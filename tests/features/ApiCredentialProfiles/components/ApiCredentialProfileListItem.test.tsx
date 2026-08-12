@@ -487,6 +487,26 @@ describe("ApiCredentialProfileListItem", () => {
     ).toHaveTextContent("0")
   })
 
+  it("keeps a telemetry error visible when no metrics were collected", () => {
+    renderListItem(
+      buildProfile({
+        telemetrySnapshot: {
+          attempts: [],
+          health: { status: SiteHealthStatus.Error },
+          lastSyncTime: 1,
+          lastError: "Usage endpoint unavailable",
+        },
+      }),
+    )
+
+    expect(
+      screen.getByRole("button", {
+        name: "apiCredentialProfiles:telemetry.title",
+      }),
+    ).toHaveAttribute("aria-expanded", "true")
+    expect(screen.getByText("Usage endpoint unavailable")).toBeVisible()
+  })
+
   it("uses not provided fallbacks for model-only refreshed snapshots", () => {
     renderListItem(
       buildProfile({

@@ -782,7 +782,9 @@ describe("ApiCredentialProfiles page", () => {
 
     await user.clear(searchInput)
 
-    const filter = screen.getAllByRole("combobox")[0]!
+    const filter = screen.getByRole("combobox", {
+      name: "apiCredentialProfiles:controls.apiTypePlaceholder",
+    })
     await user.click(filter)
     await user.click(
       await screen.findByRole("option", {

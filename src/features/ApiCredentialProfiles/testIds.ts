@@ -13,6 +13,8 @@ export const API_CREDENTIAL_PROFILES_TEST_IDS = {
     "api-credential-profile-endpoint-copy-base-url-button",
   endpointAddCredentialButton:
     "api-credential-profile-endpoint-add-credential-button",
+  endpointNavigationAddCredentialButton:
+    "api-credential-profile-endpoint-navigation-add-credential-button",
   endpointBaseUrl: "api-credential-profile-endpoint-base-url",
   endpointCredentialCount: "api-credential-profile-endpoint-credential-count",
   exportMenuButton: "api-credential-profile-export-menu-button",

@@ -15,7 +15,10 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
-import { API_TYPES } from "~/services/verification/aiApiVerification"
+import {
+  API_TYPES,
+  API_VERIFICATION_PROBE_STATUSES,
+} from "~/services/verification/aiApiVerification"
 import {
   createProfileModelVerificationHistoryTarget,
   createProfileVerificationHistoryTarget,
@@ -710,6 +713,49 @@ describe("VerifyApiCredentialProfileDialog", () => {
     ).toBeInTheDocument()
   })
 
+  it("tracks an unsupported single probe as skipped", async () => {
+    const user = userEvent.setup()
+    mockRunApiVerificationProbe.mockResolvedValueOnce({
+      id: "models",
+      status: API_VERIFICATION_PROBE_STATUSES.Unsupported,
+      latencyMs: 1,
+      summary: "Not supported",
+    })
+
+    render(
+      <VerifyApiCredentialProfileDialog
+        isOpen={true}
+        onClose={() => {}}
+        profile={{
+          id: "p-1",
+          name: "Profile",
+          apiType: API_TYPES.OPENAI_COMPATIBLE,
+          baseUrl: "https://example.com",
+          apiKey: "sk-test",
+          tagIds: [],
+          notes: "",
+          createdAt: 1,
+          updatedAt: 1,
+        }}
+      />,
+    )
+
+    const probeCard = await screen.findByTestId(
+      getApiCredentialProfileVerifyProbeTestId("models"),
+    )
+    await user.click(
+      within(probeCard).getByRole("button", {
+        name: "aiApiVerification:verifyDialog.actions.runOne",
+      }),
+    )
+
+    await waitFor(() =>
+      expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Skipped,
+      ),
+    )
+  })
+
   it("redacts baseUrl and apiKey when a probe throws", async () => {
     const user = userEvent.setup()
 
@@ -1080,6 +1126,67 @@ describe("VerifyApiCredentialProfileDialog", () => {
         PRODUCT_ANALYTICS_SURFACE_IDS.OptionsApiCredentialProfilesDialog,
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
     })
+  })
+
+  it("tracks an all-unsupported verification suite as skipped", async () => {
+    const user = userEvent.setup()
+    mockRunApiVerificationProbe.mockImplementation(async (params: any) => ({
+      id: params.probeId,
+      status: API_VERIFICATION_PROBE_STATUSES.Unsupported,
+      latencyMs: 1,
+      summary: "Not supported",
+      output:
+        params.probeId === "models"
+          ? {
+              suggestedModelId: "m1",
+              modelIdsPreview: ["m1"],
+            }
+          : undefined,
+    }))
+
+    render(
+      <VerifyApiCredentialProfileDialog
+        isOpen={true}
+        onClose={() => {}}
+        profile={{
+          id: "p-1",
+          name: "Profile",
+          apiType: API_TYPES.OPENAI_COMPATIBLE,
+          baseUrl: "https://example.com",
+          apiKey: "sk-test",
+          tagIds: [],
+          notes: "",
+          createdAt: 1,
+          updatedAt: 1,
+        }}
+      />,
+    )
+
+    const closeButton = await screen.findByText(
+      "aiApiVerification:verifyDialog.actions.close",
+      { selector: "button" },
+    )
+    const footer = closeButton.parentElement
+    if (!footer) throw new Error("Missing modal footer")
+
+    await user.click(
+      within(footer).getByRole("button", {
+        name: "aiApiVerification:verifyDialog.actions.run",
+      }),
+    )
+
+    await waitFor(() =>
+      expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Skipped,
+        {
+          insights: {
+            itemCount: 5,
+            successCount: 0,
+            failureCount: 0,
+          },
+        },
+      ),
+    )
   })
 
   it("tracks API credential verification suite failures with an error category", async () => {

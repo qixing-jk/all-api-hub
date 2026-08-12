@@ -221,7 +221,8 @@ function hasTelemetryDetailData(
         snapshot.todayRequests !== undefined ||
         snapshot.todayTokens !== undefined ||
         snapshot.unlimitedQuota === true ||
-        snapshot.models !== undefined),
+        snapshot.models !== undefined ||
+        Boolean(snapshot.lastError)),
   )
 }
 

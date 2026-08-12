@@ -2,7 +2,7 @@ import {
   API_TYPES,
   type ApiVerificationApiType,
   type ApiVerificationProbeResult,
-} from "~/services/verification/aiApiVerification"
+} from "~/services/verification/aiApiVerification/types"
 
 import type {
   ApiVerificationHistorySummary,

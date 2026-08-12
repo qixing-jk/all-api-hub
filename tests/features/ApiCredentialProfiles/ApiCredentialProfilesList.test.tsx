@@ -2,6 +2,7 @@ import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
 import { ApiCredentialProfilesList } from "~/features/ApiCredentialProfiles/components/ApiCredentialProfilesList"
+import { API_CREDENTIAL_PROFILES_TEST_IDS } from "~/features/ApiCredentialProfiles/testIds"
 import { render, screen, within } from "~~/tests/test-utils/render"
 
 const { useIsDesktopMock } = vi.hoisted(() => ({
@@ -85,16 +86,16 @@ describe("ApiCredentialProfilesList endpoint navigation", () => {
       name: "apiCredentialProfiles:grouping.navigationLabel",
     })
     expect(
-      within(navigation).getByRole("button", { name: /gateway-a/ }),
+      within(navigation).getByRole("button", { name: firstBaseUrl }),
     ).toHaveAttribute("aria-current", "true")
     expect(screen.getByText("Team primary")).toBeVisible()
     expect(screen.getByText("Team fallback")).toBeVisible()
     expect(screen.queryByText("Other endpoint")).not.toBeInTheDocument()
-    const navigationAddButtons = within(navigation).getAllByRole("button", {
-      name: "apiCredentialProfiles:grouping.addCredential",
-    })
-    expect(navigationAddButtons).toHaveLength(2)
-    await user.click(navigationAddButtons[1])
+    await user.click(
+      within(navigation).getByRole("button", {
+        name: `apiCredentialProfiles:grouping.addCredential: ${secondBaseUrl}`,
+      }),
+    )
     expect(controller.openAddDialog).toHaveBeenLastCalledWith({
       baseUrl: secondBaseUrl,
     })
@@ -106,19 +107,17 @@ describe("ApiCredentialProfilesList endpoint navigation", () => {
       }),
     )
     expect(controller.handleCopyBaseUrl).toHaveBeenCalledWith(firstBaseUrl)
-    const detailAddButton = screen
-      .getAllByRole("button", {
-        name: "apiCredentialProfiles:grouping.addCredential",
-      })
-      .find((button) => !navigation.contains(button))
-    expect(detailAddButton).toBeDefined()
-    await user.click(detailAddButton as HTMLButtonElement)
+    await user.click(
+      screen.getByTestId(
+        API_CREDENTIAL_PROFILES_TEST_IDS.endpointAddCredentialButton,
+      ),
+    )
     expect(controller.openAddDialog).toHaveBeenLastCalledWith({
       baseUrl: firstBaseUrl,
     })
 
     await user.click(
-      within(navigation).getByRole("button", { name: /gateway-b/ }),
+      within(navigation).getByRole("button", { name: secondBaseUrl }),
     )
 
     expect(screen.getByText("Other endpoint")).toBeVisible()
@@ -129,13 +128,11 @@ describe("ApiCredentialProfilesList endpoint navigation", () => {
     expect(controller.openEditDialog).toHaveBeenCalledWith(
       expect.objectContaining({ id: "b-1" }),
     )
-    const nextDetailAddButton = screen
-      .getAllByRole("button", {
-        name: "apiCredentialProfiles:grouping.addCredential",
-      })
-      .find((button) => !navigation.contains(button))
-    expect(nextDetailAddButton).toBeDefined()
-    await user.click(nextDetailAddButton as HTMLButtonElement)
+    await user.click(
+      screen.getByTestId(
+        API_CREDENTIAL_PROFILES_TEST_IDS.endpointAddCredentialButton,
+      ),
+    )
     expect(controller.openAddDialog).toHaveBeenLastCalledWith({
       baseUrl: secondBaseUrl,
     })
@@ -236,7 +233,7 @@ describe("ApiCredentialProfilesList endpoint navigation", () => {
     )
 
     await user.click(
-      await screen.findByRole("button", { name: /second\.example/ }),
+      await screen.findByRole("button", { name: second.baseUrl }),
     )
     expect(screen.getByText("Second endpoint")).toBeVisible()
 
@@ -246,6 +243,51 @@ describe("ApiCredentialProfilesList endpoint navigation", () => {
 
     expect(screen.getByText("First endpoint")).toBeVisible()
     expect(screen.queryByText("Second endpoint")).not.toBeInTheDocument()
+  })
+
+  it("applies each guided import request once without overriding later user selection", async () => {
+    const user = userEvent.setup()
+    const controller = createController()
+    const first = createProfile(
+      "first",
+      "First endpoint",
+      "https://first.example.invalid",
+    )
+    const second = createProfile(
+      "second",
+      "Second endpoint",
+      "https://second.example.invalid",
+    )
+    const { rerender } = render(
+      <ApiCredentialProfilesList
+        profiles={[first, second]}
+        controller={controller}
+        guidedImportEntry={{ profileId: second.id, request: 1 }}
+      />,
+    )
+
+    expect(await screen.findByText("Second endpoint")).toBeVisible()
+
+    await user.click(screen.getByRole("button", { name: first.baseUrl }))
+    expect(await screen.findByText("First endpoint")).toBeVisible()
+
+    rerender(
+      <ApiCredentialProfilesList
+        profiles={[first, second]}
+        controller={controller}
+        guidedImportEntry={{ profileId: second.id, request: 1 }}
+      />,
+    )
+    expect(screen.getByText("First endpoint")).toBeVisible()
+
+    rerender(
+      <ApiCredentialProfilesList
+        profiles={[first, second]}
+        controller={controller}
+        guidedImportEntry={{ profileId: second.id, request: 2 }}
+      />,
+    )
+    expect(await screen.findByText("Second endpoint")).toBeVisible()
   })
 
   it("keeps every matching endpoint visible while filters are active", async () => {

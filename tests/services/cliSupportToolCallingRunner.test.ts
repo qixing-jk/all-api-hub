@@ -4,9 +4,13 @@ const mocks = vi.hoisted(() => ({
   runApiVerificationProbe: vi.fn(),
 }))
 
-vi.mock("~/services/verification/aiApiVerification", () => ({
-  runApiVerificationProbe: mocks.runApiVerificationProbe,
-}))
+vi.mock(
+  "~/services/verification/aiApiVerification",
+  async (importOriginal) => ({
+    ...(await importOriginal()),
+    runApiVerificationProbe: mocks.runApiVerificationProbe,
+  }),
+)
 
 describe("cliSupport tool-calling runner", () => {
   beforeEach(() => {

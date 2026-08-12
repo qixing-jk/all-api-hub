@@ -6,6 +6,10 @@ import { useChannelDialog } from "~/components/dialogs/ChannelDialog"
 import { RuntimeMessageTypes } from "~/constants/runtimeActions"
 import { useProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import {
+  API_CREDENTIAL_PROFILE_EXPORT_ACTIONS,
+  type ApiCredentialProfileExportAction,
+} from "~/features/ApiCredentialProfiles/contracts"
 import { refreshApiCredentialProfileTelemetry } from "~/services/apiCredentialProfiles/telemetry"
 import { OpenInCherryStudio } from "~/services/integrations/cherryStudio"
 import { getManagedSiteLabel } from "~/services/managedSites/utils/managedSite"
@@ -61,10 +65,6 @@ import { createLogger } from "~/utils/core/logger"
 import { showResultToast } from "~/utils/core/toastHelpers"
 import { openModelsPage } from "~/utils/navigation"
 
-import {
-  API_CREDENTIAL_PROFILE_EXPORT_ACTIONS,
-  type ApiCredentialProfileExportAction,
-} from "../contracts"
 import { createExportAccount, createExportToken } from "../utils/exportShims"
 import { useApiCredentialProfiles } from "./useApiCredentialProfiles"
 

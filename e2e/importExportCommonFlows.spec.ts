@@ -1476,6 +1476,14 @@ test("uploads a WebDAV backup and restores it through the WebDAV download flow",
   ).toBeVisible()
 
   await restorePage.getByTestId(POPUP_TEST_IDS.apiCredentialProfilesTab).click()
+  const endpointSelector = restorePage.getByTestId(
+    API_CREDENTIAL_PROFILES_TEST_IDS.endpointSelector,
+  )
+  await expect(endpointSelector).toBeVisible()
+  await endpointSelector.click()
+  await restorePage
+    .getByRole("option", { name: /webdav-profile\.example\.com/i })
+    .click()
   await expect(
     restorePage.getByRole("heading", { name: "WebDAV Profile" }),
   ).toBeVisible()

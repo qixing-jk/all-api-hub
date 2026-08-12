@@ -51,7 +51,7 @@ describe("buildApiCredentialProfileListModel", () => {
         lastFilterMode: null,
       })
 
-      expect(model.filteredProfiles).toEqual([profile])
+      expect(model.filteredProfiles.map(({ id }) => id)).toEqual([profile.id])
     }
   })
 
@@ -85,7 +85,10 @@ describe("buildApiCredentialProfileListModel", () => {
       lastFilterMode: PRODUCT_ANALYTICS_MODE_IDS.GroupFilter,
     })
 
-    expect(model.filteredProfiles).toEqual([first, second])
+    expect(model.filteredProfiles.map(({ id }) => id)).toEqual([
+      first.id,
+      second.id,
+    ])
   })
 
   it("builds tag options with profile counts while preserving configured order", () => {

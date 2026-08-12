@@ -60,7 +60,10 @@ test("groups credentials by Base URL while preserving each credential card", asy
   )
   await expect(endpointNavigation).toBeVisible()
   await endpointNavigation
-    .getByRole("button", { name: /team-gateway\.example\.invalid/ })
+    .getByRole("button", {
+      name: "https://team-gateway.example.invalid",
+      exact: true,
+    })
     .click()
   await expect(page.getByText("Team primary", { exact: true })).toBeVisible()
   await expect(page.getByText("Team fallback", { exact: true })).toBeVisible()
@@ -75,7 +78,10 @@ test("groups credentials by Base URL while preserving each credential card", asy
   ).toHaveCount(0)
 
   await endpointNavigation
-    .getByRole("button", { name: /backup-gateway\.example\.invalid/ })
+    .getByRole("button", {
+      name: "https://backup-gateway.example.invalid",
+      exact: true,
+    })
     .click()
 
   await expect(

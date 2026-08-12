@@ -2,8 +2,8 @@ import type {
   ApiVerificationApiType,
   ApiVerificationProbeId,
   ApiVerificationProbeStatus,
-} from "~/services/verification/aiApiVerification"
-import { API_VERIFICATION_PROBE_STATUSES } from "~/services/verification/aiApiVerification"
+} from "~/services/verification/aiApiVerification/types"
+import { API_VERIFICATION_PROBE_STATUSES } from "~/services/verification/aiApiVerification/types"
 
 export const API_VERIFICATION_RESULT_HISTORY_CONFIG_VERSION = 1
 

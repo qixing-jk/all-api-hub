@@ -541,6 +541,10 @@ export function VerifyApiCredentialProfileDialog({
       await persistProbeResults(nextProbes, modelIdOverride)
       if (result.status === API_VERIFICATION_PROBE_STATUSES.Pass) {
         tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+      } else if (
+        result.status === API_VERIFICATION_PROBE_STATUSES.Unsupported
+      ) {
+        tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
       } else {
         tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory:
@@ -654,7 +658,9 @@ export function VerifyApiCredentialProfileDialog({
       const successCount = results.filter(
         (result) => result.status === API_VERIFICATION_PROBE_STATUSES.Pass,
       ).length
-      const failureCount = results.length - successCount
+      const failureCount = results.filter(
+        (result) => result.status === API_VERIFICATION_PROBE_STATUSES.Fail,
+      ).length
       const insights = {
         itemCount: results.length,
         successCount,
@@ -679,6 +685,11 @@ export function VerifyApiCredentialProfileDialog({
             errorCategory ?? PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
           insights,
         })
+        return
+      }
+
+      if (successCount === 0) {
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, { insights })
         return
       }
 

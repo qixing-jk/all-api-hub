@@ -1,5 +1,5 @@
 import { Copy, Plus } from "lucide-react"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
@@ -14,12 +14,7 @@ import {
 } from "~/components/ui"
 import { useIsDesktop } from "~/hooks/useMediaQuery"
 import { cn } from "~/lib/utils"
-import {
-  PRODUCT_ANALYTICS_ACTION_IDS,
-  PRODUCT_ANALYTICS_ENTRYPOINTS,
-  PRODUCT_ANALYTICS_FEATURE_IDS,
-  PRODUCT_ANALYTICS_SURFACE_IDS,
-} from "~/services/productAnalytics/contracts"
+import { PRODUCT_ANALYTICS_ACTION_IDS } from "~/services/productAnalytics/contracts"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 
 import {
@@ -170,13 +165,7 @@ function EndpointHeader({
           }
           aria-label={t("apiCredentialProfiles:actions.copyBaseUrl")}
           className="shrink-0"
-          analyticsAction={{
-            featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
-            actionId: PRODUCT_ANALYTICS_ACTION_IDS.CopyBaseUrl,
-            surfaceId:
-              PRODUCT_ANALYTICS_SURFACE_IDS.OptionsApiCredentialProfilesRowActions,
-            entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
-          }}
+          analyticsAction={PRODUCT_ANALYTICS_ACTION_IDS.CopyBaseUrl}
         >
           <Copy className="h-4 w-4" />
         </IconButton>
@@ -219,6 +208,7 @@ function DesktopEndpointNavigation({
               <button
                 type="button"
                 aria-current={selected ? "true" : undefined}
+                aria-label={group.baseUrl}
                 className="min-w-0 flex-1 rounded-lg px-3 py-2.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-inset"
                 onClick={() => onSelectBaseUrl(group.baseUrl)}
               >
@@ -239,9 +229,9 @@ function DesktopEndpointNavigation({
                 size="sm"
                 onClick={() => onAddCredential(group.baseUrl)}
                 data-testid={
-                  API_CREDENTIAL_PROFILES_TEST_IDS.endpointAddCredentialButton
+                  API_CREDENTIAL_PROFILES_TEST_IDS.endpointNavigationAddCredentialButton
                 }
-                aria-label={t("apiCredentialProfiles:grouping.addCredential")}
+                aria-label={`${t("apiCredentialProfiles:grouping.addCredential")}: ${group.baseUrl}`}
                 className="mr-1 shrink-0"
                 analyticsAction={
                   PRODUCT_ANALYTICS_ACTION_IDS.OpenCreateApiCredentialProfileDialog
@@ -360,6 +350,7 @@ export function ApiCredentialProfilesList({
   const [selectedBaseUrl, setSelectedBaseUrl] = useState(
     () => groups[0]?.baseUrl ?? "",
   )
+  const handledGuidedImportRequestRef = useRef<number | null>(null)
   const selectedGroup =
     groups.find((group) => group.baseUrl === selectedBaseUrl) ?? groups[0]
   const guidedGroup = guidedImportEntry
@@ -374,15 +365,22 @@ export function ApiCredentialProfilesList({
   }
 
   useEffect(() => {
-    if (guidedGroup && guidedGroup.baseUrl !== selectedBaseUrl) {
-      setSelectedBaseUrl(guidedGroup.baseUrl)
+    if (
+      guidedImportEntry &&
+      guidedGroup &&
+      handledGuidedImportRequestRef.current !== guidedImportEntry.request
+    ) {
+      handledGuidedImportRequestRef.current = guidedImportEntry.request
+      if (guidedGroup.baseUrl !== selectedBaseUrl) {
+        setSelectedBaseUrl(guidedGroup.baseUrl)
+      }
       return
     }
 
     if (selectedGroup && selectedGroup.baseUrl !== selectedBaseUrl) {
       setSelectedBaseUrl(selectedGroup.baseUrl)
     }
-  }, [guidedGroup, selectedBaseUrl, selectedGroup])
+  }, [guidedGroup, guidedImportEntry, selectedBaseUrl, selectedGroup])
 
   if (!selectedGroup) {
     return null

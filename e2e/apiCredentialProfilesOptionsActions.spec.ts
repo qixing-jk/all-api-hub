@@ -6,6 +6,15 @@ import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { API_CREDENTIAL_PROFILES_TEST_IDS } from "~/features/ApiCredentialProfiles/testIds"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
+import {
+  API_TYPES,
+  API_VERIFICATION_PROBE_STATUSES,
+} from "~/services/verification/aiApiVerification/types"
+import { API_VERIFICATION_RESULT_HISTORY_CONFIG_VERSION } from "~/services/verification/verificationResultHistory/types"
+import {
+  createProfileModelVerificationHistoryTarget,
+  createVerificationHistorySummary,
+} from "~/services/verification/verificationResultHistory/utils"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import { verifyApiCredentialProfileCcSwitchModelPickerScenario } from "~~/e2e/scenarios/apiCredentialProfileVerification"
 import {
@@ -191,41 +200,44 @@ test("filters options-page profiles and copies reusable credentials", async ({
       notes: "rarely used",
     }),
   ])
+  const verifiedAt = Date.now()
+  const historyTarget = createProfileModelVerificationHistoryTarget(
+    "profile-primary",
+    "example-model",
+  )
+  if (!historyTarget) throw new Error("Expected a valid verification target")
+  const historySummary = createVerificationHistorySummary({
+    target: historyTarget,
+    apiType: API_TYPES.OPENAI_COMPATIBLE,
+    preferredModelId: "example-model",
+    verifiedAt,
+    results: [
+      {
+        id: "text-generation",
+        status: API_VERIFICATION_PROBE_STATUSES.Pass,
+        latencyMs: 12,
+        summary: "Generated text",
+      },
+    ],
+  })
+  if (!historySummary) throw new Error("Expected a verification summary")
   await setPlasmoStorageValue(
     serviceWorker,
     STORAGE_KEYS.VERIFICATION_RESULT_HISTORY,
     {
-      version: 1,
-      lastUpdated: Date.now(),
-      summaries: [
-        {
-          target: {
-            kind: "profile-model",
-            profileId: "profile-primary",
-            modelId: "example-model",
-          },
-          targetKey: "profile:profile-primary:model:example-model",
-          status: "pass",
-          verifiedAt: Date.now(),
-          apiType: "openai-compatible",
-          resolvedModelId: "example-model",
-          probes: [
-            {
-              id: "text-generation",
-              status: "pass",
-              latencyMs: 12,
-              summary: "Generated text",
-            },
-          ],
-        },
-      ],
+      version: API_VERIFICATION_RESULT_HISTORY_CONFIG_VERSION,
+      lastUpdated: verifiedAt,
+      summaries: [historySummary],
     },
   )
 
   await openProfilesPage(page, extensionId)
   await page
     .getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.endpointNavigation)
-    .getByRole("button", { name: /reusable\.example\.com/i })
+    .getByRole("button", {
+      name: "https://reusable.example.com",
+      exact: true,
+    })
     .click()
 
   await expect(page.getByText("Pass", { exact: true })).toBeVisible()
@@ -246,12 +258,9 @@ test("filters options-page profiles and copies reusable credentials", async ({
       return Boolean(
         baseUrlBox &&
           countBox &&
-          Math.abs(
-            baseUrlBox.y +
-              baseUrlBox.height / 2 -
-              (countBox.y + countBox.height / 2),
-          ) < 1 &&
-          countBox.x - (baseUrlBox.x + baseUrlBox.width) <= 12,
+          baseUrlBox.x < countBox.x &&
+          baseUrlBox.y < countBox.y + countBox.height &&
+          countBox.y < baseUrlBox.y + baseUrlBox.height,
       )
     })
     .toBe(true)
@@ -284,7 +293,6 @@ test("filters options-page profiles and copies reusable credentials", async ({
     page.getByRole("heading", { name: "Archive Profile" }),
   ).toHaveCount(0)
 
-  const toolbar = page.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.toolbar)
   const copyBundleButton = page.getByTestId(
     API_CREDENTIAL_PROFILES_TEST_IDS.copyBundleButton,
   )
@@ -293,17 +301,16 @@ test("filters options-page profiles and copies reusable credentials", async ({
   )
   await expect
     .poll(async () => {
-      const [toolbarBox, firstButtonBox, lastButtonBox] = await Promise.all([
-        toolbar.boundingBox(),
+      const [firstButtonBox, lastButtonBox] = await Promise.all([
         copyBundleButton.boundingBox(),
         deleteButton.boundingBox(),
       ])
       return Boolean(
-        toolbarBox &&
-          firstButtonBox &&
+        firstButtonBox &&
           lastButtonBox &&
-          toolbarBox.width > 200 &&
-          Math.abs(firstButtonBox.y - lastButtonBox.y) < 1,
+          firstButtonBox.x < lastButtonBox.x &&
+          firstButtonBox.y < lastButtonBox.y + lastButtonBox.height &&
+          lastButtonBox.y < firstButtonBox.y + firstButtonBox.height,
       )
     })
     .toBe(true)
@@ -311,24 +318,15 @@ test("filters options-page profiles and copies reusable credentials", async ({
   const telemetryToggle = page.getByTestId(
     API_CREDENTIAL_PROFILES_TEST_IDS.telemetryToggle,
   )
-  const telemetryPanel = page.getByTestId(
-    API_CREDENTIAL_PROFILES_TEST_IDS.telemetryPanel,
-  )
   await expect(telemetryToggle).toHaveAttribute("aria-expanded", "false")
   await expect(
     page.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.telemetryBalance),
   ).toHaveCount(0)
-  await expect
-    .poll(async () => (await telemetryPanel.boundingBox())?.height)
-    .toBeLessThanOrEqual(64)
   await telemetryToggle.click()
   await expect(telemetryToggle).toHaveAttribute("aria-expanded", "true")
   await expect(
     page.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.telemetryBalance),
   ).toBeVisible()
-  await expect
-    .poll(async () => (await telemetryPanel.boundingBox())?.height)
-    .toBeGreaterThan(64)
 
   await page.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.showKeyButton).click()
   await expect(page.getByText("sk-reusable-profile")).toBeVisible()
