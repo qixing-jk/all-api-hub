@@ -11,6 +11,10 @@ import type {
   PersistedApiVerificationStatus,
   PersistedApiVerificationSummaryParams,
 } from "./types"
+import {
+  API_VERIFICATION_HISTORY_STATUSES,
+  API_VERIFICATION_HISTORY_TARGET_KINDS,
+} from "./types"
 
 const FALLBACK_SUMMARY_MAX_LENGTH = 240
 const FALLBACK_PARAM_STRING_MAX_LENGTH = 120
@@ -122,7 +126,7 @@ export function createProfileVerificationHistoryTarget(profileId: string) {
   if (!sanitizedProfileId) return null
 
   return {
-    kind: "profile",
+    kind: API_VERIFICATION_HISTORY_TARGET_KINDS.Profile,
     profileId: sanitizedProfileId,
   } satisfies ApiVerificationHistoryTarget
 }
@@ -142,7 +146,7 @@ export function createProfileModelVerificationHistoryTarget(
   if (!sanitizedProfileId || !sanitizedModelId) return null
 
   return {
-    kind: "profile-model",
+    kind: API_VERIFICATION_HISTORY_TARGET_KINDS.ProfileModel,
     profileId: sanitizedProfileId,
     modelId: sanitizedModelId,
   } satisfies ApiVerificationHistoryTarget
@@ -163,7 +167,7 @@ export function createAccountModelVerificationHistoryTarget(
   if (!sanitizedAccountId || !sanitizedModelId) return null
 
   return {
-    kind: "account-model",
+    kind: API_VERIFICATION_HISTORY_TARGET_KINDS.AccountModel,
     accountId: sanitizedAccountId,
     modelId: sanitizedModelId,
   } satisfies ApiVerificationHistoryTarget
@@ -177,11 +181,11 @@ export function createAccountModelVerificationHistoryTarget(
 export function serializeVerificationHistoryTarget(
   target: ApiVerificationHistoryTarget,
 ) {
-  if (target.kind === "profile") {
+  if (target.kind === API_VERIFICATION_HISTORY_TARGET_KINDS.Profile) {
     return `profile:${target.profileId}`
   }
 
-  if (target.kind === "profile-model") {
+  if (target.kind === API_VERIFICATION_HISTORY_TARGET_KINDS.ProfileModel) {
     return `profile:${target.profileId}:model:${target.modelId}`
   }
 
@@ -210,7 +214,11 @@ export function isApiVerificationApiType(
 export function deriveVerificationHistoryStatus(
   results: Pick<ApiVerificationProbeResult, "status">[],
 ): PersistedApiVerificationStatus {
-  return results.some((result) => result.status === "fail") ? "fail" : "pass"
+  return results.some(
+    (result) => result.status === API_VERIFICATION_HISTORY_STATUSES.Fail,
+  )
+    ? API_VERIFICATION_HISTORY_STATUSES.Fail
+    : API_VERIFICATION_HISTORY_STATUSES.Pass
 }
 
 /**

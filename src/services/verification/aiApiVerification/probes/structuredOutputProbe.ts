@@ -3,6 +3,7 @@ import { z } from "zod"
 
 import { nowMs, okLatency } from "../probeTiming"
 import { createModel } from "../providers"
+import { API_VERIFICATION_PROBE_STATUSES } from "../types"
 import type {
   ApiVerificationApiType,
   ApiVerificationProbeResult,
@@ -52,7 +53,10 @@ export async function runStructuredOutputProbe(
 
     return {
       id: "structured-output",
-      status: output?.ok === true ? "pass" : "fail",
+      status:
+        output?.ok === true
+          ? API_VERIFICATION_PROBE_STATUSES.Pass
+          : API_VERIFICATION_PROBE_STATUSES.Fail,
       latencyMs: okLatency(startedAt),
       summary:
         output?.ok === true ? "Structured output succeeded" : "Invalid output",
@@ -80,7 +84,7 @@ export async function runStructuredOutputProbe(
     const diagnostics = buildSafeProbeFailureDiagnostics(error, summary)
     return {
       id: "structured-output",
-      status: "fail",
+      status: API_VERIFICATION_PROBE_STATUSES.Fail,
       latencyMs: okLatency(startedAt),
       summary,
       summaryKey: diagnostics.summaryKey,

@@ -17,6 +17,11 @@ import type {
   ApiCredentialTelemetryJsonPathMap,
   ApiCredentialTelemetrySnapshot,
 } from "~/types/apiCredentialProfiles"
+import {
+  API_CREDENTIAL_TELEMETRY_ATTEMPT_STATUSES,
+  API_CREDENTIAL_TELEMETRY_MODES,
+  API_CREDENTIAL_TELEMETRY_SOURCES,
+} from "~/types/apiCredentialProfiles"
 import { getErrorMessage } from "~/utils/core/error"
 
 type TelemetryPatch = Partial<
@@ -277,7 +282,9 @@ function attemptFromError(
     return createAttempt(
       source,
       error.endpoint || endpoint,
-      error.unsupported ? "unsupported" : "error",
+      error.unsupported
+        ? API_CREDENTIAL_TELEMETRY_ATTEMPT_STATUSES.Unsupported
+        : API_CREDENTIAL_TELEMETRY_ATTEMPT_STATUSES.Error,
       toSanitizedErrorSummary(error, secrets),
       secrets,
     )
@@ -286,7 +293,7 @@ function attemptFromError(
   return createAttempt(
     source,
     endpoint,
-    "error",
+    API_CREDENTIAL_TELEMETRY_ATTEMPT_STATUSES.Error,
     toSanitizedErrorSummary(error, secrets),
     secrets,
   )
@@ -346,7 +353,7 @@ async function queryOpenAiBilling(
   const directBalance = readNumber(subscriptionData.balance)
   if (directBalance !== undefined) {
     return {
-      source: "openaiBilling",
+      source: API_CREDENTIAL_TELEMETRY_SOURCES.OpenAiBilling,
       endpoint: subscription.endpoint,
       data: { balanceUsd: directBalance },
     }
@@ -363,7 +370,7 @@ async function queryOpenAiBilling(
   })
 
   return {
-    source: "openaiBilling",
+    source: API_CREDENTIAL_TELEMETRY_SOURCES.OpenAiBilling,
     endpoint: subscription.endpoint,
     data: parseOpenAiBillingUsage(subscription.json, usage.json),
   }
@@ -399,7 +406,7 @@ async function queryNewApiTokenUsage(
     : nonNegativeQuotaToUsd(totalAvailable)
 
   return {
-    source: "newApiTokenUsage",
+    source: API_CREDENTIAL_TELEMETRY_SOURCES.NewApiTokenUsage,
     endpoint: result.endpoint,
     data: {
       ...(unlimitedQuota ? { unlimitedQuota: true } : {}),
@@ -436,7 +443,7 @@ async function querySub2ApiUsage(
     readNumber(today.tokens) ?? readNumber(today.total_tokens)
 
   return {
-    source: "sub2apiUsage",
+    source: API_CREDENTIAL_TELEMETRY_SOURCES.Sub2ApiUsage,
     endpoint: result.endpoint,
     data: {
       ...(balance !== undefined ? { balanceUsd: balance } : {}),
@@ -547,7 +554,7 @@ async function queryCustomReadOnlyEndpoint(
   })
 
   return {
-    source: "customReadOnlyEndpoint",
+    source: API_CREDENTIAL_TELEMETRY_SOURCES.CustomReadOnlyEndpoint,
     endpoint: result.endpoint,
     data: mapCustomJson(result.json, config.customEndpoint.jsonPaths),
   }
@@ -568,9 +575,11 @@ async function queryModels(
     })
     attempts.push(
       createAttempt(
-        "models",
+        API_CREDENTIAL_TELEMETRY_SOURCES.Models,
         getModelsEndpoint(profile),
-        modelIds.length > 0 ? "success" : "unsupported",
+        modelIds.length > 0
+          ? API_CREDENTIAL_TELEMETRY_ATTEMPT_STATUSES.Success
+          : API_CREDENTIAL_TELEMETRY_ATTEMPT_STATUSES.Unsupported,
         modelIds.length > 0
           ? `Fetched ${modelIds.length} models`
           : "No models returned",
@@ -583,9 +592,12 @@ async function queryModels(
     }
   } catch (error) {
     attempts.push(
-      attemptFromError("models", getModelsEndpoint(profile), error, [
-        profile.apiKey,
-      ]),
+      attemptFromError(
+        API_CREDENTIAL_TELEMETRY_SOURCES.Models,
+        getModelsEndpoint(profile),
+        error,
+        [profile.apiKey],
+      ),
     )
     return undefined
   }
@@ -599,10 +611,16 @@ async function runUsageAdapter(
   mode: ApiCredentialTelemetryCapabilityMode,
   config: ApiCredentialTelemetryConfig,
 ): Promise<AdapterSuccess> {
-  if (mode === "openaiBilling") return await queryOpenAiBilling(profile)
-  if (mode === "newApiTokenUsage") return await queryNewApiTokenUsage(profile)
-  if (mode === "sub2apiUsage") return await querySub2ApiUsage(profile)
-  if (mode === "customReadOnlyEndpoint") {
+  if (mode === API_CREDENTIAL_TELEMETRY_MODES.OpenAiBilling) {
+    return await queryOpenAiBilling(profile)
+  }
+  if (mode === API_CREDENTIAL_TELEMETRY_MODES.NewApiTokenUsage) {
+    return await queryNewApiTokenUsage(profile)
+  }
+  if (mode === API_CREDENTIAL_TELEMETRY_MODES.Sub2ApiUsage) {
+    return await querySub2ApiUsage(profile)
+  }
+  if (mode === API_CREDENTIAL_TELEMETRY_MODES.CustomReadOnlyEndpoint) {
     return await queryCustomReadOnlyEndpoint(profile, config)
   }
 
@@ -615,11 +633,15 @@ async function runUsageAdapter(
 function resolveModes(
   config: ApiCredentialTelemetryConfig,
 ): ApiCredentialTelemetryCapabilityMode[] {
-  if (config.mode === "disabled") return []
-  if (config.mode === "auto") {
+  if (config.mode === API_CREDENTIAL_TELEMETRY_MODES.Disabled) return []
+  if (config.mode === API_CREDENTIAL_TELEMETRY_MODES.Auto) {
     // Prefer provider-specific key telemetry. OpenAI billing endpoints often
     // expose compatibility limits, not spendable gateway balance.
-    return ["newApiTokenUsage", "sub2apiUsage", "openaiBilling"]
+    return [
+      API_CREDENTIAL_TELEMETRY_MODES.NewApiTokenUsage,
+      API_CREDENTIAL_TELEMETRY_MODES.Sub2ApiUsage,
+      API_CREDENTIAL_TELEMETRY_MODES.OpenAiBilling,
+    ]
   }
   return [config.mode]
 }
@@ -675,7 +697,7 @@ export async function refreshApiCredentialProfileTelemetry(
           createAttempt(
             result.source,
             result.endpoint,
-            "success",
+            API_CREDENTIAL_TELEMETRY_ATTEMPT_STATUSES.Success,
             "Fetched usage",
             secrets,
           ),
@@ -687,18 +709,18 @@ export async function refreshApiCredentialProfileTelemetry(
         createAttempt(
           result.source,
           result.endpoint,
-          "unsupported",
+          API_CREDENTIAL_TELEMETRY_ATTEMPT_STATUSES.Unsupported,
           "No usage fields returned",
           secrets,
         ),
       )
     } catch (error) {
       const endpoint =
-        mode === "openaiBilling"
+        mode === API_CREDENTIAL_TELEMETRY_MODES.OpenAiBilling
           ? TELEMETRY_ENDPOINTS.openAiBilling.subscription
-          : mode === "newApiTokenUsage"
+          : mode === API_CREDENTIAL_TELEMETRY_MODES.NewApiTokenUsage
             ? TELEMETRY_ENDPOINTS.newApiTokenUsage
-            : mode === "sub2apiUsage"
+            : mode === API_CREDENTIAL_TELEMETRY_MODES.Sub2ApiUsage
               ? TELEMETRY_ENDPOINTS.sub2ApiUsage
               : config.customEndpoint?.endpoint || "custom"
       attempts.push(attemptFromError(mode, endpoint, error, secrets))
@@ -709,13 +731,18 @@ export async function refreshApiCredentialProfileTelemetry(
   const usageSucceeded = Boolean(usageResult)
   const customEndpointError = attempts.find(
     (attempt) =>
-      attempt.status === "error" && attempt.source === "customReadOnlyEndpoint",
+      attempt.status === API_CREDENTIAL_TELEMETRY_ATTEMPT_STATUSES.Error &&
+      attempt.source ===
+        API_CREDENTIAL_TELEMETRY_SOURCES.CustomReadOnlyEndpoint,
   )?.message
   const lastError =
     usageSucceeded || modelSucceeded
       ? undefined
       : customEndpointError ||
-        attempts.find((attempt) => attempt.status === "error")?.message ||
+        attempts.find(
+          (attempt) =>
+            attempt.status === API_CREDENTIAL_TELEMETRY_ATTEMPT_STATUSES.Error,
+        )?.message ||
         "No supported telemetry endpoint returned data"
 
   const snapshot: ApiCredentialTelemetrySnapshot = {

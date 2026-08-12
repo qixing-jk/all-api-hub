@@ -61,6 +61,7 @@ import {
 import { resolveProductAnalyticsErrorCategoryFromProbeResult } from "~/services/productAnalytics/verification"
 import {
   API_TYPES,
+  API_VERIFICATION_PROBE_STATUSES,
   getApiVerificationProbeDefinitions,
   runApiVerificationProbe,
   type ApiVerificationApiType,
@@ -176,10 +177,18 @@ export function deriveBatchVerifyRowStatus(
   results: ApiVerificationProbeResult[],
 ): BatchVerifyRowStatus {
   if (results.length === 0) return BATCH_VERIFY_ROW_STATUSES.SKIPPED
-  if (results.some((result) => result.status === "fail")) {
+  if (
+    results.some(
+      (result) => result.status === API_VERIFICATION_PROBE_STATUSES.Fail,
+    )
+  ) {
     return BATCH_VERIFY_ROW_STATUSES.FAIL
   }
-  if (results.some((result) => result.status === "pass")) {
+  if (
+    results.some(
+      (result) => result.status === API_VERIFICATION_PROBE_STATUSES.Pass,
+    )
+  ) {
     return BATCH_VERIFY_ROW_STATUSES.PASS
   }
   return BATCH_VERIFY_ROW_STATUSES.SKIPPED
@@ -693,7 +702,7 @@ export function BatchVerifyModelsDialog({
             const sanitizedMessage = toSanitizedErrorSummary(error, redactions)
             results.push({
               id: probe.id,
-              status: "fail",
+              status: API_VERIFICATION_PROBE_STATUSES.Fail,
               latencyMs: 0,
               summary:
                 sanitizedMessage ||
@@ -712,17 +721,25 @@ export function BatchVerifyModelsDialog({
           })
         })
 
-        const pass = results.filter((result) => result.status === "pass").length
-        const fail = results.filter((result) => result.status === "fail").length
+        const pass = results.filter(
+          (result) => result.status === API_VERIFICATION_PROBE_STATUSES.Pass,
+        ).length
+        const fail = results.filter(
+          (result) => result.status === API_VERIFICATION_PROBE_STATUSES.Fail,
+        ).length
         const unsupported = results.filter(
-          (result) => result.status === "unsupported",
+          (result) =>
+            result.status === API_VERIFICATION_PROBE_STATUSES.Unsupported,
         ).length
 
         const status = deriveBatchVerifyRowStatus(results)
         const errorCategory =
           status === BATCH_VERIFY_ROW_STATUSES.FAIL
             ? results
-                .filter((result) => result.status === "fail")
+                .filter(
+                  (result) =>
+                    result.status === API_VERIFICATION_PROBE_STATUSES.Fail,
+                )
                 .map((result) =>
                   resolveProductAnalyticsErrorCategoryFromProbeResult(result),
                 )
@@ -1024,7 +1041,8 @@ export function BatchVerifyModelsDialog({
                     <Badge
                       key={result.id}
                       variant={statusVariant(
-                        result.status === "unsupported"
+                        result.status ===
+                          API_VERIFICATION_PROBE_STATUSES.Unsupported
                           ? BATCH_VERIFY_ROW_STATUSES.SKIPPED
                           : result.status,
                       )}
@@ -1032,9 +1050,9 @@ export function BatchVerifyModelsDialog({
                     >
                       {getApiVerificationProbeLabel(t, result.id)}
                       {" · "}
-                      {result.status === "pass"
+                      {result.status === API_VERIFICATION_PROBE_STATUSES.Pass
                         ? t("modelList:batchVerify.status.pass")
-                        : result.status === "fail"
+                        : result.status === API_VERIFICATION_PROBE_STATUSES.Fail
                           ? t("modelList:batchVerify.status.fail")
                           : t(
                               "aiApiVerification:verifyDialog.status.unsupported",
@@ -1045,7 +1063,10 @@ export function BatchVerifyModelsDialog({
                   ))}
                 </div>
                 {row.results
-                  .filter((result) => result.status === "fail")
+                  .filter(
+                    (result) =>
+                      result.status === API_VERIFICATION_PROBE_STATUSES.Fail,
+                  )
                   .map((result) => (
                     <div
                       key={`${result.id}-summary`}

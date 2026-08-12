@@ -49,13 +49,22 @@ import type {
   ApiCredentialTelemetryConfig,
   ApiCredentialTelemetrySnapshot,
 } from "~/types/apiCredentialProfiles"
+import {
+  API_CREDENTIAL_TELEMETRY_ATTEMPT_STATUSES,
+  API_CREDENTIAL_TELEMETRY_MODES,
+  API_CREDENTIAL_TELEMETRY_SOURCES,
+} from "~/types/apiCredentialProfiles"
 import { onRuntimeMessage } from "~/utils/browser/browserApi"
+import { assertNever } from "~/utils/core/assert"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { showResultToast } from "~/utils/core/toastHelpers"
 import { openModelsPage } from "~/utils/navigation"
 
-import type { ApiCredentialProfileExportAction } from "../components/ApiCredentialProfileListItem"
+import {
+  API_CREDENTIAL_PROFILE_EXPORT_ACTIONS,
+  type ApiCredentialProfileExportAction,
+} from "../contracts"
 import { createExportAccount, createExportToken } from "../utils/exportShims"
 import { useApiCredentialProfiles } from "./useApiCredentialProfiles"
 
@@ -156,12 +165,17 @@ const telemetryModeByConfigMode: Record<
   ApiCredentialTelemetryConfig["mode"],
   ProductAnalyticsModeId
 > = {
-  auto: PRODUCT_ANALYTICS_MODE_IDS.TelemetryAuto,
-  disabled: PRODUCT_ANALYTICS_MODE_IDS.TelemetryDisabled,
-  newApiTokenUsage: PRODUCT_ANALYTICS_MODE_IDS.TelemetryNewApiTokenUsage,
-  sub2apiUsage: PRODUCT_ANALYTICS_MODE_IDS.TelemetrySub2ApiUsage,
-  openaiBilling: PRODUCT_ANALYTICS_MODE_IDS.TelemetryOpenAiBilling,
-  customReadOnlyEndpoint:
+  [API_CREDENTIAL_TELEMETRY_MODES.Auto]:
+    PRODUCT_ANALYTICS_MODE_IDS.TelemetryAuto,
+  [API_CREDENTIAL_TELEMETRY_MODES.Disabled]:
+    PRODUCT_ANALYTICS_MODE_IDS.TelemetryDisabled,
+  [API_CREDENTIAL_TELEMETRY_MODES.NewApiTokenUsage]:
+    PRODUCT_ANALYTICS_MODE_IDS.TelemetryNewApiTokenUsage,
+  [API_CREDENTIAL_TELEMETRY_MODES.Sub2ApiUsage]:
+    PRODUCT_ANALYTICS_MODE_IDS.TelemetrySub2ApiUsage,
+  [API_CREDENTIAL_TELEMETRY_MODES.OpenAiBilling]:
+    PRODUCT_ANALYTICS_MODE_IDS.TelemetryOpenAiBilling,
+  [API_CREDENTIAL_TELEMETRY_MODES.CustomReadOnlyEndpoint]:
     PRODUCT_ANALYTICS_MODE_IDS.TelemetryCustomReadOnlyEndpoint,
 }
 
@@ -171,11 +185,15 @@ const telemetrySourceBySnapshotSource: Partial<
     ProductAnalyticsTelemetrySource
   >
 > = {
-  models: PRODUCT_ANALYTICS_TELEMETRY_SOURCES.Models,
-  openaiBilling: PRODUCT_ANALYTICS_TELEMETRY_SOURCES.OpenAiBilling,
-  newApiTokenUsage: PRODUCT_ANALYTICS_TELEMETRY_SOURCES.NewApiTokenUsage,
-  sub2apiUsage: PRODUCT_ANALYTICS_TELEMETRY_SOURCES.Sub2ApiUsage,
-  customReadOnlyEndpoint:
+  [API_CREDENTIAL_TELEMETRY_SOURCES.Models]:
+    PRODUCT_ANALYTICS_TELEMETRY_SOURCES.Models,
+  [API_CREDENTIAL_TELEMETRY_SOURCES.OpenAiBilling]:
+    PRODUCT_ANALYTICS_TELEMETRY_SOURCES.OpenAiBilling,
+  [API_CREDENTIAL_TELEMETRY_SOURCES.NewApiTokenUsage]:
+    PRODUCT_ANALYTICS_TELEMETRY_SOURCES.NewApiTokenUsage,
+  [API_CREDENTIAL_TELEMETRY_SOURCES.Sub2ApiUsage]:
+    PRODUCT_ANALYTICS_TELEMETRY_SOURCES.Sub2ApiUsage,
+  [API_CREDENTIAL_TELEMETRY_SOURCES.CustomReadOnlyEndpoint]:
     PRODUCT_ANALYTICS_TELEMETRY_SOURCES.CustomReadOnlyEndpoint,
 }
 
@@ -228,9 +246,13 @@ function getApiCredentialProfileSaveAnalyticsInsights(
   return {
     apiType: analyticsApiTypeByVerificationApiType[input.apiType],
     sourceKind,
-    mode: telemetryModeByConfigMode[input.telemetryConfig?.mode ?? "auto"],
+    mode: telemetryModeByConfigMode[
+      input.telemetryConfig?.mode ?? API_CREDENTIAL_TELEMETRY_MODES.Auto
+    ],
     selectedCount: input.tagIds.length,
-    usageDataPresent: input.telemetryConfig?.mode === "customReadOnlyEndpoint",
+    usageDataPresent:
+      input.telemetryConfig?.mode ===
+      API_CREDENTIAL_TELEMETRY_MODES.CustomReadOnlyEndpoint,
   }
 }
 
@@ -242,7 +264,10 @@ function getApiCredentialTelemetryAnalyticsInsights(
   telemetryConfig?: ApiCredentialTelemetryConfig,
 ): ProductAnalyticsActionInsights {
   const successCount = Array.isArray(snapshot.attempts)
-    ? snapshot.attempts.filter((attempt) => attempt.status === "success").length
+    ? snapshot.attempts.filter(
+        (attempt) =>
+          attempt.status === API_CREDENTIAL_TELEMETRY_ATTEMPT_STATUSES.Success,
+      ).length
     : undefined
   const failureCount = Array.isArray(snapshot.attempts)
     ? snapshot.attempts.length - (successCount ?? 0)
@@ -252,7 +277,9 @@ function getApiCredentialTelemetryAnalyticsInsights(
     ...(snapshot.source && telemetrySourceBySnapshotSource[snapshot.source]
       ? { telemetrySource: telemetrySourceBySnapshotSource[snapshot.source] }
       : {}),
-    mode: telemetryModeByConfigMode[telemetryConfig?.mode ?? "auto"],
+    mode: telemetryModeByConfigMode[
+      telemetryConfig?.mode ?? API_CREDENTIAL_TELEMETRY_MODES.Auto
+    ],
     statusKind:
       analyticsStatusByHealthStatus[snapshot.health.status] ??
       PRODUCT_ANALYTICS_STATUS_KINDS.Unknown,
@@ -532,7 +559,7 @@ export function useApiCredentialProfilesController() {
       profile: ApiCredentialProfile,
       action: ApiCredentialProfileExportAction,
     ) => {
-      if (action === "cherryStudio") {
+      if (action === API_CREDENTIAL_PROFILE_EXPORT_ACTIONS.CherryStudio) {
         const tracker = startProductAnalyticsAction({
           featureId: apiCredentialProfilesFeature,
           actionId:
@@ -556,17 +583,17 @@ export function useApiCredentialProfilesController() {
         return
       }
 
-      if (action === "ccSwitch") {
+      if (action === API_CREDENTIAL_PROFILE_EXPORT_ACTIONS.CCSwitch) {
         setCCSwitchProfile(profile)
         return
       }
 
-      if (action === "kiloCode") {
+      if (action === API_CREDENTIAL_PROFILE_EXPORT_ACTIONS.KiloCode) {
         setKiloCodeProfile(profile)
         return
       }
 
-      if (action === "cliProxy") {
+      if (action === API_CREDENTIAL_PROFILE_EXPORT_ACTIONS.CliProxy) {
         if (!cliProxyBaseUrl?.trim() || !cliProxyManagementKey?.trim()) {
           showResultToast({
             success: false,
@@ -578,7 +605,7 @@ export function useApiCredentialProfilesController() {
         return
       }
 
-      if (action === "claudeCodeRouter") {
+      if (action === API_CREDENTIAL_PROFILE_EXPORT_ACTIONS.ClaudeCodeRouter) {
         if (!claudeCodeRouterBaseUrl?.trim()) {
           showResultToast({
             success: false,
@@ -590,7 +617,7 @@ export function useApiCredentialProfilesController() {
         return
       }
 
-      if (action === "managedSite") {
+      if (action === API_CREDENTIAL_PROFILE_EXPORT_ACTIONS.ManagedSite) {
         const tracker = startProductAnalyticsAction({
           featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
           actionId: PRODUCT_ANALYTICS_ACTION_IDS.ImportManagedSiteSingleToken,
@@ -640,7 +667,10 @@ export function useApiCredentialProfilesController() {
               error,
             )
           })
+        return
       }
+
+      return assertNever(action, `Unexpected export action: ${action}`)
     },
     [
       claudeCodeRouterBaseUrl,

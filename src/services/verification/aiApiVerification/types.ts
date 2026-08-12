@@ -17,7 +17,14 @@ export type ApiVerificationProbeId =
   | "structured-output"
   | "web-search"
 
-export type ApiVerificationProbeStatus = "pass" | "fail" | "unsupported"
+export const API_VERIFICATION_PROBE_STATUSES = {
+  Pass: "pass",
+  Fail: "fail",
+  Unsupported: "unsupported",
+} as const
+
+export type ApiVerificationProbeStatus =
+  (typeof API_VERIFICATION_PROBE_STATUSES)[keyof typeof API_VERIFICATION_PROBE_STATUSES]
 
 export type ApiVerificationProbeResult = {
   id: ApiVerificationProbeId

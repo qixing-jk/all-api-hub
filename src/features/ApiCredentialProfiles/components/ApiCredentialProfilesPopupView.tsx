@@ -1,5 +1,6 @@
 import { forwardRef, useImperativeHandle } from "react"
 
+import { API_CREDENTIAL_PROFILES_VIEW_VARIANTS } from "../contracts"
 import { useApiCredentialProfilesController } from "../hooks/useApiCredentialProfilesController"
 import { API_CREDENTIAL_PROFILES_TEST_IDS } from "../testIds"
 import { ApiCredentialProfilesListView } from "./ApiCredentialProfilesListView"
@@ -33,7 +34,7 @@ const ApiCredentialProfilesPopupView = forwardRef<
     >
       <ApiCredentialProfilesListView
         controller={controller}
-        variant="popup"
+        variant={API_CREDENTIAL_PROFILES_VIEW_VARIANTS.Popup}
         autoFocusSearch={true}
       />
     </div>

@@ -12,6 +12,7 @@ import { PRODUCT_ANALYTICS_ERROR_CATEGORIES } from "~/services/productAnalytics/
 import { tagStorage } from "~/services/tags/tagStorage"
 import {
   API_TYPES,
+  API_VERIFICATION_PROBE_STATUSES,
   runApiVerificationProbe,
   type ApiVerificationApiType,
   type ApiVerificationProbeId,
@@ -456,7 +457,7 @@ export async function resolveWebAiApiCheckRunProbeMessage(
 
       const result: ApiVerificationProbeResult = {
         id: probeId as ApiVerificationProbeId,
-        status: "fail",
+        status: API_VERIFICATION_PROBE_STATUSES.Fail,
         latencyMs: 0,
         summary: message,
         ...diagnostics,

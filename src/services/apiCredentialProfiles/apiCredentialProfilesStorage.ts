@@ -24,7 +24,9 @@ import type {
 } from "~/types/apiCredentialProfiles"
 import {
   API_CREDENTIAL_PROFILES_CONFIG_VERSION,
+  API_CREDENTIAL_TELEMETRY_ATTEMPT_STATUSES,
   API_CREDENTIAL_TELEMETRY_CAPABILITY_MODES,
+  API_CREDENTIAL_TELEMETRY_SOURCES,
   DEFAULT_API_CREDENTIAL_TELEMETRY_CONFIG,
 } from "~/types/apiCredentialProfiles"
 import { onStorageChanged } from "~/utils/browser/browserApi"
@@ -172,7 +174,7 @@ function coerceTelemetryAttempts(
       const rawSource = candidate.source
       const source =
         typeof rawSource === "string" &&
-        (rawSource === "models" ||
+        (rawSource === API_CREDENTIAL_TELEMETRY_SOURCES.Models ||
           API_CREDENTIAL_TELEMETRY_CAPABILITY_MODES.includes(
             rawSource as ApiCredentialTelemetryCapabilityMode,
           ))
@@ -182,9 +184,9 @@ function coerceTelemetryAttempts(
         typeof candidate.endpoint === "string" ? candidate.endpoint.trim() : ""
       const rawStatus = candidate.status
       const status =
-        rawStatus === "success" ||
-        rawStatus === "unsupported" ||
-        rawStatus === "error"
+        rawStatus === API_CREDENTIAL_TELEMETRY_ATTEMPT_STATUSES.Success ||
+        rawStatus === API_CREDENTIAL_TELEMETRY_ATTEMPT_STATUSES.Unsupported ||
+        rawStatus === API_CREDENTIAL_TELEMETRY_ATTEMPT_STATUSES.Error
           ? rawStatus
           : null
 
@@ -235,7 +237,7 @@ function coerceTelemetrySnapshot(
   const rawSource = obj.source
   const source =
     typeof rawSource === "string" &&
-    (rawSource === "models" ||
+    (rawSource === API_CREDENTIAL_TELEMETRY_SOURCES.Models ||
       API_CREDENTIAL_TELEMETRY_CAPABILITY_MODES.includes(
         rawSource as ApiCredentialTelemetryCapabilityMode,
       ))

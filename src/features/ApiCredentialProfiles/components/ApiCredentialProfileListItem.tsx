@@ -55,7 +55,11 @@ import {
 import { getApiVerificationApiTypeLabel } from "~/services/verification/aiApiVerification/i18n"
 import type { ApiVerificationHistorySummary } from "~/services/verification/verificationResultHistory"
 import { SiteHealthStatus } from "~/types"
-import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
+import {
+  API_CREDENTIAL_TELEMETRY_SOURCES,
+  type ApiCredentialProfile,
+  type ApiCredentialTelemetrySource,
+} from "~/types/apiCredentialProfiles"
 import {
   formatLocaleDateTime,
   formatTokenCount,
@@ -63,15 +67,11 @@ import {
 } from "~/utils/core/formatters"
 import { formatTelemetryMoney } from "~/utils/core/money"
 
+import {
+  API_CREDENTIAL_PROFILE_EXPORT_ACTIONS,
+  type ApiCredentialProfileExportAction,
+} from "../contracts"
 import { API_CREDENTIAL_PROFILES_TEST_IDS } from "../testIds"
-
-export type ApiCredentialProfileExportAction =
-  | "cherryStudio"
-  | "ccSwitch"
-  | "kiloCode"
-  | "cliProxy"
-  | "claudeCodeRouter"
-  | "managedSite"
 
 interface ApiCredentialProfileListItemProps {
   profile: ApiCredentialProfile
@@ -114,6 +114,7 @@ const COMPACT_AUDIT_TIME_FORMAT: Intl.DateTimeFormatOptions = {
   hour: "2-digit",
   minute: "2-digit",
 }
+const GUIDED_IMPORT_HIGHLIGHT_DURATION_MS = 5_000
 
 interface AuditTimeBadgeProps {
   Icon: LucideIcon
@@ -153,21 +154,21 @@ function AuditTimeBadge({
  */
 function getTelemetrySourceLabel(
   t: TFunction,
-  source: string | undefined,
+  source: ApiCredentialTelemetrySource | undefined,
 ): string {
   if (!source) return t("apiCredentialProfiles:telemetry.source.notAvailable")
-  if (source === "models")
+  if (source === API_CREDENTIAL_TELEMETRY_SOURCES.Models)
     return t("apiCredentialProfiles:telemetry.source.models")
-  if (source === "openaiBilling") {
+  if (source === API_CREDENTIAL_TELEMETRY_SOURCES.OpenAiBilling) {
     return t("apiCredentialProfiles:telemetry.source.openaiBilling")
   }
-  if (source === "newApiTokenUsage") {
+  if (source === API_CREDENTIAL_TELEMETRY_SOURCES.NewApiTokenUsage) {
     return t("apiCredentialProfiles:telemetry.source.newApiTokenUsage")
   }
-  if (source === "sub2apiUsage") {
+  if (source === API_CREDENTIAL_TELEMETRY_SOURCES.Sub2ApiUsage) {
     return t("apiCredentialProfiles:telemetry.source.sub2apiUsage")
   }
-  if (source === "customReadOnlyEndpoint") {
+  if (source === API_CREDENTIAL_TELEMETRY_SOURCES.CustomReadOnlyEndpoint) {
     return t("apiCredentialProfiles:telemetry.source.customReadOnlyEndpoint")
   }
   return source
@@ -325,7 +326,7 @@ export function ApiCredentialProfileListItem({
 
     const timeoutId = window.setTimeout(() => {
       setIsImportEntryHighlighted(false)
-    }, 5000)
+    }, GUIDED_IMPORT_HIGHLIGHT_DURATION_MS)
 
     return () => window.clearTimeout(timeoutId)
   }, [guidedImportEntryRequest])
@@ -735,7 +736,12 @@ export function ApiCredentialProfileListItem({
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem
-                      onSelect={() => onExport(profile, "cherryStudio")}
+                      onSelect={() =>
+                        onExport(
+                          profile,
+                          API_CREDENTIAL_PROFILE_EXPORT_ACTIONS.CherryStudio,
+                        )
+                      }
                     >
                       <span aria-hidden="true">
                         <CherryIcon className="h-4 w-4" />
@@ -746,7 +752,12 @@ export function ApiCredentialProfileListItem({
                       data-testid={
                         API_CREDENTIAL_PROFILES_TEST_IDS.exportToCCSwitchMenuItem
                       }
-                      onSelect={() => onExport(profile, "ccSwitch")}
+                      onSelect={() =>
+                        onExport(
+                          profile,
+                          API_CREDENTIAL_PROFILE_EXPORT_ACTIONS.CCSwitch,
+                        )
+                      }
                     >
                       <span aria-hidden="true">
                         <CCSwitchIcon size="sm" />
@@ -757,7 +768,12 @@ export function ApiCredentialProfileListItem({
                       data-testid={
                         API_CREDENTIAL_PROFILES_TEST_IDS.exportToKiloCodeMenuItem
                       }
-                      onSelect={() => onExport(profile, "kiloCode")}
+                      onSelect={() =>
+                        onExport(
+                          profile,
+                          API_CREDENTIAL_PROFILE_EXPORT_ACTIONS.KiloCode,
+                        )
+                      }
                     >
                       <span aria-hidden="true">
                         <KiloCodeIcon size="sm" />
@@ -769,7 +785,12 @@ export function ApiCredentialProfileListItem({
                       data-testid={
                         API_CREDENTIAL_PROFILES_TEST_IDS.exportToCliProxyMenuItem
                       }
-                      onSelect={() => onExport(profile, "cliProxy")}
+                      onSelect={() =>
+                        onExport(
+                          profile,
+                          API_CREDENTIAL_PROFILE_EXPORT_ACTIONS.CliProxy,
+                        )
+                      }
                     >
                       <span aria-hidden="true">
                         <CliProxyIcon size="sm" />
@@ -780,7 +801,12 @@ export function ApiCredentialProfileListItem({
                       data-testid={
                         API_CREDENTIAL_PROFILES_TEST_IDS.exportToClaudeCodeRouterMenuItem
                       }
-                      onSelect={() => onExport(profile, "claudeCodeRouter")}
+                      onSelect={() =>
+                        onExport(
+                          profile,
+                          API_CREDENTIAL_PROFILE_EXPORT_ACTIONS.ClaudeCodeRouter,
+                        )
+                      }
                     >
                       <span aria-hidden="true">
                         <ClaudeCodeRouterIcon size="sm" />
@@ -796,7 +822,12 @@ export function ApiCredentialProfileListItem({
                       data-guidance-highlight={
                         isImportEntryHighlighted ? "true" : undefined
                       }
-                      onSelect={() => onExport(profile, "managedSite")}
+                      onSelect={() =>
+                        onExport(
+                          profile,
+                          API_CREDENTIAL_PROFILE_EXPORT_ACTIONS.ManagedSite,
+                        )
+                      }
                     >
                       <span aria-hidden="true">
                         <ManagedSiteIcon siteType={managedSiteType} size="sm" />

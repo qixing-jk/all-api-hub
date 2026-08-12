@@ -22,6 +22,10 @@ import {
 } from "~/services/productAnalytics/contracts"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 
+import {
+  API_CREDENTIAL_PROFILES_VIEW_VARIANTS,
+  type ApiCredentialProfilesViewVariant,
+} from "../contracts"
 import type { ApiCredentialProfilesController } from "../hooks/useApiCredentialProfilesController"
 import { API_CREDENTIAL_PROFILES_TEST_IDS } from "../testIds"
 import { ApiCredentialProfileListItem } from "./ApiCredentialProfileListItem"
@@ -29,7 +33,7 @@ import { ApiCredentialProfileListItem } from "./ApiCredentialProfileListItem"
 interface ApiCredentialProfilesListProps {
   profiles: ApiCredentialProfile[]
   controller: ApiCredentialProfilesController
-  variant?: "options" | "popup"
+  variant?: ApiCredentialProfilesViewVariant
   isFiltering?: boolean
   guidedImportEntry?: {
     profileId: string
@@ -346,7 +350,7 @@ function EndpointProfileList({
 export function ApiCredentialProfilesList({
   profiles,
   controller,
-  variant = "options",
+  variant = API_CREDENTIAL_PROFILES_VIEW_VARIANTS.Options,
   isFiltering = false,
   guidedImportEntry,
 }: ApiCredentialProfilesListProps) {
@@ -415,7 +419,10 @@ export function ApiCredentialProfilesList({
   }
 
   const hasMultipleGroups = groups.length > 1
-  const useSidebar = hasMultipleGroups && variant === "options" && isDesktop
+  const useSidebar =
+    hasMultipleGroups &&
+    variant === API_CREDENTIAL_PROFILES_VIEW_VARIANTS.Options &&
+    isDesktop
 
   return (
     <div

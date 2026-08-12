@@ -2,6 +2,7 @@ import { generateText } from "ai"
 
 import { nowMs, okLatency } from "../probeTiming"
 import { createModel } from "../providers"
+import { API_VERIFICATION_PROBE_STATUSES } from "../types"
 import type {
   ApiVerificationApiType,
   ApiVerificationProbeResult,
@@ -49,7 +50,9 @@ export async function runTextGenerationProbe(
 
     return {
       id: "text-generation",
-      status: ok ? "pass" : "fail",
+      status: ok
+        ? API_VERIFICATION_PROBE_STATUSES.Pass
+        : API_VERIFICATION_PROBE_STATUSES.Fail,
       latencyMs: okLatency(startedAt),
       summary: ok ? "Text generation succeeded" : "Unexpected response text",
       summaryKey: ok
@@ -78,7 +81,7 @@ export async function runTextGenerationProbe(
 
     return {
       id: "text-generation",
-      status: "fail",
+      status: API_VERIFICATION_PROBE_STATUSES.Fail,
       latencyMs: okLatency(startedAt),
       summary,
       summaryKey: diagnostics.summaryKey,

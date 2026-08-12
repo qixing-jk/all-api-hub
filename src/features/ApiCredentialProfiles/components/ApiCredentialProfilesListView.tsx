@@ -30,6 +30,10 @@ import {
 } from "~/services/verification/aiApiVerification"
 import { openKeysPage } from "~/utils/navigation"
 
+import {
+  API_CREDENTIAL_PROFILES_VIEW_VARIANTS,
+  type ApiCredentialProfilesViewVariant,
+} from "../contracts"
 import type { ApiCredentialProfilesController } from "../hooks/useApiCredentialProfilesController"
 import {
   buildApiCredentialProfileListModel,
@@ -40,7 +44,7 @@ import { ApiCredentialProfilesList } from "./ApiCredentialProfilesList"
 
 export interface ApiCredentialProfilesListViewProps {
   controller: ApiCredentialProfilesController
-  variant?: "options" | "popup"
+  variant?: ApiCredentialProfilesViewVariant
   autoFocusSearch?: boolean
   guidedImportEntryRequest?: number
   className?: string
@@ -57,13 +61,14 @@ const analyticsApiTypeByVerificationApiType: Partial<
   [API_TYPES.ANTHROPIC]: PRODUCT_ANALYTICS_API_TYPES.Anthropic,
   [API_TYPES.GOOGLE]: PRODUCT_ANALYTICS_API_TYPES.Google,
 }
+const FILTER_ANALYTICS_DEBOUNCE_MS = 400
 
 /**
  * Search/filterable API credential profiles view used in Options and Popup variants.
  */
 export function ApiCredentialProfilesListView({
   controller,
-  variant = "options",
+  variant = API_CREDENTIAL_PROFILES_VIEW_VARIANTS.Options,
   autoFocusSearch = false,
   guidedImportEntryRequest = 0,
   className,
@@ -82,7 +87,8 @@ export function ApiCredentialProfilesListView({
   const [lastFilterMode, setLastFilterMode] =
     useState<ApiCredentialProfileFilterMode | null>(null)
 
-  const searchInputSize = variant === "popup" ? "sm" : "default"
+  const searchInputSize =
+    variant === API_CREDENTIAL_PROFILES_VIEW_VARIANTS.Popup ? "sm" : "default"
 
   const clearSearch = useCallback(() => {
     setSearchTerm("")
@@ -168,11 +174,11 @@ export function ApiCredentialProfilesListView({
         featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
         actionId: PRODUCT_ANALYTICS_ACTION_IDS.FilterApiCredentialProfiles,
         surfaceId:
-          variant === "popup"
+          variant === API_CREDENTIAL_PROFILES_VIEW_VARIANTS.Popup
             ? PRODUCT_ANALYTICS_SURFACE_IDS.PopupViewTabs
             : PRODUCT_ANALYTICS_SURFACE_IDS.OptionsApiCredentialProfilesPage,
         entrypoint:
-          variant === "popup"
+          variant === API_CREDENTIAL_PROFILES_VIEW_VARIANTS.Popup
             ? PRODUCT_ANALYTICS_ENTRYPOINTS.Popup
             : PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
         result: PRODUCT_ANALYTICS_RESULTS.Success,
@@ -191,7 +197,7 @@ export function ApiCredentialProfilesListView({
           usageDataPresent: filteredProfiles.length > 0,
         },
       })
-    }, 400)
+    }, FILTER_ANALYTICS_DEBOUNCE_MS)
 
     return () => window.clearTimeout(timeoutId)
   }, [
@@ -203,7 +209,7 @@ export function ApiCredentialProfilesListView({
   ])
 
   const emptyStateAddAnalyticsAction =
-    variant === "popup"
+    variant === API_CREDENTIAL_PROFILES_VIEW_VARIANTS.Popup
       ? {
           featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
           actionId:
@@ -272,7 +278,10 @@ export function ApiCredentialProfilesListView({
           value={apiTypeFilter}
           onChange={handleApiTypeFilterChange}
           placeholder={t("apiCredentialProfiles:controls.apiTypePlaceholder")}
-          className={cn(variant === "popup" && "h-8 px-2 text-xs")}
+          className={cn(
+            variant === API_CREDENTIAL_PROFILES_VIEW_VARIANTS.Popup &&
+              "h-8 px-2 text-xs",
+          )}
         />
       </div>
 

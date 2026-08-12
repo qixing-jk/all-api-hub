@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next"
 
 import {
+  API_VERIFICATION_HISTORY_STATUSES,
   getVerificationSummaryLatencyMs,
   type ApiVerificationHistorySummary,
 } from "~/services/verification/verificationResultHistory"
@@ -38,7 +39,9 @@ export function VerificationHistorySummary({
       }
     >
       <span className="sr-only">{t("verifyDialog.history.lastVerified")}</span>
-      <VerificationStatusBadge status={summary?.status ?? "unverified"} />
+      <VerificationStatusBadge
+        status={summary?.status ?? API_VERIFICATION_HISTORY_STATUSES.Unverified}
+      />
       {latencyMs !== null ? (
         <span className="dark:text-dark-text-tertiary truncate text-[11px] text-gray-500 sm:text-xs">
           {formatLatency(latencyMs)}

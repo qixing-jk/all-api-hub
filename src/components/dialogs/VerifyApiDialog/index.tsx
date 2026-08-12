@@ -42,6 +42,7 @@ import {
 import { resolveProductAnalyticsErrorCategoryFromProbeResult } from "~/services/productAnalytics/verification"
 import {
   API_TYPES,
+  API_VERIFICATION_PROBE_STATUSES,
   getApiVerificationProbeDefinitions,
   guessModelIdFromToken,
   runApiVerificationProbe,
@@ -102,7 +103,7 @@ function buildStoppedProbeResult(
 ): ApiVerificationProbeResult {
   return {
     id: probeId,
-    status: "unsupported",
+    status: API_VERIFICATION_PROBE_STATUSES.Unsupported,
     latencyMs: 0,
     summary: "Stopped",
     summaryKey: "verifyDialog.summaries.stopped",
@@ -396,7 +397,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
 
       const fallback: ApiVerificationProbeResult = {
         id: probeId,
-        status: "fail",
+        status: API_VERIFICATION_PROBE_STATUSES.Fail,
         latencyMs: 0,
         summary: t("verifyDialog.errors.unexpected"),
         ...buildSafeProbeFailureDiagnostics(error, sanitizedMessage),
@@ -453,10 +454,10 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
 
         const result = await runProbe(probe.id, abortController.signal)
         if (!result) continue
-        if (result.status === "pass") {
+        if (result.status === API_VERIFICATION_PROBE_STATUSES.Pass) {
           hasExecutedProbe = true
           successCount += 1
-        } else if (result.status === "fail") {
+        } else if (result.status === API_VERIFICATION_PROBE_STATUSES.Fail) {
           hasExecutedProbe = true
           failureCount += 1
           failedProbeResult ??= result
@@ -782,7 +783,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
                     result.summaryKey,
                     result.summaryParams,
                   ) ?? result.summary
-                : result?.status === "unsupported"
+                : result?.status === API_VERIFICATION_PROBE_STATUSES.Unsupported
                   ? t("verifyDialog.unsupportedProbeForApiType", {
                       probe: getApiVerificationProbeLabel(
                         t,

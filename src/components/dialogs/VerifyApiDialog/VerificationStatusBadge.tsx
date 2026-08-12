@@ -2,8 +2,14 @@ import { CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/outline"
 import { useTranslation } from "react-i18next"
 
 import { Badge } from "~/components/ui"
-import type { ApiVerificationProbeStatus } from "~/services/verification/aiApiVerification"
-import type { ApiVerificationHistoryDisplayStatus } from "~/services/verification/verificationResultHistory"
+import {
+  API_VERIFICATION_PROBE_STATUSES,
+  type ApiVerificationProbeStatus,
+} from "~/services/verification/aiApiVerification"
+import {
+  API_VERIFICATION_HISTORY_STATUSES,
+  type ApiVerificationHistoryDisplayStatus,
+} from "~/services/verification/verificationResultHistory"
 
 type VerificationStatusBadgeProps = {
   status: ApiVerificationProbeStatus | ApiVerificationHistoryDisplayStatus
@@ -18,7 +24,7 @@ export function VerificationStatusBadge({
 }: VerificationStatusBadgeProps) {
   const { t } = useTranslation("aiApiVerification")
 
-  if (status === "pass") {
+  if (status === API_VERIFICATION_PROBE_STATUSES.Pass) {
     return (
       <Badge variant="success" size="sm">
         <span className="flex items-center gap-1">
@@ -29,7 +35,7 @@ export function VerificationStatusBadge({
     )
   }
 
-  if (status === "unsupported") {
+  if (status === API_VERIFICATION_PROBE_STATUSES.Unsupported) {
     return (
       <Badge variant="outline" size="sm">
         {t("verifyDialog.status.unsupported")}
@@ -37,7 +43,7 @@ export function VerificationStatusBadge({
     )
   }
 
-  if (status === "unverified") {
+  if (status === API_VERIFICATION_HISTORY_STATUSES.Unverified) {
     return (
       <Badge variant="outline" size="sm">
         {t("verifyDialog.status.unverified")}

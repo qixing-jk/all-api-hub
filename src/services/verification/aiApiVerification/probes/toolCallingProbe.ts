@@ -2,6 +2,7 @@ import { generateText, jsonSchema, tool } from "ai"
 
 import { nowMs, okLatency } from "../probeTiming"
 import { createModel } from "../providers"
+import { API_VERIFICATION_PROBE_STATUSES } from "../types"
 import type {
   ApiVerificationApiType,
   ApiVerificationProbeResult,
@@ -72,7 +73,7 @@ export async function runToolCallingProbe(
     if (!toolCalled(result)) {
       return {
         id: "tool-calling",
-        status: "fail",
+        status: API_VERIFICATION_PROBE_STATUSES.Fail,
         latencyMs: okLatency(startedAt),
         summary: "No tool call detected (model may not support tools)",
         summaryKey: "verifyDialog.summaries.noToolCallDetected",
@@ -98,7 +99,7 @@ export async function runToolCallingProbe(
 
     return {
       id: "tool-calling",
-      status: "pass",
+      status: API_VERIFICATION_PROBE_STATUSES.Pass,
       latencyMs: okLatency(startedAt),
       summary: "Tool call succeeded",
       summaryKey: "verifyDialog.summaries.toolCallSucceeded",
@@ -129,7 +130,7 @@ export async function runToolCallingProbe(
     const diagnostics = buildSafeProbeFailureDiagnostics(error, summary)
     return {
       id: "tool-calling",
-      status: "fail",
+      status: API_VERIFICATION_PROBE_STATUSES.Fail,
       latencyMs: okLatency(startedAt),
       summary: summary || "Request failed",
       summaryKey: diagnostics.summaryKey,

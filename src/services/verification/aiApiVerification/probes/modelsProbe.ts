@@ -7,7 +7,7 @@ import type {
   ApiVerificationApiType,
   ApiVerificationProbeResult,
 } from "../types"
-import { API_TYPES } from "../types"
+import { API_TYPES, API_VERIFICATION_PROBE_STATUSES } from "../types"
 import {
   buildSafeProbeFailureDiagnostics,
   isAbortError,
@@ -135,7 +135,10 @@ export async function runModelsProbe(
       modelId: suggestedModelId,
       result: {
         id: "models",
-        status: modelIds.length > 0 ? "pass" : "fail",
+        status:
+          modelIds.length > 0
+            ? API_VERIFICATION_PROBE_STATUSES.Pass
+            : API_VERIFICATION_PROBE_STATUSES.Fail,
         latencyMs: okLatency(startedAt),
         summary:
           modelIds.length > 0
@@ -171,7 +174,7 @@ export async function runModelsProbe(
     return {
       result: {
         id: "models",
-        status: "fail",
+        status: API_VERIFICATION_PROBE_STATUSES.Fail,
         latencyMs: okLatency(startedAt),
         summary,
         summaryKey: diagnostics.summaryKey,

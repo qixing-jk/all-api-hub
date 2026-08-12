@@ -9,6 +9,7 @@ import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/ma
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import {
   API_TYPES,
+  API_VERIFICATION_PROBE_STATUSES,
   runApiVerificationProbe,
   toSanitizedErrorSummary,
   type ApiVerificationApiType,
@@ -327,7 +328,7 @@ export async function matchesProbeFilterRule(
           probeId,
           abortSignal: context.abortSignal,
         })
-        const matched = result.status === "pass"
+        const matched = result.status === API_VERIFICATION_PROBE_STATUSES.Pass
         context.cache.set(cacheKey, matched)
         return matched
       } catch (error) {

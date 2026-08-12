@@ -1,5 +1,8 @@
-import type { ApiVerificationApiType } from "~/services/verification/aiApiVerification"
-import { runApiVerificationProbe } from "~/services/verification/aiApiVerification"
+import {
+  API_VERIFICATION_PROBE_STATUSES,
+  runApiVerificationProbe,
+  type ApiVerificationApiType,
+} from "~/services/verification/aiApiVerification"
 
 import type { CliSupportResult, CliSupportStatus, CliToolId } from "../types"
 
@@ -40,7 +43,7 @@ export async function runCliToolCallingSimulation(
   })
 
   const status: CliSupportStatus = probeResult.status
-  const isPassed = status === "pass"
+  const isPassed = status === API_VERIFICATION_PROBE_STATUSES.Pass
   const { id: probeId, ...rest } = probeResult
 
   return {

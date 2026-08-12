@@ -41,7 +41,10 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import { resolveProductAnalyticsErrorCategoryFromProbeResult } from "~/services/productAnalytics/verification"
-import { guessModelIdFromToken } from "~/services/verification/aiApiVerification"
+import {
+  API_VERIFICATION_PROBE_STATUSES,
+  guessModelIdFromToken,
+} from "~/services/verification/aiApiVerification"
 import {
   inferHttpStatus,
   inferStructuredHttpStatus,
@@ -105,7 +108,7 @@ function buildStoppedToolResult(toolId: (typeof CLI_TOOL_IDS)[number]) {
   return {
     id: toolId,
     probeId: "tool-calling" as const,
-    status: "unsupported" as const,
+    status: API_VERIFICATION_PROBE_STATUSES.Unsupported,
     latencyMs: 0,
     summary: "Stopped",
     summaryKey: "verifyDialog.summaries.stopped",
@@ -397,7 +400,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
                   result: {
                     id: toolId,
                     probeId: "tool-calling",
-                    status: "fail",
+                    status: API_VERIFICATION_PROBE_STATUSES.Fail,
                     latencyMs: Math.max(0, finishedAt - startedAt),
                     summary: "No API key is available for this runtime key.",
                     summaryKey: "verifyDialog.summaries.noRuntimeKeySecret",
@@ -489,7 +492,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
       const failureResult: CliSupportResult = {
         id: toolId,
         probeId: "tool-calling",
-        status: "fail",
+        status: API_VERIFICATION_PROBE_STATUSES.Fail,
         latencyMs: Math.max(0, finishedAt - startedAt),
         summary: sanitizedMessage || "Unknown error",
         summaryKey,
@@ -556,10 +559,10 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
         if (shouldStopRef.current || abortController.signal.aborted) break
         const result = await runTool(toolId, abortController.signal)
         if (!result) continue
-        if (result.status === "pass") {
+        if (result.status === API_VERIFICATION_PROBE_STATUSES.Pass) {
           hasExecutedTool = true
           successCount += 1
-        } else if (result.status === "fail") {
+        } else if (result.status === API_VERIFICATION_PROBE_STATUSES.Fail) {
           hasExecutedTool = true
           failureCount += 1
           failedToolResult ??= result

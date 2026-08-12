@@ -15,6 +15,7 @@ import {
 } from "~/services/productAnalytics/contracts"
 import { resolveProductAnalyticsErrorCategoryFromProbeResult } from "~/services/productAnalytics/verification"
 import {
+  API_VERIFICATION_PROBE_STATUSES,
   getApiVerificationProbeDefinitions,
   type ApiVerificationApiType,
   type ApiVerificationProbeId,
@@ -132,7 +133,7 @@ function buildMissingModelResult(
 ): ApiCheckProbeResultWithAnalyticsCategory {
   return {
     id: probeId,
-    status: "fail",
+    status: API_VERIFICATION_PROBE_STATUSES.Fail,
     latencyMs: 0,
     summary: "No model id provided",
     summaryKey: "verifyDialog.requiresModelId",
@@ -373,7 +374,7 @@ export function useApiCheckProbeRunner({
 
         const fallback: ApiCheckProbeResultWithAnalyticsCategory = {
           id: probeId,
-          status: "fail",
+          status: API_VERIFICATION_PROBE_STATUSES.Fail,
           latencyMs: 0,
           summary: message,
           analyticsErrorCategory: failedResponse?.errorCategory,
@@ -410,7 +411,7 @@ export function useApiCheckProbeRunner({
           resolveProductAnalyticsErrorCategoryFromError(error)
         const fallback: ApiCheckProbeResultWithAnalyticsCategory = {
           id: probeId,
-          status: "fail",
+          status: API_VERIFICATION_PROBE_STATUSES.Fail,
           latencyMs: 0,
           summary: t("webAiApiCheck:modal.errors.runProbeFailed"),
           analyticsErrorCategory: errorCategory,
@@ -574,10 +575,10 @@ export function useApiCheckProbeRunner({
 
       if (shouldStopRunAllRef.current) {
         const successCount = results.filter(
-          (result) => result.status === "pass",
+          (result) => result.status === API_VERIFICATION_PROBE_STATUSES.Pass,
         ).length
         const failureCount = results.filter(
-          (result) => result.status === "fail",
+          (result) => result.status === API_VERIFICATION_PROBE_STATUSES.Fail,
         ).length
         const skippedCount = Math.max(
           probeDefinitions.length - successCount - failureCount,
@@ -604,13 +605,14 @@ export function useApiCheckProbeRunner({
       }
 
       const successCount = results.filter(
-        (result) => result.status === "pass",
+        (result) => result.status === API_VERIFICATION_PROBE_STATUSES.Pass,
       ).length
       const failureCount = results.filter(
-        (result) => result.status === "fail",
+        (result) => result.status === API_VERIFICATION_PROBE_STATUSES.Fail,
       ).length
       const skippedCount = results.filter(
-        (result) => result.status === "unsupported",
+        (result) =>
+          result.status === API_VERIFICATION_PROBE_STATUSES.Unsupported,
       ).length
       const analyticsResult =
         failureCount > 0
@@ -623,10 +625,15 @@ export function useApiCheckProbeRunner({
         ...(analyticsResult === PRODUCT_ANALYTICS_RESULTS.Failure
           ? {
               errorCategory:
-                results.find((result) => result.status === "fail")
-                  ?.analyticsErrorCategory ??
+                results.find(
+                  (result) =>
+                    result.status === API_VERIFICATION_PROBE_STATUSES.Fail,
+                )?.analyticsErrorCategory ??
                 resolveProductAnalyticsErrorCategoryFromProbeResult(
-                  results.find((result) => result.status === "fail"),
+                  results.find(
+                    (result) =>
+                      result.status === API_VERIFICATION_PROBE_STATUSES.Fail,
+                  ),
                 ),
             }
           : {}),

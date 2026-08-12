@@ -3,6 +3,7 @@ import type { ApiToken } from "~/types"
 import { resolveRequestedModelId } from "./modelResolver"
 import { apiVerificationProbeRegistry } from "./probeRegistry"
 import { runApiVerificationSuite } from "./suiteRunner"
+import { API_VERIFICATION_PROBE_STATUSES } from "./types"
 import type {
   ApiVerificationApiType,
   ApiVerificationProbeId,
@@ -43,7 +44,7 @@ export async function runApiVerificationProbe(
   if (registryEntry.requiresModelId && !resolvedModelId?.trim()) {
     return {
       id: params.probeId,
-      status: "fail",
+      status: API_VERIFICATION_PROBE_STATUSES.Fail,
       latencyMs: 0,
       summary: "No model id provided",
       summaryKey: "verifyDialog.summaries.noModelIdProvided",

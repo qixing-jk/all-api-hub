@@ -49,7 +49,10 @@ import type {
   ApiCredentialTelemetryConfig,
   ApiCredentialTelemetryJsonPathMap,
 } from "~/types/apiCredentialProfiles"
-import { DEFAULT_API_CREDENTIAL_TELEMETRY_CONFIG } from "~/types/apiCredentialProfiles"
+import {
+  API_CREDENTIAL_TELEMETRY_MODES,
+  DEFAULT_API_CREDENTIAL_TELEMETRY_CONFIG,
+} from "~/types/apiCredentialProfiles"
 import { createLogger } from "~/utils/core/logger"
 
 import { API_CREDENTIAL_PROFILES_TEST_IDS } from "../testIds"
@@ -304,7 +307,9 @@ export function ApiCredentialProfileDialog({
       )
     }
 
-    if (telemetryMode === "customReadOnlyEndpoint") {
+    if (
+      telemetryMode === API_CREDENTIAL_TELEMETRY_MODES.CustomReadOnlyEndpoint
+    ) {
       const trimmedEndpoint = customEndpoint.trim()
 
       if (!trimmedEndpoint) {
@@ -343,12 +348,14 @@ export function ApiCredentialProfileDialog({
   }
 
   const buildTelemetryConfig = (): ApiCredentialTelemetryConfig => {
-    if (telemetryMode !== "customReadOnlyEndpoint") {
+    if (
+      telemetryMode !== API_CREDENTIAL_TELEMETRY_MODES.CustomReadOnlyEndpoint
+    ) {
       return { mode: telemetryMode }
     }
 
     return {
-      mode: "customReadOnlyEndpoint",
+      mode: API_CREDENTIAL_TELEMETRY_MODES.CustomReadOnlyEndpoint,
       customEndpoint: {
         endpoint: customEndpoint.trim(),
         ...(customBearerToken.trim()
@@ -656,35 +663,35 @@ export function ApiCredentialProfileDialog({
               )}
               options={[
                 {
-                  value: "auto",
+                  value: API_CREDENTIAL_TELEMETRY_MODES.Auto,
                   label: t("apiCredentialProfiles:dialog.telemetryModes.auto"),
                 },
                 {
-                  value: "disabled",
+                  value: API_CREDENTIAL_TELEMETRY_MODES.Disabled,
                   label: t(
                     "apiCredentialProfiles:dialog.telemetryModes.disabled",
                   ),
                 },
                 {
-                  value: "newApiTokenUsage",
+                  value: API_CREDENTIAL_TELEMETRY_MODES.NewApiTokenUsage,
                   label: t(
                     "apiCredentialProfiles:dialog.telemetryModes.newApiTokenUsage",
                   ),
                 },
                 {
-                  value: "sub2apiUsage",
+                  value: API_CREDENTIAL_TELEMETRY_MODES.Sub2ApiUsage,
                   label: t(
                     "apiCredentialProfiles:dialog.telemetryModes.sub2apiUsage",
                   ),
                 },
                 {
-                  value: "openaiBilling",
+                  value: API_CREDENTIAL_TELEMETRY_MODES.OpenAiBilling,
                   label: t(
                     "apiCredentialProfiles:dialog.telemetryModes.openaiBilling",
                   ),
                 },
                 {
-                  value: "customReadOnlyEndpoint",
+                  value: API_CREDENTIAL_TELEMETRY_MODES.CustomReadOnlyEndpoint,
                   label: t(
                     "apiCredentialProfiles:dialog.telemetryModes.customReadOnlyEndpoint",
                   ),
@@ -701,7 +708,8 @@ export function ApiCredentialProfileDialog({
             />
           </FormField>
 
-          {telemetryMode === "customReadOnlyEndpoint" && (
+          {telemetryMode ===
+            API_CREDENTIAL_TELEMETRY_MODES.CustomReadOnlyEndpoint && (
             <details
               open
               className="dark:border-dark-bg-tertiary rounded-lg border border-gray-200 p-3"

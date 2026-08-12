@@ -6,13 +6,25 @@ import type { HealthStatus, TokenUsage } from "~/types"
  */
 export const API_CREDENTIAL_PROFILES_CONFIG_VERSION = 4
 
+export const API_CREDENTIAL_TELEMETRY_MODES = {
+  Disabled: "disabled",
+  Auto: "auto",
+  OpenAiBilling: "openaiBilling",
+  NewApiTokenUsage: "newApiTokenUsage",
+  Sub2ApiUsage: "sub2apiUsage",
+  CustomReadOnlyEndpoint: "customReadOnlyEndpoint",
+} as const
+
 export type ApiCredentialTelemetryCapabilityMode =
-  | "disabled"
-  | "auto"
-  | "openaiBilling"
-  | "newApiTokenUsage"
-  | "sub2apiUsage"
-  | "customReadOnlyEndpoint"
+  (typeof API_CREDENTIAL_TELEMETRY_MODES)[keyof typeof API_CREDENTIAL_TELEMETRY_MODES]
+
+export const API_CREDENTIAL_TELEMETRY_SOURCES = {
+  ...API_CREDENTIAL_TELEMETRY_MODES,
+  Models: "models",
+} as const
+
+export type ApiCredentialTelemetrySource =
+  (typeof API_CREDENTIAL_TELEMETRY_SOURCES)[keyof typeof API_CREDENTIAL_TELEMETRY_SOURCES]
 
 export type ApiCredentialTelemetryJsonPathMap = {
   balanceUsd?: string
@@ -46,28 +58,26 @@ export type ApiCredentialTelemetryConfig = {
   customEndpoint?: ApiCredentialTelemetryCustomEndpoint
 }
 
-export const API_CREDENTIAL_TELEMETRY_CAPABILITY_MODES: ApiCredentialTelemetryCapabilityMode[] =
-  [
-    "disabled",
-    "auto",
-    "openaiBilling",
-    "newApiTokenUsage",
-    "sub2apiUsage",
-    "customReadOnlyEndpoint",
-  ]
+export const API_CREDENTIAL_TELEMETRY_CAPABILITY_MODES = Object.values(
+  API_CREDENTIAL_TELEMETRY_MODES,
+)
 
 export const DEFAULT_API_CREDENTIAL_TELEMETRY_CONFIG: ApiCredentialTelemetryConfig =
   {
-    mode: "auto",
+    mode: API_CREDENTIAL_TELEMETRY_MODES.Auto,
   }
 
+export const API_CREDENTIAL_TELEMETRY_ATTEMPT_STATUSES = {
+  Success: "success",
+  Unsupported: "unsupported",
+  Error: "error",
+} as const
+
 export type ApiCredentialTelemetryAttemptStatus =
-  | "success"
-  | "unsupported"
-  | "error"
+  (typeof API_CREDENTIAL_TELEMETRY_ATTEMPT_STATUSES)[keyof typeof API_CREDENTIAL_TELEMETRY_ATTEMPT_STATUSES]
 
 export type ApiCredentialTelemetryAttempt = {
-  source: ApiCredentialTelemetryCapabilityMode | "models"
+  source: ApiCredentialTelemetrySource
   endpoint: string
   status: ApiCredentialTelemetryAttemptStatus
   message?: string
@@ -83,7 +93,7 @@ export type ApiCredentialTelemetrySnapshot = {
   lastSyncTime: number
   lastSuccessTime?: number
   lastError?: string
-  source?: ApiCredentialTelemetryCapabilityMode | "models"
+  source?: ApiCredentialTelemetrySource
   balanceUsd?: number
   todayCostUsd?: number
   todayRequests?: number

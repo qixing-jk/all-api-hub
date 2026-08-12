@@ -8,9 +8,10 @@ import {
   type ProductAnalyticsResult,
   type ProductAnalyticsSourceKind,
 } from "~/services/productAnalytics/contracts"
-import type {
-  ApiVerificationApiType,
-  ApiVerificationProbeResult,
+import {
+  API_VERIFICATION_PROBE_STATUSES,
+  type ApiVerificationApiType,
+  type ApiVerificationProbeResult,
 } from "~/services/verification/aiApiVerification"
 
 import type { ApiCheckOpenModalDetail } from "../events"
@@ -64,7 +65,11 @@ export function getProbeAnalyticsResult(
   result: ApiVerificationProbeResult | undefined,
 ): ProductAnalyticsResult {
   if (!result) return PRODUCT_ANALYTICS_RESULTS.Failure
-  if (result.status === "pass") return PRODUCT_ANALYTICS_RESULTS.Success
-  if (result.status === "unsupported") return PRODUCT_ANALYTICS_RESULTS.Skipped
+  if (result.status === API_VERIFICATION_PROBE_STATUSES.Pass) {
+    return PRODUCT_ANALYTICS_RESULTS.Success
+  }
+  if (result.status === API_VERIFICATION_PROBE_STATUSES.Unsupported) {
+    return PRODUCT_ANALYTICS_RESULTS.Skipped
+  }
   return PRODUCT_ANALYTICS_RESULTS.Failure
 }

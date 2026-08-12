@@ -1,4 +1,7 @@
-import type { ApiVerificationProbeResult } from "~/services/verification/aiApiVerification"
+import {
+  API_VERIFICATION_PROBE_STATUSES,
+  type ApiVerificationProbeResult,
+} from "~/services/verification/aiApiVerification"
 
 import { resolveProductAnalyticsErrorCategoryFromError } from "./actions"
 import {
@@ -14,7 +17,7 @@ export function resolveProductAnalyticsErrorCategoryFromProbeResult(
   fallbackCategory: ProductAnalyticsErrorCategory = PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
 ): ProductAnalyticsErrorCategory {
   if (!result) return fallbackCategory
-  if (result.status === "unsupported") {
+  if (result.status === API_VERIFICATION_PROBE_STATUSES.Unsupported) {
     return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unsupported
   }
 

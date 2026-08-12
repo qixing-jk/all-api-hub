@@ -2,6 +2,7 @@ import { generateText } from "ai"
 
 import { nowMs, okLatency } from "../probeTiming"
 import { createGoogleProvider, createOpenAIProvider } from "../providers"
+import { API_VERIFICATION_PROBE_STATUSES } from "../types"
 import type {
   ApiVerificationApiType,
   ApiVerificationProbeResult,
@@ -32,7 +33,7 @@ export async function runWebSearchProbe(
   if (params.apiType === "anthropic") {
     return {
       id: "web-search",
-      status: "unsupported",
+      status: API_VERIFICATION_PROBE_STATUSES.Unsupported,
       latencyMs: okLatency(startedAt),
       summary: "Web search probe is not supported for Anthropic endpoints",
       summaryKey: "verifyDialog.summaries.webSearchUnsupportedAnthropic",
@@ -72,7 +73,9 @@ export async function runWebSearchProbe(
 
       return {
         id: "web-search",
-        status: searched ? "pass" : "fail",
+        status: searched
+          ? API_VERIFICATION_PROBE_STATUSES.Pass
+          : API_VERIFICATION_PROBE_STATUSES.Fail,
         latencyMs: okLatency(startedAt),
         summary: searched ? "Web search succeeded" : "No web search results",
         summaryKey: searched
@@ -118,7 +121,9 @@ export async function runWebSearchProbe(
 
       return {
         id: "web-search",
-        status: searched ? "pass" : "fail",
+        status: searched
+          ? API_VERIFICATION_PROBE_STATUSES.Pass
+          : API_VERIFICATION_PROBE_STATUSES.Fail,
         latencyMs: okLatency(startedAt),
         summary: searched
           ? "Web search/grounding succeeded"
@@ -143,7 +148,7 @@ export async function runWebSearchProbe(
 
     return {
       id: "web-search",
-      status: "unsupported",
+      status: API_VERIFICATION_PROBE_STATUSES.Unsupported,
       latencyMs: okLatency(startedAt),
       summary: "Web search probe is not supported for this API type",
       summaryKey: "verifyDialog.summaries.webSearchUnsupportedForApiType",
@@ -163,7 +168,7 @@ export async function runWebSearchProbe(
 
     return {
       id: "web-search",
-      status: "fail",
+      status: API_VERIFICATION_PROBE_STATUSES.Fail,
       latencyMs: okLatency(startedAt),
       summary,
       summaryKey: diagnostics.summaryKey,

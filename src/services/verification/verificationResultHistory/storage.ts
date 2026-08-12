@@ -9,10 +9,13 @@ import type {
   ApiVerificationProbeId,
   ApiVerificationProbeStatus,
 } from "~/services/verification/aiApiVerification"
+import { API_VERIFICATION_PROBE_STATUSES } from "~/services/verification/aiApiVerification"
 import { apiVerificationProbeRegistry } from "~/services/verification/aiApiVerification/probeRegistry"
 import { onStorageChanged } from "~/utils/browser/browserApi"
 
 import {
+  API_VERIFICATION_HISTORY_STATUSES,
+  API_VERIFICATION_HISTORY_TARGET_KINDS,
   API_VERIFICATION_RESULT_HISTORY_CONFIG_VERSION,
   type ApiVerificationHistoryConfig,
   type ApiVerificationHistorySummary,
@@ -94,15 +97,22 @@ function normalizeTimestamp(input: unknown) {
 /**
  * Narrow persisted aggregate status values to the supported stored variants.
  */
-function isPersistedStatus(value: unknown): value is "pass" | "fail" {
-  return value === "pass" || value === "fail"
+function isPersistedStatus(
+  value: unknown,
+): value is ApiVerificationHistorySummary["status"] {
+  return (
+    value === API_VERIFICATION_HISTORY_STATUSES.Pass ||
+    value === API_VERIFICATION_HISTORY_STATUSES.Fail
+  )
 }
 
 /**
  * Validate persisted probe status values before rehydrating summaries.
  */
 function isProbeStatus(value: unknown): value is ApiVerificationProbeStatus {
-  return value === "pass" || value === "fail" || value === "unsupported"
+  return Object.values(API_VERIFICATION_PROBE_STATUSES).includes(
+    value as ApiVerificationProbeStatus,
+  )
 }
 
 /**
@@ -140,24 +150,34 @@ function coerceTarget(raw: unknown): ApiVerificationHistoryTarget | null {
   if (!raw || typeof raw !== "object") return null
 
   const value = raw as Record<string, unknown>
-  if (value.kind === "profile") {
+  if (value.kind === API_VERIFICATION_HISTORY_TARGET_KINDS.Profile) {
     const profileId = sanitizeText(value.profileId)
-    return profileId ? { kind: "profile", profileId } : null
-  }
-
-  if (value.kind === "profile-model") {
-    const profileId = sanitizeText(value.profileId)
-    const modelId = sanitizeText(value.modelId)
-    return profileId && modelId
-      ? { kind: "profile-model", profileId, modelId }
+    return profileId
+      ? { kind: API_VERIFICATION_HISTORY_TARGET_KINDS.Profile, profileId }
       : null
   }
 
-  if (value.kind === "account-model") {
+  if (value.kind === API_VERIFICATION_HISTORY_TARGET_KINDS.ProfileModel) {
+    const profileId = sanitizeText(value.profileId)
+    const modelId = sanitizeText(value.modelId)
+    return profileId && modelId
+      ? {
+          kind: API_VERIFICATION_HISTORY_TARGET_KINDS.ProfileModel,
+          profileId,
+          modelId,
+        }
+      : null
+  }
+
+  if (value.kind === API_VERIFICATION_HISTORY_TARGET_KINDS.AccountModel) {
     const accountId = sanitizeText(value.accountId)
     const modelId = sanitizeText(value.modelId)
     return accountId && modelId
-      ? { kind: "account-model", accountId, modelId }
+      ? {
+          kind: API_VERIFICATION_HISTORY_TARGET_KINDS.AccountModel,
+          accountId,
+          modelId,
+        }
       : null
   }
 
@@ -333,7 +353,7 @@ class VerificationResultHistoryStorageService {
               [
                 normalizedProfileId,
                 serializeVerificationHistoryTarget({
-                  kind: "profile",
+                  kind: API_VERIFICATION_HISTORY_TARGET_KINDS.Profile,
                   profileId: normalizedProfileId,
                 }),
               ],
@@ -346,8 +366,9 @@ class VerificationResultHistoryStorageService {
     const latestByProfileKey: Record<string, ApiVerificationHistorySummary> = {}
     for (const summary of await this.listSummaries()) {
       if (
-        summary.target.kind !== "profile" &&
-        summary.target.kind !== "profile-model"
+        summary.target.kind !== API_VERIFICATION_HISTORY_TARGET_KINDS.Profile &&
+        summary.target.kind !==
+          API_VERIFICATION_HISTORY_TARGET_KINDS.ProfileModel
       ) {
         continue
       }
