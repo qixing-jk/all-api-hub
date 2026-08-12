@@ -903,9 +903,9 @@ export async function stubNewApiSiteRoutes(
         body: JSON.stringify({
           success: true,
           message: "ok",
-          // This legacy array-shaped stub owns completion through an empty
-          // page; object-shaped New API responses use their page metadata.
-          data: page === 0 ? tokens : [],
+          // New API aliases p=0 and p=1 to the first page. This legacy
+          // array-shaped stub owns completion through the next empty page.
+          data: page <= 1 ? tokens : [],
         }),
       })
       return
