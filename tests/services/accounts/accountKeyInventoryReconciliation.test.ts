@@ -523,6 +523,35 @@ describe("reconcileAccountKeyInventory", () => {
     expect(provision).toHaveBeenCalledOnce()
   })
 
+  it("fails closed when requirements drift after an uncertain mutation", async () => {
+    const requirement = automaticRequirement("opaque:first", "First")
+    const inspect = vi
+      .fn<AccountKeyProvisioningSession["inspect"]>()
+      .mockResolvedValueOnce({ requirements: [requirement], items: [] })
+      .mockResolvedValueOnce({
+        requirements: [
+          automaticRequirement("opaque:replacement", "Replacement"),
+        ],
+        items: [],
+      })
+    const provision = vi.fn(async () => ({
+      certainty: "possibly-applied" as const,
+      failure: uncertainFailure,
+    }))
+
+    await expect(
+      reconcileAccountKeyInventory(createSession({ inspect, provision })),
+    ).resolves.toMatchObject({
+      inventoryStatus: "incomplete",
+      inventoryIssues: [{ code: "refresh-failed", count: 1 }],
+      requirementResults: [
+        { requirement, outcome: "uncertain", failure: uncertainFailure },
+      ],
+    })
+    expect(inspect).toHaveBeenCalledTimes(2)
+    expect(provision).toHaveBeenCalledOnce()
+  })
+
   it("continues serially after a definite rejection and reports every requirement", async () => {
     const requirements = [
       automaticRequirement("opaque:reject", "Rejected"),
@@ -730,6 +759,32 @@ describe("reconcileAccountKeyInventory", () => {
       }),
     ).rejects.toMatchObject({ name: "AbortError" })
     expect(rename).toHaveBeenCalledOnce()
+  })
+
+  it("uses an AbortError fallback when an aborted signal has no reason", async () => {
+    const requirement = automaticRequirement("opaque:abort", "Abort")
+    const signal = {
+      aborted: true,
+      reason: undefined,
+    } as AbortSignal
+    const provision = vi.fn()
+
+    await expect(
+      reconcileAccountKeyInventory(
+        createSession({
+          inspect: vi.fn(async () => ({
+            requirements: [requirement],
+            items: [],
+          })),
+          provision,
+        }),
+        { signal },
+      ),
+    ).rejects.toMatchObject({
+      name: "AbortError",
+      message: "The operation was aborted",
+    })
+    expect(provision).not.toHaveBeenCalled()
   })
 
   it("does not rename when inventory is incomplete", async () => {

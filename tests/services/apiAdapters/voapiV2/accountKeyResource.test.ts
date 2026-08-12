@@ -347,10 +347,22 @@ describe("VoAPI v2 account key resources", () => {
 
     await expect(session.provisioning!.inspect()).resolves.toMatchObject({
       items: [
-        { coverage: ACCOUNT_KEY_PROVISIONING_COVERAGE.Unusable },
-        { coverage: ACCOUNT_KEY_PROVISIONING_COVERAGE.Unusable },
-        { coverage: ACCOUNT_KEY_PROVISIONING_COVERAGE.Unknown },
-        { coverage: ACCOUNT_KEY_PROVISIONING_COVERAGE.Unknown },
+        {
+          ref: { resourceId: "1" },
+          coverage: ACCOUNT_KEY_PROVISIONING_COVERAGE.Unusable,
+        },
+        {
+          ref: { resourceId: "2" },
+          coverage: ACCOUNT_KEY_PROVISIONING_COVERAGE.Unusable,
+        },
+        {
+          ref: { resourceId: "3" },
+          coverage: ACCOUNT_KEY_PROVISIONING_COVERAGE.Unknown,
+        },
+        {
+          ref: { resourceId: "4" },
+          coverage: ACCOUNT_KEY_PROVISIONING_COVERAGE.Unknown,
+        },
       ],
     })
   })
@@ -601,6 +613,7 @@ describe("VoAPI v2 account key resources", () => {
         message: "Delete rejected",
       },
     })
+    expect(mockDeleteVoApiV2Token).toHaveBeenCalledTimes(2)
   })
 
   it("rejects unsupported editors and missing collection resources", async () => {
@@ -721,6 +734,7 @@ describe("VoAPI v2 account key resources", () => {
         },
       })
       expect(mockRenameVoApiV2Key).toHaveBeenCalledOnce()
+      expect(mockFetchAllVoApiV2RawKeys).toHaveBeenCalledTimes(2)
     },
   )
 

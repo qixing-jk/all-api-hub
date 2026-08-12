@@ -82,6 +82,32 @@ describe("native resource mutations", () => {
     })
   })
 
+  it("keeps an explicit not-applied classification after dispatch", async () => {
+    const result = await runNativeResourceMutation({
+      request: createRequest(),
+      execute: async (request) => {
+        request.observer?.onDispatch()
+        request.observer?.onResponse()
+        throw new ApiError(
+          "duplicate resource",
+          409,
+          "/api/resource",
+          API_ERROR_CODES.BUSINESS_ERROR,
+        )
+      },
+      mapFailure,
+      classifyError: (error, evidence) => {
+        expect(evidence).toEqual({ dispatched: true, responseReceived: true })
+        return isApiBusinessError(error) ? "not-applied" : undefined
+      },
+    })
+
+    expect(result).toEqual({
+      certainty: "not-applied",
+      failure: "duplicate resource",
+    })
+  })
+
   it("honors a provider's possibly-applied classification before dispatch", async () => {
     const result = await runNativeResourceMutation({
       request: createRequest(),

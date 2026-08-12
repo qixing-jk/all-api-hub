@@ -167,6 +167,42 @@ describe("useRepairCreatedKeyManagedSiteImport", () => {
     expect(result.current.createdReferenceCount).toBe(1)
   })
 
+  it.each([
+    {
+      name: "account identity",
+      ref: {
+        accountId: "other-account",
+        siteType: SITE_TYPES.NEW_API,
+        scopeKey: "scope-a",
+        resourceId: "resource-1",
+      },
+    },
+    {
+      name: "site type",
+      ref: {
+        accountId: "account-1",
+        siteType: SITE_TYPES.ONE_API,
+        scopeKey: "scope-a",
+        resourceId: "resource-1",
+      },
+    },
+  ])("discards a created ref with mismatched $name", ({ ref }) => {
+    const account = createAccount()
+    const { result } = renderHook(() =>
+      useRepairCreatedKeyManagedSiteImport({
+        accounts: [account],
+        isOpen: true,
+        isCurrentSessionResult: true,
+        managedSiteType: SITE_TYPES.NEW_API,
+        progress: createProgress(account, ref),
+        setProgress: vi.fn(),
+        t: testI18n.t,
+      }),
+    )
+
+    expect(result.current.createdReferenceCount).toBe(0)
+  })
+
   it("records completed imports with the exact resource ref", async () => {
     const account = createAccount()
     const ref: AccountKeyResourceRef = {

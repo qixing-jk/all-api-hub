@@ -1,4 +1,5 @@
 import { normalizeApiTokenKey } from "~/services/accountTokens/apiTokenKey"
+import { syncResolvedApiTokenKeyCache } from "~/services/accountTokens/tokenKeyResolver"
 import type { UserGroupInfo } from "~/services/accountTokens/tokenProvisioningModel"
 import {
   transformModelPricing,
@@ -95,6 +96,7 @@ export const fetchAccountTokens = async (
     },
   )
 
+  syncResolvedApiTokenKeyCache(request, tokens)
   return tokens
 }
 

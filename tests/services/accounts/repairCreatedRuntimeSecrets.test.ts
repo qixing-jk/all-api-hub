@@ -118,6 +118,53 @@ describe("repairCreatedRuntimeSecrets", () => {
     ).resolves.toBeNull()
   })
 
+  it.each([
+    {
+      name: "non-object cache",
+      value: "invalid-cache",
+    },
+    {
+      name: "unsupported version",
+      value: { version: 2, jobId: "job-example", entries: [] },
+    },
+    {
+      name: "blank job identity",
+      value: { version: 1, jobId: " ", entries: [] },
+    },
+    {
+      name: "non-array entries",
+      value: { version: 1, jobId: "job-example", entries: {} },
+    },
+    {
+      name: "malformed entry",
+      value: {
+        version: 1,
+        jobId: "job-example",
+        entries: [{ ref: REF, secret: "" }],
+      },
+    },
+    {
+      name: "duplicate refs",
+      value: {
+        version: 1,
+        jobId: "job-example",
+        entries: [
+          { ref: REF, secret: "sk-example-first-secret" },
+          { ref: REF, secret: "sk-example-first-secret" },
+        ],
+      },
+    },
+  ])("rejects a malformed session cache with $name", async ({ value }) => {
+    mocks.sessionStorage.set(
+      ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS.REPAIR_CREATED_RUNTIME_SECRETS,
+      value,
+    )
+
+    await expect(
+      resolveRepairCreatedRuntimeSecret("job-example", REF),
+    ).resolves.toBeNull()
+  })
+
   it("reports rejected writes and invalid reset requests without exposing secrets", async () => {
     const storageError = new Error("session storage unavailable")
     mocks.setSessionStorageValues.mockRejectedValueOnce(storageError)
@@ -141,6 +188,55 @@ describe("repairCreatedRuntimeSecrets", () => {
       "Failed to reset repair-created runtime secret cache",
     )
     expect(JSON.stringify(mocks.loggerWarn.mock.calls)).not.toContain("sk-")
+  })
+
+  it("continues queued updates after a write failure", async () => {
+    mocks.setSessionStorageValues.mockRejectedValueOnce(
+      new Error("session storage unavailable"),
+    )
+
+    await expect(resetRepairCreatedRuntimeSecrets("failed-job")).resolves.toBe(
+      false,
+    )
+    await expect(resetRepairCreatedRuntimeSecrets("next-job")).resolves.toBe(
+      true,
+    )
+    await expect(
+      captureRepairCreatedRuntimeSecrets("next-job", [
+        { ref: REF, secret: "sk-example-next-secret" },
+      ]),
+    ).resolves.toBe(true)
+    await expect(
+      resolveRepairCreatedRuntimeSecret("next-job", REF),
+    ).resolves.toBe("sk-example-next-secret")
+  })
+
+  it("rejects invalid capture entries and discard refs without writing", async () => {
+    await expect(resetRepairCreatedRuntimeSecrets("job-example")).resolves.toBe(
+      true,
+    )
+    mocks.setSessionStorageValues.mockClear()
+
+    await expect(
+      captureRepairCreatedRuntimeSecrets("job-example", [
+        { ref: REF, secret: "" },
+      ]),
+    ).resolves.toBe(false)
+    await expect(
+      discardRepairCreatedRuntimeSecrets("job-example", [
+        { ...REF, resourceId: "" },
+      ]),
+    ).resolves.toBe(false)
+    await expect(
+      resolveRepairCreatedRuntimeSecret(" ", REF),
+    ).resolves.toBeNull()
+    await expect(
+      resolveRepairCreatedRuntimeSecret("job-example", {
+        ...REF,
+        resourceId: "",
+      }),
+    ).resolves.toBeNull()
+    expect(mocks.setSessionStorageValues).not.toHaveBeenCalled()
   })
 
   it("deduplicates identical refs but rejects conflicting secrets in one capture", async () => {

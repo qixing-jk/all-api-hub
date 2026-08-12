@@ -633,7 +633,7 @@ async function startDnrCaptureNewApiServer(): Promise<DnrCaptureNewApiServer> {
         success: true,
         message: "ok",
         data:
-          page === 0
+          page <= 1
             ? [
                 {
                   id: account.tokenId,

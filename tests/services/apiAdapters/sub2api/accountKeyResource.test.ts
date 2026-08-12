@@ -626,6 +626,34 @@ describe("Sub2API account key resources", () => {
     expect(mockCreateSub2ApiTokenForGroupId).toHaveBeenCalledOnce()
   })
 
+  it("prefers a dispatched create failure when reconciliation also fails", async () => {
+    mockFetchSub2ApiGroupDescriptors.mockResolvedValueOnce([
+      { id: 9, displayName: "Shared", description: "First", ratio: 1 },
+    ])
+    mockFetchAccountTokens
+      .mockResolvedValueOnce([token({ id: 1 })])
+      .mockRejectedValueOnce(new Error("inventory unavailable"))
+    mockCreateSub2ApiTokenForGroupId.mockImplementationOnce(
+      async (mutationRequest) => {
+        mutationRequest.observer?.onDispatch()
+        throw new Error("create timed out")
+      },
+    )
+    const session = await sub2ApiAccountKeyResources.open({
+      account: { id: "account-example", siteType: SITE_TYPES.SUB2API },
+      request,
+    })
+
+    await expect(session.provisioning!.provision("9")).resolves.toEqual({
+      certainty: "possibly-applied",
+      failure: {
+        code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+        message: "create timed out",
+      },
+    })
+    expect(mockCreateSub2ApiTokenForGroupId).toHaveBeenCalledOnce()
+  })
+
   it("preserves a false create result as a definite rejection", async () => {
     mockFetchSub2ApiGroupDescriptors.mockResolvedValueOnce([
       { id: 9, displayName: "Shared", description: "First", ratio: 1 },
@@ -871,6 +899,45 @@ describe("Sub2API account key resources", () => {
       },
     })
     expect(mockUpdateApiToken).toHaveBeenCalledTimes(2)
+  })
+
+  it("prefers a dispatched rename failure when confirmation also fails", async () => {
+    const before = token({
+      id: 9,
+      name: "user group (auto)",
+      group: "Example group",
+      sub2api_group_id: 9,
+    })
+    mockFetchTokenById
+      .mockResolvedValueOnce(before)
+      .mockRejectedValueOnce(new Error("refresh unavailable"))
+    mockFetchSub2ApiGroupDescriptors.mockResolvedValueOnce([
+      { id: 9, displayName: "Example group" },
+    ])
+    mockUpdateApiToken.mockImplementationOnce(async (mutationRequest) => {
+      mutationRequest.observer?.onDispatch()
+      throw new Error("rename timed out")
+    })
+    const session = await sub2ApiAccountKeyResources.open({
+      account: { id: "account-example", siteType: SITE_TYPES.SUB2API },
+      request,
+    })
+
+    await expect(
+      session.provisioning!.rename!({
+        accountId: "account-example",
+        siteType: SITE_TYPES.SUB2API,
+        scopeKey: "account",
+        resourceId: "9",
+      }),
+    ).resolves.toEqual({
+      certainty: "possibly-applied",
+      failure: {
+        code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+        message: "rename timed out",
+      },
+    })
+    expect(mockUpdateApiToken).toHaveBeenCalledOnce()
   })
 
   it("reports mismatched and failed runtime detail lookups as unavailable", async () => {

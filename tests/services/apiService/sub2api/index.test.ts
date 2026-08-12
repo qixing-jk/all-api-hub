@@ -5,6 +5,7 @@ import type { ApiServiceAccountRequest } from "~/services/accounts/accountDataMo
 import type { CreateTokenRequest } from "~/services/accountTokens/tokenProvisioningModel"
 import {
   createApiToken,
+  createSub2ApiTokenForGroupId,
   deleteApiToken,
   extractDefaultExchangeRate,
   fetchAccountAvailableModels,
@@ -2634,5 +2635,33 @@ describe("apiService sub2api exported operations", () => {
       ip_whitelist: [],
       expires_in_days: 0,
     })
+  })
+
+  it("rejects native-group token creation when the provider rejects the request", async () => {
+    vi.mocked(fetchApi).mockResolvedValueOnce({
+      code: 403,
+      message: "provider rejected create",
+    } as any)
+
+    await expect(
+      createSub2ApiTokenForGroupId(
+        baseRequest as any,
+        createOperationTokenRequest(),
+        9,
+      ),
+    ).rejects.toMatchObject({ message: "provider rejected create" })
+  })
+
+  it("rethrows the original native-group token creation transport error", async () => {
+    const transportError = new Error("provider unavailable")
+    vi.mocked(fetchApi).mockRejectedValueOnce(transportError)
+
+    await expect(
+      createSub2ApiTokenForGroupId(
+        baseRequest as any,
+        createOperationTokenRequest(),
+        9,
+      ),
+    ).rejects.toBe(transportError)
   })
 })

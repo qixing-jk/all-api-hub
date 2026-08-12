@@ -199,6 +199,50 @@ describe("native resource factory primitives", () => {
     ).toThrow(NativeResourceBoundaryError)
   })
 
+  it.each(["possibly-applied", "partially-applied"] as const)(
+    "rejects %s mutations without a readable failure",
+    (certainty) => {
+      expect(() =>
+        resolveNativeResourceMutation({
+          certainty,
+        } as unknown as NativeResourceMutationResult<string, "denied">),
+      ).toThrow(NativeResourceBoundaryError)
+
+      const mutation = { certainty } as Record<string, unknown>
+      Object.defineProperty(mutation, "failure", {
+        enumerable: true,
+        get: () => {
+          throw new Error("unreadable failure")
+        },
+      })
+      expect(() =>
+        resolveNativeResourceMutation(
+          mutation as unknown as NativeResourceMutationResult<string, "denied">,
+        ),
+      ).toThrow(NativeResourceBoundaryError)
+    },
+  )
+
+  it.each([
+    ["certainty", "certainty", {}],
+    ["applied value", "value", { certainty: "applied" }],
+    ["not-applied failure", "failure", { certainty: "not-applied" }],
+  ])("rejects a mutation with a throwing %s getter", (_, property, base) => {
+    const mutation = { ...base } as Record<string, unknown>
+    Object.defineProperty(mutation, property, {
+      enumerable: true,
+      get: () => {
+        throw new Error("unreadable mutation")
+      },
+    })
+
+    expect(() =>
+      resolveNativeResourceMutation(
+        mutation as unknown as NativeResourceMutationResult<string, "denied">,
+      ),
+    ).toThrow(NativeResourceBoundaryError)
+  })
+
   it("shares an in-flight editor submission and retries only a definite rejection", async () => {
     const deferred =
       createDeferred<NativeResourceMutationResult<string, "denied">>()

@@ -476,7 +476,7 @@ describe("defineAccountKeyResourceCapability", () => {
       .mockResolvedValueOnce({ scopes: [SCOPE, teamScope] })
     const definition = createDefinition({
       listScopeInventory,
-    } as never)
+    })
     const session = await openSession(definition)
 
     await expect((session as any).listScopeInventory()).resolves.toEqual({
@@ -660,43 +660,67 @@ describe("defineAccountKeyResourceCapability", () => {
     expect(update.mock.calls[0]![1]).not.toBe(SCOPE)
   })
 
-  it("rejects a created secret correlated to a different resource", async () => {
-    const definition = createDefinition({
-      create: vi.fn<Definition["create"]>(async () => ({
-        certainty: "applied",
-        value: {
-          detail: { id: "created-key", name: "Created" },
-          createdSecret: {
-            correlation: {
-              kind: "account-key-resource",
-              ref: {
-                accountId: "other-account",
-                siteType: SITE_TYPES.OPENROUTER,
-                scopeKey: "workspace-example",
-                resourceId: "created-key",
+  it.each([
+    [
+      "kind",
+      {
+        kind: "other-resource",
+        ref: REF,
+      },
+    ],
+    [
+      "account",
+      {
+        kind: "account-key-resource",
+        ref: { ...REF, accountId: "other-account" },
+      },
+    ],
+    [
+      "scope",
+      {
+        kind: "account-key-resource",
+        ref: { ...REF, scopeKey: "other-workspace" },
+      },
+    ],
+    [
+      "resource",
+      {
+        kind: "account-key-resource",
+        ref: { ...REF, resourceId: "other-key" },
+      },
+    ],
+  ])(
+    "rejects a created secret with mismatched %s correlation",
+    async (_, correlation) => {
+      const definition = createDefinition({
+        create: vi.fn<Definition["create"]>(async () => ({
+          certainty: "applied",
+          value: {
+            detail: { id: "created-key", name: "Created" },
+            createdSecret: {
+              correlation: correlation as never,
+              displayName: "Created",
+              secret: "created-secret",
+              secretAvailability: "create-response-only",
+              credential: {
+                accountName: "Example",
+                apiType: "openai-compatible",
+                baseUrl: "https://api.example.invalid",
+                tagIds: [],
               },
             },
-            displayName: "Created",
-            secret: "created-secret",
-            secretAvailability: "create-response-only",
-            credential: {
-              accountName: "Example",
-              apiType: "openai-compatible",
-              baseUrl: "https://api.example.invalid",
-              tagIds: [],
-            },
           },
-        },
-      })),
-    })
-    const editor = await (
-      await openSession(definition)
-    ).openCreateEditor("workspace-example")
+        })),
+      })
+      const editor = await (
+        await openSession(definition)
+      ).openCreateEditor("workspace-example")
 
-    await expect(editor.submit({ name: "Created" })).rejects.toMatchObject({
-      failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected },
-    })
-  })
+      await expect(editor.submit({ name: "Created" })).rejects.toMatchObject({
+        failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected },
+      })
+    },
+  )
 
   it("keeps a created secret correlated to the resulting resource", async () => {
     const definition = createDefinition({
@@ -826,7 +850,7 @@ describe("defineAccountKeyResourceCapability", () => {
           scopeKey: SCOPE.scopeKey,
         },
       })),
-    } as never)
+    })
     const session = await openSession(definition)
     const editor = await session.openCreateEditor(SCOPE.scopeKey)
 
@@ -988,5 +1012,41 @@ describe("defineAccountKeyResourceCapability", () => {
       failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.ValidationFailed },
     })
     expect(uncertainCreate).toHaveBeenCalledOnce()
+  })
+
+  it("preserves the mapped upstream code for uncertain editor and delete mutations", async () => {
+    const definition = createDefinition({
+      create: vi.fn<Definition["create"]>(async () => ({
+        certainty: "possibly-applied",
+        failure: "denied",
+      })),
+      delete: vi.fn<Definition["delete"]>(async () => ({
+        certainty: "partially-applied",
+        failure: "denied",
+      })),
+      mapFailure: () => ({
+        code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.UpstreamRejected,
+        message: "provider request timed out",
+        upstreamCode: "UPSTREAM_TIMEOUT",
+      }),
+    })
+    const session = await openSession(definition)
+    const editor = await session.openCreateEditor("workspace-example")
+    const collection = await session.openCollection("workspace-example")
+
+    await expect(editor.submit({ name: "Uncertain" })).rejects.toMatchObject({
+      failure: {
+        code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+        message: "provider request timed out",
+        upstreamCode: "UPSTREAM_TIMEOUT",
+      },
+    })
+    await expect(collection.delete(REF)).rejects.toMatchObject({
+      failure: {
+        code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+        message: "provider request timed out",
+        upstreamCode: "UPSTREAM_TIMEOUT",
+      },
+    })
   })
 })

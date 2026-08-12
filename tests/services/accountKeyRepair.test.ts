@@ -67,6 +67,7 @@ const mocks = vi.hoisted(() => {
     StorageMock,
     getAllAccounts: vi.fn(),
     convertToDisplayData: vi.fn(),
+    getSiteTypeCapabilities: vi.fn(),
     openKeyResources: vi.fn(),
     sendRuntimeMessage: vi.fn(),
     resetRepairCreatedRuntimeSecrets: vi.fn(async () => true),
@@ -97,17 +98,7 @@ vi.mock("~/services/accounts/accountStorage", () => ({
 }))
 
 vi.mock("~/services/apiAdapters/registry", () => ({
-  getSiteTypeCapabilities: vi.fn((siteType: string) => ({
-    siteType,
-    account:
-      siteType === "unknown"
-        ? undefined
-        : {
-            keyResources: {
-              open: mocks.openKeyResources,
-            },
-          },
-  })),
+  getSiteTypeCapabilities: mocks.getSiteTypeCapabilities,
 }))
 
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
@@ -244,6 +235,17 @@ describe("accountKeyRepair", () => {
     mocks.sessionsByAccountId.clear()
     mocks.safeRandomUUID.mockReturnValue("job-123")
     mocks.getAllAccounts.mockResolvedValue([])
+    mocks.getSiteTypeCapabilities.mockImplementation((siteType: string) => ({
+      siteType,
+      account:
+        siteType === "unknown"
+          ? undefined
+          : {
+              keyResources: {
+                open: mocks.openKeyResources,
+              },
+            },
+    }))
     mocks.convertToDisplayData.mockImplementation((accounts: SiteAccount[]) =>
       accounts.map((account) =>
         buildDisplaySiteData({
@@ -589,6 +591,41 @@ describe("accountKeyRepair", () => {
     expect(progress.summary).toMatchObject({ complete: 1 })
   })
 
+  it("classifies an incomplete inventory with no requirements as blocked", async () => {
+    const account = buildRepairAccount("empty-incomplete", SITE_TYPES.NEW_API)
+    mocks.sessionsByAccountId.set(
+      account.id,
+      createSession({
+        inspect: vi.fn().mockResolvedValue({
+          requirements: [],
+          items: [],
+          partialFailure: { code: RESOURCE_FAILURE_CODES.Unavailable },
+        }),
+        provision: vi.fn(),
+      }),
+    )
+    mocks.getAllAccounts.mockResolvedValue([account])
+
+    const { startAccountKeyRepair } = await import(
+      "~/services/accounts/accountKeyAutoProvisioning/repair"
+    )
+    await startAccountKeyRepair()
+    const progress = await waitForStoredState(
+      ACCOUNT_KEY_REPAIR_JOB_STATES.Completed,
+    )
+
+    expect(progress.results).toEqual([
+      expect.objectContaining({
+        accountId: account.id,
+        inventoryStatus:
+          ACCOUNT_KEY_RECONCILIATION_INVENTORY_STATUSES.Incomplete,
+        outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Blocked,
+        requirementResults: [],
+      }),
+    ])
+    expect(progress.summary).toMatchObject({ blocked: 1, requirements: 0 })
+  })
+
   it("classifies blocked-only, mixed controlled outcomes, and unexpected throws", async () => {
     const blocked = buildRepairAccount("blocked", SITE_TYPES.SUB2API)
     const partial = buildRepairAccount("partial", SITE_TYPES.VELOERA)
@@ -847,6 +884,34 @@ describe("accountKeyRepair", () => {
     })
   })
 
+  it("records a controlled skip if the native capability disappears after eligibility", async () => {
+    const account = buildRepairAccount("capability-race", SITE_TYPES.NEW_API)
+    mocks.getAllAccounts.mockResolvedValue([account])
+    mocks.getSiteTypeCapabilities
+      .mockReturnValueOnce({
+        siteType: account.site_type,
+        account: { keyResources: { open: mocks.openKeyResources } },
+      })
+      .mockReturnValueOnce({ siteType: account.site_type, account: {} })
+
+    const { startAccountKeyRepair } = await import(
+      "~/services/accounts/accountKeyAutoProvisioning/repair"
+    )
+    await startAccountKeyRepair()
+    const progress = await waitForStoredState(
+      ACCOUNT_KEY_REPAIR_JOB_STATES.Completed,
+    )
+
+    expect(progress.results).toEqual([
+      expect.objectContaining({
+        accountId: account.id,
+        outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Skipped,
+        skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.ProvisioningUnavailable,
+      }),
+    ])
+    expect(mocks.openKeyResources).not.toHaveBeenCalled()
+  })
+
   it("preserves per-origin serialization while allowing different origins to proceed", async () => {
     let releaseFirst!: () => void
     const firstGate = new Promise<void>((resolve) => {
@@ -927,6 +992,37 @@ describe("accountKeyRepair", () => {
       expect(progress.state).toBe(ACCOUNT_KEY_REPAIR_JOB_STATES.Cancelled)
       expect(progress.results).toEqual([])
     })
+  })
+
+  it("does not reconcile when cancellation lands while opening native resources", async () => {
+    const account = buildRepairAccount("cancelled-open", SITE_TYPES.NEW_API)
+    let releaseOpen!: () => void
+    const openGate = new Promise<void>((resolve) => {
+      releaseOpen = resolve
+    })
+    const inspect = vi.fn()
+    mocks.getAllAccounts.mockResolvedValue([account])
+    mocks.openKeyResources.mockImplementationOnce(async () => {
+      await openGate
+      return createSession({ inspect, provision: vi.fn() })
+    })
+
+    const { accountKeyRepairRunner } = await import(
+      "~/services/accounts/accountKeyAutoProvisioning/repair"
+    )
+    await accountKeyRepairRunner.start()
+    await vi.waitFor(() =>
+      expect(mocks.openKeyResources).toHaveBeenCalledOnce(),
+    )
+    await accountKeyRepairRunner.cancel()
+    releaseOpen()
+
+    await vi.waitFor(async () => {
+      const progress = await accountKeyRepairRunner.getProgress()
+      expect(progress.state).toBe(ACCOUNT_KEY_REPAIR_JOB_STATES.Cancelled)
+      expect(progress.results).toEqual([])
+    })
+    expect(inspect).not.toHaveBeenCalled()
   })
 
   it("rolls back failed persistence and recovers the serialized storage queue", async () => {
@@ -1160,6 +1256,156 @@ describe("accountKeyRepair", () => {
     ).rejects.toThrow("invalid_resource_delete_request")
     expect(mocks.getAllAccounts).not.toHaveBeenCalled()
     expect(mocks.openKeyResources).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    {
+      name: "an empty resource list",
+      request: { resources: [] },
+    },
+    {
+      name: "a mismatched resource identity",
+      request: {
+        resources: [
+          {
+            accountId: "account-1",
+            accountName: "Example Account",
+            siteType: SITE_TYPES.NEW_API,
+            siteUrlOrigin: "https://account.example.invalid",
+            ref: createRef("other-account", "mismatched-resource"),
+            reason: "orphaned-placement",
+          },
+        ],
+      },
+    },
+  ])("rejects invalid deletion input containing $name", async ({ request }) => {
+    const { deleteInvalidAccountKeyResources } = await import(
+      "~/services/accounts/accountKeyAutoProvisioning/repair"
+    )
+
+    await expect(deleteInvalidAccountKeyResources(request)).rejects.toThrow(
+      "invalid_resource_delete_request",
+    )
+    expect(mocks.getAllAccounts).not.toHaveBeenCalled()
+  })
+
+  it("rejects stale invalid-resource rows before opening a native session", async () => {
+    const account = buildRepairAccount("account-1", SITE_TYPES.NEW_API, {
+      site_url: "https://account.example.invalid/path",
+    })
+    const currentResource = {
+      accountId: account.id,
+      accountName: "Example Account",
+      siteType: account.site_type,
+      siteUrlOrigin: "https://account.example.invalid",
+      ref: createRef(account.id, "current-resource"),
+      reason: "orphaned-placement",
+    }
+    const staleResource = {
+      ...currentResource,
+      ref: createRef(account.id, "stale-resource"),
+    }
+    mocks.getAllAccounts.mockResolvedValue([account])
+    mocks.storageMap.set(
+      REPAIR_PROGRESS_STORAGE_KEY,
+      createProgress({
+        results: [
+          {
+            accountId: account.id,
+            accountName: "Example Account",
+            siteType: account.site_type,
+            siteUrlOrigin: currentResource.siteUrlOrigin,
+            outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Covered,
+            requirementResults: [],
+            createdRefs: [],
+            invalidResources: [currentResource],
+            renameResults: [],
+            finishedAt: 1,
+          },
+        ],
+        summary: { ...createEmptySummary(), invalidResources: 1 },
+      }),
+    )
+    const { deleteInvalidAccountKeyResources } = await import(
+      "~/services/accounts/accountKeyAutoProvisioning/repair"
+    )
+
+    await expect(
+      deleteInvalidAccountKeyResources({ resources: [staleResource] }),
+    ).resolves.toMatchObject({
+      data: {
+        results: [
+          {
+            resource: staleResource,
+            outcome: ACCOUNT_KEY_REPAIR_MUTATION_OUTCOMES.Rejected,
+            failure: { code: RESOURCE_FAILURE_CODES.ValidationFailed },
+          },
+        ],
+      },
+    })
+    expect(mocks.openKeyResources).not.toHaveBeenCalled()
+  })
+
+  it("preserves an unexpected deletion error message for the affected user", async () => {
+    const account = buildRepairAccount("account-1", SITE_TYPES.NEW_API, {
+      site_url: "https://account.example.invalid/path",
+    })
+    const resource = {
+      accountId: account.id,
+      accountName: "Example Account",
+      siteType: account.site_type,
+      siteUrlOrigin: "https://account.example.invalid",
+      ref: createRef(account.id, "unexpected-failure"),
+      reason: "orphaned-placement",
+    }
+    mocks.sessionsByAccountId.set(account.id, {
+      ...createSession(),
+      openCollection: vi.fn(async () => ({
+        delete: vi.fn(async () => {
+          throw new Error("provider rejected the request")
+        }),
+      })),
+    })
+    mocks.getAllAccounts.mockResolvedValue([account])
+    mocks.storageMap.set(
+      REPAIR_PROGRESS_STORAGE_KEY,
+      createProgress({
+        results: [
+          {
+            accountId: account.id,
+            accountName: resource.accountName,
+            siteType: account.site_type,
+            siteUrlOrigin: resource.siteUrlOrigin,
+            outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Covered,
+            requirementResults: [],
+            createdRefs: [],
+            invalidResources: [resource],
+            renameResults: [],
+            finishedAt: 1,
+          },
+        ],
+        summary: { ...createEmptySummary(), invalidResources: 1 },
+      }),
+    )
+    const { deleteInvalidAccountKeyResources } = await import(
+      "~/services/accounts/accountKeyAutoProvisioning/repair"
+    )
+
+    await expect(
+      deleteInvalidAccountKeyResources({ resources: [resource] }),
+    ).resolves.toMatchObject({
+      data: {
+        results: [
+          {
+            outcome: ACCOUNT_KEY_REPAIR_MUTATION_OUTCOMES.Rejected,
+            failure: {
+              code: RESOURCE_FAILURE_CODES.Unexpected,
+              message: "provider rejected the request",
+            },
+          },
+        ],
+      },
+    })
   })
 
   it("marks the job failed when account loading throws", async () => {

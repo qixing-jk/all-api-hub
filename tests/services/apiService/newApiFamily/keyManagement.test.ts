@@ -13,6 +13,7 @@ import {
   updateApiToken,
 } from "~/services/apiService/newApiFamily/default/keyManagement"
 import { API_ERROR_CODES } from "~/services/apiTransport/errors"
+import { PaginationLimitError } from "~/services/apiTransport/pagination"
 import { AuthTypeEnum, type ApiToken } from "~/types"
 
 const {
@@ -129,7 +130,7 @@ describe("newApiFamily keyManagement", () => {
       { id: 3, key: "sk-final" },
     ])
     expect(mockFetchApiData).toHaveBeenNthCalledWith(1, request, {
-      endpoint: "/api/token/?p=0&size=100",
+      endpoint: "/api/token/?p=1&size=100",
     })
     expect(mockFetchApiData).toHaveBeenNthCalledWith(2, request, {
       endpoint: "/api/token/?p=2&size=100",
@@ -150,13 +151,13 @@ describe("newApiFamily keyManagement", () => {
       { id: 2, key: "second" },
     ])
     expect(mockFetchApiData).toHaveBeenNthCalledWith(1, request, {
-      endpoint: "/api/token/?p=0&size=100",
-    })
-    expect(mockFetchApiData).toHaveBeenNthCalledWith(2, request, {
       endpoint: "/api/token/?p=1&size=100",
     })
-    expect(mockFetchApiData).toHaveBeenNthCalledWith(3, request, {
+    expect(mockFetchApiData).toHaveBeenNthCalledWith(2, request, {
       endpoint: "/api/token/?p=2&size=100",
+    })
+    expect(mockFetchApiData).toHaveBeenNthCalledWith(3, request, {
+      endpoint: "/api/token/?p=3&size=100",
     })
   })
 
@@ -266,6 +267,18 @@ describe("newApiFamily keyManagement", () => {
     )
   })
 
+  it("fetchAccountTokens rejects an inventory that reaches the page cap without syncing its cache", async () => {
+    mockFetchApiData.mockResolvedValue({
+      items: [{ id: 1, key: "sk-still-present" }],
+    })
+
+    await expect(fetchAccountTokens(request)).rejects.toBeInstanceOf(
+      PaginationLimitError,
+    )
+    expect(mockFetchApiData).toHaveBeenCalledTimes(100)
+    expect(mockSyncResolvedApiTokenKeyCache).not.toHaveBeenCalled()
+  })
+
   it("fetchAccountTokens and related fetch helpers rethrow upstream failures", async () => {
     const tokensError = new Error("tokens unavailable")
     const modelsError = new Error("models unavailable")
@@ -327,6 +340,13 @@ describe("newApiFamily keyManagement", () => {
     await expect(fetchCurrentUserGroup(request)).rejects.toThrow(
       "invalid_current_user_group_payload",
     )
+
+    for (const payload of [null, 7, [], { group: 7 }]) {
+      mockFetchApiData.mockResolvedValueOnce(payload)
+      await expect(fetchCurrentUserGroup(request)).rejects.toThrow(
+        "invalid_current_user_group_payload",
+      )
+    }
   })
 
   it("createApiToken, fetchTokenById, updateApiToken, and deleteApiToken manage token flows", async () => {
@@ -433,7 +453,7 @@ describe("newApiFamily keyManagement", () => {
     ).resolves.toEqual(["gpt-4o"])
 
     expect(mockFetchApiData).toHaveBeenNthCalledWith(1, request, {
-      endpoint: "/api/token/?p=0&size=100",
+      endpoint: "/api/token/?p=1&size=100",
     })
     expect(mockResolveApiTokenKey).toHaveBeenCalledWith(
       request,

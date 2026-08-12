@@ -12,7 +12,16 @@ import {
   transformModelPricing,
   transformUserGroup,
 } from "~/services/apiService/oneHub/transform"
+import { PaginationLimitError } from "~/services/apiTransport/pagination"
 import { fetchApiData } from "~/services/apiTransport/request"
+
+const { mockSyncResolvedApiTokenKeyCache } = vi.hoisted(() => ({
+  mockSyncResolvedApiTokenKeyCache: vi.fn(),
+}))
+
+vi.mock("~/services/accountTokens/tokenKeyResolver", () => ({
+  syncResolvedApiTokenKeyCache: mockSyncResolvedApiTokenKeyCache,
+}))
 
 vi.mock("~/services/apiTransport/request", () => ({
   fetchApiData: vi.fn(),
@@ -139,6 +148,10 @@ describe("OneHub API service", () => {
     const result = await fetchAccountTokens(baseRequest as any)
 
     expect(result).toEqual(tokens)
+    expect(mockSyncResolvedApiTokenKeyCache).toHaveBeenCalledWith(
+      baseRequest,
+      tokens,
+    )
   })
 
   it("fetchAccountTokens should reject an unexpected format", async () => {
@@ -213,6 +226,16 @@ describe("OneHub API service", () => {
     expect(mockedFetchApiData).toHaveBeenNthCalledWith(2, baseRequest, {
       endpoint: "/api/token/?page=2&size=100",
     })
+  })
+
+  it("fetchAccountTokens rejects an inventory that reaches the page cap without syncing its cache", async () => {
+    mockedFetchApiData.mockResolvedValue({ data: [{ id: 1 }] })
+
+    await expect(fetchAccountTokens(baseRequest as any)).rejects.toBeInstanceOf(
+      PaginationLimitError,
+    )
+    expect(mockedFetchApiData).toHaveBeenCalledTimes(100)
+    expect(mockSyncResolvedApiTokenKeyCache).not.toHaveBeenCalled()
   })
 
   it("fetchUserGroups should transform user group response", async () => {

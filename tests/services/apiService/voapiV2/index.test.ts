@@ -876,6 +876,33 @@ describe("apiService VoAPI v2", () => {
     ).rejects.toThrow("VoAPI v2 key inventory contains invalid key id")
   })
 
+  it("rejects oversized numeric native key ids", async () => {
+    server.use(
+      http.get("https://example.invalid/api/keys", () =>
+        HttpResponse.json({
+          code: 0,
+          data: {
+            page: 1,
+            size: 100,
+            total: 1,
+            pages: 1,
+            records: [
+              {
+                id: Number.MAX_SAFE_INTEGER + 1,
+                name: "oversized",
+                groups: [2],
+              },
+            ],
+          },
+        }),
+      ),
+    )
+
+    await expect(
+      fetchAllVoApiV2RawKeys(createVoApiV2Request()),
+    ).rejects.toThrow("VoAPI v2 key inventory contains invalid key id")
+  })
+
   it("rejects repeated pagination metadata", async () => {
     server.use(
       http.get("https://example.invalid/api/keys", ({ request }) => {
@@ -890,6 +917,75 @@ describe("apiService VoAPI v2", () => {
             total: 2,
             pages: 2,
             records: [{ id: requestedPage === 1 ? 11 : 12, groups: [2] }],
+          },
+        })
+      }),
+    )
+
+    await expect(
+      fetchAllVoApiV2RawKeys(createVoApiV2Request(), 1),
+    ).rejects.toThrow("VoAPI v2 key inventory has invalid pagination")
+  })
+
+  it("rejects pagination metadata that drifts across pages", async () => {
+    server.use(
+      http.get("https://example.invalid/api/keys", ({ request }) => {
+        const page = Number(new URL(request.url).searchParams.get("page"))
+        return HttpResponse.json({
+          code: 0,
+          data: {
+            page,
+            size: 1,
+            total: page === 1 ? 2 : 3,
+            pages: page === 1 ? 2 : 3,
+            records: [{ id: page === 1 ? 11 : 12, groups: [2] }],
+          },
+        })
+      }),
+    )
+
+    await expect(
+      fetchAllVoApiV2RawKeys(createVoApiV2Request(), 1),
+    ).rejects.toThrow("VoAPI v2 key inventory has invalid pagination")
+  })
+
+  it("rejects a page that drops established pagination metadata", async () => {
+    server.use(
+      http.get("https://example.invalid/api/keys", ({ request }) => {
+        const page = Number(new URL(request.url).searchParams.get("page"))
+        return HttpResponse.json({
+          code: 0,
+          data:
+            page === 1
+              ? {
+                  page,
+                  size: 1,
+                  total: 2,
+                  pages: 2,
+                  records: [{ id: 11, groups: [2] }],
+                }
+              : { records: [{ id: 12, groups: [2] }] },
+        })
+      }),
+    )
+
+    await expect(
+      fetchAllVoApiV2RawKeys(createVoApiV2Request(), 1),
+    ).rejects.toThrow("VoAPI v2 key inventory has invalid pagination")
+  })
+
+  it("rejects a terminal inventory whose item count differs from total", async () => {
+    server.use(
+      http.get("https://example.invalid/api/keys", ({ request }) => {
+        const page = Number(new URL(request.url).searchParams.get("page"))
+        return HttpResponse.json({
+          code: 0,
+          data: {
+            page,
+            size: 1,
+            total: 2,
+            pages: 2,
+            records: page === 1 ? [{ id: 11, groups: [2] }] : [],
           },
         })
       }),

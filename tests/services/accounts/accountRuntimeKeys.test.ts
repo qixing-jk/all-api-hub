@@ -237,6 +237,22 @@ describe("accountRuntimeKeys", () => {
     expect(isServiceCredentialRuntimeKey(runtimeKey)).toBe(false)
   })
 
+  it("marks a native resource with a blank secret as inactive", () => {
+    const runtimeKey = buildAccountKeyResourceRuntimeKey(account, {
+      ref: {
+        accountId: account.id,
+        siteType: account.siteType,
+        scopeKey: "workspace:primary",
+        resourceId: "key/blank",
+      },
+      label: "Unavailable repair-created key",
+      secret: "   ",
+    })
+
+    expect(runtimeKey.status).toBe(ACCOUNT_RUNTIME_KEY_STATUSES.Inactive)
+    expect(hasUsableAccountRuntimeKeySecret(runtimeKey)).toBe(false)
+  })
+
   it("builds ids from source identity", () => {
     expect(buildAccountTokenRuntimeKeyId("account-1", 42)).toBe(
       "account_token:account-1:42",

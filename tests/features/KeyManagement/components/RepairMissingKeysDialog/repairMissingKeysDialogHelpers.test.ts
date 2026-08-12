@@ -358,21 +358,29 @@ describe("repairMissingKeysDialogHelpers", () => {
   })
 
   it("maps every repair, requirement, skip, and view label to its owned key", () => {
-    for (const outcome of Object.values(ACCOUNT_KEY_REPAIR_OUTCOMES)) {
-      expect(getRepairOutcomeLabel(t, outcome)).toContain(
-        "keyManagement:repairMissingKeys.outcomes.",
-      )
+    const expectDistinctKeys = (labels: string[], prefix: string) => {
+      for (const label of labels) expect(label).toContain(prefix)
+      expect(new Set(labels).size).toBe(labels.length)
     }
-    for (const outcome of Object.values(ACCOUNT_KEY_RECONCILIATION_OUTCOMES)) {
-      expect(getRequirementOutcomeLabel(t, outcome)).toContain(
-        "keyManagement:repairMissingKeys.requirements.",
-      )
-    }
-    for (const reason of Object.values(ACCOUNT_KEY_REPAIR_SKIP_REASONS)) {
-      expect(getSkipReasonLabel(t, reason)).toContain(
-        "keyManagement:repairMissingKeys.skipReasons.",
-      )
-    }
+
+    expectDistinctKeys(
+      Object.values(ACCOUNT_KEY_REPAIR_OUTCOMES).map((outcome) =>
+        getRepairOutcomeLabel(t, outcome),
+      ),
+      "keyManagement:repairMissingKeys.outcomes.",
+    )
+    expectDistinctKeys(
+      Object.values(ACCOUNT_KEY_RECONCILIATION_OUTCOMES).map((outcome) =>
+        getRequirementOutcomeLabel(t, outcome),
+      ),
+      "keyManagement:repairMissingKeys.requirements.",
+    )
+    expectDistinctKeys(
+      Object.values(ACCOUNT_KEY_REPAIR_SKIP_REASONS).map((reason) =>
+        getSkipReasonLabel(t, reason),
+      ),
+      "keyManagement:repairMissingKeys.skipReasons.",
+    )
     expect(getSkipReasonLabel(t, undefined)).toBe("")
     expect(
       getRepairResultViewLabel(t, REPAIR_RESULT_VIEWS.AccountCoverage),
@@ -419,13 +427,15 @@ describe("repairMissingKeysDialogHelpers", () => {
   })
 
   it("maps every controlled inventory issue with its count where applicable", () => {
-    for (const code of Object.values(
+    const labels = Object.values(
       ACCOUNT_KEY_RECONCILIATION_INVENTORY_ISSUES,
-    )) {
-      expect(getInventoryIssueLabel(t, { code, count: 2 })).toContain(
+    ).map((code) => getInventoryIssueLabel(t, { code, count: 2 }))
+    for (const label of labels) {
+      expect(label).toContain(
         "keyManagement:repairMissingKeys.inventoryIssues.",
       )
     }
+    expect(new Set(labels).size).toBe(labels.length)
   })
 
   it.each([

@@ -48,7 +48,7 @@ interface KeyManagementImplementation {
 
 /**
  * Fetch the complete New API-family token list behind provider pagination.
- * New API normalizes `p=0` to page 1:
+ * New API uses one-based page numbers:
  * https://github.com/QuantumNous/new-api/blob/9c97e78aced572d540f227007a675d7d007666ac/common/page_info.go
  * One API and Veloera return bare paged arrays, which terminate on an empty page:
  * https://github.com/songquanpeng/one-api/blob/main/controller/token.go
@@ -57,13 +57,10 @@ interface KeyManagementImplementation {
 export async function fetchAccountTokens(
   request: ApiServiceRequest,
 ): Promise<ApiToken[]> {
-  let firstPageWasNormalizedToOne = false
   const tokens = await fetchAllItems<ApiToken>(
     async (page) => {
-      const upstreamPage =
-        firstPageWasNormalizedToOne && page > 0 ? page + 1 : page
       const searchParams = new URLSearchParams({
-        p: upstreamPage.toString(),
+        p: page.toString(),
         size: REQUEST_CONFIG.DEFAULT_PAGE_SIZE.toString(),
       })
       const tokensData = await fetchApiData<unknown>(request, {
@@ -79,9 +76,6 @@ export async function fetchAccountTokens(
         throw new Error("invalid_token_page_payload")
       }
 
-      if (page === 0 && tokensData.page === 1) {
-        firstPageWasNormalizedToOne = true
-      }
       const items = tokensData.items.map(normalizeApiTokenKey)
       return {
         items,
@@ -90,7 +84,7 @@ export async function fetchAccountTokens(
     },
     {
       pageSize: REQUEST_CONFIG.DEFAULT_PAGE_SIZE,
-      startPage: 0,
+      startPage: 1,
       requireComplete: true,
     },
   )

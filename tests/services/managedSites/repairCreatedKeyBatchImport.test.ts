@@ -41,6 +41,7 @@ import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 
 const mocks = vi.hoisted(() => ({
   createDisplayAccountApiContext: vi.fn(),
+  loggerWarn: vi.fn(),
   resolveRepairCreatedRuntimeSecret: vi.fn(),
 }))
 
@@ -54,6 +55,15 @@ vi.mock(
     resolveRepairCreatedRuntimeSecret: mocks.resolveRepairCreatedRuntimeSecret,
   }),
 )
+
+vi.mock("~/utils/core/logger", () => ({
+  createLogger: () => ({
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: mocks.loggerWarn,
+    error: vi.fn(),
+  }),
+}))
 
 const TARGET_A = "a".repeat(64)
 
@@ -155,6 +165,7 @@ const createSession = (
 describe("resolveRepairCreatedKeyBatchImportCandidate", () => {
   beforeEach(() => {
     mocks.createDisplayAccountApiContext.mockReset()
+    mocks.loggerWarn.mockReset()
     mocks.resolveRepairCreatedRuntimeSecret.mockReset()
     mocks.resolveRepairCreatedRuntimeSecret.mockResolvedValue(null)
   })
@@ -304,6 +315,67 @@ describe("resolveRepairCreatedKeyBatchImportCandidate", () => {
           MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_DETAIL_CODES.SOURCE_KEY_INVENTORY_UNAVAILABLE,
       }),
     ])
+  })
+
+  it("blocks refs when the current account has no native key-resource capability", async () => {
+    const account = createAccount({ name: "  " })
+    const ref = createRef()
+    mocks.createDisplayAccountApiContext.mockReturnValue({
+      request: { baseUrl: account.baseUrl },
+      capabilities: { account: {} },
+    })
+
+    const candidate = await resolveRepairCreatedKeyBatchImportCandidate({
+      progress: createProgress(account, ref),
+      accounts: [account],
+      targetFingerprint: TARGET_A,
+      freshness: REPAIR_CREATED_KEY_BATCH_IMPORT_FRESHNESS.CURRENT_SESSION,
+    })
+
+    expect(candidate?.items).toEqual([
+      expect.objectContaining({
+        id: buildAccountKeyResourceRuntimeKeyId(ref),
+        accountLabel: account.id,
+        keyLabel: "Created key",
+        blockingDetailCode:
+          MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_DETAIL_CODES.SOURCE_KEY_INVENTORY_UNAVAILABLE,
+      }),
+    ])
+  })
+
+  it("turns a rejected concurrent resolution into a blocked ref with a sanitized diagnostic", async () => {
+    const account = createAccount()
+    const ref = createRef()
+    mocks.resolveRepairCreatedRuntimeSecret.mockRejectedValueOnce(
+      new Error("authorization: Bearer private-token"),
+    )
+
+    const candidate = await resolveRepairCreatedKeyBatchImportCandidate({
+      progress: createProgress(account, ref),
+      accounts: [account],
+      targetFingerprint: TARGET_A,
+      freshness: REPAIR_CREATED_KEY_BATCH_IMPORT_FRESHNESS.CURRENT_SESSION,
+    })
+
+    expect(candidate?.items).toEqual([
+      expect.objectContaining({
+        id: buildAccountKeyResourceRuntimeKeyId(ref),
+        accountLabel: account.name,
+        keyLabel: "Created key",
+        blockingDetailCode:
+          MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_DETAIL_CODES.SOURCE_KEY_INVENTORY_UNAVAILABLE,
+      }),
+    ])
+    expect(mocks.loggerWarn).toHaveBeenCalledWith(
+      "Failed to prepare a repair-created runtime key",
+      { error: "authorization: [REDACTED]" },
+    )
+    expect(mocks.loggerWarn).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        error: expect.stringContaining("private-token"),
+      }),
+    )
   })
 
   it("blocks unavailable and blank runtime secrets without substituting another ref", async () => {
@@ -668,6 +740,124 @@ describe("resolveRepairCreatedKeyBatchImportCandidate", () => {
       })
     expect(otherTargetCandidate?.intent.verification).toBe(
       MANAGED_SITE_TOKEN_BATCH_IMPORT_VERIFICATIONS.TRUSTED_NEW,
+    )
+  })
+
+  it("uses the newest same-target receipt regardless of receipt order", async () => {
+    const account = createAccount()
+    const ref = createRef()
+    const progress = createProgress(account, ref)
+    const resolve = vi.fn().mockResolvedValue({
+      kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Resolved,
+      secret: "resolved-runtime-secret",
+    })
+    mocks.createDisplayAccountApiContext.mockReturnValue({
+      request: { baseUrl: account.baseUrl },
+      capabilities: {
+        account: {
+          keyResources: {
+            open: vi.fn().mockResolvedValue(createSession(resolve)),
+          },
+        },
+      },
+    })
+
+    progress.managedSiteImportReceipts = [
+      {
+        targetFingerprint: TARGET_A,
+        resourceRef: ref,
+        status: ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_STATUSES.Created,
+        updatedAt: 20,
+      },
+      {
+        targetFingerprint: TARGET_A,
+        resourceRef: ref,
+        status: ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_STATUSES.Failed,
+        updatedAt: 10,
+      },
+    ]
+    await expect(
+      resolveRepairCreatedKeyBatchImportCandidate({
+        progress,
+        accounts: [account],
+        targetFingerprint: TARGET_A,
+        freshness: REPAIR_CREATED_KEY_BATCH_IMPORT_FRESHNESS.CURRENT_SESSION,
+      }),
+    ).resolves.toBeNull()
+
+    progress.managedSiteImportReceipts = [
+      {
+        targetFingerprint: TARGET_A,
+        resourceRef: ref,
+        status: ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_STATUSES.Failed,
+        updatedAt: 20,
+      },
+      {
+        targetFingerprint: TARGET_A,
+        resourceRef: ref,
+        status: ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_STATUSES.Created,
+        updatedAt: 10,
+      },
+    ]
+    const retryCandidate = await resolveRepairCreatedKeyBatchImportCandidate({
+      progress,
+      accounts: [account],
+      targetFingerprint: TARGET_A,
+      freshness: REPAIR_CREATED_KEY_BATCH_IMPORT_FRESHNESS.CURRENT_SESSION,
+    })
+
+    expect(retryCandidate?.items).toHaveLength(1)
+    expect(retryCandidate?.intent.verification).toBe(
+      MANAGED_SITE_TOKEN_BATCH_IMPORT_VERIFICATIONS.COMPLETE,
+    )
+  })
+
+  it("rechecks completed refs only when explicitly included and uses complete verification", async () => {
+    const account = createAccount()
+    const ref = createRef()
+    const progress = createProgress(account, ref)
+    progress.managedSiteImportReceipts = [
+      {
+        targetFingerprint: TARGET_A,
+        resourceRef: ref,
+        status: ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_STATUSES.AlreadyPresent,
+        updatedAt: 1,
+      },
+    ]
+    const resolve = vi.fn().mockResolvedValue({
+      kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Resolved,
+      secret: "resolved-runtime-secret",
+    })
+    mocks.createDisplayAccountApiContext.mockReturnValue({
+      request: { baseUrl: account.baseUrl },
+      capabilities: {
+        account: {
+          keyResources: {
+            open: vi.fn().mockResolvedValue(createSession(resolve)),
+          },
+        },
+      },
+    })
+
+    const candidate = await resolveRepairCreatedKeyBatchImportCandidate({
+      progress,
+      accounts: [account],
+      targetFingerprint: TARGET_A,
+      freshness: REPAIR_CREATED_KEY_BATCH_IMPORT_FRESHNESS.CURRENT_SESSION,
+      includeCompletedReferences: true,
+    })
+
+    expect(candidate?.items).toEqual([
+      expect.objectContaining({
+        kind: "resolved",
+        runtimeKey: expect.objectContaining({
+          resourceRef: ref,
+          secret: "resolved-runtime-secret",
+        }),
+      }),
+    ])
+    expect(candidate?.intent.verification).toBe(
+      MANAGED_SITE_TOKEN_BATCH_IMPORT_VERIFICATIONS.COMPLETE,
     )
   })
 
