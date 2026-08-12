@@ -1648,11 +1648,9 @@ describe("apiService AIHubMix", () => {
         },
       ],
     })
-    expect(calculateModelPrice(result.data[0], {}, 7)).toMatchObject({
-      inputUSD: 1.5,
-      outputUSD: 9,
-      inputCNY: 10.5,
-      outputCNY: 63,
+    expect(calculateModelPrice(result.data[0], 1)).toMatchObject({
+      kind: "token",
+      usdPerMillionTokens: { input: 1.5, output: 9 },
     })
     expect(legacyModelsCalled).toBe(false)
   })

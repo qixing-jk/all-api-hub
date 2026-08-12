@@ -351,10 +351,8 @@ describe("useFilteredModels", () => {
     }
     expect(pricedSource.account.id).toBe("account-pricing")
     expect(result.current.filteredModels[0]?.calculatedPrice).toMatchObject({
-      inputUSD: 4,
-      outputUSD: 4,
-      inputCNY: 28,
-      outputCNY: 28,
+      kind: "token",
+      usdPerMillionTokens: { input: 4, output: 4 },
     })
   })
 
@@ -1254,8 +1252,8 @@ describe("useFilteredModels", () => {
     expect(result.current.filteredModels).toHaveLength(1)
     expect(result.current.filteredModels[0]).toMatchObject({
       calculatedPrice: {
-        priceAvailability: "unavailable",
-        unavailableReason: MODEL_UNAVAILABLE_PRICE_REASONS.NO_USABLE_GROUP,
+        kind: "unavailable",
+        reason: MODEL_UNAVAILABLE_PRICE_REASONS.NO_USABLE_GROUP,
       },
       groupContext: {
         accessState: MODEL_GROUP_ACCESS_STATES.KNOWN,
@@ -1307,8 +1305,8 @@ describe("useFilteredModels", () => {
 
     expect(result.current.filteredModels[0]).toMatchObject({
       calculatedPrice: {
-        priceAvailability: "unavailable",
-        unavailableReason: MODEL_UNAVAILABLE_PRICE_REASONS.NO_USABLE_GROUP,
+        kind: "unavailable",
+        reason: MODEL_UNAVAILABLE_PRICE_REASONS.NO_USABLE_GROUP,
       },
       effectiveGroup: undefined,
       groupContext: {
@@ -2192,7 +2190,9 @@ describe("useFilteredModels", () => {
         result.current.filteredModels.map((item) => [
           item.source.kind === "account" ? item.source.account.id : "profile",
           item.effectiveGroup,
-          item.calculatedPrice.inputUSD,
+          item.calculatedPrice.kind === "token"
+            ? item.calculatedPrice.usdPerMillionTokens.input
+            : undefined,
           item.isLowestPrice,
         ]),
       ).toEqual([
@@ -2215,7 +2215,9 @@ describe("useFilteredModels", () => {
         result.current.filteredModels.map((item) => [
           item.source.kind === "account" ? item.source.account.id : "profile",
           item.effectiveGroup,
-          item.calculatedPrice.inputUSD,
+          item.calculatedPrice.kind === "token"
+            ? item.calculatedPrice.usdPerMillionTokens.input
+            : undefined,
           item.isLowestPrice,
         ]),
       ).toEqual([
@@ -2289,8 +2291,12 @@ describe("useFilteredModels", () => {
         result.current.filteredModels.map((item) => [
           item.source.kind === "account" ? item.source.account.id : "profile",
           item.effectiveGroup,
-          item.calculatedPrice.inputUSD,
-          item.calculatedPrice.outputUSD,
+          item.calculatedPrice.kind === "token"
+            ? item.calculatedPrice.usdPerMillionTokens.input
+            : undefined,
+          item.calculatedPrice.kind === "token"
+            ? item.calculatedPrice.usdPerMillionTokens.output
+            : undefined,
           item.isLowestPrice,
         ]),
       ).toEqual([
@@ -2384,7 +2390,9 @@ describe("useFilteredModels", () => {
       expect(
         result.current.filteredModels.map((item) => [
           item.source.kind === "account" ? item.source.account.id : "profile",
-          item.calculatedPrice.inputUSD,
+          item.calculatedPrice.kind === "token"
+            ? item.calculatedPrice.usdPerMillionTokens.input
+            : undefined,
           item.isLowestPrice,
         ]),
       ).toEqual([
@@ -2482,8 +2490,12 @@ describe("useFilteredModels", () => {
       expect(
         result.current.filteredModels.map((item) => [
           item.source.kind === "account" ? item.source.account.id : "profile",
-          item.calculatedPrice.inputUSD,
-          item.calculatedPrice.outputUSD,
+          item.calculatedPrice.kind === "token"
+            ? item.calculatedPrice.usdPerMillionTokens.input
+            : undefined,
+          item.calculatedPrice.kind === "token"
+            ? item.calculatedPrice.usdPerMillionTokens.output
+            : undefined,
           item.isLowestPrice,
         ]),
       ).toEqual([
@@ -2590,7 +2602,9 @@ describe("useFilteredModels", () => {
           item.sourceIdentity?.id,
           item.sourceIdentity?.kind,
           item.effectiveGroup,
-          item.calculatedPrice.inputUSD,
+          item.calculatedPrice.kind === "token"
+            ? item.calculatedPrice.usdPerMillionTokens.input
+            : undefined,
           item.isLowestPrice,
         ]),
       ).toEqual([
@@ -3002,7 +3016,9 @@ describe("useFilteredModels", () => {
         result.current.filteredModels.map((item) => [
           item.source.kind === "account" ? item.source.account.id : "profile",
           item.isLowestPrice,
-          item.calculatedPrice.perCallPrice,
+          item.calculatedPrice.kind === "per-call"
+            ? item.calculatedPrice.usdPerCall
+            : undefined,
         ]),
       ).toEqual([
         ["account-explicit-rate", true, 1],
@@ -3300,12 +3316,12 @@ describe("useFilteredModels", () => {
     expect(
       result.current.filteredModels.map((item) => [
         item.model.model_name,
-        item.calculatedPrice.priceAvailability,
+        item.calculatedPrice.kind,
         item.isLowestPrice,
       ]),
     ).toEqual([
-      ["priced-cheap-model", "available", false],
-      ["priced-expensive-model", "available", false],
+      ["priced-cheap-model", "token", false],
+      ["priced-expensive-model", "token", false],
       ["example-runtime-model-a", "unavailable", false],
       ["example-runtime-model-b", "unavailable", false],
     ])
@@ -3409,9 +3425,9 @@ describe("useFilteredModels", () => {
 
     const row = result.current.filteredModels[0]
     expect(row.calculatedPrice).toEqual({
-      priceAvailability: "unavailable",
-      unavailableReason:
-        MODEL_UNAVAILABLE_PRICE_REASONS.GROUP_RATIO_UNAVAILABLE,
+      kind: "unavailable",
+      billingMode: "token",
+      reason: MODEL_UNAVAILABLE_PRICE_REASONS.GROUP_RATIO_UNAVAILABLE,
     })
     expect(row.effectiveGroup).toBeUndefined()
     expect(row.activeGroupContext).toEqual({
@@ -3438,8 +3454,9 @@ describe("useFilteredModels", () => {
     expect(row.groupContext.accessState).toBe(MODEL_GROUP_ACCESS_STATES.KNOWN)
     expect(row.activeGroupContext.activeUsableGroups).toEqual([])
     expect(row.calculatedPrice).toEqual({
-      priceAvailability: "unavailable",
-      unavailableReason: MODEL_UNAVAILABLE_PRICE_REASONS.NO_USABLE_GROUP,
+      kind: "unavailable",
+      billingMode: "token",
+      reason: MODEL_UNAVAILABLE_PRICE_REASONS.NO_USABLE_GROUP,
     })
   })
 
@@ -3578,8 +3595,8 @@ describe("useFilteredModels", () => {
     expect(row.groupContext.priceableGroups).toEqual(["vip"])
     expect(row.effectiveGroup).toBe("vip")
     expect(row.calculatedPrice).toMatchObject({
-      priceAvailability: "available",
-      inputUSD: 1,
+      kind: "token",
+      usdPerMillionTokens: { input: 1 },
     })
     expect(result.current.availableAccountGroupOptionsByAccountId).toEqual({
       "account-normalized-group": [{ name: "vip", ratio: 0.5 }],

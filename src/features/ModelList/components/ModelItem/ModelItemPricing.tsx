@@ -22,7 +22,6 @@ import {
 import {
   formatPriceCompact,
   isTokenBillingType,
-  type AvailableCalculatedPrice,
   type CalculatedPrice,
 } from "~/services/models/utils/modelPricing"
 
@@ -99,13 +98,13 @@ export function resolveUnavailablePriceReason(
 ): ModelUnavailablePriceReason | undefined {
   const sourceUnavailableReason =
     model.price_metadata?.unavailable_reason ??
-    (calculatedPrice.priceAvailability === "unavailable"
-      ? calculatedPrice.unavailableReason
+    (calculatedPrice.kind === "unavailable"
+      ? calculatedPrice.reason
       : undefined)
 
   if (
     isModelPriceUnavailable(model) ||
-    calculatedPrice.priceAvailability === "unavailable"
+    calculatedPrice.kind === "unavailable"
   ) {
     return (
       sourceUnavailableReason ??
@@ -130,8 +129,8 @@ export function resolveUnavailablePriceReason(
  */
 export function isAvailableCalculatedPrice(
   calculatedPrice: CalculatedPrice,
-): calculatedPrice is AvailableCalculatedPrice {
-  return calculatedPrice.priceAvailability !== "unavailable"
+): calculatedPrice is Exclude<CalculatedPrice, { kind: "unavailable" }> {
+  return calculatedPrice.kind !== "unavailable"
 }
 
 /**
@@ -190,7 +189,6 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
     { effectiveGroup, groupRatios },
   )
   const tokenBillingType = isTokenBillingType(model.quota_type)
-  const perCallPrice = calculatedPrice.perCallPrice
   const estimatedPriceUsesDirectTokenPrice =
     usesEstimatedDirectTokenPrice(model)
   const showsEffectiveGroupRatio =
@@ -285,10 +283,11 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
 
   return (
     <div className="mt-2">
-      {tokenBillingType ? (
+      {calculatedPrice.kind === "token" ? (
         <div className="flex flex-wrap items-center gap-3 sm:gap-4 md:gap-6">
           <PriceView
-            calculatedPrice={calculatedPrice}
+            usdPrices={calculatedPrice.usdPerMillionTokens}
+            exchangeRate={exchangeRate}
             showRealPrice={showRealPrice}
             tokenBillingType={tokenBillingType}
             isAvailableForUser={isAvailableForUser}
@@ -319,13 +318,13 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
           )}
         </div>
       ) : (
-        perCallPrice !== undefined && (
+        calculatedPrice.kind === "per-call" && (
           <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
             <span className="dark:text-dark-text-secondary text-xs whitespace-nowrap text-gray-600 sm:text-sm">
               {t("perCall")}
             </span>
             <ModelItemPerCallPricingView
-              perCallPrice={perCallPrice}
+              perCallPrice={calculatedPrice.usdPerCall}
               isAvailableForUser={isAvailableForUser}
               exchangeRate={exchangeRate}
               showRealPrice={showRealPrice}

@@ -50,15 +50,30 @@ vi.mock("~/services/models/utils/modelPricing", async (importOriginal) => {
   }
 })
 
-const createCalculatedPrice = (overrides?: Record<string, unknown>) =>
-  ({
-    inputUSD: 1.25,
-    inputCNY: 9,
-    outputUSD: 2.5,
-    outputCNY: 18,
-    perCallPrice: 3,
-    ...overrides,
-  }) as any
+const createCalculatedPrice = (overrides: Record<string, unknown> = {}) => {
+  if (overrides.priceAvailability === "unavailable") {
+    return {
+      kind: "unavailable",
+      billingMode: "token",
+      reason: overrides.unavailableReason,
+    } as const
+  }
+
+  if ("perCallPrice" in overrides) {
+    return {
+      kind: "per-call",
+      usdPerCall: overrides.perCallPrice,
+    } as any
+  }
+
+  return {
+    kind: "token",
+    usdPerMillionTokens: {
+      input: overrides.inputUSD ?? 1.25,
+      output: overrides.outputUSD ?? 2.5,
+    },
+  } as any
+}
 
 const createModel = (overrides?: Record<string, unknown>) =>
   ({
@@ -123,7 +138,8 @@ describe("Model item pricing and description", () => {
     it("formats token-billing prices in USD and appends the per-million suffix", () => {
       render(
         <PriceView
-          calculatedPrice={createCalculatedPrice()}
+          usdPrices={{ input: 1.25, output: 2.5 }}
+          exchangeRate={7.2}
           showRealPrice={false}
           tokenBillingType={true}
           isAvailableForUser={true}
@@ -142,7 +158,8 @@ describe("Model item pricing and description", () => {
     it("formats real prices in CNY without token suffixes and dims unavailable models", () => {
       render(
         <PriceView
-          calculatedPrice={createCalculatedPrice()}
+          usdPrices={{ input: 1.25, output: 2.5 }}
+          exchangeRate={7.2}
           showRealPrice={true}
           tokenBillingType={false}
           isAvailableForUser={false}

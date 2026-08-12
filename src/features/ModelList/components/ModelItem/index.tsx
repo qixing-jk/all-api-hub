@@ -273,8 +273,7 @@ export default function ModelItem(props: ModelItemProps) {
     (hasLegacyDetails || hasPresentationDetails)
 
   const hasRuntimeDiscoveredPricingGap =
-    isModelPriceUnavailable(model) ||
-    calculatedPrice.priceAvailability === "unavailable"
+    isModelPriceUnavailable(model) || calculatedPrice.kind === "unavailable"
   const hasKnownNoUsableGroup =
     groupContext.accessState === MODEL_GROUP_ACCESS_STATES.KNOWN &&
     groupContext.usableGroups.length === 0
@@ -482,6 +481,7 @@ export default function ModelItem(props: ModelItemProps) {
                   <ModelItemDetails
                     model={model}
                     calculatedPrice={calculatedPrice}
+                    exchangeRate={exchangeRate}
                     showEndpointTypes={showEndpointTypes}
                     groupRatios={groupRatios}
                     groupContext={groupContext}

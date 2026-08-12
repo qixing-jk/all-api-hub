@@ -16,6 +16,7 @@ import {
   getEndpointTypesText,
   isModelAvailableForGroup,
   isTokenBillingType,
+  resolvePriceAmount,
 } from "~/services/models/utils/modelPricing"
 
 describe("modelPricing utils", () => {
@@ -36,230 +37,54 @@ describe("modelPricing utils", () => {
   })
 
   describe("calculateModelPrice", () => {
-    const baseGroupRatio = { default: 1, vip: 2, premium: 3 }
-    const exchangeRate = 7.0
+    const tokenModel: ModelPricing = {
+      model_name: "example-token-model",
+      quota_type: 0,
+      model_ratio: 15,
+      completion_ratio: 2,
+      model_price: 0,
+      enable_groups: ["default"],
+      supported_endpoint_types: ["chat"],
+    }
 
-    it("preserves an explicit zero group multiplier", () => {
-      const result = calculateModelPrice(
-        {
-          model_name: "example-model",
-          quota_type: 0,
-          model_ratio: 2,
-          completion_ratio: 3,
-          model_price: 0,
-          enable_groups: ["free"],
-          supported_endpoint_types: [],
-        },
-        { free: 0 },
-        7,
-        "free",
-      )
-
-      expect(result.inputUSD).toBe(0)
-      expect(result.outputUSD).toBe(0)
-      expect(result.inputCNY).toBe(0)
-      expect(result.outputCNY).toBe(0)
+    it("returns token prices in USD with the effective group multiplier", () => {
+      expect(calculateModelPrice(tokenModel, 2)).toEqual({
+        kind: "token",
+        usdPerMillionTokens: { input: 60, output: 120 },
+      })
     })
 
-    it.each([Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY])(
-      "uses the default multiplier for non-finite configured value %s",
-      (configuredGroupMultiplier) => {
-        const result = calculateModelPrice(
-          {
-            model_name: "example-model",
-            quota_type: 0,
-            model_ratio: 2,
-            completion_ratio: 3,
-            model_price: 0,
-            enable_groups: ["free"],
-            supported_endpoint_types: [],
-          },
-          { free: configuredGroupMultiplier },
-          7,
-          "free",
-        )
-
-        expect(result.inputUSD).toBe(4)
-        expect(result.outputUSD).toBe(12)
-        expect(result.inputCNY).toBe(28)
-        expect(result.outputCNY).toBe(84)
-      },
-    )
-
-    describe("Token-based billing (quota_type = 0)", () => {
-      const tokenModel: ModelPricing = {
-        model_name: "gpt-4",
-        quota_type: 0,
-        model_ratio: 15,
-        completion_ratio: 2,
-        model_price: 0,
-        enable_groups: ["default", "vip"],
-        supported_endpoint_types: ["chat"],
-      }
-
-      it("should calculate prices for default group", () => {
-        const result = calculateModelPrice(
-          tokenModel,
-          baseGroupRatio,
-          exchangeRate,
-          "default",
-        )
-
-        // inputUSD = model_ratio × 2 × groupRatio = 15 × 2 × 1 = 30
-        expect(result.inputUSD).toBe(30)
-        // outputUSD = model_ratio × completion_ratio × 2 × groupRatio = 15 × 2 × 2 × 1 = 60
-        expect(result.outputUSD).toBe(60)
-        // inputCNY = inputUSD × exchangeRate = 30 × 7 = 210
-        expect(result.inputCNY).toBe(210)
-        // outputCNY = outputUSD × exchangeRate = 60 × 7 = 420
-        expect(result.outputCNY).toBe(420)
-        expect(result.perCallPrice).toBeUndefined()
+    it("preserves zero and normalizes non-finite group multipliers", () => {
+      expect(calculateModelPrice(tokenModel, 0)).toMatchObject({
+        usdPerMillionTokens: { input: 0, output: 0 },
       })
-
-      it("should calculate prices for VIP group with 2x multiplier", () => {
-        const result = calculateModelPrice(
-          tokenModel,
-          baseGroupRatio,
-          exchangeRate,
-          "vip",
-        )
-
-        // inputUSD = 15 × 2 × 2 = 60
-        expect(result.inputUSD).toBe(60)
-        // outputUSD = 15 × 2 × 2 × 2 = 120
-        expect(result.outputUSD).toBe(120)
-        expect(result.inputCNY).toBe(420)
-        expect(result.outputCNY).toBe(840)
+      expect(calculateModelPrice(tokenModel, Number.NaN)).toMatchObject({
+        usdPerMillionTokens: { input: 30, output: 60 },
       })
+    })
 
-      it("should calculate prices for premium group with 3x multiplier", () => {
-        const result = calculateModelPrice(
-          tokenModel,
-          baseGroupRatio,
-          exchangeRate,
-          "premium",
-        )
-
-        // inputUSD = 15 × 2 × 3 = 90
-        expect(result.inputUSD).toBe(90)
-        // outputUSD = 15 × 2 × 2 × 3 = 180
-        expect(result.outputUSD).toBe(180)
-      })
-
-      it("should use default multiplier (1) for unknown group", () => {
-        const result = calculateModelPrice(
-          tokenModel,
-          baseGroupRatio,
-          exchangeRate,
-          "unknown",
-        )
-
-        expect(result.inputUSD).toBe(30)
-        expect(result.outputUSD).toBe(60)
-      })
-
-      it("should handle model with completion_ratio = 1", () => {
-        const equalRatioModel: ModelPricing = {
-          ...tokenModel,
-          completion_ratio: 1,
-        }
-
-        const result = calculateModelPrice(
-          equalRatioModel,
-          baseGroupRatio,
-          exchangeRate,
-          "default",
-        )
-
-        // outputUSD = 15 × 1 × 2 × 1 = 30
-        expect(result.inputUSD).toBe(30)
-        expect(result.outputUSD).toBe(30)
-      })
-
-      it("should handle zero model_ratio", () => {
-        const zeroRatioModel: ModelPricing = {
-          ...tokenModel,
-          model_ratio: 0,
-        }
-
-        const result = calculateModelPrice(
-          zeroRatioModel,
-          baseGroupRatio,
-          exchangeRate,
-          "default",
-        )
-
-        expect(result.inputUSD).toBe(0)
-        expect(result.outputUSD).toBe(0)
-        expect(result.inputCNY).toBe(0)
-        expect(result.outputCNY).toBe(0)
-      })
-
-      it("should handle different exchange rates", () => {
-        const result = calculateModelPrice(
-          tokenModel,
-          baseGroupRatio,
-          6.5,
-          "default",
-        )
-
-        expect(result.inputCNY).toBe(195) // 30 × 6.5
-        expect(result.outputCNY).toBe(390) // 60 × 6.5
-      })
-
-      it("uses direct input token pricing while falling back to ratio output pricing", () => {
-        const result = calculateModelPrice(
+    it("lets direct token dimensions override ratio-derived dimensions", () => {
+      expect(
+        calculateModelPrice(
           {
             ...tokenModel,
             model_ratio: 3,
             completion_ratio: 4,
-            token_price_usd_per_million: {
-              input: 1.5,
-            },
+            token_price_usd_per_million: { input: 1.5 },
           },
-          baseGroupRatio,
-          exchangeRate,
-          "vip",
-        )
-
-        expect(result).toMatchObject({
-          inputUSD: 1.5,
-          outputUSD: 48,
-          inputCNY: 10.5,
-          outputCNY: 336,
-        })
+          2,
+        ),
+      ).toEqual({
+        kind: "token",
+        usdPerMillionTokens: { input: 1.5, output: 48 },
       })
+    })
 
-      it("uses direct output token pricing while falling back to ratio input pricing", () => {
-        const result = calculateModelPrice(
+    it("returns an explicit unavailable state without numeric placeholders", () => {
+      expect(
+        calculateModelPrice(
           {
             ...tokenModel,
-            model_ratio: 3,
-            completion_ratio: 4,
-            token_price_usd_per_million: {
-              output: 9,
-            },
-          },
-          baseGroupRatio,
-          exchangeRate,
-          "default",
-        )
-
-        expect(result).toMatchObject({
-          inputUSD: 6,
-          outputUSD: 9,
-          inputCNY: 42,
-          outputCNY: 63,
-        })
-      })
-
-      it("returns missing-price metadata for unavailable price rows", () => {
-        const result = calculateModelPrice(
-          {
-            ...tokenModel,
-            model_name: "example-runtime-model",
-            model_ratio: 0,
-            completion_ratio: 0,
             price_metadata: {
               source: MODEL_PRICE_SOURCE_KINDS.NONE,
               precision: MODEL_PRICE_PRECISION_KINDS.UNAVAILABLE,
@@ -267,140 +92,42 @@ describe("modelPricing utils", () => {
                 MODEL_UNAVAILABLE_PRICE_REASONS.MODEL_LIST_ONLY,
             },
           },
-          baseGroupRatio,
-          exchangeRate,
-          "default",
-        )
-
-        expect(result.priceAvailability).toBe("unavailable")
-        if (result.priceAvailability !== "unavailable") {
-          throw new Error("Expected unavailable price result")
-        }
-        expect(result.unavailableReason).toBe(
-          MODEL_UNAVAILABLE_PRICE_REASONS.MODEL_LIST_ONLY,
-        )
-        expect(result.inputUSD).toBeUndefined()
-        expect(result.outputUSD).toBeUndefined()
-        expect(result.inputCNY).toBeUndefined()
-        expect(result.outputCNY).toBeUndefined()
-        expect(result.perCallPrice).toBeUndefined()
+          1,
+        ),
+      ).toEqual({
+        kind: "unavailable",
+        billingMode: "token",
+        reason: MODEL_UNAVAILABLE_PRICE_REASONS.MODEL_LIST_ONLY,
       })
     })
 
-    describe("Per-call billing (quota_type != 0)", () => {
-      it("should calculate simple per-call price with number", () => {
-        const perCallModel: ModelPricing = {
-          model_name: "dalle-3",
-          quota_type: 1,
-          model_ratio: 0,
-          completion_ratio: 1,
-          model_price: 0.02,
-          enable_groups: ["default"],
-          supported_endpoint_types: ["image"],
-        }
+    it("returns numeric and split per-call prices without token placeholders", () => {
+      const basePerCallModel: ModelPricing = {
+        ...tokenModel,
+        quota_type: 1,
+        model_price: 0.02,
+      }
 
-        const result = calculateModelPrice(
-          perCallModel,
-          baseGroupRatio,
-          exchangeRate,
-          "default",
-        )
-
-        expect(result.inputUSD).toBe(0)
-        expect(result.outputUSD).toBe(0)
-        expect(result.inputCNY).toBe(0)
-        expect(result.outputCNY).toBe(0)
-        expect(result.perCallPrice).toBe(0.02)
+      expect(calculateModelPrice(basePerCallModel, 2)).toEqual({
+        kind: "per-call",
+        usdPerCall: 0.04,
       })
-
-      it("should apply group multiplier to per-call price", () => {
-        const perCallModel: ModelPricing = {
-          model_name: "dalle-3",
-          quota_type: 1,
-          model_ratio: 0,
-          completion_ratio: 1,
-          model_price: 0.02,
-          enable_groups: ["default"],
-          supported_endpoint_types: [],
-        }
-
-        const result = calculateModelPrice(
-          perCallModel,
-          baseGroupRatio,
-          exchangeRate,
-          "vip",
-        )
-
-        // perCallPrice = 0.02 × 2 = 0.04
-        expect(result.perCallPrice).toBe(0.04)
+      expect(
+        calculateModelPrice(
+          { ...basePerCallModel, model_price: { input: 10, output: 20 } },
+          2,
+        ),
+      ).toEqual({
+        kind: "per-call",
+        usdPerCall: { input: 0.04, output: 0.08 },
       })
+    })
+  })
 
-      it("should handle complex per-call price with input/output", () => {
-        const complexPerCallModel: ModelPricing = {
-          model_name: "done-hub-model",
-          quota_type: 1,
-          model_ratio: 0,
-          completion_ratio: 1,
-          model_price: { input: 10, output: 20 },
-          enable_groups: ["default"],
-          supported_endpoint_types: ["chat"],
-        }
-
-        const result = calculateModelPrice(
-          complexPerCallModel,
-          baseGroupRatio,
-          exchangeRate,
-          "default",
-        )
-
-        // input: 10 × 1 × 0.002 = 0.02
-        // output: 20 × 1 × 0.002 = 0.04
-        expect(result.perCallPrice).toEqual({ input: 0.02, output: 0.04 })
-      })
-
-      it("should apply group multiplier to complex per-call price", () => {
-        const complexPerCallModel: ModelPricing = {
-          model_name: "done-hub-model",
-          quota_type: 1,
-          model_ratio: 0,
-          completion_ratio: 1,
-          model_price: { input: 10, output: 20 },
-          enable_groups: ["default"],
-          supported_endpoint_types: [],
-        }
-
-        const result = calculateModelPrice(
-          complexPerCallModel,
-          baseGroupRatio,
-          exchangeRate,
-          "vip",
-        )
-
-        // input: 10 × 2 × 0.002 = 0.04
-        // output: 20 × 2 × 0.002 = 0.08
-        expect(result.perCallPrice).toEqual({ input: 0.04, output: 0.08 })
-      })
-
-      it("should handle zero per-call price", () => {
-        const freeModel: ModelPricing = {
-          model_name: "free-model",
-          quota_type: 1,
-          model_ratio: 0,
-          completion_ratio: 1,
-          model_price: 0,
-          enable_groups: ["default"],
-          supported_endpoint_types: [],
-        }
-
-        const result = calculateModelPrice(
-          freeModel,
-          baseGroupRatio,
-          exchangeRate,
-          "default",
-        )
-
-        expect(result.perCallPrice).toBe(0)
-      })
+  describe("resolvePriceAmount", () => {
+    it("keeps USD unchanged and converts CNY at the display boundary", () => {
+      expect(resolvePriceAmount(2, "USD", 7)).toBe(2)
+      expect(resolvePriceAmount(2, "CNY", 7)).toBe(14)
     })
   })
 

@@ -103,10 +103,8 @@ describe("ModelItem profile actions", () => {
           supported_endpoint_types: [],
         }}
         calculatedPrice={{
-          inputUSD: 0,
-          outputUSD: 0,
-          inputCNY: 0,
-          outputCNY: 0,
+          kind: "token",
+          usdPerMillionTokens: { input: 0, output: 0 },
         }}
         exchangeRate={1}
         showRealPrice={false}
@@ -217,10 +215,8 @@ describe("ModelItem profile actions", () => {
           supported_endpoint_types: [],
         }}
         calculatedPrice={{
-          inputUSD: 0,
-          outputUSD: 0,
-          inputCNY: 0,
-          outputCNY: 0,
+          kind: "token",
+          usdPerMillionTokens: { input: 0, output: 0 },
         }}
         exchangeRate={1}
         showRealPrice={false}
@@ -272,10 +268,8 @@ describe("ModelItem profile actions", () => {
           supported_endpoint_types: [],
         }}
         calculatedPrice={{
-          inputUSD: 0,
-          outputUSD: 0,
-          inputCNY: 0,
-          outputCNY: 0,
+          kind: "token",
+          usdPerMillionTokens: { input: 0, output: 0 },
         }}
         exchangeRate={1}
         showRealPrice={false}
@@ -330,10 +324,8 @@ describe("ModelItem profile actions", () => {
           supported_endpoint_types: [],
         }}
         calculatedPrice={{
-          inputUSD: 0,
-          outputUSD: 0,
-          inputCNY: 0,
-          outputCNY: 0,
+          kind: "token",
+          usdPerMillionTokens: { input: 0, output: 0 },
         }}
         exchangeRate={1}
         showRealPrice={false}
@@ -402,10 +394,8 @@ describe("ModelItem profile actions", () => {
           supported_endpoint_types: [],
         }}
         calculatedPrice={{
-          inputUSD: 0,
-          outputUSD: 0,
-          inputCNY: 0,
-          outputCNY: 0,
+          kind: "token",
+          usdPerMillionTokens: { input: 0, output: 0 },
         }}
         exchangeRate={1}
         showRealPrice={false}
@@ -463,10 +453,8 @@ describe("ModelItem profile actions", () => {
           supported_endpoint_types: [],
         }}
         calculatedPrice={{
-          inputUSD: 0,
-          outputUSD: 0,
-          inputCNY: 0,
-          outputCNY: 0,
+          kind: "token",
+          usdPerMillionTokens: { input: 0, output: 0 },
         }}
         exchangeRate={1}
         showRealPrice={false}
@@ -524,10 +512,8 @@ describe("ModelItem profile actions", () => {
           supported_endpoint_types: [],
         }}
         calculatedPrice={{
-          inputUSD: 0,
-          outputUSD: 0,
-          inputCNY: 0,
-          outputCNY: 0,
+          kind: "token",
+          usdPerMillionTokens: { input: 0, output: 0 },
         }}
         exchangeRate={1}
         showRealPrice={false}
@@ -602,8 +588,9 @@ describe("ModelItem profile actions", () => {
           },
         }}
         calculatedPrice={{
-          priceAvailability: "unavailable",
-          unavailableReason: MODEL_UNAVAILABLE_PRICE_REASONS.MODEL_LIST_ONLY,
+          kind: "unavailable",
+          billingMode: "token",
+          reason: MODEL_UNAVAILABLE_PRICE_REASONS.MODEL_LIST_ONLY,
         }}
         exchangeRate={1}
         showRealPrice={false}
@@ -674,10 +661,8 @@ describe("ModelItem profile actions", () => {
           supported_endpoint_types: [],
         }}
         calculatedPrice={{
-          inputUSD: 0,
-          outputUSD: 0,
-          inputCNY: 0,
-          outputCNY: 0,
+          kind: "token",
+          usdPerMillionTokens: { input: 0, output: 0 },
         }}
         exchangeRate={1}
         showRealPrice={false}
@@ -744,10 +729,8 @@ describe("ModelItem profile actions", () => {
           supported_endpoint_types: [],
         }}
         calculatedPrice={{
-          inputUSD: 2,
-          outputUSD: 2,
-          inputCNY: 14,
-          outputCNY: 14,
+          kind: "token",
+          usdPerMillionTokens: { input: 2, output: 2 },
         }}
         exchangeRate={7}
         showRealPrice={true}

@@ -85,11 +85,8 @@ const createCalculatedModelItem = (
   return {
     model,
     calculatedPrice: {
-      priceAvailability: "available",
-      inputUSD: 1,
-      outputUSD: 2,
-      inputCNY: 7,
-      outputCNY: 14,
+      kind: "token",
+      usdPerMillionTokens: { input: 1, output: 2 },
     },
     source: DEFAULT_ACCOUNT_SOURCE,
     groupRatios: { [DEFAULT_MODEL_GROUP]: 1 },

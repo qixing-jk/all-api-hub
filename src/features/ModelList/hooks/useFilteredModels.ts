@@ -38,7 +38,6 @@ import {
   MODEL_UNAVAILABLE_PRICE_REASONS,
   type PricingResponse,
 } from "~/services/modelList/pricingModel"
-import { DEFAULT_MODEL_GROUP } from "~/services/models/constants"
 import { resolveModelIdentity } from "~/services/models/modelMetadata/modelIdentityIndex"
 import type {
   ModelMetadata,
@@ -56,6 +55,7 @@ import {
 import {
   calculateModelPrice,
   isTokenBillingType,
+  resolvePriceAmount,
 } from "~/services/models/utils/modelPricing"
 
 import {
@@ -289,7 +289,7 @@ function getComparablePriceKey(
 ): ComparablePriceKey {
   if (
     isModelPriceUnavailable(item.model) ||
-    item.calculatedPrice.priceAvailability === "unavailable"
+    item.calculatedPrice.kind === "unavailable"
   ) {
     return {
       billingMode: getModelBillingMode(item.model.quota_type),
@@ -298,13 +298,19 @@ function getComparablePriceKey(
     }
   }
 
-  if (isTokenBillingType(item.model.quota_type)) {
-    const inputPrice = showRealPrice
-      ? item.calculatedPrice.inputCNY
-      : item.calculatedPrice.inputUSD
-    const outputPrice = showRealPrice
-      ? item.calculatedPrice.outputCNY
-      : item.calculatedPrice.outputUSD
+  if (item.calculatedPrice.kind === "token") {
+    const currency = showRealPrice ? "CNY" : "USD"
+    const exchangeRate = getSourceExchangeRate(item)
+    const inputPrice = resolvePriceAmount(
+      item.calculatedPrice.usdPerMillionTokens.input,
+      currency,
+      exchangeRate,
+    )
+    const outputPrice = resolvePriceAmount(
+      item.calculatedPrice.usdPerMillionTokens.output,
+      currency,
+      exchangeRate,
+    )
 
     return {
       billingMode: MODEL_LIST_BILLING_MODES.TOKEN_BASED,
@@ -313,7 +319,15 @@ function getComparablePriceKey(
     }
   }
 
-  const perCallPrice = item.calculatedPrice.perCallPrice
+  if (item.calculatedPrice.kind !== "per-call") {
+    return {
+      billingMode: getModelBillingMode(item.model.quota_type),
+      primary: null,
+      secondary: null,
+    }
+  }
+
+  const perCallPrice = item.calculatedPrice.usdPerCall
   const exchangeRate = showRealPrice ? getSourceExchangeRate(item) : 1
 
   if (typeof perCallPrice === "number") {
@@ -495,24 +509,14 @@ function resolveBestCalculatedItem(
     MODEL_GROUP_ACCESS_STATES.NOT_APPLICABLE
   ) {
     return createCalculatedItem({
-      calculatedPrice: calculateModelPrice(
-        rawItem.model,
-        rawItem.groupRatios,
-        rawItem.exchangeRate,
-        DEFAULT_MODEL_GROUP,
-      ),
+      calculatedPrice: calculateModelPrice(rawItem.model, 1),
       activeGroupContext,
     })
   }
 
   if (isModelPriceUnavailable(rawItem.model)) {
     return createCalculatedItem({
-      calculatedPrice: calculateModelPrice(
-        rawItem.model,
-        rawItem.groupRatios,
-        rawItem.exchangeRate,
-        DEFAULT_MODEL_GROUP,
-      ),
+      calculatedPrice: calculateModelPrice(rawItem.model, 1),
       activeGroupContext,
     })
   }
@@ -533,8 +537,11 @@ function resolveBestCalculatedItem(
 
     return createCalculatedItem({
       calculatedPrice: {
-        priceAvailability: "unavailable",
-        unavailableReason,
+        kind: "unavailable",
+        billingMode: isTokenBillingType(rawItem.model.quota_type)
+          ? "token"
+          : "per-call",
+        reason: unavailableReason,
       },
       activeGroupContext,
     })
@@ -546,9 +553,7 @@ function resolveBestCalculatedItem(
   activeGroupContext.activePriceableGroups.forEach((group) => {
     const calculatedPrice = calculateModelPrice(
       rawItem.model,
-      rawItem.groupRatios,
-      rawItem.exchangeRate,
-      group,
+      rawItem.groupRatios[group],
     )
     const candidateItem = createCalculatedItem({
       calculatedPrice,

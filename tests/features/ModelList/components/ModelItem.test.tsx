@@ -214,11 +214,9 @@ function createDefaultProps() {
   } as ModelPricing
 
   const calculatedPrice: CalculatedPrice = {
-    inputUSD: 1,
-    outputUSD: 2,
-    inputCNY: 7,
-    outputCNY: 14,
-  } as CalculatedPrice
+    kind: "token",
+    usdPerMillionTokens: { input: 1, output: 2 },
+  }
 
   return {
     model,

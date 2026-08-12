@@ -1,30 +1,37 @@
 import { useTranslation } from "react-i18next"
 
-import type { AvailableCalculatedPrice } from "~/services/models/utils/modelPricing"
+import {
+  resolvePriceAmount,
+  type TokenPricesUSD,
+} from "~/services/models/utils/modelPricing"
 import { CurrencyType } from "~/types"
 
 interface PriceViewProps {
-  calculatedPrice: AvailableCalculatedPrice
+  usdPrices: TokenPricesUSD
+  exchangeRate: number
   showRealPrice: boolean
   tokenBillingType: boolean
   isAvailableForUser: boolean
   formatPriceCompact: (price: number, currency?: CurrencyType) => string
 }
 export const PriceView = ({
-  calculatedPrice,
+  usdPrices,
+  exchangeRate,
   showRealPrice,
   tokenBillingType,
   isAvailableForUser,
   formatPriceCompact,
 }: PriceViewProps) => {
   const { t } = useTranslation("modelList")
-  let inputPrice = showRealPrice
-    ? `${formatPriceCompact(calculatedPrice.inputCNY, "CNY")}`
-    : `${formatPriceCompact(calculatedPrice.inputUSD, "USD")}`
-
-  let outputPrice = showRealPrice
-    ? `${formatPriceCompact(calculatedPrice.outputCNY, "CNY")}`
-    : `${formatPriceCompact(calculatedPrice.outputUSD, "USD")}`
+  const currency = showRealPrice ? "CNY" : "USD"
+  let inputPrice = formatPriceCompact(
+    resolvePriceAmount(usdPrices.input, currency, exchangeRate),
+    currency,
+  )
+  let outputPrice = formatPriceCompact(
+    resolvePriceAmount(usdPrices.output, currency, exchangeRate),
+    currency,
+  )
 
   if (tokenBillingType) {
     inputPrice += "/M"

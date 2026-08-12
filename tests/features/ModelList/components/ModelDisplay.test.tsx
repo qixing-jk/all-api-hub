@@ -199,9 +199,7 @@ const PROFILE_SOURCE = createProfileSource(PROFILE_FIXTURE)
 
 type CalculatedModelOverrides = {
   model?: Partial<ModelPricing>
-  calculatedPrice?: Partial<
-    Extract<CalculatedPrice, { priceAvailability?: "available" }>
-  >
+  calculatedPrice?: Partial<{ input: number; output: number }>
   source?: CalculatedModelItem["source"]
   effectiveGroup?: string
   resolvedVendor?: CalculatedModelItem["resolvedVendor"]
@@ -234,11 +232,11 @@ const createCalculatedModel = (
   }
 
   const calculatedPrice: CalculatedPrice = {
-    inputUSD: 1,
-    outputUSD: 2,
-    inputCNY: 7,
-    outputCNY: 14,
-    ...(overrides.calculatedPrice ?? {}),
+    kind: "token",
+    usdPerMillionTokens: {
+      input: overrides.calculatedPrice?.input ?? 1,
+      output: overrides.calculatedPrice?.output ?? 2,
+    },
   }
 
   const source = overrides.source ?? ACCOUNT_SOURCE
@@ -593,12 +591,12 @@ describe("ModelDisplay", () => {
           enable_groups: ["default"],
         },
         calculatedPrice: {
-          inputUSD: 3,
+          input: 3,
         },
       }),
       createCalculatedModel({
         calculatedPrice: {
-          inputUSD: 4,
+          input: 4,
         },
       }),
     ]
@@ -663,7 +661,7 @@ describe("ModelDisplay", () => {
     const readdedModels = [
       createCalculatedModel({
         calculatedPrice: {
-          inputUSD: 4,
+          input: 4,
         },
       }),
       createCalculatedModel({

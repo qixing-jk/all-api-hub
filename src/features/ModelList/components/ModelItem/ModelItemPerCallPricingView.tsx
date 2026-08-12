@@ -1,7 +1,7 @@
 import type { PerCallPrice } from "~/services/modelList/pricingModel"
 import {
   formatPriceCompact,
-  type AvailableCalculatedPrice,
+  resolvePriceAmount,
 } from "~/services/models/utils/modelPricing"
 
 import { PriceView } from "./ModelItemPicingView"
@@ -29,22 +29,18 @@ export const ModelItemPerCallPricingView = ({
         }`}
       >
         {showRealPrice
-          ? formatPriceCompact((perCallPrice || 0) * exchangeRate, "CNY")
-          : formatPriceCompact(perCallPrice || 0, "USD")}
+          ? formatPriceCompact(
+              resolvePriceAmount(perCallPrice, "CNY", exchangeRate),
+              "CNY",
+            )
+          : formatPriceCompact(perCallPrice, "USD")}
       </span>
     )
   } else {
-    const calculatedPrice: AvailableCalculatedPrice = {
-      priceAvailability: "available",
-      inputUSD: perCallPrice.input,
-      inputCNY: perCallPrice.input * exchangeRate,
-      outputUSD: perCallPrice.output,
-      outputCNY: perCallPrice.output * exchangeRate,
-      perCallPrice: 0,
-    }
     return (
       <PriceView
-        calculatedPrice={calculatedPrice}
+        usdPrices={perCallPrice}
+        exchangeRate={exchangeRate}
         showRealPrice={showRealPrice}
         tokenBillingType={tokenBillingType}
         isAvailableForUser={isAvailableForUser}

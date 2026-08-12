@@ -8,31 +8,33 @@ import {
   type ModelUnavailablePriceReason,
   type PerCallPrice,
 } from "~/services/modelList/pricingModel"
-import { DEFAULT_MODEL_GROUP } from "~/services/models/constants"
 import type { CurrencyType } from "~/types"
 import { t } from "~/utils/i18n/core"
 
 export type CalculatedPrice =
-  | AvailableCalculatedPrice
+  | CalculatedTokenPrice
+  | CalculatedPerCallPrice
   | UnavailableCalculatedPrice
 
-export interface AvailableCalculatedPrice {
-  priceAvailability?: "available"
-  inputUSD: number // 每1M token输入价格（美元）
-  outputUSD: number // 每1M token输出价格（美元）
-  inputCNY: number // 每1M token输入价格（人民币）
-  outputCNY: number // 每1M token输出价格（人民币）
-  perCallPrice?: PerCallPrice // 按次计费时每次调用的价格
+export interface TokenPricesUSD {
+  input: number
+  output: number
+}
+
+export interface CalculatedTokenPrice {
+  kind: "token"
+  usdPerMillionTokens: TokenPricesUSD
+}
+
+export interface CalculatedPerCallPrice {
+  kind: "per-call"
+  usdPerCall: PerCallPrice
 }
 
 export interface UnavailableCalculatedPrice {
-  priceAvailability: "unavailable"
-  unavailableReason?: ModelUnavailablePriceReason
-  inputUSD?: undefined
-  outputUSD?: undefined
-  inputCNY?: undefined
-  outputCNY?: undefined
-  perCallPrice?: undefined
+  kind: "unavailable"
+  billingMode: "token" | "per-call"
+  reason?: ModelUnavailablePriceReason
 }
 
 const NEW_API_QUOTA_PER_USD = 500_000
@@ -40,8 +42,7 @@ const TOKEN_PRICE_UNIT_TOKENS = 1_000_000
 const NEW_API_RATIO_BASE_USD_PER_MILLION_TOKENS =
   TOKEN_PRICE_UNIT_TOKENS / NEW_API_QUOTA_PER_USD
 
-type TokenPriceUSD = Pick<AvailableCalculatedPrice, "inputUSD" | "outputUSD">
-type PartialTokenPriceUSD = Partial<TokenPriceUSD>
+type PartialTokenPricesUSD = Partial<TokenPricesUSD>
 
 /**
  * Returns true when the provider supplied a finite direct USD price value.
@@ -54,15 +55,13 @@ const isFiniteTokenPrice = (value: number | undefined): value is number =>
  */
 const resolveDirectTokenPriceUSD = (
   model: ModelPricing,
-): PartialTokenPriceUSD => {
+): PartialTokenPricesUSD => {
   const directInputUSD = model.token_price_usd_per_million?.input
   const directOutputUSD = model.token_price_usd_per_million?.output
 
   return {
-    ...(isFiniteTokenPrice(directInputUSD) ? { inputUSD: directInputUSD } : {}),
-    ...(isFiniteTokenPrice(directOutputUSD)
-      ? { outputUSD: directOutputUSD }
-      : {}),
+    ...(isFiniteTokenPrice(directInputUSD) ? { input: directInputUSD } : {}),
+    ...(isFiniteTokenPrice(directOutputUSD) ? { output: directOutputUSD } : {}),
   }
 }
 
@@ -72,80 +71,77 @@ const resolveDirectTokenPriceUSD = (
 const calculateRatioTokenPriceUSD = (
   model: ModelPricing,
   groupMultiplier: number,
-): TokenPriceUSD => {
-  const inputUSD =
+): TokenPricesUSD => {
+  const input =
     model.model_ratio *
     NEW_API_RATIO_BASE_USD_PER_MILLION_TOKENS *
     groupMultiplier
-  const outputUSD = inputUSD * model.completion_ratio
+  const output = input * model.completion_ratio
 
-  return { inputUSD, outputUSD }
+  return { input, output }
 }
 
 /**
  * 计算模型价格
  * @param model 模型定价信息
- * @param groupRatio 分组倍率映射表
- * @param exchangeRate 汇率（CNY per USD）
- * @param userGroup 用户分组标识，用于匹配 groupRatio
+ * @param groupMultiplier 已解析的有效分组倍率
  * New API 倍率体系中 500,000 配额 = 1 USD，所以 1M tokens 的倍率 1 基准价为 2 USD。
  * 原理 https://docs.newapi.ai/guide/console/settings/rate-settings/
  * 当前前端实现 https://github.com/QuantumNous/new-api/blob/main/web/default/src/features/pricing/lib/price.ts
  */
 export const calculateModelPrice = (
   model: ModelPricing,
-  groupRatio: Record<string, number>,
-  exchangeRate: number,
-  userGroup: string = DEFAULT_MODEL_GROUP,
+  groupMultiplier: number,
 ): CalculatedPrice => {
   if (isModelPriceUnavailable(model)) {
     return {
-      priceAvailability: "unavailable",
-      unavailableReason: model.price_metadata?.unavailable_reason,
+      kind: "unavailable",
+      billingMode: isTokenBillingType(model.quota_type) ? "token" : "per-call",
+      reason: model.price_metadata?.unavailable_reason,
     }
   }
 
-  // 获取用户分组的倍率，默认为1
-  const configuredGroupMultiplier = groupRatio[userGroup]
-  const groupMultiplier =
-    typeof configuredGroupMultiplier === "number" &&
-    Number.isFinite(configuredGroupMultiplier)
-      ? configuredGroupMultiplier
-      : 1
+  const effectiveGroupMultiplier = Number.isFinite(groupMultiplier)
+    ? groupMultiplier
+    : 1
 
   if (isTokenBillingType(model.quota_type)) {
     // 按 New API/One API 兼容倍率计费；倍率基准来自 1M tokens / 500,000 quota-per-USD。
     // inputUSD（每 1M token） = model_ratio × baseUSDPer1M × groupRatio
     // complUSD（每 1M token） = inputUSD × completion_ratio
-    const ratioPrice = calculateRatioTokenPriceUSD(model, groupMultiplier)
+    const ratioPrice = calculateRatioTokenPriceUSD(
+      model,
+      effectiveGroupMultiplier,
+    )
     const directPrice = resolveDirectTokenPriceUSD(model)
-    const inputUSD = directPrice.inputUSD ?? ratioPrice.inputUSD
-    const outputUSD = directPrice.outputUSD ?? ratioPrice.outputUSD
 
     return {
-      priceAvailability: "available",
-      inputUSD,
-      outputUSD,
-      inputCNY: inputUSD * exchangeRate,
-      outputCNY: outputUSD * exchangeRate,
+      kind: "token",
+      usdPerMillionTokens: {
+        input: directPrice.input ?? ratioPrice.input,
+        output: directPrice.output ?? ratioPrice.output,
+      },
     }
   } else {
     // 按次计费
     const perCallPrice = calculateModelPerCallPrice(
       model.model_price,
-      groupMultiplier,
+      effectiveGroupMultiplier,
     )
 
     return {
-      priceAvailability: "available",
-      inputUSD: 0,
-      outputUSD: 0,
-      inputCNY: 0,
-      outputCNY: 0,
-      perCallPrice,
+      kind: "per-call",
+      usdPerCall: perCallPrice,
     }
   }
 }
+
+/** Converts an already resolved USD amount to the selected display currency. */
+export const resolvePriceAmount = (
+  usdAmount: number,
+  currency: CurrencyType,
+  cnyPerUsd: number,
+): number => (currency === "CNY" ? usdAmount * cnyPerUsd : usdAmount)
 // todo: 考虑其他站点的计算方式
 // https://github.com/deanxv/done-hub/blob/6f332c162175de3333477c03faaa65d0d902f8ab/web/src/views/Pricing/component/util.js#L13
 const DONE_HUB_TOKEN_TO_CALL_RATIO = 0.002
