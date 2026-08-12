@@ -101,6 +101,10 @@
     "warning": "Batch testing runs the selected items according to each model’s resolved API type. Inapplicable items are skipped automatically. Results are advisory; rely on real tool calls for final confirmation."
   },
   "billingMode": "Billing Mode",
+  "cacheRead": "Cache read:",
+  "cacheRead1MTokens": "Cache read (1M tokens)",
+  "cacheWrite": "Cache write:",
+  "cacheWrite1MTokens": "Cache write (1M tokens)",
   "clickSwitchGroup": "Click to switch to {{group}} group",
   "collapseDetails": "Collapse details",
   "comparison": {

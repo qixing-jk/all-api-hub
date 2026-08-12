@@ -24,49 +24,64 @@ export const PriceView = ({
 }: PriceViewProps) => {
   const { t } = useTranslation("modelList")
   const currency = showRealPrice ? "CNY" : "USD"
-  let inputPrice = formatPriceCompact(
-    resolvePriceAmount(usdPrices.input, currency, exchangeRate),
-    currency,
-  )
-  let outputPrice = formatPriceCompact(
-    resolvePriceAmount(usdPrices.output, currency, exchangeRate),
-    currency,
-  )
-
-  if (tokenBillingType) {
-    inputPrice += "/M"
-    outputPrice += "/M"
+  const priceItems = [
+    { key: "input", label: t("input"), amount: usdPrices.input, tone: "blue" },
+    {
+      key: "output",
+      label: t("output"),
+      amount: usdPrices.output,
+      tone: "green",
+    },
+    ...(usdPrices.cacheRead !== undefined
+      ? [
+          {
+            key: "cache-read",
+            label: t("cacheRead"),
+            amount: usdPrices.cacheRead,
+            tone: "amber",
+          },
+        ]
+      : []),
+    ...(usdPrices.cacheWrite !== undefined
+      ? [
+          {
+            key: "cache-write",
+            label: t("cacheWrite"),
+            amount: usdPrices.cacheWrite,
+            tone: "purple",
+          },
+        ]
+      : []),
+  ]
+  const availableToneClasses: Record<string, string> = {
+    blue: "text-blue-600",
+    green: "text-green-600",
+    amber: "text-amber-600",
+    purple: "text-purple-600",
   }
 
   return (
-    <div className="flex items-center gap-6">
-      {/* 输入价格 */}
-      <div className="flex items-center space-x-2">
-        <span className="dark:text-dark-text-primary text-sm text-gray-600">
-          {t("input")}
-        </span>
-        <span
-          className={`text-sm ${
-            isAvailableForUser ? "text-blue-600" : "text-gray-500"
-          }`}
-        >
-          {inputPrice}
-        </span>
-      </div>
-
-      {/* 输出价格 */}
-      <div className="flex items-center space-x-2">
-        <span className="dark:text-dark-text-primary text-sm text-gray-600">
-          {t("output")}
-        </span>
-        <span
-          className={`text-sm ${
-            isAvailableForUser ? "text-green-600" : "text-gray-500"
-          }`}
-        >
-          {outputPrice}
-        </span>
-      </div>
+    <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+      {priceItems.map((item) => (
+        <div key={item.key} className="flex items-center space-x-2">
+          <span className="dark:text-dark-text-primary text-sm text-gray-600">
+            {item.label}
+          </span>
+          <span
+            className={`text-sm ${
+              isAvailableForUser
+                ? availableToneClasses[item.tone]
+                : "text-gray-500"
+            }`}
+          >
+            {formatPriceCompact(
+              resolvePriceAmount(item.amount, currency, exchangeRate),
+              currency,
+            )}
+            {tokenBillingType ? "/M" : ""}
+          </span>
+        </div>
+      ))}
     </div>
   )
 }

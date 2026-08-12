@@ -95,6 +95,10 @@
     "warning": "批量測試會按每個模型解析後的介面型別執行所選項目；不適用的項目會自動跳過。檢測結果僅供參考，請以工具實際呼叫情況為準。"
   },
   "billingMode": "計費方式",
+  "cacheRead": "快取讀取:",
+  "cacheRead1MTokens": "快取讀取(1M tokens)",
+  "cacheWrite": "快取寫入:",
+  "cacheWrite1MTokens": "快取寫入(1M tokens)",
   "clickSwitchGroup": "點擊切換到 {{group}} 分組",
   "collapseDetails": "收起詳細資訊",
   "comparison": {

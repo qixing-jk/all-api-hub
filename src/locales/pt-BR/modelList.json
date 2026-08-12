@@ -107,6 +107,10 @@
     "warning": "O teste em lote executa os itens selecionados de acordo com o tipo de API identificado para cada modelo. Itens não aplicáveis são ignorados automaticamente. Os resultados são apenas indicativos; use chamadas reais das ferramentas para a confirmação final."
   },
   "billingMode": "Modo de cobrança",
+  "cacheRead": "Leitura do cache:",
+  "cacheRead1MTokens": "Leitura do cache (1 milhão de tokens)",
+  "cacheWrite": "Gravação no cache:",
+  "cacheWrite1MTokens": "Gravação no cache (1 milhão de tokens)",
   "clickSwitchGroup": "Clique para mudar para o grupo {{group}}",
   "collapseDetails": "Recolher detalhes",
   "comparison": {

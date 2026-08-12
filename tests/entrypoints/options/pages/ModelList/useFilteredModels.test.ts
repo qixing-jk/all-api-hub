@@ -2306,6 +2306,44 @@ describe("useFilteredModels", () => {
     })
   })
 
+  it("keeps token sorting primary-only when cache prices differ", async () => {
+    const account = createDisplayAccount({
+      id: "cache-sort-account",
+      name: "Cache Sort Account",
+      siteType: SITE_TYPES.NEW_API,
+      balance: { USD: 10, CNY: 70 },
+    })
+    const { result } = renderUseFilteredModels({
+      pricingContexts: [
+        {
+          account,
+          pricing: createPricingResponse([
+            {
+              model_name: "higher-input-cheap-cache",
+              model_ratio: 2,
+              completion_ratio: 1,
+              token_price_ratios_to_input: { cache_read: 0 },
+            },
+            {
+              model_name: "lower-input-expensive-cache",
+              model_ratio: 1,
+              completion_ratio: 1,
+              token_price_ratios_to_input: { cache_read: 10 },
+            },
+          ]),
+        },
+      ],
+      selectedSource: createAccountSource(account),
+      sortMode: MODEL_LIST_SORT_MODES.PRICE_ASC,
+    })
+
+    await waitFor(() => {
+      expect(
+        result.current.filteredModels.map((item) => item.model.model_name),
+      ).toEqual(["lower-input-expensive-cache", "higher-input-cheap-cache"])
+    })
+  })
+
   it("filters and compares provider-catalog prices without inflating account summaries", async () => {
     const ordinaryAccount = createDisplayAccount({
       id: "ordinary-comparable",

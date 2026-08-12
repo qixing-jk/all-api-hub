@@ -101,6 +101,10 @@
     "warning": "Beim Stapeltest werden die ausgewählten Elemente entsprechend dem aufgelösten API-Typ jedes Modells ausgeführt. Nicht zutreffende Elemente werden automatisch übersprungen. Die Ergebnisse sind beratend; Verlassen Sie sich zur endgültigen Bestätigung auf echte Toolaufrufe."
   },
   "billingMode": "Abrechnungsmodus",
+  "cacheRead": "Cache-Lesen:",
+  "cacheRead1MTokens": "Cache-Lesen (1 Mio. Token)",
+  "cacheWrite": "Cache-Schreiben:",
+  "cacheWrite1MTokens": "Cache-Schreiben (1 Mio. Token)",
   "clickSwitchGroup": "Klicken Sie hier, um zur Gruppe {{group}} zu wechseln",
   "collapseDetails": "Details ausblenden",
   "comparison": {

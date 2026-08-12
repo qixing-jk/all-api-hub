@@ -80,6 +80,73 @@ describe("modelPricing utils", () => {
       })
     })
 
+    it("resolves cache ratios from the effective input price", () => {
+      expect(
+        calculateModelPrice(
+          {
+            ...tokenModel,
+            model_ratio: 3,
+            token_price_ratios_to_input: {
+              cache_read: 0.25,
+              cache_write: 1.25,
+            },
+          },
+          2,
+        ),
+      ).toEqual({
+        kind: "token",
+        usdPerMillionTokens: {
+          input: 12,
+          output: 24,
+          cacheRead: 3,
+          cacheWrite: 15,
+        },
+      })
+    })
+
+    it("prefers explicit cache prices and preserves a free cache meter", () => {
+      expect(
+        calculateModelPrice(
+          {
+            ...tokenModel,
+            token_price_usd_per_million: {
+              cache_read: 0,
+              cache_write: 4,
+            },
+            token_price_ratios_to_input: {
+              cache_read: 0.5,
+              cache_write: 2,
+            },
+          },
+          1,
+        ),
+      ).toMatchObject({
+        usdPerMillionTokens: { cacheRead: 0, cacheWrite: 4 },
+      })
+    })
+
+    it("omits invalid optional cache prices without invalidating primary prices", () => {
+      expect(
+        calculateModelPrice(
+          {
+            ...tokenModel,
+            token_price_usd_per_million: {
+              cache_read: Number.NaN,
+              cache_write: -1,
+            },
+            token_price_ratios_to_input: {
+              cache_read: Number.POSITIVE_INFINITY,
+              cache_write: -2,
+            },
+          },
+          1,
+        ),
+      ).toEqual({
+        kind: "token",
+        usdPerMillionTokens: { input: 30, output: 60 },
+      })
+    })
+
     it("returns an explicit unavailable state without numeric placeholders", () => {
       expect(
         calculateModelPrice(

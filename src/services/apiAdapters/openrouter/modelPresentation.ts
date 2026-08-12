@@ -139,30 +139,6 @@ interface PriceFieldDefinition {
 
 const BASE_PRICE_FIELDS: PriceFieldDefinition[] = [
   {
-    key: "prompt",
-    label: OPENROUTER_FACT_LABELS.inputPrice,
-    unit: MODEL_DISPLAY_PRICE_UNITS.MillionInputTokens,
-    normalize: normalizeUsdPerMillionTokens,
-  },
-  {
-    key: "completion",
-    label: OPENROUTER_FACT_LABELS.outputPrice,
-    unit: MODEL_DISPLAY_PRICE_UNITS.MillionOutputTokens,
-    normalize: normalizeUsdPerMillionTokens,
-  },
-  {
-    key: "input_cache_read",
-    label: OPENROUTER_FACT_LABELS.cacheReadPrice,
-    unit: MODEL_DISPLAY_PRICE_UNITS.MillionCachedInputTokens,
-    normalize: normalizeUsdPerMillionTokens,
-  },
-  {
-    key: "input_cache_write",
-    label: OPENROUTER_FACT_LABELS.cacheWritePrice,
-    unit: MODEL_DISPLAY_PRICE_UNITS.MillionCacheWriteTokens,
-    normalize: normalizeUsdPerMillionTokens,
-  },
-  {
     key: "input_cache_write_1h",
     label: OPENROUTER_FACT_LABELS.cacheWriteOneHourPrice,
     unit: MODEL_DISPLAY_PRICE_UNITS.MillionCacheWriteOneHourTokens,
@@ -224,17 +200,41 @@ const BASE_PRICE_FIELDS: PriceFieldDefinition[] = [
   },
 ]
 
-const OVERRIDE_PRICE_FIELDS = BASE_PRICE_FIELDS.filter((field) =>
-  [
-    "prompt",
-    "completion",
-    "audio",
-    "input_audio_cache",
-    "input_cache_read",
-    "input_cache_write",
-    "input_cache_write_1h",
-  ].includes(field.key),
-)
+const OVERRIDE_PRIMARY_PRICE_FIELDS: PriceFieldDefinition[] = [
+  {
+    key: "prompt",
+    label: OPENROUTER_FACT_LABELS.inputPrice,
+    unit: MODEL_DISPLAY_PRICE_UNITS.MillionInputTokens,
+    normalize: normalizeUsdPerMillionTokens,
+  },
+  {
+    key: "completion",
+    label: OPENROUTER_FACT_LABELS.outputPrice,
+    unit: MODEL_DISPLAY_PRICE_UNITS.MillionOutputTokens,
+    normalize: normalizeUsdPerMillionTokens,
+  },
+  {
+    key: "input_cache_read",
+    label: OPENROUTER_FACT_LABELS.cacheReadPrice,
+    unit: MODEL_DISPLAY_PRICE_UNITS.MillionCachedInputTokens,
+    normalize: normalizeUsdPerMillionTokens,
+  },
+  {
+    key: "input_cache_write",
+    label: OPENROUTER_FACT_LABELS.cacheWritePrice,
+    unit: MODEL_DISPLAY_PRICE_UNITS.MillionCacheWriteTokens,
+    normalize: normalizeUsdPerMillionTokens,
+  },
+]
+
+const OVERRIDE_PRICE_FIELDS = [
+  ...OVERRIDE_PRIMARY_PRICE_FIELDS,
+  ...BASE_PRICE_FIELDS.filter((field) =>
+    ["audio", "input_audio_cache", "input_cache_write_1h"].includes(
+      field.key,
+    ),
+  ),
+]
 
 /** Maps one documented price field into an explicit currency and meter. */
 function createPrice(

@@ -248,14 +248,10 @@ describe("OpenRouter provider model catalog Adapter", () => {
       expect(models[modelId].token_price_usd_per_million).toBeUndefined()
     }
     expect(
-      getSection(models["example/negative-price"], "pricing").facts,
-    ).toEqual([
-      expect.objectContaining({
-        type: MODEL_DISPLAY_FACT_TYPES.CurrencyPrice,
-        amount: 2,
-        unit: "million-output-tokens",
-      }),
-    ])
+      models["example/negative-price"].presentation?.sections?.some(
+        (section) => section.id === "pricing",
+      ),
+    ).toBeFalsy()
   })
 
   it("preserves cache-only prices without claiming comparable primary pricing", async () => {
@@ -437,10 +433,6 @@ describe("OpenRouter provider model catalog Adapter", () => {
           fact.unit,
         ]),
     ).toEqual([
-      ["Input price", 1, "million-input-tokens"],
-      ["Output price", 2, "million-output-tokens"],
-      ["Cache read price", 0.2, "million-cached-input-tokens"],
-      ["Cache write price", 0.9, "million-cache-write-tokens"],
       [
         "One-hour cache write price",
         1.1,
@@ -482,7 +474,7 @@ describe("OpenRouter provider model catalog Adapter", () => {
     })
     expect(
       pricing.facts.some((fact) => fact.label.fallback === "Discount"),
-    ).toBe(false)
+    ).toBeFalsy()
 
     expect(
       getFact(getSection(model, "request-limits"), "Prompt token limit"),
@@ -620,8 +612,6 @@ describe("OpenRouter provider model catalog Adapter", () => {
     ])
     const pricing = getSection(model, "pricing")
     expect(pricing.facts.map((fact) => fact.label.fallback)).toEqual([
-      "Input price",
-      "Output price",
       "Conditional prices",
     ])
     expect(getFact(pricing, "Conditional prices")).toMatchObject({
@@ -646,7 +636,7 @@ describe("OpenRouter provider model catalog Adapter", () => {
     ).toMatchObject({ entries: [expect.objectContaining({ rank: 1 })] })
     expect(
       model.presentation?.sections?.some((section) => section.id === "links"),
-    ).toBe(false)
+    ).toBeFalsy()
     expect(JSON.stringify(model.presentation)).not.toContain("not-a-date")
     expect(JSON.stringify(model.presentation)).not.toContain("2026-02-30")
     expect(model.vendorEvidence).toBeUndefined()
@@ -654,7 +644,7 @@ describe("OpenRouter provider model catalog Adapter", () => {
       response.data[1]?.presentation?.sections?.some(
         (section) => section.id === "links",
       ),
-    ).toBe(false)
+    ).toBeFalsy()
   })
 
   it("does not infer publisher evidence from an unscoped model identifier", async () => {

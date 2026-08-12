@@ -107,6 +107,10 @@
     "warning": "La prueba por lotes ejecuta los elementos seleccionados según el tipo de API resuelto de cada modelo. Los elementos no aplicables se omiten automáticamente. Los resultados son orientativos; usa llamadas reales de herramientas para la confirmación final."
   },
   "billingMode": "Modo de facturación",
+  "cacheRead": "Lectura de caché:",
+  "cacheRead1MTokens": "Lectura de caché (1M tokens)",
+  "cacheWrite": "Escritura de caché:",
+  "cacheWrite1MTokens": "Escritura de caché (1M tokens)",
   "clickSwitchGroup": "Haz clic para cambiar al grupo {{group}}",
   "collapseDetails": "Contraer detalles",
   "comparison": {

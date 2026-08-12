@@ -95,6 +95,10 @@
     "warning": "一括テストは、各モデルで解決された API 種別に応じて選択項目を実行します。適用できない項目は自動的にスキップされます。結果は参考情報です。最終確認は実際のツール呼び出しで行ってください。"
   },
   "billingMode": "課金方式",
+  "cacheRead": "キャッシュ読み取り:",
+  "cacheRead1MTokens": "キャッシュ読み取り（100 万トークン）",
+  "cacheWrite": "キャッシュ書き込み:",
+  "cacheWrite1MTokens": "キャッシュ書き込み（100 万トークン）",
   "clickSwitchGroup": "{{group}} グループへ切り替える",
   "collapseDetails": "詳細を折りたたむ",
   "comparison": {

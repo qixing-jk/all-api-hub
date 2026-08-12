@@ -25,6 +25,11 @@ export interface ProductCanonicalModel {
     cache_read?: number
     cache_write?: number
   }
+  /** Cache meter multipliers relative to the effective input token price. */
+  token_price_ratios_to_input?: {
+    cache_read?: number
+    cache_write?: number
+  }
   price_metadata?: ModelPriceMetadata
   owner_by?: string
   completion_ratio: number

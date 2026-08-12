@@ -19,6 +19,8 @@ export type CalculatedPrice =
 export interface TokenPricesUSD {
   input: number
   output: number
+  cacheRead?: number
+  cacheWrite?: number
 }
 
 export interface CalculatedTokenPrice {
@@ -49,6 +51,24 @@ type PartialTokenPricesUSD = Partial<TokenPricesUSD>
  */
 const isFiniteTokenPrice = (value: number | undefined): value is number =>
   typeof value === "number" && Number.isFinite(value)
+
+const isFiniteNonnegativeCachePrice = (
+  value: number | undefined,
+): value is number => isFiniteTokenPrice(value) && value >= 0
+
+const resolveOptionalCachePrice = (
+  directPrice: number | undefined,
+  ratio: number | undefined,
+  inputPrice: number,
+): number | undefined => {
+  if (isFiniteNonnegativeCachePrice(directPrice)) {
+    return directPrice
+  }
+
+  return isFiniteNonnegativeCachePrice(ratio)
+    ? inputPrice * ratio
+    : undefined
+}
 
 /**
  * Reads direct USD-per-1M-token prices from providers without ratio semantics.
@@ -114,12 +134,25 @@ export const calculateModelPrice = (
       effectiveGroupMultiplier,
     )
     const directPrice = resolveDirectTokenPriceUSD(model)
+    const input = directPrice.input ?? ratioPrice.input
+    const cacheRead = resolveOptionalCachePrice(
+      model.token_price_usd_per_million?.cache_read,
+      model.token_price_ratios_to_input?.cache_read,
+      input,
+    )
+    const cacheWrite = resolveOptionalCachePrice(
+      model.token_price_usd_per_million?.cache_write,
+      model.token_price_ratios_to_input?.cache_write,
+      input,
+    )
 
     return {
       kind: "token",
       usdPerMillionTokens: {
-        input: directPrice.input ?? ratioPrice.input,
+        input,
         output: directPrice.output ?? ratioPrice.output,
+        ...(cacheRead !== undefined ? { cacheRead } : {}),
+        ...(cacheWrite !== undefined ? { cacheWrite } : {}),
       },
     }
   } else {

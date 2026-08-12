@@ -6,6 +6,9 @@ const INVALID_RESPONSE_MESSAGE = "Invalid New API model pricing response"
 
 type NativePricingRow = Record<string, unknown> & {
   vendor_id?: unknown
+  cache_ratio?: unknown
+  create_cache_ratio?: unknown
+  billing_mode?: unknown
 }
 
 type NativePricingResponse = Record<string, unknown> & {
@@ -69,6 +72,13 @@ function buildVendorRegistry(value: unknown): Map<number, string> {
   return vendorsById
 }
 
+const normalizeOptionalNonnegativeRatio = (
+  value: unknown,
+): number | undefined =>
+  typeof value === "number" && Number.isFinite(value) && value >= 0
+    ? value
+    : undefined
+
 /** Convert New API's native pricing extensions into the product contract. */
 export function normalizeNewApiModelPricingResponse(
   value: unknown,
@@ -84,6 +94,24 @@ export function normalizeNewApiModelPricingResponse(
 
     delete canonicalRow.vendor_id
     delete canonicalRow.vendorEvidence
+    delete canonicalRow.cache_ratio
+    delete canonicalRow.create_cache_ratio
+    delete canonicalRow.token_price_ratios_to_input
+
+    if (row.billing_mode !== "tiered_expr") {
+      // New API exposes cache ratios relative to the effective input price.
+      // https://github.com/QuantumNous/new-api/blob/ccd535ef8e50cf6e5846a59278c40b7ff59d1b7d/model/pricing.go
+      const cacheRead = normalizeOptionalNonnegativeRatio(row.cache_ratio)
+      const cacheWrite = normalizeOptionalNonnegativeRatio(
+        row.create_cache_ratio,
+      )
+      if (cacheRead !== undefined || cacheWrite !== undefined) {
+        canonicalRow.token_price_ratios_to_input = {
+          ...(cacheRead !== undefined ? { cache_read: cacheRead } : {}),
+          ...(cacheWrite !== undefined ? { cache_write: cacheWrite } : {}),
+        }
+      }
+    }
 
     const vendorName =
       typeof vendorId === "number" &&

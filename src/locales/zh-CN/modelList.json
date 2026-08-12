@@ -95,6 +95,10 @@
     "warning": "批量测试会按每个模型解析后的接口类型执行所选项目；不适用的项目会自动跳过。检测结果仅供参考，请以工具实际调用情况为准。"
   },
   "billingMode": "计费方式",
+  "cacheRead": "缓存读取:",
+  "cacheRead1MTokens": "缓存读取(1M tokens)",
+  "cacheWrite": "缓存写入:",
+  "cacheWrite1MTokens": "缓存写入(1M tokens)",
   "clickSwitchGroup": "点击切换到 {{group}} 分组",
   "collapseDetails": "收起详细信息",
   "comparison": {

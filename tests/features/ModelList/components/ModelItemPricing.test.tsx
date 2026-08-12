@@ -173,6 +173,29 @@ describe("Model item pricing and description", () => {
       expect(formatPriceCompactMock).toHaveBeenCalledWith(9, "CNY")
       expect(formatPriceCompactMock).toHaveBeenCalledWith(18, "CNY")
     })
+
+    it("conditionally renders cache prices including an explicit free meter", () => {
+      render(
+        <PriceView
+          usdPrices={{
+            input: 1,
+            output: 2,
+            cacheRead: 0,
+            cacheWrite: 1.25,
+          }}
+          exchangeRate={8}
+          showRealPrice={true}
+          tokenBillingType={true}
+          isAvailableForUser={true}
+          formatPriceCompact={formatPriceCompactMock}
+        />,
+      )
+
+      expect(screen.getByText("cacheRead")).toBeInTheDocument()
+      expect(screen.getByText("cacheWrite")).toBeInTheDocument()
+      expect(screen.getByText("CNY:0/M")).toBeInTheDocument()
+      expect(screen.getByText("CNY:10/M")).toBeInTheDocument()
+    })
   })
 
   describe("ModelItemPerCallPricingView", () => {

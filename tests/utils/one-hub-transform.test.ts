@@ -31,7 +31,7 @@ describe("OneHub data transformers", () => {
       const item = result.data[0]
       expect(item.model_name).toBe("gpt-4")
       expect(item.quota_type).toBe(0)
-      expect(item.model_ratio).toBe(1)
+      expect(item.model_ratio).toBe(10)
       expect(item.model_price).toEqual({ input: 10, output: 20 })
       expect(item.owner_by).toBe("openai")
       expect(item.vendorEvidence).toEqual({
@@ -92,6 +92,36 @@ describe("OneHub data transformers", () => {
       expect(item.vendorEvidence).toEqual({
         kind: MODEL_VENDOR_EVIDENCE_KINDS.RoutingProvider,
         name: "Example Router",
+      })
+    })
+
+    it("maps verified cache ratios and uses OneHub input as the model ratio", () => {
+      const [item] = transformModelPricing({
+        "example-model": {
+          groups: ["default"],
+          owned_by: "Example Router",
+          price: {
+            model: "example-model",
+            type: "tokens",
+            channel_type: 7,
+            input: 3,
+            output: 12,
+            locked: false,
+            extra_ratios: {
+              cached_tokens: 0.5,
+              cached_read_tokens: 0.25,
+              cached_write_tokens: 1.25,
+              cached_write_1h_tokens: 2,
+            },
+          },
+        },
+      }).data
+
+      expect(item.model_ratio).toBe(3)
+      expect(item.completion_ratio).toBe(4)
+      expect(item.token_price_ratios_to_input).toEqual({
+        cache_read: 0.25,
+        cache_write: 1.25,
       })
     })
 

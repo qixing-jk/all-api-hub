@@ -95,6 +95,10 @@
     "warning": "Kiểm tra hàng loạt sẽ thực hiện các mục đã chọn theo loại API đã phân tích cho từng mô hình; các mục không áp dụng sẽ tự động bị bỏ qua. Kết quả kiểm tra chỉ mang tính tham khảo, vui lòng dựa trên tình hình gọi thực tế của công cụ."
   },
   "billingMode": "Phương thức tính phí",
+  "cacheRead": "Đọc bộ nhớ đệm:",
+  "cacheRead1MTokens": "Đọc bộ nhớ đệm (1M tokens)",
+  "cacheWrite": "Ghi bộ nhớ đệm:",
+  "cacheWrite1MTokens": "Ghi bộ nhớ đệm (1M tokens)",
   "clickSwitchGroup": "Nhấp để chuyển sang nhóm {{group}}",
   "collapseDetails": "Thu gọn chi tiết",
   "comparison": {
