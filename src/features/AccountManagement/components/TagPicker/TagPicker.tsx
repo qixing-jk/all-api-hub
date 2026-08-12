@@ -516,7 +516,7 @@ export function TagPicker({
                           {allowDelete && onDeleteTag ? (
                             <IconButton
                               type="button"
-                              variant="ghost"
+                              variant="destructiveGhost"
                               size="sm"
                               onClick={() => {
                                 setIsOpen(false)

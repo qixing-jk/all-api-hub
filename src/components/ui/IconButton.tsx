@@ -13,6 +13,8 @@ const iconButtonVariants = cva(
         default: "bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500",
         destructive:
           "bg-red-600 text-white hover:bg-red-700 focus:ring-red-500",
+        destructiveGhost:
+          "bg-transparent text-destructive hover:bg-destructive/10 focus:ring-destructive/30 dark:hover:bg-destructive/20",
         outline:
           "border border-gray-300 dark:border-dark-bg-tertiary bg-transparent hover:bg-gray-50 dark:hover:bg-dark-bg-secondary text-gray-700 dark:text-dark-text-secondary focus:ring-gray-500",
         secondary:

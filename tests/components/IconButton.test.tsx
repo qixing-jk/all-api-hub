@@ -50,6 +50,20 @@ describe("IconButton", () => {
     )
   })
 
+  it("renders destructive row actions without a persistent filled background", () => {
+    render(
+      <IconButton aria-label="Delete item" variant="destructiveGhost">
+        <span />
+      </IconButton>,
+    )
+
+    expect(screen.getByRole("button", { name: "Delete item" })).toHaveClass(
+      "bg-transparent",
+      "text-destructive",
+      "hover:bg-destructive/10",
+    )
+  })
+
   it("uses aria-label as the fallback title for icon-only discovery", () => {
     render(
       <IconButton aria-label="Refresh profiles">

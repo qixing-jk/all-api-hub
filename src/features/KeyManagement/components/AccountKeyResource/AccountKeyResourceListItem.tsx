@@ -67,7 +67,7 @@ export function AccountKeyResourceListItem({
           <IconButton
             type="button"
             size="sm"
-            variant="outline"
+            variant="ghost"
             aria-label={t("openRouter.list.actions.edit")}
             onClick={() => onEdit(row.facts.ref)}
           >
@@ -81,7 +81,7 @@ export function AccountKeyResourceListItem({
           <IconButton
             type="button"
             size="sm"
-            variant="destructive"
+            variant="destructiveGhost"
             aria-label={t("openRouter.list.actions.delete")}
             onClick={() => onDelete(row.facts.ref)}
           >

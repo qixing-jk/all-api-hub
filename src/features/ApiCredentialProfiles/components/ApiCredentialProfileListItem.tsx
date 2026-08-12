@@ -841,7 +841,7 @@ export function ApiCredentialProfileListItem({
                 <IconButton
                   aria-label={t("common:actions.delete")}
                   size="sm"
-                  variant="destructive"
+                  variant="destructiveGhost"
                   onClick={() => onDelete(profile)}
                   data-testid={
                     API_CREDENTIAL_PROFILES_TEST_IDS.deleteTriggerButton

@@ -909,7 +909,7 @@ function TokenActionButtons({
         <IconButton
           aria-label={t("actions.editKey")}
           size="sm"
-          variant="outline"
+          variant="ghost"
           onClick={() => handleEditToken(token)}
         >
           <PencilIcon className="h-4 w-4 text-blue-500 dark:text-blue-400" />
@@ -919,7 +919,7 @@ function TokenActionButtons({
         <IconButton
           aria-label={t("actions.deleteKey")}
           size="sm"
-          variant="destructive"
+          variant="destructiveGhost"
           onClick={() => handleDeleteToken(token)}
         >
           <TrashIcon className="h-4 w-4" />

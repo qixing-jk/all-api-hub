@@ -95,9 +95,9 @@ export function ApiCheckBaseUrlHistoryPicker({
                 title={`${t("webAiApiCheck:modal.history.remove")}: ${
                   suggestion.baseUrl
                 }`}
-                variant="ghost"
+                variant="destructiveGhost"
                 size="xs"
-                className="text-muted-foreground hover:text-destructive shrink-0 opacity-70 group-hover:opacity-100"
+                className="shrink-0 opacity-70 group-hover:opacity-100"
                 onClick={() => onRemove(suggestion.baseUrl)}
               >
                 <TrashIcon className="h-3.5 w-3.5" />
