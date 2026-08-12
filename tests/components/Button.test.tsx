@@ -36,6 +36,40 @@ describe("Button", () => {
     ).not.toBeInTheDocument()
   })
 
+  it("exposes the resolved visual size for responsive layout containers", async () => {
+    render(
+      <>
+        <Button>Default</Button>
+        <Button size="sm">Small</Button>
+        <Button size="lg">Large</Button>
+      </>,
+    )
+
+    expect(
+      await screen.findByRole("button", { name: "Default" }),
+    ).toHaveAttribute("data-size", "default")
+    expect(screen.getByRole("button", { name: "Small" })).toHaveAttribute(
+      "data-size",
+      "sm",
+    )
+    expect(screen.getByRole("button", { name: "Large" })).toHaveAttribute(
+      "data-size",
+      "lg",
+    )
+  })
+
+  it("forwards the resolved visual size through asChild", async () => {
+    render(
+      <Button asChild size="sm" data-size="lg">
+        <a href="/settings">Settings</a>
+      </Button>,
+    )
+
+    expect(
+      await screen.findByRole("link", { name: "Settings" }),
+    ).toHaveAttribute("data-size", "sm")
+  })
+
   it("keeps caller pending content and exposes the loading state", async () => {
     const { container } = render(
       <Button

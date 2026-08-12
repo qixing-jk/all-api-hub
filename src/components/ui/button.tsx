@@ -88,6 +88,7 @@ function Button({
   }) {
   const Comp = asChild ? Slot.Root : "button"
   const isDisabled = Boolean(disabled || loading)
+  const resolvedSize = size ?? "default"
   const analytics = useProductAnalyticsActionTracking({
     analyticsAction,
     disabled: isDisabled,
@@ -147,6 +148,7 @@ function Button({
       disabled={asChild ? undefined : isDisabled}
       onClick={handleClick}
       {...props}
+      data-size={resolvedSize}
       aria-busy={loading ? true : ariaBusy}
     >
       {resolvedLeftIcon && <span>{resolvedLeftIcon}</span>}

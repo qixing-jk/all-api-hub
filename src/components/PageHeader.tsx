@@ -40,12 +40,18 @@ export function PageHeader({
   iconClassName,
 }: PageHeaderProps) {
   return (
-    <div className={cn(spacing === "compact" ? "mb-6" : "mb-8", className)}>
-      <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between md:gap-4">
-        <div className="flex items-center gap-3">
+    <div
+      className={cn(
+        "[container-type:inline-size]",
+        spacing === "compact" ? "mb-6" : "mb-8",
+        className,
+      )}
+    >
+      <div className="flex flex-col gap-2 [@container(min-width:42rem)]:flex-row [@container(min-width:42rem)]:items-start [@container(min-width:42rem)]:justify-between [@container(min-width:42rem)]:gap-4">
+        <div className="flex min-w-0 items-center gap-3">
           <Icon
             className={cn(
-              "h-6 w-6 text-blue-600 dark:text-blue-400",
+              "h-6 w-6 shrink-0 text-blue-600 dark:text-blue-400",
               iconClassName,
             )}
           />
@@ -60,7 +66,7 @@ export function PageHeader({
           </div>
         </div>
         {actions && (
-          <div className="flex shrink-0 flex-wrap items-center gap-3">
+          <div className="flex w-full min-w-0 flex-wrap items-center gap-3 [&_[data-slot=button]]:h-auto [&_[data-slot=button]]:min-h-9 [&_[data-slot=button]]:max-w-full [&_[data-slot=button]]:whitespace-normal [&_[data-slot=button][data-size=default]]:min-h-9 [&_[data-slot=button][data-size=icon-lg]]:min-h-10 [&_[data-slot=button][data-size=icon-sm]]:min-h-8 [&_[data-slot=button][data-size=icon-xs]]:min-h-6 [&_[data-slot=button][data-size=icon]]:min-h-9 [&_[data-slot=button][data-size=lg]]:min-h-10 [&_[data-slot=button][data-size=sm]]:min-h-8 [@container(min-width:42rem)]:w-auto [@container(min-width:42rem)]:flex-1 [@container(min-width:42rem)]:justify-end">
             {actions}
           </div>
         )}

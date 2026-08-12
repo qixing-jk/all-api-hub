@@ -366,7 +366,10 @@ function AccountManagementContent({
             featureId={PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement}
             surfaceId={headerSurface}
           >
-            <div className="flex flex-wrap items-center gap-2">
+            <div
+              className="flex w-full flex-wrap items-center justify-end gap-2"
+              data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.headerActions}
+            >
               <Button
                 onClick={() => void handleGlobalRefresh()}
                 variant="secondary"

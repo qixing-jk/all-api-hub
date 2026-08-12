@@ -146,10 +146,13 @@ function OptionsPage() {
         />
 
         {/* 右侧内容区域 */}
-        <main className="flex-1">
+        <main className="min-w-0 flex-1">
           <div className="mx-auto w-full max-w-7xl px-2 py-3 sm:px-4 sm:py-5 md:px-6 md:py-6">
             <PopupInterruptionHintBanner className="mb-3 sm:mb-4" />
-            <div className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary min-h-[400px] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm md:min-h-[600px]">
+            <div
+              className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary min-h-[400px] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm md:min-h-[600px]"
+              data-testid={OPTIONS_TEST_IDS.contentCard}
+            >
               <Suspense fallback={<OptionsPageContentFallback />}>
                 <ActiveComponent
                   routeParams={routeParams}

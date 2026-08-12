@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test"
 
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
+import { OPTIONS_TEST_IDS } from "~/entrypoints/options/testIds"
 import {
   ACCOUNT_MANAGEMENT_TEST_IDS,
   getAccountManagementListItemTestId,
@@ -145,6 +146,160 @@ test.beforeEach(async ({ context, page }) => {
   installExtensionPageGuards(page)
   await forceExtensionLanguage(page, "en")
   await stubLlmMetadataIndex(context)
+})
+
+test("keeps every account header action reachable across constrained widths", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  const viewportSizes = [
+    { width: 1280, height: 720 },
+    { width: 320, height: 720 },
+  ]
+  await page.setViewportSize(viewportSizes[0])
+
+  const serviceWorker = await getServiceWorker(context)
+  await seedStoredAccounts(serviceWorker, [
+    createStoredAccount({
+      id: "responsive-header-account",
+      site_name: "Responsive Header Account",
+      site_url: "https://account.example.invalid",
+      disabled: true,
+      checkIn: {
+        enableDetection: true,
+        customCheckIn: { url: "https://check-in.example.invalid" },
+      },
+    }),
+  ])
+
+  await page.goto(
+    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#account`,
+  )
+  await waitForExtensionRoot(page)
+  await expectPermissionOnboardingHidden(page)
+
+  const headerActionGroup = page.getByTestId(
+    ACCOUNT_MANAGEMENT_TEST_IDS.headerActions,
+  )
+  const requiredHeaderActions = [
+    page.getByRole("button", { name: "Refresh", exact: true }),
+    page.getByRole("button", {
+      name: "Refresh disabled accounts",
+      exact: true,
+    }),
+    page.getByRole("button", {
+      name: "Open all external check-ins",
+      exact: true,
+    }),
+    page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.bookmarkImportButton),
+    page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.dedupeScanButton),
+    page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.addAccountButton),
+  ]
+  for (const action of requiredHeaderActions) {
+    await expect(action.first()).toBeVisible()
+  }
+
+  const headerActions = headerActionGroup.getByRole("button")
+  const contentCard = page.getByTestId(OPTIONS_TEST_IDS.contentCard)
+  await expect(contentCard).toBeVisible()
+
+  async function expectHeaderActionsContained(viewportSize: {
+    width: number
+    height: number
+  }) {
+    await page.setViewportSize(viewportSize)
+
+    await expect
+      .poll(async () => {
+        const contentCardBox = await contentCard.boundingBox()
+        const headerActionGroupBox = await headerActionGroup.boundingBox()
+        const boxes = await headerActions.evaluateAll((actions) => {
+          return actions.map((action) => {
+            const box = action.getBoundingClientRect()
+            return {
+              x: box.x,
+              y: box.y,
+              height: box.height,
+              right: box.right,
+              width: box.width,
+            }
+          })
+        })
+
+        const rowRightEdges = new Map<number, number>()
+        for (const box of boxes) {
+          const rowCenter = Math.round(box.y + box.height / 2)
+          rowRightEdges.set(
+            rowCenter,
+            Math.max(rowRightEdges.get(rowCenter) ?? 0, box.right),
+          )
+        }
+        const actionGroupRight = headerActionGroupBox
+          ? headerActionGroupBox.x + headerActionGroupBox.width
+          : 0
+        const rowAlignmentError = Math.max(
+          ...Array.from(rowRightEdges.values()).map((rightEdge) =>
+            Math.abs(rightEdge - actionGroupRight),
+          ),
+        )
+
+        return {
+          hasLayout: Boolean(contentCardBox && headerActionGroupBox),
+          actionsContained: Boolean(
+            contentCardBox &&
+              boxes.every(
+                (box) =>
+                  box.x >= contentCardBox.x &&
+                  box.x + box.width <= contentCardBox.x + contentCardBox.width,
+              ),
+          ),
+          actionsWrapped: rowRightEdges.size > 1,
+          rowsRightAligned: rowAlignmentError <= 1,
+        }
+      })
+      .toEqual({
+        hasLayout: true,
+        actionsContained: true,
+        actionsWrapped: true,
+        rowsRightAligned: true,
+      })
+
+    expect(
+      await page.evaluate(
+        () =>
+          document.documentElement.scrollWidth ===
+          document.documentElement.clientWidth,
+      ),
+    ).toBe(true)
+  }
+
+  for (const viewportSize of viewportSizes) {
+    await expectHeaderActionsContained(viewportSize)
+  }
+
+  const externalCheckInAction = page.getByRole("button", {
+    name: "Open all external check-ins",
+    exact: true,
+  })
+  const constrainedWidthStressLabel =
+    "Open every available external check-in action in a separate page"
+  await externalCheckInAction.evaluate((action, label) => {
+    const textNode = Array.from(action.childNodes).find(
+      (node) => node.nodeType === Node.TEXT_NODE && node.textContent?.trim(),
+    )
+    if (!textNode) {
+      throw new Error("Could not resolve the external check-in action label")
+    }
+    textNode.textContent = label
+  }, constrainedWidthStressLabel)
+  await expect(
+    page.getByRole("button", {
+      name: constrainedWidthStressLabel,
+      exact: true,
+    }),
+  ).toBeVisible()
+  await expectHeaderActionsContained(viewportSizes[1])
 })
 
 test("keeps the add account dialog open when text selection ends over its backdrop", async ({
