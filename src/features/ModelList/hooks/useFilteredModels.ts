@@ -319,14 +319,6 @@ function getComparablePriceKey(
     }
   }
 
-  if (item.calculatedPrice.kind !== "per-call") {
-    return {
-      billingMode: getModelBillingMode(item.model.quota_type),
-      primary: null,
-      secondary: null,
-    }
-  }
-
   const perCallPrice = item.calculatedPrice.usdPerCall
   const exchangeRate = showRealPrice ? getSourceExchangeRate(item) : 1
 

@@ -274,6 +274,26 @@ describe("ModelItemDetails", () => {
     expect(formatPriceMock).toHaveBeenCalledWith(2, "CNY")
   })
 
+  it("renders cache-write pricing when supplied", () => {
+    renderDetails({
+      model: { ...baseProps.model, quota_type: 0 },
+      calculatedPrice: {
+        kind: "token",
+        usdPerMillionTokens: {
+          input: 1,
+          output: 2,
+          cacheWrite: 1.25,
+        },
+      } as any,
+      showGroupDetails: false,
+      showPricingDetails: true,
+    })
+
+    expect(screen.queryByText("cacheRead1MTokens")).toBeNull()
+    expect(screen.getByText("cacheWrite1MTokens")).toBeInTheDocument()
+    expect(formatPriceMock).toHaveBeenCalledWith(1.25, "USD")
+  })
+
   it("shows an unavailable-price explanation instead of zero details", () => {
     renderDetails({
       model: {

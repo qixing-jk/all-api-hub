@@ -3475,6 +3475,36 @@ describe("useFilteredModels", () => {
     })
   })
 
+  it("preserves per-call billing mode when a selected group ratio is unavailable", async () => {
+    const account = createDisplayAccount({ id: "account-unpriced-per-call" })
+    const { result } = renderUseFilteredModels({
+      pricingData: createPricingResponse(
+        [
+          {
+            model_name: "per-call-model",
+            quota_type: 1,
+            model_price: 0.5,
+            enable_groups: ["default", "vip"],
+          },
+        ],
+        {
+          group_ratio: { default: 1 },
+          usable_group: { default: "default", vip: "vip" },
+        },
+      ),
+      selectedSource: createAccountSource(account),
+      selectedGroups: ["vip"],
+    })
+
+    await waitFor(() => expect(result.current.filteredModels).toHaveLength(1))
+
+    expect(result.current.filteredModels[0]?.calculatedPrice).toEqual({
+      kind: "unavailable",
+      billingMode: "per-call",
+      reason: MODEL_UNAVAILABLE_PRICE_REASONS.GROUP_RATIO_UNAVAILABLE,
+    })
+  })
+
   it("keeps known-empty direct account rows visible without group options", async () => {
     const account = createDisplayAccount({ id: "account-known-empty" })
     const { result } = renderUseFilteredModels({

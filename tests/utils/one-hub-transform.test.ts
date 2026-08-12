@@ -145,6 +145,29 @@ describe("OneHub data transformers", () => {
       expect(item.token_price_ratios_to_input).toEqual({ cache_read: 0.5 })
     })
 
+    it("preserves an explicit zero cache-read ratio over the generic fallback", () => {
+      const [item] = transformModelPricing({
+        "example-model": {
+          groups: [],
+          owned_by: "Example Router",
+          price: {
+            model: "example-model",
+            type: "tokens",
+            channel_type: 7,
+            input: 2,
+            output: 4,
+            locked: false,
+            extra_ratios: {
+              cached_tokens: 0.5,
+              cached_read_tokens: 0,
+            },
+          },
+        },
+      }).data
+
+      expect(item.token_price_ratios_to_input).toEqual({ cache_read: 0 })
+    })
+
     it("omits invalid optional cache ratios", () => {
       const [item] = transformModelPricing({
         "example-model": {
@@ -168,12 +191,39 @@ describe("OneHub data transformers", () => {
       expect(item).not.toHaveProperty("token_price_ratios_to_input")
     })
 
+    it("preserves valid cache meters when another optional ratio is invalid", () => {
+      const [item] = transformModelPricing({
+        "example-model": {
+          groups: [],
+          owned_by: "Example Router",
+          price: {
+            model: "example-model",
+            type: "tokens",
+            channel_type: 7,
+            input: 2,
+            output: 4,
+            locked: false,
+            extra_ratios: {
+              cached_read_tokens: -1,
+              cached_write_tokens: 1.25,
+            },
+          },
+        },
+      }).data
+
+      expect(item.token_price_ratios_to_input).toEqual({ cache_write: 1.25 })
+    })
+
     it.each([
       [0, 4],
       [-1, 4],
       [1, -4],
       [Number.POSITIVE_INFINITY, 4],
       [1, Number.POSITIVE_INFINITY],
+      [Number.NEGATIVE_INFINITY, 4],
+      [1, Number.NEGATIVE_INFINITY],
+      [Number.NaN, 4],
+      [1, Number.NaN],
     ])(
       "marks invalid token ratios unavailable for input %s and output %s",
       (inputRatio, outputRatio) => {
