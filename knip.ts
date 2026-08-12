@@ -47,7 +47,6 @@ const config: KnipConfig = {
     "react-devtools",
     "shadcn",
     "tw-animate-css",
-    "web-ext",
   ],
   ignoreIssues: {
     // Shared/public component surfaces are intentionally broader than current
