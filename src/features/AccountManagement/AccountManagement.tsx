@@ -402,6 +402,9 @@ function AccountManagementContent({
                     onClick={handleOpenExternalCheckInsClick}
                     leftIcon={<CalendarCheck2 className="h-4 w-4" />}
                     title={t("account:actions.openAllExternalCheckInHint")}
+                    data-testid={
+                      ACCOUNT_MANAGEMENT_TEST_IDS.externalCheckInButton
+                    }
                   >
                     {t("account:actions.openAllExternalCheckIn")}
                   </Button>

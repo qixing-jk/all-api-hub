@@ -1,5 +1,6 @@
 export const ACCOUNT_MANAGEMENT_TEST_IDS = {
   addAccountButton: "account-management-add-account-button",
+  externalCheckInButton: "account-management-external-check-in-button",
   headerActions: "account-management-header-actions",
   accountDialog: "account-management-account-dialog",
   accountForm: "account-management-account-form",

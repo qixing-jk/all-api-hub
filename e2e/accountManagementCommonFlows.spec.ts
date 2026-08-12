@@ -188,10 +188,7 @@ test("keeps every account header action reachable across constrained widths", as
       name: "Refresh disabled accounts",
       exact: true,
     }),
-    page.getByRole("button", {
-      name: "Open all external check-ins",
-      exact: true,
-    }),
+    page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.externalCheckInButton),
     page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.bookmarkImportButton),
     page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.dedupeScanButton),
     page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.addAccountButton),
@@ -278,10 +275,9 @@ test("keeps every account header action reachable across constrained widths", as
     await expectHeaderActionsContained(viewportSize)
   }
 
-  const externalCheckInAction = page.getByRole("button", {
-    name: "Open all external check-ins",
-    exact: true,
-  })
+  const externalCheckInAction = page.getByTestId(
+    ACCOUNT_MANAGEMENT_TEST_IDS.externalCheckInButton,
+  )
   const constrainedWidthStressLabel =
     "Open every available external check-in action in a separate page"
   await externalCheckInAction.evaluate((action, label) => {
