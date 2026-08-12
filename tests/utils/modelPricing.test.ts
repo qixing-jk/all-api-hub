@@ -63,6 +63,12 @@ describe("modelPricing utils", () => {
       })
     })
 
+    it("normalizes negative group multipliers without producing negative prices", () => {
+      expect(calculateModelPrice(tokenModel, -1)).toMatchObject({
+        usdPerMillionTokens: { input: 30, output: 60 },
+      })
+    })
+
     it("lets direct token dimensions override ratio-derived dimensions", () => {
       expect(
         calculateModelPrice(

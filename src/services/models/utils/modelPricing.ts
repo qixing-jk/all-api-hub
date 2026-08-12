@@ -65,9 +65,7 @@ const resolveOptionalCachePrice = (
     return directPrice
   }
 
-  return isFiniteNonnegativeCachePrice(ratio)
-    ? inputPrice * ratio
-    : undefined
+  return isFiniteNonnegativeCachePrice(ratio) ? inputPrice * ratio : undefined
 }
 
 /**
@@ -121,9 +119,10 @@ export const calculateModelPrice = (
     }
   }
 
-  const effectiveGroupMultiplier = Number.isFinite(groupMultiplier)
-    ? groupMultiplier
-    : 1
+  const effectiveGroupMultiplier =
+    Number.isFinite(groupMultiplier) && groupMultiplier >= 0
+      ? groupMultiplier
+      : 1
 
   if (isTokenBillingType(model.quota_type)) {
     // 按 New API/One API 兼容倍率计费；倍率基准来自 1M tokens / 500,000 quota-per-USD。

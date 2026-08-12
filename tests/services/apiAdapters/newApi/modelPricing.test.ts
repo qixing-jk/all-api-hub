@@ -333,8 +333,8 @@ describe("New API model pricing adapter", () => {
         data: [
           {
             ...modelRow,
-            cache_ratio: 0.25,
-            create_cache_ratio: 1.25,
+            cache_ratio: 0,
+            create_cache_ratio: 0,
           },
         ],
       }),
@@ -347,8 +347,8 @@ describe("New API model pricing adapter", () => {
     expect(result.data[0]).toEqual({
       ...modelRow,
       token_price_ratios_to_input: {
-        cache_read: 0.25,
-        cache_write: 1.25,
+        cache_read: 0,
+        cache_write: 0,
       },
     })
     expect(result.data[0]).not.toHaveProperty("cache_ratio")

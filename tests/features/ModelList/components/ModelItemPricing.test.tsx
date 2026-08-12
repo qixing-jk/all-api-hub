@@ -196,6 +196,22 @@ describe("Model item pricing and description", () => {
       expect(screen.getByText("CNY:0/M")).toBeInTheDocument()
       expect(screen.getByText("CNY:10/M")).toBeInTheDocument()
     })
+
+    it("omits cache labels when no cache meters are supplied", () => {
+      render(
+        <PriceView
+          usdPrices={{ input: 1, output: 2 }}
+          exchangeRate={8}
+          showRealPrice={false}
+          tokenBillingType={true}
+          isAvailableForUser={true}
+          formatPriceCompact={formatPriceCompactMock}
+        />,
+      )
+
+      expect(screen.queryByText("cacheRead")).toBeNull()
+      expect(screen.queryByText("cacheWrite")).toBeNull()
+    })
   })
 
   describe("ModelItemPerCallPricingView", () => {

@@ -135,6 +135,7 @@ interface PriceFieldDefinition {
   label: ModelDisplayLabel
   unit: ModelDisplayPriceUnit
   normalize: (value: unknown) => number | undefined
+  includeInOverrides?: true
 }
 
 const BASE_PRICE_FIELDS: PriceFieldDefinition[] = [
@@ -143,6 +144,7 @@ const BASE_PRICE_FIELDS: PriceFieldDefinition[] = [
     label: OPENROUTER_FACT_LABELS.cacheWriteOneHourPrice,
     unit: MODEL_DISPLAY_PRICE_UNITS.MillionCacheWriteOneHourTokens,
     normalize: normalizeUsdPerMillionTokens,
+    includeInOverrides: true,
   },
   {
     key: "internal_reasoning",
@@ -179,6 +181,7 @@ const BASE_PRICE_FIELDS: PriceFieldDefinition[] = [
     label: OPENROUTER_FACT_LABELS.audioInputPrice,
     unit: MODEL_DISPLAY_PRICE_UNITS.MillionAudioInputTokens,
     normalize: normalizeUsdPerMillionTokens,
+    includeInOverrides: true,
   },
   {
     key: "audio_output",
@@ -191,6 +194,7 @@ const BASE_PRICE_FIELDS: PriceFieldDefinition[] = [
     label: OPENROUTER_FACT_LABELS.cachedAudioInputPrice,
     unit: MODEL_DISPLAY_PRICE_UNITS.MillionCachedAudioInputTokens,
     normalize: normalizeUsdPerMillionTokens,
+    includeInOverrides: true,
   },
   {
     key: "web_search",
@@ -206,35 +210,35 @@ const OVERRIDE_PRIMARY_PRICE_FIELDS: PriceFieldDefinition[] = [
     label: OPENROUTER_FACT_LABELS.inputPrice,
     unit: MODEL_DISPLAY_PRICE_UNITS.MillionInputTokens,
     normalize: normalizeUsdPerMillionTokens,
+    includeInOverrides: true,
   },
   {
     key: "completion",
     label: OPENROUTER_FACT_LABELS.outputPrice,
     unit: MODEL_DISPLAY_PRICE_UNITS.MillionOutputTokens,
     normalize: normalizeUsdPerMillionTokens,
+    includeInOverrides: true,
   },
   {
     key: "input_cache_read",
     label: OPENROUTER_FACT_LABELS.cacheReadPrice,
     unit: MODEL_DISPLAY_PRICE_UNITS.MillionCachedInputTokens,
     normalize: normalizeUsdPerMillionTokens,
+    includeInOverrides: true,
   },
   {
     key: "input_cache_write",
     label: OPENROUTER_FACT_LABELS.cacheWritePrice,
     unit: MODEL_DISPLAY_PRICE_UNITS.MillionCacheWriteTokens,
     normalize: normalizeUsdPerMillionTokens,
+    includeInOverrides: true,
   },
 ]
 
 const OVERRIDE_PRICE_FIELDS = [
   ...OVERRIDE_PRIMARY_PRICE_FIELDS,
-  ...BASE_PRICE_FIELDS.filter((field) =>
-    ["audio", "input_audio_cache", "input_cache_write_1h"].includes(
-      field.key,
-    ),
-  ),
-]
+  ...BASE_PRICE_FIELDS,
+].filter((field) => field.includeInOverrides)
 
 /** Maps one documented price field into an explicit currency and meter. */
 function createPrice(
