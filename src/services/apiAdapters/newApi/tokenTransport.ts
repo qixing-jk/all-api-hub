@@ -9,7 +9,6 @@ export type NewApiFamilyTokenTransport =
 const baseTransport: NewApiFamilyTokenTransport = {
   ...defaultTransport.defaultKeyManagementImplementation,
   fetchAccountTokens: defaultTransport.fetchAccountTokens,
-  fetchCompleteAccountTokens: defaultTransport.fetchCompleteAccountTokens,
   fetchCurrentUserGroup: defaultTransport.fetchCurrentUserGroup,
   createApiToken: defaultTransport.createApiToken,
   updateApiToken: defaultTransport.updateApiToken,
@@ -22,7 +21,6 @@ const baseTransport: NewApiFamilyTokenTransport = {
 
 const oneHubOverrides: Partial<NewApiFamilyTokenTransport> = {
   fetchAccountTokens: oneHub.fetchAccountTokens,
-  fetchCompleteAccountTokens: oneHub.fetchCompleteAccountTokens,
   fetchUserGroups: oneHub.fetchUserGroups,
   fetchAccountAvailableModels: oneHub.fetchAccountAvailableModels,
 }

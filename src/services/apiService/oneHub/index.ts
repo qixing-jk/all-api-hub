@@ -1,7 +1,6 @@
 export {
   fetchAccountAvailableModels,
   fetchAccountTokens,
-  fetchCompleteAccountTokens,
   fetchAvailableModel,
   fetchModelPricing,
   fetchUserGroupMap,

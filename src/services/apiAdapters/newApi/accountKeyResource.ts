@@ -3,6 +3,7 @@ import {
   buildGroupDefaultTokenRequest,
   DEFAULT_AUTO_PROVISION_TOKEN_NAME,
 } from "~/services/accounts/defaultTokenLifecycle/requests"
+import { validateApiTokenInventory } from "~/services/accountTokens/apiTokenKey"
 import type { CreateTokenRequest } from "~/services/accountTokens/tokenProvisioningModel"
 import {
   defineAccountKeyResourceCapability,
@@ -218,7 +219,7 @@ const inspectProvisioning = async (
   config: NewApiAccountKeyResourceConfig,
   options?: ResourceOperationOptions,
 ): Promise<AccountKeyProvisioningSnapshot> => {
-  const tokens = await collectCompleteTokens(config, options)
+  const tokens = await collectValidatedInventoryTokens(config, options)
   const requirements = await loadRequirements(config, options)
   const followsAccountGroup = tokenGroupFollowsAccount(config.account.siteType)
   const hasInheritedGroupToken =
@@ -290,7 +291,7 @@ const provisionRequirement = async (
 ): Promise<
   NativeResourceMutationResult<AccountKeyProvisionedResource, ResourceFailure>
 > => {
-  const before = await collectCompleteTokens(config, options)
+  const before = await collectValidatedInventoryTokens(config, options)
   const group = await resolveRequirementGroup(config, requirementKey, options)
   const beforeIds = new Set(before.map((token) => token.id))
 
@@ -317,7 +318,7 @@ const provisionRequirement = async (
 
   let after: ApiToken[]
   try {
-    after = await collectCompleteTokens(config, options)
+    after = await collectValidatedInventoryTokens(config, options)
   } catch (error) {
     return {
       certainty: "possibly-applied",
@@ -371,7 +372,7 @@ const resolveRuntimeKey = async (
   const tokenId = decodeTokenId(ref.resourceId)
   let token: ApiToken | undefined
   try {
-    token = (await collectCompleteTokens(config, options)).find(
+    token = (await collectValidatedInventoryTokens(config, options)).find(
       (candidate) => candidate.id === tokenId,
     )
   } catch (error) {
@@ -434,12 +435,14 @@ const toFacts = (
   actions: { canUpdate: true, canDelete: true },
 })
 
-const collectCompleteTokens = async (
+const collectValidatedInventoryTokens = async (
   config: NewApiAccountKeyResourceConfig,
   options?: ResourceOperationOptions,
 ): Promise<ApiToken[]> =>
-  config.transport.fetchCompleteAccountTokens(
-    requestWithOptions(config, options),
+  validateApiTokenInventory(
+    await config.transport.fetchAccountTokens(
+      requestWithOptions(config, options),
+    ),
   )
 
 const unsupportedCreateEditor =
@@ -486,7 +489,7 @@ const renameProvisionedResource = async (
   options?: ResourceOperationOptions,
 ): Promise<NativeResourceMutationResult<void, ResourceFailure>> => {
   const tokenId = decodeTokenId(ref.resourceId)
-  const current = (await collectCompleteTokens(config, options)).find(
+  const current = (await collectValidatedInventoryTokens(config, options)).find(
     (token) => token.id === tokenId,
   )
   if (!current) {
@@ -541,9 +544,9 @@ const renameProvisionedResource = async (
   }
 
   try {
-    const refreshed = (await collectCompleteTokens(config, options)).find(
-      (token) => token.id === tokenId,
-    )
+    const refreshed = (
+      await collectValidatedInventoryTokens(config, options)
+    ).find((token) => token.id === tokenId)
     return refreshed?.name?.trim() === targetDisplayName
       ? { certainty: "applied", value: undefined }
       : {
@@ -602,13 +605,13 @@ export const createNewApiAccountKeyResources = (siteType: AccountSiteType) =>
       _query,
       options,
     ): Promise<AccountKeyResourcePage<ApiToken>> => {
-      const items = await collectCompleteTokens(config, options)
+      const items = await collectValidatedInventoryTokens(config, options)
       return { items, total: items.length }
     },
     get: async (config, _scope, tokenId, options) => {
-      const token = (await collectCompleteTokens(config, options)).find(
-        (candidate) => candidate.id === tokenId,
-      )
+      const token = (
+        await collectValidatedInventoryTokens(config, options)
+      ).find((candidate) => candidate.id === tokenId)
       if (!token) throw new Error("token_not_found")
       return token
     },
@@ -664,9 +667,9 @@ export const createNewApiAccountKeyResources = (siteType: AccountSiteType) =>
         }
       }
       try {
-        const updated = (await collectCompleteTokens(config, options)).find(
-          (token) => token.id === detail.id,
-        )
+        const updated = (
+          await collectValidatedInventoryTokens(config, options)
+        ).find((token) => token.id === detail.id)
         return updated?.name === command.name
           ? { certainty: "applied" as const, value: updated }
           : {

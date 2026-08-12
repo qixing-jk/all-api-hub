@@ -1,7 +1,4 @@
-import {
-  normalizeApiTokenKey,
-  validateApiTokenInventory,
-} from "~/services/accountTokens/apiTokenKey"
+import { normalizeApiTokenKey } from "~/services/accountTokens/apiTokenKey"
 import {
   invalidateResolvedApiTokenKeyCache,
   resolveApiTokenKey,
@@ -23,22 +20,8 @@ import { isRecord } from "~/utils/core/object"
 
 const logger = createLogger("NewApiFamilyKeyManagement")
 
-type PaginatedTokenResponse = {
-  page: number
-  page_size: number
-  total: number
-  items: ApiToken[]
-}
-
 interface KeyManagementImplementation {
-  fetchAccountTokens: (
-    request: ApiServiceRequest,
-    page?: number,
-    size?: number,
-  ) => Promise<ApiToken[]>
-  fetchCompleteAccountTokens: (
-    request: ApiServiceRequest,
-  ) => Promise<ApiToken[]>
+  fetchAccountTokens: (request: ApiServiceRequest) => Promise<ApiToken[]>
   fetchCurrentUserGroup: (request: ApiServiceRequest) => Promise<string>
   createApiToken: (
     request: ApiServiceRequest,
@@ -63,71 +46,15 @@ interface KeyManagementImplementation {
   fetchAccountAvailableModels: (request: ApiServiceRequest) => Promise<string[]>
 }
 
-const isCompleteFirstTokenPage = (
-  response: PaginatedTokenResponse,
-  page: number,
-  size: number,
-) =>
-  page === 0 &&
-  response.page === page &&
-  response.page_size === size &&
-  response.total <= response.items.length
-
-/** Fetch one account-token page for ordinary key-management consumers. */
-export async function fetchAccountTokens(
-  request: ApiServiceRequest,
-  page: number = 0,
-  size: number = REQUEST_CONFIG.DEFAULT_PAGE_SIZE,
-): Promise<ApiToken[]> {
-  const searchParams = new URLSearchParams({
-    p: page.toString(),
-    size: size.toString(),
-  })
-
-  try {
-    const tokensData = await fetchApiData<unknown>(request, {
-      endpoint: `/api/token/?${searchParams.toString()}`,
-    })
-
-    if (Array.isArray(tokensData)) {
-      const normalizedTokens = tokensData.map(normalizeApiTokenKey)
-      return normalizedTokens
-    }
-
-    if (isRecord(tokensData) && Array.isArray(tokensData.items)) {
-      const normalizedTokens = tokensData.items.map(normalizeApiTokenKey)
-      if (
-        isCompleteFirstTokenPage(
-          tokensData as PaginatedTokenResponse,
-          page,
-          size,
-        )
-      ) {
-        syncResolvedApiTokenKeyCache(request, normalizedTokens)
-      }
-      return normalizedTokens
-    }
-
-    logger.warn("Unexpected token response format", {
-      receivedType: Array.isArray(tokensData) ? "array" : typeof tokensData,
-      keys: isRecord(tokensData) ? Object.keys(tokensData) : null,
-    })
-    return []
-  } catch (error) {
-    logger.error("获取令牌列表失败", error)
-    throw error
-  }
-}
-
 /**
- * Fetch a complete New API-family token inventory for native reconciliation.
+ * Fetch the complete New API-family token list behind provider pagination.
  * New API normalizes `p=0` to page 1:
  * https://github.com/QuantumNous/new-api/blob/9c97e78aced572d540f227007a675d7d007666ac/common/page_info.go
  * One API and Veloera return bare paged arrays, which terminate on an empty page:
  * https://github.com/songquanpeng/one-api/blob/main/controller/token.go
  * https://github.com/Veloera/Veloera/blob/main/controller/token.go
  */
-export async function fetchCompleteAccountTokens(
+export async function fetchAccountTokens(
   request: ApiServiceRequest,
 ): Promise<ApiToken[]> {
   let firstPageWasNormalizedToOne = false
@@ -168,9 +95,8 @@ export async function fetchCompleteAccountTokens(
     },
   )
 
-  const inventory = validateApiTokenInventory(tokens)
-  syncResolvedApiTokenKeyCache(request, inventory)
-  return inventory
+  syncResolvedApiTokenKeyCache(request, tokens)
+  return tokens
 }
 
 /**
@@ -359,7 +285,6 @@ export async function deleteApiToken(
 
 export const defaultKeyManagementImplementation: KeyManagementImplementation = {
   fetchAccountTokens,
-  fetchCompleteAccountTokens,
   fetchCurrentUserGroup,
   createApiToken,
   updateApiToken,

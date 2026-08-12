@@ -51,7 +51,6 @@ vi.mock(
         resolveApiTokenKey: mockResolveApiTokenKey,
       },
       fetchAccountTokens: mockFetchAccountTokens,
-      fetchCompleteAccountTokens: mockFetchAccountTokens,
       fetchCurrentUserGroup: mockFetchCurrentUserGroup,
       fetchUserGroups: mockFetchUserGroups,
       createApiToken: mockCreateApiToken,
@@ -68,7 +67,6 @@ vi.mock(
       typeof import("~/services/apiService/newApiFamily/variants/oneHub")
     >()),
     fetchAccountTokens: mockFetchOneHubAccountTokens,
-    fetchCompleteAccountTokens: mockFetchOneHubAccountTokens,
   }),
 )
 
@@ -168,6 +166,28 @@ describe("New API account key resources", () => {
     ])
     expect(page.total).toBe(2)
     expect(mockFetchAccountTokens).toHaveBeenCalledWith(request)
+  })
+
+  it("rejects duplicate token IDs at the native inventory boundary", async () => {
+    mockFetchAccountTokens.mockResolvedValueOnce([
+      token({ id: 1, name: "First" }),
+      token({ id: 1, name: "Duplicate" }),
+    ])
+
+    const session = await createNewApiAccountKeyResources(
+      SITE_TYPES.NEW_API,
+    ).open({
+      account: { id: "account-1", siteType: SITE_TYPES.NEW_API },
+      request,
+    })
+    const collection = await session.openCollection("account")
+
+    await expect(collection.list()).rejects.toMatchObject({
+      failure: {
+        code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected,
+        message: "duplicate_token_id",
+      },
+    })
   })
 
   it.each([SITE_TYPES.ONE_HUB, SITE_TYPES.DONE_HUB])(
@@ -992,6 +1012,7 @@ describe("New API account key resources", () => {
   })
 
   it("rejects duplicate normalized group requirements before reconciliation", async () => {
+    mockFetchAccountTokens.mockResolvedValueOnce([])
     mockFetchUserGroups.mockResolvedValueOnce({
       vip: { desc: "VIP", ratio: 2 },
       " vip ": { desc: "Duplicate VIP", ratio: 2 },

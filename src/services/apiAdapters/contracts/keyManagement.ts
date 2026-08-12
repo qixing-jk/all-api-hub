@@ -78,7 +78,7 @@ export type InventorySecretAvailability =
   (typeof INVENTORY_SECRET_AVAILABILITIES)[keyof typeof INVENTORY_SECRET_AVAILABILITIES]
 
 export type KeyManagementCapability = {
-  /** Loads the provider's ordinary compatibility token list. Native repair uses key resources for complete inventory. */
+  /** Loads the provider's complete token list across any upstream pagination. */
   fetchTokens(request: ApiServiceRequest): Promise<ApiToken[]>
   createToken(
     request: ApiServiceRequest,

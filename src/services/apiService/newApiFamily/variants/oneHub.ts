@@ -1,7 +1,4 @@
-import {
-  normalizeApiTokenKey,
-  validateApiTokenInventory,
-} from "~/services/accountTokens/apiTokenKey"
+import { normalizeApiTokenKey } from "~/services/accountTokens/apiTokenKey"
 import type { UserGroupInfo } from "~/services/accountTokens/tokenProvisioningModel"
 import {
   transformModelPricing,
@@ -57,46 +54,13 @@ export const fetchModelPricing = async (
   }
 }
 
-/** Fetch one OneHub token page for ordinary key-management consumers. */
-export const fetchAccountTokens = async (
-  request: ApiServiceRequest,
-  page: number = 0,
-  size: number = REQUEST_CONFIG.DEFAULT_PAGE_SIZE,
-): Promise<ApiToken[]> => {
-  const searchParams = new URLSearchParams({
-    page: (page + 1).toString(),
-    size: size.toString(),
-  })
-
-  try {
-    const tokensData = await fetchApiData<unknown>(request, {
-      endpoint: `/api/token/?${searchParams.toString()}`,
-    })
-
-    if (Array.isArray(tokensData)) {
-      return tokensData.map(normalizeApiTokenKey)
-    }
-    if (isRecord(tokensData) && Array.isArray(tokensData.data)) {
-      return tokensData.data.map(normalizeApiTokenKey)
-    }
-
-    logger.warn("Unexpected token response format", {
-      responseType: tokensData === null ? "null" : typeof tokensData,
-    })
-    return []
-  } catch (error) {
-    logger.error("获取令牌列表失败", error)
-    throw error
-  }
-}
-
 /**
- * Fetch a complete inventory for native reconciliation using OneHub pagination.
+ * Fetch the complete token list using OneHub's one-based pagination.
  * Source: https://github.com/MartialBE/one-hub/blob/387f8bf16ed0d601fdede7ade378adb10aa1a35a/model/common.go
  * Provider-selected sizes and stale metadata are tolerated; an empty page is
  * the provider-owned completion signal.
  */
-export const fetchCompleteAccountTokens = async (
+export const fetchAccountTokens = async (
   request: ApiServiceRequest,
 ): Promise<ApiToken[]> => {
   const tokens = await fetchAllItems<ApiToken>(
@@ -131,7 +95,7 @@ export const fetchCompleteAccountTokens = async (
     },
   )
 
-  return validateApiTokenInventory(tokens)
+  return tokens
 }
 
 /**
