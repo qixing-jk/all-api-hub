@@ -14,7 +14,7 @@ import { getTodayTimestampRange } from "~/services/apiService/newApiFamily/defau
 import { ApiError } from "~/services/apiTransport/errors"
 import { fetchApiData } from "~/services/apiTransport/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
-import { CheckInConfig, SiteHealthStatus } from "~/types"
+import { SiteHealthStatus, type CheckInConfig } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
 

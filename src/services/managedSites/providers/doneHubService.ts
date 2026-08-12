@@ -18,10 +18,10 @@ import {
 } from "~/services/managedSites/utils/fetchManagedSiteAvailableModels"
 import { fetchTokenScopedModels } from "~/services/managedSites/utils/fetchTokenScopedModels"
 import {
-  UserPreferences,
   userPreferences,
+  type UserPreferences,
 } from "~/services/preferences/userPreferences"
-import { ApiToken, AuthTypeEnum, DisplaySiteData } from "~/types"
+import { AuthTypeEnum, type ApiToken, type DisplaySiteData } from "~/types"
 import type { AccountToken } from "~/types"
 import type { DoneHubConfig } from "~/types/doneHubConfig"
 import type {

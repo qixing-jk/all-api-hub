@@ -28,7 +28,7 @@ export type InviteLinkFailureReasonCounts = Partial<
 export class InviteLinkError extends Error {
   constructor(
     public readonly reason: InviteLinkFailureReason,
-    public readonly cause?: unknown,
+    public override readonly cause?: unknown,
   ) {
     super(reason)
     this.name = "InviteLinkError"

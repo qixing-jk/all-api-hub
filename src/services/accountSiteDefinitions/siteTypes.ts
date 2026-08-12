@@ -1,4 +1,7 @@
-import { ACCOUNT_SITE_TYPE_ORDER, MANAGED_SITE_TYPE_ORDER } from "./definitions"
+import {
+  type ACCOUNT_SITE_TYPE_ORDER,
+  type MANAGED_SITE_TYPE_ORDER,
+} from "./definitions"
 import { SITE_TYPES } from "./identifiers"
 import { getAccountSiteTypeValues, getManagedSiteTypeValues } from "./registry"
 

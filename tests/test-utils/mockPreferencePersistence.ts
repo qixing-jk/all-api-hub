@@ -1,4 +1,4 @@
-import { vi } from "vitest"
+import { type vi } from "vitest"
 
 import { CURRENT_PREFERENCES_VERSION } from "~/services/preferences/migrations/preferencesMigration"
 import {

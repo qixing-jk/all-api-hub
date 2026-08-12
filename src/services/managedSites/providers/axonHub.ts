@@ -17,10 +17,10 @@ import type { AxonHubCreateChannelInput } from "~/types/axonHub"
 import type { AxonHubConfig } from "~/types/axonHubConfig"
 import {
   CHANNEL_STATUS,
-  ChannelFormData,
-  ChannelMode,
-  CreateChannelPayload,
-  ManagedSiteChannelListData,
+  type ChannelFormData,
+  type ChannelMode,
+  type CreateChannelPayload,
+  type ManagedSiteChannelListData,
 } from "~/types/managedSite"
 import { createLogger } from "~/utils/core/logger"
 import { normalizeList } from "~/utils/core/string"

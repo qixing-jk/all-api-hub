@@ -1,5 +1,5 @@
 import { ArrowPathIcon } from "@heroicons/react/24/outline"
-import { ReactNode, useState } from "react"
+import { useState, type ReactNode } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 

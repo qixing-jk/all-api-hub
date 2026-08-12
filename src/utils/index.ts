@@ -1,6 +1,6 @@
 import { mergeWith } from "lodash-es"
 
-import { DeepPartial } from "~/types/utils"
+import { type DeepPartial } from "~/types/utils"
 
 /**
  * Type guard that verifies an array is defined and contains at least one item.

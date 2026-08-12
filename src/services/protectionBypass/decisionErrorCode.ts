@@ -4,8 +4,8 @@ import {
 } from "~/services/apiTransport/errors"
 
 import {
-  PROTECTION_BYPASS_DECISION_RESULTS,
   PROTECTION_BYPASS_DENIED_REASONS,
+  type PROTECTION_BYPASS_DECISION_RESULTS,
   type ProtectionBypassDeniedReason,
 } from "./contracts"
 import type { ProtectionBypassPolicyDecision } from "./policy"

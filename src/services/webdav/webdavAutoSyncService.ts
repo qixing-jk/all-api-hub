@@ -43,7 +43,7 @@ import {
   isWebdavSyncDataSelectionEmpty,
   resolveWebdavSyncDataSelection,
   WEBDAV_SYNC_STRATEGIES,
-  WebDAVSettings,
+  type WebDAVSettings,
   type WebDAVSyncDataSelection,
 } from "~/types/webdav"
 import {

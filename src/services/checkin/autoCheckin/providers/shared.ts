@@ -6,7 +6,7 @@
  */
 
 import type { AutoCheckinProviderResult } from "~/services/checkin/autoCheckin/providers/types"
-import { AuthTypeEnum, SiteAccount } from "~/types"
+import { AuthTypeEnum, type SiteAccount } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 
 export const AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS = {

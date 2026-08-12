@@ -12,7 +12,7 @@ import { logCloudflareGuard } from "../utils/cloudflareGuard"
 import {
   normalizeFetchOptions,
   parseResponseData,
-  TempWindowResponseType,
+  type TempWindowResponseType,
 } from "../utils/tempFetchUtils"
 
 /**

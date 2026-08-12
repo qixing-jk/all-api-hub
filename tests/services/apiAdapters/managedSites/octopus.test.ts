@@ -24,7 +24,7 @@ import { testManagedUpstreamResourceMutationContract } from "~~/tests/services/a
 
 const octopusApi = vi.hoisted(() => {
   class OctopusMutationApiError extends Error {
-    readonly name = "OctopusMutationApiError"
+    override readonly name = "OctopusMutationApiError"
 
     constructor(
       message: string,

@@ -18,10 +18,10 @@ import type {
   OctopusChannelWithData,
 } from "~/types/managedSite"
 import {
-  BatchExecutionOptions,
-  ExecutionItemResult,
-  ExecutionResult,
-  ExecutionStatistics,
+  type BatchExecutionOptions,
+  type ExecutionItemResult,
+  type ExecutionResult,
+  type ExecutionStatistics,
 } from "~/types/managedSiteModelSync"
 import type { OctopusChannel, OctopusFetchModelRequest } from "~/types/octopus"
 import type { OctopusConfig } from "~/types/octopusConfig"

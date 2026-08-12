@@ -15,9 +15,9 @@ import {
   NEW_API_MANAGED_SESSION_STATUSES,
   NEW_API_SECURITY_PROOF_SCOPES,
   NEW_API_VERIFIED_SESSION_WINDOW_MS,
-  NewApiChannelKeyRequirementError,
   submitNewApiLoginTwoFactorCode,
   submitNewApiSecureVerificationCode,
+  type NewApiChannelKeyRequirementError,
 } from "~/services/managedSites/providers/newApiSession"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { server } from "~~/tests/msw/server"

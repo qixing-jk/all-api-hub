@@ -82,7 +82,7 @@ export type AxonHubNativeFailure = {
 export class AxonHubNativeError extends Error {
   constructor(
     readonly failure: AxonHubNativeFailure,
-    readonly cause?: unknown,
+    override readonly cause?: unknown,
   ) {
     super(failure.code)
     this.name = "AxonHubNativeError"

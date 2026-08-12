@@ -1,4 +1,4 @@
-import { Storage } from "@plasmohq/storage"
+import { type Storage } from "@plasmohq/storage"
 
 import {
   ACCOUNT_STORAGE_KEYS,

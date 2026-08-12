@@ -4,12 +4,12 @@ import {
   type ProductAnalyticsActionContext,
 } from "~/services/productAnalytics/actions"
 import {
-  PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_FAILURE_STAGES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
+  type PRODUCT_ANALYTICS_ACTION_IDS,
 } from "~/services/productAnalytics/contracts"
 
 export const webDavSettingsSurface =

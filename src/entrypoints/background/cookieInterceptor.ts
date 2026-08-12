@@ -2,7 +2,7 @@ import {
   ACCOUNT_STORAGE_KEYS,
   accountStorage,
 } from "~/services/accounts/accountStorage"
-import { AccountStorageConfig, type SiteAccount } from "~/types"
+import { type AccountStorageConfig, type SiteAccount } from "~/types"
 import { isSameStringSet } from "~/utils"
 import {
   onPermissionsAdded,

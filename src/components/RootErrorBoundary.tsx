@@ -113,7 +113,7 @@ export class RootErrorBoundary extends Component<
   RootErrorBoundaryProps,
   RootErrorBoundaryState
 > {
-  state: RootErrorBoundaryState = {
+  override state: RootErrorBoundaryState = {
     error: null,
     hasError: false,
   }
@@ -122,11 +122,11 @@ export class RootErrorBoundary extends Component<
     return { error, hasError: true }
   }
 
-  componentDidCatch(error: unknown, errorInfo: ErrorInfo) {
+  override componentDidCatch(error: unknown, errorInfo: ErrorInfo) {
     logger.error("Root UI crashed", { error, componentStack: errorInfo })
   }
 
-  render() {
+  override render() {
     if (this.state.hasError) {
       return (
         <RootErrorFallback

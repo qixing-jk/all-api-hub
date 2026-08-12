@@ -81,9 +81,9 @@ import {
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import { autoDetectSmart } from "~/services/siteDetection/autoDetectService"
 import {
-  ApiToken,
   AuthTypeEnum,
   SiteHealthStatus,
+  type ApiToken,
   type CheckInConfig,
   type DisplaySiteData,
   type SiteAccount,

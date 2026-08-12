@@ -41,7 +41,7 @@ import {
 } from "~/types/accountTodayStats"
 import type { DailyBalanceHistoryCaptureSource } from "~/types/dailyBalanceHistory"
 import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
-import { DeepPartial } from "~/types/utils"
+import { type DeepPartial } from "~/types/utils"
 import { deepOverride } from "~/utils"
 import { getErrorMessage } from "~/utils/core/error"
 import { safeRandomUUID } from "~/utils/core/identifier"

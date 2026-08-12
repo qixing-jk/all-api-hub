@@ -1,5 +1,5 @@
 import { createRoot, type Root } from "react-dom/client"
-import { ContentScriptContext } from "wxt/utils/content-script-context"
+import { type ContentScriptContext } from "wxt/utils/content-script-context"
 import { createShadowRootUi } from "wxt/utils/content-script-ui/shadow-root"
 
 import { CONTENT_UI_HOST_TAG } from "~/entrypoints/content/shared/contentUi"

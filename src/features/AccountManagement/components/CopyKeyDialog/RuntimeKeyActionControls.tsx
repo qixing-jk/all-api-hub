@@ -1,6 +1,6 @@
 import { CheckIcon } from "@heroicons/react/24/outline"
 import { Copy } from "lucide-react"
-import { MouseEvent, useMemo, useState } from "react"
+import { useMemo, useState, type MouseEvent } from "react"
 import { useTranslation } from "react-i18next"
 
 import { ClaudeCodeRouterImportDialog } from "~/components/ClaudeCodeRouterImportDialog"

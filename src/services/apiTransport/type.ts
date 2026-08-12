@@ -1,6 +1,6 @@
 import type { DeferredAbortDeadline } from "~/services/apiTransport/abortableTask"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
-import { AuthTypeEnum } from "~/types"
+import { type AuthTypeEnum } from "~/types"
 import type {
   TempWindowFallbackAllowlist,
   TempWindowRequestSource,

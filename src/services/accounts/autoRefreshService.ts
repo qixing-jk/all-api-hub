@@ -17,7 +17,7 @@ import {
   PROTECTION_BYPASS_SURFACES,
 } from "~/services/protectionBypass/contracts"
 import { createRuntimeMessageFailure } from "~/services/runtimeMessaging/result"
-import { AccountAutoRefresh } from "~/types/accountAutoRefresh"
+import { type AccountAutoRefresh } from "~/types/accountAutoRefresh"
 import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
 import {
   isMessageReceiverUnavailableError,

@@ -16,7 +16,7 @@ import {
   type TodayTimestampRange,
 } from "~/services/apiService/newApiFamily/default/accountDataUtils"
 import type { TodayLogQueryConfig } from "~/services/history/usageHistory/usageLogModel"
-import { CheckInConfig, SiteHealthStatus } from "~/types"
+import { SiteHealthStatus, type CheckInConfig } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
 

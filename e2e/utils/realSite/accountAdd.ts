@@ -12,7 +12,7 @@ import { expect } from "~~/e2e/fixtures/extensionTest"
 import {
   expectPermissionOnboardingHidden,
   getPlasmoStorageRawValue,
-  getServiceWorker,
+  type getServiceWorker,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 

@@ -67,7 +67,7 @@ const claudeCodeHubProvider = vi.hoisted(() => ({
 
 const claudeCodeHubApi = vi.hoisted(() => {
   class ClaudeCodeHubApiError extends Error {
-    readonly name = "ClaudeCodeHubApiError"
+    override readonly name = "ClaudeCodeHubApiError"
 
     constructor(
       message: string,

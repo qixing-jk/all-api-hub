@@ -24,7 +24,7 @@ import {
 } from "~/services/productAnalytics/contracts"
 import {
   AUTO_CHECKIN_SCHEDULE_MODE,
-  AutoCheckinPreferences,
+  type AutoCheckinPreferences,
 } from "~/types/autoCheckin"
 import { createLogger } from "~/utils/core/logger"
 import { getPreferenceWriteFailureMessage } from "~/utils/core/toastHelpers"

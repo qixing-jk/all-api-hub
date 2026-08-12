@@ -12,7 +12,7 @@ import type {
   AccountTodayStatsCoverage,
 } from "~/types/accountTodayStats"
 import type { AuthTypeEnum } from "~/types/auth"
-import { TempWindowHealthStatusCode } from "~/types/tempWindow"
+import { type TempWindowHealthStatusCode } from "~/types/tempWindow"
 import type { TurnstilePreTrigger } from "~/types/turnstile"
 
 export enum SiteHealthStatus {

@@ -60,7 +60,7 @@ type Sub2ApiAdminErrorEvidence = {
 
 /** Carries enough transport evidence to classify managed-site mutations. */
 export class Sub2ApiAdminApiError extends Error {
-  readonly name = "Sub2ApiAdminApiError"
+  override readonly name = "Sub2ApiAdminApiError"
 
   constructor(
     message: string,
@@ -73,7 +73,7 @@ export class Sub2ApiAdminApiError extends Error {
 }
 
 export class InvalidSub2ApiResourceIdError extends TypeError {
-  readonly name = "InvalidSub2ApiResourceIdError"
+  override readonly name = "InvalidSub2ApiResourceIdError"
 
   constructor(readonly resourceId: unknown) {
     super("Sub2API resource ID must be a positive safe integer")

@@ -32,6 +32,13 @@ const typescriptParserOptions = wxtPrepared
     }
 
 const rules = {
+  "@typescript-eslint/consistent-type-imports": [
+    "error",
+    {
+      disallowTypeAnnotations: false,
+      fixStyle: "inline-type-imports",
+    },
+  ],
   "@typescript-eslint/no-explicit-any": "off",
   "@typescript-eslint/no-unused-vars": [
     "warn",

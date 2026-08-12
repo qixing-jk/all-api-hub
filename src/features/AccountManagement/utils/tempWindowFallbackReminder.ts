@@ -1,7 +1,7 @@
 import {
-  DisplaySiteData,
-  HealthStatusCode,
   TEMP_WINDOW_HEALTH_STATUS_CODES,
+  type DisplaySiteData,
+  type HealthStatusCode,
 } from "~/types"
 
 export type TempWindowFallbackSettingsTab = "refresh" | "permissions"

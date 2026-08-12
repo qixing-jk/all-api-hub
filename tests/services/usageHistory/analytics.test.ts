@@ -5,7 +5,7 @@ import { createEmptyUsageHistoryAccountStore } from "~/services/history/usageHis
 import {
   USAGE_HISTORY_EXPORT_SCHEMA_VERSION,
   USAGE_HISTORY_STORE_SCHEMA_VERSION,
-  UsageHistoryStore,
+  type UsageHistoryStore,
 } from "~/types/usageHistory"
 
 describe("usageHistory analytics", () => {

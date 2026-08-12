@@ -46,7 +46,7 @@ import {
 } from "~/services/productAnalytics/webDavSync"
 import { WebdavAutoSyncMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import { sendWebdavAutoSyncMessage } from "~/services/webdav/webdavAutoSyncMessaging"
-import { WEBDAV_SYNC_STRATEGIES, WebDAVSettings } from "~/types/webdav"
+import { WEBDAV_SYNC_STRATEGIES, type WebDAVSettings } from "~/types/webdav"
 import { formatTimestamp } from "~/utils/core/formatters"
 import { createLogger } from "~/utils/core/logger"
 

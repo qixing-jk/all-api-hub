@@ -12,12 +12,12 @@ import {
 import type { ProductAnalyticsActionDiagnostics } from "./actions"
 import {
   PRODUCT_ANALYTICS_AUTO_CHECKIN_SCHEDULE_MODES,
-  PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_EVENTS,
   PRODUCT_ANALYTICS_FAILURE_REASONS,
   PRODUCT_ANALYTICS_FAILURE_STAGES,
   PRODUCT_ANALYTICS_SETTING_IDS,
+  type PRODUCT_ANALYTICS_ENTRYPOINTS,
   type ProductAnalyticsAutoCheckinRunKind,
   type ProductAnalyticsEntrypoint,
   type ProductAnalyticsErrorCategory,

@@ -22,7 +22,7 @@ import {
   type FetchManagedSiteAvailableModelsOptions,
 } from "~/services/managedSites/utils/fetchManagedSiteAvailableModels"
 import { fetchTokenScopedModels } from "~/services/managedSites/utils/fetchTokenScopedModels"
-import { ApiToken, AuthTypeEnum, DisplaySiteData } from "~/types"
+import { AuthTypeEnum, type ApiToken, type DisplaySiteData } from "~/types"
 import type { AccountToken } from "~/types"
 import type {
   ChannelFormData,
@@ -38,8 +38,8 @@ import { normalizeList } from "~/utils/core/string"
 import { normalizeUrlForOriginKey } from "~/utils/core/urlParsing"
 
 import {
-  UserPreferences,
   userPreferences,
+  type UserPreferences,
 } from "../../preferences/userPreferences"
 import { isManagedSiteAdminUserId } from "../utils/adminUserId"
 import { resolveDefaultChannelGroups } from "./defaultChannelGroups"

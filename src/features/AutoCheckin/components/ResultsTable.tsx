@@ -27,7 +27,7 @@ import {
 } from "~/services/productAnalytics/contracts"
 import {
   CHECKIN_RESULT_STATUS,
-  CheckinAccountResult,
+  type CheckinAccountResult,
 } from "~/types/autoCheckin"
 
 import { formatTimestamp } from "../utils/tableUtils"

@@ -3,11 +3,14 @@ import { NewAPI } from "@lobehub/icons"
 import { AxonHubIcon } from "~/components/icons/AxonHubIcon"
 import { ClaudeCodeHubIcon } from "~/components/icons/ClaudeCodeHubIcon"
 import { DoneHubIcon } from "~/components/icons/DoneHubIcon"
-import { ICON_SIZE_CLASSNAME, IconSize } from "~/components/icons/iconSizes"
+import {
+  ICON_SIZE_CLASSNAME,
+  type IconSize,
+} from "~/components/icons/iconSizes"
 import { OctopusIcon } from "~/components/icons/OctopusIcon"
 import { Sub2ApiIcon } from "~/components/icons/Sub2ApiIcon"
 import { VeloeraIcon } from "~/components/icons/VeloeraIcon"
-import { ManagedSiteType, SITE_TYPES } from "~/constants/siteType"
+import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import { cn } from "~/lib/utils"
 
 interface ManagedSiteIconProps {

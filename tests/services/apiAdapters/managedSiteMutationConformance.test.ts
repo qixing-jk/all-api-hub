@@ -14,9 +14,9 @@ import type { ManagedUpstreamResourceItemsCapability } from "~/services/apiAdapt
 import { getManagedResourceRegistration } from "~/services/apiAdapters/managedResources/registry"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import {
-  consumeManagedSiteMutationResult,
-  MANAGED_SITE_MUTATION_DISPATCH_STATES,
-  MANAGED_SITE_MUTATION_FINAL_STATES,
+  type consumeManagedSiteMutationResult,
+  type MANAGED_SITE_MUTATION_DISPATCH_STATES,
+  type MANAGED_SITE_MUTATION_FINAL_STATES,
   type ManagedSiteMutationConsumptionOptions,
   type ManagedSiteMutationDispatchState,
   type ManagedSiteMutationFinalState,
@@ -32,7 +32,7 @@ import * as newApiLegacyProvider from "~/services/managedSites/providers/newApi"
 import * as octopusLegacyProvider from "~/services/managedSites/providers/octopus"
 import * as veloeraLegacyProvider from "~/services/managedSites/providers/veloera"
 import {
-  collectManagedResourceSecrets,
+  type collectManagedResourceSecrets,
   type ManagedResourceSecretCollection,
 } from "~/services/managedSites/utils/managedSite"
 import type { ManagedUpstreamResourceSummary } from "~/types/managedUpstreamResource"

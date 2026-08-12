@@ -1,5 +1,5 @@
 import type { TFunction } from "i18next"
-import { FormEvent, useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState, type FormEvent } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 

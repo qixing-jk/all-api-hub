@@ -34,10 +34,10 @@ import type {
 } from "~/services/protectionBypass/contracts"
 import {
   AuthTypeEnum,
-  SiteAccount,
   SiteHealthStatus,
   type ApiToken,
   type DisplaySiteData,
+  type SiteAccount,
 } from "~/types"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"

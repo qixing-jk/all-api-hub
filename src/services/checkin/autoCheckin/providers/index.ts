@@ -6,7 +6,7 @@ import type { ProtectionBypassExecution } from "~/services/protectionBypass/cont
 import type { SiteAccount } from "~/types"
 import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
 
-import { AnyrouterCheckInParams, anyrouterProvider } from "./anyrouter"
+import { anyrouterProvider, type AnyrouterCheckInParams } from "./anyrouter"
 import { veloeraProvider } from "./veloera"
 import { wongGongyiProvider } from "./wong"
 

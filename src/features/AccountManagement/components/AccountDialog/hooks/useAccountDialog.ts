@@ -60,8 +60,8 @@ import {
 } from "~/services/accounts/utils/apiServiceRequest"
 import {
   analyzeAutoDetectError,
-  AutoDetectError,
   AutoDetectErrorType,
+  type AutoDetectError,
 } from "~/services/accounts/utils/autoDetectUtils"
 import {
   isSameAccountSiteOrigin,

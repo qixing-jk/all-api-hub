@@ -61,7 +61,7 @@ const axonHubApi = vi.hoisted(() => {
     readonly statusCode?: number
     readonly code?: string
     readonly raw?: unknown
-    readonly cause?: unknown
+    override readonly cause?: unknown
   }
 
   return {

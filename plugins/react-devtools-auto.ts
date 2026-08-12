@@ -1,4 +1,4 @@
-import { ChildProcess, spawn } from "child_process"
+import { spawn, type ChildProcess } from "child_process"
 import fs from "fs/promises"
 import { Socket } from "net"
 import path from "path"

@@ -1,4 +1,4 @@
-import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
+import { type ManagedSiteType, type SITE_TYPES } from "~/constants/siteType"
 import type { ManagedSiteRuntimeConfigValueForType } from "~/services/managedSites/runtimeConfig"
 
 import { readEnv } from "./shared"

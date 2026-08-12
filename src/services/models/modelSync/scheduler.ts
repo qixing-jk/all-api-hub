@@ -11,8 +11,8 @@ import {
   getManagedSiteContext,
   getManagedSiteNoChannelsToSyncMessage,
   getManagedSiteUnsupportedModelSyncMessage,
-  ManagedSiteMessagesKey,
   supportsManagedSiteModelSync,
+  type ManagedSiteMessagesKey,
 } from "~/services/managedSites/utils/managedSite"
 import { ModelRedirectService } from "~/services/models/modelRedirect"
 import { notifyTaskResult } from "~/services/notifications/taskNotificationService"
@@ -49,8 +49,8 @@ import {
   DEFAULT_MODEL_REDIRECT_PREFERENCES,
 } from "~/types/managedSiteModelRedirect"
 import {
-  ExecutionProgress,
-  ExecutionResult,
+  type ExecutionProgress,
+  type ExecutionResult,
 } from "~/types/managedSiteModelSync"
 import {
   getTaskNotificationStatusFromCounts,

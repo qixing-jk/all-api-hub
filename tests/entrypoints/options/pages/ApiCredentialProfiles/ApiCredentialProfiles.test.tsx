@@ -3,7 +3,7 @@ import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { type useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import ApiCredentialProfiles from "~/entrypoints/options/pages/ApiCredentialProfiles"
 import {
   KEY_MANAGEMENT_GUIDED_IMPORT_TARGETS,

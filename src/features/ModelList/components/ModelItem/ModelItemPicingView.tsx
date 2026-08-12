@@ -4,7 +4,7 @@ import {
   resolvePriceAmount,
   type TokenPricesUSD,
 } from "~/services/models/utils/modelPricing"
-import { CurrencyType } from "~/types"
+import { type CurrencyType } from "~/types"
 
 interface PriceViewProps {
   usdPrices: TokenPricesUSD

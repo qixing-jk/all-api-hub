@@ -45,8 +45,8 @@ export interface AutoDetectCompletionData {
 }
 
 export class AutoDetectCompletionError extends Error {
-  readonly name = "AutoDetectCompletionError"
-  readonly cause: unknown
+  override readonly name = "AutoDetectCompletionError"
+  override readonly cause: unknown
 
   constructor(
     readonly reason: AutoDetectFailureReason,

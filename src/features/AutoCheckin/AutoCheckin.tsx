@@ -54,9 +54,9 @@ import { AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageType
 import type { DisplaySiteData } from "~/types"
 import {
   AUTO_CHECKIN_RUN_RESULT,
-  AutoCheckinRunSummary,
-  AutoCheckinStatus,
   CHECKIN_RESULT_STATUS,
+  type AutoCheckinRunSummary,
+  type AutoCheckinStatus,
 } from "~/types/autoCheckin"
 import { onRuntimeMessage } from "~/utils/browser/browserApi"
 import { getCurrentTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"

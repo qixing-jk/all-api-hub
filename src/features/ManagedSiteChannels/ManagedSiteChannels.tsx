@@ -1,8 +1,8 @@
 import {
-  ColumnFiltersState,
-  PaginationState,
-  SortingState,
-  VisibilityState,
+  type ColumnFiltersState,
+  type PaginationState,
+  type SortingState,
+  type VisibilityState,
 } from "@tanstack/react-table"
 import type { TFunction } from "i18next"
 import {

@@ -32,18 +32,18 @@ import {
   restoreWebdavLocalOnlyPreferences,
 } from "~/services/preferences/webdavSharedPreferences"
 import {
-  ActiveSortField,
-  CurrencyType,
-  DashboardTabType,
-  SortOrder,
+  type ActiveSortField,
+  type CurrencyType,
+  type DashboardTabType,
+  type SortOrder,
 } from "~/types"
 import {
-  AccountAutoRefresh,
   DEFAULT_ACCOUNT_AUTO_REFRESH,
+  type AccountAutoRefresh,
 } from "~/types/accountAutoRefresh"
 import {
   AUTO_CHECKIN_SCHEDULE_MODE,
-  AutoCheckinPreferences,
+  type AutoCheckinPreferences,
 } from "~/types/autoCheckin"
 import {
   DEFAULT_AXON_HUB_CONFIG,
@@ -78,8 +78,11 @@ import {
   DEFAULT_MODEL_REDIRECT_PREFERENCES,
   type ModelRedirectPreferences,
 } from "~/types/managedSiteModelRedirect"
-import { DEFAULT_NEW_API_CONFIG, NewApiConfig } from "~/types/newApiConfig"
-import { DEFAULT_OCTOPUS_CONFIG, OctopusConfig } from "~/types/octopusConfig"
+import { DEFAULT_NEW_API_CONFIG, type NewApiConfig } from "~/types/newApiConfig"
+import {
+  DEFAULT_OCTOPUS_CONFIG,
+  type OctopusConfig,
+} from "~/types/octopusConfig"
 import {
   DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES,
   type SiteAnnouncementPreferences,
@@ -98,12 +101,15 @@ import {
   DEFAULT_USAGE_HISTORY_PREFERENCES,
   type UsageHistoryPreferences,
 } from "~/types/usageHistory"
-import { DeepPartial } from "~/types/utils"
-import { DEFAULT_VELOERA_CONFIG, VeloeraConfig } from "~/types/veloeraConfig"
+import { type DeepPartial } from "~/types/utils"
+import {
+  DEFAULT_VELOERA_CONFIG,
+  type VeloeraConfig,
+} from "~/types/veloeraConfig"
 import {
   DEFAULT_WEBDAV_SETTINGS,
-  WebDAVSettings,
-  WebDAVSyncStrategy,
+  type WebDAVSettings,
+  type WebDAVSyncStrategy,
 } from "~/types/webdav"
 import { deepOverride } from "~/utils"
 import { createLogger } from "~/utils/core/logger"

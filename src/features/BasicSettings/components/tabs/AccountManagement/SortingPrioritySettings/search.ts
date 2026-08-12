@@ -1,4 +1,4 @@
-import { SortingCriteriaType } from "~/types/sorting"
+import { type SortingCriteriaType } from "~/types/sorting"
 
 /**
  * Builds the DOM target id used by options search for a sorting criteria control.

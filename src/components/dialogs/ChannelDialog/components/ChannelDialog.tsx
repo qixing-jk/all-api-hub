@@ -24,7 +24,7 @@ import {
   isClaudeCodeHubProviderType,
 } from "~/constants/claudeCodeHub"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
-import { ChannelType, ChannelTypeOptions } from "~/constants/managedSite"
+import { ChannelTypeOptions, type ChannelType } from "~/constants/managedSite"
 import { OctopusOutboundTypeOptions } from "~/constants/octopus"
 import { SITE_TYPES } from "~/constants/siteType"
 import { SUB2API_API_KEY_ACCOUNT_TYPE_OPTIONS } from "~/constants/sub2api"
@@ -62,7 +62,7 @@ import {
   type ChannelStatus,
   type ManagedSiteChannel,
 } from "~/types/managedSite"
-import { OctopusOutboundType } from "~/types/octopus"
+import { type OctopusOutboundType } from "~/types/octopus"
 import { getCurrentTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 
 import { ChannelCommonFieldsBody } from "./ChannelCommonFieldsBody"

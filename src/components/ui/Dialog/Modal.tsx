@@ -1,12 +1,12 @@
 import { XIcon } from "lucide-react"
 import { Dialog as DialogPrimitive } from "radix-ui"
 import {
-  ReactNode,
   useCallback,
   useLayoutEffect,
   useRef,
   type MouseEvent,
   type PointerEvent,
+  type ReactNode,
 } from "react"
 
 import { Z_INDEX } from "~/constants/designTokens"

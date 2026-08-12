@@ -1,10 +1,10 @@
 import {
   createContext,
-  ReactNode,
   useCallback,
   useContext,
   useEffect,
   useState,
+  type ReactNode,
 } from "react"
 
 const ToasterPortalActiveHostContext = createContext<HTMLElement | null>(null)

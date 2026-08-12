@@ -4,11 +4,11 @@ import {
   MagnifyingGlassIcon,
   XCircleIcon,
 } from "@heroicons/react/24/outline"
-import { ReactNode } from "react"
+import { type ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Input } from "~/components/ui"
-import { ExecutionStatistics } from "~/types/managedSiteModelSync"
+import { type ExecutionStatistics } from "~/types/managedSiteModelSync"
 
 export type FilterStatus = "all" | "success" | "failed"
 

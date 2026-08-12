@@ -1,4 +1,4 @@
-import { z } from "zod"
+import { type z } from "zod"
 
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { fetchApiResponse } from "~/services/apiTransport/request"

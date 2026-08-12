@@ -1,5 +1,8 @@
 import OctopusLogo from "~/assets/OctopusLogo.png"
-import { ICON_SIZE_CLASSNAME, IconSize } from "~/components/icons/iconSizes"
+import {
+  ICON_SIZE_CLASSNAME,
+  type IconSize,
+} from "~/components/icons/iconSizes"
 import { cn } from "~/lib/utils"
 
 interface OctopusIconProps {

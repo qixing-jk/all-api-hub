@@ -357,7 +357,7 @@ export class AxonHubRequestError extends Error {
   readonly statusCode?: number
   readonly code?: string
   readonly raw?: unknown
-  readonly cause?: unknown
+  override readonly cause?: unknown
   readonly safeMessage: string
 
   constructor(

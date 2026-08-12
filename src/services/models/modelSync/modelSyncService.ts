@@ -27,10 +27,10 @@ import {
   type ManagedSiteChannelListData,
 } from "~/types/managedSite"
 import {
-  BatchExecutionOptions,
-  ExecutionItemResult,
-  ExecutionResult,
-  ExecutionStatistics,
+  type BatchExecutionOptions,
+  type ExecutionItemResult,
+  type ExecutionResult,
+  type ExecutionStatistics,
 } from "~/types/managedSiteModelSync"
 import type {
   ManagedUpstreamResourceDetail,

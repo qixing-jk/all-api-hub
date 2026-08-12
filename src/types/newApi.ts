@@ -1,4 +1,4 @@
-import { ChannelType } from "~/constants"
+import { type ChannelType } from "~/constants"
 import type { AxonHubChannelType } from "~/constants/axonHub"
 import type { ClaudeCodeHubProviderType } from "~/constants/claudeCodeHub"
 

@@ -5,9 +5,9 @@
 
 import type { TFunction } from "i18next"
 
-import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { type RuntimeActionIds } from "~/constants/runtimeActions"
 import type { AccountSiteType } from "~/constants/siteType"
-import { AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageTypes"
+import { type AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 
 /**
  * Check-in result status
