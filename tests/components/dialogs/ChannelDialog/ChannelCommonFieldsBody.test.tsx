@@ -1,14 +1,205 @@
 import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import type { TFunction } from "i18next"
+import { useState } from "react"
 import { describe, expect, it, vi } from "vitest"
 
-import { ChannelCommonFieldsBody } from "~/components/dialogs/ChannelDialog/components/ChannelCommonFieldsBody"
+import {
+  ChannelCommonFieldsBody,
+  ChannelModelsField,
+} from "~/components/dialogs/ChannelDialog/components/ChannelCommonFieldsBody"
 import { CHANNEL_DIALOG_TEST_IDS } from "~/components/dialogs/ChannelDialog/testIds"
 
 const t = ((key: string) => key) as TFunction
 
+function FilterableModelsHarness({
+  initialSelected = ["gpt-4", "custom-model"],
+  withGlobalBulkActions = true,
+}: {
+  initialSelected?: string[]
+  withGlobalBulkActions?: boolean
+}) {
+  const [selected, setSelected] = useState(initialSelected)
+
+  return (
+    <>
+      <ChannelModelsField
+        t={t}
+        options={[
+          { value: "gpt-4", label: "gpt-4" },
+          { value: "deepseek-chat", label: "deepseek-chat" },
+          { value: "deepseek-reasoner", label: "deepseek-reasoner" },
+        ]}
+        selected={selected}
+        onChange={setSelected}
+        disabled={false}
+        onSelectAll={
+          withGlobalBulkActions
+            ? () => setSelected(["gpt-4", "deepseek-chat", "deepseek-reasoner"])
+            : undefined
+        }
+        onInverse={
+          withGlobalBulkActions
+            ? () => setSelected(["deepseek-chat", "deepseek-reasoner"])
+            : undefined
+        }
+        onDeselectAll={
+          withGlobalBulkActions ? () => setSelected([]) : undefined
+        }
+      />
+      <output aria-label="Selected models">{selected.join(",")}</output>
+    </>
+  )
+}
+
 describe("ChannelCommonFieldsBody", () => {
+  it("provides filtered bulk actions without global bulk callbacks", async () => {
+    const user = userEvent.setup()
+
+    render(<FilterableModelsHarness withGlobalBulkActions={false} />)
+
+    expect(
+      screen.getByRole("button", { name: "ui:multiSelect.selectAll" }),
+    ).toBeVisible()
+    expect(
+      screen.getByRole("button", { name: "ui:multiSelect.cancelSelected" }),
+    ).toBeVisible()
+
+    await user.type(
+      screen.getByRole("combobox", {
+        name: "channelDialog:fields.models.label",
+      }),
+      "deepseek",
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: "ui:multiSelect.selectAllMatches",
+      }),
+    )
+
+    expect(screen.getByLabelText("Selected models")).toHaveTextContent(
+      "gpt-4,custom-model,deepseek-chat,deepseek-reasoner",
+    )
+  })
+
+  it("selects only matching models while preserving selections outside the filter", async () => {
+    const user = userEvent.setup()
+
+    render(<FilterableModelsHarness />)
+
+    expect(
+      screen.getByRole("button", {
+        name: "channelDialog:actions.selectAll",
+      }),
+    ).toBeVisible()
+    expect(
+      screen.getByRole("button", {
+        name: "channelDialog:actions.inverse",
+      }),
+    ).toBeVisible()
+    expect(
+      screen.getByRole("button", {
+        name: "channelDialog:actions.deselectAll",
+      }),
+    ).toBeVisible()
+
+    const modelsInput = screen.getByRole("combobox", {
+      name: "channelDialog:fields.models.label",
+    })
+    await user.type(modelsInput, "deepseek")
+    await user.click(
+      screen.getByRole("button", {
+        name: "ui:multiSelect.selectAllMatches",
+      }),
+    )
+
+    expect(screen.getByLabelText("Selected models")).toHaveTextContent(
+      "gpt-4,custom-model,deepseek-chat,deepseek-reasoner",
+    )
+    expect(modelsInput).toHaveAttribute("aria-expanded", "true")
+    expect(
+      screen.getByRole("button", {
+        name: "ui:multiSelect.invertMatches",
+      }),
+    ).toBeVisible()
+  })
+
+  it("inverts only matching models while preserving selections outside the filter", async () => {
+    const user = userEvent.setup()
+
+    render(
+      <FilterableModelsHarness
+        initialSelected={["gpt-4", "custom-model", "deepseek-chat"]}
+      />,
+    )
+
+    await user.type(
+      screen.getByRole("combobox", {
+        name: "channelDialog:fields.models.label",
+      }),
+      "deepseek",
+    )
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "ui:multiSelect.invertMatches",
+      }),
+    )
+    expect(screen.getByLabelText("Selected models")).toHaveTextContent(
+      "gpt-4,custom-model,deepseek-reasoner",
+    )
+  })
+
+  it("deselects only matching models while preserving selections outside the filter", async () => {
+    const user = userEvent.setup()
+
+    render(
+      <FilterableModelsHarness
+        initialSelected={[
+          "gpt-4",
+          "custom-model",
+          "deepseek-chat",
+          "deepseek-reasoner",
+        ]}
+      />,
+    )
+
+    await user.type(
+      screen.getByRole("combobox", {
+        name: "channelDialog:fields.models.label",
+      }),
+      "deepseek",
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: "ui:multiSelect.deselectMatches",
+      }),
+    )
+    expect(screen.getByLabelText("Selected models")).toHaveTextContent(
+      "gpt-4,custom-model",
+    )
+  })
+
+  it("hides filtered bulk actions when no model matches", async () => {
+    const user = userEvent.setup()
+
+    render(<FilterableModelsHarness />)
+
+    await user.type(
+      screen.getByRole("combobox", {
+        name: "channelDialog:fields.models.label",
+      }),
+      "no-such-model",
+    )
+
+    expect(
+      screen.queryByRole("group", {
+        name: "ui:multiSelect.filteredResultsScope",
+      }),
+    ).not.toBeInTheDocument()
+    expect(screen.getByText("ui:searchableSelect.empty")).toBeVisible()
+  })
+
   it("keeps stable ids, common focus order, and the advanced disclosure contract", async () => {
     const user = userEvent.setup()
 

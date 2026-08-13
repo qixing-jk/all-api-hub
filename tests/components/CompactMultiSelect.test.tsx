@@ -1,9 +1,10 @@
-import { fireEvent, screen, waitFor } from "@testing-library/react"
+import { fireEvent, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { useState, type ReactElement } from "react"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { CompactMultiSelect } from "~/components/ui/CompactMultiSelect"
+import { testI18n } from "~~/tests/test-utils/i18n"
 import { render } from "~~/tests/test-utils/render"
 
 const toastMocks = vi.hoisted(() => ({
@@ -25,6 +26,10 @@ describe("CompactMultiSelect", () => {
   beforeEach(() => {
     toastMocks.success.mockReset()
     toastMocks.error.mockReset()
+  })
+
+  afterEach(() => {
+    testI18n.removeResourceBundle("en", "ui")
   })
 
   it("uses a dedicated clear button instead of a clear option item", async () => {
@@ -87,6 +92,105 @@ describe("CompactMultiSelect", () => {
 
     await user.click(screen.getByRole("option", { name: "Alpha" }))
     expect(onChange).toHaveBeenCalledWith(["id-alpha"])
+  })
+
+  it("shows a compact filtered-results toolbar by default in chips mode", async () => {
+    const user = userEvent.setup()
+
+    testI18n.addResource(
+      "en",
+      "ui",
+      "multiSelect.filteredResultsSummary",
+      "{{matched}} matches · {{selected}} selected",
+    )
+
+    function Harness() {
+      const [selected, setSelected] = useState(["alpha", "custom-value"])
+
+      return (
+        <>
+          <CompactMultiSelect
+            options={[
+              { value: "alpha", label: "Alpha" },
+              { value: "beta-one", label: "Beta One" },
+              { value: "beta-two", label: "Beta Two" },
+            ]}
+            selected={selected}
+            onChange={setSelected}
+          />
+          <output aria-label="Selected values">{selected.join(",")}</output>
+        </>
+      )
+    }
+
+    renderCompact(<Harness />)
+
+    await user.type(screen.getByRole("combobox"), "beta")
+
+    const toolbar = screen.getByRole("group", {
+      name: "ui:multiSelect.filteredResultsScope",
+    })
+    expect(within(toolbar).getByText("2 matches · 0 selected")).toBeVisible()
+
+    await user.click(
+      within(toolbar).getByRole("button", {
+        name: "ui:multiSelect.selectAllMatches",
+      }),
+    )
+
+    expect(screen.getByLabelText("Selected values")).toHaveTextContent(
+      "alpha,custom-value,beta-one,beta-two",
+    )
+    expect(within(toolbar).getByText("2 matches · 2 selected")).toBeVisible()
+    expect(screen.getByRole("combobox")).toHaveFocus()
+  })
+
+  it("hides filtered bulk actions when fewer than two selectable options match", async () => {
+    const user = userEvent.setup()
+
+    renderCompact(
+      <CompactMultiSelect
+        options={[
+          { value: "alpha", label: "Alpha" },
+          { value: "alphabet", label: "Alphabet", disabled: true },
+          { value: "beta", label: "Beta" },
+        ]}
+        selected={[]}
+        onChange={vi.fn()}
+      />,
+    )
+
+    await user.type(screen.getByRole("combobox"), "alpha")
+
+    expect(
+      screen.queryByRole("group", {
+        name: "ui:multiSelect.filteredResultsScope",
+      }),
+    ).not.toBeInTheDocument()
+  })
+
+  it("allows filtered bulk actions to be disabled explicitly", async () => {
+    const user = userEvent.setup()
+
+    renderCompact(
+      <CompactMultiSelect
+        options={[
+          { value: "alpha", label: "Alpha" },
+          { value: "alphabet", label: "Alphabet" },
+        ]}
+        selected={[]}
+        onChange={vi.fn()}
+        enableFilteredBulkActions={false}
+      />,
+    )
+
+    await user.type(screen.getByRole("combobox"), "alpha")
+
+    expect(
+      screen.queryByRole("button", {
+        name: "ui:multiSelect.selectAllMatches",
+      }),
+    ).not.toBeInTheDocument()
   })
 
   it("forwards combined field accessibility metadata to the chips input", () => {

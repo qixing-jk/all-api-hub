@@ -475,6 +475,9 @@ export function ChannelModelsField({
         }
         disabled={disabled || isLoading}
         allowCustom
+        bulkActionsMinOptions={
+          showBulkActions ? Number.POSITIVE_INFINITY : undefined
+        }
         aria-label={t("channelDialog:fields.models.label")}
         aria-invalid={Boolean(errorMessage)}
         aria-describedby={fieldDescriptionIds(descriptionId, errorId)}

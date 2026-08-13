@@ -91,6 +91,8 @@ export interface CompactMultiSelectProps
    * Defaults to `0` to preserve the current always-visible behavior.
    */
   bulkActionsMinOptions?: number
+  /** Enables chips-mode bulk actions scoped to the current search results. */
+  enableFilteredBulkActions?: boolean
   /**
    * Optional stable selector for the searchable chips input.
    */
@@ -101,6 +103,13 @@ const getOptionAccessibleLabel = (option: CompactMultiSelectOption) =>
   typeof option.count === "number"
     ? `${option.label} ${option.count}`
     : option.label
+
+const optionMatchesSearch = (
+  option: CompactMultiSelectOption,
+  normalizedSearchTerm: string,
+) =>
+  option.label.toLowerCase().includes(normalizedSearchTerm) ||
+  option.value.toLowerCase().includes(normalizedSearchTerm)
 
 const OptionCountBadge = ({ count }: { count?: number }) =>
   typeof count === "number" ? (
@@ -137,6 +146,7 @@ export function CompactMultiSelect({
   emptyMessage,
   size = "default",
   bulkActionsMinOptions = 0,
+  enableFilteredBulkActions = true,
   inputTestId,
   className,
   ...buttonProps
@@ -146,6 +156,7 @@ export function CompactMultiSelect({
   const [open, setOpen] = React.useState(false)
   const [searchTerm, setSearchTerm] = React.useState("")
   const chipsAnchor = useComboboxAnchor()
+  const chipsInputRef = React.useRef<HTMLInputElement | null>(null)
   const actionsRef = React.useRef<HTMLDivElement | null>(null)
   const [actionsOrientation, setActionsOrientation] = React.useState<
     "horizontal" | "vertical"
@@ -163,11 +174,41 @@ export function CompactMultiSelect({
       .map((option) => option.value)
   }, [options])
 
+  const normalizedSearchTerm = searchTerm.trim().toLowerCase()
+  const filteredSelectableOptionValues = React.useMemo(() => {
+    if (!normalizedSearchTerm) return []
+
+    return options
+      .filter(
+        (option) =>
+          !option.disabled && optionMatchesSearch(option, normalizedSearchTerm),
+      )
+      .map((option) => option.value)
+  }, [normalizedSearchTerm, options])
+
   const allSelectableOptionsSelected = React.useMemo(() => {
     if (selectableOptionValues.length === 0) return false
     const selectedSet = new Set(selected)
     return selectableOptionValues.every((value) => selectedSet.has(value))
   }, [selectableOptionValues, selected])
+
+  const filteredSelectedCount = React.useMemo(() => {
+    const selectedSet = new Set(selected)
+    return filteredSelectableOptionValues.filter((value) =>
+      selectedSet.has(value),
+    ).length
+  }, [filteredSelectableOptionValues, selected])
+
+  const allFilteredOptionsSelected =
+    filteredSelectableOptionValues.length > 0 &&
+    filteredSelectedCount === filteredSelectableOptionValues.length
+  const hasFilteredSelection = filteredSelectedCount > 0
+  const showFilteredBulkActions =
+    enableFilteredBulkActions && filteredSelectableOptionValues.length >= 2
+
+  const restoreChipsInputFocus = React.useCallback(() => {
+    chipsInputRef.current?.focus()
+  }, [])
 
   const selectAllSelectableOptions = React.useCallback(() => {
     if (disabled) return
@@ -183,6 +224,59 @@ export function CompactMultiSelect({
     onChange(next)
     setSearchTerm("")
   }, [disabled, onChange, selectableOptionValues, selected])
+
+  const selectAllFilteredOptions = React.useCallback(() => {
+    if (disabled || filteredSelectableOptionValues.length === 0) return
+
+    const selectedSet = new Set(selected)
+    onChange([
+      ...selected,
+      ...filteredSelectableOptionValues.filter(
+        (value) => !selectedSet.has(value),
+      ),
+    ])
+    restoreChipsInputFocus()
+  }, [
+    disabled,
+    filteredSelectableOptionValues,
+    onChange,
+    restoreChipsInputFocus,
+    selected,
+  ])
+
+  const invertFilteredOptions = React.useCallback(() => {
+    if (disabled || filteredSelectableOptionValues.length === 0) return
+
+    const filteredSet = new Set(filteredSelectableOptionValues)
+    const selectedSet = new Set(selected)
+    onChange([
+      ...selected.filter((value) => !filteredSet.has(value)),
+      ...filteredSelectableOptionValues.filter(
+        (value) => !selectedSet.has(value),
+      ),
+    ])
+    restoreChipsInputFocus()
+  }, [
+    disabled,
+    filteredSelectableOptionValues,
+    onChange,
+    restoreChipsInputFocus,
+    selected,
+  ])
+
+  const deselectAllFilteredOptions = React.useCallback(() => {
+    if (disabled || filteredSelectableOptionValues.length === 0) return
+
+    const filteredSet = new Set(filteredSelectableOptionValues)
+    onChange(selected.filter((value) => !filteredSet.has(value)))
+    restoreChipsInputFocus()
+  }, [
+    disabled,
+    filteredSelectableOptionValues,
+    onChange,
+    restoreChipsInputFocus,
+    selected,
+  ])
 
   const selectedLabels = React.useMemo(() => {
     return selected.map((value) => optionsByValue.get(value)?.label ?? value)
@@ -341,8 +435,9 @@ export function CompactMultiSelect({
 
   const chipsFilter = React.useCallback((item: ChipsItem, query: string) => {
     if (item.__selectedOnly) return false
-    if (!query.trim()) return true
-    return item.label.toLowerCase().includes(query.trim().toLowerCase())
+    const normalizedQuery = query.trim().toLowerCase()
+    if (!normalizedQuery) return true
+    return optionMatchesSearch(item, normalizedQuery)
   }, [])
 
   const chipsIsItemEqualToValue = React.useCallback(
@@ -525,6 +620,7 @@ export function CompactMultiSelect({
                       ))
                     : null}
                   <ComboboxChipsInput
+                    ref={chipsInputRef}
                     data-testid={inputTestId}
                     aria-label={chipsInputAriaLabel}
                     aria-labelledby={chipsInputAriaLabelledBy}
@@ -542,6 +638,64 @@ export function CompactMultiSelect({
           </ComboboxChips>
 
           <ComboboxContent anchor={chipsAnchor}>
+            {showFilteredBulkActions ? (
+              <div
+                role="group"
+                aria-label={t("multiSelect.filteredResultsScope")}
+                className="border-border bg-muted/40 flex flex-wrap items-center justify-between gap-x-2 gap-y-1 border-b px-2 py-1.5 pointer-coarse:gap-y-2 pointer-coarse:px-3 pointer-coarse:py-2"
+              >
+                <p
+                  className="text-muted-foreground mr-auto text-xs tabular-nums"
+                  aria-live="polite"
+                >
+                  {t("multiSelect.filteredResultsSummary", {
+                    matched: filteredSelectableOptionValues.length,
+                    selected: filteredSelectedCount,
+                  })}
+                </p>
+                <div className="flex max-w-full flex-wrap items-center justify-end gap-0.5">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={selectAllFilteredOptions}
+                    aria-label={t("multiSelect.selectAllMatches")}
+                    disabled={
+                      disabled ||
+                      filteredSelectableOptionValues.length === 0 ||
+                      allFilteredOptionsSelected
+                    }
+                    className="h-7 px-2 text-xs pointer-coarse:h-11 pointer-coarse:px-3 pointer-coarse:text-sm"
+                  >
+                    {t("multiSelect.selectAll")}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={invertFilteredOptions}
+                    aria-label={t("multiSelect.invertMatches")}
+                    disabled={
+                      disabled || filteredSelectableOptionValues.length === 0
+                    }
+                    className="h-7 px-2 text-xs pointer-coarse:h-11 pointer-coarse:px-3 pointer-coarse:text-sm"
+                  >
+                    {t("multiSelect.invert")}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={deselectAllFilteredOptions}
+                    aria-label={t("multiSelect.deselectMatches")}
+                    disabled={disabled || !hasFilteredSelection}
+                    className="h-7 px-2 text-xs pointer-coarse:h-11 pointer-coarse:px-3 pointer-coarse:text-sm"
+                  >
+                    {t("multiSelect.deselect")}
+                  </Button>
+                </div>
+              </div>
+            ) : null}
             <ComboboxEmpty>{resolvedEmptyMessage}</ComboboxEmpty>
             <ComboboxList>
               {(item) => (
