@@ -136,6 +136,16 @@ describe("aiApiVerification utils", () => {
       "https://anthropic.example.com/v1",
     )
     expect(
+      coerceBaseUrlToV1(
+        "https://volcengine-coding-plan.example.invalid/api/coding/v3/",
+      ),
+    ).toBe("https://volcengine-coding-plan.example.invalid/api/coding/v3")
+    expect(
+      coerceBaseUrlToAnthropicV1(
+        "https://volcengine-coding-plan.example.invalid/api/coding/v3/",
+      ),
+    ).toBe("https://volcengine-coding-plan.example.invalid/api/coding/v3/v1")
+    expect(
       coerceBaseUrlToGoogleV1beta("https://generativelanguage.googleapis.com"),
     ).toBe("https://generativelanguage.googleapis.com/v1beta")
 

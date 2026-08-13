@@ -84,6 +84,25 @@ describe("aiApiVerification providers", () => {
     })
   })
 
+  it("preserves the complete Volcengine Ark Coding Plan prefix for OpenAI-compatible probes", async () => {
+    const { createModel } = await import(
+      "~/services/verification/aiApiVerification/providers"
+    )
+
+    expect(
+      createModel({
+        apiType: "openai-compatible",
+        baseUrl: "https://volcengine-coding-plan.example.invalid/api/coding/v3",
+        apiKey: "sk-compatible",
+        modelId: "coding-model",
+      }),
+    ).toMatchObject({
+      config: {
+        baseURL: "https://volcengine-coding-plan.example.invalid/api/coding/v3",
+      },
+    })
+  })
+
   it("creates an OpenAI model with a normalized /v1 base URL", async () => {
     const { createModel } = await import(
       "~/services/verification/aiApiVerification/providers"
@@ -124,6 +143,48 @@ describe("aiApiVerification providers", () => {
       config: {
         baseURL: "https://anthropic-proxy.example.com/custom/v1",
         apiKey: "sk-anthropic",
+      },
+    })
+  })
+
+  it("preserves the complete Volcengine Ark Coding Plan prefix for Codex", async () => {
+    const { createModel } = await import(
+      "~/services/verification/aiApiVerification/providers"
+    )
+
+    expect(
+      createModel({
+        apiType: "openai",
+        baseUrl:
+          "https://volcengine-coding-plan.example.invalid/api/coding/v3/",
+        apiKey: "sk-cli",
+        modelId: "coding-model",
+      }),
+    ).toMatchObject({
+      provider: "openai",
+      config: {
+        baseURL: "https://volcengine-coding-plan.example.invalid/api/coding/v3",
+      },
+    })
+  })
+
+  it("keeps Volcengine Ark Anthropic compatibility on its native /v1 protocol", async () => {
+    const { createModel } = await import(
+      "~/services/verification/aiApiVerification/providers"
+    )
+
+    expect(
+      createModel({
+        apiType: "anthropic",
+        baseUrl: "https://volcengine-anthropic.example.invalid/api/compatible",
+        apiKey: "sk-cli",
+        modelId: "claude-test",
+      }),
+    ).toMatchObject({
+      provider: "anthropic",
+      config: {
+        baseURL:
+          "https://volcengine-anthropic.example.invalid/api/compatible/v1",
       },
     })
   })

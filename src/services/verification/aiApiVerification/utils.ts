@@ -146,14 +146,47 @@ export function inferHttpStatus(
 }
 
 /**
+ * Preserve a user-supplied OpenAI-family API prefix that already ends in a
+ * version segment. Some compatible providers use a complete prefix such as
+ * `/api/coding/v3`; appending the SDK's usual `/v1` would target a different
+ * route.
+ *
+ * Volcengine Ark Coding Plan: https://docs.volcengine.com/docs/82379/2160841
+ */
+function normalizeCompleteVersionedBaseUrl(baseUrl: string): string | null {
+  const trimmed = (baseUrl || "").trim()
+  if (!trimmed) return null
+
+  try {
+    const url = new URL(trimmed)
+    const pathname = url.pathname.replace(/\/+$/, "")
+    if (!/\/v\d+(?:beta\d*)?$/i.test(pathname)) return null
+
+    url.pathname = pathname
+    return url.toString().replace(/\/+$/, "")
+  } catch {
+    const normalized = trimmed.replace(/\/+$/, "")
+    return /\/v\d+(?:beta\d*)?$/i.test(normalized) ? normalized : null
+  }
+}
+
+/**
  * Normalize a user-supplied base URL to the `/v1` prefix used by OpenAI-compatible APIs.
  */
 export function coerceBaseUrlToV1(baseUrl: string): string {
-  return coerceBaseUrlToPathSuffix(baseUrl, "/v1")
+  return (
+    normalizeCompleteVersionedBaseUrl(baseUrl) ??
+    coerceBaseUrlToPathSuffix(baseUrl, "/v1")
+  )
 }
 
 /**
  * Normalize a user-supplied base URL to the `/v1` prefix used by Anthropic APIs.
+ *
+ * Anthropic-compatible Base URLs identify the protocol root; unlike the
+ * OpenAI-compatible exception above, an arbitrary version suffix is not a
+ * complete Anthropic API prefix.
+ * Volcengine Ark Anthropic compatibility: https://docs.volcengine.com/docs/82379/2160841
  */
 export function coerceBaseUrlToAnthropicV1(baseUrl: string): string {
   return coerceBaseUrlToPathSuffix(baseUrl, "/v1")

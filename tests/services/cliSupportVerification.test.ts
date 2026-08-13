@@ -5,6 +5,54 @@ import { runCliSupportToolFromRegistry } from "~/services/verification/cliSuppor
 import { server } from "~~/tests/msw/server"
 
 describe("cliSupportVerification", () => {
+  it("sends the Codex probe below the complete Volcengine Ark Coding Plan prefix", async () => {
+    const hit = vi.fn()
+    server.use(
+      http.post(
+        "https://volcengine-coding-plan.example.invalid/api/coding/v3/responses",
+        () => {
+          hit()
+          return HttpResponse.json(
+            { error: "synthetic rejection" },
+            { status: 401 },
+          )
+        },
+      ),
+    )
+
+    await runCliSupportToolFromRegistry("codex", {
+      baseUrl: "https://volcengine-coding-plan.example.invalid/api/coding/v3",
+      apiKey: "sk-synthetic",
+      modelId: "coding-model",
+    })
+
+    expect(hit).toHaveBeenCalledOnce()
+  })
+
+  it("sends the Claude probe through the Volcengine Ark Anthropic-compatible prefix", async () => {
+    const hit = vi.fn()
+    server.use(
+      http.post(
+        "https://volcengine-anthropic.example.invalid/api/compatible/v1/messages",
+        () => {
+          hit()
+          return HttpResponse.json(
+            { error: "synthetic rejection" },
+            { status: 401 },
+          )
+        },
+      ),
+    )
+
+    await runCliSupportToolFromRegistry("claude", {
+      baseUrl: "https://volcengine-anthropic.example.invalid/api/compatible",
+      apiKey: "sk-synthetic",
+      modelId: "claude-test",
+    })
+
+    expect(hit).toHaveBeenCalledOnce()
+  })
+
   it("returns fail without sending a request when model id is missing", async () => {
     const hit = vi.fn()
     server.use(
