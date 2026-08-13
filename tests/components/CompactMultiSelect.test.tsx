@@ -97,15 +97,19 @@ describe("CompactMultiSelect", () => {
   it("shows a compact filtered-results toolbar by default in chips mode", async () => {
     const user = userEvent.setup()
 
-    testI18n.addResource(
-      "en",
-      "ui",
-      "multiSelect.filteredResultsSummary",
-      "{{matched}} matches · {{selected}} selected",
-    )
+    testI18n.addResources("en", "ui", {
+      "multiSelect.filteredMatchCount_one": "{{count}} match",
+      "multiSelect.filteredMatchCount_other": "{{count}} matches",
+      "multiSelect.filteredSelectedCount_one": "{{count}} selected item",
+      "multiSelect.filteredSelectedCount_other": "{{count}} selected items",
+    })
 
     function Harness() {
-      const [selected, setSelected] = useState(["alpha", "custom-value"])
+      const [selected, setSelected] = useState([
+        "alpha",
+        "custom-value",
+        "beta-one",
+      ])
 
       return (
         <>
@@ -114,6 +118,7 @@ describe("CompactMultiSelect", () => {
               { value: "alpha", label: "Alpha" },
               { value: "beta-one", label: "Beta One" },
               { value: "beta-two", label: "Beta Two" },
+              { value: "beta-value-only", label: "Gamma" },
             ]}
             selected={selected}
             onChange={setSelected}
@@ -130,7 +135,9 @@ describe("CompactMultiSelect", () => {
     const toolbar = screen.getByRole("group", {
       name: "ui:multiSelect.filteredResultsScope",
     })
-    expect(within(toolbar).getByText("2 matches · 0 selected")).toBeVisible()
+    expect(
+      within(toolbar).getByText("3 matches · 1 selected item"),
+    ).toBeVisible()
 
     await user.click(
       within(toolbar).getByRole("button", {
@@ -139,9 +146,11 @@ describe("CompactMultiSelect", () => {
     )
 
     expect(screen.getByLabelText("Selected values")).toHaveTextContent(
-      "alpha,custom-value,beta-one,beta-two",
+      "alpha,custom-value,beta-one,beta-two,beta-value-only",
     )
-    expect(within(toolbar).getByText("2 matches · 2 selected")).toBeVisible()
+    expect(
+      within(toolbar).getByText("3 matches · 3 selected items"),
+    ).toBeVisible()
     expect(screen.getByRole("combobox")).toHaveFocus()
   })
 

@@ -102,6 +102,14 @@ describe("ChannelCommonFieldsBody", () => {
         name: "channelDialog:actions.deselectAll",
       }),
     ).toBeVisible()
+    expect(
+      screen.queryByRole("button", { name: "ui:multiSelect.selectAll" }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", {
+        name: "ui:multiSelect.cancelSelected",
+      }),
+    ).not.toBeInTheDocument()
 
     const modelsInput = screen.getByRole("combobox", {
       name: "channelDialog:fields.models.label",

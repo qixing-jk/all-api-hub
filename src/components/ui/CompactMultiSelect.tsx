@@ -648,9 +648,12 @@ export function CompactMultiSelect({
                   className="text-muted-foreground mr-auto text-xs tabular-nums"
                   aria-live="polite"
                 >
-                  {t("multiSelect.filteredResultsSummary", {
-                    matched: filteredSelectableOptionValues.length,
-                    selected: filteredSelectedCount,
+                  {t("multiSelect.filteredMatchCount", {
+                    count: filteredSelectableOptionValues.length,
+                  })}
+                  {" · "}
+                  {t("multiSelect.filteredSelectedCount", {
+                    count: filteredSelectedCount,
                   })}
                 </p>
                 <div className="flex max-w-full flex-wrap items-center justify-end gap-0.5">
