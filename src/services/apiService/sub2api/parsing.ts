@@ -549,10 +549,16 @@ export const translateSub2ApiCreateTokenRequest = (
   return withOptionalGroupId(
     {
       ...buildSub2ApiKeyWritePayloadBase(tokenData),
-      expires_in_days:
-        tokenData.expired_time > 0
-          ? convertExpirySecondsToSub2ApiDays(tokenData.expired_time, nowMs)
-          : 0,
+      // Sub2API models never-expiring keys by omitting this optional field;
+      // explicit zero is rejected. https://github.com/Wei-Shaw/sub2api/blob/main/frontend/src/api/keys.ts
+      ...(tokenData.expired_time > 0
+        ? {
+            expires_in_days: convertExpirySecondsToSub2ApiDays(
+              tokenData.expired_time,
+              nowMs,
+            ),
+          }
+        : {}),
     },
     groupId,
   )

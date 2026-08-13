@@ -308,6 +308,17 @@ describe("apiAdapter keyManagement", () => {
     expect(mockFetchAccountAvailableModels).toHaveBeenCalledWith(request)
   })
 
+  it.each([SITE_TYPES.ONE_API, SITE_TYPES.VELOERA])(
+    "uses zero-based token inventory pagination for %s",
+    async (siteType) => {
+      mockFetchAccountTokens.mockResolvedValueOnce([])
+
+      await createNewApiKeyManagement(siteType).fetchTokens(request)
+
+      expect(mockFetchAccountTokens).toHaveBeenCalledWith(request, 0)
+    },
+  )
+
   it("uses OneHub-family key inventory overrides at the adapter layer", async () => {
     const expectedTokens = [token]
     mockOneHubFetchAccountTokens.mockResolvedValueOnce(expectedTokens)

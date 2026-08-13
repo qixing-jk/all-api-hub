@@ -662,7 +662,6 @@ describe("apiService sub2api key management service", () => {
       name: "demo key",
       group_id: 10,
       quota: 1.5,
-      expires_in_days: 0,
       ip_whitelist: ["1.1.1.1", "2.2.2.2"],
     })
   })

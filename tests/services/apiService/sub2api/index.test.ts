@@ -595,7 +595,6 @@ describe("apiService sub2api parsing", () => {
       name: "Test Token",
       quota: 0,
       ip_whitelist: [],
-      expires_in_days: 0,
     })
   })
 
@@ -2633,7 +2632,6 @@ describe("apiService sub2api exported operations", () => {
       name: "Test Token",
       quota: 1,
       ip_whitelist: [],
-      expires_in_days: 0,
     })
   })
 

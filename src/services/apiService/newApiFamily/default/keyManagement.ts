@@ -50,12 +50,14 @@ interface KeyManagementImplementation {
  * Fetch the complete New API-family token list behind provider pagination.
  * New API uses one-based page numbers:
  * https://github.com/QuantumNous/new-api/blob/9c97e78aced572d540f227007a675d7d007666ac/common/page_info.go
- * One API and Veloera return bare paged arrays, which terminate on an empty page:
+ * One API and Veloera use zero-based pages and return bare arrays, which
+ * terminate on an empty page:
  * https://github.com/songquanpeng/one-api/blob/main/controller/token.go
  * https://github.com/Veloera/Veloera/blob/main/controller/token.go
  */
 export async function fetchAccountTokens(
   request: ApiServiceRequest,
+  startPage = 1,
 ): Promise<ApiToken[]> {
   const tokens = await fetchAllItems<ApiToken>(
     async (page) => {
@@ -84,7 +86,7 @@ export async function fetchAccountTokens(
     },
     {
       pageSize: REQUEST_CONFIG.DEFAULT_PAGE_SIZE,
-      startPage: 1,
+      startPage,
       requireComplete: true,
     },
   )

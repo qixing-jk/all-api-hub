@@ -140,24 +140,24 @@ describe("newApiFamily keyManagement", () => {
     })
   })
 
-  it("fetchAccountTokens reads legacy array pages until the empty sentinel", async () => {
+  it("fetchAccountTokens reads zero-based legacy array pages until the empty sentinel", async () => {
     mockFetchApiData
       .mockResolvedValueOnce([{ id: 1, key: " first " }])
       .mockResolvedValueOnce([{ id: 2, key: " second " }])
       .mockResolvedValueOnce([])
 
-    await expect(fetchAccountTokens(request)).resolves.toEqual([
+    await expect(fetchAccountTokens(request, 0)).resolves.toEqual([
       { id: 1, key: "first" },
       { id: 2, key: "second" },
     ])
     expect(mockFetchApiData).toHaveBeenNthCalledWith(1, request, {
-      endpoint: "/api/token/?p=1&size=100",
+      endpoint: "/api/token/?p=0&size=100",
     })
     expect(mockFetchApiData).toHaveBeenNthCalledWith(2, request, {
-      endpoint: "/api/token/?p=2&size=100",
+      endpoint: "/api/token/?p=1&size=100",
     })
     expect(mockFetchApiData).toHaveBeenNthCalledWith(3, request, {
-      endpoint: "/api/token/?p=3&size=100",
+      endpoint: "/api/token/?p=2&size=100",
     })
   })
 

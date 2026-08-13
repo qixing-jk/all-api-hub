@@ -25,9 +25,16 @@ const oneHubOverrides: Partial<NewApiFamilyTokenTransport> = {
   fetchAccountAvailableModels: oneHub.fetchAccountAvailableModels,
 }
 
+const zeroBasedTokenInventoryOverrides: Partial<NewApiFamilyTokenTransport> = {
+  fetchAccountTokens: (request) =>
+    defaultTransport.fetchAccountTokens(request, 0),
+}
+
 const overrides: Partial<
   Record<AccountSiteType, Partial<NewApiFamilyTokenTransport>>
 > = {
+  [SITE_TYPES.ONE_API]: zeroBasedTokenInventoryOverrides,
+  [SITE_TYPES.VELOERA]: zeroBasedTokenInventoryOverrides,
   [SITE_TYPES.ONE_HUB]: oneHubOverrides,
   [SITE_TYPES.DONE_HUB]: oneHubOverrides,
   [SITE_TYPES.WONG_GONGYI]: {
