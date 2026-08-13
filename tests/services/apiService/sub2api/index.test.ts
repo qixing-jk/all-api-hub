@@ -598,6 +598,25 @@ describe("apiService sub2api parsing", () => {
     })
   })
 
+  it("rejects an already-expired positive timestamp when creating a token", () => {
+    expect(() =>
+      translateSub2ApiCreateTokenRequest(
+        {
+          name: "Expired Token",
+          unlimited_quota: true,
+          remain_quota: 0,
+          expired_time: 1_700_000_000,
+          model_limits_enabled: false,
+          model_limits: "",
+          allow_ips: "",
+          group: "default",
+        },
+        undefined,
+        1_700_000_000_000,
+      ),
+    ).toThrow("Sub2API token expiration must be in the future")
+  })
+
   it("extracts key items from array and object payloads", () => {
     expect(
       extractSub2ApiKeyItems([
