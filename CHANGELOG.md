@@ -1,5 +1,30 @@
 # Changelog
 
+## [3.56.0](https://github.com/qixing-jk/all-api-hub/compare/v3.55.0...v3.56.0) (2026-08-13)
+
+
+### Features
+
+* **api-credentials:** group profiles by endpoint ([#1291](https://github.com/qixing-jk/all-api-hub/issues/1291)) ([a1495cd](https://github.com/qixing-jk/all-api-hub/commit/a1495cdeaf4265dcfbbc28c43d5b53a021403f21))
+* **integrations:** support Cursor++ provider export ([#1278](https://github.com/qixing-jk/all-api-hub/issues/1278)) ([9d8a854](https://github.com/qixing-jk/all-api-hub/commit/9d8a854f646f22517b25ce7634bc29245bd20bba))
+* **key-management:** import repaired keys into managed sites ([#1276](https://github.com/qixing-jk/all-api-hub/issues/1276)) ([0d736ea](https://github.com/qixing-jk/all-api-hub/commit/0d736eaf3cb0fda5ddf4a94303d5d61b602b8cd1))
+* **key-management:** reconcile account keys with native resources ([#1287](https://github.com/qixing-jk/all-api-hub/issues/1287)) ([4dab6e9](https://github.com/qixing-jk/all-api-hub/commit/4dab6e9885d4baf62ba16cbafb0f4e0d6c5dc9e3))
+* **managed-sites:** add native Sub2API resource management ([#1282](https://github.com/qixing-jk/all-api-hub/issues/1282)) ([7f0e4cb](https://github.com/qixing-jk/all-api-hub/commit/7f0e4cba0deb78f36bfae74af2ad9fbd9b7c1125))
+* **model-list:** add personalized OpenRouter catalogs ([#1273](https://github.com/qixing-jk/all-api-hub/issues/1273)) ([63ff754](https://github.com/qixing-jk/all-api-hub/commit/63ff75472304f1d91c2e01439ace6c2638fbdbf0))
+* **model-list:** display cache token pricing ([#1290](https://github.com/qixing-jk/all-api-hub/issues/1290)) ([1b06fde](https://github.com/qixing-jk/all-api-hub/commit/1b06fde7883cf9ba9bc349cc1623cded8d4a7a81))
+* **ui:** add filtered multi-select bulk actions ([#1294](https://github.com/qixing-jk/all-api-hub/issues/1294)) ([d33a72c](https://github.com/qixing-jk/all-api-hub/commit/d33a72cc626783ac31a5481f2e1da59aaa66b39c))
+
+
+### Bug Fixes
+
+* **api-verification:** support provider-compatible API protocols ([#1295](https://github.com/qixing-jk/all-api-hub/issues/1295)) ([1688c48](https://github.com/qixing-jk/all-api-hub/commit/1688c4844db0cd4aab0bb5eabc91a83b35d1b30e))
+* **api:** restore provider key compatibility ([#1293](https://github.com/qixing-jk/all-api-hub/issues/1293)) ([73f3090](https://github.com/qixing-jk/all-api-hub/commit/73f309050b001923a306ea3e1744ebc719d32789))
+* **auto-checkin:** clarify failed check-in page action ([#1275](https://github.com/qixing-jk/all-api-hub/issues/1275)) ([d235941](https://github.com/qixing-jk/all-api-hub/commit/d2359419f908cbce5e9d47b233792036c98131cf))
+* **e2e:** align OpenCloud real-site target ([3f58001](https://github.com/qixing-jk/all-api-hub/commit/3f5800187b7511083b7c630a06d9543da0dbc84f))
+* **managed-sites:** migrate channel configs to scoped storage ([#1277](https://github.com/qixing-jk/all-api-hub/issues/1277)) ([31c652e](https://github.com/qixing-jk/all-api-hub/commit/31c652ec3717961e466ded695c049c426245f45d))
+* **managed-sites:** use native editors for channel imports ([#1279](https://github.com/qixing-jk/all-api-hub/issues/1279)) ([bfc6e44](https://github.com/qixing-jk/all-api-hub/commit/bfc6e446b7beba12e7f56db15cef8360569808c0))
+* **options:** keep page header actions reachable ([#1288](https://github.com/qixing-jk/all-api-hub/issues/1288)) ([ed1a7d8](https://github.com/qixing-jk/all-api-hub/commit/ed1a7d8da8f4afb2d20d00103efdee2a039c9a06))
+
 ## [3.55.0](https://github.com/qixing-jk/all-api-hub/compare/v3.54.0...v3.55.0) (2026-08-08)
 
 
