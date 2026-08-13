@@ -41,7 +41,7 @@
     "noCompatibleRuntimeKeyHint": "No hay ninguna clave disponible para el grupo de este modelo. Crea o elige una clave para un grupo habilitado en Administración de claves.",
     "notRunYet": "Aún no ejecutado",
     "probes": {
-      "models": "Endpoint de modelos (/v1/models)",
+      "models": "Lista de modelos",
       "structured-output": "Salida estructurada (schema JSON)",
       "text-generation": "Generación de texto",
       "tool-calling": "Llamadas a herramientas/funciones",

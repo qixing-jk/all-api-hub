@@ -41,7 +41,7 @@
     "noCompatibleRuntimeKeyHint": "Không có khóa nào dùng được cho nhóm của mô hình này. Hãy tạo hoặc chọn khóa thuộc nhóm khả dụng trong Quản lý khóa.",
     "notRunYet": "Chưa chạy",
     "probes": {
-      "models": "API danh sách mô hình (/v1/models)",
+      "models": "Danh sách mô hình",
       "structured-output": "Đầu ra có cấu trúc (JSON Schema)",
       "text-generation": "Tạo văn bản",
       "tool-calling": "Gọi công cụ/hàm",

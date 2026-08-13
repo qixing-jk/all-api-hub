@@ -41,7 +41,7 @@
     "noCompatibleRuntimeKeyHint": "このモデルのグループで使用できるキーがありません。キー管理で有効なグループのキーを作成するか選択してください。",
     "notRunYet": "未実行",
     "probes": {
-      "models": "Models エンドポイント (/v1/models)",
+      "models": "モデル一覧",
       "structured-output": "構造化出力（スキーマ JSON）",
       "text-generation": "テキスト生成",
       "tool-calling": "ツール / 関数呼び出し",

@@ -41,7 +41,7 @@
     "noCompatibleRuntimeKeyHint": "No key is available for this model's group. Create or choose a key for an enabled group in Key Management.",
     "notRunYet": "Not run yet",
     "probes": {
-      "models": "Models endpoint (/v1/models)",
+      "models": "Model list",
       "structured-output": "Structured output (schema JSON)",
       "text-generation": "Text generation",
       "tool-calling": "Tool/function calling",

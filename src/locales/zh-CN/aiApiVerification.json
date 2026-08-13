@@ -41,7 +41,7 @@
     "noCompatibleRuntimeKeyHint": "当前没有适用于该模型分组的密钥。请在密钥管理中创建或选择可用分组的密钥。",
     "notRunYet": "尚未运行",
     "probes": {
-      "models": "模型列表接口 (/v1/models)",
+      "models": "模型列表",
       "structured-output": "结构化输出（JSON Schema）",
       "text-generation": "文本生成",
       "tool-calling": "工具/函数调用",

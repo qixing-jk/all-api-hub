@@ -41,7 +41,7 @@
     "noCompatibleRuntimeKeyHint": "Für die Gruppe dieses Modells ist kein Schlüssel verfügbar. Erstellen oder wählen Sie einen Schlüssel für eine aktivierte Gruppe in der Schlüsselverwaltung aus.",
     "notRunYet": "Noch nicht ausgeführt",
     "probes": {
-      "models": "Modellendpunkt (/v1/models)",
+      "models": "Modellliste",
       "structured-output": "Strukturierte Ausgabe (JSON-Schema)",
       "text-generation": "Textgenerierung",
       "tool-calling": "Werkzeug-/Funktionsaufruf",
