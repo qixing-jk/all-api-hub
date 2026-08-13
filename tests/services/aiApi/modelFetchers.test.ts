@@ -277,6 +277,68 @@ describe("AI API model fetchers", () => {
       )
     })
 
+    it("retries a 401 with Bearer auth and keeps it for later pages", async () => {
+      const unauthorized = Object.assign(new Error("unauthorized"), {
+        statusCode: 401,
+      })
+      mocks.fetchApi
+        .mockRejectedValueOnce(unauthorized)
+        .mockResolvedValueOnce({
+          models: [{ name: "models/gemini-page-1" }],
+          nextPageToken: "page-2",
+        })
+        .mockResolvedValueOnce({
+          models: [{ name: "models/gemini-page-2" }],
+        })
+
+      const { fetchGoogleModelIds } = await import("~/services/aiApi/google")
+
+      await expect(
+        fetchGoogleModelIds({
+          baseUrl: "https://bearer-google.example.invalid/proxy",
+          apiKey: "synthetic-google-key",
+        }),
+      ).resolves.toEqual(["gemini-page-1", "gemini-page-2"])
+
+      expect(mocks.fetchApi).toHaveBeenNthCalledWith(
+        1,
+        expect.anything(),
+        expect.objectContaining({
+          options: expect.objectContaining({
+            headers: {
+              "x-goog-api-key": "synthetic-google-key",
+            },
+          }),
+        }),
+        true,
+      )
+      expect(mocks.fetchApi).toHaveBeenNthCalledWith(
+        2,
+        expect.anything(),
+        expect.objectContaining({
+          options: expect.objectContaining({
+            headers: {
+              Authorization: "Bearer synthetic-google-key",
+            },
+          }),
+        }),
+        true,
+      )
+      expect(mocks.fetchApi).toHaveBeenNthCalledWith(
+        3,
+        expect.anything(),
+        expect.objectContaining({
+          endpoint: "/v1beta/models?pageToken=page-2",
+          options: expect.objectContaining({
+            headers: {
+              Authorization: "Bearer synthetic-google-key",
+            },
+          }),
+        }),
+        true,
+      )
+    })
+
     it("stops when the next page token repeats", async () => {
       mocks.fetchApi
         .mockResolvedValueOnce({

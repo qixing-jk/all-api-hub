@@ -71,4 +71,42 @@ describe("AI API model fetcher HTTP routing", () => {
     ).resolves.toEqual(["gemini-test"])
     expect(hit).toHaveBeenCalledOnce()
   })
+
+  it("negotiates Bearer auth for a Gemini-compatible model endpoint", async () => {
+    const authHeaders: Array<{
+      authorization: string | null
+      apiKey: string | null
+    }> = []
+    server.use(
+      http.get(
+        "https://bearer-google.example.invalid/proxy/v1beta/models",
+        ({ request }) => {
+          authHeaders.push({
+            authorization: request.headers.get("authorization"),
+            apiKey: request.headers.get("x-goog-api-key"),
+          })
+          if (!request.headers.has("authorization")) {
+            return HttpResponse.json(
+              { error: { message: "use bearer authentication" } },
+              { status: 401 },
+            )
+          }
+          return HttpResponse.json({
+            models: [{ name: "models/gemini-test" }],
+          })
+        },
+      ),
+    )
+
+    await expect(
+      fetchGoogleModelIds({
+        baseUrl: "https://bearer-google.example.invalid/proxy",
+        apiKey: "synthetic-google-key",
+      }),
+    ).resolves.toEqual(["gemini-test"])
+    expect(authHeaders).toEqual([
+      { authorization: null, apiKey: "synthetic-google-key" },
+      { authorization: "Bearer synthetic-google-key", apiKey: null },
+    ])
+  })
 })

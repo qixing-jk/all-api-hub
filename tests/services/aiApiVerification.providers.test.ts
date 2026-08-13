@@ -25,6 +25,7 @@ vi.mock("@ai-sdk/openai-compatible", () => ({
 
 describe("aiApiVerification providers", () => {
   beforeEach(() => {
+    vi.unstubAllGlobals()
     vi.resetModules()
     vi.clearAllMocks()
 
@@ -239,8 +240,50 @@ describe("aiApiVerification providers", () => {
       config: {
         baseURL: "https://generativelanguage.googleapis.com/v1beta",
         apiKey: "AIza-secret",
+        fetch: expect.any(Function),
       },
     })
+  })
+
+  it("retries a Gemini SDK request with Bearer auth after a 401", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response("unauthorized", { status: 401 }))
+      .mockResolvedValueOnce(new Response("ok", { status: 200 }))
+    vi.stubGlobal("fetch", fetchMock)
+
+    const { createModel } = await import(
+      "~/services/verification/aiApiVerification/providers"
+    )
+    const model = createModel({
+      apiType: "google",
+      baseUrl: "https://bearer-google.example.invalid/proxy",
+      apiKey: "synthetic-google-key",
+      modelId: "gemini-test",
+    }) as unknown as { config: { fetch: typeof fetch } }
+
+    await expect(
+      model.config.fetch(
+        new Request(
+          "https://bearer-google.example.invalid/proxy/v1beta/models/gemini-test:generateContent",
+          {
+            method: "POST",
+            headers: { "x-goog-api-key": "synthetic-google-key" },
+          },
+        ),
+      ),
+    ).resolves.toMatchObject({ status: 200 })
+
+    const firstRequest = fetchMock.mock.calls[0]?.[0] as Request
+    const fallbackRequest = fetchMock.mock.calls[1]?.[0] as Request
+    expect(firstRequest.headers.get("x-goog-api-key")).toBe(
+      "synthetic-google-key",
+    )
+    expect(firstRequest.headers.get("authorization")).toBeNull()
+    expect(fallbackRequest.headers.get("x-goog-api-key")).toBeNull()
+    expect(fallbackRequest.headers.get("authorization")).toBe(
+      "Bearer synthetic-google-key",
+    )
   })
 
   it("exposes provider factories with the same normalized base URL rules", async () => {
@@ -271,6 +314,7 @@ describe("aiApiVerification providers", () => {
       config: {
         baseURL: "https://generativelanguage.googleapis.com/v1beta",
         apiKey: "AIza-secret",
+        fetch: expect.any(Function),
       },
     })
   })

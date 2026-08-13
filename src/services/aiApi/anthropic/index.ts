@@ -1,3 +1,4 @@
+import { executeWithUnauthorizedFallback } from "~/services/aiApi/authFallback"
 import { fetchApi } from "~/services/apiTransport/request"
 import { AuthTypeEnum } from "~/types"
 import { createLogger } from "~/utils/core/logger"
@@ -70,21 +71,15 @@ export async function fetchAnthropicModelIds(
       )
 
     try {
-      let response: AnthropicModelsListResponse
-      try {
-        response = await fetchPage(authMode)
-      } catch (error) {
-        if (
-          authMode !== ANTHROPIC_AUTH_MODES.ApiKey ||
-          !isAnthropicUnauthorized(error)
-        ) {
-          throw error
-        }
-
-        response = await fetchPage(ANTHROPIC_AUTH_MODES.Bearer)
-        authMode = ANTHROPIC_AUTH_MODES.Bearer
-        rememberAnthropicBearerAuth(params.baseUrl)
-      }
+      const authResult = await executeWithUnauthorizedFallback({
+        initialMode: authMode,
+        fallbackMode: ANTHROPIC_AUTH_MODES.Bearer,
+        run: fetchPage,
+        isUnauthorized: isAnthropicUnauthorized,
+        rememberFallback: () => rememberAnthropicBearerAuth(params.baseUrl),
+      })
+      const response: AnthropicModelsListResponse = authResult.result
+      authMode = authResult.mode
 
       const data = Array.isArray(response?.data) ? response.data : []
       for (const model of data) {

@@ -1,3 +1,10 @@
+import {
+  createAuthModeMemory,
+  createUnauthorizedFallbackFetch,
+  hasHttpStatus,
+  replaceRequestCredentialHeaders,
+} from "~/services/aiApi/authFallback"
+
 export const ANTHROPIC_AUTH_MODES = {
   ApiKey: "api-key",
   Bearer: "bearer",
@@ -18,23 +25,18 @@ type AnthropicSdkAuthConfig = {
  * extension session. The key is provider-neutral and scoped to the configured
  * Anthropic-compatible base URL.
  */
-const bearerAuthBaseUrls = new Set<string>()
-
-/** Normalize the configured URL into a stable session-level auth scope. */
-function normalizeAuthScope(baseUrl: string): string {
-  return baseUrl.trim().replace(/\/+$/, "")
-}
+const authModeMemory = createAuthModeMemory<AnthropicAuthMode>(
+  ANTHROPIC_AUTH_MODES.ApiKey,
+)
 
 /** Return the auth mode learned for an Anthropic-compatible base URL. */
 export function getAnthropicAuthMode(baseUrl: string): AnthropicAuthMode {
-  return bearerAuthBaseUrls.has(normalizeAuthScope(baseUrl))
-    ? ANTHROPIC_AUTH_MODES.Bearer
-    : ANTHROPIC_AUTH_MODES.ApiKey
+  return authModeMemory.get(baseUrl)
 }
 
 /** Remember that a base URL accepted Bearer after an explicit 401 challenge. */
 export function rememberAnthropicBearerAuth(baseUrl: string): void {
-  bearerAuthBaseUrls.add(normalizeAuthScope(baseUrl))
+  authModeMemory.remember(baseUrl, ANTHROPIC_AUTH_MODES.Bearer)
 }
 
 /**
@@ -60,16 +62,11 @@ function replaceAnthropicCredential(
   apiKey: string,
   mode: AnthropicAuthMode,
 ): Request {
-  const headers = new Headers(request.headers)
-  headers.delete("Authorization")
-  headers.delete("x-api-key")
-
-  const authHeaders = createAnthropicAuthHeaders(apiKey, mode)
-  for (const [name, value] of Object.entries(authHeaders)) {
-    headers.set(name, value)
-  }
-
-  return new Request(request, { headers })
+  return replaceRequestCredentialHeaders(
+    request,
+    ["Authorization", "x-api-key"],
+    createAnthropicAuthHeaders(apiKey, mode),
+  )
 }
 
 /**
@@ -86,44 +83,17 @@ export function createAnthropicSdkAuth(
     // Keep this explicit even in Bearer mode so every supported 3.x SDK path
     // can initialize without reading unavailable environment variables.
     apiKey,
-    fetch: async (input, init) => {
-      const request = new Request(input, init)
-
-      if (initialMode === ANTHROPIC_AUTH_MODES.Bearer) {
-        return fetch(
-          replaceAnthropicCredential(
-            request,
-            apiKey,
-            ANTHROPIC_AUTH_MODES.Bearer,
-          ),
-        )
-      }
-
-      const response = await fetch(request.clone())
-      if (response.status !== 401) return response
-
-      const fallbackResponse = await fetch(
-        replaceAnthropicCredential(
-          request,
-          apiKey,
-          ANTHROPIC_AUTH_MODES.Bearer,
-        ),
-      )
-      if (fallbackResponse.status !== 401 && fallbackResponse.status !== 403) {
-        rememberAnthropicBearerAuth(baseUrl)
-      }
-
-      return fallbackResponse
-    },
+    fetch: createUnauthorizedFallbackFetch({
+      initialMode,
+      fallbackMode: ANTHROPIC_AUTH_MODES.Bearer,
+      replaceCredential: (request, mode) =>
+        replaceAnthropicCredential(request, apiKey, mode),
+      rememberFallback: () => rememberAnthropicBearerAuth(baseUrl),
+    }),
   }
 }
 
 /** Return whether a transport error is the exact 401 challenge we can retry. */
 export function isAnthropicUnauthorized(error: unknown): boolean {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "statusCode" in error &&
-    error.statusCode === 401
-  )
+  return hasHttpStatus(error, 401)
 }
