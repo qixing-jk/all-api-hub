@@ -107,14 +107,18 @@ describe("AI API verification HTTP routing", () => {
   })
 
   it("does not replay non-401 Anthropic failures with another credential", async () => {
-    const hit = vi.fn()
+    const authHeaders: Array<{
+      authorization: string | null
+      apiKey: string | null
+    }> = []
     server.use(
       http.post(
         "https://anthropic-compatible.example.invalid/v1/messages",
         ({ request }) => {
-          hit()
-          expect(request.headers.get("x-api-key")).toBe("sk-synthetic")
-          expect(request.headers.get("authorization")).toBeNull()
+          authHeaders.push({
+            authorization: request.headers.get("authorization"),
+            apiKey: request.headers.get("x-api-key"),
+          })
           return HttpResponse.json(
             { error: { message: "synthetic rejection" } },
             { status: 403 },
@@ -131,15 +135,18 @@ describe("AI API verification HTTP routing", () => {
       probeId: "text-generation",
     })
 
-    expect(hit).toHaveBeenCalledOnce()
+    expect(authHeaders).toEqual([
+      { authorization: null, apiKey: "sk-synthetic" },
+    ])
   })
 
   it("uses Anthropic streaming for text responses with unsigned thinking blocks", async () => {
+    let requestBody: unknown
     server.use(
       http.post(
         "https://anthropic-stream.example.invalid/v1/messages",
         async ({ request }) => {
-          await expect(request.json()).resolves.toMatchObject({ stream: true })
+          requestBody = await request.json()
           return anthropicEventStream([
             {
               type: "message_start",
@@ -203,14 +210,16 @@ describe("AI API verification HTTP routing", () => {
       status: "pass",
       output: { text: "OK" },
     })
+    expect(requestBody).toMatchObject({ stream: true })
   })
 
   it("uses Anthropic streaming for tool calls with unsigned thinking blocks", async () => {
+    let requestBody: unknown
     server.use(
       http.post(
         "https://anthropic-tool-stream.example.invalid/v1/messages",
         async ({ request }) => {
-          await expect(request.json()).resolves.toMatchObject({ stream: true })
+          requestBody = await request.json()
           return anthropicEventStream([
             {
               type: "message_start",
@@ -276,5 +285,6 @@ describe("AI API verification HTTP routing", () => {
         toolCalls: [expect.objectContaining({ toolName: "verify_tool" })],
       },
     })
+    expect(requestBody).toMatchObject({ stream: true })
   })
 })

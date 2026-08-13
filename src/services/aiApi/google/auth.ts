@@ -1,14 +1,12 @@
 import {
+  API_AUTH_MODES,
   createAuthModeMemory,
   createUnauthorizedFallbackFetch,
   hasHttpStatus,
   replaceRequestCredentialHeaders,
 } from "~/services/aiApi/authFallback"
 
-export const GOOGLE_AUTH_MODES = {
-  ApiKey: "api-key",
-  Bearer: "bearer",
-} as const
+export const GOOGLE_AUTH_MODES = API_AUTH_MODES
 
 export type GoogleAuthMode =
   (typeof GOOGLE_AUTH_MODES)[keyof typeof GOOGLE_AUTH_MODES]

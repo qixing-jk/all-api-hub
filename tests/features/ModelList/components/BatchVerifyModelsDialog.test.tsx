@@ -1732,6 +1732,41 @@ describe("BatchVerifyModelsDialog", () => {
     })
   })
 
+  it("uses text generation for setup failures when no probe definition is available", async () => {
+    mockGetApiVerificationProbeDefinitions.mockReturnValue([])
+    mockFetchDisplayAccountTokens.mockRejectedValueOnce(
+      new Error("temporary token failure"),
+    )
+
+    renderDialog([
+      {
+        key: "account:acc-1:model:gpt-4o",
+        modelId: "gpt-4o",
+        enableGroups: ["default"],
+        source: { kind: "account", account },
+      },
+    ])
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "modelList:batchVerify.actions.start",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockUpsertLatestSummary).toHaveBeenCalledWith(
+        expect.objectContaining({
+          probes: [
+            expect.objectContaining({
+              id: "text-generation",
+              status: "fail",
+            }),
+          ],
+        }),
+      )
+    })
+  })
+
   it("refetches runtime keys after a failed run when rerunning the batch", async () => {
     mockFetchDisplayAccountTokens
       .mockRejectedValueOnce(new Error("temporary token failure"))

@@ -140,6 +140,9 @@ describe("aiApiVerification utils", () => {
         "https://volcengine-coding-plan.example.invalid/api/coding/v3/",
       ),
     ).toBe("https://volcengine-coding-plan.example.invalid/api/coding/v3")
+    expect(coerceBaseUrlToV1("example.invalid/api/coding/v3/")).toBe(
+      "example.invalid/api/coding/v3",
+    )
     expect(
       coerceBaseUrlToAnthropicV1(
         "https://volcengine-coding-plan.example.invalid/api/coding/v3/",

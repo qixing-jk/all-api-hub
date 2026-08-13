@@ -1,3 +1,8 @@
+export const API_AUTH_MODES = {
+  ApiKey: "api-key",
+  Bearer: "bearer",
+} as const
+
 type AuthModeMemory<TMode extends string> = {
   get: (baseUrl: string) => TMode
   remember: (baseUrl: string, mode: TMode) => void

@@ -41,17 +41,28 @@ export async function runProbeGeneration<
     }
   }
 
+  let hasStreamError = false
+  let streamError: unknown
   const result = streamText({
     ...options,
     // Probe failures are caught and sanitized by the caller.
-    onError: () => {},
+    onError: ({ error }) => {
+      hasStreamError = true
+      streamError = error
+    },
   })
-  const [output, text, toolCalls, toolResults] = await Promise.all([
-    result.output,
-    result.text,
-    result.toolCalls,
-    result.toolResults,
-  ])
+  const [output, text, toolCalls, toolResults, finishReason] =
+    await Promise.all([
+      result.output,
+      result.text,
+      result.toolCalls,
+      result.toolResults,
+      result.finishReason,
+    ])
+
+  if (hasStreamError || finishReason === "error") {
+    throw streamError ?? new Error("AI generation stream failed")
+  }
 
   return { output, text, toolCalls, toolResults }
 }
