@@ -1,5 +1,3 @@
-import { generateText } from "ai"
-
 import { nowMs, okLatency } from "../probeTiming"
 import { createModel } from "../providers"
 import { API_VERIFICATION_PROBE_STATUSES } from "../types"
@@ -12,6 +10,7 @@ import {
   isAbortError,
   toSanitizedErrorSummary,
 } from "../utils"
+import { runProbeGeneration } from "./probeGeneration"
 
 type RunTextGenerationProbeParams = {
   baseUrl: string
@@ -39,7 +38,7 @@ export async function runTextGenerationProbe(
       modelId: params.modelId,
     })
 
-    const result = await generateText({
+    const result = await runProbeGeneration(params.apiType, {
       model,
       prompt,
       abortSignal: params.abortSignal,

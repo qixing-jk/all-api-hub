@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { ANTHROPIC_VERSION } from "~/services/aiApi/anthropic/auth"
+
 const mocks = vi.hoisted(() => ({
   fetchApi: vi.fn(),
   anthropicLogger: {
@@ -61,7 +63,7 @@ describe("AI API model fetchers", () => {
           options: {
             headers: {
               "x-api-key": "synthetic-anthropic-key",
-              "anthropic-version": "2023-06-01",
+              "anthropic-version": ANTHROPIC_VERSION,
             },
           },
         }),
@@ -99,7 +101,9 @@ describe("AI API model fetchers", () => {
     })
 
     it("logs and rethrows API failures", async () => {
-      const failure = new Error("anthropic down")
+      const failure = Object.assign(new Error("anthropic forbidden"), {
+        statusCode: 403,
+      })
       mocks.fetchApi.mockRejectedValueOnce(failure)
 
       const { fetchAnthropicModelIds } = await import(
@@ -111,7 +115,9 @@ describe("AI API model fetchers", () => {
           baseUrl: "https://anthropic.example.test",
           apiKey: "synthetic-anthropic-key",
         }),
-      ).rejects.toThrow("anthropic down")
+      ).rejects.toThrow("anthropic forbidden")
+
+      expect(mocks.fetchApi).toHaveBeenCalledTimes(1)
 
       expect(mocks.anthropicLogger.error).toHaveBeenCalledWith(
         "Failed to fetch anthropic model list",
@@ -119,6 +125,75 @@ describe("AI API model fetchers", () => {
           endpoint: "/v1/models?limit=200",
           error: failure,
         }),
+      )
+    })
+
+    it("retries a 401 with Bearer auth and keeps it for later pages", async () => {
+      const unauthorized = Object.assign(new Error("unauthorized"), {
+        statusCode: 401,
+      })
+      mocks.fetchApi
+        .mockRejectedValueOnce(unauthorized)
+        .mockResolvedValueOnce({
+          data: [{ id: "claude-page-1" }],
+          has_more: true,
+          last_id: "cursor-1",
+        })
+        .mockResolvedValueOnce({
+          data: [{ id: "claude-page-2" }],
+          has_more: false,
+        })
+
+      const { fetchAnthropicModelIds } = await import(
+        "~/services/aiApi/anthropic"
+      )
+
+      await expect(
+        fetchAnthropicModelIds({
+          baseUrl: "https://bearer-anthropic.example.invalid/proxy",
+          apiKey: "synthetic-anthropic-key",
+        }),
+      ).resolves.toEqual(["claude-page-1", "claude-page-2"])
+
+      expect(mocks.fetchApi).toHaveBeenNthCalledWith(
+        1,
+        expect.anything(),
+        expect.objectContaining({
+          options: expect.objectContaining({
+            headers: {
+              "x-api-key": "synthetic-anthropic-key",
+              "anthropic-version": ANTHROPIC_VERSION,
+            },
+          }),
+        }),
+        true,
+      )
+      expect(mocks.fetchApi).toHaveBeenNthCalledWith(
+        2,
+        expect.anything(),
+        expect.objectContaining({
+          options: expect.objectContaining({
+            headers: {
+              Authorization: "Bearer synthetic-anthropic-key",
+              "anthropic-version": ANTHROPIC_VERSION,
+            },
+          }),
+        }),
+        true,
+      )
+      expect(mocks.fetchApi).toHaveBeenNthCalledWith(
+        3,
+        expect.anything(),
+        expect.objectContaining({
+          endpoint: "/v1/models?limit=200&after_id=cursor-1",
+          options: expect.objectContaining({
+            headers: {
+              Authorization: "Bearer synthetic-anthropic-key",
+              "anthropic-version": ANTHROPIC_VERSION,
+            },
+          }),
+        }),
+        true,
       )
     })
 

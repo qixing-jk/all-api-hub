@@ -1,4 +1,4 @@
-import { generateText, Output } from "ai"
+import { Output } from "ai"
 import { z } from "zod"
 
 import { nowMs, okLatency } from "../probeTiming"
@@ -13,6 +13,7 @@ import {
   isAbortError,
   toSanitizedErrorSummary,
 } from "../utils"
+import { runProbeGeneration } from "./probeGeneration"
 
 type RunStructuredOutputProbeParams = {
   baseUrl: string
@@ -40,7 +41,7 @@ export async function runStructuredOutputProbe(
     })
 
     const prompt = "Return a JSON object with shape { ok: true }."
-    const { output } = await generateText({
+    const { output } = await runProbeGeneration(params.apiType, {
       model,
       prompt,
       output: Output.object({

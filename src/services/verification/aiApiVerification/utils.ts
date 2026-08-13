@@ -1,6 +1,8 @@
 import { getErrorMessage } from "~/utils/core/error"
 import { coerceBaseUrlToPathSuffix } from "~/utils/core/url"
 
+const COMPLETE_VERSIONED_PATH_PATTERN = /\/v\d+(?:beta\d*)?$/i
+
 /**
  * Redact any known secret strings from a message.
  */
@@ -160,13 +162,13 @@ function normalizeCompleteVersionedBaseUrl(baseUrl: string): string | null {
   try {
     const url = new URL(trimmed)
     const pathname = url.pathname.replace(/\/+$/, "")
-    if (!/\/v\d+(?:beta\d*)?$/i.test(pathname)) return null
+    if (!COMPLETE_VERSIONED_PATH_PATTERN.test(pathname)) return null
 
     url.pathname = pathname
     return url.toString().replace(/\/+$/, "")
   } catch {
     const normalized = trimmed.replace(/\/+$/, "")
-    return /\/v\d+(?:beta\d*)?$/i.test(normalized) ? normalized : null
+    return COMPLETE_VERSIONED_PATH_PATTERN.test(normalized) ? normalized : null
   }
 }
 

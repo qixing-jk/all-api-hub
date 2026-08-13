@@ -30,27 +30,48 @@ describe("cliSupportVerification", () => {
   })
 
   it("sends the Claude probe through the Volcengine Ark Anthropic-compatible prefix", async () => {
-    const hit = vi.fn()
+    const authHeaders: Array<{
+      authorization: string | null
+      apiKey: string | null
+    }> = []
+    const requestBodies: unknown[] = []
     server.use(
       http.post(
-        "https://volcengine-anthropic.example.invalid/api/compatible/v1/messages",
-        () => {
-          hit()
+        "https://ark.cn-beijing.volces.com/api/compatible/v1/messages",
+        async ({ request }) => {
+          authHeaders.push({
+            authorization: request.headers.get("authorization"),
+            apiKey: request.headers.get("x-api-key"),
+          })
+          requestBodies.push(await request.json())
+          if (!request.headers.has("authorization")) {
+            return HttpResponse.json(
+              { error: "use bearer authentication" },
+              { status: 401 },
+            )
+          }
           return HttpResponse.json(
             { error: "synthetic rejection" },
-            { status: 401 },
+            { status: 400 },
           )
         },
       ),
     )
 
     await runCliSupportToolFromRegistry("claude", {
-      baseUrl: "https://volcengine-anthropic.example.invalid/api/compatible",
+      baseUrl: "https://ark.cn-beijing.volces.com/api/compatible",
       apiKey: "sk-synthetic",
       modelId: "claude-test",
     })
 
-    expect(hit).toHaveBeenCalledOnce()
+    expect(authHeaders).toEqual([
+      { authorization: null, apiKey: "sk-synthetic" },
+      { authorization: "Bearer sk-synthetic", apiKey: null },
+    ])
+    expect(requestBodies).toEqual([
+      expect.objectContaining({ stream: true }),
+      expect.objectContaining({ stream: true }),
+    ])
   })
 
   it("returns fail without sending a request when model id is missing", async () => {

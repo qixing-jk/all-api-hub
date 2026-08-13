@@ -6,17 +6,28 @@ import { fetchGoogleModelIds } from "~/services/aiApi/google"
 import { server } from "~~/tests/msw/server"
 
 describe("AI API model fetcher HTTP routing", () => {
-  it("queries Claude models below the Volcengine Ark Anthropic-compatible prefix", async () => {
-    const hit = vi.fn()
+  it("negotiates auth without changing the configured model-list path", async () => {
+    const authHeaders: Array<{
+      authorization: string | null
+      apiKey: string | null
+    }> = []
     server.use(
       http.get(
-        "https://volcengine-anthropic.example.invalid/api/compatible/v1/models",
+        "https://anthropic-compatible.example.invalid/proxy/v1/models",
         ({ request }) => {
-          hit()
+          authHeaders.push({
+            authorization: request.headers.get("authorization"),
+            apiKey: request.headers.get("x-api-key"),
+          })
           const url = new URL(request.url)
           expect(url.searchParams.get("limit")).toBe("200")
-          expect(request.headers.get("x-api-key")).toBe("sk-synthetic")
           expect(request.headers.get("anthropic-version")).toBe("2023-06-01")
+          if (!request.headers.has("authorization")) {
+            return HttpResponse.json(
+              { error: { message: "use bearer authentication" } },
+              { status: 401 },
+            )
+          }
           return HttpResponse.json({
             data: [{ id: "claude-test" }],
             has_more: false,
@@ -27,11 +38,14 @@ describe("AI API model fetcher HTTP routing", () => {
 
     await expect(
       fetchAnthropicModelIds({
-        baseUrl: "https://volcengine-anthropic.example.invalid/api/compatible",
+        baseUrl: "https://anthropic-compatible.example.invalid/proxy",
         apiKey: "sk-synthetic",
       }),
     ).resolves.toEqual(["claude-test"])
-    expect(hit).toHaveBeenCalledOnce()
+    expect(authHeaders).toEqual([
+      { authorization: null, apiKey: "sk-synthetic" },
+      { authorization: "Bearer sk-synthetic", apiKey: null },
+    ])
   })
 
   it("keeps Gemini model discovery on its native Google-compatible path", async () => {

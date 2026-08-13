@@ -137,14 +137,45 @@ describe("aiApiVerification providers", () => {
         apiKey: "sk-anthropic",
         modelId: "claude-3-7-sonnet",
       }),
-    ).toEqual({
+    ).toMatchObject({
       provider: "anthropic",
       modelId: "claude-3-7-sonnet",
       config: {
         baseURL: "https://anthropic-proxy.example.com/custom/v1",
         apiKey: "sk-anthropic",
+        fetch: expect.any(Function),
       },
     })
+  })
+
+  it("keeps an explicit SDK apiKey after Bearer auth was negotiated", async () => {
+    const { rememberAnthropicBearerAuth } = await import(
+      "~/services/aiApi/anthropic/auth"
+    )
+    const { createModel } = await import(
+      "~/services/verification/aiApiVerification/providers"
+    )
+    const baseUrl = "https://bearer-anthropic.example.invalid/proxy"
+
+    rememberAnthropicBearerAuth(baseUrl)
+
+    const model = createModel({
+      apiType: "anthropic",
+      baseUrl,
+      apiKey: "sk-anthropic",
+      modelId: "claude-test",
+    })
+
+    expect(model).toMatchObject({
+      provider: "anthropic",
+      config: {
+        apiKey: "sk-anthropic",
+        fetch: expect.any(Function),
+      },
+    })
+    expect(mocks.createAnthropic).not.toHaveBeenCalledWith(
+      expect.objectContaining({ authToken: expect.anything() }),
+    )
   })
 
   it("preserves the complete Volcengine Ark Coding Plan prefix for Codex", async () => {
@@ -176,15 +207,16 @@ describe("aiApiVerification providers", () => {
     expect(
       createModel({
         apiType: "anthropic",
-        baseUrl: "https://volcengine-anthropic.example.invalid/api/compatible",
+        baseUrl: "https://ark.cn-beijing.volces.com/api/compatible",
         apiKey: "sk-cli",
         modelId: "claude-test",
       }),
     ).toMatchObject({
       provider: "anthropic",
       config: {
-        baseURL:
-          "https://volcengine-anthropic.example.invalid/api/compatible/v1",
+        baseURL: "https://ark.cn-beijing.volces.com/api/compatible/v1",
+        apiKey: "sk-cli",
+        fetch: expect.any(Function),
       },
     })
   })

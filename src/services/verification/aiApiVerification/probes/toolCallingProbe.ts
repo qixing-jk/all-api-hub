@@ -1,4 +1,4 @@
-import { generateText, jsonSchema, tool } from "ai"
+import { jsonSchema, tool } from "ai"
 
 import { nowMs, okLatency } from "../probeTiming"
 import { createModel } from "../providers"
@@ -12,6 +12,7 @@ import {
   isAbortError,
   toSanitizedErrorSummary,
 } from "../utils"
+import { runProbeGeneration } from "./probeGeneration"
 
 type RunToolCallingProbeParams = {
   baseUrl: string
@@ -62,7 +63,7 @@ export async function runToolCallingProbe(
       execute: async () => ({ now: new Date().toISOString() }),
     })
 
-    const result = await generateText({
+    const result = await runProbeGeneration(params.apiType, {
       model,
       prompt,
       tools: { verify_tool: verifyTool },

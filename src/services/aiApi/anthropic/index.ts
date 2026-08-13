@@ -2,6 +2,15 @@ import { fetchApi } from "~/services/apiTransport/request"
 import { AuthTypeEnum } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 
+import {
+  ANTHROPIC_AUTH_MODES,
+  createAnthropicAuthHeaders,
+  getAnthropicAuthMode,
+  isAnthropicUnauthorized,
+  rememberAnthropicBearerAuth,
+  type AnthropicAuthMode,
+} from "./auth"
+
 type AnthropicAuthParams = {
   baseUrl: string
   apiKey: string
@@ -20,7 +29,6 @@ type AnthropicModelsListResponse = {
 
 const logger = createLogger("AiApi.Anthropic")
 
-const ANTHROPIC_VERSION = "2023-06-01"
 const PAGE_LIMIT = 200
 const MAX_PAGES = 20
 const MAX_MODELS = 2000
@@ -37,7 +45,9 @@ export async function fetchAnthropicModelIds(
   }
 
   const modelIds: string[] = []
+  const seenModelIds = new Set<string>()
   let afterId = ""
+  let authMode = getAnthropicAuthMode(params.baseUrl)
 
   for (let page = 0; page < MAX_PAGES; page += 1) {
     const searchParams = new URLSearchParams()
@@ -46,26 +56,41 @@ export async function fetchAnthropicModelIds(
 
     const endpoint = `/v1/models?${searchParams.toString()}`
 
-    try {
-      const response = await fetchApi<AnthropicModelsListResponse>(
+    const fetchPage = (mode: AnthropicAuthMode) =>
+      fetchApi<AnthropicModelsListResponse>(
         request,
         {
           endpoint,
           options: {
             signal: params.abortSignal,
-            headers: {
-              "x-api-key": params.apiKey,
-              "anthropic-version": ANTHROPIC_VERSION,
-            },
+            headers: createAnthropicAuthHeaders(params.apiKey, mode),
           },
         },
         true,
       )
 
+    try {
+      let response: AnthropicModelsListResponse
+      try {
+        response = await fetchPage(authMode)
+      } catch (error) {
+        if (
+          authMode !== ANTHROPIC_AUTH_MODES.ApiKey ||
+          !isAnthropicUnauthorized(error)
+        ) {
+          throw error
+        }
+
+        response = await fetchPage(ANTHROPIC_AUTH_MODES.Bearer)
+        authMode = ANTHROPIC_AUTH_MODES.Bearer
+        rememberAnthropicBearerAuth(params.baseUrl)
+      }
+
       const data = Array.isArray(response?.data) ? response.data : []
       for (const model of data) {
         const id = typeof model?.id === "string" ? model.id : ""
-        if (!id || modelIds.includes(id)) continue
+        if (!id || seenModelIds.has(id)) continue
+        seenModelIds.add(id)
         modelIds.push(id)
         if (modelIds.length >= MAX_MODELS) return modelIds
       }
