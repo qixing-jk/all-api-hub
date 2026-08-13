@@ -1,7 +1,10 @@
 import { apiVerificationProbeRegistry } from "./probeRegistry"
 import { getApiVerificationProbeDefinitions } from "./probes"
 import { runModelsProbe } from "./probes/modelsProbe"
-import { API_VERIFICATION_PROBE_STATUSES } from "./types"
+import {
+  API_VERIFICATION_PROBE_IDS,
+  API_VERIFICATION_PROBE_STATUSES,
+} from "./types"
 import type {
   ApiVerificationApiType,
   ApiVerificationProbeResult,
@@ -40,10 +43,10 @@ export async function runApiVerificationSuite(
   const resolvedModelId = params.requestedModelId ?? modelsProbe.modelId
   if (!resolvedModelId) {
     for (const definition of definitions) {
-      if (definition.id === "models") continue
-      if (definition.id === "web-search") {
+      if (definition.id === API_VERIFICATION_PROBE_IDS.Models) continue
+      if (definition.id === API_VERIFICATION_PROBE_IDS.WebSearch) {
         results.push({
-          id: "web-search",
+          id: API_VERIFICATION_PROBE_IDS.WebSearch,
           status: API_VERIFICATION_PROBE_STATUSES.Unsupported,
           latencyMs: 0,
           summary: "Web search probe requires explicit API type support",
@@ -65,7 +68,7 @@ export async function runApiVerificationSuite(
   }
 
   for (const definition of definitions) {
-    if (definition.id === "models") continue
+    if (definition.id === API_VERIFICATION_PROBE_IDS.Models) continue
     const entry = apiVerificationProbeRegistry[definition.id]
     results.push(
       await entry.run({

@@ -9,8 +9,10 @@ import type {
   ApiVerificationProbeId,
   ApiVerificationProbeStatus,
 } from "~/services/verification/aiApiVerification"
-import { API_VERIFICATION_PROBE_STATUSES } from "~/services/verification/aiApiVerification"
-import { apiVerificationProbeRegistry } from "~/services/verification/aiApiVerification/probeRegistry"
+import {
+  API_VERIFICATION_PROBE_IDS,
+  API_VERIFICATION_PROBE_STATUSES,
+} from "~/services/verification/aiApiVerification"
 import { onStorageChanged } from "~/utils/browser/browserApi"
 
 import {
@@ -29,7 +31,7 @@ import {
 } from "./utils"
 
 const KNOWN_PROBE_IDS = new Set<ApiVerificationProbeId>(
-  Object.keys(apiVerificationProbeRegistry) as ApiVerificationProbeId[],
+  Object.values(API_VERIFICATION_PROBE_IDS),
 )
 const MAX_STORED_SUMMARIES = 500
 

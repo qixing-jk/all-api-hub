@@ -4,6 +4,7 @@ import { assertNever } from "~/utils/core/assert"
 
 import {
   API_TYPES,
+  API_VERIFICATION_PROBE_IDS,
   type ApiVerificationApiType,
   type ApiVerificationProbeId,
 } from "./types"
@@ -40,15 +41,15 @@ export function getApiVerificationProbeLabel(
   probeId: ApiVerificationProbeId,
 ): string {
   switch (probeId) {
-    case "models":
+    case API_VERIFICATION_PROBE_IDS.Models:
       return t("aiApiVerification:verifyDialog.probes.models")
-    case "text-generation":
+    case API_VERIFICATION_PROBE_IDS.TextGeneration:
       return t("aiApiVerification:verifyDialog.probes.text-generation")
-    case "tool-calling":
+    case API_VERIFICATION_PROBE_IDS.ToolCalling:
       return t("aiApiVerification:verifyDialog.probes.tool-calling")
-    case "structured-output":
+    case API_VERIFICATION_PROBE_IDS.StructuredOutput:
       return t("aiApiVerification:verifyDialog.probes.structured-output")
-    case "web-search":
+    case API_VERIFICATION_PROBE_IDS.WebSearch:
       return t("aiApiVerification:verifyDialog.probes.web-search")
     default:
       return assertNever(

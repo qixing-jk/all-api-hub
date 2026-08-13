@@ -10,12 +10,16 @@ export const API_TYPES = {
 
 export type ApiVerificationApiType = (typeof API_TYPES)[keyof typeof API_TYPES]
 
+export const API_VERIFICATION_PROBE_IDS = {
+  Models: "models",
+  TextGeneration: "text-generation",
+  ToolCalling: "tool-calling",
+  StructuredOutput: "structured-output",
+  WebSearch: "web-search",
+} as const
+
 export type ApiVerificationProbeId =
-  | "models"
-  | "text-generation"
-  | "tool-calling"
-  | "structured-output"
-  | "web-search"
+  (typeof API_VERIFICATION_PROBE_IDS)[keyof typeof API_VERIFICATION_PROBE_IDS]
 
 export const API_VERIFICATION_PROBE_STATUSES = {
   Pass: "pass",

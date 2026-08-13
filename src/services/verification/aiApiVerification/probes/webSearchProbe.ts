@@ -2,7 +2,11 @@ import { generateText } from "ai"
 
 import { nowMs, okLatency } from "../probeTiming"
 import { createGoogleProvider, createOpenAIProvider } from "../providers"
-import { API_VERIFICATION_PROBE_STATUSES } from "../types"
+import {
+  API_TYPES,
+  API_VERIFICATION_PROBE_IDS,
+  API_VERIFICATION_PROBE_STATUSES,
+} from "../types"
 import type {
   ApiVerificationApiType,
   ApiVerificationProbeResult,
@@ -30,9 +34,9 @@ export async function runWebSearchProbe(
   const startedAt = nowMs()
   const secretsToRedact = [params.apiKey]
 
-  if (params.apiType === "anthropic") {
+  if (params.apiType === API_TYPES.ANTHROPIC) {
     return {
-      id: "web-search",
+      id: API_VERIFICATION_PROBE_IDS.WebSearch,
       status: API_VERIFICATION_PROBE_STATUSES.Unsupported,
       latencyMs: okLatency(startedAt),
       summary: "Web search probe is not supported for Anthropic endpoints",
@@ -46,7 +50,7 @@ export async function runWebSearchProbe(
   }
 
   try {
-    if (params.apiType === "openai") {
+    if (params.apiType === API_TYPES.OPENAI) {
       const provider = createOpenAIProvider({
         baseUrl: params.baseUrl,
         apiKey: params.apiKey,
@@ -72,7 +76,7 @@ export async function runWebSearchProbe(
         ) || (result.sources ?? []).length > 0
 
       return {
-        id: "web-search",
+        id: API_VERIFICATION_PROBE_IDS.WebSearch,
         status: searched
           ? API_VERIFICATION_PROBE_STATUSES.Pass
           : API_VERIFICATION_PROBE_STATUSES.Fail,
@@ -96,7 +100,7 @@ export async function runWebSearchProbe(
       }
     }
 
-    if (params.apiType === "google") {
+    if (params.apiType === API_TYPES.GOOGLE) {
       const google = createGoogleProvider({
         baseUrl: params.baseUrl,
         apiKey: params.apiKey,
@@ -120,7 +124,7 @@ export async function runWebSearchProbe(
         ) || (result.sources ?? []).length > 0
 
       return {
-        id: "web-search",
+        id: API_VERIFICATION_PROBE_IDS.WebSearch,
         status: searched
           ? API_VERIFICATION_PROBE_STATUSES.Pass
           : API_VERIFICATION_PROBE_STATUSES.Fail,
@@ -147,7 +151,7 @@ export async function runWebSearchProbe(
     }
 
     return {
-      id: "web-search",
+      id: API_VERIFICATION_PROBE_IDS.WebSearch,
       status: API_VERIFICATION_PROBE_STATUSES.Unsupported,
       latencyMs: okLatency(startedAt),
       summary: "Web search probe is not supported for this API type",
@@ -167,7 +171,7 @@ export async function runWebSearchProbe(
     const diagnostics = buildSafeProbeFailureDiagnostics(error, summary)
 
     return {
-      id: "web-search",
+      id: API_VERIFICATION_PROBE_IDS.WebSearch,
       status: API_VERIFICATION_PROBE_STATUSES.Fail,
       latencyMs: okLatency(startedAt),
       summary,

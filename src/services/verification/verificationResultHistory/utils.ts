@@ -1,5 +1,6 @@
 import {
   API_TYPES,
+  API_VERIFICATION_PROBE_IDS,
   type ApiVerificationApiType,
   type ApiVerificationProbeResult,
 } from "~/services/verification/aiApiVerification/types"
@@ -82,7 +83,9 @@ function extractResolvedModelId(
   const trimmedPreferred = preferredModelId?.trim()
   if (trimmedPreferred) return trimmedPreferred
 
-  const modelsResult = results.find((result) => result.id === "models")
+  const modelsResult = results.find(
+    (result) => result.id === API_VERIFICATION_PROBE_IDS.Models,
+  )
   if (!modelsResult?.output || typeof modelsResult.output !== "object") {
     return undefined
   }

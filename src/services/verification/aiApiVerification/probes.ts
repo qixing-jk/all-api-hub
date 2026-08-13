@@ -1,4 +1,8 @@
-import type { ApiVerificationApiType, ApiVerificationProbeId } from "./types"
+import {
+  API_VERIFICATION_PROBE_IDS,
+  type ApiVerificationApiType,
+  type ApiVerificationProbeId,
+} from "./types"
 
 type ApiVerificationProbeDefinition = {
   /**
@@ -21,10 +25,10 @@ export function getApiVerificationProbeDefinitions(
   _apiType: ApiVerificationApiType,
 ): ApiVerificationProbeDefinition[] {
   return [
-    { id: "models", requiresModelId: false },
-    { id: "text-generation", requiresModelId: true },
-    { id: "tool-calling", requiresModelId: true },
-    { id: "structured-output", requiresModelId: true },
-    { id: "web-search", requiresModelId: true },
+    { id: API_VERIFICATION_PROBE_IDS.Models, requiresModelId: false },
+    { id: API_VERIFICATION_PROBE_IDS.TextGeneration, requiresModelId: true },
+    { id: API_VERIFICATION_PROBE_IDS.ToolCalling, requiresModelId: true },
+    { id: API_VERIFICATION_PROBE_IDS.StructuredOutput, requiresModelId: true },
+    { id: API_VERIFICATION_PROBE_IDS.WebSearch, requiresModelId: true },
   ]
 }

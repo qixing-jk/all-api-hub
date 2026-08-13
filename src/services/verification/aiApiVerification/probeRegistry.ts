@@ -3,10 +3,11 @@ import { runStructuredOutputProbe } from "./probes/structuredOutputProbe"
 import { runTextGenerationProbe } from "./probes/textGenerationProbe"
 import { runToolCallingProbe } from "./probes/toolCallingProbe"
 import { runWebSearchProbe } from "./probes/webSearchProbe"
-import type {
-  ApiVerificationApiType,
-  ApiVerificationProbeId,
-  ApiVerificationProbeResult,
+import {
+  API_VERIFICATION_PROBE_IDS,
+  type ApiVerificationApiType,
+  type ApiVerificationProbeId,
+  type ApiVerificationProbeResult,
 } from "./types"
 
 /**
@@ -35,7 +36,7 @@ export const apiVerificationProbeRegistry: Record<
   ApiVerificationProbeId,
   ProbeRegistryEntry
 > = {
-  models: {
+  [API_VERIFICATION_PROBE_IDS.Models]: {
     requiresModelId: false,
     run: async (params) => {
       return (
@@ -48,7 +49,7 @@ export const apiVerificationProbeRegistry: Record<
       ).result
     },
   },
-  "text-generation": {
+  [API_VERIFICATION_PROBE_IDS.TextGeneration]: {
     requiresModelId: true,
     run: async (params) =>
       runTextGenerationProbe({
@@ -59,7 +60,7 @@ export const apiVerificationProbeRegistry: Record<
         abortSignal: params.abortSignal,
       }),
   },
-  "tool-calling": {
+  [API_VERIFICATION_PROBE_IDS.ToolCalling]: {
     requiresModelId: true,
     run: async (params) =>
       runToolCallingProbe({
@@ -70,7 +71,7 @@ export const apiVerificationProbeRegistry: Record<
         abortSignal: params.abortSignal,
       }),
   },
-  "structured-output": {
+  [API_VERIFICATION_PROBE_IDS.StructuredOutput]: {
     requiresModelId: true,
     run: async (params) =>
       runStructuredOutputProbe({
@@ -81,7 +82,7 @@ export const apiVerificationProbeRegistry: Record<
         abortSignal: params.abortSignal,
       }),
   },
-  "web-search": {
+  [API_VERIFICATION_PROBE_IDS.WebSearch]: {
     requiresModelId: true,
     run: async (params) =>
       runWebSearchProbe({

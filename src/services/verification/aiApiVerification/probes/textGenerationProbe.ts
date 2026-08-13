@@ -1,6 +1,9 @@
 import { nowMs, okLatency } from "../probeTiming"
 import { createModel } from "../providers"
-import { API_VERIFICATION_PROBE_STATUSES } from "../types"
+import {
+  API_VERIFICATION_PROBE_IDS,
+  API_VERIFICATION_PROBE_STATUSES,
+} from "../types"
 import type {
   ApiVerificationApiType,
   ApiVerificationProbeResult,
@@ -20,6 +23,8 @@ type RunTextGenerationProbeParams = {
   abortSignal?: AbortSignal
 }
 
+const TEXT_GENERATION_PROMPT = "Reply with exactly: OK"
+
 /**
  * Baseline text generation probe for the selected API type.
  */
@@ -30,7 +35,7 @@ export async function runTextGenerationProbe(
   const secretsToRedact = [params.apiKey]
 
   try {
-    const prompt = "Reply with exactly: OK"
+    const prompt = TEXT_GENERATION_PROMPT
     const model = createModel({
       baseUrl: params.baseUrl,
       apiKey: params.apiKey,
@@ -48,7 +53,7 @@ export async function runTextGenerationProbe(
     const ok = text === "ok" || text.includes("ok")
 
     return {
-      id: "text-generation",
+      id: API_VERIFICATION_PROBE_IDS.TextGeneration,
       status: ok
         ? API_VERIFICATION_PROBE_STATUSES.Pass
         : API_VERIFICATION_PROBE_STATUSES.Fail,
@@ -79,7 +84,7 @@ export async function runTextGenerationProbe(
     const diagnostics = buildSafeProbeFailureDiagnostics(error, summary)
 
     return {
-      id: "text-generation",
+      id: API_VERIFICATION_PROBE_IDS.TextGeneration,
       status: API_VERIFICATION_PROBE_STATUSES.Fail,
       latencyMs: okLatency(startedAt),
       summary,
@@ -89,7 +94,7 @@ export async function runTextGenerationProbe(
         apiType: params.apiType,
         baseUrl: params.baseUrl,
         modelId: params.modelId,
-        prompt: "Reply with exactly: OK",
+        prompt: TEXT_GENERATION_PROMPT,
       },
       output: diagnostics.output,
     }

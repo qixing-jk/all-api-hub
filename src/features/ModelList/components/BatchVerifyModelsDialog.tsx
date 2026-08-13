@@ -61,6 +61,7 @@ import {
 import { resolveProductAnalyticsErrorCategoryFromProbeResult } from "~/services/productAnalytics/verification"
 import {
   API_TYPES,
+  API_VERIFICATION_PROBE_IDS,
   API_VERIFICATION_PROBE_STATUSES,
   getApiVerificationProbeDefinitions,
   runApiVerificationProbe,
@@ -241,11 +242,13 @@ function getFirstApplicableProbeId(
   return (
     selectedProbeIds.find((probeId) => availableProbeIds.has(probeId)) ??
     probeDefinitions[0]?.id ??
-    "text-generation"
+    API_VERIFICATION_PROBE_IDS.TextGeneration
   )
 }
 
-const DEFAULT_SELECTED_PROBE_IDS: ApiVerificationProbeId[] = ["text-generation"]
+const DEFAULT_SELECTED_PROBE_IDS: ApiVerificationProbeId[] = [
+  API_VERIFICATION_PROBE_IDS.TextGeneration,
+]
 
 /** Cap the batch row list to half the viewport while preserving a test-safe fallback. */
 function getBatchVerifyListMaxHeight() {

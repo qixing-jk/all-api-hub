@@ -1,4 +1,5 @@
 import {
+  API_VERIFICATION_PROBE_IDS,
   API_VERIFICATION_PROBE_STATUSES,
   runApiVerificationProbe,
   type ApiVerificationApiType,
@@ -38,7 +39,7 @@ export async function runCliToolCallingSimulation(
     apiKey: params.apiKey,
     apiType: params.apiType,
     modelId: params.modelId,
-    probeId: "tool-calling",
+    probeId: API_VERIFICATION_PROBE_IDS.ToolCalling,
     abortSignal: params.abortSignal,
   })
 

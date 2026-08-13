@@ -38,6 +38,7 @@ import {
 import { resolveProductAnalyticsErrorCategoryFromProbeResult } from "~/services/productAnalytics/verification"
 import {
   API_TYPES,
+  API_VERIFICATION_PROBE_IDS,
   API_VERIFICATION_PROBE_STATUSES,
   getApiVerificationProbeDefinitions,
   runApiVerificationProbe,
@@ -99,7 +100,7 @@ type ModelsProbeOutput = {
 function extractModelsProbeOutput(
   result: ApiVerificationProbeResult,
 ): ModelsProbeOutput | null {
-  if (result.id !== "models") return null
+  if (result.id !== API_VERIFICATION_PROBE_IDS.Models) return null
   if (!result.output || typeof result.output !== "object") return null
 
   const output = result.output as Record<string, unknown>
@@ -625,8 +626,12 @@ export function VerifyApiCredentialProfileDialog({
       let modelIdForSuite = modelId.trim()
 
       for (const probe of ordered) {
-        if (probe.id === "models") {
-          const result = await runProbe("models", undefined, false)
+        if (probe.id === API_VERIFICATION_PROBE_IDS.Models) {
+          const result = await runProbe(
+            API_VERIFICATION_PROBE_IDS.Models,
+            undefined,
+            false,
+          )
           if (result) results.push(result)
           if (!modelIdForSuite && result) {
             const modelsOutput = extractModelsProbeOutput(result)
