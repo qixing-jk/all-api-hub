@@ -34,6 +34,7 @@ import {
 
 const {
   completeProductAnalyticsActionMock,
+  kelivoExportDialogRenderMock,
   cliProxyDialogRenderMock,
   claudeCodeRouterDialogRenderMock,
   createProfileMock,
@@ -51,6 +52,7 @@ const {
   verifyDialogRenderMock,
 } = vi.hoisted(() => ({
   completeProductAnalyticsActionMock: vi.fn(),
+  kelivoExportDialogRenderMock: vi.fn(),
   cliProxyDialogRenderMock: vi.fn(),
   claudeCodeRouterDialogRenderMock: vi.fn(),
   createProfileMock: vi.fn(),
@@ -80,6 +82,13 @@ vi.mock("~/contexts/UserPreferencesContext", () => ({
 vi.mock("~/components/KiloCodeExportDialog", () => ({
   KiloCodeExportDialog: (props: unknown) => {
     kiloCodeDialogRenderMock(props)
+    return null
+  },
+}))
+
+vi.mock("~/components/KelivoExportDialog", () => ({
+  KelivoExportDialog: (props: unknown) => {
+    kelivoExportDialogRenderMock(props)
     return null
   },
 }))
@@ -194,6 +203,7 @@ vi.mock("react-hot-toast", () => ({
 describe("TokenHeader analytics", () => {
   beforeEach(() => {
     completeProductAnalyticsActionMock.mockReset()
+    kelivoExportDialogRenderMock.mockReset()
     cliProxyDialogRenderMock.mockReset()
     claudeCodeRouterDialogRenderMock.mockReset()
     createProfileMock.mockReset()
@@ -893,6 +903,34 @@ describe("TokenHeader analytics", () => {
         PRODUCT_ANALYTICS_RESULTS.Success,
       )
     })
+  })
+
+  it("opens an editable Kelivo export dialog with the resolved account token", async () => {
+    resolveDisplayAccountTokenForSecretMock.mockResolvedValueOnce(
+      createToken({ id: 1, key: "sk-resolved" }),
+    )
+
+    const user = userEvent.setup()
+    renderTokenHeader()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.copyKelivoImportCode",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(kelivoExportDialogRenderMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          isOpen: true,
+          initialValue: expect.objectContaining({
+            apiType: API_TYPES.OPENAI_COMPATIBLE,
+            apiKey: "sk-resolved",
+          }),
+        }),
+      )
+    })
+    expect(startProductAnalyticsActionMock).not.toHaveBeenCalled()
   })
 
   it("tracks Cherry Studio export as unknown failure when opening throws", async () => {

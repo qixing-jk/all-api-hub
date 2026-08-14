@@ -335,6 +335,33 @@
       "sidebarInstruction": "Nhấp vào biểu tượng tiện ích trong thanh công cụ của trình duyệt, sau đó chọn \"Thanh bên\" để mở chế độ thanh bên",
       "warningTitle": "Nhắc nhở giới hạn tính năng"
     },
+    "kelivo": {
+      "actions": {
+        "copy": "Sao chép mã nhập di động"
+      },
+      "baseUrlDescription": "Địa chỉ này sẽ được giữ nguyên trong mã nhập.",
+      "description": "Kiểm tra các trường của nhà cung cấp, sau đó quét bằng Kelivo di động hoặc sao chép mã nhập.",
+      "desktopNotice": {
+        "description": "Kelivo trên máy tính hiện chưa hỗ trợ nhập nhà cung cấp. Hãy dùng các trường bên trên để thêm thủ công.",
+        "title": "Kelivo trên máy tính cần cấu hình thủ công"
+      },
+      "googleBaseUrlDescription": "Kelivo sử dụng địa chỉ API chính thức của Google cho nhà cung cấp Google.",
+      "googleNotice": {
+        "description": "Kelivo không chấp nhận Base URL tùy chỉnh cho nhà cung cấp Google. Base URL của giao thức khác sẽ được giữ lại khi bạn chuyển về.",
+        "title": "Google sử dụng địa chỉ API cố định"
+      },
+      "mobileQrCode": {
+        "description": "Mở phần nhập nhà cung cấp trong Kelivo di động và quét mã QR này.",
+        "title": "Quét bằng Kelivo di động"
+      },
+      "mobileQrCodeLabel": "Mã QR nhập nhà cung cấp cho Kelivo di động",
+      "protocolDescription": "Mã nhập Kelivo không thể chứa tùy chọn OpenAI Responses. Hãy nhập dưới dạng OpenAI Compatible rồi bật Responses trong Kelivo nếu cần.",
+      "securityNotice": {
+        "description": "Mã QR và mã nhập đã sao chép đều chứa khóa API của bạn. Không chia sẻ trong cuộc trò chuyện, issue, nhật ký hoặc kho mã.",
+        "title": "Nội dung nhập di động chứa khóa API của bạn"
+      },
+      "title": "Xuất sang Kelivo di động"
+    },
     "kiloCode": {
       "actions": {
         "copyKiloV7Provider": "Sao chép cấu hình nhà cung cấp",

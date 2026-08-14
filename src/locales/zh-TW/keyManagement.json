@@ -7,6 +7,7 @@
   },
   "actions": {
     "collapseAll": "全部摺疊",
+    "copyKelivoImportCode": "匯出到 Kelivo 行動版",
     "deleteKey": "刪除金鑰",
     "details": "查看詳情",
     "detailsFor": "查看 {{name}} 的詳情",

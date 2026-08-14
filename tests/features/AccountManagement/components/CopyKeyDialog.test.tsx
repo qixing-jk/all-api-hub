@@ -49,6 +49,7 @@ const {
   fetchUserGroupsMock,
   resolveApiTokenKeyMock,
   openInCherryStudioMock,
+  kelivoExportDialogMock,
   openWithAccountMock,
   startProductAnalyticsActionMock,
   completeProductAnalyticsActionMock,
@@ -76,6 +77,7 @@ const {
   fetchUserGroupsMock: vi.fn(),
   resolveApiTokenKeyMock: vi.fn(),
   openInCherryStudioMock: vi.fn(),
+  kelivoExportDialogMock: vi.fn(),
   openWithAccountMock: vi.fn(),
   startProductAnalyticsActionMock: vi.fn(),
   completeProductAnalyticsActionMock: vi.fn(),
@@ -295,6 +297,13 @@ vi.mock("~/components/CursorPlusExportDialog", () => ({
   },
 }))
 
+vi.mock("~/components/KelivoExportDialog", () => ({
+  KelivoExportDialog: (props: unknown) => {
+    kelivoExportDialogMock(props)
+    return null
+  },
+}))
+
 vi.mock(
   "~/features/ApiCredentialProfiles/components/KiloCodeProfileExportDialog",
   () => ({
@@ -481,6 +490,7 @@ describe("CopyKeyDialog", () => {
     openKeysPageMock.mockReset()
     resolveApiTokenKeyMock.mockReset()
     openInCherryStudioMock.mockReset()
+    kelivoExportDialogMock.mockReset()
     openWithAccountMock.mockReset()
     startProductAnalyticsActionMock.mockReset()
     completeProductAnalyticsActionMock.mockReset()
@@ -630,6 +640,11 @@ describe("CopyKeyDialog", () => {
     expect(
       screen.queryByRole("button", { name: "ui:dialog.copyKey.useInCherry" }),
     ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", {
+        name: "keyManagement:actions.copyKelivoImportCode",
+      }),
+    ).not.toBeInTheDocument()
 
     rerender(
       <RuntimeKeyActionControls
@@ -646,6 +661,11 @@ describe("CopyKeyDialog", () => {
     ).not.toBeInTheDocument()
     expect(
       screen.getByRole("button", { name: "ui:dialog.copyKey.useInCherry" }),
+    ).toBeVisible()
+    expect(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.copyKelivoImportCode",
+      }),
     ).toBeVisible()
   })
 
@@ -1524,6 +1544,40 @@ describe("CopyKeyDialog", () => {
         PRODUCT_ANALYTICS_RESULTS.Success,
       )
     })
+  })
+
+  it("opens an editable Kelivo export dialog for an account token", async () => {
+    fetchAccountTokensMock.mockResolvedValueOnce([TOKEN])
+    resolveApiTokenKeyMock.mockResolvedValueOnce("sk-full-secret")
+    const user = userEvent.setup()
+
+    render(<CopyKeyDialog isOpen={true} onClose={() => {}} account={ACCOUNT} />)
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:actions.detailsFor",
+      }),
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.copyKelivoImportCode",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(kelivoExportDialogMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          isOpen: true,
+          initialValue: {
+            apiType: API_TYPES.OPENAI_COMPATIBLE,
+            name: "Example - default",
+            baseUrl: "https://example.com",
+            apiKey: "sk-full-secret",
+          },
+        }),
+      )
+    })
+    expect(startProductAnalyticsActionMock).not.toHaveBeenCalled()
   })
 
   it("reports Cherry Studio export failures without leaving the action pending", async () => {

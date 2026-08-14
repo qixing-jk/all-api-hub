@@ -23,6 +23,7 @@ const {
   mockCursorPlusDialog,
   mockKiloCodeDialog,
   mockOpenInCherryStudio,
+  mockKelivoExportDialog,
   mockOpenSettingsTab,
   mockOpenWithCredentials,
   mockSaveApiCredentialProfiles,
@@ -37,6 +38,7 @@ const {
   mockCursorPlusDialog: vi.fn(),
   mockKiloCodeDialog: vi.fn(),
   mockOpenInCherryStudio: vi.fn(),
+  mockKelivoExportDialog: vi.fn(),
   mockOpenSettingsTab: vi.fn(),
   mockOpenWithCredentials: vi.fn(),
   mockSaveApiCredentialProfiles: vi.fn(),
@@ -88,6 +90,13 @@ vi.mock("~/components/CursorPlusExportDialog", () => ({
         </button>
       </div>
     ) : null
+  },
+}))
+
+vi.mock("~/components/KelivoExportDialog", () => ({
+  KelivoExportDialog: (props: unknown) => {
+    mockKelivoExportDialog(props)
+    return null
   },
 }))
 
@@ -525,6 +534,23 @@ describe("ServiceCredentialCard", () => {
       expect.objectContaining({
         key: "sk-service-credential",
         name: "SharedChat - Codex API Key",
+      }),
+    )
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.copyKelivoImportCode",
+      }),
+    )
+    expect(mockKelivoExportDialog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        isOpen: true,
+        initialValue: expect.objectContaining({
+          apiType: API_TYPES.OPENAI_COMPATIBLE,
+          baseUrl: "https://sharedchat.example.invalid/v1",
+          apiKey: "sk-service-credential",
+          name: "SharedChat - Codex API Key",
+        }),
       }),
     )
 

@@ -7,6 +7,7 @@
   },
   "actions": {
     "collapseAll": "全部折叠",
+    "copyKelivoImportCode": "导出到 Kelivo 移动端",
     "deleteKey": "删除密钥",
     "details": "查看详情",
     "detailsFor": "查看 {{name}} 的详情",

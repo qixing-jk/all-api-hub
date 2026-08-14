@@ -20,6 +20,7 @@ import { CCSwitchIcon } from "~/components/icons/CCSwitchIcon"
 import { CherryIcon } from "~/components/icons/CherryIcon"
 import { ClaudeCodeRouterIcon } from "~/components/icons/ClaudeCodeRouterIcon"
 import { CliProxyIcon } from "~/components/icons/CliProxyIcon"
+import { KelivoIcon } from "~/components/icons/KelivoIcon"
 import { KiloCodeIcon } from "~/components/icons/KiloCodeIcon"
 import { ManagedSiteIcon } from "~/components/icons/ManagedSiteIcon"
 import {
@@ -748,6 +749,22 @@ export function ApiCredentialProfileListItem({
                         <CherryIcon className="h-4 w-4" />
                       </span>
                       {t("keyManagement:actions.useInCherry")}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      data-testid={
+                        API_CREDENTIAL_PROFILES_TEST_IDS.copyKelivoImportCodeMenuItem
+                      }
+                      onSelect={() =>
+                        onExport(
+                          profile,
+                          API_CREDENTIAL_PROFILE_EXPORT_ACTIONS.Kelivo,
+                        )
+                      }
+                    >
+                      <span aria-hidden="true">
+                        <KelivoIcon />
+                      </span>
+                      {t("keyManagement:actions.copyKelivoImportCode")}
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       data-testid={

@@ -88,6 +88,7 @@ describe("product analytics event enums", () => {
     expect(PRODUCT_ANALYTICS_ACTION_IDS).toMatchObject({
       ExportAccountTokenToCherryStudio: "export_account_token_to_cherry_studio",
       ExportAccountTokenToCCSwitch: "export_account_token_to_cc_switch",
+      CopyAccountTokenKelivoImportCode: "copy_account_token_kelivo_import_code",
       ExportAccountTokenToCliProxy: "export_account_token_to_cli_proxy",
       ExportAccountTokensToCliProxy: "export_account_tokens_to_cli_proxy",
       ExportAccountTokenToClaudeCodeRouter:
@@ -99,6 +100,8 @@ describe("product analytics event enums", () => {
         "export_api_credential_profile_to_cherry_studio",
       ExportApiCredentialProfileToCCSwitch:
         "export_api_credential_profile_to_cc_switch",
+      CopyApiCredentialProfileKelivoImportCode:
+        "copy_api_credential_profile_kelivo_import_code",
       ImportApiCredentialProfileToCliProxy:
         "import_api_credential_profile_to_cli_proxy",
       ImportApiCredentialProfileToClaudeCodeRouter:

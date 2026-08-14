@@ -1,6 +1,7 @@
 import toast from "react-hot-toast"
 
 import type { ApiToken, DisplaySiteData } from "~/types"
+import { encodeUtf8Base64 } from "~/utils/core/base64"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
 
@@ -26,8 +27,7 @@ interface CherryStudioExportData {
  */
 function generateCherryStudioURL(data: CherryStudioExportData): string {
   const jsonString = JSON.stringify(data)
-  const bytes = new TextEncoder().encode(jsonString)
-  const base64String = btoa(String.fromCharCode(...bytes))
+  const base64String = encodeUtf8Base64(jsonString)
   return `cherrystudio://providers/api-keys?v=1&data=${base64String}`
 }
 

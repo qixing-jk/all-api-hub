@@ -4,6 +4,7 @@ import { CCSwitchExportDialog } from "~/components/CCSwitchExportDialog"
 import { ClaudeCodeRouterImportDialog } from "~/components/ClaudeCodeRouterImportDialog"
 import { CliProxyExportDialog } from "~/components/CliProxyExportDialog"
 import { VerifyCliSupportDialog } from "~/components/dialogs/VerifyCliSupportDialog"
+import { KelivoExportDialog } from "~/components/KelivoExportDialog"
 import { DestructiveConfirmDialog } from "~/components/ui"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -98,6 +99,19 @@ export function ApiCredentialProfilesDialogs({
           isOpen={true}
           onClose={() => controller.setKiloCodeProfile(null)}
           profile={controller.kiloCodeProfile}
+        />
+      ) : null}
+
+      {controller.kelivoProfile ? (
+        <KelivoExportDialog
+          isOpen={true}
+          onClose={() => controller.setKelivoProfile(null)}
+          initialValue={controller.kelivoProfile}
+          analyticsContext={{
+            ...apiCredentialProfileThirdPartyExportContext,
+            actionId:
+              PRODUCT_ANALYTICS_ACTION_IDS.CopyApiCredentialProfileKelivoImportCode,
+          }}
         />
       ) : null}
 

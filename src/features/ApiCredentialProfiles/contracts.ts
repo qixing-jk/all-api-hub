@@ -1,5 +1,6 @@
 export const API_CREDENTIAL_PROFILE_EXPORT_ACTIONS = {
   CherryStudio: "cherryStudio",
+  Kelivo: "kelivo",
   CCSwitch: "ccSwitch",
   KiloCode: "kiloCode",
   CliProxy: "cliProxy",

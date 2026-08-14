@@ -351,6 +351,33 @@
       "sidebarInstruction": "Haz clic en el ícono de la extensión en la barra de herramientas del navegador y luego selecciona la opción 'Sidebar' para abrir el modo de barra lateral",
       "warningTitle": "Recordatorio de limitación de función"
     },
+    "kelivo": {
+      "actions": {
+        "copy": "Copiar código de importación móvil"
+      },
+      "baseUrlDescription": "Esta dirección se incluirá sin cambios en el código de importación.",
+      "description": "Revisa los campos del proveedor y luego escanea con Kelivo móvil o copia su código de importación.",
+      "desktopNotice": {
+        "description": "Kelivo para escritorio aún no permite importar proveedores. Usa los campos anteriores para agregarlo manualmente.",
+        "title": "Kelivo para escritorio requiere configuración manual"
+      },
+      "googleBaseUrlDescription": "Kelivo usa la dirección oficial de la API de Google para los proveedores de Google.",
+      "googleNotice": {
+        "description": "Kelivo no acepta una Base URL personalizada para proveedores de Google. Tu Base URL para otros protocolos se conservará si vuelves a cambiar.",
+        "title": "Google usa una dirección de API fija"
+      },
+      "mobileQrCode": {
+        "description": "Abre la importación de proveedores en Kelivo móvil y escanea este código QR.",
+        "title": "Escanear con Kelivo móvil"
+      },
+      "mobileQrCodeLabel": "Código QR para importar un proveedor en Kelivo móvil",
+      "protocolDescription": "Los códigos de importación de Kelivo no pueden incluir la opción OpenAI Responses. Importa como OpenAI Compatible y luego activa Responses en Kelivo si lo necesitas.",
+      "securityNotice": {
+        "description": "El código QR y el código de importación copiado contienen tu clave de API. No los compartas en chats, incidencias, registros ni repositorios.",
+        "title": "La importación móvil contiene tu clave de API"
+      },
+      "title": "Exportar a Kelivo móvil"
+    },
     "kiloCode": {
       "actions": {
         "copyKiloV7Provider": "Copiar configuración del proveedor",
