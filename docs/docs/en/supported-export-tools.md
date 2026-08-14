@@ -7,11 +7,62 @@
 | Product | Official Description | Official Link |
 |---|---|---|
 | Cherry Studio | An AI productivity studio offering intelligent conversations, autonomous agents, and 300+ assistants, providing unified access to cutting-edge large models. | [Official Website](https://www.cherry-ai.com/) / [GitHub](https://github.com/CherryHQ/cherry-studio) |
-| CC Switch | A cross-platform desktop integrated assistant for Claude Code, Codex, OpenCode, openclaw, and Gemini CLI. | [GitHub](https://github.com/farion1231/cc-switch) |
+| CC Switch | A cross-platform desktop assistant for Claude Code, Codex, Gemini CLI, Grok CLI, Hermes, OpenCode, and OpenClaw. | [GitHub](https://github.com/farion1231/cc-switch) |
+| Cursor++ | Use Anthropic, OpenAI, Gemini, and other models in Cursor with your own API keys. | [Official Website](https://ccursor.cometix.dev/) |
 | Kilo Code | Kilo is an integrated Agentic Engineering platform. | [Official Website](https://kilocode.ai/) / [GitHub](https://github.com/Kilo-Org/kilocode) |
 | Roo Code | Roo Code allows an entire AI development team to reside directly within your code editor. | [Official Website](https://roocode.com/) / [GitHub](https://github.com/RooCodeInc/Roo-Code) |
-| CLIProxyAPI | Encapsulates Gemini CLI, Antigravity, ChatGPT Codex, Claude Code, and Qwen Code into API services compatible with OpenAI / Gemini / Claude / Codex. | [Documentation](https://help.router-for.me/) / [GitHub](https://github.com/router-for-me/CLIProxyAPI) |
+| CLIProxyAPI | Encapsulates Gemini CLI, Antigravity, ChatGPT Codex, Claude Code, Qwen Code, and iFlow into API services compatible with OpenAI / Gemini / Claude / Codex. | [Documentation](https://help.router-for.me/) / [GitHub](https://github.com/router-for-me/CLIProxyAPI) |
 | Claude Code Router | Uses Claude Code as the coding infrastructure, allowing you to continuously receive Anthropic updates while deciding how to interact with the model. | [Official Website](https://musistudio.github.io/claude-code-router/) / [GitHub](https://github.com/musistudio/claude-code-router) |
+
+## Cursor++ Export
+
+From the actions for an account key, select **Export Cursor++ Provider Configuration**. All API Hub reads the OpenAI-compatible model list and generates the `provider` object used by Cursor++ 0.0.13. The object includes a stable provider ID, name, `baseUrl`, API-key authentication, and a model list with `defaultOn: true`.
+
+Before exporting, you can search or remove discovered models and enter or paste multiple model IDs. The export uses the account's existing OpenAI-compatible address by default. If the selected native protocol uses a different path, you can edit the provider Base URL directly.
+
+Cursor++ currently supports these protocol types:
+
+- **OpenAI Chat Completions** (default): exports `type: "openai-chat"`.
+- **OpenAI Responses**: exports `type: "openai-responses"`.
+- **Anthropic Messages**: exports `type: "anthropic"`.
+- **Gemini**: exports `type: "gemini"`.
+
+The protocol selection changes only how Cursor++ calls the provider. All API Hub still discovers models through the account's existing OpenAI-compatible models endpoint and does not automatically validate a corresponding native-protocol endpoint.
+
+After copying, open **Edit Providers Config** in Cursor++ and add the object to the `providers` array in `~/.ccursor/providers.json`. The copied content is a single `provider`; it does not overwrite or replace the full configuration file. If model discovery fails or returns an empty list, add one or more model IDs manually before copying.
+
+::: warning Protect the copied content
+The exported JSON contains the API key in plain text. Do not paste it into public chats, issues, logs, or repositories.
+:::
+
+## Kilo Code / Roo Code Export
+
+### Kilo Code 7.x
+
+When you select Kilo Code 7.x, each account key or API credential is exported as a clearly named `provider`. Each `provider` contains every model ID discovered and normalized from its endpoint, plus any model IDs manually entered and retained for that provider. Inclusion in the export does not mean All API Hub has verified that the model works in every workflow. Select the default `model` first; when exporting multiple providers, also select the default `provider`.
+
+Each `provider` can use one of these API protocols:
+
+- **OpenAI Compatible** (default): exports `@ai-sdk/openai-compatible`.
+- **OpenAI Responses**: exports `@ai-sdk/openai`.
+- **Anthropic Messages**: exports `@ai-sdk/anthropic`.
+
+The protocol selection changes only the AI SDK provider package used by Kilo Code. All API Hub keeps its existing model-discovery flow and exports the complete loaded result. Selecting Anthropic Messages does not skip model discovery, rewrite model IDs, or add unverified model metadata.
+
+Choose either of these methods:
+
+- **Download settings file**: Select **Download Kilo 7.x Settings**, then in Kilo Code go to Settings → About Kilo Code → Import, choose the downloaded `kilo-settings.json`, review it, and save. The download is a settings file that can be used directly with Kilo Code's current import flow.
+- **Copy configuration**: Select **Copy Provider Configuration** to copy a top-level `{ provider, model }` fragment. Merge those two fields into the corresponding top-level fields of your existing settings JSON. The fragment is not a complete import file.
+
+Kilo Code currently limits settings imports to 1 MiB. If the file exceeds that limit, export a single API credential by copying and manually merging its configuration. For a batch account-key export, select fewer providers or copy and merge the configuration manually.
+
+::: tip The API key field may look empty after import
+After importing settings with an inline API key, Kilo Code's provider editor may still show an empty API-key field. This is a current UI limitation, not an export failure: the imported inline key and the editor's authentication state are stored separately, and the key remains available at runtime.
+:::
+
+### Legacy Roo Code / Kilo Code 5.x
+
+The legacy format exports one model per configuration. After selecting **Copy Legacy apiConfigs**, merge the copied content into `providerProfiles.apiConfigs` in your settings. To use a complete settings file instead, download `kilo-code-settings.json` and import it with the matching version's settings import feature.
 
 ## Self-Built Backends / Management Panels
 

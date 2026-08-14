@@ -123,12 +123,12 @@ AI の時代には、節約したり別のモデルを試したりするため�
 
 <div class="readme-sponsor">
   <div class="readme-sponsor-logo">
-    <a href="https://api.fenno.ai/register?redirect=/purchase?tab=subscription%26group=16&aff=VS3FMCGW4XK4">
-      <img src="../../../resources/partners/fennoai.jpg" alt="Fenno.ai">
+    <a href="https://api.fenno.ai/s/DCGC">
+      <img src="../../../resources/partners/fennoai.jpg" alt="FennoAI">
     </a>
   </div>
   <p class="readme-sponsor-copy">
-    Fenno.ai は安定性と効率性に優れた API 中継サービスプロバイダーで、主に Codex 中継サービスを提供しています。OpenAI と Anthropic のプロトコルに互換性があり、Codex、Claude Code、OpenCode などの主要なコーディングツールから柔軟に利用できます。All API Hub ユーザー向け特典として、<a href="https://api.fenno.ai/register?redirect=/purchase?tab=subscription%26group=16&aff=VS3FMCGW4XK4">こちらのリンク</a> から 9.9 元 / 150 ドル相当の Coding Plan を購読でき、紹介では最大 20% の報酬を受け取れます。
+    FennoAI は、Codex 中継サービスを中心に提供する安定性と効率性に優れた API 中継サービスプロバイダーです。OpenAI と Anthropic のプロトコルに対応し、Codex、Claude Code、OpenCode などの主要なコーディングツールへ柔軟に接続できます。1 日あたり 1,000 億 Token 規模の企業利用を安定して支え、中国国内および海外法人との企業間決済と請求書発行にも対応しています。All API Hub ユーザー向け特典として、<a href="https://api.fenno.ai/s/DCGC">専用リンク</a>からわずか 1.99 ドルで、50 ドル相当の Coding Plan クレジットを購入できます。友人の購入に対して最大 20% の紹介報酬を受け取ることができ、紹介人数に応じて報酬も増えます。
   </p>
 </div>
 

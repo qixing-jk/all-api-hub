@@ -48,6 +48,14 @@ Click the **`Export`** button next to a token to sync it to:
 - Claude Code Router
 - Your configured Self-hosted Managed Sites
 
+#### Export to Kilo Code / Roo Code
+
+When you select Kilo Code 7.x, each account key is exported as a clearly named `provider` containing every model ID discovered and normalized from the corresponding endpoint, plus any model IDs manually entered and retained for that provider. Inclusion in the export does not guarantee that every model works in every workflow. Select the default `model` and default `provider` separately; this does not reduce the models exported for other providers.
+
+Each `provider` can use OpenAI Compatible, OpenAI Responses, or Anthropic Messages, with OpenAI Compatible as the default. The protocol determines only the AI SDK provider package used by Kilo Code; it does not refetch, clear, or trim the model list already loaded by All API Hub.
+
+The legacy Roo Code / Kilo Code 5.x format selects one model per configuration, and its copied content must be merged into `providerProfiles.apiConfigs`. For file downloads, manual merging, file-size limits, and the API-key display behavior after import, see [Supported Export Tools and Integration Targets](./supported-export-tools.md).
+
 ## Integration with Credentials
 
 If you find a token particularly useful or want to add detailed notes and tags, click **`Save to API Credential Library`**. This copies the `URL + Key` pair to the [API Credential Library](./api-credential-profiles.md).

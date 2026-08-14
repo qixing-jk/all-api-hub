@@ -53,6 +53,7 @@ MAX_WORKERS = int(os.environ.get('MAX_WORKERS', '3'))  # 最大并发数
 
 # 强制翻译配置
 FORCE_TRANSLATE = os.environ.get('FORCE_TRANSLATE', 'false').lower() == 'true'  # 是否强制重新翻译已存在的文件
+TRANSLATE_SKIP_MANUAL = os.environ.get('TRANSLATE_SKIP_MANUAL', 'false').lower() == 'true'
 TRANSLATE_DIFF_BASE = os.environ.get('TRANSLATE_DIFF_BASE', 'HEAD~1')
 TRANSLATE_DIFF_HEAD = os.environ.get('TRANSLATE_DIFF_HEAD', 'HEAD')
 
@@ -139,6 +140,10 @@ def get_translation_prompt(target_language: str, content: str) -> str:
 | 渠道 | Channel | チャネル | API服务提供商的接入通道 |
 | 分组 | Group | グループ | 用户或令牌的分类，影响价格倍率 |
 | 额度 | Quota | クォータ | 用户可用的服务额度 |
+| 自动签到 | Auto Check-in | 自動チェックイン | 自动执行站点签到任务 |
+| 自建站点 | Self-hosted Site | セルフホスト型サイト | 用户自行部署和管理的站点 |
+| 托管站点 | Managed Site | 管理対象サイト | 由扩展管理配置的站点 |
+| 不适用 | Not Applicable | 適用外 | 当前配置或能力不适用 |
 
 请直接返回翻译后的内容，不要添加任何解释或说明。
 
@@ -191,6 +196,10 @@ def get_incremental_translation_prompt(
 | 渠道 | Channel | チャネル | API服务提供商的接入通道 |
 | 分组 | Group | グループ | 用户或令牌的分类，影响价格倍率 |
 | 额度 | Quota | クォータ | 用户可用的服务额度 |
+| 自动签到 | Auto Check-in | 自動チェックイン | 自动执行站点签到任务 |
+| 自建站点 | Self-hosted Site | セルフホスト型サイト | 用户自行部署和管理的站点 |
+| 托管站点 | Managed Site | 管理対象サイト | 由扩展管理配置的站点 |
+| 不适用 | Not Applicable | 適用外 | 当前配置或能力不适用 |
 
 输入一：最新中文源文
 <latest_source_markdown>
@@ -499,6 +508,10 @@ def translate_content(
             )
             
             translated_content = response.choices[0].message.content.strip()
+            if not translated_content:
+                raise ValueError(
+                    f"翻译结果为空 ({LANGUAGES[target_language]['native_name']})"
+                )
             translated_content = strip_outer_code_fence(translated_content)
             translated_content = preserve_translated_link_targets(
                 content,
@@ -554,6 +567,7 @@ def translate_file(source_file: Path, file_index: int = 0, total_files: int = 0,
     
     translated_count = 0
     skipped_count = 0
+    failed_count = 0
     source_diff = get_source_diff(source_file)
     
     # 翻译到各个目标语言
@@ -611,17 +625,24 @@ def translate_file(source_file: Path, file_index: int = 0, total_files: int = 0,
         
         except Exception as e:
             logger.error(f"{prefix}处理 {lang_info['native_name']}翻译失败: {str(e)}")
+            failed_count += 1
             continue
     
     if translated_count > 0:
         logger.info(f"{prefix}✅ 完成翻译 {translated_count} 个语言")
+    if failed_count > 0:
+        logger.error(f"{prefix}❌ {failed_count} 个语言翻译失败")
     
-    return translated_count > 0 or skipped_count > 0
+    return failed_count == 0 and (translated_count > 0 or skipped_count > 0)
 
 
 def detect_manual_translations():
     """检测手动翻译的文件"""
     manual_translations = set()
+
+    if TRANSLATE_SKIP_MANUAL:
+        logger.info("当前翻译模式跳过手动译文检测")
+        return manual_translations
     
     try:
         # 获取当前提交中修改的文件列表
@@ -642,16 +663,21 @@ def detect_manual_translations():
             cwd=REPO_ROOT
         )
         
-        if result.returncode == 0:
-            changed_files = result.stdout.strip().split('\n')
-            for file_path in changed_files:
-                normalized_path = file_path.strip()
-                if normalized_path and is_translated_doc_repo_path(normalized_path):
-                    manual_translations.add(normalized_path)
-                    logger.info(f"检测到手动翻译文件: {normalized_path}")
-        
+        if result.returncode != 0:
+            raise RuntimeError(
+                f"读取手动翻译 diff 失败: {result.stderr.strip() or result.returncode}"
+            )
+
+        changed_files = result.stdout.strip().split('\n')
+        for file_path in changed_files:
+            normalized_path = file_path.strip()
+            if normalized_path and is_translated_doc_repo_path(normalized_path):
+                manual_translations.add(normalized_path)
+                logger.info(f"检测到手动翻译文件: {normalized_path}")
+
     except Exception as e:
-        logger.warning(f"检测手动翻译时出错: {str(e)}")
+        logger.error(f"检测手动翻译时出错: {str(e)}")
+        raise
     
     return manual_translations
 
@@ -751,6 +777,9 @@ def main():
     logger.info(f"   成功: {success_count}")
     if fail_count > 0:
         logger.info(f"   失败: {fail_count}")
+        logger.error("\n❌ 翻译任务未完成，请检查上方错误")
+        sys.exit(1)
+
     logger.info("\n✅ 所有翻译任务完成！")
 
 

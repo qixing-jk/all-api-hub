@@ -44,7 +44,7 @@ Open and log in to your AI proxy station website in your browser first.
 If you are looking for stable, efficient, and highly compatible AI relay services, try our partners:
 
 - [Qiniu Cloud AI](https://s.qiniu.com/qE3eai): An enterprise MaaS platform with one-stop access to 150+ mainstream global models. Enterprise users can claim 12 million free tokens.
-- [Fenno.ai](https://api.fenno.ai/register?redirect=/purchase?tab=subscription%26group=16&aff=VS3FMCGW4XK4): A stable and efficient Codex relay provider compatible with OpenAI and Anthropic protocols, ready for Codex, Claude Code, OpenCode, and other coding tools. All API Hub users can subscribe to the 9.9 RMB / $150-equivalent Coding Plan.
+- [FennoAI](https://api.fenno.ai/s/DCGC): A stable and efficient Codex relay provider compatible with OpenAI and Anthropic protocols. It supports popular coding tools and enterprise workloads of up to 100 billion tokens per day. All API Hub users can get $50 in Coding Plan credits for $1.99, and referral purchases earn up to 20% commission.
 - [PackyCode](https://www.packyapi.com/register?aff=all-api-hub): Enter the `all-api-hub` promo code during recharge to get 10% off. [Setup guide](./sponsor-guides/packycode.md)
 - [Xingchen AI](https://ai.centos.hk): 1:1 top-up ratio, invoicing support, and Claude pricing as low as 40% of the standard price. [Setup guide](./sponsor-guides/xingchen.md)
 - [XuanShu API](https://www.xuanshuapi.com/register?aff=ALL-API-HUB&promo=ALL-API-HUB): A next-generation AI model routing gateway for enterprises, technical teams, and individual developers, with one-stop API access to leading models including Claude, GPT, and Grok. Top-ups are 20% off, model pricing starts at 20% of standard rates, registration includes US$5 in credit, and the dedicated link adds another US$5. Business invoices are available.
@@ -91,6 +91,7 @@ After adding an account, you can "push" these configurations to other AI tools w
 ## 5. In-depth Guide to Core Features
 
 ### 📊 Asset Dashboard & Statistics
+- **[Settings Page Overview (Main Dashboard)](./options-overview.md)**: View account status, API Credential Library, today's usage, and to-do items all in one screen.
 - **[Overview & Real-time Refresh](./auto-refresh.md)**: Centrally view balances, usage, and health status across multiple sites.
 - **[Balance History](./balance-history.md)**: Visualize asset change trends with historical data.
 - **[Usage Analytics](./usage-analytics.md)**: Multi-dimensional analysis of consumption, model distribution, and latency.

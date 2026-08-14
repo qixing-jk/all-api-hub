@@ -8,6 +8,9 @@ on:
       - "docs/docs/**/*.md"
       - "!docs/docs/en/**"
       - "!docs/docs/ja/**"
+      - "docs_assistant/**"
+      - "tests/docs_assistant/**"
+      - ".github/workflows/translate-docs.yml"
   workflow_dispatch:
     inputs:
       mode:
@@ -43,28 +46,44 @@ jobs:
         run: |
           pip install "openai>=1.55.0" pyyaml
 
+      - name: Test translation tooling
+        run: python -m unittest discover -s tests/docs_assistant -p "test_*.py" -v
+
       - name: Get files to translate
         id: changed-files
         run: |
+          set -o pipefail
+
           MODE="${{ github.event.inputs.mode }}"
           DOCS_ROOT='docs/docs'
           MISSING_FILES_OUTPUT="${RUNNER_TEMP}/missing_files.txt"
+          DIFF_BASE="${{ github.event.before }}"
+          DIFF_HEAD="${{ github.sha }}"
 
           # 如果是 push 触发，默认为 changed 模式
           if [ -z "$MODE" ]; then
             MODE="changed"
           fi
 
+          if [ "$MODE" = "force_all" ] || [ "$MODE" = "missing_only" ]; then
+            # 全量/补缺模式不应把上一提交中的译文误判为本次手动翻译。
+            DIFF_BASE="$DIFF_HEAD"
+          elif [ -z "$DIFF_BASE" ]; then
+            DIFF_BASE='HEAD~1'
+          fi
+
           echo "翻译模式: $MODE"
 
           # 检测手动翻译文件
           echo "🔍 检测手动翻译文件..."
-          MANUAL_TRANSLATIONS=$(
-            {
-              git diff --name-only --diff-filter=AMR --find-renames ${{ github.event.before }} ${{ github.sha }} -- "$DOCS_ROOT/en" "$DOCS_ROOT/ja" \
-                || true
-            } | tr '\n' ' '
-          )
+          if [ "$MODE" = "force_all" ] || [ "$MODE" = "missing_only" ]; then
+            MANUAL_TRANSLATIONS=""
+          else
+            MANUAL_TRANSLATIONS=$(
+              git diff --name-only --diff-filter=AMR --find-renames "$DIFF_BASE" "$DIFF_HEAD" -- "$DOCS_ROOT/en" "$DOCS_ROOT/ja" \
+                | tr '\n' ' '
+            )
+          fi
           if [ -n "$MANUAL_TRANSLATIONS" ]; then
             echo "📝 检测到手动翻译文件: $MANUAL_TRANSLATIONS"
           else
@@ -94,22 +113,14 @@ jobs:
             # 正常模式：只翻译变更的文件
             echo "📝 获取变更的文件..."
             CHANGED_FILES=$(
-              {
-                git diff --name-only --diff-filter=AMR --find-renames ${{ github.event.before }} ${{ github.sha }} -- "$DOCS_ROOT" \
-                  | grep '^docs/docs/.*\.md$' \
-                  | grep -v '^docs/docs/en/' \
-                  | grep -v '^docs/docs/ja/' \
-                  || true
-              } | tr '\n' ' '
+              git diff --name-only --diff-filter=AMR --find-renames "$DIFF_BASE" "$DIFF_HEAD" -- "$DOCS_ROOT" \
+                | awk '$0 ~ /^docs\/docs\/.*\.md$/ && $0 !~ /^docs\/docs\/(en|ja)\//' \
+                | tr '\n' ' '
             )
             SOURCE_CHANGE_COUNT=$(
-              {
-                git diff --name-only --diff-filter=AMRD --find-renames ${{ github.event.before }} ${{ github.sha }} -- "$DOCS_ROOT" \
-                  | grep '^docs/docs/.*\.md$' \
-                  | grep -v '^docs/docs/en/' \
-                  | grep -v '^docs/docs/ja/' \
-                  || true
-              } | wc -l | tr -d ' '
+              git diff --name-only --diff-filter=AMRD --find-renames "$DIFF_BASE" "$DIFF_HEAD" -- "$DOCS_ROOT" \
+                | awk '$0 ~ /^docs\/docs\/.*\.md$/ && $0 !~ /^docs\/docs\/(en|ja)\//' \
+                | wc -l | tr -d ' '
             )
           fi
 
@@ -117,6 +128,8 @@ jobs:
           echo "files=$CHANGED_FILES" >> $GITHUB_OUTPUT
           echo "manual_translations=$MANUAL_TRANSLATIONS" >> $GITHUB_OUTPUT
           echo "has_translate_files=$([ -n "$CHANGED_FILES" ] && echo true || echo false)" >> $GITHUB_OUTPUT
+          echo "diff_base=$DIFF_BASE" >> $GITHUB_OUTPUT
+          echo "diff_head=$DIFF_HEAD" >> $GITHUB_OUTPUT
 
           if [ "${SOURCE_CHANGE_COUNT:-0}" -eq 0 ]; then
             echo "✅ 没有需要处理的源文档变更"
@@ -130,8 +143,8 @@ jobs:
       - name: Sync translated docs for deletes and renames
         if: steps.changed-files.outputs.has_changes == 'true'
         env:
-          TRANSLATE_DIFF_BASE: ${{ github.event.before }}
-          TRANSLATE_DIFF_HEAD: ${{ github.sha }}
+          TRANSLATE_DIFF_BASE: ${{ steps.changed-files.outputs.diff_base }}
+          TRANSLATE_DIFF_HEAD: ${{ steps.changed-files.outputs.diff_head }}
         run: python docs_assistant/sync_translations.py
 
       - name: Translate documents
@@ -144,12 +157,16 @@ jobs:
           RETRY_DELAY: ${{ secrets.RETRY_DELAY || '2' }}
           RETRY_BACKOFF: ${{ secrets.RETRY_BACKOFF || '2.0' }}
           MAX_WORKERS: ${{ secrets.MAX_WORKERS || '10' }}
-          FORCE_TRANSLATE: ${{ github.event_name == 'push' && 'true' || 'false' }}
-          TRANSLATE_DIFF_BASE: ${{ github.event.before }}
-          TRANSLATE_DIFF_HEAD: ${{ github.sha }}
+          FORCE_TRANSLATE: ${{ (github.event_name == 'push' || github.event.inputs.mode == 'changed' || github.event.inputs.mode == 'force_all') && 'true' || 'false' }}
+          TRANSLATE_SKIP_MANUAL: ${{ (github.event.inputs.mode == 'force_all' || github.event.inputs.mode == 'missing_only') && 'true' || 'false' }}
+          TRANSLATE_DIFF_BASE: ${{ steps.changed-files.outputs.diff_base }}
+          TRANSLATE_DIFF_HEAD: ${{ steps.changed-files.outputs.diff_head }}
         run: |
           echo "手动翻译文件: ${{ steps.changed-files.outputs.manual_translations }}"
           python docs_assistant/translate.py ${{ steps.changed-files.outputs.files }}
+
+      - name: Check translation completeness
+        run: python docs_assistant/find_missing.py --check
 
       - name: Setup pnpm for docs check
         if: steps.changed-files.outputs.has_changes == 'true'

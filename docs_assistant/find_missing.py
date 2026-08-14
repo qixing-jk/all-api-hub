@@ -4,9 +4,10 @@
 比较中文源文档和翻译文档，找出还未翻译的文件
 """
 
+import argparse
+import logging
 import os
 import sys
-import logging
 import tempfile
 from pathlib import Path
 
@@ -48,7 +49,10 @@ def check_translation_exists(source_file: Path, language: str) -> bool:
     """检查指定语言的翻译文件是否存在"""
     rel_path = source_file.relative_to(DOCS_DIR)
     translated_file = DOCS_DIR / language / rel_path
-    return translated_file.exists()
+    return (
+        translated_file.is_file()
+        and bool(translated_file.read_text(encoding="utf-8").strip())
+    )
 
 
 def find_missing_translations():
@@ -99,7 +103,7 @@ def find_missing_translations():
             
             logger.info(f"   {idx:3d}. {rel_path} [{', '.join(missing_langs)}]")
     
-    return list(all_missing_sources)
+    return sorted(all_missing_sources)
 
 
 def save_missing_files(missing_files: list):
@@ -117,6 +121,14 @@ def save_missing_files(missing_files: list):
 
 def main():
     """主函数"""
+    parser = argparse.ArgumentParser(description="检测缺失的文档翻译")
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="发现缺失翻译时返回非零退出码",
+    )
+    args = parser.parse_args()
+
     try:
         # 查找缺失的翻译
         missing_files = find_missing_translations()
@@ -126,7 +138,11 @@ def main():
         
         # 返回退出码
         if missing_files:
-            logger.info(f"\n⚠️  发现 {len(missing_files)} 个文件需要翻译")
+            message = f"发现 {len(missing_files)} 个文件需要翻译"
+            if args.check:
+                logger.error(f"\n❌ {message}")
+                sys.exit(1)
+            logger.info(f"\n⚠️  {message}")
             sys.exit(0)  # 正常退出，让 workflow 继续执行翻译
         else:
             logger.info("\n✅ 没有缺失的翻译文件")

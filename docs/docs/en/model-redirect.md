@@ -18,7 +18,7 @@
 ## Prerequisites
 
 - **New API Integration Settings** have been configured in the plugin:
-  - Fill in **Admin URL**, **Admin Token**, and **User ID**.
+  - Fill in the **Admin URL**, **administrator token `Admin Token`**, and **User ID**.
 - At least one valid channel exists in New API, and the channel's `models` field contains a list of available models.
 - A model synchronization has been completed (recommended) to ensure the model list within the channel is up-to-date.
 

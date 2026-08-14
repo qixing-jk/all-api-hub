@@ -30,7 +30,7 @@
 認証情報庫を充実させるために、安定していて CLI にも対応した API インターフェースが必要な場合は、次のパートナーをお試しください。
 
 - [Qiniu Cloud AI](https://s.qiniu.com/qE3eai)：150 以上の主要グローバルモデルへ一括アクセスできる企業向け MaaS プラットフォームです。企業ユーザーは 1,200 万トークンの無料枠を受け取れます。
-- [Fenno.ai](https://api.fenno.ai/register?redirect=/purchase?tab=subscription%26group=16&aff=VS3FMCGW4XK4)：OpenAI と Anthropic プロトコルに対応した、安定性と効率性の高い Codex 中継サービスです。Codex、Claude Code、OpenCode などの開発ツールに接続でき、All API Hub ユーザーは 9.9 元 / 150 ドル相当の Coding Plan を利用できます。
+- [FennoAI](https://api.fenno.ai/s/DCGC)：OpenAI と Anthropic プロトコルに対応した、安定性と効率性の高い Codex 中継サービスです。主要なコーディングツールに接続でき、1 日あたり 1,000 億 Token 規模の企業利用を支えます。All API Hub ユーザーは 1.99 ドルで 50 ドル相当の Coding Plan クレジットを購入でき、友人の購入に対して最大 20% の紹介報酬を受け取れます。
 - [PackyCode](https://www.packyapi.com/register?aff=all-api-hub)：チャージ時に `all-api-hub` クーポンコードを入力すると 10% オフになります。[設定ガイド](./sponsor-guides/packycode.md)
 - [Xingchen AI](https://ai.centos.hk)：1:1 のチャージ比率、請求書対応、Claude は通常価格の 40% 程度から利用できます。[設定ガイド](./sponsor-guides/xingchen.md)
 - [XuanShu API](https://www.xuanshuapi.com/register?aff=ALL-API-HUB&promo=ALL-API-HUB)：企業、技術チーム、個人開発者向けの次世代 AI モデルルーティングゲートウェイで、Claude、GPT、Grok など世界トップクラスのモデルへ API で一括アクセスできます。チャージは 20% オフ、モデル料金は通常価格の 20% から。登録で 5 米ドル分、この専用リンクからの登録でさらに 5 米ドル分のクレジットを受け取れ、法人向け請求書にも対応します。
@@ -151,6 +151,12 @@
 - CLIProxyAPI
 - Claude Code Router
 - 現在のカスタムホストサイト
+
+Kilo Code 7.x にエクスポートすると、現在の認証情報はわかりやすい名前の `provider` になります。この `provider` には、エンドポイントから検出・正規化されたすべてのモデル ID と、そのプロバイダー用に手動で入力して保持したモデル ID が含まれます。エクスポートに含まれていても、すべてのモデルがすべてのワークフローで利用できるとは限りません。エクスポート前に選択する必要があるのはデフォルトの `model` だけです。旧版の Roo Code / Kilo Code 5.x 形式では、引き続き設定ごとに 1 つのモデルを使用し、コピーした内容を `providerProfiles.apiConfigs` にマージします。
+
+現在の `provider` では OpenAI Compatible、OpenAI Responses、Anthropic Messages を選択でき、デフォルトは OpenAI Compatible です。プロトコルによって変わるのは、エクスポートされる AI SDK プロバイダーパッケージだけです。モデル一覧には引き続き All API Hub の既存の読み込み結果が使用され、Anthropic Messages を選択してもモデルが省略または削減されることはありません。
+
+Kilo Code 7.x のファイルインポート、`{ provider, model }` の手動マージ、ファイルサイズ超過時の対処、API キーフィールドの表示制限については、[サポートされているエクスポートツールと統合ターゲット](./supported-export-tools.md)を参照してください。
 
 主に「多数のアップストリームインターフェース設定を管理し、複数のダウンストリームツールに配布する」場合は、`API 認証情報庫` は完全なアカウント管理よりも直接的です。
 

@@ -38,11 +38,11 @@ If you are looking for stable, efficient, and highly compatible AI relay service
   <hr>
 
   <section class="sponsor-item">
-    <a class="sponsor-logo" href="https://api.fenno.ai/register?redirect=/purchase?tab=subscription%26group=16&aff=VS3FMCGW4XK4">
-      <img src="../../../resources/partners/fennoai.jpg" alt="Fenno.ai">
+    <a class="sponsor-logo" href="https://api.fenno.ai/s/DCGC">
+      <img src="../../../resources/partners/fennoai.jpg" alt="FennoAI">
     </a>
     <p>
-      <strong>Fenno.ai</strong> is a stable and efficient API relay provider focused on Codex relay service, compatible with OpenAI and Anthropic protocols for Codex, Claude Code, OpenCode, and other coding tools. All API Hub users can subscribe to the <strong>9.9 RMB / $150-equivalent Coding Plan</strong> through <a href="https://api.fenno.ai/register?redirect=/purchase?tab=subscription%26group=16&aff=VS3FMCGW4XK4">this link</a>, and referrals can earn up to 20% rewards.
+      <strong>FennoAI</strong> is a stable and efficient API relay provider focused on Codex relay services. It supports the OpenAI and Anthropic protocols, integrates with popular coding tools such as Codex, Claude Code, and OpenCode, reliably handles enterprise demand at the scale of 100 billion tokens per day, and supports business-to-business settlement and invoicing for entities in China and overseas. Subscribe through <a href="https://api.fenno.ai/s/DCGC">the dedicated link</a> for just <strong>$1.99</strong> to receive $50 in Coding Plan credits. Referral purchases earn up to 20% commission, with higher rewards as you invite more people.
     </p>
   </section>
 
@@ -162,6 +162,7 @@ If you are also building your own backend system, All API Hub supports importing
 ## Related Documentation
 
 - [Supported Export Tools List](./supported-export-tools.md)
+- [Sponsor Setup Guides](./sponsor-guides.md)
 - [Quick Export Site Configuration](./quick-export.md)
 - [Self-Hosted Site Management](./self-hosted-site-management.md)
 - [Managed Site Model Sync](./managed-site-model-sync.md)

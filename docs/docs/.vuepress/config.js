@@ -145,6 +145,7 @@ export default defineUserConfig({
             collapsible: true,
             children: [
               '/en/get-started',
+              '/en/options-overview',
               '/en/permissions',
               '/en/extension-update-install',
               '/en/safari-install',
@@ -237,6 +238,7 @@ export default defineUserConfig({
             collapsible: true,
             children: [
               '/ja/get-started',
+              '/ja/options-overview',
               '/ja/permissions',
               '/ja/extension-update-install',
               '/ja/safari-install',

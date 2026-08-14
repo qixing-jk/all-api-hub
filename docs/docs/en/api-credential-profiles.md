@@ -30,7 +30,7 @@ If you have already obtained a key for an upstream site in `Key Management`, you
 If you need stable and CLI-friendly API interfaces to fill your credential library, try our partners:
 
 - [Qiniu Cloud AI](https://s.qiniu.com/qE3eai): An enterprise MaaS platform with one-stop access to 150+ mainstream global models. Enterprise users can claim 12 million free tokens.
-- [Fenno.ai](https://api.fenno.ai/register?redirect=/purchase?tab=subscription%26group=16&aff=VS3FMCGW4XK4): A stable and efficient Codex relay provider compatible with OpenAI and Anthropic protocols, ready for Codex, Claude Code, OpenCode, and other coding tools. All API Hub users can subscribe to the 9.9 RMB / $150-equivalent Coding Plan.
+- [FennoAI](https://api.fenno.ai/s/DCGC): A stable and efficient Codex relay provider compatible with OpenAI and Anthropic protocols. It supports popular coding tools and enterprise workloads of up to 100 billion tokens per day. All API Hub users can get $50 in Coding Plan credits for $1.99, and referral purchases earn up to 20% commission.
 - [PackyCode](https://www.packyapi.com/register?aff=all-api-hub): Enter the `all-api-hub` promo code during recharge to get 10% off. [Setup guide](./sponsor-guides/packycode.md)
 - [Xingchen AI](https://ai.centos.hk): 1:1 top-up ratio, invoicing support, and Claude pricing as low as 40% of the standard price. [Setup guide](./sponsor-guides/xingchen.md)
 - [XuanShu API](https://www.xuanshuapi.com/register?aff=ALL-API-HUB&promo=ALL-API-HUB): A next-generation AI model routing gateway for enterprises, technical teams, and individual developers, with one-stop API access to leading models including Claude, GPT, and Grok. Top-ups are 20% off, model pricing starts at 20% of standard rates, registration includes US$5 in credit, and the dedicated link adds another US$5. Business invoices are available.
@@ -151,6 +151,12 @@ Supports direct export from a single credential to:
 - CLIProxyAPI
 - Claude Code Router
 - Current self-hosted sites
+
+When exporting to Kilo Code 7.x, the current credential becomes a clearly named `provider` containing every model ID discovered and normalized from the endpoint, plus any model IDs manually entered and retained for that provider. Inclusion in the export does not guarantee that every model works in every workflow; select only the default `model` before exporting. The legacy Roo Code / Kilo Code 5.x format still uses one model per configuration, and its copied content must be merged into `providerProfiles.apiConfigs`.
+
+The current `provider` can use OpenAI Compatible, OpenAI Responses, or Anthropic Messages, with OpenAI Compatible as the default. The protocol changes only the exported AI SDK provider package. The model list continues to use All API Hub's existing loaded result, and selecting Anthropic Messages does not skip or reduce the models.
+
+For Kilo Code 7.x file import, manual `{ provider, model }` merging, file-size recovery, and the API-key field display limitation, see [Supported Export Tools and Integration Targets](./supported-export-tools.md).
 
 If your primary goal is to "manage a batch of upstream interface configurations and then distribute them to multiple downstream tools," the `API Credential Library` will be more direct than full account management.
 

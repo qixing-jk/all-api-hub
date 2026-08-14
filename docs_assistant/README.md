@@ -54,6 +54,7 @@ find ../docs/guide -name "*.md" -type f ! -path "*/en/*" ! -path "*/ja/*" | xarg
 2. 使用 OpenAI API 进行翻译（带重试机制）
 3. 保持 Markdown 格式完整
 4. 将翻译结果保存到对应的 `en/` 和 `ja/` 目录
+5. 任一文件或目标语言翻译失败时返回非零退出码，阻止工作流误报成功
 
 ### 重试机制
 
@@ -127,6 +128,7 @@ export OPENAI_MODEL="gpt-4o-mini"
 
 ## 🔧 其他工具
 
+- `find_missing.py` - 检测缺失的英日文档；使用 `--check` 可在发现缺失时返回非零退出码
 - `afdian_api.py` - 爱发电 API 集成
 - `changelog.py` - 变更日志生成
 - `contributors.py` - 贡献者统计
