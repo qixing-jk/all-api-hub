@@ -347,7 +347,7 @@ export function ServiceCredentialCard({
           analyticsContext={{
             ...apiCredentialProfileExportContext,
             actionId:
-              PRODUCT_ANALYTICS_ACTION_IDS.CopyApiCredentialProfileKelivoImportCode,
+              PRODUCT_ANALYTICS_ACTION_IDS.CopyServiceCredentialKelivoImportCode,
           }}
         />
       ) : null}

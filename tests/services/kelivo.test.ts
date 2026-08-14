@@ -7,6 +7,7 @@ import {
   buildKelivoProviderShareCode,
   copyKelivoProviderShareCode,
   createKelivoProviderExportDraft,
+  isValidKelivoBaseUrl,
 } from "~/services/integrations/kelivo"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 
@@ -68,6 +69,33 @@ describe("Kelivo integration", () => {
       baseUrl: "https://api.example.invalid/gateway/v1",
       apiKey: "sk-example",
     })
+  })
+
+  it("uses Google's fixed endpoint when preparing an editable draft", () => {
+    expect(
+      createKelivoProviderExportDraft({
+        apiType: API_TYPES.GOOGLE,
+        name: "Google Example",
+        baseUrl: "https://proxy.example.invalid",
+        apiKey: "google-example-key",
+      }),
+    ).toEqual({
+      apiType: API_TYPES.GOOGLE,
+      name: "Google Example",
+      baseUrl: "https://generativelanguage.googleapis.com/v1beta",
+      apiKey: "google-example-key",
+    })
+  })
+
+  it("rejects unsafe or non-HTTP Base URLs", () => {
+    expect(isValidKelivoBaseUrl("not-a-url")).toBe(false)
+    expect(isValidKelivoBaseUrl("ftp://api.example.invalid")).toBe(false)
+    expect(isValidKelivoBaseUrl("https://user@example.invalid")).toBe(false)
+    expect(isValidKelivoBaseUrl("https://example.invalid?key=value")).toBe(
+      false,
+    )
+    expect(isValidKelivoBaseUrl("https://example.invalid#fragment")).toBe(false)
+    expect(isValidKelivoBaseUrl("https://api.example.invalid/v1")).toBe(true)
   })
 
   it("preserves Unicode names and maps Anthropic profiles to Claude", () => {
@@ -148,5 +176,72 @@ describe("Kelivo integration", () => {
     expect(JSON.stringify(vi.mocked(toast.error).mock.calls)).not.toContain(
       "sk-sensitive-example",
     )
+  })
+
+  it.each([
+    {
+      input: {
+        apiType: API_TYPES.GOOGLE,
+        name: "Google Proxy",
+        baseUrl: "https://google-proxy.example.invalid",
+        apiKey: "google-example-key",
+      },
+      message: "messages:kelivo.customGoogleEndpointUnsupported",
+    },
+    {
+      input: {
+        apiType: API_TYPES.OPENAI,
+        name: "OpenAI Example",
+        baseUrl: "not-a-url",
+        apiKey: "sk-example",
+      },
+      message: "messages:kelivo.invalidBaseUrl",
+    },
+    {
+      input: {
+        apiType: API_TYPES.OPENAI,
+        name: "",
+        baseUrl: "https://api.example.invalid",
+        apiKey: "",
+      },
+      message: "messages:kelivo.missingCredentials",
+    },
+    {
+      input: {
+        apiType: "responses" as typeof API_TYPES.OPENAI,
+        name: "Unsupported Example",
+        baseUrl: "https://api.example.invalid",
+        apiKey: "sk-example",
+      },
+      message: "messages:kelivo.unsupportedApiType",
+    },
+  ])(
+    "reports the safe localized error $message",
+    async ({ input, message }) => {
+      await expect(copyKelivoProviderShareCode(input)).resolves.toBe(false)
+      expect(toast.error).toHaveBeenCalledWith(message)
+    },
+  )
+
+  it("reports when clipboard writing is unavailable", async () => {
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: undefined,
+    })
+
+    await expect(
+      copyKelivoProviderShareCode({
+        apiType: API_TYPES.OPENAI,
+        name: "OpenAI Example",
+        baseUrl: "https://api.example.invalid",
+        apiKey: "sk-example",
+      }),
+    ).resolves.toBe(false)
+    expect(toast.error).toHaveBeenCalledWith("messages:kelivo.copyFailed")
+
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: writeTextMock },
+    })
   })
 })

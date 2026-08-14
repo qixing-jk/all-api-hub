@@ -131,6 +131,9 @@ export function RuntimeKeyActionControls({
         : null,
     [account, runtimeKey],
   )
+  const kelivoActionId = serviceCredentialProfile
+    ? PRODUCT_ANALYTICS_ACTION_IDS.CopyServiceCredentialKelivoImportCode
+    : PRODUCT_ANALYTICS_ACTION_IDS.CopyAccountTokenKelivoImportCode
   const handleCopy = (event: MouseEvent) => {
     event.stopPropagation()
     void onCopyKey(runtimeKey)
@@ -201,10 +204,10 @@ export function RuntimeKeyActionControls({
       }
 
       setKelivoExportInput(exportInput)
-    } catch (error) {
+    } catch {
       const tracker = startProductAnalyticsAction({
         featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
-        actionId: PRODUCT_ANALYTICS_ACTION_IDS.CopyAccountTokenKelivoImportCode,
+        actionId: kelivoActionId,
         surfaceId:
           PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementRowActions,
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
@@ -214,9 +217,7 @@ export function RuntimeKeyActionControls({
       })
       showResultToast({
         success: false,
-        message: t("messages:errors.operation.failed", {
-          error: getErrorMessage(error, t("messages:errors.unknown")),
-        }),
+        message: t("messages:kelivo.prepareFailed"),
       })
     }
   }
@@ -425,8 +426,7 @@ export function RuntimeKeyActionControls({
           initialValue={kelivoExportInput}
           analyticsContext={{
             featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
-            actionId:
-              PRODUCT_ANALYTICS_ACTION_IDS.CopyAccountTokenKelivoImportCode,
+            actionId: kelivoActionId,
             surfaceId:
               PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementRowActions,
             entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,

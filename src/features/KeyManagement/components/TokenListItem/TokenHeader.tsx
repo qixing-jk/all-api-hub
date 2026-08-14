@@ -327,6 +327,7 @@ function TokenActionButtons({
   const verificationGenerationRef = useRef<symbol | null>(null)
   const apiVerificationEpochRef = useRef(0)
   const cliVerificationEpochRef = useRef(0)
+  const kelivoExportEpochRef = useRef(0)
   const [verifyingProfile, setVerifyingProfile] =
     useState<ApiCredentialProfile | null>(null)
   const [cliVerifyingProfile, setCliVerifyingProfile] =
@@ -393,6 +394,29 @@ function TokenActionButtons({
     token.accountId,
     token.id,
     token.key,
+  ])
+
+  useLayoutEffect(() => {
+    kelivoExportEpochRef.current += 1
+    setKelivoExportInput(null)
+
+    return () => {
+      kelivoExportEpochRef.current += 1
+    }
+  }, [
+    account.authType,
+    account.baseUrl,
+    account.cookieAuthSessionCookie,
+    account.id,
+    account.name,
+    account.siteType,
+    account.token,
+    account.userId,
+    actionPolicy.exportSecret,
+    token.accountId,
+    token.id,
+    token.key,
+    token.name,
   ])
 
   useEffect(() => {
@@ -557,11 +581,14 @@ function TokenActionButtons({
   }
 
   const handleOpenKelivoExportDialog = async () => {
+    const exportEpoch = ++kelivoExportEpochRef.current
     try {
       const resolvedToken = await resolveDisplayAccountTokenForSecret(
         account,
         token,
       )
+      if (kelivoExportEpochRef.current !== exportEpoch) return
+
       setKelivoExportInput({
         apiType: API_TYPES.OPENAI_COMPATIBLE,
         name: buildApiCredentialProfileName({
@@ -572,7 +599,9 @@ function TokenActionButtons({
         baseUrl: account.baseUrl,
         apiKey: resolvedToken.key,
       })
-    } catch (error) {
+    } catch {
+      if (kelivoExportEpochRef.current !== exportEpoch) return
+
       const tracker = startProductAnalyticsAction({
         featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
         actionId: PRODUCT_ANALYTICS_ACTION_IDS.CopyAccountTokenKelivoImportCode,
@@ -585,9 +614,7 @@ function TokenActionButtons({
       })
       showResultToast({
         success: false,
-        message: t("messages:errors.operation.failed", {
-          error: getErrorMessage(error),
-        }),
+        message: t("messages:kelivo.prepareFailed"),
       })
     }
   }

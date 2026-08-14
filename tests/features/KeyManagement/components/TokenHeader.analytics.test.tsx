@@ -89,7 +89,15 @@ vi.mock("~/components/KiloCodeExportDialog", () => ({
 vi.mock("~/components/KelivoExportDialog", () => ({
   KelivoExportDialog: (props: unknown) => {
     kelivoExportDialogRenderMock(props)
-    return null
+    const { isOpen, onClose } = props as {
+      isOpen: boolean
+      onClose: () => void
+    }
+    return isOpen ? (
+      <button type="button" onClick={onClose}>
+        close Kelivo export
+      </button>
+    ) : null
   },
 }))
 
@@ -931,6 +939,98 @@ describe("TokenHeader analytics", () => {
       )
     })
     expect(startProductAnalyticsActionMock).not.toHaveBeenCalled()
+
+    await user.click(
+      screen.getByRole("button", { name: "close Kelivo export" }),
+    )
+    expect(
+      screen.queryByRole("button", { name: "close Kelivo export" }),
+    ).not.toBeInTheDocument()
+  })
+
+  it("does not expose resolver errors while preparing a Kelivo export", async () => {
+    resolveDisplayAccountTokenForSecretMock.mockRejectedValueOnce(
+      new Error("upstream included sk-sensitive-resolver-secret"),
+    )
+
+    const user = userEvent.setup()
+    renderTokenHeader()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.copyKelivoImportCode",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(showResultToastMock).toHaveBeenCalledWith({
+        success: false,
+        message: "messages:kelivo.prepareFailed",
+      })
+    })
+    expect(JSON.stringify(showResultToastMock.mock.calls)).not.toContain(
+      "sk-sensitive-resolver-secret",
+    )
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
+    )
+  })
+
+  it("ignores a pending Kelivo secret after export permission is revoked", async () => {
+    const deferred = createDeferred<ReturnType<typeof createToken>>()
+    resolveDisplayAccountTokenForSecretMock.mockReturnValueOnce(
+      deferred.promise,
+    )
+    const user = userEvent.setup()
+    const { rerenderTokenHeader } = renderTokenHeader()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.copyKelivoImportCode",
+      }),
+    )
+    rerenderTokenHeader({
+      actionPolicy: { ...RECOVERABLE_ACTION_POLICY, exportSecret: false },
+    })
+
+    await act(async () => {
+      deferred.resolve(createToken({ id: 1, key: "sk-stale-permission" }))
+      await deferred.promise
+    })
+    rerenderTokenHeader({ actionPolicy: RECOVERABLE_ACTION_POLICY })
+
+    expect(kelivoExportDialogRenderMock).not.toHaveBeenCalled()
+    expect(showResultToastMock).not.toHaveBeenCalled()
+  })
+
+  it("ignores a pending Kelivo secret after the token changes", async () => {
+    const deferred = createDeferred<ReturnType<typeof createToken>>()
+    resolveDisplayAccountTokenForSecretMock.mockReturnValueOnce(
+      deferred.promise,
+    )
+    const user = userEvent.setup()
+    const account = createAccount({ id: "acc-1" })
+    const token = createToken({ id: 1, accountId: account.id })
+    const { rerenderTokenHeader } = renderTokenHeader({ account, token })
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.copyKelivoImportCode",
+      }),
+    )
+    rerenderTokenHeader({
+      account,
+      token: createToken({ id: 2, accountId: account.id }),
+    })
+
+    await act(async () => {
+      deferred.resolve(createToken({ id: 1, key: "sk-stale-token" }))
+      await deferred.promise
+    })
+
+    expect(kelivoExportDialogRenderMock).not.toHaveBeenCalled()
+    expect(showResultToastMock).not.toHaveBeenCalled()
   })
 
   it("tracks Cherry Studio export as unknown failure when opening throws", async () => {

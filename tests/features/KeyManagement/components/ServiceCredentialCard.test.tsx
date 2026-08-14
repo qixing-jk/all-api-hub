@@ -12,6 +12,7 @@ import {
   MANAGED_SITE_TOKEN_CHANNEL_STATUSES,
   type ManagedSiteTokenChannelStatus,
 } from "~/services/managedSites/tokenChannelStatus"
+import { PRODUCT_ANALYTICS_ACTION_IDS } from "~/services/productAnalytics/contracts"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 import { act, render, screen, waitFor } from "~~/tests/test-utils/render"
@@ -96,7 +97,15 @@ vi.mock("~/components/CursorPlusExportDialog", () => ({
 vi.mock("~/components/KelivoExportDialog", () => ({
   KelivoExportDialog: (props: unknown) => {
     mockKelivoExportDialog(props)
-    return null
+    const { isOpen, onClose } = props as {
+      isOpen: boolean
+      onClose: () => void
+    }
+    return isOpen ? (
+      <button type="button" onClick={onClose}>
+        close Kelivo export
+      </button>
+    ) : null
   },
 }))
 
@@ -551,8 +560,18 @@ describe("ServiceCredentialCard", () => {
           apiKey: "sk-service-credential",
           name: "SharedChat - Codex API Key",
         }),
+        analyticsContext: expect.objectContaining({
+          actionId:
+            PRODUCT_ANALYTICS_ACTION_IDS.CopyServiceCredentialKelivoImportCode,
+        }),
       }),
     )
+    await user.click(
+      screen.getByRole("button", { name: "close Kelivo export" }),
+    )
+    expect(
+      screen.queryByRole("button", { name: "close Kelivo export" }),
+    ).not.toBeInTheDocument()
 
     await user.click(
       screen.getByRole("button", {

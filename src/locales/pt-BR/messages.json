@@ -114,6 +114,7 @@
     "customGoogleEndpointUnsupported": "Os códigos de importação do Kelivo não preservam endereços personalizados da API do Google.",
     "invalidBaseUrl": "A Base URL deve ser um endereço HTTP ou HTTPS válido.",
     "missingCredentials": "É necessário informar o nome do provedor e uma chave de API completa.",
+    "prepareFailed": "Não foi possível preparar a exportação para o Kelivo. Tente novamente.",
     "unsupportedApiType": "Este protocolo de API não pode ser exportado para o Kelivo."
   },
   "managedSite": {

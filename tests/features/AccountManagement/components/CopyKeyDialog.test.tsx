@@ -13,7 +13,10 @@ import type { KeyResourceCardPresentation } from "~/features/KeyManagement/prese
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
 import { generateDefaultTokenRequest } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
 import * as accountOperations from "~/services/accounts/accountOperations"
-import { buildDisplayAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import {
+  buildDisplayAccountTokenRuntimeKey,
+  buildServiceCredentialRuntimeKey,
+} from "~/services/accounts/accountRuntimeKeys"
 import { TOKEN_QUICK_CREATE_RESOLUTION_KINDS } from "~/services/accounts/tokenQuickCreateResolution"
 import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/keyManagement"
 import {
@@ -300,7 +303,15 @@ vi.mock("~/components/CursorPlusExportDialog", () => ({
 vi.mock("~/components/KelivoExportDialog", () => ({
   KelivoExportDialog: (props: unknown) => {
     kelivoExportDialogMock(props)
-    return null
+    const { isOpen, onClose } = props as {
+      isOpen: boolean
+      onClose: () => void
+    }
+    return isOpen ? (
+      <button type="button" onClick={onClose}>
+        close Kelivo export
+      </button>
+    ) : null
   },
 }))
 
@@ -705,6 +716,78 @@ describe("CopyKeyDialog", () => {
     )
     expect(
       screen.queryByRole("button", { name: "close Cursor++ export" }),
+    ).not.toBeInTheDocument()
+  })
+
+  it("does not expose resolver errors while preparing a runtime-key Kelivo export", async () => {
+    const runtimeKey = buildDisplayAccountTokenRuntimeKey(ACCOUNT, TOKEN)
+    resolveApiTokenKeyMock.mockRejectedValueOnce(
+      new Error("upstream included sk-sensitive-runtime-secret"),
+    )
+    const user = userEvent.setup()
+
+    render(
+      <RuntimeKeyActionControls
+        runtimeKey={runtimeKey}
+        actionPolicy={{ copySecret: false, exportSecret: true }}
+        copiedRuntimeKeyId={null}
+        onCopyKey={() => {}}
+        account={ACCOUNT}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.copyKelivoImportCode",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(toastErrorMock).toHaveBeenCalledWith(
+        "messages:kelivo.prepareFailed",
+      )
+    })
+    expect(JSON.stringify(toastErrorMock.mock.calls)).not.toContain(
+      "sk-sensitive-runtime-secret",
+    )
+  })
+
+  it("uses service-credential analytics for its Kelivo export dialog", async () => {
+    const runtimeKey = buildServiceCredentialRuntimeKey(
+      SHAREDCHAT_ACCOUNT,
+      SHAREDCHAT_SERVICE_CREDENTIAL,
+    )
+    const user = userEvent.setup()
+
+    render(
+      <RuntimeKeyActionControls
+        runtimeKey={runtimeKey}
+        actionPolicy={{ copySecret: false, exportSecret: true }}
+        copiedRuntimeKeyId={null}
+        onCopyKey={() => {}}
+        account={SHAREDCHAT_ACCOUNT}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.copyKelivoImportCode",
+      }),
+    )
+
+    expect(kelivoExportDialogMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        analyticsContext: expect.objectContaining({
+          actionId:
+            PRODUCT_ANALYTICS_ACTION_IDS.CopyServiceCredentialKelivoImportCode,
+        }),
+      }),
+    )
+    await user.click(
+      screen.getByRole("button", { name: "close Kelivo export" }),
+    )
+    expect(
+      screen.queryByRole("button", { name: "close Kelivo export" }),
     ).not.toBeInTheDocument()
   })
 

@@ -522,6 +522,8 @@ export const PRODUCT_ANALYTICS_ACTION_IDS = {
   CopySelectedAccountInviteLinks: "copy_selected_account_invite_links",
   CopyAccountTokenKey: "copy_account_token_key",
   CopyAccountTokenKelivoImportCode: "copy_account_token_kelivo_import_code",
+  CopyServiceCredentialKelivoImportCode:
+    "copy_service_credential_kelivo_import_code",
   CopyVisibleModelNames: "copy_visible_model_names",
   CreateAccount: "create_account",
   CreateAccountToken: "create_account_token",

@@ -15,13 +15,21 @@ import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const {
+  buildKelivoProviderShareCodeMock,
   copyKelivoProviderShareCodeMock,
   startProductAnalyticsActionMock,
   completeProductAnalyticsActionMock,
+  toastErrorMock,
 } = vi.hoisted(() => ({
+  buildKelivoProviderShareCodeMock: vi.fn(),
   copyKelivoProviderShareCodeMock: vi.fn(),
   startProductAnalyticsActionMock: vi.fn(),
   completeProductAnalyticsActionMock: vi.fn(),
+  toastErrorMock: vi.fn(),
+}))
+
+vi.mock("react-hot-toast", () => ({
+  default: { error: (...args: unknown[]) => toastErrorMock(...args) },
 }))
 
 vi.mock("~/services/integrations/kelivo", async (importOriginal) => {
@@ -29,6 +37,8 @@ vi.mock("~/services/integrations/kelivo", async (importOriginal) => {
     await importOriginal<typeof import("~/services/integrations/kelivo")>()
   return {
     ...original,
+    buildKelivoProviderShareCode: (...args: unknown[]) =>
+      buildKelivoProviderShareCodeMock(...args),
     copyKelivoProviderShareCode: (...args: unknown[]) =>
       copyKelivoProviderShareCodeMock(...args),
   }
@@ -58,6 +68,9 @@ const INITIAL_VALUE = {
 describe("KelivoExportDialog", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    buildKelivoProviderShareCodeMock.mockReturnValue(
+      "ai-provider:v1:ZXhhbXBsZQ==",
+    )
     copyKelivoProviderShareCodeMock.mockResolvedValue(true)
     startProductAnalyticsActionMock.mockReturnValue({
       complete: completeProductAnalyticsActionMock,
@@ -254,5 +267,79 @@ describe("KelivoExportDialog", () => {
       )
     })
     expect(onClose).not.toHaveBeenCalled()
+  })
+
+  it("hides the QR code when share-code generation rejects the draft", async () => {
+    buildKelivoProviderShareCodeMock.mockImplementation(() => {
+      throw new Error("unsupported draft")
+    })
+
+    render(
+      <KelivoExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        initialValue={INITIAL_VALUE}
+        analyticsContext={ANALYTICS_CONTEXT}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(buildKelivoProviderShareCodeMock).toHaveBeenCalled()
+    })
+
+    expect(
+      screen.queryByRole("img", {
+        name: "ui:dialog.kelivo.mobileQrCodeLabel",
+      }),
+    ).not.toBeInTheDocument()
+  })
+
+  it("invalidates the export action when cancelled", async () => {
+    const onClose = vi.fn()
+    const user = userEvent.setup()
+
+    render(
+      <KelivoExportDialog
+        isOpen={true}
+        onClose={onClose}
+        initialValue={INITIAL_VALUE}
+        analyticsContext={ANALYTICS_CONTEXT}
+      />,
+    )
+
+    await user.click(
+      await screen.findByRole("button", { name: "common:actions.cancel" }),
+    )
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it("tracks and reports an unexpected copy rejection", async () => {
+    copyKelivoProviderShareCodeMock.mockRejectedValueOnce(
+      new Error("clipboard rejected"),
+    )
+    const user = userEvent.setup()
+
+    render(
+      <KelivoExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        initialValue={INITIAL_VALUE}
+        analyticsContext={ANALYTICS_CONTEXT}
+      />,
+    )
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "ui:dialog.kelivo.actions.copy",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
+      )
+    })
+    expect(toastErrorMock).toHaveBeenCalledWith("messages:kelivo.copyFailed")
   })
 })

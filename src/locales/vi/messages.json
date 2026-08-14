@@ -114,6 +114,7 @@
     "customGoogleEndpointUnsupported": "Mã nhập Kelivo không thể giữ lại địa chỉ API Google tùy chỉnh.",
     "invalidBaseUrl": "Base URL phải là địa chỉ HTTP hoặc HTTPS hợp lệ.",
     "missingCredentials": "Cần có tên nhà cung cấp và khóa API đầy đủ.",
+    "prepareFailed": "Không thể chuẩn bị dữ liệu xuất sang Kelivo. Hãy thử lại.",
     "unsupportedApiType": "Không thể xuất giao thức API này sang Kelivo."
   },
   "managedSite": {

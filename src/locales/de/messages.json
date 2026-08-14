@@ -110,10 +110,11 @@
   },
   "kelivo": {
     "copied": "Importcode für Kelivo Mobile kopiert. Füge ihn beim Anbieterimport in Kelivo Mobile ein.",
-    "copyFailed": "Der Kelivo-Importcode konnte nicht kopiert werden. Prüfen Sie die Zwischenablageberechtigung und versuchen Sie es erneut.",
+    "copyFailed": "Der Kelivo-Importcode konnte nicht kopiert werden. Prüfe die Zwischenablageberechtigung und versuche es erneut.",
     "customGoogleEndpointUnsupported": "Kelivo-Importcodes können benutzerdefinierte Google-API-Adressen nicht übernehmen.",
     "invalidBaseUrl": "Die Base URL muss eine gültige HTTP- oder HTTPS-Adresse sein.",
-    "missingCredentials": "Ein Providername und ein vollständiger API-Schlüssel sind erforderlich.",
+    "missingCredentials": "Ein Anbietername und ein vollständiger API-Schlüssel sind erforderlich.",
+    "prepareFailed": "Der Kelivo-Export konnte nicht vorbereitet werden. Versuche es erneut.",
     "unsupportedApiType": "Dieses API-Protokoll kann nicht nach Kelivo exportiert werden."
   },
   "managedSite": {
