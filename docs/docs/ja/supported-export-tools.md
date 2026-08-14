@@ -7,12 +7,27 @@
 | 製品 | 公式説明 | 公式リンク |
 |------|----------|----------|
 | Cherry Studio | AI 生産性スタジオ。スマート対話、自律エージェント、300 以上のヘルパーを提供し、最先端の大規模モデルへの統一アクセスを実現します。 | [公式サイト](https://www.cherry-ai.com/) / [GitHub](https://github.com/CherryHQ/cherry-studio) |
+| Kelivo | モバイルとデスクトップに対応した Flutter 製の大規模言語モデルチャットクライアント。 | [GitHub](https://github.com/Chevey339/kelivo) |
 | CC Switch | Claude Code、Codex、Gemini CLI、Grok CLI、Hermes、OpenCode、OpenClaw 向けのクロスプラットフォームデスクトップ統合アシスタント。 | [GitHub](https://github.com/farion1231/cc-switch) |
 | Cursor++ | 自分の API キーを使用して、Cursor で Anthropic、OpenAI、Gemini などのモデルを利用できます。 | [公式サイト](https://ccursor.cometix.dev/) |
 | Kilo Code | Kilo は、統合されたエージェンティブエンジニアリングプラットフォームです。 | [公式サイト](https://kilocode.ai/) / [GitHub](https://github.com/Kilo-Org/kilocode) |
 | Roo Code | Roo Code は、AI 開発チーム全体をコードエディタに直接配置します。 | [公式サイト](https://roocode.com/) / [GitHub](https://github.com/RooCodeInc/Roo-Code) |
 | CLIProxyAPI | Gemini CLI、Antigravity、ChatGPT Codex、Claude Code、Qwen Code、iFlow を OpenAI / Gemini / Claude / Codex と互換性のある API サービスにラップします。 | [ドキュメント](https://help.router-for.me/) / [GitHub](https://github.com/router-for-me/CLIProxyAPI) |
 | Claude Code Router | Claude Code をコーディングインフラストラクチャとして使用し、Anthropic の最新情報を継続的に取得しながら、モデルとの対話を自分で決定できるようにします。 | [公式サイト](https://musistudio.github.io/claude-code-router/) / [GitHub](https://github.com/musistudio/claude-code-router) |
+
+## Kelivo モバイルへのエクスポート
+
+アカウントキーまたは API 認証情報の操作メニューから「Kelivo モバイルへエクスポート」を選択します。ダイアログにはプロトコル、プロバイダー名、API キー、Base URL があらかじめ入力され、コピーする前に各項目を確認・編集できます。次に Kelivo モバイルのプロバイダー管理でインポートを選び、ダイアログの QR コードをスキャンするか、コピーしたモバイル用インポートコードをテキストボックスに貼り付けます。アカウントキー自体に固定のプロトコルはないため、初期値は OpenAI Compatible です。必要に応じて Anthropic または Google に変更できます。
+
+Kelivo の PC 版には現在プロバイダーのインポート機能がなく、QR コードやインポートコードは使用できません。PC 版で利用する場合は、ダイアログに表示されたプロトコル、プロバイダー名、API キー、Base URL を使ってプロバイダーを手動で追加してください。
+
+インポートコードに含まれるのは、プロバイダー名、API キー、プロバイダー種別、および該当する場合の Base URL だけです。モデル一覧、カスタムリクエストヘッダー、その他の All API Hub 設定は含まれません。OpenAI Compatible と Anthropic では、ダイアログに表示された Base URL がそのままエクスポートされます。Google プロバイダーは公式 API アドレスのみをサポートするため、Google を選ぶとアドレスが固定されます。別のプロトコルに戻すと、以前入力した Base URL が復元されます。
+
+Kelivo は OpenAI Responses にも対応していますが、現在の `ai-provider:v1` インポートコードには Responses の設定が保存されません。`openai` タイプとしてインポートしたプロバイダーは、必ず OpenAI Compatible で開始します。Responses を使用する場合は、インポート完了後に Kelivo のプロバイダー設定で有効にしてください。
+
+::: warning インポート内容を保護してください
+QR コードと Kelivo モバイル用インポートコードには、API キーが平文で含まれます。スクリーンショットを共有したり、公開チャット、Issue、ログ、リポジトリへ貼り付けたりしないでください。
+:::
 
 ## Cursor++ へのエクスポート
 

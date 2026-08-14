@@ -351,6 +351,33 @@
       "sidebarInstruction": "Clique no ícone da extensão na barra de ferramentas do navegador e selecione a opção 'Barra lateral' para abrir o modo de barra lateral",
       "warningTitle": "Lembrete de limitação de recursos"
     },
+    "kelivo": {
+      "actions": {
+        "copy": "Copiar código de importação móvel"
+      },
+      "baseUrlDescription": "Este endereço será incluído sem alterações no código de importação.",
+      "description": "Revise os campos do provedor e depois escaneie com o Kelivo móvel ou copie o código de importação.",
+      "desktopNotice": {
+        "description": "O Kelivo para desktop ainda não importa provedores. Use os campos acima para adicionar o provedor manualmente.",
+        "title": "O Kelivo para desktop exige configuração manual"
+      },
+      "googleBaseUrlDescription": "O Kelivo usa o endereço oficial da API do Google para provedores Google.",
+      "googleNotice": {
+        "description": "O Kelivo não aceita uma Base URL personalizada para provedores Google. Sua Base URL de outros protocolos será preservada se você voltar.",
+        "title": "O Google usa um endereço de API fixo"
+      },
+      "mobileQrCode": {
+        "description": "Abra a importação de provedores no Kelivo móvel e escaneie este código QR.",
+        "title": "Escanear com o Kelivo móvel"
+      },
+      "mobileQrCodeLabel": "Código QR para importar um provedor no Kelivo móvel",
+      "protocolDescription": "Os códigos de importação do Kelivo não podem incluir a opção OpenAI Responses. Importe como OpenAI Compatible e depois ative Responses no Kelivo, se necessário.",
+      "securityNotice": {
+        "description": "O código QR e o código de importação copiado contêm sua chave de API. Não os compartilhe em chats, issues, logs ou repositórios.",
+        "title": "A importação móvel contém sua chave de API"
+      },
+      "title": "Exportar para o Kelivo móvel"
+    },
     "kiloCode": {
       "actions": {
         "copyKiloV7Provider": "Copiar configuração do provedor",

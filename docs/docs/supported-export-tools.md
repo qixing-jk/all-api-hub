@@ -7,12 +7,27 @@
 | 产品 | 官方描述 | 官方链接 |
 |------|----------|----------|
 | Cherry Studio | AI 生产力工作室，提供智能对话、自主代理和 300+ 助手，统一接入前沿大模型。 | [官网](https://www.cherry-ai.com/) / [GitHub](https://github.com/CherryHQ/cherry-studio) |
+| Kelivo | 支持移动端与桌面端的 Flutter 大模型聊天客户端。 | [GitHub](https://github.com/Chevey339/kelivo) |
 | CC Switch | 面向 Claude Code、Codex、Gemini CLI、Grok CLI、Hermes、OpenCode 与 OpenClaw 的跨平台桌面一体化助手。 | [GitHub](https://github.com/farion1231/cc-switch) |
 | Cursor++ | 通过自备 API 密钥在 Cursor 中使用 Anthropic、OpenAI 与 Gemini 等模型。 | [官网](https://ccursor.cometix.dev/) |
 | Kilo Code | Kilo 是一体化的 Agentic Engineering 平台。 | [官网](https://kilocode.ai/) / [GitHub](https://github.com/Kilo-Org/kilocode) |
 | Roo Code | Roo Code 让一整支 AI 开发团队直接驻留在你的代码编辑器里。 | [官网](https://roocode.com/) / [GitHub](https://github.com/RooCodeInc/Roo-Code) |
 | CLIProxyAPI | 将 Gemini CLI、Antigravity、ChatGPT Codex、Claude Code、Qwen Code、iFlow 封装为兼容 OpenAI / Gemini / Claude / Codex 的 API 服务。 | [文档](https://help.router-for.me/) / [GitHub](https://github.com/router-for-me/CLIProxyAPI) |
 | Claude Code Router | 以 Claude Code 作为编码基础设施，让你在持续获得 Anthropic 更新的同时，自行决定如何与模型交互。 | [官网](https://musistudio.github.io/claude-code-router/) / [GitHub](https://github.com/musistudio/claude-code-router) |
+
+## Kelivo 移动端导出
+
+在账号密钥或 API 凭据的操作区选择“导出到 Kelivo 移动端”。弹窗会预填协议、提供商名称、API 密钥和 Base URL；复制前可以检查并修改这些字段。然后在 Kelivo 移动端的提供商管理中选择导入，扫描弹窗中的二维码，或把复制的移动端导入码粘贴到文本框。账号密钥本身没有固定协议，因此默认按 OpenAI Compatible 预填，也可以改为 Anthropic 或 Google。
+
+Kelivo PC 端目前没有提供商导入入口，无法使用二维码或导入码。需要在 PC 端使用时，请参照弹窗中显示的协议、提供商名称、API 密钥和 Base URL 手动新增提供商。
+
+导入码只包含提供商名称、API 密钥、提供商类型，以及适用时的 Base URL。它不包含模型列表、自定义请求头或其他 All API Hub 配置。OpenAI Compatible 和 Anthropic 协议会按弹窗中显示的 Base URL 原样导出。Google 提供商只支持官方 API 地址，因此选择 Google 后会固定该地址；切回其他协议时，先前填写的 Base URL 仍会保留。
+
+Kelivo 本身也支持 OpenAI Responses，但当前 `ai-provider:v1` 导入码没有保存 Responses 开关；`openai` 类型导入后固定为 OpenAI Compatible。若要使用 Responses，请先完成导入，再到 Kelivo 的提供商设置中开启。
+
+::: warning 请保护导入内容
+二维码和 Kelivo 移动端导入码都包含明文 API 密钥。请勿截图分享，也不要粘贴到公开聊天、Issue、日志或版本库中。
+:::
 
 ## Cursor++ 导出
 

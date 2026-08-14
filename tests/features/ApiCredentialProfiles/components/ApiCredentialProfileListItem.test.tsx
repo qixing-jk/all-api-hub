@@ -11,6 +11,7 @@ import {
 } from "vitest"
 
 import { ApiCredentialProfileListItem } from "~/features/ApiCredentialProfiles/components/ApiCredentialProfileListItem"
+import type { ApiCredentialProfileExportAction } from "~/features/ApiCredentialProfiles/contracts"
 import { API_CREDENTIAL_PROFILES_TEST_IDS } from "~/features/ApiCredentialProfiles/testIds"
 import enApiCredentialProfiles from "~/locales/en/apiCredentialProfiles.json"
 import {
@@ -101,8 +102,8 @@ vi.mock("~/components/ui", async (importOriginal) => {
 vi.mock("~/components/ui/dropdown-menu", () => ({
   DropdownMenu: ({ children }: any) => <div>{children}</div>,
   DropdownMenuContent: ({ children }: any) => <div>{children}</div>,
-  DropdownMenuItem: ({ children, ...props }: any) => (
-    <button type="button" {...props}>
+  DropdownMenuItem: ({ children, onSelect, ...props }: any) => (
+    <button type="button" onClick={() => onSelect?.()} {...props}>
       {children}
     </button>
   ),
@@ -147,6 +148,10 @@ function renderListItem(
     onRefreshTelemetry?: (profile: ApiCredentialProfile) => void
     visibleKeys?: Set<string>
     toggleKeyVisibility?: (profileId: string) => void
+    onExport?: (
+      profile: ApiCredentialProfile,
+      action: ApiCredentialProfileExportAction,
+    ) => void
   } = {},
 ) {
   const onRefreshTelemetry = overrides.onRefreshTelemetry ?? vi.fn()
@@ -165,7 +170,7 @@ function renderListItem(
       onRefreshTelemetry={onRefreshTelemetry}
       onEdit={vi.fn()}
       onDelete={vi.fn()}
-      onExport={vi.fn()}
+      onExport={overrides.onExport ?? vi.fn()}
       isTelemetryRefreshing={overrides.isTelemetryRefreshing ?? false}
       managedSiteType="new-api"
       managedSiteLabel="New API"
@@ -293,6 +298,21 @@ describe("ApiCredentialProfileListItem", () => {
       "data-analytics-action",
       profileAction(PRODUCT_ANALYTICS_ACTION_IDS.OpenApiCredentialExportMenu),
     )
+  })
+
+  it("offers Kelivo import-code copying from the export menu", async () => {
+    const profile = buildProfile()
+    const onExport = vi.fn()
+    const user = userEvent.setup()
+    renderListItem(profile, { onExport })
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.copyKelivoImportCode",
+      }),
+    )
+
+    expect(onExport).toHaveBeenCalledWith(profile, "kelivo")
   })
 
   it("delegates telemetry refresh without row-level started-only analytics", () => {

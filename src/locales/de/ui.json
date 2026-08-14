@@ -341,6 +341,33 @@
       "sidebarInstruction": "Klicken Sie auf das Erweiterungssymbol in der Browser-Symbolleiste und wählen Sie dann die Option „Seitenleiste“, um den Seitenleistenmodus zu öffnen",
       "warningTitle": "Erinnerung an Funktionseinschränkungen"
     },
+    "kelivo": {
+      "actions": {
+        "copy": "Mobilen Importcode kopieren"
+      },
+      "baseUrlDescription": "Diese Adresse wird unverändert in den Importcode übernommen.",
+      "description": "Prüfe die Anbieterfelder und scanne sie dann mit Kelivo Mobile oder kopiere den Importcode.",
+      "desktopNotice": {
+        "description": "Kelivo Desktop bietet derzeit keinen Anbieterimport. Füge den Anbieter mit den Feldern oben manuell hinzu.",
+        "title": "Kelivo Desktop muss manuell eingerichtet werden"
+      },
+      "googleBaseUrlDescription": "Kelivo verwendet für Google-Anbieter die offizielle API-Adresse von Google.",
+      "googleNotice": {
+        "description": "Kelivo akzeptiert für Google-Anbieter keine benutzerdefinierte Base URL. Deine Base URL für andere Protokolle bleibt beim Zurückwechseln erhalten.",
+        "title": "Google verwendet eine feste API-Adresse"
+      },
+      "mobileQrCode": {
+        "description": "Öffne den Anbieterimport in Kelivo Mobile und scanne diesen QR-Code.",
+        "title": "Mit Kelivo Mobile scannen"
+      },
+      "mobileQrCodeLabel": "QR-Code für den Anbieterimport in Kelivo Mobile",
+      "protocolDescription": "Kelivo-Importcodes können die OpenAI-Responses-Einstellung nicht enthalten. Importiere als OpenAI Compatible und aktiviere Responses bei Bedarf anschließend in Kelivo.",
+      "securityNotice": {
+        "description": "Der QR-Code und der kopierte Importcode enthalten deinen API-Schlüssel. Teile sie nicht in Chats, Issues, Protokollen oder Repositorys.",
+        "title": "Der mobile Import enthält deinen API-Schlüssel"
+      },
+      "title": "Nach Kelivo Mobile exportieren"
+    },
     "kiloCode": {
       "actions": {
         "copyKiloV7Provider": "Anbieterkonfiguration kopieren",

@@ -108,6 +108,14 @@
       "userIdNumeric": "ID người dùng phải là số"
     }
   },
+  "kelivo": {
+    "copied": "Đã sao chép mã nhập Kelivo di động. Hãy dán mã vào phần nhập nhà cung cấp của Kelivo di động.",
+    "copyFailed": "Không thể sao chép mã nhập Kelivo. Hãy kiểm tra quyền truy cập bảng nhớ tạm rồi thử lại.",
+    "customGoogleEndpointUnsupported": "Mã nhập Kelivo không thể giữ lại địa chỉ API Google tùy chỉnh.",
+    "invalidBaseUrl": "Base URL phải là địa chỉ HTTP hoặc HTTPS hợp lệ.",
+    "missingCredentials": "Cần có tên nhà cung cấp và khóa API đầy đủ.",
+    "unsupportedApiType": "Không thể xuất giao thức API này sang Kelivo."
+  },
   "managedSite": {
     "unsupportedModelSync": "Phiên bản hiện tại không hỗ trợ đồng bộ mô hình trạm quản lý {{siteName}}"
   },

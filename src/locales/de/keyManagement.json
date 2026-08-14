@@ -8,6 +8,7 @@
   },
   "actions": {
     "collapseAll": "Alles ausblenden",
+    "copyKelivoImportCode": "Nach Kelivo Mobile exportieren",
     "deleteKey": "Schlüssel löschen",
     "details": "Details anzeigen",
     "detailsFor": "Details für {{name}}",

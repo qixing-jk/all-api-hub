@@ -13,7 +13,10 @@ import type { KeyResourceCardPresentation } from "~/features/KeyManagement/prese
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
 import { generateDefaultTokenRequest } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
 import * as accountOperations from "~/services/accounts/accountOperations"
-import { buildDisplayAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import {
+  buildDisplayAccountTokenRuntimeKey,
+  buildServiceCredentialRuntimeKey,
+} from "~/services/accounts/accountRuntimeKeys"
 import { TOKEN_QUICK_CREATE_RESOLUTION_KINDS } from "~/services/accounts/tokenQuickCreateResolution"
 import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/keyManagement"
 import {
@@ -49,6 +52,7 @@ const {
   fetchUserGroupsMock,
   resolveApiTokenKeyMock,
   openInCherryStudioMock,
+  kelivoExportDialogMock,
   openWithAccountMock,
   startProductAnalyticsActionMock,
   completeProductAnalyticsActionMock,
@@ -76,6 +80,7 @@ const {
   fetchUserGroupsMock: vi.fn(),
   resolveApiTokenKeyMock: vi.fn(),
   openInCherryStudioMock: vi.fn(),
+  kelivoExportDialogMock: vi.fn(),
   openWithAccountMock: vi.fn(),
   startProductAnalyticsActionMock: vi.fn(),
   completeProductAnalyticsActionMock: vi.fn(),
@@ -295,6 +300,21 @@ vi.mock("~/components/CursorPlusExportDialog", () => ({
   },
 }))
 
+vi.mock("~/components/KelivoExportDialog", () => ({
+  KelivoExportDialog: (props: unknown) => {
+    kelivoExportDialogMock(props)
+    const { isOpen, onClose } = props as {
+      isOpen: boolean
+      onClose: () => void
+    }
+    return isOpen ? (
+      <button type="button" onClick={onClose}>
+        close Kelivo export
+      </button>
+    ) : null
+  },
+}))
+
 vi.mock(
   "~/features/ApiCredentialProfiles/components/KiloCodeProfileExportDialog",
   () => ({
@@ -481,6 +501,7 @@ describe("CopyKeyDialog", () => {
     openKeysPageMock.mockReset()
     resolveApiTokenKeyMock.mockReset()
     openInCherryStudioMock.mockReset()
+    kelivoExportDialogMock.mockReset()
     openWithAccountMock.mockReset()
     startProductAnalyticsActionMock.mockReset()
     completeProductAnalyticsActionMock.mockReset()
@@ -630,6 +651,11 @@ describe("CopyKeyDialog", () => {
     expect(
       screen.queryByRole("button", { name: "ui:dialog.copyKey.useInCherry" }),
     ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", {
+        name: "keyManagement:actions.copyKelivoImportCode",
+      }),
+    ).not.toBeInTheDocument()
 
     rerender(
       <RuntimeKeyActionControls
@@ -646,6 +672,11 @@ describe("CopyKeyDialog", () => {
     ).not.toBeInTheDocument()
     expect(
       screen.getByRole("button", { name: "ui:dialog.copyKey.useInCherry" }),
+    ).toBeVisible()
+    expect(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.copyKelivoImportCode",
+      }),
     ).toBeVisible()
   })
 
@@ -685,6 +716,104 @@ describe("CopyKeyDialog", () => {
     )
     expect(
       screen.queryByRole("button", { name: "close Cursor++ export" }),
+    ).not.toBeInTheDocument()
+  })
+
+  it("redacts credential values from runtime-key Kelivo export errors", async () => {
+    const runtimeKey = buildDisplayAccountTokenRuntimeKey(ACCOUNT, TOKEN)
+    resolveApiTokenKeyMock.mockRejectedValueOnce(
+      new Error("Provider rejected sk-test because the account is suspended"),
+    )
+    const user = userEvent.setup()
+
+    render(
+      <RuntimeKeyActionControls
+        runtimeKey={runtimeKey}
+        actionPolicy={{ copySecret: false, exportSecret: true }}
+        copiedRuntimeKeyId={null}
+        onCopyKey={() => {}}
+        account={ACCOUNT}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.copyKelivoImportCode",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(toastErrorMock).toHaveBeenCalledWith(
+        "messages:errors.operation.failed",
+      )
+    })
+    expect(JSON.stringify(toastErrorMock.mock.calls)).not.toContain("sk-test")
+  })
+
+  it("falls back to the local unknown error for a blank runtime-key Kelivo failure", async () => {
+    const runtimeKey = buildDisplayAccountTokenRuntimeKey(ACCOUNT, TOKEN)
+    resolveApiTokenKeyMock.mockRejectedValueOnce(new Error(""))
+    const user = userEvent.setup()
+
+    render(
+      <RuntimeKeyActionControls
+        runtimeKey={runtimeKey}
+        actionPolicy={{ copySecret: false, exportSecret: true }}
+        copiedRuntimeKeyId={null}
+        onCopyKey={() => {}}
+        account={ACCOUNT}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.copyKelivoImportCode",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(toastErrorMock).toHaveBeenCalledWith(
+        "messages:errors.operation.failed",
+      )
+    })
+  })
+
+  it("uses service-credential analytics for its Kelivo export dialog", async () => {
+    const runtimeKey = buildServiceCredentialRuntimeKey(
+      SHAREDCHAT_ACCOUNT,
+      SHAREDCHAT_SERVICE_CREDENTIAL,
+    )
+    const user = userEvent.setup()
+
+    render(
+      <RuntimeKeyActionControls
+        runtimeKey={runtimeKey}
+        actionPolicy={{ copySecret: false, exportSecret: true }}
+        copiedRuntimeKeyId={null}
+        onCopyKey={() => {}}
+        account={SHAREDCHAT_ACCOUNT}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.copyKelivoImportCode",
+      }),
+    )
+
+    expect(kelivoExportDialogMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        analyticsContext: expect.objectContaining({
+          actionId:
+            PRODUCT_ANALYTICS_ACTION_IDS.CopyServiceCredentialKelivoImportCode,
+        }),
+      }),
+    )
+    await user.click(
+      screen.getByRole("button", { name: "close Kelivo export" }),
+    )
+    expect(
+      screen.queryByRole("button", { name: "close Kelivo export" }),
     ).not.toBeInTheDocument()
   })
 
@@ -1524,6 +1653,40 @@ describe("CopyKeyDialog", () => {
         PRODUCT_ANALYTICS_RESULTS.Success,
       )
     })
+  })
+
+  it("opens an editable Kelivo export dialog for an account token", async () => {
+    fetchAccountTokensMock.mockResolvedValueOnce([TOKEN])
+    resolveApiTokenKeyMock.mockResolvedValueOnce("sk-full-secret")
+    const user = userEvent.setup()
+
+    render(<CopyKeyDialog isOpen={true} onClose={() => {}} account={ACCOUNT} />)
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:actions.detailsFor",
+      }),
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.copyKelivoImportCode",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(kelivoExportDialogMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          isOpen: true,
+          initialValue: {
+            apiType: API_TYPES.OPENAI_COMPATIBLE,
+            name: "Example - default",
+            baseUrl: "https://example.com",
+            apiKey: "sk-full-secret",
+          },
+        }),
+      )
+    })
+    expect(startProductAnalyticsActionMock).not.toHaveBeenCalled()
   })
 
   it("reports Cherry Studio export failures without leaving the action pending", async () => {

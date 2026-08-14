@@ -34,6 +34,7 @@ import {
 
 const {
   completeProductAnalyticsActionMock,
+  kelivoExportDialogRenderMock,
   cliProxyDialogRenderMock,
   claudeCodeRouterDialogRenderMock,
   createProfileMock,
@@ -51,6 +52,7 @@ const {
   verifyDialogRenderMock,
 } = vi.hoisted(() => ({
   completeProductAnalyticsActionMock: vi.fn(),
+  kelivoExportDialogRenderMock: vi.fn(),
   cliProxyDialogRenderMock: vi.fn(),
   claudeCodeRouterDialogRenderMock: vi.fn(),
   createProfileMock: vi.fn(),
@@ -81,6 +83,21 @@ vi.mock("~/components/KiloCodeExportDialog", () => ({
   KiloCodeExportDialog: (props: unknown) => {
     kiloCodeDialogRenderMock(props)
     return null
+  },
+}))
+
+vi.mock("~/components/KelivoExportDialog", () => ({
+  KelivoExportDialog: (props: unknown) => {
+    kelivoExportDialogRenderMock(props)
+    const { isOpen, onClose } = props as {
+      isOpen: boolean
+      onClose: () => void
+    }
+    return isOpen ? (
+      <button type="button" onClick={onClose}>
+        close Kelivo export
+      </button>
+    ) : null
   },
 }))
 
@@ -194,6 +211,7 @@ vi.mock("react-hot-toast", () => ({
 describe("TokenHeader analytics", () => {
   beforeEach(() => {
     completeProductAnalyticsActionMock.mockReset()
+    kelivoExportDialogRenderMock.mockReset()
     cliProxyDialogRenderMock.mockReset()
     claudeCodeRouterDialogRenderMock.mockReset()
     createProfileMock.mockReset()
@@ -893,6 +911,148 @@ describe("TokenHeader analytics", () => {
         PRODUCT_ANALYTICS_RESULTS.Success,
       )
     })
+  })
+
+  it("opens an editable Kelivo export dialog with the resolved account token", async () => {
+    resolveDisplayAccountTokenForSecretMock.mockResolvedValueOnce(
+      createToken({ id: 1, key: "sk-resolved" }),
+    )
+
+    const user = userEvent.setup()
+    renderTokenHeader()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.copyKelivoImportCode",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(kelivoExportDialogRenderMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          isOpen: true,
+          initialValue: expect.objectContaining({
+            apiType: API_TYPES.OPENAI_COMPATIBLE,
+            apiKey: "sk-resolved",
+          }),
+        }),
+      )
+    })
+    expect(startProductAnalyticsActionMock).not.toHaveBeenCalled()
+
+    await user.click(
+      screen.getByRole("button", { name: "close Kelivo export" }),
+    )
+    expect(
+      screen.queryByRole("button", { name: "close Kelivo export" }),
+    ).not.toBeInTheDocument()
+  })
+
+  it("redacts credential values from Kelivo export errors", async () => {
+    resolveDisplayAccountTokenForSecretMock.mockRejectedValueOnce(
+      new Error(
+        "Provider rejected sk-sensitive-original because the account is suspended",
+      ),
+    )
+
+    const user = userEvent.setup()
+    renderTokenHeader()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.copyKelivoImportCode",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(showResultToastMock).toHaveBeenCalledWith({
+        success: false,
+        message: "messages:errors.operation.failed",
+      })
+    })
+    expect(JSON.stringify(showResultToastMock.mock.calls)).not.toContain(
+      "sk-sensitive-original",
+    )
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
+    )
+  })
+
+  it("falls back to the local unknown error for a blank Kelivo failure", async () => {
+    resolveDisplayAccountTokenForSecretMock.mockRejectedValueOnce(new Error(""))
+
+    const user = userEvent.setup()
+    renderTokenHeader()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.copyKelivoImportCode",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(showResultToastMock).toHaveBeenCalledWith({
+        success: false,
+        message: "messages:errors.operation.failed",
+      })
+    })
+  })
+
+  it("ignores a pending Kelivo secret after export permission is revoked", async () => {
+    const deferred = createDeferred<ReturnType<typeof createToken>>()
+    resolveDisplayAccountTokenForSecretMock.mockReturnValueOnce(
+      deferred.promise,
+    )
+    const user = userEvent.setup()
+    const { rerenderTokenHeader } = renderTokenHeader()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.copyKelivoImportCode",
+      }),
+    )
+    rerenderTokenHeader({
+      actionPolicy: { ...RECOVERABLE_ACTION_POLICY, exportSecret: false },
+    })
+
+    await act(async () => {
+      deferred.resolve(createToken({ id: 1, key: "sk-stale-permission" }))
+      await deferred.promise
+    })
+    rerenderTokenHeader({ actionPolicy: RECOVERABLE_ACTION_POLICY })
+
+    expect(kelivoExportDialogRenderMock).not.toHaveBeenCalled()
+    expect(showResultToastMock).not.toHaveBeenCalled()
+  })
+
+  it("ignores a pending Kelivo secret after the token changes", async () => {
+    const deferred = createDeferred<ReturnType<typeof createToken>>()
+    resolveDisplayAccountTokenForSecretMock.mockReturnValueOnce(
+      deferred.promise,
+    )
+    const user = userEvent.setup()
+    const account = createAccount({ id: "acc-1" })
+    const token = createToken({ id: 1, accountId: account.id })
+    const { rerenderTokenHeader } = renderTokenHeader({ account, token })
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.copyKelivoImportCode",
+      }),
+    )
+    rerenderTokenHeader({
+      account,
+      token: createToken({ id: 2, accountId: account.id }),
+    })
+
+    await act(async () => {
+      deferred.resolve(createToken({ id: 1, key: "sk-stale-token" }))
+      await deferred.promise
+    })
+
+    expect(kelivoExportDialogRenderMock).not.toHaveBeenCalled()
+    expect(showResultToastMock).not.toHaveBeenCalled()
   })
 
   it("tracks Cherry Studio export as unknown failure when opening throws", async () => {

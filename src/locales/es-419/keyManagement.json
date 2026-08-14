@@ -9,6 +9,7 @@
   },
   "actions": {
     "collapseAll": "Contraer todo",
+    "copyKelivoImportCode": "Exportar a Kelivo móvil",
     "deleteKey": "Eliminar clave",
     "details": "Ver detalles",
     "detailsFor": "Ver detalles de {{name}}",

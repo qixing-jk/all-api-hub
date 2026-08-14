@@ -108,6 +108,14 @@
       "userIdNumeric": "使用者 ID 必須是數字"
     }
   },
+  "kelivo": {
+    "copied": "已複製 Kelivo 行動版匯入碼，請在 Kelivo 行動版的供應商匯入中貼上。",
+    "copyFailed": "無法複製 Kelivo 匯入碼，請檢查剪貼簿權限後重試。",
+    "customGoogleEndpointUnsupported": "Kelivo 匯入碼無法保留自訂 Google API 位址。",
+    "invalidBaseUrl": "Base URL 必須是有效的 HTTP 或 HTTPS 位址。",
+    "missingCredentials": "需要提供者名稱和完整 API 金鑰。",
+    "unsupportedApiType": "此 API 協議暫時無法匯出到 Kelivo。"
+  },
   "managedSite": {
     "unsupportedModelSync": "目前版本不支援 {{siteName}} 管理站點模型同步"
   },

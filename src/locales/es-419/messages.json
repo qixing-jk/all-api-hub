@@ -108,6 +108,14 @@
       "userIdNumeric": "El ID de usuario debe ser un número"
     }
   },
+  "kelivo": {
+    "copied": "Código de importación de Kelivo móvil copiado. Pégalo en la importación de proveedores de Kelivo móvil.",
+    "copyFailed": "No se pudo copiar el código de importación de Kelivo. Revisa el permiso del portapapeles e inténtalo de nuevo.",
+    "customGoogleEndpointUnsupported": "Los códigos de importación de Kelivo no pueden conservar direcciones personalizadas de la API de Google.",
+    "invalidBaseUrl": "La Base URL debe ser una dirección HTTP o HTTPS válida.",
+    "missingCredentials": "Se requiere un nombre de proveedor y una clave API completa.",
+    "unsupportedApiType": "Este protocolo de API no se puede exportar a Kelivo."
+  },
   "managedSite": {
     "unsupportedModelSync": "{{siteName}} no admite la sincronización de modelos de sitios administrados en esta versión"
   },

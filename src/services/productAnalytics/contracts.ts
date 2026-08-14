@@ -508,6 +508,8 @@ export type ProductAnalyticsFeatureId =
 export const PRODUCT_ANALYTICS_ACTION_IDS = {
   CopyApiCredentialBundle: "copy_api_credential_bundle",
   CopyApiCredentialExportConfig: "copy_api_credential_export_config",
+  CopyApiCredentialProfileKelivoImportCode:
+    "copy_api_credential_profile_kelivo_import_code",
   CopyApiKey: "copy_api_key",
   CopyBaseUrl: "copy_base_url",
   CopyBookmarkUrl: "copy_bookmark_url",
@@ -519,6 +521,9 @@ export const PRODUCT_ANALYTICS_ACTION_IDS = {
   CopyAccountInviteLink: "copy_account_invite_link",
   CopySelectedAccountInviteLinks: "copy_selected_account_invite_links",
   CopyAccountTokenKey: "copy_account_token_key",
+  CopyAccountTokenKelivoImportCode: "copy_account_token_kelivo_import_code",
+  CopyServiceCredentialKelivoImportCode:
+    "copy_service_credential_kelivo_import_code",
   CopyVisibleModelNames: "copy_visible_model_names",
   CreateAccount: "create_account",
   CreateAccountToken: "create_account_token",

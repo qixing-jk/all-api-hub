@@ -1,4 +1,5 @@
 import { getErrorMessage } from "~/utils/core/error"
+import { sanitizeSensitiveErrorText } from "~/utils/core/sanitizeSensitiveErrorText"
 import { coerceBaseUrlToPathSuffix } from "~/utils/core/url"
 
 const COMPLETE_VERSIONED_PATH_PATTERN = /\/v\d+(?:beta\d*)?$/i
@@ -22,7 +23,7 @@ export function toSanitizedErrorSummary(
   secretsToRedact: string[],
 ): string {
   const raw = getErrorMessage(error)
-  return redactSecrets(raw, secretsToRedact)
+  return sanitizeSensitiveErrorText(redactSecrets(raw, secretsToRedact))
 }
 
 /**

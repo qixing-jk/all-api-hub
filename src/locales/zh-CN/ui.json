@@ -331,6 +331,33 @@
       "sidebarInstruction": "点击浏览器工具栏中的插件图标，然后选择\"侧边栏\"选项来打开侧边栏模式",
       "warningTitle": "功能限制提醒"
     },
+    "kelivo": {
+      "actions": {
+        "copy": "复制移动端导入码"
+      },
+      "baseUrlDescription": "导入码会原样包含此地址。",
+      "description": "检查提供商字段后，可使用 Kelivo 移动端扫码或复制导入码。",
+      "desktopNotice": {
+        "description": "Kelivo PC 端目前没有提供商导入功能，请使用上方字段手动新增提供商。",
+        "title": "Kelivo PC 端需要手动配置"
+      },
+      "googleBaseUrlDescription": "Kelivo 的 Google 提供商固定使用 Google 官方 API 地址。",
+      "googleNotice": {
+        "description": "Kelivo 的 Google 提供商不接受自定义 Base URL。切换回其他协议时，先前填写的地址会保留。",
+        "title": "Google 使用固定 API 地址"
+      },
+      "mobileQrCode": {
+        "description": "在 Kelivo 移动端打开提供商导入并扫描此二维码。",
+        "title": "使用 Kelivo 移动端扫描"
+      },
+      "mobileQrCodeLabel": "Kelivo 移动端提供商导入二维码",
+      "protocolDescription": "Kelivo 导入码无法包含 OpenAI Responses 设置。如需使用，请先按 OpenAI Compatible 导入，再到 Kelivo 中开启 Responses。",
+      "securityNotice": {
+        "description": "二维码和复制的导入码都包含 API 密钥，请勿分享到聊天、Issue、日志或版本库。",
+        "title": "移动端导入内容包含 API 密钥"
+      },
+      "title": "导出到 Kelivo 移动端"
+    },
     "kiloCode": {
       "actions": {
         "copyKiloV7Provider": "复制 provider 配置",

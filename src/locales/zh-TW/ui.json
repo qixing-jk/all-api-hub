@@ -335,6 +335,33 @@
       "sidebarInstruction": "點擊瀏覽器工具欄中的外掛圖示，然後選擇\"側邊欄\"選項來開啟側邊欄模式",
       "warningTitle": "功能限制提醒"
     },
+    "kelivo": {
+      "actions": {
+        "copy": "複製行動版匯入碼"
+      },
+      "baseUrlDescription": "匯入碼會原樣包含此位址。",
+      "description": "檢查供應商欄位後，可使用 Kelivo 行動版掃描或複製匯入碼。",
+      "desktopNotice": {
+        "description": "Kelivo 電腦版目前沒有供應商匯入功能，請使用上方欄位手動新增供應商。",
+        "title": "Kelivo 電腦版需要手動設定"
+      },
+      "googleBaseUrlDescription": "Kelivo 的 Google 供應商固定使用 Google 官方 API 位址。",
+      "googleNotice": {
+        "description": "Kelivo 的 Google 供應商不接受自訂 Base URL。切換回其他協定時，先前填寫的位址會保留。",
+        "title": "Google 使用固定 API 位址"
+      },
+      "mobileQrCode": {
+        "description": "在 Kelivo 行動版開啟供應商匯入並掃描此 QR Code。",
+        "title": "使用 Kelivo 行動版掃描"
+      },
+      "mobileQrCodeLabel": "Kelivo 行動版供應商匯入 QR Code",
+      "protocolDescription": "Kelivo 匯入碼無法包含 OpenAI Responses 設定。如需使用，請先按 OpenAI Compatible 匯入，再到 Kelivo 中開啟 Responses。",
+      "securityNotice": {
+        "description": "QR Code 和複製的匯入碼都包含 API 金鑰，請勿分享到聊天、Issue、日誌或版本庫。",
+        "title": "行動版匯入內容包含 API 金鑰"
+      },
+      "title": "匯出到 Kelivo 行動版"
+    },
     "kiloCode": {
       "actions": {
         "copyKiloV7Provider": "複製 provider 設定",

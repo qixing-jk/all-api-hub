@@ -19,8 +19,10 @@ import { CherryIcon } from "~/components/icons/CherryIcon"
 import { ClaudeCodeRouterIcon } from "~/components/icons/ClaudeCodeRouterIcon"
 import { CliProxyIcon } from "~/components/icons/CliProxyIcon"
 import { CursorPlusIcon } from "~/components/icons/CursorPlusIcon"
+import { KelivoIcon } from "~/components/icons/KelivoIcon"
 import { KiloCodeIcon } from "~/components/icons/KiloCodeIcon"
 import { ManagedSiteIcon } from "~/components/icons/ManagedSiteIcon"
+import { KelivoExportDialog } from "~/components/KelivoExportDialog"
 import {
   Badge,
   Button,
@@ -127,6 +129,8 @@ export function ServiceCredentialCard({
   const [ccSwitchProfile, setCCSwitchProfile] =
     useState<ApiCredentialProfile | null>(null)
   const [kiloCodeProfile, setKiloCodeProfile] =
+    useState<ApiCredentialProfile | null>(null)
+  const [kelivoProfile, setKelivoProfile] =
     useState<ApiCredentialProfile | null>(null)
   const [isCursorPlusDialogOpen, setIsCursorPlusDialogOpen] = useState(false)
   const [cliProxyProfile, setCliProxyProfile] =
@@ -335,6 +339,18 @@ export function ServiceCredentialCard({
           profile={kiloCodeProfile}
         />
       ) : null}
+      {kelivoProfile ? (
+        <KelivoExportDialog
+          isOpen={true}
+          onClose={() => setKelivoProfile(null)}
+          initialValue={kelivoProfile}
+          analyticsContext={{
+            ...apiCredentialProfileExportContext,
+            actionId:
+              PRODUCT_ANALYTICS_ACTION_IDS.CopyServiceCredentialKelivoImportCode,
+          }}
+        />
+      ) : null}
       {isCursorPlusDialogOpen ? (
         <CursorPlusExportDialog
           isOpen={true}
@@ -456,6 +472,14 @@ export function ServiceCredentialCard({
                   onClick={handleUseInCherry}
                 >
                   <CherryIcon />
+                </IconButton>
+                <IconButton
+                  aria-label={t("actions.copyKelivoImportCode")}
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setKelivoProfile(transientProfile)}
+                >
+                  <KelivoIcon />
                 </IconButton>
                 <IconButton
                   aria-label={t("actions.exportToCCSwitch")}

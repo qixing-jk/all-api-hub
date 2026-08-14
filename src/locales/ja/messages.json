@@ -108,6 +108,14 @@
       "userIdNumeric": "ユーザー ID は数値である必要があります"
     }
   },
+  "kelivo": {
+    "copied": "Kelivo モバイル版のインポートコードをコピーしました。モバイル版のプロバイダーインポートに貼り付けてください。",
+    "copyFailed": "Kelivo インポートコードをコピーできません。クリップボードの権限を確認して再試行してください。",
+    "customGoogleEndpointUnsupported": "Kelivo インポートコードではカスタム Google API アドレスを保持できません。",
+    "invalidBaseUrl": "Base URL には有効な HTTP または HTTPS アドレスを指定してください。",
+    "missingCredentials": "プロバイダー名と完全な API キーが必要です。",
+    "unsupportedApiType": "この API プロトコルは Kelivo にエクスポートできません。"
+  },
   "managedSite": {
     "unsupportedModelSync": "このバージョンでは {{siteName}} の管理サイトモデル同期はサポートされていません"
   },

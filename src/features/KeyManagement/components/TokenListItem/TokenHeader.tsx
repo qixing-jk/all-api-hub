@@ -21,9 +21,11 @@ import { CherryIcon } from "~/components/icons/CherryIcon"
 import { ClaudeCodeRouterIcon } from "~/components/icons/ClaudeCodeRouterIcon"
 import { CliProxyIcon } from "~/components/icons/CliProxyIcon"
 import { CursorPlusIcon } from "~/components/icons/CursorPlusIcon"
+import { KelivoIcon } from "~/components/icons/KelivoIcon"
 import { KiloCodeIcon } from "~/components/icons/KiloCodeIcon"
 import { ManagedSiteIcon } from "~/components/icons/ManagedSiteIcon"
 import { ApiCredentialLibraryIcon } from "~/components/icons/productIcons"
+import { KelivoExportDialog } from "~/components/KelivoExportDialog"
 import { KiloCodeExportDialog } from "~/components/KiloCodeExportDialog"
 import {
   getKeySignalLabel,
@@ -52,12 +54,16 @@ import {
 import type { KeyResourceActionPolicy } from "~/features/KeyManagement/presentation/keyResourceCard"
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
 import { cn } from "~/lib/utils"
-import { buildDisplayAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import {
+  buildDisplayAccountTokenRuntimeKey,
+  collectAccountRuntimeKeySecrets,
+} from "~/services/accounts/accountRuntimeKeys"
 import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
 import { normalizeAccountSiteUrlForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
 import { createProfileFromAccountToken } from "~/services/apiCredentialProfiles/accountTokenImport"
 import { buildApiCredentialProfileName } from "~/services/apiCredentialProfiles/accountTokenProfileName"
 import { OpenInCherryStudio } from "~/services/integrations/cherryStudio"
+import type { KelivoProviderExportInput } from "~/services/integrations/kelivo"
 import {
   MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS,
   MANAGED_SITE_TOKEN_CHANNEL_STATUSES,
@@ -312,6 +318,8 @@ function TokenActionButtons({
   const [isCliProxyDialogOpen, setIsCliProxyDialogOpen] = useState(false)
   const [isCursorPlusDialogOpen, setIsCursorPlusDialogOpen] = useState(false)
   const [isKiloCodeDialogOpen, setIsKiloCodeDialogOpen] = useState(false)
+  const [kelivoExportInput, setKelivoExportInput] =
+    useState<KelivoProviderExportInput | null>(null)
   const [isManagedSiteImportHighlighted, setIsManagedSiteImportHighlighted] =
     useState(false)
   const managedSiteImportButtonRef = useRef<HTMLButtonElement>(null)
@@ -322,6 +330,7 @@ function TokenActionButtons({
   const verificationGenerationRef = useRef<symbol | null>(null)
   const apiVerificationEpochRef = useRef(0)
   const cliVerificationEpochRef = useRef(0)
+  const kelivoExportEpochRef = useRef(0)
   const [verifyingProfile, setVerifyingProfile] =
     useState<ApiCredentialProfile | null>(null)
   const [cliVerifyingProfile, setCliVerifyingProfile] =
@@ -357,6 +366,7 @@ function TokenActionButtons({
     setIsCliProxyDialogOpen(false)
     setIsCursorPlusDialogOpen(false)
     setIsKiloCodeDialogOpen(false)
+    setKelivoExportInput(null)
     setIsManagedSiteImportHighlighted(false)
   }, [actionPolicy.exportSecret])
 
@@ -387,6 +397,29 @@ function TokenActionButtons({
     token.accountId,
     token.id,
     token.key,
+  ])
+
+  useLayoutEffect(() => {
+    kelivoExportEpochRef.current += 1
+    setKelivoExportInput(null)
+
+    return () => {
+      kelivoExportEpochRef.current += 1
+    }
+  }, [
+    account.authType,
+    account.baseUrl,
+    account.cookieAuthSessionCookie,
+    account.id,
+    account.name,
+    account.siteType,
+    account.token,
+    account.userId,
+    actionPolicy.exportSecret,
+    token.accountId,
+    token.id,
+    token.key,
+    token.name,
   ])
 
   useEffect(() => {
@@ -545,6 +578,53 @@ function TokenActionButtons({
         success: false,
         message: t("messages:errors.operation.failed", {
           error: getErrorMessage(error),
+        }),
+      })
+    }
+  }
+
+  const handleOpenKelivoExportDialog = async () => {
+    const exportEpoch = ++kelivoExportEpochRef.current
+    try {
+      const resolvedToken = await resolveDisplayAccountTokenForSecret(
+        account,
+        token,
+      )
+      if (kelivoExportEpochRef.current !== exportEpoch) return
+
+      setKelivoExportInput({
+        apiType: API_TYPES.OPENAI_COMPATIBLE,
+        name: buildApiCredentialProfileName({
+          accountName: account.name,
+          fallbackAccountName: token.accountName,
+          tokenName: token.name,
+        }),
+        baseUrl: account.baseUrl,
+        apiKey: resolvedToken.key,
+      })
+    } catch (error) {
+      if (kelivoExportEpochRef.current !== exportEpoch) return
+
+      const tracker = startProductAnalyticsAction({
+        featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.CopyAccountTokenKelivoImportCode,
+        surfaceId:
+          PRODUCT_ANALYTICS_SURFACE_IDS.AccountTokenThirdPartyExportDialog,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      })
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      })
+      showResultToast({
+        success: false,
+        message: t("messages:errors.operation.failed", {
+          error:
+            toSanitizedErrorSummary(
+              error,
+              collectAccountRuntimeKeySecrets([
+                buildDisplayAccountTokenRuntimeKey(account, token),
+              ]),
+            ) || t("messages:errors.unknown"),
         }),
       })
     }
@@ -753,6 +833,21 @@ function TokenActionButtons({
               runtimeKey={buildDisplayAccountTokenRuntimeKey(account, token)}
             />
           ) : null}
+          {kelivoExportInput ? (
+            <KelivoExportDialog
+              isOpen={true}
+              onClose={() => setKelivoExportInput(null)}
+              initialValue={kelivoExportInput}
+              analyticsContext={{
+                featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+                actionId:
+                  PRODUCT_ANALYTICS_ACTION_IDS.CopyAccountTokenKelivoImportCode,
+                surfaceId:
+                  PRODUCT_ANALYTICS_SURFACE_IDS.AccountTokenThirdPartyExportDialog,
+                entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+              }}
+            />
+          ) : null}
           <ClaudeCodeRouterImportDialog
             isOpen={isClaudeCodeRouterOpen}
             onClose={() => setIsClaudeCodeRouterOpen(false)}
@@ -840,6 +935,14 @@ function TokenActionButtons({
             onClick={() => void handleUseInCherry()}
           >
             <CherryIcon />
+          </IconButton>
+          <IconButton
+            aria-label={t("actions.copyKelivoImportCode")}
+            size="sm"
+            variant="ghost"
+            onClick={() => void handleOpenKelivoExportDialog()}
+          >
+            <KelivoIcon />
           </IconButton>
           {onOpenCCSwitchDialog ? (
             <IconButton
