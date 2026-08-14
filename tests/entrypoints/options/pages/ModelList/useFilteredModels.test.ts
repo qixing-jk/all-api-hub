@@ -2243,6 +2243,65 @@ describe("useFilteredModels", () => {
     ).toEqual([true, false])
   })
 
+  it("groups normalized model aliases and puts the cheapest offer first", async () => {
+    const expensiveAccount = createDisplayAccount({
+      id: "normalized-expensive",
+      name: "Normalized Expensive",
+      balance: { USD: 10, CNY: 70 },
+    })
+    const cheaperAccount = createDisplayAccount({
+      id: "normalized-cheaper",
+      name: "Normalized Cheaper",
+      balance: { USD: 10, CNY: 70 },
+    })
+
+    const { result } = renderUseFilteredModels({
+      pricingContexts: [
+        {
+          account: expensiveAccount,
+          pricing: createPricingResponse([
+            {
+              model_name: "claude-4.5-sonnet",
+              quota_type: 0,
+              model_ratio: 2,
+              completion_ratio: 1,
+              enable_groups: ["default"],
+            },
+          ]),
+        },
+        {
+          account: cheaperAccount,
+          pricing: createPricingResponse([
+            {
+              model_name: "gateway/claude_sonnet_4_5:free",
+              quota_type: 0,
+              model_ratio: 1,
+              completion_ratio: 1,
+              enable_groups: ["default"],
+            },
+          ]),
+        },
+      ],
+      selectedSource: createAllAccountsSource(),
+      sortMode: MODEL_LIST_SORT_MODES.MODEL_CHEAPEST_FIRST,
+    })
+
+    await waitFor(() => {
+      expect(
+        result.current.filteredModels.map((item) => ({
+          modelName: item.model.model_name,
+          isLowestPrice: item.isLowestPrice,
+        })),
+      ).toEqual([
+        {
+          modelName: "gateway/claude_sonnet_4_5:free",
+          isLowestPrice: true,
+        },
+        { modelName: "claude-4.5-sonnet", isLowestPrice: false },
+      ])
+    })
+  })
+
   it("uses the cheapest eligible group per row and updates when account-specific group filters narrow", async () => {
     const multiGroupAccount = createDisplayAccount({
       id: "account-multi-group",

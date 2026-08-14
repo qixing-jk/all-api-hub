@@ -59,6 +59,7 @@ const createCalculatedModelItem = (
     model: modelOverrides,
     groupContext: groupContextOverrides,
     activeGroupContext: activeGroupContextOverrides,
+    comparableModelIdentity,
     ...itemOverrides
   } = overrides
   const model: ModelPricing = {
@@ -99,6 +100,10 @@ const createCalculatedModelItem = (
     },
     resolvedVendor: { state: "unknown" },
     ...itemOverrides,
+    comparableModelIdentity: comparableModelIdentity ?? {
+      key: `exact:${model.model_name}`,
+      displayName: model.model_name,
+    },
   }
 }
 

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import {
   createModelIdentityIndex,
+  resolveComparableModelIdentity,
   resolveModelIdentity,
   resolveRedirectModelIdentity,
 } from "~/services/models/modelMetadata/modelIdentityIndex"
@@ -18,6 +19,92 @@ function createMetadata(
 }
 
 describe("modelIdentityIndex", () => {
+  it("resolves decorated aliases to one comparable model identity", () => {
+    const metadata = createMetadata({
+      id: "openai/gpt-4o",
+      name: "GPT-4o",
+      provider_id: "openai",
+    })
+    const index = createModelIdentityIndex([metadata])
+
+    expect(resolveComparableModelIdentity(index, "gpt-4o")).toEqual({
+      key: "canonical:openai/gpt-4o",
+      displayName: "openai/gpt-4o",
+    })
+    expect(
+      resolveComparableModelIdentity(index, "upstream/openai/gpt-4o:free"),
+    ).toEqual({
+      key: "canonical:openai/gpt-4o",
+      displayName: "openai/gpt-4o",
+    })
+  })
+
+  it("keeps dated model offers isolated from aliases and other snapshots", () => {
+    const index = createModelIdentityIndex([])
+    const baseIdentity = resolveComparableModelIdentity(
+      index,
+      "vendor/model-a:free",
+    )
+    const firstSnapshot = resolveComparableModelIdentity(
+      index,
+      "vendor/model-a-2025-01-01:free",
+    )
+    const secondSnapshot = resolveComparableModelIdentity(
+      index,
+      "vendor/model-a-2025-02-02:free",
+    )
+
+    expect(firstSnapshot).toEqual({
+      key: "exact:vendor/model-a-2025-01-01:free",
+      displayName: "vendor/model-a-2025-01-01:free",
+    })
+    expect(firstSnapshot.key).not.toBe(baseIdentity.key)
+    expect(firstSnapshot.key).not.toBe(secondSnapshot.key)
+  })
+
+  it("fails closed when a normalized model alias is ambiguous", () => {
+    const providerA = createMetadata({ id: "provider-a/shared-model" })
+    const index = createModelIdentityIndex([
+      providerA,
+      createMetadata({ id: "provider-b/shared-model" }),
+    ])
+
+    expect(
+      resolveComparableModelIdentity(index, "provider-a/shared-model"),
+    ).toEqual({
+      key: "canonical:provider-a/shared-model",
+      displayName: providerA.id,
+    })
+
+    expect(resolveComparableModelIdentity(index, "shared-model")).toEqual({
+      key: "exact:shared-model",
+      displayName: "shared-model",
+    })
+    expect(
+      resolveComparableModelIdentity(index, "gateway/shared-model:free"),
+    ).toEqual({
+      key: "exact:gateway/shared-model:free",
+      displayName: "gateway/shared-model:free",
+    })
+  })
+
+  it("normalizes unknown separator and token-order aliases without crossing versions", () => {
+    const index = createModelIdentityIndex([])
+    const ordered = resolveComparableModelIdentity(index, "claude-4.5-sonnet")
+    const reordered = resolveComparableModelIdentity(
+      index,
+      "gateway/claude_sonnet_4_5:free",
+    )
+    const nextVersion = resolveComparableModelIdentity(
+      index,
+      "claude-sonnet-4-6",
+    )
+
+    expect(ordered.key).toBe("normalized:4-5-claude-sonnet")
+    expect(reordered.key).toBe(ordered.key)
+    expect(nextVersion.key).not.toBe(ordered.key)
+  })
+
   it("distinguishes exact full ids from unambiguous bare-id and name aliases", () => {
     const providerQualified = createMetadata({
       id: "openai/gpt-4o",

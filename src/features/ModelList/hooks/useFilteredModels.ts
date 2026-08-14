@@ -38,7 +38,11 @@ import {
   MODEL_UNAVAILABLE_PRICE_REASONS,
   type PricingResponse,
 } from "~/services/modelList/pricingModel"
-import { resolveModelIdentity } from "~/services/models/modelMetadata/modelIdentityIndex"
+import {
+  resolveComparableModelIdentity,
+  resolveModelIdentity,
+  type ComparableModelIdentity,
+} from "~/services/models/modelMetadata/modelIdentityIndex"
 import type {
   ModelMetadata,
   ModelVendorCandidate,
@@ -103,6 +107,7 @@ interface RawModelItem {
   groupContext: ModelGroupContext
   exchangeRate: number
   modelMetadata?: ModelMetadata
+  comparableModelIdentity: ComparableModelIdentity
   resolvedVendor: ResolvedModelVendor
 }
 
@@ -129,6 +134,7 @@ export type CalculatedModelItem = {
   activeGroupContext: ActiveModelGroupContext
   effectiveGroup?: string
   modelMetadata?: ModelMetadata
+  comparableModelIdentity: ComparableModelIdentity
   resolvedVendor: ResolvedModelVendor
   hasAutoSelectedGroup?: boolean
   isLowestPrice?: boolean
@@ -527,6 +533,7 @@ function resolveBestCalculatedItem(
     activeGroupContext: params.activeGroupContext,
     effectiveGroup: params.effectiveGroup,
     modelMetadata: rawItem.modelMetadata,
+    comparableModelIdentity: rawItem.comparableModelIdentity,
     resolvedVendor: rawItem.resolvedVendor,
     hasAutoSelectedGroup: params.hasAutoSelectedGroup,
   })
@@ -743,7 +750,10 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
     }
 
     const attachVendorCandidate = (
-      item: Omit<RawModelItem, "resolvedVendor" | "modelMetadata">,
+      item: Omit<
+        RawModelItem,
+        "resolvedVendor" | "modelMetadata" | "comparableModelIdentity"
+      >,
     ): CandidateRawModelItem => {
       const lookupResult = resolveModelIdentity(
         modelMetadataIndex,
@@ -754,6 +764,10 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
         ...item,
         modelMetadata:
           lookupResult.state === "resolved" ? lookupResult.metadata : undefined,
+        comparableModelIdentity: resolveComparableModelIdentity(
+          modelMetadataIndex,
+          item.model.model_name,
+        ),
         vendorCandidate: resolveModelVendorCandidate(
           {
             id: item.model.model_name,
@@ -1396,7 +1410,10 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
           return
         }
 
-        const groupKey = `${item.model.model_name}:${priceKey.billingMode}`
+        const groupKey = JSON.stringify([
+          item.comparableModelIdentity.key,
+          priceKey.billingMode,
+        ])
         const group = groups.get(groupKey) ?? []
         group.push(item)
         groups.set(groupKey, group)
@@ -1458,11 +1475,12 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
       b: (typeof indexedItems)[number] & { priceKey: ComparablePriceKey },
     ) => {
       if (sortMode === MODEL_LIST_SORT_MODES.MODEL_CHEAPEST_FIRST) {
-        const modelNameComparison = a.item.model.model_name.localeCompare(
-          b.item.model.model_name,
+        const modelIdentityComparison = compareCodePoints(
+          a.item.comparableModelIdentity.key,
+          b.item.comparableModelIdentity.key,
         )
-        if (modelNameComparison !== 0) {
-          return modelNameComparison
+        if (modelIdentityComparison !== 0) {
+          return modelIdentityComparison
         }
       }
 

@@ -80,7 +80,7 @@ type ModelDisplayEntry =
   | { kind: "model"; item: CalculatedModelItem }
   | { kind: "price-comparison-group"; group: PriceComparisonDisplayGroup }
 
-/** Groups exact model ids while keeping incompatible billing modes separate. */
+/** Groups comparable model identities while keeping billing modes separate. */
 function createPriceComparisonDisplayGroups(
   models: CalculatedModelItem[],
 ): PriceComparisonDisplayGroup[] {
@@ -90,10 +90,10 @@ function createPriceComparisonDisplayGroups(
     const billingMode = isTokenBillingType(item.model.quota_type)
       ? MODEL_LIST_BILLING_MODES.TOKEN_BASED
       : MODEL_LIST_BILLING_MODES.PER_CALL
-    const key = JSON.stringify([item.model.model_name, billingMode])
+    const key = JSON.stringify([item.comparableModelIdentity.key, billingMode])
     const group = groups.get(key) ?? {
       key,
-      modelName: item.model.model_name,
+      modelName: item.comparableModelIdentity.displayName,
       quotaType: item.model.quota_type,
       comparableItems: [],
       notComparedItems: [],

@@ -206,6 +206,7 @@ type CalculatedModelOverrides = {
   source?: CalculatedModelItem["source"]
   effectiveGroup?: string
   resolvedVendor?: CalculatedModelItem["resolvedVendor"]
+  comparableModelIdentity?: CalculatedModelItem["comparableModelIdentity"]
   isLowestPrice?: boolean
   isPriceComparable?: boolean
 }
@@ -279,6 +280,10 @@ const createCalculatedModel = (
     activeGroupContext,
     effectiveGroup: overrides.effectiveGroup,
     resolvedVendor: overrides.resolvedVendor ?? { state: "unknown" },
+    comparableModelIdentity: overrides.comparableModelIdentity ?? {
+      key: `exact:${model.model_name}`,
+      displayName: model.model_name,
+    },
     isLowestPrice: overrides.isLowestPrice,
     isPriceComparable: overrides.isPriceComparable,
   }
@@ -513,6 +518,51 @@ describe("ModelDisplay", () => {
         name: "modelList:priceComparison.results.notCompared",
       }),
     ).not.toBeInTheDocument()
+  })
+
+  it("renders normalized model aliases in one comparison region", () => {
+    const secondAccountSource = createAccountSource({
+      ...ACCOUNT_FIXTURE,
+      id: "account-2",
+      name: "Account Two",
+    })
+    const comparableModelIdentity = {
+      key: "normalized:4-5-claude-sonnet",
+      displayName: "claude-4.5-sonnet",
+    }
+
+    render(
+      <ModelDisplay
+        models={[
+          createCalculatedModel({
+            model: { model_name: "claude-4.5-sonnet" },
+            comparableModelIdentity,
+            isLowestPrice: true,
+            isPriceComparable: true,
+          }),
+          createCalculatedModel({
+            model: { model_name: "gateway/claude_sonnet_4_5:free" },
+            source: secondAccountSource,
+            comparableModelIdentity,
+            isPriceComparable: true,
+          }),
+        ]}
+        verificationSummariesByKey={{}}
+        showRealPrice={true}
+        showRatioColumn={true}
+        showEndpointTypes={true}
+        showPriceComparisonGroups={true}
+        handleGroupClick={vi.fn()}
+      />,
+    )
+
+    const comparisonRegion = screen.getByRole("region", {
+      name: "claude-4.5-sonnet ui:billing.tokenBased",
+    })
+    expect(screen.getAllByRole("region")).toHaveLength(1)
+    expect(
+      within(comparisonRegion).getAllByTestId(TEST_IDS.modelItem),
+    ).toHaveLength(2)
   })
 
   it("derives account exchange rates, group mode, and account verification summaries for rendered model cards", async () => {

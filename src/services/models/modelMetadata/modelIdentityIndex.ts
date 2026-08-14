@@ -53,6 +53,13 @@ function getBareIdentity(value: string): string {
   return lastSlashIndex === -1 ? value : value.slice(lastSlashIndex + 1)
 }
 
+/** Extracts an undecorated model id while retaining version/date suffixes. */
+export function extractCoreModelIdentity(modelName: string): string {
+  const bareIdentity = getBareIdentity(modelName)
+  const colonIndex = bareIdentity.indexOf(":")
+  return colonIndex === -1 ? bareIdentity : bareIdentity.slice(0, colonIndex)
+}
+
 /**
  * Builds an order-insensitive alias key while retaining the leading model token.
  */
@@ -204,6 +211,24 @@ class ModelIdentityIndexImpl {
 
 export type ModelIdentityIndex = ModelIdentityIndexImpl
 
+export interface ComparableModelIdentity {
+  key: string
+  displayName: string
+}
+
+/** Converts one resolved metadata match into a comparable identity. */
+function toCanonicalComparableIdentity(
+  result: ModelIdentityLookupResult,
+): ComparableModelIdentity | null {
+  if (result.state !== "resolved") return null
+
+  const canonicalId = normalizeIdentity(result.metadata.id)
+  return {
+    key: `canonical:${canonicalId}`,
+    displayName: result.metadata.id,
+  }
+}
+
 /**
  * Builds an ambiguity-aware identity index without exposing its lookup maps.
  */
@@ -239,4 +264,40 @@ export function resolveRedirectModelIdentity(
   }
 
   return index.resolveRedirectAlias(rawModelId)
+}
+
+/** Resolves the stable identity used to compare equivalent model offers. */
+export function resolveComparableModelIdentity(
+  index: ModelIdentityIndex,
+  rawModelId: string,
+): ComparableModelIdentity {
+  const trimmedId = rawModelId.trim()
+  const undecoratedId = extractCoreModelIdentity(trimmedId).trim()
+  const normalizedUndecoratedId = normalizeIdentity(undecoratedId)
+
+  if (removeDateSuffix(normalizedUndecoratedId) !== normalizedUndecoratedId) {
+    return { key: `exact:${trimmedId}`, displayName: trimmedId }
+  }
+
+  const directResolution = resolveRedirectModelIdentity(index, trimmedId)
+  const directIdentity = toCanonicalComparableIdentity(directResolution)
+  if (directIdentity) return directIdentity
+  if (directResolution.state === "ambiguous") {
+    return { key: `exact:${trimmedId}`, displayName: trimmedId }
+  }
+
+  const resolved = resolveRedirectModelIdentity(index, undecoratedId)
+  const canonicalIdentity = toCanonicalComparableIdentity(resolved)
+  if (canonicalIdentity) return canonicalIdentity
+
+  if (resolved.state === "ambiguous") {
+    return { key: `exact:${trimmedId}`, displayName: trimmedId }
+  }
+
+  const tokenKey = toModelTokenKey(undecoratedId)
+  if (tokenKey) {
+    return { key: `normalized:${tokenKey}`, displayName: undecoratedId }
+  }
+
+  return { key: `exact:${trimmedId}`, displayName: trimmedId }
 }

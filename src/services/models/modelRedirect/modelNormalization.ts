@@ -1,27 +1,9 @@
 import { modelMetadataService } from "~/services/models/modelMetadata"
+import { extractCoreModelIdentity } from "~/services/models/modelMetadata/modelIdentityIndex"
 import { resolveCuratedModelVendor } from "~/services/models/modelVendor"
 import { removeDateSuffix } from "~/services/models/utils/modelName"
 
-/**
- * Extracts the undecorated model identity while retaining any date suffix.
- */
-export function extractCoreModelIdentity(modelName: string): string {
-  let coreIdentity = modelName
-
-  // 提取真实模型名，提取最后一个/到结尾的内容
-  const lastSlashIndex = coreIdentity.lastIndexOf("/")
-  if (lastSlashIndex !== -1) {
-    coreIdentity = coreIdentity.slice(lastSlashIndex + 1)
-  }
-
-  // 移除冒号后缀（常见的:free等非模型信息后缀）
-  const colonIndex = coreIdentity.indexOf(":")
-  if (colonIndex !== -1) {
-    coreIdentity = coreIdentity.slice(0, colonIndex)
-  }
-
-  return coreIdentity
-}
+export { extractCoreModelIdentity }
 
 /**
  * Normalizes a raw model identifier to its core name by stripping known
