@@ -1,5 +1,5 @@
 import { ArrowPathIcon } from "@heroicons/react/24/outline"
-import { Cpu, KeyRound } from "lucide-react"
+import { Cpu, KeyRound, TrendingDown } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -28,6 +28,10 @@ import {
   resolveModelManagementSource,
   type ModelManagementItemSource,
 } from "~/features/ModelList/modelManagementSources"
+import {
+  canEnableModelPriceComparison,
+  enableModelPriceComparison,
+} from "~/features/ModelList/priceComparisonActivation"
 import {
   canCreateAccountApiTokens,
   canListAccountRuntimeKeys,
@@ -218,6 +222,35 @@ export default function ModelList(props: {
 
   const isAllAccountsScope =
     selectedSource?.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS
+  const shouldShowPriceComparisonAction = canEnableModelPriceComparison({
+    selectedSource,
+    sourceCapabilities,
+    isAllAccountsSource: isAllAccountsScope,
+    sortMode,
+    selectedBillingMode,
+    selectedGroups,
+    showRealPrice,
+  })
+  const handleEnablePriceComparison = useCallback(() => {
+    enableModelPriceComparison({
+      isAllAccountsSource: isAllAccountsScope,
+      setSelectedSourceValue: handleSelectedSourceValueChange,
+      setSortMode,
+      setSelectedBillingMode,
+      setSelectedGroups,
+      setShowRealPrice,
+      searchTerm,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListPage,
+    })
+  }, [
+    handleSelectedSourceValueChange,
+    isAllAccountsScope,
+    searchTerm,
+    setSelectedBillingMode,
+    setSelectedGroups,
+    setShowRealPrice,
+    setSortMode,
+  ])
   const modelDisplayGroupSelectionScope = isAllAccountsScope
     ? MODEL_LIST_GROUP_SELECTION_SCOPES.ALL_ACCOUNTS
     : MODEL_LIST_GROUP_SELECTION_SCOPES.SINGLE_SOURCE
@@ -556,6 +589,24 @@ export default function ModelList(props: {
               >
                 {isLoading ? t("common:status.refreshing") : t("refreshData")}
               </Button>
+              {shouldShowPriceComparisonAction && (
+                <Tooltip
+                  content={t("comparison.tooltip")}
+                  wrapperClassName="contents"
+                >
+                  <Button
+                    type="button"
+                    variant="default"
+                    data-testid={
+                      MODEL_LIST_TEST_IDS.headerPriceComparisonButton
+                    }
+                    leftIcon={<TrendingDown className="h-4 w-4" />}
+                    onClick={handleEnablePriceComparison}
+                  >
+                    {t("comparison.cta")}
+                  </Button>
+                </Tooltip>
+              )}
             </ProductAnalyticsScope>
           ) : undefined
         }

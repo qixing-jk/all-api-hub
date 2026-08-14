@@ -446,7 +446,11 @@ test("groups same-model offers when comparing prices at narrow options width", a
     },
   })
 
-  await page.getByRole("button", { name: "Compare Prices" }).click()
+  await page.setViewportSize({ width: 720, height: 900 })
+  await expect(page.getByRole("button", { name: "Refresh Data" })).toBeVisible()
+  await page
+    .getByTestId(MODEL_LIST_TEST_IDS.headerPriceComparisonButton)
+    .click()
   await expect(page).toHaveURL((url) => {
     return (
       url.hash === `#${MENU_ITEM_IDS.MODELS}` &&
@@ -462,7 +466,6 @@ test("groups same-model offers when comparing prices at narrow options width", a
   await expect(comparisonGroup).toContainText("Comparison Account A")
   await expect(comparisonGroup).toContainText("Comparison Account B")
 
-  await page.setViewportSize({ width: 720, height: 900 })
   await expect(comparisonGroup).toBeVisible()
   expect(
     await comparisonGroup.evaluate(

@@ -67,6 +67,10 @@ import {
   type ModelPriceComparisonPresetId,
   type ModelPriceComparisonWeights,
 } from "../priceComparison"
+import {
+  canEnableModelPriceComparison,
+  enableModelPriceComparison,
+} from "../priceComparisonActivation"
 import { PriceComparisonControls } from "./PriceComparisonControls"
 
 interface ControlPanelProps {
@@ -203,16 +207,15 @@ export function ControlPanel({
     sourceCapabilities.supportsBatchCredentialVerification
   const supportsSortControls =
     sourceCapabilities.supportsPricing || supportsLatencySorting
-  const isPriceComparisonActive =
-    isAllAccountsSource &&
-    sortMode === MODEL_LIST_SORT_MODES.MODEL_CHEAPEST_FIRST &&
-    selectedBillingMode === MODEL_LIST_BILLING_MODES.ALL &&
-    selectedGroups.length === 0 &&
-    showRealPrice
-  const shouldShowPriceComparisonPrompt =
-    sourceCapabilities.supportsPricing &&
-    !isProfileSource &&
-    !isPriceComparisonActive
+  const shouldShowPriceComparisonPrompt = canEnableModelPriceComparison({
+    selectedSource,
+    sourceCapabilities,
+    isAllAccountsSource,
+    sortMode,
+    selectedBillingMode,
+    selectedGroups,
+    showRealPrice,
+  })
   const shouldShowModelCapabilityCoverageHint =
     supportsModelCapabilityFilter &&
     !!modelCapabilityMetadataCoverage &&
@@ -474,26 +477,15 @@ export function ControlPanel({
     })
   }
   const handleEnablePriceComparison = () => {
-    if (!isAllAccountsSource && setSelectedSourceValue) {
-      setSelectedSourceValue(ALL_ACCOUNTS_SOURCE_VALUE)
-    }
-    setSortMode(MODEL_LIST_SORT_MODES.MODEL_CHEAPEST_FIRST)
-    setSelectedBillingMode(MODEL_LIST_BILLING_MODES.ALL)
-    setSelectedGroups([])
-    setShowRealPrice(true)
-    const filterCount = 1 + (searchTerm.trim() ? 1 : 0)
-
-    void trackProductAnalyticsActionCompleted({
-      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
-      actionId: PRODUCT_ANALYTICS_ACTION_IDS.EnableModelPriceComparison,
+    enableModelPriceComparison({
+      isAllAccountsSource,
+      setSelectedSourceValue,
+      setSortMode,
+      setSelectedBillingMode,
+      setSelectedGroups,
+      setShowRealPrice,
+      searchTerm,
       surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListControlPanel,
-      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
-      result: PRODUCT_ANALYTICS_RESULTS.Success,
-      insights: {
-        targetKind: PRODUCT_ANALYTICS_TARGET_KINDS.ModelFilter,
-        mode: PRODUCT_ANALYTICS_MODE_IDS.All,
-        filterCount,
-      },
     })
   }
 

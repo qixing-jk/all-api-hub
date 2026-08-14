@@ -975,6 +975,87 @@ describe("ModelList page flows", () => {
     })
   })
 
+  it("offers one-click price comparison beside the page refresh action", async () => {
+    const user = userEvent.setup()
+    const setSelectedSourceValue = vi.fn()
+    const setSortMode = vi.fn()
+    const setSelectedBillingMode = vi.fn()
+    const setSelectedGroups = vi.fn()
+    const setShowRealPrice = vi.fn()
+
+    mockUseModelListData.mockReturnValue(
+      buildState({
+        setSelectedSourceValue,
+        setSortMode,
+        setSelectedBillingMode,
+        setSelectedGroups,
+        setShowRealPrice,
+      }),
+    )
+
+    render(<ModelList />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    expect(
+      await screen.findByRole("button", { name: "modelList:refreshData" }),
+    ).toBeVisible()
+    await user.click(
+      screen.getByRole("button", { name: "modelList:comparison.cta" }),
+    )
+
+    expect(setSelectedSourceValue).toHaveBeenCalledWith(
+      ALL_ACCOUNTS_SOURCE.value,
+    )
+    expect(setSortMode).toHaveBeenCalledWith(
+      MODEL_LIST_SORT_MODES.MODEL_CHEAPEST_FIRST,
+    )
+    expect(setSelectedBillingMode).toHaveBeenCalledWith(
+      MODEL_LIST_BILLING_MODES.ALL,
+    )
+    expect(setSelectedGroups).toHaveBeenCalledWith([])
+    expect(setShowRealPrice).toHaveBeenCalledWith(true)
+    expect(mockTrackProductAnalyticsActionCompleted).toHaveBeenCalledWith(
+      expect.objectContaining({
+        featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.EnableModelPriceComparison,
+        surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListPage,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        insights: expect.objectContaining({ filterCount: 1 }),
+      }),
+    )
+  })
+
+  it("hides the page comparison shortcut when comparison is already active", async () => {
+    mockUseModelListData.mockReturnValue(
+      buildState({
+        selectedSource: ALL_ACCOUNTS_SOURCE,
+        selectedSourceValue: ALL_ACCOUNTS_SOURCE.value,
+        currentAccount: null,
+        sourceCapabilities: ALL_ACCOUNTS_SOURCE.capabilities,
+        sortMode: MODEL_LIST_SORT_MODES.MODEL_CHEAPEST_FIRST,
+        selectedBillingMode: MODEL_LIST_BILLING_MODES.ALL,
+        selectedGroups: [],
+        showRealPrice: true,
+        pricingData: null,
+        pricingContexts: [{ account: ACCOUNT, pricing: { data: [] } }],
+      }),
+    )
+
+    render(<ModelList />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    expect(
+      await screen.findByRole("button", { name: "modelList:refreshData" }),
+    ).toBeVisible()
+    expect(
+      screen.queryByRole("button", { name: "modelList:comparison.cta" }),
+    ).not.toBeInTheDocument()
+  })
+
   it("keeps the page-level refresh action disabled while loading", async () => {
     mockUseModelListData.mockReturnValue(
       buildState({
