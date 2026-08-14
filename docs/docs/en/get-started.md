@@ -92,6 +92,7 @@ After adding an account, you can "push" these configurations to other AI tools w
 
 ### 📊 Asset Dashboard & Statistics
 - **[Overview & Real-time Refresh](./auto-refresh.md)**: Centrally view balances, usage, and health status across multiple sites.
+- **[Settings Page Overview (Main Dashboard)](./options-overview.md)**: View account status, API Credential Library, today's usage, and to-do items all in one screen.
 - **[Balance History](./balance-history.md)**: Visualize asset change trends with historical data.
 - **[Usage Analytics](./usage-analytics.md)**: Multi-dimensional analysis of consumption, model distribution, and latency.
 
