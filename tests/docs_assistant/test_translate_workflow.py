@@ -5,6 +5,7 @@ import yaml
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+GITIGNORE_PATH = REPO_ROOT / ".gitignore"
 WORKFLOW_PATH = REPO_ROOT / ".github" / "workflows" / "translate-docs.yml"
 TEST_WORKFLOW_PATH = REPO_ROOT / ".github" / "workflows" / "test.yml"
 TOOLING_CHECK_WORKFLOW_PATH = (
@@ -41,6 +42,43 @@ class TranslationWorkflowSafetyTests(unittest.TestCase):
         self.assertIn("mapfile -d '' -t files", step["run"])
         self.assertIn('"${files[@]}"', step["run"])
         self.assertNotIn("steps.changed-files.outputs.files }}", step["run"])
+
+    def test_pull_request_requires_generated_translation_changes(self):
+        detection_step = self.get_step("Detect generated translation changes")
+        detection_script = detection_step["run"]
+
+        self.assertIn(
+            "git status --porcelain=v1 -z --untracked-files=all --",
+            detection_script,
+        )
+        self.assertIn("docs/docs/en", detection_script)
+        self.assertIn("docs/docs/ja", detection_script)
+
+        generated_change_condition = (
+            "steps.generated-changes.outputs.has_changes == 'true'"
+        )
+        for step_name in (
+            "Setup pnpm for docs check",
+            "Setup Node.js for docs check",
+            "Install docs dependencies",
+            "Check generated docs",
+            "Create Pull Request",
+        ):
+            self.assertEqual(
+                self.get_step(step_name)["if"],
+                generated_change_condition,
+            )
+
+        pull_request_step = self.get_step("Create Pull Request")
+        add_paths = pull_request_step["with"]["add-paths"].splitlines()
+        self.assertEqual(
+            [path.strip() for path in add_paths if path.strip()],
+            ["docs/docs/en/**", "docs/docs/ja/**"],
+        )
+
+        gitignore = GITIGNORE_PATH.read_text(encoding="utf-8")
+        self.assertIn("__pycache__/", gitignore.splitlines())
+        self.assertIn("*.py[cod]", gitignore.splitlines())
 
     def test_python_translation_tests_use_a_dedicated_pr_check(self):
         test_workflow = load_workflow(TEST_WORKFLOW_PATH)

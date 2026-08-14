@@ -22,6 +22,10 @@
 .DS_Store
 *.pem
 
+# Python caches
+__pycache__/
+*.py[cod]
+
 # local env files
 .env*.local
 

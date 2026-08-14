@@ -204,15 +204,33 @@ jobs:
       - name: Check translation completeness
         run: python docs_assistant/find_missing.py --check
 
+      - name: Detect generated translation changes
+        id: generated-changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          GENERATED_STATUS="${RUNNER_TEMP}/generated-translation-status.bin"
+          git status --porcelain=v1 -z --untracked-files=all -- \
+            docs/docs/en \
+            docs/docs/ja > "$GENERATED_STATUS"
+
+          if [ -s "$GENERATED_STATUS" ]; then
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+            echo "📝 检测到生成的翻译变更"
+          else
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+            echo "✅ 没有生成新的翻译变更"
+          fi
+
       - name: Setup pnpm for docs check
-        if: steps.changed-files.outputs.has_changes == 'true'
+        if: steps.generated-changes.outputs.has_changes == 'true'
         uses: pnpm/action-setup@v5
         with:
           version: 10
           run_install: false
 
       - name: Setup Node.js for docs check
-        if: steps.changed-files.outputs.has_changes == 'true'
+        if: steps.generated-changes.outputs.has_changes == 'true'
         uses: actions/setup-node@v6
         with:
           node-version-file: .nvmrc
@@ -220,22 +238,25 @@ jobs:
           cache-dependency-path: docs/pnpm-lock.yaml
 
       - name: Install docs dependencies
-        if: steps.changed-files.outputs.has_changes == 'true'
+        if: steps.generated-changes.outputs.has_changes == 'true'
         working-directory: docs
         run: pnpm install --frozen-lockfile --prefer-offline
 
       - name: Check generated docs
-        if: steps.changed-files.outputs.has_changes == 'true'
+        if: steps.generated-changes.outputs.has_changes == 'true'
         working-directory: docs
         env:
           NODE_OPTIONS: --max_old_space_size=8192
         run: pnpm run docs:check
 
       - name: Create Pull Request
-        if: steps.changed-files.outputs.has_changes == 'true'
+        if: steps.generated-changes.outputs.has_changes == 'true'
         uses: peter-evans/create-pull-request@v8
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          add-paths: |
+            docs/docs/en/**
+            docs/docs/ja/**
           commit-message: |
             🌐 Auto-translate documentation
 
