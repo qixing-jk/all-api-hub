@@ -612,6 +612,32 @@ describe("ModelDisplay", () => {
     expect(handleGroupClick).not.toHaveBeenCalled()
   })
 
+  it("omits verification history when a comparison offer has no valid history target", () => {
+    const sourceWithoutHistoryTarget = createAccountSource({
+      ...ACCOUNT_FIXTURE,
+      id: " ",
+    })
+
+    render(
+      <ModelDisplay
+        models={[
+          createCalculatedModel({
+            source: sourceWithoutHistoryTarget,
+            isPriceComparable: true,
+          }),
+        ]}
+        verificationSummariesByKey={{}}
+        showRealPrice={true}
+        showRatioColumn={true}
+        showEndpointTypes={true}
+        showPriceComparisonGroups={true}
+        handleGroupClick={vi.fn()}
+      />,
+    )
+
+    expect(modelItemSpy.mock.calls.at(-1)?.[0].verificationSummary).toBeNull()
+  })
+
   it("uses profile verification summaries without inventing group selection for profile-backed items", () => {
     const profileSummaryTarget = requireHistoryTarget(
       createProfileModelVerificationHistoryTarget(
