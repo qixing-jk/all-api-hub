@@ -95,6 +95,26 @@ class TranslateFailureReportingTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "为空"):
                 translate.translate_content("# 指南\n", "en")
 
+    def test_outer_code_fence_with_blank_content_is_rejected(self):
+        response = SimpleNamespace(
+            choices=[
+                SimpleNamespace(
+                    message=SimpleNamespace(content="```markdown\n   \n```")
+                )
+            ]
+        )
+
+        with (
+            patch.object(
+                translate.client.chat.completions,
+                "create",
+                return_value=response,
+            ),
+            patch.object(translate, "MAX_RETRIES", 0),
+        ):
+            with self.assertRaisesRegex(ValueError, "为空"):
+                translate.translate_content("# 指南\n", "en")
+
     def test_main_exits_nonzero_when_any_file_fails(self):
         with (
             patch.object(translate, "DOCS_DIR", self.docs_dir),

@@ -123,7 +123,7 @@ On the right are **collapsible monitoring panels** for 4 automated tasks (defaul
 - **Action Buttons**: **"Open Sync"**.
 
 ### ④ WebDAV Backup Sync
-- **Expanded Content**: Sync interval (minutes), sync strategy (merge/upload only/download only), data range count.
+- **Expanded Content**: Sync interval (minutes), sync strategy (merge, upload-only, or download-only), data range count.
 - **Action Buttons**: **"Open Backup Sync"**.
 
 ---

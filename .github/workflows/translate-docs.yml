@@ -51,19 +51,29 @@ jobs:
 
       - name: Get files to translate
         id: changed-files
+        env:
+          TRANSLATION_MODE: ${{ github.event.inputs.mode }}
+          EVENT_DIFF_BASE: ${{ github.event.before }}
+          EVENT_DIFF_HEAD: ${{ github.sha }}
         run: |
-          set -o pipefail
+          set -euo pipefail
 
-          MODE="${{ github.event.inputs.mode }}"
+          MODE="${TRANSLATION_MODE:-changed}"
           DOCS_ROOT='docs/docs'
-          MISSING_FILES_OUTPUT="${RUNNER_TEMP}/missing_files.txt"
-          DIFF_BASE="${{ github.event.before }}"
-          DIFF_HEAD="${{ github.sha }}"
+          FILES_TO_TRANSLATE="${RUNNER_TEMP}/translation-files.bin"
+          MANUAL_TRANSLATIONS_FILE="${RUNNER_TEMP}/manual-translations.bin"
+          SOURCE_DIFF_FILE="${RUNNER_TEMP}/source-diff.bin"
+          SOURCE_COUNT_DIFF_FILE="${RUNNER_TEMP}/source-count-diff.bin"
+          DIFF_BASE="$EVENT_DIFF_BASE"
+          DIFF_HEAD="$EVENT_DIFF_HEAD"
 
-          # 如果是 push 触发，默认为 changed 模式
-          if [ -z "$MODE" ]; then
-            MODE="changed"
-          fi
+          case "$MODE" in
+            changed|force_all|missing_only) ;;
+            *)
+              echo "❌ 不支持的翻译模式: $MODE" >&2
+              exit 1
+              ;;
+          esac
 
           if [ "$MODE" = "force_all" ] || [ "$MODE" = "missing_only" ]; then
             # 全量/补缺模式不应把上一提交中的译文误判为本次手动翻译。
@@ -76,66 +86,86 @@ jobs:
 
           # 检测手动翻译文件
           echo "🔍 检测手动翻译文件..."
+          : > "$MANUAL_TRANSLATIONS_FILE"
           if [ "$MODE" = "force_all" ] || [ "$MODE" = "missing_only" ]; then
-            MANUAL_TRANSLATIONS=""
+            MANUAL_TRANSLATIONS=()
           else
-            MANUAL_TRANSLATIONS=$(
-              git diff --name-only --diff-filter=AMR --find-renames "$DIFF_BASE" "$DIFF_HEAD" -- "$DOCS_ROOT/en" "$DOCS_ROOT/ja" \
-                | tr '\n' ' '
-            )
+            git diff -z --name-only --diff-filter=AMR --find-renames \
+              "$DIFF_BASE" "$DIFF_HEAD" -- "$DOCS_ROOT/en" "$DOCS_ROOT/ja" \
+              > "$MANUAL_TRANSLATIONS_FILE"
+            mapfile -d '' -t MANUAL_TRANSLATIONS < "$MANUAL_TRANSLATIONS_FILE"
           fi
-          if [ -n "$MANUAL_TRANSLATIONS" ]; then
-            echo "📝 检测到手动翻译文件: $MANUAL_TRANSLATIONS"
+          if [ "${#MANUAL_TRANSLATIONS[@]}" -gt 0 ]; then
+            printf '📝 检测到手动翻译文件:\n'
+            printf '  %s\n' "${MANUAL_TRANSLATIONS[@]}"
           else
             echo "📝 未检测到手动翻译文件"
           fi
 
+          : > "$FILES_TO_TRANSLATE"
           if [ "$MODE" = "force_all" ]; then
             # 强制翻译所有文档
             echo "📚 获取所有文档文件..."
-            CHANGED_FILES=$(
-              find "$DOCS_ROOT" -name "*.md" -type f ! -path "$DOCS_ROOT/en/*" ! -path "$DOCS_ROOT/ja/*" | tr '\n' ' '
-            )
-            SOURCE_CHANGE_COUNT=$(find "$DOCS_ROOT" -name "*.md" -type f ! -path "$DOCS_ROOT/en/*" ! -path "$DOCS_ROOT/ja/*" | wc -l | tr -d ' ')
+            find "$DOCS_ROOT" -name "*.md" -type f \
+              ! -path "$DOCS_ROOT/en/*" ! -path "$DOCS_ROOT/ja/*" \
+              -print0 > "$FILES_TO_TRANSLATE"
+            mapfile -d '' -t TRANSLATE_FILES < "$FILES_TO_TRANSLATE"
+            SOURCE_CHANGE_COUNT="${#TRANSLATE_FILES[@]}"
 
           elif [ "$MODE" = "missing_only" ]; then
             # 只翻译缺失的文档
             echo "🔍 检测缺失的翻译文件..."
-            MISSING_FILES_OUTPUT="$MISSING_FILES_OUTPUT" python docs_assistant/find_missing.py
-            if [ -f "$MISSING_FILES_OUTPUT" ]; then
-              CHANGED_FILES=$(cat "$MISSING_FILES_OUTPUT" | tr '\n' ' ')
-            else
-              CHANGED_FILES=""
-            fi
-            SOURCE_CHANGE_COUNT=$(printf '%s' "$CHANGED_FILES" | wc -w | tr -d ' ')
+            MISSING_FILES_OUTPUT="$FILES_TO_TRANSLATE" \
+              MISSING_FILES_DELIMITER=nul \
+              python docs_assistant/find_missing.py
+            mapfile -d '' -t TRANSLATE_FILES < "$FILES_TO_TRANSLATE"
+            SOURCE_CHANGE_COUNT="${#TRANSLATE_FILES[@]}"
 
           else
             # 正常模式：只翻译变更的文件
             echo "📝 获取变更的文件..."
-            CHANGED_FILES=$(
-              git diff --name-only --diff-filter=AMR --find-renames "$DIFF_BASE" "$DIFF_HEAD" -- "$DOCS_ROOT" \
-                | awk '$0 ~ /^docs\/docs\/.*\.md$/ && $0 !~ /^docs\/docs\/(en|ja)\//' \
-                | tr '\n' ' '
-            )
-            SOURCE_CHANGE_COUNT=$(
-              git diff --name-only --diff-filter=AMRD --find-renames "$DIFF_BASE" "$DIFF_HEAD" -- "$DOCS_ROOT" \
-                | awk '$0 ~ /^docs\/docs\/.*\.md$/ && $0 !~ /^docs\/docs\/(en|ja)\//' \
-                | wc -l | tr -d ' '
-            )
+            git diff -z --name-only --diff-filter=AMR --find-renames \
+              "$DIFF_BASE" "$DIFF_HEAD" -- "$DOCS_ROOT" > "$SOURCE_DIFF_FILE"
+            while IFS= read -r -d '' file_path; do
+              case "$file_path" in
+                docs/docs/en/*|docs/docs/ja/*) ;;
+                docs/docs/*.md) printf '%s\0' "$file_path" >> "$FILES_TO_TRANSLATE" ;;
+              esac
+            done < "$SOURCE_DIFF_FILE"
+            mapfile -d '' -t TRANSLATE_FILES < "$FILES_TO_TRANSLATE"
+
+            git diff -z --name-only --diff-filter=AMRD --find-renames \
+              "$DIFF_BASE" "$DIFF_HEAD" -- "$DOCS_ROOT" > "$SOURCE_COUNT_DIFF_FILE"
+            SOURCE_CHANGE_COUNT=0
+            while IFS= read -r -d '' file_path; do
+              case "$file_path" in
+                docs/docs/en/*|docs/docs/ja/*) ;;
+                docs/docs/*.md) SOURCE_CHANGE_COUNT=$((SOURCE_CHANGE_COUNT + 1)) ;;
+              esac
+            done < "$SOURCE_COUNT_DIFF_FILE"
           fi
 
-          echo "待翻译文件: $CHANGED_FILES"
-          echo "files=$CHANGED_FILES" >> $GITHUB_OUTPUT
-          echo "manual_translations=$MANUAL_TRANSLATIONS" >> $GITHUB_OUTPUT
-          echo "has_translate_files=$([ -n "$CHANGED_FILES" ] && echo true || echo false)" >> $GITHUB_OUTPUT
-          echo "diff_base=$DIFF_BASE" >> $GITHUB_OUTPUT
-          echo "diff_head=$DIFF_HEAD" >> $GITHUB_OUTPUT
+          FILE_COUNT="${#TRANSLATE_FILES[@]}"
+          echo "待翻译文件:"
+          if [ "$FILE_COUNT" -gt 0 ]; then
+            printf '  %s\n' "${TRANSLATE_FILES[@]}"
+          else
+            echo "  （无）"
+          fi
 
-          if [ "${SOURCE_CHANGE_COUNT:-0}" -eq 0 ]; then
+          {
+            echo "files_path=$FILES_TO_TRANSLATE"
+            echo "file_count=$FILE_COUNT"
+            echo "has_translate_files=$([ "$FILE_COUNT" -gt 0 ] && echo true || echo false)"
+            echo "diff_base=$DIFF_BASE"
+            echo "diff_head=$DIFF_HEAD"
+            echo "source_change_count=$SOURCE_CHANGE_COUNT"
+          } >> "$GITHUB_OUTPUT"
+
+          if [ "$SOURCE_CHANGE_COUNT" -eq 0 ]; then
             echo "✅ 没有需要处理的源文档变更"
             echo "has_changes=false" >> $GITHUB_OUTPUT
           else
-            FILE_COUNT=$(printf '%s' "$CHANGED_FILES" | wc -w | tr -d ' ')
             echo "📊 共检测到 $SOURCE_CHANGE_COUNT 个源文档变更，其中 $FILE_COUNT 个需要翻译"
             echo "has_changes=true" >> $GITHUB_OUTPUT
           fi
@@ -161,9 +191,15 @@ jobs:
           TRANSLATE_SKIP_MANUAL: ${{ (github.event.inputs.mode == 'force_all' || github.event.inputs.mode == 'missing_only') && 'true' || 'false' }}
           TRANSLATE_DIFF_BASE: ${{ steps.changed-files.outputs.diff_base }}
           TRANSLATE_DIFF_HEAD: ${{ steps.changed-files.outputs.diff_head }}
+          TRANSLATE_FILES_PATH: ${{ steps.changed-files.outputs.files_path }}
         run: |
-          echo "手动翻译文件: ${{ steps.changed-files.outputs.manual_translations }}"
-          python docs_assistant/translate.py ${{ steps.changed-files.outputs.files }}
+          set -euo pipefail
+          mapfile -d '' -t files < "$TRANSLATE_FILES_PATH"
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "❌ 翻译文件列表为空" >&2
+            exit 1
+          fi
+          python docs_assistant/translate.py "${files[@]}"
 
       - name: Check translation completeness
         run: python docs_assistant/find_missing.py --check
@@ -203,7 +239,7 @@ jobs:
           commit-message: |
             🌐 Auto-translate documentation
 
-            Files: ${{ steps.changed-files.outputs.files }}
+            Source documents: ${{ steps.changed-files.outputs.source_change_count }}
           branch: auto-translate-${{ github.run_id }}
           delete-branch: true
           title: "🌐 Auto-translate documentation"
@@ -218,9 +254,8 @@ jobs:
             - **工作流运行**: #${{ github.run_id }}
 
             ### 📁 翻译文件
-            ```
-            ${{ steps.changed-files.outputs.files }}
-            ```
+            - **源文档变更**: ${{ steps.changed-files.outputs.source_change_count }}
+            - **需要翻译**: ${{ steps.changed-files.outputs.file_count }}
 
             ### ✅ 检查项
             - [ ] 翻译内容准确

@@ -508,15 +508,15 @@ def translate_content(
             )
             
             translated_content = response.choices[0].message.content.strip()
-            if not translated_content:
-                raise ValueError(
-                    f"翻译结果为空 ({LANGUAGES[target_language]['native_name']})"
-                )
             translated_content = strip_outer_code_fence(translated_content)
             translated_content = preserve_translated_link_targets(
                 content,
                 translated_content,
             )
+            if not translated_content.strip():
+                raise ValueError(
+                    f"翻译结果为空 ({LANGUAGES[target_language]['native_name']})"
+                )
             logger.info(f"翻译完成 ({LANGUAGES[target_language]['native_name']})")
             
             return translated_content

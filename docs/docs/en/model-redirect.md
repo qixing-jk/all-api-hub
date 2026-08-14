@@ -87,7 +87,7 @@
 ## Frequently Asked Questions
 
 - **Prompting for Missing New API Configuration**
-  - Please first fill in the Admin URL, Token, and User ID in **"Basic Settings → New API Integration Settings"** and save.
+  - Please first fill in the Admin URL, administrator token `Admin Token`, and User ID in **"Basic Settings → New API Integration Settings"** and save.
 - **Prompting that the Feature is Not Enabled**
   - Confirm that the "Enable Model Redirect" toggle has been turned on in the "Model Redirect" area.
 - **Some Standard Models Did Not Generate Mappings**

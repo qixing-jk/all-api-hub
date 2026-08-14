@@ -112,9 +112,10 @@ def save_missing_files(missing_files: list):
         logger.info("\n✅ 所有文档都已翻译完成！")
         return
     
+    delimiter = "\0" if os.environ.get("MISSING_FILES_DELIMITER") == "nul" else "\n"
     with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
         for file_path in missing_files:
-            f.write(f"{file_path}\n")
+            f.write(f"{file_path}{delimiter}")
     
     logger.info(f"\n💾 已保存缺失文件列表到: {OUTPUT_FILE}")
 

@@ -1,3 +1,4 @@
+import os
 import sys
 import tempfile
 import unittest
@@ -8,6 +9,22 @@ from docs_assistant import find_missing
 
 
 class TranslationCompletenessTests(unittest.TestCase):
+    def test_missing_file_output_supports_nul_delimiter(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_file = Path(temp_dir) / "missing.bin"
+            missing_files = [Path(temp_dir) / "guide with spaces.md"]
+
+            with (
+                patch.object(find_missing, "OUTPUT_FILE", output_file),
+                patch.dict(os.environ, {"MISSING_FILES_DELIMITER": "nul"}),
+            ):
+                find_missing.save_missing_files(missing_files)
+
+            self.assertEqual(
+                output_file.read_bytes(),
+                f"{missing_files[0]}\0".encode("utf-8"),
+            )
+
     def test_check_mode_exits_nonzero_when_a_translation_is_missing(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             docs_dir = Path(temp_dir)
