@@ -9,7 +9,7 @@ import {
   submitTokenCreationFromKeyManagementPage,
 } from "~~/e2e/utils/accountLifecycle"
 import type { getServiceWorker } from "~~/e2e/utils/extensionState"
-import { formatScenarioError } from "~~/e2e/utils/scenarioErrors"
+import { throwScenarioError } from "~~/e2e/utils/scenarioErrors"
 
 type ServiceWorker = Awaited<ReturnType<typeof getServiceWorker>>
 
@@ -30,27 +30,6 @@ async function runFinalizers(finalizers: Array<() => Promise<void>>) {
 
   if (errors.length > 1) {
     throw new AggregateError(errors, "Account key lifecycle cleanup failed")
-  }
-}
-
-function throwScenarioError(params: {
-  primaryError: unknown
-  cleanupError: unknown
-  message: string
-}) {
-  if (params.primaryError && params.cleanupError) {
-    throw new AggregateError(
-      [params.primaryError, params.cleanupError],
-      `${params.message}: primary=${formatScenarioError(params.primaryError)}; cleanup=${formatScenarioError(params.cleanupError)}`,
-    )
-  }
-
-  if (params.primaryError) {
-    throw params.primaryError
-  }
-
-  if (params.cleanupError) {
-    throw params.cleanupError
   }
 }
 

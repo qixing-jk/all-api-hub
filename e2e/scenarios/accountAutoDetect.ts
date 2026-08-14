@@ -9,6 +9,7 @@ import {
 import { saveAutoDetectedAccountFromApp } from "~~/e2e/utils/accountLifecycle"
 import type { getServiceWorker } from "~~/e2e/utils/extensionState"
 import type { AccountAddDialog } from "~~/e2e/utils/realSite/accountAdd"
+import { throwScenarioError } from "~~/e2e/utils/scenarioErrors"
 
 type ServiceWorker = Awaited<ReturnType<typeof getServiceWorker>>
 
@@ -34,27 +35,6 @@ async function runFinalizers(finalizers: Array<() => Promise<void>>) {
 
   if (errors.length > 1) {
     throw new AggregateError(errors, "Account auto-detect cleanup failed")
-  }
-}
-
-function throwScenarioError(params: {
-  primaryError: unknown
-  cleanupError: unknown
-  message: string
-}) {
-  if (params.primaryError && params.cleanupError) {
-    throw new AggregateError(
-      [params.primaryError, params.cleanupError],
-      params.message,
-    )
-  }
-
-  if (params.primaryError) {
-    throw params.primaryError
-  }
-
-  if (params.cleanupError) {
-    throw params.cleanupError
   }
 }
 
