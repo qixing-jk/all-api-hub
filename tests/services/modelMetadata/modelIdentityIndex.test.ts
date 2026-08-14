@@ -115,6 +115,15 @@ describe("modelIdentityIndex", () => {
     expect(nextVersion.key).not.toBe(ordered.key)
   })
 
+  it("keeps unnormalizable model ids isolated", () => {
+    const index = createModelIdentityIndex([])
+
+    expect(resolveComparableModelIdentity(index, " gateway/:free ")).toEqual({
+      key: "exact:gateway/:free",
+      displayName: "gateway/:free",
+    })
+  })
+
   it("distinguishes exact full ids from unambiguous bare-id and name aliases", () => {
     const providerQualified = createMetadata({
       id: "openai/gpt-4o",
