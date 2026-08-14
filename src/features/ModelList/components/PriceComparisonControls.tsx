@@ -12,6 +12,72 @@ import {
   type ModelPriceComparisonWeightKey,
   type ModelPriceComparisonWeights,
 } from "~/features/ModelList/priceComparison"
+import { trackProductAnalyticsActionCompleted } from "~/services/productAnalytics/actions"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_MODEL_PRICE_COMPARISON_PRESETS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+  PRODUCT_ANALYTICS_TARGET_KINDS,
+  type ProductAnalyticsModelPriceComparisonPreset,
+} from "~/services/productAnalytics/contracts"
+
+const ANALYTICS_PRESET_BY_PRICE_COMPARISON_PRESET: Record<
+  ModelPriceComparisonPresetId,
+  ProductAnalyticsModelPriceComparisonPreset
+> = {
+  [MODEL_PRICE_COMPARISON_PRESET_IDS.AZURE_CONVERSATION]:
+    PRODUCT_ANALYTICS_MODEL_PRICE_COMPARISON_PRESETS.AzureConversation,
+  [MODEL_PRICE_COMPARISON_PRESET_IDS.MOONCAKE_TOOL_AGENT]:
+    PRODUCT_ANALYTICS_MODEL_PRICE_COMPARISON_PRESETS.MooncakeToolAgent,
+  [MODEL_PRICE_COMPARISON_PRESET_IDS.AZURE_CODE]:
+    PRODUCT_ANALYTICS_MODEL_PRICE_COMPARISON_PRESETS.AzureCode,
+  [MODEL_PRICE_COMPARISON_PRESET_IDS.TRACELAB_CODING_AGENT]:
+    PRODUCT_ANALYTICS_MODEL_PRICE_COMPARISON_PRESETS.TracelabCodingAgent,
+  [MODEL_PRICE_COMPARISON_PRESET_IDS.CUSTOM]:
+    PRODUCT_ANALYTICS_MODEL_PRICE_COMPARISON_PRESETS.Custom,
+}
+
+/** Counts the price meters included in the current comparison. */
+function countModeledMeters(weights: ModelPriceComparisonWeights): number {
+  return MODEL_PRICE_COMPARISON_WEIGHT_KEYS.filter(
+    (key) => weights[key] !== null,
+  ).length
+}
+
+/** Counts which price meters differ between two comparison settings. */
+function countChangedMeters(
+  currentWeights: ModelPriceComparisonWeights,
+  nextWeights: ModelPriceComparisonWeights,
+): number {
+  return MODEL_PRICE_COMPARISON_WEIGHT_KEYS.filter(
+    (key) => !Object.is(currentWeights[key], nextWeights[key]),
+  ).length
+}
+
+/** Records a privacy-safe summary of a price-comparison adjustment. */
+function trackPriceComparisonConfiguration(
+  presetId: ModelPriceComparisonPresetId,
+  changedMeterCount: number,
+  modeledMeterCount: number,
+) {
+  void trackProductAnalyticsActionCompleted({
+    featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
+    actionId: PRODUCT_ANALYTICS_ACTION_IDS.ConfigureModelPriceComparison,
+    surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListControlPanel,
+    entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    result: PRODUCT_ANALYTICS_RESULTS.Success,
+    insights: {
+      targetKind: PRODUCT_ANALYTICS_TARGET_KINDS.ModelFilter,
+      priceComparisonPreset:
+        ANALYTICS_PRESET_BY_PRICE_COMPARISON_PRESET[presetId],
+      changedMeterCount,
+      modeledMeterCount,
+    },
+  })
+}
 
 interface PriceComparisonControlsProps {
   presetId: ModelPriceComparisonPresetId
@@ -102,10 +168,23 @@ export function PriceComparisonControls({
     onPresetIdChange(nextPresetId)
 
     if (nextPresetId === MODEL_PRICE_COMPARISON_PRESET_IDS.CUSTOM) {
+      trackPriceComparisonConfiguration(
+        nextPresetId,
+        0,
+        countModeledMeters(weights),
+      )
       return
     }
 
-    onWeightsChange({ ...MODEL_PRICE_COMPARISON_PRESETS[nextPresetId].weights })
+    const nextWeights = {
+      ...MODEL_PRICE_COMPARISON_PRESETS[nextPresetId].weights,
+    }
+    onWeightsChange(nextWeights)
+    trackPriceComparisonConfiguration(
+      nextPresetId,
+      countChangedMeters(weights, nextWeights),
+      countModeledMeters(nextWeights),
+    )
   }
 
   const handleWeightChange = (
@@ -115,8 +194,14 @@ export function PriceComparisonControls({
     setDraftWeights((current) => ({ ...current, [key]: value }))
 
     if (value.trim() === "") {
+      const nextWeights = { ...weights, [key]: null }
       onPresetIdChange(MODEL_PRICE_COMPARISON_PRESET_IDS.CUSTOM)
-      onWeightsChange({ ...weights, [key]: null })
+      onWeightsChange(nextWeights)
+      trackPriceComparisonConfiguration(
+        MODEL_PRICE_COMPARISON_PRESET_IDS.CUSTOM,
+        countChangedMeters(weights, nextWeights),
+        countModeledMeters(nextWeights),
+      )
       return
     }
 
@@ -125,8 +210,14 @@ export function PriceComparisonControls({
       return
     }
 
+    const nextWeights = { ...weights, [key]: parsedValue }
     onPresetIdChange(MODEL_PRICE_COMPARISON_PRESET_IDS.CUSTOM)
-    onWeightsChange({ ...weights, [key]: parsedValue })
+    onWeightsChange(nextWeights)
+    trackPriceComparisonConfiguration(
+      MODEL_PRICE_COMPARISON_PRESET_IDS.CUSTOM,
+      countChangedMeters(weights, nextWeights),
+      countModeledMeters(nextWeights),
+    )
   }
 
   const handleWeightBlur = (key: ModelPriceComparisonWeightKey) => {

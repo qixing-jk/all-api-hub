@@ -1,6 +1,12 @@
 import { useState } from "react"
 
 import {
+  DEFAULT_MODEL_PRICE_COMPARISON_PRESET_ID,
+  DEFAULT_MODEL_PRICE_COMPARISON_WEIGHTS,
+  type ModelPriceComparisonPresetId,
+  type ModelPriceComparisonWeights,
+} from "~/features/ModelList/priceComparison"
+import {
   MODEL_LIST_SORT_MODES,
   type ModelListSortMode,
 } from "~/features/ModelList/sortModes"
@@ -18,12 +24,6 @@ import {
   type ModelListBillingMode,
 } from "../billingModes"
 import type { ModelCapabilitySelectionValue } from "../modelCapabilityFilters"
-import {
-  DEFAULT_MODEL_PRICE_COMPARISON_PRESET_ID,
-  DEFAULT_MODEL_PRICE_COMPARISON_WEIGHTS,
-  type ModelPriceComparisonPresetId,
-  type ModelPriceComparisonWeights,
-} from "../priceComparison"
 
 /**
  * Manages view state for the model list page.

@@ -23,6 +23,7 @@ import {
   PRODUCT_ANALYTICS_MANAGED_SITE_BATCH_IMPORT_SOURCES,
   PRODUCT_ANALYTICS_MANAGED_SITE_TYPES,
   PRODUCT_ANALYTICS_MODE_IDS,
+  PRODUCT_ANALYTICS_MODEL_PRICE_COMPARISON_PRESETS,
   PRODUCT_ANALYTICS_PAGE_IDS,
   PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS,
   PRODUCT_ANALYTICS_PERMISSION_IDS,
@@ -132,6 +133,37 @@ describe("product analytics privacy filtering", () => {
       feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.ProductAnalyticsSettings,
       surface_id: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsBasicSettingsGeneral,
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+  })
+
+  it("keeps controlled price-comparison settings without raw weight values", () => {
+    const sanitized = sanitizeProductAnalyticsEvent(
+      PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+      {
+        feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
+        action_id: PRODUCT_ANALYTICS_ACTION_IDS.ConfigureModelPriceComparison,
+        surface_id: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListControlPanel,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        result: PRODUCT_ANALYTICS_RESULTS.Success,
+        price_comparison_preset:
+          PRODUCT_ANALYTICS_MODEL_PRICE_COMPARISON_PRESETS.TracelabCodingAgent,
+        changed_meter_count: 1,
+        modeled_meter_count: 3,
+        input_weight: 7.5,
+        raw_weights: { input: 7.5, cache_read: 12.5 },
+      },
+    )
+
+    expect(sanitized).toEqual({
+      feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
+      action_id: PRODUCT_ANALYTICS_ACTION_IDS.ConfigureModelPriceComparison,
+      surface_id: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListControlPanel,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
+      price_comparison_preset:
+        PRODUCT_ANALYTICS_MODEL_PRICE_COMPARISON_PRESETS.TracelabCodingAgent,
+      changed_meter_count: 1,
+      modeled_meter_count: 3,
     })
   })
 

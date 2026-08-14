@@ -327,6 +327,17 @@ export const PRODUCT_ANALYTICS_TARGET_KINDS = {
 export type ProductAnalyticsTargetKind =
   (typeof PRODUCT_ANALYTICS_TARGET_KINDS)[keyof typeof PRODUCT_ANALYTICS_TARGET_KINDS]
 
+export const PRODUCT_ANALYTICS_MODEL_PRICE_COMPARISON_PRESETS = {
+  AzureConversation: "azure_conversation",
+  MooncakeToolAgent: "mooncake_tool_agent",
+  AzureCode: "azure_code",
+  TracelabCodingAgent: "tracelab_coding_agent",
+  Custom: "custom",
+} as const
+
+export type ProductAnalyticsModelPriceComparisonPreset =
+  (typeof PRODUCT_ANALYTICS_MODEL_PRICE_COMPARISON_PRESETS)[keyof typeof PRODUCT_ANALYTICS_MODEL_PRICE_COMPARISON_PRESETS]
+
 export const PRODUCT_ANALYTICS_TARGET_STATES = {
   Enabled: "enabled",
   Disabled: "disabled",
@@ -526,6 +537,7 @@ export const PRODUCT_ANALYTICS_ACTION_IDS = {
   DeleteManagedSiteChannel: "delete_managed_site_channel",
   DeleteSelectedManagedSiteChannels: "delete_selected_managed_site_channels",
   DisableSelectedAccounts: "disable_selected_accounts",
+  ConfigureModelPriceComparison: "configure_model_price_comparison",
   EnableModelPriceComparison: "enable_model_price_comparison",
   EnableProductAnalytics: "enable_product_analytics",
   EnterAccountBulkMode: "enter_account_bulk_mode",
@@ -1184,6 +1196,9 @@ export type ProductAnalyticsEventPayloadMap = {
     model_count?: number
     filter_count?: number
     result_count?: number
+    price_comparison_preset?: ProductAnalyticsModelPriceComparisonPreset
+    changed_meter_count?: number
+    modeled_meter_count?: number
     usage_data_present?: boolean
     route_params_present?: boolean
     shield_bypass_prompt_shown_count?: number

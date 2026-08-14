@@ -80,4 +80,44 @@ describe("model price comparison", () => {
       }),
     ).toBe(6)
   })
+
+  it.each([
+    ["negative", -1],
+    ["NaN", Number.NaN],
+    ["infinite", Number.POSITIVE_INFINITY],
+  ])("rejects %s weights", (_label, inputWeight) => {
+    expect(
+      calculateWeightedTokenPrice(
+        { input: 2, output: 4 },
+        {
+          input: inputWeight,
+          output: 1,
+          cacheRead: null,
+          cacheWrite: null,
+        },
+      ),
+    ).toBeNull()
+  })
+
+  it.each([
+    ["negative", -1],
+    ["NaN", Number.NaN],
+    ["infinite", Number.POSITIVE_INFINITY],
+  ])("rejects %s prices for positively weighted buckets", (_label, input) => {
+    expect(
+      calculateWeightedTokenPrice(
+        { input, output: 4 },
+        { input: 1, output: 1, cacheRead: null, cacheWrite: null },
+      ),
+    ).toBeNull()
+  })
+
+  it("requires at least one positively weighted bucket", () => {
+    expect(
+      calculateWeightedTokenPrice(
+        { input: 2, output: 4 },
+        { input: 0, output: 0, cacheRead: null, cacheWrite: null },
+      ),
+    ).toBeNull()
+  })
 })

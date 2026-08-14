@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react"
+import { fireEvent, render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import type React from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
@@ -657,5 +657,33 @@ describe("ControlPanel", () => {
         name: "priceComparison.sectionTitle",
       }),
     ).toBeVisible()
+  })
+
+  it("keeps standalone price controls usable without optional state callbacks", () => {
+    renderControlPanel({
+      sortMode: MODEL_LIST_SORT_MODES.PRICE_ASC,
+      setPriceComparisonPresetId: undefined,
+      setPriceComparisonWeights: undefined,
+    })
+
+    const priceRegion = screen.getByRole("region", {
+      name: "priceComparison.sectionTitle",
+    })
+    fireEvent.change(within(priceRegion).getByRole("combobox"), {
+      target: { value: "tracelab-coding-agent" },
+    })
+    fireEvent.change(
+      within(priceRegion).getByRole("spinbutton", {
+        name: "priceComparison.weights.input",
+      }),
+      { target: { value: "25" } },
+    )
+
+    expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.ConfigureModelPriceComparison,
+        result: PRODUCT_ANALYTICS_RESULTS.Success,
+      }),
+    )
   })
 })

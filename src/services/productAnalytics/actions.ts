@@ -20,6 +20,7 @@ import {
   type ProductAnalyticsManagedSiteBatchImportSource,
   type ProductAnalyticsManagedSiteType,
   type ProductAnalyticsModeId,
+  type ProductAnalyticsModelPriceComparisonPreset,
   type ProductAnalyticsRequestedAuthMode,
   type ProductAnalyticsResult,
   type ProductAnalyticsSiteType,
@@ -94,6 +95,9 @@ export type ProductAnalyticsActionInsights = {
   modelCount?: number
   filterCount?: number
   resultCount?: number
+  priceComparisonPreset?: ProductAnalyticsModelPriceComparisonPreset
+  changedMeterCount?: number
+  modeledMeterCount?: number
   usageDataPresent?: boolean
 }
 
@@ -419,6 +423,15 @@ function mapProductAnalyticsActionInsights(
       : {}),
     ...(typeof insights.resultCount === "number"
       ? { result_count: insights.resultCount }
+      : {}),
+    ...(insights.priceComparisonPreset
+      ? { price_comparison_preset: insights.priceComparisonPreset }
+      : {}),
+    ...(typeof insights.changedMeterCount === "number"
+      ? { changed_meter_count: insights.changedMeterCount }
+      : {}),
+    ...(typeof insights.modeledMeterCount === "number"
+      ? { modeled_meter_count: insights.modeledMeterCount }
       : {}),
     ...(typeof insights.usageDataPresent === "boolean"
       ? { usage_data_present: insights.usageDataPresent }

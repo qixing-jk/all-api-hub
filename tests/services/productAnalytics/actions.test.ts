@@ -18,6 +18,7 @@ import {
   PRODUCT_ANALYTICS_MANAGED_SITE_BATCH_IMPORT_SOURCES,
   PRODUCT_ANALYTICS_MANAGED_SITE_TYPES,
   PRODUCT_ANALYTICS_MODE_IDS,
+  PRODUCT_ANALYTICS_MODEL_PRICE_COMPARISON_PRESETS,
   PRODUCT_ANALYTICS_REQUESTED_AUTH_MODES,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SOURCE_KINDS,
@@ -508,6 +509,10 @@ describe("product analytics action helpers", () => {
         modelCount: 11,
         filterCount: 2,
         resultCount: 8,
+        priceComparisonPreset:
+          PRODUCT_ANALYTICS_MODEL_PRICE_COMPARISON_PRESETS.TracelabCodingAgent,
+        changedMeterCount: 1,
+        modeledMeterCount: 3,
         usageDataPresent: true,
       },
     })
@@ -567,6 +572,10 @@ describe("product analytics action helpers", () => {
         model_count: 11,
         filter_count: 2,
         result_count: 8,
+        price_comparison_preset:
+          PRODUCT_ANALYTICS_MODEL_PRICE_COMPARISON_PRESETS.TracelabCodingAgent,
+        changed_meter_count: 1,
+        modeled_meter_count: 3,
         usage_data_present: true,
       },
     )

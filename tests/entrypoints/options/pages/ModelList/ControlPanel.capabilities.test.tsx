@@ -8,6 +8,7 @@ import { ControlPanel } from "~/features/ModelList/components/ControlPanel"
 import { createProfileSource } from "~/features/ModelList/modelManagementSources"
 import {
   DEFAULT_MODEL_PRICE_COMPARISON_PRESET_ID,
+  MODEL_PRICE_COMPARISON_PRESET_IDS,
   MODEL_PRICE_COMPARISON_PRESETS,
   type ModelPriceComparisonPresetId,
   type ModelPriceComparisonWeights,
@@ -18,6 +19,7 @@ import {
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_MODE_IDS,
+  PRODUCT_ANALYTICS_MODEL_PRICE_COMPARISON_PRESETS,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
   PRODUCT_ANALYTICS_TARGET_KINDS,
@@ -139,6 +141,20 @@ describe("ControlPanel profile capabilities", () => {
         name: "modelList:priceComparison.sourceDetails.tracelabCodingAgent",
       }),
     ).toBeInTheDocument()
+    expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.ConfigureModelPriceComparison,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListControlPanel,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
+      insights: {
+        targetKind: PRODUCT_ANALYTICS_TARGET_KINDS.ModelFilter,
+        priceComparisonPreset:
+          PRODUCT_ANALYTICS_MODEL_PRICE_COMPARISON_PRESETS.TracelabCodingAgent,
+        changedMeterCount: 3,
+        modeledMeterCount: 3,
+      },
+    })
 
     const cacheWriteWeight = screen.getByRole("spinbutton", {
       name: "modelList:priceComparison.weights.cacheWrite",
@@ -174,6 +190,93 @@ describe("ControlPanel profile capabilities", () => {
         name: "modelList:priceComparison.sourceDetails.tracelabCodingAgent",
       }),
     ).not.toBeInTheDocument()
+    expect(trackProductAnalyticsActionCompletedMock).toHaveBeenLastCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.ConfigureModelPriceComparison,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListControlPanel,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
+      insights: {
+        targetKind: PRODUCT_ANALYTICS_TARGET_KINDS.ModelFilter,
+        priceComparisonPreset:
+          PRODUCT_ANALYTICS_MODEL_PRICE_COMPARISON_PRESETS.Custom,
+        changedMeterCount: 1,
+        modeledMeterCount: 3,
+      },
+    })
+  })
+
+  it("keeps invalid weight drafts local and restores the last applied values on blur", async () => {
+    const user = userEvent.setup()
+    const setPresetId = vi.fn()
+    const setWeights = vi.fn()
+    const weights =
+      MODEL_PRICE_COMPARISON_PRESETS[DEFAULT_MODEL_PRICE_COMPARISON_PRESET_ID]
+        .weights
+
+    render(
+      <ControlPanel
+        selectedSource={{ kind: "account" } as any}
+        sourceCapabilities={{ supportsPricing: true } as any}
+        searchTerm=""
+        setSearchTerm={vi.fn()}
+        sortMode={MODEL_LIST_SORT_MODES.PRICE_ASC}
+        setSortMode={vi.fn()}
+        priceComparisonPresetId={DEFAULT_MODEL_PRICE_COMPARISON_PRESET_ID}
+        setPriceComparisonPresetId={setPresetId}
+        priceComparisonWeights={weights}
+        setPriceComparisonWeights={setWeights}
+        selectedBillingMode={MODEL_LIST_BILLING_MODES.ALL}
+        setSelectedBillingMode={vi.fn()}
+        selectedGroups={[]}
+        setSelectedGroups={vi.fn()}
+        availableGroups={[]}
+        singleSourceGroupRatios={{}}
+        showRealPrice={false}
+        setShowRealPrice={vi.fn()}
+        showRatioColumn={false}
+        setShowRatioColumn={vi.fn()}
+        showEndpointTypes={true}
+        setShowEndpointTypes={vi.fn()}
+        totalModels={2}
+        filteredModels={[]}
+      />,
+    )
+
+    const presetSelect = await screen.findByRole("combobox", {
+      name: "modelList:priceComparison.presetLabel",
+    })
+    await user.click(presetSelect)
+    await user.click(
+      await screen.findByText("modelList:priceComparison.presets.custom"),
+    )
+    expect(setPresetId).toHaveBeenLastCalledWith(
+      MODEL_PRICE_COMPARISON_PRESET_IDS.CUSTOM,
+    )
+    expect(setWeights).not.toHaveBeenCalled()
+
+    const inputWeight = screen.getByRole("spinbutton", {
+      name: "modelList:priceComparison.weights.input",
+    })
+    fireEvent.change(inputWeight, { target: { value: "-1" } })
+    expect(setWeights).not.toHaveBeenCalled()
+    fireEvent.blur(inputWeight)
+    await waitFor(() => expect(inputWeight).toHaveValue(84.54))
+
+    const cacheWriteWeight = screen.getByRole("spinbutton", {
+      name: "modelList:priceComparison.weights.cacheWrite",
+    })
+    fireEvent.change(cacheWriteWeight, { target: { value: "-1" } })
+    fireEvent.blur(cacheWriteWeight)
+    await waitFor(() => expect(cacheWriteWeight).toHaveValue(null))
+
+    fireEvent.change(inputWeight, { target: { value: "25" } })
+    fireEvent.blur(inputWeight)
+    expect(setWeights).toHaveBeenLastCalledWith({ ...weights, input: 25 })
+
+    fireEvent.change(inputWeight, { target: { value: "" } })
+    fireEvent.blur(inputWeight)
+    expect(setWeights).toHaveBeenLastCalledWith({ ...weights, input: null })
   })
 
   it("hides account-only pricing and group controls for profile-backed sources", async () => {
