@@ -44,6 +44,8 @@ import {
   AIHUBMIX_WEB_ORIGIN,
   OPENROUTER_HOSTNAMES,
   OPENROUTER_WEB_ORIGIN,
+  ORCAROUTER_HOSTNAMES,
+  ORCAROUTER_WEB_ORIGIN,
   SHAREDCHAT_HOSTNAMES,
   SHAREDCHAT_WEB_ORIGIN,
   SITE_TYPES,
@@ -129,6 +131,7 @@ export const ACCOUNT_SITE_TYPE_ORDER = [
   SITE_TYPES.AIHUBMIX,
   SITE_TYPES.SHAREDCHAT,
   SITE_TYPES.OPENROUTER,
+  SITE_TYPES.ORCAROUTER,
   SITE_TYPES.UNKNOWN,
 ] as const
 
@@ -462,6 +465,49 @@ const ACCOUNT_SITE_DEFINITIONS = [
       },
     },
     readiness: providerCatalogReadiness,
+  },
+  {
+    siteType: SITE_TYPES.ORCAROUTER,
+    scopes: ACCOUNT_SCOPE,
+    adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.OrcaRouter,
+    onboarding: {
+      detection: { hostnames: ORCAROUTER_HOSTNAMES },
+    },
+    productProfile: {
+      metrics: {
+        deferredTodayStatsAvailability:
+          createUnsupportedTodayStatsAvailability(),
+        legacyTodayStatsAvailability: createUnsupportedTodayStatsAvailability(),
+      },
+      auth: {
+        allowedAuthTypes: [ACCOUNT_SITE_AUTH_TYPES.AccessToken],
+        defaultAuthType: ACCOUNT_SITE_AUTH_TYPES.AccessToken,
+        defaultAuthHostnames: [],
+        supportsCookieAuth: false,
+        supportsBuiltInCheckInDetection: false,
+      },
+      identity: {
+        usernameRequired: false,
+        storedUserIdentityFields: [],
+      },
+      modelList: {
+        directPricing: ACCOUNT_SITE_MODEL_LIST_DIRECT_PRICING.Unsupported,
+        tokenScopedCatalogFallback:
+          ACCOUNT_SITE_MODEL_LIST_TOKEN_SCOPED_CATALOG_FALLBACKS.None,
+        dashboardEstimateLoader:
+          ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS.None,
+        statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Account,
+        displayCapabilitiesSource:
+          ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Profile,
+        groupSemantics: ACCOUNT_SITE_MODEL_LIST_GROUP_SEMANTICS.NOT_APPLICABLE,
+      },
+      urls: {
+        recognizedHostnames: ORCAROUTER_HOSTNAMES,
+        storageOrigin: ORCAROUTER_WEB_ORIGIN,
+        duplicateOrigin: ORCAROUTER_WEB_ORIGIN,
+      },
+    },
+    readiness: unsupportedModelListReadiness,
   },
 ] as const satisfies readonly AccountSiteDefinition[]
 

@@ -18,6 +18,7 @@
 | done-hub | 本项目是基于 one-hub 二次开发而来的。 | [GitHub](https://github.com/deanxv/done-hub) |
 | AnyRouter | Claude Code 中转站 · 零门槛 · 免费 $50 | [文档](https://docs.anyrouter.top/) / [官网](https://anyrouter.top) |
 | AIHubMix | 独立 AI API 聚合站点，插件以独立账号类型适配余额、密钥和模型接口。 | [官网](https://aihubmix.com/?aff=W3DN) / [API 文档](https://docs.aihubmix.com/cn/api/Cli) / [使用教程](./sponsor-guides/aihubmix.md) |
+| OrcaRouter | 面向 AI Agent 的 OpenAI 兼容模型路由网关，可路由 150+ 模型，提供网关级零信任安全控制。 | [官网](https://www.orcarouter.ai) / [API 文档](https://docs.orcarouter.ai) |
 | Super-API | Super-Api 全新 AI 模型接口管理与分发系统，仅供个人学习使用，请勿用于任何商业用途，本项目基于 NewAPI 开发。 | [官网](https://api.cngov.top/) / [GitHub](https://github.com/SuperAI-Api/Super-API) |
 | v-api | 基于 one-api 二开的功能强大的中转平台。 | 暂无 |
 | WONG公益站 | 暂无稳定公开官方描述。 | 暂无稳定公开官方链接 |
