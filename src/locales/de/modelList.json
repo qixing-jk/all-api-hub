@@ -371,7 +371,7 @@
   "pleaseSelectSource": "Bitte wählen Sie eine Quelle aus",
   "priceComparison": {
     "clearWeight": "{{meter}} löschen",
-    "helperNote": "Leer lassen zum Ignorieren; 0 eingeben für einen Anteil von 0 %.",
+    "helperNote": "Leer lassen zum Ignorieren; 0 für einen Anteil von 0 % eingeben. Die Vergleiche sind Schätzungen auf Grundlage der von der Quelle bereitgestellten Preisdaten; maßgeblich ist die Abrechnung der Website. Fehlende Preispositionen gelten nicht als kostenlos.",
     "presetLabel": "Anwendungsfall",
     "presets": {
       "codeCompletion": "Code-Vervollständigung",
@@ -379,6 +379,11 @@
       "custom": "Benutzerdefiniert",
       "generalChat": "Allgemeiner Chat",
       "toolAgent": "Tool / Agent"
+    },
+    "results": {
+      "comparable": "Vergleichbare Angebote",
+      "notCompared": "Unter den aktuellen Bedingungen nicht verglichen",
+      "notComparedHint": "Die aktuellen Bedingungen verwenden eine von der Quelle nicht bereitgestellte Preisposition; daher wird dieses Angebot nicht in den Vergleich einbezogen."
     },
     "sectionDescription": "Legen Sie die Nutzungsanteile fest, damit der Preisvergleich zu Ihrer Modellnutzung passt. Wählen Sie einen Anwendungsfall zum Ausfüllen oder passen Sie die Anteile selbst an.",
     "sectionTitle": "Preisvergleich",

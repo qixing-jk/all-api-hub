@@ -363,7 +363,7 @@
   "pleaseSelectSource": "ソースを選択してください",
   "priceComparison": {
     "clearWeight": "{{meter}}を消去",
-    "helperNote": "空欄は比較対象外、0 は割合 0% として扱います。",
+    "helperNote": "空欄は比較対象外、0 は割合 0% として扱います。比較結果は価格ソースが公開するデータに基づく推定で、実際の請求はサイト側の請求ルールに従います。未提供の価格項目は無料として扱いません。",
     "presetLabel": "利用シーン",
     "presets": {
       "codeCompletion": "コード補完",
@@ -371,6 +371,11 @@
       "custom": "カスタム",
       "generalChat": "一般チャット",
       "toolAgent": "Tool / Agent"
+    },
+    "results": {
+      "comparable": "比較可能な料金",
+      "notCompared": "現在の条件では比較対象外",
+      "notComparedHint": "現在の条件には価格ソースが提供していない項目が含まれるため、この料金は比較対象外です。"
     },
     "sectionDescription": "利用割合を設定し、使い方に合ったモデル料金を比較できます。利用シーンを選ぶと自動で入力され、手動でも調整できます。",
     "sectionTitle": "料金比較の条件",

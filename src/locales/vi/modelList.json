@@ -363,7 +363,7 @@
   "pleaseSelectSource": "Vui lòng chọn nguồn dữ liệu",
   "priceComparison": {
     "clearWeight": "Xóa {{meter}}",
-    "helperNote": "Để trống để bỏ qua; nhập 0 nếu tỷ lệ là 0%.",
+    "helperNote": "Để trống để bỏ qua; nhập 0 nếu tỷ lệ là 0%. Kết quả so sánh chỉ là ước tính dựa trên dữ liệu giá do nguồn cung cấp; phí thực tế phụ thuộc vào cách trang web tính phí. Mục giá bị thiếu không được xem là miễn phí.",
     "presetLabel": "Nhu cầu sử dụng",
     "presets": {
       "codeCompletion": "Hoàn thành mã",
@@ -371,6 +371,11 @@
       "custom": "Tùy chỉnh",
       "generalChat": "Trò chuyện chung",
       "toolAgent": "Tool / Agent"
+    },
+    "results": {
+      "comparable": "Báo giá có thể so sánh",
+      "notCompared": "Không được so sánh theo điều kiện hiện tại",
+      "notComparedHint": "Điều kiện hiện tại sử dụng một mục giá mà nguồn không cung cấp, nên báo giá này không được đưa vào so sánh."
     },
     "sectionDescription": "Đặt tỷ lệ sử dụng để so sánh giá mô hình sát với nhu cầu của bạn hơn. Chọn một nhu cầu để tự động điền hoặc tự điều chỉnh.",
     "sectionTitle": "Điều kiện so sánh giá",

@@ -380,7 +380,7 @@
   "pleaseSelectSource": "Selecione uma fonte",
   "priceComparison": {
     "clearWeight": "Limpar {{meter}}",
-    "helperNote": "Deixe em branco para ignorar; insira 0 para uma proporção de 0%.",
+    "helperNote": "Deixe em branco para ignorar; insira 0 para uma proporção de 0%. As comparações são estimativas baseadas nos dados de preços divulgados pela fonte; a cobrança real segue o faturamento do site. Itens de preço ausentes não são considerados gratuitos.",
     "presetLabel": "Caso de uso",
     "presets": {
       "codeCompletion": "Conclusão de código",
@@ -388,6 +388,11 @@
       "custom": "Personalizado",
       "generalChat": "Conversa geral",
       "toolAgent": "Tool / Agent"
+    },
+    "results": {
+      "comparable": "Ofertas comparáveis",
+      "notCompared": "Não comparada nas condições atuais",
+      "notComparedHint": "As condições atuais usam um item de preço que a fonte não fornece, então esta oferta não entra na comparação."
     },
     "sectionDescription": "Defina a proporção de uso para que a comparação de preços reflita como você usa os modelos. Escolha um caso de uso para preenchê-la ou ajuste-a manualmente.",
     "sectionTitle": "Comparação de preços",

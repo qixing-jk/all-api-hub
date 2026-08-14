@@ -371,7 +371,7 @@
   "pleaseSelectSource": "Please select a source",
   "priceComparison": {
     "clearWeight": "Clear {{meter}}",
-    "helperNote": "Leave blank to ignore; enter 0 for a 0% share.",
+    "helperNote": "Leave blank to ignore; enter 0 for a 0% share. Comparisons are estimates based on price data exposed by the source; actual charges follow the site's billing. Missing price items are not treated as free.",
     "presetLabel": "Use case",
     "presets": {
       "codeCompletion": "Code completion",
@@ -379,6 +379,11 @@
       "custom": "Custom",
       "generalChat": "General chat",
       "toolAgent": "Tool / Agent"
+    },
+    "results": {
+      "comparable": "Comparable offers",
+      "notCompared": "Not compared under current conditions",
+      "notComparedHint": "The current conditions use a price item the source does not provide, so this offer is not included in the comparison."
     },
     "sectionDescription": "Set the usage mix so price comparisons better match how you use models. Choose a use case to fill it in, or adjust it yourself.",
     "sectionTitle": "Price comparison",

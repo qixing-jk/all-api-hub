@@ -228,6 +228,10 @@ describe("useFilteredModels", () => {
         result.current.filteredModels.map((item) => item.model.model_name),
       ).toEqual(["complete-cache-price", "missing-cache-price"])
     })
+
+    expect(
+      result.current.filteredModels.map((item) => item.isPriceComparable),
+    ).toEqual([true, false])
   })
 
   it("returns no rows or vendor catalog without pricing and a selected source", async () => {

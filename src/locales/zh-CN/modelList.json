@@ -361,7 +361,7 @@
   "pleaseSelectSource": "请选择数据源",
   "priceComparison": {
     "clearWeight": "清除{{meter}}",
-    "helperNote": "留空不参与比较；填 0 表示占比为 0。",
+    "helperNote": "留空不参与比较；填 0 表示占比为 0。比较结果基于价格来源公开的数据估算，实际费用以站点账单为准；缺少的价格项不会按免费处理。",
     "presetLabel": "使用场景",
     "presets": {
       "codeCompletion": "代码补全",
@@ -369,6 +369,11 @@
       "custom": "自定义",
       "generalChat": "普通对话",
       "toolAgent": "Tool / Agent"
+    },
+    "results": {
+      "comparable": "可比较报价",
+      "notCompared": "未参与当前条件比较",
+      "notComparedHint": "当前比较条件使用了价格来源未提供的价格项，因此此报价未参与比较。"
     },
     "sectionDescription": "设置各类用量占比，让模型价格比较更符合你的使用方式。选择场景会自动填入，也可以手动调整。",
     "sectionTitle": "价格比较条件",

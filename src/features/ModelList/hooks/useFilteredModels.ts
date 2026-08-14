@@ -132,6 +132,7 @@ export type CalculatedModelItem = {
   resolvedVendor: ResolvedModelVendor
   hasAutoSelectedGroup?: boolean
   isLowestPrice?: boolean
+  isPriceComparable?: boolean
 }
 
 const BILLING_MODE_ORDER: Record<PricingBillingMode, number> = {
@@ -1528,9 +1529,11 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
           return [...pricedItems, ...missingPriceItems]
         })()
 
-    return sortedWithIndices.map(({ item, itemKey }) => ({
+    return sortedWithIndices.map(({ item, itemKey, priceKey }) => ({
       ...item,
       isLowestPrice: lowestPriceKeys.has(itemKey),
+      isPriceComparable:
+        priceKey !== undefined && hasComparablePriceValue(priceKey),
     }))
   }, [
     baseFilteredModels,

@@ -491,6 +491,10 @@ export default function ModelList(props: {
       showRealPrice={showRealPrice}
       showRatioColumn={showRatioColumn}
       showEndpointTypes={showEndpointTypes}
+      showPriceComparisonGroups={
+        isAllAccountsScope &&
+        sortMode === MODEL_LIST_SORT_MODES.MODEL_CHEAPEST_FIRST
+      }
       handleGroupClick={handleGroupClick}
       groupSelectionScope={modelDisplayGroupSelectionScope}
       isGroupSelectionInteractive={isModelGroupSelectionInteractive}

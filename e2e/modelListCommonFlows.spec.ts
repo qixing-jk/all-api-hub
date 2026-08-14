@@ -27,6 +27,11 @@ import {
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 
 const MODEL_LIST_BASE_URL = "https://models.example.com"
+const PRICE_COMPARISON_BASE_URL_A = "https://comparison-a.example.com"
+const PRICE_COMPARISON_BASE_URL_B = "https://comparison-b.example.com"
+const PRICE_COMPARISON_ACCOUNT_A_ID = "price-comparison-account-a"
+const PRICE_COMPARISON_ACCOUNT_B_ID = "price-comparison-account-b"
+const PRICE_COMPARISON_MODEL_ID = "comparison-model"
 const OPENROUTER_ACCOUNT_A_ID = "openrouter-catalog-account-a"
 const OPENROUTER_ACCOUNT_B_ID = "openrouter-catalog-account-b"
 const OPENROUTER_MANAGEMENT_KEYS = [
@@ -100,6 +105,56 @@ async function seedModelListAccount(context: BrowserContext) {
       default: { desc: "Default", ratio: 1 },
       vip: { desc: "VIP", ratio: 1.5 },
     },
+  })
+}
+
+async function seedPriceComparisonAccounts(context: BrowserContext) {
+  const serviceWorker = await getServiceWorker(context)
+  const createPricingModel = (modelRatio: number): ModelPricing => ({
+    model_name: PRICE_COMPARISON_MODEL_ID,
+    model_description: "Shared comparison model",
+    quota_type: 0,
+    model_ratio: modelRatio,
+    model_price: 0,
+    completion_ratio: 1,
+    enable_groups: ["default"],
+    supported_endpoint_types: ["chat_completions"],
+  })
+
+  await seedStoredAccounts(serviceWorker, [
+    createStoredAccount({
+      id: PRICE_COMPARISON_ACCOUNT_A_ID,
+      site_name: "Comparison Account A",
+      site_url: PRICE_COMPARISON_BASE_URL_A,
+      account_info: {
+        id: "comparison-user-a",
+        username: "comparison-user-a",
+        access_token: "comparison-token-a",
+      },
+    }),
+    createStoredAccount({
+      id: PRICE_COMPARISON_ACCOUNT_B_ID,
+      site_name: "Comparison Account B",
+      site_url: PRICE_COMPARISON_BASE_URL_B,
+      account_info: {
+        id: "comparison-user-b",
+        username: "comparison-user-b",
+        access_token: "comparison-token-b",
+      },
+    }),
+  ])
+
+  await stubNewApiSiteRoutes(context, {
+    baseUrl: PRICE_COMPARISON_BASE_URL_A,
+    models: [PRICE_COMPARISON_MODEL_ID],
+    pricingModels: [createPricingModel(1)],
+    groups: { default: { desc: "Default", ratio: 1 } },
+  })
+  await stubNewApiSiteRoutes(context, {
+    baseUrl: PRICE_COMPARISON_BASE_URL_B,
+    models: [PRICE_COMPARISON_MODEL_ID],
+    pricingModels: [createPricingModel(2)],
+    groups: { default: { desc: "Default", ratio: 1 } },
   })
 }
 
@@ -366,6 +421,50 @@ test("loads account-backed models from the options route", async ({
       totalModels: 3,
     },
   })
+})
+
+test("groups same-model offers when comparing prices at narrow options width", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  await page.setViewportSize({ width: 1100, height: 900 })
+  await seedPriceComparisonAccounts(context)
+
+  await verifyAccountModelCatalogUsage({
+    page,
+    extensionId,
+    account: { accountId: PRICE_COMPARISON_ACCOUNT_A_ID },
+    expectations: {
+      sourceLabel: "Comparison Account A",
+      modelNames: [PRICE_COMPARISON_MODEL_ID],
+      totalModels: 1,
+    },
+  })
+
+  await page.getByRole("button", { name: "Compare Prices" }).click()
+  await expect(page).toHaveURL((url) => {
+    return (
+      url.hash === `#${MENU_ITEM_IDS.MODELS}` &&
+      url.searchParams.get("accountId") === "all"
+    )
+  })
+
+  const comparisonGroup = page.getByRole("region", {
+    name: `${PRICE_COMPARISON_MODEL_ID} Token-based billing`,
+  })
+  await expect(comparisonGroup).toBeVisible()
+  await expect(comparisonGroup).toContainText("Comparable offers: 2")
+  await expect(comparisonGroup).toContainText("Comparison Account A")
+  await expect(comparisonGroup).toContainText("Comparison Account B")
+
+  await page.setViewportSize({ width: 720, height: 900 })
+  await expect(comparisonGroup).toBeVisible()
+  expect(
+    await comparisonGroup.evaluate(
+      (element) => element.scrollWidth <= element.clientWidth + 1,
+    ),
+  ).toBe(true)
 })
 
 test("loads personalized OpenRouter catalogs with visible provider fallback and retry", async ({

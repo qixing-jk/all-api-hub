@@ -1,4 +1,4 @@
-import { act, render, screen } from "@testing-library/react"
+import { act, render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import React from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
@@ -56,6 +56,9 @@ vi.mock("react-i18next", async (importOriginal) => {
 })
 
 vi.mock("~/components/ui", () => ({
+  Badge: ({ children }: { children: React.ReactNode }) => (
+    <span>{children}</span>
+  ),
   EmptyState: ({ title }: { title: string }) => (
     <div data-testid={TEST_IDS.emptyState}>{title}</div>
   ),
@@ -203,6 +206,8 @@ type CalculatedModelOverrides = {
   source?: CalculatedModelItem["source"]
   effectiveGroup?: string
   resolvedVendor?: CalculatedModelItem["resolvedVendor"]
+  isLowestPrice?: boolean
+  isPriceComparable?: boolean
 }
 
 function requireHistoryTarget(
@@ -274,6 +279,8 @@ const createCalculatedModel = (
     activeGroupContext,
     effectiveGroup: overrides.effectiveGroup,
     resolvedVendor: overrides.resolvedVendor ?? { state: "unknown" },
+    isLowestPrice: overrides.isLowestPrice,
+    isPriceComparable: overrides.isPriceComparable,
   }
 }
 
@@ -426,6 +433,78 @@ describe("ModelDisplay", () => {
     expect(lastItem).not.toHaveClass("my-3")
     expect(firstItem).toHaveClass("pb-3")
     expect(lastItem).toHaveClass("pb-3")
+  })
+
+  it("shows separate comparison regions for each exact model and billing mode", () => {
+    const secondAccountSource = createAccountSource({
+      ...ACCOUNT_FIXTURE,
+      id: "account-2",
+      name: "Account Two",
+    })
+
+    render(
+      <ModelDisplay
+        models={[
+          createCalculatedModel({
+            model: { model_name: "shared-model" },
+            isLowestPrice: true,
+            isPriceComparable: true,
+          }),
+          createCalculatedModel({
+            model: { model_name: "shared-model" },
+            source: secondAccountSource,
+            isPriceComparable: false,
+          }),
+          createCalculatedModel({
+            model: {
+              model_name: "shared-model",
+              quota_type: 1,
+              model_price: 0.2,
+            },
+            isLowestPrice: true,
+            isPriceComparable: true,
+          }),
+          createCalculatedModel({
+            model: { model_name: "other-model" },
+            isLowestPrice: true,
+            isPriceComparable: true,
+          }),
+        ]}
+        verificationSummariesByKey={{}}
+        showRealPrice={true}
+        showRatioColumn={true}
+        showEndpointTypes={true}
+        showPriceComparisonGroups={true}
+        handleGroupClick={vi.fn()}
+      />,
+    )
+
+    const comparisonRegions = screen.getAllByRole("region")
+    expect(comparisonRegions).toHaveLength(3)
+    expect(screen.getAllByTestId(TEST_IDS.virtuosoItem)).toHaveLength(3)
+
+    const tokenGroup = screen.getByRole("region", {
+      name: "shared-model ui:billing.tokenBased",
+    })
+    const perCallGroup = screen.getByRole("region", {
+      name: "shared-model ui:billing.perCall",
+    })
+    expect(within(tokenGroup).getAllByTestId(TEST_IDS.modelItem)).toHaveLength(
+      2,
+    )
+    expect(
+      within(perCallGroup).getAllByTestId(TEST_IDS.modelItem),
+    ).toHaveLength(1)
+    expect(
+      within(tokenGroup).getByText(
+        "modelList:priceComparison.results.notComparedHint",
+      ),
+    ).toBeVisible()
+    expect(
+      within(perCallGroup).queryByText(
+        "modelList:priceComparison.results.notComparedHint",
+      ),
+    ).not.toBeInTheDocument()
   })
 
   it("derives account exchange rates, group mode, and account verification summaries for rendered model cards", async () => {
