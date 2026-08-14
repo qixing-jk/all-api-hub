@@ -304,13 +304,6 @@ async function maybePrepareStatusSourceAccount(params: {
     if (!sourceAccountResult.sourceAccount) return sourceAccountResult
 
     return { sourceAccount: sourceAccountResult.sourceAccount }
-  } catch (error) {
-    return {
-      sourceAccount: null,
-      skipReason: `Failed to prepare ${sourceAccountType} source account for ${params.managedSiteLabel} managed-site status checks: ${
-        error instanceof Error ? error.message : String(error)
-      }`,
-    }
   } finally {
     if (!sitePage.isClosed()) {
       await sitePage.close()

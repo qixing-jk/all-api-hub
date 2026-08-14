@@ -13,7 +13,10 @@ import {
   type SavedApiCredentialProfileExpectation,
 } from "~~/e2e/utils/accountLifecycle"
 import type { getServiceWorker } from "~~/e2e/utils/extensionState"
-import { throwScenarioError } from "~~/e2e/utils/scenarioErrors"
+import {
+  collectCleanupError,
+  throwScenarioError,
+} from "~~/e2e/utils/scenarioErrors"
 
 type ServiceWorker = Awaited<ReturnType<typeof getServiceWorker>>
 
@@ -53,29 +56,6 @@ type ExistingAccountTokenToApiProfileEnvironment = {
   cleanupCreatedProfile?: boolean
   afterProfileSaved?: (profile: ApiCredentialProfile) => Promise<void>
   cleanup?: () => Promise<void>
-}
-
-async function runFinalizers(finalizers: Array<() => Promise<void>>) {
-  const errors: unknown[] = []
-
-  for (const finalizer of finalizers) {
-    try {
-      await finalizer()
-    } catch (error) {
-      errors.push(error)
-    }
-  }
-
-  if (errors.length === 1) {
-    throw errors[0]
-  }
-
-  if (errors.length > 1) {
-    throw new AggregateError(
-      errors,
-      "Account key to API profile cleanup failed",
-    )
-  }
 }
 
 export async function runAccountKeyToApiProfileScenario(
@@ -129,9 +109,8 @@ export async function runAccountKeyToApiProfileScenario(
     primaryError = error
   }
 
-  let cleanupError: unknown
-  try {
-    await runFinalizers([
+  const cleanupError = await collectCleanupError(
+    [
       async () => {
         if (env.cleanupCreatedProfile !== false && savedProfile) {
           await deleteApiCredentialProfileFromStorage({
@@ -156,10 +135,9 @@ export async function runAccountKeyToApiProfileScenario(
       async () => {
         await env.cleanup?.()
       },
-    ])
-  } catch (error) {
-    cleanupError = error
-  }
+    ],
+    "Account key to API profile cleanup failed",
+  )
 
   throwScenarioError({
     primaryError,
@@ -214,9 +192,8 @@ export async function saveExistingAccountTokenToApiProfileScenario(
     primaryError = error
   }
 
-  let cleanupError: unknown
-  try {
-    await runFinalizers([
+  const cleanupError = await collectCleanupError(
+    [
       async () => {
         if (env.cleanupCreatedProfile !== false && savedProfile) {
           await deleteApiCredentialProfileFromStorage({
@@ -233,10 +210,9 @@ export async function saveExistingAccountTokenToApiProfileScenario(
       async () => {
         await env.cleanup?.()
       },
-    ])
-  } catch (error) {
-    cleanupError = error
-  }
+    ],
+    "Account key to API profile cleanup failed",
+  )
 
   throwScenarioError({
     primaryError,

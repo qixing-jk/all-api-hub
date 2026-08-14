@@ -27,7 +27,10 @@ import {
   submitTokenCreationFromKeyManagementPage,
 } from "~~/e2e/utils/accountLifecycle"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
-import { throwScenarioError } from "~~/e2e/utils/scenarioErrors"
+import {
+  collectCleanupError,
+  throwScenarioError,
+} from "~~/e2e/utils/scenarioErrors"
 
 type ManagedSiteChannelScenarioContext<TSiteType extends ManagedSiteType> = {
   page: Page
@@ -328,7 +331,6 @@ export async function runManagedSiteTokenChannelStatusScenario<
       await expect
         .poll(() => sub2ApiKeyExportRequests.length, { timeout: 30_000 })
         .toBeGreaterThan(0)
-      context.page.context().off("request", observeSub2ApiInventoryRequest)
       for (const requestUrl of sub2ApiInventoryRequests) {
         expect(new URL(requestUrl).searchParams.get("search")).toBeNull()
       }
@@ -346,17 +348,10 @@ export async function runManagedSiteTokenChannelStatusScenario<
   }
 
   context.page.context().off("request", observeSub2ApiInventoryRequest)
-  const cleanupErrors: unknown[] = []
-  const runCleanup = async (cleanup: () => Promise<void>) => {
-    try {
-      await cleanup()
-    } catch (error) {
-      cleanupErrors.push(error)
-    }
-  }
+  const cleanupFinalizers: Array<() => Promise<void>> = []
 
   if (createdTokenName) {
-    await runCleanup(async () => {
+    cleanupFinalizers.push(async () => {
       keyManagementPage = await openKeyManagementForAccount({
         page: keyManagementPage,
         extensionId: context.extensionId,
@@ -369,13 +364,13 @@ export async function runManagedSiteTokenChannelStatusScenario<
       })
     })
   }
-  await runCleanup(async () => {
+  cleanupFinalizers.push(async () => {
     await cleanupKeyManagementTokensByPrefix({
       page: keyManagementPage,
       prefix: tokenCleanupPrefix,
     })
   })
-  await runCleanup(async () => {
+  cleanupFinalizers.push(async () => {
     await cleanupManagedSiteChannelsByPrefix({
       page: keyManagementPage,
       extensionId: context.extensionId,
@@ -384,13 +379,10 @@ export async function runManagedSiteTokenChannelStatusScenario<
     })
   })
 
-  const cleanupError =
-    cleanupErrors.length > 1
-      ? new AggregateError(
-          cleanupErrors,
-          "Managed-site token channel status cleanup failed",
-        )
-      : cleanupErrors[0]
+  const cleanupError = await collectCleanupError(
+    cleanupFinalizers,
+    "Managed-site token channel status cleanup failed",
+  )
 
   throwScenarioError({
     primaryError,

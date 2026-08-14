@@ -9,29 +9,12 @@ import {
   submitTokenCreationFromKeyManagementPage,
 } from "~~/e2e/utils/accountLifecycle"
 import type { getServiceWorker } from "~~/e2e/utils/extensionState"
-import { throwScenarioError } from "~~/e2e/utils/scenarioErrors"
+import {
+  collectCleanupError,
+  throwScenarioError,
+} from "~~/e2e/utils/scenarioErrors"
 
 type ServiceWorker = Awaited<ReturnType<typeof getServiceWorker>>
-
-async function runFinalizers(finalizers: Array<() => Promise<void>>) {
-  const errors: unknown[] = []
-
-  for (const finalizer of finalizers) {
-    try {
-      await finalizer()
-    } catch (error) {
-      errors.push(error)
-    }
-  }
-
-  if (errors.length === 1) {
-    throw errors[0]
-  }
-
-  if (errors.length > 1) {
-    throw new AggregateError(errors, "Account key lifecycle cleanup failed")
-  }
-}
 
 type AccountKeyLifecycleEnvironment = {
   extensionId: string
@@ -89,9 +72,8 @@ export async function runAccountKeyLifecycleScenario(
     primaryError = error
   }
 
-  let cleanupError: unknown
-  try {
-    await runFinalizers([
+  const cleanupError = await collectCleanupError(
+    [
       async () => {
         if (submittedTokenName) {
           await deleteTokenFromKeyManagementPage({
@@ -108,10 +90,9 @@ export async function runAccountKeyLifecycleScenario(
       async () => {
         await env.cleanup?.()
       },
-    ])
-  } catch (error) {
-    cleanupError = error
-  }
+    ],
+    "Account key lifecycle cleanup failed",
+  )
 
   throwScenarioError({
     primaryError,

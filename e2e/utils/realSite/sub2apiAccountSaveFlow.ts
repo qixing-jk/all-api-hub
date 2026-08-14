@@ -63,13 +63,9 @@ export async function runSub2ApiRealSiteAccountSaveFlow(params: {
             "true",
           )
 
-          const importSessionButtonVisible =
-            await dialog.sub2apiImportSessionButton
-              .waitFor({ state: "visible", timeout: 5_000 })
-              .then(() => true)
-              .catch(() => false)
-
-          if (!importSessionButtonVisible) return
+          await expect(dialog.sub2apiImportSessionButton).toBeVisible({
+            timeout: 30_000,
+          })
 
           await dialog.sub2apiImportSessionButton.click()
           await expect
