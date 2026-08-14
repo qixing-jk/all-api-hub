@@ -489,8 +489,16 @@ describe("ModelDisplay", () => {
     const perCallGroup = screen.getByRole("region", {
       name: "shared-model ui:billing.perCall",
     })
-    expect(within(tokenGroup).getAllByTestId(TEST_IDS.modelItem)).toHaveLength(
-      2,
+    const comparableOffers = within(tokenGroup).getByRole("list", {
+      name: "modelList:priceComparison.results.comparable",
+    })
+    const notComparedOffers = within(tokenGroup).getByRole("list", {
+      name: "modelList:priceComparison.results.notCompared",
+    })
+    expect(within(comparableOffers).getAllByRole("listitem")).toHaveLength(1)
+    expect(within(notComparedOffers).getAllByRole("listitem")).toHaveLength(1)
+    expect(within(tokenGroup).getByRole("note")).toHaveTextContent(
+      "modelList:priceComparison.results.notComparedHint",
     )
     expect(
       within(perCallGroup).getAllByTestId(TEST_IDS.modelItem),
@@ -501,9 +509,9 @@ describe("ModelDisplay", () => {
       ),
     ).toBeVisible()
     expect(
-      within(perCallGroup).queryByText(
-        "modelList:priceComparison.results.notComparedHint",
-      ),
+      within(perCallGroup).queryByRole("list", {
+        name: "modelList:priceComparison.results.notCompared",
+      }),
     ).not.toBeInTheDocument()
   })
 

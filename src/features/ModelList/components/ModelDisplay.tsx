@@ -1,12 +1,5 @@
-import { CpuChipIcon } from "@heroicons/react/24/outline"
-import {
-  forwardRef,
-  Fragment,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from "react"
+import { CpuChipIcon, InformationCircleIcon } from "@heroicons/react/24/outline"
+import { forwardRef, useCallback, useEffect, useMemo, useState } from "react"
 import type { HTMLAttributes } from "react"
 import { useTranslation } from "react-i18next"
 import { Virtuoso } from "react-virtuoso"
@@ -212,7 +205,10 @@ export function ModelDisplay(props: ModelDisplayProps) {
     )
   }
 
-  const renderModelItem = (item: CalculatedModelItem) => {
+  const renderModelItem = (
+    item: CalculatedModelItem,
+    isComparisonOffer = false,
+  ) => {
     const itemKey = getModelItemKey(item)
     const sourceForModel = item.source
     const accountForModel =
@@ -253,6 +249,7 @@ export function ModelDisplay(props: ModelDisplayProps) {
         effectiveGroup={item.effectiveGroup}
         onGroupClick={handleGroupClick}
         isLowestPrice={item.isLowestPrice}
+        isComparisonOffer={isComparisonOffer}
         showsOptimalGroup={item.hasAutoSelectedGroup}
         groupSelectionScope={groupSelectionScope}
         isGroupSelectionInteractive={isGroupSelectionInteractive}
@@ -298,28 +295,33 @@ export function ModelDisplay(props: ModelDisplayProps) {
           const billingModeId = `${headingId}-billing-mode`
 
           return (
-            <section aria-labelledby={`${headingId} ${billingModeId}`}>
-              <header className="dark:border-dark-bg-tertiary dark:bg-dark-bg-primary/45 mb-3 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 border-y border-gray-200 bg-gray-50/80 px-3 py-2.5 sm:px-4">
-                <h2
-                  id={headingId}
-                  className="text-foreground min-w-0 flex-1 font-mono text-sm font-semibold break-all"
-                >
-                  {group.modelName}
-                </h2>
-                <Badge variant="secondary" size="sm" className="shrink-0">
-                  <span id={billingModeId}>
-                    {getBillingModeText(group.quotaType)}
-                  </span>
-                </Badge>
-                <div className="dark:text-dark-text-secondary flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-600">
-                  <span>
+            <section
+              aria-labelledby={`${headingId} ${billingModeId}`}
+              className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm"
+            >
+              <header className="dark:border-dark-bg-tertiary dark:bg-dark-bg-primary/45 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-gray-200 bg-gray-50/80 px-3 py-2.5 sm:px-4">
+                <div className="flex w-full min-w-0 items-center gap-2 lg:w-auto lg:flex-1">
+                  <h2
+                    id={headingId}
+                    className="text-foreground min-w-0 flex-1 font-mono text-sm font-semibold break-all"
+                  >
+                    {group.modelName}
+                  </h2>
+                  <Badge variant="secondary" size="sm" className="shrink-0">
+                    <span id={billingModeId}>
+                      {getBillingModeText(group.quotaType)}
+                    </span>
+                  </Badge>
+                </div>
+                <div className="flex w-full flex-wrap items-center gap-1.5 text-xs lg:w-auto lg:shrink-0 lg:justify-end">
+                  <span className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary dark:text-dark-text-secondary rounded-full border border-gray-200 bg-white/80 px-2.5 py-1 text-gray-600">
                     {t("priceComparison.results.comparable")}:{" "}
                     <strong className="font-semibold text-emerald-700 dark:text-emerald-400">
                       {group.comparableItems.length}
                     </strong>
                   </span>
                   {group.notComparedItems.length > 0 && (
-                    <span>
+                    <span className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary dark:text-dark-text-secondary rounded-full border border-gray-200 bg-white/80 px-2.5 py-1 text-gray-600">
                       {t("priceComparison.results.notCompared")}:{" "}
                       <strong className="text-foreground font-semibold">
                         {group.notComparedItems.length}
@@ -329,31 +331,56 @@ export function ModelDisplay(props: ModelDisplayProps) {
                 </div>
               </header>
 
-              <div className="space-y-3">
-                {group.comparableItems.map((item) => (
-                  <Fragment key={getModelItemKey(item)}>
-                    {renderModelItem(item)}
-                  </Fragment>
-                ))}
+              {group.comparableItems.length > 0 && (
+                <ul
+                  aria-label={t("priceComparison.results.comparable")}
+                  className="dark:divide-dark-bg-tertiary divide-y divide-gray-200/80"
+                >
+                  {group.comparableItems.map((item) => (
+                    <li key={getModelItemKey(item)}>
+                      {renderModelItem(item, true)}
+                    </li>
+                  ))}
+                </ul>
+              )}
 
-                {group.notComparedItems.length > 0 && (
-                  <div className="dark:border-dark-bg-tertiary space-y-3 border-t border-dashed border-gray-200 pt-3">
-                    <div className="px-1">
+              {group.notComparedItems.length > 0 && (
+                <div
+                  className={cn(
+                    "bg-gray-50/55 dark:bg-white/[0.018]",
+                    group.comparableItems.length > 0 &&
+                      "dark:border-dark-bg-tertiary border-t border-dashed border-gray-300",
+                  )}
+                >
+                  <div
+                    role="note"
+                    className="dark:border-dark-bg-tertiary flex min-w-0 gap-2 border-b border-gray-200/80 px-3 py-2.5 sm:px-4"
+                  >
+                    <InformationCircleIcon
+                      aria-hidden="true"
+                      className="dark:text-dark-text-tertiary mt-0.5 h-4 w-4 shrink-0 text-gray-500"
+                    />
+                    <div className="min-w-0">
                       <p className="text-foreground text-xs font-medium">
                         {t("priceComparison.results.notCompared")}
                       </p>
-                      <p className="dark:text-dark-text-tertiary mt-1 text-xs leading-5 text-gray-500">
+                      <p className="dark:text-dark-text-tertiary mt-0.5 text-xs leading-5 text-gray-600">
                         {t("priceComparison.results.notComparedHint")}
                       </p>
                     </div>
-                    {group.notComparedItems.map((item) => (
-                      <Fragment key={getModelItemKey(item)}>
-                        {renderModelItem(item)}
-                      </Fragment>
-                    ))}
                   </div>
-                )}
-              </div>
+                  <ul
+                    aria-label={t("priceComparison.results.notCompared")}
+                    className="dark:divide-dark-bg-tertiary divide-y divide-gray-200/80"
+                  >
+                    {group.notComparedItems.map((item) => (
+                      <li key={getModelItemKey(item)}>
+                        {renderModelItem(item, true)}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </section>
           )
         }}

@@ -285,6 +285,27 @@ describe("ModelItem", () => {
     ).toHaveTextContent("Anthropic")
   })
 
+  it("uses a connected row surface only for comparison offers", () => {
+    const { container, rerender } = render(
+      <ModelItem {...createDefaultProps()} />,
+    )
+
+    expect(container.firstElementChild).toHaveClass("rounded-lg")
+    expect(container.firstElementChild).not.toHaveClass("rounded-none")
+
+    rerender(
+      <ModelItem
+        {...createDefaultProps()}
+        isComparisonOffer={true}
+        isLowestPrice={true}
+      />,
+    )
+
+    expect(container.firstElementChild).toHaveClass("rounded-none")
+    expect(container.firstElementChild).not.toHaveClass("border-l-2")
+    expect(container.firstElementChild).not.toHaveClass("opacity-75")
+  })
+
   it("shows local no-usable guidance for known-empty group access", () => {
     const props = createDefaultProps()
 

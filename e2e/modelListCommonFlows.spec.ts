@@ -110,13 +110,17 @@ async function seedModelListAccount(context: BrowserContext) {
 
 async function seedPriceComparisonAccounts(context: BrowserContext) {
   const serviceWorker = await getServiceWorker(context)
-  const createPricingModel = (modelRatio: number): ModelPricing => ({
+  const createPricingModel = (
+    modelRatio: number,
+    includeCacheRead = false,
+  ): ModelPricing => ({
     model_name: PRICE_COMPARISON_MODEL_ID,
     model_description: "Shared comparison model",
     quota_type: 0,
     model_ratio: modelRatio,
     model_price: 0,
     completion_ratio: 1,
+    ...(includeCacheRead ? { cache_ratio: 0.5 } : {}),
     enable_groups: ["default"],
     supported_endpoint_types: ["chat_completions"],
   })
@@ -147,7 +151,7 @@ async function seedPriceComparisonAccounts(context: BrowserContext) {
   await stubNewApiSiteRoutes(context, {
     baseUrl: PRICE_COMPARISON_BASE_URL_A,
     models: [PRICE_COMPARISON_MODEL_ID],
-    pricingModels: [createPricingModel(1)],
+    pricingModels: [createPricingModel(1, true)],
     groups: { default: { desc: "Default", ratio: 1 } },
   })
   await stubNewApiSiteRoutes(context, {
@@ -459,6 +463,25 @@ test("groups same-model offers when comparing prices at narrow options width", a
   await expect(comparisonGroup).toContainText("Comparison Account B")
 
   await page.setViewportSize({ width: 720, height: 900 })
+  await expect(comparisonGroup).toBeVisible()
+  expect(
+    await comparisonGroup.evaluate(
+      (element) => element.scrollWidth <= element.clientWidth + 1,
+    ),
+  ).toBe(true)
+
+  await page.getByRole("combobox", { name: "Use case" }).click()
+  await page.getByRole("option", { name: "Coding agent" }).click()
+  await expect(comparisonGroup).toContainText("Comparable offers: 1")
+  await expect(comparisonGroup).toContainText(
+    "Not compared under current conditions: 1",
+  )
+  await expect(comparisonGroup.getByRole("note")).toContainText(
+    "The current conditions use a price item the source does not provide",
+  )
+  await expect(comparisonGroup).toContainText("Comparison Account A")
+  await expect(comparisonGroup).toContainText("Comparison Account B")
+  await comparisonGroup.scrollIntoViewIfNeeded()
   await expect(comparisonGroup).toBeVisible()
   expect(
     await comparisonGroup.evaluate(

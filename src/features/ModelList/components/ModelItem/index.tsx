@@ -24,6 +24,7 @@ import {
   MODEL_MANAGEMENT_SOURCE_KINDS,
 } from "~/features/ModelList/modelManagementSources"
 import { formatModelListSourceLabel } from "~/features/ModelList/sourceLabels"
+import { cn } from "~/lib/utils"
 import {
   isModelPriceUnavailable,
   type ModelPricing,
@@ -83,6 +84,7 @@ interface ModelItemProps {
   sourceIdentity?: ModelListSourceIdentity
   displayCapabilities?: ModelManagementSourceCapabilities
   isLowestPrice?: boolean
+  isComparisonOffer?: boolean
   verificationSummary?: ApiVerificationHistorySummary | null
   onFilterAccount?: (accountId: string) => void
   onVerifyModel?: (
@@ -131,6 +133,7 @@ export default function ModelItem(props: ModelItemProps) {
     sourceIdentity,
     displayCapabilities = source.capabilities,
     isLowestPrice = false,
+    isComparisonOffer = false,
     verificationSummary,
     onFilterAccount,
     onVerifyModel,
@@ -371,12 +374,14 @@ export default function ModelItem(props: ModelItemProps) {
 
   return (
     <Card
-      variant="interactive"
-      className={
-        isAvailableForUser
-          ? "hover:border-blue-300 dark:hover:border-blue-500/50"
-          : "bg-gray-50 opacity-75 dark:bg-gray-800/50"
-      }
+      variant={isComparisonOffer ? "ghost" : "interactive"}
+      className={cn(
+        isComparisonOffer
+          ? "rounded-none border-0 bg-transparent shadow-none transition-colors hover:bg-gray-50/80 hover:shadow-none dark:bg-transparent dark:hover:bg-white/[0.025]"
+          : isAvailableForUser &&
+              "hover:border-blue-300 dark:hover:border-blue-500/50",
+        !isAvailableForUser && "bg-gray-50 opacity-75 dark:bg-gray-800/50",
+      )}
     >
       <CardContent padding="default">
         <div className="flex min-w-0 flex-wrap items-start gap-2">
