@@ -29,6 +29,7 @@ import {
 import type { KeyResourceActionPolicy } from "~/features/KeyManagement/presentation/keyResourceCard"
 import {
   accountRuntimeKeyToLegacyAccountToken,
+  collectAccountRuntimeKeySecrets,
   isAccountTokenRuntimeKey,
   isServiceCredentialRuntimeKey,
   type AccountRuntimeKey,
@@ -49,6 +50,7 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
+import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import type { ApiToken, DisplaySiteData } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { getErrorMessage } from "~/utils/core/error"
@@ -204,7 +206,7 @@ export function RuntimeKeyActionControls({
       }
 
       setKelivoExportInput(exportInput)
-    } catch {
+    } catch (error) {
       const tracker = startProductAnalyticsAction({
         featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
         actionId: kelivoActionId,
@@ -217,7 +219,13 @@ export function RuntimeKeyActionControls({
       })
       showResultToast({
         success: false,
-        message: t("messages:kelivo.prepareFailed"),
+        message: t("messages:errors.operation.failed", {
+          error:
+            toSanitizedErrorSummary(
+              error,
+              collectAccountRuntimeKeySecrets([runtimeKey]),
+            ) || t("messages:errors.unknown"),
+        }),
       })
     }
   }

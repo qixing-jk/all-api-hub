@@ -114,7 +114,6 @@
     "customGoogleEndpointUnsupported": "Kelivo 导入码无法保留自定义 Google API 地址。",
     "invalidBaseUrl": "Base URL 必须是有效的 HTTP 或 HTTPS 地址。",
     "missingCredentials": "需要提供商名称和完整 API 密钥。",
-    "prepareFailed": "无法准备 Kelivo 导出，请重试。",
     "unsupportedApiType": "此 API 协议暂时无法导出到 Kelivo。"
   },
   "managedSite": {

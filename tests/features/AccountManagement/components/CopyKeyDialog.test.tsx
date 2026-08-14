@@ -722,7 +722,7 @@ describe("CopyKeyDialog", () => {
   it("does not expose resolver errors while preparing a runtime-key Kelivo export", async () => {
     const runtimeKey = buildDisplayAccountTokenRuntimeKey(ACCOUNT, TOKEN)
     resolveApiTokenKeyMock.mockRejectedValueOnce(
-      new Error("upstream included sk-sensitive-runtime-secret"),
+      new Error("Provider rejected sk-test because the account is suspended"),
     )
     const user = userEvent.setup()
 
@@ -744,12 +744,10 @@ describe("CopyKeyDialog", () => {
 
     await waitFor(() => {
       expect(toastErrorMock).toHaveBeenCalledWith(
-        "messages:kelivo.prepareFailed",
+        "messages:errors.operation.failed",
       )
     })
-    expect(JSON.stringify(toastErrorMock.mock.calls)).not.toContain(
-      "sk-sensitive-runtime-secret",
-    )
+    expect(JSON.stringify(toastErrorMock.mock.calls)).not.toContain("sk-test")
   })
 
   it("uses service-credential analytics for its Kelivo export dialog", async () => {

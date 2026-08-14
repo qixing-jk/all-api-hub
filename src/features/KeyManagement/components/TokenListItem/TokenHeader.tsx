@@ -54,7 +54,10 @@ import {
 import type { KeyResourceActionPolicy } from "~/features/KeyManagement/presentation/keyResourceCard"
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
 import { cn } from "~/lib/utils"
-import { buildDisplayAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import {
+  buildDisplayAccountTokenRuntimeKey,
+  collectAccountRuntimeKeySecrets,
+} from "~/services/accounts/accountRuntimeKeys"
 import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
 import { normalizeAccountSiteUrlForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
 import { createProfileFromAccountToken } from "~/services/apiCredentialProfiles/accountTokenImport"
@@ -599,7 +602,7 @@ function TokenActionButtons({
         baseUrl: account.baseUrl,
         apiKey: resolvedToken.key,
       })
-    } catch {
+    } catch (error) {
       if (kelivoExportEpochRef.current !== exportEpoch) return
 
       const tracker = startProductAnalyticsAction({
@@ -614,7 +617,15 @@ function TokenActionButtons({
       })
       showResultToast({
         success: false,
-        message: t("messages:kelivo.prepareFailed"),
+        message: t("messages:errors.operation.failed", {
+          error:
+            toSanitizedErrorSummary(
+              error,
+              collectAccountRuntimeKeySecrets([
+                buildDisplayAccountTokenRuntimeKey(account, token),
+              ]),
+            ) || t("messages:errors.unknown"),
+        }),
       })
     }
   }

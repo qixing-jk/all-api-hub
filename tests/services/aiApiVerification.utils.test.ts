@@ -59,6 +59,19 @@ describe("aiApiVerification utils", () => {
     ).toBe("401 [REDACTED] denied with [REDACTED] again")
   })
 
+  it("redacts generic credential shapes while retaining provider diagnostics", async () => {
+    const { toSanitizedErrorSummary } = await import(
+      "~/services/verification/aiApiVerification/utils"
+    )
+
+    expect(
+      toSanitizedErrorSummary(
+        new Error("Provider denied sk-sensitivekey12345 with status 403"),
+        [],
+      ),
+    ).toBe("Provider denied [REDACTED] with status 403")
+  })
+
   it("maps stable HTTP status codes to summary keys", async () => {
     const { summaryKeyFromHttpStatus } = await import(
       "~/services/verification/aiApiVerification/utils"

@@ -950,7 +950,9 @@ describe("TokenHeader analytics", () => {
 
   it("does not expose resolver errors while preparing a Kelivo export", async () => {
     resolveDisplayAccountTokenForSecretMock.mockRejectedValueOnce(
-      new Error("upstream included sk-sensitive-resolver-secret"),
+      new Error(
+        "Provider rejected sk-sensitive-original because the account is suspended",
+      ),
     )
 
     const user = userEvent.setup()
@@ -965,11 +967,11 @@ describe("TokenHeader analytics", () => {
     await waitFor(() => {
       expect(showResultToastMock).toHaveBeenCalledWith({
         success: false,
-        message: "messages:kelivo.prepareFailed",
+        message: "messages:errors.operation.failed",
       })
     })
     expect(JSON.stringify(showResultToastMock.mock.calls)).not.toContain(
-      "sk-sensitive-resolver-secret",
+      "sk-sensitive-original",
     )
     expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Failure,
