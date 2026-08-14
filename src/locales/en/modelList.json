@@ -111,6 +111,10 @@
     "cta": "Compare Prices",
     "tooltip": "Clear current filters, switch to all accounts, and sort each model by the lowest price."
   },
+  "controlPanelSections": {
+    "actions": "Actions",
+    "filters": "Filters"
+  },
   "copyAllNames": "Copy All Model Names",
   "currentUsableGroups": "Current usable groups",
   "description": "View and manage available AI models",
@@ -237,7 +241,7 @@
     "tokenCount_one": "{{formattedCount}} token",
     "tokenCount_other": "{{formattedCount}} tokens"
   },
-  "displayOptions": "Display Options:",
+  "displayOptions": "Display",
   "endpointType": "Endpoint Type",
   "endpointTypes": "Endpoint Types",
   "estimatedPrice": "Estimated",
@@ -365,6 +369,33 @@
   },
   "pleaseSelectFirst": "Please select an account or API credential first to view model list",
   "pleaseSelectSource": "Please select a source",
+  "priceComparison": {
+    "clearWeight": "Clear {{meter}}",
+    "helperNote": "Leave blank to ignore; enter 0 for a 0% share.",
+    "presetLabel": "Use case",
+    "presets": {
+      "codeCompletion": "Code completion",
+      "codingAgent": "Coding agent",
+      "custom": "Custom",
+      "generalChat": "General chat",
+      "toolAgent": "Tool / Agent"
+    },
+    "sectionDescription": "Set the usage mix so price comparisons better match how you use models. Choose a use case to fill it in, or adjust it yourself.",
+    "sectionTitle": "Price comparison",
+    "sourceDetails": {
+      "azureCode": "Calculated from the public Azure Code dataset; cache reads and writes are currently excluded.",
+      "azureConversation": "Calculated from the public Azure Conversation dataset; cache reads and writes are currently excluded.",
+      "mooncakeToolAgent": "Calculated from the public Mooncake Tool and Agent dataset; cache reads and writes are currently excluded.",
+      "tracelabCodingAgent": "Derived from the public TraceLab coding-agent dataset; cache writes are not calculated separately yet."
+    },
+    "unmodeledPlaceholder": "Ignored",
+    "weights": {
+      "cacheRead": "Cache read share",
+      "cacheWrite": "Cache write share",
+      "input": "Input share",
+      "output": "Output share"
+    }
+  },
   "pricingDescription": "Price information comes from the API interface provided by the site, and the actual cost is subject to the prices published by each site. The price of pay-per-use models is the cost per 1M tokens, and pay-per-call models display the cost per call",
   "pricingNote": "Model Pricing Note",
   "profileSourceNotice": {

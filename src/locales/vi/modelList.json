@@ -105,6 +105,10 @@
     "cta": "So sánh giá",
     "tooltip": "Xóa bộ lọc hiện tại, chuyển sang tất cả tài khoản và ưu tiên giá thấp nhất cho cùng mô hình."
   },
+  "controlPanelSections": {
+    "actions": "Thao tác",
+    "filters": "Bộ lọc"
+  },
   "copyAllNames": "Sao chép tất cả tên mô hình",
   "currentUsableGroups": "Nhóm tài khoản hiện tại có thể dùng",
   "description": "Xem và quản lý các mô hình AI khả dụng",
@@ -229,7 +233,7 @@
     },
     "tokenCount_other": "{{formattedCount}} token"
   },
-  "displayOptions": "Tùy chọn hiển thị:",
+  "displayOptions": "Hiển thị",
   "endpointType": "Loại endpoint",
   "endpointTypes": "Loại endpoint",
   "estimatedPrice": "Ước tính",
@@ -357,6 +361,33 @@
   },
   "pleaseSelectFirst": "Vui lòng chọn một tài khoản hoặc thông tin xác thực API trước để xem danh sách mô hình",
   "pleaseSelectSource": "Vui lòng chọn nguồn dữ liệu",
+  "priceComparison": {
+    "clearWeight": "Xóa {{meter}}",
+    "helperNote": "Để trống để bỏ qua; nhập 0 nếu tỷ lệ là 0%.",
+    "presetLabel": "Nhu cầu sử dụng",
+    "presets": {
+      "codeCompletion": "Hoàn thành mã",
+      "codingAgent": "Tác nhân lập trình",
+      "custom": "Tùy chỉnh",
+      "generalChat": "Trò chuyện chung",
+      "toolAgent": "Tool / Agent"
+    },
+    "sectionDescription": "Đặt tỷ lệ sử dụng để so sánh giá mô hình sát với nhu cầu của bạn hơn. Chọn một nhu cầu để tự động điền hoặc tự điều chỉnh.",
+    "sectionTitle": "Điều kiện so sánh giá",
+    "sourceDetails": {
+      "azureCode": "Được tính từ bộ dữ liệu Azure Code công khai; hiện chưa tính lượt đọc và ghi bộ nhớ đệm.",
+      "azureConversation": "Được tính từ bộ dữ liệu Azure Conversation công khai; hiện chưa tính lượt đọc và ghi bộ nhớ đệm.",
+      "mooncakeToolAgent": "Được tính từ bộ dữ liệu Mooncake Tool and Agent công khai; hiện chưa tính lượt đọc và ghi bộ nhớ đệm.",
+      "tracelabCodingAgent": "Được suy ra từ dữ liệu TraceLab công khai; lượt ghi bộ nhớ đệm hiện chưa được tính riêng."
+    },
+    "unmodeledPlaceholder": "Bỏ qua",
+    "weights": {
+      "cacheRead": "Tỷ lệ đọc bộ nhớ đệm",
+      "cacheWrite": "Tỷ lệ ghi bộ nhớ đệm",
+      "input": "Tỷ lệ đầu vào",
+      "output": "Tỷ lệ đầu ra"
+    }
+  },
   "pricingDescription": "Thông tin giá được lấy từ API do trang web cung cấp, chi phí thực tế tùy thuộc vào mức giá được công bố bởi mỗi trang web. Giá của mô hình tính phí theo lượng là chi phí cho mỗi 1M tokens, mô hình tính phí theo lần hiển thị chi phí cho mỗi lần gọi",
   "pricingNote": "Ghi chú định giá mô hình",
   "profileSourceNotice": {

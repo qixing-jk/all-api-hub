@@ -18,6 +18,12 @@ import {
   type ModelListBillingMode,
 } from "../billingModes"
 import type { ModelCapabilitySelectionValue } from "../modelCapabilityFilters"
+import {
+  DEFAULT_MODEL_PRICE_COMPARISON_PRESET_ID,
+  DEFAULT_MODEL_PRICE_COMPARISON_WEIGHTS,
+  type ModelPriceComparisonPresetId,
+  type ModelPriceComparisonWeights,
+} from "../priceComparison"
 
 /**
  * Manages view state for the model list page.
@@ -36,6 +42,14 @@ export function useModelListState() {
   const [sortMode, setSortMode] = useState<ModelListSortMode>(
     MODEL_LIST_SORT_MODES.DEFAULT,
   )
+  const [priceComparisonPresetId, setPriceComparisonPresetId] =
+    useState<ModelPriceComparisonPresetId>(
+      DEFAULT_MODEL_PRICE_COMPARISON_PRESET_ID,
+    )
+  const [priceComparisonWeights, setPriceComparisonWeights] =
+    useState<ModelPriceComparisonWeights>(() => ({
+      ...DEFAULT_MODEL_PRICE_COMPARISON_WEIGHTS,
+    }))
   const [selectedBillingMode, setSelectedBillingMode] =
     useState<ModelListBillingMode>(MODEL_LIST_BILLING_MODES.ALL)
   const [selectedGroups, setSelectedGroups] = useState<string[]>([]) // 当前选中的候选分组；空数组表示所有分组
@@ -66,6 +80,10 @@ export function useModelListState() {
     setSelectedModelCapabilities,
     sortMode,
     setSortMode,
+    priceComparisonPresetId,
+    setPriceComparisonPresetId,
+    priceComparisonWeights,
+    setPriceComparisonWeights,
     selectedBillingMode,
     setSelectedBillingMode,
     selectedGroups,

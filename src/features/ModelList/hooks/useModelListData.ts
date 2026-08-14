@@ -83,6 +83,7 @@ export function useModelListData(routeParams?: Record<string, string>) {
     selectedModelCapabilities,
     sortMode,
     setSortMode,
+    priceComparisonWeights,
     showRealPrice,
     allAccountsFilterAccountIds,
     setAllAccountsFilterAccountIds,
@@ -351,6 +352,7 @@ export function useModelListData(routeParams?: Record<string, string>) {
     selectedModelCapabilities,
     modelMetadata,
     sortMode,
+    priceComparisonWeights,
     showRealPrice,
     accountFilterAccountIds: allAccountsFilterAccountIds,
   })

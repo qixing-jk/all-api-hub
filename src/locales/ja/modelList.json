@@ -105,6 +105,10 @@
     "cta": "価格を比較",
     "tooltip": "現在の絞り込みをクリアし、すべてのアカウントに切り替えて、同一モデルの最安値を優先して並べます。"
   },
+  "controlPanelSections": {
+    "actions": "操作",
+    "filters": "絞り込み条件"
+  },
   "copyAllNames": "すべてのモデル名をコピー",
   "currentUsableGroups": "現在のアカウントで利用可能なグループ",
   "description": "利用可能な AI モデルを確認・管理します",
@@ -229,7 +233,7 @@
     },
     "tokenCount_other": "{{formattedCount}} トークン"
   },
-  "displayOptions": "表示オプション:",
+  "displayOptions": "表示内容",
   "endpointType": "エンドポイント種別",
   "endpointTypes": "エンドポイント種別",
   "estimatedPrice": "推定",
@@ -357,6 +361,33 @@
   },
   "pleaseSelectFirst": "モデル一覧を表示するには、先にアカウントまたは API 認証情報を選択してください",
   "pleaseSelectSource": "ソースを選択してください",
+  "priceComparison": {
+    "clearWeight": "{{meter}}を消去",
+    "helperNote": "空欄は比較対象外、0 は割合 0% として扱います。",
+    "presetLabel": "利用シーン",
+    "presets": {
+      "codeCompletion": "コード補完",
+      "codingAgent": "コーディングエージェント",
+      "custom": "カスタム",
+      "generalChat": "一般チャット",
+      "toolAgent": "Tool / Agent"
+    },
+    "sectionDescription": "利用割合を設定し、使い方に合ったモデル料金を比較できます。利用シーンを選ぶと自動で入力され、手動でも調整できます。",
+    "sectionTitle": "料金比較の条件",
+    "sourceDetails": {
+      "azureCode": "公開 Azure Code データセットから算出しています。キャッシュの読み取りと書き込みは現在含めていません。",
+      "azureConversation": "公開 Azure Conversation データセットから算出しています。キャッシュの読み取りと書き込みは現在含めていません。",
+      "mooncakeToolAgent": "公開 Mooncake Tool and Agent データセットから算出しています。キャッシュの読み取りと書き込みは現在含めていません。",
+      "tracelabCodingAgent": "公開 TraceLab データセットから推定しています。キャッシュ書き込みはまだ個別に計算していません。"
+    },
+    "unmodeledPlaceholder": "比較しない",
+    "weights": {
+      "cacheRead": "キャッシュ読み取りの割合",
+      "cacheWrite": "キャッシュ書き込みの割合",
+      "input": "入力の割合",
+      "output": "出力の割合"
+    }
+  },
   "pricingDescription": "料金情報はサイトが提供する API インターフェースから取得されます。実際の費用は各サイトが公開している価格に従います。従量課金モデルの価格は 100 万トークンあたりで表示され、コール課金モデルは 1 回あたりの価格を表示します。",
   "pricingNote": "モデル料金に関する注意",
   "profileSourceNotice": {

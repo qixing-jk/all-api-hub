@@ -114,6 +114,10 @@ export default function ModelList(props: {
     setSelectedProvider,
     sortMode,
     setSortMode,
+    priceComparisonPresetId,
+    setPriceComparisonPresetId,
+    priceComparisonWeights,
+    setPriceComparisonWeights,
     selectedBillingMode,
     setSelectedBillingMode,
     selectedModelCapabilities,
@@ -733,6 +737,10 @@ export default function ModelList(props: {
             setSearchTerm={setSearchTerm}
             sortMode={sortMode}
             setSortMode={setSortMode}
+            priceComparisonPresetId={priceComparisonPresetId}
+            setPriceComparisonPresetId={setPriceComparisonPresetId}
+            priceComparisonWeights={priceComparisonWeights}
+            setPriceComparisonWeights={setPriceComparisonWeights}
             selectedBillingMode={selectedBillingMode}
             setSelectedBillingMode={setSelectedBillingMode}
             supportsModelCapabilityFilter={supportsModelCapabilityFilter}

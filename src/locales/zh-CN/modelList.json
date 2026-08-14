@@ -105,6 +105,10 @@
     "cta": "一键比价",
     "tooltip": "清空当前筛选，切换到所有账号，并按同模型最低价优先排序。"
   },
+  "controlPanelSections": {
+    "actions": "操作",
+    "filters": "筛选条件"
+  },
   "copyAllNames": "复制所有模型名称",
   "currentUsableGroups": "当前账号可用分组",
   "description": "查看和管理可用的AI模型",
@@ -228,7 +232,7 @@
     },
     "tokenCount": "{{formattedCount}} Token"
   },
-  "displayOptions": "显示选项:",
+  "displayOptions": "显示内容",
   "endpointType": "端点类型",
   "endpointTypes": "端点类型",
   "estimatedPrice": "估算价",
@@ -355,6 +359,33 @@
   },
   "pleaseSelectFirst": "请先选择一个账号或 API 凭据查看模型列表",
   "pleaseSelectSource": "请选择数据源",
+  "priceComparison": {
+    "clearWeight": "清除{{meter}}",
+    "helperNote": "留空不参与比较；填 0 表示占比为 0。",
+    "presetLabel": "使用场景",
+    "presets": {
+      "codeCompletion": "代码补全",
+      "codingAgent": "编码 Agent",
+      "custom": "自定义",
+      "generalChat": "普通对话",
+      "toolAgent": "Tool / Agent"
+    },
+    "sectionDescription": "设置各类用量占比，让模型价格比较更符合你的使用方式。选择场景会自动填入，也可以手动调整。",
+    "sectionTitle": "价格比较条件",
+    "sourceDetails": {
+      "azureCode": "根据 Azure Code 公开数据计算；暂不计入缓存读取和写入。",
+      "azureConversation": "根据 Azure Conversation 公开数据计算；暂不计入缓存读取和写入。",
+      "mooncakeToolAgent": "根据 Mooncake Tool and Agent 公开数据计算；暂不计入缓存读取和写入。",
+      "tracelabCodingAgent": "根据 TraceLab 编码 Agent 公开数据推算；缓存写入暂不单独计算。"
+    },
+    "unmodeledPlaceholder": "不计入",
+    "weights": {
+      "cacheRead": "缓存读取占比",
+      "cacheWrite": "缓存写入占比",
+      "input": "输入占比",
+      "output": "输出占比"
+    }
+  },
   "pricingDescription": "价格信息来源于站点提供的 API 接口，实际费用以各站点公布的价格为准。按量计费模型的价格为每 1M tokens 的费用，按次计费模型显示每次调用的费用",
   "pricingNote": "模型定价说明",
   "profileSourceNotice": {

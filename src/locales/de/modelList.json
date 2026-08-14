@@ -111,6 +111,10 @@
     "cta": "Preise vergleichen",
     "tooltip": "Löschen Sie aktuelle Filter, wechseln Sie zu allen Konten und sortieren Sie jedes Modell nach dem niedrigsten Preis."
   },
+  "controlPanelSections": {
+    "actions": "Aktionen",
+    "filters": "Filter"
+  },
   "copyAllNames": "Alle Modellnamen kopieren",
   "currentUsableGroups": "Aktuell nutzbare Gruppen",
   "description": "Verfügbare KI-Modelle anzeigen und verwalten",
@@ -237,7 +241,7 @@
     "tokenCount_one": "{{formattedCount}} Token",
     "tokenCount_other": "{{formattedCount}} Token"
   },
-  "displayOptions": "Anzeigeoptionen:",
+  "displayOptions": "Anzeige",
   "endpointType": "Endpunkttyp",
   "endpointTypes": "Endpunkttypen",
   "estimatedPrice": "Geschätzte",
@@ -365,6 +369,33 @@
   },
   "pleaseSelectFirst": "Bitte wählen Sie zuerst ein Konto oder API-Anmeldeinformationen aus, um die Modellliste anzuzeigen",
   "pleaseSelectSource": "Bitte wählen Sie eine Quelle aus",
+  "priceComparison": {
+    "clearWeight": "{{meter}} löschen",
+    "helperNote": "Leer lassen zum Ignorieren; 0 eingeben für einen Anteil von 0 %.",
+    "presetLabel": "Anwendungsfall",
+    "presets": {
+      "codeCompletion": "Code-Vervollständigung",
+      "codingAgent": "Coding-Agent",
+      "custom": "Benutzerdefiniert",
+      "generalChat": "Allgemeiner Chat",
+      "toolAgent": "Tool / Agent"
+    },
+    "sectionDescription": "Legen Sie die Nutzungsanteile fest, damit der Preisvergleich zu Ihrer Modellnutzung passt. Wählen Sie einen Anwendungsfall zum Ausfüllen oder passen Sie die Anteile selbst an.",
+    "sectionTitle": "Preisvergleich",
+    "sourceDetails": {
+      "azureCode": "Berechnet aus dem öffentlichen Azure-Code-Datensatz; Cache-Lese- und Schreibvorgänge werden derzeit nicht einbezogen.",
+      "azureConversation": "Berechnet aus dem öffentlichen Azure-Conversation-Datensatz; Cache-Lese- und Schreibvorgänge werden derzeit nicht einbezogen.",
+      "mooncakeToolAgent": "Berechnet aus dem öffentlichen Mooncake-Tool-and-Agent-Datensatz; Cache-Lese- und Schreibvorgänge werden derzeit nicht einbezogen.",
+      "tracelabCodingAgent": "Aus dem öffentlichen TraceLab-Coding-Agent-Datensatz abgeleitet; Cache-Schreibvorgänge werden noch nicht separat berechnet."
+    },
+    "unmodeledPlaceholder": "Ignoriert",
+    "weights": {
+      "cacheRead": "Anteil Cache-Lesen",
+      "cacheWrite": "Anteil Cache-Schreiben",
+      "input": "Eingabeanteil",
+      "output": "Ausgabeanteil"
+    }
+  },
   "pricingDescription": "Preisinformationen stammen aus der von der Website bereitgestellten API-Schnittstelle, und die tatsächlichen Kosten richten sich nach den von jeder Website veröffentlichten Preisen. Der Preis von Pay-per-Use-Modellen entspricht den Kosten pro 1 Million Token, und Pay-per-Call-Modelle zeigen die Kosten pro Aufruf an.",
   "pricingNote": "Modellpreishinweis",
   "profileSourceNotice": {

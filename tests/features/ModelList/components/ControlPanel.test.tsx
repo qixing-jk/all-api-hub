@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react"
+import { render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import type React from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
@@ -95,7 +95,12 @@ vi.mock("~/components/ui", () => ({
   Card: ({ children, ...props }: React.PropsWithChildren<object>) => (
     <div {...props}>{children}</div>
   ),
-  CardContent: ({ children }: React.PropsWithChildren) => <div>{children}</div>,
+  CardContent: ({
+    children,
+    ...props
+  }: React.PropsWithChildren<React.HTMLAttributes<HTMLDivElement>>) => (
+    <div {...props}>{children}</div>
+  ),
   CompactMultiSelect: ({
     options,
     selected,
@@ -150,8 +155,21 @@ vi.mock("~/components/ui", () => ({
     value,
     onChange,
     placeholder,
-  }: React.InputHTMLAttributes<HTMLInputElement>) => (
-    <input value={value} onChange={onChange} placeholder={placeholder} />
+    leftIcon: _leftIcon,
+    onClear: _onClear,
+    clearButtonLabel: _clearButtonLabel,
+    ...props
+  }: React.InputHTMLAttributes<HTMLInputElement> & {
+    leftIcon?: React.ReactNode
+    onClear?: () => void
+    clearButtonLabel?: string
+  }) => (
+    <input
+      value={value}
+      onChange={onChange}
+      placeholder={placeholder}
+      {...props}
+    />
   ),
   Label: ({ children }: React.PropsWithChildren) => <span>{children}</span>,
   SearchableSelect: ({
@@ -453,16 +471,11 @@ describe("ControlPanel", () => {
       },
     })
 
-    const capabilityHint = screen
-      .getByText("modelCapabilityFilter.selectionHint", { exact: false })
-      .closest("p")
-
-    expect(capabilityHint).toHaveTextContent(
-      "modelCapabilityFilter.selectionHint",
-    )
-    expect(capabilityHint).toHaveTextContent(
-      "modelCapabilityFilter.coverageHint",
-    )
+    expect(
+      screen.getByRole("button", {
+        name: "modelCapabilityFilter.selectionHint modelCapabilityFilter.coverageHint",
+      }),
+    ).toBeVisible()
   })
 
   it("hides model capability filters until capability metadata is available", () => {
@@ -596,15 +609,32 @@ describe("ControlPanel", () => {
     expect(props.setSelectedGroups).toHaveBeenCalledWith(["default", "vip"])
   })
 
-  it("keeps the search field usable when all top filters are visible", () => {
+  it("groups search, filters, display settings, and actions by user task", () => {
     renderControlPanel()
 
-    expect(screen.getByTestId("model-list-filter-row")).toHaveClass(
-      "lg:flex-wrap",
-    )
-    expect(screen.getByTestId("field-searchModels")).toHaveClass(
-      "min-w-[16rem]",
-    )
+    const searchRegion = screen.getByRole("region", { name: "searchModels" })
+    const filterRegion = screen.getByRole("region", {
+      name: "controlPanelSections.filters",
+    })
+
+    expect(within(searchRegion).getByLabelText("searchModels")).toBeVisible()
+    expect(within(searchRegion).getByTestId("field-sortBy")).toBeVisible()
+    expect(within(searchRegion).getByText("totalModels")).toBeVisible()
+    expect(within(searchRegion).getByText("showing")).toBeVisible()
+    expect(within(filterRegion).queryByTestId("field-sortBy")).toBeNull()
+    expect(within(filterRegion).getByTestId("field-billingMode")).toBeVisible()
+    expect(within(filterRegion).getByText("userGroup")).toBeVisible()
+    expect(
+      within(filterRegion).getByText("verificationResults.label"),
+    ).toBeVisible()
+    expect(
+      screen.getByRole("group", { name: "displayOptions" }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("group", {
+        name: "controlPanelSections.actions",
+      }),
+    ).toBeInTheDocument()
     expect(screen.getByTestId("allGroups")).toHaveAttribute(
       "data-size",
       "default",
@@ -613,5 +643,19 @@ describe("ControlPanel", () => {
       "data-size",
       "default",
     )
+  })
+
+  it("keeps price comparison settings inside the filter area", () => {
+    renderControlPanel({ sortMode: MODEL_LIST_SORT_MODES.PRICE_ASC })
+
+    const filterRegion = screen.getByRole("region", {
+      name: "controlPanelSections.filters",
+    })
+
+    expect(
+      within(filterRegion).getByRole("region", {
+        name: "priceComparison.sectionTitle",
+      }),
+    ).toBeVisible()
   })
 })

@@ -19,6 +19,7 @@ import {
   createProviderCatalogModelListSourceIdentity,
   MODEL_LIST_SOURCE_IDENTITY_KINDS,
 } from "~/features/ModelList/modelManagementSources"
+import type { ModelPriceComparisonWeights } from "~/features/ModelList/priceComparison"
 import { MODEL_LIST_SORT_MODES } from "~/features/ModelList/sortModes"
 import {
   MODEL_LIST_SOURCE_KINDS,
@@ -108,6 +109,12 @@ function renderUseFilteredModels(
         selectedModelCapabilities: [],
         modelMetadata: [],
         sortMode: MODEL_LIST_SORT_MODES.DEFAULT,
+        priceComparisonWeights: {
+          input: 1,
+          output: 0,
+          cacheRead: 0,
+          cacheWrite: 0,
+        },
         showRealPrice: false,
         ...overrides,
       }),
@@ -118,6 +125,111 @@ function renderUseFilteredModels(
 }
 
 describe("useFilteredModels", () => {
+  it("reorders token-priced models when the workload weights change", async () => {
+    const account = createDisplayAccount({
+      id: "weighted-price-account",
+      name: "Weighted Price Account",
+      balance: { USD: 10, CNY: 70 },
+    })
+    const pricingData = createPricingResponse([
+      {
+        model_name: "cheap-input-expensive-cache",
+        token_price_usd_per_million: {
+          input: 1,
+          output: 1,
+          cache_read: 10,
+          cache_write: 10,
+        },
+      },
+      {
+        model_name: "expensive-input-cheap-cache",
+        token_price_usd_per_million: {
+          input: 2,
+          output: 1,
+          cache_read: 0.1,
+          cache_write: 0.2,
+        },
+      },
+    ])
+    const inputOnlyWeights: ModelPriceComparisonWeights = {
+      input: 1,
+      output: 0,
+      cacheRead: 0,
+      cacheWrite: 0,
+    }
+    const cacheHeavyWeights: ModelPriceComparisonWeights = {
+      input: 1,
+      output: 0,
+      cacheRead: 10,
+      cacheWrite: 2,
+    }
+
+    const { result, rerender } = renderUseFilteredModels({
+      pricingData,
+      selectedSource: createAccountSource(account),
+      sortMode: MODEL_LIST_SORT_MODES.PRICE_ASC,
+      priceComparisonWeights: inputOnlyWeights,
+    })
+
+    await waitFor(() => {
+      expect(
+        result.current.filteredModels.map((item) => item.model.model_name),
+      ).toEqual(["cheap-input-expensive-cache", "expensive-input-cheap-cache"])
+    })
+
+    rerender({
+      pricingData,
+      selectedSource: createAccountSource(account),
+      sortMode: MODEL_LIST_SORT_MODES.PRICE_ASC,
+      priceComparisonWeights: cacheHeavyWeights,
+    })
+
+    await waitFor(() => {
+      expect(
+        result.current.filteredModels.map((item) => item.model.model_name),
+      ).toEqual(["expensive-input-cheap-cache", "cheap-input-expensive-cache"])
+    })
+  })
+
+  it("places models with missing positively weighted cache prices after comparable models", async () => {
+    const account = createDisplayAccount({
+      id: "missing-cache-price-account",
+      name: "Missing Cache Price Account",
+      balance: { USD: 10, CNY: 70 },
+    })
+    const { result } = renderUseFilteredModels({
+      pricingData: createPricingResponse([
+        {
+          model_name: "missing-cache-price",
+          token_price_usd_per_million: { input: 0.1, output: 0.1 },
+        },
+        {
+          model_name: "complete-cache-price",
+          token_price_usd_per_million: {
+            input: 1,
+            output: 1,
+            cache_read: 0.1,
+            cache_write: 0.2,
+          },
+        },
+      ]),
+      selectedSource: createAccountSource(account),
+      sortMode: MODEL_LIST_SORT_MODES.PRICE_ASC,
+      priceComparisonWeights: {
+        input: 1,
+        output: 1,
+        cacheRead: 1,
+        cacheWrite: 1,
+      },
+    })
+
+    await waitFor(() => {
+      expect(
+        result.current.filteredModels.map((item) => item.model.model_name),
+      ).toEqual(["complete-cache-price", "missing-cache-price"])
+    })
+  })
+
   it("returns no rows or vendor catalog without pricing and a selected source", async () => {
     const { result } = renderUseFilteredModels()
 

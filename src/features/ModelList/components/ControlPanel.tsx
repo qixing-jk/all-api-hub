@@ -1,10 +1,9 @@
 import {
-  AdjustmentsHorizontalIcon,
   BeakerIcon,
   CpuChipIcon,
   MagnifyingGlassIcon,
 } from "@heroicons/react/24/outline"
-import { Copy, TrendingDown } from "lucide-react"
+import { CircleHelp, Copy, TrendingDown } from "lucide-react"
 import { useMemo } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
@@ -41,6 +40,7 @@ import {
   type ModelManagementSourceCapabilities,
 } from "~/features/ModelList/modelManagementSources"
 import {
+  isModelListPriceSortMode,
   MODEL_LIST_SORT_MODES,
   type ModelListSortMode,
 } from "~/features/ModelList/sortModes"
@@ -61,6 +61,14 @@ import {
   type ProductAnalyticsModeId,
 } from "~/services/productAnalytics/contracts"
 
+import {
+  DEFAULT_MODEL_PRICE_COMPARISON_PRESET_ID,
+  DEFAULT_MODEL_PRICE_COMPARISON_WEIGHTS,
+  type ModelPriceComparisonPresetId,
+  type ModelPriceComparisonWeights,
+} from "../priceComparison"
+import { PriceComparisonControls } from "./PriceComparisonControls"
+
 interface ControlPanelProps {
   selectedSource: ModelManagementSource | null
   sourceCapabilities: ModelManagementSourceCapabilities
@@ -70,6 +78,10 @@ interface ControlPanelProps {
   setSearchTerm: (term: string) => void
   sortMode: ModelListSortMode
   setSortMode: (mode: ModelListSortMode) => void
+  priceComparisonPresetId?: ModelPriceComparisonPresetId
+  setPriceComparisonPresetId?: (presetId: ModelPriceComparisonPresetId) => void
+  priceComparisonWeights?: ModelPriceComparisonWeights
+  setPriceComparisonWeights?: (weights: ModelPriceComparisonWeights) => void
   selectedVerificationResults?: ModelListVerificationResultFilter[]
   setSelectedVerificationResults?: (
     results: ModelListVerificationResultFilter[],
@@ -116,6 +128,10 @@ interface ControlPanelProps {
  * @param props.setSearchTerm Setter to update search keyword.
  * @param props.sortMode Active sort mode.
  * @param props.setSortMode Setter for sort mode.
+ * @param props.priceComparisonPresetId Active workload preset for price sorting.
+ * @param props.setPriceComparisonPresetId Setter for the workload preset.
+ * @param props.priceComparisonWeights Editable token-bucket comparison weights.
+ * @param props.setPriceComparisonWeights Setter for comparison weights.
  * @param props.selectedVerificationResults Active verification-result filters.
  * @param props.setSelectedVerificationResults Setter for verification-result filters.
  * @param props.selectedBillingMode Active billing-mode filter value.
@@ -149,6 +165,10 @@ export function ControlPanel({
   setSearchTerm,
   sortMode,
   setSortMode,
+  priceComparisonPresetId = DEFAULT_MODEL_PRICE_COMPARISON_PRESET_ID,
+  setPriceComparisonPresetId = () => {},
+  priceComparisonWeights = DEFAULT_MODEL_PRICE_COMPARISON_WEIGHTS,
+  setPriceComparisonWeights = () => {},
   selectedVerificationResults = DEFAULT_MODEL_LIST_VERIFICATION_RESULT_FILTERS,
   setSelectedVerificationResults = () => {},
   selectedBillingMode,
@@ -200,6 +220,19 @@ export function ControlPanel({
     modelCapabilityMetadataCoverage.unmatched > 0
   const unmatchedCapabilityMetadataCount =
     modelCapabilityMetadataCoverage?.unmatched ?? 0
+  const modelCapabilityHint = [
+    t("modelCapabilityFilter.selectionHint"),
+    shouldShowModelCapabilityCoverageHint
+      ? t("modelCapabilityFilter.coverageHint", {
+          count: unmatchedCapabilityMetadataCount,
+          matched: modelCapabilityMetadataCoverage?.matched ?? 0,
+          total: modelCapabilityMetadataCoverage?.total ?? 0,
+          unmatched: unmatchedCapabilityMetadataCount,
+        })
+      : null,
+  ]
+    .filter(Boolean)
+    .join(" ")
   const groupOptions = availableGroups.map((group) => ({
     value: group,
     label: formatGroupLabelFromRatios(group, singleSourceGroupRatios),
@@ -466,7 +499,7 @@ export function ControlPanel({
 
   return (
     <Card className="mb-6" data-testid={MODEL_LIST_TEST_IDS.controlPanel}>
-      <CardContent>
+      <CardContent className="[container-type:inline-size]">
         {isProfileSource && (
           <Alert
             variant="info"
@@ -476,110 +509,148 @@ export function ControlPanel({
           />
         )}
 
-        <div
-          className="mb-4 flex flex-col gap-4 lg:flex-row lg:flex-wrap"
-          data-testid="model-list-filter-row"
-        >
-          <FormField
-            label={t("searchModels")}
-            className="min-w-[16rem] flex-1 lg:basis-[18rem]"
+        <div className="space-y-4" data-testid="model-list-filter-row">
+          <section
+            aria-label={t("searchModels")}
+            className="dark:border-dark-bg-tertiary border-b border-gray-100 pb-4"
           >
-            <Input
-              type="text"
-              placeholder={t("searchPlaceholder")}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              leftIcon={<MagnifyingGlassIcon className="h-4 w-4" />}
-              onClear={handleClearSearch}
-              clearButtonLabel={t("common:actions.clear")}
-            />
-          </FormField>
+            <div className="grid grid-cols-1 gap-3 [@container(min-width:32rem)]:grid-cols-[minmax(0,1fr)_minmax(12rem,0.55fr)] [@container(min-width:48rem)]:grid-cols-[minmax(0,1fr)_minmax(12rem,0.42fr)_auto] [@container(min-width:48rem)]:items-end">
+              <FormField label={t("searchModels")}>
+                <Input
+                  type="text"
+                  aria-label={t("searchModels")}
+                  placeholder={t("searchPlaceholder")}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  leftIcon={<MagnifyingGlassIcon className="h-4 w-4" />}
+                  onClear={handleClearSearch}
+                  clearButtonLabel={t("common:actions.clear")}
+                />
+              </FormField>
 
-          {supportsSortControls && (
-            <FormField label={t("sortBy")} className="w-full lg:w-72">
-              <SearchableSelect
-                options={sortOptions}
-                value={sortMode}
-                onChange={handleSortModeChange}
-                placeholder={t("sortBy")}
-              />
-            </FormField>
-          )}
+              {supportsSortControls && (
+                <FormField label={t("sortBy")}>
+                  <SearchableSelect
+                    options={sortOptions}
+                    value={sortMode}
+                    onChange={handleSortModeChange}
+                    placeholder={t("sortBy")}
+                  />
+                </FormField>
+              )}
 
-          {sourceCapabilities.supportsPricing && (
-            <FormField label={t("billingMode")} className="w-full lg:w-64">
-              <SearchableSelect
-                options={billingModeOptions}
-                value={selectedBillingMode}
-                onChange={handleBillingModeChange}
-                placeholder={t("allBillingModes")}
-              />
-            </FormField>
-          )}
+              <div className="flex h-9 items-center gap-3 self-end text-xs [@container(min-width:32rem)]:col-span-2 [@container(min-width:32rem)]:justify-end [@container(min-width:48rem)]:col-span-1">
+                <span className="dark:text-dark-text-secondary flex items-center gap-1.5 text-gray-600">
+                  <CpuChipIcon className="h-4 w-4" />
+                  {t("totalModels", { count: totalModels })}
+                </span>
+                <span className="dark:bg-dark-bg-tertiary h-3 w-px bg-gray-300" />
+                <span className="font-medium text-blue-600 dark:text-blue-400">
+                  {t("showing", { count: filteredModels.length })}
+                </span>
+              </div>
+            </div>
+          </section>
 
-          {sourceCapabilities.supportsGroupFiltering &&
-            !isAllAccountsSource && (
-              <FormField label={t("userGroup")} className="w-full lg:w-64">
+          <section
+            aria-labelledby="model-list-filters-heading"
+            className="dark:border-dark-bg-tertiary border-b border-gray-100 pb-4"
+          >
+            <h3
+              id="model-list-filters-heading"
+              className="text-foreground mb-3 text-sm font-semibold"
+            >
+              {t("controlPanelSections.filters")}
+            </h3>
+
+            <div className="grid grid-cols-1 gap-4 [@container(min-width:32rem)]:grid-cols-2 [@container(min-width:48rem)]:grid-cols-[repeat(auto-fit,minmax(9rem,1fr))]">
+              {sourceCapabilities.supportsPricing && (
+                <FormField label={t("billingMode")}>
+                  <SearchableSelect
+                    options={billingModeOptions}
+                    value={selectedBillingMode}
+                    onChange={handleBillingModeChange}
+                    placeholder={t("allBillingModes")}
+                  />
+                </FormField>
+              )}
+
+              {sourceCapabilities.supportsGroupFiltering &&
+                !isAllAccountsSource && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-1.5">
+                      <Label>{t("userGroup")}</Label>
+                      <Tooltip content={t("groupSelectionHint")} anchorAsChild>
+                        <button
+                          type="button"
+                          aria-label={t("groupSelectionHint")}
+                          className="dark:text-dark-text-tertiary inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-gray-400 transition-colors hover:text-gray-600 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 focus-visible:outline-none dark:hover:text-gray-300"
+                        >
+                          <CircleHelp className="h-4 w-4" aria-hidden="true" />
+                        </button>
+                      </Tooltip>
+                    </div>
+                    <CompactMultiSelect
+                      options={groupOptions}
+                      selected={selectedGroups}
+                      onChange={handleGroupSelectionChange}
+                      size="default"
+                      displayMode="summary"
+                      placeholder={t("allGroups")}
+                      emptyMessage={t("allGroups")}
+                    />
+                  </div>
+                )}
+
+              {supportsModelCapabilityFilter && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-1.5">
+                    <Label>{t("modelCapabilityFilter.label")}</Label>
+                    <Tooltip content={modelCapabilityHint} anchorAsChild>
+                      <button
+                        type="button"
+                        aria-label={modelCapabilityHint}
+                        className="dark:text-dark-text-tertiary inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-gray-400 transition-colors hover:text-gray-600 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 focus-visible:outline-none dark:hover:text-gray-300"
+                      >
+                        <CircleHelp className="h-4 w-4" aria-hidden="true" />
+                      </button>
+                    </Tooltip>
+                  </div>
+                  <CompactMultiSelect
+                    options={modelCapabilityOptions}
+                    selected={selectedModelCapabilities}
+                    onChange={handleModelCapabilityChange}
+                    size="default"
+                    displayMode="summary"
+                    placeholder={t("modelCapabilityFilter.options.all")}
+                    emptyMessage={t("modelCapabilityFilter.options.all")}
+                  />
+                </div>
+              )}
+
+              <FormField label={t("verificationResults.label")}>
                 <CompactMultiSelect
-                  options={groupOptions}
-                  selected={selectedGroups}
-                  onChange={handleGroupSelectionChange}
+                  options={verificationResultOptions}
+                  selected={selectedVerificationResults}
+                  onChange={handleVerificationResultSelectionChange}
                   size="default"
                   displayMode="summary"
-                  placeholder={t("allGroups")}
-                  emptyMessage={t("allGroups")}
+                  placeholder={t("verificationResults.all")}
+                  emptyMessage={t("verificationResults.none")}
                 />
-                <p className="dark:text-dark-text-tertiary mt-1 text-xs text-gray-500">
-                  {t("groupSelectionHint")}
-                </p>
               </FormField>
-            )}
+            </div>
 
-          {supportsModelCapabilityFilter && (
-            <FormField
-              label={t("modelCapabilityFilter.label")}
-              className="w-full lg:w-64"
-            >
-              <CompactMultiSelect
-                options={modelCapabilityOptions}
-                selected={selectedModelCapabilities}
-                onChange={handleModelCapabilityChange}
-                size="default"
-                displayMode="summary"
-                placeholder={t("modelCapabilityFilter.options.all")}
-                emptyMessage={t("modelCapabilityFilter.options.all")}
-              />
-              <p className="dark:text-dark-text-tertiary mt-1 text-xs text-gray-500">
-                {t("modelCapabilityFilter.selectionHint")}
-                {shouldShowModelCapabilityCoverageHint && (
-                  <>
-                    {" "}
-                    {t("modelCapabilityFilter.coverageHint", {
-                      count: unmatchedCapabilityMetadataCount,
-                      matched: modelCapabilityMetadataCoverage.matched,
-                      total: modelCapabilityMetadataCoverage.total,
-                      unmatched: unmatchedCapabilityMetadataCount,
-                    })}
-                  </>
-                )}
-              </p>
-            </FormField>
-          )}
-
-          <FormField
-            label={t("verificationResults.label")}
-            className="w-full lg:w-64"
-          >
-            <CompactMultiSelect
-              options={verificationResultOptions}
-              selected={selectedVerificationResults}
-              onChange={handleVerificationResultSelectionChange}
-              size="default"
-              displayMode="summary"
-              placeholder={t("verificationResults.all")}
-              emptyMessage={t("verificationResults.none")}
-            />
-          </FormField>
+            {sourceCapabilities.supportsPricing &&
+              isModelListPriceSortMode(sortMode) && (
+                <PriceComparisonControls
+                  presetId={priceComparisonPresetId}
+                  onPresetIdChange={setPriceComparisonPresetId}
+                  weights={priceComparisonWeights}
+                  onWeightsChange={setPriceComparisonWeights}
+                />
+              )}
+          </section>
         </div>
 
         <ProductAnalyticsScope
@@ -587,103 +658,95 @@ export function ControlPanel({
           featureId={PRODUCT_ANALYTICS_FEATURE_IDS.ModelList}
           surfaceId={PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListControlPanel}
         >
-          <div className="dark:border-dark-bg-tertiary flex flex-col gap-4 border-t border-gray-100 pt-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex flex-wrap items-center gap-4 text-sm">
-              <div className="flex items-center space-x-2">
-                <AdjustmentsHorizontalIcon className="dark:text-dark-text-tertiary h-4 w-4 text-gray-400" />
-                <span className="dark:text-dark-text-secondary font-medium text-gray-700">
-                  {t("displayOptions")}
-                </span>
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+            <fieldset className="max-w-full shrink-0">
+              <legend className="sr-only">{t("displayOptions")}</legend>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+                {sourceCapabilities.supportsPricing && (
+                  <label className="flex cursor-pointer items-center space-x-2">
+                    <Switch
+                      checked={showRealPrice}
+                      onChange={setShowRealPrice}
+                      size="sm"
+                    />
+                    <Label className="cursor-pointer">{t("realAmount")}</Label>
+                  </label>
+                )}
+
+                {sourceCapabilities.supportsRatioDisplay && (
+                  <label className="flex cursor-pointer items-center space-x-2">
+                    <Switch
+                      checked={showRatioColumn}
+                      onChange={setShowRatioColumn}
+                      size="sm"
+                    />
+                    <Label className="cursor-pointer">{t("showRatio")}</Label>
+                  </label>
+                )}
+
+                <label className="flex cursor-pointer items-center space-x-2">
+                  <Switch
+                    checked={showEndpointTypes}
+                    onChange={setShowEndpointTypes}
+                    size="sm"
+                  />
+                  <Label className="cursor-pointer">{t("endpointTypes")}</Label>
+                </label>
               </div>
+            </fieldset>
 
-              {sourceCapabilities.supportsPricing && (
-                <label className="flex cursor-pointer items-center space-x-2">
-                  <Switch
-                    checked={showRealPrice}
-                    onChange={setShowRealPrice}
-                    size="sm"
-                  />
-                  <Label className="cursor-pointer">{t("realAmount")}</Label>
-                </label>
-              )}
-
-              {sourceCapabilities.supportsRatioDisplay && (
-                <label className="flex cursor-pointer items-center space-x-2">
-                  <Switch
-                    checked={showRatioColumn}
-                    onChange={setShowRatioColumn}
-                    size="sm"
-                  />
-                  <Label className="cursor-pointer">{t("showRatio")}</Label>
-                </label>
-              )}
-
-              <label className="flex cursor-pointer items-center space-x-2">
-                <Switch
-                  checked={showEndpointTypes}
-                  onChange={setShowEndpointTypes}
-                  size="sm"
-                />
-                <Label className="cursor-pointer">{t("endpointTypes")}</Label>
-              </label>
-
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleCopyModelNames}
-                leftIcon={<Copy className="h-4 w-4" />}
-                analyticsAction={
-                  PRODUCT_ANALYTICS_ACTION_IDS.CopyVisibleModelNames
-                }
-              >
-                {t("copyAllNames")}
-              </Button>
-
-              {onBatchVerifyModels ? (
+            <fieldset className="ml-auto max-w-full shrink-0">
+              <legend className="sr-only">
+                {t("controlPanelSections.actions")}
+              </legend>
+              <div className="flex flex-wrap items-center gap-2 [@container(min-width:50rem)]:justify-end">
                 <Button
-                  variant="secondary"
+                  variant="ghost"
                   size="sm"
-                  onClick={onBatchVerifyModels}
-                  disabled={filteredModels.length === 0}
-                  data-testid={MODEL_LIST_TEST_IDS.batchVerifyButton}
-                  leftIcon={<BeakerIcon className="h-4 w-4" />}
+                  onClick={handleCopyModelNames}
+                  leftIcon={<Copy className="h-4 w-4" />}
                   analyticsAction={
-                    PRODUCT_ANALYTICS_ACTION_IDS.OpenBatchModelVerifyDialog
+                    PRODUCT_ANALYTICS_ACTION_IDS.CopyVisibleModelNames
                   }
                 >
-                  {t("batchVerify.actions.open")}
+                  {t("copyAllNames")}
                 </Button>
-              ) : null}
 
-              {shouldShowPriceComparisonPrompt && (
-                <Tooltip
-                  content={t("comparison.tooltip")}
-                  wrapperClassName="contents"
-                >
+                {onBatchVerifyModels ? (
                   <Button
-                    type="button"
-                    variant="default"
+                    variant="secondary"
                     size="sm"
-                    title={t("comparison.tooltip")}
-                    leftIcon={<TrendingDown className="h-4 w-4" />}
-                    onClick={handleEnablePriceComparison}
+                    onClick={onBatchVerifyModels}
+                    disabled={filteredModels.length === 0}
+                    data-testid={MODEL_LIST_TEST_IDS.batchVerifyButton}
+                    leftIcon={<BeakerIcon className="h-4 w-4" />}
+                    analyticsAction={
+                      PRODUCT_ANALYTICS_ACTION_IDS.OpenBatchModelVerifyDialog
+                    }
                   >
-                    {t("comparison.cta")}
+                    {t("batchVerify.actions.open")}
                   </Button>
-                </Tooltip>
-              )}
-            </div>
+                ) : null}
 
-            <div className="flex items-center space-x-4 text-sm">
-              <div className="dark:text-dark-text-secondary flex items-center space-x-2 text-gray-600">
-                <CpuChipIcon className="h-4 w-4" />
-                <span>{t("totalModels", { count: totalModels })}</span>
+                {shouldShowPriceComparisonPrompt && (
+                  <Tooltip
+                    content={t("comparison.tooltip")}
+                    wrapperClassName="contents"
+                  >
+                    <Button
+                      type="button"
+                      variant="default"
+                      size="sm"
+                      title={t("comparison.tooltip")}
+                      leftIcon={<TrendingDown className="h-4 w-4" />}
+                      onClick={handleEnablePriceComparison}
+                    >
+                      {t("comparison.cta")}
+                    </Button>
+                  </Tooltip>
+                )}
               </div>
-              <div className="dark:bg-dark-bg-tertiary h-4 w-px bg-gray-300"></div>
-              <div className="text-blue-600 dark:text-blue-400">
-                <span>{t("showing", { count: filteredModels.length })}</span>
-              </div>
-            </div>
+            </fieldset>
           </div>
         </ProductAnalyticsScope>
       </CardContent>

@@ -117,6 +117,10 @@
     "cta": "Comparar precios",
     "tooltip": "Borra los filtros actuales, cambia a todas las cuentas y ordena cada modelo por el precio más bajo."
   },
+  "controlPanelSections": {
+    "actions": "Acciones",
+    "filters": "Filtros"
+  },
   "copyAllNames": "Copiar todos los nombres de modelos",
   "currentUsableGroups": "Grupos utilizables por la cuenta actual",
   "description": "Ver y administrar modelos de IA disponibles",
@@ -245,7 +249,7 @@
     "tokenCount_many": "{{formattedCount}} tokens",
     "tokenCount_other": "{{formattedCount}} tokens"
   },
-  "displayOptions": "Opciones de visualización:",
+  "displayOptions": "Visualización",
   "endpointType": "Tipo de endpoint",
   "endpointTypes": "Tipos de endpoint",
   "estimatedPrice": "Estimado",
@@ -374,6 +378,33 @@
   },
   "pleaseSelectFirst": "Primero selecciona una cuenta o credencial de API para ver la lista de modelos",
   "pleaseSelectSource": "Selecciona una fuente",
+  "priceComparison": {
+    "clearWeight": "Borrar {{meter}}",
+    "helperNote": "Déjalo en blanco para ignorarlo; ingresa 0 para una proporción de 0 %.",
+    "presetLabel": "Caso de uso",
+    "presets": {
+      "codeCompletion": "Autocompletado de código",
+      "codingAgent": "Agente de programación",
+      "custom": "Personalizado",
+      "generalChat": "Chat general",
+      "toolAgent": "Tool / Agent"
+    },
+    "sectionDescription": "Define la proporción de uso para que la comparación de precios refleje cómo usas los modelos. Elige un caso de uso para completarla o ajústala manualmente.",
+    "sectionTitle": "Comparación de precios",
+    "sourceDetails": {
+      "azureCode": "Calculado con el conjunto de datos público Azure Code; por ahora no se incluyen las lecturas ni escrituras de caché.",
+      "azureConversation": "Calculado con el conjunto de datos público Azure Conversation; por ahora no se incluyen las lecturas ni escrituras de caché.",
+      "mooncakeToolAgent": "Calculado con el conjunto de datos público Mooncake Tool and Agent; por ahora no se incluyen las lecturas ni escrituras de caché.",
+      "tracelabCodingAgent": "Derivado del conjunto de datos público de TraceLab; las escrituras de caché aún no se calculan por separado."
+    },
+    "unmodeledPlaceholder": "Ignorado",
+    "weights": {
+      "cacheRead": "Proporción de lectura de caché",
+      "cacheWrite": "Proporción de escritura de caché",
+      "input": "Proporción de entrada",
+      "output": "Proporción de salida"
+    }
+  },
   "pricingDescription": "La información de precios proviene de la interfaz de API proporcionada por el sitio, y el costo real depende de los precios publicados por cada sitio. El precio de los modelos de pago por uso es el costo por 1M tokens, y los modelos de pago por llamada muestran el costo por llamada",
   "pricingNote": "Nota sobre precios de modelos",
   "profileSourceNotice": {
