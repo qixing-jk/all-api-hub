@@ -1,7 +1,7 @@
 import { sanitizeUrlForLog } from "~/utils/core/sanitizeUrlForLog"
 
 const REDACTED = "[REDACTED]"
-const BEARER_PATTERN = /\bBearer\s+[A-Za-z0-9._~-]+\b/gi
+const BEARER_PATTERN = /\bBearer\s+[-A-Za-z0-9._~+/]+=*/gi
 const OPENAI_KEY_PATTERN = /\bsk-[A-Za-z0-9_-]{10,}\b/gi
 
 /**

@@ -15,6 +15,14 @@ describe("sanitizeSensitiveErrorText", () => {
     expect(sanitized).not.toContain("sk-sensitivekey12345")
   })
 
+  it("redacts complete bearer values containing base64 token characters", () => {
+    expect(
+      sanitizeSensitiveErrorText(
+        "Provider rejected Bearer header.payload+/cipher.iv.tag== with status 401",
+      ),
+    ).toBe("Provider rejected Bearer [REDACTED] with status 401")
+  })
+
   it("preserves compact provider text when it is not identified as a secret", () => {
     const diagnostic =
       "Provider diagnostic eyJhbGciOiJIUzI1NiJ9.payload.signaturevalue rejected"

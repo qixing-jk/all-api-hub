@@ -719,7 +719,7 @@ describe("CopyKeyDialog", () => {
     ).not.toBeInTheDocument()
   })
 
-  it("does not expose resolver errors while preparing a runtime-key Kelivo export", async () => {
+  it("redacts credential values from runtime-key Kelivo export errors", async () => {
     const runtimeKey = buildDisplayAccountTokenRuntimeKey(ACCOUNT, TOKEN)
     resolveApiTokenKeyMock.mockRejectedValueOnce(
       new Error("Provider rejected sk-test because the account is suspended"),
@@ -748,6 +748,34 @@ describe("CopyKeyDialog", () => {
       )
     })
     expect(JSON.stringify(toastErrorMock.mock.calls)).not.toContain("sk-test")
+  })
+
+  it("falls back to the local unknown error for a blank runtime-key Kelivo failure", async () => {
+    const runtimeKey = buildDisplayAccountTokenRuntimeKey(ACCOUNT, TOKEN)
+    resolveApiTokenKeyMock.mockRejectedValueOnce(new Error(""))
+    const user = userEvent.setup()
+
+    render(
+      <RuntimeKeyActionControls
+        runtimeKey={runtimeKey}
+        actionPolicy={{ copySecret: false, exportSecret: true }}
+        copiedRuntimeKeyId={null}
+        onCopyKey={() => {}}
+        account={ACCOUNT}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.copyKelivoImportCode",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(toastErrorMock).toHaveBeenCalledWith(
+        "messages:errors.operation.failed",
+      )
+    })
   })
 
   it("uses service-credential analytics for its Kelivo export dialog", async () => {

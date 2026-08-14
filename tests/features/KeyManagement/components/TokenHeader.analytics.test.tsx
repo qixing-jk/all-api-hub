@@ -948,7 +948,7 @@ describe("TokenHeader analytics", () => {
     ).not.toBeInTheDocument()
   })
 
-  it("does not expose resolver errors while preparing a Kelivo export", async () => {
+  it("redacts credential values from Kelivo export errors", async () => {
     resolveDisplayAccountTokenForSecretMock.mockRejectedValueOnce(
       new Error(
         "Provider rejected sk-sensitive-original because the account is suspended",
@@ -977,6 +977,26 @@ describe("TokenHeader analytics", () => {
       PRODUCT_ANALYTICS_RESULTS.Failure,
       { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
     )
+  })
+
+  it("falls back to the local unknown error for a blank Kelivo failure", async () => {
+    resolveDisplayAccountTokenForSecretMock.mockRejectedValueOnce(new Error(""))
+
+    const user = userEvent.setup()
+    renderTokenHeader()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.copyKelivoImportCode",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(showResultToastMock).toHaveBeenCalledWith({
+        success: false,
+        message: "messages:errors.operation.failed",
+      })
+    })
   })
 
   it("ignores a pending Kelivo secret after export permission is revoked", async () => {
