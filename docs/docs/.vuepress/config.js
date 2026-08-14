@@ -52,6 +52,7 @@ export default defineUserConfig({
             collapsible: true,
             children: [
               '/get-started',
+              '/options-overview',
               '/permissions',
               '/extension-update-install',
               '/safari-install',
