@@ -2,9 +2,22 @@ import { describe, expect, it } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import {
+  getManagedSiteStatusSourceAccountType,
   shouldEditModelsInManagedSiteCrudScenario,
   shouldSeedModelsInManagedSiteCrudScenario,
 } from "~~/e2e/scenarios/managedSiteChannels"
+
+describe("getManagedSiteStatusSourceAccountType", () => {
+  it("uses each provider's own account for token channel status", () => {
+    expect(getManagedSiteStatusSourceAccountType(SITE_TYPES.NEW_API)).toBe(
+      SITE_TYPES.NEW_API,
+    )
+    expect(getManagedSiteStatusSourceAccountType(SITE_TYPES.SUB2API)).toBe(
+      SITE_TYPES.SUB2API,
+    )
+    expect(getManagedSiteStatusSourceAccountType(SITE_TYPES.VELOERA)).toBeNull()
+  })
+})
 
 describe("shouldEditModelsInManagedSiteCrudScenario", () => {
   it("skips generic model edits for the AxonHub resource editor", () => {

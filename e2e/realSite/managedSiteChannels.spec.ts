@@ -5,6 +5,7 @@ import type { UserPreferences } from "~/services/preferences/userPreferences"
 import { test } from "~~/e2e/fixtures/extensionTest"
 import {
   buildManagedSiteE2ePrefix,
+  getManagedSiteStatusSourceAccountType,
   runManagedSiteChannelsCrudScenario,
   runManagedSiteTokenChannelStatusScenario,
 } from "~~/e2e/scenarios/managedSiteChannels"
@@ -34,6 +35,11 @@ import {
   resolveNewApiRealSiteConfig,
 } from "~~/e2e/utils/realSite/newApi"
 import { readEnv } from "~~/e2e/utils/realSite/shared"
+import {
+  getSub2ApiRealSiteSkipReason,
+  resolveSub2ApiRealSiteConfig,
+} from "~~/e2e/utils/realSite/sub2api"
+import { runSub2ApiRealSiteAccountSaveFlow } from "~~/e2e/utils/realSite/sub2apiAccountSaveFlow"
 
 type ServiceWorker = Awaited<ReturnType<typeof getServiceWorker>>
 
@@ -270,28 +276,13 @@ async function maybePrepareStatusSourceAccount(params: {
   > | null
   skipReason?: string
 }> {
-  if (
-    params.managedSiteType !== SITE_TYPES.NEW_API &&
-    params.managedSiteType !== SITE_TYPES.SUB2API
-  ) {
+  const sourceAccountType = getManagedSiteStatusSourceAccountType(
+    params.managedSiteType,
+  )
+  if (!sourceAccountType) {
     return {
       sourceAccount: null,
       skipReason: `${params.managedSiteLabel} token channel status is not covered by this real-site E2E`,
-    }
-  }
-
-  const realSite = {
-    ...resolveNewApiRealSiteConfig(),
-    siteType: SITE_TYPES.NEW_API,
-    expectedDetectedSiteType: undefined,
-    login: loginToRealNewApiSite,
-    label: "New API",
-  }
-
-  if (!realSite.config) {
-    return {
-      sourceAccount: null,
-      skipReason: `${realSite.label} source account E2E env is missing`,
     }
   }
 
@@ -305,27 +296,18 @@ async function maybePrepareStatusSourceAccount(params: {
 
   const sitePage = await params.context.newPage()
   try {
-    const sourceAccount = await runCompatibleRealSiteAccountSaveFlow({
-      page: params.page,
-      extensionId: params.extensionId,
-      serviceWorker: params.serviceWorker,
-      sitePage,
-      config: realSite.config,
-      siteType: realSite.siteType,
-      expectedDetectedSiteType: realSite.expectedDetectedSiteType,
-      extensionPageGuardOptions: {
-        ignoreConsoleErrorPatterns: [
-          /Failed to load resource: .*status of (401|429|500)/u,
-        ],
-      },
-      login: realSite.login,
-    })
+    const sourceAccountResult =
+      sourceAccountType === SITE_TYPES.SUB2API
+        ? await prepareSub2ApiStatusSourceAccount({ ...params, sitePage })
+        : await prepareNewApiStatusSourceAccount({ ...params, sitePage })
 
-    return { sourceAccount }
+    if (!sourceAccountResult.sourceAccount) return sourceAccountResult
+
+    return { sourceAccount: sourceAccountResult.sourceAccount }
   } catch (error) {
     return {
       sourceAccount: null,
-      skipReason: `Failed to prepare ${realSite.label} source account for ${params.managedSiteLabel} managed-site status checks: ${
+      skipReason: `Failed to prepare ${sourceAccountType} source account for ${params.managedSiteLabel} managed-site status checks: ${
         error instanceof Error ? error.message : String(error)
       }`,
     }
@@ -333,5 +315,60 @@ async function maybePrepareStatusSourceAccount(params: {
     if (!sitePage.isClosed()) {
       await sitePage.close()
     }
+  }
+}
+
+type StatusSourceAccountParams = Parameters<
+  typeof maybePrepareStatusSourceAccount
+>[0] & { sitePage: Page }
+
+async function prepareNewApiStatusSourceAccount(
+  params: StatusSourceAccountParams,
+) {
+  const realSite = resolveNewApiRealSiteConfig()
+  if (!realSite.config) {
+    return {
+      sourceAccount: null,
+      skipReason: "New API source account E2E env is missing",
+    }
+  }
+
+  return {
+    sourceAccount: await runCompatibleRealSiteAccountSaveFlow({
+      page: params.page,
+      extensionId: params.extensionId,
+      serviceWorker: params.serviceWorker,
+      sitePage: params.sitePage,
+      config: realSite.config,
+      siteType: SITE_TYPES.NEW_API,
+      extensionPageGuardOptions: {
+        ignoreConsoleErrorPatterns: [
+          /Failed to load resource: .*status of (401|429|500)/u,
+        ],
+      },
+      login: loginToRealNewApiSite,
+    }),
+  }
+}
+
+async function prepareSub2ApiStatusSourceAccount(
+  params: StatusSourceAccountParams,
+) {
+  const realSite = resolveSub2ApiRealSiteConfig()
+  if (!realSite.config) {
+    return {
+      sourceAccount: null,
+      skipReason: getSub2ApiRealSiteSkipReason(realSite.missingEnvKeys),
+    }
+  }
+
+  return {
+    sourceAccount: await runSub2ApiRealSiteAccountSaveFlow({
+      page: params.page,
+      extensionId: params.extensionId,
+      serviceWorker: params.serviceWorker,
+      sitePage: params.sitePage,
+      config: realSite.config,
+    }),
   }
 }

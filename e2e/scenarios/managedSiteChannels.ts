@@ -3,7 +3,11 @@ import type { Locator, Page } from "@playwright/test"
 import { CHANNEL_DIALOG_TEST_IDS } from "~/components/dialogs/ChannelDialog/testIds"
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
-import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
+import {
+  SITE_TYPES,
+  type AccountSiteType,
+  type ManagedSiteType,
+} from "~/constants/siteType"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import {
   getManagedSiteChannelRowActionsButtonTestId,
@@ -41,6 +45,16 @@ type ManagedSiteChannelScenarioContext<TSiteType extends ManagedSiteType> = {
 
 const CRUD_MODEL = "gpt-4o-mini"
 const CRUD_UPDATED_MODEL = "gpt-4.1-mini"
+
+export function getManagedSiteStatusSourceAccountType(
+  siteType: ManagedSiteType,
+): AccountSiteType | null {
+  if (siteType === SITE_TYPES.NEW_API || siteType === SITE_TYPES.SUB2API) {
+    return siteType
+  }
+
+  return null
+}
 
 export function shouldEditModelsInManagedSiteCrudScenario(
   siteType: ManagedSiteType,

@@ -33,7 +33,12 @@ jobs:
     name: Prepare real-site E2E matrix
     runs-on: ubuntu-latest
     outputs:
-      matrix: ${{ steps.matrix.outputs.matrix }}
+      parallel_matrix: ${{ steps.matrix.outputs.parallel_matrix }}
+      new_api_matrix: ${{ steps.matrix.outputs.new_api_matrix }}
+      sub2api_matrix: ${{ steps.matrix.outputs.sub2api_matrix }}
+      has_parallel: ${{ steps.matrix.outputs.has_parallel }}
+      has_new_api: ${{ steps.matrix.outputs.has_new_api }}
+      has_sub2api: ${{ steps.matrix.outputs.has_sub2api }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -50,14 +55,15 @@ jobs:
   real-site-e2e:
     name: ${{ matrix.label }}
     needs: real-site-matrix
+    if: needs.real-site-matrix.outputs.has_parallel == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
     strategy:
       fail-fast: false
-      matrix: ${{ fromJson(needs.real-site-matrix.outputs.matrix) }}
+      matrix: ${{ fromJson(needs.real-site-matrix.outputs.parallel_matrix) }}
 
-    steps:
+    steps: &real-site-e2e-steps
       - name: Checkout code
         uses: actions/checkout@v5
         with:
@@ -118,17 +124,6 @@ jobs:
           MANAGED_SITE_ADMIN_TOKEN: ${{ secrets[format('AAH_E2E_{0}_ADMIN_TOKEN', matrix.env_prefix)] }}
           MANAGED_SITE_ADMIN_USER_ID: ${{ secrets[format('AAH_E2E_{0}_ADMIN_USER_ID', matrix.env_prefix)] }}
           MANAGED_SITE_EMAIL: ${{ secrets[format('AAH_E2E_{0}_EMAIL', matrix.env_prefix)] }}
-          NEW_API_SOURCE_BASE_URL: ${{ secrets.AAH_E2E_NEW_API_BASE_URL }}
-          NEW_API_SOURCE_USERNAME: ${{ secrets.AAH_E2E_NEW_API_USERNAME }}
-          NEW_API_SOURCE_PASSWORD: ${{ secrets.AAH_E2E_NEW_API_PASSWORD }}
-          NEW_API_SOURCE_TOTP_SECRET: ${{ secrets.AAH_E2E_NEW_API_TOTP_SECRET }}
-          NEW_API_SOURCE_LOGIN_PATH: ${{ secrets.AAH_E2E_NEW_API_LOGIN_PATH }}
-          NEW_API_SOURCE_LOGIN_API_PATH: ${{ secrets.AAH_E2E_NEW_API_LOGIN_API_PATH }}
-          NEW_API_SOURCE_LOGIN_2FA_API_PATH: ${{ secrets.AAH_E2E_NEW_API_LOGIN_2FA_API_PATH }}
-          NEW_API_SOURCE_USERNAME_SELECTOR: ${{ secrets.AAH_E2E_NEW_API_USERNAME_SELECTOR }}
-          NEW_API_SOURCE_PASSWORD_SELECTOR: ${{ secrets.AAH_E2E_NEW_API_PASSWORD_SELECTOR }}
-          NEW_API_SOURCE_SUBMIT_SELECTOR: ${{ secrets.AAH_E2E_NEW_API_SUBMIT_SELECTOR }}
-          NEW_API_SOURCE_AGREE_SELECTOR: ${{ secrets.AAH_E2E_NEW_API_AGREE_SELECTOR }}
           WEBDAV_PROVIDER_NAME: ${{ matrix.provider_name }}
           WEBDAV_PROVIDER_ACCOUNT_PREFIX: ${{ matrix.provider_account_prefix }}
           WEBDAV_URL: ${{ secrets[format('AAH_E2E_{0}_URL', matrix.env_prefix)] }}
@@ -175,18 +170,6 @@ jobs:
             write_env "AAH_E2E_${prefix}_ADMIN_TOKEN" "$MANAGED_SITE_ADMIN_TOKEN"
             write_env "AAH_E2E_${prefix}_ADMIN_USER_ID" "$MANAGED_SITE_ADMIN_USER_ID"
             write_env "AAH_E2E_${prefix}_EMAIL" "$MANAGED_SITE_EMAIL"
-            write_env "AAH_E2E_NEW_API_BASE_URL" "$NEW_API_SOURCE_BASE_URL"
-            write_env "AAH_E2E_NEW_API_USERNAME" "$NEW_API_SOURCE_USERNAME"
-            write_env "AAH_E2E_NEW_API_PASSWORD" "$NEW_API_SOURCE_PASSWORD"
-            write_env "AAH_E2E_NEW_API_TOTP_SECRET" "$NEW_API_SOURCE_TOTP_SECRET"
-            write_env "AAH_E2E_NEW_API_LOGIN_PATH" "$NEW_API_SOURCE_LOGIN_PATH"
-            write_env "AAH_E2E_NEW_API_LOGIN_API_PATH" "$NEW_API_SOURCE_LOGIN_API_PATH"
-            write_env "AAH_E2E_NEW_API_LOGIN_2FA_API_PATH" "$NEW_API_SOURCE_LOGIN_2FA_API_PATH"
-            write_env "AAH_E2E_NEW_API_USERNAME_SELECTOR" "$NEW_API_SOURCE_USERNAME_SELECTOR"
-            write_env "AAH_E2E_NEW_API_PASSWORD_SELECTOR" "$NEW_API_SOURCE_PASSWORD_SELECTOR"
-            write_env "AAH_E2E_NEW_API_SUBMIT_SELECTOR" "$NEW_API_SOURCE_SUBMIT_SELECTOR"
-            write_env "AAH_E2E_NEW_API_AGREE_SELECTOR" "$NEW_API_SOURCE_AGREE_SELECTOR"
-
             [ -z "$REAL_SITE_BASE_URL" ] && missing+=("AAH_E2E_${prefix}_BASE_URL")
             case "$prefix" in
               NEW_API|VELOERA|DONE_HUB)
@@ -246,3 +229,31 @@ jobs:
             playwright-report/
             test-results/
           retention-days: 7
+
+  real-site-e2e-new-api:
+    name: ${{ matrix.label }}
+    needs: real-site-matrix
+    if: needs.real-site-matrix.outputs.has_new_api == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix: ${{ fromJson(needs.real-site-matrix.outputs.new_api_matrix) }}
+
+    steps: *real-site-e2e-steps
+
+  real-site-e2e-sub2api:
+    name: ${{ matrix.label }}
+    needs: real-site-matrix
+    if: needs.real-site-matrix.outputs.has_sub2api == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix: ${{ fromJson(needs.real-site-matrix.outputs.sub2api_matrix) }}
+
+    steps: *real-site-e2e-steps

@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process"
+import { readFileSync, rmSync } from "node:fs"
 import path from "node:path"
 import { describe, expect, it } from "vitest"
 
@@ -21,6 +22,38 @@ function runMatrix(...args: string[]) {
       stdio: ["ignore", "pipe", "pipe"],
     }),
   ) as { include: Array<Record<string, unknown>> }
+}
+
+function runMatrixWithOutput(...args: string[]) {
+  const scriptPath = path.resolve(
+    process.cwd(),
+    "scripts",
+    "github-real-site-e2e-matrix.mjs",
+  )
+  const outputPath = path.resolve(
+    process.cwd(),
+    ".scratch",
+    `real-site-matrix-${process.pid}-${Date.now()}.txt`,
+  )
+
+  try {
+    execFileSync(process.execPath, [scriptPath, ...args], {
+      encoding: "utf8",
+      env: { ...process.env, GITHUB_OUTPUT: outputPath },
+      stdio: ["ignore", "pipe", "pipe"],
+    })
+    return Object.fromEntries(
+      readFileSync(outputPath, "utf8")
+        .trim()
+        .split("\n")
+        .map((line) => {
+          const separatorIndex = line.indexOf("=")
+          return [line.slice(0, separatorIndex), line.slice(separatorIndex + 1)]
+        }),
+    )
+  } finally {
+    rmSync(outputPath, { force: true })
+  }
 }
 
 function selectedIds(matrix: ReturnType<typeof runMatrix>) {
@@ -76,8 +109,98 @@ describe("GitHub real-site E2E matrix selection", () => {
         category: "managed-site",
         env_prefix: "SUB2API",
         managed_site_target: "sub2api",
+        resource_group: "sub2api-account",
       }),
     ])
+  })
+
+  it("serializes account and managed-site targets within each provider", () => {
+    const matrix = runMatrix()
+    const idsForResourceGroup = (resourceGroup: string) =>
+      matrix.include
+        .filter((entry) => entry.resource_group === resourceGroup)
+        .map((entry) => entry.id)
+
+    expect(idsForResourceGroup("new-api-account")).toEqual([
+      "new-api-account",
+      "new-api-managed-site",
+    ])
+    expect(idsForResourceGroup("sub2api-account")).toEqual([
+      "sub2api-account",
+      "sub2api-managed-site",
+    ])
+    expect(
+      matrix.include.find((entry) => entry.id === "veloera-managed-site"),
+    ).not.toHaveProperty("resource_group")
+  })
+
+  it("emits disjoint parallel and provider-serialized matrices", () => {
+    const output = runMatrixWithOutput()
+    const fullMatrix = JSON.parse(output.matrix) as ReturnType<typeof runMatrix>
+    const parallelMatrix = JSON.parse(output.parallel_matrix) as ReturnType<
+      typeof runMatrix
+    >
+    const newApiMatrix = JSON.parse(output.new_api_matrix) as ReturnType<
+      typeof runMatrix
+    >
+    const sub2ApiMatrix = JSON.parse(output.sub2api_matrix) as ReturnType<
+      typeof runMatrix
+    >
+
+    expect(output.has_parallel).toBe("true")
+    expect(output.has_new_api).toBe("true")
+    expect(output.has_sub2api).toBe("true")
+    expect([
+      ...selectedIds(parallelMatrix),
+      ...selectedIds(newApiMatrix),
+      ...selectedIds(sub2ApiMatrix),
+    ]).toEqual(expect.arrayContaining(selectedIds(fullMatrix)))
+    expect(
+      new Set([
+        ...selectedIds(parallelMatrix),
+        ...selectedIds(newApiMatrix),
+        ...selectedIds(sub2ApiMatrix),
+      ]).size,
+    ).toBe(fullMatrix.include.length)
+  })
+
+  it("keeps a narrow New API target in its provider matrix only", () => {
+    const output = runMatrixWithOutput("all", "new-api-account")
+
+    expect(output.has_parallel).toBe("false")
+    expect(output.has_new_api).toBe("true")
+    expect(output.has_sub2api).toBe("false")
+    expect(JSON.parse(output.parallel_matrix)).toEqual({ include: [] })
+    expect(selectedIds(JSON.parse(output.new_api_matrix))).toEqual([
+      "new-api-account",
+    ])
+    expect(JSON.parse(output.sub2api_matrix)).toEqual({ include: [] })
+  })
+
+  it("keeps a narrow Sub2API target in its provider matrix only", () => {
+    const output = runMatrixWithOutput("all", "sub2api-managed-site")
+
+    expect(output.has_parallel).toBe("false")
+    expect(output.has_new_api).toBe("false")
+    expect(output.has_sub2api).toBe("true")
+    expect(JSON.parse(output.parallel_matrix)).toEqual({ include: [] })
+    expect(JSON.parse(output.new_api_matrix)).toEqual({ include: [] })
+    expect(selectedIds(JSON.parse(output.sub2api_matrix))).toEqual([
+      "sub2api-managed-site",
+    ])
+  })
+
+  it("keeps a narrow independent target in the parallel matrix only", () => {
+    const output = runMatrixWithOutput("all", "veloera-account")
+
+    expect(output.has_parallel).toBe("true")
+    expect(output.has_new_api).toBe("false")
+    expect(output.has_sub2api).toBe("false")
+    expect(selectedIds(JSON.parse(output.parallel_matrix))).toEqual([
+      "veloera-account",
+    ])
+    expect(JSON.parse(output.new_api_matrix)).toEqual({ include: [] })
+    expect(JSON.parse(output.sub2api_matrix)).toEqual({ include: [] })
   })
 
   it("keeps the default all-category matrix unchanged", () => {

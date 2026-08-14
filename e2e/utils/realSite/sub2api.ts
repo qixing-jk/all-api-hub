@@ -30,7 +30,7 @@ type Sub2ApiRealSiteResolution = {
   missingEnvKeys: RequiredSub2ApiRealSiteEnvKey[]
 }
 
-interface Sub2ApiRealSiteConfig {
+export interface Sub2ApiRealSiteConfig {
   baseUrl: string
   loginUrl: string
   loginApiUrl: string
