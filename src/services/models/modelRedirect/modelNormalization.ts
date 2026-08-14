@@ -3,8 +3,6 @@ import { extractCoreModelIdentity } from "~/services/models/modelMetadata/modelI
 import { resolveCuratedModelVendor } from "~/services/models/modelVendor"
 import { removeDateSuffix } from "~/services/models/utils/modelName"
 
-export { extractCoreModelIdentity }
-
 /**
  * Normalizes a raw model identifier to its core name by stripping known
  * vendor prefixes, path segments, non-model suffixes and date components.

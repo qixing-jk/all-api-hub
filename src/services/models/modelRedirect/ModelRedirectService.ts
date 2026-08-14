@@ -29,6 +29,7 @@ import {
   collectManagedResourceSecrets,
 } from "~/services/managedSites/utils/managedSite"
 import { modelMetadataService } from "~/services/models/modelMetadata"
+import { extractCoreModelIdentity } from "~/services/models/modelMetadata/modelIdentityIndex"
 import {
   removeDateSuffix,
   toModelTokenKey,
@@ -51,11 +52,7 @@ import {
   userPreferences,
   type UserPreferences,
 } from "../../preferences/userPreferences"
-import {
-  extractActualModel,
-  extractCoreModelIdentity,
-  renameModel,
-} from "./modelNormalization"
+import { extractActualModel, renameModel } from "./modelNormalization"
 import { isEmptyModelMapping } from "./utils"
 
 /**

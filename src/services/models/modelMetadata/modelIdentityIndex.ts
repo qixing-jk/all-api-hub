@@ -216,6 +216,22 @@ export interface ComparableModelIdentity {
   displayName: string
 }
 
+const COMPARABLE_MODEL_IDENTITY_KEY_PREFIXES = {
+  CANONICAL: "canonical",
+  EXACT: "exact",
+  NORMALIZED: "normalized",
+} as const
+
+/** Preserves a raw model id when normalization cannot be proven safe. */
+function toExactComparableModelIdentity(
+  modelId: string,
+): ComparableModelIdentity {
+  return {
+    key: `${COMPARABLE_MODEL_IDENTITY_KEY_PREFIXES.EXACT}:${modelId}`,
+    displayName: modelId,
+  }
+}
+
 /** Converts one resolved metadata match into a comparable identity. */
 function toCanonicalComparableIdentity(
   result: ModelIdentityLookupResult,
@@ -224,7 +240,7 @@ function toCanonicalComparableIdentity(
 
   const canonicalId = normalizeIdentity(result.metadata.id)
   return {
-    key: `canonical:${canonicalId}`,
+    key: `${COMPARABLE_MODEL_IDENTITY_KEY_PREFIXES.CANONICAL}:${canonicalId}`,
     displayName: result.metadata.id,
   }
 }
@@ -276,14 +292,14 @@ export function resolveComparableModelIdentity(
   const normalizedUndecoratedId = normalizeIdentity(undecoratedId)
 
   if (removeDateSuffix(normalizedUndecoratedId) !== normalizedUndecoratedId) {
-    return { key: `exact:${trimmedId}`, displayName: trimmedId }
+    return toExactComparableModelIdentity(trimmedId)
   }
 
   const directResolution = resolveRedirectModelIdentity(index, trimmedId)
   const directIdentity = toCanonicalComparableIdentity(directResolution)
   if (directIdentity) return directIdentity
   if (directResolution.state === "ambiguous") {
-    return { key: `exact:${trimmedId}`, displayName: trimmedId }
+    return toExactComparableModelIdentity(trimmedId)
   }
 
   const resolved = resolveRedirectModelIdentity(index, undecoratedId)
@@ -291,13 +307,16 @@ export function resolveComparableModelIdentity(
   if (canonicalIdentity) return canonicalIdentity
 
   if (resolved.state === "ambiguous") {
-    return { key: `exact:${trimmedId}`, displayName: trimmedId }
+    return toExactComparableModelIdentity(trimmedId)
   }
 
   const tokenKey = toModelTokenKey(undecoratedId)
   if (tokenKey) {
-    return { key: `normalized:${tokenKey}`, displayName: undecoratedId }
+    return {
+      key: `${COMPARABLE_MODEL_IDENTITY_KEY_PREFIXES.NORMALIZED}:${tokenKey}`,
+      displayName: undecoratedId,
+    }
   }
 
-  return { key: `exact:${trimmedId}`, displayName: trimmedId }
+  return toExactComparableModelIdentity(trimmedId)
 }

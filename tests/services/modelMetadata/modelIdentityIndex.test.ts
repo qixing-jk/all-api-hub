@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import {
   createModelIdentityIndex,
+  extractCoreModelIdentity,
   resolveComparableModelIdentity,
   resolveModelIdentity,
   resolveRedirectModelIdentity,
@@ -19,6 +20,15 @@ function createMetadata(
 }
 
 describe("modelIdentityIndex", () => {
+  it("extracts the core model identity without discarding date suffixes", () => {
+    expect(extractCoreModelIdentity("vendor/model-a-2025-01-01:free")).toBe(
+      "model-a-2025-01-01",
+    )
+    expect(extractCoreModelIdentity("vendor/model-a-20250101:free")).toBe(
+      "model-a-20250101",
+    )
+  })
+
   it("resolves decorated aliases to one comparable model identity", () => {
     const metadata = createMetadata({
       id: "openai/gpt-4o",
