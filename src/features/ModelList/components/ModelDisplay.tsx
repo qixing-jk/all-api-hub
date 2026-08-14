@@ -300,10 +300,10 @@ export function ModelDisplay(props: ModelDisplayProps) {
               className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm"
             >
               <header className="dark:border-dark-bg-tertiary dark:bg-dark-bg-primary/45 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-gray-200 bg-gray-50/80 px-3 py-2.5 sm:px-4">
-                <div className="flex w-full min-w-0 items-center gap-2 lg:w-auto lg:flex-1">
+                <div className="flex w-full min-w-0 flex-wrap items-center gap-2 lg:w-auto lg:flex-1">
                   <h2
                     id={headingId}
-                    className="text-foreground min-w-0 flex-1 font-mono text-sm font-semibold break-all"
+                    className="text-foreground max-w-full min-w-0 font-mono text-sm font-semibold break-all"
                   >
                     {group.modelName}
                   </h2>

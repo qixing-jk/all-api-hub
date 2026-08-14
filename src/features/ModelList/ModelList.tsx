@@ -222,15 +222,19 @@ export default function ModelList(props: {
 
   const isAllAccountsScope =
     selectedSource?.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS
-  const shouldShowPriceComparisonAction = canEnableModelPriceComparison({
-    selectedSource,
-    sourceCapabilities,
-    isAllAccountsSource: isAllAccountsScope,
-    sortMode,
-    selectedBillingMode,
-    selectedGroups,
-    showRealPrice,
-  })
+  const canStartUnselectedPriceComparison =
+    !selectedSource && accounts.length > 0
+  const shouldShowPriceComparisonAction =
+    canStartUnselectedPriceComparison ||
+    canEnableModelPriceComparison({
+      selectedSource,
+      sourceCapabilities,
+      isAllAccountsSource: isAllAccountsScope,
+      sortMode,
+      selectedBillingMode,
+      selectedGroups,
+      showRealPrice,
+    })
   const handleEnablePriceComparison = useCallback(() => {
     enableModelPriceComparison({
       isAllAccountsSource: isAllAccountsScope,
@@ -274,6 +278,9 @@ export default function ModelList(props: {
     selectedSource?.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS
       ? pricingContexts && pricingContexts.length > 0
       : !!pricingData
+  const shouldShowRefreshAction = Boolean(selectedSource && hasModelData)
+  const shouldShowHeaderActions =
+    shouldShowRefreshAction || shouldShowPriceComparisonAction
   const isRuntimeKeyOnlyFallbackCatalog =
     isFallbackCatalogActive &&
     !!currentAccount &&
@@ -572,23 +579,25 @@ export default function ModelList(props: {
         }
         description={t("description")}
         actions={
-          selectedSource && hasModelData ? (
+          shouldShowHeaderActions ? (
             <ProductAnalyticsScope
               entrypoint={PRODUCT_ANALYTICS_ENTRYPOINTS.Options}
               featureId={PRODUCT_ANALYTICS_FEATURE_IDS.ModelList}
               surfaceId={PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListPage}
             >
-              <Button
-                onClick={loadPricingData}
-                variant="secondary"
-                leftIcon={<ArrowPathIcon className="h-4 w-4" />}
-                loading={isLoading}
-                analyticsAction={
-                  PRODUCT_ANALYTICS_ACTION_IDS.RefreshModelPricingData
-                }
-              >
-                {isLoading ? t("common:status.refreshing") : t("refreshData")}
-              </Button>
+              {shouldShowRefreshAction && (
+                <Button
+                  onClick={loadPricingData}
+                  variant="secondary"
+                  leftIcon={<ArrowPathIcon className="h-4 w-4" />}
+                  loading={isLoading}
+                  analyticsAction={
+                    PRODUCT_ANALYTICS_ACTION_IDS.RefreshModelPricingData
+                  }
+                >
+                  {isLoading ? t("common:status.refreshing") : t("refreshData")}
+                </Button>
+              )}
               {shouldShowPriceComparisonAction && (
                 <Tooltip
                   content={t("comparison.tooltip")}

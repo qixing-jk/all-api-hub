@@ -10,6 +10,7 @@ import {
   createAccountSource,
   createAllAccountsSource,
   createProfileSource,
+  EMPTY_MODEL_MANAGEMENT_CAPABILITIES,
   MODEL_LIST_GROUP_SEMANTICS,
   toAihubmixCatalogFallbackCapabilities,
 } from "~/features/ModelList/modelManagementSources"
@@ -1025,6 +1026,59 @@ describe("ModelList page flows", () => {
         insights: expect.objectContaining({ filterCount: 1 }),
       }),
     )
+  })
+
+  it("offers one-click price comparison before a source is selected", async () => {
+    const user = userEvent.setup()
+    const setSelectedSourceValue = vi.fn()
+    const setSortMode = vi.fn()
+    const setSelectedBillingMode = vi.fn()
+    const setSelectedGroups = vi.fn()
+    const setShowRealPrice = vi.fn()
+
+    mockUseModelListData.mockReturnValue(
+      buildState({
+        selectedSource: null,
+        currentAccount: null,
+        sourceCapabilities: EMPTY_MODEL_MANAGEMENT_CAPABILITIES,
+        selectedSourceValue: "",
+        setSelectedSourceValue,
+        setSortMode,
+        setSelectedBillingMode,
+        setSelectedGroups,
+        setShowRealPrice,
+        pricingData: null,
+        filteredModels: [],
+        baseFilteredModels: [],
+      }),
+    )
+
+    render(<ModelList />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    expect(
+      screen.queryByRole("button", { name: "modelList:refreshData" }),
+    ).not.toBeInTheDocument()
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "modelList:comparison.cta",
+      }),
+    )
+
+    expect(setSelectedSourceValue).toHaveBeenCalledWith(
+      ALL_ACCOUNTS_SOURCE.value,
+    )
+    expect(setSortMode).toHaveBeenCalledWith(
+      MODEL_LIST_SORT_MODES.MODEL_CHEAPEST_FIRST,
+    )
+    expect(setSelectedBillingMode).toHaveBeenCalledWith(
+      MODEL_LIST_BILLING_MODES.ALL,
+    )
+    expect(setSelectedGroups).toHaveBeenCalledWith([])
+    expect(setShowRealPrice).toHaveBeenCalledWith(true)
   })
 
   it("hides the page comparison shortcut when comparison is already active", async () => {
