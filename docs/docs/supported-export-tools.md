@@ -2,16 +2,26 @@
 
 > 如果你已经在下面这些客户端、CLI 工具或自建后台里使用 API，All API Hub 可以帮你更快把站点配置带过去，少掉重复填写 `Base URL`、`API Key` 和模型名的步骤。
 
-## 常用客户端与工具
+## 聊天客户端
 
 | 产品 | 官方描述 | 官方链接 |
 |------|----------|----------|
 | Cherry Studio | AI 生产力工作室，提供智能对话、自主代理和 300+ 助手，统一接入前沿大模型。 | [官网](https://www.cherry-ai.com/) / [GitHub](https://github.com/CherryHQ/cherry-studio) |
 | Kelivo | 支持移动端与桌面端的 Flutter 大模型聊天客户端。 | [GitHub](https://github.com/Chevey339/kelivo) |
+
+## 编程 Agents
+
+| 产品 | 官方描述 | 官方链接 |
+|------|----------|----------|
 | CC Switch | 面向 Claude Code、Codex、Gemini CLI、Grok CLI、Hermes、OpenCode 与 OpenClaw 的跨平台桌面一体化助手。 | [GitHub](https://github.com/farion1231/cc-switch) |
-| Cursor++ | 通过自备 API 密钥在 Cursor 中使用 Anthropic、OpenAI 与 Gemini 等模型。 | [官网](https://ccursor.cometix.dev/) |
 | Kilo Code | Kilo 是一体化的 Agentic Engineering 平台。 | [官网](https://kilocode.ai/) / [GitHub](https://github.com/Kilo-Org/kilocode) |
 | Roo Code | Roo Code 让一整支 AI 开发团队直接驻留在你的代码编辑器里。 | [官网](https://roocode.com/) / [GitHub](https://github.com/RooCodeInc/Roo-Code) |
+| Cursor++ | 通过自备 API 密钥在 Cursor 中使用 Anthropic、OpenAI 与 Gemini 等模型。 | [官网](https://ccursor.cometix.dev/) |
+
+## 网关与路由工具
+
+| 产品 | 官方描述 | 官方链接 |
+|------|----------|----------|
 | CLIProxyAPI | 将 Gemini CLI、Antigravity、ChatGPT Codex、Claude Code、Qwen Code、iFlow 封装为兼容 OpenAI / Gemini / Claude / Codex 的 API 服务。 | [文档](https://help.router-for.me/) / [GitHub](https://github.com/router-for-me/CLIProxyAPI) |
 | Claude Code Router | 以 Claude Code 作为编码基础设施，让你在持续获得 Anthropic 更新的同时，自行决定如何与模型交互。 | [官网](https://musistudio.github.io/claude-code-router/) / [GitHub](https://github.com/musistudio/claude-code-router) |
 
@@ -31,7 +41,7 @@ Kelivo 本身也支持 OpenAI Responses，但当前 `ai-provider:v1` 导入码�
 
 ## Cursor++ 导出
 
-在账号密钥的操作区选择“导出 Cursor++ 提供商配置”，All API Hub 会读取 OpenAI 兼容模型列表，并生成 Cursor++ 0.0.13 使用的 `provider` 对象。其中包含稳定的提供商 ID、名称、`baseUrl`、API 密钥认证信息，以及带有 `defaultOn: true` 的模型列表。
+在账号密钥或 API 凭据的操作区选择“导出 Cursor++ 提供商配置”，All API Hub 会读取 OpenAI 兼容模型列表，并生成 Cursor++ 0.0.13 使用的 `provider` 对象。其中包含稳定的提供商 ID、名称、`baseUrl`、API 密钥认证信息，以及带有 `defaultOn: true` 的模型列表。
 
 导出前可以搜索、移除已发现的模型，也可以输入或粘贴多个模型 ID。默认使用账号现有的 OpenAI 兼容地址；如果所选原生协议使用不同路径，可以直接调整提供商 Base URL。
 

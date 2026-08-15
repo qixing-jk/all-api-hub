@@ -40,13 +40,11 @@ Each token card displays its current "Health Status":
 - **Verify CLI Compatibility**: Test if the token works correctly in specific CLI environments.
 
 ### 4. Export to Other Tools
-Click the **`Export`** button next to a token to sync it to:
-- CherryStudio
-- CC Switch
-- Kilo Code
-- CLIProxyAPI
-- Claude Code Router
-- Your configured Self-hosted Managed Sites
+The token actions area prioritizes the icon for the currently configured self-hosted site. Select it to create or update a channel. Other targets are available from the adjacent **`Export`** menu:
+
+- **Chat clients**: Cherry Studio, Kelivo
+- **Coding agents**: CC Switch, Kilo Code / Roo Code, Cursor++
+- **Gateways and routing tools**: CLIProxyAPI, Claude Code Router
 
 #### Export to Kilo Code / Roo Code
 

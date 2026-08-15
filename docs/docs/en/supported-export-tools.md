@@ -2,16 +2,26 @@
 
 > If you are already using the API in any of the following clients, CLI tools, or self-built backends, All API Hub can help you quickly transfer your site configuration, saving you the repetitive steps of filling in `Base URL`, `API Key`, and model names.
 
-## Popular Clients and Tools
+## Chat Clients
 
 | Product | Official Description | Official Link |
 |---|---|---|
 | Cherry Studio | An AI productivity studio offering intelligent conversations, autonomous agents, and 300+ assistants, providing unified access to cutting-edge large models. | [Official Website](https://www.cherry-ai.com/) / [GitHub](https://github.com/CherryHQ/cherry-studio) |
 | Kelivo | A Flutter-based LLM chat client for mobile and desktop. | [GitHub](https://github.com/Chevey339/kelivo) |
+
+## Coding Agents
+
+| Product | Official Description | Official Link |
+|---|---|---|
 | CC Switch | A cross-platform desktop assistant for Claude Code, Codex, Gemini CLI, Grok CLI, Hermes, OpenCode, and OpenClaw. | [GitHub](https://github.com/farion1231/cc-switch) |
-| Cursor++ | Use Anthropic, OpenAI, Gemini, and other models in Cursor with your own API keys. | [Official Website](https://ccursor.cometix.dev/) |
 | Kilo Code | Kilo is an integrated Agentic Engineering platform. | [Official Website](https://kilocode.ai/) / [GitHub](https://github.com/Kilo-Org/kilocode) |
 | Roo Code | Roo Code allows an entire AI development team to reside directly within your code editor. | [Official Website](https://roocode.com/) / [GitHub](https://github.com/RooCodeInc/Roo-Code) |
+| Cursor++ | Use Anthropic, OpenAI, Gemini, and other models in Cursor with your own API keys. | [Official Website](https://ccursor.cometix.dev/) |
+
+## Gateways and Routing Tools
+
+| Product | Official Description | Official Link |
+|---|---|---|
 | CLIProxyAPI | Encapsulates Gemini CLI, Antigravity, ChatGPT Codex, Claude Code, Qwen Code, and iFlow into API services compatible with OpenAI / Gemini / Claude / Codex. | [Documentation](https://help.router-for.me/) / [GitHub](https://github.com/router-for-me/CLIProxyAPI) |
 | Claude Code Router | Uses Claude Code as the coding infrastructure, allowing you to continuously receive Anthropic updates while deciding how to interact with the model. | [Official Website](https://musistudio.github.io/claude-code-router/) / [GitHub](https://github.com/musistudio/claude-code-router) |
 
@@ -31,7 +41,7 @@ Both the QR code and Kelivo Mobile import code contain the API key in plain text
 
 ## Cursor++ Export
 
-From the actions for an account key, select **Export Cursor++ Provider Configuration**. All API Hub reads the OpenAI-compatible model list and generates the `provider` object used by Cursor++ 0.0.13. The object includes a stable provider ID, name, `baseUrl`, API-key authentication, and a model list with `defaultOn: true`.
+From the actions for an account key or API credential, select **Export Cursor++ Provider Configuration**. All API Hub reads the OpenAI-compatible model list and generates the `provider` object used by Cursor++ 0.0.13. The object includes a stable provider ID, name, `baseUrl`, API-key authentication, and a model list with `defaultOn: true`.
 
 Before exporting, you can search or remove discovered models and enter or paste multiple model IDs. The export uses the account's existing OpenAI-compatible address by default. If the selected native protocol uses a different path, you can edit the provider Base URL directly.
 

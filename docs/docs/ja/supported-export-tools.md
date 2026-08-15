@@ -2,16 +2,26 @@
 
 > クライアント、CLI ツール、または独自のバックエンドで既に API を使用している場合、All API Hub はサイト設定をより迅速に移行するのに役立ち、`Base URL`、`API Key`、モデル名の再入力を減らすことができます。
 
-## 一般的なクライアントとツール
+## チャットクライアント
 
 | 製品 | 公式説明 | 公式リンク |
 |------|----------|----------|
 | Cherry Studio | AI 生産性スタジオ。スマート対話、自律エージェント、300 以上のヘルパーを提供し、最先端の大規模モデルへの統一アクセスを実現します。 | [公式サイト](https://www.cherry-ai.com/) / [GitHub](https://github.com/CherryHQ/cherry-studio) |
 | Kelivo | モバイルとデスクトップに対応した Flutter 製の大規模言語モデルチャットクライアント。 | [GitHub](https://github.com/Chevey339/kelivo) |
+
+## コーディングエージェント
+
+| 製品 | 公式説明 | 公式リンク |
+|------|----------|----------|
 | CC Switch | Claude Code、Codex、Gemini CLI、Grok CLI、Hermes、OpenCode、OpenClaw 向けのクロスプラットフォームデスクトップ統合アシスタント。 | [GitHub](https://github.com/farion1231/cc-switch) |
-| Cursor++ | 自分の API キーを使用して、Cursor で Anthropic、OpenAI、Gemini などのモデルを利用できます。 | [公式サイト](https://ccursor.cometix.dev/) |
 | Kilo Code | Kilo は、統合されたエージェンティブエンジニアリングプラットフォームです。 | [公式サイト](https://kilocode.ai/) / [GitHub](https://github.com/Kilo-Org/kilocode) |
 | Roo Code | Roo Code は、AI 開発チーム全体をコードエディタに直接配置します。 | [公式サイト](https://roocode.com/) / [GitHub](https://github.com/RooCodeInc/Roo-Code) |
+| Cursor++ | 自分の API キーを使用して、Cursor で Anthropic、OpenAI、Gemini などのモデルを利用できます。 | [公式サイト](https://ccursor.cometix.dev/) |
+
+## ゲートウェイとルーティングツール
+
+| 製品 | 公式説明 | 公式リンク |
+|------|----------|----------|
 | CLIProxyAPI | Gemini CLI、Antigravity、ChatGPT Codex、Claude Code、Qwen Code、iFlow を OpenAI / Gemini / Claude / Codex と互換性のある API サービスにラップします。 | [ドキュメント](https://help.router-for.me/) / [GitHub](https://github.com/router-for-me/CLIProxyAPI) |
 | Claude Code Router | Claude Code をコーディングインフラストラクチャとして使用し、Anthropic の最新情報を継続的に取得しながら、モデルとの対話を自分で決定できるようにします。 | [公式サイト](https://musistudio.github.io/claude-code-router/) / [GitHub](https://github.com/musistudio/claude-code-router) |
 
@@ -31,7 +41,7 @@ QR コードと Kelivo モバイル用インポートコードには、API キ�
 
 ## Cursor++ へのエクスポート
 
-アカウントキーの操作メニューから「Cursor++ プロバイダー設定をエクスポート」を選択します。All API Hub は OpenAI 互換のモデル一覧を読み込み、Cursor++ 0.0.13 で使用する `provider` オブジェクトを生成します。このオブジェクトには、安定したプロバイダー ID、名前、`baseUrl`、API キー認証情報、および `defaultOn: true` が設定されたモデル一覧が含まれます。
+アカウントキーまたは API 認証情報の操作メニューから「Cursor++ プロバイダー設定をエクスポート」を選択します。All API Hub は OpenAI 互換のモデル一覧を読み込み、Cursor++ 0.0.13 で使用する `provider` オブジェクトを生成します。このオブジェクトには、安定したプロバイダー ID、名前、`baseUrl`、API キー認証情報、および `defaultOn: true` が設定されたモデル一覧が含まれます。
 
 エクスポート前に、検出されたモデルを検索・削除したり、複数のモデル ID を入力または貼り付けたりできます。初期値にはアカウントの既存の OpenAI 互換アドレスが使用されます。選択したネイティブプロトコルが別のパスを使用する場合は、プロバイダーの Base URL を直接編集できます。
 

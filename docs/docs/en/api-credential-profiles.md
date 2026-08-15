@@ -16,7 +16,7 @@
 - **Health and Usage Overview**: View balance, today's usage, today's requests, available models, last refresh time, and health status.
 - **Interface Verification**: Supports verifying API availability and separately testing CLI compatibility.
 - **Model Integration**: Directly open the current credentials in the model list to view the model catalog and verification results.
-- **Quick Export**: Supports exporting to CherryStudio, CC Switch, Kilo Code, CLIProxyAPI, Claude Code Router, and self-hosted sites with current configurations.
+- **Quick Export**: Prioritizes a direct action for the currently configured self-hosted site. Other targets are grouped as chat clients, coding agents, and gateways and routing tools: Cherry Studio, Kelivo, CC Switch, Kilo Code / Roo Code, Cursor++, CLIProxyAPI, and Claude Code Router.
 
 ## Access Method
 
@@ -145,12 +145,12 @@ After clicking **`Open in Model Management`**, the model list page will directly
 
 Supports direct export from a single credential to:
 
-- CherryStudio
-- CC Switch
-- Kilo Code
-- CLIProxyAPI
-- Claude Code Router
-- Current self-hosted sites
+- **Self-hosted site**: The actions area shows the currently configured self-hosted site icon. Select it to create or update a channel.
+- **Chat clients**: Cherry Studio, Kelivo
+- **Coding agents**: CC Switch, Kilo Code / Roo Code, Cursor++
+- **Gateways and routing tools**: CLIProxyAPI, Claude Code Router
+
+Except for the direct self-hosted-site action, all targets are available from the **`Export`** menu. Cursor++ reads the current API credential's model list and generates a provider configuration that can be merged into `providers.json`.
 
 When exporting to Kilo Code 7.x, the current credential becomes a clearly named `provider` containing every model ID discovered and normalized from the endpoint, plus any model IDs manually entered and retained for that provider. Inclusion in the export does not guarantee that every model works in every workflow; select only the default `model` before exporting. The legacy Roo Code / Kilo Code 5.x format still uses one model per configuration, and its copied content must be merged into `providerProfiles.apiConfigs`.
 

@@ -16,7 +16,7 @@
 - **健康与用量概览**：可查看余额、今日用量、今日请求数、可用模型数量、最近刷新时间和健康状态。
 - **接口验证**：支持验证 API 是否可用，也支持单独验证 CLI 兼容性。
 - **模型联动**：可直接在模型列表中打开当前凭证，查看模型目录和验证结果。
-- **快捷导出**：支持导出到 CherryStudio、CC Switch、Kilo Code、CLIProxyAPI、Claude Code Router，以及当前配置的自建托管站点。
+- **快捷导出**：优先提供当前自建托管站点的直达入口；其他目标按聊天客户端、编程 Agents、网关与路由工具分组，支持 Cherry Studio、Kelivo、CC Switch、Kilo Code / Roo Code、Cursor++、CLIProxyAPI 和 Claude Code Router。
 
 ## 进入方式
 
@@ -145,12 +145,12 @@
 
 支持从单个凭证直接导出到：
 
-- CherryStudio
-- CC Switch
-- Kilo Code
-- CLIProxyAPI
-- Claude Code Router
-- 当前自建托管站点
+- **自建托管站点**：操作区会直接显示当前托管站点图标，点击即可创建或更新渠道。
+- **聊天客户端**：Cherry Studio、Kelivo
+- **编程 Agents**：CC Switch、Kilo Code / Roo Code、Cursor++
+- **网关与路由工具**：CLIProxyAPI、Claude Code Router
+
+除自建托管站点外，其余目标统一收在 **`导出`** 菜单中。Cursor++ 会读取当前 API 凭据的模型列表，并生成可合并到 `providers.json` 的提供商配置。
 
 导出到 Kilo Code 7.x 时，当前凭据会成为一个名称易读的 `provider`，其中包含从接口发现并规范化的全部模型 ID，以及为该 `provider` 手动输入并保留的模型 ID。被包含在导出中并不保证每个模型都适用于所有工作流；导出前只需选择默认 `model`。旧版 Roo Code / Kilo Code 5.x 格式仍是每个配置一个模型，并将复制内容合并到 `providerProfiles.apiConfigs`。
 

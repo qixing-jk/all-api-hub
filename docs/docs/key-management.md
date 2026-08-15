@@ -40,13 +40,11 @@
 - **验证 CLI 兼容性**：测试该 Token 是否能在特定的 CLI 环境下正常工作。
 
 ### 4. 导出到其他工具
-你可以点击 Token 旁边的 **`导出`** 按钮，将其一键同步到：
-- CherryStudio
-- CC Switch
-- Kilo Code
-- CLIProxyAPI
-- Claude Code Router
-- 你配置的自建托管站点
+Token 操作区会优先显示当前自建托管站点的图标，点击即可创建或更新渠道。其他目标统一收在旁边的 **`导出`** 菜单中：
+
+- **聊天客户端**：Cherry Studio、Kelivo
+- **编程 Agents**：CC Switch、Kilo Code / Roo Code、Cursor++
+- **网关与路由工具**：CLIProxyAPI、Claude Code Router
 
 #### 导出到 Kilo Code / Roo Code
 

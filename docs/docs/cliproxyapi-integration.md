@@ -34,7 +34,7 @@
 
 1. 打开插件 → 进入 **密钥管理** 页面。
 2. 找到想要导入到 CLIProxyAPI 的站点密钥卡片。
-3. 点击密钥右侧的 CLIProxyAPI 图标按钮（通常在 CherryStudio / CC Switch / New API 按钮旁边）。
+3. 点击密钥右侧的 **`导出`**，在“网关与托管服务”分组中选择 **CLIProxyAPI**。
 4. 插件会：
    - 读取 CLIProxyAPI 配置（基础 URL 和管理密钥）。
    - 使用站点的 `Base URL` 生成 OpenAI 兼容地址（自动拼接 `/v1`）。

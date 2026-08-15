@@ -81,8 +81,8 @@ Relay sites built on account-site compatible architectures can usually be added 
 After adding an account, you can "push" these configurations to other AI tools with one click, eliminating the need for manual copy-pasting.
 
 1. Go to the **`Key Management`** page.
-2. Find the Key you want to export, and select **`Export to CherryStudio`**, **`Export to CC Switch`**, etc., from the menu.
-3. Your AI client will automatically launch and complete the configuration.
+2. Find the key you want to export, select **`Export`**, and choose a target from **Chat clients**, **Coding agents**, or **Gateways and routing tools**.
+3. Follow the dialog instructions to launch the application, copy or download the configuration, or import it through the target management API.
 
 > For a complete list, please see [Supported Export Tools and Integration Targets](./supported-export-tools.md).
 

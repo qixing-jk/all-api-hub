@@ -40,13 +40,11 @@
 - **CLI 互換性の検証**: 特定の CLI 環境でトークンが正しく動作するかテストします。
 
 ### 4. 他のツールへのエクスポート
-トークンの横にある **`エクスポート`** ボタンをクリックして、以下のツールに同期できます：
-- CherryStudio
-- CC Switch
-- Kilo Code
-- CLIProxyAPI
-- Claude Code Router
-- 設定済みの自炊・ホスト型管理サイト
+トークンの操作エリアには、現在設定されているセルフホスト型サイトのアイコンが優先表示されます。クリックするとチャネルを作成または更新できます。その他の対象は、隣の **`エクスポート`** メニューにまとめられています。
+
+- **チャットクライアント**：Cherry Studio、Kelivo
+- **コーディングエージェント**：CC Switch、Kilo Code / Roo Code、Cursor++
+- **ゲートウェイとルーティングツール**：CLIProxyAPI、Claude Code Router
 
 #### Kilo Code / Roo Code へのエクスポート
 

@@ -1,56 +1,57 @@
 # Quick Export Site Configuration
 
-> Synchronize recorded aggregated relay accounts to downstream systems like CherryStudio, CC Switch, New API, and Claude Code Hub with one click, avoiding repetitive input of Base URL, API Keys, and model lists.
+> Bring recorded account keys or API credentials into common chat clients, coding agents, gateways, and self-hosted sites without repeatedly entering Base URLs, keys, and model lists.
 
 ## Supported Targets
 
-| Target | Method | Notes |
-|------|------|------|
-| CherryStudio | Launches client via local protocol, automatically populates API information | Requires CherryStudio desktop client to be running and authorized |
-| CC Switch | Outputs in JSON/clipboard format, with built-in dedicated field mapping | Requires using the import function within CC Switch to paste content |
-| Self-hosted Sites (New API / Sub2API / AxonHub / Claude Code Hub / Octopus / Veloera / DoneHub) | Calls the target backend management interface to automatically create or update site configurations | Requires completing the corresponding backend configuration in the extension first |
+| Category | Target | Method |
+|---|---|---|
+| Priority action | Self-hosted site | Calls the configured backend management API to create or update a channel |
+| Chat clients | Cherry Studio | Launches the client through its local protocol and fills in API information |
+| Chat clients | Kelivo | Generates a mobile import code and QR code; desktop requires manual entry |
+| Coding agents | CC Switch | Generates and opens an import link for the selected target application |
+| Coding agents | Kilo Code / Roo Code | Copies a configuration fragment or downloads an importable settings file |
+| Coding agents | Cursor++ | Copies a provider configuration that can be merged into `providers.json` |
+| Gateways and routing tools | CLIProxyAPI | Adds or updates provider configuration through the management API |
+| Gateways and routing tools | Claude Code Router | Imports provider configuration through the management API |
 
 ## Prerequisites
 
-1.  **Site Synchronization**: First, complete account identification in the plugin to ensure that exportable APIs exist in the API key list.
-2.  **Target Credentials**:
-    -   CherryStudio / CC Switch: No additional configuration required, but the application must remain running.
-    -   Self-hosted Sites: Select the target type and complete the configuration in "Basic Settings → Self-hosted Site Management".
-3.  **Model List**: If whitelist export is required, models can be pre-filtered in "New API Model Synchronization".
+1. **Site synchronization**: Complete account detection first and make sure an exportable API is available in the key list.
+2. **Target credentials**:
+   - Cherry Studio, Kelivo, CC Switch, Kilo Code / Roo Code, and Cursor++ do not require target credentials in the extension. Follow the export dialog instructions to finish importing.
+   - Configure the management address and credentials for CLIProxyAPI, Claude Code Router, and the self-hosted site before importing.
+3. **Model list**: If you need a model allowlist, filter the models in New API Model Sync first.
 
-## Operating Steps
+## Steps
 
-1.  Open the plugin → **API Key Management**, click the corresponding export button in any site card; if you need to process multiple API keys at once, you can select items in the API key list first.
-2.  Select the target platform: `CherryStudio` / `CC Switch` / `Current Self-hosted Site`. When multiple API keys are selected, you can use **"Batch Import to Current Self-managed Site"** to enter the preview.
-3.  Complete authorization as prompted:
-    -   CherryStudio: The browser will prompt whether to open the desktop client, and will complete automatically after confirmation.
-    -   CC Switch: Generates JSON and copies it to the clipboard, simply switch to CC Switch and paste.
-    -   Self-hosted Sites: Calls the corresponding management interface in the backend to import the current site configuration into the target backend. For batch imports, a configuration preview is shown for each API key, and matching existing configurations are skipped by default.
-4.  Verify that the configuration appears in the target system and test the call.
+1. Open the extension → **Key Management** and find an account key or service credential. Each API Credential Library card provides the same actions area.
+2. To import into the self-hosted site, select its icon directly in the actions area. For other tools, select **`Export`**, then choose a target from **Chat clients**, **Coding agents**, or **Gateways and routing tools**. Targets unsupported by the current data source are hidden.
+3. Follow the target dialog to copy or download the configuration, launch an application, or import through a management API. For batch CLIProxyAPI or self-hosted-site operations, select multiple keys and open the preview from the page's batch actions.
+4. Confirm that the configuration appears in the target system and test a request.
 
 ## Exported Content
 
 | Field | Description |
-|------|----------|
-| Site Name | Automatically taken from site/account remarks, can be modified before export |
-| Base URL | Uses the account's `base_url`, ensure it includes the protocol prefix |
-| API Key | Taken from the API key list; if the site supports multiple API keys, they will be listed individually |
-| Model List | From site capability detection or New API Model Synchronization results |
-| Recharge Ratio | Used for conversion display in CherryStudio/CC Switch |
-| Group/Priority | For self-hosted sites, can be adjusted by target backend capabilities in the export panel |
+|---|---|
+| Site name | Derived from the site or account label and editable before export |
+| Base URL | Uses the account's `base_url` and must include the protocol prefix |
+| API key | Taken from the key list; sites with multiple keys are listed individually |
+| Model list | Comes from site capability detection or New API Model Sync |
+| Group / priority | For self-hosted sites, can be adjusted in the import panel according to target backend capabilities |
 
 ## Common Issues
 
 | Issue | Solution |
-|------|----------|
-| Self-hosted Sites prompt 401/403 | Confirm that the backend credentials have not expired and that the configuration has been re-saved in the plugin; if necessary, refer to [Cloudflare Bypass Helper](./cloudflare-helper.md). |
-| CherryStudio unresponsive | Check if the desktop client is installed and if the browser is allowed to launch the `cherrystudio://` protocol. |
-| CC Switch import failed | Paste the generated JSON into the official import dialog. If prompted for missing fields, please update CC Switch to the latest version. |
-| Model list is empty | The site has not yet returned model data. You can first refresh the model list within the plugin or perform New API Model Synchronization. |
+|---|---|
+| The self-hosted site returns 401/403 | Confirm that the backend credentials have not expired and save the configuration again in the extension. If needed, see [Cloudflare Bypass Helper](./cloudflare-helper.md). |
+| Cherry Studio does not respond | Confirm that the desktop client is installed and the browser can launch the `cherrystudio://` protocol. |
+| CC Switch import fails | Confirm that CC Switch is installed and updated to a version that supports imports for the target application, then reopen the import link. |
+| The model list is empty | Refresh the model list in the extension or run New API Model Sync first. |
 
 ## Related Documentation
 
--   [Self-Hosted Site Management](./self-hosted-site-management.md)
--   [Managed Site Model Synchronization](./managed-site-model-sync.md)
--   [Cloudflare Bypass Helper](./cloudflare-helper.md)
--   [CLIProxyAPI Integration](./cliproxyapi-integration.md)
+- [Self-Hosted Site Management](./self-hosted-site-management.md)
+- [Managed Site Model Synchronization](./managed-site-model-sync.md)
+- [Cloudflare Bypass Helper](./cloudflare-helper.md)
+- [CLIProxyAPI Integration](./cliproxyapi-integration.md)
