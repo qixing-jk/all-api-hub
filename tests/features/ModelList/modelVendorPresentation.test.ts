@@ -61,7 +61,7 @@ describe("getModelVendorPresentation", () => {
   ] as const satisfies ReadonlyArray<KnownModelVendorId>
 
   it.each(knownVendorBrands)(
-    "stores the compounded icon for known vendor %s",
+    "stores one preferred icon for known vendor %s",
     (knownId) => {
       const presentation = getModelVendorPresentation(
         resolvedKnownVendor(knownId),
@@ -71,23 +71,10 @@ describe("getModelVendorPresentation", () => {
       if (presentation.kind !== "brand") {
         throw new Error(`Expected a brand presentation for ${knownId}`)
       }
-      expect(presentation.Brand.Mark).toBeDefined()
+      expect(presentation.Icon).toBeDefined()
+      expect(presentation).not.toHaveProperty("Brand")
     },
   )
-
-  it("records library Color availability without assigning local brand colors", () => {
-    const google = getModelVendorPresentation(resolvedKnownVendor("google"))
-    const anthropic = getModelVendorPresentation(
-      resolvedKnownVendor("anthropic"),
-    )
-
-    expect(google.kind).toBe("brand")
-    expect(anthropic.kind).toBe("brand")
-    if (google.kind !== "brand" || anthropic.kind !== "brand") return
-
-    expect(google.Brand.Color).toBeDefined()
-    expect(anthropic.Brand.Color).toBeUndefined()
-  })
 
   const knownVendorInitials = [
     ["netease-youdao", "YD"],

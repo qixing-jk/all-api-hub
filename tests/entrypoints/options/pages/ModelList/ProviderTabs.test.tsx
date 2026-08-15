@@ -67,12 +67,6 @@ vi.mock("@lobehub/icons/es/Google/components/Color", () => ({
   ),
 }))
 
-vi.mock("@lobehub/icons/es/Google/components/Mono", () => ({
-  default: (props: React.SVGProps<SVGSVGElement>) => (
-    <svg role="img" data-publisher-icon="Google-mono" {...props} />
-  ),
-}))
-
 vi.mock("@lobehub/icons/es/OpenAI/components/Mono", () => ({
   default: (props: React.SVGProps<SVGSVGElement>) => (
     <svg role="img" data-publisher-icon="OpenAI-mono" {...props} />

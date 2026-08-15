@@ -39,15 +39,6 @@ vi.mock("@lobehub/icons/es/Google/components/Color", () => ({
   ),
 }))
 
-vi.mock("@lobehub/icons/es/Google/components/Mono", () => ({
-  default: ({
-    size,
-    ...props
-  }: React.SVGProps<SVGSVGElement> & { size?: string | number }) => (
-    <svg role="img" data-mark="Google-mono" data-size={size} {...props} />
-  ),
-}))
-
 vi.mock("@lobehub/icons/es/Anthropic/components/Mono", () => ({
   default: ({
     size,

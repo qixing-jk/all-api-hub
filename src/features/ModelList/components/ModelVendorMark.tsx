@@ -56,7 +56,7 @@ export function ModelVendorMark({
   const presentation = getModelVendorPresentation(vendor)
 
   if (presentation.kind === "brand") {
-    const BrandMark = presentation.Brand.Color ?? presentation.Brand.Mark
+    const BrandMark = presentation.Icon
 
     if (variant === "badge") {
       return (
