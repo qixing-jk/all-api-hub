@@ -1,4 +1,4 @@
-import { NewAPI } from "@lobehub/icons"
+import NewAPIColor from "@lobehub/icons/es/NewAPI/components/Color"
 
 import { AxonHubIcon } from "~/components/icons/AxonHubIcon"
 import { ClaudeCodeHubIcon } from "~/components/icons/ClaudeCodeHubIcon"
@@ -49,5 +49,5 @@ export function ManagedSiteIcon({
     return <Sub2ApiIcon size={size} />
   }
 
-  return <NewAPI.Color className={cn(ICON_SIZE_CLASSNAME[size])} />
+  return <NewAPIColor className={cn(ICON_SIZE_CLASSNAME[size])} />
 }
