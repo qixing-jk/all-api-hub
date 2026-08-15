@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react"
+import { screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
@@ -6,6 +6,7 @@ import {
   EXPORT_ACTION_TARGETS,
   ExportActionsMenu,
 } from "~/components/ExportActionsMenu"
+import { render } from "~~/tests/test-utils/render"
 
 const allActions = Object.fromEntries(
   Object.values(EXPORT_ACTION_TARGETS).map((target) => [
@@ -18,7 +19,10 @@ describe("ExportActionsMenu", () => {
   it("groups available targets in the canonical display order", async () => {
     const user = userEvent.setup()
 
-    render(<ExportActionsMenu actions={allActions} />)
+    render(<ExportActionsMenu actions={allActions} />, {
+      withThemeProvider: false,
+      withUserPreferencesProvider: false,
+    })
 
     await user.click(
       screen.getByRole("button", { name: "common:actions.export" }),
@@ -59,6 +63,10 @@ describe("ExportActionsMenu", () => {
           [EXPORT_ACTION_TARGETS.KiloCode]: { onSelect },
         }}
       />,
+      {
+        withThemeProvider: false,
+        withUserPreferencesProvider: false,
+      },
     )
 
     await user.click(

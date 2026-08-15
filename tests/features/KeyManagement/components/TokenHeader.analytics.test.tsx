@@ -289,6 +289,21 @@ describe("TokenHeader analytics", () => {
     ).toBeVisible()
   })
 
+  it("omits CC Switch when its export opener is unavailable", async () => {
+    const user = userEvent.setup()
+    renderTokenHeader({ withCCSwitchExport: false })
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.export" }),
+    )
+
+    expect(
+      screen.queryByRole("menuitem", {
+        name: "keyManagement:actions.exportToCCSwitch",
+      }),
+    ).not.toBeInTheDocument()
+  })
+
   it("opens Cursor++ export from a recoverable token row", async () => {
     const user = userEvent.setup()
     renderTokenHeader()

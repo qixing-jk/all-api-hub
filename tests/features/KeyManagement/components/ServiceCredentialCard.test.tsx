@@ -674,6 +674,43 @@ describe("ServiceCredentialCard", () => {
     )
   })
 
+  it("shows a local error when Cherry Studio cannot be opened", async () => {
+    mockOpenInCherryStudio.mockImplementationOnce(() => {
+      throw new Error("open failed")
+    })
+    const user = userEvent.setup()
+
+    render(
+      <ServiceCredentialCard
+        account={buildDisplaySiteData({
+          id: "sharedchat-account",
+          name: "SharedChat",
+          baseUrl: "https://sharedchat.example.invalid",
+        })}
+        credential={{
+          kind: "singleton_service_key",
+          service: "codex",
+          label: "Codex API Key",
+          key: "sk-service-credential",
+          isAuthenticated: true,
+          baseUrl: "https://sharedchat.example.invalid/v1",
+        }}
+        onCopy={vi.fn().mockResolvedValue(undefined)}
+      />,
+      {
+        withThemeProvider: false,
+        withUserPreferencesProvider: false,
+      },
+    )
+
+    await selectExportAction(user, "keyManagement:actions.useInCherry")
+
+    expect(mockShowResultToast).toHaveBeenCalledWith({
+      success: false,
+      message: "messages:errors.operation.failed",
+    })
+  })
+
   it("passes managed-site status hints to single service credential import", async () => {
     const user = userEvent.setup()
     const account = buildDisplaySiteData({

@@ -227,7 +227,12 @@ export function ServiceCredentialCard({
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
       })
-      throw error
+      showResultToast({
+        success: false,
+        message: t("messages:errors.operation.failed", {
+          error: getErrorMessage(error, t("messages:errors.unknown")),
+        }),
+      })
     }
   }
 

@@ -25,6 +25,7 @@ export const RECOVERABLE_ACTION_POLICY: KeyResourceActionPolicy = {
 
 type TokenHeaderHarnessProps = Partial<ComponentProps<typeof TokenHeader>> & {
   translate?: TFunction
+  withCCSwitchExport?: boolean
 }
 
 export function TokenHeaderHarness({
@@ -37,6 +38,7 @@ export function TokenHeaderHarness({
   handleEditToken = vi.fn(),
   handleDeleteToken = vi.fn(),
   onOpenCCSwitchDialog = vi.fn(),
+  withCCSwitchExport = true,
   ...restProps
 }: TokenHeaderHarnessProps) {
   const account =
@@ -69,7 +71,9 @@ export function TokenHeaderHarness({
       handleEditToken={handleEditToken}
       handleDeleteToken={handleDeleteToken}
       account={account}
-      onOpenCCSwitchDialog={onOpenCCSwitchDialog}
+      onOpenCCSwitchDialog={
+        withCCSwitchExport ? onOpenCCSwitchDialog : undefined
+      }
       headerProps={
         headerPropsOverride ?? {
           presentation,

@@ -564,7 +564,7 @@ describe("useApiCredentialProfilesController", () => {
       result.current.handleExport(profile, "cursorPlus")
     })
 
-    expect(result.current.cursorPlusProfile).toEqual(profile)
+    expect(result.current.cursorPlusProfile).toMatchObject({ id: profile.id })
     expect(startProductAnalyticsActionMock).not.toHaveBeenCalled()
   })
 

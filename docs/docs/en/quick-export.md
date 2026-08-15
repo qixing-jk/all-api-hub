@@ -17,11 +17,12 @@
 
 ## Prerequisites
 
-1. **Site synchronization**: Complete account detection first and make sure an exportable API is available in the key list.
-2. **Target credentials**:
+1. **Key Management exports**: When exporting an account key or service credential, complete account detection first and make sure the key list contains an exportable item.
+2. **API Credential Library exports**: Account detection is not required. Save a valid `Base URL` and API key on the credential card first.
+3. **Target credentials**:
    - Cherry Studio, Kelivo, CC Switch, Kilo Code / Roo Code, and Cursor++ do not require target credentials in the extension. Follow the export dialog instructions to finish importing.
    - Configure the management address and credentials for CLIProxyAPI, Claude Code Router, and the self-hosted site before importing.
-3. **Model list**: If you need a model allowlist, filter the models in New API Model Sync first.
+4. **Model list**: If you need a model allowlist, filter the models in New API Model Sync first.
 
 ## Steps
 

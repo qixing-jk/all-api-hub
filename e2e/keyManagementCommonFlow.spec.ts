@@ -538,6 +538,9 @@ test("exports a SharedChat service credential to CC Switch", async ({
   ).toBeVisible()
 
   await serviceCredentialCard
+    .getByTestId(KEY_MANAGEMENT_TEST_IDS.serviceCredentialExportMenuButton)
+    .click()
+  await page
     .getByTestId(
       KEY_MANAGEMENT_TEST_IDS.serviceCredentialExportToCCSwitchButton,
     )

@@ -970,6 +970,9 @@ test("exports an account key from the copy-key dialog to CC Switch", async ({
     )
     .click()
   await page
+    .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.copyKeyDialogExportMenuButton)
+    .click()
+  await page
     .getByTestId(
       ACCOUNT_MANAGEMENT_TEST_IDS.copyKeyDialogExportToCCSwitchButton,
     )

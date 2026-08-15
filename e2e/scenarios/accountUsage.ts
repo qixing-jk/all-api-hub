@@ -250,7 +250,8 @@ export async function verifyAccountTokenCcSwitchModelPickerUsage(
   await runAccountTokenUiScenario({
     ...context,
     useCreatedToken: async ({ page, row }) => {
-      await row
+      await row.getByTestId(KEY_MANAGEMENT_TEST_IDS.exportMenuButton).click()
+      await page
         .getByTestId(KEY_MANAGEMENT_TEST_IDS.exportToCCSwitchButton)
         .click()
       if (context.modelName) {
