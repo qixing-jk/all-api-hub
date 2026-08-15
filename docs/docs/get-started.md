@@ -75,13 +75,16 @@
 
 ### 2.3 自动识别失败？
 
-按下面的顺序排查：
+按下面的顺序快速排查，看是否命中：
 
 - **站点有 Cloudflare 五秒盾？** → 看 [Cloudflare 过盾助手](./cloudflare-helper.md) 协助过盾后再试
-- **站点不在支持列表？** → 用 `### 2.2 手动添加（备选）` 的方法，选择对应站点类型
+- **站点不在支持列表？** → 用 [2.2 手动添加（备选）](#manual-addition) 的方法，选择对应站点类型
 - **Token 取不出来？** → 在新增账号时把"认证方式"从 `Access Token` 改成 `Cookie`，再点自动识别
 - **保存后无法刷新？** → 看 [站点类型与认证方式说明](./faq.md#auth-methods)
-- **还不行？** → 复制错误信息，去 [常见问题 FAQ](./faq.md) 搜，或者 [提 Issue](https://github.com/qixing-jk/all-api-hub/issues)
+
+**以上都不符合或没解决？** → 看 [FAQ - 自动识别失败怎么办？](./faq.md#auto-detect-failure) 的完整排查清单
+
+**都试了还是不行？** → 复制错误信息 [提 Issue](https://github.com/qixing-jk/all-api-hub/issues)
 
 ---
 
