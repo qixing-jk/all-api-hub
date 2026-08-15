@@ -80,7 +80,7 @@
 - **站点有 Cloudflare 五秒盾？** → 看 [Cloudflare 过盾助手](./cloudflare-helper.md) 协助过盾后再试
 - **站点不在支持列表？** → 用 `### 2.2 手动添加（备选）` 的方法，选择对应站点类型
 - **Token 取不出来？** → 在新增账号时把"认证方式"从 `Access Token` 改成 `Cookie`，再点自动识别
-- **保存后无法刷新？** → 看 [站点类型与认证方式说明](./faq.md#-认证方式相关)
+- **保存后无法刷新？** → 看 [站点类型与认证方式说明](./faq.md#auth-methods)
 - **还不行？** → 复制错误信息，去 [常见问题 FAQ](./faq.md) 搜，或者 [提 Issue](https://github.com/qixing-jk/all-api-hub/issues)
 
 ---

@@ -2,6 +2,7 @@
 
 收集一些插件使用时遇到的常见问题。
 
+<a id="auth-methods"></a>
 ## 🔐 认证方式相关
 
 ### Cookie模式和Access Token方式有什么区别？
