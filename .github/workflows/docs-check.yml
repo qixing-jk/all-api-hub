@@ -46,7 +46,7 @@ jobs:
           cache-dependency-path: docs/pnpm-lock.yaml
 
       - name: Install docs dependencies
-        run: pnpm install --frozen-lockfile --prefer-offline
+        run: pnpm install --ignore-workspace --frozen-lockfile --prefer-offline
 
       - name: Check docs
         env:
