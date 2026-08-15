@@ -34,7 +34,7 @@
 
 1.  Open the plugin → Go to the **Key Management** page.
 2.  Find the site key card you want to import to CLIProxyAPI.
-3.  Click the CLIProxyAPI icon button to the right of the key (usually next to the CherryStudio / CC Switch / New API buttons).
+3.  Click **`Export`** on the right side of the key, and select **CLIProxyAPI** in the "Gateways & Managed Services" group.
 4.  The plugin will:
     -   Read CLIProxyAPI configuration (Base URL and Management Key).
     -   Use the site's `Base URL` to generate an OpenAI-compatible address (automatically appends `/v1`).
