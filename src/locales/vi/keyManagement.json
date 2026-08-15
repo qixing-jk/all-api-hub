@@ -209,6 +209,13 @@
     "warningTitle": "Lưu ý"
   },
   "enabledCount_other": "Đã bật {{count}}",
+  "exportMenu": {
+    "groups": {
+      "chatClients": "Ứng dụng trò chuyện",
+      "codingAgents": "Tác nhân lập trình",
+      "gateways": "Cổng kết nối và công cụ định tuyến"
+    }
+  },
   "keyDetails": {
     "createResponseOnlySecret": "Trang web này chỉ hiển thị khóa đầy đủ khi tạo. Nếu bạn chưa lưu khóa, hãy mở Quản lý khóa và tạo khóa thay thế.",
     "createTime": "Thời gian tạo:",

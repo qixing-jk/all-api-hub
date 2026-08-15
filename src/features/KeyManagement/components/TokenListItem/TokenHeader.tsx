@@ -9,14 +9,10 @@ import { CliProxyExportDialog } from "~/components/CliProxyExportDialog"
 import { CursorPlusExportDialog } from "~/components/CursorPlusExportDialog"
 import { useChannelDialog } from "~/components/dialogs/ChannelDialog"
 import { VerifyCliSupportDialog } from "~/components/dialogs/VerifyCliSupportDialog"
-import { CCSwitchIcon } from "~/components/icons/CCSwitchIcon"
-import { CherryIcon } from "~/components/icons/CherryIcon"
-import { ClaudeCodeRouterIcon } from "~/components/icons/ClaudeCodeRouterIcon"
-import { CliProxyIcon } from "~/components/icons/CliProxyIcon"
-import { CursorPlusIcon } from "~/components/icons/CursorPlusIcon"
-import { KelivoIcon } from "~/components/icons/KelivoIcon"
-import { KiloCodeIcon } from "~/components/icons/KiloCodeIcon"
-import { ManagedSiteIcon } from "~/components/icons/ManagedSiteIcon"
+import {
+  EXPORT_ACTION_TARGETS,
+  ExportActionsMenu,
+} from "~/components/ExportActionsMenu"
 import { ApiCredentialLibraryIcon } from "~/components/icons/productIcons"
 import { KelivoExportDialog } from "~/components/KelivoExportDialog"
 import { KiloCodeExportDialog } from "~/components/KiloCodeExportDialog"
@@ -31,6 +27,7 @@ import {
   SignalBadge,
 } from "~/components/ManagedSiteChannelAssessmentSignalHelpers"
 import ManagedSiteChannelLinkButton from "~/components/ManagedSiteChannelLinkButton"
+import { ManagedSiteImportButton } from "~/components/ManagedSiteImportButton"
 import Tooltip from "~/components/Tooltip"
 import {
   Badge,
@@ -46,7 +43,6 @@ import {
 } from "~/features/KeyManagement/components/KeyResourceCard"
 import type { KeyResourceActionPolicy } from "~/features/KeyManagement/presentation/keyResourceCard"
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
-import { cn } from "~/lib/utils"
 import {
   buildDisplayAccountTokenRuntimeKey,
   collectAccountRuntimeKeySecrets,
@@ -921,84 +917,45 @@ function TokenActionButtons({
       ) : null}
       {actionPolicy.exportSecret ? (
         <>
-          <IconButton
-            aria-label={t("actions.useInCherry")}
-            size="sm"
-            variant="ghost"
-            onClick={() => void handleUseInCherry()}
-          >
-            <CherryIcon />
-          </IconButton>
-          <IconButton
-            aria-label={t("actions.copyKelivoImportCode")}
-            size="sm"
-            variant="ghost"
-            onClick={() => void handleOpenKelivoExportDialog()}
-          >
-            <KelivoIcon />
-          </IconButton>
-          {onOpenCCSwitchDialog ? (
-            <IconButton
-              aria-label={t("actions.exportToCCSwitch")}
-              size="sm"
-              variant="ghost"
-              data-testid={KEY_MANAGEMENT_TEST_IDS.exportToCCSwitchButton}
-              onClick={onOpenCCSwitchDialog}
-            >
-              <CCSwitchIcon />
-            </IconButton>
-          ) : null}
-          <IconButton
-            aria-label={t("keyManagement:actions.exportToKiloCode")}
-            size="sm"
-            variant="ghost"
-            onClick={() => setIsKiloCodeDialogOpen(true)}
-          >
-            <KiloCodeIcon className="dark:text-dark-text-tertiary text-gray-500" />
-          </IconButton>
-          <IconButton
-            aria-label={t("actions.importToCliProxy")}
-            size="sm"
-            variant="ghost"
-            onClick={handleOpenCliProxyDialog}
-          >
-            <CliProxyIcon size="sm" />
-          </IconButton>
-          <IconButton
-            aria-label={t("actions.importToClaudeCodeRouter")}
-            size="sm"
-            variant="ghost"
-            onClick={handleOpenClaudeCodeRouter}
-          >
-            <ClaudeCodeRouterIcon size="sm" />
-          </IconButton>
-          <IconButton
-            aria-label={t("keyManagement:actions.exportToCursorPlus")}
-            size="sm"
-            variant="ghost"
-            onClick={() => setIsCursorPlusDialogOpen(true)}
-          >
-            <CursorPlusIcon className="dark:text-dark-text-tertiary text-gray-500" />
-          </IconButton>
-          <IconButton
-            ref={managedSiteImportButtonRef}
-            aria-label={t("actions.importToManagedSite", {
-              site: managedSiteLabel,
-            })}
-            data-testid={KEY_MANAGEMENT_TEST_IDS.importToManagedSiteButton}
-            data-guidance-highlight={
-              isManagedSiteImportHighlighted ? "true" : undefined
-            }
-            size="sm"
-            variant="ghost"
-            className={cn(
-              isManagedSiteImportHighlighted &&
-                "dark:ring-offset-dark-bg-secondary ring-2 ring-emerald-500 ring-offset-2 ring-offset-white dark:ring-emerald-400",
-            )}
-            onClick={handleImportToManagedSite}
-          >
-            <ManagedSiteIcon siteType={managedSiteType} size="sm" />
-          </IconButton>
+          <ManagedSiteImportButton
+            buttonRef={managedSiteImportButtonRef}
+            managedSiteType={managedSiteType}
+            managedSiteLabel={managedSiteLabel}
+            onImport={handleImportToManagedSite}
+            testId={KEY_MANAGEMENT_TEST_IDS.importToManagedSiteButton}
+            highlighted={isManagedSiteImportHighlighted}
+          />
+          <ExportActionsMenu
+            triggerTestId={KEY_MANAGEMENT_TEST_IDS.exportMenuButton}
+            actions={{
+              [EXPORT_ACTION_TARGETS.CherryStudio]: {
+                onSelect: handleUseInCherry,
+              },
+              [EXPORT_ACTION_TARGETS.Kelivo]: {
+                onSelect: handleOpenKelivoExportDialog,
+              },
+              ...(onOpenCCSwitchDialog
+                ? {
+                    [EXPORT_ACTION_TARGETS.CCSwitch]: {
+                      testId: KEY_MANAGEMENT_TEST_IDS.exportToCCSwitchButton,
+                      onSelect: onOpenCCSwitchDialog,
+                    },
+                  }
+                : {}),
+              [EXPORT_ACTION_TARGETS.CursorPlus]: {
+                onSelect: () => setIsCursorPlusDialogOpen(true),
+              },
+              [EXPORT_ACTION_TARGETS.KiloCode]: {
+                onSelect: () => setIsKiloCodeDialogOpen(true),
+              },
+              [EXPORT_ACTION_TARGETS.CliProxy]: {
+                onSelect: handleOpenCliProxyDialog,
+              },
+              [EXPORT_ACTION_TARGETS.ClaudeCodeRouter]: {
+                onSelect: handleOpenClaudeCodeRouter,
+              },
+            }}
+          />
         </>
       ) : null}
       {actionPolicy.edit ? (

@@ -216,6 +216,13 @@
   },
   "enabledCount_one": "Enabled {{count}}",
   "enabledCount_other": "Enabled {{count}}",
+  "exportMenu": {
+    "groups": {
+      "chatClients": "Chat clients",
+      "codingAgents": "Coding agents",
+      "gateways": "Gateways and routing tools"
+    }
+  },
   "keyDetails": {
     "createResponseOnlySecret": "This site shows the full key only when it is created. If you did not save it, open Key Management and create a replacement key.",
     "createTime": "Create Time:",

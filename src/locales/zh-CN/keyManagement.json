@@ -209,6 +209,13 @@
     "warningTitle": "注意事项"
   },
   "enabledCount": "启用 {{count}} 个",
+  "exportMenu": {
+    "groups": {
+      "chatClients": "聊天客户端",
+      "codingAgents": "编程 Agents",
+      "gateways": "网关与路由工具"
+    }
+  },
   "keyDetails": {
     "createResponseOnlySecret": "该站点仅在创建时显示完整密钥。如果当时没有保存，请前往密钥管理创建替代密钥。",
     "createTime": "创建时间：",

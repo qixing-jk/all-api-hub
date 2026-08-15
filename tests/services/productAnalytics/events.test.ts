@@ -104,6 +104,8 @@ describe("product analytics event enums", () => {
         "export_api_credential_profile_to_cc_switch",
       CopyApiCredentialProfileKelivoImportCode:
         "copy_api_credential_profile_kelivo_import_code",
+      CopyApiCredentialProfileCursorPlusProviderConfig:
+        "copy_api_credential_profile_cursor_plus_provider_config",
       ImportApiCredentialProfileToCliProxy:
         "import_api_credential_profile_to_cli_proxy",
       ImportApiCredentialProfileToClaudeCodeRouter:

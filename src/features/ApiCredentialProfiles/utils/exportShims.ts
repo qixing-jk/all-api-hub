@@ -1,4 +1,5 @@
 import { SITE_TYPES } from "~/constants/siteType"
+import { buildDisplayAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import { createUnsupportedTodayStatsAvailability } from "~/services/accounts/accountTodayStats"
 import {
   API_CREDENTIAL_PROFILE_SYNTHETIC_ACCOUNT_ID_PREFIX,
@@ -83,6 +84,14 @@ export function createExportToken(profile: ApiCredentialProfile): ApiToken {
     unlimited_quota: true,
     used_quota: 0,
   }
+}
+
+/** Build the runtime-key shape consumed by Cursor++ from a stored profile. */
+export function createExportRuntimeKey(profile: ApiCredentialProfile) {
+  return buildDisplayAccountTokenRuntimeKey(
+    createExportAccount(profile),
+    createExportToken(profile),
+  )
 }
 
 /**

@@ -510,6 +510,8 @@ export const PRODUCT_ANALYTICS_ACTION_IDS = {
   CopyApiCredentialExportConfig: "copy_api_credential_export_config",
   CopyApiCredentialProfileKelivoImportCode:
     "copy_api_credential_profile_kelivo_import_code",
+  CopyApiCredentialProfileCursorPlusProviderConfig:
+    "copy_api_credential_profile_cursor_plus_provider_config",
   CopyApiKey: "copy_api_key",
   CopyBaseUrl: "copy_base_url",
   CopyBookmarkUrl: "copy_bookmark_url",

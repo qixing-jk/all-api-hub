@@ -209,6 +209,13 @@
     "warningTitle": "注意事項"
   },
   "enabledCount_other": "{{count}} 件有効",
+  "exportMenu": {
+    "groups": {
+      "chatClients": "チャットクライアント",
+      "codingAgents": "コーディングエージェント",
+      "gateways": "ゲートウェイとルーティングツール"
+    }
+  },
   "keyDetails": {
     "createResponseOnlySecret": "このサイトで完全なキーが表示されるのは作成時だけです。保存していない場合は、キー管理を開いて新しいキーを作成してください。",
     "createTime": "作成時刻:",

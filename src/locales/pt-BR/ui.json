@@ -205,7 +205,6 @@
       "defaultGroup": "Grupo padrão",
       "disabled": "Desativado",
       "enabled": "Ativado",
-      "exportToCCSwitch": "Exportar para o CC Switch",
       "getFailed": "Falha ao obter",
       "keyCopied": "Chave copiada para a área de transferência",
       "loadFailed": "Falha ao carregar lista de chaves: {{error}}",
@@ -217,8 +216,7 @@
       "title": "Lista de chaves",
       "totalKeys_one": "{{count}} chave no total",
       "totalKeys_many": "{{count}} chaves no total",
-      "totalKeys_other": "{{count}} chaves no total",
-      "useInCherry": "Usar no Cherry Studio"
+      "totalKeys_other": "{{count}} chaves no total"
     },
     "cursorPlus": {
       "actions": {

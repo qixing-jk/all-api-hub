@@ -2,7 +2,12 @@ export const KEY_MANAGEMENT_TEST_IDS = {
   addTokenButton: "key-management-add-token-button",
   emptyStateAddTokenButton: "key-management-empty-state-add-token-button",
   saveToApiProfilesButton: "key-management-save-to-api-profiles-button",
+  exportMenuButton: "key-management-export-menu-button",
   exportToCCSwitchButton: "key-management-export-to-cc-switch-button",
+  serviceCredentialExportMenuButton:
+    "key-management-service-credential-export-menu-button",
+  serviceCredentialImportToManagedSiteButton:
+    "key-management-service-credential-import-to-managed-site-button",
   serviceCredentialExportToCCSwitchButton:
     "key-management-service-credential-export-to-cc-switch-button",
   verifyTokenApiButton: "key-management-verify-token-api-button",

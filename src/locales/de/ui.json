@@ -200,7 +200,6 @@
       "defaultGroup": "Standardgruppe",
       "disabled": "Deaktiviert",
       "enabled": "Aktiviert",
-      "exportToCCSwitch": "In CC Switch exportieren",
       "getFailed": "Schlüssel konnten nicht abgerufen werden",
       "keyCopied": "Schlüssel in Zwischenablage kopiert",
       "loadFailed": "Schlüsselliste konnte nicht geladen werden: {{error}}",
@@ -211,8 +210,7 @@
       "retry": "Wiederholen",
       "title": "Schlüsselliste",
       "totalKeys_one": "Gesamt {{count}} Schlüssel",
-      "totalKeys_other": "Insgesamt {{count}} Schlüssel",
-      "useInCherry": "Verwendung in Cherry Studio"
+      "totalKeys_other": "Insgesamt {{count}} Schlüssel"
     },
     "cursorPlus": {
       "actions": {

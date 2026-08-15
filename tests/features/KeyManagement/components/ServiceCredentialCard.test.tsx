@@ -173,6 +173,22 @@ vi.mock("~/components/dialogs/VerifyCliSupportDialog", () => ({
   },
 }))
 
+async function selectExportAction(
+  user: ReturnType<typeof userEvent.setup>,
+  name: string,
+) {
+  const directAction = screen.queryByRole("button", { name })
+  if (directAction) {
+    await user.click(directAction)
+    return
+  }
+
+  await user.click(
+    screen.getByRole("button", { name: "common:actions.export" }),
+  )
+  await user.click(screen.getByRole("menuitem", { name }))
+}
+
 describe("ServiceCredentialCard", () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -530,11 +546,7 @@ describe("ServiceCredentialCard", () => {
       },
     )
 
-    await user.click(
-      screen.getByRole("button", {
-        name: "keyManagement:actions.useInCherry",
-      }),
-    )
+    await selectExportAction(user, "keyManagement:actions.useInCherry")
     expect(mockOpenInCherryStudio).toHaveBeenCalledWith(
       expect.objectContaining({
         baseUrl: "https://sharedchat.example.invalid/v1",
@@ -546,11 +558,7 @@ describe("ServiceCredentialCard", () => {
       }),
     )
 
-    await user.click(
-      screen.getByRole("button", {
-        name: "keyManagement:actions.copyKelivoImportCode",
-      }),
-    )
+    await selectExportAction(user, "keyManagement:actions.copyKelivoImportCode")
     expect(mockKelivoExportDialog).toHaveBeenCalledWith(
       expect.objectContaining({
         isOpen: true,
@@ -573,11 +581,7 @@ describe("ServiceCredentialCard", () => {
       screen.queryByRole("button", { name: "close Kelivo export" }),
     ).not.toBeInTheDocument()
 
-    await user.click(
-      screen.getByRole("button", {
-        name: "keyManagement:actions.exportToCCSwitch",
-      }),
-    )
+    await selectExportAction(user, "keyManagement:actions.exportToCCSwitch")
     await waitFor(() => {
       expect(mockCCSwitchDialog).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -590,11 +594,7 @@ describe("ServiceCredentialCard", () => {
       )
     })
 
-    await user.click(
-      screen.getByRole("button", {
-        name: "keyManagement:actions.exportToKiloCode",
-      }),
-    )
+    await selectExportAction(user, "keyManagement:actions.exportToKiloCode")
     await waitFor(() => {
       expect(mockKiloCodeDialog).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -607,15 +607,7 @@ describe("ServiceCredentialCard", () => {
       )
     })
 
-    const cursorPlusButton = screen.getByRole("button", {
-      name: "keyManagement:actions.exportToCursorPlus",
-    })
-    expect(cursorPlusButton.nextElementSibling).toBe(
-      screen.getByRole("button", {
-        name: "keyManagement:actions.importToManagedSite",
-      }),
-    )
-    await user.click(cursorPlusButton)
+    await selectExportAction(user, "keyManagement:actions.exportToCursorPlus")
     expect(
       screen.getByRole("dialog", { name: "Cursor++ export" }),
     ).toBeVisible()
@@ -637,11 +629,7 @@ describe("ServiceCredentialCard", () => {
       screen.queryByRole("dialog", { name: "Cursor++ export" }),
     ).not.toBeInTheDocument()
 
-    await user.click(
-      screen.getByRole("button", {
-        name: "keyManagement:actions.importToCliProxy",
-      }),
-    )
+    await selectExportAction(user, "keyManagement:actions.importToCliProxy")
     await waitFor(() => {
       expect(mockCliProxyDialog).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -654,10 +642,9 @@ describe("ServiceCredentialCard", () => {
       )
     })
 
-    await user.click(
-      screen.getByRole("button", {
-        name: "keyManagement:actions.importToClaudeCodeRouter",
-      }),
+    await selectExportAction(
+      user,
+      "keyManagement:actions.importToClaudeCodeRouter",
     )
     await waitFor(() => {
       expect(mockClaudeCodeRouterDialog).toHaveBeenCalledWith(
@@ -673,11 +660,7 @@ describe("ServiceCredentialCard", () => {
       )
     })
 
-    await user.click(
-      screen.getByRole("button", {
-        name: "keyManagement:actions.importToManagedSite",
-      }),
-    )
+    await selectExportAction(user, "keyManagement:actions.importToManagedSite")
     expect(mockOpenWithCredentials).toHaveBeenCalledWith(
       {
         name: "SharedChat - Codex API Key",
@@ -742,11 +725,7 @@ describe("ServiceCredentialCard", () => {
       },
     )
 
-    await user.click(
-      screen.getByRole("button", {
-        name: "keyManagement:actions.importToManagedSite",
-      }),
-    )
+    await selectExportAction(user, "keyManagement:actions.importToManagedSite")
     expect(mockOpenWithCredentials).toHaveBeenLastCalledWith(
       {
         name: "SharedChat - Codex API Key",
@@ -807,15 +786,10 @@ describe("ServiceCredentialCard", () => {
       },
     )
 
-    await user.click(
-      screen.getByRole("button", {
-        name: "keyManagement:actions.importToCliProxy",
-      }),
-    )
-    await user.click(
-      screen.getByRole("button", {
-        name: "keyManagement:actions.importToClaudeCodeRouter",
-      }),
+    await selectExportAction(user, "keyManagement:actions.importToCliProxy")
+    await selectExportAction(
+      user,
+      "keyManagement:actions.importToClaudeCodeRouter",
     )
 
     expect(mockCliProxyDialog).not.toHaveBeenCalledWith(

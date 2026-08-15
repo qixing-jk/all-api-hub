@@ -555,6 +555,19 @@ describe("useApiCredentialProfilesController", () => {
     expect(startProductAnalyticsActionMock).not.toHaveBeenCalled()
   })
 
+  it("opens the Cursor++ export dialog for a profile", async () => {
+    tagStorageListTagsMock.mockResolvedValue([])
+    const profile = buildProfile()
+
+    const { result } = renderController()
+    await act(async () => {
+      result.current.handleExport(profile, "cursorPlus")
+    })
+
+    expect(result.current.cursorPlusProfile).toEqual(profile)
+    expect(startProductAnalyticsActionMock).not.toHaveBeenCalled()
+  })
+
   it("tracks managed-site profile import as skipped when preparation does not open", async () => {
     tagStorageListTagsMock.mockResolvedValue([])
     openWithCredentialsMock.mockResolvedValueOnce({ opened: false })

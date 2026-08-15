@@ -209,6 +209,13 @@
     "warningTitle": "注意事項"
   },
   "enabledCount_other": "啟用 {{count}} 個",
+  "exportMenu": {
+    "groups": {
+      "chatClients": "聊天用戶端",
+      "codingAgents": "程式設計 Agents",
+      "gateways": "閘道與路由工具"
+    }
+  },
   "keyDetails": {
     "createResponseOnlySecret": "此站點僅在建立時顯示完整金鑰。如果當時沒有儲存，請前往金鑰管理建立替代金鑰。",
     "createTime": "建立時間：",

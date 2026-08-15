@@ -195,7 +195,6 @@
       "defaultGroup": "默认组",
       "disabled": "禁用",
       "enabled": "启用",
-      "exportToCCSwitch": "导出到 CC Switch",
       "getFailed": "获取失败",
       "keyCopied": "密钥已复制到剪贴板",
       "loadFailed": "加载密钥列表失败: {{error}}",
@@ -205,8 +204,7 @@
       "noKeysDescription": "该账号暂无可用密钥，可快速创建默认密钥或自定义创建后再复制。",
       "retry": "重试",
       "title": "密钥列表",
-      "totalKeys": "共 {{count}} 个密钥",
-      "useInCherry": "在 Cherry Studio 中使用"
+      "totalKeys": "共 {{count}} 个密钥"
     },
     "cursorPlus": {
       "actions": {

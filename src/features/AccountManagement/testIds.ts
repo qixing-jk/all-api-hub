@@ -39,6 +39,10 @@ export const ACCOUNT_MANAGEMENT_TEST_IDS = {
   copyKeyDialogRuntimeKeyItem:
     "account-management-copy-key-dialog-runtime-key-item",
   copyKeyDialogFooter: "account-management-copy-key-dialog-footer",
+  copyKeyDialogExportMenuButton:
+    "account-management-copy-key-dialog-export-menu-button",
+  copyKeyDialogImportToManagedSiteButton:
+    "account-management-copy-key-dialog-import-to-managed-site-button",
   copyKeyDialogExportToCCSwitchButton:
     "account-management-copy-key-dialog-export-to-cc-switch-button",
   copyKeyDialogExportToCursorPlusButton:

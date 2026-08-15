@@ -102,11 +102,13 @@ vi.mock("~/components/ui", async (importOriginal) => {
 vi.mock("~/components/ui/dropdown-menu", () => ({
   DropdownMenu: ({ children }: any) => <div>{children}</div>,
   DropdownMenuContent: ({ children }: any) => <div>{children}</div>,
+  DropdownMenuGroup: ({ children }: any) => <div>{children}</div>,
   DropdownMenuItem: ({ children, onSelect, ...props }: any) => (
-    <button type="button" onClick={() => onSelect?.()} {...props}>
+    <button type="button" onClick={(event) => onSelect?.(event)} {...props}>
       {children}
     </button>
   ),
+  DropdownMenuLabel: ({ children }: any) => <div>{children}</div>,
   DropdownMenuSeparator: () => <hr />,
   DropdownMenuTrigger: ({ children }: any) => <>{children}</>,
 }))
@@ -313,6 +315,36 @@ describe("ApiCredentialProfileListItem", () => {
     )
 
     expect(onExport).toHaveBeenCalledWith(profile, "kelivo")
+  })
+
+  it("offers Cursor++ export from the external-tools menu", async () => {
+    const profile = buildProfile()
+    const onExport = vi.fn()
+    const user = userEvent.setup()
+    renderListItem(profile, { onExport })
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.exportToCursorPlus",
+      }),
+    )
+
+    expect(onExport).toHaveBeenCalledWith(profile, "cursorPlus")
+  })
+
+  it("keeps managed-site import as a direct prioritized action", async () => {
+    const profile = buildProfile()
+    const onExport = vi.fn()
+    const user = userEvent.setup()
+    renderListItem(profile, { onExport })
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.importToManagedSite",
+      }),
+    )
+
+    expect(onExport).toHaveBeenCalledWith(profile, "managedSite")
   })
 
   it("delegates telemetry refresh without row-level started-only analytics", () => {

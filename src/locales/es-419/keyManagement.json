@@ -223,6 +223,13 @@
   "enabledCount_one": "{{count}} habilitada",
   "enabledCount_many": "{{count}} habilitadas",
   "enabledCount_other": "{{count}} habilitadas",
+  "exportMenu": {
+    "groups": {
+      "chatClients": "Clientes de chat",
+      "codingAgents": "Agentes de programación",
+      "gateways": "Gateways y herramientas de enrutamiento"
+    }
+  },
   "keyDetails": {
     "createResponseOnlySecret": "Este sitio muestra la clave completa solo al crearla. Si no la guardaste, abre Gestión de claves y crea una clave de reemplazo.",
     "createTime": "Hora de creación:",

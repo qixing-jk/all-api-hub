@@ -253,6 +253,14 @@ describe("CursorPlusExportDialog", () => {
     const writeText = vi
       .spyOn(navigator.clipboard, "writeText")
       .mockResolvedValue(undefined)
+    const analyticsContext = {
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
+      actionId:
+        PRODUCT_ANALYTICS_ACTION_IDS.CopyApiCredentialProfileCursorPlusProviderConfig,
+      surfaceId:
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsApiCredentialProfilesRowActions,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    } as const
 
     render(
       <CursorPlusExportDialog
@@ -260,6 +268,7 @@ describe("CursorPlusExportDialog", () => {
         onClose={() => {}}
         account={ACCOUNT}
         runtimeKey={runtimeKey}
+        analyticsContext={analyticsContext}
       />,
     )
 
@@ -275,6 +284,7 @@ describe("CursorPlusExportDialog", () => {
     expect(JSON.parse(writeText.mock.calls[0][0]).models).toEqual([
       { id: "model-b", apiModel: "model-b", defaultOn: true },
     ])
+    expect(startActionMock).toHaveBeenCalledWith(analyticsContext)
   })
 
   it("exports the protocol selected for Cursor++", async () => {

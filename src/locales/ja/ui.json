@@ -198,7 +198,6 @@
       "defaultGroup": "既定グループ",
       "disabled": "無効",
       "enabled": "有効",
-      "exportToCCSwitch": "CC Switch にエクスポート",
       "getFailed": "取得に失敗しました",
       "keyCopied": "キーをクリップボードにコピーしました",
       "loadFailed": "キー一覧の読み込みに失敗しました: {{error}}",
@@ -208,8 +207,7 @@
       "noKeysDescription": "既定キーをすばやく作成するか、詳細設定付きのカスタムキーを作成してください。",
       "retry": "再試行",
       "title": "キー一覧",
-      "totalKeys_other": "合計 {{count}} キー",
-      "useInCherry": "Cherry Studio で使う"
+      "totalKeys_other": "合計 {{count}} キー"
     },
     "cursorPlus": {
       "actions": {

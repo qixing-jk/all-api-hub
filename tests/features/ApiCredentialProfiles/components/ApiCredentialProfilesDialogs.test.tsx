@@ -12,8 +12,23 @@ import {
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
-const { kelivoExportDialogMock } = vi.hoisted(() => ({
-  kelivoExportDialogMock: vi.fn(),
+const { cursorPlusExportDialogMock, kelivoExportDialogMock } = vi.hoisted(
+  () => ({
+    cursorPlusExportDialogMock: vi.fn(),
+    kelivoExportDialogMock: vi.fn(),
+  }),
+)
+
+vi.mock("~/components/CursorPlusExportDialog", () => ({
+  CursorPlusExportDialog: (props: unknown) => {
+    cursorPlusExportDialogMock(props)
+    const { onClose } = props as { onClose: () => void }
+    return (
+      <button type="button" onClick={onClose}>
+        close Cursor++ profile export
+      </button>
+    )
+  },
 }))
 
 vi.mock("~/components/KelivoExportDialog", () => ({
@@ -114,4 +129,73 @@ it("passes Kelivo profile analytics and clears the profile on close", async () =
     screen.getByRole("button", { name: "close Kelivo profile export" }),
   )
   expect(setKelivoProfile).toHaveBeenCalledWith(null)
+})
+
+it("adapts a profile for Cursor++ export and clears it on close", async () => {
+  const setCursorPlusProfile = vi.fn()
+  const cursorPlusProfile = {
+    id: "profile-example",
+    name: "Example Provider",
+    apiType: API_TYPES.OPENAI_COMPATIBLE,
+    baseUrl: "https://api.example.invalid/v1",
+    apiKey: "sk-example",
+    tagIds: [],
+    notes: "",
+    createdAt: 1,
+    updatedAt: 1,
+  }
+  const controller = {
+    isEditorOpen: false,
+    setIsEditorOpen: vi.fn(),
+    editingProfile: null,
+    addPrefill: null,
+    tags: [],
+    createTag: vi.fn(),
+    renameTag: vi.fn(),
+    deleteTag: vi.fn(),
+    handleSave: vi.fn(),
+    verifyingProfile: null,
+    setVerifyingProfile: vi.fn(),
+    cliVerifyingProfile: null,
+    ccSwitchProfile: null,
+    cursorPlusProfile,
+    setCursorPlusProfile,
+    kiloCodeProfile: null,
+    kelivoProfile: null,
+    cliProxyProfile: null,
+    claudeCodeRouterProfile: null,
+    deletingProfile: null,
+  } as unknown as ApiCredentialProfilesController
+
+  const user = userEvent.setup()
+  render(<ApiCredentialProfilesDialogs controller={controller} />)
+
+  await waitFor(() => {
+    expect(cursorPlusExportDialogMock).toHaveBeenCalledWith({
+      isOpen: true,
+      onClose: expect.any(Function),
+      account: expect.objectContaining({
+        name: cursorPlusProfile.name,
+        baseUrl: cursorPlusProfile.baseUrl,
+      }),
+      runtimeKey: expect.objectContaining({
+        label: cursorPlusProfile.name,
+        secret: cursorPlusProfile.apiKey,
+        baseUrl: cursorPlusProfile.baseUrl,
+      }),
+      analyticsContext: {
+        featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
+        actionId:
+          PRODUCT_ANALYTICS_ACTION_IDS.CopyApiCredentialProfileCursorPlusProviderConfig,
+        surfaceId:
+          PRODUCT_ANALYTICS_SURFACE_IDS.OptionsApiCredentialProfilesRowActions,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      },
+    })
+  })
+
+  await user.click(
+    screen.getByRole("button", { name: "close Cursor++ profile export" }),
+  )
+  expect(setCursorPlusProfile).toHaveBeenCalledWith(null)
 })

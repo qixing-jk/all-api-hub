@@ -28,6 +28,7 @@ import {
   prepareCursorPlusProvider,
   type CursorPlusProviderType,
 } from "~/services/integrations/cursorPlusExport"
+import type { ProductAnalyticsActionContext } from "~/services/productAnalytics/actionConfig"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -48,6 +49,7 @@ interface CursorPlusExportDialogProps {
   onClose: () => void
   account: DisplaySiteData
   runtimeKey: AccountRuntimeKey
+  analyticsContext?: ProductAnalyticsActionContext
 }
 
 const cursorPlusExportAnalyticsContext = {
@@ -81,6 +83,7 @@ export function CursorPlusExportDialog({
   onClose,
   account,
   runtimeKey,
+  analyticsContext = cursorPlusExportAnalyticsContext,
 }: CursorPlusExportDialogProps) {
   const { t } = useTranslation(["ui", "common", "messages"])
   const getProtocolLabel = (value: CursorPlusProviderType) => {
@@ -188,9 +191,7 @@ export function CursorPlusExportDialog({
     const action = beginExportAction()
     if (!action) return
 
-    const tracker = startProductAnalyticsAction(
-      cursorPlusExportAnalyticsContext,
-    )
+    const tracker = startProductAnalyticsAction(analyticsContext)
     try {
       const resolvedRuntimeKey = await resolveDisplayAccountRuntimeKeySecret(
         account,

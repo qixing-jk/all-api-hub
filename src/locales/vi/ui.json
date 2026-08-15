@@ -198,7 +198,6 @@
       "defaultGroup": "Nhóm mặc định",
       "disabled": "Vô hiệu hóa",
       "enabled": "Kích hoạt",
-      "exportToCCSwitch": "Xuất sang CC Switch",
       "getFailed": "Lấy dữ liệu thất bại",
       "keyCopied": "Đã sao chép API Key vào khay nhớ tạm",
       "loadFailed": "Tải danh sách API Key thất bại: {{error}}",
@@ -208,8 +207,7 @@
       "noKeysDescription": "Tài khoản này hiện không có API Key khả dụng, bạn có thể tạo nhanh API Key mặc định hoặc tạo tùy chỉnh rồi sao chép.",
       "retry": "Thử lại",
       "title": "Danh sách API Key",
-      "totalKeys_other": "Tổng cộng {{count}} API Key",
-      "useInCherry": "Sử dụng trong Cherry Studio"
+      "totalKeys_other": "Tổng cộng {{count}} API Key"
     },
     "cursorPlus": {
       "actions": {

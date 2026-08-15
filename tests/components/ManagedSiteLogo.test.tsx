@@ -105,8 +105,7 @@ describe("Managed site logo", () => {
     )
 
     await screen.findByText("Token")
-
-    expect(screen.queryByRole("img", { name: "Veloera logo" })).toBeNull()
+    expect(screen.queryByAltText("Veloera logo")).toBeNull()
   })
 
   it("renders Veloera logo when managedSiteType is SITE_TYPES.VELOERA", async () => {
@@ -125,10 +124,7 @@ describe("Managed site logo", () => {
     )
 
     await screen.findByText("Token")
-
-    expect(
-      await screen.findByRole("img", { name: "Veloera logo" }),
-    ).toBeInTheDocument()
+    expect(await screen.findByAltText("Veloera logo")).toBeInTheDocument()
   })
 
   it("renders AxonHub logo when managedSiteType is SITE_TYPES.AXON_HUB", async () => {
@@ -147,10 +143,7 @@ describe("Managed site logo", () => {
     )
 
     await screen.findByText("Token")
-
-    expect(
-      await screen.findByRole("img", { name: "AxonHub logo" }),
-    ).toBeInTheDocument()
+    expect(await screen.findByAltText("AxonHub logo")).toBeInTheDocument()
   })
 
   it("renders Claude Code Hub logo when managedSiteType is SITE_TYPES.CLAUDE_CODE_HUB", async () => {
@@ -169,9 +162,8 @@ describe("Managed site logo", () => {
     )
 
     await screen.findByText("Token")
-
     expect(
-      await screen.findByRole("img", { name: "Claude Code Hub logo" }),
+      await screen.findByAltText("Claude Code Hub logo"),
     ).toBeInTheDocument()
   })
 
@@ -191,10 +183,7 @@ describe("Managed site logo", () => {
     )
 
     await screen.findByText("Token")
-
-    expect(
-      await screen.findByRole("img", { name: "Sub2API logo" }),
-    ).toBeInTheDocument()
+    expect(await screen.findByAltText("Sub2API logo")).toBeInTheDocument()
   })
 
   it("renders Veloera logo in CopyKeyDialog token details when managedSiteType is SITE_TYPES.VELOERA", async () => {
@@ -211,9 +200,7 @@ describe("Managed site logo", () => {
       />,
     )
 
-    expect(
-      await screen.findByRole("img", { name: "Veloera logo" }),
-    ).toBeInTheDocument()
+    expect(await screen.findByAltText("Veloera logo")).toBeInTheDocument()
   })
 
   it("renders Claude Code Hub logo in CopyKeyDialog token details when managedSiteType is SITE_TYPES.CLAUDE_CODE_HUB", async () => {
@@ -231,7 +218,7 @@ describe("Managed site logo", () => {
     )
 
     expect(
-      await screen.findByRole("img", { name: "Claude Code Hub logo" }),
+      await screen.findByAltText("Claude Code Hub logo"),
     ).toBeInTheDocument()
   })
 })

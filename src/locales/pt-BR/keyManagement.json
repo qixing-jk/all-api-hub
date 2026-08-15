@@ -223,6 +223,13 @@
   "enabledCount_one": "{{count}} ativa",
   "enabledCount_many": "{{count}} ativas",
   "enabledCount_other": "{{count}} ativas",
+  "exportMenu": {
+    "groups": {
+      "chatClients": "Clientes de chat",
+      "codingAgents": "Agentes de programação",
+      "gateways": "Gateways e ferramentas de roteamento"
+    }
+  },
   "keyDetails": {
     "createResponseOnlySecret": "Este site mostra a chave completa somente na criação. Se você não a salvou, abra o Gerenciamento de Chaves e crie uma chave substituta.",
     "createTime": "Criada em:",

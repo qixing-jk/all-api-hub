@@ -198,7 +198,6 @@
       "defaultGroup": "預設組",
       "disabled": "禁用",
       "enabled": "啟用",
-      "exportToCCSwitch": "匯出到 CC Switch",
       "getFailed": "獲取失敗",
       "keyCopied": "金鑰已複製到剪貼簿",
       "loadFailed": "載入金鑰列表失敗: {{error}}",
@@ -208,8 +207,7 @@
       "noKeysDescription": "該帳號暫無可用金鑰，可快速建立預設金鑰或自定義建立後再複製。",
       "retry": "重試",
       "title": "金鑰列表",
-      "totalKeys_other": "共 {{count}} 個金鑰",
-      "useInCherry": "在 Cherry Studio 中使用"
+      "totalKeys_other": "共 {{count}} 個金鑰"
     },
     "cursorPlus": {
       "actions": {

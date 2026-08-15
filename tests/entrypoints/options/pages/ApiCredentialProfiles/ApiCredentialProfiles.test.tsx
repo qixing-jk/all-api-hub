@@ -356,11 +356,11 @@ describe("ApiCredentialProfiles page", () => {
 
     expect(pushWithinOptionsPageMock).not.toHaveBeenCalled()
     expect(mockOpenWithCredentials).not.toHaveBeenCalled()
-    const importMenuItem = await screen.findByRole("menuitem", {
+    const importButton = await screen.findByRole("button", {
       name: "keyManagement:actions.importToManagedSite",
     })
-    expect(importMenuItem).toBeVisible()
-    expect(importMenuItem).toHaveAttribute("data-guidance-highlight", "true")
+    expect(importButton).toBeVisible()
+    expect(importButton).toHaveAttribute("data-guidance-highlight", "true")
   })
 
   it("reveals the managed-site import entry from a guided deep link", async () => {
@@ -387,11 +387,11 @@ describe("ApiCredentialProfiles page", () => {
       />,
     )
 
-    const importMenuItem = await screen.findByRole("menuitem", {
+    const importButton = await screen.findByRole("button", {
       name: "keyManagement:actions.importToManagedSite",
     })
-    expect(importMenuItem).toBeVisible()
-    expect(importMenuItem).toHaveAttribute("data-guidance-highlight", "true")
+    expect(importButton).toBeVisible()
+    expect(importButton).toHaveAttribute("data-guidance-highlight", "true")
     expect(mockOpenWithCredentials).not.toHaveBeenCalled()
   })
 

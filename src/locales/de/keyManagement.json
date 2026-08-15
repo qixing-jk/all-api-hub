@@ -216,6 +216,13 @@
   },
   "enabledCount_one": "Aktiviert {{count}}",
   "enabledCount_other": "Aktiviert {{count}}",
+  "exportMenu": {
+    "groups": {
+      "chatClients": "Chat-Clients",
+      "codingAgents": "Coding-Agenten",
+      "gateways": "Gateways und Routing-Tools"
+    }
+  },
   "keyDetails": {
     "createResponseOnlySecret": "Diese Website zeigt den vollständigen Schlüssel nur an, wenn er erstellt wird. Wenn Sie ihn nicht gespeichert haben, öffnen Sie die Schlüsselverwaltung und erstellen Sie einen Ersatzschlüssel.",
     "createTime": "Erstellungszeit:",

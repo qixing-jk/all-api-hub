@@ -200,7 +200,6 @@
       "defaultGroup": "Default Group",
       "disabled": "Disabled",
       "enabled": "Enabled",
-      "exportToCCSwitch": "Export to CC Switch",
       "getFailed": "Failed to get",
       "keyCopied": "Key copied to clipboard",
       "loadFailed": "Failed to load key list: {{error}}",
@@ -211,8 +210,7 @@
       "retry": "Retry",
       "title": "Key List",
       "totalKeys_one": "Total {{count}} key",
-      "totalKeys_other": "Total {{count}} keys",
-      "useInCherry": "Use in Cherry Studio"
+      "totalKeys_other": "Total {{count}} keys"
     },
     "cursorPlus": {
       "actions": {
