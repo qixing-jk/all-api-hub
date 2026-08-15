@@ -1,4 +1,4 @@
-import { ExclamationTriangleIcon } from "@heroicons/react/24/outline"
+import { TriangleAlert } from "lucide-react"
 import { describe, expect, it } from "vitest"
 
 import LinkCard from "~/components/LinkCard"
@@ -6,7 +6,7 @@ import { render, screen } from "~~/tests/test-utils/render"
 
 describe("LinkCard", () => {
   const defaultProps = {
-    Icon: ExclamationTriangleIcon,
+    Icon: TriangleAlert,
     title: "Test Title",
     description: "Test description text",
     href: "https://example.com",

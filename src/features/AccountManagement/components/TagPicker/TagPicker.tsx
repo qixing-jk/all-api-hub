@@ -1,11 +1,4 @@
-import {
-  CheckIcon,
-  ChevronDownIcon,
-  PencilSquareIcon,
-  PlusIcon,
-  TrashIcon,
-  XMarkIcon,
-} from "@heroicons/react/24/outline"
+import { Check, ChevronDown, Plus, SquarePen, Trash2, X } from "lucide-react"
 import { useCallback, useEffect, useId, useMemo, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
@@ -354,7 +347,7 @@ export function TagPicker({
             disabled={disabled}
           >
             <span className="truncate">{triggerLabel}</span>
-            <ChevronDownIcon className="h-4 w-4 opacity-70" />
+            <ChevronDown className="h-4 w-4 opacity-70" />
           </Button>
         </PopoverTrigger>
         <PopoverContent
@@ -391,7 +384,7 @@ export function TagPicker({
                 onClick={handleCreate}
                 disabled={disabled || isWorking}
                 loading={activeTagAction?.kind === "create"}
-                leftIcon={<PlusIcon className="h-4 w-4" />}
+                leftIcon={<Plus className="h-4 w-4" />}
                 id={getOptionId("create")}
                 data-active={activeIndex === 0}
               >
@@ -436,7 +429,7 @@ export function TagPicker({
                       {isEditing ? (
                         <div className="flex min-w-0 flex-1 items-center gap-2 text-left">
                           <span className="flex h-4 w-4 items-center justify-center rounded-sm border">
-                            {isSelected && <CheckIcon className="h-3 w-3" />}
+                            {isSelected && <Check className="h-3 w-3" />}
                           </span>
                           <span className="flex min-w-0 flex-1 items-center gap-2">
                             <Input
@@ -463,7 +456,7 @@ export function TagPicker({
                               disabled={disabled || isWorking}
                               loading={isRenamingThisTag}
                             >
-                              <CheckIcon className="h-4 w-4" />
+                              <Check className="h-4 w-4" />
                             </IconButton>
                             <IconButton
                               type="button"
@@ -476,7 +469,7 @@ export function TagPicker({
                               aria-label={t("form.tagsRenameCancel")}
                               disabled={disabled || isWorking}
                             >
-                              <XMarkIcon className="h-4 w-4" />
+                              <X className="h-4 w-4" />
                             </IconButton>
                           </span>
                         </div>
@@ -488,7 +481,7 @@ export function TagPicker({
                           disabled={disabled || isWorking}
                         >
                           <span className="flex h-4 w-4 items-center justify-center rounded-sm border">
-                            {isSelected && <CheckIcon className="h-3 w-3" />}
+                            {isSelected && <Check className="h-3 w-3" />}
                           </span>
                           <span className="flex min-w-0 flex-1 items-center justify-between gap-2">
                             <span className="truncate">{tag.name}</span>
@@ -511,7 +504,7 @@ export function TagPicker({
                             aria-label={t("form.tagsRename")}
                             disabled={disabled || isWorking}
                           >
-                            <PencilSquareIcon className="h-4 w-4" />
+                            <SquarePen className="h-4 w-4" />
                           </IconButton>
                           {allowDelete && onDeleteTag ? (
                             <IconButton
@@ -525,7 +518,7 @@ export function TagPicker({
                               aria-label={t("form.tagsDelete")}
                               disabled={disabled || isWorking}
                             >
-                              <TrashIcon className="h-4 w-4" />
+                              <Trash2 className="h-4 w-4" />
                             </IconButton>
                           ) : null}
                         </span>
@@ -556,7 +549,7 @@ export function TagPicker({
                   aria-label={t("form.tagsRemove", { name: tag.name })}
                   disabled={isWorking}
                 >
-                  <XMarkIcon className="h-3 w-3" />
+                  <X className="h-3 w-3" />
                 </button>
               )}
             </Badge>

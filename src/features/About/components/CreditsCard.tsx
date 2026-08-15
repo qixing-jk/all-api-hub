@@ -1,4 +1,4 @@
-import { HeartIcon } from "@heroicons/react/24/outline"
+import { Heart } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { Badge, BodySmall, Card, CardContent, Heading6 } from "~/components/ui"
@@ -9,7 +9,7 @@ const CreditsCard = () => {
     <Card>
       <CardContent>
         <div className="flex items-start space-x-4">
-          <HeartIcon className="mt-1 h-6 w-6 shrink-0 text-red-500 dark:text-red-400" />
+          <Heart className="mt-1 h-6 w-6 shrink-0 text-red-500 dark:text-red-400" />
           <div className="flex-1">
             <Heading6 className="mb-2">{t("devMaintenance")}</Heading6>
             <BodySmall className="dark:text-dark-text-secondary mb-4 text-gray-600">

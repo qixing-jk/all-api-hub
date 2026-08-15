@@ -1,17 +1,20 @@
-import {
-  ArrowPathIcon,
-  ArrowUpTrayIcon,
-  ChevronDownIcon,
-  CommandLineIcon,
-  CpuChipIcon,
-  EyeIcon,
-  EyeSlashIcon,
-  PencilIcon,
-  TrashIcon,
-  WrenchScrewdriverIcon,
-} from "@heroicons/react/24/outline"
 import type { TFunction } from "i18next"
-import { CalendarPlus, Copy, History, type LucideIcon } from "lucide-react"
+import {
+  CalendarPlus,
+  ChevronDown,
+  Copy,
+  Cpu,
+  Eye,
+  EyeOff,
+  History,
+  Pencil,
+  RefreshCw,
+  Terminal,
+  Trash2,
+  Upload,
+  Wrench,
+  type LucideIcon,
+} from "lucide-react"
 import { useEffect, useId, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -410,9 +413,9 @@ export function ApiCredentialProfileListItem({
                       }
                     >
                       {visibleKeys.has(profile.id) ? (
-                        <EyeSlashIcon className="h-4 w-4" />
+                        <EyeOff className="h-4 w-4" />
                       ) : (
-                        <EyeIcon className="h-4 w-4" />
+                        <Eye className="h-4 w-4" />
                       )}
                     </IconButton>
                     <IconButton
@@ -480,7 +483,7 @@ export function ApiCredentialProfileListItem({
                             {getTelemetrySourceLabel(t, telemetry.source)}
                           </Badge>
                         ) : null}
-                        <ChevronDownIcon
+                        <ChevronDown
                           className={cn(
                             "dark:text-dark-text-tertiary ml-auto h-3.5 w-3.5 shrink-0 text-gray-500 transition-transform",
                             isTelemetryOpen ? "rotate-180" : "rotate-0",
@@ -496,7 +499,7 @@ export function ApiCredentialProfileListItem({
                       className="dark:text-dark-text-tertiary dark:hover:text-dark-text-primary h-auto shrink-0 gap-1 px-1.5 py-1 text-[11px] text-gray-500 hover:text-gray-800"
                       onClick={handleRefreshTelemetry}
                       loading={isTelemetryRefreshing}
-                      leftIcon={<ArrowPathIcon className="h-3.5 w-3.5" />}
+                      leftIcon={<RefreshCw className="h-3.5 w-3.5" />}
                     >
                       {isTelemetryRefreshing
                         ? t("apiCredentialProfiles:telemetry.refreshing")
@@ -662,7 +665,7 @@ export function ApiCredentialProfileListItem({
                     PRODUCT_ANALYTICS_ACTION_IDS.OpenUpdateApiCredentialProfileDialog
                   }
                 >
-                  <PencilIcon className="h-4 w-4 text-blue-500 dark:text-blue-400" />
+                  <Pencil className="h-4 w-4 text-blue-500 dark:text-blue-400" />
                 </IconButton>
                 <IconButton
                   aria-label={t("apiCredentialProfiles:actions.verifyApi")}
@@ -674,7 +677,7 @@ export function ApiCredentialProfileListItem({
                     PRODUCT_ANALYTICS_ACTION_IDS.VerifyApiCredential
                   }
                 >
-                  <WrenchScrewdriverIcon className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                  <Wrench className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                 </IconButton>
                 <IconButton
                   aria-label={t(
@@ -687,7 +690,7 @@ export function ApiCredentialProfileListItem({
                     PRODUCT_ANALYTICS_ACTION_IDS.VerifyApiCredentialCliSupport
                   }
                 >
-                  <CommandLineIcon className="h-4 w-4 text-sky-600 dark:text-sky-400" />
+                  <Terminal className="h-4 w-4 text-sky-600 dark:text-sky-400" />
                 </IconButton>
                 <IconButton
                   aria-label={t(
@@ -707,7 +710,7 @@ export function ApiCredentialProfileListItem({
                     entrypoint: optionsEntrypoint,
                   }}
                 >
-                  <CpuChipIcon className="h-4 w-4" />
+                  <Cpu className="h-4 w-4" />
                 </IconButton>
                 <DropdownMenu
                   open={isExportMenuOpen}
@@ -733,7 +736,7 @@ export function ApiCredentialProfileListItem({
                         PRODUCT_ANALYTICS_ACTION_IDS.OpenApiCredentialExportMenu
                       }
                     >
-                      <ArrowUpTrayIcon className="h-4 w-4" />
+                      <Upload className="h-4 w-4" />
                     </IconButton>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
@@ -868,7 +871,7 @@ export function ApiCredentialProfileListItem({
                     PRODUCT_ANALYTICS_ACTION_IDS.DeleteApiCredentialProfile
                   }
                 >
-                  <TrashIcon className="h-4 w-4" />
+                  <Trash2 className="h-4 w-4" />
                 </IconButton>
               </div>
             </div>

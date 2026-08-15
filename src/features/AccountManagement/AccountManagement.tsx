@@ -1,5 +1,10 @@
-import { ArrowPathIcon } from "@heroicons/react/24/outline"
-import { BookmarkPlus, CalendarCheck2, Search, UserRound } from "lucide-react"
+import {
+  BookmarkPlus,
+  CalendarCheck2,
+  RefreshCw,
+  Search,
+  UserRound,
+} from "lucide-react"
 import {
   useCallback,
   useEffect,
@@ -373,7 +378,7 @@ function AccountManagementContent({
               <Button
                 onClick={() => void handleGlobalRefresh()}
                 variant="secondary"
-                leftIcon={<ArrowPathIcon className="h-4 w-4" />}
+                leftIcon={<RefreshCw className="h-4 w-4" />}
                 loading={isRefreshing}
                 disabled={isAnyRefreshRunning}
               >
@@ -385,7 +390,7 @@ function AccountManagementContent({
                 <Button
                   onClick={() => void handleDisabledRefresh()}
                   variant="secondary"
-                  leftIcon={<ArrowPathIcon className="h-4 w-4" />}
+                  leftIcon={<RefreshCw className="h-4 w-4" />}
                   loading={isRefreshingDisabledAccounts}
                   disabled={isAnyRefreshRunning}
                 >

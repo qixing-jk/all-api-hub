@@ -1,5 +1,5 @@
-import { ChevronDownIcon, XMarkIcon } from "@heroicons/react/24/outline"
 import type { TFunction } from "i18next"
+import { ChevronDown, X } from "lucide-react"
 import type {
   KeyboardEvent as ReactKeyboardEvent,
   RefCallback,
@@ -109,7 +109,7 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
               onClick={actions.close}
               disabled={!view.canClose}
             >
-              <XMarkIcon className="h-4 w-4" />
+              <X className="h-4 w-4" />
             </IconButton>
           </div>
 
@@ -279,7 +279,7 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
                       )}
                     </div>
                   </div>
-                  <ChevronDownIcon
+                  <ChevronDown
                     className={cn(
                       "text-muted-foreground h-4 w-4 shrink-0 transition-transform",
                       view.isProfileOptionsOpen ? "rotate-180" : "rotate-0",

@@ -1,13 +1,15 @@
 import {
-  ArrowPathIcon,
-  ChevronDownIcon,
-  ChevronUpIcon,
-  ExclamationTriangleIcon,
-  GlobeAltIcon,
-  KeyIcon,
-  PlusIcon,
-} from "@heroicons/react/24/outline"
-import { Library, Network, SendToBack } from "lucide-react"
+  ChevronDown,
+  ChevronUp,
+  Globe2,
+  KeyRound,
+  Library,
+  Network,
+  Plus,
+  RefreshCw,
+  SendToBack,
+  TriangleAlert,
+} from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -258,7 +260,7 @@ function TokenEmptyState({
   if (displayData.length === 0) {
     return (
       <EmptyState
-        icon={<KeyIcon className="h-12 w-12" />}
+        icon={<KeyRound className="h-12 w-12" />}
         title={t("account:emptyState")}
         description={t("keyManagement:pleaseAddAccount")}
         action={
@@ -267,7 +269,7 @@ function TokenEmptyState({
                 label: t("account:addFirstAccount"),
                 onClick: onAddAccount,
                 variant: "default",
-                icon: <PlusIcon className="h-4 w-4" />,
+                icon: <Plus className="h-4 w-4" />,
               }
             : undefined
         }
@@ -278,7 +280,7 @@ function TokenEmptyState({
   if (!selectedAccount) {
     return (
       <EmptyState
-        icon={<KeyIcon className="h-12 w-12" />}
+        icon={<KeyRound className="h-12 w-12" />}
         title={t("keyManagement:pleaseSelectAccount")}
         description={t("keyManagement:selectAccountToContinue")}
         action={
@@ -298,7 +300,7 @@ function TokenEmptyState({
     return (
       <EmptyState
         variant="destructive"
-        icon={<ExclamationTriangleIcon className="h-12 w-12" />}
+        icon={<TriangleAlert className="h-12 w-12" />}
         title={t("loadError.title")}
         description={t("loadError.description", {
           error: currentAccountLoadError,
@@ -310,14 +312,14 @@ function TokenEmptyState({
             label: t("refreshTokenList"),
             onClick: () => onRetryCurrentAccount?.(),
             variant: "default",
-            icon: <ArrowPathIcon className="h-4 w-4" />,
+            icon: <RefreshCw className="h-4 w-4" />,
             disabled: !onRetryCurrentAccount,
           },
           {
             label: t("loadError.openSite"),
             onClick: handleOpenCurrentAccountSite,
             variant: "outline",
-            icon: <GlobeAltIcon className="h-4 w-4" />,
+            icon: <Globe2 className="h-4 w-4" />,
             disabled: !currentAccount?.baseUrl?.trim(),
           },
         ]}
@@ -328,7 +330,7 @@ function TokenEmptyState({
   if (currentAccountUnsupportedKeyManagement && currentAccount) {
     return (
       <EmptyState
-        icon={<KeyIcon className="h-12 w-12" />}
+        icon={<KeyRound className="h-12 w-12" />}
         title={t("keyManagement:unsupportedSource.title")}
         description={t("keyManagement:unsupportedSource.description")}
         action={{
@@ -344,13 +346,13 @@ function TokenEmptyState({
   if (tokens.length === 0) {
     return (
       <EmptyState
-        icon={<KeyIcon className="h-12 w-12" />}
+        icon={<KeyRound className="h-12 w-12" />}
         title={t("noKeys")}
         action={{
           label: t("createFirstKey"),
           onClick: handleAddToken,
           variant: "success",
-          icon: <PlusIcon className="h-4 w-4" />,
+          icon: <Plus className="h-4 w-4" />,
           testId: KEY_MANAGEMENT_TEST_IDS.emptyStateAddTokenButton,
           disabled: !canCreateTokens,
         }}
@@ -361,7 +363,7 @@ function TokenEmptyState({
   // 搜索无结果
   return (
     <EmptyState
-      icon={<KeyIcon className="h-12 w-12" />}
+      icon={<KeyRound className="h-12 w-12" />}
       title={t("noMatchingKeys")}
     />
   )
@@ -1162,7 +1164,7 @@ export function TokenList(props: TokenListProps) {
               type="button"
               data-testid={KEY_MANAGEMENT_TEST_IDS.expandAllButton}
               onClick={expandAll}
-              leftIcon={<ChevronDownIcon className="h-4 w-4" />}
+              leftIcon={<ChevronDown className="h-4 w-4" />}
             >
               {t("actions.expandAll")}
             </Button>
@@ -1171,7 +1173,7 @@ export function TokenList(props: TokenListProps) {
               variant="outline"
               type="button"
               onClick={collapseAll}
-              leftIcon={<ChevronUpIcon className="h-4 w-4" />}
+              leftIcon={<ChevronUp className="h-4 w-4" />}
             >
               {t("actions.collapseAll")}
             </Button>
@@ -1267,7 +1269,7 @@ export function TokenList(props: TokenListProps) {
                           </Badge>
                         ) : null}
                       </div>
-                      <ChevronDownIcon
+                      <ChevronDown
                         className={cn(
                           "dark:text-dark-text-tertiary h-4 w-4 shrink-0 text-gray-500 transition-transform",
                           isCollapsed ? "rotate-0" : "rotate-180",

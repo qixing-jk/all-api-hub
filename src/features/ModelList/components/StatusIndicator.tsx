@@ -1,4 +1,4 @@
-import { ArrowPathIcon, CpuChipIcon } from "@heroicons/react/24/outline"
+import { Cpu, RefreshCw } from "lucide-react"
 import { useId } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -65,7 +65,7 @@ export function StatusIndicator({
   if (!selectedSource) {
     return (
       <EmptyState
-        icon={<CpuChipIcon className="h-12 w-12" />}
+        icon={<Cpu className="h-12 w-12" />}
         title={t("pleaseSelectFirst")}
       />
     )
@@ -104,7 +104,7 @@ export function StatusIndicator({
 
     return (
       <EmptyState
-        icon={<CpuChipIcon className="h-12 w-12" />}
+        icon={<Cpu className="h-12 w-12" />}
         title={t("status.unsupportedSourceTitle")}
         description={t("status.unsupportedSourceDescription")}
         action={{
@@ -159,7 +159,7 @@ export function StatusIndicator({
               <Button
                 variant="secondary"
                 onClick={accountFallback.loadRuntimeKeys}
-                leftIcon={<ArrowPathIcon className="h-4 w-4" />}
+                leftIcon={<RefreshCw className="h-4 w-4" />}
               >
                 {t("status.fallback.reloadKeys")}
               </Button>
@@ -189,7 +189,7 @@ export function StatusIndicator({
                 variant="secondary"
                 onClick={accountFallback.loadRuntimeKeys}
                 loading={accountFallback.isLoadingRuntimeKeys}
-                leftIcon={<ArrowPathIcon className="h-4 w-4" />}
+                leftIcon={<RefreshCw className="h-4 w-4" />}
               >
                 {accountFallback.isLoadingRuntimeKeys
                   ? t("status.fallback.loadingKeys")
@@ -273,7 +273,7 @@ export function StatusIndicator({
                 onClick={accountFallback.loadRuntimeKeys}
                 loading={accountFallback.isLoadingRuntimeKeys}
                 disabled={accountFallback.isLoadingCatalog}
-                leftIcon={<ArrowPathIcon className="h-4 w-4" />}
+                leftIcon={<RefreshCw className="h-4 w-4" />}
               >
                 {accountFallback.isLoadingRuntimeKeys
                   ? t("status.fallback.loadingKeys")
@@ -316,7 +316,7 @@ export function StatusIndicator({
           <Button
             variant="secondary"
             onClick={loadPricingData}
-            leftIcon={<ArrowPathIcon className="h-4 w-4" />}
+            leftIcon={<RefreshCw className="h-4 w-4" />}
           >
             {t("status.retryLoad")}
           </Button>
@@ -348,7 +348,7 @@ export function StatusIndicator({
             <Button
               variant="secondary"
               onClick={loadPricingData}
-              leftIcon={<ArrowPathIcon className="h-4 w-4" />}
+              leftIcon={<RefreshCw className="h-4 w-4" />}
             >
               {t("status.retryLoad")}
             </Button>

@@ -1,4 +1,4 @@
-import { ChartBarIcon } from "@heroicons/react/24/outline"
+import { BarChart3 } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -105,7 +105,7 @@ export default function ProductAnalyticsSettings() {
           <CardItem
             id={SETTINGS_ANCHORS.PRODUCT_ANALYTICS_ENABLED}
             icon={
-              <ChartBarIcon className="h-5 w-5 text-slate-600 dark:text-slate-300" />
+              <BarChart3 className="h-5 w-5 text-slate-600 dark:text-slate-300" />
             }
             title={t("productAnalytics.enableLabel")}
             description={t("productAnalytics.enableDescription")}

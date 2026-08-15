@@ -1,4 +1,4 @@
-import { MagnifyingGlassIcon } from "@heroicons/react/24/outline"
+import { Search } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -244,7 +244,7 @@ export function ApiCredentialProfilesListView({
             onChange={handleSearchChange}
             onKeyDown={handleSearchKeyDown}
             placeholder={t("apiCredentialProfiles:controls.searchPlaceholder")}
-            leftIcon={<MagnifyingGlassIcon className="h-4 w-4" />}
+            leftIcon={<Search className="h-4 w-4" />}
             onClear={clearSearch}
             clearButtonLabel={t("common:actions.clear")}
           />

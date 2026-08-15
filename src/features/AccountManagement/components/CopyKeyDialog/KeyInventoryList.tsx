@@ -1,8 +1,4 @@
-import {
-  KeyIcon,
-  PencilSquareIcon,
-  PlusIcon,
-} from "@heroicons/react/24/outline"
+import { KeyRound, Plus, SquarePen } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { Alert, EmptyState } from "~/components/ui"
@@ -63,7 +59,7 @@ export function KeyInventoryList({
                   label: t("dialog.copyKey.createKey"),
                   loadingLabel: t("dialog.copyKey.creatingKey"),
                   onClick: onCreateDefaultKey,
-                  icon: <PlusIcon className="h-4 w-4" />,
+                  icon: <Plus className="h-4 w-4" />,
                   disabled: !canCreateDefaultKey || isCreating,
                   loading: isCreating,
                 },
@@ -74,7 +70,7 @@ export function KeyInventoryList({
                 {
                   label: t("dialog.copyKey.createCustomKey"),
                   onClick: onOpenAddTokenDialog,
-                  icon: <PencilSquareIcon className="h-4 w-4" />,
+                  icon: <SquarePen className="h-4 w-4" />,
                   variant: "outline" as const,
                   disabled: !canCreateDefaultKey || isCreating,
                 },
@@ -86,7 +82,7 @@ export function KeyInventoryList({
     return (
       <div className="space-y-4">
         <EmptyState
-          icon={<KeyIcon className="h-12 w-12" />}
+          icon={<KeyRound className="h-12 w-12" />}
           title={t("dialog.copyKey.noKeys")}
           description={t("dialog.copyKey.noKeysDescription")}
           actions={actions}

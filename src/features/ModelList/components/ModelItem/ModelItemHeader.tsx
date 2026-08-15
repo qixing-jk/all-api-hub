@@ -1,9 +1,4 @@
-import {
-  CommandLineIcon,
-  KeyIcon,
-  WrenchScrewdriverIcon,
-} from "@heroicons/react/24/outline"
-import { Copy } from "lucide-react"
+import { Copy, KeyRound, Terminal, Wrench } from "lucide-react"
 import React from "react"
 import { useTranslation } from "react-i18next"
 
@@ -126,7 +121,7 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
                   PRODUCT_ANALYTICS_ACTION_IDS.OpenModelKeyDialog
                 }
               >
-                <KeyIcon className="h-3 w-3 text-violet-600 sm:h-3.5 sm:w-3.5 dark:text-violet-400" />
+                <KeyRound className="h-3 w-3 text-violet-600 sm:h-3.5 sm:w-3.5 dark:text-violet-400" />
               </IconButton>
             )}
 
@@ -141,7 +136,7 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
                 className="shrink-0"
                 analyticsAction={PRODUCT_ANALYTICS_ACTION_IDS.VerifyModelApi}
               >
-                <WrenchScrewdriverIcon className="h-3 w-3 text-emerald-600 sm:h-3.5 sm:w-3.5 dark:text-emerald-400" />
+                <Wrench className="h-3 w-3 text-emerald-600 sm:h-3.5 sm:w-3.5 dark:text-emerald-400" />
               </IconButton>
             )}
 
@@ -158,7 +153,7 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
                   PRODUCT_ANALYTICS_ACTION_IDS.VerifyModelCliSupport
                 }
               >
-                <CommandLineIcon className="h-3 w-3 text-sky-600 sm:h-3.5 sm:w-3.5 dark:text-sky-400" />
+                <Terminal className="h-3 w-3 text-sky-600 sm:h-3.5 sm:w-3.5 dark:text-sky-400" />
               </IconButton>
             )}
           </div>

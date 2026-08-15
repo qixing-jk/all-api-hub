@@ -1,4 +1,4 @@
-import { ArrowPathIcon } from "@heroicons/react/24/outline"
+import { RefreshCw } from "lucide-react"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -40,7 +40,7 @@ export function PersonalizedCatalogFallbackNotice({
           variant="secondary"
           onClick={handleRetry}
           loading={isRetrying}
-          leftIcon={<ArrowPathIcon className="h-4 w-4" />}
+          leftIcon={<RefreshCw className="h-4 w-4" />}
         >
           {isRetrying
             ? t("personalizedCatalogFallback.retrying")

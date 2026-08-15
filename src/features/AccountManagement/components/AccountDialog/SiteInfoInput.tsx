@@ -1,11 +1,12 @@
 import {
-  ExclamationTriangleIcon,
-  GlobeAltIcon,
-  InformationCircleIcon,
-  KeyIcon,
-  PencilIcon,
-} from "@heroicons/react/24/outline"
-import { CircleHelp, Cookie } from "lucide-react"
+  CircleHelp,
+  Cookie,
+  Globe2,
+  Info,
+  KeyRound,
+  Pencil,
+  TriangleAlert,
+} from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import Tooltip from "~/components/Tooltip"
@@ -170,7 +171,7 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
                 <SelectContent align="end" className="min-w-48">
                   <SelectItem value={AuthTypeEnum.AccessToken}>
                     <div className="flex items-center gap-2">
-                      <KeyIcon className="h-4 w-4" />
+                      <KeyRound className="h-4 w-4" />
                       <span>{t("siteInfo.authType.accessToken")}</span>
                     </div>
                   </SelectItem>
@@ -250,14 +251,14 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
         )}
         {canUseSub2ApiRefreshToken && (
           <div className="flex w-full items-start gap-2 rounded-md bg-blue-50 p-2 text-xs text-blue-700 dark:bg-blue-900/20 dark:text-blue-300">
-            <InformationCircleIcon className="mt-0.5 h-4 w-4 shrink-0" />
+            <Info className="mt-0.5 h-4 w-4 shrink-0" />
             <span>{t("siteInfo.sub2apiHint")}</span>
           </div>
         )}
         {isCurrentSiteAdded && (
           <div className="flex w-full items-center justify-between rounded-md bg-yellow-50 p-2 text-xs text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-300">
             <div className="flex items-center">
-              <ExclamationTriangleIcon className="mr-1.5 h-4 w-4 shrink-0" />
+              <TriangleAlert className="mr-1.5 h-4 w-4 shrink-0" />
               {/* Distinguish "site exists" vs "current login matches an existing account" for multi-account sites. */}
               <span>
                 {detectedAccount
@@ -271,7 +272,7 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
                 onClick={handleEditClick}
                 variant="warning"
                 size="sm"
-                leftIcon={<PencilIcon className="h-3 w-3" />}
+                leftIcon={<Pencil className="h-3 w-3" />}
               >
                 {t("siteInfo.editNow")}
               </Button>
@@ -281,7 +282,7 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
         {!isDetected && onUseCurrentTab && (
           <div className="flex w-full items-center justify-between rounded-md bg-blue-50 p-2 text-xs text-blue-700 dark:bg-blue-900/20 dark:text-blue-300">
             <div className="flex items-center">
-              <InformationCircleIcon className="h-4 w-4" />
+              <Info className="h-4 w-4" />
               <span className="ml-1">{t("siteInfo.currentSite")}:</span>
               <Tooltip content={currentTabUrl}>
                 <span className="ml-1 max-w-[150px] truncate font-medium">
@@ -296,7 +297,7 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
               className="flex items-center font-medium text-blue-800 disabled:cursor-not-allowed disabled:text-gray-400 dark:text-blue-200 dark:disabled:text-gray-600"
               disabled={!currentTabUrl}
             >
-              <GlobeAltIcon className="mr-1 h-3 w-3" />
+              <Globe2 className="mr-1 h-3 w-3" />
               <span>{t("siteInfo.useCurrent")}</span>
             </button>
           </div>

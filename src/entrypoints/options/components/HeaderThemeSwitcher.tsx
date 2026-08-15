@@ -1,9 +1,5 @@
-import {
-  ComputerDesktopIcon,
-  MoonIcon,
-  SunIcon,
-} from "@heroicons/react/24/outline"
 import type { TFunction } from "i18next"
+import { Monitor, Moon, Sun } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { IconButton } from "~/components/ui"
@@ -34,17 +30,17 @@ const getThemeOptions = (t: TFunction) => {
     {
       mode: "light" as ThemeMode,
       label: getThemeLabel(t, "light"),
-      icon: SunIcon,
+      icon: Sun,
     },
     {
       mode: "dark" as ThemeMode,
       label: getThemeLabel(t, "dark"),
-      icon: MoonIcon,
+      icon: Moon,
     },
     {
       mode: "system" as ThemeMode,
       label: getThemeLabel(t, "system"),
-      icon: ComputerDesktopIcon,
+      icon: Monitor,
     },
   ]
 }

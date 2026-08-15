@@ -1,5 +1,4 @@
-import { MagnifyingGlassIcon } from "@heroicons/react/24/outline"
-import { RefreshCcw } from "lucide-react"
+import { RefreshCcw, Search } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
@@ -1395,7 +1394,7 @@ export default function ManagedSiteModelSync({
                   }
                   value={manualSearchKeyword}
                   onChange={(e) => handleManualSearchChange(e.target.value)}
-                  leftIcon={<MagnifyingGlassIcon className="h-4 w-4" />}
+                  leftIcon={<Search className="h-4 w-4" />}
                 />
               </div>
               <Button
@@ -1458,7 +1457,7 @@ export default function ManagedSiteModelSync({
                   ? channelsError
                   : (t("execution.manual.empty.description") as string)
               }
-              icon={<MagnifyingGlassIcon className="h-12 w-12" />}
+              icon={<Search className="h-12 w-12" />}
               action={{
                 label: t("execution.manual.reload"),
                 onClick: () => void loadChannels(),

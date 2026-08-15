@@ -1,4 +1,4 @@
-import { ExclamationTriangleIcon } from "@heroicons/react/24/solid"
+import { TriangleAlert } from "lucide-react"
 
 interface WarningToastIconProps {
   resolvedTheme?: string
@@ -11,7 +11,7 @@ interface WarningToastIconProps {
 export function WarningToastIcon({ resolvedTheme }: WarningToastIconProps) {
   return (
     <div className="flex min-w-5 items-center justify-center">
-      <ExclamationTriangleIcon
+      <TriangleAlert
         className={
           resolvedTheme === "dark"
             ? "h-5 w-5 text-amber-400"

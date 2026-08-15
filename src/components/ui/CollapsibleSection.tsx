@@ -1,4 +1,4 @@
-import { ChevronDownIcon } from "@heroicons/react/24/outline"
+import { ChevronDown } from "lucide-react"
 import { useState, type ReactNode } from "react"
 
 import { cn } from "~/lib/utils"
@@ -40,7 +40,7 @@ export function CollapsibleSection({
         )}
       >
         <span className="min-w-0 truncate">{title}</span>
-        <ChevronDownIcon
+        <ChevronDown
           className={cn(
             "dark:text-dark-text-tertiary h-4 w-4 shrink-0 text-gray-500 transition-transform",
             open ? "rotate-180" : "rotate-0",

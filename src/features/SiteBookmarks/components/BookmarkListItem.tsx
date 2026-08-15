@@ -1,10 +1,4 @@
-import {
-  EllipsisHorizontalIcon,
-  LinkIcon,
-  PencilIcon,
-  TrashIcon,
-} from "@heroicons/react/24/outline"
-import { PinIcon, PinOffIcon } from "lucide-react"
+import { Ellipsis, Link, Pencil, Pin, PinOff, Trash2 } from "lucide-react"
 import type { MouseEvent } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -73,7 +67,7 @@ export default function BookmarkListItem({
   const pinLabel = isPinned
     ? t("bookmark:actions.unpin")
     : t("bookmark:actions.pin")
-  const PinToggleIcon = isPinned ? PinOffIcon : PinIcon
+  const PinToggleIcon = isPinned ? PinOff : Pin
   const rowActionsSurface =
     PRODUCT_ANALYTICS_SURFACE_IDS.OptionsBookmarkManagementRowActions
 
@@ -110,7 +104,7 @@ export default function BookmarkListItem({
                 </BodySmall>
               </Button>
               {isPinned && (
-                <PinIcon className="h-3.5 w-3.5 shrink-0 text-gray-500 dark:text-gray-300" />
+                <Pin className="h-3.5 w-3.5 shrink-0 text-gray-500 dark:text-gray-300" />
               )}
             </div>
             <Button
@@ -160,7 +154,7 @@ export default function BookmarkListItem({
                 data-testid={SITE_BOOKMARKS_TEST_IDS.rowCopyUrlButton}
                 analyticsAction={PRODUCT_ANALYTICS_ACTION_IDS.CopyBookmarkUrl}
               >
-                <LinkIcon className="h-4 w-4" />
+                <Link className="h-4 w-4" />
               </IconButton>
 
               <IconButton
@@ -172,7 +166,7 @@ export default function BookmarkListItem({
                 data-testid={SITE_BOOKMARKS_TEST_IDS.rowEditButton}
                 analyticsAction={PRODUCT_ANALYTICS_ACTION_IDS.UpdateBookmark}
               >
-                <PencilIcon className="h-4 w-4" />
+                <Pencil className="h-4 w-4" />
               </IconButton>
 
               <DropdownMenu>
@@ -183,7 +177,7 @@ export default function BookmarkListItem({
                     aria-label={t("common:actions.more")}
                     data-testid={SITE_BOOKMARKS_TEST_IDS.rowMoreActionsButton}
                   >
-                    <EllipsisHorizontalIcon className="h-4 w-4" />
+                    <Ellipsis className="h-4 w-4" />
                   </IconButton>
                 </DropdownMenuTrigger>
 
@@ -203,7 +197,7 @@ export default function BookmarkListItem({
                   <DropdownMenuSeparator className="dark:bg-dark-bg-tertiary my-1 bg-gray-200" />
                   <AccountActionMenuItem
                     onClick={() => onDelete()}
-                    icon={TrashIcon}
+                    icon={Trash2}
                     label={t("common:actions.delete")}
                     isDestructive={true}
                     testId={SITE_BOOKMARKS_TEST_IDS.rowDeleteMenuItem}

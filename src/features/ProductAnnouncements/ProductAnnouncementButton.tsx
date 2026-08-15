@@ -1,4 +1,4 @@
-import { MegaphoneIcon } from "@heroicons/react/24/outline"
+import { Megaphone } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -195,7 +195,7 @@ export function ProductAnnouncementButton({
       data-testid={PRODUCT_ANNOUNCEMENT_TEST_IDS.button}
       className={cn("relative", className)}
     >
-      <MegaphoneIcon className="h-4 w-4" />
+      <Megaphone className="h-4 w-4" />
       {activeRiskCount > 0 ? (
         <Badge
           variant="danger"

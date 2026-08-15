@@ -1,10 +1,4 @@
-import {
-  CheckIcon,
-  ChevronDownIcon,
-  ChevronUpDownIcon,
-  XMarkIcon,
-} from "@heroicons/react/20/solid"
-import { Copy } from "lucide-react"
+import { Check, ChevronDown, ChevronsUpDown, Copy, X } from "lucide-react"
 import React, { useEffect, useId, useMemo, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
@@ -343,7 +337,7 @@ export function MultiSelect({
                 className="inline-flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 focus:bg-gray-200 focus:text-gray-700 focus:outline-none"
                 aria-label={t("multiSelect.clearInput")}
               >
-                <XMarkIcon className="h-5 w-5" />
+                <X className="h-5 w-5" />
               </button>
             )}
             <button
@@ -358,7 +352,7 @@ export function MultiSelect({
                 setActiveOptionIndex(null)
               }}
             >
-              <ChevronUpDownIcon
+              <ChevronsUpDown
                 className="h-5 w-5 text-gray-400"
                 aria-hidden="true"
               />
@@ -423,7 +417,7 @@ export function MultiSelect({
                     </span>
                     {isSelected ? (
                       <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-blue-600 group-hover:text-white">
-                        <CheckIcon className="h-5 w-5" aria-hidden="true" />
+                        <Check className="h-5 w-5" aria-hidden="true" />
                       </span>
                     ) : null}
                   </button>
@@ -444,7 +438,7 @@ export function MultiSelect({
               aria-controls={`${uid}-selected-items`}
             >
               <span className="flex min-w-0 items-center gap-2">
-                <ChevronDownIcon
+                <ChevronDown
                   className={cn(
                     "dark:text-dark-text-secondary h-4 w-4 shrink-0 text-gray-500 transition-transform",
                     isSelectedExpanded ? "rotate-180" : "",
@@ -483,7 +477,7 @@ export function MultiSelect({
                 title={t("multiSelect.clearSelected")}
                 aria-label={t("multiSelect.clearSelected")}
               >
-                <XMarkIcon className="h-4 w-4" />
+                <X className="h-4 w-4" />
               </button>
             )}
             <button
@@ -518,7 +512,7 @@ export function MultiSelect({
                         value: option.label,
                       })}
                     >
-                      <XMarkIcon className="h-3 w-3" />
+                      <X className="h-3 w-3" />
                     </button>
                   )}
                 </span>

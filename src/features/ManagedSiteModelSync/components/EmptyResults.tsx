@@ -1,4 +1,4 @@
-import { ArrowPathIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline"
+import { RefreshCw, Search } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { EmptyState } from "~/components/ui"
@@ -21,7 +21,7 @@ export default function EmptyResults(props: EmptyResultsProps) {
       <EmptyState
         title={t("execution.empty.noData")}
         description={t("execution.empty.noDataDesc")}
-        icon={<ArrowPathIcon className="h-12 w-12" />}
+        icon={<RefreshCw className="h-12 w-12" />}
       />
     )
   }
@@ -30,7 +30,7 @@ export default function EmptyResults(props: EmptyResultsProps) {
     <EmptyState
       title={t("execution.empty.noResults")}
       description={t("execution.empty.noResultsDesc")}
-      icon={<MagnifyingGlassIcon className="h-12 w-12" />}
+      icon={<Search className="h-12 w-12" />}
     />
   )
 }

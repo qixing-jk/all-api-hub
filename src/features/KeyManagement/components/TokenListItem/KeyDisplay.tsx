@@ -1,4 +1,4 @@
-import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline"
+import { Eye, EyeOff } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { IconButton } from "~/components/ui"
@@ -64,9 +64,9 @@ export function KeyDisplay({
         className="shrink-0"
       >
         {visibleKeys.has(tokenIdentityKey) ? (
-          <EyeSlashIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+          <EyeOff className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
         ) : (
-          <EyeIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+          <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
         )}
       </IconButton>
     </div>

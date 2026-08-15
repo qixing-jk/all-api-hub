@@ -1,4 +1,4 @@
-import { ClockIcon, MegaphoneIcon } from "@heroicons/react/24/outline"
+import { Clock, Megaphone } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -100,7 +100,7 @@ export default function SiteAnnouncementNotificationSettings() {
           <CardItem
             id={SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_ENABLED}
             icon={
-              <MegaphoneIcon className="h-5 w-5 text-sky-600 dark:text-sky-400" />
+              <Megaphone className="h-5 w-5 text-sky-600 dark:text-sky-400" />
             }
             title={t("siteAnnouncementNotifications.polling.enable")}
             description={t("siteAnnouncementNotifications.polling.enableDesc")}
@@ -113,9 +113,7 @@ export default function SiteAnnouncementNotificationSettings() {
           />
           <CardItem
             id={SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_INTERVAL}
-            icon={
-              <ClockIcon className="h-5 w-5 text-sky-600 dark:text-sky-400" />
-            }
+            icon={<Clock className="h-5 w-5 text-sky-600 dark:text-sky-400" />}
             title={t("siteAnnouncementNotifications.polling.interval")}
             description={t(
               "siteAnnouncementNotifications.polling.intervalDesc",

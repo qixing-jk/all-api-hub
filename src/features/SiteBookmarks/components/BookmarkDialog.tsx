@@ -1,7 +1,4 @@
-import {
-  GlobeAltIcon,
-  InformationCircleIcon,
-} from "@heroicons/react/24/outline"
+import { Globe2, Info } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
@@ -312,7 +309,7 @@ export default function BookmarkDialog({
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1 font-medium">
-                  <InformationCircleIcon className="h-4 w-4 shrink-0" />
+                  <Info className="h-4 w-4 shrink-0" />
                   <span>{t("bookmark:dialog.currentPageLabel")}</span>
                 </div>
                 <div className="mt-1 truncate font-medium">
@@ -330,7 +327,7 @@ export default function BookmarkDialog({
                 type="button"
                 variant="link"
                 size="sm"
-                leftIcon={<GlobeAltIcon className="h-4 w-4" />}
+                leftIcon={<Globe2 className="h-4 w-4" />}
                 onClick={handleUseCurrentPage}
                 loading={isCurrentPageLoading}
                 disabled={!currentPage || isWorking || isCurrentPageLoading}

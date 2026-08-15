@@ -1,16 +1,16 @@
-import {
-  ArrowDownTrayIcon,
-  BugAntIcon,
-  ChatBubbleLeftEllipsisIcon,
-  CodeBracketIcon,
-  GlobeAltIcon,
-  LanguageIcon,
-  LightBulbIcon,
-  StarIcon,
-  UsersIcon,
-} from "@heroicons/react/24/outline"
 import type { TFunction } from "i18next"
-import { Info } from "lucide-react"
+import {
+  Bug,
+  Code2,
+  Download,
+  Globe2,
+  Info,
+  Languages,
+  Lightbulb,
+  MessageSquareMore,
+  Star,
+  Users,
+} from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import FeatureList from "~/components/FeatureList"
@@ -110,7 +110,7 @@ export default function About() {
           <Heading4 className="mb-4">{t("projectLinks")}</Heading4>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <LinkCard
-              Icon={CodeBracketIcon}
+              Icon={Code2}
               title={t("githubRepo")}
               description={t("githubDesc")}
               href={feedbackDestinations.repository}
@@ -119,7 +119,7 @@ export default function About() {
               iconClass="text-gray-900 dark:text-gray-100"
             />
             <LinkCard
-              Icon={GlobeAltIcon}
+              Icon={Globe2}
               title={t("homepage")}
               description={t("homepageDesc")}
               href={homepage}
@@ -139,7 +139,7 @@ export default function About() {
           <Heading4 className="mb-4">{t("feedbackSection.title")}</Heading4>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
             <LinkCard
-              Icon={BugAntIcon}
+              Icon={Bug}
               title={t("ui:feedback.bugReport")}
               description={t("feedbackSection.bugReport.description")}
               href={feedbackDestinations.bugReport}
@@ -148,7 +148,7 @@ export default function About() {
               iconClass="text-red-600 dark:text-red-400"
             />
             <LinkCard
-              Icon={LightBulbIcon}
+              Icon={Lightbulb}
               title={t("ui:feedback.featureRequest")}
               description={t("feedbackSection.featureRequest.description")}
               href={feedbackDestinations.featureRequest}
@@ -157,7 +157,7 @@ export default function About() {
               iconClass="text-amber-500 dark:text-amber-400"
             />
             <LinkCard
-              Icon={LanguageIcon}
+              Icon={Languages}
               title={t("ui:feedback.languageRequest")}
               description={t("feedbackSection.languageRequest.description")}
               href={feedbackDestinations.languageRequest}
@@ -166,7 +166,7 @@ export default function About() {
               iconClass="text-indigo-600 dark:text-indigo-400"
             />
             <LinkCard
-              Icon={UsersIcon}
+              Icon={Users}
               title={t("ui:feedback.community")}
               description={t("feedbackSection.community.description")}
               href={feedbackDestinations.community}
@@ -175,7 +175,7 @@ export default function About() {
               iconClass="text-emerald-600 dark:text-emerald-400"
             />
             <LinkCard
-              Icon={ChatBubbleLeftEllipsisIcon}
+              Icon={MessageSquareMore}
               title={t("ui:feedback.discussion")}
               description={t("feedbackSection.discussion.description")}
               href={feedbackDestinations.discussions}
@@ -191,7 +191,7 @@ export default function About() {
           <Heading4 className="mb-4">{t("storesSection.title")}</Heading4>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <LinkCard
-              Icon={StarIcon}
+              Icon={Star}
               title={t("storesSection.review.title")}
               description={t("storesSection.review.description", {
                 store: currentStoreName,
@@ -209,7 +209,7 @@ export default function About() {
               return (
                 <LinkCard
                   key={storeId}
-                  Icon={ArrowDownTrayIcon}
+                  Icon={Download}
                   title={storeLabel}
                   description={t("storesSection.download.description", {
                     store: storeLabel,

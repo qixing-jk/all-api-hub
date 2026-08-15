@@ -1,4 +1,4 @@
-import { MagnifyingGlassIcon } from "@heroicons/react/24/outline"
+import { Search } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { Input } from "~/components/ui"
@@ -41,7 +41,7 @@ export default function AccountSearchInput({
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder={t("search.placeholder")}
-        leftIcon={<MagnifyingGlassIcon className="h-4 w-4" />}
+        leftIcon={<Search className="h-4 w-4" />}
         onClear={onClear}
         clearButtonLabel={t("common:actions.clear")}
       />

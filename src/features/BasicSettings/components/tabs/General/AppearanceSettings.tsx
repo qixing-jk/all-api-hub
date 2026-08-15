@@ -1,4 +1,4 @@
-import { LanguageIcon } from "@heroicons/react/24/outline"
+import { Languages } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { LanguageSwitcher } from "~/components/LanguageSwitcher"
@@ -24,7 +24,7 @@ export default function AppearanceSettings() {
           <CardItem
             id="appearance-language"
             icon={
-              <LanguageIcon className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+              <Languages className="h-5 w-5 text-purple-600 dark:text-purple-400" />
             }
             title={t("appearanceLanguage.language")}
             description={t("appearanceLanguage.languageDesc")}

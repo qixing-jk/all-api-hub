@@ -1,4 +1,4 @@
-import { UsersIcon } from "@heroicons/react/24/outline"
+import { Users } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import {
@@ -30,7 +30,7 @@ export default function AccountManagementTab() {
     <div className="space-y-6">
       <section id="account-management">
         <Heading4 className="mb-2 flex items-center gap-2">
-          <UsersIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+          <Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />
           <span>{t("accountManagement.title")}</span>
         </Heading4>
         <Card>
@@ -42,7 +42,7 @@ export default function AccountManagementTab() {
               onClick={handleNavigate}
               variant="default"
               className="flex items-center gap-2 self-start"
-              leftIcon={<UsersIcon className="h-5 w-5" />}
+              leftIcon={<Users className="h-5 w-5" />}
             >
               <span>{t("accountManagement.openPage")}</span>
             </WorkflowTransitionButton>

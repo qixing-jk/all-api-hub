@@ -1,4 +1,4 @@
-import { Bars3Icon } from "@heroicons/react/24/outline"
+import { GripVertical } from "lucide-react"
 
 import { IconButton } from "~/components/ui"
 import type { SearchResultWithHighlight } from "~/features/AccountManagement/hooks/useAccountSearch"
@@ -117,7 +117,7 @@ export function NonSortableAccountListItem({
             onPointerDown={handleActivateDnd}
             onTouchStart={handleActivateDnd}
           >
-            <Bars3Icon className="h-4 w-4" />
+            <GripVertical className="h-4 w-4" />
           </IconButton>
         ) : null
       }

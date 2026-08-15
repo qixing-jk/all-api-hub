@@ -1,4 +1,4 @@
-import { ArrowPathIcon } from "@heroicons/react/24/outline"
+import { RefreshCw } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { Button } from "~/components/ui"
@@ -68,7 +68,7 @@ export default function ActionBar({
           variant="default"
           disabled={isBusy}
           loading={activeAction === MANAGED_SITE_MODEL_SYNC_ACTIONS.RUN_ALL}
-          leftIcon={<ArrowPathIcon className="h-4 w-4" />}
+          leftIcon={<RefreshCw className="h-4 w-4" />}
         >
           {activeAction === MANAGED_SITE_MODEL_SYNC_ACTIONS.RUN_ALL
             ? t("execution.actions.runningAll")
@@ -104,7 +104,7 @@ export default function ActionBar({
           variant="ghost"
           disabled={isBusy}
           loading={isRefreshing}
-          leftIcon={<ArrowPathIcon className="h-4 w-4" />}
+          leftIcon={<RefreshCw className="h-4 w-4" />}
         >
           {isRefreshing
             ? t("common:status.refreshing")

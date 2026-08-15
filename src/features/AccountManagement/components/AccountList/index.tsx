@@ -1,11 +1,6 @@
 import type { DragEndEvent } from "@dnd-kit/core"
-import {
-  ChevronDownIcon,
-  ChevronUpIcon,
-  InboxIcon,
-  PlusIcon,
-} from "@heroicons/react/24/outline"
 import type { TFunction } from "i18next"
+import { ChevronDown, ChevronUp, Inbox, Plus } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
@@ -1209,7 +1204,7 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-3">
             <div className="shrink-0 rounded-md bg-blue-50 p-2 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300">
-              <InboxIcon className="h-5 w-5" />
+              <Inbox className="h-5 w-5" />
             </div>
             <div className="space-y-1">
               <h2 className="dark:text-dark-text-primary text-sm font-medium text-gray-900">
@@ -1222,7 +1217,7 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
           </div>
           <Button
             className="w-full shrink-0 sm:w-auto"
-            leftIcon={<PlusIcon className="h-4 w-4" />}
+            leftIcon={<Plus className="h-4 w-4" />}
             onClick={handleEmptyStateAddAccountClick}
             size="sm"
           >
@@ -1246,9 +1241,9 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
       <span>{label}</span>
       {sortField === field &&
         (sortOrder === "asc" ? (
-          <ChevronUpIcon className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+          <ChevronUp className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
         ) : (
-          <ChevronDownIcon className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+          <ChevronDown className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
         ))}
     </IconButton>
   )
@@ -1594,7 +1589,7 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
         {/* Account List or No Results */}
         {showFilteredSummary && displayedResults.length === 0 ? (
           <EmptyState
-            icon={<InboxIcon className="h-12 w-12" />}
+            icon={<Inbox className="h-12 w-12" />}
             title={t("account:search.noResults")}
           />
         ) : shouldRenderSortableList && DndWrapper ? (

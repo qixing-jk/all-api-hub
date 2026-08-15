@@ -1,4 +1,4 @@
-import { MagnifyingGlassIcon } from "@heroicons/react/24/outline"
+import { Search } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { Input } from "~/components/ui"
@@ -25,7 +25,7 @@ export function TokenSearchBar({
         placeholder={t("searchPlaceholder")}
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
-        leftIcon={<MagnifyingGlassIcon className="h-4 w-4" />}
+        leftIcon={<Search className="h-4 w-4" />}
         onClear={() => setSearchTerm("")}
         clearButtonLabel={t("common:actions.clear")}
       />

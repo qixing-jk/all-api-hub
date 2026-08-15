@@ -12,7 +12,7 @@ import {
   SortableContext,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable"
-import { InboxIcon, PlusIcon } from "@heroicons/react/24/outline"
+import { Inbox, Plus } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
@@ -386,13 +386,13 @@ export default function BookmarksList({
           }
         >
           <EmptyState
-            icon={<InboxIcon className="h-12 w-12" />}
+            icon={<Inbox className="h-12 w-12" />}
             title={t("bookmark:emptyState")}
             action={{
               label: t("bookmark:addFirstBookmark"),
               onClick: openAddBookmark,
               variant: "default",
-              icon: <PlusIcon className="h-4 w-4" />,
+              icon: <Plus className="h-4 w-4" />,
               testId: SITE_BOOKMARKS_TEST_IDS.emptyStateAddButton,
               analyticsAction: PRODUCT_ANALYTICS_ACTION_IDS.CreateBookmark,
             }}

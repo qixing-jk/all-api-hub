@@ -1,8 +1,5 @@
-import {
-  ChevronDoubleLeftIcon,
-  ChevronDoubleRightIcon,
-} from "@heroicons/react/24/outline"
 import { motion } from "framer-motion"
+import { ChevronsLeft, ChevronsRight } from "lucide-react"
 import { useEffect } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -158,9 +155,9 @@ function Sidebar({
                 onClick={handleCollapseButtonClick}
               >
                 {shouldShowCollapsedState ? (
-                  <ChevronDoubleRightIcon className="h-4 w-4" />
+                  <ChevronsRight className="h-4 w-4" />
                 ) : (
-                  <ChevronDoubleLeftIcon className="h-4 w-4" />
+                  <ChevronsLeft className="h-4 w-4" />
                 )}
               </Button>
             )}
@@ -254,9 +251,9 @@ function Sidebar({
                 onClick={handleCollapseButtonClick}
               >
                 {shouldShowCollapsedState ? (
-                  <ChevronDoubleRightIcon className="h-5 w-5" />
+                  <ChevronsRight className="h-5 w-5" />
                 ) : (
-                  <ChevronDoubleLeftIcon className="h-5 w-5" />
+                  <ChevronsLeft className="h-5 w-5" />
                 )}
               </IconButton>
             )}

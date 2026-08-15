@@ -1,4 +1,4 @@
-import { ChevronDownIcon, ChevronRightIcon } from "@heroicons/react/24/outline"
+import { ChevronDown, ChevronRight } from "lucide-react"
 import { useId, type ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -90,9 +90,9 @@ export function QuickKeyResourceCard({
             {presentation.statusLabel}
           </Badge>
           {isExpanded ? (
-            <ChevronDownIcon aria-hidden="true" className="h-4 w-4" />
+            <ChevronDown aria-hidden="true" className="h-4 w-4" />
           ) : (
-            <ChevronRightIcon aria-hidden="true" className="h-4 w-4" />
+            <ChevronRight aria-hidden="true" className="h-4 w-4" />
           )}
         </span>
       </button>

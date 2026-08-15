@@ -1,10 +1,4 @@
-import {
-  BugAntIcon,
-  DocumentTextIcon,
-  ExclamationTriangleIcon,
-  LanguageIcon,
-  SparklesIcon,
-} from "@heroicons/react/24/outline"
+import { Bug, FileText, Languages, Sparkles, TriangleAlert } from "lucide-react"
 import { useCallback, useState } from "react"
 import toast from "react-hot-toast"
 
@@ -100,29 +94,29 @@ function DevDialogDebugMenuContent() {
             aria-label="Dev: Dialog debug menu"
             className="touch-manipulation"
           >
-            <BugAntIcon className="h-4 w-4" />
+            <Bug className="h-4 w-4" />
           </IconButton>
         </DropdownMenuTrigger>
       </Tooltip>
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuItem onClick={() => void handleTriggerUpdateLog()}>
-          <DocumentTextIcon className="h-4 w-4" />
+          <FileText className="h-4 w-4" />
           Dev: Trigger update log
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => void handleTriggerOnboarding()}>
-          <SparklesIcon className="h-4 w-4" />
+          <Sparkles className="h-4 w-4" />
           Dev: Trigger onboarding
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => void handleQueuePopupInterruptionHint()}
         >
-          <ExclamationTriangleIcon className="h-4 w-4" />
+          <TriangleAlert className="h-4 w-4" />
           Dev: Queue popup interruption hint
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => setShouldTriggerTranslationCrash(true)}
         >
-          <LanguageIcon className="h-4 w-4" />
+          <Languages className="h-4 w-4" />
           Dev: Trigger translation crash
         </DropdownMenuItem>
       </DropdownMenuContent>

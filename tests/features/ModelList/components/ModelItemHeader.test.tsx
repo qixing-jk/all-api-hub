@@ -32,16 +32,6 @@ vi.mock(
   }),
 )
 
-vi.mock("@heroicons/react/24/outline", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("@heroicons/react/24/outline")>()
-  const CpuChipIcon = (props: React.SVGProps<SVGSVGElement>) => (
-    <svg role="img" data-publisher-icon="generic" {...props} />
-  )
-
-  return { ...actual, CpuChipIcon }
-})
-
 vi.mock("@lobehub/icons/es/Anthropic/components/Mono", () => ({
   default: ({
     size,

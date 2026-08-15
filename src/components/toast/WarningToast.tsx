@@ -1,4 +1,4 @@
-import { XMarkIcon } from "@heroicons/react/24/outline"
+import { X } from "lucide-react"
 import { useRef, useState } from "react"
 import toast, { ToastBar, type Toast } from "react-hot-toast"
 
@@ -84,7 +84,7 @@ export function WarningToast({
             aria-label="Close notification"
             onClick={() => toast.dismiss(toastInstance.id)}
           >
-            <XMarkIcon className="h-4 w-4" />
+            <X className="h-4 w-4" />
           </button>
         </>
       )}

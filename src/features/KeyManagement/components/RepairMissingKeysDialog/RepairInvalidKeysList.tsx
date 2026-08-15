@@ -1,5 +1,5 @@
-import { MagnifyingGlassIcon } from "@heroicons/react/24/outline"
 import type { TFunction } from "i18next"
+import { Search } from "lucide-react"
 
 import { Alert, Badge, Button, Checkbox, EmptyState } from "~/components/ui"
 import type { AccountKeyRepairInvalidResource } from "~/types/accountKeyAutoProvisioning"
@@ -44,7 +44,7 @@ export function RepairInvalidKeysList({
           </div>
         ) : null}
         <EmptyState
-          icon={<MagnifyingGlassIcon className="h-12 w-12" />}
+          icon={<Search className="h-12 w-12" />}
           title={t("keyManagement:repairMissingKeys.invalidKeys.emptyTitle")}
           description={t(
             "keyManagement:repairMissingKeys.invalidKeys.emptyDescription",
@@ -64,7 +64,7 @@ export function RepairInvalidKeysList({
           </div>
         ) : null}
         <EmptyState
-          icon={<MagnifyingGlassIcon className="h-12 w-12" />}
+          icon={<Search className="h-12 w-12" />}
           title={t("keyManagement:repairMissingKeys.noMatchingResults")}
           className="py-10"
         />

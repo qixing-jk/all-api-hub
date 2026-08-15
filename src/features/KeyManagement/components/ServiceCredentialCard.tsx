@@ -1,10 +1,11 @@
 import {
-  ArrowPathIcon,
-  CommandLineIcon,
-  KeyIcon,
-  WrenchScrewdriverIcon,
-} from "@heroicons/react/24/outline"
-import { Copy, Library } from "lucide-react"
+  Copy,
+  KeyRound,
+  Library,
+  RefreshCw,
+  Terminal,
+  Wrench,
+} from "lucide-react"
 import { useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -414,7 +415,7 @@ export function ServiceCredentialCard({
                   onSelectionChange={onSelectionChange}
                   disabledReason={selectionDisabledReason}
                 />
-                <KeyIcon className="h-4 w-4 shrink-0 text-sky-600 dark:text-sky-400" />
+                <KeyRound className="h-4 w-4 shrink-0 text-sky-600 dark:text-sky-400" />
                 <Heading6 className="truncate text-sm sm:text-base">
                   {credential.label}
                 </Heading6>
@@ -455,7 +456,7 @@ export function ServiceCredentialCard({
                   variant="ghost"
                   onClick={() => setVerifyingProfile(transientProfile)}
                 >
-                  <WrenchScrewdriverIcon className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                  <Wrench className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                 </IconButton>
                 <IconButton
                   aria-label={t("actions.verifyCliSupport")}
@@ -463,7 +464,7 @@ export function ServiceCredentialCard({
                   variant="ghost"
                   onClick={() => setCliVerifyingProfile(transientProfile)}
                 >
-                  <CommandLineIcon className="h-4 w-4 text-sky-600 dark:text-sky-400" />
+                  <Terminal className="h-4 w-4 text-sky-600 dark:text-sky-400" />
                 </IconButton>
                 <IconButton
                   aria-label={t("actions.useInCherry")}
@@ -541,7 +542,7 @@ export function ServiceCredentialCard({
                     variant="outline"
                     loading={isRotating}
                     onClick={() => void onRotate(account)}
-                    leftIcon={<ArrowPathIcon className="h-4 w-4" />}
+                    leftIcon={<RefreshCw className="h-4 w-4" />}
                   >
                     {isRotating
                       ? t("serviceCredential.rotating")
@@ -562,7 +563,7 @@ export function ServiceCredentialCard({
                     data-testid={KEY_MANAGEMENT_TEST_IDS.managedSiteStatusBadge}
                   >
                     {isManagedSiteStatusChecking ? (
-                      <ArrowPathIcon className="h-3 w-3 animate-spin" />
+                      <RefreshCw className="h-3 w-3 animate-spin" />
                     ) : null}
                     {getManagedSiteStatusLabel(t, {
                       isChecking: isManagedSiteStatusChecking,

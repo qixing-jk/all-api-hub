@@ -1,4 +1,4 @@
-import { ExclamationTriangleIcon } from "@heroicons/react/24/outline"
+import { TriangleAlert } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
@@ -32,7 +32,7 @@ export default function ManagedSiteConfigRequiredState({
   return (
     <EmptyState
       className={className}
-      icon={<ExclamationTriangleIcon className="h-12 w-12 text-yellow-500" />}
+      icon={<TriangleAlert className="h-12 w-12 text-yellow-500" />}
       title={t("status.configurationRequired")}
       description={description}
       actions={[

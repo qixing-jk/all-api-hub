@@ -1,4 +1,4 @@
-import { ArrowsRightLeftIcon } from "@heroicons/react/24/outline"
+import { ArrowRightLeft } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import {
@@ -40,7 +40,7 @@ export default function DataBackupTab() {
                 onClick={handleNavigateToImportExport}
                 variant="default"
                 className="justify-center"
-                leftIcon={<ArrowsRightLeftIcon className="h-5 w-5" />}
+                leftIcon={<ArrowRightLeft className="h-5 w-5" />}
               >
                 {t("dataBackup.importExport.openPage")}
               </WorkflowTransitionButton>

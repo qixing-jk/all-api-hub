@@ -1,4 +1,4 @@
-import { BookOpenIcon } from "@heroicons/react/24/outline"
+import { BookOpen } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
@@ -146,7 +146,7 @@ export default function AutoDetectErrorAlert({
                   onClick={handleHelpClick}
                   variant="secondary"
                   size="sm"
-                  leftIcon={<BookOpenIcon className="h-3.5 w-3.5" />}
+                  leftIcon={<BookOpen className="h-3.5 w-3.5" />}
                 >
                   {t("actions.helpDocument")}
                 </Button>

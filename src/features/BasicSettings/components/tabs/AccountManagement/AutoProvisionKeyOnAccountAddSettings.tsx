@@ -1,4 +1,4 @@
-import { KeyIcon } from "@heroicons/react/24/outline"
+import { KeyRound } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { SettingSection } from "~/components/SettingSection"
@@ -31,7 +31,7 @@ export default function AutoProvisionKeyOnAccountAddSettings() {
           <CardItem
             id="auto-provision-key-toggle"
             icon={
-              <KeyIcon className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+              <KeyRound className="h-5 w-5 text-amber-600 dark:text-amber-400" />
             }
             title={t("autoProvisionKeyOnAccountAdd.toggleLabel")}
             description={t("autoProvisionKeyOnAccountAdd.toggleDesc")}

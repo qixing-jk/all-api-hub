@@ -1,10 +1,4 @@
-import {
-  CalendarDaysIcon,
-  CpuChipIcon,
-  CurrencyYenIcon,
-  KeyIcon,
-  PlusIcon,
-} from "@heroicons/react/24/outline"
+import { CalendarDays, Cpu, JapaneseYen, KeyRound, Plus } from "lucide-react"
 import type { MouseEvent } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -114,7 +108,7 @@ export default function ActionButtons({
             data-testid={primaryActionTestId}
             className="flex-1 touch-manipulation"
             size="default"
-            leftIcon={<PlusIcon className="h-4 w-4" />}
+            leftIcon={<Plus className="h-4 w-4" />}
             analyticsAction={primaryAnalyticsAction}
           >
             {primaryActionLabel}
@@ -134,7 +128,7 @@ export default function ActionButtons({
                   PRODUCT_ANALYTICS_ACTION_IDS.OpenPopupKeyManagement
                 }
               >
-                <KeyIcon className="h-4 w-4" />
+                <KeyRound className="h-4 w-4" />
               </IconButton>
             </ProductAnalyticsScope>
           </Tooltip>
@@ -153,7 +147,7 @@ export default function ActionButtons({
                   PRODUCT_ANALYTICS_ACTION_IDS.OpenPopupModelManagement
                 }
               >
-                <CpuChipIcon className="h-4 w-4" />
+                <Cpu className="h-4 w-4" />
               </IconButton>
             </ProductAnalyticsScope>
           </Tooltip>
@@ -172,7 +166,7 @@ export default function ActionButtons({
                   PRODUCT_ANALYTICS_ACTION_IDS.RunPopupQuickCheckin
                 }
               >
-                <CalendarDaysIcon className="h-4 w-4" />
+                <CalendarDays className="h-4 w-4" />
               </IconButton>
             </Tooltip>
 
@@ -186,7 +180,7 @@ export default function ActionButtons({
                   aria-label={t("navigation.externalCheckinAll")}
                 >
                   {/* Match per-account indicator colors: red when not checked in today, green when done. */}
-                  <CurrencyYenIcon
+                  <JapaneseYen
                     className={`h-4 w-4 ${
                       hasUncheckedExternalCheckIns
                         ? "text-red-500"

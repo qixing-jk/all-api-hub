@@ -1,4 +1,4 @@
-import { XMarkIcon } from "@heroicons/react/24/outline"
+import { X } from "lucide-react"
 import type { CSSProperties } from "react"
 import { createPortal } from "react-dom"
 import toast, { ToastBar, Toaster } from "react-hot-toast"
@@ -77,7 +77,7 @@ export const ThemeAwareToaster = ({
                     aria-label={translate("actions.close")}
                     onClick={() => toast.dismiss(toastInstance.id)}
                   >
-                    <XMarkIcon className="h-4 w-4" />
+                    <X className="h-4 w-4" />
                   </button>
                 )}
               </>

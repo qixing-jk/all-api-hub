@@ -1,5 +1,5 @@
-import { BellIcon } from "@heroicons/react/24/outline"
 import type { TFunction } from "i18next"
+import { Bell } from "lucide-react"
 import { useCallback, useEffect, useState, type ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -675,7 +675,7 @@ export default function TaskNotificationSettings() {
             <CardItem
               id={SETTINGS_ANCHORS.TASK_NOTIFICATIONS_ENABLED}
               icon={
-                <BellIcon className="h-5 w-5 text-teal-600 dark:text-teal-400" />
+                <Bell className="h-5 w-5 text-teal-600 dark:text-teal-400" />
               }
               title={t("taskNotifications.enable")}
               description={t("taskNotifications.enableDesc")}

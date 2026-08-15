@@ -3,7 +3,7 @@ import {
   Brain,
   Eye,
   FileText,
-  Image as ImageIcon,
+  Image,
   Paperclip,
   Video,
   Volume2,
@@ -29,7 +29,7 @@ interface ModelCapabilityBadgesProps {
 
 const CAPABILITY_ICONS: Record<ModelCapabilitySelectionValue, LucideIcon> = {
   [MODEL_CAPABILITY_FILTER_VALUES.IMAGE_INPUT]: Eye,
-  [MODEL_CAPABILITY_FILTER_VALUES.IMAGE_OUTPUT]: ImageIcon,
+  [MODEL_CAPABILITY_FILTER_VALUES.IMAGE_OUTPUT]: Image,
   [MODEL_CAPABILITY_FILTER_VALUES.AUDIO_INPUT]: Volume2,
   [MODEL_CAPABILITY_FILTER_VALUES.AUDIO_OUTPUT]: Volume2,
   [MODEL_CAPABILITY_FILTER_VALUES.VIDEO_INPUT]: Video,

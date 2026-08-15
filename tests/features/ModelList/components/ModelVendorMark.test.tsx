@@ -5,19 +5,6 @@ import { describe, expect, it, vi } from "vitest"
 import { ModelVendorMark } from "~/features/ModelList/components/ModelVendorMark"
 import type { ModelVendorPresentationInput } from "~/features/ModelList/modelVendorPresentation"
 
-vi.mock("@heroicons/react/24/outline", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("@heroicons/react/24/outline")>()
-  const CpuChipIcon = ({
-    size,
-    ...props
-  }: React.SVGProps<SVGSVGElement> & { size?: string | number }) => (
-    <svg role="img" data-mark="generic" data-size={size} {...props} />
-  )
-
-  return { ...actual, CpuChipIcon }
-})
-
 vi.mock("lucide-react", async (importOriginal) => {
   const actual = await importOriginal<typeof import("lucide-react")>()
   const CircleHelp = ({
@@ -26,8 +13,14 @@ vi.mock("lucide-react", async (importOriginal) => {
   }: React.SVGProps<SVGSVGElement> & { size?: string | number }) => (
     <svg role="img" data-mark="unknown" data-size={size} {...props} />
   )
+  const Cpu = ({
+    size,
+    ...props
+  }: React.SVGProps<SVGSVGElement> & { size?: string | number }) => (
+    <svg role="img" data-mark="generic" data-size={size} {...props} />
+  )
 
-  return { ...actual, CircleHelp }
+  return { ...actual, CircleHelp, Cpu }
 })
 
 vi.mock("@lobehub/icons/es/Google/components/Color", () => ({

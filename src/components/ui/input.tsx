@@ -1,5 +1,5 @@
-import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline"
 import { cva, type VariantProps } from "class-variance-authority"
+import { Eye, EyeOff } from "lucide-react"
 import React from "react"
 
 import {
@@ -202,9 +202,9 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
                   }
                 >
                   {isRevealed ? (
-                    <EyeSlashIcon className="h-4 w-4" />
+                    <EyeOff className="h-4 w-4" />
                   ) : (
-                    <EyeIcon className="h-4 w-4" />
+                    <Eye className="h-4 w-4" />
                   )}
                 </IconButton>
               </span>

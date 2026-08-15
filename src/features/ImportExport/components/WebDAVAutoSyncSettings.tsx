@@ -1,9 +1,4 @@
-import {
-  ArrowPathIcon,
-  CheckCircleIcon,
-  ClockIcon,
-  XCircleIcon,
-} from "@heroicons/react/24/outline"
+import { CircleCheck, CircleX, Clock, RefreshCw } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
@@ -252,7 +247,7 @@ export default function WebDAVAutoSyncSettings() {
     if (isSyncing) {
       return (
         <Badge variant="info">
-          <ArrowPathIcon className="mr-1 h-3 w-3 animate-spin" />
+          <RefreshCw className="mr-1 h-3 w-3 animate-spin" />
           {t("webdav.syncing")}
         </Badge>
       )
@@ -261,7 +256,7 @@ export default function WebDAVAutoSyncSettings() {
     if (lastSyncStatus === "success") {
       return (
         <Badge variant="success">
-          <CheckCircleIcon className="mr-1 h-3 w-3" />
+          <CircleCheck className="mr-1 h-3 w-3" />
           {t("webdav.syncSuccess")}
         </Badge>
       )
@@ -270,7 +265,7 @@ export default function WebDAVAutoSyncSettings() {
     if (lastSyncStatus === "error") {
       return (
         <Badge variant="danger">
-          <XCircleIcon className="mr-1 h-3 w-3" />
+          <CircleX className="mr-1 h-3 w-3" />
           {t("webdav.syncError")}
         </Badge>
       )
@@ -278,7 +273,7 @@ export default function WebDAVAutoSyncSettings() {
 
     return (
       <Badge variant="secondary">
-        <ClockIcon className="mr-1 h-3 w-3" />
+        <Clock className="mr-1 h-3 w-3" />
         {t("webdav.notSynced")}
       </Badge>
     )

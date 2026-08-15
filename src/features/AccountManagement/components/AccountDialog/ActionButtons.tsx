@@ -1,9 +1,4 @@
-import {
-  BoltIcon,
-  CheckIcon,
-  PencilIcon,
-  SparklesIcon,
-} from "@heroicons/react/24/outline"
+import { Check, Pencil, Sparkles, Zap } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { Button } from "~/components/ui"
@@ -129,9 +124,7 @@ export default function ActionButtons({
           }
           variant="default"
           data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.autoDetectButton}
-          leftIcon={
-            !isDetecting ? <SparklesIcon className="h-4 w-4" /> : undefined
-          }
+          leftIcon={!isDetecting ? <Sparkles className="h-4 w-4" /> : undefined}
         >
           {autoDetectLabel}
         </Button>
@@ -143,7 +136,7 @@ export default function ActionButtons({
           className="flex-1"
           variant="outline"
           data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.manualAddButton}
-          leftIcon={<PencilIcon className="h-4 w-4" />}
+          leftIcon={<Pencil className="h-4 w-4" />}
         >
           {t("accountDialog:mode.manualAdd")}
         </Button>
@@ -170,9 +163,7 @@ export default function ActionButtons({
               : "flex-1"
           }
           variant="warning"
-          leftIcon={
-            !isDetecting ? <SparklesIcon className="h-4 w-4" /> : undefined
-          }
+          leftIcon={!isDetecting ? <Sparkles className="h-4 w-4" /> : undefined}
         >
           {isDetecting
             ? autoDetectLabel
@@ -196,7 +187,7 @@ export default function ActionButtons({
           title={autoConfigTitle}
           variant="default"
           leftIcon={
-            !isAutoConfiguring ? <BoltIcon className="h-4 w-4" /> : undefined
+            !isAutoConfiguring ? <Zap className="h-4 w-4" /> : undefined
           }
         >
           {isAutoConfiguring
@@ -216,7 +207,7 @@ export default function ActionButtons({
         className="flex-1"
         variant={isAddMode ? "success" : "default"}
         data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.confirmAddButton}
-        leftIcon={!isSaving ? <CheckIcon className="h-4 w-4" /> : undefined}
+        leftIcon={!isSaving ? <Check className="h-4 w-4" /> : undefined}
       >
         {isSaving
           ? t("common:status.saving")

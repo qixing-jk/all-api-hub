@@ -1,4 +1,4 @@
-import { ExclamationTriangleIcon } from "@heroicons/react/24/outline"
+import { TriangleAlert } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { Alert } from "~/components/ui/Alert"
@@ -46,7 +46,7 @@ export function DuplicateAccountWarningDialog({
       header={
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <ExclamationTriangleIcon className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+            <TriangleAlert className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
             <h2 className="dark:text-dark-text-primary text-lg font-semibold text-gray-900">
               {t("accountDialog:warnings.duplicateAccount.title")}
             </h2>

@@ -1,5 +1,5 @@
-import { ClockIcon, TrashIcon } from "@heroicons/react/24/outline"
 import type { TFunction } from "i18next"
+import { Clock, Trash2 } from "lucide-react"
 
 import { IconButton } from "~/components/ui"
 import {
@@ -51,7 +51,7 @@ export function ApiCheckBaseUrlHistoryPicker({
           onMouseDown={(event) => event.preventDefault()}
           disabled={!hasSuggestions}
         >
-          <ClockIcon className="h-4 w-4" />
+          <Clock className="h-4 w-4" />
         </IconButton>
       </PopoverTrigger>
       <PopoverContent
@@ -100,7 +100,7 @@ export function ApiCheckBaseUrlHistoryPicker({
                 className="shrink-0 opacity-70 group-hover:opacity-100"
                 onClick={() => onRemove(suggestion.baseUrl)}
               >
-                <TrashIcon className="h-3.5 w-3.5" />
+                <Trash2 className="h-3.5 w-3.5" />
               </IconButton>
             </div>
           ))}

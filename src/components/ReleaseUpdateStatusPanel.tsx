@@ -1,9 +1,5 @@
-import {
-  ArrowDownTrayIcon,
-  ArrowPathIcon,
-  CloudArrowDownIcon,
-} from "@heroicons/react/24/outline"
 import type { TFunction } from "i18next"
+import { CloudDownload, Download, RefreshCw } from "lucide-react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
@@ -213,9 +209,9 @@ export function ReleaseUpdateStatusPanel() {
     : t("settings:releaseUpdate.openLatest")
   const actionIcon = hasUpdate ? (
     isStoreUpdateReady ? (
-      <ArrowPathIcon className="h-4 w-4" />
+      <RefreshCw className="h-4 w-4" />
     ) : (
-      <ArrowDownTrayIcon className="h-4 w-4" />
+      <Download className="h-4 w-4" />
     )
   ) : (
     <WorkflowTransitionIcon className="h-4 w-4" />
@@ -257,7 +253,7 @@ export function ReleaseUpdateStatusPanel() {
       <CardList>
         <CardItem
           icon={
-            <CloudArrowDownIcon className="h-5 w-5 text-sky-600 dark:text-sky-400" />
+            <CloudDownload className="h-5 w-5 text-sky-600 dark:text-sky-400" />
           }
           title={statusTitle}
           description={statusDescription}
@@ -288,7 +284,7 @@ export function ReleaseUpdateStatusPanel() {
                 size="sm"
                 onClick={() => void handleCheckNow()}
                 loading={isChecking}
-                leftIcon={<ArrowPathIcon className="h-4 w-4" />}
+                leftIcon={<RefreshCw className="h-4 w-4" />}
                 data-testid={
                   RELEASE_UPDATE_STATUS_PANEL_TEST_IDS.checkNowButton
                 }

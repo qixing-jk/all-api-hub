@@ -1,4 +1,4 @@
-import { GlobeAltIcon } from "@heroicons/react/24/outline"
+import { Globe2 } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { SettingSection } from "~/components/SettingSection"
@@ -35,9 +35,7 @@ export default function AutoFillCurrentSiteUrlOnAccountAddSettings() {
         <CardList>
           <CardItem
             id="auto-fill-current-site-url-toggle"
-            icon={
-              <GlobeAltIcon className="h-5 w-5 text-sky-600 dark:text-sky-400" />
-            }
+            icon={<Globe2 className="h-5 w-5 text-sky-600 dark:text-sky-400" />}
             title={t("autoFillCurrentSiteUrlOnAccountAdd.toggleLabel")}
             description={t("autoFillCurrentSiteUrlOnAccountAdd.toggleDesc")}
             rightContent={

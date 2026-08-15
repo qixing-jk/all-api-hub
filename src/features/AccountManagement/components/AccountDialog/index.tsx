@@ -1,4 +1,4 @@
-import { InformationCircleIcon } from "@heroicons/react/24/outline"
+import { Info } from "lucide-react"
 import { useEffect, useState, type ComponentProps } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -345,7 +345,7 @@ export default function AccountDialog({
                   className="flex items-start gap-2 rounded-md bg-blue-50 p-2 text-xs leading-5 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300"
                   data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.sponsorPostClickNote}
                 >
-                  <InformationCircleIcon
+                  <Info
                     aria-hidden="true"
                     className="mt-0.5 h-4 w-4 shrink-0"
                   />

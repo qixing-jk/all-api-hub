@@ -1,9 +1,5 @@
-import {
-  ComputerDesktopIcon,
-  MoonIcon,
-  SunIcon,
-} from "@heroicons/react/24/outline"
 import type { TFunction } from "i18next"
+import { Monitor, Moon, Sun } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { ResponsiveToggleGroup } from "~/components/ResponsiveButtonGroup"
@@ -17,19 +13,19 @@ const getThemeOptions = (t: TFunction) => {
     {
       mode: "light" as ThemeMode,
       label: t("settings:theme.light"),
-      icon: SunIcon,
+      icon: Sun,
       description: t("settings:theme.useLightTheme"),
     },
     {
       mode: "dark" as ThemeMode,
       label: t("settings:theme.dark"),
-      icon: MoonIcon,
+      icon: Moon,
       description: t("settings:theme.useDarkTheme"),
     },
     {
       mode: "system" as ThemeMode,
       label: t("settings:theme.followSystem"),
-      icon: ComputerDesktopIcon,
+      icon: Monitor,
       description: t("settings:theme.followSystemTheme"),
     },
   ]
@@ -47,7 +43,7 @@ const ThemeToggle = () => {
   return (
     <CardItem
       id="appearance-theme-mode"
-      icon={<SunIcon className="h-5 w-5 text-amber-500 dark:text-amber-400" />}
+      icon={<Sun className="h-5 w-5 text-amber-500 dark:text-amber-400" />}
       title={t("theme.appearance")}
       description={t("theme.selectTheme")}
       rightContent={

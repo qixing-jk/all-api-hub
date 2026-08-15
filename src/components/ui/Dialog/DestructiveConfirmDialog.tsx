@@ -1,4 +1,4 @@
-import { TrashIcon } from "@heroicons/react/24/outline"
+import { Trash2 } from "lucide-react"
 import type { ComponentProps, ReactNode } from "react"
 
 import { Button } from "~/components/ui/button"
@@ -93,7 +93,7 @@ export function DestructiveConfirmDialog({
   size = "sm",
   confirmButtonTestId,
   cancelButtonTestId,
-  icon = <TrashIcon className="h-5 w-5 text-red-600 dark:text-red-400" />,
+  icon = <Trash2 className="h-5 w-5 text-red-600 dark:text-red-400" />,
   confirmVariant = "destructive",
 }: DestructiveConfirmDialogProps) {
   return (

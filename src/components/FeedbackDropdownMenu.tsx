@@ -1,12 +1,12 @@
-import {
-  BugAntIcon,
-  ChatBubbleLeftEllipsisIcon,
-  LanguageIcon,
-  LightBulbIcon,
-  PuzzlePieceIcon,
-  UsersIcon,
-} from "@heroicons/react/24/outline"
 import type { TFunction } from "i18next"
+import {
+  Bug,
+  Languages,
+  Lightbulb,
+  MessageSquareMore,
+  Puzzle,
+  Users,
+} from "lucide-react"
 import type { ComponentType } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -42,27 +42,27 @@ type FeedbackMenuItem = {
 export const FEEDBACK_MENU_ITEMS: readonly FeedbackMenuItem[] = [
   {
     labelKey: "feedback.bugReport",
-    Icon: BugAntIcon,
+    Icon: Bug,
     open: () => void openBugReportPage(),
   },
   {
     labelKey: "feedback.featureRequest",
-    Icon: LightBulbIcon,
+    Icon: Lightbulb,
     open: () => void openFeatureRequestPage(),
   },
   {
     labelKey: "feedback.siteSupportRequest",
-    Icon: PuzzlePieceIcon,
+    Icon: Puzzle,
     open: () => void openSiteSupportRequestPage(),
   },
   {
     labelKey: "feedback.languageRequest",
-    Icon: LanguageIcon,
+    Icon: Languages,
     open: () => void openLanguageRequestPage(),
   },
   {
     labelKey: "feedback.community",
-    Icon: UsersIcon,
+    Icon: Users,
     open: (language) => void openCommunityPage(language),
   },
 ]
@@ -113,7 +113,7 @@ export function FeedbackDropdownMenu({
             aria-label={t("feedback.trigger")}
             className="touch-manipulation"
           >
-            <ChatBubbleLeftEllipsisIcon className="h-4 w-4" />
+            <MessageSquareMore className="h-4 w-4" />
           </IconButton>
         </DropdownMenuTrigger>
       </Tooltip>

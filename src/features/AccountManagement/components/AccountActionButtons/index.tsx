@@ -1,21 +1,24 @@
-import {
-  ArrowPathIcon,
-  ArrowUpOnSquareIcon,
-  BanknotesIcon,
-  CheckCircleIcon,
-  CpuChipIcon,
-  EllipsisHorizontalIcon,
-  KeyIcon,
-  LinkIcon,
-  ListBulletIcon,
-  MagnifyingGlassIcon,
-  NoSymbolIcon,
-  PencilIcon,
-  TrashIcon,
-} from "@heroicons/react/24/outline"
 import type { TFunction } from "i18next"
 import { isPlainObject } from "lodash-es"
-import { CalendarCheck2, ChartPieIcon, PinIcon, PinOffIcon } from "lucide-react"
+import {
+  Ban,
+  Banknote,
+  CalendarCheck2,
+  ChartPie,
+  CircleCheck,
+  Cpu,
+  Ellipsis,
+  KeyRound,
+  Link,
+  List,
+  Pencil,
+  Pin,
+  PinOff,
+  RefreshCw,
+  Search,
+  Share2,
+  Trash2,
+} from "lucide-react"
 import React, { useEffect, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
@@ -328,7 +331,7 @@ export default function AccountActionButtons({
 
   const isPinned = isAccountPinned(site.id)
   const pinLabel = isPinned ? t("actions.unpin") : t("actions.pin")
-  const PinToggleIcon = isPinned ? PinOffIcon : PinIcon
+  const PinToggleIcon = isPinned ? PinOff : Pin
 
   useEffect(() => {
     return () => {
@@ -1003,7 +1006,7 @@ export default function AccountActionButtons({
           title={t("actions.copyUrl")}
           analyticsAction={PRODUCT_ANALYTICS_ACTION_IDS.CopyAccountSiteUrl}
         >
-          <LinkIcon className="h-4 w-4" />
+          <Link className="h-4 w-4" />
         </IconButton>
 
         <IconButton
@@ -1017,7 +1020,7 @@ export default function AccountActionButtons({
           data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.rowCopyKeyButton}
           title={primaryKeyActionLabel}
         >
-          <KeyIcon className="h-4 w-4" />
+          <KeyRound className="h-4 w-4" />
         </IconButton>
 
         <IconButton
@@ -1034,7 +1037,7 @@ export default function AccountActionButtons({
           title={t("actions.edit")}
           analyticsAction={PRODUCT_ANALYTICS_ACTION_IDS.OpenUpdateAccountDialog}
         >
-          <PencilIcon className="h-4 w-4" />
+          <Pencil className="h-4 w-4" />
         </IconButton>
 
         {/* Secondary Level - Dropdown menu */}
@@ -1049,7 +1052,7 @@ export default function AccountActionButtons({
               aria-label={t("common:actions.more")}
               data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.rowMoreActionsButton}
             >
-              <EllipsisHorizontalIcon className="h-4 w-4" />
+              <Ellipsis className="h-4 w-4" />
             </IconButton>
           </DropdownMenuTrigger>
 
@@ -1061,7 +1064,7 @@ export default function AccountActionButtons({
               <>
                 <AccountActionMenuItem
                   onClick={handleDisableToggle}
-                  icon={CheckCircleIcon}
+                  icon={CircleCheck}
                   label={t("actions.enableAccount")}
                   tone="success"
                   testId={ACCOUNT_MANAGEMENT_TEST_IDS.rowDisableToggleMenuItem}
@@ -1071,7 +1074,7 @@ export default function AccountActionButtons({
 
                 <AccountActionMenuItem
                   onClick={handleDeleteLocal}
-                  icon={TrashIcon}
+                  icon={Trash2}
                   label={t("actions.delete")}
                   isDestructive={true}
                   testId={ACCOUNT_MANAGEMENT_TEST_IDS.rowDeleteMenuItem}
@@ -1082,14 +1085,14 @@ export default function AccountActionButtons({
                 {/* Secondary Menu Items */}
                 <AccountActionMenuItem
                   onClick={handleOpenKeyList}
-                  icon={ListBulletIcon}
+                  icon={List}
                   label={t("actions.keyList")}
                   analyticsAction={PRODUCT_ANALYTICS_ACTION_IDS.OpenKeyList}
                 />
 
                 <AccountActionMenuItem
                   onClick={handleNavigateToKeyManagement}
-                  icon={KeyIcon}
+                  icon={KeyRound}
                   label={t("actions.keyManagement")}
                   testId={ACCOUNT_MANAGEMENT_TEST_IDS.rowKeyManagementMenuItem}
                   analyticsAction={
@@ -1102,7 +1105,7 @@ export default function AccountActionButtons({
                 >
                   <AccountActionMenuItem
                     onClick={handleNavigateToModelManagement}
-                    icon={CpuChipIcon}
+                    icon={Cpu}
                     label={t("actions.modelManagement")}
                     testId={
                       ACCOUNT_MANAGEMENT_TEST_IDS.rowModelManagementMenuItem
@@ -1121,7 +1124,7 @@ export default function AccountActionButtons({
                   >
                     <AccountActionMenuItem
                       onClick={handleLocateManagedSiteChannel}
-                      icon={MagnifyingGlassIcon}
+                      icon={Search}
                       label={t("actions.locateManagedSiteChannel")}
                       hint={
                         !isManagedSiteChannelLookupSupported
@@ -1148,7 +1151,7 @@ export default function AccountActionButtons({
                 >
                   <AccountActionMenuItem
                     onClick={handleNavigateToUsageManagement}
-                    icon={ChartPieIcon}
+                    icon={ChartPie}
                     label={t("actions.usageLog")}
                     testId={ACCOUNT_MANAGEMENT_TEST_IDS.rowUsageLogMenuItem}
                     analyticsAction={
@@ -1159,7 +1162,7 @@ export default function AccountActionButtons({
 
                 <AccountActionMenuItem
                   onClick={handleNavigateToRedeemPage}
-                  icon={BanknotesIcon}
+                  icon={Banknote}
                   label={t("actions.redeemPage")}
                   testId={ACCOUNT_MANAGEMENT_TEST_IDS.rowRedeemMenuItem}
                   analyticsAction={PRODUCT_ANALYTICS_ACTION_IDS.OpenRedeemPage}
@@ -1179,7 +1182,7 @@ export default function AccountActionButtons({
 
                 <AccountActionMenuItem
                   onClick={handleRefreshLocal}
-                  icon={ArrowPathIcon}
+                  icon={RefreshCw}
                   label={t("actions.refresh")}
                   loading={isRefreshMenuPending}
                   loadingLabel={t("common:status.refreshing")}
@@ -1204,7 +1207,7 @@ export default function AccountActionButtons({
 
                 <AccountActionMenuItem
                   onClick={handleCopyInviteLink}
-                  icon={LinkIcon}
+                  icon={Link}
                   label={t("actions.copyInviteLink")}
                   hint={
                     !canCopyInviteLink
@@ -1224,7 +1227,7 @@ export default function AccountActionButtons({
 
                 <AccountActionMenuItem
                   onClick={handleShareSnapshot}
-                  icon={ArrowUpOnSquareIcon}
+                  icon={Share2}
                   label={t("shareSnapshots:actions.shareAccountSnapshot")}
                 />
 
@@ -1233,7 +1236,7 @@ export default function AccountActionButtons({
                 {/* Place Disable immediately above Delete for clarity and consistency. */}
                 <AccountActionMenuItem
                   onClick={handleDisableToggle}
-                  icon={NoSymbolIcon}
+                  icon={Ban}
                   label={t("actions.disableAccount")}
                   tone="warning"
                   testId={ACCOUNT_MANAGEMENT_TEST_IDS.rowDisableToggleMenuItem}
@@ -1241,7 +1244,7 @@ export default function AccountActionButtons({
 
                 <AccountActionMenuItem
                   onClick={handleDeleteLocal}
-                  icon={TrashIcon}
+                  icon={Trash2}
                   label={t("actions.delete")}
                   isDestructive={true}
                   testId={ACCOUNT_MANAGEMENT_TEST_IDS.rowDeleteMenuItem}

@@ -1,4 +1,4 @@
-import { CursorArrowRaysIcon } from "@heroicons/react/24/outline"
+import { MousePointerClick } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { ResponsiveToggleGroup } from "~/components/ResponsiveButtonGroup"
@@ -54,7 +54,7 @@ export default function ActionClickBehaviorSettings() {
           <CardItem
             id="action-click-behavior"
             icon={
-              <CursorArrowRaysIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              <MousePointerClick className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             }
             title={t("actionClick.actionIconClickTitle")}
             description={

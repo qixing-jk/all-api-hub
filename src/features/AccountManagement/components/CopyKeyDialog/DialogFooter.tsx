@@ -1,4 +1,4 @@
-import { KeyIcon } from "@heroicons/react/24/outline"
+import { KeyRound } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { Button } from "~/components/ui"
@@ -25,7 +25,7 @@ export function DialogFooter({
       <div className="flex items-center space-x-2">
         {keyCount > 0 && (
           <div className="dark:text-dark-text-secondary flex items-center space-x-1.5 text-xs text-gray-500">
-            <KeyIcon className="h-3 w-3" />
+            <KeyRound className="h-3 w-3" />
             <span>{t("ui:dialog.copyKey.totalKeys", { count: keyCount })}</span>
           </div>
         )}
@@ -39,7 +39,7 @@ export function DialogFooter({
             onClick={onOpenKeyManagement}
             analyticsAction={PRODUCT_ANALYTICS_ACTION_IDS.OpenKeyManagement}
           >
-            <KeyIcon aria-hidden="true" className="h-4 w-4" />
+            <KeyRound aria-hidden="true" className="h-4 w-4" />
             {t("account:actions.keyManagement")}
           </Button>
         ) : null}

@@ -1,8 +1,4 @@
-import {
-  CalendarDaysIcon,
-  EyeIcon,
-  GlobeAltIcon,
-} from "@heroicons/react/24/outline"
+import { CalendarDays, Eye, Globe2 } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { ResponsiveToggleGroup } from "~/components/ResponsiveButtonGroup"
@@ -58,7 +54,7 @@ export default function DisplaySettings() {
           <CardItem
             id="display-currency-unit"
             icon={
-              <GlobeAltIcon className="h-5 w-5 text-green-600 dark:text-green-400" />
+              <Globe2 className="h-5 w-5 text-green-600 dark:text-green-400" />
             }
             title={t("display.currencyUnit")}
             description={t("display.currencyDesc")}
@@ -86,7 +82,7 @@ export default function DisplaySettings() {
           <CardItem
             id="display-today-cashflow-enabled"
             icon={
-              <CalendarDaysIcon className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+              <CalendarDays className="h-5 w-5 text-amber-600 dark:text-amber-400" />
             }
             title={t("display.todayCashflowEnabled")}
             description={t("display.todayCashflowEnabledDesc")}
@@ -100,9 +96,7 @@ export default function DisplaySettings() {
 
           <CardItem
             id="display-default-tab"
-            icon={
-              <EyeIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-            }
+            icon={<Eye className="h-5 w-5 text-blue-600 dark:text-blue-400" />}
             title={t("display.defaultTab")}
             description={t("display.defaultTabDesc")}
             rightContent={

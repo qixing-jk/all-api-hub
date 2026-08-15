@@ -1,8 +1,4 @@
-import {
-  CurrencyDollarIcon,
-  ServerIcon,
-  TagIcon,
-} from "@heroicons/react/24/outline"
+import { DollarSign, Server, Tag } from "lucide-react"
 import React from "react"
 import { useTranslation } from "react-i18next"
 
@@ -114,7 +110,7 @@ export const ModelItemDetails: React.FC<ModelItemDetailsProps> = ({
         {shouldShowGroupDetails && groupContext.usableGroups.length > 0 && (
           <div>
             <div className="mb-2 flex items-center space-x-2">
-              <TagIcon className="dark:text-dark-text-tertiary h-4 w-4 text-gray-400" />
+              <Tag className="dark:text-dark-text-tertiary h-4 w-4 text-gray-400" />
               <span className="dark:text-dark-text-secondary font-medium text-gray-700">
                 {t("currentUsableGroups")}
               </span>
@@ -169,7 +165,7 @@ export const ModelItemDetails: React.FC<ModelItemDetailsProps> = ({
                         variant={isCurrentGroup ? "default" : "secondary"}
                         size="sm"
                       >
-                        {isCurrentGroup && <TagIcon className="h-3 w-3" />}
+                        {isCurrentGroup && <Tag className="h-3 w-3" />}
                         {groupLabel}
                       </Badge>
                     )}
@@ -183,7 +179,7 @@ export const ModelItemDetails: React.FC<ModelItemDetailsProps> = ({
         {shouldShowGroupDetails && supportedOnlyGroups.length > 0 && (
           <div>
             <div className="mb-2 flex items-center space-x-2">
-              <TagIcon className="dark:text-dark-text-tertiary h-4 w-4 text-gray-400" />
+              <Tag className="dark:text-dark-text-tertiary h-4 w-4 text-gray-400" />
               <span className="dark:text-dark-text-secondary font-medium text-gray-700">
                 {t("siteSupportedGroups")}
               </span>
@@ -202,7 +198,7 @@ export const ModelItemDetails: React.FC<ModelItemDetailsProps> = ({
         {showEndpointTypes && (
           <div>
             <div className="mb-2 flex items-center space-x-2">
-              <ServerIcon className="dark:text-dark-text-tertiary h-4 w-4 text-gray-400" />
+              <Server className="dark:text-dark-text-tertiary h-4 w-4 text-gray-400" />
               <span className="dark:text-dark-text-secondary font-medium text-gray-700">
                 {t("endpointType")}
               </span>
@@ -217,7 +213,7 @@ export const ModelItemDetails: React.FC<ModelItemDetailsProps> = ({
         {showPricingDetails && isTokenBillingType(model.quota_type) && (
           <div className="md:col-span-2">
             <div className="mb-2 flex items-center space-x-2">
-              <CurrencyDollarIcon className="dark:text-dark-text-tertiary h-4 w-4 text-gray-400" />
+              <DollarSign className="dark:text-dark-text-tertiary h-4 w-4 text-gray-400" />
               <span className="dark:text-dark-text-secondary font-medium text-gray-700">
                 {t("detailedPricing")}
               </span>

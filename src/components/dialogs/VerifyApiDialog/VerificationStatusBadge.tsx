@@ -1,4 +1,4 @@
-import { CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/outline"
+import { CircleCheck, CircleX } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { Badge } from "~/components/ui"
@@ -28,7 +28,7 @@ export function VerificationStatusBadge({
     return (
       <Badge variant="success" size="sm">
         <span className="flex items-center gap-1">
-          <CheckCircleIcon className="h-3.5 w-3.5" />
+          <CircleCheck className="h-3.5 w-3.5" />
           {t("verifyDialog.status.pass")}
         </span>
       </Badge>
@@ -54,7 +54,7 @@ export function VerificationStatusBadge({
   return (
     <Badge variant="destructive" size="sm">
       <span className="flex items-center gap-1">
-        <XCircleIcon className="h-3.5 w-3.5" />
+        <CircleX className="h-3.5 w-3.5" />
         {t("verifyDialog.status.fail")}
       </span>
     </Badge>

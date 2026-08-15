@@ -1,13 +1,13 @@
 import {
-  ArrowDownTrayIcon,
-  CalendarDaysIcon,
-  CurrencyDollarIcon,
-  GlobeAltIcon,
-  KeyIcon,
-  TicketIcon,
-  UserIcon,
-} from "@heroicons/react/24/outline"
-import { Cookie } from "lucide-react"
+  CalendarDays,
+  Cookie,
+  DollarSign,
+  Download,
+  Globe2,
+  KeyRound,
+  Ticket,
+  User,
+} from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import {
@@ -173,7 +173,7 @@ export default function AccountForm({
             value={siteName}
             onChange={(e) => onSiteNameChange(e.target.value)}
             placeholder="example.com"
-            leftIcon={<GlobeAltIcon className="h-5 w-5" />}
+            leftIcon={<Globe2 className="h-5 w-5" />}
             data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.siteNameInput}
             required
           />
@@ -192,7 +192,7 @@ export default function AccountForm({
               data-site-type={siteType ?? SITE_TYPES.UNKNOWN}
             >
               <div className="flex items-center gap-2">
-                <GlobeAltIcon className="text-muted-foreground h-5 w-5" />
+                <Globe2 className="text-muted-foreground h-5 w-5" />
                 <SelectValue placeholder={t("form.siteType")} />
               </div>
             </SelectTrigger>
@@ -238,7 +238,7 @@ export default function AccountForm({
             <SelectContent align="end" className="min-w-48">
               <SelectItem value={AuthTypeEnum.AccessToken}>
                 <div className="flex items-center gap-2">
-                  <KeyIcon className="h-4 w-4" />
+                  <KeyRound className="h-4 w-4" />
                   <span>{t("siteInfo.authType.accessToken")}</span>
                 </div>
               </SelectItem>
@@ -263,7 +263,7 @@ export default function AccountForm({
             value={username}
             onChange={(e) => onUsernameChange(e.target.value)}
             placeholder={t("form.username")}
-            leftIcon={<UserIcon className="h-5 w-5" />}
+            leftIcon={<User className="h-5 w-5" />}
             data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.usernameInput}
             required={sitePolicy.requireUsername}
           />
@@ -309,7 +309,7 @@ export default function AccountForm({
                     ? t("form.openrouterManagementKey")
                     : t("form.accessToken")
                 }
-                leftIcon={<KeyIcon className="h-5 w-5" />}
+                leftIcon={<KeyRound className="h-5 w-5" />}
                 data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.accessTokenInput}
                 required
               />
@@ -372,7 +372,7 @@ export default function AccountForm({
                       data-testid={
                         ACCOUNT_MANAGEMENT_TEST_IDS.sub2apiImportSessionButton
                       }
-                      leftIcon={<ArrowDownTrayIcon className="h-4 w-4" />}
+                      leftIcon={<Download className="h-4 w-4" />}
                     >
                       {isImportingSub2apiSession
                         ? t("common:status.importing")
@@ -390,7 +390,7 @@ export default function AccountForm({
                         onSub2apiRefreshTokenChange(e.target.value)
                       }
                       placeholder={t("form.sub2apiRefreshTokenPlaceholder")}
-                      leftIcon={<KeyIcon className="h-5 w-5" />}
+                      leftIcon={<KeyRound className="h-5 w-5" />}
                       data-testid={
                         ACCOUNT_MANAGEMENT_TEST_IDS.sub2apiRefreshTokenInput
                       }
@@ -407,7 +407,7 @@ export default function AccountForm({
                         sub2apiTokenExpiresAt,
                         t("common:labels.notAvailable"),
                       )}
-                      leftIcon={<CalendarDaysIcon className="h-5 w-5" />}
+                      leftIcon={<CalendarDays className="h-5 w-5" />}
                       disabled
                     />
                   </FormField>
@@ -437,7 +437,7 @@ export default function AccountForm({
                 size="sm"
                 onClick={onImportCookieAuthSessionCookie}
                 loading={isImportingCookies}
-                leftIcon={<ArrowDownTrayIcon className="h-4 w-4" />}
+                leftIcon={<Download className="h-4 w-4" />}
                 className="w-full"
               >
                 {isImportingCookies
@@ -579,7 +579,7 @@ export default function AccountForm({
               })
             }
             placeholder="https://cdk.example.com/"
-            leftIcon={<CalendarDaysIcon className="h-5 w-5" />}
+            leftIcon={<CalendarDays className="h-5 w-5" />}
           />
         </FormField>
 
@@ -630,7 +630,7 @@ export default function AccountForm({
               })
             }
             placeholder="https://example.com/console/topup"
-            leftIcon={<TicketIcon className="h-5 w-5" />}
+            leftIcon={<Ticket className="h-5 w-5" />}
           />
         </FormField>
       </AccountFormSection>
@@ -657,7 +657,7 @@ export default function AccountForm({
             value={exchangeRate}
             onChange={(e) => onExchangeRateChange(e.target.value)}
             placeholder={t("form.exchangeRatePlaceholder")}
-            leftIcon={<CurrencyDollarIcon className="h-5 w-5" />}
+            leftIcon={<DollarSign className="h-5 w-5" />}
             rightIcon={
               <span className="dark:text-dark-text-secondary text-sm text-gray-500">
                 CNY
@@ -688,7 +688,7 @@ export default function AccountForm({
             value={manualBalanceUsd}
             onChange={(e) => onManualBalanceUsdChange(e.target.value)}
             placeholder={t("form.manualBalanceUsdPlaceholder")}
-            leftIcon={<CurrencyDollarIcon className="h-5 w-5" />}
+            leftIcon={<DollarSign className="h-5 w-5" />}
             rightIcon={
               <span className="dark:text-dark-text-secondary text-sm text-gray-500">
                 USD

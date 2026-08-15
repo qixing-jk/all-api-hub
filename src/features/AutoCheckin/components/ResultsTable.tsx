@@ -1,12 +1,12 @@
 import {
-  ArrowPathIcon,
-  CalendarDaysIcon,
-  CheckCircleIcon,
-  ExclamationTriangleIcon,
-  NoSymbolIcon,
-  TrashIcon,
-  XCircleIcon,
-} from "@heroicons/react/24/outline"
+  Ban,
+  CalendarDays,
+  CircleCheck,
+  CircleX,
+  RefreshCw,
+  Trash2,
+  TriangleAlert,
+} from "lucide-react"
 import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -131,28 +131,28 @@ export default function ResultsTable({
       case CHECKIN_RESULT_STATUS.SUCCESS:
         return (
           <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800 dark:bg-green-900 dark:text-green-200">
-            <CheckCircleIcon className="h-3 w-3" />
+            <CircleCheck className="h-3 w-3" />
             {t("execution.status.success")}
           </span>
         )
       case CHECKIN_RESULT_STATUS.ALREADY_CHECKED:
         return (
           <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-            <CheckCircleIcon className="h-3 w-3" />
+            <CircleCheck className="h-3 w-3" />
             {t("execution.status.alreadyChecked")}
           </span>
         )
       case CHECKIN_RESULT_STATUS.FAILED:
         return (
           <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-1 text-xs font-medium text-red-800 dark:bg-red-900 dark:text-red-200">
-            <XCircleIcon className="h-3 w-3" />
+            <CircleX className="h-3 w-3" />
             {t("execution.status.failed")}
           </span>
         )
       case CHECKIN_RESULT_STATUS.SKIPPED:
         return (
           <span className="inline-flex items-center gap-1 rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100">
-            <ExclamationTriangleIcon className="h-3 w-3" />
+            <TriangleAlert className="h-3 w-3" />
             {t("execution.status.skipped")}
           </span>
         )
@@ -256,9 +256,7 @@ export default function ResultsTable({
                                 variant="secondary"
                                 loading={retryingAccountId === result.accountId}
                                 onClick={() => onRetryAccount(result.accountId)}
-                                leftIcon={
-                                  <ArrowPathIcon className="h-3.5 w-3.5" />
-                                }
+                                leftIcon={<RefreshCw className="h-3.5 w-3.5" />}
                               >
                                 {retryingAccountId === result.accountId
                                   ? t("common:status.retrying")
@@ -297,7 +295,7 @@ export default function ResultsTable({
                                 onOpenExternalCheckIn(result.accountId)
                               }
                               leftIcon={
-                                <CalendarDaysIcon className="h-3.5 w-3.5" />
+                                <CalendarDays className="h-3.5 w-3.5" />
                               }
                             >
                               {openingExternalCheckInAccountId ===
@@ -318,9 +316,7 @@ export default function ResultsTable({
                               variant="warning"
                               loading={disablingAccountId === result.accountId}
                               onClick={() => onDisableAccount(result.accountId)}
-                              leftIcon={
-                                <NoSymbolIcon className="h-3.5 w-3.5" />
-                              }
+                              leftIcon={<Ban className="h-3.5 w-3.5" />}
                             >
                               {disablingAccountId === result.accountId
                                 ? t("common:status.disabling")
@@ -333,7 +329,7 @@ export default function ResultsTable({
                               variant="destructive"
                               loading={deletingAccountId === result.accountId}
                               onClick={() => onDeleteAccount(result.accountId)}
-                              leftIcon={<TrashIcon className="h-3.5 w-3.5" />}
+                              leftIcon={<Trash2 className="h-3.5 w-3.5" />}
                             >
                               {deletingAccountId === result.accountId
                                 ? t("common:status.deleting")

@@ -1,8 +1,4 @@
-import {
-  ChevronDownIcon,
-  ChevronRightIcon,
-  UserGroupIcon,
-} from "@heroicons/react/24/outline"
+import { ChevronDown, ChevronRight, UsersRound } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { Badge, Card, CardContent, IconButton } from "~/components/ui"
@@ -82,7 +78,7 @@ export function RuntimeKeyItem({
               {runtimeKey.label}
             </h4>
             <div className="flex items-center space-x-1.5">
-              <UserGroupIcon className="h-3 w-3 text-gray-400 dark:text-gray-500" />
+              <UsersRound className="h-3 w-3 text-gray-400 dark:text-gray-500" />
               <Badge
                 variant="outline"
                 size="sm"
@@ -112,9 +108,9 @@ export function RuntimeKeyItem({
               }
             >
               {isExpanded ? (
-                <ChevronDownIcon className="h-4 w-4" />
+                <ChevronDown className="h-4 w-4" />
               ) : (
-                <ChevronRightIcon className="h-4 w-4" />
+                <ChevronRight className="h-4 w-4" />
               )}
             </IconButton>
           </div>

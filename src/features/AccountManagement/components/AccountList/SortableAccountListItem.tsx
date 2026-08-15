@@ -1,6 +1,6 @@
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { Bars3Icon } from "@heroicons/react/24/outline"
+import { GripVertical } from "lucide-react"
 
 import { IconButton } from "~/components/ui"
 
@@ -68,7 +68,7 @@ function SortableAccountListItem({
               {...listeners}
               {...attributes}
             >
-              <Bars3Icon className="h-4 w-4" />
+              <GripVertical className="h-4 w-4" />
             </IconButton>
           ) : null
         }

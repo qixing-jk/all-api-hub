@@ -1,6 +1,5 @@
-import { MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/outline"
 import type { TFunction } from "i18next"
-import { ShieldCheck, TriangleAlert } from "lucide-react"
+import { Search, ShieldCheck, TriangleAlert, X } from "lucide-react"
 import { useRef, type Dispatch, type SetStateAction } from "react"
 
 import {
@@ -171,7 +170,7 @@ export function RepairMissingKeysResultsPanel({
               aria-label={t("keyManagement:repairMissingKeys.searchLabel")}
               value={searchTerm}
               onChange={(event) => onSearchTermChange(event.target.value)}
-              leftIcon={<MagnifyingGlassIcon className="h-4 w-4" />}
+              leftIcon={<Search className="h-4 w-4" />}
               rightIcon={
                 searchTerm ? (
                   <button
@@ -183,7 +182,7 @@ export function RepairMissingKeysResultsPanel({
                     className="dark:hover:bg-dark-bg-tertiary rounded p-1 hover:bg-gray-100"
                     aria-label={t("common:actions.clear")}
                   >
-                    <XMarkIcon className="h-4 w-4" />
+                    <X className="h-4 w-4" />
                   </button>
                 ) : null
               }

@@ -1,4 +1,4 @@
-import { DocumentTextIcon } from "@heroicons/react/24/outline"
+import { FileText } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { SettingSection } from "~/components/SettingSection"
@@ -31,7 +31,7 @@ export default function ChangelogOnUpdateSettings() {
           <CardItem
             id="changelog-on-update-toggle"
             icon={
-              <DocumentTextIcon className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+              <FileText className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
             }
             title={t("changelogOnUpdate.toggleLabel")}
             description={t("changelogOnUpdate.toggleDesc")}

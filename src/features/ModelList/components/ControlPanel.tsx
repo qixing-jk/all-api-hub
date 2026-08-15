@@ -1,9 +1,11 @@
 import {
-  BeakerIcon,
-  CpuChipIcon,
-  MagnifyingGlassIcon,
-} from "@heroicons/react/24/outline"
-import { CircleHelp, Copy, TrendingDown } from "lucide-react"
+  CircleHelp,
+  Copy,
+  Cpu,
+  FlaskConical,
+  Search,
+  TrendingDown,
+} from "lucide-react"
 import { useMemo } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
@@ -514,7 +516,7 @@ export function ControlPanel({
                   placeholder={t("searchPlaceholder")}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  leftIcon={<MagnifyingGlassIcon className="h-4 w-4" />}
+                  leftIcon={<Search className="h-4 w-4" />}
                   onClear={handleClearSearch}
                   clearButtonLabel={t("common:actions.clear")}
                 />
@@ -533,7 +535,7 @@ export function ControlPanel({
 
               <div className="flex h-9 items-center gap-3 self-end text-xs [@container(min-width:32rem)]:col-span-2 [@container(min-width:32rem)]:justify-end [@container(min-width:48rem)]:col-span-1">
                 <span className="dark:text-dark-text-secondary flex items-center gap-1.5 text-gray-600">
-                  <CpuChipIcon className="h-4 w-4" />
+                  <Cpu className="h-4 w-4" />
                   {t("totalModels", { count: totalModels })}
                 </span>
                 <span className="dark:bg-dark-bg-tertiary h-3 w-px bg-gray-300" />
@@ -711,7 +713,7 @@ export function ControlPanel({
                     onClick={onBatchVerifyModels}
                     disabled={filteredModels.length === 0}
                     data-testid={MODEL_LIST_TEST_IDS.batchVerifyButton}
-                    leftIcon={<BeakerIcon className="h-4 w-4" />}
+                    leftIcon={<FlaskConical className="h-4 w-4" />}
                     analyticsAction={
                       PRODUCT_ANALYTICS_ACTION_IDS.OpenBatchModelVerifyDialog
                     }

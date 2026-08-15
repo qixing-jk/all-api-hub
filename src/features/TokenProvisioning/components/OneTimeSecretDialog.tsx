@@ -1,4 +1,4 @@
-import { CheckIcon, ClipboardDocumentIcon } from "@heroicons/react/24/outline"
+import { Check, Clipboard } from "lucide-react"
 import { useCallback, useId, useLayoutEffect, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
@@ -274,9 +274,9 @@ export function OneTimeSecretDialog({
               data-testid={TOKEN_PROVISIONING_TEST_IDS.oneTimeKeyCopyButton}
               leftIcon={
                 copied ? (
-                  <CheckIcon className="h-4 w-4" />
+                  <Check className="h-4 w-4" />
                 ) : (
-                  <ClipboardDocumentIcon className="h-4 w-4" />
+                  <Clipboard className="h-4 w-4" />
                 )
               }
             >

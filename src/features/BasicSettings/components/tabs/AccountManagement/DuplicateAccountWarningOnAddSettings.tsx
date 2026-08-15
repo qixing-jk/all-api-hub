@@ -1,4 +1,4 @@
-import { ExclamationTriangleIcon } from "@heroicons/react/24/outline"
+import { TriangleAlert } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { SettingSection } from "~/components/SettingSection"
@@ -31,7 +31,7 @@ export default function DuplicateAccountWarningOnAddSettings() {
           <CardItem
             id="duplicate-account-warning-toggle"
             icon={
-              <ExclamationTriangleIcon className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+              <TriangleAlert className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
             }
             title={t("duplicateAccountWarningOnAdd.toggleLabel")}
             description={t("duplicateAccountWarningOnAdd.toggleDesc")}

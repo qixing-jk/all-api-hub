@@ -1,4 +1,4 @@
-import { SparklesIcon, UsersIcon } from "@heroicons/react/24/outline"
+import { Sparkles, Users } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { LdohIcon } from "~/components/icons/LdohIcon"
@@ -76,7 +76,7 @@ export default function InfoPanel({
     )
   }
 
-  const Icon = isAddMode ? SparklesIcon : UsersIcon
+  const Icon = isAddMode ? Sparkles : Users
   const iconColor = isAddMode ? "text-blue-400" : "text-green-400"
   const bgColor = isAddMode
     ? "bg-blue-50 dark:bg-blue-900/20"

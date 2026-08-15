@@ -1,4 +1,4 @@
-import { ArrowUpCircleIcon } from "@heroicons/react/24/solid"
+import { CircleArrowUp } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { Badge } from "~/components/ui"
@@ -60,7 +60,7 @@ export function VersionBadge({
       >
         <span>v{version}</span>
         {hasUpdate && (
-          <ArrowUpCircleIcon
+          <CircleArrowUp
             aria-hidden="true"
             className="h-5 w-5 text-amber-500"
           />

@@ -1,5 +1,4 @@
-import { CheckIcon } from "@heroicons/react/24/outline"
-import { Copy } from "lucide-react"
+import { Check, Copy } from "lucide-react"
 import { useEffect, useMemo, useState, type MouseEvent } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -456,7 +455,7 @@ export function RuntimeKeyActionControls({
             onClick={handleCopy}
           >
             {copiedRuntimeKeyId === runtimeKey.id ? (
-              <CheckIcon className="h-4 w-4 text-green-500" />
+              <Check className="h-4 w-4 text-green-500" />
             ) : (
               <Copy className="dark:text-dark-text-tertiary h-4 w-4 text-gray-500" />
             )}

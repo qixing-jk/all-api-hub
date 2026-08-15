@@ -1,4 +1,4 @@
-import { ArrowUpTrayIcon } from "@heroicons/react/24/outline"
+import { Upload } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import {
@@ -73,7 +73,7 @@ const ExportSection = ({ isExporting, setIsExporting }: ExportSectionProps) => {
       <Card padding="none" className="flex flex-1 flex-col">
         <CardHeader>
           <div className="flex items-center gap-2">
-            <ArrowUpTrayIcon className="h-5 w-5 text-green-600 dark:text-green-400" />
+            <Upload className="h-5 w-5 text-green-600 dark:text-green-400" />
             <CardTitle className="mb-0">{t("export.title")}</CardTitle>
           </div>
           <CardDescription>{t("export.description")}</CardDescription>

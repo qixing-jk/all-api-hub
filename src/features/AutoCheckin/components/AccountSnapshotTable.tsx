@@ -1,9 +1,4 @@
-import {
-  CheckCircleIcon,
-  ClockIcon,
-  ExclamationTriangleIcon,
-  XCircleIcon,
-} from "@heroicons/react/24/outline"
+import { CircleCheck, CircleX, Clock, TriangleAlert } from "lucide-react"
 import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -54,21 +49,21 @@ export default function AccountSnapshotTable({
         case CHECKIN_RESULT_STATUS.ALREADY_CHECKED:
           return (
             <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900 dark:text-green-200">
-              <CheckCircleIcon className="h-3.5 w-3.5" />
+              <CircleCheck className="h-3.5 w-3.5" />
               {t("execution.status.success")}
             </span>
           )
         case CHECKIN_RESULT_STATUS.FAILED:
           return (
             <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800 dark:bg-red-900 dark:text-red-200">
-              <XCircleIcon className="h-3.5 w-3.5" />
+              <CircleX className="h-3.5 w-3.5" />
               {t("execution.status.failed")}
             </span>
           )
         case CHECKIN_RESULT_STATUS.SKIPPED:
           return (
             <span className="inline-flex items-center gap-1 rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100">
-              <ExclamationTriangleIcon className="h-3.5 w-3.5" />
+              <TriangleAlert className="h-3.5 w-3.5" />
               {t("execution.status.skipped")}
             </span>
           )
@@ -80,7 +75,7 @@ export default function AccountSnapshotTable({
     if (snapshot.skipReason) {
       return (
         <span className="inline-flex items-center gap-1 rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100">
-          <ExclamationTriangleIcon className="h-3.5 w-3.5" />
+          <TriangleAlert className="h-3.5 w-3.5" />
           {t("execution.status.skipped")}
         </span>
       )
@@ -88,7 +83,7 @@ export default function AccountSnapshotTable({
 
     return (
       <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-200">
-        <ClockIcon className="h-3.5 w-3.5" />
+        <Clock className="h-3.5 w-3.5" />
         {t("snapshot.badges.pending")}
       </span>
     )

@@ -1,9 +1,4 @@
-import {
-  CheckCircleIcon,
-  ListBulletIcon,
-  MagnifyingGlassIcon,
-  XCircleIcon,
-} from "@heroicons/react/24/outline"
+import { CircleCheck, CircleX, List, Search } from "lucide-react"
 import { type ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -79,21 +74,21 @@ export default function FilterBar({
           "all",
           t("execution.filters.all"),
           "bg-blue-600",
-          <ListBulletIcon className="h-4 w-4" />,
+          <List className="h-4 w-4" />,
           statistics.total,
         )}
         {renderFilterButton(
           "success",
           t("execution.filters.success"),
           "bg-green-600",
-          <CheckCircleIcon className="h-4 w-4" />,
+          <CircleCheck className="h-4 w-4" />,
           statistics.successCount,
         )}
         {renderFilterButton(
           "failed",
           t("execution.filters.failed"),
           "bg-red-600",
-          <XCircleIcon className="h-4 w-4" />,
+          <CircleX className="h-4 w-4" />,
           statistics.failureCount,
         )}
       </div>
@@ -103,7 +98,7 @@ export default function FilterBar({
           placeholder={t("execution.filters.searchPlaceholder") as string}
           value={keyword}
           onChange={(e) => onKeywordChange(e.target.value)}
-          leftIcon={<MagnifyingGlassIcon className="h-4 w-4" />}
+          leftIcon={<Search className="h-4 w-4" />}
           onClear={() => onKeywordChange("")}
           clearButtonLabel={t("common:actions.clear")}
         />

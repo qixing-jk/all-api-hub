@@ -1,4 +1,4 @@
-import { KeyIcon, PlusIcon } from "@heroicons/react/24/outline"
+import { KeyRound, Plus } from "lucide-react"
 import { useEffect, useId, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -361,7 +361,7 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
             ) : (
               <div className="space-y-4">
                 <EmptyState
-                  icon={<KeyIcon className="h-12 w-12" />}
+                  icon={<KeyRound className="h-12 w-12" />}
                   title={t("modelList:keyDialog.noCompatibleTitle", {
                     modelId,
                   })}
@@ -432,7 +432,7 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
                       }
                       loading={isCreating}
                       variant="default"
-                      leftIcon={<PlusIcon className="h-4 w-4" />}
+                      leftIcon={<Plus className="h-4 w-4" />}
                     >
                       {isCreating
                         ? t("common:status.creating")

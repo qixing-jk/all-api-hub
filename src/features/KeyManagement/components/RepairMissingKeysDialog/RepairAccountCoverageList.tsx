@@ -1,8 +1,5 @@
-import {
-  ChevronDownIcon,
-  MagnifyingGlassIcon,
-} from "@heroicons/react/24/outline"
 import type { TFunction } from "i18next"
+import { ChevronDown, Search } from "lucide-react"
 import { useEffect, useState } from "react"
 
 import { Badge, EmptyState } from "~/components/ui"
@@ -107,7 +104,7 @@ function RepairAccountSummary({
           {getRepairOutcomeLabel(t, result.outcome)}
         </Badge>
         {expandable ? (
-          <ChevronDownIcon
+          <ChevronDown
             aria-hidden="true"
             className={cn(
               "dark:text-dark-text-tertiary mt-0.5 h-4 w-4 shrink-0 text-gray-500 transition-transform sm:mt-0",
@@ -308,7 +305,7 @@ export function RepairAccountCoverageList({
   if (filteredResults.length === 0) {
     return (
       <EmptyState
-        icon={<MagnifyingGlassIcon className="h-12 w-12" />}
+        icon={<Search className="h-12 w-12" />}
         title={t("keyManagement:repairMissingKeys.noMatchingResults")}
         className="py-10"
       />

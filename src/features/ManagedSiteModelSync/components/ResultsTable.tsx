@@ -1,9 +1,5 @@
-import {
-  ArrowPathIcon,
-  CheckCircleIcon,
-  ExclamationCircleIcon,
-} from "@heroicons/react/24/outline"
 import dayjs from "dayjs"
+import { CircleAlert, CircleCheck, RefreshCw } from "lucide-react"
 import { useEffect, useRef } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -141,9 +137,9 @@ export default function ResultsTable({
                   {columns.status && (
                     <td className="px-4 py-3">
                       {item.ok ? (
-                        <CheckCircleIcon className="h-5 w-5 text-green-600 dark:text-green-400" />
+                        <CircleCheck className="h-5 w-5 text-green-600 dark:text-green-400" />
                       ) : (
-                        <ExclamationCircleIcon className="h-5 w-5 text-red-600 dark:text-red-400" />
+                        <CircleAlert className="h-5 w-5 text-red-600 dark:text-red-400" />
                       )}
                     </td>
                   )}
@@ -203,7 +199,7 @@ export default function ResultsTable({
                       loading={isRunningThis}
                       aria-label={t("execution.table.syncChannel")}
                       title={t("execution.table.syncChannel")}
-                      leftIcon={<ArrowPathIcon className="h-4 w-4" />}
+                      leftIcon={<RefreshCw className="h-4 w-4" />}
                     />
                   </td>
                 </tr>

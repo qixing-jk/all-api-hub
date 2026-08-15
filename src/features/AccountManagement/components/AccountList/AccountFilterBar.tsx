@@ -1,9 +1,4 @@
-import {
-  ArrowPathIcon,
-  CheckBadgeIcon,
-  GlobeAltIcon,
-  PauseCircleIcon,
-} from "@heroicons/react/24/outline"
+import { BadgeCheck, CirclePause, Globe2, RefreshCw } from "lucide-react"
 import type { ComponentType, SVGProps } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -111,7 +106,7 @@ export default function AccountFilterBar({
         siteTypeOptions,
         onSiteTypeChange,
         "account-filter-site-type",
-        GlobeAltIcon,
+        Globe2,
       )}
       {renderSelect(
         checkInValue,
@@ -119,7 +114,7 @@ export default function AccountFilterBar({
         checkInOptions,
         onCheckInChange,
         "account-filter-check-in",
-        CheckBadgeIcon,
+        BadgeCheck,
       )}
       {renderSelect(
         refreshValue,
@@ -127,7 +122,7 @@ export default function AccountFilterBar({
         refreshOptions,
         onRefreshChange,
         "account-filter-refresh",
-        ArrowPathIcon,
+        RefreshCw,
       )}
       {renderSelect(
         disabledValue,
@@ -135,7 +130,7 @@ export default function AccountFilterBar({
         disabledOptions,
         onDisabledChange,
         "account-filter-disabled",
-        PauseCircleIcon,
+        CirclePause,
       )}
     </div>
   )

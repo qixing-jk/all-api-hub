@@ -1,9 +1,4 @@
-import {
-  ArrowPathIcon,
-  ArrowsPointingOutIcon,
-  Cog6ToothIcon,
-} from "@heroicons/react/24/outline"
-import { PanelRightClose } from "lucide-react"
+import { Maximize2, PanelRightClose, RefreshCw, Settings } from "lucide-react"
 import { useCallback, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
@@ -239,7 +234,7 @@ export default function HeaderSection({
                   aria-label={t("common:actions.refresh")}
                   className="touch-manipulation"
                 >
-                  <ArrowPathIcon className="h-4 w-4" />
+                  <RefreshCw className="h-4 w-4" />
                 </IconButton>
               </Tooltip>
             )}
@@ -255,7 +250,7 @@ export default function HeaderSection({
                   className="touch-manipulation"
                   analyticsAction={openFullPageActionId}
                 >
-                  <ArrowsPointingOutIcon className="h-4 w-4" />
+                  <Maximize2 className="h-4 w-4" />
                 </IconButton>
               </Tooltip>
             </ProductAnalyticsScope>
@@ -291,7 +286,7 @@ export default function HeaderSection({
                   PRODUCT_ANALYTICS_ACTION_IDS.OpenPopupSettingsPage
                 }
               >
-                <Cog6ToothIcon className="h-4 w-4" />
+                <Settings className="h-4 w-4" />
               </IconButton>
             </Tooltip>
           </ProductAnalyticsScope>

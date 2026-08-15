@@ -1,4 +1,4 @@
-import { PencilIcon, SparklesIcon } from "@heroicons/react/24/outline"
+import { Pencil, Sparkles } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
@@ -16,7 +16,7 @@ export default function DialogHeader({ mode }: DialogHeaderProps) {
   const { t } = useTranslation("accountDialog")
   const isAddMode = mode === DIALOG_MODES.ADD
   const title = isAddMode ? t("title.add") : t("title.edit")
-  const Icon = isAddMode ? SparklesIcon : PencilIcon
+  const Icon = isAddMode ? Sparkles : Pencil
   const iconClass = isAddMode
     ? "text-blue-600 dark:text-blue-400"
     : "text-emerald-600 dark:text-emerald-400"

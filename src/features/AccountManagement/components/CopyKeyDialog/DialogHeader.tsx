@@ -1,4 +1,4 @@
-import { KeyIcon } from "@heroicons/react/24/outline"
+import { KeyRound } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import type { DisplaySiteData } from "~/types"
@@ -16,7 +16,7 @@ export function DialogHeader({ account }: DialogHeaderProps) {
   return (
     <div className="flex items-center justify-between">
       <div className="flex items-center space-x-3">
-        <KeyIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+        <KeyRound className="h-5 w-5 text-blue-600 dark:text-blue-400" />
         <div>
           <h2 className="dark:text-dark-text-primary text-lg font-semibold text-gray-900">
             {t("dialog.copyKey.title")}

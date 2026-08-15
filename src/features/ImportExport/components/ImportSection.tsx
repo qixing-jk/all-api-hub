@@ -1,4 +1,4 @@
-import { ArrowDownTrayIcon, DocumentIcon } from "@heroicons/react/24/outline"
+import { Download, File } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import {
@@ -189,7 +189,7 @@ const ImportSection = ({
       <Card padding="none" className="flex flex-1 flex-col">
         <CardHeader>
           <div className="flex items-center gap-2">
-            <ArrowDownTrayIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            <Download className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             <CardTitle className="mb-0">{t("import.title")}</CardTitle>
           </div>
           <CardDescription>{t("import.description")}</CardDescription>
@@ -209,7 +209,7 @@ const ImportSection = ({
                 onChange={handleFileImport}
                 className="block w-full text-sm text-gray-500 file:mr-4 file:rounded-md file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-blue-700 hover:file:bg-blue-100 dark:text-gray-400 dark:file:bg-blue-900/30 dark:file:text-blue-300 dark:hover:file:bg-blue-900/50"
               />
-              <DocumentIcon className="h-5 w-5 text-gray-400 dark:text-gray-500" />
+              <File className="h-5 w-5 text-gray-400 dark:text-gray-500" />
             </div>
           </FormField>
 

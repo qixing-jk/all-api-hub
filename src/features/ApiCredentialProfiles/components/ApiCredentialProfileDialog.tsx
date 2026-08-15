@@ -1,4 +1,4 @@
-import { KeyIcon, PencilIcon, PlusIcon } from "@heroicons/react/24/outline"
+import { KeyRound, Pencil, Plus } from "lucide-react"
 import type { ChangeEvent } from "react"
 import { useEffect, useMemo, useState } from "react"
 import toast from "react-hot-toast"
@@ -439,9 +439,9 @@ export function ApiCredentialProfileDialog({
         header={
           <div className="flex min-w-0 items-center gap-3">
             {isEditMode ? (
-              <PencilIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              <Pencil className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             ) : (
-              <PlusIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              <Plus className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             )}
             <h2 className="dark:text-dark-text-primary truncate text-lg font-semibold text-gray-900">
               {dialogTitle}
@@ -557,7 +557,7 @@ export function ApiCredentialProfileDialog({
                 "apiCredentialProfiles:dialog.placeholders.apiKey",
               )}
               disabled={isSaving}
-              leftIcon={<KeyIcon className="h-5 w-5" />}
+              leftIcon={<KeyRound className="h-5 w-5" />}
             />
           </FormField>
 
@@ -765,7 +765,7 @@ export function ApiCredentialProfileDialog({
                       "apiCredentialProfiles:dialog.placeholders.telemetryBearerToken",
                     )}
                     disabled={isSaving}
-                    leftIcon={<KeyIcon className="h-5 w-5" />}
+                    leftIcon={<KeyRound className="h-5 w-5" />}
                   />
                 </FormField>
 

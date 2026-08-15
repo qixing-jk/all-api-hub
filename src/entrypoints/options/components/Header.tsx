@@ -1,8 +1,4 @@
-import {
-  Bars3Icon,
-  MagnifyingGlassIcon,
-  XMarkIcon,
-} from "@heroicons/react/24/outline"
+import { Menu, Search, X } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -58,7 +54,7 @@ function SearchTrigger({
       aria-label={ariaLabel}
     >
       <span className="flex min-w-0 items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-        <MagnifyingGlassIcon className="h-4 w-4 shrink-0" />
+        <Search className="h-4 w-4 shrink-0" />
         <span className="truncate">{placeholder}</span>
       </span>
       {showShortcutHint ? (
@@ -137,9 +133,9 @@ function Header({
               aria-label={t("navigation.toggleMenu")}
             >
               {isMobileSidebarOpen ? (
-                <XMarkIcon className="h-6 w-6" />
+                <X className="h-6 w-6" />
               ) : (
-                <Bars3Icon className="h-6 w-6" />
+                <Menu className="h-6 w-6" />
               )}
             </IconButton>
 
@@ -219,7 +215,7 @@ function Header({
               className="md:hidden"
               aria-label={t("optionsSearch.open")}
             >
-              <MagnifyingGlassIcon className="h-5 w-5" />
+              <Search className="h-5 w-5" />
             </IconButton>
           </div>
         </div>

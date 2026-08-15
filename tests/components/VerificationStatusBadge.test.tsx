@@ -16,11 +16,11 @@ vi.mock("react-i18next", async (importOriginal) => {
   }
 })
 
-vi.mock("@heroicons/react/24/outline", () => ({
-  CheckCircleIcon: (props: React.SVGProps<SVGSVGElement>) => (
+vi.mock("lucide-react", () => ({
+  CircleCheck: (props: React.SVGProps<SVGSVGElement>) => (
     <svg data-testid="check-circle-icon" {...props} />
   ),
-  XCircleIcon: (props: React.SVGProps<SVGSVGElement>) => (
+  CircleX: (props: React.SVGProps<SVGSVGElement>) => (
     <svg data-testid="x-circle-icon" {...props} />
   ),
 }))

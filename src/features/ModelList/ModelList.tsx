@@ -1,5 +1,4 @@
-import { ArrowPathIcon } from "@heroicons/react/24/outline"
-import { Cpu, KeyRound, TrendingDown } from "lucide-react"
+import { Cpu, KeyRound, RefreshCw, TrendingDown } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -589,7 +588,7 @@ export default function ModelList(props: {
                 <Button
                   onClick={loadPricingData}
                   variant="secondary"
-                  leftIcon={<ArrowPathIcon className="h-4 w-4" />}
+                  leftIcon={<RefreshCw className="h-4 w-4" />}
                   loading={isLoading}
                   analyticsAction={
                     PRODUCT_ANALYTICS_ACTION_IDS.RefreshModelPricingData

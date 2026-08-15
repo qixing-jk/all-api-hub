@@ -1,5 +1,4 @@
-import { CpuChipIcon } from "@heroicons/react/24/outline"
-import { CircleHelp } from "lucide-react"
+import { CircleHelp, Cpu } from "lucide-react"
 import type { ReactNode } from "react"
 
 import { InitialsIcon } from "~/components/icons/InitialsIcon"
@@ -106,8 +105,7 @@ export function ModelVendorMark({
     )
   }
 
-  const FallbackIcon =
-    presentation.kind === "unknown" ? CircleHelp : CpuChipIcon
+  const FallbackIcon = presentation.kind === "unknown" ? CircleHelp : Cpu
 
   if (variant === "compact") {
     return (

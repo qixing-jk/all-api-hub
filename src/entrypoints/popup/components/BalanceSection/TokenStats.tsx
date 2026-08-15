@@ -1,4 +1,4 @@
-import { ArrowDownIcon, ArrowUpIcon } from "@heroicons/react/24/outline"
+import { ArrowDown, ArrowUp } from "lucide-react"
 import React from "react"
 import { useTranslation } from "react-i18next"
 
@@ -119,13 +119,13 @@ export const TokenStats = React.memo(() => {
         aria-label={completeBreakdownLabel}
       >
         <div className="flex items-center gap-1">
-          <ArrowUpIcon className="h-4 w-4 text-green-500" />
+          <ArrowUp className="h-4 w-4 text-green-500" />
           <BodySmall weight="medium">
             {formatTokenCount(todayTokens.today_total_prompt_tokens)}
           </BodySmall>
         </div>
         <div className="flex items-center gap-1">
-          <ArrowDownIcon className="h-4 w-4 text-blue-500" />
+          <ArrowDown className="h-4 w-4 text-blue-500" />
           <BodySmall weight="medium">
             {formatTokenCount(todayTokens.today_total_completion_tokens)}
           </BodySmall>

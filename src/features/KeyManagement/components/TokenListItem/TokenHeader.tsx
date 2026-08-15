@@ -1,12 +1,5 @@
-import {
-  ArrowPathIcon,
-  CommandLineIcon,
-  PencilIcon,
-  TrashIcon,
-  WrenchScrewdriverIcon,
-} from "@heroicons/react/24/outline"
 import type { TFunction } from "i18next"
-import { Copy } from "lucide-react"
+import { Copy, Pencil, RefreshCw, Terminal, Trash2, Wrench } from "lucide-react"
 import { useEffect, useLayoutEffect, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
@@ -913,7 +906,7 @@ function TokenActionButtons({
             data-testid={KEY_MANAGEMENT_TEST_IDS.verifyTokenApiButton}
             onClick={() => void handleVerifyApi()}
           >
-            <WrenchScrewdriverIcon className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+            <Wrench className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
           </IconButton>
           <IconButton
             aria-label={t("keyManagement:actions.verifyCliSupport")}
@@ -922,7 +915,7 @@ function TokenActionButtons({
             data-testid={KEY_MANAGEMENT_TEST_IDS.verifyTokenCliSupportButton}
             onClick={() => void handleVerifyCliSupport()}
           >
-            <CommandLineIcon className="h-4 w-4 text-sky-600 dark:text-sky-400" />
+            <Terminal className="h-4 w-4 text-sky-600 dark:text-sky-400" />
           </IconButton>
         </>
       ) : null}
@@ -1015,7 +1008,7 @@ function TokenActionButtons({
           variant="ghost"
           onClick={() => handleEditToken(token)}
         >
-          <PencilIcon className="h-4 w-4 text-blue-500 dark:text-blue-400" />
+          <Pencil className="h-4 w-4 text-blue-500 dark:text-blue-400" />
         </IconButton>
       ) : null}
       {actionPolicy.delete ? (
@@ -1025,7 +1018,7 @@ function TokenActionButtons({
           variant="destructiveGhost"
           onClick={() => handleDeleteToken(token)}
         >
-          <TrashIcon className="h-4 w-4" />
+          <Trash2 className="h-4 w-4" />
         </IconButton>
       ) : null}
     </div>
@@ -1173,7 +1166,7 @@ export function TokenHeader({
         data-testid={KEY_MANAGEMENT_TEST_IDS.managedSiteStatusBadge}
       >
         {isManagedSiteStatusChecking ? (
-          <ArrowPathIcon className="h-3 w-3 animate-spin" />
+          <RefreshCw className="h-3 w-3 animate-spin" />
         ) : null}
         {getManagedSiteStatusLabel(t, {
           isChecking: isManagedSiteStatusChecking,

@@ -1,8 +1,5 @@
-import {
-  AdjustmentsHorizontalIcon,
-  CommandLineIcon,
-} from "@heroicons/react/24/outline"
 import type { TFunction } from "i18next"
+import { SlidersHorizontal, Terminal } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { SettingSection } from "~/components/SettingSection"
@@ -74,7 +71,7 @@ export default function LoggingSettings() {
           <CardItem
             id="logging-console-enabled"
             icon={
-              <CommandLineIcon className="h-5 w-5 text-slate-600 dark:text-slate-300" />
+              <Terminal className="h-5 w-5 text-slate-600 dark:text-slate-300" />
             }
             title={t("logging.consoleEnabled")}
             description={t("logging.consoleEnabledDesc")}
@@ -89,7 +86,7 @@ export default function LoggingSettings() {
           <CardItem
             id="logging-min-level"
             icon={
-              <AdjustmentsHorizontalIcon className="h-5 w-5 text-slate-600 dark:text-slate-300" />
+              <SlidersHorizontal className="h-5 w-5 text-slate-600 dark:text-slate-300" />
             }
             title={t("logging.minLevel")}
             description={t("logging.minLevelDesc")}

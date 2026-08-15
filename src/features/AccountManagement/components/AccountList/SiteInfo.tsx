@@ -1,17 +1,17 @@
 import {
-  ArrowPathIcon,
-  CalendarDaysIcon,
-  CheckCircleIcon,
-  CurrencyYenIcon,
-  ExclamationTriangleIcon,
-  GiftIcon,
-  LinkIcon,
-  PencilSquareIcon,
-  TagIcon,
-  UserIcon,
-  XCircleIcon,
-} from "@heroicons/react/24/outline"
-import { PinIcon } from "lucide-react"
+  CalendarDays,
+  CircleCheck,
+  CircleX,
+  Gift,
+  JapaneseYen,
+  Link,
+  Pin,
+  RefreshCw,
+  SquarePen,
+  Tag,
+  TriangleAlert,
+  User,
+} from "lucide-react"
 import { useMemo, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
@@ -300,7 +300,7 @@ export default function SiteInfo({
             position="top"
             wrapperClassName="flex items-center"
           >
-            <ExclamationTriangleIcon className="h-4 w-4 text-yellow-500" />
+            <TriangleAlert className="h-4 w-4 text-yellow-500" />
           </Tooltip>,
         )
       } else if (
@@ -332,7 +332,7 @@ export default function SiteInfo({
               disabled={isRefreshLocked}
               aria-label={staleStatusLabel}
             >
-              <ExclamationTriangleIcon className="h-4 w-4 text-orange-500" />
+              <TriangleAlert className="h-4 w-4 text-orange-500" />
             </IconButton>
           </Tooltip>,
         )
@@ -350,7 +350,7 @@ export default function SiteInfo({
               size="xs"
               aria-label={t("list.site.checkedInToday")}
             >
-              <CheckCircleIcon className="h-4 w-4 text-green-500" />
+              <CircleCheck className="h-4 w-4 text-green-500" />
             </IconButton>
           </Tooltip>,
         )
@@ -368,7 +368,7 @@ export default function SiteInfo({
               size="xs"
               aria-label={t("list.site.notCheckedInToday")}
             >
-              <XCircleIcon className="h-4 w-4 text-red-500" />
+              <CircleX className="h-4 w-4 text-red-500" />
             </IconButton>
           </Tooltip>,
         )
@@ -391,7 +391,7 @@ export default function SiteInfo({
               size="xs"
               aria-label={t("list.site.checkedInToday")}
             >
-              <CurrencyYenIcon className="h-4 w-4 text-green-500" />
+              <JapaneseYen className="h-4 w-4 text-green-500" />
             </IconButton>
           </Tooltip>
         ) : (
@@ -407,7 +407,7 @@ export default function SiteInfo({
               size="xs"
               aria-label={t("list.site.notCheckedInToday")}
             >
-              <CurrencyYenIcon className="h-4 w-4 text-red-500" />
+              <JapaneseYen className="h-4 w-4 text-red-500" />
             </IconButton>
           </Tooltip>
         ),
@@ -520,7 +520,7 @@ export default function SiteInfo({
               size="none"
               aria-label={pinTooltipLabel}
             >
-              <PinIcon
+              <Pin
                 className="dark:text-dark-text-tertiary h-3 w-3 -rotate-12 text-gray-400 transition-colors"
                 aria-hidden="true"
               />
@@ -615,7 +615,7 @@ export default function SiteInfo({
         </div>
 
         <div className="mt-0.5 flex min-w-0 items-start gap-1">
-          <UserIcon className="dark:text-dark-text-tertiary mt-0.5 h-3 w-3 shrink-0 text-gray-400" />
+          <User className="dark:text-dark-text-tertiary mt-0.5 h-3 w-3 shrink-0 text-gray-400" />
           <Caption className="truncate" title={site.username}>
             {highlights?.username && site.username
               ? renderHighlightedFragments(highlights.username, site.username)
@@ -625,7 +625,7 @@ export default function SiteInfo({
 
         {showCreatedAt && (
           <div className="mt-0.5 flex min-w-0 items-start gap-1">
-            <CalendarDaysIcon className="dark:text-dark-text-tertiary mt-0.5 h-3 w-3 shrink-0 text-gray-400" />
+            <CalendarDays className="dark:text-dark-text-tertiary mt-0.5 h-3 w-3 shrink-0 text-gray-400" />
             <Caption
               className="truncate"
               title={`${createdAtLabel}: ${createdAtText}`}
@@ -637,7 +637,7 @@ export default function SiteInfo({
 
         {highlights?.baseUrl && (
           <div className="mt-0.5 flex min-w-0 items-start gap-1">
-            <LinkIcon className="dark:text-dark-text-tertiary mt-0.5 h-3 w-3 shrink-0 text-gray-400" />
+            <Link className="dark:text-dark-text-tertiary mt-0.5 h-3 w-3 shrink-0 text-gray-400" />
             <Caption className="truncate" title={site.baseUrl}>
               {renderHighlightedFragments(highlights.baseUrl, site.baseUrl)}
             </Caption>
@@ -646,7 +646,7 @@ export default function SiteInfo({
 
         {highlights?.customCheckInUrl && customCheckInUrl && (
           <div className="mt-0.5 flex min-w-0 items-start gap-1">
-            <ArrowPathIcon className="dark:text-dark-text-tertiary mt-0.5 h-3 w-3 shrink-0 text-gray-400" />
+            <RefreshCw className="dark:text-dark-text-tertiary mt-0.5 h-3 w-3 shrink-0 text-gray-400" />
             <Caption className="truncate" title={customCheckInUrl}>
               {renderHighlightedFragments(
                 highlights.customCheckInUrl,
@@ -658,7 +658,7 @@ export default function SiteInfo({
 
         {highlights?.customRedeemUrl && customRedeemUrl && (
           <div className="mt-0.5 flex min-w-0 items-start gap-1">
-            <GiftIcon className="dark:text-dark-text-tertiary mt-0.5 h-3 w-3 shrink-0 text-gray-400" />
+            <Gift className="dark:text-dark-text-tertiary mt-0.5 h-3 w-3 shrink-0 text-gray-400" />
             <Caption className="truncate" title={customRedeemUrl}>
               {renderHighlightedFragments(
                 highlights.customRedeemUrl,
@@ -670,7 +670,7 @@ export default function SiteInfo({
 
         {site.notes && (
           <div className="mt-0.5 flex min-w-0 items-start gap-1 sm:mt-1">
-            <PencilSquareIcon className="dark:text-dark-text-tertiary mt-0.5 h-3 w-3 shrink-0 text-gray-400" />
+            <SquarePen className="dark:text-dark-text-tertiary mt-0.5 h-3 w-3 shrink-0 text-gray-400" />
             <Caption className="truncate" title={site.notes}>
               {site.notes}
             </Caption>
@@ -679,7 +679,7 @@ export default function SiteInfo({
 
         {site.tags && site.tags.length > 0 && (
           <div className="mt-0.5 flex min-w-0 items-start gap-1 sm:mt-1">
-            <TagIcon className="dark:text-dark-text-tertiary mt-0.5 h-3 w-3 shrink-0 text-gray-400" />
+            <Tag className="dark:text-dark-text-tertiary mt-0.5 h-3 w-3 shrink-0 text-gray-400" />
             <Caption className="truncate" title={site.tags.join(", ")}>
               {highlights?.tags
                 ? renderHighlightedFragments(

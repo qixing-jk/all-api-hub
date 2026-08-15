@@ -1,4 +1,4 @@
-import { KeyIcon } from "@heroicons/react/24/outline"
+import { KeyRound } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 interface DialogHeaderProps {
@@ -16,7 +16,7 @@ export function DialogHeader({ isEditMode }: DialogHeaderProps) {
   return (
     <div className="flex items-center justify-between">
       <div className="flex items-center space-x-2">
-        <KeyIcon className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+        <KeyRound className="h-6 w-6 text-blue-600 dark:text-blue-400" />
         <h2 className="dark:text-dark-text-primary text-lg font-semibold text-gray-900">
           {isEditMode ? t("dialog.editToken") : t("dialog.addToken")}
         </h2>

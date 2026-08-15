@@ -1,7 +1,4 @@
-import {
-  ArrowPathIcon,
-  QuestionMarkCircleIcon,
-} from "@heroicons/react/24/outline"
+import { CircleHelp, RefreshCw } from "lucide-react"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -59,7 +56,7 @@ export default function AutoDetectSlowHintAlert({
               onClick={handleHelpClick}
               variant="secondary"
               size="sm"
-              leftIcon={<QuestionMarkCircleIcon className="h-3 w-3" />}
+              leftIcon={<CircleHelp className="h-3 w-3" />}
             >
               {t("accountDialog:actions.helpDocument")}
             </Button>
@@ -68,7 +65,7 @@ export default function AutoDetectSlowHintAlert({
               onClick={handleReloadExtension}
               variant="outline"
               size="sm"
-              leftIcon={<ArrowPathIcon className="h-3 w-3" />}
+              leftIcon={<RefreshCw className="h-3 w-3" />}
             >
               {t("accountDialog:actions.reloadExtensionAndRetry")}
             </Button>

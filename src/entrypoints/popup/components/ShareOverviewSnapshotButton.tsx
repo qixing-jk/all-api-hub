@@ -1,4 +1,4 @@
-import { ArrowUpOnSquareIcon } from "@heroicons/react/24/outline"
+import { Share2 } from "lucide-react"
 import { useMemo } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
@@ -133,7 +133,7 @@ export default function ShareOverviewSnapshotButton() {
         disabled={enabledAccountCount <= 0}
         className="touch-manipulation"
       >
-        <ArrowUpOnSquareIcon className="h-4 w-4" />
+        <Share2 className="h-4 w-4" />
       </IconButton>
     </Tooltip>
   )

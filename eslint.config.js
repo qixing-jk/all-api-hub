@@ -63,6 +63,11 @@ const optionsPageImportRestrictionPattern = {
   message:
     "Do not import from `~/entrypoints/options/pages/**` outside the options entrypoint. Extract shared code into `~/features/`, `~/services/`, `~/utils/`, or `~/types/` instead.",
 }
+const heroiconsImportRestrictionPattern = {
+  group: ["@heroicons/react", "@heroicons/react/**"],
+  message:
+    "Heroicons has been retired from application code. Use lucide-react or a shared semantic icon component instead.",
+}
 const apiServiceBackendImplementationImportPattern = {
   regex:
     "^(?:~/services/apiService|(?:\\.\\./)+(?:services/)?apiService)/(?:aihubmix|anyrouter|axonHub|claudeCodeHub|doneHub|octopus|oneHub|sub2api|veloera|wong)$",
@@ -88,12 +93,6 @@ const workflowTransitionIconRestrictedImports = [
     message:
       "Use `~/components/icons/WorkflowTransitionIcon` for arrow-up-right workflow/link affordances so the app keeps a single transition glyph.",
   },
-  {
-    name: "@heroicons/react/24/outline",
-    importNames: ["ArrowTopRightOnSquareIcon"],
-    message:
-      "Use `~/components/icons/WorkflowTransitionIcon` for arrow-up-right workflow/link affordances so the app keeps a single transition glyph.",
-  },
 ]
 
 function restrictedImports(...patterns) {
@@ -101,7 +100,7 @@ function restrictedImports(...patterns) {
     "error",
     {
       paths: workflowTransitionIconRestrictedImports,
-      ...(patterns.length > 0 ? { patterns } : {}),
+      patterns: [heroiconsImportRestrictionPattern, ...patterns],
     },
   ]
 }

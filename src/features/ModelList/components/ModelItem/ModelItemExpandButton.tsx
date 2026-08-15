@@ -1,4 +1,4 @@
-import { ChevronDownIcon, ChevronUpIcon } from "@heroicons/react/24/outline"
+import { ChevronDown, ChevronUp } from "lucide-react"
 import React from "react"
 import { useTranslation } from "react-i18next"
 
@@ -30,9 +30,9 @@ export const ModelItemExpandButton: React.FC<ModelItemExpandButtonProps> = ({
       analyticsAction={analyticsAction}
     >
       {isExpanded ? (
-        <ChevronUpIcon className="h-4 w-4" />
+        <ChevronUp className="h-4 w-4" />
       ) : (
-        <ChevronDownIcon className="h-4 w-4" />
+        <ChevronDown className="h-4 w-4" />
       )}
     </IconButton>
   )

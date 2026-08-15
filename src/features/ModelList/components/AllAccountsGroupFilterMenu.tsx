@@ -1,4 +1,4 @@
-import { FunnelIcon } from "@heroicons/react/24/outline"
+import { Funnel } from "lucide-react"
 import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -164,7 +164,7 @@ export function AllAccountsGroupFilterMenu({
           className={cn("w-full justify-between px-3 sm:w-56")}
         >
           <span className="flex items-center gap-2">
-            <FunnelIcon className="h-4 w-4" />
+            <Funnel className="h-4 w-4" />
             <span>{t("accountGroupFilterTrigger")}</span>
           </span>
           {activeFilteredAccountCount > 0 ? (

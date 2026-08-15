@@ -1,6 +1,6 @@
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { Bars2Icon } from "@heroicons/react/24/outline"
+import { GripVertical } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { Badge, Card, CardContent, Switch } from "~/components/ui"
@@ -56,7 +56,7 @@ export function SortingCriteriaItem({
               {...listeners}
               className="dark:text-dark-text-tertiary dark:hover:text-dark-text-secondary mt-0.5 flex shrink-0 cursor-move touch-none items-center text-gray-400 hover:text-gray-600 [@container(min-width:42rem)]:mt-0"
             >
-              <Bars2Icon className="h-5 w-5" />
+              <GripVertical className="h-5 w-5" />
             </div>
             <div className="min-w-0 grow">
               <div className="dark:text-dark-text-primary text-sm font-medium break-words text-gray-900">

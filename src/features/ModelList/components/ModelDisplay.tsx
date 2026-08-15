@@ -1,4 +1,4 @@
-import { CpuChipIcon, InformationCircleIcon } from "@heroicons/react/24/outline"
+import { Cpu, Info } from "lucide-react"
 import { forwardRef, useCallback, useEffect, useMemo, useState } from "react"
 import type { HTMLAttributes } from "react"
 import { useTranslation } from "react-i18next"
@@ -199,7 +199,7 @@ export function ModelDisplay(props: ModelDisplayProps) {
   if (models.length === 0) {
     return (
       <EmptyState
-        icon={<CpuChipIcon className="h-12 w-12" />}
+        icon={<Cpu className="h-12 w-12" />}
         title={t("noMatchingModels")}
       />
     )
@@ -356,7 +356,7 @@ export function ModelDisplay(props: ModelDisplayProps) {
                     role="note"
                     className="dark:border-dark-bg-tertiary flex min-w-0 gap-2 border-b border-gray-200/80 px-3 py-2.5 sm:px-4"
                   >
-                    <InformationCircleIcon
+                    <Info
                       aria-hidden="true"
                       className="dark:text-dark-text-tertiary mt-0.5 h-4 w-4 shrink-0 text-gray-500"
                     />

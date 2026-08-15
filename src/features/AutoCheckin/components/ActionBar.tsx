@@ -1,9 +1,4 @@
-import {
-  ArrowPathIcon,
-  BugAntIcon,
-  CalendarDaysIcon,
-  PlayIcon,
-} from "@heroicons/react/24/outline"
+import { Bug, CalendarDays, Play, RefreshCw } from "lucide-react"
 import type { MouseEventHandler } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -110,7 +105,7 @@ export default function ActionBar({
             onClick={onRunNow}
             disabled={isBusy}
             loading={isRunning}
-            leftIcon={<PlayIcon className="h-4 w-4" />}
+            leftIcon={<Play className="h-4 w-4" />}
             data-testid={BASIC_SETTINGS_TEST_IDS.autoCheckinRunNowButton}
           >
             {isRunning ? t("messages.loading.running") : t("execution.runNow")}
@@ -120,7 +115,7 @@ export default function ActionBar({
             variant="secondary"
             disabled={isBusy || isRefreshLocked}
             loading={isRefreshing}
-            leftIcon={<ArrowPathIcon className="h-4 w-4" />}
+            leftIcon={<RefreshCw className="h-4 w-4" />}
           >
             {isRefreshing
               ? t("common:status.refreshing")
@@ -148,7 +143,7 @@ export default function ActionBar({
               variant="outline"
               disabled={isBusy}
               loading={isOpeningExternalCheckIns}
-              leftIcon={<CalendarDaysIcon className="h-4 w-4" />}
+              leftIcon={<CalendarDays className="h-4 w-4" />}
               title={externalCheckInHint}
             >
               {isOpeningExternalCheckIns
@@ -166,7 +161,7 @@ export default function ActionBar({
                   activeDebugAction ===
                   AUTO_CHECKIN_DEBUG_ACTIONS.TRIGGER_DAILY_ALARM
                 }
-                leftIcon={<BugAntIcon className="h-4 w-4" />}
+                leftIcon={<Bug className="h-4 w-4" />}
               >
                 {activeDebugAction ===
                 AUTO_CHECKIN_DEBUG_ACTIONS.TRIGGER_DAILY_ALARM
@@ -181,7 +176,7 @@ export default function ActionBar({
                   activeDebugAction ===
                   AUTO_CHECKIN_DEBUG_ACTIONS.TRIGGER_RETRY_ALARM
                 }
-                leftIcon={<BugAntIcon className="h-4 w-4" />}
+                leftIcon={<Bug className="h-4 w-4" />}
               >
                 {activeDebugAction ===
                 AUTO_CHECKIN_DEBUG_ACTIONS.TRIGGER_RETRY_ALARM
@@ -196,7 +191,7 @@ export default function ActionBar({
                   activeDebugAction ===
                   AUTO_CHECKIN_DEBUG_ACTIONS.SCHEDULE_DAILY_ALARM
                 }
-                leftIcon={<BugAntIcon className="h-4 w-4" />}
+                leftIcon={<Bug className="h-4 w-4" />}
               >
                 {activeDebugAction ===
                 AUTO_CHECKIN_DEBUG_ACTIONS.SCHEDULE_DAILY_ALARM
@@ -211,7 +206,7 @@ export default function ActionBar({
                   activeDebugAction ===
                   AUTO_CHECKIN_DEBUG_ACTIONS.EVALUATE_UI_OPEN_PRETRIGGER
                 }
-                leftIcon={<BugAntIcon className="h-4 w-4" />}
+                leftIcon={<Bug className="h-4 w-4" />}
               >
                 {activeDebugAction ===
                 AUTO_CHECKIN_DEBUG_ACTIONS.EVALUATE_UI_OPEN_PRETRIGGER
@@ -226,7 +221,7 @@ export default function ActionBar({
                   activeDebugAction ===
                   AUTO_CHECKIN_DEBUG_ACTIONS.TRIGGER_UI_OPEN_PRETRIGGER
                 }
-                leftIcon={<BugAntIcon className="h-4 w-4" />}
+                leftIcon={<Bug className="h-4 w-4" />}
               >
                 {activeDebugAction ===
                 AUTO_CHECKIN_DEBUG_ACTIONS.TRIGGER_UI_OPEN_PRETRIGGER
@@ -241,7 +236,7 @@ export default function ActionBar({
                   activeDebugAction ===
                   AUTO_CHECKIN_DEBUG_ACTIONS.RESET_LAST_DAILY_RUN_DAY
                 }
-                leftIcon={<BugAntIcon className="h-4 w-4" />}
+                leftIcon={<Bug className="h-4 w-4" />}
               >
                 {activeDebugAction ===
                 AUTO_CHECKIN_DEBUG_ACTIONS.RESET_LAST_DAILY_RUN_DAY
