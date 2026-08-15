@@ -74,7 +74,8 @@ test("grants the Chromium cookie/DNR optional permissions needed for cookie auth
     await expectPermissionOnboardingHidden(page)
     await grantCookieDnrPermissions(page, localSite.origin)
   } finally {
-    await closeOtherPages(context, page)
+    // Stop extension-page requests before tearing down their local HTTP target.
+    await closeOtherPages(context)
     await localSite.close()
   }
 })
@@ -395,7 +396,8 @@ test("isolates same-site cookie and access-token accounts through account refres
       )
     })
   } finally {
-    await closeOtherPages(context, page)
+    // Stop extension-page requests before tearing down their local HTTP target.
+    await closeOtherPages(context)
     await localSite.close()
   }
 })
