@@ -533,6 +533,34 @@ describe("BookmarksList", () => {
     )
   })
 
+  it("offers the unpin action for a pinned bookmark", async () => {
+    const user = userEvent.setup()
+    const bookmark: SiteBookmark = {
+      id: "b1",
+      name: "Docs",
+      url: "https://example.com/docs",
+      tagIds: [],
+      notes: "",
+      created_at: 0,
+      updated_at: 0,
+    }
+
+    bookmarksMock = [bookmark]
+    pinnedAccountIdsMock = [bookmark.id]
+
+    render(<BookmarksList />)
+
+    await user.click(
+      await screen.findByRole("button", { name: "common:actions.more" }),
+    )
+
+    expect(
+      await screen.findByRole("menuitem", {
+        name: "bookmark:actions.unpin",
+      }),
+    ).toBeInTheDocument()
+  })
+
   it("does not start delete bookmark analytics when confirmation is cancelled", async () => {
     const user = userEvent.setup()
     const bookmark: SiteBookmark = {

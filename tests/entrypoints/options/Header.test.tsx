@@ -2,7 +2,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useUpdateLogDialogContext } from "~/components/dialogs/UpdateLogDialog"
 import Header from "~/entrypoints/options/components/Header"
-import { act, render, screen, waitFor } from "~~/tests/test-utils/render"
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "~~/tests/test-utils/render"
 
 vi.mock("~/contexts/ReleaseUpdateStatusContext", async (importOriginal) => {
   const actual =
@@ -114,6 +120,25 @@ describe("options Header", () => {
       container.textContent?.match(/ui:optionsSearch\.placeholder/g)?.length ??
         0,
     ).toBe(1)
+  })
+
+  it("keeps the mobile menu toggle operable while the sidebar is open", async () => {
+    const onMenuToggle = vi.fn()
+
+    render(
+      <Header
+        onSearchOpen={vi.fn()}
+        onTitleClick={vi.fn()}
+        onMenuToggle={onMenuToggle}
+        isMobileSidebarOpen={true}
+      />,
+    )
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "ui:navigation.toggleMenu" }),
+    )
+
+    expect(onMenuToggle).toHaveBeenCalledTimes(1)
   })
 
   it("switches to the expanded mobile search trigger after scrolling", async () => {

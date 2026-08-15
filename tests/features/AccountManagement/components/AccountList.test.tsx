@@ -712,6 +712,29 @@ describe("AccountList", () => {
     ).toBeInTheDocument()
   })
 
+  it("keeps the active descending sort control actionable", async () => {
+    const user = userEvent.setup()
+    const handleSort = vi.fn()
+
+    mockUseAccountDataContext.mockReturnValue(
+      createAccountDataContextValue({
+        handleSort,
+        sortField: "name",
+        sortOrder: "desc",
+      }),
+    )
+
+    render(<AccountList />)
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "account:list.sort account:list.header.account",
+      }),
+    )
+
+    expect(handleSort).toHaveBeenCalledWith("name")
+  })
+
   it("shows a clear sort action when field sorting is active", async () => {
     const user = userEvent.setup()
     const clearSortConfig = vi.fn()
