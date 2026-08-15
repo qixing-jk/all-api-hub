@@ -10,6 +10,7 @@
 
 | 服务 | 适用场景 | 教程 |
 | --- | --- | --- |
+| Fenno | 添加 Fenno 账号，查看模型价格，保存并导出 API 凭据。 | [查看教程](./service-guides/fenno.md) |
 | PackyCode | 添加 PackyCode 账号，查看模型价格，保存并导出 API 凭据。 | [查看教程](./service-guides/packycode.md) |
 | 星辰AI | 添加星辰AI账号，查看模型价格，保存并导出 API 凭据。 | [查看教程](./service-guides/xingchen.md) |
 | OpenRouter | 添加 OpenRouter 账号，管理 API Key，查看模型价格。 | [查看教程](./service-guides/openrouter.md) |
