@@ -308,16 +308,47 @@ describe("apiAdapter keyManagement", () => {
     expect(mockFetchAccountAvailableModels).toHaveBeenCalledWith(request)
   })
 
-  it.each([SITE_TYPES.ONE_API, SITE_TYPES.VELOERA])(
-    "uses zero-based token inventory pagination for %s",
-    async (siteType) => {
-      mockFetchAccountTokens.mockResolvedValueOnce([])
+  it("uses conservative zero-based token pagination for One API", async () => {
+    mockFetchAccountTokens.mockResolvedValueOnce([])
 
-      await createNewApiKeyManagement(siteType).fetchTokens(request)
+    await createNewApiKeyManagement(SITE_TYPES.ONE_API).fetchTokens(request)
 
-      expect(mockFetchAccountTokens).toHaveBeenCalledWith(request, 0)
-    },
-  )
+    expect(mockFetchAccountTokens).toHaveBeenCalledWith(request, {
+      startPage: 0,
+      trustsRequestedPageSize: false,
+    })
+  })
+
+  it("uses short-page-aware zero-based token pagination for Veloera", async () => {
+    mockFetchAccountTokens.mockResolvedValueOnce([])
+
+    await createNewApiKeyManagement(SITE_TYPES.VELOERA).fetchTokens(request)
+
+    expect(mockFetchAccountTokens).toHaveBeenCalledWith(request, {
+      startPage: 0,
+      trustsRequestedPageSize: true,
+    })
+  })
+
+  it.each([
+    SITE_TYPES.ANYROUTER,
+    SITE_TYPES.V_API,
+    SITE_TYPES.VO_API,
+    SITE_TYPES.SUPER_API,
+    SITE_TYPES.RIX_API,
+    SITE_TYPES.NEO_API,
+    SITE_TYPES.WONG_GONGYI,
+    SITE_TYPES.UNKNOWN,
+  ])("negotiates token pagination from p=0 for %s", async (siteType) => {
+    mockFetchAccountTokens.mockResolvedValueOnce([])
+
+    await createNewApiKeyManagement(siteType).fetchTokens(request)
+
+    expect(mockFetchAccountTokens).toHaveBeenCalledWith(request, {
+      startPage: 0,
+      detectsNormalizedFirstPage: true,
+    })
+  })
 
   it("uses OneHub-family key inventory overrides at the adapter layer", async () => {
     const expectedTokens = [token]

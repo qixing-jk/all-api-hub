@@ -100,7 +100,7 @@ describe("newApiFamily keyManagement", () => {
     mockFetchApiData.mockReset()
   })
 
-  it("fetchAccountTokens reads every New API page until the empty sentinel", async () => {
+  it("fetchAccountTokens stops at the New API total without probing an empty page", async () => {
     mockFetchApiData
       .mockResolvedValueOnce({
         items: [
@@ -117,12 +117,6 @@ describe("newApiFamily keyManagement", () => {
         page_size: 2,
         total: 3,
       })
-      .mockResolvedValueOnce({
-        items: [],
-        page: 3,
-        page_size: 2,
-        total: 3,
-      })
 
     await expect(fetchAccountTokens(request)).resolves.toEqual([
       { id: 1, key: "plain-key" },
@@ -135,9 +129,78 @@ describe("newApiFamily keyManagement", () => {
     expect(mockFetchApiData).toHaveBeenNthCalledWith(2, request, {
       endpoint: "/api/token/?p=2&size=100",
     })
-    expect(mockFetchApiData).toHaveBeenNthCalledWith(3, request, {
-      endpoint: "/api/token/?p=3&size=100",
+    expect(mockFetchApiData).toHaveBeenCalledTimes(2)
+  })
+
+  it("fetchAccountTokens does not request page two for a complete New API first page", async () => {
+    mockFetchApiData.mockResolvedValueOnce({
+      items: [{ id: 1, key: "sk-only" }],
+      page: 1,
+      page_size: 100,
+      total: 1,
     })
+
+    await expect(fetchAccountTokens(request)).resolves.toEqual([
+      { id: 1, key: "sk-only" },
+    ])
+    expect(mockFetchApiData).toHaveBeenCalledTimes(1)
+  })
+
+  it("fetchAccountTokens negotiates a New API response from p=0 without repeating page one", async () => {
+    mockFetchApiData
+      .mockResolvedValueOnce({
+        items: [
+          { id: 1, key: " first " },
+          { id: 2, key: "second" },
+        ],
+        page: 1,
+        page_size: 2,
+        total: 3,
+      })
+      .mockResolvedValueOnce({
+        items: [{ id: 3, key: " final " }],
+        page: 2,
+        page_size: 2,
+        total: 3,
+      })
+
+    await expect(
+      fetchAccountTokens(request, {
+        startPage: 0,
+        detectsNormalizedFirstPage: true,
+      }),
+    ).resolves.toEqual([
+      { id: 1, key: "first" },
+      { id: 2, key: "second" },
+      { id: 3, key: "final" },
+    ])
+    expect(mockFetchApiData).toHaveBeenNthCalledWith(1, request, {
+      endpoint: "/api/token/?p=0&size=100",
+    })
+    expect(mockFetchApiData).toHaveBeenNthCalledWith(2, request, {
+      endpoint: "/api/token/?p=2&size=100",
+    })
+    expect(mockFetchApiData).toHaveBeenCalledTimes(2)
+  })
+
+  it("fetchAccountTokens stops after a complete New API page negotiated from p=0", async () => {
+    mockFetchApiData.mockResolvedValueOnce({
+      items: [{ id: 1, key: "sk-only" }],
+      page: 1,
+      page_size: 100,
+      total: 1,
+    })
+
+    await expect(
+      fetchAccountTokens(request, {
+        startPage: 0,
+        detectsNormalizedFirstPage: true,
+      }),
+    ).resolves.toEqual([{ id: 1, key: "sk-only" }])
+    expect(mockFetchApiData).toHaveBeenCalledWith(request, {
+      endpoint: "/api/token/?p=0&size=100",
+    })
+    expect(mockFetchApiData).toHaveBeenCalledTimes(1)
   })
 
   it("fetchAccountTokens reads zero-based legacy array pages until the empty sentinel", async () => {
@@ -158,6 +221,44 @@ describe("newApiFamily keyManagement", () => {
     })
     expect(mockFetchApiData).toHaveBeenNthCalledWith(3, request, {
       endpoint: "/api/token/?p=2&size=100",
+    })
+  })
+
+  it("fetchAccountTokens keeps zero-based array pagination during compatibility negotiation", async () => {
+    mockFetchApiData
+      .mockResolvedValueOnce([{ id: 1, key: " first " }])
+      .mockResolvedValueOnce([{ id: 2, key: " second " }])
+      .mockResolvedValueOnce([])
+
+    await expect(
+      fetchAccountTokens(request, {
+        startPage: 0,
+        detectsNormalizedFirstPage: true,
+      }),
+    ).resolves.toEqual([
+      { id: 1, key: "first" },
+      { id: 2, key: "second" },
+    ])
+    expect(mockFetchApiData).toHaveBeenNthCalledWith(1, request, {
+      endpoint: "/api/token/?p=0&size=100",
+    })
+    expect(mockFetchApiData).toHaveBeenNthCalledWith(2, request, {
+      endpoint: "/api/token/?p=1&size=100",
+    })
+  })
+
+  it("fetchAccountTokens stops on a short array page when the site honors the requested size", async () => {
+    mockFetchApiData.mockResolvedValueOnce([{ id: 1, key: " only " }])
+
+    await expect(
+      fetchAccountTokens(request, {
+        startPage: 0,
+        trustsRequestedPageSize: true,
+      }),
+    ).resolves.toEqual([{ id: 1, key: "only" }])
+    expect(mockFetchApiData).toHaveBeenCalledTimes(1)
+    expect(mockFetchApiData).toHaveBeenCalledWith(request, {
+      endpoint: "/api/token/?p=0&size=100",
     })
   })
 
@@ -249,14 +350,12 @@ describe("newApiFamily keyManagement", () => {
   })
 
   it("fetchAccountTokens syncs the complete normalized inventory", async () => {
-    mockFetchApiData
-      .mockResolvedValueOnce({
-        items: [{ id: 3, key: "  sk-trim  " }],
-        page: 1,
-        page_size: 50,
-        total: 1,
-      })
-      .mockResolvedValueOnce({ items: [], page: 2, total: 1 })
+    mockFetchApiData.mockResolvedValueOnce({
+      items: [{ id: 3, key: "  sk-trim  " }],
+      page: 1,
+      page_size: 50,
+      total: 1,
+    })
 
     const result = await fetchAccountTokens(request)
 

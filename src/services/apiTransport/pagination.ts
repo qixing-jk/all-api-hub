@@ -18,6 +18,15 @@ interface PageData<T> {
   items: T[]
   total?: number
   hasMore?: boolean
+  nextPage?: number | null
+}
+
+interface NumberedPageCompletionInput {
+  requestedPage: number
+  responsePage: unknown
+  responsePageSize: unknown
+  total: unknown
+  itemCount: number
 }
 
 /** Indicates that a caller-required complete inventory hit the page cap. */
@@ -26,6 +35,48 @@ export class PaginationLimitError extends Error {
     super("Pagination limit reached before the inventory completed")
     this.name = "PaginationLimitError"
   }
+}
+
+/**
+ * Infer whether a one-based numbered page has a successor when the provider
+ * returns coherent page metadata. Invalid or stale metadata is advisory only;
+ * callers can fall back to their provider-specific completion signal.
+ */
+export function inferHasMoreFromNumberedPage({
+  requestedPage,
+  responsePage,
+  responsePageSize,
+  total,
+  itemCount,
+}: NumberedPageCompletionInput): boolean | undefined {
+  if (
+    typeof responsePage !== "number" ||
+    !Number.isSafeInteger(responsePage) ||
+    responsePage < 1 ||
+    responsePage !== requestedPage ||
+    typeof responsePageSize !== "number" ||
+    !Number.isSafeInteger(responsePageSize) ||
+    responsePageSize <= 0 ||
+    typeof total !== "number" ||
+    !Number.isSafeInteger(total) ||
+    total < 0 ||
+    !Number.isSafeInteger(itemCount) ||
+    itemCount < 0
+  ) {
+    return undefined
+  }
+
+  const pageStart = (responsePage - 1) * responsePageSize
+  const loadedThrough = pageStart + itemCount
+  if (
+    !Number.isSafeInteger(pageStart) ||
+    !Number.isSafeInteger(loadedThrough) ||
+    total < loadedThrough
+  ) {
+    return undefined
+  }
+
+  return loadedThrough < total
 }
 
 type ArrayOrItemsPayload<T> = T[] | { items?: T[] | null } | null | undefined
@@ -79,21 +130,29 @@ async function fetchAllPaginated<T, R>(
 
     aggregatedData = aggregator(aggregatedData, items)
 
-    if (typeof pageData.hasMore === "boolean") {
-      if (!pageData.hasMore) {
-        break
-      }
-    } else if (typeof pageData.total === "number") {
-      const totalPages = Math.ceil((pageData.total || 0) / pageSize)
-      const pageIndex = currentPage - startPage + 1
-      if (pageIndex >= totalPages) {
-        break
-      }
-    } else if (items.length < pageSize) {
+    if (pageData.nextPage === null) {
       break
     }
 
-    currentPage++
+    if (typeof pageData.nextPage === "number") {
+      currentPage = pageData.nextPage
+    } else {
+      if (typeof pageData.hasMore === "boolean") {
+        if (!pageData.hasMore) {
+          break
+        }
+      } else if (typeof pageData.total === "number") {
+        const totalPages = Math.ceil((pageData.total || 0) / pageSize)
+        const pageIndex = currentPage - startPage + 1
+        if (pageIndex >= totalPages) {
+          break
+        }
+      } else if (items.length < pageSize) {
+        break
+      }
+
+      currentPage++
+    }
     pageCount++
 
     if (pageCount >= maxPages) {

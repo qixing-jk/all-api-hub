@@ -11,7 +11,10 @@ import type {
   OneHubUserGroupsResponse,
 } from "~/services/apiService/oneHub/type"
 import { REQUEST_CONFIG } from "~/services/apiTransport/constant"
-import { fetchAllItems } from "~/services/apiTransport/pagination"
+import {
+  fetchAllItems,
+  inferHasMoreFromNumberedPage,
+} from "~/services/apiTransport/pagination"
 import { fetchApiData } from "~/services/apiTransport/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import type { PricingResponse } from "~/services/modelList/pricingModel"
@@ -57,9 +60,12 @@ export const fetchModelPricing = async (
 
 /**
  * Fetch the complete token list using OneHub's one-based pagination.
- * Source: https://github.com/MartialBE/one-hub/blob/387f8bf16ed0d601fdede7ade378adb10aa1a35a/model/common.go
- * Provider-selected sizes and stale metadata are tolerated; an empty page is
- * the provider-owned completion signal.
+ * OneHub and DoneHub return `page`, `size`, and `total_count` with their token
+ * data. Coherent metadata is authoritative; incompatible or stale deployments
+ * fall back to an empty-page completion signal.
+ * Sources:
+ * https://github.com/MartialBE/one-hub/blob/387f8bf16ed0d601fdede7ade378adb10aa1a35a/model/common.go
+ * https://github.com/deanxv/done-hub/blob/main/model/common.go
  */
 export const fetchAccountTokens = async (
   request: ApiServiceRequest,
@@ -84,9 +90,16 @@ export const fetchAccountTokens = async (
         throw new Error("invalid_token_page_payload")
       }
       const items = tokensData.data.map(normalizeApiTokenKey)
+      const metadataHasMore = inferHasMoreFromNumberedPage({
+        requestedPage: upstreamPage,
+        responsePage: tokensData.page,
+        responsePageSize: tokensData.size,
+        total: tokensData.total_count,
+        itemCount: items.length,
+      })
       return {
         items,
-        hasMore: items.length > 0,
+        hasMore: metadataHasMore ?? items.length > 0,
       }
     },
     {

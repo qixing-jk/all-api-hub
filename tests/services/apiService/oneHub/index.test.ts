@@ -154,6 +154,20 @@ describe("OneHub API service", () => {
     )
   })
 
+  it("fetchAccountTokens stops at the OneHub total without probing page two", async () => {
+    mockedFetchApiData.mockResolvedValueOnce({
+      data: [{ id: 1 }],
+      page: 1,
+      size: 100,
+      total_count: 1,
+    })
+
+    await expect(fetchAccountTokens(baseRequest as any)).resolves.toEqual([
+      { id: 1 },
+    ])
+    expect(mockedFetchApiData).toHaveBeenCalledTimes(1)
+  })
+
   it("fetchAccountTokens should reject an unexpected format", async () => {
     mockedFetchApiData.mockResolvedValueOnce({ foo: "bar" })
 
@@ -171,7 +185,7 @@ describe("OneHub API service", () => {
     )
   })
 
-  it("fetchAccountTokens collects OneHub pages without requiring size echo", async () => {
+  it("fetchAccountTokens collects OneHub pages using its pagination metadata", async () => {
     const firstPageTokens = [{ id: 1 }, { id: 2 }]
     mockedFetchApiData
       .mockResolvedValueOnce({
@@ -186,7 +200,6 @@ describe("OneHub API service", () => {
         size: 2,
         total_count: 3,
       })
-      .mockResolvedValueOnce({ data: [], page: 3, total_count: 3 })
 
     await expect(fetchAccountTokens(baseRequest as any)).resolves.toEqual([
       ...firstPageTokens,
@@ -198,9 +211,7 @@ describe("OneHub API service", () => {
     expect(mockedFetchApiData).toHaveBeenNthCalledWith(2, baseRequest, {
       endpoint: "/api/token/?page=2&size=100",
     })
-    expect(mockedFetchApiData).toHaveBeenNthCalledWith(3, baseRequest, {
-      endpoint: "/api/token/?page=3&size=100",
-    })
+    expect(mockedFetchApiData).toHaveBeenCalledTimes(2)
   })
 
   it("fetchAccountTokens tolerates stale OneHub page metadata", async () => {

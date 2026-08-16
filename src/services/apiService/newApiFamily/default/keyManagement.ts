@@ -11,7 +11,10 @@ import type {
 } from "~/services/accountTokens/tokenProvisioningModel"
 import { REQUEST_CONFIG } from "~/services/apiTransport/constant"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
-import { fetchAllItems } from "~/services/apiTransport/pagination"
+import {
+  fetchAllItems,
+  inferHasMoreFromNumberedPage,
+} from "~/services/apiTransport/pagination"
 import { fetchApi, fetchApiData } from "~/services/apiTransport/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import type { ApiToken } from "~/types"
@@ -46,19 +49,34 @@ interface KeyManagementImplementation {
   fetchAccountAvailableModels: (request: ApiServiceRequest) => Promise<string[]>
 }
 
+interface AccountTokenPaginationOptions {
+  startPage?: number
+  detectsNormalizedFirstPage?: boolean
+  trustsRequestedPageSize?: boolean
+}
+
 /**
  * Fetch the complete New API-family token list behind provider pagination.
- * New API uses one-based page numbers:
+ * New API uses one-based page numbers and normalizes `p=0` to page one, which
+ * lets compatibility callers probe from zero before selecting their next page:
  * https://github.com/QuantumNous/new-api/blob/9c97e78aced572d540f227007a675d7d007666ac/common/page_info.go
- * One API and Veloera use zero-based pages and return bare arrays, which
- * terminate on an empty page:
+ * One API uses zero-based pages, ignores the requested size, and returns bare
+ * arrays, so only an empty page proves completion:
  * https://github.com/songquanpeng/one-api/blob/main/controller/token.go
+ * Veloera uses zero-based pages but honors the requested size, so a short
+ * array page proves completion:
  * https://github.com/Veloera/Veloera/blob/main/controller/token.go
  */
 export async function fetchAccountTokens(
   request: ApiServiceRequest,
-  startPage = 1,
+  options: number | AccountTokenPaginationOptions = {},
 ): Promise<ApiToken[]> {
+  const {
+    startPage = 1,
+    detectsNormalizedFirstPage = false,
+    trustsRequestedPageSize = false,
+  } = typeof options === "number" ? { startPage: options } : options
+
   const tokens = await fetchAllItems<ApiToken>(
     async (page) => {
       const searchParams = new URLSearchParams({
@@ -71,7 +89,13 @@ export async function fetchAccountTokens(
 
       if (Array.isArray(tokensData)) {
         const items = tokensData.map(normalizeApiTokenKey)
-        return { items, hasMore: items.length > 0 }
+        return {
+          items,
+          hasMore:
+            items.length > 0 &&
+            (!trustsRequestedPageSize ||
+              items.length >= REQUEST_CONFIG.DEFAULT_PAGE_SIZE),
+        }
       }
 
       if (!isRecord(tokensData) || !Array.isArray(tokensData.items)) {
@@ -79,9 +103,28 @@ export async function fetchAccountTokens(
       }
 
       const items = tokensData.items.map(normalizeApiTokenKey)
+      const normalizedFirstPage =
+        detectsNormalizedFirstPage && page === 0 && tokensData.page === 1
+      const responsePage = normalizedFirstPage ? 1 : page
+      const metadataHasMore = inferHasMoreFromNumberedPage({
+        requestedPage: responsePage,
+        responsePage: tokensData.page,
+        responsePageSize: tokensData.page_size,
+        total: tokensData.total,
+        itemCount: items.length,
+      })
+      const hasMore = metadataHasMore ?? items.length > 0
+
+      if (normalizedFirstPage) {
+        return {
+          items,
+          nextPage: hasMore ? 2 : null,
+        }
+      }
+
       return {
         items,
-        hasMore: items.length > 0,
+        hasMore,
       }
     },
     {
