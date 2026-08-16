@@ -44,7 +44,7 @@
       <img src="../../resources/partners/fennoai.jpg" alt="FennoAI">
     </a>
     <p>
-      <strong>FennoAI</strong> 是一家稳定、高效的 API 中转服务商，主要提供 Codex 中转服务，兼容 OpenAI 及 Anthropic 协议，可接入 Codex、Claude Code、OpenCode 等主流编程工具，稳定支撑千亿 Token/日的企业级调用需求，并支持国内及海外主体公对公结算、开票。通过<a href="https://api.fenno.ai/s/DCGC">专属链接</a>购买订阅，仅需 <strong>1.99 美元</strong>即可获得价值 50 美元的 Coding Plan 额度；邀请好友购买最高可获得 20% 返佣，邀请越多，奖励越高。
+      <strong>FennoAI</strong> 是一家稳定、高效的 API 中转服务商，主要提供 Codex 中转服务，兼容 OpenAI 及 Anthropic 协议，可接入 Codex、Claude Code、OpenCode 等主流编程工具，稳定支撑千亿 Token/日的企业级调用需求，并支持国内及海外主体公对公结算、开票。通过<a href="https://api.fenno.ai/s/DCGC">专属链接</a>购买订阅，仅需 <strong>1.99 美元</strong>即可获得价值 50 美元的 Coding Plan 额度；邀请好友购买最高可获得 20% 返佣，邀请越多，奖励越高（<a href="./service-guides/fenno.md">使用教程</a>）。
     </p>
   </section>
 
@@ -77,7 +77,7 @@
       <img src="../../resources/partners/xuanshu-api.png" alt="玄枢API">
     </a>
     <p>
-      <strong>玄枢API</strong>是面向企业、技术团队和个人开发者的新一代 AI 模型路由网关，提供企业级稳定性的全球顶级模型（Claude, GPT, Grok等）一站式API 接入。充值享八折，模型2折起，注册送5美金，企业支持开票，通过<a href="https://www.xuanshuapi.com/register?aff=ALL-API-HUB&promo=ALL-API-HUB">此链接</a>注册额外获赠5美金额度。
+      <strong>玄枢API</strong>是面向企业、技术团队和个人开发者的新一代 AI 模型路由网关，提供企业级稳定性的全球顶级模型（Claude, GPT, Grok等）一站式API 接入。充值享八折，模型2折起，注册送5美金，企业支持开票，通过<a href="https://www.xuanshuapi.com/register?aff=ALL-API-HUB&promo=ALL-API-HUB">此链接</a>注册额外获赠5美金额度（<a href="./service-guides/xuanshuapi.md">使用教程</a>）。
     </p>
   </section>
 
@@ -88,7 +88,7 @@
       <img src="../../resources/partners/atlas-cloud-logo-display.svg" alt="Atlas Cloud">
     </a>
     <p>
-      <strong>Atlas Cloud</strong> 全模态 AI 推理平台，一个 AI API 即可访问视频生成、图像生成和 LLM API，覆盖 300+ 精选模型。新推出的 Coding Plan 优惠适合需要更高性价比 API 访问的开发者，欢迎通过<a href="https://www.atlascloud.ai/console/coding-plan?utm_source=github&utm_medium=link&utm_campaign=all-api-hub">此链接</a>了解。
+      <strong>Atlas Cloud</strong> 全模态 AI 推理平台，一个 AI API 即可访问视频生成、图像生成和 LLM API，覆盖 300+ 精选模型。新推出的 Coding Plan 优惠适合需要更高性价比 API 访问的开发者，欢迎通过<a href="https://www.atlascloud.ai/console/coding-plan?utm_source=github&utm_medium=link&utm_campaign=all-api-hub">此链接</a>了解（<a href="./service-guides/atlascloud.md">使用教程</a>）。
     </p>
   </section>
 
@@ -110,7 +110,7 @@
       <img src="../../resources/partners/suixiang.jpg" alt="随想AI中转站">
     </a>
     <p>
-      <strong>随想AI中转站</strong> 可靠高效的 API 中继服务提供商，提供 Claude、Codex、Gemini 等中继服务，支持 1:1 按量充值、每日签到测试额度、多线路冗余、跨区域容灾和自动故障切换。欢迎通过<a href="https://sui-xiang.com/">此链接</a>了解和使用。
+      <strong>随想AI中转站</strong> 可靠高效的 API 中继服务提供商，提供 Claude、Codex、Gemini 等中继服务，支持 1:1 按量充值、每日签到测试额度、多线路冗余、跨区域容灾和自动故障切换。欢迎通过<a href="https://sui-xiang.com/">此链接</a>了解和使用（<a href="./service-guides/suixiang.md">使用教程</a>）。
     </p>
   </section>
 
@@ -121,7 +121,7 @@
       <img src="../../resources/partners/infistar.png" alt="Infistar.ai">
     </a>
     <p>
-      <strong>Infistar.ai</strong> 担心模型掺水、降智或价格不透明？Infistar.ai 在售模型均经过真实调用验真，供给来自官方 API 与官方号池，超 10000 条供应链路进行负载均衡，保证时延和峰时稳定性。覆盖 ChatGPT、Claude、Gemini、Grok、GLM、DeepSeek、Kimi、Qwen、MiniMax 等国内外主流模型，覆盖文本、视频、图片、嵌入、重排等全模态能力，价格与用量透明清晰可查，模型低至官方价的 10%。All API Hub 用户可通过<a href="https://infistar.ai/register?aff=ALLAPIHUB&ref_source=link">专属入口</a>注册体验。
+      <strong>Infistar.ai</strong> 担心模型掺水、降智或价格不透明？Infistar.ai 在售模型均经过真实调用验真，供给来自官方 API 与官方号池，超 10000 条供应链路进行负载均衡，保证时延和峰时稳定性。覆盖 ChatGPT、Claude、Gemini、Grok、GLM、DeepSeek、Kimi、Qwen、MiniMax 等国内外主流模型，覆盖文本、视频、图片、嵌入、重排等全模态能力，价格与用量透明清晰可查，模型低至官方价的 10%。All API Hub 用户可通过<a href="https://infistar.ai/register?aff=ALLAPIHUB&ref_source=link">专属入口</a>注册体验（<a href="./service-guides/infistar.md">使用教程</a>）。
     </p>
   </section>
 

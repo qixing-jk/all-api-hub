@@ -43,7 +43,7 @@ If you are looking for stable, efficient, and highly compatible AI relay service
       <img src="../../../resources/partners/fennoai.jpg" alt="FennoAI">
     </a>
     <p>
-      <strong>FennoAI</strong> is a stable and efficient API relay provider focused on Codex relay services. It supports the OpenAI and Anthropic protocols, integrates with popular coding tools such as Codex, Claude Code, and OpenCode, reliably handles enterprise demand at the scale of 100 billion tokens per day, and supports business-to-business settlement and invoicing for entities in China and overseas. Subscribe through <a href="https://api.fenno.ai/s/DCGC">the dedicated link</a> for just <strong>$1.99</strong> to receive $50 in Coding Plan credits. Referral purchases earn up to 20% commission, with higher rewards as you invite more people.
+      <strong>FennoAI</strong> is a stable and efficient API relay provider focused on Codex relay services. It supports the OpenAI and Anthropic protocols, integrates with popular coding tools such as Codex, Claude Code, and OpenCode, reliably handles enterprise demand at the scale of 100 billion tokens per day, and supports business-to-business settlement and invoicing for entities in China and overseas. Subscribe through <a href="https://api.fenno.ai/s/DCGC">the dedicated link</a> for just <strong>$1.99</strong> to receive $50 in Coding Plan credits. Referral purchases earn up to 20% commission, with higher rewards as you invite more people (<a href="./service-guides/fenno.md">setup guide</a>).
     </p>
   </section>
 
@@ -76,7 +76,7 @@ If you are looking for stable, efficient, and highly compatible AI relay service
       <img src="../../../resources/partners/xuanshu-api.png" alt="XuanShu API">
     </a>
     <p>
-      <strong>XuanShu API</strong> is a next-generation AI model routing gateway for enterprises, technical teams, and individual developers. It provides one-stop API access to leading global models including Claude, GPT, and Grok with enterprise-grade reliability. Top-ups are 20% off, model pricing starts at 20% of standard rates, registration includes US$5 in credit, and business invoices are available. Register through <a href="https://www.xuanshuapi.com/register?aff=ALL-API-HUB&promo=ALL-API-HUB">this link</a> for an additional US$5 credit.
+      <strong>XuanShu API</strong> is a next-generation AI model routing gateway for enterprises, technical teams, and individual developers. It provides one-stop API access to leading global models including Claude, GPT, and Grok with enterprise-grade reliability. Top-ups are 20% off, model pricing starts at 20% of standard rates, registration includes US$5 in credit, and business invoices are available. Register through <a href="https://www.xuanshuapi.com/register?aff=ALL-API-HUB&promo=ALL-API-HUB">this link</a> for an additional US$5 credit (<a href="./service-guides/xuanshuapi.md">setup guide</a>).
     </p>
   </section>
 

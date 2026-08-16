@@ -10,6 +10,8 @@ All API Hub をまだインストールしていない場合は、先に[はじ�
 
 | サービス | 用途 | ガイド |
 | --- | --- | --- |
+| Fenno | Fenno アカウントを追加し、モデル価格を確認して API 認証情報を保存・エクスポートします。 | [ガイドを見る](./service-guides/fenno.md) |
+| XuanShu API | XuanShu API アカウントを追加し、モデル価格を確認して API 認証情報を保存・エクスポートします。 | [ガイドを見る](./service-guides/xuanshuapi.md) |
 | PackyCode | PackyCode アカウントを追加し、モデル価格を確認して API 認証情報を保存・エクスポートします。 | [ガイドを見る](./service-guides/packycode.md) |
 | Xingchen AI | Xingchen AI アカウントを追加し、モデル価格を確認して API 認証情報を保存・エクスポートします。 | [ガイドを見る](./service-guides/xingchen.md) |
 | OpenRouter | OpenRouter アカウントを追加し、API Key の管理とモデル価格の確認を行います。 | [ガイドを見る](./service-guides/openrouter.md) |
