@@ -1,10 +1,10 @@
-# Managing Fenno API Assets with All API Hub
+# Managing FennoAI API Assets with All API Hub
 
-> Use All API Hub with Fenno to check balances, compare model pricing, manage API keys, and export credentials to the AI tools you already use.
+> Use All API Hub with FennoAI to check balances, compare model pricing, manage API keys, and export credentials to the AI tools you already use.
 
-Fenno offers relay services for Claude Code, Codex, Gemini, and more. If you use multiple Fenno accounts, work across several AI API platforms, or often configure Fenno in different clients, **All API Hub** can keep those accounts and credentials in one local management entry point.
+FennoAI offers relay services for Claude Code, Codex, Gemini, and more. If you use multiple FennoAI accounts, work across several AI API platforms, or often configure FennoAI in different clients, **All API Hub** can keep those accounts and credentials in one local management entry point.
 
-After adding a Fenno account, you can view balances, manage API keys, check model pricing, and export credentials to Cherry Studio, CC Switch, Kilo Code, CLIProxyAPI, Claude Code Router, or your own self-hosted backend.
+After adding a FennoAI account, you can view balances, manage API keys, check model pricing, and export credentials to Cherry Studio, CC Switch, Kilo Code, CLIProxyAPI, Claude Code Router, or your own self-hosted backend.
 
 ![All API Hub home preview](../../static/image/sponsor-guides/fenno/all-api-hub-home-preview.png)
 
@@ -12,17 +12,17 @@ After adding a Fenno account, you can view balances, manage API keys, check mode
 
 ## 1. What All API Hub Does
 
-**All API Hub** ([open source on GitHub](https://github.com/qixing-jk/all-api-hub)) is a browser extension for AI API users who need to manage multiple accounts, sites, and client configurations. For Fenno users, it brings Fenno account status, API keys, model pricing, and export actions into one workflow.
+**All API Hub** ([open source on GitHub](https://github.com/qixing-jk/all-api-hub)) is a browser extension for AI API users who need to manage multiple accounts, sites, and client configurations. For FennoAI users, it brings FennoAI account status, API keys, model pricing, and export actions into one workflow.
 
-When used with Fenno, it helps with:
+When used with FennoAI, it helps with:
 
-- **Unified multi-account dashboard**: view Fenno together with other AI API accounts.
-- **Cross-account price comparison**: compare Fenno model prices with other added accounts.
-- **Centralized API key management**: view, create, edit, delete, and copy Fenno API keys.
+- **Unified multi-account dashboard**: view FennoAI together with other AI API accounts.
+- **Cross-account price comparison**: compare FennoAI model prices with other added accounts.
+- **Centralized API key management**: view, create, edit, delete, and copy FennoAI API keys.
 - **Credential reuse**: export managed `Base URL + API Key` credentials to clients, CLI tools, or self-hosted channels.
 - **Multi-device continuity**: move common configuration with import/export or WebDAV sync.
 
-Fenno provides the model API, and All API Hub helps organize the account, key, pricing, and downstream tool configuration around it.
+FennoAI provides the model API, and All API Hub helps organize the account, key, pricing, and downstream tool configuration around it.
 
 ---
 
@@ -45,66 +45,66 @@ For automatic updates and the most stable experience, install from the official 
 
 ---
 
-## 3. Add a Fenno Account
+## 3. Add a FennoAI Account
 
-All API Hub can auto-recognize Fenno accounts. Log in to Fenno in your browser first, then let the extension read the current site and save the account.
+All API Hub can auto-recognize FennoAI accounts. Log in to FennoAI in your browser first, then let the extension read the current site and save the account.
 
 ### 3.1 Auto-Recognize and Add
 
-1. Log in to [Fenno](https://api.fenno.ai/s/DCGC) in your browser.
+1. Log in to [FennoAI](https://api.fenno.ai/s/DCGC) in your browser.
 2. Click the All API Hub extension icon in the top-right corner of the browser.
-3. Click **Add Account**, then use the current site address or manually enter the Fenno address.
+3. Click **Add Account**, then use the current site address or manually enter the FennoAI address.
 
-   ![Enter the Fenno console address before auto-recognition](../../static/image/sponsor-guides/fenno/fenno-add-account-auto-detect.png)
+   ![Enter the FennoAI console address before auto-recognition](../../static/image/sponsor-guides/fenno/fenno-add-account-auto-detect.png)
 
 4. Click **Auto-Recognize**.
 5. Confirm the account information, then click **Save Account**.
 
-   ![Confirm the recognized Fenno account information](../../static/image/sponsor-guides/fenno/fenno-account-details-confirm.png)
+   ![Confirm the recognized FennoAI account information](../../static/image/sponsor-guides/fenno/fenno-account-details-confirm.png)
 
 :::: tip
 After the account is saved, the extension uses the imported account token to read balance, API key, and model pricing information.
 ::::
 
-### 3.2 Manage Fenno API Keys
+### 3.2 Manage FennoAI API Keys
 
-After adding the account, open **Key Management** to manage Fenno API keys:
+After adding the account, open **Key Management** to manage FennoAI API keys:
 
 - View existing API keys under the account.
 - Create a new key, or edit and delete existing keys.
 - Copy frequently used keys, or save them to **API Credential Profiles** for reuse.
 - Export credentials from the key list or credential profile when you need to configure another tool.
 
-Use **Key Management** for day-to-day Fenno key organization. Use export actions when you want to reuse the same key in a client, CLI tool, or self-hosted backend.
+Use **Key Management** for day-to-day FennoAI key organization. Use export actions when you want to reuse the same key in a client, CLI tool, or self-hosted backend.
 
 ---
 
-## 4. Common Fenno Workflows
+## 4. Common FennoAI Workflows
 
 ### 4.1 View Balance and Account Status
 
-The All API Hub dashboard shows Fenno alongside your other AI API accounts. Balance, status, and refresh results are shown in one place, which is useful when you manage multiple accounts.
+The All API Hub dashboard shows FennoAI alongside your other AI API accounts. Balance, status, and refresh results are shown in one place, which is useful when you manage multiple accounts.
 
 ### 4.2 Compare Model Pricing
 
-Open **Model Pricing** and select the Fenno account as the data source. You can:
+Open **Model Pricing** and select the FennoAI account as the data source. You can:
 
-- View the model list returned by Fenno.
+- View the model list returned by FennoAI.
 - Search for a model and test whether it is available.
 - Check input and output pricing for each model.
-- Compare Fenno pricing with models from other added accounts.
+- Compare FennoAI pricing with models from other added accounts.
 
-![View Fenno model list and pricing](../../static/image/sponsor-guides/fenno/fenno-model-price-list.png)
+![View FennoAI model list and pricing](../../static/image/sponsor-guides/fenno/fenno-model-price-list.png)
 
 ### 4.3 Export to AI Clients
 
-To use Fenno in another tool:
+To use FennoAI in another tool:
 
-1. Find your Fenno key in **Key Management**.
+1. Find your FennoAI key in **Key Management**.
 2. Choose an export action.
 3. Select the target tool, such as **Cherry Studio**, **CC Switch**, **Kilo Code**, **CLIProxyAPI**, **Claude Code Router**, or a configured self-hosted site.
 
-![Export a Fenno key from Key Management](../../static/image/sponsor-guides/fenno/fenno-credential-export-menu.png)
+![Export a FennoAI key from Key Management](../../static/image/sponsor-guides/fenno/fenno-credential-export-menu.png)
 
 You can also:
 
@@ -121,7 +121,7 @@ Browser local storage is only the default save location. Exporting to AI clients
 
 ### 4.4 Import into a Self-Hosted Channel
 
-If you maintain an AI distribution backend, you can use Fenno as an upstream provider. Configure your backend under **Basic Settings -> Self-hosted Site Management**, then return to **Key Management** and import the Fenno key into the current self-hosted site. You can also select multiple keys and import them in bulk.
+If you maintain an AI distribution backend, you can use FennoAI as an upstream provider. Configure your backend under **Basic Settings -> Self-hosted Site Management**, then return to **Key Management** and import the FennoAI key into the current self-hosted site. You can also select multiple keys and import them in bulk.
 
 ### 4.5 Back Up and Move Between Devices
 
@@ -133,11 +133,11 @@ All API Hub stores data in the current browser by default. If you work across se
 
 | Area | All API Hub (Management) | Cherry Studio / NextChat and Similar Clients |
 | --- | --- | --- |
-| Core role | Manage Fenno and other AI API accounts, balances, keys, pricing, and channels | Send chats, run inference, and manage prompts or agent workflows |
+| Core role | Manage FennoAI and other AI API accounts, balances, keys, pricing, and channels | Send chats, run inference, and manage prompts or agent workflows |
 | Main actions | Dashboard, key management, price comparison, credential export, channel import | Chat, file analysis, and agent workflows |
 | Relationship | Organizes source configuration such as keys, Base URL, pricing, and account status | Uses the managed credentials to call models |
 
-Recommended workflow: manage Fenno accounts, keys, pricing, and exports in All API Hub, then use your preferred client to send requests.
+Recommended workflow: manage FennoAI accounts, keys, pricing, and exports in All API Hub, then use your preferred client to send requests.
 
 ---
 
@@ -149,24 +149,24 @@ A: By default, account and key data stays in your local browser. Note that expor
 
 **Q: Who is this best suited for?**
 
-A: It is useful if you have multiple Fenno accounts, also use other AI API platforms, or often configure Fenno in several clients and devices. You can still start with one Fenno account and use balance checks, key management, and pricing comparison.
+A: It is useful if you have multiple FennoAI accounts, also use other AI API platforms, or often configure FennoAI in several clients and devices. You can still start with one FennoAI account and use balance checks, key management, and pricing comparison.
 
 **Q: Can I use All API Hub without a self-hosted backend?**
 
-A: Yes. After adding a Fenno account, you can view balances, manage keys, compare prices, and export to clients. Self-hosted site management is only needed if you maintain an AI distribution backend.
+A: Yes. After adding a FennoAI account, you can view balances, manage keys, compare prices, and export to clients. Self-hosted site management is only needed if you maintain an AI distribution backend.
 
 **Q: Will exported clients continue to work independently?**
 
 A: Yes. All API Hub only helps generate or fill configuration. Actual model calls are still handled by the target client.
 
-**Q: What is the relationship between All API Hub and the Fenno console?**
+**Q: What is the relationship between All API Hub and the FennoAI console?**
 
-A: They work together. The Fenno console remains the source for account, recharge, and official service operations. All API Hub is better suited for day-to-day account status, API key, pricing, and client configuration management.
+A: They work together. The FennoAI console remains the source for account, recharge, and official service operations. All API Hub is better suited for day-to-day account status, API key, pricing, and client configuration management.
 
 ---
 
 ## Links
 
-- [Fenno](https://api.fenno.ai/s/DCGC)
+- [FennoAI](https://api.fenno.ai/s/DCGC)
 - [All API Hub GitHub repository](https://github.com/qixing-jk/all-api-hub)
 - [All API Hub documentation](https://all-api-hub.qixing1217.top/en/)

@@ -1,10 +1,10 @@
-# Fenno の API 資産を All API Hub で管理する
+# FennoAI の API 資産を All API Hub で管理する
 
-> Fenno と All API Hub を組み合わせて、残高確認、モデル価格比較、API キー管理、よく使う AI ツールへの認証情報エクスポートを行います。
+> FennoAI と All API Hub を組み合わせて、残高確認、モデル価格比較、API キー管理、よく使う AI ツールへの認証情報エクスポートを行います。
 
-Fenno は Claude Code、Codex、Gemini などの中継サービスを提供します。複数の Fenno アカウントを使っている場合、複数の AI API プラットフォームを併用している場合、または Fenno を複数のクライアントに設定することが多い場合、**All API Hub** を使うとアカウントと認証情報を 1 つのローカル管理画面にまとめられます。
+FennoAI は Claude Code、Codex、Gemini などの中継サービスを提供します。複数の FennoAI アカウントを使っている場合、複数の AI API プラットフォームを併用している場合、または FennoAI を複数のクライアントに設定することが多い場合、**All API Hub** を使うとアカウントと認証情報を 1 つのローカル管理画面にまとめられます。
 
-Fenno アカウントを追加すると、All API Hub で残高確認、API キー管理、モデル価格確認、Cherry Studio、CC Switch、Kilo Code、CLIProxyAPI、Claude Code Router、またはセルフホスト型バックエンドへの認証情報エクスポートができます。
+FennoAI アカウントを追加すると、All API Hub で残高確認、API キー管理、モデル価格確認、Cherry Studio、CC Switch、Kilo Code、CLIProxyAPI、Claude Code Router、またはセルフホスト型バックエンドへの認証情報エクスポートができます。
 
 ![All API Hub ホーム画面のプレビュー](../../static/image/sponsor-guides/fenno/all-api-hub-home-preview.png)
 
@@ -12,17 +12,17 @@ Fenno アカウントを追加すると、All API Hub で残高確認、API キ�
 
 ## 1. All API Hub でできること
 
-**All API Hub**（[GitHub で公開](https://github.com/qixing-jk/all-api-hub)）は、複数のアカウント、サイト、クライアント設定を管理したい AI API ユーザー向けのブラウザ拡張機能です。Fenno ユーザーは、アカウント状態、API キー、モデル価格、エクスポート操作を 1 つの流れで扱えます。
+**All API Hub**（[GitHub で公開](https://github.com/qixing-jk/all-api-hub)）は、複数のアカウント、サイト、クライアント設定を管理したい AI API ユーザー向けのブラウザ拡張機能です。FennoAI ユーザーは、アカウント状態、API キー、モデル価格、エクスポート操作を 1 つの流れで扱えます。
 
-Fenno と組み合わせると、次の用途に役立ちます。
+FennoAI と組み合わせると、次の用途に役立ちます。
 
-- **複数アカウントの一元ダッシュボード**：Fenno と他の AI API アカウントをまとめて確認できます。
-- **アカウント間の価格比較**：Fenno のモデル価格を、追加済みの他アカウントと比較できます。
-- **API キーの集中管理**：Fenno API キーの表示、作成、編集、削除、コピーを行えます。
+- **複数アカウントの一元ダッシュボード**：FennoAI と他の AI API アカウントをまとめて確認できます。
+- **アカウント間の価格比較**：FennoAI のモデル価格を、追加済みの他アカウントと比較できます。
+- **API キーの集中管理**：FennoAI API キーの表示、作成、編集、削除、コピーを行えます。
 - **認証情報の再利用**：管理済みの `Base URL + API Key` をクライアント、CLI ツール、セルフホスト型チャネルにエクスポートできます。
 - **複数端末での継続利用**：インポート / エクスポートや WebDAV 同期で設定を移行できます。
 
-Fenno がモデル API を提供し、All API Hub がアカウント、キー、価格、下流ツール設定を整理します。
+FennoAI がモデル API を提供し、All API Hub がアカウント、キー、価格、下流ツール設定を整理します。
 
 ---
 
@@ -40,30 +40,30 @@ Fenno がモデル API を提供し、All API Hub がアカウント、キー、
 
 ---
 
-## 3. Fenno アカウントを追加する
+## 3. FennoAI アカウントを追加する
 
-All API Hub は Fenno アカウントの自動認識に対応しています。先にブラウザで Fenno にログインし、拡張機能で現在のサイトを読み取ってアカウントを保存します。
+All API Hub は FennoAI アカウントの自動認識に対応しています。先にブラウザで FennoAI にログインし、拡張機能で現在のサイトを読み取ってアカウントを保存します。
 
 ### 3.1 自動認識で追加する
 
-1. ブラウザで [Fenno](https://api.fenno.ai/s/DCGC) にログインします。
+1. ブラウザで [FennoAI](https://api.fenno.ai/s/DCGC) にログインします。
 2. ブラウザ右上の All API Hub 拡張機能アイコンをクリックします。
-3. **アカウントを追加** をクリックし、現在のサイトアドレスを使うか Fenno のアドレスを手動入力します。
+3. **アカウントを追加** をクリックし、現在のサイトアドレスを使うか FennoAI のアドレスを手動入力します。
 
-   ![Fenno コンソールアドレスを入力して自動認識を準備](../../static/image/sponsor-guides/fenno/fenno-add-account-auto-detect.png)
+   ![FennoAI コンソールアドレスを入力して自動認識を準備](../../static/image/sponsor-guides/fenno/fenno-add-account-auto-detect.png)
 
 4. **自動認識** をクリックします。
 5. アカウント情報を確認し、**アカウントを保存** をクリックします。
 
-   ![認識された Fenno アカウント情報を確認](../../static/image/sponsor-guides/fenno/fenno-account-details-confirm.png)
+   ![認識された FennoAI アカウント情報を確認](../../static/image/sponsor-guides/fenno/fenno-account-details-confirm.png)
 
 :::: tip
 保存後、拡張機能はインポートされたアカウントトークンを使って残高、API キー、モデル価格などを読み取ります。
 ::::
 
-### 3.2 Fenno API キーを管理する
+### 3.2 FennoAI API キーを管理する
 
-アカウント追加後は **キー管理** で Fenno API キーを管理できます。
+アカウント追加後は **キー管理** で FennoAI API キーを管理できます。
 
 - 現在のアカウントにある API キーを確認する。
 - 新しいキーを作成し、既存キーを編集または削除する。
@@ -74,32 +74,32 @@ All API Hub は Fenno アカウントの自動認識に対応しています。�
 
 ---
 
-## 4. Fenno ユーザー向けの主な使い方
+## 4. FennoAI ユーザー向けの主な使い方
 
 ### 4.1 残高とアカウント状態を確認する
 
-All API Hub のダッシュボードでは、Fenno と他の AI API アカウントをまとめて表示できます。残高、状態、更新結果が 1 か所に集まるため、複数アカウントの状況を素早く確認できます。
+All API Hub のダッシュボードでは、FennoAI と他の AI API アカウントをまとめて表示できます。残高、状態、更新結果が 1 か所に集まるため、複数アカウントの状況を素早く確認できます。
 
 ### 4.2 モデル価格を比較する
 
-**モデル価格** を開き、Fenno アカウントをデータソースとして選択します。次の操作ができます。
+**モデル価格** を開き、FennoAI アカウントをデータソースとして選択します。次の操作ができます。
 
-- Fenno が返すモデル一覧を確認する。
+- FennoAI が返すモデル一覧を確認する。
 - 指定モデルを検索し、利用可能か確認する。
 - 各モデルの入力 / 出力価格を確認する。
 - 他の追加済みアカウントのモデル価格と比較する。
 
-![Fenno のモデル一覧と価格を確認](../../static/image/sponsor-guides/fenno/fenno-model-price-list.png)
+![FennoAI のモデル一覧と価格を確認](../../static/image/sponsor-guides/fenno/fenno-model-price-list.png)
 
 ### 4.3 AI クライアントへエクスポートする
 
-Fenno を他のツールで使う場合は、All API Hub から直接エクスポートできます。
+FennoAI を他のツールで使う場合は、All API Hub から直接エクスポートできます。
 
-1. **キー管理** で Fenno キーを見つけます。
+1. **キー管理** で FennoAI キーを見つけます。
 2. 必要なエクスポート操作を選択します。
 3. **Cherry Studio**、**CC Switch**、**Kilo Code**、**CLIProxyAPI**、**Claude Code Router**、または設定済みのセルフホスト型サイトを選びます。
 
-![キー管理から Fenno キーをエクスポート](../../static/image/sponsor-guides/fenno/fenno-credential-export-menu.png)
+![キー管理から FennoAI キーをエクスポート](../../static/image/sponsor-guides/fenno/fenno-credential-export-menu.png)
 
 ほかにも、`Base URL + API Key` のコピー、API の疎通確認、利用可能モデル一覧の確認、複数クライアントへのエクスポート、セルフホスト型サイトへのチャネル追加、インポート / エクスポートや WebDAV 同期による移行ができます。
 
@@ -109,7 +109,7 @@ Fenno を他のツールで使う場合は、All API Hub から直接エクス�
 
 ### 4.4 セルフホスト型チャネルへインポートする
 
-AI 分配バックエンドを運用している場合、Fenno を上流プロバイダーとして使えます。**基本設定 → セルフホスト型サイト管理** でバックエンドを設定し、**キー管理** に戻って Fenno キーを現在のセルフホスト型サイトへインポートします。複数キーの一括インポートも可能です。
+AI 分配バックエンドを運用している場合、FennoAI を上流プロバイダーとして使えます。**基本設定 → セルフホスト型サイト管理** でバックエンドを設定し、**キー管理** に戻って FennoAI キーを現在のセルフホスト型サイトへインポートします。複数キーの一括インポートも可能です。
 
 ### 4.5 バックアップと端末移行
 
@@ -121,11 +121,11 @@ All API Hub のデータは既定では現在のブラウザ内に保存され�
 
 | 項目 | All API Hub（管理側） | Cherry Studio / NextChat など（利用側） |
 | --- | --- | --- |
-| 主な役割 | Fenno と他の AI API アカウント、残高、キー、価格、チャネルを管理する | チャット、推論、プロンプトや Agent ワークフローを実行する |
+| 主な役割 | FennoAI と他の AI API アカウント、残高、キー、価格、チャネルを管理する | チャット、推論、プロンプトや Agent ワークフローを実行する |
 | 主な操作 | ダッシュボード、キー管理、価格比較、認証情報エクスポート、チャネルインポート | チャット、ファイル分析、Agent ワークフロー |
 | 関係 | キー、Base URL、価格、アカウント状態などの元設定を整理する | 管理済みの認証情報を使ってモデルを呼び出す |
 
-おすすめの使い方は、All API Hub で Fenno アカウント、キー、価格、エクスポート設定を管理し、実際のリクエストは普段使っているクライアントから送ることです。
+おすすめの使い方は、All API Hub で FennoAI アカウント、キー、価格、エクスポート設定を管理し、実際のリクエストは普段使っているクライアントから送ることです。
 
 ---
 
@@ -135,26 +135,26 @@ All API Hub のデータは既定では現在のブラウザ内に保存され�
 
 A: 既定では、アカウントとキーの情報はブラウザ内に保存されます。AI クライアントへのエクスポート、セルフホスト型サイトへのインポート、API / CLI 互換性テスト、WebDAV 同期では、認証情報がそれぞれの宛先アドレスに送信される点にご注意ください。全体の設定データが WebDAV ストレージに同期されるのは、WebDAV 同期を明示的に設定した場合のみです。信頼できる宛先にのみキーを送信し、不要になったら失効させてください。
 
-**Q: All API Hub はどのような Fenno ユーザーに最適ですか？**
+**Q: All API Hub はどのような FennoAI ユーザーに最適ですか？**
 
-A: 複数の Fenno アカウントを持っている場合、他の AI API プラットフォームも併用している場合、または Fenno を複数のクライアントや端末に設定することが多い場合に役立ちます。Fenno だけで使い始める場合も、残高確認、キー管理、モデル価格比較から始められます。
+A: 複数の FennoAI アカウントを持っている場合、他の AI API プラットフォームも併用している場合、または FennoAI を複数のクライアントや端末に設定することが多い場合に役立ちます。FennoAI だけで使い始める場合も、残高確認、キー管理、モデル価格比較から始められます。
 
 **Q: セルフホスト型バックエンドがなくても使えますか？**
 
-A: はい。Fenno アカウントを追加すれば、残高確認、キー管理、価格比較、クライアントへのエクスポートを利用できます。
+A: はい。FennoAI アカウントを追加すれば、残高確認、キー管理、価格比較、クライアントへのエクスポートを利用できます。
 
 **Q: エクスポート後、クライアントは単独で動作しますか？**
 
 A: はい。All API Hub は設定の生成や入力を支援するだけです。実際のモデル呼び出しは対象クライアントが行います。
 
-**Q: All API Hub と Fenno コンソールの関係は？**
+**Q: All API Hub と FennoAI コンソールの関係は？**
 
-A: 両者は併用するものです。アカウント、チャージ、公式サービスの操作は Fenno コンソールが担当します。All API Hub は日常的なアカウント状態、API キー、価格、クライアント設定の管理に向いています。
+A: 両者は併用するものです。アカウント、チャージ、公式サービスの操作は FennoAI コンソールが担当します。All API Hub は日常的なアカウント状態、API キー、価格、クライアント設定の管理に向いています。
 
 ---
 
 ## リンク
 
-- [Fenno](https://api.fenno.ai/s/DCGC)
+- [FennoAI](https://api.fenno.ai/s/DCGC)
 - [All API Hub GitHub リポジトリ](https://github.com/qixing-jk/all-api-hub)
 - [All API Hub ドキュメント](https://all-api-hub.qixing1217.top/ja/)

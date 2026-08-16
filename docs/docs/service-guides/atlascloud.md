@@ -52,7 +52,6 @@ Atlas Cloud 当前不支持自动识别，需要通过 API 密钥手动添加。
 Atlas Cloud 适合接入多种模型和客户端。加入 All API Hub 后，你可以把 Atlas Cloud 放进统一的 AI API 管理流程：
 
 *   在 API 凭据库中统一管理 Atlas Cloud 的 API Key。
-*   在模型价格页对比不同账号下的模型成本。
 *   在 API 凭据库中查看、复制、编辑和删除 Atlas Cloud API Key。
 *   将 Atlas Cloud 密钥继续导出到 AI 客户端，或导入到你自己的自建站点渠道中。
 
@@ -82,17 +81,7 @@ Atlas Cloud 适合接入多种模型和客户端。加入 All API Hub 后，你�
 
 ## 四、Atlas Cloud 用户常用场景
 
-### 4.1 对比模型价格
-进入 **“模型价格”** 页面，选择 Atlas Cloud 作为数据源。你可以：
-
-*   查看 Atlas Cloud 返回的模型列表。
-*   搜索指定模型，测试模型是否可用。
-*   查看每个模型的输入/输出价格。
-*   与其他已添加账号的模型价格一起比较，选择更适合当前任务的调用方案。
-
-![查看 Atlas Cloud 模型列表与价格](../static/image/sponsor-guides/atlascloud/atlascloud-model-price-list.png)
-
-### 4.2 导出到 AI 客户端
+### 4.1 导出到 AI 客户端
 如果你需要将 Atlas Cloud 接入其他工具，可以直接从 All API Hub 导出：
 
 1.  在 **“API 凭据库”** 中找到你的 Atlas Cloud 密钥。
