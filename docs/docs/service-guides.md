@@ -14,7 +14,7 @@
 | PackyCode | 添加 PackyCode 账号，查看模型价格，保存并导出 API 凭据。 | [查看教程](./service-guides/packycode.md) |
 | 星辰AI | 添加星辰AI账号，查看模型价格，保存并导出 API 凭据。 | [查看教程](./service-guides/xingchen.md) |
 | 玄枢API | 添加玄枢API 账号，查看模型价格，保存并导出 API 凭据。 | [查看教程](./service-guides/xuanshuapi.md) |
-| Atlas Cloud | 添加 Atlas Cloud 账号，查看模型价格，保存并导出 API 凭据。 | [查看教程](./service-guides/atlascloud.md) |
+| Atlas Cloud | 添加 Atlas Cloud API 凭据，查看模型价格，保存并导出 API 凭据。 | [查看教程](./service-guides/atlascloud.md) |
 | 随想AI中转站 | 添加随想AI中转站 账号，查看模型价格，保存并导出 API 凭据。 | [查看教程](./service-guides/suixiang.md) |
 | Infistar.ai | 添加 Infistar.ai 账号，查看模型价格，保存并导出 API 凭据。 | [查看教程](./service-guides/infistar.md) |
 | OpenRouter | 添加 OpenRouter 账号，管理 API Key，查看模型价格。 | [查看教程](./service-guides/openrouter.md) |
