@@ -148,10 +148,35 @@ vi.mock(
 vi.mock(
   "~/features/ApiCredentialProfiles/components/ApiCredentialProfilesList",
   () => ({
-    ApiCredentialProfilesList: ({ profiles }: any) => (
-      <div data-testid="profiles-list">
+    ApiCredentialProfilesList: ({
+      profiles,
+      targetProfile,
+      associatedKeyStateByProfileId,
+      onOpenAssociatedKey,
+    }: any) => (
+      <div
+        data-testid="profiles-list"
+        data-target-profile-id={targetProfile?.profileId}
+        data-target-request={targetProfile?.request}
+      >
         {profiles.map((profile: any) => (
-          <div key={profile.id}>{profile.name}</div>
+          <div key={profile.id}>
+            {profile.name}
+            {associatedKeyStateByProfileId?.[profile.id]?.status ===
+            "linked" ? (
+              <button
+                type="button"
+                onClick={() =>
+                  onOpenAssociatedKey(
+                    associatedKeyStateByProfileId[profile.id].items[0]
+                      .associationId,
+                  )
+                }
+              >
+                Open {profile.name} key
+              </button>
+            ) : null}
+          </div>
         ))}
       </div>
     ),
@@ -347,6 +372,160 @@ describe("ApiCredentialProfilesListView", () => {
 
     expect(screen.getByText("OpenAI Profile")).toBeInTheDocument()
     expect(screen.getByText("Anthropic Profile")).toBeInTheDocument()
+  })
+
+  it("clears every list filter before locating a target profile", async () => {
+    const controller = {
+      profiles: [
+        {
+          id: "profile-1",
+          name: "First Profile",
+          apiType: "openai",
+          baseUrl: "https://first.example.invalid",
+          apiKey: "sk-first",
+          tagIds: ["team-1"],
+          notes: "",
+        },
+        {
+          id: "profile-2",
+          name: "Target Profile",
+          apiType: "anthropic",
+          baseUrl: "https://target.example.invalid",
+          apiKey: "sk-target",
+          tagIds: [],
+          notes: "",
+        },
+      ],
+      isLoading: false,
+      tags: [{ id: "team-1", name: "Team One" }],
+      tagNameById: new Map<string, string>([["team-1", "Team One"]]),
+      openAddDialog: vi.fn(),
+    } as any
+    const { rerender } = render(
+      <ApiCredentialProfilesListView controller={controller} />,
+    )
+
+    fireEvent.change(
+      await screen.findByPlaceholderText(
+        "apiCredentialProfiles:controls.searchPlaceholder",
+      ),
+      { target: { value: "First" } },
+    )
+    fireEvent.change(screen.getByLabelText("api-type-filter"), {
+      target: { value: "openai" },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Team One" }))
+    expect(screen.queryByText("Target Profile")).not.toBeInTheDocument()
+
+    rerender(
+      <ApiCredentialProfilesListView
+        controller={controller}
+        targetProfileId="profile-2"
+        targetProfileRequest={1}
+      />,
+    )
+
+    expect(await screen.findByText("Target Profile")).toBeVisible()
+    const list = screen.getByTestId("profiles-list")
+    expect(list).toHaveAttribute("data-target-profile-id", "profile-2")
+    expect(list).toHaveAttribute("data-target-request", "1")
+  })
+
+  it("waits for loading to finish before reporting a missing target", async () => {
+    const onClearTargetProfile = vi.fn()
+    const loadingController = {
+      profiles: [],
+      isLoading: true,
+      tags: [],
+      tagNameById: new Map<string, string>(),
+      openAddDialog: vi.fn(),
+    } as any
+    const { rerender } = render(
+      <ApiCredentialProfilesListView
+        controller={loadingController}
+        targetProfileId="missing-profile"
+        targetProfileRequest={1}
+        onClearTargetProfile={onClearTargetProfile}
+      />,
+    )
+
+    expect(
+      await screen.findByText("apiCredentialProfiles:target.loading"),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText("apiCredentialProfiles:target.missingDescription"),
+    ).not.toBeInTheDocument()
+
+    rerender(
+      <ApiCredentialProfilesListView
+        controller={{ ...loadingController, isLoading: false }}
+        targetProfileId="missing-profile"
+        targetProfileRequest={1}
+        onClearTargetProfile={onClearTargetProfile}
+      />,
+    )
+
+    expect(
+      await screen.findAllByText(
+        "apiCredentialProfiles:target.missingDescription",
+      ),
+    ).toHaveLength(2)
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "apiCredentialProfiles:target.clear",
+      }),
+    )
+    expect(onClearTargetProfile).toHaveBeenCalledTimes(1)
+  })
+
+  it("opens the exact associated Account Runtime Key from a profile", async () => {
+    const controller = {
+      profiles: [
+        {
+          id: "profile-1",
+          name: "Linked Profile",
+          apiType: "openai",
+          baseUrl: "https://linked.example.invalid",
+          apiKey: "sk-linked",
+          tagIds: [],
+          notes: "",
+        },
+      ],
+      isLoading: false,
+      tags: [],
+      tagNameById: new Map<string, string>(),
+      openAddDialog: vi.fn(),
+    } as any
+
+    render(
+      <ApiCredentialProfilesListView
+        controller={controller}
+        associatedKeyStateByProfileId={{
+          "profile-1": {
+            status: "linked",
+            items: [
+              {
+                associationId: "association-1",
+                locator: {
+                  source: "account_token",
+                  accountId: "account-example",
+                  siteType: "new-api",
+                  tokenId: 1,
+                },
+                state: "active",
+              },
+            ],
+          },
+        }}
+      />,
+    )
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Open Linked Profile key" }),
+    )
+    expect(openKeysPageMock).toHaveBeenCalledWith({
+      associationId: "association-1",
+    })
   })
 
   it("debounces search analytics with coarse filter and result counts only", async () => {

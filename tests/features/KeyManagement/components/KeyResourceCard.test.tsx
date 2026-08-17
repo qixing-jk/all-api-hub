@@ -132,6 +132,161 @@ describe("KeyResourceCard", () => {
     ).toHaveLength(1)
   })
 
+  it("exposes a focusable stable target for deep-link navigation", () => {
+    renderKeyResourceCard(
+      <KeyResourceCard
+        presentation={presentation}
+        targetId="credential-association-example"
+        isNavigationTarget
+        isDetailsExpanded={false}
+        onDetailsExpandedChange={vi.fn()}
+      />,
+    )
+
+    const target = document.getElementById("credential-association-example")
+    expect(target).toHaveAttribute("tabindex", "-1")
+    expect(target).toHaveAttribute("data-navigation-target", "true")
+  })
+
+  it("renders a linked credential as one icon-only identity control", async () => {
+    const user = userEvent.setup()
+    const onOpen = vi.fn()
+    const onAssociate = vi.fn()
+    const onUnlink = vi.fn()
+
+    renderKeyResourceCard(
+      <KeyResourceCard
+        presentation={presentation}
+        association={{
+          status: "linked",
+          label: "Saved in credential library",
+          actionLabel: "View linked credential",
+          associateLabel: "Link another API credential",
+          onAssociate,
+          onOpen,
+          onUnlink,
+          unlinkLabel: "Remove linked credential",
+        }}
+        isDetailsExpanded={false}
+        onDetailsExpandedChange={vi.fn()}
+      />,
+    )
+
+    expect(
+      screen.queryByText("Saved in credential library"),
+    ).not.toBeInTheDocument()
+    expect(
+      within(
+        screen.getByRole("group", {
+          name: "API credential",
+        }),
+      ).getByTestId(KEY_MANAGEMENT_TEST_IDS.apiCredentialAssociationButton),
+    ).toBeVisible()
+    const openButton = screen.getByTestId(
+      KEY_MANAGEMENT_TEST_IDS.apiCredentialAssociationButton,
+    )
+    expect(openButton).not.toHaveTextContent("Saved in credential library")
+    expect(openButton).not.toHaveAttribute("title")
+    expect(openButton.querySelector(".lucide-link-2")).not.toBeNull()
+
+    await user.hover(openButton)
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      "API credential",
+    )
+
+    await user.click(openButton)
+    expect(
+      within(screen.getByRole("menu"))
+        .getAllByRole("menuitem")
+        .map((item) => item.textContent),
+    ).toEqual([
+      "View linked credential",
+      "Link another API credential",
+      "Remove linked credential",
+    ])
+    await user.click(
+      screen.getByRole("menuitem", { name: "View linked credential" }),
+    )
+    expect(onOpen).toHaveBeenCalledOnce()
+    await user.click(openButton)
+    await user.click(
+      screen.getByRole("menuitem", { name: "Remove linked credential" }),
+    )
+    expect(onUnlink).toHaveBeenCalledOnce()
+  })
+
+  it("offers one explicit review action for an unresolved association", async () => {
+    const user = userEvent.setup()
+    const onOpen = vi.fn()
+    const onAssociate = vi.fn()
+
+    renderKeyResourceCard(
+      <KeyResourceCard
+        presentation={presentation}
+        association={{
+          status: "needs-confirmation",
+          label: "Association needs confirmation",
+          actionLabel: "Review credential association",
+          onOpen,
+          associateLabel: "Associate a saved API credential with this key",
+          onAssociate,
+        }}
+        isDetailsExpanded={false}
+        onDetailsExpandedChange={vi.fn()}
+      />,
+    )
+
+    expect(
+      screen.queryByText("Association needs confirmation"),
+    ).not.toBeInTheDocument()
+    const reviewButton = screen.getByTestId(
+      KEY_MANAGEMENT_TEST_IDS.apiCredentialAssociationButton,
+    )
+    expect(reviewButton.querySelector(".lucide-circle-alert")).not.toBeNull()
+    await user.click(reviewButton)
+    await user.click(
+      screen.getByRole("menuitem", { name: "Review credential association" }),
+    )
+    expect(onOpen).toHaveBeenCalledOnce()
+
+    await user.click(reviewButton)
+    await user.click(
+      screen.getByRole("menuitem", {
+        name: "Associate a saved API credential with this key",
+      }),
+    )
+    expect(onAssociate).toHaveBeenCalledOnce()
+  })
+
+  it("offers the existing-credential action for an unlinked resource", async () => {
+    const user = userEvent.setup()
+    const onAssociate = vi.fn()
+
+    renderKeyResourceCard(
+      <KeyResourceCard
+        presentation={presentation}
+        association={{
+          status: "unlinked",
+          label: "No API credential linked",
+          actionLabel: "Associate a saved API credential with this key",
+          associateLabel: "Associate a saved API credential with this key",
+          onAssociate,
+        }}
+        isDetailsExpanded={false}
+        onDetailsExpandedChange={vi.fn()}
+      />,
+    )
+
+    const linkButton = screen.getByTestId(
+      KEY_MANAGEMENT_TEST_IDS.apiCredentialAssociationButton,
+    )
+    expect(linkButton.querySelector(".lucide-link-2-off")).not.toBeNull()
+
+    await user.click(linkButton)
+    expect(onAssociate).toHaveBeenCalledOnce()
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument()
+  })
+
   it("lets callers use the shared header without a detail trigger", () => {
     renderKeyResourceCard(
       <KeyResourceCardHeader
@@ -249,7 +404,8 @@ describe("KeyResourceCard", () => {
     )
   })
 
-  it("renders adaptive availability guidance without requiring a secret label", () => {
+  it("renders adaptive availability guidance without requiring a secret label", async () => {
+    const user = userEvent.setup()
     renderKeyResourceCard(
       <KeyResourceSecretDisplay
         message="The saved secret cannot be retrieved."
@@ -257,9 +413,14 @@ describe("KeyResourceCard", () => {
       />,
     )
 
-    expect(
-      screen.getByText("The saved secret cannot be retrieved."),
-    ).toBeVisible()
+    const availabilityButton = screen.getByRole("button", {
+      name: "The saved secret cannot be retrieved.",
+    })
+    expect(availabilityButton).toBeVisible()
+    await user.hover(availabilityButton)
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      "The saved secret cannot be retrieved.",
+    )
     expect(screen.queryByText("Key")).not.toBeInTheDocument()
   })
 

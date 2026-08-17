@@ -163,6 +163,7 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
     isCreating,
     createError,
     oneTimeToken,
+    oneTimeSecret,
     fetchRuntimeKeys,
     copySelectedKey,
     createDefaultKey,
@@ -174,13 +175,9 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
     modelId,
     modelEnableGroups,
   })
-  const oneTimeKeySaveAction = oneTimeToken
+  const oneTimeKeySaveAction = oneTimeSecret
     ? buildOneTimeApiKeyProfileSaveAction({
-        accountName: account.name,
-        baseUrl: account.baseUrl,
-        siteType: account.siteType,
-        tagIds: account.tagIds ?? [],
-        token: oneTimeToken,
+        result: oneTimeSecret,
         t,
         logger,
         source: "ModelKeyDialog",

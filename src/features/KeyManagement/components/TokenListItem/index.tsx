@@ -2,10 +2,12 @@ import { useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { KeyResourceCard } from "~/features/KeyManagement/components/KeyResourceCard"
+import type { KeyResourceCredentialAssociation } from "~/features/KeyManagement/components/KeyResourceCard"
 import { buildLegacyKeyResourceCardPresentation } from "~/features/KeyManagement/presentation/legacyKeyResourceCard"
 import { buildDisplayAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import type { ManagedSiteTokenChannelStatus } from "~/services/managedSites/tokenChannelStatus"
 import type { AccountToken, DisplaySiteData } from "~/types"
+import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 
 import { getKeyManagementTokenRowTestId } from "../../testIds"
 import { buildTokenIdentityKey } from "../../utils"
@@ -89,6 +91,10 @@ interface TokenListItemProps {
    * Request key used to temporarily highlight this token's managed-site import action.
    */
   guidedManagedSiteImportRequest?: string
+  association?: KeyResourceCredentialAssociation
+  associatedProfile?: ApiCredentialProfile
+  targetId?: string
+  isNavigationTarget?: boolean
 }
 
 /**
@@ -115,12 +121,18 @@ export function TokenListItem(props: TokenListItemProps) {
     onSelectionChange,
     selectionDisabledReason,
     guidedManagedSiteImportRequest,
+    association,
+    associatedProfile,
+    targetId,
+    isNavigationTarget,
   } = props
   const { t } = useTranslation("keyManagement")
   const [isDetailsExpanded, setIsDetailsExpanded] = useState(false)
   const tokenIdentityKey = buildTokenIdentityKey(token.accountId, token.id)
   const runtimeKey = buildDisplayAccountTokenRuntimeKey(account, token)
-  const presentation = buildLegacyKeyResourceCardPresentation(runtimeKey, t)
+  const presentation = buildLegacyKeyResourceCardPresentation(runtimeKey, t, {
+    hasAssociatedSecret: Boolean(associatedProfile?.apiKey.trim()),
+  })
   const canInteractWithSecret =
     presentation.actions.copySecret || presentation.actions.revealSecret
   const selectionChange = presentation.actions.batchSelect
@@ -155,8 +167,12 @@ export function TokenListItem(props: TokenListItemProps) {
         name: token.name,
       })}
       testId={getKeyManagementTokenRowTestId(token.id)}
+      association={association}
+      targetId={targetId}
+      isNavigationTarget={isNavigationTarget}
       renderHeader={(headerProps) => (
         <TokenHeader
+          association={association}
           token={token}
           copyKey={copyKey}
           handleEditToken={handleEditToken}

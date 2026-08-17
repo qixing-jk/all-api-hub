@@ -210,18 +210,25 @@ export default function AccountDialog({
         )
       : null
 
-  const postSaveOneTimeKeySaveAction = state.postSaveOneTimeToken
+  const postSaveOneTimeKeySaveAction = state.postSaveOneTimeSecret
     ? buildOneTimeApiKeyProfileSaveAction({
-        accountName: state.draft.siteName || "AIHubMix",
-        baseUrl: AIHUBMIX_API_ORIGIN,
-        siteType: state.siteType,
-        tagIds: state.draft.tagIds,
-        token: state.postSaveOneTimeToken,
+        result: state.postSaveOneTimeSecret,
         t,
         logger,
         source: "AccountDialog",
       })
-    : undefined
+    : state.postSaveOneTimeToken
+      ? buildOneTimeApiKeyProfileSaveAction({
+          accountName: state.draft.siteName || "AIHubMix",
+          baseUrl: AIHUBMIX_API_ORIGIN,
+          siteType: state.siteType,
+          tagIds: state.draft.tagIds,
+          token: state.postSaveOneTimeToken,
+          t,
+          logger,
+          source: "AccountDialog",
+        })
+      : undefined
   const postSaveOneTimeSecretResult = useLegacyApiTokenSecretResult(
     state.postSaveOneTimeToken,
   )

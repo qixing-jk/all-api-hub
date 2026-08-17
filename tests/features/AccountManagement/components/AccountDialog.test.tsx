@@ -37,6 +37,7 @@ const {
   mockOpenApiCredentialProfilesPage,
   mockOpenSiteSupportRequestPage,
   mockCreateApiCredentialProfile,
+  mockCaptureApiCredentialProfile,
   mockLoggerError,
 } = vi.hoisted(() => ({
   mockSponsorRecommendationItems: [
@@ -141,6 +142,7 @@ const {
       isCreating: false,
     },
     postSaveOneTimeToken: null,
+    postSaveOneTimeSecret: null,
     postSaveSub2ApiAllowedGroups: null,
     postSaveSub2ApiAccount: null,
     postSaveSub2ApiDialogSessionId: null,
@@ -196,6 +198,7 @@ const {
   mockOpenApiCredentialProfilesPage: vi.fn(),
   mockOpenSiteSupportRequestPage: vi.fn(),
   mockCreateApiCredentialProfile: vi.fn(),
+  mockCaptureApiCredentialProfile: vi.fn(),
   mockLoggerError: vi.fn(),
 }))
 
@@ -251,6 +254,7 @@ function resetMockState() {
     },
     accountPostSaveWorkflowStep: ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle,
     postSaveOneTimeToken: null,
+    postSaveOneTimeSecret: null,
     postSaveSub2ApiAllowedGroups: null,
     postSaveSub2ApiAccount: null,
     postSaveSub2ApiDialogSessionId: null,
@@ -281,15 +285,17 @@ vi.mock("~/features/TokenProvisioning/components/AddTokenDialog", () => ({
   ),
 }))
 
-vi.mock(
-  "~/services/apiCredentialProfiles/apiCredentialProfilesStorage",
-  () => ({
-    apiCredentialProfilesStorage: {
-      createProfile: (...args: unknown[]) =>
-        mockCreateApiCredentialProfile(...args),
+vi.mock("~/services/apiCredentialProfiles/apiCredentialProfileLinks", () => ({
+  apiCredentialProfileLinks: {
+    capture: async (input: { profile: unknown }) => {
+      mockCaptureApiCredentialProfile(input)
+      return {
+        status: "captured",
+        profile: await mockCreateApiCredentialProfile(input.profile),
+      }
     },
-  }),
-)
+  },
+}))
 
 vi.mock("react-hot-toast", async (importOriginal) => {
   const actual = await importOriginal<typeof import("react-hot-toast")>()
@@ -426,6 +432,7 @@ describe("AccountDialog", () => {
       createdAt: 1,
       updatedAt: 1,
     })
+    mockCaptureApiCredentialProfile.mockReset()
     mockUseSponsorRecommendations.mockImplementation(() => ({
       isLoading: false,
       items: mockSponsorRecommendationItems,
@@ -1092,6 +1099,27 @@ describe("AccountDialog", () => {
       unlimited_quota: true,
       used_quota: 0,
     }
+    mockState.postSaveOneTimeSecret = {
+      correlation: {
+        kind: "account-runtime-key",
+        locator: {
+          source: "account_token",
+          accountId: "aihubmix-account",
+          siteType: SITE_TYPES.AIHUBMIX,
+          tokenId: 10,
+        },
+      },
+      displayName: "Default API Key",
+      secret: "sk-one-time-full",
+      secretAvailability: "create-response-only",
+      credential: {
+        accountName: "AIHubMix",
+        apiType: "openai-compatible",
+        baseUrl: "https://aihubmix.com",
+        siteType: SITE_TYPES.AIHUBMIX,
+        tagIds: ["tag-a"],
+      },
+    }
     mockCreateApiCredentialProfile.mockResolvedValueOnce({
       id: "profile-1",
       name: "AIHubMix - Default API Key",
@@ -1129,6 +1157,17 @@ describe("AccountDialog", () => {
         tagIds: ["tag-a"],
       })
     })
+    expect(mockCaptureApiCredentialProfile).toHaveBeenCalledWith(
+      expect.objectContaining({
+        locator: {
+          source: "account_token",
+          accountId: "aihubmix-account",
+          siteType: SITE_TYPES.AIHUBMIX,
+          tokenId: 10,
+        },
+        linkedBy: "creation-response",
+      }),
+    )
     expect(toast.success).toHaveBeenCalledWith(
       "keyManagement:messages.savedToApiProfiles",
     )

@@ -23,12 +23,19 @@
     "openApiProfiles": "API 認証情報庫を開く",
     "openSelectedAccountModels": "アカウントモデルを見る",
     "retryFailed": "失敗を再試行",
-    "saveToApiProfiles": "API 認証情報庫に保存",
-    "saveToApiProfilesHint": "このキーを API 認証情報庫に保存し、コピー、検証、エクスポートに再利用できます。",
+    "saveToApiProfiles": "保存して API 認証情報に関連付け",
     "showKey": "キーを表示",
     "useInCherry": "Cherry Studio で使う",
     "verifyApi": "API を検証",
     "verifyCliSupport": "CLI 対応を検証"
+  },
+  "actionToolbar": {
+    "apiCredential": "API 認証情報",
+    "diagnostics": "診断",
+    "integrationsAndExport": "連携とエクスポート",
+    "label": "キーの操作",
+    "management": "管理",
+    "quickActions": "クイック操作"
   },
   "allAccounts": "すべてのアカウント",
   "allAccountsFailed_other": "{{count}} 件のアカウントの読み込みに失敗したため、結果は不完全です",
@@ -158,6 +165,22 @@
     "unavailableReason": "このキーは一括操作に対応していません。"
   },
   "createFirstKey": "最初のキーを作成",
+  "credentialAssociation": {
+    "linked": "API 認証情報に関連付け済み",
+    "needsConfirmation": "関連付けの確認が必要です",
+    "reviewCredential": "認証情報の関連付けを確認",
+    "target": {
+      "clear": "キー一覧を表示",
+      "found": "関連付けられたキーが見つかりました",
+      "loading": "認証情報の関連付けを読み込み中...",
+      "locating": "関連付けられたキーを検索中...",
+      "missing": "この認証情報の関連付けは存在しません。",
+      "needsConfirmation": "この認証情報の関連付けは、開く前に確認が必要です。",
+      "retry": "再試行",
+      "unavailable": "現在、関連付けられたキーを特定できません。アカウント接続を確認して再試行してください。"
+    },
+    "viewCredential": "関連付けた API 認証情報を表示"
+  },
   "description": "このページでは、すべてのアカウントの API キー情報（利用状況や有効期限を含む）を表示します。右上の「キーを追加」ボタン、または各キー項目の横にある「+」ボタンから、特定アカウント用の新しいキーを作成できます。API キーは安全に保管し、第三者へ漏洩しないようにしてください。",
   "details": {
     "empty": "追加の詳細はありません",
@@ -311,6 +334,7 @@
   "messages": {
     "accountNotFound": "アカウント情報が見つかりません",
     "batchSavedToApiProfiles": "選択したキーを API 認証情報庫に保存しました",
+    "batchSavedToApiProfilesNeedsConfirmation": "選択したキーを保存しました。API 認証情報庫で強調表示された関連付けを確認してください。",
     "batchSaveToApiProfilesFailed": "選択したキーを API 認証情報庫に保存できませんでした",
     "batchSaveToApiProfilesPartialFailed": "選択した {{totalCount}} 件のうち {{savedCount}} 件を保存しました。{{failedCount}} 件は保存できませんでした。",
     "copyFailed": "コピーに失敗しました",
@@ -320,6 +344,7 @@
     "loadFailed": "キー一覧の読み込みに失敗しました",
     "revealFailed": "キーの表示に失敗しました",
     "savedToApiProfiles": "{{name}} を API 認証情報庫に保存しました",
+    "savedToApiProfilesNeedsConfirmation": "認証情報を保存しました。API 認証情報庫でキーの関連付けを確認してください。",
     "saveToApiProfilesFailed": "API 認証情報庫への保存に失敗しました",
     "serviceCredentialCopied": "サービスキーをクリップボードにコピーしました",
     "serviceCredentialRotated": "サービスキーをリセットしました",

@@ -276,9 +276,14 @@ describe("TokenListItem batch selection", () => {
       await screen.findByText("keyManagement:keyDetails.remainingQuota"),
     ).toBeVisible()
     expect(screen.getByText("keyManagement:keyDetails.key")).toBeVisible()
-    expect(
-      screen.getByText("keyManagement:keyDetails.createResponseOnlySecret"),
-    ).toBeVisible()
+    const secretAvailabilityButton = screen.getByRole("button", {
+      name: "keyManagement:keyDetails.createResponseOnlySecret",
+    })
+    expect(secretAvailabilityButton).toBeVisible()
+    await user.hover(secretAvailabilityButton)
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      "keyManagement:keyDetails.createResponseOnlySecret",
+    )
     expect(screen.queryByText("192.0.2.10")).toBeNull()
     expect(
       screen.queryByRole("button", {

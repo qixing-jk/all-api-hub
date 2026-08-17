@@ -12,6 +12,7 @@ import {
   OPENROUTER_KEY_LIMIT_RESETS,
 } from "~/services/apiAdapters/openrouter/keyResourceFields"
 
+import type { AccountKeyResourceCardAdapter } from "./accountKeyResourceCardAdapter"
 import type {
   KeyResourceCardPresentation,
   KeyResourceFact,
@@ -218,7 +219,9 @@ export const buildOpenRouterKeyResourceDetailFacts = (
 export const buildOpenRouterKeyResourceCardPresentation = (
   row: NativeKeyManagementRow,
   t: TFunction,
+  options: { hasAssociatedSecret?: boolean } = {},
 ): KeyResourceCardPresentation => {
+  const hasAssociatedSecret = options.hasAssociatedSecret === true
   const limitMode = primitiveFactValue(
     row.facts,
     OPENROUTER_KEY_FIELD_IDS.LimitMode,
@@ -243,11 +246,17 @@ export const buildOpenRouterKeyResourceCardPresentation = (
     title: row.facts.displayName,
     accountLabel: row.accountName,
     ...statusPresentation(row.facts.status, t),
-    secretAvailability: INVENTORY_SECRET_AVAILABILITIES.CreateResponseOnly,
+    secretAvailability: hasAssociatedSecret
+      ? INVENTORY_SECRET_AVAILABILITIES.Recoverable
+      : INVENTORY_SECRET_AVAILABILITIES.CreateResponseOnly,
     maskedLabel: row.facts.maskedLabel,
-    secretAvailabilityMessage: t(
-      "keyManagement:keyDetails.createResponseOnlySecret",
-    ),
+    ...(hasAssociatedSecret
+      ? {}
+      : {
+          secretAvailabilityMessage: t(
+            "keyManagement:keyDetails.createResponseOnlySecret",
+          ),
+        }),
     contextFact,
     summaryFacts: [
       contextFact,
@@ -269,10 +278,10 @@ export const buildOpenRouterKeyResourceCardPresentation = (
     ],
     detailFacts: buildOpenRouterKeyResourceDetailFacts(row.facts, t),
     actions: {
-      copySecret: false,
-      revealSecret: false,
-      verifySecret: false,
-      exportSecret: false,
+      copySecret: hasAssociatedSecret,
+      revealSecret: hasAssociatedSecret,
+      verifySecret: hasAssociatedSecret,
+      exportSecret: hasAssociatedSecret,
       edit: row.facts.actions.canUpdate,
       delete: row.facts.actions.canDelete,
       batchSelect: false,
@@ -299,4 +308,11 @@ export const buildReadOnlyOpenRouterKeyResourceCardPresentation = (
       batchSelect: false,
     },
   }
+}
+
+export const openRouterKeyResourceCardAdapter: AccountKeyResourceCardAdapter = {
+  buildPresentation: buildOpenRouterKeyResourceCardPresentation,
+  buildDetailFacts: buildOpenRouterKeyResourceDetailFacts,
+  getDetailsLoadFailedMessage: (t) =>
+    t("keyManagement:openRouter.list.details.loadFailed"),
 }

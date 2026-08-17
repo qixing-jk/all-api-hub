@@ -48,7 +48,9 @@ const {
   resolveManagedSiteTokenChannelStatusWithVerifiedKeyMock,
   startProductAnalyticsActionMock,
   trackerCompleteMock,
+  apiCredentialProfilesChangeListeners,
 } = vi.hoisted(() => ({
+  apiCredentialProfilesChangeListeners: [] as Array<() => void>,
   getManagedSiteTokenChannelStatusMock: vi.fn(),
   managedSiteTokenChannelStatuses: {
     ADDED: "added",
@@ -68,6 +70,27 @@ vi.mock("~/hooks/useAccountData", () => ({
 vi.mock("~/services/apiAdapters/registry", () => ({
   getSiteTypeCapabilities: vi.fn(),
 }))
+
+vi.mock(
+  "~/services/apiCredentialProfiles/apiCredentialProfilesStorage",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/apiCredentialProfiles/apiCredentialProfilesStorage")
+      >()
+
+    return {
+      ...actual,
+      subscribeToApiCredentialProfilesChanges: (callback: () => void) => {
+        apiCredentialProfilesChangeListeners.push(callback)
+        return () => {
+          const index = apiCredentialProfilesChangeListeners.indexOf(callback)
+          if (index >= 0) apiCredentialProfilesChangeListeners.splice(index, 1)
+        }
+      },
+    }
+  },
+)
 
 vi.mock("~/services/managedSites/tokenChannelStatus", () => ({
   MANAGED_SITE_TOKEN_CHANNEL_STATUSES: managedSiteTokenChannelStatuses,
@@ -211,6 +234,7 @@ type ManagedSiteContextValue = {
 
 describe("useKeyManagement enabled account filtering", () => {
   beforeEach(() => {
+    apiCredentialProfilesChangeListeners.length = 0
     vi.mocked(toast.success).mockReset()
     vi.mocked(toast.error).mockReset()
     getManagedSiteTokenChannelStatusMock.mockReset()
@@ -1881,11 +1905,13 @@ describe("useKeyManagement enabled account filtering", () => {
 
     await waitFor(() => expect(result.current.failedAccounts).toHaveLength(1))
 
-    await expect(
-      act(async () => {
-        await result.current.retryFailedAccounts()
-      }),
-    ).resolves.toBeUndefined()
+    let retryResult: Awaited<
+      ReturnType<typeof result.current.retryFailedAccounts>
+    >
+    await act(async () => {
+      retryResult = await result.current.retryFailedAccounts()
+    })
+    expect(retryResult).toBeUndefined()
 
     await waitFor(() => expect(result.current.failedAccounts).toHaveLength(0))
     expect(retryComplete).toHaveBeenCalledWith(
@@ -2374,6 +2400,62 @@ describe("useKeyManagement enabled account filtering", () => {
     await waitFor(() =>
       expect(result.current.visibleKeys.has(tokenIdentityKey)).toBe(true),
     )
+    expect(resolveTokenKey).toHaveBeenCalledTimes(1)
+  })
+
+  it("invalidates revealed key state when API credential profiles change", async () => {
+    const account = createDisplayAccount({
+      id: "profile-change-acc",
+      name: "Profile Change Account",
+    })
+    const token = createToken({
+      id: 506,
+      accountId: account.id,
+      accountName: account.name,
+      key: "sk-masked****************7890",
+      name: "Profile Change Token",
+    })
+    const resolveTokenKey = vi.fn().mockResolvedValue("sk-resolved-old")
+
+    vi.mocked(useAccountData).mockReturnValue({
+      enabledDisplayData: [account],
+    } as any)
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: vi.fn().mockResolvedValue([token]),
+        resolveTokenKey,
+      }) as any,
+    )
+
+    const { result } = renderHook(() => useKeyManagement(), {
+      wrapper: createWrapper(),
+    })
+
+    act(() => {
+      result.current.setSelectedAccount(account.id)
+    })
+    await waitFor(() => expect(result.current.tokens).toHaveLength(1))
+
+    await act(async () => {
+      await result.current.toggleKeyVisibility(account, token)
+    })
+    await waitFor(() =>
+      expect(
+        result.current.visibleKeys.has(
+          buildTokenIdentityKey(account.id, token.id),
+        ),
+      ).toBe(true),
+    )
+    expect(result.current.getVisibleTokenKey(token)).toBe("sk-resolved-old")
+
+    await act(async () => {
+      for (const listener of apiCredentialProfilesChangeListeners) listener()
+    })
+
+    expect(result.current.visibleKeys).not.toContain(
+      buildTokenIdentityKey(account.id, token.id),
+    )
+    expect(result.current.getVisibleTokenKey(token)).toBe(token.key)
     expect(resolveTokenKey).toHaveBeenCalledTimes(1)
   })
 
@@ -4710,6 +4792,102 @@ describe("useKeyManagement enabled account filtering", () => {
 
     await waitFor(() =>
       expect(result.current.visibleKeys.has(tokenIdentityKey)).toBe(true),
+    )
+    expect(result.current.getVisibleTokenKey(token)).toBe(
+      "resolved-token-secret",
+    )
+  })
+
+  it("ignores a stale reveal failure after profile changes start a new request for the same token", async () => {
+    const account = createDisplayAccount({
+      id: "stale-reveal-acc",
+      name: "Stale Reveal Account",
+    })
+    const token = createToken({
+      id: 916,
+      key: "sk-stale************mask",
+      name: "Stale Reveal Token",
+      accountId: account.id,
+      accountName: account.name,
+      expired_time: 0,
+    })
+    let rejectFirstReveal: (reason?: unknown) => void = () => {}
+    let resolveSecondReveal: (value: string) => void = () => {}
+    const resolveTokenKey = vi
+      .fn()
+      .mockImplementationOnce(
+        () =>
+          new Promise<string>((_resolve, reject) => {
+            rejectFirstReveal = reject
+          }),
+      )
+      .mockImplementationOnce(
+        () =>
+          new Promise<string>((resolve) => {
+            resolveSecondReveal = resolve
+          }),
+      )
+
+    vi.mocked(useAccountData).mockReturnValue({
+      enabledDisplayData: [account],
+    } as any)
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: vi.fn().mockResolvedValue([token]),
+        resolveTokenKey,
+      }) as any,
+    )
+
+    const { result } = renderHook(() => useKeyManagement(), {
+      wrapper: createWrapper(),
+    })
+
+    act(() => {
+      result.current.setSelectedAccount(account.id)
+    })
+    await waitFor(() => expect(result.current.tokens).toHaveLength(1))
+
+    const tokenIdentityKey = buildTokenIdentityKey(account.id, token.id)
+    let firstReveal!: Promise<void>
+    act(() => {
+      firstReveal = result.current.toggleKeyVisibility(account, token)
+    })
+    await waitFor(() =>
+      expect(result.current.resolvingVisibleKeys.has(tokenIdentityKey)).toBe(
+        true,
+      ),
+    )
+
+    act(() => {
+      for (const listener of apiCredentialProfilesChangeListeners) listener()
+    })
+    expect(result.current.resolvingVisibleKeys.has(tokenIdentityKey)).toBe(
+      false,
+    )
+
+    let secondReveal!: Promise<void>
+    act(() => {
+      secondReveal = result.current.toggleKeyVisibility(account, token)
+    })
+    await waitFor(() => expect(resolveTokenKey).toHaveBeenCalledTimes(2))
+    expect(result.current.resolvingVisibleKeys.has(tokenIdentityKey)).toBe(true)
+
+    await act(async () => {
+      rejectFirstReveal(new Error("stale reveal failed"))
+      await firstReveal
+    })
+
+    expect(vi.mocked(toast.error)).not.toHaveBeenCalled()
+    expect(result.current.resolvingVisibleKeys.has(tokenIdentityKey)).toBe(true)
+
+    await act(async () => {
+      resolveSecondReveal("resolved-token-secret")
+      await secondReveal
+    })
+
+    expect(result.current.visibleKeys.has(tokenIdentityKey)).toBe(true)
+    expect(result.current.resolvingVisibleKeys.has(tokenIdentityKey)).toBe(
+      false,
     )
     expect(result.current.getVisibleTokenKey(token)).toBe(
       "resolved-token-secret",

@@ -43,7 +43,7 @@ const {
   accountSummaryBarPropsSpy,
   addTokenDialogPropsSpy,
   createDisplayAccountApiContextMock,
-  createProfileFromAccountTokenMock,
+  captureProfileFromAccountTokenMock,
   oneTimeSecretDialogPropsSpy,
   oneTimeSecretDialogHarnessState,
   replaceWithinOptionsPageMock,
@@ -63,7 +63,7 @@ const {
   accountSummaryBarPropsSpy: vi.fn(),
   addTokenDialogPropsSpy: vi.fn(),
   createDisplayAccountApiContextMock: vi.fn(),
-  createProfileFromAccountTokenMock: vi.fn(),
+  captureProfileFromAccountTokenMock: vi.fn(),
   oneTimeSecretDialogPropsSpy: vi.fn(),
   oneTimeSecretDialogHarnessState: { disableAutoCopy: false },
   replaceWithinOptionsPageMock: vi.fn(),
@@ -78,8 +78,10 @@ const {
 }))
 
 vi.mock("~/services/apiCredentialProfiles/accountTokenImport", () => ({
-  createProfileFromAccountToken: (...args: unknown[]) =>
-    createProfileFromAccountTokenMock(...args),
+  captureProfileFromAccountToken: (...args: unknown[]) =>
+    captureProfileFromAccountTokenMock(...args),
+  createProfileFromAccountToken: async (...args: unknown[]) =>
+    (await captureProfileFromAccountTokenMock(...args)).profile,
 }))
 
 vi.mock(
@@ -643,7 +645,7 @@ describe("KeyManagement native page integration", () => {
     accountSummaryBarPropsSpy.mockReset()
     addTokenDialogPropsSpy.mockReset()
     createDisplayAccountApiContextMock.mockReset()
-    createProfileFromAccountTokenMock.mockReset()
+    captureProfileFromAccountTokenMock.mockReset()
     oneTimeSecretDialogPropsSpy.mockReset()
     oneTimeSecretDialogHarnessState.disableAutoCopy = false
     replaceWithinOptionsPageMock.mockReset()
@@ -670,8 +672,9 @@ describe("KeyManagement native page integration", () => {
     startProductAnalyticsActionMock.mockReturnValue({
       complete: trackCompleteMock,
     })
-    createProfileFromAccountTokenMock.mockResolvedValue({
-      name: "Saved profile",
+    captureProfileFromAccountTokenMock.mockResolvedValue({
+      status: "captured",
+      profile: { name: "Saved profile" },
     })
     testI18n.addResource(
       "en",
@@ -855,9 +858,12 @@ describe("KeyManagement native page integration", () => {
             : Promise.reject(new Error("private upstream detail")),
         )
       } else {
-        createProfileFromAccountTokenMock.mockImplementation(() =>
+        captureProfileFromAccountTokenMock.mockImplementation(() =>
           outcome === "success"
-            ? Promise.resolve({ name: "Saved profile" })
+            ? Promise.resolve({
+                status: "captured",
+                profile: { name: "Saved profile" },
+              })
             : Promise.reject(new Error("private upstream detail")),
         )
       }

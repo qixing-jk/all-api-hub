@@ -49,10 +49,24 @@ export const API_CREDENTIAL_PROFILES_TEST_IDS = {
   telemetryTodayRequests: "api-credential-telemetry-today-requests",
   telemetryModels: "api-credential-telemetry-models",
   toolbar: "api-credential-profile-toolbar",
+  associationButton: "api-credential-profile-association-button",
 } as const
 
 const API_CREDENTIAL_ENDPOINT_OPTION_TEST_ID_PREFIX =
   "api-credential-profile-endpoint-option-"
+const API_CREDENTIAL_PROFILE_ROW_TARGET_ID_PREFIX =
+  "api-credential-profile-row-"
+const API_CREDENTIAL_PROFILE_ROW_TEST_ID_PREFIX = "api-credential-profile-row-"
+
+/** Returns the stable DOM target id for a stored profile row. */
+export function getApiCredentialProfileRowTargetId(profileId: string) {
+  return `${API_CREDENTIAL_PROFILE_ROW_TARGET_ID_PREFIX}${encodeURIComponent(profileId)}`
+}
+
+/** Returns the stable test id for a stored profile row. */
+export function getApiCredentialProfileRowTestId(profileId: string) {
+  return `${API_CREDENTIAL_PROFILE_ROW_TEST_ID_PREFIX}${encodeURIComponent(profileId)}`
+}
 
 /** Returns the stable test id for the endpoint option containing a profile. */
 export function getApiCredentialEndpointOptionTestId(profileId: string) {

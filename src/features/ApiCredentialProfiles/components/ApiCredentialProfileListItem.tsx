@@ -3,23 +3,16 @@ import {
   CalendarPlus,
   ChevronDown,
   Copy,
-  Cpu,
   Eye,
   EyeOff,
   History,
-  Pencil,
   RefreshCw,
-  Terminal,
-  Trash2,
-  Wrench,
   type LucideIcon,
 } from "lucide-react"
 import { useEffect, useId, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { VerificationHistorySummary } from "~/components/dialogs/VerifyApiDialog/VerificationHistorySummary"
-import { ExportActionsMenu } from "~/components/ExportActionsMenu"
-import { ManagedSiteImportButton } from "~/components/ManagedSiteImportButton"
 import {
   Badge,
   Button,
@@ -59,10 +52,18 @@ import {
 import { formatTelemetryMoney } from "~/utils/core/money"
 
 import {
-  API_CREDENTIAL_PROFILE_EXPORT_ACTIONS,
+  API_CREDENTIAL_PROFILE_ASSOCIATION_AVAILABILITY,
+  type ApiCredentialProfileAssociatedKeyState,
+  type ApiCredentialProfileAssociationAvailability,
   type ApiCredentialProfileExportAction,
 } from "../contracts"
-import { API_CREDENTIAL_PROFILES_TEST_IDS } from "../testIds"
+import {
+  API_CREDENTIAL_PROFILES_TEST_IDS,
+  getApiCredentialProfileRowTargetId,
+  getApiCredentialProfileRowTestId,
+} from "../testIds"
+import { ApiCredentialProfileKeyAssociations } from "./ApiCredentialProfileKeyAssociations"
+import { ApiCredentialProfileRowActions } from "./ApiCredentialProfileRowActions"
 
 interface ApiCredentialProfileListItemProps {
   profile: ApiCredentialProfile
@@ -86,6 +87,12 @@ interface ApiCredentialProfileListItemProps {
   managedSiteType: ManagedSiteType
   managedSiteLabel: string
   guidedImportEntryRequest?: number
+  focusRequest?: number
+  associatedKeyState?: ApiCredentialProfileAssociatedKeyState
+  associationAvailability?: ApiCredentialProfileAssociationAvailability
+  onOpenAssociatedKey?: (associationId: string) => void
+  onConfirmAssociatedKey?: (associationId: string) => void
+  onUnlinkAssociatedKey?: (associationId: string) => void
 }
 
 /**
@@ -106,6 +113,7 @@ const COMPACT_AUDIT_TIME_FORMAT: Intl.DateTimeFormatOptions = {
   minute: "2-digit",
 }
 const GUIDED_IMPORT_HIGHLIGHT_DURATION_MS = 5_000
+const TARGET_PROFILE_HIGHLIGHT_DURATION_MS = 5_000
 
 interface AuditTimeBadgeProps {
   Icon: LucideIcon
@@ -251,6 +259,12 @@ export function ApiCredentialProfileListItem({
   managedSiteType,
   managedSiteLabel,
   guidedImportEntryRequest,
+  focusRequest,
+  associatedKeyState,
+  associationAvailability = API_CREDENTIAL_PROFILE_ASSOCIATION_AVAILABILITY.Known,
+  onOpenAssociatedKey,
+  onConfirmAssociatedKey,
+  onUnlinkAssociatedKey,
 }: ApiCredentialProfileListItemProps) {
   const { t } = useTranslation([
     "apiCredentialProfiles",
@@ -268,6 +282,10 @@ export function ApiCredentialProfileListItem({
   const [isImportEntryHighlighted, setIsImportEntryHighlighted] =
     useState(false)
   const managedSiteImportButtonRef = useRef<HTMLButtonElement>(null)
+  const [isTargetHighlighted, setIsTargetHighlighted] = useState(false)
+  const cardRef = useRef<HTMLDivElement>(null)
+  const rowTargetId = getApiCredentialProfileRowTargetId(profile.id)
+  const rowHeadingId = `${rowTargetId}-name`
   const handleRefreshTelemetry = () => {
     onRefreshTelemetry(profile)
   }
@@ -302,6 +320,22 @@ export function ApiCredentialProfileListItem({
           date: expirationDate,
         })
     : t("apiCredentialProfiles:list.expirationStatus.none")
+  useEffect(() => {
+    if (!focusRequest) {
+      return
+    }
+
+    const card = cardRef.current
+    card?.scrollIntoView?.({ block: "center", inline: "nearest" })
+    card?.focus({ preventScroll: true })
+    setIsTargetHighlighted(true)
+
+    const timeoutId = window.setTimeout(() => {
+      setIsTargetHighlighted(false)
+    }, TARGET_PROFILE_HIGHLIGHT_DURATION_MS)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [focusRequest])
 
   useEffect(() => {
     if (!guidedImportEntryRequest) {
@@ -335,38 +369,63 @@ export function ApiCredentialProfileListItem({
       featureId={PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles}
       surfaceId={rowActionsSurface}
     >
-      <Card>
+      <Card
+        ref={cardRef}
+        id={rowTargetId}
+        data-testid={getApiCredentialProfileRowTestId(profile.id)}
+        tabIndex={-1}
+        aria-labelledby={rowHeadingId}
+        className={cn(
+          "transition-shadow outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2",
+          isTargetHighlighted &&
+            "ring-2 ring-blue-500 ring-offset-2 dark:ring-blue-400",
+        )}
+      >
         <CardContent padding="md" spacing="sm">
           <div className="flex min-w-0 flex-col gap-5">
             <div className="flex min-w-0 flex-1 flex-col gap-2">
-              <div className="flex min-w-0 flex-wrap items-center gap-2">
-                <Heading6 className="max-w-full min-w-0 truncate">
-                  {profile.name}
-                </Heading6>
-                <Badge
-                  variant="outline"
-                  size="sm"
-                  className="max-w-full truncate"
-                >
-                  {getApiVerificationApiTypeLabel(t, profile.apiType)}
-                </Badge>
-                <Badge
-                  variant={isExpired ? "danger" : "outline"}
-                  size="sm"
-                  className="max-w-full truncate"
-                >
-                  {expirationStatusLabel}
-                </Badge>
-                {tagNames.map((tag) => (
+              <div className="flex min-w-0 flex-wrap items-start justify-between gap-x-3 gap-y-2">
+                <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+                  <Heading6
+                    id={rowHeadingId}
+                    className="max-w-full min-w-0 truncate"
+                  >
+                    {profile.name}
+                  </Heading6>
                   <Badge
-                    key={tag}
-                    variant="secondary"
+                    variant="outline"
                     size="sm"
                     className="max-w-full truncate"
                   >
-                    {tag}
+                    {getApiVerificationApiTypeLabel(t, profile.apiType)}
                   </Badge>
-                ))}
+                  <Badge
+                    variant={isExpired ? "danger" : "outline"}
+                    size="sm"
+                    className="max-w-full truncate"
+                  >
+                    {expirationStatusLabel}
+                  </Badge>
+                  {tagNames.map((tag) => (
+                    <Badge
+                      key={tag}
+                      variant="secondary"
+                      size="sm"
+                      className="max-w-full truncate"
+                    >
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+                <div className="min-w-0 shrink-0 -translate-y-1">
+                  <ApiCredentialProfileKeyAssociations
+                    availability={associationAvailability}
+                    state={associatedKeyState}
+                    onOpenAssociatedKey={onOpenAssociatedKey}
+                    onConfirmAssociatedKey={onConfirmAssociatedKey}
+                    onUnlinkAssociatedKey={onUnlinkAssociatedKey}
+                  />
+                </div>
               </div>
 
               <div className="flex flex-1 flex-col gap-2 text-xs">
@@ -622,182 +681,20 @@ export function ApiCredentialProfileListItem({
                 />
               </div>
 
-              <div
-                className="ml-auto flex flex-wrap items-center justify-end gap-2"
-                data-testid={API_CREDENTIAL_PROFILES_TEST_IDS.toolbar}
-              >
-                <IconButton
-                  aria-label={t("apiCredentialProfiles:actions.copyBundle")}
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => onCopyBundle(profile)}
-                  data-testid={
-                    API_CREDENTIAL_PROFILES_TEST_IDS.copyBundleButton
-                  }
-                  analyticsAction={
-                    PRODUCT_ANALYTICS_ACTION_IDS.CopyApiCredentialBundle
-                  }
-                >
-                  <Copy className="h-4 w-4" />
-                </IconButton>
-                <IconButton
-                  aria-label={t("common:actions.edit")}
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => onEdit(profile)}
-                  data-testid={API_CREDENTIAL_PROFILES_TEST_IDS.editButton}
-                  analyticsAction={
-                    PRODUCT_ANALYTICS_ACTION_IDS.OpenUpdateApiCredentialProfileDialog
-                  }
-                >
-                  <Pencil className="h-4 w-4 text-blue-500 dark:text-blue-400" />
-                </IconButton>
-                <IconButton
-                  aria-label={t("apiCredentialProfiles:actions.verifyApi")}
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => onVerify(profile)}
-                  data-testid={API_CREDENTIAL_PROFILES_TEST_IDS.verifyButton}
-                  analyticsAction={
-                    PRODUCT_ANALYTICS_ACTION_IDS.VerifyApiCredential
-                  }
-                >
-                  <Wrench className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                </IconButton>
-                <IconButton
-                  aria-label={t(
-                    "apiCredentialProfiles:actions.verifyCliSupport",
-                  )}
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => onVerifyCliSupport(profile)}
-                  analyticsAction={
-                    PRODUCT_ANALYTICS_ACTION_IDS.VerifyApiCredentialCliSupport
-                  }
-                >
-                  <Terminal className="h-4 w-4 text-sky-600 dark:text-sky-400" />
-                </IconButton>
-                <IconButton
-                  aria-label={t(
-                    "apiCredentialProfiles:actions.openModelManagement",
-                  )}
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => onOpenModelManagement(profile)}
-                  data-testid={
-                    API_CREDENTIAL_PROFILES_TEST_IDS.openModelManagementButton
-                  }
-                  analyticsAction={{
-                    featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
-                    actionId:
-                      PRODUCT_ANALYTICS_ACTION_IDS.OpenApiCredentialModelManagement,
-                    surfaceId: rowActionsSurface,
-                    entrypoint: optionsEntrypoint,
-                  }}
-                >
-                  <Cpu className="h-4 w-4" />
-                </IconButton>
-                <ManagedSiteImportButton
-                  buttonRef={managedSiteImportButtonRef}
-                  managedSiteType={managedSiteType}
-                  managedSiteLabel={managedSiteLabel}
-                  onImport={() =>
-                    onExport(
-                      profile,
-                      API_CREDENTIAL_PROFILE_EXPORT_ACTIONS.ManagedSite,
-                    )
-                  }
-                  testId={
-                    API_CREDENTIAL_PROFILES_TEST_IDS.importToManagedSiteButton
-                  }
-                  highlighted={isImportEntryHighlighted}
-                />
-                <ExportActionsMenu
-                  triggerTestId={
-                    API_CREDENTIAL_PROFILES_TEST_IDS.exportMenuButton
-                  }
-                  triggerAnalyticsAction={
-                    PRODUCT_ANALYTICS_ACTION_IDS.OpenApiCredentialExportMenu
-                  }
-                  actions={{
-                    [API_CREDENTIAL_PROFILE_EXPORT_ACTIONS.CherryStudio]: {
-                      onSelect: () =>
-                        onExport(
-                          profile,
-                          API_CREDENTIAL_PROFILE_EXPORT_ACTIONS.CherryStudio,
-                        ),
-                    },
-                    [API_CREDENTIAL_PROFILE_EXPORT_ACTIONS.Kelivo]: {
-                      testId:
-                        API_CREDENTIAL_PROFILES_TEST_IDS.copyKelivoImportCodeMenuItem,
-                      onSelect: () =>
-                        onExport(
-                          profile,
-                          API_CREDENTIAL_PROFILE_EXPORT_ACTIONS.Kelivo,
-                        ),
-                    },
-                    [API_CREDENTIAL_PROFILE_EXPORT_ACTIONS.CCSwitch]: {
-                      testId:
-                        API_CREDENTIAL_PROFILES_TEST_IDS.exportToCCSwitchMenuItem,
-                      onSelect: () =>
-                        onExport(
-                          profile,
-                          API_CREDENTIAL_PROFILE_EXPORT_ACTIONS.CCSwitch,
-                        ),
-                    },
-                    [API_CREDENTIAL_PROFILE_EXPORT_ACTIONS.CursorPlus]: {
-                      testId:
-                        API_CREDENTIAL_PROFILES_TEST_IDS.exportToCursorPlusMenuItem,
-                      onSelect: () =>
-                        onExport(
-                          profile,
-                          API_CREDENTIAL_PROFILE_EXPORT_ACTIONS.CursorPlus,
-                        ),
-                    },
-                    [API_CREDENTIAL_PROFILE_EXPORT_ACTIONS.KiloCode]: {
-                      testId:
-                        API_CREDENTIAL_PROFILES_TEST_IDS.exportToKiloCodeMenuItem,
-                      onSelect: () =>
-                        onExport(
-                          profile,
-                          API_CREDENTIAL_PROFILE_EXPORT_ACTIONS.KiloCode,
-                        ),
-                    },
-                    [API_CREDENTIAL_PROFILE_EXPORT_ACTIONS.CliProxy]: {
-                      testId:
-                        API_CREDENTIAL_PROFILES_TEST_IDS.exportToCliProxyMenuItem,
-                      onSelect: () =>
-                        onExport(
-                          profile,
-                          API_CREDENTIAL_PROFILE_EXPORT_ACTIONS.CliProxy,
-                        ),
-                    },
-                    [API_CREDENTIAL_PROFILE_EXPORT_ACTIONS.ClaudeCodeRouter]: {
-                      testId:
-                        API_CREDENTIAL_PROFILES_TEST_IDS.exportToClaudeCodeRouterMenuItem,
-                      onSelect: () =>
-                        onExport(
-                          profile,
-                          API_CREDENTIAL_PROFILE_EXPORT_ACTIONS.ClaudeCodeRouter,
-                        ),
-                    },
-                  }}
-                />
-                <IconButton
-                  aria-label={t("common:actions.delete")}
-                  size="sm"
-                  variant="destructiveGhost"
-                  onClick={() => onDelete(profile)}
-                  data-testid={
-                    API_CREDENTIAL_PROFILES_TEST_IDS.deleteTriggerButton
-                  }
-                  analyticsAction={
-                    PRODUCT_ANALYTICS_ACTION_IDS.DeleteApiCredentialProfile
-                  }
-                >
-                  <Trash2 className="h-4 w-4" />
-                </IconButton>
-              </div>
+              <ApiCredentialProfileRowActions
+                profile={profile}
+                managedSiteImportButtonRef={managedSiteImportButtonRef}
+                managedSiteType={managedSiteType}
+                managedSiteLabel={managedSiteLabel}
+                isImportEntryHighlighted={isImportEntryHighlighted}
+                onCopyBundle={onCopyBundle}
+                onExport={onExport}
+                onVerify={onVerify}
+                onVerifyCliSupport={onVerifyCliSupport}
+                onOpenModelManagement={onOpenModelManagement}
+                onEdit={onEdit}
+                onDelete={onDelete}
+              />
             </div>
           </div>
         </CardContent>

@@ -8,10 +8,12 @@ import KeyManagement from "~/entrypoints/options/pages/KeyManagement"
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "~/features/KeyManagement/constants"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import enKeyManagement from "~/locales/en/keyManagement.json"
+import { ACCOUNT_RUNTIME_KEY_SOURCES } from "~/services/accounts/accountRuntimeKeys"
 import {
   DEFAULT_PREFERENCES,
   type UserPreferences,
 } from "~/services/preferences/userPreferences"
+import { API_CREDENTIAL_PROFILE_LINK_STATES } from "~/types/apiCredentialProfiles"
 import { render, screen, waitFor, within } from "~~/tests/test-utils/render"
 import {
   createAccount,
@@ -31,6 +33,7 @@ const {
   accountSummaryBarPropsSpy,
   getSiteTypeCapabilitiesMock,
   openAccountKeyResourcesMock,
+  useApiCredentialProfileLinksMock,
 } = vi.hoisted(() => ({
   sendRuntimeActionMessageMock: vi.fn(),
   tokenListPropsSpy: vi.fn(),
@@ -44,6 +47,11 @@ const {
   accountSummaryBarPropsSpy: vi.fn(),
   getSiteTypeCapabilitiesMock: vi.fn(),
   openAccountKeyResourcesMock: vi.fn(),
+  useApiCredentialProfileLinksMock: vi.fn(),
+}))
+
+vi.mock("~/hooks/useApiCredentialProfileLinks", () => ({
+  useApiCredentialProfileLinks: () => useApiCredentialProfileLinksMock(),
 }))
 
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
@@ -315,6 +323,12 @@ describe("KeyManagement empty-state actions", () => {
     getSiteTypeCapabilitiesMock.mockReset()
     openAccountKeyResourcesMock.mockReset()
     openAccountKeyResourcesMock.mockResolvedValue(null)
+    useApiCredentialProfileLinksMock.mockReturnValue({
+      links: [],
+      isLoading: false,
+      error: null,
+      reload: vi.fn(),
+    })
     getSiteTypeCapabilitiesMock.mockImplementation((siteType: string) => ({
       siteType,
       account:
@@ -344,6 +358,169 @@ describe("KeyManagement empty-state actions", () => {
       createKeyManagementContextValue(),
     )
     sendRuntimeActionMessageMock.mockResolvedValue({ success: false })
+  })
+
+  it("resolves an association deep link to its account and passes the exact target to the list", async () => {
+    const account = createAccount({ id: "account-example", name: "Example" })
+    const setSelectedAccount = vi.fn()
+    const setSearchTerm = vi.fn()
+    const setAllAccountsFilterAccountIds = vi.fn()
+    const association = {
+      id: "association-example",
+      profileId: "profile-example",
+      locator: {
+        source: ACCOUNT_RUNTIME_KEY_SOURCES.AccountToken,
+        accountId: account.id,
+        siteType: account.siteType,
+        tokenId: 42,
+      },
+      state: API_CREDENTIAL_PROFILE_LINK_STATES.Active,
+      linkedBy: "user" as const,
+      createdAt: 1,
+      updatedAt: 1,
+    }
+    useApiCredentialProfileLinksMock.mockReturnValue({
+      links: [association],
+      isLoading: false,
+      error: null,
+      reload: vi.fn(),
+    })
+    useKeyManagementMock.mockReturnValue(
+      createHookResult({
+        displayData: [account],
+        setSelectedAccount,
+        setSearchTerm,
+        setAllAccountsFilterAccountIds,
+      }),
+    )
+
+    render(<KeyManagement routeParams={{ associationId: association.id }} />)
+
+    await waitFor(() => {
+      expect(setSelectedAccount).toHaveBeenCalledWith(account.id)
+      expect(setSearchTerm).toHaveBeenCalledWith("")
+      expect(setAllAccountsFilterAccountIds).toHaveBeenCalledWith([])
+      expect(replaceWithinOptionsPageMock).toHaveBeenCalledWith("#keys", {
+        associationId: association.id,
+        accountId: account.id,
+      })
+      expect(tokenListPropsSpy).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          credentialProfileLinks: [association],
+          associationTarget: association,
+          canAssociateExistingCredential: false,
+        }),
+      )
+    })
+  })
+
+  it("does not report a linked key as missing while its inventory is loading", async () => {
+    const account = createAccount({ id: "account-example", name: "Example" })
+    const association = {
+      id: "association-example",
+      profileId: "profile-example",
+      locator: {
+        source: ACCOUNT_RUNTIME_KEY_SOURCES.AccountToken,
+        accountId: account.id,
+        siteType: account.siteType,
+        tokenId: 42,
+      },
+      state: API_CREDENTIAL_PROFILE_LINK_STATES.Active,
+      linkedBy: "user" as const,
+      createdAt: 1,
+      updatedAt: 1,
+    }
+    useApiCredentialProfileLinksMock.mockReturnValue({
+      links: [association],
+      isLoading: false,
+      error: null,
+      reload: vi.fn(),
+    })
+    const loadedState = createHookResult({
+      displayData: [account],
+      selectedAccount: account.id,
+      isLoading: false,
+    })
+    useKeyManagementMock.mockReturnValue(loadedState)
+
+    const view = render(
+      <KeyManagement routeParams={{ associationId: association.id }} />,
+    )
+
+    await waitFor(() => expect(tokenListPropsSpy).toHaveBeenCalled())
+    const reportTargetStatus =
+      tokenListPropsSpy.mock.lastCall?.[0].onAssociationTargetStatusChange
+
+    act(() => {
+      reportTargetStatus("missing")
+    })
+
+    expect(
+      await screen.findAllByText(
+        "keyManagement:credentialAssociation.target.missing",
+      ),
+    ).toHaveLength(2)
+
+    useKeyManagementMock.mockReturnValue({ ...loadedState, isLoading: true })
+    view.rerender(
+      <KeyManagement routeParams={{ associationId: association.id }} />,
+    )
+
+    const locatingMessages = await screen.findAllByText(
+      "keyManagement:credentialAssociation.target.locating",
+    )
+    expect(locatingMessages).toHaveLength(2)
+    expect(
+      locatingMessages
+        .find((message) => message.closest("[data-tone]"))
+        ?.closest("[data-tone]"),
+    ).toHaveAttribute("data-tone", "info")
+    expect(
+      screen.queryByText("keyManagement:credentialAssociation.target.missing"),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", {
+        name: "keyManagement:credentialAssociation.target.clear",
+      }),
+    ).not.toBeInTheDocument()
+  })
+
+  it("locates a confirmation candidate without treating it as a trusted link", async () => {
+    const account = createAccount({ id: "account-example", name: "Example" })
+    const association = {
+      id: "association-example",
+      profileId: "profile-example",
+      locator: {
+        source: ACCOUNT_RUNTIME_KEY_SOURCES.AccountToken,
+        accountId: account.id,
+        siteType: account.siteType,
+        tokenId: 42,
+      },
+      state: API_CREDENTIAL_PROFILE_LINK_STATES.NeedsConfirmation,
+      linkedBy: "user" as const,
+      createdAt: 1,
+      updatedAt: 1,
+    }
+    useApiCredentialProfileLinksMock.mockReturnValue({
+      links: [association],
+      isLoading: false,
+      error: null,
+      reload: vi.fn(),
+    })
+    useKeyManagementMock.mockReturnValue(
+      createHookResult({ displayData: [account] }),
+    )
+
+    render(<KeyManagement routeParams={{ associationId: association.id }} />)
+
+    expect(
+      await screen.findAllByText(
+        "keyManagement:credentialAssociation.target.needsConfirmation",
+      ),
+    ).toHaveLength(2)
+    expect(tokenListPropsSpy).toHaveBeenLastCalledWith(
+      expect.objectContaining({ associationTarget: association }),
+    )
   })
 
   it("offers incomplete managed-site setup as a lightweight inline hint", async () => {

@@ -1,4 +1,5 @@
 import userEvent from "@testing-library/user-event"
+import { forwardRef } from "react"
 import {
   afterAll,
   afterEach,
@@ -11,8 +12,15 @@ import {
 } from "vitest"
 
 import { ApiCredentialProfileListItem } from "~/features/ApiCredentialProfiles/components/ApiCredentialProfileListItem"
-import type { ApiCredentialProfileExportAction } from "~/features/ApiCredentialProfiles/contracts"
-import { API_CREDENTIAL_PROFILES_TEST_IDS } from "~/features/ApiCredentialProfiles/testIds"
+import type {
+  ApiCredentialProfileAssociatedKeyState,
+  ApiCredentialProfileExportAction,
+} from "~/features/ApiCredentialProfiles/contracts"
+import {
+  API_CREDENTIAL_PROFILES_TEST_IDS,
+  getApiCredentialProfileRowTargetId,
+  getApiCredentialProfileRowTestId,
+} from "~/features/ApiCredentialProfiles/testIds"
 import enApiCredentialProfiles from "~/locales/en/apiCredentialProfiles.json"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -23,7 +31,7 @@ import {
 import { SiteHealthStatus } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { testI18n } from "~~/tests/test-utils/i18n"
-import { fireEvent, render, screen } from "~~/tests/test-utils/render"
+import { fireEvent, render, screen, within } from "~~/tests/test-utils/render"
 
 vi.mock(
   "~/components/dialogs/VerifyApiDialog/VerificationHistorySummary",
@@ -72,9 +80,13 @@ vi.mock("~/components/ui", async (importOriginal) => {
     Badge: ({ children, variant: _variant, size: _size, ...props }: any) => (
       <span {...props}>{children}</span>
     ),
-    Card: ({ children }: any) => <div>{children}</div>,
+    Card: forwardRef<HTMLDivElement, any>(({ children, ...props }, ref) => (
+      <div ref={ref} {...props}>
+        {children}
+      </div>
+    )),
     CardContent: ({ children }: any) => <div>{children}</div>,
-    Heading6: ({ children }: any) => <h6>{children}</h6>,
+    Heading6: ({ children, ...props }: any) => <h6 {...props}>{children}</h6>,
     IconButton: ({ analyticsAction, children, ...props }: any) => {
       const scope = useProductAnalyticsScope()
       const resolvedAction = resolveProductAnalyticsActionContext(
@@ -154,6 +166,11 @@ function renderListItem(
       profile: ApiCredentialProfile,
       action: ApiCredentialProfileExportAction,
     ) => void
+    focusRequest?: number
+    associatedKeyState?: ApiCredentialProfileAssociatedKeyState
+    onOpenAssociatedKey?: (associationId: string) => void
+    onConfirmAssociatedKey?: (associationId: string) => void
+    onUnlinkAssociatedKey?: (associationId: string) => void
   } = {},
 ) {
   const onRefreshTelemetry = overrides.onRefreshTelemetry ?? vi.fn()
@@ -176,6 +193,11 @@ function renderListItem(
       isTelemetryRefreshing={overrides.isTelemetryRefreshing ?? false}
       managedSiteType="new-api"
       managedSiteLabel="New API"
+      focusRequest={overrides.focusRequest}
+      associatedKeyState={overrides.associatedKeyState}
+      onOpenAssociatedKey={overrides.onOpenAssociatedKey}
+      onConfirmAssociatedKey={overrides.onConfirmAssociatedKey}
+      onUnlinkAssociatedKey={overrides.onUnlinkAssociatedKey}
     />,
     {
       withReleaseUpdateStatusProvider: false,
@@ -235,6 +257,83 @@ describe("ApiCredentialProfileListItem", () => {
       screen.queryByRole("button", {
         name: "apiCredentialProfiles:actions.copyBaseUrl",
       }),
+    ).not.toBeInTheDocument()
+  })
+
+  it("focuses and scrolls the exact profile card for a deep-link request", () => {
+    const focusSpy = vi.spyOn(HTMLElement.prototype, "focus")
+    const scrollIntoViewSpy = vi
+      .spyOn(HTMLElement.prototype, "scrollIntoView")
+      .mockImplementation(() => {})
+    const profile = buildProfile({ id: "profile / 1" })
+
+    renderListItem(profile, { focusRequest: 1 })
+
+    const row = screen.getByTestId(getApiCredentialProfileRowTestId(profile.id))
+    expect(row).toHaveAttribute(
+      "id",
+      getApiCredentialProfileRowTargetId(profile.id),
+    )
+    expect(row).toHaveAttribute("tabindex", "-1")
+    expect(row).toHaveFocus()
+    expect(scrollIntoViewSpy).toHaveBeenCalledWith({
+      block: "center",
+      inline: "nearest",
+    })
+    expect(focusSpy).toHaveBeenCalledWith({ preventScroll: true })
+  })
+
+  it("opens the single active Account Runtime Key association", async () => {
+    const user = userEvent.setup()
+    const onOpenAssociatedKey = vi.fn()
+
+    renderListItem(buildProfile(), {
+      associatedKeyState: {
+        status: "linked",
+        items: [
+          {
+            associationId: "association-1",
+            locator: {
+              source: "account_token",
+              accountId: "account-example",
+              siteType: "new-api",
+              tokenId: 1,
+            },
+            state: "active",
+          },
+        ],
+      },
+      onOpenAssociatedKey,
+    })
+
+    expect(
+      screen.getByText("apiCredentialProfiles:association.linked"),
+    ).toBeVisible()
+    await user.click(
+      screen.getByRole("button", {
+        name: "apiCredentialProfiles:association.linked",
+      }),
+    )
+    const viewKeyButton = screen.getByRole("button", {
+      name: "apiCredentialProfiles:association.linked",
+    })
+    await user.click(viewKeyButton)
+    await user.click(
+      screen.getByRole("button", {
+        name: "apiCredentialProfiles:association.viewKey",
+      }),
+    )
+    expect(onOpenAssociatedKey).toHaveBeenCalledWith("association-1")
+  })
+
+  it("keeps an older unlinked credential visually quiet", () => {
+    renderListItem(buildProfile())
+
+    expect(
+      screen.queryByText("apiCredentialProfiles:association.notLinked"),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText("apiCredentialProfiles:association.sectionTitle"),
     ).not.toBeInTheDocument()
   })
 
@@ -300,6 +399,57 @@ describe("ApiCredentialProfileListItem", () => {
       "data-analytics-action",
       profileAction(PRODUCT_ANALYTICS_ACTION_IDS.OpenApiCredentialExportMenu),
     )
+  })
+
+  it("organizes profile actions into quick, integration, diagnostics, and management groups", () => {
+    renderListItem(buildProfile())
+
+    const toolbar = screen.getByRole("toolbar", {
+      name: "keyManagement:actionToolbar.label",
+    })
+    const quickActionsGroup = within(toolbar).getByRole("group", {
+      name: "keyManagement:actionToolbar.quickActions",
+    })
+    const integrationsGroup = within(toolbar).getByRole("group", {
+      name: "keyManagement:actionToolbar.integrationsAndExport",
+    })
+    const diagnosticsGroup = within(toolbar).getByRole("group", {
+      name: "keyManagement:actionToolbar.diagnostics",
+    })
+    const managementGroup = within(toolbar).getByRole("group", {
+      name: "keyManagement:actionToolbar.management",
+    })
+
+    expect(
+      within(quickActionsGroup).getByRole("button", {
+        name: "apiCredentialProfiles:actions.copyBundle",
+      }),
+    ).toBeVisible()
+    expect(
+      within(integrationsGroup).getByRole("button", {
+        name: "keyManagement:actions.importToManagedSite",
+      }),
+    ).toBeVisible()
+    expect(
+      within(integrationsGroup).getByRole("button", {
+        name: "common:actions.export",
+      }),
+    ).toBeVisible()
+    expect(
+      within(diagnosticsGroup).getByRole("button", {
+        name: "apiCredentialProfiles:actions.verifyApi",
+      }),
+    ).toBeVisible()
+    expect(
+      within(managementGroup).getByRole("button", {
+        name: "common:actions.edit",
+      }),
+    ).toBeVisible()
+    expect(
+      within(managementGroup).getByRole("button", {
+        name: "common:actions.delete",
+      }),
+    ).toBeVisible()
   })
 
   it("offers Kelivo import-code copying from the export menu", async () => {

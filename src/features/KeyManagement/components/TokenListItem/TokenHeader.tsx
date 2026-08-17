@@ -1,21 +1,8 @@
 import type { TFunction } from "i18next"
-import { Copy, Pencil, RefreshCw, Terminal, Trash2, Wrench } from "lucide-react"
-import { useEffect, useLayoutEffect, useRef, useState } from "react"
-import toast from "react-hot-toast"
+import { RefreshCw } from "lucide-react"
+import { useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { ClaudeCodeRouterImportDialog } from "~/components/ClaudeCodeRouterImportDialog"
-import { CliProxyExportDialog } from "~/components/CliProxyExportDialog"
-import { CursorPlusExportDialog } from "~/components/CursorPlusExportDialog"
-import { useChannelDialog } from "~/components/dialogs/ChannelDialog"
-import { VerifyCliSupportDialog } from "~/components/dialogs/VerifyCliSupportDialog"
-import {
-  EXPORT_ACTION_TARGETS,
-  ExportActionsMenu,
-} from "~/components/ExportActionsMenu"
-import { ApiCredentialLibraryIcon } from "~/components/icons/productIcons"
-import { KelivoExportDialog } from "~/components/KelivoExportDialog"
-import { KiloCodeExportDialog } from "~/components/KiloCodeExportDialog"
 import {
   getKeySignalLabel,
   getKeySignalTooltip,
@@ -27,41 +14,18 @@ import {
   SignalBadge,
 } from "~/components/ManagedSiteChannelAssessmentSignalHelpers"
 import ManagedSiteChannelLinkButton from "~/components/ManagedSiteChannelLinkButton"
-import { ManagedSiteImportButton } from "~/components/ManagedSiteImportButton"
-import Tooltip from "~/components/Tooltip"
-import {
-  Badge,
-  Button,
-  IconButton,
-  WorkflowTransitionButton,
-} from "~/components/ui"
+import { Badge, Button, WorkflowTransitionButton } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { VerifyApiCredentialProfileDialog } from "~/features/ApiCredentialProfiles/components/VerifyApiCredentialProfileDialog"
 import {
   KeyResourceCardHeader,
   type KeyResourceCardHeaderRenderProps,
 } from "~/features/KeyManagement/components/KeyResourceCard"
-import type { KeyResourceActionPolicy } from "~/features/KeyManagement/presentation/keyResourceCard"
-import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
-import {
-  buildDisplayAccountTokenRuntimeKey,
-  collectAccountRuntimeKeySecrets,
-} from "~/services/accounts/accountRuntimeKeys"
-import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
-import { normalizeAccountSiteUrlForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
-import { createProfileFromAccountToken } from "~/services/apiCredentialProfiles/accountTokenImport"
-import { buildApiCredentialProfileName } from "~/services/apiCredentialProfiles/accountTokenProfileName"
-import { OpenInCherryStudio } from "~/services/integrations/cherryStudio"
-import type { KelivoProviderExportInput } from "~/services/integrations/kelivo"
 import {
   MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS,
   MANAGED_SITE_TOKEN_CHANNEL_STATUSES,
   type ManagedSiteTokenChannelStatus,
 } from "~/services/managedSites/tokenChannelStatus"
-import {
-  getManagedSiteLabel,
-  supportsManagedSiteBaseUrlChannelLookup,
-} from "~/services/managedSites/utils/managedSite"
+import { supportsManagedSiteBaseUrlChannelLookup } from "~/services/managedSites/utils/managedSite"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -71,69 +35,28 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
-import {
-  API_TYPES,
-  type ApiVerificationApiType,
-} from "~/services/verification/aiApiVerification"
-import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
-import type { AccountToken, DisplaySiteData } from "~/types"
-import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
-import { getErrorMessage } from "~/utils/core/error"
+import type { AccountToken } from "~/types"
 import { createLogger } from "~/utils/core/logger"
-import { showResultToast } from "~/utils/core/toastHelpers"
-import {
-  openApiCredentialProfilesPage,
-  openSettingsTab,
-} from "~/utils/navigation"
+import { openSettingsTab } from "~/utils/navigation"
 
 import { KEY_MANAGEMENT_TEST_IDS } from "../../testIds"
+import {
+  TokenActionButtons,
+  type TokenActionButtonsProps,
+} from "./TokenActionButtons"
 
 /**
  * Unified logger scoped to the Key Management token header actions.
  */
 const logger = createLogger("TokenHeader")
 
-interface TokenHeaderProps {
+export interface TokenHeaderProps extends TokenActionButtonsProps {
   /** Shared header content and controls owned by the key-resource card. */
   headerProps: KeyResourceCardHeaderRenderProps
-  /** Provider capability policy controlling available token actions. */
-  actionPolicy: KeyResourceActionPolicy
-  /**
-   * Token data with account display name included.
-   */
-  token: AccountToken
-  /**
-   * Copy handler for placing the key on clipboard.
-   */
-  copyKey: (account: DisplaySiteData, token: AccountToken) => Promise<void>
-  /**
-   * Handler to open the edit dialog for the token.
-   */
-  handleEditToken: (token: AccountToken) => void
-  /**
-   * Handler to delete the token.
-   */
-  handleDeleteToken: (token: AccountToken) => void
-  /**
-   * Account metadata for linking cross-app actions.
-   */
-  account: DisplaySiteData
-  /**
-   * Optional opener for CCSwitch export dialog.
-   */
-  onOpenCCSwitchDialog?: () => void
-  /**
-   * Current managed-site status for the token, when available.
-   */
-  managedSiteStatus?: ManagedSiteTokenChannelStatus
   /**
    * Whether a managed-site status check is currently running for the token.
    */
   isManagedSiteStatusChecking?: boolean
-  /**
-   * Optional callback invoked after a successful managed-site import.
-   */
-  onManagedSiteImportSuccess?: (token: AccountToken) => void | Promise<void>
   /**
    * Optional callback invoked to recover a New API exact-verification state.
    */
@@ -141,13 +64,7 @@ interface TokenHeaderProps {
     token: AccountToken,
     managedSiteStatus: ManagedSiteTokenChannelStatus,
   ) => void | Promise<void>
-  /**
-   * Request key used to temporarily highlight the managed-site import action.
-   */
-  guidedManagedSiteImportRequest?: string
 }
-
-type TokenActionButtonsProps = Omit<TokenHeaderProps, "headerProps">
 
 export const getManagedSiteStatusBadgeVariant = (params: {
   isChecking: boolean
@@ -267,725 +184,10 @@ export const getManagedSiteSettingsActionLabel = (
     : t("common:labels.settings")
 
 /**
- * Renders action buttons for a token (copy, export, edit/delete).
- * @param props Component props container.
- * @param props.actionPolicy Provider capability policy controlling available token actions.
- * @param props.token Token being acted upon.
- * @param props.copyKey Clipboard copy handler.
- * @param props.handleEditToken Edit action callback.
- * @param props.handleDeleteToken Delete action callback.
- * @param props.account Account context for integrations.
- * @param props.managedSiteStatus Current managed-site status used to reuse duplicate-review results when available.
- * @param props.onOpenCCSwitchDialog Optional CCSwitch export opener.
- * @param props.onManagedSiteImportSuccess Optional managed-site import success callback.
- * @param props.guidedManagedSiteImportRequest Request key that highlights the managed-site import action.
- */
-function TokenActionButtons({
-  actionPolicy,
-  token,
-  copyKey,
-  handleEditToken,
-  handleDeleteToken,
-  account,
-  managedSiteStatus,
-  onOpenCCSwitchDialog,
-  onManagedSiteImportSuccess,
-  guidedManagedSiteImportRequest,
-}: TokenActionButtonsProps) {
-  const { t } = useTranslation(["keyManagement", "settings"])
-  const {
-    managedSiteType,
-    claudeCodeRouterBaseUrl,
-    claudeCodeRouterApiKey,
-    cliProxyBaseUrl,
-    cliProxyManagementKey,
-    markGatewayGuidanceOnboardingCompleted,
-  } = useUserPreferencesContext()
-  const { openWithAccount } = useChannelDialog()
-
-  const [isClaudeCodeRouterOpen, setIsClaudeCodeRouterOpen] = useState(false)
-  const [isCliProxyDialogOpen, setIsCliProxyDialogOpen] = useState(false)
-  const [isCursorPlusDialogOpen, setIsCursorPlusDialogOpen] = useState(false)
-  const [isKiloCodeDialogOpen, setIsKiloCodeDialogOpen] = useState(false)
-  const [kelivoExportInput, setKelivoExportInput] =
-    useState<KelivoProviderExportInput | null>(null)
-  const [isManagedSiteImportHighlighted, setIsManagedSiteImportHighlighted] =
-    useState(false)
-  const managedSiteImportButtonRef = useRef<HTMLButtonElement>(null)
-  const handledGuidedManagedSiteImportRequestRef = useRef<string | undefined>(
-    undefined,
-  )
-  const verifySecretAllowedRef = useRef(false)
-  const verificationGenerationRef = useRef<symbol | null>(null)
-  const apiVerificationEpochRef = useRef(0)
-  const cliVerificationEpochRef = useRef(0)
-  const kelivoExportEpochRef = useRef(0)
-  const [verifyingProfile, setVerifyingProfile] =
-    useState<ApiCredentialProfile | null>(null)
-  const [cliVerifyingProfile, setCliVerifyingProfile] =
-    useState<ApiCredentialProfile | null>(null)
-
-  const managedSiteLabel = getManagedSiteLabel(t, managedSiteType)
-  const apiType: ApiVerificationApiType = API_TYPES.OPENAI_COMPATIBLE
-
-  const isVerificationRequestCurrent = (
-    verificationGeneration: symbol | null,
-    verificationEpoch: number,
-    currentVerificationEpoch: number,
-  ) =>
-    verificationGeneration !== null &&
-    verifySecretAllowedRef.current &&
-    verificationGenerationRef.current === verificationGeneration &&
-    verificationEpoch === currentVerificationEpoch
-
-  const completeStaleVerification = (
-    tracker: ReturnType<typeof startProductAnalyticsAction>,
-  ) => {
-    tracker.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled, {
-      diagnostics: { execution: { staleResponseIgnored: true } },
-    })
-  }
-
-  useEffect(() => {
-    if (actionPolicy.exportSecret) {
-      return
-    }
-
-    setIsClaudeCodeRouterOpen(false)
-    setIsCliProxyDialogOpen(false)
-    setIsCursorPlusDialogOpen(false)
-    setIsKiloCodeDialogOpen(false)
-    setKelivoExportInput(null)
-    setIsManagedSiteImportHighlighted(false)
-  }, [actionPolicy.exportSecret])
-
-  useLayoutEffect(() => {
-    const verificationGeneration = Symbol("token-verification-generation")
-    verificationGenerationRef.current = verificationGeneration
-    verifySecretAllowedRef.current = actionPolicy.verifySecret
-    setVerifyingProfile(null)
-    setCliVerifyingProfile(null)
-
-    return () => {
-      if (verificationGenerationRef.current === verificationGeneration) {
-        verificationGenerationRef.current = null
-      }
-      verifySecretAllowedRef.current = false
-      apiVerificationEpochRef.current += 1
-      cliVerificationEpochRef.current += 1
-    }
-  }, [
-    actionPolicy.verifySecret,
-    account.authType,
-    account.baseUrl,
-    account.cookieAuthSessionCookie,
-    account.id,
-    account.siteType,
-    account.token,
-    account.userId,
-    token.accountId,
-    token.id,
-    token.key,
-  ])
-
-  useLayoutEffect(() => {
-    kelivoExportEpochRef.current += 1
-    setKelivoExportInput(null)
-
-    return () => {
-      kelivoExportEpochRef.current += 1
-    }
-  }, [
-    account.authType,
-    account.baseUrl,
-    account.cookieAuthSessionCookie,
-    account.id,
-    account.name,
-    account.siteType,
-    account.token,
-    account.userId,
-    actionPolicy.exportSecret,
-    token.accountId,
-    token.id,
-    token.key,
-    token.name,
-  ])
-
-  useEffect(() => {
-    if (
-      !actionPolicy.exportSecret ||
-      !guidedManagedSiteImportRequest ||
-      handledGuidedManagedSiteImportRequestRef.current ===
-        guidedManagedSiteImportRequest
-    ) {
-      return
-    }
-
-    handledGuidedManagedSiteImportRequestRef.current =
-      guidedManagedSiteImportRequest
-    setIsManagedSiteImportHighlighted(true)
-    managedSiteImportButtonRef.current?.scrollIntoView?.({
-      block: "center",
-      inline: "nearest",
-    })
-    managedSiteImportButtonRef.current?.focus()
-
-    const timeoutId = window.setTimeout(() => {
-      setIsManagedSiteImportHighlighted(false)
-    }, 5000)
-
-    return () => window.clearTimeout(timeoutId)
-  }, [actionPolicy.exportSecret, guidedManagedSiteImportRequest])
-
-  const buildTransientProfile = (resolvedToken: AccountToken) => {
-    const now = Date.now()
-    return {
-      id: `account-token:${account.id}:${token.id}`,
-      name: buildApiCredentialProfileName({
-        accountName: account.name,
-        fallbackAccountName: token.accountName,
-        tokenName: token.name,
-      }),
-      apiType,
-      baseUrl: normalizeAccountSiteUrlForManagedChannel({
-        siteType: account.siteType,
-        url: account.baseUrl,
-      }),
-      apiKey: resolvedToken.key,
-      tagIds: account.tagIds ?? [],
-      notes: "",
-      createdAt: now,
-      updatedAt: now,
-    } satisfies ApiCredentialProfile
-  }
-
-  const handleImportToManagedSite = async () => {
-    const tracker = startProductAnalyticsAction({
-      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
-      actionId: PRODUCT_ANALYTICS_ACTION_IDS.ImportManagedSiteSingleToken,
-      surfaceId:
-        PRODUCT_ANALYTICS_SURFACE_IDS.AccountTokenThirdPartyExportDialog,
-      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
-    })
-
-    try {
-      const result = await openWithAccount(
-        account,
-        token,
-        (result) => {
-          showResultToast(result)
-
-          if (result?.success && onManagedSiteImportSuccess) {
-            void Promise.resolve(onManagedSiteImportSuccess(token)).catch(
-              (error) =>
-                logger.error(
-                  "Managed-site import success callback failed",
-                  error,
-                ),
-            )
-          }
-          if (result?.success) {
-            void Promise.resolve(
-              markGatewayGuidanceOnboardingCompleted(),
-            ).catch((error) =>
-              logger.error(
-                "Failed to mark gateway guidance onboarding complete",
-                error,
-              ),
-            )
-          }
-        },
-        {
-          managedSiteStatus,
-        },
-      )
-
-      if (result.opened || result.deferred) {
-        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
-        return
-      }
-
-      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-      })
-    } catch (error) {
-      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-      })
-      showResultToast({
-        success: false,
-        message: t("messages:errors.operation.failed", {
-          error: getErrorMessage(error),
-        }),
-      })
-    }
-  }
-
-  const handleOpenCliProxyDialog = () => {
-    if (!cliProxyBaseUrl?.trim() || !cliProxyManagementKey?.trim()) {
-      showResultToast({
-        success: false,
-        message: t("messages:cliproxy.configMissing"),
-      })
-      return
-    }
-    setIsCliProxyDialogOpen(true)
-  }
-
-  const handleOpenClaudeCodeRouter = () => {
-    if (!claudeCodeRouterBaseUrl?.trim()) {
-      showResultToast({
-        success: false,
-        message: t("messages:claudeCodeRouter.configMissing"),
-      })
-      return
-    }
-    setIsClaudeCodeRouterOpen(true)
-  }
-
-  const handleUseInCherry = async () => {
-    const tracker = startProductAnalyticsAction({
-      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
-      actionId: PRODUCT_ANALYTICS_ACTION_IDS.ExportAccountTokenToCherryStudio,
-      surfaceId:
-        PRODUCT_ANALYTICS_SURFACE_IDS.AccountTokenThirdPartyExportDialog,
-      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
-    })
-
-    try {
-      const resolvedToken = await resolveDisplayAccountTokenForSecret(
-        account,
-        token,
-      )
-      OpenInCherryStudio(account, resolvedToken)
-      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
-    } catch (error) {
-      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-      })
-      showResultToast({
-        success: false,
-        message: t("messages:errors.operation.failed", {
-          error: getErrorMessage(error),
-        }),
-      })
-    }
-  }
-
-  const handleOpenKelivoExportDialog = async () => {
-    const exportEpoch = ++kelivoExportEpochRef.current
-    try {
-      const resolvedToken = await resolveDisplayAccountTokenForSecret(
-        account,
-        token,
-      )
-      if (kelivoExportEpochRef.current !== exportEpoch) return
-
-      setKelivoExportInput({
-        apiType: API_TYPES.OPENAI_COMPATIBLE,
-        name: buildApiCredentialProfileName({
-          accountName: account.name,
-          fallbackAccountName: token.accountName,
-          tokenName: token.name,
-        }),
-        baseUrl: account.baseUrl,
-        apiKey: resolvedToken.key,
-      })
-    } catch (error) {
-      if (kelivoExportEpochRef.current !== exportEpoch) return
-
-      const tracker = startProductAnalyticsAction({
-        featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
-        actionId: PRODUCT_ANALYTICS_ACTION_IDS.CopyAccountTokenKelivoImportCode,
-        surfaceId:
-          PRODUCT_ANALYTICS_SURFACE_IDS.AccountTokenThirdPartyExportDialog,
-        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
-      })
-      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-      })
-      showResultToast({
-        success: false,
-        message: t("messages:errors.operation.failed", {
-          error:
-            toSanitizedErrorSummary(
-              error,
-              collectAccountRuntimeKeySecrets([
-                buildDisplayAccountTokenRuntimeKey(account, token),
-              ]),
-            ) || t("messages:errors.unknown"),
-        }),
-      })
-    }
-  }
-
-  const handleSaveToApiCredentialProfiles = async () => {
-    const tracker = startProductAnalyticsAction({
-      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.KeyManagement,
-      actionId:
-        PRODUCT_ANALYTICS_ACTION_IDS.SaveAccountTokenToApiCredentialProfile,
-      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementRowActions,
-      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
-    })
-    let resolvedToken = token
-
-    try {
-      resolvedToken = await resolveDisplayAccountTokenForSecret(account, token)
-      const profile = await createProfileFromAccountToken({
-        accountName: account.name,
-        fallbackAccountName: token.accountName,
-        baseUrl: account.baseUrl,
-        siteType: account.siteType,
-        tagIds: account.tagIds ?? [],
-        token: {
-          ...token,
-          key: resolvedToken.key,
-        },
-      })
-      toast.success(
-        (toastInstance) => (
-          <div className="flex min-w-0 items-center gap-2">
-            <span className="min-w-0 truncate">
-              {t("keyManagement:messages.savedToApiProfiles", {
-                name: profile.name,
-              })}
-            </span>
-            <button
-              type="button"
-              data-testid={
-                TOKEN_PROVISIONING_TEST_IDS.openApiProfilesToastButton
-              }
-              className="shrink-0 rounded-md bg-blue-600 px-2 py-1 text-xs font-medium text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
-              onClick={() => {
-                openApiCredentialProfilesPage()
-                toast.dismiss(toastInstance.id)
-              }}
-            >
-              {t("keyManagement:actions.openApiProfiles")}
-            </button>
-          </div>
-        ),
-        { duration: 8000 },
-      )
-      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
-    } catch (error) {
-      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-      })
-      logger.error("Failed to save token to API profiles", {
-        message: toSanitizedErrorSummary(
-          error,
-          [
-            token.key,
-            resolvedToken.key,
-            account.token,
-            account.cookieAuthSessionCookie,
-          ].filter(Boolean) as string[],
-        ),
-      })
-      toast.error(t("keyManagement:messages.saveToApiProfilesFailed"))
-    }
-  }
-
-  const handleVerifyApi = async () => {
-    const verificationGeneration = verificationGenerationRef.current
-    const verificationEpoch = ++apiVerificationEpochRef.current
-    const tracker = startProductAnalyticsAction({
-      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.KeyManagement,
-      actionId: PRODUCT_ANALYTICS_ACTION_IDS.VerifyAccountTokenApi,
-      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementRowActions,
-      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
-    })
-    let resolvedToken = token
-
-    try {
-      resolvedToken = await resolveDisplayAccountTokenForSecret(account, token)
-      if (
-        !isVerificationRequestCurrent(
-          verificationGeneration,
-          verificationEpoch,
-          apiVerificationEpochRef.current,
-        )
-      ) {
-        completeStaleVerification(tracker)
-        return
-      }
-      setVerifyingProfile(buildTransientProfile(resolvedToken))
-      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
-    } catch (error) {
-      if (
-        !isVerificationRequestCurrent(
-          verificationGeneration,
-          verificationEpoch,
-          apiVerificationEpochRef.current,
-        )
-      ) {
-        completeStaleVerification(tracker)
-        return
-      }
-      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-      })
-      logger.error("Failed to open token API verification", {
-        message: toSanitizedErrorSummary(
-          error,
-          [
-            token.key,
-            resolvedToken.key,
-            account.token,
-            account.cookieAuthSessionCookie,
-          ].filter(Boolean) as string[],
-        ),
-      })
-      showResultToast({
-        success: false,
-        message: t("keyManagement:messages.verifyApiFailed"),
-      })
-    }
-  }
-
-  const handleVerifyCliSupport = async () => {
-    const verificationGeneration = verificationGenerationRef.current
-    const verificationEpoch = ++cliVerificationEpochRef.current
-    const tracker = startProductAnalyticsAction({
-      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.KeyManagement,
-      actionId: PRODUCT_ANALYTICS_ACTION_IDS.VerifyAccountTokenCliSupport,
-      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementRowActions,
-      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
-    })
-    let resolvedToken = token
-
-    try {
-      resolvedToken = await resolveDisplayAccountTokenForSecret(account, token)
-      if (
-        !isVerificationRequestCurrent(
-          verificationGeneration,
-          verificationEpoch,
-          cliVerificationEpochRef.current,
-        )
-      ) {
-        completeStaleVerification(tracker)
-        return
-      }
-      setCliVerifyingProfile(buildTransientProfile(resolvedToken))
-      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
-    } catch (error) {
-      if (
-        !isVerificationRequestCurrent(
-          verificationGeneration,
-          verificationEpoch,
-          cliVerificationEpochRef.current,
-        )
-      ) {
-        completeStaleVerification(tracker)
-        return
-      }
-      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-      })
-      logger.error("Failed to open token CLI support verification", {
-        message: toSanitizedErrorSummary(
-          error,
-          [
-            token.key,
-            resolvedToken.key,
-            account.token,
-            account.cookieAuthSessionCookie,
-          ].filter(Boolean) as string[],
-        ),
-      })
-      showResultToast({
-        success: false,
-        message: t("keyManagement:messages.verifyCliSupportFailed"),
-      })
-    }
-  }
-
-  return (
-    <div
-      data-testid={KEY_MANAGEMENT_TEST_IDS.tokenRowActions}
-      className="flex w-full flex-wrap items-center justify-start gap-1 sm:w-auto sm:shrink-0 sm:justify-end sm:gap-1.5"
-    >
-      {actionPolicy.exportSecret ? (
-        <>
-          <KiloCodeExportDialog
-            isOpen={isKiloCodeDialogOpen}
-            onClose={() => setIsKiloCodeDialogOpen(false)}
-            initialSelectedSiteIds={[account.id]}
-            initialSelectedTokenIdsBySite={{ [account.id]: [`${token.id}`] }}
-          />
-          {isCursorPlusDialogOpen ? (
-            <CursorPlusExportDialog
-              isOpen={true}
-              onClose={() => setIsCursorPlusDialogOpen(false)}
-              account={account}
-              runtimeKey={buildDisplayAccountTokenRuntimeKey(account, token)}
-            />
-          ) : null}
-          {kelivoExportInput ? (
-            <KelivoExportDialog
-              isOpen={true}
-              onClose={() => setKelivoExportInput(null)}
-              initialValue={kelivoExportInput}
-              analyticsContext={{
-                featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
-                actionId:
-                  PRODUCT_ANALYTICS_ACTION_IDS.CopyAccountTokenKelivoImportCode,
-                surfaceId:
-                  PRODUCT_ANALYTICS_SURFACE_IDS.AccountTokenThirdPartyExportDialog,
-                entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
-              }}
-            />
-          ) : null}
-          <ClaudeCodeRouterImportDialog
-            isOpen={isClaudeCodeRouterOpen}
-            onClose={() => setIsClaudeCodeRouterOpen(false)}
-            account={account}
-            token={token}
-            routerBaseUrl={claudeCodeRouterBaseUrl}
-            routerApiKey={claudeCodeRouterApiKey}
-          />
-          <CliProxyExportDialog
-            isOpen={isCliProxyDialogOpen}
-            onClose={() => setIsCliProxyDialogOpen(false)}
-            account={account}
-            token={token}
-          />
-        </>
-      ) : null}
-      {actionPolicy.verifySecret ? (
-        <>
-          <VerifyApiCredentialProfileDialog
-            isOpen={Boolean(verifyingProfile)}
-            onClose={() => setVerifyingProfile(null)}
-            profile={verifyingProfile}
-          />
-          {cliVerifyingProfile ? (
-            <VerifyCliSupportDialog
-              isOpen={true}
-              onClose={() => setCliVerifyingProfile(null)}
-              profile={cliVerifyingProfile}
-            />
-          ) : null}
-        </>
-      ) : null}
-      {actionPolicy.copySecret ? (
-        <IconButton
-          aria-label={t("common:actions.copyKey")}
-          size="sm"
-          variant="ghost"
-          onClick={() => void copyKey(account, token)}
-        >
-          <Copy className="dark:text-dark-text-tertiary h-4 w-4 text-gray-500" />
-        </IconButton>
-      ) : null}
-      {actionPolicy.exportSecret ? (
-        <Tooltip content={t("keyManagement:actions.saveToApiProfilesHint")}>
-          <IconButton
-            aria-label={t("keyManagement:actions.saveToApiProfiles")}
-            title={t("keyManagement:actions.saveToApiProfilesHint")}
-            data-testid={KEY_MANAGEMENT_TEST_IDS.saveToApiProfilesButton}
-            size="sm"
-            variant="ghost"
-            onClick={handleSaveToApiCredentialProfiles}
-          >
-            <ApiCredentialLibraryIcon className="dark:text-dark-text-tertiary h-4 w-4 text-gray-500" />
-          </IconButton>
-        </Tooltip>
-      ) : null}
-      {actionPolicy.verifySecret ? (
-        <>
-          <IconButton
-            aria-label={t("keyManagement:actions.verifyApi")}
-            size="sm"
-            variant="ghost"
-            data-testid={KEY_MANAGEMENT_TEST_IDS.verifyTokenApiButton}
-            onClick={() => void handleVerifyApi()}
-          >
-            <Wrench className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-          </IconButton>
-          <IconButton
-            aria-label={t("keyManagement:actions.verifyCliSupport")}
-            size="sm"
-            variant="ghost"
-            data-testid={KEY_MANAGEMENT_TEST_IDS.verifyTokenCliSupportButton}
-            onClick={() => void handleVerifyCliSupport()}
-          >
-            <Terminal className="h-4 w-4 text-sky-600 dark:text-sky-400" />
-          </IconButton>
-        </>
-      ) : null}
-      {actionPolicy.exportSecret ? (
-        <>
-          <ManagedSiteImportButton
-            buttonRef={managedSiteImportButtonRef}
-            managedSiteType={managedSiteType}
-            managedSiteLabel={managedSiteLabel}
-            onImport={handleImportToManagedSite}
-            testId={KEY_MANAGEMENT_TEST_IDS.importToManagedSiteButton}
-            highlighted={isManagedSiteImportHighlighted}
-          />
-          <ExportActionsMenu
-            triggerTestId={KEY_MANAGEMENT_TEST_IDS.exportMenuButton}
-            actions={{
-              [EXPORT_ACTION_TARGETS.CherryStudio]: {
-                onSelect: handleUseInCherry,
-              },
-              [EXPORT_ACTION_TARGETS.Kelivo]: {
-                onSelect: handleOpenKelivoExportDialog,
-              },
-              ...(onOpenCCSwitchDialog
-                ? {
-                    [EXPORT_ACTION_TARGETS.CCSwitch]: {
-                      testId: KEY_MANAGEMENT_TEST_IDS.exportToCCSwitchButton,
-                      onSelect: onOpenCCSwitchDialog,
-                    },
-                  }
-                : {}),
-              [EXPORT_ACTION_TARGETS.CursorPlus]: {
-                onSelect: () => setIsCursorPlusDialogOpen(true),
-              },
-              [EXPORT_ACTION_TARGETS.KiloCode]: {
-                onSelect: () => setIsKiloCodeDialogOpen(true),
-              },
-              [EXPORT_ACTION_TARGETS.CliProxy]: {
-                onSelect: handleOpenCliProxyDialog,
-              },
-              [EXPORT_ACTION_TARGETS.ClaudeCodeRouter]: {
-                onSelect: handleOpenClaudeCodeRouter,
-              },
-            }}
-          />
-        </>
-      ) : null}
-      {actionPolicy.edit ? (
-        <IconButton
-          aria-label={t("actions.editKey")}
-          size="sm"
-          variant="ghost"
-          onClick={() => handleEditToken(token)}
-        >
-          <Pencil className="h-4 w-4 text-blue-500 dark:text-blue-400" />
-        </IconButton>
-      ) : null}
-      {actionPolicy.delete ? (
-        <IconButton
-          aria-label={t("actions.deleteKey")}
-          size="sm"
-          variant="destructiveGhost"
-          onClick={() => handleDeleteToken(token)}
-        >
-          <Trash2 className="h-4 w-4" />
-        </IconButton>
-      ) : null}
-    </div>
-  )
-}
-
-/**
  * Token header displaying name, status badges, and action buttons.
  * @param props Component props container.
  * @param props.headerProps Shared key-resource header content and controls.
+ * @param props.association Current API credential-library relationship.
  * @param props.actionPolicy Provider capability policy controlling available token actions.
  * @param props.token Token entity with account name.
  * @param props.copyKey Clipboard copy handler.
@@ -1001,6 +203,7 @@ function TokenActionButtons({
  */
 export function TokenHeader({
   headerProps,
+  association,
   actionPolicy,
   token,
   copyKey,
@@ -1240,11 +443,13 @@ export function TokenHeader({
   return (
     <KeyResourceCardHeader
       {...headerProps}
+      association={undefined}
       providerBadges={providerBadges}
       actions={
         <>
           {headerProps.actions}
           <TokenActionButtons
+            association={association}
             actionPolicy={actionPolicy}
             token={token}
             copyKey={copyKey}

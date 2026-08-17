@@ -1,11 +1,4 @@
-import {
-  Copy,
-  KeyRound,
-  Library,
-  RefreshCw,
-  Terminal,
-  Wrench,
-} from "lucide-react"
+import { Copy, KeyRound, RefreshCw, Terminal, Wrench } from "lucide-react"
 import { useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -39,7 +32,15 @@ import {
   createExportToken,
 } from "~/features/ApiCredentialProfiles/utils/exportShims"
 import { BatchSelectionControl } from "~/features/KeyManagement/components/BatchSelectionControl"
+import {
+  KeyResourceActionGroup,
+  KeyResourceActionToolbar,
+  KeyResourceCredentialAssociationControl,
+  type KeyResourceCredentialAssociation,
+} from "~/features/KeyManagement/components/KeyResourceCard"
+import { KEY_CREDENTIAL_ASSOCIATION_STATES } from "~/features/KeyManagement/credentialAssociations"
 import { saveAccountRuntimeKeysToApiCredentialProfiles } from "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction"
+import { cn } from "~/lib/utils"
 import { buildServiceCredentialRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import type { AccountServiceCredential } from "~/services/apiAdapters/contracts/serviceCredential"
 import { buildApiCredentialProfileName } from "~/services/apiCredentialProfiles/accountTokenProfileName"
@@ -93,6 +94,9 @@ interface ServiceCredentialCardProps {
   selectionDisabledReason?: string
   onCopy: (account: DisplaySiteData) => Promise<void>
   onRotate?: (account: DisplaySiteData) => Promise<void>
+  association?: KeyResourceCredentialAssociation
+  targetId?: string
+  isNavigationTarget?: boolean
 }
 
 /**
@@ -110,6 +114,9 @@ export function ServiceCredentialCard({
   selectionDisabledReason,
   onCopy,
   onRotate,
+  association,
+  targetId,
+  isNavigationTarget = false,
 }: ServiceCredentialCardProps) {
   const { t } = useTranslation(["keyManagement", "messages"])
   const {
@@ -200,6 +207,23 @@ export function ServiceCredentialCard({
     } catch {
       // The shared save helper already logs and shows the localized failure toast.
     }
+  }
+  const apiCredentialAssociation: KeyResourceCredentialAssociation = {
+    ...(association ?? {
+      status: KEY_CREDENTIAL_ASSOCIATION_STATES.Unlinked,
+      label: t("apiCredentialProfiles:association.notLinked"),
+      actionLabel: t("apiCredentialProfiles:association.linkExisting"),
+    }),
+    onSaveAndAssociate:
+      !association ||
+      association.status === KEY_CREDENTIAL_ASSOCIATION_STATES.Unlinked
+        ? handleSaveToApiCredentialProfiles
+        : undefined,
+    saveAndAssociateLabel:
+      !association ||
+      association.status === KEY_CREDENTIAL_ASSOCIATION_STATES.Unlinked
+        ? t("actions.saveToApiProfiles")
+        : undefined,
   }
   const cliProxyPayload = cliProxyProfile
     ? createCliProxyExportPayload(cliProxyProfile)
@@ -406,6 +430,13 @@ export function ServiceCredentialCard({
       <Card
         variant="interactive"
         data-testid={KEY_MANAGEMENT_TEST_IDS.serviceCredentialCard}
+        id={targetId}
+        data-navigation-target={isNavigationTarget ? "true" : undefined}
+        tabIndex={targetId ? -1 : undefined}
+        className={cn(
+          isNavigationTarget &&
+            "ring-primary-500 dark:ring-primary-400 ring-2 ring-offset-2 outline-none",
+        )}
       >
         <CardContent padding="default">
           <div className="flex min-w-0 flex-col gap-3">
@@ -433,94 +464,104 @@ export function ServiceCredentialCard({
                   {t("serviceCredential.singleton")}
                 </Badge>
               </div>
-              <div className="flex shrink-0 flex-wrap items-center gap-1.5">
-                <IconButton
-                  aria-label={t("serviceCredential.copy")}
-                  title={t("serviceCredential.copy")}
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => void onCopy(account)}
-                >
-                  <Copy className="dark:text-dark-text-tertiary h-4 w-4 text-gray-500" />
-                </IconButton>
-                <IconButton
-                  aria-label={t("actions.saveToApiProfiles")}
-                  title={t("actions.saveToApiProfilesHint")}
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => void handleSaveToApiCredentialProfiles()}
-                >
-                  <Library className="dark:text-dark-text-tertiary h-4 w-4 text-gray-500" />
-                </IconButton>
-                <IconButton
-                  aria-label={t("actions.verifyApi")}
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setVerifyingProfile(transientProfile)}
-                >
-                  <Wrench className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                </IconButton>
-                <IconButton
-                  aria-label={t("actions.verifyCliSupport")}
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setCliVerifyingProfile(transientProfile)}
-                >
-                  <Terminal className="h-4 w-4 text-sky-600 dark:text-sky-400" />
-                </IconButton>
-                <ManagedSiteImportButton
-                  managedSiteType={managedSiteType}
-                  managedSiteLabel={managedSiteLabel}
-                  onImport={handleImportToManagedSite}
-                  testId={
-                    KEY_MANAGEMENT_TEST_IDS.serviceCredentialImportToManagedSiteButton
-                  }
-                />
-                <ExportActionsMenu
-                  triggerTestId={
-                    KEY_MANAGEMENT_TEST_IDS.serviceCredentialExportMenuButton
-                  }
-                  actions={{
-                    [EXPORT_ACTION_TARGETS.CherryStudio]: {
-                      onSelect: handleUseInCherry,
-                    },
-                    [EXPORT_ACTION_TARGETS.Kelivo]: {
-                      onSelect: () => setKelivoProfile(transientProfile),
-                    },
-                    [EXPORT_ACTION_TARGETS.CCSwitch]: {
-                      testId:
-                        KEY_MANAGEMENT_TEST_IDS.serviceCredentialExportToCCSwitchButton,
-                      onSelect: () => setCCSwitchProfile(transientProfile),
-                    },
-                    [EXPORT_ACTION_TARGETS.CursorPlus]: {
-                      onSelect: () => setIsCursorPlusDialogOpen(true),
-                    },
-                    [EXPORT_ACTION_TARGETS.KiloCode]: {
-                      onSelect: () => setKiloCodeProfile(transientProfile),
-                    },
-                    [EXPORT_ACTION_TARGETS.CliProxy]: {
-                      onSelect: handleOpenCliProxyDialog,
-                    },
-                    [EXPORT_ACTION_TARGETS.ClaudeCodeRouter]: {
-                      onSelect: handleOpenClaudeCodeRouter,
-                    },
-                  }}
-                />
-                {onRotate ? (
-                  <Button
-                    type="button"
+              <KeyResourceActionToolbar label={t("actionToolbar.label")}>
+                <KeyResourceActionGroup label={t("actionToolbar.quickActions")}>
+                  <IconButton
+                    aria-label={t("serviceCredential.copy")}
                     size="sm"
-                    variant="outline"
-                    loading={isRotating}
-                    onClick={() => void onRotate(account)}
-                    leftIcon={<RefreshCw className="h-4 w-4" />}
+                    variant="ghost"
+                    onClick={() => void onCopy(account)}
                   >
-                    {isRotating
-                      ? t("serviceCredential.rotating")
-                      : t("serviceCredential.rotate")}
-                  </Button>
+                    <Copy className="dark:text-dark-text-tertiary h-4 w-4 text-gray-500" />
+                  </IconButton>
+                </KeyResourceActionGroup>
+                <KeyResourceActionGroup
+                  label={t("actionToolbar.integrationsAndExport")}
+                  separated
+                >
+                  <ManagedSiteImportButton
+                    managedSiteType={managedSiteType}
+                    managedSiteLabel={managedSiteLabel}
+                    onImport={handleImportToManagedSite}
+                    testId={
+                      KEY_MANAGEMENT_TEST_IDS.serviceCredentialImportToManagedSiteButton
+                    }
+                  />
+                  <ExportActionsMenu
+                    triggerTestId={
+                      KEY_MANAGEMENT_TEST_IDS.serviceCredentialExportMenuButton
+                    }
+                    actions={{
+                      [EXPORT_ACTION_TARGETS.CherryStudio]: {
+                        onSelect: handleUseInCherry,
+                      },
+                      [EXPORT_ACTION_TARGETS.Kelivo]: {
+                        onSelect: () => setKelivoProfile(transientProfile),
+                      },
+                      [EXPORT_ACTION_TARGETS.CCSwitch]: {
+                        testId:
+                          KEY_MANAGEMENT_TEST_IDS.serviceCredentialExportToCCSwitchButton,
+                        onSelect: () => setCCSwitchProfile(transientProfile),
+                      },
+                      [EXPORT_ACTION_TARGETS.CursorPlus]: {
+                        onSelect: () => setIsCursorPlusDialogOpen(true),
+                      },
+                      [EXPORT_ACTION_TARGETS.KiloCode]: {
+                        onSelect: () => setKiloCodeProfile(transientProfile),
+                      },
+                      [EXPORT_ACTION_TARGETS.CliProxy]: {
+                        onSelect: handleOpenCliProxyDialog,
+                      },
+                      [EXPORT_ACTION_TARGETS.ClaudeCodeRouter]: {
+                        onSelect: handleOpenClaudeCodeRouter,
+                      },
+                    }}
+                  />
+                  <KeyResourceCredentialAssociationControl
+                    association={apiCredentialAssociation}
+                  />
+                </KeyResourceActionGroup>
+                <KeyResourceActionGroup
+                  label={t("actionToolbar.diagnostics")}
+                  separated
+                >
+                  <IconButton
+                    aria-label={t("actions.verifyApi")}
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setVerifyingProfile(transientProfile)}
+                  >
+                    <Wrench className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                  </IconButton>
+                  <IconButton
+                    aria-label={t("actions.verifyCliSupport")}
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setCliVerifyingProfile(transientProfile)}
+                  >
+                    <Terminal className="h-4 w-4 text-sky-600 dark:text-sky-400" />
+                  </IconButton>
+                </KeyResourceActionGroup>
+                {onRotate ? (
+                  <KeyResourceActionGroup
+                    label={t("actionToolbar.management")}
+                    separated
+                  >
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      loading={isRotating}
+                      onClick={() => void onRotate(account)}
+                      leftIcon={<RefreshCw className="h-4 w-4" />}
+                    >
+                      {isRotating
+                        ? t("serviceCredential.rotating")
+                        : t("serviceCredential.rotate")}
+                    </Button>
+                  </KeyResourceActionGroup>
                 ) : null}
-              </div>
+              </KeyResourceActionToolbar>
             </div>
             <div className="dark:text-dark-text-secondary space-y-2 text-xs text-gray-600 sm:text-sm">
               {isManagedSiteStatusChecking || managedSiteStatus ? (

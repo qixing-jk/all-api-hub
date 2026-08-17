@@ -23,12 +23,19 @@
     "openApiProfiles": "打开 API 凭据库",
     "openSelectedAccountModels": "查看账号模型",
     "retryFailed": "重试失败账号",
-    "saveToApiProfiles": "保存到 API 凭据库",
-    "saveToApiProfilesHint": "将此密钥保存到 API 凭据库，用于快速复制、验证和导出。",
+    "saveToApiProfiles": "保存并关联到 API 凭据库",
     "showKey": "显示密钥",
     "useInCherry": "在 Cherry Studio 中使用",
     "verifyApi": "验证接口",
     "verifyCliSupport": "验证 CLI 兼容性"
+  },
+  "actionToolbar": {
+    "apiCredential": "API 凭据",
+    "diagnostics": "诊断",
+    "integrationsAndExport": "集成与导出",
+    "label": "密钥操作",
+    "management": "管理",
+    "quickActions": "快捷操作"
   },
   "allAccounts": "所有账号",
   "allAccountsFailed": "{{count}} 个账号加载失败，结果不完整",
@@ -158,6 +165,22 @@
     "unavailableReason": "此密钥不支持批量操作。"
   },
   "createFirstKey": "创建第一个密钥",
+  "credentialAssociation": {
+    "linked": "已关联 API 凭据",
+    "needsConfirmation": "关联待确认",
+    "reviewCredential": "查看待确认的凭据关联",
+    "target": {
+      "clear": "返回密钥列表",
+      "found": "已定位到关联密钥",
+      "loading": "正在加载凭据关联…",
+      "locating": "正在定位关联密钥…",
+      "missing": "这条凭据关联已不存在。",
+      "needsConfirmation": "这条凭据关联需要确认后才能打开。",
+      "retry": "重试",
+      "unavailable": "目前无法定位关联密钥，请检查账号连接后重试。"
+    },
+    "viewCredential": "查看关联的 API 凭据"
+  },
   "description": "此页面显示所有账号的 API 密钥信息，包括使用情况和过期时间。可以通过右上角的\"添加密钥\"按钮或点击各密钥项目旁的\"+\"按钮为指定账号创建新密钥。请妥善保管您的 API 密钥，避免泄露给他人",
   "details": {
     "empty": "没有更多详情",
@@ -311,6 +334,7 @@
   "messages": {
     "accountNotFound": "找不到对应账号信息",
     "batchSavedToApiProfiles": "已保存所选密钥到 API 凭据库",
+    "batchSavedToApiProfilesNeedsConfirmation": "已保存所选密钥，请在 API 凭据库中检查标记的关联。",
     "batchSaveToApiProfilesFailed": "保存所选密钥到 API 凭据库失败",
     "batchSaveToApiProfilesPartialFailed": "已保存 {{savedCount}}/{{totalCount}} 个所选密钥，{{failedCount}} 个未能保存。",
     "copyFailed": "复制失败",
@@ -320,6 +344,7 @@
     "loadFailed": "加载密钥列表失败",
     "revealFailed": "显示密钥失败",
     "savedToApiProfiles": "已保存 {{name}} 到 API 凭据库",
+    "savedToApiProfilesNeedsConfirmation": "凭据已保存，请在 API 凭据库中检查其密钥关联。",
     "saveToApiProfilesFailed": "保存到 API 凭据库失败",
     "serviceCredentialCopied": "服务密钥已复制到剪贴板",
     "serviceCredentialRotated": "服务密钥已重置",

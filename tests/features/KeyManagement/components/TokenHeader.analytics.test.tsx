@@ -26,7 +26,7 @@ import {
   RECOVERABLE_ACTION_POLICY,
   renderTokenHeader,
 } from "~~/tests/test-utils/keyManagement/TokenHeaderHarness"
-import { screen, waitFor } from "~~/tests/test-utils/render"
+import { screen, waitFor, within } from "~~/tests/test-utils/render"
 import {
   createAccount,
   createToken,
@@ -170,18 +170,23 @@ vi.mock(
 )
 
 vi.mock("~/services/accounts/utils/apiServiceRequest", () => ({
+  ACCOUNT_RUNTIME_KEY_SECRET_SOURCES: {
+    Auto: "auto",
+    AssociatedProfile: "associated-profile",
+    ProviderThenAssociatedProfile: "provider-then-associated-profile",
+  },
   resolveDisplayAccountTokenForSecret: (...args: unknown[]) =>
     resolveDisplayAccountTokenForSecretMock(...args),
 }))
 
-vi.mock(
-  "~/services/apiCredentialProfiles/apiCredentialProfilesStorage",
-  () => ({
-    apiCredentialProfilesStorage: {
-      createProfile: (...args: unknown[]) => createProfileMock(...args),
-    },
-  }),
-)
+vi.mock("~/services/apiCredentialProfiles/apiCredentialProfileLinks", () => ({
+  apiCredentialProfileLinks: {
+    capture: async ({ profile }: { profile: unknown }) => ({
+      status: "captured",
+      profile: await createProfileMock(profile),
+    }),
+  },
+}))
 
 vi.mock("~/services/integrations/cherryStudio", () => ({
   OpenInCherryStudio: (...args: unknown[]) => openInCherryStudioMock(...args),
@@ -275,9 +280,9 @@ describe("TokenHeader analytics", () => {
       screen.getByRole("button", { name: "keyManagement:actions.verifyApi" }),
     ).toBeVisible()
     expect(
-      screen.getByRole("button", {
-        name: "keyManagement:actions.saveToApiProfiles",
-      }),
+      screen.getByTestId(
+        KEY_MANAGEMENT_TEST_IDS.apiCredentialAssociationButton,
+      ),
     ).toBeVisible()
     expect(
       screen.getByRole("button", { name: "keyManagement:actions.editKey" }),
@@ -287,6 +292,143 @@ describe("TokenHeader analytics", () => {
         name: "keyManagement:actions.deleteKey",
       }),
     ).toBeVisible()
+  })
+
+  it("places the unified API credential menu after export actions", () => {
+    renderTokenHeader()
+
+    const toolbar = screen.getByRole("toolbar", {
+      name: "keyManagement:actionToolbar.label",
+    })
+    const quickActionsGroup = within(toolbar).getByRole("group", {
+      name: "keyManagement:actionToolbar.quickActions",
+    })
+    const integrationsGroup = within(toolbar).getByRole("group", {
+      name: "keyManagement:actionToolbar.integrationsAndExport",
+    })
+    const diagnosticsGroup = within(toolbar).getByRole("group", {
+      name: "keyManagement:actionToolbar.diagnostics",
+    })
+    const managementGroup = within(toolbar).getByRole("group", {
+      name: "keyManagement:actionToolbar.management",
+    })
+
+    expect(
+      within(quickActionsGroup).getByRole("button", {
+        name: "common:actions.copyKey",
+      }),
+    ).toBeVisible()
+    expect(
+      within(integrationsGroup).getByRole("button", {
+        name: "keyManagement:actions.importToManagedSite",
+      }),
+    ).toBeVisible()
+    const exportButton = within(integrationsGroup).getByRole("button", {
+      name: "common:actions.export",
+    })
+    const apiCredentialButton = within(integrationsGroup).getByTestId(
+      KEY_MANAGEMENT_TEST_IDS.apiCredentialAssociationButton,
+    )
+    expect(
+      screen.getAllByTestId(
+        KEY_MANAGEMENT_TEST_IDS.apiCredentialAssociationButton,
+      ),
+    ).toHaveLength(1)
+    expect(apiCredentialButton).toHaveClass("hover:bg-accent")
+    expect(apiCredentialButton).not.toHaveClass("border")
+    expect(
+      exportButton.compareDocumentPosition(apiCredentialButton) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+    expect(
+      within(diagnosticsGroup).getByRole("button", {
+        name: "keyManagement:actions.verifyApi",
+      }),
+    ).toBeVisible()
+    expect(
+      within(managementGroup).getByRole("button", {
+        name: "keyManagement:actions.deleteKey",
+      }),
+    ).toBeVisible()
+  })
+
+  it("does not separate an association-only action from management", () => {
+    renderTokenHeader({
+      actionPolicy: {
+        ...RECOVERABLE_ACTION_POLICY,
+        copySecret: false,
+        exportSecret: false,
+        verifySecret: false,
+      },
+      association: {
+        status: "linked",
+        label: "keyManagement:credentialAssociation.linked",
+        actionLabel: "keyManagement:credentialAssociation.viewCredential",
+        onOpen: vi.fn(),
+      },
+    })
+
+    const toolbar = screen.getByRole("toolbar", {
+      name: "keyManagement:actionToolbar.label",
+    })
+    const managementGroup = within(toolbar).getByRole("group", {
+      name: "keyManagement:actionToolbar.management",
+    })
+    expect(
+      managementGroup.parentElement?.querySelector('span[aria-hidden="true"]'),
+    ).toBeNull()
+  })
+
+  it("uses the linked identity menu without offering another save", async () => {
+    const user = userEvent.setup()
+    renderTokenHeader({
+      association: {
+        status: "linked",
+        label: "keyManagement:credentialAssociation.linked",
+        actionLabel: "keyManagement:credentialAssociation.viewCredential",
+        onOpen: vi.fn(),
+      },
+    })
+
+    await user.click(
+      screen.getByTestId(
+        KEY_MANAGEMENT_TEST_IDS.apiCredentialAssociationButton,
+      ),
+    )
+    expect(
+      screen.queryByRole("menuitem", {
+        name: "keyManagement:actions.saveToApiProfiles",
+      }),
+    ).not.toBeInTheDocument()
+  })
+
+  it("offers save and existing-credential actions in the unlinked menu", async () => {
+    const user = userEvent.setup()
+    renderTokenHeader({
+      association: {
+        status: "unlinked",
+        label: "apiCredentialProfiles:association.notLinked",
+        actionLabel: "apiCredentialProfiles:association.linkExisting",
+        associateLabel: "apiCredentialProfiles:association.linkExisting",
+        onAssociate: vi.fn(),
+      },
+    })
+
+    await user.click(
+      screen.getByTestId(
+        KEY_MANAGEMENT_TEST_IDS.apiCredentialAssociationButton,
+      ),
+    )
+    expect(
+      screen.getByRole("menuitem", {
+        name: "keyManagement:actions.saveToApiProfiles",
+      }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("menuitem", {
+        name: "apiCredentialProfiles:association.linkExisting",
+      }),
+    ).toBeInTheDocument()
   })
 
   it("omits CC Switch when its export opener is unavailable", async () => {
@@ -366,6 +508,11 @@ describe("TokenHeader analytics", () => {
     for (const name of unavailableActions) {
       expect(screen.queryByRole("button", { name })).toBeNull()
     }
+    expect(
+      screen.queryByTestId(
+        KEY_MANAGEMENT_TEST_IDS.apiCredentialAssociationButton,
+      ),
+    ).not.toBeInTheDocument()
     expect(kiloCodeDialogRenderMock).not.toHaveBeenCalled()
     expect(claudeCodeRouterDialogRenderMock).not.toHaveBeenCalled()
     expect(cliProxyDialogRenderMock).not.toHaveBeenCalled()
@@ -403,7 +550,12 @@ describe("TokenHeader analytics", () => {
     renderTokenHeader()
 
     await user.click(
-      screen.getByRole("button", {
+      screen.getByTestId(
+        KEY_MANAGEMENT_TEST_IDS.apiCredentialAssociationButton,
+      ),
+    )
+    await user.click(
+      screen.getByRole("menuitem", {
         name: "keyManagement:actions.saveToApiProfiles",
       }),
     )
@@ -441,7 +593,12 @@ describe("TokenHeader analytics", () => {
     renderTokenHeader()
 
     await user.click(
-      screen.getByRole("button", {
+      screen.getByTestId(
+        KEY_MANAGEMENT_TEST_IDS.apiCredentialAssociationButton,
+      ),
+    )
+    await user.click(
+      screen.getByRole("menuitem", {
         name: "keyManagement:actions.saveToApiProfiles",
       }),
     )
@@ -1130,10 +1287,13 @@ describe("TokenHeader analytics", () => {
     expect(showResultToastMock).toHaveBeenCalledWith({ success: true })
   })
 
-  it("highlights managed-site import without opening the import dialog", () => {
+  it("highlights managed-site import without opening the import dialog", async () => {
     vi.useFakeTimers()
     try {
       renderTokenHeader({ guidedManagedSiteImportRequest: "request-1" })
+      await act(async () => {
+        vi.advanceTimersByTime(0)
+      })
 
       const importButton = screen.getByTestId(
         KEY_MANAGEMENT_TEST_IDS.importToManagedSiteButton,
@@ -1201,9 +1361,12 @@ describe("TokenHeader analytics", () => {
     ).not.toHaveAttribute("data-guidance-highlight")
 
     rerenderTokenHeader({ guidedManagedSiteImportRequest: "request-2" })
-    expect(
-      screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.importToManagedSiteButton),
-    ).toHaveAttribute("data-guidance-highlight", "true")
+    const importButton = screen.getByTestId(
+      KEY_MANAGEMENT_TEST_IDS.importToManagedSiteButton,
+    )
+    await waitFor(() =>
+      expect(importButton).toHaveAttribute("data-guidance-highlight", "true"),
+    )
   })
 
   it("invalidates pending API and CLI verification when permission is revoked", async () => {

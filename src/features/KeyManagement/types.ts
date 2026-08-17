@@ -5,8 +5,18 @@ import type {
 } from "~/services/apiAdapters/contracts/accountKeyResource"
 import type { AccountServiceCredential } from "~/services/apiAdapters/contracts/serviceCredential"
 
+export const KEY_MANAGEMENT_LOAD_STATUSES = {
+  Idle: "idle",
+  Loading: "loading",
+  Loaded: "loaded",
+  Error: "error",
+} as const
+
+export type KeyManagementLoadStatus =
+  (typeof KEY_MANAGEMENT_LOAD_STATUSES)[keyof typeof KEY_MANAGEMENT_LOAD_STATUSES]
+
 export type ServiceCredentialState = {
-  status: "idle" | "loading" | "loaded" | "error"
+  status: KeyManagementLoadStatus
   credential?: AccountServiceCredential
   errorMessage?: string
   isRotating?: boolean

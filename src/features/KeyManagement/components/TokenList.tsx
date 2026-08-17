@@ -20,11 +20,14 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { saveAccountRuntimeKeysToApiCredentialProfiles } from "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction"
 import { cn } from "~/lib/utils"
 import {
+  ACCOUNT_RUNTIME_KEY_SOURCES,
   buildAccountTokenRuntimeKeyId,
   buildDisplayAccountTokenRuntimeKey,
+  getAccountRuntimeKeyLocator,
   hasUsableAccountRuntimeKeySecret,
   isAccountTokenRuntimeKey,
   isServiceCredentialRuntimeKey,
+  type AccountRuntimeKeyLocator,
 } from "~/services/accounts/accountRuntimeKeys"
 import type {
   AccountKeyResourceFacts,
@@ -43,6 +46,10 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import type { AccountToken, DisplaySiteData } from "~/types"
+import type {
+  ApiCredentialProfile,
+  ApiCredentialProfileLink,
+} from "~/types/apiCredentialProfiles"
 import {
   isResolvedManagedSiteTokenBatchExportItemInput,
   MANAGED_SITE_TOKEN_BATCH_IMPORT_SOURCES,
@@ -56,14 +63,20 @@ import { createLogger } from "~/utils/core/logger"
 import { openSiteSupportRequestPage } from "~/utils/navigation"
 import { SITE_SUPPORT_ERROR_TYPES } from "~/utils/navigation/feedbackLinks"
 
-import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "../constants"
+import {
+  KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE,
+  type KeyManagementAssociationTargetResultState,
+} from "../constants"
+import { useTokenCredentialAssociations } from "../hooks/useTokenCredentialAssociations"
 import {
   isKeyResourceBatchSelectable,
   isKeyResourceExportable,
 } from "../presentation/legacyKeyResourceCard"
+import { openRouterKeyResourceCardAdapter } from "../presentation/openRouterKeyResourceCard"
 import { KEY_MANAGEMENT_TEST_IDS } from "../testIds"
 import {
   KEY_MANAGEMENT_DISPLAY_ROW_KINDS,
+  KEY_MANAGEMENT_LOAD_STATUSES,
   type ApiCredentialProfileSaveEntry,
   type CliProxyExportEntry,
   type KeyManagementDisplayRow,
@@ -170,6 +183,23 @@ interface TokenListProps {
   onOpenNativeDetail?: (ref: AccountKeyResourceRef) => void
   onEditNativeKey?: (ref: AccountKeyResourceRef) => void
   onDeleteNativeKey?: (ref: AccountKeyResourceRef) => void
+  credentialProfileLinks?: readonly ApiCredentialProfileLink[]
+  getCredentialProfileForLocator?: (
+    locator: AccountRuntimeKeyLocator,
+  ) => ApiCredentialProfile | undefined
+  canManageCredentialAssociations?: boolean
+  /** Whether at least one saved API credential can be selected for association. */
+  canAssociateExistingCredential?: boolean
+  onAssociateAssociation?: (
+    locator: AccountRuntimeKeyLocator,
+    displayLabel?: string,
+    targetSecret?: string,
+  ) => void
+  onUnlinkAssociation?: (associationId: string) => void | Promise<void>
+  associationTarget?: ApiCredentialProfileLink | null
+  onAssociationTargetStatusChange?: (
+    status: KeyManagementAssociationTargetResultState,
+  ) => void
 }
 
 /**
@@ -439,6 +469,14 @@ export function TokenList(props: TokenListProps) {
     onOpenNativeDetail,
     onEditNativeKey,
     onDeleteNativeKey,
+    credentialProfileLinks = [],
+    getCredentialProfileForLocator,
+    canManageCredentialAssociations = false,
+    canAssociateExistingCredential = true,
+    onAssociateAssociation,
+    onUnlinkAssociation,
+    associationTarget,
+    onAssociationTargetStatusChange,
   } = props
   const { t } = useTranslation(["keyManagement", "settings"])
   const { managedSiteType } = useUserPreferencesContext()
@@ -508,7 +546,10 @@ export function TokenList(props: TokenListProps) {
       ? displayData
           .map((account): KeyManagementEntry | null => {
             const entry = serviceCredentials[account.id]
-            if (entry?.status !== "loaded" || !entry.credential) {
+            if (
+              entry?.status !== KEY_MANAGEMENT_LOAD_STATUSES.Loaded ||
+              !entry.credential
+            ) {
               return null
             }
 
@@ -556,6 +597,22 @@ export function TokenList(props: TokenListProps) {
     ],
     [filteredEntries, nativeRows],
   )
+  const {
+    getAssociationPresentation,
+    getNativeNavigationProps,
+    getRuntimeEntryNavigationProps,
+  } = useTokenCredentialAssociations({
+    associationTarget,
+    canAssociateExistingCredential,
+    canManageCredentialAssociations,
+    credentialProfileLinks,
+    filteredDisplayRows,
+    isLoading,
+    nativeLoading,
+    onAssociateAssociation,
+    onAssociationTargetStatusChange,
+    onUnlinkAssociation,
+  })
   const managedSiteLabel = getManagedSiteLabel(t, managedSiteType)
   const guidedManagedSiteImportEntryId = useMemo(() => {
     if (!guidedManagedSiteImportAccountId) return null
@@ -1028,6 +1085,12 @@ export function TokenList(props: TokenListProps) {
         selectionLabel={entry.runtimeKey.label}
         onCopy={onCopyServiceCredential}
         onRotate={onRotateServiceCredential}
+        association={getAssociationPresentation(
+          getAccountRuntimeKeyLocator(entry.runtimeKey),
+          entry.runtimeKey.label,
+          entry.runtimeKey.secret,
+        )}
+        {...getRuntimeEntryNavigationProps(entry)}
       />
     ) : null
   }
@@ -1037,6 +1100,8 @@ export function TokenList(props: TokenListProps) {
   ) => (
     <AccountKeyResourceList
       rows={rows}
+      ariaLabel={t("keyManagement:openRouter.list.heading")}
+      cardAdapter={openRouterKeyResourceCardAdapter}
       onOpenDetail={onOpenNativeDetail}
       onEdit={onEditNativeKey ?? (() => undefined)}
       onDelete={onDeleteNativeKey ?? (() => undefined)}
@@ -1048,6 +1113,23 @@ export function TokenList(props: TokenListProps) {
       selectionDisabledReason={t(
         "keyManagement:batchSelection.unavailableReason",
       )}
+      getAssociation={(row) =>
+        getAssociationPresentation(
+          {
+            source: ACCOUNT_RUNTIME_KEY_SOURCES.AccountKeyResource,
+            ref: row.facts.ref,
+          },
+          row.facts.displayName,
+          row.facts.maskedLabel,
+        )
+      }
+      getCredentialProfile={(row) =>
+        getCredentialProfileForLocator?.({
+          source: ACCOUNT_RUNTIME_KEY_SOURCES.AccountKeyResource,
+          ref: row.facts.ref,
+        })
+      }
+      getNavigationTarget={getNativeNavigationProps}
     />
   )
   const nativeResourceList = renderNativeResourceList(nativeRows)
@@ -1295,6 +1377,11 @@ export function TokenList(props: TokenListProps) {
                           token.accountId,
                           token.id,
                         )
+                        const runtimeKeyLocator = getAccountRuntimeKeyLocator(
+                          entry.runtimeKey,
+                        )
+                        const associatedProfile =
+                          getCredentialProfileForLocator?.(runtimeKeyLocator)
                         const managedSiteStatusEntry =
                           managedSiteTokenStatuses?.[tokenIdentityKey]
 
@@ -1302,7 +1389,12 @@ export function TokenList(props: TokenListProps) {
                           <TokenListItem
                             key={entry.id}
                             token={token}
-                            displayTokenKey={getVisibleTokenKey(token)}
+                            displayTokenKey={
+                              associatedProfile?.apiKey.trim() &&
+                              !visibleKeys.has(tokenIdentityKey)
+                                ? associatedProfile.apiKey
+                                : getVisibleTokenKey(token)
+                            }
                             visibleKeys={visibleKeys}
                             isKeyVisibilityLoading={resolvingVisibleKeys.has(
                               tokenIdentityKey,
@@ -1331,6 +1423,13 @@ export function TokenList(props: TokenListProps) {
                                 ? guidedManagedSiteImport?.request
                                 : undefined
                             }
+                            association={getAssociationPresentation(
+                              runtimeKeyLocator,
+                              entry.runtimeKey.label,
+                              entry.runtimeKey.secret,
+                            )}
+                            associatedProfile={associatedProfile}
+                            {...getRuntimeEntryNavigationProps(entry)}
                           />
                         )
                       })}
@@ -1361,6 +1460,11 @@ export function TokenList(props: TokenListProps) {
               token.accountId,
               token.id,
             )
+            const runtimeKeyLocator = getAccountRuntimeKeyLocator(
+              entry.runtimeKey,
+            )
+            const associatedProfile =
+              getCredentialProfileForLocator?.(runtimeKeyLocator)
             const managedSiteStatusEntry =
               managedSiteTokenStatuses?.[tokenIdentityKey]
 
@@ -1368,7 +1472,12 @@ export function TokenList(props: TokenListProps) {
               <TokenListItem
                 key={entry.id}
                 token={token}
-                displayTokenKey={getVisibleTokenKey(token)}
+                displayTokenKey={
+                  associatedProfile?.apiKey.trim() &&
+                  !visibleKeys.has(tokenIdentityKey)
+                    ? associatedProfile.apiKey
+                    : getVisibleTokenKey(token)
+                }
                 visibleKeys={visibleKeys}
                 isKeyVisibilityLoading={resolvingVisibleKeys.has(
                   tokenIdentityKey,
@@ -1393,6 +1502,13 @@ export function TokenList(props: TokenListProps) {
                     ? guidedManagedSiteImport?.request
                     : undefined
                 }
+                association={getAssociationPresentation(
+                  runtimeKeyLocator,
+                  entry.runtimeKey.label,
+                  entry.runtimeKey.secret,
+                )}
+                associatedProfile={associatedProfile}
+                {...getRuntimeEntryNavigationProps(entry)}
               />
             )
           })}

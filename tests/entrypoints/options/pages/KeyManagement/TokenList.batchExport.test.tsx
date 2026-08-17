@@ -5,6 +5,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { TokenList } from "~/features/KeyManagement/components/TokenList"
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "~/features/KeyManagement/constants"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
+import { KEY_MANAGEMENT_LOAD_STATUSES } from "~/features/KeyManagement/types"
 import { buildServiceCredentialRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -1045,7 +1046,7 @@ describe("TokenList batch export selection", () => {
       filteredTokens: [],
       serviceCredentials: {
         [sharedChatAccount.id]: {
-          status: "loaded",
+          status: KEY_MANAGEMENT_LOAD_STATUSES.Loaded,
           credential: {
             kind: "singleton_service_key",
             service: "codex",

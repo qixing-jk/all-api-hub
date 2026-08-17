@@ -54,6 +54,7 @@ import {
 } from "~/services/accounts/accountPostSaveWorkflow"
 import { doAccountSiteIdentitiesMatch } from "~/services/accounts/accountSiteProfile"
 import { accountStorage } from "~/services/accounts/accountStorage"
+import type { CreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
 import {
   createDisplayAccountApiContext,
   requireDisplayAccountKeyManagement,
@@ -68,6 +69,7 @@ import {
   normalizeAccountSiteUrlForDuplicateCheck,
 } from "~/services/accounts/utils/siteUrlNormalization"
 import { isCanonicalOpenRouterUrl } from "~/services/accountSiteDefinitions/identifiers"
+import { createAIHubMixCreatedRuntimeSecret } from "~/services/apiAdapters/aihubmix/createdSecret"
 import { getManagedSiteServiceForType } from "~/services/managedSites/managedSiteService"
 import {
   getManagedSiteConfigMissingMessage,
@@ -407,6 +409,8 @@ export function useAccountDialog({
     useState<AccountPostSaveWorkflowStep>(ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle)
   const [postSaveOneTimeToken, setPostSaveOneTimeToken] =
     useState<ApiToken | null>(null)
+  const [postSaveOneTimeSecret, setPostSaveOneTimeSecret] =
+    useState<CreatedRuntimeSecret | null>(null)
   const [postSaveSub2ApiAllowedGroups, setPostSaveSub2ApiAllowedGroups] =
     useState<string[] | null>(null)
   const [postSaveSub2ApiAccount, setPostSaveSub2ApiAccount] =
@@ -999,6 +1003,7 @@ export function useAccountDialog({
     aihubmixPostSaveKeyRunRef.current += 1
     setAccountPostSaveWorkflowStep(ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle)
     setPostSaveOneTimeToken(null)
+    setPostSaveOneTimeSecret(null)
     setPostSaveSub2ApiAllowedGroups(null)
     setPostSaveSub2ApiAccount(null)
     setAihubmixPostSaveKeyPrompt({
@@ -2555,6 +2560,12 @@ export function useAccountDialog({
           isCreating: false,
         })
         setPostSaveOneTimeToken(ensureResult.token)
+        setPostSaveOneTimeSecret(
+          createAIHubMixCreatedRuntimeSecret({
+            account: displaySiteData,
+            token: ensureResult.token,
+          }),
+        )
         return
       }
 
@@ -2652,6 +2663,7 @@ export function useAccountDialog({
   const handlePostSaveOneTimeTokenClose = useCallback(async () => {
     const runId = postSaveAutoConfigRunRef.current
     setPostSaveOneTimeToken(null)
+    setPostSaveOneTimeSecret(null)
     const pending = pendingPostSaveChannelRef.current
     pendingPostSaveChannelRef.current = null
     if (!pending?.token) {
@@ -2960,6 +2972,12 @@ export function useAccountDialog({
               token: ensureResult.token,
             }
             setPostSaveOneTimeToken(ensureResult.token)
+            setPostSaveOneTimeSecret(
+              createAIHubMixCreatedRuntimeSecret({
+                account: displaySiteData,
+                token: ensureResult.token,
+              }),
+            )
             setAccountPostSaveWorkflowStep(
               ACCOUNT_POST_SAVE_WORKFLOW_STEPS.WaitingForOneTimeKeyAcknowledgement,
             )
@@ -3091,6 +3109,7 @@ export function useAccountDialog({
       isImportingSub2apiSession,
       accountPostSaveWorkflowStep,
       postSaveOneTimeToken,
+      postSaveOneTimeSecret,
       postSaveSub2ApiAllowedGroups,
       postSaveSub2ApiAccount,
       postSaveSub2ApiDialogSessionId,

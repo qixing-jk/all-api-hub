@@ -25,12 +25,19 @@
     "openApiProfiles": "Abrir biblioteca de credenciais de API",
     "openSelectedAccountModels": "Ver modelos da conta",
     "retryFailed": "Tentar novamente as falhas",
-    "saveToApiProfiles": "Salvar na biblioteca de credenciais de API",
-    "saveToApiProfilesHint": "Salve esta chave na biblioteca de credenciais de API para copiá-la, verificá-la e exportá-la rapidamente.",
+    "saveToApiProfiles": "Salvar e associar à credencial de API",
     "showKey": "Mostrar chave",
     "useInCherry": "Usar no Cherry Studio",
     "verifyApi": "Verificar API",
     "verifyCliSupport": "Verificar compatibilidade com CLI"
+  },
+  "actionToolbar": {
+    "apiCredential": "Credencial de API",
+    "diagnostics": "Diagnóstico",
+    "integrationsAndExport": "Integrações e exportação",
+    "label": "Ações da chave",
+    "management": "Gerenciamento",
+    "quickActions": "Ações rápidas"
   },
   "allAccounts": "Todas as contas",
   "allAccountsFailed_one": "Falha ao carregar {{count}} conta; os resultados estão incompletos",
@@ -168,6 +175,22 @@
     "unavailableReason": "Esta chave não é compatível com ações em lote."
   },
   "createFirstKey": "Criar primeira chave",
+  "credentialAssociation": {
+    "linked": "Credencial de API vinculada",
+    "needsConfirmation": "O vínculo da credencial precisa de confirmação",
+    "reviewCredential": "Revisar vínculo da credencial",
+    "target": {
+      "clear": "Mostrar lista de chaves",
+      "found": "Chave vinculada localizada",
+      "loading": "Carregando o vínculo da credencial...",
+      "locating": "Localizando a chave vinculada...",
+      "missing": "Este vínculo de credencial não existe mais.",
+      "needsConfirmation": "Este vínculo de credencial precisa ser confirmado antes de ser aberto.",
+      "retry": "Tentar novamente",
+      "unavailable": "Não foi possível localizar a chave vinculada agora. Verifique a conexão da conta e tente novamente."
+    },
+    "viewCredential": "Ver credencial de API vinculada"
+  },
   "description": "Esta página exibe as informações das chaves de API de todas as contas, incluindo uso e data de expiração. Para criar uma chave para uma conta específica, clique no botão \"Adicionar chave\" no canto superior direito ou no botão \"+\" ao lado de cada item. Mantenha suas chaves de API seguras e não as compartilhe com outras pessoas",
   "details": {
     "empty": "Não há detalhes adicionais",
@@ -329,6 +352,7 @@
   "messages": {
     "accountNotFound": "Informações da conta não encontradas",
     "batchSavedToApiProfiles": "Chaves selecionadas salvas na biblioteca de credenciais de API",
+    "batchSavedToApiProfilesNeedsConfirmation": "As chaves selecionadas foram salvas. Revise as associações destacadas na biblioteca de credenciais de API.",
     "batchSaveToApiProfilesFailed": "Falha ao salvar as chaves selecionadas na biblioteca de credenciais de API",
     "batchSaveToApiProfilesPartialFailed": "{{savedCount}} de {{totalCount}} chaves selecionadas foram salvas. Não foi possível salvar {{failedCount}}.",
     "copyFailed": "Falha ao copiar",
@@ -338,6 +362,7 @@
     "loadFailed": "Falha ao carregar a lista de chaves",
     "revealFailed": "Falha ao revelar a chave",
     "savedToApiProfiles": "{{name}} foi salva na biblioteca de credenciais de API",
+    "savedToApiProfilesNeedsConfirmation": "A credencial foi salva. Revise a associação da chave na biblioteca de credenciais de API.",
     "saveToApiProfilesFailed": "Falha ao salvar na biblioteca de credenciais de API",
     "serviceCredentialCopied": "Chave de serviço copiada para a área de transferência",
     "serviceCredentialRotated": "Chave de serviço redefinida",

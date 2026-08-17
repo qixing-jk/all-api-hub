@@ -11,6 +11,7 @@ import {
   buildDisplayAccountTokenRuntimeKey,
   type AccountTokenRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
+import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/keyManagement"
 import {
   createAccount,
   createToken,
@@ -19,6 +20,23 @@ import {
 const t = ((key: string) => key) as TFunction
 
 describe("buildLegacyKeyResourceCardPresentation", () => {
+  it("treats an exact associated profile as a recoverable secret source", () => {
+    const runtimeKey = buildDisplayAccountTokenRuntimeKey(
+      createAccount({ siteType: SITE_TYPES.AIHUBMIX }),
+      createToken({ key: "sk-masked********" }),
+    )
+
+    const presentation = buildLegacyKeyResourceCardPresentation(runtimeKey, t, {
+      hasAssociatedSecret: true,
+    })
+
+    expect(presentation.secretAvailability).toBe(
+      INVENTORY_SECRET_AVAILABILITIES.Recoverable,
+    )
+    expect(presentation.actions.copySecret).toBe(true)
+    expect(presentation.actions.revealSecret).toBe(true)
+    expect(presentation.secretAvailabilityMessage).toBeUndefined()
+  })
   it("keeps group and usage prominent while placing creation after last use", () => {
     const runtimeKey = buildDisplayAccountTokenRuntimeKey(
       createAccount({ siteType: SITE_TYPES.NEW_API }),

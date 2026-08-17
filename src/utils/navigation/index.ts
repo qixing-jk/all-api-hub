@@ -309,7 +309,19 @@ interface BookmarkManagerNavigationParams {
 
 interface ApiCredentialProfilesNavigationParams {
   create?: ApiCredentialProfileCreationNavigationParams
+  profileId?: string
 }
+
+/**
+ * Target descriptor for Key Management deep links.
+ * Passing a string keeps the legacy account-only helper contract working.
+ */
+type KeyManagementNavigationTarget =
+  | string
+  | {
+      accountId?: string
+      associationId?: string
+    }
 
 /**
  * Opens or focuses the account manager page, preferring in-page navigation when already on options.html.
@@ -567,46 +579,73 @@ const _openApiCredentialProfilesPage = (
   params?: ApiCredentialProfilesNavigationParams,
 ) => {
   const targetHash = getApiCredentialProfilesHash()
-  const searchParams = params?.create
-    ? {
-        action: "add",
-        name: params.create.name,
-        baseUrl: params.create.baseUrl,
-        apiKeyCreateUrl: params.create.apiKeyCreateUrl,
-        apiKeyCreateHint: params.create.apiKeyCreateHint,
-      }
-    : undefined
+  const profileId = params?.profileId?.trim()
+  const searchParams = profileId
+    ? { profileId }
+    : params?.create
+      ? {
+          action: "add",
+          name: params.create.name,
+          baseUrl: params.create.baseUrl,
+          apiKeyCreateUrl: params.create.apiKeyCreateUrl,
+          apiKeyCreateHint: params.create.apiKeyCreateHint,
+        }
+      : undefined
 
   if (isOnOptionsPage()) {
-    replaceWithinOptionsPage(targetHash, searchParams)
+    if (profileId) {
+      pushWithinOptionsPage(targetHash, searchParams)
+    } else {
+      replaceWithinOptionsPage(targetHash, searchParams)
+    }
     return
   }
 
   return openOrFocusOptionsPage(targetHash, searchParams)
 }
 
-/**
- * Opens the Keys page, optionally pre-selecting an account.
- * @param accountId Optional account id to prefill.
- */
-const _openKeysPage = async (accountId?: string) => {
-  const targetHash = `#${MENU_ITEM_IDS.KEYS}`
-  const searchParams = accountId ? { accountId } : undefined
-
+const openTargetedOptionsPage = async (params: {
+  targetHash: string
+  inPageSearchParams?: Record<string, string | undefined>
+  newTabSearchParams?: Record<string, string | undefined>
+}) => {
   if (isOnOptionsPage()) {
-    pushWithinOptionsPage(targetHash, searchParams)
+    pushWithinOptionsPage(params.targetHash, params.inPageSearchParams)
     return
   }
 
   const baseUrl = getExtensionURL("options.html")
-  const url = new URL(baseUrl)
+  await createActiveTab(
+    `${baseUrl}${buildSearchString(params.newTabSearchParams)}${params.targetHash}`,
+  )
+}
 
-  if (accountId) {
-    url.searchParams.set("accountId", accountId)
-  }
+/**
+ * Opens the Keys page, optionally targeting an account or explicit association.
+ * @param target Optional account id or structured target descriptor.
+ */
+const _openKeysPage = async (target?: KeyManagementNavigationTarget) => {
+  const targetHash = `#${MENU_ITEM_IDS.KEYS}`
+  const searchParams =
+    typeof target === "string"
+      ? { accountId: target }
+      : target
+        ? {
+            accountId: target.accountId,
+            associationId: target.associationId,
+          }
+        : undefined
 
-  url.hash = targetHash
-  await createActiveTab(url.toString())
+  return openTargetedOptionsPage({
+    targetHash,
+    inPageSearchParams: searchParams,
+    newTabSearchParams: searchParams
+      ? {
+          accountId: searchParams.accountId || undefined,
+          associationId: searchParams.associationId || undefined,
+        }
+      : undefined,
+  })
 }
 
 /**
@@ -635,28 +674,19 @@ const _openModelsPage = async (target?: ModelManagementNavigationTarget) => {
           }
         : undefined
 
-  if (isOnOptionsPage()) {
-    pushWithinOptionsPage(targetHash, searchParams)
-    return
-  }
-
-  const baseUrl = getExtensionURL("options.html")
-  const url = new URL(baseUrl)
-
-  if (typeof target === "string") {
-    url.searchParams.set("accountId", target)
-  } else if (target) {
-    if (target.accountId) {
-      url.searchParams.set("accountId", target.accountId)
-    }
-
-    if (target.profileId) {
-      url.searchParams.set("profileId", target.profileId)
-    }
-  }
-
-  url.hash = targetHash
-  await createActiveTab(url.toString())
+  return openTargetedOptionsPage({
+    targetHash,
+    inPageSearchParams: searchParams,
+    newTabSearchParams:
+      typeof target === "string"
+        ? { accountId: target }
+        : searchParams
+          ? {
+              accountId: searchParams.accountId || undefined,
+              profileId: searchParams.profileId || undefined,
+            }
+          : undefined,
+  })
 }
 
 /**

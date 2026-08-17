@@ -16,12 +16,32 @@ vi.mock("~/hooks/useMediaQuery", () => ({
 vi.mock(
   "~/features/ApiCredentialProfiles/components/ApiCredentialProfileListItem",
   () => ({
-    ApiCredentialProfileListItem: ({ profile, onEdit }: any) => (
-      <article aria-label={profile.name}>
+    ApiCredentialProfileListItem: ({
+      profile,
+      onEdit,
+      focusRequest,
+      associatedKeyState,
+      onOpenAssociatedKey,
+    }: any) => (
+      <article
+        aria-label={profile.name}
+        data-focus-request={focusRequest}
+        data-association-status={associatedKeyState?.status}
+      >
         <span>{profile.name}</span>
         <button type="button" onClick={() => onEdit(profile)}>
           Edit {profile.name}
         </button>
+        {associatedKeyState?.status === "linked" ? (
+          <button
+            type="button"
+            onClick={() =>
+              onOpenAssociatedKey(associatedKeyState.items[0].associationId)
+            }
+          >
+            Open associated key {profile.name}
+          </button>
+        ) : null}
       </article>
     ),
   }),
@@ -288,6 +308,77 @@ describe("ApiCredentialProfilesList endpoint navigation", () => {
       />,
     )
     expect(await screen.findByText("Second endpoint")).toBeVisible()
+  })
+
+  it("selects the target profile endpoint and forwards the focus request", async () => {
+    const first = createProfile(
+      "first",
+      "First endpoint",
+      "https://first.example.invalid",
+    )
+    const second = createProfile(
+      "second",
+      "Target endpoint",
+      "https://target.example.invalid",
+    )
+
+    render(
+      <ApiCredentialProfilesList
+        profiles={[first, second]}
+        controller={createController()}
+        targetProfile={{ profileId: second.id, request: 1 }}
+      />,
+    )
+
+    const targetRow = await screen.findByRole("article", {
+      name: second.name,
+    })
+    expect(targetRow).toHaveAttribute("data-focus-request", "1")
+    expect(screen.queryByText(first.name)).not.toBeInTheDocument()
+  })
+
+  it("forwards one active association and its navigation callback", async () => {
+    const user = userEvent.setup()
+    const profile = createProfile(
+      "linked",
+      "Linked profile",
+      "https://linked.example.invalid",
+    )
+    const onOpenAssociatedKey = vi.fn()
+
+    render(
+      <ApiCredentialProfilesList
+        profiles={[profile]}
+        controller={createController()}
+        associatedKeyStateByProfileId={{
+          [profile.id]: {
+            status: "linked",
+            items: [
+              {
+                associationId: "association-1",
+                locator: {
+                  source: "account_token",
+                  accountId: "account-example",
+                  siteType: "new-api",
+                  tokenId: 1,
+                },
+                state: "active",
+              },
+            ],
+          },
+        }}
+        onOpenAssociatedKey={onOpenAssociatedKey}
+      />,
+    )
+
+    const row = await screen.findByRole("article", { name: profile.name })
+    expect(row).toHaveAttribute("data-association-status", "linked")
+    await user.click(
+      screen.getByRole("button", {
+        name: `Open associated key ${profile.name}`,
+      }),
+    )
+    expect(onOpenAssociatedKey).toHaveBeenCalledWith("association-1")
   })
 
   it("keeps every matching endpoint visible while filters are active", async () => {

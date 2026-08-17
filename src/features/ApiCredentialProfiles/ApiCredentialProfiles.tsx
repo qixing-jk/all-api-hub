@@ -1,5 +1,6 @@
 import type { TFunction } from "i18next"
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { ApiCredentialLibraryIcon } from "~/components/icons/productIcons"
@@ -28,6 +29,9 @@ import {
   GuidanceCardLayout,
   GuidanceCardNote,
 } from "~/features/UnifiedApiGuidance/components/GuidanceCardLayout"
+import { useAccountData } from "~/hooks/useAccountData"
+import { useApiCredentialProfileLinks } from "~/hooks/useApiCredentialProfileLinks"
+import { apiCredentialProfileLinks } from "~/services/apiCredentialProfiles/apiCredentialProfileLinks"
 import { GATEWAY_GUIDANCE_SURFACES } from "~/services/preferences/userPreferences"
 import type { UserPreferences } from "~/services/preferences/userPreferences"
 import {
@@ -36,19 +40,34 @@ import {
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
-import { openSettingsTab, pushWithinOptionsPage } from "~/utils/navigation"
+import {
+  API_CREDENTIAL_PROFILE_LINK_SOURCES,
+  type ApiCredentialProfileLink,
+} from "~/types/apiCredentialProfiles"
+import {
+  openSettingsTab,
+  pushWithinOptionsPage,
+  replaceWithinOptionsPage,
+} from "~/utils/navigation"
 
 import { ApiCredentialProfilesListView } from "./components/ApiCredentialProfilesListView"
+import {
+  API_CREDENTIAL_PROFILE_ASSOCIATION_AVAILABILITY,
+  type ApiCredentialProfileAssociatedKeyStateByProfileId,
+} from "./contracts"
 import { useApiCredentialProfilesController } from "./hooks/useApiCredentialProfilesController"
 import { API_CREDENTIAL_PROFILES_TEST_IDS } from "./testIds"
+import { buildApiCredentialProfileAssociatedKeyStates } from "./utils/apiCredentialProfileAssociatedKeyStates"
 
 /**
  * Options page for managing API credential profiles.
  */
 export default function ApiCredentialProfiles({
   routeParams,
+  associatedKeyStateByProfileId,
 }: {
   routeParams?: Record<string, string>
+  associatedKeyStateByProfileId?: ApiCredentialProfileAssociatedKeyStateByProfileId
 }) {
   const { t } = useTranslation([
     "apiCredentialProfiles",
@@ -58,9 +77,17 @@ export default function ApiCredentialProfiles({
   ])
 
   const controller = useApiCredentialProfilesController()
+  const { displayData: localAccounts } = useAccountData()
+  const {
+    links: storedProfileLinks,
+    isLoading: areProfileLinksLoading,
+    error: profileLinksError,
+    reload: reloadProfileLinks,
+  } = useApiCredentialProfileLinks()
   const { openAddDialog } = controller
   const { preferences, managedSiteType } = useUserPreferencesContext()
   const [guidedImportEntryRequest, setGuidedImportEntryRequest] = useState(0)
+  const [targetProfileRequest, setTargetProfileRequest] = useState(0)
   const unifiedApiGuidance = buildApiCredentialGatewayGuidanceModel(
     controller.profiles.length,
     preferences,
@@ -72,8 +99,29 @@ export default function ApiCredentialProfiles({
   )
   const consumedCreatePrefillKeyRef = useRef<string | null>(null)
   const consumedGuidedImportRef = useRef(false)
+  const targetProfileId = routeParams?.profileId?.trim() || undefined
+  const localAccountNameById = useMemo(
+    () => new Map(localAccounts.map((account) => [account.id, account.name])),
+    [localAccounts],
+  )
+  const resolvedAssociatedKeyStateByProfileId = useMemo(
+    () =>
+      associatedKeyStateByProfileId ??
+      buildApiCredentialProfileAssociatedKeyStates(
+        storedProfileLinks,
+        localAccountNameById,
+      ),
+    [associatedKeyStateByProfileId, localAccountNameById, storedProfileLinks],
+  )
+  const associationAvailability = associatedKeyStateByProfileId
+    ? API_CREDENTIAL_PROFILE_ASSOCIATION_AVAILABILITY.Known
+    : profileLinksError
+      ? API_CREDENTIAL_PROFILE_ASSOCIATION_AVAILABILITY.Error
+      : areProfileLinksLoading
+        ? API_CREDENTIAL_PROFILE_ASSOCIATION_AVAILABILITY.Loading
+        : API_CREDENTIAL_PROFILE_ASSOCIATION_AVAILABILITY.Known
   const createPrefill = useMemo(() => {
-    if (routeParams?.action !== "add") {
+    if (targetProfileId || routeParams?.action !== "add") {
       return null
     }
 
@@ -91,9 +139,22 @@ export default function ApiCredentialProfiles({
       apiKeyCreateUrl: apiKeyCreateUrl || undefined,
       apiKeyCreateHint: apiKeyCreateHint || undefined,
     }
-  }, [routeParams])
+  }, [routeParams, targetProfileId])
 
   useEffect(() => {
+    if (!targetProfileId) {
+      return
+    }
+
+    setTargetProfileRequest((request) => request + 1)
+  }, [routeParams, targetProfileId])
+
+  useEffect(() => {
+    if (targetProfileId) {
+      consumedGuidedImportRef.current = false
+      return
+    }
+
     if (!createPrefill) {
       consumedCreatePrefillKeyRef.current = null
       return
@@ -106,7 +167,7 @@ export default function ApiCredentialProfiles({
 
     consumedCreatePrefillKeyRef.current = prefillKey
     openAddDialog(createPrefill)
-  }, [createPrefill, openAddDialog])
+  }, [createPrefill, openAddDialog, targetProfileId])
 
   useEffect(() => {
     const isGuidedManagedSiteImport =
@@ -123,7 +184,48 @@ export default function ApiCredentialProfiles({
 
     consumedGuidedImportRef.current = true
     setGuidedImportEntryRequest((request) => request + 1)
-  }, [routeParams])
+  }, [routeParams, targetProfileId])
+
+  const handleClearTargetProfile = useCallback(() => {
+    replaceWithinOptionsPage(`#${MENU_ITEM_IDS.API_CREDENTIAL_PROFILES}`)
+  }, [])
+
+  const findStoredProfileLink = useCallback(
+    (associationId: string): ApiCredentialProfileLink | undefined =>
+      storedProfileLinks.find(({ id }) => id === associationId),
+    [storedProfileLinks],
+  )
+  const handleConfirmAssociatedKey = useCallback(
+    async (associationId: string) => {
+      const link = findStoredProfileLink(associationId)
+      if (!link) return
+      try {
+        await apiCredentialProfileLinks.relink({
+          id: link.id,
+          profileId: link.profileId,
+          locator: link.locator,
+          linkedBy: API_CREDENTIAL_PROFILE_LINK_SOURCES.User,
+        })
+        await reloadProfileLinks()
+        toast.success(t("apiCredentialProfiles:association.confirmed"))
+      } catch {
+        toast.error(t("apiCredentialProfiles:association.updateFailed"))
+      }
+    },
+    [findStoredProfileLink, reloadProfileLinks, t],
+  )
+  const handleUnlinkAssociatedKey = useCallback(
+    async (associationId: string) => {
+      try {
+        if (!(await apiCredentialProfileLinks.unlink(associationId))) return
+        await reloadProfileLinks()
+        toast.success(t("apiCredentialProfiles:association.removed"))
+      } catch {
+        toast.error(t("apiCredentialProfiles:association.updateFailed"))
+      }
+    },
+    [reloadProfileLinks, t],
+  )
 
   return (
     <ProductAnalyticsScope
@@ -204,6 +306,14 @@ export default function ApiCredentialProfiles({
         <ApiCredentialProfilesListView
           controller={controller}
           guidedImportEntryRequest={guidedImportEntryRequest}
+          targetProfileId={targetProfileId}
+          targetProfileRequest={targetProfileRequest}
+          onClearTargetProfile={handleClearTargetProfile}
+          associatedKeyStateByProfileId={resolvedAssociatedKeyStateByProfileId}
+          associationAvailability={associationAvailability}
+          onRetryAssociatedKeys={() => void reloadProfileLinks()}
+          onConfirmAssociatedKey={handleConfirmAssociatedKey}
+          onUnlinkAssociatedKey={handleUnlinkAssociatedKey}
         />
       </div>
     </ProductAnalyticsScope>

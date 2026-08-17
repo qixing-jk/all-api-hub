@@ -23,12 +23,19 @@
     "openApiProfiles": "Mở Hồ sơ API",
     "openSelectedAccountModels": "Xem mô hình tài khoản",
     "retryFailed": "Thử lại tài khoản thất bại",
-    "saveToApiProfiles": "Lưu vào Hồ sơ API",
-    "saveToApiProfilesHint": "Lưu khóa này vào thư viện thông tin xác thực API để sao chép, xác minh và xuất nhanh.",
+    "saveToApiProfiles": "Lưu và liên kết với thông tin xác thực API",
     "showKey": "Hiển thị khóa",
     "useInCherry": "Sử dụng trong Cherry Studio",
     "verifyApi": "Xác minh API",
     "verifyCliSupport": "Xác minh tính tương thích CLI"
+  },
+  "actionToolbar": {
+    "apiCredential": "Thông tin xác thực API",
+    "diagnostics": "Chẩn đoán",
+    "integrationsAndExport": "Tích hợp và xuất",
+    "label": "Thao tác khóa",
+    "management": "Quản lý",
+    "quickActions": "Thao tác nhanh"
   },
   "allAccounts": "Tất cả tài khoản",
   "allAccountsFailed_other": "Không thể tải {{count}} tài khoản; kết quả chưa đầy đủ",
@@ -158,6 +165,22 @@
     "unavailableReason": "Khóa này không hỗ trợ thao tác hàng loạt."
   },
   "createFirstKey": "Tạo khóa đầu tiên",
+  "credentialAssociation": {
+    "linked": "Đã liên kết thông tin xác thực API",
+    "needsConfirmation": "Liên kết thông tin xác thực cần được xác nhận",
+    "reviewCredential": "Xem lại liên kết thông tin xác thực",
+    "target": {
+      "clear": "Hiển thị danh sách khóa",
+      "found": "Đã tìm thấy khóa được liên kết",
+      "loading": "Đang tải liên kết thông tin xác thực...",
+      "locating": "Đang tìm khóa được liên kết...",
+      "missing": "Liên kết thông tin xác thực này không còn tồn tại.",
+      "needsConfirmation": "Liên kết thông tin xác thực này cần được xác nhận trước khi mở.",
+      "retry": "Thử lại",
+      "unavailable": "Hiện không thể tìm thấy khóa được liên kết. Hãy kiểm tra kết nối tài khoản rồi thử lại."
+    },
+    "viewCredential": "Xem thông tin xác thực API đã liên kết"
+  },
   "description": "Trang này hiển thị thông tin khóa API của tất cả tài khoản, bao gồm mức sử dụng và thời gian hết hạn. Bạn có thể tạo khóa mới cho một tài khoản cụ thể thông qua nút \"Thêm khóa API\" ở góc trên bên phải hoặc nhấp vào nút \"+\" bên cạnh mỗi mục khóa. Vui lòng bảo quản an toàn khóa API của bạn để tránh rò rỉ cho người khác.",
   "details": {
     "empty": "Không có chi tiết bổ sung",
@@ -311,6 +334,7 @@
   "messages": {
     "accountNotFound": "Không tìm thấy thông tin tài khoản tương ứng",
     "batchSavedToApiProfiles": "Đã lưu các khóa đã chọn vào thư viện thông tin xác thực API",
+    "batchSavedToApiProfilesNeedsConfirmation": "Đã lưu các khóa đã chọn. Hãy kiểm tra các liên kết được đánh dấu trong thư viện thông tin xác thực API.",
     "batchSaveToApiProfilesFailed": "Không thể lưu các khóa đã chọn vào thư viện thông tin xác thực API",
     "batchSaveToApiProfilesPartialFailed": "Đã lưu {{savedCount}}/{{totalCount}} khóa đã chọn. {{failedCount}} khóa chưa được lưu.",
     "copyFailed": "Sao chép thất bại",
@@ -320,6 +344,7 @@
     "loadFailed": "Tải danh sách khóa thất bại",
     "revealFailed": "Hiển thị khóa thất bại",
     "savedToApiProfiles": "Đã lưu {{name}} vào Hồ sơ API",
+    "savedToApiProfilesNeedsConfirmation": "Đã lưu thông tin xác thực. Hãy kiểm tra liên kết khóa trong thư viện thông tin xác thực API.",
     "saveToApiProfilesFailed": "Lưu vào Hồ sơ API thất bại",
     "serviceCredentialCopied": "Đã sao chép khóa dịch vụ vào clipboard",
     "serviceCredentialRotated": "Đã đặt lại khóa dịch vụ",

@@ -10,6 +10,7 @@ import {
   isAccountTokenRuntimeKey,
   type AccountRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
+import type { CreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
 import { shouldShowOneTimeKeyDialogForCreatedToken } from "~/services/accounts/createdTokenSecretHandling"
 import {
   canCreateAccountApiTokens,
@@ -25,6 +26,7 @@ import {
   resolveDisplayAccountRuntimeKeySecret,
 } from "~/services/accounts/utils/apiServiceRequest"
 import { formatOptionalSkPrefixSiteToken } from "~/services/accountTokens/apiTokenKey"
+import { createAIHubMixCreatedRuntimeSecret } from "~/services/apiAdapters/aihubmix/createdSecret"
 import {
   isCreatedApiToken,
   TOKEN_PROVISIONING_ERRORS,
@@ -90,6 +92,8 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
   const [isCreating, setIsCreating] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
   const [oneTimeToken, setOneTimeToken] = useState<ApiToken | null>(null)
+  const [oneTimeSecret, setOneTimeSecret] =
+    useState<CreatedRuntimeSecret | null>(null)
   // Incremented to invalidate slower runtime-key inventory requests after account eligibility changes.
   const fetchRequestIdRef = useRef(0)
 
@@ -124,6 +128,7 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
       setError(null)
       setCreateError(null)
       setOneTimeToken(null)
+      setOneTimeSecret(null)
       setIsLoading(false)
       return false
     }
@@ -182,6 +187,7 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
       setIsCreating(false)
       setCreateError(null)
       setOneTimeToken(null)
+      setOneTimeSecret(null)
       return
     }
 
@@ -303,6 +309,12 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
             setSelectedRuntimeKeyId(createdRuntimeKey.id)
             setOneTimeToken(
               formatOptionalSkPrefixSiteToken(createdToken, account.siteType),
+            )
+            setOneTimeSecret(
+              createAIHubMixCreatedRuntimeSecret({
+                account,
+                token: createdToken,
+              }),
             )
             toast.success(t("modelList:keyDialog.createSuccess"))
             return "success" as const
@@ -429,10 +441,14 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
     isCreating,
     createError,
     oneTimeToken,
+    oneTimeSecret,
     fetchRuntimeKeys,
     copySelectedKey,
     createDefaultKey,
     refreshRuntimeKeysAfterCreate,
-    clearOneTimeToken: () => setOneTimeToken(null),
+    clearOneTimeToken: () => {
+      setOneTimeToken(null)
+      setOneTimeSecret(null)
+    },
   }
 }

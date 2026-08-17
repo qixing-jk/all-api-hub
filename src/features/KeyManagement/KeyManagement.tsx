@@ -12,16 +12,23 @@ import {
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SITE_TYPES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { useApiCredentialProfiles } from "~/features/ApiCredentialProfiles/hooks/useApiCredentialProfiles"
 import { loadNewApiChannelKeyWithVerification } from "~/features/ManagedSiteVerification/loadNewApiChannelKeyWithVerification"
 import { NewApiManagedVerificationDialog } from "~/features/ManagedSiteVerification/NewApiManagedVerificationDialog"
 import { useNewApiManagedVerification } from "~/features/ManagedSiteVerification/useNewApiManagedVerification"
 import AddTokenDialog from "~/features/TokenProvisioning/components/AddTokenDialog"
 import { OneTimeSecretDialog } from "~/features/TokenProvisioning/components/OneTimeSecretDialog"
 import { buildOneTimeApiKeyProfileSaveAction } from "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction"
+import { useApiCredentialProfileLinks } from "~/hooks/useApiCredentialProfileLinks"
 import {
   AccountKeyRepairMessageTypes,
   sendAccountKeyRepairMessage,
 } from "~/services/accounts/accountKeyAutoProvisioning/messaging"
+import {
+  ACCOUNT_RUNTIME_KEY_SOURCES,
+  getAccountRuntimeKeyLocatorAccountId,
+  type AccountRuntimeKeyLocator,
+} from "~/services/accounts/accountRuntimeKeys"
 import { canCreateAccountApiTokens } from "~/services/accounts/keyProductCapabilities"
 import {
   ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
@@ -43,8 +50,10 @@ import {
 } from "~/services/protectionBypass/contracts"
 import type { AccountToken } from "~/types"
 import { ACCOUNT_KEY_REPAIR_JOB_STATES } from "~/types/accountKeyAutoProvisioning"
+import type { ApiCredentialProfileLink } from "~/types/apiCredentialProfiles"
 import { createLogger } from "~/utils/core/logger"
 import {
+  openApiCredentialProfilesPage,
   openModelsPage,
   openSettingsTab,
   pushWithinOptionsPage,
@@ -55,6 +64,7 @@ import { AccountKeyResourceEditorDialog } from "./components/AccountKeyResource/
 import { OpenRouterWorkspaceSelector } from "./components/AccountKeyResource/OpenRouterWorkspaceSelector"
 import { AccountSelectorPanel } from "./components/AccountSelectorPanel"
 import { AccountSummaryBar } from "./components/AccountSummaryBar"
+import { AssociateApiCredentialProfileDialog } from "./components/AssociateApiCredentialProfileDialog"
 import { Footer } from "./components/Footer"
 import { Header } from "./components/Header"
 import { RepairMissingKeysDialog } from "./components/RepairMissingKeysDialog"
@@ -63,13 +73,21 @@ import { TokenSearchBar } from "./components/TokenSearchBar"
 import {
   ACCOUNT_KEY_STATUS_FILTERS,
   KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE,
+  KEY_MANAGEMENT_ASSOCIATION_TARGET_STATES,
   KEY_MANAGEMENT_GUIDED_IMPORT_TARGETS,
   KEY_MANAGEMENT_ROUTE_PARAMS,
+  type KeyManagementAssociationTargetLookupState,
+  type KeyManagementAssociationTargetState,
 } from "./constants"
 import {
   useAccountKeyResourceController,
   type AccountKeyResourceRouteTransition,
 } from "./controllers/useAccountKeyResourceController"
+import {
+  getCredentialAssociationForLocator,
+  KEY_CREDENTIAL_ASSOCIATION_STATES,
+} from "./credentialAssociations"
+import { useKeyCredentialAssociations } from "./hooks/useKeyCredentialAssociations"
 import { useKeyManagement } from "./hooks/useKeyManagement"
 import { KEY_MANAGEMENT_TEST_IDS } from "./testIds"
 import {
@@ -110,6 +128,31 @@ const getRouteSignature = (params?: Record<string, string | undefined>) =>
       .filter((entry): entry is [string, string] => entry[1] !== undefined)
       .sort(([left], [right]) => left.localeCompare(right)),
   )
+
+const getAssociationLocatorWorkspace = (locator: AccountRuntimeKeyLocator) =>
+  locator.source === ACCOUNT_RUNTIME_KEY_SOURCES.AccountKeyResource
+    ? locator.ref.scopeKey
+    : undefined
+
+const getAssociationTargetStatusMessage = (
+  state: KeyManagementAssociationTargetState,
+  t: TFunction,
+) => {
+  switch (state) {
+    case KEY_MANAGEMENT_ASSOCIATION_TARGET_STATES.Loading:
+      return t("keyManagement:credentialAssociation.target.loading")
+    case KEY_MANAGEMENT_ASSOCIATION_TARGET_STATES.Locating:
+      return t("keyManagement:credentialAssociation.target.locating")
+    case KEY_MANAGEMENT_ASSOCIATION_TARGET_STATES.Found:
+      return t("keyManagement:credentialAssociation.target.found")
+    case KEY_MANAGEMENT_ASSOCIATION_TARGET_STATES.Missing:
+      return t("keyManagement:credentialAssociation.target.missing")
+    case KEY_MANAGEMENT_ASSOCIATION_TARGET_STATES.NeedsConfirmation:
+      return t("keyManagement:credentialAssociation.target.needsConfirmation")
+    case KEY_MANAGEMENT_ASSOCIATION_TARGET_STATES.Unavailable:
+      return t("keyManagement:credentialAssociation.target.unavailable")
+  }
+}
 
 const nativeDeleteFailureMessage = (code: string | undefined, t: TFunction) => {
   switch (code) {
@@ -185,7 +228,11 @@ export default function KeyManagement(props: {
   routeParams?: Record<string, string>
 }) {
   const { routeParams } = props
-  const { t } = useTranslation(["keyManagement", "common"])
+  const { t } = useTranslation([
+    "keyManagement",
+    "common",
+    "apiCredentialProfiles",
+  ])
   const [isRepairOpen, setIsRepairOpen] = useState(false)
   const [repairStartOnOpen, setRepairStartOnOpen] = useState(false)
   const [isAccountSelectorOpen, setIsAccountSelectorOpen] = useState(false)
@@ -195,6 +242,9 @@ export default function KeyManagement(props: {
   const nativeRowKeysRef = useRef(new WeakMap<object, string>())
   const nextNativeRowKeyRef = useRef(0)
   const acknowledgedNativeRouteTransitionIdRef = useRef<string | null>(null)
+  const routeAssociationId =
+    routeParams?.[KEY_MANAGEMENT_ROUTE_PARAMS.AssociationId]
+  const associationNavigationActiveRef = useRef(Boolean(routeAssociationId))
   const [pendingNativeRoute, setPendingNativeRoute] = useState<{
     params: Record<string, string>
     transition: AccountKeyResourceRouteTransition
@@ -256,6 +306,53 @@ export default function KeyManagement(props: {
     handleEditToken,
     handleDeleteToken,
   } = useKeyManagement(routeParams)
+  const {
+    links: credentialProfileLinks,
+    isLoading: areCredentialProfileLinksLoading,
+    error: credentialProfileLinksError,
+    reload: reloadCredentialProfileLinks,
+  } = useApiCredentialProfileLinks()
+  const {
+    profiles: credentialProfiles,
+    isLoading: areCredentialProfilesLoading,
+  } = useApiCredentialProfiles()
+  const credentialAssociations = useKeyCredentialAssociations({
+    links: credentialProfileLinks,
+    profiles: credentialProfiles,
+    reloadLinks: reloadCredentialProfileLinks,
+  })
+  const requestedAssociation = useMemo<ApiCredentialProfileLink | null>(
+    () =>
+      routeAssociationId
+        ? credentialProfileLinks.find(
+            (link) => link.id === routeAssociationId,
+          ) ?? null
+        : null,
+    [credentialProfileLinks, routeAssociationId],
+  )
+  const associationNeedsConfirmation = useMemo(() => {
+    if (!requestedAssociation) return null
+    const association = getCredentialAssociationForLocator(
+      credentialProfileLinks,
+      requestedAssociation.locator,
+    )
+    return !(
+      association.status === KEY_CREDENTIAL_ASSOCIATION_STATES.Linked &&
+      association.associationId === requestedAssociation.id
+    )
+  }, [credentialProfileLinks, requestedAssociation])
+  const associationTarget = requestedAssociation
+  const [associationTargetStatus, setAssociationTargetStatus] =
+    useState<KeyManagementAssociationTargetLookupState>(
+      KEY_MANAGEMENT_ASSOCIATION_TARGET_STATES.Locating,
+    )
+
+  useEffect(() => {
+    associationNavigationActiveRef.current = Boolean(routeAssociationId)
+    setAssociationTargetStatus(
+      KEY_MANAGEMENT_ASSOCIATION_TARGET_STATES.Locating,
+    )
+  }, [routeAssociationId])
 
   const routeSignature = getRouteSignature(routeParams)
   const routeTransition =
@@ -270,9 +367,16 @@ export default function KeyManagement(props: {
     routeParams,
     routeTransition,
     replaceRoute: (params, transition) => {
+      const nextParams =
+        associationNavigationActiveRef.current && routeAssociationId
+          ? {
+              ...params,
+              [KEY_MANAGEMENT_ROUTE_PARAMS.AssociationId]: routeAssociationId,
+            }
+          : params
       if (transition) {
         const pending = {
-          params,
+          params: nextParams,
           transition,
           sourceRouteSignature: routeSignature,
         }
@@ -282,9 +386,38 @@ export default function KeyManagement(props: {
         acknowledgedNativeRouteTransitionIdRef.current = null
         setPendingNativeRoute(null)
       }
-      replaceWithinOptionsPage(`#${MENU_ITEM_IDS.KEYS}`, params)
+      replaceWithinOptionsPage(`#${MENU_ITEM_IDS.KEYS}`, nextParams)
     },
   })
+
+  useEffect(() => {
+    if (!associationTarget) return
+
+    const accountId = getAccountRuntimeKeyLocatorAccountId(
+      associationTarget.locator,
+    )
+    const workspace = getAssociationLocatorWorkspace(associationTarget.locator)
+    const nextParams = {
+      [KEY_MANAGEMENT_ROUTE_PARAMS.AssociationId]: associationTarget.id,
+      [KEY_MANAGEMENT_ROUTE_PARAMS.AccountId]: accountId,
+      ...(workspace
+        ? { [KEY_MANAGEMENT_ROUTE_PARAMS.Workspace]: workspace }
+        : {}),
+    }
+
+    setSearchTerm("")
+    setAllAccountsFilterAccountIds([])
+    setSelectedAccount(accountId)
+    if (getRouteSignature(nextParams) !== routeSignature) {
+      replaceWithinOptionsPage(`#${MENU_ITEM_IDS.KEYS}`, nextParams)
+    }
+  }, [
+    associationTarget,
+    routeSignature,
+    setAllAccountsFilterAccountIds,
+    setSearchTerm,
+    setSelectedAccount,
+  ])
 
   const setNativeSearch = nativeKeys.setSearch
   useEffect(() => {
@@ -358,6 +491,13 @@ export default function KeyManagement(props: {
   }
 
   const handleAccountSummaryClick = (accountId: string) => {
+    associationNavigationActiveRef.current = false
+    if (routeAssociationId) {
+      replaceWithinOptionsPage(
+        `#${MENU_ITEM_IDS.KEYS}`,
+        selectedAccount ? { accountId: selectedAccount } : undefined,
+      )
+    }
     setAllAccountsFilterAccountIds((currentAccountIds) =>
       currentAccountIds.includes(accountId)
         ? currentAccountIds.filter((id) => id !== accountId)
@@ -375,6 +515,7 @@ export default function KeyManagement(props: {
 
   const handleSelectedAccountChange = useCallback(
     (accountId: string) => {
+      associationNavigationActiveRef.current = false
       setSelectedAccount(accountId)
       acknowledgedNativeRouteTransitionIdRef.current = null
       setPendingNativeRoute(null)
@@ -384,6 +525,22 @@ export default function KeyManagement(props: {
       )
     },
     [setSelectedAccount],
+  )
+
+  const clearAssociationTarget = useCallback(() => {
+    associationNavigationActiveRef.current = false
+    replaceWithinOptionsPage(
+      `#${MENU_ITEM_IDS.KEYS}`,
+      selectedAccount ? { accountId: selectedAccount } : undefined,
+    )
+  }, [selectedAccount])
+
+  const handleSearchTermChange = useCallback(
+    (value: string) => {
+      if (routeAssociationId) clearAssociationTarget()
+      setSearchTerm(value)
+    },
+    [clearAssociationTarget, routeAssociationId, setSearchTerm],
   )
 
   const handleRefreshTokens = useCallback(
@@ -847,6 +1004,44 @@ export default function KeyManagement(props: {
       : selectedAccount && nativeKeys.failures[selectedAccount]
         ? t("keyManagement:messages.loadFailed")
         : undefined
+  const isNativeInventoryLoading =
+    nativeKeys.isLoading || nativeKeys.isScopeInventoryLoading
+  const isAssociationTargetInventoryLoading =
+    isLoading || isNativeInventoryLoading
+  const associationRouteState: KeyManagementAssociationTargetState | null =
+    !routeAssociationId
+      ? null
+      : areCredentialProfileLinksLoading
+        ? KEY_MANAGEMENT_ASSOCIATION_TARGET_STATES.Loading
+        : credentialProfileLinksError
+          ? KEY_MANAGEMENT_ASSOCIATION_TARGET_STATES.Unavailable
+          : !requestedAssociation
+            ? KEY_MANAGEMENT_ASSOCIATION_TARGET_STATES.Missing
+            : currentAccountLoadError || nativeInventoryLoadError
+              ? KEY_MANAGEMENT_ASSOCIATION_TARGET_STATES.Unavailable
+              : associationNeedsConfirmation
+                ? KEY_MANAGEMENT_ASSOCIATION_TARGET_STATES.NeedsConfirmation
+                : isAssociationTargetInventoryLoading
+                  ? KEY_MANAGEMENT_ASSOCIATION_TARGET_STATES.Locating
+                  : associationTargetStatus
+  const associationTargetStatusMessage = associationRouteState
+    ? getAssociationTargetStatusMessage(associationRouteState, t)
+    : ""
+  const isAssociationRoutePending =
+    associationRouteState ===
+      KEY_MANAGEMENT_ASSOCIATION_TARGET_STATES.Loading ||
+    associationRouteState === KEY_MANAGEMENT_ASSOCIATION_TARGET_STATES.Locating
+  const isAssociationRouteUnavailable =
+    associationRouteState ===
+    KEY_MANAGEMENT_ASSOCIATION_TARGET_STATES.Unavailable
+  const canClearAssociationRoute =
+    associationRouteState ===
+      KEY_MANAGEMENT_ASSOCIATION_TARGET_STATES.Missing ||
+    associationRouteState ===
+      KEY_MANAGEMENT_ASSOCIATION_TARGET_STATES.NeedsConfirmation
+  const showAssociationRouteNotice =
+    associationRouteState !== null &&
+    associationRouteState !== KEY_MANAGEMENT_ASSOCIATION_TARGET_STATES.Found
 
   return (
     <div className="p-6">
@@ -887,6 +1082,38 @@ export default function KeyManagement(props: {
         }
       />
 
+      {routeAssociationId ? (
+        <div className="sr-only" role="status" aria-live="polite">
+          {associationTargetStatusMessage}
+        </div>
+      ) : null}
+
+      {showAssociationRouteNotice ? (
+        <Notice
+          tone={isAssociationRoutePending ? "info" : "warning"}
+          className="mb-4"
+          description={
+            <span>
+              {associationTargetStatusMessage}{" "}
+              {isAssociationRouteUnavailable ? (
+                <NoticeActionButton
+                  onClick={() => {
+                    void reloadCredentialProfileLinks()
+                    void handleRefreshTokens()
+                  }}
+                >
+                  {t("keyManagement:credentialAssociation.target.retry")}
+                </NoticeActionButton>
+              ) : canClearAssociationRoute ? (
+                <NoticeActionButton onClick={clearAssociationTarget}>
+                  {t("keyManagement:credentialAssociation.target.clear")}
+                </NoticeActionButton>
+              ) : null}
+            </span>
+          }
+        />
+      ) : null}
+
       <AccountSelectorPanel
         selectedAccount={selectedAccount}
         setSelectedAccount={handleSelectedAccountChange}
@@ -925,7 +1152,10 @@ export default function KeyManagement(props: {
                     ? ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unavailable
                     : undefined
             }
-            onSelectScope={nativeKeys.selectScope}
+            onSelectScope={(scope) => {
+              if (routeAssociationId) clearAssociationTarget()
+              nativeKeys.selectScope(scope)
+            }}
             onRetry={() =>
               void (nativeKeys.scopeInventoryFailure
                 ? nativeKeys.retryScopeInventory()
@@ -937,11 +1167,12 @@ export default function KeyManagement(props: {
             aria-label={t("keyManagement:openRouter.list.statusFilter.label")}
             options={nativeStatusOptions(t)}
             value={nativeKeys.statusFilter}
-            onChange={(value) =>
+            onChange={(value) => {
+              if (routeAssociationId) clearAssociationTarget()
               nativeKeys.setStatusFilter(
                 value as (typeof ACCOUNT_KEY_STATUS_FILTERS)[keyof typeof ACCOUNT_KEY_STATUS_FILTERS],
               )
-            }
+            }}
           />
           {nativeKeys.notice ? (
             <Alert
@@ -963,7 +1194,10 @@ export default function KeyManagement(props: {
         )}
 
       {selectedAccount ? (
-        <TokenSearchBar searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
+        <TokenSearchBar
+          searchTerm={searchTerm}
+          setSearchTerm={handleSearchTermChange}
+        />
       ) : null}
 
       <TokenList
@@ -995,7 +1229,7 @@ export default function KeyManagement(props: {
         onRotateServiceCredential={rotateServiceCredential}
         nativeRows={nativeRows}
         nativeUnfilteredRows={nativeUnfilteredRows}
-        nativeLoading={nativeKeys.isLoading}
+        nativeLoading={isNativeInventoryLoading}
         nativeDetail={nativeKeys.detail}
         nativeDetailLoading={nativeKeys.isDetailLoading}
         nativeDetailFailure={nativeKeys.detailFailure}
@@ -1024,6 +1258,20 @@ export default function KeyManagement(props: {
         }
         guidedManagedSiteImport={guidedManagedSiteImport}
         allAccountsFilterAccountIds={allAccountsFilterAccountIds}
+        credentialProfileLinks={credentialProfileLinks}
+        getCredentialProfileForLocator={
+          credentialAssociations.getProfileForLocator
+        }
+        canManageCredentialAssociations={
+          !areCredentialProfileLinksLoading && !credentialProfileLinksError
+        }
+        canAssociateExistingCredential={
+          !areCredentialProfilesLoading && credentialProfiles.length > 0
+        }
+        onAssociateAssociation={credentialAssociations.openPicker}
+        onUnlinkAssociation={credentialAssociations.unlink}
+        associationTarget={associationTarget}
+        onAssociationTargetStatusChange={setAssociationTargetStatus}
       />
 
       {!isManagedSiteConfigComplete ? (
@@ -1050,6 +1298,23 @@ export default function KeyManagement(props: {
       ) : null}
 
       <Footer />
+
+      <AssociateApiCredentialProfileDialog
+        isOpen={credentialAssociations.pickerTarget !== null}
+        locator={credentialAssociations.pickerTarget?.locator ?? null}
+        displayLabel={credentialAssociations.pickerTarget?.displayLabel}
+        targetSecret={credentialAssociations.pickerTarget?.targetSecret}
+        profiles={credentialProfiles}
+        isProfilesLoading={areCredentialProfilesLoading}
+        existingProfileNames={credentialAssociations.existingProfileNames}
+        isWorking={credentialAssociations.isAssociating}
+        onClose={credentialAssociations.closePicker}
+        onAssociate={credentialAssociations.associate}
+        onOpenProfiles={() => {
+          credentialAssociations.clearPicker()
+          void openApiCredentialProfilesPage()
+        }}
+      />
 
       <AddTokenDialog
         isOpen={isAddTokenOpen && !isSelectedOpenRouterAccount}

@@ -59,6 +59,7 @@ const {
   toastSuccessMock,
   toastErrorMock,
   createApiCredentialProfileMock,
+  captureApiCredentialProfileMock,
   fetchServiceCredentialMock,
   ccSwitchDialogMock,
   cliProxyDialogMock,
@@ -87,6 +88,7 @@ const {
   toastSuccessMock: vi.fn(),
   toastErrorMock: vi.fn(),
   createApiCredentialProfileMock: vi.fn(),
+  captureApiCredentialProfileMock: vi.fn(),
   fetchServiceCredentialMock: vi.fn(),
   ccSwitchDialogMock: vi.fn(),
   cliProxyDialogMock: vi.fn(),
@@ -345,15 +347,17 @@ vi.mock("~/services/productAnalytics/actions", async (importOriginal) => {
   }
 })
 
-vi.mock(
-  "~/services/apiCredentialProfiles/apiCredentialProfilesStorage",
-  () => ({
-    apiCredentialProfilesStorage: {
-      createProfile: (...args: unknown[]) =>
-        createApiCredentialProfileMock(...args),
+vi.mock("~/services/apiCredentialProfiles/apiCredentialProfileLinks", () => ({
+  apiCredentialProfileLinks: {
+    capture: async (input: { profile: unknown }) => {
+      captureApiCredentialProfileMock(input)
+      return {
+        status: "captured",
+        profile: await createApiCredentialProfileMock(input.profile),
+      }
     },
-  }),
-)
+  },
+}))
 
 const actualResolveDefaultTokenQuickCreateResolution =
   accountOperations.resolveDefaultTokenQuickCreateResolution
@@ -531,6 +535,7 @@ describe("CopyKeyDialog", () => {
     startProductAnalyticsActionMock.mockReset()
     completeProductAnalyticsActionMock.mockReset()
     createApiCredentialProfileMock.mockReset()
+    captureApiCredentialProfileMock.mockReset()
     startProductAnalyticsActionMock.mockReturnValue({
       complete: completeProductAnalyticsActionMock,
     })
@@ -1114,10 +1119,10 @@ describe("CopyKeyDialog", () => {
     expect(listAccountKeyResourcesMock).toHaveBeenCalledTimes(2)
   })
 
-  it("refreshes instead of showing a one-time key when AIHubMix create returns a masked key", async () => {
+  it("refreshes without auto-copying when AIHubMix create returns a masked key", async () => {
     fetchAccountTokensMock
       .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([TOKEN])
+      .mockResolvedValueOnce([{ ...TOKEN, key: "sk-created********masked" }])
     createApiTokenMock.mockResolvedValueOnce({
       ...TOKEN,
       id: 9,
@@ -1146,17 +1151,20 @@ describe("CopyKeyDialog", () => {
 
     await waitFor(() => {
       expect(fetchAccountTokensMock).toHaveBeenCalledTimes(2)
-      expect(writeText).toHaveBeenCalledWith("sk-test")
     })
+    expect(writeText).not.toHaveBeenCalled()
+    expect(toastSuccessMock).toHaveBeenCalledWith(
+      "ui:dialog.copyKey.createSuccess",
+    )
     expect(
       screen.queryByText("keyManagement:oneTimeKey.title"),
     ).not.toBeInTheDocument()
   })
 
-  it("refreshes instead of showing a one-time key when create returns a token-shaped object with an invalid secret", async () => {
+  it("refreshes without auto-copying when a create-response-only token has an invalid secret", async () => {
     fetchAccountTokensMock
       .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([TOKEN])
+      .mockResolvedValueOnce([{ ...TOKEN, key: "sk-created********masked" }])
     createApiTokenMock.mockResolvedValueOnce({
       ...TOKEN,
       id: 9,
@@ -1185,8 +1193,11 @@ describe("CopyKeyDialog", () => {
 
     await waitFor(() => {
       expect(fetchAccountTokensMock).toHaveBeenCalledTimes(2)
-      expect(writeText).toHaveBeenCalledWith("sk-test")
     })
+    expect(writeText).not.toHaveBeenCalled()
+    expect(toastSuccessMock).toHaveBeenCalledWith(
+      "ui:dialog.copyKey.createSuccess",
+    )
 
     expect(
       screen.queryByText("keyManagement:oneTimeKey.title"),
@@ -2413,6 +2424,17 @@ describe("CopyKeyDialog", () => {
         tagIds: AIHUBMIX_ACCOUNT.tagIds,
       })
     })
+    expect(captureApiCredentialProfileMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        locator: {
+          source: "account_token",
+          accountId: AIHUBMIX_ACCOUNT.id,
+          siteType: SITE_TYPES.AIHUBMIX,
+          tokenId: 10,
+        },
+        linkedBy: "creation-response",
+      }),
+    )
     expect(toastSuccessMock).toHaveBeenCalledWith(
       "keyManagement:messages.savedToApiProfiles",
     )

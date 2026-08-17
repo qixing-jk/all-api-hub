@@ -24,12 +24,19 @@
     "openApiProfiles": "Open API credential library",
     "openSelectedAccountModels": "View account models",
     "retryFailed": "Retry failed",
-    "saveToApiProfiles": "Save to API credential library",
-    "saveToApiProfilesHint": "Save this key to the API credential library for quick copying, verification, and export.",
+    "saveToApiProfiles": "Save and associate with API credential library",
     "showKey": "Show Key",
     "useInCherry": "Use in Cherry Studio",
     "verifyApi": "Verify API",
     "verifyCliSupport": "Verify CLI Support"
+  },
+  "actionToolbar": {
+    "apiCredential": "API credential",
+    "diagnostics": "Diagnostics",
+    "integrationsAndExport": "Integrations and export",
+    "label": "Key actions",
+    "management": "Management",
+    "quickActions": "Quick actions"
   },
   "allAccounts": "All accounts",
   "allAccountsFailed_one": "{{count}} account failed to load; results are incomplete",
@@ -163,6 +170,22 @@
     "unavailableReason": "This key does not support batch actions."
   },
   "createFirstKey": "Create first key",
+  "credentialAssociation": {
+    "linked": "Linked API credential",
+    "needsConfirmation": "Link needs confirmation",
+    "reviewCredential": "Review credential association",
+    "target": {
+      "clear": "Show key list",
+      "found": "Linked key located",
+      "loading": "Loading the credential link...",
+      "locating": "Locating the linked key...",
+      "missing": "This credential link no longer exists.",
+      "needsConfirmation": "This credential link needs confirmation before it can be opened.",
+      "retry": "Try again",
+      "unavailable": "The linked key cannot be located right now. Check the account connection and try again."
+    },
+    "viewCredential": "View linked API credential"
+  },
   "description": "This page displays API key information for all accounts, including usage and expiration time. You can create new keys for specific accounts by clicking the 'Add Key' button in the upper right corner or the '+' button next to each key item. Please keep your API keys safe and avoid leaking them to others",
   "details": {
     "empty": "No additional details",
@@ -320,6 +343,7 @@
   "messages": {
     "accountNotFound": "Account information not found",
     "batchSavedToApiProfiles": "Saved selected keys to API credential library",
+    "batchSavedToApiProfilesNeedsConfirmation": "Saved selected keys. Review the highlighted associations in the API credential library.",
     "batchSaveToApiProfilesFailed": "Failed to save selected keys to API credential library",
     "batchSaveToApiProfilesPartialFailed": "Saved {{savedCount}} of {{totalCount}} selected keys. {{failedCount}} could not be saved.",
     "copyFailed": "Copy failed",
@@ -329,6 +353,7 @@
     "loadFailed": "Failed to load key list",
     "revealFailed": "Failed to reveal key",
     "savedToApiProfiles": "Saved {{name}} to API credential library",
+    "savedToApiProfilesNeedsConfirmation": "Credential saved. Review its key association in the API credential library.",
     "saveToApiProfilesFailed": "Failed to save to API credential library",
     "serviceCredentialCopied": "Service key copied to clipboard",
     "serviceCredentialRotated": "Service key reset",

@@ -1,9 +1,18 @@
 import { act } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { AccountKeyResourceList } from "~/features/KeyManagement/components/AccountKeyResource/AccountKeyResourceList"
+import { AccountKeyResourceList as NativeAccountKeyResourceList } from "~/features/KeyManagement/components/AccountKeyResource/AccountKeyResourceList"
+import { openRouterKeyResourceCardAdapter } from "~/features/KeyManagement/presentation/openRouterKeyResourceCard"
 import type { NativeKeyManagementRow } from "~/features/KeyManagement/types"
 import { render, screen } from "~~/tests/test-utils/render"
+
+const AccountKeyResourceList = (props: any) => (
+  <NativeAccountKeyResourceList
+    ariaLabel="Native account keys"
+    cardAdapter={openRouterKeyResourceCardAdapter}
+    {...props}
+  />
+)
 
 const itemProps = new Map<string, any>()
 

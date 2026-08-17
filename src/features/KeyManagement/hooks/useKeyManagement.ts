@@ -26,6 +26,7 @@ import {
 } from "~/services/accounts/utils/apiServiceRequest"
 import { formatOptionalSkPrefixSiteTokenAuthKey } from "~/services/accountTokens/apiTokenKey"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
+import { subscribeToApiCredentialProfilesChanges } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { createManagedSiteOperationContext } from "~/services/managedSites/operationContext"
 import {
@@ -66,7 +67,12 @@ import { normalizeUrlForOriginKey } from "~/utils/core/urlParsing"
 
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "../constants"
 import { isKeyResourceExportable } from "../presentation/legacyKeyResourceCard"
-import { type KeyManagementEntry, type ServiceCredentialState } from "../types"
+import {
+  KEY_MANAGEMENT_LOAD_STATUSES,
+  type KeyManagementEntry,
+  type KeyManagementLoadStatus,
+  type ServiceCredentialState,
+} from "../types"
 import {
   buildAccountRuntimeKeyEntryIdentityKey,
   buildAccountTokenKeyManagementEntry,
@@ -167,8 +173,6 @@ const isClipboardPermissionError = (error: unknown) => {
   return false
 }
 
-type TokenLoadStatus = "idle" | "loading" | "loaded" | "error"
-
 const TOKEN_LOAD_ERROR_KINDS = {
   UnsupportedKeyManagement: "unsupported-key-management",
 } as const
@@ -185,7 +189,7 @@ type AccountTokenLoadErrorType =
   (typeof ACCOUNT_TOKEN_LOAD_ERROR_TYPES)[keyof typeof ACCOUNT_TOKEN_LOAD_ERROR_TYPES]
 
 interface TokenInventoryState {
-  status: TokenLoadStatus
+  status: KeyManagementLoadStatus
   tokens: AccountToken[]
   errorMessage?: string
   errorCategory?: ProductAnalyticsErrorCategory
@@ -326,6 +330,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
   const [resolvedVisibleKeys, setResolvedVisibleKeys] = useState<
     Record<string, string>
   >({})
+  const visibleKeyResolutionGenerationRef = useRef(0)
   const [resolvingVisibleKeys, setResolvingVisibleKeys] = useState<Set<string>>(
     new Set(),
   )
@@ -768,7 +773,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       loadEpoch: number
       toastOnError: boolean
       protectionBypassExecution: ProtectionBypassExecution
-    }): Promise<TokenLoadStatus | null> => {
+    }): Promise<KeyManagementLoadStatus | null> => {
       const { accountId, loadEpoch, toastOnError, protectionBypassExecution } =
         params
       const account = accountById.get(accountId)
@@ -781,7 +786,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       setServiceCredentials((prev) => ({
         ...prev,
         [accountId]: {
-          status: "idle",
+          status: KEY_MANAGEMENT_LOAD_STATUSES.Idle,
           credential: undefined,
           errorMessage: undefined,
           isRotating: false,
@@ -790,7 +795,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       setTokenInventories((prev) => ({
         ...prev,
         [accountId]: {
-          status: "loading",
+          status: KEY_MANAGEMENT_LOAD_STATUSES.Loading,
           tokens: prev[accountId]?.tokens ?? [],
           errorMessage: undefined,
           errorCategory: undefined,
@@ -816,14 +821,14 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
           setTokenInventories((prev) => ({
             ...prev,
             [accountId]: {
-              status: "error",
+              status: KEY_MANAGEMENT_LOAD_STATUSES.Error,
               tokens: prev[accountId]?.tokens ?? [],
               errorMessage: undefined,
               errorCategory,
               errorKind: TOKEN_LOAD_ERROR_KINDS.UnsupportedKeyManagement,
             },
           }))
-          return "error"
+          return KEY_MANAGEMENT_LOAD_STATUSES.Error
         }
 
         // Native resources are rendered by their dedicated controller. The legacy
@@ -832,7 +837,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
           setTokenInventories((prev) => ({
             ...prev,
             [accountId]: {
-              status: "loaded",
+              status: KEY_MANAGEMENT_LOAD_STATUSES.Loaded,
               tokens: [],
               errorMessage: undefined,
               errorCategory: undefined,
@@ -840,7 +845,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
             },
           }))
           delete tokenLoadErrorCategoriesRef.current[accountId]
-          return "loaded"
+          return KEY_MANAGEMENT_LOAD_STATUSES.Loaded
         }
 
         const serviceCredentialLoad =
@@ -853,7 +858,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
               setServiceCredentials((prev) => ({
                 ...prev,
                 [accountId]: {
-                  status: "loading",
+                  status: KEY_MANAGEMENT_LOAD_STATUSES.Loading,
                   credential: prev[accountId]?.credential,
                   errorMessage: undefined,
                   isRotating: false,
@@ -871,7 +876,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
           setServiceCredentials((prev) => ({
             ...prev,
             [accountId]: {
-              status: "loaded",
+              status: KEY_MANAGEMENT_LOAD_STATUSES.Loaded,
               credential,
               errorMessage: undefined,
               isRotating: false,
@@ -880,7 +885,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
           setTokenInventories((prev) => ({
             ...prev,
             [accountId]: {
-              status: "loaded",
+              status: KEY_MANAGEMENT_LOAD_STATUSES.Loaded,
               tokens: [],
               errorMessage: undefined,
               errorCategory: undefined,
@@ -897,7 +902,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
               ),
             ],
           })
-          return "loaded"
+          return KEY_MANAGEMENT_LOAD_STATUSES.Loaded
         }
 
         const tokens = await requireDisplayAccountKeyManagement(
@@ -915,7 +920,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
           setTokenInventories((prev) => ({
             ...prev,
             [accountId]: {
-              status: "error",
+              status: KEY_MANAGEMENT_LOAD_STATUSES.Error,
               tokens: prev[accountId]?.tokens ?? [],
               errorMessage,
               errorCategory,
@@ -925,7 +930,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
           if (toastOnError) {
             toast.error(errorMessage)
           }
-          return "error"
+          return KEY_MANAGEMENT_LOAD_STATUSES.Error
         }
 
         const tokensWithAccount = tokens.map((token) => ({
@@ -937,7 +942,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
         setTokenInventories((prev) => ({
           ...prev,
           [accountId]: {
-            status: "loaded",
+            status: KEY_MANAGEMENT_LOAD_STATUSES.Loaded,
             tokens: tokensWithAccount,
             errorMessage: undefined,
             errorCategory: undefined,
@@ -945,7 +950,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
           },
         }))
         delete tokenLoadErrorCategoriesRef.current[accountId]
-        return "loaded"
+        return KEY_MANAGEMENT_LOAD_STATUSES.Loaded
       } catch (error) {
         if (!isEpochActive(loadEpoch)) return null
         if (!isLatestAccountRequest(accountId, requestEpoch)) return null
@@ -958,7 +963,10 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
         logger.error("获取账号密钥失败", errorMessage)
         setServiceCredentials((prev) => {
           const credentialState = prev[accountId]
-          if (!credentialState || credentialState.status === "idle") {
+          if (
+            !credentialState ||
+            credentialState.status === KEY_MANAGEMENT_LOAD_STATUSES.Idle
+          ) {
             return prev
           }
 
@@ -966,7 +974,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
             ...prev,
             [accountId]: {
               ...credentialState,
-              status: "error",
+              status: KEY_MANAGEMENT_LOAD_STATUSES.Error,
               errorMessage,
               isRotating: false,
             },
@@ -975,7 +983,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
         setTokenInventories((prev) => ({
           ...prev,
           [accountId]: {
-            status: "error",
+            status: KEY_MANAGEMENT_LOAD_STATUSES.Error,
             tokens: prev[accountId]?.tokens ?? [],
             errorMessage,
             errorCategory,
@@ -985,7 +993,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
         if (toastOnError) {
           toast.error(errorMessage)
         }
-        return "error"
+        return KEY_MANAGEMENT_LOAD_STATUSES.Error
       }
     },
     [
@@ -1027,7 +1035,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       const originEntries = Array.from(accountsByOrigin.entries())
       const results = await Promise.allSettled(
         originEntries.map(async ([, originAccountIds]) => {
-          const statuses: TokenLoadStatus[] = []
+          const statuses: KeyManagementLoadStatus[] = []
           for (const accountId of originAccountIds) {
             if (!isEpochActive(loadEpoch)) return statuses
             const status = await loadTokensForAccount({
@@ -1036,7 +1044,10 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
               toastOnError: false,
               protectionBypassExecution,
             })
-            if (status === "loaded" || status === "error") {
+            if (
+              status === KEY_MANAGEMENT_LOAD_STATUSES.Loaded ||
+              status === KEY_MANAGEMENT_LOAD_STATUSES.Error
+            ) {
               statuses.push(status)
             }
           }
@@ -1049,10 +1060,10 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       results.forEach((result, index) => {
         if (result.status === "fulfilled") {
           successCount += result.value.filter(
-            (status) => status === "loaded",
+            (status) => status === KEY_MANAGEMENT_LOAD_STATUSES.Loaded,
           ).length
           failureCount += result.value.filter(
-            (status) => status === "error",
+            (status) => status === KEY_MANAGEMENT_LOAD_STATUSES.Error,
           ).length
           return
         }
@@ -1123,7 +1134,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
           for (const account of enabledDisplayData) {
             next[account.id] = nativeResourceOnlyAccountIds.has(account.id)
               ? {
-                  status: "loaded",
+                  status: KEY_MANAGEMENT_LOAD_STATUSES.Loaded,
                   tokens: [],
                   errorMessage: undefined,
                   errorCategory: undefined,
@@ -1131,7 +1142,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
                 }
               : {
                   ...(prev[account.id] ?? {
-                    status: "idle",
+                    status: KEY_MANAGEMENT_LOAD_STATUSES.Idle,
                     tokens: [],
                   }),
                   errorCategory: undefined,
@@ -1144,13 +1155,13 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
           for (const account of enabledDisplayData) {
             next[account.id] = nativeResourceOnlyAccountIds.has(account.id)
               ? {
-                  status: "idle",
+                  status: KEY_MANAGEMENT_LOAD_STATUSES.Idle,
                   credential: undefined,
                   errorMessage: undefined,
                   isRotating: false,
                 }
               : prev[account.id] ?? {
-                  status: "idle",
+                  status: KEY_MANAGEMENT_LOAD_STATUSES.Idle,
                 }
           }
           return next
@@ -1208,14 +1219,14 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       setTokenInventories((prev) => ({
         ...prev,
         [targetAccountId]: prev[targetAccountId] ?? {
-          status: "idle",
+          status: KEY_MANAGEMENT_LOAD_STATUSES.Idle,
           tokens: [],
         },
       }))
       setServiceCredentials((prev) => ({
         ...prev,
         [targetAccountId]: prev[targetAccountId] ?? {
-          status: "idle",
+          status: KEY_MANAGEMENT_LOAD_STATUSES.Idle,
         },
       }))
 
@@ -1226,7 +1237,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
         protectionBypassExecution,
       })
       const result =
-        status === "loaded"
+        status === KEY_MANAGEMENT_LOAD_STATUSES.Loaded
           ? PRODUCT_ANALYTICS_RESULTS.Success
           : status === null
             ? PRODUCT_ANALYTICS_RESULTS.Skipped
@@ -1270,7 +1281,8 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
     const failedAccountIds = enabledDisplayData
       .filter(
         (account) =>
-          tokenInventoriesRef.current[account.id]?.status === "error" &&
+          tokenInventoriesRef.current[account.id]?.status ===
+            KEY_MANAGEMENT_LOAD_STATUSES.Error &&
           tokenInventoriesRef.current[account.id]?.errorKind !==
             TOKEN_LOAD_ERROR_KINDS.UnsupportedKeyManagement,
       )
@@ -1374,6 +1386,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
     if (selectedAccount) {
       void loadTokensRef.current()
     } else {
+      visibleKeyResolutionGenerationRef.current += 1
       setTokenInventories({})
       setServiceCredentials({})
       setVisibleKeys(new Set())
@@ -1381,6 +1394,16 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       setResolvingVisibleKeys(new Set())
     }
   }, [selectedAccount, enabledDisplayData])
+
+  useEffect(() => {
+    return subscribeToApiCredentialProfilesChanges(() => {
+      // A profile edit/relink changes the source behind resolvedVisibleKeys.
+      visibleKeyResolutionGenerationRef.current += 1
+      setVisibleKeys(new Set())
+      setResolvedVisibleKeys({})
+      setResolvingVisibleKeys(new Set())
+    })
+  }, [])
 
   const allTokens = useMemo(() => {
     return enabledDisplayData.flatMap(
@@ -1486,11 +1509,15 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       return enabledDisplayData.some(
         (account) =>
           !nativeResourceOnlyAccountIds.has(account.id) &&
-          tokenInventories[account.id]?.status === "loading",
+          tokenInventories[account.id]?.status ===
+            KEY_MANAGEMENT_LOAD_STATUSES.Loading,
       )
     }
 
-    return tokenInventories[selectedAccount]?.status === "loading"
+    return (
+      tokenInventories[selectedAccount]?.status ===
+      KEY_MANAGEMENT_LOAD_STATUSES.Loading
+    )
   }, [
     enabledDisplayData,
     isAllAccountsMode,
@@ -1517,10 +1544,10 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       }
 
       total += 1
-      const status = inventory?.status ?? "idle"
-      if (status === "loaded") loaded += 1
-      if (status === "loading") loading += 1
-      if (status === "error") error += 1
+      const status = inventory?.status ?? KEY_MANAGEMENT_LOAD_STATUSES.Idle
+      if (status === KEY_MANAGEMENT_LOAD_STATUSES.Loaded) loaded += 1
+      if (status === KEY_MANAGEMENT_LOAD_STATUSES.Loading) loading += 1
+      if (status === KEY_MANAGEMENT_LOAD_STATUSES.Error) error += 1
     }
 
     if (total === 0) return null
@@ -1539,7 +1566,9 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
     return enabledDisplayData
       .map((account): FailedAccountTokenLoad | null => {
         const inventory = tokenInventories[account.id]
-        if (inventory?.status !== "error") return null
+        if (inventory?.status !== KEY_MANAGEMENT_LOAD_STATUSES.Error) {
+          return null
+        }
         if (
           inventory.errorKind ===
           TOKEN_LOAD_ERROR_KINDS.UnsupportedKeyManagement
@@ -1571,12 +1600,12 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       return null
     }
 
-    if (tokenInventory?.status === "error") {
+    if (tokenInventory?.status === KEY_MANAGEMENT_LOAD_STATUSES.Error) {
       return tokenInventory.errorMessage ?? loadFailedMessage
     }
 
     const serviceCredential = serviceCredentials[selectedAccount]
-    if (serviceCredential?.status === "error") {
+    if (serviceCredential?.status === KEY_MANAGEMENT_LOAD_STATUSES.Error) {
       return serviceCredential.errorMessage ?? loadFailedMessage
     }
 
@@ -1612,7 +1641,9 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       count: countMap.get(account.id) ?? 0,
       errorType: (() => {
         const inventory = tokenInventories[account.id]
-        if (inventory?.status !== "error") return undefined
+        if (inventory?.status !== KEY_MANAGEMENT_LOAD_STATUSES.Error) {
+          return undefined
+        }
         return inventory.errorKind ===
           TOKEN_LOAD_ERROR_KINDS.UnsupportedKeyManagement
           ? ACCOUNT_TOKEN_LOAD_ERROR_TYPES.Unsupported
@@ -1624,7 +1655,8 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
   const statusCheckTokens = useMemo(() => {
     return tokens.filter(
       (token) =>
-        tokenInventories[token.accountId]?.status === "loaded" &&
+        tokenInventories[token.accountId]?.status ===
+          KEY_MANAGEMENT_LOAD_STATUSES.Loaded &&
         Boolean(getExportEligibleAccountForToken(token)),
     )
   }, [getExportEligibleAccountForToken, tokenInventories, tokens])
@@ -1694,7 +1726,10 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
         return
       }
 
-      if (tokenInventoriesRef.current[token.accountId]?.status !== "loaded") {
+      if (
+        tokenInventoriesRef.current[token.accountId]?.status !==
+        KEY_MANAGEMENT_LOAD_STATUSES.Loaded
+      ) {
         return
       }
 
@@ -1731,7 +1766,10 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
         return
       }
 
-      if (tokenInventoriesRef.current[token.accountId]?.status !== "loaded") {
+      if (
+        tokenInventoriesRef.current[token.accountId]?.status !==
+        KEY_MANAGEMENT_LOAD_STATUSES.Loaded
+      ) {
         return
       }
 
@@ -1917,7 +1955,9 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
     setServiceCredentials((prev) => ({
       ...prev,
       [account.id]: {
-        ...(prev[account.id] ?? { status: "idle" }),
+        ...(prev[account.id] ?? {
+          status: KEY_MANAGEMENT_LOAD_STATUSES.Idle,
+        }),
         isRotating: true,
         errorMessage: undefined,
       },
@@ -1932,7 +1972,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       setServiceCredentials((prev) => ({
         ...prev,
         [account.id]: {
-          status: "loaded",
+          status: KEY_MANAGEMENT_LOAD_STATUSES.Loaded,
           credential,
           errorMessage: undefined,
           isRotating: false,
@@ -1962,8 +2002,10 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       setServiceCredentials((prev) => ({
         ...prev,
         [account.id]: {
-          ...(prev[account.id] ?? { status: "error" }),
-          status: "error",
+          ...(prev[account.id] ?? {
+            status: KEY_MANAGEMENT_LOAD_STATUSES.Error,
+          }),
+          status: KEY_MANAGEMENT_LOAD_STATUSES.Error,
           errorMessage,
           isRotating: false,
         },
@@ -2014,6 +2056,12 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
     }
 
     const visibilityRequestEpoch = selectionEpochRef.current
+    const visibilityRequestGeneration =
+      visibleKeyResolutionGenerationRef.current
+    const isVisibilityRequestActive = () =>
+      isMountedRef.current &&
+      isEpochActive(visibilityRequestEpoch) &&
+      visibilityRequestGeneration === visibleKeyResolutionGenerationRef.current
     const tracker = startProductAnalyticsAction(
       keyManagementAnalyticsContext(
         PRODUCT_ANALYTICS_ACTION_IDS.RevealAccountTokenKey,
@@ -2032,7 +2080,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
         token,
       )
 
-      if (!isMountedRef.current || !isEpochActive(visibilityRequestEpoch)) {
+      if (!isVisibilityRequestActive()) {
         return
       }
 
@@ -2047,6 +2095,10 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       })
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
     } catch (error) {
+      if (!isVisibilityRequestActive()) {
+        return
+      }
+
       toast.error(
         getErrorMessage(error, t("keyManagement:messages.revealFailed")),
       )
@@ -2055,7 +2107,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
       })
     } finally {
-      if (isMountedRef.current) {
+      if (isVisibilityRequestActive()) {
         setResolvingVisibleKeys((prev) => {
           if (!prev.has(tokenIdentityKey)) {
             return prev

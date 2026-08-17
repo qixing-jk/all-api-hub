@@ -4,13 +4,23 @@ import toast from "react-hot-toast"
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
 import {
   collectAccountRuntimeKeySecrets,
+  getAccountRuntimeKeyLocator,
   type AccountRuntimeKey,
+  type AccountRuntimeKeyLocator,
 } from "~/services/accounts/accountRuntimeKeys"
-import type { CreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
+import {
+  getCreatedRuntimeSecretLocator,
+  type CreatedRuntimeSecret,
+} from "~/services/accounts/createdRuntimeSecret"
 import { resolveDisplayAccountRuntimeKeySecret } from "~/services/accounts/utils/apiServiceRequest"
-import { createProfileFromAccountToken } from "~/services/apiCredentialProfiles/accountTokenImport"
+import {
+  captureProfileFromAccountToken,
+  type ApiCredentialProfileLinkedBy,
+} from "~/services/apiCredentialProfiles/accountTokenImport"
+import { API_CREDENTIAL_PROFILE_CAPTURE_STATUSES } from "~/services/apiCredentialProfiles/apiCredentialProfileLinkContracts"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import type { ApiToken, DisplaySiteData } from "~/types"
+import { API_CREDENTIAL_PROFILE_LINK_SOURCES } from "~/types/apiCredentialProfiles"
 import { openApiCredentialProfilesPage } from "~/utils/navigation"
 
 type OneTimeApiKeySaveAction = {
@@ -57,6 +67,7 @@ const normalizeBatchSaveItem = async (
     account: runtimeKey.account,
     fallbackAccountName: runtimeKey.accountName,
     baseUrl: resolvedRuntimeKey.baseUrl,
+    locator: getAccountRuntimeKeyLocator(runtimeKey),
     token: {
       name: resolvedRuntimeKey.label,
       key: resolvedRuntimeKey.secret,
@@ -72,6 +83,8 @@ type OneTimeSecretProfileInput = {
   tagIds?: string[]
   token: Pick<ApiToken, "key" | "name">
   apiType?: CreatedRuntimeSecret["credential"]["apiType"]
+  locator?: AccountRuntimeKeyLocator
+  linkedBy?: ApiCredentialProfileLinkedBy
 }
 
 type BuildOneTimeApiKeyProfileSaveActionParams =
@@ -120,13 +133,18 @@ export function buildOneTimeApiKeyProfileSaveAction(
           siteType: params.result.credential.siteType,
           tagIds: [...params.result.credential.tagIds],
           apiType: params.result.credential.apiType,
+          locator: getCreatedRuntimeSecretLocator(params.result),
+          linkedBy: API_CREDENTIAL_PROFILE_LINK_SOURCES.CreationResponse,
           token: { name: params.result.displayName, key: params.result.secret },
         }
-      : params
+      : {
+          ...params,
+          linkedBy: API_CREDENTIAL_PROFILE_LINK_SOURCES.CreationResponse,
+        }
 
   return {
     onSave: async () => {
-      const profile = await saveOneTimeApiKeyToProfile({
+      const result = await saveOneTimeApiKeyToProfile({
         ...oneTimeResult,
         t,
         logger,
@@ -134,9 +152,12 @@ export function buildOneTimeApiKeyProfileSaveAction(
       })
 
       toast.success(
-        t("keyManagement:messages.savedToApiProfiles", {
-          name: profile.name,
-        }),
+        result.status ===
+          API_CREDENTIAL_PROFILE_CAPTURE_STATUSES.AssociationConflict
+          ? t("keyManagement:messages.savedToApiProfilesNeedsConfirmation")
+          : t("keyManagement:messages.savedToApiProfiles", {
+              name: result.profile.name,
+            }),
       )
     },
   }
@@ -153,12 +174,14 @@ async function saveOneTimeApiKeyToProfile({
   tagIds,
   token,
   apiType,
+  locator,
+  linkedBy,
   t,
   logger,
   source,
 }: OneTimeSecretProfileSaveParams) {
   try {
-    return await createApiCredentialProfileFromToken({
+    return await captureApiCredentialProfileFromToken({
       accountName,
       fallbackAccountName,
       baseUrl,
@@ -166,6 +189,8 @@ async function saveOneTimeApiKeyToProfile({
       tagIds,
       token,
       apiType,
+      locator,
+      linkedBy,
     })
   } catch (error) {
     const sanitizedMessage = toSanitizedErrorSummary(error, [token.key])
@@ -190,19 +215,28 @@ export async function saveAccountRuntimeKeysToApiCredentialProfiles({
   savedCount: number
 }> {
   let savedCount = 0
+  let associationConflictCount = 0
 
   try {
     for (const item of items) {
-      const { account, fallbackAccountName, baseUrl, token } =
+      const { account, fallbackAccountName, baseUrl, locator, token } =
         await normalizeBatchSaveItem(item, resolveRuntimeKeySecret)
-      await createApiCredentialProfileFromToken({
+      const result = await captureApiCredentialProfileFromToken({
         accountName: account.name,
         fallbackAccountName,
         baseUrl,
         siteType: account.siteType,
         tagIds: account.tagIds ?? [],
         token,
+        locator,
+        linkedBy: API_CREDENTIAL_PROFILE_LINK_SOURCES.ResolvedRuntimeKey,
       })
+      if (
+        result.status ===
+        API_CREDENTIAL_PROFILE_CAPTURE_STATUSES.AssociationConflict
+      ) {
+        associationConflictCount += 1
+      }
       savedCount += 1
     }
 
@@ -210,7 +244,11 @@ export async function saveAccountRuntimeKeysToApiCredentialProfiles({
       (toastInstance) => (
         <div className="flex min-w-0 items-center gap-2">
           <span className="min-w-0 truncate">
-            {t("keyManagement:messages.batchSavedToApiProfiles")}
+            {t(
+              associationConflictCount > 0
+                ? "keyManagement:messages.batchSavedToApiProfilesNeedsConfirmation"
+                : "keyManagement:messages.batchSavedToApiProfiles",
+            )}
           </span>
           <button
             type="button"
@@ -270,7 +308,7 @@ export async function saveAccountRuntimeKeysToApiCredentialProfiles({
 /**
  * Creates one API credential profile from already-resolved token data.
  */
-async function createApiCredentialProfileFromToken({
+async function captureApiCredentialProfileFromToken({
   accountName,
   fallbackAccountName,
   baseUrl,
@@ -278,8 +316,10 @@ async function createApiCredentialProfileFromToken({
   tagIds,
   token,
   apiType,
+  locator,
+  linkedBy,
 }: OneTimeSecretProfileInput) {
-  return createProfileFromAccountToken({
+  return captureProfileFromAccountToken({
     accountName,
     fallbackAccountName,
     baseUrl,
@@ -287,5 +327,7 @@ async function createApiCredentialProfileFromToken({
     tagIds,
     token,
     apiType,
+    locator,
+    linkedBy,
   })
 }

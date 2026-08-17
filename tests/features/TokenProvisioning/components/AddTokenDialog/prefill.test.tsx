@@ -90,15 +90,14 @@ vi.mock("~/services/productAnalytics/actions", () => ({
     startProductAnalyticsActionMock(...args),
 }))
 
-vi.mock(
-  "~/services/apiCredentialProfiles/apiCredentialProfilesStorage",
-  () => ({
-    apiCredentialProfilesStorage: {
-      createProfile: (...args: unknown[]) =>
-        createApiCredentialProfileMock(...args),
-    },
-  }),
-)
+vi.mock("~/services/apiCredentialProfiles/apiCredentialProfileLinks", () => ({
+  apiCredentialProfileLinks: {
+    capture: async ({ profile }: { profile: unknown }) => ({
+      status: "captured",
+      profile: await createApiCredentialProfileMock(profile),
+    }),
+  },
+}))
 
 const ACCOUNT = {
   id: "acc-1",

@@ -171,6 +171,26 @@ describe("navigation utilities", () => {
     )
   })
 
+  it("openKeysPage should omit a blank legacy accountId outside options", async () => {
+    await openKeysPage("")
+
+    expect(mockedCreateTab).toHaveBeenCalledWith(
+      "ext://options.html#keys",
+      true,
+    )
+  })
+
+  it("openKeysPage should deep-link an associated Account Runtime Key", async () => {
+    await openKeysPage({ associationId: "association-123" })
+
+    expect(mockedGetExtensionURL).toHaveBeenCalledWith("options.html")
+    const baseUrl = mockedGetExtensionURL.mock.results[0].value
+    expect(mockedCreateTab).toHaveBeenCalledWith(
+      `${baseUrl}?associationId=association-123#keys`,
+      true,
+    )
+  })
+
   it("openKeysPage should push within the current options tab", async () => {
     window.history.replaceState(null, "", `${OPTIONS_PAGE_URL}#models`)
     const pushStateSpy = vi.spyOn(window.history, "pushState")
@@ -247,6 +267,15 @@ describe("navigation utilities", () => {
     )
     expect(mockedCreateTab).toHaveBeenCalledWith(
       `${baseUrl}?profileId=profile-7#models`,
+      true,
+    )
+  })
+
+  it("openModelsPage should preserve a blank legacy accountId outside options", async () => {
+    await openModelsPage("")
+
+    expect(mockedCreateTab).toHaveBeenCalledWith(
+      "ext://options.html?accountId=#models",
       true,
     )
   })
@@ -852,6 +881,21 @@ describe("navigation utilities", () => {
       `${OPTIONS_PAGE_URL}?action=add&name=Manual+Provider&baseUrl=https%3A%2F%2Fmanual.example.com&apiKeyCreateUrl=https%3A%2F%2Fmanual.example.com%2Fkeys%3Faff%3Dall-api-hub&apiKeyCreateHint=Use+promo+code+APIHUB+after+registration.#apiCredentialProfiles`,
       true,
     )
+  })
+
+  it("pushes a profile deep link within the current options tab", async () => {
+    window.history.replaceState(null, "", `${OPTIONS_PAGE_URL}#keys`)
+    const pushStateSpy = vi.spyOn(window.history, "pushState")
+
+    await openApiCredentialProfilesPage({ profileId: "profile-123" })
+
+    expect(pushStateSpy).toHaveBeenCalledTimes(1)
+    expect(window.location.href).toBe(
+      `${OPTIONS_PAGE_URL}?profileId=profile-123#apiCredentialProfiles`,
+    )
+    expect(mockedCreateTab).not.toHaveBeenCalled()
+
+    pushStateSpy.mockRestore()
   })
 
   it("opens managed-site pages without empty query params when no filters are provided", async () => {

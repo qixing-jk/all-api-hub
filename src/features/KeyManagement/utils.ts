@@ -4,8 +4,13 @@ import {
   accountRuntimeKeyToLegacyAccountToken,
   buildAccountTokenRuntimeKey,
   buildServiceCredentialRuntimeKey,
+  getAccountRuntimeKeyLocator,
+  isAccountRuntimeKeyLocatorEqual,
+  type AccountRuntimeKey,
+  type AccountRuntimeKeyLocator,
   type ServiceCredentialRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
+import type { AccountKeyResourceRef } from "~/services/apiAdapters/contracts/accountKeyResource"
 import type { KeyManagementCapability } from "~/services/apiAdapters/contracts/keyManagement"
 import type {
   AccountServiceCredential,
@@ -16,11 +21,35 @@ import type { AccountToken, DisplaySiteData } from "~/types"
 import { maskSecretForDisplay } from "~/utils/core/formatters"
 import { t } from "~/utils/i18n/core"
 
-import type { KeyManagementEntry, ServiceCredentialState } from "./types"
+import {
+  KEY_MANAGEMENT_LOAD_STATUSES,
+  type KeyManagementEntry,
+  type ServiceCredentialState,
+} from "./types"
 
 // 构建 token 在 UI 中的唯一标识 (accountId + tokenId)，避免跨账号 tokenId 冲突
 export const buildTokenIdentityKey = (accountId: string, tokenId: number) =>
   `${accountId}:${tokenId}`
+
+/** Matches a rendered native resource against a persisted opaque locator. */
+export const isAccountKeyResourceLocatorMatch = (
+  ref: AccountKeyResourceRef,
+  locator: AccountRuntimeKeyLocator,
+) =>
+  isAccountRuntimeKeyLocatorEqual(
+    { source: ACCOUNT_RUNTIME_KEY_SOURCES.AccountKeyResource, ref },
+    locator,
+  )
+
+/** Matches a rendered runtime key against its persisted source identity. */
+export const isAccountRuntimeKeyLocatorMatch = (
+  runtimeKey: AccountRuntimeKey,
+  locator: AccountRuntimeKeyLocator,
+) =>
+  isAccountRuntimeKeyLocatorEqual(
+    getAccountRuntimeKeyLocator(runtimeKey),
+    locator,
+  )
 
 export const buildAccountRuntimeKeyEntryIdentityKey = (runtimeKeyId: string) =>
   ["runtime_key", runtimeKeyId].join(":")
@@ -73,7 +102,10 @@ export const buildServiceCredentialKeyManagementEntry = (params: {
   canRotate: boolean
 }): KeyManagementEntry | null => {
   const { account, serviceCredential, canRotate } = params
-  if (serviceCredential?.status !== "loaded" || !serviceCredential.credential) {
+  if (
+    serviceCredential?.status !== KEY_MANAGEMENT_LOAD_STATUSES.Loaded ||
+    !serviceCredential.credential
+  ) {
     return null
   }
 

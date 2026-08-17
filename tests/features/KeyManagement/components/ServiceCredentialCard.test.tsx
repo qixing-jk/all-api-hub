@@ -15,7 +15,13 @@ import {
 import { PRODUCT_ANALYTICS_ACTION_IDS } from "~/services/productAnalytics/contracts"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
-import { act, render, screen, waitFor } from "~~/tests/test-utils/render"
+import {
+  act,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "~~/tests/test-utils/render"
 
 const {
   mockCCSwitchDialog,
@@ -240,6 +246,37 @@ describe("ServiceCredentialCard", () => {
     expect(
       screen.getByText("https://codex.example.invalid"),
     ).toBeInTheDocument()
+    const toolbar = screen.getByRole("toolbar", {
+      name: "keyManagement:actionToolbar.label",
+    })
+    expect(
+      within(toolbar).getByRole("group", {
+        name: "keyManagement:actionToolbar.quickActions",
+      }),
+    ).toBeVisible()
+    const integrationsGroup = within(toolbar).getByRole("group", {
+      name: "keyManagement:actionToolbar.integrationsAndExport",
+    })
+    const exportButton = within(integrationsGroup).getByRole("button", {
+      name: "common:actions.export",
+    })
+    const apiCredentialButton = within(integrationsGroup).getByTestId(
+      KEY_MANAGEMENT_TEST_IDS.apiCredentialAssociationButton,
+    )
+    expect(
+      exportButton.compareDocumentPosition(apiCredentialButton) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+    expect(
+      within(toolbar).getByRole("group", {
+        name: "keyManagement:actionToolbar.diagnostics",
+      }),
+    ).toBeVisible()
+    expect(
+      within(toolbar).getByRole("group", {
+        name: "keyManagement:actionToolbar.management",
+      }),
+    ).toBeVisible()
 
     await user.click(
       screen.getByRole("button", {
@@ -247,8 +284,10 @@ describe("ServiceCredentialCard", () => {
       }),
     )
     expect(
-      screen.queryByText("keyManagement:serviceCredential.copy"),
-    ).not.toBeInTheDocument()
+      screen.getByRole("button", {
+        name: "keyManagement:serviceCredential.copy",
+      }),
+    ).not.toHaveAttribute("title")
     await user.click(
       screen.getByRole("button", {
         name: "keyManagement:serviceCredential.rotate",
@@ -427,6 +466,7 @@ describe("ServiceCredentialCard", () => {
 
   it("exposes URL-and-key consumer actions without requiring a token resource", async () => {
     const user = userEvent.setup()
+    const onOpenAssociatedCredential = vi.fn()
     const account = buildDisplaySiteData({
       id: "sharedchat-account",
       name: "SharedChat",
@@ -447,6 +487,12 @@ describe("ServiceCredentialCard", () => {
         account={account}
         credential={credential}
         onCopy={vi.fn().mockResolvedValue(undefined)}
+        association={{
+          status: "linked",
+          label: "keyManagement:credentialAssociation.linked",
+          actionLabel: "keyManagement:credentialAssociation.viewCredential",
+          onOpen: onOpenAssociatedCredential,
+        }}
       />,
       {
         withThemeProvider: false,
@@ -454,28 +500,25 @@ describe("ServiceCredentialCard", () => {
       },
     )
 
-    await user.click(
-      screen.getByRole("button", {
+    const openAssociatedCredential = screen.getByTestId(
+      KEY_MANAGEMENT_TEST_IDS.apiCredentialAssociationButton,
+    )
+    expect(
+      openAssociatedCredential.querySelector(".lucide-link-2"),
+    ).not.toBeNull()
+    await user.click(openAssociatedCredential)
+    expect(
+      screen.queryByRole("menuitem", {
         name: "keyManagement:actions.saveToApiProfiles",
       }),
-    )
-
-    expect(mockSaveApiCredentialProfiles).toHaveBeenCalledWith(
-      expect.objectContaining({
-        source: "ServiceCredentialCard",
-        items: [
-          expect.objectContaining({
-            runtimeKey: expect.objectContaining({
-              account: expect.objectContaining({ id: "sharedchat-account" }),
-              baseUrl: "https://sharedchat.example.invalid/v1",
-              label: "Codex API Key",
-              secret: "sk-service-credential",
-              service: "codex",
-            }),
-          }),
-        ],
+    ).not.toBeInTheDocument()
+    await user.click(
+      screen.getByRole("menuitem", {
+        name: "keyManagement:credentialAssociation.viewCredential",
       }),
     )
+    expect(onOpenAssociatedCredential).toHaveBeenCalledOnce()
+    expect(mockSaveApiCredentialProfiles).not.toHaveBeenCalled()
 
     await user.click(
       screen.getByRole("button", {
@@ -515,6 +558,59 @@ describe("ServiceCredentialCard", () => {
         }),
       )
     })
+  })
+
+  it("offers save and existing-credential actions in the unlinked service menu", async () => {
+    const user = userEvent.setup()
+    const account = buildDisplaySiteData({
+      id: "sharedchat-account",
+      name: "SharedChat",
+      tagIds: ["tag-a"],
+      baseUrl: "https://sharedchat.example.invalid",
+    })
+    const credential = {
+      kind: "singleton_service_key" as const,
+      service: "codex",
+      label: "Codex API Key",
+      key: "sk-service-credential",
+      isAuthenticated: true,
+      baseUrl: "https://sharedchat.example.invalid/v1",
+    }
+
+    render(
+      <ServiceCredentialCard
+        account={account}
+        credential={credential}
+        onCopy={vi.fn().mockResolvedValue(undefined)}
+        association={{
+          status: "unlinked",
+          label: "apiCredentialProfiles:association.notLinked",
+          actionLabel: "apiCredentialProfiles:association.linkExisting",
+          associateLabel: "apiCredentialProfiles:association.linkExisting",
+          onAssociate: vi.fn(),
+        }}
+      />,
+      {
+        withThemeProvider: false,
+        withUserPreferencesProvider: false,
+      },
+    )
+
+    await user.click(
+      screen.getByTestId(
+        KEY_MANAGEMENT_TEST_IDS.apiCredentialAssociationButton,
+      ),
+    )
+    expect(
+      screen.getByRole("menuitem", {
+        name: "keyManagement:actions.saveToApiProfiles",
+      }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("menuitem", {
+        name: "apiCredentialProfiles:association.linkExisting",
+      }),
+    ).toBeInTheDocument()
   })
 
   it("exposes third-party export consumers from the service credential URL and key", async () => {

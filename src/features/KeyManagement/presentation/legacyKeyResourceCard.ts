@@ -156,10 +156,13 @@ export const isKeyResourceExportable = (runtimeKey: AccountTokenRuntimeKey) =>
 export const buildLegacyKeyResourceCardPresentation = (
   runtimeKey: AccountTokenRuntimeKey,
   t: TFunction,
+  options: { hasAssociatedSecret?: boolean } = {},
 ): KeyResourceCardPresentation => {
   const { token } = runtimeKey
   const keyManagement = getKeyManagement(runtimeKey)
-  const secretAvailability = getSecretAvailability(keyManagement)
+  const secretAvailability = options.hasAssociatedSecret
+    ? INVENTORY_SECRET_AVAILABILITIES.Recoverable
+    : getSecretAvailability(keyManagement)
   const modelRestrictions =
     token.model_limits_enabled === true ? token.model_limits : token.models
   const isUnlimitedQuota = token.unlimited_quota || token.remain_quota < 0

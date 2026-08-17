@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import { type useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import ApiCredentialProfiles from "~/entrypoints/options/pages/ApiCredentialProfiles"
+import { getApiCredentialProfileRowTestId } from "~/features/ApiCredentialProfiles/testIds"
 import {
   KEY_MANAGEMENT_GUIDED_IMPORT_TARGETS,
   KEY_MANAGEMENT_ROUTE_PARAMS,
@@ -25,14 +26,21 @@ import {
 } from "~/services/verification/webAiApiCheck/extractCredentials"
 import type { Tag } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
+import {
+  API_CREDENTIAL_PROFILE_LINK_STATES,
+  type ApiCredentialProfileLink,
+} from "~/types/apiCredentialProfiles"
 import { requireHistoryTarget } from "~~/tests/test-utils/history"
 import { render, screen, waitFor, within } from "~~/tests/test-utils/render"
 
 let store: ApiCredentialProfile[] = []
+let profileLinks: ApiCredentialProfileLink[] = []
 const mockOpenModelsPage = vi.fn()
 const mockOpenSettingsTab = vi.fn()
 const mockOpenWithCredentials = vi.fn()
 const pushWithinOptionsPageMock = vi.fn()
+const replaceWithinOptionsPageMock = vi.fn()
+const mockOpenKeysPage = vi.fn()
 const mockUseUserPreferencesContext = vi.fn()
 const mockDismissGatewayGuidanceSurface = vi.fn()
 const mockFetchOpenAICompatibleModelIds = vi.fn(
@@ -44,6 +52,7 @@ const mockFetchOpenAICompatibleModelIds = vi.fn(
 )
 
 const mockListProfiles = vi.fn(async () => store)
+const mockListProfileLinks = vi.fn(async () => profileLinks)
 const mockFetchApiCredentialModelIds = vi.fn(
   async (
     _params: Parameters<
@@ -163,6 +172,7 @@ vi.mock(
     subscribeToApiCredentialProfilesChanges: () => () => {},
     apiCredentialProfilesStorage: {
       listProfiles: () => mockListProfiles(),
+      listLinks: () => mockListProfileLinks(),
       createProfile: (input: any) => mockCreateProfile(input),
       updateProfile: (id: string, updates: Partial<ApiCredentialProfile>) =>
         mockUpdateProfile(id, updates),
@@ -174,6 +184,15 @@ vi.mock(
 vi.mock("~/components/dialogs/ChannelDialog", () => ({
   ChannelDialogProvider: ({ children }: { children: ReactNode }) => children,
   useChannelDialog: () => ({ openWithCredentials: mockOpenWithCredentials }),
+}))
+
+vi.mock("~/hooks/useAccountData", () => ({
+  useAccountData: () => ({
+    displayData: [
+      { id: "account-example", name: "Example account" },
+      { id: "account-second", name: "Second account" },
+    ],
+  }),
 }))
 
 vi.mock("~/services/apiCredentialProfiles/modelCatalog", async () => {
@@ -215,6 +234,9 @@ vi.mock("~/utils/navigation", () => ({
   openSettingsTab: (...args: unknown[]) => mockOpenSettingsTab(...args),
   pushWithinOptionsPage: (...args: unknown[]) =>
     pushWithinOptionsPageMock(...args),
+  replaceWithinOptionsPage: (...args: unknown[]) =>
+    replaceWithinOptionsPageMock(...args),
+  openKeysPage: (...args: unknown[]) => mockOpenKeysPage(...args),
 }))
 
 vi.mock("~/services/aiApi/openaiCompatible", () => ({
@@ -229,7 +251,9 @@ describe("ApiCredentialProfiles page", () => {
   beforeEach(async () => {
     globalThis.sessionStorage?.clear()
     store = []
+    profileLinks = []
     mockListProfiles.mockClear()
+    mockListProfileLinks.mockClear()
     mockFetchOpenAICompatibleModelIds.mockReset()
     mockFetchOpenAICompatibleModelIds.mockResolvedValue([])
     mockFetchApiCredentialModelIds.mockReset()
@@ -245,6 +269,8 @@ describe("ApiCredentialProfiles page", () => {
     mockOpenSettingsTab.mockReset()
     mockOpenWithCredentials.mockReset()
     pushWithinOptionsPageMock.mockReset()
+    replaceWithinOptionsPageMock.mockReset()
+    mockOpenKeysPage.mockReset()
     mockDismissGatewayGuidanceSurface.mockReset()
     mockUseUserPreferencesContext.mockReturnValue(
       createApiCredentialProfilesContextValue(),
@@ -393,6 +419,233 @@ describe("ApiCredentialProfiles page", () => {
     expect(importButton).toBeVisible()
     expect(importButton).toHaveAttribute("data-guidance-highlight", "true")
     expect(mockOpenWithCredentials).not.toHaveBeenCalled()
+  })
+
+  it("waits for profiles, selects the target endpoint, and focuses the exact row", async () => {
+    const scrollIntoViewSpy = vi
+      .spyOn(HTMLElement.prototype, "scrollIntoView")
+      .mockImplementation(() => {})
+    const focusSpy = vi.spyOn(HTMLElement.prototype, "focus")
+    store = [
+      {
+        id: "p-1",
+        name: "First Profile",
+        apiType: API_TYPES.OPENAI_COMPATIBLE,
+        baseUrl: "https://first.example.invalid",
+        apiKey: "sk-first",
+        tagIds: [],
+        notes: "",
+        createdAt: 1,
+        updatedAt: 1,
+      },
+      {
+        id: "p-2",
+        name: "Target Profile",
+        apiType: API_TYPES.OPENAI_COMPATIBLE,
+        baseUrl: "https://target.example.invalid",
+        apiKey: "sk-target",
+        tagIds: [],
+        notes: "",
+        createdAt: 1,
+        updatedAt: 1,
+      },
+    ]
+
+    render(<ApiCredentialProfiles routeParams={{ profileId: "p-2" }} />)
+
+    const targetRow = await screen.findByTestId(
+      getApiCredentialProfileRowTestId("p-2"),
+    )
+    await waitFor(() => expect(targetRow).toHaveFocus())
+    expect(screen.queryByText("First Profile")).not.toBeInTheDocument()
+    expect(scrollIntoViewSpy).toHaveBeenCalledWith({
+      block: "center",
+      inline: "nearest",
+    })
+    expect(focusSpy).toHaveBeenCalledWith({ preventScroll: true })
+  })
+
+  it("reports a missing profile target without focusing the first profile", async () => {
+    const user = userEvent.setup()
+    store = [
+      {
+        id: "p-1",
+        name: "Available Profile",
+        apiType: API_TYPES.OPENAI_COMPATIBLE,
+        baseUrl: "https://available.example.invalid",
+        apiKey: "sk-available",
+        tagIds: [],
+        notes: "",
+        createdAt: 1,
+        updatedAt: 1,
+      },
+    ]
+
+    render(
+      <ApiCredentialProfiles routeParams={{ profileId: "missing-profile" }} />,
+    )
+
+    expect(
+      await screen.findByText(
+        "apiCredentialProfiles:target.missingDescription",
+        { selector: "span" },
+      ),
+    ).toBeVisible()
+    const availableRow = screen.getByTestId(
+      getApiCredentialProfileRowTestId("p-1"),
+    )
+    expect(availableRow).not.toHaveFocus()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "apiCredentialProfiles:target.clear",
+      }),
+    )
+    expect(replaceWithinOptionsPageMock).toHaveBeenCalledWith(
+      "#apiCredentialProfiles",
+    )
+  })
+
+  it("shows local account context and maps a stored link to exact key navigation", async () => {
+    const user = userEvent.setup()
+    store = [
+      {
+        id: "p-1",
+        name: "Linked Profile",
+        apiType: API_TYPES.OPENAI_COMPATIBLE,
+        baseUrl: "https://linked.example.invalid",
+        apiKey: "sk-linked",
+        tagIds: [],
+        notes: "",
+        createdAt: 1,
+        updatedAt: 1,
+      },
+    ]
+    profileLinks = [
+      {
+        id: "association-1",
+        profileId: "p-1",
+        locator: {
+          source: "account_token",
+          accountId: "account-example",
+          siteType: SITE_TYPES.NEW_API,
+          tokenId: 1,
+        },
+        state: API_CREDENTIAL_PROFILE_LINK_STATES.Active,
+        linkedBy: "user",
+        createdAt: 1,
+        updatedAt: 1,
+      },
+      {
+        id: "association-2",
+        profileId: "p-1",
+        locator: {
+          source: "service_credential",
+          accountId: "account-second",
+          siteType: SITE_TYPES.NEW_API,
+          service: "codex",
+        },
+        state: API_CREDENTIAL_PROFILE_LINK_STATES.Active,
+        linkedBy: "user",
+        createdAt: 1,
+        updatedAt: 1,
+      },
+    ]
+
+    render(<ApiCredentialProfiles />)
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: /apiCredentialProfiles:association.linked/,
+      }),
+    )
+    expect(
+      screen.getByText(
+        "Example account · apiCredentialProfiles:association.accountToken",
+      ),
+    ).toBeVisible()
+    expect(
+      screen.getByText(
+        "Second account · apiCredentialProfiles:association.serviceCredential",
+      ),
+    ).toBeVisible()
+    await user.click(
+      screen.getAllByRole("menuitem", {
+        name: "apiCredentialProfiles:association.viewKey",
+      })[0],
+    )
+    expect(mockOpenKeysPage).toHaveBeenCalledWith({
+      associationId: "association-1",
+    })
+  })
+
+  it("keeps association status unknown while links are loading", async () => {
+    store = [
+      {
+        id: "p-1",
+        name: "Loading Association",
+        apiType: API_TYPES.OPENAI_COMPATIBLE,
+        baseUrl: "https://loading.example.invalid",
+        apiKey: "sk-loading",
+        tagIds: [],
+        notes: "",
+        createdAt: 1,
+        updatedAt: 1,
+      },
+    ]
+    mockListProfileLinks.mockReturnValueOnce(
+      new Promise<ApiCredentialProfileLink[]>(() => {}),
+    )
+
+    render(<ApiCredentialProfiles />)
+
+    expect(await screen.findByText("Loading Association")).toBeVisible()
+    expect(
+      screen.queryByText("apiCredentialProfiles:association.sectionTitle"),
+    ).not.toBeInTheDocument()
+  })
+
+  it("discloses association load failure and retries without showing unlinked", async () => {
+    const user = userEvent.setup()
+    store = [
+      {
+        id: "p-1",
+        name: "Unavailable Association",
+        apiType: API_TYPES.OPENAI_COMPATIBLE,
+        baseUrl: "https://unavailable.example.invalid",
+        apiKey: "sk-unavailable",
+        tagIds: [],
+        notes: "",
+        createdAt: 1,
+        updatedAt: 1,
+      },
+    ]
+    mockListProfileLinks
+      .mockRejectedValueOnce(new Error("storage unavailable"))
+      .mockResolvedValueOnce([])
+
+    render(<ApiCredentialProfiles />)
+
+    expect(
+      await screen.findByText("apiCredentialProfiles:association.loadFailed"),
+    ).toBeVisible()
+    expect(
+      screen.queryByText("apiCredentialProfiles:association.sectionTitle"),
+    ).not.toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.retry" }),
+    )
+
+    await waitFor(() => {
+      expect(mockListProfileLinks).toHaveBeenCalledTimes(2)
+      expect(
+        screen.queryByText("apiCredentialProfiles:association.loadFailed"),
+      ).not.toBeInTheDocument()
+    })
+    expect(
+      screen.queryByText("apiCredentialProfiles:association.sectionTitle"),
+    ).not.toBeInTheDocument()
   })
 
   it("keeps managed-site setup recovery out of guidance for complete configuration", async () => {

@@ -4,12 +4,27 @@ import { describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import { TokenList } from "~/features/KeyManagement/components/TokenList"
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "~/features/KeyManagement/constants"
-import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
+import {
+  getKeyManagementAssociationTargetId,
+  KEY_MANAGEMENT_TEST_IDS,
+} from "~/features/KeyManagement/testIds"
+import { KEY_MANAGEMENT_LOAD_STATUSES } from "~/features/KeyManagement/types"
+import { ACCOUNT_RUNTIME_KEY_SOURCES } from "~/services/accounts/accountRuntimeKeys"
+import { API_CREDENTIAL_PROFILE_LINK_STATES } from "~/types/apiCredentialProfiles"
 import { render, screen, waitFor, within } from "~~/tests/test-utils/render"
 import {
   createAccount,
   createToken,
 } from "~~/tests/utils/keyManagementFactories"
+
+const { openApiCredentialProfilesPageMock } = vi.hoisted(() => ({
+  openApiCredentialProfilesPageMock: vi.fn(),
+}))
+
+vi.mock("~/utils/navigation", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/utils/navigation")>()),
+  openApiCredentialProfilesPage: openApiCredentialProfilesPageMock,
+}))
 
 vi.mock("~/features/KeyManagement/components/TokenListItem", () => ({
   TokenListItem: ({
@@ -17,15 +32,29 @@ vi.mock("~/features/KeyManagement/components/TokenListItem", () => ({
     guidedManagedSiteImportRequest,
     onSelectionChange,
     selectionDisabledReason,
+    association,
+    targetId,
+    isNavigationTarget,
   }: {
     token: { name: string }
     guidedManagedSiteImportRequest?: string
     onSelectionChange?: (checked: boolean) => void
     selectionDisabledReason?: string
+    association?: {
+      status: "linked" | "needs-confirmation"
+      label: string
+      actionLabel?: string
+      onOpen?: () => void
+    }
+    targetId?: string
+    isNavigationTarget?: boolean
   }) => (
     <div
+      id={targetId}
+      tabIndex={targetId ? -1 : undefined}
       data-testid={`token-row-${token.name}`}
       data-guided-import-request={guidedManagedSiteImportRequest}
+      data-navigation-target={isNavigationTarget}
     >
       {onSelectionChange || selectionDisabledReason ? (
         <input
@@ -36,6 +65,11 @@ vi.mock("~/features/KeyManagement/components/TokenListItem", () => ({
         />
       ) : null}
       {token.name}
+      {association?.status === "linked" ? (
+        <button type="button" onClick={association.onOpen}>
+          {association.actionLabel}
+        </button>
+      ) : null}
     </div>
   ),
 }))
@@ -64,6 +98,71 @@ const nativeRow = {
 }
 
 describe("TokenList grouped all-accounts UX", () => {
+  it("locates a linked account token and opens its saved credential", async () => {
+    const user = userEvent.setup()
+    const account = createAccount({ id: "account-example", name: "Example" })
+    const token = createToken({
+      id: 42,
+      name: "Linked token",
+      key: "sk-example",
+      accountId: account.id,
+      accountName: account.name,
+    })
+    const association = {
+      id: "association-example",
+      profileId: "profile-example",
+      locator: {
+        source: ACCOUNT_RUNTIME_KEY_SOURCES.AccountToken,
+        accountId: account.id,
+        siteType: account.siteType,
+        tokenId: token.id,
+      },
+      state: API_CREDENTIAL_PROFILE_LINK_STATES.Active,
+      linkedBy: "user" as const,
+      createdAt: 1,
+      updatedAt: 1,
+    }
+    const onAssociationTargetStatusChange = vi.fn()
+
+    render(
+      <TokenList
+        isLoading={false}
+        tokens={[token] as any}
+        filteredTokens={[token] as any}
+        visibleKeys={new Set()}
+        resolvingVisibleKeys={new Set()}
+        getVisibleTokenKey={getVisibleTokenKey as any}
+        toggleKeyVisibility={vi.fn()}
+        copyKey={vi.fn()}
+        handleEditToken={vi.fn()}
+        handleDeleteToken={vi.fn()}
+        handleAddToken={vi.fn()}
+        selectedAccount={account.id}
+        displayData={[account] as any}
+        credentialProfileLinks={[association]}
+        associationTarget={association}
+        onAssociationTargetStatusChange={onAssociationTargetStatusChange}
+      />,
+    )
+
+    const target = await screen.findByTestId("token-row-Linked token")
+    await waitFor(() => expect(target).toHaveFocus())
+    expect(target).toHaveAttribute(
+      "id",
+      getKeyManagementAssociationTargetId(association.id),
+    )
+    expect(onAssociationTargetStatusChange).toHaveBeenCalledWith("found")
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:credentialAssociation.viewCredential",
+      }),
+    )
+    expect(openApiCredentialProfilesPageMock).toHaveBeenCalledWith({
+      profileId: association.profileId,
+    })
+  })
+
   it("keeps mixed native rows out of legacy batch selection and explains the eligible count", async () => {
     const user = userEvent.setup()
     const account = createAccount({ id: "legacy-account", name: "Legacy" })
@@ -423,7 +522,7 @@ describe("TokenList grouped all-accounts UX", () => {
         displayData={[account] as any}
         serviceCredentials={{
           [account.id]: {
-            status: "loaded",
+            status: KEY_MANAGEMENT_LOAD_STATUSES.Loaded,
             credential: {
               kind: "singleton_service_key",
               service: "codex",

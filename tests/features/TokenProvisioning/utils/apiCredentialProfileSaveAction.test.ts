@@ -12,10 +12,15 @@ import {
   saveAccountRuntimeKeysToApiCredentialProfiles,
 } from "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction"
 import {
+  buildAccountKeyResourceRuntimeKey,
   buildAccountTokenRuntimeKey,
   buildServiceCredentialRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
-import { createLegacyCreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
+import {
+  createAccountKeyResourceCreatedRuntimeSecret,
+  createLegacyCreatedRuntimeSecret,
+} from "~/services/accounts/createdRuntimeSecret"
+import { API_CREDENTIAL_PROFILE_CAPTURE_STATUSES } from "~/services/apiCredentialProfiles/apiCredentialProfileLinkContracts"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { AuthTypeEnum } from "~/types"
 import {
@@ -25,12 +30,14 @@ import {
 
 const {
   createApiCredentialProfileMock,
+  captureStatusMock,
   openApiCredentialProfilesPageMock,
   toastDismissMock,
   toastErrorMock,
   toastSuccessMock,
 } = vi.hoisted(() => ({
   createApiCredentialProfileMock: vi.fn(),
+  captureStatusMock: vi.fn(),
   openApiCredentialProfilesPageMock: vi.fn(),
   toastDismissMock: vi.fn(),
   toastErrorMock: vi.fn(),
@@ -50,19 +57,22 @@ vi.mock("~/utils/navigation", () => ({
     openApiCredentialProfilesPageMock(...args),
 }))
 
-vi.mock(
-  "~/services/apiCredentialProfiles/apiCredentialProfilesStorage",
-  () => ({
-    apiCredentialProfilesStorage: {
-      createProfile: (...args: unknown[]) =>
-        createApiCredentialProfileMock(...args),
-    },
-  }),
-)
+vi.mock("~/services/apiCredentialProfiles/apiCredentialProfileLinks", () => ({
+  apiCredentialProfileLinks: {
+    capture: async (...args: unknown[]) => ({
+      status: captureStatusMock(),
+      profile: await createApiCredentialProfileMock(...args),
+    }),
+  },
+}))
 
 describe("buildOneTimeApiKeyProfileSaveAction", () => {
   beforeEach(() => {
     createApiCredentialProfileMock.mockReset()
+    captureStatusMock.mockReset()
+    captureStatusMock.mockReturnValue(
+      API_CREDENTIAL_PROFILE_CAPTURE_STATUSES.Captured,
+    )
     openApiCredentialProfilesPageMock.mockReset()
     toastDismissMock.mockReset()
     toastErrorMock.mockReset()
@@ -100,11 +110,14 @@ describe("buildOneTimeApiKeyProfileSaveAction", () => {
     await saveAction.onSave()
 
     expect(createApiCredentialProfileMock).toHaveBeenCalledWith({
-      name: "AIHubMix - Default API Key",
-      apiType: API_TYPES.OPENAI_COMPATIBLE,
-      baseUrl: AIHUBMIX_API_ORIGIN,
-      apiKey: "sk-one-time-full",
-      tagIds: [],
+      profile: {
+        name: "AIHubMix - Default API Key",
+        apiType: API_TYPES.OPENAI_COMPATIBLE,
+        baseUrl: AIHUBMIX_API_ORIGIN,
+        apiKey: "sk-one-time-full",
+        tagIds: [],
+      },
+      linkedBy: "creation-response",
     })
   })
 
@@ -158,15 +171,82 @@ describe("buildOneTimeApiKeyProfileSaveAction", () => {
       `${String(sanitizedRejection)} ${serializableRejection}`,
     ).not.toContain(secret.secret)
     expect(createApiCredentialProfileMock).toHaveBeenCalledWith({
-      name: "Example - Example key",
-      apiType: API_TYPES.ANTHROPIC,
-      baseUrl: "https://api.example.invalid",
-      apiKey: "sk-one-time-secret",
-      tagIds: [],
+      profile: {
+        name: "Example - Example key",
+        apiType: API_TYPES.ANTHROPIC,
+        baseUrl: "https://api.example.invalid",
+        apiKey: "sk-one-time-secret",
+        tagIds: [],
+      },
+      linkedBy: "creation-response",
     })
     expect(logger.error).toHaveBeenCalledWith(
       "Failed to save one-time key to API profiles from OneTimeSecretDialog",
       { message: "could not save [REDACTED]" },
+    )
+  })
+
+  it("discloses when a saved credential association needs confirmation", async () => {
+    captureStatusMock.mockReturnValueOnce(
+      API_CREDENTIAL_PROFILE_CAPTURE_STATUSES.AssociationConflict,
+    )
+    createApiCredentialProfileMock.mockResolvedValueOnce({
+      id: "profile-1",
+      name: "Example - Key",
+    })
+    const t = vi.fn((key: string) => key) as unknown as TFunction
+    const saveAction = buildOneTimeApiKeyProfileSaveAction({
+      accountName: "Example",
+      baseUrl: "https://api.example.invalid",
+      token: { name: "Key", key: "sk-example-secret" },
+      t,
+      logger: { error: vi.fn() },
+      source: "ExampleDialog",
+    })
+
+    await saveAction.onSave()
+
+    expect(toastSuccessMock).toHaveBeenCalledWith(
+      "keyManagement:messages.savedToApiProfilesNeedsConfirmation",
+    )
+  })
+
+  it("preserves an account-key-resource creation correlation", async () => {
+    createApiCredentialProfileMock.mockResolvedValueOnce({
+      id: "profile-1",
+      name: "OpenRouter - Created key",
+    })
+    const ref = {
+      accountId: "openrouter-account",
+      siteType: SITE_TYPES.OPENROUTER,
+      scopeKey: "workspace-example",
+      resourceId: "resource-hash-example",
+    }
+    const saveAction = buildOneTimeApiKeyProfileSaveAction({
+      result: createAccountKeyResourceCreatedRuntimeSecret({
+        ref,
+        displayName: "Created key",
+        secret: "sk-or-example-secret",
+        credential: {
+          accountName: "OpenRouter",
+          apiType: API_TYPES.OPENAI_COMPATIBLE,
+          baseUrl: "https://openrouter.example.invalid",
+          siteType: SITE_TYPES.OPENROUTER,
+          tagIds: [],
+        },
+      }),
+      t: vi.fn((key: string) => key) as unknown as TFunction,
+      logger: { error: vi.fn() },
+      source: "OneTimeSecretDialog",
+    })
+
+    await saveAction.onSave()
+
+    expect(createApiCredentialProfileMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        locator: { source: "account_key_resource", ref },
+        linkedBy: "creation-response",
+      }),
     )
   })
 
@@ -201,11 +281,14 @@ describe("buildOneTimeApiKeyProfileSaveAction", () => {
     await saveAction.onSave()
 
     expect(createApiCredentialProfileMock).toHaveBeenCalledWith({
-      name: "Example - Default API Key",
-      apiType: API_TYPES.OPENAI_COMPATIBLE,
-      baseUrl: "https://api.example.com",
-      apiKey: "sk-one-time-full",
-      tagIds: [],
+      profile: {
+        name: "Example - Default API Key",
+        apiType: API_TYPES.OPENAI_COMPATIBLE,
+        baseUrl: "https://api.example.com",
+        apiKey: "sk-one-time-full",
+        tagIds: [],
+      },
+      linkedBy: "creation-response",
     })
   })
 
@@ -241,11 +324,14 @@ describe("buildOneTimeApiKeyProfileSaveAction", () => {
     await saveAction.onSave()
 
     expect(createApiCredentialProfileMock).toHaveBeenCalledWith({
-      name: "Example - Default API Key",
-      apiType: API_TYPES.OPENAI_COMPATIBLE,
-      baseUrl: "https://api.example.com",
-      apiKey: "sk-one-time-full",
-      tagIds: [],
+      profile: {
+        name: "Example - Default API Key",
+        apiType: API_TYPES.OPENAI_COMPATIBLE,
+        baseUrl: "https://api.example.com",
+        apiKey: "sk-one-time-full",
+        tagIds: [],
+      },
+      linkedBy: "creation-response",
     })
   })
 
@@ -349,18 +435,36 @@ describe("saveAccountRuntimeKeysToApiCredentialProfiles", () => {
 
     expect(result).toEqual({ savedCount: 2 })
     expect(createApiCredentialProfileMock).toHaveBeenNthCalledWith(1, {
-      name: "Example - First",
-      apiType: API_TYPES.OPENAI_COMPATIBLE,
-      baseUrl: "https://api.example.invalid/v1",
-      apiKey: "sk-first",
-      tagIds: ["tag-a"],
+      profile: {
+        name: "Example - First",
+        apiType: API_TYPES.OPENAI_COMPATIBLE,
+        baseUrl: "https://api.example.invalid/v1",
+        apiKey: "sk-first",
+        tagIds: ["tag-a"],
+      },
+      locator: {
+        source: "account_token",
+        accountId: "account-1",
+        siteType: SITE_TYPES.NEW_API,
+        tokenId: 1,
+      },
+      linkedBy: "resolved-runtime-key",
     })
     expect(createApiCredentialProfileMock).toHaveBeenNthCalledWith(2, {
-      name: "AIHubMix - Second",
-      apiType: API_TYPES.OPENAI_COMPATIBLE,
-      baseUrl: AIHUBMIX_API_ORIGIN,
-      apiKey: "sk-second",
-      tagIds: ["tag-b"],
+      profile: {
+        name: "AIHubMix - Second",
+        apiType: API_TYPES.OPENAI_COMPATIBLE,
+        baseUrl: AIHUBMIX_API_ORIGIN,
+        apiKey: "sk-second",
+        tagIds: ["tag-b"],
+      },
+      locator: {
+        source: "account_token",
+        accountId: "account-2",
+        siteType: SITE_TYPES.AIHUBMIX,
+        tokenId: 2,
+      },
+      linkedBy: "resolved-runtime-key",
     })
     expect(toastSuccessMock).toHaveBeenCalledWith(expect.any(Function), {
       duration: 8000,
@@ -525,11 +629,62 @@ describe("saveAccountRuntimeKeysToApiCredentialProfiles", () => {
       serviceCredentialRuntimeKey,
     )
     expect(createApiCredentialProfileMock).toHaveBeenCalledWith({
-      name: "Example Account - Codex",
-      apiType: API_TYPES.OPENAI_COMPATIBLE,
-      baseUrl: "https://fresh-runtime.example.invalid",
-      apiKey: "fresh-service-secret",
-      tagIds: ["tag-a"],
+      profile: {
+        name: "Example Account - Codex",
+        apiType: API_TYPES.OPENAI_COMPATIBLE,
+        baseUrl: "https://fresh-runtime.example.invalid",
+        apiKey: "fresh-service-secret",
+        tagIds: ["tag-a"],
+      },
+      locator: {
+        source: "service_credential",
+        accountId: "account-1",
+        siteType: SITE_TYPES.SHAREDCHAT,
+        service: "codex",
+      },
+      linkedBy: "resolved-runtime-key",
     })
+  })
+
+  it("preserves a native account-key-resource locator after secret resolution", async () => {
+    createApiCredentialProfileMock.mockResolvedValueOnce({
+      id: "profile-1",
+      name: "Example - Native key",
+    })
+    const account = createAccount({
+      id: "account-1",
+      name: "Example",
+      baseUrl: "https://api.example.invalid",
+      siteType: SITE_TYPES.NEW_API,
+      authType: AuthTypeEnum.AccessToken,
+      token: "account-token",
+      userId: "1",
+    })
+    const ref = {
+      accountId: account.id,
+      siteType: account.siteType,
+      scopeKey: "account",
+      resourceId: "42",
+    }
+    const runtimeKey = buildAccountKeyResourceRuntimeKey(account, {
+      ref,
+      label: "Native key",
+      secret: "sk-native-secret",
+    })
+
+    await saveAccountRuntimeKeysToApiCredentialProfiles({
+      items: [{ runtimeKey }],
+      t: vi.fn((key: string) => key) as unknown as TFunction,
+      logger: { error: vi.fn() },
+      source: "TokenListBatchAction",
+      resolveRuntimeKeySecret: async () => runtimeKey,
+    })
+
+    expect(createApiCredentialProfileMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        locator: { source: "account_key_resource", ref },
+        linkedBy: "resolved-runtime-key",
+      }),
+    )
   })
 })

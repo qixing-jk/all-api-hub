@@ -31,7 +31,12 @@ import {
 import { openKeysPage } from "~/utils/navigation"
 
 import {
+  API_CREDENTIAL_PROFILE_ASSOCIATION_AVAILABILITY,
+  API_CREDENTIAL_PROFILE_ASSOCIATION_AVAILABILITY_STATUSES,
+  API_CREDENTIAL_PROFILE_ASSOCIATION_UNAVAILABLE_REASONS,
   API_CREDENTIAL_PROFILES_VIEW_VARIANTS,
+  type ApiCredentialProfileAssociatedKeyStateByProfileId,
+  type ApiCredentialProfileAssociationAvailability,
   type ApiCredentialProfilesViewVariant,
 } from "../contracts"
 import type { ApiCredentialProfilesController } from "../hooks/useApiCredentialProfilesController"
@@ -47,6 +52,14 @@ export interface ApiCredentialProfilesListViewProps {
   variant?: ApiCredentialProfilesViewVariant
   autoFocusSearch?: boolean
   guidedImportEntryRequest?: number
+  targetProfileId?: string
+  targetProfileRequest?: number
+  onClearTargetProfile?: () => void
+  associatedKeyStateByProfileId?: ApiCredentialProfileAssociatedKeyStateByProfileId
+  associationAvailability?: ApiCredentialProfileAssociationAvailability
+  onRetryAssociatedKeys?: () => void
+  onConfirmAssociatedKey?: (associationId: string) => void
+  onUnlinkAssociatedKey?: (associationId: string) => void
   className?: string
 }
 
@@ -71,6 +84,14 @@ export function ApiCredentialProfilesListView({
   variant = API_CREDENTIAL_PROFILES_VIEW_VARIANTS.Options,
   autoFocusSearch = false,
   guidedImportEntryRequest = 0,
+  targetProfileId,
+  targetProfileRequest = 0,
+  onClearTargetProfile,
+  associatedKeyStateByProfileId,
+  associationAvailability = API_CREDENTIAL_PROFILE_ASSOCIATION_AVAILABILITY.Known,
+  onRetryAssociatedKeys,
+  onConfirmAssociatedKey,
+  onUnlinkAssociatedKey,
   className,
 }: ApiCredentialProfilesListViewProps) {
   const { t } = useTranslation([
@@ -124,6 +145,15 @@ export function ApiCredentialProfilesListView({
   )
 
   const maxTagFilterLines = isSmallScreen ? 2 : isDesktop ? 3 : 2
+  const targetProfile = targetProfileId
+    ? controller.profiles.find((profile) => profile.id === targetProfileId)
+    : undefined
+  const isTargetPending = Boolean(
+    targetProfileId && controller.isLoading && !targetProfile,
+  )
+  const isTargetMissing = Boolean(
+    targetProfileId && !controller.isLoading && !targetProfile,
+  )
 
   useEffect(() => {
     if (!guidedImportEntryRequest || controller.profiles.length === 0) {
@@ -135,6 +165,17 @@ export function ApiCredentialProfilesListView({
     setSelectedTagIds([])
     setLastFilterMode(null)
   }, [controller.profiles.length, guidedImportEntryRequest])
+
+  useEffect(() => {
+    if (!targetProfile) {
+      return
+    }
+
+    setSearchTerm("")
+    setApiTypeFilter("")
+    setSelectedTagIds([])
+    setLastFilterMode(null)
+  }, [targetProfile, targetProfileRequest])
 
   const {
     filteredProfiles,
@@ -230,10 +271,66 @@ export function ApiCredentialProfilesListView({
   const handleOpenKeyManagement = useCallback(() => {
     void openKeysPage()
   }, [])
+  const handleOpenAssociatedKey = useCallback((associationId: string) => {
+    void openKeysPage({ associationId })
+  }, [])
+
+  const targetStatusMessage = isTargetPending
+    ? t("apiCredentialProfiles:target.loading")
+    : isTargetMissing
+      ? t("apiCredentialProfiles:target.missingDescription")
+      : targetProfile
+        ? t("apiCredentialProfiles:target.found", {
+            name: targetProfile.name,
+          })
+        : ""
+  const hasAssociationAvailabilityError =
+    associationAvailability.status ===
+      API_CREDENTIAL_PROFILE_ASSOCIATION_AVAILABILITY_STATUSES.Unknown &&
+    associationAvailability.reason ===
+      API_CREDENTIAL_PROFILE_ASSOCIATION_UNAVAILABLE_REASONS.Error
 
   return (
     <div className={cn("space-y-4", className)}>
       <ApiCredentialProfilesDialogs controller={controller} />
+
+      {hasAssociationAvailabilityError ? (
+        <Notice
+          tone="warning"
+          description={
+            <span>
+              {t("apiCredentialProfiles:association.loadFailed")}{" "}
+              {onRetryAssociatedKeys ? (
+                <NoticeActionButton onClick={onRetryAssociatedKeys}>
+                  {t("common:actions.retry")}
+                </NoticeActionButton>
+              ) : null}
+            </span>
+          }
+        />
+      ) : null}
+
+      {targetProfileId ? (
+        <div className="sr-only" role="status" aria-live="polite">
+          {targetStatusMessage}
+        </div>
+      ) : null}
+
+      {isTargetMissing ? (
+        <Notice
+          tone="warning"
+          description={
+            <span>
+              {t("apiCredentialProfiles:target.missingDescription")}{" "}
+              {onClearTargetProfile ? (
+                <NoticeActionButton onClick={onClearTargetProfile}>
+                  {t("apiCredentialProfiles:target.clear")}
+                </NoticeActionButton>
+              ) : null}
+            </span>
+          }
+        />
+      ) : null}
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div className="sm:col-span-2">
@@ -365,6 +462,19 @@ export function ApiCredentialProfilesListView({
                 }
               : undefined
           }
+          targetProfile={
+            targetProfile
+              ? {
+                  profileId: targetProfile.id,
+                  request: targetProfileRequest || 1,
+                }
+              : undefined
+          }
+          associatedKeyStateByProfileId={associatedKeyStateByProfileId}
+          associationAvailability={associationAvailability}
+          onOpenAssociatedKey={handleOpenAssociatedKey}
+          onConfirmAssociatedKey={onConfirmAssociatedKey}
+          onUnlinkAssociatedKey={onUnlinkAssociatedKey}
         />
       )}
     </div>

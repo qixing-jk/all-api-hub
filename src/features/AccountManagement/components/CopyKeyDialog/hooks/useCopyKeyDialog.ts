@@ -13,12 +13,14 @@ import {
   buildDisplayAccountTokenRuntimeKey,
   type AccountRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
+import type { CreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
 import { shouldShowOneTimeKeyDialogForCreatedToken } from "~/services/accounts/createdTokenSecretHandling"
 import {
   canCreateAccountApiTokens,
   canListAccountKeyResources,
   canListAccountRuntimeKeys,
   supportsAccountApiTokenCreation,
+  supportsRecoverableAccountRuntimeKeySecrets,
 } from "~/services/accounts/keyProductCapabilities"
 import { TOKEN_QUICK_CREATE_RESOLUTION_KINDS } from "~/services/accounts/tokenQuickCreateResolution"
 import {
@@ -29,6 +31,7 @@ import {
   resolveDisplayAccountRuntimeKeySecret,
 } from "~/services/accounts/utils/apiServiceRequest"
 import { formatOptionalSkPrefixSiteToken } from "~/services/accountTokens/apiTokenKey"
+import { createAIHubMixCreatedRuntimeSecret } from "~/services/apiAdapters/aihubmix/createdSecret"
 import {
   isCreatedApiToken,
   TOKEN_PROVISIONING_ERRORS,
@@ -77,6 +80,8 @@ export function useCopyKeyDialog(
   const [isCreating, setIsCreating] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
   const [oneTimeToken, setOneTimeToken] = useState<ApiToken | null>(null)
+  const [oneTimeSecret, setOneTimeSecret] =
+    useState<CreatedRuntimeSecret | null>(null)
   const [defaultTokenCreateAllowedGroups, setDefaultTokenCreateAllowedGroups] =
     useState<string[] | null>(null)
   const [copiedRuntimeKeyId, setCopiedRuntimeKeyId] = useState<string | null>(
@@ -134,6 +139,7 @@ export function useCopyKeyDialog(
       setError(null)
       setCreateError(null)
       setOneTimeToken(null)
+      setOneTimeSecret(null)
       clearDefaultTokenCreateAllowedGroups()
       setCopiedRuntimeKeyId(null)
       setExpandedRuntimeKeys(new Set())
@@ -221,6 +227,7 @@ export function useCopyKeyDialog(
       setIsCreating(false)
       setCreateError(null)
       setOneTimeToken(null)
+      setOneTimeSecret(null)
       clearDefaultTokenCreateAllowedGroups()
       setCopiedRuntimeKeyId(null)
       setExpandedRuntimeKeys(new Set())
@@ -277,7 +284,7 @@ export function useCopyKeyDialog(
   /**
    * Refreshes runtime-key inventory after a successful create flow and applies the same UX rules:
    * - If no runtime key is found, show an actionable error.
-   * - If exactly one runtime key exists, auto-copy it.
+   * - If exactly one recoverable runtime key exists, auto-copy it.
    * - Otherwise, keep the list visible and show a success toast.
    *
    * Some sites, including AIHubMix, only return the full key in the create
@@ -315,6 +322,12 @@ export function useCopyKeyDialog(
           setOneTimeToken(
             formatOptionalSkPrefixSiteToken(createdToken, account.siteType),
           )
+          setOneTimeSecret(
+            createAIHubMixCreatedRuntimeSecret({
+              account,
+              token: createdToken,
+            }),
+          )
           await copyKey(createdRuntimeKey)
           return
         }
@@ -328,7 +341,10 @@ export function useCopyKeyDialog(
           return
         }
 
-        if (refreshedRuntimeKeys.length === 1) {
+        if (
+          refreshedRuntimeKeys.length === 1 &&
+          supportsRecoverableAccountRuntimeKeySecrets(account.siteType)
+        ) {
           await copyKey(refreshedRuntimeKeys[0])
           return
         }
@@ -439,6 +455,7 @@ export function useCopyKeyDialog(
     isCreating,
     createError,
     oneTimeToken,
+    oneTimeSecret,
     defaultTokenCreateAllowedGroups,
     copiedRuntimeKeyId,
     expandedRuntimeKeys,
@@ -450,6 +467,9 @@ export function useCopyKeyDialog(
     refreshRuntimeKeysAfterCreate,
     toggleRuntimeKeyExpansion,
     clearDefaultTokenCreateAllowedGroups,
-    clearOneTimeToken: () => setOneTimeToken(null),
+    clearOneTimeToken: () => {
+      setOneTimeToken(null)
+      setOneTimeSecret(null)
+    },
   }
 }

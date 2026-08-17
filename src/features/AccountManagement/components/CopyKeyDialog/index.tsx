@@ -51,6 +51,7 @@ export default function CopyKeyDialog({
     isCreating,
     createError,
     oneTimeToken,
+    oneTimeSecret,
     defaultTokenCreateAllowedGroups,
     copiedRuntimeKeyId,
     expandedRuntimeKeys,
@@ -65,13 +66,9 @@ export default function CopyKeyDialog({
     clearOneTimeToken,
   } = useCopyKeyDialog(isOpen, account)
   const oneTimeKeySaveAction =
-    account && oneTimeToken
+    account && oneTimeSecret
       ? buildOneTimeApiKeyProfileSaveAction({
-          accountName: account.name,
-          baseUrl: account.baseUrl,
-          siteType: account.siteType,
-          tagIds: account.tagIds ?? [],
-          token: oneTimeToken,
+          result: oneTimeSecret,
           t: keyManagementT,
           logger,
           source: "CopyKeyDialog",

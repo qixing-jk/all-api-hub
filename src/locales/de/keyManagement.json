@@ -24,12 +24,19 @@
     "openApiProfiles": "API-Anmeldeinformationsbibliothek öffnen",
     "openSelectedAccountModels": "Kontomodelle anzeigen",
     "retryFailed": "Wiederholung fehlgeschlagen",
-    "saveToApiProfiles": "In API-Anmeldeinformationsbibliothek speichern",
-    "saveToApiProfilesHint": "Speichern Sie diesen Schlüssel in der API-Anmeldeinformationsbibliothek, um ihn schnell kopieren, überprüfen und exportieren zu können.",
+    "saveToApiProfiles": "Speichern und mit API-Anmeldedaten verknüpfen",
     "showKey": "Schlüssel anzeigen",
     "useInCherry": "Verwendung in Cherry Studio",
     "verifyApi": "API überprüfen",
     "verifyCliSupport": "Überprüfen Sie die CLI-Unterstützung"
+  },
+  "actionToolbar": {
+    "apiCredential": "API-Anmeldedaten",
+    "diagnostics": "Diagnose",
+    "integrationsAndExport": "Integrationen und Export",
+    "label": "Schlüsselaktionen",
+    "management": "Verwaltung",
+    "quickActions": "Schnellaktionen"
   },
   "allAccounts": "Alle Konten",
   "allAccountsFailed_one": "{{count}} Konto konnte nicht geladen werden; Ergebnisse sind unvollständig",
@@ -163,6 +170,22 @@
     "unavailableReason": "Dieser Schlüssel unterstützt keine Batch-Aktionen."
   },
   "createFirstKey": "Ersten Schlüssel erstellen",
+  "credentialAssociation": {
+    "linked": "API-Zugangsdaten verknüpft",
+    "needsConfirmation": "Verknüpfung muss bestätigt werden",
+    "reviewCredential": "Verknüpfung der Zugangsdaten prüfen",
+    "target": {
+      "clear": "Schlüsselliste anzeigen",
+      "found": "Verknüpfter Schlüssel gefunden",
+      "loading": "Verknüpfung wird geladen...",
+      "locating": "Verknüpfter Schlüssel wird gesucht...",
+      "missing": "Diese Verknüpfung ist nicht mehr vorhanden.",
+      "needsConfirmation": "Diese Verknüpfung muss bestätigt werden, bevor sie geöffnet werden kann.",
+      "retry": "Erneut versuchen",
+      "unavailable": "Der verknüpfte Schlüssel kann derzeit nicht gefunden werden. Prüfen Sie die Kontoverbindung und versuchen Sie es erneut."
+    },
+    "viewCredential": "Verknüpfte API-Zugangsdaten anzeigen"
+  },
   "description": "Auf dieser Seite werden API-Schlüsselinformationen für alle Konten angezeigt, einschließlich Nutzung und Ablaufzeit. Sie können neue Schlüssel für bestimmte Konten erstellen, indem Sie auf die Schaltfläche „Schlüssel hinzufügen“ in der oberen rechten Ecke oder auf die Schaltfläche „+“ neben jedem Schlüsselelement klicken. Bitte bewahren Sie Ihre API-Schlüssel sicher auf und geben Sie sie nicht an andere weiter.",
   "details": {
     "empty": "Keine weiteren Details",
@@ -320,6 +343,7 @@
   "messages": {
     "accountNotFound": "Kontoinformationen nicht gefunden",
     "batchSavedToApiProfiles": "Ausgewählte Schlüssel in der API-Anmeldeinformationsbibliothek gespeichert",
+    "batchSavedToApiProfilesNeedsConfirmation": "Ausgewählte Schlüssel gespeichert. Prüfen Sie die markierten Verknüpfungen in der API-Anmeldeinformationsbibliothek.",
     "batchSaveToApiProfilesFailed": "Ausgewählte Schlüssel konnten nicht in der API-Anmeldeinformationsbibliothek gespeichert werden",
     "batchSaveToApiProfilesPartialFailed": "Gespeicherte Schlüssel: {{savedCount}}/{{totalCount}}. Nicht gespeicherte Schlüssel: {{failedCount}}.",
     "copyFailed": "Kopieren fehlgeschlagen",
@@ -329,6 +353,7 @@
     "loadFailed": "Schlüsselliste konnte nicht geladen werden",
     "revealFailed": "Schlüssel konnte nicht angezeigt werden",
     "savedToApiProfiles": "{{name}} in der API-Anmeldeinformationsbibliothek gespeichert",
+    "savedToApiProfilesNeedsConfirmation": "Anmeldeinformation gespeichert. Prüfen Sie die Schlüsselverknüpfung in der API-Anmeldeinformationsbibliothek.",
     "saveToApiProfilesFailed": "Speichern in der API-Anmeldeinformationsbibliothek fehlgeschlagen",
     "serviceCredentialCopied": "Serviceschlüssel in Zwischenablage kopiert",
     "serviceCredentialRotated": "Serviceschlüssel-Reset",

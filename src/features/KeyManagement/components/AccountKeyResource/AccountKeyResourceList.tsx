@@ -1,11 +1,13 @@
 import { useCallback, useRef, useState } from "react"
-import { useTranslation } from "react-i18next"
 
+import type { KeyResourceCredentialAssociation } from "~/features/KeyManagement/components/KeyResourceCard"
+import type { AccountKeyResourceCardAdapter } from "~/features/KeyManagement/presentation/accountKeyResourceCardAdapter"
 import type {
   AccountKeyResourceFacts,
   AccountKeyResourceRef,
   ResourceFailure,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
+import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 
 import type {
   NativeKeyManagementRow,
@@ -16,6 +18,8 @@ import { AccountKeyResourceListItem } from "./AccountKeyResourceListItem"
 /** Renders native account-key resources independently of legacy token presentation. */
 export function AccountKeyResourceList({
   rows,
+  ariaLabel,
+  cardAdapter,
   onOpenDetail,
   onEdit,
   onDelete,
@@ -25,8 +29,13 @@ export function AccountKeyResourceList({
   onCloseDetail,
   detailsFromRows = false,
   selectionDisabledReason,
+  getAssociation,
+  getCredentialProfile,
+  getNavigationTarget,
 }: {
   rows: readonly NativeKeyManagementRow[]
+  ariaLabel: string
+  cardAdapter: AccountKeyResourceCardAdapter
   onOpenDetail?: (ref: AccountKeyResourceRef) => void
   onEdit: NativeKeyManagementRowAction
   onDelete: NativeKeyManagementRowAction
@@ -36,8 +45,16 @@ export function AccountKeyResourceList({
   onCloseDetail?: () => void
   detailsFromRows?: boolean
   selectionDisabledReason?: string
+  getAssociation?: (
+    row: NativeKeyManagementRow,
+  ) => KeyResourceCredentialAssociation | undefined
+  getCredentialProfile?: (
+    row: NativeKeyManagementRow,
+  ) => ApiCredentialProfile | undefined
+  getNavigationTarget?: (
+    row: NativeKeyManagementRow,
+  ) => { targetId: string; isNavigationTarget: true } | undefined
 }) {
-  const { t } = useTranslation()
   const [expandedRowKey, setExpandedRowKey] = useState<string | null>(null)
   const expandedRowKeyRef = useRef<string | null>(null)
   const handleExpandedChange = useCallback(
@@ -58,14 +75,12 @@ export function AccountKeyResourceList({
   )
   if (rows.length === 0) return null
   return (
-    <section
-      aria-label={t("keyManagement:openRouter.list.heading")}
-      className="space-y-3"
-    >
+    <section aria-label={ariaLabel} className="space-y-3">
       {rows.map((row) => (
         <AccountKeyResourceListItem
           key={row.rowKey}
           row={row}
+          cardAdapter={cardAdapter}
           onEdit={onEdit}
           onDelete={onDelete}
           expanded={expandedRowKey === row.rowKey}
@@ -82,6 +97,9 @@ export function AccountKeyResourceList({
           detailFailure={expandedRowKey === row.rowKey ? detailFailure : null}
           detailsFromRow={detailsFromRows}
           selectionDisabledReason={selectionDisabledReason}
+          association={getAssociation?.(row)}
+          associatedProfile={getCredentialProfile?.(row)}
+          {...getNavigationTarget?.(row)}
         />
       ))}
     </section>

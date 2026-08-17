@@ -2,7 +2,11 @@ export const KEY_MANAGEMENT_TEST_IDS = {
   addTokenButton: "key-management-add-token-button",
   emptyStateAddTokenButton: "key-management-empty-state-add-token-button",
   saveToApiProfilesButton: "key-management-save-to-api-profiles-button",
+  apiCredentialAssociationButton:
+    "key-management-api-credential-association-button",
   exportMenuButton: "key-management-export-menu-button",
+  linkedProfileExportMenuButton:
+    "key-management-linked-profile-export-menu-button",
   exportToCCSwitchButton: "key-management-export-to-cc-switch-button",
   serviceCredentialExportMenuButton:
     "key-management-service-credential-export-menu-button",
@@ -63,10 +67,17 @@ export const KEY_MANAGEMENT_TEST_IDS = {
   nativeEditorSubmitButton: "key-management-native-editor-submit-button",
   nativeKeyRow: "key-management-native-key-row",
   nativeDeleteConfirmButton: "key-management-native-delete-confirm-button",
+  associateCredentialDialog: "key-management-associate-credential-dialog",
+  associateCredentialProfileSelect:
+    "key-management-associate-credential-profile-select",
+  associateCredentialConfirmButton:
+    "key-management-associate-credential-confirm-button",
 } as const
 
 export const KEY_MANAGEMENT_TOKEN_ROW_TEST_ID_PREFIX =
   "key-management-token-row-" as const
+const KEY_MANAGEMENT_ASSOCIATION_TARGET_ID_PREFIX =
+  "key-management-association-target-" as const
 const KEY_MANAGEMENT_REPAIR_ACCOUNT_RESULT_TEST_ID_PREFIX =
   "key-management-repair-account-result-" as const
 const KEY_MANAGEMENT_MANAGED_SITE_BATCH_EXPORT_ROW_SELECT_TEST_ID_PREFIX =
@@ -77,6 +88,11 @@ const KEY_MANAGEMENT_MANAGED_SITE_BATCH_EXPORT_ROW_SELECT_TEST_ID_PREFIX =
  */
 export function getKeyManagementTokenRowTestId(tokenId: string | number) {
   return `${KEY_MANAGEMENT_TOKEN_ROW_TEST_ID_PREFIX}${tokenId}`
+}
+
+/** Returns the stable focus target for one local credential association. */
+export function getKeyManagementAssociationTargetId(associationId: string) {
+  return `${KEY_MANAGEMENT_ASSOCIATION_TARGET_ID_PREFIX}${encodeURIComponent(associationId)}`
 }
 
 /** Returns the stable test id for one repair account result. */
