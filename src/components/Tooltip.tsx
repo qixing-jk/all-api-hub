@@ -1,5 +1,6 @@
 import {
   cloneElement,
+  createContext,
   useCallback,
   useEffect,
   useId,
@@ -42,6 +43,9 @@ interface TooltipChildProps {
   onFocusCapture?: FocusEventHandler<HTMLElement>
   onBlurCapture?: FocusEventHandler<HTMLElement>
 }
+
+/** Marks descendants as already managed by an explicit Tooltip instance. */
+export const TooltipContext = createContext(false)
 
 /**
  * Tooltip renders rich or text content from a wrapper anchor by default, or from the child itself when requested.
@@ -162,7 +166,7 @@ export default function Tooltip({
 
   const defaultClassName = `${Z_INDEX.tooltip} max-w-[90vw] rounded-lg bg-gray-900 px-3 py-2 text-xs text-white shadow-lg dark:bg-dark-bg-tertiary dark:text-dark-text-primary ${className}`
   return (
-    <>
+    <TooltipContext.Provider value={true}>
       {anchor}
 
       {anchorAsChild && isString ? (
@@ -202,6 +206,6 @@ export default function Tooltip({
           {content}
         </ReactTooltip>
       )}
-    </>
+    </TooltipContext.Provider>
   )
 }

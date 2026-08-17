@@ -33,7 +33,6 @@ export function ManagedSiteImportButton({
     <IconButton
       ref={buttonRef}
       aria-label={label}
-      title={label}
       size="sm"
       variant="ghost"
       data-testid={testId}

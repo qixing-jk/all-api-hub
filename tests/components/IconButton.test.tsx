@@ -1,6 +1,8 @@
 import { fireEvent, render, screen } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import Tooltip from "~/components/Tooltip"
 import { IconButton } from "~/components/ui/IconButton"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import {
@@ -64,9 +66,59 @@ describe("IconButton", () => {
     )
   })
 
-  it("uses aria-label as the fallback title for icon-only discovery", () => {
+  it("uses an accessible tooltip for icon-only discovery by default", async () => {
+    const user = userEvent.setup()
+
     render(
       <IconButton aria-label="Refresh profiles">
+        <span />
+      </IconButton>,
+    )
+
+    const button = screen.getByRole("button", { name: "Refresh profiles" })
+    expect(button).not.toHaveAttribute("title")
+    await user.tab()
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      "Refresh profiles",
+    )
+  })
+
+  it("uses an explicit title as the default tooltip content", async () => {
+    const user = userEvent.setup()
+
+    render(
+      <IconButton aria-label="Refresh profiles" title="Refresh the list">
+        <span />
+      </IconButton>,
+    )
+
+    const button = screen.getByRole("button", { name: "Refresh profiles" })
+    expect(button).not.toHaveAttribute("title")
+    await user.tab()
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      "Refresh the list",
+    )
+  })
+
+  it("renders an opt-in tooltip without a native title", async () => {
+    const user = userEvent.setup()
+
+    render(
+      <IconButton aria-label="Refresh profiles" tooltip="Refresh now">
+        <span />
+      </IconButton>,
+    )
+
+    const button = screen.getByRole("button", { name: "Refresh profiles" })
+    expect(button).not.toHaveAttribute("title")
+
+    await user.tab()
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("Refresh now")
+  })
+
+  it("can disable automatic tooltip and retain native title fallback", () => {
+    render(
+      <IconButton aria-label="Refresh profiles" disableAutoTooltip>
         <span />
       </IconButton>,
     )
@@ -76,28 +128,22 @@ describe("IconButton", () => {
     ).toHaveAttribute("title", "Refresh profiles")
   })
 
-  it("keeps an explicit title when it differs from the accessible name", () => {
+  it("does not add a second tooltip inside an explicit tooltip wrapper", async () => {
+    const user = userEvent.setup()
+
     render(
-      <IconButton aria-label="Refresh profiles" title="Refresh the list">
-        <span />
-      </IconButton>,
+      <Tooltip content="Outer description">
+        <IconButton aria-label="Refresh profiles">
+          <span />
+        </IconButton>
+      </Tooltip>,
     )
 
-    expect(
-      screen.getByRole("button", { name: "Refresh profiles" }),
-    ).toHaveAttribute("title", "Refresh the list")
-  })
-
-  it("can disable automatic title fallback for tooltip-managed buttons", () => {
-    render(
-      <IconButton aria-label="Refresh profiles" disableAutoTitle>
-        <span />
-      </IconButton>,
+    await user.tab()
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      "Outer description",
     )
-
-    expect(
-      screen.getByRole("button", { name: "Refresh profiles" }),
-    ).not.toHaveAttribute("title")
+    expect(screen.getAllByRole("tooltip")).toHaveLength(1)
   })
 
   it("preserves its accessible identity and disables interaction while loading", () => {
@@ -116,7 +162,7 @@ describe("IconButton", () => {
 
     const button = screen.getByRole("button", { name: "Refresh profiles" })
 
-    expect(button).toHaveAttribute("title", "Refresh profiles")
+    expect(button).not.toHaveAttribute("title")
     expect(button).toHaveAttribute("aria-busy", "true")
     expect(button).toBeDisabled()
     expect(screen.queryByTestId("refresh-icon")).not.toBeInTheDocument()
