@@ -2,6 +2,7 @@ import type { AccountSiteType } from "~/constants/siteType"
 import type { CreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 
+import type { InventorySecretAvailability } from "./keyManagement"
 import type {
   EditableResourceProjection,
   NativeResourceMutationResult,
@@ -276,6 +277,8 @@ export type AccountKeyResourceOpenInput = {
 }
 
 export interface AccountKeyResourceCapability {
+  /** Declares whether an inventory item can yield a complete runtime secret. */
+  readonly inventorySecretAvailability?: InventorySecretAvailability
   open(
     input: AccountKeyResourceOpenInput,
     options?: ResourceOperationOptions,

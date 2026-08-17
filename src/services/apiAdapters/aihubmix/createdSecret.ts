@@ -1,12 +1,18 @@
 import { AIHUBMIX_API_ORIGIN, SITE_TYPES } from "~/constants/siteType"
-import { createLegacyCreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
+import { ACCOUNT_RUNTIME_KEY_SOURCES } from "~/services/accounts/accountRuntimeKeys"
+import {
+  createAccountRuntimeKeyCreatedRuntimeSecret,
+  createLegacyCreatedRuntimeSecret,
+} from "~/services/accounts/createdRuntimeSecret"
 import {
   hasUsableApiTokenKey,
   isMaskedApiTokenKey,
 } from "~/services/accountTokens/apiTokenKey"
+import { API_TYPES } from "~/services/verification/aiApiVerification"
 import type { DisplaySiteData } from "~/types"
 
 type AIHubMixCreatedToken = {
+  id?: number
   name?: string
   full_key?: string
   key?: string
@@ -33,7 +39,7 @@ export const createAIHubMixCreatedRuntimeSecret = ({
     )
   }
 
-  return createLegacyCreatedRuntimeSecret({
+  const createdSecretInput = {
     account: {
       id: account.id,
       name: account.name,
@@ -44,6 +50,33 @@ export const createAIHubMixCreatedRuntimeSecret = ({
     token: {
       name: token.name?.trim() ?? "",
       key: secret,
+    },
+  }
+
+  const tokenId = token.id
+  if (
+    typeof tokenId !== "number" ||
+    !Number.isSafeInteger(tokenId) ||
+    tokenId <= 0
+  ) {
+    return createLegacyCreatedRuntimeSecret(createdSecretInput)
+  }
+
+  return createAccountRuntimeKeyCreatedRuntimeSecret({
+    locator: {
+      source: ACCOUNT_RUNTIME_KEY_SOURCES.AccountToken,
+      accountId: account.id,
+      siteType: SITE_TYPES.AIHUBMIX,
+      tokenId,
+    },
+    displayName: createdSecretInput.token.name,
+    secret,
+    credential: {
+      accountName: account.name,
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      baseUrl: AIHUBMIX_API_ORIGIN,
+      siteType: SITE_TYPES.AIHUBMIX,
+      tagIds: account.tagIds ?? [],
     },
   })
 }

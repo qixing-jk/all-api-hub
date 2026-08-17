@@ -1,4 +1,8 @@
 import type { AccountSiteType } from "~/constants/siteType"
+import {
+  ACCOUNT_RUNTIME_KEY_SOURCES,
+  type AccountRuntimeKeyLocator,
+} from "~/services/accounts/accountRuntimeKeys"
 import { hasUsableApiTokenKey } from "~/services/accountTokens/apiTokenKey"
 import type { ApiVerificationApiType } from "~/services/verification/aiApiVerification"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
@@ -16,6 +20,10 @@ type CreatedRuntimeSecretCorrelation =
         readonly scopeKey: string
         readonly resourceId: string
       }
+    }
+  | {
+      readonly kind: "account-runtime-key"
+      readonly locator: AccountRuntimeKeyLocator
     }
 
 type CreatedRuntimeSecretCredential = {
@@ -75,6 +83,79 @@ const createCreatedRuntimeSecret = (params: {
   secretAvailability: "create-response-only",
   credential: params.credential,
 })
+
+const requireAccountRuntimeKeyLocator = (
+  locator: AccountRuntimeKeyLocator,
+): AccountRuntimeKeyLocator => {
+  if (locator.source === ACCOUNT_RUNTIME_KEY_SOURCES.AccountKeyResource) {
+    const { ref } = locator
+    if (
+      !ref.accountId.trim() ||
+      !ref.siteType.trim() ||
+      !ref.scopeKey.trim() ||
+      !ref.resourceId.trim()
+    ) {
+      throw new Error("Created runtime secret requires a valid locator")
+    }
+    return locator
+  }
+
+  if (!locator.accountId.trim() || !locator.siteType.trim()) {
+    throw new Error("Created runtime secret requires a valid locator")
+  }
+  if (
+    locator.source === ACCOUNT_RUNTIME_KEY_SOURCES.AccountToken &&
+    (!Number.isSafeInteger(locator.tokenId) || locator.tokenId <= 0)
+  ) {
+    throw new Error("Created runtime secret requires a valid locator")
+  }
+  if (
+    locator.source === ACCOUNT_RUNTIME_KEY_SOURCES.ServiceCredential &&
+    !locator.service.trim()
+  ) {
+    throw new Error("Created runtime secret requires a valid locator")
+  }
+  return locator
+}
+
+/** Returns the provider-neutral key locator observed during creation, if any. */
+export const getCreatedRuntimeSecretLocator = (
+  result: CreatedRuntimeSecret,
+): AccountRuntimeKeyLocator | undefined => {
+  switch (result.correlation.kind) {
+    case "account-key-resource":
+      return {
+        source: ACCOUNT_RUNTIME_KEY_SOURCES.AccountKeyResource,
+        ref: result.correlation.ref,
+      }
+    case "account-runtime-key":
+      return result.correlation.locator
+    case "legacy-create":
+      return undefined
+  }
+}
+
+/** Builds a one-time secret with an exact account-runtime-key correlation. */
+export const createAccountRuntimeKeyCreatedRuntimeSecret = ({
+  locator,
+  displayName,
+  secret,
+  credential,
+}: {
+  locator: AccountRuntimeKeyLocator
+  displayName: string
+  secret: string
+  credential: CreatedRuntimeSecretCredential
+}): CreatedRuntimeSecret =>
+  createCreatedRuntimeSecret({
+    correlation: {
+      kind: "account-runtime-key",
+      locator: requireAccountRuntimeKeyLocator(locator),
+    },
+    displayName,
+    secret,
+    credential,
+  })
 
 /** Builds a one-time secret from a legacy token-create response. */
 export const createLegacyCreatedRuntimeSecret = ({

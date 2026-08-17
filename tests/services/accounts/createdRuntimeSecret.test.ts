@@ -3,7 +3,9 @@ import { describe, expect, it } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   createAccountKeyResourceCreatedRuntimeSecret,
+  createAccountRuntimeKeyCreatedRuntimeSecret,
   createLegacyCreatedRuntimeSecret,
+  getCreatedRuntimeSecretLocator,
 } from "~/services/accounts/createdRuntimeSecret"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 
@@ -129,5 +131,50 @@ describe("createLegacyCreatedRuntimeSecret", () => {
     })
 
     expect(result.secret).toBe("opaque-example-secret")
+    expect(getCreatedRuntimeSecretLocator(result)).toEqual({
+      source: "account_key_resource",
+      ref:
+        result.correlation.kind === "account-key-resource"
+          ? result.correlation.ref
+          : undefined,
+    })
+  })
+
+  it("preserves an account-runtime-key locator in a created secret", () => {
+    const result = createAccountRuntimeKeyCreatedRuntimeSecret({
+      locator: {
+        source: "account_token",
+        accountId: "account-example",
+        siteType: SITE_TYPES.AIHUBMIX,
+        tokenId: 42,
+      },
+      displayName: "Example key",
+      secret: "sk-example-secret",
+      credential: {
+        accountName: "Example account",
+        apiType: API_TYPES.OPENAI_COMPATIBLE,
+        baseUrl: "https://api.example.invalid",
+        tagIds: [],
+      },
+    })
+
+    expect(getCreatedRuntimeSecretLocator(result)).toEqual({
+      source: "account_token",
+      accountId: "account-example",
+      siteType: SITE_TYPES.AIHUBMIX,
+      tokenId: 42,
+    })
+    expect(
+      getCreatedRuntimeSecretLocator(
+        createLegacyCreatedRuntimeSecret({
+          account: {
+            id: "legacy-account",
+            name: "Legacy account",
+            baseUrl: "https://legacy.example.invalid",
+          },
+          token: { name: "Legacy", key: "sk-legacy-secret" },
+        }),
+      ),
+    ).toBeUndefined()
   })
 })

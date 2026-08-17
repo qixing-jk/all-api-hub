@@ -5,6 +5,8 @@ import {
   buildServiceCredentialRuntimeKey,
   deriveServiceCredentialRuntimeKeyFields,
   formatAccountRuntimeKeySecretForSite,
+  getAccountRuntimeKeyLocator,
+  isAccountKeyResourceRuntimeKey,
   isAccountTokenRuntimeKey,
   isServiceCredentialRuntimeKey,
   type AccountRuntimeKey,
@@ -17,13 +19,25 @@ import {
 } from "~/services/accounts/keyProductCapabilities"
 import { accountSub2ApiAuthSession } from "~/services/accounts/sub2apiAuthSession"
 import { formatOptionalSkPrefixSiteToken } from "~/services/accountTokens/apiTokenKey"
-import type { AccountKeyResourceCapability } from "~/services/apiAdapters/contracts/accountKeyResource"
+import {
+  ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS,
+  type AccountKeyResourceCapability,
+  type AccountRuntimeKeyResolution,
+} from "~/services/apiAdapters/contracts/accountKeyResource"
 import type { InviteLinkCapability } from "~/services/apiAdapters/contracts/inviteLink"
-import type { KeyManagementCapability } from "~/services/apiAdapters/contracts/keyManagement"
+import {
+  getInventorySecretAvailability,
+  INVENTORY_SECRET_AVAILABILITIES,
+  type KeyManagementCapability,
+} from "~/services/apiAdapters/contracts/keyManagement"
 import type { ServiceCredentialCapability } from "~/services/apiAdapters/contracts/serviceCredential"
 import type { SiteTypeCapabilities } from "~/services/apiAdapters/contracts/siteTypeCapabilities"
 import type { TokenProvisioningCapability } from "~/services/apiAdapters/contracts/tokenProvisioning"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
+import {
+  ASSOCIATED_PROFILE_SECRET_RESOLUTION_STATUSES,
+  resolveAssociatedProfileSecret,
+} from "~/services/apiCredentialProfiles/accountRuntimeKeyRecovery"
 import type { Sub2ApiAuthSessionRequest } from "~/services/apiService/sub2api/authSession"
 import {
   createDeferredAbortDeadline,
@@ -401,6 +415,26 @@ export async function fetchDisplayAccountInviteLink(
 export interface ResolveDisplayAccountTokenForSecretOptions {
   abortSignal?: AbortSignal
   protectionBypassExecution?: ProtectionBypassExecution
+  secretSource?: AccountRuntimeKeySecretSource
+}
+
+export const ACCOUNT_RUNTIME_KEY_SECRET_SOURCES = {
+  Auto: "auto",
+  Provider: "provider",
+  AssociatedProfile: "associated-profile",
+  ProviderThenAssociatedProfile: "provider-then-associated-profile",
+} as const
+
+export type AccountRuntimeKeySecretSource =
+  (typeof ACCOUNT_RUNTIME_KEY_SECRET_SOURCES)[keyof typeof ACCOUNT_RUNTIME_KEY_SECRET_SOURCES]
+
+export class AccountRuntimeKeySecretUnavailableError extends Error {
+  readonly code = "ACCOUNT_RUNTIME_KEY_SECRET_UNAVAILABLE"
+
+  constructor(readonly reason: string) {
+    super(`account_runtime_key_secret_unavailable:${reason}`)
+    this.name = "AccountRuntimeKeySecretUnavailableError"
+  }
 }
 
 const buildSecretResolutionRequest = (
@@ -413,6 +447,22 @@ const buildSecretResolutionRequest = (
     ? { protectionBypassExecution: options.protectionBypassExecution }
     : {}),
 })
+
+const resolveRequiredAssociatedProfileSecret = async (
+  locator: ReturnType<typeof getAccountRuntimeKeyLocator>,
+) => {
+  const resolution = await resolveAssociatedProfileSecret(locator)
+  if (
+    resolution.status !== ASSOCIATED_PROFILE_SECRET_RESOLUTION_STATUSES.Resolved
+  ) {
+    throw new AccountRuntimeKeySecretUnavailableError(resolution.status)
+  }
+  return resolution
+}
+
+const usesAssociatedProfileByDefault = (
+  availability: ReturnType<typeof getInventorySecretAvailability>,
+) => availability !== INVENTORY_SECRET_AVAILABILITIES.Recoverable
 
 /**
  * Fetches the current token inventory for a display account.
@@ -490,26 +540,111 @@ export async function resolveDisplayAccountTokenForSecret<
   const { keyManagement, serviceCredential, request } =
     createDisplayAccountApiContext(account)
   const resolutionRequest = buildSecretResolutionRequest(request, options)
-  let resolvedKey: string
-
-  if (keyManagement) {
-    resolvedKey = await keyManagement.resolveTokenKey({
-      request: resolutionRequest,
-      token,
-    })
-  } else if (serviceCredential) {
-    resolvedKey = (await serviceCredential.fetch(resolutionRequest)).key
-  } else {
-    resolvedKey = await requireDisplayAccountKeyManagement(
+  const source = options.secretSource ?? ACCOUNT_RUNTIME_KEY_SECRET_SOURCES.Auto
+  const locator = getAccountRuntimeKeyLocator(
+    buildDisplayAccountTokenRuntimeKey(account, token),
+  )
+  const resolveAssociated = async () =>
+    (await resolveRequiredAssociatedProfileSecret(locator)).secret
+  const resolveProvider = async () => {
+    if (keyManagement) {
+      return keyManagement.resolveTokenKey({
+        request: resolutionRequest,
+        token,
+      })
+    }
+    if (serviceCredential) {
+      return (await serviceCredential.fetch(resolutionRequest)).key
+    }
+    return requireDisplayAccountKeyManagement(
       account,
       keyManagement,
     ).resolveTokenKey({ request: resolutionRequest, token })
+  }
+
+  let resolvedKey: string
+  if (source === ACCOUNT_RUNTIME_KEY_SECRET_SOURCES.AssociatedProfile) {
+    resolvedKey = await resolveAssociated()
+  } else if (
+    source === ACCOUNT_RUNTIME_KEY_SECRET_SOURCES.Auto &&
+    keyManagement &&
+    usesAssociatedProfileByDefault(
+      getInventorySecretAvailability(keyManagement),
+    )
+  ) {
+    resolvedKey = await resolveAssociated()
+  } else if (
+    source === ACCOUNT_RUNTIME_KEY_SECRET_SOURCES.ProviderThenAssociatedProfile
+  ) {
+    try {
+      resolvedKey = await resolveProvider()
+    } catch (providerError) {
+      try {
+        resolvedKey = await resolveAssociated()
+      } catch {
+        throw providerError
+      }
+    }
+  } else {
+    resolvedKey = await resolveProvider()
   }
 
   return formatOptionalSkPrefixSiteToken(
     resolvedKey === token.key ? token : { ...token, key: resolvedKey },
     account.siteType,
   )
+}
+
+const resolveProviderAccountKeyResourceSecret = async (
+  account: DisplayAccountApiSnapshot,
+  runtimeKey: Extract<AccountRuntimeKey, { source: "account_key_resource" }>,
+  accountKeyResources: AccountKeyResourceCapability | undefined,
+  request: ApiServiceRequest,
+  options: ResolveDisplayAccountTokenForSecretOptions,
+): Promise<AccountRuntimeKeyResolution> => {
+  if (!accountKeyResources) {
+    throw new AccountRuntimeKeySecretUnavailableError(
+      "provider-capability-unavailable",
+    )
+  }
+
+  const operationOptions = options.abortSignal
+    ? { signal: options.abortSignal }
+    : undefined
+  const session = await accountKeyResources.open(
+    {
+      account: {
+        id: account.id,
+        name: account.name,
+        siteType: account.siteType,
+      },
+      request: buildSecretResolutionRequest(request, options),
+    },
+    operationOptions,
+  )
+  if (!session.runtimeKey) {
+    throw new AccountRuntimeKeySecretUnavailableError(
+      "provider-resolution-unavailable",
+    )
+  }
+
+  return session.runtimeKey.resolve(runtimeKey.resourceRef, operationOptions)
+}
+
+const requireResolvedProviderAccountKeyResourceSecret = (
+  resolution: AccountRuntimeKeyResolution,
+) => {
+  if (
+    resolution.kind !== ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Resolved ||
+    !resolution.secret.trim()
+  ) {
+    throw new AccountRuntimeKeySecretUnavailableError(
+      resolution.kind === ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Unavailable
+        ? resolution.failure?.code || "provider-resolution-failed"
+        : "empty-provider-secret",
+    )
+  }
+  return resolution.secret
 }
 
 /**
@@ -551,6 +686,80 @@ export async function resolveDisplayAccountRuntimeKeySecret<
       ...runtimeKey,
       credential,
       ...deriveServiceCredentialRuntimeKeyFields(credential, account.baseUrl),
+    })
+  }
+
+  if (isAccountKeyResourceRuntimeKey(runtimeKey)) {
+    const { accountKeyResources, request } =
+      createDisplayAccountApiContext(account)
+    const source =
+      options.secretSource ?? ACCOUNT_RUNTIME_KEY_SECRET_SOURCES.Auto
+    const availability = getInventorySecretAvailability(
+      accountKeyResources ?? {
+        inventorySecretAvailability:
+          INVENTORY_SECRET_AVAILABILITIES.Unavailable,
+      },
+    )
+    const resolveAssociated = async () =>
+      resolveRequiredAssociatedProfileSecret(
+        getAccountRuntimeKeyLocator(runtimeKey),
+      )
+    const resolveProvider = async () =>
+      requireResolvedProviderAccountKeyResourceSecret(
+        await resolveProviderAccountKeyResourceSecret(
+          account,
+          runtimeKey,
+          accountKeyResources,
+          request,
+          options,
+        ),
+      )
+
+    if (
+      source === ACCOUNT_RUNTIME_KEY_SECRET_SOURCES.AssociatedProfile ||
+      (source === ACCOUNT_RUNTIME_KEY_SECRET_SOURCES.Auto &&
+        usesAssociatedProfileByDefault(availability))
+    ) {
+      const associated = await resolveAssociated()
+      return formatAccountRuntimeKeySecretForSite({
+        ...runtimeKey,
+        baseUrl: associated.profile.baseUrl,
+        secret: associated.secret,
+        status: "active",
+      })
+    }
+
+    if (
+      source ===
+      ACCOUNT_RUNTIME_KEY_SECRET_SOURCES.ProviderThenAssociatedProfile
+    ) {
+      try {
+        const secret = await resolveProvider()
+        return formatAccountRuntimeKeySecretForSite({
+          ...runtimeKey,
+          secret,
+          status: "active",
+        })
+      } catch (providerError) {
+        try {
+          const associated = await resolveAssociated()
+          return formatAccountRuntimeKeySecretForSite({
+            ...runtimeKey,
+            baseUrl: associated.profile.baseUrl,
+            secret: associated.secret,
+            status: "active",
+          })
+        } catch {
+          throw providerError
+        }
+      }
+    }
+
+    const secret = await resolveProvider()
+    return formatAccountRuntimeKeySecretForSite({
+      ...runtimeKey,
+      secret,
+      status: "active",
     })
   }
 

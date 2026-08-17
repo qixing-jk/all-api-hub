@@ -17,10 +17,22 @@ describe("createAIHubMixCreatedRuntimeSecret", () => {
     expect(
       createAIHubMixCreatedRuntimeSecret({
         account,
-        token: { name: "Example key", full_key: "sk-example-secret" },
+        token: {
+          id: 42,
+          name: "Example key",
+          full_key: "sk-example-secret",
+        },
       }),
     ).toEqual({
-      correlation: { kind: "legacy-create", accountId: "account-example" },
+      correlation: {
+        kind: "account-runtime-key",
+        locator: {
+          source: "account_token",
+          accountId: "account-example",
+          siteType: SITE_TYPES.AIHUBMIX,
+          tokenId: 42,
+        },
+      },
       displayName: "Example key",
       secret: "sk-example-secret",
       secretAvailability: "create-response-only",
@@ -33,6 +45,18 @@ describe("createAIHubMixCreatedRuntimeSecret", () => {
       },
     })
   })
+
+  it.each([undefined, 0, -1, 1.5])(
+    "keeps a usable secret without exact correlation for invalid token id %s",
+    (id) => {
+      expect(
+        createAIHubMixCreatedRuntimeSecret({
+          account,
+          token: { id, name: "Example key", full_key: "sk-example-secret" },
+        }).correlation,
+      ).toEqual({ kind: "legacy-create", accountId: "account-example" })
+    },
+  )
 
   it.each(["", "   ", "sk-example********masked", "sk-example••••masked"])(
     "rejects unusable create response secrets",

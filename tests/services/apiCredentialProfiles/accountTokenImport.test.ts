@@ -8,28 +8,28 @@ import {
 import { createProfileFromAccountToken } from "~/services/apiCredentialProfiles/accountTokenImport"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 
-const { createProfileMock } = vi.hoisted(() => ({
-  createProfileMock: vi.fn(),
+const { captureProfileMock } = vi.hoisted(() => ({
+  captureProfileMock: vi.fn(),
 }))
 
-vi.mock(
-  "~/services/apiCredentialProfiles/apiCredentialProfilesStorage",
-  () => ({
-    apiCredentialProfilesStorage: {
-      createProfile: (...args: unknown[]) => createProfileMock(...args),
-    },
-  }),
-)
+vi.mock("~/services/apiCredentialProfiles/apiCredentialProfileLinks", () => ({
+  apiCredentialProfileLinks: {
+    capture: (...args: unknown[]) => captureProfileMock(...args),
+  },
+}))
 
 describe("createProfileFromAccountToken", () => {
   beforeEach(() => {
-    createProfileMock.mockReset()
+    captureProfileMock.mockReset()
   })
 
   it("creates a normalized OpenAI-compatible profile from an account token", async () => {
-    createProfileMock.mockResolvedValueOnce({
-      id: "profile-1",
-      name: "Example - Default API Key",
+    captureProfileMock.mockResolvedValueOnce({
+      status: "captured",
+      profile: {
+        id: "profile-1",
+        name: "Example - Default API Key",
+      },
     })
 
     const profile = await createProfileFromAccountToken({
@@ -48,19 +48,25 @@ describe("createProfileFromAccountToken", () => {
       id: "profile-1",
       name: "Example - Default API Key",
     })
-    expect(createProfileMock).toHaveBeenCalledWith({
-      name: "Example - Default API Key",
-      apiType: API_TYPES.OPENAI_COMPATIBLE,
-      baseUrl: "https://api.example.invalid/v1",
-      apiKey: "sk-example",
-      tagIds: ["tag-a"],
+    expect(captureProfileMock).toHaveBeenCalledWith({
+      profile: {
+        name: "Example - Default API Key",
+        apiType: API_TYPES.OPENAI_COMPATIBLE,
+        baseUrl: "https://api.example.invalid/v1",
+        apiKey: "sk-example",
+        tagIds: ["tag-a"],
+      },
+      linkedBy: "resolved-runtime-key",
     })
   })
 
   it("uses the AIHubMix API origin for web-console account tokens", async () => {
-    createProfileMock.mockResolvedValueOnce({
-      id: "profile-1",
-      name: "AIHubMix - Default API Key",
+    captureProfileMock.mockResolvedValueOnce({
+      status: "captured",
+      profile: {
+        id: "profile-1",
+        name: "AIHubMix - Default API Key",
+      },
     })
 
     await createProfileFromAccountToken({
@@ -73,12 +79,41 @@ describe("createProfileFromAccountToken", () => {
       },
     })
 
-    expect(createProfileMock).toHaveBeenCalledWith({
-      name: "AIHubMix - Default API Key",
-      apiType: API_TYPES.OPENAI_COMPATIBLE,
-      baseUrl: AIHUBMIX_API_ORIGIN,
-      apiKey: "sk-aihubmix",
-      tagIds: [],
+    expect(captureProfileMock).toHaveBeenCalledWith({
+      profile: {
+        name: "AIHubMix - Default API Key",
+        apiType: API_TYPES.OPENAI_COMPATIBLE,
+        baseUrl: AIHUBMIX_API_ORIGIN,
+        apiKey: "sk-aihubmix",
+        tagIds: [],
+      },
+      linkedBy: "resolved-runtime-key",
     })
+  })
+
+  it("forwards an exact account runtime key locator to the capture seam", async () => {
+    captureProfileMock.mockResolvedValueOnce({
+      status: "linked",
+      profile: { id: "profile-1", name: "Example - Default API Key" },
+    })
+    const locator = {
+      source: "account_token" as const,
+      accountId: "account-example",
+      siteType: SITE_TYPES.NEW_API,
+      tokenId: 42,
+    }
+
+    await createProfileFromAccountToken({
+      accountName: "Example",
+      baseUrl: "https://api.example.invalid",
+      siteType: SITE_TYPES.NEW_API,
+      token: { key: "sk-example", name: "Default API Key" },
+      locator,
+      linkedBy: "creation-response",
+    })
+
+    expect(captureProfileMock).toHaveBeenCalledWith(
+      expect.objectContaining({ locator, linkedBy: "creation-response" }),
+    )
   })
 })

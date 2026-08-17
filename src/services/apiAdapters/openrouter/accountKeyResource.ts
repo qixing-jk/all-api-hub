@@ -19,6 +19,7 @@ import {
   type ResourceOperationOptions,
   type ResourceValidationResult,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
+import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/keyManagement"
 import { RESOURCE_FIELD_TYPES } from "~/services/apiAdapters/contracts/resourceNative"
 import type { NativeResourceMutationResult } from "~/services/apiAdapters/nativeResources/factory"
 import {
@@ -879,6 +880,11 @@ const loadWorkspaceScopeInventory = async (
 export const openRouterAccountKeyResources = defineAccountKeyResourceCapability(
   {
     siteType: SITE_TYPES.OPENROUTER,
+    // OpenRouter returns plaintext only from key creation; existing inventory
+    // rows expose an opaque hash and masked key. Local profile associations are
+    // the only supported historical recovery source.
+    inventorySecretAvailability:
+      INVENTORY_SECRET_AVAILABILITIES.CreateResponseOnly,
     openConfig: async (input, options) => {
       const request = input.request
       const managementKey = request.auth.accessToken?.trim() ?? ""

@@ -10,11 +10,13 @@ import {
 
 import { SITE_TYPES } from "~/constants/siteType"
 import {
+  buildAccountKeyResourceRuntimeKey,
   buildAccountTokenRuntimeKey,
   type AccountRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
 import { accountSub2ApiAuthSession } from "~/services/accounts/sub2apiAuthSession"
 import {
+  ACCOUNT_RUNTIME_KEY_SECRET_SOURCES,
   canCreateDisplayAccountTokens,
   canFetchDisplayAccountInviteLink,
   canManageDisplayAccountTokens,
@@ -33,7 +35,10 @@ import {
   StoredAccountApiContextError,
 } from "~/services/accounts/utils/apiServiceRequest"
 import { resolveExportTokenForSecret } from "~/services/accounts/utils/exportTokenSecret"
+import { ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS } from "~/services/apiAdapters/contracts/accountKeyResource"
+import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/keyManagement"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
+import { resolveAssociatedProfileSecret } from "~/services/apiCredentialProfiles/accountRuntimeKeyRecovery"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { INVITE_LINK_FAILURE_REASONS } from "~/services/inviteLinks/errors"
 import {
@@ -54,6 +59,13 @@ const { mockGetAccountById } = vi.hoisted(() => ({
 
 vi.mock("~/services/apiAdapters/registry", () => ({
   getSiteTypeCapabilities: vi.fn(),
+}))
+
+vi.mock("~/services/apiCredentialProfiles/accountRuntimeKeyRecovery", () => ({
+  ASSOCIATED_PROFILE_SECRET_RESOLUTION_STATUSES: {
+    Resolved: "resolved",
+  },
+  resolveAssociatedProfileSecret: vi.fn(),
 }))
 
 vi.mock("~/services/accounts/sub2apiAuthSession", () => ({
@@ -129,6 +141,7 @@ describe("fetchDisplayAccountTokens", () => {
     resolveTokenKey: typeof resolveTokenKey
     deleteToken: typeof deleteToken
     fetchAvailableModels: typeof fetchAvailableModels
+    inventorySecretAvailability?: string
     userGroups: {
       fetch: typeof fetchUserGroups
     }
@@ -187,6 +200,7 @@ describe("fetchDisplayAccountTokens", () => {
 
     vi.mocked(getSiteTypeCapabilities).mockReset()
     vi.mocked(getSiteTypeCapabilities).mockReturnValue(capabilities as any)
+    vi.mocked(resolveAssociatedProfileSecret).mockReset()
     mockGetAccountById.mockReset()
   })
 
@@ -1084,6 +1098,135 @@ describe("fetchDisplayAccountTokens", () => {
     })
   })
 
+  it("automatically resolves create-response-only resource keys from an associated profile", async () => {
+    const open = vi.fn()
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue({
+      siteType: SITE_TYPES.OPENROUTER,
+      account: {
+        keyResourceManagement: {
+          inventorySecretAvailability:
+            INVENTORY_SECRET_AVAILABILITIES.CreateResponseOnly,
+          open,
+        },
+      },
+    } as any)
+    vi.mocked(resolveAssociatedProfileSecret).mockResolvedValue({
+      status: "resolved",
+      secret: "associated-secret",
+      profile: {
+        id: "profile-example",
+        name: "Example credential",
+        apiType: "openai-compatible",
+        baseUrl: "https://api.example.invalid/v1",
+        apiKey: "associated-secret",
+        tagIds: [],
+        notes: "",
+        createdAt: 1,
+        updatedAt: 1,
+      },
+    } as any)
+    const runtimeKey = buildAccountKeyResourceRuntimeKey(
+      { ...ACCOUNT, siteType: SITE_TYPES.OPENROUTER } as any,
+      {
+        ref: {
+          accountId: ACCOUNT.id,
+          siteType: SITE_TYPES.OPENROUTER,
+          scopeKey: "workspace-example",
+          resourceId: "resource-example",
+        },
+        label: "Example key",
+        secret: "",
+      },
+    )
+
+    await expect(
+      resolveDisplayAccountRuntimeKeySecret(
+        { ...ACCOUNT, siteType: SITE_TYPES.OPENROUTER } as any,
+        runtimeKey,
+      ),
+    ).resolves.toMatchObject({
+      baseUrl: "https://api.example.invalid/v1",
+      secret: "associated-secret",
+      status: "active",
+    })
+    expect(open).not.toHaveBeenCalled()
+  })
+
+  it("keeps provider resolution authoritative for recoverable resource keys", async () => {
+    const resolve = vi.fn().mockResolvedValue({
+      kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Resolved,
+      secret: "provider-secret",
+    })
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue({
+      siteType: SITE_TYPES.NEW_API,
+      account: {
+        keyResourceManagement: {
+          open: vi.fn().mockResolvedValue({ runtimeKey: { resolve } }),
+        },
+      },
+    } as any)
+    vi.mocked(resolveAssociatedProfileSecret).mockResolvedValue({
+      status: "resolved",
+      secret: "associated-secret",
+      profile: { baseUrl: "https://associated.example.invalid" },
+    } as any)
+    const runtimeKey = buildAccountKeyResourceRuntimeKey(ACCOUNT as any, {
+      ref: {
+        accountId: ACCOUNT.id,
+        siteType: SITE_TYPES.NEW_API,
+        scopeKey: "account",
+        resourceId: "resource-example",
+      },
+      label: "Example key",
+      secret: "",
+    })
+
+    await expect(
+      resolveDisplayAccountRuntimeKeySecret(ACCOUNT as any, runtimeKey),
+    ).resolves.toMatchObject({ secret: "sk-provider-secret" })
+    expect(resolveAssociatedProfileSecret).not.toHaveBeenCalled()
+  })
+
+  it("uses an associated resource secret only after explicit provider fallback", async () => {
+    const resolve = vi.fn().mockResolvedValue({
+      kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Unavailable,
+      failure: { code: "not-found" },
+    })
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue({
+      siteType: SITE_TYPES.NEW_API,
+      account: {
+        keyResourceManagement: {
+          open: vi.fn().mockResolvedValue({ runtimeKey: { resolve } }),
+        },
+      },
+    } as any)
+    vi.mocked(resolveAssociatedProfileSecret).mockResolvedValue({
+      status: "resolved",
+      secret: "associated-secret",
+      profile: { baseUrl: "https://associated.example.invalid" },
+    } as any)
+    const runtimeKey = buildAccountKeyResourceRuntimeKey(ACCOUNT as any, {
+      ref: {
+        accountId: ACCOUNT.id,
+        siteType: SITE_TYPES.NEW_API,
+        scopeKey: "account",
+        resourceId: "resource-example",
+      },
+      label: "Example key",
+      secret: "",
+    })
+
+    await expect(
+      resolveDisplayAccountRuntimeKeySecret(ACCOUNT as any, runtimeKey, {
+        secretSource:
+          ACCOUNT_RUNTIME_KEY_SECRET_SOURCES.ProviderThenAssociatedProfile,
+      }),
+    ).resolves.toMatchObject({
+      baseUrl: "https://associated.example.invalid",
+      secret: "sk-associated-secret",
+    })
+  })
+
   it("returns a transient sk-prefixed secret for optional-prefix compatible account types", async () => {
     const token = { id: 1, key: "plain-secret", status: 1, name: "Plain" }
     resolveTokenKey.mockResolvedValue("plain-secret")
@@ -1156,6 +1299,39 @@ describe("fetchDisplayAccountTokens", () => {
       request: expect.objectContaining(REQUEST),
       token,
     })
+  })
+
+  it("uses an associated profile for create-response-only account tokens", async () => {
+    capabilities = {
+      siteType: SITE_TYPES.AIHUBMIX,
+      account: {
+        keyManagement: {
+          ...keyManagement,
+          inventorySecretAvailability:
+            INVENTORY_SECRET_AVAILABILITIES.CreateResponseOnly,
+        },
+      },
+    }
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue(capabilities as any)
+    vi.mocked(resolveAssociatedProfileSecret).mockResolvedValue({
+      status: "resolved",
+      secret: "profile-secret",
+      profile: { baseUrl: "https://api.example.invalid/v1" },
+    } as any)
+    const token = {
+      id: 42,
+      key: "sk-abcd********wxyz",
+      status: 1,
+      name: "Create-only",
+    }
+
+    await expect(
+      resolveDisplayAccountTokenForSecret(
+        { ...ACCOUNT, siteType: SITE_TYPES.AIHUBMIX } as any,
+        token as any,
+      ),
+    ).resolves.toMatchObject({ key: "profile-secret" })
+    expect(resolveTokenKey).not.toHaveBeenCalled()
   })
 
   it("resolves account-token runtime key secrets without double-formatting optional prefixes", async () => {

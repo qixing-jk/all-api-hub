@@ -66,6 +66,7 @@ export type AccountKeyResourceDefinition<
   TFailure,
 > = {
   siteType: AccountSiteType
+  inventorySecretAvailability?: AccountKeyResourceCapability["inventorySecretAvailability"]
   openConfig(
     input: AccountKeyResourceOpenInput,
     options?: ResourceOperationOptions,
@@ -370,6 +371,9 @@ export function defineAccountKeyResourceCapability<
   const siteType = definition.siteType
 
   return {
+    ...(definition.inventorySecretAvailability
+      ? { inventorySecretAvailability: definition.inventorySecretAvailability }
+      : {}),
     open: (input, options) =>
       mapOperation(async () => {
         assertOpenInput(input, siteType)
