@@ -1,5 +1,6 @@
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { SITE_TYPES } from "~/constants/siteType"
+import { API_CREDENTIAL_PROFILES_TEST_IDS } from "~/features/ApiCredentialProfiles/testIds"
 import {
   getKeyManagementTokenRowTestId,
   getManagedSiteBatchExportRowSelectTestId,
@@ -13,7 +14,10 @@ import {
   ACCOUNT_KEY_REQUIREMENT_PROVISIONING_KINDS,
   type AccountKeyResourceRef,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
-import { ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS } from "~/services/core/storageKeys"
+import {
+  ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS,
+  STORAGE_KEYS,
+} from "~/services/core/storageKeys"
 import { AuthTypeEnum, type ApiToken } from "~/types"
 import {
   ACCOUNT_KEY_REPAIR_JOB_STATES,
@@ -22,6 +26,7 @@ import {
   ACCOUNT_KEY_REPAIR_PROGRESS_SCHEMA_VERSION,
   type AccountKeyRepairProgress,
 } from "~/types/accountKeyAutoProvisioning"
+import type { ApiCredentialProfilesConfig } from "~/types/apiCredentialProfiles"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {
   verifyAccountKeyLifecycleUsage,
@@ -35,8 +40,10 @@ import {
 } from "~~/e2e/utils/accountLifecycle"
 import {
   createStoredAccount,
+  createStoredApiCredentialProfile,
   forceExtensionLanguage,
   installExtensionPageGuards,
+  seedApiCredentialProfiles,
   seedStoredAccounts,
   seedUserPreferences,
   stubLlmMetadataIndex,
@@ -1067,5 +1074,153 @@ test("saves a key to API credential profiles and opens the profiles page", async
   await expect(page).toHaveURL(/options\.html.*#apiCredentialProfiles$/)
   await expect(
     page.getByRole("heading", { name: "Profile Source - Profile Export Key" }),
+  ).toBeVisible()
+
+  await page
+    .getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.associationButton)
+    .click()
+  await page.getByRole("menuitem", { name: "View corresponding key" }).click()
+
+  const linkedKeyRow = page.getByTestId(getKeyManagementTokenRowTestId(1))
+  await expect(linkedKeyRow).toHaveAttribute("data-navigation-target", "true")
+  const associationButton = linkedKeyRow.getByTestId(
+    KEY_MANAGEMENT_TEST_IDS.apiCredentialAssociationButton,
+  )
+  await expect(associationButton).toHaveCount(1)
+  await expect(associationButton).toBeVisible()
+  await expect(
+    linkedKeyRow.getByTestId(KEY_MANAGEMENT_TEST_IDS.saveToApiProfilesButton),
+  ).toHaveCount(0)
+
+  await associationButton.click()
+  await page
+    .getByRole("menuitem", { name: "View linked API credential" })
+    .click()
+  await expect(
+    page.getByRole("heading", { name: "Profile Source - Profile Export Key" }),
+  ).toBeVisible()
+})
+
+test("links an existing API credential to an existing key and preserves the association", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  const serviceWorker = await getServiceWorker(context)
+  const baseUrl = "https://manual-association.example.invalid"
+  const profile = createStoredApiCredentialProfile({
+    id: "manual-association-profile",
+    name: "Manual Association Profile",
+    baseUrl,
+    apiKey: "sk-manual-association",
+  })
+
+  await seedStoredAccounts(serviceWorker, [
+    createStoredAccount({
+      id: "e2e-manual-association-account",
+      site_name: "Manual Association Source",
+      site_url: baseUrl,
+      account_info: {
+        id: "41",
+        username: "manual-association-user",
+        access_token: "manual-association-token",
+      },
+    }),
+  ])
+  await seedApiCredentialProfiles(serviceWorker, [profile])
+  await stubNewApiSiteRoutes(context, {
+    baseUrl,
+    initialTokens: [
+      createStubApiToken({
+        id: 9,
+        name: "Manual Association Key",
+        key: profile.apiKey,
+      }),
+    ],
+  })
+
+  await page.goto(
+    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#keys?accountId=e2e-manual-association-account`,
+  )
+  await waitForExtensionRoot(page)
+  await expectPermissionOnboardingHidden(page)
+
+  const keyRow = page.getByTestId(getKeyManagementTokenRowTestId(9))
+  await expect(keyRow).toBeVisible()
+  await keyRow
+    .getByTestId(KEY_MANAGEMENT_TEST_IDS.apiCredentialAssociationButton)
+    .click()
+  await page
+    .getByRole("menuitem", {
+      name: "Associate a saved API credential with this key",
+    })
+    .click()
+
+  const associationDialog = page.getByTestId(
+    KEY_MANAGEMENT_TEST_IDS.associateCredentialDialog,
+  )
+  await expect(associationDialog).toBeVisible()
+  const profileSelect = associationDialog.getByTestId(
+    KEY_MANAGEMENT_TEST_IDS.associateCredentialProfileSelect,
+  )
+  await profileSelect.click()
+  await expect(
+    page.getByRole("option", { name: /Manual Association Profile/ }),
+  ).toBeVisible()
+  await page.keyboard.press("ArrowDown")
+  await page.keyboard.press("Enter")
+  await associationDialog
+    .getByTestId(KEY_MANAGEMENT_TEST_IDS.associateCredentialConfirmButton)
+    .click()
+  await expect(associationDialog).toHaveCount(0)
+
+  await keyRow
+    .getByTestId(KEY_MANAGEMENT_TEST_IDS.apiCredentialAssociationButton)
+    .click()
+  await expect(
+    page.getByRole("menuitem", { name: "View linked API credential" }),
+  ).toBeVisible()
+  await page.keyboard.press("Escape")
+  await expect
+    .poll(async () => {
+      const config =
+        await getPlasmoStorageJsonValue<ApiCredentialProfilesConfig>(
+          serviceWorker,
+          STORAGE_KEYS.API_CREDENTIAL_PROFILES,
+        )
+      return config?.links.find((link) => link.profileId === profile.id)
+    })
+    .toMatchObject({
+      profileId: profile.id,
+      state: "active",
+      linkedBy: "user",
+      locator: {
+        source: "account_token",
+        accountId: "e2e-manual-association-account",
+        siteType: SITE_TYPES.NEW_API,
+        tokenId: 9,
+      },
+    })
+
+  await page.goto(
+    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#apiCredentialProfiles`,
+  )
+  await waitForExtensionRoot(page)
+  await expect(page.getByRole("heading", { name: profile.name })).toBeVisible()
+  await page
+    .getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.associationButton)
+    .click()
+  await page.getByRole("menuitem", { name: "View corresponding key" }).click()
+
+  await expect(page).toHaveURL((url) => {
+    return (
+      url.pathname === `/${OPTIONS_PAGE_PATH}` &&
+      url.hash === "#keys" &&
+      url.searchParams.get("accountId") === "e2e-manual-association-account" &&
+      Boolean(url.searchParams.get("associationId"))
+    )
+  })
+  await expect(
+    page.getByTestId(getKeyManagementTokenRowTestId(9)),
   ).toBeVisible()
 })

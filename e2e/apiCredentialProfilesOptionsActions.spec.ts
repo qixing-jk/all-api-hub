@@ -379,6 +379,39 @@ test("opens model management for an options-page API credential profile", async 
 
   await openProfilesPage(page, extensionId)
 
+  const toolbar = page.getByRole("toolbar", { name: "Key actions" })
+  const quickActionsGroup = toolbar.getByRole("group", {
+    name: "Quick actions",
+  })
+  const integrationsGroup = toolbar.getByRole("group", {
+    name: "Integrations and export",
+  })
+  const diagnosticsGroup = toolbar.getByRole("group", { name: "Diagnostics" })
+  const managementGroup = toolbar.getByRole("group", { name: "Management" })
+  await expect(
+    quickActionsGroup.getByTestId(
+      API_CREDENTIAL_PROFILES_TEST_IDS.copyBundleButton,
+    ),
+  ).toBeVisible()
+  await expect(
+    integrationsGroup.getByTestId(
+      API_CREDENTIAL_PROFILES_TEST_IDS.importToManagedSiteButton,
+    ),
+  ).toBeVisible()
+  await expect(
+    integrationsGroup.getByTestId(
+      API_CREDENTIAL_PROFILES_TEST_IDS.exportMenuButton,
+    ),
+  ).toBeVisible()
+  await expect(
+    diagnosticsGroup.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.verifyButton),
+  ).toBeVisible()
+  await expect(
+    managementGroup.getByTestId(
+      API_CREDENTIAL_PROFILES_TEST_IDS.openModelManagementButton,
+    ),
+  ).toBeVisible()
+
   await page
     .getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.openModelManagementButton)
     .click()

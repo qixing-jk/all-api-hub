@@ -101,6 +101,8 @@ async function readStoredApiCredentialProfiles(
     return {
       version: API_CREDENTIAL_PROFILES_CONFIG_VERSION,
       profiles: [],
+      links: [],
+      linkTombstones: [],
       lastUpdated: 0,
     }
   }
@@ -111,6 +113,8 @@ async function readStoredApiCredentialProfiles(
     return {
       version: API_CREDENTIAL_PROFILES_CONFIG_VERSION,
       profiles: [],
+      links: [],
+      linkTombstones: [],
       lastUpdated: 0,
     }
   }

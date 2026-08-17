@@ -568,6 +568,9 @@ export async function saveTokenToApiCredentialProfilesFromKeyManagementPage(para
   )
 
   await params.row
+    .getByTestId(KEY_MANAGEMENT_TEST_IDS.apiCredentialAssociationButton)
+    .click()
+  await params.page
     .getByTestId(KEY_MANAGEMENT_TEST_IDS.saveToApiProfilesButton)
     .click()
 
