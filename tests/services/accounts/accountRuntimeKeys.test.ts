@@ -19,6 +19,8 @@ import {
   collectAccountRuntimeKeySecrets,
   findDefaultSelectableAccountRuntimeKey,
   formatAccountRuntimeKeySecretForSite,
+  getAccountRuntimeKeyLocator,
+  getAccountRuntimeKeyLocatorAccountId,
   hasUsableAccountRuntimeKeySecret,
   isAccountKeyResourceRuntimeKey,
   isAccountTokenRuntimeKey,
@@ -110,6 +112,51 @@ describe("accountRuntimeKeys", () => {
     })
     expect(isAccountTokenRuntimeKey(runtimeKey)).toBe(true)
     expect(isServiceCredentialRuntimeKey(runtimeKey)).toBe(false)
+  })
+
+  it("projects account runtime keys into provider-neutral locators", () => {
+    const accountToken = buildAccountTokenRuntimeKey(account, token)
+    const accountKeyResource = buildAccountKeyResourceRuntimeKey(account, {
+      ref: {
+        accountId: account.id,
+        siteType: account.siteType,
+        scopeKey: "scope-example",
+        resourceId: "resource-example",
+      },
+      label: "Native key",
+      secret: "native-secret",
+    })
+    const serviceCredential = buildServiceCredentialRuntimeKey(account, {
+      kind: "singleton_service_key",
+      service: "codex",
+      label: "Codex",
+      key: "service-secret",
+      isAuthenticated: true,
+    })
+
+    expect(getAccountRuntimeKeyLocator(accountToken)).toEqual({
+      source: ACCOUNT_RUNTIME_KEY_SOURCES.AccountToken,
+      accountId: account.id,
+      siteType: account.siteType,
+      tokenId: token.id,
+    })
+    expect(getAccountRuntimeKeyLocator(accountKeyResource)).toEqual({
+      source: ACCOUNT_RUNTIME_KEY_SOURCES.AccountKeyResource,
+      ref: accountKeyResource.resourceRef,
+    })
+    expect(getAccountRuntimeKeyLocator(serviceCredential)).toEqual({
+      source: ACCOUNT_RUNTIME_KEY_SOURCES.ServiceCredential,
+      accountId: account.id,
+      siteType: account.siteType,
+      service: "codex",
+    })
+    expect(
+      [accountToken, accountKeyResource, serviceCredential].map((runtimeKey) =>
+        getAccountRuntimeKeyLocatorAccountId(
+          getAccountRuntimeKeyLocator(runtimeKey),
+        ),
+      ),
+    ).toEqual([account.id, account.id, account.id])
   })
 
   it("maps account-token statuses to runtime-key statuses", () => {

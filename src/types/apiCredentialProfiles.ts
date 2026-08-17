@@ -1,10 +1,45 @@
+import type { AccountRuntimeKeyLocator } from "~/services/accounts/accountRuntimeKeys"
 import type { ApiVerificationApiType } from "~/services/verification/aiApiVerification"
 import type { HealthStatus, TokenUsage } from "~/types"
 
 /**
  * Current schema version for the API credential profiles storage payload.
  */
-export const API_CREDENTIAL_PROFILES_CONFIG_VERSION = 4
+export const API_CREDENTIAL_PROFILES_CONFIG_VERSION = 5
+
+export const API_CREDENTIAL_PROFILE_LINK_STATES = {
+  Active: "active",
+  NeedsConfirmation: "needs-confirmation",
+} as const
+
+export type ApiCredentialProfileLinkState =
+  (typeof API_CREDENTIAL_PROFILE_LINK_STATES)[keyof typeof API_CREDENTIAL_PROFILE_LINK_STATES]
+
+export const API_CREDENTIAL_PROFILE_LINK_SOURCES = {
+  CreationResponse: "creation-response",
+  ResolvedRuntimeKey: "resolved-runtime-key",
+  User: "user",
+} as const
+
+export type ApiCredentialProfileLinkSource =
+  (typeof API_CREDENTIAL_PROFILE_LINK_SOURCES)[keyof typeof API_CREDENTIAL_PROFILE_LINK_SOURCES]
+
+/** Explicit local association between one credential and one account runtime key. */
+export type ApiCredentialProfileLink = {
+  id: string
+  profileId: string
+  locator: AccountRuntimeKeyLocator
+  state: ApiCredentialProfileLinkState
+  linkedBy: ApiCredentialProfileLinkSource
+  createdAt: number
+  updatedAt: number
+}
+
+/** Merge-safe deletion marker for a credential association. */
+export type ApiCredentialProfileLinkTombstone = {
+  id: string
+  deletedAt: number
+}
 
 export const API_CREDENTIAL_TELEMETRY_MODES = {
   Disabled: "disabled",
@@ -148,5 +183,7 @@ export type ApiCredentialProfile = {
 export type ApiCredentialProfilesConfig = {
   version: number
   profiles: ApiCredentialProfile[]
+  links: ApiCredentialProfileLink[]
+  linkTombstones: ApiCredentialProfileLinkTombstone[]
   lastUpdated: number
 }

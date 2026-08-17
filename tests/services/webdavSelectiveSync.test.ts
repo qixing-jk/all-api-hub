@@ -1074,7 +1074,13 @@ describe("WebDAV preference convergence", () => {
         tagStore: { version: 1, tagsById: {} },
         preferences: DEFAULT_PREFERENCES,
         channelConfigs: { schemaVersion: 1, configs: {} },
-        apiCredentialProfiles: { version: 2, profiles: [], lastUpdated: 0 },
+        apiCredentialProfiles: {
+          version: 2,
+          profiles: [],
+          links: [],
+          linkTombstones: [],
+          lastUpdated: 0,
+        },
       },
     })
 
@@ -1167,7 +1173,13 @@ describe("WebDAV preference convergence", () => {
         tagStore: { version: 1, tagsById: {} },
         preferences: DEFAULT_PREFERENCES,
         channelConfigs: { schemaVersion: 1, configs: {} },
-        apiCredentialProfiles: { version: 2, profiles: [], lastUpdated: 0 },
+        apiCredentialProfiles: {
+          version: 2,
+          profiles: [],
+          links: [],
+          linkTombstones: [],
+          lastUpdated: 0,
+        },
       },
     })
 

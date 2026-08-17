@@ -13,6 +13,71 @@ export const ACCOUNT_RUNTIME_KEY_SOURCES = {
 type AccountRuntimeKeySource =
   (typeof ACCOUNT_RUNTIME_KEY_SOURCES)[keyof typeof ACCOUNT_RUNTIME_KEY_SOURCES]
 
+/** Provider-neutral persisted identity for one account runtime key source. */
+export type AccountRuntimeKeyLocator =
+  | {
+      readonly source: typeof ACCOUNT_RUNTIME_KEY_SOURCES.AccountToken
+      readonly accountId: string
+      readonly siteType: AccountSiteType
+      readonly tokenId: number
+    }
+  | {
+      readonly source: typeof ACCOUNT_RUNTIME_KEY_SOURCES.AccountKeyResource
+      readonly ref: AccountKeyResourceRef
+    }
+  | {
+      readonly source: typeof ACCOUNT_RUNTIME_KEY_SOURCES.ServiceCredential
+      readonly accountId: string
+      readonly siteType: AccountSiteType
+      readonly service: AccountServiceCredential["service"]
+    }
+
+/** Returns the owning local account id for every persisted key locator shape. */
+export const getAccountRuntimeKeyLocatorAccountId = (
+  locator: AccountRuntimeKeyLocator,
+): string =>
+  locator.source === ACCOUNT_RUNTIME_KEY_SOURCES.AccountKeyResource
+    ? locator.ref.accountId
+    : locator.accountId
+
+/** Returns a stable provider-neutral identity for one persisted key locator. */
+export const getAccountRuntimeKeyLocatorIdentity = (
+  locator: AccountRuntimeKeyLocator,
+): string => {
+  switch (locator.source) {
+    case ACCOUNT_RUNTIME_KEY_SOURCES.AccountToken:
+      return JSON.stringify([
+        locator.source,
+        locator.accountId,
+        locator.siteType,
+        locator.tokenId,
+      ])
+    case ACCOUNT_RUNTIME_KEY_SOURCES.AccountKeyResource:
+      return JSON.stringify([
+        locator.source,
+        locator.ref.accountId,
+        locator.ref.siteType,
+        locator.ref.scopeKey,
+        locator.ref.resourceId,
+      ])
+    case ACCOUNT_RUNTIME_KEY_SOURCES.ServiceCredential:
+      return JSON.stringify([
+        locator.source,
+        locator.accountId,
+        locator.siteType,
+        locator.service,
+      ])
+  }
+}
+
+/** Compares two locators without exposing provider-specific values to callers. */
+export const isAccountRuntimeKeyLocatorEqual = (
+  left: AccountRuntimeKeyLocator,
+  right: AccountRuntimeKeyLocator,
+) =>
+  getAccountRuntimeKeyLocatorIdentity(left) ===
+  getAccountRuntimeKeyLocatorIdentity(right)
+
 export const ACCOUNT_RUNTIME_KEY_STATUSES = {
   Active: "active",
   Inactive: "inactive",
@@ -86,6 +151,30 @@ export type AccountRuntimeKey =
   | AccountTokenRuntimeKey
   | AccountKeyResourceRuntimeKey
   | ServiceCredentialRuntimeKey
+
+/** Projects a runtime key into its provider-neutral persisted identity. */
+export const getAccountRuntimeKeyLocator = (
+  runtimeKey: AccountRuntimeKey,
+): AccountRuntimeKeyLocator => {
+  switch (runtimeKey.source) {
+    case ACCOUNT_RUNTIME_KEY_SOURCES.AccountToken:
+      return {
+        source: runtimeKey.source,
+        accountId: runtimeKey.accountId,
+        siteType: runtimeKey.siteType,
+        tokenId: runtimeKey.tokenId,
+      }
+    case ACCOUNT_RUNTIME_KEY_SOURCES.AccountKeyResource:
+      return { source: runtimeKey.source, ref: runtimeKey.resourceRef }
+    case ACCOUNT_RUNTIME_KEY_SOURCES.ServiceCredential:
+      return {
+        source: runtimeKey.source,
+        accountId: runtimeKey.accountId,
+        siteType: runtimeKey.siteType,
+        service: runtimeKey.service,
+      }
+  }
+}
 
 export const ACCOUNT_RUNTIME_KEY_LEGACY_TOKEN_ID = -1
 

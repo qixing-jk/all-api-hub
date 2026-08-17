@@ -1189,6 +1189,8 @@ describe("apiCredentialProfilesStorage additional flows", () => {
     expect(config).toEqual({
       version: API_CREDENTIAL_PROFILES_CONFIG_VERSION,
       profiles: [],
+      links: [],
+      linkTombstones: [],
       lastUpdated: Date.now(),
     })
 

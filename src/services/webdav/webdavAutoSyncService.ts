@@ -697,6 +697,8 @@ class WebdavAutoSyncService {
     const emptyProfiles: ApiCredentialProfilesConfig = {
       version: API_CREDENTIAL_PROFILES_CONFIG_VERSION,
       profiles: [],
+      links: [],
+      linkTombstones: [],
       lastUpdated: 0,
     }
 
