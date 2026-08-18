@@ -151,7 +151,11 @@ const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
     )
 
     return shouldRenderTooltip ? (
-      <Tooltip content={tooltipContent} anchorAsChild>
+      <Tooltip
+        content={tooltipContent}
+        anchorAsChild
+        includeAccessibleDescription={hasExplicitTooltip}
+      >
         {button}
       </Tooltip>
     ) : (

@@ -35,6 +35,7 @@ interface TooltipProps {
   className?: string
   wrapperClassName?: string
   anchorAsChild?: boolean
+  includeAccessibleDescription?: boolean
 }
 
 interface TooltipChildProps {
@@ -59,6 +60,7 @@ export default function Tooltip({
   className = "",
   wrapperClassName = "",
   anchorAsChild = false,
+  includeAccessibleDescription = true,
 }: TooltipProps) {
   const instanceId = useId()
   const generatedAnchorId = `tooltip-${instanceId}`
@@ -70,6 +72,8 @@ export default function Tooltip({
   const [isOpen, setIsOpen] = useState(false)
 
   const isString = typeof content === "string"
+  const shouldRenderDescription =
+    anchorAsChild && isString && includeAccessibleDescription
   const tooltipId = anchorAsChild && isString ? undefined : popupId
   const childProps = children.props as TooltipChildProps
   const anchorId =
@@ -78,7 +82,7 @@ export default function Tooltip({
     new Set(
       [
         childProps["aria-describedby"],
-        anchorAsChild ? (isString ? descriptionId : popupId) : undefined,
+        shouldRenderDescription ? descriptionId : anchorAsChild ? popupId : undefined,
       ]
         .flatMap((value) => value?.split(/\s+/) ?? [])
         .filter(Boolean),
@@ -177,7 +181,7 @@ export default function Tooltip({
     <TooltipContext.Provider value={anchorId}>
       {anchor}
 
-      {anchorAsChild && isString ? (
+      {shouldRenderDescription ? (
         <span id={descriptionId} className="sr-only">
           {content}
         </span>
