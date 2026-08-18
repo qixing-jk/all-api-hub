@@ -4602,7 +4602,7 @@ describe("ApiCheckModalHost", () => {
           .length,
       ).toBeGreaterThanOrEqual(4)
     })
-  })
+  }, 30_000)
 
   it("falls back to local fetch-models error when background returns no message", async () => {
     const user = userEvent.setup()

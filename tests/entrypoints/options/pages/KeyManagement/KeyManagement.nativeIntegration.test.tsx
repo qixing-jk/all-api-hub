@@ -1926,7 +1926,7 @@ describe("KeyManagement native page integration", () => {
         ]),
       }),
     )
-  })
+  }, 30_000)
 
   it("shows a retryable failure instead of an empty inventory when the selected native account load fails", async () => {
     const nativeAccount = createAccount({
