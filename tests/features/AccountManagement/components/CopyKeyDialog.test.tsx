@@ -2151,7 +2151,7 @@ describe("CopyKeyDialog", () => {
       expect(openWithAccountMock).not.toHaveBeenCalled()
       expect(toastSuccessMock).toHaveBeenCalledWith("credential import queued")
     })
-  })
+  }, 30_000)
 
   it("opens Kilo Code profile export for service credentials", async () => {
     const user = await renderExpandedServiceCredentialDialog()

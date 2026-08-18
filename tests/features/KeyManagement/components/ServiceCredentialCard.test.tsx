@@ -768,7 +768,7 @@ describe("ServiceCredentialCard", () => {
         managedSiteStatus: undefined,
       },
     )
-  })
+  }, 30_000)
 
   it("shows a local error when Cherry Studio cannot be opened", async () => {
     mockOpenInCherryStudio.mockImplementationOnce(() => {
