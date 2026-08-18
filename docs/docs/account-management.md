@@ -18,6 +18,11 @@ All API Hub 支持多种添加账号的方式，以适配不同类型的站点�
 
 不同站点类型需要填写的信息及其获取位置可能不同。下面按站点类型分别介绍如何手动添加账号。
 
+快速跳转：
+- [New API](#manual-new-api)
+- [Sub2API](#manual-sub2api)
+
+<a id="manual-new-api"></a>
 #### 1.2.1 New API
 
 > 不同 New API 二开站点的页面布局、按钮名称和功能位置可能存在差异，请以实际网站界面为准。
