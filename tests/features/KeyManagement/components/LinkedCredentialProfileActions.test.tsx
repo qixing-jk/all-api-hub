@@ -44,6 +44,22 @@ const profile = {
   updatedAt: 1,
 } satisfies ApiCredentialProfile
 
+const renderActions = () =>
+  render(
+    <LinkedCredentialProfileActions
+      profile={profile}
+      managementActions={<button type="button">Delete profile</button>}
+    />,
+  )
+
+const selectExportAction = async (label: string) => {
+  const user = userEvent.setup()
+  await user.click(
+    screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.linkedProfileExportMenuButton),
+  )
+  await user.click(screen.getByRole("menuitem", { name: label }))
+}
+
 describe("LinkedCredentialProfileActions", () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -59,49 +75,53 @@ describe("LinkedCredentialProfileActions", () => {
     } as unknown as LinkedCredentialProfileActionsController)
   })
 
-  it("renders the real action surfaces and routes every target", async () => {
+  it("renders the real import and management surfaces", async () => {
     const user = userEvent.setup()
-    const { rerender } = render(
-      <LinkedCredentialProfileActions
-        profile={profile}
-        managementActions={<button type="button">Delete profile</button>}
-      />,
-    )
+    const { rerender } = renderActions()
 
     await user.click(
       screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.importToManagedSiteButton),
     )
     expect(handleManagedSiteImportMock).toHaveBeenCalledOnce()
+    expect(screen.getByRole("button", { name: "Delete profile" })).toBeVisible()
 
-    const openExportMenu = () =>
-      user.click(
-        screen.getByTestId(
-          KEY_MANAGEMENT_TEST_IDS.linkedProfileExportMenuButton,
-        ),
-      )
-    for (const [label, callback] of [
-      ["keyManagement:actions.useInCherry", handleCherryStudioMock],
-      ["keyManagement:actions.importToCliProxy", handleCliProxyMock],
-      [
-        "keyManagement:actions.importToClaudeCodeRouter",
-        handleClaudeCodeRouterMock,
-      ],
-    ] as const) {
-      await openExportMenu()
-      await user.click(screen.getByRole("menuitem", { name: label }))
-      expect(callback).toHaveBeenCalledOnce()
-    }
+    rerender(<LinkedCredentialProfileActions profile={profile} />)
+    expect(
+      screen.queryByRole("button", { name: "Delete profile" }),
+    ).not.toBeInTheDocument()
+  })
 
-    for (const [label, dialog] of [
-      ["keyManagement:actions.copyKelivoImportCode", "kelivo"],
-      ["keyManagement:actions.exportToCCSwitch", "cc-switch"],
-      ["keyManagement:actions.exportToCursorPlus", "cursor-plus"],
-      ["keyManagement:actions.exportToKiloCode", "kilo-code"],
-    ] as const) {
-      await openExportMenu()
-      await user.click(screen.getByRole("menuitem", { name: label }))
-      expect(openDialogMock).toHaveBeenCalledWith(dialog)
-    }
+  it.each([
+    ["keyManagement:actions.useInCherry", handleCherryStudioMock],
+    ["keyManagement:actions.importToCliProxy", handleCliProxyMock],
+    [
+      "keyManagement:actions.importToClaudeCodeRouter",
+      handleClaudeCodeRouterMock,
+    ],
+  ] as const)("routes the %s export action", async (label, callback) => {
+    renderActions()
+
+    await selectExportAction(label)
+
+    expect(callback).toHaveBeenCalledOnce()
+  })
+
+  it.each([
+    ["keyManagement:actions.copyKelivoImportCode", "kelivo"],
+    ["keyManagement:actions.exportToCCSwitch", "cc-switch"],
+    ["keyManagement:actions.exportToCursorPlus", "cursor-plus"],
+    ["keyManagement:actions.exportToKiloCode", "kilo-code"],
+  ] as const)("opens the %s export dialog", async (label, dialog) => {
+    renderActions()
+
+    await selectExportAction(label)
+
+    expect(openDialogMock).toHaveBeenCalledWith(dialog)
+  })
+
+  it("routes both diagnostic actions", async () => {
+    const user = userEvent.setup()
+    renderActions()
 
     await user.click(
       screen.getByRole("button", {
@@ -115,11 +135,5 @@ describe("LinkedCredentialProfileActions", () => {
     )
     expect(openDialogMock).toHaveBeenCalledWith("verify-api")
     expect(openDialogMock).toHaveBeenCalledWith("verify-cli")
-    expect(screen.getByRole("button", { name: "Delete profile" })).toBeVisible()
-
-    rerender(<LinkedCredentialProfileActions profile={profile} />)
-    expect(
-      screen.queryByRole("button", { name: "Delete profile" }),
-    ).not.toBeInTheDocument()
   })
 })
