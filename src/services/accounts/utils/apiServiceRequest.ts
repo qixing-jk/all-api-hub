@@ -1,5 +1,6 @@
 import type { AccountSiteType } from "~/constants/siteType"
 import {
+  ACCOUNT_RUNTIME_KEY_STATUSES,
   buildAccountRuntimeKeyAccount,
   buildDisplayAccountTokenRuntimeKey,
   buildServiceCredentialRuntimeKey,
@@ -18,7 +19,10 @@ import {
   canListAccountRuntimeKeys,
 } from "~/services/accounts/keyProductCapabilities"
 import { accountSub2ApiAuthSession } from "~/services/accounts/sub2apiAuthSession"
-import { formatOptionalSkPrefixSiteToken } from "~/services/accountTokens/apiTokenKey"
+import {
+  formatOptionalSkPrefixSiteToken,
+  hasUsableApiTokenKey,
+} from "~/services/accountTokens/apiTokenKey"
 import {
   ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS,
   type AccountKeyResourceCapability,
@@ -546,6 +550,9 @@ export async function resolveDisplayAccountTokenForSecret<
   )
   const resolveAssociated = async () =>
     (await resolveRequiredAssociatedProfileSecret(locator)).secret
+  const inventorySecretAvailability = keyManagement
+    ? getInventorySecretAvailability(keyManagement)
+    : undefined
   const resolveProvider = async () => {
     if (keyManagement) {
       return keyManagement.resolveTokenKey({
@@ -567,10 +574,15 @@ export async function resolveDisplayAccountTokenForSecret<
     resolvedKey = await resolveAssociated()
   } else if (
     source === ACCOUNT_RUNTIME_KEY_SECRET_SOURCES.Auto &&
-    keyManagement &&
-    usesAssociatedProfileByDefault(
-      getInventorySecretAvailability(keyManagement),
-    )
+    inventorySecretAvailability &&
+    usesAssociatedProfileByDefault(inventorySecretAvailability) &&
+    hasUsableApiTokenKey(token.key)
+  ) {
+    resolvedKey = token.key
+  } else if (
+    source === ACCOUNT_RUNTIME_KEY_SECRET_SOURCES.Auto &&
+    inventorySecretAvailability &&
+    usesAssociatedProfileByDefault(inventorySecretAvailability)
   ) {
     resolvedKey = await resolveAssociated()
   } else if (
@@ -714,6 +726,13 @@ export async function resolveDisplayAccountRuntimeKeySecret<
           options,
         ),
       )
+    const projectResolvedRuntimeKey = (secret: string, baseUrl?: string) =>
+      formatAccountRuntimeKeySecretForSite({
+        ...runtimeKey,
+        ...(baseUrl !== undefined ? { baseUrl } : {}),
+        secret,
+        status: ACCOUNT_RUNTIME_KEY_STATUSES.Active,
+      })
 
     if (
       source === ACCOUNT_RUNTIME_KEY_SECRET_SOURCES.AssociatedProfile ||
@@ -721,12 +740,10 @@ export async function resolveDisplayAccountRuntimeKeySecret<
         usesAssociatedProfileByDefault(availability))
     ) {
       const associated = await resolveAssociated()
-      return formatAccountRuntimeKeySecretForSite({
-        ...runtimeKey,
-        baseUrl: associated.profile.baseUrl,
-        secret: associated.secret,
-        status: "active",
-      })
+      return projectResolvedRuntimeKey(
+        associated.secret,
+        associated.profile.baseUrl,
+      )
     }
 
     if (
@@ -735,20 +752,14 @@ export async function resolveDisplayAccountRuntimeKeySecret<
     ) {
       try {
         const secret = await resolveProvider()
-        return formatAccountRuntimeKeySecretForSite({
-          ...runtimeKey,
-          secret,
-          status: "active",
-        })
+        return projectResolvedRuntimeKey(secret)
       } catch (providerError) {
         try {
           const associated = await resolveAssociated()
-          return formatAccountRuntimeKeySecretForSite({
-            ...runtimeKey,
-            baseUrl: associated.profile.baseUrl,
-            secret: associated.secret,
-            status: "active",
-          })
+          return projectResolvedRuntimeKey(
+            associated.secret,
+            associated.profile.baseUrl,
+          )
         } catch {
           throw providerError
         }
@@ -756,11 +767,7 @@ export async function resolveDisplayAccountRuntimeKeySecret<
     }
 
     const secret = await resolveProvider()
-    return formatAccountRuntimeKeySecretForSite({
-      ...runtimeKey,
-      secret,
-      status: "active",
-    })
+    return projectResolvedRuntimeKey(secret)
   }
 
   return runtimeKey

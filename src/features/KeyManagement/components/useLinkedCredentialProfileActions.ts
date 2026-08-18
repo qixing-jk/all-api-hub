@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { useChannelDialog } from "~/components/dialogs/ChannelDialog"
@@ -59,9 +59,16 @@ export function useLinkedCredentialProfileActions(
   } = useUserPreferencesContext()
   const { openWithCredentials } = useChannelDialog()
   const [activeDialog, setActiveDialog] = useState<ActiveDialog>(null)
-  const exportAccount = createExportAccount(profile)
-  const exportToken = createExportToken(profile)
-  const cliProxyPayload = createCliProxyExportPayload(profile)
+  const exportAccount = useMemo(() => createExportAccount(profile), [profile])
+  const exportToken = useMemo(() => createExportToken(profile), [profile])
+  const exportRuntimeKey = useMemo(
+    () => createExportRuntimeKey(profile),
+    [profile],
+  )
+  const cliProxyPayload = useMemo(
+    () => createCliProxyExportPayload(profile),
+    [profile],
+  )
 
   const openDialog = (dialog: Exclude<ActiveDialog, null>) => {
     setActiveDialog(dialog)
@@ -166,7 +173,7 @@ export function useLinkedCredentialProfileActions(
     cliProxyPayload,
     closeDialog,
     exportAccount,
-    exportRuntimeKey: createExportRuntimeKey(profile),
+    exportRuntimeKey,
     exportToken,
     handleCherryStudio,
     handleClaudeCodeRouter,

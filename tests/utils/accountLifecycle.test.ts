@@ -59,19 +59,25 @@ describe("account lifecycle E2E utilities", () => {
       ),
     } as any
 
+    const associationButton = {
+      click: vi.fn(),
+    }
     const saveButton = {
       click: vi.fn(async () => {
         profiles = [existingProfile, createdProfile]
       }),
     }
     const row = {
+      getByTestId: vi.fn(() => associationButton),
+    } as any
+    const page = {
       getByTestId: vi.fn(() => saveButton),
     } as any
 
     await expect(
       saveTokenToApiCredentialProfilesFromKeyManagementPage({
         serviceWorker,
-        page: {} as any,
+        page,
         row,
         expectedProfile: {
           name: "E2E profile",
@@ -84,6 +90,8 @@ describe("account lifecycle E2E utilities", () => {
     })
 
     expect(row.getByTestId).toHaveBeenCalledOnce()
+    expect(page.getByTestId).toHaveBeenCalledOnce()
+    expect(associationButton.click).toHaveBeenCalledOnce()
     expect(saveButton.click).toHaveBeenCalledOnce()
   })
 })

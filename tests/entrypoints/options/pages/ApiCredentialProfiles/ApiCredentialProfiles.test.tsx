@@ -5,11 +5,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import { type useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import ApiCredentialProfiles from "~/entrypoints/options/pages/ApiCredentialProfiles"
-import { getApiCredentialProfileRowTestId } from "~/features/ApiCredentialProfiles/testIds"
+import {
+  API_CREDENTIAL_PROFILES_TEST_IDS,
+  getApiCredentialProfileRowTestId,
+} from "~/features/ApiCredentialProfiles/testIds"
 import {
   KEY_MANAGEMENT_GUIDED_IMPORT_TARGETS,
   KEY_MANAGEMENT_ROUTE_PARAMS,
 } from "~/features/KeyManagement/constants"
+import { ACCOUNT_RUNTIME_KEY_SOURCES } from "~/services/accounts/accountRuntimeKeys"
 import {
   DEFAULT_PREFERENCES,
   type UserPreferences,
@@ -27,6 +31,7 @@ import {
 import type { Tag } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import {
+  API_CREDENTIAL_PROFILE_LINK_SOURCES,
   API_CREDENTIAL_PROFILE_LINK_STATES,
   type ApiCredentialProfileLink,
 } from "~/types/apiCredentialProfiles"
@@ -253,7 +258,8 @@ describe("ApiCredentialProfiles page", () => {
     store = []
     profileLinks = []
     mockListProfiles.mockClear()
-    mockListProfileLinks.mockClear()
+    mockListProfileLinks.mockReset()
+    mockListProfileLinks.mockImplementation(async () => profileLinks)
     mockFetchOpenAICompatibleModelIds.mockReset()
     mockFetchOpenAICompatibleModelIds.mockResolvedValue([])
     mockFetchApiCredentialModelIds.mockReset()
@@ -486,9 +492,8 @@ describe("ApiCredentialProfiles page", () => {
     )
 
     expect(
-      await screen.findByText(
-        "apiCredentialProfiles:target.missingDescription",
-        { selector: "span" },
+      await screen.findByTestId(
+        API_CREDENTIAL_PROFILES_TEST_IDS.targetMissingMessage,
       ),
     ).toBeVisible()
     const availableRow = screen.getByTestId(
@@ -526,13 +531,13 @@ describe("ApiCredentialProfiles page", () => {
         id: "association-1",
         profileId: "p-1",
         locator: {
-          source: "account_token",
+          source: ACCOUNT_RUNTIME_KEY_SOURCES.AccountToken,
           accountId: "account-example",
           siteType: SITE_TYPES.NEW_API,
           tokenId: 1,
         },
         state: API_CREDENTIAL_PROFILE_LINK_STATES.Active,
-        linkedBy: "user",
+        linkedBy: API_CREDENTIAL_PROFILE_LINK_SOURCES.User,
         createdAt: 1,
         updatedAt: 1,
       },
@@ -540,13 +545,13 @@ describe("ApiCredentialProfiles page", () => {
         id: "association-2",
         profileId: "p-1",
         locator: {
-          source: "service_credential",
+          source: ACCOUNT_RUNTIME_KEY_SOURCES.ServiceCredential,
           accountId: "account-second",
           siteType: SITE_TYPES.NEW_API,
           service: "codex",
         },
         state: API_CREDENTIAL_PROFILE_LINK_STATES.Active,
-        linkedBy: "user",
+        linkedBy: API_CREDENTIAL_PROFILE_LINK_SOURCES.User,
         createdAt: 1,
         updatedAt: 1,
       },
@@ -559,20 +564,18 @@ describe("ApiCredentialProfiles page", () => {
         name: /apiCredentialProfiles:association.linked/,
       }),
     )
-    expect(
-      screen.getByText(
-        "Example account · apiCredentialProfiles:association.accountToken",
-      ),
-    ).toBeVisible()
+    const exampleAccountGroup = screen.getByRole("group", {
+      name: "Example account · apiCredentialProfiles:association.accountToken",
+    })
     expect(
       screen.getByText(
         "Second account · apiCredentialProfiles:association.serviceCredential",
       ),
     ).toBeVisible()
     await user.click(
-      screen.getAllByRole("menuitem", {
+      within(exampleAccountGroup).getByRole("menuitem", {
         name: "apiCredentialProfiles:association.viewKey",
-      })[0],
+      }),
     )
     expect(mockOpenKeysPage).toHaveBeenCalledWith({
       associationId: "association-1",

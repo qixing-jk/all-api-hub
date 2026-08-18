@@ -39,6 +39,7 @@ export const API_CREDENTIAL_PROFILES_TEST_IDS = {
   copyApiKeyButton: "api-credential-profile-copy-api-key-button",
   copyBundleButton: "api-credential-profile-copy-bundle-button",
   verifyButton: "api-credential-profile-verify-button",
+  verifyCliSupportButton: "api-credential-profile-verify-cli-support-button",
   verifyDialogCloseButton: "api-credential-profile-verify-dialog-close-button",
   verifyProbeRunButton: "api-credential-profile-verify-probe-run-button",
   verifyModelId: "profile-verify-model-id",
@@ -49,23 +50,27 @@ export const API_CREDENTIAL_PROFILES_TEST_IDS = {
   telemetryTodayRequests: "api-credential-telemetry-today-requests",
   telemetryModels: "api-credential-telemetry-models",
   toolbar: "api-credential-profile-toolbar",
+  toolbarQuickActionsGroup:
+    "api-credential-profile-toolbar-quick-actions-group",
+  toolbarIntegrationsGroup: "api-credential-profile-toolbar-integrations-group",
+  toolbarDiagnosticsGroup: "api-credential-profile-toolbar-diagnostics-group",
+  toolbarManagementGroup: "api-credential-profile-toolbar-management-group",
   associationButton: "api-credential-profile-association-button",
+  targetMissingMessage: "api-credential-profile-target-missing-message",
 } as const
 
 const API_CREDENTIAL_ENDPOINT_OPTION_TEST_ID_PREFIX =
   "api-credential-profile-endpoint-option-"
-const API_CREDENTIAL_PROFILE_ROW_TARGET_ID_PREFIX =
-  "api-credential-profile-row-"
-const API_CREDENTIAL_PROFILE_ROW_TEST_ID_PREFIX = "api-credential-profile-row-"
+const API_CREDENTIAL_PROFILE_ROW_ID_PREFIX = "api-credential-profile-row-"
 
 /** Returns the stable DOM target id for a stored profile row. */
 export function getApiCredentialProfileRowTargetId(profileId: string) {
-  return `${API_CREDENTIAL_PROFILE_ROW_TARGET_ID_PREFIX}${encodeURIComponent(profileId)}`
+  return `${API_CREDENTIAL_PROFILE_ROW_ID_PREFIX}${encodeURIComponent(profileId)}`
 }
 
 /** Returns the stable test id for a stored profile row. */
 export function getApiCredentialProfileRowTestId(profileId: string) {
-  return `${API_CREDENTIAL_PROFILE_ROW_TEST_ID_PREFIX}${encodeURIComponent(profileId)}`
+  return `${API_CREDENTIAL_PROFILE_ROW_ID_PREFIX}${encodeURIComponent(profileId)}`
 }
 
 /** Returns the stable test id for the endpoint option containing a profile. */

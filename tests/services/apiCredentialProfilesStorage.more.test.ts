@@ -250,6 +250,42 @@ describe("apiCredentialProfilesStorage additional flows", () => {
     )
   })
 
+  it("rejects future incoming config versions before merge or persistence", async () => {
+    const persisted = {
+      version: API_CREDENTIAL_PROFILES_CONFIG_VERSION,
+      profiles: [],
+      links: [],
+      linkTombstones: [],
+      lastUpdated: 1,
+    }
+    storageData.set(
+      API_CREDENTIAL_PROFILES_STORAGE_KEYS.API_CREDENTIAL_PROFILES,
+      persisted,
+    )
+    const futureConfig = {
+      version: API_CREDENTIAL_PROFILES_CONFIG_VERSION + 1,
+      profiles: [],
+      futureField: { preserve: true },
+      lastUpdated: 2,
+    }
+
+    expect(() =>
+      mergeApiCredentialProfilesConfigs({
+        local: persisted,
+        incoming: futureConfig,
+        now: 3,
+      }),
+    ).toThrow("Unsupported API credential profiles config version")
+    await expect(
+      apiCredentialProfilesStorage.mergeConfig(futureConfig),
+    ).rejects.toThrow("Unsupported API credential profiles config version")
+    expect(
+      storageData.get(
+        API_CREDENTIAL_PROFILES_STORAGE_KEYS.API_CREDENTIAL_PROFILES,
+      ),
+    ).toEqual(persisted)
+  })
+
   it("coerces telemetry config and snapshot fields for backup compatibility", () => {
     const coerced = coerceApiCredentialProfilesConfig(
       {

@@ -1,13 +1,31 @@
 import userEvent from "@testing-library/user-event"
+import type { ComponentProps } from "react"
 import { describe, expect, it, vi } from "vitest"
 
-import { ApiCredentialProfilesList } from "~/features/ApiCredentialProfiles/components/ApiCredentialProfilesList"
+import { ApiCredentialProfilesList as ApiCredentialProfilesListComponent } from "~/features/ApiCredentialProfiles/components/ApiCredentialProfilesList"
+import { API_CREDENTIAL_PROFILE_ASSOCIATION_AVAILABILITY } from "~/features/ApiCredentialProfiles/contracts"
 import { API_CREDENTIAL_PROFILES_TEST_IDS } from "~/features/ApiCredentialProfiles/testIds"
 import { render, screen, within } from "~~/tests/test-utils/render"
 
 const { useIsDesktopMock } = vi.hoisted(() => ({
   useIsDesktopMock: vi.fn(() => true),
 }))
+
+function ApiCredentialProfilesList(
+  props: Omit<
+    ComponentProps<typeof ApiCredentialProfilesListComponent>,
+    "associationAvailability"
+  >,
+) {
+  return (
+    <ApiCredentialProfilesListComponent
+      associationAvailability={
+        API_CREDENTIAL_PROFILE_ASSOCIATION_AVAILABILITY.Known
+      }
+      {...props}
+    />
+  )
+}
 
 vi.mock("~/hooks/useMediaQuery", () => ({
   useIsDesktop: () => useIsDesktopMock(),

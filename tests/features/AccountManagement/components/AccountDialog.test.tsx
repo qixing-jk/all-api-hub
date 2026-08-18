@@ -19,6 +19,7 @@ import enAccountDialog from "~/locales/en/accountDialog.json"
 import { DEFAULT_AUTO_PROVISION_TOKEN_NAME } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
 import { ACCOUNT_POST_SAVE_WORKFLOW_STEPS } from "~/services/accounts/accountPostSaveWorkflow"
 import { AutoDetectErrorType } from "~/services/accounts/utils/autoDetectUtils"
+import { API_CREDENTIAL_PROFILE_CAPTURE_STATUSES } from "~/services/apiCredentialProfiles/apiCredentialProfileLinkContracts"
 import { AuthTypeEnum } from "~/types"
 import { testI18n } from "~~/tests/test-utils/i18n"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
@@ -285,17 +286,29 @@ vi.mock("~/features/TokenProvisioning/components/AddTokenDialog", () => ({
   ),
 }))
 
-vi.mock("~/services/apiCredentialProfiles/apiCredentialProfileLinks", () => ({
-  apiCredentialProfileLinks: {
-    capture: async (input: { profile: unknown }) => {
-      mockCaptureApiCredentialProfile(input)
-      return {
-        status: "captured",
-        profile: await mockCreateApiCredentialProfile(input.profile),
-      }
-    },
+vi.mock(
+  "~/services/apiCredentialProfiles/apiCredentialProfileLinks",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/apiCredentialProfiles/apiCredentialProfileLinks")
+      >()
+
+    return {
+      ...actual,
+      apiCredentialProfileLinks: {
+        ...actual.apiCredentialProfileLinks,
+        capture: async (input: { profile: unknown }) => {
+          mockCaptureApiCredentialProfile(input)
+          return {
+            status: API_CREDENTIAL_PROFILE_CAPTURE_STATUSES.Captured,
+            profile: await mockCreateApiCredentialProfile(input.profile),
+          }
+        },
+      },
+    }
   },
-}))
+)
 
 vi.mock("react-hot-toast", async (importOriginal) => {
   const actual = await importOriginal<typeof import("react-hot-toast")>()

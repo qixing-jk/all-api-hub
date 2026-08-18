@@ -40,6 +40,7 @@ import {
   type ApiCredentialProfilesViewVariant,
 } from "../contracts"
 import type { ApiCredentialProfilesController } from "../hooks/useApiCredentialProfilesController"
+import { API_CREDENTIAL_PROFILES_TEST_IDS } from "../testIds"
 import {
   buildApiCredentialProfileListModel,
   type ApiCredentialProfileFilterMode,
@@ -148,6 +149,7 @@ export function ApiCredentialProfilesListView({
   const targetProfile = targetProfileId
     ? controller.profiles.find((profile) => profile.id === targetProfileId)
     : undefined
+  const hasTargetProfile = targetProfile !== undefined
   const isTargetPending = Boolean(
     targetProfileId && controller.isLoading && !targetProfile,
   )
@@ -167,7 +169,7 @@ export function ApiCredentialProfilesListView({
   }, [controller.profiles.length, guidedImportEntryRequest])
 
   useEffect(() => {
-    if (!targetProfile) {
+    if (!targetProfileId || !hasTargetProfile) {
       return
     }
 
@@ -175,7 +177,7 @@ export function ApiCredentialProfilesListView({
     setApiTypeFilter("")
     setSelectedTagIds([])
     setLastFilterMode(null)
-  }, [targetProfile, targetProfileRequest])
+  }, [hasTargetProfile, targetProfileId, targetProfileRequest])
 
   const {
     filteredProfiles,
@@ -310,7 +312,7 @@ export function ApiCredentialProfilesListView({
         />
       ) : null}
 
-      {targetProfileId ? (
+      {targetProfileId && !isTargetMissing ? (
         <div className="sr-only" role="status" aria-live="polite">
           {targetStatusMessage}
         </div>
@@ -320,7 +322,11 @@ export function ApiCredentialProfilesListView({
         <Notice
           tone="warning"
           description={
-            <span>
+            <span
+              data-testid={
+                API_CREDENTIAL_PROFILES_TEST_IDS.targetMissingMessage
+              }
+            >
               {t("apiCredentialProfiles:target.missingDescription")}{" "}
               {onClearTargetProfile ? (
                 <NoticeActionButton onClick={onClearTargetProfile}>

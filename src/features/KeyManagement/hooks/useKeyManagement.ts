@@ -2081,6 +2081,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       )
 
       if (!isVisibilityRequestActive()) {
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
         return
       }
 
@@ -2096,6 +2097,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
     } catch (error) {
       if (!isVisibilityRequestActive()) {
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
         return
       }
 

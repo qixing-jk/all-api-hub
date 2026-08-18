@@ -635,6 +635,26 @@ export function TokenList(props: TokenListProps) {
     guidedManagedSiteImportTokenId,
   ])
 
+  const getTokenRowAssociationProps = (
+    entry: KeyManagementEntry,
+    token: AccountToken,
+  ) => {
+    const tokenIdentityKey = buildTokenIdentityKey(token.accountId, token.id)
+    const runtimeKeyLocator = getAccountRuntimeKeyLocator(entry.runtimeKey)
+    const associatedProfile =
+      getCredentialProfileForLocator?.(runtimeKeyLocator)
+
+    return {
+      associatedProfile,
+      displayTokenKey:
+        associatedProfile?.apiKey.trim() && !visibleKeys.has(tokenIdentityKey)
+          ? associatedProfile.apiKey
+          : getVisibleTokenKey(token),
+      runtimeKeyLocator,
+      tokenIdentityKey,
+    }
+  }
+
   const isAllAccountsMode =
     selectedAccount === KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE
   const [collapsedAccountIds, setCollapsedAccountIds] = useState<Set<string>>(
@@ -1373,15 +1393,12 @@ export function TokenList(props: TokenListProps) {
 
                         const token =
                           toLegacyAccountTokenForKeyManagementEntry(entry)
-                        const tokenIdentityKey = buildTokenIdentityKey(
-                          token.accountId,
-                          token.id,
-                        )
-                        const runtimeKeyLocator = getAccountRuntimeKeyLocator(
-                          entry.runtimeKey,
-                        )
-                        const associatedProfile =
-                          getCredentialProfileForLocator?.(runtimeKeyLocator)
+                        const {
+                          associatedProfile,
+                          displayTokenKey,
+                          runtimeKeyLocator,
+                          tokenIdentityKey,
+                        } = getTokenRowAssociationProps(entry, token)
                         const managedSiteStatusEntry =
                           managedSiteTokenStatuses?.[tokenIdentityKey]
 
@@ -1389,12 +1406,7 @@ export function TokenList(props: TokenListProps) {
                           <TokenListItem
                             key={entry.id}
                             token={token}
-                            displayTokenKey={
-                              associatedProfile?.apiKey.trim() &&
-                              !visibleKeys.has(tokenIdentityKey)
-                                ? associatedProfile.apiKey
-                                : getVisibleTokenKey(token)
-                            }
+                            displayTokenKey={displayTokenKey}
                             visibleKeys={visibleKeys}
                             isKeyVisibilityLoading={resolvingVisibleKeys.has(
                               tokenIdentityKey,
@@ -1456,15 +1468,12 @@ export function TokenList(props: TokenListProps) {
               return null
             }
 
-            const tokenIdentityKey = buildTokenIdentityKey(
-              token.accountId,
-              token.id,
-            )
-            const runtimeKeyLocator = getAccountRuntimeKeyLocator(
-              entry.runtimeKey,
-            )
-            const associatedProfile =
-              getCredentialProfileForLocator?.(runtimeKeyLocator)
+            const {
+              associatedProfile,
+              displayTokenKey,
+              runtimeKeyLocator,
+              tokenIdentityKey,
+            } = getTokenRowAssociationProps(entry, token)
             const managedSiteStatusEntry =
               managedSiteTokenStatuses?.[tokenIdentityKey]
 
@@ -1472,12 +1481,7 @@ export function TokenList(props: TokenListProps) {
               <TokenListItem
                 key={entry.id}
                 token={token}
-                displayTokenKey={
-                  associatedProfile?.apiKey.trim() &&
-                  !visibleKeys.has(tokenIdentityKey)
-                    ? associatedProfile.apiKey
-                    : getVisibleTokenKey(token)
-                }
+                displayTokenKey={displayTokenKey}
                 visibleKeys={visibleKeys}
                 isKeyVisibilityLoading={resolvingVisibleKeys.has(
                   tokenIdentityKey,

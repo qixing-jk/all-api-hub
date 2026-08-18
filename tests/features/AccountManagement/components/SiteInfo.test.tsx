@@ -79,20 +79,25 @@ vi.mock("react-hot-toast", () => ({
   },
 }))
 
-vi.mock("~/components/Tooltip", () => ({
-  default: ({
-    children,
-    content,
-  }: {
-    children: ReactNode
-    content: ReactNode
-  }) => (
-    <div data-tooltip-content={typeof content === "string" ? content : ""}>
-      {children}
-      {typeof content === "string" ? null : content}
-    </div>
-  ),
-}))
+vi.mock("~/components/Tooltip", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/components/Tooltip")>()
+
+  return {
+    ...actual,
+    default: ({
+      children,
+      content,
+    }: {
+      children: ReactNode
+      content: ReactNode
+    }) => (
+      <div data-tooltip-content={typeof content === "string" ? content : ""}>
+        {children}
+        {typeof content === "string" ? null : content}
+      </div>
+    ),
+  }
+})
 
 vi.mock("~/features/AccountManagement/hooks/AccountDataContext", () => ({
   useAccountDataContext: () => ({

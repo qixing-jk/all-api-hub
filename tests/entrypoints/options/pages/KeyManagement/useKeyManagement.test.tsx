@@ -2452,9 +2452,11 @@ describe("useKeyManagement enabled account filtering", () => {
       for (const listener of apiCredentialProfilesChangeListeners) listener()
     })
 
-    expect(result.current.visibleKeys).not.toContain(
-      buildTokenIdentityKey(account.id, token.id),
-    )
+    expect(
+      result.current.visibleKeys.has(
+        buildTokenIdentityKey(account.id, token.id),
+      ),
+    ).toBe(false)
     expect(result.current.getVisibleTokenKey(token)).toBe(token.key)
     expect(resolveTokenKey).toHaveBeenCalledTimes(1)
   })
@@ -4879,6 +4881,9 @@ describe("useKeyManagement enabled account filtering", () => {
 
     expect(vi.mocked(toast.error)).not.toHaveBeenCalled()
     expect(result.current.resolvingVisibleKeys.has(tokenIdentityKey)).toBe(true)
+    expect(trackerCompleteMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Skipped,
+    )
 
     await act(async () => {
       resolveSecondReveal("resolved-token-secret")

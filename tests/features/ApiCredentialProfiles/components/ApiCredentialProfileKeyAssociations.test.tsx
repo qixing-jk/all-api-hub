@@ -60,6 +60,18 @@ describe("ApiCredentialProfileKeyAssociations", () => {
     ).not.toBeInTheDocument()
   })
 
+  it("does not render an association trigger without an available action", () => {
+    renderAssociations({
+      state: { status: "linked", items: [tokenItem] },
+    })
+
+    expect(
+      screen.queryByRole("button", {
+        name: "apiCredentialProfiles:association.linked",
+      }),
+    ).not.toBeInTheDocument()
+  })
+
   it("keeps one linked key compact and groups navigation and unlinking in its menu", async () => {
     const user = userEvent.setup()
     const onOpenAssociatedKey = vi.fn()
@@ -77,7 +89,9 @@ describe("ApiCredentialProfileKeyAssociations", () => {
       "apiCredentialProfiles:association.linked",
     )
     expect(trigger).not.toHaveAttribute("title")
-    expect(trigger.querySelector(".lucide-link-2")).not.toBeNull()
+    expect(trigger).toHaveAccessibleName(
+      "apiCredentialProfiles:association.linked",
+    )
 
     await user.click(trigger)
     await user.click(
@@ -109,11 +123,11 @@ describe("ApiCredentialProfileKeyAssociations", () => {
       onOpenAssociatedKey,
     })
 
-    await user.click(
-      screen.getByRole("button", {
-        name: /apiCredentialProfiles:association.linked/,
-      }),
-    )
+    const trigger = screen.getByRole("button", {
+      name: /apiCredentialProfiles:association.linkedWithCount/,
+    })
+    expect(trigger).toHaveTextContent("2")
+    await user.click(trigger)
 
     expect(
       screen.getByText(
@@ -149,11 +163,11 @@ describe("ApiCredentialProfileKeyAssociations", () => {
       onUnlinkAssociatedKey,
     })
 
-    await user.click(
-      screen.getByRole("button", {
-        name: /apiCredentialProfiles:association.needsConfirmation/,
-      }),
-    )
+    const trigger = screen.getByRole("button", {
+      name: /apiCredentialProfiles:association.needsConfirmationWithCount/,
+    })
+    expect(trigger).toHaveTextContent("1")
+    await user.click(trigger)
     await user.click(
       screen.getByRole("menuitem", {
         name: "apiCredentialProfiles:association.confirmLink",
@@ -161,11 +175,7 @@ describe("ApiCredentialProfileKeyAssociations", () => {
     )
     expect(onConfirmAssociatedKey).toHaveBeenCalledWith("association-token")
 
-    await user.click(
-      screen.getByRole("button", {
-        name: /apiCredentialProfiles:association.needsConfirmation/,
-      }),
-    )
+    await user.click(trigger)
     await user.click(
       screen.getByRole("menuitem", {
         name: "apiCredentialProfiles:association.removeLink",

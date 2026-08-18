@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { Storage } from "@plasmohq/storage"
 
+import { BACKUP_VERSION } from "~/constants/importExport"
 import {
   ACCOUNT_STORAGE_KEYS,
   USER_PREFERENCES_STORAGE_KEYS,
@@ -1484,6 +1485,46 @@ describe("WebdavAutoSyncService.syncWithWebdav (selective sync)", () => {
       version: 1,
       tagsById: { local: { id: "local-tag" } },
     })
+  })
+
+  it("rejects a future nested profile config before local writes or upload", async () => {
+    const service = createService()
+    mockGetPreferences.mockResolvedValue({
+      webdav: {
+        syncStrategy: "merge",
+        syncData: {
+          accounts: false,
+          bookmarks: false,
+          apiCredentialProfiles: true,
+          preferences: false,
+        },
+      },
+    } as any)
+    mockAccountStorageExportData.mockResolvedValue({
+      accounts: [],
+      bookmarks: [],
+      pinnedAccountIds: [],
+      orderedAccountIds: [],
+      last_updated: 1,
+    })
+    mockDownloadBackup.mockResolvedValue(
+      JSON.stringify({
+        version: BACKUP_VERSION,
+        timestamp: 2,
+        apiCredentialProfiles: {
+          version: 999,
+          profiles: [],
+          futureField: { preserve: true },
+        },
+      }),
+    )
+
+    await expect(service.syncWithWebdav()).rejects.toThrow(
+      "Unsupported API credential profiles config version",
+    )
+    expect(mockAccountStorageImportData).not.toHaveBeenCalled()
+    expect(mockApiCredentialProfilesImport).not.toHaveBeenCalled()
+    expect(mockUploadBackup).not.toHaveBeenCalled()
   })
 })
 

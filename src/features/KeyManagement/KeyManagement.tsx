@@ -396,7 +396,12 @@ export default function KeyManagement(props: {
     const accountId = getAccountRuntimeKeyLocatorAccountId(
       associationTarget.locator,
     )
-    const workspace = getAssociationLocatorWorkspace(associationTarget.locator)
+    const workspaceScopeKey = getAssociationLocatorWorkspace(
+      associationTarget.locator,
+    )
+    const workspace = nativeKeys.scopes.find(
+      (scope) => scope.scopeKey === workspaceScopeKey,
+    )?.routeKey
     const nextParams = {
       [KEY_MANAGEMENT_ROUTE_PARAMS.AssociationId]: associationTarget.id,
       [KEY_MANAGEMENT_ROUTE_PARAMS.AccountId]: accountId,
@@ -413,6 +418,7 @@ export default function KeyManagement(props: {
     }
   }, [
     associationTarget,
+    nativeKeys.scopes,
     routeSignature,
     setAllAccountsFilterAccountIds,
     setSearchTerm,

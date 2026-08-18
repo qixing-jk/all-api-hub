@@ -303,7 +303,7 @@ describe("apiCredentialProfileLinks", () => {
     )
   })
 
-  it("preserves links for metadata edits, downgrades key edits, and cascades profile deletion", async () => {
+  it("preserves links for metadata edits, downgrades protocol or key edits, and cascades profile deletion", async () => {
     const locator = {
       source: "account_token" as const,
       accountId: "account-example",
@@ -334,7 +334,9 @@ describe("apiCredentialProfileLinks", () => {
     })
     await expect(
       apiCredentialProfileLinks.findForLocator(locator),
-    ).resolves.toEqual([expect.objectContaining({ state: "active" })])
+    ).resolves.toEqual([
+      expect.objectContaining({ state: "needs-confirmation" }),
+    ])
 
     await apiCredentialProfilesStorage.updateProfile(captured.profile.id, {
       apiKey: "sk-replaced-secret",

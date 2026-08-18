@@ -414,6 +414,66 @@ describe("KeyManagement empty-state actions", () => {
     })
   })
 
+  it("maps an associated native scope key to its workspace route key", async () => {
+    const account = createAccount({
+      id: "native-account-example",
+      name: "Native example",
+      siteType: SITE_TYPES.OPENROUTER,
+    })
+    const scope = {
+      scopeKey: "workspace-opaque-id",
+      routeKey: "workspace-route",
+      displayName: "Example workspace",
+      isDefault: true,
+    }
+    openAccountKeyResourcesMock.mockResolvedValue({
+      resolveDefaultScope: vi.fn().mockResolvedValue(scope),
+      listScopes: vi.fn().mockResolvedValue([scope]),
+      openCollection: vi.fn().mockResolvedValue({
+        list: vi.fn().mockResolvedValue({ items: [] }),
+      }),
+    })
+    const association = {
+      id: "association-native-example",
+      profileId: "profile-example",
+      locator: {
+        source: ACCOUNT_RUNTIME_KEY_SOURCES.AccountKeyResource,
+        ref: {
+          accountId: account.id,
+          siteType: SITE_TYPES.OPENROUTER,
+          scopeKey: scope.scopeKey,
+          resourceId: "resource-opaque-id",
+        },
+      },
+      state: API_CREDENTIAL_PROFILE_LINK_STATES.Active,
+      linkedBy: "user" as const,
+      createdAt: 1,
+      updatedAt: 1,
+    }
+    useApiCredentialProfileLinksMock.mockReturnValue({
+      links: [association],
+      isLoading: false,
+      error: null,
+      reload: vi.fn(),
+    })
+    useKeyManagementMock.mockReturnValue(
+      createHookResult({
+        displayData: [account],
+        selectedAccount: account.id,
+      }),
+    )
+
+    render(<KeyManagement routeParams={{ associationId: association.id }} />)
+
+    await waitFor(() =>
+      expect(replaceWithinOptionsPageMock).toHaveBeenCalledWith("#keys", {
+        associationId: association.id,
+        accountId: account.id,
+        workspace: scope.routeKey,
+      }),
+    )
+  })
+
   it("does not report a linked key as missing while its inventory is loading", async () => {
     const account = createAccount({ id: "account-example", name: "Example" })
     const association = {

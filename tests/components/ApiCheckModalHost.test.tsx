@@ -621,8 +621,8 @@ describe("ApiCheckModalHost", () => {
     await waitFor(() => {
       expect(historyButton).toBeDisabled()
     })
-    expect(historyButton).toHaveAttribute(
-      "title",
+    await user.hover(historyButton)
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
       "webAiApiCheck:modal.history.empty",
     )
   })

@@ -77,6 +77,10 @@ describe("AccountKeyResourceListItem", () => {
       name: "keyManagement:keyDetails.createResponseOnlySecret",
     })
     expect(secretAvailabilityButton).toBeVisible()
+    expect(secretAvailabilityButton).toHaveAttribute("type", "button")
+    expect(screen.getByRole("note")).toHaveTextContent(
+      "keyManagement:keyDetails.createResponseOnlySecret",
+    )
     await user.hover(secretAvailabilityButton)
     expect(await screen.findByRole("tooltip")).toHaveTextContent(
       "keyManagement:keyDetails.createResponseOnlySecret",
@@ -185,13 +189,7 @@ describe("AccountKeyResourceListItem", () => {
   it("exposes complete-key actions from a linked credential profile", async () => {
     const user = userEvent.setup()
     server.use(
-      http.get("https://api.example.invalid/v1/models", () =>
-        HttpResponse.json({ data: { object: "list", data: [] } }),
-      ),
       http.get("https://api.example.invalid/v1/v1/models", () =>
-        HttpResponse.json({ data: { object: "list", data: [] } }),
-      ),
-      http.get("https://api.example.invalid/models", () =>
         HttpResponse.json({ data: { object: "list", data: [] } }),
       ),
     )
@@ -265,6 +263,62 @@ describe("AccountKeyResourceListItem", () => {
 
     await user.click(verifyApiButton)
     expect(await screen.findByRole("dialog")).toBeVisible()
+  })
+
+  it("hides a newly linked profile secret until the user reveals it", async () => {
+    const user = userEvent.setup()
+    const commonProps = {
+      row,
+      onExpandedChange: vi.fn(),
+      onEdit: vi.fn(),
+      onDelete: vi.fn(),
+    }
+    const profile = {
+      id: "profile-first",
+      name: "First credential",
+      apiType: "openai-compatible" as const,
+      baseUrl: "https://api.example.invalid/v1",
+      apiKey: "complete-first-secret",
+      tagIds: [],
+      notes: "",
+      createdAt: 1,
+      updatedAt: 1,
+    }
+    const { rerender } = render(
+      <AccountKeyResourceListItem
+        {...commonProps}
+        associatedProfile={profile}
+      />,
+      { withUserPreferencesProvider: true, withThemeProvider: false },
+    )
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:actions.showKey",
+      }),
+    )
+    expect(screen.getByText(profile.apiKey)).toBeVisible()
+
+    const nextProfile = {
+      ...profile,
+      id: "profile-second",
+      name: "Second credential",
+      apiKey: "complete-second-secret",
+    }
+    rerender(
+      <AccountKeyResourceListItem
+        {...commonProps}
+        associatedProfile={nextProfile}
+      />,
+    )
+
+    expect(screen.queryByText(nextProfile.apiKey)).not.toBeInTheDocument()
+    expect(
+      screen.getByText(maskSecretForDisplay(nextProfile.apiKey)),
+    ).toBeVisible()
+    expect(
+      screen.getByRole("button", { name: "keyManagement:actions.showKey" }),
+    ).toBeVisible()
   })
 
   it("keeps native mutations available when details come from row facts", async () => {

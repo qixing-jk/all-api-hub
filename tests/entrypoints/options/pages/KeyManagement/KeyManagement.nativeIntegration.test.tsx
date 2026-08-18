@@ -77,12 +77,21 @@ const {
   legacyRetryFailedAccountsSpy: vi.fn(),
 }))
 
-vi.mock("~/services/apiCredentialProfiles/accountTokenImport", () => ({
-  captureProfileFromAccountToken: (...args: unknown[]) =>
-    captureProfileFromAccountTokenMock(...args),
-  createProfileFromAccountToken: async (...args: unknown[]) =>
-    (await captureProfileFromAccountTokenMock(...args)).profile,
-}))
+vi.mock(
+  "~/services/apiCredentialProfiles/accountTokenImport",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/apiCredentialProfiles/accountTokenImport")
+      >()
+
+    return {
+      ...actual,
+      captureProfileFromAccountToken: (...args: unknown[]) =>
+        captureProfileFromAccountTokenMock(...args),
+    }
+  },
+)
 
 vi.mock(
   "~/features/KeyManagement/controllers/useAccountKeyResourceController",

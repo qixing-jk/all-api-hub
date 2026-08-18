@@ -429,6 +429,29 @@ describe("ApiCredentialProfilesListView", () => {
     const list = screen.getByTestId("profiles-list")
     expect(list).toHaveAttribute("data-target-profile-id", "profile-2")
     expect(list).toHaveAttribute("data-target-request", "1")
+
+    fireEvent.change(
+      screen.getByPlaceholderText(
+        "apiCredentialProfiles:controls.searchPlaceholder",
+      ),
+      { target: { value: "Target" } },
+    )
+    rerender(
+      <ApiCredentialProfilesListView
+        controller={{
+          ...controller,
+          profiles: controller.profiles.map((profile: any) => ({ ...profile })),
+        }}
+        targetProfileId="profile-2"
+        targetProfileRequest={1}
+      />,
+    )
+
+    expect(
+      screen.getByPlaceholderText(
+        "apiCredentialProfiles:controls.searchPlaceholder",
+      ),
+    ).toHaveValue("Target")
   })
 
   it("waits for loading to finish before reporting a missing target", async () => {
@@ -466,10 +489,10 @@ describe("ApiCredentialProfilesListView", () => {
     )
 
     expect(
-      await screen.findAllByText(
+      await screen.findByText(
         "apiCredentialProfiles:target.missingDescription",
       ),
-    ).toHaveLength(2)
+    ).toBeVisible()
     fireEvent.click(
       screen.getByRole("button", {
         name: "apiCredentialProfiles:target.clear",

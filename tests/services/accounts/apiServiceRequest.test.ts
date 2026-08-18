@@ -61,12 +61,20 @@ vi.mock("~/services/apiAdapters/registry", () => ({
   getSiteTypeCapabilities: vi.fn(),
 }))
 
-vi.mock("~/services/apiCredentialProfiles/accountRuntimeKeyRecovery", () => ({
-  ASSOCIATED_PROFILE_SECRET_RESOLUTION_STATUSES: {
-    Resolved: "resolved",
+vi.mock(
+  "~/services/apiCredentialProfiles/accountRuntimeKeyRecovery",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/apiCredentialProfiles/accountRuntimeKeyRecovery")
+      >()
+
+    return {
+      ...actual,
+      resolveAssociatedProfileSecret: vi.fn(),
+    }
   },
-  resolveAssociatedProfileSecret: vi.fn(),
-}))
+)
 
 vi.mock("~/services/accounts/sub2apiAuthSession", () => ({
   accountSub2ApiAuthSession: {
@@ -1331,6 +1339,35 @@ describe("fetchDisplayAccountTokens", () => {
         token as any,
       ),
     ).resolves.toMatchObject({ key: "profile-secret" })
+    expect(resolveTokenKey).not.toHaveBeenCalled()
+  })
+
+  it("keeps a newly created full secret for create-response-only account tokens", async () => {
+    capabilities = {
+      siteType: SITE_TYPES.AIHUBMIX,
+      account: {
+        keyManagement: {
+          ...keyManagement,
+          inventorySecretAvailability:
+            INVENTORY_SECRET_AVAILABILITIES.CreateResponseOnly,
+        },
+      },
+    }
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue(capabilities as any)
+    const token = {
+      id: 42,
+      key: "sk-created-one-time-secret",
+      status: 1,
+      name: "Create-only",
+    }
+
+    await expect(
+      resolveDisplayAccountTokenForSecret(
+        { ...ACCOUNT, siteType: SITE_TYPES.AIHUBMIX } as any,
+        token as any,
+      ),
+    ).resolves.toBe(token)
+    expect(resolveAssociatedProfileSecret).not.toHaveBeenCalled()
     expect(resolveTokenKey).not.toHaveBeenCalled()
   })
 

@@ -52,7 +52,6 @@ import {
 import { formatTelemetryMoney } from "~/utils/core/money"
 
 import {
-  API_CREDENTIAL_PROFILE_ASSOCIATION_AVAILABILITY,
   type ApiCredentialProfileAssociatedKeyState,
   type ApiCredentialProfileAssociationAvailability,
   type ApiCredentialProfileExportAction,
@@ -89,7 +88,7 @@ interface ApiCredentialProfileListItemProps {
   guidedImportEntryRequest?: number
   focusRequest?: number
   associatedKeyState?: ApiCredentialProfileAssociatedKeyState
-  associationAvailability?: ApiCredentialProfileAssociationAvailability
+  associationAvailability: ApiCredentialProfileAssociationAvailability
   onOpenAssociatedKey?: (associationId: string) => void
   onConfirmAssociatedKey?: (associationId: string) => void
   onUnlinkAssociatedKey?: (associationId: string) => void
@@ -261,7 +260,7 @@ export function ApiCredentialProfileListItem({
   guidedImportEntryRequest,
   focusRequest,
   associatedKeyState,
-  associationAvailability = API_CREDENTIAL_PROFILE_ASSOCIATION_AVAILABILITY.Known,
+  associationAvailability,
   onOpenAssociatedKey,
   onConfirmAssociatedKey,
   onUnlinkAssociatedKey,

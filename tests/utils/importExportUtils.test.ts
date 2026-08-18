@@ -86,15 +86,20 @@ vi.mock("~/services/tags/tagStorage", () => ({
 }))
 
 vi.mock(
-  "~/services/apiCredentialProfiles/apiCredentialProfilesStorage",
-  () => ({
-    apiCredentialProfilesStorage: {
-      importConfig: vi.fn(),
-      mergeConfig: vi.fn(),
-      exportConfig: vi.fn(),
-    },
-    coerceApiCredentialProfilesConfig: (raw: unknown) => raw,
-  }),
+  import("~/services/apiCredentialProfiles/apiCredentialProfilesStorage"),
+  async (importOriginal) => {
+    const actual = await importOriginal()
+    return {
+      ...actual,
+      apiCredentialProfilesStorage: {
+        importConfig: vi.fn(),
+        mergeConfig: vi.fn(),
+        exportConfig: vi.fn(),
+      } as unknown as typeof actual.apiCredentialProfilesStorage,
+      coerceApiCredentialProfilesConfig: (raw: unknown) =>
+        raw as ReturnType<typeof actual.coerceApiCredentialProfilesConfig>,
+    }
+  },
 )
 
 vi.mock("react-hot-toast", () => ({
@@ -1408,6 +1413,23 @@ describe("normalizeBackupForMerge", () => {
         null,
       ),
     ).toThrow("VERSION_NOT_SUPPORTED")
+  })
+
+  it("rejects a future nested profile config before coercing the backup", () => {
+    expect(() =>
+      normalizeBackupForMerge(
+        {
+          version: BACKUP_VERSION,
+          timestamp: 123,
+          apiCredentialProfiles: {
+            version: 999,
+            profiles: [],
+            futureField: { preserve: true },
+          },
+        } as RawBackupData,
+        null,
+      ),
+    ).toThrow("Unsupported API credential profiles config version")
   })
 
   it("rejects malformed scoped channel configs instead of treating them as absent", () => {

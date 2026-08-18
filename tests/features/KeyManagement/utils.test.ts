@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { getKeyManagementAssociationTargetId } from "~/features/KeyManagement/testIds"
 import { KEY_MANAGEMENT_LOAD_STATUSES } from "~/features/KeyManagement/types"
@@ -297,10 +298,10 @@ describe("KeyManagement utils", () => {
   })
 
   describe("credential association locator matching", () => {
-    it("matches account tokens by account, Site Type, and token id", () => {
+    it("matches account tokens by account, site type, and token id", () => {
       const account = buildDisplaySiteData({
         id: "account-1",
-        siteType: "new-api",
+        siteType: SITE_TYPES.NEW_API,
       })
       const runtimeKey = buildAccountTokenKeyManagementEntry(
         account,
@@ -311,7 +312,7 @@ describe("KeyManagement utils", () => {
         isAccountRuntimeKeyLocatorMatch(runtimeKey, {
           source: ACCOUNT_RUNTIME_KEY_SOURCES.AccountToken,
           accountId: "account-1",
-          siteType: "new-api",
+          siteType: SITE_TYPES.NEW_API,
           tokenId: 42,
         }),
       ).toBe(true)
@@ -319,7 +320,7 @@ describe("KeyManagement utils", () => {
         isAccountRuntimeKeyLocatorMatch(runtimeKey, {
           source: ACCOUNT_RUNTIME_KEY_SOURCES.AccountToken,
           accountId: "another-account",
-          siteType: "new-api",
+          siteType: SITE_TYPES.NEW_API,
           tokenId: 42,
         }),
       ).toBe(false)
@@ -328,7 +329,7 @@ describe("KeyManagement utils", () => {
     it("matches native resources by their complete opaque ref", () => {
       const ref = {
         accountId: "account-1",
-        siteType: "openrouter" as const,
+        siteType: SITE_TYPES.OPENROUTER,
         scopeKey: "workspace-example",
         resourceId: "hash-example",
       }

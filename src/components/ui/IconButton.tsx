@@ -54,6 +54,8 @@ export interface IconButtonProps
   /** Overrides the default Tooltip copy derived from title or aria-label. */
   tooltip?: React.ReactNode
   analyticsAction?: ProductAnalyticsScopedActionConfig
+  /** Internal marker injected by Tooltip for its direct managed child. */
+  "data-tooltip-anchor-id"?: string
 }
 
 const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
@@ -69,6 +71,7 @@ const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
       disableAutoTooltip,
       tooltip,
       analyticsAction,
+      "data-tooltip-anchor-id": managedTooltipAnchorId,
       onClick,
       "aria-busy": ariaBusy,
       ...props
@@ -93,7 +96,12 @@ const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
     }
 
     const hasExplicitTooltip = tooltip !== undefined && tooltip !== null
-    const isTooltipManaged = React.useContext(TooltipContext)
+    const tooltipAnchorId = React.useContext(TooltipContext)
+    const isTooltipManaged = Boolean(
+      tooltipAnchorId &&
+        (props.id === tooltipAnchorId ||
+          managedTooltipAnchorId === tooltipAnchorId),
+    )
     const shouldRenderTooltip = !disableAutoTooltip && !isTooltipManaged
     const tooltipContent = hasExplicitTooltip
       ? tooltip
@@ -143,7 +151,7 @@ const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
     )
 
     return shouldRenderTooltip ? (
-      <Tooltip content={tooltipContent} anchorAsChild={hasExplicitTooltip}>
+      <Tooltip content={tooltipContent} anchorAsChild>
         {button}
       </Tooltip>
     ) : (

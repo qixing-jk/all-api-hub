@@ -2,6 +2,7 @@ import { BACKUP_VERSION } from "~/constants/importExport"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import {
   apiCredentialProfilesStorage,
+  assertSupportedApiCredentialProfilesConfigVersion,
   coerceApiCredentialProfilesConfig,
 } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import {
@@ -459,6 +460,10 @@ export function normalizeBackupForMerge(
       apiCredentialProfiles: null,
     }
   }
+
+  assertSupportedApiCredentialProfilesConfigVersion(
+    (data as Record<string, unknown>).apiCredentialProfiles,
+  )
 
   const version = getSupportedBackupVersion(data)
 

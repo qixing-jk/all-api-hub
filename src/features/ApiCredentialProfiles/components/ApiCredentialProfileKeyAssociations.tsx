@@ -81,6 +81,15 @@ export function ApiCredentialProfileKeyAssociations({
     ? t("apiCredentialProfiles:association.needsConfirmation")
     : t("apiCredentialProfiles:association.linked")
   const hasCount = isNeedsConfirmation || state.items.length > 1
+  const triggerAriaLabel = !hasCount
+    ? statusLabel
+    : isNeedsConfirmation
+      ? t("apiCredentialProfiles:association.needsConfirmationWithCount", {
+          count: state.items.length,
+        })
+      : t("apiCredentialProfiles:association.linkedWithCount", {
+          count: state.items.length,
+        })
   const items = state.items.map((item) => ({
     id: item.associationId,
     label: state.items.length > 1 ? getAssociatedKeyLabel(item, t) : undefined,
@@ -107,9 +116,7 @@ export function ApiCredentialProfileKeyAssociations({
         unlink: t("apiCredentialProfiles:association.removeLink"),
       }}
       testId={API_CREDENTIAL_PROFILES_TEST_IDS.associationButton}
-      triggerAriaLabel={
-        hasCount ? `${statusLabel}: ${state.items.length}` : statusLabel
-      }
+      triggerAriaLabel={triggerAriaLabel}
       count={hasCount ? state.items.length : undefined}
     />
   )

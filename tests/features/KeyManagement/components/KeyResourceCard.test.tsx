@@ -4,6 +4,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
 
 import {
   KEY_RESOURCE_CONTENT_LAYOUTS,
+  KeyResourceActionGroup,
   KeyResourceCard,
   KeyResourceCardHeader,
   KeyResourceFactList,
@@ -87,18 +88,9 @@ describe("KeyResourceCard", () => {
     expect(screen.getByText("Remaining quota")).toBeVisible()
     expect(screen.getByText("Key:")).toBeVisible()
     expect(screen.getByText("sk-example")).toBeVisible()
-    expect(
-      screen.getByText(
-        "This site provides only a masked value after creation, so the full key cannot be viewed again.",
-      ),
-    ).toBeVisible()
-    expect(
-      within(
-        screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.keyResourceSecretDisplay),
-      ).getByText(
-        "This site provides only a masked value after creation, so the full key cannot be viewed again.",
-      ),
-    ).toBeVisible()
+    expect(screen.getByRole("note")).toHaveTextContent(
+      "This site provides only a masked value after creation, so the full key cannot be viewed again.",
+    )
     expect(
       within(
         screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.keyResourceSecretDisplay),
@@ -125,11 +117,7 @@ describe("KeyResourceCard", () => {
         .compareDocumentPosition(screen.getByText("IP limits")) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy()
-    expect(
-      screen.getAllByText(
-        "This site provides only a masked value after creation, so the full key cannot be viewed again.",
-      ),
-    ).toHaveLength(1)
+    expect(screen.getAllByRole("note")).toHaveLength(1)
   })
 
   it("exposes a focusable stable target for deep-link navigation", () => {
@@ -404,6 +392,19 @@ describe("KeyResourceCard", () => {
     )
   })
 
+  it("forwards a stable selector to an action group", () => {
+    renderKeyResourceCard(
+      <KeyResourceActionGroup label="Profile actions" testId="profile-actions">
+        <button type="button">Edit profile</button>
+      </KeyResourceActionGroup>,
+    )
+
+    expect(screen.getByTestId("profile-actions")).toHaveAttribute(
+      "aria-label",
+      "Profile actions",
+    )
+  })
+
   it("renders adaptive availability guidance without requiring a secret label", async () => {
     const user = userEvent.setup()
     renderKeyResourceCard(
@@ -417,6 +418,10 @@ describe("KeyResourceCard", () => {
       name: "The saved secret cannot be retrieved.",
     })
     expect(availabilityButton).toBeVisible()
+    expect(availabilityButton).toHaveAttribute("type", "button")
+    expect(screen.getByRole("note")).toHaveTextContent(
+      "The saved secret cannot be retrieved.",
+    )
     await user.hover(availabilityButton)
     expect(await screen.findByRole("tooltip")).toHaveTextContent(
       "The saved secret cannot be retrieved.",

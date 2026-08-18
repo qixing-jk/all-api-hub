@@ -12,9 +12,10 @@ import {
 } from "vitest"
 
 import { ApiCredentialProfileListItem } from "~/features/ApiCredentialProfiles/components/ApiCredentialProfileListItem"
-import type {
-  ApiCredentialProfileAssociatedKeyState,
-  ApiCredentialProfileExportAction,
+import {
+  API_CREDENTIAL_PROFILE_ASSOCIATION_AVAILABILITY,
+  type ApiCredentialProfileAssociatedKeyState,
+  type ApiCredentialProfileExportAction,
 } from "~/features/ApiCredentialProfiles/contracts"
 import {
   API_CREDENTIAL_PROFILES_TEST_IDS,
@@ -195,6 +196,9 @@ function renderListItem(
       managedSiteLabel="New API"
       focusRequest={overrides.focusRequest}
       associatedKeyState={overrides.associatedKeyState}
+      associationAvailability={
+        API_CREDENTIAL_PROFILE_ASSOCIATION_AVAILABILITY.Known
+      }
       onOpenAssociatedKey={overrides.onOpenAssociatedKey}
       onConfirmAssociatedKey={overrides.onConfirmAssociatedKey}
       onUnlinkAssociatedKey={overrides.onUnlinkAssociatedKey}
@@ -306,14 +310,6 @@ describe("ApiCredentialProfileListItem", () => {
       onOpenAssociatedKey,
     })
 
-    expect(
-      screen.getByText("apiCredentialProfiles:association.linked"),
-    ).toBeVisible()
-    await user.click(
-      screen.getByRole("button", {
-        name: "apiCredentialProfiles:association.linked",
-      }),
-    )
     const viewKeyButton = screen.getByRole("button", {
       name: "apiCredentialProfiles:association.linked",
     })
@@ -404,21 +400,38 @@ describe("ApiCredentialProfileListItem", () => {
   it("organizes profile actions into quick, integration, diagnostics, and management groups", () => {
     renderListItem(buildProfile())
 
-    const toolbar = screen.getByRole("toolbar", {
-      name: "keyManagement:actionToolbar.label",
-    })
-    const quickActionsGroup = within(toolbar).getByRole("group", {
-      name: "keyManagement:actionToolbar.quickActions",
-    })
-    const integrationsGroup = within(toolbar).getByRole("group", {
-      name: "keyManagement:actionToolbar.integrationsAndExport",
-    })
-    const diagnosticsGroup = within(toolbar).getByRole("group", {
-      name: "keyManagement:actionToolbar.diagnostics",
-    })
-    const managementGroup = within(toolbar).getByRole("group", {
-      name: "keyManagement:actionToolbar.management",
-    })
+    const toolbar = screen.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.toolbar)
+    const quickActionsGroup = within(toolbar).getByTestId(
+      API_CREDENTIAL_PROFILES_TEST_IDS.toolbarQuickActionsGroup,
+    )
+    const integrationsGroup = within(toolbar).getByTestId(
+      API_CREDENTIAL_PROFILES_TEST_IDS.toolbarIntegrationsGroup,
+    )
+    const diagnosticsGroup = within(toolbar).getByTestId(
+      API_CREDENTIAL_PROFILES_TEST_IDS.toolbarDiagnosticsGroup,
+    )
+    const managementGroup = within(toolbar).getByTestId(
+      API_CREDENTIAL_PROFILES_TEST_IDS.toolbarManagementGroup,
+    )
+
+    expect(toolbar).toHaveRole("toolbar")
+    expect(toolbar).toHaveAccessibleName("keyManagement:actionToolbar.label")
+    expect(quickActionsGroup).toHaveRole("group")
+    expect(quickActionsGroup).toHaveAccessibleName(
+      "keyManagement:actionToolbar.quickActions",
+    )
+    expect(integrationsGroup).toHaveRole("group")
+    expect(integrationsGroup).toHaveAccessibleName(
+      "keyManagement:actionToolbar.integrationsAndExport",
+    )
+    expect(diagnosticsGroup).toHaveRole("group")
+    expect(diagnosticsGroup).toHaveAccessibleName(
+      "keyManagement:actionToolbar.diagnostics",
+    )
+    expect(managementGroup).toHaveRole("group")
+    expect(managementGroup).toHaveAccessibleName(
+      "keyManagement:actionToolbar.management",
+    )
 
     expect(
       within(quickActionsGroup).getByRole("button", {
@@ -440,6 +453,11 @@ describe("ApiCredentialProfileListItem", () => {
         name: "apiCredentialProfiles:actions.verifyApi",
       }),
     ).toBeVisible()
+    expect(
+      within(diagnosticsGroup).getByTestId(
+        API_CREDENTIAL_PROFILES_TEST_IDS.verifyCliSupportButton,
+      ),
+    ).toHaveAccessibleName("apiCredentialProfiles:actions.verifyCliSupport")
     expect(
       within(managementGroup).getByRole("button", {
         name: "common:actions.edit",
@@ -638,6 +656,9 @@ describe("ApiCredentialProfileListItem", () => {
         isTelemetryRefreshing={false}
         managedSiteType="new-api"
         managedSiteLabel="New API"
+        associationAvailability={
+          API_CREDENTIAL_PROFILE_ASSOCIATION_AVAILABILITY.Known
+        }
       />,
     )
 
@@ -813,6 +834,9 @@ describe("ApiCredentialProfileListItem", () => {
         isTelemetryRefreshing={false}
         managedSiteType="new-api"
         managedSiteLabel="New API"
+        associationAvailability={
+          API_CREDENTIAL_PROFILE_ASSOCIATION_AVAILABILITY.Known
+        }
       />,
     )
 
@@ -881,6 +905,9 @@ describe("ApiCredentialProfileListItem", () => {
         isTelemetryRefreshing
         managedSiteType="new-api"
         managedSiteLabel="New API"
+        associationAvailability={
+          API_CREDENTIAL_PROFILE_ASSOCIATION_AVAILABILITY.Known
+        }
       />,
     )
 
@@ -934,6 +961,9 @@ describe("ApiCredentialProfileListItem", () => {
         isTelemetryRefreshing={false}
         managedSiteType="new-api"
         managedSiteLabel="New API"
+        associationAvailability={
+          API_CREDENTIAL_PROFILE_ASSOCIATION_AVAILABILITY.Known
+        }
       />,
     )
 

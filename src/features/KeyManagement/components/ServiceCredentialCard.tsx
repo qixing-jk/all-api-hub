@@ -208,22 +208,21 @@ export function ServiceCredentialCard({
       // The shared save helper already logs and shows the localized failure toast.
     }
   }
+  const canSaveAndAssociate =
+    !association ||
+    association.status === KEY_CREDENTIAL_ASSOCIATION_STATES.Unlinked
   const apiCredentialAssociation: KeyResourceCredentialAssociation = {
     ...(association ?? {
       status: KEY_CREDENTIAL_ASSOCIATION_STATES.Unlinked,
       label: t("apiCredentialProfiles:association.notLinked"),
       actionLabel: t("apiCredentialProfiles:association.linkExisting"),
     }),
-    onSaveAndAssociate:
-      !association ||
-      association.status === KEY_CREDENTIAL_ASSOCIATION_STATES.Unlinked
-        ? handleSaveToApiCredentialProfiles
-        : undefined,
-    saveAndAssociateLabel:
-      !association ||
-      association.status === KEY_CREDENTIAL_ASSOCIATION_STATES.Unlinked
-        ? t("actions.saveToApiProfiles")
-        : undefined,
+    onSaveAndAssociate: canSaveAndAssociate
+      ? handleSaveToApiCredentialProfiles
+      : undefined,
+    saveAndAssociateLabel: canSaveAndAssociate
+      ? t("actions.saveToApiProfiles")
+      : undefined,
   }
   const cliProxyPayload = cliProxyProfile
     ? createCliProxyExportPayload(cliProxyProfile)

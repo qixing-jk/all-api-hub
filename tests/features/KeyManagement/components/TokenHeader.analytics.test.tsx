@@ -1225,7 +1225,7 @@ describe("TokenHeader analytics", () => {
       createToken({ id: 1, key: "sk-resolved" }),
     )
     openInCherryStudioMock.mockImplementationOnce(() => {
-      throw new Error("open failed")
+      throw new Error("open failed for sk-resolved")
     })
 
     const user = userEvent.setup()
@@ -1239,6 +1239,9 @@ describe("TokenHeader analytics", () => {
         { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
       )
     })
+    expect(JSON.stringify(showResultToastMock.mock.calls)).not.toContain(
+      "sk-resolved",
+    )
   })
 
   it("tracks managed-site single token import as success when the dialog opens", async () => {

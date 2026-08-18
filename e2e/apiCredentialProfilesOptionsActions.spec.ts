@@ -379,15 +379,31 @@ test("opens model management for an options-page API credential profile", async 
 
   await openProfilesPage(page, extensionId)
 
-  const toolbar = page.getByRole("toolbar", { name: "Key actions" })
-  const quickActionsGroup = toolbar.getByRole("group", {
-    name: "Quick actions",
-  })
-  const integrationsGroup = toolbar.getByRole("group", {
-    name: "Integrations and export",
-  })
-  const diagnosticsGroup = toolbar.getByRole("group", { name: "Diagnostics" })
-  const managementGroup = toolbar.getByRole("group", { name: "Management" })
+  const toolbar = page.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.toolbar)
+  const quickActionsGroup = toolbar.getByTestId(
+    API_CREDENTIAL_PROFILES_TEST_IDS.toolbarQuickActionsGroup,
+  )
+  const integrationsGroup = toolbar.getByTestId(
+    API_CREDENTIAL_PROFILES_TEST_IDS.toolbarIntegrationsGroup,
+  )
+  const diagnosticsGroup = toolbar.getByTestId(
+    API_CREDENTIAL_PROFILES_TEST_IDS.toolbarDiagnosticsGroup,
+  )
+  const managementGroup = toolbar.getByTestId(
+    API_CREDENTIAL_PROFILES_TEST_IDS.toolbarManagementGroup,
+  )
+  await expect(toolbar).toHaveRole("toolbar")
+  await expect(toolbar).toHaveAccessibleName("Key actions")
+  await expect(quickActionsGroup).toHaveRole("group")
+  await expect(quickActionsGroup).toHaveAccessibleName("Quick actions")
+  await expect(integrationsGroup).toHaveRole("group")
+  await expect(integrationsGroup).toHaveAccessibleName(
+    "Integrations and export",
+  )
+  await expect(diagnosticsGroup).toHaveRole("group")
+  await expect(diagnosticsGroup).toHaveAccessibleName("Diagnostics")
+  await expect(managementGroup).toHaveRole("group")
+  await expect(managementGroup).toHaveAccessibleName("Management")
   await expect(
     quickActionsGroup.getByTestId(
       API_CREDENTIAL_PROFILES_TEST_IDS.copyBundleButton,

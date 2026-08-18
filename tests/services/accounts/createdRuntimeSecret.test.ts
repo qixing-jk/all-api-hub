@@ -133,10 +133,12 @@ describe("createLegacyCreatedRuntimeSecret", () => {
     expect(result.secret).toBe("opaque-example-secret")
     expect(getCreatedRuntimeSecretLocator(result)).toEqual({
       source: "account_key_resource",
-      ref:
-        result.correlation.kind === "account-key-resource"
-          ? result.correlation.ref
-          : undefined,
+      ref: {
+        accountId: "account-example",
+        siteType: SITE_TYPES.NEW_API,
+        scopeKey: "scope-example",
+        resourceId: "resource-example",
+      },
     })
   })
 
@@ -164,6 +166,9 @@ describe("createLegacyCreatedRuntimeSecret", () => {
       siteType: SITE_TYPES.AIHUBMIX,
       tokenId: 42,
     })
+  })
+
+  it("reports no locator for a legacy created secret", () => {
     expect(
       getCreatedRuntimeSecretLocator(
         createLegacyCreatedRuntimeSecret({

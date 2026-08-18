@@ -35,80 +35,104 @@ export function LinkedCredentialProfileDialogs({
     exportToken,
   } = controller
 
-  return (
-    <>
-      <CCSwitchExportDialog
-        isOpen={activeDialog === "cc-switch"}
-        onClose={closeDialog}
-        account={exportAccount}
-        token={exportToken}
-        analyticsContext={{
-          ...LINKED_CREDENTIAL_PROFILE_ANALYTICS_CONTEXT,
-          actionId:
-            PRODUCT_ANALYTICS_ACTION_IDS.ExportApiCredentialProfileToCCSwitch,
-        }}
-      />
-      <CursorPlusExportDialog
-        isOpen={activeDialog === "cursor-plus"}
-        onClose={closeDialog}
-        account={exportAccount}
-        runtimeKey={exportRuntimeKey}
-        analyticsContext={{
-          ...LINKED_CREDENTIAL_PROFILE_ANALYTICS_CONTEXT,
-          actionId:
-            PRODUCT_ANALYTICS_ACTION_IDS.CopyApiCredentialProfileCursorPlusProviderConfig,
-        }}
-      />
-      <KiloCodeProfileExportDialog
-        isOpen={activeDialog === "kilo-code"}
-        onClose={closeDialog}
-        profile={profile}
-      />
-      <KelivoExportDialog
-        isOpen={activeDialog === "kelivo"}
-        onClose={closeDialog}
-        initialValue={profile}
-        analyticsContext={{
-          ...LINKED_CREDENTIAL_PROFILE_ANALYTICS_CONTEXT,
-          actionId:
-            PRODUCT_ANALYTICS_ACTION_IDS.CopyApiCredentialProfileKelivoImportCode,
-        }}
-      />
-      <CliProxyExportDialog
-        isOpen={activeDialog === "cli-proxy"}
-        onClose={closeDialog}
-        account={cliProxyPayload.account}
-        token={cliProxyPayload.token}
-        apiTypeHint={cliProxyPayload.apiTypeHint}
-        analyticsContext={{
-          ...LINKED_CREDENTIAL_PROFILE_ANALYTICS_CONTEXT,
-          actionId:
-            PRODUCT_ANALYTICS_ACTION_IDS.ImportApiCredentialProfileToCliProxy,
-        }}
-      />
-      <ClaudeCodeRouterImportDialog
-        isOpen={activeDialog === "claude-code-router"}
-        onClose={closeDialog}
-        account={exportAccount}
-        token={exportToken}
-        routerBaseUrl={claudeCodeRouterBaseUrl ?? ""}
-        routerApiKey={claudeCodeRouterApiKey}
-        analyticsContext={{
-          ...LINKED_CREDENTIAL_PROFILE_ANALYTICS_CONTEXT,
-          actionId:
-            PRODUCT_ANALYTICS_ACTION_IDS.ImportApiCredentialProfileToClaudeCodeRouter,
-        }}
-      />
-      <VerifyApiCredentialProfileDialog
-        isOpen={activeDialog === "verify-api"}
-        onClose={closeDialog}
-        profile={profile}
-      />
-      <VerifyCliSupportDialog
-        isOpen={activeDialog === "verify-cli"}
-        onClose={closeDialog}
-        profile={profile}
-      />
-    </>
-  )
+  switch (activeDialog) {
+    case "cc-switch":
+      return (
+        <CCSwitchExportDialog
+          isOpen
+          onClose={closeDialog}
+          account={exportAccount}
+          token={exportToken}
+          analyticsContext={{
+            ...LINKED_CREDENTIAL_PROFILE_ANALYTICS_CONTEXT,
+            actionId:
+              PRODUCT_ANALYTICS_ACTION_IDS.ExportApiCredentialProfileToCCSwitch,
+          }}
+        />
+      )
+    case "cursor-plus":
+      return (
+        <CursorPlusExportDialog
+          isOpen
+          onClose={closeDialog}
+          account={exportAccount}
+          runtimeKey={exportRuntimeKey}
+          analyticsContext={{
+            ...LINKED_CREDENTIAL_PROFILE_ANALYTICS_CONTEXT,
+            actionId:
+              PRODUCT_ANALYTICS_ACTION_IDS.CopyApiCredentialProfileCursorPlusProviderConfig,
+          }}
+        />
+      )
+    case "kilo-code":
+      return (
+        <KiloCodeProfileExportDialog
+          isOpen
+          onClose={closeDialog}
+          profile={profile}
+        />
+      )
+    case "kelivo":
+      return (
+        <KelivoExportDialog
+          isOpen
+          onClose={closeDialog}
+          initialValue={profile}
+          analyticsContext={{
+            ...LINKED_CREDENTIAL_PROFILE_ANALYTICS_CONTEXT,
+            actionId:
+              PRODUCT_ANALYTICS_ACTION_IDS.CopyApiCredentialProfileKelivoImportCode,
+          }}
+        />
+      )
+    case "cli-proxy":
+      return (
+        <CliProxyExportDialog
+          isOpen
+          onClose={closeDialog}
+          account={cliProxyPayload.account}
+          token={cliProxyPayload.token}
+          apiTypeHint={cliProxyPayload.apiTypeHint}
+          analyticsContext={{
+            ...LINKED_CREDENTIAL_PROFILE_ANALYTICS_CONTEXT,
+            actionId:
+              PRODUCT_ANALYTICS_ACTION_IDS.ImportApiCredentialProfileToCliProxy,
+          }}
+        />
+      )
+    case "claude-code-router":
+      return (
+        <ClaudeCodeRouterImportDialog
+          isOpen
+          onClose={closeDialog}
+          account={exportAccount}
+          token={exportToken}
+          routerBaseUrl={claudeCodeRouterBaseUrl ?? ""}
+          routerApiKey={claudeCodeRouterApiKey}
+          analyticsContext={{
+            ...LINKED_CREDENTIAL_PROFILE_ANALYTICS_CONTEXT,
+            actionId:
+              PRODUCT_ANALYTICS_ACTION_IDS.ImportApiCredentialProfileToClaudeCodeRouter,
+          }}
+        />
+      )
+    case "verify-api":
+      return (
+        <VerifyApiCredentialProfileDialog
+          isOpen
+          onClose={closeDialog}
+          profile={profile}
+        />
+      )
+    case "verify-cli":
+      return (
+        <VerifyCliSupportDialog
+          isOpen
+          onClose={closeDialog}
+          profile={profile}
+        />
+      )
+    case null:
+      return null
+  }
 }

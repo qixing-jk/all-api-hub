@@ -200,7 +200,13 @@ export function useTokenIntegrationActions({
       showResultToast({
         success: false,
         message: t("messages:errors.operation.failed", {
-          error: getErrorMessage(error),
+          error:
+            toSanitizedErrorSummary(
+              error,
+              collectAccountRuntimeKeySecrets([
+                buildDisplayAccountTokenRuntimeKey(account, token),
+              ]),
+            ) || t("messages:errors.unknown"),
         }),
       })
     }

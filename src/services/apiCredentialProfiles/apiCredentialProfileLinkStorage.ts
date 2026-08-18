@@ -135,6 +135,7 @@ export const normalizeProfileLinks = (
   )
   const byId = new Map<string, ApiCredentialProfileLink>()
   for (const link of links) {
+    // Deletion wins on equal revisions so synced devices cannot resurrect a link.
     if ((deletedAtById.get(link.id) ?? -Infinity) >= link.updatedAt) continue
     const existing = byId.get(link.id)
     if (!existing || link.updatedAt > existing.updatedAt) {
@@ -245,6 +246,7 @@ export const addProfileLinkTombstones = (
     ...current,
     ...removedLinks.map(({ id, updatedAt }) => ({
       id,
+      // The tombstone must dominate the exact link revision being removed.
       deletedAt: Math.max(deletedAt, updatedAt),
     })),
   ])

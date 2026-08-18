@@ -7,6 +7,7 @@ import {
   type SiteType,
 } from "~/constants/siteType"
 import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions"
+import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/keyManagement"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 
 const expectTokenProvisioningCapability = (
@@ -274,7 +275,9 @@ describe("apiAdapters registry", () => {
     expect(capabilities.account).not.toHaveProperty("credential")
     expect(capabilities.account?.data?.fetchData).toBeTypeOf("function")
     expect(capabilities.account?.refresh?.refreshAccount).toBeTypeOf("function")
-    expect(capabilities.account?.keyResources).toEqual({
+    expect(capabilities.account?.keyResources).toMatchObject({
+      inventorySecretAvailability:
+        INVENTORY_SECRET_AVAILABILITIES.CreateResponseOnly,
       open: expect.any(Function),
     })
     expect(capabilities.account?.keyResourceManagement).toBe(

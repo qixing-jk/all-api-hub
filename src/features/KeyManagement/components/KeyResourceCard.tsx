@@ -223,6 +223,7 @@ type KeyResourceActionGroupProps = {
   label: string
   separated?: boolean
   children: ReactNode
+  testId?: string
 }
 
 /** Renders the desktop-only boundary between semantic action groups. */
@@ -240,6 +241,7 @@ export function KeyResourceActionGroup({
   label,
   separated = false,
   children,
+  testId,
 }: KeyResourceActionGroupProps) {
   return (
     <div className="inline-flex shrink-0 items-center gap-2">
@@ -247,6 +249,7 @@ export function KeyResourceActionGroup({
       <div
         role="group"
         aria-label={label}
+        data-testid={testId}
         className="inline-flex items-center gap-0.5"
       >
         {children}
@@ -318,15 +321,21 @@ export function KeyResourceSecretDisplay({
     <div className="flex flex-wrap items-center gap-1.5">{controls}</div>
   ) : null
   const messageContent = message ? (
-    <IconButton
-      aria-label={message}
-      className="dark:text-dark-text-tertiary dark:hover:bg-dark-bg-tertiary dark:hover:text-dark-text-secondary shrink-0 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
-      size="xs"
-      tooltip={message}
-      variant="ghost"
-    >
-      <Info aria-hidden="true" className="h-3.5 w-3.5" />
-    </IconButton>
+    <span className="dark:text-dark-text-tertiary inline-flex min-w-0 items-center gap-1.5 text-xs text-gray-500">
+      <IconButton
+        type="button"
+        aria-label={message}
+        className="dark:text-dark-text-tertiary dark:hover:bg-dark-bg-tertiary dark:hover:text-dark-text-secondary shrink-0 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+        size="xs"
+        tooltip={message}
+        variant="ghost"
+      >
+        <Info aria-hidden="true" className="h-3.5 w-3.5" />
+      </IconButton>
+      <span role="note" className="min-w-0 break-words">
+        {message}
+      </span>
+    </span>
   ) : null
 
   if (layout === KEY_RESOURCE_CONTENT_LAYOUTS.Adaptive) {

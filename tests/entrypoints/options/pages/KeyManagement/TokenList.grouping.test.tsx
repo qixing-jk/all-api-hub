@@ -3,14 +3,24 @@ import { describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { TokenList } from "~/features/KeyManagement/components/TokenList"
-import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "~/features/KeyManagement/constants"
+import {
+  KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE,
+  KEY_MANAGEMENT_ASSOCIATION_TARGET_STATES,
+} from "~/features/KeyManagement/constants"
+import {
+  KEY_CREDENTIAL_ASSOCIATION_STATES,
+  type KeyCredentialAssociationStatus,
+} from "~/features/KeyManagement/credentialAssociations"
 import {
   getKeyManagementAssociationTargetId,
   KEY_MANAGEMENT_TEST_IDS,
 } from "~/features/KeyManagement/testIds"
 import { KEY_MANAGEMENT_LOAD_STATUSES } from "~/features/KeyManagement/types"
 import { ACCOUNT_RUNTIME_KEY_SOURCES } from "~/services/accounts/accountRuntimeKeys"
-import { API_CREDENTIAL_PROFILE_LINK_STATES } from "~/types/apiCredentialProfiles"
+import {
+  API_CREDENTIAL_PROFILE_LINK_SOURCES,
+  API_CREDENTIAL_PROFILE_LINK_STATES,
+} from "~/types/apiCredentialProfiles"
 import { render, screen, waitFor, within } from "~~/tests/test-utils/render"
 import {
   createAccount,
@@ -41,7 +51,7 @@ vi.mock("~/features/KeyManagement/components/TokenListItem", () => ({
     onSelectionChange?: (checked: boolean) => void
     selectionDisabledReason?: string
     association?: {
-      status: "linked" | "needs-confirmation"
+      status: KeyCredentialAssociationStatus
       label: string
       actionLabel?: string
       onOpen?: () => void
@@ -65,7 +75,7 @@ vi.mock("~/features/KeyManagement/components/TokenListItem", () => ({
         />
       ) : null}
       {token.name}
-      {association?.status === "linked" ? (
+      {association?.status === KEY_CREDENTIAL_ASSOCIATION_STATES.Linked ? (
         <button type="button" onClick={association.onOpen}>
           {association.actionLabel}
         </button>
@@ -118,7 +128,7 @@ describe("TokenList grouped all-accounts UX", () => {
         tokenId: token.id,
       },
       state: API_CREDENTIAL_PROFILE_LINK_STATES.Active,
-      linkedBy: "user" as const,
+      linkedBy: API_CREDENTIAL_PROFILE_LINK_SOURCES.User,
       createdAt: 1,
       updatedAt: 1,
     }
@@ -151,7 +161,9 @@ describe("TokenList grouped all-accounts UX", () => {
       "id",
       getKeyManagementAssociationTargetId(association.id),
     )
-    expect(onAssociationTargetStatusChange).toHaveBeenCalledWith("found")
+    expect(onAssociationTargetStatusChange).toHaveBeenCalledWith(
+      KEY_MANAGEMENT_ASSOCIATION_TARGET_STATES.Found,
+    )
 
     await user.click(
       screen.getByRole("button", {

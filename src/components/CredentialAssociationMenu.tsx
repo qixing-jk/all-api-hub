@@ -63,7 +63,16 @@ export function CredentialAssociationMenu({
   testId,
   className,
 }: CredentialAssociationMenuProps) {
-  if (items.length === 0) {
+  const renderableItems = items.filter(
+    (item) =>
+      Boolean(item.onOpen && labels.open) ||
+      Boolean(item.onSaveAndAssociate && labels.saveAndAssociate) ||
+      Boolean(item.onConfirm && labels.confirm) ||
+      Boolean(item.onAssociate && labels.associate) ||
+      Boolean(item.onUnlink && labels.unlink),
+  )
+
+  if (renderableItems.length === 0) {
     return null
   }
 
@@ -80,10 +89,11 @@ export function CredentialAssociationMenu({
     : isUnlinked
       ? "text-muted-foreground"
       : "text-emerald-600 dark:text-emerald-400"
-  const triggerSize = hasVisibleLabel ? "sm" : "icon-sm"
+  const hasVisibleCount = count !== undefined
+  const triggerSize = hasVisibleLabel || hasVisibleCount ? "sm" : "icon-sm"
   const triggerClassName = cn(
     "max-w-full gap-1.5 px-2 text-xs",
-    !hasVisibleLabel && "p-0",
+    !hasVisibleLabel && !hasVisibleCount && "p-0",
     className,
   )
   const triggerVariant = hasVisibleLabel
@@ -102,8 +112,10 @@ export function CredentialAssociationMenu({
     />
   )
   const directAssociateItem =
-    status === "unlinked" && items.length === 1 && !items[0].onSaveAndAssociate
-      ? items[0]
+    status === "unlinked" &&
+    renderableItems.length === 1 &&
+    !renderableItems[0].onSaveAndAssociate
+      ? renderableItems[0]
       : undefined
 
   if (directAssociateItem?.onAssociate && labels.associate) {
@@ -141,9 +153,7 @@ export function CredentialAssociationMenu({
         {hasVisibleLabel ? (
           <span className="min-w-0 truncate">{triggerLabel}</span>
         ) : null}
-        {hasVisibleLabel && count !== undefined ? (
-          <span className="tabular-nums">{count}</span>
-        ) : null}
+        {hasVisibleCount ? <span className="tabular-nums">{count}</span> : null}
         {hasVisibleLabel ? (
           <ChevronDown
             aria-hidden="true"
@@ -168,9 +178,12 @@ export function CredentialAssociationMenu({
         collisionPadding={8}
         className="min-w-44"
       >
-        {items.map((item, index) => (
-          <DropdownMenuGroup key={item.id}>
-            {items.length > 1 && item.label ? (
+        {renderableItems.map((item, index) => (
+          <DropdownMenuGroup
+            key={item.id}
+            aria-label={typeof item.label === "string" ? item.label : undefined}
+          >
+            {renderableItems.length > 1 && item.label ? (
               <DropdownMenuLabel className="text-muted-foreground max-w-56 truncate text-xs">
                 {item.label}
               </DropdownMenuLabel>
@@ -184,7 +197,11 @@ export function CredentialAssociationMenu({
             {item.onSaveAndAssociate && labels.saveAndAssociate ? (
               <DropdownMenuItem
                 data-testid={item.testId}
-                onSelect={item.onSaveAndAssociate}
+                onSelect={() => {
+                  void Promise.resolve()
+                    .then(() => item.onSaveAndAssociate?.())
+                    .catch(() => undefined)
+                }}
               >
                 <ApiCredentialLibraryAddIcon />
                 {labels.saveAndAssociate}
@@ -214,7 +231,9 @@ export function CredentialAssociationMenu({
                 {labels.unlink}
               </DropdownMenuItem>
             ) : null}
-            {index < items.length - 1 ? <DropdownMenuSeparator /> : null}
+            {index < renderableItems.length - 1 ? (
+              <DropdownMenuSeparator />
+            ) : null}
           </DropdownMenuGroup>
         ))}
       </DropdownMenuContent>

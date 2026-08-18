@@ -77,6 +77,8 @@ describe("IconButton", () => {
 
     const button = screen.getByRole("button", { name: "Refresh profiles" })
     expect(button).not.toHaveAttribute("title")
+    expect(button.id).toMatch(/^tooltip-/)
+    expect(button.parentElement).not.toHaveAttribute("id", button.id)
     await user.tab()
     expect(await screen.findByRole("tooltip")).toHaveTextContent(
       "Refresh profiles",
@@ -132,7 +134,7 @@ describe("IconButton", () => {
     const user = userEvent.setup()
 
     render(
-      <Tooltip content="Outer description">
+      <Tooltip content="Outer description" anchorAsChild>
         <IconButton aria-label="Refresh profiles">
           <span />
         </IconButton>
@@ -140,10 +142,37 @@ describe("IconButton", () => {
     )
 
     await user.tab()
+    expect(
+      screen.getByRole("button", { name: "Refresh profiles" }),
+    ).not.toHaveAttribute("title")
     expect(await screen.findByRole("tooltip")).toHaveTextContent(
       "Outer description",
     )
     expect(screen.getAllByRole("tooltip")).toHaveLength(1)
+  })
+
+  it("keeps a nested button's own tooltip inside a wrapper anchor", async () => {
+    const user = userEvent.setup()
+
+    render(
+      <Tooltip content="Outer description">
+        <div>
+          <IconButton aria-label="Nested action">
+            <span />
+          </IconButton>
+        </div>
+      </Tooltip>,
+    )
+
+    await user.tab()
+
+    expect(screen.getByRole("button", { name: "Nested action" })).toHaveFocus()
+    const tooltipText = (await screen.findAllByRole("tooltip")).map(
+      (tooltip) => tooltip.textContent,
+    )
+    expect(tooltipText).toEqual(
+      expect.arrayContaining(["Nested action", "Outer description"]),
+    )
   })
 
   it("preserves its accessible identity and disables interaction while loading", () => {

@@ -123,6 +123,23 @@ const createDefaultConfig = (): ApiCredentialProfilesConfig => ({
   lastUpdated: Date.now(),
 })
 
+/** Rejects nested profile snapshots created by a newer schema before coercion. */
+export function assertSupportedApiCredentialProfilesConfigVersion(
+  raw: unknown,
+): void {
+  if (!raw || typeof raw !== "object") return
+
+  const version = (raw as Record<string, unknown>).version
+  if (
+    typeof version === "number" &&
+    version > API_CREDENTIAL_PROFILES_CONFIG_VERSION
+  ) {
+    throw new Error(
+      `Unsupported API credential profiles config version: ${version}`,
+    )
+  }
+}
+
 /**
  * Subscribe to local-storage writes affecting API credential profiles.
  */
@@ -146,17 +163,16 @@ export function subscribeToApiCredentialProfilesChanges(
   return onStorageChanged(listener)
 }
 
-/**
- * Clones the config.
- */
-function cloneConfig(
-  config: ApiCredentialProfilesConfig,
-): ApiCredentialProfilesConfig {
+/** Clones persisted JSON-compatible values across supported extension runtimes. */
+function clonePersistedValue<T>(value: T): T {
   if (typeof structuredClone === "function") {
-    return structuredClone(config)
+    return structuredClone(value)
   }
-  return JSON.parse(JSON.stringify(config)) as ApiCredentialProfilesConfig
+  return JSON.parse(JSON.stringify(value)) as T
 }
+
+const cloneConfig = (config: ApiCredentialProfilesConfig) =>
+  clonePersistedValue(config)
 
 /**
  * Normalizes the tag ID list.
@@ -649,6 +665,7 @@ export function mergeApiCredentialProfilesConfigs(params: {
   now?: number
 }): ApiCredentialProfilesConfig {
   const now = typeof params.now === "number" ? params.now : Date.now()
+  assertSupportedApiCredentialProfilesConfigVersion(params.incoming)
   const local = coerceApiCredentialProfilesConfig(params.local, { now })
   const incoming = coerceApiCredentialProfilesConfig(params.incoming, { now })
 
@@ -860,14 +877,9 @@ class ApiCredentialProfilesStorageService {
   async mergeConfig(raw: unknown): Promise<ApiCredentialProfilesConfig> {
     return this.withStorageWriteLock(async () => {
       const now = Date.now()
-      const local = coerceApiCredentialProfilesConfig(await this.readConfig(), {
-        now,
-      })
-      const incoming = coerceApiCredentialProfilesConfig(raw, { now })
-
       const merged = mergeApiCredentialProfilesConfigs({
-        local,
-        incoming,
+        local: await this.readConfig(),
+        incoming: raw,
         now,
       })
 
@@ -964,7 +976,7 @@ class ApiCredentialProfilesStorageService {
 
   async listLinks(): Promise<ApiCredentialProfileLink[]> {
     const config = await this.getConfig()
-    return cloneConfig(config).links
+    return config.links.map((link) => clonePersistedValue(link))
   }
 
   async getLinkById(id: string): Promise<ApiCredentialProfileLink | null> {
@@ -1275,12 +1287,15 @@ class ApiCredentialProfilesStorageService {
       const merged = profiles.map((p) => (p.id === id ? next : p))
       const { profiles: dedupedProfiles, profileIdRemap } =
         dedupeProfiles(merged)
-      const hasCredentialSecretChanged = nextApiKey !== current.apiKey
+      const hasCredentialIdentityChanged =
+        nextApiType !== current.apiType ||
+        nextBaseUrl !== current.baseUrl ||
+        nextApiKey !== current.apiKey
       const links = config.links.map((link) => ({
         ...link,
         profileId: profileIdRemap.get(link.profileId) ?? link.profileId,
         state:
-          hasCredentialSecretChanged && link.profileId === id
+          hasCredentialIdentityChanged && link.profileId === id
             ? API_CREDENTIAL_PROFILE_LINK_STATES.NeedsConfirmation
             : link.state,
       }))

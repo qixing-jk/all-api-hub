@@ -247,12 +247,14 @@ test("manages an OpenRouter key through its native one-time-secret lifecycle", a
   )
   await expect(lifecycleSummary).toContainText("Team workspace")
   await expect(lifecycleSummary).toContainText("50")
-  await expect(
-    lifecycleRow.getByTestId(KEY_MANAGEMENT_TEST_IDS.keyResourceSecretDisplay),
-  ).toContainText("full key only when it is created")
+  const recoveredCopyCount = await readClipboardWriteCount(page)
   await expect(
     lifecycleRow.getByRole("button", { name: "Copy Key" }),
-  ).toHaveCount(0)
+  ).toBeVisible()
+  await lifecycleRow.getByRole("button", { name: "Copy Key" }).click()
+  await expect
+    .poll(() => readClipboardWriteCount(page))
+    .toBeGreaterThan(recoveredCopyCount)
   await lifecycleRow
     .getByRole("button", { name: "View details for Lifecycle key" })
     .click()

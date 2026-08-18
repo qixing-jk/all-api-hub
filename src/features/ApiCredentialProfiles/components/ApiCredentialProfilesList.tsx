@@ -18,7 +18,6 @@ import { PRODUCT_ANALYTICS_ACTION_IDS } from "~/services/productAnalytics/contra
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 
 import {
-  API_CREDENTIAL_PROFILE_ASSOCIATION_AVAILABILITY,
   API_CREDENTIAL_PROFILES_VIEW_VARIANTS,
   type ApiCredentialProfileAssociatedKeyStateByProfileId,
   type ApiCredentialProfileAssociationAvailability,
@@ -45,7 +44,7 @@ interface ApiCredentialProfilesListProps {
     request: number
   }
   associatedKeyStateByProfileId?: ApiCredentialProfileAssociatedKeyStateByProfileId
-  associationAvailability?: ApiCredentialProfileAssociationAvailability
+  associationAvailability: ApiCredentialProfileAssociationAvailability
   onOpenAssociatedKey?: (associationId: string) => void
   onConfirmAssociatedKey?: (associationId: string) => void
   onUnlinkAssociatedKey?: (associationId: string) => void
@@ -388,7 +387,7 @@ export function ApiCredentialProfilesList({
   guidedImportEntry,
   targetProfile,
   associatedKeyStateByProfileId,
-  associationAvailability = API_CREDENTIAL_PROFILE_ASSOCIATION_AVAILABILITY.Known,
+  associationAvailability,
   onOpenAssociatedKey,
   onConfirmAssociatedKey,
   onUnlinkAssociatedKey,

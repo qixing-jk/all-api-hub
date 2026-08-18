@@ -3,7 +3,6 @@ import { useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
-import Tooltip from "~/components/Tooltip"
 import { IconButton } from "~/components/ui"
 import { KeyResourceCard } from "~/features/KeyManagement/components/KeyResourceCard"
 import type { KeyResourceCredentialAssociation } from "~/features/KeyManagement/components/KeyResourceCard"
@@ -58,10 +57,15 @@ export function AccountKeyResourceListItem({
   isNavigationTarget?: boolean
 }) {
   const { t } = useTranslation(["keyManagement", "common"])
-  const [isSecretVisible, setIsSecretVisible] = useState(false)
+  const [visibleSecretProfileId, setVisibleSecretProfileId] = useState<
+    string | null
+  >(null)
   const associatedProfileWithSecret = associatedProfile?.apiKey.trim()
     ? associatedProfile
     : undefined
+  const isSecretVisible =
+    associatedProfileWithSecret !== undefined &&
+    visibleSecretProfileId === associatedProfileWithSecret.id
   const hasAssociatedSecret = Boolean(associatedProfileWithSecret)
   const presentation = cardAdapter.buildPresentation(row, t, {
     hasAssociatedSecret,
@@ -139,43 +143,44 @@ export function AccountKeyResourceListItem({
   }
   const secretControls = hasAssociatedSecret ? (
     <>
-      <Tooltip
-        content={
+      {/* These local disclosure actions do not resolve provider secrets, so the
+          existing provider reveal/copy analytics would misclassify them. */}
+      <IconButton
+        type="button"
+        size="sm"
+        variant="ghost"
+        aria-label={
           isSecretVisible
             ? t("keyManagement:actions.hideKey")
             : t("keyManagement:actions.showKey")
         }
-        anchorAsChild
+        tooltip={
+          isSecretVisible
+            ? t("keyManagement:actions.hideKey")
+            : t("keyManagement:actions.showKey")
+        }
+        onClick={() =>
+          setVisibleSecretProfileId(
+            isSecretVisible ? null : associatedProfileWithSecret?.id ?? null,
+          )
+        }
       >
-        <IconButton
-          type="button"
-          size="sm"
-          variant="ghost"
-          aria-label={
-            isSecretVisible
-              ? t("keyManagement:actions.hideKey")
-              : t("keyManagement:actions.showKey")
-          }
-          onClick={() => setIsSecretVisible((visible) => !visible)}
-        >
-          {isSecretVisible ? (
-            <EyeOff aria-hidden="true" className="h-4 w-4" />
-          ) : (
-            <Eye aria-hidden="true" className="h-4 w-4" />
-          )}
-        </IconButton>
-      </Tooltip>
-      <Tooltip content={t("common:actions.copyKey")} anchorAsChild>
-        <IconButton
-          type="button"
-          size="sm"
-          variant="ghost"
-          aria-label={t("common:actions.copyKey")}
-          onClick={() => void copyAssociatedSecret()}
-        >
-          <Copy aria-hidden="true" className="h-4 w-4" />
-        </IconButton>
-      </Tooltip>
+        {isSecretVisible ? (
+          <EyeOff aria-hidden="true" className="h-4 w-4" />
+        ) : (
+          <Eye aria-hidden="true" className="h-4 w-4" />
+        )}
+      </IconButton>
+      <IconButton
+        type="button"
+        size="sm"
+        variant="ghost"
+        aria-label={t("common:actions.copyKey")}
+        tooltip={t("common:actions.copyKey")}
+        onClick={() => void copyAssociatedSecret()}
+      >
+        <Copy aria-hidden="true" className="h-4 w-4" />
+      </IconButton>
     </>
   ) : undefined
 

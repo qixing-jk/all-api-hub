@@ -73,6 +73,7 @@ export function ApiCredentialProfileRowActions({
     >
       <KeyResourceActionGroup
         label={t("keyManagement:actionToolbar.quickActions")}
+        testId={API_CREDENTIAL_PROFILES_TEST_IDS.toolbarQuickActionsGroup}
       >
         <IconButton
           aria-label={t("apiCredentialProfiles:actions.copyBundle")}
@@ -87,6 +88,7 @@ export function ApiCredentialProfileRowActions({
       </KeyResourceActionGroup>
       <KeyResourceActionGroup
         label={t("keyManagement:actionToolbar.integrationsAndExport")}
+        testId={API_CREDENTIAL_PROFILES_TEST_IDS.toolbarIntegrationsGroup}
         separated
       >
         <ManagedSiteImportButton
@@ -165,6 +167,7 @@ export function ApiCredentialProfileRowActions({
       </KeyResourceActionGroup>
       <KeyResourceActionGroup
         label={t("keyManagement:actionToolbar.diagnostics")}
+        testId={API_CREDENTIAL_PROFILES_TEST_IDS.toolbarDiagnosticsGroup}
         separated
       >
         <IconButton
@@ -182,6 +185,7 @@ export function ApiCredentialProfileRowActions({
           size="sm"
           variant="ghost"
           onClick={() => onVerifyCliSupport(profile)}
+          data-testid={API_CREDENTIAL_PROFILES_TEST_IDS.verifyCliSupportButton}
           analyticsAction={
             PRODUCT_ANALYTICS_ACTION_IDS.VerifyApiCredentialCliSupport
           }
@@ -191,6 +195,7 @@ export function ApiCredentialProfileRowActions({
       </KeyResourceActionGroup>
       <KeyResourceActionGroup
         label={t("keyManagement:actionToolbar.management")}
+        testId={API_CREDENTIAL_PROFILES_TEST_IDS.toolbarManagementGroup}
         separated
       >
         <IconButton

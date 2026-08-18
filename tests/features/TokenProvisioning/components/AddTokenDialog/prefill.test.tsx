@@ -6,6 +6,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import AddTokenDialog from "~/features/TokenProvisioning/components/AddTokenDialog"
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
 import { DEFAULT_AUTO_PROVISION_TOKEN_NAME } from "~/services/accounts/defaultTokenLifecycle"
+import { API_CREDENTIAL_PROFILE_CAPTURE_STATUSES } from "~/services/apiCredentialProfiles/apiCredentialProfileLinkContracts"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -93,7 +94,7 @@ vi.mock("~/services/productAnalytics/actions", () => ({
 vi.mock("~/services/apiCredentialProfiles/apiCredentialProfileLinks", () => ({
   apiCredentialProfileLinks: {
     capture: async ({ profile }: { profile: unknown }) => ({
-      status: "captured",
+      status: API_CREDENTIAL_PROFILE_CAPTURE_STATUSES.Captured,
       profile: await createApiCredentialProfileMock(profile),
     }),
   },
