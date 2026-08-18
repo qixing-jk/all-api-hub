@@ -73,6 +73,17 @@ const buildController = (
     exportToken: {},
   }) as unknown as LinkedCredentialProfileActionsController
 
+const activeDialogCases = [
+  ["cc-switch", "cc-switch-dialog"],
+  ["cursor-plus", "cursor-plus-dialog"],
+  ["kilo-code", "kilo-code-dialog"],
+  ["kelivo", "kelivo-dialog"],
+  ["cli-proxy", "cli-proxy-dialog"],
+  ["claude-code-router", "claude-code-router-dialog"],
+  ["verify-api", "verify-api-dialog"],
+  ["verify-cli", "verify-cli-dialog"],
+] as const
+
 describe("LinkedCredentialProfileDialogs", () => {
   it("mounts no dialog while no linked-profile action is active", () => {
     const { container } = render(
@@ -86,24 +97,22 @@ describe("LinkedCredentialProfileDialogs", () => {
     expect(container).toBeEmptyDOMElement()
   })
 
-  it("mounts only the active linked-profile dialog", () => {
-    render(
-      <LinkedCredentialProfileDialogs
-        controller={buildController("kelivo")}
-        profile={profile}
-      />,
-      { withThemeProvider: false, withUserPreferencesProvider: false },
-    )
+  it.each(activeDialogCases)(
+    "mounts only the active %s linked-profile dialog",
+    (activeDialog, activeTestId) => {
+      render(
+        <LinkedCredentialProfileDialogs
+          controller={buildController(activeDialog)}
+          profile={profile}
+        />,
+        { withThemeProvider: false, withUserPreferencesProvider: false },
+      )
 
-    expect(screen.getByTestId("kelivo-dialog")).toBeVisible()
-    expect(screen.queryByTestId("cc-switch-dialog")).not.toBeInTheDocument()
-    expect(screen.queryByTestId("cli-proxy-dialog")).not.toBeInTheDocument()
-    expect(screen.queryByTestId("cursor-plus-dialog")).not.toBeInTheDocument()
-    expect(
-      screen.queryByTestId("claude-code-router-dialog"),
-    ).not.toBeInTheDocument()
-    expect(screen.queryByTestId("kilo-code-dialog")).not.toBeInTheDocument()
-    expect(screen.queryByTestId("verify-api-dialog")).not.toBeInTheDocument()
-    expect(screen.queryByTestId("verify-cli-dialog")).not.toBeInTheDocument()
-  })
+      expect(screen.getByTestId(activeTestId)).toBeVisible()
+      for (const [, inactiveTestId] of activeDialogCases) {
+        if (inactiveTestId === activeTestId) continue
+        expect(screen.queryByTestId(inactiveTestId)).not.toBeInTheDocument()
+      }
+    },
+  )
 })
