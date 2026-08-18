@@ -1164,11 +1164,11 @@ test("links an existing API credential to an existing key and preserves the asso
     KEY_MANAGEMENT_TEST_IDS.associateCredentialProfileSelect,
   )
   await profileSelect.click()
-    const profileOption = page.getByRole("option", {
-      name: /Manual Association Profile/,
-    })
-    await expect(profileOption).toBeVisible()
-    await profileOption.click({ force: true })
+  const profileOption = page.getByRole("option", {
+    name: /Manual Association Profile/,
+  })
+  await expect(profileOption).toBeVisible()
+  await profileOption.click({ force: true })
   await associationDialog
     .getByTestId(KEY_MANAGEMENT_TEST_IDS.associateCredentialConfirmButton)
     .click()
