@@ -432,11 +432,14 @@ describe("OctopusSettings", () => {
     )
 
     await waitFor(() => {
-      expect(mockedValidateConfig).toHaveBeenCalledWith({
-        baseUrl: "https://validated.example.com",
-        username: "validated-user",
-        password: "validated-password",
-      })
+      expect(mockedValidateConfig).toHaveBeenCalledWith(
+        {
+          baseUrl: "https://validated.example.com",
+          username: "validated-user",
+          password: "validated-password",
+        },
+        "options",
+      )
     })
 
     const validatingButton = screen.getByRole("button", {

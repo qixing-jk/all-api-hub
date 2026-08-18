@@ -1564,6 +1564,7 @@ async function executeTempWindowFetch(
     const response = await sendTabMessageWithRetry(tabId, {
       action: RuntimeActionIds.ContentPerformTempWindowFetch,
       requestId: tempRequestId,
+      expectedOrigin: normalizeOrigin(originUrl),
       fetchUrl,
       fetchOptions: normalizeRequestInitForMessage(effectiveFetchOptions),
       responseType,
@@ -1980,6 +1981,7 @@ async function executeTempWindowTurnstileFetch(
     const response = (await sendTabMessageWithRetry(tabId, {
       action: RuntimeActionIds.ContentPerformTempWindowFetch,
       requestId: tempRequestId,
+      expectedOrigin: normalizeOrigin(originUrl),
       fetchUrl: fetchUrlWithToken,
       fetchOptions: normalizeRequestInitForMessage(effectiveFetchOptions),
       responseType,

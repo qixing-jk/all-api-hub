@@ -264,11 +264,10 @@ describe("Octopus managed-site channel capability", () => {
           name: "channel",
           type: OctopusOutboundType.OpenAIChat,
           enabled: true,
-          base_urls: [{ url: "" }],
-          keys: [{ enabled: true, channel_key: "" }],
+          baseUrl: "",
+          key: "",
           model: undefined,
-          auto_sync: true,
-          auto_group: 0,
+          autoSync: true,
         }),
     },
     {
@@ -292,7 +291,7 @@ describe("Octopus managed-site channel capability", () => {
           name: "updated",
           type: undefined,
           enabled: undefined,
-          base_urls: undefined,
+          baseUrl: undefined,
           model: undefined,
         }),
     },
@@ -365,7 +364,7 @@ describe("Octopus managed-site channel capability", () => {
         expect(octopusApi.createChannel.mock.calls.at(-1)?.[1]).toEqual(
           expect.objectContaining({
             name: resourceDraft.name,
-            base_urls: [{ url: resourceDraft.base_url }],
+            baseUrl: resourceDraft.base_url,
           }),
         ),
     },
@@ -395,9 +394,10 @@ describe("Octopus managed-site channel capability", () => {
         expect(octopusApi.updateChannel.mock.calls.at(-1)?.[1]).toEqual(
           expect.objectContaining({
             id: 7,
-            custom_model: octopusChannel.custom_model,
-            custom_header: octopusChannel.custom_header,
-            param_override: octopusChannel.param_override,
+            customModel: octopusChannel.custom_model,
+            customHeaders: octopusChannel.custom_header,
+            paramOverride: octopusChannel.param_override,
+            source: resourceDetail.native,
           }),
         ),
     },
@@ -504,11 +504,10 @@ describe("Octopus managed-site channel capability", () => {
       name: "",
       type: OctopusOutboundType.OpenAIResponse,
       enabled: true,
-      base_urls: [{ url: "" }],
-      keys: [{ enabled: true, channel_key: "" }],
+      baseUrl: "",
+      key: "",
       model: undefined,
-      auto_sync: true,
-      auto_group: 0,
+      autoSync: true,
     })
   })
 
@@ -585,7 +584,7 @@ describe("Octopus managed-site channel capability", () => {
       name: undefined,
       type: undefined,
       enabled: undefined,
-      base_urls: [{ url: "" }],
+      baseUrl: "",
       model: undefined,
     })
   })
@@ -625,7 +624,7 @@ describe("Octopus managed-site channel capability", () => {
       name: "Updated",
       type: OctopusOutboundType.OpenAIResponse,
       enabled: false,
-      base_urls: undefined,
+      baseUrl: undefined,
       model: "gpt-4o",
     })
 
@@ -906,11 +905,10 @@ describe("Octopus managed-site channel capability", () => {
       name: "Created Octopus channel",
       type: OctopusOutboundType.Gemini,
       enabled: true,
-      base_urls: [{ url: "https://created.example.invalid/v1" }],
-      keys: [{ enabled: true, channel_key: "sk-created" }],
+      baseUrl: "https://created.example.invalid/v1",
+      key: "sk-created",
       model: "gemini-1.5-pro",
-      auto_sync: true,
-      auto_group: 0,
+      autoSync: true,
     })
     expect(octopusApi.deleteChannel).toHaveBeenCalledWith(config, 9)
   })
@@ -1041,26 +1039,21 @@ describe("Octopus managed-site channel capability", () => {
       name: "Edited Octopus channel",
       type: OctopusOutboundType.Anthropic,
       enabled: false,
-      base_urls: [
-        { url: "https://edited.example.invalid/v1", delay: 120 },
-        { url: "https://backup.example.invalid/v1", delay: 250 },
-      ],
+      baseUrl: "https://edited.example.invalid/v1",
       model: "claude-3-5-sonnet",
-      custom_model: "custom-a,custom-b",
+      key: undefined,
+      customModel: "custom-a,custom-b",
       proxy: false,
-      auto_sync: true,
-      auto_group: OctopusAutoGroupType.Regex,
-      custom_header: [{ header_key: "x-provider", header_value: "octopus" }],
-      channel_proxy: "http://proxy.example.invalid:8080",
-      param_override: '{"temperature":0.2}',
-      match_regex: "^gpt-",
+      autoSync: true,
+      customHeaders: [{ header_key: "x-provider", header_value: "octopus" }],
+      channelProxy: "http://proxy.example.invalid:8080",
+      paramOverride: '{"temperature":0.2}',
+      matchRegex: "^gpt-",
+      source: detail.native,
     })
-    expect(octopusApi.updateChannel.mock.calls.at(-1)?.[1]).not.toHaveProperty(
-      "keys_to_update",
-    )
-    expect(octopusApi.updateChannel.mock.calls.at(-1)?.[1]).not.toHaveProperty(
-      "keys_to_add",
-    )
+    const command = octopusApi.updateChannel.mock.calls.at(-1)?.[1]
+    expect(command.key).toBeUndefined()
+    expect(command.source).toBe(detail.native)
   })
 
   it("updates an Octopus key only when the draft contains a usable replacement key", async () => {
@@ -1104,14 +1097,8 @@ describe("Octopus managed-site channel capability", () => {
 
     expect(octopusApi.updateChannel.mock.calls.at(-1)?.[1]).toEqual(
       expect.objectContaining({
-        keys_to_update: [
-          {
-            id: 1,
-            enabled: true,
-            channel_key: "sk-replacement-key",
-            remark: "primary",
-          },
-        ],
+        key: "sk-replacement-key",
+        source: octopusChannel,
       }),
     )
   })
@@ -1162,12 +1149,8 @@ describe("Octopus managed-site channel capability", () => {
 
     expect(octopusApi.updateChannel.mock.calls.at(-1)?.[1]).toEqual(
       expect.objectContaining({
-        keys_to_add: [
-          expect.objectContaining({
-            enabled: true,
-            channel_key: "sk-added-key",
-          }),
-        ],
+        key: "sk-added-key",
+        source: detail.native,
       }),
     )
 
@@ -1181,12 +1164,9 @@ describe("Octopus managed-site channel capability", () => {
       },
     )
 
-    expect(octopusApi.updateChannel.mock.calls.at(-1)?.[1]).not.toHaveProperty(
-      "keys_to_add",
-    )
-    expect(octopusApi.updateChannel.mock.calls.at(-1)?.[1]).not.toHaveProperty(
-      "keys_to_update",
-    )
+    const emptyKeyCommand = octopusApi.updateChannel.mock.calls.at(-1)?.[1]
+    expect(emptyKeyCommand.key).toBeUndefined()
+    expect(emptyKeyCommand.source).toBe(detail.native)
   })
 
   it("prepares and validates Octopus resource import drafts", async () => {

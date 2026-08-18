@@ -11,15 +11,18 @@ import {
   createManagedUpstreamResourceRef,
   getManagedUpstreamResourceRefKey,
 } from "~/types/managedUpstreamResource"
+import { OctopusAutoGroupType, OctopusOutboundType } from "~/types/octopus"
 import { automaticExecution } from "~~/tests/services/protectionBypass/fixtures"
 
 const {
+  apiListChannelsMock,
   fetchRemoteModelsMock,
   updateChannelMock,
   updateModelsMock,
   listChannelsMock,
   loggerErrorMock,
 } = vi.hoisted(() => ({
+  apiListChannelsMock: vi.fn(),
   fetchRemoteModelsMock: vi.fn(),
   updateChannelMock: vi.fn(),
   updateModelsMock: vi.fn(),
@@ -28,6 +31,7 @@ const {
 }))
 
 vi.mock("~/services/apiService/octopus", () => ({
+  listChannels: vi.fn((...args) => apiListChannelsMock(...args)),
   fetchRemoteModels: vi.fn((...args) => fetchRemoteModelsMock(...args)),
   updateChannel: vi.fn((...args) => updateChannelMock(...args)),
 }))
@@ -94,10 +98,16 @@ const createChannel = (
     name: "Alpha",
     models: "model-a",
     _octopusData: {
-      type: 10,
-      base_urls: ["https://upstream.example.com"],
-      keys: ["key-1"],
-      proxy: "http://proxy.example.com",
+      id: 1,
+      name: "Alpha",
+      type: OctopusOutboundType.OpenAIChat,
+      enabled: true,
+      base_urls: [{ url: "https://upstream.example.invalid" }],
+      keys: [{ enabled: true, channel_key: "key-1" }],
+      model: "model-a",
+      proxy: false,
+      auto_sync: true,
+      auto_group: OctopusAutoGroupType.None,
     },
     ...overrides,
   }) as unknown as OctopusChannelWithData
@@ -105,6 +115,11 @@ const createChannel = (
 describe("runOctopusBatch", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    apiListChannelsMock.mockResolvedValue({
+      data: [],
+      message: "",
+      success: true,
+    })
     updateModelsMock.mockResolvedValue({
       outcome: "succeeded",
       data: undefined,
@@ -162,10 +177,11 @@ describe("runOctopusBatch", () => {
     expect(fetchRemoteModelsMock).toHaveBeenCalledWith(
       config,
       {
-        type: 10,
-        base_urls: ["https://upstream.example.com"],
-        keys: ["key-1"],
-        proxy: "http://proxy.example.com",
+        type: OctopusOutboundType.OpenAIChat,
+        baseUrl: "https://upstream.example.invalid",
+        key: "key-1",
+        proxy: false,
+        source: createChannel()._octopusData,
       },
       expect.objectContaining({
         protectionBypassExecution: expect.objectContaining({
@@ -240,6 +256,22 @@ describe("runOctopusBatch", () => {
       ["model-b"],
       expect.objectContaining({ protectionBypassExecution: execution }),
     )
+  })
+
+  it("preserves model-sync execution when listing Octopus channels", async () => {
+    const execution = automaticExecution(
+      PROTECTION_BYPASS_FEATURES.ManagedSiteModelSync,
+      PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.BackgroundRecovery,
+    )
+
+    await createOctopusModelSyncCapability(
+      config as any,
+      execution,
+    ).listChannels()
+
+    expect(apiListChannelsMock).toHaveBeenCalledWith(config, {
+      protectionBypassExecution: execution,
+    })
   })
 
   it("applies the scoped resource filters before updating an Octopus channel", async () => {

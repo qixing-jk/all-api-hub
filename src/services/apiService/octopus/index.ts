@@ -2,6 +2,7 @@
  * Octopus API 服务
  * 提供与 Octopus 后端的所有 API 交互
  */
+import { OCTOPUS_LOGIN_PATH } from "~/constants/octopus"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { createUserCommandProtectionBypassExecution } from "~/services/protectionBypass/client"
@@ -9,16 +10,16 @@ import {
   createAutomaticProtectionBypassExecution,
   PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
   PROTECTION_BYPASS_FEATURES,
-  PROTECTION_BYPASS_SURFACES,
   PROTECTION_BYPASS_USER_COMMANDS,
   type ProtectionBypassExecution,
+  type ProtectionBypassSurface,
 } from "~/services/protectionBypass/contracts"
 import type {
   OctopusApiResponse,
   OctopusChannel,
-  OctopusCreateChannelRequest,
-  OctopusFetchModelRequest,
-  OctopusUpdateChannelRequest,
+  OctopusCreateChannelInput,
+  OctopusFetchModelInput,
+  OctopusUpdateChannelInput,
 } from "~/types/octopus"
 import type { OctopusConfig } from "~/types/octopusConfig"
 import {
@@ -36,11 +37,9 @@ import {
   octopusAuthManager,
   type OctopusAuthSession,
 } from "./auth"
-import {
-  adaptCurrentOctopusChannelRequest,
-  normalizeCurrentOctopusChannelData,
-  OCTOPUS_CHANNEL_ENDPOINTS,
-} from "./currentChannelContract"
+import { currentOctopusContract } from "./current"
+import { legacyOctopusContract } from "./legacy"
+import { OCTOPUS_API_OPERATIONS, type OctopusApiOperation } from "./operations"
 import { tempWindowOctopusApiFetch } from "./tempContextClient"
 import { buildOctopusAuthHeaders } from "./utils"
 
@@ -106,7 +105,7 @@ const fetchOctopusCookieApi = async (params: {
   if (response.status !== 401) return response
 
   throwIfOctopusRequestAborted(params.fetchOptions.signal ?? undefined)
-  const login = await perform("/api/v1/user/login", {
+  const login = await perform(OCTOPUS_LOGIN_PATH, {
     method: "POST",
     body: JSON.stringify({
       username: params.config.username,
@@ -115,6 +114,22 @@ const fetchOctopusCookieApi = async (params: {
   })
   if (!login.success) {
     throw new Error(login.error || "Octopus cookie login failed")
+  }
+  const loginData = login.data
+  if (
+    typeof loginData !== "object" ||
+    loginData === null ||
+    Array.isArray(loginData) ||
+    loginData.code !== 200
+  ) {
+    const message =
+      typeof loginData === "object" &&
+      loginData !== null &&
+      "message" in loginData &&
+      typeof loginData.message === "string"
+        ? loginData.message
+        : "Octopus cookie login failed"
+    throw new Error(message)
   }
   throwIfOctopusRequestAborted(params.fetchOptions.signal ?? undefined)
   response = await perform(params.endpoint, params.fetchOptions)
@@ -178,12 +193,22 @@ const getOctopusMutationErrorMessage = (error: unknown) =>
     ? error.message
     : "Octopus mutation failed"
 
+const parseOctopusEnvelope = (
+  endpoint: string,
+  data: unknown,
+): Record<string, unknown> => {
+  if (typeof data !== "object" || data === null || Array.isArray(data)) {
+    throw new Error(`Invalid Octopus response from ${endpoint}`)
+  }
+  return data as Record<string, unknown>
+}
+
 /**
  * 执行 Octopus API 请求
  */
 async function fetchOctopusApi<T>(
   config: OctopusConfig,
-  endpoint: string,
+  operation: OctopusApiOperation,
   options: OctopusRequestInit = {},
   requestKind: "read" | "mutation" = "read",
   retryAfterUnauthorized = true,
@@ -201,59 +226,82 @@ async function fetchOctopusApi<T>(
     })
     throwIfOctopusRequestAborted(signal)
     const baseUrl = normalizeBaseUrl(config.baseUrl)
-    const url = `${baseUrl}${endpoint}`
-
-    if (isMutation && signal?.aborted) {
-      const raw =
-        signal.reason ??
-        new DOMException("The operation was aborted", "AbortError")
-      throw new OctopusMutationApiError(getOctopusMutationErrorMessage(raw), {
-        dispatch: "not-dispatched",
-        responseReceived: false,
-        confirmedNonApplication: true,
-        raw,
-        code: getOctopusErrorCode(raw),
-      })
-    }
 
     const { protectionBypassExecution, resourceBinding, ...fetchOptions } =
       options
-    // Current Octopus releases pair cookie authentication with the flattened
-    // channel contract. This is intentionally a compatibility heuristic until
-    // protocol-version detection is introduced; legacy JWT payloads stay intact.
-    const useCurrentChannelContract = session.mode === OCTOPUS_AUTH_MODES.Cookie
+    const contract =
+      session.mode === OCTOPUS_AUTH_MODES.Cookie
+        ? currentOctopusContract
+        : legacyOctopusContract
+    const nativeRequest = contract.createRequest(operation, fetchOptions)
+    const { endpoint } = nativeRequest
     let data: unknown
 
     if (session.mode === OCTOPUS_AUTH_MODES.Cookie) {
-      const cookieFetchOptions = adaptCurrentOctopusChannelRequest(
-        endpoint,
-        fetchOptions,
+      const confirmationOperation: OctopusApiOperation = {
+        kind: OCTOPUS_API_OPERATIONS.ListChannels,
+      }
+      const confirmationRequest = currentOctopusContract.createRequest(
+        confirmationOperation,
+        {},
       )
+      if (isMutation && session.confirmed === false) {
+        const confirmation = await fetchOctopusCookieApi({
+          config,
+          session,
+          baseUrl,
+          endpoint: confirmationRequest.endpoint,
+          fetchOptions: confirmationRequest.init,
+          protectionBypassExecution,
+          resourceBinding,
+        })
+        if (!confirmation.success) {
+          throw new Error(
+            confirmation.status
+              ? `HTTP ${confirmation.status}: ${confirmation.error || "Octopus session confirmation failed"}`
+              : confirmation.error || "Octopus session confirmation failed",
+          )
+        }
+        const confirmationEnvelope = parseOctopusEnvelope(
+          confirmationRequest.endpoint,
+          confirmation.data,
+        )
+        if (
+          confirmationEnvelope.success === false ||
+          (confirmationEnvelope.code !== undefined &&
+            confirmationEnvelope.code !== 200)
+        ) {
+          throw new Error(
+            typeof confirmationEnvelope.message === "string"
+              ? confirmationEnvelope.message
+              : "Octopus session confirmation failed",
+          )
+        }
+        currentOctopusContract.normalizeResponse(
+          confirmationOperation,
+          confirmationEnvelope.data,
+        )
+        session.confirmed = true
+      }
+      // Once the temporary-context bridge is invoked, absence of lifecycle
+      // evidence cannot prove that an upstream mutation was never dispatched.
+      fetchStarted = true
       const remote = await fetchOctopusCookieApi({
         config,
         session,
         baseUrl,
         endpoint,
-        fetchOptions: cookieFetchOptions,
+        fetchOptions: nativeRequest.init,
         protectionBypassExecution,
         resourceBinding,
       })
 
       fetchStarted =
-        remote.transportLifecycle?.upstreamRequestDispatched ?? false
+        remote.transportLifecycle?.upstreamRequestDispatched ?? true
       responseReceived =
-        remote.transportLifecycle?.upstreamResponseReceived ?? false
+        remote.transportLifecycle?.upstreamResponseReceived ??
+        remote.status !== undefined
       responseStatus = remote.status
-      if (remote.status === 401 && retryAfterUnauthorized) {
-        octopusAuthManager.clearCache(config.baseUrl, config.username)
-        return await fetchOctopusApi(
-          config,
-          endpoint,
-          options,
-          requestKind,
-          false,
-        )
-      }
       if (!remote.success) {
         throw new Error(
           remote.status
@@ -262,12 +310,16 @@ async function fetchOctopusApi<T>(
         )
       }
       data = remote.data
+      session.confirmed = true
     } else {
       fetchStarted = true
-      const response = await fetch(url, {
-        ...fetchOptions,
+      const response = await fetch(`${baseUrl}${endpoint}`, {
+        ...nativeRequest.init,
         signal,
-        headers: createOctopusRequestHeaders(session, fetchOptions.headers),
+        headers: createOctopusRequestHeaders(
+          session,
+          nativeRequest.init.headers,
+        ),
       })
       responseReceived = true
       responseStatus = response.status
@@ -276,7 +328,7 @@ async function fetchOctopusApi<T>(
         octopusAuthManager.clearCache(config.baseUrl, config.username)
         return await fetchOctopusApi(
           config,
-          endpoint,
+          operation,
           options,
           requestKind,
           false,
@@ -328,7 +380,7 @@ async function fetchOctopusApi<T>(
 
     // Octopus 返回格式: { success: boolean, data?: T, message?: string }
     // 或者 { code: number, message: string, data?: T }
-    const responseData = data as Record<string, unknown>
+    const responseData = parseOctopusEnvelope(endpoint, data)
     if (
       responseData.success === false ||
       (responseData.code !== undefined && responseData.code !== 200)
@@ -347,9 +399,10 @@ async function fetchOctopusApi<T>(
       throw new Error(message)
     }
 
-    const normalizedData = useCurrentChannelContract
-      ? normalizeCurrentOctopusChannelData(endpoint, responseData.data)
-      : responseData.data
+    const normalizedData = contract.normalizeResponse(
+      operation,
+      responseData.data,
+    )
     return {
       success: true,
       data: (normalizedData as T | undefined) ?? null,
@@ -383,7 +436,7 @@ export async function listChannels(
   try {
     const result = await fetchOctopusApi<OctopusChannel[]>(
       config,
-      OCTOPUS_CHANNEL_ENDPOINTS.List,
+      { kind: OCTOPUS_API_OPERATIONS.ListChannels },
       options,
     )
     return result.data || []
@@ -396,6 +449,7 @@ export async function listChannels(
 /** Validates both authentication and a harmless protected Octopus read. */
 export async function validateOctopusConfig(
   config: OctopusConfig,
+  surface: ProtectionBypassSurface,
 ): Promise<{ success: boolean; error?: string }> {
   const authResult = await octopusAuthManager.validateConfig(config)
   if (!authResult.success) return authResult
@@ -404,7 +458,7 @@ export async function validateOctopusConfig(
     await listChannels(config, {
       protectionBypassExecution: createUserCommandProtectionBypassExecution(
         PROTECTION_BYPASS_USER_COMMANDS.ManageSiteChannels,
-        PROTECTION_BYPASS_SURFACES.Options,
+        surface,
       ),
       resourceBinding: OCTOPUS_API_RESOURCE_BINDINGS.ConfigurationTest,
     })
@@ -440,16 +494,13 @@ export async function searchChannels(
  */
 export async function createChannel(
   config: OctopusConfig,
-  data: OctopusCreateChannelRequest,
+  data: OctopusCreateChannelInput,
 ): Promise<OctopusApiResponse<OctopusChannel>> {
   try {
     const result = await fetchOctopusApi<OctopusChannel>(
       config,
-      OCTOPUS_CHANNEL_ENDPOINTS.Create,
-      {
-        method: "POST",
-        body: JSON.stringify(data),
-      },
+      { kind: OCTOPUS_API_OPERATIONS.CreateChannel, input: data },
+      {},
       "mutation",
     )
     logger.info("Channel created", { name: data.name })
@@ -465,16 +516,14 @@ export async function createChannel(
  */
 export async function updateChannel(
   config: OctopusConfig,
-  data: OctopusUpdateChannelRequest,
+  data: OctopusUpdateChannelInput,
   options?: Pick<OctopusRequestInit, "signal" | "protectionBypassExecution">,
 ): Promise<OctopusApiResponse<OctopusChannel>> {
   try {
     const result = await fetchOctopusApi<OctopusChannel>(
       config,
-      OCTOPUS_CHANNEL_ENDPOINTS.Update,
+      { kind: OCTOPUS_API_OPERATIONS.UpdateChannel, input: data },
       {
-        method: "POST",
-        body: JSON.stringify(data),
         signal: options?.signal,
         protectionBypassExecution: options?.protectionBypassExecution,
       },
@@ -498,10 +547,8 @@ export async function deleteChannel(
   try {
     const result = await fetchOctopusApi<null>(
       config,
-      `/api/v1/channel/delete/${channelId}`,
-      {
-        method: "DELETE",
-      },
+      { kind: OCTOPUS_API_OPERATIONS.DeleteChannel, channelId },
+      {},
       "mutation",
     )
     logger.info("Channel deleted", { id: channelId })
@@ -517,16 +564,17 @@ export async function deleteChannel(
  */
 export async function fetchRemoteModels(
   config: OctopusConfig,
-  channelData: OctopusFetchModelRequest,
+  channelData: OctopusFetchModelInput,
   options?: Pick<OctopusRequestInit, "signal" | "protectionBypassExecution">,
 ): Promise<string[]> {
   try {
     const result = await fetchOctopusApi<string[]>(
       config,
-      OCTOPUS_CHANNEL_ENDPOINTS.FetchModel,
       {
-        method: "POST",
-        body: JSON.stringify(channelData),
+        kind: OCTOPUS_API_OPERATIONS.FetchRemoteModels,
+        input: channelData,
+      },
+      {
         signal: options?.signal,
         protectionBypassExecution: options?.protectionBypassExecution,
       },
@@ -576,10 +624,9 @@ export async function fetchAvailableModels(
   config: OctopusConfig,
 ): Promise<string[]> {
   try {
-    const result = await fetchOctopusApi<OctopusLLMInfo[]>(
-      config,
-      "/api/v1/model/list",
-    )
+    const result = await fetchOctopusApi<OctopusLLMInfo[]>(config, {
+      kind: OCTOPUS_API_OPERATIONS.ListAvailableModels,
+    })
     return (result.data || []).map((model) => model.name)
   } catch (error) {
     logger.error("Failed to fetch available models", error)
@@ -593,10 +640,9 @@ export async function fetchAvailableModels(
  */
 export async function fetchGroups(config: OctopusConfig): Promise<string[]> {
   try {
-    const result = await fetchOctopusApi<OctopusGroup[]>(
-      config,
-      "/api/v1/group/list",
-    )
+    const result = await fetchOctopusApi<OctopusGroup[]>(config, {
+      kind: OCTOPUS_API_OPERATIONS.ListGroups,
+    })
     return (result.data || []).map((group) => group.name)
   } catch (error) {
     logger.error("Failed to fetch groups", error)

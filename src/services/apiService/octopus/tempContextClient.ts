@@ -30,6 +30,9 @@ export async function tempWindowOctopusApiFetch(params: {
       kind: TEMP_CONTEXT_TASK_KINDS.OctopusApiFetch,
       params: {
         ...request,
+        // AbortSignal is not structured-cloneable. The caller still observes
+        // cancellation locally while the temporary context receives only the
+        // serializable RequestInit fields.
         ...(fetchOptions
           ? { fetchOptions: normalizeRequestInitForMessage(fetchOptions) }
           : {}),

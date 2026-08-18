@@ -14,6 +14,7 @@ import {
   type ManagedSiteMessagesKey,
 } from "~/services/managedSites/utils/managedSite"
 import { ModelRedirectService } from "~/services/models/modelRedirect"
+import { createOctopusModelSyncCapability } from "~/services/models/modelSync/octopusModelSync"
 import { notifyTaskResult } from "~/services/notifications/taskNotificationService"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
@@ -82,7 +83,6 @@ import {
 } from "./messaging"
 import { collectModelsFromExecution } from "./modelCollection"
 import { ModelSyncService } from "./modelSyncService"
-import { createOctopusModelSyncCapability } from "./octopusModelSync"
 import { managedSiteModelSyncStorage } from "./storage"
 
 const logger = createLogger("ManagedSiteModelSync")

@@ -24,7 +24,7 @@ import {
   type ExecutionResult,
   type ExecutionStatistics,
 } from "~/types/managedSiteModelSync"
-import type { OctopusChannel, OctopusFetchModelRequest } from "~/types/octopus"
+import type { OctopusChannel, OctopusFetchModelInput } from "~/types/octopus"
 import type { OctopusConfig } from "~/types/octopusConfig"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
@@ -59,7 +59,7 @@ const createOctopusModelSyncClient = (
     listChannels: async () =>
       await octopusApi.listChannels(config, requestOptions()),
     fetchRemoteModels: async (
-      request: OctopusFetchModelRequest,
+      request: OctopusFetchModelInput,
       signal?: AbortSignal,
     ) =>
       await octopusApi.fetchRemoteModels(
@@ -138,11 +138,14 @@ async function fetchChannelModels(
     throw new Error("Missing Octopus channel data")
   }
 
-  const request: OctopusFetchModelRequest = {
+  const baseUrl = octopusData.base_urls[0]?.url ?? ""
+  const key = octopusData.keys[0]?.channel_key ?? ""
+  const request: OctopusFetchModelInput = {
     type: octopusData.type,
-    base_urls: octopusData.base_urls,
-    keys: octopusData.keys,
+    baseUrl,
+    key,
     proxy: octopusData.proxy,
+    source: octopusData,
   }
 
   throwIfAborted(abortSignal)

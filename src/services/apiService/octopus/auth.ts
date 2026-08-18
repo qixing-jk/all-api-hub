@@ -2,6 +2,7 @@
  * Octopus 认证服务
  * 处理旧版 JWT 与新版 Cookie 会话的获取、缓存和刷新
  */
+import { OCTOPUS_LOGIN_PATH } from "~/constants/octopus"
 import type { OctopusConfig } from "~/types/octopusConfig"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
@@ -34,6 +35,8 @@ export type OctopusAuthSession =
   | {
       mode: typeof OCTOPUS_AUTH_MODES.Cookie
       expireAt: number
+      /** Set after a harmless protected request proves the cookie is usable. */
+      confirmed: boolean
     }
 
 interface LegacyOctopusLoginResponse {
@@ -92,7 +95,7 @@ class OctopusAuthManager {
     credentials: OctopusLoginRequest,
     options?: Pick<RequestInit, "signal">,
   ): Promise<OctopusAuthSession> {
-    const url = `${baseUrl.replace(/\/$/, "")}/api/v1/user/login`
+    const url = `${baseUrl.replace(/\/$/, "")}${OCTOPUS_LOGIN_PATH}`
 
     const response = await fetch(url, {
       method: "POST",
@@ -126,21 +129,27 @@ class OctopusAuthManager {
       )
     }
 
-    const data = (await response.json()) as OctopusLoginEnvelope
+    const data: unknown = await response.json()
 
-    if (data.code !== 200) {
-      throw new Error(data.message || "Login failed")
+    if (typeof data !== "object" || data === null || Array.isArray(data)) {
+      throw new Error("Login failed")
     }
 
-    if (isLegacyLoginResponse(data.data)) {
+    const envelope = data as OctopusLoginEnvelope
+
+    if (envelope.code !== 200) {
+      throw new Error(envelope.message || "Login failed")
+    }
+
+    if (isLegacyLoginResponse(envelope.data)) {
       return {
         mode: OCTOPUS_AUTH_MODES.Bearer,
-        token: data.data.token,
-        expireAt: resolveExpireAt(data.data.expire_at),
+        token: envelope.data.token,
+        expireAt: resolveExpireAt(envelope.data.expire_at),
       }
     }
 
-    if (hasLegacyTokenField(data.data)) {
+    if (hasLegacyTokenField(envelope.data)) {
       throw new Error("Invalid legacy token response")
     }
 
@@ -151,6 +160,7 @@ class OctopusAuthManager {
     return {
       mode: OCTOPUS_AUTH_MODES.Cookie,
       expireAt: resolveExpireAt(undefined),
+      confirmed: false,
     }
   }
 

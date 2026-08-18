@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import { validateNewApiSessionReadResource } from "~/services/managedSites/providers/newApiProtectionBypassResource"
+import {
+  NEW_API_RESOURCE_VALIDATION_TIMEOUT_MS,
+  validateNewApiSessionReadResource,
+} from "~/services/managedSites/providers/newApiProtectionBypassResource"
 import { validateOctopusApiFetchResource } from "~/services/managedSites/providers/octopusProtectionBypassResource"
 import {
   PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
@@ -128,6 +131,33 @@ describe("protection-bypass managed-site resource validators", () => {
     ).resolves.toBe(false)
   })
 
+  it("bounds the acquire-time New API channel lookup", async () => {
+    vi.useFakeTimers()
+    try {
+      mocks.resolveForType.mockReturnValue({
+        siteType: SITE_TYPES.NEW_API,
+        config: {
+          baseUrl: "https://new-api.example.invalid",
+          userId: "example-user",
+        },
+      })
+      mocks.searchChannel.mockReturnValue(new Promise(() => {}))
+
+      const validation = validateNewApiSessionReadResource({
+        origin: "https://new-api.example.invalid",
+        userId: "example-user",
+        channelId: 12,
+      })
+      await vi.dynamicImportSettled()
+      expect(mocks.searchChannel).toHaveBeenCalledOnce()
+      await vi.advanceTimersByTimeAsync(NEW_API_RESOURCE_VALIDATION_TIMEOUT_MS)
+
+      await expect(validation).resolves.toBe(false)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it("allows only an explicit managed-site command to validate a draft Octopus config", async () => {
     await expect(
       validateOctopusApiFetchResource(
@@ -183,6 +213,17 @@ describe("protection-bypass managed-site resource validators", () => {
       config: {
         baseUrl: "https://octopus.example.invalid",
         username: "different-admin",
+      },
+    })
+    await expect(
+      validateOctopusApiFetchResource(octopusTask(), automaticExecution),
+    ).resolves.toBe(false)
+
+    mocks.resolveCurrent.mockReturnValueOnce({
+      siteType: SITE_TYPES.NEW_API,
+      config: {
+        baseUrl: "https://octopus.example.invalid",
+        userId: "example-admin",
       },
     })
     await expect(

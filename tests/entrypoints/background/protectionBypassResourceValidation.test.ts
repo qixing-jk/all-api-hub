@@ -89,4 +89,16 @@ describe("validateProtectionBypassTaskResource", () => {
     expect(mocks.validateNewApi).not.toHaveBeenCalled()
     expect(mocks.validateOctopus).not.toHaveBeenCalled()
   })
+
+  it("fails closed for an unknown task kind at the resource-validation seam", async () => {
+    await expect(
+      validateProtectionBypassTaskResource(
+        { kind: "future_task", params: {} } as never,
+        execution,
+      ),
+    ).resolves.toBe(false)
+
+    expect(mocks.validateNewApi).not.toHaveBeenCalled()
+    expect(mocks.validateOctopus).not.toHaveBeenCalled()
+  })
 })

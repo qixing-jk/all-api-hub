@@ -366,6 +366,7 @@ describe("tempWindowPool window fallback", () => {
     expect(sendMessageMock).toHaveBeenCalledWith(650, {
       action: RuntimeActionIds.ContentPerformTempWindowFetch,
       requestId: "req-new-api-key",
+      expectedOrigin: "https://example.invalid",
       fetchUrl: "https://example.invalid/api/channel/12/key",
       fetchOptions: expect.objectContaining({
         method: "POST",

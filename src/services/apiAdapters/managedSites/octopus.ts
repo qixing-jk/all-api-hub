@@ -54,8 +54,8 @@ import {
 import type {
   OctopusApiResponse,
   OctopusChannel,
-  OctopusCreateChannelRequest,
-  OctopusUpdateChannelRequest,
+  OctopusCreateChannelInput,
+  OctopusUpdateChannelInput,
 } from "~/types/octopus"
 import type { OctopusConfig } from "~/types/octopusConfig"
 
@@ -172,46 +172,59 @@ const toManagedSiteChannelListData = (
   }
 }
 
-const toOctopusCreateRequest = (
+const toOctopusCreateInput = (
   channelData: CreateChannelPayload,
-): OctopusCreateChannelRequest => {
+): OctopusCreateChannelInput => {
   const channel = channelData.channel
+  const type = mapChannelTypeToOctopusOutboundType(
+    getNumericChannelType(channel.type),
+    true,
+  )
+  const name = channel.name || ""
+  const enabled = channel.status === 1
+  const baseUrl = channel.base_url || ""
+  const key = channel.key || ""
+  const model = channel.models
 
   return {
-    name: channel.name || "",
-    type: mapChannelTypeToOctopusOutboundType(
-      getNumericChannelType(channel.type),
-      true,
-    ),
-    enabled: channel.status === 1,
-    base_urls: [{ url: channel.base_url || "" }],
-    keys: [{ enabled: true, channel_key: channel.key || "" }],
-    model: channel.models,
-    auto_sync: true,
-    auto_group: 0,
+    name,
+    type,
+    enabled,
+    baseUrl,
+    key,
+    model,
+    autoSync: true,
   }
 }
 
-const toOctopusUpdateRequest = (channelData: UpdateChannelPayload) => ({
-  id: channelData.id,
-  name: channelData.name,
-  type:
+const toOctopusUpdateInput = (
+  channelData: UpdateChannelPayload,
+): OctopusUpdateChannelInput => {
+  const type =
     channelData.type !== undefined
       ? mapChannelTypeToOctopusOutboundType(
           getNumericChannelType(channelData.type),
           true,
         )
-      : undefined,
-  enabled:
+      : undefined
+  const enabled =
     "status" in channelData && channelData.status !== undefined
       ? channelData.status === 1
-      : undefined,
-  base_urls:
+      : undefined
+  const baseUrl =
     "base_url" in channelData && channelData.base_url !== undefined
-      ? [{ url: channelData.base_url }]
-      : undefined,
-  model: channelData.models,
-})
+      ? channelData.base_url
+      : undefined
+
+  return {
+    id: channelData.id,
+    name: channelData.name,
+    type,
+    enabled,
+    baseUrl,
+    model: channelData.models,
+  }
+}
 
 export const octopusManagedSiteChannels: ManagedSiteChannelsCapability<OctopusConfig> =
   {
@@ -230,31 +243,33 @@ export const octopusManagedSiteChannels: ManagedSiteChannelsCapability<OctopusCo
       return await runOctopusMutation({
         effect: octopusChannelEffect("resource-created"),
         execute: async () =>
-          await createOctopusChannel(
-            config,
-            toOctopusCreateRequest(channelData),
-          ),
+          await createOctopusChannel(config, toOctopusCreateInput(channelData)),
       })
     },
     update: async (config, channelData) => {
       return await runOctopusMutation({
         effect: octopusChannelEffect("resource-updated", channelData.id),
         execute: async () =>
-          await updateOctopusChannel(
-            config,
-            toOctopusUpdateRequest(channelData),
-          ),
+          await updateOctopusChannel(config, toOctopusUpdateInput(channelData)),
       })
     },
     updateModels: async (config, channelId, models, options) => {
       return await runOctopusMutation<unknown, void>({
         effect: octopusChannelEffect("models-updated", channelId),
         execute: async () => {
-          const payload = { id: channelId, model: models.join(",") }
+          const payload = {
+            id: channelId,
+            model: models.join(","),
+          }
           return options
             ? await updateOctopusChannel(config, payload, {
                 signal: options.signal,
-                protectionBypassExecution: options.protectionBypassExecution,
+                ...(options.protectionBypassExecution
+                  ? {
+                      protectionBypassExecution:
+                        options.protectionBypassExecution,
+                    }
+                  : {}),
               })
             : await updateOctopusChannel(config, payload)
         },
@@ -413,73 +428,36 @@ const octopusResourceFieldDescriptors: ManagedUpstreamResourceFieldDescriptor[] 
     },
   ]
 
-const replacePrimaryBaseUrl = (
-  native: OctopusChannel,
-  baseUrl: string,
-): OctopusChannel["base_urls"] => {
-  const [primary, ...rest] = native.base_urls
-  return [{ ...(primary ?? {}), url: baseUrl }, ...rest]
-}
-
-const buildOctopusKeyUpdate = (
-  native: OctopusChannel,
-  key: string,
-): Pick<OctopusUpdateChannelRequest, "keys_to_add" | "keys_to_update"> => {
-  const trimmedKey = key.trim()
-  if (!hasUsableManagedSiteChannelKey(trimmedKey)) {
-    return {}
-  }
-
-  const primaryKey = native.keys[0]
-  if (!primaryKey?.id) {
-    return {
-      keys_to_add: [
-        {
-          enabled: primaryKey?.enabled ?? true,
-          channel_key: trimmedKey,
-          remark: primaryKey?.remark,
-        },
-      ],
-    }
-  }
-
-  return {
-    keys_to_update: [
-      {
-        id: primaryKey.id,
-        enabled: primaryKey.enabled,
-        channel_key: trimmedKey,
-        remark: primaryKey.remark,
-      },
-    ],
-  }
-}
-
-const toOctopusResourceUpdatePayload = (
+const toOctopusResourceUpdateInput = (
   detail: ManagedUpstreamResourceDetail<OctopusChannel>,
   draft: ChannelFormData,
-): OctopusUpdateChannelRequest => {
+): OctopusUpdateChannelInput => {
   const native = detail.native
+  const type = mapChannelTypeToOctopusOutboundType(
+    getNumericChannelType(draft.type),
+    true,
+  )
+  const enabled = draft.status === 1
+  const model = draft.models.join(",")
 
   return {
     id: native.id,
     name: draft.name,
-    type: mapChannelTypeToOctopusOutboundType(
-      getNumericChannelType(draft.type),
-      true,
-    ),
-    enabled: draft.status === 1,
-    base_urls: replacePrimaryBaseUrl(native, draft.base_url),
-    model: draft.models.join(","),
-    custom_model: native.custom_model,
+    type,
+    enabled,
+    baseUrl: draft.base_url,
+    model,
+    key: hasUsableManagedSiteChannelKey(draft.key.trim())
+      ? draft.key.trim()
+      : undefined,
+    customModel: native.custom_model,
     proxy: native.proxy,
-    auto_sync: native.auto_sync,
-    auto_group: native.auto_group,
-    custom_header: native.custom_header,
-    channel_proxy: native.channel_proxy,
-    param_override: native.param_override,
-    match_regex: native.match_regex,
-    ...buildOctopusKeyUpdate(native, draft.key),
+    autoSync: native.auto_sync,
+    customHeaders: native.custom_header,
+    channelProxy: native.channel_proxy,
+    paramOverride: native.param_override,
+    matchRegex: native.match_regex,
+    source: native,
   }
 }
 
@@ -517,7 +495,7 @@ const octopusManagedUpstreamResources: ManagedUpstreamResourcesCapability<
         execute: async () =>
           await createOctopusChannel(
             config,
-            toOctopusCreateRequest(buildChannelPayload(draft)),
+            toOctopusCreateInput(buildChannelPayload(draft)),
           ),
         successData: (channel) =>
           channel ? toOctopusResourceSummary(config, channel) : null,
@@ -528,7 +506,7 @@ const octopusManagedUpstreamResources: ManagedUpstreamResourcesCapability<
         execute: async () =>
           await updateOctopusChannel(
             config,
-            toOctopusResourceUpdatePayload(detail, draft),
+            toOctopusResourceUpdateInput(detail, draft),
           ),
         successData: (channel) =>
           channel ? toOctopusResourceSummary(config, channel) : null,

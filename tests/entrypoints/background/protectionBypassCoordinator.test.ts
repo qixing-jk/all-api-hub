@@ -678,7 +678,7 @@ describe("ProtectionBypassCoordinator", () => {
     })
   })
 
-  it("checks the exact Octopus origin at acquire time", async () => {
+  it("passes the complete Octopus task to acquire-time resource validation", async () => {
     const execution = {
       ...automaticExecution,
       feature: PROTECTION_BYPASS_FEATURES.ManagedSiteChannels,
@@ -715,7 +715,7 @@ describe("ProtectionBypassCoordinator", () => {
     expect(response).toEqual({ success: true })
   })
 
-  it("fails closed when the current Octopus origin is stale", async () => {
+  it("denies an Octopus task when acquire-time resource validation rejects it", async () => {
     const execution = {
       ...automaticExecution,
       feature: PROTECTION_BYPASS_FEATURES.ManagedSiteChannels,
@@ -778,7 +778,7 @@ describe("ProtectionBypassCoordinator", () => {
     expect(response).toEqual({ success: true })
   })
 
-  it("does not let automatic work use the Octopus configuration-test binding", async () => {
+  it("denies an automatic Octopus task when resource validation rejects its binding", async () => {
     const validateTaskResource = vi.fn().mockResolvedValue(false)
     const response = await createDecisionCoordinator({
       validateTaskResource,

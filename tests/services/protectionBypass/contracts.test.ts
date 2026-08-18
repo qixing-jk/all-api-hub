@@ -597,8 +597,30 @@ describe("protection bypass runtime contracts", () => {
         kind: TEMP_CONTEXT_TASK_KINDS.OctopusApiFetch,
         params: {
           originUrl: "https://example.invalid",
+          resourceUsername: "example-user",
           fetchUrl,
           fetchOptions: { method },
+        },
+      }),
+    ).toBe(false)
+  })
+
+  it.each([
+    ["extra authority", { authority: "caller-controlled" }],
+    ["non-object fetch options", { fetchOptions: "GET" }],
+    ["invalid request ID", { requestId: 42 }],
+    ["invalid response type", { responseType: "document" }],
+    ["invalid resource binding", { resourceBinding: "untrusted" }],
+  ])("rejects Octopus params with %s", (_case, override) => {
+    expect(
+      isTempContextTask({
+        kind: TEMP_CONTEXT_TASK_KINDS.OctopusApiFetch,
+        params: {
+          originUrl: "https://example.invalid",
+          resourceUsername: "example-user",
+          fetchUrl: "https://example.invalid/api/v1/channel/list",
+          fetchOptions: { method: "GET" },
+          ...override,
         },
       }),
     ).toBe(false)

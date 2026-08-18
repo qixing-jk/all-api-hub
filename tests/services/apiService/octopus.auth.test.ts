@@ -83,6 +83,7 @@ describe("Octopus auth manager", () => {
     ).resolves.toEqual({
       mode: "cookie",
       expireAt: 1_700_000_900_000,
+      confirmed: false,
     })
 
     expect(fetchMock).toHaveBeenCalledWith(
@@ -116,6 +117,28 @@ describe("Octopus auth manager", () => {
       }),
     ).rejects.toThrow("Invalid legacy token response")
   })
+
+  it.each([null, [], "success"])(
+    "rejects a non-object login envelope: %j",
+    async (body) => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValueOnce(
+          new Response(JSON.stringify(body), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+        ),
+      )
+
+      await expect(
+        octopusAuthManager.login("https://octopus.example.com", {
+          username: "alice",
+          password: "secret",
+        }),
+      ).rejects.toThrow("Login failed")
+    },
+  )
 
   it("includes the Octopus CORS hint when login returns HTTP 403", async () => {
     vi.stubGlobal(
