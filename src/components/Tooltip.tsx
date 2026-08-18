@@ -82,7 +82,11 @@ export default function Tooltip({
     new Set(
       [
         childProps["aria-describedby"],
-        shouldRenderDescription ? descriptionId : anchorAsChild ? popupId : undefined,
+        shouldRenderDescription
+          ? descriptionId
+          : anchorAsChild
+            ? popupId
+            : undefined,
       ]
         .flatMap((value) => value?.split(/\s+/) ?? [])
         .filter(Boolean),
