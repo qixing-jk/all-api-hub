@@ -258,13 +258,3 @@ export interface OctopusApiResponse<T = unknown> {
   /** 错误消息 */
   message?: string
 }
-
-/**
- * Octopus 登录响应
- */
-export interface OctopusLoginResponse {
-  /** JWT Token */
-  token: string
-  /** Token 过期时间 */
-  expire_at: string
-}

@@ -1,8 +1,7 @@
 /**
  * Octopus 认证服务
- * 处理 JWT Token 的获取、缓存和刷新
+ * 处理旧版 JWT 与新版 Cookie 会话的获取、缓存和刷新
  */
-import type { OctopusLoginResponse } from "~/types/octopus"
 import type { OctopusConfig } from "~/types/octopusConfig"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
@@ -19,11 +18,61 @@ interface OctopusLoginRequest {
 }
 
 /**
- * Token 缓存条目
+ * 认证会话类型
  */
-interface TokenCacheEntry {
+export const OCTOPUS_AUTH_MODES = {
+  Bearer: "bearer",
+  Cookie: "cookie",
+} as const
+
+export type OctopusAuthSession =
+  | {
+      mode: typeof OCTOPUS_AUTH_MODES.Bearer
+      token: string
+      expireAt: number
+    }
+  | {
+      mode: typeof OCTOPUS_AUTH_MODES.Cookie
+      expireAt: number
+    }
+
+interface LegacyOctopusLoginResponse {
   token: string
+  expire_at: string
+}
+
+interface OctopusLoginEnvelope {
+  code?: number
+  message?: string
+  data?: unknown
+}
+
+interface AuthCacheEntry {
+  session: OctopusAuthSession
   expireAt: number
+}
+
+const DEFAULT_SESSION_TTL_MS = 15 * 60 * 1000
+
+const isLegacyLoginResponse = (
+  value: unknown,
+): value is LegacyOctopusLoginResponse =>
+  typeof value === "object" &&
+  value !== null &&
+  "token" in value &&
+  typeof value.token === "string" &&
+  value.token.length > 0 &&
+  "expire_at" in value &&
+  typeof value.expire_at === "string"
+
+const hasLegacyTokenField = (value: unknown): boolean =>
+  typeof value === "object" && value !== null && "token" in value
+
+const resolveExpireAt = (expireAt: string | undefined): number => {
+  const parsedExpireAt = expireAt ? new Date(expireAt).getTime() : Number.NaN
+  return Number.isFinite(parsedExpireAt)
+    ? parsedExpireAt
+    : Date.now() + DEFAULT_SESSION_TTL_MS
 }
 
 /**
@@ -31,7 +80,7 @@ interface TokenCacheEntry {
  * 负责自动登录和 Token 生命周期管理
  */
 class OctopusAuthManager {
-  private tokenCache: Map<string, TokenCacheEntry> = new Map()
+  private authCache: Map<string, AuthCacheEntry> = new Map()
 
   /**
    * 生成缓存键
@@ -41,18 +90,19 @@ class OctopusAuthManager {
   }
 
   /**
-   * 登录到 Octopus 获取 JWT Token
+   * 登录到 Octopus 并识别当前服务端认证契约
    */
   async login(
     baseUrl: string,
     credentials: OctopusLoginRequest,
     options?: Pick<RequestInit, "signal">,
-  ): Promise<OctopusLoginResponse> {
+  ): Promise<OctopusAuthSession> {
     const url = `${baseUrl.replace(/\/$/, "")}/api/v1/user/login`
 
     const response = await fetch(url, {
       method: "POST",
       signal: options?.signal,
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(credentials),
     })
@@ -81,43 +131,62 @@ class OctopusAuthManager {
       )
     }
 
-    const data = await response.json()
+    const data = (await response.json()) as OctopusLoginEnvelope
 
-    if (data.code !== 200 || !data.data?.token) {
+    if (data.code !== 200) {
       throw new Error(data.message || "Login failed")
     }
 
-    return data.data as OctopusLoginResponse
+    if (isLegacyLoginResponse(data.data)) {
+      return {
+        mode: OCTOPUS_AUTH_MODES.Bearer,
+        token: data.data.token,
+        expireAt: resolveExpireAt(data.data.expire_at),
+      }
+    }
+
+    if (hasLegacyTokenField(data.data)) {
+      throw new Error("Invalid legacy token response")
+    }
+
+    // Octopus switched administrator login from a returned JWT to an `auth`
+    // cookie in https://github.com/bestruirui/octopus/commit/7b1de824cd272d87dce6f3659634048e6a1e3441.
+    // The protocol discriminator is the absence of the legacy token, not the
+    // human-readable success payload, which may change between releases.
+    return {
+      mode: OCTOPUS_AUTH_MODES.Cookie,
+      expireAt: resolveExpireAt(undefined),
+    }
   }
 
   /**
-   * 获取有效的 JWT Token
-   * - 如果内存缓存中有有效 Token，直接返回
-   * - 如果 Token 过期或不存在，自动重新登录获取
+   * 获取有效的认证会话
+   * - 如果内存缓存中有有效会话，直接返回
+   * - 如果会话过期或不存在，自动重新登录获取
    *
-   * 注意：Token 仅缓存在内存中，不持久化到存储。
-   * Octopus 默认 token 有效期为 15 分钟，可通过登录时的 expire 参数自定义。
+   * 注意：认证元数据仅缓存在内存中，不持久化到存储。
+   * Octopus 默认会话有效期为 15 分钟，可通过登录时的 expire 参数自定义。
    */
-  async getValidToken(
+  async getValidSession(
     config: OctopusConfig,
     options?: Pick<RequestInit, "signal">,
-  ): Promise<string> {
+  ): Promise<OctopusAuthSession> {
     if (!config.baseUrl || !config.username || !config.password) {
       throw new Error("Octopus config is incomplete")
     }
 
     const cacheKey = this.getCacheKey(config.baseUrl, config.username)
-    const cached = this.tokenCache.get(cacheKey)
+    const cached = this.authCache.get(cacheKey)
 
     // 检查内存缓存是否有效（提前 1 分钟刷新，因为默认有效期较短）
     const bufferTime = 1 * 60 * 1000
     if (cached && cached.expireAt > Date.now() + bufferTime) {
-      return cached.token
+      return cached.session
     }
 
     // 自动登录获取新 Token
     logger.info("Auto-login to Octopus", { baseUrl: config.baseUrl })
-    const response = await this.login(
+    const session = await this.login(
       config.baseUrl,
       {
         username: config.username,
@@ -126,26 +195,13 @@ class OctopusAuthManager {
       options,
     )
 
-    // 解析过期时间，验证有效性
-    const parsedExpireAt = new Date(response.expire_at).getTime()
-    const defaultTTL = 15 * 60 * 1000 // 15 minutes fallback (Octopus default)
-    let expireAt: number
-    if (Number.isFinite(parsedExpireAt)) {
-      expireAt = parsedExpireAt
-    } else {
-      logger.warn("Invalid expire_at from server, using default TTL", {
-        expire_at: response.expire_at,
-      })
-      expireAt = Date.now() + defaultTTL
-    }
-
     // 更新内存缓存
-    this.tokenCache.set(cacheKey, {
-      token: response.token,
-      expireAt,
+    this.authCache.set(cacheKey, {
+      session,
+      expireAt: session.expireAt,
     })
 
-    return response.token
+    return session
   }
 
   /**
@@ -156,7 +212,7 @@ class OctopusAuthManager {
     config: OctopusConfig,
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      await this.getValidToken(config)
+      await this.getValidSession(config)
       return { success: true }
     } catch (error) {
       logger.error("Config validation failed", error)
@@ -172,14 +228,14 @@ class OctopusAuthManager {
    */
   clearCache(baseUrl: string, username: string): void {
     const cacheKey = this.getCacheKey(baseUrl, username)
-    this.tokenCache.delete(cacheKey)
+    this.authCache.delete(cacheKey)
   }
 
   /**
    * 清除所有缓存
    */
   clearAllCache(): void {
-    this.tokenCache.clear()
+    this.authCache.clear()
   }
 }
 

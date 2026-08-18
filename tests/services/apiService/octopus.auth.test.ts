@@ -18,7 +18,7 @@ describe("Octopus auth manager", () => {
     octopusAuthManager.clearAllCache()
   })
 
-  it("logs in against the normalized Octopus endpoint and returns the token payload", async () => {
+  it("normalizes the legacy Octopus token login contract", async () => {
     const fetchMock = vi.fn().mockResolvedValueOnce(
       new Response(
         JSON.stringify({
@@ -52,9 +52,69 @@ describe("Octopus auth manager", () => {
       }),
     )
     expect(result).toEqual({
+      mode: "bearer",
       token: "jwt-token",
-      expire_at: "2026-03-29T01:00:00.000Z",
+      expireAt: new Date("2026-03-29T01:00:00.000Z").getTime(),
     })
+  })
+
+  it("accepts a successful tokenless Octopus login as a cookie session", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(1_700_000_000_000)
+    const fetchMock = vi.fn().mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          code: 200,
+          message: "success",
+          data: "signed in",
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
+    )
+    vi.stubGlobal("fetch", fetchMock)
+
+    await expect(
+      octopusAuthManager.login("https://octopus.example.com", {
+        username: "alice",
+        password: "secret",
+      }),
+    ).resolves.toEqual({
+      mode: "cookie",
+      expireAt: 1_700_000_900_000,
+    })
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://octopus.example.com/api/v1/user/login",
+      expect.objectContaining({ credentials: "include" }),
+    )
+  })
+
+  it("rejects a malformed legacy token response instead of treating it as a cookie session", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            code: 200,
+            message: "success",
+            data: { token: "", expire_at: "invalid" },
+          }),
+          {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          },
+        ),
+      ),
+    )
+
+    await expect(
+      octopusAuthManager.login("https://octopus.example.com", {
+        username: "alice",
+        password: "secret",
+      }),
+    ).rejects.toThrow("Invalid legacy token response")
   })
 
   it("includes the Octopus CORS hint when login returns HTTP 403", async () => {
@@ -174,39 +234,41 @@ describe("Octopus auth manager", () => {
     const loginSpy = vi
       .spyOn(octopusAuthManager, "login")
       .mockResolvedValueOnce({
+        mode: "bearer",
         token: "first-token",
-        expire_at: new Date(1_700_000_600_000).toISOString(),
+        expireAt: 1_700_000_600_000,
       })
       .mockResolvedValueOnce({
+        mode: "bearer",
         token: "second-token",
-        expire_at: new Date(1_700_001_200_000).toISOString(),
+        expireAt: 1_700_001_200_000,
       })
 
     await expect(
-      octopusAuthManager.getValidToken({
+      octopusAuthManager.getValidSession({
         baseUrl: "https://octopus.example.com",
         username: "alice",
         password: "secret",
       }),
-    ).resolves.toBe("first-token")
+    ).resolves.toMatchObject({ mode: "bearer", token: "first-token" })
 
     nowSpy.mockReturnValue(1_700_000_120_000)
     await expect(
-      octopusAuthManager.getValidToken({
+      octopusAuthManager.getValidSession({
         baseUrl: "https://octopus.example.com",
         username: "alice",
         password: "secret",
       }),
-    ).resolves.toBe("first-token")
+    ).resolves.toMatchObject({ mode: "bearer", token: "first-token" })
 
     nowSpy.mockReturnValue(1_700_000_560_000)
     await expect(
-      octopusAuthManager.getValidToken({
+      octopusAuthManager.getValidSession({
         baseUrl: "https://octopus.example.com",
         username: "alice",
         password: "secret",
       }),
-    ).resolves.toBe("second-token")
+    ).resolves.toMatchObject({ mode: "bearer", token: "second-token" })
 
     expect(loginSpy).toHaveBeenCalledTimes(2)
 
@@ -215,29 +277,43 @@ describe("Octopus auth manager", () => {
 
   it("falls back to the default TTL when the server returns an invalid expire_at", async () => {
     const nowSpy = vi.spyOn(Date, "now").mockReturnValue(1_700_000_000_000)
-    const loginSpy = vi
-      .spyOn(octopusAuthManager, "login")
-      .mockResolvedValueOnce({
-        token: "fallback-token",
-        expire_at: "invalid-date",
-      })
+    const loginSpy = vi.spyOn(octopusAuthManager, "login")
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            code: 200,
+            data: { token: "fallback-token", expire_at: "invalid-date" },
+          }),
+          {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          },
+        ),
+      ),
+    )
 
     await expect(
-      octopusAuthManager.getValidToken({
+      octopusAuthManager.getValidSession({
         baseUrl: "https://octopus.example.com",
         username: "alice",
         password: "secret",
       }),
-    ).resolves.toBe("fallback-token")
+    ).resolves.toEqual({
+      mode: "bearer",
+      token: "fallback-token",
+      expireAt: 1_700_000_900_000,
+    })
 
     nowSpy.mockReturnValue(1_700_000_600_000)
     await expect(
-      octopusAuthManager.getValidToken({
+      octopusAuthManager.getValidSession({
         baseUrl: "https://octopus.example.com",
         username: "alice",
         password: "secret",
       }),
-    ).resolves.toBe("fallback-token")
+    ).resolves.toMatchObject({ mode: "bearer", token: "fallback-token" })
 
     expect(loginSpy).toHaveBeenCalledTimes(1)
 
@@ -264,8 +340,12 @@ describe("Octopus auth manager", () => {
 
   it("returns success when validateConfig can obtain a valid token", async () => {
     const tokenSpy = vi
-      .spyOn(octopusAuthManager, "getValidToken")
-      .mockResolvedValueOnce("cached-token")
+      .spyOn(octopusAuthManager, "getValidSession")
+      .mockResolvedValueOnce({
+        mode: "bearer",
+        token: "cached-token",
+        expireAt: 1_700_000_900_000,
+      })
 
     await expect(
       octopusAuthManager.validateConfig({
@@ -283,49 +363,52 @@ describe("Octopus auth manager", () => {
     const loginSpy = vi
       .spyOn(octopusAuthManager, "login")
       .mockResolvedValueOnce({
+        mode: "bearer",
         token: "alice-token",
-        expire_at: new Date(1_700_000_900_000).toISOString(),
+        expireAt: 1_700_000_900_000,
       })
       .mockResolvedValueOnce({
+        mode: "bearer",
         token: "bob-token",
-        expire_at: new Date(1_700_000_900_000).toISOString(),
+        expireAt: 1_700_000_900_000,
       })
       .mockResolvedValueOnce({
+        mode: "bearer",
         token: "alice-token-2",
-        expire_at: new Date(1_700_001_200_000).toISOString(),
+        expireAt: 1_700_001_200_000,
       })
 
     await expect(
-      octopusAuthManager.getValidToken({
+      octopusAuthManager.getValidSession({
         baseUrl: "https://octopus.example.com",
         username: "alice",
         password: "secret",
       }),
-    ).resolves.toBe("alice-token")
+    ).resolves.toMatchObject({ mode: "bearer", token: "alice-token" })
     await expect(
-      octopusAuthManager.getValidToken({
+      octopusAuthManager.getValidSession({
         baseUrl: "https://octopus.example.com",
         username: "bob",
         password: "secret",
       }),
-    ).resolves.toBe("bob-token")
+    ).resolves.toMatchObject({ mode: "bearer", token: "bob-token" })
 
     octopusAuthManager.clearCache("https://octopus.example.com", "alice")
 
     await expect(
-      octopusAuthManager.getValidToken({
+      octopusAuthManager.getValidSession({
         baseUrl: "https://octopus.example.com",
         username: "alice",
         password: "secret",
       }),
-    ).resolves.toBe("alice-token-2")
+    ).resolves.toMatchObject({ mode: "bearer", token: "alice-token-2" })
     await expect(
-      octopusAuthManager.getValidToken({
+      octopusAuthManager.getValidSession({
         baseUrl: "https://octopus.example.com",
         username: "bob",
         password: "secret",
       }),
-    ).resolves.toBe("bob-token")
+    ).resolves.toMatchObject({ mode: "bearer", token: "bob-token" })
 
     expect(loginSpy).toHaveBeenCalledTimes(3)
 

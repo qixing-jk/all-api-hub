@@ -15,6 +15,7 @@ import type {
   TempWindowCheckinPageActionParams,
   TempWindowFetch,
   TempWindowFetchParams,
+  TempWindowOctopusApiFetchParams,
   TempWindowOpenContextResult,
   TempWindowRenderedTitleParams,
   TempWindowRenderedTitleResponse,
@@ -380,6 +381,7 @@ export const TEMP_CONTEXT_TASK_KINDS = {
   RenderedTitle: "rendered_title",
   SessionRead: "session_read",
   NewApiSessionRead: "new_api_session_read",
+  OctopusApiFetch: "octopus_api_fetch",
   OpenContext: "open_context",
 } as const
 
@@ -433,6 +435,10 @@ export type TempContextTask =
       params: WithoutProtectionBypassIntent<TempWindowNewApiSessionReadParams>
     }
   | {
+      kind: typeof TEMP_CONTEXT_TASK_KINDS.OctopusApiFetch
+      params: WithoutProtectionBypassIntent<TempWindowOctopusApiFetchParams>
+    }
+  | {
       kind: typeof TEMP_CONTEXT_TASK_KINDS.OpenContext
       params: WithoutProtectionBypassIntent<OpenTempContextParams>
     }
@@ -453,6 +459,7 @@ type TempContextTaskResultMap = {
   [TEMP_CONTEXT_TASK_KINDS.RenderedTitle]: TempWindowRenderedTitleResponse
   [TEMP_CONTEXT_TASK_KINDS.SessionRead]: TempWindowFetch
   [TEMP_CONTEXT_TASK_KINDS.NewApiSessionRead]: TempWindowFetch
+  [TEMP_CONTEXT_TASK_KINDS.OctopusApiFetch]: TempWindowFetch
   [TEMP_CONTEXT_TASK_KINDS.OpenContext]: TempWindowOpenContextResult
 }
 
@@ -469,6 +476,14 @@ const NEW_API_SESSION_READ_PARAM_KEYS = new Set([
   "channelId",
   "userId",
   "requestId",
+])
+
+const OCTOPUS_API_FETCH_PARAM_KEYS = new Set([
+  "originUrl",
+  "fetchUrl",
+  "fetchOptions",
+  "requestId",
+  "responseType",
 ])
 
 const TEMP_WINDOW_RESPONSE_TYPES = new Set<TempWindowResponseType>([
@@ -606,6 +621,59 @@ function isTempWindowNewApiSessionReadParams(
   )
 }
 
+const OCTOPUS_ENDPOINT_METHODS = [
+  { pattern: /^\/api\/v1\/user\/login$/u, method: "POST" },
+  { pattern: /^\/api\/v1\/channel\/list$/u, method: "GET" },
+  {
+    pattern: /^\/api\/v1\/channel\/(?:create|update|fetch-model)$/u,
+    method: "POST",
+  },
+  { pattern: /^\/api\/v1\/channel\/delete\/[1-9]\d*$/u, method: "DELETE" },
+  { pattern: /^\/api\/v1\/(?:model|group)\/list$/u, method: "GET" },
+] as const
+
+/** Validates the narrow Octopus endpoint allow-list at the runtime boundary. */
+function isTempWindowOctopusApiFetchParams(
+  value: Record<string, unknown>,
+): boolean {
+  if (
+    !Object.keys(value).every((key) => OCTOPUS_API_FETCH_PARAM_KEYS.has(key))
+  ) {
+    return false
+  }
+  if (!isCanonicalHttpOrigin(value.originUrl) || !isHttpUrl(value.fetchUrl)) {
+    return false
+  }
+  if (value.fetchOptions !== undefined && !isPlainObject(value.fetchOptions)) {
+    return false
+  }
+  if (
+    !isOptionalRequestId(value.requestId) ||
+    (value.responseType !== undefined && value.responseType !== "json")
+  ) {
+    return false
+  }
+
+  try {
+    const fetchUrl = new URL(value.fetchUrl as string)
+    const options = (value.fetchOptions ?? {}) as Record<string, unknown>
+    const method =
+      typeof options.method === "string" ? options.method.toUpperCase() : "GET"
+    return (
+      fetchUrl.origin === value.originUrl &&
+      fetchUrl.search === "" &&
+      fetchUrl.hash === "" &&
+      OCTOPUS_ENDPOINT_METHODS.some(
+        (endpoint) =>
+          endpoint.method === method &&
+          endpoint.pattern.test(fetchUrl.pathname),
+      )
+    )
+  } catch {
+    return false
+  }
+}
+
 /** Validates the discriminated task envelope at the runtime boundary. */
 export function isTempContextTask(value: unknown): value is TempContextTask {
   if (!isPlainObject(value)) return false
@@ -655,6 +723,8 @@ export function isTempContextTask(value: unknown): value is TempContextTask {
       )
     case TEMP_CONTEXT_TASK_KINDS.NewApiSessionRead:
       return isTempWindowNewApiSessionReadParams(params)
+    case TEMP_CONTEXT_TASK_KINDS.OctopusApiFetch:
+      return isTempWindowOctopusApiFetchParams(params)
     case TEMP_CONTEXT_TASK_KINDS.OpenContext:
       return (
         isHttpUrl(params.url) &&
@@ -704,6 +774,10 @@ const TEMP_CONTEXT_TASK_METADATA = {
     operation: PROTECTION_BYPASS_OPERATIONS.SessionRead,
     cause: PROTECTION_BYPASS_CAUSES.SessionRequired,
   },
+  [TEMP_CONTEXT_TASK_KINDS.OctopusApiFetch]: {
+    operation: PROTECTION_BYPASS_OPERATIONS.Fetch,
+    cause: PROTECTION_BYPASS_CAUSES.SessionRequired,
+  },
   [TEMP_CONTEXT_TASK_KINDS.OpenContext]: {
     operation: PROTECTION_BYPASS_OPERATIONS.OpenContext,
     cause: PROTECTION_BYPASS_CAUSES.ExplicitContext,
@@ -746,9 +820,11 @@ export const PROTECTION_BYPASS_FEATURE_TASK_KINDS = {
   ],
   [PROTECTION_BYPASS_FEATURES.ManagedSiteChannels]: [
     TEMP_CONTEXT_TASK_KINDS.NewApiSessionRead,
+    TEMP_CONTEXT_TASK_KINDS.OctopusApiFetch,
   ],
   [PROTECTION_BYPASS_FEATURES.ManagedSiteModelSync]: [
     TEMP_CONTEXT_TASK_KINDS.NewApiSessionRead,
+    TEMP_CONTEXT_TASK_KINDS.OctopusApiFetch,
   ],
   [PROTECTION_BYPASS_FEATURES.AccountOnboarding]: [
     TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch,

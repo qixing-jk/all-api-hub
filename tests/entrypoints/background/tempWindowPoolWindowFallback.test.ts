@@ -383,6 +383,151 @@ describe("tempWindowPool window fallback", () => {
     )
   })
 
+  it("uses the fixed Octopus session-status page without navigating to the API mutation", async () => {
+    tempContextMode = "tab"
+    createTabMock.mockResolvedValueOnce({ id: 651 })
+    let currentUrl = "https://octopus.example.invalid/api/v1/user/status"
+    tabsGetMock.mockImplementation(async () => ({
+      status: "complete",
+      url: currentUrl,
+    }))
+    tabsUpdateMock.mockImplementation(async (_tabId, update) => {
+      currentUrl = update.url
+    })
+
+    const { executeAuthorizedTempContextTask } = await import(
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
+    )
+    const sendResponse = vi.fn()
+    const request = executeAuthorizedTempContextTask(
+      {
+        kind: "octopus_api_fetch",
+        params: {
+          originUrl: "https://octopus.example.invalid",
+          resourceUsername: "example-user",
+          fetchUrl: "https://octopus.example.invalid/api/v1/channel/update",
+          fetchOptions: { method: "POST", body: "{}" },
+          requestId: "req-octopus-update",
+        },
+      },
+      vi.fn().mockResolvedValue({
+        kind: "allowed",
+        adapter: "tab",
+        feature: "managed_site_channels",
+        operation: "fetch",
+        cause: "session_required",
+        surface: "background",
+      }),
+      sendResponse,
+    )
+
+    await vi.advanceTimersByTimeAsync(500)
+    await request
+
+    expect(tabsUpdateMock).toHaveBeenLastCalledWith(651, {
+      url: "https://octopus.example.invalid/api/v1/user/status",
+    })
+    expect(tabsUpdateMock).not.toHaveBeenCalledWith(651, {
+      url: "https://octopus.example.invalid",
+    })
+    expect(tabsUpdateMock).not.toHaveBeenCalledWith(651, {
+      url: "https://octopus.example.invalid/api/v1/channel/update",
+    })
+    expect(sendMessageMock).toHaveBeenCalledWith(
+      651,
+      expect.objectContaining({
+        action: RuntimeActionIds.ContentPerformTempWindowFetch,
+        fetchUrl: "https://octopus.example.invalid/api/v1/channel/update",
+        fetchOptions: expect.objectContaining({ method: "POST", body: "{}" }),
+      }),
+    )
+    expect(sendResponse).toHaveBeenCalledWith(
+      expect.objectContaining({ success: true }),
+    )
+
+    currentUrl = "https://octopus.example.invalid/previous-page"
+    tabsUpdateMock.mockClear()
+    const reusedRequest = executeAuthorizedTempContextTask(
+      {
+        kind: "octopus_api_fetch",
+        params: {
+          originUrl: "https://octopus.example.invalid",
+          resourceUsername: "example-user",
+          fetchUrl: "https://octopus.example.invalid/api/v1/channel/list",
+          fetchOptions: { method: "GET" },
+          requestId: "req-octopus-reused-list",
+        },
+      },
+      vi.fn().mockResolvedValue({
+        kind: "allowed",
+        adapter: "tab",
+        feature: "managed_site_channels",
+        operation: "fetch",
+        cause: "session_required",
+        surface: "background",
+      }),
+      vi.fn(),
+    )
+    await vi.advanceTimersByTimeAsync(500)
+    await reusedRequest
+
+    expect(createTabMock).toHaveBeenCalledTimes(1)
+    expect(tabsUpdateMock).toHaveBeenCalledWith(651, {
+      url: "https://octopus.example.invalid/api/v1/user/status",
+    })
+  })
+
+  it("fails closed when the Octopus session-status page redirects cross-origin", async () => {
+    tempContextMode = "tab"
+    createTabMock.mockResolvedValueOnce({ id: 652 })
+    tabsGetMock.mockResolvedValue({
+      status: "complete",
+      url: "https://redirected.example.invalid/login",
+    })
+
+    const { executeAuthorizedTempContextTask } = await import(
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
+    )
+    const sendResponse = vi.fn()
+    const request = executeAuthorizedTempContextTask(
+      {
+        kind: "octopus_api_fetch",
+        params: {
+          originUrl: "https://octopus.example.invalid",
+          resourceUsername: "example-user",
+          fetchUrl: "https://octopus.example.invalid/api/v1/channel/list",
+          fetchOptions: { method: "GET" },
+          requestId: "req-octopus-cross-origin",
+        },
+      },
+      vi.fn().mockResolvedValue({
+        kind: "allowed",
+        adapter: "tab",
+        feature: "managed_site_channels",
+        operation: "fetch",
+        cause: "session_required",
+        surface: "background",
+      }),
+      sendResponse,
+    )
+
+    await vi.advanceTimersByTimeAsync(1500)
+    await request
+
+    expect(sendMessageMock).not.toHaveBeenCalledWith(
+      652,
+      expect.objectContaining({
+        action: RuntimeActionIds.ContentPerformTempWindowFetch,
+      }),
+    )
+    expect(sendResponse).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: false,
+        error: "Temporary context redirected outside the requested origin",
+      }),
+    )
+  })
+
   it("blocks Firefox popup-source requests at every direct handler boundary without opening a context", async () => {
     isProtectionBypassFirefoxEnvMock.mockReturnValue(true)
 

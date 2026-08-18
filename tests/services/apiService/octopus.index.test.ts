@@ -16,22 +16,30 @@ import {
 } from "~/services/apiService/octopus"
 import { OctopusAutoGroupType, OctopusOutboundType } from "~/types/octopus"
 
-const { mockGetValidToken, mockGetPreferences, mockLogger } = vi.hoisted(
-  () => ({
-    mockGetValidToken: vi.fn(),
-    mockGetPreferences: vi.fn(),
-    mockLogger: {
-      debug: vi.fn(),
-      info: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn(),
-    },
-  }),
-)
+const {
+  mockGetValidSession,
+  mockGetPreferences,
+  mockTempWindowOctopusApiFetch,
+  mockLogger,
+} = vi.hoisted(() => ({
+  mockGetValidSession: vi.fn(),
+  mockGetPreferences: vi.fn(),
+  mockTempWindowOctopusApiFetch: vi.fn(),
+  mockLogger: {
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+  },
+}))
 
 vi.mock("~/services/apiService/octopus/auth", () => ({
+  OCTOPUS_AUTH_MODES: {
+    Bearer: "bearer",
+    Cookie: "cookie",
+  },
   octopusAuthManager: {
-    getValidToken: mockGetValidToken,
+    getValidSession: mockGetValidSession,
   },
 }))
 
@@ -39,6 +47,10 @@ vi.mock("~/services/preferences/userPreferences", () => ({
   userPreferences: {
     getPreferences: mockGetPreferences,
   },
+}))
+
+vi.mock("~/services/apiService/octopus/tempContextClient", () => ({
+  tempWindowOctopusApiFetch: mockTempWindowOctopusApiFetch,
 }))
 
 vi.mock("~/utils/core/logger", () => ({
@@ -55,7 +67,11 @@ describe("Octopus API service", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.unstubAllGlobals()
-    mockGetValidToken.mockResolvedValue("jwt-token")
+    mockGetValidSession.mockResolvedValue({
+      mode: "bearer",
+      token: "jwt-token",
+      expireAt: 1_700_000_900_000,
+    })
   })
 
   it("lists channels with JWT auth headers", async () => {
@@ -95,6 +111,94 @@ describe("Octopus API service", () => {
     )
     expect(headers.get("Authorization")).toBe("Bearer jwt-token")
     expect(headers.get("Content-Type")).toBe("application/json")
+  })
+
+  it("lists channels with the current Octopus cookie session", async () => {
+    mockGetValidSession.mockResolvedValueOnce({
+      mode: "cookie",
+      expireAt: 1_700_000_900_000,
+    })
+    mockTempWindowOctopusApiFetch.mockResolvedValueOnce({
+      success: true,
+      status: 200,
+      data: { success: true, data: [] },
+      transportLifecycle: {
+        upstreamRequestDispatched: true,
+        upstreamResponseReceived: true,
+      },
+    })
+
+    await expect(listChannels(config)).resolves.toEqual([])
+
+    expect(mockTempWindowOctopusApiFetch).toHaveBeenCalledOnce()
+    const request = mockTempWindowOctopusApiFetch.mock.calls[0][0]
+    const headers = new Headers(request.fetchOptions.headers)
+    expect(request.fetchOptions.credentials).toBe("include")
+    expect(headers.get("Authorization")).toBeNull()
+    expect(headers.get("Content-Type")).toBe("application/json")
+    expect(request.fetchUrl).toBe(
+      "https://octopus.example.com/api/v1/channel/list",
+    )
+  })
+
+  it("establishes a same-origin cookie session after 401 and retries the mutation", async () => {
+    mockGetValidSession.mockResolvedValueOnce({
+      mode: "cookie",
+      expireAt: 1_700_000_900_000,
+    })
+    mockTempWindowOctopusApiFetch
+      .mockResolvedValueOnce({
+        success: false,
+        status: 401,
+        error: "unauthorized",
+        transportLifecycle: {
+          upstreamRequestDispatched: true,
+          upstreamResponseReceived: true,
+        },
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        status: 200,
+        data: { code: 200, data: "login successfully" },
+        transportLifecycle: {
+          upstreamRequestDispatched: true,
+          upstreamResponseReceived: true,
+        },
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        status: 200,
+        data: { code: 200, data: { id: 7, name: "Example" } },
+        transportLifecycle: {
+          upstreamRequestDispatched: true,
+          upstreamResponseReceived: true,
+        },
+      })
+
+    await expect(
+      createChannel(config, {
+        name: "Example",
+        type: OctopusOutboundType.OpenAIChat,
+        keys: [{ enabled: true, channel_key: "credential-placeholder" }],
+        base_urls: [{ url: "https://upstream.example.invalid" }],
+        model: "model-a",
+      }),
+    ).resolves.toMatchObject({ success: true, data: { id: 7 } })
+
+    expect(
+      mockTempWindowOctopusApiFetch.mock.calls.map(
+        ([request]) => new URL(request.fetchUrl).pathname,
+      ),
+    ).toEqual([
+      "/api/v1/channel/create",
+      "/api/v1/user/login",
+      "/api/v1/channel/create",
+    ])
+    expect(
+      JSON.parse(
+        mockTempWindowOctopusApiFetch.mock.calls[1][0].fetchOptions.body,
+      ),
+    ).toEqual({ username: "alice", password: "secret" })
   })
 
   it("filters searched channels by name and upstream URL", async () => {
@@ -358,7 +462,7 @@ describe("Octopus API service", () => {
     "$name marks auth failure before mutation fetch as not dispatched",
     async ({ log, invoke }) => {
       const authError = new Error("authentication failed")
-      mockGetValidToken.mockRejectedValueOnce(authError)
+      mockGetValidSession.mockRejectedValueOnce(authError)
       const fetchMock = vi.fn()
       vi.stubGlobal("fetch", fetchMock)
 
@@ -382,7 +486,7 @@ describe("Octopus API service", () => {
     "keeps only operational auth error code $code",
     async ({ code, expectedCode }) => {
       const raw = { code }
-      mockGetValidToken.mockRejectedValueOnce(raw)
+      mockGetValidSession.mockRejectedValueOnce(raw)
 
       const failure = await updateChannel(config, { id: 1 }).catch(
         (error: unknown) => error,
@@ -517,7 +621,7 @@ describe("Octopus API service", () => {
     "$name classifies real Octopus auth preflight failure as rejected",
     async ({ invoke }) => {
       const authError = new Error("authentication failed")
-      mockGetValidToken.mockRejectedValueOnce(authError)
+      mockGetValidSession.mockRejectedValueOnce(authError)
       const fetchMock = vi.fn()
       vi.stubGlobal("fetch", fetchMock)
 
@@ -582,7 +686,7 @@ describe("Octopus API service", () => {
     await vi.waitFor(() => expect(requestSignal).toBe(controller.signal))
     controller.abort()
 
-    expect(mockGetValidToken).toHaveBeenCalledWith(config, {
+    expect(mockGetValidSession).toHaveBeenCalledWith(config, {
       signal: controller.signal,
     })
     expect(requestSignal?.aborted).toBe(true)
@@ -592,7 +696,11 @@ describe("Octopus API service", () => {
   it("uses the caller signal for Octopus auth and the API request", async () => {
     const callerSignal = new AbortController().signal
     let fetchSignal: AbortSignal | undefined
-    mockGetValidToken.mockResolvedValueOnce("jwt-token")
+    mockGetValidSession.mockResolvedValueOnce({
+      mode: "bearer",
+      token: "jwt-token",
+      expireAt: 1_700_000_900_000,
+    })
 
     vi.stubGlobal(
       "fetch",
@@ -611,10 +719,10 @@ describe("Octopus API service", () => {
       listChannels(config, { signal: callerSignal }),
     ).resolves.toEqual([])
 
-    expect(mockGetValidToken).toHaveBeenCalledWith(config, {
+    expect(mockGetValidSession).toHaveBeenCalledWith(config, {
       signal: callerSignal,
     })
-    const authSignal = mockGetValidToken.mock.calls[0][1]?.signal
+    const authSignal = mockGetValidSession.mock.calls[0][1]?.signal
     expect(authSignal).toBe(fetchSignal)
   })
 
@@ -750,7 +858,7 @@ describe("Octopus API service", () => {
 
     await expect(fetchSiteUserGroups({} as any)).resolves.toEqual([])
     await expect(fetchAccountAvailableModels({} as any)).resolves.toEqual([])
-    expect(mockGetValidToken).not.toHaveBeenCalled()
+    expect(mockGetValidSession).not.toHaveBeenCalled()
   })
 
   it("returns empty arrays when stored Octopus preferences cannot be loaded", async () => {

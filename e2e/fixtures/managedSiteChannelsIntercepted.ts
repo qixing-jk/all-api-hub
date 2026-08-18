@@ -3,6 +3,7 @@ import type { BrowserContext, Page, Route } from "@playwright/test"
 import { ChannelType } from "~/constants"
 import { AXON_HUB_CHANNEL_STATUS } from "~/constants/axonHub"
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
+import { OCTOPUS_COOKIE_SESSION_STATUS_PATH } from "~/constants/octopus"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SITE_TYPES } from "~/constants/siteType"
 import type { ManagedSiteChannel } from "~/types/managedSite"
@@ -16,6 +17,8 @@ const INTERCEPTED_MANAGED_SITE_ORIGIN = "https://managed.example.invalid"
 const INTERCEPTED_MANAGED_SITE_TARGET_ORIGIN =
   "https://managed-target.example.invalid"
 const INTERCEPTED_AXON_HUB_ORIGIN = "https://axonhub.example.invalid"
+const INTERCEPTED_OCTOPUS_ORIGIN = "https://octopus.example.invalid"
+const INTERCEPTED_OCTOPUS_COOKIE = "auth=octopus-cookie-session"
 
 const AXON_HUB_PRIMARY_ID = "gid://axonhub/Channel/opaque-primary"
 const AXON_HUB_SECONDARY_ID = "gid://axonhub/Channel/opaque-secondary"
@@ -58,6 +61,9 @@ let interceptedAxonHubPrimaryTags = ["fixture-tag"]
 let interceptedAxonHubUpdateVariables: Record<string, unknown> | null = null
 let interceptedAxonHubListRequestCount = 0
 let interceptedAxonHubDeleteRequestCount = 0
+let interceptedOctopusCookieHeader: string | null = null
+let interceptedOctopusRootRequestCount = 0
+let interceptedOctopusStatusRequestCount = 0
 let interceptedAxonHubCreatedChannel: {
   name: string
   baseURL: string
@@ -205,6 +211,18 @@ export function getInterceptedAxonHubListRequestCount() {
 
 export function getInterceptedAxonHubDeleteRequestCount() {
   return interceptedAxonHubDeleteRequestCount
+}
+
+export function getInterceptedOctopusCookieHeader() {
+  return interceptedOctopusCookieHeader
+}
+
+export function getInterceptedOctopusRootRequestCount() {
+  return interceptedOctopusRootRequestCount
+}
+
+export function getInterceptedOctopusStatusRequestCount() {
+  return interceptedOctopusStatusRequestCount
 }
 
 async function fulfill(route: Route, body: unknown) {
@@ -443,6 +461,76 @@ async function installAxonHubIntercepts(context: BrowserContext) {
   })
 }
 
+async function installOctopusCookieAuthIntercepts(context: BrowserContext) {
+  interceptedOctopusCookieHeader = null
+  interceptedOctopusRootRequestCount = 0
+  interceptedOctopusStatusRequestCount = 0
+
+  await context.route(`${INTERCEPTED_OCTOPUS_ORIGIN}/**`, async (route) => {
+    const request = route.request()
+    const path = new URL(request.url()).pathname
+
+    if (path === "/") {
+      interceptedOctopusRootRequestCount += 1
+      await route.fulfill({
+        status: 403,
+        contentType: "text/html",
+        body: '<!doctype html><title>Just a moment...</title><script src="/cdn-cgi/challenge-platform/scripts/jsd/main.js"></script>',
+      })
+      return
+    }
+
+    if (path === OCTOPUS_COOKIE_SESSION_STATUS_PATH) {
+      if (request.method() === "GET" && request.resourceType() === "document") {
+        interceptedOctopusStatusRequestCount += 1
+      }
+      await route.fulfill({
+        status: 401,
+        contentType: "application/json",
+        body: JSON.stringify({ code: 401, message: "unauthorized" }),
+      })
+      return
+    }
+
+    if (path === "/api/v1/user/login" && request.method() === "POST") {
+      await route.fulfill({
+        status: 200,
+        headers: {
+          "access-control-allow-credentials": "true",
+          "access-control-allow-origin": request.headers().origin ?? "null",
+          "content-type": "application/json",
+          "set-cookie": `${INTERCEPTED_OCTOPUS_COOKIE}; Path=/; Max-Age=900`,
+        },
+        body: JSON.stringify({
+          code: 200,
+          message: "success",
+          data: "login successfully",
+        }),
+      })
+      return
+    }
+
+    if (path === "/api/v1/channel/list") {
+      interceptedOctopusCookieHeader = request.headers().cookie ?? null
+      if (
+        !interceptedOctopusCookieHeader?.includes(INTERCEPTED_OCTOPUS_COOKIE)
+      ) {
+        await route.fulfill({
+          status: 401,
+          contentType: "application/json",
+          body: JSON.stringify({ code: 401, message: "unauthorized" }),
+        })
+        return
+      }
+
+      await fulfill(route, { code: 200, data: [] })
+      return
+    }
+
+    await route.fulfill({ status: 404, body: "fixture route not configured" })
+  })
+}
+
 export async function openInterceptedManagedSiteChannels(params: {
   context: BrowserContext
   page: Page
@@ -492,6 +580,29 @@ export async function openInterceptedAxonHubManagedSiteChannels(params: {
       baseUrl: INTERCEPTED_MANAGED_SITE_TARGET_ORIGIN,
       adminToken: "fixture-target-admin-token",
       userId: "9",
+    },
+  })
+
+  const url = new URL(
+    `chrome-extension://${params.extensionId}/${OPTIONS_PAGE_PATH}`,
+  )
+  url.hash = MENU_ITEM_IDS.MANAGED_SITE_CHANNELS
+  await params.page.goto(url.toString())
+}
+
+export async function openInterceptedOctopusManagedSiteChannels(params: {
+  context: BrowserContext
+  page: Page
+  extensionId: string
+}) {
+  await forceExtensionLanguage(params.page, "en")
+  await installOctopusCookieAuthIntercepts(params.context)
+  await seedUserPreferences(await getServiceWorker(params.context), {
+    managedSiteType: SITE_TYPES.OCTOPUS,
+    octopus: {
+      baseUrl: INTERCEPTED_OCTOPUS_ORIGIN,
+      username: "admin",
+      password: "credential-placeholder",
     },
   })
 

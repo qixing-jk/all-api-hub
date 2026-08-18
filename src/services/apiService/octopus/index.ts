@@ -4,6 +4,12 @@
  */
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { userPreferences } from "~/services/preferences/userPreferences"
+import {
+  createAutomaticProtectionBypassExecution,
+  PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
+  PROTECTION_BYPASS_FEATURES,
+  type ProtectionBypassExecution,
+} from "~/services/protectionBypass/contracts"
 import type {
   OctopusApiResponse,
   OctopusChannel,
@@ -12,13 +18,81 @@ import type {
   OctopusUpdateChannelRequest,
 } from "~/types/octopus"
 import type { OctopusConfig } from "~/types/octopusConfig"
+import type { TempWindowFetch } from "~/types/tempWindowFetch"
+import { getCurrentTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
+import { safeRandomUUID } from "~/utils/core/identifier"
 import { createLogger } from "~/utils/core/logger"
 import { normalizeBaseUrl } from "~/utils/core/url"
 
-import { octopusAuthManager } from "./auth"
+import {
+  OCTOPUS_AUTH_MODES,
+  octopusAuthManager,
+  type OctopusAuthSession,
+} from "./auth"
+import { tempWindowOctopusApiFetch } from "./tempContextClient"
 import { buildOctopusAuthHeaders } from "./utils"
 
 const logger = createLogger("OctopusAPI")
+
+type OctopusRequestInit = RequestInit & {
+  protectionBypassExecution?: ProtectionBypassExecution
+}
+
+const resolveOctopusProtectionExecution = (
+  execution: ProtectionBypassExecution | undefined,
+): ProtectionBypassExecution => {
+  if (execution) return execution
+  const requestSource = getCurrentTempWindowRequestSource()
+  return createAutomaticProtectionBypassExecution(
+    PROTECTION_BYPASS_FEATURES.ManagedSiteChannels,
+    requestSource === "background"
+      ? PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.BackgroundRecovery
+      : PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
+    requestSource,
+  )
+}
+
+/** Runs the current Octopus cookie contract in its same-origin browser context. */
+const fetchOctopusCookieApi = async (params: {
+  config: OctopusConfig
+  session: Extract<OctopusAuthSession, { mode: "cookie" }>
+  baseUrl: string
+  endpoint: string
+  fetchOptions: RequestInit
+  protectionBypassExecution?: ProtectionBypassExecution
+}): Promise<TempWindowFetch> => {
+  const execution = resolveOctopusProtectionExecution(
+    params.protectionBypassExecution,
+  )
+  const perform = async (endpoint: string, init: RequestInit) =>
+    await tempWindowOctopusApiFetch({
+      originUrl: params.baseUrl,
+      fetchUrl: `${params.baseUrl}${endpoint}`,
+      fetchOptions: {
+        ...init,
+        credentials: "include",
+        headers: createOctopusRequestHeaders(params.session, init.headers),
+      },
+      requestId: safeRandomUUID(`octopus-${endpoint}`),
+      protectionBypassExecution: execution,
+    })
+
+  let response = await perform(params.endpoint, params.fetchOptions)
+  if (response.status !== 401) return response
+
+  const login = await perform("/api/v1/user/login", {
+    method: "POST",
+    body: JSON.stringify({
+      username: params.config.username,
+      password: params.config.password,
+    }),
+  })
+  if (!login.success) {
+    throw new Error(login.error || "Octopus cookie login failed")
+  }
+  response = await perform(params.endpoint, params.fetchOptions)
+  return response
+}
 
 export class OctopusMutationApiError extends Error {
   constructor(
@@ -83,7 +157,7 @@ const getOctopusMutationErrorMessage = (error: unknown) =>
 async function fetchOctopusApi<T>(
   config: OctopusConfig,
   endpoint: string,
-  options: RequestInit = {},
+  options: OctopusRequestInit = {},
   requestKind: "read" | "mutation" = "read",
 ): Promise<OctopusApiResponse<T>> {
   const signal = options.signal ?? undefined
@@ -93,7 +167,7 @@ async function fetchOctopusApi<T>(
   let responseStatus: number | undefined
 
   try {
-    const token = await octopusAuthManager.getValidToken(config, {
+    const session = await octopusAuthManager.getValidSession(config, {
       signal,
     })
     const baseUrl = normalizeBaseUrl(config.baseUrl)
@@ -112,56 +186,83 @@ async function fetchOctopusApi<T>(
       })
     }
 
-    fetchStarted = true
-    const response = await fetch(url, {
-      ...options,
-      signal,
-      headers: createOctopusRequestHeaders(token, options.headers),
-    })
-    responseReceived = true
-    responseStatus = response.status
+    const { protectionBypassExecution, ...fetchOptions } = options
+    let data: unknown
 
-    // 检查 HTTP 状态码，处理非成功响应
-    if (!response.ok) {
-      const contentType = response.headers.get("Content-Type") || ""
-      let errorMessage: string
+    if (session.mode === OCTOPUS_AUTH_MODES.Cookie) {
+      const remote = await fetchOctopusCookieApi({
+        config,
+        session,
+        baseUrl,
+        endpoint,
+        fetchOptions,
+        protectionBypassExecution,
+      })
 
-      // Read body once as text, then try to parse as JSON
-      const rawBody = await response.text()
+      fetchStarted =
+        remote.transportLifecycle?.upstreamRequestDispatched ?? false
+      responseReceived =
+        remote.transportLifecycle?.upstreamResponseReceived ?? false
+      responseStatus = remote.status
+      if (!remote.success) {
+        throw new Error(
+          remote.status
+            ? `HTTP ${remote.status}: ${remote.error || "Octopus request failed"}`
+            : remote.error || "Octopus request failed",
+        )
+      }
+      data = remote.data
+    } else {
+      fetchStarted = true
+      const response = await fetch(url, {
+        ...fetchOptions,
+        signal,
+        headers: createOctopusRequestHeaders(session, fetchOptions.headers),
+      })
+      responseReceived = true
+      responseStatus = response.status
 
-      if (contentType.includes("application/json")) {
-        // 尝试解析 JSON 错误响应
-        try {
-          const errorData = JSON.parse(rawBody)
-          errorMessage =
-            errorData.message || errorData.error || JSON.stringify(errorData)
-        } catch {
+      // 检查 HTTP 状态码，处理非成功响应
+      if (!response.ok) {
+        const contentType = response.headers.get("Content-Type") || ""
+        let errorMessage: string
+
+        // Read body once as text, then try to parse as JSON
+        const rawBody = await response.text()
+
+        if (contentType.includes("application/json")) {
+          // 尝试解析 JSON 错误响应
+          try {
+            const errorData = JSON.parse(rawBody)
+            errorMessage =
+              errorData.message || errorData.error || JSON.stringify(errorData)
+          } catch {
+            errorMessage = rawBody
+          }
+        } else {
+          // 非 JSON 响应，使用已读取的文本
           errorMessage = rawBody
         }
-      } else {
-        // 非 JSON 响应，使用已读取的文本
-        errorMessage = rawBody
+
+        throw new Error(
+          `HTTP ${response.status} ${response.statusText}: ${errorMessage}`,
+        )
       }
 
-      throw new Error(
-        `HTTP ${response.status} ${response.statusText}: ${errorMessage}`,
-      )
-    }
+      // 检查 Content-Type 是否为 JSON
+      const contentType = response.headers.get("Content-Type") || ""
+      if (!contentType.includes("application/json")) {
+        const text = await response.text()
+        throw new Error(
+          `Expected JSON response but got ${contentType || "unknown content type"}: ${text.slice(0, 200)}`,
+        )
+      }
 
-    // 检查 Content-Type 是否为 JSON
-    const contentType = response.headers.get("Content-Type") || ""
-    if (!contentType.includes("application/json")) {
-      const text = await response.text()
-      throw new Error(
-        `Expected JSON response but got ${contentType || "unknown content type"}: ${text.slice(0, 200)}`,
-      )
-    }
-
-    let data: unknown
-    try {
-      data = await response.json()
-    } catch {
-      throw new Error(`Failed to parse JSON response from ${endpoint}`)
+      try {
+        data = await response.json()
+      } catch {
+        throw new Error(`Failed to parse JSON response from ${endpoint}`)
+      }
     }
 
     // Octopus 返回格式: { success: boolean, data?: T, message?: string }
@@ -178,7 +279,7 @@ async function fetchOctopusApi<T>(
           responseReceived: true,
           confirmedNonApplication: true,
           raw: data,
-          statusCode: response.status,
+          statusCode: responseStatus,
           code: getOctopusErrorCode(data),
         })
       }
@@ -413,9 +514,11 @@ export async function fetchGroups(config: OctopusConfig): Promise<string[]> {
 export { octopusAuthManager } from "./auth"
 
 const createOctopusRequestHeaders = (
-  token: string,
+  session: OctopusAuthSession,
   headers?: HeadersInit,
 ): Headers => {
+  const token =
+    session.mode === OCTOPUS_AUTH_MODES.Bearer ? session.token : undefined
   const requestHeaders = new Headers(buildOctopusAuthHeaders(token))
   const overrideHeaders = new Headers(headers)
   for (const [name, value] of overrideHeaders.entries()) {
@@ -442,7 +545,7 @@ const getStoredOctopusConfig = async (): Promise<OctopusConfig | null> => {
 
 /**
  * 获取站点分组列表（符合 common API 签名）
- * 使用 Octopus JWT 认证调用 /api/v1/group/list
+ * 使用当前 Octopus 管理员会话调用 /api/v1/group/list
  * 注意：忽略 request 中的 auth 参数，使用 Octopus 配置中的凭据
  */
 export async function fetchSiteUserGroups(
@@ -463,7 +566,7 @@ export async function fetchSiteUserGroups(
 
 /**
  * 获取账号可用模型列表（符合 common API 签名）
- * 使用 Octopus JWT 认证调用 /api/v1/model/list
+ * 使用当前 Octopus 管理员会话调用 /api/v1/model/list
  * 注意：忽略 request 中的 auth 参数，使用 Octopus 配置中的凭据
  */
 export async function fetchAccountAvailableModels(

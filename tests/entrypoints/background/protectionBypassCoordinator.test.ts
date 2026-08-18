@@ -76,6 +76,14 @@ const allTaskKinds: TempContextTask[] = [
       userId: "example-user",
     },
   },
+  {
+    kind: TEMP_CONTEXT_TASK_KINDS.OctopusApiFetch,
+    params: {
+      originUrl: taskParams.originUrl,
+      fetchUrl: `${taskParams.originUrl}/api/v1/channel/list`,
+      fetchOptions: { method: "GET" },
+    },
+  },
   { kind: TEMP_CONTEXT_TASK_KINDS.OpenContext, params: taskParams },
   {
     kind: TEMP_CONTEXT_TASK_KINDS.OpenRouterManagementKeyAction,
@@ -241,9 +249,13 @@ describe("ProtectionBypassCoordinator", () => {
                 ? userCommandExecution(
                     PROTECTION_BYPASS_USER_COMMANDS.ManageApiKeys,
                   )
-                : userCommandExecution(
-                    PROTECTION_BYPASS_USER_COMMANDS.AddAccount,
-                  )
+                : task.kind === TEMP_CONTEXT_TASK_KINDS.OctopusApiFetch
+                  ? userCommandExecution(
+                      PROTECTION_BYPASS_USER_COMMANDS.ManageSiteChannels,
+                    )
+                  : userCommandExecution(
+                      PROTECTION_BYPASS_USER_COMMANDS.AddAccount,
+                    )
       await expect(
         coordinator.execute({
           task: withExecution(task, execution),

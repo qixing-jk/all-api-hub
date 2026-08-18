@@ -66,6 +66,17 @@ export interface TempWindowFetchParams {
   cookieStoreId?: string
 }
 
+/** Closed provider request used for Octopus' same-origin admin cookie. */
+export interface TempWindowOctopusApiFetchParams {
+  originUrl: string
+  fetchUrl: string
+  fetchOptions?: RequestInit
+  requestId?: string
+  responseType?: TempWindowResponseType
+  tempWindowRequestSource?: TempWindowRequestSource
+  protectionBypassExecution: ProtectionBypassExecution
+}
+
 export type TempWindowTurnstileStatus =
   | "not_present"
   | "token_obtained"

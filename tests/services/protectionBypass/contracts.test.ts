@@ -89,6 +89,16 @@ const canonicalTasks = [
     },
   },
   {
+    kind: TEMP_CONTEXT_TASK_KINDS.OctopusApiFetch,
+    params: {
+      originUrl: "https://example.invalid",
+      fetchUrl: "https://example.invalid/api/v1/channel/list",
+      fetchOptions: { method: "GET" },
+      responseType: "json",
+      requestId: "request-octopus-api",
+    },
+  },
+  {
     kind: TEMP_CONTEXT_TASK_KINDS.OpenContext,
     params: {
       url: "https://example.invalid",
@@ -296,6 +306,7 @@ describe("protection bypass runtime contracts", () => {
         "rendered_title",
         "session_read",
         "new_api_session_read",
+        "octopus_api_fetch",
         "open_context",
       ]),
     )
@@ -530,6 +541,8 @@ describe("protection bypass runtime contracts", () => {
     [TEMP_CONTEXT_TASK_KINDS.RenderedTitle, "originUrl"],
     [TEMP_CONTEXT_TASK_KINDS.SessionRead, "url"],
     [TEMP_CONTEXT_TASK_KINDS.NewApiSessionRead, "origin"],
+    [TEMP_CONTEXT_TASK_KINDS.OctopusApiFetch, "originUrl"],
+    [TEMP_CONTEXT_TASK_KINDS.OctopusApiFetch, "fetchUrl"],
     [TEMP_CONTEXT_TASK_KINDS.OpenContext, "url"],
   ] as const
 
@@ -562,6 +575,32 @@ describe("protection bypass runtime contracts", () => {
       ]),
     )
     expect(isTempContextTask({ ...task, params })).toBe(true)
+  })
+
+  it.each([
+    [
+      "another origin",
+      "https://other.example.invalid/api/v1/channel/list",
+      "GET",
+    ],
+    ["unowned endpoint", "https://example.invalid/api/v1/user/list", "GET"],
+    ["wrong method", "https://example.invalid/api/v1/channel/create", "GET"],
+    [
+      "query authority",
+      "https://example.invalid/api/v1/channel/list?target=other",
+      "GET",
+    ],
+  ])("rejects Octopus %s", (_case, fetchUrl, method) => {
+    expect(
+      isTempContextTask({
+        kind: TEMP_CONTEXT_TASK_KINDS.OctopusApiFetch,
+        params: {
+          originUrl: "https://example.invalid",
+          fetchUrl,
+          fetchOptions: { method },
+        },
+      }),
+    ).toBe(false)
   })
 
   it("keeps decision, capability, and denial wire values stable", () => {

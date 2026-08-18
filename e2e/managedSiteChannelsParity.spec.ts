@@ -11,8 +11,12 @@ import {
   getInterceptedAxonHubDeleteRequestCount,
   getInterceptedAxonHubListRequestCount,
   getInterceptedAxonHubUpdateVariables,
+  getInterceptedOctopusCookieHeader,
+  getInterceptedOctopusRootRequestCount,
+  getInterceptedOctopusStatusRequestCount,
   openInterceptedAxonHubManagedSiteChannels,
   openInterceptedManagedSiteChannels,
+  openInterceptedOctopusManagedSiteChannels,
 } from "~~/e2e/fixtures/managedSiteChannelsIntercepted"
 import {
   channelRowByName,
@@ -118,6 +122,32 @@ test("keeps the legacy channels table and editor presentation stable", async ({
   ).toBeVisible()
 
   await expect(migrationDialog.getByText("Migration limitations")).toBeVisible()
+})
+
+test("uses the current Octopus cookie session in a real extension browser", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  await openInterceptedOctopusManagedSiteChannels({
+    context,
+    extensionId,
+    page,
+  })
+  await waitForExtensionRoot(page)
+
+  await expect(page.getByRole("table")).toBeVisible()
+  await expect
+    .poll(async () =>
+      (await context.cookies("https://octopus.example.invalid")).find(
+        (cookie) => cookie.name === "auth",
+      ),
+    )
+    .toBeTruthy()
+  await expect.poll(getInterceptedOctopusCookieHeader).toContain("auth=")
+  await expect.poll(getInterceptedOctopusStatusRequestCount).toBeGreaterThan(0)
+  expect(getInterceptedOctopusRootRequestCount()).toBe(0)
+  await expect(page.getByText("Unable to load channels")).toBeHidden()
 })
 
 test("runs the AxonHub native edit and migration preview through the shared UI", async ({

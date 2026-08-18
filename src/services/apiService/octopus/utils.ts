@@ -3,13 +3,13 @@
  */
 
 /**
- * 构建 Octopus 认证头
+ * 构建 Octopus JSON 请求头；旧版服务端额外使用 Bearer JWT。
  */
 export function buildOctopusAuthHeaders(
-  jwtToken: string,
+  jwtToken?: string,
 ): Record<string, string> {
   return {
-    Authorization: `Bearer ${jwtToken}`,
+    ...(jwtToken ? { Authorization: `Bearer ${jwtToken}` } : {}),
     "Content-Type": "application/json",
   }
 }
