@@ -1,12 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ApiError } from "~/services/apiTransport/errors"
-import { runOctopusBatch } from "~/services/models/modelSync/octopusModelSync"
+import { createOctopusModelSyncCapability } from "~/services/models/modelSync/octopusModelSync"
+import {
+  PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
+  PROTECTION_BYPASS_FEATURES,
+} from "~/services/protectionBypass/contracts"
 import type { OctopusChannelWithData } from "~/types/managedSite"
 import {
   createManagedUpstreamResourceRef,
   getManagedUpstreamResourceRefKey,
 } from "~/types/managedUpstreamResource"
+import { automaticExecution } from "~~/tests/services/protectionBypass/fixtures"
 
 const {
   fetchRemoteModelsMock,
@@ -50,6 +55,35 @@ const config = {
   baseUrl: "https://octopus.example.com",
   username: "admin",
   password: "secret",
+}
+
+type OctopusModelSyncCapability = ReturnType<
+  typeof createOctopusModelSyncCapability
+>
+type OctopusModelSyncTestOptions = Parameters<
+  OctopusModelSyncCapability["runBatch"]
+>[1] & {
+  protectionBypassExecution?: Parameters<
+    typeof createOctopusModelSyncCapability
+  >[1]
+}
+
+const runOctopusBatch = (
+  config: Parameters<typeof createOctopusModelSyncCapability>[0],
+  channels: Parameters<OctopusModelSyncCapability["runBatch"]>[0],
+  options: OctopusModelSyncTestOptions,
+) => {
+  const {
+    protectionBypassExecution = automaticExecution(
+      PROTECTION_BYPASS_FEATURES.ManagedSiteModelSync,
+      PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.BackgroundRecovery,
+    ),
+    ...batchOptions
+  } = options
+  return createOctopusModelSyncCapability(
+    config,
+    protectionBypassExecution,
+  ).runBatch(channels, batchOptions)
 }
 
 const createChannel = (
@@ -125,17 +159,30 @@ describe("runOctopusBatch", () => {
       onProgress,
     })
 
-    expect(fetchRemoteModelsMock).toHaveBeenCalledWith(config, {
-      type: 10,
-      base_urls: ["https://upstream.example.com"],
-      keys: ["key-1"],
-      proxy: "http://proxy.example.com",
-    })
+    expect(fetchRemoteModelsMock).toHaveBeenCalledWith(
+      config,
+      {
+        type: 10,
+        base_urls: ["https://upstream.example.com"],
+        keys: ["key-1"],
+        proxy: "http://proxy.example.com",
+      },
+      expect.objectContaining({
+        protectionBypassExecution: expect.objectContaining({
+          feature: PROTECTION_BYPASS_FEATURES.ManagedSiteModelSync,
+          trigger: PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.BackgroundRecovery,
+        }),
+      }),
+    )
     expect(updateModelsMock).toHaveBeenCalledWith(
       config,
       1,
       ["beta", "gamma"],
-      undefined,
+      expect.objectContaining({
+        protectionBypassExecution: expect.objectContaining({
+          feature: PROTECTION_BYPASS_FEATURES.ManagedSiteModelSync,
+        }),
+      }),
     )
     expect(updateChannelMock).not.toHaveBeenCalled()
     expect(result).toMatchObject({
@@ -165,6 +212,34 @@ describe("runOctopusBatch", () => {
         newModels: ["beta", "gamma"],
       }),
     })
+  })
+
+  it("preserves model-sync execution for Octopus reads and writes", async () => {
+    const execution = automaticExecution(
+      PROTECTION_BYPASS_FEATURES.ManagedSiteModelSync,
+      PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.BackgroundRecovery,
+    )
+    fetchRemoteModelsMock.mockResolvedValueOnce(["model-b"])
+
+    await createOctopusModelSyncCapability(config as any, execution).runBatch(
+      [createChannel()],
+      {
+        concurrency: 1,
+        maxRetries: 0,
+      },
+    )
+
+    expect(fetchRemoteModelsMock).toHaveBeenCalledWith(
+      config,
+      expect.anything(),
+      expect.objectContaining({ protectionBypassExecution: execution }),
+    )
+    expect(updateModelsMock).toHaveBeenCalledWith(
+      config,
+      1,
+      ["model-b"],
+      expect.objectContaining({ protectionBypassExecution: execution }),
+    )
   })
 
   it("applies the scoped resource filters before updating an Octopus channel", async () => {
@@ -213,7 +288,11 @@ describe("runOctopusBatch", () => {
       config,
       1,
       ["model-a"],
-      undefined,
+      expect.objectContaining({
+        protectionBypassExecution: expect.objectContaining({
+          feature: PROTECTION_BYPASS_FEATURES.ManagedSiteModelSync,
+        }),
+      }),
     )
     expect(result.items[0]).toMatchObject({
       ok: true,

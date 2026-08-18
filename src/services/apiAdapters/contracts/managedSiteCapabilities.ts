@@ -17,6 +17,7 @@ import type {
 
 export type ManagedSiteChannelRequestOptions = {
   signal?: AbortSignal
+  protectionBypassExecution?: ProtectionBypassExecution
   bypassSiteRequestLimit?: boolean
   /** Fail instead of returning a pagination-capped partial inventory. */
   requireCompleteInventory?: boolean

@@ -251,9 +251,10 @@ export const octopusManagedSiteChannels: ManagedSiteChannelsCapability<OctopusCo
         effect: octopusChannelEffect("models-updated", channelId),
         execute: async () => {
           const payload = { id: channelId, model: models.join(",") }
-          return options?.signal
+          return options
             ? await updateOctopusChannel(config, payload, {
                 signal: options.signal,
+                protectionBypassExecution: options.protectionBypassExecution,
               })
             : await updateOctopusChannel(config, payload)
         },
