@@ -31,6 +31,20 @@ const serviceItem = {
   state: API_CREDENTIAL_PROFILE_LINK_STATES.Active,
 }
 
+const keyResourceItem = {
+  associationId: "association-resource",
+  locator: {
+    source: "account_key_resource" as const,
+    ref: {
+      accountId: "account-example",
+      siteType: "openrouter" as const,
+      scopeKey: "workspace-example",
+      resourceId: "resource-example",
+    },
+  },
+  state: API_CREDENTIAL_PROFILE_LINK_STATES.Active,
+}
+
 function renderAssociations(
   props: Partial<
     ComponentProps<typeof ApiCredentialProfileKeyAssociations>
@@ -119,14 +133,17 @@ describe("ApiCredentialProfileKeyAssociations", () => {
     const user = userEvent.setup()
     const onOpenAssociatedKey = vi.fn()
     renderAssociations({
-      state: { status: "linked", items: [tokenItem, serviceItem] },
+      state: {
+        status: "linked",
+        items: [tokenItem, serviceItem, keyResourceItem],
+      },
       onOpenAssociatedKey,
     })
 
     const trigger = screen.getByRole("button", {
       name: /apiCredentialProfiles:association.linkedWithCount/,
     })
-    expect(trigger).toHaveTextContent("2")
+    expect(trigger).toHaveTextContent("3")
     await user.click(trigger)
 
     expect(
@@ -138,6 +155,9 @@ describe("ApiCredentialProfileKeyAssociations", () => {
       screen.getByText(
         "Second account · apiCredentialProfiles:association.serviceCredential",
       ),
+    ).toBeVisible()
+    expect(
+      screen.getByText("apiCredentialProfiles:association.keyResource"),
     ).toBeVisible()
     expect(
       screen.queryByText("apiCredentialProfiles:association.viewKeyNumber"),

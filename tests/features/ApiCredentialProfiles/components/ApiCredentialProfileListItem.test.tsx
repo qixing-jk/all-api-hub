@@ -163,6 +163,8 @@ function renderListItem(
     onRefreshTelemetry?: (profile: ApiCredentialProfile) => void
     visibleKeys?: Set<string>
     toggleKeyVisibility?: (profileId: string) => void
+    onCopyBundle?: (profile: ApiCredentialProfile) => void
+    onVerify?: (profile: ApiCredentialProfile) => void
     onExport?: (
       profile: ApiCredentialProfile,
       action: ApiCredentialProfileExportAction,
@@ -183,9 +185,9 @@ function renderListItem(
       visibleKeys={overrides.visibleKeys ?? new Set()}
       toggleKeyVisibility={overrides.toggleKeyVisibility ?? vi.fn()}
       onCopyApiKey={vi.fn()}
-      onCopyBundle={vi.fn()}
+      onCopyBundle={overrides.onCopyBundle ?? vi.fn()}
       onOpenModelManagement={vi.fn()}
-      onVerify={vi.fn()}
+      onVerify={overrides.onVerify ?? vi.fn()}
       onVerifyCliSupport={vi.fn()}
       onRefreshTelemetry={onRefreshTelemetry}
       onEdit={vi.fn()}
@@ -498,6 +500,47 @@ describe("ApiCredentialProfileListItem", () => {
     )
 
     expect(onExport).toHaveBeenCalledWith(profile, "cursorPlus")
+  })
+
+  it("routes bundle, provider export, gateway export, and verification actions", async () => {
+    const user = userEvent.setup()
+    const profile = buildProfile()
+    const onCopyBundle = vi.fn()
+    const onExport = vi.fn()
+    const onVerify = vi.fn()
+    renderListItem(profile, { onCopyBundle, onExport, onVerify })
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "apiCredentialProfiles:actions.copyBundle",
+      }),
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.useInCherry",
+      }),
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.importToCliProxy",
+      }),
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.importToClaudeCodeRouter",
+      }),
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: "apiCredentialProfiles:actions.verifyApi",
+      }),
+    )
+
+    expect(onCopyBundle).toHaveBeenCalledWith(profile)
+    expect(onExport).toHaveBeenCalledWith(profile, "cherryStudio")
+    expect(onExport).toHaveBeenCalledWith(profile, "cliProxy")
+    expect(onExport).toHaveBeenCalledWith(profile, "claudeCodeRouter")
+    expect(onVerify).toHaveBeenCalledWith(profile)
   })
 
   it("keeps managed-site import as a direct prioritized action", async () => {

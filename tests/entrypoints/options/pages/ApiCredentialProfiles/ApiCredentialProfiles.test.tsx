@@ -130,6 +130,18 @@ const mockDeleteProfile = vi.fn(async (id: string) => {
   return store.length !== before
 })
 
+const {
+  mockRelinkProfileLink,
+  mockToastError,
+  mockToastSuccess,
+  mockUnlinkProfileLink,
+} = vi.hoisted(() => ({
+  mockRelinkProfileLink: vi.fn(),
+  mockToastError: vi.fn(),
+  mockToastSuccess: vi.fn(),
+  mockUnlinkProfileLink: vi.fn(),
+}))
+
 type UserPreferencesContextValue = ReturnType<typeof useUserPreferencesContext>
 type ApiCredentialProfilesContextValue = Pick<
   UserPreferencesContextValue,
@@ -185,6 +197,21 @@ vi.mock(
     },
   }),
 )
+
+vi.mock("~/services/apiCredentialProfiles/apiCredentialProfileLinks", () => ({
+  apiCredentialProfileLinks: {
+    list: () => mockListProfileLinks(),
+    relink: mockRelinkProfileLink,
+    unlink: mockUnlinkProfileLink,
+  },
+}))
+
+vi.mock("react-hot-toast", () => ({
+  default: {
+    error: mockToastError,
+    success: mockToastSuccess,
+  },
+}))
 
 vi.mock("~/components/dialogs/ChannelDialog", () => ({
   ChannelDialogProvider: ({ children }: { children: ReactNode }) => children,
@@ -278,6 +305,12 @@ describe("ApiCredentialProfiles page", () => {
     replaceWithinOptionsPageMock.mockReset()
     mockOpenKeysPage.mockReset()
     mockDismissGatewayGuidanceSurface.mockReset()
+    mockRelinkProfileLink.mockReset()
+    mockRelinkProfileLink.mockResolvedValue(undefined)
+    mockUnlinkProfileLink.mockReset()
+    mockUnlinkProfileLink.mockResolvedValue(true)
+    mockToastError.mockReset()
+    mockToastSuccess.mockReset()
     mockUseUserPreferencesContext.mockReturnValue(
       createApiCredentialProfilesContextValue(),
     )
@@ -580,6 +613,190 @@ describe("ApiCredentialProfiles page", () => {
     expect(mockOpenKeysPage).toHaveBeenCalledWith({
       associationId: "association-1",
     })
+  })
+
+  it("confirms a stored association and refreshes its status", async () => {
+    const user = userEvent.setup()
+    store = [
+      {
+        id: "p-1",
+        name: "Association to confirm",
+        apiType: API_TYPES.OPENAI_COMPATIBLE,
+        baseUrl: "https://confirm.example.invalid",
+        apiKey: "sk-confirm",
+        tagIds: [],
+        notes: "",
+        createdAt: 1,
+        updatedAt: 1,
+      },
+    ]
+    const link = {
+      id: "association-confirm",
+      profileId: "p-1",
+      locator: {
+        source: ACCOUNT_RUNTIME_KEY_SOURCES.AccountToken,
+        accountId: "account-example",
+        siteType: SITE_TYPES.NEW_API,
+        tokenId: 1,
+      },
+      state: API_CREDENTIAL_PROFILE_LINK_STATES.NeedsConfirmation,
+      linkedBy: API_CREDENTIAL_PROFILE_LINK_SOURCES.ResolvedRuntimeKey,
+      createdAt: 1,
+      updatedAt: 1,
+    } satisfies ApiCredentialProfileLink
+    profileLinks = [link]
+
+    render(<ApiCredentialProfiles />)
+    await user.click(
+      await screen.findByTestId(
+        API_CREDENTIAL_PROFILES_TEST_IDS.associationButton,
+      ),
+    )
+    await user.click(
+      screen.getByRole("menuitem", {
+        name: "apiCredentialProfiles:association.confirmLink",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockRelinkProfileLink).toHaveBeenCalledWith({
+        id: link.id,
+        profileId: link.profileId,
+        locator: link.locator,
+        linkedBy: API_CREDENTIAL_PROFILE_LINK_SOURCES.User,
+      })
+      expect(mockToastSuccess).toHaveBeenCalledWith(
+        "apiCredentialProfiles:association.confirmed",
+      )
+    })
+    expect(mockListProfileLinks).toHaveBeenCalledTimes(2)
+  })
+
+  it("reports association confirmation failures without refreshing", async () => {
+    const user = userEvent.setup()
+    store = [
+      {
+        id: "p-1",
+        name: "Association failure",
+        apiType: API_TYPES.OPENAI_COMPATIBLE,
+        baseUrl: "https://failure.example.invalid",
+        apiKey: "sk-failure",
+        tagIds: [],
+        notes: "",
+        createdAt: 1,
+        updatedAt: 1,
+      },
+    ]
+    profileLinks = [
+      {
+        id: "association-failure",
+        profileId: "p-1",
+        locator: {
+          source: ACCOUNT_RUNTIME_KEY_SOURCES.AccountToken,
+          accountId: "account-example",
+          siteType: SITE_TYPES.NEW_API,
+          tokenId: 2,
+        },
+        state: API_CREDENTIAL_PROFILE_LINK_STATES.NeedsConfirmation,
+        linkedBy: API_CREDENTIAL_PROFILE_LINK_SOURCES.ResolvedRuntimeKey,
+        createdAt: 1,
+        updatedAt: 1,
+      },
+    ]
+    mockRelinkProfileLink.mockRejectedValueOnce(
+      new Error("storage unavailable"),
+    )
+
+    render(<ApiCredentialProfiles />)
+    await user.click(
+      await screen.findByTestId(
+        API_CREDENTIAL_PROFILES_TEST_IDS.associationButton,
+      ),
+    )
+    await user.click(
+      screen.getByRole("menuitem", {
+        name: "apiCredentialProfiles:association.confirmLink",
+      }),
+    )
+
+    await waitFor(() =>
+      expect(mockToastError).toHaveBeenCalledWith(
+        "apiCredentialProfiles:association.updateFailed",
+      ),
+    )
+    expect(mockListProfileLinks).toHaveBeenCalledOnce()
+  })
+
+  it("refreshes only persisted association removals and reports failures", async () => {
+    const user = userEvent.setup()
+    store = [
+      {
+        id: "p-1",
+        name: "Linked profile",
+        apiType: API_TYPES.OPENAI_COMPATIBLE,
+        baseUrl: "https://linked.example.invalid",
+        apiKey: "sk-linked",
+        tagIds: [],
+        notes: "",
+        createdAt: 1,
+        updatedAt: 1,
+      },
+    ]
+    profileLinks = [
+      {
+        id: "association-remove",
+        profileId: "p-1",
+        locator: {
+          source: ACCOUNT_RUNTIME_KEY_SOURCES.AccountToken,
+          accountId: "account-example",
+          siteType: SITE_TYPES.NEW_API,
+          tokenId: 3,
+        },
+        state: API_CREDENTIAL_PROFILE_LINK_STATES.Active,
+        linkedBy: API_CREDENTIAL_PROFILE_LINK_SOURCES.User,
+        createdAt: 1,
+        updatedAt: 1,
+      },
+    ]
+    mockUnlinkProfileLink
+      .mockResolvedValueOnce(false)
+      .mockResolvedValueOnce(true)
+      .mockRejectedValueOnce(new Error("storage unavailable"))
+
+    render(<ApiCredentialProfiles />)
+    const openMenu = async () => {
+      await user.click(
+        await screen.findByTestId(
+          API_CREDENTIAL_PROFILES_TEST_IDS.associationButton,
+        ),
+      )
+    }
+    const removeAssociation = async () => {
+      await user.click(
+        screen.getByRole("menuitem", {
+          name: "apiCredentialProfiles:association.removeLink",
+        }),
+      )
+    }
+
+    await openMenu()
+    await removeAssociation()
+    await waitFor(() => expect(mockUnlinkProfileLink).toHaveBeenCalledTimes(1))
+    expect(mockListProfileLinks).toHaveBeenCalledOnce()
+
+    await openMenu()
+    await removeAssociation()
+    await waitFor(() => expect(mockToastSuccess).toHaveBeenCalledOnce())
+    expect(mockListProfileLinks).toHaveBeenCalledTimes(2)
+
+    await openMenu()
+    await removeAssociation()
+    await waitFor(() =>
+      expect(mockToastError).toHaveBeenCalledWith(
+        "apiCredentialProfiles:association.updateFailed",
+      ),
+    )
+    expect(mockListProfileLinks).toHaveBeenCalledTimes(2)
   })
 
   it("keeps association status unknown while links are loading", async () => {

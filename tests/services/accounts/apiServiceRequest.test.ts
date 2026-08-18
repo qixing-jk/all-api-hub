@@ -1342,6 +1342,69 @@ describe("fetchDisplayAccountTokens", () => {
     expect(resolveTokenKey).not.toHaveBeenCalled()
   })
 
+  it("supports explicit associated-profile token resolution and reports missing links", async () => {
+    const token = {
+      id: 42,
+      key: "sk-masked********",
+      status: 1,
+      name: "Associated",
+    }
+    vi.mocked(resolveAssociatedProfileSecret).mockResolvedValueOnce({
+      status: "resolved",
+      secret: "associated-secret",
+      profile: { baseUrl: "https://associated.example.invalid" },
+    } as any)
+
+    await expect(
+      resolveDisplayAccountTokenForSecret(ACCOUNT as any, token as any, {
+        secretSource: ACCOUNT_RUNTIME_KEY_SECRET_SOURCES.AssociatedProfile,
+      }),
+    ).resolves.toMatchObject({ key: "sk-associated-secret" })
+
+    vi.mocked(resolveAssociatedProfileSecret).mockResolvedValueOnce({
+      status: "not-found",
+    } as any)
+    await expect(
+      resolveDisplayAccountTokenForSecret(ACCOUNT as any, token as any, {
+        secretSource: ACCOUNT_RUNTIME_KEY_SECRET_SOURCES.AssociatedProfile,
+      }),
+    ).rejects.toThrow("account_runtime_key_secret_unavailable:not-found")
+  })
+
+  it("falls back from token provider resolution without hiding the original failure", async () => {
+    const token = {
+      id: 43,
+      key: "sk-masked********",
+      status: 1,
+      name: "Fallback",
+    }
+    resolveTokenKey.mockRejectedValueOnce(new Error("provider unavailable"))
+    vi.mocked(resolveAssociatedProfileSecret).mockResolvedValueOnce({
+      status: "resolved",
+      secret: "associated-fallback-secret",
+      profile: { baseUrl: "https://associated.example.invalid" },
+    } as any)
+
+    await expect(
+      resolveDisplayAccountTokenForSecret(ACCOUNT as any, token as any, {
+        secretSource:
+          ACCOUNT_RUNTIME_KEY_SECRET_SOURCES.ProviderThenAssociatedProfile,
+      }),
+    ).resolves.toMatchObject({ key: "sk-associated-fallback-secret" })
+
+    const providerError = new Error("original provider failure")
+    resolveTokenKey.mockRejectedValueOnce(providerError)
+    vi.mocked(resolveAssociatedProfileSecret).mockResolvedValueOnce({
+      status: "not-found",
+    } as any)
+    await expect(
+      resolveDisplayAccountTokenForSecret(ACCOUNT as any, token as any, {
+        secretSource:
+          ACCOUNT_RUNTIME_KEY_SECRET_SOURCES.ProviderThenAssociatedProfile,
+      }),
+    ).rejects.toBe(providerError)
+  })
+
   it("keeps a newly created full secret for create-response-only account tokens", async () => {
     capabilities = {
       siteType: SITE_TYPES.AIHUBMIX,
@@ -1369,6 +1432,131 @@ describe("fetchDisplayAccountTokens", () => {
     ).resolves.toBe(token)
     expect(resolveAssociatedProfileSecret).not.toHaveBeenCalled()
     expect(resolveTokenKey).not.toHaveBeenCalled()
+  })
+
+  it("reports unavailable native resource resolution boundaries", async () => {
+    const resourceAccount = {
+      ...ACCOUNT,
+      siteType: SITE_TYPES.OPENROUTER,
+    }
+    const runtimeKey = buildAccountKeyResourceRuntimeKey(
+      resourceAccount as any,
+      {
+        ref: {
+          accountId: ACCOUNT.id,
+          siteType: SITE_TYPES.OPENROUTER,
+          scopeKey: "workspace-example",
+          resourceId: "resource-example",
+        },
+        label: "Example resource",
+        secret: "",
+      },
+    )
+
+    vi.mocked(getSiteTypeCapabilities).mockReturnValueOnce({
+      siteType: SITE_TYPES.OPENROUTER,
+      account: {},
+    } as any)
+    await expect(
+      resolveDisplayAccountRuntimeKeySecret(
+        resourceAccount as any,
+        runtimeKey,
+        { secretSource: ACCOUNT_RUNTIME_KEY_SECRET_SOURCES.Provider },
+      ),
+    ).rejects.toThrow(
+      "account_runtime_key_secret_unavailable:provider-capability-unavailable",
+    )
+
+    vi.mocked(getSiteTypeCapabilities).mockReturnValueOnce({
+      siteType: SITE_TYPES.OPENROUTER,
+      account: {
+        keyResourceManagement: {
+          open: vi.fn().mockResolvedValue({}),
+        },
+      },
+    } as any)
+    await expect(
+      resolveDisplayAccountRuntimeKeySecret(
+        resourceAccount as any,
+        runtimeKey,
+        { secretSource: ACCOUNT_RUNTIME_KEY_SECRET_SOURCES.Provider },
+      ),
+    ).rejects.toThrow(
+      "account_runtime_key_secret_unavailable:provider-resolution-unavailable",
+    )
+
+    const abortController = new AbortController()
+    const resolve = vi.fn().mockResolvedValue({
+      kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Resolved,
+      secret: " ",
+    })
+    const open = vi.fn().mockResolvedValue({ runtimeKey: { resolve } })
+    vi.mocked(getSiteTypeCapabilities).mockReturnValueOnce({
+      siteType: SITE_TYPES.OPENROUTER,
+      account: { keyResourceManagement: { open } },
+    } as any)
+    await expect(
+      resolveDisplayAccountRuntimeKeySecret(
+        resourceAccount as any,
+        runtimeKey,
+        {
+          abortSignal: abortController.signal,
+          secretSource: ACCOUNT_RUNTIME_KEY_SECRET_SOURCES.Provider,
+        },
+      ),
+    ).rejects.toThrow(
+      "account_runtime_key_secret_unavailable:empty-provider-secret",
+    )
+    expect(open).toHaveBeenCalledWith(expect.anything(), {
+      signal: abortController.signal,
+    })
+    expect(resolve).toHaveBeenCalledWith(runtimeKey.resourceRef, {
+      signal: abortController.signal,
+    })
+  })
+
+  it("keeps native provider-first resolution authoritative when fallback also fails", async () => {
+    const resolve = vi.fn().mockResolvedValueOnce({
+      kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Resolved,
+      secret: "provider-secret",
+    })
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue({
+      siteType: SITE_TYPES.NEW_API,
+      account: {
+        keyResourceManagement: {
+          open: vi.fn().mockResolvedValue({ runtimeKey: { resolve } }),
+        },
+      },
+    } as any)
+    const runtimeKey = buildAccountKeyResourceRuntimeKey(ACCOUNT as any, {
+      ref: {
+        accountId: ACCOUNT.id,
+        siteType: SITE_TYPES.NEW_API,
+        scopeKey: "account",
+        resourceId: "resource-provider-first",
+      },
+      label: "Provider-first key",
+      secret: "",
+    })
+
+    await expect(
+      resolveDisplayAccountRuntimeKeySecret(ACCOUNT as any, runtimeKey, {
+        secretSource:
+          ACCOUNT_RUNTIME_KEY_SECRET_SOURCES.ProviderThenAssociatedProfile,
+      }),
+    ).resolves.toMatchObject({ secret: "sk-provider-secret" })
+
+    const providerError = new Error("provider resolution failed")
+    resolve.mockRejectedValueOnce(providerError)
+    vi.mocked(resolveAssociatedProfileSecret).mockResolvedValueOnce({
+      status: "not-found",
+    } as any)
+    await expect(
+      resolveDisplayAccountRuntimeKeySecret(ACCOUNT as any, runtimeKey, {
+        secretSource:
+          ACCOUNT_RUNTIME_KEY_SECRET_SOURCES.ProviderThenAssociatedProfile,
+      }),
+    ).rejects.toBe(providerError)
   })
 
   it("resolves account-token runtime key secrets without double-formatting optional prefixes", async () => {
