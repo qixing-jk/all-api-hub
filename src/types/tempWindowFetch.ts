@@ -67,14 +67,23 @@ export interface TempWindowFetchParams {
 }
 
 /** Closed provider request used for Octopus' same-origin admin cookie. */
+export const OCTOPUS_API_RESOURCE_BINDINGS = {
+  ConfigurationTest: "configuration_test",
+} as const
+
+export type OctopusApiResourceBinding =
+  (typeof OCTOPUS_API_RESOURCE_BINDINGS)[keyof typeof OCTOPUS_API_RESOURCE_BINDINGS]
+
 export interface TempWindowOctopusApiFetchParams {
   originUrl: string
+  resourceUsername: string
   fetchUrl: string
   fetchOptions?: RequestInit
   requestId?: string
   responseType?: TempWindowResponseType
   tempWindowRequestSource?: TempWindowRequestSource
   protectionBypassExecution: ProtectionBypassExecution
+  resourceBinding?: OctopusApiResourceBinding
 }
 
 export type TempWindowTurnstileStatus =

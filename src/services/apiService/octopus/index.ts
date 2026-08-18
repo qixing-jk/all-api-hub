@@ -4,10 +4,13 @@
  */
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { userPreferences } from "~/services/preferences/userPreferences"
+import { createUserCommandProtectionBypassExecution } from "~/services/protectionBypass/client"
 import {
   createAutomaticProtectionBypassExecution,
   PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
   PROTECTION_BYPASS_FEATURES,
+  PROTECTION_BYPASS_SURFACES,
+  PROTECTION_BYPASS_USER_COMMANDS,
   type ProtectionBypassExecution,
 } from "~/services/protectionBypass/contracts"
 import type {
@@ -18,7 +21,11 @@ import type {
   OctopusUpdateChannelRequest,
 } from "~/types/octopus"
 import type { OctopusConfig } from "~/types/octopusConfig"
-import type { TempWindowFetch } from "~/types/tempWindowFetch"
+import {
+  OCTOPUS_API_RESOURCE_BINDINGS,
+  type OctopusApiResourceBinding,
+  type TempWindowFetch,
+} from "~/types/tempWindowFetch"
 import { getCurrentTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 import { safeRandomUUID } from "~/utils/core/identifier"
 import { createLogger } from "~/utils/core/logger"
@@ -36,6 +43,7 @@ const logger = createLogger("OctopusAPI")
 
 type OctopusRequestInit = RequestInit & {
   protectionBypassExecution?: ProtectionBypassExecution
+  resourceBinding?: OctopusApiResourceBinding
 }
 
 const resolveOctopusProtectionExecution = (
@@ -52,6 +60,13 @@ const resolveOctopusProtectionExecution = (
   )
 }
 
+const throwIfOctopusRequestAborted = (signal?: AbortSignal) => {
+  if (!signal?.aborted) return
+  throw (
+    signal.reason ?? new DOMException("The operation was aborted", "AbortError")
+  )
+}
+
 /** Runs the current Octopus cookie contract in its same-origin browser context. */
 const fetchOctopusCookieApi = async (params: {
   config: OctopusConfig
@@ -60,13 +75,16 @@ const fetchOctopusCookieApi = async (params: {
   endpoint: string
   fetchOptions: RequestInit
   protectionBypassExecution?: ProtectionBypassExecution
+  resourceBinding?: OctopusApiResourceBinding
 }): Promise<TempWindowFetch> => {
   const execution = resolveOctopusProtectionExecution(
     params.protectionBypassExecution,
   )
-  const perform = async (endpoint: string, init: RequestInit) =>
-    await tempWindowOctopusApiFetch({
+  const perform = async (endpoint: string, init: RequestInit) => {
+    throwIfOctopusRequestAborted(params.fetchOptions.signal ?? undefined)
+    return await tempWindowOctopusApiFetch({
       originUrl: params.baseUrl,
+      resourceUsername: params.config.username,
       fetchUrl: `${params.baseUrl}${endpoint}`,
       fetchOptions: {
         ...init,
@@ -74,12 +92,15 @@ const fetchOctopusCookieApi = async (params: {
         headers: createOctopusRequestHeaders(params.session, init.headers),
       },
       requestId: safeRandomUUID(`octopus-${endpoint}`),
+      resourceBinding: params.resourceBinding,
       protectionBypassExecution: execution,
     })
+  }
 
   let response = await perform(params.endpoint, params.fetchOptions)
   if (response.status !== 401) return response
 
+  throwIfOctopusRequestAborted(params.fetchOptions.signal ?? undefined)
   const login = await perform("/api/v1/user/login", {
     method: "POST",
     body: JSON.stringify({
@@ -90,6 +111,7 @@ const fetchOctopusCookieApi = async (params: {
   if (!login.success) {
     throw new Error(login.error || "Octopus cookie login failed")
   }
+  throwIfOctopusRequestAborted(params.fetchOptions.signal ?? undefined)
   response = await perform(params.endpoint, params.fetchOptions)
   return response
 }
@@ -159,6 +181,7 @@ async function fetchOctopusApi<T>(
   endpoint: string,
   options: OctopusRequestInit = {},
   requestKind: "read" | "mutation" = "read",
+  retryAfterUnauthorized = true,
 ): Promise<OctopusApiResponse<T>> {
   const signal = options.signal ?? undefined
   const isMutation = requestKind === "mutation"
@@ -167,9 +190,11 @@ async function fetchOctopusApi<T>(
   let responseStatus: number | undefined
 
   try {
+    throwIfOctopusRequestAborted(signal)
     const session = await octopusAuthManager.getValidSession(config, {
       signal,
     })
+    throwIfOctopusRequestAborted(signal)
     const baseUrl = normalizeBaseUrl(config.baseUrl)
     const url = `${baseUrl}${endpoint}`
 
@@ -186,7 +211,8 @@ async function fetchOctopusApi<T>(
       })
     }
 
-    const { protectionBypassExecution, ...fetchOptions } = options
+    const { protectionBypassExecution, resourceBinding, ...fetchOptions } =
+      options
     let data: unknown
 
     if (session.mode === OCTOPUS_AUTH_MODES.Cookie) {
@@ -197,6 +223,7 @@ async function fetchOctopusApi<T>(
         endpoint,
         fetchOptions,
         protectionBypassExecution,
+        resourceBinding,
       })
 
       fetchStarted =
@@ -204,6 +231,16 @@ async function fetchOctopusApi<T>(
       responseReceived =
         remote.transportLifecycle?.upstreamResponseReceived ?? false
       responseStatus = remote.status
+      if (remote.status === 401 && retryAfterUnauthorized) {
+        octopusAuthManager.clearCache(config.baseUrl, config.username)
+        return await fetchOctopusApi(
+          config,
+          endpoint,
+          options,
+          requestKind,
+          false,
+        )
+      }
       if (!remote.success) {
         throw new Error(
           remote.status
@@ -221,6 +258,17 @@ async function fetchOctopusApi<T>(
       })
       responseReceived = true
       responseStatus = response.status
+
+      if (response.status === 401 && retryAfterUnauthorized) {
+        octopusAuthManager.clearCache(config.baseUrl, config.username)
+        return await fetchOctopusApi(
+          config,
+          endpoint,
+          options,
+          requestKind,
+          false,
+        )
+      }
 
       // 检查 HTTP 状态码，处理非成功响应
       if (!response.ok) {
@@ -311,7 +359,10 @@ async function fetchOctopusApi<T>(
  */
 export async function listChannels(
   config: OctopusConfig,
-  options?: Pick<RequestInit, "signal">,
+  options?: Pick<
+    OctopusRequestInit,
+    "signal" | "protectionBypassExecution" | "resourceBinding"
+  >,
 ): Promise<OctopusChannel[]> {
   try {
     const result = await fetchOctopusApi<OctopusChannel[]>(
@@ -323,6 +374,30 @@ export async function listChannels(
   } catch (error) {
     logger.error("Failed to list channels", error)
     throw error
+  }
+}
+
+/** Validates both authentication and a harmless protected Octopus read. */
+export async function validateOctopusConfig(
+  config: OctopusConfig,
+): Promise<{ success: boolean; error?: string }> {
+  const authResult = await octopusAuthManager.validateConfig(config)
+  if (!authResult.success) return authResult
+
+  try {
+    await listChannels(config, {
+      protectionBypassExecution: createUserCommandProtectionBypassExecution(
+        PROTECTION_BYPASS_USER_COMMANDS.ManageSiteChannels,
+        PROTECTION_BYPASS_SURFACES.Options,
+      ),
+      resourceBinding: OCTOPUS_API_RESOURCE_BINDINGS.ConfigurationTest,
+    })
+    return { success: true }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : undefined,
+    }
   }
 }
 
@@ -375,7 +450,7 @@ export async function createChannel(
 export async function updateChannel(
   config: OctopusConfig,
   data: OctopusUpdateChannelRequest,
-  options?: Pick<RequestInit, "signal">,
+  options?: Pick<OctopusRequestInit, "signal" | "protectionBypassExecution">,
 ): Promise<OctopusApiResponse<OctopusChannel>> {
   try {
     const result = await fetchOctopusApi<OctopusChannel>(
@@ -385,6 +460,7 @@ export async function updateChannel(
         method: "POST",
         body: JSON.stringify(data),
         signal: options?.signal,
+        protectionBypassExecution: options?.protectionBypassExecution,
       },
       "mutation",
     )
@@ -426,7 +502,7 @@ export async function deleteChannel(
 export async function fetchRemoteModels(
   config: OctopusConfig,
   channelData: OctopusFetchModelRequest,
-  options?: Pick<RequestInit, "signal">,
+  options?: Pick<OctopusRequestInit, "signal" | "protectionBypassExecution">,
 ): Promise<string[]> {
   try {
     const result = await fetchOctopusApi<string[]>(
@@ -436,6 +512,7 @@ export async function fetchRemoteModels(
         method: "POST",
         body: JSON.stringify(channelData),
         signal: options?.signal,
+        protectionBypassExecution: options?.protectionBypassExecution,
       },
     )
     return result.data || []

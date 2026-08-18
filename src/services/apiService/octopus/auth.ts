@@ -47,11 +47,6 @@ interface OctopusLoginEnvelope {
   data?: unknown
 }
 
-interface AuthCacheEntry {
-  session: OctopusAuthSession
-  expireAt: number
-}
-
 const DEFAULT_SESSION_TTL_MS = 15 * 60 * 1000
 
 const isLegacyLoginResponse = (
@@ -80,7 +75,7 @@ const resolveExpireAt = (expireAt: string | undefined): number => {
  * 负责自动登录和 Token 生命周期管理
  */
 class OctopusAuthManager {
-  private authCache: Map<string, AuthCacheEntry> = new Map()
+  private authCache: Map<string, OctopusAuthSession> = new Map()
 
   /**
    * 生成缓存键
@@ -181,7 +176,7 @@ class OctopusAuthManager {
     // 检查内存缓存是否有效（提前 1 分钟刷新，因为默认有效期较短）
     const bufferTime = 1 * 60 * 1000
     if (cached && cached.expireAt > Date.now() + bufferTime) {
-      return cached.session
+      return cached
     }
 
     // 自动登录获取新 Token
@@ -196,10 +191,7 @@ class OctopusAuthManager {
     )
 
     // 更新内存缓存
-    this.authCache.set(cacheKey, {
-      session,
-      expireAt: session.expireAt,
-    })
+    this.authCache.set(cacheKey, session)
 
     return session
   }
@@ -212,6 +204,9 @@ class OctopusAuthManager {
     config: OctopusConfig,
   ): Promise<{ success: boolean; error?: string }> {
     try {
+      // Validation must exercise the submitted password, not a session cached
+      // for the same origin and username under older credentials.
+      this.clearCache(config.baseUrl, config.username)
       await this.getValidSession(config)
       return { success: true }
     } catch (error) {

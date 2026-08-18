@@ -358,6 +358,35 @@ describe("Octopus auth manager", () => {
     expect(tokenSpy).toHaveBeenCalledTimes(1)
   })
 
+  it("does not validate changed credentials from a cached session", async () => {
+    const config = {
+      baseUrl: "https://octopus.example.com",
+      username: "alice",
+      password: "old-secret",
+    }
+    const loginSpy = vi
+      .spyOn(octopusAuthManager, "login")
+      .mockResolvedValueOnce({
+        mode: "bearer",
+        token: "cached-token",
+        expireAt: 1_700_000_900_000,
+      })
+      .mockRejectedValueOnce(new Error("bad credentials"))
+
+    await octopusAuthManager.getValidSession(config)
+
+    await expect(
+      octopusAuthManager.validateConfig({
+        ...config,
+        password: "wrong-secret",
+      }),
+    ).resolves.toEqual({
+      success: false,
+      error: "bad credentials",
+    })
+    expect(loginSpy).toHaveBeenCalledTimes(2)
+  })
+
   it("clearCache invalidates only the targeted cached credential", async () => {
     const nowSpy = vi.spyOn(Date, "now").mockReturnValue(1_700_000_000_000)
     const loginSpy = vi

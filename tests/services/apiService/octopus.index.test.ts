@@ -13,16 +13,27 @@ import {
   OctopusMutationApiError,
   searchChannels,
   updateChannel,
+  validateOctopusConfig,
 } from "~/services/apiService/octopus"
+import {
+  createAutomaticProtectionBypassExecution,
+  PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
+  PROTECTION_BYPASS_FEATURES,
+  PROTECTION_BYPASS_SURFACES,
+} from "~/services/protectionBypass/contracts"
 import { OctopusAutoGroupType, OctopusOutboundType } from "~/types/octopus"
 
 const {
   mockGetValidSession,
+  mockClearCache,
+  mockValidateConfig,
   mockGetPreferences,
   mockTempWindowOctopusApiFetch,
   mockLogger,
 } = vi.hoisted(() => ({
   mockGetValidSession: vi.fn(),
+  mockClearCache: vi.fn(),
+  mockValidateConfig: vi.fn(),
   mockGetPreferences: vi.fn(),
   mockTempWindowOctopusApiFetch: vi.fn(),
   mockLogger: {
@@ -40,6 +51,8 @@ vi.mock("~/services/apiService/octopus/auth", () => ({
   },
   octopusAuthManager: {
     getValidSession: mockGetValidSession,
+    clearCache: mockClearCache,
+    validateConfig: mockValidateConfig,
   },
 }))
 
@@ -72,6 +85,7 @@ describe("Octopus API service", () => {
       token: "jwt-token",
       expireAt: 1_700_000_900_000,
     })
+    mockValidateConfig.mockResolvedValue({ success: true })
   })
 
   it("lists channels with JWT auth headers", async () => {
@@ -141,6 +155,64 @@ describe("Octopus API service", () => {
     )
   })
 
+  it("validates cookie configurations through a protected channel read", async () => {
+    mockGetValidSession.mockResolvedValueOnce({
+      mode: "cookie",
+      expireAt: 1_700_000_900_000,
+    })
+    mockTempWindowOctopusApiFetch.mockResolvedValueOnce({
+      success: true,
+      status: 200,
+      data: { code: 200, data: [] },
+      transportLifecycle: {
+        upstreamRequestDispatched: true,
+        upstreamResponseReceived: true,
+      },
+    })
+
+    await expect(validateOctopusConfig(config)).resolves.toEqual({
+      success: true,
+    })
+
+    expect(mockValidateConfig).toHaveBeenCalledWith(config)
+    expect(mockTempWindowOctopusApiFetch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        resourceBinding: "configuration_test",
+        protectionBypassExecution: expect.objectContaining({
+          kind: "user_command",
+          command: "manage_site_channels",
+          surface: "options",
+        }),
+      }),
+    )
+  })
+
+  it("does not probe channels after authentication validation fails", async () => {
+    mockValidateConfig.mockResolvedValueOnce({
+      success: false,
+      error: "bad credentials",
+    })
+
+    await expect(validateOctopusConfig(config)).resolves.toEqual({
+      success: false,
+      error: "bad credentials",
+    })
+    expect(mockGetValidSession).not.toHaveBeenCalled()
+    expect(mockTempWindowOctopusApiFetch).not.toHaveBeenCalled()
+  })
+
+  it("does not dispatch a cookie request when the caller already aborted", async () => {
+    const controller = new AbortController()
+    controller.abort(new DOMException("cancelled", "AbortError"))
+
+    await expect(
+      listChannels(config, { signal: controller.signal }),
+    ).rejects.toThrow(/cancelled/i)
+
+    expect(mockGetValidSession).not.toHaveBeenCalled()
+    expect(mockTempWindowOctopusApiFetch).not.toHaveBeenCalled()
+  })
+
   it("establishes a same-origin cookie session after 401 and retries the mutation", async () => {
     mockGetValidSession.mockResolvedValueOnce({
       mode: "cookie",
@@ -199,6 +271,119 @@ describe("Octopus API service", () => {
         mockTempWindowOctopusApiFetch.mock.calls[1][0].fetchOptions.body,
       ),
     ).toEqual({ username: "alice", password: "secret" })
+  })
+
+  it("preserves one model-sync execution across cookie login and retry", async () => {
+    const execution = createAutomaticProtectionBypassExecution(
+      PROTECTION_BYPASS_FEATURES.ManagedSiteModelSync,
+      PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.Scheduled,
+      PROTECTION_BYPASS_SURFACES.Background,
+    )
+    mockGetValidSession.mockResolvedValueOnce({
+      mode: "cookie",
+      expireAt: 1_700_000_900_000,
+    })
+    mockTempWindowOctopusApiFetch
+      .mockResolvedValueOnce({
+        success: false,
+        status: 401,
+        error: "unauthorized",
+        transportLifecycle: {
+          upstreamRequestDispatched: true,
+          upstreamResponseReceived: true,
+        },
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        status: 200,
+        data: { code: 200, data: "login successfully" },
+        transportLifecycle: {
+          upstreamRequestDispatched: true,
+          upstreamResponseReceived: true,
+        },
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        status: 200,
+        data: { code: 200, data: [] },
+        transportLifecycle: {
+          upstreamRequestDispatched: true,
+          upstreamResponseReceived: true,
+        },
+      })
+
+    await expect(
+      listChannels(config, { protectionBypassExecution: execution }),
+    ).resolves.toEqual([])
+
+    expect(mockTempWindowOctopusApiFetch).toHaveBeenCalledTimes(3)
+    for (const [request] of mockTempWindowOctopusApiFetch.mock.calls) {
+      expect(request.protectionBypassExecution).toBe(execution)
+    }
+  })
+
+  it("renegotiates once when a cached legacy JWT receives 401", async () => {
+    mockGetValidSession
+      .mockResolvedValueOnce({
+        mode: "bearer",
+        token: "expired-jwt",
+        expireAt: 1_700_000_900_000,
+      })
+      .mockResolvedValueOnce({
+        mode: "cookie",
+        expireAt: 1_700_000_900_000,
+      })
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(
+        new Response(JSON.stringify({ message: "unauthorized" }), {
+          status: 401,
+          headers: { "Content-Type": "application/json" },
+        }),
+      ),
+    )
+    mockTempWindowOctopusApiFetch.mockResolvedValueOnce({
+      success: true,
+      status: 200,
+      data: { code: 200, data: [] },
+      transportLifecycle: {
+        upstreamRequestDispatched: true,
+        upstreamResponseReceived: true,
+      },
+    })
+
+    await expect(listChannels(config)).resolves.toEqual([])
+
+    expect(mockClearCache).toHaveBeenCalledWith(config.baseUrl, config.username)
+    expect(mockGetValidSession).toHaveBeenCalledTimes(2)
+    expect(mockTempWindowOctopusApiFetch).toHaveBeenCalledOnce()
+  })
+
+  it("does not renegotiate repeatedly when refreshed JWT auth still returns 401", async () => {
+    mockGetValidSession
+      .mockResolvedValueOnce({
+        mode: "bearer",
+        token: "expired-jwt",
+        expireAt: 1_700_000_900_000,
+      })
+      .mockResolvedValueOnce({
+        mode: "bearer",
+        token: "replacement-jwt",
+        expireAt: 1_700_000_900_000,
+      })
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ message: "unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      }),
+    )
+    vi.stubGlobal("fetch", fetchMock)
+
+    await expect(listChannels(config)).rejects.toThrow(/HTTP 401/i)
+
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(mockGetValidSession).toHaveBeenCalledTimes(2)
+    expect(mockClearCache).toHaveBeenCalledTimes(1)
   })
 
   it("filters searched channels by name and upstream URL", async () => {

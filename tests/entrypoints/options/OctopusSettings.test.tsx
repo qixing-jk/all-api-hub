@@ -3,7 +3,7 @@ import toast from "react-hot-toast"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import OctopusSettings from "~/features/BasicSettings/components/tabs/ManagedSite/OctopusSettings"
-import { octopusAuthManager } from "~/services/apiService/octopus/auth"
+import { validateOctopusConfig } from "~/services/apiService/octopus"
 import type { PreferenceWriteResult } from "~/services/preferences/userPreferences"
 import { showUpdateToast } from "~/utils/core/toastHelpers"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
@@ -38,10 +38,9 @@ vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
   }
 })
 
-vi.mock("~/services/apiService/octopus/auth", () => ({
-  octopusAuthManager: {
-    validateConfig: vi.fn(),
-  },
+vi.mock("~/services/apiService/octopus", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/services/apiService/octopus")>()),
+  validateOctopusConfig: vi.fn(),
 }))
 
 vi.mock("~/utils/core/toastHelpers", () => ({
@@ -184,9 +183,7 @@ vi.mock("~/components/ui", async (importOriginal) => {
   }
 })
 
-const mockedValidateConfig = octopusAuthManager.validateConfig as ReturnType<
-  typeof vi.fn
->
+const mockedValidateConfig = validateOctopusConfig as ReturnType<typeof vi.fn>
 const mockedShowUpdateToast = showUpdateToast as ReturnType<typeof vi.fn>
 
 const createContextValue = (overrides: Record<string, unknown> = {}) => ({

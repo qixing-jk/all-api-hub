@@ -6,6 +6,7 @@ import {
 } from "~/services/apiAdapters/openrouter/managementKeyPageContract"
 import { AuthTypeEnum } from "~/types/auth"
 import {
+  OCTOPUS_API_RESOURCE_BINDINGS,
   TEMP_WINDOW_REQUEST_SOURCES,
   type TempWindowRequestSource,
   type TempWindowResponseType,
@@ -480,10 +481,12 @@ const NEW_API_SESSION_READ_PARAM_KEYS = new Set([
 
 const OCTOPUS_API_FETCH_PARAM_KEYS = new Set([
   "originUrl",
+  "resourceUsername",
   "fetchUrl",
   "fetchOptions",
   "requestId",
   "responseType",
+  "resourceBinding",
 ])
 
 const TEMP_WINDOW_RESPONSE_TYPES = new Set<TempWindowResponseType>([
@@ -632,6 +635,11 @@ const OCTOPUS_ENDPOINT_METHODS = [
   { pattern: /^\/api\/v1\/(?:model|group)\/list$/u, method: "GET" },
 ] as const
 
+const OCTOPUS_CONFIGURATION_TEST_ENDPOINT_METHODS = [
+  { pathname: "/api/v1/user/login", method: "POST" },
+  { pathname: "/api/v1/channel/list", method: "GET" },
+] as const
+
 /** Validates the narrow Octopus endpoint allow-list at the runtime boundary. */
 function isTempWindowOctopusApiFetchParams(
   value: Record<string, unknown>,
@@ -641,7 +649,11 @@ function isTempWindowOctopusApiFetchParams(
   ) {
     return false
   }
-  if (!isCanonicalHttpOrigin(value.originUrl) || !isHttpUrl(value.fetchUrl)) {
+  if (
+    !isCanonicalHttpOrigin(value.originUrl) ||
+    !isNonEmptyString(value.resourceUsername) ||
+    !isHttpUrl(value.fetchUrl)
+  ) {
     return false
   }
   if (value.fetchOptions !== undefined && !isPlainObject(value.fetchOptions)) {
@@ -649,7 +661,9 @@ function isTempWindowOctopusApiFetchParams(
   }
   if (
     !isOptionalRequestId(value.requestId) ||
-    (value.responseType !== undefined && value.responseType !== "json")
+    (value.responseType !== undefined && value.responseType !== "json") ||
+    (value.resourceBinding !== undefined &&
+      value.resourceBinding !== OCTOPUS_API_RESOURCE_BINDINGS.ConfigurationTest)
   ) {
     return false
   }
@@ -659,15 +673,23 @@ function isTempWindowOctopusApiFetchParams(
     const options = (value.fetchOptions ?? {}) as Record<string, unknown>
     const method =
       typeof options.method === "string" ? options.method.toUpperCase() : "GET"
+    const endpointIsAllowed = OCTOPUS_ENDPOINT_METHODS.some(
+      (endpoint) =>
+        endpoint.method === method && endpoint.pattern.test(fetchUrl.pathname),
+    )
+    const configurationTestEndpointIsAllowed =
+      value.resourceBinding !==
+        OCTOPUS_API_RESOURCE_BINDINGS.ConfigurationTest ||
+      OCTOPUS_CONFIGURATION_TEST_ENDPOINT_METHODS.some(
+        (endpoint) =>
+          endpoint.method === method && endpoint.pathname === fetchUrl.pathname,
+      )
     return (
       fetchUrl.origin === value.originUrl &&
       fetchUrl.search === "" &&
       fetchUrl.hash === "" &&
-      OCTOPUS_ENDPOINT_METHODS.some(
-        (endpoint) =>
-          endpoint.method === method &&
-          endpoint.pattern.test(fetchUrl.pathname),
-      )
+      endpointIsAllowed &&
+      configurationTestEndpointIsAllowed
     )
   } catch {
     return false

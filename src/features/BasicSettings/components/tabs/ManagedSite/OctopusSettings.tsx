@@ -6,7 +6,7 @@ import { SettingSection } from "~/components/SettingSection"
 import { Button, Card, CardItem, CardList, Input } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
-import { octopusAuthManager } from "~/services/apiService/octopus/auth"
+import { validateOctopusConfig } from "~/services/apiService/octopus"
 import {
   createVersionedPreferenceSaveOptions,
   getPreferenceWriteFailureMessage,
@@ -101,7 +101,7 @@ export default function OctopusSettings() {
 
     setIsValidating(true)
     try {
-      const result = await octopusAuthManager.validateConfig({
+      const result = await validateOctopusConfig({
         baseUrl: trimmedUrl,
         username: trimmedUsername,
         password: trimmedPassword,

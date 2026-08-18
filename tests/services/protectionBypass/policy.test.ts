@@ -42,6 +42,7 @@ import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 
 const fetchParams = {
   originUrl: "https://example.invalid",
+  resourceUsername: "example-user",
   fetchUrl: "https://example.invalid/api/account",
   requestId: "request-1",
 }

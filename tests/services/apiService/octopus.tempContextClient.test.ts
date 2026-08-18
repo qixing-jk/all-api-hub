@@ -27,6 +27,7 @@ describe("Octopus temporary-context client", () => {
 
     await tempWindowOctopusApiFetch({
       originUrl: "https://example.invalid",
+      resourceUsername: "example-user",
       fetchUrl: "https://example.invalid/api/v1/channel/list",
       fetchOptions: {
         method: "GET",
@@ -43,6 +44,7 @@ describe("Octopus temporary-context client", () => {
         kind: TEMP_CONTEXT_TASK_KINDS.OctopusApiFetch,
         params: {
           originUrl: "https://example.invalid",
+          resourceUsername: "example-user",
           fetchUrl: "https://example.invalid/api/v1/channel/list",
           fetchOptions: {
             method: "GET",

@@ -92,6 +92,7 @@ const canonicalTasks = [
     kind: TEMP_CONTEXT_TASK_KINDS.OctopusApiFetch,
     params: {
       originUrl: "https://example.invalid",
+      resourceUsername: "example-user",
       fetchUrl: "https://example.invalid/api/v1/channel/list",
       fetchOptions: { method: "GET" },
       responseType: "json",
@@ -601,6 +602,56 @@ describe("protection bypass runtime contracts", () => {
         },
       }),
     ).toBe(false)
+  })
+
+  it.each([
+    ["channel list", "/api/v1/channel/list", "GET"],
+    ["cookie login", "/api/v1/user/login", "POST"],
+  ])("allows Octopus configuration-test %s", (_case, pathname, method) => {
+    expect(
+      isTempContextTask({
+        kind: TEMP_CONTEXT_TASK_KINDS.OctopusApiFetch,
+        params: {
+          originUrl: "https://example.invalid",
+          resourceUsername: "example-user",
+          fetchUrl: `https://example.invalid${pathname}`,
+          fetchOptions: { method },
+          resourceBinding: "configuration_test",
+        },
+      }),
+    ).toBe(true)
+  })
+
+  it.each([
+    ["update", "/api/v1/channel/update", "POST"],
+    ["delete", "/api/v1/channel/delete/7", "DELETE"],
+  ])("rejects Octopus configuration-test %s", (_case, pathname, method) => {
+    expect(
+      isTempContextTask({
+        kind: TEMP_CONTEXT_TASK_KINDS.OctopusApiFetch,
+        params: {
+          originUrl: "https://example.invalid",
+          resourceUsername: "example-user",
+          fetchUrl: `https://example.invalid${pathname}`,
+          fetchOptions: { method },
+          resourceBinding: "configuration_test",
+        },
+      }),
+    ).toBe(false)
+  })
+
+  it("keeps persisted Octopus mutations in the protected endpoint allow-list", () => {
+    expect(
+      isTempContextTask({
+        kind: TEMP_CONTEXT_TASK_KINDS.OctopusApiFetch,
+        params: {
+          originUrl: "https://example.invalid",
+          resourceUsername: "example-user",
+          fetchUrl: "https://example.invalid/api/v1/channel/update",
+          fetchOptions: { method: "POST" },
+        },
+      }),
+    ).toBe(true)
   })
 
   it("keeps decision, capability, and denial wire values stable", () => {
