@@ -15,6 +15,7 @@ import {
   updateChannel,
   validateOctopusConfig,
 } from "~/services/apiService/octopus"
+import { OCTOPUS_AUTH_MODES } from "~/services/apiService/octopus/auth"
 import {
   createAutomaticProtectionBypassExecution,
   PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
@@ -155,7 +156,7 @@ describe("Octopus API service", () => {
     mockValidateConfig.mockReset()
     vi.unstubAllGlobals()
     mockGetValidSession.mockResolvedValue({
-      mode: "bearer",
+      mode: OCTOPUS_AUTH_MODES.Bearer,
       token: "jwt-token",
       expireAt: 1_700_000_900_000,
     })
@@ -203,7 +204,7 @@ describe("Octopus API service", () => {
 
   it("lists channels with the current Octopus cookie session", async () => {
     mockGetValidSession.mockResolvedValueOnce({
-      mode: "cookie",
+      mode: OCTOPUS_AUTH_MODES.Cookie,
       expireAt: 1_700_000_900_000,
     })
     mockTempWindowOctopusApiFetch.mockResolvedValueOnce({
@@ -261,7 +262,7 @@ describe("Octopus API service", () => {
 
   it("validates cookie configurations through a protected channel read", async () => {
     mockGetValidSession.mockResolvedValueOnce({
-      mode: "cookie",
+      mode: OCTOPUS_AUTH_MODES.Cookie,
       expireAt: 1_700_000_900_000,
     })
     mockTempWindowOctopusApiFetch.mockResolvedValueOnce({
@@ -311,7 +312,7 @@ describe("Octopus API service", () => {
 
   it("returns a controlled validation failure when the protected read fails", async () => {
     mockGetValidSession.mockResolvedValueOnce({
-      mode: "cookie",
+      mode: OCTOPUS_AUTH_MODES.Cookie,
       expireAt: 1_700_000_900_000,
     })
     mockTempWindowOctopusApiFetch.mockResolvedValueOnce({
@@ -341,7 +342,7 @@ describe("Octopus API service", () => {
 
   it("establishes a same-origin cookie session after 401 and retries the mutation", async () => {
     mockGetValidSession.mockResolvedValueOnce({
-      mode: "cookie",
+      mode: OCTOPUS_AUTH_MODES.Cookie,
       expireAt: 1_700_000_900_000,
     })
     mockTempWindowOctopusApiFetch
@@ -474,7 +475,7 @@ describe("Octopus API service", () => {
     "fails closed after cookie 401 when login returns $name",
     async ({ login, expected }) => {
       mockGetValidSession.mockResolvedValueOnce({
-        mode: "cookie",
+        mode: OCTOPUS_AUTH_MODES.Cookie,
         expireAt: 1_700_000_900_000,
       })
       mockTempWindowOctopusApiFetch
@@ -500,8 +501,9 @@ describe("Octopus API service", () => {
   )
 
   it("confirms a tokenless login candidate with a harmless read before mutation", async () => {
+    const controller = new AbortController()
     mockGetValidSession.mockResolvedValueOnce({
-      mode: "cookie",
+      mode: OCTOPUS_AUTH_MODES.Cookie,
       expireAt: 1_700_000_900_000,
       confirmed: false,
     })
@@ -518,7 +520,11 @@ describe("Octopus API service", () => {
       })
 
     await expect(
-      updateChannel(config, updateInput({ id: 7 }, { id: 7, name: "Updated" })),
+      updateChannel(
+        config,
+        updateInput({ id: 7 }, { id: 7, name: "Updated" }),
+        { signal: controller.signal },
+      ),
     ).resolves.toMatchObject({ success: true })
 
     expect(
@@ -526,6 +532,9 @@ describe("Octopus API service", () => {
         ([request]) => new URL(request.fetchUrl).pathname,
       ),
     ).toEqual(["/api/v1/channel/list", "/api/v1/channel/update"])
+    expect(
+      mockTempWindowOctopusApiFetch.mock.calls[0][0].fetchOptions.signal,
+    ).toBe(controller.signal)
   })
 
   it.each([
@@ -552,7 +561,7 @@ describe("Octopus API service", () => {
     "does not dispatch a mutation after candidate $name",
     async ({ confirmation, expected }) => {
       mockGetValidSession.mockResolvedValueOnce({
-        mode: "cookie",
+        mode: OCTOPUS_AUTH_MODES.Cookie,
         expireAt: 1_700_000_900_000,
         confirmed: false,
       })
@@ -573,7 +582,7 @@ describe("Octopus API service", () => {
 
   it("selects explicit current update and model-probe payloads", async () => {
     mockGetValidSession.mockResolvedValue({
-      mode: "cookie",
+      mode: OCTOPUS_AUTH_MODES.Cookie,
       expireAt: 1_700_000_900_000,
     })
     mockTempWindowOctopusApiFetch
@@ -687,7 +696,7 @@ describe("Octopus API service", () => {
 
   it("includes current-only channel settings in a current model probe", async () => {
     mockGetValidSession.mockResolvedValueOnce({
-      mode: "cookie",
+      mode: OCTOPUS_AUTH_MODES.Cookie,
       expireAt: 1_700_000_900_000,
     })
     mockTempWindowOctopusApiFetch.mockResolvedValueOnce({
@@ -738,7 +747,7 @@ describe("Octopus API service", () => {
 
   it("rejects the removed embedding-only type before a cookie request is dispatched", async () => {
     mockGetValidSession.mockResolvedValueOnce({
-      mode: "cookie",
+      mode: OCTOPUS_AUTH_MODES.Cookie,
       expireAt: 1_700_000_900_000,
     })
 
@@ -758,7 +767,7 @@ describe("Octopus API service", () => {
 
   it("classifies an invalid cookie mutation type as not dispatched", async () => {
     mockGetValidSession.mockResolvedValueOnce({
-      mode: "cookie",
+      mode: OCTOPUS_AUTH_MODES.Cookie,
       expireAt: 1_700_000_900_000,
     })
 
@@ -786,7 +795,7 @@ describe("Octopus API service", () => {
 
   it("does not forward legacy-only update fields to the current contract", async () => {
     mockGetValidSession.mockResolvedValueOnce({
-      mode: "cookie",
+      mode: OCTOPUS_AUTH_MODES.Cookie,
       expireAt: 1_700_000_900_000,
     })
     mockTempWindowOctopusApiFetch.mockResolvedValueOnce({
@@ -814,7 +823,7 @@ describe("Octopus API service", () => {
       PROTECTION_BYPASS_SURFACES.Background,
     )
     mockGetValidSession.mockResolvedValueOnce({
-      mode: "cookie",
+      mode: OCTOPUS_AUTH_MODES.Cookie,
       expireAt: 1_700_000_900_000,
     })
     mockTempWindowOctopusApiFetch
@@ -858,7 +867,7 @@ describe("Octopus API service", () => {
 
   it("owns cookie 401 recovery in one layer and retries only once", async () => {
     mockGetValidSession.mockResolvedValue({
-      mode: "cookie",
+      mode: OCTOPUS_AUTH_MODES.Cookie,
       expireAt: 1_700_000_900_000,
     })
     mockTempWindowOctopusApiFetch
@@ -879,7 +888,7 @@ describe("Octopus API service", () => {
 
   it("treats missing cookie transport lifecycle as possibly dispatched", async () => {
     mockGetValidSession.mockResolvedValue({
-      mode: "cookie",
+      mode: OCTOPUS_AUTH_MODES.Cookie,
       expireAt: 1_700_000_900_000,
     })
     const transportError = new Error("temporary context failed")
@@ -914,7 +923,7 @@ describe("Octopus API service", () => {
     "rejects invalid current channel field $field",
     async ({ field, value }) => {
       mockGetValidSession.mockResolvedValueOnce({
-        mode: "cookie",
+        mode: OCTOPUS_AUTH_MODES.Cookie,
         expireAt: 1_700_000_900_000,
       })
       const channel: Record<string, unknown> = {
@@ -942,7 +951,7 @@ describe("Octopus API service", () => {
 
   it("normalizes the supported current channel types and validated nested fields", async () => {
     mockGetValidSession.mockResolvedValue({
-      mode: "cookie",
+      mode: OCTOPUS_AUTH_MODES.Cookie,
       expireAt: 1_700_000_900_000,
     })
     mockTempWindowOctopusApiFetch
@@ -1065,7 +1074,7 @@ describe("Octopus API service", () => {
     },
   ])("rejects $name from the current channel list", async ({ data }) => {
     mockGetValidSession.mockResolvedValueOnce({
-      mode: "cookie",
+      mode: OCTOPUS_AUTH_MODES.Cookie,
       expireAt: 1_700_000_900_000,
     })
     mockTempWindowOctopusApiFetch.mockResolvedValueOnce({
@@ -1079,7 +1088,7 @@ describe("Octopus API service", () => {
 
   it("uses current model, group, and delete endpoints after cookie auth", async () => {
     mockGetValidSession.mockResolvedValue({
-      mode: "cookie",
+      mode: OCTOPUS_AUTH_MODES.Cookie,
       expireAt: 1_700_000_900_000,
     })
     mockTempWindowOctopusApiFetch
@@ -1120,12 +1129,12 @@ describe("Octopus API service", () => {
   it("renegotiates once when a cached legacy JWT receives 401", async () => {
     mockGetValidSession
       .mockResolvedValueOnce({
-        mode: "bearer",
+        mode: OCTOPUS_AUTH_MODES.Bearer,
         token: "expired-jwt",
         expireAt: 1_700_000_900_000,
       })
       .mockResolvedValueOnce({
-        mode: "cookie",
+        mode: OCTOPUS_AUTH_MODES.Cookie,
         expireAt: 1_700_000_900_000,
       })
     vi.stubGlobal(
@@ -1157,12 +1166,12 @@ describe("Octopus API service", () => {
   it("does not renegotiate repeatedly when refreshed JWT auth still returns 401", async () => {
     mockGetValidSession
       .mockResolvedValueOnce({
-        mode: "bearer",
+        mode: OCTOPUS_AUTH_MODES.Bearer,
         token: "expired-jwt",
         expireAt: 1_700_000_900_000,
       })
       .mockResolvedValueOnce({
-        mode: "bearer",
+        mode: OCTOPUS_AUTH_MODES.Bearer,
         token: "replacement-jwt",
         expireAt: 1_700_000_900_000,
       })
@@ -1423,16 +1432,22 @@ describe("Octopus API service", () => {
 
     await fetchRemoteModels(config, {
       type: source.type,
-      baseUrl: source.base_urls[0].url,
-      key: source.keys[0].channel_key,
+      baseUrl: "https://draft.example.invalid/v1",
+      key: "credential-draft",
       proxy: source.proxy,
       source,
     })
 
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({
       type: OctopusOutboundType.OpenAIEmbedding,
-      base_urls: source.base_urls,
-      keys: source.keys,
+      base_urls: [
+        { url: "https://draft.example.invalid/v1", delay: 120 },
+        { url: "https://backup.example.invalid/v1" },
+      ],
+      keys: [
+        { ...source.keys[0], channel_key: "credential-draft" },
+        source.keys[1],
+      ],
       proxy: false,
     })
 
@@ -1446,7 +1461,7 @@ describe("Octopus API service", () => {
     expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({
       type: OctopusOutboundType.OpenAIEmbedding,
       base_urls: [{ url: "https://fallback.example.invalid/v1" }],
-      keys: [],
+      keys: [{ enabled: true, channel_key: "credential-fallback" }],
       proxy: false,
     })
   })
@@ -1897,7 +1912,7 @@ describe("Octopus API service", () => {
     const callerSignal = new AbortController().signal
     let fetchSignal: AbortSignal | undefined
     mockGetValidSession.mockResolvedValueOnce({
-      mode: "bearer",
+      mode: OCTOPUS_AUTH_MODES.Bearer,
       token: "jwt-token",
       expireAt: 1_700_000_900_000,
     })

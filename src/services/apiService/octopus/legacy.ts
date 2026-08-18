@@ -77,12 +77,19 @@ const preserveBaseUrls = (
   ]
 }
 
-const preserveKeys = (source: OctopusChannel): OctopusChannelKey[] =>
-  source.keys.map((item) => ({
+const preserveProbeKeys = (
+  source: OctopusChannel,
+  primaryKey: string,
+): OctopusChannelKey[] => {
+  if (source.keys.length === 0) {
+    return [{ enabled: true, channel_key: primaryKey }]
+  }
+
+  return source.keys.map((item, index) => ({
     ...(item.id === undefined ? {} : { id: item.id }),
     ...(item.channel_id === undefined ? {} : { channel_id: item.channel_id }),
     enabled: item.enabled,
-    channel_key: item.channel_key,
+    channel_key: index === 0 ? primaryKey : item.channel_key,
     ...(item.remark === undefined ? {} : { remark: item.remark }),
     ...(item.status_code === undefined
       ? {}
@@ -92,6 +99,7 @@ const preserveKeys = (source: OctopusChannel): OctopusChannelKey[] =>
       : { last_use_time_stamp: item.last_use_time_stamp }),
     ...(item.total_cost === undefined ? {} : { total_cost: item.total_cost }),
   }))
+}
 
 const encodeCustomHeaders = (
   headers: OctopusCustomHeader[] | undefined,
@@ -182,14 +190,11 @@ const encodeFetchModel = (
   base_urls:
     input.source === undefined
       ? [{ url: input.baseUrl }]
-      : preserveBaseUrls(
-          input.source,
-          input.source.base_urls[0]?.url ?? input.baseUrl,
-        ),
+      : preserveBaseUrls(input.source, input.baseUrl),
   keys:
     input.source === undefined
       ? [{ enabled: true, channel_key: input.key }]
-      : preserveKeys(input.source),
+      : preserveProbeKeys(input.source, input.key),
   proxy: input.proxy,
 })
 

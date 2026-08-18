@@ -54,6 +54,7 @@ export function handlePerformTempWindowFetch(
       }
 
       const normalizedOptions = normalizeFetchOptions(fetchOptions)
+      normalizedOptions.redirect = "error"
       // Respect caller-provided credentials so token-auth flows can omit cookies.
       // Cookie-auth flows should explicitly set credentials="include" when needed.
       if (!normalizedOptions.credentials) {

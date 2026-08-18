@@ -243,7 +243,7 @@ async function fetchOctopusApi<T>(
       }
       const confirmationRequest = currentOctopusContract.createRequest(
         confirmationOperation,
-        {},
+        signal ? { signal } : {},
       )
       if (isMutation && session.confirmed === false) {
         const confirmation = await fetchOctopusCookieApi({

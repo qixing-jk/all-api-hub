@@ -59,6 +59,7 @@ describe("handlePerformTempWindowFetch", () => {
         fetchUrl: "https://example.com/api/data",
         fetchOptions: {
           method: "POST",
+          redirect: "follow",
           headers: {
             authorization: "Bearer token",
           },
@@ -93,6 +94,7 @@ describe("handlePerformTempWindowFetch", () => {
       expect.objectContaining({
         method: "POST",
         credentials: "include",
+        redirect: "error",
         headers: expect.objectContaining({
           authorization: "Bearer token",
           [EXTENSION_HEADER_NAME.toLowerCase()]: EXTENSION_HEADER_VALUE,
