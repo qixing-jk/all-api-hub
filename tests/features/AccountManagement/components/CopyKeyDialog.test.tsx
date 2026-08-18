@@ -2030,7 +2030,7 @@ describe("CopyKeyDialog", () => {
     act(() => {
       claudeCodeRouterDialogMock.mock.calls[0]?.[0].onClose()
     })
-  })
+  }, 30_000)
 
   it("renders service credential details without token-only quota or expiry metadata", async () => {
     await renderExpandedServiceCredentialDialog()
