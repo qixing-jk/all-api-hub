@@ -3,7 +3,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { useTokenIntegrationActions } from "~/features/KeyManagement/components/TokenListItem/useTokenIntegrationActions"
-import { AuthTypeEnum } from "~/types"
+import {
+  AuthTypeEnum,
+  SiteHealthStatus,
+  type AccountToken,
+  type DisplaySiteData,
+} from "~/types"
+import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 
 const {
   completeActionMock,
@@ -68,6 +74,13 @@ vi.mock("~/utils/core/toastHelpers", () => ({
 const account = {
   id: "account-example",
   name: "Example account",
+  username: "example-user",
+  balance: { USD: 0, CNY: 0 },
+  todayConsumption: { USD: 0, CNY: 0 },
+  todayIncome: { USD: 0, CNY: 0 },
+  todayTokens: { upload: 0, download: 0 },
+  todayStatsAvailability: buildCompleteTodayStatsAvailability(),
+  health: { status: SiteHealthStatus.Healthy },
   siteType: SITE_TYPES.NEW_API,
   baseUrl: "https://account.example.invalid",
   authType: AuthTypeEnum.AccessToken,
@@ -75,24 +88,32 @@ const account = {
   token: "account-token",
   cookieAuthSessionCookie: "",
   tagIds: [],
-}
+  checkIn: { enableDetection: false },
+} satisfies DisplaySiteData
 
 const token = {
   id: 7,
+  user_id: 1,
+  created_time: 1,
+  accessed_time: 1,
+  expired_time: -1,
+  remain_quota: 0,
+  unlimited_quota: false,
+  used_quota: 0,
   accountId: account.id,
   accountName: account.name,
   key: "sk-example",
   name: "Example key",
   status: 1,
-}
+} satisfies AccountToken
 
 const renderActions = (onManagedSiteImportSuccess?: () => Promise<void>) =>
   renderHook(() =>
     useTokenIntegrationActions({
-      account: account as never,
+      account,
       enabled: true,
       onManagedSiteImportSuccess,
-      token: token as never,
+      token,
     }),
   )
 
@@ -120,6 +141,8 @@ describe("useTokenIntegrationActions", () => {
       success: false,
       message: "messages:claudeCodeRouter.configMissing",
     })
+    expect(result.current.dialogs.cliProxy.isOpen).toBe(false)
+    expect(result.current.dialogs.claudeCodeRouter.isOpen).toBe(false)
 
     preferences.cliProxyBaseUrl = "https://cli.example.invalid"
     preferences.cliProxyManagementKey = "cli-key"
@@ -173,6 +196,11 @@ describe("useTokenIntegrationActions", () => {
       success: false,
       message: "messages:errors.operation.failed",
     })
+    expect(showResultToastMock).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.stringContaining("account-token"),
+      }),
+    )
     expect(completeActionMock).toHaveBeenCalledWith("failure", {
       errorCategory: "unknown",
     })

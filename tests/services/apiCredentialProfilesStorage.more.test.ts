@@ -1370,6 +1370,16 @@ describe("apiCredentialProfilesStorage additional flows", () => {
         status: API_CREDENTIAL_PROFILE_LINK_RESOLUTION_STATUSES.Resolved,
       }),
     )
+    await expect(apiCredentialProfilesStorage.listLinks()).resolves.toEqual([
+      relinked,
+    ])
+    expect(
+      storageData.get(
+        API_CREDENTIAL_PROFILES_STORAGE_KEYS.API_CREDENTIAL_PROFILES,
+      ).linkTombstones,
+    ).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: secondLink.id })]),
+    )
   })
 
   it("rejects invalid relink targets without changing stored links", async () => {
