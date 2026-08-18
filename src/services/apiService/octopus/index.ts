@@ -36,6 +36,11 @@ import {
   octopusAuthManager,
   type OctopusAuthSession,
 } from "./auth"
+import {
+  adaptCurrentOctopusChannelRequest,
+  normalizeCurrentOctopusChannelData,
+  OCTOPUS_CHANNEL_ENDPOINTS,
+} from "./currentChannelContract"
 import { tempWindowOctopusApiFetch } from "./tempContextClient"
 import { buildOctopusAuthHeaders } from "./utils"
 
@@ -213,15 +218,23 @@ async function fetchOctopusApi<T>(
 
     const { protectionBypassExecution, resourceBinding, ...fetchOptions } =
       options
+    // Current Octopus releases pair cookie authentication with the flattened
+    // channel contract. This is intentionally a compatibility heuristic until
+    // protocol-version detection is introduced; legacy JWT payloads stay intact.
+    const useCurrentChannelContract = session.mode === OCTOPUS_AUTH_MODES.Cookie
     let data: unknown
 
     if (session.mode === OCTOPUS_AUTH_MODES.Cookie) {
+      const cookieFetchOptions = adaptCurrentOctopusChannelRequest(
+        endpoint,
+        fetchOptions,
+      )
       const remote = await fetchOctopusCookieApi({
         config,
         session,
         baseUrl,
         endpoint,
-        fetchOptions,
+        fetchOptions: cookieFetchOptions,
         protectionBypassExecution,
         resourceBinding,
       })
@@ -334,9 +347,12 @@ async function fetchOctopusApi<T>(
       throw new Error(message)
     }
 
+    const normalizedData = useCurrentChannelContract
+      ? normalizeCurrentOctopusChannelData(endpoint, responseData.data)
+      : responseData.data
     return {
       success: true,
-      data: (responseData.data as T | undefined) ?? null,
+      data: (normalizedData as T | undefined) ?? null,
       message: (responseData.message as string) || "success",
     }
   } catch (error) {
@@ -367,7 +383,7 @@ export async function listChannels(
   try {
     const result = await fetchOctopusApi<OctopusChannel[]>(
       config,
-      "/api/v1/channel/list",
+      OCTOPUS_CHANNEL_ENDPOINTS.List,
       options,
     )
     return result.data || []
@@ -429,7 +445,7 @@ export async function createChannel(
   try {
     const result = await fetchOctopusApi<OctopusChannel>(
       config,
-      "/api/v1/channel/create",
+      OCTOPUS_CHANNEL_ENDPOINTS.Create,
       {
         method: "POST",
         body: JSON.stringify(data),
@@ -455,7 +471,7 @@ export async function updateChannel(
   try {
     const result = await fetchOctopusApi<OctopusChannel>(
       config,
-      "/api/v1/channel/update",
+      OCTOPUS_CHANNEL_ENDPOINTS.Update,
       {
         method: "POST",
         body: JSON.stringify(data),
@@ -507,7 +523,7 @@ export async function fetchRemoteModels(
   try {
     const result = await fetchOctopusApi<string[]>(
       config,
-      "/api/v1/channel/fetch-model",
+      OCTOPUS_CHANNEL_ENDPOINTS.FetchModel,
       {
         method: "POST",
         body: JSON.stringify(channelData),
