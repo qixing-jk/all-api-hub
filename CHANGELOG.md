@@ -1,5 +1,30 @@
 # Changelog
 
+## [3.57.0](https://github.com/qixing-jk/all-api-hub/compare/v3.56.0...v3.57.0) (2026-08-19)
+
+
+### Features
+
+* **credentials:** associate API profiles with account keys ([#1322](https://github.com/qixing-jk/all-api-hub/issues/1322)) ([0bbd67f](https://github.com/qixing-jk/all-api-hub/commit/0bbd67f4c28885e30b332a0b8ed13a3ffe09753e))
+* **export:** reorganize export actions by destination ([#1315](https://github.com/qixing-jk/all-api-hub/issues/1315)) ([d1c5aae](https://github.com/qixing-jk/all-api-hub/commit/d1c5aaef840531c5b611f0f6c400940b28fcc636))
+* **integrations:** support Kelivo mobile provider export ([#1302](https://github.com/qixing-jk/all-api-hub/issues/1302)) ([fb1c335](https://github.com/qixing-jk/all-api-hub/commit/fb1c335a44aea6997fcc2fb4541a65fa95226056))
+* **model-list:** add workload-aware price comparison ([#1298](https://github.com/qixing-jk/all-api-hub/issues/1298)) ([63549ec](https://github.com/qixing-jk/all-api-hub/commit/63549ec1cd7a5b58e4307253e63c243197ca9e73))
+* **model-list:** improve price comparison grouping and access ([#1304](https://github.com/qixing-jk/all-api-hub/issues/1304)) ([18e0de3](https://github.com/qixing-jk/all-api-hub/commit/18e0de3332b46832e69c4f39cb7c54107e86df0b))
+* **model-list:** normalize identities for price comparison ([#1307](https://github.com/qixing-jk/all-api-hub/issues/1307)) ([42d353b](https://github.com/qixing-jk/all-api-hub/commit/42d353b7164c1a2552c50d9a5029c3743253f2a5))
+
+
+### Bug Fixes
+
+* **api:** preserve compatible token pagination ([#1319](https://github.com/qixing-jk/all-api-hub/issues/1319)) ([8398edb](https://github.com/qixing-jk/all-api-hub/commit/8398edbdd96e66797ec4f9080cd5938c0436c7da))
+* **docs:** prevent artifact-only translation PRs ([#1309](https://github.com/qixing-jk/all-api-hub/issues/1309)) ([b0382e1](https://github.com/qixing-jk/all-api-hub/commit/b0382e1d00736a433603b1a99759b7a1e6ecb861))
+* **docs:** surface translation failures and sync locales ([#1306](https://github.com/qixing-jk/all-api-hub/issues/1306)) ([51e6d6d](https://github.com/qixing-jk/all-api-hub/commit/51e6d6d7e9922ada36ea6b4441c18715a44df2da))
+* **octopus:** support current cookie-authenticated deployments ([#1324](https://github.com/qixing-jk/all-api-hub/issues/1324)) ([141c1bb](https://github.com/qixing-jk/all-api-hub/commit/141c1bb9297bf1b4449b522e954ce88198c2c48d))
+
+
+### Performance Improvements
+
+* **icons:** reduce Lobe icon bundle overhead ([#1314](https://github.com/qixing-jk/all-api-hub/issues/1314)) ([b303326](https://github.com/qixing-jk/all-api-hub/commit/b303326dd96be734b08c15298f4a743a63cf9633))
+
 ## [3.56.0](https://github.com/qixing-jk/all-api-hub/compare/v3.55.0...v3.56.0) (2026-08-13)
 
 
