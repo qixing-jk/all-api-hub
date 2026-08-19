@@ -21,6 +21,7 @@ All API Hub 支持多种添加账号的方式，以适配不同类型的站点�
 快速跳转：
 - [New API](#manual-new-api)
 - [Sub2API](#manual-sub2api)
+- [OpenRouter](#manual-openrouter)
 
 <a id="manual-new-api"></a>
 #### 1.2.1 New API
@@ -150,6 +151,56 @@ Sub2API 仅支持 **访问令牌认证**（不支持 Cookie 模式），请优�
 
 ::: warning 保护账号信息
 访问令牌属于敏感信息，请勿将完整内容发给他人，也不要在公开截图或问题反馈中暴露这些信息。
+:::
+
+<a id="manual-openrouter"></a>
+#### 1.2.3 OpenRouter
+
+1. 登录你的 OpenRouter 网站。
+2. 点击浏览器右上角的 **All API Hub** 扩展图标。建议以侧边栏方式打开，方便后续对照填写。
+3. 点击 **“新增账号”**，使用当前站点地址或手动填写地址。
+4. 点击 **“手动添加”**。
+
+   ![点击“新增账号”](./static/image/manual/open-router/add-account.png)
+
+5. 在表单中填写以下信息，点击字段名称可以跳转到下方对应的填写说明：
+
+   - [**网站名称**](#manual-openrouter-site-name)
+   - [**站点类型**](#manual-openrouter-site-type)
+   - [**访问令牌**](#manual-openrouter-access-token)
+
+   <a id="manual-openrouter-site-name"></a>
+
+   **网站名称**：用于在插件中区分账号，可以自定义。
+
+   <a id="manual-openrouter-site-type"></a>
+
+   **站点类型**：选择 `openrouter`。
+
+   ![手动添加账号表单](./static/image/manual/open-router/account-form.png)
+
+   <a id="manual-openrouter-access-token"></a>
+
+   **5.1 怎么获取访问令牌**
+
+   进入 OpenRouter 网站的控制台页面后，找到 **“Management Keys”**，点击右上角 **“+ New Key”**，填写对应表单后，点击 **“Create”**，然后点击复制您的新 API Key，填入插件中的 **“OpenRouter 管理密钥”**。
+
+   > 注意：该 Key 只能明文显示一次，若丢失请重新创建并填入。
+
+   快捷跳转网站：[https://openrouter.ai/settings/management-keys](https://openrouter.ai/settings/management-keys)
+
+   ![Management Keys 中的管理密钥](./static/image/manual/open-router/management-key.png)
+
+6. 填写 **充值金额比例**（`CNY/USD`，需大于 0）后即可保存账号。具体充值比例请前往实际使用的网站查询，再填写该网站对应的实际比例。
+
+   ![填写充值金额比例](./static/image/manual/open-router/exchange-rate.png)
+
+::: tip 填写建议
+优先使用 **访问令牌认证**。如果保存后无法刷新账号，请先检查站点类型、用户 ID 和访问令牌是否填写正确；只有目标站点明确需要时，再尝试 Cookie 认证。
+:::
+
+::: warning 保护账号信息
+访问令牌和 Cookie 都属于敏感信息。请勿将完整内容发给他人，也不要在公开截图或问题反馈中暴露这些信息。
 :::
 
 ### 1.3 Cookie 模式
