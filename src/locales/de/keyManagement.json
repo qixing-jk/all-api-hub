@@ -208,7 +208,7 @@
     "expirationPlaceholder": "Leer lassen, da es nie abläuft",
     "groupLabel": "Gruppe",
     "groupRate": "Multiplikator:",
-    "groupRestrictedNote": "Es können nur Gruppen ausgewählt werden, die mit diesem Modell kompatibel sind.",
+    "groupRestrictedNote": "Nur verfügbare Gruppen können ausgewählt werden; andere Gruppen sind deaktiviert.",
     "ipExample": "Beispiel: 192.168.1.1,10.0.0.1 oder verwenden Sie * für keine Begrenzung",
     "ipLimits": "IP-Limits",
     "ipPlaceholder": "Für keine Begrenzung leer lassen, mehrere IPs durch Kommas trennen",

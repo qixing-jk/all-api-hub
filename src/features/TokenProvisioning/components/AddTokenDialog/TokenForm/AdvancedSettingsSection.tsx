@@ -1,11 +1,11 @@
 import { useTranslation } from "react-i18next"
 
+import { TokenGroupSelectionField } from "~/features/TokenProvisioning/components/TokenGroupSelectionField"
 import type { UserGroupInfo } from "~/services/accountTokens/tokenProvisioningModel"
 import { isNotEmptyArray } from "~/utils"
 
 import type { FormData } from "../hooks/useTokenForm"
 import { FormSection } from "./FormSection"
-import { GroupSelection } from "./GroupSelection"
 import { IpLimitsInput } from "./IpLimitsInput"
 import { ModelLimits } from "./ModelLimits"
 
@@ -59,9 +59,9 @@ export function AdvancedSettingsSection({
   return (
     <FormSection title={t("dialog.advancedSettings")}>
       {showGroupSelection ? (
-        <GroupSelection
+        <TokenGroupSelectionField
           group={formData.group}
-          handleSelectChange={handleSelectChange("group")}
+          onChange={handleSelectChange("group")}
           groups={groups}
           allowedGroups={allowedGroups}
           error={errors.group}

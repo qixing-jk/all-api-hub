@@ -8,7 +8,6 @@
     "tokenNotFound": "无法创建或找到 API 令牌"
   },
   "aihubmix": {
-    "createRequiresOneTimeKeyDialog": "AIHubMix 创建的密钥只能查看一次，请在密钥管理中手动创建并立即保存完整密钥。",
     "oneTimeKeyPromptCancelled": "账号已保存。你之后可以在密钥管理中手动创建 AIHubMix API 密钥。",
     "oneTimeKeyUnavailableAfterCreate": "账号已保存，但未能获取完整 AIHubMix API 密钥。AIHubMix 密钥只在创建时显示一次，请在密钥管理中重新创建并立即保存完整密钥。"
   },
@@ -164,7 +163,6 @@
   },
   "sub2api": {
     "configMissing": "请先在基础设置中配置 Sub2API 基础 URL 和管理员 API Key。",
-    "createRequiresAvailableGroup": "当前账号没有可用于创建密钥的分组，请先确认账号分组情况后再试。",
     "groupMissing": "Sub2API 分组“{{group}}”已不可用。请刷新分组列表后重试。",
     "loginRequired": "请先登录 Sub2API 控制台（插件会读取 auth_token/auth_user 用于导入会话）后再重试。",
     "refreshTokenInvalid": "Sub2API refresh_token 已失效/已轮转。请从控制台重新导入会话（推荐无痕/隐私窗口），或粘贴新的 refresh_token 后重试。"
@@ -215,8 +213,11 @@
     }
   },
   "tokenProvisioning": {
+    "createRequiresAvailableGroup": "当前账号没有可用于创建密钥的分组，请先确认账号分组情况后再试。",
     "createRequiresGroup": "创建密钥前需要先确定分组，请先选择一个可用分组后再继续。",
-    "createRequiresGroupSelection": "当前账号有多个可用分组，请先选择要使用的分组，再创建密钥。"
+    "createRequiresGroupSelection": "当前账号有多个可用分组，请先选择要使用的分组，再创建密钥。",
+    "createRequiresOneTimeSecretHandling": "此服务创建的密钥只能查看一次，请在密钥管理中手动创建并立即保存完整密钥。",
+    "selectGroupTitle": "选择密钥分组"
   },
   "veloera": {
     "configMissing": "请先在设置中配置 Veloera 地址、管理员令牌和用户 ID",

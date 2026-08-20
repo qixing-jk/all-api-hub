@@ -8,7 +8,6 @@
     "tokenNotFound": "API トークンの作成または検索に失敗しました"
   },
   "aihubmix": {
-    "createRequiresOneTimeKeyDialog": "AIHubMix のキーは作成時に一度しか表示できません。キー管理で手動作成し、完全なキーをすぐに保存してください。",
     "oneTimeKeyPromptCancelled": "アカウントは保存されました。あとでキー管理から AIHubMix API キーを手動作成できます。",
     "oneTimeKeyUnavailableAfterCreate": "アカウントは保存されましたが、完全な AIHubMix API キーを取得できませんでした。AIHubMix キーは作成直後に一度だけ表示されます。キー管理で新しいキーを作成し、完全なキーをすぐに保存してください。"
   },
@@ -164,7 +163,6 @@
   },
   "sub2api": {
     "configMissing": "先に基本設定で Sub2API のベース URL と管理者 API Key を設定してください。",
-    "createRequiresAvailableGroup": "このアカウントにはキー作成に使えるグループがありません。利用可能なグループ設定を確認してから再試行してください。",
     "groupMissing": "Sub2API グループ '{{group}}' は現在利用できません。グループ一覧を更新して再試行してください。",
     "loginRequired": "先に Sub2API ダッシュボードへログインして（拡張機能が localStorage から auth_token / auth_user を読めるようにして）、再試行してください。",
     "refreshTokenInvalid": "Sub2API の Refresh Token が無効または更新済みです。ダッシュボードからセッションを再取り込み（推奨: シークレット / プライベートウィンドウ）するか、新しい refresh_token を貼り付けて再試行してください。"
@@ -216,8 +214,11 @@
     }
   },
   "tokenProvisioning": {
+    "createRequiresAvailableGroup": "このアカウントにはキー作成に使えるグループがありません。利用可能なグループ設定を確認してから再試行してください。",
     "createRequiresGroup": "キー作成にはグループの確定が必要です。続行する前に利用可能なグループを選択してください。",
-    "createRequiresGroupSelection": "このアカウントには利用可能なグループが複数あります。キーを作成する前に 1 つ選択してください。"
+    "createRequiresGroupSelection": "このアカウントには利用可能なグループが複数あります。キーを作成する前に 1 つ選択してください。",
+    "createRequiresOneTimeSecretHandling": "このプロバイダーで新しく作成したキーは一度しか表示されません。キー管理で手動作成し、完全なキーをすぐに保存してください。",
+    "selectGroupTitle": "キーのグループを選択"
   },
   "veloera": {
     "configMissing": "先に設定で Veloera のアドレス、管理者トークン、ユーザー ID を設定してください",

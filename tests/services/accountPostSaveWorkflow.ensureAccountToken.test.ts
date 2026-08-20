@@ -693,7 +693,7 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
     ).resolves.toEqual({
       kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Blocked,
       code: ACCOUNT_POST_SAVE_WORKFLOW_ERROR_CODES.TokenSecretUnavailable,
-      message: "messages:aihubmix.createRequiresOneTimeKeyDialog",
+      message: "messages:tokenProvisioning.createRequiresOneTimeSecretHandling",
     })
     expect(fetchAccountTokensMock).toHaveBeenCalledTimes(1)
   })
@@ -829,7 +829,7 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
     ).resolves.toEqual({
       kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Blocked,
       code: ACCOUNT_POST_SAVE_WORKFLOW_ERROR_CODES.TokenCreationFailed,
-      message: "messages:sub2api.createRequiresAvailableGroup",
+      message: "messages:tokenProvisioning.createRequiresAvailableGroup",
     })
   })
 
@@ -891,7 +891,7 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
     ).resolves.toEqual({
       kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Blocked,
       code: ACCOUNT_POST_SAVE_WORKFLOW_ERROR_CODES.TokenCreationFailed,
-      message: "messages:sub2api.createRequiresAvailableGroup",
+      message: "messages:tokenProvisioning.createRequiresAvailableGroup",
     })
     expect(fetchUserGroupsMock).toHaveBeenCalledTimes(1)
     expect(createApiTokenMock).not.toHaveBeenCalled()

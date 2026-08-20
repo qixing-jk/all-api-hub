@@ -1,16 +1,16 @@
 import { describe, expect, it, vi } from "vitest"
 
-import { GroupSelection } from "~/features/TokenProvisioning/components/AddTokenDialog/TokenForm/GroupSelection"
+import { TokenGroupSelectionField } from "~/features/TokenProvisioning/components/TokenGroupSelectionField"
 import { fireEvent, render, screen, within } from "~~/tests/test-utils/render"
 
-describe("GroupSelection", () => {
+describe("TokenGroupSelectionField", () => {
   it("renders group options with the group identifier in the label", async () => {
     const handleSelectChange = vi.fn()
 
     render(
-      <GroupSelection
+      <TokenGroupSelectionField
         group="level1"
-        handleSelectChange={handleSelectChange}
+        onChange={handleSelectChange}
         groups={{
           level1: { desc: "Default Group", ratio: 1 },
           level3: { desc: "User Group", ratio: 1.5 },
@@ -38,9 +38,9 @@ describe("GroupSelection", () => {
 
   it("avoids duplicating description when it matches the group identifier", async () => {
     render(
-      <GroupSelection
+      <TokenGroupSelectionField
         group="level2"
-        handleSelectChange={() => {}}
+        onChange={() => {}}
         groups={{
           level2: { desc: "level2", ratio: 1 },
         }}

@@ -203,7 +203,7 @@
     "expirationPlaceholder": "Để trống nghĩa là không bao giờ hết hạn",
     "groupLabel": "Nhóm",
     "groupRate": "Hệ số: ",
-    "groupRestrictedNote": "Chỉ có thể chọn các nhóm khả dụng cho mô hình này, các nhóm khác đã bị vô hiệu hóa.",
+    "groupRestrictedNote": "Chỉ có thể chọn các nhóm khả dụng; các nhóm khác đã bị vô hiệu hóa.",
     "ipExample": "Ví dụ: 192.168.1.1,10.0.0.1 hoặc dùng * để không giới hạn",
     "ipLimits": "Giới hạn IP",
     "ipPlaceholder": "Để trống để không giới hạn, phân tách nhiều IP bằng dấu phẩy",

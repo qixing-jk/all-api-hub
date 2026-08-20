@@ -361,7 +361,8 @@ describe("accountOperations auto-provision key on add", () => {
     ensureDefaultApiTokenForAccountMock.mockRejectedValueOnce(
       new DefaultTokenLifecyclePolicyBlockedError({
         reason: TOKEN_PROVISIONING_BLOCK_REASONS.OneTimeSecretRequired,
-        message: "messages:aihubmix.createRequiresOneTimeKeyDialog",
+        message:
+          "messages:tokenProvisioning.createRequiresOneTimeSecretHandling",
       }),
     )
 

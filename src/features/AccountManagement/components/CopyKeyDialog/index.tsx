@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { CCSwitchExportDialog } from "~/components/CCSwitchExportDialog"
@@ -6,8 +6,9 @@ import { Alert, Modal } from "~/components/ui"
 import { useCopyKeyDialog } from "~/features/AccountManagement/components/CopyKeyDialog/hooks/useCopyKeyDialog"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import AddTokenDialog from "~/features/TokenProvisioning/components/AddTokenDialog"
-import { buildDefaultTokenCreatePrefill } from "~/features/TokenProvisioning/components/AddTokenDialog/defaultTokenCreatePrefill"
+import { DefaultTokenGroupSelectionDialog } from "~/features/TokenProvisioning/components/DefaultTokenGroupSelectionDialog"
 import { OneTimeSecretDialog } from "~/features/TokenProvisioning/components/OneTimeSecretDialog"
+import { useDefaultTokenQuickCreate } from "~/features/TokenProvisioning/hooks/useDefaultTokenQuickCreate"
 import { useLegacyApiTokenSecretResult } from "~/features/TokenProvisioning/hooks/useLegacyApiTokenSecretResult"
 import { buildOneTimeApiKeyProfileSaveAction } from "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction"
 import { supportsRecoverableAccountRuntimeKeySecrets } from "~/services/accounts/keyProductCapabilities"
@@ -35,10 +36,8 @@ export default function CopyKeyDialog({
   onClose,
   account,
 }: CopyKeyDialogProps) {
-  const { t } = useTranslation("messages")
   const keyManagementT = useTranslation("keyManagement").t
   const [isAddTokenDialogOpen, setIsAddTokenDialogOpen] = useState(false)
-  const isMountedRef = useRef(true)
   const [ccSwitchContext, setCCSwitchContext] = useState<{
     token: ApiToken
     account: DisplaySiteData
@@ -48,23 +47,31 @@ export default function CopyKeyDialog({
     nativeKeyRows,
     isLoading,
     error,
-    isCreating,
-    createError,
+    postCreateError,
     oneTimeToken,
     oneTimeSecret,
-    defaultTokenCreateAllowedGroups,
     copiedRuntimeKeyId,
     expandedRuntimeKeys,
     canCreateDefaultKey,
     supportsApiTokenCreation,
     fetchKeyInventory,
     copyKey,
-    createDefaultKey,
     refreshRuntimeKeysAfterCreate,
     toggleRuntimeKeyExpansion,
-    clearDefaultTokenCreateAllowedGroups,
     clearOneTimeToken,
   } = useCopyKeyDialog(isOpen, account)
+  const defaultTokenQuickCreate = useDefaultTokenQuickCreate({
+    isActive: isOpen,
+    account,
+    canCreate: canCreateDefaultKey,
+    onCreated: refreshRuntimeKeysAfterCreate,
+  })
+  const {
+    selection: defaultTokenGroupSelection,
+    isBusy: isDefaultTokenQuickCreateBusy,
+    isCreating: isDefaultTokenQuickCreating,
+    error: defaultTokenQuickCreateError,
+  } = defaultTokenQuickCreate.view
   const oneTimeKeySaveAction =
     account && oneTimeSecret
       ? buildOneTimeApiKeyProfileSaveAction({
@@ -80,50 +87,21 @@ export default function CopyKeyDialog({
     !supportsRecoverableAccountRuntimeKeySecrets(account.siteType)
 
   const handleOpenAddTokenDialog = () => {
-    clearDefaultTokenCreateAllowedGroups()
+    defaultTokenQuickCreate.reset()
     setIsAddTokenDialogOpen(true)
   }
   const handleCloseAddTokenDialog = () => {
-    clearDefaultTokenCreateAllowedGroups()
     setIsAddTokenDialogOpen(false)
   }
   const handleAddTokenSuccess = (createdToken?: ApiToken) => {
-    clearDefaultTokenCreateAllowedGroups()
     return refreshRuntimeKeysAfterCreate(createdToken)
   }
 
   useEffect(() => {
-    isMountedRef.current = true
-
-    return () => {
-      isMountedRef.current = false
-    }
-  }, [])
-
-  useEffect(() => {
     if (!isOpen || !account) {
-      clearDefaultTokenCreateAllowedGroups()
       setIsAddTokenDialogOpen(false)
     }
-  }, [account, clearDefaultTokenCreateAllowedGroups, isOpen])
-
-  useEffect(() => {
-    if (
-      !isMountedRef.current ||
-      !isOpen ||
-      !account ||
-      !defaultTokenCreateAllowedGroups ||
-      defaultTokenCreateAllowedGroups.length === 0
-    ) {
-      return
-    }
-
-    setIsAddTokenDialogOpen(true)
-  }, [account, defaultTokenCreateAllowedGroups, isOpen])
-
-  const defaultTokenQuickCreatePrefill = buildDefaultTokenCreatePrefill(
-    defaultTokenCreateAllowedGroups,
-  )
+  }, [account, isOpen])
 
   const handleOpenCCSwitchDialog = (
     token: ApiToken,
@@ -161,9 +139,13 @@ export default function CopyKeyDialog({
         account={account}
         onOpenCCSwitchDialog={handleOpenCCSwitchDialog}
         canCreateDefaultKey={canCreateDefaultKey}
-        isCreating={isCreating}
-        createError={createError}
-        onCreateDefaultKey={createDefaultKey}
+        isCreating={isDefaultTokenQuickCreateBusy}
+        createError={
+          defaultTokenGroupSelection
+            ? null
+            : defaultTokenQuickCreateError ?? postCreateError
+        }
+        onCreateDefaultKey={defaultTokenQuickCreate.start}
         onOpenAddTokenDialog={handleOpenAddTokenDialog}
         supportsApiTokenCreation={supportsApiTokenCreation}
       />
@@ -214,16 +196,20 @@ export default function CopyKeyDialog({
           onClose={handleCloseAddTokenDialog}
           availableAccounts={[account]}
           preSelectedAccountId={account.id}
-          createPrefill={defaultTokenQuickCreatePrefill}
-          prefillNotice={
-            defaultTokenQuickCreatePrefill
-              ? t("tokenProvisioning.createRequiresGroupSelection")
-              : undefined
-          }
           onSuccess={handleAddTokenSuccess}
           showOneTimeKeyDialog={false}
         />
       ) : null}
+      <DefaultTokenGroupSelectionDialog
+        isOpen={Boolean(defaultTokenGroupSelection)}
+        allowedGroups={defaultTokenGroupSelection?.allowedGroups ?? []}
+        groups={defaultTokenGroupSelection?.groups ?? {}}
+        suggestedGroup={defaultTokenGroupSelection?.suggestedGroup ?? ""}
+        isCreating={isDefaultTokenQuickCreating}
+        error={defaultTokenGroupSelection ? defaultTokenQuickCreateError : null}
+        onCancel={defaultTokenQuickCreate.cancelSelection}
+        onConfirm={defaultTokenQuickCreate.confirmGroup}
+      />
       <OneTimeSecretDialog
         isOpen={!!oneTimeToken}
         result={oneTimeSecretResult}

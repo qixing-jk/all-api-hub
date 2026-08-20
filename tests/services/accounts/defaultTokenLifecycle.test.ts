@@ -14,6 +14,7 @@ import {
   inspectDefaultTokenInventory,
   inspectDefaultTokenInventoryWithContext,
   resolveDefaultTokenLifecycleDecision,
+  resolveDefaultTokenLifecycleDecisionDetails,
   resolveDefaultTokenLifecycleDecisionWithContext,
   selectSingleNewApiTokenByIdDiff,
 } from "~/services/accounts/defaultTokenLifecycle"
@@ -297,10 +298,11 @@ describe("defaultTokenLifecycle decision and create helpers", () => {
         allowedGroups: ["default", "vip"],
         reason: TOKEN_PROVISIONING_BLOCK_REASONS.GroupSelectionRequired,
       })
-    const fetchUserGroupsMock = vi.fn().mockResolvedValueOnce({
+    const userGroups = {
       default: { desc: "Default", ratio: 1 },
       vip: { desc: "VIP", ratio: 2 },
-    })
+    }
+    const fetchUserGroupsMock = vi.fn().mockResolvedValueOnce(userGroups)
 
     getSiteTypeCapabilitiesMock.mockReturnValueOnce(
       buildAccountCapabilities({
@@ -322,14 +324,17 @@ describe("defaultTokenLifecycle decision and create helpers", () => {
     )
 
     await expect(
-      resolveDefaultTokenLifecycleDecision({
+      resolveDefaultTokenLifecycleDecisionDetails({
         workflow: TOKEN_PROVISIONING_WORKFLOWS.QuickCreateSelection,
         displaySiteData: buildDisplayAccount(),
       }),
     ).resolves.toEqual({
-      kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.SelectionRequired,
-      allowedGroups: ["default", "vip"],
-      reason: TOKEN_PROVISIONING_BLOCK_REASONS.GroupSelectionRequired,
+      decision: {
+        kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.SelectionRequired,
+        allowedGroups: ["default", "vip"],
+        reason: TOKEN_PROVISIONING_BLOCK_REASONS.GroupSelectionRequired,
+      },
+      userGroups,
     })
 
     expect(fetchUserGroupsMock).toHaveBeenCalledTimes(1)

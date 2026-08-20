@@ -213,7 +213,7 @@
     "expirationPlaceholder": "Deixe em branco para nunca expirar",
     "groupLabel": "Grupo",
     "groupRate": "Taxa:",
-    "groupRestrictedNote": "Somente grupos compatíveis com este modelo podem ser selecionados.",
+    "groupRestrictedNote": "Somente os grupos disponíveis podem ser selecionados; os demais estão desativados.",
     "ipExample": "Exemplo: 192.168.1.1,10.0.0.1 ou use * para não limitar",
     "ipLimits": "Limites de IP",
     "ipPlaceholder": "Deixe em branco para não limitar; separe vários IPs com vírgulas",

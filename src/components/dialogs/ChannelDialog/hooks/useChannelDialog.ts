@@ -10,14 +10,14 @@ import {
 } from "~/components/dialogs/ChannelDialog/utils/advisoryWarning"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import { SITE_TYPES } from "~/constants/siteType"
-import {
-  ensureAccountApiToken,
-  resolveDefaultTokenQuickCreateResolution,
-} from "~/services/accounts/accountOperations"
+import { ensureAccountApiToken } from "~/services/accounts/accountOperations"
 import { selectSingleNewApiTokenByIdDiff } from "~/services/accounts/accountPostSaveWorkflow"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { createUnsupportedTodayStatsAvailability } from "~/services/accounts/accountTodayStats"
-import { TOKEN_QUICK_CREATE_RESOLUTION_KINDS } from "~/services/accounts/tokenQuickCreateResolution"
+import {
+  resolveDefaultTokenQuickCreateResolution,
+  TOKEN_QUICK_CREATE_RESOLUTION_KINDS,
+} from "~/services/accounts/tokenQuickCreateResolution"
 import {
   createDisplayAccountApiContext,
   requireDisplayAccountKeyManagement,

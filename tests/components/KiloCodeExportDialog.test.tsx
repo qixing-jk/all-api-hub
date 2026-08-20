@@ -145,9 +145,18 @@ vi.mock("~/services/apiAdapters/registry", () => ({
 vi.mock("~/services/accounts/accountOperations", () => ({
   ensureAccountApiToken: (...args: unknown[]) =>
     mockEnsureAccountApiToken(...args),
-  resolveDefaultTokenQuickCreateResolution: (...args: unknown[]) =>
-    mockResolveDefaultTokenQuickCreateResolution(...args),
 }))
+
+vi.mock("~/services/accounts/tokenQuickCreateResolution", async () => {
+  const actual = await vi.importActual<
+    typeof import("~/services/accounts/tokenQuickCreateResolution")
+  >("~/services/accounts/tokenQuickCreateResolution")
+  return {
+    ...actual,
+    resolveDefaultTokenQuickCreateResolution: (...args: unknown[]) =>
+      mockResolveDefaultTokenQuickCreateResolution(...args),
+  }
+})
 
 const createDisplayAccount = (
   overrides: Partial<DisplaySiteData>,

@@ -203,7 +203,7 @@
     "expirationPlaceholder": "無期限の場合は空欄のまま",
     "groupLabel": "グループ",
     "groupRate": "倍率:",
-    "groupRestrictedNote": "このモデルに対応するグループのみ選択できます。",
+    "groupRestrictedNote": "利用可能なグループのみ選択できます。その他のグループは無効です。",
     "ipExample": "例: 192.168.1.1,10.0.0.1 または制限なしなら *",
     "ipLimits": "IP 制限",
     "ipPlaceholder": "制限なしの場合は空欄。複数 IP はカンマ区切り",

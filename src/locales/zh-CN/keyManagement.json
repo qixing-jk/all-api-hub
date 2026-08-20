@@ -203,7 +203,7 @@
     "expirationPlaceholder": "留空表示永不过期",
     "groupLabel": "分组",
     "groupRate": "倍率：",
-    "groupRestrictedNote": "仅可选择该模型可用的分组，其他分组已禁用。",
+    "groupRestrictedNote": "仅可选择可用分组，其他分组已禁用。",
     "ipExample": "例如：192.168.1.1,10.0.0.1 或使用 * 表示不限制",
     "ipLimits": "IP 限制",
     "ipPlaceholder": "留空表示不限制，多个 IP 用逗号分隔",

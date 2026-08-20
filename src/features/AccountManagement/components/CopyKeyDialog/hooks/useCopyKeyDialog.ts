@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
@@ -7,7 +7,6 @@ import {
   type NativeKeyManagementRow,
 } from "~/features/KeyManagement/types"
 import { fetchDisplayAccountKeyResourceInventory } from "~/services/accounts/accountKeyResourceInventory"
-import { resolveDefaultTokenQuickCreateResolution } from "~/services/accounts/accountOperations"
 import {
   appendOrReplaceAccountRuntimeKey,
   buildDisplayAccountTokenRuntimeKey,
@@ -22,20 +21,13 @@ import {
   supportsAccountApiTokenCreation,
   supportsRecoverableAccountRuntimeKeySecrets,
 } from "~/services/accounts/keyProductCapabilities"
-import { TOKEN_QUICK_CREATE_RESOLUTION_KINDS } from "~/services/accounts/tokenQuickCreateResolution"
 import {
-  createDisplayAccountApiContext,
   fetchDisplayAccountRuntimeKeys,
   getRuntimeKeyInventoryErrorMessage,
-  requireDisplayAccountKeyManagement,
   resolveDisplayAccountRuntimeKeySecret,
 } from "~/services/accounts/utils/apiServiceRequest"
 import { formatOptionalSkPrefixSiteToken } from "~/services/accountTokens/apiTokenKey"
 import { createAIHubMixCreatedRuntimeSecret } from "~/services/apiAdapters/aihubmix/createdSecret"
-import {
-  isCreatedApiToken,
-  TOKEN_PROVISIONING_ERRORS,
-} from "~/services/apiAdapters/contracts/tokenProvisioning"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -70,20 +62,17 @@ export function useCopyKeyDialog(
   isOpen: boolean,
   account: DisplaySiteData | null,
 ) {
-  const { t } = useTranslation(["ui", "messages"])
+  const { t } = useTranslation("ui")
   const [runtimeKeys, setRuntimeKeys] = useState<AccountRuntimeKey[]>([])
   const [nativeKeyRows, setNativeKeyRows] = useState<NativeKeyManagementRow[]>(
     [],
   )
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [isCreating, setIsCreating] = useState(false)
-  const [createError, setCreateError] = useState<string | null>(null)
+  const [postCreateError, setPostCreateError] = useState<string | null>(null)
   const [oneTimeToken, setOneTimeToken] = useState<ApiToken | null>(null)
   const [oneTimeSecret, setOneTimeSecret] =
     useState<CreatedRuntimeSecret | null>(null)
-  const [defaultTokenCreateAllowedGroups, setDefaultTokenCreateAllowedGroups] =
-    useState<string[] | null>(null)
   const [copiedRuntimeKeyId, setCopiedRuntimeKeyId] = useState<string | null>(
     null,
   )
@@ -97,25 +86,23 @@ export function useCopyKeyDialog(
   const fetchRequestIdRef = useRef(0)
   const inventoryAbortControllerRef = useRef<AbortController | null>(null)
 
-  const canCreateDefaultKey = useMemo(
-    () => canCreateAccountApiTokens(account),
-    [account],
+  const canCreateDefaultKey = canCreateAccountApiTokens(account)
+  const canLoadRuntimeKeys = canListAccountRuntimeKeys(account)
+  const canLoadNativeKeys = canListAccountKeyResources(account)
+  const supportsApiTokenCreation = Boolean(
+    account && supportsAccountApiTokenCreation(account.siteType),
   )
 
-  const canLoadRuntimeKeys = useMemo(
-    () => canListAccountRuntimeKeys(account),
-    [account],
-  )
-
-  const canLoadNativeKeys = useMemo(
-    () => canListAccountKeyResources(account),
-    [account],
-  )
-
-  const supportsApiTokenCreation = useMemo(
-    () => Boolean(account && supportsAccountApiTokenCreation(account.siteType)),
-    [account],
-  )
+  const resetPresentationState = useCallback(() => {
+    setRuntimeKeys([])
+    setNativeKeyRows([])
+    setError(null)
+    setPostCreateError(null)
+    setOneTimeToken(null)
+    setOneTimeSecret(null)
+    setCopiedRuntimeKeyId(null)
+    setExpandedRuntimeKeys(new Set())
+  }, [])
 
   const clearCopiedRuntimeKeyResetTimeout = useCallback(() => {
     if (copiedRuntimeKeyResetTimeoutRef.current === null) return
@@ -124,25 +111,13 @@ export function useCopyKeyDialog(
     copiedRuntimeKeyResetTimeoutRef.current = null
   }, [])
 
-  const clearDefaultTokenCreateAllowedGroups = useCallback(() => {
-    setDefaultTokenCreateAllowedGroups(null)
-  }, [])
-
   const fetchKeyInventory = useCallback(async () => {
     if (!account) return
     inventoryAbortControllerRef.current?.abort()
 
     if (!canLoadRuntimeKeys && !canLoadNativeKeys) {
       fetchRequestIdRef.current += 1
-      setRuntimeKeys([])
-      setNativeKeyRows([])
-      setError(null)
-      setCreateError(null)
-      setOneTimeToken(null)
-      setOneTimeSecret(null)
-      clearDefaultTokenCreateAllowedGroups()
-      setCopiedRuntimeKeyId(null)
-      setExpandedRuntimeKeys(new Set())
+      resetPresentationState()
       setIsLoading(false)
       return
     }
@@ -152,8 +127,7 @@ export function useCopyKeyDialog(
     inventoryAbortControllerRef.current = controller
     setIsLoading(true)
     setError(null)
-    setCreateError(null)
-    clearDefaultTokenCreateAllowedGroups()
+    setPostCreateError(null)
 
     try {
       if (canLoadNativeKeys) {
@@ -210,7 +184,7 @@ export function useCopyKeyDialog(
     account,
     canLoadNativeKeys,
     canLoadRuntimeKeys,
-    clearDefaultTokenCreateAllowedGroups,
+    resetPresentationState,
     t,
   ])
 
@@ -221,23 +195,14 @@ export function useCopyKeyDialog(
       inventoryAbortControllerRef.current?.abort()
       inventoryAbortControllerRef.current = null
       clearCopiedRuntimeKeyResetTimeout()
-      setRuntimeKeys([])
-      setNativeKeyRows([])
-      setError(null)
-      setIsCreating(false)
-      setCreateError(null)
-      setOneTimeToken(null)
-      setOneTimeSecret(null)
-      clearDefaultTokenCreateAllowedGroups()
-      setCopiedRuntimeKeyId(null)
-      setExpandedRuntimeKeys(new Set())
+      resetPresentationState()
     }
   }, [
     account,
     clearCopiedRuntimeKeyResetTimeout,
-    clearDefaultTokenCreateAllowedGroups,
     fetchKeyInventory,
     isOpen,
+    resetPresentationState,
   ])
 
   useEffect(() => {
@@ -297,11 +262,11 @@ export function useCopyKeyDialog(
       if (!account) return
 
       if (!canCreateDefaultKey) {
-        setCreateError(t("ui:dialog.copyKey.createNotSupported"))
+        setPostCreateError(t("ui:dialog.copyKey.createNotSupported"))
         return
       }
 
-      setCreateError(null)
+      setPostCreateError(null)
 
       try {
         const shouldShowOneTimeKeyDialog =
@@ -337,7 +302,7 @@ export function useCopyKeyDialog(
         setRuntimeKeys(refreshedRuntimeKeys)
 
         if (refreshedRuntimeKeys.length === 0) {
-          setCreateError(t("ui:dialog.copyKey.noKeyFoundAfterCreate"))
+          setPostCreateError(t("ui:dialog.copyKey.noKeyFoundAfterCreate"))
           return
         }
 
@@ -361,79 +326,13 @@ export function useCopyKeyDialog(
           error,
           t("ui:dialog.copyKey.getFailed"),
         )
-        setCreateError(
+        setPostCreateError(
           t("ui:dialog.copyKey.createFailed", { error: errorMessage }),
         )
       }
     },
     [account, canCreateDefaultKey, copyKey, t],
   )
-
-  const createDefaultKey = useCallback(async () => {
-    if (!account) return
-
-    if (!canCreateDefaultKey) {
-      setCreateError(t("ui:dialog.copyKey.createNotSupported"))
-      return
-    }
-
-    if (isCreating) return
-
-    setIsCreating(true)
-    setCreateError(null)
-    clearDefaultTokenCreateAllowedGroups()
-
-    try {
-      const { keyManagement, request } = createDisplayAccountApiContext(account)
-      const resolution = await resolveDefaultTokenQuickCreateResolution(account)
-      if (resolution.kind === TOKEN_QUICK_CREATE_RESOLUTION_KINDS.Blocked) {
-        setCreateError(resolution.message)
-        return
-      }
-
-      if (
-        resolution.kind ===
-        TOKEN_QUICK_CREATE_RESOLUTION_KINDS.SelectionRequired
-      ) {
-        setDefaultTokenCreateAllowedGroups(resolution.allowedGroups)
-        return
-      }
-
-      const tokenRequest = resolution.tokenData
-
-      const created = await requireDisplayAccountKeyManagement(
-        account,
-        keyManagement,
-      ).createToken(request, tokenRequest)
-      if (!created) {
-        throw new Error(TOKEN_PROVISIONING_ERRORS.CreateTokenFailed)
-      }
-
-      await refreshRuntimeKeysAfterCreate(
-        isCreatedApiToken(created) ? created : undefined,
-      )
-    } catch (error) {
-      logger.error("Failed to create default key", {
-        error,
-        accountId: account.id,
-        baseUrl: account.baseUrl,
-        siteType: account.siteType,
-      })
-      const errorMessage = getErrorMessage(error)
-      setCreateError(
-        t("ui:dialog.copyKey.createFailed", { error: errorMessage }),
-      )
-    } finally {
-      setIsCreating(false)
-    }
-  }, [
-    account,
-    canCreateDefaultKey,
-    clearDefaultTokenCreateAllowedGroups,
-    isCreating,
-    refreshRuntimeKeysAfterCreate,
-    t,
-  ])
 
   const toggleRuntimeKeyExpansion = (runtimeKeyId: string) => {
     setExpandedRuntimeKeys((prev) => {
@@ -452,21 +351,17 @@ export function useCopyKeyDialog(
     nativeKeyRows,
     isLoading,
     error,
-    isCreating,
-    createError,
+    postCreateError,
     oneTimeToken,
     oneTimeSecret,
-    defaultTokenCreateAllowedGroups,
     copiedRuntimeKeyId,
     expandedRuntimeKeys,
     canCreateDefaultKey,
     supportsApiTokenCreation,
     fetchKeyInventory,
     copyKey,
-    createDefaultKey,
     refreshRuntimeKeysAfterCreate,
     toggleRuntimeKeyExpansion,
-    clearDefaultTokenCreateAllowedGroups,
     clearOneTimeToken: () => {
       setOneTimeToken(null)
       setOneTimeSecret(null)

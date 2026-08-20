@@ -8,7 +8,6 @@
     "tokenNotFound": "Fehler beim Erstellen oder Finden eines API-Tokens"
   },
   "aihubmix": {
-    "createRequiresOneTimeKeyDialog": "AIHubMix Schlüssel können nur einmal angezeigt werden. Erstellen Sie den Schlüssel manuell in der Schlüsselverwaltung und speichern Sie den vollständigen Schlüssel sofort.",
     "oneTimeKeyPromptCancelled": "Konto gespeichert. Sie können einen AIHubMix API-Schlüssel später manuell in der Schlüsselverwaltung erstellen.",
     "oneTimeKeyUnavailableAfterCreate": "Konto gespeichert, aber der vollständige AIHubMix-API-Schlüssel konnte nicht abgerufen werden. AIHubMix-Schlüssel werden nach der Erstellung nur einmal angezeigt; erstellen Sie in der Schlüsselverwaltung einen neuen Schlüssel und speichern Sie ihn sofort vollständig."
   },
@@ -164,7 +163,6 @@
   },
   "sub2api": {
     "configMissing": "Bitte konfigurieren Sie zuerst die Sub2API-Basis-URL und den Admin API Key in den Grundeinstellungen.",
-    "createRequiresAvailableGroup": "Für dieses Konto ist keine Gruppe für die Schlüsselerstellung verfügbar. Überprüfen Sie die verfügbaren Gruppen des Kontos und versuchen Sie es erneut.",
     "groupMissing": "Die Sub2API-Gruppe „{{group}}“ ist nicht mehr verfügbar. Aktualisieren Sie die Gruppenliste und versuchen Sie es erneut.",
     "loginRequired": "Bitte melden Sie sich zuerst beim Sub2API-Dashboard an (damit die Erweiterung auth_token/auth_user aus localStorage lesen kann) und versuchen Sie es erneut.",
     "refreshTokenInvalid": "Das Sub2API-Aktualisierungstoken ist ungültig oder wurde rotiert. Importieren Sie die Sitzung erneut aus dem Dashboard (empfohlen: Inkognito-/privates Fenster) oder fügen Sie ein aktualisiertes refresh_token ein und versuchen Sie es erneut."
@@ -220,8 +218,11 @@
     }
   },
   "tokenProvisioning": {
+    "createRequiresAvailableGroup": "Für dieses Konto ist keine Gruppe für die Schlüsselerstellung verfügbar. Überprüfen Sie die verfügbaren Gruppen des Kontos und versuchen Sie es erneut.",
     "createRequiresGroup": "Für die Schlüsselerstellung ist eine bestätigte Gruppe erforderlich. Wählen Sie eine verfügbare Gruppe aus, bevor Sie fortfahren.",
-    "createRequiresGroupSelection": "Dieses Konto verfügt über mehrere verfügbare Gruppen. Wählen Sie eine aus, bevor Sie den Schlüssel erstellen."
+    "createRequiresGroupSelection": "Dieses Konto verfügt über mehrere verfügbare Gruppen. Wählen Sie eine aus, bevor Sie den Schlüssel erstellen.",
+    "createRequiresOneTimeSecretHandling": "Dieser Anbieter zeigt neu erstellte Schlüssel nur einmal an. Erstellen Sie den Schlüssel manuell in der Schlüsselverwaltung und speichern Sie den vollständigen Schlüssel sofort.",
+    "selectGroupTitle": "Schlüsselgruppe auswählen"
   },
   "veloera": {
     "configMissing": "Bitte konfigurieren Sie zuerst die Veloera-Adresse, das Admin-Token und die Benutzer-ID in den Grundeinstellungen",

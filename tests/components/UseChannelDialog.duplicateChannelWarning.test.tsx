@@ -9,7 +9,11 @@ import { DIALOG_MODES } from "~/constants/dialogModes"
 import { SITE_TYPES } from "~/constants/siteType"
 import * as accountOperations from "~/services/accounts/accountOperations"
 import { accountStorage } from "~/services/accounts/accountStorage"
-import { TOKEN_QUICK_CREATE_RESOLUTION_KINDS } from "~/services/accounts/tokenQuickCreateResolution"
+import * as tokenQuickCreateResolution from "~/services/accounts/tokenQuickCreateResolution"
+import {
+  TOKEN_QUICK_CREATE_RESOLUTION_KINDS,
+  type DefaultTokenQuickCreateResolution,
+} from "~/services/accounts/tokenQuickCreateResolution"
 import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
 import { MANAGED_RESOURCE_CREATE_SEED_KINDS } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { TOKEN_PROVISIONING_BLOCK_REASONS } from "~/services/apiAdapters/contracts/tokenProvisioning"
@@ -64,9 +68,17 @@ const ensureAccountApiTokenSpy = vi.spyOn(
   "ensureAccountApiToken",
 )
 const resolveDefaultTokenQuickCreateResolutionSpy = vi.spyOn(
-  accountOperations,
+  tokenQuickCreateResolution,
   "resolveDefaultTokenQuickCreateResolution",
 )
+
+const buildSelectionRequiredResolution =
+  (): DefaultTokenQuickCreateResolution => ({
+    kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.SelectionRequired,
+    allowedGroups: ["default", "vip"],
+    suggestedGroup: "default",
+    groups: {},
+  })
 
 const buildSiteAccount = (
   overrides: Partial<SiteAccount> = {},
@@ -1044,10 +1056,9 @@ describe("useChannelDialog", () => {
     getAccountByIdSpy.mockResolvedValue(
       buildSiteAccount({ site_type: "sub2api" }),
     )
-    resolveDefaultTokenQuickCreateResolutionSpy.mockResolvedValueOnce({
-      kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.SelectionRequired,
-      allowedGroups: ["default", "vip"],
-    })
+    resolveDefaultTokenQuickCreateResolutionSpy.mockResolvedValueOnce(
+      buildSelectionRequiredResolution(),
+    )
 
     const { result } = renderHook(() => ({
       dialog: useChannelDialog(),
@@ -1111,10 +1122,9 @@ describe("useChannelDialog", () => {
     mockFetchAccountTokens
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([buildApiToken()])
-    resolveDefaultTokenQuickCreateResolutionSpy.mockResolvedValueOnce({
-      kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.SelectionRequired,
-      allowedGroups: ["default", "vip"],
-    })
+    resolveDefaultTokenQuickCreateResolutionSpy.mockResolvedValueOnce(
+      buildSelectionRequiredResolution(),
+    )
 
     const { result } = renderHook(() => ({
       dialog: useChannelDialog(),
@@ -1279,10 +1289,9 @@ describe("useChannelDialog", () => {
       buildSiteAccount({ site_type: SITE_TYPES.SUB2API }),
     )
     mockFetchAccountTokens.mockResolvedValueOnce([])
-    resolveDefaultTokenQuickCreateResolutionSpy.mockResolvedValueOnce({
-      kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.SelectionRequired,
-      allowedGroups: ["default", "vip"],
-    })
+    resolveDefaultTokenQuickCreateResolutionSpy.mockResolvedValueOnce(
+      buildSelectionRequiredResolution(),
+    )
 
     let shouldContinueCalls = 0
     const { result } = await renderChannelDialogHook()
@@ -1344,10 +1353,9 @@ describe("useChannelDialog", () => {
     mockFetchAccountTokens
       .mockResolvedValueOnce([existingToken, undefined] as ApiToken[])
       .mockResolvedValueOnce([createdToken, existingToken])
-    resolveDefaultTokenQuickCreateResolutionSpy.mockResolvedValueOnce({
-      kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.SelectionRequired,
-      allowedGroups: ["default", "vip"],
-    })
+    resolveDefaultTokenQuickCreateResolutionSpy.mockResolvedValueOnce(
+      buildSelectionRequiredResolution(),
+    )
 
     const { result } = await renderChannelDialogHook()
 
@@ -1411,10 +1419,9 @@ describe("useChannelDialog", () => {
       buildSiteAccount({ site_type: SITE_TYPES.SUB2API }),
     )
     mockFetchAccountTokens.mockResolvedValueOnce([])
-    resolveDefaultTokenQuickCreateResolutionSpy.mockResolvedValueOnce({
-      kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.SelectionRequired,
-      allowedGroups: ["default", "vip"],
-    })
+    resolveDefaultTokenQuickCreateResolutionSpy.mockResolvedValueOnce(
+      buildSelectionRequiredResolution(),
+    )
 
     const { result } = await renderChannelDialogHook()
 
@@ -1475,10 +1482,9 @@ describe("useChannelDialog", () => {
       buildSiteAccount({ site_type: "sub2api" }),
     )
     mockFetchAccountTokens.mockResolvedValueOnce([])
-    resolveDefaultTokenQuickCreateResolutionSpy.mockResolvedValueOnce({
-      kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.SelectionRequired,
-      allowedGroups: ["default", "vip"],
-    })
+    resolveDefaultTokenQuickCreateResolutionSpy.mockResolvedValueOnce(
+      buildSelectionRequiredResolution(),
+    )
 
     const { result } = await renderChannelDialogHook()
 
@@ -1608,10 +1614,9 @@ describe("useChannelDialog", () => {
     mockFetchAccountTokens
       .mockResolvedValueOnce([existingToken, undefined] as ApiToken[])
       .mockResolvedValueOnce([existingToken, ambiguousTokenA, ambiguousTokenB])
-    resolveDefaultTokenQuickCreateResolutionSpy.mockResolvedValueOnce({
-      kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.SelectionRequired,
-      allowedGroups: ["default", "vip"],
-    })
+    resolveDefaultTokenQuickCreateResolutionSpy.mockResolvedValueOnce(
+      buildSelectionRequiredResolution(),
+    )
 
     const { result } = await renderChannelDialogHook()
 
@@ -1654,10 +1659,9 @@ describe("useChannelDialog", () => {
       buildSiteAccount({ site_type: SITE_TYPES.SUB2API }),
     )
     mockFetchAccountTokens.mockResolvedValueOnce([]).mockResolvedValueOnce(null)
-    resolveDefaultTokenQuickCreateResolutionSpy.mockResolvedValueOnce({
-      kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.SelectionRequired,
-      allowedGroups: ["default", "vip"],
-    })
+    resolveDefaultTokenQuickCreateResolutionSpy.mockResolvedValueOnce(
+      buildSelectionRequiredResolution(),
+    )
 
     const { result } = await renderChannelDialogHook()
 
@@ -1705,10 +1709,9 @@ describe("useChannelDialog", () => {
       buildSiteAccount({ site_type: SITE_TYPES.SUB2API }),
     )
     mockFetchAccountTokens.mockResolvedValueOnce([])
-    resolveDefaultTokenQuickCreateResolutionSpy.mockResolvedValueOnce({
-      kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.SelectionRequired,
-      allowedGroups: ["default", "vip"],
-    })
+    resolveDefaultTokenQuickCreateResolutionSpy.mockResolvedValueOnce(
+      buildSelectionRequiredResolution(),
+    )
 
     let shouldContinue = true
     const { result } = await renderChannelDialogHook()
@@ -1753,10 +1756,9 @@ describe("useChannelDialog", () => {
       buildSiteAccount({ site_type: SITE_TYPES.SUB2API }),
     )
     mockFetchAccountTokens.mockResolvedValueOnce([])
-    resolveDefaultTokenQuickCreateResolutionSpy.mockResolvedValueOnce({
-      kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.SelectionRequired,
-      allowedGroups: ["default", "vip"],
-    })
+    resolveDefaultTokenQuickCreateResolutionSpy.mockResolvedValueOnce(
+      buildSelectionRequiredResolution(),
+    )
 
     let shouldContinueCalls = 0
     const { result } = await renderChannelDialogHook()
@@ -1814,10 +1816,9 @@ describe("useChannelDialog", () => {
     mockFetchAccountTokens
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([createdToken, existingToken])
-    resolveDefaultTokenQuickCreateResolutionSpy.mockResolvedValueOnce({
-      kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.SelectionRequired,
-      allowedGroups: ["default", "vip"],
-    })
+    resolveDefaultTokenQuickCreateResolutionSpy.mockResolvedValueOnce(
+      buildSelectionRequiredResolution(),
+    )
 
     let shouldContinueCalls = 0
     const { result } = await renderChannelDialogHook()
@@ -1897,10 +1898,9 @@ describe("useChannelDialog", () => {
     const onSuccess = vi.fn(async () => {})
 
     mockFetchAccountTokens.mockResolvedValueOnce([])
-    resolveDefaultTokenQuickCreateResolutionSpy.mockResolvedValueOnce({
-      kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.SelectionRequired,
-      allowedGroups: ["default", "vip"],
-    })
+    resolveDefaultTokenQuickCreateResolutionSpy.mockResolvedValueOnce(
+      buildSelectionRequiredResolution(),
+    )
 
     const { result } = await renderChannelDialogHook()
 
