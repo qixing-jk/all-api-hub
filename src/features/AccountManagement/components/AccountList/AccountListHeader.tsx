@@ -8,7 +8,10 @@ import {
   DATA_TYPE_CREATED_AT,
   DATA_TYPE_INCOME,
 } from "~/constants"
-import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
+import {
+  ACCOUNT_MANAGEMENT_TEST_IDS,
+  getAccountManagementSortButtonTestId,
+} from "~/features/AccountManagement/testIds"
 import { cn } from "~/lib/utils"
 import type { ActiveSortField, SortField, SortOrder } from "~/types"
 
@@ -55,6 +58,7 @@ function AccountListSortButton({
       size="none"
       disabled={disabled}
       aria-label={`${sortLabel} ${label}`}
+      data-testid={getAccountManagementSortButtonTestId(field)}
       className={cn(
         "min-h-6 space-x-0.5 rounded-md px-1.5 text-xs font-medium sm:space-x-1",
         isActive &&
@@ -172,6 +176,9 @@ export function AccountListHeader({
             className="h-7 shrink-0 px-2 text-xs"
             onClick={isBulkMode ? onBulkModeExit : onBulkModeEnter}
             disabled={isBulkBusy}
+            data-testid={
+              ACCOUNT_MANAGEMENT_TEST_IDS.accountListBulkManageButton
+            }
           >
             {isBulkMode ? t("account:bulk.exit") : t("account:bulk.manage")}
           </Button>

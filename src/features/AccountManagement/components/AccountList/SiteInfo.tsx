@@ -87,6 +87,7 @@ interface CheckInStatusButtonProps {
   icon: LucideIcon
   label: string
   onClick: () => void
+  testId: string
 }
 
 /** Renders a check-in action with its source-specific icon and shared status color. */
@@ -95,6 +96,7 @@ function CheckInStatusButton({
   icon: Icon,
   label,
   onClick,
+  testId,
 }: CheckInStatusButtonProps) {
   return (
     <Tooltip
@@ -107,6 +109,7 @@ function CheckInStatusButton({
         variant="ghost"
         size="xs"
         aria-label={label}
+        data-testid={testId}
       >
         <Icon
           className={cn(
@@ -368,6 +371,7 @@ export default function SiteInfo({
             icon={CircleCheck}
             label={t("list.site.checkedInToday")}
             onClick={handleSiteCheckIn}
+            testId={ACCOUNT_MANAGEMENT_TEST_IDS.siteCheckInStatusButton}
           />,
         )
       } else {
@@ -378,6 +382,7 @@ export default function SiteInfo({
             icon={CircleX}
             label={t("list.site.notCheckedInToday")}
             onClick={handleSiteCheckIn}
+            testId={ACCOUNT_MANAGEMENT_TEST_IDS.siteCheckInStatusButton}
           />,
         )
       }
@@ -395,6 +400,7 @@ export default function SiteInfo({
           icon={CircleDollarSign}
           label={customCheckInLabel}
           onClick={handleCustomCheckIn}
+          testId={ACCOUNT_MANAGEMENT_TEST_IDS.customCheckInStatusButton}
         />,
       )
     }

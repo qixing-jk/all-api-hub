@@ -5,6 +5,7 @@ import { OPTIONS_TEST_IDS } from "~/entrypoints/options/testIds"
 import {
   ACCOUNT_MANAGEMENT_TEST_IDS,
   getAccountManagementListItemTestId,
+  getAccountManagementSortButtonTestId,
 } from "~/features/AccountManagement/testIds"
 import {
   createDefaultAccountStorageConfig,
@@ -324,23 +325,11 @@ test("keeps account management controls reachable across constrained widths", as
     ACCOUNT_MANAGEMENT_TEST_IDS.accountListClearSortButton,
   )
   const requiredAccountListHeaderActions = [
-    accountListHeader.getByRole("button", {
-      name: "Sort Account",
-      exact: true,
-    }),
-    accountListHeader.getByRole("button", {
-      name: "Sort Created At",
-      exact: true,
-    }),
-    accountListHeader.getByRole("button", {
-      name: "Sort Balance",
-      exact: true,
-    }),
+    page.getByTestId(getAccountManagementSortButtonTestId("name")),
+    page.getByTestId(getAccountManagementSortButtonTestId("created_at")),
+    page.getByTestId(getAccountManagementSortButtonTestId("balance")),
     clearSortAction,
-    accountListHeader.getByRole("button", {
-      name: "Bulk manage",
-      exact: true,
-    }),
+    page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accountListBulkManageButton),
   ]
   for (const action of requiredAccountListHeaderActions) {
     await expect(action).toBeVisible()

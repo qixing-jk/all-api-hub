@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import SiteInfo from "~/features/AccountManagement/components/AccountList/SiteInfo"
+import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import type { DisplaySiteData } from "~/types"
 import {
   AuthTypeEnum,
@@ -376,18 +377,20 @@ describe("SiteInfo", () => {
         />,
       )
 
-      const checkInActions = await screen.findAllByRole("button", {
-        name: "account:list.site.checkedInToday",
-      })
-      expect(checkInActions).toHaveLength(2)
+      const siteCheckInAction = await screen.findByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.siteCheckInStatusButton,
+      )
+      const customCheckInAction = await screen.findByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.customCheckInStatusButton,
+      )
 
-      await user.click(checkInActions[0])
+      await user.click(siteCheckInAction)
       expect(mockOpenCheckInPage).toHaveBeenCalledWith(
         expect.objectContaining({ id: "acc-1" }),
       )
       expect(mockHandleMarkCustomCheckInAsCheckedIn).not.toHaveBeenCalled()
 
-      await user.click(checkInActions[1])
+      await user.click(customCheckInAction)
       expect(mockHandleMarkCustomCheckInAsCheckedIn).toHaveBeenCalledWith(
         expect.objectContaining({ id: "acc-1" }),
       )
