@@ -1,5 +1,6 @@
-import { getDayKeyFromUnixSeconds } from "~/services/history/usageHistory/core"
 import type { DisplaySiteData } from "~/types"
+
+import { isCheckInStatusDetectedToday } from "./checkInStatus"
 
 export type AccountCheckInFilterValue =
   | "checked-in"
@@ -9,19 +10,6 @@ export type AccountCheckInFilterValue =
 
 export const ACCOUNT_CHECK_IN_FILTER_OPTION_ORDER: AccountCheckInFilterValue[] =
   ["checked-in", "not-checked-in", "outdated", "unsupported"]
-
-/**
- * Checks whether a persisted site check-in detection timestamp belongs to today.
- */
-function isCheckInStatusDetectedToday(detectedAt?: number): boolean {
-  if (typeof detectedAt !== "number" || !Number.isFinite(detectedAt)) {
-    return false
-  }
-
-  const todayKey = getDayKeyFromUnixSeconds(Math.floor(Date.now() / 1000))
-  const detectedKey = getDayKeyFromUnixSeconds(Math.floor(detectedAt / 1000))
-  return detectedKey === todayKey
-}
 
 /**
  * Maps combined site/custom check-in state into one stable filter bucket.

@@ -1,9 +1,9 @@
 import {
   CalendarDays,
   CircleCheck,
+  CircleDollarSign,
   CircleX,
   Gift,
-  JapaneseYen,
   Link,
   Pin,
   RefreshCw,
@@ -11,8 +11,9 @@ import {
   Tag,
   TriangleAlert,
   User,
+  type LucideIcon,
 } from "lucide-react"
-import { useMemo, useState } from "react"
+import { useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
@@ -42,7 +43,7 @@ import {
   getTempWindowFallbackSettingsTab,
 } from "~/features/AccountManagement/utils/tempWindowFallbackReminder"
 import { useLdohSiteLookupContext } from "~/features/LdohSiteLookup/hooks/LdohSiteLookupContext"
-import { getDayKeyFromUnixSeconds } from "~/services/history/usageHistory/core"
+import { cn } from "~/lib/utils"
 import {
   SiteHealthStatus,
   TEMP_WINDOW_HEALTH_STATUS_CODES,
@@ -59,6 +60,8 @@ import {
   openCustomCheckInPage,
   openSettingsTab,
 } from "~/utils/navigation"
+
+import { isCheckInStatusDetectedToday } from "./checkInStatus"
 
 interface SiteInfoProps {
   site: DisplaySiteData
@@ -78,6 +81,43 @@ type SiteInfoRefreshTarget =
  * Logger scoped to account list rows so navigation failures can be diagnosed without leaking account secrets.
  */
 const logger = createLogger("AccountList.SiteInfo")
+
+interface CheckInStatusButtonProps {
+  checkedIn: boolean
+  icon: LucideIcon
+  label: string
+  onClick: () => void
+}
+
+/** Renders a check-in action with its source-specific icon and shared status color. */
+function CheckInStatusButton({
+  checkedIn,
+  icon: Icon,
+  label,
+  onClick,
+}: CheckInStatusButtonProps) {
+  return (
+    <Tooltip
+      content={label}
+      position="top"
+      wrapperClassName="flex items-center"
+    >
+      <IconButton
+        onClick={onClick}
+        variant="ghost"
+        size="xs"
+        aria-label={label}
+      >
+        <Icon
+          className={cn(
+            "h-4 w-4",
+            checkedIn ? "text-green-500" : "text-red-500",
+          )}
+        />
+      </IconButton>
+    </Tooltip>
+  )
+}
 
 /**
  * Renders highlighted fragments (such as search matches) with mark elements while preserving non-highlighted text.
@@ -128,9 +168,8 @@ export default function SiteInfo({
   const { getLdohSearchUrlForAccountUrl } = useLdohSiteLookupContext()
   const [activeRefreshTarget, setActiveRefreshTarget] =
     useState<SiteInfoRefreshTarget | null>(null)
-  const detectedAccountIdSet = useMemo(
-    () => new Set(detectedSiteAccounts.map((account) => account.id)),
-    [detectedSiteAccounts],
+  const isDetectedAccount = detectedSiteAccounts.some(
+    (account) => account.id === site.id,
   )
 
   const isPinned = isAccountPinned(site.id)
@@ -141,6 +180,8 @@ export default function SiteInfo({
   const ldohSearchUrl = getLdohSearchUrlForAccountUrl(site.baseUrl)
   const customCheckInUrl = site.checkIn?.customCheckIn?.url
   const customRedeemUrl = site.checkIn?.customCheckIn?.redeemUrl
+  const hasTags = Boolean(site.tags && site.tags.length > 0)
+  const tagLabel = hasTags ? site.tags?.join(", ") || "" : ""
   const createdAtLabel = t("account:list.header.createdAt")
   const siteTypeLabel = t("list.site.siteType")
   const createdAtText = formatLocaleDateTime(
@@ -267,23 +308,6 @@ export default function SiteInfo({
       return null
     }
 
-    /**
-     * Check-in status is fetched and persisted during refresh operations.
-     * When the last detection date isn't today, we show a warning state to avoid
-     * misleading users with stale "checked in" / "not checked in" indicators.
-     */
-    const isCheckInStatusDetectedToday = (detectedAt?: number): boolean => {
-      if (typeof detectedAt !== "number" || !Number.isFinite(detectedAt)) {
-        return false
-      }
-
-      const todayKey = getDayKeyFromUnixSeconds(Math.floor(Date.now() / 1000))
-      const detectedKey = getDayKeyFromUnixSeconds(
-        Math.floor(detectedAt / 1000),
-      )
-      return detectedKey === todayKey
-    }
-
     const indicators: React.ReactNode[] = []
 
     const customUrl = site.checkIn?.customCheckIn?.url
@@ -338,79 +362,40 @@ export default function SiteInfo({
         )
       } else if (siteCheckedIn) {
         indicators.push(
-          <Tooltip
+          <CheckInStatusButton
             key="site-checkin"
-            content={t("list.site.checkedInToday")}
-            position="top"
-            wrapperClassName="flex items-center"
-          >
-            <IconButton
-              onClick={handleSiteCheckIn}
-              variant="ghost"
-              size="xs"
-              aria-label={t("list.site.checkedInToday")}
-            >
-              <CircleCheck className="h-4 w-4 text-green-500" />
-            </IconButton>
-          </Tooltip>,
+            checkedIn
+            icon={CircleCheck}
+            label={t("list.site.checkedInToday")}
+            onClick={handleSiteCheckIn}
+          />,
         )
       } else {
         indicators.push(
-          <Tooltip
+          <CheckInStatusButton
             key="site-checkin"
-            content={t("list.site.notCheckedInToday")}
-            position="top"
-            wrapperClassName="flex items-center"
-          >
-            <IconButton
-              onClick={handleSiteCheckIn}
-              variant="ghost"
-              size="xs"
-              aria-label={t("list.site.notCheckedInToday")}
-            >
-              <CircleX className="h-4 w-4 text-red-500" />
-            </IconButton>
-          </Tooltip>,
+            checkedIn={false}
+            icon={CircleX}
+            label={t("list.site.notCheckedInToday")}
+            onClick={handleSiteCheckIn}
+          />,
         )
       }
     }
 
     if (hasCustomUrl) {
       const isCustomCheckedIn = site.checkIn.customCheckIn?.isCheckedInToday
+      const customCheckInLabel = isCustomCheckedIn
+        ? t("list.site.checkedInToday")
+        : t("list.site.notCheckedInToday")
       indicators.push(
-        isCustomCheckedIn ? (
-          <Tooltip
-            key="custom-checkin"
-            content={t("list.site.checkedInToday")}
-            position="top"
-            wrapperClassName="flex items-center"
-          >
-            <IconButton
-              onClick={handleCustomCheckIn}
-              variant="ghost"
-              size="xs"
-              aria-label={t("list.site.checkedInToday")}
-            >
-              <JapaneseYen className="h-4 w-4 text-green-500" />
-            </IconButton>
-          </Tooltip>
-        ) : (
-          <Tooltip
-            key="custom-checkin"
-            content={t("list.site.notCheckedInToday")}
-            position="top"
-            wrapperClassName="flex items-center"
-          >
-            <IconButton
-              onClick={handleCustomCheckIn}
-              variant="ghost"
-              size="xs"
-              aria-label={t("list.site.notCheckedInToday")}
-            >
-              <JapaneseYen className="h-4 w-4 text-red-500" />
-            </IconButton>
-          </Tooltip>
-        ),
+        <CheckInStatusButton
+          key="custom-checkin"
+          checkedIn={Boolean(isCustomCheckedIn)}
+          icon={CircleDollarSign}
+          label={customCheckInLabel}
+          onClick={handleCustomCheckIn}
+        />,
       )
     }
 
@@ -422,6 +407,7 @@ export default function SiteInfo({
   }
 
   const checkInIndicator = renderCheckInIndicators()
+  const healthStatusDisplay = getHealthStatusDisplay(site.health?.status, t)
 
   return (
     <div className="flex w-full min-w-0 items-center gap-2">
@@ -431,14 +417,8 @@ export default function SiteInfo({
             <div className="space-y-1">
               <p>
                 {t("list.site.status")}:{" "}
-                <span
-                  className={
-                    getHealthStatusDisplay(site.health?.status, t).color ||
-                    "text-gray-400"
-                  }
-                >
-                  {getHealthStatusDisplay(site.health?.status, t).text ||
-                    t("list.site.unknown")}
+                <span className={healthStatusDisplay.color || "text-gray-400"}>
+                  {healthStatusDisplay.text || t("list.site.unknown")}
                 </span>
               </p>
               {site.health?.reason && (
@@ -532,7 +512,7 @@ export default function SiteInfo({
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-1 gap-y-1">
           <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-            {detectedAccountIdSet.has(site.id) && (
+            {isDetectedAccount && (
               <Tooltip
                 content={t("list.site.currentSiteExists")}
                 position="top"
@@ -569,7 +549,7 @@ export default function SiteInfo({
             </Tooltip>
           </div>
 
-          <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
+          <div className="flex min-w-0 items-center gap-1 sm:gap-1.5">
             {/* Keep the site URL clickable even when the account is disabled so users can still open the provider site. */}
             {/* Avoid `bleed`/non-shrinking button layout that can overflow into the action buttons column. */}
             <Button
@@ -677,16 +657,13 @@ export default function SiteInfo({
           </div>
         )}
 
-        {site.tags && site.tags.length > 0 && (
+        {hasTags && (
           <div className="mt-0.5 flex min-w-0 items-start gap-1 sm:mt-1">
             <Tag className="dark:text-dark-text-tertiary mt-0.5 h-3 w-3 shrink-0 text-gray-400" />
-            <Caption className="truncate" title={site.tags.join(", ")}>
+            <Caption className="truncate" title={tagLabel}>
               {highlights?.tags
-                ? renderHighlightedFragments(
-                    highlights.tags,
-                    site.tags.join(", "),
-                  )
-                : site.tags.join(", ")}
+                ? renderHighlightedFragments(highlights.tags, tagLabel)
+                : tagLabel}
             </Caption>
           </div>
         )}
