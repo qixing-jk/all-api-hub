@@ -1,4 +1,4 @@
-import { SITE_TYPES } from "~/constants/siteType"
+import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import { newApiProvider } from "~/services/checkin/autoCheckin/providers/newApi"
 import type { AutoCheckinProviderResult } from "~/services/checkin/autoCheckin/providers/types"
 import { voApiV2Provider } from "~/services/checkin/autoCheckin/providers/voapiV2"
@@ -30,11 +30,14 @@ export interface AutoCheckinProviderContext {
   protectionBypassExecution: ProtectionBypassExecution
 }
 
-const providers: Record<string, AutoCheckinProvider> = {
+const autoCheckinProvidersBySiteType: Partial<
+  Record<AccountSiteType, AutoCheckinProvider>
+> = {
   [SITE_TYPES.ANYROUTER]: anyrouterProvider,
   [SITE_TYPES.VELOERA]: veloeraProvider,
   [SITE_TYPES.WONG_GONGYI]: wongGongyiProvider,
   [SITE_TYPES.NEW_API]: newApiProvider,
+  [SITE_TYPES.MODELFLARE]: newApiProvider,
   [SITE_TYPES.VO_API_V2]: voApiV2Provider,
 }
 
@@ -46,6 +49,6 @@ const providers: Record<string, AutoCheckinProvider> = {
 export function resolveAutoCheckinProvider(
   account: SiteAccount,
 ): AutoCheckinProvider | null {
-  const provider = providers[account.site_type]
+  const provider = autoCheckinProvidersBySiteType[account.site_type]
   return provider ?? null
 }

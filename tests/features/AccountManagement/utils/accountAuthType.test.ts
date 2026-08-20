@@ -15,6 +15,12 @@ describe("account auth type utilities", () => {
     ).toBe(AuthTypeEnum.Cookie)
   })
 
+  it("defaults the canonical ModelFlare deployment to cookie auth", () => {
+    expect(
+      resolveDefaultAccountAuthType({ siteUrl: "https://modelflare.dev" }),
+    ).toBe(AuthTypeEnum.Cookie)
+  })
+
   it("keeps the existing optional auth normalization behavior", () => {
     expect(normalizeOptionalAccountAuthType("")).toBeUndefined()
     expect(normalizeOptionalAccountAuthType(AuthTypeEnum.Cookie)).toBe(

@@ -12,8 +12,13 @@ import {
 } from "~/constants/siteType"
 
 describe("siteType constants", () => {
+  it("keeps the persisted ModelFlare site type identifier stable", () => {
+    expect(SITE_TYPES.MODELFLARE).toBe("ModelFlare")
+  })
+
   it("recognizes account site type values only", () => {
     expect(isAccountSiteType(SITE_TYPES.NEW_API)).toBe(true)
+    expect(isAccountSiteType(SITE_TYPES.MODELFLARE)).toBe(true)
     expect(isAccountSiteType(SITE_TYPES.V_API)).toBe(true)
     expect(isAccountSiteType(SITE_TYPES.VO_API_V2)).toBe(true)
     expect(isAccountSiteType(SITE_TYPES.SUB2API)).toBe(true)
@@ -30,6 +35,7 @@ describe("siteType constants", () => {
 
   it("recognizes managed site type values only", () => {
     expect(isManagedSiteType(SITE_TYPES.NEW_API)).toBe(true)
+    expect(isManagedSiteType(SITE_TYPES.MODELFLARE)).toBe(false)
     expect(isManagedSiteType(SITE_TYPES.OCTOPUS)).toBe(true)
     expect(isManagedSiteType(SITE_TYPES.AXON_HUB)).toBe(true)
     expect(isManagedSiteType(SITE_TYPES.CLAUDE_CODE_HUB)).toBe(true)

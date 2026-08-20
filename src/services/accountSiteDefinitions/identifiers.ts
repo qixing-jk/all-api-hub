@@ -1,6 +1,7 @@
 export const SITE_TYPES = {
   ONE_API: "one-api",
   NEW_API: "new-api",
+  MODELFLARE: "ModelFlare",
   ANYROUTER: "anyrouter",
   VELOERA: "Veloera",
   ONE_HUB: "one-hub",
@@ -23,6 +24,14 @@ export const SITE_TYPES = {
 } as const
 
 export type SiteType = (typeof SITE_TYPES)[keyof typeof SITE_TYPES]
+
+export const MODELFLARE_HOSTNAME = "modelflare.dev"
+
+/**
+ * ModelFlare's New API-derived account endpoints expect the user id in this
+ * deployment-specific header: https://modelflare.dev/
+ */
+export const MODELFLARE_USER_ID_HEADER_NAME = "X-ModelFlare-User"
 
 export const AIHUBMIX_API_ORIGIN = "https://aihubmix.com"
 export const AIHUBMIX_WEB_ORIGIN = "https://console.aihubmix.com"

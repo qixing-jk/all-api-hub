@@ -174,6 +174,7 @@ describe("apiAdapter keyManagement", () => {
 
   it.each([
     [SITE_TYPES.NEW_API, "follows-account"],
+    [SITE_TYPES.MODELFLARE, "follows-account"],
     [SITE_TYPES.VELOERA, "follows-account"],
     [SITE_TYPES.ANYROUTER, "follows-account"],
     [SITE_TYPES.RIX_API, "follows-account"],
