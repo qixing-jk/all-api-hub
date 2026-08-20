@@ -1,7 +1,6 @@
 import { CHANNEL_DIALOG_TEST_IDS } from "~/components/dialogs/ChannelDialog/testIds"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
-  getManagedSiteChannelRowActionsButtonTestId,
   getManagedSiteChannelRowEditActionTestId,
   getManagedSiteChannelRowSelectTestId,
   MANAGED_SITE_CHANNELS_TEST_IDS,
@@ -11,16 +10,22 @@ import {
   getInterceptedAxonHubDeleteRequestCount,
   getInterceptedAxonHubListRequestCount,
   getInterceptedAxonHubUpdateVariables,
+  getInterceptedNewApiDeleteRequestCount,
+  getInterceptedNewApiFetchModelsRequestCount,
+  getInterceptedNewApiListRequestCount,
+  getInterceptedNewApiSecretRequestCount,
+  getInterceptedNewApiUpdatePayload,
   getInterceptedOctopusCookieHeader,
   getInterceptedOctopusRootRequestCount,
   getInterceptedOctopusStatusRequestCount,
   openInterceptedAxonHubManagedSiteChannels,
-  openInterceptedManagedSiteChannels,
+  openInterceptedNewApiManagedSiteChannels,
   openInterceptedOctopusManagedSiteChannels,
 } from "~~/e2e/fixtures/managedSiteChannelsIntercepted"
 import {
   channelRowByName,
   getChannelRowTestToken,
+  openManagedSiteChannelRowActions,
   runManagedSiteChannelsCrudScenario,
 } from "~~/e2e/scenarios/managedSiteChannels"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
@@ -33,13 +38,16 @@ test.use({
   contextOptions: { reducedMotion: "reduce" },
 })
 
-test("keeps the legacy channels table and editor presentation stable", async ({
+test("keeps the New API native presentation stable and loads editor models on demand", async ({
   context,
   extensionId,
   page,
 }) => {
-  await openInterceptedManagedSiteChannels({ context, extensionId, page })
-  await page.emulateMedia({ reducedMotion: "reduce" })
+  await openInterceptedNewApiManagedSiteChannels({
+    context,
+    extensionId,
+    page,
+  })
   await waitForExtensionRoot(page)
 
   await expect(page.getByRole("table")).toBeVisible()
@@ -63,12 +71,10 @@ test("keeps the legacy channels table and editor presentation stable", async ({
     .fill("secondary")
   await expect(page.getByText("Example secondary")).toBeVisible()
   await page.getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.searchInput).fill("")
-
-  await page
-    .getByTestId(getManagedSiteChannelRowActionsButtonTestId("Example primary"))
-    .click()
+  const { rowTestToken: primaryRowToken } =
+    await openManagedSiteChannelRowActions(page, "Example primary")
   const editAction = page.getByTestId(
-    getManagedSiteChannelRowEditActionTestId("Example primary"),
+    getManagedSiteChannelRowEditActionTestId(primaryRowToken),
   )
   await expect(editAction).toBeVisible()
   await editAction.click()
@@ -83,17 +89,31 @@ test("keeps the legacy channels table and editor presentation stable", async ({
     page.getByTestId(CHANNEL_DIALOG_TEST_IDS.modelsInput),
   ).toBeVisible()
   await expect(page.getByText("Edit Channel", { exact: true })).toHaveCount(1)
-  await expect(page.locator("form#channel-editor-form")).toHaveCount(1)
+  await expect(page.getByTestId(CHANNEL_DIALOG_TEST_IDS.form)).toHaveCount(1)
   await expect(
     page.getByTestId(CHANNEL_DIALOG_TEST_IDS.submitButton),
   ).toBeEnabled()
+  expect(getInterceptedNewApiFetchModelsRequestCount()).toBe(0)
+  expect(getInterceptedNewApiSecretRequestCount()).toBe(0)
+  await page
+    .getByRole("button", { name: "Load Available Models", exact: true })
+    .click()
+  await expect.poll(getInterceptedNewApiFetchModelsRequestCount).toBe(1)
+  await page
+    .getByRole("combobox", { name: "Available Models", exact: true })
+    .click()
+  await expect(
+    page.getByRole("option", { name: "model-from-credential", exact: true }),
+  ).toBeVisible()
+  expect(getInterceptedNewApiSecretRequestCount()).toBe(0)
+  await page
+    .getByRole("combobox", { name: "Available Models", exact: true })
+    .press("Escape")
   await page.getByRole("button", { name: "Cancel", exact: true }).click()
   await page
     .getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.migrationModeButton)
     .click()
-  await page
-    .getByTestId(getManagedSiteChannelRowActionsButtonTestId("Example primary"))
-    .click()
+  await openManagedSiteChannelRowActions(page, "Example primary")
   await page.getByRole("menuitem", { name: "Migrate" }).click()
 
   const migrationDialog = page.getByRole("dialog", { name: "Dialog" })
@@ -122,6 +142,113 @@ test("keeps the legacy channels table and editor presentation stable", async ({
   ).toBeVisible()
 
   await expect(migrationDialog.getByText("Migration limitations")).toBeVisible()
+})
+
+test("offers managed-site groups while editing a New API channel", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  await openInterceptedNewApiManagedSiteChannels({
+    context,
+    extensionId,
+    page,
+  })
+  await waitForExtensionRoot(page)
+
+  const { rowTestToken: secondaryRowToken } =
+    await openManagedSiteChannelRowActions(page, "Example secondary")
+  await page
+    .getByTestId(getManagedSiteChannelRowEditActionTestId(secondaryRowToken))
+    .click()
+
+  await page.getByRole("combobox", { name: "Channel Groups" }).click()
+  await expect(page.getByRole("option", { name: "example" })).toBeVisible()
+})
+
+test("runs New API native CRUD through the shared UI", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  test.setTimeout(120_000)
+  const runPrefix = "AAH E2E New API intercepted"
+
+  await openInterceptedNewApiManagedSiteChannels({
+    context,
+    extensionId,
+    page,
+  })
+
+  await runManagedSiteChannelsCrudScenario({
+    page,
+    extensionId,
+    siteType: SITE_TYPES.NEW_API,
+    label: "New API intercepted",
+    runPrefix,
+    beforeDeleteConfirm: () => {
+      expect(getInterceptedNewApiDeleteRequestCount()).toBe(0)
+    },
+  })
+
+  expect(getInterceptedNewApiDeleteRequestCount()).toBe(1)
+  const updatePayload = getInterceptedNewApiUpdatePayload()
+  expect(updatePayload).toMatchObject({
+    id: 303,
+    name: `${runPrefix} CRUD edited`,
+    models: "gpt-4o-mini,gpt-4.1-mini",
+  })
+  expect(updatePayload).not.toHaveProperty("key")
+})
+
+test("reconciles confirmed New API edits and deletes without reloading the collection", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  await openInterceptedNewApiManagedSiteChannels({
+    context,
+    extensionId,
+    page,
+  })
+  await waitForExtensionRoot(page)
+
+  const { rowTestToken: originalRowToken } =
+    await openManagedSiteChannelRowActions(page, "Example primary")
+  await page
+    .getByTestId(getManagedSiteChannelRowEditActionTestId(originalRowToken))
+    .click()
+
+  await expect(
+    page.getByTestId(CHANNEL_DIALOG_TEST_IDS.submitButton),
+  ).toBeVisible()
+  const listRequestsBeforeSave = getInterceptedNewApiListRequestCount()
+  await page
+    .getByTestId(CHANNEL_DIALOG_TEST_IDS.nameInput)
+    .fill("Example primary edited locally")
+  await page.getByTestId(CHANNEL_DIALOG_TEST_IDS.submitButton).click()
+
+  const editedRow = channelRowByName(page, "Example primary edited locally")
+  await expect(editedRow).toBeVisible()
+  expect(getInterceptedNewApiListRequestCount()).toBe(listRequestsBeforeSave)
+
+  const editedRowToken = await getChannelRowTestToken(editedRow)
+  await editedRow
+    .getByTestId(getManagedSiteChannelRowSelectTestId(editedRowToken))
+    .click()
+  await page
+    .getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.deleteSelectedButton)
+    .click()
+  const confirmDelete = page.getByTestId(
+    MANAGED_SITE_CHANNELS_TEST_IDS.deleteChannelConfirmButton,
+  )
+  await expect(confirmDelete).toBeEnabled()
+  const listRequestsBeforeDelete = getInterceptedNewApiListRequestCount()
+  await confirmDelete.click()
+
+  await expect(editedRow).toHaveCount(0)
+  expect(getInterceptedNewApiDeleteRequestCount()).toBe(1)
+  expect(getInterceptedNewApiListRequestCount()).toBe(listRequestsBeforeDelete)
 })
 
 test("uses the current Octopus cookie session in a real extension browser", async ({
@@ -160,7 +287,6 @@ test("runs the AxonHub native edit and migration preview through the shared UI",
     extensionId,
     page,
   })
-  await page.emulateMedia({ reducedMotion: "reduce" })
   await waitForExtensionRoot(page)
 
   await expect(page.getByRole("table")).toBeVisible()
@@ -184,10 +310,7 @@ test("runs the AxonHub native edit and migration preview through the shared UI",
   await page.getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.searchInput).fill("")
   await expect(page.getByText("Example primary")).toBeVisible()
 
-  const primaryRow = page
-    .getByText("Example primary")
-    .locator("xpath=ancestor::tr")
-  await primaryRow.getByTestId(/-actions$/).click()
+  await openManagedSiteChannelRowActions(page, "Example primary")
   const editAction = page.getByRole("menuitem", { name: "Edit" })
   await expect(editAction).toBeVisible()
   await editAction.click()
@@ -201,7 +324,7 @@ test("runs the AxonHub native edit and migration preview through the shared UI",
   await page
     .getByTestId(CHANNEL_DIALOG_TEST_IDS.nameInput)
     .fill("Example primary edited")
-  const tagsInput = page.locator('input[aria-label="Tags"]')
+  const tagsInput = page.getByRole("combobox", { name: "Tags" })
   await tagsInput.scrollIntoViewIfNeeded()
   await tagsInput.fill("edited-tag")
   await tagsInput.press("Enter")
@@ -213,9 +336,7 @@ test("runs the AxonHub native edit and migration preview through the shared UI",
   await saveChangesButton.click()
   await expect(saveChangesButton).toBeHidden()
   await expect(page.getByText("Example primary edited")).toBeVisible()
-  await expect
-    .poll(getInterceptedAxonHubListRequestCount)
-    .toBeGreaterThan(listRequestsBeforeSave)
+  expect(getInterceptedAxonHubListRequestCount()).toBe(listRequestsBeforeSave)
   await expect.poll(getInterceptedAxonHubUpdateVariables).toEqual({
     id: "gid://axonhub/Channel/opaque-primary",
     input: {
@@ -230,11 +351,7 @@ test("runs the AxonHub native edit and migration preview through the shared UI",
   await page
     .getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.migrationModeButton)
     .click()
-  await page
-    .getByText("Example primary edited")
-    .locator("xpath=ancestor::tr")
-    .getByTestId(/-actions$/)
-    .click()
+  await openManagedSiteChannelRowActions(page, "Example primary edited")
   await page.getByRole("menuitem", { name: "Migrate" }).click()
 
   const migrationDialog = page.getByRole("dialog", { name: "Dialog" })
@@ -335,7 +452,7 @@ test("cancels native bulk-delete confirmation without dispatching a request", as
   expect(getInterceptedAxonHubDeleteRequestCount()).toBe(0)
 })
 
-test.describe("mobile legacy parity", () => {
+test.describe("mobile New API parity", () => {
   test.use({ viewport: { width: 390, height: 844 } })
 
   test("keeps common toolbar controls usable", async ({
@@ -343,8 +460,11 @@ test.describe("mobile legacy parity", () => {
     extensionId,
     page,
   }) => {
-    await openInterceptedManagedSiteChannels({ context, extensionId, page })
-    await page.emulateMedia({ reducedMotion: "reduce" })
+    await openInterceptedNewApiManagedSiteChannels({
+      context,
+      extensionId,
+      page,
+    })
     await waitForExtensionRoot(page)
 
     await expect(
@@ -363,14 +483,13 @@ test.describe("mobile legacy parity", () => {
     await expect(page.getByText("Example secondary")).toBeVisible()
     await expect(page.getByText("Example primary")).toBeHidden()
     await page.getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.searchInput).fill("")
-
     await page
       .getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.addChannelButton)
       .click()
     await expect(
       page.getByRole("heading", { name: "Create Channel", exact: true }),
     ).toBeVisible()
-    await expect(page.locator("form#channel-editor-form")).toHaveCount(1)
+    await expect(page.getByTestId(CHANNEL_DIALOG_TEST_IDS.form)).toHaveCount(1)
     await expect(
       page.getByTestId(CHANNEL_DIALOG_TEST_IDS.submitButton),
     ).toBeDisabled()
@@ -379,11 +498,7 @@ test.describe("mobile legacy parity", () => {
     await page
       .getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.migrationModeButton)
       .click()
-    await page
-      .getByTestId(
-        getManagedSiteChannelRowActionsButtonTestId("Example primary"),
-      )
-      .click()
+    await openManagedSiteChannelRowActions(page, "Example primary")
     await page.getByRole("menuitem", { name: "Migrate" }).click()
     const migrationDialog = page.getByRole("dialog", { name: "Dialog" })
     await expect(migrationDialog).toContainText("Migrate channels")
@@ -401,7 +516,7 @@ test.describe("mobile legacy parity", () => {
   })
 })
 
-test.describe("mobile native parity", () => {
+test.describe("mobile AxonHub parity", () => {
   test.use({ viewport: { width: 390, height: 844 } })
 
   test("keeps AxonHub common controls usable", async ({
@@ -414,7 +529,6 @@ test.describe("mobile native parity", () => {
       extensionId,
       page,
     })
-    await page.emulateMedia({ reducedMotion: "reduce" })
     await waitForExtensionRoot(page)
 
     await expect(
