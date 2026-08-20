@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 
 import {
+  MANAGED_CHANNELS_DELETE_RESULT_STATUSES,
+  type ManagedChannelsDeleteResultStatus,
+  type ManagedChannelsRowViewModel,
+} from "~/features/ManagedSiteChannels/presentation/contracts"
+import {
   MANAGED_RESOURCE_FAILURE_CODES,
   ManagedResourceError,
   type EditableResourceProjection,
@@ -23,11 +28,6 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 
-import {
-  MANAGED_CHANNELS_DELETE_RESULT_STATUSES,
-  type ManagedChannelsDeleteResultStatus,
-  type ManagedChannelsRowViewModel,
-} from "../presentation/contracts"
 import {
   MANAGED_RESOURCE_EDITOR_MODES,
   type ManagedResourceEditorMode,
@@ -724,10 +724,13 @@ export function useManagedResourceMutationController({
 
           if (currentGeneration !== deleteGeneration.current) return []
           const canAcceptDeletionResults =
-            results.every(({ status }) => status !== "uncertain") &&
+            results.every(
+              ({ status }) =>
+                status !== MANAGED_CHANNELS_DELETE_RESULT_STATUSES.Uncertain,
+            ) &&
             results.every(
               ({ status }, index) =>
-                status !== "success" ||
+                status !== MANAGED_CHANNELS_DELETE_RESULT_STATUSES.Success ||
                 locallyConfirmedSuccessIndexes.has(index),
             )
           let deletionAccepted = false

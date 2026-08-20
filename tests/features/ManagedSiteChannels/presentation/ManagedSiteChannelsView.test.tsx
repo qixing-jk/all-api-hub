@@ -63,7 +63,7 @@ const labels: ManagedChannelsLabels = {
   emptyFiltered: "No matches",
   emptyNoChannels: "No channels",
   rowsPerPage: "Rows per page",
-  paginationSummary: "1-1 of 1",
+  paginationSummary: (start, end, total) => `${start}-${end} of ${total}`,
   noEntries: "No entries",
   paginationPrev: "Previous page",
   paginationNext: "Next page",
@@ -668,6 +668,7 @@ describe("ManagedSiteChannelsView", () => {
     )
 
     expect(screen.getByText("Page two")).toBeVisible()
+    expect(screen.getByText("2-2 of 2")).toBeVisible()
     await user.click(screen.getByRole("checkbox", { name: "Select row" }))
     expect(onSelectedRowKeysChange).toHaveBeenLastCalledWith({
       "opaque:page-one": true,

@@ -6,6 +6,7 @@ import ChannelFiltersEditor from "~/components/ChannelFiltersEditor"
 import type { EditableFilterField } from "~/components/ChannelFiltersEditor"
 import { Modal } from "~/components/ui"
 import { Button } from "~/components/ui/button"
+import { MANAGED_SITE_CHANNELS_TEST_IDS } from "~/features/ManagedSiteChannels/testIds"
 import {
   normalizeChannelFilters,
   type IncomingChannelFilter,
@@ -30,7 +31,6 @@ import {
 import { getErrorMessage } from "~/utils/core/error"
 import { safeRandomUUID } from "~/utils/core/identifier"
 
-import { MANAGED_SITE_CHANNELS_TEST_IDS } from "../testIds"
 import type { ChannelRow } from "../types"
 import {
   fetchChannelFilters,

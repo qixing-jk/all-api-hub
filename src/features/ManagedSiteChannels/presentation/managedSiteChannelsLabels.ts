@@ -1,9 +1,6 @@
 import type { TFunction } from "i18next"
 
-import type {
-  ManagedChannelsLabels,
-  ManagedChannelsPagination,
-} from "./contracts"
+import type { ManagedChannelsLabels } from "./contracts"
 
 type ManagedSiteChannelsLabelOverrides = Pick<
   ManagedChannelsLabels,
@@ -13,8 +10,6 @@ type ManagedSiteChannelsLabelOverrides = Pick<
 /** Builds copy shared by legacy and native managed-channel presentations. */
 export const createManagedSiteChannelsLabels = (
   t: TFunction,
-  pagination: ManagedChannelsPagination,
-  total: number,
   overrides: ManagedSiteChannelsLabelOverrides,
 ): ManagedChannelsLabels => ({
   searchPlaceholder: t("managedSiteChannels:toolbar.searchPlaceholder"),
@@ -34,11 +29,12 @@ export const createManagedSiteChannelsLabels = (
   emptyFiltered: t("managedSiteChannels:table.emptyFiltered"),
   emptyNoChannels: t("managedSiteChannels:table.emptyNoChannels"),
   rowsPerPage: t("managedSiteChannels:table.rowsPerPage"),
-  paginationSummary: t("managedSiteChannels:table.paginationSummary", {
-    start: total ? pagination.pageIndex * pagination.pageSize + 1 : 0,
-    end: Math.min((pagination.pageIndex + 1) * pagination.pageSize, total),
-    total,
-  }),
+  paginationSummary: (start, end, currentTotal) =>
+    t("managedSiteChannels:table.paginationSummary", {
+      start,
+      end,
+      total: currentTotal,
+    }),
   noEntries: t("managedSiteChannels:table.noEntries"),
   paginationPrev: t("managedSiteChannels:table.paginationPrev"),
   paginationNext: t("managedSiteChannels:table.paginationNext"),

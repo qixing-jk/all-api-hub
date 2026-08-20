@@ -1,13 +1,13 @@
 import {
+  MANAGED_CHANNELS_DELETE_RESULT_STATUSES,
+  type ManagedChannelsDeleteResultStatus,
+} from "~/features/ManagedSiteChannels/presentation/contracts"
+import {
   assertManagedSiteMutationResult,
   MANAGED_SITE_MUTATION_OUTCOMES,
   toPrivateManagedSiteMutationOutput,
 } from "~/services/managedSites/mutations"
 
-import {
-  MANAGED_CHANNELS_DELETE_RESULT_STATUSES,
-  type ManagedChannelsDeleteResultStatus,
-} from "../presentation/contracts"
 import { mapSettledWithConcurrency } from "./managedResourceConcurrency"
 
 const LEGACY_DELETE_CONCURRENCY = 4

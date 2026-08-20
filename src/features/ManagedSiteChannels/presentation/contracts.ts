@@ -249,7 +249,7 @@ export type ManagedChannelsLabels = {
   emptyFiltered: string
   emptyNoChannels: string
   rowsPerPage: string
-  paginationSummary: string
+  paginationSummary: (start: number, end: number, total: number) => string
   noEntries: string
   paginationPrev: string
   paginationNext: string

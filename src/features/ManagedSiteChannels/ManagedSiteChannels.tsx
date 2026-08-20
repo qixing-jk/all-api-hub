@@ -1638,21 +1638,16 @@ export default function ManagedSiteChannels({
 
   const presentationLabels = useMemo(
     () =>
-      createManagedSiteChannelsLabels(
-        t,
-        pagination,
-        filteredPresentationRows.length,
-        {
-          statusLabels: Object.fromEntries(
-            ["0", "1", "2", "3"].map((value) => [
-              value,
-              getManagedSiteChannelStatusFilterLabel(t, value),
-            ]),
-          ),
-          rowActions: rowActionLabels,
-        },
-      ),
-    [filteredPresentationRows.length, pagination, rowActionLabels, t],
+      createManagedSiteChannelsLabels(t, {
+        statusLabels: Object.fromEntries(
+          ["0", "1", "2", "3"].map((value) => [
+            value,
+            getManagedSiteChannelStatusFilterLabel(t, value),
+          ]),
+        ),
+        rowActions: rowActionLabels,
+      }),
+    [rowActionLabels, t],
   )
 
   const presentationState = useMemo<ManagedChannelsPresentationState>(

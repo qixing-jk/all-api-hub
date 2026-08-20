@@ -10,8 +10,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select"
+import { MANAGED_SITE_CHANNELS_TEST_IDS } from "~/features/ManagedSiteChannels/testIds"
 
-import { MANAGED_SITE_CHANNELS_TEST_IDS } from "../testIds"
 import type {
   ManagedChannelsLabels,
   ManagedChannelsPagination,
@@ -36,6 +36,9 @@ export function ManagedSiteChannelsPagination({
   labels,
   onPaginationChange,
 }: ManagedSiteChannelsPaginationProps) {
+  const start = total ? pagination.pageIndex * pagination.pageSize + 1 : 0
+  const end = Math.min((pagination.pageIndex + 1) * pagination.pageSize, total)
+
   return (
     <div className="flex flex-wrap items-center gap-4 text-sm">
       <div className="flex items-center gap-2">
@@ -74,14 +77,11 @@ export function ManagedSiteChannelsPagination({
         {total ? (
           <span
             data-testid={MANAGED_SITE_CHANNELS_TEST_IDS.paginationSummary}
-            data-start={pagination.pageIndex * pagination.pageSize + 1}
-            data-end={Math.min(
-              (pagination.pageIndex + 1) * pagination.pageSize,
-              total,
-            )}
+            data-start={start}
+            data-end={end}
             data-total={total}
           >
-            {labels.paginationSummary}
+            {labels.paginationSummary(start, end, total)}
           </span>
         ) : (
           <span>{labels.noEntries}</span>

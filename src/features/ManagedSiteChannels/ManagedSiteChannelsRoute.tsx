@@ -450,7 +450,7 @@ function NativeManagedSiteChannels({
   )
   const labels = useMemo(
     () =>
-      createManagedSiteChannelsLabels(t, pagination, list.totalRows, {
+      createManagedSiteChannelsLabels(t, {
         statusLabels: {
           enabled: t("managedSiteChannels:statusLabels.enabled"),
           disabled: t("managedSiteChannels:statusLabels.manualPause"),
@@ -470,7 +470,7 @@ function NativeManagedSiteChannels({
           delete: t("managedSiteChannels:table.rowActions.delete"),
         },
       }),
-    [list.totalRows, pagination, t],
+    [t],
   )
   const canMigrate =
     policy.actions.includes(MANAGED_RESOURCE_PRODUCT_ACTIONS.Migrate) &&
