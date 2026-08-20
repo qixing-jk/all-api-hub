@@ -359,4 +359,44 @@ describe("useManagedSiteChannelModelSync", () => {
       }),
     )
   })
+
+  it("invalidates pending synchronization when the hook unmounts", async () => {
+    let resolveSync!: (value: unknown) => void
+    sendModelSyncMessageMock.mockReturnValue(
+      new Promise((resolve) => {
+        resolveSync = resolve
+      }),
+    )
+    const onModelsChanged = vi.fn()
+    const { result, unmount } = renderHook(() =>
+      useManagedSiteChannelModelSync({
+        siteType: SITE_TYPES.NEW_API,
+        onModelsChanged,
+      }),
+    )
+
+    let syncPromise!: Promise<void>
+    act(() => {
+      syncPromise = result.current.syncChannels([42], analyticsContext)
+    })
+    unmount()
+    resolveSync({
+      success: true,
+      data: {
+        statistics: { successCount: 1, failureCount: 0 },
+        items: [{ channelId: 42, ok: true, newModels: ["stale-model"] }],
+      },
+    })
+    await act(async () => syncPromise)
+
+    expect(onModelsChanged).not.toHaveBeenCalled()
+    expect(toastSuccessMock).not.toHaveBeenCalled()
+    expect(toastErrorMock).not.toHaveBeenCalled()
+    expect(trackerCompleteMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Skipped,
+      expect.objectContaining({
+        insights: expect.objectContaining({ selectedCount: 1 }),
+      }),
+    )
+  })
 })

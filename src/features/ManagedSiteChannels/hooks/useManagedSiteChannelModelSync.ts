@@ -51,6 +51,9 @@ export function useManagedSiteChannelModelSync({
   useLayoutEffect(() => {
     syncGenerationRef.current += 1
     setSyncingChannelIds(new Set())
+    return () => {
+      syncGenerationRef.current += 1
+    }
   }, [siteType])
 
   const syncChannels = useCallback(
