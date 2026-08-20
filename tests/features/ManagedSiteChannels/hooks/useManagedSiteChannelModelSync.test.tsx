@@ -314,4 +314,49 @@ describe("useManagedSiteChannelModelSync", () => {
     )
     expect(result.current.syncingChannelIds).toEqual(new Set())
   })
+
+  it("discards completion feedback when reconciliation becomes stale", async () => {
+    let resolveReconciliation!: () => void
+    sendModelSyncMessageMock.mockResolvedValue({
+      success: true,
+      data: {
+        statistics: { successCount: 1, failureCount: 0 },
+        items: [{ channelId: 42, ok: true, newModels: ["model-a"] }],
+      },
+    })
+    const onModelsChanged = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveReconciliation = resolve
+        }),
+    )
+    const { result, rerender } = renderHook(
+      ({ siteType }: { siteType: ManagedSiteType }) =>
+        useManagedSiteChannelModelSync({ siteType, onModelsChanged }),
+      {
+        initialProps: { siteType: SITE_TYPES.NEW_API } as {
+          siteType: ManagedSiteType
+        },
+      },
+    )
+
+    let syncPromise!: Promise<void>
+    act(() => {
+      syncPromise = result.current.syncChannels([42], analyticsContext)
+    })
+    await waitFor(() => expect(onModelsChanged).toHaveBeenCalled())
+
+    rerender({ siteType: SITE_TYPES.AXON_HUB } as { siteType: ManagedSiteType })
+    resolveReconciliation()
+    await act(async () => syncPromise)
+
+    expect(toastSuccessMock).not.toHaveBeenCalled()
+    expect(toastErrorMock).not.toHaveBeenCalled()
+    expect(trackerCompleteMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Skipped,
+      expect.objectContaining({
+        insights: expect.objectContaining({ selectedCount: 1 }),
+      }),
+    )
+  })
 })

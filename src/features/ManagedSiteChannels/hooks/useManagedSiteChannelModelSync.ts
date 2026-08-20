@@ -128,6 +128,16 @@ export function useManagedSiteChannelModelSync({
             failure: { code: MANAGED_RESOURCE_FAILURE_CODES.Unexpected },
           }
         }
+        if (requestGeneration !== syncGenerationRef.current) {
+          tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
+            insights: {
+              itemCount: eligibleChannelIds.length,
+              selectedCount: channelIds.length,
+              managedSiteType: managedSiteAnalyticsType,
+            },
+          })
+          return
+        }
         const completionValues = {
           success: successCount,
           total: eligibleChannelIds.length,
