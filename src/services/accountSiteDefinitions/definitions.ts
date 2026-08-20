@@ -2,6 +2,10 @@ import {
   AXON_HUB_EDITABLE_FIELD_IDS,
   AXON_HUB_TABLE_FIELD_IDS,
 } from "~/constants/axonHub"
+import {
+  NEW_API_MANAGED_RESOURCE_DETAIL_FIELD_IDS,
+  NEW_API_MANAGED_RESOURCE_TABLE_FIELD_IDS,
+} from "~/constants/newApi"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import {
   SUB2API_MANAGED_RESOURCE_DETAIL_FIELD_IDS,
@@ -161,7 +165,20 @@ const ACCOUNT_SITE_DEFINITIONS = [
     siteType: SITE_TYPES.NEW_API,
     scopes: ACCOUNT_AND_MANAGED_SCOPES,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
-    managedResource: { ...LEGACY_MANAGED_CHANNEL_POLICY },
+    managedResource: {
+      ...LEGACY_MANAGED_CHANNEL_POLICY,
+      mode: MANAGED_RESOURCE_MODES.NativeResource,
+      tableFieldIds: NEW_API_MANAGED_RESOURCE_TABLE_FIELD_IDS,
+      detailFieldIds: NEW_API_MANAGED_RESOURCE_DETAIL_FIELD_IDS,
+      actions: [
+        MANAGED_RESOURCE_PRODUCT_ACTIONS.Create,
+        MANAGED_RESOURCE_PRODUCT_ACTIONS.DeleteSelected,
+        MANAGED_RESOURCE_PRODUCT_ACTIONS.Migrate,
+        MANAGED_RESOURCE_PRODUCT_ACTIONS.SyncModels,
+        MANAGED_RESOURCE_PRODUCT_ACTIONS.ConfigureModelSync,
+        MANAGED_RESOURCE_PRODUCT_ACTIONS.ConfigureModelFilters,
+      ],
+    },
     onboarding: {
       detection: {
         titlePatterns: [makeTitleRegex(SITE_TYPES.NEW_API)],

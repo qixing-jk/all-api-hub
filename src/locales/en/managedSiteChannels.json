@@ -1,8 +1,8 @@
 {
   "alerts": {
     "authenticationFailed": {
-      "description": "The saved AxonHub credentials were rejected. Open settings, update them, then refresh the channel list.",
-      "title": "Sign in to AxonHub again"
+      "description": "The saved {{site}} credentials were rejected. Open settings, update them, then refresh the channel list.",
+      "title": "Sign in to {{site}} again"
     },
     "editorLoadError": {
       "description": "The channel form could not be loaded. Refresh the channel list and try again.",
@@ -21,16 +21,16 @@
       "title": "Channel update needs review"
     },
     "permissionDenied": {
-      "description": "This AxonHub account cannot manage channels. Use an administrator account or update its permissions, then refresh.",
-      "title": "AxonHub access denied"
+      "description": "This {{site}} account cannot manage channels. Use an administrator account or update its permissions, then refresh.",
+      "title": "{{site}} access denied"
     },
     "savedRefreshError": {
       "description": "The channel was saved, but the latest list could not be loaded. Refresh the channel list before making more changes.",
       "title": "Channel saved, refresh needed"
     },
     "unavailable": {
-      "description": "AxonHub could not be reached. Check the server and network, then refresh the channel list.",
-      "title": "AxonHub is unavailable"
+      "description": "{{site}} could not be reached. Check the server and network, then refresh the channel list.",
+      "title": "{{site}} is unavailable"
     }
   },
   "dialog": {
@@ -141,25 +141,28 @@
     },
     "secret": {
       "actions": {
-        "clear": "Remove saved credential",
-        "restore": "Keep saved credential",
+        "cancelLoad": "Cancel loading",
+        "clear": "Remove saved API key",
+        "restore": "Keep saved API key",
         "retry": "Retry",
-        "view": "View saved credential"
+        "view": "View saved API key"
       },
-      "createHint": "Enter a credential for the new channel.",
-      "keepExistingHint": "Leave this field blank to keep the saved credential unchanged.",
-      "loadError": "The saved credential could not be loaded.",
-      "loading": "Loading the saved credential...",
-      "placeholder": "Enter a credential",
+      "createHint": "Enter the upstream API key for the new channel.",
+      "keepExistingHint": "Leave this field blank to keep the saved API key unchanged.",
+      "loadableHint": "The saved API key is not shown here. Leave blank to keep it unchanged.",
+      "loadError": "The saved API key could not be loaded.",
+      "loading": "Loading the saved API key...",
+      "placeholder": "Enter an upstream API key",
       "replacementBlocked": {
         "multipleCredentials": "This channel has multiple API keys. Manage its keys in AxonHub."
       },
-      "replacementDisabled": "This credential type cannot be replaced here.",
+      "replacementDisabled": "This API key cannot be replaced here.",
+      "replacePlaceholder": "Enter a new API key to replace the saved one",
       "state": {
-        "available": "A saved credential is available.",
-        "masked": "A masked credential is saved.",
-        "permissionHidden": "The saved credential is hidden by permissions.",
-        "unavailable": "No credential is available to display."
+        "available": "A saved API key is available.",
+        "masked": "A masked API key is saved.",
+        "permissionHidden": "The saved API key is hidden by permissions.",
+        "unavailable": "The saved API key cannot be shown here."
       }
     },
     "sections": {
@@ -371,7 +374,6 @@
     },
     "title": "Migrate channels"
   },
-  "resourceDescription": "Search, create, edit, and delete channels connected to this managed site.",
   "statusLabels": {
     "autoDisabled": "Auto Disabled",
     "enabled": "Enabled",
@@ -425,6 +427,7 @@
     "someDeletesFailed_one": "Failed to delete {{count}} channel: {{error}}",
     "someDeletesFailed_other": "Failed to delete {{count}} channels: {{error}}",
     "syncCompleted": "Model sync completed ({{success}}/{{total}})",
+    "syncCompletedRefreshFailed": "Models were synced ({{success}}/{{total}}), but the channel list could not be refreshed. Refresh and try again.",
     "syncFailed": "Model sync failed: {{error}}"
   },
   "toolbar": {

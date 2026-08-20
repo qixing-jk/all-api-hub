@@ -22,11 +22,17 @@ import { cn } from "~/lib/utils"
 import { getManagedSiteChannelRowTestId } from "../testIds"
 import type {
   ManagedChannelsColumnExtension,
+  ManagedChannelsColumnRenderer,
   ManagedChannelsRowViewModel,
+} from "./contracts"
+import {
+  MANAGED_CHANNELS_COLUMN_EXTENSION_KINDS,
+  MANAGED_CHANNELS_COLUMN_RENDERERS,
+  MANAGED_CHANNELS_SORT_DIRECTIONS,
 } from "./contracts"
 
 type ManagedChannelsColumnMeta = {
-  renderer?: "select" | "identifier" | "channel" | "value" | "actions"
+  renderer?: ManagedChannelsColumnRenderer
   extension?: ManagedChannelsColumnExtension
 }
 
@@ -66,12 +72,14 @@ export function ManagedSiteChannelsTable({
                       key={header.id}
                       data-column-extension={meta.extension?.kind}
                       data-column-namespace={
-                        meta.extension?.kind === "native"
+                        meta.extension?.kind ===
+                        MANAGED_CHANNELS_COLUMN_EXTENSION_KINDS.Native
                           ? meta.extension.namespace
                           : undefined
                       }
                       className={cn(
-                        meta.renderer === "actions" &&
+                        meta.renderer ===
+                          MANAGED_CHANNELS_COLUMN_RENDERERS.Actions &&
                           cn(
                             "bg-background sticky right-0 border-l",
                             Z_INDEX.tableStickyHeader,
@@ -89,10 +97,12 @@ export function ManagedSiteChannelsTable({
                             header.column.columnDef.header,
                             header.getContext(),
                           )}
-                          {header.column.getIsSorted() === "asc" && (
+                          {header.column.getIsSorted() ===
+                            MANAGED_CHANNELS_SORT_DIRECTIONS.Ascending && (
                             <ChevronUp className="h-3.5 w-3.5 opacity-60" />
                           )}
-                          {header.column.getIsSorted() === "desc" && (
+                          {header.column.getIsSorted() ===
+                            MANAGED_CHANNELS_SORT_DIRECTIONS.Descending && (
                             <ChevronDown className="h-3.5 w-3.5 opacity-60" />
                           )}
                         </button>
@@ -140,18 +150,22 @@ export function ManagedSiteChannelsTable({
                           key={cell.id}
                           data-column-extension={meta.extension?.kind}
                           data-column-namespace={
-                            meta.extension?.kind === "native"
+                            meta.extension?.kind ===
+                            MANAGED_CHANNELS_COLUMN_EXTENSION_KINDS.Native
                               ? meta.extension.namespace
                               : undefined
                           }
                           data-state={
-                            meta.renderer === "actions" && row.getIsSelected()
+                            meta.renderer ===
+                              MANAGED_CHANNELS_COLUMN_RENDERERS.Actions &&
+                            row.getIsSelected()
                               ? "selected"
                               : undefined
                           }
                           className={cn(
                             "py-3",
-                            meta.renderer === "actions" &&
+                            meta.renderer ===
+                              MANAGED_CHANNELS_COLUMN_RENDERERS.Actions &&
                               cn(
                                 "bg-background group-hover:bg-muted/50 data-[state=selected]:bg-muted sticky right-0 border-l",
                                 Z_INDEX.tableStickyCell,

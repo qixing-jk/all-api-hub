@@ -1,8 +1,8 @@
 {
   "alerts": {
     "authenticationFailed": {
-      "description": "已儲存的 AxonHub 憑證遭拒。請開啟設定更新憑證，然後重新整理渠道清單。",
-      "title": "請重新登入 AxonHub"
+      "description": "已儲存的 {{site}} 憑證遭拒。請開啟設定更新憑證，然後重新整理渠道清單。",
+      "title": "請重新登入 {{site}}"
     },
     "editorLoadError": {
       "description": "無法載入渠道表單。請重新整理渠道列表後重試。",
@@ -21,16 +21,16 @@
       "title": "渠道更新需要核對"
     },
     "permissionDenied": {
-      "description": "目前的 AxonHub 帳號無權管理渠道。請改用管理員帳號或調整權限，然後重新整理。",
-      "title": "AxonHub 拒絕存取"
+      "description": "目前的 {{site}} 帳號無權管理渠道。請改用管理員帳號或調整權限，然後重新整理。",
+      "title": "{{site}} 拒絕存取"
     },
     "savedRefreshError": {
       "description": "渠道已儲存，但無法載入最新列表。請先重新整理渠道列表，再進行其他變更。",
       "title": "渠道已儲存，需要重新整理"
     },
     "unavailable": {
-      "description": "無法連線至 AxonHub。請檢查伺服器和網路，然後重新整理渠道清單。",
-      "title": "AxonHub 暫時無法使用"
+      "description": "無法連線至 {{site}}。請檢查伺服器和網路，然後重新整理渠道清單。",
+      "title": "{{site}} 暫時無法使用"
     }
   },
   "dialog": {
@@ -141,25 +141,28 @@
     },
     "secret": {
       "actions": {
-        "clear": "移除已儲存憑據",
-        "restore": "保留已儲存憑據",
+        "cancelLoad": "取消載入",
+        "clear": "移除已儲存的 API 金鑰",
+        "restore": "保留已儲存的 API 金鑰",
         "retry": "重試",
-        "view": "檢視已儲存憑據"
+        "view": "檢視已儲存金鑰"
       },
-      "createHint": "輸入新頻道的憑據。",
-      "keepExistingHint": "將此欄位留空可保留已儲存的憑據，不作變更。",
-      "loadError": "無法載入已儲存憑據。",
-      "loading": "正在載入已儲存的憑據…",
-      "placeholder": "輸入憑據",
+      "createHint": "輸入新頻道使用的上游 API 金鑰。",
+      "keepExistingHint": "將此欄位留空可保留已儲存的 API 金鑰，不作變更。",
+      "loadableHint": "已儲存的 API 金鑰未在此處顯示；留空將保持不變。",
+      "loadError": "無法載入已儲存的 API 金鑰。",
+      "loading": "正在載入已儲存的 API 金鑰…",
+      "placeholder": "輸入上游 API 金鑰",
       "replacementBlocked": {
         "multipleCredentials": "此頻道有多個 API 金鑰。請在 AxonHub 中管理這些金鑰。"
       },
-      "replacementDisabled": "此憑據類型無法在此處替換。",
+      "replacementDisabled": "此 API 金鑰無法在此處取代。",
+      "replacePlaceholder": "輸入新的 API 金鑰以取代已儲存金鑰",
       "state": {
-        "available": "已有可用的憑據。",
-        "masked": "已儲存遮罩憑據。",
-        "permissionHidden": "已儲存憑據因權限限制而不可見。",
-        "unavailable": "暫無可顯示的憑據。"
+        "available": "已有可用的 API 金鑰。",
+        "masked": "已儲存遮罩的 API 金鑰。",
+        "permissionHidden": "已儲存的 API 金鑰因權限限制而不可見。",
+        "unavailable": "目前無法顯示已儲存的 API 金鑰。"
       }
     },
     "sections": {
@@ -371,7 +374,6 @@
     },
     "title": "遷移渠道"
   },
-  "resourceDescription": "搜尋、建立、編輯和刪除與此託管站點相連的渠道。",
   "statusLabels": {
     "autoDisabled": "自動禁用",
     "enabled": "啟用",
@@ -423,6 +425,7 @@
     "revealKeyUnsupported": "目前的託管站點不支援顯示渠道 key",
     "someDeletesFailed_other": "刪除 {{count}} 個渠道失敗：{{error}}",
     "syncCompleted": "模型同步完成（{{success}}/{{total}}）",
+    "syncCompletedRefreshFailed": "模型已同步（{{success}}/{{total}}），但渠道清單重新整理失敗。請重新整理後再試。",
     "syncFailed": "模型同步失敗：{{error}}"
   },
   "toolbar": {

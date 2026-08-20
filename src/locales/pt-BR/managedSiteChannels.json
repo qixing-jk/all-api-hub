@@ -1,8 +1,8 @@
 {
   "alerts": {
     "authenticationFailed": {
-      "description": "As credenciais salvas do AxonHub foram recusadas. Abra os ajustes, atualize-as e depois atualize a lista de canais.",
-      "title": "Entre novamente no AxonHub"
+      "description": "As credenciais salvas do {{site}} foram recusadas. Abra os ajustes, atualize-as e depois atualize a lista de canais.",
+      "title": "Entre novamente no {{site}}"
     },
     "editorLoadError": {
       "description": "Não foi possível carregar o formulário do canal. Atualize a lista de canais e tente novamente.",
@@ -21,16 +21,16 @@
       "title": "A atualização do canal precisa ser revisada"
     },
     "permissionDenied": {
-      "description": "Esta conta do AxonHub não pode gerenciar canais. Use uma conta de administrador ou atualize as permissões e depois atualize a lista.",
-      "title": "Acesso ao AxonHub negado"
+      "description": "Esta conta do {{site}} não pode gerenciar canais. Use uma conta de administrador ou atualize as permissões e depois atualize a lista.",
+      "title": "Acesso ao {{site}} negado"
     },
     "savedRefreshError": {
       "description": "O canal foi salvo, mas não foi possível carregar a lista mais recente. Atualize a lista de canais antes de fazer outras alterações.",
       "title": "Canal salvo; é necessário atualizar"
     },
     "unavailable": {
-      "description": "Não foi possível acessar o AxonHub. Verifique o servidor e a rede e depois atualize a lista de canais.",
-      "title": "O AxonHub está indisponível"
+      "description": "Não foi possível acessar o {{site}}. Verifique o servidor e a rede e depois atualize a lista de canais.",
+      "title": "O {{site}} está indisponível"
     }
   },
   "dialog": {
@@ -141,25 +141,28 @@
     },
     "secret": {
       "actions": {
-        "clear": "Remover credencial salva",
-        "restore": "Manter credencial salva",
+        "cancelLoad": "Cancelar carregamento",
+        "clear": "Remover chave de API salva",
+        "restore": "Manter chave de API salva",
         "retry": "Tentar novamente",
-        "view": "Ver credencial salva"
+        "view": "Ver chave de API salva"
       },
-      "createHint": "Insira uma credencial para o novo canal.",
-      "keepExistingHint": "Deixe este campo em branco para manter a credencial salva sem alterações.",
-      "loadError": "Não foi possível carregar a credencial salva.",
-      "loading": "Carregando a credencial salva...",
-      "placeholder": "Insira uma credencial",
+      "createHint": "Insira a chave de API do provedor para o novo canal.",
+      "keepExistingHint": "Deixe este campo em branco para manter a chave de API salva sem alterações.",
+      "loadableHint": "A chave de API salva não é exibida aqui. Deixe em branco para mantê-la sem alterações.",
+      "loadError": "Não foi possível carregar a chave de API salva.",
+      "loading": "Carregando a chave de API salva...",
+      "placeholder": "Insira a chave de API do provedor",
       "replacementBlocked": {
         "multipleCredentials": "Este canal tem várias chaves de API. Gerencie-as no AxonHub."
       },
-      "replacementDisabled": "Este tipo de credencial não pode ser substituído aqui.",
+      "replacementDisabled": "Esta chave de API não pode ser substituída aqui.",
+      "replacePlaceholder": "Insira uma nova chave de API para substituir a salva",
       "state": {
-        "available": "Há uma credencial salva disponível.",
-        "masked": "Há uma credencial mascarada salva.",
-        "permissionHidden": "A credencial salva está oculta devido às permissões.",
-        "unavailable": "Não há nenhuma credencial disponível para exibição."
+        "available": "Há uma chave de API salva disponível.",
+        "masked": "Há uma chave de API mascarada salva.",
+        "permissionHidden": "A chave de API salva está oculta devido às permissões.",
+        "unavailable": "A chave de API salva não pode ser exibida aqui."
       }
     },
     "sections": {
@@ -376,7 +379,6 @@
     },
     "title": "Migrar canais"
   },
-  "resourceDescription": "Pesquise, crie, edite e exclua os canais conectados a este site gerenciado.",
   "statusLabels": {
     "autoDisabled": "Desativado automaticamente",
     "enabled": "Ativado",
@@ -432,6 +434,7 @@
     "someDeletesFailed_many": "Falha ao excluir {{count}} canais: {{error}}",
     "someDeletesFailed_other": "Falha ao excluir {{count}} canais: {{error}}",
     "syncCompleted": "Sincronização de modelos concluída ({{success}}/{{total}})",
+    "syncCompletedRefreshFailed": "Os modelos foram sincronizados ({{success}}/{{total}}), mas não foi possível atualizar a lista de canais. Atualize e tente novamente.",
     "syncFailed": "Falha na sincronização de modelos: {{error}}"
   },
   "toolbar": {

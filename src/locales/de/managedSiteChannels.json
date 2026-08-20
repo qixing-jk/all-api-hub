@@ -1,8 +1,8 @@
 {
   "alerts": {
     "authenticationFailed": {
-      "description": "Die gespeicherten AxonHub-Anmeldeinformationen wurden abgelehnt. Öffnen Sie die Einstellungen, aktualisieren Sie sie und aktualisieren Sie dann die Kanalliste.",
-      "title": "Melden Sie sich erneut bei AxonHub an"
+      "description": "Die gespeicherten {{site}}-Anmeldeinformationen wurden abgelehnt. Öffnen Sie die Einstellungen, aktualisieren Sie sie und aktualisieren Sie dann die Kanalliste.",
+      "title": "Melden Sie sich erneut bei {{site}} an"
     },
     "editorLoadError": {
       "description": "Das Kanalformular konnte nicht geladen werden. Aktualisieren Sie die Kanalliste und versuchen Sie es erneut.",
@@ -21,16 +21,16 @@
       "title": "Kanalaktualisierung muss überprüft werden"
     },
     "permissionDenied": {
-      "description": "Dieses AxonHub-Konto kann keine Kanäle verwalten. Verwenden Sie ein Administratorkonto oder aktualisieren Sie die Berechtigungen und anschließend die Kanalliste.",
-      "title": "AxonHub Zugriff verweigert"
+      "description": "Dieses {{site}}-Konto kann keine Kanäle verwalten. Verwenden Sie ein Administratorkonto oder aktualisieren Sie die Berechtigungen und anschließend die Kanalliste.",
+      "title": "{{site}} Zugriff verweigert"
     },
     "savedRefreshError": {
       "description": "Der Kanal wurde gespeichert, aber die neueste Liste konnte nicht geladen werden. Aktualisieren Sie die Kanalliste, bevor Sie weitere Änderungen vornehmen.",
       "title": "Kanal gespeichert, Aktualisierung erforderlich"
     },
     "unavailable": {
-      "description": "AxonHub konnte nicht erreicht werden. Überprüfen Sie den Server und das Netzwerk und aktualisieren Sie dann die Kanalliste.",
-      "title": "AxonHub ist nicht verfügbar"
+      "description": "{{site}} konnte nicht erreicht werden. Überprüfen Sie den Server und das Netzwerk und aktualisieren Sie dann die Kanalliste.",
+      "title": "{{site}} ist nicht verfügbar"
     }
   },
   "dialog": {
@@ -141,25 +141,28 @@
     },
     "secret": {
       "actions": {
-        "clear": "Gespeicherte Anmeldeinformationen entfernen",
-        "restore": "Gespeicherte Anmeldeinformationen behalten",
+        "cancelLoad": "Laden abbrechen",
+        "clear": "Gespeicherten API-Schlüssel entfernen",
+        "restore": "Gespeicherten API-Schlüssel beibehalten",
         "retry": "Wiederholen",
-        "view": "Gespeicherte Anmeldedaten anzeigen"
+        "view": "Gespeicherten API-Schlüssel anzeigen"
       },
-      "createHint": "Geben Sie einen Berechtigungsnachweis für den neuen Kanal ein.",
-      "keepExistingHint": "Lassen Sie dieses Feld leer, um die gespeicherten Anmeldeinformationen unverändert zu lassen.",
-      "loadError": "Die gespeicherten Anmeldeinformationen konnten nicht geladen werden.",
-      "loading": "Laden der gespeicherten Anmeldeinformationen...",
-      "placeholder": "Geben Sie einen Berechtigungsnachweis ein",
+      "createHint": "Geben Sie den Upstream-API-Schlüssel für den neuen Kanal ein.",
+      "keepExistingHint": "Lassen Sie dieses Feld leer, um den gespeicherten API-Schlüssel unverändert beizubehalten.",
+      "loadableHint": "Der gespeicherte API-Schlüssel wird hier nicht angezeigt. Leer lassen, um ihn unverändert beizubehalten.",
+      "loadError": "Der gespeicherte API-Schlüssel konnte nicht geladen werden.",
+      "loading": "Gespeicherter API-Schlüssel wird geladen...",
+      "placeholder": "Upstream-API-Schlüssel eingeben",
       "replacementBlocked": {
         "multipleCredentials": "Dieser Kanal hat mehrere API-Schlüssel. Verwalten Sie seine Schlüssel in AxonHub."
       },
-      "replacementDisabled": "Dieser Anmeldeinformationstyp kann hier nicht ersetzt werden.",
+      "replacementDisabled": "Dieser API-Schlüssel kann hier nicht ersetzt werden.",
+      "replacePlaceholder": "Neuen API-Schlüssel eingeben, um den gespeicherten zu ersetzen",
       "state": {
-        "available": "Ein gespeicherter Berechtigungsnachweis ist verfügbar.",
-        "masked": "Ein maskierter Berechtigungsnachweis wird gespeichert.",
-        "permissionHidden": "Die gespeicherten Anmeldeinformationen werden durch Berechtigungen ausgeblendet.",
-        "unavailable": "Es sind keine Anmeldeinformationen zur Anzeige verfügbar."
+        "available": "Ein gespeicherter API-Schlüssel ist verfügbar.",
+        "masked": "Ein maskierter API-Schlüssel ist gespeichert.",
+        "permissionHidden": "Der gespeicherte API-Schlüssel wird aufgrund fehlender Berechtigungen ausgeblendet.",
+        "unavailable": "Der gespeicherte API-Schlüssel kann hier nicht angezeigt werden."
       }
     },
     "sections": {
@@ -371,7 +374,6 @@
     },
     "title": "Kanäle migrieren"
   },
-  "resourceDescription": "Suchen, erstellen, bearbeiten und löschen Sie Kanäle, die mit dieser verwalteten Website verbunden sind.",
   "statusLabels": {
     "autoDisabled": "Automatisch deaktiviert",
     "enabled": "Aktiviert",
@@ -425,6 +427,7 @@
     "someDeletesFailed_one": "Fehler beim Löschen von {{count}} Kanal: {{error}}",
     "someDeletesFailed_other": "Fehler beim Löschen von {{count}} Kanälen: {{error}}",
     "syncCompleted": "Modellsynchronisierung abgeschlossen ({{success}}/{{total}})",
+    "syncCompletedRefreshFailed": "Die Modelle wurden synchronisiert ({{success}}/{{total}}), aber die Kanalliste konnte nicht aktualisiert werden. Aktualisieren Sie die Liste und versuchen Sie es erneut.",
     "syncFailed": "Modellsynchronisierung fehlgeschlagen: {{error}}"
   },
   "toolbar": {

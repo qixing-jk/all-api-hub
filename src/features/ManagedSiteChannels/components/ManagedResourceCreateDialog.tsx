@@ -217,7 +217,7 @@ export function ManagedResourceCreateDialog({
       {policy ? (
         <ManagedResourceEditorBody
           t={t}
-          mode="create"
+          mode={MANAGED_RESOURCE_EDITOR_MODES.Create}
           descriptors={editor.fields}
           policy={policy}
           values={values}
@@ -225,6 +225,7 @@ export function ManagedResourceCreateDialog({
           disabled={isSaving || feedback?.kind === "uncertain"}
           showModelPrefillWarning={showModelPrefillWarning}
           onValueChange={updateValue}
+          onLoadOptions={editor.loadOptions}
         />
       ) : null}
     </ChannelEditorShell>

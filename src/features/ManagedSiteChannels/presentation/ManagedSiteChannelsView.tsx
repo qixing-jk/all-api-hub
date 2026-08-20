@@ -1,19 +1,5 @@
 import {
-  getCoreRowModel,
-  getFacetedUniqueValues,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
-  type ColumnDef,
-  type FilterFn,
-  type Row,
-  type Updater,
-} from "@tanstack/react-table"
-import {
   ArrowRightLeft,
-  ChevronLeft,
-  ChevronRight,
   CircleX,
   Columns3,
   Filter,
@@ -24,7 +10,7 @@ import {
   Settings,
   Trash2,
 } from "lucide-react"
-import { useMemo, useRef, type ReactNode } from "react"
+import { useRef, type ReactNode } from "react"
 
 import ManagedSiteConfigRequiredState from "~/components/ManagedSiteConfigRequiredState"
 import { PageHeader } from "~/components/PageHeader"
@@ -32,12 +18,11 @@ import Tooltip from "~/components/Tooltip"
 import {
   Badge,
   DestructiveConfirmDialog,
-  ExternalUrlText,
   IconButton,
   Input,
 } from "~/components/ui"
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/Alert"
-import { Button } from "~/components/ui/button"
+import { Button, BUTTON_LOADING_BEHAVIORS } from "~/components/ui/button"
 import { Checkbox } from "~/components/ui/checkbox"
 import {
   DropdownMenu,
@@ -60,15 +45,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select"
-import { Spinner } from "~/components/ui/spinner"
-import { cn } from "~/lib/utils"
 
-import RowActions from "../components/RowActions"
 import {
-  getManagedSiteChannelRowActionsButtonTestId,
-  getManagedSiteChannelRowDeleteActionTestId,
-  getManagedSiteChannelRowEditActionTestId,
-  getManagedSiteChannelRowSelectTestId,
   MANAGED_SITE_CHANNELS_REFRESH_STATE_ATTRIBUTE,
   MANAGED_SITE_CHANNELS_REFRESH_STATES,
   MANAGED_SITE_CHANNELS_TEST_IDS,
@@ -76,15 +54,13 @@ import {
 import type {
   ManagedChannelsCallbacks,
   ManagedChannelsCapabilities,
-  ManagedChannelsCell,
-  ManagedChannelsColumnAccessor,
   ManagedChannelsLabels,
-  ManagedChannelsPagination,
   ManagedChannelsPresentationState,
-  ManagedChannelsRowViewModel,
-  ManagedChannelsSorting,
 } from "./contracts"
+import { ManagedSiteChannelsDeleteFeedback } from "./ManagedSiteChannelsDeleteFeedback"
+import { ManagedSiteChannelsPagination } from "./ManagedSiteChannelsPagination"
 import { ManagedSiteChannelsTable } from "./ManagedSiteChannelsTable"
+import { useManagedSiteChannelsTable } from "./useManagedSiteChannelsTable"
 
 type ManagedSiteChannelsViewProps = {
   state: ManagedChannelsPresentationState
@@ -103,98 +79,6 @@ type ManagedSiteChannelsViewProps = {
   }
   siteTypeLabel: string
   filterDialog?: ReactNode
-}
-
-const getUpdatedState = <T,>(updater: Updater<T>, current: T) =>
-  typeof updater === "function"
-    ? (updater as (previous: T) => T)(current)
-    : updater
-
-const getAccessorValue = (
-  row: ManagedChannelsRowViewModel,
-  accessor: ManagedChannelsColumnAccessor | undefined,
-): string | number | ManagedChannelsCell | undefined => {
-  if (!accessor) return undefined
-  switch (accessor.kind) {
-    case "displayIdentifier":
-      return row.displayIdentifier
-    case "displayIdentifierSort":
-      return row.displayIdentifierSort
-    case "name":
-      return row.name
-    case "cell":
-      return row.cells[accessor.key]
-    case "cellSortValue": {
-      const cell = row.cells[accessor.key]
-      return !cell || ("missing" in cell && cell.missing)
-        ? undefined
-        : cell.sortValue
-    }
-  }
-}
-
-/** Renders a controlled cell value without exposing controller identities. */
-function CellValue({ cell }: { cell?: ManagedChannelsCell }) {
-  if (!cell) {
-    return <span className="text-muted-foreground">—</span>
-  }
-  if (cell.kind === "groups") {
-    if (!cell.values.length) {
-      return <span className="text-muted-foreground">—</span>
-    }
-    return (
-      <div className="text-muted-foreground flex flex-wrap gap-1 text-xs">
-        {cell.values.slice(0, 3).map((value) => (
-          <span key={value} className="rounded border px-1 py-0.5">
-            {value}
-          </span>
-        ))}
-        {cell.values.length > 3 && <span>+{cell.values.length - 3}</span>}
-      </div>
-    )
-  }
-
-  if (cell.kind === "status") {
-    const config = {
-      default: { variant: "secondary" as const, className: "" },
-      success: {
-        variant: "secondary" as const,
-        className: "border-emerald-200 text-emerald-700",
-      },
-      warning: {
-        variant: "outline" as const,
-        className: "border-amber-200 text-amber-800",
-      },
-      danger: { variant: "destructive" as const, className: "" },
-    }[cell.tone]
-    return (
-      <Badge
-        variant={config.variant}
-        className={cn("text-xs", config.className)}
-      >
-        {cell.value}
-      </Badge>
-    )
-  }
-
-  if (cell.missing) {
-    return <span className="text-muted-foreground">—</span>
-  }
-
-  return <>{cell.value}</>
-}
-
-const multiColumnFilterFn: FilterFn<ManagedChannelsRowViewModel> = (
-  row,
-  _columnId,
-  filterValue,
-) => {
-  const content = row.original.searchText.toLowerCase().trim()
-  return content.includes(
-    String(filterValue ?? "")
-      .toLowerCase()
-      .trim(),
-  )
 }
 
 /** Renders the shared managed-channel page for legacy and native controllers. */
@@ -217,288 +101,28 @@ export function ManagedSiteChannelsView({
   const isDeleteReplayBlocked = state.deleteState.requiresRefresh
   const isResourceInteractionBlocked =
     state.isResourceInteractionBlocked ?? false
-  const columns = useMemo<ColumnDef<ManagedChannelsRowViewModel, unknown>[]>(
-    () =>
-      state.columns.map((column) => {
-        if (column.renderer === "select") {
-          return {
-            id: "select",
-            meta: {
-              renderer: column.renderer,
-              extension: column.extension,
-            },
-            header: ({ table }) => (
-              <Checkbox
-                checked={
-                  table.getIsAllPageRowsSelected() ||
-                  (table.getIsSomePageRowsSelected() && "indeterminate")
-                }
-                onCheckedChange={(value) =>
-                  table.toggleAllPageRowsSelected(!!value)
-                }
-                aria-label={labels.selectAll}
-              />
-            ),
-            cell: ({ row }: { row: Row<ManagedChannelsRowViewModel> }) => (
-              <Checkbox
-                checked={row.getIsSelected()}
-                onCheckedChange={(value) => row.toggleSelected(!!value)}
-                aria-label={labels.selectRow}
-                data-testid={getManagedSiteChannelRowSelectTestId(
-                  row.original.testToken,
-                )}
-              />
-            ),
-            size: 16,
-            enableSorting: false,
-            enableHiding: false,
-          } satisfies ColumnDef<ManagedChannelsRowViewModel, unknown>
-        }
-
-        if (column.renderer === "actions") {
-          return {
-            id: column.id,
-            meta: {
-              renderer: column.renderer,
-              extension: column.extension,
-            },
-            header: () => <span className="sr-only">{column.label}</span>,
-            cell: ({ row }: { row: Row<ManagedChannelsRowViewModel> }) =>
-              isResourceInteractionBlocked ? null : (
-                <RowActions
-                  rowKey={row.original.rowKey}
-                  displayName={row.original.name}
-                  capabilities={{
-                    ...row.original.capabilities,
-                    canDelete:
-                      row.original.capabilities.canDelete &&
-                      !isDeleteReplayBlocked,
-                  }}
-                  onEdit={callbacks.onEdit}
-                  onView={callbacks.onView}
-                  onMigrate={callbacks.onMigrate}
-                  onDelete={callbacks.onDelete}
-                  onSync={callbacks.onSync}
-                  onOpenSync={callbacks.onOpenSync}
-                  onFilters={callbacks.onFilters}
-                  showMigrationAction={state.migrationMode}
-                  showNewApiOnlyActions={capabilities.showNewApiOnlyActions}
-                  isSyncing={Boolean(row.original.isSyncing)}
-                  labels={labels.rowActions}
-                  testIds={{
-                    trigger: getManagedSiteChannelRowActionsButtonTestId(
-                      row.original.testToken,
-                    ),
-                    edit: getManagedSiteChannelRowEditActionTestId(
-                      row.original.testToken,
-                    ),
-                    delete: getManagedSiteChannelRowDeleteActionTestId(
-                      row.original.testToken,
-                    ),
-                  }}
-                />
-              ),
-            size: column.size,
-            enableSorting: false,
-            enableHiding: false,
-          } satisfies ColumnDef<ManagedChannelsRowViewModel, unknown>
-        }
-
-        return {
-          id: column.id,
-          meta: {
-            renderer: column.renderer,
-            extension: column.extension,
-          },
-          accessorFn: (row) =>
-            getAccessorValue(row, column.sort?.accessor ?? column.accessor),
-          header: column.label,
-          cell: ({ row }: { row: Row<ManagedChannelsRowViewModel> }) => {
-            if (column.renderer === "identifier") {
-              return (
-                <span className="font-mono text-sm">
-                  {row.original.displayIdentifier}
-                </span>
-              )
-            }
-            if (column.renderer === "channel") {
-              return (
-                <div>
-                  <div className="leading-tight font-medium">
-                    {row.original.name}
-                  </div>
-                  <div className="text-muted-foreground truncate text-xs">
-                    <ExternalUrlText
-                      value={row.original.baseURL}
-                      className="truncate"
-                    />
-                  </div>
-                </div>
-              )
-            }
-            const cell = getAccessorValue(row.original, column.accessor)
-            return (
-              <span className={column.cellClassName}>
-                <CellValue cell={typeof cell === "object" ? cell : undefined} />
-              </span>
-            )
-          },
-          filterFn:
-            column.renderer === "identifier"
-              ? (row, _columnId, value) =>
-                  !String(value ?? "").trim() ||
-                  row.original.displayIdentifier === String(value).trim()
-              : column.renderer === "channel"
-                ? multiColumnFilterFn
-                : column.facet?.kind === "status"
-                  ? (row, _columnId, value: string[]) => {
-                      const facetValue = getAccessorValue(
-                        row.original,
-                        column.sort?.accessor ?? column.accessor,
-                      )
-                      return (
-                        !value?.length || value.includes(String(facetValue))
-                      )
-                    }
-                  : undefined,
-          enableHiding: column.canHide,
-          enableSorting: Boolean(column.sort),
-          sortDescFirst: column.sort?.defaultDirection === "desc",
-          sortUndefined: column.sort?.missing,
-          size: column.size,
-        } satisfies ColumnDef<ManagedChannelsRowViewModel, unknown>
-      }),
-    [
-      callbacks,
-      capabilities.showNewApiOnlyActions,
-      isDeleteReplayBlocked,
-      isResourceInteractionBlocked,
-      labels,
-      state.columns,
-      state.migrationMode,
-    ],
-  )
-
-  const identifierColumn = state.columns.find(
-    (column) => column.renderer === "identifier",
-  )
-  const channelColumn = state.columns.find(
-    (column) => column.renderer === "channel",
-  )
-  const statusFacetColumn = state.columns.find(
-    (column) => column.facet?.kind === "status",
-  )
-
-  const columnFilters = useMemo(
-    () => [
-      ...(state.channelIdFilterValue
-        ? [
-            {
-              id: identifierColumn?.id ?? "",
-              value: state.channelIdFilterValue,
-            },
-          ]
-        : []),
-      ...(state.searchValue && channelColumn
-        ? [{ id: channelColumn.id, value: state.searchValue }]
-        : []),
-      ...(state.statusFilterValues.length
-        ? [{ id: statusFacetColumn?.id ?? "", value: state.statusFilterValues }]
-        : []),
-    ],
-    [
-      channelColumn,
-      identifierColumn,
-      state.channelIdFilterValue,
-      state.searchValue,
-      state.statusFilterValues,
-      statusFacetColumn,
-    ],
-  )
-
-  const columnVisibility = useMemo(
-    () =>
-      Object.fromEntries(
-        state.columns.map((column) => [
-          column.id,
-          column.visible ?? column.defaultVisible,
-        ]),
-      ),
-    [state.columns],
-  )
-
-  const table = useReactTable({
-    data: state.rows,
-    columns,
-    state: {
-      sorting: state.sorting,
-      columnFilters,
-      columnVisibility,
-      pagination: state.pagination,
-      rowSelection: state.selectedRowKeys,
-    },
-    onSortingChange: (updater) =>
-      callbacks.onSortingChange(
-        getUpdatedState<ManagedChannelsSorting>(updater, state.sorting),
-      ),
-    onColumnVisibilityChange: (updater) =>
-      callbacks.onColumnVisibilityChange(
-        getUpdatedState(updater, columnVisibility),
-      ),
-    onPaginationChange: (updater) =>
-      callbacks.onPaginationChange(
-        getUpdatedState<ManagedChannelsPagination>(updater, state.pagination),
-      ),
-    onRowSelectionChange: (updater) =>
-      callbacks.onSelectedRowKeysChange(
-        getUpdatedState(updater, state.selectedRowKeys),
-      ),
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getFacetedUniqueValues: getFacetedUniqueValues(),
-    enableSortingRemoval: false,
-    autoResetPageIndex: false,
-    getRowId: (row) => row.rowKey,
+  const {
+    table,
+    columnCount,
+    statusCounts,
+    uniqueStatusValues,
+    selectedRows,
+    filteredRows,
+    selectedCount,
+    filteredCount,
+  } = useManagedSiteChannelsTable({
+    state,
+    callbacks,
+    labels,
+    isDeleteReplayBlocked,
+    isResourceInteractionBlocked,
   })
-
-  const statusColumn = statusFacetColumn
-    ? table.getColumn(statusFacetColumn.id)
-    : undefined
-  const statusCounts = statusColumn?.getFacetedUniqueValues()
-  const uniqueStatusValues = Array.from(statusCounts?.keys() ?? [])
-    .map(String)
-    .sort((a, b) => {
-      const numericA = Number(a)
-      const numericB = Number(b)
-      const isNumericA = a.trim() !== "" && Number.isFinite(numericA)
-      const isNumericB = b.trim() !== "" && Number.isFinite(numericB)
-      if (isNumericA && isNumericB) return numericA - numericB
-      if (isNumericA !== isNumericB) return isNumericA ? -1 : 1
-      return a.localeCompare(b)
-    })
-  const selectedRows = table.getSelectedRowModel().rows
-  const filteredRows = table.getFilteredRowModel().rows
-  const selectedCount = selectedRows.length
-  const filteredCount = filteredRows.length
-  const renderDeleteRefreshAction = () => (
-    <Button
-      type="button"
-      variant="outline"
-      onClick={callbacks.onRefresh}
-      disabled={state.isRefreshing || !capabilities.canRefresh}
-    >
-      {labels.deleteRefreshAction}
-    </Button>
-  )
   const emptyTableMessage =
     state.searchValue.trim() ||
     state.channelIdFilterValue.trim() ||
     state.statusFilterValues.length
       ? labels.emptyFiltered
       : labels.emptyNoChannels
-  const rowsPerPageOptions = [10, 25, 50, 100]
   const isInitialLoading =
     state.isLoading &&
     state.rows.length === 0 &&
@@ -543,7 +167,8 @@ export function ManagedSiteChannelsView({
             {!state.isConfigurationMissing && capabilities.canRefresh ? (
               <Button
                 variant="outline"
-                aria-busy={state.isRefreshing}
+                loading={state.isRefreshing}
+                loadingBehavior={BUTTON_LOADING_BEHAVIORS.Interactive}
                 data-testid={MANAGED_SITE_CHANNELS_TEST_IDS.refreshButton}
                 {...{
                   [MANAGED_SITE_CHANNELS_REFRESH_STATE_ATTRIBUTE]:
@@ -552,13 +177,7 @@ export function ManagedSiteChannelsView({
                       : MANAGED_SITE_CHANNELS_REFRESH_STATES.Idle,
                 }}
                 onClick={callbacks.onRefresh}
-                leftIcon={
-                  state.isRefreshing ? (
-                    <Spinner aria-hidden="true" size="sm" variant="primary" />
-                  ) : (
-                    <RefreshCcw className="h-4 w-4" />
-                  )
-                }
+                leftIcon={<RefreshCcw className="h-4 w-4" />}
               >
                 {state.isRefreshing ? labels.cancelRefresh : labels.refresh}
               </Button>
@@ -625,67 +244,19 @@ export function ManagedSiteChannelsView({
           {state.failure ? (
             <Alert variant={state.failure.variant ?? "destructive"}>
               <AlertTitle>{state.failure.category}</AlertTitle>
-              <AlertDescription>{state.failure.message}</AlertDescription>
-            </Alert>
-          ) : null}
-
-          {state.deleteState.failure ? (
-            <Alert
-              role="alert"
-              variant={state.deleteState.failure.variant ?? "destructive"}
-            >
-              <AlertTitle>{state.deleteState.failure.category}</AlertTitle>
-              <AlertDescription className="space-y-3">
-                <p>{state.deleteState.failure.message}</p>
-                {state.deleteState.requiresRefresh
-                  ? renderDeleteRefreshAction()
-                  : null}
+              <AlertDescription className="whitespace-pre-line">
+                {state.failure.message}
               </AlertDescription>
             </Alert>
           ) : null}
 
-          {state.deleteState.results.length > 0 ? (
-            <section
-              role="status"
-              aria-label={labels.deleteResultsTitle}
-              className="space-y-3 rounded-md border p-4"
-            >
-              <div>
-                <h3 className="font-medium">{labels.deleteResultsTitle}</h3>
-                {state.deleteState.requiresRefresh ? (
-                  <p className="text-muted-foreground mt-1 text-sm">
-                    {labels.deleteRefreshRequired}
-                  </p>
-                ) : null}
-              </div>
-              <ol className="space-y-2">
-                {state.deleteState.results.map((result) => (
-                  <li
-                    key={result.rowKey}
-                    className="flex items-center justify-between gap-3"
-                  >
-                    <span className="min-w-0 truncate text-sm">
-                      {result.displayLabel}
-                    </span>
-                    <Badge
-                      variant={
-                        result.status === "success"
-                          ? "success"
-                          : result.status === "failed"
-                            ? "danger"
-                            : "warning"
-                      }
-                    >
-                      {labels.deleteResultStatusLabels[result.status]}
-                    </Badge>
-                  </li>
-                ))}
-              </ol>
-              {state.deleteState.requiresRefresh
-                ? renderDeleteRefreshAction()
-                : null}
-            </section>
-          ) : null}
+          <ManagedSiteChannelsDeleteFeedback
+            deleteState={state.deleteState}
+            labels={labels}
+            canRefresh={capabilities.canRefresh}
+            isRefreshing={state.isRefreshing}
+            onRefresh={callbacks.onRefresh}
+          />
 
           <div className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-center">
             <div className="relative w-full md:max-w-sm">
@@ -884,87 +455,20 @@ export function ManagedSiteChannelsView({
 
           <ManagedSiteChannelsTable
             table={table}
-            columnCount={columns.length}
+            columnCount={columnCount}
             isInitialLoading={isInitialLoading}
             loadingLabel={labels.loading}
             emptyMessage={emptyTableMessage}
             emptyContent={emptyContent}
           />
 
-          <div className="flex flex-wrap items-center gap-4 text-sm">
-            <div className="flex items-center gap-2">
-              <Label htmlFor="rows-per-page" className="text-xs font-medium">
-                {labels.rowsPerPage}
-              </Label>
-              <Select
-                value={String(state.pagination.pageSize)}
-                onValueChange={(value) =>
-                  callbacks.onPaginationChange({
-                    ...state.pagination,
-                    pageSize: Number(value),
-                  })
-                }
-              >
-                <SelectTrigger
-                  id="rows-per-page"
-                  size="sm"
-                  aria-label={labels.rowsPerPage}
-                  className="w-[110px]"
-                >
-                  <SelectValue placeholder={labels.rowsPerPage} />
-                </SelectTrigger>
-                <SelectContent>
-                  {rowsPerPageOptions.map((option) => (
-                    <SelectItem key={option} value={String(option)}>
-                      {option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="text-muted-foreground ml-auto">
-              {state.total ? (
-                <span
-                  data-testid={MANAGED_SITE_CHANNELS_TEST_IDS.paginationSummary}
-                  data-start={
-                    state.pagination.pageIndex * state.pagination.pageSize + 1
-                  }
-                  data-end={Math.min(
-                    (state.pagination.pageIndex + 1) *
-                      state.pagination.pageSize,
-                    state.total,
-                  )}
-                  data-total={state.total}
-                >
-                  {labels.paginationSummary}
-                </span>
-              ) : (
-                <span>{labels.noEntries}</span>
-              )}
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Button
-                size="icon"
-                variant="outline"
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
-                aria-label={labels.paginationPrev}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                size="icon"
-                variant="outline"
-                onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
-                aria-label={labels.paginationNext}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
+          <ManagedSiteChannelsPagination
+            table={table}
+            pagination={state.pagination}
+            total={state.total}
+            labels={labels}
+            onPaginationChange={callbacks.onPaginationChange}
+          />
         </>
       )}
 

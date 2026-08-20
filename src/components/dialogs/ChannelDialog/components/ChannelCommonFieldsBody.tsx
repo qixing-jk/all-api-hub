@@ -5,6 +5,7 @@ import { CHANNEL_DIALOG_TEST_IDS } from "~/components/dialogs/ChannelDialog/test
 import {
   Alert,
   Button,
+  BUTTON_LOADING_BEHAVIORS,
   CompactMultiSelect,
   Input,
   Label,
@@ -258,7 +259,11 @@ export function ChannelSecretField({
   realKeyHint?: string
   actions?: ReactNode
 }) {
+  const isCancelableRealKeyLoad =
+    isLoadingRealKey && Boolean(onCancelLoadRealKey)
+
   const descriptionId = description ? "channel-key-description" : undefined
+  const realKeyHintId = canLoadRealKey ? "channel-key-real-key-hint" : undefined
   const errorId = errorMessage ? "channel-key-error" : undefined
   return (
     <div>
@@ -284,7 +289,11 @@ export function ChannelSecretField({
         readOnly={readOnly}
         required={required}
         aria-invalid={Boolean(errorMessage)}
-        aria-describedby={fieldDescriptionIds(descriptionId, errorId)}
+        aria-describedby={fieldDescriptionIds(
+          descriptionId,
+          realKeyHintId,
+          errorId,
+        )}
       />
       {description && descriptionId ? (
         <ChannelFieldMessage id={descriptionId}>
@@ -298,7 +307,10 @@ export function ChannelSecretField({
       ) : null}
       {canLoadRealKey ? (
         <div className="mt-2 flex items-center justify-between gap-2">
-          <p className="dark:text-dark-text-secondary text-xs text-gray-500">
+          <p
+            id={realKeyHintId}
+            className="dark:text-dark-text-secondary text-xs text-gray-500"
+          >
             {realKeyHint ?? t("channelDialog:fields.key.realKeyHint")}
           </p>
           <div className="flex shrink-0 items-center gap-2">
@@ -306,25 +318,25 @@ export function ChannelSecretField({
               type="button"
               size="sm"
               variant="outline"
-              onClick={onLoadRealKey}
+              onClick={
+                isCancelableRealKeyLoad ? onCancelLoadRealKey : onLoadRealKey
+              }
               disabled={disabled}
               loading={isLoadingRealKey}
+              loadingBehavior={
+                isCancelableRealKeyLoad
+                  ? BUTTON_LOADING_BEHAVIORS.Interactive
+                  : undefined
+              }
+              aria-live={isLoadingRealKey ? "polite" : undefined}
             >
-              {isLoadingRealKey
-                ? loadingRealKeyLabel ??
-                  t("channelDialog:actions.loadingRealKey")
-                : loadRealKeyLabel ?? t("channelDialog:actions.loadRealKey")}
+              {isCancelableRealKeyLoad
+                ? cancelLoadRealKeyLabel ?? t("common:actions.cancel")
+                : isLoadingRealKey
+                  ? loadingRealKeyLabel ??
+                    t("channelDialog:actions.loadingRealKey")
+                  : loadRealKeyLabel ?? t("channelDialog:actions.loadRealKey")}
             </Button>
-            {isLoadingRealKey && onCancelLoadRealKey ? (
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                onClick={onCancelLoadRealKey}
-              >
-                {cancelLoadRealKeyLabel ?? t("common:actions.cancel")}
-              </Button>
-            ) : null}
           </div>
         </div>
       ) : null}
@@ -396,6 +408,7 @@ export function ChannelModelsField({
   errorMessage,
   required = false,
   description,
+  actions,
 }: {
   t: TFunction
   options: readonly ChannelCommonFieldsOption[]
@@ -410,6 +423,7 @@ export function ChannelModelsField({
   errorMessage?: string
   required?: boolean
   description?: ReactNode
+  actions?: ReactNode
 }) {
   const showBulkActions = Boolean(onSelectAll && onInverse && onDeselectAll)
   const descriptionId = "channel-models-description"
@@ -420,35 +434,40 @@ export function ChannelModelsField({
         <Label className="mb-0" required={required}>
           {t("channelDialog:fields.models.label")}
         </Label>
-        {showBulkActions ? (
+        {showBulkActions || actions ? (
           <div className="flex flex-wrap gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onSelectAll}
-              disabled={disabled || isLoading || options.length === 0}
-              type="button"
-            >
-              {t("channelDialog:actions.selectAll")}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onInverse}
-              disabled={disabled || isLoading || options.length === 0}
-              type="button"
-            >
-              {t("channelDialog:actions.inverse")}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onDeselectAll}
-              disabled={disabled || isLoading || selected.length === 0}
-              type="button"
-            >
-              {t("channelDialog:actions.deselectAll")}
-            </Button>
+            {showBulkActions ? (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onSelectAll}
+                  disabled={disabled || isLoading || options.length === 0}
+                  type="button"
+                >
+                  {t("channelDialog:actions.selectAll")}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onInverse}
+                  disabled={disabled || isLoading || options.length === 0}
+                  type="button"
+                >
+                  {t("channelDialog:actions.inverse")}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onDeselectAll}
+                  disabled={disabled || isLoading || selected.length === 0}
+                  type="button"
+                >
+                  {t("channelDialog:actions.deselectAll")}
+                </Button>
+              </>
+            ) : null}
+            {actions}
           </div>
         ) : null}
       </div>
@@ -486,8 +505,8 @@ export function ChannelModelsField({
       <ChannelFieldMessage id={descriptionId}>
         {description ?? t("channelDialog:fields.models.hint")}
       </ChannelFieldMessage>
-      {errorMessage ? (
-        <ChannelFieldMessage id="channel-models-error" tone="error">
+      {errorMessage && errorId ? (
+        <ChannelFieldMessage id={errorId} tone="error">
           {errorMessage}
         </ChannelFieldMessage>
       ) : null}

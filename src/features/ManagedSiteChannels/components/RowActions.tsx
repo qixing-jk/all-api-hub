@@ -24,7 +24,6 @@ export type RowActionsLabels = {
 
 export type RowActionsProps = {
   rowKey: string
-  displayName: string
   capabilities: {
     canEdit?: boolean
     canView?: boolean
@@ -35,7 +34,6 @@ export type RowActionsProps = {
     canFilter?: boolean
   }
   showMigrationAction: boolean
-  showNewApiOnlyActions: boolean
   isSyncing: boolean
   onEdit?: (rowKey: string) => void
   onView?: (rowKey: string) => void
@@ -55,10 +53,8 @@ export type RowActionsProps = {
 /** Pure row-action presentation. Domain resolution and analytics stay upstream. */
 export default function RowActions({
   rowKey,
-  displayName,
   capabilities,
   showMigrationAction,
-  showNewApiOnlyActions,
   isSyncing,
   onEdit,
   onView,
@@ -102,7 +98,8 @@ export default function RowActions({
           variant="ghost"
           className="h-8 w-8"
           aria-label={labels.trigger}
-          title={displayName}
+          disableAutoTooltip
+          disableAutoTitle
           data-testid={testIds.trigger}
           disabled={isSyncing}
           loading={isActionPending}
@@ -135,22 +132,20 @@ export default function RowActions({
                 {labels.edit}
               </DropdownMenuItem>
             ) : null}
-            {showNewApiOnlyActions &&
-            (canFilter || canOpenSync || canSync) &&
-            canEdit ? (
+            {(canFilter || canOpenSync || canSync) && canEdit ? (
               <DropdownMenuSeparator />
             ) : null}
-            {showNewApiOnlyActions && canFilter ? (
+            {canFilter ? (
               <DropdownMenuItem onClick={() => onFilters(rowKey)}>
                 {labels.filters}
               </DropdownMenuItem>
             ) : null}
-            {showNewApiOnlyActions && canOpenSync ? (
+            {canOpenSync ? (
               <DropdownMenuItem onClick={() => void onOpenSync(rowKey)}>
                 {labels.openSync}
               </DropdownMenuItem>
             ) : null}
-            {showNewApiOnlyActions && canSync ? (
+            {canSync ? (
               <DropdownMenuItem
                 onClick={() => void handleSync()}
                 disabled={isSyncing}

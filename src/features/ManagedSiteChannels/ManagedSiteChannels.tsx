@@ -17,9 +17,6 @@ import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { useChannelDialog } from "~/components/dialogs/ChannelDialog"
-import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
-import Tooltip from "~/components/Tooltip"
-import { Button, IconButton, Notice } from "~/components/ui"
 import { AxonHubChannelTypeNames } from "~/constants/axonHub"
 import { ClaudeCodeHubProviderTypeNames } from "~/constants/claudeCodeHub"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
@@ -28,22 +25,10 @@ import { OctopusOutboundTypeNames } from "~/constants/octopus"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import {
-  KEY_MANAGEMENT_GUIDED_IMPORT_TARGETS,
-  KEY_MANAGEMENT_ROUTE_PARAMS,
-} from "~/features/KeyManagement/constants"
 import { loadNewApiChannelKeyWithVerification } from "~/features/ManagedSiteVerification/loadNewApiChannelKeyWithVerification"
 import { NewApiManagedVerificationDialog } from "~/features/ManagedSiteVerification/NewApiManagedVerificationDialog"
 import { useNewApiManagedVerification } from "~/features/ManagedSiteVerification/useNewApiManagedVerification"
-import { buildGuidedAccountKeyImportTarget } from "~/features/UnifiedApiGuidance/navigation"
-import { accountStorage } from "~/services/accounts/accountStorage"
-import { canResolveAccountRuntimeKeySecret } from "~/services/accounts/keyProductCapabilities"
-import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { getManagedSiteChannelResourceId } from "~/services/managedSites/managedSiteChannelResourceIdentity"
-import {
-  buildManagedSiteChannelConsoleUrl,
-  buildManagedSiteTokenConsoleUrl,
-} from "~/services/managedSites/managedSiteConsoleRoutes"
 import {
   getManagedSiteService,
   hasValidManagedSiteConfig,
@@ -59,7 +44,6 @@ import {
   getManagedSiteTargetOptions,
   needsManagedSiteChannelKeyResolution,
 } from "~/services/managedSites/utils/managedSite"
-import { sendModelSyncMessage } from "~/services/models/modelSync/messaging"
 import {
   startProductAnalyticsAction,
   trackProductAnalyticsActionCompleted,
@@ -76,18 +60,11 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import { resolveProductAnalyticsManagedSiteType } from "~/services/productAnalytics/managedSite"
-import { withProtectionBypassUserCommand } from "~/services/protectionBypass/client"
-import {
-  PROTECTION_BYPASS_SURFACES,
-  PROTECTION_BYPASS_USER_COMMANDS,
-} from "~/services/protectionBypass/contracts"
-import { ModelSyncMessageTypes } from "~/services/runtimeMessaging/messageTypes"
-import type { ExecutionItemResult } from "~/types/managedSiteModelSync"
+import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import {
   createManagedUpstreamResourceRef,
   normalizeManagedUpstreamResourceScopeKey,
 } from "~/types/managedUpstreamResource"
-import { createTab } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { showUpdateToast } from "~/utils/core/toastHelpers"
@@ -95,7 +72,6 @@ import {
   navigateWithinOptionsPage,
   openManagedSiteModelSyncForChannel,
   openSettingsTab,
-  pushWithinOptionsPage,
 } from "~/utils/navigation"
 
 import ChannelFilterDialog from "./components/ChannelFilterDialog"
@@ -107,15 +83,30 @@ import {
   type LegacyManagedResourceDeleteResult,
   type LegacyManagedResourceDeleteTarget,
 } from "./controllers/legacyManagedResourceBulkDeleteController"
+import { useManagedSiteChannelModelSync } from "./hooks/useManagedSiteChannelModelSync"
 import type {
   ManagedChannelsCallbacks,
   ManagedChannelsCapabilities,
   ManagedChannelsColumn,
-  ManagedChannelsLabels,
   ManagedChannelsPresentationState,
   ManagedChannelsRowViewModel,
 } from "./presentation/contracts"
+import {
+  MANAGED_CHANNELS_CELL_KINDS,
+  MANAGED_CHANNELS_CELL_TONES,
+  MANAGED_CHANNELS_COLUMN_ACCESSOR_KINDS,
+  MANAGED_CHANNELS_COLUMN_EXTENSION_KINDS,
+  MANAGED_CHANNELS_COLUMN_FACET_KINDS,
+  MANAGED_CHANNELS_COLUMN_IDS,
+  MANAGED_CHANNELS_COLUMN_RENDERERS,
+  MANAGED_CHANNELS_ROUTE_FILTER_KINDS,
+  MANAGED_CHANNELS_ROUTE_QUERY_KEYS,
+  MANAGED_CHANNELS_SORT_DIRECTIONS,
+  MANAGED_CHANNELS_SORT_MISSING_PLACEMENTS,
+} from "./presentation/contracts"
+import { createManagedSiteChannelsLabels } from "./presentation/managedSiteChannelsLabels"
 import { ManagedSiteChannelsView } from "./presentation/ManagedSiteChannelsView"
+import { useManagedSiteChannelPageExperience } from "./presentation/useManagedSiteChannelPageExperience"
 import type { ChannelRow } from "./types"
 
 const optionsEntrypoint = PRODUCT_ANALYTICS_ENTRYPOINTS.Options
@@ -348,45 +339,24 @@ export default function ManagedSiteChannels({
   const managedSiteBaseUrl =
     getManagedSiteAdminConfigForType(preferences, managedSiteType)?.baseUrl ??
     ""
-  const managedSiteTokenConsoleUrl = buildManagedSiteTokenConsoleUrl(
-    managedSiteBaseUrl,
-    managedSiteType,
-  )
-  const managedSiteChannelConsoleUrl = buildManagedSiteChannelConsoleUrl(
-    managedSiteBaseUrl,
-    managedSiteType,
-  )
-  const openManagedSiteChannelConsole = () => {
-    if (!managedSiteChannelConsoleUrl) return
-    void createTab(managedSiteChannelConsoleUrl, true)
-  }
-
   const [channels, setChannels] = useState<ChannelRow[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [hasCompletedInitialChannelLoad, setHasCompletedInitialChannelLoad] =
     useState(false)
-  const [gatewayGuidanceImportAccountId, setGatewayGuidanceImportAccountId] =
-    useState<string | undefined>()
-  const [hasGatewayGuidanceProfiles, setHasGatewayGuidanceProfiles] =
-    useState(false)
-  const [
-    isGatewayGuidanceSourceInventoryLoaded,
-    setIsGatewayGuidanceSourceInventoryLoaded,
-  ] = useState(false)
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
-    base_url: false,
-    group: !isOctopus && !isAxonHub,
-    priority: !isOctopus && !isAxonHub,
-    weight: !isOctopus && !isAxonHub,
+    [MANAGED_CHANNELS_COLUMN_IDS.BaseUrl]: false,
+    [MANAGED_CHANNELS_COLUMN_IDS.Group]: !isOctopus && !isAxonHub,
+    [MANAGED_CHANNELS_COLUMN_IDS.Priority]: !isOctopus && !isAxonHub,
+    [MANAGED_CHANNELS_COLUMN_IDS.Weight]: !isOctopus && !isAxonHub,
   })
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: 10,
   })
   const [sorting, setSorting] = useState<SortingState>([
-    { id: "id", desc: true },
+    { id: MANAGED_CHANNELS_COLUMN_IDS.Identifier, desc: true },
   ])
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({})
   const [bulkDeleteController] = useState(
@@ -403,7 +373,6 @@ export default function ManagedSiteChannels({
     useState<ProductAnalyticsActionContext | null>(null)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
-  const [syncingIds, setSyncingIds] = useState<Set<number>>(new Set())
   const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false)
   const [filterDialogChannel, setFilterDialogChannel] =
     useState<ChannelRow | null>(null)
@@ -421,6 +390,25 @@ export default function ManagedSiteChannels({
   const { openNewApiManagedVerification } = verification
 
   const { openWithCustom } = useChannelDialog()
+  const applySyncedModels = useCallback(
+    (modelsByChannelId: ReadonlyMap<number, string>) => {
+      if (modelsByChannelId.size === 0) return
+      setChannels((current) =>
+        current.map((channel) => {
+          const nextModels = modelsByChannelId.get(channel.id)
+          return nextModels == null
+            ? channel
+            : { ...channel, models: nextModels }
+        }),
+      )
+    },
+    [],
+  )
+  const { syncingChannelIds: syncingIds, syncChannels: handleSyncChannels } =
+    useManagedSiteChannelModelSync({
+      siteType: managedSiteType,
+      onModelsChanged: applySyncedModels,
+    })
   const migrationTargets = useMemo(
     () =>
       supportsChannelMigration
@@ -431,56 +419,6 @@ export default function ManagedSiteChannels({
     [managedSiteType, preferences, supportsChannelMigration],
   )
   const hasMigrationTargets = migrationTargets.length > 0
-
-  useEffect(() => {
-    let isCurrent = true
-
-    const loadGatewayGuidanceSources = async () => {
-      const [accounts, profiles] = await Promise.all([
-        accountStorage.getAllAccounts().catch((error) => {
-          logger.warn(
-            "Failed to load account context for gateway guidance",
-            error,
-          )
-          return []
-        }),
-        apiCredentialProfilesStorage.listProfiles().catch((error) => {
-          logger.warn(
-            "Failed to load API credential context for gateway guidance",
-            error,
-          )
-          return []
-        }),
-      ])
-      if (!isCurrent) return
-
-      const displayAccounts = accountStorage.convertToDisplayData(accounts)
-      setGatewayGuidanceImportAccountId(
-        displayAccounts.find(canResolveAccountRuntimeKeySecret)?.id,
-      )
-      setHasGatewayGuidanceProfiles(profiles.length > 0)
-      setIsGatewayGuidanceSourceInventoryLoaded(true)
-    }
-
-    void loadGatewayGuidanceSources()
-    return () => {
-      isCurrent = false
-    }
-  }, [])
-
-  const handleOpenGatewayChannelImport = useCallback(() => {
-    const target = buildGuidedAccountKeyImportTarget(
-      gatewayGuidanceImportAccountId,
-    )
-    pushWithinOptionsPage(`#${target.menuItemId}`, target.params)
-  }, [gatewayGuidanceImportAccountId])
-
-  const handleOpenApiCredentialProfiles = useCallback(() => {
-    pushWithinOptionsPage(`#${MENU_ITEM_IDS.API_CREDENTIAL_PROFILES}`, {
-      [KEY_MANAGEMENT_ROUTE_PARAMS.GuidedImport]:
-        KEY_MANAGEMENT_GUIDED_IMPORT_TARGETS.ManagedSite,
-    })
-  }, [])
 
   const refreshChannels = useCallback(
     async (analyticsContext?: ProductAnalyticsActionContext) => {
@@ -694,9 +632,9 @@ export default function ManagedSiteChannels({
   useEffect(() => {
     setColumnVisibility((prev) => ({
       ...prev,
-      group: !isOctopus && !isAxonHub,
-      priority: !isOctopus && !isAxonHub,
-      weight: !isOctopus && !isAxonHub,
+      [MANAGED_CHANNELS_COLUMN_IDS.Group]: !isOctopus && !isAxonHub,
+      [MANAGED_CHANNELS_COLUMN_IDS.Priority]: !isOctopus && !isAxonHub,
+      [MANAGED_CHANNELS_COLUMN_IDS.Weight]: !isOctopus && !isAxonHub,
     }))
   }, [isAxonHub, isOctopus])
 
@@ -1189,107 +1127,6 @@ export default function ManagedSiteChannels({
     t,
   ])
 
-  const handleSyncChannels = useCallback(
-    async (
-      channelIds: number[],
-      analyticsContext: ProductAnalyticsActionContext,
-    ) => {
-      const tracker = startProductAnalyticsAction(analyticsContext)
-      const eligibleChannelIds = channelIds.filter((id) => id > 0)
-
-      if (!eligibleChannelIds.length) {
-        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
-          insights: {
-            itemCount: 0,
-            selectedCount: channelIds.length,
-            managedSiteType: managedSiteAnalyticsType,
-          },
-        })
-        return
-      }
-      setSyncingIds((prev) => {
-        const next = new Set(prev)
-        eligibleChannelIds.forEach((id) => next.add(id))
-        return next
-      })
-      try {
-        const response = await withProtectionBypassUserCommand(
-          PROTECTION_BYPASS_USER_COMMANDS.SyncManagedSiteModels,
-          PROTECTION_BYPASS_SURFACES.Options,
-          async (protectionBypassExecution) =>
-            await sendModelSyncMessage(ModelSyncMessageTypes.TriggerSelected, {
-              channelIds: eligibleChannelIds,
-              protectionBypassExecution,
-            }),
-        )
-        if (!response?.success) {
-          throw new Error(response?.error || "Failed to sync channels")
-        }
-        const successCount =
-          response.data?.statistics?.successCount ?? eligibleChannelIds.length
-        const failureCount =
-          response.data?.statistics?.failureCount ??
-          Math.max(eligibleChannelIds.length - successCount, 0)
-        toast.success(
-          t("toasts.syncCompleted", {
-            success: successCount,
-            total: eligibleChannelIds.length,
-          }),
-        )
-        const successfulItems = (response.data?.items ?? []).filter(
-          (item: ExecutionItemResult) => item.ok,
-        )
-        if (successfulItems.length > 0) {
-          const modelsByChannelId = new Map<number, string>(
-            successfulItems
-              .filter((item: ExecutionItemResult) => item.newModels)
-              .map((item: ExecutionItemResult) => [
-                item.channelId,
-                item.newModels!.join(","),
-              ]),
-          )
-
-          if (modelsByChannelId.size > 0) {
-            setChannels((prev) =>
-              prev.map((channel) => {
-                const nextModels = modelsByChannelId.get(channel.id)
-                return nextModels == null
-                  ? channel
-                  : { ...channel, models: nextModels }
-              }),
-            )
-          }
-        }
-        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
-          insights: {
-            itemCount: eligibleChannelIds.length,
-            selectedCount: channelIds.length,
-            successCount,
-            failureCount,
-            managedSiteType: managedSiteAnalyticsType,
-          },
-        })
-      } catch (err) {
-        toast.error(t("toasts.syncFailed", { error: getErrorMessage(err) }))
-        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-          insights: {
-            itemCount: eligibleChannelIds.length,
-            selectedCount: channelIds.length,
-            managedSiteType: managedSiteAnalyticsType,
-          },
-        })
-      } finally {
-        setSyncingIds((prev) => {
-          const next = new Set(prev)
-          eligibleChannelIds.forEach((id) => next.delete(id))
-          return next
-        })
-      }
-    },
-    [managedSiteAnalyticsType, t],
-  )
-
   const rowActionLabels = useMemo<RowActionsLabels>(
     () => ({
       trigger: t("table.columns.actions"),
@@ -1400,7 +1237,13 @@ export default function ManagedSiteChannels({
   )
 
   const setControlledFilter = useCallback(
-    (id: "id" | "name" | "status", value: string | string[] | undefined) => {
+    (
+      id:
+        | typeof MANAGED_CHANNELS_COLUMN_IDS.Identifier
+        | typeof MANAGED_CHANNELS_COLUMN_IDS.Name
+        | typeof MANAGED_CHANNELS_COLUMN_IDS.Status,
+      value: string | string[] | undefined,
+    ) => {
       setColumnFilters((current) => {
         const next = current.filter((filter) => filter.id !== id)
         if (
@@ -1417,37 +1260,46 @@ export default function ManagedSiteChannels({
   )
 
   const searchValue =
-    (columnFilters.find((filter) => filter.id === "name")?.value as string) ??
-    ""
+    (columnFilters.find(
+      (filter) => filter.id === MANAGED_CHANNELS_COLUMN_IDS.Name,
+    )?.value as string) ?? ""
   const channelIdFilterValue =
-    (columnFilters.find((filter) => filter.id === "id")?.value as string) ?? ""
+    (columnFilters.find(
+      (filter) => filter.id === MANAGED_CHANNELS_COLUMN_IDS.Identifier,
+    )?.value as string) ?? ""
   const selectedStatuses = useMemo(
     () =>
-      (columnFilters.find((filter) => filter.id === "status")?.value as
-        | string[]
-        | undefined) ?? [],
+      (columnFilters.find(
+        (filter) => filter.id === MANAGED_CHANNELS_COLUMN_IDS.Status,
+      )?.value as string[] | undefined) ?? [],
     [columnFilters],
   )
 
   useEffect(() => {
     const channelIdParam = routeParams?.channelId?.trim()
     if (channelIdParam) {
-      setControlledFilter("id", channelIdParam)
-      setControlledFilter("name", channelIdParam)
+      setControlledFilter(
+        MANAGED_CHANNELS_COLUMN_IDS.Identifier,
+        channelIdParam,
+      )
+      setControlledFilter(MANAGED_CHANNELS_COLUMN_IDS.Name, channelIdParam)
       setPagination((current) => ({ ...current, pageIndex: 0 }))
       return
     }
 
-    setControlledFilter("id", undefined)
-    setControlledFilter("name", routeParams?.search?.trim() || undefined)
+    setControlledFilter(MANAGED_CHANNELS_COLUMN_IDS.Identifier, undefined)
+    setControlledFilter(
+      MANAGED_CHANNELS_COLUMN_IDS.Name,
+      routeParams?.search?.trim() || undefined,
+    )
     setPagination((current) => ({ ...current, pageIndex: 0 }))
   }, [routeParams?.channelId, routeParams?.search, setControlledFilter])
 
   const managedSiteChannelsHash = `#${MENU_ITEM_IDS.MANAGED_SITE_CHANNELS}`
   const handleSearchChange = useCallback(
     (value: string) => {
-      setControlledFilter("name", value || undefined)
-      setControlledFilter("id", undefined)
+      setControlledFilter(MANAGED_CHANNELS_COLUMN_IDS.Name, value || undefined)
+      setControlledFilter(MANAGED_CHANNELS_COLUMN_IDS.Identifier, undefined)
       setPagination((current) => ({ ...current, pageIndex: 0 }))
     },
     [setControlledFilter],
@@ -1502,12 +1354,12 @@ export default function ManagedSiteChannels({
         const statusValue = String(channel.status ?? 0)
         const statusTone =
           channel.status === 1
-            ? "success"
+            ? MANAGED_CHANNELS_CELL_TONES.Success
             : channel.status === 2
-              ? "warning"
+              ? MANAGED_CHANNELS_CELL_TONES.Warning
               : channel.status === 3
-                ? "danger"
-                : "default"
+                ? MANAGED_CHANNELS_CELL_TONES.Danger
+                : MANAGED_CHANNELS_CELL_TONES.Default
 
         return {
           rowKey: String(channel.id),
@@ -1518,38 +1370,38 @@ export default function ManagedSiteChannels({
           baseURL: channel.base_url,
           searchText: `${channel.id} ${channel.name} ${channel.base_url} ${groups.join(" ")}`,
           cells: {
-            type: {
-              kind: "text",
+            [MANAGED_CHANNELS_COLUMN_IDS.Type]: {
+              kind: MANAGED_CHANNELS_CELL_KINDS.Text,
               value: typeLabel,
               sortValue: String(rawType ?? ""),
               missing: rawType === undefined || rawType === null,
             },
-            models: {
-              kind: "text",
+            [MANAGED_CHANNELS_COLUMN_IDS.Models]: {
+              kind: MANAGED_CHANNELS_CELL_KINDS.Text,
               value: String(modelCount),
               sortValue: modelCount,
             },
-            group: {
-              kind: "groups",
+            [MANAGED_CHANNELS_COLUMN_IDS.Group]: {
+              kind: MANAGED_CHANNELS_CELL_KINDS.Groups,
               values: groups,
               sortValue: groups.join(","),
               missing: groups.length === 0,
             },
-            status: {
-              kind: "status",
+            [MANAGED_CHANNELS_COLUMN_IDS.Status]: {
+              kind: MANAGED_CHANNELS_CELL_KINDS.Status,
               value: getManagedSiteChannelStatusFilterLabel(t, statusValue),
               sortValue: statusValue,
               tone: statusTone,
             },
-            priority: {
-              kind: "text",
+            [MANAGED_CHANNELS_COLUMN_IDS.Priority]: {
+              kind: MANAGED_CHANNELS_CELL_KINDS.Text,
               value: String(channel.priority ?? ""),
               sortValue: channel.priority ?? 0,
               missing:
                 channel.priority === undefined || channel.priority === null,
             },
-            weight: {
-              kind: "text",
+            [MANAGED_CHANNELS_COLUMN_IDS.Weight]: {
+              kind: MANAGED_CHANNELS_CELL_KINDS.Text,
               value: String(channel.weight ?? ""),
               sortValue: channel.weight ?? 0,
               missing: channel.weight === undefined || channel.weight === null,
@@ -1588,16 +1440,19 @@ export default function ManagedSiteChannels({
         }
         if (
           selectedStatuses.length &&
-          !selectedStatuses.includes(String(row.cells.status.sortValue))
+          !selectedStatuses.includes(
+            String(row.cells[MANAGED_CHANNELS_COLUMN_IDS.Status].sortValue),
+          )
         ) {
           return false
         }
         const term = searchValue.toLowerCase().trim()
         if (!term) return true
+        const groupCell = row.cells[MANAGED_CHANNELS_COLUMN_IDS.Group]
         const groups =
-          row.cells.group.kind === "groups"
-            ? row.cells.group.values.join(" ")
-            : row.cells.group.value
+          groupCell.kind === MANAGED_CHANNELS_CELL_KINDS.Groups
+            ? groupCell.values.join(" ")
+            : groupCell.value
         return `${row.displayIdentifier} ${row.name} ${row.baseURL} ${groups}`
           .toLowerCase()
           .includes(term)
@@ -1607,14 +1462,14 @@ export default function ManagedSiteChannels({
 
   const columnLabels = useMemo(
     () => ({
-      id: t("table.columns.id"),
-      name: t("table.columns.name"),
-      type: t("table.columns.type"),
-      models: t("table.columns.models"),
-      group: t("table.columns.group"),
-      status: t("table.columns.status"),
-      priority: t("table.columns.priority"),
-      weight: t("table.columns.weight"),
+      [MANAGED_CHANNELS_COLUMN_IDS.Identifier]: t("table.columns.id"),
+      [MANAGED_CHANNELS_COLUMN_IDS.Name]: t("table.columns.name"),
+      [MANAGED_CHANNELS_COLUMN_IDS.Type]: t("table.columns.type"),
+      [MANAGED_CHANNELS_COLUMN_IDS.Models]: t("table.columns.models"),
+      [MANAGED_CHANNELS_COLUMN_IDS.Group]: t("table.columns.group"),
+      [MANAGED_CHANNELS_COLUMN_IDS.Status]: t("table.columns.status"),
+      [MANAGED_CHANNELS_COLUMN_IDS.Priority]: t("table.columns.priority"),
+      [MANAGED_CHANNELS_COLUMN_IDS.Weight]: t("table.columns.weight"),
     }),
     [t],
   )
@@ -1622,179 +1477,182 @@ export default function ManagedSiteChannels({
   const presentationColumns = useMemo<ManagedChannelsColumn[]>(
     () => [
       {
-        id: "select",
+        id: MANAGED_CHANNELS_COLUMN_IDS.Select,
         label: "",
-        renderer: "select",
+        renderer: MANAGED_CHANNELS_COLUMN_RENDERERS.Select,
         canHide: false,
         defaultVisible: true,
         visible: true,
-        extension: { kind: "legacy-common" },
+        extension: {
+          kind: MANAGED_CHANNELS_COLUMN_EXTENSION_KINDS.LegacyCommon,
+        },
       },
       {
-        id: "id",
-        label: columnLabels.id,
-        renderer: "identifier",
-        accessor: { kind: "displayIdentifier" },
+        id: MANAGED_CHANNELS_COLUMN_IDS.Identifier,
+        label: columnLabels[MANAGED_CHANNELS_COLUMN_IDS.Identifier],
+        renderer: MANAGED_CHANNELS_COLUMN_RENDERERS.Identifier,
+        accessor: {
+          kind: MANAGED_CHANNELS_COLUMN_ACCESSOR_KINDS.DisplayIdentifier,
+        },
+        routeFilter: {
+          kind: MANAGED_CHANNELS_ROUTE_FILTER_KINDS.Exact,
+          queryKey: MANAGED_CHANNELS_ROUTE_QUERY_KEYS.ChannelId,
+        },
         canHide: true,
         defaultVisible: true,
-        visible: columnVisibility.id !== false,
+        visible:
+          columnVisibility[MANAGED_CHANNELS_COLUMN_IDS.Identifier] !== false,
         sort: {
-          accessor: { kind: "displayIdentifierSort" },
-          defaultDirection: "desc",
-          missing: "last",
+          accessor: {
+            kind: MANAGED_CHANNELS_COLUMN_ACCESSOR_KINDS.DisplayIdentifierSort,
+          },
+          defaultDirection: MANAGED_CHANNELS_SORT_DIRECTIONS.Descending,
+          missing: MANAGED_CHANNELS_SORT_MISSING_PLACEMENTS.Last,
         },
         size: 40,
-        extension: { kind: "legacy-common" },
+        extension: {
+          kind: MANAGED_CHANNELS_COLUMN_EXTENSION_KINDS.LegacyCommon,
+        },
       },
       {
-        id: "name",
-        label: columnLabels.name,
-        renderer: "channel",
-        accessor: { kind: "name" },
+        id: MANAGED_CHANNELS_COLUMN_IDS.Name,
+        label: columnLabels[MANAGED_CHANNELS_COLUMN_IDS.Name],
+        renderer: MANAGED_CHANNELS_COLUMN_RENDERERS.Channel,
+        accessor: { kind: MANAGED_CHANNELS_COLUMN_ACCESSOR_KINDS.Name },
         canHide: false,
         defaultVisible: true,
         visible: true,
         sort: {
-          accessor: { kind: "name" },
-          defaultDirection: "asc",
-          missing: "last",
+          accessor: { kind: MANAGED_CHANNELS_COLUMN_ACCESSOR_KINDS.Name },
+          defaultDirection: MANAGED_CHANNELS_SORT_DIRECTIONS.Ascending,
+          missing: MANAGED_CHANNELS_SORT_MISSING_PLACEMENTS.Last,
         },
         size: 300,
-        extension: { kind: "legacy-common" },
+        extension: {
+          kind: MANAGED_CHANNELS_COLUMN_EXTENSION_KINDS.LegacyCommon,
+        },
       },
-      ...(["type", "models", "group"] as const).map((id) => ({
+      ...(
+        [
+          MANAGED_CHANNELS_COLUMN_IDS.Type,
+          MANAGED_CHANNELS_COLUMN_IDS.Models,
+          MANAGED_CHANNELS_COLUMN_IDS.Group,
+        ] as const
+      ).map((id) => ({
         id,
         label: columnLabels[id],
-        renderer: "value" as const,
-        accessor: { kind: "cell" as const, key: id },
+        renderer: MANAGED_CHANNELS_COLUMN_RENDERERS.Value,
+        accessor: {
+          kind: MANAGED_CHANNELS_COLUMN_ACCESSOR_KINDS.Cell,
+          key: id,
+        },
         canHide: true,
         defaultVisible: true,
         visible: columnVisibility[id] !== false,
         sort: {
-          accessor: { kind: "cellSortValue" as const, key: id },
-          defaultDirection: "asc" as const,
-          missing: "last" as const,
+          accessor: {
+            kind: MANAGED_CHANNELS_COLUMN_ACCESSOR_KINDS.CellSortValue,
+            key: id,
+          },
+          defaultDirection: MANAGED_CHANNELS_SORT_DIRECTIONS.Ascending,
+          missing: MANAGED_CHANNELS_SORT_MISSING_PLACEMENTS.Last,
         },
         size: 90,
-        cellClassName: id === "models" ? "text-sm font-medium" : undefined,
-        extension: { kind: "legacy-common" as const },
+        cellClassName:
+          id === MANAGED_CHANNELS_COLUMN_IDS.Models
+            ? "text-sm font-medium"
+            : undefined,
+        extension: {
+          kind: MANAGED_CHANNELS_COLUMN_EXTENSION_KINDS.LegacyCommon,
+        },
       })),
       {
-        id: "status",
-        label: columnLabels.status,
-        renderer: "value",
-        accessor: { kind: "cell", key: "status" },
+        id: MANAGED_CHANNELS_COLUMN_IDS.Status,
+        label: columnLabels[MANAGED_CHANNELS_COLUMN_IDS.Status],
+        renderer: MANAGED_CHANNELS_COLUMN_RENDERERS.Value,
+        accessor: {
+          kind: MANAGED_CHANNELS_COLUMN_ACCESSOR_KINDS.Cell,
+          key: MANAGED_CHANNELS_COLUMN_IDS.Status,
+        },
         canHide: true,
         defaultVisible: true,
-        visible: columnVisibility.status !== false,
+        visible: columnVisibility[MANAGED_CHANNELS_COLUMN_IDS.Status] !== false,
         sort: {
-          accessor: { kind: "cellSortValue", key: "status" },
-          defaultDirection: "asc",
-          missing: "last",
+          accessor: {
+            kind: MANAGED_CHANNELS_COLUMN_ACCESSOR_KINDS.CellSortValue,
+            key: MANAGED_CHANNELS_COLUMN_IDS.Status,
+          },
+          defaultDirection: MANAGED_CHANNELS_SORT_DIRECTIONS.Ascending,
+          missing: MANAGED_CHANNELS_SORT_MISSING_PLACEMENTS.Last,
         },
-        facet: { kind: "status" },
+        facet: { kind: MANAGED_CHANNELS_COLUMN_FACET_KINDS.Status },
         size: 90,
-        extension: { kind: "legacy-common" },
+        extension: {
+          kind: MANAGED_CHANNELS_COLUMN_EXTENSION_KINDS.LegacyCommon,
+        },
       },
-      ...(["priority", "weight"] as const).map((id) => ({
+      ...(
+        [
+          MANAGED_CHANNELS_COLUMN_IDS.Priority,
+          MANAGED_CHANNELS_COLUMN_IDS.Weight,
+        ] as const
+      ).map((id) => ({
         id,
         label: columnLabels[id],
-        renderer: "value" as const,
-        accessor: { kind: "cell" as const, key: id },
+        renderer: MANAGED_CHANNELS_COLUMN_RENDERERS.Value,
+        accessor: {
+          kind: MANAGED_CHANNELS_COLUMN_ACCESSOR_KINDS.Cell,
+          key: id,
+        },
         canHide: true,
         defaultVisible: true,
         visible: columnVisibility[id] !== false,
         sort: {
-          accessor: { kind: "cellSortValue" as const, key: id },
-          defaultDirection: "asc" as const,
-          missing: "last" as const,
+          accessor: {
+            kind: MANAGED_CHANNELS_COLUMN_ACCESSOR_KINDS.CellSortValue,
+            key: id,
+          },
+          defaultDirection: MANAGED_CHANNELS_SORT_DIRECTIONS.Ascending,
+          missing: MANAGED_CHANNELS_SORT_MISSING_PLACEMENTS.Last,
         },
         size: 60,
-        extension: { kind: "legacy-common" as const },
+        extension: {
+          kind: MANAGED_CHANNELS_COLUMN_EXTENSION_KINDS.LegacyCommon,
+        },
       })),
       {
-        id: "actions",
+        id: MANAGED_CHANNELS_COLUMN_IDS.Actions,
         label: t("table.columns.actions"),
-        renderer: "actions",
+        renderer: MANAGED_CHANNELS_COLUMN_RENDERERS.Actions,
         canHide: false,
         defaultVisible: true,
         visible: true,
         size: 60,
-        extension: { kind: "legacy-common" },
+        extension: {
+          kind: MANAGED_CHANNELS_COLUMN_EXTENSION_KINDS.LegacyCommon,
+        },
       },
     ],
     [columnLabels, columnVisibility, t],
   )
 
-  const presentationLabels = useMemo<ManagedChannelsLabels>(
-    () => ({
-      searchPlaceholder: t("toolbar.searchPlaceholder"),
-      clearSearch: t("toolbar.clearSearch"),
-      refresh: t("toolbar.refresh"),
-      cancelRefresh: t("toolbar.cancelRefresh"),
-      status: t("toolbar.status"),
-      statusLabel: t("filter.statusLabel"),
-      columns: t("toolbar.columns"),
-      toggleColumns: t("toolbar.toggleColumns"),
-      migrateSelected: t("toolbar.migrateSelected"),
-      migrateFiltered: t("toolbar.migrateFiltered"),
-      deleteSelected: t("toolbar.deleteSelected"),
-      syncSelected: t("toolbar.syncSelected"),
-      addChannel: t("toolbar.addChannel"),
-      loading: t("table.loading"),
-      emptyFiltered: t("table.emptyFiltered"),
-      emptyNoChannels: t("table.emptyNoChannels"),
-      rowsPerPage: t("table.rowsPerPage"),
-      paginationSummary: t("table.paginationSummary", {
-        start: filteredPresentationRows.length
-          ? pagination.pageIndex * pagination.pageSize + 1
-          : 0,
-        end: Math.min(
-          (pagination.pageIndex + 1) * pagination.pageSize,
-          filteredPresentationRows.length,
-        ),
-        total: filteredPresentationRows.length,
-      }),
-      noEntries: t("table.noEntries"),
-      paginationPrev: t("table.paginationPrev"),
-      paginationNext: t("table.paginationNext"),
-      selectAll: t("table.selectAll"),
-      selectRow: t("table.selectRow"),
-      statusLabels: Object.fromEntries(
-        ["0", "1", "2", "3"].map((value) => [
-          value,
-          getManagedSiteChannelStatusFilterLabel(t, value),
-        ]),
+  const presentationLabels = useMemo(
+    () =>
+      createManagedSiteChannelsLabels(
+        t,
+        pagination,
+        filteredPresentationRows.length,
+        {
+          statusLabels: Object.fromEntries(
+            ["0", "1", "2", "3"].map((value) => [
+              value,
+              getManagedSiteChannelStatusFilterLabel(t, value),
+            ]),
+          ),
+          rowActions: rowActionLabels,
+        },
       ),
-      settings: t("common:labels.settings"),
-      configurationRequired: t("common:status.configurationRequired"),
-      goToSettings: t("common:actions.goToSettings"),
-      deleteTitle: t("dialog.deleteTitle"),
-      deleteTitlePlural: t("dialog.deleteTitlePlural"),
-      deleteDescription: t("dialog.deleteDescription"),
-      deleteCancel: t("dialog.cancel"),
-      deleteConfirm: t("dialog.confirm"),
-      deleting: t("common:status.deleting"),
-      deleteResultsTitle: t("dialog.deleteResultsTitle"),
-      deleteRefreshRequired: t("dialog.deleteRefreshRequired"),
-      deleteRefreshAction: t("dialog.deleteRefreshAction"),
-      deleteResultStatusLabels: {
-        success: t("dialog.deleteResultStatus.success"),
-        failed: t("dialog.deleteResultStatus.failed"),
-        uncertain: t("dialog.deleteResultStatus.uncertain"),
-      },
-      migrationBeta: t("migration.betaBadge"),
-      enterMigrationMode: t("toolbar.enterMigrationMode"),
-      exitMigrationMode: t("toolbar.exitMigrationMode"),
-      rowActions: rowActionLabels,
-    }),
-    [
-      filteredPresentationRows.length,
-      pagination.pageIndex,
-      pagination.pageSize,
-      rowActionLabels,
-      t,
-    ],
+    [filteredPresentationRows.length, pagination, rowActionLabels, t],
   )
 
   const presentationState = useMemo<ManagedChannelsPresentationState>(
@@ -1867,7 +1725,6 @@ export default function ManagedSiteChannels({
         supportsChannelMigration && (hasMigrationTargets || isMigrationMode),
       canMigrateSelected: hasMigrationTargets,
       canMigrateFiltered: hasMigrationTargets,
-      showNewApiOnlyActions: supportsNewApiOnlyChannelActions,
       hasMigrationTargets,
     }),
     [
@@ -1910,9 +1767,15 @@ export default function ManagedSiteChannels({
         showUpdateToast(writeResult, t("settings:managedSite.siteTypeLabel"))
       },
       onChannelIdFilterChange: (value) =>
-        setControlledFilter("id", value || undefined),
+        setControlledFilter(
+          MANAGED_CHANNELS_COLUMN_IDS.Identifier,
+          value || undefined,
+        ),
       onStatusFilterChange: (values) => {
-        setControlledFilter("status", values.length ? values : undefined)
+        setControlledFilter(
+          MANAGED_CHANNELS_COLUMN_IDS.Status,
+          values.length ? values : undefined,
+        )
         setPagination((current) => ({ ...current, pageIndex: 0 }))
       },
       onSortingChange: setSorting,
@@ -2094,31 +1957,13 @@ export default function ManagedSiteChannels({
     !error &&
     !isLoading &&
     channels.length === 0
-  const shouldPrioritizeApiCredentialProfiles =
-    !gatewayGuidanceImportAccountId && hasGatewayGuidanceProfiles
-  const gatewayImportActions = !isGatewayGuidanceSourceInventoryLoaded
-    ? []
-    : shouldPrioritizeApiCredentialProfiles
-      ? [
-          {
-            label: t("gatewayGuidance.empty.importFromApiKeyLibrary"),
-            onClick: handleOpenApiCredentialProfiles,
-          },
-          {
-            label: t("gatewayGuidance.empty.importFromAccountKey"),
-            onClick: handleOpenGatewayChannelImport,
-          },
-        ]
-      : [
-          {
-            label: t("gatewayGuidance.empty.importFromAccountKey"),
-            onClick: handleOpenGatewayChannelImport,
-          },
-          {
-            label: t("gatewayGuidance.empty.importFromApiKeyLibrary"),
-            onClick: handleOpenApiCredentialProfiles,
-          },
-        ]
+  const pageExperience = useManagedSiteChannelPageExperience({
+    siteType: managedSiteType,
+    baseUrl: managedSiteBaseUrl,
+    isConfigurationMissing: isConfigMissing,
+    isLoadedEmpty,
+    canImportChannel: true,
+  })
 
   return (
     <>
@@ -2128,85 +1973,14 @@ export default function ManagedSiteChannels({
         callbacks={presentationCallbacks}
         labels={presentationLabels}
         title={t("title")}
-        titleActions={
-          !isConfigMissing && managedSiteChannelConsoleUrl ? (
-            <Tooltip content={t("gatewayGuidance.openChannelConsole")}>
-              <IconButton
-                type="button"
-                size="sm"
-                variant="outline"
-                aria-label={t("gatewayGuidance.openChannelConsole")}
-                analyticsAction={{
-                  featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
-                  actionId:
-                    PRODUCT_ANALYTICS_ACTION_IDS.OpenManagedSiteChannelManagement,
-                  surfaceId: channelsToolbarSurface,
-                  entrypoint: optionsEntrypoint,
-                }}
-                onClick={openManagedSiteChannelConsole}
-              >
-                <WorkflowTransitionIcon className="h-4 w-4" aria-hidden />
-              </IconButton>
-            </Tooltip>
-          ) : null
-        }
-        description={
-          <>
-            {t("gatewayGuidance.headerDescription")}{" "}
-            {!isConfigMissing && managedSiteTokenConsoleUrl ? (
-              <>
-                {t("gatewayGuidance.clientHint")}{" "}
-                <a
-                  href={managedSiteTokenConsoleUrl}
-                  target="_blank"
-                  rel="noreferrer noopener"
-                  className="font-medium text-blue-700 underline-offset-2 hover:underline focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:outline-none dark:text-blue-200"
-                >
-                  {t("gatewayGuidance.openTokenConsole")}
-                </a>
-              </>
-            ) : null}
-          </>
-        }
+        titleActions={pageExperience.titleActions}
+        description={pageExperience.description}
         configurationMissingDescription={getManagedSiteConfigMissingMessage(
           t,
           getManagedSiteMessagesKeyFromSiteType(managedSiteType),
         )}
-        configurationMissingNotice={
-          <Notice
-            tone="info"
-            className="mx-auto max-w-md text-left"
-            description={t("gatewayGuidance.unconfiguredValueDescription")}
-          />
-        }
-        emptyContent={
-          isLoadedEmpty ? (
-            <div className="mx-auto flex max-w-md flex-col items-center gap-3 py-4 text-center">
-              <div className="space-y-1">
-                <div className="text-sm font-medium text-slate-900 dark:text-slate-100">
-                  {t("gatewayGuidance.empty.title")}
-                </div>
-                <div className="text-muted-foreground text-sm">
-                  {t("gatewayGuidance.empty.description")}
-                </div>
-              </div>
-              <div className="flex w-full max-w-full flex-wrap items-center justify-center gap-2">
-                {gatewayImportActions.map((action, index) => (
-                  <Button
-                    key={action.label}
-                    type="button"
-                    variant={index === 0 ? "default" : "outline"}
-                    size="sm"
-                    className="h-auto min-h-8 max-w-full break-words whitespace-normal"
-                    onClick={action.onClick}
-                  >
-                    {action.label}
-                  </Button>
-                ))}
-              </div>
-            </div>
-          ) : undefined
-        }
+        configurationMissingNotice={pageExperience.configurationMissingNotice}
+        emptyContent={pageExperience.emptyContent}
         siteTypeLabel={t("settings:managedSite.siteTypeLabel")}
         filterDialog={
           <ChannelFilterDialog
