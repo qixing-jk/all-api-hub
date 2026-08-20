@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useLayoutEffect, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
@@ -48,7 +48,7 @@ export function useManagedSiteChannelModelSync({
   const managedSiteAnalyticsType =
     resolveProductAnalyticsManagedSiteType(siteType)
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     syncGenerationRef.current += 1
     setSyncingChannelIds(new Set())
   }, [siteType])

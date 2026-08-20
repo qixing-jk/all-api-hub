@@ -315,7 +315,7 @@ describe("useManagedSiteChannelModelSync", () => {
     expect(result.current.syncingChannelIds).toEqual(new Set())
   })
 
-  it("discards completion feedback when reconciliation becomes stale", async () => {
+  it("invalidates reconciliation during a managed-site type commit", async () => {
     let resolveReconciliation!: () => void
     sendModelSyncMessageMock.mockResolvedValue({
       success: true,
