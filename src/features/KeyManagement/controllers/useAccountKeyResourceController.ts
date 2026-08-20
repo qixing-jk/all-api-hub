@@ -25,6 +25,7 @@ import {
   type ResourceFieldDescriptor,
   type ResourceFieldOption,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
+import { RESOURCE_FIELD_TYPES } from "~/services/apiAdapters/contracts/resourceNative"
 import {
   accountKeyResourceRefIdentity,
   collectAccountKeyResourceInventory,
@@ -365,7 +366,7 @@ const resetInvalidOptionValue = (
   ) {
     return { ...values, [field.fieldId]: initialValue }
   }
-  if (field.type === "multi-select") {
+  if (field.type === RESOURCE_FIELD_TYPES.MultiSelect) {
     return { ...values, [field.fieldId]: [] }
   }
   if (field.required && options[0]) {

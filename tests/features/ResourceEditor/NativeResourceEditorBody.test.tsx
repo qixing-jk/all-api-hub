@@ -11,6 +11,11 @@ import {
   type NativeResourceEditorBodyProps,
 } from "~/features/ResourceEditor/NativeResourceEditorBody"
 import { defineResourceEditorFieldPolicy } from "~/features/ResourceEditor/resourceFieldPolicy"
+import {
+  MANAGED_RESOURCE_FAILURE_CODES,
+  ManagedResourceError,
+} from "~/services/apiAdapters/contracts/managedResourceNative"
+import { RESOURCE_FIELD_OPTION_LOAD_TRIGGERS } from "~/services/apiAdapters/contracts/resourceNative"
 
 function createDeferred<T>() {
   let resolve!: (value: T) => void
@@ -20,15 +25,21 @@ function createDeferred<T>() {
   return { promise, resolve }
 }
 
-const t = ((key: string) =>
-  ({
+const t = ((key: string, options?: { field?: string }) => {
+  const value = {
     "example:creator": "Creator",
     "example:basic": "Basic",
     "common:status.loading": "Loading...",
+    "common:status.loadingField": "Loading {{field}}...",
     "common:status.error": "Error",
+    "common:actions.loadField": "Load {{field}}",
     "common:actions.retry": "Retry",
+    "common:actions.refresh": "Refresh",
+    "common:actions.refreshField": "Refresh {{field}}",
     "ui:multiSelect.noOptions": "No options available",
-  })[key] ?? key) as TFunction
+  }[key]
+  return value?.replace("{{field}}", options?.field ?? "") ?? key
+}) as TFunction
 
 describe("NativeResourceEditorBody", () => {
   it("renders controller-owned dynamic option state inline and disables unavailable selectors", () => {
@@ -897,6 +908,149 @@ describe("NativeResourceEditorBody", () => {
     expect(await screen.findByText("Example member 2")).toBeVisible()
   })
 
+  it("loads manual options only on request and invalidates them when dependencies change", async () => {
+    const user = userEvent.setup()
+    const firstLoad =
+      createDeferred<readonly { value: string; displayLabel: string }[]>()
+    const onLoadOptions = vi
+      .fn()
+      .mockImplementationOnce(() => firstLoad.promise)
+      .mockResolvedValueOnce([
+        { value: "model-second", displayLabel: "Second model" },
+      ])
+    const props = {
+      t,
+      descriptors: [
+        { fieldId: "credential", type: "text" as const },
+        {
+          fieldId: "models",
+          type: "multi-select" as const,
+          options: [{ value: "selected-model" }],
+          optionLoader: {
+            dependsOn: ["credential"],
+            trigger: RESOURCE_FIELD_OPTION_LOAD_TRIGGERS.Manual,
+          },
+        },
+      ],
+      policy: defineResourceEditorFieldPolicy({
+        fields: [
+          {
+            fieldId: "credential",
+            section: "basic",
+            order: 1,
+            renderer: "text" as const,
+            resolveLabel: () => "Credential",
+          },
+          {
+            fieldId: "models",
+            section: "basic",
+            order: 2,
+            renderer: "multi-select" as const,
+            resolveLabel: () => "Models",
+          },
+        ],
+        hiddenFields: [],
+      }),
+      sectionOrder: { basic: 0 },
+      sectionLabelResolvers: { basic: () => "Basic" },
+      onValueChange: vi.fn(),
+      onLoadOptions,
+    }
+    const view = render(
+      <NativeResourceEditorBody
+        {...props}
+        values={{ credential: "first-key", models: ["selected-model"] }}
+      />,
+    )
+
+    expect(onLoadOptions).not.toHaveBeenCalled()
+    await user.click(screen.getByRole("button", { name: "Load Models" }))
+    await waitFor(() => expect(onLoadOptions).toHaveBeenCalledOnce())
+    const loadingButton = await screen.findByRole("button", {
+      name: "Loading Models...",
+    })
+    expect(loadingButton).toBeDisabled()
+    expect(loadingButton).toHaveAttribute("aria-busy", "true")
+    expect(screen.queryByRole("status")).toBeNull()
+    await act(async () =>
+      firstLoad.resolve([
+        { value: "model-first", displayLabel: "First model" },
+      ]),
+    )
+    expect(screen.getByRole("button", { name: "Refresh Models" })).toBeVisible()
+    await user.click(screen.getByRole("combobox", { name: "Models" }))
+    expect(await screen.findByText("First model")).toBeVisible()
+    await user.keyboard("{Escape}")
+
+    view.rerender(
+      <NativeResourceEditorBody
+        {...props}
+        values={{ credential: "second-key", models: ["selected-model"] }}
+      />,
+    )
+    expect(screen.queryByText("First model")).toBeNull()
+    expect(props.onValueChange).not.toHaveBeenCalled()
+    expect(onLoadOptions).toHaveBeenCalledOnce()
+    expect(screen.getByRole("button", { name: "Load Models" })).toBeVisible()
+
+    await user.click(screen.getByRole("button", { name: "Load Models" }))
+    await waitFor(() => expect(onLoadOptions).toHaveBeenCalledTimes(2))
+    expect(onLoadOptions.mock.calls[1]?.[1]).toEqual({
+      credential: "second-key",
+      models: ["selected-model"],
+    })
+  })
+
+  it("shows a provider failure message when manual option loading fails", async () => {
+    const onLoadOptions = vi.fn().mockRejectedValue(
+      new ManagedResourceError({
+        code: MANAGED_RESOURCE_FAILURE_CODES.UpstreamRejected,
+        message: "The example upstream rejected the model lookup",
+      }),
+    )
+    render(
+      <NativeResourceEditorBody
+        t={t}
+        descriptors={[
+          {
+            fieldId: "models",
+            type: "multi-select",
+            options: [],
+            optionLoader: {
+              dependsOn: [],
+              trigger: RESOURCE_FIELD_OPTION_LOAD_TRIGGERS.Manual,
+            },
+          },
+        ]}
+        policy={defineResourceEditorFieldPolicy({
+          fields: [
+            {
+              fieldId: "models",
+              section: "basic",
+              order: 1,
+              renderer: "multi-select",
+              resolveLabel: () => "Models",
+            },
+          ],
+          hiddenFields: [],
+        })}
+        sectionOrder={{ basic: 0 }}
+        sectionLabelResolvers={{ basic: () => "Basic" }}
+        values={{ models: [] }}
+        onValueChange={() => undefined}
+        onLoadOptions={onLoadOptions}
+      />,
+    )
+
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: "Load Models" }))
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "The example upstream rejected the model lookup",
+    )
+  })
+
   it("keeps retry and dependency reloads local to the affected option field", async () => {
     const calls: Array<{ fieldId: string; signal: AbortSignal }> = []
     const onLoadOptions = vi.fn((fieldId, _values, options) => {
@@ -968,7 +1122,7 @@ describe("NativeResourceEditorBody", () => {
       />,
     )
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("Error")
+    expect(await screen.findByRole("alert")).toHaveTextContent("unavailable")
     const projectCall = calls.find((call) => call.fieldId === "project")!
     await userEvent
       .setup()
@@ -1599,7 +1753,7 @@ describe("NativeResourceEditorBody", () => {
   it("uses local fallback copy and retry for descriptor-owned multi-select options", async () => {
     const onLoadOptions = vi
       .fn()
-      .mockRejectedValueOnce(new Error("unavailable"))
+      .mockRejectedValueOnce(null)
       .mockResolvedValueOnce([])
     render(
       <NativeResourceEditorBody
