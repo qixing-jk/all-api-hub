@@ -1,4 +1,13 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest"
 
 import { COOKIE_IMPORT_FAILURE_REASONS } from "~/constants/cookieImport"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
@@ -25,20 +34,16 @@ describe("setupRuntimeMessageListeners routing", () => {
   let executeProtectionBypassTask: ReturnType<typeof vi.fn>
   let handleOpenRouterManagementKeyAction: ReturnType<typeof vi.fn>
 
-  beforeEach(() => {
-    runtimeMessageListener = undefined
+  beforeAll(async () => {
     getCookieHeaderForUrlResult = vi.fn()
-    hasCookieReadPermissionForUrl = vi.fn().mockResolvedValue(true)
-    originalBrowserCookies = (globalThis as any).browser?.cookies
+    hasCookieReadPermissionForUrl = vi.fn()
     setupManagedSiteModelSyncMessagingListeners = vi.fn()
     setupPreferencesMessagingListeners = vi.fn()
     setupProductAnnouncementMessagingListeners = vi.fn()
     setupRedemptionAssistMessagingListeners = vi.fn()
     setupProductAnalyticsMessagingListeners = vi.fn()
-    executeProtectionBypassTask = vi.fn().mockResolvedValue({ success: true })
-    handleOpenRouterManagementKeyAction = vi.fn().mockResolvedValue(undefined)
-
-    vi.resetModules()
+    executeProtectionBypassTask = vi.fn()
+    handleOpenRouterManagementKeyAction = vi.fn()
 
     vi.doMock("~/utils/browser/browserApi", async (importOriginal) => {
       const actual =
@@ -125,9 +130,31 @@ describe("setupRuntimeMessageListeners routing", () => {
     vi.doMock("~/services/siteAnnouncements/scheduler", () => ({
       setupSiteAnnouncementsMessagingListeners: vi.fn(),
     }))
+
+    // Keep this expensive background dependency graph cached for all routing cases.
+    await import("~/entrypoints/background/runtimeMessages")
+  })
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    runtimeMessageListener = undefined
+    originalBrowserCookies = (globalThis as any).browser?.cookies
+    getCookieHeaderForUrlResult.mockReset()
+    hasCookieReadPermissionForUrl.mockReset().mockResolvedValue(true)
+    setupManagedSiteModelSyncMessagingListeners.mockReset()
+    setupPreferencesMessagingListeners.mockReset()
+    setupProductAnnouncementMessagingListeners.mockReset()
+    setupRedemptionAssistMessagingListeners.mockReset()
+    setupProductAnalyticsMessagingListeners.mockReset()
+    executeProtectionBypassTask.mockReset().mockResolvedValue({ success: true })
+    handleOpenRouterManagementKeyAction.mockReset().mockResolvedValue(undefined)
   })
 
   afterEach(() => {
+    ;(globalThis as any).browser.cookies = originalBrowserCookies
+  })
+
+  afterAll(() => {
     vi.doUnmock("~/utils/browser/browserApi")
     vi.doUnmock("~/utils/browser/cookieHelper")
     vi.doUnmock("~/services/models/modelSync")
@@ -143,8 +170,9 @@ describe("setupRuntimeMessageListeners routing", () => {
     vi.doUnmock("~/entrypoints/background/openrouter/managementKeyAction")
     vi.doUnmock("~/services/history/usageHistory/scheduler")
     vi.doUnmock("~/services/webdav/webdavAutoSyncService")
-    ;(globalThis as any).browser.cookies = originalBrowserCookies
     vi.doUnmock("~/services/history/dailyBalanceHistory/scheduler")
+    vi.doUnmock("~/services/integrations/ldohSiteLookup/background")
+    vi.doUnmock("~/services/notifications/taskNotificationService")
     vi.doUnmock("~/services/siteAnnouncements/scheduler")
     vi.resetModules()
     vi.restoreAllMocks()
