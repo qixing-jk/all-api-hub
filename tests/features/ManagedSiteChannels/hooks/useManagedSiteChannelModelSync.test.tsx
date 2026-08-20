@@ -206,6 +206,41 @@ describe("useManagedSiteChannelModelSync", () => {
     )
   })
 
+  it("keeps a channel busy until overlapping sync requests both finish", async () => {
+    let resolveFirst!: (value: unknown) => void
+    let resolveSecond!: (value: unknown) => void
+    sendModelSyncMessageMock
+      .mockReturnValueOnce(
+        new Promise((resolve) => {
+          resolveFirst = resolve
+        }),
+      )
+      .mockReturnValueOnce(
+        new Promise((resolve) => {
+          resolveSecond = resolve
+        }),
+      )
+    const { result } = renderHook(() =>
+      useManagedSiteChannelModelSync({ siteType: SITE_TYPES.NEW_API }),
+    )
+
+    let firstPromise!: Promise<void>
+    let secondPromise!: Promise<void>
+    act(() => {
+      firstPromise = result.current.syncChannels([42], analyticsContext)
+      secondPromise = result.current.syncChannels([42], analyticsContext)
+    })
+    expect(result.current.syncingChannelIds).toEqual(new Set([42]))
+
+    resolveFirst({ success: true })
+    await act(async () => firstPromise)
+    expect(result.current.syncingChannelIds).toEqual(new Set([42]))
+
+    resolveSecond({ success: true })
+    await act(async () => secondPromise)
+    expect(result.current.syncingChannelIds).toEqual(new Set())
+  })
+
   it("reports partial success when model sync succeeds but reconciliation fails", async () => {
     sendModelSyncMessageMock.mockResolvedValue({
       success: true,

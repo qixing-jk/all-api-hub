@@ -45,14 +45,18 @@ export function useManagedSiteChannelModelSync({
     new Set(),
   )
   const syncGenerationRef = useRef(0)
+  const inFlightChannelCountsRef = useRef(new Map<number, number>())
   const managedSiteAnalyticsType =
     resolveProductAnalyticsManagedSiteType(siteType)
 
   useLayoutEffect(() => {
+    const inFlightChannelCounts = inFlightChannelCountsRef.current
     syncGenerationRef.current += 1
+    inFlightChannelCounts.clear()
     setSyncingChannelIds(new Set())
     return () => {
       syncGenerationRef.current += 1
+      inFlightChannelCounts.clear()
     }
   }, [siteType])
 
@@ -76,11 +80,15 @@ export function useManagedSiteChannelModelSync({
         return
       }
 
-      setSyncingChannelIds((current) => {
-        const next = new Set(current)
-        eligibleChannelIds.forEach((id) => next.add(id))
-        return next
+      eligibleChannelIds.forEach((id) => {
+        inFlightChannelCountsRef.current.set(
+          id,
+          (inFlightChannelCountsRef.current.get(id) ?? 0) + 1,
+        )
       })
+      setSyncingChannelIds(
+        (current) => new Set([...current, ...eligibleChannelIds]),
+      )
 
       try {
         const response = await withProtectionBypassUserCommand(
@@ -182,9 +190,21 @@ export function useManagedSiteChannelModelSync({
         })
       } finally {
         if (requestGeneration === syncGenerationRef.current) {
+          eligibleChannelIds.forEach((id) => {
+            const count = inFlightChannelCountsRef.current.get(id) ?? 0
+            if (count <= 1) {
+              inFlightChannelCountsRef.current.delete(id)
+            } else {
+              inFlightChannelCountsRef.current.set(id, count - 1)
+            }
+          })
           setSyncingChannelIds((current) => {
             const next = new Set(current)
-            eligibleChannelIds.forEach((id) => next.delete(id))
+            eligibleChannelIds.forEach((id) => {
+              if (!inFlightChannelCountsRef.current.has(id)) {
+                next.delete(id)
+              }
+            })
             return next
           })
         }
