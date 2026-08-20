@@ -218,7 +218,7 @@
     "createRequiresGroup": "建立金鑰前需要先確認分組，請先選擇一個可用分組後再繼續。",
     "createRequiresGroupSelection": "目前這個帳號有多個可用分組。請先選擇要使用的分組，再建立金鑰。",
     "createRequiresOneTimeSecretHandling": "此服務建立的金鑰只能查看一次，請在金鑰管理中手動建立並立即保存完整金鑰。",
-    "selectGroupTitle": "選擇金鑰群組"
+    "selectGroupTitle": "選擇金鑰分組"
   },
   "veloera": {
     "configMissing": "請先在設定中配置 Veloera 地址、管理員令牌和使用者 ID",

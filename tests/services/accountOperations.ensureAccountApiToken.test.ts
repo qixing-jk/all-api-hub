@@ -387,6 +387,10 @@ describe("accountOperations Sub2API token creation guards", () => {
       kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.SelectionRequired,
       allowedGroups: ["default", "vip"],
       suggestedGroup: "default",
+      groups: {
+        default: { desc: "Default", ratio: 1 },
+        vip: { desc: "VIP", ratio: 1 },
+      },
     })
   })
 

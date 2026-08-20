@@ -6,8 +6,8 @@ import { defaultTokenProvisioning } from "~/services/apiService/newApiFamily/def
 const createModelFlareTokenProvisioning = (): TokenProvisioningCapability => ({
   ...defaultTokenProvisioning,
   resolveDefaultTokenCreation(request) {
-    // ModelFlare rejects empty and legacy `default` groups, exposing the valid
-    // choices through /api/user/self/groups instead: https://modelflare.dev/
+    // ModelFlare requires one of the explicit groups exposed by
+    // /api/user/self/groups: https://modelflare.dev/
     const defaultTokenData = {
       ...request.defaultTokenData,
       remain_quota: request.defaultTokenData.unlimited_quota

@@ -224,6 +224,19 @@ describe("useDefaultTokenQuickCreate", () => {
     })
     expect(createTokenMock).not.toHaveBeenCalled()
     expect(onCreated).not.toHaveBeenCalled()
+
+    resolveQuickCreateMock.mockResolvedValueOnce({
+      kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.Blocked,
+      reason: TOKEN_PROVISIONING_BLOCK_REASONS.AvailableGroupRequired,
+      message: "No available groups",
+    })
+    await act(async () => result.current.start())
+
+    expect(resolveQuickCreateMock).toHaveBeenLastCalledWith(replacementAccount)
+    expect(result.current.state).toEqual({
+      kind: DEFAULT_TOKEN_QUICK_CREATE_STATE_KINDS.Idle,
+      error: "No available groups",
+    })
   })
 
   it("surfaces policy blocks without attempting token creation", async () => {

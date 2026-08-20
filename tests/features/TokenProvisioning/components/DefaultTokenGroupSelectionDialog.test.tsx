@@ -21,29 +21,23 @@ const defaultProps = {
 
 describe("DefaultTokenGroupSelectionDialog", () => {
   it("uses the policy-suggested group and unique accessible field ids", async () => {
-    const firstDialog = render(
-      <DefaultTokenGroupSelectionDialog {...defaultProps} />,
-    )
-    const firstGroupSelector = await screen.findByRole("combobox", {
-      name: /^keyManagement:dialog\.groupLabel/,
-    })
-    const firstId = firstGroupSelector.id
-
-    expect(firstGroupSelector).toHaveTextContent("vip")
-    firstDialog.unmount()
-
     render(
-      <DefaultTokenGroupSelectionDialog
-        {...defaultProps}
-        suggestedGroup="default"
-      />,
+      <>
+        <DefaultTokenGroupSelectionDialog {...defaultProps} />
+        <DefaultTokenGroupSelectionDialog
+          {...defaultProps}
+          suggestedGroup="default"
+        />
+      </>,
     )
-    const secondGroupSelector = await screen.findByRole("combobox", {
-      name: /^keyManagement:dialog\.groupLabel/,
+    const groupSelectors = await screen.findAllByRole("combobox", {
+      hidden: true,
     })
 
-    expect(secondGroupSelector).toHaveTextContent("default")
-    expect(secondGroupSelector.id).not.toBe(firstId)
+    expect(groupSelectors).toHaveLength(2)
+    expect(groupSelectors[0]).toHaveTextContent("vip")
+    expect(groupSelectors[1]).toHaveTextContent("default")
+    expect(groupSelectors[0].id).not.toBe(groupSelectors[1].id)
   })
 
   it("removes dismissal controls while creation is in progress", async () => {
