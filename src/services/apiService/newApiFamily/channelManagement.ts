@@ -18,7 +18,7 @@ import { createLogger } from "~/utils/core/logger"
 
 const CHANNEL_API_BASE = "/api/channel/"
 
-export type DraftChannelModelProbe = {
+type DraftChannelModelProbe = {
   type: number
   baseUrl: string
   key: string

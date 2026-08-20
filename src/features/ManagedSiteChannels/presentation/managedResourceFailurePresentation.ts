@@ -1,6 +1,6 @@
 import type { ResourceFailure } from "~/services/apiAdapters/contracts/managedResourceNative"
 
-export type ManagedResourceFailurePresentation = {
+type ManagedResourceFailurePresentation = {
   category: string
   message: string
   variant?: "warning"

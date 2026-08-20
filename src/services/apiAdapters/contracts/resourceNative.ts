@@ -138,7 +138,7 @@ export type ResourceFieldOption = {
   secondaryLabel?: string
 }
 
-export type ResourceFieldOptionLoadTrigger =
+type ResourceFieldOptionLoadTrigger =
   (typeof RESOURCE_FIELD_OPTION_LOAD_TRIGGERS)[keyof typeof RESOURCE_FIELD_OPTION_LOAD_TRIGGERS]
 
 export type ResourceFieldDescriptorBase = {

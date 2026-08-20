@@ -57,7 +57,7 @@ type NewApiNativeConfig = {
   scopeKey: string
 }
 
-export type NewApiNativeResourceOperations = {
+type NewApiNativeResourceOperations = {
   scopeKey: string
   canLoadSecret: boolean
   list(
