@@ -216,6 +216,13 @@ describe("SiteInfo", () => {
     )
   })
 
+  it("renders plain tags without search highlights", () => {
+    render(<SiteInfo site={buildSite({ tags: ["team", "backup"] })} />)
+
+    expect(screen.getByTitle("team, backup")).toHaveTextContent("team, backup")
+    expect(document.querySelector("mark")).toBeNull()
+  })
+
   it("renders the neutral health indicator for an unknown health status", () => {
     render(
       <SiteInfo

@@ -56,6 +56,19 @@ describe("getAccountCheckInFilterValue", () => {
         getAccountCheckInFilterValue(
           buildDisplaySiteData({
             checkIn: {
+              enableDetection: true,
+              siteStatus: {
+                isCheckedInToday: true,
+              },
+            },
+          }),
+        ),
+      ).toBe("outdated")
+
+      expect(
+        getAccountCheckInFilterValue(
+          buildDisplaySiteData({
+            checkIn: {
               enableDetection: false,
             },
           }),
