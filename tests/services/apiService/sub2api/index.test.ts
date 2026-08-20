@@ -2158,6 +2158,18 @@ describe("apiService sub2api exported operations", () => {
     )
   })
 
+  it("keeps synthetic status when public settings have no site name", async () => {
+    vi.mocked(fetchApi).mockResolvedValueOnce({
+      code: 0,
+      message: "ok",
+      data: { site_name: null },
+    } as any)
+
+    await expect(fetchSiteStatus(baseRequest as any)).resolves.toEqual({
+      checkin_enabled: false,
+    })
+  })
+
   it("keeps synthetic Sub2API status when the optional public name lookup fails", async () => {
     vi.mocked(fetchApi).mockRejectedValueOnce(
       new Error("public settings unavailable"),
