@@ -1,6 +1,9 @@
 import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import type { ModelPricingCapability } from "~/services/apiAdapters/contracts/modelPricing"
-import { normalizeNewApiModelPricingResponse } from "~/services/apiAdapters/newApi/modelPricingDto"
+import {
+  normalizeNewApiModelPricingResponse,
+  normalizeVApiModelPricingResponse,
+} from "~/services/apiAdapters/newApi/modelPricingDto"
 import * as modelPricing from "~/services/apiService/newApiFamily/default/modelPricing"
 import * as oneHub from "~/services/apiService/newApiFamily/variants/oneHub"
 
@@ -16,9 +19,14 @@ export function createNewApiModelPricing(
     }
   }
 
+  const normalizePricingResponse =
+    siteType === SITE_TYPES.V_API
+      ? normalizeVApiModelPricingResponse
+      : normalizeNewApiModelPricingResponse
+
   return {
     fetchPricing: async (request) =>
-      normalizeNewApiModelPricingResponse(
+      normalizePricingResponse(
         await modelPricing.defaultModelPricingImplementation.fetchModelPricing(
           request,
         ),

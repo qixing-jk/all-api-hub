@@ -327,6 +327,43 @@ describe("New API model pricing adapter", () => {
     })
   })
 
+  it("adapts current V-API group names when usable groups are omitted", async () => {
+    fetchModelPricingMock.mockResolvedValueOnce({
+      data: [modelRow],
+      group_ratio: { standard: 1 },
+      group_names: { standard: "Standard" },
+      success: true,
+    })
+
+    await expect(
+      createNewApiModelPricing(SITE_TYPES.V_API).fetchPricing(request),
+    ).resolves.toEqual({
+      data: [modelRow],
+      group_ratio: { standard: 1 },
+      success: true,
+      usable_group: { standard: "Standard" },
+    })
+  })
+
+  it("preserves legacy V-API usable groups when both group fields exist", async () => {
+    fetchModelPricingMock.mockResolvedValueOnce({
+      data: [modelRow],
+      group_ratio: { legacy: 1 },
+      group_names: { current: "Current" },
+      success: true,
+      usable_group: { legacy: "Legacy" },
+    })
+
+    await expect(
+      createNewApiModelPricing(SITE_TYPES.V_API).fetchPricing(request),
+    ).resolves.toEqual({
+      data: [modelRow],
+      group_ratio: { legacy: 1 },
+      success: true,
+      usable_group: { legacy: "Legacy" },
+    })
+  })
+
   it("normalizes cache read and write ratios without leaking native fields", async () => {
     fetchModelPricingMock.mockResolvedValueOnce(
       pricingResponse({
