@@ -1202,6 +1202,8 @@ describe("VerifyApiDialog", () => {
     const stopButton = await screen.findByRole("button", {
       name: "aiApiVerification:verifyDialog.actions.stop",
     })
+    expect(stopButton).toBeEnabled()
+    expect(stopButton).toHaveAttribute("aria-busy", "true")
     fireEvent.click(stopButton)
 
     await waitFor(() => {

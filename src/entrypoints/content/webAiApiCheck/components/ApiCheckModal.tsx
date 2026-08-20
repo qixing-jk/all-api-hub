@@ -8,6 +8,7 @@ import type {
 
 import {
   Button,
+  BUTTON_LOADING_BEHAVIORS,
   DatePicker,
   FormField,
   IconButton,
@@ -398,6 +399,8 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
                     view.isRunningAll ? actions.stopRunAll : actions.runAll
                   }
                   disabled={view.isRunAllActionDisabled}
+                  loading={view.isRunningAll}
+                  loadingBehavior={BUTTON_LOADING_BEHAVIORS.Interactive}
                 >
                   {view.isRunningAll
                     ? view.isStoppingRunAll

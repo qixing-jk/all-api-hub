@@ -2920,11 +2920,12 @@ describe("ApiCheckModalHost", () => {
       return activeProbeMessage!.runId as string
     })
 
-    await user.click(
-      await screen.findByRole("button", {
-        name: "webAiApiCheck:modal.actions.stopTest",
-      }),
-    )
+    const stopButton = await screen.findByRole("button", {
+      name: "webAiApiCheck:modal.actions.stopTest",
+    })
+    expect(stopButton).toBeEnabled()
+    expect(stopButton).toHaveAttribute("aria-busy", "true")
+    await user.click(stopButton)
 
     expect(sendWebAiApiCheckMessage).toHaveBeenCalledWith(
       WebAiApiCheckMessageTypes.CancelRunProbe,

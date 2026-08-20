@@ -1,5 +1,10 @@
 // Core UI Components
-export { Button, buttonVariants } from "./button"
+export {
+  BUTTON_LOADING_BEHAVIORS,
+  Button,
+  buttonVariants,
+  type ButtonLoadingBehavior,
+} from "./button"
 export { Calendar, CalendarDayButton } from "./calendar"
 export {
   DatePicker,

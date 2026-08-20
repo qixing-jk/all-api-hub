@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { Button } from "~/components/ui/button"
+import { Button, BUTTON_LOADING_BEHAVIORS } from "~/components/ui/button"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -188,6 +188,54 @@ describe("Button", () => {
     )
 
     const button = await screen.findByRole("button", { name: "Save" })
+    expect(button).toBeDisabled()
+
+    fireEvent.click(button)
+
+    expect(onClick).not.toHaveBeenCalled()
+  })
+
+  it("keeps an interactive loading action enabled and clickable", async () => {
+    const onClick = vi.fn()
+
+    render(
+      <Button
+        loading
+        loadingBehavior={BUTTON_LOADING_BEHAVIORS.Interactive}
+        onClick={onClick}
+      >
+        Cancel loading
+      </Button>,
+    )
+
+    const button = await screen.findByRole("button", {
+      name: "Cancel loading",
+    })
+    expect(button).toBeEnabled()
+    expect(button).toHaveAttribute("aria-busy", "true")
+
+    fireEvent.click(button)
+
+    expect(onClick).toHaveBeenCalledOnce()
+  })
+
+  it("lets an explicit disabled state override interactive loading", async () => {
+    const onClick = vi.fn()
+
+    render(
+      <Button
+        loading
+        loadingBehavior={BUTTON_LOADING_BEHAVIORS.Interactive}
+        disabled
+        onClick={onClick}
+      >
+        Cancel loading
+      </Button>,
+    )
+
+    const button = await screen.findByRole("button", {
+      name: "Cancel loading",
+    })
     expect(button).toBeDisabled()
 
     fireEvent.click(button)

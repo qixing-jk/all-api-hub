@@ -7,6 +7,7 @@ import {
   Alert,
   Badge,
   Button,
+  BUTTON_LOADING_BEHAVIORS,
   CollapsibleSection,
   Heading5,
   Input,
@@ -67,6 +68,10 @@ import {
 } from "~/services/verification/verificationResultHistory"
 import { createLogger } from "~/utils/core/logger"
 
+import {
+  filterVerificationRedactions as filterRedactions,
+  isVerificationAbortError as isAbortError,
+} from "../verificationDialogUtils"
 import { buildProbeState } from "./probeState"
 import type { VerifyApiDialogProps } from "./types"
 import { useVerificationDialogState } from "./useVerificationDialogState"
@@ -76,24 +81,6 @@ import { formatLatency, safeJsonStringify } from "./utils"
  * Unified logger scoped to the API verification dialog.
  */
 const logger = createLogger("VerifyApiDialog")
-
-/**
- * Detects user-initiated cancellation across DOM and service-layer aborts.
- */
-function isAbortError(error: unknown, abortSignal?: AbortSignal) {
-  return (
-    abortSignal?.aborted ||
-    (error instanceof DOMException && error.name === "AbortError") ||
-    (error instanceof Error && error.name === "AbortError")
-  )
-}
-
-/**
- * Keeps optional redaction values type-safe before sanitizing diagnostics.
- */
-function filterRedactions(values: Array<string | undefined>): string[] {
-  return values.filter((value): value is string => Boolean(value))
-}
 
 /**
  * Builds a synthetic result so interrupted probes render as stopped, not failed.
@@ -608,6 +595,8 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
           variant={isRunning ? "destructive" : "success"}
           onClick={isRunning ? stopRun : runAll}
           disabled={!isRunning && (isLoadingRuntimeKeys || !canRunAll)}
+          loading={isRunning}
+          loadingBehavior={BUTTON_LOADING_BEHAVIORS.Interactive}
         >
           {isRunning
             ? t("verifyDialog.actions.stop")
@@ -829,6 +818,8 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
                     size="sm"
                     variant={probe.isRunning ? "destructive" : "secondary"}
                     onClick={probe.isRunning ? stopProbe : runSingleProbe}
+                    loading={probe.isRunning}
+                    loadingBehavior={BUTTON_LOADING_BEHAVIORS.Interactive}
                     aria-label={
                       probe.isRunning
                         ? t("verifyDialog.actions.stopProbe", {
