@@ -253,6 +253,38 @@ describe("account browser-session reader", () => {
     })
   })
 
+  it("rejects the modern New API probe intent for existing-tab reads", async () => {
+    mockSendTabMessage.mockResolvedValueOnce({
+      success: true,
+      data: {
+        userId: "user-42",
+        siteTypeHint: SITE_TYPES.NEW_API,
+        transientAuth: {
+          kind: NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND,
+          token: "dashboard-token-placeholder",
+          expiresAt: 2_000_000_000,
+          sessionId: "session-placeholder",
+          origin: "https://white-label.example.invalid",
+        },
+      },
+    })
+
+    const session = await readAccountBrowserSessionFromTab({
+      tabId: 14,
+      baseUrl: "https://white-label.example.invalid",
+      siteType: SITE_TYPES.UNKNOWN,
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
+      allowNewApiAuthProbe: true,
+    })
+
+    expect(mockSendTabMessage).toHaveBeenCalledWith(14, {
+      action: RuntimeActionIds.ContentGetUserFromLocalStorage,
+      url: "https://white-label.example.invalid",
+      siteType: SITE_TYPES.UNKNOWN,
+    })
+    expect(session).not.toHaveProperty("transientAuth")
+  })
+
   it("retains modern New API auth discovered from an unknown white-label site", async () => {
     mockSendTabMessage.mockResolvedValueOnce({
       success: true,

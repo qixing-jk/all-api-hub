@@ -167,11 +167,14 @@ export async function readAccountBrowserSessionFromTab(
   options: ReadAccountBrowserSessionFromTabOptions,
 ): Promise<AccountBrowserSession | null> {
   try {
+    const allowNewApiAuthProbe =
+      options.source === ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB &&
+      options.allowNewApiAuthProbe === true
     const response = await sendTabMessageWithRetry(options.tabId, {
       action: RuntimeActionIds.ContentGetUserFromLocalStorage,
       url: options.baseUrl,
       siteType: options.siteType,
-      ...(options.allowNewApiAuthProbe ? { allowNewApiAuthProbe: true } : {}),
+      ...(allowNewApiAuthProbe ? { allowNewApiAuthProbe: true } : {}),
     })
 
     if (!response?.success || !response.data) return null
@@ -180,7 +183,7 @@ export async function readAccountBrowserSessionFromTab(
       source: options.source,
       baseUrl: options.baseUrl,
       siteType: options.siteType,
-      allowNewApiAuthProbe: options.allowNewApiAuthProbe,
+      allowNewApiAuthProbe,
       fetchContext: options.fetchContext,
     })
   } catch (error) {
