@@ -18,6 +18,12 @@ import { createLogger } from "~/utils/core/logger"
 
 const CHANNEL_API_BASE = "/api/channel/"
 
+export type DraftChannelModelProbe = {
+  type: number
+  baseUrl: string
+  key: string
+}
+
 const logger = createLogger("NewApiFamilyChannelManagement")
 
 const serializeChannelGroups = <T extends { groups?: string[] }>(
@@ -315,6 +321,40 @@ export async function listAllChannels(
 }
 
 /**
+ * Fetch one channel without scanning the paginated channel inventory.
+ * QuantumNous/new-api exposes GET /api/channel/:id for channel-read access:
+ * https://github.com/QuantumNous/new-api/blob/f116414284162ad15d8925f7bca494c109b83e93/router/channel-router.go#L45
+ */
+export async function fetchChannel(
+  request: ApiServiceRequest,
+  channelId: number,
+  options?: Pick<RequestInit, "signal">,
+): Promise<ManagedSiteChannel> {
+  return await fetchApiData<ManagedSiteChannel>(request, {
+    endpoint: `${CHANNEL_API_BASE}${channelId}`,
+    options: { signal: options?.signal },
+  })
+}
+
+const readChannelModelResponse = (
+  response: ApiResponse<string[]>,
+  endpoint: string,
+) => {
+  // New API reports upstream model lookup failures as a successful HTTP response
+  // with `success: false` and the diagnostic in `message` for both endpoints.
+  // Source: https://github.com/QuantumNous/new-api/blob/f116414284162ad15d8925f7bca494c109b83e93/controller/channel.go#L230-L254
+  // Source: https://github.com/QuantumNous/new-api/blob/f116414284162ad15d8925f7bca494c109b83e93/controller/channel.go#L1274-L1324
+  if (!response.success || !Array.isArray(response.data)) {
+    throw new ApiError(
+      response.message || "Failed to fetch models",
+      undefined,
+      endpoint,
+    )
+  }
+  return response.data
+}
+
+/**
  * Fetch raw model list for a given channel.
  * @param request ApiServiceRequest（包含 baseUrl + 认证信息）。
  * @param channelId Target channel id.
@@ -324,24 +364,48 @@ export async function fetchChannelModels(
   channelId: number,
   options?: Pick<RequestInit, "signal">,
 ): Promise<string[]> {
+  const endpoint = `${CHANNEL_API_BASE}fetch_models/${channelId}`
   const response = await fetchApi<string[]>(
     request,
     {
-      endpoint: `${CHANNEL_API_BASE}fetch_models/${channelId}`,
+      endpoint,
       options,
     },
     false,
   )
 
-  if (!response.success || !Array.isArray(response.data)) {
-    throw new ApiError(
-      response.message || "Failed to fetch models",
-      undefined,
-      `${CHANNEL_API_BASE}fetch_models/${channelId}`,
-    )
-  }
+  return readChannelModelResponse(response, endpoint)
+}
 
-  return response.data
+/**
+ * Probes models from an unsaved New API channel configuration.
+ * QuantumNous/new-api accepts type, base_url, and key at this endpoint:
+ * https://github.com/QuantumNous/new-api/blob/f116414284162ad15d8925f7bca494c109b83e93/web/src/features/channels/api.ts
+ */
+export async function fetchDraftChannelModels(
+  request: ApiServiceRequest,
+  draft: DraftChannelModelProbe,
+  options?: Pick<RequestInit, "signal">,
+): Promise<string[]> {
+  const endpoint = `${CHANNEL_API_BASE}fetch_models`
+  const response = await fetchApi<string[]>(
+    request,
+    {
+      endpoint,
+      options: {
+        method: "POST",
+        body: JSON.stringify({
+          type: draft.type,
+          base_url: draft.baseUrl,
+          key: draft.key,
+        }),
+        signal: options?.signal,
+      },
+    },
+    false,
+  )
+
+  return readChannelModelResponse(response, endpoint)
 }
 
 /**

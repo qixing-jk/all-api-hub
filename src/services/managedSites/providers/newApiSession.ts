@@ -4,6 +4,7 @@ import {
   parseNewApiDashboardAuthBundleResponse,
   type NewApiDashboardAuthBundle,
 } from "~/services/apiService/newApi/dashboardAuth"
+import { runAbortableTask } from "~/services/apiTransport/abortableTask"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import {
   fetchApi,
@@ -259,11 +260,22 @@ const createDashboardAuthRequest = (
 const createManagedSessionRequest = (
   baseUrl: string,
   userId?: number | string,
+  signal?: AbortSignal,
 ): ApiServiceRequest => {
   const dashboardAuth = getActiveDashboardAuth(baseUrl)
-  return dashboardAuth
+  const request = dashboardAuth
     ? createDashboardAuthRequest(baseUrl, dashboardAuth)
     : createCookieAuthRequest(baseUrl, userId)
+  return signal ? { ...request, abortSignal: signal } : request
+}
+
+const throwIfNewApiSessionReadAborted = (signal?: AbortSignal) => {
+  if (signal?.aborted) {
+    throw (
+      signal.reason ??
+      new DOMException("The operation was aborted", "AbortError")
+    )
+  }
 }
 
 const isUnauthorizedError = (error: unknown) =>
@@ -1264,20 +1276,28 @@ export async function fetchNewApiChannelKey(params: {
   password?: string
   totpSecret?: string
   protectionBypassExecution?: ProtectionBypassExecution
+  signal?: AbortSignal
 }): Promise<string> {
-  await ensureNewApiChannelKeyAccess({
-    baseUrl: params.baseUrl,
-    userId: params.userId?.toString() ?? "",
-    username: params.username?.trim() ?? "",
-    password: params.password ?? "",
-    totpSecret: params.totpSecret?.trim() ?? "",
-  })
+  throwIfNewApiSessionReadAborted(params.signal)
+  await runAbortableTask(
+    async () =>
+      await ensureNewApiChannelKeyAccess({
+        baseUrl: params.baseUrl,
+        userId: params.userId?.toString() ?? "",
+        username: params.username?.trim() ?? "",
+        password: params.password ?? "",
+        totpSecret: params.totpSecret?.trim() ?? "",
+      }),
+    { signals: [params.signal] },
+  )
+  throwIfNewApiSessionReadAborted(params.signal)
 
   try {
     const endpoint = `/api/channel/${params.channelId}/key`
     const sessionRequest = createManagedSessionRequest(
       params.baseUrl,
       params.userId,
+      params.signal,
     )
     const usesDashboardAuth =
       sessionRequest.auth.authType === AuthTypeEnum.AccessToken
@@ -1302,11 +1322,12 @@ export async function fetchNewApiChannelKey(params: {
         },
       })
     } catch (error) {
+      const protectionBypassExecution = params.protectionBypassExecution
       if (
         // The protected NewApiSessionRead envelope is intentionally closed and
         // Cookie-only; never copy a transient dashboard Bearer into it.
         usesDashboardAuth ||
-        !params.protectionBypassExecution ||
+        !protectionBypassExecution ||
         !(error instanceof ApiError) ||
         error.code === API_ERROR_CODES.BUSINESS_ERROR ||
         !isNewApiSessionReadFallbackError(error)
@@ -1315,17 +1336,25 @@ export async function fetchNewApiChannelKey(params: {
       }
 
       const origin = new URL(params.baseUrl).origin
+      throwIfNewApiSessionReadAborted(params.signal)
       const { tempWindowNewApiSessionRead } = await import(
         "~/utils/browser/tempWindowFetch"
       )
-      const fallback = await tempWindowNewApiSessionRead({
-        origin,
-        action: NEW_API_SESSION_READ_ACTIONS.ChannelKey,
-        channelId: params.channelId,
-        userId: params.userId?.toString().trim() ?? "",
-        requestId: safeRandomUUID(`new-api-channel-key-${params.channelId}`),
-        protectionBypassExecution: params.protectionBypassExecution,
-      })
+      const fallback = await runAbortableTask(
+        async () =>
+          await tempWindowNewApiSessionRead({
+            origin,
+            action: NEW_API_SESSION_READ_ACTIONS.ChannelKey,
+            channelId: params.channelId,
+            userId: params.userId?.toString().trim() ?? "",
+            requestId: safeRandomUUID(
+              `new-api-channel-key-${params.channelId}`,
+            ),
+            protectionBypassExecution,
+          }),
+        { signals: [params.signal] },
+      )
+      throwIfNewApiSessionReadAborted(params.signal)
       if (!fallback.success) {
         throw new ApiError(
           fallback.error || "New API session read failed",
@@ -1348,6 +1377,8 @@ export async function fetchNewApiChannelKey(params: {
       response = body.data as { key?: string } | string
     }
 
+    throwIfNewApiSessionReadAborted(params.signal)
+
     const key =
       typeof response === "string" ? response.trim() : response?.key?.trim()
 
@@ -1356,12 +1387,18 @@ export async function fetchNewApiChannelKey(params: {
     }
 
     markVerified(params.baseUrl)
-    await touchNewApiOwnedSession(
-      params.baseUrl,
-      getActiveDashboardAuth(params.baseUrl)?.sessionId,
+    await runAbortableTask(
+      async () =>
+        await touchNewApiOwnedSession(
+          params.baseUrl,
+          getActiveDashboardAuth(params.baseUrl)?.sessionId,
+        ),
+      { signals: [params.signal] },
     )
+    throwIfNewApiSessionReadAborted(params.signal)
     return key
   } catch (rawError) {
+    throwIfNewApiSessionReadAborted(params.signal)
     const error = sanitizeNewApiErrorForOrigin(rawError, params.baseUrl)
     if (isUnauthorizedError(error)) {
       clearLoggedInState(params.baseUrl)

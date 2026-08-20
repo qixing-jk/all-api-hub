@@ -25,7 +25,7 @@ export interface ChannelModel {
 
 /**
  * Channel status constants
- * @see https://github.com/QuantumNous/new-api/blob/7156bf238276d2089435eacc3efb266403f27c8e/common/constants.go#L192
+ * @see https://github.com/QuantumNous/new-api/blob/f116414284162ad15d8925f7bca494c109b83e93/common/constants.go
  */
 export const CHANNEL_STATUS = {
   Unknown: 0,

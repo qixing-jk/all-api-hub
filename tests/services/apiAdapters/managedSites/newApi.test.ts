@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { CHANNEL_STATUS } from "~/types/managedSite"
 import type {
@@ -22,6 +23,7 @@ import {
 const channelManagement = vi.hoisted(() => ({
   searchChannel: vi.fn(),
   listAllChannels: vi.fn(),
+  fetchChannel: vi.fn(),
   createChannel: vi.fn(),
   updateChannel: vi.fn(),
   updateChannelFields: vi.fn(),
@@ -29,6 +31,7 @@ const channelManagement = vi.hoisted(() => ({
   isNewApiManualStatus: vi.fn((status) => status === 1 || status === 2),
   deleteChannel: vi.fn(),
   fetchChannelModels: vi.fn(),
+  fetchDraftChannelModels: vi.fn(),
   updateChannelModels: vi.fn(),
   updateChannelModelMapping: vi.fn(),
 }))
@@ -404,6 +407,29 @@ describe("newApi managed-site channel capability", () => {
     },
   ])
 
+  it("does not dispatch the status endpoint when resource status is unchanged", async () => {
+    channelManagement.updateChannelStatus.mockClear()
+    channelManagement.updateChannelFields.mockImplementationOnce(
+      async (request) => {
+        request.observer?.onDispatch()
+        request.observer?.onResponse()
+        return { success: true, data: null, message: "success" }
+      },
+    )
+    const { newApiManagedSiteCapabilities } = await import(
+      "~/services/apiAdapters/managedSites/newApi"
+    )
+
+    await expect(
+      newApiManagedSiteCapabilities.resources!.items.update(
+        config,
+        resourceDetail,
+        resourceDraft,
+      ),
+    ).resolves.toMatchObject({ outcome: "succeeded" })
+    expect(channelManagement.updateChannelStatus).not.toHaveBeenCalled()
+  })
+
   it("returns a partial resource update when status rejects after fields apply", async () => {
     const statusResponse = {
       success: false,
@@ -657,6 +683,7 @@ describe("newApi managed-site channel capability", () => {
     await newApiManagedSiteChannels.list?.(config, {
       bypassSiteRequestLimit: true,
     })
+    await newApiManagedSiteChannels.get?.(config, 1)
     await newApiManagedSiteChannels.create(config, createPayload)
     await newApiManagedSiteChannels.update(config, {
       id: 1,
@@ -664,6 +691,11 @@ describe("newApi managed-site channel capability", () => {
     })
     await newApiManagedSiteChannels.delete(config, 1)
     await newApiManagedSiteChannels.fetchModels?.(config, 1)
+    await newApiManagedSiteChannels.fetchDraftModels?.(config, {
+      channelType: 1,
+      baseUrl: "https://upstream.example.invalid",
+      credential: "credential-placeholder",
+    })
     await newApiManagedSiteChannels.updateModels?.(config, 1, ["gpt-4o"])
     await newApiManagedSiteChannels.updateModelMapping?.(
       config,
@@ -680,6 +712,11 @@ describe("newApi managed-site channel capability", () => {
       { ...request, bypassSiteRequestLimit: true },
       { bypassSiteRequestLimit: true },
     )
+    expect(channelManagement.fetchChannel).toHaveBeenCalledWith(
+      request,
+      1,
+      undefined,
+    )
     expect(channelManagement.createChannel).toHaveBeenCalledWith(
       expect.objectContaining(request),
       createPayload,
@@ -695,6 +732,15 @@ describe("newApi managed-site channel capability", () => {
     expect(channelManagement.fetchChannelModels).toHaveBeenCalledWith(
       request,
       1,
+      undefined,
+    )
+    expect(channelManagement.fetchDraftChannelModels).toHaveBeenCalledWith(
+      request,
+      {
+        type: 1,
+        baseUrl: "https://upstream.example.invalid",
+        key: "credential-placeholder",
+      },
       undefined,
     )
     expect(channelManagement.updateChannelFields).toHaveBeenCalledWith(
@@ -725,13 +771,19 @@ describe("newApi managed-site channel capability", () => {
         userId: config.userId,
       },
     }
+    const signal = new AbortController().signal
 
-    await newApiManagedSiteCapabilities.queries.fetchSiteUserGroups(config)
+    await newApiManagedSiteCapabilities.queries.fetchSiteUserGroups(config, {
+      signal,
+    })
     await newApiManagedSiteCapabilities.queries.fetchAccountAvailableModels(
       config,
     )
 
-    expect(keyManagement.fetchSiteUserGroups).toHaveBeenCalledWith(request)
+    expect(keyManagement.fetchSiteUserGroups).toHaveBeenCalledWith({
+      ...request,
+      abortSignal: signal,
+    })
     expect(keyManagement.fetchAccountAvailableModels).toHaveBeenCalledWith(
       request,
     )
@@ -762,6 +814,48 @@ describe("newApi managed-site channel capability", () => {
       1,
       { signal, bypassSiteRequestLimit: true },
     )
+  })
+
+  it("propagates channel operation signals to the API transport request", async () => {
+    const { newApiManagedSiteChannels } = await import(
+      "~/services/apiAdapters/managedSites/newApi"
+    )
+    const signal = new AbortController().signal
+
+    channelManagement.searchChannel.mockResolvedValue({ items: [], total: 0 })
+    const succeedMutation =
+      (message: string) => async (request: ApiServiceRequest) => {
+        request.observer?.onDispatch()
+        request.observer?.onResponse()
+        return { success: true, data: undefined, message }
+      }
+    channelManagement.createChannel.mockImplementation(
+      succeedMutation("created"),
+    )
+    channelManagement.updateChannelFields.mockImplementation(
+      succeedMutation("updated"),
+    )
+    channelManagement.deleteChannel.mockImplementation(
+      succeedMutation("deleted"),
+    )
+
+    await newApiManagedSiteChannels.search(config, "keyword", { signal })
+    await newApiManagedSiteChannels.get?.(config, 7, { signal })
+    await newApiManagedSiteChannels.create(config, createPayload, { signal })
+    await newApiManagedSiteChannels.update(config, updatePayload, { signal })
+    await newApiManagedSiteChannels.delete(config, 7, { signal })
+
+    for (const mock of [
+      channelManagement.searchChannel,
+      channelManagement.fetchChannel,
+      channelManagement.createChannel,
+      channelManagement.updateChannelFields,
+      channelManagement.deleteChannel,
+    ]) {
+      expect(mock.mock.calls.at(-1)?.[0]).toEqual(
+        expect.objectContaining({ abortSignal: signal }),
+      )
+    }
   })
 
   it("loads config through the managed-site runtime config boundary", async () => {

@@ -4,7 +4,9 @@ import { toManagedSiteApiServiceRequest } from "~/services/apiAdapters/managedSi
 import {
   createChannel,
   deleteChannel,
+  fetchChannel,
   fetchChannelModels,
+  fetchDraftChannelModels,
   listAllChannels,
   searchChannel,
   updateChannel,
@@ -66,6 +68,20 @@ describe("newApiFamily channel management APIs", () => {
       total: 1,
     })
     await expect(searchChannel(baseRequest, "gpt-4")).resolves.toBeNull()
+  })
+
+  it("fetchChannel reads one channel through the upstream detail endpoint", async () => {
+    const signal = new AbortController().signal
+    const channel = { id: 17, name: "Example Channel" }
+    mockFetchApiData.mockResolvedValueOnce(channel)
+
+    await expect(fetchChannel(baseRequest, 17, { signal })).resolves.toBe(
+      channel,
+    )
+    expect(mockFetchApiData).toHaveBeenCalledWith(baseRequest, {
+      endpoint: "/api/channel/17",
+      options: { signal },
+    })
   })
 
   it("createChannel serializes groups", async () => {
@@ -485,6 +501,67 @@ describe("newApiFamily channel management APIs", () => {
       false,
     )
     expect(result).toEqual(["gpt-4"])
+  })
+
+  it("fetchDraftChannelModels probes an unsaved channel configuration", async () => {
+    const signal = new AbortController().signal
+    mockFetchApi.mockResolvedValueOnce({
+      success: true,
+      data: ["model-example-a", "model-example-b"],
+    })
+
+    await expect(
+      fetchDraftChannelModels(
+        baseRequest,
+        {
+          type: 1,
+          baseUrl: "https://upstream.example.invalid",
+          key: "credential-placeholder",
+        },
+        { signal },
+      ),
+    ).resolves.toEqual(["model-example-a", "model-example-b"])
+    expect(mockFetchApi).toHaveBeenCalledWith(
+      baseRequest,
+      {
+        endpoint: "/api/channel/fetch_models",
+        options: {
+          method: "POST",
+          body: JSON.stringify({
+            type: 1,
+            base_url: "https://upstream.example.invalid",
+            key: "credential-placeholder",
+          }),
+          signal,
+        },
+      },
+      false,
+    )
+  })
+
+  it("preserves New API model lookup messages from provider failure envelopes", async () => {
+    mockFetchApi
+      .mockResolvedValueOnce({
+        success: false,
+        message: "The example upstream rejected the saved-channel lookup",
+      })
+      .mockResolvedValueOnce({
+        success: false,
+        message: "The example upstream rejected the draft lookup",
+      })
+
+    await expect(fetchChannelModels(baseRequest, 17)).rejects.toMatchObject({
+      message: "The example upstream rejected the saved-channel lookup",
+    })
+    await expect(
+      fetchDraftChannelModels(baseRequest, {
+        type: 1,
+        baseUrl: "https://upstream.example.invalid",
+        key: "credential-placeholder",
+      }),
+    ).rejects.toMatchObject({
+      message: "The example upstream rejected the draft lookup",
+    })
   })
 
   it("fetchChannelModels rejects malformed model payloads", async () => {

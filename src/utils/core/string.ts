@@ -32,7 +32,7 @@ export function parseDelimitedList(value?: string | null): string[] {
  * @param values - 字符串数组
  * @returns 规范化后的数组
  */
-export function normalizeList(values: string[] = []): string[] {
+export function normalizeList(values: readonly string[] = []): string[] {
   return Array.from(
     new Set(values.map((item) => trimToNull(item) ?? "").filter(Boolean)),
   )

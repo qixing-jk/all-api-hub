@@ -1,6 +1,7 @@
 import { SITE_TYPES } from "~/constants/siteType"
 import type {
   ManagedSiteChannelDraftsCapability,
+  ManagedSiteChannelRequestOptions,
   ManagedSiteChannelsCapability,
   ManagedSiteConfigCapability,
   ManagedSiteQueriesCapability,
@@ -9,7 +10,9 @@ import type { ManagedUpstreamResourcesCapability } from "~/services/apiAdapters/
 import {
   createChannel,
   deleteChannel,
+  fetchChannel,
   fetchChannelModels,
+  fetchDraftChannelModels,
   isNewApiManualStatus,
   listAllChannels,
   searchChannel,
@@ -26,8 +29,13 @@ import type {
 } from "~/services/apiTransport/type"
 import {
   createManagedSiteMutationSequence,
+  MANAGED_SITE_MUTATION_EFFECT_KINDS,
+  MANAGED_SITE_MUTATION_FINAL_STATES,
+  MANAGED_SITE_MUTATION_OUTCOMES,
   type ManagedSiteMutationConfirmedEffect,
   type ManagedSiteMutationSequence,
+  type ManagedSiteMutationStepRunResult,
+  type ManagedSiteVoidMutationResult,
 } from "~/services/managedSites/mutations"
 import {
   buildChannelName,
@@ -38,9 +46,11 @@ import {
   hydrateComparableChannelKeys,
   prepareChannelFormData,
 } from "~/services/managedSites/providers/newApi"
+import { buildNewApiUpdatePayload } from "~/services/managedSites/providers/newApiChannelPayload"
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/managedSite"
 import type {
   ChannelFormData,
+  CreateChannelPayload,
   ManagedSiteChannel,
   UpdateChannelPayload,
 } from "~/types/managedSite"
@@ -59,6 +69,7 @@ import {
 } from "~/types/managedUpstreamResource"
 import { CHANNEL_STATUS } from "~/types/newApi"
 import type { NewApiConfig } from "~/types/newApiConfig"
+import { parseDelimitedList } from "~/utils/core/string"
 
 import { createManagedSiteConfigCapability } from "./config"
 import {
@@ -68,27 +79,39 @@ import {
   toManagedSiteApiServiceRequest,
 } from "./request"
 
-const toNewApiMutationResponse = (response: ApiResponse<unknown>) =>
+const NEW_API_MUTATION_STEP_OUTCOMES = {
+  Applied: "applied",
+  Rejected: "rejected",
+} as const
+
+const toNewApiMutationResponse = <TData>(response: ApiResponse<TData>) =>
   response.success
-    ? { outcome: "applied" as const, data: response.data }
+    ? { outcome: NEW_API_MUTATION_STEP_OUTCOMES.Applied, data: response.data }
     : {
-        outcome: "rejected" as const,
+        outcome: NEW_API_MUTATION_STEP_OUTCOMES.Rejected,
         diagnostic: {
           message: response.message || "Provider rejected the mutation",
           raw: response,
         },
       }
 
-const runNewApiMutationStep = async (input: {
+const runNewApiMutationStep = async <TData>(input: {
   config: NewApiConfig
-  options?: { bypassSiteRequestLimit?: boolean }
+  options?: Pick<
+    ManagedSiteChannelRequestOptions,
+    "signal" | "bypassSiteRequestLimit"
+  >
   sequence: ManagedSiteMutationSequence<ManagedSiteMutationConfirmedEffect>
   effect: ManagedSiteMutationConfirmedEffect
-  execute(request: ApiServiceRequest): Promise<ApiResponse<unknown>>
-}) =>
-  await runManagedSiteApiServiceMutationStep({
+  execute(request: ApiServiceRequest): Promise<ApiResponse<TData>>
+}): Promise<ManagedSiteMutationStepRunResult<TData>> =>
+  await runManagedSiteApiServiceMutationStep<
+    ManagedSiteMutationConfirmedEffect,
+    ApiResponse<TData>,
+    TData
+  >({
     ...input,
-    classifyResponse: toNewApiMutationResponse,
+    classifyResponse: (response) => toNewApiMutationResponse(response),
     classifyResponseError: (error) => {
       throw error
     },
@@ -103,81 +126,118 @@ const requireProtectionBypassExecution = (
   return options
 }
 
+type NewApiMutationOptions = Pick<
+  ManagedSiteChannelRequestOptions,
+  "signal" | "bypassSiteRequestLimit"
+>
+
+const runNewApiChannelCreateMutation = async (
+  config: NewApiConfig,
+  channelData: CreateChannelPayload,
+  options?: NewApiMutationOptions,
+) => {
+  const sequence = createManagedSiteMutationSequence({ idempotent: false })
+  const step = await runNewApiMutationStep<void>({
+    config,
+    options,
+    sequence,
+    effect: createManagedSiteChannelEffect(
+      MANAGED_SITE_MUTATION_EFFECT_KINDS.ResourceCreated,
+    ),
+    execute: async (request) => await createChannel(request, channelData),
+  })
+  return finishManagedSiteMutationStep(sequence, step)
+}
+
+const runNewApiChannelUpdateMutation = async (
+  config: NewApiConfig,
+  channelData: UpdateChannelPayload,
+  options?: NewApiMutationOptions,
+) => {
+  const sequence = createManagedSiteMutationSequence({ idempotent: false })
+  const fieldsStep = await runNewApiMutationStep<void>({
+    config,
+    options,
+    sequence,
+    effect: createManagedSiteChannelEffect(
+      MANAGED_SITE_MUTATION_EFFECT_KINDS.ResourceUpdated,
+      channelData.id,
+    ),
+    execute: async (request) => await updateChannelFields(request, channelData),
+  })
+  if (fieldsStep.outcome !== NEW_API_MUTATION_STEP_OUTCOMES.Applied) {
+    return finishManagedSiteMutationStep(sequence, fieldsStep)
+  }
+
+  const status = channelData.status
+  if (typeof status === "number" && isNewApiManualStatus(status)) {
+    const statusStep = await runNewApiMutationStep<boolean>({
+      config,
+      options,
+      sequence,
+      effect: createManagedSiteChannelEffect(
+        MANAGED_SITE_MUTATION_EFFECT_KINDS.StatusUpdated,
+        channelData.id,
+      ),
+      execute: async (request) =>
+        await updateChannelStatus(request, channelData.id, status),
+    })
+    if (statusStep.outcome !== NEW_API_MUTATION_STEP_OUTCOMES.Applied) {
+      return finishManagedSiteMutationStep(sequence, statusStep)
+    }
+  }
+
+  return sequence.finish({
+    finalState: MANAGED_SITE_MUTATION_FINAL_STATES.Confirmed,
+    data: fieldsStep.data,
+  })
+}
+
+const runNewApiChannelDeleteMutation = async (
+  config: NewApiConfig,
+  channelId: number,
+  options?: NewApiMutationOptions,
+): Promise<ManagedSiteVoidMutationResult> => {
+  const sequence = createManagedSiteMutationSequence({ idempotent: false })
+  const step = await runNewApiMutationStep<void>({
+    config,
+    options,
+    sequence,
+    effect: createManagedSiteChannelEffect(
+      MANAGED_SITE_MUTATION_EFFECT_KINDS.ResourceDeleted,
+      channelId,
+    ),
+    execute: async (request) => await deleteChannel(request, channelId),
+  })
+  return step.outcome === NEW_API_MUTATION_STEP_OUTCOMES.Applied
+    ? sequence.finish<void>({
+        finalState: MANAGED_SITE_MUTATION_FINAL_STATES.Confirmed,
+        data: undefined,
+      })
+    : finishManagedSiteMutationStep(sequence, step)
+}
+
 export const newApiManagedSiteChannels: ManagedSiteChannelsCapability<NewApiConfig> =
   {
-    search: async (config, keyword) =>
-      await searchChannel(toManagedSiteApiServiceRequest(config), keyword),
+    search: async (config, keyword, options) =>
+      await searchChannel(
+        toManagedSiteApiServiceRequest(config, options),
+        keyword,
+      ),
     list: async (config, options) =>
       await listAllChannels(
         toManagedSiteApiServiceRequest(config, options),
         options,
       ),
-    create: async (config, channelData) => {
-      const sequence = createManagedSiteMutationSequence({ idempotent: false })
-      const step = await runNewApiMutationStep({
-        config,
-        sequence,
-        effect: createManagedSiteChannelEffect("resource-created"),
-        execute: async (request) => await createChannel(request, channelData),
-      })
-      return finishManagedSiteMutationStep(sequence, step)
-    },
-    update: async (config, channelData) => {
-      const sequence = createManagedSiteMutationSequence({ idempotent: false })
-      const fieldsStep = await runNewApiMutationStep({
-        config,
-        sequence,
-        effect: createManagedSiteChannelEffect(
-          "resource-updated",
-          channelData.id,
-        ),
-        execute: async (request) =>
-          await updateChannelFields(request, channelData),
-      })
-      if (fieldsStep.outcome !== "applied") {
-        return finishManagedSiteMutationStep(sequence, fieldsStep)
-      }
-
-      if (
-        typeof channelData.status === "number" &&
-        isNewApiManualStatus(channelData.status)
-      ) {
-        const statusStep = await runNewApiMutationStep({
-          config,
-          sequence,
-          effect: createManagedSiteChannelEffect(
-            "status-updated",
-            channelData.id,
-          ),
-          execute: async (request) =>
-            await updateChannelStatus(
-              request,
-              channelData.id,
-              channelData.status as number,
-            ),
-        })
-        if (statusStep.outcome !== "applied") {
-          return finishManagedSiteMutationStep(sequence, statusStep)
-        }
-      }
-
-      return sequence.finish({
-        finalState: "confirmed",
-        data: fieldsStep.data,
-      })
-    },
-    delete: async (config, channelId) => {
-      const sequence = createManagedSiteMutationSequence({ idempotent: false })
-      const step = await runNewApiMutationStep({
-        config,
-        sequence,
-        effect: createManagedSiteChannelEffect("resource-deleted", channelId),
-        execute: async (request) => await deleteChannel(request, channelId),
-      })
-      return step.outcome === "applied"
-        ? sequence.finish({ finalState: "confirmed", data: undefined })
-        : finishManagedSiteMutationStep(sequence, step)
-    },
+    get: async (config, channelId, options) =>
+      await fetchChannel(
+        toManagedSiteApiServiceRequest(config, options),
+        channelId,
+        options,
+      ),
+    create: runNewApiChannelCreateMutation,
+    update: runNewApiChannelUpdateMutation,
+    delete: runNewApiChannelDeleteMutation,
     fetchSecretKey: async (config, channelId, options) =>
       await fetchChannelSecretKey(
         config,
@@ -196,13 +256,26 @@ export const newApiManagedSiteChannels: ManagedSiteChannelsCapability<NewApiConf
         channelId,
         options,
       ),
+    fetchDraftModels: async (config, probe, options) =>
+      await fetchDraftChannelModels(
+        toManagedSiteApiServiceRequest(config, options),
+        {
+          type: Number(probe.channelType),
+          baseUrl: probe.baseUrl,
+          key: probe.credential,
+        },
+        options,
+      ),
     updateModels: async (config, channelId, models, options) => {
       const sequence = createManagedSiteMutationSequence({ idempotent: false })
       const step = await runNewApiMutationStep({
         config,
         options,
         sequence,
-        effect: createManagedSiteChannelEffect("models-updated", channelId),
+        effect: createManagedSiteChannelEffect(
+          MANAGED_SITE_MUTATION_EFFECT_KINDS.ModelsUpdated,
+          channelId,
+        ),
         execute: async (request) =>
           await updateChannelFields(
             request,
@@ -213,8 +286,11 @@ export const newApiManagedSiteChannels: ManagedSiteChannelsCapability<NewApiConf
             options,
           ),
       })
-      return step.outcome === "applied"
-        ? sequence.finish({ finalState: "confirmed", data: undefined })
+      return step.outcome === NEW_API_MUTATION_STEP_OUTCOMES.Applied
+        ? sequence.finish({
+            finalState: MANAGED_SITE_MUTATION_FINAL_STATES.Confirmed,
+            data: undefined,
+          })
         : finishManagedSiteMutationStep(sequence, step)
     },
     updateModelMapping: async (
@@ -230,7 +306,7 @@ export const newApiManagedSiteChannels: ManagedSiteChannelsCapability<NewApiConf
         options,
         sequence,
         effect: createManagedSiteChannelEffect(
-          "model-mapping-updated",
+          MANAGED_SITE_MUTATION_EFFECT_KINDS.ModelMappingUpdated,
           channelId,
         ),
         execute: async (request) =>
@@ -244,8 +320,11 @@ export const newApiManagedSiteChannels: ManagedSiteChannelsCapability<NewApiConf
             options,
           ),
       })
-      return step.outcome === "applied"
-        ? sequence.finish({ finalState: "confirmed", data: undefined })
+      return step.outcome === NEW_API_MUTATION_STEP_OUTCOMES.Applied
+        ? sequence.finish({
+            finalState: MANAGED_SITE_MUTATION_FINAL_STATES.Confirmed,
+            data: undefined,
+          })
         : finishManagedSiteMutationStep(sequence, step)
     },
   }
@@ -254,8 +333,11 @@ const newApiManagedSiteConfig: ManagedSiteConfigCapability<NewApiConfig> =
   createManagedSiteConfigCapability(SITE_TYPES.NEW_API, checkValidNewApiConfig)
 
 const newApiManagedSiteQueries: ManagedSiteQueriesCapability<NewApiConfig> = {
-  fetchSiteUserGroups: async (config) =>
-    await fetchSiteUserGroups(toManagedSiteApiServiceRequest(config)),
+  fetchSiteUserGroups: async (
+    config: NewApiConfig,
+    options?: Pick<ManagedSiteChannelRequestOptions, "signal">,
+  ) =>
+    await fetchSiteUserGroups(toManagedSiteApiServiceRequest(config, options)),
   fetchAccountAvailableModels: async (config) =>
     await fetchAccountAvailableModels(toManagedSiteApiServiceRequest(config)),
 }
@@ -302,10 +384,7 @@ const toSecretState = (key?: string | null) =>
     : MANAGED_UPSTREAM_RESOURCE_SECRET_STATES.Masked
 
 const splitDelimitedValues = (value?: string | null): string[] =>
-  value
-    ?.split(",")
-    .map((item) => item.trim())
-    .filter(Boolean) ?? []
+  parseDelimitedList(value)
 
 const toNewApiResourceSummary = (
   config: NewApiConfig,
@@ -413,34 +492,6 @@ const newApiResourceFieldDescriptors: ManagedUpstreamResourceFieldDescriptor[] =
     },
   ]
 
-const toNewApiUpdatePayload = (
-  detail: ManagedUpstreamResourceDetail<ManagedSiteChannel>,
-  draft: ChannelFormData,
-): UpdateChannelPayload => {
-  const native = detail.native
-  const payload: UpdateChannelPayload = {
-    ...native,
-    id: native.id,
-    name: draft.name,
-    type: draft.type,
-    base_url: draft.base_url,
-    models: draft.models.join(","),
-    groups: draft.groups,
-    group: draft.groups.join(","),
-    priority: draft.priority,
-    weight: draft.weight,
-    status: draft.status,
-  }
-
-  if (hasUsableManagedSiteChannelKey(draft.key)) {
-    payload.key = draft.key.trim()
-  } else {
-    delete payload.key
-  }
-
-  return payload
-}
-
 const newApiManagedUpstreamResources: ManagedUpstreamResourcesCapability<
   NewApiConfig,
   ManagedSiteChannel,
@@ -475,62 +526,25 @@ const newApiManagedUpstreamResources: ManagedUpstreamResourcesCapability<
       }
     },
     create: async (config, draft) => {
-      const sequence = createManagedSiteMutationSequence({ idempotent: false })
-      const step = await runNewApiMutationStep({
+      const result = await runNewApiChannelCreateMutation(
         config,
-        sequence,
-        effect: createManagedSiteChannelEffect("resource-created"),
-        execute: async (request) =>
-          await createChannel(request, buildChannelPayload(draft)),
-      })
-      return step.outcome === "applied"
-        ? sequence.finish({ finalState: "confirmed", data: null })
-        : finishManagedSiteMutationStep(sequence, step)
+        buildChannelPayload(draft),
+      )
+      return result.outcome === MANAGED_SITE_MUTATION_OUTCOMES.Succeeded
+        ? { ...result, data: null }
+        : result
     },
     update: async (config, detail, draft) => {
-      const payload = toNewApiUpdatePayload(detail, draft)
-      const sequence = createManagedSiteMutationSequence({ idempotent: false })
-      const fieldsStep = await runNewApiMutationStep({
-        config,
-        sequence,
-        effect: createManagedSiteChannelEffect("resource-updated", payload.id),
-        execute: async (request) => await updateChannelFields(request, payload),
-      })
-      if (fieldsStep.outcome !== "applied") {
-        return finishManagedSiteMutationStep(sequence, fieldsStep)
-      }
-
-      if (
-        typeof payload.status === "number" &&
-        isNewApiManualStatus(payload.status)
-      ) {
-        const statusStep = await runNewApiMutationStep({
-          config,
-          sequence,
-          effect: createManagedSiteChannelEffect("status-updated", payload.id),
-          execute: async (request) =>
-            await updateChannelStatus(request, payload.id, payload.status!),
-        })
-        if (statusStep.outcome !== "applied") {
-          return finishManagedSiteMutationStep(sequence, statusStep)
-        }
-      }
-
-      return sequence.finish({ finalState: "confirmed", data: null })
+      const payload = buildNewApiUpdatePayload(detail.native, draft)
+      const result = await runNewApiChannelUpdateMutation(config, payload)
+      return result.outcome === MANAGED_SITE_MUTATION_OUTCOMES.Succeeded
+        ? { ...result, data: null }
+        : result
     },
     delete: async (config, ref) => {
       assertNewApiResourceRef(config, ref)
       const resourceId = Number(ref.resourceId)
-      const sequence = createManagedSiteMutationSequence({ idempotent: false })
-      const step = await runNewApiMutationStep({
-        config,
-        sequence,
-        effect: createManagedSiteChannelEffect("resource-deleted", resourceId),
-        execute: async (request) => await deleteChannel(request, resourceId),
-      })
-      return step.outcome === "applied"
-        ? sequence.finish({ finalState: "confirmed", data: undefined })
-        : finishManagedSiteMutationStep(sequence, step)
+      return await runNewApiChannelDeleteMutation(config, resourceId)
     },
   },
   drafts: {
