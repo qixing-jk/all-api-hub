@@ -5,6 +5,7 @@ import {
   type ResourceDisplayFact,
   type ResourceFailure,
   type ResourceFieldDescriptor,
+  type ResourceFieldOption,
   type ResourceListQuery,
   type ResourceOperationOptions,
   type ResourceValidationResult,
@@ -12,10 +13,15 @@ import {
 import type { ManagedSiteMutationResult } from "~/services/managedSites/mutations"
 
 export {
+  RESOURCE_DISPLAY_FACT_KINDS as MANAGED_RESOURCE_DISPLAY_FACT_KINDS,
   RESOURCE_FAILURE_CODES as MANAGED_RESOURCE_FAILURE_CODES,
+  RESOURCE_FAILURE_RECOVERY_HINTS as MANAGED_RESOURCE_FAILURE_RECOVERY_HINTS,
   RESOURCE_FIELD_ISSUE_CODES as MANAGED_RESOURCE_FIELD_ISSUE_CODES,
+  RESOURCE_FIELD_OPTION_LOAD_TRIGGERS as MANAGED_RESOURCE_FIELD_OPTION_LOAD_TRIGGERS,
   RESOURCE_FIELD_TYPES as MANAGED_RESOURCE_FIELD_TYPES,
+  RESOURCE_SECRET_EDIT_INTENT_KINDS as MANAGED_RESOURCE_SECRET_EDIT_INTENT_KINDS,
   RESOURCE_SECRET_REPLACEMENT_BLOCK_REASONS as MANAGED_RESOURCE_SECRET_REPLACEMENT_BLOCK_REASONS,
+  RESOURCE_SECRET_STATES as MANAGED_RESOURCE_SECRET_STATES,
 } from "~/services/apiAdapters/contracts/resourceNative"
 export type {
   EditableResourceProjection,
@@ -23,6 +29,7 @@ export type {
   ResourceFailure,
   ResourceFieldDescriptor,
   ResourceFieldIssue,
+  ResourceFieldOption,
   ResourceFieldValue,
   ResourceListQuery,
   ResourceOperationOptions,
@@ -71,14 +78,36 @@ export const isManagedResourceRefFor = (
   value.kind === expected.kind &&
   (expected.scopeKey === undefined || value.scopeKey === expected.scopeKey)
 
+export const MANAGED_RESOURCE_STATUSES = {
+  Enabled: "enabled",
+  Disabled: "disabled",
+  ManuallyDisabled: "manually-disabled",
+  Archived: "archived",
+  AutoDisabled: "auto-disabled",
+  Unknown: "unknown",
+} as const
+
 export type ResourceDisplayFacts = {
   ref: ManagedResourceRef
   displayName: string
-  status: "enabled" | "disabled" | "archived" | "auto-disabled" | "unknown"
+  status: (typeof MANAGED_RESOURCE_STATUSES)[keyof typeof MANAGED_RESOURCE_STATUSES]
   fields: readonly ResourceDisplayFact[]
   /** Safe, non-rendered values used by the shared local search index. */
   searchValues?: readonly string[]
-  actions: { canUpdate: boolean; canDelete: boolean }
+  actions: {
+    canUpdate: boolean
+    canDelete: boolean
+    /** Safe channel identity facts used by optional product-owned actions. */
+    channel?: ManagedResourceChannelActionFacts
+  }
+}
+
+export type ManagedResourceChannelActionFacts = {
+  channelId: number
+  channelType: string | number
+  canSyncModels: boolean
+  canOpenModelSync: boolean
+  canConfigureModelFilters: boolean
 }
 
 export type ResourcePage = {
@@ -119,7 +148,7 @@ export class ManagedResourceError extends Error {
     readonly failure: ResourceFailure,
     options?: { privateMessage?: string },
   ) {
-    super(options?.privateMessage ?? failure.code)
+    super(options?.privateMessage ?? (failure.message?.trim() || failure.code))
     this.name = "ManagedResourceError"
   }
 }
@@ -133,6 +162,12 @@ export interface ResourceEditor {
     fieldId: string,
     options?: ResourceOperationOptions,
   ) => Promise<string>
+  /** Loads provider-owned options without coupling the shared editor to a protocol. */
+  loadOptions?: (
+    fieldId: string,
+    values: EditableResourceProjection,
+    options?: ResourceOperationOptions,
+  ) => Promise<readonly ResourceFieldOption[]>
   submit(
     values: EditableResourceProjection,
     options?: ResourceOperationOptions,

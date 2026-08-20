@@ -14,6 +14,7 @@ import {
   type ResourceEditor,
   type ResourceFailure,
   type ResourceFieldDescriptor,
+  type ResourceFieldOption,
   type ResourceListQuery,
   type ResourceOperationOptions,
   type ResourceValidationResult,
@@ -45,6 +46,11 @@ export type NativeResourceEditorDefinition<TCommand> = {
     fieldId: string,
     options?: ResourceOperationOptions,
   ) => Promise<string>
+  loadOptions?: (
+    fieldId: string,
+    values: EditableResourceProjection,
+    options?: ResourceOperationOptions,
+  ) => Promise<readonly ResourceFieldOption[]>
 }
 
 export type NativeResourceCreateSeedBinding = {
@@ -86,6 +92,11 @@ export type NativeResourceKindDefinition<
   ): Promise<TDetail>
   toListFacts(item: TListItem, ref: ManagedResourceRef): ResourceDisplayFacts
   toDetailFacts(detail: TDetail, ref: ManagedResourceRef): ResourceDisplayFacts
+  /** Projects a mutation result into the provider's collection row shape. */
+  toMutationFacts?(
+    detail: TDetail,
+    ref: ManagedResourceRef,
+  ): ResourceDisplayFacts
   createEditor(
     config: TConfig,
     options?: ResourceOperationOptions,
@@ -93,7 +104,10 @@ export type NativeResourceKindDefinition<
   editEditor(
     config: TConfig,
     detail: TDetail,
-  ): NativeResourceEditorDefinition<TUpdateCommand>
+    options?: ResourceOperationOptions,
+  ):
+    | NativeResourceEditorDefinition<TUpdateCommand>
+    | Promise<NativeResourceEditorDefinition<TUpdateCommand>>
   sanitizeEditDetail?(detail: TDetail): TDetail
   create(
     config: TConfig,
@@ -319,14 +333,15 @@ export function defineNativeResourceKind<
           )
         }
 
-        const projectCreatedDetail = (detail: TDetail) => {
-          const ref = refFromDetail(detail)
+        const projectMutationFacts = (
+          detail: TDetail,
+          ref: ManagedResourceRef,
+        ) => {
           try {
-            return assertNativeResourceFacts(
-              definition.toDetailFacts(detail, ref),
-              ref,
-              refBoundary.refsMatch,
-            )
+            const facts = definition.toMutationFacts
+              ? definition.toMutationFacts(detail, ref)
+              : definition.toDetailFacts(detail, ref)
+            return assertNativeResourceFacts(facts, ref, refBoundary.refsMatch)
           } catch (error) {
             if (isNativeResourceBoundaryError(error)) {
               throw unexpectedDefinitionOutput()
@@ -335,23 +350,15 @@ export function defineNativeResourceKind<
           }
         }
 
+        const projectCreatedDetail = (detail: TDetail) =>
+          projectMutationFacts(detail, refFromDetail(detail))
+
         const projectDetailAtRef = (
           detail: TDetail,
           expectedRef: ManagedResourceRef,
         ) => {
           assertDetailIdentity(detail, expectedRef)
-          try {
-            return assertNativeResourceFacts(
-              definition.toDetailFacts(detail, expectedRef),
-              expectedRef,
-              refBoundary.refsMatch,
-            )
-          } catch (error) {
-            if (isNativeResourceBoundaryError(error)) {
-              throw unexpectedDefinitionOutput()
-            }
-            throw error
-          }
+          return projectMutationFacts(detail, expectedRef)
         }
 
         const createEditor = <TCommand>(
@@ -457,18 +464,34 @@ export function defineNativeResourceKind<
             return tracked
           }
 
+          const loadSecretCallback = editorDefinition.loadSecret
+          const loadOptionsCallback = editorDefinition.loadOptions
           return {
             fields: editorDefinition.fields,
             initialValues: editorDefinition.initialValues,
             validate,
-            ...(editorDefinition.loadSecret
+            ...(loadSecretCallback
               ? {
                   loadSecret: (
                     fieldId: string,
-                    loadOptions?: ResourceOperationOptions,
+                    operationOptions?: ResourceOperationOptions,
                   ) =>
                     mapOperationFailure(
-                      () => editorDefinition.loadSecret!(fieldId, loadOptions),
+                      () => loadSecretCallback(fieldId, operationOptions),
+                      mapFailure,
+                    ),
+                }
+              : {}),
+            ...(loadOptionsCallback
+              ? {
+                  loadOptions: (
+                    fieldId: string,
+                    values: EditableResourceProjection,
+                    operationOptions?: ResourceOperationOptions,
+                  ) =>
+                    mapOperationFailure(
+                      () =>
+                        loadOptionsCallback(fieldId, values, operationOptions),
                       mapFailure,
                     ),
                 }
@@ -585,9 +608,12 @@ export function defineNativeResourceKind<
                     ? definition.sanitizeEditDetail(detail)
                     : detail
                   assertDetailIdentity(editorDetail, canonicalRef)
-                  const editorDefinition = definition.editEditor(
+                  const editorDefinition = await definition.editEditor(
                     config,
                     editorDetail,
+                    editorOptions?.signal
+                      ? { signal: editorOptions.signal }
+                      : undefined,
                   )
                   return createEditor(
                     editorDefinition,

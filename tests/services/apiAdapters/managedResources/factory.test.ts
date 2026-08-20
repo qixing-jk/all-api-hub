@@ -289,6 +289,39 @@ describe("defineNativeResourceKind", () => {
     ])
   })
 
+  it("projects provider option loading through the public managed editor seam", async () => {
+    const loadOptions = vi.fn(async (_fieldId, values) => [
+      { value: String(values.name) },
+    ])
+    const createEditor = vi.fn<TestDefinition["createEditor"]>(async () => ({
+      fields: [
+        {
+          fieldId: "name",
+          type: RESOURCE_FIELD_TYPES.Select,
+          options: [],
+          optionLoader: { dependsOn: [] },
+        },
+      ],
+      initialValues: { name: "model-example" },
+      validate: () => ({ valid: true }),
+      buildCommand: (values) => ({ name: String(values.name) }),
+      loadOptions,
+    }))
+    const editor = await (
+      await createHarness({ createEditor }).registration.open()
+    ).openCreateEditor()
+    const signal = new AbortController().signal
+
+    await expect(
+      editor.loadOptions?.("name", editor.initialValues, { signal }),
+    ).resolves.toEqual([{ value: "model-example" }])
+    expect(loadOptions).toHaveBeenCalledWith(
+      "name",
+      { name: "model-example" },
+      { signal },
+    )
+  })
+
   it("projects provider-neutral create seeds through the registration-owned binding", async () => {
     const project = vi.fn((seed) => ({ name: `${seed.name} (seeded)` }))
     const { definition, registration } = createHarness({
@@ -396,6 +429,31 @@ describe("defineNativeResourceKind", () => {
     expect(
       vi.mocked(definition.createEditor).mock.calls[0]?.[1],
     ).not.toHaveProperty("seed")
+  })
+
+  it("awaits provider edit setup and forwards its abort signal", async () => {
+    const editEditor = vi.fn<TestDefinition["editEditor"]>(
+      async (_config, detail) => ({
+        fields: [{ fieldId: "name", type: "text", required: true }],
+        initialValues: { name: detail.name },
+        validate: () => ({ valid: true }),
+        buildCommand: (values) => ({
+          name: String(values.name),
+          visible: detail.settings.visible,
+        }),
+      }),
+    )
+    const { registration } = createHarness({ editEditor })
+    const controller = new AbortController()
+
+    const editor = await (
+      await registration.open()
+    ).openEditEditor(toRef(), { signal: controller.signal })
+
+    expect(editor.initialValues).toEqual({ name: TEST_DETAIL.name })
+    expect(editEditor).toHaveBeenCalledWith({ scope: "scope-a" }, TEST_DETAIL, {
+      signal: controller.signal,
+    })
   })
 
   it("exposes provider-neutral mutation results from the public workspace contract", async () => {

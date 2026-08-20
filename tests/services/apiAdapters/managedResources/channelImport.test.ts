@@ -82,13 +82,13 @@ describe("native managed-channel import", () => {
       managedResourceRegistry,
       "getManagedResourceRegistration",
     ).mockReturnValue({
-      siteType: SITE_TYPES.NEW_API,
+      siteType: SITE_TYPES.VELOERA,
       kind: MANAGED_RESOURCE_KINDS.Channel,
       open: vi.fn(),
     } as unknown as ManagedResourceRegistration)
 
     await expect(
-      openNativeManagedChannelImportSession(SITE_TYPES.NEW_API),
+      openNativeManagedChannelImportSession(SITE_TYPES.VELOERA),
     ).resolves.toBeNull()
   })
 
