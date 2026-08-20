@@ -161,6 +161,7 @@ describe("account site onboarding registry", () => {
       "sub2api",
       "sharedchat",
       "voapi-v2",
+      "v-api",
       "new-api-auth-bundle",
       "compatible-user",
     ])

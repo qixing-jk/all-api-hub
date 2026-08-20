@@ -48,6 +48,24 @@ describe("compatibleUserContentSessionExtractor", () => {
     })
   })
 
+  it("keeps legacy V-API user storage compatible", async () => {
+    localStorage.setItem(
+      "user",
+      JSON.stringify({ id: 42, username: "legacy-user", group: "default" }),
+    )
+
+    await expect(
+      compatibleUserContentSessionExtractor.extract({
+        url: "https://v-api.example.invalid/panel",
+        siteTypeHint: SITE_TYPES.V_API,
+      }),
+    ).resolves.toEqual({
+      userId: "42",
+      user: { id: 42, username: "legacy-user", group: "default" },
+      siteTypeHint: SITE_TYPES.V_API,
+    })
+  })
+
   it("omits siteTypeHint when the explicit site type is unknown", async () => {
     localStorage.setItem(
       "user",
