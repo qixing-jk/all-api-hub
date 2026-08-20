@@ -428,7 +428,8 @@
     "someDeletesFailed_other": "Failed to delete {{count}} channels: {{error}}",
     "syncCompleted": "Model sync completed ({{success}}/{{total}})",
     "syncCompletedRefreshFailed": "Models were synced ({{success}}/{{total}}), but the channel list could not be refreshed. Refresh and try again.",
-    "syncFailed": "Model sync failed: {{error}}"
+    "syncFailed": "Model sync failed: {{error}}",
+    "syncFailedFallback": "The channels could not be synchronized"
   },
   "toolbar": {
     "addChannel": "Add channel",

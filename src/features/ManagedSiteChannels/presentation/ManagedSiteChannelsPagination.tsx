@@ -47,6 +47,7 @@ export function ManagedSiteChannelsPagination({
           onValueChange={(value) =>
             onPaginationChange({
               ...pagination,
+              pageIndex: 0,
               pageSize: Number(value),
             })
           }

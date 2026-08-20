@@ -89,6 +89,7 @@ async function stubManagedSiteImportTargetRoutes(
   context: Parameters<typeof stubNewApiSiteRoutes>[0],
 ) {
   const createPayloads: unknown[] = []
+  let createdChannel: Record<string, unknown> | null = null
 
   await context.route(
     `${MANAGED_SITE_IMPORT_TARGET_ORIGIN}/**`,
@@ -108,7 +109,11 @@ async function stubManagedSiteImportTargetRoutes(
           body: JSON.stringify({
             success: true,
             message: "ok",
-            data: { items: [], total: 0, type_counts: {} },
+            data: {
+              items: createdChannel ? [createdChannel] : [],
+              total: createdChannel ? 1 : 0,
+              type_counts: {},
+            },
           }),
         })
         return
@@ -154,7 +159,19 @@ async function stubManagedSiteImportTargetRoutes(
       }
 
       if (method === "POST" && url.pathname === "/api/channel/") {
-        createPayloads.push(request.postDataJSON())
+        const payload = request.postDataJSON() as {
+          channel?: Record<string, unknown>
+        }
+        createPayloads.push(payload)
+        createdChannel = {
+          id: 91,
+          status: 1,
+          priority: 0,
+          weight: 0,
+          group: "default",
+          models: "gpt-4o-mini,gpt-4.1-mini",
+          ...payload.channel,
+        }
         await route.fulfill({
           status: 200,
           contentType: "application/json",

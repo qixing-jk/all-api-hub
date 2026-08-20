@@ -18,6 +18,7 @@ import {
   getInterceptedOctopusCookieHeader,
   getInterceptedOctopusRootRequestCount,
   getInterceptedOctopusStatusRequestCount,
+  NEW_API_CREATED_ID,
   openInterceptedAxonHubManagedSiteChannels,
   openInterceptedNewApiManagedSiteChannels,
   openInterceptedOctopusManagedSiteChannels,
@@ -194,7 +195,7 @@ test("runs New API native CRUD through the shared UI", async ({
   expect(getInterceptedNewApiDeleteRequestCount()).toBe(1)
   const updatePayload = getInterceptedNewApiUpdatePayload()
   expect(updatePayload).toMatchObject({
-    id: 303,
+    id: NEW_API_CREATED_ID,
     name: `${runPrefix} CRUD edited`,
     models: "gpt-4o-mini,gpt-4.1-mini",
   })

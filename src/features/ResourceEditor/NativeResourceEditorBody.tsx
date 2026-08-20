@@ -137,18 +137,22 @@ export function NativeResourceEditorBody<TSection extends string>({
     () => resolveResourceFieldPolicy(descriptors, policy, sectionOrder).fields,
     [descriptors, policy, sectionOrder],
   )
-  const fields = resolvedFields.filter(
-    ({ presentation }) => presentation.visibleWhen?.(values) ?? true,
+  const fields = useMemo(
+    () =>
+      resolvedFields.filter(
+        ({ presentation }) => presentation.visibleWhen?.(values) ?? true,
+      ),
+    [resolvedFields, values],
+  )
+  const activeDescriptors = useMemo(
+    () => fields.map(({ descriptor }) => descriptor),
+    [fields],
   )
   const {
     states: optionStates,
     load,
     retry,
-  } = useLoadedResourceOptions(
-    fields.map(({ descriptor }) => descriptor),
-    values,
-    onLoadOptions,
-  )
+  } = useLoadedResourceOptions(activeDescriptors, values, onLoadOptions)
   const {
     selectOptionsByFieldId,
     selectTokenRegistriesByFieldId,

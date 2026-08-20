@@ -370,6 +370,35 @@ const openRealAxonHubEditors = async () => {
 }
 
 describe("ManagedResourceEditorBody", () => {
+  it("falls back to the native control when a channel role cannot render the descriptor", () => {
+    render(
+      <ManagedResourceEditorBody
+        t={t}
+        mode={MANAGED_RESOURCE_EDITOR_MODES.Edit}
+        descriptors={[{ fieldId: "mismatched-type", type: "text" }]}
+        policy={{
+          fields: [
+            {
+              fieldId: "mismatched-type",
+              section: "basic",
+              order: 1,
+              renderer: "text",
+              resolveLabel: () => "Fallback channel type",
+              channelFieldRole: MANAGED_RESOURCE_CHANNEL_FIELD_ROLES.Type,
+            },
+          ],
+          hiddenFields: [],
+        }}
+        values={{ "mismatched-type": "provider-owned-value" }}
+        onValueChange={vi.fn()}
+      />,
+    )
+
+    expect(
+      screen.getByRole("textbox", { name: "Fallback channel type" }),
+    ).toHaveValue("provider-owned-value")
+  })
+
   it("routes New API native fields through the shared channel controls", () => {
     const policy = getManagedResourceFieldPolicy(
       SITE_TYPES.NEW_API,

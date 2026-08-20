@@ -428,7 +428,8 @@
     "someDeletesFailed_other": "Fehler beim Löschen von {{count}} Kanälen: {{error}}",
     "syncCompleted": "Modellsynchronisierung abgeschlossen ({{success}}/{{total}})",
     "syncCompletedRefreshFailed": "Die Modelle wurden synchronisiert ({{success}}/{{total}}), aber die Kanalliste konnte nicht aktualisiert werden. Aktualisieren Sie die Liste und versuchen Sie es erneut.",
-    "syncFailed": "Modellsynchronisierung fehlgeschlagen: {{error}}"
+    "syncFailed": "Modellsynchronisierung fehlgeschlagen: {{error}}",
+    "syncFailedFallback": "Die Kanäle konnten nicht synchronisiert werden"
   },
   "toolbar": {
     "addChannel": "Kanal hinzufügen",

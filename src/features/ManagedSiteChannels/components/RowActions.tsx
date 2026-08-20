@@ -47,6 +47,8 @@ export type RowActionsProps = {
     trigger: string
     edit: string
     delete: string
+    filters?: string
+    sync?: string
   }
 }
 
@@ -136,7 +138,10 @@ export default function RowActions({
               <DropdownMenuSeparator />
             ) : null}
             {canFilter ? (
-              <DropdownMenuItem onClick={() => onFilters(rowKey)}>
+              <DropdownMenuItem
+                data-testid={testIds.filters}
+                onClick={() => onFilters(rowKey)}
+              >
                 {labels.filters}
               </DropdownMenuItem>
             ) : null}
@@ -147,6 +152,7 @@ export default function RowActions({
             ) : null}
             {canSync ? (
               <DropdownMenuItem
+                data-testid={testIds.sync}
                 onClick={() => void handleSync()}
                 disabled={isSyncing}
               >

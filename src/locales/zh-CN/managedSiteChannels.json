@@ -421,7 +421,8 @@
     "someDeletesFailed": "删除 {{count}} 个渠道失败：{{error}}",
     "syncCompleted": "模型同步完成（{{success}}/{{total}}）",
     "syncCompletedRefreshFailed": "模型已同步（{{success}}/{{total}}），但渠道列表刷新失败。请刷新后重试。",
-    "syncFailed": "模型同步失败：{{error}}"
+    "syncFailed": "模型同步失败：{{error}}",
+    "syncFailedFallback": "无法同步渠道"
   },
   "toolbar": {
     "addChannel": "新增渠道",

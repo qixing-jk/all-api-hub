@@ -426,7 +426,8 @@
     "someDeletesFailed_other": "Xóa {{count}} kênh thất bại: {{error}}",
     "syncCompleted": "Đồng bộ mô hình hoàn tất ({{success}}/{{total}})",
     "syncCompletedRefreshFailed": "Đã đồng bộ mô hình ({{success}}/{{total}}), nhưng không thể làm mới danh sách kênh. Hãy làm mới rồi thử lại.",
-    "syncFailed": "Đồng bộ mô hình thất bại: {{error}}"
+    "syncFailed": "Đồng bộ mô hình thất bại: {{error}}",
+    "syncFailedFallback": "Không thể đồng bộ các kênh"
   },
   "toolbar": {
     "addChannel": "Thêm kênh",

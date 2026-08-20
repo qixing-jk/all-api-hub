@@ -16,9 +16,11 @@ import type { ManagedResourceKind } from "~/services/accountSiteDefinitions/cont
 import {
   MANAGED_RESOURCE_FAILURE_CODES,
   ManagedResourceError,
+  type EditableResourceProjection,
   type ResourceEditor,
   type ResourceFieldIssue,
   type ResourceFieldValue,
+  type ResourceOperationOptions,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 import {
   assertManagedSiteMutationResult,
@@ -37,6 +39,11 @@ export interface ManagedResourceCreateDialogProps {
   editor: ResourceEditor
   showModelPrefillWarning?: boolean
   advisoryWarning?: ChannelDialogAdvisoryWarning | null
+  runRead?: <T>(
+    read: () => Promise<T>,
+    label: string,
+    signal?: AbortSignal,
+  ) => Promise<T>
   onClose: () => void
   onCloseComplete: () => void
   onSuccess: (result: {
@@ -54,6 +61,7 @@ export function ManagedResourceCreateDialog({
   editor,
   showModelPrefillWarning = false,
   advisoryWarning,
+  runRead,
   onClose,
   onCloseComplete,
   onSuccess,
@@ -77,6 +85,22 @@ export function ManagedResourceCreateDialog({
     feedback?.kind === "failed" && feedback.fieldIssues
       ? feedback.fieldIssues
       : []
+  const loadOptions = useMemo(() => {
+    if (!editor.loadOptions) return undefined
+    const editorOptionLoader = editor.loadOptions
+    return async (
+      fieldId: string,
+      currentValues: EditableResourceProjection,
+      options?: ResourceOperationOptions,
+    ) =>
+      runRead
+        ? await runRead(
+            () => editorOptionLoader(fieldId, currentValues, options),
+            t("channelDialog:title.add"),
+            options?.signal,
+          )
+        : await editorOptionLoader(fieldId, currentValues, options)
+  }, [editor.loadOptions, runRead, t])
 
   useEffect(() => {
     setValues(editor.initialValues)
@@ -225,7 +249,7 @@ export function ManagedResourceCreateDialog({
           disabled={isSaving || feedback?.kind === "uncertain"}
           showModelPrefillWarning={showModelPrefillWarning}
           onValueChange={updateValue}
-          onLoadOptions={editor.loadOptions}
+          onLoadOptions={loadOptions}
         />
       ) : null}
     </ChannelEditorShell>

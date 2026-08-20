@@ -158,12 +158,17 @@ describe("ManagedResourceCreateDialog", () => {
 
   it("forwards the provider option loader to the shared editor body", async () => {
     const loadOptions = vi.fn().mockResolvedValue([{ value: "model-example" }])
+    const runRead = vi.fn(
+      async (read: () => Promise<any>, _label: string, _signal?: AbortSignal) =>
+        await read(),
+    )
     render(
       <ManagedResourceCreateDialog
         isOpen
         siteType={SITE_TYPES.AXON_HUB}
         kind={MANAGED_RESOURCE_KINDS.Channel}
         editor={createEditor(vi.fn(), { loadOptions })}
+        runRead={runRead}
         onClose={vi.fn()}
         onCloseComplete={vi.fn()}
         onSuccess={vi.fn()}
@@ -172,9 +177,16 @@ describe("ManagedResourceCreateDialog", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Load native options" }))
     await waitFor(() =>
-      expect(loadOptions).toHaveBeenCalledWith("name", {
-        name: "Imported channel",
-      }),
+      expect(loadOptions).toHaveBeenCalledWith(
+        "name",
+        { name: "Imported channel" },
+        undefined,
+      ),
+    )
+    expect(runRead).toHaveBeenCalledWith(
+      expect.any(Function),
+      "channelDialog:title.add",
+      undefined,
     )
   })
 

@@ -23,7 +23,11 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 
-import type { ManagedChannelsRowViewModel } from "../presentation/contracts"
+import {
+  MANAGED_CHANNELS_DELETE_RESULT_STATUSES,
+  type ManagedChannelsDeleteResultStatus,
+  type ManagedChannelsRowViewModel,
+} from "../presentation/contracts"
 import {
   MANAGED_RESOURCE_EDITOR_MODES,
   type ManagedResourceEditorMode,
@@ -47,7 +51,7 @@ import {
 
 type DeleteResult = {
   rowKey: string
-  status: "success" | "failed" | "uncertain"
+  status: ManagedChannelsDeleteResultStatus
   resultKey: string
 }
 
@@ -644,7 +648,7 @@ export function useManagedResourceMutationController({
             switch (mutationResult.outcome) {
               case MANAGED_SITE_MUTATION_OUTCOMES.Succeeded:
                 return {
-                  status: "success",
+                  status: MANAGED_CHANNELS_DELETE_RESULT_STATUSES.Success,
                   locallyConfirmed: canAcceptDeleteEffectsLocally(
                     ref,
                     mutationResult.confirmedEffects,
@@ -652,13 +656,13 @@ export function useManagedResourceMutationController({
                 } satisfies DeleteExecutionResult
               case MANAGED_SITE_MUTATION_OUTCOMES.Rejected:
                 return {
-                  status: "failed",
+                  status: MANAGED_CHANNELS_DELETE_RESULT_STATUSES.Failed,
                   locallyConfirmed: true,
                 } satisfies DeleteExecutionResult
               case MANAGED_SITE_MUTATION_OUTCOMES.Partial:
               case MANAGED_SITE_MUTATION_OUTCOMES.Uncertain:
                 return {
-                  status: "uncertain",
+                  status: MANAGED_CHANNELS_DELETE_RESULT_STATUSES.Uncertain,
                   locallyConfirmed: false,
                 } satisfies DeleteExecutionResult
             }
@@ -682,7 +686,10 @@ export function useManagedResourceMutationController({
             }
 
             const { locallyConfirmed, status } = outcome.value
-            if (status === "success" && locallyConfirmed) {
+            if (
+              status === MANAGED_CHANNELS_DELETE_RESULT_STATUSES.Success &&
+              locallyConfirmed
+            ) {
               locallyConfirmedSuccessIndexes.add(index)
             }
             results.push({
@@ -726,7 +733,9 @@ export function useManagedResourceMutationController({
           let deletionAccepted = false
           if (canAcceptDeletionResults) {
             const successfulTargets = resolvedTargets.filter(
-              (_, index) => results[index]?.status === "success",
+              (_, index) =>
+                results[index]?.status ===
+                MANAGED_CHANNELS_DELETE_RESULT_STATUSES.Success,
             )
             try {
               deletionAccepted =
@@ -749,7 +758,8 @@ export function useManagedResourceMutationController({
           })
           deleteSession.current = null
           const successCount = results.filter(
-            ({ status }) => status === "success",
+            ({ status }) =>
+              status === MANAGED_CHANNELS_DELETE_RESULT_STATUSES.Success,
           ).length
           const failureCount = results.length - successCount
           analyticsCompletion?.complete(

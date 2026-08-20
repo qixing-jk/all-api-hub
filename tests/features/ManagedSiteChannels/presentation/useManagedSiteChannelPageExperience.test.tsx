@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { useManagedSiteChannelPageExperience } from "~/features/ManagedSiteChannels/presentation/useManagedSiteChannelPageExperience"
@@ -53,6 +53,10 @@ function Fixture({ isLoadedEmpty = true }: { isLoadedEmpty?: boolean }) {
 }
 
 describe("managed-site channel page experience", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
   it("combines console links and prioritized import recovery actions", async () => {
     const user = userEvent.setup()
     render(<Fixture />)
@@ -89,7 +93,6 @@ describe("managed-site channel page experience", () => {
   })
 
   it("does not show import guidance for a filtered empty state", async () => {
-    mocks.getAllAccounts.mockClear()
     render(<Fixture isLoadedEmpty={false} />)
 
     expect(

@@ -83,7 +83,7 @@ export function useManagedSiteChannelModelSync({
             }),
         )
         if (!response?.success) {
-          throw new Error(response?.error || "Failed to sync channels")
+          throw new Error(response?.error || t("toasts.syncFailedFallback"))
         }
 
         const successCount =

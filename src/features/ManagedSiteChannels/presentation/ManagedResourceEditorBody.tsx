@@ -11,7 +11,10 @@ import type {
   ResourceOperationOptions,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 
-import { ManagedResourceChannelField } from "./ManagedResourceChannelField"
+import {
+  canRenderManagedResourceChannelField,
+  ManagedResourceChannelField,
+} from "./ManagedResourceChannelField"
 import {
   MANAGED_RESOURCE_SECTION_ORDER,
   MANAGED_RESOURCE_SECTIONS,
@@ -138,7 +141,12 @@ export function ManagedResourceEditorBody({
         optionControl,
       }) => {
         const fieldId = descriptor.fieldId
-        if (!channelFieldRoles.get(fieldId)) return undefined
+        const channelFieldRole = channelFieldRoles.get(fieldId)
+        if (
+          !channelFieldRole ||
+          !canRenderManagedResourceChannelField(channelFieldRole, descriptor)
+        )
+          return undefined
         return (
           <ManagedResourceChannelField
             key={fieldId}

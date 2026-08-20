@@ -5,6 +5,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
 import { newApiManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/newApiMigration"
 import {
+  MANAGED_SITE_MUTATION_COMPLETIONS,
   MANAGED_SITE_MUTATION_EFFECT_KINDS,
   MANAGED_SITE_MUTATION_OUTCOMES,
 } from "~/services/managedSites/mutations"
@@ -182,7 +183,7 @@ describe("New API managed-site migration capability", () => {
             resourceKind: MANAGED_RESOURCE_KINDS.Channel,
           },
         ],
-        completion: "uncertain",
+        completion: MANAGED_SITE_MUTATION_COMPLETIONS.Uncertain,
         diagnostic: { message: "identity unresolved" },
       },
       expected: { status: "uncertain" },

@@ -18,6 +18,7 @@ const {
   trackerCompleteMock,
   toastErrorMock,
   toastSuccessMock,
+  translationMock,
   withProtectionBypassUserCommandMock,
 } = vi.hoisted(() => ({
   sendModelSyncMessageMock: vi.fn(),
@@ -25,6 +26,7 @@ const {
   trackerCompleteMock: vi.fn(),
   toastErrorMock: vi.fn(),
   toastSuccessMock: vi.fn(),
+  translationMock: vi.fn((key: string) => key),
   withProtectionBypassUserCommandMock: vi.fn(),
 }))
 
@@ -34,7 +36,7 @@ vi.mock("react-hot-toast", () => ({
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
-    t: (key: string) => key,
+    t: translationMock,
   }),
 }))
 
@@ -117,6 +119,9 @@ describe("useManagedSiteChannelModelSync", () => {
     await act(async () => syncPromise)
 
     expect(toastErrorMock).toHaveBeenCalledWith("toasts.syncFailed")
+    expect(translationMock).toHaveBeenCalledWith("toasts.syncFailed", {
+      error: "provider unavailable",
+    })
     expect(trackerCompleteMock).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Failure,
       expect.objectContaining({
@@ -124,6 +129,23 @@ describe("useManagedSiteChannelModelSync", () => {
       }),
     )
     expect(result.current.syncingChannelIds).toEqual(new Set())
+  })
+
+  it("uses localized fallback copy when model sync returns no error", async () => {
+    sendModelSyncMessageMock.mockResolvedValue({ success: false })
+    translationMock.mockImplementation((key: string) =>
+      key === "toasts.syncFailedFallback" ? "Localized sync fallback" : key,
+    )
+    const { result } = renderHook(() =>
+      useManagedSiteChannelModelSync({ siteType: SITE_TYPES.NEW_API }),
+    )
+
+    await act(async () => result.current.syncChannels([42], analyticsContext))
+
+    expect(translationMock).toHaveBeenCalledWith("toasts.syncFailedFallback")
+    expect(translationMock).toHaveBeenCalledWith("toasts.syncFailed", {
+      error: "Localized sync fallback",
+    })
   })
 
   it("syncs eligible native channel ids and reports refreshed models", async () => {
@@ -164,6 +186,10 @@ describe("useManagedSiteChannelModelSync", () => {
       },
     )
     expect(onModelsChanged).toHaveBeenCalledWith(new Map([[42, "model-a"]]))
+    expect(translationMock).toHaveBeenCalledWith("toasts.syncCompleted", {
+      success: 1,
+      total: 1,
+    })
     expect(trackerCompleteMock).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Success,
       expect.objectContaining({

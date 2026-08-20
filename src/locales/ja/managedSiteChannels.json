@@ -426,7 +426,8 @@
     "someDeletesFailed_other": "{{count}} 個のチャネル削除に失敗しました: {{error}}",
     "syncCompleted": "モデル同期が完了しました ({{success}}/{{total}})",
     "syncCompletedRefreshFailed": "モデルは同期されました（{{success}}/{{total}}）が、チャネル一覧を更新できませんでした。更新してもう一度お試しください。",
-    "syncFailed": "モデル同期に失敗しました: {{error}}"
+    "syncFailed": "モデル同期に失敗しました: {{error}}",
+    "syncFailedFallback": "チャネルを同期できませんでした"
   },
   "toolbar": {
     "addChannel": "チャネルを追加",

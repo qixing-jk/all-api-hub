@@ -1,5 +1,7 @@
 import { useChannelDialogContext } from "~/components/dialogs/ChannelDialog/context/ChannelDialogContext"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { ManagedResourceCreateDialog } from "~/features/ManagedSiteChannels/components/ManagedResourceCreateDialog"
+import { useManagedResourceInteraction } from "~/features/ManagedSiteChannels/providers/useManagedResourceInteraction"
 import AddTokenDialog from "~/features/TokenProvisioning/components/AddTokenDialog"
 import { buildDefaultTokenCreatePrefill } from "~/features/TokenProvisioning/components/AddTokenDialog/defaultTokenCreatePrefill"
 
@@ -9,6 +11,7 @@ import { ChannelDialog } from "./ChannelDialog"
  * Global ChannelDialog container that can be triggered from anywhere
  */
 export function ChannelDialogContainer() {
+  const { preferences, managedSiteType } = useUserPreferencesContext()
   const {
     state,
     defaultTokenQuickCreateDialog,
@@ -25,6 +28,10 @@ export function ChannelDialogContainer() {
       )
     : undefined
   const nativeCreate = state.nativeCreate
+  const { runRead, verificationDialog } = useManagedResourceInteraction({
+    siteType: nativeCreate?.siteType ?? managedSiteType,
+    newApiConfig: preferences.newApi,
+  })
 
   return (
     <>
@@ -52,6 +59,7 @@ export function ChannelDialogContainer() {
           editor={nativeCreate.editor}
           showModelPrefillWarning={nativeCreate.showModelPrefillWarning}
           advisoryWarning={nativeCreate.advisoryWarning}
+          runRead={runRead}
           onClose={closeDialog}
           onCloseComplete={() =>
             completeNativeDialogClose(nativeCreate.sessionId)
@@ -59,6 +67,7 @@ export function ChannelDialogContainer() {
           onSuccess={handleSuccess}
         />
       ) : null}
+      {verificationDialog}
       {defaultTokenQuickCreateDialog.account &&
       defaultTokenQuickCreatePrefill ? (
         <AddTokenDialog

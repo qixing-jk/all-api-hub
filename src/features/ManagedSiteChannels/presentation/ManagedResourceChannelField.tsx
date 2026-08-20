@@ -107,6 +107,27 @@ type ManagedResourceChannelFieldProps = {
   onSecretInput: (fieldId: string, value: string) => void
 }
 
+/** Returns whether a channel-specific control can faithfully render the descriptor. */
+export function canRenderManagedResourceChannelField(
+  role: ManagedResourceFieldPresentation["channelFieldRole"],
+  descriptor: ResourceFieldDescriptor,
+) {
+  switch (role) {
+    case MANAGED_RESOURCE_CHANNEL_FIELD_ROLES.Name:
+    case MANAGED_RESOURCE_CHANNEL_FIELD_ROLES.BaseUrl:
+      return descriptor.type === MANAGED_RESOURCE_FIELD_TYPES.Text
+    case MANAGED_RESOURCE_CHANNEL_FIELD_ROLES.Type:
+    case MANAGED_RESOURCE_CHANNEL_FIELD_ROLES.Status:
+      return descriptor.type === MANAGED_RESOURCE_FIELD_TYPES.Select
+    case MANAGED_RESOURCE_CHANNEL_FIELD_ROLES.Models:
+      return descriptor.type === MANAGED_RESOURCE_FIELD_TYPES.MultiSelect
+    case MANAGED_RESOURCE_CHANNEL_FIELD_ROLES.Secret:
+      return descriptor.type === MANAGED_RESOURCE_FIELD_TYPES.Secret
+    default:
+      return false
+  }
+}
+
 /** Renders channel-semantic field roles while the parent owns secret lifecycle state. */
 export function ManagedResourceChannelField({
   t,

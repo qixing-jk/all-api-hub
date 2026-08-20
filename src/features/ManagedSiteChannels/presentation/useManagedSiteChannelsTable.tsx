@@ -22,7 +22,9 @@ import {
   getManagedSiteChannelRowActionsButtonTestId,
   getManagedSiteChannelRowDeleteActionTestId,
   getManagedSiteChannelRowEditActionTestId,
+  getManagedSiteChannelRowFiltersActionTestId,
   getManagedSiteChannelRowSelectTestId,
+  getManagedSiteChannelRowSyncActionTestId,
 } from "../testIds"
 import type {
   ManagedChannelsCallbacks,
@@ -253,6 +255,12 @@ export function useManagedSiteChannelsTable({
                       row.original.testToken,
                     ),
                     delete: getManagedSiteChannelRowDeleteActionTestId(
+                      row.original.testToken,
+                    ),
+                    filters: getManagedSiteChannelRowFiltersActionTestId(
+                      row.original.testToken,
+                    ),
+                    sync: getManagedSiteChannelRowSyncActionTestId(
                       row.original.testToken,
                     ),
                   }}

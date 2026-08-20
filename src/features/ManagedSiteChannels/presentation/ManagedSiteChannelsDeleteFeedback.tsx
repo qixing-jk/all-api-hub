@@ -7,6 +7,7 @@ import type {
   ManagedChannelsDeleteState,
   ManagedChannelsLabels,
 } from "./contracts"
+import { MANAGED_CHANNELS_DELETE_RESULT_STATUSES } from "./contracts"
 
 type ManagedSiteChannelsDeleteFeedbackProps = {
   deleteState: ManagedChannelsDeleteState
@@ -75,9 +76,11 @@ export function ManagedSiteChannelsDeleteFeedback({
                 </span>
                 <Badge
                   variant={
-                    result.status === "success"
+                    result.status ===
+                    MANAGED_CHANNELS_DELETE_RESULT_STATUSES.Success
                       ? "success"
-                      : result.status === "failed"
+                      : result.status ===
+                          MANAGED_CHANNELS_DELETE_RESULT_STATUSES.Failed
                         ? "danger"
                         : "warning"
                   }
@@ -87,7 +90,9 @@ export function ManagedSiteChannelsDeleteFeedback({
               </li>
             ))}
           </ol>
-          {deleteState.requiresRefresh ? renderRefreshAction() : null}
+          {deleteState.requiresRefresh && !deleteState.failure
+            ? renderRefreshAction()
+            : null}
         </section>
       ) : null}
     </>

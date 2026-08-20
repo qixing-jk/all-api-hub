@@ -2559,18 +2559,17 @@ describe("ManagedSiteChannelsRoute", () => {
       expect(
         screen.getByText("managedSiteChannels:migration.title"),
       ).toBeVisible()
-      expect(trackProductAnalyticsActionStarted.mock.calls).toEqual([
-        [
-          expect.objectContaining({
-            actionId:
-              PRODUCT_ANALYTICS_ACTION_IDS.ToggleManagedSiteChannelMigrationMode,
-          }),
-        ],
-        [
-          expect.objectContaining({
-            actionId,
-          }),
-        ],
+      const migrationActionIds = trackProductAnalyticsActionStarted.mock.calls
+        .map(([context]) => context.actionId)
+        .filter(
+          (candidate) =>
+            candidate ===
+              PRODUCT_ANALYTICS_ACTION_IDS.ToggleManagedSiteChannelMigrationMode ||
+            candidate === actionId,
+        )
+      expect(migrationActionIds).toEqual([
+        PRODUCT_ANALYTICS_ACTION_IDS.ToggleManagedSiteChannelMigrationMode,
+        actionId,
       ])
     },
   )

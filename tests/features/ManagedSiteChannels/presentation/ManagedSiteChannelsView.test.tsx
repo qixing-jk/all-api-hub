@@ -10,6 +10,7 @@ import type {
   ManagedChannelsLabels,
   ManagedChannelsPresentationState,
 } from "~/features/ManagedSiteChannels/presentation/contracts"
+import { MANAGED_SITE_CHANNELS_TEST_IDS } from "~/features/ManagedSiteChannels/testIds"
 import { ManagedSiteChannelsView } from "~/features/ManagedSiteChannels/presentation/ManagedSiteChannelsView"
 import { compareManagedSiteChannelStatusValues } from "~/features/ManagedSiteChannels/presentation/useManagedSiteChannelsTable"
 
@@ -681,7 +682,7 @@ describe("ManagedSiteChannelsView", () => {
     render(
       <ManagedSiteChannelsView
         {...commonProps}
-        state={createState()}
+        state={createState({ pagination: { pageIndex: 3, pageSize: 10 } })}
         callbacks={createCallbacks({ onPaginationChange })}
       />,
     )
@@ -811,6 +812,44 @@ describe("ManagedSiteChannelsView", () => {
     expect(onRefresh).not.toHaveBeenCalled()
   })
 
+  it("renders one refresh action when delete results and a failure coexist", () => {
+    render(
+      <ManagedSiteChannelsView
+        {...commonProps}
+        state={createState({
+          deleteState: {
+            isOpen: false,
+            isWorking: false,
+            rowKeys: [],
+            results: [
+              {
+                rowKey: "opaque:uncertain",
+                displayLabel: "Example uncertain",
+                status: "uncertain",
+                resultKey: "transport-lost",
+              },
+            ],
+            requiresRefresh: true,
+            failure: {
+              category: "Delete state uncertain",
+              message: "Refresh before continuing.",
+            },
+          },
+        })}
+        callbacks={createCallbacks()}
+      />,
+    )
+
+    expect(
+      screen.getAllByRole("button", { name: "Refresh channels" }),
+    ).toHaveLength(1)
+    expect(
+      within(screen.getByRole("alert")).getByRole("button", {
+        name: "Refresh channels",
+      }),
+    ).toBeVisible()
+  })
+
   it("offers delete failure refresh recovery only when a fresh read is required", async () => {
     const user = userEvent.setup()
     const onRefresh = vi.fn()
@@ -934,7 +973,9 @@ describe("ManagedSiteChannelsView", () => {
     expect(screen.getAllByRole("row")[1]).toHaveTextContent("Fast channel")
     expect(screen.getAllByRole("row")[2]).toHaveTextContent("Missing latency")
 
-    await user.click(screen.getAllByRole("button", { name: "Status" })[0])
+    await user.click(
+      screen.getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.statusFilterTrigger),
+    )
     await user.click(screen.getByRole("checkbox", { name: "Enabled" }))
     expect(onStatusFilterChange).toHaveBeenCalledWith(["1"])
   })
@@ -981,7 +1022,9 @@ describe("ManagedSiteChannelsView", () => {
       />,
     )
 
-    await user.click(screen.getAllByRole("button", { name: "Status" })[0])
+    await user.click(
+      screen.getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.statusFilterTrigger),
+    )
     const unknownStatus = screen.getByRole("checkbox", {
       name: "future-status",
     })

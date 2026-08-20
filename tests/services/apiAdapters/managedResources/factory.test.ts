@@ -290,9 +290,13 @@ describe("defineNativeResourceKind", () => {
   })
 
   it("projects provider option loading through the public managed editor seam", async () => {
-    const loadOptions = vi.fn(async (_fieldId, values) => [
-      { value: String(values.name) },
-    ])
+    const loadOptions = vi.fn<
+      NonNullable<
+        Awaited<
+          ReturnType<NonNullable<TestDefinition["createEditor"]>>
+        >["loadOptions"]
+      >
+    >(async (_fieldId, values) => [{ value: String(values.name) }])
     const createEditor = vi.fn<TestDefinition["createEditor"]>(async () => ({
       fields: [
         {

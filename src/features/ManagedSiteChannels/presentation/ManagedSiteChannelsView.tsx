@@ -303,6 +303,9 @@ export function ManagedSiteChannelsView({
                   <Button
                     variant="outline"
                     leftIcon={<Filter className="h-4 w-4" />}
+                    data-testid={
+                      MANAGED_SITE_CHANNELS_TEST_IDS.statusFilterTrigger
+                    }
                   >
                     {labels.status}
                     {state.statusFilterValues.length > 0 ? (

@@ -296,7 +296,7 @@ const fieldDescriptors = (
     required: detail === undefined,
     secretState:
       detail === undefined
-        ? "unavailable"
+        ? MANAGED_RESOURCE_SECRET_STATES.Unavailable
         : editorSecretStates.get(detail) ?? getInventorySecretState(detail.key),
     canLoadSecret: detail !== undefined && canLoadSecret,
     canReplace: true,

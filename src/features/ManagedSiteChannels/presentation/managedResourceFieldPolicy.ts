@@ -29,8 +29,10 @@ import {
 } from "~/services/accountSiteDefinitions/contracts"
 import {
   MANAGED_RESOURCE_FIELD_TYPES,
+  MANAGED_RESOURCE_STATUSES,
   type ResourceFieldDescriptor,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
+import { CHANNEL_STATUS } from "~/types/newApi"
 
 export const MANAGED_RESOURCE_EDITOR_MODES = {
   Create: "create",
@@ -159,7 +161,7 @@ const axonHubStatusOptionLabelResolvers = {
     t("managedSiteChannels:editor.options.status.disabled"),
   [AXON_HUB_CHANNEL_STATUS.ARCHIVED]: (t: TFunction) =>
     t("managedSiteChannels:editor.options.status.archived"),
-  "auto-disabled": (t: TFunction) =>
+  [MANAGED_RESOURCE_STATUSES.AutoDisabled]: (t: TFunction) =>
     t("managedSiteChannels:statusLabels.autoDisabled"),
 } as const
 
@@ -353,10 +355,14 @@ const newApiTypeOptionLabelResolvers = Object.fromEntries(
 ) satisfies Readonly<Record<string, ManagedResourceTextResolver>>
 
 const newApiStatusOptionLabelResolvers = {
-  "0": (t: TFunction) => t("managedSiteChannels:statusLabels.unknown"),
-  "1": (t: TFunction) => t("managedSiteChannels:statusLabels.enabled"),
-  "2": (t: TFunction) => t("managedSiteChannels:statusLabels.manualPause"),
-  "3": (t: TFunction) => t("managedSiteChannels:statusLabels.autoDisabled"),
+  [String(CHANNEL_STATUS.Unknown)]: (t: TFunction) =>
+    t("managedSiteChannels:statusLabels.unknown"),
+  [String(CHANNEL_STATUS.Enable)]: (t: TFunction) =>
+    t("managedSiteChannels:statusLabels.enabled"),
+  [String(CHANNEL_STATUS.ManuallyDisabled)]: (t: TFunction) =>
+    t("managedSiteChannels:statusLabels.manualPause"),
+  [String(CHANNEL_STATUS.AutoDisabled)]: (t: TFunction) =>
+    t("managedSiteChannels:statusLabels.autoDisabled"),
 } as const satisfies Readonly<Record<string, ManagedResourceTextResolver>>
 
 const newApiFields = [

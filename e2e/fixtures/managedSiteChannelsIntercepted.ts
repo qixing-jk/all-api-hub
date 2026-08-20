@@ -20,7 +20,7 @@ const INTERCEPTED_AXON_HUB_ORIGIN = "https://axonhub.example.invalid"
 const INTERCEPTED_OCTOPUS_ORIGIN = "https://octopus.example.invalid"
 const INTERCEPTED_OCTOPUS_COOKIE = "auth=octopus-cookie-session"
 
-const NEW_API_CREATED_ID = 303
+export const NEW_API_CREATED_ID = 303
 
 const AXON_HUB_PRIMARY_ID = "gid://axonhub/Channel/opaque-primary"
 const AXON_HUB_SECONDARY_ID = "gid://axonhub/Channel/opaque-secondary"

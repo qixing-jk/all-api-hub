@@ -234,6 +234,8 @@ const buildManagedSiteServiceMock = (
   ...overrides,
 })
 
+const nativeOpenCreateEditorMock = vi.fn()
+
 const renderChannelDialogHook = async () => {
   const rendered = renderHook(() => ({
     dialog: useChannelDialog(),
@@ -276,6 +278,44 @@ describe("useChannelDialog", () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+
+    nativeOpenCreateEditorMock.mockImplementation(async (options: any) => ({
+      fields: [],
+      initialValues: { name: options.seed?.name ?? "Imported channel" },
+      validate: vi.fn(() => ({ valid: true as const })),
+      submit: vi.fn(),
+    }))
+    registrationSpy = vi
+      .spyOn(nativeResourceRegistry, "getManagedResourceRegistration")
+      .mockImplementation((siteType, kind) => {
+        if (
+          siteType !== SITE_TYPES.NEW_API &&
+          siteType !== SITE_TYPES.SUB2API
+        ) {
+          return null
+        }
+
+        return {
+          siteType,
+          kind,
+          createSeedKinds: [
+            MANAGED_RESOURCE_CREATE_SEED_KINDS.ManagedChannelImport,
+          ],
+          open: vi.fn(async () => ({
+            capabilities: {
+              canSearch: true,
+              canCreate: true,
+              canUpdate: true,
+              canDelete: true,
+            },
+            list: vi.fn(),
+            get: vi.fn(),
+            openCreateEditor: nativeOpenCreateEditorMock,
+            openEditEditor: vi.fn(),
+            delete: vi.fn(),
+          })),
+        }
+      })
 
     mockToastLoading.mockReturnValue("toast-id")
     getAccountByIdSpy.mockResolvedValue(buildSiteAccount())
@@ -1183,6 +1223,8 @@ describe("useChannelDialog", () => {
         }),
     )
     const mockService = buildManagedSiteServiceMock({
+      siteType: SITE_TYPES.SUB2API,
+      messagesKey: "sub2api",
       prepareChannelFormData: prepareChannelFormDataMock,
     })
     getManagedSiteServiceSpy.mockResolvedValue(
@@ -1289,6 +1331,8 @@ describe("useChannelDialog", () => {
         }),
     )
     const mockService = buildManagedSiteServiceMock({
+      siteType: SITE_TYPES.SUB2API,
+      messagesKey: "sub2api",
       prepareChannelFormData: prepareChannelFormDataMock,
     })
     getManagedSiteServiceSpy.mockResolvedValue(
@@ -1333,9 +1377,12 @@ describe("useChannelDialog", () => {
     )
     expect(result.current.context.state).toMatchObject({
       isOpen: true,
-      initialValues: {
-        key: createdToken.key,
+      nativeCreate: {
+        siteType: SITE_TYPES.SUB2API,
       },
+    })
+    expect(nativeOpenCreateEditorMock).toHaveBeenLastCalledWith({
+      seed: expect.objectContaining({ credential: createdToken.key }),
     })
     expect(mockToastError).not.toHaveBeenCalled()
   })
@@ -1353,6 +1400,8 @@ describe("useChannelDialog", () => {
         }),
     )
     const mockService = buildManagedSiteServiceMock({
+      siteType: SITE_TYPES.SUB2API,
+      messagesKey: "sub2api",
       prepareChannelFormData: prepareChannelFormDataMock,
     })
     getManagedSiteServiceSpy.mockResolvedValue(
@@ -1394,9 +1443,12 @@ describe("useChannelDialog", () => {
     )
     expect(result.current.context.state).toMatchObject({
       isOpen: true,
-      initialValues: {
-        key: createdToken.key,
+      nativeCreate: {
+        siteType: SITE_TYPES.SUB2API,
       },
+    })
+    expect(nativeOpenCreateEditorMock).toHaveBeenLastCalledWith({
+      seed: expect.objectContaining({ credential: createdToken.key }),
     })
     expect(mockToastError).not.toHaveBeenCalled()
   })
@@ -2118,8 +2170,9 @@ describe("useChannelDialog", () => {
 
     expect(searchChannelMock).toHaveBeenCalledOnce()
     expect(result.current.context.duplicateChannelWarning.isOpen).toBe(false)
-    expect(result.current.context.state).toMatchObject({
-      isOpen: true,
+    expect(result.current.context.state.isOpen).toBe(true)
+    expect(result.current.context.state.nativeCreate).toMatchObject({
+      siteType: SITE_TYPES.NEW_API,
       advisoryWarning: {
         kind: "reviewSuggested",
         title: "channelDialog:warnings.reviewSuggested.title",
@@ -2171,8 +2224,8 @@ describe("useChannelDialog", () => {
     })
 
     expect(searchChannelMock).toHaveBeenCalledOnce()
-    expect(result.current.context.state).toMatchObject({
-      isOpen: true,
+    expect(result.current.context.state.nativeCreate).toMatchObject({
+      siteType: SITE_TYPES.NEW_API,
       advisoryWarning: {
         kind: "verificationRequired",
         title: "channelDialog:warnings.verificationRequired.title",
@@ -2246,9 +2299,12 @@ describe("useChannelDialog", () => {
     )
     expect(result.current.context.state).toMatchObject({
       isOpen: true,
-      initialValues: {
-        key: "sk-ensured-token",
+      nativeCreate: {
+        siteType: SITE_TYPES.NEW_API,
       },
+    })
+    expect(nativeOpenCreateEditorMock).toHaveBeenLastCalledWith({
+      seed: expect.objectContaining({ credential: "sk-ensured-token" }),
     })
 
     await act(async () => {
@@ -2431,12 +2487,16 @@ describe("useChannelDialog", () => {
     expect(prepareChannelFormDataMock).toHaveBeenCalledTimes(1)
     expect(result.current.context.state).toMatchObject({
       isOpen: true,
-      initialValues: {
-        key: "sk-credential",
-        base_url: "https://upstream.example.com",
+      nativeCreate: {
+        siteType: SITE_TYPES.NEW_API,
       },
-      initialModels: ["gpt-4"],
-      initialGroups: ["default"],
+    })
+    expect(nativeOpenCreateEditorMock).toHaveBeenLastCalledWith({
+      seed: expect.objectContaining({
+        credential: "sk-credential",
+        baseUrl: "https://upstream.example.com",
+        models: ["gpt-4"],
+      }),
     })
 
     await act(async () => {

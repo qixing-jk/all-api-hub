@@ -6,6 +6,11 @@ import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SITE_TYPES } from "~/constants/siteType"
 import { BASIC_SETTINGS_TEST_IDS } from "~/features/BasicSettings/testIds"
+import {
+  getManagedSiteChannelRowFiltersActionTestId,
+  getManagedSiteChannelRowSyncActionTestId,
+  MANAGED_SITE_CHANNELS_TEST_IDS,
+} from "~/features/ManagedSiteChannels/testIds"
 import { CHANNEL_STATUS, type ManagedSiteChannel } from "~/types/managedSite"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import { openManagedSiteChannelRowActions } from "~~/e2e/scenarios/managedSiteChannels"
@@ -897,32 +902,41 @@ test("applies a saved channel filter during immediate model sync", async ({
   await waitForExtensionRoot(page)
   await expectPermissionOnboardingHidden(page)
 
-  await openManagedSiteChannelRowActions(page, "Production OpenAI")
+  const { rowTestToken } = await openManagedSiteChannelRowActions(
+    page,
+    "Production OpenAI",
+  )
   await page
-    .getByRole("menuitem", { name: "Edit channel filtering rules" })
+    .getByTestId(getManagedSiteChannelRowFiltersActionTestId(rowTestToken))
     .click()
 
   const filterDialog = page.getByRole("dialog")
   await expect(
     filterDialog.getByText("Channel filters", { exact: true }),
   ).toBeVisible()
-  await filterDialog.getByRole("button", { name: "JSON edit" }).click()
-  await filterDialog.getByRole("textbox").fill(
-    JSON.stringify([
-      {
-        name: "Only GPT-4.1",
-        pattern: "gpt-4.1",
-        action: "include",
-      },
-    ]),
-  )
-  await filterDialog.getByRole("button", { name: "Save filters" }).click()
+  await filterDialog
+    .getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.channelFiltersViewJsonButton)
+    .click()
+  await filterDialog
+    .getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.channelFiltersJsonEditor)
+    .fill(
+      JSON.stringify([
+        {
+          name: "Only GPT-4.1",
+          pattern: "gpt-4.1",
+          action: "include",
+        },
+      ]),
+    )
+  await filterDialog
+    .getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.channelFiltersSaveButton)
+    .click()
   await expect(page.getByText("Filters saved")).toBeVisible()
   await expect(filterDialog).toBeHidden()
 
   await openManagedSiteChannelRowActions(page, "Production OpenAI")
   await page
-    .getByRole("menuitem", { name: "Sync model list immediately" })
+    .getByTestId(getManagedSiteChannelRowSyncActionTestId(rowTestToken))
     .click()
 
   await expect(page.getByText("Model sync completed (1/1)")).toBeVisible()

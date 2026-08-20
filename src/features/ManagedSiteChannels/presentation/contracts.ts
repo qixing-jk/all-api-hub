@@ -175,6 +175,15 @@ export type ManagedChannelsFailureState = {
   variant?: "destructive" | "warning"
 }
 
+export const MANAGED_CHANNELS_DELETE_RESULT_STATUSES = {
+  Success: "success",
+  Failed: "failed",
+  Uncertain: "uncertain",
+} as const
+
+export type ManagedChannelsDeleteResultStatus =
+  (typeof MANAGED_CHANNELS_DELETE_RESULT_STATUSES)[keyof typeof MANAGED_CHANNELS_DELETE_RESULT_STATUSES]
+
 export type ManagedChannelsDeleteState = {
   isOpen: boolean
   isWorking: boolean
@@ -182,7 +191,7 @@ export type ManagedChannelsDeleteState = {
   results: Array<{
     rowKey: string
     displayLabel: string
-    status: "success" | "failed" | "uncertain"
+    status: ManagedChannelsDeleteResultStatus
     resultKey: string
   }>
   requiresRefresh: boolean

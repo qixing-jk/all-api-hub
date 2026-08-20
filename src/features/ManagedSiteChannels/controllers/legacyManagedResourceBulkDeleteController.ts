@@ -4,6 +4,10 @@ import {
   toPrivateManagedSiteMutationOutput,
 } from "~/services/managedSites/mutations"
 
+import {
+  MANAGED_CHANNELS_DELETE_RESULT_STATUSES,
+  type ManagedChannelsDeleteResultStatus,
+} from "../presentation/contracts"
 import { mapSettledWithConcurrency } from "./managedResourceConcurrency"
 
 const LEGACY_DELETE_CONCURRENCY = 4
@@ -26,7 +30,7 @@ type LegacyManagedResourceDeleteContext = {
 export type LegacyManagedResourceDeleteResult = {
   rowKey: string
   displayLabel: string
-  status: "success" | "failed" | "uncertain"
+  status: ManagedChannelsDeleteResultStatus
   resultKey: string
 }
 
@@ -131,7 +135,10 @@ export class LegacyManagedResourceBulkDeleteController {
 
         const outcomes = targets.map((target) => ({
           target,
-          result: toResult(target, "failed"),
+          result: toResult(
+            target,
+            MANAGED_CHANNELS_DELETE_RESULT_STATUSES.Failed,
+          ),
           reason: failure,
         }))
         return {
@@ -162,24 +169,55 @@ export class LegacyManagedResourceBulkDeleteController {
             )
           switch (mutationResult.outcome) {
             case MANAGED_SITE_MUTATION_OUTCOMES.Succeeded:
-              return { result: toResult(target, "success") }
+              return {
+                result: toResult(
+                  target,
+                  MANAGED_CHANNELS_DELETE_RESULT_STATUSES.Success,
+                ),
+              }
             case MANAGED_SITE_MUTATION_OUTCOMES.Rejected:
               if (mutationResult.diagnostic.code === "not_found") {
                 try {
                   return (await deleteContext.confirmMissing(target))
-                    ? { result: toResult(target, "success") }
-                    : { result: toResult(target, "failed"), reason: reason() }
+                    ? {
+                        result: toResult(
+                          target,
+                          MANAGED_CHANNELS_DELETE_RESULT_STATUSES.Success,
+                        ),
+                      }
+                    : {
+                        result: toResult(
+                          target,
+                          MANAGED_CHANNELS_DELETE_RESULT_STATUSES.Failed,
+                        ),
+                        reason: reason(),
+                      }
                 } catch {
                   return {
-                    result: toResult(target, "uncertain"),
+                    result: toResult(
+                      target,
+                      MANAGED_CHANNELS_DELETE_RESULT_STATUSES.Uncertain,
+                    ),
                     reason: reason(),
                   }
                 }
               }
-              return { result: toResult(target, "failed"), reason: reason() }
+              return {
+                result: toResult(
+                  target,
+                  MANAGED_CHANNELS_DELETE_RESULT_STATUSES.Failed,
+                ),
+                reason: reason(),
+              }
             case MANAGED_SITE_MUTATION_OUTCOMES.Partial:
             case MANAGED_SITE_MUTATION_OUTCOMES.Uncertain:
-              return { result: toResult(target, "uncertain"), reason: reason() }
+              return {
+                result: toResult(
+                  target,
+                  MANAGED_CHANNELS_DELETE_RESULT_STATUSES.Uncertain,
+                ),
+                reason: reason(),
+              }
           }
         },
       )
@@ -209,7 +247,10 @@ export class LegacyManagedResourceBulkDeleteController {
 
         return {
           target,
-          result: toResult(target, "uncertain"),
+          result: toResult(
+            target,
+            MANAGED_CHANNELS_DELETE_RESULT_STATUSES.Uncertain,
+          ),
           reason: new Error(LEGACY_MANAGED_RESOURCE_DELETE_FAILED_FALLBACK),
         }
       })
@@ -223,7 +264,9 @@ export class LegacyManagedResourceBulkDeleteController {
       if (!isCurrentExecution()) return null
 
       const hasUncertainResult = outcomes.some(
-        (outcome) => outcome.result.status === "uncertain",
+        (outcome) =>
+          outcome.result.status ===
+          MANAGED_CHANNELS_DELETE_RESULT_STATUSES.Uncertain,
       )
       this.replayBlocked = hasUncertainResult && !refreshAccepted
 

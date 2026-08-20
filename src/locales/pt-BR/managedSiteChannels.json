@@ -435,7 +435,8 @@
     "someDeletesFailed_other": "Falha ao excluir {{count}} canais: {{error}}",
     "syncCompleted": "Sincronização de modelos concluída ({{success}}/{{total}})",
     "syncCompletedRefreshFailed": "Os modelos foram sincronizados ({{success}}/{{total}}), mas não foi possível atualizar a lista de canais. Atualize e tente novamente.",
-    "syncFailed": "Falha na sincronização de modelos: {{error}}"
+    "syncFailed": "Falha na sincronização de modelos: {{error}}",
+    "syncFailedFallback": "Não foi possível sincronizar os canais"
   },
   "toolbar": {
     "addChannel": "Adicionar canal",

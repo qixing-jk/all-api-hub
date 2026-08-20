@@ -30,6 +30,7 @@ import {
 import { getErrorMessage } from "~/utils/core/error"
 import { safeRandomUUID } from "~/utils/core/identifier"
 
+import { MANAGED_SITE_CHANNELS_TEST_IDS } from "../testIds"
 import type { ChannelRow } from "../types"
 import {
   fetchChannelFilters,
@@ -412,7 +413,13 @@ export default function ChannelFilterDialog({
           >
             {t("filters.actions.cancel")}
           </Button>
-          <Button onClick={handleSave} loading={isSaving}>
+          <Button
+            onClick={handleSave}
+            loading={isSaving}
+            data-testid={
+              MANAGED_SITE_CHANNELS_TEST_IDS.channelFiltersSaveButton
+            }
+          >
             {isSaving ? t("common:status.saving") : t("filters.actions.save")}
           </Button>
         </div>
@@ -453,6 +460,11 @@ export default function ChannelFilterDialog({
           setViewMode("json")
         }}
         onChangeJsonText={setJsonText}
+        testIds={{
+          viewJsonButton:
+            MANAGED_SITE_CHANNELS_TEST_IDS.channelFiltersViewJsonButton,
+          jsonEditor: MANAGED_SITE_CHANNELS_TEST_IDS.channelFiltersJsonEditor,
+        }}
       />
     </Modal>
   )
