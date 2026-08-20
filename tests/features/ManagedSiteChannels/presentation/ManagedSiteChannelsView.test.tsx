@@ -10,9 +10,9 @@ import type {
   ManagedChannelsLabels,
   ManagedChannelsPresentationState,
 } from "~/features/ManagedSiteChannels/presentation/contracts"
-import { MANAGED_SITE_CHANNELS_TEST_IDS } from "~/features/ManagedSiteChannels/testIds"
 import { ManagedSiteChannelsView } from "~/features/ManagedSiteChannels/presentation/ManagedSiteChannelsView"
 import { compareManagedSiteChannelStatusValues } from "~/features/ManagedSiteChannels/presentation/useManagedSiteChannelsTable"
+import { MANAGED_SITE_CHANNELS_TEST_IDS } from "~/features/ManagedSiteChannels/testIds"
 
 const rows = [
   {
