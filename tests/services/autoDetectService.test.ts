@@ -585,6 +585,50 @@ describe("autoDetectSmart", () => {
     expect(mockFetchUserInfo).not.toHaveBeenCalled()
   })
 
+  it("enables the modern New API probe only for unknown current-tab sites", async () => {
+    mockGetAccountSiteType.mockResolvedValueOnce(SITE_TYPES.UNKNOWN)
+    mockGetActiveOrAllTabs.mockResolvedValue([
+      {
+        id: 301,
+        active: true,
+        url: "https://white-label.example.invalid/dashboard",
+      },
+    ])
+    mockReadAccountBrowserSessionFromTab.mockResolvedValueOnce({
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
+      siteType: SITE_TYPES.NEW_API,
+      siteTypeHint: SITE_TYPES.NEW_API,
+      userId: "43",
+      user: { username: "modern-user" },
+      accessToken: "modern-jwt",
+      fetchContext: {
+        kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+        tabId: 301,
+        origin: "https://white-label.example.invalid",
+      },
+    })
+
+    const result = await autoDetectSmart(
+      "https://white-label.example.invalid/console",
+    )
+
+    expect(result).toMatchObject({
+      success: true,
+      data: {
+        siteType: SITE_TYPES.NEW_API,
+        userId: "43",
+        accessToken: "modern-jwt",
+      },
+    })
+    expect(mockReadAccountBrowserSessionFromTab).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tabId: 301,
+        siteType: SITE_TYPES.UNKNOWN,
+        allowNewApiAuthProbe: true,
+      }),
+    )
+  })
+
   it("does not report Sub2API API fallback success from cookie-auth user-info calls", async () => {
     mockGetAccountSiteType.mockResolvedValueOnce(SITE_TYPES.SUB2API)
     mockGetActiveOrAllTabs.mockResolvedValue([

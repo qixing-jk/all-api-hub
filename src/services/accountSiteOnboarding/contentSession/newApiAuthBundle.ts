@@ -104,6 +104,8 @@ async function extractNewApiAuthBundle(): Promise<ContentSessionExtractionResult
 export const newApiAuthBundleContentSessionExtractor: ContentSessionExtractor =
   {
     id: "new-api-auth-bundle",
-    canExtract: (context) => context.siteTypeHint === SITE_TYPES.NEW_API,
+    canExtract: (context) =>
+      context.siteTypeHint === SITE_TYPES.NEW_API ||
+      context.allowNewApiAuthProbe === true,
     extract: extractNewApiAuthBundle,
   }

@@ -51,6 +51,8 @@ export type ReadAccountBrowserSessionFromTabOptions = {
     | typeof ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB
   >
   fetchContext?: AccountBrowserSessionFetchContext
+  /** Enables the one-shot modern New API refresh probe for explicit current-tab detection. */
+  allowNewApiAuthProbe?: boolean
   /** Carries caller intent for downstream temp-context workflows; tab reads do not consume it. */
   protectionBypassExecution?: ProtectionBypassExecution
   onError?: AccountBrowserSessionErrorHandler

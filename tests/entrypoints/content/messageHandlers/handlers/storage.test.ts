@@ -798,6 +798,96 @@ describe("content storage handler", () => {
       },
     )
 
+    it("detects a modern white-label New API session when explicitly probed", async () => {
+      const nowSeconds = 1_800_000_000
+      vi.spyOn(Date, "now").mockReturnValue(nowSeconds * 1000)
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue(
+          new Response(
+            JSON.stringify({
+              success: true,
+              data: {
+                access_token: "dashboard-token-placeholder",
+                token_type: "Bearer",
+                access_expires_at: nowSeconds + 900,
+                user: { id: "white-label-user", username: "example-user" },
+                session: { sid: "session-placeholder", current: true },
+              },
+            }),
+            { status: 200, headers: { "Content-Type": "application/json" } },
+          ),
+        ),
+      )
+      mockGetContentSessionExtractors.mockReturnValue([
+        newApiAuthBundleContentSessionExtractor,
+        compatibleUserContentSessionExtractor,
+      ])
+
+      const response = await new Promise<any>((resolve) => {
+        handleGetUserFromLocalStorage(
+          {
+            url: "https://white-label.example.invalid",
+            siteType: "unknown",
+            allowNewApiAuthProbe: true,
+          },
+          resolve,
+        )
+      })
+
+      expect(response).toEqual({
+        success: true,
+        data: {
+          userId: "white-label-user",
+          user: { id: "white-label-user", username: "example-user" },
+          siteTypeHint: "new-api",
+          transientAuth: {
+            kind: "new_api_dashboard_bearer",
+            token: "dashboard-token-placeholder",
+            expiresAt: nowSeconds + 900,
+            sessionId: "session-placeholder",
+            origin: window.location.origin,
+          },
+        },
+      })
+    })
+
+    it("does not classify an unauthorized unknown-site refresh as New API", async () => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue(
+          new Response(
+            JSON.stringify({
+              success: false,
+              code: "AUTH_UNAUTHORIZED",
+              message: "Unauthorized",
+            }),
+            { status: 401, headers: { "Content-Type": "application/json" } },
+          ),
+        ),
+      )
+      mockGetContentSessionExtractors.mockReturnValue([
+        newApiAuthBundleContentSessionExtractor,
+        compatibleUserContentSessionExtractor,
+      ])
+
+      const response = await new Promise<any>((resolve) => {
+        handleGetUserFromLocalStorage(
+          {
+            url: "https://unknown.example.invalid",
+            siteType: "unknown",
+            allowNewApiAuthProbe: true,
+          },
+          resolve,
+        )
+      })
+
+      expect(response).toEqual({
+        success: false,
+        error: "AUTH_UNAUTHORIZED: Unauthorized",
+      })
+    })
+
     it("returns userInfoNotFound when no extractor returns a result", async () => {
       mockGetContentSessionExtractors.mockReturnValue([
         {
