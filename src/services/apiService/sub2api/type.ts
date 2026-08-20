@@ -51,6 +51,7 @@ export type Sub2ApiAuthMeResponse = Sub2ApiEnvelope<Sub2ApiAuthMeData>
 
 export type Sub2ApiPublicSettingsData = {
   affiliate_enabled?: boolean | null
+  site_name?: string | null
 }
 
 export type Sub2ApiAffiliateData = {

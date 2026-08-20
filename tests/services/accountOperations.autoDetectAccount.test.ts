@@ -436,7 +436,10 @@ describe("accountOperations autoDetectAccount", () => {
       },
     })
 
-    mockFetchSiteStatus.mockResolvedValueOnce(null)
+    mockFetchSiteStatus.mockResolvedValueOnce({
+      system_name: "Example Portal",
+      checkin_enabled: false,
+    })
     mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
 
     const result = await autoDetectAccount(
@@ -448,6 +451,7 @@ describe("accountOperations autoDetectAccount", () => {
     expect(result.success).toBe(true)
     expect(result.data?.siteType).toBe(SITE_TYPES.SUB2API)
     expect(result.data?.username).toBe("")
+    expect(result.data?.siteName).toBe("Example Portal")
     expect(result.data?.accessToken).toBe("jwt-token")
     expect(result.data?.exchangeRate).toBe(UI_CONSTANTS.EXCHANGE_RATE.DEFAULT)
     expect(mockFetchSiteStatus).toHaveBeenCalledTimes(1)
