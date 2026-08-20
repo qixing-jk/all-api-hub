@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test"
+import type { Locator, Page } from "@playwright/test"
 
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { OPTIONS_TEST_IDS } from "~/entrypoints/options/testIds"
@@ -31,6 +31,8 @@ import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 
 const ACCOUNT_QUICK_CHECKIN_E2E_STATE_KEY =
   "__aah_account_quick_checkin_e2e_state__"
+const DESKTOP_VIEWPORT_SIZE = { width: 1280, height: 720 }
+const MOBILE_VIEWPORT_SIZE = { width: 320, height: 720 }
 
 type AccountQuickCheckinRuntimeState = {
   calls: Array<{
@@ -41,6 +43,57 @@ type AccountQuickCheckinRuntimeState = {
 
 type RuntimeLike = {
   sendMessage?: (message: unknown) => Promise<unknown>
+}
+
+type ElementBounds = {
+  bottom: number
+  height: number
+  right: number
+  width: number
+  x: number
+  y: number
+}
+
+async function readElementBounds(locator: Locator): Promise<ElementBounds[]> {
+  return locator.evaluateAll((elements) =>
+    elements.map((element) => {
+      const box = element.getBoundingClientRect()
+      return {
+        bottom: box.bottom,
+        height: box.height,
+        right: box.right,
+        width: box.width,
+        x: box.x,
+        y: box.y,
+      }
+    }),
+  )
+}
+
+function elementBoundsOverlap(left: ElementBounds, right: ElementBounds) {
+  return (
+    left.x < right.right &&
+    left.right > right.x &&
+    left.y < right.bottom &&
+    left.bottom > right.y
+  )
+}
+
+function isHorizontallyContained(
+  bounds: ElementBounds,
+  container: { width: number; x: number },
+) {
+  return (
+    bounds.x >= container.x && bounds.right <= container.x + container.width
+  )
+}
+
+async function openAccountManagement(page: Page, extensionId: string) {
+  await page.goto(
+    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#account`,
+  )
+  await waitForExtensionRoot(page)
+  await expectPermissionOnboardingHidden(page)
 }
 
 async function readStoredAccountConfig(
@@ -148,15 +201,12 @@ test.beforeEach(async ({ context, page }) => {
   await stubLlmMetadataIndex(context)
 })
 
-test("keeps every account header action reachable across constrained widths", async ({
+test("keeps account management controls reachable across constrained widths", async ({
   context,
   extensionId,
   page,
 }) => {
-  const viewportSizes = [
-    { width: 1280, height: 720 },
-    { width: 320, height: 720 },
-  ]
+  const viewportSizes = [DESKTOP_VIEWPORT_SIZE, MOBILE_VIEWPORT_SIZE]
   await page.setViewportSize(viewportSizes[0])
 
   const serviceWorker = await getServiceWorker(context)
@@ -173,11 +223,7 @@ test("keeps every account header action reachable across constrained widths", as
     }),
   ])
 
-  await page.goto(
-    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#account`,
-  )
-  await waitForExtensionRoot(page)
-  await expectPermissionOnboardingHidden(page)
+  await openAccountManagement(page, extensionId)
 
   const headerActionGroup = page.getByTestId(
     ACCOUNT_MANAGEMENT_TEST_IDS.headerActions,
@@ -211,18 +257,7 @@ test("keeps every account header action reachable across constrained widths", as
       .poll(async () => {
         const contentCardBox = await contentCard.boundingBox()
         const headerActionGroupBox = await headerActionGroup.boundingBox()
-        const boxes = await headerActions.evaluateAll((actions) => {
-          return actions.map((action) => {
-            const box = action.getBoundingClientRect()
-            return {
-              x: box.x,
-              y: box.y,
-              height: box.height,
-              right: box.right,
-              width: box.width,
-            }
-          })
-        })
+        const boxes = await readElementBounds(headerActions)
 
         const rowRightEdges = new Map<number, number>()
         for (const box of boxes) {
@@ -245,10 +280,8 @@ test("keeps every account header action reachable across constrained widths", as
           hasLayout: Boolean(contentCardBox && headerActionGroupBox),
           actionsContained: Boolean(
             contentCardBox &&
-              boxes.every(
-                (box) =>
-                  box.x >= contentCardBox.x &&
-                  box.x + box.width <= contentCardBox.x + contentCardBox.width,
+              boxes.every((box) =>
+                isHorizontallyContained(box, contentCardBox),
               ),
           ),
           actionsWrapped: rowRightEdges.size > 1,
@@ -275,6 +308,121 @@ test("keeps every account header action reachable across constrained widths", as
     await expectHeaderActionsContained(viewportSize)
   }
 
+  const accountList = page.getByTestId(
+    ACCOUNT_MANAGEMENT_TEST_IDS.accountListView,
+  )
+  const accountListHeader = page.getByTestId(
+    ACCOUNT_MANAGEMENT_TEST_IDS.accountListHeader,
+  )
+  const accountListSortControls = page.getByTestId(
+    ACCOUNT_MANAGEMENT_TEST_IDS.accountListSortControls,
+  )
+  const accountListUtilities = page.getByTestId(
+    ACCOUNT_MANAGEMENT_TEST_IDS.accountListUtilities,
+  )
+  const clearSortAction = page.getByTestId(
+    ACCOUNT_MANAGEMENT_TEST_IDS.accountListClearSortButton,
+  )
+  const requiredAccountListHeaderActions = [
+    accountListHeader.getByRole("button", {
+      name: "Sort Account",
+      exact: true,
+    }),
+    accountListHeader.getByRole("button", {
+      name: "Sort Created At",
+      exact: true,
+    }),
+    accountListHeader.getByRole("button", {
+      name: "Sort Balance",
+      exact: true,
+    }),
+    clearSortAction,
+    accountListHeader.getByRole("button", {
+      name: "Bulk manage",
+      exact: true,
+    }),
+  ]
+  for (const action of requiredAccountListHeaderActions) {
+    await expect(action).toBeVisible()
+  }
+
+  async function expectAccountListHeaderLayout(
+    viewportSize: { height: number; width: number },
+    layout: "inline" | "stacked",
+  ) {
+    await page.setViewportSize(viewportSize)
+
+    await expect
+      .poll(async () => {
+        const listBox = await accountList.boundingBox()
+        const sortControlsBox = await accountListSortControls.boundingBox()
+        const utilitiesBox = await accountListUtilities.boundingBox()
+        const clearSortActionBox = await clearSortAction.boundingBox()
+        const headerButtons = await readElementBounds(
+          accountListHeader.getByRole("button"),
+        )
+        const hasOverlappingButtons = headerButtons.some((box, index) =>
+          headerButtons
+            .slice(index + 1)
+            .some((other) => elementBoundsOverlap(box, other)),
+        )
+        const clearSortStaysWithinSortTier = Boolean(
+          sortControlsBox &&
+            clearSortActionBox &&
+            clearSortActionBox.y >= sortControlsBox.y &&
+            clearSortActionBox.y + clearSortActionBox.height <=
+              sortControlsBox.y + sortControlsBox.height,
+        )
+
+        return {
+          hasLayout: Boolean(
+            listBox && sortControlsBox && utilitiesBox && clearSortActionBox,
+          ),
+          utilitiesPlacementMatches: Boolean(
+            sortControlsBox &&
+              utilitiesBox &&
+              (layout === "stacked"
+                ? utilitiesBox.y + utilitiesBox.height <= sortControlsBox.y
+                : sortControlsBox.x + sortControlsBox.width <= utilitiesBox.x &&
+                  Math.abs(
+                    sortControlsBox.y +
+                      sortControlsBox.height / 2 -
+                      (utilitiesBox.y + utilitiesBox.height / 2),
+                  ) <= 1),
+          ),
+          clearSortPlacementMatches:
+            clearSortStaysWithinSortTier &&
+            (layout === "inline" ||
+              Boolean(
+                sortControlsBox &&
+                  clearSortActionBox &&
+                  Math.abs(
+                    clearSortActionBox.x +
+                      clearSortActionBox.width -
+                      (sortControlsBox.x + sortControlsBox.width),
+                  ) <= 1,
+              )),
+          buttonsContained: Boolean(
+            listBox &&
+              headerButtons.every((box) =>
+                isHorizontallyContained(box, listBox),
+              ),
+          ),
+          hasOverlappingButtons,
+        }
+      })
+      .toEqual({
+        hasLayout: true,
+        utilitiesPlacementMatches: true,
+        clearSortPlacementMatches: true,
+        buttonsContained: true,
+        hasOverlappingButtons: false,
+      })
+  }
+
+  await expectAccountListHeaderLayout(DESKTOP_VIEWPORT_SIZE, "inline")
+  await expectAccountListHeaderLayout(MOBILE_VIEWPORT_SIZE, "stacked")
+
   const externalCheckInAction = page.getByTestId(
     ACCOUNT_MANAGEMENT_TEST_IDS.externalCheckInButton,
   )
@@ -295,18 +443,14 @@ test("keeps every account header action reachable across constrained widths", as
       exact: true,
     }),
   ).toBeVisible()
-  await expectHeaderActionsContained(viewportSizes[1])
+  await expectHeaderActionsContained(MOBILE_VIEWPORT_SIZE)
 })
 
 test("keeps the add account dialog open when text selection ends over its backdrop", async ({
   extensionId,
   page,
 }) => {
-  await page.goto(
-    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#account`,
-  )
-  await waitForExtensionRoot(page)
-  await expectPermissionOnboardingHidden(page)
+  await openAccountManagement(page, extensionId)
 
   await page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.addAccountButton).click()
 
@@ -360,11 +504,7 @@ test("disables and re-enables a stored account from account management", async (
     }),
   ])
 
-  await page.goto(
-    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#account`,
-  )
-  await waitForExtensionRoot(page)
-  await expectPermissionOnboardingHidden(page)
+  await openAccountManagement(page, extensionId)
 
   await expect(
     page.getByRole("button", { name: "Toggle Account" }),
@@ -429,11 +569,7 @@ test("deletes a stored account from account management and removes it from stora
     }),
   ])
 
-  await page.goto(
-    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#account`,
-  )
-  await waitForExtensionRoot(page)
-  await expectPermissionOnboardingHidden(page)
+  await openAccountManagement(page, extensionId)
 
   await expect(
     page.getByRole("button", { name: "Delete Account" }),
@@ -486,6 +622,24 @@ test("runs quick check-in for the selected eligible account from account managem
         window.sessionStorage.setItem(stateKey, JSON.stringify(nextState))
       }
 
+      const readAccountIds = (message: unknown): string[] => {
+        if (typeof message !== "object" || message === null) {
+          return []
+        }
+
+        const data = (message as Record<string, unknown>).data
+        if (typeof data !== "object" || data === null) {
+          return []
+        }
+
+        const accountIds = (data as Record<string, unknown>).accountIds
+        return Array.isArray(accountIds)
+          ? accountIds.filter(
+              (accountId): accountId is string => typeof accountId === "string",
+            )
+          : []
+      }
+
       const patchRuntime = (runtime: RuntimeLike | undefined) => {
         if (!runtime || typeof runtime.sendMessage !== "function") {
           return
@@ -508,17 +662,7 @@ test("runs quick check-in for the selected eligible account from account managem
               return await originalSendMessage(message)
             }
 
-            const accountIds =
-              typeof message === "object" &&
-              message !== null &&
-              "data" in message &&
-              typeof (message as { data?: unknown }).data === "object" &&
-              (message as { data?: unknown }).data !== null &&
-              "accountIds" in (message as { data: any }).data &&
-              Array.isArray((message as { data: any }).data.accountIds)
-                ? (message as { data: { accountIds: string[] } }).data
-                    .accountIds
-                : []
+            const accountIds = readAccountIds(message)
 
             const nextState = {
               calls: [...readState().calls, { type, accountIds }],
@@ -585,11 +729,7 @@ test("runs quick check-in for the selected eligible account from account managem
     }),
   ])
 
-  await page.goto(
-    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#account`,
-  )
-  await waitForExtensionRoot(page)
-  await expectPermissionOnboardingHidden(page)
+  await openAccountManagement(page, extensionId)
 
   await openAccountActionsMenu(page, "Quick Check-in Account")
   await page
@@ -648,11 +788,7 @@ test("pins and unpins an account from account management while persisting pinned
     orderedAccountIds: ["stored-account-1", "stored-account-2"],
   })
 
-  await page.goto(
-    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#account`,
-  )
-  await waitForExtensionRoot(page)
-  await expectPermissionOnboardingHidden(page)
+  await openAccountManagement(page, extensionId)
 
   await expect(
     page.getByRole("button", { name: "Alpha Account" }),
@@ -733,11 +869,7 @@ test("shows the empty duplicate-cleanup state when no duplicate accounts are fou
     }),
   ])
 
-  await page.goto(
-    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#account`,
-  )
-  await waitForExtensionRoot(page)
-  await expectPermissionOnboardingHidden(page)
+  await openAccountManagement(page, extensionId)
 
   await page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.dedupeScanButton).click()
 
@@ -801,11 +933,7 @@ test("cleans duplicate accounts after preview confirmation and prunes stale refe
     orderedAccountIds: ["dup-keep", "dup-delete", "unique-account"],
   })
 
-  await page.goto(
-    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#account`,
-  )
-  await waitForExtensionRoot(page)
-  await expectPermissionOnboardingHidden(page)
+  await openAccountManagement(page, extensionId)
 
   await page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.dedupeScanButton).click()
 

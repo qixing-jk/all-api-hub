@@ -2,6 +2,11 @@ export const ACCOUNT_MANAGEMENT_TEST_IDS = {
   addAccountButton: "account-management-add-account-button",
   externalCheckInButton: "account-management-external-check-in-button",
   headerActions: "account-management-header-actions",
+  accountListHeader: "account-management-account-list-header",
+  accountListSortControls: "account-management-account-list-sort-controls",
+  accountListUtilities: "account-management-account-list-utilities",
+  accountListClearSortButton:
+    "account-management-account-list-clear-sort-button",
   accountDialog: "account-management-account-dialog",
   accountForm: "account-management-account-form",
   accountListView: "account-list-view",

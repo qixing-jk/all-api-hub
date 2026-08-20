@@ -1,6 +1,6 @@
 import type { DragEndEvent } from "@dnd-kit/core"
 import type { TFunction } from "i18next"
-import { ChevronDown, ChevronUp, Inbox, Plus } from "lucide-react"
+import { Inbox, Plus } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
@@ -14,15 +14,9 @@ import {
   Checkbox,
   DestructiveConfirmDialog,
   EmptyState,
-  IconButton,
   TagFilter,
 } from "~/components/ui"
-import {
-  DATA_TYPE_BALANCE,
-  DATA_TYPE_CONSUMPTION,
-  DATA_TYPE_CREATED_AT,
-  DATA_TYPE_INCOME,
-} from "~/constants"
+import { DATA_TYPE_CREATED_AT } from "~/constants"
 import { ACCOUNT_SITE_TITLE_RULES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { NewcomerSponsorRecommendationsSection } from "~/features/AccountManagement/components/NewcomerSponsorRecommendationsSection"
@@ -64,7 +58,7 @@ import {
   PRODUCT_ANALYTICS_SOURCE_KINDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
-import type { CurrencyMetricTotal, DisplaySiteData, SortField } from "~/types"
+import type { CurrencyMetricTotal, DisplaySiteData } from "~/types"
 import { ACCOUNT_TODAY_METRIC_STATUSES } from "~/types/accountTodayStats"
 import {
   calculateTotalBalanceForSites,
@@ -79,6 +73,7 @@ import DelAccountDialog from "../DelAccountDialog"
 import { InviteLinkManualCopyDialog } from "../InviteLinkManualCopyDialog"
 import AccountFilterBar from "./AccountFilterBar"
 import { NonSortableAccountListItem } from "./AccountListBaseItem"
+import { AccountListHeader } from "./AccountListHeader"
 import { AccountListInitialLoadingState } from "./AccountListLoadingState"
 import AccountSearchInput from "./AccountSearchInput"
 import {
@@ -1229,25 +1224,6 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
     )
   }
 
-  const renderSortButton = (field: SortField, label: string) => (
-    <IconButton
-      onClick={() => handleSort(field)}
-      variant="ghost"
-      size="none"
-      disabled={inSearchMode}
-      aria-label={`${t("account:list.sort")} ${label}`}
-      className="space-x-0.5 text-[10px] font-medium sm:space-x-1 sm:text-xs"
-    >
-      <span>{label}</span>
-      {sortField === field &&
-        (sortOrder === "asc" ? (
-          <ChevronUp className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
-        ) : (
-          <ChevronDown className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
-        ))}
-    </IconButton>
-  )
-
   const listContent = (
     <CardList>
       {displayedResults.map((item) => {
@@ -1508,83 +1484,19 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
           </div>
         </div>
 
-        {/* Header */}
-        <div className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary sticky top-0 z-10 border-b border-gray-200 bg-gray-50 px-3 py-2 sm:px-5">
-          <div className="flex items-center justify-between gap-2 sm:gap-4">
-            {/* Account Name Column */}
-            <div className="flex min-w-0 flex-1 items-center gap-2">
-              <div className="flex min-w-0 items-center gap-0.5">
-                {renderSortButton("name", t("account:list.header.account"))}
-                <div className="dark:text-dark-text-tertiary text-[10px] text-gray-400 sm:text-xs">
-                  /
-                </div>
-                <div className="dark:text-dark-text-tertiary flex items-center text-[9px] text-gray-400 sm:text-[10px]">
-                  {renderSortButton(
-                    DATA_TYPE_CREATED_AT,
-                    t("account:list.header.createdAt"),
-                  )}
-                </div>
-              </div>
-              <span className="text-[10px] font-medium sm:text-xs">
-                {t("common:total") + ": " + displayedResults.length}
-              </span>
-              {sortField !== null && !inSearchMode ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="h-7 shrink-0 px-2 text-xs"
-                  onClick={clearSortConfig}
-                  aria-label={t("account:list.clearSort")}
-                >
-                  {t("account:list.clearSort")}
-                </Button>
-              ) : null}
-              <Button
-                type="button"
-                variant={isBulkMode ? "secondary" : "outline"}
-                size="sm"
-                className="h-7 shrink-0 px-2 text-xs"
-                onClick={isBulkMode ? handleBulkModeExit : handleBulkModeEnter}
-                disabled={isBulkBusy}
-              >
-                {isBulkMode ? t("account:bulk.exit") : t("account:bulk.manage")}
-              </Button>
-            </div>
-
-            {/* Balance & Consumption Column */}
-            <div className="flex shrink-0 items-end gap-0.5">
-              <div className="flex items-center">
-                {renderSortButton(
-                  DATA_TYPE_BALANCE,
-                  t("account:list.header.balance"),
-                )}
-              </div>
-              {showTodayCashflow && (
-                <>
-                  <div className="dark:text-dark-text-tertiary text-[10px] text-gray-400 sm:text-xs">
-                    /
-                  </div>
-                  <div className="dark:text-dark-text-tertiary flex items-center text-[9px] text-gray-400 sm:text-[10px]">
-                    {renderSortButton(
-                      DATA_TYPE_CONSUMPTION,
-                      t("account:list.header.todayConsumption"),
-                    )}
-                  </div>
-                  <div className="dark:text-dark-text-tertiary text-[10px] text-gray-400 sm:text-xs">
-                    /
-                  </div>
-                  <div className="dark:text-dark-text-tertiary flex items-center text-[9px] text-gray-400 sm:text-[10px]">
-                    {renderSortButton(
-                      DATA_TYPE_INCOME,
-                      t("account:list.header.todayIncome"),
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
+        <AccountListHeader
+          displayedResultCount={displayedResults.length}
+          inSearchMode={inSearchMode}
+          isBulkBusy={isBulkBusy}
+          isBulkMode={isBulkMode}
+          onBulkModeEnter={handleBulkModeEnter}
+          onBulkModeExit={handleBulkModeExit}
+          onClearSort={clearSortConfig}
+          onSort={handleSort}
+          showTodayCashflow={showTodayCashflow}
+          sortField={sortField}
+          sortOrder={sortOrder}
+        />
 
         {/* Account List or No Results */}
         {showFilteredSummary && displayedResults.length === 0 ? (
