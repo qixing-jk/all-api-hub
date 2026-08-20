@@ -472,6 +472,7 @@ describe("DoneHub managed-site channel capability", () => {
           accessToken: config.adminToken,
           userId: config.userId,
         },
+        abortSignal: options.signal,
         bypassSiteRequestLimit: true,
       }
       expect(doneHubApi.fetchChannelRaw).toHaveBeenCalledWith(

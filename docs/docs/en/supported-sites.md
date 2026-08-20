@@ -12,7 +12,8 @@ The following are the most common and suitable types of sites for unified manage
 | New API | Unified AI model aggregation and distribution center. | [Official Website](https://www.newapi.ai/) / [GitHub](https://github.com/QuantumNous/new-api) |
 | one-api | LLM API management and distribution system, supporting mainstream models such as OpenAI, Azure, Anthropic Claude, Google Gemini, DeepSeek, etc. Unified API adaptation, can be used for Key management and secondary distribution. | [GitHub](https://github.com/songquanpeng/one-api) |
 | Sub2API | Sub2API-CRS2 one-stop open-source relay service, providing unified access to Claude, OpenAI, Gemini, and Antigravity subscriptions, with shared plans, more efficient cost sharing, and seamless use of native tools. | [GitHub](https://github.com/Wei-Shaw/sub2api) |
-| AnyRouter | Claude Code intermediate station · Zero threshold · Free $50 | [Documentation](https://docs.anyrouter.top/) / [Official Website](https://anyrouter.top) |
+| AnyRouter | Claude Code intermediate station · Zero threshold · Free $50 | [Documentation](https://docs.anyrouter.top/) / [Official Website](https://anyrouter.top/register?aff=tDKX) |
+| AgentRouter | AI API routing and relay service platform. | [Official Website](https://agentrouter.org/register?aff=TUX6) |
 | one-hub | OpenAI interface management and distribution system, modified from songquanpeng/one-api, supports more models, adds a statistics page, and improves function calls for non-OpenAI models. | [Official Website](https://one-hub.xiao5.info/) / [GitHub](https://github.com/MartialBE/one-hub) |
 | Veloera | This project has been discontinued. | [GitHub](https://github.com/Veloera/Veloera) |
 | VoAPI | Only legacy compatible deployments are supported; newer VoAPI versions are outside the extension's current compatibility scope. | [GitHub](https://github.com/VoAPI/VoAPI) |

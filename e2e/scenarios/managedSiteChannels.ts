@@ -596,14 +596,10 @@ async function fillModelInput(page: Page, model: string) {
 
 async function openSingleVisibleChannelEditDialog(page: Page, rowText: string) {
   await expect(async () => {
-    const row = channelRowByName(page, rowText)
-    await expect(row).toBeVisible({ timeout: 10_000 })
-    const rowTestToken = await getChannelRowTestToken(row)
-    const actionsButton = row.getByTestId(
-      getManagedSiteChannelRowActionsButtonTestId(rowTestToken),
+    const { rowTestToken } = await openManagedSiteChannelRowActions(
+      page,
+      rowText,
     )
-    await expect(actionsButton).toBeEnabled({ timeout: 10_000 })
-    await actionsButton.click({ timeout: 10_000 })
 
     const editAction = page.getByTestId(
       getManagedSiteChannelRowEditActionTestId(rowTestToken),
@@ -664,6 +660,22 @@ export async function getChannelRowTestToken(row: Locator) {
     throw new Error("Managed-site channel row is missing its stable test token")
   }
   return testId.slice(MANAGED_SITE_CHANNEL_ROW_TEST_ID_PREFIX.length)
+}
+
+export async function openManagedSiteChannelRowActions(
+  page: Page,
+  channelName: string,
+) {
+  const row = channelRowByName(page, channelName)
+  await expect(row).toBeVisible({ timeout: 30_000 })
+  const rowTestToken = await getChannelRowTestToken(row)
+  const actionsButton = row.getByTestId(
+    getManagedSiteChannelRowActionsButtonTestId(rowTestToken),
+  )
+  await expect(actionsButton).toBeEnabled({ timeout: 10_000 })
+  await actionsButton.click()
+
+  return { row, rowTestToken }
 }
 
 async function getChannelRowName(row: ReturnType<typeof channelRowByText>) {

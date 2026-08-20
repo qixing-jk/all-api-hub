@@ -6,7 +6,11 @@ import ChannelFiltersEditor from "~/components/ChannelFiltersEditor"
 import type { EditableFilterField } from "~/components/ChannelFiltersEditor"
 import { Modal } from "~/components/ui"
 import { Button } from "~/components/ui/button"
-import { normalizeChannelFilters } from "~/services/managedSites/channelModelFilterRules"
+import { MANAGED_SITE_CHANNELS_TEST_IDS } from "~/features/ManagedSiteChannels/testIds"
+import {
+  normalizeChannelFilters,
+  type IncomingChannelFilter,
+} from "~/services/managedSites/channelModelFilterRules"
 import { resolveApiVerificationTypeForChannelType } from "~/services/models/modelSync/channelModelFilterEvaluator"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
@@ -34,8 +38,13 @@ import {
   type ChannelFilterStorageIdentity,
 } from "../utils/channelFilters"
 
+export type ChannelFilterTarget = Pick<
+  ChannelRow,
+  "id" | "name" | "type" | "resourceRef"
+>
+
 interface ChannelFilterDialogProps {
-  channel: ChannelRow | null
+  channel: ChannelFilterTarget | null
   open: boolean
   onClose: () => void
 }
@@ -69,7 +78,7 @@ function moveFilterById(
  * Builds the storage identity used when channel filters have a resource ref.
  */
 function getChannelFilterStorageIdentity(
-  channel: ChannelRow,
+  channel: ChannelFilterTarget,
 ): ChannelFilterStorageIdentity {
   if (!channel.resourceRef) {
     throw new Error("Channel resource reference is unavailable")
@@ -281,7 +290,7 @@ export default function ChannelFilterDialog({
       }
     })
 
-    return normalizeChannelFilters(parsed as any[], {
+    return normalizeChannelFilters(parsed as IncomingChannelFilter[], {
       idPrefix: "channel-filter",
     })
   }
@@ -404,7 +413,13 @@ export default function ChannelFilterDialog({
           >
             {t("filters.actions.cancel")}
           </Button>
-          <Button onClick={handleSave} loading={isSaving}>
+          <Button
+            onClick={handleSave}
+            loading={isSaving}
+            data-testid={
+              MANAGED_SITE_CHANNELS_TEST_IDS.channelFiltersSaveButton
+            }
+          >
             {isSaving ? t("common:status.saving") : t("filters.actions.save")}
           </Button>
         </div>
@@ -445,6 +460,11 @@ export default function ChannelFilterDialog({
           setViewMode("json")
         }}
         onChangeJsonText={setJsonText}
+        testIds={{
+          viewJsonButton:
+            MANAGED_SITE_CHANNELS_TEST_IDS.channelFiltersViewJsonButton,
+          jsonEditor: MANAGED_SITE_CHANNELS_TEST_IDS.channelFiltersJsonEditor,
+        }}
       />
     </Modal>
   )

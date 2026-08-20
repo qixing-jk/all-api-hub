@@ -247,6 +247,53 @@ export interface OctopusFetchModelRequest {
   proxy?: boolean
 }
 
+/** Product-owned create command shared by current and legacy codecs. */
+export interface OctopusCreateChannelInput {
+  name: string
+  type: OctopusOutboundType
+  enabled?: boolean
+  baseUrl: string
+  key: string
+  model?: string
+  customModel?: string
+  proxy?: boolean
+  autoSync?: boolean
+  customHeaders?: OctopusCustomHeader[]
+  paramOverride?: string
+  channelProxy?: string
+  matchRegex?: string
+}
+
+/** Product-owned update command shared by current and legacy codecs. */
+export interface OctopusUpdateChannelInput {
+  id: number
+  name?: string
+  type?: OctopusOutboundType
+  enabled?: boolean
+  baseUrl?: string
+  key?: string
+  model?: string
+  customModel?: string
+  proxy?: boolean
+  autoSync?: boolean
+  customHeaders?: OctopusCustomHeader[]
+  paramOverride?: string
+  channelProxy?: string
+  matchRegex?: string
+  /** Existing normalized state used by codecs to preserve provider semantics. */
+  source?: OctopusChannel
+}
+
+/** Product-owned model-probe command shared by current and legacy codecs. */
+export interface OctopusFetchModelInput {
+  type: OctopusOutboundType
+  baseUrl: string
+  key: string
+  proxy?: boolean
+  /** Existing normalized state lets each codec derive its native probe shape. */
+  source?: OctopusChannel
+}
+
 /**
  * Octopus API 通用响应格式
  */
@@ -257,14 +304,4 @@ export interface OctopusApiResponse<T = unknown> {
   data?: T | null
   /** 错误消息 */
   message?: string
-}
-
-/**
- * Octopus 登录响应
- */
-export interface OctopusLoginResponse {
-  /** JWT Token */
-  token: string
-  /** Token 过期时间 */
-  expire_at: string
 }

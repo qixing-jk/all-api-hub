@@ -6,10 +6,13 @@ import { describe, expect, it, vi } from "vitest"
 
 import type {
   ManagedChannelsCallbacks,
+  ManagedChannelsDeleteState,
   ManagedChannelsLabels,
   ManagedChannelsPresentationState,
 } from "~/features/ManagedSiteChannels/presentation/contracts"
 import { ManagedSiteChannelsView } from "~/features/ManagedSiteChannels/presentation/ManagedSiteChannelsView"
+import { compareManagedSiteChannelStatusValues } from "~/features/ManagedSiteChannels/presentation/useManagedSiteChannelsTable"
+import { MANAGED_SITE_CHANNELS_TEST_IDS } from "~/features/ManagedSiteChannels/testIds"
 
 const rows = [
   {
@@ -60,7 +63,7 @@ const labels: ManagedChannelsLabels = {
   emptyFiltered: "No matches",
   emptyNoChannels: "No channels",
   rowsPerPage: "Rows per page",
-  paginationSummary: "1-1 of 1",
+  paginationSummary: (start, end, total) => `${start}-${end} of ${total}`,
   noEntries: "No entries",
   paginationPrev: "Previous page",
   paginationNext: "Next page",
@@ -115,6 +118,7 @@ const columns = [
     label: "ID",
     renderer: "identifier" as const,
     accessor: { kind: "displayIdentifier" as const },
+    routeFilter: { kind: "exact" as const, queryKey: "channelId" as const },
     canHide: true,
     defaultVisible: true,
     visible: true,
@@ -258,7 +262,6 @@ const commonProps = {
     canToggleMigration: true,
     canMigrateSelected: true,
     canMigrateFiltered: true,
-    showNewApiOnlyActions: true,
     hasMigrationTargets: true,
   },
   labels,
@@ -304,10 +307,6 @@ describe("ManagedSiteChannelsView", () => {
     rerender(
       <ManagedSiteChannelsView
         {...commonProps}
-        capabilities={{
-          ...commonProps.capabilities,
-          showNewApiOnlyActions: false,
-        }}
         state={createState({
           siteTypeValue: "native",
           rows: [
@@ -384,6 +383,27 @@ describe("ManagedSiteChannelsView", () => {
     expect(onRefresh).toHaveBeenCalledTimes(1)
   })
 
+  it("keeps a refreshing toolbar action available for cancellation", async () => {
+    const user = userEvent.setup()
+    const onRefresh = vi.fn()
+    render(
+      <ManagedSiteChannelsView
+        {...commonProps}
+        state={createState({ isRefreshing: true })}
+        callbacks={createCallbacks({ onRefresh })}
+      />,
+    )
+
+    const cancelRefreshButton = screen.getByRole("button", {
+      name: "Cancel refresh",
+    })
+    expect(cancelRefreshButton).toBeEnabled()
+    expect(cancelRefreshButton).toHaveAttribute("aria-busy", "true")
+
+    await user.click(cancelRefreshButton)
+    expect(onRefresh).toHaveBeenCalledOnce()
+  })
+
   it("keeps toolbar order and common columns while emitting opaque row keys", async () => {
     const user = userEvent.setup()
     const onSelectedRowKeysChange = vi.fn()
@@ -448,6 +468,63 @@ describe("ManagedSiteChannelsView", () => {
     )
     expect(screen.getByText("No matches")).toBeVisible()
     expect(screen.queryByText("opaque:first")).toBeNull()
+  })
+
+  it("applies an exact route filter through the declared native value accessor", async () => {
+    const user = userEvent.setup()
+    const onMigrateFiltered = vi.fn()
+    const nativeRows = [
+      {
+        ...rows[0],
+        rowKey: "opaque:native-12",
+        name: "Channel twelve",
+        cells: {
+          ...rows[0].cells,
+          "newApi.id": { kind: "text" as const, value: "12", sortValue: 12 },
+        },
+      },
+      {
+        ...rows[0],
+        rowKey: "opaque:native-112",
+        name: "Channel one hundred twelve",
+        cells: {
+          ...rows[0].cells,
+          "newApi.id": {
+            kind: "text" as const,
+            value: "112",
+            sortValue: 112,
+          },
+        },
+      },
+    ]
+    const nativeColumns = columns.map((column) =>
+      column.id === "id"
+        ? {
+            ...column,
+            renderer: "value" as const,
+            accessor: { kind: "cell" as const, key: "newApi.id" },
+          }
+        : column,
+    )
+
+    render(
+      <ManagedSiteChannelsView
+        {...commonProps}
+        state={createState({
+          rows: nativeRows,
+          total: nativeRows.length,
+          columns: nativeColumns,
+          channelIdFilterValue: "12",
+          migrationMode: true,
+        })}
+        callbacks={createCallbacks({ onMigrateFiltered })}
+      />,
+    )
+
+    expect(screen.getByText("Channel twelve")).toBeVisible()
+    expect(screen.queryByText("Channel one hundred twelve")).toBeNull()
+    await user.click(screen.getByRole("button", { name: "Migrate filtered" }))
+    expect(onMigrateFiltered).toHaveBeenCalledWith(["opaque:native-12"])
   })
 
   it("emits controlled selection changes without keeping private state", async () => {
@@ -591,6 +668,7 @@ describe("ManagedSiteChannelsView", () => {
     )
 
     expect(screen.getByText("Page two")).toBeVisible()
+    expect(screen.getByText("2-2 of 2")).toBeVisible()
     await user.click(screen.getByRole("checkbox", { name: "Select row" }))
     expect(onSelectedRowKeysChange).toHaveBeenLastCalledWith({
       "opaque:page-one": true,
@@ -598,10 +676,31 @@ describe("ManagedSiteChannelsView", () => {
     })
   })
 
+  it("renders page-size options and emits the controlled selection", async () => {
+    const user = userEvent.setup()
+    const onPaginationChange = vi.fn()
+
+    render(
+      <ManagedSiteChannelsView
+        {...commonProps}
+        state={createState({ pagination: { pageIndex: 3, pageSize: 10 } })}
+        callbacks={createCallbacks({ onPaginationChange })}
+      />,
+    )
+
+    await user.click(screen.getByRole("combobox", { name: labels.rowsPerPage }))
+    await user.click(screen.getByRole("option", { name: "25" }))
+
+    expect(onPaginationChange).toHaveBeenCalledWith({
+      pageIndex: 0,
+      pageSize: 25,
+    })
+  })
+
   it("renders ordered bulk-delete outcomes and blocks uncertain replay until refresh", async () => {
     const user = userEvent.setup()
     const onRefresh = vi.fn()
-    const deleteResultLabels = {
+    const deleteResultLabels: ManagedChannelsLabels = {
       ...labels,
       deleteResultsTitle: "Delete results",
       deleteRefreshRequired: "Refresh before deleting again.",
@@ -611,7 +710,33 @@ describe("ManagedSiteChannelsView", () => {
         failed: "Failed",
         uncertain: "Uncertain",
       },
-    } as any
+    }
+    const deleteState: ManagedChannelsDeleteState = {
+      isOpen: true,
+      isWorking: false,
+      rowKeys: ["opaque:first"],
+      results: [
+        {
+          rowKey: "opaque:success",
+          displayLabel: "Example success",
+          status: "success",
+          resultKey: "deleted",
+        },
+        {
+          rowKey: "opaque:failed",
+          displayLabel: "Example failed",
+          status: "failed",
+          resultKey: "rejected",
+        },
+        {
+          rowKey: "opaque:uncertain",
+          displayLabel: "Example uncertain",
+          status: "uncertain",
+          resultKey: "transport-lost",
+        },
+      ],
+      requiresRefresh: true,
+    }
 
     render(
       <ManagedSiteChannelsView
@@ -619,32 +744,7 @@ describe("ManagedSiteChannelsView", () => {
         labels={deleteResultLabels}
         state={createState({
           selectedRowKeys: { "opaque:first": true },
-          deleteState: {
-            isOpen: true,
-            isWorking: false,
-            rowKeys: ["opaque:first"],
-            results: [
-              {
-                rowKey: "opaque:success",
-                displayLabel: "Example success",
-                status: "success",
-                resultKey: "deleted",
-              },
-              {
-                rowKey: "opaque:failed",
-                displayLabel: "Example failed",
-                status: "failed",
-                resultKey: "rejected",
-              },
-              {
-                rowKey: "opaque:uncertain",
-                displayLabel: "Example uncertain",
-                status: "uncertain",
-                resultKey: "transport-lost",
-              },
-            ],
-            requiresRefresh: true,
-          } as any,
+          deleteState,
         })}
         callbacks={createCallbacks({ onRefresh })}
       />,
@@ -711,6 +811,44 @@ describe("ManagedSiteChannelsView", () => {
       within(alert).queryByRole("button", { name: "Refresh channels" }),
     ).toBeNull()
     expect(onRefresh).not.toHaveBeenCalled()
+  })
+
+  it("renders one refresh action when delete results and a failure coexist", () => {
+    render(
+      <ManagedSiteChannelsView
+        {...commonProps}
+        state={createState({
+          deleteState: {
+            isOpen: false,
+            isWorking: false,
+            rowKeys: [],
+            results: [
+              {
+                rowKey: "opaque:uncertain",
+                displayLabel: "Example uncertain",
+                status: "uncertain",
+                resultKey: "transport-lost",
+              },
+            ],
+            requiresRefresh: true,
+            failure: {
+              category: "Delete state uncertain",
+              message: "Refresh before continuing.",
+            },
+          },
+        })}
+        callbacks={createCallbacks()}
+      />,
+    )
+
+    expect(
+      screen.getAllByRole("button", { name: "Refresh channels" }),
+    ).toHaveLength(1)
+    expect(
+      within(screen.getByRole("alert")).getByRole("button", {
+        name: "Refresh channels",
+      }),
+    ).toBeVisible()
   })
 
   it("offers delete failure refresh recovery only when a fresh read is required", async () => {
@@ -836,13 +974,16 @@ describe("ManagedSiteChannelsView", () => {
     expect(screen.getAllByRole("row")[1]).toHaveTextContent("Fast channel")
     expect(screen.getAllByRole("row")[2]).toHaveTextContent("Missing latency")
 
-    await user.click(screen.getAllByRole("button", { name: "Status" })[0])
+    await user.click(
+      screen.getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.statusFilterTrigger),
+    )
     await user.click(screen.getByRole("checkbox", { name: "Enabled" }))
     expect(onStatusFilterChange).toHaveBeenCalledWith(["1"])
   })
 
-  it("orders mixed status facets and labels unmapped values accessibly", async () => {
+  it("labels unmapped status facets accessibly and filters by their value", async () => {
     const user = userEvent.setup()
+    const onStatusFilterChange = vi.fn()
     const statusRows = [
       "10",
       "enabled",
@@ -878,24 +1019,31 @@ describe("ManagedSiteChannelsView", () => {
           },
         }}
         state={createState({ rows: statusRows, total: statusRows.length })}
-        callbacks={createCallbacks()}
+        callbacks={createCallbacks({ onStatusFilterChange })}
       />,
     )
 
-    await user.click(screen.getAllByRole("button", { name: "Status" })[0])
-    const facetCheckboxes = screen
-      .getAllByRole("checkbox")
-      .filter((checkbox) => checkbox.id.startsWith("status-"))
+    await user.click(
+      screen.getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.statusFilterTrigger),
+    )
+    const unknownStatus = screen.getByRole("checkbox", {
+      name: "future-status",
+    })
 
-    expect(facetCheckboxes.map((checkbox) => checkbox.id)).toEqual([
-      "status-2",
-      "status-10",
-      "status-auto-disabled",
-      "status-enabled",
-      "status-future-status",
+    expect(unknownStatus).toBeVisible()
+    await user.click(unknownStatus)
+    expect(onStatusFilterChange).toHaveBeenCalledWith(["future-status"])
+  })
+
+  it("sorts numeric status facets before provider-owned text values", () => {
+    const values = ["10", "enabled", "2", "future-status", "auto-disabled"]
+
+    expect(values.sort(compareManagedSiteChannelStatusValues)).toEqual([
+      "2",
+      "10",
+      "auto-disabled",
+      "enabled",
+      "future-status",
     ])
-    expect(
-      screen.getByRole("checkbox", { name: "future-status" }),
-    ).toBeVisible()
   })
 })

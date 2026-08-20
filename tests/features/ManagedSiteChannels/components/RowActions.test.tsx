@@ -56,7 +56,6 @@ const labels = {
 const setup = (props: Partial<Parameters<typeof RowActions>[0]> = {}) => {
   const defaultProps = {
     rowKey: "opaque:channel:42",
-    displayName: "Example Channel",
     capabilities: {
       canEdit: true,
       canView: true,
@@ -74,7 +73,6 @@ const setup = (props: Partial<Parameters<typeof RowActions>[0]> = {}) => {
     onOpenSync: vi.fn(),
     onFilters: vi.fn(),
     showMigrationAction: false,
-    showNewApiOnlyActions: true,
     isSyncing: false,
     labels,
     testIds: {
@@ -99,6 +97,15 @@ describe("ManagedSiteChannels RowActions", () => {
     vi.clearAllMocks()
   })
 
+  it("keeps the menu trigger accessible without a competing tooltip", () => {
+    setup()
+
+    const trigger = screen.getByRole("button", { name: labels.trigger })
+    expect(trigger).toHaveAccessibleName(labels.trigger)
+    expect(trigger).not.toHaveAttribute("title")
+    expect(trigger).not.toHaveAttribute("aria-describedby")
+  })
+
   it("renders standard row actions and routes callbacks", async () => {
     const user = userEvent.setup()
     const props = setup()
@@ -118,8 +125,13 @@ describe("ManagedSiteChannels RowActions", () => {
     expect(screen.queryByRole("menuitem", { name: labels.migrate })).toBeNull()
   })
 
-  it("hides New API-only actions for incompatible managed sites", () => {
-    setup({ showNewApiOnlyActions: false })
+  it("hides channel actions that the row does not support", () => {
+    setup({
+      capabilities: {
+        canEdit: true,
+        canDelete: true,
+      },
+    })
 
     expect(
       screen.getByRole("menuitem", { name: labels.edit }),
@@ -136,7 +148,10 @@ describe("ManagedSiteChannels RowActions", () => {
     const user = userEvent.setup()
     const props = setup({
       rowKey: "gid://example.invalid/Channel/native-string-id",
-      showNewApiOnlyActions: false,
+      capabilities: {
+        canEdit: true,
+        canDelete: true,
+      },
     })
 
     await user.click(screen.getByRole("menuitem", { name: labels.edit }))

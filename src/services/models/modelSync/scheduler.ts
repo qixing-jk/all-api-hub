@@ -1,5 +1,4 @@
 import { SITE_TYPES } from "~/constants/siteType"
-import * as octopusApi from "~/services/apiService/octopus"
 import { ensureLegacyChannelConfigMigrationReady } from "~/services/managedSites/legacyChannelConfigMigration"
 import { getManagedSiteServiceForType } from "~/services/managedSites/managedSiteService"
 import {
@@ -15,6 +14,7 @@ import {
   type ManagedSiteMessagesKey,
 } from "~/services/managedSites/utils/managedSite"
 import { ModelRedirectService } from "~/services/models/modelRedirect"
+import { createOctopusModelSyncCapability } from "~/services/models/modelSync/octopusModelSync"
 import { notifyTaskResult } from "~/services/notifications/taskNotificationService"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
@@ -83,7 +83,6 @@ import {
 } from "./messaging"
 import { collectModelsFromExecution } from "./modelCollection"
 import { ModelSyncService } from "./modelSyncService"
-import { runOctopusBatch } from "./octopusModelSync"
 import { managedSiteModelSyncStorage } from "./storage"
 
 const logger = createLogger("ManagedSiteModelSync")
@@ -93,6 +92,17 @@ const MODEL_SYNC_BACKGROUND_ANALYTICS_CONTEXT = {
   actionId: PRODUCT_ANALYTICS_ACTION_IDS.ScheduledManagedSiteModelSync,
   entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
 } as const
+
+const resolveModelSyncProtectionExecution = (
+  trigger: ProtectionBypassAutomaticTrigger,
+  execution?: ProtectionBypassExecution,
+): ProtectionBypassExecution =>
+  execution ??
+  createAutomaticProtectionBypassExecution(
+    PROTECTION_BYPASS_FEATURES.ManagedSiteModelSync,
+    trigger,
+    PROTECTION_BYPASS_SURFACES.Background,
+  )
 
 /**
  * Buckets automatic sync failures without exposing raw backend messages.
@@ -225,12 +235,7 @@ class ModelSyncScheduler {
       sanitizeChannelFiltersForStorage(config.globalChannelModelFilters, {
         idPrefix: "global-channel-filter",
       }),
-      protectionBypassExecution ??
-        createAutomaticProtectionBypassExecution(
-          PROTECTION_BYPASS_FEATURES.ManagedSiteModelSync,
-          trigger,
-          PROTECTION_BYPASS_SURFACES.Background,
-        ),
+      resolveModelSyncProtectionExecution(trigger, protectionBypassExecution),
     )
   }
 
@@ -420,9 +425,12 @@ class ModelSyncScheduler {
         throw new Error(getManagedSiteConfigMissingMessage(t, messagesKey))
       }
 
-      const channels = await octopusApi.listChannels(
+      const channels = await createOctopusModelSyncCapability(
         octopusRuntimeConfig.config,
-      )
+        resolveModelSyncProtectionExecution(
+          PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.BackgroundRecovery,
+        ),
+      ).listChannels()
       return {
         items: channels.map(octopusChannelToManagedSite),
         total: channels.length,
@@ -476,6 +484,10 @@ class ModelSyncScheduler {
 
     // Octopus 使用独立的模型同步逻辑
     if (siteType === SITE_TYPES.OCTOPUS) {
+      const octopusExecution = resolveModelSyncProtectionExecution(
+        trigger,
+        protectionBypassExecution,
+      )
       return this.executeSyncForOctopus(
         channelIds,
         prefs,
@@ -483,6 +495,7 @@ class ModelSyncScheduler {
         concurrency,
         maxRetries,
         channelProcessingTimeout,
+        octopusExecution,
       )
     }
 
@@ -671,7 +684,7 @@ class ModelSyncScheduler {
    *
    * NOTE: This Octopus-specific sync path intentionally omits ModelRedirectService
    * mappings (unlike executeSync for New API/Veloera). This is because:
-   * 1. runOctopusBatch / octopusApi.updateChannel only update the model list directly
+   * 1. The Octopus sync capability only updates the model list directly
    * 2. Octopus channels initialize model_mapping as an empty string
    * 3. Redirect logic is not applicable to Octopus's channel architecture
    *
@@ -685,6 +698,7 @@ class ModelSyncScheduler {
     concurrency: number,
     maxRetries: number,
     channelProcessingTimeout: number,
+    protectionBypassExecution: ProtectionBypassExecution,
   ): Promise<ExecutionResult> {
     const octopusRuntimeConfig = resolveCurrentManagedSiteRuntimeConfig(prefs)
 
@@ -699,10 +713,12 @@ class ModelSyncScheduler {
       throw new Error(getManagedSiteConfigMissingMessage(t, messagesKey))
     }
 
-    // List channels using Octopus API
-    const octopusChannels = await octopusApi.listChannels(
+    const octopusModelSync = createOctopusModelSyncCapability(
       octopusRuntimeConfig.config,
+      protectionBypassExecution,
     )
+    // List channels through the same intent-bound capability used by the batch.
+    const octopusChannels = await octopusModelSync.listChannels()
     const allChannels = octopusChannels.map(octopusChannelToManagedSite)
 
     // Filter channels if specific IDs provided
@@ -736,7 +752,7 @@ class ModelSyncScheduler {
         scopeKey: octopusRuntimeConfig.config.baseUrl,
       })
       // Execute batch sync using Octopus-specific implementation
-      result = await runOctopusBatch(octopusRuntimeConfig.config, channels, {
+      result = await octopusModelSync.runBatch(channels, {
         concurrency,
         maxRetries,
         channelProcessingTimeout,

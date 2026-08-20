@@ -12,6 +12,12 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SOURCE_KINDS,
 } from "~/services/productAnalytics/contracts"
+import {
+  PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
+  PROTECTION_BYPASS_FEATURES,
+  PROTECTION_BYPASS_SURFACES,
+} from "~/services/protectionBypass/contracts"
+import { automaticExecution } from "~~/tests/services/protectionBypass/fixtures"
 
 vi.mock("~/services/managedSites/legacyChannelConfigMigration", () => ({
   ensureLegacyChannelConfigMigrationReady: vi.fn().mockResolvedValue(undefined),
@@ -31,6 +37,7 @@ const mocks = vi.hoisted(() => ({
   runBatch: vi.fn(),
   octopusListChannels: vi.fn(),
   runOctopusBatch: vi.fn(),
+  createOctopusModelSyncCapability: vi.fn(),
   saveLastExecution: vi.fn(),
   getLastExecution: vi.fn(),
   saveChannelUpstreamModelOptions: vi.fn(),
@@ -135,7 +142,7 @@ vi.mock("~/services/apiService/octopus", () => ({
 }))
 
 vi.mock("~/services/models/modelSync/octopusModelSync", () => ({
-  runOctopusBatch: mocks.runOctopusBatch,
+  createOctopusModelSyncCapability: mocks.createOctopusModelSyncCapability,
 }))
 
 vi.mock("~/services/managedSites/providers/octopus", () => ({
@@ -157,6 +164,10 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
     mocks.hasAlarmsAPI.mockReturnValue(true)
     mocks.onAlarm.mockReturnValue(undefined)
     mocks.getConfigsForScope.mockResolvedValue({})
+    mocks.createOctopusModelSyncCapability.mockReturnValue({
+      listChannels: mocks.octopusListChannels,
+      runBatch: mocks.runOctopusBatch,
+    })
     mocks.saveLastExecution.mockResolvedValue(undefined)
     mocks.saveChannelUpstreamModelOptions.mockResolvedValue(undefined)
     mocks.getLastExecution.mockResolvedValue(null)
@@ -374,6 +385,14 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
       total: 2,
       type_counts: {},
     })
+    expect(mocks.createOctopusModelSyncCapability).toHaveBeenCalledWith(
+      expect.objectContaining({ baseUrl: "https://octopus.example.com" }),
+      expect.objectContaining({
+        feature: PROTECTION_BYPASS_FEATURES.ManagedSiteModelSync,
+        trigger: PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.BackgroundRecovery,
+        surface: PROTECTION_BYPASS_SURFACES.Background,
+      }),
+    )
 
     mocks.getPreferences.mockResolvedValueOnce({
       managedSiteType: SITE_TYPES.OCTOPUS,
@@ -648,7 +667,7 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
       { id: 2, name: "Beta" },
     ])
     mocks.runOctopusBatch.mockImplementation(
-      async (_config: any, channels: any[], options: any) => {
+      async (channels: any[], options: any) => {
         expect(channels.map((channel) => channel.id)).toEqual([2])
 
         const lastResult = {
@@ -674,13 +693,27 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
       },
     )
 
-    await expect(modelSyncScheduler.executeSync([2])).resolves.toMatchObject({
+    const execution = automaticExecution(
+      PROTECTION_BYPASS_FEATURES.ManagedSiteModelSync,
+      PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.BackgroundRecovery,
+    )
+
+    await expect(
+      modelSyncScheduler.executeSync(
+        [2],
+        PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.BackgroundRecovery,
+        execution,
+      ),
+    ).resolves.toMatchObject({
       statistics: { failureCount: 1 },
     })
 
     expect(mocks.runOctopusBatch).toHaveBeenCalledTimes(1)
+    expect(mocks.createOctopusModelSyncCapability).toHaveBeenCalledWith(
+      expect.objectContaining({ baseUrl: "https://octopus.example.com" }),
+      execution,
+    )
     expect(mocks.runOctopusBatch).toHaveBeenCalledWith(
-      expect.anything(),
       expect.anything(),
       expect.objectContaining({
         concurrency: 2,
@@ -702,6 +735,52 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
         }),
       },
       { maxAttempts: 1 },
+    )
+  })
+
+  it("binds scheduled Octopus sync to one scheduled model-sync execution", async () => {
+    mocks.getPreferences.mockResolvedValueOnce({
+      managedSiteType: SITE_TYPES.OCTOPUS,
+      octopus: {
+        baseUrl: "https://managed.example.invalid",
+        username: "example-admin",
+        password: "example-password",
+      },
+      managedSiteModelSync: {
+        ...(DEFAULT_PREFERENCES as any).managedSiteModelSync,
+      },
+    })
+    mocks.octopusListChannels.mockResolvedValueOnce([
+      { id: 4, name: "Example channel" },
+    ])
+    mocks.runOctopusBatch.mockResolvedValueOnce({
+      items: [{ channelId: 4, channelName: "Example channel", ok: true }],
+      statistics: {
+        total: 1,
+        successCount: 1,
+        failureCount: 0,
+      },
+    })
+
+    await modelSyncScheduler.executeSync(
+      undefined,
+      PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.Scheduled,
+    )
+
+    expect(mocks.createOctopusModelSyncCapability).toHaveBeenCalledTimes(1)
+    expect(mocks.createOctopusModelSyncCapability).toHaveBeenCalledWith(
+      expect.objectContaining({ baseUrl: "https://managed.example.invalid" }),
+      expect.objectContaining({
+        feature: PROTECTION_BYPASS_FEATURES.ManagedSiteModelSync,
+        trigger: PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.Scheduled,
+        surface: PROTECTION_BYPASS_SURFACES.Background,
+      }),
+    )
+    expect(mocks.runOctopusBatch).toHaveBeenCalledWith(
+      expect.any(Array),
+      expect.not.objectContaining({
+        protectionBypassExecution: expect.anything(),
+      }),
     )
   })
 

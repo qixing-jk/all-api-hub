@@ -12,9 +12,13 @@ import {
 import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
 import {
   MANAGED_RESOURCE_CREATE_SEED_KINDS,
+  MANAGED_RESOURCE_DISPLAY_FACT_KINDS,
   MANAGED_RESOURCE_FAILURE_CODES,
   MANAGED_RESOURCE_FIELD_ISSUE_CODES,
   MANAGED_RESOURCE_FIELD_TYPES,
+  MANAGED_RESOURCE_SECRET_EDIT_INTENT_KINDS,
+  MANAGED_RESOURCE_SECRET_STATES,
+  MANAGED_RESOURCE_STATUSES,
   ManagedResourceError,
   type EditableResourceProjection,
   type ManagedChannelImportCreateSeed,
@@ -107,12 +111,20 @@ const readSecretIntent = (
     Array.isArray(value) ||
     !("kind" in value)
   ) {
-    return { kind: "unchanged" }
+    return { kind: MANAGED_RESOURCE_SECRET_EDIT_INTENT_KINDS.Unchanged }
   }
-  if (value.kind === "replace" && typeof value.value === "string") {
-    return { kind: "replace", value: value.value }
+  if (
+    value.kind === MANAGED_RESOURCE_SECRET_EDIT_INTENT_KINDS.Replace &&
+    typeof value.value === "string"
+  ) {
+    return {
+      kind: MANAGED_RESOURCE_SECRET_EDIT_INTENT_KINDS.Replace,
+      value: value.value,
+    }
   }
-  return value.kind === "clear" ? { kind: "clear" } : { kind: "unchanged" }
+  return value.kind === MANAGED_RESOURCE_SECRET_EDIT_INTENT_KINDS.Clear
+    ? { kind: MANAGED_RESOURCE_SECRET_EDIT_INTENT_KINDS.Clear }
+    : { kind: MANAGED_RESOURCE_SECRET_EDIT_INTENT_KINDS.Unchanged }
 }
 
 const isHttpUrl = (value: string) => {
@@ -131,10 +143,13 @@ const isHttpUrl = (value: string) => {
 const statusToDisplay = (
   status: Sub2ApiAdminApiKeyAccount["status"],
 ): ResourceDisplayFacts["status"] => {
-  if (status === SUB2API_MANAGED_RESOURCE_STATUS.Active) return "enabled"
-  if (status === SUB2API_MANAGED_RESOURCE_STATUS.Inactive) return "disabled"
-  if (status === SUB2API_MANAGED_RESOURCE_STATUS.Error) return "auto-disabled"
-  return "unknown"
+  if (status === SUB2API_MANAGED_RESOURCE_STATUS.Active)
+    return MANAGED_RESOURCE_STATUSES.Enabled
+  if (status === SUB2API_MANAGED_RESOURCE_STATUS.Inactive)
+    return MANAGED_RESOURCE_STATUSES.Disabled
+  if (status === SUB2API_MANAGED_RESOURCE_STATUS.Error)
+    return MANAGED_RESOURCE_STATUSES.AutoDisabled
+  return MANAGED_RESOURCE_STATUSES.Unknown
 }
 
 const getBaseUrl = (account: Sub2ApiAdminApiKeyAccount) =>
@@ -171,44 +186,46 @@ const baseFacts = (
   const facts: ResourceDisplayFact[] = [
     {
       fieldId: SUB2API_MANAGED_RESOURCE_FIELD_IDS.Name,
-      kind: "text",
+      kind: MANAGED_RESOURCE_DISPLAY_FACT_KINDS.Text,
       value: account.name,
     },
     {
       fieldId: SUB2API_MANAGED_RESOURCE_FIELD_IDS.Platform,
-      kind: "text",
+      kind: MANAGED_RESOURCE_DISPLAY_FACT_KINDS.Text,
       value: SUB2API_API_KEY_ACCOUNT_PLATFORM_LABELS[account.platform],
     },
     {
       fieldId: SUB2API_MANAGED_RESOURCE_FIELD_IDS.Status,
-      kind: "text",
+      kind: MANAGED_RESOURCE_DISPLAY_FACT_KINDS.Text,
       value: normalizedStatus,
     },
     {
       fieldId: SUB2API_MANAGED_RESOURCE_FIELD_IDS.Key,
-      kind: "secret",
-      state: hasSavedKey(account) ? "available" : "unavailable",
+      kind: MANAGED_RESOURCE_DISPLAY_FACT_KINDS.Secret,
+      state: hasSavedKey(account)
+        ? MANAGED_RESOURCE_SECRET_STATES.Available
+        : MANAGED_RESOURCE_SECRET_STATES.Unavailable,
     },
   ]
   const baseUrl = getBaseUrl(account)
   if (baseUrl) {
     facts.push({
       fieldId: SUB2API_MANAGED_RESOURCE_FIELD_IDS.BaseUrl,
-      kind: "text",
+      kind: MANAGED_RESOURCE_DISPLAY_FACT_KINDS.Text,
       value: baseUrl,
     })
   }
   if (typeof account.concurrency === "number") {
     facts.push({
       fieldId: SUB2API_MANAGED_RESOURCE_FIELD_IDS.Concurrency,
-      kind: "number",
+      kind: MANAGED_RESOURCE_DISPLAY_FACT_KINDS.Number,
       value: account.concurrency,
     })
   }
   if (typeof account.priority === "number") {
     facts.push({
       fieldId: SUB2API_MANAGED_RESOURCE_FIELD_IDS.Priority,
-      kind: "number",
+      kind: MANAGED_RESOURCE_DISPLAY_FACT_KINDS.Number,
       value: account.priority,
     })
   }
@@ -216,7 +233,7 @@ const baseFacts = (
   if (models.length > 0) {
     facts.push({
       fieldId: SUB2API_MANAGED_RESOURCE_FIELD_IDS.Models,
-      kind: "list",
+      kind: MANAGED_RESOURCE_DISPLAY_FACT_KINDS.List,
       value: models,
     })
   }
@@ -233,7 +250,7 @@ const toFacts = (
   if (includeNotes && typeof account.notes === "string" && account.notes) {
     fields.push({
       fieldId: SUB2API_MANAGED_RESOURCE_FIELD_IDS.Notes,
-      kind: "text",
+      kind: MANAGED_RESOURCE_DISPLAY_FACT_KINDS.Text,
       value: account.notes,
     })
   }
@@ -303,10 +320,10 @@ const fieldDescriptors = (
     required: detail === undefined,
     secretState:
       detail === undefined
-        ? "unavailable"
+        ? MANAGED_RESOURCE_SECRET_STATES.Unavailable
         : hasSavedKey(detail)
-          ? "available"
-          : "unavailable",
+          ? MANAGED_RESOURCE_SECRET_STATES.Available
+          : MANAGED_RESOURCE_SECRET_STATES.Unavailable,
     canReplace: true,
     allowClear: false,
   },
@@ -346,7 +363,9 @@ const createInitialValues = (): EditableResourceProjection => ({
   [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Status]:
     SUB2API_MANAGED_RESOURCE_STATUS.Active,
   [SUB2API_MANAGED_RESOURCE_FIELD_IDS.BaseUrl]: "",
-  [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Key]: { kind: "unchanged" },
+  [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Key]: {
+    kind: MANAGED_RESOURCE_SECRET_EDIT_INTENT_KINDS.Unchanged,
+  },
   [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Models]: [],
   [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Concurrency]: 1,
   [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Priority]: 1,
@@ -360,7 +379,9 @@ const editInitialValues = (
   [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Platform]: detail.platform,
   [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Status]: detail.status ?? "",
   [SUB2API_MANAGED_RESOURCE_FIELD_IDS.BaseUrl]: getBaseUrl(detail),
-  [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Key]: { kind: "unchanged" },
+  [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Key]: {
+    kind: MANAGED_RESOURCE_SECRET_EDIT_INTENT_KINDS.Unchanged,
+  },
   [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Models]: getModelWhitelist(detail),
   [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Concurrency]: detail.concurrency ?? 1,
   [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Priority]: detail.priority ?? 1,
@@ -434,10 +455,11 @@ const validateValues = (
   }
   if (
     (context.create &&
-      (secret.kind !== "replace" ||
+      (secret.kind !== MANAGED_RESOURCE_SECRET_EDIT_INTENT_KINDS.Replace ||
         !hasUsableManagedSiteChannelKey(secret.value))) ||
-    secret.kind === "clear" ||
-    (secret.kind === "replace" && !hasUsableManagedSiteChannelKey(secret.value))
+    secret.kind === MANAGED_RESOURCE_SECRET_EDIT_INTENT_KINDS.Clear ||
+    (secret.kind === MANAGED_RESOURCE_SECRET_EDIT_INTENT_KINDS.Replace &&
+      !hasUsableManagedSiteChannelKey(secret.value))
   ) {
     issues.push({
       fieldId: SUB2API_MANAGED_RESOURCE_FIELD_IDS.Key,
@@ -486,7 +508,10 @@ const buildCreateCommand = (
         values,
         SUB2API_MANAGED_RESOURCE_FIELD_IDS.BaseUrl,
       ).trim(),
-      apiKey: secret.kind === "replace" ? secret.value.trim() : "",
+      apiKey:
+        secret.kind === MANAGED_RESOURCE_SECRET_EDIT_INTENT_KINDS.Replace
+          ? secret.value.trim()
+          : "",
       ...(models.length
         ? {
             modelMapping: toIdentityModelMapping(models),
@@ -537,7 +562,8 @@ const buildUpdateCommand = (
   if (status !== detail.status && isSub2ApiManagedResourceStatus(status)) {
     input.status = status
   }
-  if (secret.kind === "replace") input.apiKey = secret.value.trim()
+  if (secret.kind === MANAGED_RESOURCE_SECRET_EDIT_INTENT_KINDS.Replace)
+    input.apiKey = secret.value.trim()
   if ([...models].sort().join("\0") !== [...existingModels].sort().join("\0")) {
     input.modelMapping = Object.fromEntries(
       models.map((model) => [model, existingModelMapping[model] ?? model]),
@@ -570,8 +596,11 @@ const createSub2ApiChannelImportProjection = (
   [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Key]: hasUsableManagedSiteChannelKey(
     seed.credential,
   )
-    ? { kind: "replace", value: seed.credential.trim() }
-    : { kind: "unchanged" },
+    ? {
+        kind: MANAGED_RESOURCE_SECRET_EDIT_INTENT_KINDS.Replace,
+        value: seed.credential.trim(),
+      }
+    : { kind: MANAGED_RESOURCE_SECRET_EDIT_INTENT_KINDS.Unchanged },
   [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Models]: normalizeList(seed.models),
   [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Concurrency]: 1,
   [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Priority]: seed.priority,

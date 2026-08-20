@@ -5,6 +5,7 @@ import {
   Alert,
   Badge,
   Button,
+  BUTTON_LOADING_BEHAVIORS,
   CollapsibleSection,
   Heading5,
   Input,
@@ -62,6 +63,10 @@ import {
 } from "~/services/verification/cliSupportVerification/i18n"
 import { createLogger } from "~/utils/core/logger"
 
+import {
+  filterVerificationRedactions as filterRedactions,
+  isVerificationAbortError as isAbortError,
+} from "../verificationDialogUtils"
 import { ToolStatusBadge } from "./ToolStatusBadge"
 import type { ToolItemState, VerifyCliSupportDialogProps } from "./types"
 import { formatLatency, safeJsonStringify } from "./utils"
@@ -70,24 +75,6 @@ import { formatLatency, safeJsonStringify } from "./utils"
  * Unified logger scoped to the CLI support verification dialog.
  */
 const logger = createLogger("VerifyCliSupportDialog")
-
-/**
- * Detects user-initiated cancellation across DOM and service-layer aborts.
- */
-function isAbortError(error: unknown, abortSignal?: AbortSignal) {
-  return (
-    abortSignal?.aborted ||
-    (error instanceof DOMException && error.name === "AbortError") ||
-    (error instanceof Error && error.name === "AbortError")
-  )
-}
-
-/**
- * Keeps optional redaction values type-safe before sanitizing diagnostics.
- */
-function filterRedactions(values: Array<string | undefined>): string[] {
-  return values.filter((value): value is string => Boolean(value))
-}
 
 /**
  * Build the initial UI state for all tool rows.
@@ -678,6 +665,8 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
         variant={isRunning ? "destructive" : "success"}
         onClick={isRunning ? stopRun : runAll}
         disabled={!isRunning && (isLoadingRuntimeKeys || !canRunAll)}
+        loading={isRunning}
+        loadingBehavior={BUTTON_LOADING_BEHAVIORS.Interactive}
       >
         {isRunning
           ? t("verifyDialog.actions.stop")
@@ -859,6 +848,8 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
                     size="sm"
                     variant={tool.isRunning ? "destructive" : "secondary"}
                     onClick={tool.isRunning ? stopTool : runSingleTool}
+                    loading={tool.isRunning}
+                    loadingBehavior={BUTTON_LOADING_BEHAVIORS.Interactive}
                     aria-label={
                       tool.isRunning
                         ? t("verifyDialog.actions.stopTool", {

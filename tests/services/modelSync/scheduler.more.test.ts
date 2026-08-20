@@ -22,6 +22,7 @@ const mocks = vi.hoisted(() => ({
   octopusFetchGroups: vi.fn(),
   octopusFetchAvailableModels: vi.fn(),
   runOctopusBatch: vi.fn(),
+  createOctopusModelSyncCapability: vi.fn(),
   saveLastExecution: vi.fn(),
   getLastExecution: vi.fn(),
   getStoredPreferences: vi.fn(),
@@ -105,13 +106,17 @@ vi.mock("~/services/apiService/octopus", () => ({
 }))
 
 vi.mock("~/services/models/modelSync/octopusModelSync", () => ({
-  runOctopusBatch: mocks.runOctopusBatch,
+  createOctopusModelSyncCapability: mocks.createOctopusModelSyncCapability,
 }))
 
 describe("modelSyncScheduler additional scheduler flows", () => {
   beforeEach(() => {
     vi.resetModules()
     vi.clearAllMocks()
+    mocks.createOctopusModelSyncCapability.mockReturnValue({
+      listChannels: mocks.octopusListChannels,
+      runBatch: mocks.runOctopusBatch,
+    })
     mocks.hasAlarmsAPI.mockReturnValue(true)
     mocks.getPreferences.mockResolvedValue({
       managedSiteType: "new-api",

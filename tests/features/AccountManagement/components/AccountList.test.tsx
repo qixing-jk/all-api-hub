@@ -157,18 +157,33 @@ vi.mock("@dnd-kit/sortable", () => ({
 }))
 
 vi.mock("~/components/ui", () => {
-  const MockInput = React.forwardRef<HTMLInputElement, any>(function MockInput(
-    { leftIcon, rightIcon, ...props },
-    ref,
-  ) {
-    return (
-      <div>
-        {leftIcon}
-        <input ref={ref} {...props} />
-        {rightIcon}
-      </div>
-    )
-  })
+  interface MockInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+    clearButtonLabel?: string
+    leftIcon?: React.ReactNode
+    onClear?: () => void
+    rightIcon?: React.ReactNode
+  }
+
+  const MockInput = React.forwardRef<HTMLInputElement, MockInputProps>(
+    function MockInput(
+      {
+        clearButtonLabel: _clearButtonLabel,
+        leftIcon,
+        onClear: _onClear,
+        rightIcon,
+        ...props
+      },
+      ref,
+    ) {
+      return (
+        <div>
+          {leftIcon}
+          <input ref={ref} {...props} />
+          {rightIcon}
+        </div>
+      )
+    },
+  )
 
   const MockTagFilter = ({ mode, options, value, onChange, allLabel }: any) => {
     const isSingleMode = mode === "single"

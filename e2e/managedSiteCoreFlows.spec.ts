@@ -1,12 +1,19 @@
 import type { BrowserContext, Route } from "@playwright/test"
 
+import { CHANNEL_DIALOG_TEST_IDS } from "~/components/dialogs/ChannelDialog/testIds"
 import { ChannelType } from "~/constants"
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SITE_TYPES } from "~/constants/siteType"
 import { BASIC_SETTINGS_TEST_IDS } from "~/features/BasicSettings/testIds"
+import {
+  getManagedSiteChannelRowFiltersActionTestId,
+  getManagedSiteChannelRowSyncActionTestId,
+  MANAGED_SITE_CHANNELS_TEST_IDS,
+} from "~/features/ManagedSiteChannels/testIds"
 import { CHANNEL_STATUS, type ManagedSiteChannel } from "~/types/managedSite"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
+import { openManagedSiteChannelRowActions } from "~~/e2e/scenarios/managedSiteChannels"
 import {
   forceExtensionLanguage,
   installExtensionPageGuards,
@@ -210,6 +217,14 @@ async function readStoredModelSyncExecution(context: BrowserContext): Promise<{
   }
 }
 
+async function fulfillJson(route: Route, body: unknown, status = 200) {
+  await route.fulfill({
+    status,
+    contentType: "application/json",
+    body: JSON.stringify(body),
+  })
+}
+
 async function stubManagedSiteAdminRoutes(
   context: BrowserContext,
   options: {
@@ -243,7 +258,7 @@ async function stubManagedSiteAdminRoutes(
   let nextChannelId = 303
   const createPayloads: unknown[] = []
   const updatePayloads: unknown[] = []
-  const statusPayloads: unknown[] = []
+  const fetchedModelChannelIds: number[] = []
   const origin = new URL(MANAGED_SITE_BASE_URL).origin
 
   await context.route(`${origin}/**`, async (route: Route) => {
@@ -252,47 +267,48 @@ async function stubManagedSiteAdminRoutes(
     const method = request.method()
 
     if (method === "GET" && url.pathname === "/api/channel/") {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          success: true,
-          message: "ok",
-          data: {
-            items: channels,
-            total: channels.length,
-            type_counts: {
-              [String(ChannelType.OpenAI)]: 1,
-              [String(ChannelType.Anthropic)]: 1,
-            },
+      await fulfillJson(route, {
+        success: true,
+        message: "ok",
+        data: {
+          items: channels,
+          total: channels.length,
+          type_counts: {
+            [String(ChannelType.OpenAI)]: 1,
+            [String(ChannelType.Anthropic)]: 1,
           },
-        }),
+        },
+      })
+      return
+    }
+
+    if (method === "GET" && url.pathname === "/api/channel/search") {
+      const keyword = url.searchParams.get("keyword")?.toLowerCase() ?? ""
+      const items = channels.filter((channel) =>
+        channel.name.toLowerCase().includes(keyword),
+      )
+      await fulfillJson(route, {
+        success: true,
+        message: "ok",
+        data: { items, total: items.length, type_counts: {} },
       })
       return
     }
 
     if (method === "GET" && url.pathname === "/api/group") {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          success: true,
-          message: "ok",
-          data: ["default", "vip"],
-        }),
+      await fulfillJson(route, {
+        success: true,
+        message: "ok",
+        data: ["default", "vip"],
       })
       return
     }
 
     if (method === "GET" && url.pathname === "/api/user/models") {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          success: true,
-          message: "ok",
-          data: ["gpt-4o-mini", "gpt-4.1-mini", "claude-3-5-sonnet"],
-        }),
+      await fulfillJson(route, {
+        success: true,
+        message: "ok",
+        data: ["gpt-4o-mini", "gpt-4.1-mini", "claude-3-5-sonnet"],
       })
       return
     }
@@ -302,6 +318,7 @@ async function stubManagedSiteAdminRoutes(
       url.pathname.startsWith("/api/channel/fetch_models/")
     ) {
       const channelId = Number(url.pathname.split("/").filter(Boolean).pop())
+      fetchedModelChannelIds.push(channelId)
       const fetchedModels =
         options.fetchedModelsByChannelId?.[channelId] ??
         (channelId === 101
@@ -311,26 +328,36 @@ async function stubManagedSiteAdminRoutes(
             : null)
 
       if (!fetchedModels) {
-        await route.fulfill({
-          status: 404,
-          contentType: "application/json",
-          body: JSON.stringify({
+        await fulfillJson(
+          route,
+          {
             success: false,
             message: `No fetched models configured for channel ${channelId}`,
-          }),
-        })
+          },
+          404,
+        )
         return
       }
 
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          success: true,
-          message: "ok",
-          data: fetchedModels,
-        }),
+      await fulfillJson(route, {
+        success: true,
+        message: "ok",
+        data: fetchedModels,
       })
+      return
+    }
+
+    const channelDetailMatch = url.pathname.match(/^\/api\/channel\/(\d+)$/u)
+    if (method === "GET" && channelDetailMatch) {
+      const channelId = Number(channelDetailMatch[1])
+      const channel = channels.find((item) => item.id === channelId)
+      await fulfillJson(
+        route,
+        channel
+          ? { success: true, message: "ok", data: channel }
+          : { success: false, message: "channel not found" },
+        channel ? 200 : 404,
+      )
       return
     }
 
@@ -365,14 +392,10 @@ async function stubManagedSiteAdminRoutes(
       nextChannelId += 1
       channels.push(createdChannel)
 
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          success: true,
-          message: "created",
-          data: createdChannel,
-        }),
+      await fulfillJson(route, {
+        success: true,
+        message: "created",
+        data: createdChannel,
       })
       return
     }
@@ -404,14 +427,10 @@ async function stubManagedSiteAdminRoutes(
         if (updates.status !== undefined) channel.status = updates.status
       }
 
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          success: true,
-          message: "updated",
-          data: null,
-        }),
+      await fulfillJson(route, {
+        success: true,
+        message: "updated",
+        data: null,
       })
       return
     }
@@ -422,7 +441,6 @@ async function stubManagedSiteAdminRoutes(
     ) {
       const payload = request.postDataJSON()
       const channelId = Number(url.pathname.split("/").filter(Boolean)[2])
-      statusPayloads.push({ id: channelId, ...payload })
 
       const channel = channels.find((item) => item.id === channelId)
       const status =
@@ -439,14 +457,10 @@ async function stubManagedSiteAdminRoutes(
         channel.status = status
       }
 
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          success: true,
-          message: "status updated",
-          data: true,
-        }),
+      await fulfillJson(route, {
+        success: true,
+        message: "status updated",
+        data: true,
       })
       return
     }
@@ -459,32 +473,28 @@ async function stubManagedSiteAdminRoutes(
         channels.splice(channelIndex, 1)
       }
 
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          success: true,
-          message: "deleted",
-          data: null,
-        }),
+      await fulfillJson(route, {
+        success: true,
+        message: "deleted",
+        data: null,
       })
       return
     }
 
-    await route.fulfill({
-      status: 404,
-      contentType: "application/json",
-      body: JSON.stringify({
+    await fulfillJson(
+      route,
+      {
         success: false,
         message: `Unhandled managed-site E2E route: ${method} ${url.pathname}`,
-      }),
-    })
+      },
+      404,
+    )
   })
 
   return {
     createPayloads,
     updatePayloads,
-    statusPayloads,
+    fetchedModelChannelIds,
   }
 }
 
@@ -769,13 +779,15 @@ test("creates a managed-site channel from channel management", async ({
   ).toBeVisible()
 
   await page
-    .getByPlaceholder("Enter a descriptive channel name")
+    .getByTestId(CHANNEL_DIALOG_TEST_IDS.nameInput)
     .fill("E2E Created OpenAI")
   await page
-    .getByPlaceholder("Enter the upstream provider API key")
+    .getByTestId(CHANNEL_DIALOG_TEST_IDS.keyInput)
     .fill("sk-e2e-created-channel")
-  await page.getByPlaceholder("Select or type model names").fill("gpt-4.1-mini")
-  await page.getByPlaceholder("Select or type model names").press("Enter")
+  await page
+    .getByTestId(CHANNEL_DIALOG_TEST_IDS.modelsInput)
+    .fill("gpt-4.1-mini")
+  await page.getByTestId(CHANNEL_DIALOG_TEST_IDS.modelsInput).press("Enter")
 
   await expect(
     page.getByLabel("Copy gpt-4.1-mini", { exact: true }),
@@ -825,15 +837,13 @@ test("edits a managed-site channel from row actions", async ({
   page,
 }) => {
   await seedManagedSitePreferences(context)
-  const { statusPayloads, updatePayloads } =
-    await stubManagedSiteAdminRoutes(context)
+  const { updatePayloads } = await stubManagedSiteAdminRoutes(context)
 
   await page.goto(channelsUrl(extensionId, { search: "Production" }))
   await waitForExtensionRoot(page)
   await expectPermissionOnboardingHidden(page)
 
-  await expect(page.getByText("Production OpenAI")).toBeVisible()
-  await page.getByRole("button", { name: "Actions" }).click()
+  await openManagedSiteChannelRowActions(page, "Production OpenAI")
   await page.getByRole("menuitem", { name: "Edit", exact: true }).click()
 
   await expect(
@@ -841,9 +851,9 @@ test("edits a managed-site channel from row actions", async ({
   ).toBeVisible()
 
   await page
-    .getByPlaceholder("Enter a descriptive channel name")
+    .getByTestId(CHANNEL_DIALOG_TEST_IDS.nameInput)
     .fill("Production OpenAI Edited")
-  const modelSearchInput = page.getByPlaceholder("Search...").first()
+  const modelSearchInput = page.getByTestId(CHANNEL_DIALOG_TEST_IDS.modelsInput)
   await modelSearchInput.fill("gpt-4.1-mini")
   await modelSearchInput.press("Enter")
 
@@ -873,10 +883,78 @@ test("edits a managed-site channel from row actions", async ({
   })
   expect(editedPayload).not.toHaveProperty("status")
   expect(editedPayload).not.toHaveProperty("groups")
-  expect(statusPayloads).toContainEqual({
+})
+
+test("applies a saved channel filter during immediate model sync", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  await seedManagedSitePreferences(context)
+  const { fetchedModelChannelIds, updatePayloads } =
+    await stubManagedSiteAdminRoutes(context, {
+      fetchedModelsByChannelId: {
+        101: ["gpt-4o-mini", "gpt-4.1-mini"],
+      },
+    })
+
+  await page.goto(channelsUrl(extensionId))
+  await waitForExtensionRoot(page)
+  await expectPermissionOnboardingHidden(page)
+
+  const { rowTestToken } = await openManagedSiteChannelRowActions(
+    page,
+    "Production OpenAI",
+  )
+  await page
+    .getByTestId(getManagedSiteChannelRowFiltersActionTestId(rowTestToken))
+    .click()
+
+  const filterDialog = page.getByRole("dialog")
+  await expect(
+    filterDialog.getByText("Channel filters", { exact: true }),
+  ).toBeVisible()
+  await filterDialog
+    .getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.channelFiltersViewJsonButton)
+    .click()
+  await filterDialog
+    .getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.channelFiltersJsonEditor)
+    .fill(
+      JSON.stringify([
+        {
+          name: "Only GPT-4.1",
+          pattern: "gpt-4.1",
+          action: "include",
+        },
+      ]),
+    )
+  await filterDialog
+    .getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.channelFiltersSaveButton)
+    .click()
+  await expect(page.getByText("Filters saved")).toBeVisible()
+  await expect(filterDialog).toBeHidden()
+
+  await openManagedSiteChannelRowActions(page, "Production OpenAI")
+  await page
+    .getByTestId(getManagedSiteChannelRowSyncActionTestId(rowTestToken))
+    .click()
+
+  await expect(page.getByText("Model sync completed (1/1)")).toBeVisible()
+  expect(fetchedModelChannelIds).toEqual([101])
+  const modelSyncPayload = updatePayloads.find(
+    (payload) =>
+      typeof payload === "object" &&
+      payload !== null &&
+      "id" in payload &&
+      payload.id === 101 &&
+      "models" in payload &&
+      payload.models === "gpt-4.1-mini",
+  ) as Record<string, unknown> | undefined
+  expect(modelSyncPayload).toMatchObject({
     id: 101,
-    status: CHANNEL_STATUS.Enable,
+    models: "gpt-4.1-mini",
   })
+  expect(modelSyncPayload).not.toHaveProperty("key")
 })
 
 test("loads managed-site channels, deep-links into manual model sync, and runs a selected sync", async ({
@@ -901,7 +979,7 @@ test("loads managed-site channels, deep-links into manual model sync, and runs a
   await expect(page.getByText("Sandbox Anthropic")).toHaveCount(0)
   await expect(page.getByText("1 - 1 of 1 channels")).toBeVisible()
 
-  await page.getByRole("button", { name: "Actions" }).click()
+  await openManagedSiteChannelRowActions(page, "Production OpenAI")
   await page
     .getByRole("menuitem", { name: "Open model sync interface" })
     .click()

@@ -1,8 +1,8 @@
 {
   "alerts": {
     "authenticationFailed": {
-      "description": "已保存的 AxonHub 凭据被拒绝。请打开设置更新凭据，然后刷新渠道列表。",
-      "title": "请重新登录 AxonHub"
+      "description": "已保存的 {{site}} 凭据被拒绝。请打开设置更新凭据，然后刷新渠道列表。",
+      "title": "请重新登录 {{site}}"
     },
     "editorLoadError": {
       "description": "无法加载渠道表单。请刷新渠道列表后重试。",
@@ -21,16 +21,16 @@
       "title": "渠道更新需要核对"
     },
     "permissionDenied": {
-      "description": "当前 AxonHub 账号无权管理渠道。请改用管理员账号或调整权限，然后刷新。",
-      "title": "AxonHub 拒绝访问"
+      "description": "当前 {{site}} 账号无权管理渠道。请改用管理员账号或调整权限，然后刷新。",
+      "title": "{{site}} 拒绝访问"
     },
     "savedRefreshError": {
       "description": "渠道已保存，但无法加载最新列表。请先刷新渠道列表，再进行其他更改。",
       "title": "渠道已保存，需要刷新"
     },
     "unavailable": {
-      "description": "无法连接 AxonHub。请检查服务器和网络，然后刷新渠道列表。",
-      "title": "AxonHub 暂时不可用"
+      "description": "无法连接 {{site}}。请检查服务器和网络，然后刷新渠道列表。",
+      "title": "{{site}} 暂时不可用"
     }
   },
   "dialog": {
@@ -141,25 +141,28 @@
     },
     "secret": {
       "actions": {
-        "clear": "移除已保存凭据",
-        "restore": "保留已保存凭据",
+        "cancelLoad": "取消加载",
+        "clear": "移除已保存的 API 密钥",
+        "restore": "保留已保存的 API 密钥",
         "retry": "重试",
-        "view": "查看已保存凭据"
+        "view": "查看已保存密钥"
       },
-      "createHint": "输入新渠道的凭据。",
-      "keepExistingHint": "将此字段留空可保留已保存的凭据，不作更改。",
-      "loadError": "无法加载已保存凭据。",
-      "loading": "正在加载已保存的凭据…",
-      "placeholder": "输入凭据",
+      "createHint": "输入新渠道使用的上游 API 密钥。",
+      "keepExistingHint": "将此字段留空可保留已保存的 API 密钥，不作更改。",
+      "loadableHint": "已保存的 API 密钥未在此处显示；留空将保持不变。",
+      "loadError": "无法加载已保存的 API 密钥。",
+      "loading": "正在加载已保存的 API 密钥…",
+      "placeholder": "输入上游 API 密钥",
       "replacementBlocked": {
         "multipleCredentials": "此渠道有多个 API 密钥。请在 AxonHub 中管理这些密钥。"
       },
-      "replacementDisabled": "此凭据类型无法在此处替换。",
+      "replacementDisabled": "此 API 密钥无法在此处替换。",
+      "replacePlaceholder": "输入新的 API 密钥以替换已保存密钥",
       "state": {
-        "available": "已有可用的凭据。",
-        "masked": "已保存脱敏凭据。",
-        "permissionHidden": "已保存凭据因权限限制而不可见。",
-        "unavailable": "暂无可显示的凭据。"
+        "available": "已有可用的 API 密钥。",
+        "masked": "已保存脱敏的 API 密钥。",
+        "permissionHidden": "已保存的 API 密钥因权限限制而不可见。",
+        "unavailable": "当前无法显示已保存的 API 密钥。"
       }
     },
     "sections": {
@@ -366,7 +369,6 @@
     },
     "title": "迁移渠道"
   },
-  "resourceDescription": "搜索、创建、编辑和删除与此托管站点相连的渠道。",
   "statusLabels": {
     "autoDisabled": "自动禁用",
     "enabled": "启用",
@@ -418,7 +420,9 @@
     "revealKeyUnsupported": "当前托管站点不支持显示渠道 key",
     "someDeletesFailed": "删除 {{count}} 个渠道失败：{{error}}",
     "syncCompleted": "模型同步完成（{{success}}/{{total}}）",
-    "syncFailed": "模型同步失败：{{error}}"
+    "syncCompletedRefreshFailed": "模型已同步（{{success}}/{{total}}），但渠道列表刷新失败。请刷新后重试。",
+    "syncFailed": "模型同步失败：{{error}}",
+    "syncFailedFallback": "无法同步渠道"
   },
   "toolbar": {
     "addChannel": "新增渠道",

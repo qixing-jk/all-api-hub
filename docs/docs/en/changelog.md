@@ -8,6 +8,22 @@ This page records major updates for general users (feature changes / experience 
 - **Troubleshooting**: You can enable console logs in "Settings → General → Logs" and report reproduction steps to [Issues](https://github.com/qixing-jk/all-api-hub/issues).
 :::
 
+## 3.57.0
+- **New Features:**
+  - API credential and account key associations: OpenRouter and similar sites show the full API key only once at creation time, then display only a masked value in the key list. You can now save the full key to the API Credential Library and associate it with the account key, so it remains available locally for copying, verification, and export instead of having to create a replacement. See [API Credential Library](./api-credential-profiles.md) and [Key Management](./key-management.md).
+  - Model price comparison: Choose a workload such as general chat, code completion, or coding agents to compare estimated prices for the way you use models, or adjust the input, output, and cache shares yourself. Different names for the same model are grouped when they can be matched safely, and offers with incomplete pricing are clearly marked instead of being treated as free. See [Model List](./model-list.md).
+  - Kelivo mobile export: Send an account key, service credential, or saved API credential to Kelivo Mobile without re-entering each provider field. Review or edit the configuration, then import it by QR code or share code using OpenAI Compatible, Anthropic, or Google. QR codes and share codes contain the API key in plain text, so do not capture or share them publicly. See [Supported Export Tools and Integration Targets](./supported-export-tools.md).
+- **Experience Improvements:**
+  - Export actions: Common destinations are now easier to find. Configured self-hosted sites appear as direct import actions, while the remaining destinations are grouped into chat clients, coding agents, and gateway or routing tools. Saved API credentials can also generate Cursor++ provider configurations. See [Quick Export](./quick-export.md).
+- **Bug Fixes:**
+  - Key lists: Fixed some One API, Veloera, OneHub / DoneHub, and other New API-compatible sites showing only part of the key list. Loading also finishes once the complete list is available, avoiding unnecessary wait. See [Key Management](./key-management.md).
+  - `Octopus` self-hosted sites: Recent Octopus releases can now connect successfully for configuration checks, channel management, and model synchronization. Older Octopus sites remain supported. See [Self-hosted Site Management](./self-hosted-site-management.md).
+
+**Where to find them:**
+- Credential associations: Open **Settings → API Credential Library** to review associations, or use a key action under **Settings → Key Management** to save, associate, or open a credential.
+- Model price comparison: Under **Settings → Model List**, select `Compare Prices` at the top of the page, then choose a preset or adjust the shares under `Price comparison`.
+- Kelivo and other export destinations: Open the `Export` menu for an account key, service credential, or saved API credential. Configured self-hosted sites appear as separate actions.
+
 ## 3.56.0
 - **New Features:**
   - Model Pricing: Model List now shows cache-read and cache-write pricing alongside input and output pricing. Only prices actually provided by the service are displayed, so missing data is not mistaken for zero-cost usage. See [Model List](./model-list.md).

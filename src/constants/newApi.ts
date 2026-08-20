@@ -2,7 +2,7 @@ import type { ChannelDefaults } from "~/types/managedSite"
 
 /**
  * Channel Type enumeration
- * Based on https://github.com/QuantumNous/new-api/blob/00782aae88c3ae6a3623ca557f6af17c4a28b8b9/constant/channel.go#L3
+ * Based on https://github.com/QuantumNous/new-api/blob/f116414284162ad15d8925f7bca494c109b83e93/constant/channel.go
  */
 export const ChannelType = {
   Unknown: 0,
@@ -57,6 +57,11 @@ export const ChannelType = {
   Submodel: 53,
   DoubaoVideo: 54,
   Sora: 55,
+  Replicate: 56,
+  Codex: 57,
+  AdvancedCustom: 58,
+  Sub2API: 59,
+  NewAPI: 60,
 } as const
 
 export type ChannelType = (typeof ChannelType)[keyof typeof ChannelType]
@@ -76,7 +81,7 @@ export const DEFAULT_CHANNEL_FIELDS: ChannelDefaults = {
 
 /**
  * Mapping of ChannelType enum to human-readable names
- * @see https://github.com/QuantumNous/new-api/blob/0952973887e7588e28d08da7d4cab2530de857c5/constant/channel.go#L3
+ * @see https://github.com/QuantumNous/new-api/blob/f116414284162ad15d8925f7bca494c109b83e93/constant/channel.go
  */
 export const ChannelTypeNames: Record<ChannelType, string> = {
   [ChannelType.Unknown]: "Unknown",
@@ -131,6 +136,11 @@ export const ChannelTypeNames: Record<ChannelType, string> = {
   [ChannelType.Submodel]: "Submodel",
   [ChannelType.DoubaoVideo]: "DoubaoVideo",
   [ChannelType.Sora]: "Sora",
+  [ChannelType.Replicate]: "Replicate",
+  [ChannelType.Codex]: "ChatGPT Subscription (Codex)",
+  [ChannelType.AdvancedCustom]: "Advanced Custom",
+  [ChannelType.Sub2API]: "Sub2API",
+  [ChannelType.NewAPI]: "New API",
 }
 
 export const ChannelTypeOptions = Object.entries(ChannelTypeNames).map(
@@ -139,3 +149,42 @@ export const ChannelTypeOptions = Object.entries(ChannelTypeNames).map(
     label,
   }),
 )
+
+export const NEW_API_MANAGED_RESOURCE_FIELD_IDS = {
+  Id: "newApi.id",
+  Name: "newApi.name",
+  Type: "newApi.type",
+  Status: "newApi.status",
+  BaseUrl: "newApi.baseUrl",
+  Key: "newApi.key",
+  Models: "newApi.models",
+  ModelCount: "newApi.modelCount",
+  Groups: "newApi.groups",
+  Priority: "newApi.priority",
+  Weight: "newApi.weight",
+} as const
+
+export const NEW_API_MANAGED_RESOURCE_TABLE_FIELD_IDS = [
+  NEW_API_MANAGED_RESOURCE_FIELD_IDS.Id,
+  NEW_API_MANAGED_RESOURCE_FIELD_IDS.Name,
+  NEW_API_MANAGED_RESOURCE_FIELD_IDS.Type,
+  NEW_API_MANAGED_RESOURCE_FIELD_IDS.BaseUrl,
+  NEW_API_MANAGED_RESOURCE_FIELD_IDS.ModelCount,
+  NEW_API_MANAGED_RESOURCE_FIELD_IDS.Groups,
+  NEW_API_MANAGED_RESOURCE_FIELD_IDS.Status,
+  NEW_API_MANAGED_RESOURCE_FIELD_IDS.Priority,
+  NEW_API_MANAGED_RESOURCE_FIELD_IDS.Weight,
+] as const
+
+export const NEW_API_MANAGED_RESOURCE_DETAIL_FIELD_IDS = [
+  NEW_API_MANAGED_RESOURCE_FIELD_IDS.Id,
+  NEW_API_MANAGED_RESOURCE_FIELD_IDS.Name,
+  NEW_API_MANAGED_RESOURCE_FIELD_IDS.Type,
+  NEW_API_MANAGED_RESOURCE_FIELD_IDS.Status,
+  NEW_API_MANAGED_RESOURCE_FIELD_IDS.BaseUrl,
+  NEW_API_MANAGED_RESOURCE_FIELD_IDS.Key,
+  NEW_API_MANAGED_RESOURCE_FIELD_IDS.Models,
+  NEW_API_MANAGED_RESOURCE_FIELD_IDS.Groups,
+  NEW_API_MANAGED_RESOURCE_FIELD_IDS.Priority,
+  NEW_API_MANAGED_RESOURCE_FIELD_IDS.Weight,
+] as const

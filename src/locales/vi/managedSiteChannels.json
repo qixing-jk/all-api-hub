@@ -1,8 +1,8 @@
 {
   "alerts": {
     "authenticationFailed": {
-      "description": "Thông tin đăng nhập AxonHub đã lưu bị từ chối. Mở phần cài đặt, cập nhật thông tin rồi làm mới danh sách kênh.",
-      "title": "Đăng nhập lại vào AxonHub"
+      "description": "Thông tin đăng nhập {{site}} đã lưu bị từ chối. Mở phần cài đặt, cập nhật thông tin rồi làm mới danh sách kênh.",
+      "title": "Đăng nhập lại vào {{site}}"
     },
     "editorLoadError": {
       "description": "Không thể tải biểu mẫu kênh. Hãy làm mới danh sách kênh rồi thử lại.",
@@ -21,16 +21,16 @@
       "title": "Cần kiểm tra bản cập nhật kênh"
     },
     "permissionDenied": {
-      "description": "Tài khoản AxonHub này không thể quản lý kênh. Dùng tài khoản quản trị viên hoặc cập nhật quyền rồi làm mới.",
-      "title": "AxonHub đã từ chối truy cập"
+      "description": "Tài khoản {{site}} này không thể quản lý kênh. Dùng tài khoản quản trị viên hoặc cập nhật quyền rồi làm mới.",
+      "title": "{{site}} đã từ chối truy cập"
     },
     "savedRefreshError": {
       "description": "Kênh đã được lưu nhưng không thể tải danh sách mới nhất. Hãy làm mới danh sách kênh trước khi thực hiện thêm thay đổi.",
       "title": "Đã lưu kênh, cần làm mới"
     },
     "unavailable": {
-      "description": "Không thể kết nối tới AxonHub. Kiểm tra máy chủ và mạng rồi làm mới danh sách kênh.",
-      "title": "AxonHub không khả dụng"
+      "description": "Không thể kết nối tới {{site}}. Kiểm tra máy chủ và mạng rồi làm mới danh sách kênh.",
+      "title": "{{site}} không khả dụng"
     }
   },
   "dialog": {
@@ -141,25 +141,28 @@
     },
     "secret": {
       "actions": {
-        "clear": "Xóa thông tin xác thực đã lưu",
-        "restore": "Giữ thông tin xác thực đã lưu",
+        "cancelLoad": "Hủy tải",
+        "clear": "Xóa khóa API đã lưu",
+        "restore": "Giữ khóa API đã lưu",
         "retry": "Thử lại",
-        "view": "Xem thông tin xác thực đã lưu"
+        "view": "Xem khóa API đã lưu"
       },
-      "createHint": "Nhập thông tin xác thực cho kênh mới.",
-      "keepExistingHint": "Để trống trường này để giữ nguyên thông tin xác thực đã lưu.",
-      "loadError": "Không thể tải thông tin xác thực đã lưu.",
-      "loading": "Đang tải thông tin xác thực đã lưu...",
-      "placeholder": "Nhập thông tin xác thực",
+      "createHint": "Nhập khóa API của nhà cung cấp cho kênh mới.",
+      "keepExistingHint": "Để trống trường này để giữ nguyên khóa API đã lưu.",
+      "loadableHint": "Khóa API đã lưu không hiển thị tại đây. Để trống để giữ nguyên khóa.",
+      "loadError": "Không thể tải khóa API đã lưu.",
+      "loading": "Đang tải khóa API đã lưu...",
+      "placeholder": "Nhập khóa API của nhà cung cấp",
       "replacementBlocked": {
         "multipleCredentials": "Kênh này có nhiều khóa API. Hãy quản lý các khóa của kênh trong AxonHub."
       },
-      "replacementDisabled": "Không thể thay thế loại thông tin xác thực này tại đây.",
+      "replacementDisabled": "Không thể thay thế khóa API này tại đây.",
+      "replacePlaceholder": "Nhập khóa API mới để thay thế khóa đã lưu",
       "state": {
-        "available": "Có thông tin xác thực đã lưu.",
-        "masked": "Đã lưu thông tin xác thực được che.",
-        "permissionHidden": "Thông tin xác thực đã lưu bị ẩn do quyền truy cập.",
-        "unavailable": "Không có thông tin xác thực để hiển thị."
+        "available": "Có khóa API đã lưu.",
+        "masked": "Đã lưu khóa API được che.",
+        "permissionHidden": "Khóa API đã lưu bị ẩn do quyền truy cập.",
+        "unavailable": "Không thể hiển thị khóa API đã lưu tại đây."
       }
     },
     "sections": {
@@ -371,7 +374,6 @@
     },
     "title": "Di chuyển kênh"
   },
-  "resourceDescription": "Tìm kiếm, tạo, chỉnh sửa và xóa các kênh được kết nối với trang web được quản lý này.",
   "statusLabels": {
     "autoDisabled": "Tự động tắt",
     "enabled": "Bật",
@@ -423,7 +425,9 @@
     "revealKeyUnsupported": "Trang được quản lý này không hỗ trợ hiển thị key của kênh",
     "someDeletesFailed_other": "Xóa {{count}} kênh thất bại: {{error}}",
     "syncCompleted": "Đồng bộ mô hình hoàn tất ({{success}}/{{total}})",
-    "syncFailed": "Đồng bộ mô hình thất bại: {{error}}"
+    "syncCompletedRefreshFailed": "Đã đồng bộ mô hình ({{success}}/{{total}}), nhưng không thể làm mới danh sách kênh. Hãy làm mới rồi thử lại.",
+    "syncFailed": "Đồng bộ mô hình thất bại: {{error}}",
+    "syncFailedFallback": "Không thể đồng bộ các kênh"
   },
   "toolbar": {
     "addChannel": "Thêm kênh",

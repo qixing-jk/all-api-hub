@@ -227,6 +227,133 @@ describe("account browser-session reader", () => {
     })
   })
 
+  it("passes the explicit modern New API probe intent to the current tab", async () => {
+    mockSendTabMessage.mockResolvedValueOnce({
+      success: true,
+      data: {
+        userId: "user-42",
+        user: { username: "example-user" },
+        siteTypeHint: SITE_TYPES.NEW_API,
+      },
+    })
+
+    await readAccountBrowserSessionFromTab({
+      tabId: 14,
+      baseUrl: "https://white-label.example.invalid",
+      siteType: SITE_TYPES.UNKNOWN,
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
+      allowNewApiAuthProbe: true,
+    })
+
+    expect(mockSendTabMessage).toHaveBeenCalledWith(14, {
+      action: RuntimeActionIds.ContentGetUserFromLocalStorage,
+      url: "https://white-label.example.invalid",
+      siteType: SITE_TYPES.UNKNOWN,
+      allowNewApiAuthProbe: true,
+    })
+  })
+
+  it("rejects the modern New API probe intent for existing-tab reads", async () => {
+    mockSendTabMessage.mockResolvedValueOnce({
+      success: true,
+      data: {
+        userId: "user-42",
+        siteTypeHint: SITE_TYPES.NEW_API,
+        transientAuth: {
+          kind: NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND,
+          token: "dashboard-token-placeholder",
+          expiresAt: 2_000_000_000,
+          sessionId: "session-placeholder",
+          origin: "https://white-label.example.invalid",
+        },
+      },
+    })
+
+    const session = await readAccountBrowserSessionFromTab({
+      tabId: 14,
+      baseUrl: "https://white-label.example.invalid",
+      siteType: SITE_TYPES.UNKNOWN,
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
+      allowNewApiAuthProbe: true,
+    })
+
+    expect(mockSendTabMessage).toHaveBeenCalledWith(14, {
+      action: RuntimeActionIds.ContentGetUserFromLocalStorage,
+      url: "https://white-label.example.invalid",
+      siteType: SITE_TYPES.UNKNOWN,
+    })
+    expect(session).not.toHaveProperty("transientAuth")
+  })
+
+  it("retains modern New API auth discovered from an unknown white-label site", async () => {
+    mockSendTabMessage.mockResolvedValueOnce({
+      success: true,
+      data: {
+        userId: "user-42",
+        user: { username: "example-user" },
+        siteTypeHint: SITE_TYPES.NEW_API,
+        transientAuth: {
+          kind: NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND,
+          token: "dashboard-token-placeholder",
+          expiresAt: 2_000_000_000,
+          sessionId: "session-placeholder",
+          origin: "https://white-label.example.invalid",
+        },
+      },
+    })
+
+    const session = await readAccountBrowserSessionFromTab({
+      tabId: 14,
+      baseUrl: "https://white-label.example.invalid/dashboard",
+      siteType: SITE_TYPES.UNKNOWN,
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
+      allowNewApiAuthProbe: true,
+    })
+
+    expect(session).toEqual(
+      expect.objectContaining({
+        siteType: SITE_TYPES.UNKNOWN,
+        siteTypeHint: SITE_TYPES.NEW_API,
+        transientAuth: expect.objectContaining({
+          kind: NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND,
+          token: "dashboard-token-placeholder",
+        }),
+      }),
+    )
+  })
+
+  it("drops a New API auth hint from an unknown site without explicit probing", async () => {
+    mockSendTabMessage.mockResolvedValueOnce({
+      success: true,
+      data: {
+        userId: "user-42",
+        siteTypeHint: SITE_TYPES.NEW_API,
+        transientAuth: {
+          kind: NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND,
+          token: "dashboard-token-placeholder",
+          expiresAt: 2_000_000_000,
+          sessionId: "session-placeholder",
+          origin: "https://unknown.example.invalid",
+        },
+      },
+    })
+
+    const session = await readAccountBrowserSessionFromTab({
+      tabId: 14,
+      baseUrl: "https://unknown.example.invalid/dashboard",
+      siteType: SITE_TYPES.UNKNOWN,
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
+    })
+
+    expect(session).toEqual(
+      expect.objectContaining({
+        siteType: SITE_TYPES.UNKNOWN,
+        siteTypeHint: SITE_TYPES.NEW_API,
+      }),
+    )
+    expect(session).not.toHaveProperty("transientAuth")
+  })
+
   it("normalizes a valid transient dashboard auth payload", async () => {
     mockSendTabMessage.mockResolvedValueOnce({
       success: true,

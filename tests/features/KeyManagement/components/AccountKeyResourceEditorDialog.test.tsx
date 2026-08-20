@@ -11,6 +11,7 @@ import {
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import { NATIVE_RESOURCE_EDITOR_LOADING_REVEALS } from "~/features/ResourceEditor/nativeResourceEditorOpeningState"
 import { OneTimeSecretDialog } from "~/features/TokenProvisioning/components/OneTimeSecretDialog"
+import { RESOURCE_FIELD_OPTION_LOAD_TRIGGERS } from "~/services/apiAdapters/contracts/resourceNative"
 import {
   OPENROUTER_KEY_FIELD_IDS,
   OPENROUTER_KEY_LIMIT_MODES,
@@ -424,6 +425,63 @@ describe("AccountKeyResourceEditorDialog", () => {
         [field.Creator]: null,
       }),
     )
+  })
+
+  it("waits for an explicit request before loading manual options and preserves the selection on dependency changes", async () => {
+    const onLoadOptions = vi.fn()
+    const onValuesChange = vi.fn()
+    const originalEditor: AccountKeyResourceEditorDialogState = editor()
+    const manualEditor: AccountKeyResourceEditorDialogState = {
+      ...originalEditor,
+      fields: originalEditor.fields.map((descriptor) =>
+        descriptor.fieldId === field.Creator && descriptor.type === "select"
+          ? {
+              ...descriptor,
+              optionLoader: {
+                dependsOn: [field.Workspace],
+                trigger: RESOURCE_FIELD_OPTION_LOAD_TRIGGERS.Manual,
+              },
+            }
+          : descriptor,
+      ),
+    }
+    render(
+      <AccountKeyResourceEditorDialog
+        editor={manualEditor}
+        onClose={() => undefined}
+        onSubmit={() => undefined}
+        onValuesChange={onValuesChange}
+        onLoadOptions={onLoadOptions}
+      />,
+      { withUserPreferencesProvider: false, withThemeProvider: false },
+    )
+
+    expect(onLoadOptions).not.toHaveBeenCalled()
+    await userEvent.setup().click(
+      screen.getByRole("button", {
+        name: "common:actions.refreshField",
+      }),
+    )
+    expect(onLoadOptions).toHaveBeenCalledWith(
+      1,
+      field.Creator,
+      expect.objectContaining({ [field.Creator]: "member-example" }),
+    )
+
+    fireEvent.click(
+      screen.getByRole("combobox", {
+        name: /keyManagement:openRouter\.editor\.fields\.workspace\.label/,
+      }),
+    )
+    fireEvent.click(screen.getByRole("option", { name: "Next team" }))
+    expect(onValuesChange).toHaveBeenLastCalledWith(
+      1,
+      expect.objectContaining({
+        [field.Workspace]: "workspace-next",
+        [field.Creator]: "member-example",
+      }),
+    )
+    expect(onLoadOptions).toHaveBeenCalledTimes(1)
   })
 
   it("starts each editor session with its own projection before loading dependent options", async () => {

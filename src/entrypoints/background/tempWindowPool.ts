@@ -1,3 +1,4 @@
+import { OCTOPUS_COOKIE_SESSION_STATUS_PATH } from "~/constants/octopus"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { isAccountSiteType, type AccountSiteType } from "~/constants/siteType"
 import {
@@ -463,6 +464,17 @@ async function runTempPageHandler(
   await tempPageTaskScheduler.run(originKey, task)
 }
 
+/**
+ * Uses Octopus' read-only cookie-session probe instead of the deployment UI.
+ * The UI root may be protected by an interactive WAF challenge even when the
+ * provider API remains available.
+ *
+ * Upstream contract: https://github.com/bestruirui/octopus/blob/master/internal/server/handlers/user.go
+ */
+function getOctopusCookieContextPageUrl(originUrl: string): string {
+  return new URL(OCTOPUS_COOKIE_SESSION_STATUS_PATH, originUrl).toString()
+}
+
 export type AuthorizedTempContextOutcome =
   | {
       kind: Extract<
@@ -663,15 +675,17 @@ export async function executeAuthorizedTempContextTask(
     return
   }
   const url =
-    task.kind === TEMP_CONTEXT_TASK_KINDS.NewApiSessionRead
-      ? task.params.origin
-      : task.kind === TEMP_CONTEXT_TASK_KINDS.SessionRead ||
-          task.kind === TEMP_CONTEXT_TASK_KINDS.OpenContext
-        ? task.params.url
-        : task.kind === TEMP_CONTEXT_TASK_KINDS.TurnstileFetch ||
-            task.kind === TEMP_CONTEXT_TASK_KINDS.NativePageAction
-          ? task.params.pageUrl || task.params.originUrl
-          : task.params.originUrl
+    task.kind === TEMP_CONTEXT_TASK_KINDS.OctopusApiFetch
+      ? getOctopusCookieContextPageUrl(task.params.originUrl)
+      : task.kind === TEMP_CONTEXT_TASK_KINDS.NewApiSessionRead
+        ? task.params.origin
+        : task.kind === TEMP_CONTEXT_TASK_KINDS.SessionRead ||
+            task.kind === TEMP_CONTEXT_TASK_KINDS.OpenContext
+          ? task.params.url
+          : task.kind === TEMP_CONTEXT_TASK_KINDS.TurnstileFetch ||
+              task.kind === TEMP_CONTEXT_TASK_KINDS.NativePageAction
+            ? task.params.pageUrl || task.params.originUrl
+            : task.params.originUrl
   const incognito =
     "useIncognito" in task.params && Boolean(task.params.useIncognito)
 
@@ -684,6 +698,15 @@ export async function executeAuthorizedTempContextTask(
           suppressMinimize,
           sendResponse,
           authorizeAtAcquire,
+        )
+        return
+      case TEMP_CONTEXT_TASK_KINDS.OctopusApiFetch:
+        await executeTempWindowFetch(
+          task.params,
+          suppressMinimize,
+          sendResponse,
+          authorizeAtAcquire,
+          { contextPageUrl: url },
         )
         return
       case TEMP_CONTEXT_TASK_KINDS.TurnstileFetch:
@@ -1421,10 +1444,12 @@ async function executeTempWindowFetch(
   request: TaskParams<
     | typeof TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch
     | typeof TEMP_CONTEXT_TASK_KINDS.ProfileIsolatedFetch
+    | typeof TEMP_CONTEXT_TASK_KINDS.OctopusApiFetch
   >,
   suppressMinimize: boolean,
   sendResponse: (response?: any) => void,
   authorizeAtAcquire?: AuthorizeTempContextAtAcquire,
+  executionOptions: { contextPageUrl?: string } = {},
 ) {
   const {
     originUrl,
@@ -1432,12 +1457,17 @@ async function executeTempWindowFetch(
     fetchOptions,
     responseType = "json",
     requestId,
-    accountId,
-    authType,
-    cookieAuthSessionCookie,
-    useIncognito,
-    cookieStoreId,
   } = request
+  const accountId = "accountId" in request ? request.accountId : undefined
+  const authType = "authType" in request ? request.authType : undefined
+  const cookieAuthSessionCookie =
+    "cookieAuthSessionCookie" in request
+      ? request.cookieAuthSessionCookie
+      : undefined
+  const useIncognito =
+    "useIncognito" in request ? request.useIncognito : undefined
+  const cookieStoreId =
+    "cookieStoreId" in request ? request.cookieStoreId : undefined
   if (!originUrl || !fetchUrl) {
     const error = t("messages:background.invalidFetchRequest")
     sendResponse({
@@ -1491,14 +1521,31 @@ async function executeTempWindowFetch(
       }
     }
 
+    const contextPageUrl = executionOptions.contextPageUrl ?? originUrl
     const context = await acquireTempContext(
-      originUrl,
+      contextPageUrl,
       tempRequestId,
       suppressMinimize,
       { incognito: Boolean(useIncognito) },
       authorizeAtAcquire,
     )
     const { tabId } = context
+
+    if (executionOptions.contextPageUrl) {
+      await navigateTempContextToPage(context, contextPageUrl, {
+        requestId: tempRequestId,
+        origin: normalizeOrigin(originUrl),
+      })
+      const contextTab = await getTempContextTabSnapshot(tabId)
+      if (
+        !contextTab?.url ||
+        normalizeOrigin(contextTab.url) !== normalizeOrigin(originUrl)
+      ) {
+        throw new Error(
+          "Temporary context redirected outside the requested origin",
+        )
+      }
+    }
 
     const prepared = await prepareTempContextFetchOptions({
       tabId,
@@ -1517,6 +1564,7 @@ async function executeTempWindowFetch(
     const response = await sendTabMessageWithRetry(tabId, {
       action: RuntimeActionIds.ContentPerformTempWindowFetch,
       requestId: tempRequestId,
+      expectedOrigin: normalizeOrigin(originUrl),
       fetchUrl,
       fetchOptions: normalizeRequestInitForMessage(effectiveFetchOptions),
       responseType,
@@ -1933,6 +1981,7 @@ async function executeTempWindowTurnstileFetch(
     const response = (await sendTabMessageWithRetry(tabId, {
       action: RuntimeActionIds.ContentPerformTempWindowFetch,
       requestId: tempRequestId,
+      expectedOrigin: normalizeOrigin(originUrl),
       fetchUrl: fetchUrlWithToken,
       fetchOptions: normalizeRequestInitForMessage(effectiveFetchOptions),
       responseType,

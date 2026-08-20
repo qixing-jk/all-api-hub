@@ -12,8 +12,7 @@ import {
   Button,
   Modal,
 } from "~/components/ui"
-import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
-import { SUB2API_MANAGED_RESOURCE_FIELD_IDS } from "~/constants/sub2api"
+import type { ManagedSiteType } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import {
   MANAGED_RESOURCE_MODES,
@@ -25,10 +24,13 @@ import {
   getManagedSiteTypeValues,
 } from "~/services/accountSiteDefinitions/registry"
 import {
+  MANAGED_RESOURCE_CREATE_SEED_KINDS,
   MANAGED_RESOURCE_FAILURE_CODES,
+  ManagedResourceError,
   type EditableResourceProjection,
   type ManagedResourceRegistration,
   type ResourceFailure,
+  type ResourceOperationOptions,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { getManagedResourceRegistration } from "~/services/apiAdapters/managedResources/registry"
 import {
@@ -38,32 +40,56 @@ import {
   getManagedSiteMessagesKeyFromSiteType,
   getManagedSiteTargetOptions,
 } from "~/services/managedSites/utils/managedSite"
-import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
+import {
+  startProductAnalyticsAction,
+  trackProductAnalyticsActionStarted,
+} from "~/services/productAnalytics/actions"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/contracts"
 import { resolveProductAnalyticsManagedSiteType } from "~/services/productAnalytics/managedSite"
+import { createManagedUpstreamResourceRef } from "~/types/managedUpstreamResource"
 import { showUpdateToast } from "~/utils/core/toastHelpers"
-import { openSettingsTab } from "~/utils/navigation"
+import {
+  openManagedSiteModelSyncForChannel,
+  openSettingsTab,
+} from "~/utils/navigation"
 
+import ChannelFilterDialog, {
+  type ChannelFilterTarget,
+} from "./components/ChannelFilterDialog"
 import { useManagedResourceListController } from "./controllers/useManagedResourceListController"
 import { useManagedResourceMigrationController } from "./controllers/useManagedResourceMigrationController"
 import { useManagedResourceMutationController } from "./controllers/useManagedResourceMutationController"
+import { useManagedSiteChannelModelSync } from "./hooks/useManagedSiteChannelModelSync"
 import ManagedSiteChannels from "./ManagedSiteChannels"
 import type {
   ManagedChannelsCallbacks,
   ManagedChannelsCapabilities,
-  ManagedChannelsColumn,
-  ManagedChannelsLabels,
   ManagedChannelsPresentationState,
-  ManagedChannelsSorting,
   ManagedSiteMigrationLabels,
 } from "./presentation/contracts"
 import { ManagedResourceEditorBody } from "./presentation/ManagedResourceEditorBody"
+import { presentManagedResourceFailure } from "./presentation/managedResourceFailurePresentation"
 import {
   getManagedResourceFieldPolicy,
   MANAGED_RESOURCE_EDITOR_MODES,
+  type ManagedResourceEditorMode,
 } from "./presentation/managedResourceFieldPolicy"
+import {
+  createManagedResourceColumns,
+  getDefaultManagedResourceSorting,
+  getManagedResourcePresentationSemantics,
+} from "./presentation/managedResourceTablePolicy"
 import { ManagedSiteChannelDetailView } from "./presentation/ManagedSiteChannelDetailView"
+import { createManagedSiteChannelsLabels } from "./presentation/managedSiteChannelsLabels"
 import { ManagedSiteChannelsView } from "./presentation/ManagedSiteChannelsView"
 import { ManagedSiteMigrationDialogView } from "./presentation/ManagedSiteMigrationDialogView"
+import { useManagedSiteChannelPageExperience } from "./presentation/useManagedSiteChannelPageExperience"
+import { useManagedResourceInteraction } from "./providers/useManagedResourceInteraction"
 
 type ManagedSiteChannelsRouteProps = {
   siteType: ManagedSiteType
@@ -77,17 +103,23 @@ const resolvePolicy = (
 ): ManagedResourceProductPolicy | undefined =>
   getAccountSiteDefinition(siteType)?.managedResource
 
-const getDefaultNativeSorting = (
-  siteType: ManagedSiteType,
-): ManagedChannelsSorting => [
-  {
-    id:
-      siteType === SITE_TYPES.SUB2API
-        ? SUB2API_MANAGED_RESOURCE_FIELD_IDS.Name
-        : "id",
-    desc: true,
-  },
-]
+const nativeChannelActionAnalyticsContext = (
+  actionId: (typeof PRODUCT_ANALYTICS_ACTION_IDS)[keyof typeof PRODUCT_ANALYTICS_ACTION_IDS],
+  surfaceId: (typeof PRODUCT_ANALYTICS_SURFACE_IDS)[keyof typeof PRODUCT_ANALYTICS_SURFACE_IDS],
+) => ({
+  featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
+  actionId,
+  surfaceId,
+  entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+})
+
+const trackNativeChannelActionStarted = (
+  actionId: (typeof PRODUCT_ANALYTICS_ACTION_IDS)[keyof typeof PRODUCT_ANALYTICS_ACTION_IDS],
+  surfaceId: (typeof PRODUCT_ANALYTICS_SURFACE_IDS)[keyof typeof PRODUCT_ANALYTICS_SURFACE_IDS],
+) =>
+  void trackProductAnalyticsActionStarted(
+    nativeChannelActionAnalyticsContext(actionId, surfaceId),
+  )
 
 /** Renders a controlled failure when static native integration is incomplete. */
 function ManagedSiteChannelsIntegrationFailure() {
@@ -104,299 +136,58 @@ function ManagedSiteChannelsIntegrationFailure() {
 }
 
 const getFailureMessage = (
-  t: ReturnType<typeof useTranslation>["t"],
+  t: TFunction,
   failure: ResourceFailure | null,
+  siteLabel: string,
 ) => {
   if (!failure) return null
+  let fallback: {
+    category: string
+    message: string
+  }
   switch (failure.code) {
     case MANAGED_RESOURCE_FAILURE_CODES.AuthenticationFailed:
-      return {
-        category: t("managedSiteChannels:alerts.authenticationFailed.title"),
+      fallback = {
+        category: t("managedSiteChannels:alerts.authenticationFailed.title", {
+          site: siteLabel,
+        }),
         message: t(
           "managedSiteChannels:alerts.authenticationFailed.description",
+          { site: siteLabel },
         ),
       }
+      break
     case MANAGED_RESOURCE_FAILURE_CODES.PermissionDenied:
-      return {
-        category: t("managedSiteChannels:alerts.permissionDenied.title"),
-        message: t("managedSiteChannels:alerts.permissionDenied.description"),
+      fallback = {
+        category: t("managedSiteChannels:alerts.permissionDenied.title", {
+          site: siteLabel,
+        }),
+        message: t("managedSiteChannels:alerts.permissionDenied.description", {
+          site: siteLabel,
+        }),
       }
+      break
     case MANAGED_RESOURCE_FAILURE_CODES.Unavailable:
-      return {
-        category: t("managedSiteChannels:alerts.unavailable.title"),
-        message: t("managedSiteChannels:alerts.unavailable.description"),
+      fallback = {
+        category: t("managedSiteChannels:alerts.unavailable.title", {
+          site: siteLabel,
+        }),
+        message: t("managedSiteChannels:alerts.unavailable.description", {
+          site: siteLabel,
+        }),
+      }
+      break
+    default:
+      fallback = {
+        category: t("managedSiteChannels:alerts.loadError.title"),
+        message: t("common:rootErrorBoundary.genericDescription"),
       }
   }
-  return {
-    category: t("managedSiteChannels:alerts.loadError.title"),
-    message: t("common:rootErrorBoundary.genericDescription"),
-  }
+  return presentManagedResourceFailure(failure, fallback)
 }
-
-const createNativeColumns = (
-  t: ReturnType<typeof useTranslation>["t"],
-  siteType: ManagedSiteType,
-  policy: ManagedResourceProductPolicy,
-  visibility: Readonly<Record<string, boolean>>,
-): ManagedChannelsColumn[] => {
-  const hasField = (fieldId: string) => policy.tableFieldIds.includes(fieldId)
-  const valueColumn = (
-    id: string,
-    label: string,
-    fieldId: string,
-    options: Partial<ManagedChannelsColumn> = {},
-  ): ManagedChannelsColumn => ({
-    id,
-    label,
-    renderer: "value",
-    accessor: { kind: "cell", key: fieldId },
-    canHide: true,
-    defaultVisible: true,
-    visible: visibility[id] !== false,
-    sort: {
-      accessor: { kind: "cellSortValue", key: fieldId },
-      defaultDirection: "asc",
-      missing: "last",
-    },
-    extension: { kind: "legacy-common" },
-    ...options,
-  })
-
-  if (siteType === SITE_TYPES.SUB2API) {
-    const fieldPolicy = getManagedResourceFieldPolicy(
-      siteType,
-      policy.primaryKind,
-      MANAGED_RESOURCE_EDITOR_MODES.Edit,
-    )
-    const labels = new Map(
-      fieldPolicy?.fields.map((field) => [
-        field.fieldId,
-        field.resolveLabel(t),
-      ]),
-    )
-    return [
-      {
-        id: "select",
-        label: "",
-        renderer: "select",
-        canHide: false,
-        defaultVisible: true,
-        visible: true,
-        extension: { kind: "legacy-common" },
-      },
-      {
-        id: SUB2API_MANAGED_RESOURCE_FIELD_IDS.Name,
-        label: t("managedSiteChannels:table.columns.name"),
-        renderer: "channel",
-        accessor: { kind: "name" },
-        canHide: false,
-        defaultVisible: true,
-        visible: true,
-        sort: {
-          accessor: { kind: "name" },
-          defaultDirection: "asc",
-          missing: "last",
-        },
-        size: 240,
-        extension: { kind: "legacy-common" },
-      },
-      ...policy.tableFieldIds.flatMap((fieldId) => {
-        if (fieldId === SUB2API_MANAGED_RESOURCE_FIELD_IDS.Name) return []
-        const options =
-          fieldId === SUB2API_MANAGED_RESOURCE_FIELD_IDS.Status
-            ? { facet: { kind: "status" as const } }
-            : fieldId === SUB2API_MANAGED_RESOURCE_FIELD_IDS.BaseUrl
-              ? { size: 260 }
-              : fieldId === SUB2API_MANAGED_RESOURCE_FIELD_IDS.Platform
-                ? { size: 110 }
-                : { size: 120 }
-        return [
-          valueColumn(
-            fieldId,
-            labels.get(fieldId) ?? fieldId,
-            fieldId,
-            options,
-          ),
-        ]
-      }),
-      {
-        id: "actions",
-        label: t("managedSiteChannels:table.columns.actions"),
-        renderer: "actions",
-        canHide: false,
-        defaultVisible: true,
-        visible: true,
-        size: 60,
-        extension: { kind: "legacy-common" },
-      },
-    ] satisfies ManagedChannelsColumn[]
-  }
-
-  return [
-    {
-      id: "select",
-      label: "",
-      renderer: "select",
-      canHide: false,
-      defaultVisible: true,
-      visible: true,
-      extension: { kind: "legacy-common" },
-    },
-    {
-      id: "id",
-      label: t("managedSiteChannels:table.columns.id"),
-      renderer: "identifier",
-      accessor: { kind: "displayIdentifier" },
-      canHide: true,
-      defaultVisible: true,
-      visible: visibility.id !== false,
-      sort: {
-        accessor: { kind: "displayIdentifierSort" },
-        defaultDirection: "desc",
-        missing: "last",
-      },
-      size: 40,
-      extension: { kind: "legacy-common" },
-    },
-    {
-      id: "name",
-      label: t("managedSiteChannels:table.columns.name"),
-      renderer: "channel",
-      accessor: { kind: "name" },
-      canHide: false,
-      defaultVisible: true,
-      visible: true,
-      sort: {
-        accessor: { kind: "name" },
-        defaultDirection: "asc",
-        missing: "last",
-      },
-      size: 300,
-      extension: { kind: "legacy-common" },
-    },
-    ...(hasField("type")
-      ? [
-          valueColumn(
-            "type",
-            t("managedSiteChannels:table.columns.type"),
-            "type",
-          ),
-        ]
-      : []),
-    ...(hasField("supportedModels")
-      ? [
-          valueColumn(
-            "models",
-            t("managedSiteChannels:table.columns.models"),
-            "supportedModels",
-          ),
-        ]
-      : []),
-    valueColumn(
-      "status",
-      t("managedSiteChannels:table.columns.status"),
-      "status",
-      { facet: { kind: "status" } },
-    ),
-    ...(hasField("tags")
-      ? [
-          valueColumn(
-            "tags",
-            t("managedSiteChannels:editor.fields.tags.label"),
-            "tags",
-            {
-              extension: { kind: "native", namespace: policy.primaryKind },
-            },
-          ),
-        ]
-      : []),
-    {
-      id: "actions",
-      label: t("managedSiteChannels:table.columns.actions"),
-      renderer: "actions",
-      canHide: false,
-      defaultVisible: true,
-      visible: true,
-      size: 60,
-      extension: { kind: "legacy-common" },
-    },
-  ]
-}
-
-const createNativeLabels = (
-  t: ReturnType<typeof useTranslation>["t"],
-  pagination: { pageIndex: number; pageSize: number },
-  total: number,
-): ManagedChannelsLabels => ({
-  searchPlaceholder: t("managedSiteChannels:toolbar.searchPlaceholder"),
-  clearSearch: t("managedSiteChannels:toolbar.clearSearch"),
-  refresh: t("managedSiteChannels:toolbar.refresh"),
-  cancelRefresh: t("managedSiteChannels:toolbar.cancelRefresh"),
-  status: t("managedSiteChannels:toolbar.status"),
-  statusLabel: t("managedSiteChannels:filter.statusLabel"),
-  columns: t("managedSiteChannels:toolbar.columns"),
-  toggleColumns: t("managedSiteChannels:toolbar.toggleColumns"),
-  migrateSelected: t("managedSiteChannels:toolbar.migrateSelected"),
-  migrateFiltered: t("managedSiteChannels:toolbar.migrateFiltered"),
-  deleteSelected: t("managedSiteChannels:toolbar.deleteSelected"),
-  syncSelected: t("managedSiteChannels:toolbar.syncSelected"),
-  addChannel: t("managedSiteChannels:toolbar.addChannel"),
-  loading: t("managedSiteChannels:table.loading"),
-  emptyFiltered: t("managedSiteChannels:table.emptyFiltered"),
-  emptyNoChannels: t("managedSiteChannels:table.emptyNoChannels"),
-  rowsPerPage: t("managedSiteChannels:table.rowsPerPage"),
-  paginationSummary: t("managedSiteChannels:table.paginationSummary", {
-    start: total ? pagination.pageIndex * pagination.pageSize + 1 : 0,
-    end: Math.min((pagination.pageIndex + 1) * pagination.pageSize, total),
-    total,
-  }),
-  noEntries: t("managedSiteChannels:table.noEntries"),
-  paginationPrev: t("managedSiteChannels:table.paginationPrev"),
-  paginationNext: t("managedSiteChannels:table.paginationNext"),
-  selectAll: t("managedSiteChannels:table.selectAll"),
-  selectRow: t("managedSiteChannels:table.selectRow"),
-  statusLabels: {
-    enabled: t("managedSiteChannels:statusLabels.enabled"),
-    disabled: t("managedSiteChannels:statusLabels.manualPause"),
-    archived: t("managedSiteChannels:editor.options.status.archived"),
-    "auto-disabled": t("managedSiteChannels:statusLabels.autoDisabled"),
-    unknown: t("managedSiteChannels:statusLabels.unknown"),
-  },
-  settings: t("common:labels.settings"),
-  configurationRequired: t("common:status.configurationRequired"),
-  goToSettings: t("common:actions.goToSettings"),
-  deleteTitle: t("managedSiteChannels:dialog.deleteTitle"),
-  deleteTitlePlural: t("managedSiteChannels:dialog.deleteTitlePlural"),
-  deleteDescription: t("managedSiteChannels:dialog.deleteDescription"),
-  deleteCancel: t("managedSiteChannels:dialog.cancel"),
-  deleteConfirm: t("managedSiteChannels:dialog.confirm"),
-  deleting: t("common:status.deleting"),
-  deleteResultsTitle: t("managedSiteChannels:dialog.deleteResultsTitle"),
-  deleteRefreshRequired: t("managedSiteChannels:dialog.deleteRefreshRequired"),
-  deleteRefreshAction: t("managedSiteChannels:dialog.deleteRefreshAction"),
-  deleteResultStatusLabels: {
-    success: t("managedSiteChannels:dialog.deleteResultStatus.success"),
-    failed: t("managedSiteChannels:dialog.deleteResultStatus.failed"),
-    uncertain: t("managedSiteChannels:dialog.deleteResultStatus.uncertain"),
-  },
-  migrationBeta: t("managedSiteChannels:migration.betaBadge"),
-  enterMigrationMode: t("managedSiteChannels:toolbar.enterMigrationMode"),
-  exitMigrationMode: t("managedSiteChannels:toolbar.exitMigrationMode"),
-  rowActions: {
-    trigger: t("managedSiteChannels:table.columns.actions"),
-    edit: t("managedSiteChannels:table.rowActions.edit"),
-    view: t("managedSiteChannels:table.rowActions.view"),
-    migrate: t("managedSiteChannels:table.rowActions.migrate"),
-    sync: t("managedSiteChannels:table.rowActions.sync"),
-    syncing: t("managedSiteChannels:table.rowActions.syncing"),
-    openSync: t("managedSiteChannels:table.rowActions.openSync"),
-    filters: t("managedSiteChannels:table.rowActions.filters"),
-    delete: t("managedSiteChannels:table.rowActions.delete"),
-  },
-})
 
 const createMigrationLabels = (
-  t: ReturnType<typeof useTranslation>["t"],
+  t: TFunction,
   selectedCount: number,
   preview: ReturnType<typeof useManagedResourceMigrationController>["preview"],
 ): ManagedSiteMigrationLabels => ({
@@ -475,6 +266,11 @@ function NativeManagedSiteChannels({
   ])
   const { preferences, updateManagedSiteType } = useUserPreferencesContext()
   const config = getManagedSiteAdminConfigForType(preferences, siteType)
+  const { runRead, executeMigration, verificationDialog } =
+    useManagedResourceInteraction({
+      siteType,
+      newApiConfig: preferences.newApi,
+    })
   const latestRouteParams = useRef(routeParams)
   const latestTranslate = useRef(t)
   useEffect(() => {
@@ -492,10 +288,10 @@ function NativeManagedSiteChannels({
     })
   }, [onReplaceRouteQuery])
   const onMutationSuccess = useCallback(
-    (mode: "create" | "edit") =>
+    (mode: ManagedResourceEditorMode) =>
       toast.success(
         t(
-          mode === "create"
+          mode === MANAGED_RESOURCE_EDITOR_MODES.Create
             ? "managedSiteChannels:toasts.channelSaved"
             : "managedSiteChannels:toasts.channelUpdated",
         ),
@@ -504,7 +300,7 @@ function NativeManagedSiteChannels({
   )
   const [searchValue, setSearchValue] = useState(routeParams.search ?? "")
   const [sorting, setSorting] = useState(() =>
-    getDefaultNativeSorting(siteType),
+    getDefaultManagedResourceSorting(siteType),
   )
   const [columnVisibility, setColumnVisibility] = useState<
     Record<string, boolean>
@@ -513,6 +309,9 @@ function NativeManagedSiteChannels({
   const [migrationMode, setMigrationMode] = useState(false)
   const [migrationRowKeys, setMigrationRowKeys] = useState<string[]>([])
   const [isMigrationOpen, setIsMigrationOpen] = useState(false)
+  const [filterTarget, setFilterTarget] = useState<ChannelFilterTarget | null>(
+    null,
+  )
   const [editorValues, setEditorValues] = useState<EditableResourceProjection>(
     {},
   )
@@ -527,7 +326,10 @@ function NativeManagedSiteChannels({
     () => setSearchValue(routeParams.search ?? ""),
     [routeParams.search],
   )
-  useEffect(() => setSorting(getDefaultNativeSorting(siteType)), [siteType])
+  useEffect(
+    () => setSorting(getDefaultManagedResourceSorting(siteType)),
+    [siteType],
+  )
   const list = useManagedResourceListController({
     registration,
     scopeKey: config?.baseUrl ?? `${siteType}:configuration-missing`,
@@ -537,19 +339,62 @@ function NativeManagedSiteChannels({
     onUnsupportedSearch,
     resolveLabel,
     fieldIds: policy.tableFieldIds,
+    semantics: getManagedResourcePresentationSemantics(siteType),
     analytics,
+  })
+  const { syncingChannelIds, syncChannels } = useManagedSiteChannelModelSync({
+    siteType,
+    onModelsChanged: list.reconcile,
   })
   const mutation = useManagedResourceMutationController({
     workspace: list.workspace,
     refresh: list.refreshSilently,
     resolveRef: list.resolveRef,
     mapFacts: list.mapFacts,
+    acceptMutationResult: list.acceptMutationResult,
+    acceptDeletionResults: list.acceptDeletionResults,
     onMutationSuccess,
     analytics,
   })
   useEffect(() => {
     setEditorValues(mutation.editor?.initialValues ?? {})
   }, [mutation.editor])
+  const editorSecretLoader = mutation.editor?.loadSecret
+  const editorOptionLoader = mutation.editor?.loadOptions
+  const loadEditorSecret = useCallback(
+    async (fieldId: string, options?: ResourceOperationOptions) => {
+      if (!editorSecretLoader) {
+        throw new ManagedResourceError({
+          code: MANAGED_RESOURCE_FAILURE_CODES.PermissionDenied,
+        })
+      }
+      return await runRead(
+        () => editorSecretLoader(fieldId, options),
+        t("channelDialog:title.edit"),
+        options?.signal,
+      )
+    },
+    [editorSecretLoader, runRead, t],
+  )
+  const loadEditorOptions = useCallback(
+    async (
+      fieldId: string,
+      values: EditableResourceProjection,
+      options?: ResourceOperationOptions,
+    ) => {
+      if (!editorOptionLoader) {
+        throw new ManagedResourceError({
+          code: MANAGED_RESOURCE_FAILURE_CODES.PermissionDenied,
+        })
+      }
+      return await runRead(
+        () => editorOptionLoader(fieldId, values, options),
+        t("channelDialog:title.edit"),
+        options?.signal,
+      )
+    },
+    [editorOptionLoader, runRead, t],
+  )
   const targets = useMemo(
     () =>
       getManagedSiteTargetOptions(preferences, {
@@ -574,6 +419,7 @@ function NativeManagedSiteChannels({
     t,
     getSiteLabel: (targetSiteType) => getManagedSiteLabel(t, targetSiteType),
     analytics,
+    executeMigration,
   })
   const editorPolicy =
     mutation.editor && mutation.editorMode
@@ -594,12 +440,8 @@ function NativeManagedSiteChannels({
       ? []
       : liveEditorValidation.issues
     : mutation.editorFailure?.fieldIssues
-  const rowsByKey = useMemo(
-    () => new Map(list.allRows.map((row) => [row.rowKey, row])),
-    [list.allRows],
-  )
   const columns = useMemo(
-    () => createNativeColumns(t, siteType, policy, columnVisibility),
+    () => createManagedResourceColumns(t, siteType, policy, columnVisibility),
     [columnVisibility, policy, siteType, t],
   )
   const pagination = useMemo(
@@ -607,47 +449,98 @@ function NativeManagedSiteChannels({
     [list.pageIndex, pageSize],
   )
   const labels = useMemo(
-    () => createNativeLabels(t, pagination, list.totalRows),
-    [list.totalRows, pagination, t],
+    () =>
+      createManagedSiteChannelsLabels(t, {
+        statusLabels: {
+          enabled: t("managedSiteChannels:statusLabels.enabled"),
+          disabled: t("managedSiteChannels:statusLabels.manualPause"),
+          archived: t("managedSiteChannels:editor.options.status.archived"),
+          "auto-disabled": t("managedSiteChannels:statusLabels.autoDisabled"),
+          unknown: t("managedSiteChannels:statusLabels.unknown"),
+        },
+        rowActions: {
+          trigger: t("managedSiteChannels:table.columns.actions"),
+          edit: t("managedSiteChannels:table.rowActions.edit"),
+          view: t("managedSiteChannels:table.rowActions.view"),
+          migrate: t("managedSiteChannels:table.rowActions.migrate"),
+          sync: t("managedSiteChannels:table.rowActions.sync"),
+          syncing: t("managedSiteChannels:table.rowActions.syncing"),
+          openSync: t("managedSiteChannels:table.rowActions.openSync"),
+          filters: t("managedSiteChannels:table.rowActions.filters"),
+          delete: t("managedSiteChannels:table.rowActions.delete"),
+        },
+      }),
+    [t],
   )
   const canMigrate =
     policy.actions.includes(MANAGED_RESOURCE_PRODUCT_ACTIONS.Migrate) &&
     targets.length > 0
+  const canSyncModels = policy.actions.includes(
+    MANAGED_RESOURCE_PRODUCT_ACTIONS.SyncModels,
+  )
+  const canConfigureModelSync = policy.actions.includes(
+    MANAGED_RESOURCE_PRODUCT_ACTIONS.ConfigureModelSync,
+  )
+  const canConfigureModelFilters = policy.actions.includes(
+    MANAGED_RESOURCE_PRODUCT_ACTIONS.ConfigureModelFilters,
+  )
   const nativeRows = useMemo(
     () =>
-      list.allRows.map((row) => ({
-        ...row,
-        capabilities: {
-          ...row.capabilities,
-          canMigrate: canMigrate && row.capabilities.canView,
-        },
-      })),
-    [canMigrate, list.allRows],
+      list.allRows.map((row) => {
+        const channelActions = row.channelActions
+        return {
+          ...row,
+          capabilities: {
+            ...row.capabilities,
+            canMigrate: canMigrate && row.capabilities.canView,
+            canSync: canSyncModels && channelActions?.canSyncModels === true,
+            canOpenSync:
+              canConfigureModelSync &&
+              channelActions?.canOpenModelSync === true,
+            canFilter:
+              canConfigureModelFilters &&
+              channelActions?.canConfigureModelFilters === true,
+          },
+          isSyncing:
+            channelActions !== undefined &&
+            syncingChannelIds.has(channelActions.channelId),
+        }
+      }),
+    [
+      canConfigureModelFilters,
+      canConfigureModelSync,
+      canMigrate,
+      canSyncModels,
+      list.allRows,
+      syncingChannelIds,
+    ],
+  )
+  const rowsByKey = useMemo(
+    () => new Map(nativeRows.map((row) => [row.rowKey, row])),
+    [nativeRows],
   )
   const confirmedDeleteLabels = useRef(new Map<string, string>())
   const editorPageFailure = (() => {
     switch (mutation.editorFeedback?.kind) {
       case "open-failed":
-        return {
+        return presentManagedResourceFailure(mutation.editorFeedback.failure, {
           category: t("managedSiteChannels:alerts.editorLoadError.title"),
           message: t("managedSiteChannels:alerts.editorLoadError.description"),
-        }
+        })
       case "save-failed":
         return mutation.editor === null
-          ? {
+          ? presentManagedResourceFailure(mutation.editorFeedback.failure, {
               category: t("managedSiteChannels:alerts.editorSaveError.title"),
-              message:
-                mutation.editorFeedback.failure.message ??
-                t("managedSiteChannels:alerts.editorSaveError.description"),
-            }
+              message: t(
+                "managedSiteChannels:alerts.editorSaveError.description",
+              ),
+            })
           : null
       case "save-uncertain":
-        return {
+        return presentManagedResourceFailure(mutation.editorFeedback.failure, {
           category: t("managedSiteChannels:alerts.partialMutation.title"),
-          message:
-            mutation.editorFeedback.failure.message ??
-            t("managedSiteChannels:alerts.partialMutation.description"),
-        }
+          message: t("managedSiteChannels:alerts.partialMutation.description"),
+        })
       case "saved-refresh-failed":
         return {
           category: t("managedSiteChannels:alerts.savedRefreshError.title"),
@@ -660,7 +553,16 @@ function NativeManagedSiteChannels({
         return null
     }
   })()
-  const failure = editorPageFailure ?? getFailureMessage(t, list.failure)
+  const detailPageFailure = mutation.detailFailure
+    ? presentManagedResourceFailure(mutation.detailFailure, {
+        category: t("managedSiteChannels:alerts.loadError.title"),
+        message: t("common:rootErrorBoundary.genericDescription"),
+      })
+    : null
+  const failure =
+    editorPageFailure ??
+    detailPageFailure ??
+    getFailureMessage(t, list.failure, getManagedSiteLabel(t, siteType))
   const isConfigurationMissing =
     config === null ||
     list.failure?.code ===
@@ -700,7 +602,11 @@ function NativeManagedSiteChannels({
           "",
       })),
       requiresRefresh: mutation.deleteState.requiresRefresh,
-      failure: getFailureMessage(t, mutation.deleteState.failure),
+      failure: getFailureMessage(
+        t,
+        mutation.deleteState.failure,
+        getManagedSiteLabel(t, siteType),
+      ),
     },
   }
   const capabilities: ManagedChannelsCapabilities = {
@@ -711,11 +617,10 @@ function NativeManagedSiteChannels({
     canDeleteSelected:
       mutation.capabilities.canDelete &&
       policy.actions.includes(MANAGED_RESOURCE_PRODUCT_ACTIONS.DeleteSelected),
-    canSyncSelected: false,
+    canSyncSelected: nativeRows.some((row) => row.capabilities.canSync),
     canToggleMigration: canMigrate || migrationMode,
     canMigrateSelected: canMigrate,
     canMigrateFiltered: canMigrate,
-    showNewApiOnlyActions: false,
     hasMigrationTargets: targets.length > 0,
   }
   const callbacks: ManagedChannelsCallbacks = {
@@ -755,25 +660,90 @@ function NativeManagedSiteChannels({
     },
     onSelectedRowKeysChange: list.setSelectedRowKeys,
     onCreate: () => void mutation.openCreate(),
-    onToggleMigrationMode: () => setMigrationMode((current) => !current),
+    onToggleMigrationMode: () => {
+      trackNativeChannelActionStarted(
+        PRODUCT_ANALYTICS_ACTION_IDS.ToggleManagedSiteChannelMigrationMode,
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsToolbar,
+      )
+      setMigrationMode((current) => !current)
+    },
     onMigrateSelected: (rowKeys) => {
+      trackNativeChannelActionStarted(
+        PRODUCT_ANALYTICS_ACTION_IDS.OpenSelectedManagedSiteChannelMigration,
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsToolbar,
+      )
       setMigrationRowKeys(rowKeys)
       setIsMigrationOpen(true)
     },
     onMigrateFiltered: (rowKeys) => {
+      trackNativeChannelActionStarted(
+        PRODUCT_ANALYTICS_ACTION_IDS.OpenFilteredManagedSiteChannelMigration,
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsToolbar,
+      )
       setMigrationRowKeys(rowKeys)
       setIsMigrationOpen(true)
     },
     onEdit: (rowKey) => void mutation.openEdit(rowKey),
-    onView: (rowKey) => void mutation.openDetail(rowKey),
+    onView: (rowKey) => {
+      trackNativeChannelActionStarted(
+        PRODUCT_ANALYTICS_ACTION_IDS.ViewManagedSiteChannel,
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsRowActions,
+      )
+      void mutation.openDetail(rowKey)
+    },
     onMigrate: (rowKey) => {
+      trackNativeChannelActionStarted(
+        PRODUCT_ANALYTICS_ACTION_IDS.OpenManagedSiteChannelMigration,
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsRowActions,
+      )
       setMigrationRowKeys([rowKey])
       setIsMigrationOpen(true)
     },
     onDelete: mutation.openDelete,
-    onSync: async () => undefined,
-    onOpenSync: async () => undefined,
-    onFilters: () => undefined,
+    onSync: async (rowKey) => {
+      const row = rowsByKey.get(rowKey)
+      if (!row?.capabilities.canSync || !row.channelActions) return
+      await syncChannels(
+        [row.channelActions.channelId],
+        nativeChannelActionAnalyticsContext(
+          PRODUCT_ANALYTICS_ACTION_IDS.SyncManagedSiteChannel,
+          PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsRowActions,
+        ),
+      )
+    },
+    onOpenSync: async (rowKey) => {
+      const row = rowsByKey.get(rowKey)
+      if (!row?.capabilities.canOpenSync || !row.channelActions) return
+      void trackProductAnalyticsActionStarted(
+        nativeChannelActionAnalyticsContext(
+          PRODUCT_ANALYTICS_ACTION_IDS.OpenManagedSiteChannelModelSync,
+          PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsRowActions,
+        ),
+      )
+      await openManagedSiteModelSyncForChannel(row.channelActions.channelId)
+    },
+    onFilters: (rowKey) => {
+      const row = rowsByKey.get(rowKey)
+      if (!row?.capabilities.canFilter || !row.channelActions) return
+      const ref = list.resolveRef(rowKey)
+      if (!ref) return
+      setFilterTarget({
+        id: row.channelActions.channelId,
+        name: row.name,
+        type: String(row.channelActions.channelType),
+        resourceRef: createManagedUpstreamResourceRef({
+          managedSiteType: ref.siteType,
+          scopeKey: ref.scopeKey,
+          resourceId: ref.resourceId,
+        }),
+      })
+      void trackProductAnalyticsActionStarted(
+        nativeChannelActionAnalyticsContext(
+          PRODUCT_ANALYTICS_ACTION_IDS.OpenManagedSiteChannelFilters,
+          PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsRowActions,
+        ),
+      )
+    },
     onDeleteSelected: () => {
       void mutation.openBulkDelete(
         Object.keys(list.selectedRowKeys).filter(
@@ -781,7 +751,21 @@ function NativeManagedSiteChannels({
         ),
       )
     },
-    onSyncSelected: async () => undefined,
+    onSyncSelected: async (rowKeys) => {
+      const channelIds = rowKeys.flatMap((rowKey) => {
+        const row = rowsByKey.get(rowKey)
+        return row?.capabilities.canSync && row.channelActions
+          ? [row.channelActions.channelId]
+          : []
+      })
+      await syncChannels(
+        channelIds,
+        nativeChannelActionAnalyticsContext(
+          PRODUCT_ANALYTICS_ACTION_IDS.SyncSelectedManagedSiteChannels,
+          PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsToolbar,
+        ),
+      )
+    },
     onDeleteConfirm: () => {
       confirmedDeleteLabels.current = new Map(
         mutation.deleteState.rowKeys.flatMap((rowKey) => {
@@ -809,6 +793,23 @@ function NativeManagedSiteChannels({
         return value && resolveLabel ? [{ label: resolveLabel(t), value }] : []
       })
     : []
+  const pageExperience = useManagedSiteChannelPageExperience({
+    siteType,
+    baseUrl: config?.baseUrl,
+    isConfigurationMissing,
+    isLoadedEmpty:
+      !list.isLoading &&
+      !list.failure &&
+      !searchValue.trim() &&
+      !routeParams.channelId?.trim() &&
+      list.statusFilter.length === 0 &&
+      list.totalRows === 0,
+    canImportChannel:
+      capabilities.canCreate &&
+      registration.createSeedKinds?.includes(
+        MANAGED_RESOURCE_CREATE_SEED_KINDS.ManagedChannelImport,
+      ) === true,
+  })
 
   return (
     <>
@@ -818,25 +819,35 @@ function NativeManagedSiteChannels({
         callbacks={callbacks}
         labels={labels}
         title={t(policy.titleKey)}
-        description={t("managedSiteChannels:resourceDescription")}
+        titleActions={pageExperience.titleActions}
+        description={pageExperience.description}
         configurationMissingDescription={getManagedSiteConfigMissingMessage(
           t,
           getManagedSiteMessagesKeyFromSiteType(siteType),
         )}
+        configurationMissingNotice={pageExperience.configurationMissingNotice}
+        emptyContent={pageExperience.emptyContent}
         configurationSettingsTarget={policy.settingsTarget}
         siteTypeLabel={t("settings:managedSite.siteTypeLabel")}
+        filterDialog={
+          <ChannelFilterDialog
+            channel={filterTarget}
+            open={filterTarget !== null}
+            onClose={() => setFilterTarget(null)}
+          />
+        }
       />
 
       {mutation.editor && mutation.editorMode && editorPolicy ? (
         <ChannelEditorShell
           isOpen
           title={t(
-            mutation.editorMode === "create"
+            mutation.editorMode === MANAGED_RESOURCE_EDITOR_MODES.Create
               ? "channelDialog:title.add"
               : "channelDialog:title.edit",
           )}
           description={t(
-            mutation.editorMode === "create"
+            mutation.editorMode === MANAGED_RESOURCE_EDITOR_MODES.Create
               ? "channelDialog:description.add"
               : "channelDialog:description.edit",
           )}
@@ -846,7 +857,7 @@ function NativeManagedSiteChannels({
             void mutation.submit(editorValues)
           }}
           submitLabel={t(
-            mutation.editorMode === "create"
+            mutation.editorMode === MANAGED_RESOURCE_EDITOR_MODES.Create
               ? "channelDialog:actions.create"
               : "channelDialog:actions.update",
           )}
@@ -863,9 +874,18 @@ function NativeManagedSiteChannels({
               <AlertTitle>
                 {t("managedSiteChannels:alerts.editorSaveError.title")}
               </AlertTitle>
-              <AlertDescription>
-                {mutation.editorFeedback.failure.message ??
-                  t("managedSiteChannels:alerts.editorSaveError.description")}
+              <AlertDescription className="whitespace-pre-line">
+                {
+                  presentManagedResourceFailure(
+                    mutation.editorFeedback.failure,
+                    {
+                      category: "",
+                      message: t(
+                        "managedSiteChannels:alerts.editorSaveError.description",
+                      ),
+                    },
+                  ).message
+                }
               </AlertDescription>
             </Alert>
           ) : null}
@@ -877,7 +897,12 @@ function NativeManagedSiteChannels({
             values={editorValues}
             fieldIssues={editorFieldIssues}
             disabled={mutation.isSaving}
-            onLoadSecret={mutation.editor.loadSecret}
+            onLoadSecret={
+              mutation.editor.loadSecret ? loadEditorSecret : undefined
+            }
+            onLoadOptions={
+              mutation.editor.loadOptions ? loadEditorOptions : undefined
+            }
             onValueChange={(fieldId, value) =>
               setEditorValues((current) => ({
                 ...current,
@@ -906,6 +931,8 @@ function NativeManagedSiteChannels({
           />
         ) : null}
       </Modal>
+
+      {verificationDialog}
 
       <ManagedSiteMigrationDialogView
         isOpen={isMigrationOpen}
@@ -958,6 +985,7 @@ export function ManagedSiteChannelsRoute({
 
   return (
     <NativeManagedSiteChannels
+      key={siteType}
       siteType={siteType}
       refreshKey={refreshKey}
       routeParams={routeParams}

@@ -12,10 +12,14 @@ import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions/regi
 import { hasUsableApiTokenKey } from "~/services/accountTokens/apiTokenKey"
 import {
   MANAGED_RESOURCE_CREATE_SEED_KINDS,
+  MANAGED_RESOURCE_DISPLAY_FACT_KINDS,
   MANAGED_RESOURCE_FAILURE_CODES,
   MANAGED_RESOURCE_FIELD_ISSUE_CODES,
   MANAGED_RESOURCE_FIELD_TYPES,
+  MANAGED_RESOURCE_SECRET_EDIT_INTENT_KINDS,
   MANAGED_RESOURCE_SECRET_REPLACEMENT_BLOCK_REASONS,
+  MANAGED_RESOURCE_SECRET_STATES,
+  MANAGED_RESOURCE_STATUSES,
   ManagedResourceError,
   type EditableResourceProjection,
   type ManagedChannelImportCreateSeed,
@@ -698,15 +702,15 @@ const searchableValues = (channel: AxonHubChannel) => [
 const toStatus = (status: string): ResourceDisplayFacts["status"] => {
   switch (status) {
     case AXON_HUB_CHANNEL_STATUS.ENABLED:
-      return "enabled"
+      return MANAGED_RESOURCE_STATUSES.Enabled
     case AXON_HUB_CHANNEL_STATUS.DISABLED:
-      return "disabled"
+      return MANAGED_RESOURCE_STATUSES.Disabled
     case AXON_HUB_CHANNEL_STATUS.ARCHIVED:
-      return "archived"
-    case "auto-disabled":
-      return "auto-disabled"
+      return MANAGED_RESOURCE_STATUSES.Archived
+    case MANAGED_RESOURCE_STATUSES.AutoDisabled:
+      return MANAGED_RESOURCE_STATUSES.AutoDisabled
     default:
-      return "unknown"
+      return MANAGED_RESOURCE_STATUSES.Unknown
   }
 }
 
@@ -729,11 +733,13 @@ const getCredentialReplacementBlockReason = (
 const getCredentialState = (channel: AxonHubChannel): ResourceSecretState => {
   const editorState = editorCredentialStates.get(channel)
   if (editorState) return editorState
-  if (channel.credentials === null) return "permission-hidden"
+  if (channel.credentials === null)
+    return MANAGED_RESOURCE_SECRET_STATES.PermissionHidden
   const keys = getAxonHubCredentialCandidates(channel)
-  if (keys.some(hasUsableApiTokenKey)) return "available"
-  if (keys.length) return "masked"
-  return "unavailable"
+  if (keys.some(hasUsableApiTokenKey))
+    return MANAGED_RESOURCE_SECRET_STATES.Available
+  if (keys.length) return MANAGED_RESOURCE_SECRET_STATES.Masked
+  return MANAGED_RESOURCE_SECRET_STATES.Unavailable
 }
 
 const sanitizeAxonHubEditorDetail = (
@@ -773,7 +779,7 @@ const sanitizeAxonHubEditorDetail = (
 
 const getAxonHubCredentialKey = (channel: AxonHubChannel) => {
   if (
-    getCredentialState(channel) !== "available" ||
+    getCredentialState(channel) !== MANAGED_RESOURCE_SECRET_STATES.Available ||
     getCredentialReplacementBlockReason(channel)
   ) {
     return undefined
@@ -783,7 +789,8 @@ const getAxonHubCredentialKey = (channel: AxonHubChannel) => {
 
 const canReplaceCredential = (channel: AxonHubChannel) =>
   isRegularAxonHubChannelType(String(channel.type)) &&
-  getCredentialState(channel) !== "permission-hidden" &&
+  getCredentialState(channel) !==
+    MANAGED_RESOURCE_SECRET_STATES.PermissionHidden &&
   getCredentialReplacementBlockReason(channel) === undefined
 
 const detailFacts = (
@@ -791,72 +798,72 @@ const detailFacts = (
 ): readonly ResourceDisplayFact[] => [
   {
     fieldId: AXON_HUB_CHANNEL_FIELD_IDS.NAME,
-    kind: "text",
+    kind: MANAGED_RESOURCE_DISPLAY_FACT_KINDS.Text,
     value: channel.name,
   },
   {
     fieldId: AXON_HUB_CHANNEL_FIELD_IDS.TYPE,
-    kind: "text",
+    kind: MANAGED_RESOURCE_DISPLAY_FACT_KINDS.Text,
     value: String(channel.type),
   },
   {
     fieldId: AXON_HUB_CHANNEL_FIELD_IDS.BASE_URL,
-    kind: "text",
+    kind: MANAGED_RESOURCE_DISPLAY_FACT_KINDS.Text,
     value: channel.baseURL ?? "",
   },
   {
     fieldId: AXON_HUB_CHANNEL_FIELD_IDS.STATUS,
-    kind: "text",
+    kind: MANAGED_RESOURCE_DISPLAY_FACT_KINDS.Text,
     value: String(channel.status),
   },
   {
     fieldId: AXON_HUB_CHANNEL_FIELD_IDS.KEY,
-    kind: "secret",
+    kind: MANAGED_RESOURCE_DISPLAY_FACT_KINDS.Secret,
     state: getCredentialState(channel),
   },
   {
     fieldId: AXON_HUB_CHANNEL_FIELD_IDS.SUPPORTED_MODELS,
-    kind: "list",
+    kind: MANAGED_RESOURCE_DISPLAY_FACT_KINDS.List,
     value: channel.supportedModels ?? [],
   },
   {
     fieldId: AXON_HUB_CHANNEL_FIELD_IDS.MANUAL_MODELS,
-    kind: "list",
+    kind: MANAGED_RESOURCE_DISPLAY_FACT_KINDS.List,
     value: channel.manualModels ?? [],
   },
   {
     fieldId: AXON_HUB_CHANNEL_FIELD_IDS.DEFAULT_TEST_MODEL,
-    kind: "text",
+    kind: MANAGED_RESOURCE_DISPLAY_FACT_KINDS.Text,
     value: channel.defaultTestModel ?? "",
   },
   {
     fieldId: AXON_HUB_CHANNEL_FIELD_IDS.AUTO_SYNC_SUPPORTED_MODELS,
-    kind: "boolean",
+    kind: MANAGED_RESOURCE_DISPLAY_FACT_KINDS.Boolean,
     value: channel.autoSyncSupportedModels ?? false,
   },
   {
     fieldId: AXON_HUB_CHANNEL_FIELD_IDS.AUTO_SYNC_MODEL_PATTERN,
-    kind: "text",
+    kind: MANAGED_RESOURCE_DISPLAY_FACT_KINDS.Text,
     value: channel.autoSyncModelPattern ?? "",
   },
   {
     fieldId: AXON_HUB_CHANNEL_FIELD_IDS.TAGS,
-    kind: "list",
+    kind: MANAGED_RESOURCE_DISPLAY_FACT_KINDS.List,
     value: channel.tags ?? [],
   },
   {
     fieldId: AXON_HUB_CHANNEL_FIELD_IDS.ORDERING_WEIGHT,
-    kind: "number",
+    kind: MANAGED_RESOURCE_DISPLAY_FACT_KINDS.Number,
     value: channel.orderingWeight ?? 0,
   },
   {
     fieldId: AXON_HUB_CHANNEL_FIELD_IDS.REMARK,
-    kind: "text",
+    kind: MANAGED_RESOURCE_DISPLAY_FACT_KINDS.Text,
     value: channel.remark ?? "",
   },
   {
     fieldId: AXON_HUB_CHANNEL_FIELD_IDS.EXTRA_MODEL_PREFIX,
-    kind: "text",
+    kind: MANAGED_RESOURCE_DISPLAY_FACT_KINDS.Text,
     value: channel.settings?.extraModelPrefix ?? "",
   },
 ]
@@ -868,7 +875,7 @@ const toFacts = (
   searchValues?: readonly string[],
 ): ResourceDisplayFacts => {
   const status = toStatus(channel.status)
-  const supportedState = status !== "unknown"
+  const supportedState = status !== MANAGED_RESOURCE_STATUSES.Unknown
   return {
     ref,
     displayName: channel.name,
@@ -900,7 +907,7 @@ const toListFacts = (channel: AxonHubChannel, ref: ManagedResourceRef) => {
         fact.fieldId === AXON_HUB_CHANNEL_FIELD_IDS.SUPPORTED_MODELS
           ? ({
               fieldId: fact.fieldId,
-              kind: "number",
+              kind: MANAGED_RESOURCE_DISPLAY_FACT_KINDS.Number,
               value: modelNames.length,
             } satisfies ResourceDisplayFact)
           : fact,
@@ -952,17 +959,22 @@ const readSecretIntent = (
     Object.prototype.hasOwnProperty.call(value, "kind")
   ) {
     const candidate = value as Record<PropertyKey, unknown>
-    if (candidate.kind === "unchanged") return { kind: "unchanged" }
-    if (candidate.kind === "clear") return { kind: "clear" }
+    if (candidate.kind === MANAGED_RESOURCE_SECRET_EDIT_INTENT_KINDS.Unchanged)
+      return { kind: MANAGED_RESOURCE_SECRET_EDIT_INTENT_KINDS.Unchanged }
+    if (candidate.kind === MANAGED_RESOURCE_SECRET_EDIT_INTENT_KINDS.Clear)
+      return { kind: MANAGED_RESOURCE_SECRET_EDIT_INTENT_KINDS.Clear }
     if (
-      candidate.kind === "replace" &&
+      candidate.kind === MANAGED_RESOURCE_SECRET_EDIT_INTENT_KINDS.Replace &&
       Object.prototype.hasOwnProperty.call(candidate, "value") &&
       typeof candidate.value === "string"
     ) {
-      return { kind: "replace", value: candidate.value }
+      return {
+        kind: MANAGED_RESOURCE_SECRET_EDIT_INTENT_KINDS.Replace,
+        value: candidate.value,
+      }
     }
   }
-  return { kind: "unchanged" }
+  return { kind: MANAGED_RESOURCE_SECRET_EDIT_INTENT_KINDS.Unchanged }
 }
 
 const normalizeList = (values: readonly string[]) =>
@@ -1098,10 +1110,14 @@ const validateValues = (
   }
   if (
     (context.create &&
-      (secretIntent.kind !== "replace" || !secretIntent.value.trim())) ||
-    secretIntent.kind === "clear" ||
-    (secretIntent.kind === "replace" && !secretIntent.value.trim()) ||
-    (credentialMutationForbidden && secretIntent.kind !== "unchanged")
+      (secretIntent.kind !==
+        MANAGED_RESOURCE_SECRET_EDIT_INTENT_KINDS.Replace ||
+        !secretIntent.value.trim())) ||
+    secretIntent.kind === MANAGED_RESOURCE_SECRET_EDIT_INTENT_KINDS.Clear ||
+    (secretIntent.kind === MANAGED_RESOURCE_SECRET_EDIT_INTENT_KINDS.Replace &&
+      !secretIntent.value.trim()) ||
+    (credentialMutationForbidden &&
+      secretIntent.kind !== MANAGED_RESOURCE_SECRET_EDIT_INTENT_KINDS.Unchanged)
   ) {
     issues.push({
       fieldId: AXON_HUB_CHANNEL_FIELD_IDS.KEY,
@@ -1230,7 +1246,9 @@ const createFieldDescriptors = (
       ? [{ value: String(detail.type) }]
       : REGULAR_AXON_HUB_CHANNEL_TYPES.map((value) => ({ value }))
   const currentStatus = detail ? String(detail.status) : undefined
-  const secretState = detail ? getCredentialState(detail) : "unavailable"
+  const secretState = detail
+    ? getCredentialState(detail)
+    : MANAGED_RESOURCE_SECRET_STATES.Unavailable
   const replacementBlockReason = detail
     ? getCredentialReplacementBlockReason(detail)
     : undefined
@@ -1331,7 +1349,9 @@ const createInitialValues = (): EditableResourceProjection => ({
   [AXON_HUB_CHANNEL_FIELD_IDS.TYPE]: AXON_HUB_CHANNEL_TYPE.OPENAI,
   [AXON_HUB_CHANNEL_FIELD_IDS.BASE_URL]: "",
   [AXON_HUB_CHANNEL_FIELD_IDS.STATUS]: AXON_HUB_CHANNEL_STATUS.DISABLED,
-  [AXON_HUB_CHANNEL_FIELD_IDS.KEY]: { kind: "unchanged" },
+  [AXON_HUB_CHANNEL_FIELD_IDS.KEY]: {
+    kind: MANAGED_RESOURCE_SECRET_EDIT_INTENT_KINDS.Unchanged,
+  },
   [AXON_HUB_CHANNEL_FIELD_IDS.SUPPORTED_MODELS]: [],
   [AXON_HUB_CHANNEL_FIELD_IDS.MANUAL_MODELS]: [],
   [AXON_HUB_CHANNEL_FIELD_IDS.DEFAULT_TEST_MODEL]: "",
@@ -1357,7 +1377,7 @@ const createAxonHubChannelImportProjection = (
       ? AXON_HUB_CHANNEL_STATUS.ENABLED
       : AXON_HUB_CHANNEL_STATUS.DISABLED,
     [AXON_HUB_CHANNEL_FIELD_IDS.KEY]: {
-      kind: "replace",
+      kind: MANAGED_RESOURCE_SECRET_EDIT_INTENT_KINDS.Replace,
       value: seed.credential,
     },
     [AXON_HUB_CHANNEL_FIELD_IDS.SUPPORTED_MODELS]: models,
@@ -1374,7 +1394,9 @@ const editInitialValues = (
   [AXON_HUB_CHANNEL_FIELD_IDS.TYPE]: String(detail.type),
   [AXON_HUB_CHANNEL_FIELD_IDS.BASE_URL]: detail.baseURL ?? "",
   [AXON_HUB_CHANNEL_FIELD_IDS.STATUS]: String(detail.status),
-  [AXON_HUB_CHANNEL_FIELD_IDS.KEY]: { kind: "unchanged" },
+  [AXON_HUB_CHANNEL_FIELD_IDS.KEY]: {
+    kind: MANAGED_RESOURCE_SECRET_EDIT_INTENT_KINDS.Unchanged,
+  },
   [AXON_HUB_CHANNEL_FIELD_IDS.SUPPORTED_MODELS]: [
     ...(detail.supportedModels ?? []),
   ],
@@ -1397,7 +1419,10 @@ const buildCreateCommand = (
 ): AxonHubCreateCommand => {
   const baseURL = readString(values, AXON_HUB_CHANNEL_FIELD_IDS.BASE_URL)
   const secret = readSecretIntent(values)
-  const credential = secret.kind === "replace" ? secret.value.trim() : ""
+  const credential =
+    secret.kind === MANAGED_RESOURCE_SECRET_EDIT_INTENT_KINDS.Replace
+      ? secret.value.trim()
+      : ""
   const extraModelPrefix = readString(
     values,
     AXON_HUB_CHANNEL_FIELD_IDS.EXTRA_MODEL_PREFIX,
@@ -1518,7 +1543,10 @@ const buildUpdateCommand = (
   )
 
   const secret = readSecretIntent(values)
-  if (secret.kind === "replace" && canReplaceCredential(detail)) {
+  if (
+    secret.kind === MANAGED_RESOURCE_SECRET_EDIT_INTENT_KINDS.Replace &&
+    canReplaceCredential(detail)
+  ) {
     input.credentials = { apiKeys: [secret.value.trim()] }
   }
 
@@ -1679,6 +1707,7 @@ const axonHubNativeDefinition = {
   toListFacts,
   toDetailFacts: (detail: AxonHubChannel, ref: ManagedResourceRef) =>
     toFacts(detail, ref, detailFacts(detail)),
+  toMutationFacts: toListFacts,
   createEditor: async () => createEditor(),
   editEditor: (
     operations: AxonHubNativeResourceOperations,
@@ -1686,7 +1715,8 @@ const axonHubNativeDefinition = {
   ) => {
     const resourceId = detail.id
     const loadSecret =
-      getCredentialState(detail) === "available" && canReplaceCredential(detail)
+      getCredentialState(detail) === MANAGED_RESOURCE_SECRET_STATES.Available &&
+      canReplaceCredential(detail)
         ? (fieldId: string, options?: ResourceOperationOptions) => {
             if (fieldId !== AXON_HUB_CHANNEL_FIELD_IDS.KEY) {
               throw createNativeFailure("unexpected")

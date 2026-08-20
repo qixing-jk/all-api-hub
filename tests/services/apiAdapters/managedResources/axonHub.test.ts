@@ -674,12 +674,35 @@ describe("AxonHub native managed-resource Adapter", () => {
       value: 2,
     })
 
-    const row = createManagedResourcePresentationMapper().map(page.items[0]!)
+    const row = createManagedResourcePresentationMapper({
+      fieldIds: AXON_HUB_TABLE_FIELD_IDS,
+    }).map(page.items[0]!)
     expect(row.searchText).toContain("manual-model")
     expect(row.cells.supportedModels).toEqual({
       kind: "text",
       value: "2",
       sortValue: 2,
+    })
+  })
+
+  it("projects successful editor results with the provider-owned table facts", async () => {
+    const detail = buildDetailChannel()
+    mocks.getChannel.mockResolvedValue(detail)
+    mocks.updateChannel.mockResolvedValue({ ...detail, name: "Renamed" })
+    const workspace = await openWorkspace()
+    const editor = await workspace.openEditEditor(refFor(detail))
+
+    const result = await editor.submit({
+      ...editor.initialValues,
+      name: "Renamed",
+    })
+
+    expect(result.outcome).toBe(MANAGED_SITE_MUTATION_OUTCOMES.Succeeded)
+    if (result.outcome !== MANAGED_SITE_MUTATION_OUTCOMES.Succeeded) return
+    expect(result.data.fields).toContainEqual({
+      fieldId: AXON_HUB_CHANNEL_FIELD_IDS.SUPPORTED_MODELS,
+      kind: "number",
+      value: 2,
     })
   })
 
@@ -2723,6 +2746,10 @@ describe("AxonHub native managed-resource Adapter", () => {
       SITE_TYPES.AXON_HUB,
       MANAGED_RESOURCE_KINDS.Channel,
     )
+    const newApiRegistration = getManagedResourceRegistration(
+      SITE_TYPES.NEW_API,
+      MANAGED_RESOURCE_KINDS.Channel,
+    )
     const capabilities = getSiteTypeCapabilities(SITE_TYPES.AXON_HUB)
 
     expect(registration).toBe(axonHubManagedResourceRegistration)
@@ -2732,12 +2759,8 @@ describe("AxonHub native managed-resource Adapter", () => {
     })
     expect(capabilities.managedSites).not.toHaveProperty("nativeResources")
     expect(capabilities.managedSites).not.toHaveProperty("resourceRegistration")
-    expect(
-      getManagedResourceRegistration(
-        SITE_TYPES.NEW_API,
-        MANAGED_RESOURCE_KINDS.Channel,
-      ),
-    ).toBeNull()
+    expect(newApiRegistration).not.toBeNull()
+    expect(newApiRegistration).not.toBe(registration)
   })
 
   it("keeps registration presence and native rollout mode explicit", () => {

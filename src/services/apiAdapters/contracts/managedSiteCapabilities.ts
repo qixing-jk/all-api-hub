@@ -17,6 +17,7 @@ import type {
 
 export type ManagedSiteChannelRequestOptions = {
   signal?: AbortSignal
+  protectionBypassExecution?: ProtectionBypassExecution
   bypassSiteRequestLimit?: boolean
   /** Fail instead of returning a pagination-capped partial inventory. */
   requireCompleteInventory?: boolean
@@ -32,6 +33,14 @@ export type ManagedSitePaginatedChannelRequestOptions =
 
 export type ManagedSiteChannelSecretReadOptions = {
   protectionBypassExecution: ProtectionBypassExecution
+  signal?: AbortSignal
+}
+
+/** Provider-neutral connection values for probing an unsaved managed channel. */
+export type ManagedSiteChannelModelProbe = {
+  channelType: string | number
+  baseUrl: string
+  credential: string
 }
 
 export type ManagedSiteChannelsCapability<
@@ -40,6 +49,7 @@ export type ManagedSiteChannelsCapability<
   search(
     config: TConfig,
     keyword: string,
+    options?: ManagedSiteChannelRequestOptions,
   ): Promise<ManagedSiteChannelListData | null>
   list?(
     config: TConfig,
@@ -47,17 +57,25 @@ export type ManagedSiteChannelsCapability<
       beforeRequest?: () => Promise<void>
     },
   ): Promise<ManagedSiteChannelListData>
+  get?(
+    config: TConfig,
+    channelId: number,
+    options?: ManagedSiteChannelRequestOptions,
+  ): Promise<ManagedSiteChannel>
   create(
     config: TConfig,
     channelData: CreateChannelPayload,
+    options?: ManagedSiteChannelRequestOptions,
   ): Promise<ManagedSiteMutationResult<unknown>>
   update(
     config: TConfig,
     channelData: UpdateChannelPayload,
+    options?: ManagedSiteChannelRequestOptions,
   ): Promise<ManagedSiteMutationResult<unknown>>
   delete(
     config: TConfig,
     channelId: number,
+    options?: ManagedSiteChannelRequestOptions,
   ): Promise<ManagedSiteVoidMutationResult>
   fetchSecretKey?(
     config: TConfig,
@@ -72,6 +90,11 @@ export type ManagedSiteChannelsCapability<
   fetchModels?(
     config: TConfig,
     channelId: number,
+    options?: ManagedSiteChannelRequestOptions,
+  ): Promise<string[]>
+  fetchDraftModels?(
+    config: TConfig,
+    probe: ManagedSiteChannelModelProbe,
     options?: ManagedSiteChannelRequestOptions,
   ): Promise<string[]>
   updateModels?(
@@ -99,7 +122,10 @@ export type ManagedSiteConfigCapability<
 export type ManagedSiteQueriesCapability<
   TConfig = ManagedSiteRuntimeConfigValue,
 > = {
-  fetchSiteUserGroups(config: TConfig): Promise<string[]>
+  fetchSiteUserGroups(
+    config: TConfig,
+    options?: ManagedSiteChannelRequestOptions,
+  ): Promise<string[]>
   fetchAccountAvailableModels(config: TConfig): Promise<string[]>
 }
 

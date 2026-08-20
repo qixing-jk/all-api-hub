@@ -419,6 +419,7 @@ async function fetchViaCurrentTabContent<T>(context: {
       response = await sendTabMessageWithRetry(context.fetchContext.tabId, {
         action: RuntimeActionIds.ContentPerformTempWindowFetch,
         requestId,
+        expectedOrigin: new URL(context.fetchContext.origin).origin,
         fetchUrl: context.url,
         fetchOptions: normalizeRequestInitForMessage(context.fetchOptions),
         responseType: context.responseType,

@@ -3,6 +3,7 @@ import type { BrowserContext, Page, Route } from "@playwright/test"
 import { ChannelType } from "~/constants"
 import { AXON_HUB_CHANNEL_STATUS } from "~/constants/axonHub"
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
+import { OCTOPUS_COOKIE_SESSION_STATUS_PATH } from "~/constants/octopus"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SITE_TYPES } from "~/constants/siteType"
 import type { ManagedSiteChannel } from "~/types/managedSite"
@@ -12,10 +13,14 @@ import {
 } from "~~/e2e/utils/commonUserFlows"
 import { getServiceWorker } from "~~/e2e/utils/extensionState"
 
-const INTERCEPTED_MANAGED_SITE_ORIGIN = "https://managed.example.invalid"
-const INTERCEPTED_MANAGED_SITE_TARGET_ORIGIN =
+const INTERCEPTED_NEW_API_ORIGIN = "https://managed.example.invalid"
+const INTERCEPTED_DONE_HUB_TARGET_ORIGIN =
   "https://managed-target.example.invalid"
 const INTERCEPTED_AXON_HUB_ORIGIN = "https://axonhub.example.invalid"
+const INTERCEPTED_OCTOPUS_ORIGIN = "https://octopus.example.invalid"
+const INTERCEPTED_OCTOPUS_COOKIE = "auth=octopus-cookie-session"
+
+export const NEW_API_CREATED_ID = 303
 
 const AXON_HUB_PRIMARY_ID = "gid://axonhub/Channel/opaque-primary"
 const AXON_HUB_SECONDARY_ID = "gid://axonhub/Channel/opaque-secondary"
@@ -23,7 +28,9 @@ const AXON_HUB_CREATED_ID = "gid://axonhub/Channel/opaque-created"
 const AXON_HUB_NEXT_CURSOR = "axonhub-cursor-page-2"
 const AXON_HUB_CREATED_CURSOR = "axonhub-cursor-page-3"
 
-const channel = (overrides: Partial<ManagedSiteChannel>): ManagedSiteChannel =>
+const newApiChannel = (
+  overrides: Partial<ManagedSiteChannel>,
+): ManagedSiteChannel =>
   ({
     id: 101,
     name: "Example primary",
@@ -38,9 +45,9 @@ const channel = (overrides: Partial<ManagedSiteChannel>): ManagedSiteChannel =>
     ...overrides,
   }) as ManagedSiteChannel
 
-const interceptedManagedSiteChannels = [
-  channel({}),
-  channel({
+const interceptedNewApiChannelTemplates = [
+  newApiChannel({}),
+  newApiChannel({
     id: 202,
     name: "Example secondary",
     type: ChannelType.Anthropic,
@@ -53,17 +60,39 @@ const interceptedManagedSiteChannels = [
   }),
 ]
 
+let interceptedNewApiChannels: ManagedSiteChannel[] = []
+let interceptedNewApiCreatedChannel: ManagedSiteChannel | null = null
+let interceptedNewApiUpdatePayload: Record<string, unknown> | null = null
+let interceptedNewApiListRequestCount = 0
+let interceptedNewApiFetchModelsRequestCount = 0
+let interceptedNewApiSecretRequestCount = 0
+let interceptedNewApiDeleteRequestCount = 0
 let interceptedAxonHubPrimaryName = "Example primary"
 let interceptedAxonHubPrimaryTags = ["fixture-tag"]
 let interceptedAxonHubUpdateVariables: Record<string, unknown> | null = null
 let interceptedAxonHubListRequestCount = 0
 let interceptedAxonHubDeleteRequestCount = 0
+let interceptedOctopusCookieHeader: string | null = null
+let interceptedOctopusRootRequestCount = 0
+let interceptedOctopusStatusRequestCount = 0
 let interceptedAxonHubCreatedChannel: {
   name: string
   baseURL: string
   supportedModels: string[]
   tags: string[]
 } | null = null
+
+function replaceInterceptedNewApiChannel(updated: ManagedSiteChannel) {
+  if (updated.id === NEW_API_CREATED_ID) {
+    interceptedNewApiCreatedChannel = updated
+    return
+  }
+
+  const index = interceptedNewApiChannels.findIndex(
+    (candidate) => candidate.id === updated.id,
+  )
+  if (index >= 0) interceptedNewApiChannels[index] = updated
+}
 
 const axonHubSummary = (params: {
   id: string
@@ -199,12 +228,44 @@ export function getInterceptedAxonHubUpdateVariables() {
   return interceptedAxonHubUpdateVariables
 }
 
+export function getInterceptedNewApiUpdatePayload() {
+  return interceptedNewApiUpdatePayload
+}
+
+export function getInterceptedNewApiListRequestCount() {
+  return interceptedNewApiListRequestCount
+}
+
+export function getInterceptedNewApiFetchModelsRequestCount() {
+  return interceptedNewApiFetchModelsRequestCount
+}
+
+export function getInterceptedNewApiSecretRequestCount() {
+  return interceptedNewApiSecretRequestCount
+}
+
+export function getInterceptedNewApiDeleteRequestCount() {
+  return interceptedNewApiDeleteRequestCount
+}
+
 export function getInterceptedAxonHubListRequestCount() {
   return interceptedAxonHubListRequestCount
 }
 
 export function getInterceptedAxonHubDeleteRequestCount() {
   return interceptedAxonHubDeleteRequestCount
+}
+
+export function getInterceptedOctopusCookieHeader() {
+  return interceptedOctopusCookieHeader
+}
+
+export function getInterceptedOctopusRootRequestCount() {
+  return interceptedOctopusRootRequestCount
+}
+
+export function getInterceptedOctopusStatusRequestCount() {
+  return interceptedOctopusStatusRequestCount
 }
 
 async function fulfill(route: Route, body: unknown) {
@@ -223,37 +284,185 @@ async function fulfillGraphQLError(route: Route, message: string) {
   })
 }
 
-async function installManagedSiteChannelsIntercepts(context: BrowserContext) {
-  await context.route(
-    `${INTERCEPTED_MANAGED_SITE_ORIGIN}/**`,
-    async (route) => {
-      const path = new URL(route.request().url()).pathname
-
-      if (path === "/api/channel/") {
-        await fulfill(route, {
-          success: true,
-          message: "ok",
-          data: { items: interceptedManagedSiteChannels, total: 2 },
-        })
-        return
-      }
-
-      if (path === "/api/group") {
-        await fulfill(route, { success: true, data: ["default", "example"] })
-        return
-      }
-
-      if (path === "/api/user/models") {
-        await fulfill(route, {
-          success: true,
-          data: ["model-a", "model-b", "model-c"],
-        })
-        return
-      }
-
-      await route.fulfill({ status: 404, body: "fixture route not configured" })
-    },
+async function installNewApiManagedSiteChannelsIntercepts(
+  context: BrowserContext,
+) {
+  interceptedNewApiChannels = interceptedNewApiChannelTemplates.map(
+    (template) => ({ ...template }),
   )
+  interceptedNewApiCreatedChannel = null
+  interceptedNewApiUpdatePayload = null
+  interceptedNewApiListRequestCount = 0
+  interceptedNewApiFetchModelsRequestCount = 0
+  interceptedNewApiSecretRequestCount = 0
+  interceptedNewApiDeleteRequestCount = 0
+
+  await context.route(`${INTERCEPTED_NEW_API_ORIGIN}/**`, async (route) => {
+    const request = route.request()
+    const path = new URL(request.url()).pathname
+    const method = request.method()
+    const channels = [
+      ...interceptedNewApiChannels,
+      ...(interceptedNewApiCreatedChannel
+        ? [interceptedNewApiCreatedChannel]
+        : []),
+    ]
+
+    if (path === "/api/channel/" && method === "GET") {
+      interceptedNewApiListRequestCount += 1
+      await fulfill(route, {
+        success: true,
+        message: "ok",
+        data: { items: channels, total: channels.length },
+      })
+      return
+    }
+
+    if (path === "/api/channel/" && method === "POST") {
+      const body = JSON.parse(request.postData() ?? "{}") as {
+        channel?: Partial<ManagedSiteChannel>
+      }
+      const draft = body.channel ?? {}
+      interceptedNewApiCreatedChannel = newApiChannel({
+        ...draft,
+        id: NEW_API_CREATED_ID,
+        key: "",
+        name: draft.name ?? "Fixture created channel",
+        base_url: draft.base_url ?? "https://upstream.example.invalid/v1",
+        models: draft.models ?? "model-a",
+        group: draft.group ?? "default",
+      })
+      await fulfill(route, { success: true, message: "ok" })
+      return
+    }
+
+    if (path === "/api/channel/" && method === "PUT") {
+      const payload = JSON.parse(request.postData() ?? "{}") as Record<
+        string,
+        unknown
+      > & { id?: number }
+      interceptedNewApiUpdatePayload = payload
+      const existing = channels.find((candidate) => candidate.id === payload.id)
+      if (!existing) {
+        await fulfill(route, { success: false, message: "unknown channel" })
+        return
+      }
+      const updated = newApiChannel({
+        ...existing,
+        ...(payload as Partial<ManagedSiteChannel>),
+        id: existing.id,
+        key: existing.key,
+      })
+      replaceInterceptedNewApiChannel(updated)
+      await fulfill(route, { success: true, message: "ok" })
+      return
+    }
+
+    const fetchModelsMatch = path.match(
+      /^\/api\/channel\/fetch_models\/(\d+)$/u,
+    )
+    if (fetchModelsMatch && method === "GET") {
+      interceptedNewApiFetchModelsRequestCount += 1
+      await fulfill(route, {
+        success: true,
+        message: "ok",
+        data: ["model-from-credential"],
+      })
+      return
+    }
+
+    const secretMatch = path.match(/^\/api\/channel\/(\d+)\/key$/u)
+    if (secretMatch && method === "POST") {
+      interceptedNewApiSecretRequestCount += 1
+      await fulfill(route, {
+        success: true,
+        message: "ok",
+        data: { key: "sk-fixture-revealed" },
+      })
+      return
+    }
+
+    const channelMatch = path.match(/^\/api\/channel\/(\d+)$/u)
+    if (channelMatch && method === "GET") {
+      const id = Number(channelMatch[1])
+      const detail = channels.find((candidate) => candidate.id === id)
+      await fulfill(
+        route,
+        detail
+          ? { success: true, message: "ok", data: detail }
+          : { success: false, message: "unknown channel" },
+      )
+      return
+    }
+
+    if (channelMatch && method === "DELETE") {
+      const id = Number(channelMatch[1])
+      const existingIndex = interceptedNewApiChannels.findIndex(
+        (candidate) => candidate.id === id,
+      )
+      if (id === NEW_API_CREATED_ID && interceptedNewApiCreatedChannel) {
+        interceptedNewApiCreatedChannel = null
+        interceptedNewApiDeleteRequestCount += 1
+        await fulfill(route, { success: true, message: "ok" })
+      } else if (existingIndex >= 0) {
+        interceptedNewApiChannels.splice(existingIndex, 1)
+        interceptedNewApiDeleteRequestCount += 1
+        await fulfill(route, { success: true, message: "ok" })
+      } else {
+        await fulfill(route, { success: false, message: "unknown channel" })
+      }
+      return
+    }
+
+    const statusMatch = path.match(/^\/api\/channel\/(\d+)\/status$/u)
+    if (statusMatch && method === "POST") {
+      const id = Number(statusMatch[1])
+      const body = JSON.parse(request.postData() ?? "{}") as {
+        status?: ManagedSiteChannel["status"]
+      }
+      const existing = channels.find((candidate) => candidate.id === id)
+      if (existing) {
+        const updated = newApiChannel({
+          ...existing,
+          status: body.status ?? existing.status,
+        })
+        replaceInterceptedNewApiChannel(updated)
+        await fulfill(route, { success: true, message: "ok", data: true })
+      } else {
+        await fulfill(route, { success: false, message: "unknown channel" })
+      }
+      return
+    }
+
+    if (path === "/api/channel/search" && method === "GET") {
+      const keyword =
+        new URL(request.url()).searchParams.get("keyword")?.toLowerCase() ?? ""
+      const items = channels.filter((channel) =>
+        channel.name.toLowerCase().includes(keyword),
+      )
+      await fulfill(route, {
+        success: true,
+        message: "ok",
+        data: { items, total: items.length, type_counts: {} },
+      })
+      return
+    }
+
+    if (path === "/api/group") {
+      await fulfill(route, { success: true, data: ["default", "example"] })
+      return
+    }
+
+    if (path === "/api/user/models") {
+      await fulfill(route, {
+        success: true,
+        data: ["model-a", "model-b", "model-c"],
+      })
+      return
+    }
+
+    await route.fulfill({ status: 404, body: "fixture route not configured" })
+  })
 }
 
 async function installAxonHubIntercepts(context: BrowserContext) {
@@ -443,17 +652,98 @@ async function installAxonHubIntercepts(context: BrowserContext) {
   })
 }
 
-export async function openInterceptedManagedSiteChannels(params: {
+async function installOctopusCookieAuthIntercepts(context: BrowserContext) {
+  interceptedOctopusCookieHeader = null
+  interceptedOctopusRootRequestCount = 0
+  interceptedOctopusStatusRequestCount = 0
+
+  await context.route(`${INTERCEPTED_OCTOPUS_ORIGIN}/**`, async (route) => {
+    const request = route.request()
+    const path = new URL(request.url()).pathname
+
+    if (path === "/") {
+      interceptedOctopusRootRequestCount += 1
+      await route.fulfill({
+        status: 403,
+        contentType: "text/html",
+        body: '<!doctype html><title>Just a moment...</title><script src="/cdn-cgi/challenge-platform/scripts/jsd/main.js"></script>',
+      })
+      return
+    }
+
+    if (path === OCTOPUS_COOKIE_SESSION_STATUS_PATH) {
+      if (request.method() === "GET" && request.resourceType() === "document") {
+        interceptedOctopusStatusRequestCount += 1
+      }
+      await route.fulfill({
+        status: 401,
+        contentType: "application/json",
+        body: JSON.stringify({ code: 401, message: "unauthorized" }),
+      })
+      return
+    }
+
+    if (path === "/api/v1/user/login" && request.method() === "POST") {
+      await route.fulfill({
+        status: 200,
+        headers: {
+          "access-control-allow-credentials": "true",
+          "access-control-allow-origin": request.headers().origin ?? "null",
+          "content-type": "application/json",
+          "set-cookie": `${INTERCEPTED_OCTOPUS_COOKIE}; Path=/; Max-Age=900`,
+        },
+        body: JSON.stringify({
+          code: 200,
+          message: "success",
+          data: "login successfully",
+        }),
+      })
+      return
+    }
+
+    if (path === "/api/v1/channel/list") {
+      interceptedOctopusCookieHeader = request.headers().cookie ?? null
+      if (
+        !interceptedOctopusCookieHeader?.includes(INTERCEPTED_OCTOPUS_COOKIE)
+      ) {
+        await route.fulfill({
+          status: 401,
+          contentType: "application/json",
+          body: JSON.stringify({ code: 401, message: "unauthorized" }),
+        })
+        return
+      }
+
+      await fulfill(route, { code: 200, data: [] })
+      return
+    }
+
+    await route.fulfill({ status: 404, body: "fixture route not configured" })
+  })
+}
+
+async function openManagedSiteChannelsPage(params: {
+  page: Page
+  extensionId: string
+}) {
+  const url = new URL(
+    `chrome-extension://${params.extensionId}/${OPTIONS_PAGE_PATH}`,
+  )
+  url.hash = MENU_ITEM_IDS.MANAGED_SITE_CHANNELS
+  await params.page.goto(url.toString())
+}
+
+export async function openInterceptedNewApiManagedSiteChannels(params: {
   context: BrowserContext
   page: Page
   extensionId: string
 }) {
   await forceExtensionLanguage(params.page, "en")
-  await installManagedSiteChannelsIntercepts(params.context)
+  await installNewApiManagedSiteChannelsIntercepts(params.context)
   await seedUserPreferences(await getServiceWorker(params.context), {
     managedSiteType: SITE_TYPES.NEW_API,
     newApi: {
-      baseUrl: INTERCEPTED_MANAGED_SITE_ORIGIN,
+      baseUrl: INTERCEPTED_NEW_API_ORIGIN,
       adminToken: "fixture-admin-token",
       userId: "1",
       username: "",
@@ -461,17 +751,12 @@ export async function openInterceptedManagedSiteChannels(params: {
       totpSecret: "",
     },
     doneHub: {
-      baseUrl: INTERCEPTED_MANAGED_SITE_TARGET_ORIGIN,
+      baseUrl: INTERCEPTED_DONE_HUB_TARGET_ORIGIN,
       adminToken: "fixture-target-admin-token",
       userId: "9",
     },
   })
-
-  const url = new URL(
-    `chrome-extension://${params.extensionId}/${OPTIONS_PAGE_PATH}`,
-  )
-  url.hash = MENU_ITEM_IDS.MANAGED_SITE_CHANNELS
-  await params.page.goto(url.toString())
+  await openManagedSiteChannelsPage(params)
 }
 
 export async function openInterceptedAxonHubManagedSiteChannels(params: {
@@ -489,15 +774,28 @@ export async function openInterceptedAxonHubManagedSiteChannels(params: {
       password: "fixture-password",
     },
     doneHub: {
-      baseUrl: INTERCEPTED_MANAGED_SITE_TARGET_ORIGIN,
+      baseUrl: INTERCEPTED_DONE_HUB_TARGET_ORIGIN,
       adminToken: "fixture-target-admin-token",
       userId: "9",
     },
   })
+  await openManagedSiteChannelsPage(params)
+}
 
-  const url = new URL(
-    `chrome-extension://${params.extensionId}/${OPTIONS_PAGE_PATH}`,
-  )
-  url.hash = MENU_ITEM_IDS.MANAGED_SITE_CHANNELS
-  await params.page.goto(url.toString())
+export async function openInterceptedOctopusManagedSiteChannels(params: {
+  context: BrowserContext
+  page: Page
+  extensionId: string
+}) {
+  await forceExtensionLanguage(params.page, "en")
+  await installOctopusCookieAuthIntercepts(params.context)
+  await seedUserPreferences(await getServiceWorker(params.context), {
+    managedSiteType: SITE_TYPES.OCTOPUS,
+    octopus: {
+      baseUrl: INTERCEPTED_OCTOPUS_ORIGIN,
+      username: "admin",
+      password: "credential-placeholder",
+    },
+  })
+  await openManagedSiteChannelsPage(params)
 }

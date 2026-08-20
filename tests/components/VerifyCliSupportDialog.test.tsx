@@ -1966,6 +1966,8 @@ describe("VerifyCliSupportDialog", () => {
     const stopButton = await screen.findByRole("button", {
       name: "cliSupportVerification:verifyDialog.actions.stop",
     })
+    expect(stopButton).toBeEnabled()
+    expect(stopButton).toHaveAttribute("aria-busy", "true")
     await waitFor(() => {
       expect(receivedSignal).toBeDefined()
     })

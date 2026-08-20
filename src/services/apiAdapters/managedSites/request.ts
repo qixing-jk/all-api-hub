@@ -18,6 +18,7 @@ type ManagedSiteApiServiceConfig = {
 }
 
 type ManagedSiteApiServiceRequestOptions = {
+  signal?: AbortSignal | null
   bypassSiteRequestLimit?: boolean
   observer?: ApiTransportRequestObserver
 }
@@ -36,6 +37,7 @@ export function toManagedSiteApiServiceRequest(
       accessToken: config.adminToken,
       userId: config.userId,
     },
+    ...(options?.signal ? { abortSignal: options.signal } : {}),
     ...(options?.bypassSiteRequestLimit
       ? { bypassSiteRequestLimit: true }
       : {}),

@@ -2133,12 +2133,51 @@ describe("apiService sub2api exported operations", () => {
     })
   })
 
-  it("provides an explicit synthetic site status instead of calling /api/status", async () => {
+  it("maps the public Sub2API site name into the account status contract", async () => {
+    vi.mocked(fetchApi).mockResolvedValueOnce({
+      code: 0,
+      message: "ok",
+      data: { site_name: "  Example Portal  " },
+    } as any)
+
     await expect(fetchSiteStatus(baseRequest as any)).resolves.toEqual({
+      system_name: "Example Portal",
       checkin_enabled: false,
     })
 
-    expect(vi.mocked(fetchApi)).not.toHaveBeenCalled()
+    expect(vi.mocked(fetchApi)).toHaveBeenCalledWith(
+      {
+        ...baseRequest,
+        auth: { authType: AuthTypeEnum.None },
+      },
+      {
+        endpoint: "/api/v1/settings/public",
+        options: { method: "GET", cache: "no-store" },
+      },
+      true,
+    )
+  })
+
+  it("keeps synthetic status when public settings have no site name", async () => {
+    vi.mocked(fetchApi).mockResolvedValueOnce({
+      code: 0,
+      message: "ok",
+      data: { site_name: null },
+    } as any)
+
+    await expect(fetchSiteStatus(baseRequest as any)).resolves.toEqual({
+      checkin_enabled: false,
+    })
+  })
+
+  it("keeps synthetic Sub2API status when the optional public name lookup fails", async () => {
+    vi.mocked(fetchApi).mockRejectedValueOnce(
+      new Error("public settings unavailable"),
+    )
+
+    await expect(fetchSiteStatus(baseRequest as any)).resolves.toEqual({
+      checkin_enabled: false,
+    })
   })
 
   it("reuses the common exchange-rate extraction contract for status payloads", () => {

@@ -1,7 +1,18 @@
+import type { SortField } from "~/types"
+
 export const ACCOUNT_MANAGEMENT_TEST_IDS = {
   addAccountButton: "account-management-add-account-button",
   externalCheckInButton: "account-management-external-check-in-button",
   headerActions: "account-management-header-actions",
+  accountListHeader: "account-management-account-list-header",
+  accountListSortControls: "account-management-account-list-sort-controls",
+  accountListUtilities: "account-management-account-list-utilities",
+  accountListClearSortButton:
+    "account-management-account-list-clear-sort-button",
+  accountListBulkManageButton:
+    "account-management-account-list-bulk-manage-button",
+  siteCheckInStatusButton: "account-management-site-check-in-status-button",
+  customCheckInStatusButton: "account-management-custom-check-in-status-button",
   accountDialog: "account-management-account-dialog",
   accountForm: "account-management-account-form",
   accountListView: "account-list-view",
@@ -109,6 +120,11 @@ export const ACCOUNT_MANAGEMENT_TEST_IDS = {
   sponsorFallbackApiCredentialProfilesAction:
     "account-management-sponsor-fallback-api-credential-profiles-action",
 } as const
+
+/** Returns a stable test id for an account-list sort control. */
+export function getAccountManagementSortButtonTestId(field: SortField) {
+  return `account-management-account-list-sort-${field}-button`
+}
 
 /**
  * Returns a stable test id for a rendered account row.

@@ -13,7 +13,8 @@
 | New API | 统一的 AI 模型聚合与分发中心。 | [官网](https://www.newapi.ai/) / [GitHub](https://github.com/QuantumNous/new-api) |
 | one-api | LLM API 管理与分发系统，支持 OpenAI、Azure、Anthropic Claude、Google Gemini、DeepSeek 等主流模型，统一 API 适配，可用于 Key 管理与二次分发。 | [GitHub](https://github.com/songquanpeng/one-api) |
 | Sub2API | Sub2API-CRS2 一站式开源中转服务，让 Claude、OpenAI、Gemini、Antigravity 订阅统一接入，支持拼车共享，更高效分摊成本，原生工具无缝使用。 | [GitHub](https://github.com/Wei-Shaw/sub2api) |
-| AnyRouter | Claude Code 中转站 · 零门槛 · 免费 $50 | [文档](https://docs.anyrouter.top/) / [官网](https://anyrouter.top) |
+| AnyRouter | Claude Code 中转站 · 零门槛 · 免费 $50 | [文档](https://docs.anyrouter.top/) / [官网](https://anyrouter.top/register?aff=tDKX) |
+| AgentRouter | AI API 路由与中转服务平台。 | [官网](https://agentrouter.org/register?aff=TUX6) |
 | one-hub | OpenAI 接口管理与分发系统，改自 songquanpeng/one-api，支持更多模型，加入统计页面，并完善非 OpenAI 模型的函数调用。 | [官网](https://one-hub.xiao5.info/) / [GitHub](https://github.com/MartialBE/one-hub) |
 | Veloera | 本项目已停止维护。 | [GitHub](https://github.com/Veloera/Veloera) |
 | VoAPI | 仅支持老版本兼容部署；新版 VoAPI 的接口和行为与当前插件兼容范围不一致。 | [GitHub](https://github.com/VoAPI/VoAPI) |

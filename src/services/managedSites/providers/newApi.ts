@@ -86,6 +86,7 @@ export async function fetchChannelSecretKey(
     ...sessionConfig,
     channelId,
     protectionBypassExecution: options.protectionBypassExecution,
+    signal: options.signal,
   })
 }
 
@@ -111,6 +112,7 @@ export async function hydrateComparableChannelKeys(
         ...sessionConfig,
         channelId: candidate.id,
         protectionBypassExecution: options.protectionBypassExecution,
+        signal: options.signal,
       })
 
       hydratedCandidates.push({
@@ -118,6 +120,9 @@ export async function hydrateComparableChannelKeys(
         key: resolvedKey,
       })
     } catch (error) {
+      if (options.signal?.aborted) {
+        throw error
+      }
       if (error instanceof NewApiChannelKeyRequirementError) {
         throw new MatchResolutionUnresolvedError(
           MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.VERIFICATION_REQUIRED,

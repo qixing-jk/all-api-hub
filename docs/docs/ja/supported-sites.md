@@ -12,7 +12,8 @@
 | New API | 統一された AI モデル集約および配布センター。 | [公式サイト](https://www.newapi.ai/) / [GitHub](https://github.com/QuantumNous/new-api) |
 | one-api | LLM API 管理および配布システム。OpenAI、Azure、Anthropic Claude、Google Gemini、DeepSeek などの主要モデルをサポートし、API を統一的にアダプトします。キー管理および二次配布に使用できます。 | [GitHub](https://github.com/songquanpeng/one-api) |
 | Sub2API | Sub2API-CRS2 ワンストップオープンソースプロキシサービス。Claude、OpenAI、Gemini、Antigravity のサブスクリプションを統一的に接続し、共同利用による効率的なコスト分担とネイティブツールのシームレスな利用に対応します。 | [GitHub](https://github.com/Wei-Shaw/sub2api) |
-| AnyRouter | Claude Code プロキシ · ゼロしきい値 · 無料 $50 | [ドキュメント](https://docs.anyrouter.top/) / [公式サイト](https://anyrouter.top) |
+| AnyRouter | Claude Code プロキシ · ゼロしきい値 · 無料 $50 | [ドキュメント](https://docs.anyrouter.top/) / [公式サイト](https://anyrouter.top/register?aff=tDKX) |
+| AgentRouter | AI API ルーティングおよびプロキシサービスプラットフォーム。 | [公式サイト](https://agentrouter.org/register?aff=TUX6) |
 | one-hub | OpenAI インターフェース管理および配布システム。songquanpeng/one-api から改変され、より多くのモデルをサポートし、統計ページを追加し、OpenAI 以外のモデルの関数呼び出しを改善しました。 | [公式サイト](https://one-hub.xiao5.info/) / [GitHub](https://github.com/MartialBE/one-hub) |
 | Veloera | このプロジェクトはメンテナンスを停止しました。 | [GitHub](https://github.com/Veloera/Veloera) |
 | VoAPI | 旧バージョンの互換デプロイのみ対応しています。新しい VoAPI バージョンは、現在の拡張機能の互換範囲外です。 | [GitHub](https://github.com/VoAPI/VoAPI) |

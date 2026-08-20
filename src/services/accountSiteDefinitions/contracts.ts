@@ -57,6 +57,9 @@ export const MANAGED_RESOURCE_PRODUCT_ACTIONS = {
   Create: "create",
   DeleteSelected: "delete-selected",
   Migrate: "migrate",
+  SyncModels: "sync-models",
+  ConfigureModelSync: "configure-model-sync",
+  ConfigureModelFilters: "configure-model-filters",
 } as const
 
 export type ManagedResourceProductAction =

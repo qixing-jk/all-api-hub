@@ -1606,6 +1606,121 @@ describe("newApiSession", () => {
     ).resolves.toBe("hidden-channel-key")
   })
 
+  it("rejects a pre-aborted hidden-key read before session preflight", async () => {
+    const controller = new AbortController()
+    const abortError = new DOMException(
+      "Cancelled hidden-key read",
+      "AbortError",
+    )
+    controller.abort(abortError)
+
+    await expect(
+      fetchNewApiChannelKey({
+        ...BASE_CONFIG,
+        channelId: 12,
+        protectionBypassExecution: MANAGE_API_KEYS_EXECUTION,
+        signal: controller.signal,
+      }),
+    ).rejects.toBe(abortError)
+    expect(generateNewApiTotpCodeMock).not.toHaveBeenCalled()
+  })
+
+  it("cancels one caller promptly without poisoning shared session preflight", async () => {
+    const controller = new AbortController()
+    const abortError = new DOMException(
+      "Cancelled hidden-key read",
+      "AbortError",
+    )
+    let releaseTwoFactorProbe: (() => void) | undefined
+    let markTwoFactorProbeStarted: (() => void) | undefined
+    let twoFactorProbeCalls = 0
+    const twoFactorProbeStarted = new Promise<void>((resolve) => {
+      markTwoFactorProbeStarted = resolve
+    })
+    server.use(
+      http.get(`${BASE_CONFIG.baseUrl}/api/user/2fa/status`, () => {
+        twoFactorProbeCalls += 1
+        if (twoFactorProbeCalls > 1) {
+          return jsonData({ enabled: true })
+        }
+        markTwoFactorProbeStarted?.()
+        return new Promise<ReturnType<typeof jsonData>>((resolve) => {
+          releaseTwoFactorProbe = () => resolve(jsonData({ enabled: true }))
+        })
+      }),
+      http.get(`${BASE_CONFIG.baseUrl}/api/user/passkey`, () =>
+        jsonData({ enabled: false }),
+      ),
+      http.post(`${BASE_CONFIG.baseUrl}/api/verify`, () =>
+        jsonData({ verified: true, expires_at: 1_700_000_000 }),
+      ),
+      http.post(`${BASE_CONFIG.baseUrl}/api/channel/12/key`, () =>
+        jsonData("shared-preflight-hidden-key"),
+      ),
+    )
+    generateNewApiTotpCodeMock.mockReturnValue("123456")
+
+    const cancelledRead = fetchNewApiChannelKey({
+      ...BASE_CONFIG,
+      channelId: 12,
+      protectionBypassExecution: MANAGE_API_KEYS_EXECUTION,
+      signal: controller.signal,
+    })
+    const cancelledExpectation = expect(cancelledRead).rejects.toBe(abortError)
+    await twoFactorProbeStarted
+    const survivingRead = fetchNewApiChannelKey({
+      ...BASE_CONFIG,
+      channelId: 12,
+      protectionBypassExecution: MANAGE_API_KEYS_EXECUTION,
+    })
+
+    controller.abort(abortError)
+    await cancelledExpectation
+    releaseTwoFactorProbe?.()
+    await expect(survivingRead).resolves.toBe("shared-preflight-hidden-key")
+  })
+
+  it("aborts the dispatched hidden-key transport and ignores its late result", async () => {
+    const controller = new AbortController()
+    const abortError = new DOMException(
+      "Cancelled hidden-key read",
+      "AbortError",
+    )
+    let keyRequestObservedAbort = false
+    server.use(
+      http.get(`${BASE_CONFIG.baseUrl}/api/user/2fa/status`, () =>
+        jsonData({ enabled: true }),
+      ),
+      http.get(`${BASE_CONFIG.baseUrl}/api/user/passkey`, () =>
+        jsonData({ enabled: false }),
+      ),
+      http.post(`${BASE_CONFIG.baseUrl}/api/verify`, () =>
+        jsonData({ verified: true, expires_at: 1_700_000_000 }),
+      ),
+      http.post(
+        `${BASE_CONFIG.baseUrl}/api/channel/12/key`,
+        async ({ request }) => {
+          controller.abort(abortError)
+          await Promise.resolve()
+          keyRequestObservedAbort = request.signal.aborted
+          return jsonData("late-hidden-channel-key")
+        },
+      ),
+    )
+    generateNewApiTotpCodeMock.mockReturnValue("123456")
+
+    await expect(
+      fetchNewApiChannelKey({
+        ...BASE_CONFIG,
+        channelId: 12,
+        protectionBypassExecution: MANAGE_API_KEYS_EXECUTION,
+        signal: controller.signal,
+      }),
+    ).rejects.toBe(abortError)
+    expect(keyRequestObservedAbort).toBe(true)
+    expect(touchOwnedSessionMock).not.toHaveBeenCalled()
+  })
+
   it("uses the modern dashboard bearer for hidden channel-key reads", async () => {
     const dashboardToken = "example-key-dashboard-token"
     const proofToken = "example-channel-key-proof-token"
@@ -2019,6 +2134,74 @@ describe("newApiSession", () => {
       "protectionBypassExecution",
     )
     expect(envelope?.task?.params).not.toHaveProperty("tempWindowRequestSource")
+  })
+
+  it("cancels a pending temp-context fallback without serializing the signal", async () => {
+    const controller = new AbortController()
+    const abortError = new DOMException(
+      "Cancelled hidden-key read",
+      "AbortError",
+    )
+    let resolveFallback:
+      | ((value: {
+          success: true
+          data: { success: true; message: string; data: string }
+        }) => void)
+      | undefined
+    server.use(
+      http.get(`${BASE_CONFIG.baseUrl}/api/user/2fa/status`, () =>
+        jsonData({ enabled: true }),
+      ),
+      http.get(`${BASE_CONFIG.baseUrl}/api/user/passkey`, () =>
+        jsonData({ enabled: false }),
+      ),
+      http.post(`${BASE_CONFIG.baseUrl}/api/verify`, () =>
+        jsonData({ verified: true, expires_at: 1_700_000_000 }),
+      ),
+      http.post(
+        `${BASE_CONFIG.baseUrl}/api/channel/12/key`,
+        () =>
+          new HttpResponse("<html>blocked</html>", {
+            status: 403,
+            headers: { "content-type": "text/html" },
+          }),
+      ),
+    )
+    generateNewApiTotpCodeMock.mockReturnValue("123456")
+    sendRuntimeMessageMock.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveFallback = resolve
+        }),
+    )
+
+    const read = fetchNewApiChannelKey({
+      ...BASE_CONFIG,
+      channelId: 12,
+      protectionBypassExecution: MANAGE_API_KEYS_EXECUTION,
+      signal: controller.signal,
+    })
+    const rejection = expect(read).rejects.toBe(abortError)
+    await vi.waitFor(() => {
+      expect(sendRuntimeMessageMock).toHaveBeenCalledTimes(1)
+    })
+    const envelope = sendRuntimeMessageMock.mock.calls[0]?.[0]
+    expect(envelope).not.toHaveProperty("signal")
+    expect(envelope?.task).not.toHaveProperty("signal")
+    expect(envelope?.task?.params).not.toHaveProperty("signal")
+
+    controller.abort(abortError)
+    await rejection
+    resolveFallback?.({
+      success: true,
+      data: {
+        success: true,
+        message: "",
+        data: "late-hidden-channel-key",
+      },
+    })
+    await Promise.resolve()
+    expect(touchOwnedSessionMock).not.toHaveBeenCalled()
   })
 
   it("preserves structured temp-context errors when rollback is impossible for a hidden key read", async () => {

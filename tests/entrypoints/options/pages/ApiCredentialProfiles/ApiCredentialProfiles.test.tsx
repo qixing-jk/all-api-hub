@@ -54,6 +54,9 @@ const replaceWithinOptionsPageMock = vi.fn()
 const mockOpenKeysPage = vi.fn()
 const mockUseUserPreferencesContext = vi.fn()
 const mockDismissGatewayGuidanceSurface = vi.fn()
+const CC_SWITCH_EXPORT_DIALOG_NAME = "CCSwitch export"
+const CC_SWITCH_EXPORT_DIALOG_CLOSE_NAME = "Close CCSwitch export"
+const KILO_CODE_EXPORT_DIALOG_NAME = "Kilo Code export"
 const mockFetchOpenAICompatibleModelIds = vi.fn(
   async (
     _params: Parameters<
@@ -223,6 +226,22 @@ const seedActiveAssociation = () => {
   ]
 }
 
+const seedExportableProfile = () => {
+  store = [
+    {
+      id: "p-1",
+      name: "Exportable",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      baseUrl: "https://example.com",
+      apiKey: "sk-test",
+      tagIds: [],
+      notes: "",
+      createdAt: 1,
+      updatedAt: 1,
+    },
+  ]
+}
+
 vi.mock(
   "~/services/apiCredentialProfiles/apiCredentialProfilesStorage",
   () => ({
@@ -258,6 +277,25 @@ vi.mock("~/components/dialogs/ChannelDialog", () => ({
   ChannelDialogProvider: ({ children }: { children: ReactNode }) => children,
   useChannelDialog: () => ({ openWithCredentials: mockOpenWithCredentials }),
 }))
+
+vi.mock("~/components/CCSwitchExportDialog", () => ({
+  CCSwitchExportDialog: ({ onClose }: { onClose: () => void }) => (
+    <div role="dialog" aria-label={CC_SWITCH_EXPORT_DIALOG_NAME}>
+      <button type="button" onClick={onClose}>
+        {CC_SWITCH_EXPORT_DIALOG_CLOSE_NAME}
+      </button>
+    </div>
+  ),
+}))
+
+vi.mock(
+  "~/features/ApiCredentialProfiles/components/KiloCodeProfileExportDialog",
+  () => ({
+    KiloCodeProfileExportDialog: () => (
+      <div role="dialog" aria-label={KILO_CODE_EXPORT_DIALOG_NAME} />
+    ),
+  }),
+)
 
 vi.mock("~/hooks/useAccountData", () => ({
   useAccountData: () => ({
@@ -1316,22 +1354,9 @@ describe("ApiCredentialProfiles page", () => {
     })
   })
 
-  it("opens export dialogs from the per-profile export menu", async () => {
+  it("opens CCSwitch export from the per-profile export menu", async () => {
     const user = userEvent.setup()
-
-    store = [
-      {
-        id: "p-1",
-        name: "Exportable",
-        apiType: API_TYPES.OPENAI_COMPATIBLE,
-        baseUrl: "https://example.com",
-        apiKey: "sk-test",
-        tagIds: [],
-        notes: "",
-        createdAt: 1,
-        updatedAt: 1,
-      },
-    ]
+    seedExportableProfile()
 
     render(<ApiCredentialProfiles />)
 
@@ -1347,13 +1372,30 @@ describe("ApiCredentialProfiles page", () => {
       }),
     )
 
-    expect(
-      await screen.findByText("ui:dialog.ccswitch.description"),
-    ).toBeInTheDocument()
+    const exportDialog = await screen.findByRole("dialog", {
+      name: CC_SWITCH_EXPORT_DIALOG_NAME,
+    })
+    expect(exportDialog).toBeVisible()
 
     await user.click(
-      screen.getByRole("button", { name: "common:actions.cancel" }),
+      within(exportDialog).getByRole("button", {
+        name: CC_SWITCH_EXPORT_DIALOG_CLOSE_NAME,
+      }),
     )
+    expect(
+      screen.queryByRole("dialog", {
+        name: CC_SWITCH_EXPORT_DIALOG_NAME,
+      }),
+    ).not.toBeInTheDocument()
+  })
+
+  it("opens Kilo Code export from the per-profile export menu", async () => {
+    const user = userEvent.setup()
+    seedExportableProfile()
+
+    render(<ApiCredentialProfiles />)
+
+    expect(await screen.findByText("Exportable")).toBeInTheDocument()
 
     await user.click(
       screen.getByRole("button", { name: "common:actions.export" }),
@@ -1366,8 +1408,10 @@ describe("ApiCredentialProfiles page", () => {
     )
 
     expect(
-      await screen.findByText("ui:dialog.kiloCode.title"),
-    ).toBeInTheDocument()
+      await screen.findByRole("dialog", {
+        name: KILO_CODE_EXPORT_DIALOG_NAME,
+      }),
+    ).toBeVisible()
   })
 
   it("opens shared CLI verification for a stored profile", async () => {

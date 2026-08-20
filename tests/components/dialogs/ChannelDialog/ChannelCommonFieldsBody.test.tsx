@@ -7,6 +7,7 @@ import { describe, expect, it, vi } from "vitest"
 import {
   ChannelCommonFieldsBody,
   ChannelModelsField,
+  ChannelSecretField,
 } from "~/components/dialogs/ChannelDialog/components/ChannelCommonFieldsBody"
 import { CHANNEL_DIALOG_TEST_IDS } from "~/components/dialogs/ChannelDialog/testIds"
 
@@ -53,6 +54,97 @@ function FilterableModelsHarness({
 }
 
 describe("ChannelCommonFieldsBody", () => {
+  it("keeps a loading secret action cancelable and associates its hint with the input", async () => {
+    const user = userEvent.setup()
+    const onLoadRealKey = vi.fn()
+    const onCancelLoadRealKey = vi.fn()
+
+    const view = render(
+      <ChannelSecretField
+        t={t}
+        value=""
+        onChange={vi.fn()}
+        disabled={false}
+        revealed={false}
+        onRevealedChange={vi.fn()}
+        canLoadRealKey
+        isLoadingRealKey={false}
+        onLoadRealKey={onLoadRealKey}
+        onCancelLoadRealKey={onCancelLoadRealKey}
+        loadRealKeyLabel="View saved API key"
+        cancelLoadRealKeyLabel="Cancel loading"
+        realKeyHint="The saved API key is not shown here."
+      />,
+    )
+
+    const input = screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.keyInput)
+    const hint = screen.getByText("The saved API key is not shown here.")
+    expect(input.getAttribute("aria-describedby")?.split(" ")).toContain(
+      hint.id,
+    )
+    expect(input).toHaveAccessibleDescription(
+      "The saved API key is not shown here.",
+    )
+    await user.click(screen.getByRole("button", { name: "View saved API key" }))
+    expect(onLoadRealKey).toHaveBeenCalledOnce()
+
+    view.rerender(
+      <ChannelSecretField
+        t={t}
+        value=""
+        onChange={vi.fn()}
+        disabled={false}
+        revealed={false}
+        onRevealedChange={vi.fn()}
+        canLoadRealKey
+        isLoadingRealKey
+        onLoadRealKey={onLoadRealKey}
+        onCancelLoadRealKey={onCancelLoadRealKey}
+        loadRealKeyLabel="View saved API key"
+        cancelLoadRealKeyLabel="Cancel loading"
+        realKeyHint="The saved API key is not shown here."
+      />,
+    )
+
+    const cancelButton = screen.getByRole("button", {
+      name: "Cancel loading",
+    })
+    expect(cancelButton).toBeEnabled()
+    expect(cancelButton).toHaveAttribute("aria-busy", "true")
+    expect(cancelButton).toHaveAttribute("aria-live", "polite")
+    await user.click(cancelButton)
+    expect(onCancelLoadRealKey).toHaveBeenCalledOnce()
+  })
+
+  it("renders injected model actions beside the shared bulk actions", async () => {
+    const user = userEvent.setup()
+    const onInjectedAction = vi.fn()
+
+    render(
+      <ChannelModelsField
+        t={t}
+        options={[{ value: "model-example", label: "Example model" }]}
+        selected={[]}
+        onChange={vi.fn()}
+        disabled={false}
+        onSelectAll={vi.fn()}
+        onInverse={vi.fn()}
+        onDeselectAll={vi.fn()}
+        actions={
+          <button type="button" onClick={onInjectedAction}>
+            Refresh models
+          </button>
+        }
+      />,
+    )
+
+    expect(
+      screen.getByRole("button", { name: "channelDialog:actions.selectAll" }),
+    ).toBeVisible()
+    await user.click(screen.getByRole("button", { name: "Refresh models" }))
+    expect(onInjectedAction).toHaveBeenCalledOnce()
+  })
+
   it("provides filtered bulk actions without global bulk callbacks", async () => {
     const user = userEvent.setup()
 

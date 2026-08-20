@@ -11,14 +11,21 @@ import {
   AXON_HUB_CHANNEL_STATUS,
   AXON_HUB_CHANNEL_TYPE,
 } from "~/constants/axonHub"
+import {
+  ChannelType,
+  NEW_API_MANAGED_RESOURCE_FIELD_IDS,
+} from "~/constants/newApi"
 import { SITE_TYPES } from "~/constants/siteType"
 import { ManagedResourceEditorBody } from "~/features/ManagedSiteChannels/presentation/ManagedResourceEditorBody"
 import {
   getManagedResourceFieldPolicy,
+  MANAGED_RESOURCE_CHANNEL_FIELD_ROLES,
   MANAGED_RESOURCE_EDITOR_MODES,
 } from "~/features/ManagedSiteChannels/presentation/managedResourceFieldPolicy"
 import { ManagedSiteChannelDetailView } from "~/features/ManagedSiteChannels/presentation/ManagedSiteChannelDetailView"
 import { defineResourceEditorFieldPolicy } from "~/features/ResourceEditor/resourceFieldPolicy"
+import enChannelDialog from "~/locales/en/channelDialog.json"
+import enCommon from "~/locales/en/common.json"
 import enManagedSiteChannels from "~/locales/en/managedSiteChannels.json"
 import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
 import type {
@@ -27,8 +34,10 @@ import type {
   ResourceFieldIssue,
   ResourceFieldValue,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
+import { MANAGED_RESOURCE_FIELD_OPTION_LOAD_TRIGGERS } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { axonHubManagedResourceRegistration } from "~/services/apiAdapters/managedResources/axonHub"
 import type { AxonHubChannel } from "~/types/axonHub"
+import { createResourceTestI18n } from "~~/tests/test-utils/i18n"
 
 function createDeferred<T>() {
   let resolve!: (value: T) => void
@@ -69,97 +78,82 @@ vi.mock("~/services/apiService/axonHub", () => ({
   deleteAxonHubChannel: adapterMocks.deleteChannel,
 }))
 
-const labels: Record<string, string> = {
-  "channelDialog:actions.hideKey": "Hide key",
-  "channelDialog:actions.showKey": "Show key",
-  "channelDialog:fields.baseUrl.label": "Base URL",
-  "channelDialog:fields.baseUrl.placeholder": "https://api.example.invalid",
-  "channelDialog:fields.key.label": "API key",
-  "channelDialog:fields.models.label": "Models",
-  "channelDialog:fields.models.placeholder": "Add models",
-  "channelDialog:fields.name.label": "Name",
-  "channelDialog:fields.name.placeholder": "Channel name",
-  "channelDialog:fields.status.label": "Status",
-  "channelDialog:fields.type.hint": "Choose a channel type.",
-  "channelDialog:fields.type.label": "Type",
-  "channelDialog:fields.type.placeholder": "Choose a type",
-  "channelDialog:fields.weight.label": "Weight",
-  "managedSiteChannels:editor.fields.autoSyncModelPattern.label":
-    "Model filter pattern",
-  "managedSiteChannels:editor.fields.autoSyncModelPattern.help":
-    "Only sync matching models. Prefix with (?i) to ignore case; leave empty to sync all models.",
-  "managedSiteChannels:editor.fields.autoSyncModelPattern.invalid":
-    "Enter a valid model filter pattern.",
-  "managedSiteChannels:editor.fields.autoSyncModelPattern.placeholder":
-    "For example, (?i)^model-example",
-  "managedSiteChannels:editor.fields.autoSyncSupportedModels.label":
-    "Automatically sync supported models",
-  "managedSiteChannels:editor.fields.autoSyncSupportedModels.help":
-    "AxonHub updates enabled channels from the provider API at the frequency configured in AxonHub system settings.",
-  "managedSiteChannels:editor.fields.defaultTestModel.label":
-    "Default test model",
-  "managedSiteChannels:editor.fields.defaultTestModel.help":
-    "Used to test this channel connection. Choose one of the supported models.",
-  "managedSiteChannels:editor.fields.defaultTestModel.placeholder":
-    "Select a configured model",
-  "managedSiteChannels:editor.fields.extraModelPrefix.label":
-    "Extra model prefix",
-  "managedSiteChannels:editor.fields.manualModels.label": "Manual models",
-  "managedSiteChannels:editor.fields.orderingWeight.help":
-    "Higher values are preferred when AxonHub selects a channel; equal values have equal ordering priority.",
-  "managedSiteChannels:editor.fields.orderingWeight.label": "Ordering weight",
-  "managedSiteChannels:editor.fields.supportedModels.help":
-    "Type or paste model names. Models added here are kept during automatic model sync.",
-  "managedSiteChannels:editor.fields.remark.label": "Remark",
-  "managedSiteChannels:editor.fields.tags.label": "Tags",
-  "managedSiteChannels:editor.fields.tags.placeholder": "Add tags...",
-  "managedSiteChannels:editor.options.channelType.anthropic": "Anthropic",
-  "managedSiteChannels:editor.options.channelType.openai": "OpenAI",
-  "managedSiteChannels:editor.options.status.disabled": "Disabled",
-  "managedSiteChannels:editor.options.status.enabled": "Enabled",
-  "managedSiteChannels:editor.sections.advanced": "Advanced",
-  "managedSiteChannels:editor.sections.basic": "Basic",
-  "managedSiteChannels:editor.sections.connection": "Connection",
-  "managedSiteChannels:editor.sections.metadata": "Metadata",
-  "managedSiteChannels:editor.sections.models": "Models",
-  "managedSiteChannels:editor.sections.routing": "Routing",
-  "managedSiteChannels:editor.sections.sync": "Model sync",
-  "managedSiteChannels:editor.secret.actions.clear": "Remove saved credential",
-  "managedSiteChannels:editor.secret.actions.restore": "Keep saved credential",
-  "managedSiteChannels:editor.secret.actions.retry": "Retry",
-  "managedSiteChannels:editor.secret.actions.view": "View saved credential",
-  "managedSiteChannels:editor.secret.createHint":
-    "Enter a credential for the new channel.",
-  "managedSiteChannels:editor.secret.keepExistingHint":
-    "Leave this field blank to keep the saved credential unchanged.",
-  "managedSiteChannels:editor.secret.loadError":
-    "The saved credential could not be loaded.",
-  "managedSiteChannels:editor.secret.loading":
-    "Loading the saved credential...",
-  "managedSiteChannels:editor.secret.placeholder": "Enter a credential",
-  "managedSiteChannels:editor.secret.state.available":
-    "A saved credential is available.",
-  "managedSiteChannels:editor.secret.state.masked":
-    "A masked credential is saved.",
-  "managedSiteChannels:editor.secret.state.permissionHidden":
-    "The saved credential is hidden by permissions.",
-  "managedSiteChannels:editor.secret.state.unavailable":
-    "No credential is available to display.",
-  "managedSiteChannels:editor.secret.replacementDisabled":
-    "This credential type cannot be replaced here.",
-  "managedSiteChannels:editor.secret.replacementBlocked.multipleCredentials":
-    "This channel has multiple API keys. Manage its keys in AxonHub.",
-  "managedSiteChannels:editor.validation.inconsistentValue":
-    "This value conflicts with another field.",
-  "managedSiteChannels:editor.validation.invalidValue": "Enter a valid value.",
-  "managedSiteChannels:editor.validation.outOfRange":
-    "Enter a value in the allowed range.",
-  "managedSiteChannels:editor.validation.required": "This field is required.",
-  "managedSiteChannels:editor.validation.unsupportedOption":
-    "This option is not supported.",
-}
+const resourceI18n = await createResourceTestI18n({
+  en: {
+    channelDialog: enChannelDialog,
+    common: enCommon,
+    managedSiteChannels: enManagedSiteChannels,
+  },
+})
+const t = resourceI18n.getFixedT("en")
 
-const t = ((key: string) => labels[key] ?? key) as TFunction
+describe("managed resource dynamic model options", () => {
+  it("reuses the shared manual loader in the channel-specific models control", async () => {
+    const user = userEvent.setup()
+    const onLoadOptions = vi
+      .fn()
+      .mockResolvedValue([{ value: "model-from-credential" }])
+    const completePolicy = getManagedResourceFieldPolicy(
+      SITE_TYPES.NEW_API,
+      MANAGED_RESOURCE_KINDS.Channel,
+      MANAGED_RESOURCE_EDITOR_MODES.Create,
+    )!
+    const policy = {
+      fields: completePolicy.fields.filter(
+        ({ fieldId }) => fieldId === NEW_API_MANAGED_RESOURCE_FIELD_IDS.Models,
+      ),
+      hiddenFields: [],
+    }
+    render(
+      <ManagedResourceEditorBody
+        t={t}
+        mode="create"
+        descriptors={[
+          {
+            fieldId: NEW_API_MANAGED_RESOURCE_FIELD_IDS.Models,
+            type: "multi-select",
+            required: true,
+            options: [{ value: "selected-model" }],
+            optionLoader: {
+              dependsOn: [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Key],
+              trigger: MANAGED_RESOURCE_FIELD_OPTION_LOAD_TRIGGERS.Manual,
+            },
+          },
+        ]}
+        policy={policy}
+        values={{
+          [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Key]: {
+            kind: "replace",
+            value: "credential-placeholder",
+          },
+          [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Models]: ["selected-model"],
+        }}
+        onValueChange={vi.fn()}
+        onLoadOptions={onLoadOptions}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", {
+        name: `Load ${t("channelDialog:fields.models.label")}`,
+      }),
+    )
+    await waitFor(() => expect(onLoadOptions).toHaveBeenCalledOnce())
+    expect(
+      screen.getByRole("button", {
+        name: `Refresh ${t("channelDialog:fields.models.label")}`,
+      }),
+    ).toBeVisible()
+    await user.click(
+      screen.getByRole("combobox", {
+        name: t("channelDialog:fields.models.label"),
+      }),
+    )
+    expect(
+      await screen.findByRole("option", { name: "model-from-credential" }),
+    ).toBeVisible()
+  })
+})
 
 const initialValues: EditableResourceProjection = {
   [AXON_HUB_CHANNEL_FIELD_IDS.NAME]: "Example channel",
@@ -376,6 +370,142 @@ const openRealAxonHubEditors = async () => {
 }
 
 describe("ManagedResourceEditorBody", () => {
+  it("falls back to the native control when a channel role cannot render the descriptor", () => {
+    render(
+      <ManagedResourceEditorBody
+        t={t}
+        mode={MANAGED_RESOURCE_EDITOR_MODES.Edit}
+        descriptors={[{ fieldId: "mismatched-type", type: "text" }]}
+        policy={{
+          fields: [
+            {
+              fieldId: "mismatched-type",
+              section: "basic",
+              order: 1,
+              renderer: "text",
+              resolveLabel: () => "Fallback channel type",
+              channelFieldRole: MANAGED_RESOURCE_CHANNEL_FIELD_ROLES.Type,
+            },
+          ],
+          hiddenFields: [],
+        }}
+        values={{ "mismatched-type": "provider-owned-value" }}
+        onValueChange={vi.fn()}
+      />,
+    )
+
+    expect(
+      screen.getByRole("textbox", { name: "Fallback channel type" }),
+    ).toHaveValue("provider-owned-value")
+  })
+
+  it("routes New API native fields through the shared channel controls", () => {
+    const policy = getManagedResourceFieldPolicy(
+      SITE_TYPES.NEW_API,
+      MANAGED_RESOURCE_KINDS.Channel,
+      MANAGED_RESOURCE_EDITOR_MODES.Create,
+    )!
+    const descriptors: readonly ResourceFieldDescriptor[] = [
+      {
+        fieldId: NEW_API_MANAGED_RESOURCE_FIELD_IDS.Name,
+        type: "text",
+        required: true,
+      },
+      {
+        fieldId: NEW_API_MANAGED_RESOURCE_FIELD_IDS.Type,
+        type: "select",
+        required: true,
+        options: [{ value: String(ChannelType.OpenAI) }],
+      },
+      {
+        fieldId: NEW_API_MANAGED_RESOURCE_FIELD_IDS.Status,
+        type: "select",
+        required: true,
+        options: [{ value: "1" }],
+      },
+      {
+        fieldId: NEW_API_MANAGED_RESOURCE_FIELD_IDS.BaseUrl,
+        type: "text",
+      },
+      {
+        fieldId: NEW_API_MANAGED_RESOURCE_FIELD_IDS.Key,
+        type: "secret",
+        required: true,
+        secretState: "unavailable",
+        canReplace: true,
+        allowClear: false,
+      },
+      {
+        fieldId: NEW_API_MANAGED_RESOURCE_FIELD_IDS.Models,
+        type: "multi-select",
+        required: true,
+        options: [],
+      },
+      {
+        fieldId: NEW_API_MANAGED_RESOURCE_FIELD_IDS.Groups,
+        type: "multi-select",
+        options: [],
+      },
+      {
+        fieldId: NEW_API_MANAGED_RESOURCE_FIELD_IDS.Priority,
+        type: "number",
+      },
+      {
+        fieldId: NEW_API_MANAGED_RESOURCE_FIELD_IDS.Weight,
+        type: "number",
+      },
+    ]
+    const values: EditableResourceProjection = {
+      [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Name]: "New API channel",
+      [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Type]: String(ChannelType.OpenAI),
+      [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Status]: "1",
+      [NEW_API_MANAGED_RESOURCE_FIELD_IDS.BaseUrl]:
+        "https://upstream.example.invalid/v1",
+      [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Key]: {
+        kind: "replace",
+        value: "secret-placeholder",
+      },
+      [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Models]: ["model-example"],
+      [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Groups]: [],
+      [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Priority]: 0,
+      [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Weight]: 0,
+    }
+
+    render(
+      <ManagedResourceEditorBody
+        t={t}
+        mode="create"
+        descriptors={descriptors}
+        policy={policy}
+        values={values}
+        onValueChange={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.nameInput)).toHaveValue(
+      "New API channel",
+    )
+    expect(
+      screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.baseUrlInput),
+    ).toHaveValue("https://upstream.example.invalid/v1")
+    expect(screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.keyInput)).toHaveValue(
+      "secret-placeholder",
+    )
+    expect(
+      screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.modelsInput),
+    ).toBeVisible()
+    const groups = screen.getByRole("combobox", {
+      name: t("channelDialog:fields.groups.label"),
+    })
+    expect(groups).toHaveAttribute(
+      "placeholder",
+      t("channelDialog:fields.groups.placeholder"),
+    )
+    expect(groups).toHaveAccessibleDescription(
+      t("channelDialog:fields.groups.hint"),
+    )
+  })
+
   it("keeps nullable shared select values separate from its UI clear option", async () => {
     const onValueChange = vi.fn()
     const user = userEvent.setup()
@@ -485,6 +615,7 @@ describe("ManagedResourceEditorBody", () => {
           renderer: "select",
           resolveLabel: () => "Provider",
           resolveOptionFallback: () => "Unknown provider",
+          channelFieldRole: MANAGED_RESOURCE_CHANNEL_FIELD_ROLES.Type,
         },
       ],
       hiddenFields: [],
@@ -507,7 +638,9 @@ describe("ManagedResourceEditorBody", () => {
       />,
     )
 
-    const select = screen.getByRole("combobox", { name: "Type" })
+    const select = screen.getByRole("combobox", {
+      name: t("channelDialog:fields.type.label"),
+    })
     expect(select).toHaveTextContent("legacy-provider")
     await user.click(select)
     expect(
@@ -518,18 +651,6 @@ describe("ManagedResourceEditorBody", () => {
 
   it("shows credential create and edit guidance for each editor mode", async () => {
     const { createEditor, editEditor } = await openRealAxonHubEditors()
-    const englishT = ((key: string) => {
-      if (key === "managedSiteChannels:editor.secret.placeholder") {
-        return enManagedSiteChannels.editor.secret.placeholder
-      }
-      if (key === "managedSiteChannels:editor.secret.state.unavailable") {
-        return enManagedSiteChannels.editor.secret.state.unavailable
-      }
-      if (key === "managedSiteChannels:editor.secret.createHint") {
-        return "Enter a credential for the new channel."
-      }
-      return labels[key] ?? key
-    }) as TFunction
 
     const createRender = render(
       <NativeEditorHarness
@@ -537,32 +658,43 @@ describe("ManagedResourceEditorBody", () => {
         values={createEditor.initialValues}
         editorPolicy={createPolicy}
         mode="create"
-        translate={englishT}
+        translate={t}
       />,
     )
 
-    const createKey = screen.getByLabelText(/^API key/)
-    const createModels = screen.getByRole("combobox", { name: "Models" })
+    const createKey = screen.getByLabelText(
+      new RegExp(`^${t("channelDialog:fields.key.label")}`),
+    )
+    const createModels = screen.getByRole("combobox", {
+      name: t("channelDialog:fields.models.label"),
+    })
     expect(createKey).toBeRequired()
-    expect(createKey).toHaveAttribute("placeholder", "Enter a credential")
+    expect(createKey).toHaveAttribute(
+      "placeholder",
+      "Enter an upstream API key",
+    )
     expect(createKey).toHaveAccessibleDescription(
-      "Enter a credential for the new channel.",
+      "Enter the upstream API key for the new channel.",
     )
     expect(createModels).toHaveAttribute("aria-required", "true")
     expect(createModels).toHaveAccessibleDescription(
       "Type or paste model names. Models added here are kept during automatic model sync.",
     )
-    expect(screen.getByRole("combobox", { name: /^Type/ })).toHaveAttribute(
-      "aria-required",
-      "true",
-    )
-    expect(screen.getByRole("combobox", { name: /^Status/ })).toHaveAttribute(
-      "aria-required",
-      "true",
-    )
-    expect(screen.getByText("Models", { selector: "label" })).toHaveTextContent(
-      "*",
-    )
+    expect(
+      screen.getByRole("combobox", {
+        name: new RegExp(`^${t("channelDialog:fields.type.label")}`),
+      }),
+    ).toHaveAttribute("aria-required", "true")
+    expect(
+      screen.getByRole("combobox", {
+        name: new RegExp(`^${t("channelDialog:fields.status.label")}`),
+      }),
+    ).toHaveAttribute("aria-required", "true")
+    expect(
+      screen.getByText(t("channelDialog:fields.models.label"), {
+        selector: "label",
+      }),
+    ).toHaveTextContent("*")
 
     createRender.unmount()
 
@@ -574,14 +706,18 @@ describe("ManagedResourceEditorBody", () => {
       />,
     )
 
-    expect(screen.getByLabelText(/^API key/)).not.toBeRequired()
-    expect(screen.getByLabelText(/^API key/)).toHaveAccessibleDescription(
-      "A saved credential is available. Leave this field blank to keep the saved credential unchanged.",
+    const editKey = screen.getByLabelText(
+      new RegExp(`^${t("channelDialog:fields.key.label")}`),
     )
-    expect(screen.getByRole("combobox", { name: "Models" })).toHaveAttribute(
-      "aria-required",
-      "true",
+    expect(editKey).not.toBeRequired()
+    expect(editKey).toHaveAccessibleDescription(
+      `${t("managedSiteChannels:editor.secret.state.available")} ${t("managedSiteChannels:editor.secret.keepExistingHint")}`,
     )
+    expect(
+      screen.getByRole("combobox", {
+        name: t("channelDialog:fields.models.label"),
+      }),
+    ).toHaveAttribute("aria-required", "true")
   })
 
   it("renders the native body inside the shared channel editor shell", async () => {
@@ -596,7 +732,11 @@ describe("ManagedResourceEditorBody", () => {
 
     const dialog = screen.getByRole("dialog", { name: "Edit native channel" })
     expect(dialog).toBeVisible()
-    expect(within(dialog).getByRole("textbox", { name: /^Name/ })).toBeVisible()
+    expect(
+      within(dialog).getByRole("textbox", {
+        name: new RegExp(`^${t("channelDialog:fields.name.label")}`),
+      }),
+    ).toBeVisible()
 
     await user.click(screen.getByRole("button", { name: "Save" }))
     expect(onSubmit).toHaveBeenCalledTimes(1)
@@ -669,13 +809,27 @@ describe("ManagedResourceEditorBody", () => {
     const closeButton = screen.getByRole("button", {
       name: "common:actions.close",
     })
-    const nameInput = screen.getByRole("textbox", { name: /^Name/ })
-    const typeSelect = screen.getByRole("combobox", { name: /^Type/ })
-    const statusSelect = screen.getByRole("combobox", { name: /^Status/ })
-    const baseUrlInput = screen.getByRole("textbox", { name: "Base URL" })
-    const keyInput = screen.getByLabelText(/^API key/)
-    const revealButton = screen.getByRole("button", { name: "Show key" })
-    const modelsInput = screen.getByRole("combobox", { name: "Models" })
+    const nameInput = screen.getByRole("textbox", {
+      name: new RegExp(`^${t("channelDialog:fields.name.label")}`),
+    })
+    const typeSelect = screen.getByRole("combobox", {
+      name: new RegExp(`^${t("channelDialog:fields.type.label")}`),
+    })
+    const statusSelect = screen.getByRole("combobox", {
+      name: new RegExp(`^${t("channelDialog:fields.status.label")}`),
+    })
+    const baseUrlInput = screen.getByRole("textbox", {
+      name: t("channelDialog:fields.baseUrl.label"),
+    })
+    const keyInput = screen.getByLabelText(
+      new RegExp(`^${t("channelDialog:fields.key.label")}`),
+    )
+    const revealButton = screen.getByRole("button", {
+      name: t("channelDialog:actions.showKey"),
+    })
+    const modelsInput = screen.getByRole("combobox", {
+      name: t("channelDialog:fields.models.label"),
+    })
 
     expect(dialog).toContainElement(closeButton)
     expect(closeButton).toHaveFocus()
@@ -801,7 +955,9 @@ describe("ManagedResourceEditorBody", () => {
       screen.queryByRole("combobox", { name: "Manual models" }),
     ).not.toBeInTheDocument()
 
-    const models = screen.getByRole("combobox", { name: "Models" })
+    const models = screen.getByRole("combobox", {
+      name: t("channelDialog:fields.models.label"),
+    })
     await user.click(models)
     await user.type(models, "model-example-c")
     await user.keyboard("{Enter}")
@@ -1108,7 +1264,9 @@ describe("ManagedResourceEditorBody", () => {
     )
 
     expect(
-      screen.getByRole("combobox", { name: "Models" }),
+      screen.getByRole("combobox", {
+        name: t("channelDialog:fields.models.label"),
+      }),
     ).toHaveAccessibleDescription(
       "Type or paste model names. Models added here are kept during automatic model sync. This field is required.",
     )
@@ -1161,7 +1319,7 @@ describe("ManagedResourceEditorBody", () => {
 
     const input = screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.keyInput)
     expect(input).toHaveAccessibleDescription(
-      "A masked credential is saved. Leave this field blank to keep the saved credential unchanged.",
+      "A masked API key is saved. Leave this field blank to keep the saved API key unchanged.",
     )
 
     await user.type(input, "replacement-secret")
@@ -1183,7 +1341,8 @@ describe("ManagedResourceEditorBody", () => {
           renderer: "secret",
           resolveLabel: () => "API key",
           resolveHelp: () =>
-            "Leave this field blank to keep the saved credential unchanged.",
+            "Leave this field blank to keep the saved API key unchanged.",
+          channelFieldRole: MANAGED_RESOURCE_CHANNEL_FIELD_ROLES.Secret,
         },
       ],
       hiddenFields: [],
@@ -1212,9 +1371,9 @@ describe("ManagedResourceEditorBody", () => {
 
     const input = screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.keyInput)
     expect(input).toHaveAccessibleDescription(
-      "Leave this field blank to keep the saved credential unchanged.",
+      "Leave this field blank to keep the saved API key unchanged.",
     )
-    expect(screen.queryByText("A saved credential is available.")).toBeNull()
+    expect(screen.queryByText("A saved API key is available.")).toBeNull()
   })
 
   it("explains and does not load a multi-key credential that cannot be replaced", () => {
@@ -1257,13 +1416,18 @@ describe("ManagedResourceEditorBody", () => {
     expect(input).toHaveAttribute("type", "password")
     expect(input).toHaveAttribute("autocomplete", "new-password")
     expect(input).toHaveValue("")
+    expect(input).toHaveAttribute(
+      "placeholder",
+      "Enter a new API key to replace the saved one",
+    )
+    expect(input).toHaveAccessibleDescription(
+      "The saved API key is not shown here. Leave blank to keep it unchanged.",
+    )
     expect(onLoadSecret).not.toHaveBeenCalled()
 
-    await user.click(
-      screen.getByRole("button", { name: "View saved credential" }),
-    )
+    await user.click(screen.getByRole("button", { name: "View saved API key" }))
     expect(await screen.findByDisplayValue("saved-secret-value")).toBe(input)
-    expect(screen.queryByText("Loading the saved credential...")).toBeNull()
+    expect(screen.queryByText("Loading the saved API key...")).toBeNull()
     expect(onLoadSecret).toHaveBeenCalledWith(AXON_HUB_CHANNEL_FIELD_IDS.KEY, {
       signal: expect.any(AbortSignal),
     })
@@ -1277,10 +1441,49 @@ describe("ManagedResourceEditorBody", () => {
     )
   })
 
-  it("shows loading credential guidance until the pending load resolves", async () => {
+  it.each(["masked", "unavailable"] as const)(
+    "loads a %s API key when the descriptor exposes a reveal capability",
+    async (secretState) => {
+      const user = userEvent.setup()
+      const onLoadSecret = vi.fn().mockResolvedValue("revealed-secret-value")
+      render(
+        <NativeEditorHarness
+          descriptors={createDescriptors({
+            secretState,
+            canReplace: true,
+            canLoadSecret: true,
+          })}
+          onLoadSecret={onLoadSecret}
+        />,
+      )
+
+      const input = screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.keyInput)
+      expect(input).toHaveAccessibleDescription(
+        "The saved API key is not shown here. Leave blank to keep it unchanged.",
+      )
+      await user.click(
+        screen.getByRole("button", { name: "View saved API key" }),
+      )
+
+      expect(await screen.findByDisplayValue("revealed-secret-value")).toBe(
+        input,
+      )
+      expect(onLoadSecret).toHaveBeenCalledWith(
+        AXON_HUB_CHANNEL_FIELD_IDS.KEY,
+        { signal: expect.any(AbortSignal) },
+      )
+    },
+  )
+
+  it("cancels a saved credential load from the loading button", async () => {
     const user = userEvent.setup()
-    const pendingLoad = createDeferred<string>()
-    const onLoadSecret = vi.fn(() => pendingLoad.promise)
+    let loadSignal: AbortSignal | undefined
+    const onLoadSecret = vi.fn(
+      (_fieldId: string, options?: { signal?: AbortSignal }) => {
+        loadSignal = options?.signal
+        return new Promise<string>(() => undefined)
+      },
+    )
     render(
       <NativeEditorHarness
         descriptors={createDescriptors({
@@ -1292,21 +1495,32 @@ describe("ManagedResourceEditorBody", () => {
     )
 
     expect(onLoadSecret).not.toHaveBeenCalled()
-    await user.click(
-      screen.getByRole("button", { name: "View saved credential" }),
-    )
-    const loading = await screen.findByText("Loading the saved credential...")
-    expect(loading).toHaveAttribute("aria-live", "polite")
+    await user.click(screen.getByRole("button", { name: "View saved API key" }))
+    const loadingButton = await screen.findByRole("button", {
+      name: "Cancel loading",
+    })
+    expect(loadingButton).toBeEnabled()
+    expect(loadingButton).toHaveAttribute("aria-busy", "true")
+    expect(loadingButton).toHaveAttribute("aria-live", "polite")
+    expect(
+      within(screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.footer)).getByRole(
+        "button",
+        { name: t("common:actions.cancel") },
+      ),
+    ).toBeVisible()
     expect(
       screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.keyInput),
-    ).toHaveAccessibleDescription("Loading the saved credential...")
-
-    await act(async () => pendingLoad.resolve("saved-secret-value"))
-
-    expect(screen.queryByText("Loading the saved credential...")).toBeNull()
-    expect(screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.keyInput)).toHaveValue(
-      "saved-secret-value",
+    ).toHaveAccessibleDescription(
+      "The saved API key is not shown here. Leave blank to keep it unchanged.",
     )
+
+    await user.click(loadingButton)
+
+    expect(loadSignal?.aborted).toBe(true)
+    expect(
+      screen.getByRole("button", { name: "View saved API key" }),
+    ).toBeEnabled()
+    expect(screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.keyInput)).toHaveValue("")
   })
 
   it("cancels an in-flight saved credential load when replacement input begins", async () => {
@@ -1328,9 +1542,7 @@ describe("ManagedResourceEditorBody", () => {
       />,
     )
 
-    await user.click(
-      screen.getByRole("button", { name: "View saved credential" }),
-    )
+    await user.click(screen.getByRole("button", { name: "View saved API key" }))
     await waitFor(() => expect(onLoadSecret).toHaveBeenCalledOnce())
     await user.type(
       screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.keyInput),
@@ -1338,7 +1550,7 @@ describe("ManagedResourceEditorBody", () => {
     )
 
     expect(loadSignal?.aborted).toBe(true)
-    expect(screen.queryByText("Loading the saved credential...")).toBeNull()
+    expect(screen.queryByText("Loading the saved API key...")).toBeNull()
   })
 
   it("ignores a late saved credential result after replacement input begins", async () => {
@@ -1363,9 +1575,7 @@ describe("ManagedResourceEditorBody", () => {
     const nameInput = screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.nameInput)
     await user.clear(nameInput)
     await user.type(nameInput, "Unsaved rename")
-    await user.click(
-      screen.getByRole("button", { name: "View saved credential" }),
-    )
+    await user.click(screen.getByRole("button", { name: "View saved API key" }))
     await waitFor(() => expect(onLoadSecret).toHaveBeenCalledOnce())
     await user.type(
       screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.keyInput),
@@ -1402,9 +1612,7 @@ describe("ManagedResourceEditorBody", () => {
         onLoadSecret={onLoadSecret}
       />,
     )
-    await user.click(
-      screen.getByRole("button", { name: "View saved credential" }),
-    )
+    await user.click(screen.getByRole("button", { name: "View saved API key" }))
     await waitFor(() => expect(onLoadSecret).toHaveBeenCalledOnce())
 
     view.unmount()
@@ -1431,15 +1639,13 @@ describe("ManagedResourceEditorBody", () => {
     )
 
     expect(onLoadSecret).not.toHaveBeenCalled()
-    await user.click(
-      screen.getByRole("button", { name: "View saved credential" }),
-    )
+    await user.click(screen.getByRole("button", { name: "View saved API key" }))
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "The saved credential could not be loaded.",
+      "The saved API key could not be loaded.",
     )
-    expect(screen.queryByText("Loading the saved credential...")).toBeNull()
+    expect(screen.queryByText("Loading the saved API key...")).toBeNull()
     expect(
-      screen.queryByRole("button", { name: /load saved credential/i }),
+      screen.queryByRole("button", { name: /load saved api key/i }),
     ).toBeNull()
 
     await user.click(screen.getByRole("button", { name: "Retry" }))
@@ -1460,7 +1666,7 @@ describe("ManagedResourceEditorBody", () => {
       )
 
       expect(
-        screen.queryByRole("button", { name: "Load saved credential" }),
+        screen.queryByRole("button", { name: "Load saved API key" }),
       ).toBeNull()
     },
   )
@@ -1513,7 +1719,7 @@ describe("ManagedResourceEditorBody", () => {
       expect(enabledInput).toBeEnabled()
       expect(enabledInput).toHaveValue("")
       expect(
-        screen.queryByRole("button", { name: "Remove saved credential" }),
+        screen.queryByRole("button", { name: "Remove saved API key" }),
       ).toBeNull()
 
       await user.type(enabledInput, "replacement-secret")
@@ -1535,7 +1741,7 @@ describe("ManagedResourceEditorBody", () => {
         />,
       )
       await user.click(
-        screen.getByRole("button", { name: "Remove saved credential" }),
+        screen.getByRole("button", { name: "Remove saved API key" }),
       )
       expect(onValueChange).toHaveBeenLastCalledWith(
         AXON_HUB_CHANNEL_FIELD_IDS.KEY,

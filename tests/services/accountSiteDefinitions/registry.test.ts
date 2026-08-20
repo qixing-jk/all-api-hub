@@ -286,7 +286,7 @@ describe("account site definition registry", () => {
 
   it("keeps every managed-resource mode explicit in the static definitions", () => {
     const expectedModes = new Map<ManagedSiteType, string>([
-      [SITE_TYPES.NEW_API, MANAGED_RESOURCE_MODES.LegacyChannel],
+      [SITE_TYPES.NEW_API, MANAGED_RESOURCE_MODES.NativeResource],
       [SITE_TYPES.VELOERA, MANAGED_RESOURCE_MODES.LegacyChannel],
       [SITE_TYPES.DONE_HUB, MANAGED_RESOURCE_MODES.LegacyChannel],
       [SITE_TYPES.OCTOPUS, MANAGED_RESOURCE_MODES.LegacyChannel],

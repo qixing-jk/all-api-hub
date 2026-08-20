@@ -2150,6 +2150,58 @@ describe("channelMigration", () => {
     expect(create).toHaveBeenCalledOnce()
   })
 
+  it("uses a caller credential resolver for interactive native verification", async () => {
+    const { executeManagedSiteMigration } = await import(
+      "~/services/managedSites/channelMigration"
+    )
+    const selection = buildMigrationSelection("interactive-secret")
+    const registeredResolver = vi.fn(async () => ({
+      status: "ready" as const,
+      credential: "registered-credential-placeholder",
+    }))
+    const interactiveResolver = vi.fn(async () => ({
+      status: "ready" as const,
+      credential: "interactive-credential-placeholder",
+    }))
+    const create = vi.fn(async () => ({ status: "created" as const }))
+    mockResolveManagedSiteMigrationCapability.mockImplementation((siteType) => {
+      if (siteType === SITE_TYPES.NEW_API) {
+        return {
+          source: {
+            prepare: vi.fn(),
+            resolveCredential: registeredResolver,
+          },
+        }
+      }
+      if (siteType === SITE_TYPES.DONE_HUB) {
+        return {
+          target: {
+            prepare: vi.fn(),
+            create,
+          },
+        }
+      }
+      return null
+    })
+    const options = { signal: new AbortController().signal }
+
+    const result = await executeManagedSiteMigration({
+      preview: buildCanonicalPreview([selection]),
+      options,
+      resolveSourceCredential: interactiveResolver,
+    })
+
+    expect(result.createdCount).toBe(1)
+    expect(interactiveResolver).toHaveBeenCalledWith(selection, options)
+    expect(registeredResolver).not.toHaveBeenCalled()
+    expect(create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        credential: "interactive-credential-placeholder",
+      }),
+      options,
+    )
+  })
+
   it("keeps an unsupported AxonHub source row blocked through mixed canonical execution", async () => {
     const { executeManagedSiteMigration, prepareManagedSiteMigrationPreview } =
       await import("~/services/managedSites/channelMigration")

@@ -42,6 +42,7 @@ import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 
 const fetchParams = {
   originUrl: "https://example.invalid",
+  resourceUsername: "example-user",
   fetchUrl: "https://example.invalid/api/account",
   requestId: "request-1",
 }
@@ -531,8 +532,8 @@ describe("evaluateProtectionBypassPolicy", () => {
         "session_read",
         "new_api_session_read",
       ],
-      managed_site_channels: ["new_api_session_read"],
-      managed_site_model_sync: ["new_api_session_read"],
+      managed_site_channels: ["new_api_session_read", "octopus_api_fetch"],
+      managed_site_model_sync: ["new_api_session_read", "octopus_api_fetch"],
       account_onboarding: [
         "api_fallback_fetch",
         "profile_isolated_fetch",
@@ -544,6 +545,7 @@ describe("evaluateProtectionBypassPolicy", () => {
       switch (kind) {
         case "api_fallback_fetch":
         case "profile_isolated_fetch":
+        case "octopus_api_fetch":
           return { kind, params: fetchParams }
         case "turnstile_fetch":
           return {

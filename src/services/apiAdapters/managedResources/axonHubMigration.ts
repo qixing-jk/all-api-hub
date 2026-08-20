@@ -8,7 +8,9 @@ import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contra
 import { hasUsableApiTokenKey } from "~/services/accountTokens/apiTokenKey"
 import {
   isManagedResourceRefFor,
+  MANAGED_RESOURCE_SECRET_STATES,
   type ResourceOperationOptions,
+  type ResourceSecretState,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 import {
   AxonHubNativeError,
@@ -50,23 +52,27 @@ class AxonHubUnsupportedMigrationTypeError extends Error {
 
 const inspectCredential = (channel: AxonHubChannel) => {
   if (channel.credentials === null) {
-    return { state: "permission-hidden" as const }
+    return { state: MANAGED_RESOURCE_SECRET_STATES.PermissionHidden }
   }
   if (!isRegularAxonHubChannelType(String(channel.type))) {
-    return { state: "unavailable" as const }
+    return { state: MANAGED_RESOURCE_SECRET_STATES.Unavailable }
   }
   const candidates = getAxonHubCredentialCandidates(channel)
   const credential = candidates.find(hasUsableApiTokenKey)
-  if (credential) return { state: "available" as const, credential }
+  if (credential)
+    return { state: MANAGED_RESOURCE_SECRET_STATES.Available, credential }
   return candidates.length > 0
-    ? { state: "masked" as const }
-    : { state: "unavailable" as const }
+    ? { state: MANAGED_RESOURCE_SECRET_STATES.Masked }
+    : { state: MANAGED_RESOURCE_SECRET_STATES.Unavailable }
 }
 
 const credentialBlocker = (
-  state: "permission-hidden" | "masked" | "unavailable",
+  state: Exclude<
+    ResourceSecretState,
+    typeof MANAGED_RESOURCE_SECRET_STATES.Available
+  >,
 ) =>
-  state === "permission-hidden"
+  state === MANAGED_RESOURCE_SECRET_STATES.PermissionHidden
     ? blockers.SOURCE_KEY_RESOLUTION_FAILED
     : blockers.SOURCE_KEY_MISSING
 

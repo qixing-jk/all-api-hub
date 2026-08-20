@@ -1,6 +1,7 @@
 export const CHANNEL_DIALOG_TEST_IDS = {
   header: "channel-dialog-header",
   footer: "channel-dialog-footer",
+  form: "channel-dialog-form",
   nameInput: "channel-dialog-name-input",
   typeSelect: "channel-dialog-type-select",
   keyInput: "channel-dialog-key-input",

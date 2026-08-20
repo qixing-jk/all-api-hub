@@ -1,24 +1,96 @@
+import type { ManagedResourceChannelActionFacts } from "~/services/apiAdapters/contracts/managedResourceNative"
+
+export const MANAGED_CHANNELS_CELL_TONES = {
+  Default: "default",
+  Success: "success",
+  Warning: "warning",
+  Danger: "danger",
+} as const
+
 export type ManagedChannelsCellTone =
-  | "default"
-  | "success"
-  | "warning"
-  | "danger"
+  (typeof MANAGED_CHANNELS_CELL_TONES)[keyof typeof MANAGED_CHANNELS_CELL_TONES]
+
+export const MANAGED_CHANNELS_CELL_KINDS = {
+  Text: "text",
+  Groups: "groups",
+  Status: "status",
+} as const
+
+export const MANAGED_CHANNELS_COLUMN_RENDERERS = {
+  Select: "select",
+  Identifier: "identifier",
+  Channel: "channel",
+  Value: "value",
+  Actions: "actions",
+} as const
+
+export type ManagedChannelsColumnRenderer =
+  (typeof MANAGED_CHANNELS_COLUMN_RENDERERS)[keyof typeof MANAGED_CHANNELS_COLUMN_RENDERERS]
+
+export const MANAGED_CHANNELS_COLUMN_ACCESSOR_KINDS = {
+  DisplayIdentifier: "displayIdentifier",
+  DisplayIdentifierSort: "displayIdentifierSort",
+  Name: "name",
+  Cell: "cell",
+  CellSortValue: "cellSortValue",
+} as const
+
+export const MANAGED_CHANNELS_COLUMN_EXTENSION_KINDS = {
+  LegacyCommon: "legacy-common",
+  Native: "native",
+} as const
+
+export const MANAGED_CHANNELS_SORT_DIRECTIONS = {
+  Ascending: "asc",
+  Descending: "desc",
+} as const
+
+export const MANAGED_CHANNELS_SORT_MISSING_PLACEMENTS = {
+  First: "first",
+  Last: "last",
+} as const
+
+export const MANAGED_CHANNELS_COLUMN_FACET_KINDS = {
+  Status: "status",
+} as const
+
+export const MANAGED_CHANNELS_ROUTE_FILTER_KINDS = {
+  Exact: "exact",
+} as const
+
+export const MANAGED_CHANNELS_ROUTE_QUERY_KEYS = {
+  ChannelId: "channelId",
+} as const
+
+export const MANAGED_CHANNELS_COLUMN_IDS = {
+  Select: "select",
+  Identifier: "id",
+  Name: "name",
+  BaseUrl: "base_url",
+  Type: "type",
+  Models: "models",
+  Group: "group",
+  Status: "status",
+  Priority: "priority",
+  Weight: "weight",
+  Actions: "actions",
+} as const
 
 export type ManagedChannelsCell =
   | {
-      kind: "text"
+      kind: typeof MANAGED_CHANNELS_CELL_KINDS.Text
       value: string
       sortValue: string | number
       missing?: boolean
     }
   | {
-      kind: "groups"
+      kind: typeof MANAGED_CHANNELS_CELL_KINDS.Groups
       values: string[]
       sortValue: string
       missing?: boolean
     }
   | {
-      kind: "status"
+      kind: typeof MANAGED_CHANNELS_CELL_KINDS.Status
       value: string
       sortValue: string | number
       tone: ManagedChannelsCellTone
@@ -45,36 +117,50 @@ export type ManagedChannelsRowViewModel = {
     canOpenSync?: boolean
     canFilter?: boolean
   }
+  channelActions?: ManagedResourceChannelActionFacts
   isSyncing?: boolean
 }
 
 export type ManagedChannelsColumnId = string
 
 export type ManagedChannelsColumnAccessor =
-  | { kind: "displayIdentifier" }
-  | { kind: "displayIdentifierSort" }
-  | { kind: "name" }
-  | { kind: "cell"; key: string }
-  | { kind: "cellSortValue"; key: string }
+  | { kind: typeof MANAGED_CHANNELS_COLUMN_ACCESSOR_KINDS.DisplayIdentifier }
+  | {
+      kind: typeof MANAGED_CHANNELS_COLUMN_ACCESSOR_KINDS.DisplayIdentifierSort
+    }
+  | { kind: typeof MANAGED_CHANNELS_COLUMN_ACCESSOR_KINDS.Name }
+  | { kind: typeof MANAGED_CHANNELS_COLUMN_ACCESSOR_KINDS.Cell; key: string }
+  | {
+      kind: typeof MANAGED_CHANNELS_COLUMN_ACCESSOR_KINDS.CellSortValue
+      key: string
+    }
 
 export type ManagedChannelsColumnExtension =
-  | { kind: "legacy-common" }
-  | { kind: "native"; namespace: string }
+  | { kind: typeof MANAGED_CHANNELS_COLUMN_EXTENSION_KINDS.LegacyCommon }
+  | {
+      kind: typeof MANAGED_CHANNELS_COLUMN_EXTENSION_KINDS.Native
+      namespace: string
+    }
 
 export type ManagedChannelsColumn = {
   id: ManagedChannelsColumnId
   label: string
-  renderer: "select" | "identifier" | "channel" | "value" | "actions"
+  renderer: ManagedChannelsColumnRenderer
   accessor?: ManagedChannelsColumnAccessor
   canHide: boolean
   defaultVisible: boolean
   visible?: boolean
   sort?: {
     accessor: ManagedChannelsColumnAccessor
-    defaultDirection: "asc" | "desc"
-    missing: "first" | "last"
+    defaultDirection: (typeof MANAGED_CHANNELS_SORT_DIRECTIONS)[keyof typeof MANAGED_CHANNELS_SORT_DIRECTIONS]
+    missing: (typeof MANAGED_CHANNELS_SORT_MISSING_PLACEMENTS)[keyof typeof MANAGED_CHANNELS_SORT_MISSING_PLACEMENTS]
   }
-  facet?: { kind: "status" }
+  facet?: { kind: typeof MANAGED_CHANNELS_COLUMN_FACET_KINDS.Status }
+  /** Declares route-owned filtering independently from how the value renders. */
+  routeFilter?: {
+    kind: typeof MANAGED_CHANNELS_ROUTE_FILTER_KINDS.Exact
+    queryKey: typeof MANAGED_CHANNELS_ROUTE_QUERY_KEYS.ChannelId
+  }
   size?: number
   cellClassName?: string
   extension: ManagedChannelsColumnExtension
@@ -89,6 +175,15 @@ export type ManagedChannelsFailureState = {
   variant?: "destructive" | "warning"
 }
 
+export const MANAGED_CHANNELS_DELETE_RESULT_STATUSES = {
+  Success: "success",
+  Failed: "failed",
+  Uncertain: "uncertain",
+} as const
+
+export type ManagedChannelsDeleteResultStatus =
+  (typeof MANAGED_CHANNELS_DELETE_RESULT_STATUSES)[keyof typeof MANAGED_CHANNELS_DELETE_RESULT_STATUSES]
+
 export type ManagedChannelsDeleteState = {
   isOpen: boolean
   isWorking: boolean
@@ -96,7 +191,7 @@ export type ManagedChannelsDeleteState = {
   results: Array<{
     rowKey: string
     displayLabel: string
-    status: "success" | "failed" | "uncertain"
+    status: ManagedChannelsDeleteResultStatus
     resultKey: string
   }>
   requiresRefresh: boolean
@@ -133,7 +228,6 @@ export type ManagedChannelsCapabilities = {
   canToggleMigration: boolean
   canMigrateSelected: boolean
   canMigrateFiltered: boolean
-  showNewApiOnlyActions: boolean
   hasMigrationTargets: boolean
 }
 
@@ -155,7 +249,7 @@ export type ManagedChannelsLabels = {
   emptyFiltered: string
   emptyNoChannels: string
   rowsPerPage: string
-  paginationSummary: string
+  paginationSummary: (start: number, end: number, total: number) => string
   noEntries: string
   paginationPrev: string
   paginationNext: string
@@ -174,7 +268,7 @@ export type ManagedChannelsLabels = {
   deleteResultsTitle: string
   deleteRefreshRequired: string
   deleteRefreshAction: string
-  deleteResultStatusLabels: Record<"success" | "failed" | "uncertain", string>
+  deleteResultStatusLabels: Record<ManagedChannelsDeleteResultStatus, string>
   migrationBeta: string
   enterMigrationMode: string
   exitMigrationMode: string

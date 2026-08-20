@@ -27,12 +27,14 @@ import type {
   ManagedSiteMigrationPreviewState,
   ManagedSiteMigrationResult,
 } from "./contracts"
-import { MANAGED_RESOURCE_CHANNEL_TYPE_FALLBACK_LABEL_RESOLVER } from "./managedResourceFieldPolicy"
 
 type ManagedResourceMigrationPresentationOptions = {
   t: TFunction
   getSiteLabel: (siteType: ManagedSiteType) => string
 }
+
+const resolveUnsupportedChannelTypeLabel = (t: TFunction) =>
+  t("managedSiteChannels:editor.options.channelType.unsupported")
 
 type ManagedSiteMigrationResultCounts = {
   created: number
@@ -199,7 +201,7 @@ const getTypeText = (
   ) {
     return AxonHubChannelTypeNames[type]
   }
-  return MANAGED_RESOURCE_CHANNEL_TYPE_FALLBACK_LABEL_RESOLVER(t)
+  return resolveUnsupportedChannelTypeLabel(t)
 }
 
 const getStatusText = (

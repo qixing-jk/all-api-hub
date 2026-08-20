@@ -76,6 +76,15 @@ const allTaskKinds: TempContextTask[] = [
       userId: "example-user",
     },
   },
+  {
+    kind: TEMP_CONTEXT_TASK_KINDS.OctopusApiFetch,
+    params: {
+      originUrl: taskParams.originUrl,
+      resourceUsername: "example-user",
+      fetchUrl: `${taskParams.originUrl}/api/v1/channel/list`,
+      fetchOptions: { method: "GET" },
+    },
+  },
   { kind: TEMP_CONTEXT_TASK_KINDS.OpenContext, params: taskParams },
   {
     kind: TEMP_CONTEXT_TASK_KINDS.OpenRouterManagementKeyAction,
@@ -111,7 +120,7 @@ function createDecisionCoordinator(overrides: Record<string, unknown> = {}) {
       kind: "available",
       adapter: "tab",
     }),
-    validateNewApiSessionReadResource: vi.fn().mockResolvedValue(true),
+    validateTaskResource: vi.fn().mockResolvedValue(true),
     executeAuthorizedTask: vi.fn(
       async (
         _task,
@@ -241,9 +250,13 @@ describe("ProtectionBypassCoordinator", () => {
                 ? userCommandExecution(
                     PROTECTION_BYPASS_USER_COMMANDS.ManageApiKeys,
                   )
-                : userCommandExecution(
-                    PROTECTION_BYPASS_USER_COMMANDS.AddAccount,
-                  )
+                : task.kind === TEMP_CONTEXT_TASK_KINDS.OctopusApiFetch
+                  ? userCommandExecution(
+                      PROTECTION_BYPASS_USER_COMMANDS.ManageSiteChannels,
+                    )
+                  : userCommandExecution(
+                      PROTECTION_BYPASS_USER_COMMANDS.AddAccount,
+                    )
       await expect(
         coordinator.execute({
           task: withExecution(task, execution),
@@ -437,7 +450,7 @@ describe("ProtectionBypassCoordinator", () => {
   it("rejects v1 execution before policy, capability, resource, or pool work", async () => {
     const readPolicy = vi.fn()
     const resolveCapability = vi.fn()
-    const validateNewApiSessionReadResource = vi.fn()
+    const validateTaskResource = vi.fn()
     const executeAuthorizedTask = vi.fn()
     const recordDecision = vi.fn()
 
@@ -457,7 +470,7 @@ describe("ProtectionBypassCoordinator", () => {
     const response = await createDecisionCoordinator({
       readPolicy,
       resolveCapability,
-      validateNewApiSessionReadResource,
+      validateTaskResource,
       executeAuthorizedTask,
       recordDecision,
     }).execute({
@@ -471,7 +484,7 @@ describe("ProtectionBypassCoordinator", () => {
     })
     expect(readPolicy).not.toHaveBeenCalled()
     expect(resolveCapability).not.toHaveBeenCalled()
-    expect(validateNewApiSessionReadResource).not.toHaveBeenCalled()
+    expect(validateTaskResource).not.toHaveBeenCalled()
     expect(executeAuthorizedTask).not.toHaveBeenCalled()
     expect(recordDecision).not.toHaveBeenCalled()
   })
@@ -486,12 +499,12 @@ describe("ProtectionBypassCoordinator", () => {
   ])(
     "skips current-resource I/O for %s New API session-read intent",
     async (_case, execution, _reason) => {
-      const validateNewApiSessionReadResource = vi.fn().mockResolvedValue(true)
+      const validateTaskResource = vi.fn().mockResolvedValue(true)
       const recordDecision = vi.fn().mockResolvedValue(undefined)
 
       await expect(
         createDecisionCoordinator({
-          validateNewApiSessionReadResource,
+          validateTaskResource,
           recordDecision,
         }).execute({
           task: {
@@ -509,7 +522,7 @@ describe("ProtectionBypassCoordinator", () => {
         success: false,
         code: API_ERROR_CODES.TEMP_WINDOW_POLICY_CONTEXT_INVALID,
       })
-      expect(validateNewApiSessionReadResource).not.toHaveBeenCalled()
+      expect(validateTaskResource).not.toHaveBeenCalled()
       expect(recordDecision).not.toHaveBeenCalled()
     },
   )
@@ -606,9 +619,9 @@ describe("ProtectionBypassCoordinator", () => {
     const execution = userCommandExecution(
       PROTECTION_BYPASS_USER_COMMANDS.ManageApiKeys,
     )
-    const validateNewApiSessionReadResource = vi.fn().mockResolvedValue(true)
+    const validateTaskResource = vi.fn().mockResolvedValue(true)
     const response = await createDecisionCoordinator({
-      validateNewApiSessionReadResource,
+      validateTaskResource,
     }).execute({
       task: {
         kind: TEMP_CONTEXT_TASK_KINDS.NewApiSessionRead,
@@ -622,11 +635,21 @@ describe("ProtectionBypassCoordinator", () => {
       execution,
     })
 
-    expect(validateNewApiSessionReadResource).toHaveBeenCalledWith({
-      origin: "https://example.invalid",
-      userId: "example-user",
-      channelId: 12,
-    })
+    expect(validateTaskResource).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: TEMP_CONTEXT_TASK_KINDS.NewApiSessionRead,
+        params: expect.objectContaining({
+          origin: "https://example.invalid",
+          userId: "example-user",
+          channelId: 12,
+        }),
+      }),
+      expect.objectContaining({
+        kind: execution.kind,
+        command: execution.command,
+        feature: PROTECTION_BYPASS_FEATURES.KeyManagement,
+      }),
+    )
     expect(response).toEqual({ success: true })
   })
 
@@ -635,7 +658,7 @@ describe("ProtectionBypassCoordinator", () => {
       PROTECTION_BYPASS_USER_COMMANDS.ManageApiKeys,
     )
     const response = await createDecisionCoordinator({
-      validateNewApiSessionReadResource: vi.fn().mockResolvedValue(false),
+      validateTaskResource: vi.fn().mockResolvedValue(false),
     }).execute({
       task: {
         kind: TEMP_CONTEXT_TASK_KINDS.NewApiSessionRead,
@@ -649,6 +672,145 @@ describe("ProtectionBypassCoordinator", () => {
       execution,
     })
 
+    expect(response).toEqual({
+      success: false,
+      code: API_ERROR_CODES.TEMP_WINDOW_POLICY_CONTEXT_INVALID,
+    })
+  })
+
+  it("passes the complete Octopus task to acquire-time resource validation", async () => {
+    const execution = {
+      ...automaticExecution,
+      feature: PROTECTION_BYPASS_FEATURES.ManagedSiteChannels,
+    } as const
+    const validateTaskResource = vi.fn().mockResolvedValue(true)
+    const response = await createDecisionCoordinator({
+      validateTaskResource,
+    }).execute({
+      task: {
+        kind: TEMP_CONTEXT_TASK_KINDS.OctopusApiFetch,
+        params: {
+          originUrl: "https://example.invalid",
+          resourceUsername: "example-user",
+          fetchUrl: "https://example.invalid/api/v1/channel/list",
+          fetchOptions: { method: "GET" },
+        },
+      },
+      execution,
+    })
+
+    expect(validateTaskResource).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: TEMP_CONTEXT_TASK_KINDS.OctopusApiFetch,
+        params: expect.objectContaining({
+          originUrl: "https://example.invalid",
+          resourceUsername: "example-user",
+        }),
+      }),
+      expect.objectContaining({
+        kind: execution.kind,
+        feature: PROTECTION_BYPASS_FEATURES.ManagedSiteChannels,
+      }),
+    )
+    expect(response).toEqual({ success: true })
+  })
+
+  it("denies an Octopus task when acquire-time resource validation rejects it", async () => {
+    const execution = {
+      ...automaticExecution,
+      feature: PROTECTION_BYPASS_FEATURES.ManagedSiteChannels,
+    } as const
+    const response = await createDecisionCoordinator({
+      validateTaskResource: vi.fn().mockResolvedValue(false),
+    }).execute({
+      task: {
+        kind: TEMP_CONTEXT_TASK_KINDS.OctopusApiFetch,
+        params: {
+          originUrl: "https://old.example.invalid",
+          resourceUsername: "example-user",
+          fetchUrl: "https://old.example.invalid/api/v1/channel/list",
+          fetchOptions: { method: "GET" },
+        },
+      },
+      execution,
+    })
+
+    expect(response).toEqual({
+      success: false,
+      code: API_ERROR_CODES.TEMP_WINDOW_POLICY_CONTEXT_INVALID,
+    })
+  })
+
+  it("delegates Octopus configuration-test resources to the resource adapter", async () => {
+    const validateTaskResource = vi.fn().mockResolvedValue(true)
+    const execution = userCommandExecution(
+      PROTECTION_BYPASS_USER_COMMANDS.ManageSiteChannels,
+    )
+    const response = await createDecisionCoordinator({
+      validateTaskResource,
+    }).execute({
+      task: {
+        kind: TEMP_CONTEXT_TASK_KINDS.OctopusApiFetch,
+        params: {
+          originUrl: "https://draft.example.invalid",
+          resourceUsername: "draft-user",
+          fetchUrl: "https://draft.example.invalid/api/v1/channel/list",
+          fetchOptions: { method: "GET" },
+          resourceBinding: "configuration_test",
+        },
+      },
+      execution,
+    })
+
+    expect(validateTaskResource).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: TEMP_CONTEXT_TASK_KINDS.OctopusApiFetch,
+        params: expect.objectContaining({
+          resourceBinding: "configuration_test",
+        }),
+      }),
+      expect.objectContaining({
+        kind: execution.kind,
+        command: execution.command,
+        feature: PROTECTION_BYPASS_FEATURES.ManagedSiteChannels,
+      }),
+    )
+    expect(response).toEqual({ success: true })
+  })
+
+  it("denies an automatic Octopus task when resource validation rejects its binding", async () => {
+    const validateTaskResource = vi.fn().mockResolvedValue(false)
+    const response = await createDecisionCoordinator({
+      validateTaskResource,
+    }).execute({
+      task: {
+        kind: TEMP_CONTEXT_TASK_KINDS.OctopusApiFetch,
+        params: {
+          originUrl: "https://draft.example.invalid",
+          resourceUsername: "draft-user",
+          fetchUrl: "https://draft.example.invalid/api/v1/channel/list",
+          fetchOptions: { method: "GET" },
+          resourceBinding: "configuration_test",
+        },
+      },
+      execution: {
+        ...automaticExecution,
+        feature: PROTECTION_BYPASS_FEATURES.ManagedSiteChannels,
+      },
+    })
+
+    expect(validateTaskResource).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: TEMP_CONTEXT_TASK_KINDS.OctopusApiFetch,
+        params: expect.objectContaining({
+          originUrl: "https://draft.example.invalid",
+          resourceUsername: "draft-user",
+        }),
+      }),
+      expect.objectContaining({
+        kind: PROTECTION_BYPASS_EXECUTION_KINDS.Automatic,
+      }),
+    )
     expect(response).toEqual({
       success: false,
       code: API_ERROR_CODES.TEMP_WINDOW_POLICY_CONTEXT_INVALID,
@@ -677,7 +839,7 @@ describe("ProtectionBypassCoordinator", () => {
         await releaseCapability.promise
         return { kind: "available", adapter: "tab" } as const
       }),
-      validateNewApiSessionReadResource: vi.fn(async () => {
+      validateTaskResource: vi.fn(async () => {
         events.push("resource")
         return resourceIsCurrent
       }),
@@ -752,7 +914,7 @@ describe("ProtectionBypassCoordinator", () => {
 
     await expect(
       createDecisionCoordinator({
-        validateNewApiSessionReadResource: vi
+        validateTaskResource: vi
           .fn()
           .mockRejectedValue(new Error("resource lookup failed")),
         recordDecision,

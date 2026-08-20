@@ -89,6 +89,17 @@ const canonicalTasks = [
     },
   },
   {
+    kind: TEMP_CONTEXT_TASK_KINDS.OctopusApiFetch,
+    params: {
+      originUrl: "https://example.invalid",
+      resourceUsername: "example-user",
+      fetchUrl: "https://example.invalid/api/v1/channel/list",
+      fetchOptions: { method: "GET" },
+      responseType: "json",
+      requestId: "request-octopus-api",
+    },
+  },
+  {
     kind: TEMP_CONTEXT_TASK_KINDS.OpenContext,
     params: {
       url: "https://example.invalid",
@@ -296,6 +307,7 @@ describe("protection bypass runtime contracts", () => {
         "rendered_title",
         "session_read",
         "new_api_session_read",
+        "octopus_api_fetch",
         "open_context",
       ]),
     )
@@ -530,6 +542,8 @@ describe("protection bypass runtime contracts", () => {
     [TEMP_CONTEXT_TASK_KINDS.RenderedTitle, "originUrl"],
     [TEMP_CONTEXT_TASK_KINDS.SessionRead, "url"],
     [TEMP_CONTEXT_TASK_KINDS.NewApiSessionRead, "origin"],
+    [TEMP_CONTEXT_TASK_KINDS.OctopusApiFetch, "originUrl"],
+    [TEMP_CONTEXT_TASK_KINDS.OctopusApiFetch, "fetchUrl"],
     [TEMP_CONTEXT_TASK_KINDS.OpenContext, "url"],
   ] as const
 
@@ -562,6 +576,104 @@ describe("protection bypass runtime contracts", () => {
       ]),
     )
     expect(isTempContextTask({ ...task, params })).toBe(true)
+  })
+
+  it.each([
+    [
+      "another origin",
+      "https://other.example.invalid/api/v1/channel/list",
+      "GET",
+    ],
+    ["unowned endpoint", "https://example.invalid/api/v1/user/list", "GET"],
+    ["wrong method", "https://example.invalid/api/v1/channel/create", "GET"],
+    [
+      "query authority",
+      "https://example.invalid/api/v1/channel/list?target=other",
+      "GET",
+    ],
+  ])("rejects Octopus %s", (_case, fetchUrl, method) => {
+    expect(
+      isTempContextTask({
+        kind: TEMP_CONTEXT_TASK_KINDS.OctopusApiFetch,
+        params: {
+          originUrl: "https://example.invalid",
+          resourceUsername: "example-user",
+          fetchUrl,
+          fetchOptions: { method },
+        },
+      }),
+    ).toBe(false)
+  })
+
+  it.each([
+    ["extra authority", { authority: "caller-controlled" }],
+    ["non-object fetch options", { fetchOptions: "GET" }],
+    ["invalid request ID", { requestId: 42 }],
+    ["invalid response type", { responseType: "document" }],
+    ["invalid resource binding", { resourceBinding: "untrusted" }],
+  ])("rejects Octopus params with %s", (_case, override) => {
+    expect(
+      isTempContextTask({
+        kind: TEMP_CONTEXT_TASK_KINDS.OctopusApiFetch,
+        params: {
+          originUrl: "https://example.invalid",
+          resourceUsername: "example-user",
+          fetchUrl: "https://example.invalid/api/v1/channel/list",
+          fetchOptions: { method: "GET" },
+          ...override,
+        },
+      }),
+    ).toBe(false)
+  })
+
+  it.each([
+    ["channel list", "/api/v1/channel/list", "GET"],
+    ["cookie login", "/api/v1/user/login", "POST"],
+  ])("allows Octopus configuration-test %s", (_case, pathname, method) => {
+    expect(
+      isTempContextTask({
+        kind: TEMP_CONTEXT_TASK_KINDS.OctopusApiFetch,
+        params: {
+          originUrl: "https://example.invalid",
+          resourceUsername: "example-user",
+          fetchUrl: `https://example.invalid${pathname}`,
+          fetchOptions: { method },
+          resourceBinding: "configuration_test",
+        },
+      }),
+    ).toBe(true)
+  })
+
+  it.each([
+    ["update", "/api/v1/channel/update", "POST"],
+    ["delete", "/api/v1/channel/delete/7", "DELETE"],
+  ])("rejects Octopus configuration-test %s", (_case, pathname, method) => {
+    expect(
+      isTempContextTask({
+        kind: TEMP_CONTEXT_TASK_KINDS.OctopusApiFetch,
+        params: {
+          originUrl: "https://example.invalid",
+          resourceUsername: "example-user",
+          fetchUrl: `https://example.invalid${pathname}`,
+          fetchOptions: { method },
+          resourceBinding: "configuration_test",
+        },
+      }),
+    ).toBe(false)
+  })
+
+  it("keeps persisted Octopus mutations in the protected endpoint allow-list", () => {
+    expect(
+      isTempContextTask({
+        kind: TEMP_CONTEXT_TASK_KINDS.OctopusApiFetch,
+        params: {
+          originUrl: "https://example.invalid",
+          resourceUsername: "example-user",
+          fetchUrl: "https://example.invalid/api/v1/channel/update",
+          fetchOptions: { method: "POST" },
+        },
+      }),
+    ).toBe(true)
   })
 
   it("keeps decision, capability, and denial wire values stable", () => {

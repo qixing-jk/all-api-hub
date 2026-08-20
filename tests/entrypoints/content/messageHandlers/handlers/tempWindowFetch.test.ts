@@ -33,6 +33,7 @@ describe("handlePerformTempWindowFetch", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.unstubAllGlobals()
+    vi.stubGlobal("location", { origin: "https://example.com" })
   })
 
   it("adds the extension header, defaults credentials to include, and relays json responses", async () => {
@@ -54,9 +55,11 @@ describe("handlePerformTempWindowFetch", () => {
     const sendResponse = vi.fn()
     const shouldKeepChannelOpen = handlePerformTempWindowFetch(
       {
+        expectedOrigin: "https://example.com",
         fetchUrl: "https://example.com/api/data",
         fetchOptions: {
           method: "POST",
+          redirect: "follow",
           headers: {
             authorization: "Bearer token",
           },
@@ -91,6 +94,7 @@ describe("handlePerformTempWindowFetch", () => {
       expect.objectContaining({
         method: "POST",
         credentials: "include",
+        redirect: "error",
         headers: expect.objectContaining({
           authorization: "Bearer token",
           [EXTENSION_HEADER_NAME.toLowerCase()]: EXTENSION_HEADER_VALUE,
@@ -135,6 +139,7 @@ describe("handlePerformTempWindowFetch", () => {
     const sendResponse = vi.fn()
     handlePerformTempWindowFetch(
       {
+        expectedOrigin: "https://example.com",
         fetchUrl: "https://example.com/protected",
         fetchOptions: {
           credentials: "omit",
@@ -189,6 +194,7 @@ describe("handlePerformTempWindowFetch", () => {
     const sendResponse = vi.fn()
     handlePerformTempWindowFetch(
       {
+        expectedOrigin: "https://example.com",
         fetchUrl: "https://example.com/rate-limited",
         responseType: "json",
       },
@@ -230,6 +236,7 @@ describe("handlePerformTempWindowFetch", () => {
     const sendResponse = vi.fn()
     handlePerformTempWindowFetch(
       {
+        expectedOrigin: "https://example.com",
         fetchUrl: "https://example.com/gateway",
         responseType: "json",
       },
@@ -275,6 +282,7 @@ describe("handlePerformTempWindowFetch", () => {
     const sendResponse = vi.fn()
     handlePerformTempWindowFetch(
       {
+        expectedOrigin: "https://example.com",
         fetchUrl: "https://example.com/binary",
         responseType: "blob",
       },
@@ -323,6 +331,7 @@ describe("handlePerformTempWindowFetch", () => {
     const sendResponse = vi.fn()
     handlePerformTempWindowFetch(
       {
+        expectedOrigin: "https://example.com",
         fetchUrl: "https://example.com/empty-success",
         responseType: "blob",
       },
@@ -379,6 +388,74 @@ describe("handlePerformTempWindowFetch", () => {
     expect(mockLogCloudflareGuard).not.toHaveBeenCalled()
   })
 
+  it("fails before dispatch when the content context no longer matches the authorized origin", async () => {
+    const fetchMock = vi.fn()
+    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch)
+    vi.stubGlobal("location", { origin: "https://navigated.example.com" })
+
+    const { handlePerformTempWindowFetch } = await import(
+      "~/entrypoints/content/messageHandlers/handlers/tempWindowFetch"
+    )
+
+    const sendResponse = vi.fn()
+    handlePerformTempWindowFetch(
+      {
+        expectedOrigin: "https://example.com",
+        fetchUrl: "https://example.com/api/data",
+        requestId: "req-origin-race",
+      },
+      sendResponse,
+    )
+
+    await vi.waitFor(() => {
+      expect(sendResponse).toHaveBeenCalledWith({
+        transportLifecycle: {
+          upstreamRequestDispatched: false,
+          upstreamResponseReceived: false,
+        },
+        success: false,
+        error: "Temporary context origin changed before fetch",
+      })
+    })
+
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(mockSendRuntimeMessage).not.toHaveBeenCalled()
+  })
+
+  it("fails before dispatch when the fetch URL no longer matches the authorized origin", async () => {
+    const fetchMock = vi.fn()
+    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch)
+    vi.stubGlobal("location", { origin: "https://example.com" })
+
+    const { handlePerformTempWindowFetch } = await import(
+      "~/entrypoints/content/messageHandlers/handlers/tempWindowFetch"
+    )
+
+    const sendResponse = vi.fn()
+    handlePerformTempWindowFetch(
+      {
+        expectedOrigin: "https://example.com",
+        fetchUrl: "https://attacker.example.invalid/api/data",
+        requestId: "req-fetch-origin-race",
+      },
+      sendResponse,
+    )
+
+    await vi.waitFor(() => {
+      expect(sendResponse).toHaveBeenCalledWith({
+        transportLifecycle: {
+          upstreamRequestDispatched: false,
+          upstreamResponseReceived: false,
+        },
+        success: false,
+        error: "Temporary context origin changed before fetch",
+      })
+    })
+
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(mockSendRuntimeMessage).not.toHaveBeenCalled()
+  })
+
   it("logs request-scoped failures when fetch throws", async () => {
     const fetchMock = vi.fn().mockRejectedValue(new Error("network down"))
     vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch)
@@ -390,6 +467,7 @@ describe("handlePerformTempWindowFetch", () => {
     const sendResponse = vi.fn()
     handlePerformTempWindowFetch(
       {
+        expectedOrigin: "https://example.com",
         fetchUrl: "https://example.com/api/data",
         requestId: "req-err",
       },

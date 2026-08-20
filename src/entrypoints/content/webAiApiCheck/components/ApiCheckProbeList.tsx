@@ -1,7 +1,7 @@
 import type { TFunction } from "i18next"
 
 import { ProbeStatusBadge } from "~/components/dialogs/VerifyApiDialog/ProbeStatusBadge"
-import { Button } from "~/components/ui"
+import { Button, BUTTON_LOADING_BEHAVIORS } from "~/components/ui"
 import type { ApiVerificationProbeId } from "~/services/verification/aiApiVerification"
 import {
   getApiVerificationProbeLabel,
@@ -74,6 +74,8 @@ export function ApiCheckProbeList({
                 onClick={() =>
                   probe.isRunning ? onStopProbe(probe.id) : onRunProbe(probe.id)
                 }
+                loading={probe.isRunning}
+                loadingBehavior={BUTTON_LOADING_BEHAVIORS.Interactive}
                 disabled={
                   isRunningAll || (!probe.isRunning && isFetchingModels)
                 }

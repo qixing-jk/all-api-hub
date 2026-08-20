@@ -5,6 +5,7 @@ import type {
   ResourceFieldDescriptor,
   ResourceFieldIssue,
 } from "~/services/apiAdapters/contracts/resourceNative"
+import { RESOURCE_FIELD_TYPES } from "~/services/apiAdapters/contracts/resourceNative"
 
 export type ResourceFieldTextResolver = (t: TFunction) => string
 
@@ -30,12 +31,15 @@ type ResourceFieldPresentationBase<TSection extends string = string> = {
 
 export type ResourceFieldPresentation<TSection extends string = string> =
   | (ResourceFieldPresentationBase<TSection> & {
-      renderer: "select"
+      renderer: typeof RESOURCE_FIELD_TYPES.Select
       /** Frontend-owned label for clearing a nullable single-select projection. */
       resolveNullableOptionLabel?: ResourceFieldTextResolver
     })
   | (ResourceFieldPresentationBase<TSection> & {
-      renderer: Exclude<ResourceFieldDescriptor["type"], "select">
+      renderer: Exclude<
+        ResourceFieldDescriptor["type"],
+        typeof RESOURCE_FIELD_TYPES.Select
+      >
       resolveNullableOptionLabel?: never
     })
 
@@ -51,21 +55,20 @@ export type ResourceEditorFieldPolicy<TSection extends string = string> = {
 
 export const RESOURCE_EDITOR_OPTION_STATE_LABEL_RESOLVERS = {
   loading: (t: TFunction) => t("common:status.loading"),
+  loadingField: (t: TFunction, field: string) =>
+    t("common:status.loadingField", { field }),
   empty: (t: TFunction) => t("ui:multiSelect.noOptions"),
   error: (t: TFunction) => t("common:status.error"),
+  loadField: (t: TFunction, field: string) =>
+    t("common:actions.loadField", { field }),
+  refreshField: (t: TFunction, field: string) =>
+    t("common:actions.refreshField", { field }),
   retry: (t: TFunction) => t("common:actions.retry"),
 } as const
 
-const rendererValues = new Set<ResourceFieldDescriptor["type"]>([
-  "text",
-  "textarea",
-  "number",
-  "boolean",
-  "select",
-  "multi-select",
-  "secret",
-  "date-time",
-])
+const rendererValues = new Set<ResourceFieldDescriptor["type"]>(
+  Object.values(RESOURCE_FIELD_TYPES),
+)
 
 const assertPolicy = <TSection extends string>(
   policy: ResourceEditorFieldPolicy<TSection>,
@@ -82,13 +85,13 @@ const assertPolicy = <TSection extends string>(
     }
     if (
       field.resolveNullableOptionLabel !== undefined &&
-      field.renderer !== "select"
+      field.renderer !== RESOURCE_FIELD_TYPES.Select
     ) {
       throw new Error("invalid resource field policy")
     }
     if (
       field.rows !== undefined &&
-      (field.renderer !== "textarea" ||
+      (field.renderer !== RESOURCE_FIELD_TYPES.Textarea ||
         !Number.isInteger(field.rows) ||
         field.rows < 2 ||
         field.rows > 12)
@@ -97,7 +100,7 @@ const assertPolicy = <TSection extends string>(
     }
     if (
       field.optionSourceFieldIds !== undefined &&
-      (field.renderer !== "select" ||
+      (field.renderer !== RESOURCE_FIELD_TYPES.Select ||
         field.optionSourceFieldIds.length === 0 ||
         field.optionSourceFieldIds.some((fieldId) => !fieldId) ||
         new Set(field.optionSourceFieldIds).size !==
@@ -107,7 +110,7 @@ const assertPolicy = <TSection extends string>(
     }
     if (
       field.customValuesMirrorFieldId !== undefined &&
-      (field.renderer !== "multi-select" ||
+      (field.renderer !== RESOURCE_FIELD_TYPES.MultiSelect ||
         !field.customValuesMirrorFieldId ||
         field.customValuesMirrorFieldId === field.fieldId)
     ) {

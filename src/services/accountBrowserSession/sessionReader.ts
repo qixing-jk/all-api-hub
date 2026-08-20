@@ -1,5 +1,5 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { isAccountSiteType } from "~/constants/siteType"
+import { isAccountSiteType, SITE_TYPES } from "~/constants/siteType"
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
 import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import {
@@ -98,6 +98,7 @@ const normalizeSessionData = (
     source: AccountBrowserSession["source"]
     baseUrl: string
     siteType: AccountBrowserSession["siteType"]
+    allowNewApiAuthProbe?: boolean
     fetchContext?: AccountBrowserSessionFetchContext
   },
 ): AccountBrowserSession | null => {
@@ -130,11 +131,17 @@ const normalizeSessionData = (
       ? payload.siteType
       : undefined
   const sub2apiAuth = normalizeSub2ApiAuth(payload.sub2apiAuth)
+  const transientAuthSiteType =
+    options.allowNewApiAuthProbe === true &&
+    options.siteType === SITE_TYPES.UNKNOWN &&
+    siteTypeHint === SITE_TYPES.NEW_API
+      ? SITE_TYPES.NEW_API
+      : options.siteType
   const transientAuth = normalizeContentSessionTransientAuth(
     payload.transientAuth,
     {
       baseUrl: options.baseUrl,
-      siteType: options.siteType,
+      siteType: transientAuthSiteType,
     },
   )
   const fetchContext =
@@ -160,10 +167,14 @@ export async function readAccountBrowserSessionFromTab(
   options: ReadAccountBrowserSessionFromTabOptions,
 ): Promise<AccountBrowserSession | null> {
   try {
+    const allowNewApiAuthProbe =
+      options.source === ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB &&
+      options.allowNewApiAuthProbe === true
     const response = await sendTabMessageWithRetry(options.tabId, {
       action: RuntimeActionIds.ContentGetUserFromLocalStorage,
       url: options.baseUrl,
       siteType: options.siteType,
+      ...(allowNewApiAuthProbe ? { allowNewApiAuthProbe: true } : {}),
     })
 
     if (!response?.success || !response.data) return null
@@ -172,6 +183,7 @@ export async function readAccountBrowserSessionFromTab(
       source: options.source,
       baseUrl: options.baseUrl,
       siteType: options.siteType,
+      allowNewApiAuthProbe,
       fetchContext: options.fetchContext,
     })
   } catch (error) {

@@ -1,8 +1,8 @@
 {
   "alerts": {
     "authenticationFailed": {
-      "description": "Se rechazaron las credenciales guardadas de AxonHub. Abre los ajustes, actualízalas y luego actualiza la lista de canales.",
-      "title": "Vuelve a iniciar sesión en AxonHub"
+      "description": "Se rechazaron las credenciales guardadas de {{site}}. Abre los ajustes, actualízalas y luego actualiza la lista de canales.",
+      "title": "Vuelve a iniciar sesión en {{site}}"
     },
     "editorLoadError": {
       "description": "No se pudo cargar el formulario del canal. Actualiza la lista de canales y vuelve a intentarlo.",
@@ -21,16 +21,16 @@
       "title": "La actualización del canal requiere revisión"
     },
     "permissionDenied": {
-      "description": "Esta cuenta de AxonHub no puede administrar canales. Usa una cuenta de administrador o actualiza sus permisos y luego vuelve a actualizar.",
-      "title": "Acceso a AxonHub denegado"
+      "description": "Esta cuenta de {{site}} no puede administrar canales. Usa una cuenta de administrador o actualiza sus permisos y luego vuelve a actualizar.",
+      "title": "Acceso a {{site}} denegado"
     },
     "savedRefreshError": {
       "description": "El canal se guardó, pero no se pudo cargar la lista más reciente. Actualiza la lista de canales antes de hacer más cambios.",
       "title": "Canal guardado; es necesario actualizar"
     },
     "unavailable": {
-      "description": "No se pudo acceder a AxonHub. Comprueba el servidor y la red y luego actualiza la lista de canales.",
-      "title": "AxonHub no está disponible"
+      "description": "No se pudo acceder a {{site}}. Comprueba el servidor y la red y luego actualiza la lista de canales.",
+      "title": "{{site}} no está disponible"
     }
   },
   "dialog": {
@@ -141,25 +141,28 @@
     },
     "secret": {
       "actions": {
-        "clear": "Quitar la credencial guardada",
-        "restore": "Conservar la credencial guardada",
+        "cancelLoad": "Cancelar carga",
+        "clear": "Quitar la clave de API guardada",
+        "restore": "Conservar la clave de API guardada",
         "retry": "Reintentar",
-        "view": "Ver credencial guardada"
+        "view": "Ver clave de API guardada"
       },
-      "createHint": "Ingresa una credencial para el nuevo canal.",
-      "keepExistingHint": "Deja este campo en blanco para conservar sin cambios la credencial guardada.",
-      "loadError": "No se pudo cargar la credencial guardada.",
-      "loading": "Cargando la credencial guardada...",
-      "placeholder": "Ingresa una credencial",
+      "createHint": "Ingresa la clave de API del proveedor para el nuevo canal.",
+      "keepExistingHint": "Deja este campo en blanco para conservar sin cambios la clave de API guardada.",
+      "loadableHint": "La clave de API guardada no se muestra aquí. Déjala en blanco para conservarla sin cambios.",
+      "loadError": "No se pudo cargar la clave de API guardada.",
+      "loading": "Cargando la clave de API guardada...",
+      "placeholder": "Ingresa la clave de API del proveedor",
       "replacementBlocked": {
         "multipleCredentials": "Este canal tiene varias claves de API. Administra sus claves en AxonHub."
       },
-      "replacementDisabled": "Este tipo de credencial no se puede reemplazar aquí.",
+      "replacementDisabled": "Esta clave de API no se puede reemplazar aquí.",
+      "replacePlaceholder": "Ingresa una nueva clave de API para reemplazar la guardada",
       "state": {
-        "available": "Hay una credencial guardada disponible.",
-        "masked": "Hay una credencial enmascarada guardada.",
-        "permissionHidden": "La credencial guardada está oculta por permisos.",
-        "unavailable": "No hay ninguna credencial disponible para mostrar."
+        "available": "Hay una clave de API guardada disponible.",
+        "masked": "Hay una clave de API enmascarada guardada.",
+        "permissionHidden": "La clave de API guardada está oculta por permisos.",
+        "unavailable": "La clave de API guardada no se puede mostrar aquí."
       }
     },
     "sections": {
@@ -376,7 +379,6 @@
     },
     "title": "Migrar canales"
   },
-  "resourceDescription": "Busca, crea, edita y elimina canales conectados a este sitio administrado.",
   "statusLabels": {
     "autoDisabled": "Deshabilitado automáticamente",
     "enabled": "Habilitado",
@@ -432,7 +434,9 @@
     "someDeletesFailed_many": "No se pudieron eliminar {{count}} canales: {{error}}",
     "someDeletesFailed_other": "No se pudieron eliminar {{count}} canales: {{error}}",
     "syncCompleted": "Sincronización de modelos completada ({{success}}/{{total}})",
-    "syncFailed": "Falló la sincronización de modelos: {{error}}"
+    "syncCompletedRefreshFailed": "Los modelos se sincronizaron ({{success}}/{{total}}), pero no se pudo actualizar la lista de canales. Actualízala y vuelve a intentarlo.",
+    "syncFailed": "Falló la sincronización de modelos: {{error}}",
+    "syncFailedFallback": "No se pudieron sincronizar los canales"
   },
   "toolbar": {
     "addChannel": "Agregar canal",

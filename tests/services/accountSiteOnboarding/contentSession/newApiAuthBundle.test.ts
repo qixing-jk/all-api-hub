@@ -56,7 +56,7 @@ describe("newApiAuthBundleContentSessionExtractor", () => {
     vi.stubGlobal("localStorage", createLocalStorageMock())
   })
 
-  it("only extracts an exact New API site-type hint", () => {
+  it("extracts known New API sites or an explicitly enabled unknown-site probe", () => {
     expect(
       newApiAuthBundleContentSessionExtractor.canExtract({
         siteTypeHint: SITE_TYPES.NEW_API,
@@ -72,6 +72,11 @@ describe("newApiAuthBundleContentSessionExtractor", () => {
         siteTypeHint: SITE_TYPES.VELOERA,
       }),
     ).toBe(false)
+    expect(
+      newApiAuthBundleContentSessionExtractor.canExtract({
+        allowNewApiAuthProbe: true,
+      }),
+    ).toBe(true)
     expect(newApiAuthBundleContentSessionExtractor.canExtract({})).toBe(false)
   })
 

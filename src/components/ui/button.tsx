@@ -56,6 +56,14 @@ const buttonVariants = cva(
   },
 )
 
+export const BUTTON_LOADING_BEHAVIORS = {
+  Disabled: "disabled",
+  Interactive: "interactive",
+} as const
+
+export type ButtonLoadingBehavior =
+  (typeof BUTTON_LOADING_BEHAVIORS)[keyof typeof BUTTON_LOADING_BEHAVIORS]
+
 /**
  * Button renders a styled Radix-aware button with variants, sizes, icons, and optional loading spinner
  * (replacing the left icon while loading).
@@ -67,6 +75,7 @@ function Button({
   bleed,
   asChild = false,
   loading = false,
+  loadingBehavior = BUTTON_LOADING_BEHAVIORS.Disabled,
   leftIcon,
   rightIcon,
   children,
@@ -81,13 +90,18 @@ function Button({
     asChild?: boolean
     bleed?: boolean
     loading?: boolean
+    /** Keeps a loading button actionable for state-changing actions such as cancel or stop. */
+    loadingBehavior?: ButtonLoadingBehavior
     leftIcon?: React.ReactNode
     rightIcon?: React.ReactNode
     spinnerProps?: React.ComponentProps<typeof Spinner>
     analyticsAction?: ProductAnalyticsScopedActionConfig
   }) {
   const Comp = asChild ? Slot.Root : "button"
-  const isDisabled = Boolean(disabled || loading)
+  const isDisabled = Boolean(
+    disabled ||
+      (loading && loadingBehavior === BUTTON_LOADING_BEHAVIORS.Disabled),
+  )
   const resolvedSize = size ?? "default"
   const analytics = useProductAnalyticsActionTracking({
     analyticsAction,

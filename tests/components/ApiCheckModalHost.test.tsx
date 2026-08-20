@@ -304,6 +304,15 @@ describe("ApiCheckModalHost", () => {
     })
   }
 
+  const pasteIntoField = async (
+    user: ReturnType<typeof userEvent.setup>,
+    field: HTMLElement,
+    value: string,
+  ) => {
+    await user.click(field)
+    await user.paste(value)
+  }
+
   it("opens with empty inputs for manual trigger without selection", async () => {
     await openModal()
 
@@ -605,8 +614,9 @@ describe("ApiCheckModalHost", () => {
     })
     expect(historyButton).toBeDisabled()
 
-    await user.type(baseUrlInput, "https://fresh.example.com/api")
-    await user.type(screen.getByPlaceholderText("sk-..."), "sk-test-fixture")
+    const apiKeyInput = screen.getByPlaceholderText("sk-...")
+    await pasteIntoField(user, baseUrlInput, "https://fresh.example.com/api")
+    await pasteIntoField(user, apiKeyInput, "sk-test-fixture")
 
     await waitFor(() => {
       expectTypedApiCheckMessage(
@@ -1786,14 +1796,12 @@ describe("ApiCheckModalHost", () => {
 
     await openModal()
 
-    await user.type(
-      await screen.findByPlaceholderText("https://example.com/api"),
-      "https://proxy.example.com/api",
+    const baseUrlInput = await screen.findByPlaceholderText(
+      "https://example.com/api",
     )
-    await user.type(
-      await screen.findByPlaceholderText("sk-..."),
-      "sk-test-secret-fixture",
-    )
+    const apiKeyInput = await screen.findByPlaceholderText("sk-...")
+    await pasteIntoField(user, baseUrlInput, "https://proxy.example.com/api")
+    await pasteIntoField(user, apiKeyInput, "sk-test-secret-fixture")
 
     await user.click(
       screen.getByRole("button", {
@@ -2101,14 +2109,12 @@ describe("ApiCheckModalHost", () => {
 
     await openModal()
 
-    await user.type(
-      await screen.findByPlaceholderText("https://example.com/api"),
-      "https://proxy.example.com/api",
+    const baseUrlInput = await screen.findByPlaceholderText(
+      "https://example.com/api",
     )
-    await user.type(
-      await screen.findByPlaceholderText("sk-..."),
-      "sk-test-secret-fixture",
-    )
+    const apiKeyInput = await screen.findByPlaceholderText("sk-...")
+    await pasteIntoField(user, baseUrlInput, "https://proxy.example.com/api")
+    await pasteIntoField(user, apiKeyInput, "sk-test-secret-fixture")
 
     await waitFor(() => {
       expect(sendWebAiApiCheckMessage).toHaveBeenCalledWith(
@@ -2119,7 +2125,7 @@ describe("ApiCheckModalHost", () => {
       )
     })
 
-    await user.type(await screen.findByPlaceholderText("sk-..."), "-rotated")
+    await pasteIntoField(user, apiKeyInput, "-rotated")
 
     await waitFor(() => {
       expect(sendWebAiApiCheckMessage).toHaveBeenCalledWith(
@@ -2188,8 +2194,8 @@ describe("ApiCheckModalHost", () => {
     )
     const apiKeyInput = await screen.findByPlaceholderText("sk-...")
 
-    await user.type(baseUrlInput, "https://proxy.example.com/api")
-    await user.type(apiKeyInput, "sk-test-secret-fixture")
+    await pasteIntoField(user, baseUrlInput, "https://proxy.example.com/api")
+    await pasteIntoField(user, apiKeyInput, "sk-test-secret-fixture")
 
     await waitFor(() => {
       expect(sendWebAiApiCheckMessage).toHaveBeenCalledWith(
@@ -2920,11 +2926,12 @@ describe("ApiCheckModalHost", () => {
       return activeProbeMessage!.runId as string
     })
 
-    await user.click(
-      await screen.findByRole("button", {
-        name: "webAiApiCheck:modal.actions.stopTest",
-      }),
-    )
+    const stopButton = await screen.findByRole("button", {
+      name: "webAiApiCheck:modal.actions.stopTest",
+    })
+    expect(stopButton).toBeEnabled()
+    expect(stopButton).toHaveAttribute("aria-busy", "true")
+    await user.click(stopButton)
 
     expect(sendWebAiApiCheckMessage).toHaveBeenCalledWith(
       WebAiApiCheckMessageTypes.CancelRunProbe,
@@ -4524,14 +4531,14 @@ describe("ApiCheckModalHost", () => {
 
     await openModal()
 
-    await user.type(
-      await screen.findByLabelText("webAiApiCheck:modal.fields.baseUrl"),
-      "https://proxy.example.com/api",
+    const baseUrlInput = await screen.findByLabelText(
+      "webAiApiCheck:modal.fields.baseUrl",
     )
-    await user.type(
-      screen.getByLabelText("webAiApiCheck:modal.fields.apiKey"),
-      "sk-test-missing-model-fixture",
+    const apiKeyInput = screen.getByLabelText(
+      "webAiApiCheck:modal.fields.apiKey",
     )
+    await pasteIntoField(user, baseUrlInput, "https://proxy.example.com/api")
+    await pasteIntoField(user, apiKeyInput, "sk-test-missing-model-fixture")
 
     const probeCard = await screen.findByTestId(
       getWebAiApiCheckProbeTestId("text-generation"),
@@ -4579,12 +4586,16 @@ describe("ApiCheckModalHost", () => {
 
     await openModal()
 
-    await user.type(
-      await screen.findByLabelText("webAiApiCheck:modal.fields.baseUrl"),
-      "https://proxy.example.com/api",
+    const baseUrlInput = await screen.findByLabelText(
+      "webAiApiCheck:modal.fields.baseUrl",
     )
-    await user.type(
-      screen.getByLabelText("webAiApiCheck:modal.fields.apiKey"),
+    const apiKeyInput = screen.getByLabelText(
+      "webAiApiCheck:modal.fields.apiKey",
+    )
+    await pasteIntoField(user, baseUrlInput, "https://proxy.example.com/api")
+    await pasteIntoField(
+      user,
+      apiKeyInput,
       "sk-test-run-all-missing-model-fixture",
     )
     await user.click(

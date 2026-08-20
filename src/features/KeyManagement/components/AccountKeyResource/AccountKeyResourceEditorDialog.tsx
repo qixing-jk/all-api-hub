@@ -1,5 +1,5 @@
 import type { TFunction } from "i18next"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import { useTranslation } from "react-i18next"
 
@@ -18,7 +18,11 @@ import type {
   ResourceFailure,
   ResourceFieldDescriptor,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
-import type { ResourceFieldValue } from "~/services/apiAdapters/contracts/resourceNative"
+import {
+  RESOURCE_FIELD_OPTION_LOAD_TRIGGERS,
+  RESOURCE_FIELD_TYPES,
+  type ResourceFieldValue,
+} from "~/services/apiAdapters/contracts/resourceNative"
 import {
   OPENROUTER_KEY_FIELD_IDS,
   OPENROUTER_KEY_LIMIT_MODES,
@@ -81,13 +85,18 @@ const field = OPENROUTER_KEY_FIELD_IDS
 
 type DynamicOptionField = Extract<
   ResourceFieldDescriptor,
-  { type: "select" | "multi-select" }
+  {
+    type:
+      | typeof RESOURCE_FIELD_TYPES.Select
+      | typeof RESOURCE_FIELD_TYPES.MultiSelect
+  }
 >
 
 const isDynamicOptionField = (
   descriptor: ResourceFieldDescriptor,
 ): descriptor is DynamicOptionField =>
-  (descriptor.type === "select" || descriptor.type === "multi-select") &&
+  (descriptor.type === RESOURCE_FIELD_TYPES.Select ||
+    descriptor.type === RESOURCE_FIELD_TYPES.MultiSelect) &&
   descriptor.optionLoader !== undefined
 
 const isSameProjection = (
@@ -416,13 +425,23 @@ function AccountKeyResourceEditorDialogSession({
     }
   }, [editor.values])
 
-  const dynamicOptionFields = (editor?.fields ?? []).filter(
-    isDynamicOptionField,
+  const dynamicOptionFields = useMemo(
+    () => editor.fields.filter(isDynamicOptionField),
+    [editor.fields],
+  )
+  const automaticDynamicOptionFields = useMemo(
+    () =>
+      dynamicOptionFields.filter(
+        (descriptor) =>
+          descriptor.optionLoader?.trigger !==
+          RESOURCE_FIELD_OPTION_LOAD_TRIGGERS.Manual,
+      ),
+    [dynamicOptionFields],
   )
 
   useEffect(() => {
     if (!onLoadOptions) return
-    for (const candidate of dynamicOptionFields) {
+    for (const candidate of automaticDynamicOptionFields) {
       const signature = (candidate.optionLoader?.dependsOn ?? [])
         .map((fieldId) => JSON.stringify(values[fieldId]))
         .join("|")
@@ -433,7 +452,7 @@ function AccountKeyResourceEditorDialogSession({
       loadedOptionSignaturesRef.current.set(candidate.fieldId, signature)
       onLoadOptions(editor.editorId, candidate.fieldId, values)
     }
-  }, [dynamicOptionFields, editor.editorId, onLoadOptions, values])
+  }, [automaticDynamicOptionFields, editor.editorId, onLoadOptions, values])
 
   const controlledOptionStates:
     | Readonly<Record<string, ResourceEditorControlledOptionState>>
@@ -446,6 +465,9 @@ function AccountKeyResourceEditorDialogSession({
             const isLoading = editor.loadingFieldIds?.includes(
               descriptor.fieldId,
             )
+            const isManual =
+              descriptor.optionLoader?.trigger ===
+              RESOURCE_FIELD_OPTION_LOAD_TRIGGERS.Manual
             // OpenRouter documents creator_user_id as optional and meaningful
             // only for organization-owned keys:
             // https://github.com/OpenRouterTeam/docs/blob/main/openapi/openapi.yaml
@@ -462,7 +484,7 @@ function AccountKeyResourceEditorDialogSession({
                     ? isCreatorAssignmentUnavailable
                       ? "ready"
                       : "error"
-                    : options
+                    : options || isManual
                       ? "ready"
                       : "loading",
                 options: options ?? [],
@@ -503,7 +525,11 @@ function AccountKeyResourceEditorDialogSession({
   const updateValues = (fieldId: string, value: ResourceFieldValue) => {
     const next = { ...valuesRef.current, [fieldId]: value }
     for (const candidate of dynamicOptionFields) {
-      if (candidate.optionLoader?.dependsOn.includes(fieldId)) {
+      if (
+        candidate.optionLoader?.trigger !==
+          RESOURCE_FIELD_OPTION_LOAD_TRIGGERS.Manual &&
+        candidate.optionLoader?.dependsOn.includes(fieldId)
+      ) {
         next[candidate.fieldId] = candidate.nullable ? null : ""
       }
     }

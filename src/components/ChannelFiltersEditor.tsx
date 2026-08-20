@@ -49,6 +49,10 @@ interface ChannelFiltersEditorProps {
   onClickViewVisual: () => void
   onClickViewJson: () => void
   onChangeJsonText: (value: string) => void
+  testIds?: {
+    viewJsonButton?: string
+    jsonEditor?: string
+  }
 }
 
 /**
@@ -82,6 +86,7 @@ export default function ChannelFiltersEditor(props: ChannelFiltersEditorProps) {
     onClickViewVisual,
     onClickViewJson,
     onChangeJsonText,
+    testIds,
   } = props
   const { t } = useTranslation("managedSiteChannels")
   const probeOptions = CHANNEL_MODEL_FILTER_PROBE_IDS.map((probeId) => ({
@@ -118,6 +123,7 @@ export default function ChannelFiltersEditor(props: ChannelFiltersEditorProps) {
             size="sm"
             variant={viewMode === "json" ? "secondary" : "ghost"}
             onClick={onClickViewJson}
+            data-testid={testIds?.viewJsonButton}
           >
             {t("filters.viewMode.json")}
           </Button>
@@ -391,6 +397,7 @@ export default function ChannelFiltersEditor(props: ChannelFiltersEditorProps) {
         <div className="space-y-2">
           <Label>{t("filters.jsonEditor.label")}</Label>
           <Textarea
+            data-testid={testIds?.jsonEditor}
             value={jsonText}
             onChange={(event) => onChangeJsonText(event.target.value)}
             placeholder={t("filters.jsonEditor.placeholder")}

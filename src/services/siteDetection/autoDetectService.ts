@@ -18,6 +18,7 @@ import {
   AIHUBMIX_API_ORIGIN,
   AIHUBMIX_HOSTNAMES,
   isAccountSiteType,
+  SITE_TYPES,
   type AccountSiteType,
 } from "~/constants/siteType"
 import {
@@ -581,6 +582,9 @@ async function getUserDataFromCurrentTab(
       siteType,
       source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
       fetchContext,
+      ...(siteType === SITE_TYPES.UNKNOWN
+        ? { allowNewApiAuthProbe: true }
+        : {}),
       protectionBypassExecution,
       onError(error) {
         contentScriptUnavailable = isMessageReceiverUnavailableError(error)

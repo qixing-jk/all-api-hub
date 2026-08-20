@@ -5,10 +5,14 @@ export const MANAGED_SITE_CHANNELS_TEST_IDS = {
   migrationControls: "managed-site-channels-migration-controls",
   migrationComparison: "managed-site-channels-migration-comparison",
   searchInput: "managed-site-channels-search-input",
+  statusFilterTrigger: "managed-site-channels-status-filter-trigger",
   paginationSummary: "managed-site-channels-pagination-summary",
   deleteChannelConfirmButton: "managed-site-channels-delete-confirm-button",
   deleteChannelCancelButton: "managed-site-channels-delete-cancel-button",
   deleteSelectedButton: "managed-site-channels-delete-selected-button",
+  channelFiltersViewJsonButton: "managed-site-channels-filter-view-json-button",
+  channelFiltersJsonEditor: "managed-site-channels-filter-json-editor",
+  channelFiltersSaveButton: "managed-site-channels-filter-save-button",
 } as const
 
 export const MANAGED_SITE_CHANNEL_ROW_TEST_ID_PREFIX =
@@ -25,38 +29,50 @@ export const MANAGED_SITE_CHANNELS_REFRESH_STATES = {
 /**
  * Returns the stable test id for a managed-site channel table row.
  */
-export function getManagedSiteChannelRowTestId(channelName: string) {
-  return `${MANAGED_SITE_CHANNEL_ROW_TEST_ID_PREFIX}${channelName}`
+export function getManagedSiteChannelRowTestId(rowTestToken: string) {
+  return `${MANAGED_SITE_CHANNEL_ROW_TEST_ID_PREFIX}${rowTestToken}`
 }
 
 /**
  * Returns the stable test id for a managed-site channel row actions trigger.
  */
 export function getManagedSiteChannelRowActionsButtonTestId(
-  channelName: string,
+  rowTestToken: string,
 ) {
-  return `${getManagedSiteChannelRowTestId(channelName)}-actions`
+  return `${getManagedSiteChannelRowTestId(rowTestToken)}-actions`
 }
 
 /**
  * Returns the stable test id for a managed-site channel row selection checkbox.
  */
-export function getManagedSiteChannelRowSelectTestId(channelName: string) {
-  return `${getManagedSiteChannelRowTestId(channelName)}-select`
+export function getManagedSiteChannelRowSelectTestId(rowTestToken: string) {
+  return `${getManagedSiteChannelRowTestId(rowTestToken)}-select`
 }
 
 /**
  * Returns the stable test id for a managed-site channel edit action.
  */
-export function getManagedSiteChannelRowEditActionTestId(channelName: string) {
-  return `${getManagedSiteChannelRowTestId(channelName)}-edit`
+export function getManagedSiteChannelRowEditActionTestId(rowTestToken: string) {
+  return `${getManagedSiteChannelRowTestId(rowTestToken)}-edit`
 }
 
 /**
  * Returns the stable test id for a managed-site channel delete action.
  */
 export function getManagedSiteChannelRowDeleteActionTestId(
-  channelName: string,
+  rowTestToken: string,
 ) {
-  return `${getManagedSiteChannelRowTestId(channelName)}-delete`
+  return `${getManagedSiteChannelRowTestId(rowTestToken)}-delete`
+}
+
+/** Returns the stable test id for a managed-site channel filter action. */
+export function getManagedSiteChannelRowFiltersActionTestId(
+  rowTestToken: string,
+) {
+  return `${getManagedSiteChannelRowTestId(rowTestToken)}-filters`
+}
+
+/** Returns the stable test id for a managed-site channel immediate-sync action. */
+export function getManagedSiteChannelRowSyncActionTestId(rowTestToken: string) {
+  return `${getManagedSiteChannelRowTestId(rowTestToken)}-sync`
 }

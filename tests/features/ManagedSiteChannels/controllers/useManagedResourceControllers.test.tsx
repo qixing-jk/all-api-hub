@@ -18,6 +18,7 @@ import {
   MANAGED_SITE_MUTATION_COMPLETIONS,
   MANAGED_SITE_MUTATION_EFFECT_KINDS,
   MANAGED_SITE_MUTATION_OUTCOMES,
+  type ManagedSiteMutationConfirmedEffect,
   type ManagedSiteMutationResult,
 } from "~/services/managedSites/mutations"
 import {
@@ -47,26 +48,35 @@ const deferred = <T,>() => {
 
 const succeededFacts = (
   facts = createManagedResourceFacts(),
-): ManagedSiteMutationResult<ResourceDisplayFacts> => ({
+  effectKind: ManagedSiteMutationConfirmedEffect["kind"] = MANAGED_SITE_MUTATION_EFFECT_KINDS.ResourceUpdated,
+): Extract<
+  ManagedSiteMutationResult<ResourceDisplayFacts>,
+  { outcome: typeof MANAGED_SITE_MUTATION_OUTCOMES.Succeeded }
+> => ({
   outcome: MANAGED_SITE_MUTATION_OUTCOMES.Succeeded,
   data: facts,
   confirmedEffects: [
     {
-      kind: MANAGED_SITE_MUTATION_EFFECT_KINDS.ResourceUpdated,
+      kind: effectKind,
       resourceKind: MANAGED_RESOURCE_KINDS.Channel,
       resourceId: facts.ref.resourceId,
     },
   ],
 })
 
-const succeededDelete = (): ManagedSiteMutationResult<void> => ({
+const succeededDelete = (
+  resourceId = EXAMPLE_MANAGED_RESOURCE_REF.resourceId,
+): Extract<
+  ManagedSiteMutationResult<void>,
+  { outcome: typeof MANAGED_SITE_MUTATION_OUTCOMES.Succeeded }
+> => ({
   outcome: MANAGED_SITE_MUTATION_OUTCOMES.Succeeded,
   data: undefined,
   confirmedEffects: [
     {
       kind: MANAGED_SITE_MUTATION_EFFECT_KINDS.ResourceDeleted,
       resourceKind: MANAGED_RESOURCE_KINDS.Channel,
-      resourceId: EXAMPLE_MANAGED_RESOURCE_REF.resourceId,
+      resourceId,
     },
   ],
 })
@@ -92,6 +102,26 @@ const useManagedResourceListController = (
   useManagedResourceListControllerBase({
     ...options,
     scopeKey: options.scopeKey ?? EXAMPLE_LIST_SCOPE_KEY,
+  })
+
+const renderIntegratedManagedResourceControllers = (
+  value: ManagedResourceRegistration,
+  options: { search?: string } = {},
+) =>
+  renderHook(() => {
+    const collection = useManagedResourceListController({
+      registration: value,
+      scopeKey: EXAMPLE_MANAGED_RESOURCE_REF.scopeKey,
+      ...options,
+    })
+    const mutation = useManagedResourceMutationController({
+      workspace: collection.workspace,
+      refresh: collection.refreshSilently,
+      resolveRef: collection.resolveRef,
+      acceptMutationResult: collection.acceptMutationResult,
+      acceptDeletionResults: collection.acceptDeletionResults,
+    })
+    return { collection, mutation }
   })
 
 const createAnalytics = () => {
@@ -240,6 +270,30 @@ describe("useManagedResourceListController", () => {
     ])
     expect(analyticsPayload).not.toContain("token-private")
     expect(analyticsPayload).not.toContain("private.example.invalid")
+  })
+
+  it("returns a structured reconciliation outcome and keeps the last accepted rows on failure", async () => {
+    const list = vi
+      .fn()
+      .mockResolvedValueOnce({ items: [createManagedResourceFacts("old")] })
+      .mockRejectedValueOnce(new Error("refresh failed"))
+    const workspace = createManagedResourceWorkspace({ list })
+    const value = registration(async () => workspace)
+    const { result } = renderHook(() =>
+      useManagedResourceListController({ registration: value }),
+    )
+    await waitFor(() => expect(result.current.rows[0]?.name).toContain("old"))
+
+    let outcome: Awaited<ReturnType<typeof result.current.reconcile>>
+    await act(async () => {
+      outcome = await result.current.reconcile()
+    })
+
+    expect(outcome!).toEqual({
+      outcome: "failed",
+      failure: { code: MANAGED_RESOURCE_FAILURE_CODES.Unexpected },
+    })
+    expect(result.current.rows[0]?.name).toContain("old")
   })
 
   it("keeps crafted ref, secret, and adapter-message sentinels out of public state and analytics", async () => {
@@ -954,6 +1008,262 @@ describe("useManagedResourceListController", () => {
     ])
     expect(list).toHaveBeenCalledOnce()
   })
+
+  it.each([
+    {
+      mode: "edit" as const,
+      saved: createManagedResourceFacts(
+        EXAMPLE_MANAGED_RESOURCE_REF.resourceId,
+        "Renamed resource",
+      ),
+      expectedNames: ["Renamed resource"],
+    },
+    {
+      mode: "create" as const,
+      saved: createManagedResourceFacts("created-resource", "Created resource"),
+      expectedNames: [
+        "Created resource",
+        "Example resource opaque-resource-id",
+      ],
+    },
+  ])(
+    "accepts complete $mode results into the collection without listing again",
+    async ({ mode, saved, expectedNames }) => {
+      const editor = createManagedResourceEditor({
+        submit: vi.fn(async () =>
+          succeededFacts(
+            saved,
+            mode === "create"
+              ? MANAGED_SITE_MUTATION_EFFECT_KINDS.ResourceCreated
+              : MANAGED_SITE_MUTATION_EFFECT_KINDS.ResourceUpdated,
+          ),
+        ),
+      })
+      const list = vi.fn(async () => ({
+        items: [createManagedResourceFacts()],
+      }))
+      const workspace = createManagedResourceWorkspace({
+        list,
+        openCreateEditor: vi.fn(async () => editor),
+        openEditEditor: vi.fn(async () => editor),
+      })
+      const value = registration(async () => workspace)
+      const { result } = renderIntegratedManagedResourceControllers(value)
+
+      await waitFor(() =>
+        expect(result.current.collection.allRows).toHaveLength(1),
+      )
+      if (mode === "create") {
+        await act(async () => result.current.mutation.openCreate())
+      } else {
+        const rowKey = result.current.collection.allRows[0]!.rowKey
+        await act(async () => result.current.mutation.openEdit(rowKey))
+      }
+      await act(async () =>
+        result.current.mutation.submit({ name: saved.displayName }),
+      )
+
+      expect(result.current.collection.allRows.map(({ name }) => name)).toEqual(
+        expectedNames,
+      )
+      expect(list).toHaveBeenCalledOnce()
+    },
+  )
+
+  it("falls back to an authoritative list when search makes edit membership ambiguous", async () => {
+    const saved = createManagedResourceFacts(
+      EXAMPLE_MANAGED_RESOURCE_REF.resourceId,
+      "Renamed resource",
+    )
+    const editor = createManagedResourceEditor({
+      submit: vi.fn(async () => succeededFacts(saved)),
+    })
+    const list = vi
+      .fn()
+      .mockResolvedValueOnce({ items: [createManagedResourceFacts()] })
+      .mockResolvedValueOnce({ items: [saved] })
+    const workspace = createManagedResourceWorkspace({
+      list,
+      openEditEditor: vi.fn(async () => editor),
+    })
+    const value = registration(async () => workspace)
+    const { result } = renderIntegratedManagedResourceControllers(value, {
+      search: "resource",
+    })
+
+    await waitFor(() =>
+      expect(result.current.collection.allRows).toHaveLength(1),
+    )
+    const rowKey = result.current.collection.allRows[0]!.rowKey
+    await act(async () => result.current.mutation.openEdit(rowKey))
+    await act(async () => result.current.mutation.submit({ name: "Renamed" }))
+
+    expect(result.current.collection.allRows[0]?.name).toBe("Renamed resource")
+    expect(list).toHaveBeenCalledTimes(2)
+  })
+
+  it("supersedes an older collection before accepting a complete edit result", async () => {
+    const staleCollection = deferred<{
+      items: readonly ResourceDisplayFacts[]
+    }>()
+    const saved = createManagedResourceFacts(
+      EXAMPLE_MANAGED_RESOURCE_REF.resourceId,
+      "Saved resource",
+    )
+    const editor = createManagedResourceEditor({
+      submit: vi.fn(async () => succeededFacts(saved)),
+    })
+    const list = vi
+      .fn()
+      .mockResolvedValueOnce({ items: [createManagedResourceFacts()] })
+      .mockImplementationOnce(() => staleCollection.promise)
+    const workspace = createManagedResourceWorkspace({
+      list,
+      openEditEditor: vi.fn(async () => editor),
+    })
+    const value = registration(async () => workspace)
+    const { result } = renderIntegratedManagedResourceControllers(value)
+
+    await waitFor(() =>
+      expect(result.current.collection.allRows).toHaveLength(1),
+    )
+    const rowKey = result.current.collection.allRows[0]!.rowKey
+    await act(async () => result.current.mutation.openEdit(rowKey))
+    let staleRefresh!: Promise<boolean>
+    act(() => {
+      staleRefresh = result.current.collection.refresh()
+    })
+    await waitFor(() => expect(result.current.collection.isLoading).toBe(true))
+
+    await act(async () => result.current.mutation.submit({ name: "Saved" }))
+    expect(result.current.collection.allRows[0]?.name).toBe("Saved resource")
+    expect(result.current.collection.isLoading).toBe(false)
+
+    await act(async () => {
+      staleCollection.resolve({
+        items: [
+          createManagedResourceFacts(
+            EXAMPLE_MANAGED_RESOURCE_REF.resourceId,
+            "Stale resource",
+          ),
+        ],
+      })
+      await staleRefresh
+    })
+    expect(result.current.collection.allRows[0]?.name).toBe("Saved resource")
+    expect(list).toHaveBeenCalledTimes(2)
+  })
+
+  it("removes only confirmed deleted rows without listing again", async () => {
+    const first = createManagedResourceFacts("first", "First resource")
+    const second = createManagedResourceFacts("second", "Second resource")
+    const list = vi.fn(async () => ({ items: [first, second] }))
+    const workspace = createManagedResourceWorkspace({
+      list,
+      delete: vi.fn(async (ref) =>
+        ref.resourceId === first.ref.resourceId
+          ? succeededDelete(ref.resourceId)
+          : {
+              outcome: MANAGED_SITE_MUTATION_OUTCOMES.Rejected,
+              diagnostic: { message: "permission denied" },
+            },
+      ),
+    })
+    const value = registration(async () => workspace)
+    const { result } = renderIntegratedManagedResourceControllers(value)
+
+    await waitFor(() =>
+      expect(result.current.collection.allRows).toHaveLength(2),
+    )
+    const [firstRow, secondRow] = result.current.collection.allRows
+    act(() =>
+      result.current.collection.setSelectedRowKeys({
+        [firstRow!.rowKey]: true,
+        [secondRow!.rowKey]: true,
+      }),
+    )
+    await act(async () =>
+      result.current.mutation.openBulkDelete([
+        firstRow!.rowKey,
+        secondRow!.rowKey,
+      ]),
+    )
+    await act(async () => result.current.mutation.confirmDelete())
+
+    expect(result.current.collection.allRows.map(({ name }) => name)).toEqual([
+      "Second resource",
+    ])
+    expect(result.current.collection.selectedRowKeys).toEqual({
+      [secondRow!.rowKey]: true,
+    })
+    expect(
+      result.current.collection.resolveRef(firstRow!.rowKey),
+    ).toBeUndefined()
+    expect(
+      result.current.mutation.deleteState.results.map(({ status }) => status),
+    ).toEqual(["success", "failed"])
+    expect(list).toHaveBeenCalledOnce()
+  })
+
+  it("rejects a late deletion result from a replaced deployment scope", async () => {
+    const oldFacts = createManagedResourceFacts("old", "Old resource")
+    const replacementScope = "https://replacement.example.invalid"
+    const replacementFacts = {
+      ...createManagedResourceFacts("replacement", "Replacement resource"),
+      ref: {
+        ...EXAMPLE_MANAGED_RESOURCE_REF,
+        scopeKey: replacementScope,
+        resourceId: "replacement",
+      },
+    }
+    const oldRegistration = registration(async () =>
+      createManagedResourceWorkspace({
+        list: vi.fn(async () => ({ items: [oldFacts] })),
+      }),
+    )
+    const replacementRegistration = registration(async () =>
+      createManagedResourceWorkspace({
+        list: vi.fn(async () => ({ items: [replacementFacts] })),
+      }),
+    )
+    const { result, rerender } = renderHook(
+      ({ value, scopeKey }) =>
+        useManagedResourceListController({
+          registration: value,
+          scopeKey,
+        }),
+      {
+        initialProps: {
+          value: oldRegistration,
+          scopeKey: EXAMPLE_MANAGED_RESOURCE_REF.scopeKey,
+        },
+      },
+    )
+
+    await waitFor(() =>
+      expect(result.current.allRows[0]?.name).toBe("Old resource"),
+    )
+    const oldRowKey = result.current.allRows[0]!.rowKey
+    rerender({
+      value: replacementRegistration,
+      scopeKey: replacementScope,
+    })
+    await waitFor(() =>
+      expect(result.current.allRows[0]?.name).toBe("Replacement resource"),
+    )
+
+    let accepted = true
+    act(() => {
+      accepted = result.current.acceptDeletionResults([
+        { rowKey: oldRowKey, ref: oldFacts.ref },
+      ])
+    })
+
+    expect(accepted).toBe(false)
+    expect(result.current.allRows.map(({ name }) => name)).toEqual([
+      "Replacement resource",
+    ])
+  })
 })
 
 describe("useManagedResourceMutationController", () => {
@@ -988,6 +1298,32 @@ describe("useManagedResourceMutationController", () => {
 
     expect(result.current.editor).toBeNull()
     await expect(submission).resolves.toBe(saved)
+  })
+
+  it("does not locally accept a create result with an update effect", async () => {
+    const editor = createManagedResourceEditor({
+      submit: vi.fn(async () =>
+        succeededFacts(createManagedResourceFacts("created")),
+      ),
+    })
+    const workspace = createManagedResourceWorkspace({
+      openCreateEditor: vi.fn(async () => editor),
+    })
+    const refresh = vi.fn(async () => true)
+    const acceptMutationResult = vi.fn(() => true)
+    const { result } = renderHook(() =>
+      useManagedResourceMutationController({
+        workspace,
+        refresh,
+        acceptMutationResult,
+      }),
+    )
+
+    await act(async () => result.current.openCreate())
+    await act(async () => result.current.submit({ name: "Created" }))
+
+    expect(acceptMutationResult).not.toHaveBeenCalled()
+    expect(refresh).toHaveBeenCalledOnce()
   })
 
   it("keeps provider rejection reusable and stores only a controlled failure", async () => {
@@ -1498,11 +1834,13 @@ describe("useManagedResourceMutationController", () => {
     const workspace = createManagedResourceWorkspace({
       openEditEditor: vi.fn(() => late.promise),
     })
+    const analytics = createAnalytics()
     let currentRef = EXAMPLE_MANAGED_RESOURCE_REF
     const { result } = renderHook(() =>
       useManagedResourceMutationController({
         workspace,
         resolveRef: () => currentRef,
+        analytics: analytics.analytics,
       }),
     )
 
@@ -1518,6 +1856,16 @@ describe("useManagedResourceMutationController", () => {
 
     expect(result.current.editor).toBeNull()
     expect(result.current.editorMode).toBeNull()
+    expect(analytics.startAction).toHaveBeenCalledOnce()
+    expect(analytics.complete).toHaveBeenCalledOnce()
+    expect(analytics.complete).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Cancelled,
+      {
+        insights: {
+          managedSiteType: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.AxonHub,
+        },
+      },
+    )
   })
 
   it("recovers the list after a not-found detail read without publishing stale detail", async () => {
@@ -1939,6 +2287,14 @@ describe("useManagedResourceMutationController", () => {
     )
 
     await act(async () => result.current.openEdit(rowKey))
+    expect(analytics.startAction).toHaveBeenCalledOnce()
+    expect(analytics.startAction).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.UpdateManagedSiteChannel,
+      surfaceId:
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsRowActions,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
     let first!: ReturnType<typeof result.current.submit>
     let second!: ReturnType<typeof result.current.submit>
     act(() => {
@@ -1955,16 +2311,43 @@ describe("useManagedResourceMutationController", () => {
     })
 
     expect(analytics.startAction).toHaveBeenCalledOnce()
-    expect(analytics.startAction).toHaveBeenCalledWith({
-      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
-      actionId: PRODUCT_ANALYTICS_ACTION_IDS.UpdateManagedSiteChannel,
-      surfaceId:
-        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsRowActions,
-      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
-    })
     expect(analytics.complete).toHaveBeenCalledOnce()
     expect(analytics.complete).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Success,
+      {
+        insights: {
+          managedSiteType: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.AxonHub,
+        },
+      },
+    )
+  })
+
+  it("starts create analytics on editor open and completes cancellation once", async () => {
+    const workspace = createManagedResourceWorkspace()
+    const analytics = createAnalytics()
+    const { result } = renderHook(() =>
+      useManagedResourceMutationController({
+        workspace,
+        analytics: analytics.analytics,
+      }),
+    )
+
+    await act(async () => result.current.openCreate())
+
+    expect(analytics.startAction).toHaveBeenCalledOnce()
+    expect(analytics.startAction).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.CreateManagedSiteChannel,
+      surfaceId:
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsToolbar,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+
+    act(() => result.current.closeEditor())
+
+    expect(analytics.complete).toHaveBeenCalledOnce()
+    expect(analytics.complete).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Cancelled,
       {
         insights: {
           managedSiteType: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.AxonHub,
@@ -2184,6 +2567,65 @@ describe("useManagedResourceMutationController", () => {
       expect(JSON.stringify(result.current.deleteState)).not.toContain(secret)
     },
   )
+
+  it("does not locally accept an uncertain delete result", async () => {
+    const workspace = createManagedResourceWorkspace({
+      delete: vi.fn(async () => ({
+        outcome: MANAGED_SITE_MUTATION_OUTCOMES.Uncertain,
+        diagnostic: { message: "mutation state uncertain" },
+      })),
+    })
+    const refresh = vi.fn(async () => true)
+    const acceptDeletionResults = vi.fn(() => true)
+    const { result } = renderHook(() =>
+      useManagedResourceMutationController({
+        workspace,
+        refresh,
+        resolveRef: () => EXAMPLE_MANAGED_RESOURCE_REF,
+        acceptDeletionResults,
+      }),
+    )
+
+    act(() => {
+      result.current.openDelete("opaque-row")
+    })
+    await act(async () => result.current.confirmDelete())
+
+    expect(acceptDeletionResults).not.toHaveBeenCalled()
+    expect(refresh).toHaveBeenCalledOnce()
+    expect(result.current.deleteState.results[0]?.status).toBe("uncertain")
+  })
+
+  it("does not locally accept a delete effect for another resource", async () => {
+    const matching = succeededDelete()
+    const workspace = createManagedResourceWorkspace({
+      delete: vi.fn(async () => ({
+        ...matching,
+        confirmedEffects: [
+          ...matching.confirmedEffects,
+          ...succeededDelete("another-resource").confirmedEffects,
+        ],
+      })),
+    })
+    const refresh = vi.fn(async () => true)
+    const acceptDeletionResults = vi.fn(() => true)
+    const { result } = renderHook(() =>
+      useManagedResourceMutationController({
+        workspace,
+        refresh,
+        resolveRef: () => EXAMPLE_MANAGED_RESOURCE_REF,
+        acceptDeletionResults,
+      }),
+    )
+
+    act(() => {
+      result.current.openDelete("opaque-row")
+    })
+    await act(async () => result.current.confirmDelete())
+
+    expect(acceptDeletionResults).not.toHaveBeenCalled()
+    expect(refresh).toHaveBeenCalledOnce()
+  })
 
   it("owns single-delete open, cancel, capability, and stale-row guards", async () => {
     let currentRef = EXAMPLE_MANAGED_RESOURCE_REF

@@ -34,13 +34,14 @@ export function handlePerformTempWindowFetch(
   const perform = async () => {
     try {
       const {
+        expectedOrigin,
         fetchUrl,
         fetchOptions = {},
         responseType = "json",
         requestId,
       } = request
 
-      if (!fetchUrl) {
+      if (!fetchUrl || !expectedOrigin) {
         throw new Error("Invalid fetch request")
       }
 
@@ -53,6 +54,7 @@ export function handlePerformTempWindowFetch(
       }
 
       const normalizedOptions = normalizeFetchOptions(fetchOptions)
+      normalizedOptions.redirect = "error"
       // Respect caller-provided credentials so token-auth flows can omit cookies.
       // Cookie-auth flows should explicitly set credentials="include" when needed.
       if (!normalizedOptions.credentials) {
@@ -62,6 +64,14 @@ export function handlePerformTempWindowFetch(
       const requestHeaders = new Headers(normalizedOptions.headers)
       requestHeaders.set(EXTENSION_HEADER_NAME, EXTENSION_HEADER_VALUE)
       normalizedOptions.headers = Object.fromEntries(requestHeaders.entries())
+
+      const normalizedExpectedOrigin = new URL(expectedOrigin).origin
+      if (
+        globalThis.location.origin !== normalizedExpectedOrigin ||
+        new URL(fetchUrl).origin !== normalizedExpectedOrigin
+      ) {
+        throw new Error("Temporary context origin changed before fetch")
+      }
 
       transportLifecycle.upstreamRequestDispatched = true
       if (typeof requestId === "string" && requestId.length > 0) {

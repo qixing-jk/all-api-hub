@@ -1,8 +1,8 @@
 {
   "alerts": {
     "authenticationFailed": {
-      "description": "保存されている AxonHub の認証情報が拒否されました。設定を開いて更新し、チャネル一覧を再読み込みしてください。",
-      "title": "AxonHub に再度サインインしてください"
+      "description": "保存されている {{site}} の認証情報が拒否されました。設定を開いて更新し、チャネル一覧を再読み込みしてください。",
+      "title": "{{site}} に再度サインインしてください"
     },
     "editorLoadError": {
       "description": "チャネルフォームを読み込めませんでした。チャネル一覧を更新してから再試行してください。",
@@ -21,16 +21,16 @@
       "title": "チャネル更新の確認が必要です"
     },
     "permissionDenied": {
-      "description": "この AxonHub アカウントではチャネルを管理できません。管理者アカウントを使用するか権限を更新してから、再読み込みしてください。",
-      "title": "AxonHub へのアクセスが拒否されました"
+      "description": "この {{site}} アカウントではチャネルを管理できません。管理者アカウントを使用するか権限を更新してから、再読み込みしてください。",
+      "title": "{{site}} へのアクセスが拒否されました"
     },
     "savedRefreshError": {
       "description": "チャネルは保存されましたが、最新の一覧を読み込めませんでした。さらに変更する前にチャネル一覧を更新してください。",
       "title": "チャネルを保存しました。更新が必要です"
     },
     "unavailable": {
-      "description": "AxonHub に接続できませんでした。サーバーとネットワークを確認してから、チャネル一覧を再読み込みしてください。",
-      "title": "AxonHub を利用できません"
+      "description": "{{site}} に接続できませんでした。サーバーとネットワークを確認してから、チャネル一覧を再読み込みしてください。",
+      "title": "{{site}} を利用できません"
     }
   },
   "dialog": {
@@ -141,25 +141,28 @@
     },
     "secret": {
       "actions": {
-        "clear": "保存済み認証情報を削除",
-        "restore": "保存済み認証情報を保持",
+        "cancelLoad": "読み込みをキャンセル",
+        "clear": "保存済み API キーを削除",
+        "restore": "保存済み API キーを保持",
         "retry": "再試行",
-        "view": "保存済み認証情報を表示"
+        "view": "保存済み API キーを表示"
       },
-      "createHint": "新しいチャネルの認証情報を入力してください。",
-      "keepExistingHint": "保存済みの認証情報を変更しない場合は、このフィールドを空欄のままにしてください。",
-      "loadError": "保存済み認証情報を読み込めませんでした。",
-      "loading": "保存済みの認証情報を読み込んでいます…",
-      "placeholder": "認証情報を入力",
+      "createHint": "新しいチャネルで使用するアップストリーム API キーを入力してください。",
+      "keepExistingHint": "保存済み API キーを変更しない場合は、このフィールドを空欄のままにしてください。",
+      "loadableHint": "保存済み API キーはここには表示されません。変更しない場合は空欄のままにしてください。",
+      "loadError": "保存済み API キーを読み込めませんでした。",
+      "loading": "保存済み API キーを読み込んでいます…",
+      "placeholder": "アップストリーム API キーを入力",
       "replacementBlocked": {
         "multipleCredentials": "このチャネルには複数の API キーがあります。キーは AxonHub で管理してください。"
       },
-      "replacementDisabled": "この認証情報の種類はここでは置き換えられません。",
+      "replacementDisabled": "この API キーはここでは置き換えられません。",
+      "replacePlaceholder": "保存済みキーを置き換える新しい API キーを入力",
       "state": {
-        "available": "保存済みの認証情報があります。",
-        "masked": "マスクされた認証情報が保存されています。",
-        "permissionHidden": "保存済み認証情報は権限により非表示です。",
-        "unavailable": "表示できる認証情報がありません。"
+        "available": "保存済み API キーがあります。",
+        "masked": "マスクされた API キーが保存されています。",
+        "permissionHidden": "保存済み API キーは権限により非表示です。",
+        "unavailable": "保存済み API キーはここでは表示できません。"
       }
     },
     "sections": {
@@ -371,7 +374,6 @@
     },
     "title": "チャネル移行"
   },
-  "resourceDescription": "この管理対象サイトに接続されたチャネルを検索、作成、編集、削除できます。",
   "statusLabels": {
     "autoDisabled": "自動無効",
     "enabled": "有効",
@@ -423,7 +425,9 @@
     "revealKeyUnsupported": "この管理対象サイトではチャネルキーを表示できません",
     "someDeletesFailed_other": "{{count}} 個のチャネル削除に失敗しました: {{error}}",
     "syncCompleted": "モデル同期が完了しました ({{success}}/{{total}})",
-    "syncFailed": "モデル同期に失敗しました: {{error}}"
+    "syncCompletedRefreshFailed": "モデルは同期されました（{{success}}/{{total}}）が、チャネル一覧を更新できませんでした。更新してもう一度お試しください。",
+    "syncFailed": "モデル同期に失敗しました: {{error}}",
+    "syncFailedFallback": "チャネルを同期できませんでした"
   },
   "toolbar": {
     "addChannel": "チャネルを追加",

@@ -1,4 +1,10 @@
-import { CalendarDays, Cpu, JapaneseYen, KeyRound, Plus } from "lucide-react"
+import {
+  CalendarDays,
+  CircleDollarSign,
+  Cpu,
+  KeyRound,
+  Plus,
+} from "lucide-react"
 import type { MouseEvent } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -180,7 +186,7 @@ export default function ActionButtons({
                   aria-label={t("navigation.externalCheckinAll")}
                 >
                   {/* Match per-account indicator colors: red when not checked in today, green when done. */}
-                  <JapaneseYen
+                  <CircleDollarSign
                     className={`h-4 w-4 ${
                       hasUncheckedExternalCheckIns
                         ? "text-red-500"

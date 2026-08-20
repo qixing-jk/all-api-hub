@@ -4,8 +4,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import SiteInfo from "~/features/AccountManagement/components/AccountList/SiteInfo"
-import { TEMP_WINDOW_HEALTH_STATUS_CODES } from "~/types"
+import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
+import type { DisplaySiteData } from "~/types"
+import {
+  AuthTypeEnum,
+  SiteHealthStatus,
+  TEMP_WINDOW_HEALTH_STATUS_CODES,
+} from "~/types"
 import { formatLocaleDateTime } from "~/utils/core/formatters"
+import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const createDeferred = <T,>() => {
@@ -140,8 +147,8 @@ vi.mock("~/utils/navigation", () => ({
   openSettingsTab: mockOpenSettingsTab,
 }))
 
-const buildSite = (overrides: Record<string, unknown> = {}) =>
-  ({
+const buildSite = (overrides: Partial<DisplaySiteData> = {}) =>
+  buildDisplaySiteData({
     id: "acc-1",
     disabled: false,
     name: "Site",
@@ -150,15 +157,15 @@ const buildSite = (overrides: Record<string, unknown> = {}) =>
     siteType: SITE_TYPES.UNKNOWN,
     token: "token",
     userId: "1",
-    authType: "access_token",
+    authType: AuthTypeEnum.AccessToken,
     balance: { USD: 0, CNY: 0 },
     todayConsumption: { USD: 0, CNY: 0 },
     todayIncome: { USD: 0, CNY: 0 },
     todayTokens: { upload: 0, download: 0 },
-    health: { status: "healthy" },
+    health: { status: SiteHealthStatus.Healthy },
     checkIn: { enableDetection: false },
     ...overrides,
-  }) as any
+  })
 
 describe("SiteInfo", () => {
   beforeEach(() => {
@@ -209,10 +216,21 @@ describe("SiteInfo", () => {
     )
   })
 
+  it("renders plain tags without search highlights", () => {
+    render(<SiteInfo site={buildSite({ tags: ["team", "backup"] })} />)
+
+    const tags = screen.getByTitle("team, backup")
+
+    expect(tags).toHaveTextContent("team, backup")
+    expect(tags.querySelector("mark")).toBeNull()
+  })
+
   it("renders the neutral health indicator for an unknown health status", () => {
     render(
       <SiteInfo
-        site={buildSite({ health: { status: "unexpected-status" } })}
+        site={buildSite({
+          health: { status: "unexpected-status" as SiteHealthStatus },
+        })}
       />,
     )
 
@@ -342,6 +360,57 @@ describe("SiteInfo", () => {
     }
   })
 
+  it("keeps provider and custom check-in actions independently actionable", async () => {
+    const user = userEvent.setup()
+    const dateNowSpy = vi
+      .spyOn(Date, "now")
+      .mockReturnValue(new Date(2026, 0, 2, 10, 0, 0).getTime())
+
+    try {
+      render(
+        <SiteInfo
+          site={buildSite({
+            checkIn: {
+              enableDetection: true,
+              siteStatus: {
+                isCheckedInToday: true,
+                lastDetectedAt: new Date(2026, 0, 2, 9, 0, 0).getTime(),
+              },
+              customCheckIn: {
+                url: "https://check-in.example.invalid",
+                isCheckedInToday: true,
+                openRedeemWithCheckIn: false,
+              },
+            },
+          })}
+        />,
+      )
+
+      const siteCheckInAction = await screen.findByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.siteCheckInStatusButton,
+      )
+      const customCheckInAction = await screen.findByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.customCheckInStatusButton,
+      )
+
+      await user.click(siteCheckInAction)
+      expect(mockOpenCheckInPage).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "acc-1" }),
+      )
+      expect(mockHandleMarkCustomCheckInAsCheckedIn).not.toHaveBeenCalled()
+
+      await user.click(customCheckInAction)
+      expect(mockHandleMarkCustomCheckInAsCheckedIn).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "acc-1" }),
+      )
+      expect(mockOpenCustomCheckInPage).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "acc-1" }),
+      )
+    } finally {
+      dateNowSpy.mockRestore()
+    }
+  })
+
   it("hides View on LDOH when no match is available", async () => {
     getLdohSearchUrlForAccountUrlMock.mockReturnValue(null)
 
@@ -374,7 +443,7 @@ describe("SiteInfo", () => {
       <SiteInfo
         site={buildSite({
           health: {
-            status: "warning",
+            status: SiteHealthStatus.Warning,
             code: TEMP_WINDOW_HEALTH_STATUS_CODES.PERMISSION_REQUIRED,
             reason: "Permission required",
           },
@@ -406,7 +475,7 @@ describe("SiteInfo", () => {
       <SiteInfo
         site={buildSite({
           health: {
-            status: "warning",
+            status: SiteHealthStatus.Warning,
             code: TEMP_WINDOW_HEALTH_STATUS_CODES.DISABLED,
             reason: "Temp window fallback disabled",
           },
@@ -440,7 +509,7 @@ describe("SiteInfo", () => {
       <SiteInfo
         site={buildSite({
           health: {
-            status: "warning",
+            status: SiteHealthStatus.Warning,
             code: TEMP_WINDOW_HEALTH_STATUS_CODES.PERMISSION_REQUIRED,
             reason: "Permission required",
           },

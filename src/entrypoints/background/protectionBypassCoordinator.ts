@@ -26,7 +26,6 @@ import {
   PROTECTION_BYPASS_EXECUTION_VERSION,
   PROTECTION_BYPASS_USER_COMMAND_FEATURES,
   TEMP_CONTEXT_TASK_KINDS,
-  type NewApiChannelKeyResource,
   type ProtectionBypassExecuteRequest,
   type ProtectionBypassExecutionResolutionFailure,
   type ProtectionBypassSurface,
@@ -44,6 +43,10 @@ import { hasWindowsAPI } from "~/utils/browser/browserApi"
 import { isProtectionBypassFirefoxEnv } from "~/utils/browser/protectionBypass"
 import { t } from "~/utils/i18n/core"
 
+import {
+  validateProtectionBypassTaskResource,
+  type ValidateProtectionBypassTaskResource,
+} from "./protectionBypassResourceValidation"
 import {
   executeAuthorizedTempContextTask,
   type AuthorizedTempContextOutcome,
@@ -118,44 +121,6 @@ async function resolveCurrentCapability(
   }
 }
 
-/** Confirms a New API session read still targets the configured site and channel. */
-async function validateCurrentNewApiSessionReadResource(
-  resource: NewApiChannelKeyResource,
-): Promise<boolean> {
-  try {
-    const [
-      { SITE_TYPES },
-      { resolveManagedSiteRuntimeConfigForType },
-      serviceModule,
-    ] = await Promise.all([
-      import("~/constants/siteType"),
-      import("~/services/managedSites/runtimeConfig"),
-      import("~/services/managedSites/managedSiteService"),
-    ])
-    const preferences = await userPreferences.getPreferencesStrict()
-    const runtimeConfig = resolveManagedSiteRuntimeConfigForType(
-      preferences,
-      SITE_TYPES.NEW_API,
-    )
-    if (
-      !runtimeConfig ||
-      new URL(runtimeConfig.config.baseUrl).origin !== resource.origin ||
-      runtimeConfig.config.userId.trim() !== resource.userId
-    ) {
-      return false
-    }
-
-    const channels = await serviceModule
-      .getManagedSiteServiceForType(SITE_TYPES.NEW_API)
-      .searchChannel(runtimeConfig.config, String(resource.channelId))
-    return Boolean(
-      channels?.items?.some((channel) => channel.id === resource.channelId),
-    )
-  } catch {
-    return false
-  }
-}
-
 /** Resolves plain invocation intent without consulting runtime grant state. */
 export function resolveProtectionBypassExecution(
   execution: unknown,
@@ -199,7 +164,7 @@ export function createProtectionBypassCoordinator({
   resolveCapability = resolveCurrentCapability,
   executeAuthorizedTask = executeCoordinatorAuthorizedTask,
   recordDecision = recordProtectionBypassDecision,
-  validateNewApiSessionReadResource = validateCurrentNewApiSessionReadResource,
+  validateTaskResource = validateProtectionBypassTaskResource,
 }: {
   readPolicy?: () => Promise<ProtectionBypassPolicyState>
   resolveCapability?: (
@@ -207,9 +172,7 @@ export function createProtectionBypassCoordinator({
   ) => Promise<ProtectionBypassCapability>
   executeAuthorizedTask?: ExecuteAuthorizedTask
   recordDecision?: (summary: ProtectionBypassDecisionSummary) => Promise<void>
-  validateNewApiSessionReadResource?: (
-    resource: NewApiChannelKeyResource,
-  ) => Promise<boolean>
+  validateTaskResource?: ValidateProtectionBypassTaskResource
 } = {}) {
   return {
     /** Validates and executes one protected task through acquire-time policy. */
@@ -287,17 +250,14 @@ export function createProtectionBypassCoordinator({
           }
         }
 
-        let resourceIsCurrent = true
-        if (authorizedTask.kind === TEMP_CONTEXT_TASK_KINDS.NewApiSessionRead) {
-          try {
-            resourceIsCurrent = await validateNewApiSessionReadResource({
-              origin: authorizedTask.params.origin,
-              userId: authorizedTask.params.userId,
-              channelId: authorizedTask.params.channelId,
-            })
-          } catch {
-            resourceIsCurrent = false
-          }
+        let resourceIsCurrent = false
+        try {
+          resourceIsCurrent = await validateTaskResource(
+            authorizedTask,
+            resolvedExecution,
+          )
+        } catch {
+          resourceIsCurrent = false
         }
 
         finalDecision = evaluateProtectionBypassPolicy({

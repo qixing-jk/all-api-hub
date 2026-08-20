@@ -68,7 +68,7 @@ If auto detection fails, click **"Manual Add"**, select the site type, and enter
 
 No matter which architecture you use, there is a good chance we support it:
 - **Account-site compatible architectures**: New API, One API, Sub2API, One-Hub, Veloera, Done-Hub, and more.
-- **Specialized account platforms and compatible implementations**: OpenRouter, AnyRouter, AIHubMix, Super-API, v-api, Neo-API, and more.
+- **Specialized account platforms and compatible implementations**: [OpenRouter](https://openrouter.ai/), [AnyRouter](https://anyrouter.top/register?aff=tDKX), [AgentRouter](https://agentrouter.org/register?aff=TUX6), [AIHubMix](https://aihubmix.com/?aff=W3DN), Super-API, v-api, Neo-API, and more.
 - **Self-hosted admin backends**: New API, Sub2API, AxonHub, Claude Code Hub, [Octopus](https://github.com/bestruirui/octopus), Veloera, Done-Hub, and more, for backend management, migration, and partial model sync.
 
 ::: tip Compatibility Tip

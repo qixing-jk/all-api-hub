@@ -19,8 +19,22 @@ describe("managed site migration capability registry", () => {
     resolveManagedUpstreamResourceFeatureCapabilitiesMock.mockReset()
   })
 
-  it("returns null when New API has no migration capability registration", () => {
-    expect(resolveManagedSiteMigrationCapability(SITE_TYPES.NEW_API)).toBeNull()
+  it("resolves New API without falling back to the legacy feature gate", () => {
+    expect(
+      resolveManagedSiteMigrationCapability(SITE_TYPES.NEW_API),
+    ).toMatchObject({
+      source: {
+        prepare: expect.any(Function),
+        resolveCredential: expect.any(Function),
+      },
+      target: {
+        prepare: expect.any(Function),
+        create: expect.any(Function),
+      },
+    })
+    expect(
+      resolveManagedUpstreamResourceFeatureCapabilitiesMock,
+    ).not.toHaveBeenCalled()
   })
 
   it("resolves AxonHub without falling back to the legacy feature gate", () => {

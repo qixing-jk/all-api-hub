@@ -8,6 +8,8 @@ import type {
 export type ContentSessionExtractionContext = {
   url?: string
   siteTypeHint?: AccountSiteType
+  /** Allows an explicit current-tab auto-detect to probe the modern New API session. */
+  allowNewApiAuthProbe?: boolean
 }
 
 export const NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND = "new_api_dashboard_bearer"

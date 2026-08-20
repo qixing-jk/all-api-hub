@@ -58,6 +58,7 @@ import {
   type ManagedSiteMigrationCanonicalPreview,
   type ManagedSiteMigrationCanonicalPreviewItem,
   type ManagedSiteMigrationCreateResult,
+  type ManagedSiteMigrationCredentialResolution,
   type ManagedSiteMigrationSelection,
   type ManagedSiteMigrationSelectionValidationContext,
   type ManagedSiteMigrationSource,
@@ -622,6 +623,10 @@ export async function prepareManagedSiteMigrationPreview(params: {
 export async function executeManagedSiteMigration(params: {
   preview: ManagedSiteMigrationCanonicalPreview
   options?: ResourceOperationOptions
+  resolveSourceCredential?: (
+    selection: ManagedSiteMigrationSelection,
+    options?: ResourceOperationOptions,
+  ) => Promise<ManagedSiteMigrationCredentialResolution>
 }): Promise<ManagedSiteMigrationCanonicalExecutionResult> {
   const { preview } = params
   const sourceCapability = resolveManagedSiteMigrationCapability(
@@ -697,12 +702,14 @@ export async function executeManagedSiteMigration(params: {
       signal: params.options?.signal,
       sourceFailureReasonCode: migrationBlockers.SOURCE_KEY_RESOLUTION_FAILED,
       resolveCredential: (selection) =>
-        sourceCapability
-          ? sourceCapability.resolveCredential(selection, params.options)
-          : Promise.resolve({
-              status: "blocked",
-              reasonCode: migrationBlockers.SOURCE_KEY_RESOLUTION_FAILED,
-            }),
+        params.resolveSourceCredential
+          ? params.resolveSourceCredential(selection, params.options)
+          : sourceCapability
+            ? sourceCapability.resolveCredential(selection, params.options)
+            : Promise.resolve({
+                status: "blocked",
+                reasonCode: migrationBlockers.SOURCE_KEY_RESOLUTION_FAILED,
+              }),
       create: async (command) => {
         if (targetCapability) {
           return await targetCapability.create(command, params.options)

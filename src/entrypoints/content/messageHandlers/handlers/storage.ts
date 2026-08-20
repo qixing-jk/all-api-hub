@@ -53,6 +53,9 @@ export function handleGetUserFromLocalStorage(
         siteTypeHint: isAccountSiteType(request?.siteType)
           ? request.siteType
           : SITE_TYPES.UNKNOWN,
+        ...(request?.allowNewApiAuthProbe === true
+          ? { allowNewApiAuthProbe: true }
+          : {}),
       }
 
       for (const extractor of getContentSessionExtractors()) {

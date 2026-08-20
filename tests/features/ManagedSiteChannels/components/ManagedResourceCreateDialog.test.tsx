@@ -23,6 +23,7 @@ interface EditorBodyHarnessProps {
   fieldIssues: readonly ResourceFieldIssue[]
   disabled: boolean
   onValueChange: (fieldId: string, value: ResourceFieldValue) => void
+  onLoadOptions?: ResourceEditor["loadOptions"]
 }
 
 vi.mock(
@@ -33,6 +34,7 @@ vi.mock(
       fieldIssues,
       disabled,
       onValueChange,
+      onLoadOptions,
     }: EditorBodyHarnessProps) => (
       <div data-testid="native-resource-editor-body">
         <span data-testid="native-resource-editor-values">
@@ -50,6 +52,14 @@ vi.mock(
         >
           Edit native name
         </button>
+        {onLoadOptions ? (
+          <button
+            type="button"
+            onClick={() => void onLoadOptions("name", values)}
+          >
+            Load native options
+          </button>
+        ) : null}
       </div>
     ),
   }),
@@ -144,6 +154,40 @@ describe("ManagedResourceCreateDialog", () => {
         message: "created",
       })
     })
+  })
+
+  it("forwards the provider option loader to the shared editor body", async () => {
+    const loadOptions = vi.fn().mockResolvedValue([{ value: "model-example" }])
+    const runRead = vi.fn(
+      async (read: () => Promise<any>, _label: string, _signal?: AbortSignal) =>
+        await read(),
+    )
+    render(
+      <ManagedResourceCreateDialog
+        isOpen
+        siteType={SITE_TYPES.AXON_HUB}
+        kind={MANAGED_RESOURCE_KINDS.Channel}
+        editor={createEditor(vi.fn(), { loadOptions })}
+        runRead={runRead}
+        onClose={vi.fn()}
+        onCloseComplete={vi.fn()}
+        onSuccess={vi.fn()}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "Load native options" }))
+    await waitFor(() =>
+      expect(loadOptions).toHaveBeenCalledWith(
+        "name",
+        { name: "Imported channel" },
+        undefined,
+      ),
+    )
+    expect(runRead).toHaveBeenCalledWith(
+      expect.any(Function),
+      "channelDialog:title.add",
+      undefined,
+    )
   })
 
   it("shows an import advisory and forwards success without an optional message", async () => {
@@ -260,11 +304,7 @@ describe("ManagedResourceCreateDialog", () => {
       />,
     )
 
-    const form = screen
-      .getByTestId("native-resource-editor-body")
-      .closest("form")
-    expect(form).not.toBeNull()
-    fireEvent.submit(form!)
+    fireEvent.submit(screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.form))
 
     await waitFor(() => {
       expect(

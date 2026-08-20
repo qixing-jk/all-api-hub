@@ -91,6 +91,7 @@ export function ChannelEditorShell({
     >
       <form
         id="channel-editor-form"
+        data-testid={CHANNEL_DIALOG_TEST_IDS.form}
         onSubmit={onSubmit}
         noValidate={noValidate}
         className="space-y-4"

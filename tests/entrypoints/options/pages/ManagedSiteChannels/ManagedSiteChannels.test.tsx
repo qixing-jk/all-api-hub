@@ -13,10 +13,10 @@ import { ChannelType } from "~/constants"
 import { CLAUDE_CODE_HUB_PROVIDER_TYPE } from "~/constants/claudeCodeHub"
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import ManagedSiteChannels from "~/entrypoints/options/pages/ManagedSiteChannels"
 import {
   attachChannelFilterResourceRef,
   isChannelRowLike,
+  default as ManagedSiteChannels,
   upsertChannelRow,
 } from "~/features/ManagedSiteChannels/ManagedSiteChannels"
 import {
@@ -4101,6 +4101,7 @@ describe("ManagedSiteChannels", () => {
           managedSiteType: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.NewApi,
           selectedCount: 2,
           successCount: 1,
+          warningCount: 0,
         },
       },
     )

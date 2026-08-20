@@ -1,5 +1,11 @@
 import { OctopusOutboundType } from "~/types/octopus"
 
+/** Side-effect-free page used to host Octopus cookie-auth API requests. */
+export const OCTOPUS_COOKIE_SESSION_STATUS_PATH = "/api/v1/user/status"
+
+/** Shared administrator login endpoint for both supported Octopus generations. */
+export const OCTOPUS_LOGIN_PATH = "/api/v1/user/login"
+
 /**
  * Octopus 渠道类型选项
  * 用于 UI 下拉选择器

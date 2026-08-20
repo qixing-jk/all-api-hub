@@ -1,11 +1,16 @@
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import { axonHubManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/axonHubMigration"
+import { newApiManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/newApiMigration"
 import type { ManagedSiteMigrationCapability } from "~/types/managedSiteMigrationCapability"
 
 const registrations: readonly {
   siteType: ManagedSiteType
   capability: ManagedSiteMigrationCapability
 }[] = [
+  {
+    siteType: SITE_TYPES.NEW_API,
+    capability: newApiManagedSiteMigrationCapability,
+  },
   {
     siteType: SITE_TYPES.AXON_HUB,
     capability: axonHubManagedSiteMigrationCapability,

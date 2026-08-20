@@ -611,17 +611,14 @@ const fetchSub2ApiData = async <T>(
 }
 
 /**
- * Fetch an opt-in Sub2API affiliate link from the deployment that owns the account.
- * The settings route is public, while the affiliate detail route uses the saved
- * dashboard JWT; the frontend builds a same-origin `/register?aff=` URL.
- * https://github.com/Wei-Shaw/sub2api/blob/main/backend/internal/handler/setting_handler.go
- * https://github.com/Wei-Shaw/sub2api/blob/main/backend/internal/handler/user_handler.go
- * https://github.com/Wei-Shaw/sub2api/blob/main/frontend/src/views/user/AffiliateView.vue
+ * Fetch deployment-owned settings that Sub2API exposes without authentication.
+ * Source: https://github.com/Wei-Shaw/sub2api/blob/2bc139ab527b4a687546d145dc7bb9063cf14510/backend/internal/handler/dto/settings.go
+ * `PublicSettings.site_name` is the canonical public deployment name.
  */
-export async function fetchInviteLink(
+const fetchSub2ApiPublicSettings = async (
   request: ApiServiceRequest,
-): Promise<string> {
-  const publicSettingsBody = await fetchApi<unknown>(
+): Promise<Sub2ApiPublicSettingsData | undefined> => {
+  const body = await fetchApi<unknown>(
     {
       ...request,
       auth: { authType: AuthTypeEnum.None },
@@ -632,11 +629,26 @@ export async function fetchInviteLink(
     },
     true,
   )
-  const publicSettings = parseSub2ApiEnvelope<Sub2ApiPublicSettingsData>(
-    publicSettingsBody,
+
+  return parseSub2ApiEnvelope<Sub2ApiPublicSettingsData>(
+    body,
     SUB2API_PUBLIC_SETTINGS_ENDPOINT,
     { allowMissingData: true },
   )
+}
+
+/**
+ * Fetch an opt-in Sub2API affiliate link from the deployment that owns the account.
+ * The settings route is public, while the affiliate detail route uses the saved
+ * dashboard JWT; the frontend builds a same-origin `/register?aff=` URL.
+ * https://github.com/Wei-Shaw/sub2api/blob/main/backend/internal/handler/setting_handler.go
+ * https://github.com/Wei-Shaw/sub2api/blob/main/backend/internal/handler/user_handler.go
+ * https://github.com/Wei-Shaw/sub2api/blob/main/frontend/src/views/user/AffiliateView.vue
+ */
+export async function fetchInviteLink(
+  request: ApiServiceRequest,
+): Promise<string> {
+  const publicSettings = await fetchSub2ApiPublicSettings(request)
 
   if (
     !publicSettings ||
@@ -1198,15 +1210,33 @@ export async function getOrCreateAccessToken(
 }
 
 /**
- * Sub2API does not expose the One-API-style public `/api/status` endpoint.
- * Return a synthetic status payload so shared callers can skip that request and
- * still treat built-in check-in as unsupported.
+ * Sub2API does not expose the One-API-style public `/api/status` endpoint, so
+ * adapt its native public settings into the shared status contract. Name lookup
+ * remains optional so a transient settings failure cannot block account setup.
  */
 export async function fetchSiteStatus(
-  _request: ApiServiceRequest,
+  request: ApiServiceRequest,
 ): Promise<SiteStatusInfo> {
-  return {
-    checkin_enabled: false,
+  try {
+    const publicSettings = await fetchSub2ApiPublicSettings(request)
+    const siteName =
+      typeof publicSettings?.site_name === "string"
+        ? publicSettings.site_name.trim()
+        : ""
+
+    return {
+      ...(siteName ? { system_name: siteName } : {}),
+      checkin_enabled: false,
+    }
+  } catch (error) {
+    logger.warn("Failed to fetch optional Sub2API site name", {
+      endpoint: SUB2API_PUBLIC_SETTINGS_ENDPOINT,
+      error: getSafeErrorMessage(error),
+    })
+
+    return {
+      checkin_enabled: false,
+    }
   }
 }
 
