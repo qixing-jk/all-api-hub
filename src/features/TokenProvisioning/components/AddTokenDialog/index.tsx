@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
@@ -122,7 +122,17 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
     (acc) => acc.id === formData.accountId,
   )
 
-  const { isLoading, availableModels, groups, resetData } = useTokenData(
+  const {
+    isLoading,
+    availableModels,
+    groups,
+    canFetchModels,
+    isModelsLoading,
+    modelsLoaded,
+    modelLoadErrorMessage,
+    loadAvailableModels,
+    resetData,
+  } = useTokenData(
     isOpen,
     currentAccount,
     setFormData,
@@ -131,6 +141,26 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
   const showGroupSelection =
     Object.keys(groups).length > 0 ||
     (!isEditMode && (props.createPrefill?.allowedGroups?.length ?? 0) > 0)
+  const showModelLimits = canFetchModels || formData.modelLimitsEnabled
+
+  useEffect(() => {
+    if (
+      isOpen &&
+      formData.modelLimitsEnabled &&
+      !modelsLoaded &&
+      !isModelsLoading &&
+      !modelLoadErrorMessage
+    ) {
+      void loadAvailableModels()
+    }
+  }, [
+    formData.modelLimitsEnabled,
+    isModelsLoading,
+    isOpen,
+    loadAvailableModels,
+    modelLoadErrorMessage,
+    modelsLoaded,
+  ])
 
   const handleClose = () => {
     resetForm()
@@ -302,7 +332,7 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
               isEditMode={isEditMode}
               onClose={handleClose}
               onSubmit={handleSubmit}
-              canSubmit={!!currentAccount}
+              canSubmit={!!currentAccount && !isModelsLoading}
             />
           )
         }
@@ -323,6 +353,10 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
               }
               availableModels={availableModels}
               showGroupSelection={showGroupSelection}
+              showModelLimits={showModelLimits}
+              isModelsLoading={isModelsLoading}
+              modelLoadErrorMessage={modelLoadErrorMessage}
+              onRequestModels={loadAvailableModels}
             />
             {typeof props.prefillNotice === "string" &&
             props.prefillNotice.trim().length > 0 ? (

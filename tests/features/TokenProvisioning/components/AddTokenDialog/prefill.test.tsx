@@ -208,8 +208,10 @@ describe("AddTokenDialog prefill", () => {
     )
   })
 
-  it("prefills the default auto token name for manual create", async () => {
-    fetchAccountAvailableModelsMock.mockResolvedValueOnce([])
+  it("keeps manual create usable when on-demand model discovery is denied", async () => {
+    fetchAccountAvailableModelsMock.mockRejectedValueOnce(
+      new Error("model lookup forbidden"),
+    )
     fetchUserGroupsMock.mockResolvedValueOnce({
       default: { desc: "default", ratio: 1 },
     })
@@ -229,6 +231,20 @@ describe("AddTokenDialog prefill", () => {
     expect(
       await screen.findByLabelText(/keyManagement:dialog\.tokenName/),
     ).toHaveValue(DEFAULT_AUTO_PROVISION_TOKEN_NAME)
+    expect(fetchAccountAvailableModelsMock).not.toHaveBeenCalled()
+
+    const modelLimitsSwitch = screen.getByRole("switch", {
+      name: "keyManagement:dialog.modelLimits",
+    })
+    await user.click(modelLimitsSwitch)
+
+    await waitFor(() => {
+      expect(fetchAccountAvailableModelsMock).toHaveBeenCalledTimes(1)
+      expect(modelLimitsSwitch).not.toBeChecked()
+      expect(toastErrorMock).toHaveBeenCalledWith(
+        "keyManagement:dialog.modelLoadFailed",
+      )
+    })
 
     await user.click(
       screen.getByRole("button", { name: "keyManagement:dialog.createToken" }),
@@ -240,6 +256,8 @@ describe("AddTokenDialog prefill", () => {
 
     expect(createApiTokenMock.mock.calls[0]?.[1]).toMatchObject({
       name: DEFAULT_AUTO_PROVISION_TOKEN_NAME,
+      model_limits_enabled: false,
+      model_limits: "",
     })
   })
 

@@ -8,8 +8,11 @@ interface ModelLimitsProps {
   modelLimitsEnabled: boolean
   modelLimits: string[]
   availableModels: string[]
+  isLoading: boolean
+  loadErrorMessage: string | null
   setFormData: React.Dispatch<React.SetStateAction<FormData>>
   handleModelLimitsChange: (values: string[]) => void
+  onRequestModels: () => Promise<boolean>
 }
 
 /**
@@ -18,33 +21,43 @@ interface ModelLimitsProps {
  * @param props.modelLimitsEnabled Whether per-model limits are enabled.
  * @param props.modelLimits Selected model allow list.
  * @param props.availableModels All available models to choose from.
+ * @param props.isLoading Whether model discovery is in progress.
+ * @param props.loadErrorMessage Scoped model-discovery failure guidance.
  * @param props.setFormData Setter to update the form state.
  * @param props.handleModelLimitsChange Change handler for model selections.
+ * @param props.onRequestModels Requests the optional model list on demand.
  * @returns Toggle with optional multi-select for model limits.
  */
 export function ModelLimits({
   modelLimitsEnabled,
   modelLimits,
   availableModels,
+  isLoading,
+  loadErrorMessage,
   setFormData,
   handleModelLimitsChange,
+  onRequestModels,
 }: ModelLimitsProps) {
   const { t } = useTranslation("keyManagement")
+  const modelOptions = Array.from(new Set([...modelLimits, ...availableModels]))
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" aria-busy={isLoading}>
       <div className="flex items-center justify-between">
         <label className="dark:text-dark-text-secondary text-sm font-medium text-gray-700">
           {t("dialog.modelLimits")}
         </label>
         <Switch
           checked={modelLimitsEnabled}
+          disabled={isLoading}
+          aria-label={t("dialog.modelLimits")}
           onChange={(enabled) => {
             setFormData((prev) => ({
               ...prev,
               modelLimitsEnabled: enabled,
               modelLimits: enabled ? prev.modelLimits : [],
             }))
+            if (enabled) void onRequestModels()
           }}
           className={`${
             modelLimitsEnabled
@@ -57,7 +70,7 @@ export function ModelLimits({
       {modelLimitsEnabled && (
         <div>
           <CompactMultiSelect
-            options={availableModels.map((model) => ({
+            options={modelOptions.map((model) => ({
               value: model,
               label: model,
             }))}
@@ -72,6 +85,21 @@ export function ModelLimits({
           </p>
         </div>
       )}
+      {isLoading ? (
+        <p
+          aria-live="polite"
+          className="dark:text-dark-text-tertiary text-xs text-gray-500"
+        >
+          {t("common:status.loadingField", {
+            field: t("dialog.availableModels"),
+          })}
+        </p>
+      ) : null}
+      {loadErrorMessage ? (
+        <p role="alert" className="text-xs text-amber-700 dark:text-amber-300">
+          {loadErrorMessage}
+        </p>
+      ) : null}
     </div>
   )
 }

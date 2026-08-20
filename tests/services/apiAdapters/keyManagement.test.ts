@@ -32,6 +32,7 @@ const {
   mockSub2ApiResolveApiTokenKey,
   mockSub2ApiUpdateApiToken,
   mockUpdateApiToken,
+  mockVApiFetchAccountAvailableModels,
   mockVoApiV2CreateToken,
   mockVoApiV2DeleteToken,
   mockVoApiV2FetchAvailableModels,
@@ -65,6 +66,7 @@ const {
   mockSub2ApiResolveApiTokenKey: vi.fn(),
   mockSub2ApiUpdateApiToken: vi.fn(),
   mockUpdateApiToken: vi.fn(),
+  mockVApiFetchAccountAvailableModels: vi.fn(),
   mockVoApiV2CreateToken: vi.fn(),
   mockVoApiV2DeleteToken: vi.fn(),
   mockVoApiV2FetchAvailableModels: vi.fn(),
@@ -119,6 +121,10 @@ vi.mock("~/services/apiService/newApiFamily/variants/oneHub", () => ({
   fetchAccountAvailableModels: mockOneHubFetchAccountAvailableModels,
   fetchAccountTokens: mockOneHubFetchAccountTokens,
   fetchUserGroups: mockOneHubFetchUserGroups,
+}))
+
+vi.mock("~/services/apiService/newApiFamily/variants/vApi", () => ({
+  fetchAccountAvailableModels: mockVApiFetchAccountAvailableModels,
 }))
 
 vi.mock("~/services/apiService/newApiFamily/variants/wong", () => ({
@@ -374,6 +380,17 @@ describe("apiAdapter keyManagement", () => {
     expect(mockOneHubFetchAccountAvailableModels).toHaveBeenCalledWith(request)
     expect(mockFetchAccountTokens).not.toHaveBeenCalled()
     expect(mockFetchUserGroups).not.toHaveBeenCalled()
+    expect(mockFetchAccountAvailableModels).not.toHaveBeenCalled()
+  })
+
+  it("uses the V-API account-available-model override", async () => {
+    mockVApiFetchAccountAvailableModels.mockResolvedValueOnce(availableModels)
+
+    await expect(
+      createNewApiKeyManagement(SITE_TYPES.V_API).fetchAvailableModels(request),
+    ).resolves.toBe(availableModels)
+
+    expect(mockVApiFetchAccountAvailableModels).toHaveBeenCalledWith(request)
     expect(mockFetchAccountAvailableModels).not.toHaveBeenCalled()
   })
 

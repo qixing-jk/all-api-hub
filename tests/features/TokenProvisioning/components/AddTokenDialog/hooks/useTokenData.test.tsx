@@ -5,18 +5,20 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { useTokenData } from "~/features/TokenProvisioning/components/AddTokenDialog/hooks/useTokenData"
 import { DEFAULT_AUTO_PROVISION_TOKEN_NAME } from "~/services/accounts/defaultTokenLifecycle"
 import { AuthTypeEnum } from "~/types"
-import { renderHook, waitFor } from "~~/tests/test-utils/render"
+import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 
 const {
   createDisplayAccountApiContextMock,
   fetchAccountAvailableModelsMock,
   fetchUserGroupsMock,
   toastErrorMock,
+  translateMock,
 } = vi.hoisted(() => ({
   createDisplayAccountApiContextMock: vi.fn(),
   fetchAccountAvailableModelsMock: vi.fn(),
   fetchUserGroupsMock: vi.fn(),
   toastErrorMock: vi.fn(),
+  translateMock: vi.fn((key: string) => `keyManagement:${key}`),
 }))
 
 vi.mock("react-hot-toast", () => ({
@@ -30,7 +32,7 @@ vi.mock("react-i18next", async (importOriginal) => {
   return {
     ...actual,
     useTranslation: () => ({
-      t: (key: string) => `keyManagement:${key}`,
+      t: translateMock,
     }),
   }
 })
@@ -122,7 +124,7 @@ describe("useTokenData", () => {
     })
   })
 
-  it("waits until the dialog is open before loading bootstrap data", async () => {
+  it("waits until the dialog is open before loading required bootstrap data", async () => {
     fetchAccountAvailableModelsMock.mockResolvedValue(["gpt-4o-mini"])
     fetchUserGroupsMock.mockResolvedValue(createGroups(["default"]))
 
@@ -142,11 +144,12 @@ describe("useTokenData", () => {
     })
 
     await waitFor(() => {
-      expect(result.current.availableModels).toEqual(["gpt-4o-mini"])
+      expect(result.current.groups).toEqual(createGroups(["default"]))
     })
 
     expect(createDisplayAccountApiContextMock).toHaveBeenCalledWith(ACCOUNT)
     expect(fetchUserGroupsMock).toHaveBeenCalled()
+    expect(fetchAccountAvailableModelsMock).not.toHaveBeenCalled()
   })
 
   it("keeps an already-eligible group selection when restricted groups still allow it", async () => {
@@ -181,7 +184,7 @@ describe("useTokenData", () => {
     })
 
     await waitFor(() => {
-      expect(result.current.availableModels).toEqual(["gpt-4o-mini"])
+      expect(result.current.groups).toEqual(createGroups(["default", "vip"]))
     })
 
     expect(result.current.formData.group).toBe("")
@@ -199,7 +202,7 @@ describe("useTokenData", () => {
     })
 
     await waitFor(() => {
-      expect(result.current.availableModels).toEqual(["gpt-4o-mini"])
+      expect(result.current.groups).toEqual(createGroups(["default"]))
     })
 
     expect(result.current.formData.group).toBe("legacy")
@@ -286,10 +289,12 @@ describe("useTokenData", () => {
     })
 
     await waitFor(() => {
-      expect(result.current.availableModels).toEqual(["gpt-4o-mini"])
+      expect(createDisplayAccountApiContextMock).toHaveBeenCalledWith(ACCOUNT)
+      expect(result.current.isLoading).toBe(false)
     })
 
     expect(result.current.groups).toEqual({})
+    expect(fetchAccountAvailableModelsMock).not.toHaveBeenCalled()
     expect(fetchUserGroupsMock).not.toHaveBeenCalled()
     expect(toastErrorMock).not.toHaveBeenCalled()
   })
@@ -322,9 +327,61 @@ describe("useTokenData", () => {
     expect(toastErrorMock).not.toHaveBeenCalled()
   })
 
-  it("shows the localized fallback error when loading bootstrap data fails without a message", async () => {
-    fetchAccountAvailableModelsMock.mockRejectedValue("")
+  it("contains an on-demand model lookup failure without clearing groups", async () => {
+    fetchAccountAvailableModelsMock.mockRejectedValue(
+      new Error("model lookup forbidden"),
+    )
     fetchUserGroupsMock.mockResolvedValue(createGroups(["default"]))
+
+    const { result } = renderSubject({
+      isOpen: true,
+      currentAccount: ACCOUNT,
+      initialGroup: "default",
+    })
+
+    await waitFor(() => {
+      expect(result.current.groups).toEqual(createGroups(["default"]))
+    })
+
+    await act(async () => {
+      await expect(result.current.loadAvailableModels()).resolves.toBe(false)
+    })
+
+    expect(result.current.groups).toEqual(createGroups(["default"]))
+    expect(result.current.availableModels).toEqual([])
+    expect(result.current.isModelsLoading).toBe(false)
+    expect(result.current.modelLoadErrorMessage).toBe(
+      "keyManagement:dialog.modelLoadFailed",
+    )
+    expect(toastErrorMock).toHaveBeenCalledWith(
+      "keyManagement:dialog.modelLoadFailed",
+    )
+  })
+
+  it("keeps group bootstrap independent from optional model discovery", async () => {
+    fetchAccountAvailableModelsMock.mockRejectedValue(
+      new Error("model lookup forbidden"),
+    )
+    fetchUserGroupsMock.mockResolvedValue(createGroups(["default"]))
+
+    const { result } = renderSubject({
+      isOpen: true,
+      currentAccount: ACCOUNT,
+      initialGroup: "default",
+    })
+
+    await waitFor(() => {
+      expect(result.current.groups).toEqual(createGroups(["default"]))
+    })
+
+    expect(fetchAccountAvailableModelsMock).not.toHaveBeenCalled()
+    expect(result.current.isLoading).toBe(false)
+    expect(toastErrorMock).not.toHaveBeenCalled()
+  })
+
+  it("shows the localized fallback error when loading bootstrap data fails without a message", async () => {
+    fetchAccountAvailableModelsMock.mockResolvedValue(["gpt-4o-mini"])
+    fetchUserGroupsMock.mockRejectedValue("")
 
     const { result } = renderSubject({
       isOpen: true,

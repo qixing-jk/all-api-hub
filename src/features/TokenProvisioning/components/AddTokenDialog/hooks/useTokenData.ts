@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
@@ -43,14 +43,25 @@ export function useTokenData(
   const [isLoading, setIsLoading] = useState(false)
   const [availableModels, setAvailableModels] = useState<string[]>([])
   const [groups, setGroups] = useState<Record<string, UserGroupInfo>>({})
+  const [isModelsLoading, setIsModelsLoading] = useState(false)
+  const [modelsLoaded, setModelsLoaded] = useState(false)
+  const [modelLoadErrorMessage, setModelLoadErrorMessage] = useState<
+    string | null
+  >(null)
+  const modelLoadGenerationRef = useRef(0)
+  const activeModelLoadRef = useRef<{
+    accountId: string
+    promise: Promise<boolean>
+  } | null>(null)
+  const canFetchModels = currentAccount
+    ? canFetchAccountTokenModels(currentAccount)
+    : false
 
   const loadInitialData = useCallback(async () => {
     if (!currentAccount) return
 
-    const canFetchModels = canFetchAccountTokenModels(currentAccount)
     const canFetchGroups = canFetchAccountTokenGroups(currentAccount)
-    if (!canFetchModels && !canFetchGroups) {
-      setAvailableModels((prev) => (prev.length > 0 ? [] : prev))
+    if (!canFetchGroups) {
       setGroups((prev) =>
         Object.keys(prev).length > 0 ? EMPTY_USER_GROUPS : prev,
       )
@@ -67,16 +78,12 @@ export function useTokenData(
         keyManagement,
       )
 
-      const [models, groupsData] = await Promise.all([
-        canFetchModels ? capability.fetchAvailableModels(request) : [],
-        canFetchGroups && capability.userGroups
-          ? capability.userGroups.fetch(request)
-          : EMPTY_USER_GROUPS,
-      ])
+      const groupsData = capability.userGroups
+        ? await capability.userGroups.fetch(request)
+        : EMPTY_USER_GROUPS
 
       const resolvedGroupsData = groupsData ?? EMPTY_USER_GROUPS
 
-      setAvailableModels(models)
       setGroups(resolvedGroupsData)
 
       // Set default group (but keep existing selection when it's still valid).
@@ -149,6 +156,88 @@ export function useTokenData(
     }
   }, [allowedGroups, currentAccount, setFormData, t])
 
+  const loadAvailableModels = useCallback(async (): Promise<boolean> => {
+    if (!currentAccount || !canFetchModels) return false
+    if (modelsLoaded) return true
+
+    const activeLoad = activeModelLoadRef.current
+    if (activeLoad?.accountId === currentAccount.id) {
+      return await activeLoad.promise
+    }
+
+    const generation = ++modelLoadGenerationRef.current
+    setIsModelsLoading(true)
+    setModelLoadErrorMessage(null)
+
+    const promise = (async () => {
+      try {
+        const { keyManagement, request } =
+          createDisplayAccountApiContext(currentAccount)
+        const models = await requireDisplayAccountKeyManagement(
+          currentAccount,
+          keyManagement,
+        ).fetchAvailableModels(request)
+
+        if (
+          !Array.isArray(models) ||
+          !models.every((model) => typeof model === "string")
+        ) {
+          throw new TypeError(t("dialog.loadDataFailed"))
+        }
+        if (models.length === 0) {
+          throw new Error(t("dialog.noAvailableModels"))
+        }
+
+        if (generation !== modelLoadGenerationRef.current) return false
+        setAvailableModels(models)
+        setModelsLoaded(true)
+        return true
+      } catch (error) {
+        if (generation !== modelLoadGenerationRef.current) return false
+
+        logger.warn("Failed to load optional model restrictions", error)
+        const upstreamReason = getErrorMessage(error).trim()
+        const reason = upstreamReason || t("dialog.loadDataFailed")
+        const message = t("dialog.modelLoadFailed", { reason })
+        setAvailableModels([])
+        setModelLoadErrorMessage(message)
+        setFormData((prev) =>
+          prev.modelLimitsEnabled && prev.modelLimits.length === 0
+            ? { ...prev, modelLimitsEnabled: false }
+            : prev,
+        )
+        toast.error(message)
+        return false
+      } finally {
+        if (generation === modelLoadGenerationRef.current) {
+          setIsModelsLoading(false)
+        }
+      }
+    })()
+
+    activeModelLoadRef.current = {
+      accountId: currentAccount.id,
+      promise,
+    }
+
+    try {
+      return await promise
+    } finally {
+      if (activeModelLoadRef.current?.promise === promise) {
+        activeModelLoadRef.current = null
+      }
+    }
+  }, [canFetchModels, currentAccount, modelsLoaded, setFormData, t])
+
+  useEffect(() => {
+    modelLoadGenerationRef.current += 1
+    activeModelLoadRef.current = null
+    setAvailableModels([])
+    setIsModelsLoading(false)
+    setModelsLoaded(false)
+    setModelLoadErrorMessage(null)
+  }, [currentAccount?.id])
+
   useEffect(() => {
     if (isOpen && currentAccount) {
       loadInitialData()
@@ -156,9 +245,24 @@ export function useTokenData(
   }, [isOpen, currentAccount, loadInitialData])
 
   const resetData = () => {
+    modelLoadGenerationRef.current += 1
+    activeModelLoadRef.current = null
     setAvailableModels([])
     setGroups({})
+    setIsModelsLoading(false)
+    setModelsLoaded(false)
+    setModelLoadErrorMessage(null)
   }
 
-  return { isLoading, availableModels, groups, resetData }
+  return {
+    isLoading,
+    availableModels,
+    groups,
+    canFetchModels,
+    isModelsLoading,
+    modelsLoaded,
+    modelLoadErrorMessage,
+    loadAvailableModels,
+    resetData,
+  }
 }
