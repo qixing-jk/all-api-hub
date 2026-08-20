@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
@@ -44,8 +44,14 @@ export function useManagedSiteChannelModelSync({
   const [syncingChannelIds, setSyncingChannelIds] = useState<Set<number>>(
     new Set(),
   )
+  const syncGenerationRef = useRef(0)
   const managedSiteAnalyticsType =
     resolveProductAnalyticsManagedSiteType(siteType)
+
+  useEffect(() => {
+    syncGenerationRef.current += 1
+    setSyncingChannelIds(new Set())
+  }, [siteType])
 
   const syncChannels = useCallback(
     async (
@@ -54,6 +60,7 @@ export function useManagedSiteChannelModelSync({
     ) => {
       const tracker = startProductAnalyticsAction(analyticsContext)
       const eligibleChannelIds = channelIds.filter((id) => id > 0)
+      const requestGeneration = syncGenerationRef.current
 
       if (!eligibleChannelIds.length) {
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
@@ -82,6 +89,16 @@ export function useManagedSiteChannelModelSync({
               protectionBypassExecution,
             }),
         )
+        if (requestGeneration !== syncGenerationRef.current) {
+          tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
+            insights: {
+              itemCount: eligibleChannelIds.length,
+              selectedCount: channelIds.length,
+              managedSiteType: managedSiteAnalyticsType,
+            },
+          })
+          return
+        }
         if (!response?.success) {
           throw new Error(response?.error || t("toasts.syncFailedFallback"))
         }
@@ -131,6 +148,16 @@ export function useManagedSiteChannelModelSync({
           },
         })
       } catch (error) {
+        if (requestGeneration !== syncGenerationRef.current) {
+          tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
+            insights: {
+              itemCount: eligibleChannelIds.length,
+              selectedCount: channelIds.length,
+              managedSiteType: managedSiteAnalyticsType,
+            },
+          })
+          return
+        }
         toast.error(t("toasts.syncFailed", { error: getErrorMessage(error) }))
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
@@ -141,11 +168,13 @@ export function useManagedSiteChannelModelSync({
           },
         })
       } finally {
-        setSyncingChannelIds((current) => {
-          const next = new Set(current)
-          eligibleChannelIds.forEach((id) => next.delete(id))
-          return next
-        })
+        if (requestGeneration === syncGenerationRef.current) {
+          setSyncingChannelIds((current) => {
+            const next = new Set(current)
+            eligibleChannelIds.forEach((id) => next.delete(id))
+            return next
+          })
+        }
       }
     },
     [managedSiteAnalyticsType, onModelsChanged, t],

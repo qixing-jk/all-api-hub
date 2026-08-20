@@ -56,6 +56,7 @@ const nestedLegacyLabels = new Proxy<Record<string, string>>(
   {},
   { get: (_target, key) => `legacy:${String(key)}` },
 )
+const legacyPaginationSummary = () => "legacy:paginationSummary"
 const legacyLabels = new Proxy<Record<string, unknown>>(
   {},
   {
@@ -64,7 +65,9 @@ const legacyLabels = new Proxy<Record<string, unknown>>(
         String(key),
       )
         ? nestedLegacyLabels
-        : `legacy:${String(key)}`,
+        : key === "paginationSummary"
+          ? legacyPaginationSummary
+          : `legacy:${String(key)}`,
   },
 ) as unknown as ManagedChannelsLabels
 

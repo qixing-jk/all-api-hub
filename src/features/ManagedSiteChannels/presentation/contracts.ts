@@ -268,7 +268,7 @@ export type ManagedChannelsLabels = {
   deleteResultsTitle: string
   deleteRefreshRequired: string
   deleteRefreshAction: string
-  deleteResultStatusLabels: Record<"success" | "failed" | "uncertain", string>
+  deleteResultStatusLabels: Record<ManagedChannelsDeleteResultStatus, string>
   migrationBeta: string
   enterMigrationMode: string
   exitMigrationMode: string

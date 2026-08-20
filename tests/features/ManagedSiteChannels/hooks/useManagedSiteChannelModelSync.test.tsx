@@ -1,7 +1,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { SITE_TYPES } from "~/constants/siteType"
+import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import { useManagedSiteChannelModelSync } from "~/features/ManagedSiteChannels/hooks/useManagedSiteChannelModelSync"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -266,5 +266,52 @@ describe("useManagedSiteChannelModelSync", () => {
         insights: expect.objectContaining({ warningCount: 1 }),
       }),
     )
+  })
+
+  it("discards a pending sync when the managed-site type changes", async () => {
+    let resolveSync!: (value: unknown) => void
+    sendModelSyncMessageMock.mockReturnValue(
+      new Promise((resolve) => {
+        resolveSync = resolve
+      }),
+    )
+    const onModelsChanged = vi.fn()
+    const { result, rerender } = renderHook(
+      ({ siteType }: { siteType: ManagedSiteType }) =>
+        useManagedSiteChannelModelSync({ siteType, onModelsChanged }),
+      {
+        initialProps: { siteType: SITE_TYPES.NEW_API } as {
+          siteType: ManagedSiteType
+        },
+      },
+    )
+
+    let syncPromise!: Promise<void>
+    act(() => {
+      syncPromise = result.current.syncChannels([42], analyticsContext)
+    })
+    expect(result.current.syncingChannelIds).toEqual(new Set([42]))
+
+    rerender({ siteType: SITE_TYPES.AXON_HUB } as { siteType: ManagedSiteType })
+    expect(result.current.syncingChannelIds).toEqual(new Set())
+
+    resolveSync({
+      success: true,
+      data: {
+        statistics: { successCount: 1, failureCount: 0 },
+        items: [{ channelId: 42, ok: true, newModels: ["stale-model"] }],
+      },
+    })
+    await act(async () => syncPromise)
+
+    expect(onModelsChanged).not.toHaveBeenCalled()
+    expect(toastSuccessMock).not.toHaveBeenCalled()
+    expect(trackerCompleteMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Skipped,
+      expect.objectContaining({
+        insights: expect.objectContaining({ selectedCount: 1 }),
+      }),
+    )
+    expect(result.current.syncingChannelIds).toEqual(new Set())
   })
 })
