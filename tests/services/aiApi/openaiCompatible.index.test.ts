@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
+  discoverOpenAICompatibleModels,
   fetchOpenAICompatibleModelIds,
   fetchOpenAICompatibleModels,
 } from "~/services/aiApi/openaiCompatible"
+import { ApiError } from "~/services/apiTransport/errors"
 import { AuthTypeEnum } from "~/types"
 
 const { mockFetchApiData, mockLoggerError } = vi.hoisted(() => ({
@@ -52,6 +54,16 @@ describe("OpenAI-compatible model fetchers", () => {
     )
   })
 
+  it("returns the API base URL confirmed by the canonical model endpoint", async () => {
+    const models = [{ id: "gpt-4.1" }]
+    mockFetchApiData.mockResolvedValueOnce(models)
+
+    await expect(discoverOpenAICompatibleModels(params)).resolves.toEqual({
+      models,
+      resolvedBaseUrl: "https://openai-compatible.example.com/v1",
+    })
+  })
+
   it("accepts an empty canonical model list without trying another endpoint", async () => {
     mockFetchApiData.mockResolvedValueOnce([])
 
@@ -60,8 +72,55 @@ describe("OpenAI-compatible model fetchers", () => {
     expect(mockFetchApiData).toHaveBeenCalledTimes(1)
   })
 
-  it("falls back to /models when the canonical model endpoint fails", async () => {
-    const canonicalError = new Error("canonical endpoint unavailable")
+  it.each([404, 405])(
+    "falls back to /models when the canonical route returns %s",
+    async (statusCode) => {
+      const canonicalError = new ApiError(
+        "canonical route unavailable",
+        statusCode,
+      )
+      const models = [{ id: "custom-model" }]
+      mockFetchApiData
+        .mockRejectedValueOnce(canonicalError)
+        .mockResolvedValueOnce(models)
+
+      await expect(discoverOpenAICompatibleModels(params)).resolves.toEqual({
+        models,
+        resolvedBaseUrl: "https://openai-compatible.example.com",
+      })
+
+      expect(mockFetchApiData).toHaveBeenNthCalledWith(1, expect.any(Object), {
+        endpoint: "/v1/models",
+      })
+      expect(mockFetchApiData).toHaveBeenNthCalledWith(2, expect.any(Object), {
+        endpoint: "/models",
+      })
+    },
+  )
+
+  it("does not infer another route from an authentication failure", async () => {
+    const authenticationError = new ApiError("unauthorized", 401)
+    mockFetchApiData.mockRejectedValueOnce(authenticationError)
+
+    await expect(discoverOpenAICompatibleModels(params)).rejects.toBe(
+      authenticationError,
+    )
+
+    expect(mockFetchApiData).toHaveBeenCalledTimes(1)
+  })
+
+  it("does not accept an invalid successful payload as route confirmation", async () => {
+    mockFetchApiData.mockResolvedValueOnce({ message: "not a model list" })
+
+    await expect(discoverOpenAICompatibleModels(params)).rejects.toThrow(
+      "invalid model list",
+    )
+
+    expect(mockFetchApiData).toHaveBeenCalledTimes(1)
+  })
+
+  it("keeps the model-only wrapper compatible with /models fallback", async () => {
+    const canonicalError = new ApiError("canonical route unavailable", 404)
     const models = [{ id: "custom-model" }]
     mockFetchApiData
       .mockRejectedValueOnce(canonicalError)
@@ -140,7 +199,7 @@ describe("OpenAI-compatible model fetchers", () => {
   })
 
   it("logs and rethrows after both model endpoints fail", async () => {
-    const canonicalError = new Error("canonical endpoint unavailable")
+    const canonicalError = new ApiError("canonical route unavailable", 404)
     const fallbackError = new Error("fallback endpoint unavailable")
     mockFetchApiData
       .mockRejectedValueOnce(canonicalError)
