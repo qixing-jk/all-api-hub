@@ -511,6 +511,13 @@ describe("accountDefaults", () => {
         today: "checked",
         evidence: { source: "probe", observedAt: 123 },
       })
+      expect(
+        updated.checkIn.methodKnowledge.methods["new-api:daily-checkin"]
+          ?.detection,
+      ).toEqual({
+        outcome: "matched",
+        evidence: { source: "compatibility_registration" },
+      })
     })
 
     it("replaces arrays instead of concatenating", () => {

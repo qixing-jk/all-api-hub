@@ -913,6 +913,143 @@ describe("normalizeCheckInConfigV7", () => {
     expect(normalized.methodKnowledge.lastFullDiscoveryAt).toBe(140)
   })
 
+  it("drops an empty Turnstile throttle after validating every bound", () => {
+    const normalized = normalizeCheckInConfigV7({
+      customCheckIn: {
+        turnstilePreTrigger: {
+          kind: "checkinButton",
+          throttle: {
+            maxAttempts: -1,
+            minIntervalMs: Number.POSITIVE_INFINITY,
+          },
+        },
+      },
+    })
+
+    expect(normalized.customCheckIn?.turnstilePreTrigger).toEqual({
+      kind: "checkinButton",
+    })
+  })
+
+  it("normalizes unsupported evidence with a valid later unknown attempt", () => {
+    const normalized = normalizeCheckInConfigV7({
+      methodKnowledge: {
+        methods: {
+          [NEW_API_METHOD_ID]: {
+            detection: {
+              outcome: "unsupported",
+              evidence: { source: "probe", observedAt: "200" },
+              lastUnknownAttempt: {
+                reason: "timeout",
+                attemptedAt: "201",
+              },
+            },
+          },
+        },
+      },
+    })
+
+    expect(
+      normalized.methodKnowledge.methods[NEW_API_METHOD_ID]?.detection,
+    ).toEqual({
+      outcome: "unsupported",
+      evidence: { source: "probe", observedAt: 200 },
+      lastUnknownAttempt: { reason: "timeout", attemptedAt: 201 },
+    })
+  })
+
+  it("drops an invalid later unknown attempt without losing valid evidence", () => {
+    const normalized = normalizeCheckInConfigV7({
+      methodKnowledge: {
+        methods: {
+          [NEW_API_METHOD_ID]: {
+            detection: {
+              outcome: "unsupported",
+              evidence: { source: "probe", observedAt: 200 },
+              lastUnknownAttempt: {
+                reason: "timeout",
+                attemptedAt: -1,
+              },
+            },
+          },
+        },
+      },
+    })
+
+    expect(
+      normalized.methodKnowledge.methods[NEW_API_METHOD_ID]?.detection,
+    ).toEqual({
+      outcome: "unsupported",
+      evidence: { source: "probe", observedAt: 200 },
+    })
+  })
+
+  it.each([
+    { outcome: "corrupt", evidence: {} },
+    {
+      outcome: "unsupported",
+      evidence: { source: "legacy_migration" },
+    },
+    {
+      outcome: "unsupported",
+      evidence: { source: "probe", observedAt: -1 },
+    },
+    {
+      outcome: "matched",
+      evidence: { source: "unrecognized" },
+    },
+  ])("drops malformed detection evidence %#", (detection) => {
+    const normalized = normalizeCheckInConfigV7({
+      methodKnowledge: {
+        methods: {
+          [NEW_API_METHOD_ID]: { detection },
+        },
+      },
+    })
+
+    expect(normalized.methodKnowledge.methods).not.toHaveProperty(
+      NEW_API_METHOD_ID,
+    )
+  })
+
+  it.each([
+    { outcome: "corrupt", evidence: {} },
+    {
+      outcome: "known",
+      availability: "enabled",
+      today: "corrupt",
+      evidence: { source: "unrecognized" },
+    },
+  ])("drops malformed method status %#", (status) => {
+    const normalized = normalizeCheckInConfigV7({
+      methodKnowledge: {
+        methods: {
+          [NEW_API_METHOD_ID]: {
+            detection: matched,
+            status,
+          },
+        },
+      },
+    })
+
+    expect(
+      normalized.methodKnowledge.methods[NEW_API_METHOD_ID]?.detection,
+    ).toEqual(matched)
+    expect(
+      normalized.methodKnowledge.methods[NEW_API_METHOD_ID]?.status,
+    ).toBeUndefined()
+  })
+
+  it("treats malformed method containers as empty knowledge", () => {
+    expect(
+      normalizeCheckInConfigV7({ methodKnowledge: [] }).methodKnowledge.methods,
+    ).toEqual({})
+    expect(
+      normalizeCheckInConfigV7({ methodKnowledge: { methods: [] } })
+        .methodKnowledge.methods,
+    ).toEqual({})
+  })
+
   it("is deterministic and idempotent", () => {
     const input = {
       automaticExecutionEnabled: true,
