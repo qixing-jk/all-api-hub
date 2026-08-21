@@ -65,8 +65,7 @@ export function extractApiKeyCandidates(
     const sourceCleanupApplied =
       cleanedApiKeyInput.cleanupApplied ||
       cleanupApplied ||
-      sourceValue !== candidateValue ||
-      undefined
+      sourceValue !== candidateValue
     pushCandidate(candidates, {
       value: sourceValue,
       kind: API_CHECK_CANDIDATE_KINDS.API_KEY,
@@ -74,7 +73,7 @@ export function extractApiKeyCandidates(
       reasons: mergeReasons(candidateReasons, [
         API_CHECK_CANDIDATE_REASONS.BASE64_ENCODED_SOURCE,
       ]),
-      cleanupApplied: sourceCleanupApplied,
+      ...(sourceCleanupApplied ? { cleanupApplied: true } : {}),
       autoPromptEligible: false,
       insertionOrder,
     })
@@ -120,10 +119,10 @@ export function extractApiKeyCandidates(
   }
 
   const pushApiKeyCandidate = (
-    value: string | null,
+    value: string,
     reasons: ApiCheckCandidateReason[],
+    allowFallback = true,
   ) => {
-    if (!value) return
     const cleanedByCustomPatterns = applyCustomApiKeyCleanupPatterns(
       value,
       options.apiKeyCleanupPatterns,
@@ -145,6 +144,7 @@ export function extractApiKeyCandidates(
       )
     )
       return
+    if (!allowFallback) return
     if (!isApiKeyFallbackCandidate(candidateValue)) return
     const fallbackCandidate: InternalApiCheckCandidate = {
       value: candidateValue,
@@ -171,7 +171,6 @@ export function extractApiKeyCandidates(
     if (raw)
       pushApiKeyCandidate(raw, [
         API_CHECK_CANDIDATE_REASONS.AUTHORIZATION_HEADER,
-        API_CHECK_CANDIDATE_REASONS.KNOWN_PREFIX,
       ])
   }
 
@@ -202,11 +201,7 @@ export function extractApiKeyCandidates(
       cleanedApiKeyInput.cleanupApplied
         ? [API_CHECK_CANDIDATE_REASONS.CUSTOM_REGEX_REMOVED]
         : []
-    pushDecodedOrClassifiedApiKeyCandidate(
-      match[1] ?? "",
-      candidateReasons,
-      cleanedApiKeyInput.cleanupApplied,
-    )
+    pushApiKeyCandidate(match[1] ?? "", candidateReasons, false)
   }
 
   candidates.sort(compareApiKeyCandidates)

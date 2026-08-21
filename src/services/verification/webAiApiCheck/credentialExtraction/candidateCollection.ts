@@ -1,12 +1,14 @@
 import {
   API_CHECK_CANDIDATE_CONFIDENCES,
   API_CHECK_CANDIDATE_REASONS,
+  type ApiCheckCandidate,
   type ApiCheckCandidateConfidence,
   type ApiCheckCandidateReason,
   type ApiCheckExtractionSummary,
   type InternalApiCheckCandidate,
 } from "./candidateContract"
 
+// Lower values sort first and represent stronger confidence.
 const CONFIDENCE_RANK: Record<ApiCheckCandidateConfidence, number> = {
   [API_CHECK_CANDIDATE_CONFIDENCES.STANDARD]: 0,
   [API_CHECK_CANDIDATE_CONFIDENCES.ENHANCED_HIGH]: 1,
@@ -157,7 +159,9 @@ export function pushCandidate(
 /**
  * Drop internal ranking data before exposing structured candidates.
  */
-export function toPublicCandidate(candidate: InternalApiCheckCandidate) {
+export function toPublicCandidate(
+  candidate: InternalApiCheckCandidate,
+): ApiCheckCandidate {
   const { insertionOrder: _insertionOrder, ...publicCandidate } = candidate
   return publicCandidate
 }

@@ -368,6 +368,26 @@ describe("WebAiApiCheckSettings", () => {
     expect(screen.getAllByText("broken-[")).toHaveLength(2)
   })
 
+  it("shows unsafe custom API key cleanup regex warnings", () => {
+    render(<WebAiApiCheckSettings />)
+
+    fireEvent.change(
+      screen.getByLabelText(
+        "webAiApiCheck:settings.keyCleanup.patternsPlaceholder",
+      ),
+      {
+        target: {
+          value: "(a+)+$",
+        },
+      },
+    )
+
+    expect(
+      screen.getByText("webAiApiCheck:settings.keyCleanup.invalidTitle"),
+    ).toBeInTheDocument()
+    expect(screen.getAllByText("(a+)+$")).toHaveLength(2)
+  })
+
   it("disables enhanced auto-detect control when auto-detect is disabled", () => {
     mockedUseUserPreferencesContext.mockReturnValue(
       createContextValue({

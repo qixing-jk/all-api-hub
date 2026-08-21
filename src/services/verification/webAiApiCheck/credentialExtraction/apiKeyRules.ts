@@ -1,3 +1,5 @@
+import { isSafeRegexPattern } from "~/utils/core/regex"
+
 import { trimWrappingPunctuation } from "./candidateCollection"
 import {
   API_CHECK_CANDIDATE_CONFIDENCES,
@@ -6,6 +8,8 @@ import {
   type ApiCheckCandidateReason,
 } from "./candidateContract"
 
+// Keep more-specific prefixes before shared shorter prefixes because the
+// generated RegExp alternations use first-match ordering.
 const KNOWN_KEY_PREFIXES = [
   { value: "sk-ant", requiresHyphenSuffix: true },
   { value: "sk-or", requiresHyphenSuffix: true },
@@ -126,16 +130,13 @@ export function applyCustomApiKeyCleanupPatterns(
   for (const pattern of patterns) {
     const normalizedPattern = pattern.trim()
     if (!normalizedPattern) continue
+    if (!isSafeRegexPattern(normalizedPattern, "gi")) continue
 
-    try {
-      const regex = new RegExp(normalizedPattern, "gi")
-      const nextValue = value.replace(regex, "")
-      if (nextValue !== value) {
-        value = nextValue
-        cleanupApplied = true
-      }
-    } catch {
-      // Invalid saved patterns are ignored, matching settings validation.
+    const regex = new RegExp(normalizedPattern, "gi")
+    const nextValue = value.replace(regex, "")
+    if (nextValue !== value) {
+      value = nextValue
+      cleanupApplied = true
     }
   }
 
@@ -163,7 +164,6 @@ function decodeBase64ApiKeyCandidate(raw: string): string | null {
     return null
   }
   if (!/^[\x20-\x7E]+$/.test(decoded)) return null
-  if (decoded === encoded) return null
   return decoded
 }
 
@@ -230,7 +230,6 @@ export function classifyApiKeyCandidate(
   const cleaned = cleanKeyWindow(trimmed)
   const value = cleaned.value
   if (value.length < API_KEY_HEURISTICS.minimumCandidateLength) return null
-  if (!/^[A-Za-z0-9_-]+$/.test(value)) return null
   if (isNaturalLanguageMultiSegment(value)) return null
 
   const lowerValue = value.toLowerCase()
@@ -239,13 +238,19 @@ export function classifyApiKeyCandidate(
   const hasLongRandomSegment = segments.some((segment) =>
     isRandomLookingSegment(segment),
   )
+  const cleanupReasons: ApiCheckCandidateReason[] = cleaned.cleanupApplied
+    ? [API_CHECK_CANDIDATE_REASONS.ILLEGAL_CHARS_REMOVED]
+    : []
 
-  const knownHyphenPrefix = KNOWN_KEY_PREFIXES.find(
-    (prefix) =>
-      prefix.requiresHyphenSuffix && lowerValue.startsWith(`${prefix.value}-`),
+  const knownPrefix = KNOWN_KEY_PREFIXES.find((prefix) =>
+    lowerValue.startsWith(
+      prefix.requiresHyphenSuffix
+        ? `${prefix.value.toLowerCase()}-`
+        : prefix.value.toLowerCase(),
+    ),
   )
 
-  if (knownHyphenPrefix || value.startsWith("AIza")) {
+  if (knownPrefix) {
     return {
       value,
       confidence: API_CHECK_CANDIDATE_CONFIDENCES.STANDARD,
@@ -256,11 +261,7 @@ export function classifyApiKeyCandidate(
               API_CHECK_CANDIDATE_REASONS.MULTI_SEGMENT,
             ] satisfies ApiCheckCandidateReason[])
           : []),
-        ...(cleaned.cleanupApplied
-          ? ([
-              API_CHECK_CANDIDATE_REASONS.ILLEGAL_CHARS_REMOVED,
-            ] satisfies ApiCheckCandidateReason[])
-          : []),
+        ...cleanupReasons,
       ],
       cleanupApplied: cleaned.cleanupApplied,
       autoPromptEligible: true,
@@ -292,11 +293,7 @@ export function classifyApiKeyCandidate(
                 API_CHECK_CANDIDATE_REASONS.MULTI_SEGMENT,
               ] satisfies ApiCheckCandidateReason[])
             : []),
-          ...(cleaned.cleanupApplied
-            ? ([
-                API_CHECK_CANDIDATE_REASONS.ILLEGAL_CHARS_REMOVED,
-              ] satisfies ApiCheckCandidateReason[])
-            : []),
+          ...cleanupReasons,
         ],
         cleanupApplied: cleaned.cleanupApplied,
         autoPromptEligible: true,
@@ -311,11 +308,7 @@ export function classifyApiKeyCandidate(
           prefix.length > API_KEY_HEURISTICS.maximumShortPrefixLength
             ? API_CHECK_CANDIDATE_REASONS.UNKNOWN_LONG_PREFIX
             : API_CHECK_CANDIDATE_REASONS.MULTI_SEGMENT,
-          ...(cleaned.cleanupApplied
-            ? ([
-                API_CHECK_CANDIDATE_REASONS.ILLEGAL_CHARS_REMOVED,
-              ] satisfies ApiCheckCandidateReason[])
-            : []),
+          ...cleanupReasons,
         ],
         cleanupApplied: cleaned.cleanupApplied,
         autoPromptEligible: false,
@@ -333,11 +326,7 @@ export function classifyApiKeyCandidate(
       confidence: API_CHECK_CANDIDATE_CONFIDENCES.ENHANCED_MEDIUM,
       reasons: [
         API_CHECK_CANDIDATE_REASONS.UNSEPARATED_LONG_TOKEN,
-        ...(cleaned.cleanupApplied
-          ? ([
-              API_CHECK_CANDIDATE_REASONS.ILLEGAL_CHARS_REMOVED,
-            ] satisfies ApiCheckCandidateReason[])
-          : []),
+        ...cleanupReasons,
       ],
       cleanupApplied: cleaned.cleanupApplied,
       autoPromptEligible: false,

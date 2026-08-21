@@ -1,5 +1,3 @@
-import safeRegex from "safe-regex2"
-
 import type { ApiVerificationProbeId } from "~/services/verification/aiApiVerification"
 import type {
   ChannelFilterAction,
@@ -10,6 +8,7 @@ import type {
 } from "~/types/channelModelFilters"
 import { CHANNEL_MODEL_FILTER_PROBE_IDS } from "~/types/channelModelFilters"
 import { safeRandomUUID } from "~/utils/core/identifier"
+import { isSafeRegexPattern } from "~/utils/core/regex"
 
 const FILTER_CREDENTIAL_FIELD_NAMES = new Set([
   "apiKey",
@@ -45,7 +44,7 @@ const supportedProbeIds = new Set<ApiVerificationProbeId>(
 
 /** Rejects syntactically invalid or potentially exponential regex patterns. */
 export function isSafeChannelModelFilterRegex(pattern: string): boolean {
-  return safeRegex(pattern)
+  return isSafeRegexPattern(pattern)
 }
 
 /**

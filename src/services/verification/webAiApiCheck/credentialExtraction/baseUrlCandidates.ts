@@ -167,13 +167,36 @@ export function extractBaseUrlCandidates(
     insertionOrder += 1
   }
 
-  const baseUrlPattern =
-    /\b(?:base[_\s-]?url|baseURL|baseUrl|api[_\s-]?base|endpoint|proxy[_\s-]?url)\b\s*[:=]\s*([^\s'"]+)/gi
-  for (const match of rawInput.matchAll(baseUrlPattern)) {
-    const raw = trimWrappingPunctuation(match[1] ?? "")
+  const pushNormalizedFamilyCandidates = (
+    raw: string,
+    reasons: ApiCheckCandidateReason[],
+    confidence: ApiCheckCandidateConfidence = API_CHECK_CANDIDATE_CONFIDENCES.STANDARD,
+  ) => {
     const normalized = normalizeApiCheckBaseUrl(raw)
     const openAiNormalized = normalizeOpenAiFamilyBaseUrl(raw)
     const googleNormalized = normalizeGoogleFamilyBaseUrl(raw)
+
+    if (openAiNormalized !== normalized) {
+      pushBaseUrlCandidate(
+        openAiNormalized,
+        [...reasons, API_CHECK_CANDIDATE_REASONS.PATH_NORMALIZED],
+        confidence,
+      )
+    }
+    if (googleNormalized !== normalized) {
+      pushBaseUrlCandidate(
+        googleNormalized,
+        [...reasons, API_CHECK_CANDIDATE_REASONS.PATH_NORMALIZED],
+        confidence,
+      )
+    }
+    pushBaseUrlCandidate(normalized, reasons, confidence)
+  }
+
+  const baseUrlPattern =
+    /\b(?:base[_\s-]?url|api[_\s-]?base|endpoint|proxy[_\s-]?url)\b\s*[:=]\s*([^\s'"]+)/gi
+  for (const match of rawInput.matchAll(baseUrlPattern)) {
+    const raw = trimWrappingPunctuation(match[1] ?? "")
     const isLabeledBareDomain =
       !/^https?:\/\//i.test(raw) && isLikelyBareDomainCandidate(raw)
     const labeledReasons: ApiCheckCandidateReason[] = isLabeledBareDomain
@@ -186,42 +209,15 @@ export function extractBaseUrlCandidates(
     const confidence: ApiCheckCandidateConfidence = isLabeledBareDomain
       ? API_CHECK_CANDIDATE_CONFIDENCES.ENHANCED_HIGH
       : API_CHECK_CANDIDATE_CONFIDENCES.STANDARD
-    if (openAiNormalized !== normalized) {
-      pushBaseUrlCandidate(
-        openAiNormalized,
-        [...labeledReasons, API_CHECK_CANDIDATE_REASONS.PATH_NORMALIZED],
-        confidence,
-      )
-    }
-    if (googleNormalized !== normalized) {
-      pushBaseUrlCandidate(
-        googleNormalized,
-        [...labeledReasons, API_CHECK_CANDIDATE_REASONS.PATH_NORMALIZED],
-        confidence,
-      )
-    }
-    pushBaseUrlCandidate(normalized, labeledReasons, confidence)
+    pushNormalizedFamilyCandidates(raw, labeledReasons, confidence)
   }
 
   const urlPattern = /\bhttps?:\/\/[^\s'"]+/gi
   for (const match of rawInput.matchAll(urlPattern)) {
     const raw = trimWrappingPunctuation(match[0] ?? "")
-    const normalized = normalizeApiCheckBaseUrl(raw)
-    const openAiNormalized = normalizeOpenAiFamilyBaseUrl(raw)
-    const googleNormalized = normalizeGoogleFamilyBaseUrl(raw)
-    if (openAiNormalized !== normalized) {
-      pushBaseUrlCandidate(openAiNormalized, [
-        API_CHECK_CANDIDATE_REASONS.GENERIC_URL,
-        API_CHECK_CANDIDATE_REASONS.PATH_NORMALIZED,
-      ])
-    }
-    if (googleNormalized !== normalized) {
-      pushBaseUrlCandidate(googleNormalized, [
-        API_CHECK_CANDIDATE_REASONS.GENERIC_URL,
-        API_CHECK_CANDIDATE_REASONS.PATH_NORMALIZED,
-      ])
-    }
-    pushBaseUrlCandidate(normalized, [API_CHECK_CANDIDATE_REASONS.GENERIC_URL])
+    pushNormalizedFamilyCandidates(raw, [
+      API_CHECK_CANDIDATE_REASONS.GENERIC_URL,
+    ])
   }
 
   const bareDomainPattern =
@@ -234,30 +230,13 @@ export function extractBaseUrlCandidates(
     if (!isLikelyBareDomainCandidate(raw)) continue
 
     const withScheme = `https://${raw}`
-    const normalized = normalizeApiCheckBaseUrl(withScheme)
-    const openAiNormalized = normalizeOpenAiFamilyBaseUrl(withScheme)
-    const googleNormalized = normalizeGoogleFamilyBaseUrl(withScheme)
     const baseReasons: ApiCheckCandidateReason[] = [
       API_CHECK_CANDIDATE_REASONS.BARE_DOMAIN,
       API_CHECK_CANDIDATE_REASONS.SCHEME_ADDED,
     ]
 
-    if (openAiNormalized !== normalized) {
-      pushBaseUrlCandidate(
-        openAiNormalized,
-        [...baseReasons, API_CHECK_CANDIDATE_REASONS.PATH_NORMALIZED],
-        API_CHECK_CANDIDATE_CONFIDENCES.ENHANCED_HIGH,
-      )
-    }
-    if (googleNormalized !== normalized) {
-      pushBaseUrlCandidate(
-        googleNormalized,
-        [...baseReasons, API_CHECK_CANDIDATE_REASONS.PATH_NORMALIZED],
-        API_CHECK_CANDIDATE_CONFIDENCES.ENHANCED_HIGH,
-      )
-    }
-    pushBaseUrlCandidate(
-      normalized,
+    pushNormalizedFamilyCandidates(
+      withScheme,
       baseReasons,
       API_CHECK_CANDIDATE_CONFIDENCES.ENHANCED_HIGH,
     )
