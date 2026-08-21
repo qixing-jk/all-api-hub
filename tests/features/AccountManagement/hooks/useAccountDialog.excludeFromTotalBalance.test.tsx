@@ -8,6 +8,7 @@ import { accountStorage } from "~/services/accounts/accountStorage"
 import { PROTECTION_BYPASS_EXECUTION_VERSION } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import { server } from "~~/tests/msw/server"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 
 const { mockOpenWithAccount, mockOpenDefaultTokenQuickCreateDialogForAccount } =
@@ -102,11 +103,7 @@ describe("useAccountDialog aggregate exclusion flags", () => {
       notes: "",
       tagIds: [],
       authType: AuthTypeEnum.AccessToken,
-      checkIn: {
-        automaticExecutionEnabled: false,
-        methodKnowledge: { methods: {} },
-        selection: { mode: "automatic" as const },
-      } as any,
+      checkIn: buildCheckInConfig(),
       excludeFromTotalBalance: false,
       excludeFromTodayIncome: false,
     } as any)
@@ -178,11 +175,7 @@ describe("useAccountDialog aggregate exclusion flags", () => {
       notes: "",
       tagIds: [],
       authType: AuthTypeEnum.AccessToken,
-      checkIn: {
-        automaticExecutionEnabled: false,
-        methodKnowledge: { methods: {} },
-        selection: { mode: "automatic" as const },
-      } as any,
+      checkIn: buildCheckInConfig(),
       excludeFromTotalBalance: false,
       excludeFromTodayIncome: false,
     } as any)

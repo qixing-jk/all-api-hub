@@ -6,6 +6,7 @@ import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/con
 import { AuthTypeEnum, SiteHealthStatus, type SiteAccount } from "~/types"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
 vi.mock("~/services/apiTransport/request", () => ({
   fetchApi: vi.fn(),
@@ -23,11 +24,7 @@ const mockAccount: SiteAccount = {
   disabled: false,
   excludeFromTotalBalance: false,
   excludeFromTodayIncome: false,
-  checkIn: {
-    automaticExecutionEnabled: true,
-    methodKnowledge: { methods: {} },
-    selection: { mode: "automatic" as const },
-  },
+  checkIn: buildCheckInConfig({ automaticExecutionEnabled: true }),
   health: { status: SiteHealthStatus.Healthy },
   account_info: {
     id: "123",
@@ -73,11 +70,7 @@ describe("wongGongyiProvider", () => {
     it("leaves automatic-execution intent to the Module", () => {
       const account = {
         ...mockAccount,
-        checkIn: {
-          automaticExecutionEnabled: false,
-          methodKnowledge: { methods: {} },
-          selection: { mode: "automatic" as const },
-        },
+        checkIn: buildCheckInConfig(),
       }
       expect(wongGongyiProvider.canCheckIn(account)).toBe(true)
     })

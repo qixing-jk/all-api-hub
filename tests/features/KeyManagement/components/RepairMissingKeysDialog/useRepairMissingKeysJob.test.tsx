@@ -23,6 +23,7 @@ import {
   ACCOUNT_KEY_REPAIR_PROGRESS_SCHEMA_VERSION,
 } from "~/types/accountKeyAutoProvisioning"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { testI18n } from "~~/tests/test-utils/i18n"
 import { renderHook } from "~~/tests/test-utils/render"
 
@@ -73,11 +74,7 @@ function buildAccount(
     userId: "user-1",
     authType: AuthTypeEnum.AccessToken,
     disabled: false,
-    checkIn: {
-      automaticExecutionEnabled: false,
-      methodKnowledge: { methods: {} },
-      selection: { mode: "automatic" as const },
-    },
+    checkIn: buildCheckInConfig(),
     ...overrides,
   }
 }

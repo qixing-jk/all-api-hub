@@ -12,6 +12,7 @@ import {
   validateAndUpdateAccount,
 } from "~/services/accounts/accountOperations"
 import { AuthTypeEnum } from "~/types"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
 const {
   mockFetchAccountData,
@@ -83,11 +84,7 @@ describe("accountOperations", () => {
     })
   })
 
-  const checkInDisabled = {
-    automaticExecutionEnabled: false,
-    methodKnowledge: { methods: {} },
-    selection: { mode: "automatic" as const },
-  }
+  const checkInDisabled = buildCheckInConfig()
 
   describe("validateAndUpdateAccount", () => {
     it("fails closed for an OpenRouter edit when the strict account read fails", async () => {
@@ -133,11 +130,7 @@ describe("accountOperations", () => {
         today_quota_consumption: 0,
         today_requests_count: 0,
         today_income: 0,
-        checkIn: {
-          automaticExecutionEnabled: false,
-          methodKnowledge: { methods: {} },
-          selection: { mode: "automatic" as const },
-        },
+        checkIn: buildCheckInConfig(),
       })
       const result = await validateAndUpdateAccount(
         "account-1",
@@ -213,11 +206,7 @@ describe("accountOperations", () => {
         today_quota_consumption: 0,
         today_requests_count: 0,
         today_income: 0,
-        checkIn: {
-          automaticExecutionEnabled: false,
-          methodKnowledge: { methods: {} },
-          selection: { mode: "automatic" as const },
-        },
+        checkIn: buildCheckInConfig(),
       })
       mockUpdateAccountWithCheckInDraft.mockResolvedValueOnce(false)
 
@@ -277,11 +266,7 @@ describe("accountOperations", () => {
         today_quota_consumption: 0,
         today_requests_count: 0,
         today_income: 0,
-        checkIn: {
-          automaticExecutionEnabled: false,
-          methodKnowledge: { methods: {} },
-          selection: { mode: "automatic" as const },
-        },
+        checkIn: buildCheckInConfig(),
       })
       const result = await validateAndUpdateAccount(
         "account-1",

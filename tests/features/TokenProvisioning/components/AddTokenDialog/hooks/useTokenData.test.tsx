@@ -8,6 +8,7 @@ import {
 } from "~/features/TokenProvisioning/components/AddTokenDialog/hooks/useTokenData"
 import { DEFAULT_AUTO_PROVISION_TOKEN_NAME } from "~/services/accounts/defaultTokenLifecycle"
 import { AuthTypeEnum } from "~/types"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 
 const {
@@ -60,11 +61,7 @@ const ACCOUNT = {
   token: "token",
   userId: "1",
   authType: AuthTypeEnum.AccessToken,
-  checkIn: {
-    automaticExecutionEnabled: false,
-    methodKnowledge: { methods: {} },
-    selection: { mode: "automatic" as const },
-  },
+  checkIn: buildCheckInConfig(),
 } as any
 
 const SERVICE_CREDENTIAL_ONLY_ACCOUNT = {

@@ -14,6 +14,7 @@ import {
   type UsageHistoryPreferences,
 } from "~/types/usageHistory"
 import { server } from "~~/tests/msw/server"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
 /**
  * Create a fully populated Consume log item for usage-history sync tests.
@@ -77,11 +78,7 @@ async function createTestAccount(baseUrl: string): Promise<string> {
     excludeFromTotalBalance: false,
     excludeFromTodayIncome: false,
     authType: AuthTypeEnum.AccessToken,
-    checkIn: {
-      automaticExecutionEnabled: false,
-      methodKnowledge: { methods: {} },
-      selection: { mode: "automatic" as const },
-    },
+    checkIn: buildCheckInConfig(),
   }
 
   return await accountStorage.addAccount(accountData)

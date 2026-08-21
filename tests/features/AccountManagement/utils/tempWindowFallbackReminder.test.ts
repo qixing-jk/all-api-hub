@@ -8,6 +8,7 @@ import {
   type DisplaySiteData,
 } from "~/types"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
 /**
  * Build a DisplaySiteData object with overrides for test scenarios.
@@ -31,11 +32,7 @@ function makeSite(overrides: Partial<DisplaySiteData>): DisplaySiteData {
     token: "token",
     userId: "1",
     authType: "access_token" as any,
-    checkIn: {
-      automaticExecutionEnabled: false,
-      methodKnowledge: { methods: {} },
-      selection: { mode: "automatic" as const },
-    },
+    checkIn: buildCheckInConfig(),
     ...overrides,
   }
 }

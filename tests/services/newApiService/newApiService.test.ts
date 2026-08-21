@@ -6,6 +6,7 @@ import type { ApiToken, DisplaySiteData } from "~/types"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import type { ChannelFormData, CreateChannelPayload } from "~/types/newApi"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
 // ============================================================================
 // MOCKS
@@ -149,11 +150,7 @@ function createMockDisplaySiteData(
     token: "test-token-123",
     userId: "1",
     authType: AuthTypeEnum.AccessToken,
-    checkIn: {
-      automaticExecutionEnabled: false,
-      methodKnowledge: { methods: {} },
-      selection: { mode: "automatic" as const },
-    },
+    checkIn: buildCheckInConfig(),
     ...overrides,
   }
 }

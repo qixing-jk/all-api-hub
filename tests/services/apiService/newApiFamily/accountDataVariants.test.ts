@@ -5,6 +5,7 @@ import { fetchAccountData as fetchDoneHubAccountData } from "~/services/apiServi
 import { fetchAccountData as fetchVeloeraAccountData } from "~/services/apiService/newApiFamily/variants/veloera"
 import { fetchAccountData as fetchWongAccountData } from "~/services/apiService/newApiFamily/variants/wong"
 import { AuthTypeEnum } from "~/types"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
 const {
   mockFetchAccountQuota,
@@ -37,11 +38,7 @@ const request = {
     accessToken: "access-token",
     userId: "user-1",
   },
-  checkIn: {
-    automaticExecutionEnabled: false,
-    methodKnowledge: { methods: {} },
-    selection: { mode: "automatic" as const },
-  },
+  checkIn: buildCheckInConfig(),
 }
 
 const timestampRange = { start: 111, end: 222 }

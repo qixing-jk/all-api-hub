@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import type { ApiToken, DisplaySiteData } from "~/types"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
 // ============================================================================
 // MOCKS
@@ -97,11 +98,7 @@ function createMockDisplaySiteData(
     token: "access-token",
     userId: "1",
     authType: "access_token" as any,
-    checkIn: {
-      automaticExecutionEnabled: false,
-      methodKnowledge: { methods: {} },
-      selection: { mode: "automatic" as const },
-    },
+    checkIn: buildCheckInConfig(),
     ...overrides,
   }
 }

@@ -19,6 +19,7 @@ import {
 } from "~/services/modelList/pricingModel"
 import { MODEL_VENDOR_EVIDENCE_KINDS } from "~/services/models/modelDescriptor"
 import { AuthTypeEnum } from "~/types"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
 import { loadAccountRuntimeKeyFallbackPricingResponseFromToken } from "./runtimeKeyFallbackTestUtils"
 
@@ -113,11 +114,7 @@ const ACCOUNT = {
   token: "account-token",
   userId: "1",
   authType: AuthTypeEnum.AccessToken,
-  checkIn: {
-    automaticExecutionEnabled: false,
-    methodKnowledge: { methods: {} },
-    selection: { mode: "automatic" as const },
-  },
+  checkIn: buildCheckInConfig(),
 } as const
 
 const TOKEN = {

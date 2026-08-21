@@ -18,6 +18,7 @@ import {
 import { siteAnnouncementStorage } from "~/services/siteAnnouncements/storage"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import { SITE_ANNOUNCEMENT_PROVIDER_IDS } from "~/types/siteAnnouncements"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
 const {
   clearAlarmMock,
@@ -132,11 +133,7 @@ function createAccount(overrides: Partial<any> = {}) {
     notes: "",
     tagIds: [],
     excludeFromTotalBalance: false,
-    checkIn: {
-      automaticExecutionEnabled: false,
-      methodKnowledge: { methods: {} },
-      selection: { mode: "automatic" as const },
-    },
+    checkIn: buildCheckInConfig(),
     ...overrides,
   }
 }

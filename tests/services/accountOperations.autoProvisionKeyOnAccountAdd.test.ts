@@ -12,7 +12,8 @@ import {
   DEFAULT_PREFERENCES,
   userPreferences,
 } from "~/services/preferences/userPreferences"
-import { AuthTypeEnum, type CheckInConfig, type DisplaySiteData } from "~/types"
+import { AuthTypeEnum, type DisplaySiteData } from "~/types"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
 const {
   fetchAccountDataMock,
@@ -74,17 +75,14 @@ vi.mock(
   }),
 )
 
-const CHECK_IN_DISABLED: CheckInConfig = {
-  automaticExecutionEnabled: false,
-  methodKnowledge: { methods: {} },
-  selection: { mode: "automatic" },
+const CHECK_IN_DISABLED = buildCheckInConfig({
   customCheckIn: {
     url: "",
     redeemUrl: "",
     openRedeemWithCheckIn: true,
     isCheckedInToday: false,
   },
-}
+})
 
 const flushPromises = () => new Promise((resolve) => setTimeout(resolve, 0))
 

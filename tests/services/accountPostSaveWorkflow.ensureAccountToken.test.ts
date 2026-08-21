@@ -25,6 +25,7 @@ import {
   TOKEN_PROVISIONING_WORKFLOWS,
 } from "~/services/apiAdapters/contracts/tokenProvisioning"
 import { AuthTypeEnum, type ApiToken, type DisplaySiteData } from "~/types"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 
 const {
@@ -111,11 +112,7 @@ const buildDisplayAccount = (
     token: "access-token",
     userId: "7",
     authType: AuthTypeEnum.AccessToken,
-    checkIn: {
-      automaticExecutionEnabled: false,
-      methodKnowledge: { methods: {} },
-      selection: { mode: "automatic" as const },
-    },
+    checkIn: buildCheckInConfig(),
     cookieAuthSessionCookie: "",
     ...overrides,
   }) as DisplaySiteData

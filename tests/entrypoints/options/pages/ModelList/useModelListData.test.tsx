@@ -14,6 +14,7 @@ import { MODEL_LIST_SORT_MODES } from "~/features/ModelList/sortModes"
 import { MODEL_LIST_SOURCE_KINDS } from "~/services/modelList/pricingModel"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
 const mockUseAccountData = vi.fn()
 const mockUseApiCredentialProfiles = vi.fn()
@@ -65,11 +66,7 @@ const ACCOUNT: DisplaySiteData = {
   token: "token",
   userId: "1",
   authType: AuthTypeEnum.AccessToken,
-  checkIn: {
-    automaticExecutionEnabled: false,
-    methodKnowledge: { methods: {} },
-    selection: { mode: "automatic" as const },
-  },
+  checkIn: buildCheckInConfig(),
 }
 
 const SECOND_ACCOUNT: DisplaySiteData = {

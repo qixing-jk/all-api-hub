@@ -13,7 +13,7 @@ import {
   DEFAULT_PREFERENCES,
   userPreferences,
 } from "~/services/preferences/userPreferences"
-import { AuthTypeEnum, SiteHealthStatus, type CheckInConfig } from "~/types"
+import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import {
   ACCOUNT_TODAY_METRIC_REASONS,
   ACCOUNT_TODAY_METRIC_STATUSES,
@@ -22,6 +22,7 @@ import {
   buildCompleteTodayStatsAvailability,
   buildTodayStatsAvailabilityReplacementCases,
 } from "~~/tests/test-utils/accountTodayStats"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
 const {
   fetchAccountDataMock,
@@ -88,17 +89,14 @@ vi.mock(
   }),
 )
 
-const CHECK_IN_DISABLED: CheckInConfig = {
-  automaticExecutionEnabled: false,
-  methodKnowledge: { methods: {} },
-  selection: { mode: "automatic" },
+const CHECK_IN_DISABLED = buildCheckInConfig({
   customCheckIn: {
     url: "",
     redeemUrl: "",
     openRedeemWithCheckIn: true,
     isCheckedInToday: false,
   },
-}
+})
 
 const flushMicrotasks = async () => {
   await Promise.resolve()

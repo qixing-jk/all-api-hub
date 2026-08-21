@@ -15,6 +15,7 @@ import type { DisplaySiteData } from "~/types"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
 const createAccountFixture = (siteType: AccountSiteType): DisplaySiteData => ({
   id: `account-${siteType}`,
@@ -31,11 +32,7 @@ const createAccountFixture = (siteType: AccountSiteType): DisplaySiteData => ({
   token: "example-token",
   userId: "example-user-id",
   authType: AuthTypeEnum.AccessToken,
-  checkIn: {
-    automaticExecutionEnabled: false,
-    methodKnowledge: { methods: {} },
-    selection: { mode: "automatic" as const },
-  },
+  checkIn: buildCheckInConfig(),
 })
 
 const PROFILE_FIXTURE: ApiCredentialProfile = {

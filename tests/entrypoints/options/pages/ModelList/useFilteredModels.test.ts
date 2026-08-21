@@ -35,6 +35,7 @@ import { MODEL_VENDOR_FILTER_VALUES } from "~/services/models/modelVendor"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { renderHook, waitFor } from "~~/tests/test-utils/render"
 
 const createDisplayAccount = (
@@ -54,11 +55,7 @@ const createDisplayAccount = (
   token: "token",
   userId: "1",
   authType: AuthTypeEnum.AccessToken,
-  checkIn: {
-    automaticExecutionEnabled: false,
-    methodKnowledge: { methods: {} },
-    selection: { mode: "automatic" as const },
-  },
+  checkIn: buildCheckInConfig(),
   ...overrides,
 })
 

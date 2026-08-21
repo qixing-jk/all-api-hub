@@ -64,6 +64,7 @@ import {
   automaticExecution,
   userCommandExecution,
 } from "~~/tests/services/protectionBypass/fixtures"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
 const manualExecution = (
   surface: ProtectionBypassSurface = TEMP_WINDOW_REQUEST_SOURCES.Options,
@@ -119,11 +120,8 @@ const runnableCheckIn = (automaticExecutionEnabled = true) => ({
   },
 })
 
-const noSelectedCheckIn = () => ({
-  automaticExecutionEnabled: true,
-  methodKnowledge: { methods: {} },
-  selection: { mode: "automatic" as const },
-})
+const noSelectedCheckIn = () =>
+  buildCheckInConfig({ automaticExecutionEnabled: true })
 
 const runCheckinsForTest = (
   options: Omit<

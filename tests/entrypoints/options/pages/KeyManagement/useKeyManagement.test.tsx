@@ -38,6 +38,7 @@ import {
   userCommandExecution,
 } from "~~/tests/services/protectionBypass/fixtures"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { testI18n } from "~~/tests/test-utils/i18n"
 import { createToken } from "~~/tests/utils/keyManagementFactories"
 
@@ -139,11 +140,7 @@ const createDisplayAccount = (
   token: "token",
   userId: "1",
   authType: AuthTypeEnum.AccessToken,
-  checkIn: {
-    automaticExecutionEnabled: false,
-    methodKnowledge: { methods: {} },
-    selection: { mode: "automatic" as const },
-  },
+  checkIn: buildCheckInConfig(),
   ...overrides,
 })
 

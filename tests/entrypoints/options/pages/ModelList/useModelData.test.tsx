@@ -40,6 +40,7 @@ import {
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { testI18n } from "~~/tests/test-utils/i18n"
 
 const { toastSuccessMock, toastErrorMock } = vi.hoisted(() => ({
@@ -159,11 +160,7 @@ const createDisplayAccount = (
   token: "token",
   userId: "1",
   authType: AuthTypeEnum.AccessToken,
-  checkIn: {
-    automaticExecutionEnabled: false,
-    methodKnowledge: { methods: {} },
-    selection: { mode: "automatic" as const },
-  },
+  checkIn: buildCheckInConfig(),
   ...overrides,
 })
 

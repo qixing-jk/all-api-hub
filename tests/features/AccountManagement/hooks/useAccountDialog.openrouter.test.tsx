@@ -15,10 +15,8 @@ import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/con
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
-import {
-  buildCheckInConfig,
-  buildSiteAccount,
-} from "~~/tests/test-utils/factories"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
+import { buildSiteAccount } from "~~/tests/test-utils/factories"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 
 const {
@@ -262,11 +260,7 @@ describe("useAccountDialog OpenRouter behavior", () => {
       userId: "example-user-placeholder",
       exchangeRate: 7,
       siteType: SITE_TYPES.NEW_API,
-      checkIn: {
-        automaticExecutionEnabled: false,
-        methodKnowledge: { methods: {} },
-        selection: { mode: "automatic" as const },
-      },
+      checkIn: buildCheckInConfig(),
     },
   })
 

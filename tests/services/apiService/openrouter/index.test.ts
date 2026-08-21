@@ -26,6 +26,7 @@ import {
   SiteHealthStatus,
 } from "~/types"
 import { server } from "~~/tests/msw/server"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
 const baseRequest = {
   baseUrl: "https://mirror.example.invalid",
@@ -35,11 +36,7 @@ const baseRequest = {
     accessToken: "  management-key-placeholder  ",
     userId: "should-not-be-sent",
   },
-  checkIn: {
-    automaticExecutionEnabled: true,
-    methodKnowledge: { methods: {} },
-    selection: { mode: "automatic" as const },
-  },
+  checkIn: buildCheckInConfig({ automaticExecutionEnabled: true }),
 }
 
 describe("apiService OpenRouter", () => {

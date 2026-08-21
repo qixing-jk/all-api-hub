@@ -26,6 +26,7 @@ import {
 } from "~/services/verification/verificationResultHistory"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { render, screen } from "~~/tests/test-utils/render"
 
 const mockCreateTab = vi.hoisted(() => vi.fn())
@@ -378,11 +379,7 @@ describe("ModelItem profile actions", () => {
       token: "token",
       userId: "1",
       authType: AuthTypeEnum.AccessToken,
-      checkIn: {
-        automaticExecutionEnabled: false,
-        methodKnowledge: { methods: {} },
-        selection: { mode: "automatic" as const },
-      },
+      checkIn: buildCheckInConfig(),
     })
 
     render(
@@ -441,11 +438,7 @@ describe("ModelItem profile actions", () => {
       token: "token",
       userId: "1",
       authType: AuthTypeEnum.AccessToken,
-      checkIn: {
-        automaticExecutionEnabled: false,
-        methodKnowledge: { methods: {} },
-        selection: { mode: "automatic" as const },
-      },
+      checkIn: buildCheckInConfig(),
     })
 
     render(
@@ -504,11 +497,7 @@ describe("ModelItem profile actions", () => {
       token: "token",
       userId: "1",
       authType: AuthTypeEnum.AccessToken,
-      checkIn: {
-        automaticExecutionEnabled: false,
-        methodKnowledge: { methods: {} },
-        selection: { mode: "automatic" as const },
-      },
+      checkIn: buildCheckInConfig(),
     })
 
     render(
@@ -579,11 +568,7 @@ describe("ModelItem profile actions", () => {
       token: "token",
       userId: "1",
       authType: AuthTypeEnum.AccessToken,
-      checkIn: {
-        automaticExecutionEnabled: false,
-        methodKnowledge: { methods: {} },
-        selection: { mode: "automatic" as const },
-      },
+      checkIn: buildCheckInConfig(),
     })
 
     render(
@@ -655,11 +640,7 @@ describe("ModelItem profile actions", () => {
       token: "token",
       userId: "1",
       authType: AuthTypeEnum.AccessToken,
-      checkIn: {
-        automaticExecutionEnabled: false,
-        methodKnowledge: { methods: {} },
-        selection: { mode: "automatic" as const },
-      },
+      checkIn: buildCheckInConfig(),
     })
     const catalogFallbackSource = {
       ...accountSource,
@@ -733,11 +714,7 @@ describe("ModelItem profile actions", () => {
       token: "token",
       userId: "1",
       authType: AuthTypeEnum.AccessToken,
-      checkIn: {
-        automaticExecutionEnabled: false,
-        methodKnowledge: { methods: {} },
-        selection: { mode: "automatic" as const },
-      },
+      checkIn: buildCheckInConfig(),
     })
 
     render(

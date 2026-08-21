@@ -18,6 +18,7 @@ import {
   ACCOUNT_TODAY_METRIC_STATUSES,
   AuthTypeEnum,
 } from "~/types"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
 import { createCheckInConfig } from "../../apiAdapters/checkInFixtures"
 
@@ -635,11 +636,7 @@ describe("newApiFamily accountData", () => {
 
     await fetchAccountData({
       ...baseRequest,
-      checkIn: {
-        automaticExecutionEnabled: false,
-        methodKnowledge: { methods: {} },
-        selection: { mode: "automatic" as const },
-      },
+      checkIn: buildCheckInConfig(),
     })
 
     expect(mockGetTodayTimestampRange).toHaveBeenCalledTimes(1)

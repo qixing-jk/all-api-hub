@@ -29,6 +29,7 @@ import {
   type SiteAccount,
 } from "~/types"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import {
   expectKiloCodeSettingsSizeGuidance,
   expectKiloCodeUsageGuidance,
@@ -175,11 +176,7 @@ const createDisplayAccount = (
   token: "access-token",
   userId: "1",
   authType: AuthTypeEnum.AccessToken,
-  checkIn: {
-    automaticExecutionEnabled: false,
-    methodKnowledge: { methods: {} },
-    selection: { mode: "automatic" as const },
-  },
+  checkIn: buildCheckInConfig(),
   ...overrides,
 })
 
@@ -194,11 +191,7 @@ const createSiteAccount = (site: DisplaySiteData): SiteAccount => ({
   disabled: false,
   excludeFromTotalBalance: false,
   excludeFromTodayIncome: false,
-  checkIn: {
-    automaticExecutionEnabled: false,
-    methodKnowledge: { methods: {} },
-    selection: { mode: "automatic" as const },
-  },
+  checkIn: buildCheckInConfig(),
   health: { status: SiteHealthStatus.Healthy },
   authType: site.authType,
   account_info: {

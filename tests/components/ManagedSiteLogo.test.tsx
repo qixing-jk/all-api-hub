@@ -6,6 +6,7 @@ import { RuntimeKeyDetails } from "~/features/AccountManagement/components/CopyK
 import { buildServiceCredentialRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { TokenHeaderHarness as TokenHeader } from "~~/tests/test-utils/keyManagement/TokenHeaderHarness"
 import { render, screen } from "~~/tests/test-utils/render"
 
@@ -54,11 +55,7 @@ function createAccountStub(): DisplaySiteData {
     token: "token",
     userId: "1",
     authType: AuthTypeEnum.AccessToken,
-    checkIn: {
-      automaticExecutionEnabled: false,
-      methodKnowledge: { methods: {} },
-      selection: { mode: "automatic" as const },
-    },
+    checkIn: buildCheckInConfig(),
   }
 }
 

@@ -41,6 +41,7 @@ import {
   AuthTypeEnum,
 } from "~/types"
 import { server } from "~~/tests/msw/server"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { runMockSiteRequestTask } from "~~/tests/test-utils/siteRequestLease"
 
 const { mockWithSiteApiRequestLimit } = vi.hoisted(() => ({
@@ -73,11 +74,7 @@ const baseRequest = {
 
 const baseAccountRequest = {
   ...baseRequest,
-  checkIn: {
-    automaticExecutionEnabled: false,
-    methodKnowledge: { methods: {} },
-    selection: { mode: "automatic" as const },
-  },
+  checkIn: buildCheckInConfig(),
 }
 
 const tokenRequest: CreateTokenRequest = {

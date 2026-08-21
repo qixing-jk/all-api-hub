@@ -41,6 +41,7 @@ import {
 } from "~/types"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 
@@ -313,11 +314,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       token: "saved-token",
       userId: "12",
       authType: AuthTypeEnum.AccessToken,
-      checkIn: {
-        automaticExecutionEnabled: false,
-        methodKnowledge: { methods: {} },
-        selection: { mode: "automatic" as const },
-      },
+      checkIn: buildCheckInConfig(),
       cookieAuthSessionCookie: "",
       ...overrides,
     }) as DisplaySiteData

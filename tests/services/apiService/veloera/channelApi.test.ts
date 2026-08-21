@@ -18,6 +18,7 @@ import {
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { getSelectedCheckInStatus } from "~/services/checkin/autoCheckin/inspection"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
 import { createCheckInConfig } from "../../apiAdapters/checkInFixtures"
 
@@ -761,11 +762,7 @@ describe("apiService veloera channel APIs", () => {
         accessToken: "token",
         userId: "1",
       },
-      checkIn: {
-        automaticExecutionEnabled: true,
-        methodKnowledge: { methods: {} },
-        selection: { mode: "automatic" as const },
-      },
+      checkIn: buildCheckInConfig({ automaticExecutionEnabled: true }),
     } as any)
 
     expect(result.success).toBe(true)
@@ -788,11 +785,7 @@ describe("apiService veloera channel APIs", () => {
         accessToken: "token",
         userId: "1",
       },
-      checkIn: {
-        automaticExecutionEnabled: false,
-        methodKnowledge: { methods: {} },
-        selection: { mode: "automatic" as const },
-      },
+      checkIn: buildCheckInConfig(),
     } as any)
 
     expect(mockDetermineHealthStatus).toHaveBeenCalledWith(failure)

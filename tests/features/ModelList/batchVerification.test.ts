@@ -23,6 +23,7 @@ import { DEFAULT_MODEL_GROUP } from "~/services/models/constants"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
 const createAccountFixture = (id = "account-1"): DisplaySiteData => ({
   id,
@@ -39,11 +40,7 @@ const createAccountFixture = (id = "account-1"): DisplaySiteData => ({
   token: "example-token",
   userId: "example-user-id",
   authType: AuthTypeEnum.AccessToken,
-  checkIn: {
-    automaticExecutionEnabled: false,
-    methodKnowledge: { methods: {} },
-    selection: { mode: "automatic" as const },
-  },
+  checkIn: buildCheckInConfig(),
 })
 
 const DEFAULT_ACCOUNT_SOURCE = createAccountSource(createAccountFixture())

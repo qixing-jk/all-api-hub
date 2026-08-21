@@ -43,8 +43,8 @@ import {
 } from "~/types/accountTodayStats"
 import type { ChannelFormData, ManagedSiteChannel } from "~/types/managedSite"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { createDeferred } from "~~/tests/test-utils/deferred"
-import { buildCheckInConfig } from "~~/tests/test-utils/factories"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 
 const { mockToastLoading, mockToastDismiss, mockToastError } = vi.hoisted(
@@ -134,11 +134,7 @@ const buildDisplaySiteData = (
   token: "access-token",
   userId: "1",
   authType: AuthTypeEnum.AccessToken,
-  checkIn: {
-    automaticExecutionEnabled: false,
-    methodKnowledge: { methods: {} },
-    selection: { mode: "automatic" as const },
-  },
+  checkIn: buildCheckInConfig(),
   ...overrides,
 })
 

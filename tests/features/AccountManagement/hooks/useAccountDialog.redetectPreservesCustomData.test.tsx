@@ -13,10 +13,8 @@ import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import { PROTECTION_BYPASS_EXECUTION_VERSION } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum, SiteHealthStatus, type CheckInConfig } from "~/types"
 import type { TurnstilePreTrigger } from "~/types/turnstile"
-import {
-  buildCheckInConfig,
-  buildSiteAccount,
-} from "~~/tests/test-utils/factories"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
+import { buildSiteAccount } from "~~/tests/test-utils/factories"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 
 const {
@@ -554,11 +552,7 @@ describe("useAccountDialog re-detect preservation", () => {
         userId: "12",
         siteName: "Detected Cookie Site",
         siteType: "new-api",
-        checkIn: {
-          automaticExecutionEnabled: false,
-          methodKnowledge: { methods: {} },
-          selection: { mode: "automatic" as const },
-        },
+        checkIn: buildCheckInConfig(),
         fetchContext: {
           kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
           tabId: 101,
@@ -686,11 +680,7 @@ describe("useAccountDialog re-detect preservation", () => {
         siteType: SITE_TYPES.AIHUBMIX,
         authType: AuthTypeEnum.AccessToken,
         exchangeRate: 7,
-        checkIn: {
-          automaticExecutionEnabled: false,
-          methodKnowledge: { methods: {} },
-          selection: { mode: "automatic" as const },
-        },
+        checkIn: buildCheckInConfig(),
       },
     })
 
@@ -740,11 +730,7 @@ describe("useAccountDialog re-detect preservation", () => {
         siteName: "Detected Cookie Site",
         siteType: "new-api",
         exchangeRate: 7,
-        checkIn: {
-          automaticExecutionEnabled: false,
-          methodKnowledge: { methods: {} },
-          selection: { mode: "automatic" as const },
-        },
+        checkIn: buildCheckInConfig(),
       },
     })
 

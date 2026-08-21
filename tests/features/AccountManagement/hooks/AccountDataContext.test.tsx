@@ -40,6 +40,7 @@ import {
   automaticExecution,
   userCommandExecution,
 } from "~~/tests/services/protectionBypass/fixtures"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { testI18n } from "~~/tests/test-utils/i18n"
 
 function buildCheckInStatus(isCheckedInToday: boolean): CheckInConfig {
@@ -1044,11 +1045,7 @@ describe("AccountDataContext initial load orchestration", () => {
         balance: { USD: 0, CNY: 0 },
         todayConsumption: { USD: 0, CNY: 0 },
         todayIncome: { USD: 0, CNY: 0 },
-        checkIn: {
-          automaticExecutionEnabled: false,
-          methodKnowledge: { methods: {} },
-          selection: { mode: "automatic" as const },
-        },
+        checkIn: buildCheckInConfig(),
       },
     ])
     mockGetActiveTabs.mockReturnValue(
@@ -1113,11 +1110,7 @@ describe("AccountDataContext initial load orchestration", () => {
         balance: { USD: 0, CNY: 0 },
         todayConsumption: { USD: 0, CNY: 0 },
         todayIncome: { USD: 0, CNY: 0 },
-        checkIn: {
-          automaticExecutionEnabled: false,
-          methodKnowledge: { methods: {} },
-          selection: { mode: "automatic" as const },
-        },
+        checkIn: buildCheckInConfig(),
       },
     ])
     mockGetActiveTabs.mockReturnValue(
@@ -1179,11 +1172,7 @@ describe("AccountDataContext initial load orchestration", () => {
         balance: { USD: 0, CNY: 0 },
         todayConsumption: { USD: 0, CNY: 0 },
         todayIncome: { USD: 0, CNY: 0 },
-        checkIn: {
-          automaticExecutionEnabled: false,
-          methodKnowledge: { methods: {} },
-          selection: { mode: "automatic" as const },
-        },
+        checkIn: buildCheckInConfig(),
       },
     ])
     mockGetActiveTabs.mockRejectedValue(new Error("tabs query failed"))
@@ -1217,11 +1206,7 @@ describe("AccountDataContext initial load orchestration", () => {
         balance: { USD: 0, CNY: 0 },
         todayConsumption: { USD: 0, CNY: 0 },
         todayIncome: { USD: 0, CNY: 0 },
-        checkIn: {
-          automaticExecutionEnabled: false,
-          methodKnowledge: { methods: {} },
-          selection: { mode: "automatic" as const },
-        },
+        checkIn: buildCheckInConfig(),
       },
     ])
     mockGetActiveTabs.mockResolvedValue([])

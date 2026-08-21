@@ -10,6 +10,7 @@ import {
 import { buildAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { render, screen } from "~~/tests/test-utils/render"
 
 const ACCOUNT = {
@@ -26,11 +27,7 @@ const ACCOUNT = {
   token: "token",
   userId: "1",
   authType: AuthTypeEnum.AccessToken,
-  checkIn: {
-    automaticExecutionEnabled: false,
-    methodKnowledge: { methods: {} },
-    selection: { mode: "automatic" as const },
-  },
+  checkIn: buildCheckInConfig(),
 } as const
 
 describe("StatusIndicator", () => {

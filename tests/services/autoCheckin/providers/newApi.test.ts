@@ -19,6 +19,7 @@ import {
 } from "~/utils/browser/tempWindowFetch"
 import { safeRandomUUID } from "~/utils/core/identifier"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 
 vi.mock("~/services/apiTransport/request", () => ({
@@ -59,11 +60,7 @@ const mockAccount = buildSiteAccount({
   exchange_rate: 7.0,
   notes: "",
   tagIds: [],
-  checkIn: {
-    automaticExecutionEnabled: true,
-    methodKnowledge: { methods: {} },
-    selection: { mode: "automatic" as const },
-  },
+  checkIn: buildCheckInConfig({ automaticExecutionEnabled: true }),
   health: { status: SiteHealthStatus.Healthy },
   account_info: {
     id: "123",
@@ -114,11 +111,7 @@ describe("newApiProvider", () => {
     it("leaves automatic-execution intent to the Module", () => {
       const account = {
         ...mockAccount,
-        checkIn: {
-          automaticExecutionEnabled: false,
-          methodKnowledge: { methods: {} },
-          selection: { mode: "automatic" as const },
-        },
+        checkIn: buildCheckInConfig(),
       }
       expect(newApiProvider.canCheckIn(account)).toBe(true)
     })

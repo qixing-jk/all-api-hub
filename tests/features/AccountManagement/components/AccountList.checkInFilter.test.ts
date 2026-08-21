@@ -4,6 +4,7 @@ import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { SITE_TYPES } from "~/constants/siteType"
 import { getAccountCheckInFilterValue } from "~/features/AccountManagement/components/AccountList/checkInFilter"
 import type { CheckInConfig } from "~/types"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 
 const todayMs = Date.UTC(2026, 0, 15, 12)
@@ -49,12 +50,11 @@ function buildCheckIn(input?: {
 
 const unsupportedCheckIn = (
   customCheckIn?: CheckInConfig["customCheckIn"],
-): CheckInConfig => ({
-  automaticExecutionEnabled: true,
-  methodKnowledge: { methods: {} },
-  selection: { mode: "automatic" as const },
-  ...(customCheckIn ? { customCheckIn } : {}),
-})
+): CheckInConfig =>
+  buildCheckInConfig({
+    automaticExecutionEnabled: true,
+    ...(customCheckIn ? { customCheckIn } : {}),
+  })
 
 describe("getAccountCheckInFilterValue", () => {
   it("classifies the selected method status into filter buckets", () => {

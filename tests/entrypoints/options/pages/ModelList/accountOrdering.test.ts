@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import { sortModelListAccounts } from "~/features/ModelList/accountOrdering"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
 function createAccount(id: string, name: string): DisplaySiteData {
   return {
@@ -20,11 +21,7 @@ function createAccount(id: string, name: string): DisplaySiteData {
     token: "token",
     userId: "1",
     authType: AuthTypeEnum.AccessToken,
-    checkIn: {
-      automaticExecutionEnabled: false,
-      methodKnowledge: { methods: {} },
-      selection: { mode: "automatic" as const },
-    },
+    checkIn: buildCheckInConfig(),
   }
 }
 
