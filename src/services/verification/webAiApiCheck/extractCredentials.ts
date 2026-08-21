@@ -350,6 +350,13 @@ function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 }
 
+const KNOWN_KEY_WINDOW_PREFIX_PATTERN_SOURCE = `(?:${KNOWN_KEY_PREFIXES.map(
+  (prefix) =>
+    `${escapeRegExp(prefix.value)}${prefix.requiresHyphenSuffix ? "-" : ""}`,
+).join("|")})`
+const ENGLISH_API_KEY_LABEL_PATTERN_SOURCE = String.raw`\b(?:api[_\s-]?key|key|token|access[_\s-]?token|secret)\b`
+const SEPARATED_KNOWN_KEY_WINDOW_PATTERN_SOURCE = `(${KNOWN_KEY_WINDOW_PREFIX_PATTERN_SOURCE}[A-Za-z0-9_-]{6,}(?:[ \\t.\\u200B-\\u200D]+[A-Za-z0-9_-]{6,})+)`
+
 const KNOWN_KEY_PREFIX_PATTERN = new RegExp(
   `(?<![A-Za-z0-9_-])(?:${KNOWN_KEY_PREFIXES.map((prefix) =>
     escapeRegExp(prefix.value),
@@ -446,8 +453,8 @@ const MAX_BASE64_API_KEY_DECODE_DEPTH = 4
 /**
  * Decode nested base64/base64url values with a bounded depth and cycle guard.
  */
-function decodeBase64ApiKeyCandidateChain(raw: string): string[] {
-  const decodedValues: string[] = []
+function decodeBase64ApiKeyCandidateLayers(raw: string): string[] {
+  const decodedLayers: string[] = []
   const seenValues = new Set([raw])
   let currentValue = raw
 
@@ -455,12 +462,12 @@ function decodeBase64ApiKeyCandidateChain(raw: string): string[] {
     const decoded = decodeBase64ApiKeyCandidate(currentValue)
     if (!decoded || seenValues.has(decoded)) break
 
-    decodedValues.push(decoded)
+    decodedLayers.push(decoded)
     seenValues.add(decoded)
     currentValue = decoded
   }
 
-  return decodedValues
+  return decodedLayers
 }
 
 /**
@@ -736,16 +743,17 @@ export function extractApiCheckCredentialsFromText(
     cleanupApplied = false,
   ) => {
     const sourceValue = trimWrappingPunctuation(candidateValue)
+    const sourceCleanupApplied =
+      cleanedApiKeyInput.cleanupApplied ||
+      cleanupApplied ||
+      sourceValue !== candidateValue ||
+      undefined
     pushCandidate(apiKeyCandidates, {
       value: sourceValue,
       kind: "apiKey",
       confidence: "enhancedMedium",
       reasons: mergeReasons(candidateReasons, ["base64EncodedSource"]),
-      cleanupApplied:
-        cleanedApiKeyInput.cleanupApplied ||
-        cleanupApplied ||
-        sourceValue !== candidateValue ||
-        undefined,
+      cleanupApplied: sourceCleanupApplied,
       autoPromptEligible: false,
       insertionOrder,
     })
@@ -757,9 +765,9 @@ export function extractApiCheckCredentialsFromText(
     candidateReasons: ApiCheckCandidateReason[],
     cleanupApplied = false,
   ) => {
-    const decodedValues = decodeBase64ApiKeyCandidateChain(candidateValue)
+    const decodedLayers = decodeBase64ApiKeyCandidateLayers(candidateValue)
     let pushedDecoded = false
-    for (const decoded of [...decodedValues].reverse()) {
+    for (const decoded of decodedLayers.reverse()) {
       if (
         pushClassifiedApiKeyCandidate(
           decoded,
@@ -920,15 +928,19 @@ export function extractApiCheckCredentialsFromText(
     if (raw) pushApiKeyCandidate(raw, ["authorizationHeader", "knownPrefix"])
   }
 
-  const apiKeyPattern =
-    /(?:\b(?:api[_\s-]?key|key|token|access[_\s-]?token|secret)\b|API\s*密钥|密钥|访问令牌|令牌)\s*[:=：＝]\s*([^\s'"]+)/gi
+  const apiKeyPattern = new RegExp(
+    `(?:${ENGLISH_API_KEY_LABEL_PATTERN_SOURCE}|API\\s*密钥|密钥|访问令牌|令牌)\\s*[:=：＝]\\s*([^\\s'"]+)`,
+    "gi",
+  )
   for (const match of apiKeyInput.matchAll(apiKeyPattern)) {
     const raw = trimWrappingPunctuation(match[1] ?? "")
     if (raw) pushApiKeyCandidate(raw, ["labeled"])
   }
 
-  const labeledSeparatedKnownKeyWindowPattern =
-    /\b(?:api[_\s-]?key|key|token|access[_\s-]?token|secret)\b\s*[:=]\s*((?:(?:sk-ant|sk-or|sk|tp)-|AIza)[A-Za-z0-9_-]{6,}(?:[ \t.\u200B-\u200D]+[A-Za-z0-9_-]{6,})+)(?=$|[\r\n"'`,;)\]}])/gi
+  const labeledSeparatedKnownKeyWindowPattern = new RegExp(
+    `${ENGLISH_API_KEY_LABEL_PATTERN_SOURCE}\\s*[:=]\\s*${SEPARATED_KNOWN_KEY_WINDOW_PATTERN_SOURCE}(?=$|[\\r\\n"'\`,;)\\]}])`,
+    "gi",
+  )
   for (const match of apiKeyInput.matchAll(
     labeledSeparatedKnownKeyWindowPattern,
   )) {
@@ -936,8 +948,10 @@ export function extractApiCheckCredentialsFromText(
     if (raw) pushApiKeyCandidate(raw, ["labeled"])
   }
 
-  const separatedKnownKeyWindowPattern =
-    /(?<![A-Za-z0-9_-])((?:(?:sk-ant|sk-or|sk|tp)-|AIza)[A-Za-z0-9_-]{6,}(?:[ \t.\u200B-\u200D]+[A-Za-z0-9_-]{6,})+)(?![A-Za-z0-9_-])/gi
+  const separatedKnownKeyWindowPattern = new RegExp(
+    `(?<![A-Za-z0-9_-])${SEPARATED_KNOWN_KEY_WINDOW_PATTERN_SOURCE}(?![A-Za-z0-9_-])`,
+    "gi",
+  )
   for (const match of apiKeyInput.matchAll(separatedKnownKeyWindowPattern)) {
     const raw = trimWrappingPunctuation(match[1] ?? "")
     if (raw) pushApiKeyCandidate(raw, ["knownPrefix"])

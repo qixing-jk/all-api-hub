@@ -17,6 +17,10 @@ function buildKnownKey(body: string, prefix = OPENAI_KEY_PREFIX): string {
   return `${prefix}${body}`
 }
 
+function encodeUnpaddedBase64(value: string): string {
+  return btoa(value).replace(/=+$/, "")
+}
+
 describe("webAiApiCheck extractCredentials", () => {
   it("normalizes loose base urls by trimming wrappers, adding https, and dropping query fragments", () => {
     expect(
@@ -605,7 +609,7 @@ describe("webAiApiCheck extractCredentials", () => {
 
   it("decodes labeled unpadded base64-obfuscated API keys", () => {
     const apiKey = buildKnownKey("base64Aa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1A")
-    const encodedApiKey = btoa(apiKey).replace(/=+$/, "")
+    const encodedApiKey = encodeUnpaddedBase64(apiKey)
 
     const result = extractApiCheckCredentialsFromText(
       `API Key: ${encodedApiKey}`,
@@ -638,7 +642,7 @@ describe("webAiApiCheck extractCredentials", () => {
     const apiKey = buildKnownKey(
       "unlabeledBase64Aa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1A",
     )
-    const encodedApiKey = btoa(apiKey).replace(/=+$/, "")
+    const encodedApiKey = encodeUnpaddedBase64(apiKey)
 
     const result = extractApiCheckCredentialsFromText(`
       https://proxy.example.com/api
@@ -663,8 +667,8 @@ describe("webAiApiCheck extractCredentials", () => {
     const apiKey = buildKnownKey(
       "nestedBase64Aa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1A",
     )
-    const encodedApiKey = btoa(apiKey).replace(/=+$/, "")
-    const nestedEncodedApiKey = btoa(encodedApiKey).replace(/=+$/, "")
+    const encodedApiKey = encodeUnpaddedBase64(apiKey)
+    const nestedEncodedApiKey = encodeUnpaddedBase64(encodedApiKey)
 
     const result = extractApiCheckCredentialsFromText(`
       https://proxy.example.com/api
@@ -691,7 +695,7 @@ describe("webAiApiCheck extractCredentials", () => {
     const encodedLayers = [apiKey]
     for (let depth = 0; depth < 5; depth += 1) {
       encodedLayers.push(
-        btoa(encodedLayers[encodedLayers.length - 1]).replace(/=+$/, ""),
+        encodeUnpaddedBase64(encodedLayers[encodedLayers.length - 1]),
       )
     }
     const deepestEncodedApiKey = encodedLayers[5]
@@ -707,6 +711,7 @@ describe("webAiApiCheck extractCredentials", () => {
   })
 
   it.each([
+    ["English token label", "token={{key}}"],
     ["full-width separator", "API Key：**{{key}}**"],
     ["full-width equals", "token＝{{key}}"],
     ["Chinese API key label", "API 密钥：{{key}}"],
@@ -715,7 +720,7 @@ describe("webAiApiCheck extractCredentials", () => {
     const apiKey = buildKnownKey(
       "localizedLabelAa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1A",
     )
-    const encodedApiKey = btoa(apiKey).replace(/=+$/, "")
+    const encodedApiKey = encodeUnpaddedBase64(apiKey)
     const sourceText = template.replace("{{key}}", encodedApiKey)
 
     const result = extractApiCheckCredentialsFromText(sourceText)
