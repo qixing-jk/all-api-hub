@@ -384,9 +384,13 @@ describe("useTokenData", () => {
     expect(toastErrorMock).toHaveBeenCalledWith(
       "keyManagement:dialog.modelLoadFailed",
     )
-    expect(fetchAccountAvailableModelsMock).toHaveBeenCalledWith(ACCOUNT, {
-      requestTimeoutMs: TOKEN_MODEL_DISCOVERY_TIMEOUT_MS,
-    })
+    expect(fetchAccountAvailableModelsMock).toHaveBeenCalledWith(
+      ACCOUNT,
+      expect.objectContaining({
+        abortSignal: expect.any(AbortSignal),
+        requestTimeoutMs: TOKEN_MODEL_DISCOVERY_TIMEOUT_MS,
+      }),
+    )
   })
 
   it("disables and clears prefilled model limits when discovery fails for create", async () => {
@@ -575,11 +579,17 @@ describe("useTokenData", () => {
     act(() => {
       previousRequest = result.current.loadAvailableModels()
     })
+    const previousAbortSignal = fetchAccountAvailableModelsMock.mock
+      .calls[0]?.[1]?.abortSignal as AbortSignal
+    expect(previousAbortSignal.aborted).toBe(false)
 
     rerender({
       isOpen: true,
       currentAccount: nextAccount,
       initialGroup: "default",
+    })
+    await waitFor(() => {
+      expect(previousAbortSignal.aborted).toBe(true)
     })
 
     let currentRequest!: Promise<boolean>
@@ -599,6 +609,41 @@ describe("useTokenData", () => {
 
     expect(result.current.availableModels).toEqual(["current-model"])
     expect(fetchAccountAvailableModelsMock).toHaveBeenCalledTimes(2)
+  })
+
+  it("cancels active model discovery when dialog data resets", async () => {
+    const deferredModels = createDeferred<string[]>()
+    fetchAccountAvailableModelsMock.mockReturnValue(deferredModels.promise)
+    fetchUserGroupsMock.mockResolvedValue(createGroups(["default"]))
+
+    const { result } = renderSubject({
+      isOpen: true,
+      currentAccount: ACCOUNT,
+      initialGroup: "default",
+    })
+
+    await waitFor(() => {
+      expect(result.current.groups).toEqual(createGroups(["default"]))
+    })
+
+    let request!: Promise<boolean>
+    act(() => {
+      request = result.current.loadAvailableModels()
+    })
+    const abortSignal = fetchAccountAvailableModelsMock.mock.calls[0]?.[1]
+      ?.abortSignal as AbortSignal
+    expect(abortSignal.aborted).toBe(false)
+
+    act(() => {
+      result.current.resetData()
+    })
+    expect(abortSignal.aborted).toBe(true)
+
+    deferredModels.resolve(["stale-model"])
+    await act(async () => {
+      await expect(request).resolves.toBe(false)
+    })
+    expect(result.current.availableModels).toEqual([])
   })
 
   it("shows the localized fallback error when loading bootstrap data fails without a message", async () => {

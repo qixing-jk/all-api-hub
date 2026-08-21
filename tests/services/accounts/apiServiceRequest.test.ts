@@ -437,6 +437,31 @@ describe("fetchDisplayAccountTokens", () => {
     )
   })
 
+  it("cancels model discovery through the caller abort signal", async () => {
+    const controller = new AbortController()
+    fetchAvailableModels.mockImplementationOnce(
+      () => new Promise<string[]>(() => {}),
+    )
+
+    const requestSettled = fetchDisplayAccountAvailableModels(ACCOUNT as any, {
+      abortSignal: controller.signal,
+    })
+    const abortExpectation = expect(requestSettled).rejects.toMatchObject({
+      name: "AbortError",
+    })
+
+    await Promise.resolve()
+    controller.abort(new DOMException("Dialog closed", "AbortError"))
+
+    await abortExpectation
+    expect(fetchAvailableModels).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ...REQUEST,
+        abortSignal: expect.any(AbortSignal),
+      }),
+    )
+  })
+
   it("normalizes provider failures at the display-account invite-link boundary", async () => {
     const providerError = new ApiError(
       "Session expired",

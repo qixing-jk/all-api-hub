@@ -57,11 +57,18 @@ export function useTokenData(
   const modelLoadGenerationRef = useRef(0)
   const activeModelLoadRef = useRef<{
     accountId: string
+    controller: AbortController
     promise: Promise<boolean>
   } | null>(null)
   const canFetchModels = currentAccount
     ? canFetchAccountTokenModels(currentAccount)
     : false
+
+  const cancelActiveModelLoad = useCallback(() => {
+    modelLoadGenerationRef.current += 1
+    activeModelLoadRef.current?.controller.abort()
+    activeModelLoadRef.current = null
+  }, [])
 
   const loadInitialData = useCallback(async () => {
     if (!currentAccount) return
@@ -170,8 +177,10 @@ export function useTokenData(
     if (activeLoad?.accountId === currentAccount.id) {
       return await activeLoad.promise
     }
+    if (activeLoad) cancelActiveModelLoad()
 
     const generation = ++modelLoadGenerationRef.current
+    const controller = new AbortController()
     setIsModelsLoading(true)
     setModelLoadErrorMessage(null)
 
@@ -179,7 +188,10 @@ export function useTokenData(
       try {
         const models = await fetchDisplayAccountAvailableModels(
           currentAccount,
-          { requestTimeoutMs: TOKEN_MODEL_DISCOVERY_TIMEOUT_MS },
+          {
+            abortSignal: controller.signal,
+            requestTimeoutMs: TOKEN_MODEL_DISCOVERY_TIMEOUT_MS,
+          },
         )
 
         if (
@@ -227,6 +239,7 @@ export function useTokenData(
 
     activeModelLoadRef.current = {
       accountId: currentAccount.id,
+      controller,
       promise,
     }
 
@@ -239,6 +252,7 @@ export function useTokenData(
     }
   }, [
     canFetchModels,
+    cancelActiveModelLoad,
     currentAccount,
     modelsLoaded,
     preserveExistingModelLimitsOnFailure,
@@ -247,13 +261,14 @@ export function useTokenData(
   ])
 
   useEffect(() => {
-    modelLoadGenerationRef.current += 1
-    activeModelLoadRef.current = null
+    cancelActiveModelLoad()
     setAvailableModels([])
     setIsModelsLoading(false)
     setModelsLoaded(false)
     setModelLoadErrorMessage(null)
-  }, [currentAccount?.id])
+
+    return cancelActiveModelLoad
+  }, [cancelActiveModelLoad, currentAccount?.id])
 
   useEffect(() => {
     if (isOpen && currentAccount) {
@@ -262,8 +277,7 @@ export function useTokenData(
   }, [isOpen, currentAccount, loadInitialData])
 
   const resetData = () => {
-    modelLoadGenerationRef.current += 1
-    activeModelLoadRef.current = null
+    cancelActiveModelLoad()
     setAvailableModels([])
     setGroups({})
     setIsModelsLoading(false)
