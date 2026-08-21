@@ -3,6 +3,7 @@ import type { ApiVerificationProbeId } from "~/services/verification/aiApiVerifi
 export const WEB_AI_API_CHECK_TEST_IDS = {
   backdrop: "api-check-backdrop",
   modal: "api-check-modal",
+  closeButton: "api-check-close-button",
   modelId: "api-check-model-id",
   baseUrlCandidatePrefix: "web-ai-api-check-base-url-candidate",
   apiKeyCandidatePrefix: "web-ai-api-check-api-key-candidate",

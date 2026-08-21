@@ -412,7 +412,7 @@ test("closes the API check modal with detected credentials in one click", async 
     API_KEY,
   )
 
-  await modal.getByRole("button", { name: "Close" }).click()
+  await modal.getByTestId(WEB_AI_API_CHECK_TEST_IDS.closeButton).click()
 
   await expect(modal).toHaveCount(0)
 })

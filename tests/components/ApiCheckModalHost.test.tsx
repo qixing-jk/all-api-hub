@@ -1192,10 +1192,11 @@ describe("ApiCheckModalHost", () => {
       trigger: "autoDetect",
     })
 
-    const closeButton = screen.getByRole("button", {
-      name: "common:actions.close",
-    })
+    const closeButton = screen.getByTestId(
+      WEB_AI_API_CHECK_TEST_IDS.closeButton,
+    )
 
+    expect(closeButton).toHaveAccessibleName("common:actions.close")
     expect(closeButton).not.toHaveAttribute("aria-describedby")
     expect(closeButton).toHaveAttribute("title", "common:actions.close")
   })

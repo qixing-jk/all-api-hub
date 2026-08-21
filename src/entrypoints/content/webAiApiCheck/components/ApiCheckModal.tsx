@@ -105,6 +105,7 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
             </div>
             {/* Focus-opened react-tooltip can consume the first dismiss click in Edge's content ShadowRoot. */}
             <IconButton
+              data-testid={WEB_AI_API_CHECK_TEST_IDS.closeButton}
               aria-label={t("common:actions.close")}
               variant="ghost"
               size="sm"
