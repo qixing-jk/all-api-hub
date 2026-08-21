@@ -54,15 +54,35 @@ describe("OpenAI-compatible model fetchers", () => {
     )
   })
 
-  it("returns the API base URL confirmed by the canonical model endpoint", async () => {
-    const models = [{ id: "gpt-4.1" }]
-    mockFetchApiData.mockResolvedValueOnce(models)
-
-    await expect(discoverOpenAICompatibleModels(params)).resolves.toEqual({
-      models,
+  it.each([
+    {
+      baseUrl: "https://openai-compatible.example.com",
       resolvedBaseUrl: "https://openai-compatible.example.com/v1",
-    })
-  })
+    },
+    {
+      baseUrl: "https://x.test/v1",
+      resolvedBaseUrl: "https://x.test/v1",
+    },
+    {
+      baseUrl: "https://ark.example.invalid/api/v3",
+      resolvedBaseUrl: "https://ark.example.invalid/api/v3/v1",
+    },
+  ])(
+    "returns $resolvedBaseUrl when the canonical route succeeds for $baseUrl",
+    async ({ baseUrl, resolvedBaseUrl }) => {
+      const models = [{ id: "gpt-4.1" }]
+      mockFetchApiData.mockResolvedValueOnce(models)
+
+      await expect(
+        discoverOpenAICompatibleModels({ ...params, baseUrl }),
+      ).resolves.toEqual({ models, resolvedBaseUrl })
+
+      expect(mockFetchApiData).toHaveBeenCalledWith(
+        expect.objectContaining({ baseUrl }),
+        { endpoint: "/v1/models" },
+      )
+    },
+  )
 
   it("accepts an empty canonical model list without trying another endpoint", async () => {
     mockFetchApiData.mockResolvedValueOnce([])
