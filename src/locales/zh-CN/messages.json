@@ -162,6 +162,7 @@
     "updateFailed": "更新账号失败"
   },
   "sub2api": {
+    "authPersistenceFailed": "无法将刷新的 Sub2API 登录信息安全地保存到此账号。请刷新或重新导入该账号，然后重试。",
     "configMissing": "请先在基础设置中配置 Sub2API 基础 URL 和管理员 API Key。",
     "groupMissing": "Sub2API 分组“{{group}}”已不可用。请刷新分组列表后重试。",
     "loginRequired": "请先登录 Sub2API 控制台（插件会读取 auth_token/auth_user 用于导入会话）后再重试。",

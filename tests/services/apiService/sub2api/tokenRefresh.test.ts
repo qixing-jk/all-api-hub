@@ -3,15 +3,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import {
   refreshSub2ApiTokens,
   SUB2API_TOKEN_REFRESH_BUFFER_MS,
+  SUB2API_TOKEN_REFRESH_FAILURE_REASONS,
+  Sub2ApiTokenRefreshError,
 } from "~/services/apiService/sub2api/tokenRefresh"
-
-const { mockGetSafeErrorMessage } = vi.hoisted(() => ({
-  mockGetSafeErrorMessage: vi.fn(),
-}))
-
-vi.mock("~/services/apiService/sub2api/redaction", () => ({
-  getSafeErrorMessage: mockGetSafeErrorMessage,
-}))
 
 describe("Sub2API token refresh", () => {
   beforeEach(() => {
@@ -102,8 +96,7 @@ describe("Sub2API token refresh", () => {
     )
   })
 
-  it("sanitizes network failures through getSafeErrorMessage", async () => {
-    mockGetSafeErrorMessage.mockReturnValueOnce("redacted network error")
+  it("treats a lost refresh response as an uncertain rotation", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockRejectedValueOnce(new Error("raw upstream failure")),
@@ -114,9 +107,10 @@ describe("Sub2API token refresh", () => {
         baseUrl: "https://sub2.example.com",
         refreshToken: "refresh-token",
       }),
-    ).rejects.toThrow("redacted network error")
-
-    expect(mockGetSafeErrorMessage).toHaveBeenCalled()
+    ).rejects.toMatchObject({
+      name: Sub2ApiTokenRefreshError.name,
+      reason: SUB2API_TOKEN_REFRESH_FAILURE_REASONS.UNCERTAIN_ROTATION,
+    })
   })
 
   it("rejects envelopes whose code is not successful", async () => {
@@ -138,7 +132,7 @@ describe("Sub2API token refresh", () => {
     ).rejects.toThrow("Sub2API token refresh failed")
   })
 
-  it("falls back to a generic refresh failure when the response body is not valid JSON", async () => {
+  it("treats an unreadable refresh response as an uncertain rotation", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValueOnce({
@@ -151,7 +145,10 @@ describe("Sub2API token refresh", () => {
         baseUrl: "https://sub2.example.com",
         refreshToken: "refresh-token",
       }),
-    ).rejects.toThrow("Sub2API token refresh failed")
+    ).rejects.toMatchObject({
+      name: Sub2ApiTokenRefreshError.name,
+      reason: SUB2API_TOKEN_REFRESH_FAILURE_REASONS.UNCERTAIN_ROTATION,
+    })
   })
 
   it("rejects payloads with missing token fields or non-positive expiry", async () => {
@@ -182,13 +179,42 @@ describe("Sub2API token refresh", () => {
         baseUrl: "https://sub2.example.com",
         refreshToken: "refresh-token",
       }),
-    ).rejects.toThrow("Sub2API token refresh failed")
+    ).rejects.toMatchObject({
+      reason: SUB2API_TOKEN_REFRESH_FAILURE_REASONS.UNCERTAIN_ROTATION,
+    })
 
     await expect(
       refreshSub2ApiTokens({
         baseUrl: "https://sub2.example.com",
         refreshToken: "refresh-token",
       }),
-    ).rejects.toThrow("Sub2API token refresh failed")
+    ).rejects.toMatchObject({
+      reason: SUB2API_TOKEN_REFRESH_FAILURE_REASONS.UNCERTAIN_ROTATION,
+    })
+  })
+
+  it("classifies a response that loses the rotated refresh token as uncertain", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce({
+        json: vi.fn().mockResolvedValue({
+          code: 0,
+          data: {
+            access_token: "rotated-access-token",
+            expires_in: 3600,
+          },
+        }),
+      }),
+    )
+
+    await expect(
+      refreshSub2ApiTokens({
+        baseUrl: "https://auth.example.invalid",
+        refreshToken: "single-use-refresh-token",
+      }),
+    ).rejects.toMatchObject({
+      name: Sub2ApiTokenRefreshError.name,
+      reason: SUB2API_TOKEN_REFRESH_FAILURE_REASONS.UNCERTAIN_ROTATION,
+    })
   })
 })

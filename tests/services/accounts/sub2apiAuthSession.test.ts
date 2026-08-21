@@ -3,15 +3,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { AccountUpdateUserTimestampMode } from "~/services/accounts/accountDefaults"
 import { accountSub2ApiAuthSession } from "~/services/accounts/sub2apiAuthSession"
 
-const { getAccountByIdMock, updateAccountMock } = vi.hoisted(() => ({
+const { getAccountByIdMock, updateSub2ApiAuthMock } = vi.hoisted(() => ({
   getAccountByIdMock: vi.fn(),
-  updateAccountMock: vi.fn(),
+  updateSub2ApiAuthMock: vi.fn(),
 }))
 
 vi.mock("~/services/accounts/accountStorage", () => ({
   accountStorage: {
     getAccountById: (...args: unknown[]) => getAccountByIdMock(...args),
-    updateAccount: (...args: unknown[]) => updateAccountMock(...args),
+    updateSub2ApiAuth: (...args: unknown[]) => updateSub2ApiAuthMock(...args),
   },
 }))
 
@@ -19,11 +19,13 @@ describe("accountSub2ApiAuthSession", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     getAccountByIdMock.mockResolvedValue(null)
-    updateAccountMock.mockResolvedValue(true)
+    updateSub2ApiAuthMock.mockResolvedValue({ status: "persisted" })
   })
 
   it("returns a narrow stored auth snapshot for an existing Sub2API account", async () => {
     getAccountByIdMock.mockResolvedValueOnce({
+      site_type: "sub2api",
+      site_url: "https://auth.example.invalid/dashboard",
       account_info: {
         id: "9",
         access_token: " stored-jwt ",
@@ -38,6 +40,7 @@ describe("accountSub2ApiAuthSession", () => {
       accountSub2ApiAuthSession.getLatestAuth("account-1"),
     ).resolves.toEqual({
       accessToken: "stored-jwt",
+      origin: "https://auth.example.invalid",
       userId: "9",
       sub2apiAuth: {
         refreshToken: "stored-refresh",
@@ -111,60 +114,54 @@ describe("accountSub2ApiAuthSession", () => {
     await expect(
       accountSub2ApiAuthSession.persistAuthUpdate("account-1", {
         accessToken: "resynced-jwt",
+        expectedOrigin: "https://sub2.example.com",
+        expectedUserId: "9",
       }),
-    ).resolves.toBe(true)
+    ).resolves.toEqual({ status: "persisted" })
 
-    expect(updateAccountMock).toHaveBeenCalledWith(
+    expect(updateSub2ApiAuthMock).toHaveBeenCalledWith(
       "account-1",
-      {
-        account_info: {
-          access_token: "resynced-jwt",
-        },
-      },
+      expect.objectContaining({
+        accessToken: "resynced-jwt",
+        expectedOrigin: "https://sub2.example.com",
+        expectedUserId: "9",
+      }),
       { userTimestampMode: AccountUpdateUserTimestampMode.Preserve },
     )
   })
 
-  it("normalizes refresh-token updates before persisting", async () => {
+  it("delegates refresh-token updates to storage normalization", async () => {
     await expect(
       accountSub2ApiAuthSession.persistAuthUpdate("account-1", {
         accessToken: "new-jwt",
         refreshToken: "  trimmed-refresh  ",
         tokenExpiresAt: 1_700_000_060_000,
+        expectedOrigin: "https://sub2.example.com",
+        expectedUserId: "9",
       }),
-    ).resolves.toBe(true)
+    ).resolves.toEqual({ status: "persisted" })
 
-    expect(updateAccountMock).toHaveBeenCalledWith(
+    expect(updateSub2ApiAuthMock).toHaveBeenCalledWith(
       "account-1",
-      {
-        account_info: {
-          access_token: "new-jwt",
-        },
-        sub2apiAuth: {
-          refreshToken: "trimmed-refresh",
-          tokenExpiresAt: 1_700_000_060_000,
-        },
-      },
+      expect.objectContaining({ refreshToken: "  trimmed-refresh  " }),
       { userTimestampMode: AccountUpdateUserTimestampMode.Preserve },
     )
 
-    updateAccountMock.mockClear()
+    updateSub2ApiAuthMock.mockClear()
 
     await expect(
       accountSub2ApiAuthSession.persistAuthUpdate("account-1", {
         accessToken: "new-jwt",
         refreshToken: "   ",
         tokenExpiresAt: 1_700_000_060_000,
+        expectedOrigin: "https://sub2.example.com",
+        expectedUserId: "9",
       }),
-    ).resolves.toBe(true)
+    ).resolves.toEqual({ status: "persisted" })
 
-    expect(updateAccountMock).toHaveBeenCalledWith(
+    expect(updateSub2ApiAuthMock).toHaveBeenCalledWith(
       "account-1",
-      {
-        account_info: {
-          access_token: "new-jwt",
-        },
-      },
+      expect.objectContaining({ refreshToken: "   " }),
       { userTimestampMode: AccountUpdateUserTimestampMode.Preserve },
     )
   })
@@ -175,20 +172,14 @@ describe("accountSub2ApiAuthSession", () => {
         accessToken: "new-jwt",
         refreshToken: "new-refresh",
         tokenExpiresAt: 1_700_000_060_000,
+        expectedOrigin: "https://sub2.example.com",
+        expectedUserId: "9",
       }),
-    ).resolves.toBe(true)
+    ).resolves.toEqual({ status: "persisted" })
 
-    expect(updateAccountMock).toHaveBeenCalledWith(
+    expect(updateSub2ApiAuthMock).toHaveBeenCalledWith(
       "account-1",
-      {
-        account_info: {
-          access_token: "new-jwt",
-        },
-        sub2apiAuth: {
-          refreshToken: "new-refresh",
-          tokenExpiresAt: 1_700_000_060_000,
-        },
-      },
+      expect.objectContaining({ refreshToken: "new-refresh" }),
       { userTimestampMode: AccountUpdateUserTimestampMode.Preserve },
     )
   })

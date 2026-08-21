@@ -162,6 +162,7 @@
     "updateFailed": "Failed to update account"
   },
   "sub2api": {
+    "authPersistenceFailed": "The refreshed Sub2API sign-in could not be saved to this account. Refresh or re-import the account, then try again.",
     "configMissing": "Please configure the Sub2API Base URL and Admin API Key in basic settings first.",
     "groupMissing": "Sub2API group '{{group}}' is no longer available. Refresh the group list and try again.",
     "loginRequired": "Please log in to the Sub2API dashboard first (so the extension can read auth_token/auth_user from localStorage) and try again.",

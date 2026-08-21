@@ -1,5 +1,3 @@
-import { getSafeErrorMessage } from "./redaction"
-
 /**
  * Match upstream buffer: refresh ~2 minutes before expiry.
  */
@@ -24,6 +22,20 @@ type Sub2ApiRefreshedCredentials = {
   tokenExpiresAt: number
 }
 
+export const SUB2API_TOKEN_REFRESH_FAILURE_REASONS = {
+  INVALID_REFRESH_TOKEN: "invalid_refresh_token",
+  UNCERTAIN_ROTATION: "uncertain_rotation",
+} as const
+
+export class Sub2ApiTokenRefreshError extends Error {
+  constructor(
+    public readonly reason: (typeof SUB2API_TOKEN_REFRESH_FAILURE_REASONS)[keyof typeof SUB2API_TOKEN_REFRESH_FAILURE_REASONS],
+  ) {
+    super("Sub2API token refresh failed")
+    this.name = "Sub2ApiTokenRefreshError"
+  }
+}
+
 const normalizeString = (value: unknown): string =>
   typeof value === "string" ? value.trim() : ""
 
@@ -32,6 +44,11 @@ const normalizeExpiresInSeconds = (value: unknown): number =>
 
 /**
  * Refreshes Sub2API tokens.
+ *
+ * Source: https://github.com/Wei-Shaw/sub2api/blob/67380eafd5ae2eaa8db910ae738199c3dac62e37/backend/internal/service/auth_service.go#L1777-L1861
+ * Each refresh immediately invalidates the submitted refresh token and returns
+ * a complete replacement pair. An incomplete success response is therefore an
+ * uncertain credential mutation and must not replay the submitted token.
  */
 export async function refreshSub2ApiTokens(params: {
   baseUrl: string
@@ -46,7 +63,7 @@ export async function refreshSub2ApiTokens(params: {
   }
 
   const endpoint = new URL("/api/v1/auth/refresh", baseUrl).toString()
-  let payload: Sub2ApiEnvelope<Sub2ApiRefreshTokenData> | null = null
+  let payload: Sub2ApiEnvelope<Sub2ApiRefreshTokenData> | null
 
   try {
     const response = await fetch(endpoint, {
@@ -58,27 +75,40 @@ export async function refreshSub2ApiTokens(params: {
       body: JSON.stringify({ refresh_token: normalizedRefreshToken }),
     })
 
-    payload = (await response
-      .json()
-      .catch(() => null)) as Sub2ApiEnvelope<Sub2ApiRefreshTokenData> | null
-  } catch (error) {
-    throw new Error(getSafeErrorMessage(error))
+    payload =
+      (await response.json()) as Sub2ApiEnvelope<Sub2ApiRefreshTokenData>
+  } catch {
+    throw new Sub2ApiTokenRefreshError(
+      SUB2API_TOKEN_REFRESH_FAILURE_REASONS.UNCERTAIN_ROTATION,
+    )
   }
 
-  if (!payload || typeof payload !== "object" || payload.code !== 0) {
-    throw new Error("Sub2API token refresh failed")
+  if (!payload || typeof payload !== "object") {
+    throw new Sub2ApiTokenRefreshError(
+      SUB2API_TOKEN_REFRESH_FAILURE_REASONS.UNCERTAIN_ROTATION,
+    )
+  }
+
+  if (payload.code !== 0) {
+    throw new Sub2ApiTokenRefreshError(
+      SUB2API_TOKEN_REFRESH_FAILURE_REASONS.INVALID_REFRESH_TOKEN,
+    )
   }
 
   const data = payload.data
   if (!data || typeof data !== "object") {
-    throw new Error("Sub2API token refresh failed")
+    throw new Sub2ApiTokenRefreshError(
+      SUB2API_TOKEN_REFRESH_FAILURE_REASONS.UNCERTAIN_ROTATION,
+    )
   }
 
   const nextAccessToken = normalizeString(data.access_token)
   const nextRefreshToken = normalizeString(data.refresh_token)
   const expiresInSeconds = normalizeExpiresInSeconds(data.expires_in)
   if (!nextAccessToken || !nextRefreshToken || expiresInSeconds <= 0) {
-    throw new Error("Sub2API token refresh failed")
+    throw new Sub2ApiTokenRefreshError(
+      SUB2API_TOKEN_REFRESH_FAILURE_REASONS.UNCERTAIN_ROTATION,
+    )
   }
 
   const now = Date.now()

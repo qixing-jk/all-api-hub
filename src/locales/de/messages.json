@@ -162,6 +162,7 @@
     "updateFailed": "Konto konnte nicht aktualisiert werden"
   },
   "sub2api": {
+    "authPersistenceFailed": "Die aktualisierte Sub2API-Anmeldung konnte nicht sicher in diesem Konto gespeichert werden. Aktualisieren oder importieren Sie das Konto erneut und versuchen Sie es dann noch einmal.",
     "configMissing": "Bitte konfigurieren Sie zuerst die Sub2API-Basis-URL und den Admin API Key in den Grundeinstellungen.",
     "groupMissing": "Die Sub2API-Gruppe „{{group}}“ ist nicht mehr verfügbar. Aktualisieren Sie die Gruppenliste und versuchen Sie es erneut.",
     "loginRequired": "Bitte melden Sie sich zuerst beim Sub2API-Dashboard an (damit die Erweiterung auth_token/auth_user aus localStorage lesen kann) und versuchen Sie es erneut.",

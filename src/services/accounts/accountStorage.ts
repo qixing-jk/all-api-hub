@@ -15,6 +15,11 @@ import {
   resolveAccountDisplayName,
 } from "~/services/accounts/utils/accountDisplayName"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
+import type {
+  Sub2ApiAuthPersistenceResult,
+  Sub2ApiPersistAuthUpdate,
+} from "~/services/apiService/sub2api/authSession"
+import { SUB2API_AUTH_PERSISTENCE_STATUSES } from "~/services/apiService/sub2api/authSession"
 import { isCheckInMethodId } from "~/services/checkin/autoCheckin/providers/registry"
 import {
   markCheckInMethodExecuted,
@@ -502,6 +507,90 @@ class AccountStorageService {
     } catch (error) {
       logger.error(t("messages:storage.updateFailed", { error: "" }), error)
       return false
+    }
+  }
+
+  /**
+   * Atomically replaces Sub2API credentials after re-reading the account under
+   * the storage lock and confirming its origin and user identity still match.
+   */
+  async updateSub2ApiAuth(
+    id: string,
+    update: Sub2ApiPersistAuthUpdate,
+    options: UpdateAccountOptions,
+  ): Promise<Sub2ApiAuthPersistenceResult> {
+    try {
+      const expectedOrigin = normalizeAccountSiteProfileUrlForOriginKey({
+        siteType: SITE_TYPES.SUB2API,
+        url: update.expectedOrigin,
+      })
+      const expectedUserId = normalizeAccountIdentity(update.expectedUserId)
+      const result =
+        await this.mutateStorageConfig<Sub2ApiAuthPersistenceResult>(
+          (config) => {
+            const account = config.accounts.find((item) => item.id === id)
+            if (!account) {
+              return {
+                result: {
+                  status: SUB2API_AUTH_PERSISTENCE_STATUSES.ACCOUNT_MISSING,
+                },
+                changed: false,
+              }
+            }
+
+            const actualOrigin = normalizeAccountSiteProfileUrlForOriginKey({
+              siteType: account.site_type,
+              url: account.site_url,
+            })
+            const actualUserId = normalizeAccountIdentity(
+              account.account_info.id,
+            )
+            if (
+              account.site_type !== SITE_TYPES.SUB2API ||
+              !expectedUserId ||
+              !actualUserId ||
+              actualOrigin !== expectedOrigin ||
+              actualUserId !== expectedUserId
+            ) {
+              return {
+                result: {
+                  status: SUB2API_AUTH_PERSISTENCE_STATUSES.IDENTITY_MISMATCH,
+                },
+                changed: false,
+              }
+            }
+
+            const index = config.accounts.indexOf(account)
+            const authUpdates: DeepPartial<SiteAccount> = {
+              account_info: {
+                access_token: update.accessToken,
+              },
+            }
+            const refreshToken = update.refreshToken?.trim()
+            if (refreshToken) {
+              authUpdates.sub2apiAuth = {
+                refreshToken,
+                ...(typeof update.tokenExpiresAt === "number" &&
+                Number.isFinite(update.tokenExpiresAt)
+                  ? { tokenExpiresAt: update.tokenExpiresAt }
+                  : {}),
+              }
+            }
+            config.accounts[index] = applySiteAccountUpdates({
+              account,
+              updates: authUpdates,
+              now: Date.now(),
+              userTimestampMode: options.userTimestampMode,
+            })
+            return {
+              result: { status: SUB2API_AUTH_PERSISTENCE_STATUSES.PERSISTED },
+              changed: true,
+            }
+          },
+        )
+      return result
+    } catch {
+      return { status: SUB2API_AUTH_PERSISTENCE_STATUSES.WRITE_FAILED }
     }
   }
 

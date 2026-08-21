@@ -162,6 +162,7 @@
     "updateFailed": "更新帳號失敗"
   },
   "sub2api": {
+    "authPersistenceFailed": "無法將重新整理的 Sub2API 登入資訊安全地儲存到此帳號。請重新整理或重新匯入該帳號，然後再試一次。",
     "configMissing": "請先在基礎設定中配置 Sub2API 基礎 URL 和管理員 API Key。",
     "groupMissing": "Sub2API 分組“{{group}}”已不可用。請重新整理分組列表後重試。",
     "loginRequired": "請先登入 Sub2API 控制台（外掛會讀取 auth_token/auth_user 用於匯入會話）後再重試。",

@@ -645,7 +645,7 @@ describe("apiService sub2api refreshAccountData", () => {
     mockGetLatestAuth.mockReset()
     mockPersistAuthUpdate.mockReset()
     mockGetLatestAuth.mockResolvedValue(null)
-    mockPersistAuthUpdate.mockResolvedValue(true)
+    mockPersistAuthUpdate.mockResolvedValue({ status: "persisted" })
   })
 
   const createRequest = (
@@ -819,6 +819,7 @@ describe("apiService sub2api refreshAccountData", () => {
       request.baseUrl,
       TEMP_WINDOW_REQUEST_SOURCES.Popup,
       undefined,
+      "1",
     )
     const retryRequest = vi.mocked(fetchApi).mock.calls[1]?.[0] as any
     expect(retryRequest?.auth?.accessToken).toBe("new-jwt")
@@ -967,6 +968,145 @@ describe("apiService sub2api refreshAccountData", () => {
     expect(mockPersistAuthUpdate).not.toHaveBeenCalled()
 
     nowSpy.mockRestore()
+  })
+
+  it("does not invoke a business mutation after rotated credentials fail to persist", async () => {
+    const now = 1_700_000_000_000
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(now)
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            code: 0,
+            message: "ok",
+            data: {
+              access_token: "rotated-access-token",
+              refresh_token: "rotated-refresh-token",
+              expires_in: 3600,
+            },
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      ),
+    )
+    vi.mocked(fetchApi).mockResolvedValueOnce({
+      code: 0,
+      message: "ok",
+      data: { id: 1, username: "example-user", balance: 1 },
+    } as any)
+    mockPersistAuthUpdate.mockResolvedValueOnce({ status: "write_failed" })
+
+    const request = createRequest({
+      accountId: "account-1",
+      sub2apiAuthSession: {
+        getLatestAuth: (...args: any[]) => mockGetLatestAuth(...args),
+        persistAuthUpdate: (...args: any[]) => mockPersistAuthUpdate(...args),
+      },
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        userId: "1",
+        accessToken: "old-access-token",
+        refreshToken: "single-use-refresh-token",
+        tokenExpiresAt: now + 60_000,
+      },
+    })
+
+    await expect(
+      createApiToken(request, createTokenRequest({ group: "" })),
+    ).rejects.toThrow("messages:sub2api.authPersistenceFailed")
+
+    expect(fetchApi).toHaveBeenCalledTimes(1)
+    expect(vi.mocked(fetchApi).mock.calls[0]?.[1]).toMatchObject({
+      endpoint: "/api/v1/auth/me",
+    })
+    expect(mockPersistAuthUpdate).toHaveBeenCalledTimes(1)
+    nowSpy.mockRestore()
+  })
+
+  it("rejects refreshed credentials that resolve to another account identity", async () => {
+    const now = 1_700_000_000_000
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(now)
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            code: 0,
+            message: "ok",
+            data: {
+              access_token: "other-user-access-token",
+              refresh_token: "other-user-refresh-token",
+              expires_in: 3600,
+            },
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      ),
+    )
+    vi.mocked(fetchApi).mockResolvedValueOnce({
+      code: 0,
+      message: "ok",
+      data: { id: 2, username: "other-user", balance: 1 },
+    } as any)
+
+    const request = createRequest({
+      accountId: "account-1",
+      sub2apiAuthSession: {
+        getLatestAuth: (...args: any[]) => mockGetLatestAuth(...args),
+        persistAuthUpdate: (...args: any[]) => mockPersistAuthUpdate(...args),
+      },
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        userId: "1",
+        accessToken: "old-access-token",
+        refreshToken: "single-use-refresh-token",
+        tokenExpiresAt: now + 60_000,
+      },
+    })
+
+    await expect(
+      createApiToken(request, createTokenRequest({ group: "" })),
+    ).rejects.toThrow("messages:sub2api.authPersistenceFailed")
+
+    expect(fetchApi).toHaveBeenCalledTimes(1)
+    expect(mockPersistAuthUpdate).not.toHaveBeenCalled()
+    nowSpy.mockRestore()
+  })
+
+  it.each([
+    {
+      label: "identity",
+      stored: {
+        accessToken: "other-user-access-token",
+        origin: "https://sub2.example.com",
+        userId: "2",
+      },
+    },
+    {
+      label: "origin",
+      stored: {
+        accessToken: "other-origin-access-token",
+        origin: "https://other.example.invalid",
+        userId: "1",
+      },
+    },
+  ])("rejects stored auth after account $label drift", async ({ stored }) => {
+    mockGetLatestAuth.mockResolvedValueOnce(stored)
+    const request = createRequest({
+      accountId: "account-1",
+      sub2apiAuthSession: {
+        getLatestAuth: (...args: any[]) => mockGetLatestAuth(...args),
+        persistAuthUpdate: (...args: any[]) => mockPersistAuthUpdate(...args),
+      },
+    })
+
+    await expect(
+      createApiToken(request, createTokenRequest({ group: "" })),
+    ).rejects.toThrow("messages:sub2api.authPersistenceFailed")
+
+    expect(fetchApi).not.toHaveBeenCalled()
+    expect(mockPersistAuthUpdate).not.toHaveBeenCalled()
   })
 
   it("uses rotated refresh token for 401 retry after proactive refresh", async () => {
@@ -1154,6 +1294,7 @@ describe("apiService sub2api refreshAccountData", () => {
       request.baseUrl,
       undefined,
       undefined,
+      "1",
     )
     expect(
       (vi.mocked(fetchApi).mock.calls[1]?.[0] as any)?.auth?.accessToken,
@@ -1163,6 +1304,152 @@ describe("apiService sub2api refreshAccountData", () => {
       key: "sub2api-token",
       group: "default",
     })
+  })
+
+  it("recovers a lost refresh-token response only through identity-checked resync", async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          code: 0,
+          message: "ok",
+          data: {
+            access_token: "rotated-access-without-pair",
+            expires_in: 3600,
+          },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    )
+    vi.stubGlobal("fetch", fetchMock as any)
+    vi.mocked(fetchApi)
+      .mockRejectedValueOnce(new ApiError("Unauthorized", 401, "/api/v1/keys"))
+      .mockResolvedValueOnce({
+        code: 0,
+        message: "ok",
+        data: {
+          items: [
+            {
+              id: 1,
+              name: "Recovered key",
+              key: "recovered-key",
+              enabled: true,
+              quota: 0,
+              used_quota: 0,
+              group: { name: "default" },
+            },
+          ],
+        },
+      } as any)
+    vi.mocked(resyncSub2ApiAuthToken).mockResolvedValueOnce({
+      accessToken: "identity-checked-access-token",
+      userId: "1",
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
+    })
+
+    const tokens = await fetchAccountTokens(
+      createRequest({
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          userId: "1",
+          accessToken: "old-access-token",
+          refreshToken: "single-use-refresh-token",
+        },
+      }),
+    )
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(resyncSub2ApiAuthToken).toHaveBeenCalledWith(
+      "https://sub2.example.com",
+      undefined,
+      undefined,
+      "1",
+    )
+    expect(tokens).toHaveLength(1)
+  })
+
+  it("does not use stale auth after a proactive refresh response is lost", async () => {
+    const now = 1_700_000_000_000
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(now)
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockRejectedValueOnce(new Error("network down")),
+    )
+    vi.mocked(resyncSub2ApiAuthToken).mockResolvedValueOnce({
+      accessToken: "identity-checked-access-token",
+      userId: "1",
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
+    })
+    vi.mocked(fetchApi).mockResolvedValueOnce({
+      code: 0,
+      message: "ok",
+      data: { items: [] },
+    } as any)
+
+    await fetchAccountTokens(
+      createRequest({
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          userId: "1",
+          accessToken: "old-access-token",
+          refreshToken: "single-use-refresh-token",
+          tokenExpiresAt: now + 60_000,
+        },
+      }),
+    )
+
+    expect(resyncSub2ApiAuthToken).toHaveBeenCalledWith(
+      "https://sub2.example.com",
+      undefined,
+      undefined,
+      "1",
+    )
+    expect(fetchApi).toHaveBeenCalledTimes(1)
+    expect(
+      (vi.mocked(fetchApi).mock.calls[0]?.[0] as any).auth.accessToken,
+    ).toBe("identity-checked-access-token")
+    nowSpy.mockRestore()
+  })
+
+  it("does not replay a business request after its refreshed retry fails", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            code: 0,
+            message: "ok",
+            data: {
+              access_token: "refreshed-access-token",
+              refresh_token: "rotated-refresh-token",
+              expires_in: 3600,
+            },
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      ),
+    )
+    vi.mocked(fetchApi)
+      .mockRejectedValueOnce(new ApiError("Unauthorized", 401, "/api/v1/keys"))
+      .mockRejectedValueOnce(new ApiError("Unauthorized", 401, "/api/v1/keys"))
+
+    await expect(
+      fetchAccountTokens(
+        createRequest({
+          auth: {
+            authType: AuthTypeEnum.AccessToken,
+            userId: "1",
+            accessToken: "old-access-token",
+            refreshToken: "single-use-refresh-token",
+          },
+        }),
+      ),
+    ).rejects.toMatchObject({
+      message: "messages:sub2api.loginRequired",
+      code: API_ERROR_CODES.HTTP_401,
+    })
+
+    expect(fetchApi).toHaveBeenCalledTimes(2)
+    expect(resyncSub2ApiAuthToken).not.toHaveBeenCalled()
   })
 
   it("does not re-sync key requests when refresh token restore fails with a contract error", async () => {
@@ -1260,6 +1547,7 @@ describe("apiService sub2api refreshAccountData", () => {
       request.baseUrl,
       undefined,
       undefined,
+      "1",
     )
     expect(
       (vi.mocked(fetchApi).mock.calls[1]?.[0] as any)?.auth?.accessToken,
@@ -1304,6 +1592,7 @@ describe("apiService sub2api refreshAccountData", () => {
       request.baseUrl,
       undefined,
       undefined,
+      "1",
     )
     expect(fetchApi).toHaveBeenCalledTimes(1)
     expect(result.success).toBe(false)
@@ -1342,11 +1631,17 @@ describe("apiService sub2api refreshAccountData", () => {
     )
     vi.stubGlobal("fetch", fetchMock as any)
 
-    vi.mocked(fetchApi).mockResolvedValueOnce({
-      code: 0,
-      message: "ok",
-      data: { id: 9, username: "stored-user", balance: 3 },
-    } as any)
+    vi.mocked(fetchApi)
+      .mockResolvedValueOnce({
+        code: 0,
+        message: "ok",
+        data: { id: 9, username: "stored-user", balance: 3 },
+      } as any)
+      .mockResolvedValueOnce({
+        code: 0,
+        message: "ok",
+        data: { id: 9, username: "stored-user", balance: 3 },
+      } as any)
 
     const result = await refreshAccountData(
       createRequest({
@@ -1375,6 +1670,9 @@ describe("apiService sub2api refreshAccountData", () => {
       accessToken: "new-jwt",
       refreshToken: "new-refresh",
       tokenExpiresAt: now + 3600 * 1000,
+      expectedOrigin: "https://sub2.example.com",
+      expectedUserId: "9",
+      userId: "9",
     })
     expect(result.success).toBe(true)
     expect(result.authUpdate?.userId).toBe("9")
@@ -1394,7 +1692,7 @@ describe("apiService sub2api exported operations", () => {
     mockGetLatestAuth.mockReset()
     mockPersistAuthUpdate.mockReset()
     mockGetLatestAuth.mockResolvedValue(null)
-    mockPersistAuthUpdate.mockResolvedValue(true)
+    mockPersistAuthUpdate.mockResolvedValue({ status: "persisted" })
   })
 
   const baseRequest = {

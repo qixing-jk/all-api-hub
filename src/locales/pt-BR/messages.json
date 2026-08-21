@@ -162,6 +162,7 @@
     "updateFailed": "Falha ao atualizar conta"
   },
   "sub2api": {
+    "authPersistenceFailed": "Não foi possível salvar com segurança o login atualizado do Sub2API nesta conta. Atualize ou importe a conta novamente e tente outra vez.",
     "configMissing": "Configure primeiro a URL base e a Admin API Key do Sub2API nas configurações básicas.",
     "groupMissing": "O grupo '{{group}}' do Sub2API não está mais disponível. Atualize a lista de grupos e tente novamente.",
     "loginRequired": "Faça login no painel do Sub2API primeiro (para que a extensão possa ler auth_token/auth_user do localStorage) e tente novamente.",

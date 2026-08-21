@@ -162,6 +162,7 @@
     "updateFailed": "Cập nhật tài khoản thất bại"
   },
   "sub2api": {
+    "authPersistenceFailed": "Không thể lưu thông tin đăng nhập Sub2API đã làm mới vào tài khoản này một cách an toàn. Hãy làm mới hoặc nhập lại tài khoản rồi thử lại.",
     "configMissing": "Hãy cấu hình URL gốc và Admin API Key của Sub2API trong phần Cài đặt cơ bản trước.",
     "groupMissing": "Nhóm Sub2API \"{{group}}\" không còn khả dụng. Vui lòng làm mới danh sách nhóm rồi thử lại.",
     "loginRequired": "Vui lòng đăng nhập vào bảng điều khiển Sub2API (tiện ích sẽ đọc auth_token/auth_user để nhập phiên) rồi thử lại.",

@@ -264,6 +264,180 @@ describe("accountStorage core behaviors", () => {
     })
   })
 
+  describe("updateSub2ApiAuth", () => {
+    const authUpdate = {
+      accessToken: "rotated-access-token",
+      refreshToken: "rotated-refresh-token",
+      tokenExpiresAt: 1_800_000_000_000,
+      expectedOrigin: "https://auth.example.invalid/dashboard",
+      expectedUserId: "user-1",
+    }
+
+    it("persists a complete rotation only when the locked account identity still matches", async () => {
+      seedStorage([
+        createAccount({
+          id: "sub2-account",
+          site_type: SITE_TYPES.SUB2API,
+          site_url: "https://auth.example.invalid",
+          account_info: { id: "user-1" } as SiteAccount["account_info"],
+          sub2apiAuth: {
+            refreshToken: "stored-refresh-token",
+            tokenExpiresAt: 1_700_000_000_000,
+          },
+        }),
+      ])
+
+      await expect(
+        accountStorage.updateSub2ApiAuth("sub2-account", authUpdate, {
+          userTimestampMode: AccountUpdateUserTimestampMode.Preserve,
+        }),
+      ).resolves.toEqual({ status: "persisted" })
+
+      await expect(
+        accountStorage.getAccountById("sub2-account"),
+      ).resolves.toMatchObject({
+        account_info: {
+          id: "user-1",
+          access_token: "rotated-access-token",
+        },
+        sub2apiAuth: {
+          refreshToken: "rotated-refresh-token",
+          tokenExpiresAt: 1_800_000_000_000,
+        },
+      })
+    })
+
+    it("returns typed non-success outcomes for deletion, identity drift, and write failure", async () => {
+      await expect(
+        accountStorage.updateSub2ApiAuth("missing", authUpdate, {
+          userTimestampMode: AccountUpdateUserTimestampMode.Preserve,
+        }),
+      ).resolves.toEqual({ status: "account_missing" })
+
+      seedStorage([
+        createAccount({
+          id: "sub2-account",
+          site_type: SITE_TYPES.SUB2API,
+          site_url: "https://other.example.invalid",
+          account_info: { id: "user-1" } as SiteAccount["account_info"],
+        }),
+      ])
+      await expect(
+        accountStorage.updateSub2ApiAuth("sub2-account", authUpdate, {
+          userTimestampMode: AccountUpdateUserTimestampMode.Preserve,
+        }),
+      ).resolves.toEqual({ status: "identity_mismatch" })
+
+      seedStorage([
+        createAccount({
+          id: "sub2-account",
+          site_type: SITE_TYPES.SUB2API,
+          site_url: "https://auth.example.invalid",
+          account_info: { id: "other-user" } as SiteAccount["account_info"],
+        }),
+      ])
+      await expect(
+        accountStorage.updateSub2ApiAuth("sub2-account", authUpdate, {
+          userTimestampMode: AccountUpdateUserTimestampMode.Preserve,
+        }),
+      ).resolves.toEqual({ status: "identity_mismatch" })
+
+      seedStorage([
+        createAccount({
+          id: "sub2-account",
+          site_type: SITE_TYPES.SUB2API,
+          site_url: "https://auth.example.invalid",
+          account_info: { id: "user-1" } as SiteAccount["account_info"],
+        }),
+      ])
+      storageHooks.beforeSet = async () => {
+        throw new Error("storage unavailable")
+      }
+      await expect(
+        accountStorage.updateSub2ApiAuth("sub2-account", authUpdate, {
+          userTimestampMode: AccountUpdateUserTimestampMode.Preserve,
+        }),
+      ).resolves.toEqual({ status: "write_failed" })
+    })
+
+    it("requires a non-empty expected identity before writing credentials", async () => {
+      seedStorage([
+        createAccount({
+          id: "sub2-account",
+          site_type: SITE_TYPES.SUB2API,
+          site_url: "https://auth.example.invalid",
+          account_info: { id: "" } as SiteAccount["account_info"],
+        }),
+      ])
+
+      await expect(
+        accountStorage.updateSub2ApiAuth(
+          "sub2-account",
+          { ...authUpdate, expectedUserId: "   " },
+          { userTimestampMode: AccountUpdateUserTimestampMode.Preserve },
+        ),
+      ).resolves.toEqual({ status: "identity_mismatch" })
+    })
+
+    it("does not recreate credentials when deletion wins the storage lock race", async () => {
+      seedStorage([
+        createAccount({
+          id: "sub2-account",
+          site_type: SITE_TYPES.SUB2API,
+          site_url: "https://auth.example.invalid",
+          account_info: { id: "user-1" } as SiteAccount["account_info"],
+        }),
+      ])
+
+      const deletion = accountStorage.deleteAccount("sub2-account")
+      const persistence = accountStorage.updateSub2ApiAuth(
+        "sub2-account",
+        authUpdate,
+        { userTimestampMode: AccountUpdateUserTimestampMode.Preserve },
+      )
+
+      await expect(deletion).resolves.toBe(true)
+      await expect(persistence).resolves.toEqual({ status: "account_missing" })
+      await expect(
+        accountStorage.getAccountById("sub2-account"),
+      ).resolves.toBeNull()
+    })
+
+    it("preserves stored refresh metadata when a verified resync supplies only an access token", async () => {
+      seedStorage([
+        createAccount({
+          id: "sub2-account",
+          site_type: SITE_TYPES.SUB2API,
+          site_url: "https://auth.example.invalid",
+          account_info: { id: "user-1" } as SiteAccount["account_info"],
+          sub2apiAuth: {
+            refreshToken: "stored-refresh-token",
+            tokenExpiresAt: 1_700_000_000_000,
+          },
+        }),
+      ])
+
+      await accountStorage.updateSub2ApiAuth(
+        "sub2-account",
+        {
+          accessToken: "resynced-access-token",
+          expectedOrigin: "https://auth.example.invalid",
+          expectedUserId: "user-1",
+        },
+        { userTimestampMode: AccountUpdateUserTimestampMode.Preserve },
+      )
+
+      await expect(
+        accountStorage.getAccountById("sub2-account"),
+      ).resolves.toMatchObject({
+        sub2apiAuth: {
+          refreshToken: "stored-refresh-token",
+          tokenExpiresAt: 1_700_000_000_000,
+        },
+      })
+    })
+  })
+
   it("migrates legacy string tags on reads (account.tags -> tagIds + global tag store)", async () => {
     const account = createAccount({
       id: "with-legacy-tags",
