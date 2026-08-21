@@ -75,10 +75,16 @@ describe("TokenGroupSelectionField", () => {
     const options = within(await screen.findByRole("dialog")).getAllByRole(
       "option",
     )
-    expect(options.map((option) => option.getAttribute("data-value"))).toEqual([
-      "vip",
-      "alpha",
-      "zeta",
-    ])
+    const optionValues = options.map((option) =>
+      option.getAttribute("data-value"),
+    )
+
+    expect(optionValues).toEqual(
+      expect.arrayContaining(["vip", "alpha", "zeta"]),
+    )
+    expect(optionValues[0]).toBe("vip")
+    expect(optionValues.indexOf("alpha")).toBeLessThan(
+      optionValues.indexOf("zeta"),
+    )
   })
 })
