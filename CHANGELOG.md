@@ -1,5 +1,24 @@
 # Changelog
 
+## [3.58.0](https://github.com/qixing-jk/all-api-hub/compare/v3.57.0...v3.58.0) (2026-08-21)
+
+
+### Features
+
+* **account:** add ModelFlare account support ([#1335](https://github.com/qixing-jk/all-api-hub/issues/1335)) ([2915b2c](https://github.com/qixing-jk/all-api-hub/commit/2915b2c8f621ba235ee35099e5dedd199e371549))
+* **managed-sites:** migrate New API channels to native resource management ([#1329](https://github.com/qixing-jk/all-api-hub/issues/1329)) ([93096fc](https://github.com/qixing-jk/all-api-hub/commit/93096fca6fd9ad86ddc0d292d5afdd49d7f7fe44))
+* **web-ai-api-check:** enhance base64 credential extraction ([#1337](https://github.com/qixing-jk/all-api-hub/issues/1337)) ([d796056](https://github.com/qixing-jk/all-api-hub/commit/d7960564a0ef19f699eac9a59fc20de1a7622229))
+
+
+### Bug Fixes
+
+* **account-management:** keep list controls reachable ([#1332](https://github.com/qixing-jk/all-api-hub/issues/1332)) ([d7cf255](https://github.com/qixing-jk/all-api-hub/commit/d7cf25543bd4ecfdb26029f143f6b13d9ba0653d))
+* **account:** detect modern New API white-label sessions ([#1331](https://github.com/qixing-jk/all-api-hub/issues/1331)) ([d910866](https://github.com/qixing-jk/all-api-hub/commit/d910866898b6c8122ba87187c46aeba5c699153b))
+* **account:** support current V-API account workflows ([#1336](https://github.com/qixing-jk/all-api-hub/issues/1336)) ([f27f0c6](https://github.com/qixing-jk/all-api-hub/commit/f27f0c6b9d7dc4b3e15e92dcb847721f09791a79))
+* **cc-switch:** resolve Codex endpoint from model discovery ([#1338](https://github.com/qixing-jk/all-api-hub/issues/1338)) ([8e0980a](https://github.com/qixing-jk/all-api-hub/commit/8e0980a54f1ef36d6a007888fbcbd35279de2fad))
+* **content:** keep API check dialog close action clickable ([#1339](https://github.com/qixing-jk/all-api-hub/issues/1339)) ([2266f60](https://github.com/qixing-jk/all-api-hub/commit/2266f609bfe35501529f1e2d9c7bc99977b8ccce))
+* **sub2api:** detect deployment site name ([#1334](https://github.com/qixing-jk/all-api-hub/issues/1334)) ([0944080](https://github.com/qixing-jk/all-api-hub/commit/09440809dcbcb29703b9a77f77e0a1a4465d1cbe))
+
 ## [3.57.0](https://github.com/qixing-jk/all-api-hub/compare/v3.56.0...v3.57.0) (2026-08-19)
 
 
