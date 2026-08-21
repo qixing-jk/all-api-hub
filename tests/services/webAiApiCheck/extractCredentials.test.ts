@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest"
 
 import {
-  extractApiCheckCredentialsFromText,
   normalizeApiCheckBaseUrl,
   normalizeGoogleFamilyBaseUrl,
   normalizeOpenAiFamilyBaseUrl,
-} from "~/services/verification/webAiApiCheck/extractCredentials"
+} from "~/services/verification/webAiApiCheck/credentialExtraction/baseUrlCandidates"
+import { extractApiCheckCredentialsFromText } from "~/services/verification/webAiApiCheck/extractCredentials"
 
 const OPENAI_KEY_PREFIX = ["s", "k", "-"].join("")
 const ANTHROPIC_KEY_PREFIX = ["s", "k", "-", "ant", "-"].join("")
@@ -533,12 +533,16 @@ describe("webAiApiCheck extractCredentials", () => {
     expect(result.summary.hasCleanup).toBe(true)
   })
 
-  it("cleans separator characters embedded inside labeled API keys", () => {
+  it.each([
+    ["English half-width label", "API Key: {{key}}"],
+    ["Chinese full-width label", "API 密钥：{{key}}"],
+    ["Chinese full-width equals label", "访问令牌＝{{key}}"],
+  ])("cleans separator characters embedded after %s", (_name, template) => {
     const apiKey = buildKnownKey("testAa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1")
     const separatedApiKey = `${OPENAI_KEY_PREFIX}testAa1Bb2Cc3Dd4 . Ee5Ff6Gg7Hh8Ii9Jj0Kk1`
 
     const result = extractApiCheckCredentialsFromText(
-      `API Key: ${separatedApiKey}`,
+      template.replace("{{key}}", separatedApiKey),
     )
 
     expect(result.apiKey).toBe(apiKey)

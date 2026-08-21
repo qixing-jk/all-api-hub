@@ -9,7 +9,7 @@
 import type {
   ApiCheckCandidate,
   ApiCheckExtractionSummary,
-} from "~/services/verification/webAiApiCheck/extractCredentials"
+} from "~/services/verification/webAiApiCheck/credentialExtraction/candidateContract"
 
 export const API_CHECK_OPEN_MODAL_EVENT = "all-api-hub:api-check:open-modal"
 export const API_CHECK_MODAL_CLOSED_EVENT = "all-api-hub:api-check:closed-modal"
