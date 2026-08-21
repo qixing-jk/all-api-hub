@@ -2,6 +2,7 @@ import {
   AUTO_DETECT_FAILURE_REASONS,
   type AutoDetectFailureReason,
 } from "~/constants/autoDetect"
+import type { AccountSiteType } from "~/constants/siteType"
 import { getSiteName } from "~/services/accounts/siteName"
 import type { SiteStatusInfo } from "~/services/apiAdapters/contracts/accountBootstrap"
 import type {
@@ -101,10 +102,10 @@ function trimString(value: unknown): string {
 function createInitialCheckInConfig(input: {
   supported: boolean
   automaticExecutionEnabled: boolean
-  siteType: string
+  siteType: AccountSiteType
 }) {
   return createCompatibilityCheckInConfig({
-    siteType: input.siteType as AutoDetectCompletionData["siteType"],
+    siteType: input.siteType,
     supported: input.supported,
     automaticExecutionEnabled: input.automaticExecutionEnabled,
     customCheckIn: {
@@ -126,7 +127,7 @@ const createCompletionError = (
 
 const createAccountCompletionHelpers = (params: {
   url: string
-  siteType: string
+  siteType: AccountSiteType
 }): AccountCompletionHelpers => ({
   createServiceRequest(input: {
     baseUrl: string

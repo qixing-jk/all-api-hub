@@ -17,6 +17,8 @@ export function createCompatibilityCheckInConfig(input: {
   const candidateIds = input.supported
     ? getNewAccountCompatibilityMethodIds(input.siteType)
     : []
+  // Compatibility activation is definitive only for one registered method;
+  // multiple candidates require discovery before automatic selection is safe.
   const methodId = candidateIds.length === 1 ? candidateIds[0] : undefined
 
   return {

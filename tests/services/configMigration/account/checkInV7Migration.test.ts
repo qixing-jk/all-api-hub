@@ -72,7 +72,7 @@ const legacyResolver = {
 
 describe("migrateSiteAccountCheckInToV7", () => {
   it("keeps every pre-V7 provider covered by an exact legacy registration", () => {
-    expect(legacyRegistrations).toEqual([
+    const expectedRegistrations = [
       {
         methodId: "anyrouter:daily-checkin",
         siteType: SITE_TYPES.ANYROUTER,
@@ -97,7 +97,12 @@ describe("migrateSiteAccountCheckInToV7", () => {
         methodId: "voapi-v2:daily-checkin",
         siteType: SITE_TYPES.VO_API_V2,
       },
-    ])
+    ]
+
+    expect(legacyRegistrations).toHaveLength(expectedRegistrations.length)
+    expect(legacyRegistrations).toEqual(
+      expect.arrayContaining(expectedRegistrations),
+    )
   })
 
   it.each(legacyRegistrations)(

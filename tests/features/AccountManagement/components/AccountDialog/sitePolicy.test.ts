@@ -137,10 +137,10 @@ describe("Account Dialog site policy", () => {
     })
 
     expect(normalized.checkIn.automaticExecutionEnabled).toBe(false)
-    expect(normalized.checkIn.methodKnowledge).toBe(
+    expect(normalized.checkIn.methodKnowledge).toEqual(
       draft.checkIn.methodKnowledge,
     )
-    expect(normalized.checkIn.selection).toBe(draft.checkIn.selection)
+    expect(normalized.checkIn.selection).toEqual(draft.checkIn.selection)
   })
 
   it("derives shared auth and supplemental-auth facts from product profiles", async () => {

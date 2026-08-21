@@ -1,4 +1,7 @@
-import { CHECK_IN_METHOD_EXECUTION_RESULT_KINDS } from "~/constants/checkIn"
+import {
+  CHECK_IN_EXECUTION_SKIP_REASONS,
+  CHECK_IN_METHOD_EXECUTION_RESULT_KINDS,
+} from "~/constants/checkIn"
 import type { AccountSiteType } from "~/constants/siteType"
 import {
   inspectAccountCheckIn,
@@ -9,7 +12,6 @@ import type { AutoCheckinProviderContext } from "~/services/checkin/autoCheckin/
 import type { AutoCheckinProviderResult } from "~/services/checkin/autoCheckin/providers/types"
 import { markCheckInMethodExecuted } from "~/services/checkin/autoCheckin/state"
 import type { SiteAccount } from "~/types"
-import { AUTO_CHECKIN_SKIP_REASON } from "~/types/autoCheckin"
 import type {
   CheckInConfig,
   CheckInExecutionSkipReason,
@@ -39,15 +41,12 @@ type ExecuteSelectedCheckInResult =
     }
   | {
       kind: typeof CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Skipped
-      reason:
-        | CheckInExecutionSkipReason
-        | typeof AUTO_CHECKIN_SKIP_REASON.PROVIDER_NOT_READY
-        | typeof AUTO_CHECKIN_SKIP_REASON.NO_PROVIDER
+      reason: CheckInExecutionSkipReason
     }
 
 const resolveSelectedCheckInRegistration = (input: {
   account: SiteAccount
-  globalAutomaticExecutionEnabled?: boolean
+  globalAutomaticExecutionEnabled: boolean
 }) => {
   const state = inspectAccountCheckIn({
     config: input.account.checkIn,
@@ -65,7 +64,7 @@ const resolveSelectedCheckInRegistration = (input: {
 /** Adds provider authentication readiness without exposing the provider. */
 export function inspectSelectedCheckInCompatibility(input: {
   account: SiteAccount
-  globalAutomaticExecutionEnabled?: boolean
+  globalAutomaticExecutionEnabled: boolean
 }) {
   const { state, registration } = resolveSelectedCheckInRegistration({
     account: input.account,
@@ -81,7 +80,7 @@ export function inspectSelectedCheckInCompatibility(input: {
 /** Compatibility execution entrance used by the scheduler. */
 export async function executeSelectedCheckIn(input: {
   account: SiteAccount
-  globalAutomaticExecutionEnabled?: boolean
+  globalAutomaticExecutionEnabled: boolean
   context: AutoCheckinProviderContext
 }): Promise<ExecuteSelectedCheckInResult> {
   const { state, registration } = resolveSelectedCheckInRegistration({
@@ -97,13 +96,13 @@ export async function executeSelectedCheckIn(input: {
   if (!registration) {
     return {
       kind: CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Skipped,
-      reason: AUTO_CHECKIN_SKIP_REASON.NO_PROVIDER,
+      reason: CHECK_IN_EXECUTION_SKIP_REASONS.NoProvider,
     }
   }
   if (!registration.provider.canCheckIn(input.account)) {
     return {
       kind: CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Skipped,
-      reason: AUTO_CHECKIN_SKIP_REASON.PROVIDER_NOT_READY,
+      reason: CHECK_IN_EXECUTION_SKIP_REASONS.ProviderNotReady,
     }
   }
 

@@ -33,6 +33,8 @@ const uniqueCandidateMethodIds = (
 const getEffectiveDetectionOutcome = (
   detection: CheckInMethodDetection | undefined,
 ): CheckInMethodDetection["outcome"] => {
+  // A failed rediscovery attempt must not erase established positive or
+  // negative evidence, but it does keep the overall decision non-definitive.
   if (
     !detection ||
     detection.outcome === CHECK_IN_METHOD_DETECTION_OUTCOMES.Unknown ||
@@ -380,15 +382,17 @@ export function mergeCheckInDiscoveryResults(input: {
     }
   }
 
-  const selectedDetection = isCandidateMethodId(
+  const selectedMethodIsCandidate = isCandidateMethodId(
     selectedMethodId,
     candidateMethodIds,
   )
+  const selectedDetection = selectedMethodIsCandidate
     ? methods[selectedMethodId]?.detection
     : undefined
   if (
-    selectedDetection?.outcome ===
-      CHECK_IN_METHOD_DETECTION_OUTCOMES.Unsupported &&
+    (!selectedMethodIsCandidate ||
+      selectedDetection?.outcome ===
+        CHECK_IN_METHOD_DETECTION_OUTCOMES.Unsupported) &&
     decision.outcome === CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Resolved
   ) {
     return {

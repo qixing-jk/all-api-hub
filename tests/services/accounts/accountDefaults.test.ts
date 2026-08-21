@@ -198,6 +198,20 @@ describe("accountDefaults", () => {
       )
     })
 
+    it("drops legacy account-level check-in capability flags", () => {
+      const legacy = createSiteAccount() as SiteAccount & {
+        can_check_in?: boolean
+        supports_check_in?: boolean
+      }
+      legacy.can_check_in = true
+      legacy.supports_check_in = true
+
+      const normalized = normalizeSiteAccount(legacy)
+
+      expect(normalized).not.toHaveProperty("can_check_in")
+      expect(normalized).not.toHaveProperty("supports_check_in")
+    })
+
     it("preserves legacy numeric statistics without inventing availability", () => {
       const legacy = createSiteAccount({
         account_info: {
@@ -510,6 +524,24 @@ describe("accountDefaults", () => {
       })
 
       expect(updated.tagIds).toEqual(["b"])
+    })
+
+    it("removes custom check-in when the update explicitly clears it", () => {
+      const current = createSiteAccount({
+        checkIn: {
+          ...createSiteAccount().checkIn,
+          customCheckIn: { url: "https://example.invalid/check-in" },
+        },
+      })
+
+      const updated = applySiteAccountUpdates({
+        account: current,
+        updates: { checkIn: { customCheckIn: undefined } },
+        now: 999,
+        userTimestampMode: AccountUpdateUserTimestampMode.Touch,
+      })
+
+      expect(updated.checkIn.customCheckIn).toBeUndefined()
     })
 
     it("advances user update timestamp when requested", () => {

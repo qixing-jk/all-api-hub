@@ -10,6 +10,7 @@ import {
   normalizeAccountStorageConfigForWrite,
   normalizeSiteAccount,
 } from "~/services/accounts/accountDefaults"
+import { CURRENT_CONFIG_VERSION } from "~/services/accounts/migrations/accountDataMigration"
 import {
   I18NEXT_LANGUAGE_STORAGE_KEY,
   STORAGE_KEYS,
@@ -223,6 +224,7 @@ export function createStoredAccount(
     excludeFromTotalBalance: false,
     excludeFromTodayIncome: false,
     authType: AuthTypeEnum.AccessToken,
+    configVersion: CURRENT_CONFIG_VERSION,
     checkIn: {
       automaticExecutionEnabled: false,
       methodKnowledge: { methods: {} },

@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
+import {
+  CHECK_IN_METHOD_STATUS_OUTCOMES,
+  CHECK_IN_METHOD_TODAY_STATUSES,
+} from "~/constants/checkIn"
 import { SITE_TYPES } from "~/constants/siteType"
 import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
 import {
@@ -60,6 +64,7 @@ describe("check-in methods compatibility activation", () => {
       methodKnowledge: { methods: {} },
       selection: { mode: "automatic" as const },
     })
+    expect(config.selection).not.toHaveProperty("methodId")
   })
 
   it.each([
@@ -137,6 +142,7 @@ describe("check-in methods compatibility activation", () => {
       supported: true,
       automaticExecutionEnabled: true,
     })
+    const originalSnapshot = structuredClone(config)
     const updated = markSelectedCheckInExecuted({
       config,
       siteType: SITE_TYPES.NEW_API,
@@ -152,6 +158,38 @@ describe("check-in methods compatibility activation", () => {
       outcome: "known",
       today: "checked",
       evidence: { source: "execution", observedAt: 456 },
+    })
+    expect(config).toEqual(originalSnapshot)
+    expect(updated).not.toBe(config)
+  })
+
+  it("preserves known method availability when refreshing boolean daily status", () => {
+    const config = createCompatibilityCheckInConfig({
+      siteType: SITE_TYPES.NEW_API,
+      supported: true,
+      automaticExecutionEnabled: true,
+    })
+    config.methodKnowledge.methods["new-api:daily-checkin"]!.status = {
+      outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
+      availability: "disabled",
+      today: CHECK_IN_METHOD_TODAY_STATUSES.Checked,
+      evidence: { source: "probe", observedAt: 100 },
+    }
+
+    const updated = mergeCompatibilityCheckInStatus({
+      config,
+      methodId: "new-api:daily-checkin",
+      isCheckedInToday: false,
+      observedAt: 200,
+    })
+
+    expect(
+      updated.methodKnowledge.methods["new-api:daily-checkin"]?.status,
+    ).toMatchObject({
+      outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
+      availability: "disabled",
+      today: CHECK_IN_METHOD_TODAY_STATUSES.NotChecked,
+      evidence: { source: "probe", observedAt: 200 },
     })
   })
 
@@ -403,6 +441,7 @@ describe("check-in methods compatibility activation", () => {
           .mockResolvedValue({ status: "success" })
         const result = await executeSelectedCheckIn({
           account,
+          globalAutomaticExecutionEnabled: true,
           context: {
             tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
             protectionBypassExecution: userCommandExecution(

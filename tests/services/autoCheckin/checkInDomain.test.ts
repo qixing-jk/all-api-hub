@@ -572,6 +572,29 @@ describe("mergeCheckInDiscoveryResults", () => {
     })
   })
 
+  it("reselects a resolved automatic method when the persisted method is no longer a candidate", () => {
+    const config = createConfig({
+      [NEW_API_METHOD_ID]: matched,
+      [VELOERA_METHOD_ID]: matched,
+    })
+    config.selection = {
+      mode: "automatic",
+      methodId: VELOERA_METHOD_ID,
+    }
+
+    const merged = mergeCheckInDiscoveryResults({
+      config,
+      candidateMethodIds: [NEW_API_METHOD_ID],
+      detections: { [NEW_API_METHOD_ID]: matched },
+      completedAt: 450,
+    })
+
+    expect(merged.selection).toEqual({
+      mode: "automatic",
+      methodId: NEW_API_METHOD_ID,
+    })
+  })
+
   it("does not revoke a still-matched automatic selection when discovery becomes ambiguous", () => {
     const config = createConfig({
       [NEW_API_METHOD_ID]: matched,
@@ -666,6 +689,16 @@ describe("normalizeCheckInConfigV7", () => {
         candidateMethodIds: [NEW_API_METHOD_ID],
       }).executionEligibility,
     ).toEqual({ eligible: false, skipReason: "no_selected_method" })
+  })
+
+  it("drops an invalid custom check-in record that has no canonical fields", () => {
+    const normalized = normalizeCheckInConfigV7({
+      methodKnowledge: { methods: {} },
+      selection: { mode: "automatic" },
+      customCheckIn: { url: 123, unsupportedField: true },
+    })
+
+    expect(normalized.customCheckIn).toBeUndefined()
   })
 
   it.each([

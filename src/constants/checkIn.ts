@@ -97,6 +97,8 @@ export const CHECK_IN_EXECUTION_SKIP_REASONS = {
   MethodUnsupported: CHECK_IN_SELECTION_STALE_REASONS.MethodUnsupported,
   MethodDisabled: "method_disabled",
   AlreadyChecked: "already_checked",
+  NoProvider: "no_provider",
+  ProviderNotReady: "provider_not_ready",
 } as const
 
 export const CHECK_IN_METHOD_EXECUTION_RESULT_KINDS = {

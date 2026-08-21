@@ -50,11 +50,19 @@ export function mergeCompatibilityCheckInStatus(input: {
   isCheckedInToday: boolean
   observedAt: number
 }): CheckInConfig {
+  const previousStatus =
+    input.config.methodKnowledge.methods[input.methodId]?.status
+  const availability =
+    previousStatus?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known
+      ? previousStatus.availability
+      : undefined
+
   return replaceCheckInMethodStatus({
     config: input.config,
     methodId: input.methodId,
     status: {
       outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
+      ...(availability ? { availability } : {}),
       today: input.isCheckedInToday
         ? CHECK_IN_METHOD_TODAY_STATUSES.Checked
         : CHECK_IN_METHOD_TODAY_STATUSES.NotChecked,

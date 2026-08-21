@@ -715,23 +715,11 @@ test("runs quick check-in for the selected eligible account from account managem
         username: "checkin-user",
         access_token: "checkin-token",
       },
-      checkIn: {
+      checkIn: createCompatibilityCheckInConfig({
+        siteType: SITE_TYPES.NEW_API,
+        supported: true,
         automaticExecutionEnabled: true,
-        methodKnowledge: {
-          methods: {
-            "new-api:daily-checkin": {
-              detection: {
-                outcome: "matched",
-                evidence: { source: "compatibility_registration" },
-              },
-            },
-          },
-        },
-        selection: {
-          mode: "automatic",
-          methodId: "new-api:daily-checkin",
-        },
-      },
+      }),
     }),
   ])
 

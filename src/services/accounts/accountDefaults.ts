@@ -391,7 +391,7 @@ export function normalizeSiteAccount(raw: SiteAccount): SiteAccount {
   const rawUserUpdatedAt = (raw as { user_updated_at?: unknown })
     .user_updated_at
 
-  return {
+  const normalized = {
     ...merged,
     id: coerceString(merged.id, ""),
     site_name: coerceString(merged.site_name, ""),
@@ -427,6 +427,11 @@ export function normalizeSiteAccount(raw: SiteAccount): SiteAccount {
       : AuthTypeEnum.AccessToken,
     checkIn: normalizeCheckInConfig(merged.checkIn),
   }
+
+  delete (normalized as SiteAccount & { can_check_in?: unknown }).can_check_in
+  delete (normalized as SiteAccount & { supports_check_in?: unknown })
+    .supports_check_in
+  return normalized
 }
 
 /**
@@ -504,6 +509,17 @@ export function applySiteAccountUpdates(params: {
   }
 
   const result = normalizeSiteAccount(merged)
+
+  if (
+    params.updates.checkIn &&
+    Object.prototype.hasOwnProperty.call(
+      params.updates.checkIn,
+      "customCheckIn",
+    ) &&
+    params.updates.checkIn.customCheckIn === undefined
+  ) {
+    delete result.checkIn.customCheckIn
+  }
 
   if (
     params.updates.health &&

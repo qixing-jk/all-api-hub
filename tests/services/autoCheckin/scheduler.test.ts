@@ -3,6 +3,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SITE_TYPES } from "~/constants/siteType"
 import { accountStorage } from "~/services/accounts/accountStorage"
+import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
+import {
+  getSelectedCheckInStatus,
+  inspectAccountCheckIn,
+} from "~/services/checkin/autoCheckin/inspection"
 import {
   executeSelectedCheckIn,
   inspectSelectedCheckInCompatibility,
@@ -102,23 +107,17 @@ const ACCOUNT_REFRESH_EXECUTION = automaticExecution(
   PROTECTION_BYPASS_SURFACES.Popup,
 )
 
-const runnableCheckIn = (automaticExecutionEnabled = true) => ({
-  automaticExecutionEnabled,
-  methodKnowledge: {
-    methods: {
-      "new-api:daily-checkin": {
-        detection: {
-          outcome: "matched" as const,
-          evidence: { source: "compatibility_registration" as const },
-        },
-      },
-    },
-  },
-  selection: {
-    mode: "automatic" as const,
-    methodId: "new-api:daily-checkin" as const,
-  },
-})
+const runnableCheckIn = (
+  automaticExecutionEnabled = true,
+  siteType: Parameters<
+    typeof createCompatibilityCheckInConfig
+  >[0]["siteType"] = SITE_TYPES.VELOERA,
+) =>
+  createCompatibilityCheckInConfig({
+    siteType,
+    supported: true,
+    automaticExecutionEnabled,
+  })
 
 const noSelectedCheckIn = () =>
   buildCheckInConfig({ automaticExecutionEnabled: true })
@@ -205,9 +204,19 @@ vi.mock("~/services/accounts/accountStorage", () => ({
 
 vi.mock("~/services/checkin/autoCheckin/methods", () => ({
   executeSelectedCheckIn: vi.fn(),
-  getSelectedCheckInStatus: vi.fn(() => null),
   inspectSelectedCheckInCompatibility: vi.fn(),
 }))
+
+vi.mock("~/services/checkin/autoCheckin/inspection", async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import("~/services/checkin/autoCheckin/inspection")
+    >()
+  return {
+    ...actual,
+    getSelectedCheckInStatus: vi.fn(() => undefined),
+  }
+})
 
 vi.mock("~/services/checkin/autoCheckin/storage", () => ({
   AUTO_CHECKIN_STATUS_STORAGE_LOCK: "all-api-hub:auto-checkin-status",
@@ -280,6 +289,12 @@ const mockedMethods = {
     inspectSelectedCheckInCompatibility as unknown as ReturnType<typeof vi.fn>,
 }
 
+const mockedInspection = {
+  getSelectedCheckInStatus: getSelectedCheckInStatus as unknown as ReturnType<
+    typeof vi.fn
+  >,
+}
+
 const mockedBrowserApi = {
   clearAlarm: clearAlarm as unknown as ReturnType<typeof vi.fn>,
   createAlarm: createAlarm as unknown as ReturnType<typeof vi.fn>,
@@ -315,39 +330,30 @@ let alarmStore: Record<string, any> = {}
 beforeEach(() => {
   storedStatus = null
   alarmStore = {}
+  resolveProviderForTest.mockReset()
+  mockedMethods.inspectSelectedCheckInCompatibility.mockReset()
+  mockedMethods.executeSelectedCheckIn.mockReset()
+  mockedInspection.getSelectedCheckInStatus.mockReset()
+  mockedInspection.getSelectedCheckInStatus.mockReturnValue(undefined)
 
   const inspectForTest = ({
     account,
     globalAutomaticExecutionEnabled,
   }: any) => {
-    const automaticExecutionEnabled =
-      account.checkIn?.automaticExecutionEnabled === true
-    const hasSelection = Boolean(account.checkIn?.selection?.methodId)
-    const skipReason = account.disabled
-      ? "account_disabled"
-      : !hasSelection
-        ? "no_selection"
-        : globalAutomaticExecutionEnabled === false
-          ? "global_automatic_execution_disabled"
-          : !automaticExecutionEnabled
-            ? "automatic_execution_disabled"
-            : null
-    const eligible = skipReason === null
-    const provider = eligible ? resolveProviderForTest(account) : null
+    const state = inspectAccountCheckIn({
+      config: account.checkIn,
+      siteType: account.site_type,
+      accountDisabled: account.disabled,
+      globalAutomaticExecutionEnabled,
+    })
+    const provider = state.executionEligibility.eligible
+      ? resolveProviderForTest(account)
+      : null
     return {
-      state: {
-        selectionState: hasSelection
-          ? { status: "selected", methodId: "new-api:daily-checkin" }
-          : { status: "none" },
-        executionEligibility: eligible
-          ? {
-              eligible: true,
-              methodId: "new-api:daily-checkin",
-              status: null,
-            }
-          : { eligible: false, skipReason },
-      },
-      providerAvailable: eligible && provider?.canCheckIn(account) === true,
+      state,
+      providerAvailable:
+        state.executionEligibility.eligible &&
+        provider?.canCheckIn(account) === true,
       provider,
     }
   }
@@ -1627,6 +1633,59 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
       }),
       { maxAttempts: 1 },
     )
+
+    vi.useRealTimers()
+  })
+
+  it("does not count a runtime skip as a failure or enqueue a retry", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2024, 0, 1, 9, 0, 0))
+    mockedUserPreferences.getPreferences.mockResolvedValue({
+      autoCheckin: {
+        ...(DEFAULT_PREFERENCES as any).autoCheckin,
+        globalEnabled: true,
+        retryStrategy: {
+          enabled: true,
+          intervalMinutes: 30,
+          maxAttemptsPerDay: 3,
+        },
+      },
+    })
+    mockedAccountStorage.getAllAccounts.mockResolvedValue([
+      {
+        id: "runtime-skip",
+        disabled: false,
+        site_name: "Runtime Skip",
+        site_type: SITE_TYPES.NEW_API,
+        account_info: { username: "user" },
+        checkIn: runnableCheckIn(true, SITE_TYPES.NEW_API),
+      },
+    ])
+    resolveProviderForTest.mockReturnValue({
+      canCheckIn: vi.fn(() => true),
+      checkIn: vi.fn(),
+    })
+    mockedMethods.executeSelectedCheckIn.mockResolvedValueOnce({
+      kind: "skipped",
+      reason: "provider_not_ready",
+    })
+
+    await runCheckinsForTest({ runType: AUTO_CHECKIN_RUN_TYPE.DAILY })
+
+    expect(storedStatus.summary).toEqual({
+      totalEligible: 1,
+      executed: 0,
+      successCount: 0,
+      failedCount: 0,
+      skippedCount: 1,
+      needsRetry: false,
+    })
+    expect(storedStatus.perAccount["runtime-skip"]).toMatchObject({
+      status: "skipped",
+      reasonCode: "provider_not_ready",
+    })
+    expect(storedStatus.retryState).toBeUndefined()
+    expect(storedStatus.pendingRetry).toBe(false)
 
     vi.useRealTimers()
   })
@@ -6002,6 +6061,10 @@ describe("autoCheckinScheduler private helpers", () => {
   })
 
   it("derives snapshot skip reasons from account state and provider availability", () => {
+    resolveProviderForTest.mockReturnValue({
+      canCheckIn: vi.fn(() => true),
+    })
+
     expect(
       (autoCheckinScheduler as any).buildAccountSnapshot(
         {
@@ -6010,7 +6073,7 @@ describe("autoCheckinScheduler private helpers", () => {
           site_type: "new-api",
           site_name: "Base",
           account_info: { username: "user" },
-          checkIn: runnableCheckIn(),
+          checkIn: runnableCheckIn(true, SITE_TYPES.NEW_API),
         },
         "Base",
       ),
@@ -6030,7 +6093,7 @@ describe("autoCheckinScheduler private helpers", () => {
           site_type: "new-api",
           site_name: "No Provider",
           account_info: { username: "user" },
-          checkIn: runnableCheckIn(),
+          checkIn: runnableCheckIn(true, SITE_TYPES.NEW_API),
         },
         "No Provider",
       ),
@@ -6069,7 +6132,7 @@ describe("autoCheckinScheduler private helpers", () => {
           site_type: "new-api",
           site_name: "Provider Not Ready",
           account_info: { username: "user" },
-          checkIn: runnableCheckIn(),
+          checkIn: runnableCheckIn(true, SITE_TYPES.NEW_API),
         },
         "Provider Not Ready",
       ),
@@ -6087,7 +6150,7 @@ describe("autoCheckinScheduler private helpers", () => {
           site_type: "new-api",
           site_name: "Auto Disabled",
           account_info: { username: "user" },
-          checkIn: runnableCheckIn(false),
+          checkIn: runnableCheckIn(false, SITE_TYPES.NEW_API),
         },
         "Auto Disabled",
       ),
@@ -6132,7 +6195,7 @@ describe("autoCheckinScheduler private helpers", () => {
             site_type: "new-api",
             site_name: domainReason,
             account_info: { username: "user" },
-            checkIn: runnableCheckIn(),
+            checkIn: runnableCheckIn(true, SITE_TYPES.NEW_API),
           },
           domainReason,
         ),
@@ -6157,12 +6220,11 @@ describe("autoCheckinScheduler private helpers", () => {
           site_type: SITE_TYPES.NEW_API,
           disabled: false,
           account_info: {},
-          checkIn: runnableCheckIn(),
+          checkIn: runnableCheckIn(true, SITE_TYPES.NEW_API),
         },
         "Method Disabled",
       ),
     ).resolves.toMatchObject({
-      successful: false,
       result: {
         status: "skipped",
         reasonCode: "method_disabled",
@@ -6183,12 +6245,11 @@ describe("autoCheckinScheduler private helpers", () => {
           site_type: SITE_TYPES.NEW_API,
           disabled: false,
           account_info: {},
-          checkIn: runnableCheckIn(),
+          checkIn: runnableCheckIn(true, SITE_TYPES.NEW_API),
         },
         "Missing Provider",
       ),
     ).resolves.toMatchObject({
-      successful: false,
       result: {
         accountId: "missing-provider",
         status: "skipped",
@@ -6213,12 +6274,11 @@ describe("autoCheckinScheduler private helpers", () => {
           site_type: SITE_TYPES.NEW_API,
           disabled: false,
           account_info: {},
-          checkIn: runnableCheckIn(),
+          checkIn: runnableCheckIn(true, SITE_TYPES.NEW_API),
         },
         "Provider Failed",
       ),
     ).resolves.toMatchObject({
-      successful: false,
       result: {
         accountId: "provider-failed",
         status: "failed",
@@ -6240,12 +6300,11 @@ describe("autoCheckinScheduler private helpers", () => {
           site_type: SITE_TYPES.NEW_API,
           disabled: false,
           account_info: {},
-          checkIn: runnableCheckIn(),
+          checkIn: runnableCheckIn(true, SITE_TYPES.NEW_API),
         },
         "Provider Threw",
       ),
     ).resolves.toMatchObject({
-      successful: false,
       result: {
         accountId: "provider-threw",
         status: "failed",
@@ -6263,7 +6322,7 @@ describe("autoCheckinScheduler private helpers", () => {
         site_type: SITE_TYPES.NEW_API,
         disabled: false,
         account_info: {},
-        checkIn: runnableCheckIn(),
+        checkIn: runnableCheckIn(true, SITE_TYPES.NEW_API),
       },
       {
         id: "source-b",
@@ -6271,7 +6330,7 @@ describe("autoCheckinScheduler private helpers", () => {
         site_type: SITE_TYPES.NEW_API,
         disabled: false,
         account_info: {},
-        checkIn: runnableCheckIn(),
+        checkIn: runnableCheckIn(true, SITE_TYPES.NEW_API),
       },
     ] as any[]
     const provider = {
@@ -6315,12 +6374,11 @@ describe("autoCheckinScheduler private helpers", () => {
           site_type: SITE_TYPES.NEW_API,
           disabled: false,
           account_info: {},
-          checkIn: runnableCheckIn(),
+          checkIn: runnableCheckIn(true, SITE_TYPES.NEW_API),
         },
         "Success Account",
       ),
     ).resolves.toMatchObject({
-      successful: true,
       result: {
         accountId: "success-account",
         status: "success",
@@ -6344,12 +6402,11 @@ describe("autoCheckinScheduler private helpers", () => {
           site_type: SITE_TYPES.NEW_API,
           disabled: false,
           account_info: {},
-          checkIn: runnableCheckIn(),
+          checkIn: runnableCheckIn(true, SITE_TYPES.NEW_API),
         },
         "Already Checked",
       ),
     ).resolves.toMatchObject({
-      successful: true,
       result: {
         accountId: "already-checked-account",
         status: "already_checked",

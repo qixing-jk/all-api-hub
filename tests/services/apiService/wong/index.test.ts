@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { CHECK_IN_METHOD_TODAY_STATUSES } from "~/constants/checkIn"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   fetchAccountData,
@@ -223,14 +224,15 @@ describe("apiService wong", () => {
   })
 
   it("preserves check-in state when no method is selected", async () => {
+    const checkIn = createCheckInConfig(SITE_TYPES.WONG_GONGYI, {
+      matched: false,
+    })
     const result = await fetchAccountData({
       ...baseRequest,
-      checkIn: createCheckInConfig(SITE_TYPES.WONG_GONGYI, {
-        matched: false,
-      }),
+      checkIn,
     })
 
-    expect(result.checkIn.selection).not.toHaveProperty("methodId")
+    expect(result.checkIn).toEqual(checkIn)
     expect(mockFetchApi).not.toHaveBeenCalled()
   })
 
@@ -262,7 +264,7 @@ describe("apiService wong", () => {
         config: result.data!.checkIn,
         siteType: SITE_TYPES.WONG_GONGYI,
       }),
-    ).toMatchObject({ today: "not_checked" })
+    ).toMatchObject({ today: CHECK_IN_METHOD_TODAY_STATUSES.NotChecked })
   })
 
   it("maps refresh failures through determineHealthStatus", async () => {

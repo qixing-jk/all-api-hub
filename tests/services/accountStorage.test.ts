@@ -2561,6 +2561,33 @@ describe("accountStorage core behaviors", () => {
     })
   })
 
+  it("updateAccountCheckInDraft removes a cleared custom check-in URL", async () => {
+    const account = createAccount({
+      id: "remove-custom-check-in",
+      site_type: SITE_TYPES.NEW_API,
+      checkIn: {
+        automaticExecutionEnabled: true,
+        methodKnowledge: { methods: {} },
+        selection: { mode: "automatic" },
+        customCheckIn: {
+          url: "https://example.invalid/check-in",
+          isCheckedInToday: true,
+        },
+      },
+    })
+    seedStorage([account])
+
+    await expect(
+      accountStorage.updateAccountCheckInDraft(account.id, {
+        ...account.checkIn,
+        customCheckIn: undefined,
+      }),
+    ).resolves.toBe(true)
+
+    const updated = await accountStorage.getAccountById(account.id)
+    expect(updated?.checkIn.customCheckIn).toBeUndefined()
+  })
+
   it("keeps account fields and the check-in draft unchanged when their atomic save fails", async () => {
     const account = createAccount({
       id: "atomic-dialog-save",

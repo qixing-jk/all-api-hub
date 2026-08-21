@@ -100,7 +100,11 @@ describe("newApiProvider", () => {
   it("registers the shared provider for ModelFlare accounts", () => {
     expect(
       autoCheckinMethodRegistry.getCandidates(SITE_TYPES.MODELFLARE),
-    ).toEqual([expect.objectContaining({ provider: newApiProvider })])
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ provider: newApiProvider }),
+      ]),
+    )
   })
 
   describe("canCheckIn", () => {

@@ -124,7 +124,11 @@ vi.mock("~/components/Tooltip", async (importOriginal) => {
       children: ReactNode
       content: ReactNode
     }) => (
-      <div data-tooltip-content={typeof content === "string" ? content : ""}>
+      <div
+        role={typeof content === "string" ? "img" : undefined}
+        aria-label={typeof content === "string" ? content : undefined}
+        data-tooltip-content={typeof content === "string" ? content : ""}
+      >
         {children}
         {typeof content === "string" ? null : content}
       </div>
@@ -349,7 +353,7 @@ describe("SiteInfo", () => {
   })
 
   it("does not label a selected check-in method without readback status as unsupported", () => {
-    const { container } = render(
+    render(
       <SiteInfo
         site={buildSite({
           checkIn: createCheckIn({ supported: true }),
@@ -358,14 +362,14 @@ describe("SiteInfo", () => {
     )
 
     expect(
-      container.querySelector(
-        '[data-tooltip-content="account:list.site.checkInStatusUnavailable"]',
-      ),
+      screen.getByRole("img", {
+        name: "account:list.site.checkInStatusUnavailable",
+      }),
     ).toBeInTheDocument()
     expect(
-      container.querySelector(
-        '[data-tooltip-content="account:list.site.checkInUnsupported"]',
-      ),
+      screen.queryByRole("img", {
+        name: "account:list.site.checkInUnsupported",
+      }),
     ).not.toBeInTheDocument()
   })
 

@@ -10,6 +10,7 @@ import {
 } from "~/constants"
 import {
   AUTO_CHECKIN_METHOD_IDS,
+  CHECK_IN_METHOD_STATUS_OUTCOMES,
   CHECK_IN_METHOD_TODAY_STATUSES,
 } from "~/constants/checkIn"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
@@ -60,7 +61,9 @@ function readCheckInToday(config: CheckInConfig | undefined) {
   if (!config) return undefined
 
   const status = getSelectedCheckInStatus({ config, siteType: "new-api" })
-  return status?.outcome === "known" ? status.today : undefined
+  return status?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known
+    ? status.today
+    : undefined
 }
 
 type MockIndexedAccountSearchEntry = {

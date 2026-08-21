@@ -588,6 +588,19 @@ async function startDnrCaptureNewApiServer(): Promise<DnrCaptureNewApiServer> {
       return
     }
 
+    if (method === "GET" && url.pathname === "/api/user/checkin") {
+      sendJson(200, {
+        success: true,
+        message: "ok",
+        data: {
+          stats: {
+            checked_in_today: false,
+          },
+        },
+      })
+      return
+    }
+
     if (method === "GET" && url.pathname === "/api/token/") {
       const page = Number(url.searchParams.get("p") ?? "0")
       const cookieHeader = request.headers.cookie ?? ""

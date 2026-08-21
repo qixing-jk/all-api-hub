@@ -155,7 +155,9 @@ async function waitForStoredAccountQuota(params: {
 }
 
 async function openAccountRowActionsMenu(row: Locator) {
-  await row.hover()
+  // Hover near the row edge so transient centered toasts cannot intercept the
+  // pointer while the previous account refresh notification is still visible.
+  await row.hover({ position: { x: 8, y: 8 } })
   const moreActionsButton = row.getByTestId(
     ACCOUNT_MANAGEMENT_TEST_IDS.rowMoreActionsButton,
   )

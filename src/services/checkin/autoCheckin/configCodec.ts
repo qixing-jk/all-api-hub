@@ -297,7 +297,7 @@ const normalizeCustomCheckIn = (
   const turnstilePreTrigger = normalizeTurnstilePreTrigger(
     value.turnstilePreTrigger,
   )
-  return {
+  const normalized: NonNullable<CheckInConfig["customCheckIn"]> = {
     ...(typeof value.url === "string" ? { url: value.url } : {}),
     ...(turnstilePreTrigger ? { turnstilePreTrigger } : {}),
     ...(typeof value.redeemUrl === "string"
@@ -313,6 +313,7 @@ const normalizeCustomCheckIn = (
       ? { lastCheckInDate: value.lastCheckInDate }
       : {}),
   }
+  return Object.keys(normalized).length > 0 ? normalized : undefined
 }
 
 /**
