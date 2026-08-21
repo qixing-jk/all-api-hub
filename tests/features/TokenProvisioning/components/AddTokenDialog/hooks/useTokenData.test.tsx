@@ -74,6 +74,15 @@ const createGroups = (keys: string[]) =>
     keys.map((key, index) => [key, { desc: `${key} group`, ratio: index + 1 }]),
   )
 
+const createDeferred = <T,>() => {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((resolvePromise) => {
+    resolve = resolvePromise
+  })
+
+  return { promise, resolve }
+}
+
 type RenderSubjectProps = {
   isOpen: boolean
   currentAccount?: typeof ACCOUNT
@@ -377,6 +386,89 @@ describe("useTokenData", () => {
     expect(fetchAccountAvailableModelsMock).not.toHaveBeenCalled()
     expect(result.current.isLoading).toBe(false)
     expect(toastErrorMock).not.toHaveBeenCalled()
+  })
+
+  it("deduplicates concurrent model discovery requests for one account", async () => {
+    const deferredModels = createDeferred<string[]>()
+    fetchAccountAvailableModelsMock.mockReturnValue(deferredModels.promise)
+    fetchUserGroupsMock.mockResolvedValue(createGroups(["default"]))
+
+    const { result } = renderSubject({
+      isOpen: true,
+      currentAccount: ACCOUNT,
+      initialGroup: "default",
+    })
+
+    await waitFor(() => {
+      expect(result.current.groups).toEqual(createGroups(["default"]))
+    })
+
+    let firstRequest!: Promise<boolean>
+    let secondRequest!: Promise<boolean>
+    act(() => {
+      firstRequest = result.current.loadAvailableModels()
+      secondRequest = result.current.loadAvailableModels()
+    })
+
+    expect(fetchAccountAvailableModelsMock).toHaveBeenCalledTimes(1)
+
+    deferredModels.resolve(["example-model"])
+    await act(async () => {
+      await expect(Promise.all([firstRequest, secondRequest])).resolves.toEqual(
+        [true, true],
+      )
+    })
+
+    expect(result.current.availableModels).toEqual(["example-model"])
+  })
+
+  it("ignores a model response that arrives after switching accounts", async () => {
+    const previousModels = createDeferred<string[]>()
+    const currentModels = createDeferred<string[]>()
+    const nextAccount = { ...ACCOUNT, id: "acc-2", name: "Example 2" }
+    fetchAccountAvailableModelsMock
+      .mockReturnValueOnce(previousModels.promise)
+      .mockReturnValueOnce(currentModels.promise)
+    fetchUserGroupsMock.mockResolvedValue(createGroups(["default"]))
+
+    const { result, rerender } = renderSubject({
+      isOpen: true,
+      currentAccount: ACCOUNT,
+      initialGroup: "default",
+    })
+
+    await waitFor(() => {
+      expect(result.current.groups).toEqual(createGroups(["default"]))
+    })
+
+    let previousRequest!: Promise<boolean>
+    act(() => {
+      previousRequest = result.current.loadAvailableModels()
+    })
+
+    rerender({
+      isOpen: true,
+      currentAccount: nextAccount,
+      initialGroup: "default",
+    })
+
+    let currentRequest!: Promise<boolean>
+    act(() => {
+      currentRequest = result.current.loadAvailableModels()
+    })
+    currentModels.resolve(["current-model"])
+
+    await act(async () => {
+      await expect(currentRequest).resolves.toBe(true)
+    })
+
+    previousModels.resolve(["stale-model"])
+    await act(async () => {
+      await expect(previousRequest).resolves.toBe(false)
+    })
+
+    expect(result.current.availableModels).toEqual(["current-model"])
+    expect(fetchAccountAvailableModelsMock).toHaveBeenCalledTimes(2)
   })
 
   it("shows the localized fallback error when loading bootstrap data fails without a message", async () => {

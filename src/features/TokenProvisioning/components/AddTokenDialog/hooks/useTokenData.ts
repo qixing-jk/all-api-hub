@@ -27,11 +27,11 @@ const logger = createLogger("TokenDataHook")
 const EMPTY_USER_GROUPS: Record<string, UserGroupInfo> = {}
 
 /**
- * Loads available models and user groups for the selected account when dialog opens.
+ * Loads required user groups when the dialog opens and optional models on demand.
  * @param isOpen Whether dialog is visible.
  * @param currentAccount Currently selected account info.
  * @param setFormData Setter to update form state with defaults (e.g., group).
- * @returns Loading flag, fetched models/groups, and reset helper.
+ * @returns Required group state plus isolated, on-demand model discovery state.
  */
 export function useTokenData(
   isOpen: boolean,

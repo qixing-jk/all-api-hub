@@ -33,6 +33,7 @@ const {
   mockSub2ApiUpdateApiToken,
   mockUpdateApiToken,
   mockVApiFetchAccountAvailableModels,
+  mockVApiFetchUserGroups,
   mockVoApiV2CreateToken,
   mockVoApiV2DeleteToken,
   mockVoApiV2FetchAvailableModels,
@@ -67,6 +68,7 @@ const {
   mockSub2ApiUpdateApiToken: vi.fn(),
   mockUpdateApiToken: vi.fn(),
   mockVApiFetchAccountAvailableModels: vi.fn(),
+  mockVApiFetchUserGroups: vi.fn(),
   mockVoApiV2CreateToken: vi.fn(),
   mockVoApiV2DeleteToken: vi.fn(),
   mockVoApiV2FetchAvailableModels: vi.fn(),
@@ -125,6 +127,7 @@ vi.mock("~/services/apiService/newApiFamily/variants/oneHub", () => ({
 
 vi.mock("~/services/apiService/newApiFamily/variants/vApi", () => ({
   fetchAccountAvailableModels: mockVApiFetchAccountAvailableModels,
+  fetchUserGroups: mockVApiFetchUserGroups,
 }))
 
 vi.mock("~/services/apiService/newApiFamily/variants/wong", () => ({
@@ -383,15 +386,23 @@ describe("apiAdapter keyManagement", () => {
     expect(mockFetchAccountAvailableModels).not.toHaveBeenCalled()
   })
 
-  it("uses the V-API account-available-model override", async () => {
+  it("uses the V-API account metadata overrides", async () => {
     mockVApiFetchAccountAvailableModels.mockResolvedValueOnce(availableModels)
+    mockVApiFetchUserGroups.mockResolvedValueOnce(userGroups)
 
-    await expect(
-      createNewApiKeyManagement(SITE_TYPES.V_API).fetchAvailableModels(request),
-    ).resolves.toBe(availableModels)
+    const keyManagement = createNewApiKeyManagement(SITE_TYPES.V_API)
+
+    await expect(keyManagement.fetchAvailableModels(request)).resolves.toBe(
+      availableModels,
+    )
+    await expect(keyManagement.userGroups?.fetch(request)).resolves.toBe(
+      userGroups,
+    )
 
     expect(mockVApiFetchAccountAvailableModels).toHaveBeenCalledWith(request)
+    expect(mockVApiFetchUserGroups).toHaveBeenCalledWith(request)
     expect(mockFetchAccountAvailableModels).not.toHaveBeenCalled()
+    expect(mockFetchUserGroups).not.toHaveBeenCalled()
   })
 
   it("uses WONG token-key resolution override at the adapter layer", async () => {

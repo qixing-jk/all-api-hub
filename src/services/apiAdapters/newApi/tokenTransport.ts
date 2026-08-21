@@ -61,6 +61,7 @@ const overrides: Partial<
   [SITE_TYPES.V_API]: {
     ...compatibleTokenInventoryOverrides,
     fetchAccountAvailableModels: vApi.fetchAccountAvailableModels,
+    fetchUserGroups: vApi.fetchUserGroups,
   },
   [SITE_TYPES.VO_API]: compatibleTokenInventoryOverrides,
   [SITE_TYPES.SUPER_API]: compatibleTokenInventoryOverrides,
