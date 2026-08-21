@@ -612,6 +612,7 @@ describe("webAiApiCheck extractCredentials", () => {
     )
 
     expect(result.apiKey).toBe(apiKey)
+    expect(result.apiKeyCandidates).toEqual([apiKey, encodedApiKey])
     expect(result.summary.hasCleanup).toBe(true)
     expect(result.candidates.apiKeys[0]).toEqual(
       expect.objectContaining({
@@ -623,6 +624,106 @@ describe("webAiApiCheck extractCredentials", () => {
           "knownPrefix",
         ]),
       }),
+    )
+    expect(result.candidates.apiKeys[1]).toEqual(
+      expect.objectContaining({
+        value: encodedApiKey,
+        autoPromptEligible: false,
+        reasons: expect.arrayContaining(["labeled", "base64EncodedSource"]),
+      }),
+    )
+  })
+
+  it("decodes unlabeled base64 token candidates before ranking", () => {
+    const apiKey = buildKnownKey(
+      "unlabeledBase64Aa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1A",
+    )
+    const encodedApiKey = btoa(apiKey).replace(/=+$/, "")
+
+    const result = extractApiCheckCredentialsFromText(`
+      https://proxy.example.com/api
+      ${encodedApiKey}
+    `)
+
+    expect(result.apiKey).toBe(apiKey)
+    expect(result.apiKeyCandidates).toEqual([apiKey, encodedApiKey])
+    expect(result.candidates.apiKeys[0]).toEqual(
+      expect.objectContaining({
+        value: apiKey,
+        confidence: "standard",
+        cleanupApplied: true,
+        autoPromptEligible: true,
+        reasons: expect.arrayContaining(["base64Decoded", "knownPrefix"]),
+      }),
+    )
+    expect(result.summary.enhancedAutoPromptEligible).toBe(true)
+  })
+
+  it("recursively decodes nested base64 token candidates", () => {
+    const apiKey = buildKnownKey(
+      "nestedBase64Aa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1A",
+    )
+    const encodedApiKey = btoa(apiKey).replace(/=+$/, "")
+    const nestedEncodedApiKey = btoa(encodedApiKey).replace(/=+$/, "")
+
+    const result = extractApiCheckCredentialsFromText(`
+      https://proxy.example.com/api
+      ${nestedEncodedApiKey}
+    `)
+
+    expect(result.apiKey).toBe(apiKey)
+    expect(result.apiKeyCandidates).toEqual([apiKey, nestedEncodedApiKey])
+    expect(result.candidates.apiKeys[0]?.reasons).toEqual(
+      expect.arrayContaining(["base64Decoded", "knownPrefix"]),
+    )
+    expect(result.candidates.apiKeys[1]).toEqual(
+      expect.objectContaining({
+        value: nestedEncodedApiKey,
+        reasons: expect.arrayContaining(["base64EncodedSource"]),
+      }),
+    )
+  })
+
+  it("bounds recursive base64 decoding to four layers", () => {
+    const apiKey = buildKnownKey(
+      "boundedBase64Aa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1A",
+    )
+    const encodedLayers = [apiKey]
+    for (let depth = 0; depth < 5; depth += 1) {
+      encodedLayers.push(
+        btoa(encodedLayers[encodedLayers.length - 1]).replace(/=+$/, ""),
+      )
+    }
+    const deepestEncodedApiKey = encodedLayers[5]
+
+    const result = extractApiCheckCredentialsFromText(deepestEncodedApiKey)
+
+    expect(result.apiKey).toBe(encodedLayers[1])
+    expect(result.apiKey).not.toBe(apiKey)
+    expect(result.apiKeyCandidates).toEqual([
+      encodedLayers[1],
+      deepestEncodedApiKey,
+    ])
+  })
+
+  it.each([
+    ["full-width separator", "API Key：**{{key}}**"],
+    ["full-width equals", "token＝{{key}}"],
+    ["Chinese API key label", "API 密钥：{{key}}"],
+    ["Chinese access-token label", "访问令牌={{key}}"],
+  ])("decodes base64 values from %s", (_name, template) => {
+    const apiKey = buildKnownKey(
+      "localizedLabelAa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1A",
+    )
+    const encodedApiKey = btoa(apiKey).replace(/=+$/, "")
+    const sourceText = template.replace("{{key}}", encodedApiKey)
+
+    const result = extractApiCheckCredentialsFromText(sourceText)
+
+    expect(result.apiKey).toBe(apiKey)
+    expect(result.apiKeyCandidates).toEqual([apiKey, encodedApiKey])
+    expect(result.candidates.apiKeys[0]?.reasons).toEqual(
+      expect.arrayContaining(["labeled", "base64Decoded", "knownPrefix"]),
     )
   })
 

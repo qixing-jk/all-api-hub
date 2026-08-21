@@ -262,6 +262,54 @@ describe("setupWebAiApiCheckContent", () => {
     cleanup()
   })
 
+  it("opens enhanced auto-detect for an unlabeled base64 token candidate", async () => {
+    const apiKey = "sk-base64Aa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1A"
+    const encodedApiKey = btoa(apiKey).replace(/=+$/, "")
+    vi.mocked(sendWebAiApiCheckMessage).mockResolvedValue({
+      success: true,
+      shouldPrompt: true,
+      enhancedShouldPrompt: true,
+    })
+    vi.mocked(showApiCheckConfirmToast).mockResolvedValue(true)
+
+    const cleanup = setupWebAiApiCheckContent()
+
+    document.dispatchEvent(
+      makeClipboardEvent(
+        "copy",
+        ["https://proxy.example.com/api", encodedApiKey].join("\n"),
+      ),
+    )
+
+    await waitFor(() =>
+      expect(dispatchOpenApiCheckModal).toHaveBeenCalledWith(
+        expect.objectContaining({
+          trigger: "autoDetect",
+          extraction: expect.objectContaining({
+            candidates: expect.objectContaining({
+              apiKeys: expect.arrayContaining([
+                expect.objectContaining({
+                  value: apiKey,
+                  reasons: expect.arrayContaining(["base64Decoded"]),
+                }),
+                expect.objectContaining({
+                  value: encodedApiKey,
+                  autoPromptEligible: false,
+                  reasons: expect.arrayContaining(["base64EncodedSource"]),
+                }),
+              ]),
+            }),
+            summary: expect.objectContaining({
+              enhancedAutoPromptEligible: true,
+            }),
+          }),
+        }),
+      ),
+    )
+
+    cleanup()
+  })
+
   it("passes configured API key cleanup regex patterns into auto-detect extraction", async () => {
     const apiKey = buildApiKey()
     vi.mocked(sendWebAiApiCheckMessage).mockImplementation(

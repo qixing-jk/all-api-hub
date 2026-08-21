@@ -31,6 +31,7 @@ export type ApiCheckCandidateReason =
   | "illegalCharsRemoved"
   | "customRegexRemoved"
   | "base64Decoded"
+  | "base64EncodedSource"
 
 export type ApiCheckCandidateKind = "baseUrl" | "apiKey"
 
@@ -78,6 +79,7 @@ type InternalApiCheckCandidate = ApiCheckCandidate & {
 function trimWrappingPunctuation(value: string): string {
   return (value || "")
     .trim()
+    .replace(/^\*+|\*+$/g, "")
     .replace(/^[("'`[{<]+/, "")
     .replace(/[)"'`}\]>.,;]+$/, "")
 }
@@ -133,6 +135,7 @@ function compareCandidates(
  * Rank API key candidates by how likely the final value is to be usable.
  */
 function getApiKeyUsefulnessRank(candidate: InternalApiCheckCandidate) {
+  if (candidate.reasons.includes("base64EncodedSource")) return -1
   if (candidate.reasons.includes("knownPrefix")) return 4
   if (candidate.reasons.includes("unknownShortPrefix")) return 3
   if (
@@ -427,10 +430,37 @@ function decodeBase64ApiKeyCandidate(raw: string): string | null {
 
   const normalized = encoded.replace(/-/g, "+").replace(/_/g, "/")
   const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=")
-  const decoded = atob(padded)
+  let decoded: string
+  try {
+    decoded = atob(padded)
+  } catch {
+    return null
+  }
   if (!/^[\x20-\x7E]+$/.test(decoded)) return null
   if (decoded === encoded) return null
   return decoded
+}
+
+const MAX_BASE64_API_KEY_DECODE_DEPTH = 4
+
+/**
+ * Decode nested base64/base64url values with a bounded depth and cycle guard.
+ */
+function decodeBase64ApiKeyCandidateChain(raw: string): string[] {
+  const decodedValues: string[] = []
+  const seenValues = new Set([raw])
+  let currentValue = raw
+
+  for (let depth = 0; depth < MAX_BASE64_API_KEY_DECODE_DEPTH; depth += 1) {
+    const decoded = decodeBase64ApiKeyCandidate(currentValue)
+    if (!decoded || seenValues.has(decoded)) break
+
+    decodedValues.push(decoded)
+    seenValues.add(decoded)
+    currentValue = decoded
+  }
+
+  return decodedValues
 }
 
 /**
@@ -679,6 +709,85 @@ export function extractApiCheckCredentialsFromText(
     insertionOrder += 1
   }
 
+  const pushClassifiedApiKeyCandidate = (
+    candidateValue: string,
+    candidateReasons: ApiCheckCandidateReason[],
+    cleanupApplied = false,
+  ) => {
+    const classified = classifyApiKeyCandidate(candidateValue)
+    if (!classified) return false
+    pushCandidate(apiKeyCandidates, {
+      ...classified,
+      kind: "apiKey",
+      reasons: mergeReasons(candidateReasons, classified.reasons),
+      cleanupApplied:
+        cleanedApiKeyInput.cleanupApplied ||
+        cleanupApplied ||
+        classified.cleanupApplied,
+      insertionOrder,
+    })
+    insertionOrder += 1
+    return true
+  }
+
+  const pushBase64EncodedSourceCandidate = (
+    candidateValue: string,
+    candidateReasons: ApiCheckCandidateReason[],
+    cleanupApplied = false,
+  ) => {
+    const sourceValue = trimWrappingPunctuation(candidateValue)
+    pushCandidate(apiKeyCandidates, {
+      value: sourceValue,
+      kind: "apiKey",
+      confidence: "enhancedMedium",
+      reasons: mergeReasons(candidateReasons, ["base64EncodedSource"]),
+      cleanupApplied:
+        cleanedApiKeyInput.cleanupApplied ||
+        cleanupApplied ||
+        sourceValue !== candidateValue ||
+        undefined,
+      autoPromptEligible: false,
+      insertionOrder,
+    })
+    insertionOrder += 1
+  }
+
+  const pushDecodedOrClassifiedApiKeyCandidate = (
+    candidateValue: string,
+    candidateReasons: ApiCheckCandidateReason[],
+    cleanupApplied = false,
+  ) => {
+    const decodedValues = decodeBase64ApiKeyCandidateChain(candidateValue)
+    let pushedDecoded = false
+    for (const decoded of [...decodedValues].reverse()) {
+      if (
+        pushClassifiedApiKeyCandidate(
+          decoded,
+          mergeReasons(candidateReasons, ["base64Decoded"]),
+          true,
+        )
+      ) {
+        pushedDecoded = true
+        break
+      }
+    }
+
+    if (pushedDecoded) {
+      pushBase64EncodedSourceCandidate(
+        candidateValue,
+        candidateReasons,
+        cleanupApplied,
+      )
+      return true
+    }
+
+    return pushClassifiedApiKeyCandidate(
+      candidateValue,
+      candidateReasons,
+      cleanupApplied,
+    )
+  }
+
   const pushApiKeyCandidate = (
     value: string | null,
     reasons: ApiCheckCandidateReason[],
@@ -695,52 +804,14 @@ export function extractApiCheckCredentialsFromText(
         ? mergeReasons(reasons, ["customRegexRemoved"])
         : reasons
 
-    const pushClassifiedCandidate = (
-      candidateValue: string,
-      candidateReasons: ApiCheckCandidateReason[],
-      cleanupApplied = false,
-    ) => {
-      const classified = classifyApiKeyCandidate(candidateValue)
-      if (!classified) return false
-      pushCandidate(apiKeyCandidates, {
-        ...classified,
-        kind: "apiKey",
-        reasons: mergeReasons(candidateReasons, classified.reasons),
-        cleanupApplied:
-          cleanedApiKeyInput.cleanupApplied ||
-          cleanupApplied ||
-          classified.cleanupApplied,
-        insertionOrder,
-      })
-      insertionOrder += 1
-      return true
-    }
-
-    const decoded = decodeBase64ApiKeyCandidate(candidateValue)
-    const pushedDecoded = decoded
-      ? pushClassifiedCandidate(
-          decoded,
-          mergeReasons(candidateReasons, ["base64Decoded"]),
-          true,
-        )
-      : false
-    if (pushedDecoded) return
-
-    const classified = classifyApiKeyCandidate(candidateValue)
-    if (classified) {
-      pushCandidate(apiKeyCandidates, {
-        ...classified,
-        kind: "apiKey",
-        reasons: mergeReasons(candidateReasons, classified.reasons),
-        cleanupApplied:
-          cleanedApiKeyInput.cleanupApplied ||
-          cleanedByCustomPatterns.cleanupApplied ||
-          classified.cleanupApplied,
-        insertionOrder,
-      })
-      insertionOrder += 1
+    if (
+      pushDecodedOrClassifiedApiKeyCandidate(
+        candidateValue,
+        candidateReasons,
+        cleanedByCustomPatterns.cleanupApplied,
+      )
+    )
       return
-    }
     if (candidateValue.length < 10) return
     const fallbackCandidate: InternalApiCheckCandidate = {
       value: candidateValue,
@@ -850,7 +921,7 @@ export function extractApiCheckCredentialsFromText(
   }
 
   const apiKeyPattern =
-    /\b(?:api[_\s-]?key|key|token|access[_\s-]?token|secret)\b\s*[:=]\s*([^\s'"]+)/gi
+    /(?:\b(?:api[_\s-]?key|key|token|access[_\s-]?token|secret)\b|API\s*密钥|密钥|访问令牌|令牌)\s*[:=：＝]\s*([^\s'"]+)/gi
   for (const match of apiKeyInput.matchAll(apiKeyPattern)) {
     const raw = trimWrappingPunctuation(match[1] ?? "")
     if (raw) pushApiKeyCandidate(raw, ["labeled"])
@@ -881,22 +952,15 @@ export function extractApiCheckCredentialsFromText(
   // 6) Enhanced key windows: bounded to a single non-whitespace token so cleanup
   // can remove accidental punctuation without merging URLs, assignments, or lines.
   const enhancedKeyWindowPattern =
-    /(?<![A-Za-z0-9_-])([A-Za-z0-9_-][^\s'"=:/\\]{17,})(?![A-Za-z0-9_-])/g
+    /(?<![A-Za-z0-9_-])([A-Za-z0-9_-][^\s'"=:/\\：＝]{17,})(?![A-Za-z0-9_-])/g
   for (const match of apiKeyInput.matchAll(enhancedKeyWindowPattern)) {
-    const classified = classifyApiKeyCandidate(match[1] ?? "")
-    if (!classified) continue
-
-    pushCandidate(apiKeyCandidates, {
-      ...classified,
-      kind: "apiKey",
-      reasons: cleanedApiKeyInput.cleanupApplied
-        ? mergeReasons(classified.reasons, ["customRegexRemoved"])
-        : classified.reasons,
-      cleanupApplied:
-        cleanedApiKeyInput.cleanupApplied || classified.cleanupApplied,
-      insertionOrder,
-    })
-    insertionOrder += 1
+    const candidateReasons: ApiCheckCandidateReason[] =
+      cleanedApiKeyInput.cleanupApplied ? ["customRegexRemoved"] : []
+    pushDecodedOrClassifiedApiKeyCandidate(
+      match[1] ?? "",
+      candidateReasons,
+      cleanedApiKeyInput.cleanupApplied,
+    )
   }
 
   baseUrlCandidates.sort(compareCandidates)
