@@ -62,7 +62,7 @@ function validateRegexPatterns(lines: string[]): {
 }
 
 /**
- * Flag cleanup patterns that content scripts will skip as unsafe.
+ * Separate cleanup patterns that are safe to persist from invalid entries.
  */
 function validateSafeRegexPatterns(lines: string[]): {
   patterns: string[]
@@ -73,9 +73,13 @@ function validateSafeRegexPatterns(lines: string[]): {
     (pattern) =>
       !result.invalid.includes(pattern) && !isSafeRegexPattern(pattern, "i"),
   )
+  const invalid = [...result.invalid, ...unsafe]
+  const invalidPatterns = new Set(invalid)
   return {
-    patterns: result.patterns,
-    invalid: [...result.invalid, ...unsafe],
+    patterns: result.patterns.filter(
+      (pattern) => !invalidPatterns.has(pattern),
+    ),
+    invalid,
   }
 }
 

@@ -880,13 +880,18 @@ describe("webAiApiCheck extractCredentials", () => {
       throw new DOMException("Invalid character", "InvalidCharacterError")
     })
 
-    const result = extractApiCheckCredentialsFromText(
-      `API Key: ${encodedApiKey}`,
-    )
+    try {
+      const result = extractApiCheckCredentialsFromText(
+        `API Key: ${encodedApiKey}`,
+      )
 
-    expect(result.apiKey).toBe(encodedApiKey)
-    expect(result.candidates.apiKeys[0]?.reasons).not.toContain("base64Decoded")
-    atobSpy.mockRestore()
+      expect(result.apiKey).toBe(encodedApiKey)
+      expect(result.candidates.apiKeys[0]?.reasons).not.toContain(
+        "base64Decoded",
+      )
+    } finally {
+      atobSpy.mockRestore()
+    }
   })
 
   it("classifies non-hyphen known prefixes case-insensitively", () => {

@@ -368,24 +368,37 @@ describe("WebAiApiCheckSettings", () => {
     expect(screen.getAllByText("broken-[")).toHaveLength(2)
   })
 
-  it("shows unsafe custom API key cleanup regex warnings", () => {
+  it("warns about unsafe cleanup regexes and omits them when saving", async () => {
     render(<WebAiApiCheckSettings />)
 
-    fireEvent.change(
-      screen.getByLabelText(
-        "webAiApiCheck:settings.keyCleanup.patternsPlaceholder",
-      ),
-      {
-        target: {
-          value: "(a+)+$",
-        },
-      },
+    const textarea = screen.getByLabelText(
+      "webAiApiCheck:settings.keyCleanup.patternsPlaceholder",
     )
+    fireEvent.change(textarea, {
+      target: {
+        value: "safe-prefix\n(a+)+$",
+      },
+    })
 
     expect(
       screen.getByText("webAiApiCheck:settings.keyCleanup.invalidTitle"),
     ).toBeInTheDocument()
-    expect(screen.getAllByText("(a+)+$")).toHaveLength(2)
+    expect(textarea).toHaveValue("safe-prefix\n(a+)+$")
+    expect(screen.getByText("(a+)+$")).toBeInTheDocument()
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "webAiApiCheck:settings.keyCleanup.save",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockUpdateWebAiApiCheck).toHaveBeenCalledWith({
+        keyCleanup: {
+          removalPatterns: ["safe-prefix"],
+        },
+      })
+    })
   })
 
   it("disables enhanced auto-detect control when auto-detect is disabled", () => {
