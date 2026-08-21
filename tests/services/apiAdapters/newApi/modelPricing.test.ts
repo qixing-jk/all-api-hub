@@ -369,7 +369,7 @@ describe("New API model pricing adapter", () => {
 
     await expect(
       createNewApiModelPricing(SITE_TYPES.V_API).fetchPricing(request),
-    ).rejects.toThrow()
+    ).rejects.toThrow("Invalid New API model pricing response")
   })
 
   it("normalizes cache read and write ratios without leaking native fields", async () => {
