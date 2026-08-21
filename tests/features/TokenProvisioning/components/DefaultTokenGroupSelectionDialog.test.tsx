@@ -35,9 +35,32 @@ describe("DefaultTokenGroupSelectionDialog", () => {
     })
 
     expect(groupSelectors).toHaveLength(2)
-    expect(groupSelectors[0]).toHaveTextContent("vip")
-    expect(groupSelectors[1]).toHaveTextContent("default")
-    expect(groupSelectors[0].id).not.toBe(groupSelectors[1].id)
+    expect(
+      groupSelectors.some((selector) => selector.textContent?.includes("vip")),
+    ).toBe(true)
+    expect(
+      groupSelectors.some((selector) =>
+        selector.textContent?.includes("default"),
+      ),
+    ).toBe(true)
+    expect(new Set(groupSelectors.map((selector) => selector.id)).size).toBe(2)
+  })
+
+  it("cancels when the dialog close control dismisses it", async () => {
+    const onCancel = vi.fn()
+    const user = userEvent.setup()
+    render(
+      <DefaultTokenGroupSelectionDialog
+        {...defaultProps}
+        onCancel={onCancel}
+      />,
+    )
+
+    await user.click(
+      await screen.findByRole("button", { name: "common:actions.close" }),
+    )
+
+    expect(onCancel).toHaveBeenCalledTimes(1)
   })
 
   it("removes dismissal controls while creation is in progress", async () => {

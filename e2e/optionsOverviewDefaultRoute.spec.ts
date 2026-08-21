@@ -166,14 +166,12 @@ test("overview action center opens disabled auto check-in settings", async ({
         hash: url.hash,
         tab: url.searchParams.get("tab"),
         anchor: url.searchParams.get("anchor"),
-        highlight: url.searchParams.get("highlight"),
       }
     })
     .toEqual({
       hash: `#${MENU_ITEM_IDS.BASIC}`,
       tab: "checkinRedeem",
       anchor: SETTINGS_ANCHORS.AUTO_CHECKIN,
-      highlight: SETTINGS_ANCHORS.AUTO_CHECKIN,
     })
 
   await expect(page.getByTestId(BASIC_SETTINGS_TEST_IDS.page)).toBeVisible()

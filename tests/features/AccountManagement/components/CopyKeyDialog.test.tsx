@@ -1,3 +1,4 @@
+import { renderHook } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
@@ -5,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import CopyKeyDialog from "~/features/AccountManagement/components/CopyKeyDialog"
 import { DialogFooter } from "~/features/AccountManagement/components/CopyKeyDialog/DialogFooter"
+import { useCopyKeyDialog } from "~/features/AccountManagement/components/CopyKeyDialog/hooks/useCopyKeyDialog"
 import { KeyInventoryList } from "~/features/AccountManagement/components/CopyKeyDialog/KeyInventoryList"
 import { QuickKeyResourceCard } from "~/features/AccountManagement/components/CopyKeyDialog/QuickKeyResourceCard"
 import { RuntimeKeyActionControls } from "~/features/AccountManagement/components/CopyKeyDialog/RuntimeKeyActionControls"
@@ -1388,6 +1390,26 @@ describe("CopyKeyDialog", () => {
     ).toBeDisabled()
     expect(screen.queryByText("default")).not.toBeInTheDocument()
     expect(fetchAccountTokensMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("reports unsupported post-create refresh after credentials are lost", async () => {
+    const accountWithoutCredentials = {
+      ...ACCOUNT,
+      token: "",
+      cookieAuthSessionCookie: "",
+    }
+    const { result } = renderHook(() =>
+      useCopyKeyDialog(false, accountWithoutCredentials),
+    )
+
+    expect(result.current.canCreateDefaultKey).toBe(false)
+
+    await act(async () => result.current.refreshRuntimeKeysAfterCreate())
+
+    expect(result.current.postCreateError).toBe(
+      "ui:dialog.copyKey.createNotSupported",
+    )
+    expect(fetchAccountTokensMock).not.toHaveBeenCalled()
   })
 
   it("ignores stale token fetch completions after the selected account loses manageable credentials", async () => {

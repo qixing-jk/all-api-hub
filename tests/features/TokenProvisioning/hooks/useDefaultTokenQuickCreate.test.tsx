@@ -263,4 +263,40 @@ describe("useDefaultTokenQuickCreate", () => {
     })
     expect(createTokenMock).not.toHaveBeenCalled()
   })
+
+  it("reports unsupported creation before resolving provider policy", async () => {
+    const { result } = renderHook(() =>
+      useDefaultTokenQuickCreate({
+        isActive: true,
+        account,
+        canCreate: false,
+        onCreated: vi.fn(),
+      }),
+    )
+
+    await act(async () => result.current.start())
+
+    expect(result.current.state).toEqual({
+      kind: DEFAULT_TOKEN_QUICK_CREATE_STATE_KINDS.Idle,
+      error: "ui:dialog.copyKey.createNotSupported",
+    })
+    expect(resolveQuickCreateMock).not.toHaveBeenCalled()
+    expect(createTokenMock).not.toHaveBeenCalled()
+  })
+
+  it("ignores group confirmation outside the selection state", async () => {
+    const { result } = renderHook(() =>
+      useDefaultTokenQuickCreate({
+        isActive: true,
+        account,
+        canCreate: true,
+        onCreated: vi.fn(),
+      }),
+    )
+
+    await act(async () => result.current.confirmGroup("vip"))
+
+    expect(resolveQuickCreateMock).not.toHaveBeenCalled()
+    expect(createTokenMock).not.toHaveBeenCalled()
+  })
 })

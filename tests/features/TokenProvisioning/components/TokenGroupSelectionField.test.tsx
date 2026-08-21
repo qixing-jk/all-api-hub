@@ -55,4 +55,30 @@ describe("TokenGroupSelectionField", () => {
       within(dropdown).getByText("level2 (keyManagement:dialog.groupRate 1)"),
     ).toBeInTheDocument()
   })
+
+  it("keeps allowed groups first and sorts unavailable groups by name", async () => {
+    render(
+      <TokenGroupSelectionField
+        group="vip"
+        onChange={() => {}}
+        groups={{
+          zeta: { desc: "Zeta", ratio: 1 },
+          vip: { desc: "VIP", ratio: 2 },
+          alpha: { desc: "Alpha", ratio: 1 },
+        }}
+        allowedGroups={["vip"]}
+      />,
+    )
+
+    fireEvent.click(await screen.findByRole("combobox"))
+
+    const options = within(await screen.findByRole("dialog")).getAllByRole(
+      "option",
+    )
+    expect(options.map((option) => option.getAttribute("data-value"))).toEqual([
+      "vip",
+      "alpha",
+      "zeta",
+    ])
+  })
 })
