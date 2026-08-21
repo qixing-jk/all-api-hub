@@ -1185,6 +1185,21 @@ describe("ApiCheckModalHost", () => {
     ])
   })
 
+  it("does not attach a focus tooltip to the close control when credentials are detected", async () => {
+    await openModal({
+      sourceText:
+        "Base URL: https://proxy.example.com/api\nAPI Key: sk-test-close-fixture",
+      trigger: "autoDetect",
+    })
+
+    const closeButton = screen.getByRole("button", {
+      name: "common:actions.close",
+    })
+
+    expect(closeButton).not.toHaveAttribute("aria-describedby")
+    expect(closeButton).toHaveAttribute("title", "common:actions.close")
+  })
+
   it("auto-extract fills baseUrl + apiKey from pasted text", async () => {
     const user = userEvent.setup()
     await openModal()
