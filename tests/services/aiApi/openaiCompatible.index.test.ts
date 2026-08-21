@@ -28,6 +28,13 @@ describe("OpenAI-compatible model fetchers", () => {
     baseUrl: "https://openai-compatible.example.com",
     apiKey: "synthetic-openai-compatible-key",
   }
+  const expectedRequest = {
+    baseUrl: params.baseUrl,
+    auth: {
+      authType: AuthTypeEnum.AccessToken,
+      accessToken: params.apiKey,
+    },
+  }
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -109,22 +116,38 @@ describe("OpenAI-compatible model fetchers", () => {
         resolvedBaseUrl: "https://openai-compatible.example.com",
       })
 
-      expect(mockFetchApiData).toHaveBeenNthCalledWith(1, expect.any(Object), {
+      expect(mockFetchApiData).toHaveBeenNthCalledWith(1, expectedRequest, {
         endpoint: "/v1/models",
       })
-      expect(mockFetchApiData).toHaveBeenNthCalledWith(2, expect.any(Object), {
+      expect(mockFetchApiData).toHaveBeenNthCalledWith(2, expectedRequest, {
         endpoint: "/models",
       })
     },
   )
 
-  it("does not infer another route from an authentication failure", async () => {
-    const authenticationError = new ApiError("unauthorized", 401)
-    mockFetchApiData.mockRejectedValueOnce(authenticationError)
+  it("normalizes a path-fragment Base URL after fallback discovery", async () => {
+    const pathParams = { ...params, baseUrl: "  /api/v3/  " }
+    const canonicalError = new ApiError("canonical route unavailable", 404)
+    const models = [{ id: "custom-model" }]
+    mockFetchApiData
+      .mockRejectedValueOnce(canonicalError)
+      .mockResolvedValueOnce(models)
 
-    await expect(discoverOpenAICompatibleModels(params)).rejects.toBe(
-      authenticationError,
-    )
+    await expect(discoverOpenAICompatibleModels(pathParams)).resolves.toEqual({
+      models,
+      resolvedBaseUrl: "/api/v3",
+    })
+  })
+
+  it.each([
+    ["authentication", new ApiError("unauthorized", 401)],
+    ["throttling", new ApiError("rate limited", 429)],
+    ["server", new ApiError("upstream unavailable", 500)],
+    ["network", new TypeError("network request failed")],
+  ])("does not infer another route from a %s failure", async (_kind, error) => {
+    mockFetchApiData.mockRejectedValueOnce(error)
+
+    await expect(discoverOpenAICompatibleModels(params)).rejects.toBe(error)
 
     expect(mockFetchApiData).toHaveBeenCalledTimes(1)
   })
