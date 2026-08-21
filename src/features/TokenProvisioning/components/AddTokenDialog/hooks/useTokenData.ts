@@ -9,6 +9,7 @@ import {
 } from "~/services/accounts/keyProductCapabilities"
 import {
   createDisplayAccountApiContext,
+  fetchDisplayAccountAvailableModels,
   requireDisplayAccountKeyManagement,
 } from "~/services/accounts/utils/apiServiceRequest"
 import type { UserGroupInfo } from "~/services/accountTokens/tokenProvisioningModel"
@@ -26,11 +27,15 @@ const logger = createLogger("TokenDataHook")
 
 const EMPTY_USER_GROUPS: Record<string, UserGroupInfo> = {}
 
+export const TOKEN_MODEL_DISCOVERY_TIMEOUT_MS = 10_000
+
 /**
  * Loads required user groups when the dialog opens and optional models on demand.
  * @param isOpen Whether dialog is visible.
  * @param currentAccount Currently selected account info.
  * @param setFormData Setter to update form state with defaults (e.g., group).
+ * @param allowedGroups Optional create-flow group allow-list.
+ * @param preserveExistingModelLimitsOnFailure Whether an edit flow should keep existing restrictions when optional discovery fails.
  * @returns Required group state plus isolated, on-demand model discovery state.
  */
 export function useTokenData(
@@ -38,6 +43,7 @@ export function useTokenData(
   currentAccount: DisplaySiteData | undefined,
   setFormData: React.Dispatch<React.SetStateAction<FormData>>,
   allowedGroups?: string[],
+  preserveExistingModelLimitsOnFailure = false,
 ) {
   const { t } = useTranslation("keyManagement")
   const [isLoading, setIsLoading] = useState(false)
@@ -171,12 +177,10 @@ export function useTokenData(
 
     const promise = (async () => {
       try {
-        const { keyManagement, request } =
-          createDisplayAccountApiContext(currentAccount)
-        const models = await requireDisplayAccountKeyManagement(
+        const models = await fetchDisplayAccountAvailableModels(
           currentAccount,
-          keyManagement,
-        ).fetchAvailableModels(request)
+          { requestTimeoutMs: TOKEN_MODEL_DISCOVERY_TIMEOUT_MS },
+        )
 
         if (
           !Array.isArray(models) ||
@@ -201,11 +205,17 @@ export function useTokenData(
         const message = t("dialog.modelLoadFailed", { reason })
         setAvailableModels([])
         setModelLoadErrorMessage(message)
-        setFormData((prev) =>
-          prev.modelLimitsEnabled && prev.modelLimits.length === 0
-            ? { ...prev, modelLimitsEnabled: false }
-            : prev,
-        )
+        if (!preserveExistingModelLimitsOnFailure) {
+          setFormData((prev) =>
+            prev.modelLimitsEnabled || prev.modelLimits.length > 0
+              ? {
+                  ...prev,
+                  modelLimitsEnabled: false,
+                  modelLimits: [],
+                }
+              : prev,
+          )
+        }
         toast.error(message)
         return false
       } finally {
@@ -227,7 +237,14 @@ export function useTokenData(
         activeModelLoadRef.current = null
       }
     }
-  }, [canFetchModels, currentAccount, modelsLoaded, setFormData, t])
+  }, [
+    canFetchModels,
+    currentAccount,
+    modelsLoaded,
+    preserveExistingModelLimitsOnFailure,
+    setFormData,
+    t,
+  ])
 
   useEffect(() => {
     modelLoadGenerationRef.current += 1

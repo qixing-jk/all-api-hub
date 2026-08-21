@@ -2,7 +2,10 @@ import { useState } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import { useTokenData } from "~/features/TokenProvisioning/components/AddTokenDialog/hooks/useTokenData"
+import {
+  TOKEN_MODEL_DISCOVERY_TIMEOUT_MS,
+  useTokenData,
+} from "~/features/TokenProvisioning/components/AddTokenDialog/hooks/useTokenData"
 import { DEFAULT_AUTO_PROVISION_TOKEN_NAME } from "~/services/accounts/defaultTokenLifecycle"
 import { AuthTypeEnum } from "~/types"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
@@ -40,6 +43,8 @@ vi.mock("react-i18next", async (importOriginal) => {
 vi.mock("~/services/accounts/utils/apiServiceRequest", () => ({
   createDisplayAccountApiContext: (...args: any[]) =>
     createDisplayAccountApiContextMock(...args),
+  fetchDisplayAccountAvailableModels: (...args: any[]) =>
+    fetchAccountAvailableModelsMock(...args),
   requireDisplayAccountKeyManagement: (
     _account: unknown,
     keyManagement: unknown,
@@ -88,7 +93,10 @@ type RenderSubjectProps = {
   currentAccount?: typeof ACCOUNT
   initialGroup?: string
   initialName?: string
+  initialModelLimitsEnabled?: boolean
+  initialModelLimits?: string[]
   allowedGroups?: string[]
+  preserveExistingModelLimitsOnFailure?: boolean
 }
 
 const renderSubject = (props: RenderSubjectProps) =>
@@ -98,16 +106,27 @@ const renderSubject = (props: RenderSubjectProps) =>
       currentAccount,
       initialGroup = "",
       initialName = "",
+      initialModelLimitsEnabled = false,
+      initialModelLimits = [],
       allowedGroups,
+      preserveExistingModelLimitsOnFailure = false,
     }: RenderSubjectProps) => {
       const [formData, setFormData] = useState({
         group: initialGroup,
         name: initialName,
+        modelLimitsEnabled: initialModelLimitsEnabled,
+        modelLimits: initialModelLimits,
       } as any)
 
       return {
         formData,
-        ...useTokenData(isOpen, currentAccount, setFormData, allowedGroups),
+        ...useTokenData(
+          isOpen,
+          currentAccount,
+          setFormData,
+          allowedGroups,
+          preserveExistingModelLimitsOnFailure,
+        ),
       }
     },
     {
@@ -363,6 +382,117 @@ describe("useTokenData", () => {
       "keyManagement:dialog.modelLoadFailed",
     )
     expect(toastErrorMock).toHaveBeenCalledWith(
+      "keyManagement:dialog.modelLoadFailed",
+    )
+    expect(fetchAccountAvailableModelsMock).toHaveBeenCalledWith(ACCOUNT, {
+      requestTimeoutMs: TOKEN_MODEL_DISCOVERY_TIMEOUT_MS,
+    })
+  })
+
+  it("disables and clears prefilled model limits when discovery fails for create", async () => {
+    fetchAccountAvailableModelsMock.mockRejectedValue(
+      new Error("model lookup forbidden"),
+    )
+    fetchUserGroupsMock.mockResolvedValue(createGroups(["default"]))
+
+    const { result } = renderSubject({
+      isOpen: true,
+      currentAccount: ACCOUNT,
+      initialGroup: "default",
+      initialModelLimitsEnabled: true,
+      initialModelLimits: ["prefilled-model"],
+    })
+
+    await waitFor(() => {
+      expect(result.current.groups).toEqual(createGroups(["default"]))
+    })
+
+    await act(async () => {
+      await expect(result.current.loadAvailableModels()).resolves.toBe(false)
+    })
+
+    expect(result.current.formData).toMatchObject({
+      modelLimitsEnabled: false,
+      modelLimits: [],
+    })
+  })
+
+  it("preserves existing model limits when discovery fails during edit", async () => {
+    fetchAccountAvailableModelsMock.mockRejectedValue(
+      new Error("model lookup forbidden"),
+    )
+    fetchUserGroupsMock.mockResolvedValue(createGroups(["default"]))
+
+    const { result } = renderSubject({
+      isOpen: true,
+      currentAccount: ACCOUNT,
+      initialGroup: "default",
+      initialModelLimitsEnabled: true,
+      initialModelLimits: ["existing-model"],
+      preserveExistingModelLimitsOnFailure: true,
+    })
+
+    await waitFor(() => {
+      expect(result.current.groups).toEqual(createGroups(["default"]))
+    })
+
+    await act(async () => {
+      await expect(result.current.loadAvailableModels()).resolves.toBe(false)
+    })
+
+    expect(result.current.formData).toMatchObject({
+      modelLimitsEnabled: true,
+      modelLimits: ["existing-model"],
+    })
+  })
+
+  it.each([
+    ["a non-array payload", { data: ["example-model"] }],
+    ["a payload containing non-string models", ["example-model", 42]],
+  ])("rejects %s from model discovery", async (_label, payload) => {
+    fetchAccountAvailableModelsMock.mockResolvedValue(payload)
+    fetchUserGroupsMock.mockResolvedValue(createGroups(["default"]))
+
+    const { result } = renderSubject({
+      isOpen: true,
+      currentAccount: ACCOUNT,
+      initialGroup: "default",
+    })
+
+    await waitFor(() => {
+      expect(result.current.groups).toEqual(createGroups(["default"]))
+    })
+
+    await act(async () => {
+      await expect(result.current.loadAvailableModels()).resolves.toBe(false)
+    })
+
+    expect(result.current.availableModels).toEqual([])
+    expect(result.current.modelLoadErrorMessage).toBe(
+      "keyManagement:dialog.modelLoadFailed",
+    )
+  })
+
+  it("treats an empty model list as unavailable", async () => {
+    fetchAccountAvailableModelsMock.mockResolvedValue([])
+    fetchUserGroupsMock.mockResolvedValue(createGroups(["default"]))
+
+    const { result } = renderSubject({
+      isOpen: true,
+      currentAccount: ACCOUNT,
+      initialGroup: "default",
+    })
+
+    await waitFor(() => {
+      expect(result.current.groups).toEqual(createGroups(["default"]))
+    })
+
+    await act(async () => {
+      await expect(result.current.loadAvailableModels()).resolves.toBe(false)
+    })
+
+    expect(result.current.availableModels).toEqual([])
+    expect(result.current.modelLoadErrorMessage).toBe(
       "keyManagement:dialog.modelLoadFailed",
     )
   })

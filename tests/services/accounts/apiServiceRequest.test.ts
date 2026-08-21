@@ -23,6 +23,7 @@ import {
   createAccountApiRequestFromStoredAccount,
   createDisplayAccountApiContext,
   createDisplayAccountRequestContext,
+  fetchDisplayAccountAvailableModels,
   fetchDisplayAccountInviteLink,
   fetchDisplayAccountRuntimeKeys,
   fetchDisplayAccountTokens,
@@ -397,6 +398,43 @@ describe("fetchDisplayAccountTokens", () => {
     expect(fetchInviteLink).toHaveBeenCalledWith({
       request: expect.objectContaining(REQUEST),
     })
+  })
+
+  it("fetches available models through the site key-management capability", async () => {
+    fetchAvailableModels.mockResolvedValueOnce(["example-model"])
+
+    await expect(
+      fetchDisplayAccountAvailableModels(ACCOUNT as any),
+    ).resolves.toEqual(["example-model"])
+
+    expect(fetchAvailableModels).toHaveBeenCalledWith(
+      expect.objectContaining(REQUEST),
+    )
+  })
+
+  it("bounds model discovery even when a provider ignores cancellation", async () => {
+    vi.useFakeTimers()
+    fetchAvailableModels.mockImplementationOnce(
+      () => new Promise<string[]>(() => {}),
+    )
+
+    const requestSettled = fetchDisplayAccountAvailableModels(ACCOUNT as any, {
+      requestTimeoutMs: 1_000,
+    })
+    const timeoutExpectation = expect(requestSettled).rejects.toMatchObject({
+      name: "TimeoutError",
+    })
+
+    await vi.advanceTimersByTimeAsync(1_000)
+
+    await timeoutExpectation
+    expect(fetchAvailableModels).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ...REQUEST,
+        abortSignal: expect.any(AbortSignal),
+        requestTimeoutMs: 1_000,
+      }),
+    )
   })
 
   it("normalizes provider failures at the display-account invite-link boundary", async () => {

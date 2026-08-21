@@ -364,6 +364,14 @@ describe("New API model pricing adapter", () => {
     })
   })
 
+  it("retains shared validation for malformed V-API pricing envelopes", async () => {
+    fetchModelPricingMock.mockResolvedValueOnce(null)
+
+    await expect(
+      createNewApiModelPricing(SITE_TYPES.V_API).fetchPricing(request),
+    ).rejects.toThrow()
+  })
+
   it("normalizes cache read and write ratios without leaking native fields", async () => {
     fetchModelPricingMock.mockResolvedValueOnce(
       pricingResponse({

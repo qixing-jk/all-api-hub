@@ -370,6 +370,40 @@ export const createDisplayAccountApiContext = (
   }
 }
 
+export interface FetchDisplayAccountAvailableModelsOptions {
+  abortSignal?: AbortSignal
+  requestTimeoutMs?: number
+}
+
+/**
+ * Fetches account-available models with caller-owned cancellation and a bounded
+ * end-to-end wait, even when a provider does not observe the abort signal.
+ */
+export async function fetchDisplayAccountAvailableModels(
+  account: DisplayAccountApiSnapshot,
+  options: FetchDisplayAccountAvailableModelsOptions = {},
+): Promise<string[]> {
+  const { keyManagement, request } = createDisplayAccountApiContext(account)
+
+  return await runAbortableTask(
+    async (signal) =>
+      await requireDisplayAccountKeyManagement(
+        account,
+        keyManagement,
+      ).fetchAvailableModels({
+        ...request,
+        ...(signal ? { abortSignal: signal } : {}),
+        ...(options.requestTimeoutMs !== undefined
+          ? { requestTimeoutMs: options.requestTimeoutMs }
+          : {}),
+      }),
+    {
+      signals: [options.abortSignal],
+      timeoutMs: options.requestTimeoutMs,
+    },
+  )
+}
+
 /**
  * Fetches the current invite link for a display account.
  */

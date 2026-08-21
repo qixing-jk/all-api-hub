@@ -137,6 +137,7 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
     currentAccount,
     setFormData,
     !isEditMode ? props.createPrefill?.allowedGroups : undefined,
+    isEditMode,
   )
   const showGroupSelection =
     Object.keys(groups).length > 0 ||

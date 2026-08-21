@@ -131,4 +131,22 @@ describe("V-API key management transport", () => {
 
     await expect(fetchUserGroups(request)).resolves.toEqual(groups)
   })
+
+  it("rejects malformed string-valued user group metadata", async () => {
+    fetchApiDataMock.mockResolvedValueOnce({
+      default: "General route",
+    })
+
+    await expect(fetchUserGroups(request)).rejects.toThrow(
+      "Invalid V-API metadata for group default",
+    )
+  })
+
+  it("rejects a non-object user group payload", async () => {
+    fetchApiDataMock.mockResolvedValueOnce([])
+
+    await expect(fetchUserGroups(request)).rejects.toThrow(
+      "Invalid V-API user group payload",
+    )
+  })
 })
