@@ -7,7 +7,11 @@ export const UI_CONSTANTS = {
   // 弹窗尺寸
   POPUP: {
     WIDTH: "w-[410px]",
-    HEIGHT: "h-[600px]",
+    // Chromium caps action popups at 600 CSS px and page zoom (>100%) shrinks
+    // the live viewport below that; without a viewport clamp the fixed-height
+    // root overflows the document (extra scrollbars) and breaks fixed-position
+    // floaters rendered by Radix selects/dropdowns inside the popup.
+    HEIGHT: "h-[600px] max-h-screen",
     MAX_HEIGHT: "max-h-[90vh]",
   },
 
