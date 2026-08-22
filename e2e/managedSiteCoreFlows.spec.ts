@@ -685,9 +685,14 @@ test("configures managed-site model sync scheduling and allowed models", async (
   await intervalInput.fill("12")
   await expect
     .poll(async () => (await readStoredManagedSiteModelSync(context)).interval)
+    .toBe(24 * 60 * 60 * 1000)
+  await intervalInput.blur()
+  await expect
+    .poll(async () => (await readStoredManagedSiteModelSync(context)).interval)
     .toBe(12 * 60 * 60 * 1000)
 
   await concurrencyInput.fill("3")
+  await concurrencyInput.blur()
   await expect
     .poll(
       async () => (await readStoredManagedSiteModelSync(context)).concurrency,
@@ -695,6 +700,7 @@ test("configures managed-site model sync scheduling and allowed models", async (
     .toBe(3)
 
   await maxRetriesInput.fill("2")
+  await maxRetriesInput.blur()
   await expect
     .poll(
       async () => (await readStoredManagedSiteModelSync(context)).maxRetries,
@@ -702,6 +708,7 @@ test("configures managed-site model sync scheduling and allowed models", async (
     .toBe(2)
 
   await requestsPerMinuteInput.fill("30")
+  await requestsPerMinuteInput.blur()
   await expect
     .poll(
       async () =>
@@ -714,6 +721,7 @@ test("configures managed-site model sync scheduling and allowed models", async (
     .toBe(30)
 
   await burstInput.fill("8")
+  await burstInput.blur()
   await expect
     .poll(
       async () =>

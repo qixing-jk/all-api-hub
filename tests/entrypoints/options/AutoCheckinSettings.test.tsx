@@ -130,8 +130,19 @@ describe("AutoCheckinSettings", () => {
 
     const timeInputs = screen.getAllByDisplayValue(/^\d{2}:\d{2}$/)
     fireEvent.change(timeInputs[0], { target: { value: "10:00" } })
+    expect(updateAutoCheckin).not.toHaveBeenCalled()
+    expect(toastMocks.error).not.toHaveBeenCalled()
+    fireEvent.blur(timeInputs[0])
+    expect(timeInputs[0]).toHaveValue("08:00")
+
     fireEvent.change(timeInputs[2], { target: { value: "25:00" } })
+    expect(toastMocks.error).toHaveBeenCalledTimes(1)
+    fireEvent.blur(timeInputs[2])
+    expect(timeInputs[2]).toHaveValue("09:00")
+
     fireEvent.change(timeInputs[2], { target: { value: "07:30" } })
+    fireEvent.blur(timeInputs[2])
+    expect(timeInputs[2]).toHaveValue("09:00")
 
     expect(toastMocks.error).toHaveBeenNthCalledWith(
       1,
@@ -157,9 +168,44 @@ describe("AutoCheckinSettings", () => {
     const timeInputs = screen.getAllByDisplayValue(/^\d{2}:\d{2}$/)
     const numberInputs = screen.getAllByRole("spinbutton")
 
+    fireEvent.focus(timeInputs[2])
     fireEvent.change(timeInputs[2], { target: { value: "09:30" } })
+    expect(updateAutoCheckin).not.toHaveBeenCalled()
+    const timeBlurSpy = vi.spyOn(timeInputs[2], "blur")
+    fireEvent.keyDown(timeInputs[2], { key: "Enter" })
+    expect(timeBlurSpy).toHaveBeenCalledOnce()
+    fireEvent.blur(timeInputs[2])
+
+    await waitFor(() => {
+      expect(updateAutoCheckin).toHaveBeenCalledWith({
+        deterministicTime: "09:30",
+      })
+    })
+
     fireEvent.change(numberInputs[0], { target: { value: "45" } })
+    expect(updateAutoCheckin).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        retryStrategy: expect.objectContaining({ intervalMinutes: 45 }),
+      }),
+    )
+    fireEvent.blur(numberInputs[0])
+
+    await waitFor(() => {
+      expect(updateAutoCheckin).toHaveBeenCalledWith({
+        retryStrategy: {
+          enabled: true,
+          intervalMinutes: 45,
+          maxAttemptsPerDay: 3,
+        },
+      })
+    })
+
+    fireEvent.focus(numberInputs[1])
     fireEvent.change(numberInputs[1], { target: { value: "4" } })
+    const numberBlurSpy = vi.spyOn(numberInputs[1], "blur")
+    fireEvent.keyDown(numberInputs[1], { key: "Enter" })
+    expect(numberBlurSpy).toHaveBeenCalledOnce()
+    fireEvent.blur(numberInputs[1])
     fireEvent.click(
       screen.getByRole("button", {
         name: "autoCheckin:settings.viewExecutionButton",
@@ -168,23 +214,15 @@ describe("AutoCheckinSettings", () => {
 
     await waitFor(() => {
       expect(updateAutoCheckin).toHaveBeenCalledWith({
-        deterministicTime: "09:30",
+        retryStrategy: {
+          enabled: true,
+          intervalMinutes: 30,
+          maxAttemptsPerDay: 4,
+        },
       })
     })
-    expect(updateAutoCheckin).toHaveBeenCalledWith({
-      retryStrategy: {
-        enabled: true,
-        intervalMinutes: 45,
-        maxAttemptsPerDay: 3,
-      },
-    })
-    expect(updateAutoCheckin).toHaveBeenCalledWith({
-      retryStrategy: {
-        enabled: true,
-        intervalMinutes: 30,
-        maxAttemptsPerDay: 4,
-      },
-    })
+    expect(numberInputs[0]).toHaveAttribute("placeholder", "30")
+    expect(numberInputs[1]).toHaveAttribute("placeholder", "3")
     expect(toastMocks.success).toHaveBeenCalled()
     expect(pushWithinOptionsPageMock).toHaveBeenCalledWith("#autoCheckin")
     expect(trackProductAnalyticsActionStartedMock).toHaveBeenCalledWith(
@@ -194,6 +232,76 @@ describe("AutoCheckinSettings", () => {
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
       }),
     )
+  })
+
+  it("saves changed time-window boundaries and skips unchanged values", async () => {
+    render(<AutoCheckinSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    const timeInputs = screen.getAllByDisplayValue(/^\d{2}:\d{2}$/)
+
+    fireEvent.blur(timeInputs[0])
+    fireEvent.blur(timeInputs[1])
+    expect(updateAutoCheckin).not.toHaveBeenCalled()
+
+    fireEvent.change(timeInputs[0], { target: { value: "07:30" } })
+    expect(updateAutoCheckin).not.toHaveBeenCalled()
+    fireEvent.blur(timeInputs[0])
+
+    await waitFor(() => {
+      expect(updateAutoCheckin).toHaveBeenCalledWith({ windowStart: "07:30" })
+    })
+
+    fireEvent.change(timeInputs[1], { target: { value: "10:30" } })
+    expect(updateAutoCheckin).not.toHaveBeenCalledWith({ windowEnd: "10:30" })
+    fireEvent.blur(timeInputs[1])
+
+    await waitFor(() => {
+      expect(updateAutoCheckin).toHaveBeenCalledWith({ windowEnd: "10:30" })
+    })
+  })
+
+  it("restores time-window drafts after invalid values or failed saves", async () => {
+    updateAutoCheckin
+      .mockRejectedValueOnce(new Error("write failed"))
+      .mockResolvedValueOnce(preferenceWriteFailure())
+
+    render(<AutoCheckinSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    const timeInputs = screen.getAllByDisplayValue(/^\d{2}:\d{2}$/)
+
+    fireEvent.change(timeInputs[1], { target: { value: "08:00" } })
+    fireEvent.blur(timeInputs[1])
+    await waitFor(() => {
+      expect(timeInputs[1]).toHaveValue("10:00")
+    })
+    expect(toastMocks.error).toHaveBeenCalledWith(
+      "autoCheckin:messages.error.invalidTimeWindow",
+    )
+    expect(updateAutoCheckin).not.toHaveBeenCalled()
+
+    fireEvent.change(timeInputs[0], { target: { value: "07:30" } })
+    fireEvent.blur(timeInputs[0])
+
+    await waitFor(() => {
+      expect(timeInputs[0]).toHaveValue("08:00")
+    })
+    expect(toastMocks.error).toHaveBeenCalledWith(
+      "settings:messages.saveSettingsFailed",
+    )
+
+    fireEvent.change(timeInputs[1], { target: { value: "10:30" } })
+    fireEvent.blur(timeInputs[1])
+
+    await waitFor(() => {
+      expect(timeInputs[1]).toHaveValue("10:00")
+    })
+    expect(updateAutoCheckin).toHaveBeenCalledWith({ windowEnd: "10:30" })
   })
 
   it("lets schedule mode options wrap inside narrow settings cards", async () => {
@@ -314,7 +422,13 @@ describe("AutoCheckinSettings", () => {
 
     const numberInputs = screen.getAllByRole("spinbutton")
     fireEvent.change(numberInputs[0], { target: { value: "0" } })
+    expect(toastMocks.error).not.toHaveBeenCalled()
+    fireEvent.blur(numberInputs[0])
+    expect(numberInputs[0]).toHaveValue(30)
+
     fireEvent.change(numberInputs[1], { target: { value: "-1" } })
+    fireEvent.blur(numberInputs[1])
+    expect(numberInputs[1]).toHaveValue(3)
     fireEvent.click(screen.getAllByRole("switch")[0])
 
     expect(toastMocks.error).toHaveBeenNthCalledWith(

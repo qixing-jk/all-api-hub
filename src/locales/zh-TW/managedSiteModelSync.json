@@ -89,6 +89,7 @@
   },
   "messages": {
     "error": {
+      "invalidSettingValue": "請輸入 {{min}} 到 {{max}} 之間的值。",
       "loadFailed": "資料載入失敗：{{error}}",
       "noSelection": "請至少選擇一個渠道",
       "syncFailed": "同步失敗：{{error}}"

@@ -89,6 +89,7 @@
   },
   "messages": {
     "error": {
+      "invalidSettingValue": "{{min}} から {{max}} の範囲で値を入力してください。",
       "loadFailed": "データの読み込みに失敗しました: {{error}}",
       "noSelection": "少なくとも 1 つのチャネルを選択してください",
       "syncFailed": "同期に失敗しました: {{error}}"

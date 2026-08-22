@@ -89,6 +89,7 @@
   },
   "messages": {
     "error": {
+      "invalidSettingValue": "Vui lòng nhập giá trị từ {{min}} đến {{max}}.",
       "loadFailed": "Tải dữ liệu thất bại: {{error}}",
       "noSelection": "Vui lòng chọn ít nhất một kênh",
       "syncFailed": "Đồng bộ hóa thất bại: {{error}}"
