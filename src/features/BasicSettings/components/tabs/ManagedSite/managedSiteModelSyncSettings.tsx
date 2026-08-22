@@ -109,6 +109,7 @@ const MODEL_SYNC_SETTINGS_ANALYTICS_CONTEXT = {
 } as const
 
 const CHANNEL_PROCESSING_TIMEOUT_MAX_SECONDS = 43_200
+const DEFAULT_MODEL_SYNC_PREFERENCES = DEFAULT_PREFERENCES.managedSiteModelSync!
 
 /** Converts persisted model-sync preferences to editable input strings. */
 function buildModelSyncInputDrafts(
@@ -177,27 +178,16 @@ export default function ManagedSiteModelSyncSettings() {
             globalChannelModelFilters: rawPrefs.globalChannelModelFilters ?? [],
           }
         : {
-            enableSync:
-              DEFAULT_PREFERENCES.managedSiteModelSync?.enabled ?? false,
-            intervalMs:
-              DEFAULT_PREFERENCES.managedSiteModelSync?.interval ??
-              24 * 60 * 60 * 1000,
-            concurrency:
-              DEFAULT_PREFERENCES.managedSiteModelSync?.concurrency ?? 2,
-            maxRetries:
-              DEFAULT_PREFERENCES.managedSiteModelSync?.maxRetries ?? 2,
+            enableSync: DEFAULT_MODEL_SYNC_PREFERENCES.enabled,
+            intervalMs: DEFAULT_MODEL_SYNC_PREFERENCES.interval,
+            concurrency: DEFAULT_MODEL_SYNC_PREFERENCES.concurrency,
+            maxRetries: DEFAULT_MODEL_SYNC_PREFERENCES.maxRetries,
             channelProcessingTimeout:
-              DEFAULT_PREFERENCES.managedSiteModelSync
-                ?.channelProcessingTimeout ?? 0,
-            rateLimit: DEFAULT_PREFERENCES.managedSiteModelSync?.rateLimit ?? {
-              requestsPerMinute: 20,
-              burst: 5,
-            },
-            allowedModels:
-              DEFAULT_PREFERENCES.managedSiteModelSync?.allowedModels ?? [],
+              DEFAULT_MODEL_SYNC_PREFERENCES.channelProcessingTimeout,
+            rateLimit: DEFAULT_MODEL_SYNC_PREFERENCES.rateLimit,
+            allowedModels: DEFAULT_MODEL_SYNC_PREFERENCES.allowedModels,
             globalChannelModelFilters:
-              DEFAULT_PREFERENCES.managedSiteModelSync
-                ?.globalChannelModelFilters ?? [],
+              DEFAULT_MODEL_SYNC_PREFERENCES.globalChannelModelFilters,
           },
     [rawPrefs],
   )
@@ -674,9 +664,7 @@ export default function ManagedSiteModelSyncSettings() {
                   }
                   onKeyDown={handleInputKeyDown}
                   placeholder={String(
-                    (DEFAULT_PREFERENCES.managedSiteModelSync?.interval ??
-                      24 * 60 * 60 * 1000) /
-                      (1000 * 60 * 60),
+                    preferences.intervalMs / (1000 * 60 * 60),
                   )}
                   aria-label={t("managedSiteModelSync:settings.interval")}
                   disabled={isSaving}
@@ -713,9 +701,7 @@ export default function ManagedSiteModelSyncSettings() {
                   })
                 }
                 onKeyDown={handleInputKeyDown}
-                placeholder={String(
-                  DEFAULT_PREFERENCES.managedSiteModelSync?.concurrency ?? 2,
-                )}
+                placeholder={String(preferences.concurrency)}
                 aria-label={t("managedSiteModelSync:settings.concurrency")}
                 disabled={isSaving}
                 className="w-24"
@@ -747,9 +733,7 @@ export default function ManagedSiteModelSyncSettings() {
                   })
                 }
                 onKeyDown={handleInputKeyDown}
-                placeholder={String(
-                  DEFAULT_PREFERENCES.managedSiteModelSync?.maxRetries ?? 2,
-                )}
+                placeholder={String(preferences.maxRetries)}
                 aria-label={t("managedSiteModelSync:settings.maxRetries")}
                 disabled={isSaving}
                 className="w-24"
@@ -789,10 +773,7 @@ export default function ManagedSiteModelSyncSettings() {
                     })
                   }
                   onKeyDown={handleInputKeyDown}
-                  placeholder={String(
-                    DEFAULT_PREFERENCES.managedSiteModelSync
-                      ?.channelProcessingTimeout ?? 0,
-                  )}
+                  placeholder={String(preferences.channelProcessingTimeout)}
                   aria-label={t(
                     "managedSiteModelSync:settings.channelProcessingTimeout",
                   )}
@@ -839,10 +820,7 @@ export default function ManagedSiteModelSyncSettings() {
                   })
                 }
                 onKeyDown={handleInputKeyDown}
-                placeholder={String(
-                  DEFAULT_PREFERENCES.managedSiteModelSync?.rateLimit
-                    ?.requestsPerMinute ?? 20,
-                )}
+                placeholder={String(preferences.rateLimit.requestsPerMinute)}
                 aria-label={t(
                   "managedSiteModelSync:settings.requestsPerMinute",
                 )}
@@ -881,10 +859,7 @@ export default function ManagedSiteModelSyncSettings() {
                   })
                 }
                 onKeyDown={handleInputKeyDown}
-                placeholder={String(
-                  DEFAULT_PREFERENCES.managedSiteModelSync?.rateLimit?.burst ??
-                    5,
-                )}
+                placeholder={String(preferences.rateLimit.burst)}
                 aria-label={t("managedSiteModelSync:settings.burst")}
                 disabled={isSaving}
                 className="w-24"

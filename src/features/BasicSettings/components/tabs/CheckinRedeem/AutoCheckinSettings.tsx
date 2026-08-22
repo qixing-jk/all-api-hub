@@ -491,10 +491,7 @@ export default function AutoCheckinSettings() {
                   void handleRetryNumberBlur("retryIntervalMinutes")
                 }
                 onKeyDown={handleInputKeyDown}
-                placeholder={String(
-                  DEFAULT_PREFERENCES.autoCheckin?.retryStrategy
-                    ?.intervalMinutes ?? 30,
-                )}
+                placeholder={String(retryPreferences.intervalMinutes)}
                 disabled={isSaving || !retryPreferences.enabled}
                 className="w-32"
               />
@@ -517,10 +514,7 @@ export default function AutoCheckinSettings() {
                   void handleRetryNumberBlur("retryMaxAttemptsPerDay")
                 }
                 onKeyDown={handleInputKeyDown}
-                placeholder={String(
-                  DEFAULT_PREFERENCES.autoCheckin?.retryStrategy
-                    ?.maxAttemptsPerDay ?? 3,
-                )}
+                placeholder={String(retryPreferences.maxAttemptsPerDay)}
                 disabled={isSaving || !retryPreferences.enabled}
                 className="w-32"
               />

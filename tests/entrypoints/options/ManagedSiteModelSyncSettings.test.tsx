@@ -487,6 +487,51 @@ describe("ManagedSiteModelSyncSettings", () => {
     expect(mockUpdateNewApiModelSync).not.toHaveBeenCalled()
   })
 
+  it("renders defaults when model-sync preferences have not been saved", async () => {
+    mockedUseUserPreferencesContext.mockReturnValue(
+      createContextValue({ preferences: {} }),
+    )
+
+    render(<ManagedSiteModelSyncSettings />)
+    await waitFor(() => {
+      expect(mockedSendModelSyncMessage).toHaveBeenCalled()
+    })
+
+    expect(
+      screen.getByRole("checkbox", { name: "managed-site-sync-enabled" }),
+    ).not.toBeChecked()
+    expect(
+      screen.getByRole("spinbutton", {
+        name: "managedSiteModelSync:settings.interval",
+      }),
+    ).toHaveValue(24)
+    expect(
+      screen.getByRole("spinbutton", {
+        name: "managedSiteModelSync:settings.concurrency",
+      }),
+    ).toHaveValue(2)
+    expect(
+      screen.getByRole("spinbutton", {
+        name: "managedSiteModelSync:settings.maxRetries",
+      }),
+    ).toHaveValue(2)
+    expect(
+      screen.getByRole("spinbutton", {
+        name: "managedSiteModelSync:settings.channelProcessingTimeout",
+      }),
+    ).toHaveValue(0)
+    expect(
+      screen.getByRole("spinbutton", {
+        name: "managedSiteModelSync:settings.requestsPerMinute",
+      }),
+    ).toHaveValue(20)
+    expect(
+      screen.getByRole("spinbutton", {
+        name: "managedSiteModelSync:settings.burst",
+      }),
+    ).toHaveValue(5)
+  })
+
   it("honors an empty successful runtime model option list", async () => {
     mockedSendModelSyncMessage.mockResolvedValue({
       success: true,
