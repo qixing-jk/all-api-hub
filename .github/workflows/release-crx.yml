@@ -1,0 +1,218 @@
+name: release-crx-update
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Examples: v3.58.0 (tag), main, or a commit SHA. Leave empty to use the latest main commit."
+        required: false
+        default: ""
+      upload_to_release:
+        description: "Upload CRX/update manifest to the matching GitHub Release (requires checking out the matching release tag)."
+        required: false
+        type: boolean
+        default: false
+      channel_tag:
+        description: "Optional release tag for the update channel baked into update_manifest.xml. Leave empty for the stable 'latest' channel."
+        required: false
+        default: ""
+
+concurrency:
+  group: release-crx-update
+  # Only dispatch (artifact-only) runs are cancellable; a release publication
+  # run must never be canceled by a manual dispatch, otherwise the published
+  # release could end up without its CRX/update-manifest assets.
+  cancel-in-progress: ${{ github.event_name == 'workflow_dispatch' }}
+
+permissions:
+  contents: write
+
+env:
+  CRX_ASSET_NAME: all-api-hub-chrome.crx
+  UPDATE_XML_ASSET_NAME: update_manifest.xml
+
+jobs:
+  release-crx:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event_name == 'release' && github.event.release.tag_name || github.event.inputs.ref || github.event.repository.default_branch }}
+          fetch-depth: 0
+
+      - name: Build and package extension
+        id: package
+        uses: ./.github/actions/package-extension
+
+      - name: Resolve release context
+        id: resolve_tag
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          IS_PRERELEASE: ${{ github.event.release.prerelease }}
+          DISPATCH_UPLOAD: ${{ github.event.inputs.upload_to_release }}
+          DISPATCH_CHANNEL_TAG: ${{ github.event.inputs.channel_tag }}
+          CHECKOUT_REF: ${{ github.event_name == 'release' && github.event.release.tag_name || github.event.inputs.ref || github.event.repository.default_branch }}
+          PACKAGE_VERSION: ${{ steps.package.outputs.package-version }}
+        run: |
+          EXPECTED_TAG="v${PACKAGE_VERSION}"
+
+          if [ "$EVENT_NAME" = "release" ]; then
+            # Never attach self-hosted artifacts built from mismatched sources.
+            if [ "$RELEASE_TAG" != "$EXPECTED_TAG" ]; then
+              echo "::error::Release tag '$RELEASE_TAG' does not match the built package version tag '$EXPECTED_TAG'."
+              exit 1
+            fi
+            # Stable releases keep the /latest/ channel URL; only prereleases
+            # pin their own tag-scoped channel.
+            URL_CHANNEL_TAG=""
+            if [ "$IS_PRERELEASE" = "true" ]; then
+              URL_CHANNEL_TAG="$RELEASE_TAG"
+            fi
+            {
+              echo "tag=$RELEASE_TAG"
+              echo "upload_tag=$RELEASE_TAG"
+              echo "url_channel_tag=$URL_CHANNEL_TAG"
+              echo "upload=true"
+            } >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ "$DISPATCH_UPLOAD" != "true" ]; then
+            echo "upload=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Manual uploads must point at the release that matches the built version.
+          if [ "$CHECKOUT_REF" != "$EXPECTED_TAG" ]; then
+            echo "::error::upload_to_release requires checking out the release tag ($EXPECTED_TAG) instead of '$CHECKOUT_REF'."
+            exit 1
+          fi
+          {
+            echo "tag=$EXPECTED_TAG"
+            echo "upload_tag=${DISPATCH_CHANNEL_TAG:-$EXPECTED_TAG}"
+            echo "url_channel_tag=$DISPATCH_CHANNEL_TAG"
+            echo "upload=true"
+          } >> "$GITHUB_OUTPUT"
+
+      # Runs only for matched release-tag builds, so artifact-only dispatch
+      # runs never load CRX_PRIVATE_KEY into the environment at all.
+      - name: Check CRX signing key availability
+        if: steps.resolve_tag.outputs.upload == 'true'
+        id: keycheck
+        env:
+          CRX_PRIVATE_KEY: ${{ secrets.CRX_PRIVATE_KEY }}
+        run: |
+          if [ -z "$CRX_PRIVATE_KEY" ]; then
+            echo "has_key=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Secret CRX_PRIVATE_KEY is not configured; skipping self-hosted CRX packaging. Generate one with 'ssh-keygen -t rsa -m PEM -f crx.pem' and store the PEM contents in the repository secret to enable this feature."
+          else
+            echo "has_key=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Resolve update channel URLs
+        if: steps.keycheck.outputs.has_key == 'true'
+        id: channel
+        env:
+          REPO: ${{ github.repository }}
+          URL_CHANNEL_TAG: ${{ steps.resolve_tag.outputs.url_channel_tag }}
+        run: |
+          # Stable installs poll /releases/latest/...; prereleases and explicit
+          # dispatch channels poll a tag-scoped manifest because /latest/
+          # excludes prereleases, otherwise a prerelease CRX would silently
+          # track stable builds.
+          if [ -n "$URL_CHANNEL_TAG" ]; then
+            BASE="https://github.com/$REPO/releases/download/$URL_CHANNEL_TAG"
+          else
+            BASE="https://github.com/$REPO/releases/latest/download"
+          fi
+          {
+            echo "update_url=$BASE/$UPDATE_XML_ASSET_NAME"
+            echo "crx_url=$BASE/$CRX_ASSET_NAME"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Prepare self-hosted Chromium build with update_url
+        if: steps.keycheck.outputs.has_key == 'true'
+        id: prepare-selfhosted
+        env:
+          UPDATE_URL: ${{ steps.channel.outputs.update_url }}
+        run: |
+          CHROME_ZIP="${{ steps.package.outputs.chrome-zip }}"
+          BUILD_DIR=".output/crx-build"
+
+          rm -rf "$BUILD_DIR"
+          mkdir -p "$BUILD_DIR"
+          unzip -q "$CHROME_ZIP" -d "$BUILD_DIR"
+
+          MANIFEST="$(find "$BUILD_DIR" -maxdepth 2 -name manifest.json | head -n 1)"
+          if [ -z "$MANIFEST" ]; then
+            echo "::error::manifest.json not found inside $CHROME_ZIP."
+            exit 1
+          fi
+
+          # Non-store installs poll this URL for updates; stores ignore the key,
+          # but we keep the patch isolated to the self-hosted artifact anyway.
+          node -e '
+            const fs = require("node:fs");
+            const path = process.argv[1];
+            const manifest = JSON.parse(fs.readFileSync(path, "utf8"));
+            manifest.update_url = process.env.UPDATE_URL;
+            fs.writeFileSync(path, JSON.stringify(manifest, null, 2));
+          ' "$MANIFEST"
+
+          ARCHIVE_ROOT="$(dirname "$MANIFEST")"
+          SELFHOST_ZIP=".output/all-api-hub-${{ steps.package.outputs.package-version }}-chrome-selfhosted.zip"
+          rm -f "$SELFHOST_ZIP"
+          (cd "$ARCHIVE_ROOT" && zip -qr "$OLDPWD/$SELFHOST_ZIP" .)
+          echo "selfhost_zip=$SELFHOST_ZIP" >> "$GITHUB_OUTPUT"
+
+      - name: Pack signed CRX and update manifest
+        if: steps.keycheck.outputs.has_key == 'true'
+        id: crx
+        uses: cardinalby/webext-buildtools-chrome-crx-action@200e7173cbdb5acb91d381cf9f7a30080b025047 # v2.0.3
+        with:
+          zipFilePath: ${{ steps.prepare-selfhosted.outputs.selfhost_zip || '' }}
+          crxFilePath: .output/${{ env.CRX_ASSET_NAME }}
+          privateKey: ${{ secrets.CRX_PRIVATE_KEY }}
+          updateXmlPath: .output/${{ env.UPDATE_XML_ASSET_NAME }}
+          updateXmlCodebaseUrl: ${{ steps.channel.outputs.crx_url }}
+
+      - name: Upload CRX and update manifest to release
+        if: steps.keycheck.outputs.has_key == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          UPLOAD_TAG: ${{ steps.resolve_tag.outputs.upload_tag }}
+        run: |
+          gh release upload "$UPLOAD_TAG" \
+            ".output/$CRX_ASSET_NAME" \
+            ".output/$UPDATE_XML_ASSET_NAME" \
+            --clobber
+
+      - name: Summarize skipped run
+        if: steps.keycheck.outputs.has_key != 'true'
+        run: |
+          {
+            echo "## Self-hosted CRX auto-update assets: skipped"
+            echo ""
+            echo "- No release-key-signed artifacts were produced by this run."
+            echo "- Configure the \`CRX_PRIVATE_KEY\` secret (PEM contents) and run against a matching release tag to enable packaging."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Summarize
+        if: steps.keycheck.outputs.has_key == 'true'
+        run: |
+          {
+            echo "## Self-hosted CRX auto-update assets"
+            echo ""
+            echo "- \`${CRX_ASSET_NAME}\` — signed Chromium build with \`update_url\` baked in"
+            echo "- \`${UPDATE_XML_ASSET_NAME}\` — served at the same fixed asset URL every release:"
+            echo ""
+            echo '```xml'
+            cat ".output/$UPDATE_XML_ASSET_NAME"
+            echo '```'
+            echo ""
+            echo "Users install the CRX once; Chrome polls \`update_url\` and applies newer releases silently."
+          } >> "$GITHUB_STEP_SUMMARY"
