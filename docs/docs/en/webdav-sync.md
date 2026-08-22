@@ -42,11 +42,17 @@ Enable "Automatic Synchronization" on the same page for scheduled background syn
    - First call `testWebdavConnection` to confirm credentials are valid.
    - Download remote backup (if it doesn't exist, it's considered the first backup).
    - Export local accounts and preferences, determining the final data based on the strategy:
-     - **Merge**: Retain the latest items based on `updated_at` / `lastUpdated` timestamps; deletion markers for accounts and bookmarks will participate in the merge during synchronization, preventing deleted items from being restored by old remote copies.
+     - **Merge**: Retain the latest items based on `updated_at` / `lastUpdated` timestamps; deletion markers for accounts and bookmarks will participate in the merge during synchronization, preventing deleted items from being restored by old remote copies. Account conflicts use "whole-account Last-Write-Wins (LWW)", meaning the newer account (including its check-in configuration) will entirely replace the older one rather than merging field by field.
      - **Upload Only/Download Only**: Directly select local or remote data.
    - Write the merged result back to local (via `accountStorage.importData` + `userPreferences.importPreferences`).
    - Generate new JSON, upload it to a temporary file in the same directory, verify the content after reading it back, and then move it to the configured backup file; the default path `all-api-hub-backup/all-api-hub-1-0.json` is used only when the WebDAV target is a directory URL. Old temporary files older than 24 hours will be cleaned up as much as possible during subsequent uploads.
 3. Synchronization status (success/failure, last execution time) will be broadcast via the `WEBDAV_AUTO_SYNC_UPDATE` message, which can be monitored on the frontend or viewed in console logs.
+
+### Version Compatibility and Multi-Device Upgrades
+
+The current version writes backups in V4 format and upgrades the check-in configuration of legacy V6 accounts to V7. Backups in V1–V3 formats can still be imported. The previous V3 reader will attempt to reject V4 imports to prevent data overwrites based on the old structure, but earlier clients with lenient parsing for unknown versions are not guaranteed to be safe.
+
+Before upgrading, pause automatic synchronization, ensure all devices sharing the same WebDAV file are upgraded to a version supporting V7 accounts, and then re-enable synchronization. Concurrent writes from V6 and V7 clients to the same backup file are not supported; with whole-account LWW, an older client might overwrite V7 check-in configurations with V6 accounts. If you must roll back to an older version, first disable synchronization on other devices and maintain separate backup files.
 
 ## Security Recommendations
 
