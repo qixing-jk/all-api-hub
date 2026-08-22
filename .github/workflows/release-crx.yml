@@ -66,9 +66,18 @@ jobs:
               echo "::error::Release tag '$RELEASE_TAG' does not match the built package version tag '$EXPECTED_TAG'."
               exit 1
             fi
-            echo "tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
-            echo "prerelease=$IS_PRERELEASE" >> "$GITHUB_OUTPUT"
-            echo "upload=true" >> "$GITHUB_OUTPUT"
+            # Stable releases keep the /latest/ channel URL; only prereleases
+            # pin their own tag-scoped channel.
+            URL_CHANNEL_TAG=""
+            if [ "$IS_PRERELEASE" = "true" ]; then
+              URL_CHANNEL_TAG="$RELEASE_TAG"
+            fi
+            {
+              echo "tag=$RELEASE_TAG"
+              echo "upload_tag=$RELEASE_TAG"
+              echo "url_channel_tag=$URL_CHANNEL_TAG"
+              echo "upload=true"
+            } >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -82,10 +91,12 @@ jobs:
             echo "::error::upload_to_release requires checking out the release tag ($EXPECTED_TAG) instead of '$CHECKOUT_REF'."
             exit 1
           fi
-          echo "tag=$EXPECTED_TAG" >> "$GITHUB_OUTPUT"
-          echo "prerelease=false" >> "$GITHUB_OUTPUT"
-          echo "dispatch_channel_tag=$DISPATCH_CHANNEL_TAG" >> "$GITHUB_OUTPUT"
-          echo "upload=true" >> "$GITHUB_OUTPUT"
+          {
+            echo "tag=$EXPECTED_TAG"
+            echo "upload_tag=${DISPATCH_CHANNEL_TAG:-$EXPECTED_TAG}"
+            echo "url_channel_tag=$DISPATCH_CHANNEL_TAG"
+            echo "upload=true"
+          } >> "$GITHUB_OUTPUT"
 
       # Runs only for matched release-tag builds, so artifact-only dispatch
       # runs never load CRX_PRIVATE_KEY into the environment at all.
@@ -107,23 +118,21 @@ jobs:
         id: channel
         env:
           REPO: ${{ github.repository }}
-          TAG: ${{ steps.resolve_tag.outputs.tag }}
-          PRERELEASE: ${{ steps.resolve_tag.outputs.prerelease }}
-          EXPLICIT_CHANNEL_TAG: ${{ steps.resolve_tag.outputs.dispatch_channel_tag }}
+          URL_CHANNEL_TAG: ${{ steps.resolve_tag.outputs.url_channel_tag }}
         run: |
-          # Stable installs poll /releases/latest/...; prereleases must poll a
-          # tag-scoped manifest because /latest/ excludes prereleases, otherwise
-          # a prerelease CRX would silently track stable builds. An explicit
-          # dispatch channel_tag always pins its own tag-scoped channel.
-          if [ "$PRERELEASE" = "true" ]; then
-            BASE="https://github.com/$REPO/releases/download/$TAG"
-          elif [ -n "$EXPLICIT_CHANNEL_TAG" ]; then
-            BASE="https://github.com/$REPO/releases/download/$EXPLICIT_CHANNEL_TAG"
+          # Stable installs poll /releases/latest/...; prereleases and explicit
+          # dispatch channels poll a tag-scoped manifest because /latest/
+          # excludes prereleases, otherwise a prerelease CRX would silently
+          # track stable builds.
+          if [ -n "$URL_CHANNEL_TAG" ]; then
+            BASE="https://github.com/$REPO/releases/download/$URL_CHANNEL_TAG"
           else
             BASE="https://github.com/$REPO/releases/latest/download"
           fi
-          echo "update_url=$BASE/$UPDATE_XML_ASSET_NAME" >> "$GITHUB_OUTPUT"
-          echo "crx_url=$BASE/$CRX_ASSET_NAME" >> "$GITHUB_OUTPUT"
+          {
+            echo "update_url=$BASE/$UPDATE_XML_ASSET_NAME"
+            echo "crx_url=$BASE/$CRX_ASSET_NAME"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Prepare self-hosted Chromium build with update_url
         if: steps.keycheck.outputs.has_key == 'true'
@@ -175,9 +184,9 @@ jobs:
         if: steps.keycheck.outputs.has_key == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ steps.resolve_tag.outputs.tag }}
+          UPLOAD_TAG: ${{ steps.resolve_tag.outputs.upload_tag }}
         run: |
-          gh release upload "$RELEASE_TAG" \
+          gh release upload "$UPLOAD_TAG" \
             ".output/$CRX_ASSET_NAME" \
             ".output/$UPDATE_XML_ASSET_NAME" \
             --clobber
