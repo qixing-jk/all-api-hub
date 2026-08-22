@@ -92,6 +92,7 @@
   },
   "messages": {
     "error": {
+      "invalidSettingValue": "Enter a value between {{min}} and {{max}}.",
       "loadFailed": "Failed to load data: {{error}}",
       "noSelection": "Please select at least one channel",
       "syncFailed": "Sync failed: {{error}}"

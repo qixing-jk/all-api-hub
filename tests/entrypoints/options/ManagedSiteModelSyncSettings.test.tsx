@@ -1,4 +1,4 @@
-import type { ReactNode } from "react"
+import type { InputHTMLAttributes, ReactNode } from "react"
 import toast from "react-hot-toast"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -257,26 +257,7 @@ vi.mock("~/components/ui", () => ({
       </button>
     </div>
   ),
-  Input: ({
-    value,
-    placeholder,
-    onChange,
-    type,
-  }: {
-    value?: string
-    placeholder?: string
-    type?: string
-    onChange?: (event: { target: { value: string } }) => void
-  }) => (
-    <input
-      aria-label={placeholder ?? type ?? "input"}
-      value={value}
-      onChange={(event) =>
-        onChange?.({ target: { value: event.currentTarget.value } })
-      }
-      type={type}
-    />
-  ),
+  Input: (props: InputHTMLAttributes<HTMLInputElement>) => <input {...props} />,
   Modal: ({
     isOpen,
     children,
@@ -424,6 +405,10 @@ describe("ManagedSiteModelSyncSettings", () => {
 
     const intervalInput = screen.getByDisplayValue("24")
     fireEvent.change(intervalInput, { target: { value: "12" } })
+    expect(mockUpdateNewApiModelSync).not.toHaveBeenCalledWith({
+      interval: 12 * 60 * 60 * 1000,
+    })
+    fireEvent.blur(intervalInput)
 
     await waitFor(() => {
       expect(mockUpdateNewApiModelSync).toHaveBeenCalledWith({
@@ -447,6 +432,42 @@ describe("ManagedSiteModelSyncSettings", () => {
     expect(toast.success).toHaveBeenCalledWith(
       "managedSiteModelSync:messages.success.settingsSaved",
     )
+  })
+
+  it("saves numeric drafts on blur or Enter and restores invalid values", async () => {
+    render(<ManagedSiteModelSyncSettings />)
+
+    const concurrencyInput = screen.getByRole("spinbutton", {
+      name: "managedSiteModelSync:settings.concurrency",
+    })
+    fireEvent.change(concurrencyInput, { target: { value: "4" } })
+    expect(mockUpdateNewApiModelSync).not.toHaveBeenCalledWith({
+      concurrency: 4,
+    })
+
+    fireEvent.focus(concurrencyInput)
+    const blurSpy = vi.spyOn(concurrencyInput, "blur")
+    fireEvent.keyDown(concurrencyInput, { key: "Enter" })
+    expect(blurSpy).toHaveBeenCalledOnce()
+    fireEvent.blur(concurrencyInput)
+    await waitFor(() => {
+      expect(mockUpdateNewApiModelSync).toHaveBeenCalledWith({
+        concurrency: 4,
+      })
+    })
+
+    const maxRetriesInput = screen.getByRole("spinbutton", {
+      name: "managedSiteModelSync:settings.maxRetries",
+    })
+    fireEvent.change(maxRetriesInput, { target: { value: "6" } })
+    expect(toast.error).not.toHaveBeenCalled()
+    fireEvent.blur(maxRetriesInput)
+
+    expect(toast.error).toHaveBeenCalledWith(
+      "managedSiteModelSync:messages.error.invalidSettingValue",
+    )
+    expect(maxRetriesInput).toHaveValue(2)
+    expect(maxRetriesInput).toHaveAttribute("placeholder", "2")
   })
 
   it("honors an empty successful runtime model option list", async () => {
@@ -612,12 +633,19 @@ describe("ManagedSiteModelSyncSettings", () => {
     ] = inputs
 
     fireEvent.change(intervalInput, { target: { value: "0" } })
+    fireEvent.blur(intervalInput)
     fireEvent.change(concurrencyInput, { target: { value: "11" } })
+    fireEvent.blur(concurrencyInput)
     fireEvent.change(retriesInput, { target: { value: "6" } })
+    fireEvent.blur(retriesInput)
     fireEvent.change(channelTimeoutInput, { target: { value: "-1" } })
+    fireEvent.blur(channelTimeoutInput)
     fireEvent.change(channelTimeoutInput, { target: { value: "43201" } })
+    fireEvent.blur(channelTimeoutInput)
     fireEvent.change(rpmInput, { target: { value: "4" } })
+    fireEvent.blur(rpmInput)
     fireEvent.change(burstInput, { target: { value: "21" } })
+    fireEvent.blur(burstInput)
 
     expect(mockUpdateNewApiModelSync).not.toHaveBeenCalled()
   })
@@ -642,27 +670,44 @@ describe("ManagedSiteModelSyncSettings", () => {
     ] = inputs
 
     fireEvent.change(concurrencyInput, { target: { value: "4" } })
-    fireEvent.change(retriesInput, { target: { value: "3" } })
-    fireEvent.change(channelTimeoutInput, { target: { value: "15" } })
-    fireEvent.change(rpmInput, { target: { value: "30" } })
-    fireEvent.change(burstInput, { target: { value: "8" } })
-
+    fireEvent.blur(concurrencyInput)
     await waitFor(() => {
       expect(mockUpdateNewApiModelSync).toHaveBeenCalledWith({
         concurrency: 4,
       })
+    })
+
+    fireEvent.change(retriesInput, { target: { value: "3" } })
+    fireEvent.blur(retriesInput)
+    await waitFor(() => {
       expect(mockUpdateNewApiModelSync).toHaveBeenCalledWith({
         maxRetries: 3,
       })
+    })
+
+    fireEvent.change(channelTimeoutInput, { target: { value: "15" } })
+    fireEvent.blur(channelTimeoutInput)
+    await waitFor(() => {
       expect(mockUpdateNewApiModelSync).toHaveBeenCalledWith({
         channelProcessingTimeout: 15,
       })
+    })
+
+    fireEvent.change(rpmInput, { target: { value: "30" } })
+    fireEvent.blur(rpmInput)
+    await waitFor(() => {
       expect(mockUpdateNewApiModelSync).toHaveBeenCalledWith({
         rateLimit: {
           requestsPerMinute: 30,
           burst: 5,
         },
       })
+    })
+
+    fireEvent.change(burstInput, { target: { value: "8" } })
+    fireEvent.blur(burstInput)
+
+    await waitFor(() => {
       expect(mockUpdateNewApiModelSync).toHaveBeenCalledWith({
         rateLimit: {
           requestsPerMinute: 20,
@@ -700,6 +745,7 @@ describe("ManagedSiteModelSyncSettings", () => {
 
     const [, , , channelTimeoutInput] = screen.getAllByRole("spinbutton")
     fireEvent.change(channelTimeoutInput, { target: { value: "0" } })
+    fireEvent.blur(channelTimeoutInput)
 
     await waitFor(() => {
       expect(mockUpdateNewApiModelSync).toHaveBeenCalledWith({

@@ -95,6 +95,7 @@
   },
   "messages": {
     "error": {
+      "invalidSettingValue": "Insira um valor entre {{min}} e {{max}}.",
       "loadFailed": "Falha ao carregar os dados: {{error}}",
       "noSelection": "Selecione pelo menos um canal",
       "syncFailed": "Falha na sincronização: {{error}}"

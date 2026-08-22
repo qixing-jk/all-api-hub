@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState, type KeyboardEvent } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
@@ -41,6 +41,14 @@ const AUTO_CHECKIN_SETTINGS_ANALYTICS_CONTEXT = {
   entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
 } as const
 
+type AutoCheckinInputDrafts = {
+  windowStart: string
+  windowEnd: string
+  deterministicTime: string
+  retryIntervalMinutes: string
+  retryMaxAttemptsPerDay: string
+}
+
 /**
  * Applies partial preference updates before reporting the resulting strategy.
  */
@@ -62,6 +70,33 @@ export default function AutoCheckinSettings() {
     intervalMinutes: 30,
     maxAttemptsPerDay: 3,
   }
+  const [inputDrafts, setInputDrafts] = useState<AutoCheckinInputDrafts>(
+    () => ({
+      windowStart: preferences.windowStart,
+      windowEnd: preferences.windowEnd,
+      deterministicTime:
+        preferences.deterministicTime ?? preferences.windowStart,
+      retryIntervalMinutes: String(retryPreferences.intervalMinutes),
+      retryMaxAttemptsPerDay: String(retryPreferences.maxAttemptsPerDay),
+    }),
+  )
+
+  useEffect(() => {
+    setInputDrafts({
+      windowStart: preferences.windowStart,
+      windowEnd: preferences.windowEnd,
+      deterministicTime:
+        preferences.deterministicTime ?? preferences.windowStart,
+      retryIntervalMinutes: String(retryPreferences.intervalMinutes),
+      retryMaxAttemptsPerDay: String(retryPreferences.maxAttemptsPerDay),
+    })
+  }, [
+    preferences.deterministicTime,
+    preferences.windowEnd,
+    preferences.windowStart,
+    retryPreferences.intervalMinutes,
+    retryPreferences.maxAttemptsPerDay,
+  ])
 
   const scheduleModes = useMemo(
     () => [
@@ -84,16 +119,19 @@ export default function AutoCheckinSettings() {
 
       if (writeResult.ok) {
         toast.success(t("autoCheckin:messages.success.settingsSaved"))
+        return true
       } else {
         toast.error(
           getPreferenceWriteFailureMessage(writeResult.reason, {
             fallback: t("settings:messages.saveSettingsFailed"),
           }),
         )
+        return false
       }
     } catch (error) {
       logger.error("Failed to save preferences", error)
       toast.error(t("settings:messages.saveSettingsFailed"))
+      return false
     } finally {
       setIsSaving(false)
     }
@@ -160,12 +198,112 @@ export default function AutoCheckinSettings() {
   const saveRetryPreferences = async (
     updates: Partial<AutoCheckinPreferences["retryStrategy"]>,
   ) => {
-    await savePreferences({
+    return savePreferences({
       retryStrategy: {
         ...retryPreferences,
         ...updates,
       },
     })
+  }
+
+  const updateInputDraft = (
+    key: keyof AutoCheckinInputDrafts,
+    value: string,
+  ) => {
+    setInputDrafts((current) => ({ ...current, [key]: value }))
+  }
+
+  const handleInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter") {
+      event.currentTarget.blur()
+    }
+  }
+
+  const handleWindowStartBlur = async () => {
+    const nextValue = inputDrafts.windowStart
+    if (
+      !validateTimeFormat(nextValue) ||
+      !validateTimeWindow(nextValue, preferences.windowEnd)
+    ) {
+      toast.error(t("autoCheckin:messages.error.invalidTimeWindow"))
+      updateInputDraft("windowStart", preferences.windowStart)
+      return
+    }
+    if (nextValue === preferences.windowStart) return
+
+    const saved = await savePreferences({ windowStart: nextValue })
+    if (!saved) updateInputDraft("windowStart", preferences.windowStart)
+  }
+
+  const handleWindowEndBlur = async () => {
+    const nextValue = inputDrafts.windowEnd
+    if (
+      !validateTimeFormat(nextValue) ||
+      !validateTimeWindow(preferences.windowStart, nextValue)
+    ) {
+      toast.error(t("autoCheckin:messages.error.invalidTimeWindow"))
+      updateInputDraft("windowEnd", preferences.windowEnd)
+      return
+    }
+    if (nextValue === preferences.windowEnd) return
+
+    const saved = await savePreferences({ windowEnd: nextValue })
+    if (!saved) updateInputDraft("windowEnd", preferences.windowEnd)
+  }
+
+  const handleDeterministicTimeBlur = async () => {
+    const nextValue = inputDrafts.deterministicTime
+    const persistedValue =
+      preferences.deterministicTime ?? preferences.windowStart
+    if (!validateTimeFormat(nextValue)) {
+      toast.error(t("autoCheckin:messages.error.invalidDeterministicTime"))
+      updateInputDraft("deterministicTime", persistedValue)
+      return
+    }
+    if (
+      !isTimeWithinWindow(
+        nextValue,
+        preferences.windowStart,
+        preferences.windowEnd,
+      )
+    ) {
+      toast.error(
+        t("autoCheckin:messages.error.deterministicTimeOutsideWindow"),
+      )
+      updateInputDraft("deterministicTime", persistedValue)
+      return
+    }
+    if (nextValue === persistedValue) return
+
+    const saved = await savePreferences({ deterministicTime: nextValue })
+    if (!saved) updateInputDraft("deterministicTime", persistedValue)
+  }
+
+  const handleRetryNumberBlur = async (
+    key: "retryIntervalMinutes" | "retryMaxAttemptsPerDay",
+  ) => {
+    const persistedValue =
+      key === "retryIntervalMinutes"
+        ? retryPreferences.intervalMinutes
+        : retryPreferences.maxAttemptsPerDay
+    const nextValue = Number(inputDrafts[key])
+    if (
+      inputDrafts[key].trim() === "" ||
+      !Number.isInteger(nextValue) ||
+      nextValue <= 0
+    ) {
+      toast.error(t("autoCheckin:messages.error.invalidNumber"))
+      updateInputDraft(key, String(persistedValue))
+      return
+    }
+    if (nextValue === persistedValue) return
+
+    const saved = await saveRetryPreferences(
+      key === "retryIntervalMinutes"
+        ? { intervalMinutes: nextValue }
+        : { maxAttemptsPerDay: nextValue },
+    )
+    if (!saved) updateInputDraft(key, String(persistedValue))
   }
 
   return (
@@ -239,17 +377,13 @@ export default function AutoCheckinSettings() {
             rightContent={
               <Input
                 type="time"
-                value={preferences.windowStart}
-                onChange={(e) => {
-                  const newStart = e.target.value
-                  if (validateTimeWindow(newStart, preferences.windowEnd)) {
-                    savePreferences({ windowStart: newStart })
-                  } else {
-                    toast.error(
-                      t("autoCheckin:messages.error.invalidTimeWindow"),
-                    )
-                  }
-                }}
+                value={inputDrafts.windowStart}
+                onChange={(event) =>
+                  updateInputDraft("windowStart", event.target.value)
+                }
+                onBlur={() => void handleWindowStartBlur()}
+                onKeyDown={handleInputKeyDown}
+                placeholder={DEFAULT_PREFERENCES.autoCheckin?.windowStart}
                 disabled={isSaving}
                 className="w-32"
               />
@@ -264,17 +398,13 @@ export default function AutoCheckinSettings() {
             rightContent={
               <Input
                 type="time"
-                value={preferences.windowEnd}
-                onChange={(e) => {
-                  const newEnd = e.target.value
-                  if (validateTimeWindow(preferences.windowStart, newEnd)) {
-                    savePreferences({ windowEnd: newEnd })
-                  } else {
-                    toast.error(
-                      t("autoCheckin:messages.error.invalidTimeWindow"),
-                    )
-                  }
-                }}
+                value={inputDrafts.windowEnd}
+                onChange={(event) =>
+                  updateInputDraft("windowEnd", event.target.value)
+                }
+                onBlur={() => void handleWindowEndBlur()}
+                onKeyDown={handleInputKeyDown}
+                placeholder={DEFAULT_PREFERENCES.autoCheckin?.windowEnd}
                 disabled={isSaving}
                 className="w-32"
               />
@@ -313,35 +443,15 @@ export default function AutoCheckinSettings() {
               rightContent={
                 <Input
                   type="time"
-                  value={
-                    preferences.deterministicTime ?? preferences.windowStart
+                  value={inputDrafts.deterministicTime}
+                  onChange={(event) =>
+                    updateInputDraft("deterministicTime", event.target.value)
                   }
-                  onChange={(e) => {
-                    const newTime = e.target.value
-                    if (!validateTimeFormat(newTime)) {
-                      toast.error(
-                        t(
-                          "autoCheckin:messages.error.invalidDeterministicTime",
-                        ),
-                      )
-                      return
-                    }
-                    if (
-                      !isTimeWithinWindow(
-                        newTime,
-                        preferences.windowStart,
-                        preferences.windowEnd,
-                      )
-                    ) {
-                      toast.error(
-                        t(
-                          "autoCheckin:messages.error.deterministicTimeOutsideWindow",
-                        ),
-                      )
-                      return
-                    }
-                    void savePreferences({ deterministicTime: newTime })
-                  }}
+                  onBlur={() => void handleDeterministicTimeBlur()}
+                  onKeyDown={handleInputKeyDown}
+                  placeholder={
+                    DEFAULT_PREFERENCES.autoCheckin?.deterministicTime
+                  }
                   disabled={isSaving}
                   className="w-32"
                 />
@@ -373,15 +483,18 @@ export default function AutoCheckinSettings() {
               <Input
                 type="number"
                 min={1}
-                value={retryPreferences.intervalMinutes}
-                onChange={(e) => {
-                  const value = Number(e.target.value)
-                  if (Number.isNaN(value) || value <= 0) {
-                    toast.error(t("autoCheckin:messages.error.invalidNumber"))
-                    return
-                  }
-                  void saveRetryPreferences({ intervalMinutes: value })
-                }}
+                value={inputDrafts.retryIntervalMinutes}
+                onChange={(event) =>
+                  updateInputDraft("retryIntervalMinutes", event.target.value)
+                }
+                onBlur={() =>
+                  void handleRetryNumberBlur("retryIntervalMinutes")
+                }
+                onKeyDown={handleInputKeyDown}
+                placeholder={String(
+                  DEFAULT_PREFERENCES.autoCheckin?.retryStrategy
+                    ?.intervalMinutes ?? 30,
+                )}
                 disabled={isSaving || !retryPreferences.enabled}
                 className="w-32"
               />
@@ -396,15 +509,18 @@ export default function AutoCheckinSettings() {
               <Input
                 type="number"
                 min={1}
-                value={retryPreferences.maxAttemptsPerDay}
-                onChange={(e) => {
-                  const value = Number(e.target.value)
-                  if (Number.isNaN(value) || value <= 0) {
-                    toast.error(t("autoCheckin:messages.error.invalidNumber"))
-                    return
-                  }
-                  void saveRetryPreferences({ maxAttemptsPerDay: value })
-                }}
+                value={inputDrafts.retryMaxAttemptsPerDay}
+                onChange={(event) =>
+                  updateInputDraft("retryMaxAttemptsPerDay", event.target.value)
+                }
+                onBlur={() =>
+                  void handleRetryNumberBlur("retryMaxAttemptsPerDay")
+                }
+                onKeyDown={handleInputKeyDown}
+                placeholder={String(
+                  DEFAULT_PREFERENCES.autoCheckin?.retryStrategy
+                    ?.maxAttemptsPerDay ?? 3,
+                )}
                 disabled={isSaving || !retryPreferences.enabled}
                 className="w-32"
               />
