@@ -234,6 +234,76 @@ describe("AutoCheckinSettings", () => {
     )
   })
 
+  it("saves changed time-window boundaries and skips unchanged values", async () => {
+    render(<AutoCheckinSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    const timeInputs = screen.getAllByDisplayValue(/^\d{2}:\d{2}$/)
+
+    fireEvent.blur(timeInputs[0])
+    fireEvent.blur(timeInputs[1])
+    expect(updateAutoCheckin).not.toHaveBeenCalled()
+
+    fireEvent.change(timeInputs[0], { target: { value: "07:30" } })
+    expect(updateAutoCheckin).not.toHaveBeenCalled()
+    fireEvent.blur(timeInputs[0])
+
+    await waitFor(() => {
+      expect(updateAutoCheckin).toHaveBeenCalledWith({ windowStart: "07:30" })
+    })
+
+    fireEvent.change(timeInputs[1], { target: { value: "10:30" } })
+    expect(updateAutoCheckin).not.toHaveBeenCalledWith({ windowEnd: "10:30" })
+    fireEvent.blur(timeInputs[1])
+
+    await waitFor(() => {
+      expect(updateAutoCheckin).toHaveBeenCalledWith({ windowEnd: "10:30" })
+    })
+  })
+
+  it("restores time-window drafts after invalid values or failed saves", async () => {
+    updateAutoCheckin
+      .mockRejectedValueOnce(new Error("write failed"))
+      .mockResolvedValueOnce(preferenceWriteFailure())
+
+    render(<AutoCheckinSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    const timeInputs = screen.getAllByDisplayValue(/^\d{2}:\d{2}$/)
+
+    fireEvent.change(timeInputs[1], { target: { value: "08:00" } })
+    fireEvent.blur(timeInputs[1])
+    await waitFor(() => {
+      expect(timeInputs[1]).toHaveValue("10:00")
+    })
+    expect(toastMocks.error).toHaveBeenCalledWith(
+      "autoCheckin:messages.error.invalidTimeWindow",
+    )
+    expect(updateAutoCheckin).not.toHaveBeenCalled()
+
+    fireEvent.change(timeInputs[0], { target: { value: "07:30" } })
+    fireEvent.blur(timeInputs[0])
+
+    await waitFor(() => {
+      expect(timeInputs[0]).toHaveValue("08:00")
+    })
+    expect(toastMocks.error).toHaveBeenCalledWith(
+      "settings:messages.saveSettingsFailed",
+    )
+
+    fireEvent.change(timeInputs[1], { target: { value: "10:30" } })
+    fireEvent.blur(timeInputs[1])
+
+    await waitFor(() => {
+      expect(timeInputs[1]).toHaveValue("10:00")
+    })
+    expect(updateAutoCheckin).toHaveBeenCalledWith({ windowEnd: "10:30" })
+  })
+
   it("lets schedule mode options wrap inside narrow settings cards", async () => {
     render(<AutoCheckinSettings />, {
       withUserPreferencesProvider: false,

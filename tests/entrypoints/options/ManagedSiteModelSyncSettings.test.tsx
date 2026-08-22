@@ -470,6 +470,23 @@ describe("ManagedSiteModelSyncSettings", () => {
     expect(maxRetriesInput).toHaveAttribute("placeholder", "2")
   })
 
+  it("normalizes an unchanged numeric draft without saving", async () => {
+    render(<ManagedSiteModelSyncSettings />)
+    await waitFor(() => {
+      expect(mockedSendModelSyncMessage).toHaveBeenCalled()
+    })
+    vi.clearAllMocks()
+
+    const concurrencyInput = screen.getByRole("spinbutton", {
+      name: "managedSiteModelSync:settings.concurrency",
+    })
+    fireEvent.change(concurrencyInput, { target: { value: "02" } })
+    fireEvent.blur(concurrencyInput)
+
+    expect(concurrencyInput).toHaveValue(2)
+    expect(mockUpdateNewApiModelSync).not.toHaveBeenCalled()
+  })
+
   it("honors an empty successful runtime model option list", async () => {
     mockedSendModelSyncMessage.mockResolvedValue({
       success: true,
