@@ -1,7 +1,10 @@
 import type { CDPSession, ChromiumBrowser } from "@playwright/test"
 
 import { POPUP_PAGE_PATH } from "~/constants/extensionPages"
-import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
+import {
+  ACCOUNT_MANAGEMENT_TEST_IDS,
+  getAccountManagementSiteTypeOptionTestId,
+} from "~/features/AccountManagement/testIds"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import { stubLlmMetadataIndex } from "~~/e2e/utils/commonUserFlows"
 import { getExtensionServiceWorker } from "~~/e2e/utils/extension"
@@ -385,9 +388,7 @@ for (const zoomPercentage of POPUP_ZOOM_PERCENTAGES) {
     await evaluateInTarget(
       send,
       `(() => {
-        const option = document.querySelector(
-          '[role="option"][data-site-type="new-api"]',
-        )
+        const option = document.querySelector('[data-testid="${getAccountManagementSiteTypeOptionTestId("new-api")}"]')
         if (!option) throw new Error('new-api option was not rendered')
         option.dispatchEvent(new PointerEvent('pointerdown', {
           bubbles: true,

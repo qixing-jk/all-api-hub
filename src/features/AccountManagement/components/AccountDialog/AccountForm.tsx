@@ -34,7 +34,10 @@ import {
 import type { AccountDialogDraft } from "~/features/AccountManagement/components/AccountDialog/models"
 import type { AccountDialogSitePolicy } from "~/features/AccountManagement/components/AccountDialog/sitePolicy"
 import { TagPicker } from "~/features/AccountManagement/components/TagPicker"
-import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
+import {
+  ACCOUNT_MANAGEMENT_TEST_IDS,
+  getAccountManagementSiteTypeOptionTestId,
+} from "~/features/AccountManagement/testIds"
 import { isValidExchangeRate } from "~/services/accounts/accountOperations"
 import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/inspection"
 import { AuthTypeEnum, type CheckInConfig, type Tag } from "~/types"
@@ -210,7 +213,9 @@ export default function AccountForm({
                 <SelectItem
                   key={siteType}
                   value={siteType}
-                  data-site-type={siteType}
+                  data-testid={getAccountManagementSiteTypeOptionTestId(
+                    siteType,
+                  )}
                 >
                   {siteType}
                 </SelectItem>

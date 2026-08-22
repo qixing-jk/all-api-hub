@@ -27,6 +27,25 @@ function SelectFixture({ preserveOpen }: { preserveOpen: boolean }) {
   )
 }
 
+function ControlledSelectFixture({
+  onOpenChange,
+}: {
+  onOpenChange: (open: boolean) => void
+}) {
+  return (
+    <SelectViewportResizeProvider preserveOpen>
+      <Select open onOpenChange={onOpenChange} value="first">
+        <SelectTrigger aria-label="Controlled selection">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="first">First</SelectItem>
+        </SelectContent>
+      </Select>
+    </SelectViewportResizeProvider>
+  )
+}
+
 describe("Select viewport resize behavior", () => {
   it("keeps an action-popup select open during its resize event", async () => {
     const user = userEvent.setup()
@@ -39,6 +58,25 @@ describe("Select viewport resize behavior", () => {
 
     act(() => {
       window.dispatchEvent(new Event("resize"))
+    })
+
+    expect(screen.getByRole("listbox")).toBeInTheDocument()
+  })
+
+  it("keeps the select open across consecutive resize events", async () => {
+    const user = userEvent.setup()
+    render(<SelectFixture preserveOpen />)
+
+    await user.click(
+      screen.getByRole("combobox", { name: "Example selection" }),
+    )
+
+    act(() => {
+      window.dispatchEvent(new Event("resize"))
+      window.dispatchEvent(new Event("resize"))
+    })
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0))
     })
 
     expect(screen.getByRole("listbox")).toBeInTheDocument()
@@ -83,24 +121,45 @@ describe("Select viewport resize behavior", () => {
   it("does not report a resize close to a controlled parent", () => {
     const onOpenChange = vi.fn()
 
-    render(
-      <SelectViewportResizeProvider preserveOpen>
-        <Select open onOpenChange={onOpenChange} value="first">
-          <SelectTrigger aria-label="Controlled selection">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="first">First</SelectItem>
-          </SelectContent>
-        </Select>
-      </SelectViewportResizeProvider>,
-    )
+    render(<ControlledSelectFixture onOpenChange={onOpenChange} />)
 
     act(() => {
       window.dispatchEvent(new Event("resize"))
     })
 
     expect(screen.getByRole("listbox")).toBeInTheDocument()
+    expect(onOpenChange).not.toHaveBeenCalled()
+  })
+
+  it("preserves assistive-technology click close intent during resize", async () => {
+    const onOpenChange = vi.fn()
+
+    render(<ControlledSelectFixture onOpenChange={onOpenChange} />)
+
+    fireEvent.click(document, { detail: 0 })
+    onOpenChange.mockClear()
+    fireEvent.click(document, { detail: 0 })
+    onOpenChange.mockClear()
+    act(() => {
+      window.dispatchEvent(new Event("resize"))
+    })
+
+    expect(onOpenChange).toHaveBeenCalledWith(false)
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+  })
+
+  it("does not treat unrelated keys as close intent", () => {
+    const onOpenChange = vi.fn()
+
+    render(<ControlledSelectFixture onOpenChange={onOpenChange} />)
+
+    fireEvent.keyDown(document, { key: "Tab" })
+    act(() => {
+      window.dispatchEvent(new Event("resize"))
+    })
+
     expect(onOpenChange).not.toHaveBeenCalled()
   })
 
