@@ -6,12 +6,177 @@ import { cn } from "~/lib/utils"
 
 import { useFloatingLayerClass } from "./floating-layer"
 
+const SelectViewportResizeContext = React.createContext(false)
+
+interface SelectViewportResizeProviderProps {
+  children: React.ReactNode
+  preserveOpen: boolean
+}
+
+/**
+ * Configures whether descendant selects stay open during a viewport resize.
+ * Action popups need this because opening a floating layer can resize the
+ * browser-owned popup viewport synchronously.
+ */
+function SelectViewportResizeProvider({
+  children,
+  preserveOpen,
+}: SelectViewportResizeProviderProps) {
+  return (
+    <SelectViewportResizeContext.Provider value={preserveOpen}>
+      {children}
+    </SelectViewportResizeContext.Provider>
+  )
+}
+
+type SelectRootProps = React.ComponentProps<typeof SelectPrimitive.Root>
+
+/** Keeps a controlled or uncontrolled Select open for the active resize event. */
+function ResizeStableSelect({
+  open: controlledOpen,
+  defaultOpen,
+  onOpenChange,
+  ...props
+}: SelectRootProps) {
+  const [uncontrolledOpen, setUncontrolledOpen] = React.useState(
+    defaultOpen ?? false,
+  )
+  const resizeEventActiveRef = React.useRef(false)
+  const resizeResetTimeoutRef = React.useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null)
+  const interactionResetTimeoutRef = React.useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null)
+  const pointerStartedWhileOpenRef = React.useRef(false)
+  const userCloseIntentRef = React.useRef(false)
+  const isControlled = controlledOpen !== undefined
+  const open = isControlled ? controlledOpen : uncontrolledOpen
+  const openRef = React.useRef(open)
+
+  React.useEffect(() => {
+    openRef.current = open
+  }, [open])
+
+  React.useEffect(() => {
+    const handleResize = () => {
+      resizeEventActiveRef.current = true
+      if (resizeResetTimeoutRef.current !== null) {
+        clearTimeout(resizeResetTimeoutRef.current)
+      }
+      // Radix forwards its controlled close after the native listener returns.
+      // Keep the marker through those microtasks, then clear it before the next
+      // user interaction task.
+      resizeResetTimeoutRef.current = setTimeout(() => {
+        resizeEventActiveRef.current = false
+        resizeResetTimeoutRef.current = null
+      }, 0)
+    }
+
+    // Capture runs before Radix's window resize listener, which synchronously
+    // requests that the Select close during the same event dispatch.
+    window.addEventListener("resize", handleResize, true)
+    return () => {
+      window.removeEventListener("resize", handleResize, true)
+      if (resizeResetTimeoutRef.current !== null) {
+        clearTimeout(resizeResetTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  React.useEffect(() => {
+    const scheduleIntentReset = () => {
+      if (interactionResetTimeoutRef.current !== null) {
+        clearTimeout(interactionResetTimeoutRef.current)
+      }
+      interactionResetTimeoutRef.current = setTimeout(() => {
+        userCloseIntentRef.current = false
+        interactionResetTimeoutRef.current = null
+      }, 0)
+    }
+    const handlePointerDown = () => {
+      pointerStartedWhileOpenRef.current = openRef.current
+      if (pointerStartedWhileOpenRef.current) {
+        userCloseIntentRef.current = true
+      }
+    }
+    const handlePointerEnd = () => {
+      const startedWhileOpen = pointerStartedWhileOpenRef.current
+      pointerStartedWhileOpenRef.current = false
+      if (!startedWhileOpen) return
+      userCloseIntentRef.current = true
+      scheduleIntentReset()
+    }
+    const handleClick = (event: MouseEvent) => {
+      // Pointer interactions are classified from their pointerdown state.
+      // detail=0 covers keyboard and assistive-technology click activation.
+      if (event.detail !== 0 || !openRef.current) return
+      userCloseIntentRef.current = true
+      scheduleIntentReset()
+    }
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!openRef.current || ![" ", "Enter", "Escape"].includes(event.key)) {
+        return
+      }
+      userCloseIntentRef.current = true
+      scheduleIntentReset()
+    }
+
+    document.addEventListener("click", handleClick, true)
+    document.addEventListener("keydown", handleKeyDown, true)
+    document.addEventListener("pointercancel", handlePointerEnd, true)
+    document.addEventListener("pointerdown", handlePointerDown, true)
+    document.addEventListener("pointerup", handlePointerEnd, true)
+    return () => {
+      document.removeEventListener("click", handleClick, true)
+      document.removeEventListener("keydown", handleKeyDown, true)
+      document.removeEventListener("pointercancel", handlePointerEnd, true)
+      document.removeEventListener("pointerdown", handlePointerDown, true)
+      document.removeEventListener("pointerup", handlePointerEnd, true)
+      if (interactionResetTimeoutRef.current !== null) {
+        clearTimeout(interactionResetTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  const handleOpenChange = React.useCallback(
+    (nextOpen: boolean) => {
+      if (
+        !nextOpen &&
+        resizeEventActiveRef.current &&
+        !userCloseIntentRef.current
+      ) {
+        return
+      }
+
+      if (!isControlled) {
+        setUncontrolledOpen(nextOpen)
+      }
+      onOpenChange?.(nextOpen)
+    },
+    [isControlled, onOpenChange],
+  )
+
+  return (
+    <SelectPrimitive.Root
+      data-slot="select"
+      {...props}
+      open={open}
+      onOpenChange={handleOpenChange}
+    />
+  )
+}
+
 /**
  * Select provides a Radix-based select root for controlled value and open state.
  */
-function Select({
-  ...props
-}: React.ComponentProps<typeof SelectPrimitive.Root>) {
+function Select({ ...props }: SelectRootProps) {
+  const preserveOpenOnResize = React.useContext(SelectViewportResizeContext)
+
+  if (preserveOpenOnResize) {
+    return <ResizeStableSelect {...props} />
+  }
+
   return <SelectPrimitive.Root data-slot="select" {...props} />
 }
 
@@ -207,4 +372,5 @@ export {
   SelectSeparator,
   SelectTrigger,
   SelectValue,
+  SelectViewportResizeProvider,
 }
