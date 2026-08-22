@@ -102,13 +102,13 @@
 - **[网页 API 嗅探](./web-ai-api-check.md)**：在网页内快速识别并测试 API 配置，可保存到 API 凭据库。
 
 ### ⚡ 自动化与信息追踪
-- **[自动签到流](./auto-checkin.md)**：每天自动帮你完成所有站点的签到。
+- **[自动签到流](./auto-checkin.md)**：为已识别且受支持的账号安排每日签到，也可立即执行并查看最近结果。
 - **[网站公告](./site-announcements.md)**：后台抓取已添加站点的公告，集中查看维护、模型变更、价格调整等消息。
 - **[兑换助手](./redemption-assist.md)**：自动识别网页兑换码并一键领取。
 - **[书签收纳管理](./bookmark-management.md)**：集中收藏控制台、文档、充值入口。
 
 ### 🛡️ 稳定性与安全防护
-- **[Cloudflare 过盾助手](./cloudflare-helper.md)**：协助通过验证，确保刷新、签到不中断。
+- **[Cloudflare 过盾助手](./cloudflare-helper.md)**：在需要网页验证时协助继续流程。
 - **[WebDAV 同步与加密](./webdav-sync.md)**：支持跨设备加密备份，数据永不丢失。
 
 ### 🔔 通知渠道

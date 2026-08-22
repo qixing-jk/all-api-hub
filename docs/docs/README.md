@@ -33,11 +33,11 @@ features:
   - title: "💰 跨站模型价格比对"
     details: "计算各站点模型的折合单价，直观找出更具性价比的模型与分组。"
   - title: "✅ 多站点自动签到"
-    details: "一键或定时完成多站点每日签到，自动领取奖励，免去每天逐站登录。"
+    details: "一键或定时处理受支持账号的每日签到，自动领取奖励，免去每天逐站登录。"
   - title: "🧪 API、模型与 CLI 验证"
     details: "一键测试 API 连通性、模型可用性与 CLI 接入状态，快速排查配置问题。"
   - title: "🔔 公告与任务提醒"
-    details: "集中展示已添加站点的各类公告，维护、模型、价格等动态及时提醒；自动签到、WebDAV 自动同步和模型同步的结果也能及时收到。"
+    details: "集中展示已添加站点的各类公告，维护、模型、价格等动态及时提醒；自动签到、WebDAV 自动同步和模型同步的后台计划结果也能及时收到。"
   - title: "🚀 网页录入与一键导出"
     details: "从网页快速识别 Base URL 或 API Key，并一键导出至常用 AI 客户端。"
   - title: "🛠️ 主流 AI 网关支持"
@@ -59,7 +59,7 @@ footer: "AGPL-3.0 Licensed | Copyright 2025-present All API Hub"
 ### 👤 我是普通 AI 用户 (新手推荐)
 - **我该怎么用？**：[下载并安装扩展](./get-started.md) -> [添加第一个账号](./get-started.md#add-site)
 - **我想省钱**：[自动签到获取额度](./auto-checkin.md) -> [跨站模型价格比对](./model-list.md)
-- **我想更省事**：[资产变动一眼看清](./balance-history.md) -> [同步账号到其它 AI 工具](./get-started.md#quick-export-sites)
+- **我想更省事**：[资产变动一眼看清](./balance-history.md) -> [同步账号到其它 AI 工具](./get-started.md#quick-export-sites) -> [接收后台任务通知](./task-notifications.md)
 
 ### 🛠️ 我是进阶玩家 (Key 收藏家)
 - **密钥管理**：[将独立 URL+Key 保存到 API 凭据库](./api-credential-profiles.md)
