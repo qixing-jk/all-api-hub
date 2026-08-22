@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.59.0](https://github.com/qixing-jk/all-api-hub/compare/v3.58.0...v3.59.0) (2026-08-22)
+
+
+### Features
+
+* **checkin:** support method-aware account configuration ([#1340](https://github.com/qixing-jk/all-api-hub/issues/1340)) ([bcd689f](https://github.com/qixing-jk/all-api-hub/commit/bcd689f9822e21c8df4aafe36caf9680175802ad))
+
+
+### Bug Fixes
+
+* **sub2api:** harden auth credential durability ([#1343](https://github.com/qixing-jk/all-api-hub/issues/1343)) ([634f28b](https://github.com/qixing-jk/all-api-hub/commit/634f28bfeff6d6ba20e61836c1961d7e26499a1a))
+
 ## [3.58.0](https://github.com/qixing-jk/all-api-hub/compare/v3.57.0...v3.58.0) (2026-08-21)
 
 
