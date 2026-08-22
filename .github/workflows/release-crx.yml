@@ -56,8 +56,9 @@ jobs:
           DISPATCH_UPLOAD: ${{ github.event.inputs.upload_to_release }}
           DISPATCH_CHANNEL_TAG: ${{ github.event.inputs.channel_tag }}
           CHECKOUT_REF: ${{ github.event_name == 'release' && github.event.release.tag_name || github.event.inputs.ref || github.event.repository.default_branch }}
+          PACKAGE_VERSION: ${{ steps.package.outputs.package-version }}
         run: |
-          EXPECTED_TAG="v${{ steps.package.outputs.package-version }}"
+          EXPECTED_TAG="v${PACKAGE_VERSION}"
 
           if [ "$EVENT_NAME" = "release" ]; then
             # Never attach self-hosted artifacts built from mismatched sources.
@@ -67,7 +68,6 @@ jobs:
             fi
             echo "tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
             echo "prerelease=$IS_PRERELEASE" >> "$GITHUB_OUTPUT"
-            echo "channel_tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
             echo "upload=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -84,43 +84,46 @@ jobs:
           fi
           echo "tag=$EXPECTED_TAG" >> "$GITHUB_OUTPUT"
           echo "prerelease=false" >> "$GITHUB_OUTPUT"
-          echo "channel_tag=$DISPATCH_CHANNEL_TAG" >> "$GITHUB_OUTPUT"
+          echo "dispatch_channel_tag=$DISPATCH_CHANNEL_TAG" >> "$GITHUB_OUTPUT"
           echo "upload=true" >> "$GITHUB_OUTPUT"
 
+      # Runs only for matched release-tag builds, so artifact-only dispatch
+      # runs never load CRX_PRIVATE_KEY into the environment at all.
       - name: Check CRX signing key availability
+        if: steps.resolve_tag.outputs.upload == 'true'
         id: keycheck
         env:
           CRX_PRIVATE_KEY: ${{ secrets.CRX_PRIVATE_KEY }}
-          UPLOAD: ${{ steps.resolve_tag.outputs.upload }}
         run: |
           if [ -z "$CRX_PRIVATE_KEY" ]; then
             echo "has_key=false" >> "$GITHUB_OUTPUT"
             echo "::warning::Secret CRX_PRIVATE_KEY is not configured; skipping self-hosted CRX packaging. Generate one with 'ssh-keygen -t rsa -m PEM -f crx.pem' and store the PEM contents in the repository secret to enable this feature."
-            exit 0
-          fi
-
-          if [ "$UPLOAD" != "true" ]; then
-            echo "has_key=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::Artifact-only dispatch runs are never signed with the release key; select upload_to_release and check out the matching version tag to exercise signing."
           else
             echo "has_key=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Resolve update channel URL
+      - name: Resolve update channel URLs
         if: steps.keycheck.outputs.has_key == 'true'
         id: channel
         env:
           REPO: ${{ github.repository }}
-          CHANNEL_TAG: ${{ steps.resolve_tag.outputs.channel_tag }}
+          TAG: ${{ steps.resolve_tag.outputs.tag }}
+          PRERELEASE: ${{ steps.resolve_tag.outputs.prerelease }}
+          EXPLICIT_CHANNEL_TAG: ${{ steps.resolve_tag.outputs.dispatch_channel_tag }}
         run: |
-          # Stable installs poll /releases/latest/...; prereleases must poll
-          # their own tag-scoped manifest because /latest/ excludes prereleases,
-          # otherwise a prerelease CRX would silently track stable builds.
-          if [ -n "$CHANNEL_TAG" ] && [ "${{ steps.resolve_tag.outputs.prerelease }}" = "true" ]; then
-            echo "update_url=https://github.com/$REPO/releases/download/$CHANNEL_TAG/$UPDATE_XML_ASSET_NAME" >> "$GITHUB_OUTPUT"
+          # Stable installs poll /releases/latest/...; prereleases must poll a
+          # tag-scoped manifest because /latest/ excludes prereleases, otherwise
+          # a prerelease CRX would silently track stable builds. An explicit
+          # dispatch channel_tag always pins its own tag-scoped channel.
+          if [ "$PRERELEASE" = "true" ]; then
+            BASE="https://github.com/$REPO/releases/download/$TAG"
+          elif [ -n "$EXPLICIT_CHANNEL_TAG" ]; then
+            BASE="https://github.com/$REPO/releases/download/$EXPLICIT_CHANNEL_TAG"
           else
-            echo "update_url=https://github.com/$REPO/releases/latest/download/$UPDATE_XML_ASSET_NAME" >> "$GITHUB_OUTPUT"
+            BASE="https://github.com/$REPO/releases/latest/download"
           fi
+          echo "update_url=$BASE/$UPDATE_XML_ASSET_NAME" >> "$GITHUB_OUTPUT"
+          echo "crx_url=$BASE/$CRX_ASSET_NAME" >> "$GITHUB_OUTPUT"
 
       - name: Prepare self-hosted Chromium build with update_url
         if: steps.keycheck.outputs.has_key == 'true'
@@ -166,7 +169,7 @@ jobs:
           crxFilePath: .output/${{ env.CRX_ASSET_NAME }}
           privateKey: ${{ secrets.CRX_PRIVATE_KEY }}
           updateXmlPath: .output/${{ env.UPDATE_XML_ASSET_NAME }}
-          updateXmlCodebaseUrl: ${{ steps.channel.outputs.update_url }}
+          updateXmlCodebaseUrl: ${{ steps.channel.outputs.crx_url }}
 
       - name: Upload CRX and update manifest to release
         if: steps.keycheck.outputs.has_key == 'true'
