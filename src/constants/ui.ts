@@ -6,8 +6,10 @@ import { DATA_TYPE_BALANCE } from "~/constants/index"
 export const UI_CONSTANTS = {
   // 弹窗尺寸
   POPUP: {
-    WIDTH: "w-[410px]",
-    HEIGHT: "h-[600px]",
+    WIDTH_PX: 410,
+    HEIGHT_PX: 600,
+    WIDTH: "w-full",
+    HEIGHT: "h-full",
     MAX_HEIGHT: "max-h-[90vh]",
   },
 

@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next"
 
 import { AppLayout } from "~/components/AppLayout"
 import PopupInterruptionHintBanner from "~/components/PopupInterruptionHintBanner"
+import { SelectViewportResizeProvider } from "~/components/ui/select"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
@@ -201,9 +202,11 @@ function PopupContent() {
 function App() {
   return (
     <AppLayout>
-      <AccountManagementProvider>
-        <PopupContent />
-      </AccountManagementProvider>
+      <SelectViewportResizeProvider preserveOpen={isExtensionPopup()}>
+        <AccountManagementProvider>
+          <PopupContent />
+        </AccountManagementProvider>
+      </SelectViewportResizeProvider>
     </AppLayout>
   )
 }
