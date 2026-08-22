@@ -10,10 +10,14 @@ on:
         required: false
         default: ""
       upload_to_release:
-        description: "Upload CRX/update manifest to the matching GitHub Release (requires the checkout ref to equal an existing release tag)."
+        description: "Upload CRX/update manifest to the matching GitHub Release (requires checking out the matching release tag)."
         required: false
         type: boolean
         default: false
+      channel_tag:
+        description: "Optional release tag for the update channel baked into update_manifest.xml. Leave empty for the stable 'latest' channel."
+        required: false
+        default: ""
 
 concurrency:
   group: release-crx-update
@@ -43,16 +47,27 @@ jobs:
         id: package
         uses: ./.github/actions/package-extension
 
-      - name: Resolve release tag
+      - name: Resolve release context
         id: resolve_tag
         env:
           EVENT_NAME: ${{ github.event_name }}
           RELEASE_TAG: ${{ github.event.release.tag_name }}
+          IS_PRERELEASE: ${{ github.event.release.prerelease }}
           DISPATCH_UPLOAD: ${{ github.event.inputs.upload_to_release }}
+          DISPATCH_CHANNEL_TAG: ${{ github.event.inputs.channel_tag }}
           CHECKOUT_REF: ${{ github.event_name == 'release' && github.event.release.tag_name || github.event.inputs.ref || github.event.repository.default_branch }}
         run: |
+          EXPECTED_TAG="v${{ steps.package.outputs.package-version }}"
+
           if [ "$EVENT_NAME" = "release" ]; then
+            # Never attach self-hosted artifacts built from mismatched sources.
+            if [ "$RELEASE_TAG" != "$EXPECTED_TAG" ]; then
+              echo "::error::Release tag '$RELEASE_TAG' does not match the built package version tag '$EXPECTED_TAG'."
+              exit 1
+            fi
             echo "tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+            echo "prerelease=$IS_PRERELEASE" >> "$GITHUB_OUTPUT"
+            echo "channel_tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
             echo "upload=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -63,33 +78,55 @@ jobs:
           fi
 
           # Manual uploads must point at the release that matches the built version.
-          EXPECTED_TAG="v${{ steps.package.outputs.package-version }}"
           if [ "$CHECKOUT_REF" != "$EXPECTED_TAG" ]; then
             echo "::error::upload_to_release requires checking out the release tag ($EXPECTED_TAG) instead of '$CHECKOUT_REF'."
             exit 1
           fi
           echo "tag=$EXPECTED_TAG" >> "$GITHUB_OUTPUT"
+          echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          echo "channel_tag=$DISPATCH_CHANNEL_TAG" >> "$GITHUB_OUTPUT"
           echo "upload=true" >> "$GITHUB_OUTPUT"
 
       - name: Check CRX signing key availability
         id: keycheck
         env:
           CRX_PRIVATE_KEY: ${{ secrets.CRX_PRIVATE_KEY }}
+          UPLOAD: ${{ steps.resolve_tag.outputs.upload }}
         run: |
           if [ -z "$CRX_PRIVATE_KEY" ]; then
             echo "has_key=false" >> "$GITHUB_OUTPUT"
             echo "::warning::Secret CRX_PRIVATE_KEY is not configured; skipping self-hosted CRX packaging. Generate one with 'ssh-keygen -t rsa -m PEM -f crx.pem' and store the PEM contents in the repository secret to enable this feature."
+            exit 0
+          fi
+
+          if [ "$UPLOAD" != "true" ]; then
+            echo "has_key=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Artifact-only dispatch runs are never signed with the release key; select upload_to_release and check out the matching version tag to exercise signing."
           else
             echo "has_key=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Resolve update channel URL
+        if: steps.keycheck.outputs.has_key == 'true'
+        id: channel
+        env:
+          REPO: ${{ github.repository }}
+          CHANNEL_TAG: ${{ steps.resolve_tag.outputs.channel_tag }}
+        run: |
+          # Stable installs poll /releases/latest/...; prereleases must poll
+          # their own tag-scoped manifest because /latest/ excludes prereleases,
+          # otherwise a prerelease CRX would silently track stable builds.
+          if [ -n "$CHANNEL_TAG" ] && [ "${{ steps.resolve_tag.outputs.prerelease }}" = "true" ]; then
+            echo "update_url=https://github.com/$REPO/releases/download/$CHANNEL_TAG/$UPDATE_XML_ASSET_NAME" >> "$GITHUB_OUTPUT"
+          else
+            echo "update_url=https://github.com/$REPO/releases/latest/download/$UPDATE_XML_ASSET_NAME" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Prepare self-hosted Chromium build with update_url
         if: steps.keycheck.outputs.has_key == 'true'
         id: prepare-selfhosted
         env:
-          # Fixed "latest" URL: this workflow re-uploads update_manifest.xml
-          # (--clobber) on every release, so the address never changes.
-          UPDATE_URL: https://github.com/${{ github.repository }}/releases/latest/download/${{ env.UPDATE_XML_ASSET_NAME }}
+          UPDATE_URL: ${{ steps.channel.outputs.update_url }}
         run: |
           CHROME_ZIP="${{ steps.package.outputs.chrome-zip }}"
           BUILD_DIR=".output/crx-build"
@@ -129,19 +166,10 @@ jobs:
           crxFilePath: .output/${{ env.CRX_ASSET_NAME }}
           privateKey: ${{ secrets.CRX_PRIVATE_KEY }}
           updateXmlPath: .output/${{ env.UPDATE_XML_ASSET_NAME }}
-          updateXmlCodebaseUrl: https://github.com/${{ github.repository }}/releases/latest/download/${{ env.CRX_ASSET_NAME }}
-
-      - name: Upload artifacts (no release upload)
-        if: steps.keycheck.outputs.has_key == 'true' && steps.resolve_tag.outputs.upload != 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: selfhosted-crx
-          path: |
-            .output/${{ env.CRX_ASSET_NAME }}
-            .output/${{ env.UPDATE_XML_ASSET_NAME }}
+          updateXmlCodebaseUrl: ${{ steps.channel.outputs.update_url }}
 
       - name: Upload CRX and update manifest to release
-        if: steps.keycheck.outputs.has_key == 'true' && steps.resolve_tag.outputs.upload == 'true'
+        if: steps.keycheck.outputs.has_key == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ steps.resolve_tag.outputs.tag }}
@@ -150,6 +178,16 @@ jobs:
             ".output/$CRX_ASSET_NAME" \
             ".output/$UPDATE_XML_ASSET_NAME" \
             --clobber
+
+      - name: Summarize skipped run
+        if: steps.keycheck.outputs.has_key != 'true'
+        run: |
+          {
+            echo "## Self-hosted CRX auto-update assets: skipped"
+            echo ""
+            echo "- No release-key-signed artifacts were produced by this run."
+            echo "- Configure the \`CRX_PRIVATE_KEY\` secret (PEM contents) and run against a matching release tag to enable packaging."
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Summarize
         if: steps.keycheck.outputs.has_key == 'true'
