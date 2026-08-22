@@ -17,7 +17,10 @@ on:
 
 concurrency:
   group: release-crx-update
-  cancel-in-progress: true
+  # Only dispatch (artifact-only) runs are cancellable; a release publication
+  # run must never be canceled by a manual dispatch, otherwise the published
+  # release could end up without its CRX/update-manifest assets.
+  cancel-in-progress: ${{ github.event_name == 'workflow_dispatch' }}
 
 permissions:
   contents: write
@@ -120,7 +123,7 @@ jobs:
       - name: Pack signed CRX and update manifest
         if: steps.keycheck.outputs.has_key == 'true'
         id: crx
-        uses: cardinalby/webext-buildtools-chrome-crx-action@2.0.3
+        uses: cardinalby/webext-buildtools-chrome-crx-action@200e7173cbdb5acb91d381cf9f7a30080b025047 # v2.0.3
         with:
           zipFilePath: ${{ steps.prepare-selfhosted.outputs.selfhost_zip || '' }}
           crxFilePath: .output/${{ env.CRX_ASSET_NAME }}
