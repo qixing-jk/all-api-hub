@@ -53,7 +53,10 @@ function ResizeStableSelect({
   const isControlled = controlledOpen !== undefined
   const open = isControlled ? controlledOpen : uncontrolledOpen
   const openRef = React.useRef(open)
-  openRef.current = open
+
+  React.useEffect(() => {
+    openRef.current = open
+  }, [open])
 
   React.useEffect(() => {
     const handleResize = () => {

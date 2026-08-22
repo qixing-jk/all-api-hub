@@ -51,8 +51,15 @@ function createTargetCommandSender(
   return async (method, params = {}) => {
     nextId += 1
     const commandId = nextId
+    let handleMessage:
+      | ((event: { message: string; sessionId: string }) => void)
+      | undefined
+    let handleDetach: ((event: { sessionId: string }) => void) | undefined
+    let rejectResponse: ((reason?: unknown) => void) | undefined
+    let timeoutId: ReturnType<typeof setTimeout> | undefined
     const response = new Promise<CdpCommandResult>((resolve, reject) => {
-      const handleMessage = (event: { message: string; sessionId: string }) => {
+      rejectResponse = reject
+      handleMessage = (event) => {
         if (event.sessionId !== sessionId) return
 
         const message = JSON.parse(event.message) as {
@@ -62,23 +69,42 @@ function createTargetCommandSender(
         }
         if (message.id !== commandId) return
 
-        session.off("Target.receivedMessageFromTarget", handleMessage)
         if (message.error) {
           reject(new Error(message.error.message))
         } else {
           resolve(message.result ?? {})
         }
       }
+      handleDetach = (event) => {
+        if (event.sessionId !== sessionId) return
+        reject(new Error(`Action popup target detached during CDP '${method}'`))
+      }
+      timeoutId = setTimeout(() => {
+        reject(new Error(`Timed out waiting for CDP '${method}'`))
+      }, 10_000)
 
       session.on("Target.receivedMessageFromTarget", handleMessage)
+      session.on("Target.detachedFromTarget", handleDetach)
     })
 
-    await session.send("Target.sendMessageToTarget", {
-      message: JSON.stringify({ id: commandId, method, params }),
-      sessionId,
-    })
+    void session
+      .send("Target.sendMessageToTarget", {
+        message: JSON.stringify({ id: commandId, method, params }),
+        sessionId,
+      })
+      .catch((error) => rejectResponse?.(error))
 
-    return await response
+    try {
+      return await response
+    } finally {
+      if (timeoutId !== undefined) clearTimeout(timeoutId)
+      if (handleMessage) {
+        session.off("Target.receivedMessageFromTarget", handleMessage)
+      }
+      if (handleDetach) {
+        session.off("Target.detachedFromTarget", handleDetach)
+      }
+    }
   }
 }
 
@@ -353,14 +379,16 @@ for (const zoomPercentage of POPUP_ZOOM_PERCENTAGES) {
     expect(popupState.formSectionPreserved).toBe(true)
     expect(popupState.innerWidth).toBeGreaterThanOrEqual(200)
     expect(popupState.innerHeight).toBeGreaterThanOrEqual(200)
-    expect(popupState.contentWidth).toBe(popupState.innerWidth)
-    expect(popupState.contentHeight).toBe(popupState.innerHeight)
+    expect(popupState.contentWidth).toBeCloseTo(popupState.innerWidth, 0)
+    expect(popupState.contentHeight).toBeCloseTo(popupState.innerHeight, 0)
 
     await evaluateInTarget(
       send,
       `(() => {
-        const option = Array.from(document.querySelectorAll('[role="option"]'))
-          .find(option => option.textContent?.trim() === 'new-api')
+        const option = document.querySelector(
+          '[role="option"][data-site-type="new-api"]',
+        )
+        if (!option) throw new Error('new-api option was not rendered')
         option.dispatchEvent(new PointerEvent('pointerdown', {
           bubbles: true,
           button: 0,

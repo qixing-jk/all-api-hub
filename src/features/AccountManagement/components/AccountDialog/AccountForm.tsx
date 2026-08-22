@@ -207,7 +207,11 @@ export default function AccountForm({
             </SelectTrigger>
             <SelectContent>
               {ACCOUNT_FORM_SITE_TYPE_OPTIONS.map((siteType) => (
-                <SelectItem key={siteType} value={siteType}>
+                <SelectItem
+                  key={siteType}
+                  value={siteType}
+                  data-site-type={siteType}
+                >
                   {siteType}
                 </SelectItem>
               ))}
