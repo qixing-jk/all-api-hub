@@ -64,6 +64,7 @@ export async function refreshSub2ApiTokens(params: {
 
   const endpoint = new URL("/api/v1/auth/refresh", baseUrl).toString()
   let payload: Sub2ApiEnvelope<Sub2ApiRefreshTokenData> | null
+  let responseStatus: number | undefined
 
   try {
     const response = await fetch(endpoint, {
@@ -74,6 +75,7 @@ export async function refreshSub2ApiTokens(params: {
       },
       body: JSON.stringify({ refresh_token: normalizedRefreshToken }),
     })
+    responseStatus = response.status
 
     payload =
       (await response.json()) as Sub2ApiEnvelope<Sub2ApiRefreshTokenData>
@@ -90,8 +92,13 @@ export async function refreshSub2ApiTokens(params: {
   }
 
   if (payload.code !== 0) {
+    // Upstream maps rejected refresh tokens to HTTP 401. Other failures may
+    // occur after rotation and cannot safely authorize replay of the old token.
+    // Source: https://github.com/Wei-Shaw/sub2api/blob/67380eafd5ae2eaa8db910ae738199c3dac62e37/backend/internal/handler/auth_handler.go#L692-L704
     throw new Sub2ApiTokenRefreshError(
-      SUB2API_TOKEN_REFRESH_FAILURE_REASONS.INVALID_REFRESH_TOKEN,
+      responseStatus === 401
+        ? SUB2API_TOKEN_REFRESH_FAILURE_REASONS.INVALID_REFRESH_TOKEN
+        : SUB2API_TOKEN_REFRESH_FAILURE_REASONS.UNCERTAIN_ROTATION,
     )
   }
 

@@ -379,6 +379,33 @@ describe("accountStorage core behaviors", () => {
       ).resolves.toEqual({ status: "identity_mismatch" })
     })
 
+    it("rejects a credential update whose returned identity differs from the expected account", async () => {
+      seedStorage([
+        createAccount({
+          id: "sub2-account",
+          site_type: SITE_TYPES.SUB2API,
+          site_url: "https://auth.example.invalid",
+          account_info: { id: "user-1" } as SiteAccount["account_info"],
+        }),
+      ])
+
+      await expect(
+        accountStorage.updateSub2ApiAuth(
+          "sub2-account",
+          { ...authUpdate, userId: "user-2" },
+          { userTimestampMode: AccountUpdateUserTimestampMode.Preserve },
+        ),
+      ).resolves.toEqual({ status: "identity_mismatch" })
+
+      await expect(
+        accountStorage.getAccountById("sub2-account"),
+      ).resolves.toMatchObject({
+        account_info: {
+          id: "user-1",
+        },
+      })
+    })
+
     it("does not recreate credentials when deletion wins the storage lock race", async () => {
       seedStorage([
         createAccount({
@@ -432,6 +459,46 @@ describe("accountStorage core behaviors", () => {
       ).resolves.toMatchObject({
         sub2apiAuth: {
           refreshToken: "stored-refresh-token",
+          tokenExpiresAt: 1_700_000_000_000,
+        },
+      })
+    })
+
+    it("preserves the latest valid expiry when resync supplies a new refresh token without one", async () => {
+      seedStorage([
+        createAccount({
+          id: "sub2-account",
+          site_type: SITE_TYPES.SUB2API,
+          site_url: "https://auth.example.invalid",
+          account_info: { id: "user-1" } as SiteAccount["account_info"],
+          sub2apiAuth: {
+            refreshToken: "stored-refresh-token",
+            tokenExpiresAt: 1_700_000_000_000,
+          },
+        }),
+      ])
+
+      await accountStorage.updateSub2ApiAuth(
+        "sub2-account",
+        {
+          accessToken: "resynced-access-token",
+          refreshToken: "resynced-refresh-token",
+          expectedOrigin: "https://auth.example.invalid",
+          expectedUserId: "user-1",
+          userId: " user-1 ",
+        },
+        { userTimestampMode: AccountUpdateUserTimestampMode.Preserve },
+      )
+
+      await expect(
+        accountStorage.getAccountById("sub2-account"),
+      ).resolves.toMatchObject({
+        account_info: {
+          id: "user-1",
+          access_token: "resynced-access-token",
+        },
+        sub2apiAuth: {
+          refreshToken: "resynced-refresh-token",
           tokenExpiresAt: 1_700_000_000_000,
         },
       })

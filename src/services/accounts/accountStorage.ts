@@ -525,6 +525,7 @@ class AccountStorageService {
         url: update.expectedOrigin,
       })
       const expectedUserId = normalizeAccountIdentity(update.expectedUserId)
+      const updateUserId = normalizeAccountIdentity(update.userId)
       const result =
         await this.mutateStorageConfig<Sub2ApiAuthPersistenceResult>(
           (config) => {
@@ -550,7 +551,8 @@ class AccountStorageService {
               !expectedUserId ||
               !actualUserId ||
               actualOrigin !== expectedOrigin ||
-              actualUserId !== expectedUserId
+              actualUserId !== expectedUserId ||
+              (update.userId !== undefined && updateUserId !== expectedUserId)
             ) {
               return {
                 result: {
@@ -564,6 +566,7 @@ class AccountStorageService {
             const authUpdates: DeepPartial<SiteAccount> = {
               account_info: {
                 access_token: update.accessToken,
+                ...(updateUserId ? { id: updateUserId } : {}),
               },
             }
             const refreshToken = update.refreshToken?.trim()
@@ -589,7 +592,11 @@ class AccountStorageService {
           },
         )
       return result
-    } catch {
+    } catch (error) {
+      logger.error("Failed to persist Sub2API credentials", {
+        accountId: id,
+        error: getErrorMessage(error),
+      })
       return { status: SUB2API_AUTH_PERSISTENCE_STATUSES.WRITE_FAILED }
     }
   }

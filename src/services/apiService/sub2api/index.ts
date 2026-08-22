@@ -423,7 +423,14 @@ const verifySub2ApiAuthIdentity = async <TRequest extends ApiServiceRequest>(
   }
 
   const verificationRequest = applySub2ApiAuthUpdate(request, authUpdate)
-  const verified = await fetchUserInfo(verificationRequest)
+  let verified: Awaited<ReturnType<typeof fetchUserInfo>>
+  try {
+    verified = await fetchUserInfo(verificationRequest)
+  } catch {
+    throw new Sub2ApiTokenRefreshError(
+      SUB2API_TOKEN_REFRESH_FAILURE_REASONS.UNCERTAIN_ROTATION,
+    )
+  }
   const verifiedUserId = normalizeAccountIdentity(verified.id)
   if (verifiedUserId !== expectedUserId) {
     throw new Sub2ApiAuthPersistenceError({
@@ -511,18 +518,12 @@ const resyncSub2ApiRequestAuth = async <
     const expectedUserId = normalizeAccountIdentity(latestRequest.auth?.userId)
     let resynced
     try {
-      resynced = expectedUserId
-        ? await resyncSub2ApiAuthToken(
-            latestRequest.baseUrl,
-            latestRequest.tempWindowRequestSource,
-            latestRequest.protectionBypassExecution,
-            expectedUserId,
-          )
-        : await resyncSub2ApiAuthToken(
-            latestRequest.baseUrl,
-            latestRequest.tempWindowRequestSource,
-            latestRequest.protectionBypassExecution,
-          )
+      resynced = await resyncSub2ApiAuthToken(
+        latestRequest.baseUrl,
+        latestRequest.tempWindowRequestSource,
+        latestRequest.protectionBypassExecution,
+        expectedUserId ?? undefined,
+      )
     } catch (error) {
       if (error instanceof Sub2ApiAuthIdentityMismatchError) {
         throw new Sub2ApiAuthPersistenceError({
@@ -540,29 +541,24 @@ const resyncSub2ApiRequestAuth = async <
       source: resynced.source,
     })
 
-    const resyncedRequest = applySub2ApiAuthUpdate(latestRequest, {
+    const resyncedUpdate: PersistableSub2ApiAuthUpdate = {
       accessToken: resynced.accessToken,
-      userId: resynced.userId,
+      ...(resynced.userId ? { userId: resynced.userId } : {}),
       ...(resynced.sub2apiAuth?.refreshToken
         ? { refreshToken: resynced.sub2apiAuth.refreshToken }
         : {}),
       ...(typeof resynced.sub2apiAuth?.tokenExpiresAt === "number"
         ? { tokenExpiresAt: resynced.sub2apiAuth.tokenExpiresAt }
         : {}),
-    })
+    }
+    const resyncedRequest = applySub2ApiAuthUpdate(
+      latestRequest,
+      resyncedUpdate,
+    )
 
     await persistSub2ApiAuthUpdate(
       resyncedRequest,
-      {
-        accessToken: resynced.accessToken,
-        userId: resynced.userId,
-        ...(resyncedRequest.auth?.refreshToken
-          ? { refreshToken: resyncedRequest.auth.refreshToken }
-          : {}),
-        ...(typeof resyncedRequest.auth?.tokenExpiresAt === "number"
-          ? { tokenExpiresAt: resyncedRequest.auth.tokenExpiresAt }
-          : {}),
-      },
+      resyncedUpdate,
       latestAuthSession,
     )
 
@@ -1085,6 +1081,11 @@ const createRefreshTokenRestoreRequiredHealthStatus = () => ({
   message: t("messages:sub2api.refreshTokenInvalid"),
 })
 
+const createAuthPersistenceFailureHealthStatus = () => ({
+  status: SiteHealthStatus.Warning,
+  message: t("messages:sub2api.authPersistenceFailed"),
+})
+
 const createHealthyHealthStatus = () => ({
   status: SiteHealthStatus.Healthy,
   message: t("account:healthStatus.normal"),
@@ -1546,6 +1547,12 @@ export async function refreshAccountData(
         : {}),
     })
   } catch (error) {
+    if (error instanceof Sub2ApiAuthPersistenceError) {
+      return {
+        success: false,
+        healthStatus: createAuthPersistenceFailureHealthStatus(),
+      }
+    }
     if (error instanceof ApiError && error.statusCode === 401) {
       hydratedRequest ??= await hydrateSub2ApiAuthRequest(request)
       effectiveRequest = didSub2ApiAuthChange(request, effectiveRequest)
@@ -1586,10 +1593,13 @@ export async function refreshAccountData(
               authSession: hydratedRequest.authSession,
               checkIn,
             })
-          } catch {
+          } catch (resyncError) {
             return {
               success: false,
-              healthStatus: createRefreshTokenRestoreRequiredHealthStatus(),
+              healthStatus:
+                resyncError instanceof Sub2ApiAuthPersistenceError
+                  ? createAuthPersistenceFailureHealthStatus()
+                  : createRefreshTokenRestoreRequiredHealthStatus(),
             }
           }
         }
@@ -1602,6 +1612,12 @@ export async function refreshAccountData(
           checkIn,
         })
       } catch (retryError) {
+        if (retryError instanceof Sub2ApiAuthPersistenceError) {
+          return {
+            success: false,
+            healthStatus: createAuthPersistenceFailureHealthStatus(),
+          }
+        }
         if (retryError instanceof ApiError && retryError.statusCode === 401) {
           return {
             success: false,
