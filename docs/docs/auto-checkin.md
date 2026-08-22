@@ -70,11 +70,12 @@
 
 ## 支持站点与认证要求
 
-当前内置自动签到提供方只包含以下五个精确站点类型：
+当前内置自动签到提供方包含以下六个精确站点类型：
 
 | 站点类型 | 是否内置自动签到 | 认证要求 |
 |----------|------------------|----------|
 | `new-api` | 有 | Access Token（Cookie 账号可用 Cookie 会话）与账号 ID |
+| `ModelFlare` | 有 | Cookie 会话与账号 ID |
 | `Veloera` | 有 | Access Token 或 Cookie，以及账号 ID |
 | `anyrouter` | 有 | Cookie 会话或浏览器登录上下文，以及账号 ID |
 | `wong-gongyi` | 有 | Access Token 或 Cookie，以及账号 ID |

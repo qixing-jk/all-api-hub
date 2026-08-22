@@ -23,6 +23,7 @@ import {
   Switch,
   Textarea,
 } from "~/components/ui"
+import { CHECK_IN_SELECTION_STATUSES } from "~/constants/checkIn"
 import { ACCOUNT_SITE_TYPES, SITE_TYPES } from "~/constants/siteType"
 import { AccountFormSection } from "~/features/AccountManagement/components/AccountDialog/AccountFormSection"
 import { ACCOUNT_FORM_MOBILE_DEFAULT_OPEN } from "~/features/AccountManagement/components/AccountDialog/accountFormSections"
@@ -35,6 +36,7 @@ import type { AccountDialogSitePolicy } from "~/features/AccountManagement/compo
 import { TagPicker } from "~/features/AccountManagement/components/TagPicker"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { isValidExchangeRate } from "~/services/accounts/accountOperations"
+import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/inspection"
 import { AuthTypeEnum, type CheckInConfig, type Tag } from "~/types"
 import { formatLocaleDateTime } from "~/utils/core/formatters"
 
@@ -153,9 +155,16 @@ export default function AccountForm({
     checkIn,
     siteType,
   } = draft
+  const checkInInspection = inspectAccountCheckIn({
+    config: checkIn,
+    siteType,
+  })
   const isAuthTypeLocked = sitePolicy.forceAccessTokenAuth
   const canUseCookieAuth = sitePolicy.allowCookieAuthSession
-  const canUseBuiltInCheckInDetection = sitePolicy.allowBuiltInCheckInDetection
+  const canUseBuiltInCheckInDetection =
+    sitePolicy.allowBuiltInCheckInDetection &&
+    checkInInspection.selectionState.status ===
+      CHECK_IN_SELECTION_STATUSES.Selected
   const showBuiltInAutoCheckIn = canUseBuiltInCheckInDetection
   const canUseSub2ApiRefreshToken = sitePolicy.allowSub2ApiRefreshTokenState
   const isOpenRouterManagementKey = siteType === SITE_TYPES.OPENROUTER
@@ -545,13 +554,13 @@ export default function AccountForm({
               </p>
             </div>
             <Switch
-              checked={checkIn.autoCheckInEnabled !== false}
-              onChange={(autoCheckInEnabled) =>
-                onCheckInChange({ ...checkIn, autoCheckInEnabled })
+              checked={checkIn.automaticExecutionEnabled}
+              onChange={(automaticExecutionEnabled) =>
+                onCheckInChange({ ...checkIn, automaticExecutionEnabled })
               }
               id="auto-checkin-enabled"
               className={`${
-                checkIn.autoCheckInEnabled !== false
+                checkIn.automaticExecutionEnabled
                   ? "bg-green-600"
                   : "bg-gray-200"
               } focus:ring-green-500`}

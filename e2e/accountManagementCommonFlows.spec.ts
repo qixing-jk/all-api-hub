@@ -1,6 +1,7 @@
 import type { Locator, Page } from "@playwright/test"
 
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
+import { SITE_TYPES } from "~/constants/siteType"
 import { OPTIONS_TEST_IDS } from "~/entrypoints/options/testIds"
 import {
   ACCOUNT_MANAGEMENT_TEST_IDS,
@@ -11,6 +12,7 @@ import {
   createDefaultAccountStorageConfig,
   normalizeAccountStorageConfigForWrite,
 } from "~/services/accounts/accountDefaults"
+import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import { AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import type { AccountStorageConfig, SiteAccount } from "~/types"
@@ -217,10 +219,12 @@ test("keeps account management controls reachable across constrained widths", as
       site_name: "Responsive Header Account",
       site_url: "https://account.example.invalid",
       disabled: true,
-      checkIn: {
-        enableDetection: true,
+      checkIn: createCompatibilityCheckInConfig({
+        siteType: SITE_TYPES.NEW_API,
+        supported: true,
+        automaticExecutionEnabled: true,
         customCheckIn: { url: "https://check-in.example.invalid" },
-      },
+      }),
     }),
   ])
 
@@ -711,10 +715,11 @@ test("runs quick check-in for the selected eligible account from account managem
         username: "checkin-user",
         access_token: "checkin-token",
       },
-      checkIn: {
-        enableDetection: true,
-        autoCheckInEnabled: true,
-      },
+      checkIn: createCompatibilityCheckInConfig({
+        siteType: SITE_TYPES.NEW_API,
+        supported: true,
+        automaticExecutionEnabled: true,
+      }),
     }),
   ])
 

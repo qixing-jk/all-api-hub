@@ -5,6 +5,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import ModelKeyDialog from "~/features/ModelList/components/ModelKeyDialog"
 import { MODEL_LIST_TEST_IDS } from "~/features/ModelList/testIds"
 import { AuthTypeEnum } from "~/types"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const serviceCredentialFetchMock = vi.fn()
@@ -34,7 +35,7 @@ const ACCOUNT = {
   token: "access-token",
   userId: "1",
   authType: AuthTypeEnum.AccessToken,
-  checkIn: { enableDetection: false },
+  checkIn: buildCheckInConfig(),
 } as any
 
 describe("ModelKeyDialog", () => {

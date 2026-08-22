@@ -400,6 +400,23 @@ test("opens the API check modal from the background context-menu message path", 
   )
 })
 
+test("closes the API check modal with detected credentials in one click", async ({
+  context,
+  page,
+}) => {
+  const serviceWorker = await getServiceWorker(context)
+  await seedAutoDetectApiCheckPreferences(serviceWorker)
+
+  const { modal } = await openApiCheckModalFromCopiedCredentials(page)
+  await expect(modal.getByRole("textbox", { name: "API key" })).toHaveValue(
+    API_KEY,
+  )
+
+  await modal.getByTestId(WEB_AI_API_CHECK_TEST_IDS.closeButton).click()
+
+  await expect(modal).toHaveCount(0)
+})
+
 test("reads copied web API credentials from the clipboard after clicking a copy-like control", async ({
   context,
   page,

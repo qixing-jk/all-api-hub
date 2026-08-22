@@ -1,5 +1,9 @@
 import { Storage } from "@plasmohq/storage"
 
+import {
+  canonicalizeAccountStorageConfig,
+  normalizeAccountStorageConfigForWrite,
+} from "~/services/accounts/accountDefaults"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import {
   ACCOUNT_STORAGE_KEYS,
@@ -69,23 +73,12 @@ class TagStorageService {
       | AccountStorageConfig
       | undefined
 
-    return {
-      accounts: raw?.accounts ?? [],
-      bookmarks: Array.isArray(raw?.bookmarks) ? raw.bookmarks : [],
-      pinnedAccountIds: raw?.pinnedAccountIds ?? [],
-      orderedAccountIds: raw?.orderedAccountIds ?? [],
-      last_updated: raw?.last_updated ?? Date.now(),
-    }
+    return canonicalizeAccountStorageConfig(raw).config
   }
 
   private async saveAccountStorageConfig(config: AccountStorageConfig) {
-    const next: AccountStorageConfig = {
-      accounts: config.accounts ?? [],
-      bookmarks: Array.isArray(config.bookmarks) ? config.bookmarks : [],
-      pinnedAccountIds: config.pinnedAccountIds ?? [],
-      orderedAccountIds: config.orderedAccountIds ?? [],
-      last_updated: Date.now(),
-    }
+    const canonical = canonicalizeAccountStorageConfig(config).config
+    const next = normalizeAccountStorageConfigForWrite(canonical)
 
     await this.storage.set(ACCOUNT_STORAGE_KEYS.ACCOUNTS, next)
   }

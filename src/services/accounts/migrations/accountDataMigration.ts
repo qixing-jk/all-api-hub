@@ -9,8 +9,13 @@
 import type { SiteAccount } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 
+import { getLegacyAutoCheckinMethodIds } from "../../checkin/autoCheckin/providers/registry"
 import { migrateCheckInDualStatusConfig } from "./checkInDualStatusMigration"
 import { migrateCheckInConfig } from "./checkInMigration"
+import {
+  ACCOUNT_CONFIG_V7_VERSION,
+  migrateSiteAccountCheckInToV7,
+} from "./checkInV7Migration"
 import { migrateDisabledFlagConfig } from "./disabledFlagMigration"
 import { migrateExcludeFromTodayIncomeConfig } from "./excludeFromTodayIncomeMigration"
 import { migrateExcludeFromTotalBalanceConfig } from "./excludeFromTotalBalanceMigration"
@@ -19,7 +24,7 @@ import { migrateSub2ApiAuthConfig } from "./sub2apiAuthMigration"
 const logger = createLogger("AccountDataMigration")
 
 // Current version of the configuration schema
-export const CURRENT_CONFIG_VERSION = 6
+export const CURRENT_CONFIG_VERSION = ACCOUNT_CONFIG_V7_VERSION
 
 /**
  * Migration function type
@@ -74,6 +79,12 @@ const migrations: Record<number, MigrationFunction> = {
     migrated.configVersion = 6
     return migrated
   },
+
+  // Version 6 -> 7: Activate canonical per-method check-in storage.
+  7: (account: SiteAccount): SiteAccount =>
+    migrateSiteAccountCheckInToV7(account, {
+      getLegacyMethodIds: getLegacyAutoCheckinMethodIds,
+    }),
 }
 
 /**

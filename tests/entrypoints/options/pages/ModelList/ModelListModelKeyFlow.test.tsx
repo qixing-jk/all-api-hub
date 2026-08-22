@@ -5,6 +5,7 @@ import ModelList from "~/entrypoints/options/pages/ModelList"
 import { MODEL_LIST_BILLING_MODES } from "~/features/ModelList/billingModes"
 import { createAccountSource } from "~/features/ModelList/modelManagementSources"
 import { AuthTypeEnum } from "~/types"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const {
@@ -68,7 +69,7 @@ const ACCOUNT = {
   token: "token",
   userId: "1",
   authType: AuthTypeEnum.AccessToken,
-  checkIn: { enableDetection: false },
+  checkIn: buildCheckInConfig(),
 } as any
 
 const TOKEN = {

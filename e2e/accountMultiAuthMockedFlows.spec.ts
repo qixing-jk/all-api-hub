@@ -493,6 +493,19 @@ async function stubCredentialIsolatedNewApiSiteRoutes(context: BrowserContext) {
       return
     }
 
+    if (method === "GET" && url.pathname === "/api/user/checkin") {
+      await fulfillJson(200, {
+        success: true,
+        message: "ok",
+        data: {
+          stats: {
+            checked_in_today: false,
+          },
+        },
+      })
+      return
+    }
+
     if (method === "GET" && url.pathname === "/api/log/self/stat") {
       await fulfillJson(200, {
         success: true,

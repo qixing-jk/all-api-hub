@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from "~/components/ui"
 import { resolveExportTokenForSecret } from "~/services/accounts/utils/exportTokenSecret"
-import { fetchOpenAICompatibleModelIds } from "~/services/aiApi/openaiCompatible"
+import { discoverOpenAICompatibleModels } from "~/services/aiApi/openaiCompatible"
 import {
   CCSWITCH_APPS,
   openInCCSwitch,
@@ -65,6 +65,16 @@ const APP_LIMITATION_NOTICE_ID = "ccswitch-app-limitation"
 // Preserve the real debounce in dev/prod so endpoint edits do not spam model-list
 // requests, but skip the wall-clock delay in Vitest.
 const UPSTREAM_MODEL_FETCH_DEBOUNCE_MS = isTestMode() ? 0 : 300
+
+const getConservativeCodexEndpoint = (baseUrl: string) => {
+  const normalizedBaseUrl = normalizeHttpUrl(baseUrl)
+  if (!normalizedBaseUrl) return baseUrl
+
+  const path = new URL(normalizedBaseUrl).pathname.replace(/\/+$/, "")
+  return path
+    ? normalizedBaseUrl
+    : coerceBaseUrlToPathSuffix(normalizedBaseUrl, "/v1")
+}
 
 const getCCSwitchAppLabel = (t: TFunction, app: CCSwitchApp) => {
   switch (app) {
@@ -115,14 +125,26 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
   const [notes, setNotes] = useState("")
   const [providerName, setProviderName] = useState(account.name)
   const [homepage, setHomepage] = useState(account.baseUrl)
+  // CC Switch writes this directly to Codex's provider base_url. Model discovery
+  // confirms whether the compatible route uses `/v1`; provider paths remain intact.
+  // https://github.com/farion1231/cc-switch/blob/0b5da510168914b251481654a568c3ffacd62cf4/src-tauri/src/deeplink/provider.rs
+  // https://developers.openai.com/api/reference/cli/resources/responses/methods/create
   const [endpoint, setEndpoint] = useState(account.baseUrl)
   const [isEndpointCustomized, setIsEndpointCustomized] = useState(false)
+  const [codexEndpointDiscovery, setCodexEndpointDiscovery] = useState<{
+    sourceBaseUrl: string
+    resolvedBaseUrl: string
+  } | null>(null)
   const [upstreamModelOptions, setUpstreamModelOptions] = useState<
     { value: string; label: string }[]
   >([])
   const [isLoadingModels, setIsLoadingModels] = useState(false)
   const formId = useMemo(() => `ccswitch-export-form-${token.id}`, [token.id])
   const limitationNotice = getCCSwitchLimitationNotice(t, app)
+  const upstreamBaseUrl = useMemo(() => {
+    const normalizedEndpoint = normalizeHttpUrl(endpoint)
+    return normalizedEndpoint ? stripTrailingOpenAIV1(normalizedEndpoint) : ""
+  }, [endpoint])
 
   useEffect(() => {
     if (isOpen) {
@@ -133,6 +155,7 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
       setHomepage(account.baseUrl)
       setEndpoint(account.baseUrl)
       setIsEndpointCustomized(false)
+      setCodexEndpointDiscovery(null)
       setUpstreamModelOptions([])
       setIsLoadingModels(false)
     }
@@ -140,24 +163,7 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
 
   useEffect(() => {
     if (!isOpen) return
-    if (isEndpointCustomized) return
 
-    // CC Switch expects Codex exports to default to an OpenAI-style /v1 endpoint,
-    // while OpenCode/OpenClaw should keep the stored base URL unless the user overrides it.
-    const defaultEndpoint =
-      app === "codex"
-        ? coerceBaseUrlToPathSuffix(account.baseUrl, "/v1")
-        : account.baseUrl
-    setEndpoint(defaultEndpoint)
-  }, [account.baseUrl, app, isEndpointCustomized, isOpen])
-
-  useEffect(() => {
-    if (!isOpen) return
-
-    const normalizedEndpoint = normalizeHttpUrl(endpoint)
-    const upstreamBaseUrl = normalizedEndpoint
-      ? stripTrailingOpenAIV1(normalizedEndpoint)
-      : ""
     if (!upstreamBaseUrl) {
       setUpstreamModelOptions([])
       setIsLoadingModels(false)
@@ -173,23 +179,28 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
             account,
             token,
           )
-          const modelIds = await fetchOpenAICompatibleModelIds({
+          const discovery = await discoverOpenAICompatibleModels({
             baseUrl: upstreamBaseUrl,
             apiKey: resolvedToken.key,
           })
-          const normalized = modelIds
-            .map((item) => (typeof item === "string" ? item.trim() : ""))
+          const normalized = discovery.models
+            .map((item) => item.id.trim())
             .filter(Boolean)
             .sort((a, b) => a.localeCompare(b))
             .map((id) => ({ value: id, label: id }))
 
           if (isMounted) {
             setUpstreamModelOptions(normalized)
+            setCodexEndpointDiscovery({
+              sourceBaseUrl: upstreamBaseUrl,
+              resolvedBaseUrl: discovery.resolvedBaseUrl,
+            })
           }
         } catch (error) {
           logger.warn("Failed to fetch upstream model list", error)
           if (isMounted) {
             setUpstreamModelOptions([])
+            setCodexEndpointDiscovery(null)
           }
         } finally {
           if (isMounted) {
@@ -203,7 +214,29 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
       isMounted = false
       clearTimeout(handle)
     }
-  }, [account, endpoint, isOpen, token])
+  }, [account, isOpen, token, upstreamBaseUrl])
+
+  useEffect(() => {
+    if (!isOpen || isEndpointCustomized) return
+
+    if (app !== "codex") {
+      setEndpoint(account.baseUrl)
+      return
+    }
+
+    const resolvedEndpoint =
+      codexEndpointDiscovery?.sourceBaseUrl === upstreamBaseUrl
+        ? codexEndpointDiscovery.resolvedBaseUrl
+        : getConservativeCodexEndpoint(account.baseUrl)
+    setEndpoint(resolvedEndpoint)
+  }, [
+    account.baseUrl,
+    app,
+    codexEndpointDiscovery,
+    isEndpointCustomized,
+    isOpen,
+    upstreamBaseUrl,
+  ])
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()

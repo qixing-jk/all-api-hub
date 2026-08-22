@@ -9,6 +9,7 @@ import { createEmptyAccountDialogDraft } from "~/features/AccountManagement/comp
 import { getAccountDialogSitePolicy } from "~/features/AccountManagement/components/AccountDialog/sitePolicy"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import enAccountDialog from "~/locales/en/accountDialog.json"
+import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
 import { AuthTypeEnum, type CheckInConfig } from "~/types"
 import { testI18n } from "~~/tests/test-utils/i18n"
 import { fireEvent, render, screen, within } from "~~/tests/test-utils/render"
@@ -53,15 +54,20 @@ describe("AccountDialog AccountForm", () => {
     vi.restoreAllMocks()
   })
 
-  const createCheckIn = (
-    overrides: Partial<CheckInConfig> = {},
-  ): CheckInConfig =>
-    ({
-      enableDetection: false,
-      autoCheckInEnabled: undefined,
-      customCheckIn: undefined,
-      ...overrides,
-    }) as CheckInConfig
+  const createCheckIn = (input?: {
+    siteType?: Parameters<
+      typeof createCompatibilityCheckInConfig
+    >[0]["siteType"]
+    supported?: boolean
+    automaticExecutionEnabled?: boolean
+    customCheckIn?: CheckInConfig["customCheckIn"]
+  }): CheckInConfig =>
+    createCompatibilityCheckInConfig({
+      siteType: input?.siteType ?? SITE_TYPES.UNKNOWN,
+      supported: input?.supported ?? false,
+      automaticExecutionEnabled: input?.automaticExecutionEnabled ?? true,
+      customCheckIn: input?.customCheckIn,
+    })
 
   const createProps = (): ComponentProps<typeof AccountForm> => ({
     draft: {
@@ -266,7 +272,7 @@ describe("AccountDialog AccountForm", () => {
       screen.getByText("accountDialog:form.checkInStatus"),
     ).toBeInTheDocument()
     expect(
-      screen.getByText("accountDialog:form.checkInStatusDesc"),
+      screen.getByText("accountDialog:form.checkInStatusUnsupported"),
     ).toBeInTheDocument()
     expect(
       screen.queryByRole("switch", {
@@ -748,8 +754,9 @@ describe("AccountDialog AccountForm", () => {
     const props = createProps()
     props.draft.siteType = SITE_TYPES.NEW_API
     props.draft.checkIn = createCheckIn({
-      enableDetection: true,
-      autoCheckInEnabled: false,
+      siteType: SITE_TYPES.NEW_API,
+      supported: true,
+      automaticExecutionEnabled: false,
     })
     const onCheckInChange = vi.mocked(props.onCheckInChange)
 
@@ -771,8 +778,9 @@ describe("AccountDialog AccountForm", () => {
     })
 
     const nextCheckIn = createCheckIn({
-      enableDetection: true,
-      autoCheckInEnabled: false,
+      siteType: SITE_TYPES.NEW_API,
+      supported: true,
+      automaticExecutionEnabled: false,
       customCheckIn: {
         url: "https://check.example.com/",
         openRedeemWithCheckIn: false,
@@ -790,7 +798,7 @@ describe("AccountDialog AccountForm", () => {
     )
     expect(onCheckInChange).toHaveBeenCalledWith({
       ...nextCheckIn,
-      autoCheckInEnabled: true,
+      automaticExecutionEnabled: true,
     })
 
     await user.click(
@@ -820,7 +828,8 @@ describe("AccountDialog AccountForm", () => {
 
     onCheckInChange.mockClear()
     const missingRedeemToggleCheckIn = createCheckIn({
-      enableDetection: true,
+      siteType: SITE_TYPES.NEW_API,
+      supported: true,
       customCheckIn: {
         url: "https://check.example.com/",
       },
@@ -843,13 +852,14 @@ describe("AccountDialog AccountForm", () => {
     })
   })
 
-  it("shows auto check-in for supported sites even when a legacy draft has status detection disabled", async () => {
+  it("shows auto check-in for a selected method even when automatic execution is disabled", async () => {
     const user = userEvent.setup()
     const props = createProps()
     props.draft.siteType = SITE_TYPES.NEW_API
     props.draft.checkIn = createCheckIn({
-      enableDetection: false,
-      autoCheckInEnabled: false,
+      siteType: SITE_TYPES.NEW_API,
+      supported: true,
+      automaticExecutionEnabled: false,
     })
 
     render(<AccountForm {...withSitePolicy(props)} />)
@@ -868,7 +878,7 @@ describe("AccountDialog AccountForm", () => {
 
     expect(props.onCheckInChange).toHaveBeenCalledWith({
       ...props.draft.checkIn,
-      autoCheckInEnabled: true,
+      automaticExecutionEnabled: true,
     })
   })
 
@@ -876,8 +886,9 @@ describe("AccountDialog AccountForm", () => {
     const props = createProps()
     props.draft.siteType = SITE_TYPES.AIHUBMIX
     props.draft.checkIn = createCheckIn({
-      enableDetection: true,
-      autoCheckInEnabled: true,
+      siteType: SITE_TYPES.AIHUBMIX,
+      supported: false,
+      automaticExecutionEnabled: true,
     })
 
     render(<AccountForm {...withSitePolicy(props)} />)

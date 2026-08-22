@@ -4,6 +4,8 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { createNewApiAccountRefresh } from "~/services/apiAdapters/newApi/accountRefresh"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 
+import { createCheckInConfig } from "../checkInFixtures"
+
 const {
   anyrouterFetchSupportCheckIn,
   anyrouterRefreshAccountData,
@@ -60,13 +62,10 @@ const supportRequest = {
 const refreshRequest = {
   ...supportRequest,
   accountId: "account-1",
-  checkIn: {
-    enableDetection: true,
-    autoCheckInEnabled: true,
-    siteStatus: {
-      isCheckedInToday: false,
-    },
-  },
+  siteType: SITE_TYPES.NEW_API,
+  checkIn: createCheckInConfig(SITE_TYPES.NEW_API, {
+    isCheckedInToday: false,
+  }),
   includeTodayCashflow: false,
 }
 

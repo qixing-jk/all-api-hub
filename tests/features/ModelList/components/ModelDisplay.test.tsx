@@ -28,6 +28,7 @@ import {
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
 const { mockTotalListHeightChanged, modelItemSpy } = vi.hoisted(() => ({
   mockTotalListHeightChanged: {
@@ -182,7 +183,7 @@ const ACCOUNT_FIXTURE: DisplaySiteData = {
   token: "example-token",
   userId: "example-user-id",
   authType: AuthTypeEnum.AccessToken,
-  checkIn: { enableDetection: false },
+  checkIn: buildCheckInConfig(),
 }
 
 const PROFILE_FIXTURE: ApiCredentialProfile = {

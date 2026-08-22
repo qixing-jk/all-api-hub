@@ -1,4 +1,5 @@
 import type { ManagedSiteType } from "~/constants/siteType"
+import { isAutomaticCheckInConfiguredForAccount } from "~/services/checkin/autoCheckin/inspection"
 import { resolveManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
 import { supportsManagedSiteModelSync } from "~/services/managedSites/utils/managedSite"
 import type { UserPreferences } from "~/services/preferences/userPreferences"
@@ -43,9 +44,12 @@ export function resolveAutoCheckinConfigurationStatus(input: {
     return CONFIGURATION_STATUSES.disabled
   }
 
-  const hasReadyAccount = input.accounts.some(
-    (account) =>
-      account.disabled !== true && account.checkIn?.enableDetection === true,
+  const hasReadyAccount = input.accounts.some((account) =>
+    isAutomaticCheckInConfiguredForAccount({
+      config: account.checkIn,
+      siteType: account.site_type,
+      accountDisabled: account.disabled,
+    }),
   )
 
   return hasReadyAccount

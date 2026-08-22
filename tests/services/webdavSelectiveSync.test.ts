@@ -333,6 +333,61 @@ describe("mergeWebdavBackupPayloadBySelection", () => {
     )
   })
 
+  it("preserves an unselected remote account after canonicalizing V6 check-in data", () => {
+    const backup: any = {
+      version: "4.0",
+      timestamp: 456,
+      accounts: { accounts: [], last_updated: 456 },
+      preferences: { lastUpdated: 456 },
+      channelConfigs: { schemaVersion: 1, configs: {} },
+    }
+    const remoteBackup: any = {
+      version: "3.0",
+      timestamp: 123,
+      accounts: {
+        accounts: [
+          {
+            id: "remote-account",
+            site_type: "new-api",
+            configVersion: 6,
+            checkIn: {
+              enableDetection: true,
+              autoCheckInEnabled: true,
+              siteStatus: { isCheckedInToday: false },
+            },
+          },
+        ],
+        last_updated: 123,
+      },
+      preferences: { lastUpdated: 123 },
+      channelConfigs: { schemaVersion: 1, configs: {} },
+    }
+
+    const payload = mergeWebdavBackupPayloadBySelection({
+      backup,
+      selection: {
+        accounts: false,
+        bookmarks: false,
+        apiCredentialProfiles: false,
+        preferences: true,
+      },
+      remoteBackup,
+    })
+
+    expect(payload.version).toBe("4.0")
+    expect((payload.accounts as any).accounts[0]).toMatchObject({
+      id: "remote-account",
+      configVersion: 7,
+      checkIn: {
+        automaticExecutionEnabled: true,
+        selection: { methodId: "new-api:daily-checkin" },
+      },
+    })
+    expect((payload.accounts as any).accounts[0]).not.toHaveProperty(
+      "checkIn.enableDetection",
+    )
+  })
+
   it("preserves remote bookmarks and ordering metadata when only accounts are selected", () => {
     const backup: any = {
       version: "2.0",
@@ -1022,7 +1077,7 @@ describe("createWebdavImportPayloadBySelection", () => {
     })
   })
 
-  it("always emits a canonical V3 payload even for legacy WebDAV backups", () => {
+  it("always emits a canonical V4 payload even for legacy WebDAV backups", () => {
     const payload = createWebdavImportPayloadBySelection({
       rawBackup: {
         timestamp: 200,
@@ -1056,7 +1111,7 @@ describe("createWebdavImportPayloadBySelection", () => {
       localState: baseLocalState,
     })
 
-    expect(payload.version).toBe("3.0")
+    expect(payload.version).toBe("4.0")
     expect(payload.apiCredentialProfiles).toBeUndefined()
   })
 })

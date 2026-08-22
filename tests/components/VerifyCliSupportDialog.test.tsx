@@ -14,6 +14,7 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import {
   act,
   fireEvent,
@@ -278,7 +279,7 @@ describe("VerifyCliSupportDialog", () => {
       token: "t1",
       userId: "1",
       authType: "access_token" as any,
-      checkIn: { enableDetection: false } as any,
+      checkIn: buildCheckInConfig(),
       tagIds: [],
     }
     const secondAccount = {
@@ -355,7 +356,7 @@ describe("VerifyCliSupportDialog", () => {
       token: "t1",
       userId: "1",
       authType: "access_token" as any,
-      checkIn: { enableDetection: false } as any,
+      checkIn: buildCheckInConfig(),
       tagIds: [],
     }
     const secondAccount = {
@@ -636,7 +637,7 @@ describe("VerifyCliSupportDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: buildCheckInConfig(),
         }}
         initialModelId="gpt-test"
       />,
@@ -685,7 +686,7 @@ describe("VerifyCliSupportDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: buildCheckInConfig(),
         }}
         initialModelId="gpt-test"
       />,
@@ -741,7 +742,7 @@ describe("VerifyCliSupportDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: buildCheckInConfig(),
         }}
         initialModelId="gpt-test"
       />,
@@ -837,7 +838,7 @@ describe("VerifyCliSupportDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: buildCheckInConfig(),
         }}
         initialModelId="gpt-test"
       />,
@@ -903,7 +904,7 @@ describe("VerifyCliSupportDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: buildCheckInConfig(),
         }}
         initialModelId=""
       />,
@@ -969,7 +970,7 @@ describe("VerifyCliSupportDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: buildCheckInConfig(),
         }}
         initialModelId=""
       />,
@@ -1036,7 +1037,7 @@ describe("VerifyCliSupportDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: buildCheckInConfig(),
         }}
         initialModelId="gpt-explicit"
       />,
@@ -1111,7 +1112,7 @@ describe("VerifyCliSupportDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: buildCheckInConfig(),
         }}
         initialModelId="gpt-test"
       />,
@@ -1155,7 +1156,7 @@ describe("VerifyCliSupportDialog", () => {
       token: "t",
       userId: "1",
       authType: "access_token" as any,
-      checkIn: { enableDetection: false } as any,
+      checkIn: buildCheckInConfig(),
       tagIds: [],
     }
     const serviceCredentialRuntimeKey = buildServiceCredentialRuntimeKey(
@@ -1246,7 +1247,7 @@ describe("VerifyCliSupportDialog", () => {
       token: "t",
       userId: "1",
       authType: "access_token" as any,
-      checkIn: { enableDetection: false } as any,
+      checkIn: buildCheckInConfig(),
       tagIds: [],
     }
     const serviceCredentialRuntimeKey = buildServiceCredentialRuntimeKey(
@@ -1321,7 +1322,7 @@ describe("VerifyCliSupportDialog", () => {
       token: "t",
       userId: "1",
       authType: "access_token" as any,
-      checkIn: { enableDetection: false } as any,
+      checkIn: buildCheckInConfig(),
       tagIds: [],
     }
     const emptyServiceCredentialRuntimeKey = buildServiceCredentialRuntimeKey(
@@ -1437,7 +1438,7 @@ describe("VerifyCliSupportDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: buildCheckInConfig(),
         }}
         initialModelId="gpt-test"
       />,
@@ -1615,7 +1616,7 @@ describe("VerifyCliSupportDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: buildCheckInConfig(),
         }}
         initialModelId="gpt-test"
       />,
@@ -1656,7 +1657,7 @@ describe("VerifyCliSupportDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: buildCheckInConfig(),
         }}
         initialModelId="gpt-test"
       />,
@@ -1710,7 +1711,7 @@ describe("VerifyCliSupportDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: buildCheckInConfig(),
         }}
         initialModelId="gpt-test"
       />,
@@ -1780,7 +1781,7 @@ describe("VerifyCliSupportDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: buildCheckInConfig(),
         }}
         initialModelId="gpt-test"
       />,
@@ -1852,7 +1853,7 @@ describe("VerifyCliSupportDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: buildCheckInConfig(),
         }}
         initialModelId="gpt-test"
       />,
@@ -2167,7 +2168,7 @@ describe("VerifyCliSupportDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: buildCheckInConfig(),
         }}
         initialModelId="gpt-test"
       />,

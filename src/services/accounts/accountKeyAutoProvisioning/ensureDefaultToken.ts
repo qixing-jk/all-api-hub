@@ -56,7 +56,9 @@ export async function ensureDefaultApiTokenForAccount(params: {
   ) {
     throw new DefaultTokenLifecyclePolicyBlockedError({
       reason: result.reason,
-      message: t("messages:aihubmix.createRequiresOneTimeKeyDialog"),
+      message: t(
+        "messages:tokenProvisioning.createRequiresOneTimeSecretHandling",
+      ),
     })
   }
 

@@ -25,6 +25,7 @@ import {
   TOKEN_PROVISIONING_WORKFLOWS,
 } from "~/services/apiAdapters/contracts/tokenProvisioning"
 import { AuthTypeEnum, type ApiToken, type DisplaySiteData } from "~/types"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 
 const {
@@ -111,7 +112,7 @@ const buildDisplayAccount = (
     token: "access-token",
     userId: "7",
     authType: AuthTypeEnum.AccessToken,
-    checkIn: { enableDetection: false },
+    checkIn: buildCheckInConfig(),
     cookieAuthSessionCookie: "",
     ...overrides,
   }) as DisplaySiteData
@@ -693,7 +694,7 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
     ).resolves.toEqual({
       kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Blocked,
       code: ACCOUNT_POST_SAVE_WORKFLOW_ERROR_CODES.TokenSecretUnavailable,
-      message: "messages:aihubmix.createRequiresOneTimeKeyDialog",
+      message: "messages:tokenProvisioning.createRequiresOneTimeSecretHandling",
     })
     expect(fetchAccountTokensMock).toHaveBeenCalledTimes(1)
   })
@@ -829,7 +830,7 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
     ).resolves.toEqual({
       kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Blocked,
       code: ACCOUNT_POST_SAVE_WORKFLOW_ERROR_CODES.TokenCreationFailed,
-      message: "messages:sub2api.createRequiresAvailableGroup",
+      message: "messages:tokenProvisioning.createRequiresAvailableGroup",
     })
   })
 
@@ -891,7 +892,7 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
     ).resolves.toEqual({
       kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Blocked,
       code: ACCOUNT_POST_SAVE_WORKFLOW_ERROR_CODES.TokenCreationFailed,
-      message: "messages:sub2api.createRequiresAvailableGroup",
+      message: "messages:tokenProvisioning.createRequiresAvailableGroup",
     })
     expect(fetchUserGroupsMock).toHaveBeenCalledTimes(1)
     expect(createApiTokenMock).not.toHaveBeenCalled()

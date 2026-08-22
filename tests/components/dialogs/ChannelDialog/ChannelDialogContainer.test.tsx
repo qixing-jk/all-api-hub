@@ -11,6 +11,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { act, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const {
@@ -76,7 +77,7 @@ const buildDisplaySiteData = (): DisplaySiteData => ({
   token: "access-token",
   userId: "1",
   authType: AuthTypeEnum.AccessToken,
-  checkIn: { enableDetection: false },
+  checkIn: buildCheckInConfig(),
 })
 
 function OpenDefaultTokenQuickCreateDialog({

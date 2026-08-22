@@ -30,6 +30,7 @@ export const CHECKIN_RESULT_STATUSES = Object.values(
 export const AUTO_CHECKIN_SKIP_REASON = {
   ACCOUNT_DISABLED: "account_disabled",
   DETECTION_DISABLED: "detection_disabled",
+  METHOD_DISABLED: "method_disabled",
   AUTO_CHECKIN_DISABLED: "auto_checkin_disabled",
   ALREADY_CHECKED_TODAY: "already_checked_today",
   NO_PROVIDER: "no_provider",
@@ -52,6 +53,8 @@ export function getAutoCheckinSkipReasonTranslationKey(
       return "autoCheckin:skipReasons.account_disabled"
     case AUTO_CHECKIN_SKIP_REASON.DETECTION_DISABLED:
       return "autoCheckin:skipReasons.detection_disabled"
+    case AUTO_CHECKIN_SKIP_REASON.METHOD_DISABLED:
+      return "autoCheckin:skipReasons.method_disabled"
     case AUTO_CHECKIN_SKIP_REASON.AUTO_CHECKIN_DISABLED:
       return "autoCheckin:skipReasons.auto_checkin_disabled"
     case AUTO_CHECKIN_SKIP_REASON.ALREADY_CHECKED_TODAY:
@@ -77,6 +80,8 @@ export function translateAutoCheckinSkipReason(
       return t("autoCheckin:skipReasons.account_disabled")
     case AUTO_CHECKIN_SKIP_REASON.DETECTION_DISABLED:
       return t("autoCheckin:skipReasons.detection_disabled")
+    case AUTO_CHECKIN_SKIP_REASON.METHOD_DISABLED:
+      return t("autoCheckin:skipReasons.method_disabled")
     case AUTO_CHECKIN_SKIP_REASON.AUTO_CHECKIN_DISABLED:
       return t("autoCheckin:skipReasons.auto_checkin_disabled")
     case AUTO_CHECKIN_SKIP_REASON.ALREADY_CHECKED_TODAY:

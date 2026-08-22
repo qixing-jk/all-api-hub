@@ -1,6 +1,7 @@
 import { SITE_TYPES } from "~/constants/siteType"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
 export const createAccount = (overrides: Partial<any>) => ({
   id: "account",
@@ -17,7 +18,7 @@ export const createAccount = (overrides: Partial<any>) => ({
   token: "token",
   userId: "1",
   authType: AuthTypeEnum.AccessToken,
-  checkIn: { enableDetection: false },
+  checkIn: buildCheckInConfig(),
   ...overrides,
 })
 

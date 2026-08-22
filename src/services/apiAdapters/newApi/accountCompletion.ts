@@ -1,5 +1,5 @@
 import { AUTO_DETECT_FAILURE_REASONS } from "~/constants/autoDetect"
-import { SITE_TYPES } from "~/constants/siteType"
+import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND } from "~/services/accountSiteOnboarding/contracts"
 import { ApiError } from "~/services/apiTransport/errors"
@@ -30,11 +30,13 @@ function createModernAuthExchangeError(error: unknown): Error {
   return safeError
 }
 
-export const newApiAccountCompletion: AccountCompletionCapability = {
+export const createNewApiAccountCompletion = (
+  siteType: AccountSiteType,
+): AccountCompletionCapability => ({
   async complete(request, helpers) {
     const { url, requestedAuthType, detected, context } = request
     const modernDashboardAuth =
-      detected.siteType === SITE_TYPES.NEW_API &&
+      siteType === SITE_TYPES.NEW_API &&
       detected.transientAuth?.kind === NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND
         ? detected.transientAuth
         : undefined
@@ -65,7 +67,7 @@ export const newApiAccountCompletion: AccountCompletionCapability = {
     }
 
     const accountBootstrap = modernDashboardAuth
-      ? createNewApiAccountBootstrap(detected.siteType, {
+      ? createNewApiAccountBootstrap(siteType, {
           // New API rc.22 regenerates and overwrites the management PAT here,
           // so this dashboard-Bearer exchange must not replay via transports.
           // https://github.com/QuantumNous/new-api/blob/v1.0.0-rc.22/controller/user.go
@@ -74,7 +76,7 @@ export const newApiAccountCompletion: AccountCompletionCapability = {
             tempWindowFallback: { statusCodes: [], codes: [] },
           },
         })
-      : createNewApiAccountBootstrap(detected.siteType)
+      : createNewApiAccountBootstrap(siteType)
 
     const effectiveAuthType = modernDashboardAuth
       ? AuthTypeEnum.AccessToken
@@ -164,9 +166,19 @@ export const newApiAccountCompletion: AccountCompletionCapability = {
 
     const tokenData =
       tokenInfo && typeof tokenInfo === "object"
-        ? (tokenInfo as { username?: unknown; access_token?: unknown })
+        ? (tokenInfo as {
+            username?: unknown
+            access_token?: unknown
+            user?: { display_name?: unknown }
+          })
         : {}
-    const username = helpers.trimString(tokenData.username)
+    const username =
+      helpers.trimString(tokenData.username) ||
+      // ModelFlare leaves username empty and exposes the account label as
+      // display_name in /api/user/self: https://modelflare.dev/
+      (siteType === SITE_TYPES.MODELFLARE
+        ? helpers.trimString(tokenData.user?.display_name)
+        : "")
     const accessToken = helpers.trimString(tokenData.access_token)
 
     if (effectiveAuthType === AuthTypeEnum.AccessToken && !accessToken) {
@@ -193,9 +205,9 @@ export const newApiAccountCompletion: AccountCompletionCapability = {
         UI_CONSTANTS.EXCHANGE_RATE.DEFAULT,
       authType: effectiveAuthType,
       checkIn: helpers.createInitialCheckInConfig({
-        enableDetection: checkSupport ?? false,
-        autoCheckInEnabled: true,
+        supported: checkSupport ?? false,
+        automaticExecutionEnabled: true,
       }),
     }
   },
-}
+})

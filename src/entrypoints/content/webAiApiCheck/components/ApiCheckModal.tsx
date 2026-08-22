@@ -103,12 +103,15 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
                 {t("webAiApiCheck:modal.privacyHint")}
               </div>
             </div>
+            {/* Focus-opened react-tooltip can consume the first dismiss click in Edge's content ShadowRoot. */}
             <IconButton
+              data-testid={WEB_AI_API_CHECK_TEST_IDS.closeButton}
               aria-label={t("common:actions.close")}
               variant="ghost"
               size="sm"
               onClick={actions.close}
               disabled={!view.canClose}
+              disableAutoTooltip
             >
               <X className="h-4 w-4" />
             </IconButton>

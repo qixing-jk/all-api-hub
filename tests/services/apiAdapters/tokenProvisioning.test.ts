@@ -10,10 +10,7 @@ import {
   TOKEN_PROVISIONING_WORKFLOWS,
 } from "~/services/apiAdapters/contracts/tokenProvisioning"
 import { createNewApiTokenProvisioning } from "~/services/apiAdapters/newApi/tokenProvisioning"
-import {
-  normalizeTokenProvisioningGroupNames,
-  sub2ApiTokenProvisioning,
-} from "~/services/apiAdapters/sub2api/tokenProvisioning"
+import { sub2ApiTokenProvisioning } from "~/services/apiAdapters/sub2api/tokenProvisioning"
 import { voApiV2TokenProvisioning } from "~/services/apiAdapters/voapiV2/tokenProvisioning"
 import type { ApiToken } from "~/types"
 
@@ -90,6 +87,7 @@ describe("apiAdapter tokenProvisioning", () => {
         oneTimeSecret: false,
       })
     tokenProvisioningMock.isInventoryTokenUsable.mockReturnValueOnce(true)
+    expect(provisioning).toBe(tokenProvisioningMock)
     expect(
       provisioning.resolveDefaultTokenCreation({
         workflow: TOKEN_PROVISIONING_WORKFLOWS.BackgroundAutoProvision,
@@ -143,83 +141,6 @@ describe("apiAdapter tokenProvisioning", () => {
     expect(tokenProvisioningMock.isInventoryTokenUsable).toHaveBeenCalledWith({
       workflow: TOKEN_PROVISIONING_WORKFLOWS.SharedEnsure,
       token: maskedToken,
-    })
-  })
-
-  it("normalizes token provisioning group names", () => {
-    expect(
-      normalizeTokenProvisioningGroupNames({
-        " default ": { desc: "Default", ratio: 1 },
-        default: { desc: "Duplicate", ratio: 1 },
-        "": { desc: "Blank", ratio: 1 },
-        " vip ": { desc: "VIP", ratio: 2 },
-        "   ": { desc: "Whitespace", ratio: 1 },
-      }),
-    ).toEqual(["default", "vip"])
-  })
-
-  it("keeps implicit Sub2API creation blocked for shared ensure", () => {
-    expect(
-      sub2ApiTokenProvisioning.resolveDefaultTokenCreation({
-        workflow: TOKEN_PROVISIONING_WORKFLOWS.SharedEnsure,
-        defaultTokenData,
-      }),
-    ).toEqual({
-      kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Blocked,
-      reason: TOKEN_PROVISIONING_BLOCK_REASONS.GroupRequired,
-    })
-
-    expect(
-      sub2ApiTokenProvisioning.resolveDefaultTokenCreation({
-        workflow: TOKEN_PROVISIONING_WORKFLOWS.QuickCreateSelection,
-        defaultTokenData,
-      }),
-    ).toEqual({
-      kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.NeedsUserGroups,
-    })
-
-    expect(
-      sub2ApiTokenProvisioning.resolveDefaultTokenCreation({
-        workflow: TOKEN_PROVISIONING_WORKFLOWS.PostSaveAutomation,
-        defaultTokenData,
-        userGroups: {
-          " default ": { desc: "Default", ratio: 1 },
-        },
-      }),
-    ).toEqual({
-      kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Create,
-      tokenData: { ...defaultTokenData, group: "default" },
-      oneTimeSecret: false,
-      recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.InventoryRefetch,
-    })
-
-    expect(
-      sub2ApiTokenProvisioning.resolveDefaultTokenCreation({
-        workflow: TOKEN_PROVISIONING_WORKFLOWS.QuickCreateSelection,
-        defaultTokenData,
-        userGroups: {
-          " vip ": { desc: "VIP", ratio: 2 },
-          default: { desc: "Default", ratio: 1 },
-          " vip": { desc: "Duplicate", ratio: 2 },
-        },
-      }),
-    ).toEqual({
-      kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.SelectionRequired,
-      allowedGroups: ["vip", "default"],
-      reason: TOKEN_PROVISIONING_BLOCK_REASONS.GroupSelectionRequired,
-    })
-
-    expect(
-      sub2ApiTokenProvisioning.resolveDefaultTokenCreation({
-        workflow: TOKEN_PROVISIONING_WORKFLOWS.PostSaveAutomation,
-        defaultTokenData,
-        userGroups: {
-          " ": { desc: "Blank", ratio: 1 },
-        },
-      }),
-    ).toEqual({
-      kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Blocked,
-      reason: TOKEN_PROVISIONING_BLOCK_REASONS.AvailableGroupRequired,
     })
   })
 

@@ -7,20 +7,18 @@ import {
   validateAndUpdateAccount,
 } from "~/services/accounts/accountOperations"
 import { accountStorage } from "~/services/accounts/accountStorage"
-import { AuthTypeEnum, SiteHealthStatus, type CheckInConfig } from "~/types"
+import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import { server } from "~~/tests/msw/server"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
-const CHECK_IN_DISABLED: CheckInConfig = {
-  enableDetection: false,
-  autoCheckInEnabled: true,
-  siteStatus: { isCheckedInToday: false },
+const CHECK_IN_DISABLED = buildCheckInConfig({
   customCheckIn: {
     url: "",
     redeemUrl: "",
     openRedeemWithCheckIn: true,
     isCheckedInToday: false,
   },
-}
+})
 
 describe("accountOperations manual quota", () => {
   beforeEach(async () => {

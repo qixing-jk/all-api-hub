@@ -577,7 +577,7 @@ test("opens pending external check-ins from the popup and marks them checked in"
         access_token: "pending-external-token",
       },
       checkIn: {
-        enableDetection: false,
+        automaticExecutionEnabled: false,
         customCheckIn: {
           url: "https://benefits.example.com/pending/checkin",
           redeemUrl: "https://benefits.example.com/pending/redeem",
@@ -596,7 +596,7 @@ test("opens pending external check-ins from the popup and marks them checked in"
         access_token: "done-external-token",
       },
       checkIn: {
-        enableDetection: false,
+        automaticExecutionEnabled: false,
         customCheckIn: {
           url: "https://benefits.example.com/done/checkin",
           redeemUrl: "https://benefits.example.com/done/redeem",
@@ -664,7 +664,7 @@ test("ctrl-clicking popup external check-ins opens already checked accounts too"
         access_token: "pending-external-token",
       },
       checkIn: {
-        enableDetection: false,
+        automaticExecutionEnabled: false,
         customCheckIn: {
           url: "https://benefits.example.com/ctrl-pending/checkin",
           redeemUrl: "https://benefits.example.com/ctrl-pending/redeem",
@@ -683,7 +683,7 @@ test("ctrl-clicking popup external check-ins opens already checked accounts too"
         access_token: "done-external-token",
       },
       checkIn: {
-        enableDetection: false,
+        automaticExecutionEnabled: false,
         customCheckIn: {
           url: "https://benefits.example.com/ctrl-done/checkin",
           redeemUrl: "https://benefits.example.com/ctrl-done/redeem",
@@ -752,7 +752,7 @@ test("shift-clicking popup external check-ins groups opened pages into one brows
         access_token: "shift-pending-external-token",
       },
       checkIn: {
-        enableDetection: false,
+        automaticExecutionEnabled: false,
         customCheckIn: {
           url: "https://benefits.example.com/shift-pending/checkin",
           redeemUrl: "https://benefits.example.com/shift-pending/redeem",
@@ -771,7 +771,7 @@ test("shift-clicking popup external check-ins groups opened pages into one brows
         access_token: "shift-done-external-token",
       },
       checkIn: {
-        enableDetection: false,
+        automaticExecutionEnabled: false,
         customCheckIn: {
           url: "https://benefits.example.com/shift-done/checkin",
           redeemUrl: "https://benefits.example.com/shift-done/redeem",

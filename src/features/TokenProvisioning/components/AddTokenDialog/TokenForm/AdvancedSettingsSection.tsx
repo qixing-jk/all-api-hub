@@ -1,11 +1,10 @@
 import { useTranslation } from "react-i18next"
 
+import { TokenGroupSelectionField } from "~/features/TokenProvisioning/components/TokenGroupSelectionField"
 import type { UserGroupInfo } from "~/services/accountTokens/tokenProvisioningModel"
-import { isNotEmptyArray } from "~/utils"
 
 import type { FormData } from "../hooks/useTokenForm"
 import { FormSection } from "./FormSection"
-import { GroupSelection } from "./GroupSelection"
 import { IpLimitsInput } from "./IpLimitsInput"
 import { ModelLimits } from "./ModelLimits"
 
@@ -17,6 +16,10 @@ interface AdvancedSettingsSectionProps {
   allowedGroups?: string[]
   availableModels: string[]
   showGroupSelection: boolean
+  showModelLimits: boolean
+  isModelsLoading: boolean
+  modelLoadErrorMessage: string | null
+  onRequestModels: () => Promise<boolean>
   usesSubnetLimits?: boolean
   handleInputChange: (
     field: keyof FormData,
@@ -35,6 +38,10 @@ interface AdvancedSettingsSectionProps {
  * @param props.allowedGroups Optional allow-list restricting selectable groups.
  * @param props.availableModels List of model IDs that can be targeted.
  * @param props.showGroupSelection Whether group selection is supported.
+ * @param props.showModelLimits Whether model restrictions are supported or already active.
+ * @param props.isModelsLoading Whether the optional model list is loading.
+ * @param props.modelLoadErrorMessage Scoped model-list failure guidance.
+ * @param props.onRequestModels Requests the optional model list on demand.
  * @param props.usesSubnetLimits Whether the selected account uses subnet-limit semantics.
  * @param props.handleInputChange Factory for text input change handlers.
  * @param props.handleSelectChange Factory for select change handlers.
@@ -49,6 +56,10 @@ export function AdvancedSettingsSection({
   allowedGroups,
   availableModels,
   showGroupSelection,
+  showModelLimits,
+  isModelsLoading,
+  modelLoadErrorMessage,
+  onRequestModels,
   usesSubnetLimits = false,
   handleInputChange,
   handleSelectChange,
@@ -59,21 +70,24 @@ export function AdvancedSettingsSection({
   return (
     <FormSection title={t("dialog.advancedSettings")}>
       {showGroupSelection ? (
-        <GroupSelection
+        <TokenGroupSelectionField
           group={formData.group}
-          handleSelectChange={handleSelectChange("group")}
+          onChange={handleSelectChange("group")}
           groups={groups}
           allowedGroups={allowedGroups}
           error={errors.group}
         />
       ) : null}
-      {isNotEmptyArray(availableModels) && (
+      {showModelLimits && (
         <ModelLimits
           modelLimitsEnabled={formData.modelLimitsEnabled}
           modelLimits={formData.modelLimits}
           availableModels={availableModels}
+          isLoading={isModelsLoading}
+          loadErrorMessage={modelLoadErrorMessage}
           setFormData={setFormData}
           handleModelLimitsChange={handleModelLimitsChange}
+          onRequestModels={onRequestModels}
         />
       )}
       <IpLimitsInput

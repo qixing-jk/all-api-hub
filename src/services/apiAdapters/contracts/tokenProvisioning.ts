@@ -45,9 +45,8 @@ export type TokenCreationSecretRecovery =
 
 export const TOKEN_PROVISIONING_ERRORS = {
   CreateTokenFailed: "create_token_failed",
-  Sub2ApiGroupInventoryNotImplemented:
-    "sub2api_group_inventory_not_implemented",
-  Sub2ApiQuickCreateNotApplicable: "sub2api_quick_create_not_applicable",
+  // Keep the diagnostic value stable while group resolution is shared by providers.
+  GroupInventoryNotImplemented: "sub2api_group_inventory_not_implemented",
   TokenNotFound: "token_not_found",
 } as const
 

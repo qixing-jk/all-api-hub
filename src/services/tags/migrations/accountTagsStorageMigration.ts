@@ -1,6 +1,10 @@
 import { type Storage } from "@plasmohq/storage"
 
 import {
+  canonicalizeAccountStorageConfig,
+  normalizeAccountStorageConfigForWrite,
+} from "~/services/accounts/accountDefaults"
+import {
   ACCOUNT_STORAGE_KEYS,
   STORAGE_LOCKS,
   TAG_STORAGE_KEYS,
@@ -38,15 +42,8 @@ export async function ensureAccountTagsStorageMigrated(
   const rawAccountsConfig = (await storage.get(
     ACCOUNT_STORAGE_KEYS.ACCOUNTS,
   )) as AccountStorageConfig | undefined
-  const accountsConfig: AccountStorageConfig = {
-    accounts: rawAccountsConfig?.accounts ?? [],
-    bookmarks: Array.isArray(rawAccountsConfig?.bookmarks)
-      ? rawAccountsConfig.bookmarks
-      : [],
-    pinnedAccountIds: rawAccountsConfig?.pinnedAccountIds ?? [],
-    orderedAccountIds: rawAccountsConfig?.orderedAccountIds ?? [],
-    last_updated: rawAccountsConfig?.last_updated ?? Date.now(),
-  }
+  const { config: accountsConfig } =
+    canonicalizeAccountStorageConfig(rawAccountsConfig)
 
   if (!needsAccountTagsDataMigration(accountsConfig.accounts)) {
     return { migratedAccountCount: 0, createdTagCount: 0 }
@@ -58,15 +55,9 @@ export async function ensureAccountTagsStorageMigrated(
       const lockedRawAccountsConfig = (await storage.get(
         ACCOUNT_STORAGE_KEYS.ACCOUNTS,
       )) as AccountStorageConfig | undefined
-      const lockedAccountsConfig: AccountStorageConfig = {
-        accounts: lockedRawAccountsConfig?.accounts ?? [],
-        bookmarks: Array.isArray(lockedRawAccountsConfig?.bookmarks)
-          ? lockedRawAccountsConfig.bookmarks
-          : [],
-        pinnedAccountIds: lockedRawAccountsConfig?.pinnedAccountIds ?? [],
-        orderedAccountIds: lockedRawAccountsConfig?.orderedAccountIds ?? [],
-        last_updated: lockedRawAccountsConfig?.last_updated ?? Date.now(),
-      }
+      const { config: lockedAccountsConfig } = canonicalizeAccountStorageConfig(
+        lockedRawAccountsConfig,
+      )
 
       if (!needsAccountTagsDataMigration(lockedAccountsConfig.accounts)) {
         return { migratedAccountCount: 0, createdTagCount: 0 }
@@ -82,11 +73,10 @@ export async function ensureAccountTagsStorageMigrated(
         tagStore,
       })
 
-      const nextAccountsConfig: AccountStorageConfig = {
+      const nextAccountsConfig = normalizeAccountStorageConfigForWrite({
         ...lockedAccountsConfig,
         accounts: migration.accounts,
-        last_updated: Date.now(),
-      }
+      })
 
       await Promise.all([
         storage.set(ACCOUNT_STORAGE_KEYS.ACCOUNTS, nextAccountsConfig),

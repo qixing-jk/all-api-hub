@@ -63,6 +63,7 @@ import {
   InvalidTokenPayloadError,
   resolveDisplayAccountRuntimeKeySecret,
 } from "~/services/accounts/utils/apiServiceRequest"
+import { isAutomaticCheckInConfiguredForAccount } from "~/services/checkin/autoCheckin/inspection"
 import { sendAutoCheckinMessage } from "~/services/checkin/autoCheckin/messaging"
 import {
   getManagedSiteChannelExactMatch,
@@ -320,10 +321,11 @@ export default function AccountActionButtons({
     ? t("actions.copyKey")
     : t("actions.keyList")
   const canCopyInviteLink = canFetchDisplayAccountInviteLink(site)
-  const isQuickCheckinEligible =
-    !isAccountDisabled &&
-    site.checkIn?.enableDetection === true &&
-    site.checkIn?.autoCheckInEnabled !== false
+  const isQuickCheckinEligible = isAutomaticCheckInConfiguredForAccount({
+    config: site.checkIn,
+    siteType: site.siteType,
+    accountDisabled: site.disabled,
+  })
   const canLocateManagedSiteChannel = hasValidManagedSiteConfig(preferences)
   const isManagedSiteChannelLookupSupported = preferences
     ? supportsManagedSiteBaseUrlChannelLookup(getManagedSiteType(preferences))

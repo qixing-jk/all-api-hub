@@ -5,6 +5,7 @@ import { fetchAccountData as fetchDoneHubAccountData } from "~/services/apiServi
 import { fetchAccountData as fetchVeloeraAccountData } from "~/services/apiService/newApiFamily/variants/veloera"
 import { fetchAccountData as fetchWongAccountData } from "~/services/apiService/newApiFamily/variants/wong"
 import { AuthTypeEnum } from "~/types"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
 const {
   mockFetchAccountQuota,
@@ -23,7 +24,6 @@ vi.mock("~/services/apiService/newApiFamily/default/accountData", () => ({
   fetchCheckInStatus: vi.fn(),
   fetchTodayIncome: mockFetchTodayIncome,
   fetchTodayUsage: mockFetchTodayUsage,
-  resolveCheckInSiteStatus: vi.fn((checkIn) => checkIn.siteStatus ?? {}),
 }))
 
 vi.mock("~/services/apiService/newApiFamily/default/accountDataUtils", () => ({
@@ -38,7 +38,7 @@ const request = {
     accessToken: "access-token",
     userId: "user-1",
   },
-  checkIn: { enableDetection: false },
+  checkIn: buildCheckInConfig(),
 }
 
 const timestampRange = { start: 111, end: 222 }

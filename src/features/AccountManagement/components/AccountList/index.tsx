@@ -598,6 +598,8 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
           return t("filter.checkIn.not-checked-in")
         case "outdated":
           return t("filter.checkIn.outdated")
+        case "status-unavailable":
+          return t("filter.checkIn.status-unavailable")
         case "unsupported":
         default:
           return t("filter.checkIn.unsupported")

@@ -3,9 +3,12 @@ import { describe, expect, it } from "vitest"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import {
   getAccountSiteApiRouter,
+  isAccountSiteType as isLegacyAccountSiteType,
+  isManagedSiteType as isLegacyManagedSiteType,
   ACCOUNT_SITE_TYPE_VALUES as LEGACY_ACCOUNT_SITE_TYPE_VALUES,
   ACCOUNT_SITE_TYPES as LEGACY_ACCOUNT_SITE_TYPES,
   MANAGED_SITE_TYPES as LEGACY_MANAGED_SITE_TYPES,
+  SITE_TYPES as LEGACY_SITE_TYPES,
 } from "~/constants/siteType"
 import { getAccountSiteProductProfile } from "~/services/accounts/accountSiteProfile"
 import {
@@ -65,6 +68,7 @@ type ExpectExact<T, Expected> = [T] extends [Expected]
 type ExpectedAccountSiteType =
   | typeof SITE_TYPES.ONE_API
   | typeof SITE_TYPES.NEW_API
+  | typeof SITE_TYPES.MODELFLARE
   | typeof SITE_TYPES.ANYROUTER
   | typeof SITE_TYPES.VELOERA
   | typeof SITE_TYPES.ONE_HUB
@@ -158,18 +162,16 @@ describe("account site definition registry", () => {
     expect(MANAGED_SITE_TYPES).toEqual(LEGACY_MANAGED_SITE_TYPES)
   })
 
-  it("keeps the legacy constants facade aligned with definitions", async () => {
-    const legacy = await import("~/constants/siteType")
-
-    expect(legacy.SITE_TYPES).toBe(SITE_TYPES)
-    expect(legacy.ACCOUNT_SITE_TYPES).toEqual(getAccountSiteTypeValues())
-    expect(legacy.ACCOUNT_SITE_TYPE_VALUES).toEqual(getAccountSiteTypeValues())
-    expect(legacy.MANAGED_SITE_TYPES).toEqual(getManagedSiteTypeValues())
-    expect(legacy.isAccountSiteType(SITE_TYPES.AIHUBMIX)).toBe(true)
-    expect(legacy.isAccountSiteType(SITE_TYPES.SHAREDCHAT)).toBe(true)
-    expect(legacy.isAccountSiteType(SITE_TYPES.OCTOPUS)).toBe(false)
-    expect(legacy.isManagedSiteType(SITE_TYPES.OCTOPUS)).toBe(true)
-    expect(legacy.isManagedSiteType(SITE_TYPES.SUB2API)).toBe(true)
+  it("keeps the legacy constants facade aligned with definitions", () => {
+    expect(LEGACY_SITE_TYPES).toBe(SITE_TYPES)
+    expect(LEGACY_ACCOUNT_SITE_TYPES).toEqual(getAccountSiteTypeValues())
+    expect(LEGACY_ACCOUNT_SITE_TYPE_VALUES).toEqual(getAccountSiteTypeValues())
+    expect(LEGACY_MANAGED_SITE_TYPES).toEqual(getManagedSiteTypeValues())
+    expect(isLegacyAccountSiteType(SITE_TYPES.AIHUBMIX)).toBe(true)
+    expect(isLegacyAccountSiteType(SITE_TYPES.SHAREDCHAT)).toBe(true)
+    expect(isLegacyAccountSiteType(SITE_TYPES.OCTOPUS)).toBe(false)
+    expect(isLegacyManagedSiteType(SITE_TYPES.OCTOPUS)).toBe(true)
+    expect(isLegacyManagedSiteType(SITE_TYPES.SUB2API)).toBe(true)
   })
 
   it("keeps the public route facade aligned with definition route metadata", () => {
@@ -225,6 +227,7 @@ describe("account site definition registry", () => {
     expect(getAccountSiteTypeValues()).toEqual([
       SITE_TYPES.ONE_API,
       SITE_TYPES.NEW_API,
+      SITE_TYPES.MODELFLARE,
       SITE_TYPES.ANYROUTER,
       SITE_TYPES.VELOERA,
       SITE_TYPES.ONE_HUB,
@@ -282,6 +285,15 @@ describe("account site definition registry", () => {
         ACCOUNT_SITE_DEFINITION_SCOPES.Managed,
       )
     }
+  })
+
+  it("registers ModelFlare as an account-only New API family site", () => {
+    expect(getAccountSiteDefinition(SITE_TYPES.MODELFLARE)).toMatchObject({
+      siteType: SITE_TYPES.MODELFLARE,
+      scopes: [ACCOUNT_SITE_DEFINITION_SCOPES.Account],
+      adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
+    })
+    expect(MANAGED_SITE_TYPES).not.toContain(SITE_TYPES.MODELFLARE)
   })
 
   it("keeps every managed-resource mode explicit in the static definitions", () => {

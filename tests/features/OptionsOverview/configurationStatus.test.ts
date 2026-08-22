@@ -9,21 +9,38 @@ import {
   resolveUsageAnalyticsConfigurationStatus,
   summarizeConfigurationStatuses,
 } from "~/features/OptionsOverview/configurationStatus"
+import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import type { SiteAccount } from "~/types"
 
 const readyCheckinAccount = {
   disabled: false,
-  checkIn: {
-    enableDetection: true,
-  },
+  site_type: SITE_TYPES.NEW_API,
+  checkIn: createCompatibilityCheckInConfig({
+    siteType: SITE_TYPES.NEW_API,
+    supported: true,
+    automaticExecutionEnabled: true,
+  }),
 } as SiteAccount
 
 const disabledCheckinAccount = {
   disabled: true,
-  checkIn: {
-    enableDetection: true,
-  },
+  site_type: SITE_TYPES.NEW_API,
+  checkIn: createCompatibilityCheckInConfig({
+    siteType: SITE_TYPES.NEW_API,
+    supported: true,
+    automaticExecutionEnabled: true,
+  }),
+} as SiteAccount
+
+const accountWithoutSelection = {
+  disabled: false,
+  site_type: SITE_TYPES.NEW_API,
+  checkIn: createCompatibilityCheckInConfig({
+    siteType: SITE_TYPES.NEW_API,
+    supported: false,
+    automaticExecutionEnabled: true,
+  }),
 } as SiteAccount
 
 describe("configuration status helpers", () => {
@@ -52,6 +69,12 @@ describe("configuration status helpers", () => {
     expect(
       resolveAutoCheckinConfigurationStatus({
         accounts: [disabledCheckinAccount],
+        preferences: DEFAULT_PREFERENCES,
+      }),
+    ).toBe("needs_setup")
+    expect(
+      resolveAutoCheckinConfigurationStatus({
+        accounts: [accountWithoutSelection],
         preferences: DEFAULT_PREFERENCES,
       }),
     ).toBe("needs_setup")

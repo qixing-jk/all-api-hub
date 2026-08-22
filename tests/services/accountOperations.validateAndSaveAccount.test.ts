@@ -13,7 +13,7 @@ import {
   DEFAULT_PREFERENCES,
   userPreferences,
 } from "~/services/preferences/userPreferences"
-import { AuthTypeEnum, SiteHealthStatus, type CheckInConfig } from "~/types"
+import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import {
   ACCOUNT_TODAY_METRIC_REASONS,
   ACCOUNT_TODAY_METRIC_STATUSES,
@@ -22,6 +22,7 @@ import {
   buildCompleteTodayStatsAvailability,
   buildTodayStatsAvailabilityReplacementCases,
 } from "~~/tests/test-utils/accountTodayStats"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
 const {
   fetchAccountDataMock,
@@ -88,17 +89,14 @@ vi.mock(
   }),
 )
 
-const CHECK_IN_DISABLED: CheckInConfig = {
-  enableDetection: false,
-  autoCheckInEnabled: true,
-  siteStatus: { isCheckedInToday: false },
+const CHECK_IN_DISABLED = buildCheckInConfig({
   customCheckIn: {
     url: "",
     redeemUrl: "",
     openRedeemWithCheckIn: true,
     isCheckedInToday: false,
   },
-}
+})
 
 const flushMicrotasks = async () => {
   await Promise.resolve()
@@ -1796,6 +1794,7 @@ describe("accountOperations validateAndSaveAccount", () => {
     })
     expect(fetchAccountDataMock).toHaveBeenCalledWith({
       baseUrl: "https://cookie.example.com/console",
+      siteType: SITE_TYPES.UNKNOWN,
       checkIn: CHECK_IN_DISABLED,
       accountId: undefined,
       exchangeRate: 7,
@@ -2285,7 +2284,7 @@ describe("accountOperations validateAndSaveAccount", () => {
 
   it("returns a stable update failure when deferred account persistence fails", async () => {
     const updateAccountSpy = vi
-      .spyOn(accountStorage, "updateAccount")
+      .spyOn(accountStorage, "updateAccountWithCheckInDraft")
       .mockResolvedValueOnce(false)
 
     const result = await validateAndUpdateAccount(

@@ -18,7 +18,7 @@ import {
   type ManagedSiteChannelMatchResult,
   type ManagedSiteChannelModelsAssessment,
 } from "~/services/managedSites/channelMatch"
-import { normalizeOpenAiFamilyBaseUrl } from "~/services/verification/webAiApiCheck/extractCredentials"
+import { normalizeOpenAiFamilyBaseUrl } from "~/services/verification/webAiApiCheck/credentialExtraction/baseUrlCandidates"
 import type {
   ManagedSiteChannel,
   ManagedSiteChannelListData,

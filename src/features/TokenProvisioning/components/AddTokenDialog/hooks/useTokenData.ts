@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
@@ -9,6 +9,7 @@ import {
 } from "~/services/accounts/keyProductCapabilities"
 import {
   createDisplayAccountApiContext,
+  fetchDisplayAccountAvailableModels,
   requireDisplayAccountKeyManagement,
 } from "~/services/accounts/utils/apiServiceRequest"
 import type { UserGroupInfo } from "~/services/accountTokens/tokenProvisioningModel"
@@ -26,31 +27,54 @@ const logger = createLogger("TokenDataHook")
 
 const EMPTY_USER_GROUPS: Record<string, UserGroupInfo> = {}
 
+export const TOKEN_MODEL_DISCOVERY_TIMEOUT_MS = 10_000
+
 /**
- * Loads available models and user groups for the selected account when dialog opens.
+ * Loads required user groups when the dialog opens and optional models on demand.
  * @param isOpen Whether dialog is visible.
  * @param currentAccount Currently selected account info.
  * @param setFormData Setter to update form state with defaults (e.g., group).
- * @returns Loading flag, fetched models/groups, and reset helper.
+ * @param allowedGroups Optional create-flow group allow-list.
+ * @param preserveExistingModelLimitsOnFailure Whether an edit flow should keep existing restrictions when optional discovery fails.
+ * @returns Required group state plus isolated, on-demand model discovery state.
  */
 export function useTokenData(
   isOpen: boolean,
   currentAccount: DisplaySiteData | undefined,
   setFormData: React.Dispatch<React.SetStateAction<FormData>>,
   allowedGroups?: string[],
+  preserveExistingModelLimitsOnFailure = false,
 ) {
   const { t } = useTranslation("keyManagement")
   const [isLoading, setIsLoading] = useState(false)
   const [availableModels, setAvailableModels] = useState<string[]>([])
   const [groups, setGroups] = useState<Record<string, UserGroupInfo>>({})
+  const [isModelsLoading, setIsModelsLoading] = useState(false)
+  const [modelsLoaded, setModelsLoaded] = useState(false)
+  const [modelLoadErrorMessage, setModelLoadErrorMessage] = useState<
+    string | null
+  >(null)
+  const modelLoadGenerationRef = useRef(0)
+  const activeModelLoadRef = useRef<{
+    accountId: string
+    controller: AbortController
+    promise: Promise<boolean>
+  } | null>(null)
+  const canFetchModels = currentAccount
+    ? canFetchAccountTokenModels(currentAccount)
+    : false
+
+  const cancelActiveModelLoad = useCallback(() => {
+    modelLoadGenerationRef.current += 1
+    activeModelLoadRef.current?.controller.abort()
+    activeModelLoadRef.current = null
+  }, [])
 
   const loadInitialData = useCallback(async () => {
     if (!currentAccount) return
 
-    const canFetchModels = canFetchAccountTokenModels(currentAccount)
     const canFetchGroups = canFetchAccountTokenGroups(currentAccount)
-    if (!canFetchModels && !canFetchGroups) {
-      setAvailableModels((prev) => (prev.length > 0 ? [] : prev))
+    if (!canFetchGroups) {
       setGroups((prev) =>
         Object.keys(prev).length > 0 ? EMPTY_USER_GROUPS : prev,
       )
@@ -67,16 +91,12 @@ export function useTokenData(
         keyManagement,
       )
 
-      const [models, groupsData] = await Promise.all([
-        canFetchModels ? capability.fetchAvailableModels(request) : [],
-        canFetchGroups && capability.userGroups
-          ? capability.userGroups.fetch(request)
-          : EMPTY_USER_GROUPS,
-      ])
+      const groupsData = capability.userGroups
+        ? await capability.userGroups.fetch(request)
+        : EMPTY_USER_GROUPS
 
       const resolvedGroupsData = groupsData ?? EMPTY_USER_GROUPS
 
-      setAvailableModels(models)
       setGroups(resolvedGroupsData)
 
       // Set default group (but keep existing selection when it's still valid).
@@ -149,6 +169,107 @@ export function useTokenData(
     }
   }, [allowedGroups, currentAccount, setFormData, t])
 
+  const loadAvailableModels = useCallback(async (): Promise<boolean> => {
+    if (!currentAccount || !canFetchModels) return false
+    if (modelsLoaded) return true
+
+    const activeLoad = activeModelLoadRef.current
+    if (activeLoad?.accountId === currentAccount.id) {
+      return await activeLoad.promise
+    }
+    if (activeLoad) cancelActiveModelLoad()
+
+    const generation = ++modelLoadGenerationRef.current
+    const controller = new AbortController()
+    setIsModelsLoading(true)
+    setModelLoadErrorMessage(null)
+
+    const promise = (async () => {
+      try {
+        const models = await fetchDisplayAccountAvailableModels(
+          currentAccount,
+          {
+            abortSignal: controller.signal,
+            requestTimeoutMs: TOKEN_MODEL_DISCOVERY_TIMEOUT_MS,
+          },
+        )
+
+        if (
+          !Array.isArray(models) ||
+          !models.every((model) => typeof model === "string")
+        ) {
+          throw new TypeError(t("dialog.loadDataFailed"))
+        }
+        if (models.length === 0) {
+          throw new Error(t("dialog.noAvailableModels"))
+        }
+
+        if (generation !== modelLoadGenerationRef.current) return false
+        setAvailableModels(models)
+        setModelsLoaded(true)
+        return true
+      } catch (error) {
+        if (generation !== modelLoadGenerationRef.current) return false
+
+        logger.warn("Failed to load optional model restrictions", error)
+        const upstreamReason = getErrorMessage(error).trim()
+        const reason = upstreamReason || t("dialog.loadDataFailed")
+        const message = t("dialog.modelLoadFailed", { reason })
+        setAvailableModels([])
+        setModelLoadErrorMessage(message)
+        if (!preserveExistingModelLimitsOnFailure) {
+          setFormData((prev) =>
+            prev.modelLimitsEnabled || prev.modelLimits.length > 0
+              ? {
+                  ...prev,
+                  modelLimitsEnabled: false,
+                  modelLimits: [],
+                }
+              : prev,
+          )
+        }
+        toast.error(message)
+        return false
+      } finally {
+        if (generation === modelLoadGenerationRef.current) {
+          setIsModelsLoading(false)
+        }
+      }
+    })()
+
+    activeModelLoadRef.current = {
+      accountId: currentAccount.id,
+      controller,
+      promise,
+    }
+
+    try {
+      return await promise
+    } finally {
+      if (activeModelLoadRef.current?.promise === promise) {
+        activeModelLoadRef.current = null
+      }
+    }
+  }, [
+    canFetchModels,
+    cancelActiveModelLoad,
+    currentAccount,
+    modelsLoaded,
+    preserveExistingModelLimitsOnFailure,
+    setFormData,
+    t,
+  ])
+
+  useEffect(() => {
+    cancelActiveModelLoad()
+    setAvailableModels([])
+    setIsModelsLoading(false)
+    setModelsLoaded(false)
+    setModelLoadErrorMessage(null)
+
+    return cancelActiveModelLoad
+  }, [cancelActiveModelLoad, currentAccount?.id])
+
   useEffect(() => {
     if (isOpen && currentAccount) {
       loadInitialData()
@@ -156,9 +277,23 @@ export function useTokenData(
   }, [isOpen, currentAccount, loadInitialData])
 
   const resetData = () => {
+    cancelActiveModelLoad()
     setAvailableModels([])
     setGroups({})
+    setIsModelsLoading(false)
+    setModelsLoaded(false)
+    setModelLoadErrorMessage(null)
   }
 
-  return { isLoading, availableModels, groups, resetData }
+  return {
+    isLoading,
+    availableModels,
+    groups,
+    canFetchModels,
+    isModelsLoading,
+    modelsLoaded,
+    modelLoadErrorMessage,
+    loadAvailableModels,
+    resetData,
+  }
 }

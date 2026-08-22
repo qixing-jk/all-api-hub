@@ -11,6 +11,7 @@ import {
   createSharedRealSiteAccountFixtureCache,
   resolveSharedRealSiteAccountFixture,
 } from "~~/e2e/utils/realSite/sharedAccountFixture"
+import { buildCheckInConfig } from "~~/tests/test-utils/factories"
 
 const mocks = vi.hoisted(() => ({
   readStoredAccounts: vi.fn(),
@@ -54,9 +55,7 @@ describe("shared real-site account fixture cache", () => {
     tagIds: [],
     notes: "",
     authType: AuthTypeEnum.AccessToken,
-    checkIn: {
-      enableDetection: false,
-    },
+    checkIn: buildCheckInConfig(),
   }
 
   const createdFixture: AccountFixture = {

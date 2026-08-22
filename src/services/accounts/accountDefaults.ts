@@ -1,8 +1,14 @@
+import { CHECK_IN_SELECTION_MODES } from "~/constants/checkIn"
 import { isAccountSiteType, SITE_TYPES } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { coerceAccountIdentity } from "~/services/accounts/accountIdentity"
 import { normalizeAccountTodayStatsAvailability } from "~/services/accounts/accountTodayStats"
+import {
+  CURRENT_CONFIG_VERSION,
+  migrateAccountsConfig,
+} from "~/services/accounts/migrations/accountDataMigration"
 import { normalizeAccountSiteUrlForStorage } from "~/services/accounts/utils/siteUrlNormalization"
+import { normalizeCheckInConfigV7 } from "~/services/checkin/autoCheckin/configCodec"
 import {
   ACCOUNT_USAGE_SUMMARY_SCOPES,
   AuthTypeEnum,
@@ -38,7 +44,9 @@ const DEFAULT_HEALTH_STATUS: HealthStatus = {
 }
 
 const DEFAULT_CHECK_IN_CONFIG: CheckInConfig = {
-  enableDetection: false,
+  automaticExecutionEnabled: true,
+  methodKnowledge: { methods: {} },
+  selection: { mode: CHECK_IN_SELECTION_MODES.Automatic },
 }
 
 // Placeholder values for required fields; real persisted data should override these.
@@ -332,29 +340,41 @@ function normalizeHealthStatus(raw: Partial<HealthStatus> | undefined) {
 }
 
 /**
- * Normalizes a `CheckInConfig` object using deterministic deep-merge semantics.
- *
- * Default behavior is backward-compatible:
- * - `enableDetection` defaults to false
- * - `autoCheckInEnabled` defaults to true unless explicitly set to false
- * - `customCheckIn.openRedeemWithCheckIn` defaults to true unless explicitly set to false
+ * Normalizes canonical check-in state and applies the independent custom
+ * URL flow's backward-compatible open policy.
  */
-function normalizeCheckInConfig(raw: DeepPartial<CheckInConfig> | undefined) {
-  const merged = deepOverride(DEFAULT_CHECK_IN_CONFIG, raw ?? undefined)
-
-  const customCheckIn = merged.customCheckIn
+function normalizeCheckInConfig(raw: unknown): CheckInConfig {
+  const normalized = normalizeCheckInConfigV7(raw)
+  const customCheckIn = normalized.customCheckIn
     ? {
-        ...merged.customCheckIn,
+        ...normalized.customCheckIn,
         openRedeemWithCheckIn:
-          merged.customCheckIn.openRedeemWithCheckIn !== false,
+          normalized.customCheckIn.openRedeemWithCheckIn !== false,
       }
     : undefined
 
   return {
-    ...merged,
-    enableDetection: merged.enableDetection === true,
-    autoCheckInEnabled: merged.autoCheckInEnabled !== false,
-    customCheckIn,
+    ...normalized,
+    ...(customCheckIn ? { customCheckIn } : {}),
+  }
+}
+
+/** Decodes all accounts in a storage envelope into the canonical schema. */
+export function canonicalizeAccountStorageConfig(
+  raw: AccountStorageConfig | undefined,
+): {
+  config: AccountStorageConfig
+  migratedCount: number
+} {
+  const normalized = normalizeAccountStorageConfigForRead(raw)
+  const { accounts, migratedCount } = migrateAccountsConfig(normalized.accounts)
+
+  return {
+    config: {
+      ...normalized,
+      accounts: accounts.map(normalizeSiteAccount),
+    },
+    migratedCount,
   }
 }
 
@@ -371,7 +391,7 @@ export function normalizeSiteAccount(raw: SiteAccount): SiteAccount {
   const rawUserUpdatedAt = (raw as { user_updated_at?: unknown })
     .user_updated_at
 
-  return {
+  const normalized = {
     ...merged,
     id: coerceString(merged.id, ""),
     site_name: coerceString(merged.site_name, ""),
@@ -407,6 +427,11 @@ export function normalizeSiteAccount(raw: SiteAccount): SiteAccount {
       : AuthTypeEnum.AccessToken,
     checkIn: normalizeCheckInConfig(merged.checkIn),
   }
+
+  delete (normalized as SiteAccount & { can_check_in?: unknown }).can_check_in
+  delete (normalized as SiteAccount & { supports_check_in?: unknown })
+    .supports_check_in
+  return normalized
 }
 
 /**
@@ -431,6 +456,7 @@ export function createPersistedSiteAccount(params: {
       created_at: params.now,
       updated_at: params.now,
       user_updated_at: params.now,
+      configVersion: CURRENT_CONFIG_VERSION,
     } as DeepPartial<SiteAccount>,
   )
 
@@ -483,6 +509,17 @@ export function applySiteAccountUpdates(params: {
   }
 
   const result = normalizeSiteAccount(merged)
+
+  if (
+    params.updates.checkIn &&
+    Object.prototype.hasOwnProperty.call(
+      params.updates.checkIn,
+      "customCheckIn",
+    ) &&
+    params.updates.checkIn.customCheckIn === undefined
+  ) {
+    delete result.checkIn.customCheckIn
+  }
 
   if (
     params.updates.health &&

@@ -5,6 +5,7 @@ import { DIALOG_MODES } from "~/constants/dialogModes"
 import { useAccountDialog } from "~/features/AccountManagement/components/AccountDialog/hooks/useAccountDialog"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { renderHook, waitFor } from "~~/tests/test-utils/render"
 
 const { mockOpenWithAccount, mockOpenDefaultTokenQuickCreateDialogForAccount } =
@@ -62,7 +63,7 @@ describe("useAccountDialog manual balance", () => {
       notes: "",
       tagIds: [],
       authType: AuthTypeEnum.AccessToken,
-      checkIn: { enableDetection: false } as any,
+      checkIn: buildCheckInConfig(),
       manualBalanceUsd,
     } as any)
 

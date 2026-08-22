@@ -1,15 +1,18 @@
 import { describe, expect, it } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import { migrateCheckInConfig } from "~/services/accounts/migrations/checkInMigration"
+import {
+  migrateCheckInConfig,
+  type StoredSiteAccountForCheckInV1Migration,
+} from "~/services/accounts/migrations/checkInMigration"
 import type { SiteAccount } from "~/types"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 
 describe("checkInMigration", () => {
   // Helper to create a minimal SiteAccount fixture
   const createSiteAccount = (
-    overrides: Partial<SiteAccount> = {},
-  ): SiteAccount =>
+    overrides: StoredSiteAccountForCheckInV1Migration = {},
+  ): StoredSiteAccountForCheckInV1Migration =>
     ({
       id: "test-account-1",
       site_name: "Test Site",

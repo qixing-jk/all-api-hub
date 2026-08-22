@@ -166,6 +166,7 @@
     "already_checked_today": "Check-in já realizado hoje",
     "auto_checkin_disabled": "Check-in automático desativado",
     "detection_disabled": "Detecção desativada",
+    "method_disabled": "A função de check-in deste site está desativada",
     "no_provider": "O tipo de site da conta atualmente não suporta check-in",
     "provider_not_ready": "A configuração da conta atualmente não suporta check-in"
   },

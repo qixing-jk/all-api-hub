@@ -11,6 +11,16 @@ describe("compat user-id headers", () => {
     })
   })
 
+  it("supports the ModelFlare user-id header as family compatibility", () => {
+    expect(buildCompatUserIdHeaders(123)).toMatchObject({
+      "X-ModelFlare-User": "123",
+    })
+    expect(getAccountSiteCompatUserIdHeaderRules()).toContainEqual({
+      headerName: "X-ModelFlare-User",
+      siteType: SITE_TYPES.MODELFLARE,
+    })
+  })
+
   it("keeps the broad User-id compatibility header in request fan-out", () => {
     expect(buildCompatUserIdHeaders(123)).toMatchObject({
       "User-id": "123",

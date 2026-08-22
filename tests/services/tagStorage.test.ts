@@ -137,7 +137,11 @@ describe("tagStorage", () => {
           updated_at: 0,
           created_at: 0,
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: {
+            automaticExecutionEnabled: false,
+            methodKnowledge: { methods: {} },
+            selection: { mode: "automatic" as const },
+          } as any,
           tags: [" Work "] as any,
         },
       ] as any,
@@ -158,6 +162,10 @@ describe("tagStorage", () => {
     ) as AccountStorageConfig
     expect(savedAccounts.accounts[0].tagIds).toHaveLength(1)
     expect((savedAccounts.accounts[0] as any).tags).toBeUndefined()
+    expect(savedAccounts.accounts[0].configVersion).toBe(7)
+    expect(savedAccounts.accounts[0].checkIn).not.toHaveProperty(
+      "enableDetection",
+    )
 
     const store = storageData.get("global_tag_store") as any
     expect(Object.values(store.tagsById).map((t: any) => t.name)).toEqual([
@@ -180,7 +188,11 @@ describe("tagStorage", () => {
           updated_at: 0,
           created_at: 0,
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: {
+            automaticExecutionEnabled: false,
+            methodKnowledge: { methods: {} },
+            selection: { mode: "automatic" as const },
+          } as any,
           tagIds: ["t1"],
         },
       ] as any,
@@ -211,7 +223,11 @@ describe("tagStorage", () => {
           updated_at: 0,
           created_at: 0,
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: {
+            automaticExecutionEnabled: false,
+            methodKnowledge: { methods: {} },
+            selection: { mode: "automatic" as const },
+          } as any,
           tags: ["Work"] as any,
         },
       ] as any,
@@ -254,7 +270,11 @@ describe("tagStorage", () => {
           updated_at: 0,
           created_at: 0,
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: {
+            automaticExecutionEnabled: false,
+            methodKnowledge: { methods: {} },
+            selection: { mode: "automatic" as const },
+          } as any,
           tagIds: ["t1"],
         },
       ] as any,
@@ -322,7 +342,11 @@ describe("tagStorage", () => {
           updated_at: 0,
           created_at: 0,
           authType: "access_token",
-          checkIn: { enableDetection: false },
+          checkIn: {
+            automaticExecutionEnabled: false,
+            methodKnowledge: { methods: {} },
+            selection: { mode: "automatic" as const },
+          },
           tagIds: ["t1", "keep"],
         } as any,
         {
@@ -337,7 +361,11 @@ describe("tagStorage", () => {
           updated_at: 0,
           created_at: 0,
           authType: "access_token",
-          checkIn: { enableDetection: false },
+          checkIn: {
+            automaticExecutionEnabled: false,
+            methodKnowledge: { methods: {} },
+            selection: { mode: "automatic" as const },
+          },
           tagIds: [],
         } as any,
         {
@@ -352,7 +380,11 @@ describe("tagStorage", () => {
           updated_at: 0,
           created_at: 0,
           authType: "access_token",
-          checkIn: { enableDetection: false },
+          checkIn: {
+            automaticExecutionEnabled: false,
+            methodKnowledge: { methods: {} },
+            selection: { mode: "automatic" as const },
+          },
           tagIds: ["keep"],
         } as any,
         {
@@ -367,7 +399,11 @@ describe("tagStorage", () => {
           updated_at: 0,
           created_at: 0,
           authType: "access_token",
-          checkIn: { enableDetection: false },
+          checkIn: {
+            automaticExecutionEnabled: false,
+            methodKnowledge: { methods: {} },
+            selection: { mode: "automatic" as const },
+          },
         } as any,
       ],
       bookmarks: [
@@ -415,10 +451,14 @@ describe("tagStorage", () => {
     const savedAccounts = storageData.get(
       "site_accounts",
     ) as AccountStorageConfig
+    expect(savedAccounts.accounts[0].configVersion).toBe(7)
+    expect(savedAccounts.accounts[0].checkIn).not.toHaveProperty(
+      "enableDetection",
+    )
     expect(savedAccounts.accounts[0].tagIds).toEqual(["keep"])
     expect(savedAccounts.accounts[1].tagIds).toEqual([])
     expect(savedAccounts.accounts[2].tagIds).toEqual(["keep"])
-    expect(savedAccounts.accounts[3].tagIds).toBeUndefined()
+    expect(savedAccounts.accounts[3].tagIds).toEqual([])
     expect(savedAccounts.bookmarks[0].tagIds).toEqual([])
     expect(savedAccounts.bookmarks[1].tagIds).toEqual(["keep"])
     expect(savedAccounts.bookmarks[2].tagIds).toEqual([])

@@ -8,6 +8,7 @@ import { compatibleUserContentSessionExtractor } from "./contentSession/compatib
 import { newApiAuthBundleContentSessionExtractor } from "./contentSession/newApiAuthBundle"
 import { sharedChatContentSessionExtractor } from "./contentSession/sharedchat"
 import { sub2ApiContentSessionExtractor } from "./contentSession/sub2api"
+import { vApiContentSessionExtractor } from "./contentSession/vApi"
 import { voApiV2ContentSessionExtractor } from "./contentSession/voapiV2"
 import type { ContentSessionExtractor } from "./contracts"
 
@@ -40,6 +41,7 @@ export function getContentSessionExtractors(): readonly ContentSessionExtractor[
     sub2ApiContentSessionExtractor,
     sharedChatContentSessionExtractor,
     voApiV2ContentSessionExtractor,
+    vApiContentSessionExtractor,
     newApiAuthBundleContentSessionExtractor,
     compatibleUserContentSessionExtractor,
   ]

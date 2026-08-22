@@ -162,6 +162,7 @@
     "already_checked_today": "今日已签到",
     "auto_checkin_disabled": "自动签到已关闭",
     "detection_disabled": "检测已关闭",
+    "method_disabled": "该站点的签到功能已停用",
     "no_provider": "账号所属站点类型暂不支持签到",
     "provider_not_ready": "账号配置暂不支持签到"
   },

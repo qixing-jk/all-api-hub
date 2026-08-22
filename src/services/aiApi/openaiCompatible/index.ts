@@ -1,3 +1,4 @@
+import { ApiError } from "~/services/apiTransport/errors"
 import { fetchApiData } from "~/services/apiTransport/request"
 import type {
   OpenAIAuthParams,
@@ -6,6 +7,7 @@ import type {
 } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { createLogger } from "~/utils/core/logger"
+import { coerceBaseUrlToPathSuffix, normalizeHttpUrl } from "~/utils/core/url"
 
 /**
  * Unified logger scoped to OpenAI-compatible upstream model fetch helpers.
@@ -17,7 +19,43 @@ const logger = createLogger("AiApi.OpenAICompatible")
 // Volcengine Ark Coding Plan: https://docs.volcengine.com/docs/82379/2160841
 const OPENAI_COMPATIBLE_MODELS_ENDPOINTS = ["/v1/models", "/models"] as const
 
-export const fetchOpenAICompatibleModels = async (params: OpenAIAuthParams) => {
+interface OpenAICompatibleModelDiscovery {
+  models: UpstreamModelList
+  resolvedBaseUrl: string
+}
+
+const isModelList = (value: unknown): value is UpstreamModelList =>
+  Array.isArray(value) &&
+  value.every(
+    (item) =>
+      typeof item === "object" &&
+      item !== null &&
+      typeof (item as { id?: unknown }).id === "string",
+  )
+
+const isMissingModelRoute = (error: unknown) =>
+  error instanceof ApiError &&
+  (error.statusCode === 404 || error.statusCode === 405)
+
+const resolveBaseUrlForModelEndpoint = (
+  baseUrl: string,
+  endpoint: (typeof OPENAI_COMPATIBLE_MODELS_ENDPOINTS)[number],
+) => {
+  const normalizedBaseUrl =
+    normalizeHttpUrl(baseUrl) ?? baseUrl.trim().replace(/\/+$/, "")
+  return endpoint === "/v1/models"
+    ? coerceBaseUrlToPathSuffix(normalizedBaseUrl, "/v1")
+    : normalizedBaseUrl
+}
+
+/**
+ * Discovers models and retains the API base URL confirmed by that same request.
+ * Only route-level 404/405 responses justify trying the path-preserving fallback;
+ * authentication, throttling, server, and network failures are inconclusive.
+ */
+export const discoverOpenAICompatibleModels = async (
+  params: OpenAIAuthParams,
+): Promise<OpenAICompatibleModelDiscovery> => {
   const request = {
     baseUrl: params.baseUrl,
     auth: {
@@ -26,14 +64,28 @@ export const fetchOpenAICompatibleModels = async (params: OpenAIAuthParams) => {
     },
   }
   let lastError: unknown
-  for (const endpoint of OPENAI_COMPATIBLE_MODELS_ENDPOINTS) {
+  for (const [
+    index,
+    endpoint,
+  ] of OPENAI_COMPATIBLE_MODELS_ENDPOINTS.entries()) {
     try {
-      return await fetchApiData<UpstreamModelList>(request, {
+      const models = await fetchApiData<unknown>(request, {
         endpoint,
         ...(params.abortSignal
           ? { options: { signal: params.abortSignal } }
           : {}),
       })
+      if (!isModelList(models)) {
+        throw new TypeError("Upstream returned an invalid model list")
+      }
+
+      return {
+        models,
+        resolvedBaseUrl: resolveBaseUrlForModelEndpoint(
+          params.baseUrl,
+          endpoint,
+        ),
+      }
     } catch (error) {
       if (
         params.abortSignal?.aborted ||
@@ -42,12 +94,22 @@ export const fetchOpenAICompatibleModels = async (params: OpenAIAuthParams) => {
         throw error
       }
       lastError = error
+      const hasFallback = index < OPENAI_COMPATIBLE_MODELS_ENDPOINTS.length - 1
+      if (hasFallback && isMissingModelRoute(error)) {
+        continue
+      }
+
+      logger.error("Failed to fetch upstream model list", error)
+      throw error
     }
   }
 
   logger.error("Failed to fetch upstream model list", lastError)
   throw lastError
 }
+
+export const fetchOpenAICompatibleModels = async (params: OpenAIAuthParams) =>
+  (await discoverOpenAICompatibleModels(params)).models
 
 export const fetchOpenAICompatibleModelIds = async (
   params: OpenAIAuthParams,

@@ -9,7 +9,7 @@ import {
 import type { ApiVerificationApiType } from "~/services/verification/aiApiVerification"
 import type { WebAiApiCheckBaseUrlSuggestion } from "~/services/verification/webAiApiCheck/baseUrlHistory"
 import { WEB_AI_API_CHECK_BASE_URL_HISTORY_SUGGESTION_LIMIT } from "~/services/verification/webAiApiCheck/constants"
-import { normalizeOpenAiFamilyBaseUrl } from "~/services/verification/webAiApiCheck/extractCredentials"
+import { normalizeOpenAiFamilyBaseUrl } from "~/services/verification/webAiApiCheck/credentialExtraction/baseUrlCandidates"
 import {
   sendWebAiApiCheckMessage,
   WebAiApiCheckMessageTypes,

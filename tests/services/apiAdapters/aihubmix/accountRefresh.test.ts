@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import { aihubmixAccountRefresh } from "~/services/apiAdapters/aihubmix/accountRefresh"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
+
+import { createCheckInConfig } from "../checkInFixtures"
 
 const { mockFetchSupportCheckIn, mockRefreshAccountData } = vi.hoisted(() => ({
   mockFetchSupportCheckIn: vi.fn(),
@@ -24,12 +27,8 @@ const supportRequest = {
 const refreshRequest = {
   ...supportRequest,
   accountId: "aihubmix-account",
-  checkIn: {
-    enableDetection: true,
-    siteStatus: {
-      isCheckedInToday: false,
-    },
-  },
+  siteType: SITE_TYPES.AIHUBMIX,
+  checkIn: createCheckInConfig(SITE_TYPES.AIHUBMIX, { matched: false }),
   includeTodayCashflow: true,
 }
 
@@ -48,12 +47,9 @@ describe("aihubmixAccountRefresh", () => {
         today_quota_consumption: 0,
         today_requests_count: 0,
         today_income: 0,
-        checkIn: {
-          enableDetection: false,
-          siteStatus: {
-            isCheckedInToday: undefined,
-          },
-        },
+        checkIn: createCheckInConfig(SITE_TYPES.AIHUBMIX, {
+          matched: false,
+        }),
       },
       healthStatus: {
         status: SiteHealthStatus.Healthy,

@@ -16,7 +16,7 @@ import { fetchApi, fetchApiData } from "~/services/apiTransport/request"
 import type {
   AutoCheckinProvider,
   AutoCheckinProviderContext,
-} from "~/services/checkin/autoCheckin/providers/index"
+} from "~/services/checkin/autoCheckin/providers/contracts"
 import {
   AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
   AUTO_CHECKIN_USER_CHECKIN_ENDPOINT,
@@ -939,10 +939,6 @@ async function checkinNewApi(
  * Determine whether this account has the required configuration for check-in.
  */
 function canCheckIn(account: SiteAccount): boolean {
-  if (!account.checkIn?.enableDetection) {
-    return false
-  }
-
   if (!account.account_info?.id) {
     return false
   }

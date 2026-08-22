@@ -6,6 +6,7 @@ import {
   type AccountApiContext,
   type DisplayAccountApiCapabilityContext,
 } from "~/services/accounts/utils/apiServiceRequest"
+import type { UserGroupInfo } from "~/services/accountTokens/tokenProvisioningModel"
 import type { KeyManagementCapability } from "~/services/apiAdapters/contracts/keyManagement"
 import {
   CREATED_TOKEN_SECRET_DECISION_KINDS,
@@ -51,6 +52,11 @@ class MissingUserGroupsCapabilityError extends Error {
     super(message)
     this.name = "MissingUserGroupsCapabilityError"
   }
+}
+
+export interface DefaultTokenLifecycleDecisionDetails {
+  decision: DefaultTokenCreationDecision
+  userGroups?: Record<string, UserGroupInfo>
 }
 
 const isDisplayAccountApiCapabilityContext = (
@@ -173,13 +179,13 @@ async function resolveDefaultTokenCreationWithUserGroups(params: {
   request: ApiServiceRequest
   decisionRequest: ResolveDefaultTokenCreationRequest
   missingUserGroupsMessage?: string
-}): Promise<DefaultTokenCreationDecision> {
+}): Promise<DefaultTokenLifecycleDecisionDetails> {
   const decision = params.tokenProvisioning.resolveDefaultTokenCreation(
     params.decisionRequest,
   )
 
   if (decision.kind !== DEFAULT_TOKEN_CREATION_DECISION_KINDS.NeedsUserGroups) {
-    return decision
+    return { decision }
   }
 
   if (!params.keyManagement.userGroups) {
@@ -191,10 +197,13 @@ async function resolveDefaultTokenCreationWithUserGroups(params: {
 
   const userGroups = await params.keyManagement.userGroups.fetch(params.request)
 
-  return params.tokenProvisioning.resolveDefaultTokenCreation({
-    ...params.decisionRequest,
+  return {
+    decision: params.tokenProvisioning.resolveDefaultTokenCreation({
+      ...params.decisionRequest,
+      userGroups,
+    }),
     userGroups,
-  })
+  }
 }
 
 /**
@@ -210,10 +219,38 @@ export async function resolveDefaultTokenLifecycleDecisionWithContext(params: {
   const { keyManagement, tokenProvisioning } =
     requireTokenLifecycleCapabilities(params.context)
 
+  return (
+    await resolveDefaultTokenCreationWithUserGroups({
+      keyManagement,
+      tokenProvisioning,
+      request: params.context.request,
+      decisionRequest: {
+        workflow: params.workflow,
+        defaultTokenData:
+          params.defaultTokenData ?? generateDefaultTokenRequest(),
+        explicitGroup: params.explicitGroup,
+      },
+      missingUserGroupsMessage: params.missingUserGroupsMessage,
+    })
+  ).decision
+}
+
+/** Resolves quick-create policy while retaining group metadata already fetched for it. */
+export async function resolveDefaultTokenLifecycleDecisionDetails(params: {
+  workflow: TokenProvisioningWorkflow
+  displaySiteData: DisplaySiteData
+  defaultTokenData?: ResolveDefaultTokenCreationRequest["defaultTokenData"]
+  explicitGroup?: string
+  missingUserGroupsMessage?: string
+}): Promise<DefaultTokenLifecycleDecisionDetails> {
+  const context = createDisplayAccountApiContext(params.displaySiteData)
+  const { keyManagement, tokenProvisioning } =
+    requireTokenLifecycleCapabilities(context)
+
   return resolveDefaultTokenCreationWithUserGroups({
     keyManagement,
     tokenProvisioning,
-    request: params.context.request,
+    request: context.request,
     decisionRequest: {
       workflow: params.workflow,
       defaultTokenData:
@@ -234,13 +271,7 @@ export async function resolveDefaultTokenLifecycleDecision(params: {
   explicitGroup?: string
   missingUserGroupsMessage?: string
 }): Promise<DefaultTokenCreationDecision> {
-  return resolveDefaultTokenLifecycleDecisionWithContext({
-    workflow: params.workflow,
-    context: createDisplayAccountApiContext(params.displaySiteData),
-    defaultTokenData: params.defaultTokenData,
-    explicitGroup: params.explicitGroup,
-    missingUserGroupsMessage: params.missingUserGroupsMessage,
-  })
+  return (await resolveDefaultTokenLifecycleDecisionDetails(params)).decision
 }
 
 /**
@@ -418,17 +449,19 @@ export async function ensureDefaultTokenLifecycleWithContext(params: {
 
   let decision: DefaultTokenCreationDecision
   try {
-    decision = await resolveDefaultTokenCreationWithUserGroups({
-      keyManagement,
-      tokenProvisioning,
-      request: context.request,
-      decisionRequest: {
-        workflow,
-        defaultTokenData:
-          params.defaultTokenData ?? generateDefaultTokenRequest(),
-        explicitGroup: params.explicitGroup,
-      },
-    })
+    decision = (
+      await resolveDefaultTokenCreationWithUserGroups({
+        keyManagement,
+        tokenProvisioning,
+        request: context.request,
+        decisionRequest: {
+          workflow,
+          defaultTokenData:
+            params.defaultTokenData ?? generateDefaultTokenRequest(),
+          explicitGroup: params.explicitGroup,
+        },
+      })
+    ).decision
   } catch (error) {
     if (!(error instanceof MissingUserGroupsCapabilityError)) {
       throw error

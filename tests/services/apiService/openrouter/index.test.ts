@@ -26,6 +26,7 @@ import {
   SiteHealthStatus,
 } from "~/types"
 import { server } from "~~/tests/msw/server"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
 const baseRequest = {
   baseUrl: "https://mirror.example.invalid",
@@ -35,7 +36,7 @@ const baseRequest = {
     accessToken: "  management-key-placeholder  ",
     userId: "should-not-be-sent",
   },
-  checkIn: { enableDetection: true },
+  checkIn: buildCheckInConfig({ automaticExecutionEnabled: true }),
 }
 
 describe("apiService OpenRouter", () => {
@@ -262,7 +263,7 @@ describe("apiService OpenRouter", () => {
           reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
         },
       },
-      checkIn: { enableDetection: false },
+      checkIn: baseRequest.checkIn,
     })
   })
 

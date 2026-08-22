@@ -1,7 +1,4 @@
-import {
-  SITE_TYPES,
-  type AccountSiteType,
-} from "~/services/accountSiteDefinitions/siteTypes"
+import { MODELFLARE_USER_ID_HEADER_NAME } from "~/services/accountSiteDefinitions/identifiers"
 
 /**
  * Compatibility headers for One-API/New-API family deployments.
@@ -10,24 +7,27 @@ import {
  * the same `userId` value across multiple known keys.
  */
 
-const COMPAT_USER_ID_HEADER_TO_SITE_TYPE = {
-  "New-API-User": SITE_TYPES.NEW_API,
-  "Veloera-User": SITE_TYPES.VELOERA,
-  // V-API support follows the requested popjane/v-api contract: user id in X-Api-User.
-  "X-Api-User": SITE_TYPES.V_API,
-  "voapi-user": SITE_TYPES.VO_API,
+const COMPAT_USER_ID_HEADER_NAMES = [
+  // New API account endpoints: https://github.com/QuantumNous/new-api
+  "New-API-User",
+  // ModelFlare's New API-derived account endpoints: https://modelflare.dev/
+  MODELFLARE_USER_ID_HEADER_NAME,
+  // Veloera account endpoints: https://github.com/Veloera/Veloera
+  "Veloera-User",
+  // V-API account endpoints: https://github.com/popjane/v-api
+  "X-Api-User",
+  // Legacy VoAPI compatibility. Verify the target deployment before changing.
+  "voapi-user",
   // Added in commit cb7527d2b15a2c99bc39827fe3ae1d7590622428 for Super-API
   // compatibility. Keep sending it as a broad fallback header, but do not
   // treat it as a site-specific detection signal from error messages because
   // the name itself is too generic.
-  "User-id": SITE_TYPES.NEW_API,
-  "Rix-Api-User": SITE_TYPES.RIX_API,
-  "neo-api-user": SITE_TYPES.NEO_API,
-} as const satisfies Record<string, AccountSiteType>
-
-const COMPAT_USER_ID_HEADER_NAMES = Object.keys(
-  COMPAT_USER_ID_HEADER_TO_SITE_TYPE,
-) as Array<keyof typeof COMPAT_USER_ID_HEADER_TO_SITE_TYPE>
+  "User-id",
+  // Existing Rix-Api and Neo-API compatibility contracts; no canonical
+  // public protocol source is currently recorded in this repository.
+  "Rix-Api-User",
+  "neo-api-user",
+] as const
 
 type CompatUserIdHeaderName = (typeof COMPAT_USER_ID_HEADER_NAMES)[number]
 

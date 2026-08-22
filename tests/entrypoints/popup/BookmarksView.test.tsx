@@ -2,6 +2,7 @@ import userEvent from "@testing-library/user-event"
 import { useState, type ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import App from "~/entrypoints/popup/App"
 import { getPopupViewTestId } from "~/entrypoints/popup/testIds"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -9,7 +10,13 @@ import {
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
-import { fireEvent, render, screen, within } from "~~/tests/test-utils/render"
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "~~/tests/test-utils/render"
 
 const {
   apiCredentialProfilesPreloadMock,
@@ -136,7 +143,6 @@ describe("popup bookmarks view", () => {
 
   it("switches between accounts, bookmarks, and api credentials layouts", async () => {
     const user = userEvent.setup()
-    const { default: App } = await import("~/entrypoints/popup/App")
 
     render(<App />)
 
@@ -234,10 +240,10 @@ describe("popup bookmarks view", () => {
   })
 
   it("records a pending popup interruption hint when the popup page is hidden", async () => {
-    const { default: App } = await import("~/entrypoints/popup/App")
-
     render(<App />)
-    await screen.findByText("ActionButtons")
+    await waitFor(() => {
+      expect(isExtensionPopupMock).toHaveBeenCalledTimes(1)
+    })
 
     window.dispatchEvent(new Event("pagehide"))
 
@@ -246,10 +252,11 @@ describe("popup bookmarks view", () => {
 
   it("does not track popup interruption state outside the popup window", async () => {
     isExtensionPopupMock.mockReturnValue(false)
-    const { default: App } = await import("~/entrypoints/popup/App")
 
     render(<App />)
-    await screen.findByText("ActionButtons")
+    await waitFor(() => {
+      expect(isExtensionPopupMock).toHaveBeenCalledTimes(1)
+    })
 
     window.dispatchEvent(new Event("pagehide"))
 

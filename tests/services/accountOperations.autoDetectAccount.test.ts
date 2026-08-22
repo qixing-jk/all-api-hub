@@ -531,8 +531,9 @@ describe("accountOperations autoDetectAccount", () => {
       authType: AuthTypeEnum.Cookie,
       exchangeRate: UI_CONSTANTS.EXCHANGE_RATE.DEFAULT,
       checkIn: {
-        enableDetection: false,
-        autoCheckInEnabled: false,
+        automaticExecutionEnabled: false,
+        methodKnowledge: { methods: {} },
+        selection: { mode: "automatic" },
       },
     })
     expect(mockFetchSharedChatUserInfo).toHaveBeenCalledWith(
@@ -579,7 +580,8 @@ describe("accountOperations autoDetectAccount", () => {
       accessToken: "tracked-token",
       exchangeRate: 8.8,
       checkIn: expect.objectContaining({
-        enableDetection: false,
+        automaticExecutionEnabled: true,
+        methodKnowledge: { methods: {} },
       }),
     })
     expect(mockSendRuntimeMessage).toHaveBeenCalledWith({
@@ -782,7 +784,10 @@ describe("accountOperations autoDetectAccount", () => {
       siteName: "Content Status Portal",
       exchangeRate: 7.4,
       checkIn: expect.objectContaining({
-        enableDetection: true,
+        automaticExecutionEnabled: true,
+        selection: expect.objectContaining({
+          methodId: "new-api:daily-checkin",
+        }),
       }),
     })
     expect(mockGetOrCreateAccessToken).toHaveBeenCalledWith({
@@ -1006,7 +1011,8 @@ describe("accountOperations autoDetectAccount", () => {
       siteName: "Service Status Portal",
       exchangeRate: 6.9,
       checkIn: expect.objectContaining({
-        enableDetection: false,
+        automaticExecutionEnabled: true,
+        methodKnowledge: { methods: {} },
       }),
     })
     expect(mockFetchSiteStatus).toHaveBeenCalledWith({
@@ -1129,7 +1135,10 @@ describe("accountOperations autoDetectAccount", () => {
       siteName: "Cookie Portal",
       exchangeRate: 6.6,
       checkIn: expect.objectContaining({
-        enableDetection: true,
+        automaticExecutionEnabled: true,
+        selection: expect.objectContaining({
+          methodId: "new-api:daily-checkin",
+        }),
       }),
     })
     expect(mockFetchUserInfo).toHaveBeenCalledWith({
@@ -1364,7 +1373,10 @@ describe("accountOperations autoDetectAccount", () => {
       accessToken: "anyrouter-token",
       siteType: SITE_TYPES.ANYROUTER,
       checkIn: expect.objectContaining({
-        enableDetection: true,
+        automaticExecutionEnabled: true,
+        selection: expect.objectContaining({
+          methodId: "anyrouter:daily-checkin",
+        }),
       }),
     })
     expect(mockGetOrCreateAccessToken).toHaveBeenCalledWith({
@@ -1415,7 +1427,10 @@ describe("accountOperations autoDetectAccount", () => {
       accessToken: "wong-token",
       siteType: SITE_TYPES.WONG_GONGYI,
       checkIn: expect.objectContaining({
-        enableDetection: true,
+        automaticExecutionEnabled: true,
+        selection: expect.objectContaining({
+          methodId: "wong-gongyi:daily-checkin",
+        }),
       }),
     })
     expect(mockFetchSupportCheckIn).toHaveBeenCalledWith({
@@ -1674,7 +1689,8 @@ describe("accountOperations autoDetectAccount", () => {
       username: "checkin-fallback-user",
       accessToken: "checkin-fallback-token",
       checkIn: expect.objectContaining({
-        enableDetection: false,
+        automaticExecutionEnabled: true,
+        methodKnowledge: { methods: {} },
       }),
     })
   })

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import {
   defaultAccountRefreshImplementation,
   refreshAccountData,
@@ -11,6 +12,8 @@ import {
   SiteHealthStatus,
   TEMP_WINDOW_HEALTH_STATUS_CODES,
 } from "~/types"
+
+import { createCheckInConfig } from "../../apiAdapters/checkInFixtures"
 
 const {
   commonDetermineHealthStatus,
@@ -49,13 +52,10 @@ describe("newApiFamily accountRefresh", () => {
   const refreshRequest = {
     ...supportRequest,
     accountId: "account-1",
-    checkIn: {
-      enableDetection: true,
-      autoCheckInEnabled: true,
-      siteStatus: {
-        isCheckedInToday: false,
-      },
-    },
+    siteType: SITE_TYPES.NEW_API,
+    checkIn: createCheckInConfig(SITE_TYPES.NEW_API, {
+      isCheckedInToday: false,
+    }),
     includeTodayCashflow: false,
   }
 

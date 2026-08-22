@@ -5,10 +5,15 @@ import {
   DATA_TYPE_INCOME,
 } from "~/constants"
 import {
+  CHECK_IN_METHOD_STATUS_OUTCOMES,
+  CHECK_IN_METHOD_TODAY_STATUSES,
+} from "~/constants/checkIn"
+import {
   isAccountTodayMetricAvailable,
   isAccountTodayMetricComplete,
 } from "~/services/accounts/accountTodayStats"
 import { compareAccountDisplayNames } from "~/services/accounts/utils/accountDisplayName"
+import { getSelectedCheckInStatus } from "~/services/checkin/autoCheckin/inspection"
 import type {
   AccountTodayMetricAvailability,
   ActiveSortField,
@@ -96,16 +101,17 @@ export function createDefaultSortingPriorityConfig(): SortingPriorityConfig {
 
 /** Returns whether an account still needs site or custom check-in today. */
 function isNotCheckedIn(item: DisplaySiteData): boolean {
-  const checkIn = item?.checkIn
-  if (!checkIn) return false
-
-  const supportsSiteCheckIn = checkIn.enableDetection === true
+  const checkIn = item.checkIn
   const supportsCustomCheckIn =
     typeof checkIn.customCheckIn?.url === "string" &&
     checkIn.customCheckIn.url.trim() !== ""
-
+  const selectedStatus = getSelectedCheckInStatus({
+    config: checkIn,
+    siteType: item.siteType,
+  })
   const siteNotCheckedIn =
-    supportsSiteCheckIn && checkIn.siteStatus?.isCheckedInToday === false
+    selectedStatus?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known &&
+    selectedStatus.today === CHECK_IN_METHOD_TODAY_STATUSES.NotChecked
   const customNotCheckedIn =
     supportsCustomCheckIn &&
     (checkIn.customCheckIn?.isCheckedInToday ?? false) === false

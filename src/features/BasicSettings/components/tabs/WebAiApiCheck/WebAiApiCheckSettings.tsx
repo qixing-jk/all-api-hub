@@ -18,6 +18,7 @@ import {
   type WebAiApiCheckPreferences,
 } from "~/services/preferences/userPreferences"
 import { createLogger } from "~/utils/core/logger"
+import { isSafeRegexPattern } from "~/utils/core/regex"
 import { getPreferenceWriteFailureMessage } from "~/utils/core/toastHelpers"
 
 import { WEB_AI_API_CHECK_TARGET_IDS } from "./searchTargets"
@@ -58,6 +59,28 @@ function validateRegexPatterns(lines: string[]): {
   }
 
   return { patterns, invalid }
+}
+
+/**
+ * Separate cleanup patterns that are safe to persist from invalid entries.
+ */
+function validateSafeRegexPatterns(lines: string[]): {
+  patterns: string[]
+  invalid: string[]
+} {
+  const result = validateRegexPatterns(lines)
+  const unsafe = result.patterns.filter(
+    (pattern) =>
+      !result.invalid.includes(pattern) && !isSafeRegexPattern(pattern, "i"),
+  )
+  const invalid = [...result.invalid, ...unsafe]
+  const invalidPatterns = new Set(invalid)
+  return {
+    patterns: result.patterns.filter(
+      (pattern) => !invalidPatterns.has(pattern),
+    ),
+    invalid,
+  }
 }
 
 /**
@@ -142,7 +165,7 @@ export default function WebAiApiCheckSettings() {
   )
   const { patterns: keyCleanupPatterns, invalid: invalidKeyCleanupPatterns } =
     useMemo(
-      () => validateRegexPatterns(keyCleanupPatternsDraft.split(/\r?\n/)),
+      () => validateSafeRegexPatterns(keyCleanupPatternsDraft.split(/\r?\n/)),
       [keyCleanupPatternsDraft],
     )
 

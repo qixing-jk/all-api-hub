@@ -27,6 +27,7 @@ import {
   MANAGED_SITE_TOKEN_BATCH_IMPORT_VERIFICATIONS,
 } from "~/types/managedSiteTokenBatchExport"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { testI18n } from "~~/tests/test-utils/i18n"
 import {
   act,
@@ -231,7 +232,7 @@ function buildAccount(): DisplaySiteData {
     userId: "user-1",
     authType: AuthTypeEnum.AccessToken,
     disabled: false,
-    checkIn: { enableDetection: false },
+    checkIn: buildCheckInConfig(),
   }
 }
 

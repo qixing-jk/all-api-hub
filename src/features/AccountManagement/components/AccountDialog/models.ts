@@ -3,6 +3,7 @@ import {
   BOOKMARK_IMPORT_ADD_ACCOUNT_PREFILL_SOURCE,
   type AddAccountPrefill,
 } from "~/features/AccountManagement/sponsors/types"
+import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
 import { AuthTypeEnum, type CheckInConfig } from "~/types"
 
 export const ACCOUNT_DIALOG_PHASES = {
@@ -59,19 +60,17 @@ export function createEmptyAccountDialogDraft(): AccountDialogDraft {
     tagIds: [],
     excludeFromTotalBalance: false,
     excludeFromTodayIncome: false,
-    checkIn: {
-      enableDetection: false,
-      autoCheckInEnabled: true,
-      siteStatus: {
-        isCheckedInToday: false,
-      },
+    checkIn: createCompatibilityCheckInConfig({
+      siteType: SITE_TYPES.UNKNOWN,
+      supported: false,
+      automaticExecutionEnabled: true,
       customCheckIn: {
         url: "",
         redeemUrl: "",
         openRedeemWithCheckIn: true,
         isCheckedInToday: false,
       },
-    },
+    }),
     siteType: SITE_TYPES.UNKNOWN,
     authType: AuthTypeEnum.AccessToken,
     cookieAuthSessionCookie: "",

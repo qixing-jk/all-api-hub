@@ -12,6 +12,8 @@ import type { AccountCompletionHelpers } from "~/services/apiAdapters/contracts/
 import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
+import { createCheckInConfig } from "../checkInFixtures"
+
 const {
   mockExtractDefaultExchangeRate,
   mockFetchSiteStatus,
@@ -71,12 +73,11 @@ const trimString = vi.fn((value: unknown) =>
 )
 
 const createInitialCheckInConfig = vi.fn(
-  ({ enableDetection, autoCheckInEnabled }) => ({
-    enableDetection,
-    autoCheckInEnabled,
-    siteStatus: {
-      isCheckedInToday: false,
-    },
+  ({ supported, automaticExecutionEnabled }) => ({
+    ...createCheckInConfig(SITE_TYPES.AIHUBMIX, {
+      matched: supported,
+      automaticExecutionEnabled,
+    }),
     customCheckIn: {
       url: "",
       redeemUrl: "",
@@ -139,8 +140,8 @@ describe("aihubmixAccountCompletion", () => {
     })
     expect(mockFetchSupportCheckIn).not.toHaveBeenCalled()
     expect(createInitialCheckInConfig).toHaveBeenCalledWith({
-      enableDetection: false,
-      autoCheckInEnabled: true,
+      supported: false,
+      automaticExecutionEnabled: true,
     })
     expect(result).toEqual({
       username: "aihubmix-user",
@@ -150,11 +151,7 @@ describe("aihubmixAccountCompletion", () => {
       exchangeRate: UI_CONSTANTS.EXCHANGE_RATE.DEFAULT,
       authType: AuthTypeEnum.AccessToken,
       checkIn: {
-        enableDetection: false,
-        autoCheckInEnabled: true,
-        siteStatus: {
-          isCheckedInToday: false,
-        },
+        ...createCheckInConfig(SITE_TYPES.AIHUBMIX, { matched: false }),
         customCheckIn: {
           url: "",
           redeemUrl: "",
@@ -215,8 +212,7 @@ describe("aihubmixAccountCompletion", () => {
       exchangeRate: UI_CONSTANTS.EXCHANGE_RATE.DEFAULT,
       authType: AuthTypeEnum.AccessToken,
       checkIn: expect.objectContaining({
-        enableDetection: true,
-        autoCheckInEnabled: true,
+        automaticExecutionEnabled: true,
       }),
     })
   })
@@ -347,10 +343,10 @@ describe("aihubmixAccountCompletion", () => {
 
     expect(handleCheckInSupportFetchFailure).toHaveBeenCalledWith(supportError)
     expect(createInitialCheckInConfig).toHaveBeenCalledWith({
-      enableDetection: false,
-      autoCheckInEnabled: true,
+      supported: false,
+      automaticExecutionEnabled: true,
     })
-    expect(result.checkIn.enableDetection).toBe(false)
+    expect(result.checkIn.selection).not.toHaveProperty("methodId")
   })
 
   it("classifies missing generated access token when username is present", async () => {

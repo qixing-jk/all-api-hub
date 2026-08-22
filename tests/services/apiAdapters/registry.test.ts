@@ -153,6 +153,7 @@ describe("apiAdapters registry", () => {
     for (const siteType of [
       SITE_TYPES.ONE_API,
       SITE_TYPES.NEW_API,
+      SITE_TYPES.MODELFLARE,
       SITE_TYPES.ANYROUTER,
       SITE_TYPES.VELOERA,
       SITE_TYPES.ONE_HUB,
@@ -332,6 +333,12 @@ describe("apiAdapters registry", () => {
       expect(capabilities.siteType).toBe(siteType)
       expectManagedSiteCapabilities(capabilities)
     }
+  })
+
+  it("keeps ModelFlare account-only despite sharing the New API family", () => {
+    expect(
+      getSiteTypeCapabilities(SITE_TYPES.MODELFLARE).managedSites,
+    ).toBeUndefined()
   })
 
   it("returns managed-only capabilities without account capabilities", () => {

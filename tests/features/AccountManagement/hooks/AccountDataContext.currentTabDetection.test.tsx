@@ -10,6 +10,7 @@ import {
 } from "~/features/AccountManagement/hooks/AccountDataContext"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import { getActiveTabs } from "~/utils/browser/browserApi"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { testI18n } from "~~/tests/test-utils/i18n"
 
 let activeTabs: any[] = []
@@ -185,7 +186,7 @@ function createAccount({
     notes: "",
     tagIds: [],
     authType: AuthTypeEnum.AccessToken,
-    checkIn: { enableDetection: false },
+    checkIn: buildCheckInConfig(),
   } as any
 }
 

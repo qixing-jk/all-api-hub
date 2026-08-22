@@ -2,8 +2,10 @@ import userEvent from "@testing-library/user-event"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { SITE_TYPES } from "~/constants/siteType"
 import AutoCheckin from "~/entrypoints/options/pages/AutoCheckin"
 import { accountStorage } from "~/services/accounts/accountStorage"
+import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -199,7 +201,12 @@ describe("AutoCheckin quick run", () => {
       {
         id: "manual-account",
         disabled: false,
-        checkIn: { enableDetection: false },
+        site_type: SITE_TYPES.NEW_API,
+        checkIn: createCompatibilityCheckInConfig({
+          siteType: SITE_TYPES.NEW_API,
+          supported: false,
+          automaticExecutionEnabled: true,
+        }),
       },
     ] as any)
     sendAutoCheckinMessageMock.mockImplementation(async (type: string) => {
@@ -230,6 +237,36 @@ describe("AutoCheckin quick run", () => {
     expect(pushWithinOptionsPageMock).toHaveBeenCalledWith(
       `#${MENU_ITEM_IDS.ACCOUNT}`,
     )
+  })
+
+  it("recognizes a selected method as ready for auto check-in", async () => {
+    vi.mocked(accountStorage.getAllAccounts).mockResolvedValue([
+      {
+        id: "ready-account",
+        disabled: false,
+        site_type: SITE_TYPES.NEW_API,
+        checkIn: createCompatibilityCheckInConfig({
+          siteType: SITE_TYPES.NEW_API,
+          supported: true,
+          automaticExecutionEnabled: true,
+        }),
+      },
+    ] as any)
+    sendAutoCheckinMessageMock.mockResolvedValue({
+      success: true,
+      data: { perAccount: {} },
+    })
+
+    render(<AutoCheckin routeParams={{}} />)
+
+    expect(
+      await screen.findByText(
+        /autoCheckin:execution\.empty\.no(?:History|Results)$/,
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText("autoCheckin:execution.empty.noDetectionAccounts"),
+    ).not.toBeInTheDocument()
   })
 
   it("does not block auto check-in results when account setup lookup fails", async () => {

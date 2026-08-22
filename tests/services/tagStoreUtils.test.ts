@@ -16,6 +16,7 @@ import {
 } from "~/services/tags/tagStoreUtils"
 import type { SiteAccount } from "~/types"
 import { AuthTypeEnum } from "~/types"
+import { buildCheckInConfig } from "~~/tests/test-utils/factories"
 
 const mocks = vi.hoisted(() => ({
   safeRandomUUID: vi.fn(
@@ -61,7 +62,7 @@ function makeAccount(overrides: Partial<SiteAccount>): SiteAccount {
     disabled: overrides.disabled === true,
     excludeFromTotalBalance: overrides.excludeFromTotalBalance === true,
     excludeFromTodayIncome: overrides.excludeFromTodayIncome === true,
-    checkIn: overrides.checkIn ?? ({ enableDetection: false } as any),
+    checkIn: overrides.checkIn ?? buildCheckInConfig(),
     tagIds: overrides.tagIds ?? [],
     ...overrides,
   }

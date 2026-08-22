@@ -1,51 +1,29 @@
-import { SITE_TYPES } from "~/constants/siteType"
+import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { newApiProvider } from "~/services/checkin/autoCheckin/providers/newApi"
-import type { AutoCheckinProviderResult } from "~/services/checkin/autoCheckin/providers/types"
 import { voApiV2Provider } from "~/services/checkin/autoCheckin/providers/voapiV2"
-import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
-import type { SiteAccount } from "~/types"
-import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
+import type { CheckInMethodId } from "~/types/checkIn"
 
-import { anyrouterProvider, type AnyrouterCheckInParams } from "./anyrouter"
+import { anyrouterProvider } from "./anyrouter"
+import type { AutoCheckinProvider } from "./contracts"
+import {
+  AUTO_CHECKIN_METHOD_DEFINITIONS,
+  createAutoCheckinMethodRegistry,
+} from "./registry"
 import { veloeraProvider } from "./veloera"
 import { wongGongyiProvider } from "./wong"
 
-/**
- * Auto check-in provider contract.
- *
- * Providers are selected by `SiteAccount.site_type` and should:
- * - Quickly decide eligibility via `canCheckIn`.
- * - Perform the check-in flow via `checkIn` and return a normalized result.
- */
-export interface AutoCheckinProvider {
-  canCheckIn(account: SiteAccount): boolean
-  checkIn(
-    account: SiteAccount | AnyrouterCheckInParams,
-    context: AutoCheckinProviderContext,
-  ): Promise<AutoCheckinProviderResult>
-}
+const PROVIDER_BY_METHOD_ID = {
+  [AUTO_CHECKIN_METHOD_IDS.AnyrouterDailyCheckIn]: anyrouterProvider,
+  [AUTO_CHECKIN_METHOD_IDS.VeloeraDailyCheckIn]: veloeraProvider,
+  [AUTO_CHECKIN_METHOD_IDS.WongGongyiDailyCheckIn]: wongGongyiProvider,
+  [AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn]: newApiProvider,
+  [AUTO_CHECKIN_METHOD_IDS.VoApiV2DailyCheckIn]: voApiV2Provider,
+} as const satisfies Record<CheckInMethodId, AutoCheckinProvider>
 
-export interface AutoCheckinProviderContext {
-  tempWindowRequestSource: TempWindowRequestSource
-  protectionBypassExecution: ProtectionBypassExecution
-}
-
-const providers: Record<string, AutoCheckinProvider> = {
-  [SITE_TYPES.ANYROUTER]: anyrouterProvider,
-  [SITE_TYPES.VELOERA]: veloeraProvider,
-  [SITE_TYPES.WONG_GONGYI]: wongGongyiProvider,
-  [SITE_TYPES.NEW_API]: newApiProvider,
-  [SITE_TYPES.VO_API_V2]: voApiV2Provider,
-}
-
-/**
- * Resolve the auto check-in provider based on the site type of the given account
- * @param account - The site account to resolve the provider for
- * @returns The resolved auto check-in provider, or null if no provider is found
- */
-export function resolveAutoCheckinProvider(
-  account: SiteAccount,
-): AutoCheckinProvider | null {
-  const provider = providers[account.site_type]
-  return provider ?? null
-}
+export const autoCheckinMethodRegistry = createAutoCheckinMethodRegistry(
+  Object.values(AUTO_CHECKIN_METHOD_DEFINITIONS).map(({ id, siteTypes }) => ({
+    id,
+    siteTypes,
+    provider: PROVIDER_BY_METHOD_ID[id],
+  })),
+)

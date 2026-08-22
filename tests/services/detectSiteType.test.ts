@@ -163,6 +163,26 @@ describe("detectSiteType", () => {
 
   describe("getAccountSiteType", () => {
     describe("Domain-based detection", () => {
+      it("detects the canonical ModelFlare deployment without title fetch", async () => {
+        let titleFetched = false
+        server.use(
+          http.get("https://modelflare.dev", () => {
+            titleFetched = true
+            return new HttpResponse(
+              "<html><title>Unbranded Console</title></html>",
+              {
+                headers: { "Content-Type": "text/html" },
+              },
+            )
+          }),
+        )
+
+        await expect(
+          getAccountSiteType("https://modelflare.dev/dashboard/overview"),
+        ).resolves.toBe(SITE_TYPES.MODELFLARE)
+        expect(titleFetched).toBe(false)
+      })
+
       it("detects AIHubMix from the canonical root domain without title fetch", async () => {
         let titleFetched = false
         server.use(
@@ -303,15 +323,23 @@ describe("detectSiteType", () => {
           }),
         )
 
-        const siteType = await getAccountSiteType("https://example.com")
+        await expect(getAccountSiteType("https://example.com")).resolves.toBe(
+          SITE_TYPES.ONE_API,
+        )
+      })
 
-        // Check if result matches one of the known site types
-        const knownTypes = ACCOUNT_SITE_TITLE_RULES.map((rule) => rule.name)
-        if (knownTypes.includes(siteType)) {
-          expect(knownTypes).toContain(siteType)
-        } else {
-          expect(siteType).toBe(SITE_TYPES.UNKNOWN)
-        }
+      it("detects ModelFlare from a branded title on a custom origin", async () => {
+        server.use(
+          http.get("https://portal.example.invalid", () => {
+            return new HttpResponse("<html><title>Model Flare</title></html>", {
+              headers: { "Content-Type": "text/html" },
+            })
+          }),
+        )
+
+        await expect(
+          getAccountSiteType("https://portal.example.invalid"),
+        ).resolves.toBe(SITE_TYPES.MODELFLARE)
       })
 
       it("should not classify managed-only titles as account site types", async () => {
@@ -584,10 +612,9 @@ describe("detectSiteType", () => {
           }),
         )
 
-        const siteType = await getAccountSiteType("https://example.com")
-
-        // Result depends on whether "unknown-api-identifier" matches any rule
-        expect(typeof siteType).toBe("string")
+        await expect(getAccountSiteType("https://example.com")).resolves.toBe(
+          SITE_TYPES.UNKNOWN,
+        )
       })
 
       it("should return SITE_TYPES.UNKNOWN when no match found", async () => {
@@ -608,13 +635,9 @@ describe("detectSiteType", () => {
           }),
         )
 
-        const siteType = await getAccountSiteType("https://example.com")
-
-        // Should return SITE_TYPES.UNKNOWN if no rule matches
-        const knownTypes = ACCOUNT_SITE_TITLE_RULES.map((rule) => rule.name)
-        if (!knownTypes.some((type) => siteType === type)) {
-          expect(siteType).toBe(SITE_TYPES.UNKNOWN)
-        }
+        await expect(getAccountSiteType("https://example.com")).resolves.toBe(
+          SITE_TYPES.UNKNOWN,
+        )
       })
     })
 
@@ -711,6 +734,29 @@ describe("detectSiteType", () => {
         expect(siteType).toBe(SITE_TYPES.NEW_API)
       })
 
+      it("should detect SITE_TYPES.MODELFLARE from the X-ModelFlare-User header error", async () => {
+        const mockHTML = "<html><title>No Match</title></html>"
+        const mockApiResponse = {
+          success: false,
+          message: "Unauthorized, X-ModelFlare-User header not provided",
+        }
+
+        server.use(
+          http.get("https://example.com", () => {
+            return new HttpResponse(mockHTML, {
+              headers: { "Content-Type": "text/html" },
+            })
+          }),
+          http.get("https://example.com/api/user/self", () => {
+            return HttpResponse.json(mockApiResponse, { status: 401 })
+          }),
+        )
+
+        const siteType = await getAccountSiteType("https://example.com")
+
+        expect(siteType).toBe(SITE_TYPES.MODELFLARE)
+      })
+
       it("should detect SITE_TYPES.V_API from the X-Api-User header error", async () => {
         const mockHTML = "<html><title>No Match</title></html>"
         const mockApiResponse = {
@@ -789,23 +835,6 @@ describe("detectSiteType", () => {
         await expect(
           getAccountSiteType("https://example.com"),
         ).rejects.toThrow()
-      })
-
-      it.skip("should handle HTML parsing error", async () => {
-        // Skipped: Complex to mock parsing errors with MSW
-        // The function handles errors internally and returns SITE_TYPES.UNKNOWN
-        server.use(
-          http.get("https://example.com", () => {
-            // Return a response that will cause text() to throw
-            return new HttpResponse(null, {
-              headers: { "Content-Type": "text/html" },
-            })
-          }),
-        )
-
-        const siteType = await getAccountSiteType("https://example.com")
-        // The function should handle the error and return SITE_TYPES.UNKNOWN
-        expect(typeof siteType).toBe("string")
       })
     })
   })

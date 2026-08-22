@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import {
   createChannel,
   deleteChannel,
@@ -15,7 +16,11 @@ import {
   updateChannelModels,
 } from "~/services/apiService/veloera"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import { getSelectedCheckInStatus } from "~/services/checkin/autoCheckin/inspection"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
+
+import { createCheckInConfig } from "../../apiAdapters/checkInFixtures"
 
 const {
   mockDetermineHealthStatus,
@@ -61,18 +66,6 @@ vi.mock("~/services/apiService/newApiFamily/default/accountData", () => ({
   fetchAccountQuota: (...args: unknown[]) => mockFetchAccountQuota(...args),
   fetchTodayIncome: (...args: unknown[]) => mockFetchTodayIncome(...args),
   fetchTodayUsage: (...args: unknown[]) => mockFetchTodayUsage(...args),
-  resolveCheckInSiteStatus: (checkIn: any, canCheckIn: boolean | undefined) =>
-    typeof canCheckIn === "boolean"
-      ? {
-          ...(checkIn.siteStatus ?? {}),
-          isCheckedInToday: !canCheckIn,
-          lastDetectedAt: Date.now(),
-        }
-      : {
-          ...(checkIn.siteStatus ?? {}),
-          isCheckedInToday: checkIn.siteStatus?.isCheckedInToday,
-          lastDetectedAt: checkIn.siteStatus?.lastDetectedAt,
-        },
 }))
 
 /**
@@ -707,13 +700,11 @@ describe("apiService veloera channel APIs", () => {
         accessToken: "token",
         userId: "1",
       },
-      checkIn: {
-        enableDetection: true,
-        siteStatus: {
-          isCheckedInToday: false,
-          lastDetectedAt: 5,
-        },
-      },
+      siteType: SITE_TYPES.VELOERA,
+      checkIn: createCheckInConfig(SITE_TYPES.VELOERA, {
+        isCheckedInToday: false,
+        observedAt: 5,
+      }),
     }
 
     mockFetchApiData.mockResolvedValueOnce({ can_check_in: false })
@@ -727,13 +718,17 @@ describe("apiService veloera channel APIs", () => {
       today_quota_consumption: 33,
       today_requests_count: 44,
       today_income: 55,
-      checkIn: {
-        enableDetection: true,
-        siteStatus: {
-          isCheckedInToday: true,
-          lastDetectedAt: 123456,
-        },
-      },
+      checkIn: expect.any(Object),
+    })
+    expect(
+      getSelectedCheckInStatus({
+        config: result.checkIn,
+        siteType: SITE_TYPES.VELOERA,
+      }),
+    ).toEqual({
+      outcome: "known",
+      today: "checked",
+      evidence: { source: "probe", observedAt: 123456 },
     })
 
     nowSpy.mockRestore()
@@ -747,22 +742,14 @@ describe("apiService veloera channel APIs", () => {
         accessToken: "token",
         userId: "1",
       },
-      checkIn: {
-        enableDetection: false,
-        siteStatus: {
-          isCheckedInToday: true,
-          lastDetectedAt: 999,
-        },
-      },
+      siteType: SITE_TYPES.VELOERA,
+      checkIn: createCheckInConfig(SITE_TYPES.VELOERA, { matched: false }),
     }
 
     const result = await fetchAccountData(request as any)
 
     expect(mockFetchApiData).not.toHaveBeenCalled()
-    expect(result.checkIn.siteStatus).toEqual({
-      isCheckedInToday: true,
-      lastDetectedAt: 999,
-    })
+    expect(result.checkIn.selection).not.toHaveProperty("methodId")
   })
 
   it("returns a healthy refresh result when account aggregation succeeds", async () => {
@@ -775,7 +762,7 @@ describe("apiService veloera channel APIs", () => {
         accessToken: "token",
         userId: "1",
       },
-      checkIn: { enableDetection: true },
+      checkIn: buildCheckInConfig({ automaticExecutionEnabled: true }),
     } as any)
 
     expect(result.success).toBe(true)
@@ -798,7 +785,7 @@ describe("apiService veloera channel APIs", () => {
         accessToken: "token",
         userId: "1",
       },
-      checkIn: { enableDetection: false },
+      checkIn: buildCheckInConfig(),
     } as any)
 
     expect(mockDetermineHealthStatus).toHaveBeenCalledWith(failure)

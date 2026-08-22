@@ -17,6 +17,7 @@ import {
 } from "~/services/productAnalytics/contracts"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { AuthTypeEnum } from "~/types"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import {
   fireEvent,
   render,
@@ -109,7 +110,7 @@ const ACCOUNT = {
   token: "token",
   userId: "1",
   authType: AuthTypeEnum.AccessToken,
-  checkIn: { enableDetection: false },
+  checkIn: buildCheckInConfig(),
   tagIds: ["tag-a"],
 } as any
 
@@ -208,8 +209,10 @@ describe("AddTokenDialog prefill", () => {
     )
   })
 
-  it("prefills the default auto token name for manual create", async () => {
-    fetchAccountAvailableModelsMock.mockResolvedValueOnce([])
+  it("keeps manual create usable when on-demand model discovery is denied", async () => {
+    fetchAccountAvailableModelsMock.mockRejectedValueOnce(
+      new Error("model lookup forbidden"),
+    )
     fetchUserGroupsMock.mockResolvedValueOnce({
       default: { desc: "default", ratio: 1 },
     })
@@ -229,6 +232,20 @@ describe("AddTokenDialog prefill", () => {
     expect(
       await screen.findByLabelText(/keyManagement:dialog\.tokenName/),
     ).toHaveValue(DEFAULT_AUTO_PROVISION_TOKEN_NAME)
+    expect(fetchAccountAvailableModelsMock).not.toHaveBeenCalled()
+
+    const modelLimitsSwitch = screen.getByRole("switch", {
+      name: "keyManagement:dialog.modelLimits",
+    })
+    await user.click(modelLimitsSwitch)
+
+    await waitFor(() => {
+      expect(fetchAccountAvailableModelsMock).toHaveBeenCalledTimes(1)
+      expect(modelLimitsSwitch).not.toBeChecked()
+      expect(toastErrorMock).toHaveBeenCalledWith(
+        "keyManagement:dialog.modelLoadFailed",
+      )
+    })
 
     await user.click(
       screen.getByRole("button", { name: "keyManagement:dialog.createToken" }),
@@ -240,6 +257,50 @@ describe("AddTokenDialog prefill", () => {
 
     expect(createApiTokenMock.mock.calls[0]?.[1]).toMatchObject({
       name: DEFAULT_AUTO_PROVISION_TOKEN_NAME,
+      model_limits_enabled: false,
+      model_limits: "",
+    })
+  })
+
+  it("drops an unverified prefilled model when discovery is denied", async () => {
+    fetchAccountAvailableModelsMock.mockRejectedValueOnce(
+      new Error("model lookup forbidden"),
+    )
+    fetchUserGroupsMock.mockResolvedValueOnce({
+      default: { desc: "default", ratio: 1 },
+    })
+    createApiTokenMock.mockResolvedValueOnce(true)
+
+    const user = userEvent.setup()
+
+    render(
+      <AddTokenDialog
+        isOpen={true}
+        onClose={() => {}}
+        availableAccounts={[ACCOUNT]}
+        preSelectedAccountId={ACCOUNT.id}
+        createPrefill={{ modelId: "unverified-model" }}
+      />,
+    )
+
+    const modelLimitsSwitch = await screen.findByRole("switch", {
+      name: "keyManagement:dialog.modelLimits",
+    })
+    await waitFor(() => {
+      expect(fetchAccountAvailableModelsMock).toHaveBeenCalledTimes(1)
+      expect(modelLimitsSwitch).not.toBeChecked()
+    })
+
+    await user.click(
+      screen.getByRole("button", { name: "keyManagement:dialog.createToken" }),
+    )
+
+    await waitFor(() => {
+      expect(createApiTokenMock).toHaveBeenCalledTimes(1)
+    })
+    expect(createApiTokenMock.mock.calls[0]?.[1]).toMatchObject({
+      model_limits_enabled: false,
+      model_limits: "",
     })
   })
 
@@ -469,6 +530,67 @@ describe("AddTokenDialog prefill", () => {
     expect(JSON.stringify(trackerCompleteMock.mock.calls)).not.toContain(
       "Existing key",
     )
+  })
+
+  it("preserves existing model limits when optional discovery fails during edit", async () => {
+    fetchAccountAvailableModelsMock.mockRejectedValueOnce(
+      new Error("model lookup forbidden"),
+    )
+    fetchUserGroupsMock.mockResolvedValueOnce({
+      default: { desc: "default", ratio: 1 },
+    })
+    updateTokenMock.mockResolvedValueOnce(true)
+
+    const editingToken = {
+      id: 123,
+      accountId: ACCOUNT.id,
+      accountName: ACCOUNT.name,
+      name: "Existing key",
+      remain_quota: -1,
+      expired_time: -1,
+      unlimited_quota: true,
+      model_limits_enabled: true,
+      model_limits: "existing-model",
+      allow_ips: "",
+      group: "default",
+    } as any
+    const user = userEvent.setup()
+
+    render(
+      <AddTokenDialog
+        isOpen={true}
+        onClose={() => {}}
+        availableAccounts={[ACCOUNT]}
+        preSelectedAccountId={ACCOUNT.id}
+        editingToken={editingToken}
+      />,
+    )
+
+    const modelLimitsSwitch = await screen.findByRole("switch", {
+      name: "keyManagement:dialog.modelLimits",
+    })
+    await waitFor(() => {
+      expect(fetchAccountAvailableModelsMock).toHaveBeenCalledTimes(1)
+      expect(toastErrorMock).toHaveBeenCalledWith(
+        "keyManagement:dialog.modelLoadFailed",
+      )
+      expect(modelLimitsSwitch).toBeChecked()
+    })
+
+    await user.click(
+      screen.getByRole("button", { name: "keyManagement:dialog.updateToken" }),
+    )
+
+    await waitFor(() => {
+      expect(updateTokenMock).toHaveBeenCalledTimes(1)
+    })
+    expect(updateTokenMock.mock.calls[0]?.[0]).toMatchObject({
+      tokenId: 123,
+      tokenData: {
+        model_limits_enabled: true,
+        model_limits: "existing-model",
+      },
+    })
   })
 
   it("falls back to the localized create failure message when the error is blank", async () => {

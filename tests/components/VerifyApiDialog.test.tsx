@@ -20,6 +20,7 @@ import {
   verificationResultHistoryStorage,
 } from "~/services/verification/verificationResultHistory"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { requireHistoryTarget } from "~~/tests/test-utils/history"
 import {
   fireEvent,
@@ -218,7 +219,7 @@ describe("VerifyApiDialog", () => {
             token: "t",
             userId: "1",
             authType: "access_token" as any,
-            checkIn: { enableDetection: false } as any,
+            checkIn: buildCheckInConfig(),
           }}
           initialModelId={initialModelId}
         />,
@@ -272,7 +273,7 @@ describe("VerifyApiDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: buildCheckInConfig(),
         }}
         initialModelId="gpt-test"
       />,
@@ -345,7 +346,7 @@ describe("VerifyApiDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: buildCheckInConfig(),
         }}
         initialModelId="gpt-test"
       />,
@@ -451,7 +452,7 @@ describe("VerifyApiDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: buildCheckInConfig(),
         }}
         initialModelId="gpt-test"
         modelEnableGroups={["vip"]}
@@ -526,7 +527,7 @@ describe("VerifyApiDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: buildCheckInConfig(),
         }}
         initialModelId="gpt-test"
       />,
@@ -577,7 +578,7 @@ describe("VerifyApiDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: buildCheckInConfig(),
         }}
         initialModelId="gpt-test"
       />,
@@ -612,7 +613,7 @@ describe("VerifyApiDialog", () => {
       token: "t",
       userId: "1",
       authType: "access_token" as any,
-      checkIn: { enableDetection: false } as any,
+      checkIn: buildCheckInConfig(),
       tagIds: [],
     }
     const serviceCredentialRuntimeKey = buildServiceCredentialRuntimeKey(
@@ -696,7 +697,7 @@ describe("VerifyApiDialog", () => {
       token: "t",
       userId: "1",
       authType: "access_token" as any,
-      checkIn: { enableDetection: false } as any,
+      checkIn: buildCheckInConfig(),
       tagIds: [],
     }
     const emptyServiceCredentialRuntimeKey = buildServiceCredentialRuntimeKey(
@@ -777,7 +778,7 @@ describe("VerifyApiDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: buildCheckInConfig(),
         }}
         initialModelId="gpt-test"
         modelEnableGroups={["vip"]}
@@ -862,7 +863,7 @@ describe("VerifyApiDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: buildCheckInConfig(),
         }}
         modelEnableGroups={["vip"]}
       />,
@@ -934,7 +935,7 @@ describe("VerifyApiDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: buildCheckInConfig(),
         }}
         initialModelId="gpt-test"
       />,
@@ -1018,7 +1019,7 @@ describe("VerifyApiDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: buildCheckInConfig(),
         }}
         initialModelId="gpt-test"
       />,
@@ -1097,7 +1098,7 @@ describe("VerifyApiDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: buildCheckInConfig(),
         }}
         initialModelId="gpt-test"
       />,
@@ -1187,7 +1188,7 @@ describe("VerifyApiDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: buildCheckInConfig(),
         }}
         initialModelId="gpt-test"
       />,
@@ -1300,7 +1301,7 @@ describe("VerifyApiDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: buildCheckInConfig(),
         }}
         initialModelId="gpt-test"
       />,
@@ -1381,7 +1382,7 @@ describe("VerifyApiDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: buildCheckInConfig(),
         }}
         initialModelId="gpt-test"
       />,
@@ -1467,7 +1468,7 @@ describe("VerifyApiDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: buildCheckInConfig(),
         }}
         initialModelId="gpt-test"
       />,
@@ -1545,7 +1546,7 @@ describe("VerifyApiDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: buildCheckInConfig(),
         }}
         initialModelId="gpt-test"
       />,
@@ -1613,7 +1614,7 @@ describe("VerifyApiDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: buildCheckInConfig(),
         }}
         initialModelId=""
       />,

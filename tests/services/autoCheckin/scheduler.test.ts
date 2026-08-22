@@ -3,7 +3,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SITE_TYPES } from "~/constants/siteType"
 import { accountStorage } from "~/services/accounts/accountStorage"
-import { resolveAutoCheckinProvider } from "~/services/checkin/autoCheckin/providers"
+import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
+import {
+  getSelectedCheckInStatus,
+  inspectAccountCheckIn,
+} from "~/services/checkin/autoCheckin/inspection"
+import {
+  executeSelectedCheckIn,
+  inspectSelectedCheckInCompatibility,
+} from "~/services/checkin/autoCheckin/methods"
 import {
   autoCheckinScheduler,
   getAutoCheckinAccountInfo,
@@ -61,6 +69,7 @@ import {
   automaticExecution,
   userCommandExecution,
 } from "~~/tests/services/protectionBypass/fixtures"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
 const manualExecution = (
   surface: ProtectionBypassSurface = TEMP_WINDOW_REQUEST_SOURCES.Options,
@@ -97,6 +106,21 @@ const ACCOUNT_REFRESH_EXECUTION = automaticExecution(
   PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
   PROTECTION_BYPASS_SURFACES.Popup,
 )
+
+const runnableCheckIn = (
+  automaticExecutionEnabled = true,
+  siteType: Parameters<
+    typeof createCompatibilityCheckInConfig
+  >[0]["siteType"] = SITE_TYPES.VELOERA,
+) =>
+  createCompatibilityCheckInConfig({
+    siteType,
+    supported: true,
+    automaticExecutionEnabled,
+  })
+
+const noSelectedCheckIn = () =>
+  buildCheckInConfig({ automaticExecutionEnabled: true })
 
 const runCheckinsForTest = (
   options: Omit<
@@ -178,9 +202,21 @@ vi.mock("~/services/accounts/accountStorage", () => ({
   },
 }))
 
-vi.mock("~/services/checkin/autoCheckin/providers", () => ({
-  resolveAutoCheckinProvider: vi.fn(),
+vi.mock("~/services/checkin/autoCheckin/methods", () => ({
+  executeSelectedCheckIn: vi.fn(),
+  inspectSelectedCheckInCompatibility: vi.fn(),
 }))
+
+vi.mock("~/services/checkin/autoCheckin/inspection", async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import("~/services/checkin/autoCheckin/inspection")
+    >()
+  return {
+    ...actual,
+    getSelectedCheckInStatus: vi.fn(() => undefined),
+  }
+})
 
 vi.mock("~/services/checkin/autoCheckin/storage", () => ({
   AUTO_CHECKIN_STATUS_STORAGE_LOCK: "all-api-hub:auto-checkin-status",
@@ -243,9 +279,20 @@ const mockedAccountStorage = accountStorage as unknown as {
   convertToDisplayData: ReturnType<typeof vi.fn>
 }
 
-const mockedProviders = {
-  resolveAutoCheckinProvider:
-    resolveAutoCheckinProvider as unknown as ReturnType<typeof vi.fn>,
+const resolveProviderForTest = vi.fn()
+
+const mockedMethods = {
+  executeSelectedCheckIn: executeSelectedCheckIn as unknown as ReturnType<
+    typeof vi.fn
+  >,
+  inspectSelectedCheckInCompatibility:
+    inspectSelectedCheckInCompatibility as unknown as ReturnType<typeof vi.fn>,
+}
+
+const mockedInspection = {
+  getSelectedCheckInStatus: getSelectedCheckInStatus as unknown as ReturnType<
+    typeof vi.fn
+  >,
 }
 
 const mockedBrowserApi = {
@@ -283,6 +330,61 @@ let alarmStore: Record<string, any> = {}
 beforeEach(() => {
   storedStatus = null
   alarmStore = {}
+  resolveProviderForTest.mockReset()
+  mockedMethods.inspectSelectedCheckInCompatibility.mockReset()
+  mockedMethods.executeSelectedCheckIn.mockReset()
+  mockedInspection.getSelectedCheckInStatus.mockReset()
+  mockedInspection.getSelectedCheckInStatus.mockReturnValue(undefined)
+
+  const inspectForTest = ({
+    account,
+    globalAutomaticExecutionEnabled,
+  }: any) => {
+    const state = inspectAccountCheckIn({
+      config: account.checkIn,
+      siteType: account.site_type,
+      accountDisabled: account.disabled,
+      globalAutomaticExecutionEnabled,
+    })
+    const provider = state.executionEligibility.eligible
+      ? resolveProviderForTest(account)
+      : null
+    return {
+      state,
+      providerAvailable:
+        state.executionEligibility.eligible &&
+        provider?.canCheckIn(account) === true,
+      provider,
+    }
+  }
+
+  mockedMethods.inspectSelectedCheckInCompatibility.mockImplementation(
+    inspectForTest,
+  )
+  mockedMethods.executeSelectedCheckIn.mockImplementation(
+    async ({ account, globalAutomaticExecutionEnabled, context }: any) => {
+      const inspection = inspectForTest({
+        account,
+        globalAutomaticExecutionEnabled,
+      })
+      if (!inspection.state.executionEligibility.eligible) {
+        return {
+          kind: "skipped",
+          reason: inspection.state.executionEligibility.skipReason,
+        }
+      }
+      const provider = inspection.provider
+      if (!provider) return { kind: "skipped", reason: "no_provider" }
+      if (!provider.canCheckIn(account)) {
+        return { kind: "skipped", reason: "provider_not_ready" }
+      }
+      return {
+        kind: "executed",
+        methodId: "new-api:daily-checkin",
+        result: await provider.checkIn(account, context),
+      }
+    },
+  )
 
   mockedAutoCheckinStorage.getStatus.mockImplementation(
     async () => storedStatus,
@@ -1048,7 +1150,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
       site_name: "Success Site",
       site_type: SITE_TYPES.VELOERA,
       account_info: { username: "success-user" },
-      checkIn: { enableDetection: true, autoCheckInEnabled: true },
+      checkIn: runnableCheckIn(),
     }
     const failedAccount: any = {
       id: "failed",
@@ -1056,7 +1158,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
       site_name: "Failed Site",
       site_type: SITE_TYPES.VELOERA,
       account_info: { username: "failed-user" },
-      checkIn: { enableDetection: true, autoCheckInEnabled: true },
+      checkIn: runnableCheckIn(),
     }
     const skippedAccount: any = {
       id: "skipped",
@@ -1064,7 +1166,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
       site_name: "Skipped Site",
       site_type: SITE_TYPES.VELOERA,
       account_info: { username: "skipped-user" },
-      checkIn: { enableDetection: true, autoCheckInEnabled: false },
+      checkIn: runnableCheckIn(false),
     }
 
     mockedAccountStorage.getAllAccounts.mockResolvedValue([
@@ -1081,7 +1183,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
           : { status: "failed", rawMessage: "boom" },
       ),
     }
-    mockedProviders.resolveAutoCheckinProvider.mockReturnValue(provider)
+    resolveProviderForTest.mockReturnValue(provider)
 
     await runCheckinsForTest({
       runType: AUTO_CHECKIN_RUN_TYPE.DAILY,
@@ -1148,10 +1250,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
       site_name: "SiteA",
       site_type: SITE_TYPES.VELOERA,
       account_info: { username: "user-a" },
-      checkIn: {
-        enableDetection: true,
-        siteStatus: { isCheckedInToday: true },
-      },
+      checkIn: runnableCheckIn(),
     }
     const accountB: any = {
       id: "b",
@@ -1159,7 +1258,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
       site_name: "SiteB",
       site_type: SITE_TYPES.VELOERA,
       account_info: { username: "user-b" },
-      checkIn: { enableDetection: true },
+      checkIn: runnableCheckIn(),
     }
 
     mockedAccountStorage.getAllAccounts.mockResolvedValue([accountA, accountB])
@@ -1173,7 +1272,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
         return { status: "failed", rawMessage: "boom" }
       }),
     }
-    mockedProviders.resolveAutoCheckinProvider.mockReturnValue(provider)
+    resolveProviderForTest.mockReturnValue(provider)
 
     await runCheckinsForTest({
       runType: AUTO_CHECKIN_RUN_TYPE.DAILY,
@@ -1228,7 +1327,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
       site_name: `Site ${index + 1}`,
       site_type: SITE_TYPES.VELOERA,
       account_info: { username: `user-${index + 1}` },
-      checkIn: { enableDetection: true, autoCheckInEnabled: true },
+      checkIn: runnableCheckIn(),
     }))
     mockedAccountStorage.getAllAccounts.mockResolvedValue(accounts)
 
@@ -1243,7 +1342,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
         return deferred.promise
       }),
     }
-    mockedProviders.resolveAutoCheckinProvider.mockReturnValue(provider)
+    resolveProviderForTest.mockReturnValue(provider)
 
     const runPromise = runCheckinsForTest({
       runType: AUTO_CHECKIN_RUN_TYPE.DAILY,
@@ -1288,7 +1387,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
       site_name: `Site ${index + 1}`,
       site_type: SITE_TYPES.VELOERA,
       account_info: { username: `user-${index + 1}` },
-      checkIn: { enableDetection: true, autoCheckInEnabled: true },
+      checkIn: runnableCheckIn(),
     }))
     mockedAccountStorage.getAllAccounts.mockResolvedValue(accounts)
 
@@ -1296,7 +1395,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
       canCheckIn: vi.fn(() => true),
       checkIn: vi.fn(async () => ({ status: "success" })),
     }
-    mockedProviders.resolveAutoCheckinProvider.mockReturnValue(provider)
+    resolveProviderForTest.mockReturnValue(provider)
 
     const runAccountCheckinSpy = vi
       .spyOn(autoCheckinScheduler as any, "runAccountCheckin")
@@ -1358,10 +1457,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
       site_name: "Boundary Site",
       site_type: SITE_TYPES.VELOERA,
       account_info: { username: "user" },
-      checkIn: {
-        enableDetection: true,
-        autoCheckInEnabled: true,
-      },
+      checkIn: runnableCheckIn(),
     }
 
     mockedAccountStorage.getAllAccounts.mockResolvedValue([account])
@@ -1370,7 +1466,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
       canCheckIn: vi.fn(() => true),
       checkIn: vi.fn(async () => ({ status: "failed", rawMessage: "boom" })),
     }
-    mockedProviders.resolveAutoCheckinProvider.mockReturnValue(provider)
+    resolveProviderForTest.mockReturnValue(provider)
 
     await runCheckinsForTest({
       runType: AUTO_CHECKIN_RUN_TYPE.DAILY,
@@ -1434,7 +1530,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
       site_name: "SiteB",
       site_type: SITE_TYPES.VELOERA,
       account_info: { username: "user-b" },
-      checkIn: { enableDetection: true },
+      checkIn: runnableCheckIn(),
     }
     mockedAccountStorage.getAccountById.mockResolvedValue(accountB)
     mockedAccountStorage.getAllAccounts.mockResolvedValue([accountB])
@@ -1443,7 +1539,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
       canCheckIn: vi.fn(() => true),
       checkIn: vi.fn(async () => ({ status: "failed", rawMessage: "boom" })),
     }
-    mockedProviders.resolveAutoCheckinProvider.mockReturnValue(provider)
+    resolveProviderForTest.mockReturnValue(provider)
 
     await (autoCheckinScheduler as any).handleRetryAlarm({
       name: "autoCheckinRetry",
@@ -1483,7 +1579,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
       site_name: "Disabled Site",
       site_type: SITE_TYPES.VELOERA,
       account_info: { username: "disabled-user" },
-      checkIn: { enableDetection: true },
+      checkIn: runnableCheckIn(),
     }
     const detectionDisabledAccount: any = {
       id: "detection-off",
@@ -1491,7 +1587,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
       site_name: "Detection Off",
       site_type: SITE_TYPES.VELOERA,
       account_info: { username: "off-user" },
-      checkIn: { enableDetection: false, autoCheckInEnabled: true },
+      checkIn: noSelectedCheckIn(),
     }
 
     mockedAccountStorage.getAllAccounts.mockResolvedValue([
@@ -1503,37 +1599,93 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
       runType: AUTO_CHECKIN_RUN_TYPE.MANUAL,
     })
 
-    expect(mockedProviders.resolveAutoCheckinProvider).not.toHaveBeenCalled()
+    expect(resolveProviderForTest).not.toHaveBeenCalled()
     expect(storedStatus.lastRunResult).toBe("success")
     expect(storedStatus.summary).toEqual({
-      totalEligible: 0,
+      totalEligible: 1,
       executed: 0,
       successCount: 0,
       failedCount: 0,
-      skippedCount: 0,
+      skippedCount: 1,
       needsRetry: false,
     })
     expect(storedStatus.perAccount.disabled).toMatchObject({
       status: "skipped",
       reasonCode: "account_disabled",
     })
-    expect(storedStatus.perAccount["detection-off"]).toBeUndefined()
+    expect(storedStatus.perAccount["detection-off"]).toMatchObject({
+      status: "skipped",
+      reasonCode: "detection_disabled",
+    })
     expect(mockedBrowserApi.sendRuntimeMessage).toHaveBeenCalledWith(
       expect.objectContaining({
         action: RuntimeActionIds.AutoCheckinRunCompleted,
         runKind: "manual",
         updatedAccountIds: [],
         summary: {
-          totalEligible: 0,
+          totalEligible: 1,
           executed: 0,
           successCount: 0,
           failedCount: 0,
-          skippedCount: 0,
+          skippedCount: 1,
           needsRetry: false,
         },
       }),
       { maxAttempts: 1 },
     )
+
+    vi.useRealTimers()
+  })
+
+  it("does not count a runtime skip as a failure or enqueue a retry", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2024, 0, 1, 9, 0, 0))
+    mockedUserPreferences.getPreferences.mockResolvedValue({
+      autoCheckin: {
+        ...(DEFAULT_PREFERENCES as any).autoCheckin,
+        globalEnabled: true,
+        retryStrategy: {
+          enabled: true,
+          intervalMinutes: 30,
+          maxAttemptsPerDay: 3,
+        },
+      },
+    })
+    mockedAccountStorage.getAllAccounts.mockResolvedValue([
+      {
+        id: "runtime-skip",
+        disabled: false,
+        site_name: "Runtime Skip",
+        site_type: SITE_TYPES.NEW_API,
+        account_info: { username: "user" },
+        checkIn: runnableCheckIn(true, SITE_TYPES.NEW_API),
+      },
+    ])
+    resolveProviderForTest.mockReturnValue({
+      canCheckIn: vi.fn(() => true),
+      checkIn: vi.fn(),
+    })
+    mockedMethods.executeSelectedCheckIn.mockResolvedValueOnce({
+      kind: "skipped",
+      reason: "provider_not_ready",
+    })
+
+    await runCheckinsForTest({ runType: AUTO_CHECKIN_RUN_TYPE.DAILY })
+
+    expect(storedStatus.summary).toEqual({
+      totalEligible: 1,
+      executed: 0,
+      successCount: 0,
+      failedCount: 0,
+      skippedCount: 1,
+      needsRetry: false,
+    })
+    expect(storedStatus.perAccount["runtime-skip"]).toMatchObject({
+      status: "skipped",
+      reasonCode: "provider_not_ready",
+    })
+    expect(storedStatus.retryState).toBeUndefined()
+    expect(storedStatus.pendingRetry).toBe(false)
 
     vi.useRealTimers()
   })
@@ -1561,7 +1713,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
       site_name: "Paused Daily",
       site_type: SITE_TYPES.VELOERA,
       account_info: { username: "user" },
-      checkIn: { enableDetection: true, autoCheckInEnabled: false },
+      checkIn: runnableCheckIn(false),
     }
 
     storedStatus = {
@@ -1580,7 +1732,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
       canCheckIn: vi.fn(() => true),
       checkIn: vi.fn(),
     }
-    mockedProviders.resolveAutoCheckinProvider.mockReturnValue(provider)
+    resolveProviderForTest.mockReturnValue(provider)
 
     await runCheckinsForTest({
       runType: AUTO_CHECKIN_RUN_TYPE.DAILY,
@@ -1645,7 +1797,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
     ).resolves.toBeUndefined()
 
     expect(mockedAccountStorage.getAllAccounts).not.toHaveBeenCalled()
-    expect(mockedProviders.resolveAutoCheckinProvider).not.toHaveBeenCalled()
+    expect(resolveProviderForTest).not.toHaveBeenCalled()
     expect(mockedAutoCheckinStorage.saveStatus).not.toHaveBeenCalled()
     expect(mockedBrowserApi.sendRuntimeMessage).not.toHaveBeenCalled()
     expect(storedStatus).toEqual({
@@ -1695,7 +1847,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
       site_name: "Target Site",
       site_type: SITE_TYPES.VELOERA,
       account_info: { username: "user" },
-      checkIn: { enableDetection: true, autoCheckInEnabled: true },
+      checkIn: runnableCheckIn(),
     }
     mockedAccountStorage.getAllAccounts.mockResolvedValue([targetAccount])
 
@@ -1703,7 +1855,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
       canCheckIn: vi.fn(() => true),
       checkIn: vi.fn(async () => ({ status: "success" })),
     }
-    mockedProviders.resolveAutoCheckinProvider.mockReturnValue(provider)
+    resolveProviderForTest.mockReturnValue(provider)
 
     await runCheckinsForTest({
       runType: AUTO_CHECKIN_RUN_TYPE.MANUAL,
@@ -1972,7 +2124,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
       site_name: "Disabled Site",
       site_type: SITE_TYPES.VELOERA,
       account_info: { username: "disabled-user" },
-      checkIn: { enableDetection: true },
+      checkIn: runnableCheckIn(),
     }
     const successAccount: any = {
       id: "success",
@@ -1980,7 +2132,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
       site_name: "Success Site",
       site_type: SITE_TYPES.VELOERA,
       account_info: { username: "success-user" },
-      checkIn: { enableDetection: true, autoCheckInEnabled: true },
+      checkIn: runnableCheckIn(),
     }
     const failedAccount: any = {
       id: "failed",
@@ -1988,7 +2140,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
       site_name: "Failed Site",
       site_type: SITE_TYPES.VELOERA,
       account_info: { username: "failed-user" },
-      checkIn: { enableDetection: true, autoCheckInEnabled: true },
+      checkIn: runnableCheckIn(),
     }
 
     mockedAccountStorage.getAllAccounts.mockResolvedValue([
@@ -2014,7 +2166,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
         return { status: "failed", rawMessage: "boom" }
       }),
     }
-    mockedProviders.resolveAutoCheckinProvider.mockReturnValue(provider)
+    resolveProviderForTest.mockReturnValue(provider)
 
     const refreshSpy = vi.spyOn(
       autoCheckinScheduler as any,
@@ -2129,7 +2281,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
       site_name: "Success Site",
       site_type: SITE_TYPES.VELOERA,
       account_info: { username: "success-user" },
-      checkIn: { enableDetection: true, autoCheckInEnabled: true },
+      checkIn: runnableCheckIn(),
     }
     const failedAccount: any = {
       id: "failed",
@@ -2137,7 +2289,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
       site_name: "Failed Site",
       site_type: SITE_TYPES.VELOERA,
       account_info: { username: "failed-user" },
-      checkIn: { enableDetection: true, autoCheckInEnabled: true },
+      checkIn: runnableCheckIn(),
     }
 
     mockedAccountStorage.getAllAccounts.mockResolvedValue([
@@ -2156,7 +2308,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
           : { status: "failed", rawMessage: "boom" },
       ),
     }
-    mockedProviders.resolveAutoCheckinProvider.mockReturnValue(provider)
+    resolveProviderForTest.mockReturnValue(provider)
 
     await (autoCheckinScheduler as any).runRetryCheckins()
 
@@ -2252,14 +2404,14 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
         site_name: "Exhausted Site",
         site_type: SITE_TYPES.VELOERA,
         account_info: { username: "user" },
-        checkIn: { enableDetection: true, autoCheckInEnabled: true },
+        checkIn: runnableCheckIn(),
       },
     ])
 
     await (autoCheckinScheduler as any).runRetryCheckins()
 
     expect(mockedAccountStorage.getAccountById).not.toHaveBeenCalled()
-    expect(mockedProviders.resolveAutoCheckinProvider).not.toHaveBeenCalled()
+    expect(resolveProviderForTest).not.toHaveBeenCalled()
     expect(storedStatus.retryState).toBeUndefined()
     expect(storedStatus.pendingRetry).toBe(false)
     expect(storedStatus.lastRunResult).toBe("failed")
@@ -2570,7 +2722,7 @@ describe("autoCheckinScheduler retry scheduling", () => {
 
     expect(mockedBrowserApi.clearAlarm).toHaveBeenCalledWith("autoCheckinRetry")
     expect(mockedAccountStorage.getAccountById).not.toHaveBeenCalled()
-    expect(mockedProviders.resolveAutoCheckinProvider).not.toHaveBeenCalled()
+    expect(resolveProviderForTest).not.toHaveBeenCalled()
     expect(mockedBrowserApi.sendRuntimeMessage).not.toHaveBeenCalled()
     expect(storedStatus.retryState).toBeUndefined()
     expect(storedStatus.pendingRetry).toBe(false)
@@ -2608,7 +2760,7 @@ describe("autoCheckinScheduler retry scheduling", () => {
 
     expect(mockedBrowserApi.clearAlarm).toHaveBeenCalledWith("autoCheckinRetry")
     expect(mockedAccountStorage.getAccountById).not.toHaveBeenCalled()
-    expect(mockedProviders.resolveAutoCheckinProvider).not.toHaveBeenCalled()
+    expect(resolveProviderForTest).not.toHaveBeenCalled()
     expect(storedStatus.retryState).toBeUndefined()
     expect(storedStatus.pendingRetry).toBe(false)
 
@@ -2645,7 +2797,7 @@ describe("autoCheckinScheduler retry scheduling", () => {
 
     expect(mockedBrowserApi.clearAlarm).toHaveBeenCalledWith("autoCheckinRetry")
     expect(mockedAccountStorage.getAccountById).not.toHaveBeenCalled()
-    expect(mockedProviders.resolveAutoCheckinProvider).not.toHaveBeenCalled()
+    expect(resolveProviderForTest).not.toHaveBeenCalled()
     expect(mockedBrowserApi.sendRuntimeMessage).not.toHaveBeenCalled()
     expect(storedStatus.retryState).toBeUndefined()
     expect(storedStatus.pendingRetry).toBe(false)
@@ -2701,7 +2853,7 @@ describe("autoCheckinScheduler retry scheduling", () => {
 
     await (autoCheckinScheduler as any).runRetryCheckins()
 
-    expect(mockedProviders.resolveAutoCheckinProvider).not.toHaveBeenCalled()
+    expect(resolveProviderForTest).not.toHaveBeenCalled()
     expect(storedStatus.perAccount.missing).toMatchObject({
       accountId: "missing",
       accountName: "missing",
@@ -2789,7 +2941,7 @@ describe("autoCheckinScheduler retry scheduling", () => {
       site_name: "Paused Site",
       site_type: SITE_TYPES.VELOERA,
       account_info: { username: "user" },
-      checkIn: { enableDetection: true, autoCheckInEnabled: false },
+      checkIn: runnableCheckIn(false),
     }
 
     mockedAccountStorage.getAllAccounts.mockResolvedValue([pausedAccount])
@@ -2798,7 +2950,7 @@ describe("autoCheckinScheduler retry scheduling", () => {
       canCheckIn: vi.fn(() => true),
       checkIn: vi.fn(),
     }
-    mockedProviders.resolveAutoCheckinProvider.mockReturnValue(provider)
+    resolveProviderForTest.mockReturnValue(provider)
 
     await (autoCheckinScheduler as any).runRetryCheckins()
 
@@ -2926,7 +3078,7 @@ describe("autoCheckinScheduler targeting support", () => {
       site_name: "Disabled Site",
       site_type: SITE_TYPES.VELOERA,
       account_info: { username: "disabled-user" },
-      checkIn: { enableDetection: true, autoCheckInEnabled: true },
+      checkIn: runnableCheckIn(),
     }
     const detectionDisabledAccount: any = {
       id: "detection-disabled",
@@ -2934,7 +3086,7 @@ describe("autoCheckinScheduler targeting support", () => {
       site_name: "Detection Disabled Site",
       site_type: SITE_TYPES.VELOERA,
       account_info: { username: "detection-user" },
-      checkIn: { enableDetection: false, autoCheckInEnabled: true },
+      checkIn: noSelectedCheckIn(),
     }
 
     mockedAccountStorage.getAllAccounts.mockResolvedValue([
@@ -2954,13 +3106,16 @@ describe("autoCheckinScheduler targeting support", () => {
       status: "skipped",
       reasonCode: "account_disabled",
     })
-    expect(storedStatus.perAccount["detection-disabled"]).toBeUndefined()
+    expect(storedStatus.perAccount["detection-disabled"]).toMatchObject({
+      status: "skipped",
+      reasonCode: "detection_disabled",
+    })
     expect(storedStatus.summary).toEqual({
       totalEligible: 2,
       executed: 1,
       successCount: 1,
       failedCount: 0,
-      skippedCount: 1,
+      skippedCount: 2,
       needsRetry: false,
     })
     expect(storedStatus.pendingRetry).toBe(true)
@@ -2979,7 +3134,7 @@ describe("autoCheckinScheduler targeting support", () => {
           executed: 1,
           successCount: 1,
           failedCount: 0,
-          skippedCount: 1,
+          skippedCount: 2,
           needsRetry: false,
         },
       }),
@@ -3053,7 +3208,7 @@ describe("autoCheckinScheduler targeting support", () => {
       site_name: "Retry Target",
       site_type: SITE_TYPES.VELOERA,
       account_info: { username: "user" },
-      checkIn: { enableDetection: true, autoCheckInEnabled: true },
+      checkIn: runnableCheckIn(),
     }
     const otherAccount: any = {
       id: "other",
@@ -3061,7 +3216,7 @@ describe("autoCheckinScheduler targeting support", () => {
       site_name: "Other Retry",
       site_type: SITE_TYPES.VELOERA,
       account_info: { username: "other" },
-      checkIn: { enableDetection: true, autoCheckInEnabled: true },
+      checkIn: runnableCheckIn(),
     }
 
     mockedAccountStorage.getAllAccounts.mockResolvedValue([
@@ -3073,7 +3228,7 @@ describe("autoCheckinScheduler targeting support", () => {
       canCheckIn: vi.fn(() => true),
       checkIn: vi.fn(async () => ({ status: "success" })),
     }
-    mockedProviders.resolveAutoCheckinProvider.mockReturnValue(provider)
+    resolveProviderForTest.mockReturnValue(provider)
 
     await runCheckinsForTest({
       runType: AUTO_CHECKIN_RUN_TYPE.MANUAL,
@@ -3167,7 +3322,7 @@ describe("autoCheckinScheduler targeting support", () => {
       site_name: "Final Retry Target",
       site_type: SITE_TYPES.VELOERA,
       account_info: { username: "user" },
-      checkIn: { enableDetection: true, autoCheckInEnabled: true },
+      checkIn: runnableCheckIn(),
     }
 
     mockedAccountStorage.getAllAccounts.mockResolvedValue([targetAccount])
@@ -3175,7 +3330,7 @@ describe("autoCheckinScheduler targeting support", () => {
       canCheckIn: vi.fn(() => true),
       checkIn: vi.fn(async () => ({ status: "success" })),
     }
-    mockedProviders.resolveAutoCheckinProvider.mockReturnValue(provider)
+    resolveProviderForTest.mockReturnValue(provider)
 
     await runCheckinsForTest({
       runType: AUTO_CHECKIN_RUN_TYPE.MANUAL,
@@ -3223,7 +3378,7 @@ describe("autoCheckinScheduler targeting support", () => {
       site_name: "SiteA",
       site_type: SITE_TYPES.VELOERA,
       account_info: { username: "user-a" },
-      checkIn: { enableDetection: true },
+      checkIn: runnableCheckIn(),
     }
     const accountB: any = {
       id: "b",
@@ -3231,7 +3386,7 @@ describe("autoCheckinScheduler targeting support", () => {
       site_name: "SiteB",
       site_type: SITE_TYPES.VELOERA,
       account_info: { username: "user-b" },
-      checkIn: { enableDetection: true },
+      checkIn: runnableCheckIn(),
     }
 
     mockedAccountStorage.getAllAccounts.mockResolvedValue([accountA, accountB])
@@ -3243,7 +3398,7 @@ describe("autoCheckinScheduler targeting support", () => {
         return { status: "success" }
       }),
     }
-    mockedProviders.resolveAutoCheckinProvider.mockReturnValue(provider)
+    resolveProviderForTest.mockReturnValue(provider)
 
     await runCheckinsForTest({
       runType: AUTO_CHECKIN_RUN_TYPE.MANUAL,
@@ -3287,7 +3442,7 @@ describe("autoCheckinScheduler targeting support", () => {
       site_name: "Same Name",
       site_type: SITE_TYPES.VELOERA,
       account_info: { username: "alice" },
-      checkIn: { enableDetection: true },
+      checkIn: runnableCheckIn(),
     }
     const accountB: any = {
       id: "b",
@@ -3295,7 +3450,7 @@ describe("autoCheckinScheduler targeting support", () => {
       site_name: "same   name",
       site_type: SITE_TYPES.VELOERA,
       account_info: { username: "bob" },
-      checkIn: { enableDetection: true },
+      checkIn: runnableCheckIn(),
     }
 
     mockedAccountStorage.getAllAccounts.mockResolvedValue([accountA, accountB])
@@ -3304,7 +3459,7 @@ describe("autoCheckinScheduler targeting support", () => {
       canCheckIn: vi.fn(() => true),
       checkIn: vi.fn(async () => ({ status: "success" })),
     }
-    mockedProviders.resolveAutoCheckinProvider.mockReturnValue(provider)
+    resolveProviderForTest.mockReturnValue(provider)
 
     await runCheckinsForTest({
       runType: AUTO_CHECKIN_RUN_TYPE.MANUAL,
@@ -3339,7 +3494,7 @@ describe("autoCheckinScheduler targeting support", () => {
       site_name: "Same Name",
       site_type: SITE_TYPES.VELOERA,
       account_info: { username: "alice" },
-      checkIn: { enableDetection: true },
+      checkIn: runnableCheckIn(),
     }
     const accountB: any = {
       id: "b",
@@ -3347,7 +3502,7 @@ describe("autoCheckinScheduler targeting support", () => {
       site_name: "same   name",
       site_type: SITE_TYPES.VELOERA,
       account_info: { username: "bob" },
-      checkIn: { enableDetection: true },
+      checkIn: runnableCheckIn(),
     }
 
     mockedAccountStorage.getAllAccounts.mockResolvedValue([accountA, accountB])
@@ -3356,7 +3511,7 @@ describe("autoCheckinScheduler targeting support", () => {
       canCheckIn: vi.fn(() => true),
       checkIn: vi.fn(async () => ({ status: "success" })),
     }
-    mockedProviders.resolveAutoCheckinProvider.mockReturnValue(provider)
+    resolveProviderForTest.mockReturnValue(provider)
 
     await runCheckinsForTest({
       runType: AUTO_CHECKIN_RUN_TYPE.MANUAL,
@@ -3409,7 +3564,7 @@ describe("autoCheckinScheduler run-completed notifications", () => {
       site_name: "SiteA",
       site_type: SITE_TYPES.VELOERA,
       account_info: { username: "user-a" },
-      checkIn: { enableDetection: true },
+      checkIn: runnableCheckIn(),
     }
     const accountB: any = {
       id: "b",
@@ -3417,7 +3572,7 @@ describe("autoCheckinScheduler run-completed notifications", () => {
       site_name: "SiteB",
       site_type: SITE_TYPES.VELOERA,
       account_info: { username: "user-b" },
-      checkIn: { enableDetection: true },
+      checkIn: runnableCheckIn(),
     }
 
     mockedAccountStorage.getAllAccounts.mockResolvedValue([accountA, accountB])
@@ -3439,7 +3594,7 @@ describe("autoCheckinScheduler run-completed notifications", () => {
           : { status: "failed", rawMessage: "boom" }
       }),
     }
-    mockedProviders.resolveAutoCheckinProvider.mockReturnValue(provider)
+    resolveProviderForTest.mockReturnValue(provider)
 
     await runCheckinsForTest({
       runType: AUTO_CHECKIN_RUN_TYPE.MANUAL,
@@ -3508,7 +3663,7 @@ describe("autoCheckinScheduler run-completed notifications", () => {
       site_name: "SiteA",
       site_type: SITE_TYPES.VELOERA,
       account_info: { username: "user-a" },
-      checkIn: { enableDetection: true },
+      checkIn: runnableCheckIn(),
     }
 
     mockedAccountStorage.getAllAccounts.mockResolvedValue([accountA])
@@ -3521,7 +3676,7 @@ describe("autoCheckinScheduler run-completed notifications", () => {
       canCheckIn: vi.fn(() => true),
       checkIn: vi.fn(async () => ({ status: "success" })),
     }
-    mockedProviders.resolveAutoCheckinProvider.mockReturnValue(provider)
+    resolveProviderForTest.mockReturnValue(provider)
 
     await runCheckinsForTest({
       runType: AUTO_CHECKIN_RUN_TYPE.MANUAL,
@@ -3584,7 +3739,7 @@ describe("autoCheckinScheduler run-completed notifications", () => {
       site_name: "SiteA",
       site_type: SITE_TYPES.VELOERA,
       account_info: { username: "user-a" },
-      checkIn: { enableDetection: true },
+      checkIn: runnableCheckIn(),
     }
 
     mockedAccountStorage.getAllAccounts.mockResolvedValue([accountA])
@@ -3597,7 +3752,7 @@ describe("autoCheckinScheduler run-completed notifications", () => {
       canCheckIn: vi.fn(() => true),
       checkIn: vi.fn(async () => ({ status: "success" })),
     }
-    mockedProviders.resolveAutoCheckinProvider.mockReturnValue(provider)
+    resolveProviderForTest.mockReturnValue(provider)
 
     await runCheckinsForTest({
       runType: AUTO_CHECKIN_RUN_TYPE.MANUAL,
@@ -4225,7 +4380,7 @@ describe("autoCheckinScheduler.retryAccount", () => {
       site_name: "Disabled",
       site_type: SITE_TYPES.VELOERA,
       account_info: { username: "user" },
-      checkIn: { enableDetection: true, autoCheckInEnabled: true },
+      checkIn: runnableCheckIn(),
     }
 
     mockedAccountStorage.getAllAccounts.mockResolvedValueOnce([disabledAccount])
@@ -4304,7 +4459,7 @@ describe("autoCheckinScheduler.retryAccount", () => {
       site_name: "Retry Site",
       site_type: SITE_TYPES.VELOERA,
       account_info: { username: "user" },
-      checkIn: { enableDetection: true, autoCheckInEnabled: true },
+      checkIn: runnableCheckIn(),
     }
 
     mockedAccountStorage.getAllAccounts.mockResolvedValueOnce([account])
@@ -4354,7 +4509,7 @@ describe("autoCheckinScheduler.retryAccount", () => {
       canCheckIn: vi.fn(() => true),
       checkIn: vi.fn(async () => ({ status: "success" })),
     }
-    mockedProviders.resolveAutoCheckinProvider.mockReturnValue(provider)
+    resolveProviderForTest.mockReturnValue(provider)
     const scheduleRetrySpy = vi
       .spyOn(autoCheckinScheduler as any, "scheduleRetryAlarm")
       .mockResolvedValue(undefined)
@@ -4403,7 +4558,7 @@ describe("autoCheckinScheduler.retryAccount", () => {
       site_name: "Retry Site",
       site_type: SITE_TYPES.VELOERA,
       account_info: { username: "user" },
-      checkIn: { enableDetection: true, autoCheckInEnabled: true },
+      checkIn: runnableCheckIn(),
     }
 
     mockedAccountStorage.getAllAccounts.mockResolvedValueOnce([account])
@@ -4453,7 +4608,7 @@ describe("autoCheckinScheduler.retryAccount", () => {
       canCheckIn: vi.fn(() => true),
       checkIn: vi.fn(async () => ({ status: "success" })),
     }
-    mockedProviders.resolveAutoCheckinProvider.mockReturnValue(provider)
+    resolveProviderForTest.mockReturnValue(provider)
 
     vi.spyOn(
       autoCheckinScheduler as any,
@@ -4487,7 +4642,7 @@ describe("autoCheckinScheduler.retryAccount", () => {
       site_name: "Retry Site",
       site_type: SITE_TYPES.VELOERA,
       account_info: { username: "user" },
-      checkIn: { enableDetection: true, autoCheckInEnabled: true },
+      checkIn: runnableCheckIn(),
     }
     const remainingAccount: any = {
       id: "retry-2",
@@ -4495,7 +4650,7 @@ describe("autoCheckinScheduler.retryAccount", () => {
       site_name: "Still Failing",
       site_type: SITE_TYPES.VELOERA,
       account_info: { username: "other" },
-      checkIn: { enableDetection: true, autoCheckInEnabled: true },
+      checkIn: runnableCheckIn(),
     }
 
     mockedAccountStorage.getAllAccounts.mockResolvedValueOnce([
@@ -4558,7 +4713,7 @@ describe("autoCheckinScheduler.retryAccount", () => {
       canCheckIn: vi.fn(() => true),
       checkIn: vi.fn(async () => ({ status: "success" })),
     }
-    mockedProviders.resolveAutoCheckinProvider.mockReturnValue(provider)
+    resolveProviderForTest.mockReturnValue(provider)
     const scheduleRetrySpy = vi
       .spyOn(autoCheckinScheduler as any, "scheduleRetryAlarm")
       .mockResolvedValue(undefined)
@@ -4595,7 +4750,7 @@ describe("autoCheckinScheduler.retryAccount", () => {
       site_name: "Retry Site",
       site_type: SITE_TYPES.VELOERA,
       account_info: { username: "user" },
-      checkIn: { enableDetection: true, autoCheckInEnabled: true },
+      checkIn: runnableCheckIn(),
     }
 
     mockedAccountStorage.getAllAccounts.mockResolvedValueOnce([account])
@@ -4648,7 +4803,7 @@ describe("autoCheckinScheduler.retryAccount", () => {
         rawMessage: "retry still failing",
       })),
     }
-    mockedProviders.resolveAutoCheckinProvider.mockReturnValue(provider)
+    resolveProviderForTest.mockReturnValue(provider)
     const scheduleRetrySpy = vi
       .spyOn(autoCheckinScheduler as any, "scheduleRetryAlarm")
       .mockResolvedValue(undefined)
@@ -4684,7 +4839,7 @@ describe("autoCheckinScheduler.retryAccount", () => {
       site_name: "Adhoc Retry",
       site_type: SITE_TYPES.VELOERA,
       account_info: { username: "adhoc" },
-      checkIn: { enableDetection: true, autoCheckInEnabled: true },
+      checkIn: runnableCheckIn(),
     }
     const queuedAccount: any = {
       id: "retry-2",
@@ -4692,7 +4847,7 @@ describe("autoCheckinScheduler.retryAccount", () => {
       site_name: "Queued Retry",
       site_type: SITE_TYPES.VELOERA,
       account_info: { username: "queued" },
-      checkIn: { enableDetection: true, autoCheckInEnabled: true },
+      checkIn: runnableCheckIn(),
     }
 
     mockedAccountStorage.getAllAccounts.mockResolvedValueOnce([
@@ -4745,7 +4900,7 @@ describe("autoCheckinScheduler.retryAccount", () => {
       canCheckIn: vi.fn(() => true),
       checkIn: vi.fn(async () => ({ status: "success" })),
     }
-    mockedProviders.resolveAutoCheckinProvider.mockReturnValue(provider)
+    resolveProviderForTest.mockReturnValue(provider)
     const scheduleRetrySpy = vi
       .spyOn(autoCheckinScheduler as any, "scheduleRetryAlarm")
       .mockResolvedValue(undefined)
@@ -5906,6 +6061,10 @@ describe("autoCheckinScheduler private helpers", () => {
   })
 
   it("derives snapshot skip reasons from account state and provider availability", () => {
+    resolveProviderForTest.mockReturnValue({
+      canCheckIn: vi.fn(() => true),
+    })
+
     expect(
       (autoCheckinScheduler as any).buildAccountSnapshot(
         {
@@ -5914,7 +6073,7 @@ describe("autoCheckinScheduler private helpers", () => {
           site_type: "new-api",
           site_name: "Base",
           account_info: { username: "user" },
-          checkIn: { enableDetection: true, autoCheckInEnabled: true },
+          checkIn: runnableCheckIn(true, SITE_TYPES.NEW_API),
         },
         "Base",
       ),
@@ -5924,7 +6083,7 @@ describe("autoCheckinScheduler private helpers", () => {
       providerAvailable: true,
     })
 
-    mockedProviders.resolveAutoCheckinProvider.mockReturnValueOnce(null)
+    resolveProviderForTest.mockReturnValueOnce(null)
 
     expect(
       (autoCheckinScheduler as any).buildAccountSnapshot(
@@ -5934,13 +6093,13 @@ describe("autoCheckinScheduler private helpers", () => {
           site_type: "new-api",
           site_name: "No Provider",
           account_info: { username: "user" },
-          checkIn: { enableDetection: true, autoCheckInEnabled: true },
+          checkIn: runnableCheckIn(true, SITE_TYPES.NEW_API),
         },
         "No Provider",
       ),
     ).toMatchObject({
       accountId: "no-provider",
-      skipReason: "no_provider",
+      skipReason: "provider_not_ready",
       providerAvailable: false,
     })
 
@@ -5952,7 +6111,7 @@ describe("autoCheckinScheduler private helpers", () => {
           site_type: "new-api",
           site_name: "Manual",
           account_info: { username: "user" },
-          checkIn: { enableDetection: false, autoCheckInEnabled: true },
+          checkIn: noSelectedCheckIn(),
         },
         "Manual",
       ),
@@ -5961,7 +6120,7 @@ describe("autoCheckinScheduler private helpers", () => {
       skipReason: "detection_disabled",
     })
 
-    mockedProviders.resolveAutoCheckinProvider.mockReturnValueOnce({
+    resolveProviderForTest.mockReturnValueOnce({
       canCheckIn: vi.fn(() => false),
     })
 
@@ -5973,7 +6132,7 @@ describe("autoCheckinScheduler private helpers", () => {
           site_type: "new-api",
           site_name: "Provider Not Ready",
           account_info: { username: "user" },
-          checkIn: { enableDetection: true, autoCheckInEnabled: true },
+          checkIn: runnableCheckIn(true, SITE_TYPES.NEW_API),
         },
         "Provider Not Ready",
       ),
@@ -5991,7 +6150,7 @@ describe("autoCheckinScheduler private helpers", () => {
           site_type: "new-api",
           site_name: "Auto Disabled",
           account_info: { username: "user" },
-          checkIn: { enableDetection: true, autoCheckInEnabled: false },
+          checkIn: runnableCheckIn(false, SITE_TYPES.NEW_API),
         },
         "Auto Disabled",
       ),
@@ -6001,47 +6160,125 @@ describe("autoCheckinScheduler private helpers", () => {
     })
   })
 
+  it.each([
+    {
+      domainReason: "already_checked",
+      snapshotReason: "already_checked_today",
+    },
+    {
+      domainReason: "method_disabled",
+      snapshotReason: "method_disabled",
+    },
+  ])(
+    "preserves $domainReason instead of reporting provider readiness",
+    ({ domainReason, snapshotReason }) => {
+      mockedMethods.inspectSelectedCheckInCompatibility.mockReturnValueOnce({
+        state: {
+          selectionState: {
+            mode: "automatic",
+            status: "selected",
+            methodId: "new-api:daily-checkin",
+          },
+          executionEligibility: {
+            eligible: false,
+            skipReason: domainReason,
+          },
+        },
+        providerAvailable: false,
+      })
+
+      expect(
+        (autoCheckinScheduler as any).buildAccountSnapshot(
+          {
+            id: domainReason,
+            disabled: false,
+            site_type: "new-api",
+            site_name: domainReason,
+            account_info: { username: "user" },
+            checkIn: runnableCheckIn(true, SITE_TYPES.NEW_API),
+          },
+          domainReason,
+        ),
+      ).toMatchObject({
+        skipReason: snapshotReason,
+        providerAvailable: false,
+      })
+    },
+  )
+
+  it("keeps method_disabled on an actual skipped result", async () => {
+    mockedMethods.executeSelectedCheckIn.mockResolvedValueOnce({
+      kind: "skipped",
+      reason: "method_disabled",
+    })
+
+    await expect(
+      (autoCheckinScheduler as any).runAccountCheckin(
+        {
+          id: "method-disabled-result",
+          site_name: "Method Disabled",
+          site_type: SITE_TYPES.NEW_API,
+          disabled: false,
+          account_info: {},
+          checkIn: runnableCheckIn(true, SITE_TYPES.NEW_API),
+        },
+        "Method Disabled",
+      ),
+    ).resolves.toMatchObject({
+      result: {
+        status: "skipped",
+        reasonCode: "method_disabled",
+        messageKey: "autoCheckin:skipReasons.method_disabled",
+      },
+    })
+  })
+
   it("handles provider-missing, failed, and thrown account check-in outcomes", async () => {
-    mockedProviders.resolveAutoCheckinProvider.mockReset()
-    mockedProviders.resolveAutoCheckinProvider.mockReturnValueOnce(null)
+    resolveProviderForTest.mockReset()
+    resolveProviderForTest.mockReturnValueOnce(null)
 
     await expect(
       (autoCheckinScheduler as any).runAccountCheckin(
         {
           id: "missing-provider",
           site_name: "Missing Provider",
+          site_type: SITE_TYPES.NEW_API,
+          disabled: false,
+          account_info: {},
+          checkIn: runnableCheckIn(true, SITE_TYPES.NEW_API),
         },
         "Missing Provider",
       ),
     ).resolves.toMatchObject({
-      successful: false,
       result: {
         accountId: "missing-provider",
-        status: "failed",
+        status: "skipped",
         reasonCode: "no_provider",
       },
     })
 
     const failedProvider = {
+      canCheckIn: vi.fn(() => true),
       checkIn: vi.fn().mockResolvedValue({
         status: "failed",
         rawMessage: "provider failed",
       }),
     }
-    mockedProviders.resolveAutoCheckinProvider.mockReturnValueOnce(
-      failedProvider as any,
-    )
+    resolveProviderForTest.mockReturnValueOnce(failedProvider as any)
 
     await expect(
       (autoCheckinScheduler as any).runAccountCheckin(
         {
           id: "provider-failed",
           site_name: "Provider Failed",
+          site_type: SITE_TYPES.NEW_API,
+          disabled: false,
+          account_info: {},
+          checkIn: runnableCheckIn(true, SITE_TYPES.NEW_API),
         },
         "Provider Failed",
       ),
     ).resolves.toMatchObject({
-      successful: false,
       result: {
         accountId: "provider-failed",
         status: "failed",
@@ -6050,22 +6287,24 @@ describe("autoCheckinScheduler private helpers", () => {
     })
 
     const throwingProvider = {
+      canCheckIn: vi.fn(() => true),
       checkIn: vi.fn().mockRejectedValue(new Error("provider exploded")),
     }
-    mockedProviders.resolveAutoCheckinProvider.mockReturnValueOnce(
-      throwingProvider as any,
-    )
+    resolveProviderForTest.mockReturnValueOnce(throwingProvider as any)
 
     await expect(
       (autoCheckinScheduler as any).runAccountCheckin(
         {
           id: "provider-threw",
           site_name: "Provider Threw",
+          site_type: SITE_TYPES.NEW_API,
+          disabled: false,
+          account_info: {},
+          checkIn: runnableCheckIn(true, SITE_TYPES.NEW_API),
         },
         "Provider Threw",
       ),
     ).resolves.toMatchObject({
-      successful: false,
       result: {
         accountId: "provider-threw",
         status: "failed",
@@ -6077,13 +6316,28 @@ describe("autoCheckinScheduler private helpers", () => {
 
   it("retains one normalized source across account dispatch", async () => {
     const accounts = [
-      { id: "source-a", site_name: "Source A" },
-      { id: "source-b", site_name: "Source B" },
+      {
+        id: "source-a",
+        site_name: "Source A",
+        site_type: SITE_TYPES.NEW_API,
+        disabled: false,
+        account_info: {},
+        checkIn: runnableCheckIn(true, SITE_TYPES.NEW_API),
+      },
+      {
+        id: "source-b",
+        site_name: "Source B",
+        site_type: SITE_TYPES.NEW_API,
+        disabled: false,
+        account_info: {},
+        checkIn: runnableCheckIn(true, SITE_TYPES.NEW_API),
+      },
     ] as any[]
     const provider = {
+      canCheckIn: vi.fn(() => true),
       checkIn: vi.fn().mockResolvedValue({ status: "success" }),
     }
-    mockedProviders.resolveAutoCheckinProvider.mockReturnValue(provider as any)
+    resolveProviderForTest.mockReturnValue(provider as any)
 
     await (autoCheckinScheduler as any).runAccountCheckins({
       accounts,
@@ -6104,25 +6358,27 @@ describe("autoCheckinScheduler private helpers", () => {
 
   it("marks accounts checked in for successful and already-checked outcomes", async () => {
     const successProvider = {
+      canCheckIn: vi.fn(() => true),
       checkIn: vi.fn().mockResolvedValueOnce({
         status: "success",
         rawMessage: "ok",
       }),
     }
-    mockedProviders.resolveAutoCheckinProvider.mockReturnValueOnce(
-      successProvider as any,
-    )
+    resolveProviderForTest.mockReturnValueOnce(successProvider as any)
 
     await expect(
       (autoCheckinScheduler as any).runAccountCheckin(
         {
           id: "success-account",
           site_name: "Success Account",
+          site_type: SITE_TYPES.NEW_API,
+          disabled: false,
+          account_info: {},
+          checkIn: runnableCheckIn(true, SITE_TYPES.NEW_API),
         },
         "Success Account",
       ),
     ).resolves.toMatchObject({
-      successful: true,
       result: {
         accountId: "success-account",
         status: "success",
@@ -6130,25 +6386,27 @@ describe("autoCheckinScheduler private helpers", () => {
     })
 
     const alreadyCheckedProvider = {
+      canCheckIn: vi.fn(() => true),
       checkIn: vi.fn().mockResolvedValueOnce({
         status: "already_checked",
         rawMessage: "already done",
       }),
     }
-    mockedProviders.resolveAutoCheckinProvider.mockReturnValueOnce(
-      alreadyCheckedProvider as any,
-    )
+    resolveProviderForTest.mockReturnValueOnce(alreadyCheckedProvider as any)
 
     await expect(
       (autoCheckinScheduler as any).runAccountCheckin(
         {
           id: "already-checked-account",
           site_name: "Already Checked",
+          site_type: SITE_TYPES.NEW_API,
+          disabled: false,
+          account_info: {},
+          checkIn: runnableCheckIn(true, SITE_TYPES.NEW_API),
         },
         "Already Checked",
       ),
     ).resolves.toMatchObject({
-      successful: true,
       result: {
         accountId: "already-checked-account",
         status: "already_checked",

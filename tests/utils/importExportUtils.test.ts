@@ -179,7 +179,7 @@ describe("parseBackupSummary", () => {
 
   it("rejects unsupported explicit versions during preview", () => {
     const result = parseBackupSummary(
-      JSON.stringify({ version: "4.0", timestamp: Date.now() }),
+      JSON.stringify({ version: "5.0", timestamp: Date.now() }),
       "unknown",
     )
 
@@ -383,6 +383,67 @@ describe("importFromBackupObject", () => {
     })
   })
 
+  it("uses the V4 backup envelope for every current writer", () => {
+    expect(BACKUP_VERSION).toBe("4.0")
+  })
+
+  it("accepts the legacy V3 envelope after V4 activation", async () => {
+    const payload: RawBackupData = {
+      version: "3.0",
+      timestamp: Date.now(),
+      accounts: { accounts: [{ id: "v3-account" }] },
+      channelConfigs: { schemaVersion: 1, configs: {} },
+    }
+
+    const result = await importFromBackupObject(payload)
+
+    expect(mockAccountStorageImportData).toHaveBeenCalledWith({
+      accounts: [{ id: "v3-account" }],
+      bookmarks: [],
+      pinnedAccountIds: [],
+      orderedAccountIds: [],
+      deletedEntryRecords: undefined,
+    })
+    expect(result.sections.accounts).toBe(true)
+  })
+
+  it.each(["1.0", "2.0", "3.0"])(
+    "imports V6 accounts from a V%s envelope as canonical V7",
+    async (version) => {
+      await importFromBackupObject({
+        version,
+        timestamp: Date.now(),
+        accounts: {
+          accounts: [
+            {
+              id: `legacy-${version}`,
+              site_type: "new-api",
+              configVersion: 6,
+              checkIn: {
+                enableDetection: true,
+                autoCheckInEnabled: false,
+                siteStatus: { isCheckedInToday: true },
+              },
+            },
+          ],
+        },
+      })
+
+      const imported = mockAccountStorageImportData.mock.calls[0][0]
+        .accounts[0] as any
+      expect(imported).toMatchObject({
+        id: `legacy-${version}`,
+        configVersion: 7,
+        checkIn: {
+          automaticExecutionEnabled: false,
+          selection: { methodId: "new-api:daily-checkin" },
+        },
+      })
+      expect(imported.checkIn).not.toHaveProperty("enableDetection")
+      expect(imported.checkIn).not.toHaveProperty("siteStatus")
+    },
+  )
+
   it("ignores legacy numeric channel configs without replacing scoped storage", async () => {
     const backup: RawBackupData = {
       version: "2.0",
@@ -407,7 +468,7 @@ describe("importFromBackupObject", () => {
     expect(result.sections.channelConfigs).toBe(false)
   })
 
-  it("rejects malformed V3 channel configs before importing other sections", async () => {
+  it("rejects malformed V4 channel configs before importing other sections", async () => {
     const payload: RawBackupData = {
       version: BACKUP_VERSION,
       timestamp: Date.now(),
@@ -1202,7 +1263,7 @@ describe("importFromBackupObject", () => {
 
   it("rejects backups created by a newer unsupported version", async () => {
     const payload: RawBackupData = {
-      version: "4.0",
+      version: "5.0",
       timestamp: Date.now(),
       accounts: { accounts: [{ id: "x" }] },
     }
@@ -1402,11 +1463,88 @@ describe("importFromBackupObject", () => {
 })
 
 describe("normalizeBackupForMerge", () => {
+  it("upgrades V6 accounts for WebDAV arbitration without rewriting V7 accounts", () => {
+    const currentCheckIn = {
+      automaticExecutionEnabled: true,
+      methodKnowledge: {
+        methods: {
+          "future-provider:daily-check-in": {
+            detection: {
+              outcome: "matched",
+              evidence: { source: "user-selection", observedAt: 99 },
+            },
+          },
+        },
+      },
+      selection: {
+        mode: "manual",
+        methodId: "future-provider:daily-check-in",
+      },
+    }
+    const currentAccount = {
+      id: "current-account",
+      configVersion: 7,
+      checkIn: currentCheckIn,
+    }
+
+    const result = normalizeBackupForMerge(
+      {
+        version: BACKUP_VERSION,
+        timestamp: 123,
+        accounts: {
+          accounts: [
+            {
+              id: "legacy-account",
+              site_type: "new-api",
+              configVersion: 6,
+              checkIn: {
+                enableDetection: true,
+                autoCheckInEnabled: false,
+                siteStatus: {
+                  isCheckedInToday: true,
+                  lastDetectedAt: 456,
+                  lastCheckInDate: "2026-08-10",
+                },
+              },
+            },
+            currentAccount,
+          ],
+        },
+      },
+      null,
+    )
+
+    expect(result.accounts[0]).toMatchObject({
+      id: "legacy-account",
+      configVersion: 7,
+      checkIn: {
+        automaticExecutionEnabled: false,
+        selection: {
+          mode: "automatic",
+          methodId: "new-api:daily-checkin",
+        },
+        methodKnowledge: {
+          methods: {
+            "new-api:daily-checkin": {
+              detection: { outcome: "matched" },
+              status: { outcome: "known", today: "checked" },
+            },
+          },
+        },
+      },
+    })
+    expect(result.accounts[0]).not.toHaveProperty("checkIn.enableDetection")
+    expect(result.accounts[0]).not.toHaveProperty("checkIn.autoCheckInEnabled")
+    expect(result.accounts[0]).not.toHaveProperty("checkIn.siteStatus")
+    expect(result.accounts[1]).toBe(currentAccount)
+    expect(result.accounts[1].checkIn).toBe(currentCheckIn)
+  })
+
   it("rejects future backup versions instead of normalizing them as V1", () => {
     expect(() =>
       normalizeBackupForMerge(
         {
-          version: "4.0",
+          version: "5.0",
           timestamp: 123,
           accounts: { accounts: [{ id: "future-account" }] },
         },

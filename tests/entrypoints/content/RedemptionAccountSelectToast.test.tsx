@@ -13,6 +13,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { RedemptionAccountSelectToast } from "~/entrypoints/content/redemptionAssist/components/RedemptionAccountSelectToast"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { testI18n } from "~~/tests/test-utils/i18n"
 
 const makeAccount = (
@@ -31,7 +32,7 @@ const makeAccount = (
     token: "token",
     userId: "1",
     authType: AuthTypeEnum.AccessToken,
-    checkIn: { enableDetection: false },
+    checkIn: buildCheckInConfig(),
     ...overrides,
   }
 }
@@ -115,12 +116,11 @@ describe("RedemptionAccountSelectToast", () => {
         id: "acc-1",
         name: "Account 1",
         baseUrl: "https://base.example.com",
-        checkIn: {
-          enableDetection: false,
+        checkIn: buildCheckInConfig({
           customCheckIn: {
             url: "https://custom.example.com/check-in",
           },
-        } as any,
+        }),
       }),
       makeAccount({ id: "acc-2", name: "Account 2" }),
     ]

@@ -12,8 +12,8 @@ import type {
   AccountTodayStatsCoverage,
 } from "~/types/accountTodayStats"
 import type { AuthTypeEnum } from "~/types/auth"
+import type { CheckInConfig } from "~/types/checkIn"
 import { type TempWindowHealthStatusCode } from "~/types/tempWindow"
-import type { TurnstilePreTrigger } from "~/types/turnstile"
 
 export enum SiteHealthStatus {
   Healthy = "healthy",
@@ -200,16 +200,6 @@ export interface SiteAccount {
    * Canonical persisted shape: always present as a boolean; default: false.
    */
   excludeFromTodayIncome: boolean
-  /**
-   * Legacy flag indicating whether the account can be checked in today.
-   * @deprecated Use `checkIn.siteStatus.isCheckedInToday` instead.
-   */
-  can_check_in?: boolean // 是否可以签到
-  /**
-   * Legacy flag indicating whether the account supports check-in at all.
-   * @deprecated Use `checkIn` object presence instead.
-   */
-  supports_check_in?: boolean // 是否支持签到功能
   authType: AuthTypeEnum // 认证方式
   /**
    * Per-account cookie-auth session cookie bundle for multi-account isolation.
@@ -247,103 +237,7 @@ export interface SiteAccount {
   configVersion?: number
 }
 
-export interface CheckInConfig {
-  /**
-   * Whether to enable check-in detection and monitoring.
-   * This is the master toggle that controls whether the system should:
-   * - Detect check-in support during account setup
-   * - Check today's check-in status during refresh operations
-   * - Display check-in UI elements
-   *
-   * When false or undefined, check-in functionality is completely disabled for this account.
-   */
-  enableDetection: boolean
-
-  /**
-   * Whether to enable automatic daily check-in for this account.
-   * Only effective when:
-   * - enableDetection is true
-   * - Global auto check-in feature is enabled
-   * - Account has necessary credentials for check-in
-   * Default: true for user configure and be considered true when it is undefined.
-   */
-  autoCheckInEnabled?: boolean
-
-  /**
-   * Status for the built-in site check-in flow (API-backed detection).
-   * This status is independent from the custom check-in URL flow.
-   */
-  siteStatus?: {
-    /**
-     * Today's check-in status.
-     * - true: Already checked in today
-     * - false: Can check in today (not yet checked in)
-     * - undefined: Status unknown or detection not enabled
-     */
-    isCheckedInToday?: boolean
-
-    /**
-     * The date (YYYY-MM-DD format) when the site check-in was last marked as done.
-     * Used by the auto check-in scheduler to reset the daily state.
-     */
-    lastCheckInDate?: string
-
-    /**
-     * Timestamp (ms) of the last successful check-in status detection for this account.
-     *
-     * This is used by the UI to warn users when the displayed check-in status may be stale
-     * (e.g., status was detected on a previous day, so "checked in" / "not checked in"
-     * might not represent today's real state).
-     */
-    lastDetectedAt?: number
-  }
-
-  /**
-   * Configuration and status for the custom check-in URL flow.
-   * This does not disable the site check-in feature and can co-exist with it.
-   */
-  customCheckIn?: {
-    /**
-     * Custom URL for check-in operations.
-     * When provided, the UI can open this URL in addition to the site check-in page.
-     */
-    url?: string
-
-    /**
-     * Optional Turnstile widget pre-trigger configuration used by temp-window
-     * Turnstile-assisted fetch flows.
-     *
-     * Advanced: this is typically only needed for deployments that render
-     * Turnstile only after a user action (e.g. a check-in button click).
-     */
-    turnstilePreTrigger?: TurnstilePreTrigger
-
-    /**
-     * Custom URL path for redeem/topup operations.
-     */
-    redeemUrl?: string
-
-    /**
-     * Whether to open the redeem page when opening a custom check-in URL.
-     * Only applicable when `customCheckIn.url` is set.
-     * Default: true (for backward compatibility)
-     */
-    openRedeemWithCheckIn?: boolean
-
-    /**
-     * Today's custom check-in status.
-     * - true: Already opened/checked in today
-     * - false: Not yet opened/checked in today
-     */
-    isCheckedInToday?: boolean
-
-    /**
-     * The date (YYYY-MM-DD format) when the user last checked in via the custom URL.
-     * Used to reset the custom check-in status daily.
-     */
-    lastCheckInDate?: string
-  }
-}
+export type { CheckInConfig, CustomCheckInConfig } from "~/types/checkIn"
 
 /**
  * Lightweight persisted bookmark entry for quickly opening a site URL.
@@ -543,16 +437,6 @@ export interface DisplaySiteData {
    * and account behaviors like refresh/check-in remain unchanged.
    */
   excludeFromTodayIncome?: boolean
-  /**
-   * Legacy flag indicating whether the account can be checked in today.
-   * @deprecated Use `checkIn.siteStatus.isCheckedInToday` instead.
-   */
-  can_check_in?: boolean // 是否可以签到
-  /**
-   * Legacy flag indicating whether the account supports check-in at all.
-   * @deprecated Use `checkIn` object presence instead.
-   */
-  supports_check_in?: boolean // 是否支持签到功能
   authType: AuthTypeEnum // 认证方式
   /**
    * Account id for per-request cookie isolation.

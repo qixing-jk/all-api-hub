@@ -12,6 +12,13 @@ export type TurnstilePreTriggerThrottle = {
   minIntervalMs?: number
 }
 
+export const TURNSTILE_PRE_TRIGGER_KINDS = {
+  None: "none",
+  CheckinButton: "checkinButton",
+  ClickSelector: "clickSelector",
+  ClickText: "clickText",
+} as const
+
 /**
  * Optional pre-trigger action used to *render* a Turnstile widget.
  *
@@ -20,9 +27,9 @@ export type TurnstilePreTriggerThrottle = {
  * to perform a best-effort click before waiting for `cf-turnstile-response`.
  */
 export type TurnstilePreTrigger =
-  | { kind: "none" }
+  | { kind: typeof TURNSTILE_PRE_TRIGGER_KINDS.None }
   | {
-      kind: "checkinButton"
+      kind: typeof TURNSTILE_PRE_TRIGGER_KINDS.CheckinButton
       /**
        * Regex pattern strings tested against element `textContent`.
        * Patterns are treated as case-insensitive.
@@ -34,7 +41,7 @@ export type TurnstilePreTrigger =
       throttle?: TurnstilePreTriggerThrottle
     }
   | {
-      kind: "clickSelector"
+      kind: typeof TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector
       /** CSS selector for the element to click. */
       selector: string
       /** Optional label for logging/debugging. */
@@ -42,7 +49,7 @@ export type TurnstilePreTrigger =
       throttle?: TurnstilePreTriggerThrottle
     }
   | {
-      kind: "clickText"
+      kind: typeof TURNSTILE_PRE_TRIGGER_KINDS.ClickText
       /**
        * Regex pattern string tested against element `textContent`.
        * The match is case-insensitive.

@@ -29,7 +29,7 @@ import {
 import {
   normalizeGoogleFamilyBaseUrl,
   normalizeOpenAiFamilyBaseUrl,
-} from "~/services/verification/webAiApiCheck/extractCredentials"
+} from "~/services/verification/webAiApiCheck/credentialExtraction/baseUrlCandidates"
 import type {
   API_CREDENTIAL_PROFILE_LINK_SOURCES,
   ApiCredentialProfile,

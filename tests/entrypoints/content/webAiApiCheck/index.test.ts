@@ -17,10 +17,13 @@ import {
   WebAiApiCheckMessageTypes,
 } from "~/services/verification/webAiApiCheck/messaging"
 import { checkPermissionViaMessage } from "~/utils/browser/browserApi"
+import { encodeUnpaddedBase64 } from "~~/tests/test-utils/encoding"
 import {
   buildApiCheckClipboardText,
   buildApiKey,
 } from "~~/tests/test-utils/factories"
+
+const OPENAI_KEY_PREFIX = ["s", "k", "-"].join("")
 
 const { logger } = vi.hoisted(() => ({
   logger: {
@@ -258,6 +261,54 @@ describe("setupWebAiApiCheckContent", () => {
     expect(showApiCheckConfirmToast).toHaveBeenCalledWith({
       usesEnhancedResult: true,
     })
+
+    cleanup()
+  })
+
+  it("opens enhanced auto-detect for an unlabeled base64 token candidate", async () => {
+    const apiKey = `${OPENAI_KEY_PREFIX}base64Aa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1A`
+    const encodedApiKey = encodeUnpaddedBase64(apiKey)
+    vi.mocked(sendWebAiApiCheckMessage).mockResolvedValue({
+      success: true,
+      shouldPrompt: true,
+      enhancedShouldPrompt: true,
+    })
+    vi.mocked(showApiCheckConfirmToast).mockResolvedValue(true)
+
+    const cleanup = setupWebAiApiCheckContent()
+
+    document.dispatchEvent(
+      makeClipboardEvent(
+        "copy",
+        ["https://proxy.example.com/api", encodedApiKey].join("\n"),
+      ),
+    )
+
+    await waitFor(() =>
+      expect(dispatchOpenApiCheckModal).toHaveBeenCalledWith(
+        expect.objectContaining({
+          trigger: "autoDetect",
+          extraction: expect.objectContaining({
+            candidates: expect.objectContaining({
+              apiKeys: expect.arrayContaining([
+                expect.objectContaining({
+                  value: apiKey,
+                  reasons: expect.arrayContaining(["base64Decoded"]),
+                }),
+                expect.objectContaining({
+                  value: encodedApiKey,
+                  autoPromptEligible: false,
+                  reasons: expect.arrayContaining(["base64EncodedSource"]),
+                }),
+              ]),
+            }),
+            summary: expect.objectContaining({
+              enhancedAutoPromptEligible: true,
+            }),
+          }),
+        }),
+      ),
+    )
 
     cleanup()
   })

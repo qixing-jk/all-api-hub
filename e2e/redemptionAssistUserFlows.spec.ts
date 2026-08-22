@@ -175,7 +175,7 @@ test("detects a redemption code on a real page, redeems it for the matched accou
         quota: 1_000_000,
       },
       checkIn: {
-        enableDetection: false,
+        automaticExecutionEnabled: false,
         customCheckIn: {
           url: REDEEM_PAGE_URL,
           redeemUrl: REDEEM_PAGE_URL,
@@ -314,7 +314,7 @@ test("forwards selected redemption text from the background context-menu path to
         quota: 2_000_000,
       },
       checkIn: {
-        enableDetection: false,
+        automaticExecutionEnabled: false,
         customCheckIn: {
           url: REDEEM_PAGE_URL,
           redeemUrl: REDEEM_PAGE_URL,
@@ -411,7 +411,7 @@ test("opens Redemption Assist settings from the content prompt", async ({
         quota: 1_000_000,
       },
       checkIn: {
-        enableDetection: false,
+        automaticExecutionEnabled: false,
         customCheckIn: {
           url: REDEEM_PAGE_URL,
           redeemUrl: REDEEM_PAGE_URL,

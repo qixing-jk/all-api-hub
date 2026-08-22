@@ -3,13 +3,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import CopyKeyDialog from "~/features/AccountManagement/components/CopyKeyDialog"
 import {
-  CREATED_TOKEN_SECRET_DECISION_KINDS,
-  DEFAULT_TOKEN_CREATION_DECISION_KINDS,
-  TOKEN_CREATION_SECRET_RECOVERY,
-  TOKEN_PROVISIONING_BLOCK_REASONS,
-  TOKEN_PROVISIONING_WORKFLOWS,
-} from "~/services/apiAdapters/contracts/tokenProvisioning"
-import {
   buildSub2ApiAccount,
   buildSub2ApiToken,
 } from "~~/tests/test-utils/factories"
@@ -31,80 +24,6 @@ const {
   toastErrorMock: vi.fn(),
 }))
 
-const normalizeGroupNames = (groups: Record<string, unknown>): string[] =>
-  Array.from(
-    new Set(
-      Object.keys(groups)
-        .map((group) => group.trim())
-        .filter(Boolean),
-    ),
-  )
-
-const createSub2ApiTokenProvisioningMock = () => ({
-  isInventoryTokenUsable: vi.fn(() => true),
-  resolveDefaultTokenCreation: vi.fn((request: any) => {
-    const explicitGroup =
-      typeof request.explicitGroup === "string"
-        ? request.explicitGroup.trim()
-        : ""
-
-    if (explicitGroup) {
-      return {
-        kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Create,
-        tokenData: { ...request.defaultTokenData, group: explicitGroup },
-        oneTimeSecret: false,
-        recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.InventoryRefetch,
-      }
-    }
-
-    if (
-      request.workflow !== TOKEN_PROVISIONING_WORKFLOWS.QuickCreateSelection &&
-      request.workflow !== TOKEN_PROVISIONING_WORKFLOWS.PostSaveAutomation
-    ) {
-      return {
-        kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Blocked,
-        reason: TOKEN_PROVISIONING_BLOCK_REASONS.GroupRequired,
-      }
-    }
-
-    if (!request.userGroups) {
-      return { kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.NeedsUserGroups }
-    }
-
-    const allowedGroups = normalizeGroupNames(request.userGroups)
-
-    if (allowedGroups.length === 0) {
-      return {
-        kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Blocked,
-        reason: TOKEN_PROVISIONING_BLOCK_REASONS.AvailableGroupRequired,
-      }
-    }
-
-    if (allowedGroups.length === 1) {
-      return {
-        kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Create,
-        tokenData: { ...request.defaultTokenData, group: allowedGroups[0] },
-        oneTimeSecret: false,
-        recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.InventoryRefetch,
-      }
-    }
-
-    return {
-      kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.SelectionRequired,
-      allowedGroups,
-      reason: TOKEN_PROVISIONING_BLOCK_REASONS.GroupSelectionRequired,
-    }
-  }),
-  classifyCreatedToken: vi.fn(({ result }: any) =>
-    result
-      ? { kind: CREATED_TOKEN_SECRET_DECISION_KINDS.NeedsInventoryRefetch }
-      : {
-          kind: CREATED_TOKEN_SECRET_DECISION_KINDS.Failed,
-          reason: TOKEN_PROVISIONING_BLOCK_REASONS.CreateFailed,
-        },
-  ),
-})
-
 vi.mock("react-hot-toast", () => ({
   default: {
     success: toastSuccessMock,
@@ -112,27 +31,33 @@ vi.mock("react-hot-toast", () => ({
   },
 }))
 
-vi.mock("~/services/apiAdapters/registry", () => ({
-  getSiteTypeCapabilities: () => ({
-    account: {
-      keyManagement: {
-        fetchTokens: (...args: any[]) => fetchAccountTokensMock(...args),
-        createToken: (...args: any[]) => createApiTokenMock(...args),
-        resolveTokenKey: async (_params: {
-          request: unknown
-          token: { key: string }
-        }) => _params.token.key,
-        deleteToken: vi.fn(),
-        fetchAvailableModels: (...args: any[]) =>
-          fetchAccountAvailableModelsMock(...args),
-        userGroups: {
-          fetch: (...args: any[]) => fetchUserGroupsMock(...args),
+vi.mock("~/services/apiAdapters/registry", async () => {
+  const { sub2ApiTokenProvisioning } = await vi.importActual<
+    typeof import("~/services/apiAdapters/sub2api/tokenProvisioning")
+  >("~/services/apiAdapters/sub2api/tokenProvisioning")
+
+  return {
+    getSiteTypeCapabilities: () => ({
+      account: {
+        keyManagement: {
+          fetchTokens: (...args: any[]) => fetchAccountTokensMock(...args),
+          createToken: (...args: any[]) => createApiTokenMock(...args),
+          resolveTokenKey: async (_params: {
+            request: unknown
+            token: { key: string }
+          }) => _params.token.key,
+          deleteToken: vi.fn(),
+          fetchAvailableModels: (...args: any[]) =>
+            fetchAccountAvailableModelsMock(...args),
+          userGroups: {
+            fetch: (...args: any[]) => fetchUserGroupsMock(...args),
+          },
         },
+        tokenProvisioning: sub2ApiTokenProvisioning,
       },
-      tokenProvisioning: createSub2ApiTokenProvisioningMock(),
-    },
-  }),
-}))
+    }),
+  }
+})
 
 const ACCOUNT = buildSub2ApiAccount()
 
@@ -216,15 +141,10 @@ describe("CopyKeyDialog sub2api support", () => {
 
   it("requires explicit group selection when multiple Sub2API groups exist", async () => {
     fetchAccountTokensMock.mockResolvedValueOnce([])
-    fetchUserGroupsMock
-      .mockResolvedValueOnce({
-        default: { desc: "Default", ratio: 1 },
-        vip: { desc: "VIP", ratio: 2 },
-      })
-      .mockResolvedValueOnce({
-        default: { desc: "Default", ratio: 1 },
-        vip: { desc: "VIP", ratio: 2 },
-      })
+    fetchUserGroupsMock.mockResolvedValueOnce({
+      default: { desc: "Default", ratio: 1 },
+      vip: { desc: "VIP", ratio: 2 },
+    })
 
     const user = userEvent.setup()
 
@@ -260,12 +180,14 @@ describe("CopyKeyDialog sub2api support", () => {
 
     expect(createApiTokenMock).not.toHaveBeenCalled()
     expect(
-      await screen.findByText("messages:sub2api.createRequiresAvailableGroup"),
+      await screen.findByText(
+        "messages:tokenProvisioning.createRequiresAvailableGroup",
+      ),
     ).toBeInTheDocument()
     expect(fetchAccountTokensMock).toHaveBeenCalledTimes(1)
   })
 
-  it("opens the constrained dialog flow before creating when multiple groups exist", async () => {
+  it("confirms the preferred group without opening the full token form", async () => {
     fetchAccountTokensMock.mockResolvedValueOnce([])
     fetchUserGroupsMock
       .mockResolvedValueOnce({
@@ -289,18 +211,25 @@ describe("CopyKeyDialog sub2api support", () => {
       }),
     )
 
-    await screen.findByRole("button", {
-      name: "keyManagement:dialog.createToken",
-    })
-
     expect(
-      screen.getByRole("textbox", {
+      await screen.findByRole("heading", {
+        name: "messages:tokenProvisioning.selectGroupTitle",
+      }),
+    ).toBeVisible()
+    expect(
+      screen.queryByRole("textbox", {
         name: "keyManagement:dialog.tokenName *",
       }),
-    ).toHaveValue("user group (auto)")
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("combobox", {
+        name: /^keyManagement:dialog\.groupLabel/,
+      }),
+    ).toHaveTextContent("default")
+    expect(fetchAccountAvailableModelsMock).not.toHaveBeenCalled()
 
     await user.click(
-      await screen.findByRole("button", {
+      screen.getByRole("button", {
         name: "keyManagement:dialog.createToken",
       }),
     )

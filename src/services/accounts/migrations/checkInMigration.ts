@@ -1,5 +1,14 @@
 import type { SiteAccount } from "~/types"
 
+export type StoredSiteAccountForCheckInV1Migration = Omit<
+  Partial<SiteAccount>,
+  "checkIn"
+> & {
+  checkIn?: unknown
+  can_check_in?: boolean
+  supports_check_in?: boolean
+}
+
 /**
  * This module handles the migration of check-in related configuration from version 0 to version 1.
  * It is now part of the centralized version-based migration system.
@@ -11,7 +20,9 @@ import type { SiteAccount } from "~/types"
  * @param account The SiteAccount to check.
  * @returns True if migration is needed, false otherwise.
  */
-function needsCheckInMigration(account: Partial<SiteAccount>): boolean {
+function needsCheckInMigration(
+  account: StoredSiteAccountForCheckInV1Migration,
+): boolean {
   return (
     !account.checkIn &&
     (account.supports_check_in === true ||
@@ -59,9 +70,9 @@ function needsCheckInMigration(account: Partial<SiteAccount>): boolean {
  * const migrated5 = migrateCheckInConfig(account5);
  * // migrated5 will be { id: '5', checkIn: { enableDetection: true, siteStatus: { isCheckedInToday: false } } }
  */
-export function migrateCheckInConfig<T extends Partial<SiteAccount>>(
-  account: T,
-): T {
+export function migrateCheckInConfig<
+  T extends StoredSiteAccountForCheckInV1Migration,
+>(account: T): T {
   if (!needsCheckInMigration(account)) {
     // If migration is not needed, but old keys still exist (e.g. supports_check_in: false),
     // we should clean them up.
@@ -78,15 +89,17 @@ export function migrateCheckInConfig<T extends Partial<SiteAccount>>(
 
   // Create the new checkIn object if supported
   if (migratedAccount.supports_check_in === true) {
-    migratedAccount.checkIn = {
-      enableDetection: true,
-      // The logic is inverted:
-      // old `can_check_in: true` (can check in) => new `isCheckedInToday: false` (not checked in)
-      // old `can_check_in: false` (already checked in) => new `isCheckedInToday: true` (checked in)
-      siteStatus: {
-        isCheckedInToday: !(migratedAccount.can_check_in ?? true),
+    Object.assign(migratedAccount, {
+      checkIn: {
+        enableDetection: true,
+        // The logic is inverted:
+        // old `can_check_in: true` (can check in) => new `isCheckedInToday: false` (not checked in)
+        // old `can_check_in: false` (already checked in) => new `isCheckedInToday: true` (checked in)
+        siteStatus: {
+          isCheckedInToday: !(migratedAccount.can_check_in ?? true),
+        },
       },
-    }
+    })
   }
 
   // Remove old properties

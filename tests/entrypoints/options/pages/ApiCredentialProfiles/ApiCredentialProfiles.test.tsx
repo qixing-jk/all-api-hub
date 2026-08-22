@@ -27,7 +27,7 @@ import {
 import {
   normalizeGoogleFamilyBaseUrl,
   normalizeOpenAiFamilyBaseUrl,
-} from "~/services/verification/webAiApiCheck/extractCredentials"
+} from "~/services/verification/webAiApiCheck/credentialExtraction/baseUrlCandidates"
 import type { Tag } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import {

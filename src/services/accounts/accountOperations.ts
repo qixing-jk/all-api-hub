@@ -30,19 +30,11 @@ import {
   DEFAULT_TOKEN_LIFECYCLE_RESULT_KINDS,
   DefaultTokenLifecyclePolicyBlockedError,
   ensureDefaultTokenLifecycle,
-  generateDefaultTokenRequest,
-  normalizeDefaultTokenRequestName,
-  resolveDefaultTokenLifecycleDecision,
 } from "~/services/accounts/defaultTokenLifecycle"
 import {
   canRunAccountDefaultTokenAutomation,
   createStoredAccountKeyProductContext,
 } from "~/services/accounts/keyProductCapabilities"
-import {
-  TOKEN_QUICK_CREATE_RESOLUTION_KINDS,
-  type DefaultTokenQuickCreateResolution,
-  type Sub2ApiQuickCreateResolution,
-} from "~/services/accounts/tokenQuickCreateResolution"
 import {
   analyzeAutoDetectError,
   AUTO_DETECT_FAILURE_REASONS,
@@ -56,11 +48,8 @@ import { isCanonicalOpenRouterUrl } from "~/services/accountSiteDefinitions/iden
 import type { CreateTokenRequest } from "~/services/accountTokens/tokenProvisioningModel"
 import type { AccountDataCapability } from "~/services/apiAdapters/contracts/accountData"
 import {
-  DEFAULT_TOKEN_CREATION_DECISION_KINDS,
   TOKEN_PROVISIONING_BLOCK_REASONS,
-  TOKEN_PROVISIONING_ERRORS,
   TOKEN_PROVISIONING_WORKFLOWS,
-  type TokenProvisioningBlockReason,
 } from "~/services/apiAdapters/contracts/tokenProvisioning"
 import { resolveOpenRouterAccountUserId } from "~/services/apiAdapters/openrouter/accountIdentity"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
@@ -646,104 +635,6 @@ type EnsureAccountApiTokenOptions = {
   toastId?: string
   defaultTokenData?: CreateTokenRequest
   explicitGroup?: string
-  /**
-   * Temporary compatibility alias for older Sub2API callers.
-   * New product code should pass `defaultTokenData` from policy resolution.
-   */
-  sub2apiGroup?: string
-}
-
-const getDefaultTokenProvisioningBlockMessage = (
-  reason: TokenProvisioningBlockReason,
-): string => {
-  if (reason === TOKEN_PROVISIONING_BLOCK_REASONS.AvailableGroupRequired) {
-    return t("messages:sub2api.createRequiresAvailableGroup")
-  }
-
-  if (reason === TOKEN_PROVISIONING_BLOCK_REASONS.OneTimeSecretRequired) {
-    return t("messages:aihubmix.createRequiresOneTimeKeyDialog")
-  }
-
-  return t("messages:tokenProvisioning.createRequiresGroup")
-}
-
-/**
- * Resolves the current default-token quick-create state from adapter policy.
- */
-export async function resolveDefaultTokenQuickCreateResolution(
-  account: DisplaySiteData,
-  options: { explicitGroup?: string } = {},
-): Promise<DefaultTokenQuickCreateResolution> {
-  const decision = await resolveDefaultTokenLifecycleDecision({
-    workflow: TOKEN_PROVISIONING_WORKFLOWS.QuickCreateSelection,
-    displaySiteData: account,
-    defaultTokenData: generateDefaultTokenRequest(),
-    explicitGroup: options.explicitGroup,
-    missingUserGroupsMessage:
-      TOKEN_PROVISIONING_ERRORS.Sub2ApiGroupInventoryNotImplemented,
-  })
-
-  if (decision.kind === DEFAULT_TOKEN_CREATION_DECISION_KINDS.Create) {
-    return {
-      kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.Ready,
-      tokenData: normalizeDefaultTokenRequestName(decision.tokenData),
-    }
-  }
-
-  if (
-    decision.kind === DEFAULT_TOKEN_CREATION_DECISION_KINDS.SelectionRequired
-  ) {
-    return {
-      kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.SelectionRequired,
-      allowedGroups: decision.allowedGroups,
-    }
-  }
-
-  if (decision.kind === DEFAULT_TOKEN_CREATION_DECISION_KINDS.NeedsUserGroups) {
-    throw new Error(
-      TOKEN_PROVISIONING_ERRORS.Sub2ApiGroupInventoryNotImplemented,
-    )
-  }
-
-  return {
-    kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.Blocked,
-    reason: decision.reason,
-    message: getDefaultTokenProvisioningBlockMessage(decision.reason),
-  }
-}
-
-/**
- * Resolves the current Sub2API quick-create state through default-token policy.
- */
-export async function resolveSub2ApiQuickCreateResolution(
-  account: DisplaySiteData,
-): Promise<Sub2ApiQuickCreateResolution> {
-  if (account.siteType !== SITE_TYPES.SUB2API) {
-    throw new Error(TOKEN_PROVISIONING_ERRORS.Sub2ApiQuickCreateNotApplicable)
-  }
-
-  const resolution = await resolveDefaultTokenQuickCreateResolution(account)
-
-  if (resolution.kind === TOKEN_QUICK_CREATE_RESOLUTION_KINDS.Ready) {
-    return {
-      kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.Ready,
-      group: resolution.tokenData.group,
-    }
-  }
-
-  if (
-    resolution.kind === TOKEN_QUICK_CREATE_RESOLUTION_KINDS.SelectionRequired
-  ) {
-    return {
-      kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.SelectionRequired,
-      allowedGroups: resolution.allowedGroups,
-    }
-  }
-
-  return {
-    kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.Blocked,
-    message: resolution.message,
-  }
 }
 
 /**
@@ -984,6 +875,7 @@ export async function validateAndSaveAccount(
     const freshAccountData = await withTimeout(
       accountDataCapability.fetchData({
         baseUrl: requestBaseUrl,
+        siteType: normalizedSiteType,
         checkIn: checkInConfig,
         accountId: undefined, // New account, no ID yet
         exchangeRate: resolvedExchangeRate,
@@ -1343,7 +1235,6 @@ export async function validateAndUpdateAccount(
       notes: notes,
       manualBalanceUsd: normalizedManualBalanceUsd,
       tagIds: normalizedTagIds,
-      checkIn: checkInConfig,
       account_info: {
         id: accountIdentity,
         access_token: normalizedAccessToken,
@@ -1352,9 +1243,14 @@ export async function validateAndUpdateAccount(
       },
     }
 
-    const success = await accountStorage.updateAccount(accountId, updateData, {
-      userTimestampMode: AccountUpdateUserTimestampMode.Touch,
-    })
+    const success = await accountStorage.updateAccountWithCheckInDraft(
+      accountId,
+      updateData,
+      checkInConfig,
+      {
+        userTimestampMode: AccountUpdateUserTimestampMode.Touch,
+      },
+    )
 
     if (!success) {
       return {
@@ -1417,6 +1313,7 @@ export async function validateAndUpdateAccount(
     )
     const freshAccountData = await accountData.fetchData({
       baseUrl: requestBaseUrl,
+      siteType: normalizedSiteType,
       checkIn: checkInConfig,
       accountId,
       exchangeRate: resolvedExchangeRate,
@@ -1450,7 +1347,6 @@ export async function validateAndUpdateAccount(
       notes: notes,
       manualBalanceUsd: normalizedManualBalanceUsd,
       tagIds: normalizedTagIds,
-      checkIn: freshAccountData.checkIn,
       account_info: {
         id: accountIdentity,
         access_token: normalizedAccessToken,
@@ -1469,9 +1365,15 @@ export async function validateAndUpdateAccount(
       last_sync_time: Date.now(),
     }
 
-    const success = await accountStorage.updateAccount(accountId, updateData, {
-      userTimestampMode: AccountUpdateUserTimestampMode.Touch,
-    })
+    const success = await accountStorage.updateAccountWithCheckInDraft(
+      accountId,
+      updateData,
+      checkInConfig,
+      {
+        userTimestampMode: AccountUpdateUserTimestampMode.Touch,
+        refreshed: freshAccountData.checkIn,
+      },
+    )
     if (!success) {
       return {
         success: false,
@@ -1529,7 +1431,6 @@ export async function validateAndUpdateAccount(
       notes: notes,
       manualBalanceUsd: normalizedManualBalanceUsd,
       tagIds: normalizedTagIds,
-      checkIn: checkInConfig,
       health: {
         status: SiteHealthStatus.Warning,
         reason: getAccountHealthFailureReason(normalizedSiteType, error),
@@ -1544,10 +1445,13 @@ export async function validateAndUpdateAccount(
     }
 
     // Try to save partial update
-    const success = await accountStorage.updateAccount(
+    const success = await accountStorage.updateAccountWithCheckInDraft(
       accountId,
       partialUpdateData,
-      { userTimestampMode: AccountUpdateUserTimestampMode.Touch },
+      checkInConfig,
+      {
+        userTimestampMode: AccountUpdateUserTimestampMode.Touch,
+      },
     )
 
     if (!success) {
@@ -1607,7 +1511,7 @@ export async function ensureAccountApiToken(
     account,
     displaySiteData,
     defaultTokenData: options.defaultTokenData,
-    explicitGroup: options.explicitGroup ?? options.sub2apiGroup,
+    explicitGroup: options.explicitGroup,
   })
 
   if (
@@ -1623,7 +1527,9 @@ export async function ensureAccountApiToken(
       result.reason ===
         TOKEN_PROVISIONING_BLOCK_REASONS.CreatedTokenSecretUnavailable)
   ) {
-    throw new Error(t("messages:aihubmix.createRequiresOneTimeKeyDialog"))
+    throw new Error(
+      t("messages:tokenProvisioning.createRequiresOneTimeSecretHandling"),
+    )
   }
 
   if (

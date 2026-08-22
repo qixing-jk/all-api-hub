@@ -34,6 +34,7 @@ import {
   buildCompleteTodayStatsAvailability,
   buildTodayStatsAvailabilityReplacementCases,
 } from "~~/tests/test-utils/accountTodayStats"
+import { createDeferred } from "~~/tests/test-utils/deferred"
 
 const storageData = new Map<string, any>()
 
@@ -142,12 +143,19 @@ const seedStorage = (
   })
 }
 
+const createCanonicalCheckIn = () => ({
+  automaticExecutionEnabled: true,
+  methodKnowledge: { methods: {} },
+  selection: { mode: "automatic" as const },
+})
+
 const createAccount = (overrides: Partial<SiteAccount> = {}): SiteAccount => {
   const numericId = overrides.id?.replace(/\D/g, "") || "1"
   const updatedAt = overrides.updated_at ?? Date.now()
 
   return {
     id: overrides.id || "account-1",
+    configVersion: overrides.configVersion ?? 7,
     disabled: overrides.disabled === true,
     excludeFromTotalBalance: overrides.excludeFromTotalBalance === true,
     excludeFromTodayIncome: overrides.excludeFromTodayIncome === true,
@@ -185,14 +193,8 @@ const createAccount = (overrides: Partial<SiteAccount> = {}): SiteAccount => {
     sub2apiAuth: overrides.sub2apiAuth,
     tagIds: overrides.tagIds ?? [],
     tags: overrides.tags,
-    can_check_in: overrides.can_check_in,
-    supports_check_in: overrides.supports_check_in,
     authType: overrides.authType ?? AuthTypeEnum.AccessToken,
-    checkIn: overrides.checkIn || {
-      enableDetection: true,
-      autoCheckInEnabled: true,
-      siteStatus: { isCheckedInToday: false },
-    },
+    checkIn: overrides.checkIn || createCanonicalCheckIn(),
   }
 }
 
@@ -242,13 +244,7 @@ describe("accountStorage core behaviors", () => {
         today_quota_consumption: 0,
         today_requests_count: 0,
         today_income: 0,
-        checkIn: {
-          ...(request.checkIn ?? { enableDetection: false }),
-          siteStatus: {
-            ...((request.checkIn?.siteStatus ?? {}) as any),
-            isCheckedInToday: false,
-          },
-        },
+        checkIn: request.checkIn,
       },
       healthStatus: {
         status: SiteHealthStatus.Healthy,
@@ -265,6 +261,247 @@ describe("accountStorage core behaviors", () => {
           refreshAccount: mockRefreshAccountData,
         },
       },
+    })
+  })
+
+  describe("updateSub2ApiAuth", () => {
+    const authUpdate = {
+      accessToken: "rotated-access-token",
+      refreshToken: "rotated-refresh-token",
+      tokenExpiresAt: 1_800_000_000_000,
+      expectedOrigin: "https://auth.example.invalid/dashboard",
+      expectedUserId: "user-1",
+    }
+
+    it("persists a complete rotation only when the locked account identity still matches", async () => {
+      seedStorage([
+        createAccount({
+          id: "sub2-account",
+          site_type: SITE_TYPES.SUB2API,
+          site_url: "https://auth.example.invalid",
+          account_info: { id: "user-1" } as SiteAccount["account_info"],
+          sub2apiAuth: {
+            refreshToken: "stored-refresh-token",
+            tokenExpiresAt: 1_700_000_000_000,
+          },
+        }),
+      ])
+
+      await expect(
+        accountStorage.updateSub2ApiAuth("sub2-account", authUpdate, {
+          userTimestampMode: AccountUpdateUserTimestampMode.Preserve,
+        }),
+      ).resolves.toEqual({ status: "persisted" })
+
+      await expect(
+        accountStorage.getAccountById("sub2-account"),
+      ).resolves.toMatchObject({
+        account_info: {
+          id: "user-1",
+          access_token: "rotated-access-token",
+        },
+        sub2apiAuth: {
+          refreshToken: "rotated-refresh-token",
+          tokenExpiresAt: 1_800_000_000_000,
+        },
+      })
+    })
+
+    it("returns typed non-success outcomes for deletion, identity drift, and write failure", async () => {
+      await expect(
+        accountStorage.updateSub2ApiAuth("missing", authUpdate, {
+          userTimestampMode: AccountUpdateUserTimestampMode.Preserve,
+        }),
+      ).resolves.toEqual({ status: "account_missing" })
+
+      seedStorage([
+        createAccount({
+          id: "sub2-account",
+          site_type: SITE_TYPES.SUB2API,
+          site_url: "https://other.example.invalid",
+          account_info: { id: "user-1" } as SiteAccount["account_info"],
+        }),
+      ])
+      await expect(
+        accountStorage.updateSub2ApiAuth("sub2-account", authUpdate, {
+          userTimestampMode: AccountUpdateUserTimestampMode.Preserve,
+        }),
+      ).resolves.toEqual({ status: "identity_mismatch" })
+
+      seedStorage([
+        createAccount({
+          id: "sub2-account",
+          site_type: SITE_TYPES.SUB2API,
+          site_url: "https://auth.example.invalid",
+          account_info: { id: "other-user" } as SiteAccount["account_info"],
+        }),
+      ])
+      await expect(
+        accountStorage.updateSub2ApiAuth("sub2-account", authUpdate, {
+          userTimestampMode: AccountUpdateUserTimestampMode.Preserve,
+        }),
+      ).resolves.toEqual({ status: "identity_mismatch" })
+
+      seedStorage([
+        createAccount({
+          id: "sub2-account",
+          site_type: SITE_TYPES.SUB2API,
+          site_url: "https://auth.example.invalid",
+          account_info: { id: "user-1" } as SiteAccount["account_info"],
+        }),
+      ])
+      storageHooks.beforeSet = async () => {
+        throw new Error("storage unavailable")
+      }
+      await expect(
+        accountStorage.updateSub2ApiAuth("sub2-account", authUpdate, {
+          userTimestampMode: AccountUpdateUserTimestampMode.Preserve,
+        }),
+      ).resolves.toEqual({ status: "write_failed" })
+    })
+
+    it("requires a non-empty expected identity before writing credentials", async () => {
+      seedStorage([
+        createAccount({
+          id: "sub2-account",
+          site_type: SITE_TYPES.SUB2API,
+          site_url: "https://auth.example.invalid",
+          account_info: { id: "" } as SiteAccount["account_info"],
+        }),
+      ])
+
+      await expect(
+        accountStorage.updateSub2ApiAuth(
+          "sub2-account",
+          { ...authUpdate, expectedUserId: "   " },
+          { userTimestampMode: AccountUpdateUserTimestampMode.Preserve },
+        ),
+      ).resolves.toEqual({ status: "identity_mismatch" })
+    })
+
+    it("rejects a credential update whose returned identity differs from the expected account", async () => {
+      seedStorage([
+        createAccount({
+          id: "sub2-account",
+          site_type: SITE_TYPES.SUB2API,
+          site_url: "https://auth.example.invalid",
+          account_info: { id: "user-1" } as SiteAccount["account_info"],
+        }),
+      ])
+
+      await expect(
+        accountStorage.updateSub2ApiAuth(
+          "sub2-account",
+          { ...authUpdate, userId: "user-2" },
+          { userTimestampMode: AccountUpdateUserTimestampMode.Preserve },
+        ),
+      ).resolves.toEqual({ status: "identity_mismatch" })
+
+      await expect(
+        accountStorage.getAccountById("sub2-account"),
+      ).resolves.toMatchObject({
+        account_info: {
+          id: "user-1",
+        },
+      })
+    })
+
+    it("does not recreate credentials when deletion wins the storage lock race", async () => {
+      seedStorage([
+        createAccount({
+          id: "sub2-account",
+          site_type: SITE_TYPES.SUB2API,
+          site_url: "https://auth.example.invalid",
+          account_info: { id: "user-1" } as SiteAccount["account_info"],
+        }),
+      ])
+
+      const deletion = accountStorage.deleteAccount("sub2-account")
+      const persistence = accountStorage.updateSub2ApiAuth(
+        "sub2-account",
+        authUpdate,
+        { userTimestampMode: AccountUpdateUserTimestampMode.Preserve },
+      )
+
+      await expect(deletion).resolves.toBe(true)
+      await expect(persistence).resolves.toEqual({ status: "account_missing" })
+      await expect(
+        accountStorage.getAccountById("sub2-account"),
+      ).resolves.toBeNull()
+    })
+
+    it("preserves stored refresh metadata when a verified resync supplies only an access token", async () => {
+      seedStorage([
+        createAccount({
+          id: "sub2-account",
+          site_type: SITE_TYPES.SUB2API,
+          site_url: "https://auth.example.invalid",
+          account_info: { id: "user-1" } as SiteAccount["account_info"],
+          sub2apiAuth: {
+            refreshToken: "stored-refresh-token",
+            tokenExpiresAt: 1_700_000_000_000,
+          },
+        }),
+      ])
+
+      await accountStorage.updateSub2ApiAuth(
+        "sub2-account",
+        {
+          accessToken: "resynced-access-token",
+          expectedOrigin: "https://auth.example.invalid",
+          expectedUserId: "user-1",
+        },
+        { userTimestampMode: AccountUpdateUserTimestampMode.Preserve },
+      )
+
+      await expect(
+        accountStorage.getAccountById("sub2-account"),
+      ).resolves.toMatchObject({
+        sub2apiAuth: {
+          refreshToken: "stored-refresh-token",
+          tokenExpiresAt: 1_700_000_000_000,
+        },
+      })
+    })
+
+    it("preserves the latest valid expiry when resync supplies a new refresh token without one", async () => {
+      seedStorage([
+        createAccount({
+          id: "sub2-account",
+          site_type: SITE_TYPES.SUB2API,
+          site_url: "https://auth.example.invalid",
+          account_info: { id: "user-1" } as SiteAccount["account_info"],
+          sub2apiAuth: {
+            refreshToken: "stored-refresh-token",
+            tokenExpiresAt: 1_700_000_000_000,
+          },
+        }),
+      ])
+
+      await accountStorage.updateSub2ApiAuth(
+        "sub2-account",
+        {
+          accessToken: "resynced-access-token",
+          refreshToken: "resynced-refresh-token",
+          expectedOrigin: "https://auth.example.invalid",
+          expectedUserId: "user-1",
+          userId: " user-1 ",
+        },
+        { userTimestampMode: AccountUpdateUserTimestampMode.Preserve },
+      )
+
+      await expect(
+        accountStorage.getAccountById("sub2-account"),
+      ).resolves.toMatchObject({
+        account_info: {
+          id: "user-1",
+          access_token: "resynced-access-token",
+        },
+        sub2apiAuth: {
+          refreshToken: "resynced-refresh-token",
+          tokenExpiresAt: 1_700_000_000_000,
+        },
+      })
     })
   })
 
@@ -331,10 +568,38 @@ describe("accountStorage core behaviors", () => {
       expect(
         persistedConfig.accounts.find((account) => account.id === "legacy")
           ?.configVersion,
-      ).toBe(6)
+      ).toBe(7)
     } finally {
       storageHooks.afterGet = async () => {}
     }
+  })
+
+  it("canonicalizes legacy accounts before unrelated storage mutations", async () => {
+    const legacyAccount = createAccount({
+      id: "legacy-account",
+      configVersion: 6,
+      checkIn: {
+        enableDetection: true,
+        autoCheckInEnabled: false,
+        siteStatus: { isCheckedInToday: false },
+      } as any,
+    })
+    seedStorage([legacyAccount])
+
+    await accountStorage.setPinnedList([legacyAccount.id])
+
+    const persistedConfig = storageData.get(
+      ACCOUNT_STORAGE_KEYS.ACCOUNTS,
+    ) as AccountStorageConfig
+    const persistedAccount = persistedConfig.accounts[0] as any
+    expect(persistedAccount.configVersion).toBe(7)
+    expect(persistedAccount.checkIn).toMatchObject({
+      automaticExecutionEnabled: false,
+      selection: { mode: "automatic" as const },
+    })
+    expect(persistedAccount.checkIn).not.toHaveProperty("enableDetection")
+    expect(persistedAccount.checkIn).not.toHaveProperty("autoCheckInEnabled")
+    expect(persistedAccount.checkIn).not.toHaveProperty("siteStatus")
   })
 
   it("convertToDisplayData should normalize currency values", () => {
@@ -353,6 +618,10 @@ describe("accountStorage core behaviors", () => {
         today_income: 250_000,
       },
     })
+    Object.assign(account, {
+      can_check_in: true,
+      supports_check_in: true,
+    })
 
     const display = accountStorage.convertToDisplayData(account)
 
@@ -363,6 +632,8 @@ describe("accountStorage core behaviors", () => {
     expect(display.todayTokens.upload).toBe(600)
     expect(display.todayTokens.download).toBe(400)
     expect(display.created_at).toBe(1_700_000_000_000)
+    expect(display).not.toHaveProperty("can_check_in")
+    expect(display).not.toHaveProperty("supports_check_in")
   })
 
   it("projects missing availability through generic and AIHubMix legacy policies", () => {
@@ -823,9 +1094,7 @@ describe("accountStorage core behaviors", () => {
           today_quota_consumption: 0,
           today_requests_count: 0,
           today_income: 0,
-          checkIn: {
-            enableDetection: false,
-          },
+          checkIn: createCanonicalCheckIn(),
         },
         healthStatus: {
           status: SiteHealthStatus.Healthy,
@@ -892,17 +1161,28 @@ describe("accountStorage core behaviors", () => {
 
     const account = createAccount({
       id: "check-1",
+      site_type: SITE_TYPES.NEW_API,
       checkIn: {
-        enableDetection: true,
-        siteStatus: {
-          isCheckedInToday: false,
+        automaticExecutionEnabled: true,
+        methodKnowledge: {
+          methods: {
+            "new-api:daily-checkin": {
+              detection: {
+                outcome: "matched",
+                evidence: { source: "compatibility_registration" },
+              },
+            },
+          },
+        },
+        selection: {
+          mode: "automatic",
+          methodId: "new-api:daily-checkin",
         },
       },
     })
     seedStorage([account])
 
     try {
-      const today = fixedNow.toISOString().split("T")[0]
       const success = await accountStorage.markAccountAsSiteCheckedIn("check-1")
 
       expect(success).toBe(true)
@@ -912,11 +1192,18 @@ describe("accountStorage core behaviors", () => {
         (acc: { id: string }) => acc.id === "check-1",
       )
 
-      expect(updatedAccount?.checkIn?.siteStatus?.isCheckedInToday).toBe(true)
-      expect(updatedAccount?.checkIn?.siteStatus?.lastCheckInDate).toBe(today)
-      expect(updatedAccount?.checkIn?.siteStatus?.lastDetectedAt).toBe(
-        fixedNow.getTime(),
-      )
+      expect(
+        updatedAccount?.checkIn?.methodKnowledge.methods[
+          "new-api:daily-checkin"
+        ]?.status,
+      ).toEqual({
+        outcome: "known",
+        today: "checked",
+        evidence: {
+          source: "execution",
+          observedAt: fixedNow.getTime(),
+        },
+      })
     } finally {
       vi.useRealTimers()
     }
@@ -926,7 +1213,7 @@ describe("accountStorage core behaviors", () => {
     const account = createAccount({
       id: "custom-1",
       checkIn: {
-        enableDetection: true,
+        ...createCanonicalCheckIn(),
         customCheckIn: {
           url: "https://example.com/check",
           isCheckedInToday: false,
@@ -970,7 +1257,7 @@ describe("accountStorage core behaviors", () => {
         id: "disabled-custom-check-in",
         disabled: true,
         checkIn: {
-          enableDetection: true,
+          ...createCanonicalCheckIn(),
           customCheckIn: {
             url: "https://example.com/check",
             isCheckedInToday: false,
@@ -980,7 +1267,7 @@ describe("accountStorage core behaviors", () => {
       createAccount({
         id: "empty-custom-url",
         checkIn: {
-          enableDetection: true,
+          ...createCanonicalCheckIn(),
           customCheckIn: {
             url: "   ",
             isCheckedInToday: false,
@@ -2212,7 +2499,7 @@ describe("accountStorage core behaviors", () => {
     const staleAccount = createAccount({
       id: "stale",
       checkIn: {
-        enableDetection: true,
+        ...createCanonicalCheckIn(),
         customCheckIn: {
           url: "https://example.com/check",
           isCheckedInToday: true,
@@ -2224,7 +2511,7 @@ describe("accountStorage core behaviors", () => {
     const freshAccount = createAccount({
       id: "fresh",
       checkIn: {
-        enableDetection: true,
+        ...createCanonicalCheckIn(),
         customCheckIn: {
           url: "https://example.com/check",
           isCheckedInToday: true,
@@ -2251,7 +2538,7 @@ describe("accountStorage core behaviors", () => {
     )
   })
 
-  it("refreshAccount should re-detect unknown site type and check-in support", async () => {
+  it("refreshAccount should re-detect unknown site type and pass canonical check-in context", async () => {
     const protectionBypassExecution = userCommandExecution(
       PROTECTION_BYPASS_USER_COMMANDS.RefreshAccount,
     )
@@ -2265,8 +2552,6 @@ describe("accountStorage core behaviors", () => {
     seedStorage([account])
 
     mockGetAccountSiteType.mockResolvedValue("one-api")
-    mockFetchSupportCheckIn.mockResolvedValue(true)
-
     await accountStorage.refreshAccount("needs-detect", true, {
       protectionBypassExecution,
     })
@@ -2281,25 +2566,19 @@ describe("accountStorage core behaviors", () => {
     expect(mockgetSiteTypeCapabilities).not.toHaveBeenCalledWith(
       SITE_TYPES.UNKNOWN,
     )
-    expect(mockFetchSupportCheckIn).toHaveBeenCalledWith(
+    expect(mockFetchSupportCheckIn).not.toHaveBeenCalled()
+    expect(mockRefreshAccountData).toHaveBeenCalledWith(
       expect.objectContaining({
-        baseUrl: "https://foo.example.com",
-        accountId: "needs-detect",
         protectionBypassExecution,
-        cookieAuthSessionCookie: "stored-session-cookie",
-        auth: expect.objectContaining({
-          authType: AuthTypeEnum.AccessToken,
-          userId: "1",
-          accessToken: "token",
-          cookie: "stored-session-cookie",
+        siteType: "one-api",
+        checkIn: expect.objectContaining({
+          automaticExecutionEnabled: true,
+          selection: { mode: "automatic" as const },
         }),
       }),
     )
-    expect(mockRefreshAccountData).toHaveBeenCalledWith(
-      expect.objectContaining({ protectionBypassExecution }),
-    )
     expect(updatedAccount?.site_type).toBe("one-api")
-    expect(updatedAccount?.checkIn?.enableDetection).toBe(true)
+    expect(updatedAccount?.checkIn).not.toHaveProperty("enableDetection")
     expect(updatedAccount).not.toHaveProperty("protectionBypassExecution")
     expect(updatedAccount).not.toHaveProperty("tempWindowRequestSource")
   })
@@ -2346,17 +2625,7 @@ describe("accountStorage core behaviors", () => {
       },
     )
 
-    expect(mockFetchSupportCheckIn).toHaveBeenCalledWith(
-      expect.objectContaining({
-        baseUrl: "https://revive.example.com",
-        accountId: "disabled-revive",
-        auth: expect.objectContaining({
-          authType: AuthTypeEnum.AccessToken,
-          userId: "1",
-          accessToken: "token",
-        }),
-      }),
-    )
+    expect(mockFetchSupportCheckIn).not.toHaveBeenCalled()
     expect(mockRefreshAccountData).toHaveBeenCalledTimes(1)
     expect(result).toEqual(
       expect.objectContaining({
@@ -2375,12 +2644,15 @@ describe("accountStorage core behaviors", () => {
       disabled: true,
       site_url: "https://persist.example.com",
       site_type: SITE_TYPES.UNKNOWN,
+      checkIn: createCanonicalCheckIn(),
     })
     seedStorage([account])
 
-    const updateAccountSpy = vi
-      .spyOn(accountStorage, "updateAccount")
-      .mockResolvedValueOnce(false)
+    storageHooks.beforeSet = async (key) => {
+      if (key === ACCOUNT_STORAGE_KEYS.ACCOUNTS) {
+        throw new Error("storage write failed")
+      }
+    }
 
     try {
       const result = await accountStorage.refreshAccount(
@@ -2403,7 +2675,7 @@ describe("accountStorage core behaviors", () => {
           ?.disabled,
       ).toBe(true)
     } finally {
-      updateAccountSpy.mockRestore()
+      storageHooks.beforeSet = async () => {}
     }
   })
 
@@ -2446,46 +2718,266 @@ describe("accountStorage core behaviors", () => {
       id: "known-site",
       site_url: "https://bar.example.com",
       site_type: "one-api",
-      checkIn: { enableDetection: true },
+      checkIn: {
+        automaticExecutionEnabled: true,
+        methodKnowledge: { methods: {} },
+        selection: { mode: "automatic" as const },
+      },
     })
     seedStorage([account])
-
-    mockFetchSupportCheckIn.mockResolvedValue(false)
 
     await accountStorage.refreshAccount("known-site", true)
 
     expect(mockGetAccountSiteType).not.toHaveBeenCalled()
     expect(mockgetSiteTypeCapabilities).toHaveBeenCalledWith("one-api")
-    expect(mockFetchSupportCheckIn).toHaveBeenCalledWith(
-      expect.objectContaining({
-        baseUrl: "https://bar.example.com",
-        accountId: "known-site",
-        auth: expect.objectContaining({
-          authType: AuthTypeEnum.AccessToken,
-          userId: "1",
-          accessToken: "token",
-        }),
-      }),
+    expect(mockFetchSupportCheckIn).not.toHaveBeenCalled()
+    expect(mockRefreshAccountData).toHaveBeenCalledWith(
+      expect.objectContaining({ siteType: "one-api" }),
     )
     const updatedAccount = await accountStorage.getAccountById("known-site")
     expect(updatedAccount?.site_type).toBe("one-api")
-    expect(updatedAccount?.checkIn?.enableDetection).toBe(false)
+    expect(updatedAccount?.checkIn).not.toHaveProperty("enableDetection")
   })
 
-  it("refreshAccount should continue when check-in support detection throws", async () => {
-    const account = createAccount({
-      id: "support-check-fails",
-      site_url: "https://support.example.com",
-      site_type: "one-api",
+  it("updateAccountCheckInDraft preserves concurrently refreshed method knowledge and custom daily status", async () => {
+    const latestAccount = createAccount({
+      id: "check-in-draft",
+      site_type: SITE_TYPES.NEW_API,
+      configVersion: 7,
       checkIn: {
-        enableDetection: true,
-        autoCheckInEnabled: true,
-        siteStatus: { isCheckedInToday: false },
+        automaticExecutionEnabled: true,
+        methodKnowledge: {
+          methods: {
+            "new-api:daily-checkin": {
+              detection: {
+                outcome: "matched",
+                evidence: { source: "compatibility_registration" },
+              },
+              status: {
+                outcome: "known",
+                today: "checked",
+                evidence: { source: "probe", observedAt: 200 },
+              },
+            },
+          },
+        },
+        selection: {
+          mode: "automatic",
+          methodId: "new-api:daily-checkin",
+        },
+        customCheckIn: {
+          url: "https://old.example.invalid/check-in",
+          isCheckedInToday: true,
+          lastCheckInDate: "2026-08-10",
+        },
+      },
+    } as any)
+    latestAccount.configVersion = 7
+    seedStorage([latestAccount])
+
+    const success = await accountStorage.updateAccountCheckInDraft(
+      latestAccount.id,
+      {
+        automaticExecutionEnabled: false,
+        methodKnowledge: { methods: {} },
+        selection: { mode: "manual" },
+        customCheckIn: {
+          url: "https://new.example.invalid/check-in",
+          isCheckedInToday: false,
+        },
+      } as any,
+    )
+
+    expect(success).toBe(true)
+    const updated = await accountStorage.getAccountById(latestAccount.id)
+    expect(updated?.checkIn.automaticExecutionEnabled).toBe(false)
+    expect(updated?.checkIn.selection).toEqual(latestAccount.checkIn.selection)
+    expect(updated?.checkIn.methodKnowledge).toEqual(
+      latestAccount.checkIn.methodKnowledge,
+    )
+    expect(updated?.checkIn.customCheckIn).toMatchObject({
+      url: "https://new.example.invalid/check-in",
+      isCheckedInToday: true,
+      lastCheckInDate: "2026-08-10",
+    })
+  })
+
+  it("updateAccountCheckInDraft removes a cleared custom check-in URL", async () => {
+    const account = createAccount({
+      id: "remove-custom-check-in",
+      site_type: SITE_TYPES.NEW_API,
+      checkIn: {
+        automaticExecutionEnabled: true,
+        methodKnowledge: { methods: {} },
+        selection: { mode: "automatic" },
+        customCheckIn: {
+          url: "https://example.invalid/check-in",
+          isCheckedInToday: true,
+        },
       },
     })
     seedStorage([account])
 
-    mockFetchSupportCheckIn.mockRejectedValueOnce(new Error("support failed"))
+    await expect(
+      accountStorage.updateAccountCheckInDraft(account.id, {
+        ...account.checkIn,
+        customCheckIn: undefined,
+      }),
+    ).resolves.toBe(true)
+
+    const updated = await accountStorage.getAccountById(account.id)
+    expect(updated?.checkIn.customCheckIn).toBeUndefined()
+  })
+
+  it("keeps account fields and the check-in draft unchanged when their atomic save fails", async () => {
+    const account = createAccount({
+      id: "atomic-dialog-save",
+      notes: "before",
+      site_type: SITE_TYPES.NEW_API,
+      checkIn: {
+        automaticExecutionEnabled: true,
+        methodKnowledge: {
+          methods: {
+            "new-api:daily-checkin": {
+              detection: {
+                outcome: "matched",
+                evidence: { source: "compatibility_registration" },
+              },
+            },
+          },
+        },
+        selection: {
+          mode: "automatic",
+          methodId: "new-api:daily-checkin",
+        },
+      },
+    } as any)
+    seedStorage([account])
+    storageHooks.beforeSet = async (key) => {
+      if (key === ACCOUNT_STORAGE_KEYS.ACCOUNTS) {
+        throw new Error("storage unavailable")
+      }
+    }
+
+    const success = await accountStorage.updateAccountWithCheckInDraft(
+      account.id,
+      { notes: "after" },
+      {
+        automaticExecutionEnabled: false,
+        methodKnowledge: { methods: {} },
+        selection: { mode: "automatic" },
+      },
+      { userTimestampMode: AccountUpdateUserTimestampMode.Touch },
+    )
+
+    expect(success).toBe(false)
+    const persisted = storageData.get(ACCOUNT_STORAGE_KEYS.ACCOUNTS)
+      .accounts[0] as SiteAccount
+    expect(persisted.notes).toBe("before")
+    expect(persisted.checkIn.automaticExecutionEnabled).toBe(true)
+    expect(persisted.checkIn.methodKnowledge).toEqual(
+      account.checkIn.methodKnowledge,
+    )
+  })
+
+  it("refreshAccount merges status into a newer dialog save inside the storage lock", async () => {
+    const account = createAccount({
+      id: "refresh-dialog-race",
+      site_type: SITE_TYPES.NEW_API,
+      checkIn: {
+        automaticExecutionEnabled: true,
+        methodKnowledge: {
+          methods: {
+            "new-api:daily-checkin": {
+              detection: {
+                outcome: "matched",
+                evidence: { source: "compatibility_registration" },
+              },
+              status: {
+                outcome: "known",
+                today: "not_checked",
+                evidence: { source: "probe", observedAt: 100 },
+              },
+            },
+          },
+        },
+        selection: {
+          mode: "automatic",
+          methodId: "new-api:daily-checkin",
+        },
+        customCheckIn: { url: "https://old.example.invalid/check-in" },
+      },
+    } as any)
+    account.configVersion = 7
+    seedStorage([account])
+
+    const deferred = createDeferred<any>()
+    mockRefreshAccountData.mockReturnValueOnce(deferred.promise)
+    const refreshPromise = accountStorage.refreshAccount(account.id, true)
+    await vi.waitFor(() => expect(mockRefreshAccountData).toHaveBeenCalled())
+
+    await accountStorage.updateAccountCheckInDraft(account.id, {
+      ...account.checkIn,
+      automaticExecutionEnabled: false,
+      customCheckIn: { url: "https://new.example.invalid/check-in" },
+    })
+
+    deferred.resolve({
+      success: true,
+      data: {
+        quota: 0,
+        today_prompt_tokens: 0,
+        today_completion_tokens: 0,
+        today_quota_consumption: 0,
+        today_requests_count: 0,
+        today_income: 0,
+        checkIn: {
+          ...account.checkIn,
+          methodKnowledge: {
+            methods: {
+              "new-api:daily-checkin": {
+                ...account.checkIn.methodKnowledge.methods[
+                  "new-api:daily-checkin"
+                ],
+                status: {
+                  outcome: "known",
+                  today: "checked",
+                  evidence: { source: "probe", observedAt: 300 },
+                },
+              },
+            },
+          },
+        },
+      },
+      healthStatus: {
+        status: SiteHealthStatus.Healthy,
+        message: "",
+      },
+    })
+    await refreshPromise
+
+    const updated = await accountStorage.getAccountById(account.id)
+    expect(updated?.checkIn.automaticExecutionEnabled).toBe(false)
+    expect(updated?.checkIn.customCheckIn?.url).toBe(
+      "https://new.example.invalid/check-in",
+    )
+    expect(
+      updated?.checkIn.methodKnowledge.methods["new-api:daily-checkin"]?.status,
+    ).toMatchObject({
+      outcome: "known",
+      today: "checked",
+      evidence: { observedAt: 300 },
+    })
+  })
+
+  it("refreshAccount should not invoke the legacy check-in support probe", async () => {
+    const account = createAccount({
+      id: "support-check-fails",
+      site_url: "https://support.example.com",
+      site_type: "one-api",
+      checkIn: createCanonicalCheckIn(),
+    })
+    seedStorage([account])
 
     const result = await accountStorage.refreshAccount(
       "support-check-fails",
@@ -2500,11 +2992,13 @@ describe("accountStorage core behaviors", () => {
         refreshed: true,
       }),
     )
+    expect(mockFetchSupportCheckIn).not.toHaveBeenCalled()
     expect(mockRefreshAccountData).toHaveBeenCalledWith(
       expect.objectContaining({
         checkIn: expect.objectContaining({
-          enableDetection: true,
+          automaticExecutionEnabled: true,
         }),
+        siteType: "one-api",
       }),
     )
     expect(updatedAccount?.health?.status).toBe(SiteHealthStatus.Healthy)
@@ -2515,30 +3009,35 @@ describe("accountStorage core behaviors", () => {
       id: "pathful-refresh-url",
       site_url: "https://pathful.example.com/dashboard?tab=usage",
       site_type: SITE_TYPES.NEW_API,
-      checkIn: { enableDetection: true },
+      checkIn: {
+        automaticExecutionEnabled: true,
+        methodKnowledge: { methods: {} },
+        selection: { mode: "automatic" as const },
+      },
     })
     seedStorage([account])
 
     await accountStorage.refreshAccount("pathful-refresh-url", true)
 
-    expect(mockFetchSupportCheckIn).toHaveBeenCalledWith(
-      expect.objectContaining({
-        baseUrl: "https://pathful.example.com",
-      }),
-    )
+    expect(mockFetchSupportCheckIn).not.toHaveBeenCalled()
     expect(mockRefreshAccountData).toHaveBeenCalledWith(
       expect.objectContaining({
         baseUrl: "https://pathful.example.com",
+        siteType: SITE_TYPES.NEW_API,
       }),
     )
   })
 
-  it("refreshAccount preserves the temp window source across support detection and data refresh", async () => {
+  it("refreshAccount preserves the temp window source for data refresh", async () => {
     const account = createAccount({
       id: "temp-window",
       site_url: "https://refresh.example.invalid/dashboard",
       site_type: SITE_TYPES.NEW_API,
-      checkIn: { enableDetection: true },
+      checkIn: {
+        automaticExecutionEnabled: true,
+        methodKnowledge: { methods: {} },
+        selection: { mode: "automatic" as const },
+      },
     })
     seedStorage([account])
 
@@ -2546,12 +3045,7 @@ describe("accountStorage core behaviors", () => {
       tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
     })
 
-    expect(mockFetchSupportCheckIn).toHaveBeenCalledWith(
-      expect.objectContaining({
-        accountId: "temp-window",
-        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
-      }),
-    )
+    expect(mockFetchSupportCheckIn).not.toHaveBeenCalled()
     expect(mockRefreshAccountData).toHaveBeenCalledWith(
       expect.objectContaining({
         accountId: "temp-window",
@@ -2565,13 +3059,7 @@ describe("accountStorage core behaviors", () => {
       id: "unsupported-refresh",
       site_url: "https://unsupported.example.com",
       site_type: SITE_TYPES.ONE_API,
-      checkIn: {
-        enableDetection: true,
-        autoCheckInEnabled: true,
-        siteStatus: {
-          isCheckedInToday: false,
-        },
-      },
+      checkIn: createCanonicalCheckIn(),
     })
     seedStorage([account])
 
@@ -2607,7 +3095,11 @@ describe("accountStorage core behaviors", () => {
       site_url: "https://income.example.com",
       site_type: "one-api",
       exchange_rate: 8.5,
-      checkIn: { enableDetection: true },
+      checkIn: {
+        automaticExecutionEnabled: true,
+        methodKnowledge: { methods: {} },
+        selection: { mode: "automatic" as const },
+      },
     })
     seedStorage([account])
 
@@ -2626,12 +3118,7 @@ describe("accountStorage core behaviors", () => {
             reason: ACCOUNT_TODAY_METRIC_REASONS.SourcePartial,
           },
         }),
-        checkIn: {
-          enableDetection: true,
-          siteStatus: {
-            isCheckedInToday: false,
-          },
-        },
+        checkIn: createCanonicalCheckIn(),
       },
       healthStatus: {
         status: SiteHealthStatus.Healthy,
@@ -2685,7 +3172,11 @@ describe("accountStorage core behaviors", () => {
           today_requests_count: 40,
           today_income: 50,
           todayStatsAvailability: availability,
-          checkIn: { enableDetection: false },
+          checkIn: {
+            automaticExecutionEnabled: false,
+            methodKnowledge: { methods: {} },
+            selection: { mode: "automatic" as const },
+          },
         },
         healthStatus: {
           status: SiteHealthStatus.Healthy,
@@ -2739,9 +3230,7 @@ describe("accountStorage core behaviors", () => {
         today_quota_consumption: 0,
         today_requests_count: 0,
         today_income: 0,
-        checkIn: {
-          enableDetection: false,
-        },
+        checkIn: createCanonicalCheckIn(),
       },
       healthStatus: {
         status: SiteHealthStatus.Healthy,
@@ -2808,9 +3297,7 @@ describe("accountStorage core behaviors", () => {
         today_quota_consumption: 0,
         today_requests_count: 0,
         today_income: 0,
-        checkIn: {
-          enableDetection: true,
-        },
+        checkIn: createCanonicalCheckIn(),
       },
       healthStatus: {
         status: SiteHealthStatus.Healthy,
@@ -2866,9 +3353,7 @@ describe("accountStorage core behaviors", () => {
         today_quota_consumption: 0,
         today_requests_count: 0,
         today_income: 0,
-        checkIn: {
-          enableDetection: false,
-        },
+        checkIn: createCanonicalCheckIn(),
       },
       healthStatus: {
         status: SiteHealthStatus.Healthy,
@@ -2927,9 +3412,7 @@ describe("accountStorage core behaviors", () => {
         today_quota_consumption: 0,
         today_requests_count: 0,
         today_income: 0,
-        checkIn: {
-          enableDetection: false,
-        },
+        checkIn: createCanonicalCheckIn(),
       },
       healthStatus: {
         status: SiteHealthStatus.Healthy,
@@ -2958,7 +3441,11 @@ describe("accountStorage core behaviors", () => {
       id: "temp-window",
       site_url: "https://baz.example.com",
       site_type: "one-api",
-      checkIn: { enableDetection: true },
+      checkIn: {
+        automaticExecutionEnabled: true,
+        methodKnowledge: { methods: {} },
+        selection: { mode: "automatic" as const },
+      },
     })
     seedStorage([account])
 
@@ -2988,12 +3475,7 @@ describe("accountStorage core behaviors", () => {
         today_quota_consumption: 0,
         today_requests_count: 0,
         today_income: 0,
-        checkIn: {
-          enableDetection: true,
-          siteStatus: {
-            isCheckedInToday: false,
-          },
-        },
+        checkIn: createCanonicalCheckIn(),
       },
       healthStatus: {
         status: SiteHealthStatus.Healthy,
@@ -3060,10 +3542,7 @@ describe("accountStorage core behaviors", () => {
               reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
             },
           }),
-          checkIn: {
-            enableDetection: true,
-            siteStatus: { isCheckedInToday: false },
-          },
+          checkIn: createCanonicalCheckIn(),
         },
         healthStatus: {
           status: SiteHealthStatus.Healthy,
@@ -3134,10 +3613,7 @@ describe("accountStorage core behaviors", () => {
               reason: ACCOUNT_TODAY_METRIC_REASONS.NotCollected,
             },
           }),
-          checkIn: {
-            enableDetection: true,
-            siteStatus: { isCheckedInToday: false },
-          },
+          checkIn: createCanonicalCheckIn(),
         },
         healthStatus: {
           status: SiteHealthStatus.Healthy,
@@ -3707,7 +4183,13 @@ describe("accountStorage bookmarks", () => {
     it("getAccountByBaseUrlAndUserId migrates matched legacy accounts before returning", async () => {
       const legacyAccount = createAccount({
         id: "legacy-target",
+        configVersion: 6,
         site_url: "https://legacy.example.com",
+        checkIn: {
+          enableDetection: true,
+          autoCheckInEnabled: true,
+          siteStatus: { isCheckedInToday: false },
+        } as any,
         account_info: {
           id: "321",
           access_token: "token",
@@ -3748,8 +4230,14 @@ describe("accountStorage bookmarks", () => {
         vi.setSystemTime(now)
         const legacyAccount = createAccount({
           id: "legacy-by-id",
+          configVersion: 6,
           updated_at: 100,
           user_updated_at: 100,
+          checkIn: {
+            enableDetection: true,
+            autoCheckInEnabled: true,
+            siteStatus: { isCheckedInToday: false },
+          } as any,
         })
         delete (legacyAccount as any).disabled
         delete (legacyAccount as any).excludeFromTotalBalance
@@ -3777,9 +4265,15 @@ describe("accountStorage bookmarks", () => {
         vi.setSystemTime(now)
         const legacyAccount = createAccount({
           id: "legacy-by-url-user",
+          configVersion: 6,
           site_url: "https://legacy-user.example.com",
           updated_at: 200,
           user_updated_at: 200,
+          checkIn: {
+            enableDetection: true,
+            autoCheckInEnabled: true,
+            siteStatus: { isCheckedInToday: false },
+          } as any,
           account_info: {
             id: "987",
             access_token: "token",

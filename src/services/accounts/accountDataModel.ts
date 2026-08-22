@@ -6,6 +6,7 @@ import {
   type AccountUsageRecord,
   type AccountUsageSummary,
   type CheckInConfig,
+  type SiteAccount,
   type SiteHealthStatus,
   type Sub2ApiAuthConfig,
   type TempWindowHealthStatusCode,
@@ -41,11 +42,6 @@ export interface AccountData extends TodayStatsData {
   usage?: AccountUsageSummary
   subscription?: AccountSubscriptionSummary
   recentUsageRecords?: AccountUsageRecord[]
-  /**
-   * Legacy flag indicating whether the account can be checked in today.
-   * @deprecated Use `checkIn.siteStatus.isCheckedInToday` instead.
-   */
-  can_check_in?: boolean
   checkIn: CheckInConfig
 }
 
@@ -57,6 +53,7 @@ export interface AccountData extends TodayStatsData {
  */
 export type ApiServiceAccountRequest = ApiServiceRequest & {
   checkIn: CheckInConfig
+  siteType?: SiteAccount["site_type"]
   /**
    * Account-owned exchange rate (CNY per USD) used when parsing recharge/system
    * log text into quota units.

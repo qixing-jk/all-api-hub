@@ -106,6 +106,7 @@
       "not-checked-in": "Not checked in",
       "outdated": "Status outdated",
       "placeholder": "Check-in status",
+      "status-unavailable": "Status unavailable",
       "unsupported": "Unsupported"
     },
     "disabled": {
@@ -205,7 +206,7 @@
     "site": {
       "checkedInToday": "Checked in today, click to view",
       "checkInStatusOutdated": "Check-in status wasn't detected today (last check time: {{time}}). Click to refresh",
-      "checkInUnsupported": "Site may not support check-in",
+      "checkInStatusUnavailable": "Check-in is supported, but today's status cannot be read automatically",
       "currentSite": "Current Site",
       "currentSiteExists": "Same site as the current tab",
       "disabled": "Disabled",

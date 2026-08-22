@@ -29,7 +29,7 @@ import {
   normalizeApiCheckBaseUrl,
   normalizeGoogleFamilyBaseUrl,
   normalizeOpenAiFamilyBaseUrl,
-} from "~/services/verification/webAiApiCheck/extractCredentials"
+} from "~/services/verification/webAiApiCheck/credentialExtraction/baseUrlCandidates"
 import { createLogger } from "~/utils/core/logger"
 import { isUrlAllowedByRegexList } from "~/utils/core/urlWhitelist"
 

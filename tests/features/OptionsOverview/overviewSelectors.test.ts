@@ -13,6 +13,7 @@ import {
   UNIFIED_API_GUIDANCE_SOURCE_KINDS,
   UNIFIED_API_GUIDANCE_STATUSES,
 } from "~/features/UnifiedApiGuidance"
+import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
 import { createEmptyUsageHistoryAccountStore } from "~/services/history/usageHistory/core"
 import {
   DEFAULT_PREFERENCES,
@@ -44,6 +45,7 @@ import {
   buildAccountStats,
   buildCompleteTodayStatsAvailability,
 } from "~~/tests/test-utils/accountTodayStats"
+import { buildCheckInConfig } from "~~/tests/test-utils/factories"
 
 const unavailableMetricCoverage = {
   status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
@@ -100,9 +102,7 @@ const baseAccount = {
   excludeFromTotalBalance: false,
   excludeFromTodayIncome: false,
   authType: AuthTypeEnum.AccessToken,
-  checkIn: {
-    enableDetection: false,
-  },
+  checkIn: buildCheckInConfig(),
 } satisfies SiteAccount
 
 const healthyAccount: SiteAccount = {
@@ -113,7 +113,11 @@ const healthyAccount: SiteAccount = {
 const autoCheckinReadyAccount: SiteAccount = {
   ...healthyAccount,
   id: "auto-checkin-ready-account",
-  checkIn: { enableDetection: true },
+  checkIn: createCompatibilityCheckInConfig({
+    siteType: SITE_TYPES.NEW_API,
+    supported: true,
+    automaticExecutionEnabled: true,
+  }),
 }
 
 const unhealthyAccount: SiteAccount = {
@@ -140,7 +144,7 @@ const healthyDisplayData: DisplaySiteData = {
   token: "redacted-token",
   userId: "user-1",
   authType: AuthTypeEnum.AccessToken,
-  checkIn: { enableDetection: false },
+  checkIn: buildCheckInConfig(),
 }
 
 const unhealthyDisplayData: DisplaySiteData = {

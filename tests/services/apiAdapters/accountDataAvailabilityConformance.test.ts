@@ -20,6 +20,7 @@ import {
 } from "~/types"
 import type { AccountTodayStatsAvailability } from "~/types/accountTodayStats"
 import { server } from "~~/tests/msw/server"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
 const complete = { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete } as const
 const unavailable = (
@@ -285,7 +286,7 @@ const createRequest = (siteType: AccountSiteType) => {
       userId: "user-1",
       accessToken: "account-token",
     },
-    checkIn: { enableDetection: false },
+    checkIn: buildCheckInConfig(),
     includeTodayCashflow: true,
   }
 }
@@ -334,7 +335,7 @@ describe("AccountData availability producer conformance", () => {
           reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
         },
       },
-      checkIn: { enableDetection: false },
+      checkIn: buildCheckInConfig(),
     }
 
     expect(() => expectClassifiedAvailability(invalidData)).toThrow()

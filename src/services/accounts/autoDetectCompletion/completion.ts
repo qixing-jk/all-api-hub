@@ -2,6 +2,7 @@ import {
   AUTO_DETECT_FAILURE_REASONS,
   type AutoDetectFailureReason,
 } from "~/constants/autoDetect"
+import type { AccountSiteType } from "~/constants/siteType"
 import { getSiteName } from "~/services/accounts/siteName"
 import type { SiteStatusInfo } from "~/services/apiAdapters/contracts/accountBootstrap"
 import type {
@@ -14,6 +15,7 @@ import type {
   ApiServiceFetchContext,
   ApiServiceRequest,
 } from "~/services/apiTransport/type"
+import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
@@ -98,22 +100,21 @@ function trimString(value: unknown): string {
  * Creates the persisted check-in shape used by auto-detected accounts.
  */
 function createInitialCheckInConfig(input: {
-  enableDetection: boolean
-  autoCheckInEnabled: boolean
+  supported: boolean
+  automaticExecutionEnabled: boolean
+  siteType: AccountSiteType
 }) {
-  return {
-    enableDetection: input.enableDetection,
-    autoCheckInEnabled: input.autoCheckInEnabled,
-    siteStatus: {
-      isCheckedInToday: false,
-    },
+  return createCompatibilityCheckInConfig({
+    siteType: input.siteType,
+    supported: input.supported,
+    automaticExecutionEnabled: input.automaticExecutionEnabled,
     customCheckIn: {
       url: "",
       redeemUrl: "",
       openRedeemWithCheckIn: true,
       isCheckedInToday: false,
     },
-  }
+  })
 }
 
 const createMissingAccountCompletionCapabilityError = (siteType: string) =>
@@ -126,7 +127,7 @@ const createCompletionError = (
 
 const createAccountCompletionHelpers = (params: {
   url: string
-  siteType: string
+  siteType: AccountSiteType
 }): AccountCompletionHelpers => ({
   createServiceRequest(input: {
     baseUrl: string
@@ -145,7 +146,9 @@ const createAccountCompletionHelpers = (params: {
   },
   createCompletionError,
   trimString,
-  createInitialCheckInConfig,
+  createInitialCheckInConfig(input) {
+    return createInitialCheckInConfig({ ...input, siteType: params.siteType })
+  },
   handleCheckInSupportFetchFailure(error: unknown) {
     logger.warn("Auto-detect check-in support probe failed", {
       siteType: params.siteType,

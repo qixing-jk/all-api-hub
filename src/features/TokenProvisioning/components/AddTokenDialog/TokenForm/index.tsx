@@ -20,6 +20,10 @@ interface TokenFormProps {
   allowedGroups?: string[]
   availableModels: string[]
   showGroupSelection: boolean
+  showModelLimits: boolean
+  isModelsLoading: boolean
+  modelLoadErrorMessage: string | null
+  onRequestModels: () => Promise<boolean>
 }
 
 /**
@@ -36,6 +40,10 @@ export function TokenForm({
   allowedGroups,
   availableModels,
   showGroupSelection,
+  showModelLimits,
+  isModelsLoading,
+  modelLoadErrorMessage,
+  onRequestModels,
 }: TokenFormProps) {
   const handleInputChange =
     (field: keyof FormData) =>
@@ -88,6 +96,10 @@ export function TokenForm({
         allowedGroups={allowedGroups}
         availableModels={availableModels}
         showGroupSelection={showGroupSelection}
+        showModelLimits={showModelLimits}
+        isModelsLoading={isModelsLoading}
+        modelLoadErrorMessage={modelLoadErrorMessage}
+        onRequestModels={onRequestModels}
         usesSubnetLimits={usesSubnetLimits}
         handleInputChange={handleInputChange}
         handleSelectChange={handleSelectChange}

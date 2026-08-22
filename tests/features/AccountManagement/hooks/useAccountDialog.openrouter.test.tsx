@@ -15,6 +15,7 @@ import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/con
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 
@@ -239,7 +240,7 @@ describe("useAccountDialog OpenRouter behavior", () => {
         exchangeRate: 7.2,
         authType: AuthTypeEnum.AccessToken,
         siteType: SITE_TYPES.OPENROUTER,
-        checkIn: { enableDetection: false, autoCheckInEnabled: false },
+        checkIn: buildCheckInConfig(),
       },
       provisioning: {
         requestId,
@@ -259,7 +260,7 @@ describe("useAccountDialog OpenRouter behavior", () => {
       userId: "example-user-placeholder",
       exchangeRate: 7,
       siteType: SITE_TYPES.NEW_API,
-      checkIn: { enableDetection: false },
+      checkIn: buildCheckInConfig(),
     },
   })
 

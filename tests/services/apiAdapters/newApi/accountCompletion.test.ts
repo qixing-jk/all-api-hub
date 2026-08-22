@@ -9,10 +9,12 @@ import { UI_CONSTANTS } from "~/constants/ui"
 import { AutoDetectCompletionError } from "~/services/accounts/autoDetectCompletion/types"
 import { NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND } from "~/services/accountSiteOnboarding/contracts"
 import type { AccountCompletionHelpers } from "~/services/apiAdapters/contracts/accountCompletion"
-import { newApiAccountCompletion } from "~/services/apiAdapters/newApi/accountCompletion"
+import { createNewApiAccountCompletion } from "~/services/apiAdapters/newApi/accountCompletion"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
+
+import { createCheckInConfig } from "../checkInFixtures"
 
 const {
   mockCreateNewApiAccountBootstrap,
@@ -33,6 +35,10 @@ const {
 vi.mock("~/services/apiAdapters/newApi/accountBootstrap", () => ({
   createNewApiAccountBootstrap: mockCreateNewApiAccountBootstrap,
 }))
+
+const newApiAccountCompletion = createNewApiAccountCompletion(
+  SITE_TYPES.NEW_API,
+)
 
 const currentTabFetchContext = {
   kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
@@ -68,12 +74,12 @@ const trimString = vi.fn((value: unknown) =>
 )
 
 const createInitialCheckInConfig = vi.fn(
-  ({ enableDetection, autoCheckInEnabled }) => ({
-    enableDetection,
-    autoCheckInEnabled,
-    siteStatus: {
+  ({ supported, automaticExecutionEnabled }) => ({
+    ...createCheckInConfig(SITE_TYPES.NEW_API, {
+      matched: supported,
+      automaticExecutionEnabled,
       isCheckedInToday: false,
-    },
+    }),
     customCheckIn: {
       url: "",
       redeemUrl: "",
@@ -170,8 +176,8 @@ describe("newApiAccountCompletion", () => {
       price: 6.8,
     })
     expect(createInitialCheckInConfig).toHaveBeenCalledWith({
-      enableDetection: true,
-      autoCheckInEnabled: true,
+      supported: true,
+      automaticExecutionEnabled: true,
     })
     expect(result).toEqual({
       username: "token-user",
@@ -181,11 +187,9 @@ describe("newApiAccountCompletion", () => {
       exchangeRate: 6.8,
       authType: AuthTypeEnum.AccessToken,
       checkIn: {
-        enableDetection: true,
-        autoCheckInEnabled: true,
-        siteStatus: {
+        ...createCheckInConfig(SITE_TYPES.NEW_API, {
           isCheckedInToday: false,
-        },
+        }),
         customCheckIn: {
           url: "",
           redeemUrl: "",
@@ -450,7 +454,9 @@ describe("newApiAccountCompletion", () => {
     })
     mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
 
-    const result = await newApiAccountCompletion.complete(
+    const result = await createNewApiAccountCompletion(
+      SITE_TYPES.VELOERA,
+    ).complete(
       {
         url: "https://family.example.invalid",
         requestedAuthType: AuthTypeEnum.Cookie,
@@ -533,11 +539,61 @@ describe("newApiAccountCompletion", () => {
       exchangeRate: UI_CONSTANTS.EXCHANGE_RATE.DEFAULT,
       authType: AuthTypeEnum.Cookie,
       checkIn: expect.objectContaining({
-        enableDetection: true,
-        autoCheckInEnabled: true,
+        automaticExecutionEnabled: true,
+        selection: expect.objectContaining({
+          methodId: "new-api:daily-checkin",
+        }),
       }),
     })
   })
+
+  it.each([
+    ["", "  Example Account  ", "Example Account"],
+    ["  primary-user  ", "Fallback Account", "primary-user"],
+  ])(
+    "resolves ModelFlare username %j before display name %j",
+    async (username, displayName, expectedUsername) => {
+      mockFetchUserInfo.mockResolvedValueOnce({
+        username,
+        access_token: "",
+        user: {
+          id: 8,
+          username,
+          access_token: null,
+          display_name: displayName,
+          email: "owner@example.invalid",
+        },
+      })
+      mockFetchSiteStatus.mockResolvedValueOnce({
+        system_name: "Example Portal",
+        checkin_enabled: false,
+        price: 1,
+      })
+      mockExtractDefaultExchangeRate.mockReturnValueOnce(1)
+
+      const result = await createNewApiAccountCompletion(
+        SITE_TYPES.MODELFLARE,
+      ).complete(
+        {
+          url: "https://portal.example.invalid/dashboard/overview",
+          requestedAuthType: AuthTypeEnum.Cookie,
+          detected: {
+            userId: "8",
+            siteType: SITE_TYPES.MODELFLARE,
+          },
+          context: {},
+        },
+        helpers,
+      )
+
+      expect(result).toMatchObject({
+        username: expectedUsername,
+        accessToken: "",
+        authType: AuthTypeEnum.Cookie,
+      })
+      expect(mockGetOrCreateAccessToken).not.toHaveBeenCalled()
+    },
+  )
 
   it("classifies missing access token for access-token completion", async () => {
     mockGetOrCreateAccessToken.mockResolvedValueOnce({
@@ -698,9 +754,9 @@ describe("newApiAccountCompletion", () => {
 
     expect(handleCheckInSupportFetchFailure).toHaveBeenCalledWith(supportError)
     expect(createInitialCheckInConfig).toHaveBeenCalledWith({
-      enableDetection: false,
-      autoCheckInEnabled: true,
+      supported: false,
+      automaticExecutionEnabled: true,
     })
-    expect(result.checkIn.enableDetection).toBe(false)
+    expect(result.checkIn.selection).not.toHaveProperty("methodId")
   })
 })

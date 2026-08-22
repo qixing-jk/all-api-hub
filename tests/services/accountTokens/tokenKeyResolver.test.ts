@@ -54,6 +54,9 @@ describe("token key resolver", () => {
 
   it("formats auth/display keys for optional sk-prefix compatible site types only", () => {
     expect(hasOptionalSkPrefixSiteTokenSemantics(SITE_TYPES.NEW_API)).toBe(true)
+    expect(hasOptionalSkPrefixSiteTokenSemantics(SITE_TYPES.MODELFLARE)).toBe(
+      true,
+    )
     expect(hasOptionalSkPrefixSiteTokenSemantics(SITE_TYPES.VELOERA)).toBe(true)
     expect(hasOptionalSkPrefixSiteTokenSemantics(SITE_TYPES.ONE_HUB)).toBe(true)
     expect(hasOptionalSkPrefixSiteTokenSemantics(SITE_TYPES.DONE_HUB)).toBe(

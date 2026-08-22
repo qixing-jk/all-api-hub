@@ -8,6 +8,7 @@ import {
   WEBDAV_TARGET_IDS,
 } from "~/features/ImportExport/searchTargets"
 import { buildConfigurationOverviewItems } from "~/features/OptionsOverview/configurationOverviewItems"
+import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
 import {
   DEFAULT_PREFERENCES,
   type UserPreferences,
@@ -16,9 +17,12 @@ import type { SiteAccount } from "~/types"
 
 const readyCheckinAccount = {
   disabled: false,
-  checkIn: {
-    enableDetection: true,
-  },
+  site_type: SITE_TYPES.NEW_API,
+  checkIn: createCompatibilityCheckInConfig({
+    siteType: SITE_TYPES.NEW_API,
+    supported: true,
+    automaticExecutionEnabled: true,
+  }),
 } as SiteAccount
 
 const basePreferences: UserPreferences = {

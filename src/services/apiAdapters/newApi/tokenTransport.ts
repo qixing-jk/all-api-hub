@@ -1,6 +1,7 @@
 import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import * as defaultTransport from "~/services/apiService/newApiFamily/default/keyManagement"
 import * as oneHub from "~/services/apiService/newApiFamily/variants/oneHub"
+import * as vApi from "~/services/apiService/newApiFamily/variants/vApi"
 import * as wong from "~/services/apiService/newApiFamily/variants/wong"
 
 export type NewApiFamilyTokenTransport =
@@ -57,7 +58,11 @@ const overrides: Partial<
   [SITE_TYPES.VELOERA]: veloeraTokenInventoryOverrides,
   [SITE_TYPES.ONE_HUB]: oneHubOverrides,
   [SITE_TYPES.DONE_HUB]: oneHubOverrides,
-  [SITE_TYPES.V_API]: compatibleTokenInventoryOverrides,
+  [SITE_TYPES.V_API]: {
+    ...compatibleTokenInventoryOverrides,
+    fetchAccountAvailableModels: vApi.fetchAccountAvailableModels,
+    fetchUserGroups: vApi.fetchUserGroups,
+  },
   [SITE_TYPES.VO_API]: compatibleTokenInventoryOverrides,
   [SITE_TYPES.SUPER_API]: compatibleTokenInventoryOverrides,
   [SITE_TYPES.RIX_API]: compatibleTokenInventoryOverrides,

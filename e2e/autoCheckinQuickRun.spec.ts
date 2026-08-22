@@ -3,6 +3,7 @@ import type { Page, Worker } from "@playwright/test"
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SITE_TYPES } from "~/constants/siteType"
+import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import { AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import {
@@ -466,13 +467,11 @@ test("auto-checkin UI-open pretrigger runs once through the real MV3 scheduler b
         username: "ui-open-pretrigger-user",
         access_token: "ui-open-pretrigger-token",
       },
-      checkIn: {
-        enableDetection: true,
-        autoCheckInEnabled: true,
-        siteStatus: {
-          isCheckedInToday: false,
-        },
-      },
+      checkIn: createCompatibilityCheckInConfig({
+        siteType: SITE_TYPES.NEW_API,
+        supported: true,
+        automaticExecutionEnabled: true,
+      }),
     }),
   ])
 

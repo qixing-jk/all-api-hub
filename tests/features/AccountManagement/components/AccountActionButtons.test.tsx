@@ -7,6 +7,7 @@ import AccountActionButtons from "~/features/AccountManagement/components/Accoun
 import * as inviteLinkCopyWorkflow from "~/features/AccountManagement/inviteLinkCopyWorkflow"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import type { ManagedUpstreamResourcesCapability } from "~/services/apiAdapters/contracts/managedUpstreamResources"
+import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
 import { INVITE_LINK_FAILURE_REASONS } from "~/services/inviteLinks/errors"
 import { MANAGED_UPSTREAM_RESOURCE_FEATURES } from "~/services/managedSites/managedUpstreamResourceMigration"
 import type { UserPreferences } from "~/services/preferences/userPreferences"
@@ -35,8 +36,27 @@ import {
 } from "~/types/managedUpstreamResource"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
-import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
+import { buildDisplaySiteData as buildDisplaySiteDataFixture } from "~~/tests/test-utils/factories"
 import { render } from "~~/tests/test-utils/render"
+
+const createEnabledCheckIn = () =>
+  createCompatibilityCheckInConfig({
+    siteType: SITE_TYPES.NEW_API,
+    supported: true,
+    automaticExecutionEnabled: true,
+  })
+
+const buildDisplaySiteData: typeof buildDisplaySiteDataFixture = (
+  overrides = {},
+) =>
+  buildDisplaySiteDataFixture({
+    checkIn: createCompatibilityCheckInConfig({
+      siteType: SITE_TYPES.UNKNOWN,
+      supported: false,
+      automaticExecutionEnabled: false,
+    }),
+    ...overrides,
+  })
 
 const createDeferred = <T,>() => {
   let resolve!: (value: T) => void
@@ -905,7 +925,8 @@ describe("AccountActionButtons", () => {
           id: "acc-menu-actions",
           disabled: false,
           name: "Menu Site",
-          checkIn: { enableDetection: true },
+          siteType: SITE_TYPES.NEW_API,
+          checkIn: createEnabledCheckIn(),
         })}
         onCopyKey={vi.fn()}
         onDeleteAccount={onDeleteAccount}
@@ -1722,7 +1743,8 @@ describe("AccountActionButtons", () => {
           id: "acc-5",
           disabled: false,
           name: "Site",
-          checkIn: { enableDetection: true },
+          siteType: SITE_TYPES.NEW_API,
+          checkIn: createEnabledCheckIn(),
         })}
         onCopyKey={vi.fn()}
         onDeleteAccount={vi.fn()}
@@ -1814,7 +1836,8 @@ describe("AccountActionButtons", () => {
         site={buildDisplaySiteData({
           id: "acc-double-click",
           disabled: false,
-          checkIn: { enableDetection: true },
+          siteType: SITE_TYPES.NEW_API,
+          checkIn: createEnabledCheckIn(),
         })}
         onCopyKey={vi.fn()}
         onDeleteAccount={vi.fn()}
@@ -1862,7 +1885,8 @@ describe("AccountActionButtons", () => {
           id: "acc-quick-fallback",
           disabled: false,
           name: "Fallback Site",
-          checkIn: { enableDetection: true },
+          siteType: SITE_TYPES.NEW_API,
+          checkIn: createEnabledCheckIn(),
         })}
         onCopyKey={vi.fn()}
         onDeleteAccount={vi.fn()}
@@ -1913,7 +1937,8 @@ describe("AccountActionButtons", () => {
           id: "acc-quick-status-failed",
           disabled: false,
           name: "Status Failed Site",
-          checkIn: { enableDetection: true },
+          siteType: SITE_TYPES.NEW_API,
+          checkIn: createEnabledCheckIn(),
         })}
         onCopyKey={vi.fn()}
         onDeleteAccount={vi.fn()}
@@ -1965,7 +1990,8 @@ describe("AccountActionButtons", () => {
           id: "acc-quick-failed",
           disabled: false,
           name: "Failed Site",
-          checkIn: { enableDetection: true },
+          siteType: SITE_TYPES.NEW_API,
+          checkIn: createEnabledCheckIn(),
         })}
         onCopyKey={vi.fn()}
         onDeleteAccount={vi.fn()}
@@ -2009,7 +2035,8 @@ describe("AccountActionButtons", () => {
           id: "acc-quick-throw",
           disabled: false,
           name: "Thrown Site",
-          checkIn: { enableDetection: true },
+          siteType: SITE_TYPES.NEW_API,
+          checkIn: createEnabledCheckIn(),
         })}
         onCopyKey={vi.fn()}
         onDeleteAccount={vi.fn()}
@@ -2056,7 +2083,8 @@ describe("AccountActionButtons", () => {
           id: "acc-quick-structured-error",
           disabled: false,
           name: "Structured Error Site",
-          checkIn: { enableDetection: true },
+          siteType: SITE_TYPES.NEW_API,
+          checkIn: createEnabledCheckIn(),
         })}
         onCopyKey={vi.fn()}
         onDeleteAccount={vi.fn()}
@@ -2110,7 +2138,8 @@ describe("AccountActionButtons", () => {
           id: "acc-quick-skipped",
           disabled: false,
           name: "Skipped Site",
-          checkIn: { enableDetection: true },
+          siteType: SITE_TYPES.NEW_API,
+          checkIn: createEnabledCheckIn(),
         })}
         onCopyKey={vi.fn()}
         onDeleteAccount={vi.fn()}
@@ -2164,7 +2193,8 @@ describe("AccountActionButtons", () => {
           id: "acc-quick-failed-status",
           disabled: false,
           name: "Failed Status Site",
-          checkIn: { enableDetection: true },
+          siteType: SITE_TYPES.NEW_API,
+          checkIn: createEnabledCheckIn(),
         })}
         onCopyKey={vi.fn()}
         onDeleteAccount={vi.fn()}
@@ -2219,7 +2249,8 @@ describe("AccountActionButtons", () => {
           id: "acc-quick-unsupported",
           disabled: false,
           name: "Unsupported Site",
-          checkIn: { enableDetection: true },
+          siteType: SITE_TYPES.NEW_API,
+          checkIn: createEnabledCheckIn(),
         })}
         onCopyKey={vi.fn()}
         onDeleteAccount={vi.fn()}

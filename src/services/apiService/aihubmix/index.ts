@@ -770,14 +770,7 @@ export async function fetchAccountData(
     today_requests_count: 0,
     today_income: 0,
     todayStatsAvailability: createAIHubMixTodayStatsAvailability(),
-    checkIn: {
-      ...(request.checkIn ?? { enableDetection: false }),
-      enableDetection: false,
-      siteStatus: {
-        ...(request.checkIn?.siteStatus ?? {}),
-        isCheckedInToday: undefined,
-      },
-    },
+    checkIn: request.checkIn,
   }
 }
 

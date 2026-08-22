@@ -27,6 +27,13 @@ import {
   IconButton,
   WorkflowTransitionButton,
 } from "~/components/ui"
+import {
+  CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES,
+  CHECK_IN_METHOD_STATUS_OUTCOMES,
+  CHECK_IN_METHOD_TODAY_STATUSES,
+  CHECK_IN_SELECTION_STATUSES,
+} from "~/constants/checkIn"
+import { isSelectedCheckInStatusCurrent } from "~/features/AccountManagement/components/AccountList/checkInFilter"
 import { useAccountActionsContext } from "~/features/AccountManagement/hooks/AccountActionsContext"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 import type {
@@ -45,6 +52,10 @@ import {
 import { useLdohSiteLookupContext } from "~/features/LdohSiteLookup/hooks/LdohSiteLookupContext"
 import { cn } from "~/lib/utils"
 import {
+  getSelectedCheckInStatus,
+  inspectAccountCheckIn,
+} from "~/services/checkin/autoCheckin/inspection"
+import {
   SiteHealthStatus,
   TEMP_WINDOW_HEALTH_STATUS_CODES,
   type DisplaySiteData,
@@ -60,8 +71,6 @@ import {
   openCustomCheckInPage,
   openSettingsTab,
 } from "~/utils/navigation"
-
-import { isCheckInStatusDetectedToday } from "./checkInStatus"
 
 interface SiteInfoProps {
   site: DisplaySiteData
@@ -317,26 +326,49 @@ export default function SiteInfo({
     const hasCustomUrl =
       typeof customUrl === "string" && customUrl.trim() !== ""
 
-    if (site.checkIn?.enableDetection) {
-      const siteCheckedIn = site.checkIn.siteStatus?.isCheckedInToday
+    const checkInInspection = inspectAccountCheckIn({
+      config: site.checkIn,
+      siteType: site.siteType,
+    })
+    const selectedStatus = getSelectedCheckInStatus({
+      config: site.checkIn,
+      siteType: site.siteType,
+    })
+    const siteCheckedIn =
+      selectedStatus?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known
+        ? selectedStatus.today === CHECK_IN_METHOD_TODAY_STATUSES.Checked
+          ? true
+          : selectedStatus.today === CHECK_IN_METHOD_TODAY_STATUSES.NotChecked
+            ? false
+            : undefined
+        : undefined
+    const selectedStatusObservedAt =
+      selectedStatus?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known
+        ? selectedStatus.evidence.source ===
+          CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.LegacyMigration
+          ? selectedStatus.evidence.legacyObservedAt
+          : selectedStatus.evidence.observedAt
+        : undefined
+
+    if (
+      checkInInspection.selectionState.status ===
+      CHECK_IN_SELECTION_STATUSES.Selected
+    ) {
       if (siteCheckedIn === undefined) {
         indicators.push(
           <Tooltip
             key="site-checkin"
-            content={t("list.site.checkInUnsupported")}
+            content={t("list.site.checkInStatusUnavailable")}
             position="top"
             wrapperClassName="flex items-center"
           >
             <TriangleAlert className="h-4 w-4 text-yellow-500" />
           </Tooltip>,
         )
-      } else if (
-        !isCheckInStatusDetectedToday(site.checkIn.siteStatus?.lastDetectedAt)
-      ) {
-        const lastDetectedAt = site.checkIn.siteStatus?.lastDetectedAt
+      } else if (!isSelectedCheckInStatusCurrent(site)) {
         const staleStatusLabel = t("list.site.checkInStatusOutdated", {
           time: formatLocaleDateTime(
-            lastDetectedAt,
+            selectedStatusObservedAt,
             t("list.site.notAvailable"),
           ),
         })

@@ -97,6 +97,7 @@
       "not-checked-in": "Chưa điểm danh",
       "outdated": "Trạng thái hết hạn",
       "placeholder": "Trạng thái điểm danh",
+      "status-unavailable": "Không thể đọc trạng thái",
       "unsupported": "Không hỗ trợ"
     },
     "disabled": {
@@ -183,7 +184,7 @@
     "site": {
       "checkedInToday": "Hôm nay đã điểm danh, nhấp vào tôi để xem",
       "checkInStatusOutdated": "Trạng thái điểm danh không phải là kiểm tra hôm nay (lần kiểm tra cuối: {{time}}), nhấp vào tôi để làm mới",
-      "checkInUnsupported": "Trang web có thể không hỗ trợ điểm danh",
+      "checkInStatusUnavailable": "Có hỗ trợ điểm danh nhưng không thể tự động đọc trạng thái hôm nay",
       "currentSite": "Trang web hiện tại",
       "currentSiteExists": "Giống với trang web ở tab hiện tại",
       "disabled": "Đã vô hiệu hóa",

@@ -41,6 +41,7 @@ import {
   AuthTypeEnum,
 } from "~/types"
 import { server } from "~~/tests/msw/server"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { runMockSiteRequestTask } from "~~/tests/test-utils/siteRequestLease"
 
 const { mockWithSiteApiRequestLimit } = vi.hoisted(() => ({
@@ -73,7 +74,7 @@ const baseRequest = {
 
 const baseAccountRequest = {
   ...baseRequest,
-  checkIn: { enableDetection: false },
+  checkIn: buildCheckInConfig(),
 }
 
 const tokenRequest: CreateTokenRequest = {
@@ -1096,12 +1097,8 @@ describe("apiService AIHubMix", () => {
 
     const accountData = await fetchAccountData({
       ...baseRequest,
-      checkIn: {
-        enableDetection: true,
-        siteStatus: {
-          isCheckedInToday: false,
-        },
-      },
+      siteType: SITE_TYPES.AIHUBMIX,
+      checkIn: baseAccountRequest.checkIn,
     })
 
     expect(accountData).toMatchObject({
@@ -1129,9 +1126,7 @@ describe("apiService AIHubMix", () => {
           reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
         },
       },
-      checkIn: {
-        enableDetection: false,
-      },
+      checkIn: baseAccountRequest.checkIn,
     })
   })
 

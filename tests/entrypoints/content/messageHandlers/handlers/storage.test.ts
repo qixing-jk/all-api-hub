@@ -11,6 +11,7 @@ import {
   sub2ApiContentSessionExtractor,
   Sub2ApiContentSessionLoginRequiredError,
 } from "~/services/accountSiteOnboarding/contentSession/sub2api"
+import { vApiContentSessionExtractor } from "~/services/accountSiteOnboarding/contentSession/vApi"
 
 const { mockGetContentSessionExtractors } = vi.hoisted(() => ({
   mockGetContentSessionExtractors: vi.fn(),
@@ -77,6 +78,74 @@ describe("content storage handler", () => {
     expect(sendResponse).toHaveBeenCalledWith({
       success: false,
       error: "storage blocked",
+    })
+  })
+
+  it("prefers the current V-API user store over legacy storage", async () => {
+    localStorage.setItem(
+      "user-storage",
+      JSON.stringify({
+        state: { user: { id: 42, username: "current-user" } },
+        version: 0,
+      }),
+    )
+    localStorage.setItem(
+      "user",
+      JSON.stringify({ id: 7, username: "legacy-user" }),
+    )
+    mockGetContentSessionExtractors.mockReturnValue([
+      vApiContentSessionExtractor,
+      compatibleUserContentSessionExtractor,
+    ])
+
+    const response = await new Promise<any>((resolve) => {
+      handleGetUserFromLocalStorage(
+        {
+          url: "https://v-api.example.invalid/panel",
+          siteType: "v-api",
+        },
+        resolve,
+      )
+    })
+
+    expect(response).toEqual({
+      success: true,
+      data: {
+        userId: "42",
+        user: { id: 42, username: "current-user" },
+        siteTypeHint: "v-api",
+      },
+    })
+  })
+
+  it("falls back to legacy V-API user storage", async () => {
+    localStorage.setItem("user-storage", "not-json")
+    localStorage.setItem(
+      "user",
+      JSON.stringify({ id: 7, username: "legacy-user" }),
+    )
+    mockGetContentSessionExtractors.mockReturnValue([
+      vApiContentSessionExtractor,
+      compatibleUserContentSessionExtractor,
+    ])
+
+    const response = await new Promise<any>((resolve) => {
+      handleGetUserFromLocalStorage(
+        {
+          url: "https://v-api.example.invalid/panel",
+          siteType: "v-api",
+        },
+        resolve,
+      )
+    })
+
+    expect(response).toEqual({
+      success: true,
+      data: {
+        userId: "7",
+        user: { id: 7, username: "legacy-user" },
+        siteTypeHint: "v-api",
+      },
     })
   })
 

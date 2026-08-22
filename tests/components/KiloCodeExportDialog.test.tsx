@@ -29,6 +29,7 @@ import {
   type SiteAccount,
 } from "~/types"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import {
   expectKiloCodeSettingsSizeGuidance,
   expectKiloCodeUsageGuidance,
@@ -145,9 +146,18 @@ vi.mock("~/services/apiAdapters/registry", () => ({
 vi.mock("~/services/accounts/accountOperations", () => ({
   ensureAccountApiToken: (...args: unknown[]) =>
     mockEnsureAccountApiToken(...args),
-  resolveDefaultTokenQuickCreateResolution: (...args: unknown[]) =>
-    mockResolveDefaultTokenQuickCreateResolution(...args),
 }))
+
+vi.mock("~/services/accounts/tokenQuickCreateResolution", async () => {
+  const actual = await vi.importActual<
+    typeof import("~/services/accounts/tokenQuickCreateResolution")
+  >("~/services/accounts/tokenQuickCreateResolution")
+  return {
+    ...actual,
+    resolveDefaultTokenQuickCreateResolution: (...args: unknown[]) =>
+      mockResolveDefaultTokenQuickCreateResolution(...args),
+  }
+})
 
 const createDisplayAccount = (
   overrides: Partial<DisplaySiteData>,
@@ -166,7 +176,7 @@ const createDisplayAccount = (
   token: "access-token",
   userId: "1",
   authType: AuthTypeEnum.AccessToken,
-  checkIn: { enableDetection: false },
+  checkIn: buildCheckInConfig(),
   ...overrides,
 })
 
@@ -181,7 +191,7 @@ const createSiteAccount = (site: DisplaySiteData): SiteAccount => ({
   disabled: false,
   excludeFromTotalBalance: false,
   excludeFromTodayIncome: false,
-  checkIn: { enableDetection: false },
+  checkIn: buildCheckInConfig(),
   health: { status: SiteHealthStatus.Healthy },
   authType: site.authType,
   account_info: {

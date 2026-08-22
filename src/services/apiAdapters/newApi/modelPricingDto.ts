@@ -137,3 +137,26 @@ export function normalizeNewApiModelPricingResponse(
 
   return canonicalResponse as unknown as PricingResponse
 }
+
+/** Adapt V-API's current group field without weakening the shared envelope. */
+export function normalizeVApiModelPricingResponse(
+  value: unknown,
+): PricingResponse {
+  if (!isPlainObject(value)) {
+    return normalizeNewApiModelPricingResponse(value)
+  }
+
+  // https://gpt.ge/api/pricing currently omits `usable_group` in favor of
+  // `group_names`; older V-API deployments still use the New API field.
+  const usableGroup = isRecord(value.usable_group)
+    ? value.usable_group
+    : value.group_names
+  const response = normalizeNewApiModelPricingResponse({
+    ...value,
+    usable_group: usableGroup,
+  })
+  const canonicalResponse: Record<string, unknown> = { ...response }
+  delete canonicalResponse.group_names
+
+  return canonicalResponse as unknown as PricingResponse
+}

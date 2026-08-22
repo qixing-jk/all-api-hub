@@ -1,3 +1,4 @@
+import { renderHook } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
@@ -5,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import CopyKeyDialog from "~/features/AccountManagement/components/CopyKeyDialog"
 import { DialogFooter } from "~/features/AccountManagement/components/CopyKeyDialog/DialogFooter"
+import { useCopyKeyDialog } from "~/features/AccountManagement/components/CopyKeyDialog/hooks/useCopyKeyDialog"
 import { KeyInventoryList } from "~/features/AccountManagement/components/CopyKeyDialog/KeyInventoryList"
 import { QuickKeyResourceCard } from "~/features/AccountManagement/components/CopyKeyDialog/QuickKeyResourceCard"
 import { RuntimeKeyActionControls } from "~/features/AccountManagement/components/CopyKeyDialog/RuntimeKeyActionControls"
@@ -12,11 +14,11 @@ import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testId
 import type { KeyResourceCardPresentation } from "~/features/KeyManagement/presentation/keyResourceCard"
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
 import { generateDefaultTokenRequest } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
-import * as accountOperations from "~/services/accounts/accountOperations"
 import {
   buildDisplayAccountTokenRuntimeKey,
   buildServiceCredentialRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
+import * as tokenQuickCreateResolution from "~/services/accounts/tokenQuickCreateResolution"
 import { TOKEN_QUICK_CREATE_RESOLUTION_KINDS } from "~/services/accounts/tokenQuickCreateResolution"
 import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/keyManagement"
 import {
@@ -37,6 +39,7 @@ import {
 } from "~/services/productAnalytics/contracts"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { AuthTypeEnum } from "~/types"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import {
   act,
   render,
@@ -360,10 +363,10 @@ vi.mock("~/services/apiCredentialProfiles/apiCredentialProfileLinks", () => ({
 }))
 
 const actualResolveDefaultTokenQuickCreateResolution =
-  accountOperations.resolveDefaultTokenQuickCreateResolution
+  tokenQuickCreateResolution.resolveDefaultTokenQuickCreateResolution
 
 const resolveDefaultTokenQuickCreateResolutionSpy = vi.spyOn(
-  accountOperations,
+  tokenQuickCreateResolution,
   "resolveDefaultTokenQuickCreateResolution",
 )
 
@@ -376,7 +379,7 @@ const ACCOUNT = {
   token: "token",
   userId: "1",
   authType: AuthTypeEnum.AccessToken,
-  checkIn: { enableDetection: false },
+  checkIn: buildCheckInConfig(),
   tagIds: ["tag-a"],
 } as any
 
@@ -1390,6 +1393,26 @@ describe("CopyKeyDialog", () => {
     expect(fetchAccountTokensMock).toHaveBeenCalledTimes(1)
   })
 
+  it("reports unsupported post-create refresh after credentials are lost", async () => {
+    const accountWithoutCredentials = {
+      ...ACCOUNT,
+      token: "",
+      cookieAuthSessionCookie: "",
+    }
+    const { result } = renderHook(() =>
+      useCopyKeyDialog(false, accountWithoutCredentials),
+    )
+
+    expect(result.current.canCreateDefaultKey).toBe(false)
+
+    await act(async () => result.current.refreshRuntimeKeysAfterCreate())
+
+    expect(result.current.postCreateError).toBe(
+      "ui:dialog.copyKey.createNotSupported",
+    )
+    expect(fetchAccountTokensMock).not.toHaveBeenCalled()
+  })
+
   it("ignores stale token fetch completions after the selected account loses manageable credentials", async () => {
     const pendingTokens = createDeferred<(typeof TOKEN)[]>()
     fetchAccountTokensMock.mockReturnValueOnce(pendingTokens.promise)
@@ -1446,12 +1469,30 @@ describe("CopyKeyDialog", () => {
     ).not.toBeInTheDocument()
   })
 
-  it("opens a generic constrained Add Token dialog when default token policy requires selection", async () => {
-    fetchAccountTokensMock.mockResolvedValueOnce([])
-    resolveDefaultTokenQuickCreateResolutionSpy.mockResolvedValueOnce({
-      kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.SelectionRequired,
-      allowedGroups: ["default", "vip"],
-    })
+  it("shows ModelFlare group selection immediately without reopening the full Add Token flow", async () => {
+    const modelFlareAccount = {
+      ...ACCOUNT,
+      siteType: SITE_TYPES.MODELFLARE,
+    }
+    const selectedGroupTokenData = {
+      ...generateDefaultTokenRequest(),
+      group: "vip",
+    }
+    fetchAccountTokensMock
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([TOKEN])
+    resolveDefaultTokenQuickCreateResolutionSpy
+      .mockResolvedValueOnce({
+        kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.SelectionRequired,
+        allowedGroups: ["default", "vip"],
+        suggestedGroup: "default",
+        groups: {},
+      })
+      .mockResolvedValueOnce({
+        kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.Ready,
+        tokenData: selectedGroupTokenData,
+      })
+    createApiTokenMock.mockResolvedValueOnce(true)
 
     const user = userEvent.setup()
 
@@ -1459,10 +1500,7 @@ describe("CopyKeyDialog", () => {
       <CopyKeyDialog
         isOpen={true}
         onClose={() => {}}
-        account={{
-          ...ACCOUNT,
-          siteType: SITE_TYPES.NEW_API,
-        }}
+        account={modelFlareAccount}
       />,
     )
 
@@ -1472,22 +1510,59 @@ describe("CopyKeyDialog", () => {
       }),
     )
 
-    await screen.findByText(
-      "messages:tokenProvisioning.createRequiresGroupSelection",
-    )
+    expect(
+      await screen.findByRole("heading", {
+        name: "messages:tokenProvisioning.selectGroupTitle",
+      }),
+    ).toBeVisible()
+    expect(
+      screen.getByText(
+        "messages:tokenProvisioning.createRequiresGroupSelection",
+      ),
+    ).toBeVisible()
+    expect(
+      screen.queryByRole("heading", { name: "keyManagement:dialog.addToken" }),
+    ).not.toBeInTheDocument()
+    expect(fetchAccountAvailableModelsMock).not.toHaveBeenCalled()
     expect(resolveDefaultTokenQuickCreateResolutionSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ siteType: SITE_TYPES.NEW_API }),
+      expect.objectContaining({ siteType: SITE_TYPES.MODELFLARE }),
     )
     expect(createApiTokenMock).not.toHaveBeenCalled()
+
+    await user.click(
+      screen.getByRole("combobox", {
+        name: /^keyManagement:dialog\.groupLabel/,
+      }),
+    )
+    await user.click(await screen.findByRole("option", { name: "vip" }))
+    await user.click(
+      screen.getByRole("button", { name: "keyManagement:dialog.createToken" }),
+    )
+
+    await waitFor(() => {
+      expect(
+        resolveDefaultTokenQuickCreateResolutionSpy,
+      ).toHaveBeenLastCalledWith(
+        expect.objectContaining({ siteType: SITE_TYPES.MODELFLARE }),
+        { explicitGroup: "vip" },
+      )
+      expect(createApiTokenMock).toHaveBeenCalledTimes(1)
+      expect(createApiTokenMock).toHaveBeenCalledWith(
+        expect.any(Object),
+        selectedGroupTokenData,
+      )
+    })
+    expect(
+      screen.queryByRole("heading", {
+        name: "messages:tokenProvisioning.selectGroupTitle",
+      }),
+    ).not.toBeInTheDocument()
 
     rerender(
       <CopyKeyDialog
         isOpen={false}
         onClose={() => {}}
-        account={{
-          ...ACCOUNT,
-          siteType: SITE_TYPES.NEW_API,
-        }}
+        account={modelFlareAccount}
       />,
     )
     await waitFor(() => {
@@ -1497,6 +1572,56 @@ describe("CopyKeyDialog", () => {
         ),
       ).not.toBeInTheDocument()
     })
+  })
+
+  it("keeps group selection actionable when ModelFlare quick creation fails", async () => {
+    fetchAccountTokensMock.mockResolvedValueOnce([])
+    resolveDefaultTokenQuickCreateResolutionSpy
+      .mockResolvedValueOnce({
+        kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.SelectionRequired,
+        allowedGroups: ["default", "vip"],
+        suggestedGroup: "default",
+        groups: {},
+      })
+      .mockResolvedValueOnce({
+        kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.Ready,
+        tokenData: {
+          ...generateDefaultTokenRequest(),
+          group: "default",
+        },
+      })
+    createApiTokenMock.mockResolvedValueOnce(false)
+
+    const user = userEvent.setup()
+
+    render(
+      <CopyKeyDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={{ ...ACCOUNT, siteType: SITE_TYPES.MODELFLARE }}
+      />,
+    )
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "ui:dialog.copyKey.createKey",
+      }),
+    )
+    await user.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:dialog.createToken",
+      }),
+    )
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "messages:tokenProvisioning.selectGroupTitle",
+      }),
+    ).toBeVisible()
+    expect(
+      await screen.findByText("ui:dialog.copyKey.createFailed"),
+    ).toBeVisible()
+    expect(createApiTokenMock).toHaveBeenCalledTimes(1)
   })
 
   it("creates a default key with the full policy-resolved token payload", async () => {

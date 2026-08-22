@@ -4,6 +4,7 @@ import type { ApiToken } from "~/types"
 const OPTIONAL_SK_PREFIX_SITE_TYPES = new Set<string>([
   SITE_TYPES.ONE_API,
   SITE_TYPES.NEW_API,
+  SITE_TYPES.MODELFLARE,
   SITE_TYPES.ANYROUTER,
   SITE_TYPES.VELOERA,
   SITE_TYPES.ONE_HUB,
@@ -25,15 +26,8 @@ const OPTIONAL_SK_PREFIX_SITE_TYPES = new Set<string>([
  * while persisting the underlying key without it
  * (`controller/token.go:GetTokenUsage` trims `sk-` before lookup).
  */
-function normalizeApiTokenKeyText(key: string): string {
-  return key.trim()
-}
-
-/**
- * Normalizes a raw token key string by trimming surrounding whitespace only.
- */
 export function normalizeApiTokenKeyValue(key: string): string {
-  return normalizeApiTokenKeyText(key)
+  return key.trim()
 }
 
 /**

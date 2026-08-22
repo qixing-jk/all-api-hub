@@ -1,11 +1,16 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
 import {
-  extractApiCheckCredentialsFromText,
+  applyCustomApiKeyCleanupPatterns,
+  classifyApiKeyCandidate,
+} from "~/services/verification/webAiApiCheck/credentialExtraction/apiKeyRules"
+import {
   normalizeApiCheckBaseUrl,
   normalizeGoogleFamilyBaseUrl,
   normalizeOpenAiFamilyBaseUrl,
-} from "~/services/verification/webAiApiCheck/extractCredentials"
+} from "~/services/verification/webAiApiCheck/credentialExtraction/baseUrlCandidates"
+import { extractApiCheckCredentialsFromText } from "~/services/verification/webAiApiCheck/extractCredentials"
+import { encodeUnpaddedBase64 } from "~~/tests/test-utils/encoding"
 
 const OPENAI_KEY_PREFIX = ["s", "k", "-"].join("")
 const ANTHROPIC_KEY_PREFIX = ["s", "k", "-", "ant", "-"].join("")
@@ -176,6 +181,40 @@ describe("webAiApiCheck extractCredentials", () => {
         reasons: expect.arrayContaining(["unknownShortPrefix"]),
       }),
     )
+  })
+
+  it("rejects blank key candidates and ignores blank cleanup patterns", () => {
+    expect(classifyApiKeyCandidate("")).toBeNull()
+    expect(applyCustomApiKeyCleanupPatterns("unchanged", ["  "])).toEqual({
+      value: "unchanged",
+      cleanupApplied: false,
+    })
+  })
+
+  it("does not promote a shapeless Bearer token over a known-prefix key", () => {
+    const bearerToken = "opaqueBearerAa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1Ll2Mm3Nn"
+    const knownKey = buildKnownKey("preferredAa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1")
+
+    const result = extractApiCheckCredentialsFromText(`
+      Authorization: Bearer ${bearerToken}
+      ${knownKey}
+    `)
+
+    expect(result.apiKey).toBe(knownKey)
+    expect(
+      result.candidates.apiKeys.find(
+        (candidate) => candidate.value === bearerToken,
+      ),
+    ).toEqual(
+      expect.objectContaining({
+        reasons: expect.arrayContaining(["authorizationHeader"]),
+      }),
+    )
+    expect(
+      result.candidates.apiKeys
+        .find((candidate) => candidate.value === bearerToken)
+        ?.reasons.includes("knownPrefix"),
+    ).toBe(false)
   })
 
   it("prioritizes labeled urls, deduplicates generic repeats, and captures multiple provider keys", () => {
@@ -529,12 +568,16 @@ describe("webAiApiCheck extractCredentials", () => {
     expect(result.summary.hasCleanup).toBe(true)
   })
 
-  it("cleans separator characters embedded inside labeled API keys", () => {
+  it.each([
+    ["English half-width label", "API Key: {{key}}"],
+    ["Chinese full-width label", "API 密钥：{{key}}"],
+    ["Chinese full-width equals label", "访问令牌＝{{key}}"],
+  ])("cleans separator characters embedded after %s", (_name, template) => {
     const apiKey = buildKnownKey("testAa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1")
     const separatedApiKey = `${OPENAI_KEY_PREFIX}testAa1Bb2Cc3Dd4 . Ee5Ff6Gg7Hh8Ii9Jj0Kk1`
 
     const result = extractApiCheckCredentialsFromText(
-      `API Key: ${separatedApiKey}`,
+      template.replace("{{key}}", separatedApiKey),
     )
 
     expect(result.apiKey).toBe(apiKey)
@@ -603,15 +646,91 @@ describe("webAiApiCheck extractCredentials", () => {
     )
   })
 
+  it("does not add a multi-segment reason below its length threshold", () => {
+    const body = "Aa1Bb2".repeat(4)
+    const apiKey = `x-${body}`
+
+    const result = extractApiCheckCredentialsFromText(apiKey)
+
+    expect(result.candidates.apiKeys[0]).toEqual(
+      expect.objectContaining({
+        confidence: "enhancedHigh",
+        reasons: ["unknownShortPrefix"],
+      }),
+    )
+  })
+
+  it("classifies separator-heavy short-prefix values as multi-segment", () => {
+    const apiKey = "short----------Aa1Bb2Cc3Dd4Ee5Ff6"
+
+    const result = extractApiCheckCredentialsFromText(apiKey)
+
+    expect(result.candidates.apiKeys[0]).toEqual(
+      expect.objectContaining({
+        confidence: "enhancedMedium",
+        reasons: expect.arrayContaining(["multiSegment"]),
+      }),
+    )
+  })
+
+  it("applies anchored custom cleanup consistently to enhanced windows", () => {
+    const apiKey = buildKnownKey(
+      "anchoredCleanupAa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1",
+    )
+    const decoratedApiKey = `marker-${apiKey}`
+
+    const result = extractApiCheckCredentialsFromText(
+      `copied ${decoratedApiKey}`,
+      { apiKeyCleanupPatterns: ["^marker-"] },
+    )
+
+    expect(result.apiKey).toBe(apiKey)
+    expect(result.apiKeyCandidates).not.toContain(decoratedApiKey)
+    expect(result.candidates.apiKeys[0]).toEqual(
+      expect.objectContaining({
+        cleanupApplied: true,
+        reasons: expect.arrayContaining(["customRegexRemoved"]),
+      }),
+    )
+  })
+
+  it("ignores unsafe custom cleanup regexes at runtime", () => {
+    const apiKey = buildKnownKey("safePatternFixture" + "a".repeat(12))
+
+    const result = extractApiCheckCredentialsFromText(`API Key: ${apiKey}`, {
+      apiKeyCleanupPatterns: ["(a+)+$"],
+    })
+
+    expect(result.apiKey).toBe(apiKey)
+    expect(result.summary.hasCleanup).toBe(false)
+  })
+
+  it("marks cleaned fallback candidates without changing their legacy rank", () => {
+    const result = extractApiCheckCredentialsFromText(
+      "API Key: prefix[[remove]]plainvalue",
+      { apiKeyCleanupPatterns: ["\\[\\[remove\\]\\]"] },
+    )
+
+    expect(result.apiKey).toBe("prefixplainvalue")
+    expect(result.candidates.apiKeys[0]).toEqual(
+      expect.objectContaining({
+        confidence: "standard",
+        cleanupApplied: true,
+        reasons: expect.arrayContaining(["labeled", "customRegexRemoved"]),
+      }),
+    )
+  })
+
   it("decodes labeled unpadded base64-obfuscated API keys", () => {
     const apiKey = buildKnownKey("base64Aa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1A")
-    const encodedApiKey = btoa(apiKey).replace(/=+$/, "")
+    const encodedApiKey = encodeUnpaddedBase64(apiKey)
 
     const result = extractApiCheckCredentialsFromText(
       `API Key: ${encodedApiKey}`,
     )
 
     expect(result.apiKey).toBe(apiKey)
+    expect(result.apiKeyCandidates).toEqual([apiKey, encodedApiKey])
     expect(result.summary.hasCleanup).toBe(true)
     expect(result.candidates.apiKeys[0]).toEqual(
       expect.objectContaining({
@@ -623,6 +742,107 @@ describe("webAiApiCheck extractCredentials", () => {
           "knownPrefix",
         ]),
       }),
+    )
+    expect(result.candidates.apiKeys[1]).toEqual(
+      expect.objectContaining({
+        value: encodedApiKey,
+        autoPromptEligible: false,
+        reasons: expect.arrayContaining(["labeled", "base64EncodedSource"]),
+      }),
+    )
+  })
+
+  it("decodes unlabeled base64 token candidates before ranking", () => {
+    const apiKey = buildKnownKey(
+      "unlabeledBase64Aa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1A",
+    )
+    const encodedApiKey = encodeUnpaddedBase64(apiKey)
+
+    const result = extractApiCheckCredentialsFromText(`
+      https://proxy.example.com/api
+      ${encodedApiKey}
+    `)
+
+    expect(result.apiKey).toBe(apiKey)
+    expect(result.apiKeyCandidates).toEqual([apiKey, encodedApiKey])
+    expect(result.candidates.apiKeys[0]).toEqual(
+      expect.objectContaining({
+        value: apiKey,
+        confidence: "standard",
+        cleanupApplied: true,
+        autoPromptEligible: true,
+        reasons: expect.arrayContaining(["base64Decoded", "knownPrefix"]),
+      }),
+    )
+    expect(result.summary.enhancedAutoPromptEligible).toBe(true)
+  })
+
+  it("recursively decodes nested base64 token candidates", () => {
+    const apiKey = buildKnownKey(
+      "nestedBase64Aa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1A",
+    )
+    const encodedApiKey = encodeUnpaddedBase64(apiKey)
+    const nestedEncodedApiKey = encodeUnpaddedBase64(encodedApiKey)
+
+    const result = extractApiCheckCredentialsFromText(`
+      https://proxy.example.com/api
+      ${nestedEncodedApiKey}
+    `)
+
+    expect(result.apiKey).toBe(apiKey)
+    expect(result.apiKeyCandidates).toEqual([apiKey, nestedEncodedApiKey])
+    expect(result.candidates.apiKeys[0]?.reasons).toEqual(
+      expect.arrayContaining(["base64Decoded", "knownPrefix"]),
+    )
+    expect(result.candidates.apiKeys[1]).toEqual(
+      expect.objectContaining({
+        value: nestedEncodedApiKey,
+        reasons: expect.arrayContaining(["base64EncodedSource"]),
+      }),
+    )
+  })
+
+  it("bounds recursive base64 decoding to four layers", () => {
+    const apiKey = buildKnownKey(
+      "boundedBase64Aa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1A",
+    )
+    const encodedLayers = [apiKey]
+    for (let depth = 0; depth < 5; depth += 1) {
+      encodedLayers.push(
+        encodeUnpaddedBase64(encodedLayers[encodedLayers.length - 1]),
+      )
+    }
+    const deepestEncodedApiKey = encodedLayers[5]
+
+    const result = extractApiCheckCredentialsFromText(deepestEncodedApiKey)
+
+    expect(result.apiKey).toBe(encodedLayers[1])
+    expect(result.apiKey).not.toBe(apiKey)
+    expect(result.apiKeyCandidates).toEqual([
+      encodedLayers[1],
+      deepestEncodedApiKey,
+    ])
+  })
+
+  it.each([
+    ["English token label", "token={{key}}"],
+    ["full-width separator", "API Key：**{{key}}**"],
+    ["full-width equals", "token＝{{key}}"],
+    ["Chinese API key label", "API 密钥：{{key}}"],
+    ["Chinese access-token label", "访问令牌={{key}}"],
+  ])("decodes base64 values from %s", (_name, template) => {
+    const apiKey = buildKnownKey(
+      "localizedLabelAa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1A",
+    )
+    const encodedApiKey = encodeUnpaddedBase64(apiKey)
+    const sourceText = template.replace("{{key}}", encodedApiKey)
+
+    const result = extractApiCheckCredentialsFromText(sourceText)
+
+    expect(result.apiKey).toBe(apiKey)
+    expect(result.apiKeyCandidates).toEqual([apiKey, encodedApiKey])
+    expect(result.candidates.apiKeys[0]?.reasons).toEqual(
+      expect.arrayContaining(["labeled", "base64Decoded", "knownPrefix"]),
     )
   })
 
@@ -639,6 +859,59 @@ describe("webAiApiCheck extractCredentials", () => {
       }),
     )
     expect(result.candidates.apiKeys[0]).not.toHaveProperty("cleanupApplied")
+  })
+
+  it("keeps malformed padded base64 text as a plain candidate", () => {
+    const malformedBase64 = `${"A".repeat(24)}==`
+
+    const result = extractApiCheckCredentialsFromText(
+      `API Key: ${malformedBase64}`,
+    )
+
+    expect(result.apiKey).toBe(malformedBase64)
+    expect(result.candidates.apiKeys[0]?.reasons).not.toContain("base64Decoded")
+  })
+
+  it("keeps base64 text as a plain candidate when browser decoding fails", () => {
+    const encodedApiKey = encodeUnpaddedBase64(
+      buildKnownKey("decodeFailureAa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1"),
+    )
+    const atobSpy = vi.spyOn(globalThis, "atob").mockImplementation(() => {
+      throw new DOMException("Invalid character", "InvalidCharacterError")
+    })
+
+    try {
+      const result = extractApiCheckCredentialsFromText(
+        `API Key: ${encodedApiKey}`,
+      )
+
+      expect(result.apiKey).toBe(encodedApiKey)
+      expect(result.candidates.apiKeys[0]?.reasons).not.toContain(
+        "base64Decoded",
+      )
+    } finally {
+      atobSpy.mockRestore()
+    }
+  })
+
+  it("classifies non-hyphen known prefixes case-insensitively", () => {
+    const apiKey = buildKnownKey("MixedCaseAa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8", "aIzA")
+
+    const result = extractApiCheckCredentialsFromText(`token=${apiKey}`)
+
+    expect(classifyApiKeyCandidate(apiKey)).toEqual(
+      expect.objectContaining({
+        confidence: "standard",
+        reasons: expect.arrayContaining(["knownPrefix"]),
+      }),
+    )
+    expect(result.apiKey).toBe(apiKey)
+    expect(result.candidates.apiKeys[0]).toEqual(
+      expect.objectContaining({
+        confidence: "standard",
+        reasons: expect.arrayContaining(["labeled", "knownPrefix"]),
+      }),
+    )
   })
 
   it("does not join unrelated token fields while cleaning", () => {

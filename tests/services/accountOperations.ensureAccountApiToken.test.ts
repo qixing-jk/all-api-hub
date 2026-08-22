@@ -7,11 +7,11 @@ import {
   ensureDefaultApiTokenForAccount,
   generateDefaultTokenRequest,
 } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
+import { ensureAccountApiToken } from "~/services/accounts/accountOperations"
 import {
-  ensureAccountApiToken,
-  resolveSub2ApiQuickCreateResolution,
-} from "~/services/accounts/accountOperations"
-import { TOKEN_QUICK_CREATE_RESOLUTION_KINDS } from "~/services/accounts/tokenQuickCreateResolution"
+  resolveDefaultTokenQuickCreateResolution,
+  TOKEN_QUICK_CREATE_RESOLUTION_KINDS,
+} from "~/services/accounts/tokenQuickCreateResolution"
 import type { SiteTypeCapabilities } from "~/services/apiAdapters/contracts/siteTypeCapabilities"
 import {
   CREATED_TOKEN_SECRET_DECISION_KINDS,
@@ -299,7 +299,7 @@ describe("accountOperations Sub2API token creation guards", () => {
     expect(createApiTokenMock).not.toHaveBeenCalled()
   })
 
-  it("creates a Sub2API token when an explicit valid group is provided", async () => {
+  it("creates a token when an explicit valid group is provided", async () => {
     const token = buildSub2ApiToken({ id: 9, group: "vip" })
     fetchAccountTokensMock
       .mockResolvedValueOnce([])
@@ -316,7 +316,7 @@ describe("accountOperations Sub2API token creation guards", () => {
 
     await expect(
       ensureAccountApiToken(SITE_ACCOUNT, DISPLAY_ACCOUNT, {
-        sub2apiGroup: "vip",
+        explicitGroup: "vip",
       }),
     ).resolves.toEqual(token)
 
@@ -324,36 +324,6 @@ describe("accountOperations Sub2API token creation guards", () => {
       expect.anything(),
       expect.objectContaining({ group: "vip" }),
     )
-    expect(createApiTokenMock).toHaveBeenCalledWith(
-      expect.any(Object),
-      expect.objectContaining({ group: "vip" }),
-    )
-  })
-
-  it("keeps explicitGroup as the generic group-selection alias", async () => {
-    const token = buildSub2ApiToken({ id: 12, key: "sk-vip" })
-
-    fetchAccountTokensMock
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([token])
-    createApiTokenMock.mockResolvedValueOnce(true)
-    resolveDefaultTokenCreationMock.mockImplementationOnce((request) => ({
-      kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Create,
-      tokenData: { ...request.defaultTokenData, group: request.explicitGroup },
-      oneTimeSecret: false,
-      recoverCreatedToken: TOKEN_CREATION_SECRET_RECOVERY.InventoryRefetch,
-    }))
-    classifyCreatedTokenMock.mockReturnValueOnce({
-      kind: CREATED_TOKEN_SECRET_DECISION_KINDS.NeedsInventoryRefetch,
-    })
-
-    await expect(
-      ensureAccountApiToken(SITE_ACCOUNT, DISPLAY_ACCOUNT, {
-        toastId: "toast-explicit-group",
-        explicitGroup: "vip",
-      }),
-    ).resolves.toEqual(token)
-
     expect(createApiTokenMock).toHaveBeenCalledWith(
       expect.any(Object),
       expect.objectContaining({ group: "vip" }),
@@ -411,19 +381,20 @@ describe("accountOperations Sub2API token creation guards", () => {
       vip: { desc: "VIP", ratio: 1 },
     })
 
-    const { resolveDefaultTokenQuickCreateResolution } = await import(
-      "~/services/accounts/accountOperations"
-    )
-
     await expect(
       resolveDefaultTokenQuickCreateResolution(DISPLAY_ACCOUNT),
     ).resolves.toEqual({
       kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.SelectionRequired,
       allowedGroups: ["default", "vip"],
+      suggestedGroup: "default",
+      groups: {
+        default: { desc: "Default", ratio: 1 },
+        vip: { desc: "VIP", ratio: 1 },
+      },
     })
   })
 
-  it("reports when Sub2API quick-create has no valid current groups", async () => {
+  it("reports when quick-create has no valid current groups", async () => {
     resolveDefaultTokenCreationMock
       .mockReturnValueOnce({
         kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.NeedsUserGroups,
@@ -435,37 +406,15 @@ describe("accountOperations Sub2API token creation guards", () => {
     fetchUserGroupsMock.mockResolvedValueOnce({})
 
     await expect(
-      resolveSub2ApiQuickCreateResolution(DISPLAY_ACCOUNT),
+      resolveDefaultTokenQuickCreateResolution(DISPLAY_ACCOUNT),
     ).resolves.toEqual({
       kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.Blocked,
-      message: "messages:sub2api.createRequiresAvailableGroup",
+      reason: TOKEN_PROVISIONING_BLOCK_REASONS.AvailableGroupRequired,
+      message: "messages:tokenProvisioning.createRequiresAvailableGroup",
     })
   })
 
-  it("requires explicit selection when Sub2API quick-create has multiple groups", async () => {
-    resolveDefaultTokenCreationMock
-      .mockReturnValueOnce({
-        kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.NeedsUserGroups,
-      })
-      .mockReturnValueOnce({
-        kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.SelectionRequired,
-        allowedGroups: ["default", "vip"],
-        reason: TOKEN_PROVISIONING_BLOCK_REASONS.GroupSelectionRequired,
-      })
-    fetchUserGroupsMock.mockResolvedValueOnce({
-      default: { desc: "Default", ratio: 1 },
-      vip: { desc: "VIP", ratio: 2 },
-    })
-
-    await expect(
-      resolveSub2ApiQuickCreateResolution(DISPLAY_ACCOUNT),
-    ).resolves.toEqual({
-      kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.SelectionRequired,
-      allowedGroups: ["default", "vip"],
-    })
-  })
-
-  it("resolves a ready state when Sub2API quick-create has exactly one unique group", async () => {
+  it("resolves a ready state when quick-create has exactly one unique group", async () => {
     resolveDefaultTokenCreationMock
       .mockReturnValueOnce({
         kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.NeedsUserGroups,
@@ -482,18 +431,14 @@ describe("accountOperations Sub2API token creation guards", () => {
     })
 
     await expect(
-      resolveSub2ApiQuickCreateResolution(DISPLAY_ACCOUNT),
-    ).resolves.toEqual({
+      resolveDefaultTokenQuickCreateResolution(DISPLAY_ACCOUNT),
+    ).resolves.toMatchObject({
       kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.Ready,
-      group: "vip",
+      tokenData: { group: "vip" },
     })
   })
 
   it("normalizes ready default quick-create token names for non-default groups", async () => {
-    const { resolveDefaultTokenQuickCreateResolution } = await import(
-      "~/services/accounts/accountOperations"
-    )
-
     resolveDefaultTokenCreationMock
       .mockReturnValueOnce({
         kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.NeedsUserGroups,
@@ -519,46 +464,7 @@ describe("accountOperations Sub2API token creation guards", () => {
     })
   })
 
-  it("rejects quick-create resolution when Sub2API group inventory is missing", async () => {
-    resolveDefaultTokenCreationMock.mockReturnValueOnce({
-      kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.NeedsUserGroups,
-    })
-    getSiteTypeCapabilitiesMock.mockReturnValueOnce({
-      siteType: SITE_TYPES.SUB2API,
-      account: {
-        keyManagement: {
-          fetchTokens: vi.fn(),
-          createToken: vi.fn(),
-          updateToken: vi.fn(),
-          resolveTokenKey: vi.fn(),
-          deleteToken: vi.fn(),
-          fetchAvailableModels: vi.fn(),
-          userGroups: undefined,
-        },
-        tokenProvisioning: {
-          isInventoryTokenUsable: vi.fn(() => true),
-          resolveDefaultTokenCreation: (...args: unknown[]) =>
-            resolveDefaultTokenCreationMock(...args),
-          classifyCreatedToken: (...args: unknown[]) =>
-            classifyCreatedTokenMock(...args),
-        },
-      },
-    })
-
-    await expect(
-      resolveSub2ApiQuickCreateResolution(DISPLAY_ACCOUNT),
-    ).rejects.toThrow(
-      TOKEN_PROVISIONING_ERRORS.Sub2ApiGroupInventoryNotImplemented,
-    )
-
-    expect(fetchUserGroupsMock).not.toHaveBeenCalled()
-  })
-
   it("rejects default quick-create resolution when policy still needs groups after lookup", async () => {
-    const { resolveDefaultTokenQuickCreateResolution } = await import(
-      "~/services/accounts/accountOperations"
-    )
-
     resolveDefaultTokenCreationMock
       .mockReturnValueOnce({
         kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.NeedsUserGroups,
@@ -572,29 +478,13 @@ describe("accountOperations Sub2API token creation guards", () => {
 
     await expect(
       resolveDefaultTokenQuickCreateResolution(DISPLAY_ACCOUNT),
-    ).rejects.toThrow(
-      TOKEN_PROVISIONING_ERRORS.Sub2ApiGroupInventoryNotImplemented,
-    )
+    ).rejects.toThrow(TOKEN_PROVISIONING_ERRORS.GroupInventoryNotImplemented)
 
     expect(fetchUserGroupsMock).toHaveBeenCalledTimes(1)
   })
 
-  it("rejects quick-create resolution for non-Sub2API accounts", async () => {
-    const { displayAccount } = createNonSub2ApiAccounts()
-
-    await expect(
-      resolveSub2ApiQuickCreateResolution(displayAccount as any),
-    ).rejects.toThrow(TOKEN_PROVISIONING_ERRORS.Sub2ApiQuickCreateNotApplicable)
-
-    expect(fetchUserGroupsMock).not.toHaveBeenCalled()
-  })
-
   it("reports one-time secret policy blocks through default quick-create resolution", async () => {
     const { displayAccount } = createAIHubMixAccounts()
-    const { resolveDefaultTokenQuickCreateResolution } = await import(
-      "~/services/accounts/accountOperations"
-    )
-
     resolveDefaultTokenCreationMock.mockReturnValueOnce({
       kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Blocked,
       reason: TOKEN_PROVISIONING_BLOCK_REASONS.OneTimeSecretRequired,
@@ -605,16 +495,12 @@ describe("accountOperations Sub2API token creation guards", () => {
     ).resolves.toEqual({
       kind: TOKEN_QUICK_CREATE_RESOLUTION_KINDS.Blocked,
       reason: TOKEN_PROVISIONING_BLOCK_REASONS.OneTimeSecretRequired,
-      message: "messages:aihubmix.createRequiresOneTimeKeyDialog",
+      message: "messages:tokenProvisioning.createRequiresOneTimeSecretHandling",
     })
   })
 
   it("reports generic policy blocks through default quick-create resolution", async () => {
     const { displayAccount } = createNonSub2ApiAccounts()
-    const { resolveDefaultTokenQuickCreateResolution } = await import(
-      "~/services/accounts/accountOperations"
-    )
-
     resolveDefaultTokenCreationMock.mockReturnValueOnce({
       kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Blocked,
       reason: TOKEN_PROVISIONING_BLOCK_REASONS.GroupRequired,
@@ -820,7 +706,9 @@ describe("ensureDefaultApiTokenForAccount non-Sub2API branches", () => {
       ensureDefaultApiTokenForAccount({
         account: siteAccount as any,
       }),
-    ).rejects.toThrow("messages:aihubmix.createRequiresOneTimeKeyDialog")
+    ).rejects.toThrow(
+      "messages:tokenProvisioning.createRequiresOneTimeSecretHandling",
+    )
 
     expect(createApiTokenMock).not.toHaveBeenCalled()
   })
@@ -940,7 +828,9 @@ describe("ensureDefaultApiTokenForAccount non-Sub2API branches", () => {
 
     await expect(
       ensureAccountApiToken(siteAccount as any, displayAccount as any),
-    ).rejects.toThrow("messages:aihubmix.createRequiresOneTimeKeyDialog")
+    ).rejects.toThrow(
+      "messages:tokenProvisioning.createRequiresOneTimeSecretHandling",
+    )
 
     expect(createApiTokenMock).not.toHaveBeenCalled()
   })
@@ -994,7 +884,9 @@ describe("ensureDefaultApiTokenForAccount non-Sub2API branches", () => {
 
     await expect(
       ensureAccountApiToken(siteAccount as any, displayAccount as any),
-    ).rejects.toThrow("messages:aihubmix.createRequiresOneTimeKeyDialog")
+    ).rejects.toThrow(
+      "messages:tokenProvisioning.createRequiresOneTimeSecretHandling",
+    )
 
     expect(createApiTokenMock).not.toHaveBeenCalled()
   })
@@ -1017,7 +909,9 @@ describe("ensureDefaultApiTokenForAccount non-Sub2API branches", () => {
 
     await expect(
       ensureAccountApiToken(siteAccount as any, displayAccount as any),
-    ).rejects.toThrow("messages:aihubmix.createRequiresOneTimeKeyDialog")
+    ).rejects.toThrow(
+      "messages:tokenProvisioning.createRequiresOneTimeSecretHandling",
+    )
   })
 
   it("reports shared token creation failures with the create-token message", async () => {
@@ -1051,7 +945,9 @@ describe("ensureDefaultApiTokenForAccount non-Sub2API branches", () => {
       ensureDefaultApiTokenForAccount({
         account: siteAccount as any,
       }),
-    ).rejects.toThrow("messages:aihubmix.createRequiresOneTimeKeyDialog")
+    ).rejects.toThrow(
+      "messages:tokenProvisioning.createRequiresOneTimeSecretHandling",
+    )
   })
 
   it("preserves the fallback policy reason for unsupported background auto-provision", async () => {

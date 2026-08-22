@@ -1,6 +1,7 @@
 import { http, HttpResponse } from "msw"
 import { beforeEach, describe, expect, it } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import {
   fetchAccountData,
@@ -19,6 +20,8 @@ import {
 import { sharedChatCodexQuotaSample } from "~~/tests/fixtures/sharedchat/codexQuota.sample"
 import { server } from "~~/tests/msw/server"
 
+import { createCheckInConfig } from "../../apiAdapters/checkInFixtures"
+
 const baseRequest = {
   baseUrl: "https://new.sharedchat.cc",
   auth: {
@@ -30,9 +33,8 @@ const baseRequest = {
 
 const accountRequest = {
   ...baseRequest,
-  checkIn: {
-    enableDetection: false,
-  },
+  siteType: SITE_TYPES.SHAREDCHAT,
+  checkIn: createCheckInConfig(SITE_TYPES.SHAREDCHAT, { matched: false }),
 }
 
 describe("apiService SharedChat", () => {
@@ -266,12 +268,9 @@ describe("apiService SharedChat", () => {
           status: "success",
         },
       ],
-      checkIn: {
-        enableDetection: false,
-        siteStatus: {
-          isCheckedInToday: undefined,
-        },
-      },
+      checkIn: createCheckInConfig(SITE_TYPES.SHAREDCHAT, {
+        matched: false,
+      }),
     })
   })
 

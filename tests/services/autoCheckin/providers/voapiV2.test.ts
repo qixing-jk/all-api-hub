@@ -1,11 +1,10 @@
 import { http, HttpResponse } from "msw"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { SITE_TYPES } from "~/constants/siteType"
-import {
-  resolveAutoCheckinProvider,
-  type AutoCheckinProvider,
-} from "~/services/checkin/autoCheckin/providers"
+import { autoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers"
+import type { AutoCheckinProvider } from "~/services/checkin/autoCheckin/providers/contracts"
 import { voApiV2Provider } from "~/services/checkin/autoCheckin/providers/voapiV2"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import type { SiteAccount } from "~/types"
@@ -13,6 +12,7 @@ import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { server } from "~~/tests/msw/server"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
+import { buildCheckInConfig } from "~~/tests/test-utils/factories"
 
 const {
   mockResyncVoApiV2AuthToken,
@@ -65,9 +65,7 @@ const account = {
     id: "7",
     access_token: "jwt-dashboard",
   },
-  checkIn: {
-    enableDetection: true,
-  },
+  checkIn: buildCheckInConfig({ automaticExecutionEnabled: true }),
 } as unknown as SiteAccount
 
 const DEFAULT_PROVIDER_CONTEXT = {
@@ -92,9 +90,11 @@ describe("voApiV2Provider", () => {
   })
 
   it("registers the VoAPI v2 auto-check-in provider", () => {
-    expect(resolveAutoCheckinProvider(account)).toBe(
-      voApiV2Provider as AutoCheckinProvider,
-    )
+    expect(
+      autoCheckinMethodRegistry.resolveById(
+        AUTO_CHECKIN_METHOD_IDS.VoApiV2DailyCheckIn,
+      )?.provider,
+    ).toBe(voApiV2Provider as AutoCheckinProvider)
   })
 
   it("propagates the popup source through VoAPI v2 check-in and stats requests", async () => {
@@ -160,27 +160,16 @@ describe("voApiV2Provider", () => {
     ).toBe(false)
   })
 
-  it("does not run when automatic check-in is disabled", () => {
+  it("leaves automatic-execution intent to the Module", () => {
     expect(
       voApiV2Provider.canCheckIn({
         ...account,
         checkIn: {
-          enableDetection: true,
-          autoCheckInEnabled: false,
+          ...account.checkIn,
+          automaticExecutionEnabled: false,
         },
-      } as SiteAccount),
-    ).toBe(false)
-  })
-
-  it("returns a failed result for unusable VoAPI v2 accounts", async () => {
-    await expect(
-      checkInForTest({
-        ...account,
-        account_info: { ...account.account_info, access_token: "" },
-      } as SiteAccount),
-    ).resolves.toMatchObject({
-      status: CHECKIN_RESULT_STATUS.FAILED,
-    })
+      }),
+    ).toBe(true)
   })
 
   it("reports failure when submit succeeds but final stats are not checked in", async () => {

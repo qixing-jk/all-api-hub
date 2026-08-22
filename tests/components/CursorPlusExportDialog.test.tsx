@@ -13,6 +13,7 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import { AuthTypeEnum } from "~/types"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const {
@@ -71,7 +72,7 @@ const ACCOUNT = {
   token: "account-access-token",
   userId: "1",
   authType: AuthTypeEnum.AccessToken,
-  checkIn: { enableDetection: false },
+  checkIn: buildCheckInConfig(),
   tagIds: [],
 } as any
 

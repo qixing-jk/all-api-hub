@@ -8,6 +8,25 @@ This page records major updates for general users (feature changes / experience 
 - **Troubleshooting**: You can enable console logs in "Settings → General → Logs" and report reproduction steps to [Issues](https://github.com/qixing-jk/all-api-hub/issues).
 :::
 
+## 3.58.0
+- **New Features:**
+  - `ModelFlare` accounts: After signing in, you can automatically detect and add your account, view its balance, check in, browse models and pricing, and manage API keys from the extension. If creating the default key requires a group selection, the extension guides you through it directly. See [Account Management](./account-management.md) and [Key Management](./key-management.md).
+  - Web API detection and verification: When copying API details from webpages, documentation, or chat content, the extension can now recognize encoded API keys and keys mixed with spaces, punctuation, or invisible characters, reducing manual cleanup. See [Web API Detection and Verification](./web-ai-api-check.md).
+- **Experience Improvements:**
+  - `New API` self-hosted channels: Creating, editing, deleting, importing, migrating, and synchronizing channels from the extension is now more complete and reliable, without unintentionally changing untouched settings or existing API keys. You can also change a channel's type; after doing so, review its API key, Base URL, and other settings to make sure they suit the new type. See [Self-hosted Site Management](./self-hosted-site-management.md).
+- **Bug Fixes:**
+  - Account list: Sorting, result counts, and bulk actions no longer overlap on mobile devices and in narrow windows, and check-in states are easier to distinguish.
+  - New API account detection: Signed-in accounts on newer or white-label New API sites can now be detected automatically without repeatedly asking you to sign in or failing outright. See [Auto-detection Troubleshooting](./auto-detect.md).
+  - `V-API` accounts: Fixed signed-in accounts not being detected, incorrect group ratios, and API key creation failing while available models were loading. You can now continue creating a key even if the model list temporarily fails to load.
+  - `Sub2API` accounts: Automatically detected accounts now prefer the site name configured by the service instead of frequently showing only the site's domain.
+  - `CC Switch` `Codex` exports: Provider endpoint paths are now preserved instead of being changed into an incorrect address. See [Supported Export Tools and Integration Targets](./supported-export-tools.md).
+  - Web API detection and verification: Fixed the detection dialog sometimes requiring two clicks to close in Edge.
+
+**Where to find them:**
+- `ModelFlare` accounts: Under **Settings → Account Management**, add an account with `https://modelflare.dev`, then run automatic detection from the signed-in page.
+- Web API detection and verification: Select text on a webpage and choose `Check AI API` from the context menu, or use automatic detection on an allowlisted page. Related controls are under **Settings → Basic Settings → Web API Check**.
+- `New API` channel management: Configure New API under **Settings → Self-hosted Site Management**, then open **Settings → Channel Management** to view, edit, migrate, or synchronize channels.
+
 ## 3.57.0
 - **New Features:**
   - API credential and account key associations: OpenRouter and similar sites show the full API key only once at creation time, then display only a masked value in the key list. You can now save the full key to the API Credential Library and associate it with the account key, so it remains available locally for copying, verification, and export instead of having to create a replacement. See [API Credential Library](./api-credential-profiles.md) and [Key Management](./key-management.md).

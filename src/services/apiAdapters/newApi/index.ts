@@ -6,7 +6,7 @@ import {
 
 import type { SiteTypeCapabilities } from "../contracts/siteTypeCapabilities"
 import { createNewApiAccountBootstrap } from "./accountBootstrap"
-import { newApiAccountCompletion } from "./accountCompletion"
+import { createNewApiAccountCompletion } from "./accountCompletion"
 import { createNewApiAccountData } from "./accountData"
 import { createNewApiAccountKeyResources } from "./accountKeyResource"
 import { createNewApiAccountRefresh } from "./accountRefresh"
@@ -30,11 +30,11 @@ export const createNewApiCapabilities = (
   account: {
     data: createNewApiAccountData(siteType),
     bootstrap: createNewApiAccountBootstrap(siteType),
-    completion: newApiAccountCompletion,
+    completion: createNewApiAccountCompletion(siteType),
     inviteLink: createNewApiInviteLink(),
     keyManagement: createNewApiKeyManagement(siteType),
     keyResources: createNewApiAccountKeyResources(siteType),
-    tokenProvisioning: createNewApiTokenProvisioning(),
+    tokenProvisioning: createNewApiTokenProvisioning(siteType),
     refresh: createNewApiAccountRefresh(siteType),
     modelPricing: createNewApiModelPricing(siteType),
     redemption: createNewApiRedemption(),

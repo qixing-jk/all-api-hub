@@ -13,6 +13,7 @@ import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import { PROTECTION_BYPASS_EXECUTION_VERSION } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum, SiteHealthStatus, type CheckInConfig } from "~/types"
 import type { TurnstilePreTrigger } from "~/types/turnstile"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 
@@ -109,17 +110,15 @@ describe("useAccountDialog re-detect preservation", () => {
         exchangeRate: 7,
         siteName: "Detected New API",
         siteType: SITE_TYPES.NEW_API,
-        checkIn: {
-          enableDetection: true,
-          autoCheckInEnabled: true,
-          siteStatus: { isCheckedInToday: false },
+        checkIn: buildCheckInConfig({
+          automaticExecutionEnabled: true,
           customCheckIn: {
             url: "",
             redeemUrl: "",
             openRedeemWithCheckIn: true,
             isCheckedInToday: false,
           },
-        } as CheckInConfig,
+        }),
       },
     })
 
@@ -146,8 +145,7 @@ describe("useAccountDialog re-detect preservation", () => {
 
     expect(result.current.state.isDetected).toBe(true)
     expect(result.current.state.siteType).toBe(SITE_TYPES.NEW_API)
-    expect(result.current.state.checkIn.enableDetection).toBe(true)
-    expect(result.current.state.checkIn.autoCheckInEnabled).toBe(true)
+    expect(result.current.state.checkIn.automaticExecutionEnabled).toBe(true)
   })
 
   it("preserves notes and custom check-in fields when re-detecting an existing account", async () => {
@@ -156,14 +154,8 @@ describe("useAccountDialog re-detect preservation", () => {
       selector: "#check-in",
     }
 
-    const existingCheckIn: CheckInConfig = {
-      enableDetection: true,
-      autoCheckInEnabled: false,
-      siteStatus: {
-        isCheckedInToday: true,
-        lastCheckInDate: "2026-03-05",
-        lastDetectedAt: 123,
-      },
+    const existingCheckIn: CheckInConfig = buildCheckInConfig({
+      automaticExecutionEnabled: false,
       customCheckIn: {
         url: "https://checkin.example.com",
         redeemUrl: "https://redeem.example.com",
@@ -172,7 +164,7 @@ describe("useAccountDialog re-detect preservation", () => {
         lastCheckInDate: "2026-03-05",
         turnstilePreTrigger,
       },
-    }
+    })
 
     const existingNotes = "Keep this note"
 
@@ -210,17 +202,15 @@ describe("useAccountDialog re-detect preservation", () => {
         exchangeRate: 7,
         siteName: "Detected",
         siteType: "unknown",
-        checkIn: {
-          enableDetection: true,
-          autoCheckInEnabled: true,
-          siteStatus: { isCheckedInToday: false },
+        checkIn: buildCheckInConfig({
+          automaticExecutionEnabled: true,
           customCheckIn: {
             url: "",
             redeemUrl: "",
             openRedeemWithCheckIn: true,
             isCheckedInToday: false,
           },
-        } as CheckInConfig,
+        }),
       },
     })
 
@@ -269,8 +259,8 @@ describe("useAccountDialog re-detect preservation", () => {
     expect(
       result.current.state.checkIn.customCheckIn?.turnstilePreTrigger,
     ).toEqual(turnstilePreTrigger)
-    expect(result.current.state.checkIn.autoCheckInEnabled).toBe(
-      existingCheckIn.autoCheckInEnabled,
+    expect(result.current.state.checkIn.automaticExecutionEnabled).toBe(
+      existingCheckIn.automaticExecutionEnabled,
     )
   })
 
@@ -359,11 +349,7 @@ describe("useAccountDialog re-detect preservation", () => {
         exchangeRate: 7,
         siteName: "Detected Sub2API",
         siteType: "sub2api",
-        checkIn: {
-          enableDetection: true,
-          autoCheckInEnabled: true,
-          siteStatus: { isCheckedInToday: true },
-        },
+        checkIn: buildCheckInConfig({ automaticExecutionEnabled: true }),
         sub2apiAuth: {
           refreshToken: "refresh-token",
           tokenExpiresAt: 123456789,
@@ -388,19 +374,16 @@ describe("useAccountDialog re-detect preservation", () => {
       result.current.setters.setUrl("https://sub2.example.com")
       result.current.setters.setAuthType(AuthTypeEnum.Cookie)
       result.current.setters.setCookieAuthSessionCookie("session=abc")
-      result.current.setters.setCheckIn({
-        enableDetection: true,
-        autoCheckInEnabled: true,
-        siteStatus: { isCheckedInToday: true },
-      } as any)
+      result.current.setters.setCheckIn(
+        buildCheckInConfig({ automaticExecutionEnabled: true }),
+      )
     })
 
     await waitFor(() => {
       expect(result.current.state.url).toBe("https://sub2.example.com")
       expect(result.current.state.authType).toBe(AuthTypeEnum.Cookie)
       expect(result.current.state.cookieAuthSessionCookie).toBe("session=abc")
-      expect(result.current.state.checkIn.enableDetection).toBe(true)
-      expect(result.current.state.checkIn.autoCheckInEnabled).toBe(true)
+      expect(result.current.state.checkIn.automaticExecutionEnabled).toBe(true)
     })
 
     await act(async () => {
@@ -411,8 +394,7 @@ describe("useAccountDialog re-detect preservation", () => {
       expect(result.current.state.siteType).toBe("sub2api")
       expect(result.current.state.authType).toBe(AuthTypeEnum.AccessToken)
       expect(result.current.state.cookieAuthSessionCookie).toBe("")
-      expect(result.current.state.checkIn.enableDetection).toBe(false)
-      expect(result.current.state.checkIn.autoCheckInEnabled).toBe(false)
+      expect(result.current.state.checkIn.automaticExecutionEnabled).toBe(false)
       expect(result.current.state.sub2apiUseRefreshToken).toBe(false)
       expect(result.current.state.sub2apiRefreshToken).toBe("refresh-token")
       expect(result.current.state.sub2apiTokenExpiresAt).toBe(123456789)
@@ -430,11 +412,7 @@ describe("useAccountDialog re-detect preservation", () => {
         exchangeRate: 7,
         siteName: "Detected Site",
         siteType: "legacy-invalid-site",
-        checkIn: {
-          enableDetection: true,
-          autoCheckInEnabled: true,
-          siteStatus: { isCheckedInToday: false },
-        },
+        checkIn: buildCheckInConfig({ automaticExecutionEnabled: true }),
       },
     })
 
@@ -574,7 +552,7 @@ describe("useAccountDialog re-detect preservation", () => {
         userId: "12",
         siteName: "Detected Cookie Site",
         siteType: "new-api",
-        checkIn: { enableDetection: false },
+        checkIn: buildCheckInConfig(),
         fetchContext: {
           kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
           tabId: 101,
@@ -702,7 +680,7 @@ describe("useAccountDialog re-detect preservation", () => {
         siteType: SITE_TYPES.AIHUBMIX,
         authType: AuthTypeEnum.AccessToken,
         exchangeRate: 7,
-        checkIn: { enableDetection: false },
+        checkIn: buildCheckInConfig(),
       },
     })
 
@@ -752,7 +730,7 @@ describe("useAccountDialog re-detect preservation", () => {
         siteName: "Detected Cookie Site",
         siteType: "new-api",
         exchangeRate: 7,
-        checkIn: { enableDetection: false },
+        checkIn: buildCheckInConfig(),
       },
     })
 

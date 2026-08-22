@@ -80,7 +80,9 @@ export async function ensureAccountTokenForPostSaveWorkflowFromStoredAccount(par
     return {
       kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Blocked,
       code: ACCOUNT_POST_SAVE_WORKFLOW_ERROR_CODES.TokenSecretUnavailable,
-      message: t("messages:aihubmix.createRequiresOneTimeKeyDialog"),
+      message: t(
+        "messages:tokenProvisioning.createRequiresOneTimeSecretHandling",
+      ),
     }
   }
 
@@ -91,7 +93,7 @@ export async function ensureAccountTokenForPostSaveWorkflowFromStoredAccount(par
     return {
       kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Blocked,
       code: ACCOUNT_POST_SAVE_WORKFLOW_ERROR_CODES.TokenCreationFailed,
-      message: t("messages:sub2api.createRequiresAvailableGroup"),
+      message: t("messages:tokenProvisioning.createRequiresAvailableGroup"),
     }
   }
 
