@@ -456,6 +456,32 @@ describe("Model item pricing and description", () => {
       expect(screen.queryByText(/^optimalGroup:/)).toBeNull()
     })
 
+    it("shows a lowest-price badge without implying the effective group is optimal", () => {
+      isTokenBillingTypeMock.mockReturnValue(true)
+
+      render(
+        <ModelItemPricing
+          model={createModel({ model_ratio: 2 })}
+          calculatedPrice={createCalculatedPrice()}
+          exchangeRate={7}
+          showRealPrice={false}
+          showPricing={true}
+          isAvailableForUser={true}
+          isLowestPrice={true}
+          effectiveGroup="vip"
+          groupRatios={{ vip: 1 }}
+          showsOptimalGroup={false}
+          groupSelectionScope={MODEL_LIST_GROUP_SELECTION_SCOPES.ALL_ACCOUNTS}
+        />,
+      )
+
+      expect(screen.getByText("lowestPrice")).toHaveAttribute(
+        "title",
+        "lowestPriceWithinAccountFilters",
+      )
+      expect(screen.queryByText(/^optimalGroup:/)).toBeNull()
+    })
+
     it("shows unavailable pricing metadata without formatting a zero price or ratio", () => {
       isTokenBillingTypeMock.mockReturnValue(true)
 

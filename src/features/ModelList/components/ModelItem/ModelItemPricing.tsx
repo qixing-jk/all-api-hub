@@ -142,11 +142,7 @@ function resolvePriceMetaBadge(params: {
 }): PriceMetaBadgeViewModel | null {
   const { effectiveGroup, isLowestPrice, showsOptimalGroup } = params
 
-  if (effectiveGroup) {
-    if (!showsOptimalGroup && !isLowestPrice) {
-      return null
-    }
-
+  if (effectiveGroup && showsOptimalGroup) {
     return {
       kind: "optimal-group",
       variant: isLowestPrice ? "success" : "secondary",

@@ -1981,7 +1981,7 @@ describe("useFilteredModels", () => {
     })
   })
 
-  it("uses code-point order when equal-price groups tie", async () => {
+  it("uses code-point order without marking equal-price groups as optimal", async () => {
     const account = createDisplayAccount({
       id: "account-equal-group-price",
       balance: { USD: 10, CNY: 70 },
@@ -2009,7 +2009,10 @@ describe("useFilteredModels", () => {
       expect(result.current.filteredModels).toHaveLength(1)
     })
 
-    expect(result.current.filteredModels[0]?.effectiveGroup).toBe("B")
+    expect(result.current.filteredModels[0]).toMatchObject({
+      effectiveGroup: "B",
+      hasUniquelyOptimalGroup: false,
+    })
   })
 
   it("falls back to model-name ordering when prices and groups tie", async () => {
@@ -2375,6 +2378,10 @@ describe("useFilteredModels", () => {
         ["account-multi-group", "vip", 1, true],
         ["account-default-only", "default", 1.2, false],
       ])
+    })
+    expect(result.current.filteredModels[0]).toMatchObject({
+      effectiveGroup: "vip",
+      hasUniquelyOptimalGroup: true,
     })
 
     rerender({

@@ -136,7 +136,7 @@ export type CalculatedModelItem = {
   modelMetadata?: ModelMetadata
   comparableModelIdentity: ComparableModelIdentity
   resolvedVendor: ResolvedModelVendor
-  hasAutoSelectedGroup?: boolean
+  hasUniquelyOptimalGroup?: boolean
   isLowestPrice?: boolean
   isPriceComparable?: boolean
 }
@@ -522,7 +522,7 @@ function resolveBestCalculatedItem(
     calculatedPrice: ReturnType<typeof calculateModelPrice>
     activeGroupContext: ActiveModelGroupContext
     effectiveGroup?: string
-    hasAutoSelectedGroup?: boolean
+    hasUniquelyOptimalGroup?: boolean
   }): CalculatedModelItem => ({
     model: rawItem.model,
     calculatedPrice: params.calculatedPrice,
@@ -535,7 +535,7 @@ function resolveBestCalculatedItem(
     modelMetadata: rawItem.modelMetadata,
     comparableModelIdentity: rawItem.comparableModelIdentity,
     resolvedVendor: rawItem.resolvedVendor,
-    hasAutoSelectedGroup: params.hasAutoSelectedGroup,
+    hasUniquelyOptimalGroup: params.hasUniquelyOptimalGroup,
   })
 
   if (
@@ -583,8 +583,9 @@ function resolveBestCalculatedItem(
 
   let bestResult: CalculatedModelItem | null = null
   let bestKey: ComparablePriceKey | null = null
+  let bestPriceMatchCount = 0
 
-  activeGroupContext.activePriceableGroups.forEach((group) => {
+  for (const group of activeGroupContext.activePriceableGroups) {
     const calculatedPrice = calculateModelPrice(
       rawItem.model,
       rawItem.groupRatios[group],
@@ -597,7 +598,6 @@ function resolveBestCalculatedItem(
         candidateGroups: groupCandidates,
         effectiveGroup: group,
       }),
-      hasAutoSelectedGroup: activeGroupContext.activePriceableGroups.length > 1,
     })
     const candidateKey = getComparablePriceKey(
       candidateItem,
@@ -608,26 +608,41 @@ function resolveBestCalculatedItem(
     if (!bestResult || !bestKey) {
       bestResult = candidateItem
       bestKey = candidateKey
-      return
+      bestPriceMatchCount = 1
+      continue
     }
 
     const priceComparison = comparePriceKeys(candidateKey, bestKey, 1)
     if (priceComparison < 0) {
       bestResult = candidateItem
       bestKey = candidateKey
-      return
+      bestPriceMatchCount = 1
+      continue
     }
 
-    if (
-      priceComparison === 0 &&
-      compareCodePoints(group, bestResult.effectiveGroup ?? "") < 0
-    ) {
-      bestResult = candidateItem
-      bestKey = candidateKey
-    }
-  })
+    if (priceComparison === 0) {
+      bestPriceMatchCount += 1
 
-  return bestResult
+      if (compareCodePoints(group, bestResult.effectiveGroup ?? "") < 0) {
+        bestResult = candidateItem
+        bestKey = candidateKey
+      }
+    }
+  }
+
+  if (!bestResult) {
+    return null
+  }
+
+  return {
+    ...bestResult,
+    // Keep deterministic tie-breaking for price calculation, but only present
+    // one group as optimal when it is the unique lowest-price candidate.
+    hasUniquelyOptimalGroup:
+      activeGroupContext.activePriceableGroups.length > 1
+        ? bestPriceMatchCount === 1
+        : undefined,
+  }
 }
 
 /** Maps raw priced rows into calculated display rows for the current filters. */

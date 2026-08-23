@@ -247,7 +247,7 @@ export function ModelDisplay(props: ModelDisplayProps) {
         onGroupClick={handleGroupClick}
         isLowestPrice={item.isLowestPrice}
         isComparisonOffer={isComparisonOffer}
-        showsOptimalGroup={item.hasAutoSelectedGroup}
+        showsOptimalGroup={item.hasUniquelyOptimalGroup}
         groupSelectionScope={groupSelectionScope}
         isGroupSelectionInteractive={isGroupSelectionInteractive}
         source={sourceForModel}
