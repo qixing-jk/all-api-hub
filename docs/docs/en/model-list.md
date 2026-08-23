@@ -37,7 +37,7 @@ Use the price badges as follows:
 
 - **Estimated**: Calculated from the available price table and group information. Use it to shortlist options; the provider's bill remains authoritative.
 - **Lowest Price**: The lowest comparable offer under the current filters and comparison conditions.
-- **Best Group**: Shown when one available group is clearly cheaper than the others. If the lowest price is tied, no single group is selected as best.
+- **Best Group**: Shown when one available group has the unique lowest price among comparable groups. If the lowest price is tied, no single group is selected as best.
 
 ### 3. Group Switching and Simulation
 
