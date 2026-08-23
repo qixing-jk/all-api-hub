@@ -18,7 +18,11 @@ import { isDevBuild } from "~/utils/core/environment"
 
 import i18n from "./core"
 import { normalizeAppLanguage, resolveInitialAppLanguage } from "./language"
-import { mapToDayjsLocale, resources } from "./resources"
+import {
+  installAppLanguageResources,
+  loadAppLanguageResources,
+  mapToDayjsLocale,
+} from "./resources"
 
 /**
  * Keep the extension page root language aligned with the active UI locale.
@@ -31,7 +35,7 @@ function syncDocumentLanguage(language: string) {
   document.documentElement.lang = normalizeAppLanguage(language) ?? language
 }
 
-i18n
+export const i18nReady = i18n
   .use(LanguageDetector)
   .use(initReactI18next)
   .init({
@@ -42,7 +46,7 @@ i18n
     detection: {
       lookupLocalStorage: I18NEXT_LANGUAGE_STORAGE_KEY,
     },
-    resources,
+    resources: {},
     interpolation: {
       escapeValue: false, // react already escapes by default
     },
@@ -69,12 +73,13 @@ i18n
       detectedLanguage,
     })
 
-    if (
-      initialLanguage !== i18n.resolvedLanguage &&
-      initialLanguage !== i18n.language
-    ) {
-      await i18n.changeLanguage(initialLanguage)
-    }
+    installAppLanguageResources(
+      i18n,
+      await loadAppLanguageResources(initialLanguage),
+    )
+    // Re-resolve even when the detector selected the same language because
+    // resources are intentionally installed only after detection completes.
+    await i18n.changeLanguage(initialLanguage)
 
     dayjs.locale(mapToDayjsLocale(initialLanguage))
     syncDocumentLanguage(initialLanguage)

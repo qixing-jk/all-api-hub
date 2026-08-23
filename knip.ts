@@ -17,6 +17,8 @@ const config: KnipConfig = {
     "src/entrypoints/options/main.tsx",
     "src/entrypoints/popup/main.tsx",
     "src/entrypoints/sidepanel/main.tsx",
+    // WXT discovers this local build module from the configured modulesDir.
+    "src/locales/runtime-assets.ts",
     "tests/**/*.test.{ts,tsx}",
     "tests/setup.ts",
     "tests/setup.node.ts",

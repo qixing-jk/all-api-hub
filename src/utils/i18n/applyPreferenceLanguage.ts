@@ -1,5 +1,6 @@
 import i18n from "./core"
 import { normalizeAppLanguage } from "./language"
+import { changeAppLanguage } from "./resources"
 
 /**
  * Apply a persisted UI language preference to the active i18n instance when it
@@ -21,6 +22,6 @@ export async function applyPreferenceLanguage(
     return false
   }
 
-  await i18n.changeLanguage(nextLanguage)
+  await changeAppLanguage(i18n, nextLanguage)
   return true
 }

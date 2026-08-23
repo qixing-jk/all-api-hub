@@ -16,7 +16,7 @@ import { userPreferences } from "~/services/preferences/userPreferences"
 import { applyPreferenceLanguage } from "./applyPreferenceLanguage"
 import i18n from "./core"
 import { resolveInitialAppLanguage } from "./language"
-import { mapToDayjsLocale, resources } from "./resources"
+import { loadAppLanguageResources, mapToDayjsLocale } from "./resources"
 
 let contentI18nReadyPromise: Promise<void> | null = null
 let contentI18nInitialized = false
@@ -25,6 +25,14 @@ let contentI18nInitialized = false
  * Initializes i18n for content scripts without reading host-page storage.
  */
 async function initContentI18n() {
+  const storedLanguage = await userPreferences.getLanguage()
+  const initialLanguage = resolveInitialAppLanguage({
+    userPreferenceLanguage: storedLanguage,
+    detectedLanguage:
+      typeof navigator !== "undefined" ? navigator.language : undefined,
+  })
+  const resources = await loadAppLanguageResources(initialLanguage)
+
   await i18n.use(initReactI18next).init({
     resources,
     fallbackLng: DEFAULT_LANG,
@@ -32,13 +40,6 @@ async function initContentI18n() {
     interpolation: { escapeValue: false },
     returnEmptyString: false,
     react: { useSuspense: false },
-  })
-
-  const storedLanguage = await userPreferences.getLanguage()
-  const initialLanguage = resolveInitialAppLanguage({
-    userPreferenceLanguage: storedLanguage,
-    detectedLanguage:
-      typeof navigator !== "undefined" ? navigator.language : undefined,
   })
 
   await i18n.changeLanguage(initialLanguage)

@@ -177,6 +177,18 @@ vi.mock("~/utils/core/toastHelpers", () => ({
   showResultToast: toastHelperMocks.showResultToast,
 }))
 
+vi.mock("~/utils/i18n/resources", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/utils/i18n/resources")>()
+
+  return {
+    ...actual,
+    changeAppLanguage: (
+      instance: { changeLanguage: (language: string) => Promise<unknown> },
+      language: string,
+    ) => instance.changeLanguage(language),
+  }
+})
+
 vi.mock("~/contexts/ReleaseUpdateStatusContext", () => ({
   useReleaseUpdateStatus: () => ({
     status: null,

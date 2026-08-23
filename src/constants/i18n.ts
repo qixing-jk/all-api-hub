@@ -5,6 +5,7 @@ export const SPANISH_LATIN_AMERICA_LANG = "es-419"
 export const JAPANESE_LANG = "ja"
 export const TRADITIONAL_CHINESE_LANG = "zh-TW"
 export const VIETNAMESE_LANG = "vi"
+export const APP_LOCALE_ASSET_DIR = "app-locales"
 
 export const SUPPORTED_UI_LANGUAGES = [
   "en",

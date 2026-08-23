@@ -8,6 +8,7 @@ import {
   readE2eBuildVariant,
 } from "./e2e/utils/e2eBuildVariants"
 import { reactDevToolsAuto } from "./plugins/react-devtools-auto"
+import { APP_LOCALE_ASSET_DIR } from "./src/constants/i18n"
 import { OPENROUTER_WEB_ORIGIN } from "./src/services/accountSiteDefinitions/identifiers"
 
 type BrowserTarget = "chrome" | "firefox" | "safari" | string
@@ -47,6 +48,8 @@ const e2eBuildVariant = readE2eBuildVariant()
 export default defineConfig({
   srcDir: "src",
   publicDir: "src/public",
+  // Locale changes restart dev so the local module can regenerate runtime assets.
+  modulesDir: "src/locales",
   outDirTemplate: getOutDirTemplate(),
   modules: ["@wxt-dev/auto-icons", "@wxt-dev/module-react"],
   manifest: (env) => {
@@ -72,6 +75,11 @@ export default defineConfig({
         {
           resources: ["openrouter-clerk-session.js"],
           matches: [`${OPENROUTER_WEB_ORIGIN}/*`],
+        },
+        {
+          resources: [`${APP_LOCALE_ASSET_DIR}/*.json`],
+          matches: ["<all_urls>"],
+          use_dynamic_url: true,
         },
       ],
       browser_specific_settings: {

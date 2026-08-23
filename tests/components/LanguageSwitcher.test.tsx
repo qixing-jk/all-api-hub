@@ -49,6 +49,13 @@ vi.mock("~/services/preferences/userPreferences", () => ({
   },
 }))
 
+vi.mock("~/utils/i18n/resources", () => ({
+  changeAppLanguage: (
+    instance: { changeLanguage: (language: string) => Promise<void> },
+    language: string,
+  ) => instance.changeLanguage(language),
+}))
+
 const selectContext = createContext<{
   onValueChange?: (value: string) => void
 } | null>(null)

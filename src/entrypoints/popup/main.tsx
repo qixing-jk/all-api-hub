@@ -1,20 +1,16 @@
 import React, { Suspense } from "react"
 import ReactDOM from "react-dom/client"
 
-import "~/utils/i18n" // Import the i18n configuration
-
 import { RootErrorBoundary } from "~/components/RootErrorBoundary"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { isMobileDevice } from "~/utils/browser"
+import { i18nReady } from "~/utils/i18n"
 import { t } from "~/utils/i18n/core"
 import { setDocumentTitle } from "~/utils/navigation/documentTitle"
 
 import App from "./App"
 
 import "./style.css"
-
-// Set the document title immediately
-setDocumentTitle("popup")
 
 if (!isMobileDevice()) {
   const popupDocument = document.documentElement
@@ -43,12 +39,20 @@ if (!isMobileDevice()) {
   window.addEventListener("resize", syncPopupDocumentSize)
 }
 
-ReactDOM.createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>
-    <RootErrorBoundary>
-      <Suspense fallback={<div>{t("common:status.loading")}</div>}>
-        <App />
-      </Suspense>
-    </RootErrorBoundary>
-  </React.StrictMode>,
-)
+/** Render only after the active and fallback locale assets are ready. */
+async function renderApp() {
+  await i18nReady
+  setDocumentTitle("popup")
+
+  ReactDOM.createRoot(document.getElementById("root")!).render(
+    <React.StrictMode>
+      <RootErrorBoundary>
+        <Suspense fallback={<div>{t("common:status.loading")}</div>}>
+          <App />
+        </Suspense>
+      </RootErrorBoundary>
+    </React.StrictMode>,
+  )
+}
+
+void renderApp()

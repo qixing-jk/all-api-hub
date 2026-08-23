@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 const {
   i18nCoreMock,
   getLanguageMock,
+  loadAppLanguageResourcesMock,
   resolveInitialAppLanguageMock,
   mapToDayjsLocaleMock,
 } = vi.hoisted(() => ({
@@ -13,6 +14,7 @@ const {
     on: vi.fn(),
   },
   getLanguageMock: vi.fn(),
+  loadAppLanguageResourcesMock: vi.fn(),
   resolveInitialAppLanguageMock: vi.fn(),
   mapToDayjsLocaleMock: vi.fn(),
 }))
@@ -32,8 +34,8 @@ vi.mock("~/utils/i18n/language", () => ({
 }))
 
 vi.mock("~/utils/i18n/resources", () => ({
+  loadAppLanguageResources: loadAppLanguageResourcesMock,
   mapToDayjsLocale: mapToDayjsLocaleMock,
-  resources: { en: { common: { hello: "Hello" } } },
 }))
 
 describe("initBackgroundI18n", () => {
@@ -42,6 +44,10 @@ describe("initBackgroundI18n", () => {
     i18nCoreMock.changeLanguage.mockReset()
     i18nCoreMock.on.mockReset()
     getLanguageMock.mockReset()
+    loadAppLanguageResourcesMock.mockReset()
+    loadAppLanguageResourcesMock.mockResolvedValue({
+      en: { common: { hello: "Hello" } },
+    })
     resolveInitialAppLanguageMock.mockReset()
     mapToDayjsLocaleMock.mockReset()
     vi.resetModules()
@@ -68,6 +74,7 @@ describe("initBackgroundI18n", () => {
       interpolation: { escapeValue: false },
       returnEmptyString: false,
     })
+    expect(loadAppLanguageResourcesMock).toHaveBeenCalledWith("ja")
     expect(resolveInitialAppLanguageMock).toHaveBeenCalledWith({
       userPreferenceLanguage: "ja",
       detectedLanguage:

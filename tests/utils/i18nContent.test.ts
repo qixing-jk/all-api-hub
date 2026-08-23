@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 const {
   i18nCoreMock,
   getLanguageMock,
+  loadAppLanguageResourcesMock,
   reactI18nextPlugin,
   resolveInitialAppLanguageMock,
   mapToDayjsLocaleMock,
@@ -17,6 +18,7 @@ const {
     language: "en",
   },
   getLanguageMock: vi.fn(),
+  loadAppLanguageResourcesMock: vi.fn(),
   reactI18nextPlugin: { type: "3rdParty" },
   resolveInitialAppLanguageMock: vi.fn(),
   mapToDayjsLocaleMock: vi.fn(),
@@ -45,8 +47,12 @@ vi.mock("~/utils/i18n/language", () => ({
 }))
 
 vi.mock("~/utils/i18n/resources", () => ({
+  changeAppLanguage: (
+    instance: { changeLanguage: (language: string) => Promise<void> },
+    language: string,
+  ) => instance.changeLanguage(language),
+  loadAppLanguageResources: loadAppLanguageResourcesMock,
   mapToDayjsLocale: mapToDayjsLocaleMock,
-  resources: { en: { common: { hello: "Hello" } } },
 }))
 
 vi.mock("react-i18next", () => ({
@@ -64,6 +70,10 @@ describe("content i18n initialization", () => {
     i18nCoreMock.resolvedLanguage = "en"
     i18nCoreMock.language = "en"
     getLanguageMock.mockReset()
+    loadAppLanguageResourcesMock.mockReset()
+    loadAppLanguageResourcesMock.mockResolvedValue({
+      en: { common: { hello: "Hello" } },
+    })
     resolveInitialAppLanguageMock.mockReset()
     mapToDayjsLocaleMock.mockReset()
     mapToDayjsLocaleMock.mockImplementation((language: string) =>
@@ -73,8 +83,8 @@ describe("content i18n initialization", () => {
 
   it("initializes without app-page language detection and resolves from extension preferences", async () => {
     const localeSpy = vi.spyOn(dayjs, "locale").mockReturnValue("en")
-    getLanguageMock.mockResolvedValueOnce("ja")
-    resolveInitialAppLanguageMock.mockReturnValueOnce("ja")
+    getLanguageMock.mockResolvedValue("ja")
+    resolveInitialAppLanguageMock.mockReturnValue("ja")
 
     const { ensureContentI18nReady } = await import("~/utils/i18n/content")
 
@@ -95,6 +105,7 @@ describe("content i18n initialization", () => {
       detectedLanguage:
         typeof navigator !== "undefined" ? navigator.language : undefined,
     })
+    expect(loadAppLanguageResourcesMock).toHaveBeenCalledWith("ja")
     expect(i18nCoreMock.changeLanguage).toHaveBeenCalledWith("ja")
     expect(localeSpy).toHaveBeenCalledWith("ja")
 
@@ -123,8 +134,8 @@ describe("content i18n initialization", () => {
     i18nCoreMock.init
       .mockRejectedValueOnce(initError)
       .mockResolvedValueOnce(undefined)
-    getLanguageMock.mockResolvedValueOnce("ja")
-    resolveInitialAppLanguageMock.mockReturnValueOnce("ja")
+    getLanguageMock.mockResolvedValue("ja")
+    resolveInitialAppLanguageMock.mockReturnValue("ja")
 
     const { ensureContentI18nReady } = await import("~/utils/i18n/content")
 

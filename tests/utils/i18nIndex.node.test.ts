@@ -7,7 +7,9 @@ import { I18NEXT_LANGUAGE_STORAGE_KEY } from "~/services/core/storageKeys"
 const {
   getLanguageMock,
   i18nCoreMock,
+  installAppLanguageResourcesMock,
   languageDetectorPlugin,
+  loadAppLanguageResourcesMock,
   mapToDayjsLocaleMock,
   reactI18nextPlugin,
   resolveInitialAppLanguageMock,
@@ -21,7 +23,9 @@ const {
     language: "en",
     resolvedLanguage: "en" as string | undefined,
   },
+  installAppLanguageResourcesMock: vi.fn(),
   languageDetectorPlugin: { type: "languageDetector" },
+  loadAppLanguageResourcesMock: vi.fn(),
   mapToDayjsLocaleMock: vi.fn(),
   reactI18nextPlugin: { type: "3rdParty" },
   resolveInitialAppLanguageMock: vi.fn(),
@@ -43,10 +47,9 @@ vi.mock("~/utils/i18n/language", () => ({
 }))
 
 vi.mock("~/utils/i18n/resources", () => ({
+  installAppLanguageResources: installAppLanguageResourcesMock,
+  loadAppLanguageResources: loadAppLanguageResourcesMock,
   mapToDayjsLocale: mapToDayjsLocaleMock,
-  resources: {
-    en: { common: { greeting: "Hello" } },
-  },
 }))
 
 vi.mock("i18next-browser-languagedetector", () => ({
@@ -71,6 +74,11 @@ describe("app i18n initialization without a document", () => {
     i18nCoreMock.on.mockReset()
 
     getLanguageMock.mockReset()
+    installAppLanguageResourcesMock.mockReset()
+    loadAppLanguageResourcesMock.mockReset()
+    loadAppLanguageResourcesMock.mockResolvedValue({
+      en: { common: { greeting: "Hello" } },
+    })
     resolveInitialAppLanguageMock.mockReset()
     mapToDayjsLocaleMock.mockReset()
     mapToDayjsLocaleMock.mockImplementation((language: string) => language)
@@ -85,7 +93,8 @@ describe("app i18n initialization without a document", () => {
     resolveInitialAppLanguageMock.mockReturnValueOnce("ja")
 
     try {
-      await import("~/utils/i18n/index")
+      const { i18nReady } = await import("~/utils/i18n/index")
+      await i18nReady
 
       await vi.waitFor(() => {
         expect(getLanguageMock).toHaveBeenCalledTimes(1)
