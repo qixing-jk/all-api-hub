@@ -1,11 +1,11 @@
 # Model List and Price Comparison
 
-> See the details of all models across all your relay sites at a glance. Supports cross-site price comparison, automatic selection of the best group, and batch availability verification to help you make the most cost-effective choice.
+> Bring together model, price, and availability information from your accounts and API credentials, then compare options for the way you plan to use them.
 
 ## Features at a Glance
 
-- 💰 **Real-time Price Comparison**: Automatically calculates the actual unit price of each model at different sites based on billing ratios, group ratios, and exchange rates.
-- 🎯 **Best Path Recommendation**: In the "All Accounts" view, the system highlights the lowest price within the current comparison scope. Within one site, it shows a "Best Group" only when one group has a uniquely lowest price.
+- 💰 **Cross-account Price Comparison**: Compare the same model across accounts and API credentials using a consistent price basis.
+- 🎯 **Usage-aware Estimates**: Choose a workload such as general chat, code completion, or coding agents, or set your own input, output, and cache usage mix.
 - 🔍 **Multi-dimensional Deep Filtering**: Supports combined filtering by site source, API credentials, providers (OpenAI, Anthropic, etc.), billing modes, and tags.
 - ✅ **Batch Availability Verification**: Supports model connectivity testing, token compatibility checks, and CLI proxy availability verification.
 - 📊 **Billing Transparency**: Clearly distinguishes between "Token Billing" and "Per-Call Billing," and shows actual input, output, and cache prices when available.
@@ -25,19 +25,25 @@ In the selector at the top of the page, you can switch between different data so
 - **Specific Account**: View the full model catalog of a specific site.
 - **API credentials**: View models supported by keys saved in the API Credential Library (no site account required).
 
-### 2. Intelligent Price Comparison
+### 2. Compare Prices
 
-Model cards display detailed billing information for the model:
+For a cross-account comparison, click **"Compare Prices"**. The page switches to all accounts and puts the lower-priced offers for each model first.
 
-- **Actual Unit Price**: Token-billed models are converted to **Per 1M Tokens (USD/CNY)**, with separate input, output, and cache prices when available. Per-call models show a **Per Call** price.
-- **Group Prices**: Expand the model details to compare available groups and their ratios. Switching groups updates the calculated price.
-- **Price Badges**: "Estimated" means the price is calculated from available catalog and group information, so the provider's bill remains authoritative. "Lowest Price" identifies the lowest comparable option within the current filters and billing mode. "Best Group" appears only when one available group is uniquely cheapest; tied groups are not ranked against each other.
+- **Set the comparison conditions**: Choose the closest workload, or adjust the input, output, cache-read, and cache-write shares yourself.
+- **Review comparable offers**: Only offers with the same billing mode and all price data required by the current conditions are ranked together. Other offers remain under **"Not compared under current conditions"**, where you can see which price item is unavailable.
+- **Check the price breakdown**: Token-billed models show input, output, and cache prices per 1 million tokens. Per-call models show a price per request. Expand a model to review prices for each group.
+
+Use the price badges as follows:
+
+- **Estimated**: Calculated from the available price table and group information. Use it to shortlist options; the provider's bill remains authoritative.
+- **Lowest Price**: The lowest comparable offer under the current filters and comparison conditions.
+- **Best Group**: Shown when one available group is clearly cheaper than the others. If the lowest price is tied, no single group is selected as best.
 
 ### 3. Group Switching and Simulation
 
-If a site supports multiple user groups (e.g., `default`, `vip`, `svip`), you can switch groups in the filter bar to preview real-time price changes for different tiers.
+If a site supports multiple user groups (for example, `default`, `vip`, or `svip`), use the group filter to choose which groups participate in the comparison, then expand a model to review each group's price.
 
-> 💡 **Tip**: The system calculates with the lowest available group price. If multiple groups have the same price, it does not label any one of them as the "Best Group."
+> 💡 **Tip**: Groups directly affect the calculated unit price. Before using an offer, confirm that your account can access the corresponding group.
 
 ### 4. Model Verification
 
@@ -54,16 +60,17 @@ Click the verification icons on the right side of the model card:
 | **Search Box** | Supports fuzzy search by Model ID (e.g., `gpt-4o`) or site name. |
 | **Billing Mode** | Filter models by "Token Billing" or "Per-Call Billing." |
 | **Provider Filter** | Quickly lock onto models from OpenAI, Anthropic, Google, Meta, and other vendors. |
-| **Sort By** | Supports sorting by Name, Price (Low to High), and Account Count. |
+| **Sort By** | Use the default order, cheapest offer per model, price ascending or descending, or verification latency. |
+| **Price Comparison** | When using a price sort, choose a workload or customize the input, output, and cache shares. |
 | **Display Settings** | Control whether to show CNY prices and endpoint types. |
 
 ## FAQ
 
 | Question | Solution |
 |------|----------|
-| Why do some models show a price of 0? | The site may have set this model to be free, or the site hasn't provided valid billing data, in which case it falls back to the default catalog. |
+| Why is a model priced at 0 or excluded from the comparison? | A model may be free when the site explicitly reports a zero price. If required price data is missing, the page marks the offer as not comparable instead of treating it as free. |
 | How is the exchange rate calculated for cross-site comparison? | The extension has a built-in fixed exchange rate of 1 USD = 7.3 CNY (referencing the New API convention) to provide a uniform comparison baseline. |
-| What does "Best Group" mean? | When a model is available in multiple groups (e.g., `default` and `vip`), the badge appears only for a group with a uniquely lowest price. If the lowest price is tied, no group is presented as better than the others. |
+| Why is an offer shown as "Not compared under current conditions"? | Its source does not provide a price item required by the current usage mix, such as cache-read pricing. Try another workload, adjust the shares, or expand the offer to review the available prices. |
 | Why does the verification result show "Unknown"? | Please check if your API Key has permission to call the model, or if the site is currently triggering a rate limit. |
 
 ## Related Docs
