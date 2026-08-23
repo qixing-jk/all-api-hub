@@ -5,10 +5,10 @@
 ## Features at a Glance
 
 - 💰 **Real-time Price Comparison**: Automatically calculates the actual unit price of each model at different sites based on billing ratios, group ratios, and exchange rates.
-- 🎯 **Best Path Recommendation**: In the "All Accounts" view, the system automatically highlights the "Lowest Price" across all sites or the "Optimal Group" for the current site.
+- 🎯 **Best Path Recommendation**: In the "All Accounts" view, the system highlights the lowest price within the current comparison scope. Within one site, it shows a "Best Group" only when one group has a uniquely lowest price.
 - 🔍 **Multi-dimensional Deep Filtering**: Supports combined filtering by site source, API credentials, providers (OpenAI, Anthropic, etc.), billing modes, and tags.
 - ✅ **Batch Availability Verification**: Supports model connectivity testing, token compatibility checks, and CLI proxy availability verification.
-- 📊 **Billing Transparency**: Clearly distinguishes between "Token Billing" and "Per-Call Billing," and provides official ratio comparisons.
+- 📊 **Billing Transparency**: Clearly distinguishes between "Token Billing" and "Per-Call Billing," and shows actual input, output, and cache prices when available.
 
 ## How to Access
 
@@ -29,16 +29,15 @@ In the selector at the top of the page, you can switch between different data so
 
 Model cards display detailed billing information for the model:
 
-- **Billing Ratio**: Shows the site's model ratio (e.g., `1.5`) and completion ratio (e.g., `2`).
-- **Group Ratio**: Shows the additional ratio for your current group (e.g., `default`, `VIP`).
-- **Actual Unit Price**: The system automatically converts prices to **Per 1M Tokens (USD/CNY)** or **Per Call**.
-- **Lowest Price Badge**: In the "All Accounts" view, sites with the best price will have a green badge.
+- **Actual Unit Price**: Token-billed models are converted to **Per 1M Tokens (USD/CNY)**, with separate input, output, and cache prices when available. Per-call models show a **Per Call** price.
+- **Group Prices**: Expand the model details to compare available groups and their ratios. Switching groups updates the calculated price.
+- **Price Badges**: "Estimated" means the price is calculated from available catalog and group information, so the provider's bill remains authoritative. "Lowest Price" identifies the lowest comparable option within the current filters and billing mode. "Best Group" appears only when one available group is uniquely cheapest; tied groups are not ranked against each other.
 
 ### 3. Group Switching and Simulation
 
 If a site supports multiple user groups (e.g., `default`, `vip`, `svip`), you can switch groups in the filter bar to preview real-time price changes for different tiers.
 
-> 💡 **Tip**: The system defaults to selecting the most cost-effective available group for the model.
+> 💡 **Tip**: The system calculates with the lowest available group price. If multiple groups have the same price, it does not label any one of them as the "Best Group."
 
 ### 4. Model Verification
 
@@ -56,7 +55,7 @@ Click the verification icons on the right side of the model card:
 | **Billing Mode** | Filter models by "Token Billing" or "Per-Call Billing." |
 | **Provider Filter** | Quickly lock onto models from OpenAI, Anthropic, Google, Meta, and other vendors. |
 | **Sort By** | Supports sorting by Name, Price (Low to High), and Account Count. |
-| **Display Settings** | Control whether to show CNY prices, show ratio columns, and show endpoint types. |
+| **Display Settings** | Control whether to show CNY prices and endpoint types. |
 
 ## FAQ
 
@@ -64,7 +63,7 @@ Click the verification icons on the right side of the model card:
 |------|----------|
 | Why do some models show a price of 0? | The site may have set this model to be free, or the site hasn't provided valid billing data, in which case it falls back to the default catalog. |
 | How is the exchange rate calculated for cross-site comparison? | The extension has a built-in fixed exchange rate of 1 USD = 7.3 CNY (referencing the New API convention) to provide a uniform comparison baseline. |
-| What does "Optimal Group" mean? | When a model is available in multiple groups (e.g., `default` and `vip`), the extension automatically selects the group with the lowest ratio to calculate the price. |
+| What does "Best Group" mean? | When a model is available in multiple groups (e.g., `default` and `vip`), the badge appears only for a group with a uniquely lowest price. If the lowest price is tied, no group is presented as better than the others. |
 | Why does the verification result show "Unknown"? | Please check if your API Key has permission to call the model, or if the site is currently triggering a rate limit. |
 
 ## Related Docs
