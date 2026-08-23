@@ -251,7 +251,6 @@
     "description": "Dieser Katalog wird derzeit über einen Kontoschlüssel-Fallback geladen und unterstützt daher nur die Modellerkennung und -überprüfung. „Daten aktualisieren“ wird die direkte Kontoroute erneut versuchen.",
     "title": "Kontoschlüssel-Fallback-Katalog"
   },
-  "groupRatio": "Gruppenverhältnis:",
   "groupRatioTooltip": "Gruppe {{group}} Verhältnis: {{ratio}}x",
   "groupRatioUnavailable": "Gruppenmultiplikator nicht verfügbar",
   "groupSelectionHint": "Lassen Sie dieses Feld leer, um einen Vergleich über alle Gruppen hinweg durchzuführen. Bei der Preissortierung wird der beste Preis innerhalb des ausgewählten Gruppensatzes verwendet",
@@ -339,7 +338,6 @@
     },
     "selectionHint": "Wenn mehrere Funktionen ausgewählt werden, müssen die Modelle allen ausgewählten Funktionen entsprechen."
   },
-  "modelRatio": "Modellverhältnis:",
   "noMatchingModels": "Keine passenden Modelle gefunden",
   "noSourcesDescription": "Fügen Sie ein Website-Konto oder API-Anmeldeinformationen hinzu, bevor Sie die Modellliste anzeigen.",
   "noSourcesTitle": "Noch keine Modellquellen",
@@ -425,7 +423,6 @@
   "selectSourceToContinue": "Wählen Sie oben eine Quelle aus, bevor Sie die Modellliste anzeigen.",
   "showing_one": "Zeigt {{count}} Modell",
   "showing_other": "Zeigt {{count}} Modelle",
-  "showRatio": "Verhältnis anzeigen",
   "siteSupportedGroups": "Von der Website unterstützte Gruppen",
   "sortBy": "Sortieren nach",
   "sortOptions": {

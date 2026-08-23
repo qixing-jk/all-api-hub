@@ -133,8 +133,6 @@ export default function ModelList(props: {
     // Display options
     showRealPrice,
     setShowRealPrice,
-    showRatioColumn,
-    setShowRatioColumn,
     showEndpointTypes,
     setShowEndpointTypes,
     selectedVerificationResults,
@@ -528,7 +526,6 @@ export default function ModelList(props: {
           : undefined
       }
       showRealPrice={showRealPrice}
-      showRatioColumn={showRatioColumn}
       showEndpointTypes={showEndpointTypes}
       showPriceComparisonGroups={
         isAllAccountsScope &&
@@ -816,8 +813,6 @@ export default function ModelList(props: {
             singleSourceGroupRatios={singleSourceGroupRatios}
             showRealPrice={showRealPrice}
             setShowRealPrice={setShowRealPrice}
-            showRatioColumn={showRatioColumn}
-            setShowRatioColumn={setShowRatioColumn}
             showEndpointTypes={showEndpointTypes}
             setShowEndpointTypes={setShowEndpointTypes}
             totalModels={totalModels}

@@ -58,7 +58,6 @@ interface ModelDisplayProps {
   onModelClick?: (model: CalculatedModelItem) => void
   count?: number
   showRealPrice: boolean
-  showRatioColumn: boolean
   showEndpointTypes: boolean
   showPriceComparisonGroups?: boolean
   handleGroupClick: (group: string) => void
@@ -149,7 +148,6 @@ export function ModelDisplay(props: ModelDisplayProps) {
     onVerifyCliSupport,
     onOpenModelKeyDialog,
     showRealPrice,
-    showRatioColumn,
     showEndpointTypes,
     showPriceComparisonGroups = false,
     handleGroupClick,
@@ -241,7 +239,6 @@ export function ModelDisplay(props: ModelDisplayProps) {
         calculatedPrice={item.calculatedPrice}
         exchangeRate={exchangeRate}
         showRealPrice={showRealPrice}
-        showRatioColumn={showRatioColumn}
         showEndpointTypes={showEndpointTypes}
         groupRatios={item.groupRatios}
         groupContext={item.groupContext}

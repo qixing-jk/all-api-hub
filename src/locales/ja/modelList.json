@@ -243,7 +243,6 @@
     "description": "このカタログは現在アカウントキーのフォールバック経由で読み込まれているため、モデル検出と検証のみ利用できます。[データを更新] を押すと直接のアカウント経路を再試行します。",
     "title": "アカウントキーフォールバックのカタログ"
   },
-  "groupRatio": "グループ倍率:",
   "groupRatioTooltip": "グループ {{group}} の倍率: {{ratio}}x",
   "groupRatioUnavailable": "グループ倍率を取得できません",
   "groupSelectionHint": "未選択なら全グループ対象です。価格ソートは選択済みグループ範囲内の最安値を使います",
@@ -331,7 +330,6 @@
     },
     "selectionHint": "複数の能力を選択すると、モデルは選択したすべての能力を満たす必要があります。"
   },
-  "modelRatio": "モデル倍率:",
   "noMatchingModels": "一致するモデルが見つかりません",
   "noSourcesDescription": "モデル一覧を表示するには、先にサイトアカウントまたは API 認証情報を追加してください。",
   "noSourcesTitle": "利用できるデータソースがありません",
@@ -416,7 +414,6 @@
   "selectSource": "ソースを選択",
   "selectSourceToContinue": "上のデータソースを選択してから、モデル一覧を表示してください。",
   "showing_other": "{{count}} モデルを表示中",
-  "showRatio": "倍率を表示",
   "siteSupportedGroups": "サイトが対応するグループ",
   "sortBy": "並び順",
   "sortOptions": {

@@ -70,7 +70,6 @@ interface ModelItemProps {
   calculatedPrice: CalculatedPrice
   exchangeRate: number
   showRealPrice: boolean
-  showRatioColumn: boolean
   showEndpointTypes: boolean
   groupRatios: Record<string, number>
   groupContext: ModelGroupContext
@@ -119,7 +118,6 @@ export default function ModelItem(props: ModelItemProps) {
     calculatedPrice,
     exchangeRate,
     showRealPrice,
-    showRatioColumn,
     showEndpointTypes,
     groupRatios,
     groupContext,
@@ -236,9 +234,6 @@ export default function ModelItem(props: ModelItemProps) {
     supportsPricing:
       source.capabilities.supportsPricing &&
       displayCapabilities.supportsPricing,
-    supportsRatioDisplay:
-      source.capabilities.supportsRatioDisplay &&
-      displayCapabilities.supportsRatioDisplay,
     supportsGroupFiltering:
       source.capabilities.supportsGroupFiltering &&
       displayCapabilities.supportsGroupFiltering,
@@ -459,9 +454,6 @@ export default function ModelItem(props: ModelItemProps) {
               exchangeRate={exchangeRate}
               showRealPrice={showRealPrice}
               showPricing={showPricing}
-              showRatioColumn={
-                showRatioColumn && effectiveCapabilities.supportsRatioDisplay
-              }
               isAvailableForUser={isAvailableForUser}
               isLowestPrice={isLowestPrice}
               effectiveGroup={effectiveGroup}

@@ -713,7 +713,6 @@ describe("useModelListData", () => {
     expect(result.current.sourceCapabilities).toMatchObject({
       supportsRuntimeModelList: true,
       supportsPricing: false,
-      supportsRatioDisplay: false,
       supportsGroupFiltering: false,
       supportsAccountSummary: false,
       supportsTokenCompatibility: true,
@@ -788,7 +787,6 @@ describe("useModelListData", () => {
     expect(result.current.sourceCapabilities).toMatchObject({
       supportsRuntimeModelList: true,
       supportsPricing: true,
-      supportsRatioDisplay: true,
       supportsGroupFiltering: true,
       supportsAccountSummary: false,
       supportsTokenCompatibility: true,
@@ -893,7 +891,6 @@ describe("useModelListData", () => {
               provider: SITE_TYPES.OPENROUTER,
               supportsPricing: true,
               actionPolicy: {
-                supportsRatioDisplay: false,
                 supportsGroupFiltering: false,
                 supportsAccountSummary: false,
                 supportsTokenCompatibility: false,
@@ -928,7 +925,6 @@ describe("useModelListData", () => {
 
     expect(result.current.sourceCapabilities).toMatchObject({
       supportsPricing: true,
-      supportsRatioDisplay: false,
       supportsGroupFiltering: false,
       supportsAccountSummary: false,
       supportsCredentialVerification: false,
@@ -967,7 +963,6 @@ describe("useModelListData", () => {
               provider: SITE_TYPES.OPENROUTER,
               supportsPricing: true,
               actionPolicy: {
-                supportsRatioDisplay: false,
                 supportsGroupFiltering: false,
                 supportsAccountSummary: false,
                 supportsTokenCompatibility: false,
@@ -1002,7 +997,6 @@ describe("useModelListData", () => {
 
     expect(result.current.sourceCapabilities).toMatchObject({
       supportsPricing: true,
-      supportsRatioDisplay: true,
       supportsGroupFiltering: true,
       supportsAccountSummary: true,
       supportsBatchCredentialVerification: true,

@@ -287,7 +287,6 @@ describe("Model item pricing and description", () => {
           exchangeRate={7}
           showRealPrice={false}
           showPricing={false}
-          showRatioColumn={true}
           isAvailableForUser={true}
           groupRatios={{}}
         />,
@@ -296,7 +295,7 @@ describe("Model item pricing and description", () => {
       expect(container).toBeEmptyDOMElement()
     })
 
-    it("renders token billing prices and ratio metadata when enabled", () => {
+    it("renders token billing prices without internal ratio metadata", () => {
       isTokenBillingTypeMock.mockReturnValue(true)
 
       render(
@@ -306,34 +305,14 @@ describe("Model item pricing and description", () => {
           exchangeRate={7}
           showRealPrice={false}
           showPricing={true}
-          showRatioColumn={true}
           isAvailableForUser={false}
           groupRatios={{}}
         />,
       )
 
       expect(screen.getByText("USD:1.25/M")).toBeInTheDocument()
-      expect(screen.getByText("modelRatio")).toBeInTheDocument()
-      expect(screen.getByText("3.5x")).toHaveClass("text-gray-500")
-    })
-
-    it("uses the active ratio styling for available token-billing models", () => {
-      isTokenBillingTypeMock.mockReturnValue(true)
-
-      render(
-        <ModelItemPricing
-          model={createModel({ model_ratio: 2 })}
-          calculatedPrice={createCalculatedPrice()}
-          exchangeRate={7}
-          showRealPrice={false}
-          showPricing={true}
-          showRatioColumn={true}
-          isAvailableForUser={true}
-          groupRatios={{}}
-        />,
-      )
-
-      expect(screen.getByText("2x")).toHaveClass("text-gray-900")
+      expect(screen.queryByText("modelRatio")).not.toBeInTheDocument()
+      expect(screen.queryByText("3.5x")).not.toBeInTheDocument()
     })
 
     it("renders per-call pricing when the model charges per request", () => {
@@ -346,7 +325,6 @@ describe("Model item pricing and description", () => {
           exchangeRate={5}
           showRealPrice={false}
           showPricing={true}
-          showRatioColumn={false}
           isAvailableForUser={true}
           groupRatios={{}}
         />,
@@ -367,7 +345,6 @@ describe("Model item pricing and description", () => {
           exchangeRate={5}
           showRealPrice={false}
           showPricing={true}
-          showRatioColumn={false}
           isAvailableForUser={true}
           groupRatios={{}}
         />,
@@ -378,7 +355,7 @@ describe("Model item pricing and description", () => {
       expect(screen.queryByText("modelRatio")).not.toBeInTheDocument()
     })
 
-    it("renders the optimal-group indicator beside ratio metadata and uses title-only explanation for the lowest price", () => {
+    it("renders the optimal-group indicator beside prices and uses title-only explanation for the lowest price", () => {
       isTokenBillingTypeMock.mockReturnValue(true)
 
       render(
@@ -388,7 +365,6 @@ describe("Model item pricing and description", () => {
           exchangeRate={7}
           showRealPrice={false}
           showPricing={true}
-          showRatioColumn={true}
           isAvailableForUser={true}
           isLowestPrice={true}
           effectiveGroup="vip"
@@ -397,7 +373,7 @@ describe("Model item pricing and description", () => {
         />,
       )
 
-      expect(screen.getByText("modelRatio")).toBeInTheDocument()
+      expect(screen.queryByText("modelRatio")).not.toBeInTheDocument()
       expect(screen.getByText("optimalGroup:vip (2x)")).toBeInTheDocument()
       expect(screen.getByText("optimalGroup:vip (2x)")).toHaveAttribute(
         "title",
@@ -416,7 +392,6 @@ describe("Model item pricing and description", () => {
           exchangeRate={7}
           showRealPrice={false}
           showPricing={true}
-          showRatioColumn={false}
           isAvailableForUser={true}
           isLowestPrice={false}
           effectiveGroup="vip"
@@ -442,7 +417,6 @@ describe("Model item pricing and description", () => {
           exchangeRate={7}
           showRealPrice={false}
           showPricing={true}
-          showRatioColumn={false}
           isAvailableForUser={true}
           isLowestPrice={true}
           effectiveGroup="vip"
@@ -468,7 +442,6 @@ describe("Model item pricing and description", () => {
           exchangeRate={7}
           showRealPrice={false}
           showPricing={true}
-          showRatioColumn={false}
           isAvailableForUser={true}
           isLowestPrice={true}
           groupRatios={{}}
@@ -507,7 +480,6 @@ describe("Model item pricing and description", () => {
           exchangeRate={7}
           showRealPrice={false}
           showPricing={true}
-          showRatioColumn={true}
           isAvailableForUser={true}
           groupRatios={{}}
         />,
@@ -544,7 +516,6 @@ describe("Model item pricing and description", () => {
           exchangeRate={7}
           showRealPrice={false}
           showPricing={true}
-          showRatioColumn={true}
           isAvailableForUser={true}
           groupRatios={{}}
         />,
@@ -574,7 +545,6 @@ describe("Model item pricing and description", () => {
           exchangeRate={7}
           showRealPrice={false}
           showPricing={true}
-          showRatioColumn={true}
           isAvailableForUser={true}
           groupRatios={{}}
         />,
@@ -605,7 +575,6 @@ describe("Model item pricing and description", () => {
           exchangeRate={7}
           showRealPrice={false}
           showPricing={true}
-          showRatioColumn={false}
           isAvailableForUser={true}
           groupRatios={{}}
         />,
@@ -630,7 +599,6 @@ describe("Model item pricing and description", () => {
           exchangeRate={7}
           showRealPrice={false}
           showPricing={true}
-          showRatioColumn={true}
           isAvailableForUser={false}
           groupRatios={{}}
         />,
@@ -670,7 +638,6 @@ describe("Model item pricing and description", () => {
           exchangeRate={7}
           showRealPrice={false}
           showPricing={true}
-          showRatioColumn={false}
           isAvailableForUser={true}
           groupRatios={{ default: 1 }}
         />,
@@ -686,7 +653,7 @@ describe("Model item pricing and description", () => {
       expect(screen.queryByText("2026-06-14")).toBeNull()
     })
 
-    it("shows the effective group ratio for estimated Sub2API prices", () => {
+    it("keeps estimate context without exposing its effective group ratio", () => {
       isTokenBillingTypeMock.mockReturnValue(true)
 
       render(
@@ -712,19 +679,19 @@ describe("Model item pricing and description", () => {
           exchangeRate={7}
           showRealPrice={false}
           showPricing={true}
-          showRatioColumn={true}
           isAvailableForUser={true}
           effectiveGroup="vip"
           groupRatios={{ vip: 2 }}
         />,
       )
 
-      expect(screen.getByText("groupRatio")).toBeInTheDocument()
-      expect(screen.getByText("2x")).toBeInTheDocument()
+      expect(screen.getByText("estimatedPrice")).toBeInTheDocument()
+      expect(screen.queryByText("groupRatio")).not.toBeInTheDocument()
+      expect(screen.queryByText("2x")).not.toBeInTheDocument()
       expect(screen.queryByText("0x")).toBeNull()
     })
 
-    it("does not label an estimated model ratio as a group ratio without an effective group", () => {
+    it("omits internal ratio metadata when an estimate has no effective group", () => {
       isTokenBillingTypeMock.mockReturnValue(true)
 
       render(
@@ -740,13 +707,13 @@ describe("Model item pricing and description", () => {
           exchangeRate={7}
           showRealPrice={false}
           showPricing={true}
-          showRatioColumn={true}
           isAvailableForUser={true}
           groupRatios={{ default: 1 }}
         />,
       )
 
-      expect(screen.getByText("modelRatio")).toBeInTheDocument()
+      expect(screen.getByText("estimatedPrice")).toBeInTheDocument()
+      expect(screen.queryByText("modelRatio")).not.toBeInTheDocument()
       expect(screen.queryByText("groupRatio")).not.toBeInTheDocument()
     })
 
@@ -771,7 +738,6 @@ describe("Model item pricing and description", () => {
           exchangeRate={7}
           showRealPrice={false}
           showPricing={true}
-          showRatioColumn={true}
           isAvailableForUser={true}
           effectiveGroup="vip"
           groupRatios={{}}
@@ -795,7 +761,6 @@ describe("Model item pricing and description", () => {
           exchangeRate={7}
           showRealPrice={false}
           showPricing={true}
-          showRatioColumn={false}
           isAvailableForUser={true}
           isLowestPrice={false}
           effectiveGroup="vip"

@@ -295,7 +295,6 @@ const productCanonicalModelSchema = z
   })
 
 const actionPolicySchema = z.strictObject({
-  supportsRatioDisplay: z.boolean(),
   supportsGroupFiltering: z.boolean(),
   supportsAccountSummary: z.boolean(),
   supportsTokenCompatibility: z.boolean(),

@@ -35,7 +35,6 @@ const ACCOUNT_SOURCE = {
   account: ACCOUNT,
   capabilities: {
     supportsPricing: false,
-    supportsRatioDisplay: false,
     supportsGroupFiltering: false,
     supportsAccountSummary: false,
     supportsTokenCompatibility: true,

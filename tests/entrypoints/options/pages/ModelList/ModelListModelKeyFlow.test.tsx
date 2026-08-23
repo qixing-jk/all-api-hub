@@ -117,8 +117,6 @@ vi.mock("~/features/ModelList/hooks/useModelListData", () => ({
     // Display options
     showRealPrice: false,
     setShowRealPrice: vi.fn(),
-    showRatioColumn: false,
-    setShowRatioColumn: vi.fn(),
     showEndpointTypes: false,
     setShowEndpointTypes: vi.fn(),
 

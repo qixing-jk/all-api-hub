@@ -66,7 +66,6 @@ export function useModelListState() {
 
   // 显示选项
   const [showRealPrice, setShowRealPrice] = useState(false) // 是否显示真实价格
-  const [showRatioColumn, setShowRatioColumn] = useState(true) // 是否显示倍率列
   const [showEndpointTypes, setShowEndpointTypes] = useState(true) // 是否显示端点类型
 
   return {
@@ -96,8 +95,6 @@ export function useModelListState() {
     setSelectedVerificationResults,
     showRealPrice,
     setShowRealPrice,
-    showRatioColumn,
-    setShowRatioColumn,
     showEndpointTypes,
     setShowEndpointTypes,
   }

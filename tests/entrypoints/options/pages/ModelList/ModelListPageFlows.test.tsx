@@ -356,8 +356,6 @@ function buildState(overrides: Record<string, any> = {}) {
 
     showRealPrice: false,
     setShowRealPrice: vi.fn(),
-    showRatioColumn: false,
-    setShowRatioColumn: vi.fn(),
     showEndpointTypes: false,
     setShowEndpointTypes: vi.fn(),
 

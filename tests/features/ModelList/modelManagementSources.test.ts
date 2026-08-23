@@ -95,7 +95,6 @@ describe("modelManagementSources group semantics", () => {
         modelListSource: {
           supportsPricing: true,
           actionPolicy: {
-            supportsRatioDisplay: false,
             supportsGroupFiltering: false,
             supportsAccountSummary: false,
             supportsTokenCompatibility: false,
@@ -107,7 +106,6 @@ describe("modelManagementSources group semantics", () => {
       }),
     ).toMatchObject({
       supportsPricing: true,
-      supportsRatioDisplay: false,
       supportsGroupFiltering: false,
       supportsAccountSummary: false,
       supportsTokenCompatibility: false,
@@ -122,7 +120,6 @@ describe("modelManagementSources group semantics", () => {
     const providerCatalogPolicy = {
       supportsPricing: true,
       actionPolicy: {
-        supportsRatioDisplay: false,
         supportsGroupFiltering: false,
         supportsAccountSummary: false,
         supportsTokenCompatibility: false,
@@ -139,7 +136,6 @@ describe("modelManagementSources group semantics", () => {
       }),
     ).toMatchObject({
       supportsPricing: true,
-      supportsRatioDisplay: false,
       supportsGroupFiltering: false,
       supportsAccountSummary: false,
       supportsCredentialVerification: false,
@@ -155,7 +151,6 @@ describe("modelManagementSources group semantics", () => {
       }),
     ).toMatchObject({
       supportsPricing: true,
-      supportsRatioDisplay: true,
       supportsGroupFiltering: true,
       supportsAccountSummary: true,
       supportsCredentialVerification: false,

@@ -106,8 +106,6 @@ interface ControlPanelProps {
   singleSourceGroupRatios: Record<string, number>
   showRealPrice: boolean
   setShowRealPrice: (show: boolean) => void
-  showRatioColumn: boolean
-  setShowRatioColumn: (show: boolean) => void
   showEndpointTypes: boolean
   setShowEndpointTypes: (show: boolean) => void
   totalModels: number
@@ -152,8 +150,6 @@ interface ControlPanelProps {
  * @param props.singleSourceGroupRatios Normalized ratios used in group labels.
  * @param props.showRealPrice Whether to display real price values.
  * @param props.setShowRealPrice Setter for real price toggle.
- * @param props.showRatioColumn Whether to show ratio column.
- * @param props.setShowRatioColumn Setter for ratio column toggle.
  * @param props.showEndpointTypes Whether to show endpoint types.
  * @param props.setShowEndpointTypes Setter for endpoint type toggle.
  * @param props.totalModels Total models available.
@@ -189,8 +185,6 @@ export function ControlPanel({
   singleSourceGroupRatios,
   showRealPrice,
   setShowRealPrice,
-  showRatioColumn,
-  setShowRatioColumn,
   showEndpointTypes,
   setShowEndpointTypes,
   totalModels,
@@ -664,17 +658,6 @@ export function ControlPanel({
                       size="sm"
                     />
                     <Label className="cursor-pointer">{t("realAmount")}</Label>
-                  </label>
-                )}
-
-                {sourceCapabilities.supportsRatioDisplay && (
-                  <label className="flex cursor-pointer items-center space-x-2">
-                    <Switch
-                      checked={showRatioColumn}
-                      onChange={setShowRatioColumn}
-                      size="sm"
-                    />
-                    <Label className="cursor-pointer">{t("showRatio")}</Label>
                   </label>
                 )}
 

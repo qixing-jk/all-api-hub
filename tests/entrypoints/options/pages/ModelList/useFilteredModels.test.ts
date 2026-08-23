@@ -2582,7 +2582,6 @@ describe("useFilteredModels", () => {
                 supportsRuntimeModelList: false,
                 supportsPricing: true,
                 actionPolicy: {
-                  supportsRatioDisplay: false,
                   supportsGroupFiltering: false,
                   supportsAccountSummary: false,
                   supportsTokenCompatibility: false,
@@ -2620,7 +2619,6 @@ describe("useFilteredModels", () => {
     ).toEqual([[ordinaryAccount.id, 1]])
     expect(result.current.filteredModels[0]?.source.capabilities).toMatchObject(
       {
-        supportsRatioDisplay: false,
         supportsGroupFiltering: false,
         supportsAccountSummary: false,
         supportsTokenCompatibility: false,

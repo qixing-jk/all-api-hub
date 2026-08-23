@@ -162,7 +162,6 @@ describe("OpenRouter provider model catalog Adapter", () => {
       supportsRuntimeModelList: false,
       supportsPricing: true,
       actionPolicy: {
-        supportsRatioDisplay: false,
         supportsGroupFiltering: false,
         supportsAccountSummary: false,
         supportsTokenCompatibility: false,

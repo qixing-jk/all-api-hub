@@ -133,8 +133,6 @@ function buildState(overrides: Record<string, unknown> = {}) {
     setSortMode: vi.fn(),
     showRealPrice: false,
     setShowRealPrice: vi.fn(),
-    showRatioColumn: false,
-    setShowRatioColumn: vi.fn(),
     showEndpointTypes: false,
     setShowEndpointTypes: vi.fn(),
     pricingData: null,

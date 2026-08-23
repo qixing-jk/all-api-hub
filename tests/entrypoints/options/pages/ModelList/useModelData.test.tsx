@@ -233,7 +233,6 @@ const createProviderCatalogModelListSource = () => ({
   supportsRuntimeModelList: false,
   supportsPricing: true,
   actionPolicy: {
-    supportsRatioDisplay: false,
     supportsGroupFiltering: false,
     supportsAccountSummary: false,
     supportsTokenCompatibility: false,
