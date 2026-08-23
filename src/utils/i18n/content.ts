@@ -1,13 +1,3 @@
-import dayjs from "dayjs"
-
-import "dayjs/locale/de"
-import "dayjs/locale/es"
-import "dayjs/locale/ja"
-import "dayjs/locale/pt-br"
-import "dayjs/locale/vi"
-import "dayjs/locale/zh-cn"
-import "dayjs/locale/zh-tw"
-
 import { initReactI18next } from "react-i18next"
 
 import { DEFAULT_LANG } from "~/constants"
@@ -16,7 +6,7 @@ import { userPreferences } from "~/services/preferences/userPreferences"
 import { applyPreferenceLanguage } from "./applyPreferenceLanguage"
 import i18n from "./core"
 import { resolveInitialAppLanguage } from "./language"
-import { loadAppLanguageResources, mapToDayjsLocale } from "./resources"
+import { loadAppLanguageResources } from "./resources"
 
 let contentI18nReadyPromise: Promise<void> | null = null
 let contentI18nInitialized = false
@@ -43,7 +33,6 @@ async function initContentI18n() {
   })
 
   await i18n.changeLanguage(initialLanguage)
-  dayjs.locale(mapToDayjsLocale(initialLanguage))
   contentI18nInitialized = true
 }
 
@@ -65,7 +54,3 @@ export async function ensureContentI18nReady() {
     await applyPreferenceLanguage(await userPreferences.getLanguage())
   }
 }
-
-i18n.on("languageChanged", (lng) => {
-  dayjs.locale(mapToDayjsLocale(lng))
-})

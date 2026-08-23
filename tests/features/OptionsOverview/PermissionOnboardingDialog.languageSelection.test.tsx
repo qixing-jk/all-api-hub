@@ -177,17 +177,15 @@ vi.mock("~/utils/core/toastHelpers", () => ({
   showResultToast: toastHelperMocks.showResultToast,
 }))
 
-vi.mock("~/utils/i18n/resources", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("~/utils/i18n/resources")>()
-
-  return {
-    ...actual,
-    changeAppLanguage: (
-      instance: { changeLanguage: (language: string) => Promise<unknown> },
-      language: string,
-    ) => instance.changeLanguage(language),
-  }
-})
+vi.mock("~/utils/i18n/pageLanguage", () => ({
+  changePageLanguage: async (
+    instance: { changeLanguage: (language: string) => Promise<unknown> },
+    language: string,
+  ) => {
+    await instance.changeLanguage(language)
+    return true
+  },
+}))
 
 vi.mock("~/contexts/ReleaseUpdateStatusContext", () => ({
   useReleaseUpdateStatus: () => ({

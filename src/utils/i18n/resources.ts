@@ -3,8 +3,6 @@ import type { i18n, Resource, ResourceLanguage } from "i18next"
 import {
   APP_LOCALE_ASSET_DIR,
   DEFAULT_LANG,
-  GERMAN_LANG,
-  SPANISH_LATIN_AMERICA_LANG,
   type SupportedUiLanguage,
 } from "~/constants/i18n"
 import { getExtensionResourceUrl } from "~/utils/browser/extensionResourceUrl"
@@ -97,15 +95,4 @@ export async function changeAppLanguage(
     await loadAppLanguageResources(language),
   )
   await instance.changeLanguage(language)
-}
-
-/**
- * Convert i18next language codes into dayjs-compatible locale names.
- */
-export function mapToDayjsLocale(lng: string): string {
-  const normalized = lng.toLowerCase().replace("_", "-")
-  if (normalized === GERMAN_LANG || normalized.startsWith(`${GERMAN_LANG}-`)) {
-    return GERMAN_LANG
-  }
-  return normalized === SPANISH_LATIN_AMERICA_LANG ? "es" : normalized
 }

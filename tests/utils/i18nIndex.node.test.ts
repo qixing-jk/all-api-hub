@@ -9,8 +9,8 @@ const {
   i18nCoreMock,
   installAppLanguageResourcesMock,
   languageDetectorPlugin,
+  loadDayjsLocaleMock,
   loadAppLanguageResourcesMock,
-  mapToDayjsLocaleMock,
   reactI18nextPlugin,
   resolveInitialAppLanguageMock,
 } = vi.hoisted(() => ({
@@ -25,8 +25,8 @@ const {
   },
   installAppLanguageResourcesMock: vi.fn(),
   languageDetectorPlugin: { type: "languageDetector" },
+  loadDayjsLocaleMock: vi.fn(),
   loadAppLanguageResourcesMock: vi.fn(),
-  mapToDayjsLocaleMock: vi.fn(),
   reactI18nextPlugin: { type: "3rdParty" },
   resolveInitialAppLanguageMock: vi.fn(),
 }))
@@ -49,7 +49,10 @@ vi.mock("~/utils/i18n/language", () => ({
 vi.mock("~/utils/i18n/resources", () => ({
   installAppLanguageResources: installAppLanguageResourcesMock,
   loadAppLanguageResources: loadAppLanguageResourcesMock,
-  mapToDayjsLocale: mapToDayjsLocaleMock,
+}))
+
+vi.mock("~/utils/i18n/dayjsLocale", () => ({
+  loadDayjsLocale: loadDayjsLocaleMock,
 }))
 
 vi.mock("i18next-browser-languagedetector", () => ({
@@ -80,8 +83,8 @@ describe("app i18n initialization without a document", () => {
       en: { common: { greeting: "Hello" } },
     })
     resolveInitialAppLanguageMock.mockReset()
-    mapToDayjsLocaleMock.mockReset()
-    mapToDayjsLocaleMock.mockImplementation((language: string) => language)
+    loadDayjsLocaleMock.mockReset()
+    loadDayjsLocaleMock.mockImplementation(async (language: string) => language)
 
     i18nCoreMock.language = "en"
     i18nCoreMock.resolvedLanguage = "en"

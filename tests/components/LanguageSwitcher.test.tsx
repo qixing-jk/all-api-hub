@@ -49,11 +49,14 @@ vi.mock("~/services/preferences/userPreferences", () => ({
   },
 }))
 
-vi.mock("~/utils/i18n/resources", () => ({
-  changeAppLanguage: (
+vi.mock("~/utils/i18n/pageLanguage", () => ({
+  changePageLanguage: async (
     instance: { changeLanguage: (language: string) => Promise<void> },
     language: string,
-  ) => instance.changeLanguage(language),
+  ) => {
+    await instance.changeLanguage(language)
+    return true
+  },
 }))
 
 const selectContext = createContext<{

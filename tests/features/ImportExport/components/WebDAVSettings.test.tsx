@@ -1503,7 +1503,10 @@ describe("WebDAVSettings", () => {
         { preserveWebdav: true },
       )
       expect(mockUserPreferences.getLanguage).toHaveBeenCalledTimes(1)
-      expect(mockApplyPreferenceLanguage).toHaveBeenCalledWith("ja")
+      expect(mockApplyPreferenceLanguage).toHaveBeenCalledWith(
+        "ja",
+        expect.any(Function),
+      )
     })
     expect(
       mockUserPreferences.savePreferencesWithResult,
@@ -1908,7 +1911,10 @@ describe("WebDAVSettings", () => {
         { preserveWebdav: true },
       )
       expect(mockUserPreferences.getLanguage).toHaveBeenCalledTimes(1)
-      expect(mockApplyPreferenceLanguage).toHaveBeenCalledWith("ja")
+      expect(mockApplyPreferenceLanguage).toHaveBeenCalledWith(
+        "ja",
+        expect.any(Function),
+      )
       expect(mockUserPreferences.getPreferences).toHaveBeenCalledTimes(2)
       expect(toast.success).toHaveBeenCalledWith(
         "importExport:import.importSuccess",

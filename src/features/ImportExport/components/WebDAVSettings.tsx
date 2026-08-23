@@ -74,6 +74,7 @@ import { createLogger } from "~/utils/core/logger"
 import { getPreferenceWriteFailureMessage } from "~/utils/core/toastHelpers"
 import { applyPreferenceLanguage } from "~/utils/i18n/applyPreferenceLanguage"
 import { t as translate } from "~/utils/i18n/core"
+import { changePageLanguage } from "~/utils/i18n/pageLanguage"
 
 import { WEBDAV_TARGET_IDS } from "../searchTargets"
 import { IMPORT_EXPORT_TEST_IDS } from "../testIds"
@@ -635,7 +636,10 @@ export default function WebDAVSettings() {
       const result = await handleImportWithSelection(data)
       if (result.allImported || result.sections?.preferences) {
         await loadPreferences()
-        await applyPreferenceLanguage(await userPreferences.getLanguage())
+        await applyPreferenceLanguage(
+          await userPreferences.getLanguage(),
+          changePageLanguage,
+        )
       }
       if (result.allImported) {
         toast.success(t("importExport:import.importSuccess"))
@@ -738,7 +742,10 @@ export default function WebDAVSettings() {
         const refreshedPreferences = await userPreferences.getPreferences()
         importedPreferencesLastUpdated = refreshedPreferences.lastUpdated
         await loadPreferences()
-        await applyPreferenceLanguage(await userPreferences.getLanguage())
+        await applyPreferenceLanguage(
+          await userPreferences.getLanguage(),
+          changePageLanguage,
+        )
       }
 
       if (saveDecryptPassword) {

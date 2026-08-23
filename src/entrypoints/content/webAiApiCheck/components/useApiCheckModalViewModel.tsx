@@ -2,10 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import toast from "react-hot-toast/headless"
 import { useTranslation } from "react-i18next"
 
-import {
-  getDatePickerLocale,
-  parseDatePickerTimestamp,
-} from "~/components/ui/datePickerValue"
+import { parseDatePickerTimestamp } from "~/components/ui/datePickerValue"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
   resolveProductAnalyticsErrorCategoryFromError,
@@ -82,7 +79,7 @@ export interface ApiCheckModalViewModel {
   selectedTagIds: string[]
   notes: string
   expiresAtInput: string
-  datePickerLocale: ReturnType<typeof getDatePickerLocale>
+  datePickerLanguage: string
   isProfileOptionsOpen: boolean
   hasProfileMetadataInput: boolean
   isFetchingModels: boolean
@@ -601,11 +598,6 @@ export function useApiCheckModalViewModel() {
     ],
     [],
   )
-  const datePickerLocale = useMemo(
-    () => getDatePickerLocale(i18n.language),
-    [i18n.language],
-  )
-
   return {
     view: {
       isOpen,
@@ -623,7 +615,7 @@ export function useApiCheckModalViewModel() {
       selectedTagIds,
       notes,
       expiresAtInput,
-      datePickerLocale,
+      datePickerLanguage: i18n.language,
       isProfileOptionsOpen,
       hasProfileMetadataInput,
       isFetchingModels,

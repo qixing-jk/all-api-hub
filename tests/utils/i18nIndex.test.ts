@@ -11,8 +11,8 @@ const {
   i18nCoreMock,
   languageDetectorPlugin,
   installAppLanguageResourcesMock,
+  loadDayjsLocaleMock,
   loadAppLanguageResourcesMock,
-  mapToDayjsLocaleMock,
   reactI18nextPlugin,
   resolveInitialAppLanguageMock,
 } = vi.hoisted(() => ({
@@ -27,8 +27,8 @@ const {
   },
   languageDetectorPlugin: { type: "languageDetector" },
   installAppLanguageResourcesMock: vi.fn(),
+  loadDayjsLocaleMock: vi.fn(),
   loadAppLanguageResourcesMock: vi.fn(),
-  mapToDayjsLocaleMock: vi.fn(),
   reactI18nextPlugin: { type: "3rdParty" },
   resolveInitialAppLanguageMock: vi.fn(),
 }))
@@ -65,7 +65,10 @@ vi.mock("~/utils/i18n/language", () => ({
 vi.mock("~/utils/i18n/resources", () => ({
   installAppLanguageResources: installAppLanguageResourcesMock,
   loadAppLanguageResources: loadAppLanguageResourcesMock,
-  mapToDayjsLocale: mapToDayjsLocaleMock,
+}))
+
+vi.mock("~/utils/i18n/dayjsLocale", () => ({
+  loadDayjsLocale: loadDayjsLocaleMock,
 }))
 
 vi.mock("i18next-browser-languagedetector", () => ({
@@ -97,10 +100,12 @@ describe("app i18n initialization", () => {
       en: { common: { greeting: "Hello" } },
     })
     resolveInitialAppLanguageMock.mockReset()
-    mapToDayjsLocaleMock.mockReset()
-    mapToDayjsLocaleMock.mockImplementation((language: string) =>
-      language.toLowerCase().replace("_", "-"),
-    )
+    loadDayjsLocaleMock.mockReset()
+    loadDayjsLocaleMock.mockImplementation(async (language: string) => {
+      if (language === "pt-BR") return "pt-br"
+      if (language === "zh-TW") return "zh-tw"
+      return language.toLowerCase().replace("_", "-")
+    })
 
     i18nCoreMock.language = "en"
     i18nCoreMock.resolvedLanguage = "en"
@@ -167,7 +172,7 @@ describe("app i18n initialization", () => {
       expect(languageChangedHandler).toBeTypeOf("function")
       languageChangedHandler?.("zh_TW")
 
-      expect(localeSpy).toHaveBeenLastCalledWith("zh-tw")
+      expect(localeSpy).toHaveBeenLastCalledWith("ja")
       expect(document.documentElement.lang).toBe("zh-TW")
     } finally {
       localeSpy.mockRestore()

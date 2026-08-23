@@ -26,7 +26,7 @@ import {
   normalizeAppLanguage,
   UI_LANGUAGE_OPTIONS,
 } from "~/utils/i18n/language"
-import { changeAppLanguage } from "~/utils/i18n/resources"
+import { changePageLanguage } from "~/utils/i18n/pageLanguage"
 
 interface LanguageSwitcherProps {
   className?: string
@@ -105,7 +105,8 @@ export function LanguageSwitcher({
 
   const handleLanguageChange = async (language: SupportedUiLanguage) => {
     if (language !== activeLanguage) {
-      await changeAppLanguage(i18n, language)
+      const applied = await changePageLanguage(i18n, language)
+      if (!applied) return
     }
     await userPreferences.setLanguage(language)
   }

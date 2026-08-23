@@ -102,17 +102,4 @@ describe("i18n resources", () => {
       changeLanguage.mock.invocationCallOrder[0]!,
     )
   })
-
-  it("normalizes i18next language tags to dayjs-compatible locale names", async () => {
-    const { mapToDayjsLocale } = await import("~/utils/i18n/resources")
-
-    expect(mapToDayjsLocale("EN")).toBe("en")
-    expect(mapToDayjsLocale("zh_TW")).toBe("zh-tw")
-    expect(mapToDayjsLocale("ja-JP")).toBe("ja-jp")
-    expect(mapToDayjsLocale("vi_VN")).toBe("vi-vn")
-    expect(mapToDayjsLocale("es-419")).toBe("es")
-    expect(mapToDayjsLocale("pt-BR")).toBe("pt-br")
-    expect(mapToDayjsLocale("de")).toBe("de")
-    expect(mapToDayjsLocale("de-DE")).toBe("de")
-  })
 })

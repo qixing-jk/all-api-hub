@@ -342,7 +342,7 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
                             ),
                           },
                         }}
-                        locale={view.datePickerLocale}
+                        language={view.datePickerLanguage}
                         portalContainer={view.popoverPortalContainer}
                         disabled={view.isSavingProfile}
                         naturalInput

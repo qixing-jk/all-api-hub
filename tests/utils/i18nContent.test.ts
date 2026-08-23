@@ -1,4 +1,3 @@
-import dayjs from "dayjs"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const {
@@ -7,7 +6,6 @@ const {
   loadAppLanguageResourcesMock,
   reactI18nextPlugin,
   resolveInitialAppLanguageMock,
-  mapToDayjsLocaleMock,
 } = vi.hoisted(() => ({
   i18nCoreMock: {
     use: vi.fn(),
@@ -21,7 +19,6 @@ const {
   loadAppLanguageResourcesMock: vi.fn(),
   reactI18nextPlugin: { type: "3rdParty" },
   resolveInitialAppLanguageMock: vi.fn(),
-  mapToDayjsLocaleMock: vi.fn(),
 }))
 
 vi.mock("~/utils/i18n/core", () => ({
@@ -52,7 +49,6 @@ vi.mock("~/utils/i18n/resources", () => ({
     language: string,
   ) => instance.changeLanguage(language),
   loadAppLanguageResources: loadAppLanguageResourcesMock,
-  mapToDayjsLocale: mapToDayjsLocaleMock,
 }))
 
 vi.mock("react-i18next", () => ({
@@ -75,14 +71,9 @@ describe("content i18n initialization", () => {
       en: { common: { hello: "Hello" } },
     })
     resolveInitialAppLanguageMock.mockReset()
-    mapToDayjsLocaleMock.mockReset()
-    mapToDayjsLocaleMock.mockImplementation((language: string) =>
-      language.toLowerCase(),
-    )
   })
 
   it("initializes without app-page language detection and resolves from extension preferences", async () => {
-    const localeSpy = vi.spyOn(dayjs, "locale").mockReturnValue("en")
     getLanguageMock.mockResolvedValue("ja")
     resolveInitialAppLanguageMock.mockReturnValue("ja")
 
@@ -107,9 +98,6 @@ describe("content i18n initialization", () => {
     })
     expect(loadAppLanguageResourcesMock).toHaveBeenCalledWith("ja")
     expect(i18nCoreMock.changeLanguage).toHaveBeenCalledWith("ja")
-    expect(localeSpy).toHaveBeenCalledWith("ja")
-
-    localeSpy.mockRestore()
   })
 
   it("refreshes persisted language on later readiness calls for already-injected content scripts", async () => {
@@ -144,22 +132,5 @@ describe("content i18n initialization", () => {
 
     expect(i18nCoreMock.init).toHaveBeenCalledTimes(2)
     expect(i18nCoreMock.changeLanguage).toHaveBeenCalledWith("ja")
-  })
-
-  it("keeps dayjs locale aligned with later i18n language changes", async () => {
-    const localeSpy = vi.spyOn(dayjs, "locale").mockReturnValue("en")
-
-    await import("~/utils/i18n/content")
-
-    const languageChangedHandler = i18nCoreMock.on.mock.calls.find(
-      ([eventName]) => eventName === "languageChanged",
-    )?.[1]
-    expect(languageChangedHandler).toBeTypeOf("function")
-
-    languageChangedHandler("zh-TW")
-
-    expect(localeSpy).toHaveBeenCalledWith("zh-tw")
-
-    localeSpy.mockRestore()
   })
 })
