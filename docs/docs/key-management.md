@@ -117,7 +117,7 @@ Token 操作区会根据目标提供不同入口，主要分为：
 - **聊天客户端**：Cherry Studio、Kelivo
 - **编程 Agents**：CC Switch、Kilo Code / Roo Code、Cursor++
 - **网关与路由工具**：CLIProxyAPI、Claude Code Router
-- **自建托管站点**：直接显示当前托管站点图标，点击可创建或更新渠道
+- **自建托管站点**：直接显示当前托管站点图标，点击后进入预填的新增渠道流程；检测到相同渠道时只会提示重复风险，不会更新或覆盖原渠道
 
 #### 导出到 Kilo Code / Roo Code
 

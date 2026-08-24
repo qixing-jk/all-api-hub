@@ -110,7 +110,7 @@ This section **only displays items requiring your attention**, sorted by severit
 On the right are **collapsible monitoring panels** for 4 automated tasks (default: collapsed; click to expand for details; use the right-side icon for one-click access):
 
 ### ① Auto Check-In
-- **Expanded Content**: Overview of the current check-in round (e.g., `5/10` means 5 out of 10 check-in-capable accounts succeeded), success/failure/skipped mini-blocks, last run time, next scheduled time.
+- **Expanded Content**: Overview of the latest saved execution result (for example, `5/10` means 5 of 10 eligible accounts succeeded), success/failure/skipped mini-blocks, last run time, and next scheduled time. This is the latest run result, not a pending queue or multi-day history. See [Automatic Check-in](./auto-checkin.md).
 - **Action Buttons**: **"View Check-Ins"** (opens the check-in page) and **"Retry Failed"** (only shown if there are failures).
 
 ### ② Website Announcement Fetching

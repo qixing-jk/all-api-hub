@@ -54,6 +54,10 @@ The current version writes backups in V4 format and upgrades the check-in config
 
 Before upgrading, pause automatic synchronization, ensure all devices sharing the same WebDAV file are upgraded to a version supporting V7 accounts, and then re-enable synchronization. Concurrent writes from V6 and V7 clients to the same backup file are not supported; with whole-account LWW, an older client might overwrite V7 check-in configurations with V6 accounts. If you must roll back to an older version, first disable synchronization on other devices and maintain separate backup files.
 
+## Automatic Check-in and Multiple Devices
+
+Accounts and preferences can be synchronized through WebDAV, but automatic check-in's **current-day execution state, latest results, and browser alarms are not shared across devices**. If the daily schedule is enabled on multiple devices, duplicate check-ins may still occur. To avoid this, enable the automatic check-in schedule on only one device.
+
 ## Security Recommendations
 
 - It is recommended to create a separate sub-account or access token for the backup directory on the WebDAV server.

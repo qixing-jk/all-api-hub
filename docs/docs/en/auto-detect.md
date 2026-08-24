@@ -34,14 +34,14 @@ Different sites/modified versions handle interfaces and login states differently
 
 ## Unable to Submit / Unable to Save: Check Required Fields Item by Item
 
-When required fields are not met, the submit button will be disabled or saving will fail. Please confirm item by item:
+When required fields are missing, the submit button is disabled or saving fails. Requirements vary by site, so confirm the site type first and check the corresponding fields:
 
--   **Site Name**, **Username**, **User ID** have been filled in.
--   **Recharge Amount Ratio (Exchange Rate)** is a number greater than 0.
--   When **Access Token authentication** is selected: **Access Token** has been filled in.
--   When **Cookie authentication** is selected: **Session Cookie (Header Value)** has been imported or filled in.
+-   **New API and compatible sites**: Check the Site Name, Username, User ID, Access Token, and a Recharge Amount Ratio greater than 0. When using Cookie authentication, import or enter the Session Cookie (Header Value).
+-   **Sub2API**: Check the Site Name, User ID, JWT Access Token, and Recharge Amount Ratio. Cookie authentication is not supported. When "Extension-managed session (multiple accounts)" is enabled, you must also import or enter a Refresh Token.
+-   **OpenRouter**: Check the Site Name, OpenRouter Management Key, and Recharge Amount Ratio. A User ID is not required, and Cookie authentication is not supported.
+-   **Other sites**: Follow the required markers currently shown in the form and the corresponding site instructions in the [Manual Account Addition Guide](./add-account.md#manual-addition).
 
 ## Last Resort: Manually Add Account
 If auto-identification consistently fails, you can switch to **Manual Addition**, complete the information, and then save the account.
 
-See the [Manual Account Addition Guide](./account-management.md#manual-addition) for details.
+See the [Manual Account Addition Guide](./add-account.md#manual-addition) for details.

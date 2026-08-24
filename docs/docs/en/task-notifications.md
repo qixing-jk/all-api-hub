@@ -2,6 +2,12 @@
 
 > Receive result reminders after background scheduled tasks finish, through browser notifications or third-party channels.
 
+## Notification Scope for Automatic Check-in Tasks
+
+- Task result notifications are sent after an automatic check-in **daily scheduled run** or **automatic retry** finishes.
+- **"Run Now"** on the Automatic Check-in page and per-account **"Quick Check-in"** do **not** send scheduled-task notifications because they are manual runs.
+- **"Refresh data and the interface after automatic check-in completes"** in the Automatic Check-in settings is **not** a notification-channel switch. It controls only whether interface data is refreshed after check-in.
+
 <a id="channels"></a>
 ## Supported Channels
 

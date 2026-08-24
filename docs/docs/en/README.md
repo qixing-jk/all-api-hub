@@ -33,11 +33,11 @@ features:
   - title: "💰 Cross-Site Model Price Comparison"
     details: "Calculate effective model prices across sites and quickly find better-value models and groups."
   - title: "✅ Multi-Site Auto Check-In"
-    details: "Check in to multiple sites with one click or on a schedule, collect rewards automatically, and skip daily logins."
+    details: "Run daily check-ins for supported accounts with one click or on a schedule, collect rewards automatically, and skip daily logins."
   - title: "🧪 API, Model & CLI Verification"
     details: "Test API connectivity, model availability, and CLI integration in one click to quickly troubleshoot configuration issues."
   - title: "🔔 Announcements & Task Alerts"
-    details: "See announcements from added sites in one place and receive timely maintenance, model, and pricing updates, plus results from auto check-ins, WebDAV auto-sync, and model sync."
+    details: "See announcements from added sites in one place and receive timely maintenance, model, and pricing updates, plus results from scheduled background auto check-ins, WebDAV auto-sync, and model sync."
   - title: "🚀 Web Capture & One-Click Export"
     details: "Quickly find Base URLs or API Keys on web pages and export them to popular AI clients with one click."
   - title: "🛠️ Popular AI Gateway Support"
@@ -60,7 +60,7 @@ In the AI era, many of us keep multiple relay-site accounts to save money or try
 
 - **How do I start?**: [Download and install the extension](./get-started.md) -> [Add my first account](./get-started.md#add-site)
 - **I want to save money**: [Earn credits with auto check-in](./auto-checkin.md) -> [Compare model prices across sites](./model-list.md)
-- **I want less manual work**: [See asset changes at a glance](./balance-history.md) -> [Sync accounts to other AI tools](./get-started.md#quick-export-sites)
+- **I want less manual work**: [See asset changes at a glance](./balance-history.md) -> [Sync accounts to other AI tools](./get-started.md#quick-export-sites) -> [Receive background task notifications](./task-notifications.md)
 
 ### 🛠️ I am an advanced user (Key collector)
 

@@ -85,7 +85,7 @@ When enabled, the plugin saves the `refresh_token` as an **account-private** cre
 
 **Other Known Limitations**:
 - Only supports **Access Token (JWT)** mode, not Cookie authentication.
-- Does not currently support site check-in functionality (check-in detection will be automatically disabled).
+- Does not currently support built-in automatic check-in. You can still configure an external check-in URL for the account.
 - The current version primarily synchronizes **balance/quota**; statistics like "Today's Usage/Income" may be 0.
 
 ### What to do if auto-detection fails?
@@ -93,11 +93,11 @@ When enabled, the plugin saves the `refresh_token` as an **account-private** cre
 If auto-detection fails, you can try the following methods:
 
 1. **Switch Authentication Method**: Try switching from Access Token to Cookie mode.
-2. **Manual Addition**: If auto-detection fails, follow the [Manual Account Addition Guide](./account-management.md#manual-addition) and enter the following information:
-   - Username
-   - User ID
-   - Access Token
-   - Top-up Ratio
+2. **Manual Addition**: If auto detection fails, follow the [Manual Account Addition Guide](./add-account.md#manual-addition), select the site type, and check its corresponding fields:
+   - New API and compatible sites: Username, User ID, Access Token, and Recharge Ratio
+   - Sub2API: User ID, JWT Access Token, and Recharge Ratio; a Refresh Token is also required when extension-managed sessions are enabled
+   - OpenRouter: Management Key and Recharge Ratio; no User ID is required, and Cookie mode is not supported
+   - Other sites: Follow the required markers currently shown in the form and the instructions for that site
 3. **Check Login Status**: Ensure you are logged into the target site in your browser.
 4. **Check Site Compatibility**: Confirm if the site is based on a supported project (see below).
 
@@ -194,21 +194,18 @@ For more comprehensive export and integration instructions, please refer to [Qui
 
 ### How to use the site check-in feature?
 
-Some proxy sites support daily check-ins for rewards:
+Some relay sites offer daily check-in rewards. See [Automatic Check-in](./auto-checkin.md) for the complete behavior. The shortest setup is:
 
-1. **Enable Check-in Detection**:
-   - Edit Account.
-   - Check "Enable Check-in Detection".
+1. **Add and refresh the account**: Add it in Account Management and complete one successful refresh or detection.
+2. **Confirm the account-level switch**: Edit the account and check that "Enable Daily Auto Check-in" appears under Check-in Settings. If it does not appear, the site type usually has no built-in automatic check-in support.
+3. **Enable the global schedule**: Open Settings → Check-in & Redemption → Automatic Check-in, enable "Automatic Check-in", and configure the time window, schedule mode, and retries as needed.
+4. **Test immediately**: Click "Run Now" on the Automatic Check-in page to test all accounts. To test only one account, click "Quick Check-in" from its "…" menu.
 
-2. **Customize Check-in URL** (Optional):
-   - If the site's check-in page is not at the standard path.
-   - You can enter a "Custom Check-in URL".
-   - Enter a "Custom Top-up URL" (Optional).
+Notes:
 
-3. **Perform Check-in**:
-   - Accounts that need to check in will display a check-in icon.
-   - Click the check-in button on the account card.
-   - The check-in page will open automatically.
+- "Quick Check-in" makes a real request through the account's built-in check-in provider.
+- "Manual Check-in" and "External Check-in" only open a page. You must finish check-in on that page, and opening it does not mean check-in succeeded.
+- The account form has no "check-in detection" switch. Check-in status is read automatically during account refresh or detection.
 
 ### How to customize account sorting?
 

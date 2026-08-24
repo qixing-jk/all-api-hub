@@ -1,88 +1,122 @@
 # Automatic Check-in and Check-in Monitoring
 
-> Allows aggregated accounts that support check-in to check in daily on time, accumulate quota, and synchronize check-in logs, preventing manual oversight.
+> Run daily check-ins for supported relay accounts, collect credits, and save the latest execution result so you do not have to remember every site manually.
 
-## Feature Overview
+## Features at a Glance
 
--   **Site Detection**: Automatically determines if a site has a check-in entry during account recognition. "Check-in Detection" can be enabled/disabled in account details.
--   **Custom Check-in Entry**: For modified sites, `customCheckInUrl` and `customRedeemUrl` can be configured, and it can also be decided whether to link to open the top-up page.
--   **Automatic Check-in Scheduling**: `autoCheckinScheduler` performs **daily** regular automatic check-ins based on `chrome.alarms`, and retries **failed accounts for the current day** using a separate alarm (this will not affect the next daily schedule).
--   **Execution Records**: Each run generates logs, including success/failure reasons, last run time, next daily schedule, and (if any) next retry schedule, which can be viewed on the "Automatic Check-in" page.
+- **Check-in status detection**: Adding or refreshing an account automatically detects whether its site has a check-in entry point. There is no manual "check-in detection" switch.
+- **Custom check-in entry point**: If the page is not at the standard path, enter an External Check-in Site URL under the account's Check-in Settings.
+- **Automatic scheduling**: Uses browser background scheduling for a regular **once-per-day** automatic check-in and optional same-day retries for **accounts that failed the daily run**.
+- **Execution result**: Saves the latest result with success, failure, skip reasons, last run time, and next schedule. This is not a multi-day history log.
 
-## Prerequisites
+## Requirements
 
-1.  In **Account Management → Edit Account**, enable "Check-in Detection" and ensure manual check-in is successful.
-2.  For accounts requiring automatic check-in, check the "Automatic Check-in" switch (enabled by default, can be disabled for individual accounts).
-3.  In **Settings → Automatic Check-in**, enable global automatic check-in and set the time window.
-4.  The browser must support `chrome.alarms` (Chrome, Edge, Kiwi browsers work normally; some Firefox mobile versions may not support it).
+1. The account has been added in **Account Management** and completed at least one successful refresh or detection.
+2. Its exact site type is listed under Supported Sites below.
+3. Under **Account Management → Edit Account → Check-in Settings**, the **Enable Daily Auto Check-in** switch is visible. Only accounts with a built-in provider show it.
+4. The browser must support background scheduling. Exact timing is not guaranteed when the browser is closed, the device sleeps, or background policies change.
 
-## Setup Steps
+## Setup
 
-### 1. Account-level Switch
+### 1. Account-level Settings
 
--   Open any account details → "More Settings".
--   After enabling "Check-in Detection", you can configure:
-    -   Custom check-in URL (if the site's default entry is unavailable).
-    -   Custom top-up URL and "Open top-up page when checking in".
-    -   "Automatic Check-in" switch (if disabled, this account will not participate in automatic check-in even if globally enabled).
+- Open an account → **Edit Account** → Check-in Settings.
+- Accounts with a built-in provider show:
+  - **Enable Daily Auto Check-in**: Enabled by default. When disabled, the account does not participate even if the global schedule is enabled.
+  - **External Check-in Site URL** (optional): Enter it when the page is not at the standard path. Every account can configure an external entry point.
+  - **Custom Recharge/Redemption Page URL** (optional) and "Open the recharge page when using external check-in".
+- The account form has no "check-in detection" switch. Status is read automatically during account refresh or detection.
 
 ### 2. Global Time Window
 
-In the **Settings → Automatic Check-in** panel:
+Under **Settings → Check-in & Redemption → Automatic Check-in**:
 
-| Option | Description |
-|------|------|
-| **Enable Automatic Check-in** | Controls global `globalEnabled`. No alarms will be created if disabled. |
-| **Trigger today's check-in early when opening the interface** | Enabled by default. When opening the popup / sidebar / settings page, if today's daily schedule has not yet been executed and the current time is within the window, a "Daily Run" will be triggered early. After the run is complete, a result summary dialog will pop up, providing "View Details" to jump to the "Automatic Check-in" page. |
-| **Time Window Start / End** | 24-hour format, allows crossing midnight (e.g., 22:00 → 06:00). The scheduler will randomly select a time within this range to run. |
-| **View Execution Records** | Quickly jump to the "Automatic Check-in" page to view status and logs. |
-| **Restore Defaults** | Calls `resetAutoCheckinConfig()`, restoring to 09:00~18:00 and disabled state. |
+| Option | Default | Description |
+|------|--------|------|
+| **Enable Automatic Check-in** | On | Controls the global daily schedule, automatic retries, and bulk "Run Now" on the Automatic Check-in page. When off, no related schedule is created and bulk check-in does not run. Per-account "Quick Check-in" can still run. |
+| **Trigger Today's Check-in Early When Opening the Interface** | Off | When the popup, side panel, or settings page opens within the window and today's schedule has not run, starts the daily run early. |
+| **Refresh Data and Interface after Automatic Check-in** | On | Refreshes account data and the interface after successful check-in. This is not a system or third-party notification switch. |
+| **Window Start / End** | 09:00 / 23:00 | Allowed local-time range for the daily schedule. It can cross midnight. |
+| **Schedule Mode** | Random | Selects a random time within the window, or choose Fixed Time. |
+| **Fixed Time** | 09:00 | Used only in Fixed Time mode. |
+| **Retry Strategy** | Off | Retries only accounts that failed the daily scheduled run on the same day. Manual "Run Now" does not create an automatic retry queue. |
+| **Retry Interval (minutes)** | 30 | Used only when retries are enabled. |
+| **Maximum Daily Attempts** | 3 | **Includes the initial daily run**; it does not mean three additional retries. |
+| **View Check-in History / Open Records** | Button | Opens the Automatic Check-in results page. It stores latest status, not a multi-day archive. |
+| **Restore Defaults** | Button | Restores: enabled, 09:00–23:00, random, retries off. |
+
+Saved settings take effect immediately and reschedule the task without restarting the extension.
 
 ### 3. View Execution Status
 
--   Open the **Extension Sidebar → Automatic Check-in** page to view:
-    -   Latest execution results (Success / Partial Success / Failure).
-    -   Next daily scheduled time `nextDailyScheduledAt`.
-    -   (If any) Next retry scheduled time `nextRetryScheduledAt`.
-    -   Account-level logs (time spent, failure reasons, etc.).
--   Click "Run Now" to manually trigger an `autoCheckin:runNow` for debugging.
+- Open **Automatic Check-in** in the settings sidebar to see the latest result, the next daily schedule, and the next retry schedule when present.
+- Results show eligible, executed, successful, failed, and skipped states. The bottom also shows account detection state, provider, skip reason, and latest result.
+- When the global switch is on, **Run Now** manually runs every eligible account once. When it is off, this bulk run does not execute. To process one account, click **Quick Check-in** in its "…" menu; that action is not controlled by the global switch.
+- The calendar icon at the top of the popup or side panel, labeled Quick Check-in, opens Automatic Check-in in Settings and immediately runs it when the global switch is on. The side panel reuses the popup entry point and has no separate page.
+- Failed rows can offer Retry, Manual Check-in, External Check-in, or Open Site. Manual Check-in requires you to finish the action on the site.
 
 ## How It Works
 
-1.  **Configuration Writing**: `UserPreferencesContext` saves the `autoCheckin` configuration to local preferences and notifies the background via `sendRuntimeMessage`.
-2.  **Scheduler Initialization**: `autoCheckinScheduler.initialize()` creates alarm listeners when the extension starts:
-    -   **Daily Alarm**: Regular automatic check-in (at most once per day).
-    -   **Retry Alarm**: Triggered only when there are failed accounts in the current day's regular run (only retries failed accounts).
-3.  **Execution Flow**:
-    -   Reads accounts and builds a snapshot (accounts with detection enabled will be shown in "Account Detection Status").
-    -   Filters accounts that meet the conditions (detection enabled, automatic check-in allowed, provider exists and is available).
-    -   **Does not use** `checkIn.siteStatus.isCheckedInToday` to determine execution (this field is unreliable); `already_checked` returned by the provider serves as the true source for "already checked in".
-    -   Concurrently calls the corresponding provider (currently built-in Veloera, extensible), and records success/failure information.
-    -   Success or `already_checked` will be written to `accountStorage.markAccountAsSiteCheckedIn()`; failure will be logged and enter the current day's retry queue (if retries are enabled).
-    -   Finally, it writes to `autoCheckinStorage` for the frontend page to display each account's status and retry information.
-4.  **Rescheduling**:
-    -   After the regular daily run is complete, the daily alarm will be rescheduled for the **next day** (ensuring at most once per day).
-    -   If there are failed accounts for the current day and retries are enabled, a retry alarm will be scheduled, and the number of attempts for the day will be recorded per account (retries stop after reaching `maxAttemptsPerDay`).
+1. **Save configuration**: Saving local preferences immediately tells the background process to reschedule.
+2. **Initialize scheduling**: Extension startup registers browser alarm listeners:
+   - **Daily alarm**: Regular automatic check-in, at most once per day.
+   - **Retry alarm**: Created only when the regular daily run has failed accounts; retries only those accounts.
+3. **Execute**:
+   - Read accounts and create a snapshot, then require each account to be enabled, refreshed/detected, enabled at account level, supported by a built-in provider, and backed by usable credentials.
+   - Call the site's built-in provider and record success, failure, or skip reason.
+   - Both "success" and "already checked in today" count as success. A newly successful check-in also refreshes account data.
+   - Failed accounts enter the same-day retry queue when retries are enabled and stop after Maximum Daily Attempts.
+4. **Reschedule**: After the regular daily run, schedule the **next day's** daily alarm. When same-day failures exist and retries are enabled, schedule a retry alarm.
+
+## Supported Sites and Authentication
+
+The built-in providers currently cover these six exact site types:
+
+| Site type | Built-in automatic check-in | Authentication |
+|----------|------------------|----------|
+| `new-api` | Yes | Access Token (Cookie accounts can use the Cookie session) and account ID |
+| `ModelFlare` | Yes | Cookie session and account ID |
+| `Veloera` | Yes | Access Token or Cookie, plus account ID |
+| `anyrouter` | Yes | Cookie session or browser sign-in context, plus account ID |
+| `wong-gongyi` | Yes | Access Token or Cookie, plus account ID |
+| `voapi-v2` | Yes | Saved dashboard JWT (Access Token) |
+
+::: warning Deployment differences
+Even when the site type matches, a deployment can be customized: the expected endpoint may be missing and return 404/405, authentication may differ, or human verification may be required. Do not assume that every site "compatible with New API" has built-in automatic check-in.
+:::
+
+The following types currently have no built-in provider, but can still use an external URL or Manual Check-in: `one-api`, `one-hub`, `done-hub`, `v-api`, legacy `VoAPI`, `Super-API`, `Rix-Api`, `neo-Api`, `sub2api`, `AIHubMix`, `sharedchat`, `openrouter`, and others.
 
 ## Best Practices
 
--   **Time Window Suggestion**: Set it during early morning or off-peak hours for the site (e.g., 02:00-05:00) to improve success rate.
--   **Cross-device Synchronization**: Combine with [WebDAV Backup and Automatic Synchronization](./webdav-sync.md) to ensure multiple devices share the same account and check-in settings, avoiding duplicate check-ins.
--   **Anomaly Notification**: Notifications are not yet built-in. You can manually monitor the background page `autoCheckinStorage` or check the "Automatic Check-in" page to find failure records.
+- **Time window**: Prefer off-peak hours, such as early morning, for a higher success rate.
+- **Keep the browser running**: A closed browser or sleeping device does not check in and cannot wake the device. A missed alarm may run late after wake-up, and the previous day is not backfilled. See the [Chrome Alarms API](https://developer.chrome.com/docs/extensions/reference/api/alarms).
+- **External and manual check-in**: External Check-in only opens the configured page and records that it was opened today; it does not submit or verify the page. Manual Check-in opens the site's native page and requires you to complete the action there.
+- **Multiple devices**: WebDAV synchronizes accounts and preferences, but current-day execution state, latest result, and browser alarms are not shared. Multiple devices with the schedule enabled can check in more than once.
+- **Notifications**: Daily schedules and automatic retries send task notifications after completion, configured under **Settings → General → Notifications**. Manual Run Now and per-account Quick Check-in do not send scheduled-task notifications.
 
-## Frequently Asked Questions
+## FAQ
 
-| Issue | Troubleshooting Method |
+| Result | Meaning | Automatic retry |
+|------|------|:---:|
+| Success / Already checked in today | The run confirmed a completed check-in, or the site confirmed today's check-in was already done | No |
+| Failed | API, authentication, verification, network, or site response failed | Only for the daily schedule when retries are enabled |
+| Skipped | Account disabled, not detected, account-level setting off, no provider, or insufficient credentials | No |
+
+| Problem | Troubleshooting |
 |------|----------|
-| Page displays "Not Scheduled / Disabled / No Retries Pending" | "Disabled": Global automatic check-in switch is off.<br/>"Retries Not Enabled": Retry strategy is not enabled.<br/>"No Retries Pending": Retries are enabled but there are no failed accounts currently.<br/>"Not Scheduled": Enabled but the browser does not support `chrome.alarms` or the alarm has not been created/cleared; try re-saving settings or switching to Chrome/Edge. |
-| An account fails daily | Check if the site supports the automatic check-in provider; if necessary, disable automatic check-in for this account and switch to manual. |
-| Execution result shows "Unauthorized operation, access token invalid" | Usually indicates that the account's Access Token has expired/been revoked.<br/>Solution: First log in to the site in the browser, then in "Account Management → Edit Account", re-"Auto-detect/Refresh Access Token".<br/>If the site disables Tokens or Tokens cannot be obtained, you can switch to Cookie authentication, or disable automatic check-in for this account and switch to manual. |
-| Custom URL invalid | Confirm that it can be directly accessed in the browser and successfully checked in; some sites require additional form data, currently only GET/simple POST check-in processes are supported. |
-| Multiple accounts checking in repeatedly | May be due to multiple devices running simultaneously. It is recommended to enable WebDAV synchronization to keep configurations consistent, or only enable automatic check-in on one device. |
+| "Not Scheduled / Disabled / No Pending Retries" | "Disabled": the global switch is off.<br/>"Retries Disabled": Retry Strategy is off.<br/>"No Pending Retries": retries are on, but no account currently failed.<br/>"Not Scheduled": enabled, but background scheduling is unsupported or the alarm has not been created/was cleared; save the settings again. |
+| An account fails every day or shows Skipped | Check its provider and skip reason under Account Detection Status. Confirm the account is enabled, refreshed/detected, enabled at account level, supported by a built-in provider, and has usable credentials. |
+| Access Token is invalid | Usually the Access Token expired or was revoked. Sign in to the site, then open Account Management → Edit Account and run Auto Detect / refresh the Access Token. If the site disables Tokens or no Token can be obtained, use Cookie authentication or disable automatic check-in for that account and use manual check-in. |
+| New API returns 404/405 | The deployment does not provide the expected endpoint. This is not necessarily an extension failure; use Manual or External Check-in. |
+| Sign-in or human verification is required | Open the site as prompted, complete verification, and retry. Do not assume the extension has already checked in. |
+| Multiple accounts check in repeatedly | Multiple devices can run while execution state is not shared. Enable the schedule on only one device. |
+| External Check-in does not work | It only opens the page and does not submit or confirm success. Ensure the URL opens directly in the browser and finish check-in manually. |
 
 ## Related Documentation
 
--   [Auto-detection Troubleshooting Guide](./auto-detect.md)
--   [Auto-refresh and Real-time Data](./auto-refresh.md)
--   [WebDAV Backup and Automatic Synchronization](./webdav-sync.md)
--   [Cloudflare Bypass Helper](./cloudflare-helper.md)
+- [Auto-detection Troubleshooting](./auto-detect.md)
+- [Auto Refresh and Real-time Data](./auto-refresh.md)
+- [WebDAV Backup and Automatic Sync](./webdav-sync.md)
+- [Cloudflare Helper](./cloudflare-helper.md)
+- [Task Notifications](./task-notifications.md)

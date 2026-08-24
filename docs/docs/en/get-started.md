@@ -60,7 +60,7 @@ If you are looking for stable, efficient, and highly compatible AI relay service
 <a id="manual-addition"></a>
 ### 2.2 Manual Addition (Alternative)
 
-If auto detection fails, click **"Manual Add"**, select the site type, and enter the account information yourself. See the [manual account addition guide](./account-management.md#manual-addition) for the required fields, where to find the Access Token, and important precautions.
+If auto detection fails, click **"Manual Add"**, select the site type, and enter the account information yourself. See the [manual account addition guide](./add-account.md#manual-addition) for the required fields, where to find the Access Token, and important precautions.
 
 ---
 
@@ -102,13 +102,13 @@ After adding an account, you can "push" these configurations to other AI tools w
 - **[Web API Sniffing](./web-ai-api-check.md)**: Quickly identify and test API configurations within a webpage.
 
 ### ⚡ Automation & Information Tracking
-- **[Auto Check-in Flow](./auto-checkin.md)**: Automatically complete check-ins for all sites daily.
+- **[Auto Check-in Flow](./auto-checkin.md)**: Schedule daily check-ins for detected, supported accounts, run them immediately, and review the latest results.
 - **[Site Announcements](./site-announcements.md)**: Fetch announcements from saved sites in the background and centrally review maintenance, model changes, pricing updates, and other messages.
 - **[Redemption Assistant](./redemption-assist.md)**: Automatically recognize redemption codes on webpages and claim them with one click.
 - **[Bookmark Management](./bookmark-management.md)**: Centrally collect console links, documentation, recharge portals, and more.
 
 ### 🛡️ Stability & Security Protection
-- **[Cloudflare Bypass Assistant](./cloudflare-helper.md)**: Assist in passing verification to ensure uninterrupted refreshes and check-ins.
+- **[Cloudflare Bypass Assistant](./cloudflare-helper.md)**: Helps a flow continue when webpage verification is required.
 - **[WebDAV Sync & Encryption](./webdav-sync.md)**: Supports cross-device encrypted backups, ensuring data is never lost.
 
 ### 🔔 Notification Channels
