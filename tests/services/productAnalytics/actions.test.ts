@@ -301,6 +301,37 @@ describe("product analytics action helpers", () => {
     )
   })
 
+  it("maps controlled check-in discovery insights to the event payload", async () => {
+    const { trackProductAnalyticsActionCompleted } = await import(
+      "~/services/productAnalytics/actions"
+    )
+
+    await trackProductAnalyticsActionCompleted({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RedetectCheckInMethods,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
+      insights: {
+        checkInDiscoveryTrigger: "redetect",
+        checkInDiscoveryDecision: "resolved",
+        checkInCandidateCount: 2,
+        checkInSelectionSource: "manual",
+        checkInRecoveryAction: "manual_override",
+      },
+    })
+
+    expect(trackMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+      expect.objectContaining({
+        check_in_discovery_trigger: "redetect",
+        check_in_discovery_decision: "resolved",
+        check_in_candidate_count: 2,
+        check_in_selection_source: "manual",
+        check_in_recovery_action: "manual_override",
+      }),
+    )
+  })
+
   it("defaults failed completions without an explicit failure stage to execute", async () => {
     const { trackProductAnalyticsActionCompleted } = await import(
       "~/services/productAnalytics/actions"

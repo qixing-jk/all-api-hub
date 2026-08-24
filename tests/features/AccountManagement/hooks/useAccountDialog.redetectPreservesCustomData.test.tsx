@@ -133,6 +133,71 @@ describe("useAccountDialog re-detect preservation", () => {
     return result
   }
 
+  it("keeps redetection local when the account URL is missing", async () => {
+    const { result } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.ADD,
+        isOpen: true,
+        onClose: vi.fn(),
+        onSuccess: vi.fn(),
+      }),
+    )
+    await waitFor(() => expect(result.current).toBeTruthy())
+
+    await act(async () => {
+      await result.current.handlers.handleRedetectCheckInMethods()
+    })
+
+    expect(result.current.state.checkInRedetectionFeedback).toEqual({
+      kind: "failed",
+      message: "accountDialog:messages.urlRequired",
+    })
+    expect(mockDiscoverCheckInMethods).not.toHaveBeenCalled()
+  })
+
+  it("ignores a redetection result after the requested URL changes", async () => {
+    let resolveDiscovery!: (value: unknown) => void
+    mockDiscoverCheckInMethods.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveDiscovery = resolve
+      }),
+    )
+    const { result } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.ADD,
+        isOpen: true,
+        onClose: vi.fn(),
+        onSuccess: vi.fn(),
+      }),
+    )
+    await waitFor(() => expect(result.current).toBeTruthy())
+    await act(async () => {
+      result.current.setters.setUrl("https://first.example.invalid")
+      result.current.setters.setSiteType(SITE_TYPES.NEW_API)
+    })
+
+    let redetection!: Promise<void>
+    await act(async () => {
+      redetection = result.current.handlers.handleRedetectCheckInMethods()
+      await Promise.resolve()
+    })
+    act(() => {
+      result.current.setters.setUrl("https://second.example.invalid")
+    })
+    resolveDiscovery({
+      config: buildCheckInConfig({ automaticExecutionEnabled: true }),
+      decision: { outcome: "resolved", methodId: "new-api:daily-checkin" },
+      detections: {},
+      timedOutMethodIds: [],
+    })
+    await act(async () => {
+      await redetection
+    })
+
+    expect(result.current.state.url).toBe("https://second.example.invalid")
+    expect(result.current.state.checkInRedetectionFeedback).toBeNull()
+  })
+
   it("prefills detected check-in support on the first add-account auto-detect", async () => {
     mockAutoDetectAccount.mockResolvedValueOnce({
       success: true,
@@ -543,6 +608,35 @@ describe("useAccountDialog re-detect preservation", () => {
       kind: "failed",
       message: "accountDialog:messages.operationFailed",
     })
+  })
+
+  it("reports a redetection failure when no method is selected", async () => {
+    mockDiscoverCheckInMethods.mockRejectedValueOnce(new Error("network down"))
+    const { result } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.ADD,
+        isOpen: true,
+        onClose: vi.fn(),
+        onSuccess: vi.fn(),
+      }),
+    )
+    await waitFor(() => expect(result.current).toBeTruthy())
+    await act(async () => {
+      result.current.setters.setUrl("https://new-api.example.invalid")
+      result.current.setters.setSiteType(SITE_TYPES.NEW_API)
+    })
+    await act(async () => {
+      result.current.setters.setCheckIn({
+        ...result.current.state.checkIn,
+        selection: { mode: "automatic" },
+      })
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleRedetectCheckInMethods()
+    })
+
+    expect(result.current.state.checkInRedetectionFeedback?.kind).toBe("failed")
   })
 
   it("preserves notes and custom check-in fields when re-detecting an existing account", async () => {

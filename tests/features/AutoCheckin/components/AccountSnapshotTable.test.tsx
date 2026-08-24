@@ -67,6 +67,36 @@ describe("AutoCheckin AccountSnapshotTable", () => {
     expect(rows[1]).toHaveTextContent("Zulu Newer")
   })
 
+  it("sorts snapshots by whether automatic check-in is enabled", async () => {
+    const user = userEvent.setup()
+    renderSnapshotTable([
+      {
+        accountId: "enabled",
+        accountName: "Enabled Account",
+        siteType: "new-api",
+        detectionEnabled: true,
+        autoCheckinEnabled: true,
+        providerAvailable: true,
+      },
+      {
+        accountId: "disabled",
+        accountName: "Disabled Account",
+        siteType: "new-api",
+        detectionEnabled: true,
+        autoCheckinEnabled: false,
+        providerAvailable: true,
+      },
+    ])
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "autoCheckin:snapshot.table.autoCheckin",
+      }),
+    )
+
+    expect(screen.getAllByRole("row")[1]).toHaveTextContent("Enabled Account")
+  })
+
   it("paginates long readiness lists", async () => {
     const user = userEvent.setup()
     renderSnapshotTable(
@@ -90,6 +120,16 @@ describe("AutoCheckin AccountSnapshotTable", () => {
     )
 
     expect(screen.getByText("Snapshot 26")).toBeVisible()
+
+    await user.click(
+      screen.getByRole("combobox", {
+        name: "autoCheckin:execution.pagination.rowsPerPage",
+      }),
+    )
+    await user.click(screen.getByRole("option", { name: "10" }))
+
+    expect(screen.getByText("Snapshot 1")).toBeVisible()
+    expect(screen.queryByText("Snapshot 26")).not.toBeInTheDocument()
   })
 
   it("renders sorted snapshot rows with status badges and skip reasons", () => {
@@ -260,6 +300,12 @@ describe("AutoCheckin AccountSnapshotTable", () => {
 
     expect(screen.getByText("Disabled Account")).toBeVisible()
     expect(screen.queryByText("Ready Account")).not.toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.clear" }),
+    )
+
+    expect(screen.getByText("Ready Account")).toBeVisible()
   })
 
   it("searches snapshots by the latest classified failure reason", async () => {

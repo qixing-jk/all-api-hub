@@ -19,6 +19,7 @@ import {
 } from "~/services/checkin/autoCheckin/inspection"
 import {
   executeSelectedCheckIn,
+  inspectSelectedCheckInCompatibility,
   markSelectedCheckInExecuted,
 } from "~/services/checkin/autoCheckin/methods"
 import { autoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers"
@@ -786,6 +787,98 @@ describe("check-in methods compatibility activation", () => {
 
     expect(result).toMatchObject({ kind: "executed" })
     expect(checkInRequest).toHaveBeenCalledOnce()
+  })
+
+  it.each([
+    [401, "authentication_required", false],
+    [403, "permission_denied", false],
+    [408, "timeout", true],
+    [500, "source_unavailable", true],
+  ] as const)(
+    "classifies an HTTP %s optional status failure as %s",
+    async (statusCode, expectedReason, shouldExecute) => {
+      const registration = getNewApiExecutionRegistration()
+      const account = createNewApiExecutionAccount()
+      vi.spyOn(registration.provider, "getStatus").mockRejectedValue(
+        Object.assign(new Error(`Request failed with ${statusCode}`), {
+          statusCode,
+        }),
+      )
+      const checkInRequest = vi
+        .spyOn(registration.provider, "checkIn")
+        .mockResolvedValue({ status: "success" })
+
+      const result = await executeSelectedCheckIn({
+        account,
+        globalAutomaticExecutionEnabled: true,
+        context: createExecutionContext(),
+      })
+
+      if (shouldExecute) {
+        expect(result).toMatchObject({ kind: "executed" })
+        expect(checkInRequest).toHaveBeenCalledOnce()
+      } else {
+        expect(result).toMatchObject({
+          kind: "skipped",
+          reason: expectedReason,
+        })
+        expect(checkInRequest).not.toHaveBeenCalled()
+      }
+    },
+  )
+
+  it.each([
+    ["returns no account", async () => null],
+    [
+      "cannot reload the account",
+      async () => {
+        throw new Error("Example storage failure")
+      },
+    ],
+  ])(
+    "skips execution when revalidation %s",
+    async (_name, revalidateAccount) => {
+      const registration = getNewApiExecutionRegistration()
+      const account = createNewApiExecutionAccount()
+      vi.spyOn(registration.provider, "getStatus").mockResolvedValue(undefined)
+      const checkInRequest = vi
+        .spyOn(registration.provider, "checkIn")
+        .mockResolvedValue({ status: "success" })
+
+      const result = await executeSelectedCheckIn({
+        account,
+        globalAutomaticExecutionEnabled: true,
+        context: createExecutionContext(),
+        revalidateAccount,
+      })
+
+      expect(result).toMatchObject({
+        kind: "skipped",
+        reason: "account_unavailable",
+      })
+      expect(checkInRequest).not.toHaveBeenCalled()
+    },
+  )
+
+  it("exposes unavailable provider readiness without leaking the provider", () => {
+    const account = buildSiteAccount({
+      site_type: SITE_TYPES.UNKNOWN,
+      checkIn: createCompatibilityCheckInConfig({
+        siteType: SITE_TYPES.UNKNOWN,
+        supported: false,
+        automaticExecutionEnabled: true,
+      }),
+    })
+
+    expect(
+      inspectSelectedCheckInCompatibility({
+        account,
+        globalAutomaticExecutionEnabled: true,
+      }),
+    ).toMatchObject({
+      providerReadiness: null,
+      providerAvailable: false,
+    })
   })
 
   it("revalidates the latest account intent before posting", async () => {
