@@ -64,4 +64,29 @@ describe("useDeferredPreferenceDraft", () => {
     expect(result.current.isDirty).toBe(false)
     expect(result.current.isCommitting).toBe(false)
   })
+
+  it("restores the saved value when the commit rejects", async () => {
+    const onCommit = vi.fn().mockRejectedValue(new Error("write failed"))
+    const { result } = renderHook(() =>
+      useDeferredPreferenceDraft({
+        savedValue: "saved",
+        savedVersion: 1,
+        onCommit,
+      }),
+    )
+
+    act(() => {
+      result.current.setDraft("draft")
+    })
+
+    let outcome!: DeferredPreferenceCommitResult<string>
+    await act(async () => {
+      outcome = await result.current.commit()
+    })
+
+    expect(outcome).toEqual({ ok: false })
+    expect(result.current.draft).toBe("saved")
+    expect(result.current.isDirty).toBe(false)
+    expect(result.current.isCommitting).toBe(false)
+  })
 })

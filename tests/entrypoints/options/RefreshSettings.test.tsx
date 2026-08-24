@@ -8,7 +8,6 @@ import RefreshSettings from "~/features/BasicSettings/components/tabs/Refresh/Re
 import {
   ACCOUNT_AUTO_REFRESH_INTERVAL_MIN_SECONDS,
   ACCOUNT_AUTO_REFRESH_MIN_INTERVAL_MIN_SECONDS,
-  DEFAULT_ACCOUNT_AUTO_REFRESH,
 } from "~/types/accountAutoRefresh"
 import { showUpdateToast } from "~/utils/core/toastHelpers"
 import { testI18n } from "~~/tests/test-utils/i18n"
@@ -54,9 +53,9 @@ describe("RefreshSettings (min refresh interval)", () => {
 
     renderSubject()
 
-    const input = screen.getByPlaceholderText(
-      String(DEFAULT_ACCOUNT_AUTO_REFRESH.minInterval),
-    )
+    const input = screen.getByRole("spinbutton", {
+      name: "settings:refresh.minRefreshInterval",
+    })
     fireEvent.change(input, { target: { value: "301" } })
     fireEvent.blur(input)
 
@@ -83,9 +82,9 @@ describe("RefreshSettings (min refresh interval)", () => {
 
     renderSubject()
 
-    const input = screen.getByPlaceholderText(
-      String(DEFAULT_ACCOUNT_AUTO_REFRESH.minInterval),
-    ) as HTMLInputElement
+    const input = screen.getByRole("spinbutton", {
+      name: "settings:refresh.minRefreshInterval",
+    }) as HTMLInputElement
     fireEvent.change(input, { target: { value: "0" } })
     fireEvent.blur(input)
 
@@ -115,9 +114,9 @@ describe("RefreshSettings (min refresh interval)", () => {
 
     renderSubject()
 
-    const input = screen.getByPlaceholderText(
-      String(DEFAULT_ACCOUNT_AUTO_REFRESH.minInterval),
-    )
+    const input = screen.getByRole("spinbutton", {
+      name: "settings:refresh.minRefreshInterval",
+    })
     fireEvent.change(input, {
       target: { value: String(ACCOUNT_AUTO_REFRESH_MIN_INTERVAL_MIN_SECONDS) },
     })
@@ -148,9 +147,9 @@ describe("RefreshSettings (min refresh interval)", () => {
 
     renderSubject()
 
-    const input = screen.getByPlaceholderText(
-      String(DEFAULT_ACCOUNT_AUTO_REFRESH.interval),
-    ) as HTMLInputElement
+    const input = screen.getByRole("spinbutton", {
+      name: "settings:refresh.refreshInterval",
+    }) as HTMLInputElement
 
     fireEvent.change(input, {
       target: { value: String(ACCOUNT_AUTO_REFRESH_INTERVAL_MIN_SECONDS - 1) },
@@ -183,9 +182,9 @@ describe("RefreshSettings (min refresh interval)", () => {
 
     renderSubject()
 
-    const input = screen.getByPlaceholderText(
-      String(DEFAULT_ACCOUNT_AUTO_REFRESH.interval),
-    )
+    const input = screen.getByRole("spinbutton", {
+      name: "settings:refresh.refreshInterval",
+    })
 
     fireEvent.change(input, {
       target: { value: String(ACCOUNT_AUTO_REFRESH_INTERVAL_MIN_SECONDS) },
@@ -228,6 +227,43 @@ describe("RefreshSettings (min refresh interval)", () => {
     )
   })
 
+  it("normalizes unchanged interval drafts without saving", async () => {
+    const updateRefreshInterval = vi.fn().mockResolvedValue({ ok: true })
+    const updateMinRefreshInterval = vi.fn().mockResolvedValue({ ok: true })
+    vi.mocked(useUserPreferencesContext).mockReturnValue({
+      preferences: { lastUpdated: 1 },
+      autoRefresh: true,
+      refreshOnOpen: true,
+      refreshInterval: 360,
+      minRefreshInterval: 60,
+      updateAutoRefresh: vi.fn().mockResolvedValue({ ok: true }),
+      updateRefreshOnOpen: vi.fn().mockResolvedValue({ ok: true }),
+      updateRefreshInterval,
+      updateMinRefreshInterval,
+      resetAutoRefreshConfig: vi.fn().mockResolvedValue({ ok: true }),
+    } as any)
+
+    renderSubject()
+
+    const refreshIntervalInput = screen.getByRole("spinbutton", {
+      name: "settings:refresh.refreshInterval",
+    })
+    const minRefreshIntervalInput = screen.getByRole("spinbutton", {
+      name: "settings:refresh.minRefreshInterval",
+    })
+    fireEvent.change(refreshIntervalInput, { target: { value: "0360" } })
+    fireEvent.blur(refreshIntervalInput)
+    fireEvent.change(minRefreshIntervalInput, { target: { value: "060" } })
+    fireEvent.blur(minRefreshIntervalInput)
+
+    await waitFor(() => {
+      expect(refreshIntervalInput).toHaveValue(360)
+      expect(minRefreshIntervalInput).toHaveValue(60)
+    })
+    expect(updateRefreshInterval).not.toHaveBeenCalled()
+    expect(updateMinRefreshInterval).not.toHaveBeenCalled()
+  })
+
   it("restores the saved refresh interval when persistence fails", async () => {
     const failedWrite = {
       ok: false as const,
@@ -252,9 +288,9 @@ describe("RefreshSettings (min refresh interval)", () => {
 
     renderSubject()
 
-    const input = screen.getByPlaceholderText(
-      String(DEFAULT_ACCOUNT_AUTO_REFRESH.interval),
-    )
+    const input = screen.getByRole("spinbutton", {
+      name: "settings:refresh.refreshInterval",
+    })
     fireEvent.change(input, { target: { value: "420" } })
     fireEvent.blur(input)
 

@@ -51,4 +51,20 @@ describe("useSingleFlightActions", () => {
       await secondRun
     })
   })
+
+  it("clears pending state when an action throws synchronously", async () => {
+    const action = vi.fn(() => {
+      throw new Error("sync failure")
+    })
+    const { result } = renderHook(() => useSingleFlightActions<"save">())
+
+    await act(async () => {
+      await expect(result.current.run("save", action)).rejects.toThrow(
+        "sync failure",
+      )
+    })
+
+    expect(action).toHaveBeenCalledOnce()
+    expect(result.current.isPending("save")).toBe(false)
+  })
 })

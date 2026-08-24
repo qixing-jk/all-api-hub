@@ -1,3 +1,4 @@
+import toast from "react-hot-toast"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
@@ -60,6 +61,71 @@ describe("RedemptionAssistSettings", () => {
       updateRedemptionAssist,
       resetRedemptionAssistConfig,
     } as any)
+  })
+
+  it("persists each switch as an independent partial update", async () => {
+    render(<RedemptionAssistSettings />, {
+      withUserPreferencesProvider: false,
+    })
+
+    const cases = [
+      {
+        name: "redemptionAssist:settings.enable",
+        update: { enabled: false },
+      },
+      {
+        name: "redemptionAssist:settings.contextMenu.enable",
+        update: { contextMenu: { enabled: false } },
+      },
+      {
+        name: "redemptionAssist:settings.relaxedCodeValidation",
+        update: { relaxedCodeValidation: false },
+      },
+      {
+        name: "redemptionAssist:settings.urlWhitelist.enable",
+        update: { urlWhitelist: { enabled: false } },
+      },
+      {
+        name: "redemptionAssist:settings.urlWhitelist.includeAccountSiteUrls",
+        update: { urlWhitelist: { includeAccountSiteUrls: false } },
+      },
+      {
+        name: "redemptionAssist:settings.urlWhitelist.includeCheckInAndRedeemUrls",
+        update: { urlWhitelist: { includeCheckInAndRedeemUrls: false } },
+      },
+    ]
+
+    for (const testCase of cases) {
+      updateRedemptionAssist.mockClear()
+      fireEvent.click(screen.getByRole("switch", { name: testCase.name }))
+      await waitFor(() => {
+        expect(updateRedemptionAssist).toHaveBeenCalledWith(testCase.update)
+      })
+    }
+  })
+
+  it("shows failure feedback when a switch update is rejected by storage", async () => {
+    updateRedemptionAssist.mockResolvedValueOnce({
+      ok: false,
+      reason: { type: "storage-error", error: new Error("write failed") },
+    })
+
+    render(<RedemptionAssistSettings />, {
+      withUserPreferencesProvider: false,
+    })
+
+    fireEvent.click(
+      screen.getByRole("switch", {
+        name: "redemptionAssist:settings.enable",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(
+        "settings:messages.saveSettingsFailed",
+      )
+    })
+    expect(toast.success).not.toHaveBeenCalled()
   })
 
   it("marks only the URL-pattern save busy and restores it after rejection", async () => {

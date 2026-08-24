@@ -96,7 +96,7 @@ import {
   type TaskNotificationPreferences,
 } from "~/types/taskNotifications"
 import type { ThemeMode } from "~/types/theme"
-import type { DeepPartial } from "~/types/utils"
+import type { DeepPartial, PartialWithNested } from "~/types/utils"
 import type { WebDAVSettings } from "~/types/webdav"
 import { deepOverride } from "~/utils"
 import { createLogger } from "~/utils/core/logger"
@@ -105,6 +105,11 @@ const logger = createLogger("UserPreferencesContext")
 
 type UserManagedSiteModelSyncConfig = NonNullable<
   UserPreferences["managedSiteModelSync"]
+>
+
+type UserManagedSiteModelSyncConfigUpdate = PartialWithNested<
+  UserManagedSiteModelSyncConfig,
+  "rateLimit"
 >
 
 const DEFAULT_MANAGED_SITE_MODEL_SYNC_CONFIG =
@@ -459,7 +464,7 @@ interface UserPreferencesContextType {
     updates: Partial<BalanceHistoryPreferences>,
   ) => PreferenceWritePromise
   updateNewApiModelSync: (
-    updates: Partial<UserManagedSiteModelSyncConfig>,
+    updates: UserManagedSiteModelSyncConfigUpdate,
   ) => PreferenceWritePromise
   updateModelRedirect: (
     updates: Partial<ModelRedirectPreferences>,
@@ -1371,7 +1376,7 @@ export const UserPreferencesProvider = ({
   )
 
   const updateNewApiModelSync = useCallback(
-    async (updates: Partial<UserManagedSiteModelSyncConfig>) => {
+    async (updates: UserManagedSiteModelSyncConfigUpdate) => {
       const preferenceUpdates = {
         managedSiteModelSync: updates,
       }

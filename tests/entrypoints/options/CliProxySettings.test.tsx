@@ -227,7 +227,7 @@ describe("CliProxySettings", () => {
 
     renderSubject()
 
-    const input = screen.getByDisplayValue("secret-key")
+    const input = screen.getByLabelText("settings:cliProxy.managementKeyLabel")
 
     fireEvent.change(input, {
       target: { value: "  next-secret-key  " },
@@ -257,6 +257,48 @@ describe("CliProxySettings", () => {
     expect(vi.mocked(showResultToast)).toHaveBeenCalledWith({
       success: false,
       message: "messages:toast.error.operationFailedGeneric",
+    })
+  })
+
+  it("persists and verifies the management key on Enter", async () => {
+    const updateCliProxyManagementKey = vi
+      .fn()
+      .mockResolvedValue({ ok: true, preferences: {} })
+    vi.mocked(verifyCliProxyManagementConnection).mockResolvedValue({
+      success: true,
+      message: "messages:toast.success.operationSuccess",
+    })
+    vi.mocked(useUserPreferencesContext).mockReturnValue({
+      preferences: { lastUpdated: 1 },
+      cliProxyBaseUrl: "http://localhost:8317/v0/management",
+      cliProxyManagementKey: "secret-key",
+      updateCliProxyBaseUrl: vi
+        .fn()
+        .mockResolvedValue({ ok: true, preferences: {} }),
+      updateCliProxyManagementKey,
+      resetCliProxyConfig: vi
+        .fn()
+        .mockResolvedValue({ ok: true, preferences: {} }),
+    } as any)
+
+    renderSubject()
+
+    const input = screen.getByLabelText("settings:cliProxy.managementKeyLabel")
+    fireEvent.change(input, { target: { value: "  enter-secret-key  " } })
+    input.focus()
+    fireEvent.keyDown(input, { key: "Enter" })
+
+    await waitFor(() => {
+      expect(updateCliProxyManagementKey).toHaveBeenCalledWith(
+        "enter-secret-key",
+        expect.objectContaining({ expectedLastUpdated: 1 }),
+      )
+    })
+    await waitFor(() => {
+      expect(verifyCliProxyManagementConnection).toHaveBeenCalledWith({
+        baseUrl: "http://localhost:8317/v0/management",
+        managementKey: "enter-secret-key",
+      })
     })
   })
 

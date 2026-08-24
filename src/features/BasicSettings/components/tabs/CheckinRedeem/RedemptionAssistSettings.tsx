@@ -132,6 +132,7 @@ export default function RedemptionAssistSettings() {
             rightContent={
               <Switch
                 checked={config.enabled}
+                aria-label={t("redemptionAssist:settings.enable")}
                 onChange={(checked) => {
                   void saveSettings(REDEMPTION_ASSIST_SAVE_ACTIONS.ENABLED, {
                     enabled: checked,
@@ -151,6 +152,7 @@ export default function RedemptionAssistSettings() {
             rightContent={
               <Switch
                 checked={!!contextMenu.enabled}
+                aria-label={t("redemptionAssist:settings.contextMenu.enable")}
                 onChange={(checked) => {
                   void saveSettings(
                     REDEMPTION_ASSIST_SAVE_ACTIONS.CONTEXT_MENU,
@@ -177,6 +179,9 @@ export default function RedemptionAssistSettings() {
             rightContent={
               <Switch
                 checked={config.relaxedCodeValidation}
+                aria-label={t(
+                  "redemptionAssist:settings.relaxedCodeValidation",
+                )}
                 onChange={(checked) => {
                   void saveSettings(
                     REDEMPTION_ASSIST_SAVE_ACTIONS.RELAXED_CODE_VALIDATION,
@@ -197,6 +202,7 @@ export default function RedemptionAssistSettings() {
             rightContent={
               <Switch
                 checked={whitelist.enabled}
+                aria-label={t("redemptionAssist:settings.urlWhitelist.enable")}
                 onChange={(checked) => {
                   void saveSettings(
                     REDEMPTION_ASSIST_SAVE_ACTIONS.URL_WHITELIST_ENABLED,
@@ -225,6 +231,9 @@ export default function RedemptionAssistSettings() {
             rightContent={
               <Switch
                 checked={whitelist.includeAccountSiteUrls}
+                aria-label={t(
+                  "redemptionAssist:settings.urlWhitelist.includeAccountSiteUrls",
+                )}
                 onChange={(checked) => {
                   void saveSettings(
                     REDEMPTION_ASSIST_SAVE_ACTIONS.INCLUDE_ACCOUNT_SITE_URLS,
@@ -253,6 +262,9 @@ export default function RedemptionAssistSettings() {
             rightContent={
               <Switch
                 checked={whitelist.includeCheckInAndRedeemUrls}
+                aria-label={t(
+                  "redemptionAssist:settings.urlWhitelist.includeCheckInAndRedeemUrls",
+                )}
                 onChange={(checked) => {
                   void saveSettings(
                     REDEMPTION_ASSIST_SAVE_ACTIONS.INCLUDE_CHECKIN_REDEEM_URLS,

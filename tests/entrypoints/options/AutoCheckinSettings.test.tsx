@@ -248,23 +248,28 @@ describe("AutoCheckinSettings", () => {
       withThemeProvider: false,
     })
 
-    const timeInputs = screen.getAllByDisplayValue(/^\d{2}:\d{2}$/)
+    const windowStartInput = screen.getByLabelText(
+      "autoCheckin:settings.windowStart",
+    )
+    const windowEndInput = screen.getByLabelText(
+      "autoCheckin:settings.windowEnd",
+    )
 
-    fireEvent.blur(timeInputs[0])
-    fireEvent.blur(timeInputs[1])
+    fireEvent.blur(windowStartInput)
+    fireEvent.blur(windowEndInput)
     expect(updateAutoCheckin).not.toHaveBeenCalled()
 
-    fireEvent.change(timeInputs[0], { target: { value: "07:30" } })
+    fireEvent.change(windowStartInput, { target: { value: "07:30" } })
     expect(updateAutoCheckin).not.toHaveBeenCalled()
-    fireEvent.blur(timeInputs[0])
+    fireEvent.blur(windowStartInput)
 
     await waitFor(() => {
       expect(updateAutoCheckin).toHaveBeenCalledWith({ windowStart: "07:30" })
     })
 
-    fireEvent.change(timeInputs[1], { target: { value: "10:30" } })
+    fireEvent.change(windowEndInput, { target: { value: "10:30" } })
     expect(updateAutoCheckin).not.toHaveBeenCalledWith({ windowEnd: "10:30" })
-    fireEvent.blur(timeInputs[1])
+    fireEvent.blur(windowEndInput)
 
     await waitFor(() => {
       expect(updateAutoCheckin).toHaveBeenCalledWith({ windowEnd: "10:30" })
@@ -281,33 +286,38 @@ describe("AutoCheckinSettings", () => {
       withThemeProvider: false,
     })
 
-    const timeInputs = screen.getAllByDisplayValue(/^\d{2}:\d{2}$/)
+    const windowStartInput = screen.getByLabelText(
+      "autoCheckin:settings.windowStart",
+    )
+    const windowEndInput = screen.getByLabelText(
+      "autoCheckin:settings.windowEnd",
+    )
 
-    fireEvent.change(timeInputs[1], { target: { value: "08:00" } })
-    fireEvent.blur(timeInputs[1])
+    fireEvent.change(windowEndInput, { target: { value: "08:00" } })
+    fireEvent.blur(windowEndInput)
     await waitFor(() => {
-      expect(timeInputs[1]).toHaveValue("10:00")
+      expect(windowEndInput).toHaveValue("10:00")
     })
     expect(toastMocks.error).toHaveBeenCalledWith(
       "autoCheckin:messages.error.invalidTimeWindow",
     )
     expect(updateAutoCheckin).not.toHaveBeenCalled()
 
-    fireEvent.change(timeInputs[0], { target: { value: "07:30" } })
-    fireEvent.blur(timeInputs[0])
+    fireEvent.change(windowStartInput, { target: { value: "07:30" } })
+    fireEvent.blur(windowStartInput)
 
     await waitFor(() => {
-      expect(timeInputs[0]).toHaveValue("08:00")
+      expect(windowStartInput).toHaveValue("08:00")
     })
     expect(toastMocks.error).toHaveBeenCalledWith(
       "settings:messages.saveSettingsFailed",
     )
 
-    fireEvent.change(timeInputs[1], { target: { value: "10:30" } })
-    fireEvent.blur(timeInputs[1])
+    fireEvent.change(windowEndInput, { target: { value: "10:30" } })
+    fireEvent.blur(windowEndInput)
 
     await waitFor(() => {
-      expect(timeInputs[1]).toHaveValue("10:00")
+      expect(windowEndInput).toHaveValue("10:00")
     })
     expect(updateAutoCheckin).toHaveBeenCalledWith({ windowEnd: "10:30" })
   })

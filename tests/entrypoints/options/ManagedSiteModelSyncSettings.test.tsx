@@ -488,6 +488,51 @@ describe("ManagedSiteModelSyncSettings", () => {
     expect(mockUpdateNewApiModelSync).not.toHaveBeenCalled()
   })
 
+  it("persists concurrent rate-limit edits as independent nested patches", async () => {
+    const requestsSave =
+      createDeferred<ReturnType<typeof preferenceWriteSuccess>>()
+    const burstSave =
+      createDeferred<ReturnType<typeof preferenceWriteSuccess>>()
+    mockUpdateNewApiModelSync
+      .mockReturnValueOnce(requestsSave.promise)
+      .mockReturnValueOnce(burstSave.promise)
+
+    render(<ManagedSiteModelSyncSettings />)
+
+    const requestsPerMinuteInput = screen.getByRole("spinbutton", {
+      name: "managedSiteModelSync:settings.requestsPerMinute",
+    })
+    const burstInput = screen.getByRole("spinbutton", {
+      name: "managedSiteModelSync:settings.burst",
+    })
+
+    fireEvent.change(requestsPerMinuteInput, { target: { value: "40" } })
+    fireEvent.blur(requestsPerMinuteInput)
+
+    await waitFor(() => {
+      expect(mockUpdateNewApiModelSync).toHaveBeenNthCalledWith(1, {
+        rateLimit: { requestsPerMinute: 40 },
+      })
+    })
+
+    fireEvent.change(burstInput, { target: { value: "8" } })
+    fireEvent.blur(burstInput)
+
+    await waitFor(() => {
+      expect(mockUpdateNewApiModelSync).toHaveBeenNthCalledWith(2, {
+        rateLimit: { burst: 8 },
+      })
+    })
+
+    requestsSave.resolve(preferenceWriteSuccess())
+    burstSave.resolve(preferenceWriteSuccess())
+
+    await waitFor(() => {
+      expect(requestsPerMinuteInput).toBeEnabled()
+      expect(burstInput).toBeEnabled()
+    })
+  })
+
   it("renders defaults when model-sync preferences have not been saved", async () => {
     mockedUseUserPreferencesContext.mockReturnValue(
       createContextValue({ preferences: {} }),
@@ -769,7 +814,6 @@ describe("ManagedSiteModelSyncSettings", () => {
       expect(mockUpdateNewApiModelSync).toHaveBeenCalledWith({
         rateLimit: {
           requestsPerMinute: 30,
-          burst: 5,
         },
       })
     })
@@ -780,7 +824,6 @@ describe("ManagedSiteModelSyncSettings", () => {
     await waitFor(() => {
       expect(mockUpdateNewApiModelSync).toHaveBeenCalledWith({
         rateLimit: {
-          requestsPerMinute: 20,
           burst: 8,
         },
       })

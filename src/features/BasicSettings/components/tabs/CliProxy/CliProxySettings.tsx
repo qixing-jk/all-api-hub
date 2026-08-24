@@ -140,6 +140,7 @@ export default function CliProxySettings() {
                 onBlur={(e) => handleBaseUrlChange(e.target.value)}
                 onKeyDown={blurInputOnEnter}
                 placeholder="http://localhost:8317/v0/management"
+                aria-label={t("cliProxy.baseUrlLabel")}
               />
             }
           />
@@ -166,6 +167,7 @@ export default function CliProxySettings() {
                   }
                   onBlur={(e) => handleKeyChange(e.target.value)}
                   onKeyDown={blurInputOnEnter}
+                  aria-label={t("cliProxy.managementKeyLabel")}
                 />
               </div>
             }

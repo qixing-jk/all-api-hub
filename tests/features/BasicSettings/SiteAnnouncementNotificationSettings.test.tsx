@@ -206,7 +206,7 @@ describe("SiteAnnouncementNotificationSettings", () => {
       "settings:siteAnnouncementNotifications.polling.interval",
     )
 
-    fireEvent.change(intervalInput, { target: { value: "360" } })
+    fireEvent.change(intervalInput, { target: { value: "0360" } })
     fireEvent.blur(intervalInput)
 
     await waitFor(() => {

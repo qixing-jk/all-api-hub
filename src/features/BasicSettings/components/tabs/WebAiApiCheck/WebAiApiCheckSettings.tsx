@@ -241,6 +241,7 @@ export default function WebAiApiCheckSettings() {
             rightContent={
               <Switch
                 checked={!!contextMenu.enabled}
+                aria-label={t("webAiApiCheck:settings.contextMenu.enable")}
                 onChange={(checked) => {
                   void saveSettings(SETTINGS_SAVE_ACTIONS.CONTEXT_MENU, {
                     contextMenu: {
@@ -261,6 +262,7 @@ export default function WebAiApiCheckSettings() {
             rightContent={
               <Switch
                 checked={!!autoDetect.enabled}
+                aria-label={t("webAiApiCheck:settings.autoDetect.enable")}
                 onChange={(checked) => {
                   void saveSettings(SETTINGS_SAVE_ACTIONS.AUTO_DETECT, {
                     autoDetect: {
@@ -283,6 +285,9 @@ export default function WebAiApiCheckSettings() {
             rightContent={
               <Switch
                 checked={!!enhancedAutoDetect.enabled}
+                aria-label={t(
+                  "webAiApiCheck:settings.autoDetect.enhanced.enable",
+                )}
                 onChange={(checked) => {
                   void saveSettings(
                     SETTINGS_SAVE_ACTIONS.ENHANCED_AUTO_DETECT,

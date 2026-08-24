@@ -5,3 +5,8 @@ export type DeepPartial<T> = {
       : U
     : never
 }
+
+/** Makes selected object fields partial without weakening array element types. */
+export type PartialWithNested<T, K extends keyof T> = Omit<Partial<T>, K> & {
+  [P in K]?: Partial<T[P]>
+}

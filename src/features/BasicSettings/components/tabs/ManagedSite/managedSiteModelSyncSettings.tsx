@@ -43,6 +43,7 @@ import {
   isProbeChannelModelFilterRule,
 } from "~/types/channelModelFilters"
 import type { ManagedSiteModelSyncPreferences } from "~/types/managedSiteModelSync"
+import type { PartialWithNested } from "~/types/utils"
 import { getErrorMessage } from "~/utils/core/error"
 import { safeRandomUUID } from "~/utils/core/identifier"
 import { createLogger } from "~/utils/core/logger"
@@ -55,6 +56,16 @@ type UserManagedSiteModelSyncConfig = NonNullable<
   typeof DEFAULT_PREFERENCES.managedSiteModelSync
 >
 
+type ManagedSiteModelSyncPreferenceUpdate = PartialWithNested<
+  ManagedSiteModelSyncPreferences,
+  "rateLimit"
+>
+
+type UserManagedSiteModelSyncConfigUpdate = PartialWithNested<
+  UserManagedSiteModelSyncConfig,
+  "rateLimit"
+>
+
 type EditableFilter = ChannelModelFilterRule
 
 type NumericInputCommitOptions = {
@@ -62,7 +73,7 @@ type NumericInputCommitOptions = {
   min: number
   max: number
   allowDecimal?: boolean
-  createUpdate: (value: number) => Partial<ManagedSiteModelSyncPreferences>
+  createUpdate: (value: number) => ManagedSiteModelSyncPreferenceUpdate
 }
 
 /**
@@ -224,7 +235,7 @@ export default function ManagedSiteModelSyncSettings() {
   }, [])
 
   const savePreferences = async (
-    updates: Partial<ManagedSiteModelSyncPreferences>,
+    updates: ManagedSiteModelSyncPreferenceUpdate,
   ) => {
     const isGlobalFiltersUpdate =
       updates.globalChannelModelFilters !== undefined
@@ -236,7 +247,7 @@ export default function ManagedSiteModelSyncSettings() {
 
     try {
       // Convert to UserPreferences.modelSync format
-      const userPrefsUpdate: Partial<UserManagedSiteModelSyncConfig> = {}
+      const userPrefsUpdate: UserManagedSiteModelSyncConfigUpdate = {}
       if (updates.enableSync !== undefined) {
         userPrefsUpdate.enabled = updates.enableSync
       }
@@ -394,10 +405,7 @@ export default function ManagedSiteModelSyncSettings() {
         min: 5,
         max: 120,
         createUpdate: (requestsPerMinute) => ({
-          rateLimit: {
-            ...preferences.rateLimit,
-            requestsPerMinute,
-          },
+          rateLimit: { requestsPerMinute },
         }),
       }),
   })
@@ -410,10 +418,7 @@ export default function ManagedSiteModelSyncSettings() {
         min: 1,
         max: 20,
         createUpdate: (burst) => ({
-          rateLimit: {
-            ...preferences.rateLimit,
-            burst,
-          },
+          rateLimit: { burst },
         }),
       }),
   })

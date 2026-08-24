@@ -116,15 +116,18 @@ vi.mock("~/components/ui", () => ({
     checked,
     onChange,
     disabled,
+    "aria-label": ariaLabel,
   }: {
     checked?: boolean
     onChange?: (checked: boolean) => void
     disabled?: boolean
+    "aria-label"?: string
   }) => (
     <button
       type="button"
       role="switch"
       aria-checked={checked}
+      aria-label={ariaLabel}
       disabled={disabled}
       onClick={() => onChange?.(!checked)}
     >
@@ -214,10 +217,21 @@ describe("WebAiApiCheckSettings", () => {
 
     render(<WebAiApiCheckSettings />)
 
-    const switches = screen.getAllByRole("switch")
-    expect(switches[0]).toHaveAttribute("aria-checked", "true")
-    expect(switches[1]).toHaveAttribute("aria-checked", "true")
-    expect(switches[2]).toHaveAttribute("aria-checked", "true")
+    expect(
+      screen.getByRole("switch", {
+        name: "webAiApiCheck:settings.contextMenu.enable",
+      }),
+    ).toHaveAttribute("aria-checked", "true")
+    expect(
+      screen.getByRole("switch", {
+        name: "webAiApiCheck:settings.autoDetect.enable",
+      }),
+    ).toHaveAttribute("aria-checked", "true")
+    expect(
+      screen.getByRole("switch", {
+        name: "webAiApiCheck:settings.autoDetect.enhanced.enable",
+      }),
+    ).toHaveAttribute("aria-checked", "true")
 
     const textarea = screen.getByLabelText(
       "webAiApiCheck:settings.autoDetect.whitelist.patternsPlaceholder",
@@ -299,16 +313,34 @@ describe("WebAiApiCheckSettings", () => {
   it("toggles enhanced auto-detect without changing whitelist patterns", async () => {
     render(<WebAiApiCheckSettings />)
 
-    const switches = screen.getAllByRole("switch")
-    expect(switches[2]).toHaveAttribute("aria-checked", "true")
+    const enhancedAutoDetectSwitch = screen.getByRole("switch", {
+      name: "webAiApiCheck:settings.autoDetect.enhanced.enable",
+    })
+    expect(enhancedAutoDetectSwitch).toHaveAttribute("aria-checked", "true")
 
-    fireEvent.click(switches[2])
+    fireEvent.click(enhancedAutoDetectSwitch)
 
     await waitFor(() => {
       expect(mockUpdateWebAiApiCheck).toHaveBeenCalledWith({
         autoDetect: {
           enhanced: { enabled: false },
         },
+      })
+    })
+  })
+
+  it("toggles auto-detect through its accessible label", async () => {
+    render(<WebAiApiCheckSettings />)
+
+    fireEvent.click(
+      screen.getByRole("switch", {
+        name: "webAiApiCheck:settings.autoDetect.enable",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockUpdateWebAiApiCheck).toHaveBeenCalledWith({
+        autoDetect: { enabled: false },
       })
     })
   })
@@ -414,8 +446,11 @@ describe("WebAiApiCheckSettings", () => {
 
     render(<WebAiApiCheckSettings />)
 
-    const switches = screen.getAllByRole("switch")
-    expect(switches[2]).toBeDisabled()
+    expect(
+      screen.getByRole("switch", {
+        name: "webAiApiCheck:settings.autoDetect.enhanced.enable",
+      }),
+    ).toBeDisabled()
   })
 
   it("keeps unrelated controls active while a switch save is in flight and shows an error toast when persistence fails", async () => {
@@ -424,7 +459,15 @@ describe("WebAiApiCheckSettings", () => {
 
     render(<WebAiApiCheckSettings />)
 
-    const switches = screen.getAllByRole("switch")
+    const contextMenuSwitch = screen.getByRole("switch", {
+      name: "webAiApiCheck:settings.contextMenu.enable",
+    })
+    const autoDetectSwitch = screen.getByRole("switch", {
+      name: "webAiApiCheck:settings.autoDetect.enable",
+    })
+    const enhancedAutoDetectSwitch = screen.getByRole("switch", {
+      name: "webAiApiCheck:settings.autoDetect.enhanced.enable",
+    })
     const textarea = screen.getByLabelText(
       "webAiApiCheck:settings.autoDetect.whitelist.patternsPlaceholder",
     )
@@ -435,12 +478,12 @@ describe("WebAiApiCheckSettings", () => {
       target: { value: "^https://draft.example.invalid" },
     })
 
-    fireEvent.click(switches[0])
+    fireEvent.click(contextMenuSwitch)
 
     await waitFor(() => {
-      expect(switches[0]).toBeDisabled()
-      expect(switches[1]).toBeEnabled()
-      expect(switches[2]).toBeEnabled()
+      expect(contextMenuSwitch).toBeDisabled()
+      expect(autoDetectSwitch).toBeEnabled()
+      expect(enhancedAutoDetectSwitch).toBeEnabled()
       expect(textarea).toBeEnabled()
       expect(
         screen.getByLabelText(
@@ -465,7 +508,7 @@ describe("WebAiApiCheckSettings", () => {
     })
 
     await waitFor(() => {
-      expect(switches[0]).not.toBeDisabled()
+      expect(contextMenuSwitch).not.toBeDisabled()
       expect(textarea).not.toBeDisabled()
       expect(saveButton).not.toBeDisabled()
     })
