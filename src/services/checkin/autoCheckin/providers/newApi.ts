@@ -1018,6 +1018,13 @@ async function checkinNewApi(
       data: checkinResponse ?? undefined,
     }
   } catch (error: unknown) {
+    if (context.mutationLifecycle?.dispatched) {
+      return resolveProviderErrorResult({
+        error,
+        mutationDispatched: true,
+      })
+    }
+
     const errorMessage = getProviderErrorMessage(error)
     if (
       await isCheckInDisabled(

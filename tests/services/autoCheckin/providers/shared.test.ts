@@ -108,4 +108,17 @@ describe("auto-checkin provider error normalization", () => {
       messageParams: { statusCode: 503 },
     })
   })
+
+  it("keeps an unstructured lost result uncertain after mutation dispatch", () => {
+    expect(
+      resolveProviderErrorResult({
+        error: new Error("Invalid response"),
+        mutationDispatched: true,
+      }),
+    ).toEqual({
+      status: "uncertain",
+      rawMessage: "Invalid response",
+      messageKey: undefined,
+    })
+  })
 })

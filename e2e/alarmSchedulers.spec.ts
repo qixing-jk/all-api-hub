@@ -1247,6 +1247,16 @@ test("runs auto-checkin retries when its MV3 alarm fires", async ({
   const today = getLocalDay()
   let checkinRequests = 0
 
+  await context.route(`${baseUrl}/api/user/checkin?month=*`, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        success: true,
+        data: { enabled: true, stats: { checked_in_today: false } },
+      }),
+    }),
+  )
   await context.route(`${baseUrl}/api/user/checkin`, (route) => {
     checkinRequests += 1
     return route.fulfill({

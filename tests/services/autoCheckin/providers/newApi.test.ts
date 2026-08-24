@@ -11,6 +11,7 @@ import { autoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/provid
 import { newApiProvider } from "~/services/checkin/autoCheckin/providers/newApi"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
+import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { isAllowedIncognitoAccess } from "~/utils/browser/browserApi"
 import {
@@ -19,6 +20,7 @@ import {
 } from "~/utils/browser/tempWindowFetch"
 import { safeRandomUUID } from "~/utils/core/identifier"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
+import { createAutoCheckinMutationLifecycle } from "~~/tests/test-utils/autoCheckin"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 
@@ -754,6 +756,27 @@ describe("newApiProvider", () => {
 
       expect(result.status).toBe("already_checked")
       expect(tempWindowTriggerCheckinPageAction).toHaveBeenCalledTimes(1)
+    })
+
+    it("does not start a second mutation after a dispatched request loses its result", async () => {
+      vi.mocked(fetchApi).mockRejectedValueOnce(
+        new Error("missing check-in signature header"),
+      )
+      const mutationLifecycle = createAutoCheckinMutationLifecycle()
+      mutationLifecycle.onDispatch()
+
+      const result = await checkInForTest(mockAccount, {
+        ...DEFAULT_PROVIDER_CONTEXT,
+        mutationLifecycle,
+      })
+
+      expect(result).toMatchObject({
+        status: CHECKIN_RESULT_STATUS.UNCERTAIN,
+        rawMessage: "missing check-in signature header",
+      })
+      expect(fetchApiData).not.toHaveBeenCalled()
+      expect(tempWindowTriggerCheckinPageAction).not.toHaveBeenCalled()
+      expect(tempWindowTurnstileFetch).not.toHaveBeenCalled()
     })
 
     it("returns native trigger failure messaging when native page action rejects after thrown signature error", async () => {

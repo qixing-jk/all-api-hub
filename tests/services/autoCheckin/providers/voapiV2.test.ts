@@ -12,6 +12,7 @@ import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { server } from "~~/tests/msw/server"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
+import { createAutoCheckinMutationLifecycle } from "~~/tests/test-utils/autoCheckin"
 import { buildCheckInConfig } from "~~/tests/test-utils/factories"
 
 const {
@@ -283,6 +284,59 @@ describe("voApiV2Provider", () => {
       TEMP_WINDOW_REQUEST_SOURCES.Background,
       DEFAULT_PROVIDER_CONTEXT.protectionBypassExecution,
     )
+  })
+
+  it("keeps a failed token resync retryable after an authoritative 401", async () => {
+    const mutationLifecycle = createAutoCheckinMutationLifecycle()
+    mockResyncVoApiV2AuthToken.mockRejectedValueOnce(
+      new Error("dashboard token resync unavailable"),
+    )
+    server.use(
+      http.post("https://example.invalid/api/check_in", () =>
+        HttpResponse.json({ code: 2, data: null, msg: "Auth expire" }),
+      ),
+    )
+
+    await expect(
+      checkInForTest(account, {
+        ...DEFAULT_PROVIDER_CONTEXT,
+        mutationLifecycle,
+      }),
+    ).resolves.toMatchObject({
+      status: CHECKIN_RESULT_STATUS.FAILED,
+      rawMessage: "dashboard token resync unavailable",
+    })
+    expect(mutationLifecycle.dispatched).toBe(false)
+  })
+
+  it("keeps a failed auth persistence step retryable after an authoritative 401", async () => {
+    const mutationLifecycle = createAutoCheckinMutationLifecycle()
+    mockResyncVoApiV2AuthToken.mockResolvedValueOnce({
+      accessToken: "resynced-dashboard-token",
+      userId: "8",
+      username: "resynced-owner",
+      source: "existing_tab",
+    })
+    mockUpdateAccount.mockRejectedValueOnce(
+      new Error("account auth persistence unavailable"),
+    )
+    server.use(
+      http.post("https://example.invalid/api/check_in", () =>
+        HttpResponse.json({ code: 2, data: null, msg: "Auth expire" }),
+      ),
+    )
+
+    await expect(
+      checkInForTest(account, {
+        ...DEFAULT_PROVIDER_CONTEXT,
+        mutationLifecycle,
+      }),
+    ).resolves.toMatchObject({
+      status: CHECKIN_RESULT_STATUS.FAILED,
+      rawMessage: "account auth persistence unavailable",
+    })
+    expect(mutationLifecycle.dispatched).toBe(false)
+    expect(mockSubmitVoApiV2CheckIn).toHaveBeenCalledTimes(1)
   })
 
   it("reports generic backend failures without dashboard JWT re-sync", async () => {

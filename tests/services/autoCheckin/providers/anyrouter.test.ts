@@ -7,6 +7,7 @@ import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/con
 import { AuthTypeEnum, SiteHealthStatus, type SiteAccount } from "~/types"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
+import { createAutoCheckinMutationLifecycle } from "~~/tests/test-utils/autoCheckin"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
 vi.mock("~/services/apiTransport/request", () => ({
@@ -383,16 +384,7 @@ describe("anyrouterProvider", () => {
 
     it("returns uncertain when the response is lost after dispatch", async () => {
       const { fetchApi } = await import("~/services/apiTransport/request")
-      const mutationLifecycle = {
-        dispatched: false,
-        responseReceived: false,
-        onDispatch() {
-          this.dispatched = true
-        },
-        onResponse() {
-          this.responseReceived = true
-        },
-      }
+      const mutationLifecycle = createAutoCheckinMutationLifecycle()
       vi.mocked(fetchApi).mockImplementationOnce(async (request) => {
         request.observer?.onDispatch()
         throw new TypeError("Failed to fetch")

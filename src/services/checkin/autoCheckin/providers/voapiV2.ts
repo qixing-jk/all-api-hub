@@ -182,6 +182,13 @@ export const voApiV2Provider: AutoCheckinProvider = {
           throw error
         }
 
+        // The authoritative 401 proves the first POST was not applied. Clear
+        // its lifecycle before any read-only recovery work can fail.
+        if (context.mutationLifecycle) {
+          context.mutationLifecycle.dispatched = false
+          context.mutationLifecycle.responseReceived = false
+        }
+
         const resynced = await resyncVoApiV2AuthToken(
           siteAccount.site_url,
           tempWindowRequestSource,
@@ -192,13 +199,6 @@ export const voApiV2Provider: AutoCheckinProvider = {
         }
 
         await updateAccountAuthFromResync(siteAccount, resynced)
-
-        // The authoritative 401 belongs to the first, confirmed-not-applied
-        // attempt. Classify the recovered POST from its own dispatch evidence.
-        if (context.mutationLifecycle) {
-          context.mutationLifecycle.dispatched = false
-          context.mutationLifecycle.responseReceived = false
-        }
 
         return await runCheckIn({
           ...request,

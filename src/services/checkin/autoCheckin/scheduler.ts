@@ -105,6 +105,7 @@ import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
 
+import { isRetryableCheckinResult } from "./resultPolicy"
 import { AUTO_CHECKIN_STATUS_STORAGE_LOCK, autoCheckinStorage } from "./storage"
 
 const logger = createLogger("AutoCheckin")
@@ -115,14 +116,6 @@ const isSuccessfulCheckinStatus = (status: CheckinResultStatus): boolean =>
 
 const isFailedCheckinStatus = (status: CheckinResultStatus): boolean =>
   status === CHECKIN_RESULT_STATUS.FAILED
-
-const isRetryableCheckinResult = (result: CheckinAccountResult): boolean => {
-  if (!isFailedCheckinStatus(result.status)) return false
-  // Persisted pre-contract failures have no flag; keep their historical retry
-  // behavior while all newly produced failures write an explicit decision.
-  if (result.retryable !== undefined) return result.retryable
-  return true
-}
 
 const toSchedulerSkipReason = (
   reason: CheckInExecutionSkipReason,

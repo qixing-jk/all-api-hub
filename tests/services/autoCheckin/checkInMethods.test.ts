@@ -950,6 +950,40 @@ describe("check-in methods compatibility activation", () => {
     expect(requestOrder).toEqual(["status-before", "mutation", "status-after"])
   })
 
+  it("passes transport lifecycle evidence through the selected-method boundary", async () => {
+    const registration = getNewApiExecutionRegistration()
+    const account = createNewApiExecutionAccount()
+    vi.spyOn(registration.provider, "getStatus").mockResolvedValue({
+      outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
+      availability: CHECK_IN_METHOD_AVAILABILITIES.Enabled,
+      today: CHECK_IN_METHOD_TODAY_STATUSES.NotChecked,
+      evidence: {
+        source: CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Probe,
+        observedAt: 200,
+      },
+    })
+    const checkInRequest = vi
+      .spyOn(registration.provider, "checkIn")
+      .mockImplementation(async (_account, context) => {
+        context.mutationLifecycle?.onDispatch()
+        context.mutationLifecycle?.onResponse()
+        expect(context.mutationLifecycle).toMatchObject({
+          dispatched: true,
+          responseReceived: true,
+        })
+        return { status: "success" }
+      })
+
+    await expect(
+      executeSelectedCheckIn({
+        account,
+        globalAutomaticExecutionEnabled: true,
+        context: createExecutionContext(),
+      }),
+    ).resolves.toMatchObject({ kind: "executed", retryable: false })
+    expect(checkInRequest).toHaveBeenCalledOnce()
+  })
+
   it.each([
     {
       name: "authoritatively not checked",
@@ -972,6 +1006,11 @@ describe("check-in methods compatibility activation", () => {
         attemptedAt: Date.now(),
       },
       reconciliation: "unknown",
+    },
+    {
+      name: "unavailable",
+      status: undefined,
+      reconciliation: "unavailable",
     },
     {
       name: "known without today's state",

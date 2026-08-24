@@ -10,7 +10,10 @@ import {
   resolveAutoCheckinTroubleshootingHintKey,
   translateAutoCheckinMessageKey,
 } from "~/features/AutoCheckin/utils/autoCheckin"
-import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
+import {
+  CHECKIN_RESULT_STATUS,
+  type CheckinAccountResult,
+} from "~/types/autoCheckin"
 
 describe("autoCheckin utils", () => {
   it("counts already-checked outcomes as successful", () => {
@@ -40,8 +43,15 @@ describe("autoCheckin utils", () => {
           status: CHECKIN_RESULT_STATUS.SKIPPED,
           timestamp: 4,
         },
+        {
+          accountId: "uncertain",
+          accountName: "Uncertain",
+          status: CHECKIN_RESULT_STATUS.UNCERTAIN,
+          reconciliation: "unknown",
+          timestamp: 5,
+        },
       ]),
-    ).toEqual({ total: 4, success: 2, failed: 1, skipped: 1 })
+    ).toEqual({ total: 5, success: 2, failed: 2, skipped: 1 })
   })
 
   describe("translateAutoCheckinMessageKey", () => {
@@ -204,8 +214,8 @@ describe("autoCheckin utils", () => {
       ).toHaveLength(1)
     })
 
-    it("groups failed and skipped results into one outcome filter", () => {
-      const results = [
+    it("keeps uncertain results in the existing failure attention filters", () => {
+      const results: CheckinAccountResult[] = [
         {
           accountId: "failed",
           accountName: "Failed",
@@ -224,6 +234,13 @@ describe("autoCheckin utils", () => {
           status: CHECKIN_RESULT_STATUS.SUCCESS,
           timestamp: 1,
         },
+        {
+          accountId: "uncertain",
+          accountName: "Uncertain",
+          status: CHECKIN_RESULT_STATUS.UNCERTAIN,
+          reconciliation: "unknown",
+          timestamp: 4,
+        },
       ]
 
       expect(
@@ -233,7 +250,16 @@ describe("autoCheckin utils", () => {
           "",
           vi.fn((key: string) => key) as any,
         ).map((result) => result.accountId),
-      ).toEqual(["failed", "skipped"])
+      ).toEqual(["failed", "skipped", "uncertain"])
+
+      expect(
+        filterAutoCheckinResults(
+          results,
+          FILTER_STATUS.FAILED,
+          "",
+          vi.fn((key: string) => key) as any,
+        ).map((result) => result.accountId),
+      ).toEqual(["failed", "uncertain"])
     })
   })
 

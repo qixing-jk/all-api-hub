@@ -221,6 +221,36 @@ describe("AutoCheckin ResultsTable", () => {
     ).toBeVisible()
   })
 
+  it("shows an explicit uncertain outcome and pending-confirmation guidance", async () => {
+    render(
+      <ResultsTable
+        results={[
+          {
+            accountId: "uncertain-account",
+            accountName: "Uncertain Account",
+            status: CHECKIN_RESULT_STATUS.UNCERTAIN,
+            reconciliation: "unknown",
+            timestamp: 1,
+          },
+        ]}
+      />,
+      {
+        withReleaseUpdateStatusProvider: false,
+        withThemeProvider: false,
+        withUserPreferencesProvider: false,
+      },
+    )
+
+    expect(
+      await screen.findByText("autoCheckin:execution.status.uncertain"),
+    ).toBeVisible()
+    expect(
+      screen.getByText(
+        "autoCheckin:providerFallback.resultPendingConfirmation",
+      ),
+    ).toBeVisible()
+  })
+
   it("offers a retry when status discovery was temporarily unavailable", async () => {
     const user = userEvent.setup()
     render(

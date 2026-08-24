@@ -1,11 +1,11 @@
 # Account-Level Check-In Method Discovery, Selection, and Execution Design
 
-- Status: Design approved; implementation plan in progress (Tickets 01-04 and 06 resolved; Tickets 05 and 08 partially implemented)
+- Status: Design approved; implementation plan in progress (Tickets 01-06 resolved; Ticket 08 partially implemented)
 - Related issue: qixing-jk/all-api-hub#1270
 - Design baseline: `origin/main` @ `1c6f72543c8feb12a8562eb15199969656045979`
-- Current implementation: merged to `main` through PRs #1340, #1343, and #1350
+- Current implementation: merged to `main` through PRs #1340, #1343, and #1350; Ticket 05 is completed by PR #1352 pending merge
 - Research and review date: 2026-08-10
-- Current implementation slice: Tickets 01-04 deliver the method-aware account model, bounded discovery, selection, and AccountDialog recovery controls. Ticket 06 delivers the Sub2API authentication-durability prerequisite. PR #1350 also hardens related readiness, execution-result, and recovery UI paths from Tickets 05 and 08 without claiming their remaining acceptance criteria. Tickets 07 and 09 remain unimplemented.
+- Current implementation slice: Tickets 01-04 deliver the method-aware account model, bounded discovery, selection, and AccountDialog recovery controls. Ticket 05 completes certainty-aware execution and safe retry admission in PR #1352. Ticket 06 delivers the Sub2API authentication-durability prerequisite. PR #1350 also hardens related readiness, execution-result, and recovery UI paths from Ticket 08 without claiming its remaining acceptance criteria. Tickets 07 and 09 remain unimplemented.
 
 ## 1. Goals and Non-Goals
 

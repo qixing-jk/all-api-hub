@@ -15,6 +15,8 @@ import {
 import { createLogger } from "~/utils/core/logger"
 import { isPlainObject } from "~/utils/core/object"
 
+import { isRetryableCheckinResult } from "./resultPolicy"
+
 const logger = createLogger("AutoCheckinStorage")
 
 /**
@@ -38,8 +40,8 @@ export const AUTO_CHECKIN_STATUS_STORAGE_LOCK =
  * `successCount` includes both `CHECKIN_RESULT_STATUS.SUCCESS` and
  * `CHECKIN_RESULT_STATUS.ALREADY_CHECKED`. `executed` counts only successful and
  * failed executions, while `totalEligible` falls back to `executed + skipped`
- * when no prior eligible total is provided. `needsRetry` is true whenever
- * `failedCount > 0`.
+ * when no prior eligible total is provided. `needsRetry` is true only when a
+ * failed result remains eligible for the ordinary retry queue.
  */
 function recalculateSummaryFromResults(
   perAccount: Record<string, CheckinAccountResult>,
@@ -74,11 +76,7 @@ function recalculateSummaryFromResults(
     failedCount,
     skippedCount,
     ...(uncertainCount > 0 ? { uncertainCount } : {}),
-    needsRetry: values.some(
-      (value) =>
-        value.status === CHECKIN_RESULT_STATUS.FAILED &&
-        value.retryable !== false,
-    ),
+    needsRetry: values.some(isRetryableCheckinResult),
   }
 }
 
