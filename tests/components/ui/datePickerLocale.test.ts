@@ -20,12 +20,17 @@ describe("date picker locale loading", () => {
     expect(resolveDatePickerLocaleKey(language)).toBe(expected)
   })
 
-  it("loads only the requested date-fns locale contract", async () => {
-    await expect(loadDatePickerLocale("de-DE")).resolves.toMatchObject({
-      code: "de",
-    })
-    await expect(loadDatePickerLocale("pt-PT")).resolves.toMatchObject({
-      code: "pt-BR",
+  it.each([
+    ["de", "de"],
+    ["es-419", "es"],
+    ["ja", "ja"],
+    ["pt-BR", "pt-BR"],
+    ["vi", "vi"],
+    ["zh-CN", "zh-CN"],
+    ["zh-TW", "zh-TW"],
+  ])("loads only the requested %s locale contract", async (language, code) => {
+    await expect(loadDatePickerLocale(language)).resolves.toMatchObject({
+      code,
     })
   })
 

@@ -3,6 +3,7 @@ import {
   render as rtlRender,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import type { ReactNode } from "react"
@@ -2342,12 +2343,12 @@ describe("WebDAVSettings", () => {
       "https://dav.example.com/backup.json",
     )) as HTMLInputElement
     const usernameInput = screen.getByDisplayValue("alice") as HTMLInputElement
-    const webdavPasswordInput = screen.getByDisplayValue(
-      "pw",
+    const webdavPasswordInput = document.getElementById(
+      WEBDAV_TARGET_IDS.password,
     ) as HTMLInputElement
-    const backupPasswordInput = screen.getAllByDisplayValue(
-      "stored-secret",
-    )[0] as HTMLInputElement
+    const backupPasswordInput = document.getElementById(
+      WEBDAV_TARGET_IDS.encryptionPassword,
+    ) as HTMLInputElement
 
     fireEvent.change(urlInput, {
       target: { value: "https://dav.example.com/backup-2.json" },
@@ -2364,14 +2365,14 @@ describe("WebDAVSettings", () => {
     expect(webdavPasswordInput.value).toBe("pw-2")
 
     await user.click(
-      screen.getAllByRole("button", {
+      within(webdavPasswordInput.parentElement!).getByRole("button", {
         name: /importExport:webdav\.(show|hide)Password/,
-      })[0],
+      }),
     )
     await user.click(
-      screen.getAllByRole("button", {
+      within(backupPasswordInput.parentElement!).getByRole("button", {
         name: /importExport:webdav\.(show|hide)Password/,
-      })[1],
+      }),
     )
 
     expect(webdavPasswordInput).toHaveAttribute("type", "text")

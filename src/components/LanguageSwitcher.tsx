@@ -122,9 +122,12 @@ export function LanguageSwitcher({
     }
     await userPreferences.setLanguage(language)
   }
+  const queueLanguageChange = (language: SupportedUiLanguage) => {
+    void handleLanguageChange(language).catch(() => undefined)
+  }
   const handleSupportedLanguageChange = (value: string) => {
     const nextLanguage = findSupportedUiLanguage(value)
-    if (nextLanguage) void handleLanguageChange(nextLanguage)
+    if (nextLanguage) queueLanguageChange(nextLanguage)
   }
 
   if (variant === "icon-dropdown") {
@@ -201,7 +204,7 @@ export function LanguageSwitcher({
                   value={code}
                   onPointerUp={() => {
                     if (code === activeLanguage) {
-                      void handleLanguageChange(code)
+                      queueLanguageChange(code)
                     }
                   }}
                 >
@@ -234,7 +237,7 @@ export function LanguageSwitcher({
       <ResponsiveToggleGroup
         aria-label={t("appearanceLanguage.switcher.groupLabel")}
         value={activeLanguage}
-        onValueChange={(code) => void handleLanguageChange(code)}
+        onValueChange={queueLanguageChange}
         buttonSize="sm"
         showActiveIndicator
         className={cn("p-0.5", !compact && "sm:p-1")}

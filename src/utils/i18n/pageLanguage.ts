@@ -33,6 +33,7 @@ export async function changePageLanguage(
     if (!isLatestRequest()) return false
 
     installAppLanguageResources(instance, resources)
+    const previousLanguage = instance.language
     const previousDayjsLocale = dayjs.locale()
     dayjs.locale(dayjsLocale)
     try {
@@ -42,7 +43,11 @@ export async function changePageLanguage(
       throw error
     }
 
-    return isLatestRequest()
+    if (isLatestRequest()) return true
+
+    dayjs.locale(previousDayjsLocale)
+    if (previousLanguage) await instance.changeLanguage(previousLanguage)
+    return false
   }
   const commitResult = languageCommitQueue.then(commit)
   languageCommitQueue = commitResult.then(

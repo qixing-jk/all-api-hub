@@ -4,16 +4,20 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { LanguageSwitcher } from "~/components/LanguageSwitcher"
 
-const { changeLanguageMock, setLanguageMock, translationState } = vi.hoisted(
-  () => ({
-    changeLanguageMock: vi.fn().mockResolvedValue(undefined),
-    setLanguageMock: vi.fn().mockResolvedValue(undefined),
-    translationState: {
-      language: "en",
-      resolvedLanguage: "en",
-    },
-  }),
-)
+const {
+  changeLanguageMock,
+  changePageLanguageMock,
+  setLanguageMock,
+  translationState,
+} = vi.hoisted(() => ({
+  changeLanguageMock: vi.fn().mockResolvedValue(undefined),
+  changePageLanguageMock: vi.fn().mockResolvedValue(true),
+  setLanguageMock: vi.fn().mockResolvedValue(undefined),
+  translationState: {
+    language: "en",
+    resolvedLanguage: "en",
+  },
+}))
 
 vi.mock("react-i18next", async (importOriginal) => {
   const actual = await importOriginal<typeof import("react-i18next")>()
@@ -50,13 +54,7 @@ vi.mock("~/services/preferences/userPreferences", () => ({
 }))
 
 vi.mock("~/utils/i18n/pageLanguage", () => ({
-  changePageLanguage: async (
-    instance: { changeLanguage: (language: string) => Promise<void> },
-    language: string,
-  ) => {
-    await instance.changeLanguage(language)
-    return true
-  },
+  changePageLanguage: (...args: unknown[]) => changePageLanguageMock(...args),
 }))
 
 const selectContext = createContext<{
@@ -182,6 +180,7 @@ vi.mock("~/components/ui/dropdown-menu", () => ({
 describe("LanguageSwitcher", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    changePageLanguageMock.mockResolvedValue(true)
     translationState.language = "en"
     translationState.resolvedLanguage = "en"
   })
@@ -209,8 +208,13 @@ describe("LanguageSwitcher", () => {
 
     fireEvent.click(nextButton)
 
-    expect(changeLanguageMock).toHaveBeenCalledTimes(1)
-    expect(changeLanguageMock).toHaveBeenCalledWith("ja")
+    expect(changePageLanguageMock).toHaveBeenCalledTimes(1)
+    expect(changePageLanguageMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        changeLanguage: changeLanguageMock,
+      }),
+      "ja",
+    )
     await waitFor(() => {
       expect(setLanguageMock).toHaveBeenCalledTimes(2)
     })
@@ -255,7 +259,7 @@ describe("LanguageSwitcher", () => {
 
     fireEvent.pointerUp(activeSelectItem)
 
-    expect(changeLanguageMock).not.toHaveBeenCalled()
+    expect(changePageLanguageMock).not.toHaveBeenCalled()
     expect(setLanguageMock).toHaveBeenCalledWith("en")
   })
 
@@ -270,7 +274,10 @@ describe("LanguageSwitcher", () => {
         }),
       )
 
-      expect(changeLanguageMock).toHaveBeenCalledWith(language)
+      expect(changePageLanguageMock).toHaveBeenCalledWith(
+        expect.any(Object),
+        language,
+      )
       await waitFor(() => {
         expect(setLanguageMock).toHaveBeenCalledWith(language)
       })
@@ -292,9 +299,38 @@ describe("LanguageSwitcher", () => {
       }),
     )
 
-    expect(changeLanguageMock).toHaveBeenCalledWith("ja")
+    expect(changePageLanguageMock).toHaveBeenCalledWith(
+      expect.any(Object),
+      "ja",
+    )
     return waitFor(() => {
       expect(setLanguageMock).toHaveBeenCalledWith("ja")
     })
+  })
+
+  it.each([
+    ["returns false", false],
+    ["rejects", new Error("locale asset unavailable")],
+  ])("does not persist when changing language %s", async (_label, outcome) => {
+    if (outcome instanceof Error) {
+      changePageLanguageMock.mockRejectedValueOnce(outcome)
+    } else {
+      changePageLanguageMock.mockResolvedValueOnce(outcome)
+    }
+    render(<LanguageSwitcher />)
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Switch to settings:appearanceLanguage.switcher.options.ja.name",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(changePageLanguageMock).toHaveBeenCalledWith(
+        expect.any(Object),
+        "ja",
+      )
+    })
+    expect(setLanguageMock).not.toHaveBeenCalled()
   })
 })

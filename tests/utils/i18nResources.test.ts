@@ -71,6 +71,15 @@ describe("i18n resources", () => {
     expect(fetchMock).toHaveBeenCalledTimes(3)
   })
 
+  it("rejects locale assets that are not namespace objects", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(createJsonResponse([])))
+    const { loadAppLanguageResources } = await import("~/utils/i18n/resources")
+
+    await expect(loadAppLanguageResources("zh-CN")).rejects.toThrow(
+      "Locale asset for zh-CN is not a JSON object",
+    )
+  })
+
   it("installs every loaded namespace before changing language", async () => {
     vi.stubGlobal(
       "fetch",

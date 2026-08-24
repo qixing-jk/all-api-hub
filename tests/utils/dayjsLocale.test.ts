@@ -18,7 +18,22 @@ describe("dayjs locale loading", () => {
     expect(resolveDayjsLocale(language)).toBe(expected)
   })
 
-  it("reuses an in-flight locale import", () => {
-    expect(loadDayjsLocale("de")).toBe(loadDayjsLocale("de-DE"))
+  it.each([
+    ["de", "de"],
+    ["es-419", "es"],
+    ["ja", "ja"],
+    ["pt-BR", "pt-br"],
+    ["vi", "vi"],
+    ["zh-CN", "zh-cn"],
+    ["zh-TW", "zh-tw"],
+  ])("loads the %s locale module", async (language, expected) => {
+    await expect(loadDayjsLocale(language)).resolves.toBe(expected)
+  })
+
+  it("reuses an in-flight locale import", async () => {
+    const firstLoad = loadDayjsLocale("de")
+
+    expect(firstLoad).toBe(loadDayjsLocale("de-DE"))
+    await expect(firstLoad).resolves.toBe("de")
   })
 })

@@ -104,9 +104,11 @@ describe("page language switching", () => {
     const localeSpy = vi.spyOn(dayjs, "locale").mockReturnValue("de")
     let activeLanguage = "en"
     const instance = {
+      language: "en",
       changeLanguage: vi.fn(async (language: string) => {
         if (language === "ja") await japaneseCommit.promise
         activeLanguage = language
+        instance.language = language
       }),
     }
     const { changePageLanguage } = await import("~/utils/i18n/pageLanguage")
@@ -128,6 +130,80 @@ describe("page language switching", () => {
     await expect(japaneseRequest).resolves.toBe(false)
     await expect(germanRequest).resolves.toBe(true)
     expect(activeLanguage).toBe("de")
+
+    localeSpy.mockRestore()
+  })
+
+  it("restores the prior locales when a newer request fails during an older commit", async () => {
+    const japaneseCommit = deferred<void>()
+    loadAppLanguageResourcesMock.mockImplementation((language: string) => {
+      if (language === "de") {
+        return Promise.reject(new Error("German locale unavailable"))
+      }
+      return Promise.resolve({ ja: { common: {} } })
+    })
+    loadDayjsLocaleMock.mockImplementation((language: string) =>
+      Promise.resolve(language),
+    )
+    let activeDayjsLocale = "en"
+    const localeSpy = vi
+      .spyOn(dayjs, "locale")
+      .mockImplementation((locale?: Parameters<typeof dayjs.locale>[0]) => {
+        if (typeof locale === "string") activeDayjsLocale = locale
+        return activeDayjsLocale
+      })
+    let activeLanguage = "en"
+    const instance = {
+      language: "en",
+      changeLanguage: vi.fn(async (language: string) => {
+        if (language === "ja") await japaneseCommit.promise
+        activeLanguage = language
+        instance.language = language
+      }),
+    }
+    const { changePageLanguage } = await import("~/utils/i18n/pageLanguage")
+
+    const japaneseRequest = changePageLanguage(
+      instance as unknown as i18n,
+      "ja",
+    )
+    await vi.waitFor(() => {
+      expect(instance.changeLanguage).toHaveBeenCalledWith("ja")
+    })
+    const germanRequest = changePageLanguage(instance as unknown as i18n, "de")
+
+    await expect(germanRequest).rejects.toThrow("German locale unavailable")
+    japaneseCommit.resolve()
+    await expect(japaneseRequest).resolves.toBe(false)
+
+    expect(instance.changeLanguage).toHaveBeenNthCalledWith(1, "ja")
+    expect(instance.changeLanguage).toHaveBeenNthCalledWith(2, "en")
+    expect(activeLanguage).toBe("en")
+    expect(activeDayjsLocale).toBe("en")
+
+    localeSpy.mockRestore()
+  })
+
+  it("restores the prior Day.js locale when i18next rejects a change", async () => {
+    loadAppLanguageResourcesMock.mockResolvedValue({ ja: { common: {} } })
+    loadDayjsLocaleMock.mockResolvedValue("ja")
+    let activeDayjsLocale = "en"
+    const localeSpy = vi
+      .spyOn(dayjs, "locale")
+      .mockImplementation((locale?: Parameters<typeof dayjs.locale>[0]) => {
+        if (typeof locale === "string") activeDayjsLocale = locale
+        return activeDayjsLocale
+      })
+    const instance = {
+      language: "en",
+      changeLanguage: vi.fn().mockRejectedValue(new Error("change failed")),
+    }
+    const { changePageLanguage } = await import("~/utils/i18n/pageLanguage")
+
+    await expect(
+      changePageLanguage(instance as unknown as i18n, "ja"),
+    ).rejects.toThrow("change failed")
+    expect(activeDayjsLocale).toBe("en")
 
     localeSpy.mockRestore()
   })
