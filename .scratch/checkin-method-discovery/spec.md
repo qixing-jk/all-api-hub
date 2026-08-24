@@ -36,7 +36,7 @@ Establish a general check-in method model for each account so the system can:
 
 | Term | Meaning | Does not mean |
 | --- | --- | --- |
-| Check-in Method | A stable, named built-in check-in protocol Adapter registered in the registry | Site Type or custom URL |
+| Check-in Method | A stable, named check-in protocol Adapter registered in the registry | Site Type or custom URL |
 | Detection | Whether a method matches the protocol exposed by the current deployment | Whether the account has checked in today |
 | Status Readback | An optional read-only operation that reports whether a matched method is enabled or has checked in today | A prerequisite for selecting or executing the method |
 | Status | Whether a matched method is currently enabled and whether the account has checked in today | Whether the method is the only match |
@@ -47,7 +47,7 @@ Establish a general check-in method model for each account so the system can:
 | Uncertain Mutation | A POST may have been applied, but no authoritative result is available | An ordinary failure that may be retried directly |
 | Status-first | Read the selected method's authoritative status before every mutation and POST only when it is enabled and not checked in | Using cached account state instead of remote confirmation |
 
-`CheckInConfig` is already the check-in namespace, so no additional `builtIn` wrapper is added. `methodKnowledge.methods` represents registered built-in methods, while `customCheckIn` explicitly remains independent.
+`CheckInConfig` is already the check-in namespace, so no additional `builtIn` wrapper is added. `methodKnowledge.methods` represents registered methods, while `customCheckIn` explicitly remains independent.
 
 ## 3. Issue Intake and Protocol Evidence
 
@@ -806,7 +806,7 @@ Detailed rules:
    - Preserve the URL, Turnstile configuration, redemption URL, open policy, and local today's status in full.
 6. Migration sends no network requests and does not modify `updated_at` or `user_updated_at`.
 
-The hard release invariant is: for the same account, credentials, and global settings, `preMigrationRunnable === postMigrationRunnable`. Every existing provider that can execute before migration must have a stable registration. A missing mapping fails tests or the build instead of silently removing an account from the scheduler. Defaulting automatic execution off for a new Sub2API account applies only to new accounts and must not override a migrated account's legacy `autoCheckInEnabled` intent.
+The hard release invariant is: for the same account, credentials, and global settings, `preMigrationRunnable === postMigrationRunnable`. Every existing provider that can execute before migration must have a stable registration. A missing mapping fails tests or the build instead of silently removing an account from the scheduler. New-account defaults are derived from registered candidate methods, while migration continues to preserve each account's legacy `autoCheckInEnabled` intent.
 
 ### Stable legacy method IDs
 
@@ -864,7 +864,7 @@ The current `failed → automatic retry` behavior of legacy providers must not m
 - Resolved: show the automatically detected and selected method.
 - Ambiguous: when no selection exists, require a one-time choice; when an existing selection remains executable, continue using it and show the other matched candidates.
 - Unknown: show a controlled reason and “Rediscover”; do not present it as unsupported.
-- Unsupported: show that no known built-in method is available; the custom URL is unaffected.
+- Unsupported: show that no known registered method is available; the custom URL is unaffected.
 - Matched + disabled: show that the deployment has disabled the method, retain the automatic selection, and stop execution.
 - Status unavailable: keep the matched method selectable and executable, explain that today's check-in state cannot be read automatically, and do not present the method as unsupported.
 - Manual stale: retain the user's method ID and show rediscover, choose another method, and restore automatic actions; do not switch silently.
@@ -983,7 +983,7 @@ The following architectural decisions remain unchanged:
 - Do not retain runtime `enableDetection` or `siteStatus`.
 - A uniquely matched but disabled method may still be selected automatically, but it cannot execute.
 - Retain a stale manual selection and derive stale state from facts.
-- Default automatic execution off for new Sub2API accounts.
+- Default account-level automatic execution on for new site types with a registered candidate method; discovery and method readiness still gate execution, and the user can disable the account explicitly.
 - In the first release, an unresolved uncertain result enters read-only reconciliation and never ordinary retry; do not add a generic write-ahead journal.
 - Do not persist a bare reward amount or implement a capability fingerprint in the first release.
 

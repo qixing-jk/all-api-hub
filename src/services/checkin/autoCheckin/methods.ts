@@ -25,6 +25,7 @@ import type {
   AutoCheckinProvider,
   AutoCheckinProviderContext,
 } from "~/services/checkin/autoCheckin/providers/contracts"
+import type { AutoCheckinMethodRegistration } from "~/services/checkin/autoCheckin/providers/registry"
 import { AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS } from "~/services/checkin/autoCheckin/providers/shared"
 import type { AutoCheckinProviderResult } from "~/services/checkin/autoCheckin/providers/types"
 import {
@@ -170,6 +171,66 @@ const createMutationLifecycle = (): AutoCheckinMutationLifecycle => {
   return lifecycle
 }
 
+type RevalidateCheckInAccount = (
+  refreshedConfig?: CheckInConfig,
+) => Promise<SiteAccount | null>
+
+const hasSameCheckInAccountIdentity = (
+  currentAccount: SiteAccount,
+  latestAccount: SiteAccount,
+): boolean =>
+  latestAccount.id === currentAccount.id &&
+  latestAccount.site_type === currentAccount.site_type &&
+  normalizeAccountIdentity(latestAccount.account_info?.id) ===
+    normalizeAccountIdentity(currentAccount.account_info?.id) &&
+  normalizeAccountSiteProfileUrlForOriginKey({
+    siteType: latestAccount.site_type,
+    url: latestAccount.site_url,
+  }) ===
+    normalizeAccountSiteProfileUrlForOriginKey({
+      siteType: currentAccount.site_type,
+      url: currentAccount.site_url,
+    })
+
+/** Rechecks account identity, intent, selection, and readiness before a recovered POST. */
+const createRecoveredMutationGuard = (input: {
+  currentAccount: SiteAccount
+  refreshedConfig?: CheckInConfig
+  globalAutomaticExecutionEnabled: boolean
+  registration: AutoCheckinMethodRegistration
+  revalidateAccount?: RevalidateCheckInAccount
+}): (() => Promise<boolean>) | undefined => {
+  const revalidateAccount = input.revalidateAccount
+  if (!revalidateAccount) return undefined
+
+  return async () => {
+    let latestAccount: SiteAccount | null
+    try {
+      latestAccount = await revalidateAccount(input.refreshedConfig)
+    } catch {
+      return false
+    }
+    if (
+      !latestAccount ||
+      !hasSameCheckInAccountIdentity(input.currentAccount, latestAccount)
+    ) {
+      return false
+    }
+
+    const latestState = inspectAccountCheckIn({
+      config: latestAccount.checkIn,
+      siteType: latestAccount.site_type,
+      accountDisabled: latestAccount.disabled,
+      globalAutomaticExecutionEnabled: input.globalAutomaticExecutionEnabled,
+    })
+    return (
+      latestState.executionEligibility.eligible &&
+      latestState.executionEligibility.methodId === input.registration.id &&
+      input.registration.provider.getReadiness(latestAccount).ready
+    )
+  }
+}
+
 const reconcileUncertainResult = async (input: {
   account: SiteAccount
   providerResult: AutoCheckinProviderResult
@@ -256,9 +317,7 @@ export async function executeSelectedCheckIn(input: {
   account: SiteAccount
   globalAutomaticExecutionEnabled: boolean
   context: AutoCheckinProviderContext
-  revalidateAccount?: (
-    refreshedConfig?: CheckInConfig,
-  ) => Promise<SiteAccount | null>
+  revalidateAccount?: RevalidateCheckInAccount
   /**
    * Retry safety guard: a provider with readback must confirm current status
    * before another mutation. Initial daily/manual runs keep best-effort
@@ -433,44 +492,13 @@ export async function executeSelectedCheckIn(input: {
   }
 
   const mutationLifecycle = createMutationLifecycle()
-  const revalidateAccount = input.revalidateAccount
-  const beforeRecoveredMutation = revalidateAccount
-    ? async () => {
-        let latestAccount: SiteAccount | null
-        try {
-          latestAccount = await revalidateAccount(refreshedConfig)
-        } catch {
-          return false
-        }
-        if (!latestAccount) return false
-        const sameAccountIdentity =
-          latestAccount.id === currentAccount.id &&
-          latestAccount.site_type === currentAccount.site_type &&
-          normalizeAccountIdentity(latestAccount.account_info?.id) ===
-            normalizeAccountIdentity(currentAccount.account_info?.id) &&
-          normalizeAccountSiteProfileUrlForOriginKey({
-            siteType: latestAccount.site_type,
-            url: latestAccount.site_url,
-          }) ===
-            normalizeAccountSiteProfileUrlForOriginKey({
-              siteType: currentAccount.site_type,
-              url: currentAccount.site_url,
-            })
-        if (!sameAccountIdentity) return false
-        const latestState = inspectAccountCheckIn({
-          config: latestAccount.checkIn,
-          siteType: latestAccount.site_type,
-          accountDisabled: latestAccount.disabled,
-          globalAutomaticExecutionEnabled:
-            input.globalAutomaticExecutionEnabled,
-        })
-        return (
-          latestState.executionEligibility.eligible &&
-          latestState.executionEligibility.methodId === registration.id &&
-          registration.provider.getReadiness(latestAccount).ready
-        )
-      }
-    : undefined
+  const beforeRecoveredMutation = createRecoveredMutationGuard({
+    currentAccount,
+    refreshedConfig,
+    globalAutomaticExecutionEnabled: input.globalAutomaticExecutionEnabled,
+    registration,
+    revalidateAccount: input.revalidateAccount,
+  })
   const providerResult = await registration.provider.checkIn(currentAccount, {
     ...input.context,
     mutationLifecycle,

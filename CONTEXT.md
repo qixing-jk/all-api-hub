@@ -86,6 +86,14 @@ A stable explanation for a readiness or execution outcome, such as user intent,
 method selection, credentials, network connectivity, or source availability.
 _Avoid_: status
 
+**Check-in Method**:
+An account-level protocol choice shown to users. A sole official method may use a generic name; a third-party or fork-specific method includes its distinguishing source.
+_Avoid_: provider, site type
+
+**Check-in Method Source**:
+The product or fork whose protocol distinguishes one check-in method from another. It is omitted when the account has only one official method.
+_Avoid_: provider
+
 ## Relationships
 
 - An **Account Site Type** is a **Site Type** that supports saved-account workflows.

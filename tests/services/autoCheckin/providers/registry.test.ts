@@ -6,9 +6,11 @@ import { autoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/provid
 import { anyrouterProvider } from "~/services/checkin/autoCheckin/providers/anyrouter"
 import { newApiProvider } from "~/services/checkin/autoCheckin/providers/newApi"
 import {
+  AUTO_CHECKIN_METHOD_SOURCE_KINDS,
   createAutoCheckinMethodMetadata,
   createAutoCheckinMethodRegistry,
   decodePersistedCheckInMethodId,
+  getAutoCheckinMethodSource,
   getLegacyAutoCheckinMethodIds,
   getNewAccountCompatibilityMethodIds,
 } from "~/services/checkin/autoCheckin/providers/registry"
@@ -21,6 +23,10 @@ import { veloeraProvider } from "~/services/checkin/autoCheckin/providers/veloer
 import { voApiV2Provider } from "~/services/checkin/autoCheckin/providers/voapiV2"
 import { wongGongyiProvider } from "~/services/checkin/autoCheckin/providers/wong"
 import type { CheckInMethodId } from "~/types/checkIn"
+
+const OFFICIAL_METHOD_SOURCE = {
+  kind: AUTO_CHECKIN_METHOD_SOURCE_KINDS.Official,
+} as const
 
 const registrationFor = (
   id: CheckInMethodId,
@@ -102,17 +108,33 @@ describe("autoCheckinMethodRegistry", () => {
     expect(sub2apiProProvider.detect).toBeTypeOf("function")
   })
 
+  it("distinguishes official methods from third-party protocol methods", () => {
+    expect(
+      getAutoCheckinMethodSource(AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn),
+    ).toEqual(OFFICIAL_METHOD_SOURCE)
+    expect(
+      getAutoCheckinMethodSource(
+        AUTO_CHECKIN_METHOD_IDS.Sub2ApiProDailyCheckIn,
+      ),
+    ).toEqual({
+      kind: AUTO_CHECKIN_METHOD_SOURCE_KINDS.ThirdParty,
+      sourceName: "Sub2API Pro",
+    })
+  })
+
   it("keeps newly introduced candidates outside legacy and new-account compatibility", () => {
     const metadata = createAutoCheckinMethodMetadata([
       {
         id: AUTO_CHECKIN_METHOD_IDS.AnyrouterDailyCheckIn,
         siteTypes: [SITE_TYPES.NEW_API],
+        source: OFFICIAL_METHOD_SOURCE,
         legacy: true,
         newAccountCompatibility: true,
       },
       {
         id: AUTO_CHECKIN_METHOD_IDS.VeloeraDailyCheckIn,
         siteTypes: [SITE_TYPES.NEW_API],
+        source: OFFICIAL_METHOD_SOURCE,
         legacy: false,
         newAccountCompatibility: false,
       },
@@ -215,12 +237,14 @@ describe("autoCheckinMethodRegistry", () => {
           {
             id: AUTO_CHECKIN_METHOD_IDS.AnyrouterDailyCheckIn,
             siteTypes: [SITE_TYPES.ANYROUTER],
+            source: OFFICIAL_METHOD_SOURCE,
             legacy: true,
             newAccountCompatibility: true,
           },
           {
             id: AUTO_CHECKIN_METHOD_IDS.VeloeraDailyCheckIn,
             siteTypes: [SITE_TYPES.VELOERA],
+            source: OFFICIAL_METHOD_SOURCE,
             legacy: true,
             newAccountCompatibility: true,
           },
@@ -241,6 +265,7 @@ describe("autoCheckinMethodRegistry", () => {
           {
             id: AUTO_CHECKIN_METHOD_IDS.AnyrouterDailyCheckIn,
             siteTypes: [SITE_TYPES.ANYROUTER],
+            source: OFFICIAL_METHOD_SOURCE,
             legacy: false,
             newAccountCompatibility: false,
           },
@@ -260,12 +285,14 @@ describe("autoCheckinMethodRegistry", () => {
         {
           id: AUTO_CHECKIN_METHOD_IDS.AnyrouterDailyCheckIn,
           siteTypes: [SITE_TYPES.NEW_API],
+          source: OFFICIAL_METHOD_SOURCE,
           legacy: true,
           newAccountCompatibility: true,
         },
         {
           id: AUTO_CHECKIN_METHOD_IDS.VeloeraDailyCheckIn,
           siteTypes: [SITE_TYPES.NEW_API],
+          source: OFFICIAL_METHOD_SOURCE,
           legacy: true,
           newAccountCompatibility: true,
         },

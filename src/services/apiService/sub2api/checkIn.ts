@@ -11,6 +11,15 @@ export const SUB2API_PRO_DAILY_CHECK_IN_ERROR_REASONS = {
   AlreadyCheckedToday: "DAILY_CHECKIN_ALREADY_DONE",
 } as const
 
+export const SUB2API_PRO_DAILY_CHECK_IN_RESULT_KINDS = {
+  Applied: "applied",
+  AlreadyChecked: "already_checked",
+  Disabled: "disabled",
+  RoleForbidden: "role_forbidden",
+  RecoveryStatusUnavailable: "recovery_status_unavailable",
+  RecoveryPreconditionFailed: "recovery_precondition_failed",
+} as const
+
 type Sub2ApiProDailyCheckInStatus = {
   enabled: boolean
   checkedInToday: boolean
@@ -18,16 +27,27 @@ type Sub2ApiProDailyCheckInStatus = {
 
 export type Sub2ApiProDailyCheckInMutationResult =
   | {
-      kind: "applied"
+      kind: typeof SUB2API_PRO_DAILY_CHECK_IN_RESULT_KINDS.Applied
       data: {
         rewardAmount: number
         newBalance: number
         checkedInAt: string
       }
     }
-  | { kind: "already_checked" }
-  | { kind: "disabled" }
-  | { kind: "role_forbidden" }
+  | {
+      kind: typeof SUB2API_PRO_DAILY_CHECK_IN_RESULT_KINDS.AlreadyChecked
+    }
+  | { kind: typeof SUB2API_PRO_DAILY_CHECK_IN_RESULT_KINDS.Disabled }
+  | { kind: typeof SUB2API_PRO_DAILY_CHECK_IN_RESULT_KINDS.RoleForbidden }
+
+export type Sub2ApiProDailyCheckInOperationResult =
+  | Sub2ApiProDailyCheckInMutationResult
+  | {
+      kind: typeof SUB2API_PRO_DAILY_CHECK_IN_RESULT_KINDS.RecoveryStatusUnavailable
+    }
+  | {
+      kind: typeof SUB2API_PRO_DAILY_CHECK_IN_RESULT_KINDS.RecoveryPreconditionFailed
+    }
 
 const toRecord = (value: unknown): Record<string, unknown> | null =>
   value !== null && typeof value === "object" && !Array.isArray(value)
@@ -157,7 +177,7 @@ export function parseSub2ApiProDailyCheckInMutationResponse(
       throw createInvalidResponseError(SUB2API_PRO_DAILY_CHECK_IN_ENDPOINT)
     }
     return {
-      kind: "applied",
+      kind: SUB2API_PRO_DAILY_CHECK_IN_RESULT_KINDS.Applied,
       data: {
         rewardAmount: data.reward_amount,
         newBalance: data.new_balance,
@@ -172,19 +192,19 @@ export function parseSub2ApiProDailyCheckInMutationResponse(
       response.status === 409 &&
       reason === SUB2API_PRO_DAILY_CHECK_IN_ERROR_REASONS.AlreadyCheckedToday
     ) {
-      return { kind: "already_checked" }
+      return { kind: SUB2API_PRO_DAILY_CHECK_IN_RESULT_KINDS.AlreadyChecked }
     }
     if (
       response.status === 403 &&
       reason === SUB2API_PRO_DAILY_CHECK_IN_ERROR_REASONS.Disabled
     ) {
-      return { kind: "disabled" }
+      return { kind: SUB2API_PRO_DAILY_CHECK_IN_RESULT_KINDS.Disabled }
     }
     if (
       response.status === 403 &&
       reason === SUB2API_PRO_DAILY_CHECK_IN_ERROR_REASONS.RoleForbidden
     ) {
-      return { kind: "role_forbidden" }
+      return { kind: SUB2API_PRO_DAILY_CHECK_IN_RESULT_KINDS.RoleForbidden }
     }
   }
 

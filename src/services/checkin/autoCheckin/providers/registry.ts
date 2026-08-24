@@ -17,6 +17,24 @@ const CHECK_IN_METHOD_ID_SET = new Set<string>(
   Object.values(AUTO_CHECKIN_METHOD_IDS),
 )
 
+export const AUTO_CHECKIN_METHOD_SOURCE_KINDS = {
+  Official: "official",
+  ThirdParty: "third-party",
+} as const
+
+type AutoCheckinMethodSource =
+  | {
+      readonly kind: typeof AUTO_CHECKIN_METHOD_SOURCE_KINDS.Official
+    }
+  | {
+      readonly kind: typeof AUTO_CHECKIN_METHOD_SOURCE_KINDS.ThirdParty
+      readonly sourceName: string
+    }
+
+const OFFICIAL_CHECK_IN_METHOD_SOURCE = {
+  kind: AUTO_CHECKIN_METHOD_SOURCE_KINDS.Official,
+} as const satisfies AutoCheckinMethodSource
+
 /** Returns whether a persisted value names a registered check-in method. */
 export function isCheckInMethodId(value: unknown): value is CheckInMethodId {
   return typeof value === "string" && CHECK_IN_METHOD_ID_SET.has(value)
@@ -25,6 +43,7 @@ export function isCheckInMethodId(value: unknown): value is CheckInMethodId {
 interface AutoCheckinMethodDefinitionBase {
   readonly id: CheckInMethodId
   readonly siteTypes: readonly AccountSiteType[]
+  readonly source: AutoCheckinMethodSource
 }
 
 /**
@@ -73,8 +92,9 @@ export function createAutoCheckinMethodMetadata(
     : null
 
   for (const definition of definitions) {
-    const legacy = Boolean(definition.legacy)
-    const newAccountCompatibility = Boolean(definition.newAccountCompatibility)
+    const methodId = definition.id
+    const legacy = definition.legacy
+    const newAccountCompatibility = definition.newAccountCompatibility
     if (!isCheckInMethodId(definition.id)) {
       throw new Error(
         `Auto check-in method ID is not declared in AUTO_CHECKIN_METHOD_IDS: ${definition.id}`,
@@ -90,7 +110,7 @@ export function createAutoCheckinMethodMetadata(
     }
     if (newAccountCompatibility && !legacy) {
       throw new Error(
-        `New-account compatibility requires legacy method metadata: ${definition.id}`,
+        `New-account compatibility requires legacy method metadata: ${methodId}`,
       )
     }
     if (
@@ -144,40 +164,56 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
   [AUTO_CHECKIN_METHOD_IDS.AnyrouterDailyCheckIn]: {
     id: AUTO_CHECKIN_METHOD_IDS.AnyrouterDailyCheckIn,
     siteTypes: [SITE_TYPES.ANYROUTER],
+    source: OFFICIAL_CHECK_IN_METHOD_SOURCE,
     legacy: true,
     newAccountCompatibility: true,
   },
   [AUTO_CHECKIN_METHOD_IDS.VeloeraDailyCheckIn]: {
     id: AUTO_CHECKIN_METHOD_IDS.VeloeraDailyCheckIn,
     siteTypes: [SITE_TYPES.VELOERA],
+    source: OFFICIAL_CHECK_IN_METHOD_SOURCE,
     legacy: true,
     newAccountCompatibility: true,
   },
   [AUTO_CHECKIN_METHOD_IDS.WongGongyiDailyCheckIn]: {
     id: AUTO_CHECKIN_METHOD_IDS.WongGongyiDailyCheckIn,
     siteTypes: [SITE_TYPES.WONG_GONGYI],
+    source: OFFICIAL_CHECK_IN_METHOD_SOURCE,
     legacy: true,
     newAccountCompatibility: true,
   },
   [AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn]: {
     id: AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn,
     siteTypes: [SITE_TYPES.NEW_API, SITE_TYPES.MODELFLARE],
+    source: OFFICIAL_CHECK_IN_METHOD_SOURCE,
     legacy: true,
     newAccountCompatibility: true,
   },
   [AUTO_CHECKIN_METHOD_IDS.VoApiV2DailyCheckIn]: {
     id: AUTO_CHECKIN_METHOD_IDS.VoApiV2DailyCheckIn,
     siteTypes: [SITE_TYPES.VO_API_V2],
+    source: OFFICIAL_CHECK_IN_METHOD_SOURCE,
     legacy: true,
     newAccountCompatibility: true,
   },
   [AUTO_CHECKIN_METHOD_IDS.Sub2ApiProDailyCheckIn]: {
     id: AUTO_CHECKIN_METHOD_IDS.Sub2ApiProDailyCheckIn,
     siteTypes: [SITE_TYPES.SUB2API],
+    source: {
+      kind: AUTO_CHECKIN_METHOD_SOURCE_KINDS.ThirdParty,
+      sourceName: "Sub2API Pro",
+    },
     legacy: false,
     newAccountCompatibility: false,
   },
 } as const satisfies Record<CheckInMethodId, AutoCheckinMethodDefinition>
+
+/** Returns the product source used to present a registered method. */
+export function getAutoCheckinMethodSource(
+  methodId: CheckInMethodId,
+): AutoCheckinMethodSource {
+  return AUTO_CHECKIN_METHOD_DEFINITIONS[methodId].source
+}
 
 const AUTO_CHECKIN_METHOD_METADATA = createAutoCheckinMethodMetadata(
   Object.values(AUTO_CHECKIN_METHOD_DEFINITIONS),

@@ -217,7 +217,7 @@ describe("useAccountDialog auth defaults", () => {
     await act(async () => {
       result.current.setters.setSiteType(SITE_TYPES.SUB2API)
     })
-    const unsupportedSwitch = result.current.state.checkIn
+    const discoveryRequiredSwitch = result.current.state.checkIn
 
     expect({
       supported: {
@@ -226,11 +226,12 @@ describe("useAccountDialog auth defaults", () => {
         methodIds: Object.keys(supportedSwitch.methodKnowledge.methods),
         selection: supportedSwitch.selection,
       },
-      unsupported: {
-        automaticExecutionEnabled: unsupportedSwitch.automaticExecutionEnabled,
-        customCheckIn: unsupportedSwitch.customCheckIn,
-        methodIds: Object.keys(unsupportedSwitch.methodKnowledge.methods),
-        selection: unsupportedSwitch.selection,
+      discoveryRequired: {
+        automaticExecutionEnabled:
+          discoveryRequiredSwitch.automaticExecutionEnabled,
+        customCheckIn: discoveryRequiredSwitch.customCheckIn,
+        methodIds: Object.keys(discoveryRequiredSwitch.methodKnowledge.methods),
+        selection: discoveryRequiredSwitch.selection,
       },
     }).toEqual({
       supported: {
@@ -242,7 +243,7 @@ describe("useAccountDialog auth defaults", () => {
           methodId: AUTO_CHECKIN_METHOD_IDS.VeloeraDailyCheckIn,
         },
       },
-      unsupported: {
+      discoveryRequired: {
         automaticExecutionEnabled: false,
         customCheckIn,
         methodIds: [],
@@ -267,7 +268,7 @@ describe("useAccountDialog auth defaults", () => {
     await act(async () => {
       result.current.setters.setSiteType(SITE_TYPES.SUB2API)
     })
-    expect(result.current.state.checkIn.automaticExecutionEnabled).toBe(false)
+    expect(result.current.state.checkIn.automaticExecutionEnabled).toBe(true)
 
     await act(async () => {
       result.current.setters.setSiteType(SITE_TYPES.VELOERA)

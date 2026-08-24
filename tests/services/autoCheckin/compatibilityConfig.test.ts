@@ -16,14 +16,14 @@ describe("new-account check-in defaults", () => {
       true,
     )
     expect(getNewAccountAutomaticExecutionDefault(SITE_TYPES.SUB2API)).toBe(
-      false,
+      true,
     )
     expect(hasNewAccountCompatibilityRegistration(SITE_TYPES.SUB2API)).toBe(
       false,
     )
   })
 
-  it("preserves an explicit disabled preference only for candidate site types", () => {
+  it("preserves an explicit disabled preference only for site types with candidates", () => {
     expect(
       resolveNewAccountAutomaticExecutionEnabled({
         siteType: SITE_TYPES.NEW_API,
@@ -34,7 +34,7 @@ describe("new-account check-in defaults", () => {
     expect(
       resolveNewAccountAutomaticExecutionEnabled({
         siteType: SITE_TYPES.SUB2API,
-        currentAutomaticExecutionEnabled: true,
+        currentAutomaticExecutionEnabled: false,
         userPreferenceChanged: true,
       }),
     ).toBe(false)

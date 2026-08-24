@@ -91,7 +91,7 @@ describe("check-in methods compatibility activation", () => {
     })
   })
 
-  it("does not invent support for a new Sub2API account and keeps execution off", () => {
+  it("does not invent compatibility evidence when Sub2API support is unconfirmed", () => {
     const config = createCompatibilityCheckInConfig({
       siteType: SITE_TYPES.SUB2API,
       supported: false,

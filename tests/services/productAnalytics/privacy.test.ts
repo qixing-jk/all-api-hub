@@ -1538,6 +1538,24 @@ describe("product analytics privacy filtering", () => {
     })
   })
 
+  it("drops an Auto Check-in method category outside the reviewed enum", () => {
+    expect(
+      sanitizeProductAnalyticsEvent(
+        PRODUCT_ANALYTICS_EVENTS.AutoCheckinAccountGroupCaptured,
+        {
+          run_kind: "daily",
+          entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
+          method_category: "future_category",
+          total_accounts: 1,
+          runnable_accounts: 1,
+          success_count: 1,
+          failed_count: 0,
+          skipped_count: 0,
+        },
+      ),
+    ).not.toHaveProperty("method_category")
+  })
+
   it("keeps managed-site channel analytics dimensions as fixed enums and counts", () => {
     const sanitized = sanitizeProductAnalyticsEvent(
       PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,

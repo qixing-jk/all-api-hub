@@ -22,6 +22,7 @@ import { AuthTypeEnum } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
+import { createAutoCheckinMutationLifecycle } from "~~/tests/test-utils/autoCheckin"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 
 vi.mock("~/services/apiService/sub2api", async (importOriginal) => {
@@ -104,17 +105,39 @@ describe("Sub2API Pro daily check-in method Adapter", () => {
     vi.restoreAllMocks()
   })
 
-  it("registers a non-legacy Sub2API candidate without static compatibility", () => {
-    const registration = autoCheckinMethodRegistry.resolveById(METHOD_ID)
+  it.each([
+    [
+      "account ID",
+      (account: ReturnType<typeof createAccount>) => (account.id = ""),
+    ],
+    [
+      "site URL",
+      (account: ReturnType<typeof createAccount>) => (account.site_url = ""),
+    ],
+    [
+      "user ID",
+      (account: ReturnType<typeof createAccount>) => {
+        if (account.account_info) account.account_info.id = ""
+      },
+    ],
+  ])("requires %s before reading status", (_field, removeField) => {
+    const account = createAccount()
+    removeField(account)
 
-    expect(registration).toMatchObject({
-      id: "sub2api-pro:daily-checkin",
-      siteTypes: [SITE_TYPES.SUB2API],
-      compatibilityRegistration: false,
+    expect(sub2apiProProvider.getReadiness(account)).toEqual({
+      ready: false,
+      reason: "account_data_missing",
     })
-    expect(
-      autoCheckinMethodRegistry.getCandidates(SITE_TYPES.SUB2API),
-    ).toContain(registration)
+  })
+
+  it("requires an access token before reading status", () => {
+    const account = createAccount()
+    if (account.account_info) account.account_info.access_token = ""
+
+    expect(sub2apiProProvider.getReadiness(account)).toEqual({
+      ready: false,
+      reason: "credentials_missing",
+    })
   })
 
   it("discovers only with status GET and selects the unique disabled match", async () => {
@@ -344,6 +367,71 @@ describe("Sub2API Pro daily check-in method Adapter", () => {
     expect(revalidateAccount).toHaveBeenCalledTimes(2)
   })
 
+  it.each([
+    [
+      "account ID",
+      (account: ReturnType<typeof createAccount>) => {
+        account.id = "replacement-account"
+      },
+    ],
+    [
+      "site origin",
+      (account: ReturnType<typeof createAccount>) => {
+        account.site_url = "https://replacement.example.invalid"
+      },
+    ],
+    [
+      "automatic intent",
+      (account: ReturnType<typeof createAccount>) => {
+        account.checkIn.automaticExecutionEnabled = false
+      },
+    ],
+    [
+      "selected method",
+      (account: ReturnType<typeof createAccount>) => {
+        account.checkIn.selection = { mode: "automatic" }
+      },
+    ],
+    [
+      "credentials",
+      (account: ReturnType<typeof createAccount>) => {
+        if (account.account_info) account.account_info.access_token = ""
+      },
+    ],
+  ])(
+    "rejects a recovered mutation after %s changes",
+    async (_field, mutateAccount) => {
+      const registration = autoCheckinMethodRegistry.resolveById(METHOD_ID)
+      if (!registration?.provider.getStatus) throw new Error("Missing Adapter")
+      vi.spyOn(registration.provider, "getStatus").mockResolvedValue(
+        notCheckedStatus,
+      )
+      const changedAccount = createAccount()
+      mutateAccount(changedAccount)
+      const revalidateAccount = vi
+        .fn()
+        .mockResolvedValueOnce(createAccount())
+        .mockResolvedValueOnce(changedAccount)
+      vi.spyOn(registration.provider, "checkIn").mockImplementation(
+        async (_account, context) => {
+          await expect(context.beforeRecoveredMutation?.()).resolves.toBe(false)
+          return {
+            status: CHECKIN_RESULT_STATUS.FAILED,
+            reasonCode: "account_unavailable",
+          }
+        },
+      )
+
+      await executeSelectedCheckIn({
+        account: createAccount(),
+        globalAutomaticExecutionEnabled: true,
+        context: executionContext(),
+        revalidateAccount,
+      })
+      expect(revalidateAccount).toHaveBeenCalledTimes(2)
+    },
+  )
+
   it("turns authoritative not-checked reconciliation into one later safe retry", async () => {
     const registration = autoCheckinMethodRegistry.resolveById(METHOD_ID)
     if (!registration?.provider.getStatus) throw new Error("Missing Adapter")
@@ -423,6 +511,14 @@ describe("Sub2API Pro daily check-in method Adapter", () => {
     ],
     [{ kind: "disabled" as const }, CHECKIN_RESULT_STATUS.FAILED],
     [{ kind: "role_forbidden" as const }, CHECKIN_RESULT_STATUS.FAILED],
+    [
+      { kind: "recovery_status_unavailable" as const },
+      CHECKIN_RESULT_STATUS.FAILED,
+    ],
+    [
+      { kind: "recovery_precondition_failed" as const },
+      CHECKIN_RESULT_STATUS.FAILED,
+    ],
   ])("maps protocol result $kind", async (protocolResult, expectedStatus) => {
     vi.mocked(performSub2ApiProDailyCheckIn).mockResolvedValue(protocolResult)
 
@@ -440,6 +536,7 @@ describe("Sub2API Pro daily check-in method Adapter", () => {
       "authentication_required",
     ],
     [SUB2API_AUTH_PERSISTENCE_STATUSES.WRITE_FAILED, "status_unavailable"],
+    [SUB2API_AUTH_PERSISTENCE_STATUSES.ACCOUNT_MISSING, "account_unavailable"],
   ] as const)(
     "stops a recovered mutation on auth-session result %s",
     async (status, reasonCode) => {
@@ -468,16 +565,7 @@ describe("Sub2API Pro daily check-in method Adapter", () => {
         throw new TypeError("Failed to fetch")
       },
     )
-    const mutationLifecycle = {
-      dispatched: false,
-      responseReceived: false,
-      onDispatch() {
-        this.dispatched = true
-      },
-      onResponse() {
-        this.responseReceived = true
-      },
-    }
+    const mutationLifecycle = createAutoCheckinMutationLifecycle()
 
     await expect(
       sub2apiProProvider.checkIn(createAccount(), {

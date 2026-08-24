@@ -18,7 +18,7 @@ Cut every account persistence and runtime consumer over to one canonical V7 chec
 - Remove `enableDetection`, `autoCheckInEnabled`, and `siteStatus` from the canonical runtime account and from ordinary consumers and writers. They may appear only in the V6 migration decoder or in the Module-private, non-persisted compatibility view described above.
 - Preserve `customCheckIn` structurally and behaviorally as an independent URL/bookmark flow.
 - Preserve current new-account behavior during the cutover by translating an existing provider's current support result into `compatibility_registration` evidence and an automatic selection. This bridge is limited to pre-existing registrations and is replaced by strict Detection where available.
-- Own the product default here: new Sub2API accounts start with automatic execution off, while existing provider defaults and every migrated account's prior intent remain unchanged.
+- Own the product default here: new accounts with a registered candidate method start with account-level automatic execution on, while discovery and method readiness gate execution and every migrated account's prior intent remains unchanged.
 - Make AccountDialog saves ownership-aware: inside the account storage lock, re-read the latest account and patch only user-edited intent, explicit selection changes, and custom check-in fields. Never write a stale whole `checkIn` draft over system-owned knowledge.
 - Bump the backup/WebDAV envelope to V4. V7 readers accept V1 through V4 and reject later explicit versions.
 - Document that V6/V7 clients concurrently writing the same WebDAV file are unsupported. V4 provides best-effort fail-closed behavior for the immediately preceding V3 reader; older tolerant readers are not guaranteed safe.

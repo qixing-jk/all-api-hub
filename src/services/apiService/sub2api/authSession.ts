@@ -24,8 +24,33 @@ export const SUB2API_AUTH_PERSISTENCE_STATUSES = {
   WRITE_FAILED: "write_failed",
 } as const
 
+export type Sub2ApiAuthPersistenceStatus =
+  (typeof SUB2API_AUTH_PERSISTENCE_STATUSES)[keyof typeof SUB2API_AUTH_PERSISTENCE_STATUSES]
+
 export type Sub2ApiAuthPersistenceResult = {
-  status: (typeof SUB2API_AUTH_PERSISTENCE_STATUSES)[keyof typeof SUB2API_AUTH_PERSISTENCE_STATUSES]
+  status: Sub2ApiAuthPersistenceStatus
+}
+
+const SUB2API_AUTH_PERSISTENCE_STATUS_SET = new Set<string>(
+  Object.values(SUB2API_AUTH_PERSISTENCE_STATUSES),
+)
+
+/** Reads the controlled persistence status carried by an auth-session error. */
+export function getSub2ApiAuthPersistenceStatus(
+  error: unknown,
+): Sub2ApiAuthPersistenceStatus | undefined {
+  if (!error || typeof error !== "object" || !("result" in error)) {
+    return undefined
+  }
+  const result = error.result
+  if (!result || typeof result !== "object" || !("status" in result)) {
+    return undefined
+  }
+  const status = result.status
+  return typeof status === "string" &&
+    SUB2API_AUTH_PERSISTENCE_STATUS_SET.has(status)
+    ? (status as Sub2ApiAuthPersistenceStatus)
+    : undefined
 }
 
 export type Sub2ApiAuthSession = {

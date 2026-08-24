@@ -3,7 +3,10 @@ import type { ComponentProps } from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
+  AUTO_CHECKIN_METHOD_IDS,
   CHECK_IN_METHOD_AVAILABILITIES,
+  CHECK_IN_METHOD_DETECTION_EVIDENCE_SOURCES,
+  CHECK_IN_METHOD_DETECTION_OUTCOMES,
   CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES,
   CHECK_IN_METHOD_STATUS_OUTCOMES,
   CHECK_IN_METHOD_TODAY_STATUSES,
@@ -701,9 +704,7 @@ describe("AccountDialog AccountForm", () => {
       ),
     ).toBeInTheDocument()
     expect(
-      screen.getByText("accountDialog:form.checkInStatusUnsupported", {
-        exact: false,
-      }),
+      screen.getByText("accountDialog:form.checkInStatusPending"),
     ).toBeInTheDocument()
     expect(
       screen.queryByText("accountDialog:form.checkInStatusDesc"),
@@ -894,12 +895,10 @@ describe("AccountDialog AccountForm", () => {
 
   it("shows enabled automatic intent while a candidate method is still unresolved", async () => {
     const props = createProps()
-    props.draft.siteType = SITE_TYPES.NEW_API
-    props.draft.checkIn = createCheckIn({
-      siteType: SITE_TYPES.NEW_API,
-      supported: false,
-      automaticExecutionEnabled: true,
-    })
+    props.draft.siteType = SITE_TYPES.SUB2API
+    props.draft.checkIn = createEmptyAccountDialogDraft(
+      SITE_TYPES.SUB2API,
+    ).checkIn
 
     render(<AccountForm {...withSitePolicy(props)} />)
 
@@ -911,6 +910,159 @@ describe("AccountDialog AccountForm", () => {
     expect(
       screen.getByText("accountDialog:form.autoCheckInPendingDesc"),
     ).toBeVisible()
+    expect(
+      screen.getByRole("combobox", {
+        name: "accountDialog:form.checkInMethod",
+      }),
+    ).toHaveTextContent(
+      "accountDialog:form.automaticCheckInSelectionWithDetail",
+    )
+    expect(
+      screen.getByText("accountDialog:form.checkInSelectionAutomaticPending"),
+    ).toBeVisible()
+  })
+
+  it("distinguishes a confirmed unavailable method from one awaiting confirmation", async () => {
+    const props = createProps()
+    props.draft.siteType = SITE_TYPES.NEW_API
+    props.draft.checkIn = createCheckIn({
+      siteType: SITE_TYPES.NEW_API,
+      supported: false,
+    })
+    props.draft.checkIn.methodKnowledge.methods["new-api:daily-checkin"] = {
+      detection: {
+        outcome: CHECK_IN_METHOD_DETECTION_OUTCOMES.Unsupported,
+        evidence: {
+          source: CHECK_IN_METHOD_DETECTION_EVIDENCE_SOURCES.Probe,
+          observedAt: 200,
+        },
+      },
+    }
+
+    render(<AccountForm {...withSitePolicy(props)} />)
+
+    expect(
+      await screen.findByRole("combobox", {
+        name: "accountDialog:form.checkInMethod",
+      }),
+    ).toHaveTextContent(
+      "accountDialog:form.automaticCheckInSelectionWithDetail",
+    )
+    expect(
+      screen.getByText(
+        "accountDialog:form.checkInSelectionAutomaticUnavailable",
+      ),
+    ).toBeVisible()
+  })
+
+  it("shows the automatic result in the trigger and explains it below", async () => {
+    testI18n.addResourceBundle("en", "accountDialog", enAccountDialog)
+    const props = createProps()
+    props.draft.siteType = SITE_TYPES.NEW_API
+    props.draft.checkIn = createCheckIn({
+      siteType: SITE_TYPES.NEW_API,
+      supported: true,
+    })
+
+    try {
+      render(<AccountForm {...withSitePolicy(props)} />)
+
+      const methodSelect = await screen.findByRole("combobox", {
+        name: enAccountDialog.form.checkInMethod,
+      })
+      expect(methodSelect).toHaveTextContent(
+        "Automatic selection: Daily check-in",
+      )
+      expect(methodSelect).not.toHaveTextContent("New API")
+      expect(methodSelect).toHaveAttribute(
+        "aria-describedby",
+        "check-in-method-helper",
+      )
+      expect(
+        screen.getByText(
+          "The system currently selects Daily check-in. Re-detection may update this method.",
+        ),
+      ).toBeVisible()
+    } finally {
+      testI18n.removeResourceBundle("en", "accountDialog")
+    }
+  })
+
+  it("names a third-party check-in protocol and explains its compatibility boundary", async () => {
+    testI18n.addResourceBundle("en", "accountDialog", enAccountDialog)
+    const props = createProps()
+    const methodId = AUTO_CHECKIN_METHOD_IDS.Sub2ApiProDailyCheckIn
+    props.draft.siteType = SITE_TYPES.SUB2API
+    props.draft.checkIn = {
+      automaticExecutionEnabled: true,
+      methodKnowledge: {
+        methods: {
+          [methodId]: {
+            detection: {
+              outcome: CHECK_IN_METHOD_DETECTION_OUTCOMES.Matched,
+              evidence: {
+                source: CHECK_IN_METHOD_DETECTION_EVIDENCE_SOURCES.Probe,
+                observedAt: 200,
+              },
+            },
+          },
+        },
+      },
+      selection: {
+        mode: "automatic",
+        methodId,
+      },
+    }
+
+    try {
+      render(<AccountForm {...withSitePolicy(props)} />)
+
+      expect(
+        await screen.findByRole("combobox", {
+          name: enAccountDialog.form.checkInMethod,
+        }),
+      ).toHaveTextContent("Automatic selection: Sub2API Pro daily check-in")
+      expect(
+        screen.getByText(
+          "This method uses the third-party Sub2API Pro check-in protocol and only works on deployments that support it.",
+        ),
+      ).toBeVisible()
+    } finally {
+      testI18n.removeResourceBundle("en", "accountDialog")
+    }
+  })
+
+  it("names the fixed method in the manual selection helper", async () => {
+    testI18n.addResourceBundle("en", "accountDialog", enAccountDialog)
+    const props = createProps()
+    props.draft.siteType = SITE_TYPES.NEW_API
+    props.draft.checkIn = {
+      ...createCheckIn({
+        siteType: SITE_TYPES.NEW_API,
+        supported: true,
+      }),
+      selection: {
+        mode: "manual",
+        methodId: "new-api:daily-checkin",
+      },
+    }
+
+    try {
+      render(<AccountForm {...withSitePolicy(props)} />)
+
+      expect(
+        await screen.findByRole("combobox", {
+          name: enAccountDialog.form.checkInMethod,
+        }),
+      ).toHaveTextContent("Daily check-in")
+      expect(
+        screen.getByText(
+          "You manually selected Daily check-in. The system will not replace it automatically.",
+        ),
+      ).toBeVisible()
+    } finally {
+      testI18n.removeResourceBundle("en", "accountDialog")
+    }
   })
 
   it("explains that automatic check-in is paused when the site disables the selected method", async () => {
@@ -963,6 +1115,14 @@ describe("AccountDialog AccountForm", () => {
       ACCOUNT_MANAGEMENT_TEST_IDS.accountFormSectionCheckIn,
     )
 
+    expect(
+      screen.getByRole("combobox", {
+        name: "accountDialog:form.checkInMethod",
+      }),
+    ).toHaveTextContent(
+      "accountDialog:form.automaticCheckInSelectionWithDetail",
+    )
+
     await user.click(
       screen.getByRole("combobox", {
         name: "accountDialog:form.checkInMethod",
@@ -970,7 +1130,7 @@ describe("AccountDialog AccountForm", () => {
     )
     await user.click(
       screen.getByRole("option", {
-        name: "accountDialog:form.builtInCheckInMethod",
+        name: "accountDialog:form.dailyCheckInMethod",
       }),
     )
     expect(props.onCheckInSelectionChange).toHaveBeenCalledWith(

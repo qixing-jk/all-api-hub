@@ -10,7 +10,11 @@ import {
   fetchSub2ApiProDailyCheckInStatus,
   performSub2ApiProDailyCheckIn,
 } from "~/services/apiService/sub2api"
-import { SUB2API_AUTH_PERSISTENCE_STATUSES } from "~/services/apiService/sub2api/authSession"
+import {
+  getSub2ApiAuthPersistenceStatus,
+  SUB2API_AUTH_PERSISTENCE_STATUSES,
+} from "~/services/apiService/sub2api/authSession"
+import { SUB2API_PRO_DAILY_CHECK_IN_RESULT_KINDS } from "~/services/apiService/sub2api/checkIn"
 import { ApiError } from "~/services/apiTransport/errors"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import {
@@ -82,18 +86,6 @@ const readStatus = async (context: AutoCheckinProviderReadContext) => {
   } as const
 }
 
-const getAuthPersistenceStatus = (error: unknown): string | undefined => {
-  if (!error || typeof error !== "object" || !("result" in error)) {
-    return undefined
-  }
-  const result = error.result
-  return result && typeof result === "object" && "status" in result
-    ? typeof result.status === "string"
-      ? result.status
-      : undefined
-    : undefined
-}
-
 const failed = (
   reasonCode: AutoCheckinProviderResult["reasonCode"],
   retryable?: boolean,
@@ -108,7 +100,7 @@ const mapMutationError = (
   error: unknown,
   context: AutoCheckinProviderContext,
 ): AutoCheckinProviderResult => {
-  const persistenceStatus = getAuthPersistenceStatus(error)
+  const persistenceStatus = getSub2ApiAuthPersistenceStatus(error)
   if (
     persistenceStatus === SUB2API_AUTH_PERSISTENCE_STATUSES.IDENTITY_MISMATCH
   ) {
@@ -185,8 +177,7 @@ export const sub2apiProProvider: AutoCheckinProvider = {
   async checkIn(account, context) {
     const status = context.statusProof
     if (
-      status?.outcome !== CHECK_IN_METHOD_STATUS_OUTCOMES.Known ||
-      status.availability !== CHECK_IN_METHOD_AVAILABILITIES.Enabled ||
+      status?.availability !== CHECK_IN_METHOD_AVAILABILITIES.Enabled ||
       status.today !== CHECK_IN_METHOD_TODAY_STATUSES.NotChecked
     ) {
       return failed(AUTO_CHECKIN_SKIP_REASON.STATUS_UNAVAILABLE)
@@ -198,26 +189,26 @@ export const sub2apiProProvider: AutoCheckinProvider = {
         { beforeRecoveredMutation: context.beforeRecoveredMutation },
       )
       switch (result.kind) {
-        case "applied":
+        case SUB2API_PRO_DAILY_CHECK_IN_RESULT_KINDS.Applied:
           return {
             status: CHECKIN_RESULT_STATUS.SUCCESS,
             messageKey:
               AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinSuccessful,
             data: result.data,
           }
-        case "already_checked":
+        case SUB2API_PRO_DAILY_CHECK_IN_RESULT_KINDS.AlreadyChecked:
           return {
             status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
             messageKey:
               AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.alreadyCheckedToday,
           }
-        case "disabled":
+        case SUB2API_PRO_DAILY_CHECK_IN_RESULT_KINDS.Disabled:
           return failed(AUTO_CHECKIN_SKIP_REASON.METHOD_DISABLED)
-        case "role_forbidden":
+        case SUB2API_PRO_DAILY_CHECK_IN_RESULT_KINDS.RoleForbidden:
           return failed(AUTO_CHECKIN_SKIP_REASON.PERMISSION_DENIED)
-        case "recovery_status_unavailable":
+        case SUB2API_PRO_DAILY_CHECK_IN_RESULT_KINDS.RecoveryStatusUnavailable:
           return failed(AUTO_CHECKIN_SKIP_REASON.STATUS_UNAVAILABLE, false)
-        case "recovery_precondition_failed":
+        case SUB2API_PRO_DAILY_CHECK_IN_RESULT_KINDS.RecoveryPreconditionFailed:
           return failed(AUTO_CHECKIN_SKIP_REASON.ACCOUNT_UNAVAILABLE, false)
       }
     } catch (error) {

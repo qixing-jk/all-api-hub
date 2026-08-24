@@ -4,18 +4,21 @@ import {
   CHECK_IN_SELECTION_MODES,
 } from "~/constants/checkIn"
 import type { AccountSiteType } from "~/constants/siteType"
-import { getNewAccountCompatibilityMethodIds } from "~/services/checkin/autoCheckin/providers/registry"
+import {
+  getAutoCheckinCandidateMethodIds,
+  getNewAccountCompatibilityMethodIds,
+} from "~/services/checkin/autoCheckin/providers/registry"
 import type { CheckInConfig, CustomCheckInConfig } from "~/types/checkIn"
 
 /**
- * Defaults a new account into automatic execution intent only when a legacy
- * compatibility registration can execute immediately. Newly discovered
- * protocols remain opt-in until discovery proves their deployment support.
+ * New accounts opt into the account-level automatic intent when the site type
+ * has at least one registered provider candidate. Discovery and provider
+ * readiness still gate the actual execution path.
  */
 export function getNewAccountAutomaticExecutionDefault(
   siteType: AccountSiteType,
 ): boolean {
-  return getNewAccountCompatibilityMethodIds(siteType).length > 0
+  return getAutoCheckinCandidateMethodIds(siteType).length > 0
 }
 
 /** Returns whether legacy compatibility may preselect a new account method. */
@@ -26,8 +29,8 @@ export function hasNewAccountCompatibilityRegistration(
 }
 
 /**
- * Applies the candidate-backed default while preserving an explicit choice only
- * when the new site type can still execute automatically.
+ * Applies the candidate-backed default while preserving an explicit user
+ * choice for a site type that still has a registered provider candidate.
  */
 export function resolveNewAccountAutomaticExecutionEnabled(input: {
   siteType: AccountSiteType

@@ -1,4 +1,7 @@
-import { type CHECK_IN_PROVIDER_READINESS_REASONS } from "~/constants/checkIn"
+import {
+  type CHECK_IN_METHOD_STATUS_OUTCOMES,
+  type CHECK_IN_PROVIDER_READINESS_REASONS,
+} from "~/constants/checkIn"
 import type {
   ApiServiceRequest,
   ApiTransportRequestObserver,
@@ -42,8 +45,12 @@ export interface AutoCheckinMutationLifecycle
   extends ApiTransportRequestObserver {
   dispatched: boolean
   responseReceived: boolean
-  onPreHandlerUnauthorized?(): void
 }
+
+export type KnownCheckInMethodStatus = Extract<
+  CheckInMethodStatus,
+  { outcome: typeof CHECK_IN_METHOD_STATUS_OUTCOMES.Known }
+>
 
 export interface AutoCheckinProviderContext {
   tempWindowRequestSource: TempWindowRequestSource
@@ -51,7 +58,7 @@ export interface AutoCheckinProviderContext {
   /** Process-local evidence for classifying a lost mutation response. */
   mutationLifecycle?: AutoCheckinMutationLifecycle
   /** Fresh status read by the Module in this execution cycle. */
-  statusProof?: CheckInMethodStatus
+  statusProof?: KnownCheckInMethodStatus
   /** Rechecks current selection and automatic intent before a recovered POST. */
   beforeRecoveredMutation?: () => Promise<boolean>
 }

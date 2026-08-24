@@ -621,7 +621,6 @@ const PRIVACY_REVIEWED_ALLOWED_KEYS = new Set([
   "account_auto_refresh_min_interval_seconds",
   "account_auto_refresh_on_open_enabled",
   "account_state_durability_failure_count",
-  "account_count",
   "active_tab",
   "background_execution",
   "auto_checkin_enabled_accounts",

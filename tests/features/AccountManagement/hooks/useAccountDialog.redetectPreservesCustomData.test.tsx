@@ -918,7 +918,7 @@ describe("useAccountDialog re-detect preservation", () => {
       expect(result.current.state.siteType).toBe("sub2api")
       expect(result.current.state.authType).toBe(AuthTypeEnum.AccessToken)
       expect(result.current.state.cookieAuthSessionCookie).toBe("")
-      expect(result.current.state.checkIn.automaticExecutionEnabled).toBe(false)
+      expect(result.current.state.checkIn.automaticExecutionEnabled).toBe(true)
       expect(result.current.state.sub2apiUseRefreshToken).toBe(false)
       expect(result.current.state.sub2apiRefreshToken).toBe("refresh-token")
       expect(result.current.state.sub2apiTokenExpiresAt).toBe(123456789)

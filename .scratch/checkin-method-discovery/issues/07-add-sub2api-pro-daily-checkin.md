@@ -34,7 +34,7 @@ Register and execute the verified `sub2api-pro:daily-checkin` protocol through t
 - Reconciliation checked converges to applied; unknown remains uncertain; not-checked never reposts in the same cycle.
 - An authoritative not-checked reconciliation may become `failed + retryable`; the later retry still begins with GET and sends at most one POST capable of reaching the business handler only if it remains not checked.
 - A later run always begins with GET status, so an applied request whose response was lost does not duplicate the daily reward.
-- New Sub2API accounts default automatic execution off; users can still enable it explicitly.
+- New Sub2API accounts with a registered candidate default to account-level automatic execution on; discovery and method readiness still gate execution, and users can disable the account explicitly.
 
 ## Tests
 
@@ -59,4 +59,6 @@ Report only the allow-listed method category and controlled discovery/execution/
   bounded reconciliation, durable auth recovery, privacy-safe method telemetry,
   and registry integration.
 - Added focused parser, transport/auth, Adapter, scheduler, compatibility-default,
-  and analytics tests. New Sub2API accounts remain automatic-execution opt-in.
+  and analytics tests. New Sub2API accounts opt into automatic execution when the
+  candidate is registered, while discovery and method readiness remain the
+  execution gate.

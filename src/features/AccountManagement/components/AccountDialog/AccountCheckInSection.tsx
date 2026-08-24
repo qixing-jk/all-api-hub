@@ -14,29 +14,28 @@ import {
   Switch,
 } from "~/components/ui"
 import {
-  CHECK_IN_DISCOVERY_DECISION_OUTCOMES,
   CHECK_IN_METHOD_AVAILABILITIES,
   CHECK_IN_METHOD_STATUS_OUTCOMES,
-  CHECK_IN_METHOD_UNKNOWN_REASON_CODES,
   CHECK_IN_SELECTION_MODES,
   CHECK_IN_SELECTION_STATUSES,
 } from "~/constants/checkIn"
 import type { AccountSiteType } from "~/constants/siteType"
 import { AccountFormSection } from "~/features/AccountManagement/components/AccountDialog/AccountFormSection"
 import { ACCOUNT_FORM_MOBILE_DEFAULT_OPEN } from "~/features/AccountManagement/components/AccountDialog/accountFormSections"
+import {
+  getCheckInMethodPresentation,
+  getCheckInRedetectionFeedbackPresentation,
+  getCheckInSelectionPresentation,
+} from "~/features/AccountManagement/components/AccountDialog/checkInPresentation"
 import type { AccountCheckInRedetectionFeedback } from "~/features/AccountManagement/components/AccountDialog/models"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
-import {
-  getSelectedCheckInStatus,
-  inspectAccountCheckIn,
-} from "~/services/checkin/autoCheckin/inspection"
+import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/inspection"
 import { setCheckInSelection } from "~/services/checkin/autoCheckin/methods"
-import { getAutoCheckinCandidateMethodIds } from "~/services/checkin/autoCheckin/providers/registry"
 import type { CheckInConfig } from "~/types"
-import type { CheckInMethodUnknownReason } from "~/types/checkIn"
 
 const AUTOMATIC_CHECK_IN_SELECTION_VALUE = "automatic"
 const AUTO_CHECKIN_ENABLED_CONTROL_ID = "auto-checkin-enabled"
+const CHECK_IN_METHOD_HELPER_ID = "check-in-method-helper"
 const OPEN_REDEEM_WITH_CHECKIN_CONTROL_ID = "open-redeem-with-checkin"
 
 interface AccountCheckInSectionProps {
@@ -61,93 +60,26 @@ export function AccountCheckInSection({
 }: AccountCheckInSectionProps) {
   const { t } = useTranslation("accountDialog")
   const inspection = inspectAccountCheckIn({ config: checkIn, siteType })
-  const candidateMethodIds = getAutoCheckinCandidateMethodIds(siteType)
+  const candidateMethodIds = inspection.choices.map((choice) => choice.methodId)
   const hasCandidates = candidateMethodIds.length > 0
+  const selectionPresentation = getCheckInSelectionPresentation(
+    t,
+    inspection,
+    checkIn.selection,
+  )
   const hasSelectedMethod =
     hasCandidates &&
     inspection.selectionState.status === CHECK_IN_SELECTION_STATUSES.Selected
-  const selectedStatus = hasSelectedMethod
-    ? getSelectedCheckInStatus({ config: checkIn, siteType })
-    : null
+  const selectedStatus =
+    inspection.selectionState.status === CHECK_IN_SELECTION_STATUSES.Selected
+      ? checkIn.methodKnowledge.methods[inspection.selectionState.methodId]
+          ?.status
+      : null
   const isSelectedMethodDisabled =
     selectedStatus?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known &&
     selectedStatus.availability === CHECK_IN_METHOD_AVAILABILITIES.Disabled
-  const getUnknownReasonMessage = (reason: CheckInMethodUnknownReason) => {
-    switch (reason) {
-      case CHECK_IN_METHOD_UNKNOWN_REASON_CODES.Network:
-        return t("messages.checkInRedetectUnknownReasons.network")
-      case CHECK_IN_METHOD_UNKNOWN_REASON_CODES.Timeout:
-        return t("messages.checkInRedetectUnknownReasons.timeout")
-      case CHECK_IN_METHOD_UNKNOWN_REASON_CODES.AuthenticationRequired:
-        return t(
-          "messages.checkInRedetectUnknownReasons.authentication_required",
-        )
-      case CHECK_IN_METHOD_UNKNOWN_REASON_CODES.PermissionDenied:
-        return t("messages.checkInRedetectUnknownReasons.permission_denied")
-      case CHECK_IN_METHOD_UNKNOWN_REASON_CODES.SourceUnavailable:
-        return t("messages.checkInRedetectUnknownReasons.source_unavailable")
-      case CHECK_IN_METHOD_UNKNOWN_REASON_CODES.IdentityMismatch:
-        return t("messages.checkInRedetectUnknownReasons.identity_mismatch")
-      case CHECK_IN_METHOD_UNKNOWN_REASON_CODES.InvalidResponse:
-        return t("messages.checkInRedetectUnknownReasons.invalid_response")
-      case CHECK_IN_METHOD_UNKNOWN_REASON_CODES.CredentialPersistenceFailed:
-        return t(
-          "messages.checkInRedetectUnknownReasons.credential_persistence_failed",
-        )
-    }
-  }
-  const redetectionFeedbackPresentation = (() => {
-    if (!checkInRedetectionFeedback) return null
-    if (checkInRedetectionFeedback.kind === "failed") {
-      return {
-        tone: "destructive" as const,
-        title: checkInRedetectionFeedback.message,
-      }
-    }
-
-    const description = checkInRedetectionFeedback.saveRequired
-      ? t("messages.checkInRedetectSaveRequired")
-      : undefined
-    if (checkInRedetectionFeedback.selectedMethodDisabled) {
-      return {
-        tone: "warning" as const,
-        title: t("messages.checkInRedetectDisabled"),
-        description,
-      }
-    }
-
-    switch (checkInRedetectionFeedback.decisionOutcome) {
-      case CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Resolved:
-        return {
-          tone: "success" as const,
-          title: t("messages.checkInRedetectResolved"),
-          description,
-        }
-      case CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Ambiguous:
-        return {
-          tone: "warning" as const,
-          title: t("messages.checkInRedetectAmbiguous"),
-          description,
-        }
-      case CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Unsupported:
-        return {
-          tone: "info" as const,
-          title: t("messages.checkInRedetectUnsupported"),
-          description,
-        }
-      case CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Unknown:
-        return {
-          tone: "warning" as const,
-          title: t("messages.checkInRedetectUnknown"),
-          description:
-            checkInRedetectionFeedback.unknownReasons.length > 0
-              ? checkInRedetectionFeedback.unknownReasons
-                  .map(getUnknownReasonMessage)
-                  .join(" ")
-              : undefined,
-        }
-    }
-  })()
+  const redetectionFeedbackPresentation =
+    getCheckInRedetectionFeedbackPresentation(t, checkInRedetectionFeedback)
 
   const setAutomaticSelection = () => {
     onCheckInSelectionChange(
@@ -244,8 +176,12 @@ export function AccountCheckInSection({
               <SelectTrigger
                 className="w-full"
                 aria-label={t("form.checkInMethod")}
+                aria-describedby={CHECK_IN_METHOD_HELPER_ID}
+                title={selectionPresentation.triggerLabel}
               >
-                <SelectValue placeholder={t("form.checkInMethodNotSelected")} />
+                <SelectValue placeholder={t("form.checkInMethodNotSelected")}>
+                  {selectionPresentation.triggerLabel}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value={AUTOMATIC_CHECK_IN_SELECTION_VALUE}>
@@ -253,19 +189,22 @@ export function AccountCheckInSection({
                 </SelectItem>
                 {candidateMethodIds.map((methodId) => (
                   <SelectItem key={methodId} value={methodId}>
-                    {t("form.builtInCheckInMethod")}
+                    {getCheckInMethodPresentation(t, methodId).label}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </FormField>
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            {checkIn.selection.mode === CHECK_IN_SELECTION_MODES.Manual
-              ? t("form.checkInSelectionManual")
-              : t("form.checkInSelectionAutomatic")}
-            {inspection.selectionState.status ===
-              CHECK_IN_SELECTION_STATUSES.Stale &&
-              ` ${t("form.checkInSelectionStale")}`}
+          <p
+            id={CHECK_IN_METHOD_HELPER_ID}
+            className="text-xs text-gray-500 dark:text-gray-400"
+          >
+            <span>{selectionPresentation.helperText}</span>
+            {selectionPresentation.selectedMethodDisclosure && (
+              <span className="mt-1 block">
+                {selectionPresentation.selectedMethodDisclosure}
+              </span>
+            )}
           </p>
           {checkIn.selection.mode === CHECK_IN_SELECTION_MODES.Manual && (
             <Button

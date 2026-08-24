@@ -3,8 +3,11 @@ import { describe, expect, it } from "vitest"
 import {
   parseSub2ApiProDailyCheckInMutationResponse,
   parseSub2ApiProDailyCheckInStatusResponse,
+  SUB2API_PRO_DAILY_CHECK_IN_ENDPOINT,
   SUB2API_PRO_DAILY_CHECK_IN_ERROR_REASONS,
+  SUB2API_PRO_DAILY_CHECK_IN_STATUS_ENDPOINT,
 } from "~/services/apiService/sub2api/checkIn"
+import { API_ERROR_CODES, type ApiError } from "~/services/apiTransport/errors"
 import type { ApiTransportResponse } from "~/services/apiTransport/type"
 
 const response = (
@@ -82,7 +85,39 @@ describe("Sub2API Pro daily check-in protocol parsing", () => {
       parseSub2ApiProDailyCheckInStatusResponse(
         response(200, { code: 403, message: "disabled" }),
       ),
-    ).toThrow()
+    ).toThrowError(
+      expect.objectContaining({
+        code: API_ERROR_CODES.BUSINESS_ERROR,
+        endpoint: SUB2API_PRO_DAILY_CHECK_IN_STATUS_ENDPOINT,
+      }),
+    )
+  })
+
+  it("keeps invalid status response diagnostics tied to the status endpoint", () => {
+    expect(() =>
+      parseSub2ApiProDailyCheckInStatusResponse(
+        response(200, { code: 0, message: "success", data: {} }),
+      ),
+    ).toThrowError(
+      expect.objectContaining({
+        code: API_ERROR_CODES.JSON_PARSE_ERROR,
+        endpoint: SUB2API_PRO_DAILY_CHECK_IN_STATUS_ENDPOINT,
+      }),
+    )
+  })
+
+  it("preserves HTTP status diagnostics for unrecognized mutation failures", () => {
+    expect(() =>
+      parseSub2ApiProDailyCheckInMutationResponse(
+        response(503, { message: "temporarily unavailable" }),
+      ),
+    ).toThrowError(
+      expect.objectContaining({
+        statusCode: 503,
+        code: API_ERROR_CODES.HTTP_OTHER,
+        endpoint: SUB2API_PRO_DAILY_CHECK_IN_ENDPOINT,
+      } satisfies Partial<ApiError>),
+    )
   })
 
   it("parses successful mutation data and the stable error reasons", () => {

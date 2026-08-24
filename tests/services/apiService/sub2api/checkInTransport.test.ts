@@ -13,7 +13,7 @@ import {
   resyncSub2ApiAuthToken,
   Sub2ApiAuthIdentityMismatchError,
 } from "~/services/apiService/sub2api/tokenResync"
-import { fetchApi, fetchApiResponse } from "~/services/apiTransport/request"
+import { fetchApiResponse } from "~/services/apiTransport/request"
 import type { ApiTransportResponse } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
@@ -23,8 +23,8 @@ const { getLatestAuth, persistAuthUpdate } = vi.hoisted(() => ({
   persistAuthUpdate: vi.fn(),
 }))
 
-vi.mock("~/services/apiTransport/request", () => ({
-  fetchApi: vi.fn(),
+vi.mock("~/services/apiTransport/request", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/services/apiTransport/request")>()),
   fetchApiResponse: vi.fn(),
 }))
 
@@ -83,7 +83,6 @@ const createRequest = (): Sub2ApiAuthSessionRequest => ({
 describe("Sub2API Pro daily check-in authenticated transport", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(fetchApi).mockReset()
     vi.mocked(fetchApiResponse).mockReset()
     vi.mocked(resyncSub2ApiAuthToken).mockReset()
     getLatestAuth.mockResolvedValue(null)
@@ -274,6 +273,28 @@ describe("Sub2API Pro daily check-in authenticated transport", () => {
     ).rejects.toBeInstanceOf(TypeError)
     expect(observer.dispatched).toBe(false)
     expect(observer.responseReceived).toBe(false)
+    expect(fetchApiResponse).toHaveBeenCalledOnce()
+  })
+
+  it("keeps observer failures isolated from the authentication result", async () => {
+    const observerError = new Error("observer failed")
+    const observer = {
+      onDispatch: vi.fn(),
+      onResponse: vi.fn(),
+      onPreHandlerUnauthorized: vi.fn(() => {
+        throw observerError
+      }),
+    }
+    const authenticationError = new TypeError("Failed to fetch")
+    vi.mocked(resyncSub2ApiAuthToken).mockRejectedValue(authenticationError)
+    vi.mocked(fetchApiResponse).mockResolvedValue(
+      response(401, { code: 401, message: "unauthorized" }),
+    )
+
+    await expect(
+      performSub2ApiProDailyCheckIn({ ...createRequest(), observer }),
+    ).rejects.toBe(authenticationError)
+    expect(observer.onPreHandlerUnauthorized).toHaveBeenCalledOnce()
     expect(fetchApiResponse).toHaveBeenCalledOnce()
   })
 
