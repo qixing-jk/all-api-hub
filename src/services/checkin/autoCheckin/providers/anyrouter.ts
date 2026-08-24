@@ -55,6 +55,9 @@ const checkinAnyRouter = async (
         },
         tempWindowRequestSource,
         ...(protectionBypassExecution ? { protectionBypassExecution } : {}),
+        ...(context.mutationLifecycle
+          ? { observer: context.mutationLifecycle }
+          : {}),
       },
       {
         endpoint: "/api/user/sign_in",
@@ -106,7 +109,10 @@ const checkinAnyRouter = async (
       data: response ?? undefined,
     }
   } catch (error: unknown) {
-    return resolveProviderErrorResult({ error })
+    return resolveProviderErrorResult({
+      error,
+      mutationDispatched: context.mutationLifecycle?.dispatched,
+    })
   }
 }
 

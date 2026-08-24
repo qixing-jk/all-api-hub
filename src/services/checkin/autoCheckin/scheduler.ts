@@ -63,6 +63,7 @@ import {
   AUTO_CHECKIN_RUN_TYPE,
   AUTO_CHECKIN_SCHEDULE_MODE,
   AUTO_CHECKIN_SKIP_REASON,
+  CHECKIN_ACCOUNT_STATE_DURABILITY,
   CHECKIN_RESULT_STATUS,
   getAutoCheckinRunResultFromSummary,
   getAutoCheckinSkipReasonTranslationKey,
@@ -114,6 +115,14 @@ const isSuccessfulCheckinStatus = (status: CheckinResultStatus): boolean =>
 
 const isFailedCheckinStatus = (status: CheckinResultStatus): boolean =>
   status === CHECKIN_RESULT_STATUS.FAILED
+
+const isRetryableCheckinResult = (result: CheckinAccountResult): boolean => {
+  if (!isFailedCheckinStatus(result.status)) return false
+  // Persisted pre-contract failures have no flag; keep their historical retry
+  // behavior while all newly produced failures write an explicit decision.
+  if (result.retryable !== undefined) return result.retryable
+  return true
+}
 
 const toSchedulerSkipReason = (
   reason: CheckInExecutionSkipReason,
@@ -939,8 +948,11 @@ class AutoCheckinScheduler {
     const skippedCount = values.filter(
       (value) => value.status === CHECKIN_RESULT_STATUS.SKIPPED,
     ).length
+    const uncertainCount = values.filter(
+      (value) => value.status === CHECKIN_RESULT_STATUS.UNCERTAIN,
+    ).length
 
-    const executed = successCount + failedCount
+    const executed = successCount + failedCount + uncertainCount
     const totalEligible =
       previousSummary?.totalEligible ?? executed + skippedCount
 
@@ -950,7 +962,8 @@ class AutoCheckinScheduler {
       successCount,
       failedCount,
       skippedCount,
-      needsRetry: failedCount > 0,
+      ...(uncertainCount > 0 ? { uncertainCount } : {}),
+      needsRetry: values.some(isRetryableCheckinResult),
     }
   }
 
@@ -1069,22 +1082,34 @@ class AutoCheckinScheduler {
     accountName: string,
     tempWindowRequestSource: TempWindowRequestSource,
     protectionBypassExecution: ProtectionBypassExecution,
+    requireStatusConfirmationBeforeMutation = false,
   ): Promise<{
     result: CheckinAccountResult
   }> {
     const buildResult = (
       status: CheckinResultStatus,
-      partial?: Pick<
-        CheckinAccountResult,
-        "message" | "messageKey" | "messageParams" | "rawMessage" | "reasonCode"
+      partial?: Partial<
+        Pick<
+          CheckinAccountResult,
+          | "message"
+          | "messageKey"
+          | "messageParams"
+          | "rawMessage"
+          | "reasonCode"
+          | "retryable"
+          | "methodId"
+          | "reconciliation"
+          | "accountStateDurability"
+        >
       >,
-    ): CheckinAccountResult => ({
-      accountId: account.id,
-      accountName,
-      status,
-      ...(partial ?? {}),
-      timestamp: Date.now(),
-    })
+    ): CheckinAccountResult =>
+      ({
+        accountId: account.id,
+        accountName,
+        status,
+        ...(partial ?? {}),
+        timestamp: Date.now(),
+      }) as CheckinAccountResult
 
     try {
       const execution = await executeSelectedCheckIn({
@@ -1100,14 +1125,22 @@ class AutoCheckinScheduler {
             account.id,
             refreshedConfig,
           ),
+        requireStatusConfirmationBeforeMutation,
       })
       if (execution.kind === CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Skipped) {
         const reasonCode = toSchedulerSkipReason(execution.reason)
+        const retryablePreMutationFailure = execution.retryable === true
         return {
-          result: buildResult(CHECKIN_RESULT_STATUS.SKIPPED, {
-            messageKey: getAutoCheckinSkipReasonTranslationKey(reasonCode),
-            reasonCode,
-          }),
+          result: buildResult(
+            retryablePreMutationFailure
+              ? CHECKIN_RESULT_STATUS.FAILED
+              : CHECKIN_RESULT_STATUS.SKIPPED,
+            {
+              messageKey: getAutoCheckinSkipReasonTranslationKey(reasonCode),
+              reasonCode,
+              ...(retryablePreMutationFailure ? { retryable: true } : {}),
+            },
+          ),
         }
       }
       const providerResult = execution.result
@@ -1116,13 +1149,24 @@ class AutoCheckinScheduler {
         messageParams: providerResult.messageParams,
         rawMessage: providerResult.rawMessage,
         reasonCode: providerResult.reasonCode,
+        methodId: execution.methodId,
+        reconciliation: providerResult.reconciliation,
+        ...(providerResult.status === CHECKIN_RESULT_STATUS.FAILED
+          ? { retryable: execution.retryable }
+          : {}),
       })
 
       if (
         providerResult.status === CHECKIN_RESULT_STATUS.SUCCESS ||
         providerResult.status === CHECKIN_RESULT_STATUS.ALREADY_CHECKED
       ) {
-        await accountStorage.markAccountAsSiteCheckedIn(account.id)
+        const persisted = await accountStorage.markAccountAsSiteCheckedIn(
+          account.id,
+        )
+        result.accountStateDurability =
+          persisted === false
+            ? CHECKIN_ACCOUNT_STATE_DURABILITY.FAILED
+            : CHECKIN_ACCOUNT_STATE_DURABILITY.PERSISTED
         logger.info("Check-in completed", {
           accountId: account.id,
           siteName: account.site_name,
@@ -1153,6 +1197,9 @@ class AutoCheckinScheduler {
           messageParams: normalizedError.messageParams,
           rawMessage: normalizedError.rawMessage,
           reasonCode: normalizedError.reasonCode,
+          ...(normalizedError.status === CHECKIN_RESULT_STATUS.FAILED
+            ? { retryable: false }
+            : {}),
         }),
       }
     }
@@ -1186,6 +1233,7 @@ class AutoCheckinScheduler {
               accountName,
               status: CHECKIN_RESULT_STATUS.FAILED,
               rawMessage: getErrorMessage(error),
+              retryable: false,
               timestamp: Date.now(),
             },
           }
@@ -2256,6 +2304,7 @@ class AutoCheckinScheduler {
       // API/page resources are limited by their owning lower layers.
       let successCount = 0
       let failedCount = 0
+      let uncertainCount = 0
 
       const checkinOutcomes = await this.runAccountCheckins({
         accounts: runnableAccounts,
@@ -2270,6 +2319,8 @@ class AutoCheckinScheduler {
           successCount++
         } else if (isFailedCheckinStatus(outcome.result.status)) {
           failedCount++
+        } else if (outcome.result.status === CHECKIN_RESULT_STATUS.UNCERTAIN) {
+          uncertainCount++
         }
       }
 
@@ -2278,14 +2329,17 @@ class AutoCheckinScheduler {
       ).length
       const skippedCount =
         accountSnapshots.length - runnableAccounts.length + runtimeSkippedCount
-      const summaryNeedsRetry = failedCount > 0 && runnableAccounts.length > 0
+      const summaryNeedsRetry = checkinOutcomes.some((outcome) =>
+        isRetryableCheckinResult(outcome.result),
+      )
 
       const summary: AutoCheckinRunSummary = {
         totalEligible: accountSnapshots.length,
-        executed: successCount + failedCount,
+        executed: successCount + failedCount + uncertainCount,
         successCount,
         failedCount,
         skippedCount,
+        ...(uncertainCount > 0 ? { uncertainCount } : {}),
         needsRetry: summaryNeedsRetry,
       }
       const updatedAccountIds = checkinOutcomes
@@ -2310,7 +2364,7 @@ class AutoCheckinScheduler {
           // Retry queue is derived only from today's *failed* runnable accounts.
           // Provider `already_checked` is treated as success and excluded automatically.
           const failedAccountIds = checkinOutcomes
-            .filter((outcome) => isFailedCheckinStatus(outcome.result.status))
+            .filter((outcome) => isRetryableCheckinResult(outcome.result))
             .map((outcome) => outcome.result.accountId)
 
           retryState = {
@@ -2328,7 +2382,7 @@ class AutoCheckinScheduler {
       ) {
         const pending = retryState.pendingAccountIds.filter((accountId) => {
           const result = results[accountId]
-          return result ? result.status === CHECKIN_RESULT_STATUS.FAILED : true
+          return result ? isRetryableCheckinResult(result) : true
         })
         retryState =
           pending.length > 0
@@ -2574,6 +2628,7 @@ class AutoCheckinScheduler {
         accountDisplayNameById.get(account.id) ?? account.id,
         tempWindowRequestSource,
         protectionBypassExecution,
+        true,
       )
       // Persist that we've attempted one more time for this account today, regardless of outcome.
       attemptsByAccount[accountId] = attempts + 1
@@ -2586,7 +2641,7 @@ class AutoCheckinScheduler {
       }
 
       if (
-        isFailedCheckinStatus(outcome.result.status) &&
+        isRetryableCheckinResult(outcome.result) &&
         attemptsByAccount[accountId] < maxAttempts
       ) {
         remaining.push(accountId)
@@ -2676,7 +2731,7 @@ class AutoCheckinScheduler {
           successCount: retrySuccessCount,
           failedCount: retryFailedCount,
           skippedCount: retrySkippedCount,
-          needsRetry: retryFailedCount > 0,
+          needsRetry: Boolean(nextRetryState?.pendingAccountIds.length),
         },
         durationMs: Date.now() - startTime,
         mode: PRODUCT_ANALYTICS_MODE_IDS.RetryFailed,
@@ -2797,7 +2852,7 @@ class AutoCheckinScheduler {
       retryState?.day === today &&
       retryState.pendingAccountIds.includes(accountId)
     ) {
-      if (result.status !== CHECKIN_RESULT_STATUS.FAILED) {
+      if (!isRetryableCheckinResult(result)) {
         const nextPending = retryState.pendingAccountIds.filter(
           (id) => id !== accountId,
         )

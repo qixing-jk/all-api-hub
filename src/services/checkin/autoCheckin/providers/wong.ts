@@ -58,6 +58,7 @@ async function performCheckin(
   account: SiteAccount,
   tempWindowRequestSource: TempWindowRequestSource,
   protectionBypassExecution?: AutoCheckinProviderContext["protectionBypassExecution"],
+  mutationLifecycle?: AutoCheckinProviderContext["mutationLifecycle"],
 ): Promise<WongCheckinApiResponse> {
   const { site_url, account_info } = account
 
@@ -73,6 +74,7 @@ async function performCheckin(
       },
       tempWindowRequestSource,
       ...(protectionBypassExecution ? { protectionBypassExecution } : {}),
+      ...(mutationLifecycle ? { observer: mutationLifecycle } : {}),
     },
     {
       endpoint: ENDPOINT,
@@ -100,6 +102,7 @@ async function checkinWongGongyi(
       account,
       tempWindowRequestSource,
       context.protectionBypassExecution,
+      context.mutationLifecycle,
     )
     const responseMessage = normalizeCheckinMessage(checkinResponse.message)
 
@@ -151,7 +154,10 @@ async function checkinWongGongyi(
       data: checkinResponse ?? undefined,
     }
   } catch (error: unknown) {
-    return resolveProviderErrorResult({ error })
+    return resolveProviderErrorResult({
+      error,
+      mutationDispatched: context.mutationLifecycle?.dispatched,
+    })
   }
 }
 

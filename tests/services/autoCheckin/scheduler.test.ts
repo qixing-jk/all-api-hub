@@ -379,10 +379,12 @@ beforeEach(() => {
       if (!readiness.ready) {
         return { kind: "skipped", reason: readiness.reason }
       }
+      const result = await provider.checkIn(account, context)
       return {
         kind: "executed",
         methodId: "new-api:daily-checkin",
-        result: await provider.checkIn(account, context),
+        result,
+        retryable: result.retryable ?? result.status === "failed",
       }
     },
   )
@@ -1304,6 +1306,55 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
     vi.useRealTimers()
   })
 
+  it("does not enqueue a failed account when its method cannot be retried safely", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2024, 0, 1, 9, 0, 0))
+
+    mockedUserPreferences.getPreferences.mockResolvedValue({
+      autoCheckin: {
+        globalEnabled: true,
+        windowStart: "08:00",
+        windowEnd: "10:00",
+        scheduleMode: "random",
+        deterministicTime: "08:00",
+        retryStrategy: {
+          enabled: true,
+          intervalMinutes: 30,
+          maxAttemptsPerDay: 3,
+        },
+      },
+    })
+
+    const account: any = {
+      id: "no-safe-readback",
+      disabled: false,
+      site_name: "Example Site",
+      site_type: SITE_TYPES.ANYROUTER,
+      account_info: { username: "example-user" },
+      checkIn: runnableCheckIn(true, SITE_TYPES.ANYROUTER),
+    }
+    mockedAccountStorage.getAllAccounts.mockResolvedValue([account])
+    resolveProviderForTest.mockReturnValue({
+      getReadiness: vi.fn(() => ({ ready: true })),
+      checkIn: vi.fn(async () => ({
+        status: "failed",
+        rawMessage: "Example failure",
+        retryable: false,
+      })),
+    })
+
+    await runCheckinsForTest({ runType: AUTO_CHECKIN_RUN_TYPE.DAILY })
+
+    expect(storedStatus.perAccount[account.id]).toMatchObject({
+      status: "failed",
+      retryable: false,
+    })
+    expect(storedStatus.retryState).toBeUndefined()
+    expect(storedStatus.pendingRetry).toBe(false)
+
+    vi.useRealTimers()
+  })
+
   it("dispatches every eligible account without a scheduler batch barrier", async () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date(2024, 0, 1, 9, 0, 0))
@@ -1555,9 +1606,92 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
         protectionBypassExecution: RETRY_EXECUTION,
       },
     )
+    expect(mockedMethods.executeSelectedCheckIn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        account: expect.objectContaining({ id: "b" }),
+        requireStatusConfirmationBeforeMutation: true,
+      }),
+    )
     expect(storedStatus.retryState).toBeUndefined()
     expect(storedStatus.pendingRetry).toBe(false)
     expect(alarmStore.autoCheckinRetry).toBeUndefined()
+
+    vi.useRealTimers()
+  })
+
+  it("keeps a bounded retry queued when authoritative status is temporarily unavailable", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2024, 0, 1, 9, 30, 0))
+
+    mockedUserPreferences.getPreferences.mockResolvedValue({
+      autoCheckin: {
+        globalEnabled: true,
+        windowStart: "08:00",
+        windowEnd: "10:00",
+        scheduleMode: "random",
+        deterministicTime: "08:00",
+        retryStrategy: {
+          enabled: true,
+          intervalMinutes: 30,
+          maxAttemptsPerDay: 3,
+        },
+      },
+    })
+
+    storedStatus = {
+      lastDailyRunDay: "2024-01-01",
+      retryState: {
+        day: "2024-01-01",
+        pendingAccountIds: ["temporary-readback-failure"],
+        attemptsByAccount: { "temporary-readback-failure": 1 },
+      },
+      perAccount: {
+        "temporary-readback-failure": {
+          accountId: "temporary-readback-failure",
+          accountName: "Example Site",
+          status: "failed",
+          retryable: true,
+          timestamp: Date.now(),
+        },
+      },
+    }
+
+    const account: any = {
+      id: "temporary-readback-failure",
+      disabled: false,
+      site_name: "Example Site",
+      site_type: SITE_TYPES.VELOERA,
+      account_info: { username: "example-user" },
+      checkIn: runnableCheckIn(),
+    }
+    mockedAccountStorage.getAccountById.mockResolvedValue(account)
+    mockedAccountStorage.getAllAccounts.mockResolvedValue([account])
+    resolveProviderForTest.mockReturnValue({
+      getReadiness: vi.fn(() => ({ ready: true })),
+      checkIn: vi.fn(),
+    })
+    mockedMethods.executeSelectedCheckIn.mockResolvedValueOnce({
+      kind: "skipped",
+      reason: "network_error",
+      retryable: true,
+    })
+
+    await (autoCheckinScheduler as any).handleRetryAlarm({
+      name: "autoCheckinRetry",
+      scheduledTime: Date.now(),
+    })
+
+    expect(storedStatus.perAccount[account.id]).toMatchObject({
+      status: "failed",
+      reasonCode: "network_error",
+      retryable: true,
+    })
+    expect(storedStatus.retryState).toMatchObject({
+      pendingAccountIds: [account.id],
+      attemptsByAccount: { [account.id]: 2 },
+    })
+    expect(storedStatus.pendingRetry).toBe(true)
+    expect(alarmStore.autoCheckinRetry).toBeDefined()
 
     vi.useRealTimers()
   })
@@ -1689,6 +1823,89 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
     expect(storedStatus.pendingRetry).toBe(false)
 
     vi.useRealTimers()
+  })
+
+  it("persists an uncertain mutation without adding it to ordinary retry", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2024, 0, 1, 9, 0, 0))
+    mockedUserPreferences.getPreferences.mockResolvedValue({
+      autoCheckin: {
+        ...(DEFAULT_PREFERENCES as any).autoCheckin,
+        globalEnabled: true,
+        retryStrategy: {
+          enabled: true,
+          intervalMinutes: 30,
+          maxAttemptsPerDay: 3,
+        },
+      },
+    })
+    mockedAccountStorage.getAllAccounts.mockResolvedValue([
+      {
+        id: "uncertain-result",
+        disabled: false,
+        site_name: "Uncertain Result",
+        site_type: SITE_TYPES.NEW_API,
+        account_info: { username: "user" },
+        checkIn: runnableCheckIn(true, SITE_TYPES.NEW_API),
+      },
+    ])
+    resolveProviderForTest.mockReturnValue({
+      getReadiness: vi.fn(() => ({ ready: true })),
+      checkIn: vi.fn(),
+    })
+    mockedMethods.executeSelectedCheckIn.mockResolvedValueOnce({
+      kind: "executed",
+      methodId: "new-api:daily-checkin",
+      result: { status: "uncertain", reconciliation: "unknown" },
+      retryable: false,
+    })
+
+    await runCheckinsForTest({ runType: AUTO_CHECKIN_RUN_TYPE.DAILY })
+
+    expect(storedStatus.perAccount["uncertain-result"]).toMatchObject({
+      status: "uncertain",
+      methodId: "new-api:daily-checkin",
+      reconciliation: "unknown",
+    })
+    expect(storedStatus.summary).toMatchObject({
+      executed: 1,
+      uncertainCount: 1,
+      needsRetry: false,
+    })
+    expect(storedStatus.retryState).toBeUndefined()
+    expect(storedStatus.pendingRetry).toBe(false)
+
+    vi.useRealTimers()
+  })
+
+  it("keeps remote success confirmed when local method status persistence fails", async () => {
+    mockedMethods.executeSelectedCheckIn.mockResolvedValueOnce({
+      kind: "executed",
+      methodId: "new-api:daily-checkin",
+      result: { status: "success" },
+      retryable: false,
+    })
+    mockedAccountStorage.markAccountAsSiteCheckedIn.mockResolvedValueOnce(false)
+
+    await expect(
+      (autoCheckinScheduler as any).runAccountCheckin(
+        {
+          id: "remote-success",
+          site_name: "Remote Success",
+          site_type: SITE_TYPES.NEW_API,
+          disabled: false,
+          account_info: {},
+          checkIn: runnableCheckIn(true, SITE_TYPES.NEW_API),
+        },
+        "Remote Success",
+      ),
+    ).resolves.toMatchObject({
+      result: {
+        status: "success",
+        methodId: "new-api:daily-checkin",
+        accountStateDurability: "failed",
+      },
+    })
   })
 
   it("marks the day as attempted when a daily run has no runnable accounts", async () => {

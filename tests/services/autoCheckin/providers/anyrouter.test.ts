@@ -380,5 +380,33 @@ describe("anyrouterProvider", () => {
       const result = await checkInForTest(mockAccount)
       expect(result.status).toBe("failed")
     })
+
+    it("returns uncertain when the response is lost after dispatch", async () => {
+      const { fetchApi } = await import("~/services/apiTransport/request")
+      const mutationLifecycle = {
+        dispatched: false,
+        responseReceived: false,
+        onDispatch() {
+          this.dispatched = true
+        },
+        onResponse() {
+          this.responseReceived = true
+        },
+      }
+      vi.mocked(fetchApi).mockImplementationOnce(async (request) => {
+        request.observer?.onDispatch()
+        throw new TypeError("Failed to fetch")
+      })
+
+      await expect(
+        checkInForTest(mockAccount, {
+          ...DEFAULT_PROVIDER_CONTEXT,
+          mutationLifecycle,
+        }),
+      ).resolves.toMatchObject({
+        status: "uncertain",
+        reasonCode: "network_error",
+      })
+    })
   })
 })

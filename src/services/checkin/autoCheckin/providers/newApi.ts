@@ -85,6 +85,7 @@ function createCheckInRequest(
   account: SiteAccount,
   tempWindowRequestSource?: TempWindowRequestSource,
   protectionBypassExecution?: ProtectionBypassExecution,
+  mutationLifecycle?: AutoCheckinProviderContext["mutationLifecycle"],
 ): ApiServiceRequest {
   return {
     baseUrl: account.site_url,
@@ -97,6 +98,7 @@ function createCheckInRequest(
     },
     tempWindowRequestSource,
     protectionBypassExecution,
+    ...(mutationLifecycle ? { observer: mutationLifecycle } : {}),
   }
 }
 
@@ -895,12 +897,14 @@ async function performCheckin(
   account: SiteAccount,
   tempWindowRequestSource: TempWindowRequestSource,
   protectionBypassExecution: ProtectionBypassExecution,
+  mutationLifecycle?: AutoCheckinProviderContext["mutationLifecycle"],
 ): Promise<NewApiCheckInResponse> {
   return await fetchApi<NewApiCheckInRecord>(
     createCheckInRequest(
       account,
       tempWindowRequestSource,
       protectionBypassExecution,
+      mutationLifecycle,
     ),
     {
       endpoint: ENDPOINT,
@@ -941,6 +945,7 @@ async function checkinNewApi(
       account,
       tempWindowRequestSource,
       context.protectionBypassExecution,
+      context.mutationLifecycle,
     )
     const responseMessage = normalizeCheckinMessage(checkinResponse.message)
 
@@ -1023,7 +1028,10 @@ async function checkinNewApi(
         ),
       )
     ) {
-      return resolveProviderErrorResult({ error })
+      return resolveProviderErrorResult({
+        error,
+        mutationDispatched: context.mutationLifecycle?.dispatched,
+      })
     }
     if (
       shouldAttemptNativePageCheckinFallback({
@@ -1040,7 +1048,10 @@ async function checkinNewApi(
       })
     }
 
-    return resolveProviderErrorResult({ error })
+    return resolveProviderErrorResult({
+      error,
+      mutationDispatched: context.mutationLifecycle?.dispatched,
+    })
   }
 }
 

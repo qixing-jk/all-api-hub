@@ -59,8 +59,11 @@ function recalculateSummaryFromResults(
   const skippedCount = values.filter(
     (value) => value.status === CHECKIN_RESULT_STATUS.SKIPPED,
   ).length
+  const uncertainCount = values.filter(
+    (value) => value.status === CHECKIN_RESULT_STATUS.UNCERTAIN,
+  ).length
 
-  const executed = successCount + failedCount
+  const executed = successCount + failedCount + uncertainCount
   const totalEligible =
     previousSummary?.totalEligible ?? executed + skippedCount
 
@@ -70,7 +73,12 @@ function recalculateSummaryFromResults(
     successCount,
     failedCount,
     skippedCount,
-    needsRetry: failedCount > 0,
+    ...(uncertainCount > 0 ? { uncertainCount } : {}),
+    needsRetry: values.some(
+      (value) =>
+        value.status === CHECKIN_RESULT_STATUS.FAILED &&
+        value.retryable !== false,
+    ),
   }
 }
 

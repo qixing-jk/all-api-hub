@@ -17,12 +17,29 @@ export const CHECKIN_RESULT_STATUS = {
   ALREADY_CHECKED: "already_checked",
   FAILED: "failed",
   SKIPPED: "skipped",
+  UNCERTAIN: "uncertain",
 } as const
 export type CheckinResultStatus =
   (typeof CHECKIN_RESULT_STATUS)[keyof typeof CHECKIN_RESULT_STATUS]
 export const CHECKIN_RESULT_STATUSES = Object.values(
   CHECKIN_RESULT_STATUS,
 ) as CheckinResultStatus[]
+
+export const CHECKIN_RECONCILIATION_OUTCOME = {
+  CHECKED: "checked",
+  NOT_CHECKED: "not_checked",
+  UNKNOWN: "unknown",
+  UNAVAILABLE: "unavailable",
+} as const
+export type CheckinReconciliationOutcome =
+  (typeof CHECKIN_RECONCILIATION_OUTCOME)[keyof typeof CHECKIN_RECONCILIATION_OUTCOME]
+
+export const CHECKIN_ACCOUNT_STATE_DURABILITY = {
+  PERSISTED: "persisted",
+  FAILED: "failed",
+} as const
+export type CheckinAccountStateDurability =
+  (typeof CHECKIN_ACCOUNT_STATE_DURABILITY)[keyof typeof CHECKIN_ACCOUNT_STATE_DURABILITY]
 
 /**
  * Reasons why an account was skipped during auto check-in
@@ -153,20 +170,52 @@ export function translateAutoCheckinSkipReason(
   }
 }
 
-/**
- * Single account check-in result
- */
-export interface CheckinAccountResult {
+interface CheckinAccountResultBase {
   accountId: string
   accountName: string
-  status: CheckinResultStatus
+  methodId?: string
   message?: string
   messageKey?: string
   messageParams?: Record<string, any>
   rawMessage?: string
   reasonCode?: AutoCheckinSkipReason
+  retryable?: boolean
+  reconciliation?: CheckinReconciliationOutcome
+  accountStateDurability?: CheckinAccountStateDurability
   timestamp: number
 }
+
+/** One account outcome with only valid retry/certainty combinations. */
+export type CheckinAccountResult = CheckinAccountResultBase &
+  (
+    | {
+        status:
+          | typeof CHECKIN_RESULT_STATUS.SUCCESS
+          | typeof CHECKIN_RESULT_STATUS.ALREADY_CHECKED
+        retryable?: never
+        accountStateDurability?: CheckinAccountStateDurability
+        reconciliation?: typeof CHECKIN_RECONCILIATION_OUTCOME.CHECKED
+      }
+    | {
+        status: typeof CHECKIN_RESULT_STATUS.FAILED
+        accountStateDurability?: never
+      }
+    | {
+        status: typeof CHECKIN_RESULT_STATUS.SKIPPED
+        retryable?: never
+        reconciliation?: never
+        accountStateDurability?: never
+      }
+    | {
+        status: typeof CHECKIN_RESULT_STATUS.UNCERTAIN
+        retryable?: never
+        reconciliation: Exclude<
+          CheckinReconciliationOutcome,
+          typeof CHECKIN_RECONCILIATION_OUTCOME.CHECKED
+        >
+        accountStateDurability?: never
+      }
+  )
 
 /**
  * Overall auto check-in execution result
@@ -210,13 +259,14 @@ export function getAutoCheckinRunResultLabel(
 export function getAutoCheckinRunResultFromSummary(
   summary: Pick<
     AutoCheckinRunSummary,
-    "executed" | "successCount" | "failedCount"
+    "executed" | "successCount" | "failedCount" | "uncertainCount"
   >,
 ): AutoCheckinRunResult {
-  if (summary.failedCount > 0 && summary.successCount > 0) {
+  const unresolvedCount = summary.failedCount + (summary.uncertainCount ?? 0)
+  if (unresolvedCount > 0 && summary.successCount > 0) {
     return AUTO_CHECKIN_RUN_RESULT.PARTIAL
   }
-  if (summary.failedCount > 0) {
+  if (unresolvedCount > 0) {
     return AUTO_CHECKIN_RUN_RESULT.FAILED
   }
   if (summary.executed === 0) {
@@ -259,6 +309,7 @@ export interface AutoCheckinRunSummary {
   successCount: number
   failedCount: number
   skippedCount: number
+  uncertainCount?: number
   needsRetry: boolean
 }
 

@@ -47,6 +47,7 @@ const createRequest = (
   account: SiteAccount,
   tempWindowRequestSource?: TempWindowRequestSource,
   protectionBypassExecution?: AutoCheckinProviderContext["protectionBypassExecution"],
+  mutationLifecycle?: AutoCheckinProviderContext["mutationLifecycle"],
 ): ApiServiceRequest => ({
   baseUrl: account.site_url,
   accountId: account.id,
@@ -58,6 +59,7 @@ const createRequest = (
   },
   ...(tempWindowRequestSource ? { tempWindowRequestSource } : {}),
   ...(protectionBypassExecution ? { protectionBypassExecution } : {}),
+  ...(mutationLifecycle ? { observer: mutationLifecycle } : {}),
 })
 
 type VeloeraCheckInObservation = {
@@ -100,6 +102,7 @@ async function checkinVeloera(
     account,
     tempWindowRequestSource,
     context.protectionBypassExecution,
+    context.mutationLifecycle,
   )
 
   try {
@@ -156,7 +159,10 @@ async function checkinVeloera(
       data: response ?? undefined,
     }
   } catch (error: unknown) {
-    return resolveProviderErrorResult({ error })
+    return resolveProviderErrorResult({
+      error,
+      mutationDispatched: context.mutationLifecycle?.dispatched,
+    })
   }
 }
 

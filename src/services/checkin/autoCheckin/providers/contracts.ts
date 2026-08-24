@@ -1,5 +1,8 @@
 import { type CHECK_IN_PROVIDER_READINESS_REASONS } from "~/constants/checkIn"
-import type { ApiServiceRequest } from "~/services/apiTransport/type"
+import type {
+  ApiServiceRequest,
+  ApiTransportRequestObserver,
+} from "~/services/apiTransport/type"
 import type { AutoCheckinProviderResult } from "~/services/checkin/autoCheckin/providers/types"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import type { SiteAccount } from "~/types"
@@ -35,9 +38,17 @@ export interface AnyrouterCheckInParams {
 }
 
 /** Execution dependencies supplied by the check-in scheduler. */
+export interface AutoCheckinMutationLifecycle
+  extends ApiTransportRequestObserver {
+  dispatched: boolean
+  responseReceived: boolean
+}
+
 export interface AutoCheckinProviderContext {
   tempWindowRequestSource: TempWindowRequestSource
   protectionBypassExecution: ProtectionBypassExecution
+  /** Process-local evidence for classifying a lost mutation response. */
+  mutationLifecycle?: AutoCheckinMutationLifecycle
 }
 
 export type AutoCheckinProviderReadiness =

@@ -84,6 +84,8 @@ const getFailureReasonCode = (
 export function resolveProviderErrorResult(params: {
   error: unknown
   isAlreadyChecked?: (message: string) => boolean
+  /** The business mutation may have reached the remote handler. */
+  mutationDispatched?: boolean
 }): AutoCheckinProviderResult {
   const errorMessage = (() => {
     const error = params.error
@@ -133,9 +135,15 @@ export function resolveProviderErrorResult(params: {
   const normalizedReasonCode = getFailureReasonCode(
     classifyAutoCheckinError(params.error),
   )
+  const mutationResultIsUncertain =
+    params.mutationDispatched === true &&
+    normalizedReasonCode !== AUTO_CHECKIN_SKIP_REASON.AUTHENTICATION_REQUIRED &&
+    normalizedReasonCode !== AUTO_CHECKIN_SKIP_REASON.PERMISSION_DENIED
   if (normalizedReasonCode) {
     return {
-      status: CHECKIN_RESULT_STATUS.FAILED,
+      status: mutationResultIsUncertain
+        ? CHECKIN_RESULT_STATUS.UNCERTAIN
+        : CHECKIN_RESULT_STATUS.FAILED,
       messageKey: getAutoCheckinSkipReasonTranslationKey(normalizedReasonCode),
       ...(statusCode ? { messageParams: { statusCode } } : {}),
       reasonCode: normalizedReasonCode,
@@ -143,7 +151,9 @@ export function resolveProviderErrorResult(params: {
   }
 
   return {
-    status: CHECKIN_RESULT_STATUS.FAILED,
+    status: mutationResultIsUncertain
+      ? CHECKIN_RESULT_STATUS.UNCERTAIN
+      : CHECKIN_RESULT_STATUS.FAILED,
     rawMessage: errorMessage || undefined,
     messageKey: errorMessage
       ? undefined

@@ -1,5 +1,6 @@
 import type {
   AutoCheckinSkipReason,
+  CheckinReconciliationOutcome,
   CheckinResultStatus,
 } from "~/types/autoCheckin"
 
@@ -19,5 +20,7 @@ export interface AutoCheckinProviderResult<
   messageParams?: TMessageParams
   rawMessage?: string
   reasonCode?: AutoCheckinSkipReason
+  retryable?: boolean
+  reconciliation?: CheckinReconciliationOutcome
   data?: TData
 }
