@@ -1,6 +1,12 @@
 import type { TFunction } from "i18next"
 import { Bell } from "lucide-react"
-import { useCallback, useEffect, useState, type ReactNode } from "react"
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react"
 import { useTranslation } from "react-i18next"
 
 import { SettingSection } from "~/components/SettingSection"
@@ -21,6 +27,8 @@ import {
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { BASIC_SETTINGS_TEST_IDS } from "~/features/BasicSettings/testIds"
+import { useDeferredPreferenceDraft } from "~/hooks/useDeferredPreferenceDraft"
+import { blurInputOnEnter } from "~/hooks/useDeferredPreferenceField"
 import {
   sendTaskNotificationMessage,
   TaskNotificationMessageTypes,
@@ -38,7 +46,9 @@ import {
   type TaskNotificationChannel,
   type TaskNotificationChannelPreferences,
   type TaskNotificationTask,
+  type TaskNotificationTaskPreferences,
 } from "~/types/taskNotifications"
+import type { DeepPartial } from "~/types/utils"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { showResultToast, showUpdateToast } from "~/utils/core/toastHelpers"
@@ -202,6 +212,7 @@ function getTaskDescription(
 export default function TaskNotificationSettings() {
   const { i18n, t } = useTranslation(["settings", "common"])
   const {
+    preferences,
     siteAnnouncementNotifications,
     taskNotifications,
     updateSiteAnnouncementNotifications,
@@ -214,46 +225,151 @@ export default function TaskNotificationSettings() {
   const [testingChannel, setTestingChannel] =
     useState<TaskNotificationChannel | null>(null)
   const channels = taskNotifications.channels
-  const [telegramDraft, setTelegramDraft] = useState(
-    channels[TASK_NOTIFICATION_CHANNELS.Telegram],
+  const savedVersion = preferences?.lastUpdated ?? 0
+  const savedTelegramChannel = channels[TASK_NOTIFICATION_CHANNELS.Telegram]
+  const savedFeishuChannel = channels[TASK_NOTIFICATION_CHANNELS.Feishu]
+  const savedDingtalkChannel = channels[TASK_NOTIFICATION_CHANNELS.Dingtalk]
+  const savedWecomChannel = channels[TASK_NOTIFICATION_CHANNELS.Wecom]
+  const savedNtfyChannel = channels[TASK_NOTIFICATION_CHANNELS.Ntfy]
+  const savedWebhookChannel = channels[TASK_NOTIFICATION_CHANNELS.Webhook]
+
+  const handleChannelUpdate = async (
+    channelUpdates: DeepPartial<TaskNotificationChannelPreferences>,
+    label: string,
+  ) => {
+    const result = await updateTaskNotifications({ channels: channelUpdates })
+    showUpdateToast(result, label)
+    return result.ok
+  }
+
+  const savedTelegramDraft = useMemo(
+    () => ({
+      botToken: savedTelegramChannel.botToken,
+      chatId: savedTelegramChannel.chatId,
+    }),
+    [savedTelegramChannel],
   )
-  const [feishuDraft, setFeishuDraft] = useState(
-    channels[TASK_NOTIFICATION_CHANNELS.Feishu],
+  const telegram = useDeferredPreferenceDraft({
+    savedValue: savedTelegramDraft,
+    savedVersion,
+    onCommit: async (draft) => {
+      const value = {
+        botToken: draft.botToken.trim(),
+        chatId: draft.chatId.trim(),
+      }
+      const ok = await handleChannelUpdate(
+        { [TASK_NOTIFICATION_CHANNELS.Telegram]: value },
+        t("taskNotifications.channels.telegram.title"),
+      )
+      return { ok, value }
+    },
+  })
+
+  const savedFeishuDraft = useMemo(
+    () => ({
+      webhookKey: savedFeishuChannel.webhookKey,
+    }),
+    [savedFeishuChannel],
   )
-  const [dingtalkDraft, setDingtalkDraft] = useState(
-    channels[TASK_NOTIFICATION_CHANNELS.Dingtalk],
+  const feishu = useDeferredPreferenceDraft({
+    savedValue: savedFeishuDraft,
+    savedVersion,
+    onCommit: async (draft) => {
+      const value = { webhookKey: draft.webhookKey.trim() }
+      const ok = await handleChannelUpdate(
+        { [TASK_NOTIFICATION_CHANNELS.Feishu]: value },
+        t("taskNotifications.channels.feishu.title"),
+      )
+      return { ok, value }
+    },
+  })
+
+  const savedDingtalkDraft = useMemo(
+    () => ({
+      webhookKey: savedDingtalkChannel.webhookKey,
+      secret: savedDingtalkChannel.secret,
+    }),
+    [savedDingtalkChannel],
   )
-  const [wecomDraft, setWecomDraft] = useState(
-    channels[TASK_NOTIFICATION_CHANNELS.Wecom],
+  const dingtalk = useDeferredPreferenceDraft({
+    savedValue: savedDingtalkDraft,
+    savedVersion,
+    onCommit: async (draft) => {
+      const value = {
+        webhookKey: draft.webhookKey.trim(),
+        secret: draft.secret.trim(),
+      }
+      const ok = await handleChannelUpdate(
+        { [TASK_NOTIFICATION_CHANNELS.Dingtalk]: value },
+        t("taskNotifications.channels.dingtalk.title"),
+      )
+      return { ok, value }
+    },
+  })
+
+  const savedWecomDraft = useMemo(
+    () => ({
+      webhookKey: savedWecomChannel.webhookKey,
+    }),
+    [savedWecomChannel],
   )
-  const [ntfyDraft, setNtfyDraft] = useState(
-    channels[TASK_NOTIFICATION_CHANNELS.Ntfy],
+  const wecom = useDeferredPreferenceDraft({
+    savedValue: savedWecomDraft,
+    savedVersion,
+    onCommit: async (draft) => {
+      const value = { webhookKey: draft.webhookKey.trim() }
+      const ok = await handleChannelUpdate(
+        { [TASK_NOTIFICATION_CHANNELS.Wecom]: value },
+        t("taskNotifications.channels.wecom.title"),
+      )
+      return { ok, value }
+    },
+  })
+
+  const savedNtfyDraft = useMemo(
+    () => ({
+      topicUrl: savedNtfyChannel.topicUrl,
+      accessToken: savedNtfyChannel.accessToken,
+    }),
+    [savedNtfyChannel],
   )
-  const [webhookDraft, setWebhookDraft] = useState(
-    channels[TASK_NOTIFICATION_CHANNELS.Webhook],
+  const ntfy = useDeferredPreferenceDraft({
+    savedValue: savedNtfyDraft,
+    savedVersion,
+    onCommit: async (draft) => {
+      const value = {
+        topicUrl: draft.topicUrl.trim(),
+        accessToken: draft.accessToken.trim(),
+      }
+      const ok = await handleChannelUpdate(
+        { [TASK_NOTIFICATION_CHANNELS.Ntfy]: value },
+        t("taskNotifications.channels.ntfy.title"),
+      )
+      return { ok, value }
+    },
+  })
+
+  const savedWebhookDraft = useMemo(
+    () => ({ url: savedWebhookChannel.url }),
+    [savedWebhookChannel],
   )
+  const webhook = useDeferredPreferenceDraft({
+    savedValue: savedWebhookDraft,
+    savedVersion,
+    onCommit: async (draft) => {
+      const value = { url: draft.url.trim() }
+      const ok = await handleChannelUpdate(
+        { [TASK_NOTIFICATION_CHANNELS.Webhook]: value },
+        t("taskNotifications.channels.webhook.title"),
+      )
+      return { ok, value }
+    },
+  })
 
   const refreshPermissionStatus = useCallback(async () => {
     const granted = await hasPermission(OPTIONAL_PERMISSION_IDS.Notifications)
     setPermissionGranted(granted)
   }, [])
-
-  useEffect(() => {
-    setTelegramDraft(
-      taskNotifications.channels[TASK_NOTIFICATION_CHANNELS.Telegram],
-    )
-    setFeishuDraft(
-      taskNotifications.channels[TASK_NOTIFICATION_CHANNELS.Feishu],
-    )
-    setDingtalkDraft(
-      taskNotifications.channels[TASK_NOTIFICATION_CHANNELS.Dingtalk],
-    )
-    setWecomDraft(taskNotifications.channels[TASK_NOTIFICATION_CHANNELS.Wecom])
-    setNtfyDraft(taskNotifications.channels[TASK_NOTIFICATION_CHANNELS.Ntfy])
-    setWebhookDraft(
-      taskNotifications.channels[TASK_NOTIFICATION_CHANNELS.Webhook],
-    )
-  }, [taskNotifications.channels])
 
   useEffect(() => {
     void refreshPermissionStatus()
@@ -268,21 +384,10 @@ export default function TaskNotificationSettings() {
     showUpdateToast(writeResult, t("taskNotifications.enable"))
   }
 
-  const handleChannelUpdate = async (
-    channels: TaskNotificationChannelPreferences,
-    label: string,
-  ) => {
-    const result = await updateTaskNotifications({ channels })
-    showUpdateToast(result, label)
-    return result.ok
-  }
-
   const handleBrowserChannelToggle = async (enabled: boolean) => {
     await handleChannelUpdate(
       {
-        ...channels,
         [TASK_NOTIFICATION_CHANNELS.Browser]: {
-          ...channels[TASK_NOTIFICATION_CHANNELS.Browser],
           enabled,
         },
       },
@@ -293,9 +398,7 @@ export default function TaskNotificationSettings() {
   const handleTelegramChannelToggle = async (enabled: boolean) => {
     await handleChannelUpdate(
       {
-        ...channels,
         [TASK_NOTIFICATION_CHANNELS.Telegram]: {
-          ...channels[TASK_NOTIFICATION_CHANNELS.Telegram],
           enabled,
         },
       },
@@ -306,9 +409,7 @@ export default function TaskNotificationSettings() {
   const handleFeishuChannelToggle = async (enabled: boolean) => {
     await handleChannelUpdate(
       {
-        ...channels,
         [TASK_NOTIFICATION_CHANNELS.Feishu]: {
-          ...channels[TASK_NOTIFICATION_CHANNELS.Feishu],
           enabled,
         },
       },
@@ -319,9 +420,7 @@ export default function TaskNotificationSettings() {
   const handleDingtalkChannelToggle = async (enabled: boolean) => {
     await handleChannelUpdate(
       {
-        ...channels,
         [TASK_NOTIFICATION_CHANNELS.Dingtalk]: {
-          ...channels[TASK_NOTIFICATION_CHANNELS.Dingtalk],
           enabled,
         },
       },
@@ -332,9 +431,7 @@ export default function TaskNotificationSettings() {
   const handleWecomChannelToggle = async (enabled: boolean) => {
     await handleChannelUpdate(
       {
-        ...channels,
         [TASK_NOTIFICATION_CHANNELS.Wecom]: {
-          ...channels[TASK_NOTIFICATION_CHANNELS.Wecom],
           enabled,
         },
       },
@@ -345,9 +442,7 @@ export default function TaskNotificationSettings() {
   const handleNtfyChannelToggle = async (enabled: boolean) => {
     await handleChannelUpdate(
       {
-        ...channels,
         [TASK_NOTIFICATION_CHANNELS.Ntfy]: {
-          ...channels[TASK_NOTIFICATION_CHANNELS.Ntfy],
           enabled,
         },
       },
@@ -358,140 +453,9 @@ export default function TaskNotificationSettings() {
   const handleWebhookChannelToggle = async (enabled: boolean) => {
     await handleChannelUpdate(
       {
-        ...channels,
         [TASK_NOTIFICATION_CHANNELS.Webhook]: {
-          ...channels[TASK_NOTIFICATION_CHANNELS.Webhook],
           enabled,
         },
-      },
-      t("taskNotifications.channels.webhook.title"),
-    )
-  }
-
-  const handleNtfyConfigSave = async (): Promise<boolean> => {
-    const nextNtfy = {
-      ...channels[TASK_NOTIFICATION_CHANNELS.Ntfy],
-      topicUrl: ntfyDraft.topicUrl.trim(),
-      accessToken: ntfyDraft.accessToken.trim(),
-    }
-    const currentNtfy = channels[TASK_NOTIFICATION_CHANNELS.Ntfy]
-    if (
-      nextNtfy.topicUrl === currentNtfy.topicUrl &&
-      nextNtfy.accessToken === currentNtfy.accessToken
-    ) {
-      return true
-    }
-
-    return await handleChannelUpdate(
-      {
-        ...channels,
-        [TASK_NOTIFICATION_CHANNELS.Ntfy]: nextNtfy,
-      },
-      t("taskNotifications.channels.ntfy.title"),
-    )
-  }
-
-  const handleTelegramConfigSave = async (): Promise<boolean> => {
-    const nextTelegram = {
-      ...channels[TASK_NOTIFICATION_CHANNELS.Telegram],
-      botToken: telegramDraft.botToken.trim(),
-      chatId: telegramDraft.chatId.trim(),
-    }
-    const currentTelegram = channels[TASK_NOTIFICATION_CHANNELS.Telegram]
-    if (
-      nextTelegram.botToken === currentTelegram.botToken &&
-      nextTelegram.chatId === currentTelegram.chatId
-    ) {
-      return true
-    }
-
-    return await handleChannelUpdate(
-      {
-        ...channels,
-        [TASK_NOTIFICATION_CHANNELS.Telegram]: nextTelegram,
-      },
-      t("taskNotifications.channels.telegram.title"),
-    )
-  }
-
-  const handleFeishuConfigSave = async (): Promise<boolean> => {
-    const nextFeishu = {
-      ...channels[TASK_NOTIFICATION_CHANNELS.Feishu],
-      webhookKey: feishuDraft.webhookKey.trim(),
-    }
-    if (
-      nextFeishu.webhookKey ===
-      channels[TASK_NOTIFICATION_CHANNELS.Feishu].webhookKey
-    ) {
-      return true
-    }
-
-    return await handleChannelUpdate(
-      {
-        ...channels,
-        [TASK_NOTIFICATION_CHANNELS.Feishu]: nextFeishu,
-      },
-      t("taskNotifications.channels.feishu.title"),
-    )
-  }
-
-  const handleDingtalkConfigSave = async (): Promise<boolean> => {
-    const nextDingtalk = {
-      ...channels[TASK_NOTIFICATION_CHANNELS.Dingtalk],
-      webhookKey: dingtalkDraft.webhookKey.trim(),
-      secret: dingtalkDraft.secret.trim(),
-    }
-    const currentDingtalk = channels[TASK_NOTIFICATION_CHANNELS.Dingtalk]
-    if (
-      nextDingtalk.webhookKey === currentDingtalk.webhookKey &&
-      nextDingtalk.secret === currentDingtalk.secret
-    ) {
-      return true
-    }
-
-    return await handleChannelUpdate(
-      {
-        ...channels,
-        [TASK_NOTIFICATION_CHANNELS.Dingtalk]: nextDingtalk,
-      },
-      t("taskNotifications.channels.dingtalk.title"),
-    )
-  }
-
-  const handleWecomConfigSave = async (): Promise<boolean> => {
-    const nextWecom = {
-      ...channels[TASK_NOTIFICATION_CHANNELS.Wecom],
-      webhookKey: wecomDraft.webhookKey.trim(),
-    }
-    if (
-      nextWecom.webhookKey ===
-      channels[TASK_NOTIFICATION_CHANNELS.Wecom].webhookKey
-    ) {
-      return true
-    }
-
-    return await handleChannelUpdate(
-      {
-        ...channels,
-        [TASK_NOTIFICATION_CHANNELS.Wecom]: nextWecom,
-      },
-      t("taskNotifications.channels.wecom.title"),
-    )
-  }
-
-  const handleWebhookConfigSave = async (): Promise<boolean> => {
-    const nextWebhook = {
-      ...channels[TASK_NOTIFICATION_CHANNELS.Webhook],
-      url: webhookDraft.url.trim(),
-    }
-    if (nextWebhook.url === channels[TASK_NOTIFICATION_CHANNELS.Webhook].url) {
-      return true
-    }
-
-    return await handleChannelUpdate(
-      {
-        ...channels,
-        [TASK_NOTIFICATION_CHANNELS.Webhook]: nextWebhook,
       },
       t("taskNotifications.channels.webhook.title"),
     )
@@ -503,9 +467,8 @@ export default function TaskNotificationSettings() {
   ) => {
     const result = await updateTaskNotifications({
       tasks: {
-        ...taskNotifications.tasks,
         [task]: enabled,
-      },
+      } as DeepPartial<TaskNotificationTaskPreferences>,
     })
     showUpdateToast(result, t("taskNotifications.tasksLabel"))
   }
@@ -522,17 +485,17 @@ export default function TaskNotificationSettings() {
   ): Promise<boolean> => {
     switch (channel) {
       case TASK_NOTIFICATION_CHANNELS.Telegram:
-        return await handleTelegramConfigSave()
+        return (await telegram.commit()).ok
       case TASK_NOTIFICATION_CHANNELS.Feishu:
-        return await handleFeishuConfigSave()
+        return (await feishu.commit()).ok
       case TASK_NOTIFICATION_CHANNELS.Dingtalk:
-        return await handleDingtalkConfigSave()
+        return (await dingtalk.commit()).ok
       case TASK_NOTIFICATION_CHANNELS.Wecom:
-        return await handleWecomConfigSave()
+        return (await wecom.commit()).ok
       case TASK_NOTIFICATION_CHANNELS.Ntfy:
-        return await handleNtfyConfigSave()
+        return (await ntfy.commit()).ok
       case TASK_NOTIFICATION_CHANNELS.Webhook:
-        return await handleWebhookConfigSave()
+        return (await webhook.commit()).ok
       case TASK_NOTIFICATION_CHANNELS.Browser:
         return true
     }
@@ -630,33 +593,33 @@ export default function TaskNotificationSettings() {
   const canSendTelegramTest =
     taskNotifications.enabled &&
     channels[TASK_NOTIFICATION_CHANNELS.Telegram].enabled &&
-    Boolean(channels[TASK_NOTIFICATION_CHANNELS.Telegram].botToken.trim()) &&
-    Boolean(channels[TASK_NOTIFICATION_CHANNELS.Telegram].chatId.trim()) &&
+    Boolean(telegram.draft.botToken.trim()) &&
+    Boolean(telegram.draft.chatId.trim()) &&
     !isAnyChannelTesting
   const canSendFeishuTest =
     taskNotifications.enabled &&
     channels[TASK_NOTIFICATION_CHANNELS.Feishu].enabled &&
-    Boolean(channels[TASK_NOTIFICATION_CHANNELS.Feishu].webhookKey.trim()) &&
+    Boolean(feishu.draft.webhookKey.trim()) &&
     !isAnyChannelTesting
   const canSendDingtalkTest =
     taskNotifications.enabled &&
     channels[TASK_NOTIFICATION_CHANNELS.Dingtalk].enabled &&
-    Boolean(channels[TASK_NOTIFICATION_CHANNELS.Dingtalk].webhookKey.trim()) &&
+    Boolean(dingtalk.draft.webhookKey.trim()) &&
     !isAnyChannelTesting
   const canSendWecomTest =
     taskNotifications.enabled &&
     channels[TASK_NOTIFICATION_CHANNELS.Wecom].enabled &&
-    Boolean(channels[TASK_NOTIFICATION_CHANNELS.Wecom].webhookKey.trim()) &&
+    Boolean(wecom.draft.webhookKey.trim()) &&
     !isAnyChannelTesting
   const canSendNtfyTest =
     taskNotifications.enabled &&
     channels[TASK_NOTIFICATION_CHANNELS.Ntfy].enabled &&
-    Boolean(channels[TASK_NOTIFICATION_CHANNELS.Ntfy].topicUrl.trim()) &&
+    Boolean(ntfy.draft.topicUrl.trim()) &&
     !isAnyChannelTesting
   const canSendWebhookTest =
     taskNotifications.enabled &&
     channels[TASK_NOTIFICATION_CHANNELS.Webhook].enabled &&
-    Boolean(channels[TASK_NOTIFICATION_CHANNELS.Webhook].url.trim()) &&
+    Boolean(webhook.draft.url.trim()) &&
     !isAnyChannelTesting
   const feishuDocsUrl = getDocsTaskNotificationsFeishuUrl(i18n.language)
   const dingtalkDocsUrl = getDocsTaskNotificationsDingtalkUrl(i18n.language)
@@ -801,21 +764,23 @@ export default function TaskNotificationSettings() {
                       show: t("keyManagement:actions.showKey"),
                       hide: t("keyManagement:actions.hideKey"),
                     }}
-                    value={telegramDraft.botToken}
+                    value={telegram.draft.botToken}
                     disabled={
                       !taskNotifications.enabled ||
-                      !channels[TASK_NOTIFICATION_CHANNELS.Telegram].enabled
+                      !channels[TASK_NOTIFICATION_CHANNELS.Telegram].enabled ||
+                      telegram.isCommitting
                     }
                     placeholder={t(
                       "taskNotifications.channels.telegram.botTokenPlaceholder",
                     )}
                     onChange={(event) =>
-                      setTelegramDraft((draft) => ({
+                      telegram.setDraft((draft) => ({
                         ...draft,
                         botToken: event.target.value,
                       }))
                     }
-                    onBlur={() => void handleTelegramConfigSave()}
+                    onBlur={() => void telegram.commit()}
+                    onKeyDown={blurInputOnEnter}
                   />
                 </FormField>
                 <FormField
@@ -824,21 +789,23 @@ export default function TaskNotificationSettings() {
                 >
                   <Input
                     id={SETTINGS_ANCHORS.TASK_NOTIFICATIONS_TELEGRAM_CHAT_ID}
-                    value={telegramDraft.chatId}
+                    value={telegram.draft.chatId}
                     disabled={
                       !taskNotifications.enabled ||
-                      !channels[TASK_NOTIFICATION_CHANNELS.Telegram].enabled
+                      !channels[TASK_NOTIFICATION_CHANNELS.Telegram].enabled ||
+                      telegram.isCommitting
                     }
                     placeholder={t(
                       "taskNotifications.channels.telegram.chatIdPlaceholder",
                     )}
                     onChange={(event) =>
-                      setTelegramDraft((draft) => ({
+                      telegram.setDraft((draft) => ({
                         ...draft,
                         chatId: event.target.value,
                       }))
                     }
-                    onBlur={() => void handleTelegramConfigSave()}
+                    onBlur={() => void telegram.commit()}
+                    onKeyDown={blurInputOnEnter}
                   />
                 </FormField>
               </div>
@@ -876,21 +843,23 @@ export default function TaskNotificationSettings() {
                     show: t("keyManagement:actions.showKey"),
                     hide: t("keyManagement:actions.hideKey"),
                   }}
-                  value={feishuDraft.webhookKey}
+                  value={feishu.draft.webhookKey}
                   disabled={
                     !taskNotifications.enabled ||
-                    !channels[TASK_NOTIFICATION_CHANNELS.Feishu].enabled
+                    !channels[TASK_NOTIFICATION_CHANNELS.Feishu].enabled ||
+                    feishu.isCommitting
                   }
                   placeholder={t(
                     "taskNotifications.channels.feishu.webhookKeyPlaceholder",
                   )}
                   onChange={(event) =>
-                    setFeishuDraft((draft) => ({
+                    feishu.setDraft((draft) => ({
                       ...draft,
                       webhookKey: event.target.value,
                     }))
                   }
-                  onBlur={() => void handleFeishuConfigSave()}
+                  onBlur={() => void feishu.commit()}
+                  onKeyDown={blurInputOnEnter}
                 />
                 <p className="text-xs text-gray-500 dark:text-gray-400">
                   {t("taskNotifications.channels.feishu.webhookKeyDescription")}{" "}
@@ -948,21 +917,24 @@ export default function TaskNotificationSettings() {
                         show: t("keyManagement:actions.showKey"),
                         hide: t("keyManagement:actions.hideKey"),
                       }}
-                      value={dingtalkDraft.webhookKey}
+                      value={dingtalk.draft.webhookKey}
                       disabled={
                         !taskNotifications.enabled ||
-                        !channels[TASK_NOTIFICATION_CHANNELS.Dingtalk].enabled
+                        !channels[TASK_NOTIFICATION_CHANNELS.Dingtalk]
+                          .enabled ||
+                        dingtalk.isCommitting
                       }
                       placeholder={t(
                         "taskNotifications.channels.dingtalk.webhookKeyPlaceholder",
                       )}
                       onChange={(event) =>
-                        setDingtalkDraft((draft) => ({
+                        dingtalk.setDraft((draft) => ({
                           ...draft,
                           webhookKey: event.target.value,
                         }))
                       }
-                      onBlur={() => void handleDingtalkConfigSave()}
+                      onBlur={() => void dingtalk.commit()}
+                      onKeyDown={blurInputOnEnter}
                     />
                   </FormField>
                   <FormField
@@ -979,21 +951,24 @@ export default function TaskNotificationSettings() {
                         show: t("keyManagement:actions.showKey"),
                         hide: t("keyManagement:actions.hideKey"),
                       }}
-                      value={dingtalkDraft.secret}
+                      value={dingtalk.draft.secret}
                       disabled={
                         !taskNotifications.enabled ||
-                        !channels[TASK_NOTIFICATION_CHANNELS.Dingtalk].enabled
+                        !channels[TASK_NOTIFICATION_CHANNELS.Dingtalk]
+                          .enabled ||
+                        dingtalk.isCommitting
                       }
                       placeholder={t(
                         "taskNotifications.channels.dingtalk.secretPlaceholder",
                       )}
                       onChange={(event) =>
-                        setDingtalkDraft((draft) => ({
+                        dingtalk.setDraft((draft) => ({
                           ...draft,
                           secret: event.target.value,
                         }))
                       }
-                      onBlur={() => void handleDingtalkConfigSave()}
+                      onBlur={() => void dingtalk.commit()}
+                      onKeyDown={blurInputOnEnter}
                     />
                   </FormField>
                 </div>
@@ -1043,21 +1018,23 @@ export default function TaskNotificationSettings() {
                     show: t("keyManagement:actions.showKey"),
                     hide: t("keyManagement:actions.hideKey"),
                   }}
-                  value={wecomDraft.webhookKey}
+                  value={wecom.draft.webhookKey}
                   disabled={
                     !taskNotifications.enabled ||
-                    !channels[TASK_NOTIFICATION_CHANNELS.Wecom].enabled
+                    !channels[TASK_NOTIFICATION_CHANNELS.Wecom].enabled ||
+                    wecom.isCommitting
                   }
                   placeholder={t(
                     "taskNotifications.channels.wecom.webhookKeyPlaceholder",
                   )}
                   onChange={(event) =>
-                    setWecomDraft((draft) => ({
+                    wecom.setDraft((draft) => ({
                       ...draft,
                       webhookKey: event.target.value,
                     }))
                   }
-                  onBlur={() => void handleWecomConfigSave()}
+                  onBlur={() => void wecom.commit()}
+                  onKeyDown={blurInputOnEnter}
                 />
                 <p className="text-xs text-gray-500 dark:text-gray-400">
                   {t("taskNotifications.channels.wecom.webhookKeyDescription")}{" "}
@@ -1099,21 +1076,23 @@ export default function TaskNotificationSettings() {
                   >
                     <Input
                       id={SETTINGS_ANCHORS.TASK_NOTIFICATIONS_NTFY_TOPIC_URL}
-                      value={ntfyDraft.topicUrl}
+                      value={ntfy.draft.topicUrl}
                       disabled={
                         !taskNotifications.enabled ||
-                        !channels[TASK_NOTIFICATION_CHANNELS.Ntfy].enabled
+                        !channels[TASK_NOTIFICATION_CHANNELS.Ntfy].enabled ||
+                        ntfy.isCommitting
                       }
                       placeholder={t(
                         "taskNotifications.channels.ntfy.topicUrlPlaceholder",
                       )}
                       onChange={(event) =>
-                        setNtfyDraft((draft) => ({
+                        ntfy.setDraft((draft) => ({
                           ...draft,
                           topicUrl: event.target.value,
                         }))
                       }
-                      onBlur={() => void handleNtfyConfigSave()}
+                      onBlur={() => void ntfy.commit()}
+                      onKeyDown={blurInputOnEnter}
                     />
                   </FormField>
                   <FormField
@@ -1130,21 +1109,23 @@ export default function TaskNotificationSettings() {
                         show: t("keyManagement:actions.showKey"),
                         hide: t("keyManagement:actions.hideKey"),
                       }}
-                      value={ntfyDraft.accessToken}
+                      value={ntfy.draft.accessToken}
                       disabled={
                         !taskNotifications.enabled ||
-                        !channels[TASK_NOTIFICATION_CHANNELS.Ntfy].enabled
+                        !channels[TASK_NOTIFICATION_CHANNELS.Ntfy].enabled ||
+                        ntfy.isCommitting
                       }
                       placeholder={t(
                         "taskNotifications.channels.ntfy.accessTokenPlaceholder",
                       )}
                       onChange={(event) =>
-                        setNtfyDraft((draft) => ({
+                        ntfy.setDraft((draft) => ({
                           ...draft,
                           accessToken: event.target.value,
                         }))
                       }
-                      onBlur={() => void handleNtfyConfigSave()}
+                      onBlur={() => void ntfy.commit()}
+                      onKeyDown={blurInputOnEnter}
                     />
                   </FormField>
                 </div>
@@ -1190,21 +1171,23 @@ export default function TaskNotificationSettings() {
               >
                 <Input
                   id={SETTINGS_ANCHORS.TASK_NOTIFICATIONS_WEBHOOK_URL}
-                  value={webhookDraft.url}
+                  value={webhook.draft.url}
                   disabled={
                     !taskNotifications.enabled ||
-                    !channels[TASK_NOTIFICATION_CHANNELS.Webhook].enabled
+                    !channels[TASK_NOTIFICATION_CHANNELS.Webhook].enabled ||
+                    webhook.isCommitting
                   }
                   placeholder={t(
                     "taskNotifications.channels.webhook.urlPlaceholder",
                   )}
                   onChange={(event) =>
-                    setWebhookDraft((draft) => ({
+                    webhook.setDraft((draft) => ({
                       ...draft,
                       url: event.target.value,
                     }))
                   }
-                  onBlur={() => void handleWebhookConfigSave()}
+                  onBlur={() => void webhook.commit()}
+                  onKeyDown={blurInputOnEnter}
                 />
                 <p className="text-xs text-gray-500 dark:text-gray-400">
                   {t("taskNotifications.channels.webhook.urlDescription")}

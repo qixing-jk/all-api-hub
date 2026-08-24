@@ -1451,7 +1451,7 @@ class UserPreferencesService {
    * Update task-notification preferences.
    */
   async updateTaskNotifications(
-    updates: Partial<TaskNotificationPreferences>,
+    updates: DeepPartial<TaskNotificationPreferences>,
   ): Promise<PreferenceWriteResult> {
     return this.savePreferences({
       taskNotifications: updates,

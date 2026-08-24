@@ -1,16 +1,24 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from "react"
+import type { KeyboardEvent } from "react"
 
-import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
+import {
+  useDeferredPreferenceDraft,
+  type DeferredPreferenceCommitResult as GenericDeferredPreferenceCommitResult,
+} from "~/hooks/useDeferredPreferenceDraft"
 
-export type DeferredPreferenceCommitResult = {
-  ok: boolean
-  value?: string
-}
+export type DeferredPreferenceCommitResult =
+  GenericDeferredPreferenceCommitResult<string>
 
 type UseDeferredPreferenceFieldOptions = {
   savedValue: string
   savedVersion: number
   onCommit: (draft: string) => Promise<DeferredPreferenceCommitResult>
+}
+
+/** Treat Enter as the same commit boundary as leaving a single-line input. */
+export function blurInputOnEnter(event: KeyboardEvent<HTMLInputElement>) {
+  if (event.key === "Enter") {
+    event.currentTarget.blur()
+  }
 }
 
 /**
@@ -22,49 +30,14 @@ export function useDeferredPreferenceField({
   savedVersion,
   onCommit,
 }: UseDeferredPreferenceFieldOptions) {
-  const { draft, setDraft } = usePreferenceDraft({
+  const deferredDraft = useDeferredPreferenceDraft({
     savedValue,
     savedVersion,
+    onCommit,
   })
-  const [isCommitting, setIsCommitting] = useState(false)
-  const isCommittingRef = useRef(false)
-  const latestSavedValueRef = useRef(savedValue)
-
-  useEffect(() => {
-    latestSavedValueRef.current = savedValue
-  }, [savedValue])
-
-  const commit = async () => {
-    if (isCommittingRef.current) return
-    if (draft === savedValue) {
-      setDraft(savedValue)
-      return
-    }
-
-    isCommittingRef.current = true
-    setIsCommitting(true)
-    try {
-      const result = await onCommit(draft)
-      setDraft(result.ok ? result.value ?? draft : latestSavedValueRef.current)
-    } catch {
-      setDraft(latestSavedValueRef.current)
-    } finally {
-      isCommittingRef.current = false
-      setIsCommitting(false)
-    }
-  }
-
-  const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "Enter") {
-      event.currentTarget.blur()
-    }
-  }
 
   return {
-    draft,
-    setDraft,
-    isCommitting,
-    commit,
-    handleKeyDown,
+    ...deferredDraft,
+    handleKeyDown: blurInputOnEnter,
   }
 }

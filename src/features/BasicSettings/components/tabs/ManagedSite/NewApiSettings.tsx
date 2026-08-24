@@ -14,6 +14,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { NewApiManagedVerificationDialog } from "~/features/ManagedSiteVerification/NewApiManagedVerificationDialog"
 import { useNewApiManagedVerification } from "~/features/ManagedSiteVerification/useNewApiManagedVerification"
+import { blurInputOnEnter } from "~/hooks/useDeferredPreferenceField"
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
 import {
   resolveAccountSiteRouteUrl,
@@ -199,6 +200,7 @@ export default function NewApiSettings() {
                   }))
                 }
                 onBlur={(e) => handleNewApiBaseUrlChange(e.target.value)}
+                onKeyDown={blurInputOnEnter}
                 placeholder={t("newApi.fields.baseUrlPlaceholder")}
               />
             }
@@ -242,6 +244,7 @@ export default function NewApiSettings() {
                     }))
                   }
                   onBlur={(e) => handleNewApiAdminTokenChange(e.target.value)}
+                  onKeyDown={blurInputOnEnter}
                 />
               </div>
             }
@@ -264,6 +267,7 @@ export default function NewApiSettings() {
                   }))
                 }
                 onBlur={(e) => handleNewApiUserIdChange(e.target.value)}
+                onKeyDown={blurInputOnEnter}
                 error={userIdError}
                 aria-invalid={Boolean(userIdError)}
               />
@@ -285,6 +289,7 @@ export default function NewApiSettings() {
                   }))
                 }
                 onBlur={(e) => handleNewApiUsernameChange(e.target.value)}
+                onKeyDown={blurInputOnEnter}
                 placeholder={t("newApi.fields.usernamePlaceholder")}
               />
             }
@@ -311,6 +316,7 @@ export default function NewApiSettings() {
                     }))
                   }
                   onBlur={(e) => handleNewApiPasswordChange(e.target.value)}
+                  onKeyDown={blurInputOnEnter}
                   placeholder={t("newApi.fields.passwordPlaceholder")}
                 />
               </div>
@@ -338,6 +344,7 @@ export default function NewApiSettings() {
                     }))
                   }
                   onBlur={(e) => handleNewApiTotpSecretChange(e.target.value)}
+                  onKeyDown={blurInputOnEnter}
                   placeholder={t("newApi.fields.totpSecretPlaceholder")}
                 />
               </div>

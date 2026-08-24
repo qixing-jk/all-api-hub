@@ -11,6 +11,7 @@ import {
 } from "~/components/ui"
 import { getSiteRouteConfigForKey, SITE_TYPES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { blurInputOnEnter } from "~/hooks/useDeferredPreferenceField"
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
 import { isManagedSiteAdminUserIdInputValid } from "~/services/managedSites/utils/adminUserId"
 import { createTab } from "~/utils/browser/browserApi"
@@ -133,6 +134,7 @@ export default function DoneHubSettings() {
                   }))
                 }
                 onBlur={(e) => handleBaseUrlChange(e.target.value)}
+                onKeyDown={blurInputOnEnter}
                 placeholder={t("doneHub.fields.baseUrlPlaceholder")}
               />
             }
@@ -176,6 +178,7 @@ export default function DoneHubSettings() {
                     }))
                   }
                   onBlur={(e) => handleAdminTokenChange(e.target.value)}
+                  onKeyDown={blurInputOnEnter}
                 />
               </div>
             }
@@ -198,6 +201,7 @@ export default function DoneHubSettings() {
                   }))
                 }
                 onBlur={(e) => handleUserIdChange(e.target.value)}
+                onKeyDown={blurInputOnEnter}
                 error={userIdError}
                 aria-invalid={Boolean(userIdError)}
               />

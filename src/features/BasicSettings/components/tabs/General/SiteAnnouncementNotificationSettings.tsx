@@ -1,5 +1,5 @@
 import { Clock, Megaphone } from "lucide-react"
-import { useEffect, useState } from "react"
+import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
@@ -15,6 +15,7 @@ import {
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { useDeferredPreferenceField } from "~/hooks/useDeferredPreferenceField"
 import { showUpdateToast } from "~/utils/core/toastHelpers"
 import { openOrFocusOptionsMenuItem } from "~/utils/navigation"
 
@@ -30,14 +31,15 @@ export function normalizePollingIntervalInput(value: string): number | null {
   }
 
   const parsed = Number(value)
-  if (!Number.isFinite(parsed)) {
+  if (
+    !Number.isInteger(parsed) ||
+    parsed < MIN_POLLING_INTERVAL_MINUTES ||
+    parsed > MAX_POLLING_INTERVAL_MINUTES
+  ) {
     return null
   }
 
-  return Math.min(
-    MAX_POLLING_INTERVAL_MINUTES,
-    Math.max(MIN_POLLING_INTERVAL_MINUTES, Math.trunc(parsed)),
-  )
+  return parsed
 }
 
 /**
@@ -45,49 +47,50 @@ export function normalizePollingIntervalInput(value: string): number | null {
  */
 export default function SiteAnnouncementNotificationSettings() {
   const { t } = useTranslation("settings")
-  const { siteAnnouncementNotifications, updateSiteAnnouncementNotifications } =
-    useUserPreferencesContext()
-  const [intervalInput, setIntervalInput] = useState(
-    String(siteAnnouncementNotifications.intervalMinutes),
-  )
-
-  useEffect(() => {
-    setIntervalInput(String(siteAnnouncementNotifications.intervalMinutes))
-  }, [siteAnnouncementNotifications.intervalMinutes])
+  const {
+    preferences,
+    siteAnnouncementNotifications,
+    updateSiteAnnouncementNotifications,
+  } = useUserPreferencesContext()
 
   const handleToggle = async (enabled: boolean) => {
     const response = await updateSiteAnnouncementNotifications({ enabled })
     showUpdateToast(response, t("siteAnnouncementNotifications.polling.enable"))
   }
 
-  const handleIntervalBlur = async () => {
-    const intervalMinutes = normalizePollingIntervalInput(intervalInput)
-    if (intervalMinutes == null) {
-      setIntervalInput(String(siteAnnouncementNotifications.intervalMinutes))
-      return
-    }
+  const intervalField = useDeferredPreferenceField({
+    savedValue: String(siteAnnouncementNotifications.intervalMinutes),
+    savedVersion: preferences?.lastUpdated ?? 0,
+    onCommit: async (draft) => {
+      const intervalMinutes = normalizePollingIntervalInput(draft)
+      if (intervalMinutes == null) {
+        toast.error(
+          t("siteAnnouncementNotifications.polling.intervalInvalid", {
+            min: MIN_POLLING_INTERVAL_MINUTES,
+            max: MAX_POLLING_INTERVAL_MINUTES,
+          }),
+        )
+        return { ok: false }
+      }
+      if (intervalMinutes === siteAnnouncementNotifications.intervalMinutes) {
+        return { ok: true, value: String(intervalMinutes) }
+      }
 
-    setIntervalInput(String(intervalMinutes))
-    if (intervalMinutes === siteAnnouncementNotifications.intervalMinutes) {
-      return
-    }
-
-    let response = { success: false }
-    try {
-      response = await updateSiteAnnouncementNotifications({
-        intervalMinutes,
-      })
-    } catch {
-      response = { success: false }
-    }
-    if (!response.success) {
-      setIntervalInput(String(siteAnnouncementNotifications.intervalMinutes))
-    }
-    showUpdateToast(
-      response,
-      t("siteAnnouncementNotifications.polling.interval"),
-    )
-  }
+      let response = { success: false }
+      try {
+        response = await updateSiteAnnouncementNotifications({
+          intervalMinutes,
+        })
+      } catch {
+        response = { success: false }
+      }
+      showUpdateToast(
+        response,
+        t("siteAnnouncementNotifications.polling.interval"),
+      )
+      return { ok: response.success, value: String(intervalMinutes) }
+    },
+  })
 
   return (
     <SettingSection
@@ -125,9 +128,11 @@ export default function SiteAnnouncementNotificationSettings() {
                 min={MIN_POLLING_INTERVAL_MINUTES}
                 max={MAX_POLLING_INTERVAL_MINUTES}
                 step={1}
-                value={intervalInput}
-                onChange={(event) => setIntervalInput(event.target.value)}
-                onBlur={() => void handleIntervalBlur()}
+                value={intervalField.draft}
+                onChange={(event) => intervalField.setDraft(event.target.value)}
+                onBlur={() => void intervalField.commit()}
+                onKeyDown={intervalField.handleKeyDown}
+                disabled={intervalField.isCommitting}
                 containerClassName="w-full sm:w-32"
               />
             }

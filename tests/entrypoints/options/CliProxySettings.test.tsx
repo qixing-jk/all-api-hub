@@ -91,7 +91,7 @@ describe("CliProxySettings", () => {
       </I18nextProvider>,
     )
 
-  it("trims the base URL before persisting and re-checks the connection", async () => {
+  it("saves a trimmed base URL on Enter and re-checks the connection", async () => {
     const updateCliProxyBaseUrl = vi
       .fn()
       .mockResolvedValue({ ok: true, preferences: {} })
@@ -117,7 +117,8 @@ describe("CliProxySettings", () => {
     fireEvent.change(input, {
       target: { value: "  http://localhost:9000/v0/management  " },
     })
-    fireEvent.blur(input)
+    input.focus()
+    fireEvent.keyDown(input, { key: "Enter" })
 
     await waitFor(() => {
       expect(updateCliProxyBaseUrl).toHaveBeenCalledWith(

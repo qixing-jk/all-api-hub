@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { SettingSection } from "~/components/SettingSection"
 import { Card, CardItem, CardList, Input, Switch } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { useDeferredPreferenceField } from "~/hooks/useDeferredPreferenceField"
 import {
   ACCOUNT_AUTO_REFRESH_INTERVAL_MIN_SECONDS,
   ACCOUNT_AUTO_REFRESH_MIN_INTERVAL_MIN_SECONDS,
@@ -18,6 +18,7 @@ import { showUpdateToast } from "~/utils/core/toastHelpers"
 export default function RefreshSettings() {
   const { t } = useTranslation("settings")
   const {
+    preferences,
     autoRefresh,
     refreshOnOpen,
     refreshInterval,
@@ -29,19 +30,6 @@ export default function RefreshSettings() {
     resetAutoRefreshConfig,
   } = useUserPreferencesContext()
 
-  const [intervalInput, setIntervalInput] = useState(refreshInterval.toString())
-  const [minIntervalInput, setMinIntervalInput] = useState(
-    minRefreshInterval.toString(),
-  )
-
-  useEffect(() => {
-    setIntervalInput(refreshInterval.toString())
-  }, [refreshInterval])
-
-  useEffect(() => {
-    setMinIntervalInput(minRefreshInterval.toString())
-  }, [minRefreshInterval])
-
   const handleAutoRefreshChange = async (value: boolean) => {
     const writeResult = await updateAutoRefresh(value)
     showUpdateToast(writeResult, t("refresh.autoRefresh"))
@@ -52,41 +40,61 @@ export default function RefreshSettings() {
     showUpdateToast(writeResult, t("refresh.refreshOnOpen"))
   }
 
-  const handleRefreshIntervalBlur = async () => {
-    const value = parseInt(intervalInput, 10)
-    if (isNaN(value) || value < ACCOUNT_AUTO_REFRESH_INTERVAL_MIN_SECONDS) {
-      toast.error(
-        t("refresh.refreshIntervalInvalid", {
-          minSeconds: ACCOUNT_AUTO_REFRESH_INTERVAL_MIN_SECONDS,
-        }),
-      )
-      setIntervalInput(refreshInterval.toString())
-      return
-    }
-    if (value === refreshInterval) return
+  const savedVersion = preferences?.lastUpdated ?? 0
+  const refreshIntervalField = useDeferredPreferenceField({
+    savedValue: String(refreshInterval),
+    savedVersion,
+    onCommit: async (draft) => {
+      const value = Number(draft)
+      if (
+        draft.trim() === "" ||
+        !Number.isInteger(value) ||
+        value < ACCOUNT_AUTO_REFRESH_INTERVAL_MIN_SECONDS
+      ) {
+        toast.error(
+          t("refresh.refreshIntervalInvalid", {
+            minSeconds: ACCOUNT_AUTO_REFRESH_INTERVAL_MIN_SECONDS,
+          }),
+        )
+        return { ok: false }
+      }
 
-    const writeResult = await updateRefreshInterval(value)
-    showUpdateToast(writeResult, t("refresh.refreshInterval"))
-  }
+      if (value === refreshInterval) {
+        return { ok: true, value: String(refreshInterval) }
+      }
+      const writeResult = await updateRefreshInterval(value)
+      showUpdateToast(writeResult, t("refresh.refreshInterval"))
+      return { ok: writeResult.ok, value: String(value) }
+    },
+  })
+  const minRefreshIntervalField = useDeferredPreferenceField({
+    savedValue: String(minRefreshInterval),
+    savedVersion,
+    onCommit: async (draft) => {
+      const value = Number(draft)
+      // No upper bound: allow any integer >= MIN to let users effectively
+      // reduce non-forced refresh frequency by setting a very large interval.
+      if (
+        draft.trim() === "" ||
+        !Number.isInteger(value) ||
+        value < ACCOUNT_AUTO_REFRESH_MIN_INTERVAL_MIN_SECONDS
+      ) {
+        toast.error(
+          t("refresh.minRefreshIntervalInvalid", {
+            minSeconds: ACCOUNT_AUTO_REFRESH_MIN_INTERVAL_MIN_SECONDS,
+          }),
+        )
+        return { ok: false }
+      }
 
-  const handleMinRefreshIntervalBlur = async () => {
-    const value = parseInt(minIntervalInput, 10)
-    // No upper bound: allow any integer >= MIN to let users effectively
-    // reduce non-forced refresh frequency by setting a very large interval.
-    if (isNaN(value) || value < ACCOUNT_AUTO_REFRESH_MIN_INTERVAL_MIN_SECONDS) {
-      toast.error(
-        t("refresh.minRefreshIntervalInvalid", {
-          minSeconds: ACCOUNT_AUTO_REFRESH_MIN_INTERVAL_MIN_SECONDS,
-        }),
-      )
-      setMinIntervalInput(minRefreshInterval.toString())
-      return
-    }
-    if (value === minRefreshInterval) return
-
-    const writeResult = await updateMinRefreshInterval(value)
-    showUpdateToast(writeResult, t("refresh.minRefreshInterval"))
-  }
+      if (value === minRefreshInterval) {
+        return { ok: true, value: String(minRefreshInterval) }
+      }
+      const writeResult = await updateMinRefreshInterval(value)
+      showUpdateToast(writeResult, t("refresh.minRefreshInterval"))
+      return { ok: writeResult.ok, value: String(value) }
+    },
+  })
 
   return (
     <SettingSection
@@ -121,15 +129,16 @@ export default function RefreshSettings() {
                   <Input
                     type="number"
                     min={ACCOUNT_AUTO_REFRESH_INTERVAL_MIN_SECONDS}
-                    value={intervalInput}
-                    onChange={(e) => setIntervalInput(e.target.value)}
-                    onBlur={handleRefreshIntervalBlur}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        ;(e.currentTarget as HTMLInputElement).blur()
-                      }
-                    }}
+                    step={1}
+                    value={refreshIntervalField.draft}
+                    onChange={(event) =>
+                      refreshIntervalField.setDraft(event.target.value)
+                    }
+                    onBlur={() => void refreshIntervalField.commit()}
+                    onKeyDown={refreshIntervalField.handleKeyDown}
                     placeholder={String(DEFAULT_ACCOUNT_AUTO_REFRESH.interval)}
+                    aria-label={t("refresh.refreshInterval")}
+                    disabled={refreshIntervalField.isCommitting}
                     className="w-24"
                   />
                   <span className="dark:text-dark-text-secondary text-sm text-gray-500">
@@ -163,15 +172,16 @@ export default function RefreshSettings() {
                 <Input
                   type="number"
                   min={ACCOUNT_AUTO_REFRESH_MIN_INTERVAL_MIN_SECONDS}
-                  value={minIntervalInput}
-                  onChange={(e) => setMinIntervalInput(e.target.value)}
-                  onBlur={handleMinRefreshIntervalBlur}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      ;(e.currentTarget as HTMLInputElement).blur()
-                    }
-                  }}
+                  step={1}
+                  value={minRefreshIntervalField.draft}
+                  onChange={(event) =>
+                    minRefreshIntervalField.setDraft(event.target.value)
+                  }
+                  onBlur={() => void minRefreshIntervalField.commit()}
+                  onKeyDown={minRefreshIntervalField.handleKeyDown}
                   placeholder={String(DEFAULT_ACCOUNT_AUTO_REFRESH.minInterval)}
+                  aria-label={t("refresh.minRefreshInterval")}
+                  disabled={minRefreshIntervalField.isCommitting}
                   className="w-24"
                 />
                 <span className="dark:text-dark-text-secondary text-sm text-gray-500">

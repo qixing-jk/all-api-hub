@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
 type UsePreferenceDraftOptions<T> = {
   savedValue: T
@@ -44,11 +44,34 @@ export function usePreferenceDraft<T>({
   const [draft, setDraft] = useState(savedValue)
   const [baselineValue, setBaselineValue] = useState(savedValue)
   const [baselineVersion, setBaselineVersion] = useState(savedVersion)
+  const acceptedFromSnapshotRef = useRef<{ value: T } | null>(null)
 
   const isDirty = !isEqual(draft, baselineValue)
 
+  const acceptDraft = (value: T) => {
+    acceptedFromSnapshotRef.current = { value: savedValue }
+    setDraft(value)
+    setBaselineValue(value)
+  }
+
   useEffect(() => {
     if (!isDirty) {
+      if (savedVersion < baselineVersion) {
+        return
+      }
+      if (
+        acceptedFromSnapshotRef.current &&
+        isEqual(savedValue, acceptedFromSnapshotRef.current.value)
+      ) {
+        return
+      }
+      acceptedFromSnapshotRef.current = null
+      if (isEqual(draft, savedValue) && isEqual(baselineValue, savedValue)) {
+        if (savedVersion !== baselineVersion) {
+          setBaselineVersion(savedVersion)
+        }
+        return
+      }
       setDraft(savedValue)
       setBaselineValue(savedValue)
       setBaselineVersion(savedVersion)
@@ -92,6 +115,7 @@ export function usePreferenceDraft<T>({
   return {
     draft,
     setDraft,
+    acceptDraft,
     isDirty,
     expectedLastUpdated: baselineVersion,
   }

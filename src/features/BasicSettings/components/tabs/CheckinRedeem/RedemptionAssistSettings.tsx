@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
@@ -13,6 +12,8 @@ import {
   Textarea,
 } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
+import { useSingleFlightActions } from "~/hooks/useSingleFlightActions"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
@@ -23,6 +24,12 @@ import { getPreferenceWriteFailureMessage } from "~/utils/core/toastHelpers"
  */
 const logger = createLogger("RedemptionAssistSettings")
 const REDEMPTION_ASSIST_SAVE_ACTIONS = {
+  ENABLED: "enabled",
+  CONTEXT_MENU: "context_menu",
+  RELAXED_CODE_VALIDATION: "relaxed_code_validation",
+  URL_WHITELIST_ENABLED: "url_whitelist_enabled",
+  INCLUDE_ACCOUNT_SITE_URLS: "include_account_site_urls",
+  INCLUDE_CHECKIN_REDEEM_URLS: "include_checkin_redeem_urls",
   URL_PATTERNS: "url_patterns",
 } as const
 
@@ -39,9 +46,7 @@ export default function RedemptionAssistSettings() {
     updateRedemptionAssist,
     resetRedemptionAssistConfig,
   } = useUserPreferencesContext()
-  const [isSaving, setIsSaving] = useState(false)
-  const [activeSaveAction, setActiveSaveAction] =
-    useState<RedemptionAssistSaveAction | null>(null)
+  const saveActions = useSingleFlightActions<RedemptionAssistSaveAction>()
 
   const config =
     userPrefs.redemptionAssist ?? DEFAULT_PREFERENCES.redemptionAssist!
@@ -53,41 +58,44 @@ export default function RedemptionAssistSettings() {
   const whitelist =
     config.urlWhitelist ?? DEFAULT_PREFERENCES.redemptionAssist!.urlWhitelist
 
-  const [patternsDraft, setPatternsDraft] = useState(
-    (whitelist.patterns ?? []).join("\n"),
-  )
+  const {
+    draft: patternsDraft,
+    setDraft: setPatternsDraft,
+    acceptDraft: acceptPatternsDraft,
+    isDirty: patternsDirty,
+  } = usePreferenceDraft({
+    savedValue: (whitelist.patterns ?? []).join("\n"),
+    savedVersion: userPrefs.lastUpdated ?? 0,
+  })
 
-  useEffect(() => {
-    setPatternsDraft((whitelist.patterns ?? []).join("\n"))
-  }, [whitelist.patterns])
-
-  const saveSettings = async (
+  const saveSettings = (
+    action: RedemptionAssistSaveAction,
     updates: Parameters<typeof updateRedemptionAssist>[0],
-  ) => {
-    try {
-      setIsSaving(true)
-      const writeResult = await updateRedemptionAssist(updates)
+  ) =>
+    saveActions.run(action, async () => {
+      try {
+        const writeResult = await updateRedemptionAssist(updates)
 
-      if (writeResult.ok) {
-        toast.success(t("redemptionAssist:messages.success.settingsSaved"))
-      } else {
+        if (writeResult.ok) {
+          toast.success(t("redemptionAssist:messages.success.settingsSaved"))
+          return true
+        }
         toast.error(
           getPreferenceWriteFailureMessage(writeResult.reason, {
             fallback: t("settings:messages.saveSettingsFailed"),
           }),
         )
+        return false
+      } catch (error) {
+        const msg = getErrorMessage(error)
+        logger.error("Failed to save redemption assist settings", {
+          message: msg,
+          error,
+        })
+        toast.error(msg || t("settings:messages.saveSettingsFailed"))
+        return false
       }
-    } catch (error) {
-      const msg = getErrorMessage(error)
-      logger.error("Failed to save redemption assist settings", {
-        message: msg,
-        error,
-      })
-      toast.error(msg || t("settings:messages.saveSettingsFailed"))
-    } finally {
-      setIsSaving(false)
-    }
-  }
+    })
 
   const handleSaveUrlPatterns = async () => {
     const nextPatterns = patternsDraft
@@ -95,16 +103,16 @@ export default function RedemptionAssistSettings() {
       .map((line) => line.trim())
       .filter(Boolean)
 
-    setActiveSaveAction(REDEMPTION_ASSIST_SAVE_ACTIONS.URL_PATTERNS)
-    try {
-      await saveSettings({
+    const saved = await saveSettings(
+      REDEMPTION_ASSIST_SAVE_ACTIONS.URL_PATTERNS,
+      {
         urlWhitelist: {
-          ...whitelist,
           patterns: nextPatterns,
         },
-      })
-    } finally {
-      setActiveSaveAction(null)
+      },
+    )
+    if (saved) {
+      acceptPatternsDraft(nextPatterns.join("\n"))
     }
   }
 
@@ -113,13 +121,7 @@ export default function RedemptionAssistSettings() {
       id="redemption-assist"
       title={t("redemptionAssist:settings.title")}
       description={t("redemptionAssist:settings.description")}
-      onReset={async () => {
-        const result = await resetRedemptionAssistConfig()
-        if (result.ok) {
-          setIsSaving(false)
-        }
-        return result
-      }}
+      onReset={resetRedemptionAssistConfig}
     >
       <Card padding="none">
         <CardList>
@@ -131,9 +133,13 @@ export default function RedemptionAssistSettings() {
               <Switch
                 checked={config.enabled}
                 onChange={(checked) => {
-                  void saveSettings({ enabled: checked })
+                  void saveSettings(REDEMPTION_ASSIST_SAVE_ACTIONS.ENABLED, {
+                    enabled: checked,
+                  })
                 }}
-                disabled={isSaving}
+                disabled={saveActions.isPending(
+                  REDEMPTION_ASSIST_SAVE_ACTIONS.ENABLED,
+                )}
               />
             }
           />
@@ -146,14 +152,18 @@ export default function RedemptionAssistSettings() {
               <Switch
                 checked={!!contextMenu.enabled}
                 onChange={(checked) => {
-                  void saveSettings({
-                    contextMenu: {
-                      ...contextMenu,
-                      enabled: checked,
+                  void saveSettings(
+                    REDEMPTION_ASSIST_SAVE_ACTIONS.CONTEXT_MENU,
+                    {
+                      contextMenu: {
+                        enabled: checked,
+                      },
                     },
-                  })
+                  )
                 }}
-                disabled={isSaving}
+                disabled={saveActions.isPending(
+                  REDEMPTION_ASSIST_SAVE_ACTIONS.CONTEXT_MENU,
+                )}
               />
             }
           />
@@ -168,9 +178,14 @@ export default function RedemptionAssistSettings() {
               <Switch
                 checked={config.relaxedCodeValidation}
                 onChange={(checked) => {
-                  void saveSettings({ relaxedCodeValidation: checked })
+                  void saveSettings(
+                    REDEMPTION_ASSIST_SAVE_ACTIONS.RELAXED_CODE_VALIDATION,
+                    { relaxedCodeValidation: checked },
+                  )
                 }}
-                disabled={isSaving}
+                disabled={saveActions.isPending(
+                  REDEMPTION_ASSIST_SAVE_ACTIONS.RELAXED_CODE_VALIDATION,
+                )}
               />
             }
           />
@@ -183,14 +198,18 @@ export default function RedemptionAssistSettings() {
               <Switch
                 checked={whitelist.enabled}
                 onChange={(checked) => {
-                  void saveSettings({
-                    urlWhitelist: {
-                      ...whitelist,
-                      enabled: checked,
+                  void saveSettings(
+                    REDEMPTION_ASSIST_SAVE_ACTIONS.URL_WHITELIST_ENABLED,
+                    {
+                      urlWhitelist: {
+                        enabled: checked,
+                      },
                     },
-                  })
+                  )
                 }}
-                disabled={isSaving}
+                disabled={saveActions.isPending(
+                  REDEMPTION_ASSIST_SAVE_ACTIONS.URL_WHITELIST_ENABLED,
+                )}
               />
             }
           />
@@ -207,14 +226,18 @@ export default function RedemptionAssistSettings() {
               <Switch
                 checked={whitelist.includeAccountSiteUrls}
                 onChange={(checked) => {
-                  void saveSettings({
-                    urlWhitelist: {
-                      ...whitelist,
-                      includeAccountSiteUrls: checked,
+                  void saveSettings(
+                    REDEMPTION_ASSIST_SAVE_ACTIONS.INCLUDE_ACCOUNT_SITE_URLS,
+                    {
+                      urlWhitelist: {
+                        includeAccountSiteUrls: checked,
+                      },
                     },
-                  })
+                  )
                 }}
-                disabled={isSaving}
+                disabled={saveActions.isPending(
+                  REDEMPTION_ASSIST_SAVE_ACTIONS.INCLUDE_ACCOUNT_SITE_URLS,
+                )}
               />
             }
           />
@@ -231,14 +254,18 @@ export default function RedemptionAssistSettings() {
               <Switch
                 checked={whitelist.includeCheckInAndRedeemUrls}
                 onChange={(checked) => {
-                  void saveSettings({
-                    urlWhitelist: {
-                      ...whitelist,
-                      includeCheckInAndRedeemUrls: checked,
+                  void saveSettings(
+                    REDEMPTION_ASSIST_SAVE_ACTIONS.INCLUDE_CHECKIN_REDEEM_URLS,
+                    {
+                      urlWhitelist: {
+                        includeCheckInAndRedeemUrls: checked,
+                      },
                     },
-                  })
+                  )
                 }}
-                disabled={isSaving}
+                disabled={saveActions.isPending(
+                  REDEMPTION_ASSIST_SAVE_ACTIONS.INCLUDE_CHECKIN_REDEEM_URLS,
+                )}
               />
             }
           />
@@ -263,22 +290,29 @@ export default function RedemptionAssistSettings() {
                 "redemptionAssist:settings.urlWhitelist.patternsPlaceholder",
               )}
               rows={6}
-              disabled={isSaving}
+              disabled={saveActions.isPending(
+                REDEMPTION_ASSIST_SAVE_ACTIONS.URL_PATTERNS,
+              )}
             />
 
             <div className="flex justify-end">
               <Button
                 type="button"
                 variant="outline"
-                disabled={isSaving}
-                loading={
-                  activeSaveAction ===
-                  REDEMPTION_ASSIST_SAVE_ACTIONS.URL_PATTERNS
+                disabled={
+                  !patternsDirty ||
+                  saveActions.isPending(
+                    REDEMPTION_ASSIST_SAVE_ACTIONS.URL_PATTERNS,
+                  )
                 }
+                loading={saveActions.isPending(
+                  REDEMPTION_ASSIST_SAVE_ACTIONS.URL_PATTERNS,
+                )}
                 onClick={() => void handleSaveUrlPatterns()}
               >
-                {activeSaveAction ===
-                REDEMPTION_ASSIST_SAVE_ACTIONS.URL_PATTERNS
+                {saveActions.isPending(
+                  REDEMPTION_ASSIST_SAVE_ACTIONS.URL_PATTERNS,
+                )
                   ? t("common:status.saving")
                   : t("common:actions.save")}
               </Button>

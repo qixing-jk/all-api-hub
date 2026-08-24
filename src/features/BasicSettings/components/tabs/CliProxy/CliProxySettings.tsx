@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next"
 import { SettingSection } from "~/components/SettingSection"
 import { Button, Card, CardItem, CardList, Input, Link } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { blurInputOnEnter } from "~/hooks/useDeferredPreferenceField"
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
 import { verifyCliProxyManagementConnection } from "~/services/integrations/cliProxyService"
 import {
@@ -137,6 +138,7 @@ export default function CliProxySettings() {
                   }))
                 }
                 onBlur={(e) => handleBaseUrlChange(e.target.value)}
+                onKeyDown={blurInputOnEnter}
                 placeholder="http://localhost:8317/v0/management"
               />
             }
@@ -163,6 +165,7 @@ export default function CliProxySettings() {
                     }))
                   }
                   onBlur={(e) => handleKeyChange(e.target.value)}
+                  onKeyDown={blurInputOnEnter}
                 />
               </div>
             }

@@ -6,6 +6,7 @@ import { SettingSection } from "~/components/SettingSection"
 import { Button, Card, CardItem, CardList, Input } from "~/components/ui"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { blurInputOnEnter } from "~/hooks/useDeferredPreferenceField"
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
 import { validateSub2ApiManagedSiteConfig } from "~/services/managedSites/providers/sub2api"
 import { getErrorMessage } from "~/utils/core/error"
@@ -127,6 +128,7 @@ export default function Sub2ApiSettings() {
                   }))
                 }
                 onBlur={(event) => handleBaseUrlChange(event.target.value)}
+                onKeyDown={blurInputOnEnter}
                 placeholder={t("sub2apiManagedSite.fields.baseUrlPlaceholder")}
               />
             }
@@ -151,6 +153,7 @@ export default function Sub2ApiSettings() {
                   }))
                 }
                 onBlur={(event) => handleAdminApiKeyChange(event.target.value)}
+                onKeyDown={blurInputOnEnter}
                 placeholder={t(
                   "sub2apiManagedSite.fields.adminApiKeyPlaceholder",
                 )}

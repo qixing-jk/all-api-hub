@@ -11,6 +11,7 @@ import {
 } from "~/components/ui"
 import { getSiteRouteConfigForKey, SITE_TYPES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { blurInputOnEnter } from "~/hooks/useDeferredPreferenceField"
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
 import { isManagedSiteAdminUserIdInputValid } from "~/services/managedSites/utils/adminUserId"
 import { createTab } from "~/utils/browser/browserApi"
@@ -138,6 +139,7 @@ export default function VeloeraSettings() {
                   }))
                 }
                 onBlur={(e) => handleVeloeraBaseUrlChange(e.target.value)}
+                onKeyDown={blurInputOnEnter}
                 placeholder={t("veloera.fields.baseUrlPlaceholder")}
               />
             }
@@ -180,6 +182,7 @@ export default function VeloeraSettings() {
                   }))
                 }
                 onBlur={(e) => handleVeloeraAdminTokenChange(e.target.value)}
+                onKeyDown={blurInputOnEnter}
               />
             }
           />
@@ -201,6 +204,7 @@ export default function VeloeraSettings() {
                   }))
                 }
                 onBlur={(e) => handleVeloeraUserIdChange(e.target.value)}
+                onKeyDown={blurInputOnEnter}
                 error={userIdError}
                 aria-invalid={Boolean(userIdError)}
               />

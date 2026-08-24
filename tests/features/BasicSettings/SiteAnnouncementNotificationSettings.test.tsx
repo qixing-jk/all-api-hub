@@ -1,4 +1,5 @@
 import { fireEvent } from "@testing-library/react"
+import toast from "react-hot-toast"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
@@ -36,6 +37,10 @@ vi.mock("~/utils/core/toastHelpers", () => ({
 vi.mock("~/utils/navigation", () => ({
   openOrFocusOptionsMenuItem: (...args: unknown[]) =>
     openOrFocusOptionsMenuItemMock(...args),
+}))
+
+vi.mock("react-hot-toast", () => ({
+  default: { error: vi.fn() },
 }))
 
 describe("SiteAnnouncementNotificationSettings", () => {
@@ -186,6 +191,9 @@ describe("SiteAnnouncementNotificationSettings", () => {
 
     expect(updateSiteAnnouncementNotificationsMock).not.toHaveBeenCalled()
     expect(showUpdateToastMock).not.toHaveBeenCalled()
+    expect(toast.error).toHaveBeenCalledWith(
+      "settings:siteAnnouncementNotifications.polling.intervalInvalid",
+    )
   })
 
   it("keeps the persisted polling interval without saving", async () => {
@@ -209,7 +217,7 @@ describe("SiteAnnouncementNotificationSettings", () => {
     expect(showUpdateToastMock).not.toHaveBeenCalled()
   })
 
-  it("caps polling interval values above the supported maximum", async () => {
+  it("rejects polling intervals above the supported maximum", async () => {
     render(<SiteAnnouncementNotificationSettings />, {
       withUserPreferencesProvider: false,
       withThemeProvider: false,
@@ -222,13 +230,11 @@ describe("SiteAnnouncementNotificationSettings", () => {
     fireEvent.change(intervalInput, { target: { value: "9999" } })
     fireEvent.blur(intervalInput)
 
-    await waitFor(() => {
-      expect(updateSiteAnnouncementNotificationsMock).toHaveBeenCalledWith({
-        intervalMinutes: 1440,
-      })
-    })
-
-    expect(intervalInput).toHaveValue(1440)
+    await waitFor(() => expect(intervalInput).toHaveValue(360))
+    expect(updateSiteAnnouncementNotificationsMock).not.toHaveBeenCalled()
+    expect(toast.error).toHaveBeenCalledWith(
+      "settings:siteAnnouncementNotifications.polling.intervalInvalid",
+    )
   })
 
   it("resets the polling interval input when the update fails", async () => {
@@ -299,5 +305,11 @@ describe("normalizePollingIntervalInput", () => {
 
   it("keeps whole-minute values without snapping to 15-minute steps", () => {
     expect(normalizePollingIntervalInput("16")).toBe(16)
+  })
+
+  it("rejects out-of-range and fractional minute values", () => {
+    expect(normalizePollingIntervalInput("14")).toBeNull()
+    expect(normalizePollingIntervalInput("1441")).toBeNull()
+    expect(normalizePollingIntervalInput("15.5")).toBeNull()
   })
 })

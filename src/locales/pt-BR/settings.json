@@ -555,7 +555,8 @@
       "enable": "Ativar pesquisa de anúncios do site",
       "enableDesc": "Quando desativado, a pesquisa em segundo plano programada é interrompida. Os registros locais existentes são mantidos e a página de anúncio ainda pode executar uma verificação manual.",
       "interval": "Intervalo de pesquisa",
-      "intervalDesc": "Defina o intervalo de pesquisa do anúncio do site em segundo plano em minutos, de 15 a 1440."
+      "intervalDesc": "Defina o intervalo de pesquisa do anúncio do site em segundo plano em minutos, de 15 a 1440.",
+      "intervalInvalid": "Insira um número inteiro de minutos entre {{min}} e {{max}}."
     },
     "title": "Anúncios do site"
   },

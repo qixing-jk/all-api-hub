@@ -555,7 +555,8 @@
       "enable": "Habilitar sondeo de anuncios del sitio",
       "enableDesc": "Cuando está deshabilitado, el sondeo programado en segundo plano se detiene. Los registros locales existentes se conservan y la página de anuncios aún puede ejecutar una comprobación manual.",
       "interval": "Intervalo de sondeo",
-      "intervalDesc": "Define el intervalo de sondeo de anuncios del sitio en segundo plano en minutos, de 15 a 1440."
+      "intervalDesc": "Define el intervalo de sondeo de anuncios del sitio en segundo plano en minutos, de 15 a 1440.",
+      "intervalInvalid": "Ingresa una cantidad entera de minutos entre {{min}} y {{max}}."
     },
     "title": "Anuncios del sitio"
   },

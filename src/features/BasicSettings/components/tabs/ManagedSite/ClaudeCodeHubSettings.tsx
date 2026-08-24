@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next"
 import { SettingSection } from "~/components/SettingSection"
 import { Button, Card, CardItem, CardList, Input } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { blurInputOnEnter } from "~/hooks/useDeferredPreferenceField"
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
 import { validateClaudeCodeHubConfig } from "~/services/apiService/claudeCodeHub"
 import { getErrorMessage } from "~/utils/core/error"
@@ -142,6 +143,7 @@ export default function ClaudeCodeHubSettings() {
                   }))
                 }
                 onBlur={(event) => handleBaseUrlChange(event.target.value)}
+                onKeyDown={blurInputOnEnter}
                 placeholder={t("claudeCodeHub.fields.baseUrlPlaceholder")}
               />
             }
@@ -167,6 +169,7 @@ export default function ClaudeCodeHubSettings() {
                   }))
                 }
                 onBlur={(event) => handleTokenChange(event.target.value)}
+                onKeyDown={blurInputOnEnter}
                 placeholder={t("claudeCodeHub.fields.adminTokenPlaceholder")}
               />
             }

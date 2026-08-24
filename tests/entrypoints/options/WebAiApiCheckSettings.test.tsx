@@ -241,8 +241,6 @@ describe("WebAiApiCheckSettings", () => {
     await waitFor(() => {
       expect(mockUpdateWebAiApiCheck).toHaveBeenCalledWith({
         autoDetect: {
-          enabled: true,
-          enhanced: { enabled: true },
           urlWhitelist: {
             patterns: [
               "^https://one\\.example\\.com",
@@ -309,11 +307,7 @@ describe("WebAiApiCheckSettings", () => {
     await waitFor(() => {
       expect(mockUpdateWebAiApiCheck).toHaveBeenCalledWith({
         autoDetect: {
-          enabled: true,
           enhanced: { enabled: false },
-          urlWhitelist: {
-            patterns: ["^https://stored\\.example\\.com"],
-          },
         },
       })
     })
@@ -424,7 +418,7 @@ describe("WebAiApiCheckSettings", () => {
     expect(switches[2]).toBeDisabled()
   })
 
-  it("disables controls while a switch save is in flight and shows an error toast when persistence fails", async () => {
+  it("keeps unrelated controls active while a switch save is in flight and shows an error toast when persistence fails", async () => {
     const deferredSave = createDeferred<PreferenceWriteResult>()
     mockUpdateWebAiApiCheck.mockReturnValue(deferredSave.promise)
 
@@ -437,20 +431,23 @@ describe("WebAiApiCheckSettings", () => {
     const saveButton = screen.getByRole("button", {
       name: "common:actions.save",
     })
+    fireEvent.change(textarea, {
+      target: { value: "^https://draft.example.invalid" },
+    })
 
     fireEvent.click(switches[0])
 
     await waitFor(() => {
       expect(switches[0]).toBeDisabled()
-      expect(switches[1]).toBeDisabled()
-      expect(switches[2]).toBeDisabled()
-      expect(textarea).toBeDisabled()
+      expect(switches[1]).toBeEnabled()
+      expect(switches[2]).toBeEnabled()
+      expect(textarea).toBeEnabled()
       expect(
         screen.getByLabelText(
           "webAiApiCheck:settings.keyCleanup.patternsPlaceholder",
         ),
-      ).toBeDisabled()
-      expect(saveButton).toBeDisabled()
+      ).toBeEnabled()
+      expect(saveButton).toBeEnabled()
     })
 
     deferredSave.resolve({
@@ -534,6 +531,18 @@ describe("WebAiApiCheckSettings", () => {
       const siblingButton = screen.getByRole("button", {
         name: siblingName,
       })
+      fireEvent.change(
+        screen.getByLabelText(
+          "webAiApiCheck:settings.autoDetect.whitelist.patternsPlaceholder",
+        ),
+        { target: { value: "^https://draft.example.invalid" } },
+      )
+      fireEvent.change(
+        screen.getByLabelText(
+          "webAiApiCheck:settings.keyCleanup.patternsPlaceholder",
+        ),
+        { target: { value: "draft-cleanup" } },
+      )
 
       fireEvent.click(initiatingButton)
 
@@ -542,11 +551,11 @@ describe("WebAiApiCheckSettings", () => {
       })
       expect(initiatingButton).toBeDisabled()
       expect(initiatingButton).toHaveAttribute("aria-busy", "true")
-      expect(siblingButton).toBeDisabled()
+      expect(siblingButton).toBeEnabled()
       expect(siblingButton).toHaveAccessibleName(siblingName)
       expect(siblingButton).not.toHaveAttribute("aria-busy")
       for (const control of screen.getAllByRole("switch")) {
-        expect(control).toBeDisabled()
+        expect(control).toBeEnabled()
         expect(control).not.toHaveAttribute("aria-busy")
       }
 
@@ -568,7 +577,7 @@ describe("WebAiApiCheckSettings", () => {
       await waitFor(() => {
         expect(mockUpdateWebAiApiCheck).toHaveBeenCalledTimes(2)
         expect(initiatingButton).toHaveAccessibleName(buttonName)
-        expect(initiatingButton).toBeEnabled()
+        expect(initiatingButton).toBeDisabled()
         expect(initiatingButton).not.toHaveAttribute("aria-busy")
         expect(toast.success).toHaveBeenCalledWith(
           "webAiApiCheck:messages.success.settingsSaved",
@@ -577,7 +586,7 @@ describe("WebAiApiCheckSettings", () => {
     },
   )
 
-  it("resyncs the whitelist draft when stored preferences change", async () => {
+  it("preserves a dirty whitelist draft while clean sibling drafts resync", async () => {
     let contextValue = createContextValue()
     mockedUseUserPreferencesContext.mockImplementation(() => contextValue)
 
@@ -616,9 +625,7 @@ describe("WebAiApiCheckSettings", () => {
     rerender(<WebAiApiCheckSettings />)
 
     await waitFor(() => {
-      expect(textarea).toHaveValue(
-        "^https://server\\.example\\.com\n^https://next\\.example\\.com",
-      )
+      expect(textarea).toHaveValue("^https://draft-only\\.example\\.com")
     })
     expect(
       screen.getByLabelText(

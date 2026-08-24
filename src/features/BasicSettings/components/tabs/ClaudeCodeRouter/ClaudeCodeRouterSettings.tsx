@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next"
 import { SettingSection } from "~/components/SettingSection"
 import { Card, CardItem, CardList, Input } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { blurInputOnEnter } from "~/hooks/useDeferredPreferenceField"
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
 import { runPreferenceUpdateWithToast } from "~/utils/core/toastHelpers"
 
@@ -82,6 +83,7 @@ export default function ClaudeCodeRouterSettings() {
                   }))
                 }
                 onBlur={(e) => handleBaseUrlChange(e.target.value)}
+                onKeyDown={blurInputOnEnter}
                 placeholder={t("settings:claudeCodeRouter.baseUrlPlaceholder")}
               />
             }
@@ -108,6 +110,7 @@ export default function ClaudeCodeRouterSettings() {
                     }))
                   }
                   onBlur={(e) => handleKeyChange(e.target.value)}
+                  onKeyDown={blurInputOnEnter}
                   placeholder={t("settings:claudeCodeRouter.apiKeyPlaceholder")}
                 />
               </div>

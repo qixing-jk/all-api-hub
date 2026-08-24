@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next"
 import { SettingSection } from "~/components/SettingSection"
 import { Button, Card, CardItem, CardList, Input } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { blurInputOnEnter } from "~/hooks/useDeferredPreferenceField"
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
 import { validateOctopusConfig } from "~/services/apiService/octopus"
 import { PROTECTION_BYPASS_SURFACES } from "~/services/protectionBypass/contracts"
@@ -164,6 +165,7 @@ export default function OctopusSettings() {
                   }))
                 }
                 onBlur={(e) => handleBaseUrlChange(e.target.value)}
+                onKeyDown={blurInputOnEnter}
                 placeholder={t("octopus.fields.baseUrlPlaceholder")}
               />
             }
@@ -184,6 +186,7 @@ export default function OctopusSettings() {
                   }))
                 }
                 onBlur={(e) => handleUsernameChange(e.target.value)}
+                onKeyDown={blurInputOnEnter}
                 placeholder={t("octopus.fields.usernamePlaceholder")}
               />
             }
@@ -210,6 +213,7 @@ export default function OctopusSettings() {
                     }))
                   }
                   onBlur={(e) => handlePasswordChange(e.target.value)}
+                  onKeyDown={blurInputOnEnter}
                   placeholder={t("octopus.fields.passwordPlaceholder")}
                 />
               </div>

@@ -227,4 +227,41 @@ describe("RefreshSettings (min refresh interval)", () => {
       "settings:refresh.refreshOnOpen",
     )
   })
+
+  it("restores the saved refresh interval when persistence fails", async () => {
+    const failedWrite = {
+      ok: false as const,
+      reason: {
+        type: "storage-error" as const,
+        error: new Error("write failed"),
+      },
+    }
+    const updateRefreshInterval = vi.fn().mockResolvedValue(failedWrite)
+    vi.mocked(useUserPreferencesContext).mockReturnValue({
+      preferences: { lastUpdated: 1 },
+      autoRefresh: true,
+      refreshOnOpen: true,
+      refreshInterval: 360,
+      minRefreshInterval: 60,
+      updateAutoRefresh: vi.fn().mockResolvedValue({ ok: true }),
+      updateRefreshOnOpen: vi.fn().mockResolvedValue({ ok: true }),
+      updateRefreshInterval,
+      updateMinRefreshInterval: vi.fn().mockResolvedValue({ ok: true }),
+      resetAutoRefreshConfig: vi.fn().mockResolvedValue({ ok: true }),
+    } as any)
+
+    renderSubject()
+
+    const input = screen.getByPlaceholderText(
+      String(DEFAULT_ACCOUNT_AUTO_REFRESH.interval),
+    )
+    fireEvent.change(input, { target: { value: "420" } })
+    fireEvent.blur(input)
+
+    await waitFor(() => expect(input).toHaveValue(360))
+    expect(showUpdateToast).toHaveBeenCalledWith(
+      failedWrite,
+      "settings:refresh.refreshInterval",
+    )
+  })
 })

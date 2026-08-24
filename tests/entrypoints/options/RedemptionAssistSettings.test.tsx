@@ -73,6 +73,10 @@ describe("RedemptionAssistSettings", () => {
     const saveButton = screen.getByRole("button", {
       name: "common:actions.save",
     })
+    const patternsTextarea = screen.getByRole("textbox")
+    fireEvent.change(patternsTextarea, {
+      target: { value: "^https://draft.example.invalid" },
+    })
 
     fireEvent.click(saveButton)
 
@@ -83,10 +87,9 @@ describe("RedemptionAssistSettings", () => {
     expect(saveButton).toHaveAttribute("aria-busy", "true")
 
     for (const control of screen.getAllByRole("switch")) {
-      expect(control).toBeDisabled()
+      expect(control).toBeEnabled()
       expect(control).not.toHaveAttribute("aria-busy")
     }
-    const patternsTextarea = screen.getByRole("textbox")
     expect(patternsTextarea).toBeDisabled()
     expect(patternsTextarea).not.toHaveAttribute("aria-busy")
 
@@ -105,7 +108,7 @@ describe("RedemptionAssistSettings", () => {
     await waitFor(() => {
       expect(updateRedemptionAssist).toHaveBeenCalledTimes(2)
       expect(saveButton).toHaveAccessibleName("common:actions.save")
-      expect(saveButton).toBeEnabled()
+      expect(saveButton).toBeDisabled()
       expect(saveButton).not.toHaveAttribute("aria-busy")
     })
   })

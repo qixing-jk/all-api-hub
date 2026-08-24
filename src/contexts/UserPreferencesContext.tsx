@@ -465,7 +465,7 @@ interface UserPreferencesContextType {
     updates: Partial<ModelRedirectPreferences>,
   ) => PreferenceWritePromise
   updateRedemptionAssist: (
-    updates: Partial<RedemptionAssistPreferences>,
+    updates: DeepPartial<RedemptionAssistPreferences>,
   ) => PreferenceWritePromise
   updateWebAiApiCheck: (
     updates: DeepPartial<WebAiApiCheckPreferences>,
@@ -488,7 +488,7 @@ interface UserPreferencesContextType {
     updates: Partial<TempWindowFallbackReminderPreferences>,
   ) => PreferenceWritePromise
   updateTaskNotifications: (
-    updates: Partial<TaskNotificationPreferences>,
+    updates: DeepPartial<TaskNotificationPreferences>,
   ) => PreferenceWritePromise
   updateSiteAnnouncementNotifications: (
     updates: Partial<SiteAnnouncementPreferences>,
@@ -1403,18 +1403,39 @@ export const UserPreferencesProvider = ({
   )
 
   const updateRedemptionAssist = useCallback(
-    async (updates: Partial<RedemptionAssistPreferences>) => {
+    async (updates: DeepPartial<RedemptionAssistPreferences>) => {
       const preferenceUpdates = {
         redemptionAssist: updates,
       }
       const result =
         await userPreferences.savePreferencesWithResult(preferenceUpdates)
 
-      if (applySuccessfulPreferenceWrite(result, preferenceUpdates)) {
+      const nextPreferences = applySuccessfulPreferenceWrite(
+        result,
+        preferenceUpdates,
+      )
+      if (nextPreferences) {
+        const savedSettings =
+          nextPreferences.redemptionAssist ??
+          DEFAULT_REDEMPTION_ASSIST_PREFERENCES
+        const runtimeSettings: Partial<RedemptionAssistPreferences> = {}
+        if (typeof updates.enabled === "boolean") {
+          runtimeSettings.enabled = savedSettings.enabled
+        }
+        if (updates.contextMenu) {
+          runtimeSettings.contextMenu = savedSettings.contextMenu
+        }
+        if (typeof updates.relaxedCodeValidation === "boolean") {
+          runtimeSettings.relaxedCodeValidation =
+            savedSettings.relaxedCodeValidation
+        }
+        if (updates.urlWhitelist) {
+          runtimeSettings.urlWhitelist = savedSettings.urlWhitelist
+        }
         void sendRedemptionAssistMessage(
           RedemptionAssistMessageTypes.UpdateSettings,
           {
-            settings: updates,
+            settings: runtimeSettings,
           },
         )
 
@@ -1524,7 +1545,7 @@ export const UserPreferencesProvider = ({
   )
 
   const updateTaskNotifications = useCallback(
-    async (updates: Partial<TaskNotificationPreferences>) => {
+    async (updates: DeepPartial<TaskNotificationPreferences>) => {
       const preferenceUpdates = {
         taskNotifications: updates,
       }
