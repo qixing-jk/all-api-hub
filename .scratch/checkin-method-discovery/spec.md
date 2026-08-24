@@ -952,7 +952,7 @@ This option provides the best balance between a minimal caller Interface, Locali
 
 ## 18. Implementation Plan
 
-Implementation is split into eight independently reviewable local tickets:
+Implementation is split into nine independently reviewable local tickets:
 
 1. [Register stable check-in method identities](issues/01-register-stable-checkin-methods.md): stable IDs, pure legacy metadata, and registry validation with no behavior or persistence change.
 2. [Build the Check-in domain Module and dormant V7 codec](issues/02-build-checkin-domain-and-v7-codec.md): pure projections, selection transitions, Decision rules, and an inactive migration.
@@ -962,6 +962,7 @@ Implementation is split into eight independently reviewable local tickets:
 6. [Harden Sub2API authentication durability](issues/06-harden-sub2api-auth-durability.md): expected identity, typed persistence, complete resync, and rotated credentials persisted first.
 7. [Add the Sub2API Pro daily check-in method](issues/07-add-sub2api-pro-daily-checkin.md): strict protocol parsing, safe discovery, status-first execution, and evidence-backed later retry.
 8. [Complete the release experience](issues/08-complete-checkin-release-experience.md): non-happy-path UI, settings discoverability, documentation, telemetry audit, and one representative E2E.
+9. [Add bulk check-in capability and status refresh](issues/09-add-bulk-checkin-capability-and-status-refresh.md): one explicit all-account action that refreshes selected status, rediscovers only when needed, and reports partial results without executing check-in or changing user intent.
 
 Every ticket uses the same preferred registry path. Legacy code connects only through compatibility Adapters and migration glue. Ticket 03 may contain multiple reviewable commits, but no release may write V7 while a runtime consumer still understands only V6.
 
