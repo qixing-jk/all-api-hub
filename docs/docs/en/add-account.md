@@ -1,6 +1,6 @@
 # Add Accounts
 
-> This guide explains how to add AI site accounts to All API Hub through auto detection, manual entry, or bookmark import. After adding an account, see [Account Management](./account-management.md) for organization, sorting, and bulk operations.
+> This guide explains how to add AI site accounts to All API Hub through auto-detection, manual entry, or bookmark import. After adding an account, see [Account Management](./account-management.md) for organization, sorting, and bulk operations.
 
 ## 1. Auto Detection (Recommended)
 
@@ -12,7 +12,7 @@ This is the simplest way to add an account. First sign in to the target site in 
 4. The extension will attempt to identify the site type and the account currently signed in, then fill in the required information.
 5. Review the information and save the account.
 
-If the site uses Cloudflare verification, the extension will open a helper window and continue detection after verification is complete. If auto detection fails, see the [FAQ](./faq.md) to check your sign-in state, authentication method, and site compatibility, or use manual addition below.
+If the site uses Cloudflare verification, the extension will open a helper window and continue detection after verification is complete. If auto-detection fails, see the [FAQ](./faq.md) to check your sign-in state, authentication method, and site compatibility, or use manual addition below.
 
 <a id="manual-addition"></a>
 ## 2. Manual Addition
@@ -153,7 +153,7 @@ Access Tokens and Cookies are sensitive information. Do not share their full con
 
 6. Enter a **Recharge Amount Ratio** (`CNY/USD`, greater than 0), then save the account.
 
-   Auto detection first uses the recharge conversion setting returned by the site. It falls back to **7.2** only when the site provides no valid value. You can also adjust it to match the actual recharge ratio. This value only affects balance conversion in the interface and does not affect account behavior.
+   Auto-detection first uses the recharge conversion setting returned by the site. It falls back to the default value **7.2** only when the site provides no valid value. You can also adjust it to match the actual recharge ratio. This value only affects balance conversion in the interface and does not affect account behavior.
 
    ![Enter the recharge amount ratio](../static/image/manual/sub2api/exchange-rate.png)
 
@@ -219,7 +219,7 @@ Management Keys are sensitive information. Do not share their full contents or e
 
 For some sites with strict API protection or extensive customization, try **"Cookie Mode"** if Access Token mode does not work. In this mode, the extension uses your current signed-in session (Cookie) to request data.
 
-Cookies can expire and are not supported by every site. Try auto detection and Access Token authentication first, and switch to Cookie mode only when the target site specifically requires it.
+Cookies can expire and are not supported by every site. Try auto-detection and Access Token authentication first, and switch to Cookie mode only when the target site specifically requires it.
 
 ## 4. Importing Accounts from Bookmarks
 

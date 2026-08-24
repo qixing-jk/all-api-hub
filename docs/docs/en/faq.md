@@ -93,10 +93,10 @@ When enabled, the plugin saves the `refresh_token` as an **account-private** cre
 If auto-detection fails, you can try the following methods:
 
 1. **Switch Authentication Method**: Try switching from Access Token to Cookie mode.
-2. **Manual Addition**: If auto detection fails, follow the [Manual Account Addition Guide](./add-account.md#manual-addition), select the site type, and check its corresponding fields:
-   - New API and compatible sites: Username, User ID, Access Token, and Recharge Ratio
-   - Sub2API: User ID, JWT Access Token, and Recharge Ratio; a Refresh Token is also required when extension-managed sessions are enabled
-   - OpenRouter: Management Key and Recharge Ratio; no User ID is required, and Cookie mode is not supported
+2. **Manual Addition**: If auto-detection fails, follow the [Manual Account Addition Guide](./add-account.md#manual-addition), select the site type, and check its corresponding fields:
+   - New API and compatible sites: Site Name, Username, User ID, Access Token, and Recharge Ratio
+   - Sub2API: Site Name, User ID, JWT Access Token, and Recharge Ratio; a Refresh Token is also required when extension-managed sessions are enabled
+   - OpenRouter: Site Name, Management Key, and Recharge Ratio; no User ID is required, and Cookie mode is not supported
    - Other sites: Follow the required markers currently shown in the form and the instructions for that site
 3. **Check Login Status**: Ensure you are logged into the target site in your browser.
 4. **Check Site Compatibility**: Confirm if the site is based on a supported project (see below).

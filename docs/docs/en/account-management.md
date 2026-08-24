@@ -4,7 +4,7 @@
 
 ## Add an Account
 
-Try auto detection first. If it fails, you can manually enter the information required by New API, Sub2API, OpenRouter, and other site types.
+Try auto-detection first. If it fails, you can manually enter the information required by New API, Sub2API, OpenRouter, and other site types.
 
 - [View the complete account addition guide](./add-account.md)
 - [Go directly to manual addition](./add-account.md#manual-addition)

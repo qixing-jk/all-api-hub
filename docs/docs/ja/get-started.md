@@ -55,7 +55,7 @@
 - [Dola Seed on BytePlus ModelArk](https://www.byteplus.com/en/product/modelark?utm_campaign=hw&utm_content=all-api-hub&utm_medium=devrel_tool_web&utm_source=OWO&utm_term=all-api-hub)：BytePlus ModelArk から登録すると、各モデルにつき 500,000 トークン分の無料推論枠を受け取れます。
 :::
 
-> **盾越えのヒント**：サイトに Cloudflare 認証（5 秒ルール）がある場合、プラグインは自動的にウィンドウを表示して盾越えを支援します。認証が完了すると、自動的に認識を続行します。
+> **Cloudflare 認証ヘルパーのヒント**：サイトに Cloudflare 認証（5 秒ルール）がある場合、プラグインは自動的にヘルパーウィンドウを表示します。認証が完了すると、自動的に認識を続行します。
 
 <a id="manual-addition"></a>
 ### 2.2 手動追加（代替）

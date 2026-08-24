@@ -60,7 +60,7 @@ If you are looking for stable, efficient, and highly compatible AI relay service
 <a id="manual-addition"></a>
 ### 2.2 Manual Addition (Alternative)
 
-If auto detection fails, click **"Manual Add"**, select the site type, and enter the account information yourself. See the [manual account addition guide](./add-account.md#manual-addition) for the required fields, where to find the Access Token, and important precautions.
+If auto-detection fails, click **"Manual Add"**, select the site type, and enter the account information yourself. See the [manual account addition guide](./add-account.md#manual-addition) for the required fields, where to find the Access Token, and important precautions.
 
 ---
 
