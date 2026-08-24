@@ -9,6 +9,7 @@ import {
   TRADITIONAL_CHINESE_LANG,
   VIETNAMESE_LANG,
 } from "~/constants"
+import { createCachedLocaleLoader } from "~/utils/i18n/createCachedLocaleLoader"
 import { normalizeAppLanguage } from "~/utils/i18n/language"
 
 type DatePickerLocaleKey =
@@ -21,14 +22,11 @@ type DatePickerLocaleKey =
   | "zh-CN"
   | "zh-TW"
 
-const localeImportCache = new Map<
-  DatePickerLocaleKey,
-  Promise<Locale | undefined>
->()
 const resolvedEnglishLocale = Promise.resolve(undefined)
+type LocalizedDatePickerLocaleKey = Exclude<DatePickerLocaleKey, "en-US">
 
 const localeImporters: Record<
-  Exclude<DatePickerLocaleKey, "en-US">,
+  LocalizedDatePickerLocaleKey,
   () => Promise<Locale>
 > = {
   de: () => import("date-fns/locale/de").then(({ de }) => de),
@@ -39,6 +37,10 @@ const localeImporters: Record<
   "zh-CN": () => import("date-fns/locale/zh-CN").then(({ zhCN }) => zhCN),
   "zh-TW": () => import("date-fns/locale/zh-TW").then(({ zhTW }) => zhTW),
 }
+
+const loadDatePickerLocaleImport = createCachedLocaleLoader(
+  (localeKey: LocalizedDatePickerLocaleKey) => localeImporters[localeKey](),
+)
 
 /** Resolve a runtime language tag to the closest date-fns calendar locale. */
 export function resolveDatePickerLocaleKey(
@@ -70,14 +72,5 @@ export function loadDatePickerLocale(
 ): Promise<Locale | undefined> {
   const localeKey = resolveDatePickerLocaleKey(language)
   if (localeKey === "en-US") return resolvedEnglishLocale
-
-  const cachedImport = localeImportCache.get(localeKey)
-  if (cachedImport) return cachedImport
-
-  const importPromise = localeImporters[localeKey]().catch((error) => {
-    localeImportCache.delete(localeKey)
-    throw error
-  })
-  localeImportCache.set(localeKey, importPromise)
-  return importPromise
+  return loadDatePickerLocaleImport(localeKey)
 }

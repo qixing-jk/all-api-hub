@@ -259,80 +259,23 @@ describe("LanguageSwitcher", () => {
     expect(setLanguageMock).toHaveBeenCalledWith("en")
   })
 
-  it("changes language from the select variant when a different option is chosen", async () => {
-    render(<LanguageSwitcher variant="select" />)
+  it.each(["ja", "vi", "es-419", "pt-BR", "de"] as const)(
+    "shows and persists %s from the select variant",
+    async (language) => {
+      render(<LanguageSwitcher variant="select" />)
 
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "settings:appearanceLanguage.switcher.options.ja.name",
-      }),
-    )
+      fireEvent.click(
+        screen.getByRole("button", {
+          name: `settings:appearanceLanguage.switcher.options.${language}.name`,
+        }),
+      )
 
-    expect(changeLanguageMock).toHaveBeenCalledWith("ja")
-    await waitFor(() => {
-      expect(setLanguageMock).toHaveBeenCalledWith("ja")
-    })
-  })
-
-  it("shows and persists Vietnamese from the select variant", async () => {
-    render(<LanguageSwitcher variant="select" />)
-
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "settings:appearanceLanguage.switcher.options.vi.name",
-      }),
-    )
-
-    expect(changeLanguageMock).toHaveBeenCalledWith("vi")
-    await waitFor(() => {
-      expect(setLanguageMock).toHaveBeenCalledWith("vi")
-    })
-  })
-
-  it("shows and persists latin american spanish from the select variant", async () => {
-    render(<LanguageSwitcher variant="select" />)
-
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "settings:appearanceLanguage.switcher.options.es-419.name",
-      }),
-    )
-
-    expect(changeLanguageMock).toHaveBeenCalledWith("es-419")
-    await waitFor(() => {
-      expect(setLanguageMock).toHaveBeenCalledWith("es-419")
-    })
-  })
-
-  it("shows and persists Brazilian Portuguese from the select variant", async () => {
-    render(<LanguageSwitcher variant="select" />)
-
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "settings:appearanceLanguage.switcher.options.pt-BR.name",
-      }),
-    )
-
-    expect(changeLanguageMock).toHaveBeenCalledWith("pt-BR")
-    await waitFor(() => {
-      expect(setLanguageMock).toHaveBeenCalledWith("pt-BR")
-    })
-  })
-
-  it("shows and persists German from the select variant", async () => {
-    render(<LanguageSwitcher variant="select" />)
-
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "settings:appearanceLanguage.switcher.options.de.name",
-      }),
-    )
-
-    expect(changeLanguageMock).toHaveBeenCalledWith("de")
-    await waitFor(() => {
-      expect(setLanguageMock).toHaveBeenCalledWith("de")
-    })
-  })
+      expect(changeLanguageMock).toHaveBeenCalledWith(language)
+      await waitFor(() => {
+        expect(setLanguageMock).toHaveBeenCalledWith(language)
+      })
+    },
+  )
 
   it("renders the icon-dropdown trigger label and changes language from the radio menu", () => {
     render(<LanguageSwitcher variant="icon-dropdown" />)

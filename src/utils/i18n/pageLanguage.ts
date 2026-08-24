@@ -10,6 +10,8 @@ import {
 } from "./resources"
 
 let latestLanguageRequest = 0
+// Locale assets can load concurrently, but i18next and Day.js commits must not.
+let languageCommitQueue = Promise.resolve()
 
 /**
  * Prepare page-only locale dependencies, then commit only the latest request.
@@ -19,24 +21,33 @@ export async function changePageLanguage(
   language: SupportedUiLanguage,
 ): Promise<boolean> {
   const requestId = ++latestLanguageRequest
+  const isLatestRequest = () => requestId === latestLanguageRequest
   const [resources, dayjsLocale] = await Promise.all([
     loadAppLanguageResources(language),
     loadDayjsLocale(language),
   ])
 
-  if (requestId !== latestLanguageRequest) return false
+  if (!isLatestRequest()) return false
 
-  installAppLanguageResources(instance, resources)
-  const previousDayjsLocale = dayjs.locale()
-  dayjs.locale(dayjsLocale)
-  try {
-    await instance.changeLanguage(language)
-  } catch (error) {
-    dayjs.locale(previousDayjsLocale)
-    throw error
+  const commit = async () => {
+    if (!isLatestRequest()) return false
+
+    installAppLanguageResources(instance, resources)
+    const previousDayjsLocale = dayjs.locale()
+    dayjs.locale(dayjsLocale)
+    try {
+      await instance.changeLanguage(language)
+    } catch (error) {
+      dayjs.locale(previousDayjsLocale)
+      throw error
+    }
+
+    return isLatestRequest()
   }
-
-  if (requestId !== latestLanguageRequest) return false
-
-  return true
+  const commitResult = languageCommitQueue.then(commit)
+  languageCommitQueue = commitResult.then(
+    () => undefined,
+    () => undefined,
+  )
+  return commitResult
 }

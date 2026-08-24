@@ -92,4 +92,43 @@ describe("page language switching", () => {
 
     localeSpy.mockRestore()
   })
+
+  it("keeps the latest language when change commits overlap", async () => {
+    const japaneseCommit = deferred<void>()
+    loadAppLanguageResourcesMock.mockImplementation((language: string) =>
+      Promise.resolve({ [language]: { common: {} } }),
+    )
+    loadDayjsLocaleMock.mockImplementation((language: string) =>
+      Promise.resolve(language),
+    )
+    const localeSpy = vi.spyOn(dayjs, "locale").mockReturnValue("de")
+    let activeLanguage = "en"
+    const instance = {
+      changeLanguage: vi.fn(async (language: string) => {
+        if (language === "ja") await japaneseCommit.promise
+        activeLanguage = language
+      }),
+    }
+    const { changePageLanguage } = await import("~/utils/i18n/pageLanguage")
+
+    const japaneseRequest = changePageLanguage(
+      instance as unknown as i18n,
+      "ja",
+    )
+    await vi.waitFor(() => {
+      expect(instance.changeLanguage).toHaveBeenCalledWith("ja")
+    })
+
+    const germanRequest = changePageLanguage(instance as unknown as i18n, "de")
+    await vi.waitFor(() => {
+      expect(loadAppLanguageResourcesMock).toHaveBeenCalledWith("de")
+    })
+    japaneseCommit.resolve()
+
+    await expect(japaneseRequest).resolves.toBe(false)
+    await expect(germanRequest).resolves.toBe(true)
+    expect(activeLanguage).toBe("de")
+
+    localeSpy.mockRestore()
+  })
 })

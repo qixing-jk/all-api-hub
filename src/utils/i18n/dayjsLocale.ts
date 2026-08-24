@@ -8,6 +8,7 @@ import {
   VIETNAMESE_LANG,
 } from "~/constants"
 
+import { createCachedLocaleLoader } from "./createCachedLocaleLoader"
 import { normalizeAppLanguage } from "./language"
 
 type DayjsLocale =
@@ -20,11 +21,11 @@ type DayjsLocale =
   | "zh-cn"
   | "zh-tw"
 
-const ENGLISH_DAYJS_LOCALE: DayjsLocale = "en"
+const ENGLISH_DAYJS_LOCALE = "en" as const
 const resolvedEnglishLocale = Promise.resolve(ENGLISH_DAYJS_LOCALE)
-const localeImportCache = new Map<DayjsLocale, Promise<DayjsLocale>>()
+type NonEnglishDayjsLocale = Exclude<DayjsLocale, "en">
 
-const localeImporters: Partial<Record<DayjsLocale, () => Promise<unknown>>> = {
+const localeImporters: Record<NonEnglishDayjsLocale, () => Promise<unknown>> = {
   de: () => import("dayjs/locale/de"),
   es: () => import("dayjs/locale/es"),
   ja: () => import("dayjs/locale/ja"),
@@ -33,6 +34,13 @@ const localeImporters: Partial<Record<DayjsLocale, () => Promise<unknown>>> = {
   "zh-cn": () => import("dayjs/locale/zh-cn"),
   "zh-tw": () => import("dayjs/locale/zh-tw"),
 }
+
+const loadDayjsLocaleImport = createCachedLocaleLoader(
+  async (locale: NonEnglishDayjsLocale) => {
+    await localeImporters[locale]()
+    return locale
+  },
+)
 
 /** Resolve a runtime language tag to the finite Day.js locale set we ship. */
 export function resolveDayjsLocale(language?: string | null): DayjsLocale {
@@ -62,19 +70,5 @@ export function loadDayjsLocale(
 ): Promise<DayjsLocale> {
   const locale = resolveDayjsLocale(language)
   if (locale === ENGLISH_DAYJS_LOCALE) return resolvedEnglishLocale
-
-  const cachedImport = localeImportCache.get(locale)
-  if (cachedImport) return cachedImport
-
-  const importer = localeImporters[locale]
-  if (!importer) return resolvedEnglishLocale
-
-  const importPromise = importer()
-    .then(() => locale)
-    .catch((error) => {
-      localeImportCache.delete(locale)
-      throw error
-    })
-  localeImportCache.set(locale, importPromise)
-  return importPromise
+  return loadDayjsLocaleImport(locale)
 }

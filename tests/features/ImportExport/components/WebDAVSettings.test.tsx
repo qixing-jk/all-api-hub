@@ -4,6 +4,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import type { ReactNode } from "react"
 import toast from "react-hot-toast"
 import { I18nextProvider } from "react-i18next"
@@ -2329,6 +2330,7 @@ describe("WebDAVSettings", () => {
   })
 
   it("updates the editable fields and toggles password visibility in both forms", async () => {
+    const user = userEvent.setup()
     mockDownloadBackupRaw.mockResolvedValueOnce("encrypted-payload")
     mockTryParseEncryptedWebdavBackupEnvelope.mockReturnValue(
       ENCRYPTED_BACKUP_ENVELOPE,
@@ -2361,12 +2363,12 @@ describe("WebDAVSettings", () => {
     expect(usernameInput.value).toBe("bob")
     expect(webdavPasswordInput.value).toBe("pw-2")
 
-    fireEvent.click(
+    await user.click(
       screen.getAllByRole("button", {
         name: /importExport:webdav\.(show|hide)Password/,
       })[0],
     )
-    fireEvent.click(
+    await user.click(
       screen.getAllByRole("button", {
         name: /importExport:webdav\.(show|hide)Password/,
       })[1],
@@ -2378,8 +2380,10 @@ describe("WebDAVSettings", () => {
     fireEvent.change(backupPasswordInput, {
       target: { value: "" },
     })
-    fireEvent.click(screen.getByRole("switch"))
-    clickWebdavAction("webdav-download-import")
+    await user.click(screen.getByRole("switch"))
+    await user.click(
+      document.getElementById("webdav-download-import") as HTMLButtonElement,
+    )
 
     expect(
       await screen.findByText(
@@ -2387,7 +2391,7 @@ describe("WebDAVSettings", () => {
       ),
     ).toBeInTheDocument()
 
-    fireEvent.click(
+    await user.click(
       screen.getAllByRole("button", {
         name: /importExport:webdav\.(show|hide)Password/,
       })[2],

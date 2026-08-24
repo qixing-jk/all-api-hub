@@ -1,4 +1,5 @@
 export const DEFAULT_LANG = "zh-CN"
+export const ENGLISH_LANG = "en"
 export const GERMAN_LANG = "de"
 export const PORTUGUESE_BRAZIL_LANG = "pt-BR"
 export const SPANISH_LATIN_AMERICA_LANG = "es-419"
@@ -8,7 +9,7 @@ export const VIETNAMESE_LANG = "vi"
 export const APP_LOCALE_ASSET_DIR = "app-locales"
 
 export const SUPPORTED_UI_LANGUAGES = [
-  "en",
+  ENGLISH_LANG,
   GERMAN_LANG,
   SPANISH_LATIN_AMERICA_LANG,
   PORTUGUESE_BRAZIL_LANG,

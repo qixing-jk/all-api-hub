@@ -19,7 +19,7 @@ vi.mock("~/components/RootErrorBoundary", () => ({
 }))
 vi.mock("~/entrypoints/popup/App", () => ({ default: () => null }))
 vi.mock("~/utils/browser", () => ({ isMobileDevice: isMobileDeviceMock }))
-vi.mock("~/utils/i18n", () => ({}))
+vi.mock("~/utils/i18n", () => ({ i18nReady: Promise.resolve() }))
 vi.mock("~/utils/i18n/core", () => ({ t: vi.fn(() => "Loading") }))
 vi.mock("~/utils/navigation/documentTitle", () => ({
   setDocumentTitle: setDocumentTitleMock,

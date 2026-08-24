@@ -7,7 +7,6 @@ import { cn } from "~/lib/utils"
 
 import { Button } from "./button"
 import { Calendar } from "./calendar"
-import { loadDatePickerLocale } from "./datePickerLocale"
 import {
   isNoExpirationNaturalInput,
   parseNaturalDatePickerValue,
@@ -20,6 +19,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "./popover"
+import { useDatePickerLocale } from "./useDatePickerLocale"
 
 export interface DatePickerNaturalInputLabels {
   invalid: string
@@ -70,7 +70,7 @@ export function DatePicker({
 }: DatePickerProps) {
   const [open, setOpen] = useState(false)
   const [naturalInputValue, setNaturalInputValue] = useState("")
-  const [loadedLocale, setLoadedLocale] = useState<Locale | undefined>(locale)
+  const calendarLocale = useDatePickerLocale(locale, language)
   const generatedFeedbackId = useId()
   const selectedDate = useMemo(() => parseDatePickerValue(value), [value])
   const triggerLabel = selectedDate ? value : labels.placeholder
@@ -106,31 +106,6 @@ export function DatePicker({
 
     setNaturalInputValue(selectedDate ? value : "")
   }, [naturalInput, selectedDate, value])
-
-  useEffect(() => {
-    if (locale) {
-      setLoadedLocale(locale)
-      return
-    }
-    if (!language) {
-      setLoadedLocale(undefined)
-      return
-    }
-
-    let acceptsResult = true
-    setLoadedLocale(undefined)
-    void loadDatePickerLocale(language)
-      .then((nextLocale) => {
-        if (acceptsResult) setLoadedLocale(nextLocale)
-      })
-      .catch(() => {
-        // Keep the calendar usable with React DayPicker's English fallback.
-      })
-
-    return () => {
-      acceptsResult = false
-    }
-  }, [language, locale])
 
   const selectDate = (date: Date | undefined) => {
     const nextValue = date ? formatDatePickerValue(date) : ""
@@ -196,7 +171,7 @@ export function DatePicker({
         selected={selectedDate ?? undefined}
         defaultMonth={calendarDefaultMonth}
         onSelect={selectDate}
-        locale={locale ?? loadedLocale}
+        locale={calendarLocale}
       />
       <div className="border-border grid grid-cols-2 gap-2 border-t p-2">
         <Button

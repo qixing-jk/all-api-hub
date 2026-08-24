@@ -12,8 +12,10 @@ export function getExtensionResourceUrl(path: string) {
     browser?: ExtensionRuntimeBrowser
     chrome?: ExtensionRuntimeBrowser
   }
-  const runtime =
-    runtimeGlobal.browser?.runtime ?? runtimeGlobal.chrome?.runtime
+  const browserRuntime = runtimeGlobal.browser?.runtime
+  const runtime = browserRuntime?.getURL
+    ? browserRuntime
+    : runtimeGlobal.chrome?.runtime
 
   if (!runtime?.getURL) {
     throw new Error("Extension runtime.getURL is unavailable")

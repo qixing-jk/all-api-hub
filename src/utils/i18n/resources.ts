@@ -7,10 +7,7 @@ import {
 } from "~/constants/i18n"
 import { getExtensionResourceUrl } from "~/utils/browser/extensionResourceUrl"
 
-const languageResourceCache = new Map<
-  SupportedUiLanguage,
-  Promise<ResourceLanguage>
->()
+import { createCachedLocaleLoader } from "./createCachedLocaleLoader"
 
 /** Return whether a fetched locale payload has a namespace map shape. */
 function isResourceLanguage(value: unknown): value is ResourceLanguage {
@@ -38,18 +35,7 @@ async function fetchLanguageResource(
   return resource
 }
 
-/** Return one cached language request, evicting failed attempts for retries. */
-function loadLanguageResource(language: SupportedUiLanguage) {
-  const cachedResource = languageResourceCache.get(language)
-  if (cachedResource) return cachedResource
-
-  const resourcePromise = fetchLanguageResource(language).catch((error) => {
-    languageResourceCache.delete(language)
-    throw error
-  })
-  languageResourceCache.set(language, resourcePromise)
-  return resourcePromise
-}
+const loadLanguageResource = createCachedLocaleLoader(fetchLanguageResource)
 
 /**
  * Load only the requested UI language and the default fallback language.

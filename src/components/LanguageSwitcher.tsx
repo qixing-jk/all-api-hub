@@ -18,14 +18,21 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
-import { DEFAULT_LANG, GERMAN_LANG, PORTUGUESE_BRAZIL_LANG } from "~/constants"
+import {
+  DEFAULT_LANG,
+  ENGLISH_LANG,
+  GERMAN_LANG,
+  JAPANESE_LANG,
+  PORTUGUESE_BRAZIL_LANG,
+  SPANISH_LATIN_AMERICA_LANG,
+  SUPPORTED_UI_LANGUAGES,
+  TRADITIONAL_CHINESE_LANG,
+  VIETNAMESE_LANG,
+} from "~/constants"
 import type { SupportedUiLanguage } from "~/constants"
 import { cn } from "~/lib/utils"
 import { userPreferences } from "~/services/preferences/userPreferences"
-import {
-  normalizeAppLanguage,
-  UI_LANGUAGE_OPTIONS,
-} from "~/utils/i18n/language"
+import { normalizeAppLanguage } from "~/utils/i18n/language"
 import { changePageLanguage } from "~/utils/i18n/pageLanguage"
 
 interface LanguageSwitcherProps {
@@ -40,21 +47,21 @@ interface LanguageSwitcherProps {
  */
 function getLanguageOptionLabel(t: TFunction, language: SupportedUiLanguage) {
   switch (language) {
-    case "en":
+    case ENGLISH_LANG:
       return t("settings:appearanceLanguage.switcher.options.en.label")
     case GERMAN_LANG:
       return t("settings:appearanceLanguage.switcher.options.de.label")
-    case "es-419":
+    case SPANISH_LATIN_AMERICA_LANG:
       return t("settings:appearanceLanguage.switcher.options.es-419.label")
     case PORTUGUESE_BRAZIL_LANG:
       return t("settings:appearanceLanguage.switcher.options.pt-BR.label")
-    case "ja":
+    case JAPANESE_LANG:
       return t("settings:appearanceLanguage.switcher.options.ja.label")
-    case "vi":
+    case VIETNAMESE_LANG:
       return t("settings:appearanceLanguage.switcher.options.vi.label")
-    case "zh-CN":
+    case DEFAULT_LANG:
       return t("settings:appearanceLanguage.switcher.options.zh-CN.label")
-    case "zh-TW":
+    case TRADITIONAL_CHINESE_LANG:
       return t("settings:appearanceLanguage.switcher.options.zh-TW.label")
   }
 }
@@ -64,23 +71,28 @@ function getLanguageOptionLabel(t: TFunction, language: SupportedUiLanguage) {
  */
 function getLanguageOptionName(t: TFunction, language: SupportedUiLanguage) {
   switch (language) {
-    case "en":
+    case ENGLISH_LANG:
       return t("settings:appearanceLanguage.switcher.options.en.name")
     case GERMAN_LANG:
       return t("settings:appearanceLanguage.switcher.options.de.name")
-    case "es-419":
+    case SPANISH_LATIN_AMERICA_LANG:
       return t("settings:appearanceLanguage.switcher.options.es-419.name")
     case PORTUGUESE_BRAZIL_LANG:
       return t("settings:appearanceLanguage.switcher.options.pt-BR.name")
-    case "ja":
+    case JAPANESE_LANG:
       return t("settings:appearanceLanguage.switcher.options.ja.name")
-    case "vi":
+    case VIETNAMESE_LANG:
       return t("settings:appearanceLanguage.switcher.options.vi.name")
-    case "zh-CN":
+    case DEFAULT_LANG:
       return t("settings:appearanceLanguage.switcher.options.zh-CN.name")
-    case "zh-TW":
+    case TRADITIONAL_CHINESE_LANG:
       return t("settings:appearanceLanguage.switcher.options.zh-TW.name")
   }
+}
+
+/** Resolve only exact option values emitted by the language controls. */
+function findSupportedUiLanguage(value: string) {
+  return SUPPORTED_UI_LANGUAGES.find((language) => language === value)
 }
 
 /**
@@ -110,6 +122,10 @@ export function LanguageSwitcher({
     }
     await userPreferences.setLanguage(language)
   }
+  const handleSupportedLanguageChange = (value: string) => {
+    const nextLanguage = findSupportedUiLanguage(value)
+    if (nextLanguage) void handleLanguageChange(nextLanguage)
+  }
 
   if (variant === "icon-dropdown") {
     const triggerLabel = `${t("appearanceLanguage.switcher.groupLabel")}: ${currentLanguageLabel}`
@@ -130,17 +146,9 @@ export function LanguageSwitcher({
         <DropdownMenuContent align="end" className="w-36">
           <DropdownMenuRadioGroup
             value={activeLanguage}
-            onValueChange={(value: string) => {
-              const nextLanguage = UI_LANGUAGE_OPTIONS.find(
-                ({ code }) => code === value,
-              )?.code
-
-              if (nextLanguage) {
-                void handleLanguageChange(nextLanguage)
-              }
-            }}
+            onValueChange={handleSupportedLanguageChange}
           >
-            {UI_LANGUAGE_OPTIONS.map(({ code }) => {
+            {SUPPORTED_UI_LANGUAGES.map((code) => {
               const languageName = getLanguageOptionName(t, code)
 
               return (
@@ -173,15 +181,7 @@ export function LanguageSwitcher({
         )}
         <Select
           value={activeLanguage}
-          onValueChange={(value: string) => {
-            const nextLanguage = UI_LANGUAGE_OPTIONS.find(
-              ({ code }) => code === value,
-            )?.code
-
-            if (nextLanguage) {
-              void handleLanguageChange(nextLanguage)
-            }
-          }}
+          onValueChange={handleSupportedLanguageChange}
         >
           <SelectTrigger
             size={compact ? "sm" : "default"}
@@ -192,7 +192,7 @@ export function LanguageSwitcher({
             <SelectValue />
           </SelectTrigger>
           <SelectContent align="end">
-            {UI_LANGUAGE_OPTIONS.map(({ code }) => {
+            {SUPPORTED_UI_LANGUAGES.map((code) => {
               const languageName = getLanguageOptionName(t, code)
 
               return (
@@ -238,7 +238,7 @@ export function LanguageSwitcher({
         buttonSize="sm"
         showActiveIndicator
         className={cn("p-0.5", !compact && "sm:p-1")}
-        options={UI_LANGUAGE_OPTIONS.map(({ code }) => {
+        options={SUPPORTED_UI_LANGUAGES.map((code) => {
           const label = getLanguageOptionLabel(t, code)
           const languageName = getLanguageOptionName(t, code)
           const accessibleLabel =
