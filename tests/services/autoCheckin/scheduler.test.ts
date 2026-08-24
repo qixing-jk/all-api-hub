@@ -6257,6 +6257,38 @@ describe("autoCheckinScheduler private helpers", () => {
 
   it.each([
     {
+      domainReason: "status_unavailable",
+      resultReason: "status_unavailable",
+    },
+    {
+      domainReason: "authentication_required",
+      resultReason: "authentication_required",
+    },
+    {
+      domainReason: "credentials_missing",
+      resultReason: "credentials_missing",
+    },
+    {
+      domainReason: "network_error",
+      resultReason: "network_error",
+    },
+    {
+      domainReason: "source_unavailable",
+      resultReason: "source_unavailable",
+    },
+    {
+      domainReason: "permission_denied",
+      resultReason: "permission_denied",
+    },
+    {
+      domainReason: "timeout",
+      resultReason: "timeout",
+    },
+    {
+      domainReason: "account_unavailable",
+      resultReason: "account_unavailable",
+    },
+    {
       domainReason: "no_selected_method",
       resultReason: "no_selected_method",
     },
