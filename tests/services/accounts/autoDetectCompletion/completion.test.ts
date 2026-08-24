@@ -325,7 +325,7 @@ describe("auto-detect completion", () => {
           id,
           siteTypes: [SITE_TYPES.NEW_API],
           provider: {
-            canCheckIn: () => true,
+            getReadiness: () => ({ ready: true }),
             detect: async () =>
               outcomes[index] === "matched"
                 ? {
@@ -377,7 +377,7 @@ describe("auto-detect completion", () => {
         id: "new-api:daily-checkin",
         siteTypes: [SITE_TYPES.NEW_API],
         provider: {
-          canCheckIn: () => true,
+          getReadiness: () => ({ ready: true }),
           detect: async () => new Promise<never>(() => undefined),
           checkIn: async () => ({ status: "success" }),
         },

@@ -1,6 +1,41 @@
 import type { TFunction } from "i18next"
 
-import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
+import {
+  CHECKIN_RESULT_STATUS,
+  translateAutoCheckinSkipReason,
+  type CheckinAccountResult,
+} from "~/types/autoCheckin"
+
+export const FILTER_STATUS = {
+  ALL: "all",
+  SUCCESS: "success",
+  FAILED: "failed",
+  SKIPPED: "skipped",
+} as const
+
+export type FilterStatus = (typeof FILTER_STATUS)[keyof typeof FILTER_STATUS]
+
+/**
+ * Checks whether a result belongs to the selected status filter.
+ */
+function matchesAutoCheckinResultStatus(
+  result: CheckinAccountResult,
+  status: FilterStatus,
+): boolean {
+  switch (status) {
+    case FILTER_STATUS.SUCCESS:
+      return (
+        result.status === CHECKIN_RESULT_STATUS.SUCCESS ||
+        result.status === CHECKIN_RESULT_STATUS.ALREADY_CHECKED
+      )
+    case FILTER_STATUS.FAILED:
+      return result.status === CHECKIN_RESULT_STATUS.FAILED
+    case FILTER_STATUS.SKIPPED:
+      return result.status === CHECKIN_RESULT_STATUS.SKIPPED
+    case FILTER_STATUS.ALL:
+      return true
+  }
+}
 
 /**
  * Translate a known auto-checkin i18n key while preserving non-i18n backend
@@ -67,19 +102,91 @@ export function translateAutoCheckinMessageKey(
       return t("autoCheckin:providerWong.checkinDisabled", messageParams)
     case "autoCheckin:skipReasons.account_disabled":
       return t("autoCheckin:skipReasons.account_disabled", messageParams)
+    case "autoCheckin:skipReasons.account_data_missing":
+      return t("autoCheckin:skipReasons.account_data_missing", messageParams)
+    case "autoCheckin:skipReasons.authentication_required":
+      return t("autoCheckin:skipReasons.authentication_required", messageParams)
+    case "autoCheckin:skipReasons.credentials_missing":
+      return t("autoCheckin:skipReasons.credentials_missing", messageParams)
     case "autoCheckin:skipReasons.detection_disabled":
       return t("autoCheckin:skipReasons.detection_disabled", messageParams)
+    case "autoCheckin:skipReasons.method_disabled":
+      return t("autoCheckin:skipReasons.method_disabled", messageParams)
+    case "autoCheckin:skipReasons.method_not_matched":
+      return t("autoCheckin:skipReasons.method_not_matched", messageParams)
+    case "autoCheckin:skipReasons.method_unavailable":
+      return t("autoCheckin:skipReasons.method_unavailable", messageParams)
+    case "autoCheckin:skipReasons.method_unsupported":
+      return t("autoCheckin:skipReasons.method_unsupported", messageParams)
+    case "autoCheckin:skipReasons.network_error":
+      return t("autoCheckin:skipReasons.network_error", messageParams)
+    case "autoCheckin:skipReasons.no_selected_method":
+      return t("autoCheckin:skipReasons.no_selected_method", messageParams)
+    case "autoCheckin:skipReasons.permission_denied":
+      return t("autoCheckin:skipReasons.permission_denied", messageParams)
+    case "autoCheckin:skipReasons.source_unavailable":
+      return t("autoCheckin:skipReasons.source_unavailable", messageParams)
+    case "autoCheckin:skipReasons.timeout":
+      return t("autoCheckin:skipReasons.timeout", messageParams)
     case "autoCheckin:skipReasons.auto_checkin_disabled":
       return t("autoCheckin:skipReasons.auto_checkin_disabled", messageParams)
     case "autoCheckin:skipReasons.already_checked_today":
       return t("autoCheckin:skipReasons.already_checked_today", messageParams)
+    case "autoCheckin:skipReasons.status_unavailable":
+      return t("autoCheckin:skipReasons.status_unavailable", messageParams)
     case "autoCheckin:skipReasons.no_provider":
       return t("autoCheckin:skipReasons.no_provider", messageParams)
-    case "autoCheckin:skipReasons.provider_not_ready":
-      return t("autoCheckin:skipReasons.provider_not_ready", messageParams)
+    case "autoCheckin:skipReasons.account_unavailable":
+      return t("autoCheckin:skipReasons.account_unavailable", messageParams)
     default:
       return messageKey
   }
+}
+
+/**
+ * Resolves the user-facing message for one persisted execution result.
+ */
+export function getAutoCheckinResultMessage(
+  t: TFunction,
+  result: CheckinAccountResult,
+): string {
+  if (result.rawMessage) return result.rawMessage
+  if (result.reasonCode) {
+    return translateAutoCheckinSkipReason(t, result.reasonCode)
+  }
+  if (result.messageKey) {
+    return translateAutoCheckinMessageKey(
+      t,
+      result.messageKey,
+      result.messageParams,
+    )
+  }
+  return result.message ?? "-"
+}
+
+/**
+ * Applies the result-table status and localized keyword filters.
+ */
+export function filterAutoCheckinResults(
+  results: CheckinAccountResult[],
+  status: FilterStatus,
+  keyword: string,
+  t: TFunction,
+): CheckinAccountResult[] {
+  const normalizedKeyword = keyword.trim().toLowerCase()
+
+  return results.filter((result) => {
+    if (!matchesAutoCheckinResultStatus(result, status)) return false
+    if (!normalizedKeyword) return true
+
+    return (
+      result.accountName.toLowerCase().includes(normalizedKeyword) ||
+      String(result.accountId).toLowerCase().includes(normalizedKeyword) ||
+      getAutoCheckinResultMessage(t, result)
+        .toLowerCase()
+        .includes(normalizedKeyword)
+    )
+  })
 }
 
 const INVALID_ACCESS_TOKEN_STRICT_SNIPPET = "access token 无效"

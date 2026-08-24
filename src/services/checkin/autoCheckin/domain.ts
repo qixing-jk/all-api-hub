@@ -166,7 +166,10 @@ const deriveExecutionEligibility = (
   if (selectionState.status === CHECK_IN_SELECTION_STATUSES.None) {
     return {
       eligible: false,
-      skipReason: CHECK_IN_EXECUTION_SKIP_REASONS.NoSelectedMethod,
+      skipReason:
+        input.candidateMethodIds.length === 0
+          ? CHECK_IN_EXECUTION_SKIP_REASONS.NoProvider
+          : CHECK_IN_EXECUTION_SKIP_REASONS.NoSelectedMethod,
     }
   }
   if (selectionState.status === CHECK_IN_SELECTION_STATUSES.Stale) {

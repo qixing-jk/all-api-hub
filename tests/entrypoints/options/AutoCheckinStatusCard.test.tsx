@@ -90,4 +90,24 @@ describe("AutoCheckin StatusCard scheduling labels", () => {
       within(retrySection).getByText("autoCheckin:status.pendingRetry"),
     ).toBeInTheDocument()
   })
+
+  it("shows a non-success result when every account was skipped", async () => {
+    const status: AutoCheckinStatus = {
+      lastRunResult: "skipped",
+      summary: {
+        totalEligible: 2,
+        executed: 0,
+        successCount: 0,
+        failedCount: 0,
+        skippedCount: 2,
+        needsRetry: false,
+      },
+    }
+
+    render(<StatusCard status={status} preferences={basePreferences} />)
+
+    expect(
+      await screen.findByText("autoCheckin:status.result.skipped"),
+    ).toBeVisible()
+  })
 })

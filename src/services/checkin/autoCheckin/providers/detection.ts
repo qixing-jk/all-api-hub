@@ -4,6 +4,7 @@ import {
   CHECK_IN_METHOD_STATUS_OUTCOMES,
   CHECK_IN_METHOD_UNKNOWN_REASON_CODES,
 } from "~/constants/checkIn"
+import { getCheckInMethodUnknownReason } from "~/services/checkin/autoCheckin/errors"
 import type { CheckInMethodStatus } from "~/types/checkIn"
 
 import type {
@@ -66,12 +67,7 @@ export async function detectWithStatusReadback(
     }
     return {
       outcome: CHECK_IN_METHOD_DETECTION_OUTCOMES.Unknown,
-      reason:
-        statusCode === 401
-          ? CHECK_IN_METHOD_UNKNOWN_REASON_CODES.AuthenticationRequired
-          : statusCode === 403
-            ? CHECK_IN_METHOD_UNKNOWN_REASON_CODES.PermissionDenied
-            : CHECK_IN_METHOD_UNKNOWN_REASON_CODES.Network,
+      reason: getCheckInMethodUnknownReason(error),
       attemptedAt: context.observedAt,
     }
   }

@@ -45,6 +45,7 @@
       "not_run": "初回実行待ち",
       "partial": "一部成功",
       "ready": "準備完了",
+      "skipped": "未実行",
       "success": "成功"
     },
     "summary": "自動チェックイン実行サマリー"

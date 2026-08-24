@@ -33,9 +33,14 @@
     },
     "filters": {
       "all": "Todos",
+      "clearAll": "Limpar filtros",
+      "countFiltered": "Mostrando {{filtered}} de {{total}}",
+      "countTotal": "{{total}} no total",
       "failed": "Falha",
+      "searchLabel": "Pesquisar resultados da execução",
       "searchPlaceholder": "Pesquise por nome de conta ou mensagem...",
       "skipped": "Ignorado",
+      "statusLabel": "Filtrar por status da execução",
       "success": "Sucesso"
     },
     "hints": {
@@ -162,32 +167,62 @@
     "windowStartDesc": "Horário local mais próximo em que o check-in diário pode começar."
   },
   "skipReasons": {
+    "account_data_missing": "Dados obrigatórios da conta estão ausentes. Detecte a conta novamente.",
     "account_disabled": "Conta desativada",
     "account_unavailable": "A conta foi alterada ou ficou indisponível antes do check-in",
     "already_checked_today": "Check-in já realizado hoje",
+    "authentication_required": "A sessão expirou ou é necessário entrar. Entre no site e tente novamente.",
     "auto_checkin_disabled": "Check-in automático desativado",
+    "credentials_missing": "As credenciais salvas estão ausentes. Detecte a conta novamente ou atualize as credenciais.",
     "detection_disabled": "Detecção desativada",
     "method_disabled": "A função de check-in deste site está desativada",
+    "method_not_matched": "O método de check-in selecionado não corresponde mais a este site. Detecte-o novamente.",
+    "method_unavailable": "O método de check-in selecionado não está mais disponível. Detecte-o novamente.",
+    "method_unsupported": "Este site não oferece suporte ao método de check-in selecionado.",
+    "network_error": "Um problema de conexão de rede impediu o check-in. Verifique a conexão e tente novamente.",
     "no_provider": "O tipo de site da conta atualmente não suporta check-in",
-    "provider_not_ready": "A configuração da conta atualmente não suporta check-in",
-    "status_unavailable": "Não foi possível confirmar o status atual, portanto o check-in não foi realizado"
+    "no_selected_method": "Nenhum método de check-in está selecionado. Detecte novamente ou selecione um nas configurações da conta.",
+    "permission_denied": "O site negou permissão para o check-in. Entre novamente ou verifique as permissões da conta.",
+    "source_unavailable": "O site de origem está temporariamente indisponível. Tente novamente mais tarde.",
+    "status_unavailable": "Não foi possível confirmar o status atual, portanto o check-in não foi realizado",
+    "timeout": "A conexão expirou antes da conclusão do check-in. Tente novamente."
   },
   "snapshot": {
     "badges": {
       "disabled": "Desativado",
       "enabled": "Habilitado",
+      "methodNotSelected": "Não selecionado",
+      "methodSelected": "Selecionado",
       "pending": "Pendente",
       "providerAvailable": "Disponível",
       "providerUnavailable": "Indisponível"
     },
-    "description": "Todas as contas habilitadas para detecção e sua prontidão estão listadas abaixo. Contas pendentes entram no check-in quando você clica em “Executar agora” ou quando chega o horário agendado.",
+    "description": "Mostra a prontidão das contas registrada na última execução. Contas pendentes entram no check-in quando você clica em “Executar agora” ou quando chega o horário agendado.",
+    "filters": {
+      "clearAll": "Limpar filtros",
+      "countFiltered": "Mostrando {{filtered}} de {{total}} contas",
+      "countTotal": "{{total}} contas",
+      "noMatches": "Nenhuma conta correspondente",
+      "noMatchesDescription": "Ajuste a pesquisa ou os filtros, ou limpe todos os filtros.",
+      "readinessAll": "Todos os estados de prontidão",
+      "readinessDisabled": "Desativada",
+      "readinessLabel": "Filtrar por prontidão de execução",
+      "readinessReady": "Pronta para executar",
+      "readinessSetupRequired": "Configuração necessária",
+      "readinessTemporarilyUnavailable": "Temporariamente indisponível",
+      "readinessUnsupported": "Não compatível",
+      "searchLabel": "Pesquisar prontidão das contas",
+      "searchPlaceholder": "Pesquisar por nome, ID ou motivo...",
+      "statusAll": "Todos os status recentes",
+      "statusLabel": "Filtrar por status recente"
+    },
     "table": {
       "autoCheckin": "Check-in automático",
-      "detection": "Detecção",
-      "lastResult": "Último resultado",
-      "provider": "Provedor",
-      "skipReason": "Motivo para ignorar",
-      "status": "Status"
+      "detection": "Método de check-in",
+      "lastResult": "Atualizado",
+      "provider": "Execução",
+      "skipReason": "Motivo da não execução",
+      "status": "Status mais recente"
     },
     "title": "Preparação da conta"
   },
@@ -202,6 +237,7 @@
     "result": {
       "failed": "Falha",
       "partial": "Parcial",
+      "skipped": "Não executado",
       "success": "Sucesso"
     },
     "retryDisabled": "Nova tentativa desativada",

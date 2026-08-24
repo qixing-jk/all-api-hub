@@ -75,9 +75,9 @@ describe("veloeraProvider", () => {
     mockFetchVeloeraCheckInSupport.mockResolvedValue(undefined)
   })
 
-  describe("canCheckIn", () => {
-    it("returns true for valid account", () => {
-      expect(veloeraProvider.canCheckIn(mockAccount)).toBe(true)
+  describe("getReadiness", () => {
+    it("returns ready for a valid account", () => {
+      expect(veloeraProvider.getReadiness(mockAccount)).toEqual({ ready: true })
     })
 
     it("leaves automatic-execution intent to the Module", () => {
@@ -85,15 +85,18 @@ describe("veloeraProvider", () => {
         ...mockAccount,
         checkIn: buildCheckInConfig(),
       }
-      expect(veloeraProvider.canCheckIn(account)).toBe(true)
+      expect(veloeraProvider.getReadiness(account)).toEqual({ ready: true })
     })
 
-    it("returns false when no access token", () => {
+    it("explains when saved credentials are missing", () => {
       const account = {
         ...mockAccount,
         account_info: { ...mockAccount.account_info, access_token: "" },
       }
-      expect(veloeraProvider.canCheckIn(account)).toBe(false)
+      expect(veloeraProvider.getReadiness(account)).toEqual({
+        ready: false,
+        reason: "credentials_missing",
+      })
     })
 
     it("allows cookie-auth accounts without an access token", () => {
@@ -103,7 +106,7 @@ describe("veloeraProvider", () => {
         account_info: { ...mockAccount.account_info, access_token: "" },
       }
 
-      expect(veloeraProvider.canCheckIn(account)).toBe(true)
+      expect(veloeraProvider.getReadiness(account)).toEqual({ ready: true })
     })
   })
 

@@ -345,12 +345,22 @@ describe("product analytics event enums", () => {
       Retry: "retry",
     })
     expect(PRODUCT_ANALYTICS_AUTO_CHECKIN_SKIP_REASONS).toMatchObject({
+      AccountDataMissing: "account_data_missing",
       AccountDisabled: "account_disabled",
+      AuthenticationRequired: "authentication_required",
+      CredentialsMissing: "credentials_missing",
       DetectionDisabled: "detection_disabled",
       MethodDisabled: "method_disabled",
+      MethodNotMatched: "method_not_matched",
+      MethodUnavailable: "method_unavailable",
+      MethodUnsupported: "method_unsupported",
       AutoCheckinDisabled: "auto_checkin_disabled",
+      NetworkError: "network_error",
+      NoSelectedMethod: "no_selected_method",
       NoProvider: "no_provider",
-      ProviderNotReady: "provider_not_ready",
+      PermissionDenied: "permission_denied",
+      SourceUnavailable: "source_unavailable",
+      Timeout: "timeout",
     })
   })
 

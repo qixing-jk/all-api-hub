@@ -132,6 +132,7 @@ describe("AccountDialog AccountForm", () => {
     onCheckInSelectionChange: vi.fn(),
     onRedetectCheckInMethods: vi.fn(),
     isRedetectingCheckInMethods: false,
+    checkInRedetectionFeedback: null,
   })
 
   const withSitePolicy = (
@@ -1057,6 +1058,65 @@ describe("AccountDialog AccountForm", () => {
     })
     expect(button).toBeDisabled()
     expect(button).toHaveAttribute("aria-busy", "true")
+  })
+
+  it("keeps the redetection result visible and explains that edit-mode changes must be saved", async () => {
+    const props = createProps()
+    props.draft.siteType = SITE_TYPES.NEW_API
+    props.draft.checkIn = createCheckIn({
+      siteType: SITE_TYPES.NEW_API,
+      supported: true,
+    })
+    props.checkInRedetectionFeedback = {
+      kind: "completed",
+      decisionOutcome: "resolved",
+      selectedMethodDisabled: false,
+      saveRequired: true,
+      unknownReasons: [],
+    }
+
+    render(<AccountForm {...withSitePolicy(props)} />)
+
+    const feedback = await screen.findByRole("status", {
+      name: "accountDialog:messages.checkInRedetectResolved",
+    })
+    expect(
+      within(feedback).getByText(
+        "accountDialog:messages.checkInRedetectSaveRequired",
+      ),
+    ).toBeVisible()
+  })
+
+  it("explains why redetection was inconclusive without asking to save it", async () => {
+    const props = createProps()
+    props.draft.siteType = SITE_TYPES.NEW_API
+    props.draft.checkIn = createCheckIn({
+      siteType: SITE_TYPES.NEW_API,
+      supported: true,
+    })
+    props.checkInRedetectionFeedback = {
+      kind: "completed",
+      decisionOutcome: "unknown",
+      selectedMethodDisabled: false,
+      saveRequired: false,
+      unknownReasons: ["timeout"],
+    }
+
+    render(<AccountForm {...withSitePolicy(props)} />)
+
+    const feedback = await screen.findByRole("status", {
+      name: "accountDialog:messages.checkInRedetectUnknown",
+    })
+    expect(
+      within(feedback).getByText(
+        "accountDialog:messages.checkInRedetectUnknownReasons.timeout",
+      ),
+    ).toBeVisible()
+    expect(
+      within(feedback).queryByText(
+        "accountDialog:messages.checkInRedetectSaveRequired",
+      ),
+    ).not.toBeInTheDocument()
   })
 
   it("does not show built-in auto check-in controls for AIHubMix accounts", async () => {

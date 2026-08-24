@@ -366,6 +366,43 @@ describe("AutoCheckinUiOpenPretrigger", () => {
     })
   })
 
+  it("maps all-skipped run results to skipped analytics", async () => {
+    vi.spyOn(userPreferences, "getPreferences").mockResolvedValue({
+      ...DEFAULT_PREFERENCES,
+      autoCheckin: {
+        ...DEFAULT_PREFERENCES.autoCheckin!,
+        globalEnabled: true,
+        pretriggerDailyOnUiOpen: true,
+      },
+    })
+
+    const browserApi = await import("~/utils/browser/browserApi")
+    vi.spyOn(browserApi, "sendRuntimeMessage").mockResolvedValue({
+      success: true,
+      started: true,
+      lastRunResult: AUTO_CHECKIN_RUN_RESULT.SKIPPED,
+      pendingRetry: false,
+      summary: {
+        totalEligible: 1,
+        executed: 0,
+        successCount: 0,
+        failedCount: 0,
+        skippedCount: 1,
+        needsRetry: false,
+      },
+    })
+
+    render(<AutoCheckinUiOpenPretrigger />)
+
+    await waitFor(() => {
+      expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          result: PRODUCT_ANALYTICS_RESULTS.Skipped,
+        }),
+      )
+    })
+  })
+
   it("tracks completion dialog close clicks", async () => {
     render(
       <AutoCheckinPretriggerCompletionDialog

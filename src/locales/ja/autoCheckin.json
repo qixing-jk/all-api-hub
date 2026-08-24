@@ -33,9 +33,14 @@
     },
     "filters": {
       "all": "すべて",
+      "clearAll": "フィルターを解除",
+      "countFiltered": "{{total}} 件中 {{filtered}} 件を表示",
+      "countTotal": "全 {{total}} 件",
       "failed": "失敗",
+      "searchLabel": "実行結果を検索",
       "searchPlaceholder": "アカウント名またはメッセージで検索...",
       "skipped": "スキップ",
+      "statusLabel": "実行状態で絞り込む",
       "success": "成功"
     },
     "hints": {
@@ -158,32 +163,62 @@
     "windowStartDesc": "デイリーチェックインを開始できる最も早いローカル時刻です。"
   },
   "skipReasons": {
+    "account_data_missing": "必要なアカウント情報が不足しています。アカウントを再検出してください。",
     "account_disabled": "アカウントは無効です",
     "account_unavailable": "チェックイン前にアカウントが変更されたか、利用できなくなりました",
     "already_checked_today": "本日はすでにチェック済みです",
+    "authentication_required": "ログインの有効期限が切れているか、ログインが必要です。対象サイトにログインしてから再試行してください。",
     "auto_checkin_disabled": "自動チェックインは無効です",
+    "credentials_missing": "保存済みの認証情報が不足しています。アカウントを再検出するか、認証情報を更新してください。",
     "detection_disabled": "検出は無効です",
     "method_disabled": "このサイトのチェックイン機能は無効です",
+    "method_not_matched": "選択したチェックイン方法は現在のサイトと一致しません。チェックイン方法を再検出してください。",
+    "method_unavailable": "選択したチェックイン方法は利用できなくなりました。チェックイン方法を再検出してください。",
+    "method_unsupported": "現在のサイトは選択したチェックイン方法に対応していません。",
+    "network_error": "ネットワーク接続の問題でチェックインできませんでした。接続を確認して再試行してください。",
     "no_provider": "このアカウントのサイト種別は現在チェックインに対応していません",
-    "provider_not_ready": "現在のアカウント設定ではチェックインに対応していません",
-    "status_unavailable": "現在のチェックイン状態を確認できなかったため、チェックインは実行されませんでした"
+    "no_selected_method": "チェックイン方法が選択されていません。アカウント設定で再検出または選択してください。",
+    "permission_denied": "サイトがチェックインを拒否しました。再ログインするか、アカウント権限を確認してください。",
+    "source_unavailable": "対象サイトは一時的に利用できません。しばらくしてから再試行してください。",
+    "status_unavailable": "現在のチェックイン状態を確認できなかったため、チェックインは実行されませんでした",
+    "timeout": "接続がタイムアウトし、チェックインを完了できませんでした。再試行してください。"
   },
   "snapshot": {
     "badges": {
       "disabled": "無効",
       "enabled": "有効",
+      "methodNotSelected": "未選択",
+      "methodSelected": "選択済み",
       "pending": "保留中",
       "providerAvailable": "利用可能",
       "providerUnavailable": "利用不可"
     },
-    "description": "検出が有効なすべてのアカウントと準備状況を表示します。保留中のアカウントは、「今すぐ実行」をクリックするか予定時刻になるとチェックインに参加します。",
+    "description": "前回の実行で記録されたアカウントの準備状況を表示します。保留中のアカウントは、「今すぐ実行」をクリックするか予定時刻になるとチェックインに参加します。",
+    "filters": {
+      "clearAll": "フィルターを解除",
+      "countFiltered": "{{total}} 件中 {{filtered}} 件のアカウントを表示",
+      "countTotal": "{{total}} 件のアカウント",
+      "noMatches": "一致するアカウントはありません",
+      "noMatchesDescription": "検索またはフィルターを調整するか、すべて解除してください。",
+      "readinessAll": "すべての準備状態",
+      "readinessDisabled": "無効",
+      "readinessLabel": "実行準備状態で絞り込む",
+      "readinessReady": "実行可能",
+      "readinessSetupRequired": "設定が必要",
+      "readinessTemporarilyUnavailable": "一時的に利用不可",
+      "readinessUnsupported": "未対応",
+      "searchLabel": "アカウント準備状況を検索",
+      "searchPlaceholder": "アカウント名、ID、未実行理由で検索...",
+      "statusAll": "すべての最新状態",
+      "statusLabel": "最新状態で絞り込む"
+    },
     "table": {
       "autoCheckin": "自動チェックイン",
-      "detection": "検出",
-      "lastResult": "前回結果",
-      "provider": "プロバイダー",
-      "skipReason": "スキップ理由",
-      "status": "状態"
+      "detection": "チェックイン方法",
+      "lastResult": "更新日時",
+      "provider": "実行可否",
+      "skipReason": "未実行の理由",
+      "status": "最新状態"
     },
     "title": "アカウント準備状況"
   },
@@ -198,6 +233,7 @@
     "result": {
       "failed": "失敗",
       "partial": "一部成功",
+      "skipped": "未実行",
       "success": "成功"
     },
     "retryDisabled": "再試行は無効です",

@@ -9,6 +9,10 @@ import {
   hasNewAccountCompatibilityRegistration,
 } from "~/services/checkin/autoCheckin/compatibilityConfig"
 import { AuthTypeEnum, type CheckInConfig } from "~/types"
+import type {
+  CheckInDiscoveryDecision,
+  CheckInMethodUnknownReason,
+} from "~/types/checkIn"
 
 export const ACCOUNT_DIALOG_PHASES = {
   SITE_INPUT: "site-input",
@@ -48,6 +52,19 @@ export interface AccountDialogDraft {
   sub2apiRefreshToken: string
   sub2apiTokenExpiresAt: number | null
 }
+
+export type AccountCheckInRedetectionFeedback =
+  | {
+      kind: "completed"
+      decisionOutcome: CheckInDiscoveryDecision["outcome"]
+      selectedMethodDisabled: boolean
+      saveRequired: boolean
+      unknownReasons: CheckInMethodUnknownReason[]
+    }
+  | {
+      kind: "failed"
+      message: string
+    }
 
 /**
  * Creates the default empty draft used before loading or detecting account data.

@@ -77,6 +77,59 @@ const failedResult: CheckinAccountResult = {
 }
 
 describe("AutoCheckin ResultsTable", () => {
+  it("shows a localized structured reason when a skipped row has no message key", async () => {
+    render(
+      <ResultsTable
+        results={[
+          {
+            accountId: "skipped-account",
+            accountName: "Skipped Account",
+            status: CHECKIN_RESULT_STATUS.SKIPPED,
+            reasonCode: "status_unavailable",
+            timestamp: 1,
+          },
+        ]}
+      />,
+      {
+        withReleaseUpdateStatusProvider: false,
+        withThemeProvider: false,
+        withUserPreferencesProvider: false,
+      },
+    )
+
+    expect(
+      await screen.findByText("autoCheckin:skipReasons.status_unavailable"),
+    ).toBeVisible()
+  })
+
+  it("offers a retry when status discovery was temporarily unavailable", async () => {
+    render(
+      <ResultsTable
+        results={[
+          {
+            accountId: "status-unavailable",
+            accountName: "Status Unavailable",
+            status: CHECKIN_RESULT_STATUS.SKIPPED,
+            reasonCode: "status_unavailable",
+            timestamp: 1,
+          },
+        ]}
+        onRetryAccount={vi.fn()}
+      />,
+      {
+        withReleaseUpdateStatusProvider: false,
+        withThemeProvider: false,
+        withUserPreferencesProvider: false,
+      },
+    )
+
+    expect(
+      await screen.findByRole("button", {
+        name: "autoCheckin:execution.actions.retryAccount",
+      }),
+    ).toBeVisible()
+  })
+
   it("does not attach automatic analytics metadata to explicit-tracked row action buttons", () => {
     render(
       <ResultsTable

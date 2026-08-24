@@ -30,7 +30,10 @@ import {
   CookieAuthPermissionRecommendation,
   type CookieAuthPermissionRecommendationProps,
 } from "~/features/AccountManagement/components/AccountDialog/CookieAuthPermissionRecommendation"
-import type { AccountDialogDraft } from "~/features/AccountManagement/components/AccountDialog/models"
+import type {
+  AccountCheckInRedetectionFeedback,
+  AccountDialogDraft,
+} from "~/features/AccountManagement/components/AccountDialog/models"
 import type { AccountDialogSitePolicy } from "~/features/AccountManagement/components/AccountDialog/sitePolicy"
 import { TagPicker } from "~/features/AccountManagement/components/TagPicker"
 import {
@@ -94,6 +97,7 @@ interface AccountFormProps {
   onCheckInSelectionChange: (value: CheckInConfig) => void
   onRedetectCheckInMethods: () => void
   isRedetectingCheckInMethods: boolean
+  checkInRedetectionFeedback: AccountCheckInRedetectionFeedback | null
 }
 
 /**
@@ -139,6 +143,7 @@ export default function AccountForm({
   onCheckInSelectionChange,
   onRedetectCheckInMethods,
   isRedetectingCheckInMethods,
+  checkInRedetectionFeedback,
 }: AccountFormProps) {
   const { t } = useTranslation(["accountDialog", "common"])
   const {
@@ -527,6 +532,7 @@ export default function AccountForm({
         onCheckInSelectionChange={onCheckInSelectionChange}
         onRedetectCheckInMethods={onRedetectCheckInMethods}
         isRedetectingCheckInMethods={isRedetectingCheckInMethods}
+        checkInRedetectionFeedback={checkInRedetectionFeedback}
       />
 
       <AccountFormSection

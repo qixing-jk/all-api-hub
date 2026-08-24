@@ -45,6 +45,7 @@
       "not_run": "Waiting for first run",
       "partial": "Partial success",
       "ready": "Ready",
+      "skipped": "Not executed",
       "success": "Successful"
     },
     "summary": "Auto check-in run summary"

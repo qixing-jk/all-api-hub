@@ -22,10 +22,12 @@ const autoCheckinRunResultStatusMap = {
   [AUTO_CHECKIN_RUN_RESULT.FAILED]: AUTO_CHECKIN_PANEL_STATUSES.failed,
   [AUTO_CHECKIN_RUN_RESULT.PARTIAL]: AUTO_CHECKIN_PANEL_STATUSES.partial,
   [AUTO_CHECKIN_RUN_RESULT.SUCCESS]: AUTO_CHECKIN_PANEL_STATUSES.success,
+  [AUTO_CHECKIN_RUN_RESULT.SKIPPED]: AUTO_CHECKIN_PANEL_STATUSES.skipped,
 } as const satisfies Record<AutoCheckinRunResult, AutoCheckinPanelStatus>
 
 const autoCheckinPanelSeverityMap = {
   [AUTO_CHECKIN_PANEL_STATUSES.failed]: "error",
+  [AUTO_CHECKIN_PANEL_STATUSES.skipped]: "info",
   [AUTO_CHECKIN_PANEL_STATUSES.partial]: "warning",
   [AUTO_CHECKIN_PANEL_STATUSES.disabled]: "info",
   [AUTO_CHECKIN_PANEL_STATUSES.notRun]: "info",

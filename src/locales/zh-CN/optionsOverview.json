@@ -45,6 +45,7 @@
       "not_run": "等待首次运行",
       "partial": "部分成功",
       "ready": "已就绪",
+      "skipped": "未执行",
       "success": "运行成功"
     },
     "summary": "自动签到运行概况"

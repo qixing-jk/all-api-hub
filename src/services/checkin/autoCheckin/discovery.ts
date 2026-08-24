@@ -10,6 +10,7 @@ import {
   inspectCheckInMethods,
   mergeCheckInDiscoveryResults,
 } from "~/services/checkin/autoCheckin/domain"
+import { getCheckInMethodUnknownReason } from "~/services/checkin/autoCheckin/errors"
 import { autoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers"
 import type {
   AutoCheckinProviderDetectResult,
@@ -118,10 +119,10 @@ const runDetection = async (
       Promise.resolve().then(() => registration.provider.detect!(context)),
       timeoutMs,
     )
-  } catch {
+  } catch (error) {
     return {
       detection: unknownDetection(
-        CHECK_IN_METHOD_UNKNOWN_REASON_CODES.Network,
+        getCheckInMethodUnknownReason(error),
         context.observedAt,
       ),
       timedOut: false,

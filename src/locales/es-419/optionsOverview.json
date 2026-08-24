@@ -45,6 +45,7 @@
       "not_run": "Esperando la primera ejecución",
       "partial": "Éxito parcial",
       "ready": "Listo",
+      "skipped": "No ejecutado",
       "success": "Correcto"
     },
     "summary": "Resumen de ejecución de check-in automático"

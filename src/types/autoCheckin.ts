@@ -35,7 +35,17 @@ export const AUTO_CHECKIN_SKIP_REASON = {
   ALREADY_CHECKED_TODAY: "already_checked_today",
   STATUS_UNAVAILABLE: "status_unavailable",
   NO_PROVIDER: "no_provider",
-  PROVIDER_NOT_READY: "provider_not_ready",
+  NO_SELECTED_METHOD: "no_selected_method",
+  METHOD_UNAVAILABLE: "method_unavailable",
+  METHOD_NOT_MATCHED: "method_not_matched",
+  METHOD_UNSUPPORTED: "method_unsupported",
+  ACCOUNT_DATA_MISSING: "account_data_missing",
+  AUTHENTICATION_REQUIRED: "authentication_required",
+  CREDENTIALS_MISSING: "credentials_missing",
+  NETWORK_ERROR: "network_error",
+  SOURCE_UNAVAILABLE: "source_unavailable",
+  PERMISSION_DENIED: "permission_denied",
+  TIMEOUT: "timeout",
   ACCOUNT_UNAVAILABLE: "account_unavailable",
 } as const
 export type AutoCheckinSkipReason =
@@ -65,8 +75,28 @@ export function getAutoCheckinSkipReasonTranslationKey(
       return "autoCheckin:skipReasons.status_unavailable"
     case AUTO_CHECKIN_SKIP_REASON.NO_PROVIDER:
       return "autoCheckin:skipReasons.no_provider"
-    case AUTO_CHECKIN_SKIP_REASON.PROVIDER_NOT_READY:
-      return "autoCheckin:skipReasons.provider_not_ready"
+    case AUTO_CHECKIN_SKIP_REASON.NO_SELECTED_METHOD:
+      return "autoCheckin:skipReasons.no_selected_method"
+    case AUTO_CHECKIN_SKIP_REASON.METHOD_UNAVAILABLE:
+      return "autoCheckin:skipReasons.method_unavailable"
+    case AUTO_CHECKIN_SKIP_REASON.METHOD_NOT_MATCHED:
+      return "autoCheckin:skipReasons.method_not_matched"
+    case AUTO_CHECKIN_SKIP_REASON.METHOD_UNSUPPORTED:
+      return "autoCheckin:skipReasons.method_unsupported"
+    case AUTO_CHECKIN_SKIP_REASON.ACCOUNT_DATA_MISSING:
+      return "autoCheckin:skipReasons.account_data_missing"
+    case AUTO_CHECKIN_SKIP_REASON.AUTHENTICATION_REQUIRED:
+      return "autoCheckin:skipReasons.authentication_required"
+    case AUTO_CHECKIN_SKIP_REASON.CREDENTIALS_MISSING:
+      return "autoCheckin:skipReasons.credentials_missing"
+    case AUTO_CHECKIN_SKIP_REASON.NETWORK_ERROR:
+      return "autoCheckin:skipReasons.network_error"
+    case AUTO_CHECKIN_SKIP_REASON.SOURCE_UNAVAILABLE:
+      return "autoCheckin:skipReasons.source_unavailable"
+    case AUTO_CHECKIN_SKIP_REASON.PERMISSION_DENIED:
+      return "autoCheckin:skipReasons.permission_denied"
+    case AUTO_CHECKIN_SKIP_REASON.TIMEOUT:
+      return "autoCheckin:skipReasons.timeout"
     case AUTO_CHECKIN_SKIP_REASON.ACCOUNT_UNAVAILABLE:
       return "autoCheckin:skipReasons.account_unavailable"
   }
@@ -96,8 +126,28 @@ export function translateAutoCheckinSkipReason(
       return t("autoCheckin:skipReasons.status_unavailable")
     case AUTO_CHECKIN_SKIP_REASON.NO_PROVIDER:
       return t("autoCheckin:skipReasons.no_provider")
-    case AUTO_CHECKIN_SKIP_REASON.PROVIDER_NOT_READY:
-      return t("autoCheckin:skipReasons.provider_not_ready")
+    case AUTO_CHECKIN_SKIP_REASON.NO_SELECTED_METHOD:
+      return t("autoCheckin:skipReasons.no_selected_method")
+    case AUTO_CHECKIN_SKIP_REASON.METHOD_UNAVAILABLE:
+      return t("autoCheckin:skipReasons.method_unavailable")
+    case AUTO_CHECKIN_SKIP_REASON.METHOD_NOT_MATCHED:
+      return t("autoCheckin:skipReasons.method_not_matched")
+    case AUTO_CHECKIN_SKIP_REASON.METHOD_UNSUPPORTED:
+      return t("autoCheckin:skipReasons.method_unsupported")
+    case AUTO_CHECKIN_SKIP_REASON.ACCOUNT_DATA_MISSING:
+      return t("autoCheckin:skipReasons.account_data_missing")
+    case AUTO_CHECKIN_SKIP_REASON.AUTHENTICATION_REQUIRED:
+      return t("autoCheckin:skipReasons.authentication_required")
+    case AUTO_CHECKIN_SKIP_REASON.CREDENTIALS_MISSING:
+      return t("autoCheckin:skipReasons.credentials_missing")
+    case AUTO_CHECKIN_SKIP_REASON.NETWORK_ERROR:
+      return t("autoCheckin:skipReasons.network_error")
+    case AUTO_CHECKIN_SKIP_REASON.SOURCE_UNAVAILABLE:
+      return t("autoCheckin:skipReasons.source_unavailable")
+    case AUTO_CHECKIN_SKIP_REASON.PERMISSION_DENIED:
+      return t("autoCheckin:skipReasons.permission_denied")
+    case AUTO_CHECKIN_SKIP_REASON.TIMEOUT:
+      return t("autoCheckin:skipReasons.timeout")
     case AUTO_CHECKIN_SKIP_REASON.ACCOUNT_UNAVAILABLE:
       return t("autoCheckin:skipReasons.account_unavailable")
   }
@@ -125,6 +175,7 @@ export const AUTO_CHECKIN_RUN_RESULT = {
   SUCCESS: "success",
   PARTIAL: "partial",
   FAILED: "failed",
+  SKIPPED: "skipped",
 } as const
 export type AutoCheckinRunResult =
   (typeof AUTO_CHECKIN_RUN_RESULT)[keyof typeof AUTO_CHECKIN_RUN_RESULT]
@@ -146,9 +197,32 @@ export function getAutoCheckinRunResultLabel(
       return t("autoCheckin:status.result.partial")
     case AUTO_CHECKIN_RUN_RESULT.FAILED:
       return t("autoCheckin:status.result.failed")
+    case AUTO_CHECKIN_RUN_RESULT.SKIPPED:
+      return t("autoCheckin:status.result.skipped")
   }
 
   return t("common:labels.unknown")
+}
+
+/**
+ * Derives the persisted run result from its account-level summary.
+ */
+export function getAutoCheckinRunResultFromSummary(
+  summary: Pick<
+    AutoCheckinRunSummary,
+    "executed" | "successCount" | "failedCount"
+  >,
+): AutoCheckinRunResult {
+  if (summary.failedCount > 0 && summary.successCount > 0) {
+    return AUTO_CHECKIN_RUN_RESULT.PARTIAL
+  }
+  if (summary.failedCount > 0) {
+    return AUTO_CHECKIN_RUN_RESULT.FAILED
+  }
+  if (summary.executed === 0) {
+    return AUTO_CHECKIN_RUN_RESULT.SKIPPED
+  }
+  return AUTO_CHECKIN_RUN_RESULT.SUCCESS
 }
 
 /**

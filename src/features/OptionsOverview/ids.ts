@@ -75,6 +75,7 @@ export const OPTIONS_OVERVIEW_AUTO_CHECKIN_PANEL_STATUSES = {
   success: "success",
   partial: "partial",
   failed: "failed",
+  skipped: "skipped",
   disabled: "disabled",
   notRun: "not_run",
 } as const

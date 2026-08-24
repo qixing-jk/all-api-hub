@@ -33,9 +33,14 @@
     },
     "filters": {
       "all": "全部",
+      "clearAll": "清除篩選",
+      "countFiltered": "顯示 {{filtered}} / {{total}} 筆",
+      "countTotal": "共 {{total}} 筆",
       "failed": "失敗",
+      "searchLabel": "搜尋執行結果",
       "searchPlaceholder": "搜尋帳號名稱或訊息...",
       "skipped": "已跳過",
+      "statusLabel": "依執行狀態篩選",
       "success": "成功"
     },
     "hints": {
@@ -158,34 +163,64 @@
     "windowStartDesc": "允許每日自動簽到開始的最早本地時間。"
   },
   "skipReasons": {
+    "account_data_missing": "帳號資料不完整，請重新識別此帳號。",
     "account_disabled": "帳號已禁用",
     "account_unavailable": "簽到前帳號已變更或無法使用",
     "already_checked_today": "今日已簽到",
+    "authentication_required": "登入狀態已失效或需要登入。請先登入目標站點，再重試。",
     "auto_checkin_disabled": "自動簽到已關閉",
+    "credentials_missing": "缺少已儲存的帳號憑證，請重新識別帳號或更新憑證。",
     "detection_disabled": "檢測已關閉",
     "method_disabled": "此站點的簽到功能已停用",
+    "method_not_matched": "已選簽到方式與目前站點不再相符，請重新偵測簽到方式。",
+    "method_unavailable": "已選簽到方式已無法使用，請重新偵測簽到方式。",
+    "method_unsupported": "目前站點不支援已選的簽到方式。",
+    "network_error": "網路連線問題導致無法簽到，請檢查網路後重試。",
     "no_provider": "帳號所屬站點型別暫不支援簽到",
-    "provider_not_ready": "帳號配置暫不支援簽到",
-    "status_unavailable": "暫時無法確認目前簽到狀態，因此未執行簽到"
+    "no_selected_method": "尚未選擇簽到方式，請在帳號設定中重新偵測或選擇。",
+    "permission_denied": "目標站點拒絕了簽到請求，請重新登入或檢查帳號權限。",
+    "source_unavailable": "目標站點暫時無法使用，請稍後重試。",
+    "status_unavailable": "暫時無法確認目前簽到狀態，因此未執行簽到",
+    "timeout": "連線逾時，簽到未能完成，請重試。"
   },
   "snapshot": {
     "badges": {
       "disabled": "未啟用",
       "enabled": "已啟用",
+      "methodNotSelected": "未選擇",
+      "methodSelected": "已選擇",
       "pending": "待執行",
       "providerAvailable": "可用",
       "providerUnavailable": "不可用"
     },
-    "description": "列出所有已啟用檢測的帳號及其準備狀態。處於待執行狀態的帳號會在點擊「立即執行」或到達計劃時間後參與簽到。",
+    "description": "顯示最近一次執行記錄的帳號準備狀態。處於待執行狀態的帳號會在點擊「立即執行」或到達計劃時間後參與簽到。",
+    "filters": {
+      "clearAll": "清除篩選",
+      "countFiltered": "顯示 {{filtered}} / {{total}} 個帳號",
+      "countTotal": "共 {{total}} 個帳號",
+      "noMatches": "沒有符合條件的帳號",
+      "noMatchesDescription": "調整搜尋或篩選條件，或清除全部篩選。",
+      "readinessAll": "全部準備狀態",
+      "readinessDisabled": "已關閉",
+      "readinessLabel": "依執行準備狀態篩選",
+      "readinessReady": "可執行",
+      "readinessSetupRequired": "需要設定",
+      "readinessTemporarilyUnavailable": "暫時無法使用",
+      "readinessUnsupported": "不支援",
+      "searchLabel": "搜尋帳號準備狀態",
+      "searchPlaceholder": "搜尋帳號名稱、ID 或未執行原因...",
+      "statusAll": "全部最近狀態",
+      "statusLabel": "依最近狀態篩選"
+    },
     "table": {
       "autoCheckin": "自動簽到",
-      "detection": "檢測",
-      "lastResult": "最近結果",
-      "provider": "提供方",
-      "skipReason": "跳過原因",
-      "status": "狀態"
+      "detection": "簽到方式",
+      "lastResult": "更新時間",
+      "provider": "執行能力",
+      "skipReason": "未執行原因",
+      "status": "最近狀態"
     },
-    "title": "帳號檢測狀態"
+    "title": "帳號準備狀態"
   },
   "status": {
     "disabled": "已禁用",
@@ -198,6 +233,7 @@
     "result": {
       "failed": "失敗",
       "partial": "部分成功",
+      "skipped": "未執行",
       "success": "成功"
     },
     "retryDisabled": "重試未啟用",

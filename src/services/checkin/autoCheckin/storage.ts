@@ -2,12 +2,11 @@ import { Storage } from "@plasmohq/storage"
 
 import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
 import {
-  AUTO_CHECKIN_RUN_RESULT,
   AUTO_CHECKIN_SKIP_REASON,
   CHECKIN_RESULT_STATUS,
+  getAutoCheckinRunResultFromSummary,
   getAutoCheckinSkipReasonTranslationKey,
   type AutoCheckinAccountSnapshot,
-  type AutoCheckinRunResult,
   type AutoCheckinRunSummary,
   type AutoCheckinStatus,
   type CheckinAccountResult,
@@ -73,25 +72,6 @@ function recalculateSummaryFromResults(
     skippedCount,
     needsRetry: failedCount > 0,
   }
-}
-
-/**
- * Derive the overall auto check-in run result from an aggregated summary.
- * @param summary Aggregated run summary with success and failure counts.
- * @returns `AUTO_CHECKIN_RUN_RESULT.PARTIAL` when both success and failure are
- * present, `AUTO_CHECKIN_RUN_RESULT.FAILED` when only failures remain, or
- * `AUTO_CHECKIN_RUN_RESULT.SUCCESS` otherwise.
- */
-function getRunResultFromSummary(
-  summary: AutoCheckinRunSummary,
-): AutoCheckinRunResult {
-  if (summary.failedCount > 0 && summary.successCount > 0) {
-    return AUTO_CHECKIN_RUN_RESULT.PARTIAL
-  }
-  if (summary.failedCount > 0) {
-    return AUTO_CHECKIN_RUN_RESULT.FAILED
-  }
-  return AUTO_CHECKIN_RUN_RESULT.SUCCESS
 }
 
 /**
@@ -321,7 +301,7 @@ class AutoCheckinStorage {
 
           const nextStatus: AutoCheckinStatus = {
             ...current,
-            lastRunResult: getRunResultFromSummary(summary),
+            lastRunResult: getAutoCheckinRunResultFromSummary(summary),
             perAccount,
             summary,
             retryState,
@@ -531,7 +511,9 @@ class AutoCheckinStorage {
 
             next.summary = summary
             next.lastRunResult =
-              resultCount > 0 ? getRunResultFromSummary(summary) : undefined
+              resultCount > 0
+                ? getAutoCheckinRunResultFromSummary(summary)
+                : undefined
           } else {
             next.summary = undefined
             next.lastRunResult = undefined

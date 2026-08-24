@@ -22,13 +22,11 @@ const {
   mockDiscoverCheckInMethods,
   mockOpenWithAccount,
   mockOpenDefaultTokenQuickCreateDialogForAccount,
-  mockShowWarningToast,
 } = vi.hoisted(() => ({
   mockAutoDetectAccount: vi.fn(),
   mockDiscoverCheckInMethods: vi.fn(),
   mockOpenWithAccount: vi.fn(),
   mockOpenDefaultTokenQuickCreateDialogForAccount: vi.fn(),
-  mockShowWarningToast: vi.fn(),
 }))
 
 vi.mock("react-hot-toast", () => ({
@@ -38,12 +36,6 @@ vi.mock("react-hot-toast", () => ({
     loading: vi.fn(),
   }),
 }))
-
-vi.mock("~/utils/core/toastHelpers", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("~/utils/core/toastHelpers")>()
-  return { ...actual, showWarningToast: mockShowWarningToast }
-})
 
 vi.mock("~/components/dialogs/ChannelDialog", () => ({
   ChannelDialogProvider: ({ children }: { children: ReactNode }) => children,
@@ -137,6 +129,8 @@ describe("useAccountDialog re-detect preservation", () => {
     await act(async () => {
       await result.current.handlers.handleRedetectCheckInMethods()
     })
+
+    return result
   }
 
   it("prefills detected check-in support on the first add-account auto-detect", async () => {
@@ -288,12 +282,21 @@ describe("useAccountDialog re-detect preservation", () => {
       redeemUrl: "https://redeem.example.invalid",
       openRedeemWithCheckIn: false,
     })
-    expect(toast.success).toHaveBeenCalledWith(
-      "accountDialog:messages.checkInRedetectResolved",
-    )
+    expect(result.current.state.checkInRedetectionFeedback).toEqual({
+      kind: "completed",
+      decisionOutcome: "resolved",
+      selectedMethodDisabled: false,
+      saveRequired: false,
+      unknownReasons: [],
+    })
+
+    act(() => {
+      result.current.setters.setUrl("https://changed.example.invalid")
+    })
+    expect(result.current.state.checkInRedetectionFeedback).toBeNull()
   })
 
-  it("uses warning feedback when the detected method is disabled by the site", async () => {
+  it("stores persistent feedback when the detected method is disabled by the site", async () => {
     const disabledCheckIn = buildCheckInConfig({
       automaticExecutionEnabled: true,
       methodKnowledge: {
@@ -328,12 +331,15 @@ describe("useAccountDialog re-detect preservation", () => {
       timedOutMethodIds: [],
     })
 
-    await runBasicAddModeRedetection()
+    const result = await runBasicAddModeRedetection()
 
-    expect(mockShowWarningToast).toHaveBeenCalledWith(
-      "accountDialog:messages.checkInRedetectDisabled",
-    )
-    expect(toast.error).not.toHaveBeenCalled()
+    expect(result.current.state.checkInRedetectionFeedback).toEqual({
+      kind: "completed",
+      decisionOutcome: "resolved",
+      selectedMethodDisabled: true,
+      saveRequired: false,
+      unknownReasons: [],
+    })
   })
 
   it.each([
@@ -343,16 +349,14 @@ describe("useAccountDialog re-detect preservation", () => {
         outcome: "ambiguous" as const,
         methodIds: ["new-api:daily-checkin", "new-api:alternate-checkin"],
       },
-      messageKey: "accountDialog:messages.checkInRedetectAmbiguous",
     },
     {
       outcome: "unknown" as const,
       decision: { outcome: "unknown" as const },
-      messageKey: "accountDialog:messages.checkInRedetectUnknown",
     },
   ])(
-    "uses warning feedback for $outcome results",
-    async ({ decision, messageKey }) => {
+    "stores persistent feedback for $outcome results",
+    async ({ decision }) => {
       mockDiscoverCheckInMethods.mockResolvedValueOnce({
         config: buildCheckInConfig({ automaticExecutionEnabled: true }),
         decision,
@@ -360,14 +364,19 @@ describe("useAccountDialog re-detect preservation", () => {
         timedOutMethodIds: [],
       })
 
-      await runBasicAddModeRedetection()
+      const result = await runBasicAddModeRedetection()
 
-      expect(mockShowWarningToast).toHaveBeenCalledWith(messageKey)
-      expect(toast.error).not.toHaveBeenCalled()
+      expect(result.current.state.checkInRedetectionFeedback).toEqual({
+        kind: "completed",
+        decisionOutcome: decision.outcome,
+        selectedMethodDisabled: false,
+        saveRequired: false,
+        unknownReasons: [],
+      })
     },
   )
 
-  it("reports an unsupported redetection result instead of showing generic success", async () => {
+  it("stores an unsupported redetection result", async () => {
     const unsupportedCheckIn = buildCheckInConfig({
       automaticExecutionEnabled: true,
       methodKnowledge: {
@@ -394,14 +403,146 @@ describe("useAccountDialog re-detect preservation", () => {
       timedOutMethodIds: [],
     })
 
-    await runBasicAddModeRedetection()
+    const result = await runBasicAddModeRedetection()
 
-    expect(toast).toHaveBeenCalledWith(
-      "accountDialog:messages.checkInRedetectUnsupported",
+    expect(result.current.state.checkInRedetectionFeedback).toEqual({
+      kind: "completed",
+      decisionOutcome: "unsupported",
+      selectedMethodDisabled: false,
+      saveRequired: false,
+      unknownReasons: [],
+    })
+  })
+
+  it("marks edit-mode redetection feedback as requiring a save", async () => {
+    const accountId = await accountStorage.addAccount(
+      buildSiteAccount({
+        site_url: "https://new-api.example.invalid",
+        site_type: SITE_TYPES.NEW_API,
+        checkIn: buildCheckInConfig({ automaticExecutionEnabled: true }),
+      }),
     )
-    expect(toast.error).not.toHaveBeenCalled()
-    expect(toast.success).not.toHaveBeenCalled()
-    expect(mockShowWarningToast).not.toHaveBeenCalled()
+    mockDiscoverCheckInMethods.mockResolvedValueOnce({
+      config: buildCheckInConfig({
+        automaticExecutionEnabled: true,
+        methodKnowledge: {
+          lastFullDiscoveryAt: 275,
+          methods: {
+            "new-api:daily-checkin": {
+              detection: {
+                outcome: "matched",
+                evidence: { source: "probe", observedAt: 275 },
+              },
+            },
+          },
+        },
+        selection: {
+          mode: "automatic",
+          methodId: "new-api:daily-checkin",
+        },
+      }),
+      decision: { outcome: "resolved", methodId: "new-api:daily-checkin" },
+      detections: {},
+      timedOutMethodIds: [],
+    })
+
+    const account = { id: accountId } as any
+    const { result } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.EDIT,
+        account,
+        isOpen: true,
+        onClose: vi.fn(),
+        onSuccess: vi.fn(),
+      }),
+    )
+    await waitFor(() => {
+      expect(result.current.state.siteType).toBe(SITE_TYPES.NEW_API)
+      expect(result.current.state.url).toBe("https://new-api.example.invalid")
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleRedetectCheckInMethods()
+    })
+
+    expect(result.current.state.checkInRedetectionFeedback).toEqual({
+      kind: "completed",
+      decisionOutcome: "resolved",
+      selectedMethodDisabled: false,
+      saveRequired: true,
+      unknownReasons: [],
+    })
+  })
+
+  it("reports the concrete reason for inconclusive edit-mode detection without asking to save", async () => {
+    const accountId = await accountStorage.addAccount(
+      buildSiteAccount({
+        site_url: "https://new-api.example.invalid",
+        site_type: SITE_TYPES.NEW_API,
+        checkIn: buildCheckInConfig({ automaticExecutionEnabled: true }),
+      }),
+    )
+    const unknownDetection = {
+      outcome: "unknown" as const,
+      reason: "timeout" as const,
+      attemptedAt: 300,
+    }
+    mockDiscoverCheckInMethods.mockResolvedValueOnce({
+      config: buildCheckInConfig({
+        automaticExecutionEnabled: true,
+        methodKnowledge: {
+          lastFullDiscoveryAt: 300,
+          methods: {
+            "new-api:daily-checkin": { detection: unknownDetection },
+          },
+        },
+      }),
+      decision: {
+        outcome: "unknown",
+        matchedMethodIds: [],
+        unknownMethodIds: ["new-api:daily-checkin"],
+      },
+      detections: { "new-api:daily-checkin": unknownDetection },
+      timedOutMethodIds: ["new-api:daily-checkin"],
+    })
+
+    const account = { id: accountId } as any
+    const { result } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.EDIT,
+        account,
+        isOpen: true,
+        onClose: vi.fn(),
+        onSuccess: vi.fn(),
+      }),
+    )
+    await waitFor(() => {
+      expect(result.current.state.siteType).toBe(SITE_TYPES.NEW_API)
+      expect(result.current.state.url).toBe("https://new-api.example.invalid")
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleRedetectCheckInMethods()
+    })
+
+    expect(result.current.state.checkInRedetectionFeedback).toEqual({
+      kind: "completed",
+      decisionOutcome: "unknown",
+      selectedMethodDisabled: false,
+      saveRequired: false,
+      unknownReasons: ["timeout"],
+    })
+  })
+
+  it("keeps redetection failures visible in dialog state", async () => {
+    mockDiscoverCheckInMethods.mockRejectedValueOnce(new Error("network down"))
+
+    const result = await runBasicAddModeRedetection()
+
+    expect(result.current.state.checkInRedetectionFeedback).toEqual({
+      kind: "failed",
+      message: "accountDialog:messages.operationFailed",
+    })
   })
 
   it("preserves notes and custom check-in fields when re-detecting an existing account", async () => {

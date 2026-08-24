@@ -349,11 +349,11 @@ beforeEach(() => {
     const provider = state.executionEligibility.eligible
       ? resolveProviderForTest(account)
       : null
+    const providerReadiness = provider?.getReadiness(account) ?? null
     return {
       state,
-      providerAvailable:
-        state.executionEligibility.eligible &&
-        provider?.canCheckIn(account) === true,
+      providerReadiness,
+      providerAvailable: providerReadiness?.ready === true,
       provider,
     }
   }
@@ -375,8 +375,9 @@ beforeEach(() => {
       }
       const provider = inspection.provider
       if (!provider) return { kind: "skipped", reason: "no_provider" }
-      if (!provider.canCheckIn(account)) {
-        return { kind: "skipped", reason: "provider_not_ready" }
+      const readiness = provider.getReadiness(account)
+      if (!readiness.ready) {
+        return { kind: "skipped", reason: readiness.reason }
       }
       return {
         kind: "executed",
@@ -1176,7 +1177,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
     ])
 
     const provider = {
-      canCheckIn: vi.fn(() => true),
+      getReadiness: vi.fn(() => ({ ready: true })),
       checkIn: vi.fn(async (account: any) =>
         account.id === "success"
           ? { status: "success" }
@@ -1264,7 +1265,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
     mockedAccountStorage.getAllAccounts.mockResolvedValue([accountA, accountB])
 
     const provider = {
-      canCheckIn: vi.fn(() => true),
+      getReadiness: vi.fn(() => ({ ready: true })),
       checkIn: vi.fn(async (account: any, _context?: unknown) => {
         if (account.id === "a") {
           return { status: "already_checked" }
@@ -1335,7 +1336,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
       ReturnType<typeof createDeferred<{ status: "success" }>>
     > = []
     const provider = {
-      canCheckIn: vi.fn(() => true),
+      getReadiness: vi.fn(() => ({ ready: true })),
       checkIn: vi.fn(() => {
         const deferred = createDeferred<{ status: "success" }>()
         deferredCheckins.push(deferred)
@@ -1392,7 +1393,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
     mockedAccountStorage.getAllAccounts.mockResolvedValue(accounts)
 
     const provider = {
-      canCheckIn: vi.fn(() => true),
+      getReadiness: vi.fn(() => ({ ready: true })),
       checkIn: vi.fn(async () => ({ status: "success" })),
     }
     resolveProviderForTest.mockReturnValue(provider)
@@ -1463,7 +1464,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
     mockedAccountStorage.getAllAccounts.mockResolvedValue([account])
 
     const provider = {
-      canCheckIn: vi.fn(() => true),
+      getReadiness: vi.fn(() => ({ ready: true })),
       checkIn: vi.fn(async () => ({ status: "failed", rawMessage: "boom" })),
     }
     resolveProviderForTest.mockReturnValue(provider)
@@ -1536,7 +1537,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
     mockedAccountStorage.getAllAccounts.mockResolvedValue([accountB])
 
     const provider = {
-      canCheckIn: vi.fn(() => true),
+      getReadiness: vi.fn(() => ({ ready: true })),
       checkIn: vi.fn(async () => ({ status: "failed", rawMessage: "boom" })),
     }
     resolveProviderForTest.mockReturnValue(provider)
@@ -1600,7 +1601,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
     })
 
     expect(resolveProviderForTest).not.toHaveBeenCalled()
-    expect(storedStatus.lastRunResult).toBe("success")
+    expect(storedStatus.lastRunResult).toBe("skipped")
     expect(storedStatus.summary).toEqual({
       totalEligible: 1,
       executed: 0,
@@ -1615,7 +1616,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
     })
     expect(storedStatus.perAccount["detection-off"]).toMatchObject({
       status: "skipped",
-      reasonCode: "detection_disabled",
+      reasonCode: "no_selected_method",
     })
     expect(mockedBrowserApi.sendRuntimeMessage).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -1662,12 +1663,12 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
       },
     ])
     resolveProviderForTest.mockReturnValue({
-      canCheckIn: vi.fn(() => true),
+      getReadiness: vi.fn(() => ({ ready: true })),
       checkIn: vi.fn(),
     })
     mockedMethods.executeSelectedCheckIn.mockResolvedValueOnce({
       kind: "skipped",
-      reason: "provider_not_ready",
+      reason: "account_data_missing",
     })
 
     await runCheckinsForTest({ runType: AUTO_CHECKIN_RUN_TYPE.DAILY })
@@ -1682,7 +1683,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
     })
     expect(storedStatus.perAccount["runtime-skip"]).toMatchObject({
       status: "skipped",
-      reasonCode: "provider_not_ready",
+      reasonCode: "account_data_missing",
     })
     expect(storedStatus.retryState).toBeUndefined()
     expect(storedStatus.pendingRetry).toBe(false)
@@ -1729,7 +1730,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
 
     mockedAccountStorage.getAllAccounts.mockResolvedValue([skippedAccount])
     const provider = {
-      canCheckIn: vi.fn(() => true),
+      getReadiness: vi.fn(() => ({ ready: true })),
       checkIn: vi.fn(),
     }
     resolveProviderForTest.mockReturnValue(provider)
@@ -1740,7 +1741,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
 
     expect(provider.checkIn).not.toHaveBeenCalled()
     expect(storedStatus.lastDailyRunDay).toBe("2024-01-01")
-    expect(storedStatus.lastRunResult).toBe("success")
+    expect(storedStatus.lastRunResult).toBe("skipped")
     expect(storedStatus.perAccount["paused-daily"]).toMatchObject({
       status: "skipped",
       reasonCode: "auto_checkin_disabled",
@@ -1852,7 +1853,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
     mockedAccountStorage.getAllAccounts.mockResolvedValue([targetAccount])
 
     const provider = {
-      canCheckIn: vi.fn(() => true),
+      getReadiness: vi.fn(() => ({ ready: true })),
       checkIn: vi.fn(async () => ({ status: "success" })),
     }
     resolveProviderForTest.mockReturnValue(provider)
@@ -2158,7 +2159,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
     )
 
     const provider = {
-      canCheckIn: vi.fn(() => true),
+      getReadiness: vi.fn(() => ({ ready: true })),
       checkIn: vi.fn(async (account: any, _context?: unknown) => {
         if (account.id === "success") {
           return { status: "success", rawMessage: "ok" }
@@ -2301,7 +2302,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
     )
 
     const provider = {
-      canCheckIn: vi.fn(() => true),
+      getReadiness: vi.fn(() => ({ ready: true })),
       checkIn: vi.fn(async (account: any) =>
         account.id === "success"
           ? { status: "success" }
@@ -2947,7 +2948,7 @@ describe("autoCheckinScheduler retry scheduling", () => {
     mockedAccountStorage.getAllAccounts.mockResolvedValue([pausedAccount])
     mockedAccountStorage.getAccountById.mockResolvedValue(pausedAccount)
     const provider = {
-      canCheckIn: vi.fn(() => true),
+      getReadiness: vi.fn(() => ({ ready: true })),
       checkIn: vi.fn(),
     }
     resolveProviderForTest.mockReturnValue(provider)
@@ -3108,7 +3109,7 @@ describe("autoCheckinScheduler targeting support", () => {
     })
     expect(storedStatus.perAccount["detection-disabled"]).toMatchObject({
       status: "skipped",
-      reasonCode: "detection_disabled",
+      reasonCode: "no_selected_method",
     })
     expect(storedStatus.summary).toEqual({
       totalEligible: 2,
@@ -3225,7 +3226,7 @@ describe("autoCheckinScheduler targeting support", () => {
     ])
 
     const provider = {
-      canCheckIn: vi.fn(() => true),
+      getReadiness: vi.fn(() => ({ ready: true })),
       checkIn: vi.fn(async () => ({ status: "success" })),
     }
     resolveProviderForTest.mockReturnValue(provider)
@@ -3327,7 +3328,7 @@ describe("autoCheckinScheduler targeting support", () => {
 
     mockedAccountStorage.getAllAccounts.mockResolvedValue([targetAccount])
     const provider = {
-      canCheckIn: vi.fn(() => true),
+      getReadiness: vi.fn(() => ({ ready: true })),
       checkIn: vi.fn(async () => ({ status: "success" })),
     }
     resolveProviderForTest.mockReturnValue(provider)
@@ -3392,7 +3393,7 @@ describe("autoCheckinScheduler targeting support", () => {
     mockedAccountStorage.getAllAccounts.mockResolvedValue([accountA, accountB])
 
     const provider = {
-      canCheckIn: vi.fn(() => true),
+      getReadiness: vi.fn(() => ({ ready: true })),
       checkIn: vi.fn(async (account: any) => {
         void account
         return { status: "success" }
@@ -3456,7 +3457,7 @@ describe("autoCheckinScheduler targeting support", () => {
     mockedAccountStorage.getAllAccounts.mockResolvedValue([accountA, accountB])
 
     const provider = {
-      canCheckIn: vi.fn(() => true),
+      getReadiness: vi.fn(() => ({ ready: true })),
       checkIn: vi.fn(async () => ({ status: "success" })),
     }
     resolveProviderForTest.mockReturnValue(provider)
@@ -3508,7 +3509,7 @@ describe("autoCheckinScheduler targeting support", () => {
     mockedAccountStorage.getAllAccounts.mockResolvedValue([accountA, accountB])
 
     const provider = {
-      canCheckIn: vi.fn(() => true),
+      getReadiness: vi.fn(() => ({ ready: true })),
       checkIn: vi.fn(async () => ({ status: "success" })),
     }
     resolveProviderForTest.mockReturnValue(provider)
@@ -3587,7 +3588,7 @@ describe("autoCheckinScheduler run-completed notifications", () => {
     )
 
     const provider = {
-      canCheckIn: vi.fn(() => true),
+      getReadiness: vi.fn(() => ({ ready: true })),
       checkIn: vi.fn(async (account: any) => {
         return account.id === "a"
           ? { status: "success" }
@@ -3673,7 +3674,7 @@ describe("autoCheckinScheduler run-completed notifications", () => {
     })
 
     const provider = {
-      canCheckIn: vi.fn(() => true),
+      getReadiness: vi.fn(() => ({ ready: true })),
       checkIn: vi.fn(async () => ({ status: "success" })),
     }
     resolveProviderForTest.mockReturnValue(provider)
@@ -3749,7 +3750,7 @@ describe("autoCheckinScheduler run-completed notifications", () => {
     } as any)
 
     const provider = {
-      canCheckIn: vi.fn(() => true),
+      getReadiness: vi.fn(() => ({ ready: true })),
       checkIn: vi.fn(async () => ({ status: "success" })),
     }
     resolveProviderForTest.mockReturnValue(provider)
@@ -4435,7 +4436,7 @@ describe("autoCheckinScheduler.retryAccount", () => {
     expect(result.result.status).toBe("skipped")
     expect(result.result.reasonCode).toBe("account_disabled")
     expect(result.pendingRetry).toBe(false)
-    expect(storedStatus.lastRunResult).toBe("success")
+    expect(storedStatus.lastRunResult).toBe("skipped")
     expect(storedStatus.retryState).toBeUndefined()
     expect(storedStatus.pendingRetry).toBe(false)
     expect(storedStatus.summary).toMatchObject({
@@ -4506,7 +4507,7 @@ describe("autoCheckinScheduler.retryAccount", () => {
     } as any
 
     const provider = {
-      canCheckIn: vi.fn(() => true),
+      getReadiness: vi.fn(() => ({ ready: true })),
       checkIn: vi.fn(async () => ({ status: "success" })),
     }
     resolveProviderForTest.mockReturnValue(provider)
@@ -4605,7 +4606,7 @@ describe("autoCheckinScheduler.retryAccount", () => {
     } as any
 
     const provider = {
-      canCheckIn: vi.fn(() => true),
+      getReadiness: vi.fn(() => ({ ready: true })),
       checkIn: vi.fn(async () => ({ status: "success" })),
     }
     resolveProviderForTest.mockReturnValue(provider)
@@ -4710,7 +4711,7 @@ describe("autoCheckinScheduler.retryAccount", () => {
     } as any
 
     const provider = {
-      canCheckIn: vi.fn(() => true),
+      getReadiness: vi.fn(() => ({ ready: true })),
       checkIn: vi.fn(async () => ({ status: "success" })),
     }
     resolveProviderForTest.mockReturnValue(provider)
@@ -4797,7 +4798,7 @@ describe("autoCheckinScheduler.retryAccount", () => {
     } as any
 
     const provider = {
-      canCheckIn: vi.fn(() => true),
+      getReadiness: vi.fn(() => ({ ready: true })),
       checkIn: vi.fn(async () => ({
         status: "failed",
         rawMessage: "retry still failing",
@@ -4897,7 +4898,7 @@ describe("autoCheckinScheduler.retryAccount", () => {
     } as any
 
     const provider = {
-      canCheckIn: vi.fn(() => true),
+      getReadiness: vi.fn(() => ({ ready: true })),
       checkIn: vi.fn(async () => ({ status: "success" })),
     }
     resolveProviderForTest.mockReturnValue(provider)
@@ -6062,7 +6063,7 @@ describe("autoCheckinScheduler private helpers", () => {
 
   it("derives snapshot skip reasons from account state and provider availability", () => {
     resolveProviderForTest.mockReturnValue({
-      canCheckIn: vi.fn(() => true),
+      getReadiness: vi.fn(() => ({ ready: true })),
     })
 
     expect(
@@ -6099,7 +6100,7 @@ describe("autoCheckinScheduler private helpers", () => {
       ),
     ).toMatchObject({
       accountId: "no-provider",
-      skipReason: "provider_not_ready",
+      skipReason: "no_provider",
       providerAvailable: false,
     })
 
@@ -6117,11 +6118,31 @@ describe("autoCheckinScheduler private helpers", () => {
       ),
     ).toMatchObject({
       accountId: "manual",
-      skipReason: "detection_disabled",
+      skipReason: "no_selected_method",
+    })
+
+    expect(
+      (autoCheckinScheduler as any).buildAccountSnapshot(
+        {
+          id: "unsupported-site-type",
+          disabled: false,
+          site_type: SITE_TYPES.AIHUBMIX,
+          site_name: "Unsupported Site Type",
+          account_info: { username: "user" },
+          checkIn: noSelectedCheckIn(),
+        },
+        "Unsupported Site Type",
+      ),
+    ).toMatchObject({
+      accountId: "unsupported-site-type",
+      skipReason: "no_provider",
     })
 
     resolveProviderForTest.mockReturnValueOnce({
-      canCheckIn: vi.fn(() => false),
+      getReadiness: vi.fn(() => ({
+        ready: false,
+        reason: "account_data_missing",
+      })),
     })
 
     expect(
@@ -6138,7 +6159,7 @@ describe("autoCheckinScheduler private helpers", () => {
       ),
     ).toMatchObject({
       accountId: "provider-not-ready",
-      skipReason: "provider_not_ready",
+      skipReason: "account_data_missing",
       providerAvailable: false,
     })
 
@@ -6233,6 +6254,53 @@ describe("autoCheckinScheduler private helpers", () => {
     })
   })
 
+  it.each([
+    {
+      domainReason: "no_selected_method",
+      resultReason: "no_selected_method",
+    },
+    {
+      domainReason: "method_unavailable",
+      resultReason: "method_unavailable",
+    },
+    {
+      domainReason: "method_not_matched",
+      resultReason: "method_not_matched",
+    },
+    {
+      domainReason: "method_unsupported",
+      resultReason: "method_unsupported",
+    },
+  ])(
+    "maps $domainReason to the user-facing $resultReason result",
+    async ({ domainReason, resultReason }) => {
+      mockedMethods.executeSelectedCheckIn.mockResolvedValueOnce({
+        kind: "skipped",
+        reason: domainReason,
+      })
+
+      await expect(
+        (autoCheckinScheduler as any).runAccountCheckin(
+          {
+            id: domainReason,
+            site_name: domainReason,
+            site_type: SITE_TYPES.NEW_API,
+            disabled: false,
+            account_info: {},
+            checkIn: runnableCheckIn(true, SITE_TYPES.NEW_API),
+          },
+          domainReason,
+        ),
+      ).resolves.toMatchObject({
+        result: {
+          status: "skipped",
+          reasonCode: resultReason,
+          messageKey: `autoCheckin:skipReasons.${resultReason}`,
+        },
+      })
+    },
+  )
+
   it("handles provider-missing, failed, and thrown account check-in outcomes", async () => {
     resolveProviderForTest.mockReset()
     resolveProviderForTest.mockReturnValueOnce(null)
@@ -6258,7 +6326,7 @@ describe("autoCheckinScheduler private helpers", () => {
     })
 
     const failedProvider = {
-      canCheckIn: vi.fn(() => true),
+      getReadiness: vi.fn(() => ({ ready: true })),
       checkIn: vi.fn().mockResolvedValue({
         status: "failed",
         rawMessage: "provider failed",
@@ -6287,7 +6355,7 @@ describe("autoCheckinScheduler private helpers", () => {
     })
 
     const throwingProvider = {
-      canCheckIn: vi.fn(() => true),
+      getReadiness: vi.fn(() => ({ ready: true })),
       checkIn: vi.fn().mockRejectedValue(new Error("provider exploded")),
     }
     resolveProviderForTest.mockReturnValueOnce(throwingProvider as any)
@@ -6314,6 +6382,65 @@ describe("autoCheckinScheduler private helpers", () => {
     expect(throwingProvider.checkIn).toHaveBeenCalledTimes(1)
   })
 
+  it("preserves a provider-classified network failure for user-facing results", async () => {
+    mockedMethods.executeSelectedCheckIn.mockResolvedValueOnce({
+      kind: "executed",
+      methodId: "new-api:daily-checkin",
+      result: {
+        status: "failed",
+        messageKey: "autoCheckin:skipReasons.network_error",
+        reasonCode: "network_error",
+      },
+    })
+
+    await expect(
+      (autoCheckinScheduler as any).runAccountCheckin(
+        {
+          id: "network-failure",
+          site_name: "Network Failure",
+          site_type: SITE_TYPES.NEW_API,
+          disabled: false,
+          account_info: {},
+          checkIn: runnableCheckIn(true, SITE_TYPES.NEW_API),
+        },
+        "Network Failure",
+      ),
+    ).resolves.toMatchObject({
+      result: {
+        status: "failed",
+        reasonCode: "network_error",
+        messageKey: "autoCheckin:skipReasons.network_error",
+      },
+    })
+  })
+
+  it("classifies an uncaught transport failure as network-related", async () => {
+    mockedMethods.executeSelectedCheckIn.mockRejectedValueOnce(
+      new TypeError("Failed to fetch"),
+    )
+
+    await expect(
+      (autoCheckinScheduler as any).runAccountCheckin(
+        {
+          id: "uncaught-network-failure",
+          site_name: "Uncaught Network Failure",
+          site_type: SITE_TYPES.NEW_API,
+          disabled: false,
+          account_info: {},
+          checkIn: runnableCheckIn(true, SITE_TYPES.NEW_API),
+        },
+        "Uncaught Network Failure",
+      ),
+    ).resolves.toMatchObject({
+      result: {
+        status: "failed",
+        reasonCode: "network_error",
+        messageKey: "autoCheckin:skipReasons.network_error",
+        rawMessage: undefined,
+      },
+    })
+  })
+
   it("retains one normalized source across account dispatch", async () => {
     const accounts = [
       {
@@ -6334,7 +6461,7 @@ describe("autoCheckinScheduler private helpers", () => {
       },
     ] as any[]
     const provider = {
-      canCheckIn: vi.fn(() => true),
+      getReadiness: vi.fn(() => ({ ready: true })),
       checkIn: vi.fn().mockResolvedValue({ status: "success" }),
     }
     resolveProviderForTest.mockReturnValue(provider as any)
@@ -6358,7 +6485,7 @@ describe("autoCheckinScheduler private helpers", () => {
 
   it("marks accounts checked in for successful and already-checked outcomes", async () => {
     const successProvider = {
-      canCheckIn: vi.fn(() => true),
+      getReadiness: vi.fn(() => ({ ready: true })),
       checkIn: vi.fn().mockResolvedValueOnce({
         status: "success",
         rawMessage: "ok",
@@ -6386,7 +6513,7 @@ describe("autoCheckinScheduler private helpers", () => {
     })
 
     const alreadyCheckedProvider = {
-      canCheckIn: vi.fn(() => true),
+      getReadiness: vi.fn(() => ({ ready: true })),
       checkIn: vi.fn().mockResolvedValueOnce({
         status: "already_checked",
         rawMessage: "already done",

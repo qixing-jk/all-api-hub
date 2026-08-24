@@ -20,6 +20,8 @@ const autoCheckinStatusLabelResolvers = {
     t("optionsOverview:autoCheckin.status.partial"),
   [AUTO_CHECKIN_PANEL_STATUSES.failed]: (t: TFunction) =>
     t("optionsOverview:autoCheckin.status.failed"),
+  [AUTO_CHECKIN_PANEL_STATUSES.skipped]: (t: TFunction) =>
+    t("optionsOverview:autoCheckin.status.skipped"),
   [AUTO_CHECKIN_PANEL_STATUSES.disabled]: (t: TFunction) =>
     t("optionsOverview:autoCheckin.status.disabled"),
   [AUTO_CHECKIN_PANEL_STATUSES.notRun]: (t: TFunction) =>

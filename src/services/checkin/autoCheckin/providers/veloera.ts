@@ -9,6 +9,7 @@ import {
   CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES,
   CHECK_IN_METHOD_STATUS_OUTCOMES,
   CHECK_IN_METHOD_TODAY_STATUSES,
+  CHECK_IN_PROVIDER_READINESS_REASONS,
 } from "~/constants/checkIn"
 import { fetchSupportCheckIn } from "~/services/apiService/newApiFamily/variants/veloeraCheckIn"
 import { fetchApi, fetchApiData } from "~/services/apiTransport/request"
@@ -163,18 +164,26 @@ async function checkinVeloera(
  * @param account - The site account to check
  * @returns true if account meets check-in requirements
  */
-function canCheckIn(account: SiteAccount): boolean {
+function getReadiness(account: SiteAccount) {
   if (!account.account_info?.id) {
-    return false
+    return {
+      ready: false,
+      reason: CHECK_IN_PROVIDER_READINESS_REASONS.AccountDataMissing,
+    } as const
   }
 
   const authType = account.authType
 
   if (authType === AuthTypeEnum.AccessToken) {
-    return Boolean(account.account_info?.access_token)
+    return account.account_info?.access_token
+      ? ({ ready: true } as const)
+      : ({
+          ready: false,
+          reason: CHECK_IN_PROVIDER_READINESS_REASONS.CredentialsMissing,
+        } as const)
   }
 
-  return true
+  return { ready: true } as const
 }
 
 const getStatus: NonNullable<AutoCheckinProvider["getStatus"]> = async ({
@@ -225,7 +234,7 @@ const getStatus: NonNullable<AutoCheckinProvider["getStatus"]> = async ({
 }
 
 export const veloeraProvider: AutoCheckinProvider = {
-  canCheckIn,
+  getReadiness,
   detect: (context) => detectWithStatusReadback(context, getStatus),
   getStatus,
   checkIn: checkinVeloera,

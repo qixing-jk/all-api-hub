@@ -33,9 +33,14 @@
     },
     "filters": {
       "all": "Tất cả",
+      "clearAll": "Xóa bộ lọc",
+      "countFiltered": "Hiển thị {{filtered}} / {{total}}",
+      "countTotal": "Tổng cộng {{total}}",
       "failed": "Thất bại",
+      "searchLabel": "Tìm kiếm kết quả thực hiện",
       "searchPlaceholder": "Tìm kiếm tên tài khoản hoặc tin nhắn...",
       "skipped": "Đã bỏ qua",
+      "statusLabel": "Lọc theo trạng thái thực hiện",
       "success": "Thành công"
     },
     "hints": {
@@ -158,34 +163,64 @@
     "windowStartDesc": "Giờ địa phương sớm nhất cho phép bắt đầu điểm danh tự động hàng ngày."
   },
   "skipReasons": {
+    "account_data_missing": "Thiếu thông tin tài khoản bắt buộc. Hãy phát hiện lại tài khoản.",
     "account_disabled": "Tài khoản đã bị vô hiệu hóa",
     "account_unavailable": "Tài khoản đã thay đổi hoặc không còn khả dụng trước khi điểm danh",
     "already_checked_today": "Hôm nay đã điểm danh",
+    "authentication_required": "Phiên đăng nhập đã hết hạn hoặc cần đăng nhập. Hãy đăng nhập vào trang đích rồi thử lại.",
     "auto_checkin_disabled": "Điểm danh tự động đã tắt",
+    "credentials_missing": "Thiếu thông tin xác thực đã lưu. Hãy phát hiện lại tài khoản hoặc cập nhật thông tin xác thực.",
     "detection_disabled": "Phát hiện đã tắt",
     "method_disabled": "Tính năng điểm danh của trang web này đã bị tắt",
+    "method_not_matched": "Phương thức điểm danh đã chọn không còn khớp với trang này. Hãy phát hiện lại phương thức.",
+    "method_unavailable": "Phương thức điểm danh đã chọn không còn khả dụng. Hãy phát hiện lại phương thức.",
+    "method_unsupported": "Trang này không hỗ trợ phương thức điểm danh đã chọn.",
+    "network_error": "Sự cố kết nối mạng đã ngăn việc điểm danh. Hãy kiểm tra mạng rồi thử lại.",
     "no_provider": "Loại trang web của tài khoản hiện không hỗ trợ điểm danh",
-    "provider_not_ready": "Cấu hình tài khoản hiện không hỗ trợ điểm danh",
-    "status_unavailable": "Không thể xác nhận trạng thái điểm danh hiện tại nên hệ thống không thực hiện điểm danh"
+    "no_selected_method": "Chưa chọn phương thức điểm danh. Hãy phát hiện lại hoặc chọn trong cài đặt tài khoản.",
+    "permission_denied": "Trang đích từ chối quyền điểm danh. Hãy đăng nhập lại hoặc kiểm tra quyền tài khoản.",
+    "source_unavailable": "Trang đích tạm thời không khả dụng. Hãy thử lại sau.",
+    "status_unavailable": "Không thể xác nhận trạng thái điểm danh hiện tại nên hệ thống không thực hiện điểm danh",
+    "timeout": "Kết nối đã hết thời gian chờ trước khi hoàn tất điểm danh. Hãy thử lại."
   },
   "snapshot": {
     "badges": {
       "disabled": "Chưa bật",
       "enabled": "Đã bật",
+      "methodNotSelected": "Chưa chọn",
+      "methodSelected": "Đã chọn",
       "pending": "Chờ thực hiện",
       "providerAvailable": "Có sẵn",
       "providerUnavailable": "Không có sẵn"
     },
-    "description": "Liệt kê tất cả các tài khoản đã bật tính năng phát hiện và trạng thái chuẩn bị của chúng. Các tài khoản ở trạng thái chờ thực hiện sẽ tham gia điểm danh sau khi nhấp vào \"Thực hiện ngay\" hoặc đạt đến thời gian đã lên lịch.",
+    "description": "Hiển thị trạng thái sẵn sàng của tài khoản được ghi nhận trong lần chạy gần nhất. Các tài khoản đang chờ sẽ tham gia điểm danh khi bạn nhấp vào \"Thực hiện ngay\" hoặc đến thời gian đã lên lịch.",
+    "filters": {
+      "clearAll": "Xóa bộ lọc",
+      "countFiltered": "Hiển thị {{filtered}} / {{total}} tài khoản",
+      "countTotal": "{{total}} tài khoản",
+      "noMatches": "Không có tài khoản phù hợp",
+      "noMatchesDescription": "Điều chỉnh tìm kiếm hoặc bộ lọc, hoặc xóa tất cả bộ lọc.",
+      "readinessAll": "Tất cả trạng thái sẵn sàng",
+      "readinessDisabled": "Đã tắt",
+      "readinessLabel": "Lọc theo mức sẵn sàng thực hiện",
+      "readinessReady": "Sẵn sàng thực hiện",
+      "readinessSetupRequired": "Cần thiết lập",
+      "readinessTemporarilyUnavailable": "Tạm thời không khả dụng",
+      "readinessUnsupported": "Không hỗ trợ",
+      "searchLabel": "Tìm kiếm trạng thái sẵn sàng",
+      "searchPlaceholder": "Tìm theo tên, ID hoặc lý do chưa thực hiện...",
+      "statusAll": "Tất cả trạng thái gần nhất",
+      "statusLabel": "Lọc theo trạng thái gần nhất"
+    },
     "table": {
       "autoCheckin": "Điểm danh tự động",
-      "detection": "Phát hiện",
-      "lastResult": "Kết quả gần đây",
-      "provider": "Nhà cung cấp",
-      "skipReason": "Lý do bỏ qua",
-      "status": "Trạng thái"
+      "detection": "Phương thức điểm danh",
+      "lastResult": "Thời gian cập nhật",
+      "provider": "Khả năng thực hiện",
+      "skipReason": "Lý do chưa thực hiện",
+      "status": "Trạng thái gần nhất"
     },
-    "title": "Trạng thái phát hiện tài khoản"
+    "title": "Trạng thái sẵn sàng của tài khoản"
   },
   "status": {
     "disabled": "Đã vô hiệu hóa",
@@ -198,6 +233,7 @@
     "result": {
       "failed": "Thất bại",
       "partial": "Thành công một phần",
+      "skipped": "Chưa thực hiện",
       "success": "Thành công"
     },
     "retryDisabled": "Thử lại chưa bật",

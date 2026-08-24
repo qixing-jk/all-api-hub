@@ -37,6 +37,7 @@ export const AUTO_CHECKIN_STATUS_BADGE_VARIANTS = {
   [AUTO_CHECKIN_PANEL_STATUSES.success]: "success",
   [AUTO_CHECKIN_PANEL_STATUSES.partial]: "warning",
   [AUTO_CHECKIN_PANEL_STATUSES.failed]: "danger",
+  [AUTO_CHECKIN_PANEL_STATUSES.skipped]: "secondary",
   [AUTO_CHECKIN_PANEL_STATUSES.disabled]: "secondary",
   [AUTO_CHECKIN_PANEL_STATUSES.notRun]: "info",
 } as const satisfies Record<OptionsOverviewAutoCheckinPanel["status"], string>

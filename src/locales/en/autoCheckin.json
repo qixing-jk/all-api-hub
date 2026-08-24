@@ -33,9 +33,14 @@
     },
     "filters": {
       "all": "All",
+      "clearAll": "Clear filters",
+      "countFiltered": "Showing {{filtered}} of {{total}}",
+      "countTotal": "{{total}} total",
       "failed": "Failed",
+      "searchLabel": "Search execution results",
       "searchPlaceholder": "Search by account name or message...",
       "skipped": "Skipped",
+      "statusLabel": "Filter by execution status",
       "success": "Success"
     },
     "hints": {
@@ -160,32 +165,62 @@
     "windowStartDesc": "The earliest local time when the daily check-in can start."
   },
   "skipReasons": {
+    "account_data_missing": "Required account details are missing. Re-detect the account.",
     "account_disabled": "Account is disabled",
     "account_unavailable": "The account changed or became unavailable before check-in",
     "already_checked_today": "Already checked today",
+    "authentication_required": "Sign-in has expired or is required. Sign in to the site, then try again.",
     "auto_checkin_disabled": "Auto check-in disabled",
+    "credentials_missing": "Saved credentials are missing. Re-detect the account or update its credentials.",
     "detection_disabled": "Detection disabled",
     "method_disabled": "This site's check-in method is disabled",
+    "method_not_matched": "The selected check-in method no longer matches this site. Re-detect the check-in method.",
+    "method_unavailable": "The selected check-in method is no longer available. Re-detect the check-in method.",
+    "method_unsupported": "The selected check-in method is not supported by this site.",
+    "network_error": "A network connection problem prevented check-in. Check your connection and try again.",
     "no_provider": "The account's site type currently does not support check-in",
-    "provider_not_ready": "Account configuration currently does not support check-in",
-    "status_unavailable": "The current check-in status could not be confirmed, so no check-in was attempted"
+    "no_selected_method": "No check-in method is selected. Re-detect or select one in account settings.",
+    "permission_denied": "The site denied permission to check in. Sign in again or review the account permissions.",
+    "source_unavailable": "The source site is temporarily unavailable. Try again later.",
+    "status_unavailable": "The current check-in status could not be confirmed, so no check-in was attempted",
+    "timeout": "The connection timed out before check-in could complete. Try again."
   },
   "snapshot": {
     "badges": {
       "disabled": "Disabled",
       "enabled": "Enabled",
+      "methodNotSelected": "Not selected",
+      "methodSelected": "Selected",
       "pending": "Pending",
       "providerAvailable": "Available",
       "providerUnavailable": "Unavailable"
     },
-    "description": "Every detection-enabled account and its readiness are listed below. Pending accounts join check-in when you click \"Run now\" or when the scheduled time arrives.",
+    "description": "Shows the account readiness recorded by the latest run. Pending accounts join check-in when you click \"Run now\" or when the scheduled time arrives.",
+    "filters": {
+      "clearAll": "Clear filters",
+      "countFiltered": "Showing {{filtered}} of {{total}} accounts",
+      "countTotal": "{{total}} accounts",
+      "noMatches": "No matching accounts",
+      "noMatchesDescription": "Adjust the search or filters, or clear all filters.",
+      "readinessAll": "All readiness states",
+      "readinessDisabled": "Disabled",
+      "readinessLabel": "Filter by execution readiness",
+      "readinessReady": "Ready to run",
+      "readinessSetupRequired": "Setup required",
+      "readinessTemporarilyUnavailable": "Temporarily unavailable",
+      "readinessUnsupported": "Unsupported",
+      "searchLabel": "Search account readiness",
+      "searchPlaceholder": "Search account name, ID, or reason...",
+      "statusAll": "All latest statuses",
+      "statusLabel": "Filter by latest status"
+    },
     "table": {
       "autoCheckin": "Auto check-in",
-      "detection": "Detection",
-      "lastResult": "Last result",
-      "provider": "Provider",
-      "skipReason": "Skip reason",
-      "status": "Status"
+      "detection": "Check-in method",
+      "lastResult": "Updated",
+      "provider": "Execution",
+      "skipReason": "Not executed because",
+      "status": "Latest status"
     },
     "title": "Account readiness"
   },
@@ -200,6 +235,7 @@
     "result": {
       "failed": "Failed",
       "partial": "Partial",
+      "skipped": "Not executed",
       "success": "Success"
     },
     "retryDisabled": "Retry disabled",

@@ -2,8 +2,13 @@ import {
   CHECK_IN_EXECUTION_SKIP_REASONS,
   CHECK_IN_METHOD_EXECUTION_RESULT_KINDS,
   CHECK_IN_METHOD_STATUS_OUTCOMES,
+  CHECK_IN_PROVIDER_READINESS_REASONS,
 } from "~/constants/checkIn"
 import type { AccountSiteType } from "~/constants/siteType"
+import {
+  AUTO_CHECKIN_ERROR_CATEGORIES,
+  classifyAutoCheckinError,
+} from "~/services/checkin/autoCheckin/errors"
 import {
   inspectAccountCheckIn,
   resolveSelectedCheckInMethod,
@@ -72,6 +77,32 @@ const resolveSelectedCheckInRegistration = (input: {
   return { state, registration }
 }
 
+const toProviderReadinessSkipReason = (
+  reason:
+    | typeof CHECK_IN_PROVIDER_READINESS_REASONS.AccountDataMissing
+    | typeof CHECK_IN_PROVIDER_READINESS_REASONS.CredentialsMissing,
+): CheckInExecutionSkipReason =>
+  reason === CHECK_IN_PROVIDER_READINESS_REASONS.CredentialsMissing
+    ? CHECK_IN_EXECUTION_SKIP_REASONS.CredentialsMissing
+    : CHECK_IN_EXECUTION_SKIP_REASONS.AccountDataMissing
+
+const toStatusReadSkipReason = (error: unknown): CheckInExecutionSkipReason => {
+  switch (classifyAutoCheckinError(error)) {
+    case AUTO_CHECKIN_ERROR_CATEGORIES.AuthenticationRequired:
+      return CHECK_IN_EXECUTION_SKIP_REASONS.AuthenticationRequired
+    case AUTO_CHECKIN_ERROR_CATEGORIES.Network:
+      return CHECK_IN_EXECUTION_SKIP_REASONS.NetworkError
+    case AUTO_CHECKIN_ERROR_CATEGORIES.PermissionDenied:
+      return CHECK_IN_EXECUTION_SKIP_REASONS.PermissionDenied
+    case AUTO_CHECKIN_ERROR_CATEGORIES.SourceUnavailable:
+      return CHECK_IN_EXECUTION_SKIP_REASONS.SourceUnavailable
+    case AUTO_CHECKIN_ERROR_CATEGORIES.Timeout:
+      return CHECK_IN_EXECUTION_SKIP_REASONS.Timeout
+    default:
+      return CHECK_IN_EXECUTION_SKIP_REASONS.StatusUnavailable
+  }
+}
+
 /** Adds provider authentication readiness without exposing the provider. */
 export function inspectSelectedCheckInCompatibility(input: {
   account: SiteAccount
@@ -81,10 +112,11 @@ export function inspectSelectedCheckInCompatibility(input: {
     account: input.account,
     globalAutomaticExecutionEnabled: input.globalAutomaticExecutionEnabled,
   })
+  const providerReadiness = registration?.provider.getReadiness(input.account)
   return {
     state,
-    providerAvailable:
-      registration?.provider.canCheckIn(input.account) === true,
+    providerReadiness: providerReadiness ?? null,
+    providerAvailable: providerReadiness?.ready === true,
   }
 }
 
@@ -129,10 +161,11 @@ export async function executeSelectedCheckIn(input: {
       reason: CHECK_IN_EXECUTION_SKIP_REASONS.NoProvider,
     }
   }
-  if (!registration.provider.canCheckIn(input.account)) {
+  const initialReadiness = registration.provider.getReadiness(input.account)
+  if (!initialReadiness.ready) {
     return {
       kind: CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Skipped,
-      reason: CHECK_IN_EXECUTION_SKIP_REASONS.ProviderNotReady,
+      reason: toProviderReadinessSkipReason(initialReadiness.reason),
     }
   }
 
@@ -157,10 +190,10 @@ export async function executeSelectedCheckIn(input: {
       })
       statusUnavailable =
         status.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Unknown
-    } catch {
+    } catch (error) {
       return {
         kind: CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Skipped,
-        reason: CHECK_IN_EXECUTION_SKIP_REASONS.StatusUnavailable,
+        reason: toStatusReadSkipReason(error),
       }
     }
   }
@@ -206,10 +239,11 @@ export async function executeSelectedCheckIn(input: {
       reason: CHECK_IN_EXECUTION_SKIP_REASONS.MethodNotMatched,
     }
   }
-  if (!registration.provider.canCheckIn(currentAccount)) {
+  const currentReadiness = registration.provider.getReadiness(currentAccount)
+  if (!currentReadiness.ready) {
     return {
       kind: CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Skipped,
-      reason: CHECK_IN_EXECUTION_SKIP_REASONS.ProviderNotReady,
+      reason: toProviderReadinessSkipReason(currentReadiness.reason),
     }
   }
 

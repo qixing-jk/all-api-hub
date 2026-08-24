@@ -1,4 +1,7 @@
-import type { CheckinResultStatus } from "~/types/autoCheckin"
+import type {
+  AutoCheckinSkipReason,
+  CheckinResultStatus,
+} from "~/types/autoCheckin"
 
 /**
  * Normalized provider result consumed by the auto check-in scheduler/UI.
@@ -15,5 +18,6 @@ export interface AutoCheckinProviderResult<
   messageKey?: string
   messageParams?: TMessageParams
   rawMessage?: string
+  reasonCode?: AutoCheckinSkipReason
   data?: TData
 }

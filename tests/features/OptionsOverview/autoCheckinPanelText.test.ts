@@ -51,6 +51,12 @@ describe("auto check-in panel text helpers", () => {
         t,
       ),
     ).toBe("optionsOverview:autoCheckin.status.not_run")
+    expect(
+      getAutoCheckinStatusLabel(
+        OPTIONS_OVERVIEW_AUTO_CHECKIN_PANEL_STATUSES.skipped,
+        t,
+      ),
+    ).toBe("optionsOverview:autoCheckin.status.skipped")
   })
 
   it("resolves empty descriptions only for empty auto check-in states", () => {

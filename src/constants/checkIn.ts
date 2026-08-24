@@ -15,6 +15,7 @@ export const CHECK_IN_METHOD_UNKNOWN_REASON_CODES = {
   Timeout: "timeout",
   AuthenticationRequired: "authentication_required",
   PermissionDenied: "permission_denied",
+  SourceUnavailable: "source_unavailable",
   IdentityMismatch: "identity_mismatch",
   InvalidResponse: "invalid_response",
   CredentialPersistenceFailed: "credential_persistence_failed",
@@ -25,10 +26,16 @@ export const CHECK_IN_METHOD_UNKNOWN_REASONS = [
   CHECK_IN_METHOD_UNKNOWN_REASON_CODES.Timeout,
   CHECK_IN_METHOD_UNKNOWN_REASON_CODES.AuthenticationRequired,
   CHECK_IN_METHOD_UNKNOWN_REASON_CODES.PermissionDenied,
+  CHECK_IN_METHOD_UNKNOWN_REASON_CODES.SourceUnavailable,
   CHECK_IN_METHOD_UNKNOWN_REASON_CODES.IdentityMismatch,
   CHECK_IN_METHOD_UNKNOWN_REASON_CODES.InvalidResponse,
   CHECK_IN_METHOD_UNKNOWN_REASON_CODES.CredentialPersistenceFailed,
 ] as const
+
+export const CHECK_IN_PROVIDER_READINESS_REASONS = {
+  AccountDataMissing: "account_data_missing",
+  CredentialsMissing: "credentials_missing",
+} as const
 
 export const CHECK_IN_METHOD_DETECTION_OUTCOMES = {
   Matched: "matched",
@@ -99,7 +106,13 @@ export const CHECK_IN_EXECUTION_SKIP_REASONS = {
   AlreadyChecked: "already_checked",
   StatusUnavailable: "status_unavailable",
   NoProvider: "no_provider",
-  ProviderNotReady: "provider_not_ready",
+  AccountDataMissing: CHECK_IN_PROVIDER_READINESS_REASONS.AccountDataMissing,
+  AuthenticationRequired: "authentication_required",
+  CredentialsMissing: CHECK_IN_PROVIDER_READINESS_REASONS.CredentialsMissing,
+  NetworkError: "network_error",
+  SourceUnavailable: "source_unavailable",
+  PermissionDenied: "permission_denied",
+  Timeout: "timeout",
   AccountUnavailable: "account_unavailable",
 } as const
 

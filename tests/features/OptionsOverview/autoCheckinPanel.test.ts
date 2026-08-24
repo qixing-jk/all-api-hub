@@ -78,6 +78,15 @@ describe("auto check-in overview panel builder", () => {
       status: OPTIONS_OVERVIEW_AUTO_CHECKIN_PANEL_STATUSES.failed,
       severity: "error",
     })
+    expect(
+      buildAutoCheckinPanel({
+        preferences: DEFAULT_PREFERENCES,
+        status: { lastRunResult: AUTO_CHECKIN_RUN_RESULT.SKIPPED },
+      }),
+    ).toMatchObject({
+      status: OPTIONS_OVERVIEW_AUTO_CHECKIN_PANEL_STATUSES.skipped,
+      severity: "info",
+    })
   })
 
   it("copies run summary and exposes retry action when retry is pending", () => {

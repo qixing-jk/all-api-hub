@@ -1202,9 +1202,20 @@ describe("AutoCheckin account actions", () => {
         screen.getByText("autoCheckin:execution.empty.noResults"),
       ).toBeInTheDocument()
     })
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "autoCheckin:execution.filters.clearAll",
+      }),
+    )
+
+    expect(await screen.findByText("Already Account")).toBeVisible()
+    expect(screen.getByText("Skipped Account")).toBeVisible()
+    expect(screen.getByText("Failed Account")).toBeVisible()
   })
 
   it("renders account snapshots from status data", async () => {
+    const user = userEvent.setup()
     const browserApi = await import("~/utils/browser/browserApi")
 
     vi.spyOn(browserApi, "sendRuntimeMessage").mockResolvedValue({
@@ -1226,10 +1237,14 @@ describe("AutoCheckin account actions", () => {
 
     render(<AutoCheckin routeParams={{}} />)
 
-    expect(
-      await screen.findByText("autoCheckin:snapshot.title"),
-    ).toBeInTheDocument()
-    expect(screen.getByText("Snapshot Account")).toBeInTheDocument()
+    const readinessButton = await screen.findByRole("button", {
+      name: /autoCheckin:snapshot\.title/i,
+    })
+    expect(screen.queryByText("Snapshot Account")).not.toBeInTheDocument()
+
+    await user.click(readinessButton)
+
+    expect(await screen.findByText("Snapshot Account")).toBeVisible()
   })
 
   it("keeps existing results rendered while a manual refresh is loading", async () => {

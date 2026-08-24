@@ -1,3 +1,4 @@
+import { CHECK_IN_PROVIDER_READINESS_REASONS } from "~/constants/checkIn"
 import { fetchApi } from "~/services/apiTransport/request"
 import {
   AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
@@ -109,17 +110,20 @@ const checkinAnyRouter = async (
   }
 }
 
-const canCheckIn = (account: SiteAccount): boolean => {
+const getReadiness = (account: SiteAccount) => {
   if (!account.account_info?.id) {
-    return false
+    return {
+      ready: false,
+      reason: CHECK_IN_PROVIDER_READINESS_REASONS.AccountDataMissing,
+    } as const
   }
 
-  return true
+  return { ready: true } as const
 }
 
 export const anyrouterProvider: AutoCheckinProvider = {
   // /api/user/sign_in is a mutating POST, so this provider intentionally has
   // no detect/getStatus implementation and uses the legacy registry bridge.
-  canCheckIn,
+  getReadiness,
   checkIn: checkinAnyRouter,
 }

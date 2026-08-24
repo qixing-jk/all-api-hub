@@ -135,9 +135,9 @@ describe("newApiProvider", () => {
     )
   })
 
-  describe("canCheckIn", () => {
-    it("returns true for valid account", () => {
-      expect(newApiProvider.canCheckIn(mockAccount)).toBe(true)
+  describe("getReadiness", () => {
+    it("returns ready for a valid account", () => {
+      expect(newApiProvider.getReadiness(mockAccount)).toEqual({ ready: true })
     })
 
     it("leaves automatic-execution intent to the Module", () => {
@@ -145,24 +145,30 @@ describe("newApiProvider", () => {
         ...mockAccount,
         checkIn: buildCheckInConfig(),
       }
-      expect(newApiProvider.canCheckIn(account)).toBe(true)
+      expect(newApiProvider.getReadiness(account)).toEqual({ ready: true })
     })
 
-    it("returns false when no user id", () => {
+    it("explains when account data is missing", () => {
       const account = {
         ...mockAccount,
         account_info: { ...mockAccount.account_info, id: "" },
       }
-      expect(newApiProvider.canCheckIn(account)).toBe(false)
+      expect(newApiProvider.getReadiness(account)).toEqual({
+        ready: false,
+        reason: "account_data_missing",
+      })
     })
 
-    it("returns false when token auth but access token is missing", () => {
+    it("explains when saved credentials are missing", () => {
       const account = {
         ...mockAccount,
         authType: AuthTypeEnum.AccessToken,
         account_info: { ...mockAccount.account_info, access_token: "" },
       }
-      expect(newApiProvider.canCheckIn(account)).toBe(false)
+      expect(newApiProvider.getReadiness(account)).toEqual({
+        ready: false,
+        reason: "credentials_missing",
+      })
     })
 
     it("treats missing authType as access-token auth", () => {
@@ -170,7 +176,7 @@ describe("newApiProvider", () => {
         ...mockAccount,
         authType: undefined as any,
       }
-      expect(newApiProvider.canCheckIn(account)).toBe(true)
+      expect(newApiProvider.getReadiness(account)).toEqual({ ready: true })
     })
 
     it("requires an access token when authType is missing", () => {
@@ -179,7 +185,10 @@ describe("newApiProvider", () => {
         authType: undefined as any,
         account_info: { ...mockAccount.account_info, access_token: "" },
       }
-      expect(newApiProvider.canCheckIn(account)).toBe(false)
+      expect(newApiProvider.getReadiness(account)).toEqual({
+        ready: false,
+        reason: "credentials_missing",
+      })
     })
 
     it("allows cookie-auth accounts to check in without an access token", () => {
@@ -188,7 +197,7 @@ describe("newApiProvider", () => {
         authType: AuthTypeEnum.Cookie,
         account_info: { ...mockAccount.account_info, access_token: "" },
       }
-      expect(newApiProvider.canCheckIn(account)).toBe(true)
+      expect(newApiProvider.getReadiness(account)).toEqual({ ready: true })
     })
   })
 
@@ -242,7 +251,7 @@ describe("newApiProvider", () => {
         newApiProvider.detect!({ account: mockAccount, observedAt: 200 }),
       ).resolves.toEqual({
         outcome: "unknown",
-        reason: "network",
+        reason: "invalid_response",
         attemptedAt: 200,
       })
     })

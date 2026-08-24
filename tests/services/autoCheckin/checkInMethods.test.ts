@@ -264,7 +264,7 @@ describe("check-in methods compatibility activation", () => {
         id: "new-api:daily-checkin",
         siteTypes: [SITE_TYPES.NEW_API],
         provider: {
-          canCheckIn: () => true,
+          getReadiness: () => ({ ready: true }),
           detect: async () => ({
             detection: {
               outcome: "matched",
@@ -285,7 +285,7 @@ describe("check-in methods compatibility activation", () => {
         id: "veloera:daily-checkin",
         siteTypes: [SITE_TYPES.NEW_API],
         provider: {
-          canCheckIn: () => true,
+          getReadiness: () => ({ ready: true }),
           detect: async () => ({
             outcome: "unsupported",
             evidence: { source: "probe", observedAt: 100 },
@@ -329,7 +329,7 @@ describe("check-in methods compatibility activation", () => {
         id: "new-api:daily-checkin",
         siteTypes: [SITE_TYPES.NEW_API],
         provider: {
-          canCheckIn: () => true,
+          getReadiness: () => ({ ready: true }),
           detect: async () => ({
             outcome: "matched",
             evidence: { source: "probe", observedAt: 200 },
@@ -341,7 +341,7 @@ describe("check-in methods compatibility activation", () => {
         id: "veloera:daily-checkin",
         siteTypes: [SITE_TYPES.NEW_API],
         provider: {
-          canCheckIn: () => true,
+          getReadiness: () => ({ ready: true }),
           detect: async ({ signal }) =>
             new Promise<never>(() =>
               signal?.addEventListener("abort", abortSpy),
@@ -410,7 +410,7 @@ describe("check-in methods compatibility activation", () => {
           id,
           siteTypes: [SITE_TYPES.NEW_API],
           provider: {
-            canCheckIn: () => true,
+            getReadiness: () => ({ ready: true }),
             detect: async () =>
               outcomes[index] === "matched"
                 ? {
@@ -448,15 +448,15 @@ describe("check-in methods compatibility activation", () => {
     },
   )
 
-  it("turns an adapter failure into unknown without blocking discovery", async () => {
+  it("turns a network adapter failure into unknown without blocking discovery", async () => {
     const registry = createAutoCheckinMethodRegistry([
       {
         id: "new-api:daily-checkin",
         siteTypes: [SITE_TYPES.NEW_API],
         provider: {
-          canCheckIn: () => true,
+          getReadiness: () => ({ ready: true }),
           detect: async () => {
-            throw new Error("offline")
+            throw new TypeError("Failed to fetch")
           },
           checkIn: async () => ({ status: "success" }),
         },
@@ -480,6 +480,38 @@ describe("check-in methods compatibility activation", () => {
       attemptedAt: 400,
     })
     expect(result.config.selection).toEqual({ mode: "automatic" })
+  })
+
+  it("does not mislabel an unstructured discovery failure as a network problem", async () => {
+    const registry = createAutoCheckinMethodRegistry([
+      {
+        id: "new-api:daily-checkin",
+        siteTypes: [SITE_TYPES.NEW_API],
+        provider: {
+          getReadiness: () => ({ ready: true }),
+          detect: async () => {
+            throw new Error("Invalid response")
+          },
+          checkIn: async () => ({ status: "success" }),
+        },
+      },
+    ])
+
+    const result = await discoverCheckInMethods({
+      account: buildSiteAccount({ site_type: SITE_TYPES.NEW_API }),
+      config: createCompatibilityCheckInConfig({
+        siteType: SITE_TYPES.NEW_API,
+        supported: false,
+        automaticExecutionEnabled: true,
+      }),
+      registry,
+      observedAt: 401,
+    })
+
+    expect(result.detections["new-api:daily-checkin"]).toMatchObject({
+      outcome: "unknown",
+      reason: "invalid_response",
+    })
   })
 
   it("leaves a matched method without status readback unchanged on refresh", async () => {
@@ -689,11 +721,34 @@ describe("check-in methods compatibility activation", () => {
     expect(checkInRequest).not.toHaveBeenCalled()
   })
 
-  it("does not post when execution-time status cannot be read", async () => {
+  it("reports a network reason when execution-time status cannot connect", async () => {
     const registration = getNewApiExecutionRegistration()
     const account = createNewApiExecutionAccount()
     vi.spyOn(registration.provider, "getStatus").mockRejectedValue(
-      new Error("status unavailable"),
+      new TypeError("Failed to fetch"),
+    )
+    const checkInRequest = vi
+      .spyOn(registration.provider, "checkIn")
+      .mockResolvedValue({ status: "success" })
+
+    const result = await executeSelectedCheckIn({
+      account,
+      globalAutomaticExecutionEnabled: true,
+      context: createExecutionContext(),
+    })
+
+    expect(result).toMatchObject({
+      kind: "skipped",
+      reason: "network_error",
+    })
+    expect(checkInRequest).not.toHaveBeenCalled()
+  })
+
+  it("does not label an unstructured status error as a network problem", async () => {
+    const registration = getNewApiExecutionRegistration()
+    const account = createNewApiExecutionAccount()
+    vi.spyOn(registration.provider, "getStatus").mockRejectedValue(
+      new Error("Invalid response payload"),
     )
     const checkInRequest = vi
       .spyOn(registration.provider, "checkIn")
@@ -894,9 +949,10 @@ describe("check-in methods compatibility activation", () => {
             automaticExecutionEnabled: testCase.automaticExecutionEnabled,
           }),
         })
-        expect(registration.provider.canCheckIn(account), testCase.name).toBe(
-          testCase.providerReady,
-        )
+        expect(
+          registration.provider.getReadiness(account).ready,
+          testCase.name,
+        ).toBe(testCase.providerReady)
 
         const checkIn = vi
           .spyOn(registration.provider, "checkIn")

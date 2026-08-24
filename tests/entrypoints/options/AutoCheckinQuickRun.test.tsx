@@ -405,7 +405,7 @@ describe("AutoCheckin quick run", () => {
     expect(startProductAnalyticsActionMock).not.toHaveBeenCalled()
   })
 
-  it("completes run-now analytics as skipped when the runtime surfaces no runnable work", async () => {
+  it("completes run-now analytics as skipped when every eligible account is skipped", async () => {
     const user = userEvent.setup()
 
     sendAutoCheckinMessageMock.mockImplementation(async (type: string) => {
@@ -416,11 +416,11 @@ describe("AutoCheckin quick run", () => {
         return {
           success: true,
           summary: {
-            totalEligible: 0,
+            totalEligible: 2,
             executed: 0,
             successCount: 0,
             failedCount: 0,
-            skippedCount: 0,
+            skippedCount: 2,
             needsRetry: false,
           },
         }
@@ -442,7 +442,7 @@ describe("AutoCheckin quick run", () => {
           itemCount: 0,
           successCount: 0,
           failureCount: 0,
-          skippedCount: 0,
+          skippedCount: 2,
         },
       },
     )

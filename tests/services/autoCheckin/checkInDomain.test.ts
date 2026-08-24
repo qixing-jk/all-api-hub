@@ -53,6 +53,29 @@ const unknown: CheckInMethodDetection = {
 describe("inspectCheckInMethods", () => {
   it.each([
     {
+      name: "the site type has no registered candidates",
+      candidateMethodIds: [],
+      expected: "no_provider",
+    },
+    {
+      name: "the site type has a candidate awaiting selection",
+      candidateMethodIds: [NEW_API_METHOD_ID],
+      expected: "no_selected_method",
+    },
+  ])(
+    "distinguishes missing provider support when $name",
+    ({ candidateMethodIds, expected }) => {
+      expect(
+        inspectCheckInMethods({
+          config: createConfig({}),
+          candidateMethodIds,
+        }).executionEligibility,
+      ).toEqual({ eligible: false, skipReason: expected })
+    },
+  )
+
+  it.each([
+    {
       name: "no registered candidates",
       candidates: [],
       detections: {},

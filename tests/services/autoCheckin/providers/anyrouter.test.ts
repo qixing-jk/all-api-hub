@@ -59,9 +59,11 @@ const checkInForTest = (
 ) => anyrouterProvider.checkIn(account, context)
 
 describe("anyrouterProvider", () => {
-  describe("canCheckIn", () => {
-    it("returns true for valid account", () => {
-      expect(anyrouterProvider.canCheckIn(mockAccount)).toBe(true)
+  describe("getReadiness", () => {
+    it("returns ready for a valid account", () => {
+      expect(anyrouterProvider.getReadiness(mockAccount)).toEqual({
+        ready: true,
+      })
     })
 
     it("leaves automatic-execution intent to the Module", () => {
@@ -69,15 +71,18 @@ describe("anyrouterProvider", () => {
         ...mockAccount,
         checkIn: buildCheckInConfig(),
       }
-      expect(anyrouterProvider.canCheckIn(account)).toBe(true)
+      expect(anyrouterProvider.getReadiness(account)).toEqual({ ready: true })
     })
 
-    it("returns false when no user id", () => {
+    it("explains when account data is missing", () => {
       const account = {
         ...mockAccount,
         account_info: { ...mockAccount.account_info, id: "" },
       }
-      expect(anyrouterProvider.canCheckIn(account)).toBe(false)
+      expect(anyrouterProvider.getReadiness(account)).toEqual({
+        ready: false,
+        reason: "account_data_missing",
+      })
     })
   })
 

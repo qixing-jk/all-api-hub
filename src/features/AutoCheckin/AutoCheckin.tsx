@@ -13,14 +13,18 @@ import { useTranslation } from "react-i18next"
 import { AutoCheckinPretriggerCompletionDialog } from "~/components/AutoCheckinPretriggerCompletionDialog"
 import { OptionsPageSettingsTitleAction } from "~/components/OptionsPageSettingsTitleAction"
 import { PageHeader } from "~/components/PageHeader"
-import { Button } from "~/components/ui"
+import { Button, CollapsibleSection } from "~/components/ui"
 import { Modal } from "~/components/ui/Dialog/Modal"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import DelAccountDialog from "~/features/AccountManagement/components/DelAccountDialog"
 import { openExternalCheckIns } from "~/features/AccountManagement/utils/openExternalCheckIns"
-import { translateAutoCheckinMessageKey } from "~/features/AutoCheckin/utils/autoCheckin"
+import {
+  FILTER_STATUS,
+  filterAutoCheckinResults,
+  type FilterStatus,
+} from "~/features/AutoCheckin/utils/autoCheckin"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { isAutomaticCheckInConfiguredForAccount } from "~/services/checkin/autoCheckin/inspection"
 import {
@@ -81,13 +85,11 @@ import {
 import AccountSnapshotTable from "./components/AccountSnapshotTable"
 import ActionBar from "./components/ActionBar"
 import EmptyResults from "./components/EmptyResults"
-import FilterBar, {
-  FILTER_STATUS,
-  type FilterStatus,
-} from "./components/FilterBar"
+import FilterBar from "./components/FilterBar"
 import LoadingSkeleton from "./components/LoadingSkeleton"
 import ResultsTable from "./components/ResultsTable"
 import StatusCard from "./components/StatusCard"
+import TableFilteredEmptyState from "./components/TableFilteredEmptyState"
 
 /**
  * Unified logger scoped to the Auto Check-in options page.
@@ -139,7 +141,7 @@ const getAutoCheckinStatusAnalyticsInsights = (
   }
 }
 
-const isNoRunnableAutoCheckinResponse = (
+const isSkippedAutoCheckinResponse = (
   response: AutoCheckinBasicResponse,
 ): boolean => {
   const summary = response.success ? response.summary : undefined
@@ -147,11 +149,7 @@ const isNoRunnableAutoCheckinResponse = (
     return false
   }
 
-  return (
-    response?.success === true &&
-    summary.executed === 0 &&
-    summary.totalEligible === 0
-  )
+  return response.success === true && summary.executed === 0
 }
 
 const getRetryAnalyticsResult = (
@@ -163,6 +161,10 @@ const getRetryAnalyticsResult = (
 
   if (response.lastRunResult === AUTO_CHECKIN_RUN_RESULT.FAILED) {
     return PRODUCT_ANALYTICS_RESULTS.Failure
+  }
+
+  if (response.lastRunResult === AUTO_CHECKIN_RUN_RESULT.SKIPPED) {
+    return PRODUCT_ANALYTICS_RESULTS.Skipped
   }
 
   if (!response.lastRunResult && response.pendingRetry) {
@@ -356,7 +358,7 @@ export default function AutoCheckin(props: {
         toast.success(t("messages.success.runCompleted"))
         const updatedStatus = await loadStatus()
         tracker.complete(
-          isNoRunnableAutoCheckinResponse(response)
+          isSkippedAutoCheckinResponse(response)
             ? PRODUCT_ANALYTICS_RESULTS.Skipped
             : PRODUCT_ANALYTICS_RESULTS.Success,
           {
@@ -1324,47 +1326,12 @@ export default function AutoCheckin(props: {
     )
   }
 
-  const filteredResults = accountResults.filter((result) => {
-    // Filter by status
-    if (
-      filterStatus === FILTER_STATUS.SUCCESS &&
-      result.status !== CHECKIN_RESULT_STATUS.SUCCESS &&
-      result.status !== CHECKIN_RESULT_STATUS.ALREADY_CHECKED
-    )
-      return false
-    if (
-      filterStatus === FILTER_STATUS.FAILED &&
-      result.status !== CHECKIN_RESULT_STATUS.FAILED
-    )
-      return false
-    if (
-      filterStatus === FILTER_STATUS.SKIPPED &&
-      result.status !== CHECKIN_RESULT_STATUS.SKIPPED
-    )
-      return false
-
-    // Search by keyword
-    if (searchKeyword) {
-      const keyword = searchKeyword.toLowerCase()
-
-      const displayMessage =
-        result.rawMessage ??
-        (result.messageKey
-          ? translateAutoCheckinMessageKey(
-              t,
-              result.messageKey,
-              result.messageParams,
-            )
-          : result.message ?? "")
-      return (
-        result.accountName.toLowerCase().includes(keyword) ||
-        String(result.accountId).toLowerCase().includes(keyword) ||
-        displayMessage.toLowerCase().includes(keyword)
-      )
-    }
-
-    return true
-  })
+  const filteredResults = filterAutoCheckinResults(
+    accountResults,
+    filterStatus,
+    searchKeyword,
+    t,
+  )
 
   const isInitialLoading = isLoading && status === null
 
@@ -1422,19 +1389,7 @@ export default function AutoCheckin(props: {
         />
       </div>
 
-      {hasHistory && (
-        <div className="mb-4">
-          <FilterBar
-            accountResults={accountResults}
-            status={filterStatus}
-            keyword={searchKeyword}
-            onStatusChange={setFilterStatus}
-            onKeywordChange={setSearchKeyword}
-          />
-        </div>
-      )}
-
-      {!hasResults ? (
+      {!hasHistory ? (
         <EmptyResults
           hasHistory={hasHistory}
           setupState={accountSetupState ?? "ready"}
@@ -1443,6 +1398,28 @@ export default function AutoCheckin(props: {
       ) : (
         <ResultsTable
           results={filteredResults}
+          toolbar={
+            <FilterBar
+              accountResults={accountResults}
+              status={filterStatus}
+              keyword={searchKeyword}
+              onStatusChange={setFilterStatus}
+              onKeywordChange={setSearchKeyword}
+            />
+          }
+          emptyState={
+            !hasResults ? (
+              <TableFilteredEmptyState
+                title={t("execution.empty.noResults")}
+                description={t("execution.empty.noResultsDesc")}
+                clearLabel={t("execution.filters.clearAll")}
+                onClearFilters={() => {
+                  setFilterStatus(FILTER_STATUS.ALL)
+                  setSearchKeyword("")
+                }}
+              />
+            ) : undefined
+          }
           showDevActions={showDebugButtons}
           retryingAccountId={retryingAccountId}
           disablingAccountId={disablingAccountId}
@@ -1461,17 +1438,19 @@ export default function AutoCheckin(props: {
       )}
 
       {status?.accountsSnapshot && status.accountsSnapshot.length > 0 && (
-        <div className="mt-6 space-y-3">
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-              {t("snapshot.title")}
-            </h3>
+        <CollapsibleSection
+          title={t("snapshot.title")}
+          className="mt-6"
+          buttonClassName="border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-900 shadow-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+          panelClassName="space-y-3 border-0 bg-transparent p-0 dark:bg-transparent"
+        >
+          <div className="px-1">
             <p className="text-sm text-gray-500 dark:text-gray-400">
               {t("snapshot.description")}
             </p>
           </div>
           <AccountSnapshotTable snapshots={status.accountsSnapshot} />
-        </div>
+        </CollapsibleSection>
       )}
 
       <AutoCheckinPretriggerCompletionDialog

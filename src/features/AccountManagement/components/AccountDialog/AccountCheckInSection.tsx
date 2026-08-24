@@ -5,6 +5,7 @@ import {
   Button,
   FormField,
   Input,
+  Notice,
   Select,
   SelectContent,
   SelectItem,
@@ -13,14 +14,17 @@ import {
   Switch,
 } from "~/components/ui"
 import {
+  CHECK_IN_DISCOVERY_DECISION_OUTCOMES,
   CHECK_IN_METHOD_AVAILABILITIES,
   CHECK_IN_METHOD_STATUS_OUTCOMES,
+  CHECK_IN_METHOD_UNKNOWN_REASON_CODES,
   CHECK_IN_SELECTION_MODES,
   CHECK_IN_SELECTION_STATUSES,
 } from "~/constants/checkIn"
 import type { AccountSiteType } from "~/constants/siteType"
 import { AccountFormSection } from "~/features/AccountManagement/components/AccountDialog/AccountFormSection"
 import { ACCOUNT_FORM_MOBILE_DEFAULT_OPEN } from "~/features/AccountManagement/components/AccountDialog/accountFormSections"
+import type { AccountCheckInRedetectionFeedback } from "~/features/AccountManagement/components/AccountDialog/models"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import {
   getSelectedCheckInStatus,
@@ -29,6 +33,7 @@ import {
 import { setCheckInSelection } from "~/services/checkin/autoCheckin/methods"
 import { getAutoCheckinCandidateMethodIds } from "~/services/checkin/autoCheckin/providers/registry"
 import type { CheckInConfig } from "~/types"
+import type { CheckInMethodUnknownReason } from "~/types/checkIn"
 
 const AUTOMATIC_CHECK_IN_SELECTION_VALUE = "automatic"
 const AUTO_CHECKIN_ENABLED_CONTROL_ID = "auto-checkin-enabled"
@@ -41,6 +46,7 @@ interface AccountCheckInSectionProps {
   onCheckInSelectionChange: (value: CheckInConfig) => void
   onRedetectCheckInMethods: () => void
   isRedetectingCheckInMethods: boolean
+  checkInRedetectionFeedback: AccountCheckInRedetectionFeedback | null
 }
 
 /** Renders method discovery, automatic intent, and custom check-in settings. */
@@ -51,6 +57,7 @@ export function AccountCheckInSection({
   onCheckInSelectionChange,
   onRedetectCheckInMethods,
   isRedetectingCheckInMethods,
+  checkInRedetectionFeedback,
 }: AccountCheckInSectionProps) {
   const { t } = useTranslation("accountDialog")
   const inspection = inspectAccountCheckIn({ config: checkIn, siteType })
@@ -65,6 +72,82 @@ export function AccountCheckInSection({
   const isSelectedMethodDisabled =
     selectedStatus?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known &&
     selectedStatus.availability === CHECK_IN_METHOD_AVAILABILITIES.Disabled
+  const getUnknownReasonMessage = (reason: CheckInMethodUnknownReason) => {
+    switch (reason) {
+      case CHECK_IN_METHOD_UNKNOWN_REASON_CODES.Network:
+        return t("messages.checkInRedetectUnknownReasons.network")
+      case CHECK_IN_METHOD_UNKNOWN_REASON_CODES.Timeout:
+        return t("messages.checkInRedetectUnknownReasons.timeout")
+      case CHECK_IN_METHOD_UNKNOWN_REASON_CODES.AuthenticationRequired:
+        return t(
+          "messages.checkInRedetectUnknownReasons.authentication_required",
+        )
+      case CHECK_IN_METHOD_UNKNOWN_REASON_CODES.PermissionDenied:
+        return t("messages.checkInRedetectUnknownReasons.permission_denied")
+      case CHECK_IN_METHOD_UNKNOWN_REASON_CODES.SourceUnavailable:
+        return t("messages.checkInRedetectUnknownReasons.source_unavailable")
+      case CHECK_IN_METHOD_UNKNOWN_REASON_CODES.IdentityMismatch:
+        return t("messages.checkInRedetectUnknownReasons.identity_mismatch")
+      case CHECK_IN_METHOD_UNKNOWN_REASON_CODES.InvalidResponse:
+        return t("messages.checkInRedetectUnknownReasons.invalid_response")
+      case CHECK_IN_METHOD_UNKNOWN_REASON_CODES.CredentialPersistenceFailed:
+        return t(
+          "messages.checkInRedetectUnknownReasons.credential_persistence_failed",
+        )
+    }
+  }
+  const redetectionFeedbackPresentation = (() => {
+    if (!checkInRedetectionFeedback) return null
+    if (checkInRedetectionFeedback.kind === "failed") {
+      return {
+        tone: "destructive" as const,
+        title: checkInRedetectionFeedback.message,
+      }
+    }
+
+    const description = checkInRedetectionFeedback.saveRequired
+      ? t("messages.checkInRedetectSaveRequired")
+      : undefined
+    if (checkInRedetectionFeedback.selectedMethodDisabled) {
+      return {
+        tone: "warning" as const,
+        title: t("messages.checkInRedetectDisabled"),
+        description,
+      }
+    }
+
+    switch (checkInRedetectionFeedback.decisionOutcome) {
+      case CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Resolved:
+        return {
+          tone: "success" as const,
+          title: t("messages.checkInRedetectResolved"),
+          description,
+        }
+      case CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Ambiguous:
+        return {
+          tone: "warning" as const,
+          title: t("messages.checkInRedetectAmbiguous"),
+          description,
+        }
+      case CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Unsupported:
+        return {
+          tone: "info" as const,
+          title: t("messages.checkInRedetectUnsupported"),
+          description,
+        }
+      case CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Unknown:
+        return {
+          tone: "warning" as const,
+          title: t("messages.checkInRedetectUnknown"),
+          description:
+            checkInRedetectionFeedback.unknownReasons.length > 0
+              ? checkInRedetectionFeedback.unknownReasons
+                  .map(getUnknownReasonMessage)
+                  .join(" ")
+              : undefined,
+        }
+    }
+  })()
 
   const setAutomaticSelection = () => {
     onCheckInSelectionChange(
@@ -113,6 +196,22 @@ export function AccountCheckInSection({
           </Button>
         )}
       </div>
+
+      {redetectionFeedbackPresentation && (
+        <Notice
+          tone={redetectionFeedbackPresentation.tone}
+          title={redetectionFeedbackPresentation.title}
+          description={redetectionFeedbackPresentation.description}
+          role={
+            checkInRedetectionFeedback?.kind === "failed" ? "alert" : "status"
+          }
+          aria-live={
+            checkInRedetectionFeedback?.kind === "failed"
+              ? "assertive"
+              : "polite"
+          }
+        />
+      )}
 
       {hasCandidates && (
         <div className="space-y-2">

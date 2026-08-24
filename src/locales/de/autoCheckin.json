@@ -33,9 +33,14 @@
     },
     "filters": {
       "all": "Alle",
+      "clearAll": "Filter löschen",
+      "countFiltered": "{{filtered}} von {{total}} angezeigt",
+      "countTotal": "Insgesamt {{total}}",
       "failed": "Fehlgeschlagen",
+      "searchLabel": "Ausführungsergebnisse durchsuchen",
       "searchPlaceholder": "Suche nach Kontoname oder Nachricht...",
       "skipped": "Übersprungen",
+      "statusLabel": "Nach Ausführungsstatus filtern",
       "success": "Erfolg"
     },
     "hints": {
@@ -160,32 +165,62 @@
     "windowStartDesc": "Die früheste Ortszeit, zu der der tägliche Check-in beginnen kann."
   },
   "skipReasons": {
+    "account_data_missing": "Erforderliche Kontodaten fehlen. Erkennen Sie das Konto erneut.",
     "account_disabled": "Konto ist deaktiviert",
     "account_unavailable": "Das Konto wurde vor dem Check-in geändert oder ist nicht mehr verfügbar",
     "already_checked_today": "Heute bereits eingecheckt",
+    "authentication_required": "Die Anmeldung ist abgelaufen oder erforderlich. Melden Sie sich bei der Zielseite an und versuchen Sie es erneut.",
     "auto_checkin_disabled": "Automatischer Check-in deaktiviert",
+    "credentials_missing": "Gespeicherte Zugangsdaten fehlen. Erkennen Sie das Konto erneut oder aktualisieren Sie die Zugangsdaten.",
     "detection_disabled": "Erkennung deaktiviert",
     "method_disabled": "Die Check-in-Funktion dieser Website ist deaktiviert",
+    "method_not_matched": "Die ausgewählte Check-in-Methode passt nicht mehr zu dieser Website. Erkennen Sie die Methode erneut.",
+    "method_unavailable": "Die ausgewählte Check-in-Methode ist nicht mehr verfügbar. Erkennen Sie die Methode erneut.",
+    "method_unsupported": "Die ausgewählte Check-in-Methode wird von dieser Website nicht unterstützt.",
+    "network_error": "Ein Netzwerkproblem hat den Check-in verhindert. Prüfen Sie die Verbindung und versuchen Sie es erneut.",
     "no_provider": "Der Websitetyp des Kontos unterstützt derzeit keinen Check-in",
-    "provider_not_ready": "Die Kontokonfiguration unterstützt derzeit keinen Check-in",
-    "status_unavailable": "Der aktuelle Check-in-Status konnte nicht bestätigt werden, daher wurde kein Check-in versucht"
+    "no_selected_method": "Es ist keine Check-in-Methode ausgewählt. Erkennen oder wählen Sie eine Methode in den Kontoeinstellungen.",
+    "permission_denied": "Die Website hat den Check-in abgelehnt. Melden Sie sich erneut an oder prüfen Sie die Kontoberechtigungen.",
+    "source_unavailable": "Die Zielwebsite ist vorübergehend nicht verfügbar. Versuchen Sie es später erneut.",
+    "status_unavailable": "Der aktuelle Check-in-Status konnte nicht bestätigt werden, daher wurde kein Check-in versucht",
+    "timeout": "Die Verbindung wurde vor Abschluss des Check-ins unterbrochen. Versuchen Sie es erneut."
   },
   "snapshot": {
     "badges": {
       "disabled": "Deaktiviert",
       "enabled": "Aktiviert",
+      "methodNotSelected": "Nicht ausgewählt",
+      "methodSelected": "Ausgewählt",
       "pending": "Ausstehend",
       "providerAvailable": "Verfügbar",
       "providerUnavailable": "Nicht verfügbar"
     },
-    "description": "Alle für die Erkennung aktivierten Konten und ihre Bereitschaft sind unten aufgeführt. Ausstehende Konten nehmen am Check-in teil, wenn Sie auf „Jetzt ausführen“ klicken oder wenn die geplante Zeit erreicht ist.",
+    "description": "Zeigt die beim letzten Lauf erfasste Kontobereitschaft. Ausstehende Konten nehmen am Check-in teil, wenn Sie auf „Jetzt ausführen“ klicken oder wenn die geplante Zeit erreicht ist.",
+    "filters": {
+      "clearAll": "Filter löschen",
+      "countFiltered": "{{filtered}} von {{total}} Konten angezeigt",
+      "countTotal": "{{total}} Konten",
+      "noMatches": "Keine passenden Konten",
+      "noMatchesDescription": "Passen Sie Suche oder Filter an oder löschen Sie alle Filter.",
+      "readinessAll": "Alle Bereitschaftsstatus",
+      "readinessDisabled": "Deaktiviert",
+      "readinessLabel": "Nach Ausführungsbereitschaft filtern",
+      "readinessReady": "Ausführbar",
+      "readinessSetupRequired": "Einrichtung erforderlich",
+      "readinessTemporarilyUnavailable": "Vorübergehend nicht verfügbar",
+      "readinessUnsupported": "Nicht unterstützt",
+      "searchLabel": "Kontobereitschaft durchsuchen",
+      "searchPlaceholder": "Nach Kontoname, ID oder Grund suchen...",
+      "statusAll": "Alle letzten Status",
+      "statusLabel": "Nach letztem Status filtern"
+    },
     "table": {
       "autoCheckin": "Automatischer Check-in",
-      "detection": "Erkennung",
-      "lastResult": "Letztes Ergebnis",
-      "provider": "Anbieter",
-      "skipReason": "Grund für das Überspringen",
-      "status": "Status"
+      "detection": "Check-in-Methode",
+      "lastResult": "Aktualisiert",
+      "provider": "Ausführung",
+      "skipReason": "Grund für Nichtausführung",
+      "status": "Letzter Status"
     },
     "title": "Kontobereitschaft"
   },
@@ -200,6 +235,7 @@
     "result": {
       "failed": "Fehlgeschlagen",
       "partial": "Teilweise",
+      "skipped": "Nicht ausgeführt",
       "success": "Erfolg"
     },
     "retryDisabled": "Wiederholung deaktiviert",

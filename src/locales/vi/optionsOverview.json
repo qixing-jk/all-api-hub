@@ -45,6 +45,7 @@
       "not_run": "Chờ lần chạy đầu",
       "partial": "Thành công một phần",
       "ready": "Sẵn sàng",
+      "skipped": "Chưa thực hiện",
       "success": "Thành công"
     },
     "summary": "Tóm tắt chạy tự động điểm danh"

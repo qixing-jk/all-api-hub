@@ -64,6 +64,10 @@ function toAnalyticsResult(
     return PRODUCT_ANALYTICS_RESULTS.Failure
   }
 
+  if (response.lastRunResult === AUTO_CHECKIN_RUN_RESULT.SKIPPED) {
+    return PRODUCT_ANALYTICS_RESULTS.Skipped
+  }
+
   return PRODUCT_ANALYTICS_RESULTS.Success
 }
 

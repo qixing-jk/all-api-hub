@@ -33,9 +33,14 @@
     },
     "filters": {
       "all": "Todos",
+      "clearAll": "Borrar filtros",
+      "countFiltered": "Mostrando {{filtered}} de {{total}}",
+      "countTotal": "{{total}} en total",
       "failed": "Fallidos",
+      "searchLabel": "Buscar resultados de ejecución",
       "searchPlaceholder": "Buscar por nombre de cuenta o mensaje...",
       "skipped": "Omitidos",
+      "statusLabel": "Filtrar por estado de ejecución",
       "success": "Correctos"
     },
     "hints": {
@@ -162,32 +167,62 @@
     "windowStartDesc": "La hora local más temprana en la que puede iniciar el check-in diario."
   },
   "skipReasons": {
+    "account_data_missing": "Faltan datos obligatorios de la cuenta. Vuelve a detectarla.",
     "account_disabled": "La cuenta está deshabilitada",
     "account_unavailable": "La cuenta cambió o dejó de estar disponible antes del check-in",
     "already_checked_today": "Ya hizo check-in hoy",
+    "authentication_required": "La sesión expiró o es necesario iniciar sesión. Inicia sesión en el sitio y vuelve a intentarlo.",
     "auto_checkin_disabled": "Check-in automático deshabilitado",
+    "credentials_missing": "Faltan las credenciales guardadas. Vuelve a detectar la cuenta o actualiza sus credenciales.",
     "detection_disabled": "Detección deshabilitada",
     "method_disabled": "La función de check-in de este sitio está deshabilitada",
+    "method_not_matched": "El método de check-in seleccionado ya no coincide con este sitio. Vuelve a detectarlo.",
+    "method_unavailable": "El método de check-in seleccionado ya no está disponible. Vuelve a detectarlo.",
+    "method_unsupported": "Este sitio no admite el método de check-in seleccionado.",
+    "network_error": "Un problema de conexión de red impidió el check-in. Revisa tu conexión y vuelve a intentarlo.",
     "no_provider": "El tipo de sitio de la cuenta actualmente no admite check-in",
-    "provider_not_ready": "La configuración de la cuenta actualmente no admite check-in",
-    "status_unavailable": "No se pudo confirmar el estado actual, por lo que no se intentó el check-in"
+    "no_selected_method": "No hay un método de check-in seleccionado. Vuelve a detectarlo o elige uno en la configuración de la cuenta.",
+    "permission_denied": "El sitio rechazó el permiso para hacer check-in. Inicia sesión de nuevo o revisa los permisos de la cuenta.",
+    "source_unavailable": "El sitio de origen no está disponible temporalmente. Inténtalo de nuevo más tarde.",
+    "status_unavailable": "No se pudo confirmar el estado actual, por lo que no se intentó el check-in",
+    "timeout": "La conexión agotó el tiempo de espera antes de completar el check-in. Vuelve a intentarlo."
   },
   "snapshot": {
     "badges": {
       "disabled": "Deshabilitada",
       "enabled": "Habilitada",
+      "methodNotSelected": "Sin seleccionar",
+      "methodSelected": "Seleccionado",
       "pending": "Pendiente",
       "providerAvailable": "Disponible",
       "providerUnavailable": "No disponible"
     },
-    "description": "Todas las cuentas con detección habilitada y su preparación se listan abajo. Las cuentas pendientes entran al check-in cuando haces clic en \"Ejecutar ahora\" o cuando llega la hora programada.",
+    "description": "Muestra la preparación de las cuentas registrada en la última ejecución. Las cuentas pendientes entran al check-in cuando haces clic en \"Ejecutar ahora\" o cuando llega la hora programada.",
+    "filters": {
+      "clearAll": "Borrar filtros",
+      "countFiltered": "Mostrando {{filtered}} de {{total}} cuentas",
+      "countTotal": "{{total}} cuentas",
+      "noMatches": "No hay cuentas coincidentes",
+      "noMatchesDescription": "Ajusta la búsqueda o los filtros, o borra todos los filtros.",
+      "readinessAll": "Todos los estados de preparación",
+      "readinessDisabled": "Deshabilitada",
+      "readinessLabel": "Filtrar por preparación de ejecución",
+      "readinessReady": "Lista para ejecutar",
+      "readinessSetupRequired": "Requiere configuración",
+      "readinessTemporarilyUnavailable": "No disponible temporalmente",
+      "readinessUnsupported": "No compatible",
+      "searchLabel": "Buscar preparación de cuentas",
+      "searchPlaceholder": "Buscar por nombre, ID o motivo...",
+      "statusAll": "Todos los estados recientes",
+      "statusLabel": "Filtrar por estado reciente"
+    },
     "table": {
       "autoCheckin": "Check-in automático",
-      "detection": "Detección",
-      "lastResult": "Último resultado",
-      "provider": "Proveedor",
-      "skipReason": "Motivo de omisión",
-      "status": "Estado"
+      "detection": "Método de check-in",
+      "lastResult": "Actualizado",
+      "provider": "Ejecución",
+      "skipReason": "Motivo de no ejecución",
+      "status": "Último estado"
     },
     "title": "Preparación de cuentas"
   },
@@ -202,6 +237,7 @@
     "result": {
       "failed": "Fallido",
       "partial": "Parcial",
+      "skipped": "No ejecutado",
       "success": "Correcto"
     },
     "retryDisabled": "Reintento deshabilitado",

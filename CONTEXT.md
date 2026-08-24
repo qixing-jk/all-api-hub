@@ -67,6 +67,25 @@ regardless of whether the key comes from an API token resource or an account
 service credential.
 _Avoid_: API token, token row
 
+**Automatic Check-in Intent**:
+A user's choice that an account may participate in automatic check-in,
+independent of current method support, readiness, and the latest result.
+_Avoid_: check-in support, check-in readiness
+
+**Check-in Readiness**:
+Whether an account currently has a selected usable method and the saved account
+data and credentials required to execute it.
+_Avoid_: enabled, supported, latest status
+
+**Check-in Execution Outcome**:
+What happened in one attempt: succeeded, failed, or was not executed.
+_Avoid_: readiness, reason
+
+**Check-in Reason**:
+A stable explanation for a readiness or execution outcome, such as user intent,
+method selection, credentials, network connectivity, or source availability.
+_Avoid_: status
+
 ## Relationships
 
 - An **Account Site Type** is a **Site Type** that supports saved-account workflows.
@@ -93,6 +112,10 @@ _Avoid_: API token, token row
 - An **Account Runtime Key** is not necessarily an API token resource. API token
   CRUD, token metadata, and service-credential rotation remain source-specific
   behavior behind the account runtime key source.
+- **Automatic Check-in Intent**, **Check-in Readiness**, **Check-in Execution
+  Outcome**, and **Check-in Reason** are independent facts. A failed attempt does
+  not disable the user's intent, and a disabled intent is not an execution
+  failure.
 
 ## Example dialogue
 

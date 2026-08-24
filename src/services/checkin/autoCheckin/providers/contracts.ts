@@ -1,3 +1,4 @@
+import { type CHECK_IN_PROVIDER_READINESS_REASONS } from "~/constants/checkIn"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import type { AutoCheckinProviderResult } from "~/services/checkin/autoCheckin/providers/types"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
@@ -39,9 +40,16 @@ export interface AutoCheckinProviderContext {
   protectionBypassExecution: ProtectionBypassExecution
 }
 
+export type AutoCheckinProviderReadiness =
+  | { ready: true }
+  | {
+      ready: false
+      reason: (typeof CHECK_IN_PROVIDER_READINESS_REASONS)[keyof typeof CHECK_IN_PROVIDER_READINESS_REASONS]
+    }
+
 /** Executable compatibility contract for a registered check-in method. */
 export interface AutoCheckinProvider {
-  canCheckIn(account: SiteAccount): boolean
+  getReadiness(account: SiteAccount): AutoCheckinProviderReadiness
   /** Optional read-only protocol probe used by full discovery. */
   detect?: (
     context: AutoCheckinProviderReadContext,

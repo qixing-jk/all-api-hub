@@ -13,6 +13,7 @@ import {
   CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES,
   CHECK_IN_METHOD_STATUS_OUTCOMES,
   CHECK_IN_METHOD_TODAY_STATUSES,
+  CHECK_IN_PROVIDER_READINESS_REASONS,
 } from "~/constants/checkIn"
 import type {
   WongCheckinApiResponse,
@@ -157,18 +158,26 @@ async function checkinWongGongyi(
 /**
  * Determine whether this account has the required configuration for WONG check-in.
  */
-function canCheckIn(account: SiteAccount): boolean {
+function getReadiness(account: SiteAccount) {
   if (!account.account_info?.id) {
-    return false
+    return {
+      ready: false,
+      reason: CHECK_IN_PROVIDER_READINESS_REASONS.AccountDataMissing,
+    } as const
   }
 
   const authType = getEffectiveAuthType(account)
 
   if (authType === AuthTypeEnum.AccessToken) {
-    return !!account.account_info?.access_token
+    return account.account_info?.access_token
+      ? ({ ready: true } as const)
+      : ({
+          ready: false,
+          reason: CHECK_IN_PROVIDER_READINESS_REASONS.CredentialsMissing,
+        } as const)
   }
 
-  return true
+  return { ready: true } as const
 }
 
 /**
@@ -226,7 +235,7 @@ const getStatus: NonNullable<AutoCheckinProvider["getStatus"]> = async ({
 }
 
 export const wongGongyiProvider: AutoCheckinProvider = {
-  canCheckIn,
+  getReadiness,
   detect: (context) => detectWithStatusReadback(context, getStatus),
   getStatus,
   checkIn: checkinWongGongyi,

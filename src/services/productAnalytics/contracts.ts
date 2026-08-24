@@ -962,7 +962,17 @@ export const PRODUCT_ANALYTICS_AUTO_CHECKIN_SKIP_REASONS = {
   AutoCheckinDisabled: "auto_checkin_disabled",
   AlreadyCheckedToday: "already_checked_today",
   NoProvider: "no_provider",
-  ProviderNotReady: "provider_not_ready",
+  NoSelectedMethod: "no_selected_method",
+  MethodUnavailable: "method_unavailable",
+  MethodNotMatched: "method_not_matched",
+  MethodUnsupported: "method_unsupported",
+  AccountDataMissing: "account_data_missing",
+  AuthenticationRequired: "authentication_required",
+  CredentialsMissing: "credentials_missing",
+  NetworkError: "network_error",
+  SourceUnavailable: "source_unavailable",
+  PermissionDenied: "permission_denied",
+  Timeout: "timeout",
   StatusUnavailable: "status_unavailable",
 } as const
 

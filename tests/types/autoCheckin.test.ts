@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest"
 import {
   AUTO_CHECKIN_RUN_RESULT,
   AUTO_CHECKIN_SKIP_REASON,
+  getAutoCheckinRunResultFromSummary,
   getAutoCheckinRunResultLabel,
   getAutoCheckinSkipReasonTranslationKey,
   translateAutoCheckinSkipReason,
@@ -15,6 +16,10 @@ const t = ((key: string) => key) as unknown as TFunction
 
 describe("autoCheckin translation helpers", () => {
   it.each([
+    [
+      AUTO_CHECKIN_SKIP_REASON.ACCOUNT_DATA_MISSING,
+      "autoCheckin:skipReasons.account_data_missing",
+    ],
     [
       AUTO_CHECKIN_SKIP_REASON.ACCOUNT_DISABLED,
       "autoCheckin:skipReasons.account_disabled",
@@ -36,13 +41,54 @@ describe("autoCheckin translation helpers", () => {
       "autoCheckin:skipReasons.already_checked_today",
     ],
     [
+      AUTO_CHECKIN_SKIP_REASON.STATUS_UNAVAILABLE,
+      "autoCheckin:skipReasons.status_unavailable",
+    ],
+    [
       AUTO_CHECKIN_SKIP_REASON.NO_PROVIDER,
       "autoCheckin:skipReasons.no_provider",
     ],
     [
-      AUTO_CHECKIN_SKIP_REASON.PROVIDER_NOT_READY,
-      "autoCheckin:skipReasons.provider_not_ready",
+      AUTO_CHECKIN_SKIP_REASON.ACCOUNT_UNAVAILABLE,
+      "autoCheckin:skipReasons.account_unavailable",
     ],
+    [
+      AUTO_CHECKIN_SKIP_REASON.AUTHENTICATION_REQUIRED,
+      "autoCheckin:skipReasons.authentication_required",
+    ],
+    [
+      AUTO_CHECKIN_SKIP_REASON.CREDENTIALS_MISSING,
+      "autoCheckin:skipReasons.credentials_missing",
+    ],
+    [
+      AUTO_CHECKIN_SKIP_REASON.METHOD_NOT_MATCHED,
+      "autoCheckin:skipReasons.method_not_matched",
+    ],
+    [
+      AUTO_CHECKIN_SKIP_REASON.METHOD_UNAVAILABLE,
+      "autoCheckin:skipReasons.method_unavailable",
+    ],
+    [
+      AUTO_CHECKIN_SKIP_REASON.METHOD_UNSUPPORTED,
+      "autoCheckin:skipReasons.method_unsupported",
+    ],
+    [
+      AUTO_CHECKIN_SKIP_REASON.NETWORK_ERROR,
+      "autoCheckin:skipReasons.network_error",
+    ],
+    [
+      AUTO_CHECKIN_SKIP_REASON.NO_SELECTED_METHOD,
+      "autoCheckin:skipReasons.no_selected_method",
+    ],
+    [
+      AUTO_CHECKIN_SKIP_REASON.PERMISSION_DENIED,
+      "autoCheckin:skipReasons.permission_denied",
+    ],
+    [
+      AUTO_CHECKIN_SKIP_REASON.SOURCE_UNAVAILABLE,
+      "autoCheckin:skipReasons.source_unavailable",
+    ],
+    [AUTO_CHECKIN_SKIP_REASON.TIMEOUT, "autoCheckin:skipReasons.timeout"],
   ])(
     "maps skip reason %s to the correct translation key",
     (reason, expected) => {
@@ -63,6 +109,7 @@ describe("autoCheckin translation helpers", () => {
     [AUTO_CHECKIN_RUN_RESULT.SUCCESS, "autoCheckin:status.result.success"],
     [AUTO_CHECKIN_RUN_RESULT.PARTIAL, "autoCheckin:status.result.partial"],
     [AUTO_CHECKIN_RUN_RESULT.FAILED, "autoCheckin:status.result.failed"],
+    [AUTO_CHECKIN_RUN_RESULT.SKIPPED, "autoCheckin:status.result.skipped"],
   ])(
     "maps run result %s to the correct localized label",
     (result, expected) => {
@@ -74,5 +121,15 @@ describe("autoCheckin translation helpers", () => {
     expect(
       getAutoCheckinRunResultLabel(t, "legacy_result" as AutoCheckinRunResult),
     ).toBe("common:labels.unknown")
+  })
+
+  it("classifies a completed run with zero executions as skipped", () => {
+    expect(
+      getAutoCheckinRunResultFromSummary({
+        executed: 0,
+        successCount: 0,
+        failedCount: 0,
+      }),
+    ).toBe(AUTO_CHECKIN_RUN_RESULT.SKIPPED)
   })
 })

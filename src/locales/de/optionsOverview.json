@@ -45,6 +45,7 @@
       "not_run": "Warten auf den ersten Lauf",
       "partial": "Teilerfolg",
       "ready": "Bereit",
+      "skipped": "Nicht ausgeführt",
       "success": "Erfolgreich"
     },
     "summary": "Zusammenfassung des automatischen Check-in-Laufs"

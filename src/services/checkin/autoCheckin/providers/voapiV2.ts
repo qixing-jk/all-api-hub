@@ -2,6 +2,7 @@ import {
   CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES,
   CHECK_IN_METHOD_STATUS_OUTCOMES,
   CHECK_IN_METHOD_TODAY_STATUSES,
+  CHECK_IN_PROVIDER_READINESS_REASONS,
 } from "~/constants/checkIn"
 import { SITE_TYPES } from "~/constants/siteType"
 import { AccountUpdateUserTimestampMode } from "~/services/accounts/accountDefaults"
@@ -141,10 +142,19 @@ const getStatus: NonNullable<AutoCheckinProvider["getStatus"]> = async ({
 }
 
 export const voApiV2Provider: AutoCheckinProvider = {
-  canCheckIn(account) {
-    return Boolean(
-      isVoApiV2Account(account) && account.account_info?.access_token,
-    )
+  getReadiness(account) {
+    if (!isVoApiV2Account(account)) {
+      return {
+        ready: false,
+        reason: CHECK_IN_PROVIDER_READINESS_REASONS.AccountDataMissing,
+      }
+    }
+    return account.account_info?.access_token
+      ? { ready: true }
+      : {
+          ready: false,
+          reason: CHECK_IN_PROVIDER_READINESS_REASONS.CredentialsMissing,
+        }
   },
   detect: (context) => detectWithStatusReadback(context, getStatus),
   getStatus,

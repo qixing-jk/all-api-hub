@@ -215,23 +215,23 @@ describe("voApiV2Provider", () => {
 
   it("does not run without the saved dashboard JWT", () => {
     expect(
-      voApiV2Provider.canCheckIn({
+      voApiV2Provider.getReadiness({
         ...account,
         account_info: { ...account.account_info, access_token: "" },
       } as SiteAccount),
-    ).toBe(false)
+    ).toEqual({ ready: false, reason: "credentials_missing" })
   })
 
   it("leaves automatic-execution intent to the Module", () => {
     expect(
-      voApiV2Provider.canCheckIn({
+      voApiV2Provider.getReadiness({
         ...account,
         checkIn: {
           ...account.checkIn,
           automaticExecutionEnabled: false,
         },
       }),
-    ).toBe(true)
+    ).toEqual({ ready: true })
   })
 
   it("reports failure when submit succeeds but final stats are not checked in", async () => {

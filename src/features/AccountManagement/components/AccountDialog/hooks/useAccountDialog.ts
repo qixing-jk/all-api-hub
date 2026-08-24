@@ -517,6 +517,7 @@ export function useAccountDialog({
   )
   const {
     isRedetectingCheckInMethods,
+    checkInRedetectionFeedback,
     handleRedetectCheckInMethods,
     resetCheckInRedetection,
   } = useAccountCheckInRedetection({
@@ -531,11 +532,12 @@ export function useAccountDialog({
   })
   const setDialogUrl = useCallback(
     (value: string) => {
+      resetCheckInRedetection()
       notifyOpenRouterUrlChange(value)
       selectedSiteUrlRef.current = value
       setUrl(value)
     },
-    [notifyOpenRouterUrlChange],
+    [notifyOpenRouterUrlChange, resetCheckInRedetection],
   )
   const setSiteName = useCallback(
     (value: string) => {
@@ -639,6 +641,7 @@ export function useAccountDialog({
   )
   const setSiteType = useCallback(
     (value: string) => {
+      resetCheckInRedetection()
       const nextSiteType = isAccountSiteType(value) ? value : SITE_TYPES.UNKNOWN
       const nextPolicy = getAccountDialogSitePolicy(nextSiteType)
       selectedSiteTypeRef.current = nextSiteType
@@ -687,7 +690,13 @@ export function useAccountDialog({
         setDialogUrl(nextPolicy.canonicalSiteUrl)
       }
     },
-    [mode, setDialogUrl, notifyOpenRouterSiteChange, updateDraft],
+    [
+      mode,
+      setDialogUrl,
+      notifyOpenRouterSiteChange,
+      resetCheckInRedetection,
+      updateDraft,
+    ],
   )
   const setAuthType = useCallback(
     (value: AuthTypeEnum) => {
@@ -3195,6 +3204,7 @@ export function useAccountDialog({
       isDetecting,
       isDetectingSlow,
       isRedetectingCheckInMethods,
+      checkInRedetectionFeedback,
       siteName,
       username,
       accessToken,

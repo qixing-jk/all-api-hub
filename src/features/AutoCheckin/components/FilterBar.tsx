@@ -1,8 +1,13 @@
-import { CircleCheck, CircleX, List, Search } from "lucide-react"
+import { CircleCheck, CircleX, List, Search, TriangleAlert } from "lucide-react"
 import { type ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Input } from "~/components/ui"
+import {
+  FILTER_STATUS,
+  filterAutoCheckinResults,
+  type FilterStatus,
+} from "~/features/AutoCheckin/utils/autoCheckin"
 import { trackProductAnalyticsActionCompleted } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -18,50 +23,10 @@ import {
   type CheckinAccountResult,
 } from "~/types/autoCheckin"
 
-export const FILTER_STATUS = {
-  ALL: "all",
-  SUCCESS: "success",
-  FAILED: "failed",
-  SKIPPED: "skipped",
-} as const
+import TableFilterToolbar from "./TableFilterToolbar"
 
-export type FilterStatus = (typeof FILTER_STATUS)[keyof typeof FILTER_STATUS]
-
-const getResultMessage = (result: CheckinAccountResult) =>
-  result.rawMessage ?? result.message ?? result.messageKey ?? ""
-
-const matchesStatusFilter = (
-  result: CheckinAccountResult,
-  status: FilterStatus,
-) => {
-  switch (status) {
-    case FILTER_STATUS.SUCCESS:
-      return (
-        result.status === CHECKIN_RESULT_STATUS.SUCCESS ||
-        result.status === CHECKIN_RESULT_STATUS.ALREADY_CHECKED
-      )
-    case FILTER_STATUS.FAILED:
-      return result.status === CHECKIN_RESULT_STATUS.FAILED
-    case FILTER_STATUS.SKIPPED:
-      return result.status === CHECKIN_RESULT_STATUS.SKIPPED
-    case FILTER_STATUS.ALL:
-      return true
-  }
-}
-
-const matchesKeywordFilter = (
-  result: CheckinAccountResult,
-  keyword: string,
-) => {
-  const normalizedKeyword = keyword.trim().toLowerCase()
-  if (!normalizedKeyword) return true
-
-  return (
-    result.accountName.toLowerCase().includes(normalizedKeyword) ||
-    String(result.accountId).toLowerCase().includes(normalizedKeyword) ||
-    getResultMessage(result).toLowerCase().includes(normalizedKeyword)
-  )
-}
+export { FILTER_STATUS }
+export type { FilterStatus }
 
 interface FilterBarProps {
   accountResults: CheckinAccountResult[]
@@ -105,11 +70,15 @@ export default function FilterBar({
     nextStatus: FilterStatus,
     nextKeyword: string,
   ) =>
-    accountResults.filter(
-      (result) =>
-        matchesStatusFilter(result, nextStatus) &&
-        matchesKeywordFilter(result, nextKeyword),
-    ).length
+    filterAutoCheckinResults(accountResults, nextStatus, nextKeyword, t).length
+  const filteredCount = getFilteredResultCount(status, keyword)
+  const isFiltered = status !== FILTER_STATUS.ALL || Boolean(keyword.trim())
+  const countLabel = isFiltered
+    ? t("execution.filters.countFiltered", {
+        filtered: filteredCount,
+        total: totalCount,
+      })
+    : t("execution.filters.countTotal", { total: totalCount })
   const trackFilterSelection = (
     mode:
       | typeof PRODUCT_ANALYTICS_MODE_IDS.SearchFilter
@@ -138,9 +107,8 @@ export default function FilterBar({
   const renderFilterButton = (
     value: FilterStatus,
     label: string,
-    color: string,
     icon: ReactNode,
-    count?: number,
+    count: number,
   ) => (
     <button
       type="button"
@@ -149,63 +117,42 @@ export default function FilterBar({
         onStatusChange(value)
         trackFilterSelection(PRODUCT_ANALYTICS_MODE_IDS.StatusFilter, value)
       }}
-      className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+      className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors ${
         status === value
-          ? `${color} text-white`
-          : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+          ? "border-blue-500 bg-blue-50 text-blue-700 shadow-xs dark:border-blue-500 dark:bg-blue-950/40 dark:text-blue-200"
+          : "border-transparent bg-gray-100/80 text-gray-600 hover:bg-gray-200 hover:text-gray-900 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-gray-100"
       }`}
     >
       {icon}
       <span>{label}</span>
-      {count !== undefined && count > 0 && (
-        <span
-          className={`ml-1 rounded-full px-1.5 py-0.5 text-xs font-semibold ${
-            status === value
-              ? "bg-white/20 text-white"
-              : "bg-gray-200 text-gray-600 dark:bg-gray-600 dark:text-gray-300"
-          }`}
-        >
-          {count}
-        </span>
-      )}
+      <span className="ml-0.5 rounded-full bg-black/5 px-1.5 py-0.5 text-[10px] font-semibold dark:bg-white/10">
+        {count}
+      </span>
     </button>
   )
 
   return (
-    <div className="flex flex-wrap gap-3">
-      <div className="flex gap-2">
-        {renderFilterButton(
+    <TableFilterToolbar
+      countLabel={countLabel}
+      clearLabel={t("execution.filters.clearAll")}
+      showClear={isFiltered && filteredCount > 0}
+      onClearFilters={() => {
+        onStatusChange(FILTER_STATUS.ALL)
+        onKeywordChange("")
+        trackFilterSelection(
+          keyword.trim()
+            ? PRODUCT_ANALYTICS_MODE_IDS.SearchFilter
+            : PRODUCT_ANALYTICS_MODE_IDS.StatusFilter,
           FILTER_STATUS.ALL,
-          t("execution.filters.all"),
-          "bg-blue-600",
-          <List className="h-4 w-4" />,
-          totalCount,
-        )}
-        {renderFilterButton(
-          FILTER_STATUS.SUCCESS,
-          t("execution.filters.success"),
-          "bg-green-600",
-          <CircleCheck className="h-4 w-4" />,
-          successCount,
-        )}
-        {renderFilterButton(
-          FILTER_STATUS.FAILED,
-          t("execution.filters.failed"),
-          "bg-red-600",
-          <CircleX className="h-4 w-4" />,
-          failedCount,
-        )}
-        {renderFilterButton(
-          FILTER_STATUS.SKIPPED,
-          t("execution.filters.skipped"),
-          "bg-yellow-600",
-          <List className="h-4 w-4" />,
-          skippedCount,
-        )}
-      </div>
-      <div className="relative flex-1 md:max-w-xs">
+          "",
+        )
+      }}
+      controlsClassName="flex flex-col gap-2 lg:flex-row lg:items-center"
+    >
+      <div className="relative w-full lg:max-w-xs">
         <Input
           type="text"
+          aria-label={t("execution.filters.searchLabel")}
           placeholder={t("execution.filters.searchPlaceholder") as string}
           value={keyword}
           onChange={(e) => onKeywordChange(e.target.value)}
@@ -221,6 +168,36 @@ export default function FilterBar({
           clearButtonLabel={t("common:actions.clear")}
         />
       </div>
-    </div>
+      <div
+        className="flex flex-wrap gap-1.5"
+        role="group"
+        aria-label={t("execution.filters.statusLabel")}
+      >
+        {renderFilterButton(
+          FILTER_STATUS.ALL,
+          t("execution.filters.all"),
+          <List className="h-4 w-4" />,
+          totalCount,
+        )}
+        {renderFilterButton(
+          FILTER_STATUS.SUCCESS,
+          t("execution.filters.success"),
+          <CircleCheck className="h-4 w-4" />,
+          successCount,
+        )}
+        {renderFilterButton(
+          FILTER_STATUS.FAILED,
+          t("execution.filters.failed"),
+          <CircleX className="h-4 w-4" />,
+          failedCount,
+        )}
+        {renderFilterButton(
+          FILTER_STATUS.SKIPPED,
+          t("execution.filters.skipped"),
+          <TriangleAlert className="h-4 w-4" />,
+          skippedCount,
+        )}
+      </div>
+    </TableFilterToolbar>
   )
 }

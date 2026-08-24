@@ -62,9 +62,11 @@ describe("wongGongyiProvider", () => {
     vi.clearAllMocks()
   })
 
-  describe("canCheckIn", () => {
-    it("returns true for valid account", () => {
-      expect(wongGongyiProvider.canCheckIn(mockAccount)).toBe(true)
+  describe("getReadiness", () => {
+    it("returns ready for a valid account", () => {
+      expect(wongGongyiProvider.getReadiness(mockAccount)).toEqual({
+        ready: true,
+      })
     })
 
     it("leaves automatic-execution intent to the Module", () => {
@@ -72,15 +74,18 @@ describe("wongGongyiProvider", () => {
         ...mockAccount,
         checkIn: buildCheckInConfig(),
       }
-      expect(wongGongyiProvider.canCheckIn(account)).toBe(true)
+      expect(wongGongyiProvider.getReadiness(account)).toEqual({ ready: true })
     })
 
-    it("returns false when authType is token but token is missing", () => {
+    it("explains when saved credentials are missing", () => {
       const account = {
         ...mockAccount,
         account_info: { ...mockAccount.account_info, access_token: "" },
       }
-      expect(wongGongyiProvider.canCheckIn(account)).toBe(false)
+      expect(wongGongyiProvider.getReadiness(account)).toEqual({
+        ready: false,
+        reason: "credentials_missing",
+      })
     })
 
     it("treats missing authType as access-token auth", () => {
@@ -88,7 +93,7 @@ describe("wongGongyiProvider", () => {
         ...mockAccount,
         authType: undefined as any,
       }
-      expect(wongGongyiProvider.canCheckIn(account)).toBe(true)
+      expect(wongGongyiProvider.getReadiness(account)).toEqual({ ready: true })
     })
 
     it("requires an access token when authType is missing", () => {
@@ -97,7 +102,10 @@ describe("wongGongyiProvider", () => {
         authType: undefined as any,
         account_info: { ...mockAccount.account_info, access_token: "" },
       }
-      expect(wongGongyiProvider.canCheckIn(account)).toBe(false)
+      expect(wongGongyiProvider.getReadiness(account)).toEqual({
+        ready: false,
+        reason: "credentials_missing",
+      })
     })
   })
 
@@ -267,11 +275,15 @@ describe("wongGongyiProvider", () => {
       const { fetchApi } = await import("~/services/apiTransport/request")
       const mockedFetchApi = vi.mocked(fetchApi)
 
-      mockedFetchApi.mockRejectedValueOnce(new Error("Network error"))
+      mockedFetchApi.mockRejectedValueOnce(new TypeError("Failed to fetch"))
 
       const result = await checkInForTest(mockAccount)
       expect(result.status).toBe("failed")
-      expect(result.rawMessage).toBe("Network error")
+      expect(result).toMatchObject({
+        reasonCode: "network_error",
+        messageKey: "autoCheckin:skipReasons.network_error",
+      })
+      expect(result.rawMessage).toBeUndefined()
     })
 
     it("returns endpointNotSupported when API returns 404", async () => {

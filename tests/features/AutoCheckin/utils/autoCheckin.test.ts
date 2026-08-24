@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest"
 
 import {
+  FILTER_STATUS,
+  filterAutoCheckinResults,
   isInvalidAccessTokenMessage,
   isNoTabWithIdMessage,
   resolveAutoCheckinTroubleshootingHintKey,
@@ -24,12 +26,25 @@ describe("autoCheckin utils", () => {
       "autoCheckin:providerFallback.turnstileManualRequired",
       "autoCheckin:providerFallback.turnstileIncognitoAccessRequired",
       "autoCheckin:providerWong.checkinDisabled",
+      "autoCheckin:skipReasons.account_data_missing",
       "autoCheckin:skipReasons.account_disabled",
+      "autoCheckin:skipReasons.authentication_required",
+      "autoCheckin:skipReasons.credentials_missing",
       "autoCheckin:skipReasons.detection_disabled",
+      "autoCheckin:skipReasons.method_disabled",
+      "autoCheckin:skipReasons.method_not_matched",
+      "autoCheckin:skipReasons.method_unavailable",
+      "autoCheckin:skipReasons.method_unsupported",
+      "autoCheckin:skipReasons.network_error",
+      "autoCheckin:skipReasons.no_selected_method",
+      "autoCheckin:skipReasons.permission_denied",
+      "autoCheckin:skipReasons.source_unavailable",
+      "autoCheckin:skipReasons.timeout",
       "autoCheckin:skipReasons.auto_checkin_disabled",
       "autoCheckin:skipReasons.already_checked_today",
+      "autoCheckin:skipReasons.status_unavailable",
       "autoCheckin:skipReasons.no_provider",
-      "autoCheckin:skipReasons.provider_not_ready",
+      "autoCheckin:skipReasons.account_unavailable",
     ])("translates the known key %s", (messageKey) => {
       const t = vi.fn(
         (key: string, params?: Record<string, unknown>) =>
@@ -85,6 +100,33 @@ describe("autoCheckin utils", () => {
       expect(
         isInvalidAccessTokenMessage("access token accepted but quota exceeded"),
       ).toBe(false)
+    })
+  })
+
+  describe("filterAutoCheckinResults", () => {
+    it("matches trimmed keywords against the localized result message", () => {
+      const t = vi.fn((key: string) =>
+        key === "autoCheckin:skipReasons.status_unavailable"
+          ? "暂时无法确认当前签到状态"
+          : key,
+      )
+
+      expect(
+        filterAutoCheckinResults(
+          [
+            {
+              accountId: "account-1",
+              accountName: "Example Account",
+              status: CHECKIN_RESULT_STATUS.SKIPPED,
+              reasonCode: "status_unavailable",
+              timestamp: 1,
+            },
+          ],
+          FILTER_STATUS.SKIPPED,
+          "  无法确认  ",
+          t as any,
+        ),
+      ).toHaveLength(1)
     })
   })
 
