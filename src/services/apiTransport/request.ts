@@ -131,7 +131,7 @@ function notifyApiTransportObserver(
   event: ApiTransportObserverEvent,
 ): void {
   try {
-    observer?.[event]()
+    observer?.[event]?.()
   } catch {
     logger.warn("API transport observer callback failed", { event })
   }

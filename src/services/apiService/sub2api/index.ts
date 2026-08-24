@@ -30,7 +30,7 @@ import type {
 } from "~/services/apiAdapters/contracts/accountBootstrap"
 import { extractDefaultExchangeRate as extractNewApiFamilyDefaultExchangeRate } from "~/services/apiService/newApiFamily/default/accountBootstrap"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
-import { fetchApi } from "~/services/apiTransport/request"
+import { fetchApi, fetchApiResponse } from "~/services/apiTransport/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import {
   INVITE_LINK_FAILURE_REASONS,
@@ -54,6 +54,13 @@ import {
   type Sub2ApiAuthPersistenceResult,
   type Sub2ApiAuthSession,
 } from "./authSession"
+import {
+  parseSub2ApiProDailyCheckInMutationResponse,
+  parseSub2ApiProDailyCheckInStatusResponse,
+  SUB2API_PRO_DAILY_CHECK_IN_ENDPOINT,
+  SUB2API_PRO_DAILY_CHECK_IN_STATUS_ENDPOINT,
+  type Sub2ApiProDailyCheckInMutationResult,
+} from "./checkIn"
 import {
   buildSub2ApiGroupDescriptors,
   buildSub2ApiUserGroups,
@@ -568,11 +575,35 @@ const resyncSub2ApiRequestAuth = async <
 
 type AuthenticatedSub2ApiRunner<T> = (request: ApiServiceRequest) => Promise<T>
 
+type AuthenticatedSub2ApiRequestOptions = {
+  proactiveRefresh?: boolean
+  recoverUnauthorized?: boolean
+  beforeUnauthorizedRetry?: (request: ApiServiceRequest) => Promise<void>
+}
+
+const runRecoveredSub2ApiRequest = async <T>(params: {
+  request: ApiServiceRequest
+  endpoint: string
+  runner: AuthenticatedSub2ApiRunner<T>
+  beforeUnauthorizedRetry?: (request: ApiServiceRequest) => Promise<void>
+}): Promise<T> => {
+  await params.beforeUnauthorizedRetry?.(params.request)
+  try {
+    return await params.runner(params.request)
+  } catch (retryError) {
+    if (isUnauthorizedError(retryError)) {
+      throw createLoginRequiredError(params.endpoint)
+    }
+    throw retryError
+  }
+}
+
 const retrySub2ApiRunnerWithResyncedAuth = async <T>(params: {
   request: ApiServiceRequest
   endpoint: string
   authSession?: Sub2ApiAuthSession
   runner: AuthenticatedSub2ApiRunner<T>
+  beforeUnauthorizedRetry?: (request: ApiServiceRequest) => Promise<void>
 }): Promise<T> => {
   const updatedRequest = await resyncSub2ApiRequestAuth({
     request: params.request,
@@ -580,15 +611,12 @@ const retrySub2ApiRunnerWithResyncedAuth = async <T>(params: {
     authSession: params.authSession,
   })
 
-  try {
-    return await params.runner(updatedRequest)
-  } catch (retryError) {
-    if (isUnauthorizedError(retryError)) {
-      throw createLoginRequiredError(params.endpoint)
-    }
-
-    throw retryError
-  }
+  return runRecoveredSub2ApiRequest({
+    request: updatedRequest,
+    endpoint: params.endpoint,
+    runner: params.runner,
+    beforeUnauthorizedRetry: params.beforeUnauthorizedRetry,
+  })
 }
 
 /**
@@ -601,6 +629,7 @@ const executeAuthenticatedSub2ApiRequest = async <T>(
   request: ApiServiceRequest,
   endpoint: string,
   runner: AuthenticatedSub2ApiRunner<T>,
+  options: AuthenticatedSub2ApiRequestOptions = {},
 ): Promise<T> => {
   const hydrated = await hydrateSub2ApiAuthRequest(request)
   let effectiveRequest = normalizeJwtRequest(hydrated.request)
@@ -610,6 +639,7 @@ const executeAuthenticatedSub2ApiRequest = async <T>(
   )
 
   if (
+    options.proactiveRefresh !== false &&
     refreshToken &&
     typeof tokenExpiresAt === "number" &&
     isCloseToExpiry(tokenExpiresAt)
@@ -649,6 +679,10 @@ const executeAuthenticatedSub2ApiRequest = async <T>(
     if (!isUnauthorizedError(error)) {
       throw error
     }
+    request.observer?.onPreHandlerUnauthorized?.()
+    if (options.recoverUnauthorized === false) {
+      throw error
+    }
 
     if (refreshToken) {
       let refreshed: RefreshedSub2ApiRequest
@@ -680,27 +714,21 @@ const executeAuthenticatedSub2ApiRequest = async <T>(
           throw refreshError
         }
 
-        try {
-          return await runner(updatedRequest)
-        } catch (retryError) {
-          if (isUnauthorizedError(retryError)) {
-            throw createLoginRequiredError(endpoint)
-          }
-
-          throw retryError
-        }
+        return await runRecoveredSub2ApiRequest({
+          request: updatedRequest,
+          endpoint,
+          runner,
+          beforeUnauthorizedRetry: options.beforeUnauthorizedRetry,
+        })
       }
 
       effectiveRequest = refreshed.request
-      try {
-        return await runner(effectiveRequest)
-      } catch (retryError) {
-        if (isUnauthorizedError(retryError)) {
-          throw createLoginRequiredError(endpoint)
-        }
-
-        throw retryError
-      }
+      return await runRecoveredSub2ApiRequest({
+        request: effectiveRequest,
+        endpoint,
+        runner,
+        beforeUnauthorizedRetry: options.beforeUnauthorizedRetry,
+      })
     }
 
     return await retrySub2ApiRunnerWithResyncedAuth({
@@ -708,6 +736,7 @@ const executeAuthenticatedSub2ApiRequest = async <T>(
       endpoint,
       authSession: hydrated.authSession,
       runner,
+      beforeUnauthorizedRetry: options.beforeUnauthorizedRetry,
     })
   }
 }
@@ -753,6 +782,105 @@ const fetchSub2ApiData = async <T>(
   )
 
   return result.data
+}
+
+const fetchSub2ApiProDailyCheckInStatusWithRequest = async (
+  request: ApiServiceRequest,
+) => {
+  const response = await fetchApiResponse<unknown>(request, {
+    endpoint: SUB2API_PRO_DAILY_CHECK_IN_STATUS_ENDPOINT,
+    options: { method: "GET", cache: "no-store" },
+  })
+  return parseSub2ApiProDailyCheckInStatusResponse(response)
+}
+
+/** Reads the pinned Sub2API Pro status without reactive GET-side auth replay. */
+export async function fetchSub2ApiProDailyCheckInStatus(
+  request: ApiServiceRequest,
+) {
+  return executeAuthenticatedSub2ApiRequest(
+    request,
+    SUB2API_PRO_DAILY_CHECK_IN_STATUS_ENDPOINT,
+    fetchSub2ApiProDailyCheckInStatusWithRequest,
+    { proactiveRefresh: false, recoverUnauthorized: false },
+  )
+}
+
+class Sub2ApiProRecoveredMutationBlockedError extends Error {
+  constructor(
+    public readonly result:
+      | Exclude<Sub2ApiProDailyCheckInMutationResult, { kind: "applied" }>
+      | { kind: "recovery_precondition_failed" },
+  ) {
+    super("Sub2API Pro recovered mutation blocked by status readback")
+    this.name = "Sub2ApiProRecoveredMutationBlockedError"
+  }
+}
+
+class Sub2ApiProRecoveredStatusUnavailableError extends Error {
+  constructor() {
+    super("Sub2API Pro recovered status readback unavailable")
+    this.name = "Sub2ApiProRecoveredStatusUnavailableError"
+  }
+}
+
+type Sub2ApiProDailyCheckInOperationResult =
+  | Sub2ApiProDailyCheckInMutationResult
+  | { kind: "recovery_status_unavailable" }
+  | { kind: "recovery_precondition_failed" }
+
+/** Executes one status-guarded mutation, including one safe middleware-401 recovery. */
+export async function performSub2ApiProDailyCheckIn(
+  request: ApiServiceRequest,
+  options: { beforeRecoveredMutation?: () => Promise<boolean> } = {},
+): Promise<Sub2ApiProDailyCheckInOperationResult> {
+  try {
+    return await executeAuthenticatedSub2ApiRequest(
+      request,
+      SUB2API_PRO_DAILY_CHECK_IN_ENDPOINT,
+      async (authenticatedRequest) => {
+        const response = await fetchApiResponse<unknown>(authenticatedRequest, {
+          endpoint: SUB2API_PRO_DAILY_CHECK_IN_ENDPOINT,
+          options: { method: "POST", cache: "no-store" },
+        })
+        return parseSub2ApiProDailyCheckInMutationResponse(response)
+      },
+      {
+        beforeUnauthorizedRetry: async (recoveredRequest) => {
+          const status = await fetchSub2ApiProDailyCheckInStatusWithRequest(
+            recoveredRequest,
+          ).catch(() => {
+            throw new Sub2ApiProRecoveredStatusUnavailableError()
+          })
+          if (status.enabled && !status.checkedInToday) {
+            if (
+              options.beforeRecoveredMutation &&
+              !(await options.beforeRecoveredMutation())
+            ) {
+              throw new Sub2ApiProRecoveredMutationBlockedError({
+                kind: "recovery_precondition_failed",
+              })
+            }
+            recoveredRequest.observer?.onPreHandlerUnauthorized?.()
+            return
+          }
+          throw new Sub2ApiProRecoveredMutationBlockedError(
+            status.checkedInToday
+              ? { kind: "already_checked" }
+              : { kind: "disabled" },
+          )
+        },
+      },
+    )
+  } catch (error) {
+    if (error instanceof Sub2ApiProRecoveredMutationBlockedError) {
+      return error.result
+    }
+    if (error instanceof Sub2ApiProRecoveredStatusUnavailableError) {
+      return { kind: "recovery_status_unavailable" }
+    }
+    throw error
+  }
 }
 
 /**

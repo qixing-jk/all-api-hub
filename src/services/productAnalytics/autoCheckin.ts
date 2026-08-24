@@ -1,3 +1,4 @@
+import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import type { SiteAccount } from "~/types"
 import { AuthTypeEnum } from "~/types"
 import type {
@@ -13,6 +14,7 @@ import {
 
 import type { ProductAnalyticsActionDiagnostics } from "./actions"
 import {
+  PRODUCT_ANALYTICS_AUTO_CHECKIN_METHOD_CATEGORIES,
   PRODUCT_ANALYTICS_AUTO_CHECKIN_SCHEDULE_MODES,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_EVENTS,
@@ -20,6 +22,7 @@ import {
   PRODUCT_ANALYTICS_FAILURE_STAGES,
   PRODUCT_ANALYTICS_SETTING_IDS,
   type PRODUCT_ANALYTICS_ENTRYPOINTS,
+  type ProductAnalyticsAutoCheckinMethodCategory,
   type ProductAnalyticsAutoCheckinRunKind,
   type ProductAnalyticsEntrypoint,
   type ProductAnalyticsErrorCategory,
@@ -82,6 +85,7 @@ type AutoCheckinAccountGroupAccumulator = {
   site_type?: AutoCheckinAccountSnapshot["siteType"]
   requested_auth_mode?: AuthTypeEnum
   skip_reason?: NonNullable<AutoCheckinAccountSnapshot["skipReason"]>
+  method_category?: ProductAnalyticsAutoCheckinMethodCategory
   total_accounts: number
   runnable_accounts: number
   success_count: number
@@ -120,7 +124,33 @@ function buildGroupKey(
   snapshot: AutoCheckinAccountSnapshot,
   authMode: AuthTypeEnum,
 ) {
-  return [snapshot.siteType, authMode, snapshot.skipReason ?? ""].join("\u001f")
+  return [
+    snapshot.siteType,
+    authMode,
+    snapshot.skipReason ?? "",
+    getSnapshotMethodCategory(snapshot) ?? "",
+  ].join("\u001f")
+}
+
+const COMPATIBILITY_METHOD_IDS: ReadonlySet<string> = new Set([
+  AUTO_CHECKIN_METHOD_IDS.AnyrouterDailyCheckIn,
+  AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn,
+  AUTO_CHECKIN_METHOD_IDS.VeloeraDailyCheckIn,
+  AUTO_CHECKIN_METHOD_IDS.VoApiV2DailyCheckIn,
+  AUTO_CHECKIN_METHOD_IDS.WongGongyiDailyCheckIn,
+])
+
+/** Collapses persisted method IDs into privacy-reviewed analytics categories. */
+function getSnapshotMethodCategory(
+  snapshot: AutoCheckinAccountSnapshot,
+): ProductAnalyticsAutoCheckinMethodCategory | undefined {
+  const methodId = snapshot.lastResult?.methodId
+  if (methodId === AUTO_CHECKIN_METHOD_IDS.Sub2ApiProDailyCheckIn) {
+    return PRODUCT_ANALYTICS_AUTO_CHECKIN_METHOD_CATEGORIES.StrictReadback
+  }
+  return methodId && COMPATIBILITY_METHOD_IDS.has(methodId)
+    ? PRODUCT_ANALYTICS_AUTO_CHECKIN_METHOD_CATEGORIES.Compatibility
+    : undefined
 }
 
 /** Adds one account snapshot to an aggregate analytics group. */
@@ -229,6 +259,7 @@ export function buildAutoCheckinAccountGroupProperties(
 
   for (const snapshot of params.snapshots) {
     const authMode = getSnapshotAuthMode(snapshot, params.accountsById)
+    const methodCategory = getSnapshotMethodCategory(snapshot)
     const key = buildGroupKey(snapshot, authMode)
     const existing = groups.get(key)
     const group =
@@ -239,6 +270,7 @@ export function buildAutoCheckinAccountGroupProperties(
         site_type: snapshot.siteType,
         requested_auth_mode: authMode,
         ...(snapshot.skipReason ? { skip_reason: snapshot.skipReason } : {}),
+        ...(methodCategory ? { method_category: methodCategory } : {}),
         total_accounts: 0,
         runnable_accounts: 0,
         success_count: 0,

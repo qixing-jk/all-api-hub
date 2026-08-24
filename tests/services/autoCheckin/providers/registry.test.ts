@@ -16,6 +16,7 @@ import type {
   AutoCheckinMethodDefinition,
   AutoCheckinMethodRegistration,
 } from "~/services/checkin/autoCheckin/providers/registry"
+import { sub2apiProProvider } from "~/services/checkin/autoCheckin/providers/sub2apiPro"
 import { veloeraProvider } from "~/services/checkin/autoCheckin/providers/veloera"
 import { voApiV2Provider } from "~/services/checkin/autoCheckin/providers/voapiV2"
 import { wongGongyiProvider } from "~/services/checkin/autoCheckin/providers/wong"
@@ -44,7 +45,7 @@ describe("autoCheckinMethodRegistry", () => {
       }),
     )
 
-    expect(registrationContracts).toHaveLength(5)
+    expect(registrationContracts).toHaveLength(6)
     expect(registrationContracts).toEqual(
       expect.arrayContaining([
         {
@@ -72,6 +73,11 @@ describe("autoCheckinMethodRegistry", () => {
           candidateSiteTypes: [SITE_TYPES.VO_API_V2],
           provider: voApiV2Provider,
         },
+        {
+          id: "sub2api-pro:daily-checkin",
+          candidateSiteTypes: [SITE_TYPES.SUB2API],
+          provider: sub2apiProProvider,
+        },
       ]),
     )
 
@@ -92,6 +98,8 @@ describe("autoCheckinMethodRegistry", () => {
     expect(wongGongyiProvider.detect).toBeTypeOf("function")
     expect(voApiV2Provider.getStatus).toBeTypeOf("function")
     expect(voApiV2Provider.detect).toBeTypeOf("function")
+    expect(sub2apiProProvider.getStatus).toBeTypeOf("function")
+    expect(sub2apiProProvider.detect).toBeTypeOf("function")
   })
 
   it("keeps newly introduced candidates outside legacy and new-account compatibility", () => {

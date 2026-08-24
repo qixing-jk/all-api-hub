@@ -4,20 +4,18 @@ import {
   CHECK_IN_SELECTION_MODES,
 } from "~/constants/checkIn"
 import type { AccountSiteType } from "~/constants/siteType"
-import {
-  getAutoCheckinCandidateMethodIds,
-  getNewAccountCompatibilityMethodIds,
-} from "~/services/checkin/autoCheckin/providers/registry"
+import { getNewAccountCompatibilityMethodIds } from "~/services/checkin/autoCheckin/providers/registry"
 import type { CheckInConfig, CustomCheckInConfig } from "~/types/checkIn"
 
 /**
- * Defaults a new account into automatic execution intent when its site type
- * has at least one candidate method. Discovery remains the execution gate.
+ * Defaults a new account into automatic execution intent only when a legacy
+ * compatibility registration can execute immediately. Newly discovered
+ * protocols remain opt-in until discovery proves their deployment support.
  */
 export function getNewAccountAutomaticExecutionDefault(
   siteType: AccountSiteType,
 ): boolean {
-  return getAutoCheckinCandidateMethodIds(siteType).length > 0
+  return getNewAccountCompatibilityMethodIds(siteType).length > 0
 }
 
 /** Returns whether legacy compatibility may preselect a new account method. */

@@ -959,6 +959,14 @@ export const PRODUCT_ANALYTICS_AUTO_CHECKIN_RUN_KINDS = {
 export type ProductAnalyticsAutoCheckinRunKind =
   (typeof PRODUCT_ANALYTICS_AUTO_CHECKIN_RUN_KINDS)[keyof typeof PRODUCT_ANALYTICS_AUTO_CHECKIN_RUN_KINDS]
 
+export const PRODUCT_ANALYTICS_AUTO_CHECKIN_METHOD_CATEGORIES = {
+  StrictReadback: "strict_readback",
+  Compatibility: "compatibility",
+} as const
+
+export type ProductAnalyticsAutoCheckinMethodCategory =
+  (typeof PRODUCT_ANALYTICS_AUTO_CHECKIN_METHOD_CATEGORIES)[keyof typeof PRODUCT_ANALYTICS_AUTO_CHECKIN_METHOD_CATEGORIES]
+
 export const PRODUCT_ANALYTICS_AUTO_CHECKIN_SKIP_REASONS = {
   AccountDisabled: "account_disabled",
   AccountUnavailable: "account_unavailable",
@@ -1342,6 +1350,7 @@ export type ProductAnalyticsEventPayloadMap = {
     site_type?: ProductAnalyticsSiteType
     requested_auth_mode?: ProductAnalyticsRequestedAuthMode
     skip_reason?: ProductAnalyticsAutoCheckinSkipReason
+    method_category?: ProductAnalyticsAutoCheckinMethodCategory
     total_accounts: number
     runnable_accounts: number
     success_count: number

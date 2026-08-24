@@ -1,6 +1,6 @@
 # Add the Sub2API Pro Daily Check-in Method
 
-Status: ready-for-agent
+Status: resolved
 
 Blocked by: 04, 05, 06
 
@@ -54,3 +54,9 @@ Report only the allow-listed method category and controlled discovery/execution/
 - Run `pnpm compile` and any affected export checks.
 
 ## Comments
+
+- Implemented strict Sub2API Pro status/mutation parsing, status-first execution,
+  bounded reconciliation, durable auth recovery, privacy-safe method telemetry,
+  and registry integration.
+- Added focused parser, transport/auth, Adapter, scheduler, compatibility-default,
+  and analytics tests. New Sub2API accounts remain automatic-execution opt-in.
