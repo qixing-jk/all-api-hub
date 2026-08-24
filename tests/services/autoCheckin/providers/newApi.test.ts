@@ -483,6 +483,23 @@ describe("newApiProvider", () => {
       expect(tempWindowTurnstileFetch).not.toHaveBeenCalled()
     })
 
+    it("keeps a pre-dispatch error failed when public status disables check-in", async () => {
+      vi.mocked(fetchApi).mockRejectedValueOnce(
+        new Error("missing check-in signature header"),
+      )
+      mockFetchSupportCheckIn.mockResolvedValueOnce(false)
+
+      const result = await checkInForTest(mockAccount)
+
+      expect(result).toEqual({
+        status: CHECKIN_RESULT_STATUS.FAILED,
+        rawMessage: "missing check-in signature header",
+        messageKey: undefined,
+      })
+      expect(tempWindowTriggerCheckinPageAction).not.toHaveBeenCalled()
+      expect(tempWindowTurnstileFetch).not.toHaveBeenCalled()
+    })
+
     it.each([
       "check-in endpoint unsupported",
       "unauthorized check-in request",
