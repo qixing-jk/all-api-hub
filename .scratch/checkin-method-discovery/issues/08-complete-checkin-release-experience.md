@@ -2,6 +2,8 @@
 
 Status: ready-for-agent
 
+Implementation progress: partial
+
 Blocked by: 03, 04, 05, 07
 
 ## Objective
@@ -66,3 +68,5 @@ Keep the complete state matrix in Vitest/Testing Library rather than adding more
 - A generic operation journal.
 
 ## Comments
+
+- 2026-08-24: PR #1350 delivered localized AccountDialog discovery/selection recovery states, preserved automatic intent and custom check-in independence, added privacy-safe discovery/execution analytics, and added sortable/filterable/paginated readiness and result workspaces. Remaining work includes a complete acceptance-state audit, any missing settings-search/deep-link wiring, and the ticket's representative cross-entrypoint uncertain-result/restart E2E proof after Ticket 05 supplies the final certainty contract.

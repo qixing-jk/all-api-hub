@@ -67,7 +67,8 @@
       "alreadyChecked": "Já fez check-in",
       "failed": "Falha",
       "skipped": "Ignorado",
-      "success": "Sucesso"
+      "success": "Sucesso",
+      "uncertain": "Confirmação pendente"
     },
     "table": {
       "accountName": "Nome da conta",
@@ -138,6 +139,7 @@
     "nativePageStatusUnconfirmed": "A ação de check-in da página foi clicada, mas o status da conta de destino não foi confirmado. Por favor, abra a página de check-in e verifique manualmente: {{checkInUrl}}",
     "nativePageTargetNotFound": "O botão de check-in não foi encontrado na página. Abra a página de check-in e conclua o check-in manualmente: {{checkInUrl}}",
     "nativePageTriggerFailed": "A ação de check-in da página não pôde ser acionada. Abra a página de check-in e conclua o check-in manualmente: {{checkInUrl}}",
+    "resultPendingConfirmation": "Resultado do check-in aguardando confirmação",
     "turnstileIncognitoAccessRequired": "A extensão deve ter permissão para ser executada em janelas anônimas/privadas para buscar o token Turnstile em uma janela temporária privada (cenário de múltiplas contas). Ative \"Permitir modo anônimo\" para esta extensão e tente novamente ou abra a página de check-in para concluir a verificação: {{checkInUrl}}",
     "turnstileManualRequired": "A verificação Cloudflare Turnstile é necessária. Abra a página de check-in para concluir a verificação: {{checkInUrl}}",
     "unknownError": "Ocorreu um erro desconhecido"

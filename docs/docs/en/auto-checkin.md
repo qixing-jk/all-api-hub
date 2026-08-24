@@ -63,9 +63,10 @@ Saved settings take effect immediately and reschedule the task without restartin
    - **Retry alarm**: Created only when the regular daily run has failed accounts; retries only those accounts.
 3. **Execute**:
    - Read accounts and create a snapshot, then require each account to be enabled, refreshed/detected, enabled at account level, supported by a built-in provider, and backed by usable credentials.
-   - Call the site's built-in provider and record success, failure, or skip reason.
+   - Call the site's built-in provider and record success, failure, pending confirmation, or a skip reason.
    - Both "success" and "already checked in today" count as success. A newly successful check-in also refreshes account data.
-   - Failed accounts enter the same-day retry queue when retries are enabled and stop after Maximum Daily Attempts.
+   - Only safely retryable failures enter the same-day queue when retries are enabled. Authentication failures, permission failures, and sites without check-in status readback are not retried automatically.
+   - Before an automatic retry submits another check-in, it confirms today's status. If status is temporarily unavailable, that attempt does not submit anything but remains eligible for another bounded retry up to Maximum Daily Attempts.
 4. **Reschedule**: After the regular daily run, schedule the **next day's** daily alarm. When same-day failures exist and retries are enabled, schedule a retry alarm.
 
 ## Supported Sites and Authentication
@@ -100,7 +101,8 @@ The following types currently have no built-in provider, but can still use an ex
 | Result | Meaning | Automatic retry |
 |------|------|:---:|
 | Success / Already checked in today | The run confirmed a completed check-in, or the site confirmed today's check-in was already done | No |
-| Failed | API, authentication, verification, network, or site response failed | Only for the daily schedule when retries are enabled |
+| Failed | API, authentication, verification, network, or site response failed | Only for the daily schedule when retries are enabled and the failure is safe to retry |
+| Pending confirmation | The request may have been submitted, but the site result could not be confirmed reliably. The extension performs one read-only status check and does not directly resend the check-in | No |
 | Skipped | Account disabled, not detected, account-level setting off, no provider, or insufficient credentials | No |
 
 | Problem | Troubleshooting |

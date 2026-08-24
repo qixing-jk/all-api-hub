@@ -67,7 +67,8 @@
       "alreadyChecked": "Đã điểm danh",
       "failed": "Thất bại",
       "skipped": "Đã bỏ qua",
-      "success": "Thành công"
+      "success": "Thành công",
+      "uncertain": "Đang chờ xác nhận"
     },
     "table": {
       "accountName": "Tên tài khoản",
@@ -134,6 +135,7 @@
     "nativePageStatusUnconfirmed": "Đã bấm thao tác điểm danh trên trang, nhưng chưa xác nhận được trạng thái của tài khoản mục tiêu. Vui lòng mở trang điểm danh để kiểm tra thủ công: {{checkInUrl}}",
     "nativePageTargetNotFound": "Không tìm thấy nút điểm danh trên trang. Vui lòng mở trang điểm danh và hoàn tất thủ công: {{checkInUrl}}",
     "nativePageTriggerFailed": "Không thể kích hoạt thao tác điểm danh trên trang. Vui lòng mở trang điểm danh và hoàn tất thủ công: {{checkInUrl}}",
+    "resultPendingConfirmation": "Kết quả điểm danh đang chờ xác nhận",
     "turnstileIncognitoAccessRequired": "Cần cho phép tiện ích mở rộng chạy ở chế độ ẩn danh để nhận Turnstile Token trên trang ẩn danh (kịch bản nhiều tài khoản). Vui lòng bật \"Cho phép chạy ở chế độ ẩn danh\" trong trang quản lý tiện ích mở rộng và thử lại; hoặc mở trang điểm danh theo cách thủ công để hoàn tất xác minh: {{checkInUrl}}",
     "turnstileManualRequired": "Cần hoàn tất xác minh Cloudflare Turnstile, vui lòng mở trang điểm danh để hoàn tất xác minh: {{checkInUrl}}",
     "unknownError": "Đã xảy ra lỗi không xác định"

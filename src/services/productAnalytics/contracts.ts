@@ -1322,6 +1322,13 @@ export type ProductAnalyticsEventPayloadMap = {
     success_count: number
     failed_count: number
     skipped_count: number
+    uncertain_count: number
+    retryable_failure_count: number
+    reconciliation_checked_count: number
+    reconciliation_not_checked_count: number
+    reconciliation_unknown_count: number
+    reconciliation_unavailable_count: number
+    account_state_durability_failure_count: number
     retry_enabled: boolean
     retry_pending_before: number
     retry_attempted: number

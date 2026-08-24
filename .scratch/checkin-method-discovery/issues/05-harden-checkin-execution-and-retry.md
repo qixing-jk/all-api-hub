@@ -1,6 +1,8 @@
 # Harden Selected Check-in Execution and Retry
 
-Status: ready-for-agent
+Status: resolved
+
+Implementation progress: complete
 
 Blocked by: 03, 04
 
@@ -55,3 +57,7 @@ Add controlled execution outcome, retryability, reconciliation outcome, and loca
 - Run `pnpm compile` because the result union is a shared contract.
 
 ## Comments
+
+- 2026-08-24: PR #1350 moved ordinary refresh and scheduler execution onto the selected method, added status-first execution for providers with safe readback, kept AnyRouter out of passive mutation paths, improved skipped/readiness classification, and preserved confirmed remote success when local status persistence fails. Remaining work includes the complete certainty-aware execution union, bounded uncertain reconciliation and retry admission contract, and the corresponding telemetry and worker re-entry coverage.
+- 2026-08-24: Added a bounded retry-safety slice without reducing first-attempt availability. Initial daily and user-triggered runs retain best-effort status readback, while automatic retries require a fresh authoritative status before another mutation. A temporary readback failure performs no mutation but stays queued within the configured attempt limit. Newly produced failures persist an explicit retryability decision; authentication/permission failures and methods without safe status readback do not enter automatic retry, and pre-contract persisted failures keep their historical compatibility behavior. The complete uncertain/reconciliation result union remains open.
+- 2026-08-24: Completed the certainty-aware execution contract. Mutation transport lifecycle evidence now distinguishes lost post-dispatch results as uncertain; the selected-method use case performs at most one read-only reconciliation, converges authoritative checked state to success, and never replays unresolved results inline. Persisted account results distinguish failed, skipped, and uncertain states; only failed results with an explicit safe retry decision enter the ordinary queue, while pre-contract failed records retain compatibility. AnyRouter remains executable without passive status reads and never retries an uncertain result. Confirmed remote success survives local method-status persistence failure with a controlled durability marker. Aggregate telemetry records only controlled outcome, retryability, reconciliation, and durability counts. The residual MV3 crash window before an uncertain compatibility-provider result is persisted remains documented; no generic mutation journal was added.

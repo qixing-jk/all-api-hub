@@ -1,6 +1,6 @@
 # Harden Sub2API Authentication Durability
 
-Status: ready-for-agent
+Status: resolved
 
 Blocked by: 03
 
@@ -45,3 +45,5 @@ Reuse or add only controlled identity-mismatch and credential-durability categor
 - Run `pnpm compile` because the auth port is shared by multiple account operations.
 
 ## Comments
+
+- 2026-08-22: Resolved by PR #1343. Credential updates now validate normalized origin and account identity under the account-storage lock, preserve complete rotated credential state, expose deletion/mismatch/write failures, and stop downstream business callbacks when rotated credentials cannot be persisted. Focused auth/storage coverage, compile, lint, locale extraction, the full Vitest suite, and PR CI passed.

@@ -6,6 +6,8 @@ import type {
 } from "~/types/autoCheckin"
 import {
   AUTO_CHECKIN_SCHEDULE_MODE,
+  CHECKIN_ACCOUNT_STATE_DURABILITY,
+  CHECKIN_RECONCILIATION_OUTCOME,
   CHECKIN_RESULT_STATUS,
 } from "~/types/autoCheckin"
 
@@ -168,6 +170,40 @@ export function buildAutoCheckinRunSummaryProperties(
     failed_count: snapshots.filter(
       (snapshot) =>
         snapshot.lastResult?.status === CHECKIN_RESULT_STATUS.FAILED,
+    ).length,
+    uncertain_count: snapshots.filter(
+      (snapshot) =>
+        snapshot.lastResult?.status === CHECKIN_RESULT_STATUS.UNCERTAIN,
+    ).length,
+    retryable_failure_count: snapshots.filter(
+      (snapshot) =>
+        snapshot.lastResult?.status === CHECKIN_RESULT_STATUS.FAILED &&
+        snapshot.lastResult.retryable === true,
+    ).length,
+    reconciliation_checked_count: snapshots.filter(
+      (snapshot) =>
+        snapshot.lastResult?.reconciliation ===
+        CHECKIN_RECONCILIATION_OUTCOME.CHECKED,
+    ).length,
+    reconciliation_not_checked_count: snapshots.filter(
+      (snapshot) =>
+        snapshot.lastResult?.reconciliation ===
+        CHECKIN_RECONCILIATION_OUTCOME.NOT_CHECKED,
+    ).length,
+    reconciliation_unknown_count: snapshots.filter(
+      (snapshot) =>
+        snapshot.lastResult?.reconciliation ===
+        CHECKIN_RECONCILIATION_OUTCOME.UNKNOWN,
+    ).length,
+    reconciliation_unavailable_count: snapshots.filter(
+      (snapshot) =>
+        snapshot.lastResult?.reconciliation ===
+        CHECKIN_RECONCILIATION_OUTCOME.UNAVAILABLE,
+    ).length,
+    account_state_durability_failure_count: snapshots.filter(
+      (snapshot) =>
+        snapshot.lastResult?.accountStateDurability ===
+        CHECKIN_ACCOUNT_STATE_DURABILITY.FAILED,
     ).length,
     skipped_count: snapshots.filter(
       (snapshot) =>

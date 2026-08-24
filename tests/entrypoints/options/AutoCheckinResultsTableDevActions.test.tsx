@@ -92,6 +92,8 @@ describe("AutoCheckin ResultsTable dev actions", () => {
             accountId: "failed-account",
             accountName: "Failed Account",
             status: CHECKIN_RESULT_STATUS.FAILED,
+            retryable: false,
+            accountStateDurability: undefined,
           },
         ]}
         onDisableAccount={vi.fn()}

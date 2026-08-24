@@ -188,6 +188,9 @@ export function getAutoCheckinResultMessage(
   t: TFunction,
   result: CheckinAccountResult,
 ): string {
+  if (result.status === CHECKIN_RESULT_STATUS.UNCERTAIN) {
+    return t("autoCheckin:providerFallback.resultPendingConfirmation")
+  }
   if (result.reasonCode) {
     return translateAutoCheckinSkipReason(t, result.reasonCode)
   }

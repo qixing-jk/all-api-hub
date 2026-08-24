@@ -133,6 +133,20 @@ describe("autoCheckin utils", () => {
     ).toBe("translated:autoCheckin:providerFallback.unknownError")
   })
 
+  it("uses a localized pending-confirmation message for uncertain results", () => {
+    const t = vi.fn((key: string) => `translated:${key}`)
+
+    expect(
+      getAutoCheckinResultMessage(t as any, {
+        accountId: "account-1",
+        accountName: "Account",
+        status: CHECKIN_RESULT_STATUS.UNCERTAIN,
+        reconciliation: "unknown",
+        timestamp: 1,
+      }),
+    ).toBe("translated:autoCheckin:providerFallback.resultPendingConfirmation")
+  })
+
   describe("isInvalidAccessTokenMessage", () => {
     it("returns false for blank messages", () => {
       expect(isInvalidAccessTokenMessage("")).toBe(false)

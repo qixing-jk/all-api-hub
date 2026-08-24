@@ -80,10 +80,17 @@ export default function ResultsTableRow({
             {t("execution.status.skipped")}
           </span>
         )
+      case CHECKIN_RESULT_STATUS.UNCERTAIN:
+        return (
+          <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-800 dark:bg-amber-900 dark:text-amber-100">
+            <TriangleAlert className="h-3 w-3" />
+            {t("execution.status.uncertain")}
+          </span>
+        )
       default:
         return (
           <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-800 dark:bg-gray-700 dark:text-gray-200">
-            {result.status}
+            {(result as unknown as { status: string }).status}
           </span>
         )
     }
