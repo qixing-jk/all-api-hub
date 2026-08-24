@@ -1,11 +1,11 @@
 # Account-Level Check-In Method Discovery, Selection, and Execution Design
 
-- Status: Design approved; implementation plan in progress (Tickets 01-03 resolved)
+- Status: Design approved; implementation plan in progress (Tickets 01-04 resolved)
 - Related issue: qixing-jk/all-api-hub#1270
 - Design baseline: `origin/main` @ `1c6f72543c8feb12a8562eb15199969656045979`
-- Current implementation branch: `feat/checkin-v7-account-state`
+- Current implementation branch: `feat/auto-checkin-method-discovery`
 - Research and review date: 2026-08-10
-- Current implementation slice: Tickets 01-03 establish stable method IDs, the dormant V7 domain/codec, and canonical V7 account state; Tickets 04-08 remain deferred
+- Current implementation slice: Ticket 04 delivers bounded method discovery and selection. This branch also hardens the related readiness, execution-result, and recovery UI paths from Tickets 05 and 08 without claiming their remaining acceptance criteria; Ticket 09 tracks the deferred bulk refresh action.
 
 ## 1. Goals and Non-Goals
 

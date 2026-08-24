@@ -1,6 +1,6 @@
 # Deliver Check-in Method Discovery and Selection
 
-Status: ready-for-agent
+Status: resolved
 
 Blocked by: 03
 
@@ -60,3 +60,5 @@ Add controlled discovery and selection actions with trigger, Decision, candidate
 - Background discovery by the scheduler.
 
 ## Comments
+
+- 2026-08-24: Implemented on `feat/auto-checkin-method-discovery` with bounded discovery, sticky manual selection, selected-only refresh, AccountDialog recovery controls, privacy-safe telemetry, and focused service/component coverage.
