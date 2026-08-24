@@ -1,3 +1,4 @@
+import userEvent from "@testing-library/user-event"
 import type { InputHTMLAttributes, ReactNode } from "react"
 import toast from "react-hot-toast"
 import { beforeEach, describe, expect, it, vi } from "vitest"
@@ -435,6 +436,7 @@ describe("ManagedSiteModelSyncSettings", () => {
   })
 
   it("saves numeric drafts on blur or Enter and restores invalid values", async () => {
+    const user = userEvent.setup()
     render(<ManagedSiteModelSyncSettings />)
 
     const concurrencyInput = screen.getByRole("spinbutton", {
@@ -445,11 +447,8 @@ describe("ManagedSiteModelSyncSettings", () => {
       concurrency: 4,
     })
 
-    fireEvent.focus(concurrencyInput)
-    const blurSpy = vi.spyOn(concurrencyInput, "blur")
-    fireEvent.keyDown(concurrencyInput, { key: "Enter" })
-    expect(blurSpy).toHaveBeenCalledOnce()
-    fireEvent.blur(concurrencyInput)
+    await user.click(concurrencyInput)
+    await user.keyboard("{Enter}")
     await waitFor(() => {
       expect(mockUpdateNewApiModelSync).toHaveBeenCalledWith({
         concurrency: 4,
@@ -463,10 +462,12 @@ describe("ManagedSiteModelSyncSettings", () => {
     expect(toast.error).not.toHaveBeenCalled()
     fireEvent.blur(maxRetriesInput)
 
-    expect(toast.error).toHaveBeenCalledWith(
-      "managedSiteModelSync:messages.error.invalidSettingValue",
-    )
-    expect(maxRetriesInput).toHaveValue(2)
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(
+        "managedSiteModelSync:messages.error.invalidSettingValue",
+      )
+      expect(maxRetriesInput).toHaveValue(2)
+    })
     expect(maxRetriesInput).toHaveAttribute("placeholder", "2")
   })
 
@@ -483,7 +484,7 @@ describe("ManagedSiteModelSyncSettings", () => {
     fireEvent.change(concurrencyInput, { target: { value: "02" } })
     fireEvent.blur(concurrencyInput)
 
-    expect(concurrencyInput).toHaveValue(2)
+    await waitFor(() => expect(concurrencyInput).toHaveValue(2))
     expect(mockUpdateNewApiModelSync).not.toHaveBeenCalled()
   })
 
@@ -696,18 +697,25 @@ describe("ManagedSiteModelSyncSettings", () => {
 
     fireEvent.change(intervalInput, { target: { value: "0" } })
     fireEvent.blur(intervalInput)
+    await waitFor(() => expect(intervalInput).toHaveValue(24))
     fireEvent.change(concurrencyInput, { target: { value: "11" } })
     fireEvent.blur(concurrencyInput)
+    await waitFor(() => expect(concurrencyInput).toHaveValue(2))
     fireEvent.change(retriesInput, { target: { value: "6" } })
     fireEvent.blur(retriesInput)
+    await waitFor(() => expect(retriesInput).toHaveValue(2))
     fireEvent.change(channelTimeoutInput, { target: { value: "-1" } })
     fireEvent.blur(channelTimeoutInput)
+    await waitFor(() => expect(channelTimeoutInput).toHaveValue(0))
     fireEvent.change(channelTimeoutInput, { target: { value: "43201" } })
     fireEvent.blur(channelTimeoutInput)
+    await waitFor(() => expect(channelTimeoutInput).toHaveValue(0))
     fireEvent.change(rpmInput, { target: { value: "4" } })
     fireEvent.blur(rpmInput)
+    await waitFor(() => expect(rpmInput).toHaveValue(20))
     fireEvent.change(burstInput, { target: { value: "21" } })
     fireEvent.blur(burstInput)
+    await waitFor(() => expect(burstInput).toHaveValue(5))
 
     expect(mockUpdateNewApiModelSync).not.toHaveBeenCalled()
   })
