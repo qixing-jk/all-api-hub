@@ -3,7 +3,7 @@ import path from "node:path"
 import { defineWxtModule } from "wxt/modules"
 
 import {
-  APP_LOCALE_ASSET_DIR,
+  getAppLocaleAssetPath,
   SUPPORTED_UI_LANGUAGES,
   type SupportedUiLanguage,
 } from "../constants/i18n"
@@ -43,7 +43,7 @@ export default defineWxtModule((wxt) => {
     const assets = await Promise.all(
       SUPPORTED_UI_LANGUAGES.map(async (language) => ({
         contents: await createLocaleAssetContents(localeRoot, language),
-        relativeDest: `${APP_LOCALE_ASSET_DIR}/${language}.json`,
+        relativeDest: getAppLocaleAssetPath(language),
       })),
     )
 

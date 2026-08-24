@@ -1,8 +1,8 @@
 import type { i18n, Resource, ResourceLanguage } from "i18next"
 
 import {
-  APP_LOCALE_ASSET_DIR,
   DEFAULT_LANG,
+  getAppLocaleAssetPath,
   type SupportedUiLanguage,
 } from "~/constants/i18n"
 import { getExtensionResourceUrl } from "~/utils/browser/extensionResourceUrl"
@@ -18,8 +18,9 @@ function isResourceLanguage(value: unknown): value is ResourceLanguage {
 async function fetchLanguageResource(
   language: SupportedUiLanguage,
 ): Promise<ResourceLanguage> {
-  const assetPath = `${APP_LOCALE_ASSET_DIR}/${language}.json`
-  const response = await fetch(getExtensionResourceUrl(assetPath))
+  const response = await fetch(
+    getExtensionResourceUrl(getAppLocaleAssetPath(language)),
+  )
 
   if (!response.ok) {
     throw new Error(

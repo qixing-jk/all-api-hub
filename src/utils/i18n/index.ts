@@ -2,7 +2,7 @@ import dayjs from "dayjs"
 import LanguageDetector from "i18next-browser-languagedetector"
 import { initReactI18next } from "react-i18next"
 
-import { DEFAULT_LANG } from "~/constants"
+import { DEFAULT_I18N_NAMESPACE, DEFAULT_LANG } from "~/constants"
 import { I18NEXT_LANGUAGE_STORAGE_KEY } from "~/services/core/storageKeys"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { isDevBuild } from "~/utils/core/environment"
@@ -32,7 +32,7 @@ export const i18nReady = i18n
   .init({
     debug: isDevBuild(),
     fallbackLng: DEFAULT_LANG,
-    defaultNS: "common",
+    defaultNS: DEFAULT_I18N_NAMESPACE,
     // default config: https://github.com/i18next/i18next-browser-languageDetector#detector-options
     detection: {
       lookupLocalStorage: I18NEXT_LANGUAGE_STORAGE_KEY,

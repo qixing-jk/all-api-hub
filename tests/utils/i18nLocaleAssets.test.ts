@@ -3,7 +3,11 @@ import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { describe, expect, it } from "vitest"
 
-import { SUPPORTED_UI_LANGUAGES } from "~/constants/i18n"
+import {
+  APP_LOCALE_ASSET_GLOB,
+  getAppLocaleAssetPath,
+  SUPPORTED_UI_LANGUAGES,
+} from "~/constants/i18n"
 import { createLocaleAssetContents } from "~/locales/runtime-assets"
 
 const localeRoot = fileURLToPath(new URL("../../src/locales", import.meta.url))
@@ -19,6 +23,11 @@ async function listSourceNamespaces(language: string) {
 }
 
 describe("locale asset generation", () => {
+  it("keeps generated asset paths aligned with the manifest glob", () => {
+    expect(getAppLocaleAssetPath("en")).toBe("app-locales/en.json")
+    expect(APP_LOCALE_ASSET_GLOB).toBe("app-locales/*.json")
+  })
+
   it("emits one complete namespaced JSON asset per supported language", async () => {
     for (const language of SUPPORTED_UI_LANGUAGES) {
       const contents = await createLocaleAssetContents(localeRoot, language)

@@ -1,6 +1,6 @@
 import { initReactI18next } from "react-i18next"
 
-import { DEFAULT_LANG } from "~/constants"
+import { DEFAULT_I18N_NAMESPACE, DEFAULT_LANG } from "~/constants"
 import { userPreferences } from "~/services/preferences/userPreferences"
 
 import { applyPreferenceLanguage } from "./applyPreferenceLanguage"
@@ -26,7 +26,7 @@ async function initContentI18n() {
   await i18n.use(initReactI18next).init({
     resources,
     fallbackLng: DEFAULT_LANG,
-    defaultNS: "common",
+    defaultNS: DEFAULT_I18N_NAMESPACE,
     interpolation: { escapeValue: false },
     returnEmptyString: false,
     react: { useSuspense: false },

@@ -1,31 +1,20 @@
 import {
   DEFAULT_LANG,
+  ENGLISH_LANG,
   GERMAN_LANG,
   JAPANESE_LANG,
   PORTUGUESE_BRAZIL_LANG,
   SPANISH_LATIN_AMERICA_LANG,
   TRADITIONAL_CHINESE_LANG,
   VIETNAMESE_LANG,
+  type SupportedUiLanguage,
 } from "~/constants"
 
 import { createCachedLocaleLoader } from "./createCachedLocaleLoader"
 import { normalizeAppLanguage } from "./language"
 
-type DayjsLocale =
-  | "de"
-  | "en"
-  | "es"
-  | "ja"
-  | "pt-br"
-  | "vi"
-  | "zh-cn"
-  | "zh-tw"
-
 const ENGLISH_DAYJS_LOCALE = "en" as const
-const resolvedEnglishLocale = Promise.resolve(ENGLISH_DAYJS_LOCALE)
-type NonEnglishDayjsLocale = Exclude<DayjsLocale, "en">
-
-const localeImporters: Record<NonEnglishDayjsLocale, () => Promise<unknown>> = {
+const localeImporters = {
   de: () => import("dayjs/locale/de"),
   es: () => import("dayjs/locale/es"),
   ja: () => import("dayjs/locale/ja"),
@@ -33,7 +22,22 @@ const localeImporters: Record<NonEnglishDayjsLocale, () => Promise<unknown>> = {
   vi: () => import("dayjs/locale/vi"),
   "zh-cn": () => import("dayjs/locale/zh-cn"),
   "zh-tw": () => import("dayjs/locale/zh-tw"),
-}
+} as const
+
+type NonEnglishDayjsLocale = keyof typeof localeImporters
+type DayjsLocale = typeof ENGLISH_DAYJS_LOCALE | NonEnglishDayjsLocale
+
+const resolvedEnglishLocale = Promise.resolve(ENGLISH_DAYJS_LOCALE)
+const DAYJS_LOCALE_BY_APP_LANGUAGE = {
+  [ENGLISH_LANG]: ENGLISH_DAYJS_LOCALE,
+  [GERMAN_LANG]: "de",
+  [SPANISH_LATIN_AMERICA_LANG]: "es",
+  [PORTUGUESE_BRAZIL_LANG]: "pt-br",
+  [JAPANESE_LANG]: "ja",
+  [VIETNAMESE_LANG]: "vi",
+  [DEFAULT_LANG]: "zh-cn",
+  [TRADITIONAL_CHINESE_LANG]: "zh-tw",
+} as const satisfies Record<SupportedUiLanguage, DayjsLocale>
 
 const loadDayjsLocaleImport = createCachedLocaleLoader(
   async (locale: NonEnglishDayjsLocale) => {
@@ -44,24 +48,8 @@ const loadDayjsLocaleImport = createCachedLocaleLoader(
 
 /** Resolve a runtime language tag to the finite Day.js locale set we ship. */
 export function resolveDayjsLocale(language?: string | null): DayjsLocale {
-  switch (normalizeAppLanguage(language)) {
-    case GERMAN_LANG:
-      return "de"
-    case SPANISH_LATIN_AMERICA_LANG:
-      return "es"
-    case PORTUGUESE_BRAZIL_LANG:
-      return "pt-br"
-    case JAPANESE_LANG:
-      return "ja"
-    case VIETNAMESE_LANG:
-      return "vi"
-    case DEFAULT_LANG:
-      return "zh-cn"
-    case TRADITIONAL_CHINESE_LANG:
-      return "zh-tw"
-    default:
-      return ENGLISH_DAYJS_LOCALE
-  }
+  const appLanguage = normalizeAppLanguage(language) ?? ENGLISH_LANG
+  return DAYJS_LOCALE_BY_APP_LANGUAGE[appLanguage]
 }
 
 /** Load one Day.js locale module, sharing in-flight work and allowing retries. */
