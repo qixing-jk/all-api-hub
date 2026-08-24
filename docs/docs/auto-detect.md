@@ -45,5 +45,5 @@
 ## 最后的手段：手动添加账号
 如果自动识别始终无法完成，可切换到 **手动添加**，补齐信息，再保存账号。
 
-详见 [手动添加账号指南](./account-management.md#manual-addition)。
+详见 [手动添加账号指南](./add-account.md#manual-addition)。
 

@@ -63,6 +63,7 @@ export default defineUserConfig({
             text: '🔑 账号与凭证',
             collapsible: true,
             children: [
+              '/add-account',
               '/account-management',
               '/service-guides',
               '/service-guides/fenno',
@@ -161,6 +162,7 @@ export default defineUserConfig({
             text: '🔑 Accounts & Credentials',
             collapsible: true,
             children: [
+              '/en/add-account',
               '/en/account-management',
               '/en/service-guides',
               '/en/service-guides/fenno',
@@ -259,6 +261,7 @@ export default defineUserConfig({
             text: '🔑 アカウントと認証情報',
             collapsible: true,
             children: [
+              '/ja/add-account',
               '/ja/account-management',
               '/ja/service-guides',
               '/ja/service-guides/fenno',
