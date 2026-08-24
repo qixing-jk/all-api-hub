@@ -80,17 +80,19 @@ const runCheckIn = async (
 ): Promise<AutoCheckinProviderResult> => {
   const submitResult = await submitVoApiV2CheckIn(request)
   const stats = await fetchVoApiV2CheckInStats(request)
+  const signed = stats.todaySigned === true
 
   if ("alreadySigned" in submitResult) {
     return {
-      status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
-      messageKey:
-        AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.alreadyCheckedToday,
+      status: signed
+        ? CHECKIN_RESULT_STATUS.ALREADY_CHECKED
+        : CHECKIN_RESULT_STATUS.FAILED,
+      messageKey: signed
+        ? AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.alreadyCheckedToday
+        : AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinFailed,
       data: stats,
     }
   }
-
-  const signed = stats.todaySigned === true
 
   return {
     status: signed

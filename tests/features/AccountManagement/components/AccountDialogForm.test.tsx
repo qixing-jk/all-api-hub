@@ -2,6 +2,12 @@ import userEvent from "@testing-library/user-event"
 import type { ComponentProps } from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import {
+  CHECK_IN_METHOD_AVAILABILITIES,
+  CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES,
+  CHECK_IN_METHOD_STATUS_OUTCOMES,
+  CHECK_IN_METHOD_TODAY_STATUSES,
+} from "~/constants/checkIn"
 import { SITE_TYPES } from "~/constants/siteType"
 import AccountForm from "~/features/AccountManagement/components/AccountDialog/AccountForm"
 import { ACCOUNT_FORM_MOBILE_DEFAULT_OPEN } from "~/features/AccountManagement/components/AccountDialog/accountFormSections"
@@ -904,6 +910,41 @@ describe("AccountDialog AccountForm", () => {
     expect(
       screen.getByText("accountDialog:form.autoCheckInPendingDesc"),
     ).toBeVisible()
+  })
+
+  it("explains that automatic check-in is paused when the site disables the selected method", async () => {
+    const props = createProps()
+    props.draft.siteType = SITE_TYPES.NEW_API
+    props.draft.checkIn = createCheckIn({
+      siteType: SITE_TYPES.NEW_API,
+      supported: true,
+      automaticExecutionEnabled: true,
+    })
+    props.draft.checkIn.methodKnowledge.methods[
+      "new-api:daily-checkin"
+    ]!.status = {
+      outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
+      availability: CHECK_IN_METHOD_AVAILABILITIES.Disabled,
+      today: CHECK_IN_METHOD_TODAY_STATUSES.NotChecked,
+      evidence: {
+        source: CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Probe,
+        observedAt: 200,
+      },
+    }
+
+    render(<AccountForm {...withSitePolicy(props)} />)
+
+    expect(
+      await screen.findByText("accountDialog:form.checkInStatusDisabled"),
+    ).toBeVisible()
+    expect(
+      screen.getByText("accountDialog:form.autoCheckInPausedBySiteDesc"),
+    ).toBeVisible()
+    expect(
+      screen.getByRole("switch", {
+        name: "accountDialog:form.autoCheckInEnabled",
+      }),
+    ).toBeChecked()
   })
 
   it("supports manual selection, restoring automatic selection, and redetection", async () => {

@@ -111,9 +111,14 @@ async function checkinWongGongyi(
       }
     }
 
+    const hasStructuredCheckedIn =
+      typeof checkinResponse.data?.checked_in === "boolean"
+
     if (
-      (responseMessage && isAlreadyCheckedMessage(responseMessage)) ||
-      checkinResponse.data?.checked_in === true
+      checkinResponse.data?.checked_in === true ||
+      (!hasStructuredCheckedIn &&
+        responseMessage &&
+        isAlreadyCheckedMessage(responseMessage))
     ) {
       return {
         status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,

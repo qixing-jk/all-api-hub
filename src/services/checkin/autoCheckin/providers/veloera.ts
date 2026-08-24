@@ -5,11 +5,14 @@
  */
 
 import {
+  CHECK_IN_METHOD_AVAILABILITIES,
   CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES,
   CHECK_IN_METHOD_STATUS_OUTCOMES,
   CHECK_IN_METHOD_TODAY_STATUSES,
 } from "~/constants/checkIn"
+import { fetchSupportCheckIn } from "~/services/apiService/newApiFamily/variants/veloeraCheckIn"
 import { fetchApi, fetchApiData } from "~/services/apiTransport/request"
+import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import {
   AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
   isAlreadyCheckedMessage,
@@ -20,8 +23,8 @@ import type { AutoCheckinProviderResult } from "~/services/checkin/autoCheckin/p
 import type { SiteAccount } from "~/types"
 import { AuthTypeEnum } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
+import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
 import { normalizeTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
-import { getErrorMessage } from "~/utils/core/error"
 
 import type {
   AutoCheckinProvider,
@@ -33,8 +36,51 @@ type CheckinResult = AutoCheckinProviderResult
 
 const ENDPOINT = "/api/user/check_in"
 
-// https://github.com/Veloera/Veloera — /api/user/check_in_status is the
-// provider-owned read-only capability/status endpoint.
+// Veloera exposes the global switch through /api/status and today's state
+// through /api/user/check_in_status. Keep these independent: `can_check_in`
+// alone cannot prove that the site has enabled the feature.
+// https://github.com/Veloera/Veloera/blob/6525dfce816beaa270e78f0d8b762e19e54d13b8/controller/user.go
+
+const createRequest = (
+  account: SiteAccount,
+  tempWindowRequestSource?: TempWindowRequestSource,
+  protectionBypassExecution?: AutoCheckinProviderContext["protectionBypassExecution"],
+): ApiServiceRequest => ({
+  baseUrl: account.site_url,
+  accountId: account.id,
+  cookieAuthSessionCookie: account.cookieAuth?.sessionCookie,
+  auth: {
+    authType: account.authType,
+    userId: account.account_info.id,
+    accessToken: account.account_info.access_token,
+  },
+  ...(tempWindowRequestSource ? { tempWindowRequestSource } : {}),
+  ...(protectionBypassExecution ? { protectionBypassExecution } : {}),
+})
+
+type VeloeraCheckInObservation = {
+  enabled?: boolean
+  canCheckIn?: boolean
+}
+
+/** Read the independent deployment switch and current user's daily state. */
+async function fetchCheckInObservation(
+  request: ApiServiceRequest,
+  signal?: AbortSignal,
+): Promise<VeloeraCheckInObservation | undefined> {
+  const enabled = await fetchSupportCheckIn(request)
+  if (enabled === false) return { enabled }
+
+  const data = await fetchApiData<{ can_check_in?: boolean }>(request, {
+    endpoint: "/api/user/check_in_status",
+    ...(signal ? { options: { signal } } : {}),
+  })
+  if (typeof data.can_check_in === "boolean") {
+    return { enabled, canCheckIn: data.can_check_in }
+  }
+
+  return enabled === true ? { enabled } : undefined
+}
 
 /**
  * Perform check-in for a Veloera account
@@ -48,29 +94,18 @@ async function checkinVeloera(
   const tempWindowRequestSource = normalizeTempWindowRequestSource(
     context.tempWindowRequestSource,
   )
-  const protectionBypassExecution = context.protectionBypassExecution
-  const { site_url, account_info, authType } = account
+  const request = createRequest(
+    account,
+    tempWindowRequestSource,
+    context.protectionBypassExecution,
+  )
 
   try {
     // Call the check-in API endpoint
-    const response = await fetchApi<unknown>(
-      {
-        baseUrl: site_url,
-        accountId: account.id,
-        cookieAuthSessionCookie: account.cookieAuth?.sessionCookie,
-        auth: {
-          authType,
-          userId: account_info.id,
-          accessToken: account_info.access_token,
-        },
-        tempWindowRequestSource,
-        ...(protectionBypassExecution ? { protectionBypassExecution } : {}),
-      },
-      {
-        endpoint: ENDPOINT,
-        options: { method: "POST" },
-      },
-    )
+    const response = await fetchApi<unknown>(request, {
+      endpoint: ENDPOINT,
+      options: { method: "POST" },
+    })
 
     const responseMessage = normalizeCheckinMessage(response?.message)
 
@@ -95,7 +130,21 @@ async function checkinVeloera(
       }
     }
 
-    // Other failure cases
+    // Veloera's failure copy is deployment-controlled. Confirm the current
+    // state before deciding whether an arbitrary message means "already".
+    try {
+      const observation = await fetchCheckInObservation(request)
+      if (observation?.canCheckIn === false) {
+        return {
+          status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
+          rawMessage: responseMessage || undefined,
+          data: response.data ?? undefined,
+        }
+      }
+    } catch {
+      // Preserve the original mutation failure if best-effort readback fails.
+    }
+
     return {
       status: CHECKIN_RESULT_STATUS.FAILED,
       rawMessage: responseMessage || undefined,
@@ -105,7 +154,7 @@ async function checkinVeloera(
       data: response ?? undefined,
     }
   } catch (error: unknown) {
-    return resolveProviderErrorResult({ error: getErrorMessage(error) })
+    return resolveProviderErrorResult({ error })
   }
 }
 
@@ -149,22 +198,30 @@ const getStatus: NonNullable<AutoCheckinProvider["getStatus"]> = async ({
         }
       : undefined)
   if (!statusRequest) return undefined
-  const data = await fetchApiData<{ can_check_in?: boolean }>(statusRequest, {
-    endpoint: "/api/user/check_in_status",
-    ...(signal ? { options: { signal } } : {}),
-  })
-  return typeof data.can_check_in === "boolean"
-    ? {
-        outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
-        today: data.can_check_in
-          ? CHECK_IN_METHOD_TODAY_STATUSES.NotChecked
-          : CHECK_IN_METHOD_TODAY_STATUSES.Checked,
-        evidence: {
-          source: CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Probe,
-          observedAt,
-        },
-      }
-    : undefined
+  const observation = await fetchCheckInObservation(statusRequest, signal)
+  if (!observation) return undefined
+
+  return {
+    outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
+    ...(observation.enabled !== undefined
+      ? {
+          availability: observation.enabled
+            ? CHECK_IN_METHOD_AVAILABILITIES.Enabled
+            : CHECK_IN_METHOD_AVAILABILITIES.Disabled,
+        }
+      : {}),
+    ...(observation.canCheckIn !== undefined
+      ? {
+          today: observation.canCheckIn
+            ? CHECK_IN_METHOD_TODAY_STATUSES.NotChecked
+            : CHECK_IN_METHOD_TODAY_STATUSES.Checked,
+        }
+      : {}),
+    evidence: {
+      source: CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Probe,
+      observedAt,
+    },
+  }
 }
 
 export const veloeraProvider: AutoCheckinProvider = {

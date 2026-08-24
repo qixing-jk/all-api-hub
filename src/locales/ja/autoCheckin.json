@@ -159,12 +159,14 @@
   },
   "skipReasons": {
     "account_disabled": "アカウントは無効です",
+    "account_unavailable": "チェックイン前にアカウントが変更されたか、利用できなくなりました",
     "already_checked_today": "本日はすでにチェック済みです",
     "auto_checkin_disabled": "自動チェックインは無効です",
     "detection_disabled": "検出は無効です",
     "method_disabled": "このサイトのチェックイン機能は無効です",
     "no_provider": "このアカウントのサイト種別は現在チェックインに対応していません",
-    "provider_not_ready": "現在のアカウント設定ではチェックインに対応していません"
+    "provider_not_ready": "現在のアカウント設定ではチェックインに対応していません",
+    "status_unavailable": "現在のチェックイン状態を確認できなかったため、チェックインは実行されませんでした"
   },
   "snapshot": {
     "badges": {

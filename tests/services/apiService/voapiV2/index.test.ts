@@ -1478,7 +1478,7 @@ describe("apiService VoAPI v2", () => {
   it("classifies repeated VoAPI v2 check-in as already signed", async () => {
     server.use(
       http.post("https://example.invalid/api/check_in", () =>
-        HttpResponse.json({ code: 1, data: null, msg: "Signed in today" }),
+        HttpResponse.json({ code: 1, data: null, msg: "No action performed" }),
       ),
     )
 

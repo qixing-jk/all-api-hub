@@ -13,6 +13,8 @@ import {
   Switch,
 } from "~/components/ui"
 import {
+  CHECK_IN_METHOD_AVAILABILITIES,
+  CHECK_IN_METHOD_STATUS_OUTCOMES,
   CHECK_IN_SELECTION_MODES,
   CHECK_IN_SELECTION_STATUSES,
 } from "~/constants/checkIn"
@@ -20,7 +22,10 @@ import type { AccountSiteType } from "~/constants/siteType"
 import { AccountFormSection } from "~/features/AccountManagement/components/AccountDialog/AccountFormSection"
 import { ACCOUNT_FORM_MOBILE_DEFAULT_OPEN } from "~/features/AccountManagement/components/AccountDialog/accountFormSections"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
-import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/inspection"
+import {
+  getSelectedCheckInStatus,
+  inspectAccountCheckIn,
+} from "~/services/checkin/autoCheckin/inspection"
 import { setCheckInSelection } from "~/services/checkin/autoCheckin/methods"
 import { getAutoCheckinCandidateMethodIds } from "~/services/checkin/autoCheckin/providers/registry"
 import type { CheckInConfig } from "~/types"
@@ -54,6 +59,12 @@ export function AccountCheckInSection({
   const hasSelectedMethod =
     hasCandidates &&
     inspection.selectionState.status === CHECK_IN_SELECTION_STATUSES.Selected
+  const selectedStatus = hasSelectedMethod
+    ? getSelectedCheckInStatus({ config: checkIn, siteType })
+    : null
+  const isSelectedMethodDisabled =
+    selectedStatus?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known &&
+    selectedStatus.availability === CHECK_IN_METHOD_AVAILABILITIES.Disabled
 
   const setAutomaticSelection = () => {
     onCheckInSelectionChange(
@@ -77,11 +88,13 @@ export function AccountCheckInSection({
             {t("form.checkInStatus")}
           </p>
           <p className="text-xs text-gray-500 dark:text-gray-400">
-            {hasSelectedMethod
-              ? t("form.checkInStatusDesc")
-              : hasCandidates
-                ? t("form.checkInStatusPending")
-                : t("form.checkInStatusUnsupported", { siteType })}
+            {isSelectedMethodDisabled
+              ? t("form.checkInStatusDisabled")
+              : hasSelectedMethod
+                ? t("form.checkInStatusDesc")
+                : hasCandidates
+                  ? t("form.checkInStatusPending")
+                  : t("form.checkInStatusUnsupported", { siteType })}
           </p>
         </div>
         {hasCandidates && (
@@ -177,9 +190,11 @@ export function AccountCheckInSection({
               {t("form.autoCheckInEnabled")}
             </label>
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              {hasSelectedMethod
-                ? t("form.autoCheckInEnabledDesc")
-                : t("form.autoCheckInPendingDesc")}
+              {isSelectedMethodDisabled
+                ? t("form.autoCheckInPausedBySiteDesc")
+                : hasSelectedMethod
+                  ? t("form.autoCheckInEnabledDesc")
+                  : t("form.autoCheckInPendingDesc")}
             </p>
           </div>
           <Switch

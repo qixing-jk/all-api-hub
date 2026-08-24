@@ -174,7 +174,20 @@ describe("anyrouterProvider", () => {
       })
     })
 
-    it("returns already_checked when response is success and message is empty", async () => {
+    it("returns success when success is true and optional result fields are omitted", async () => {
+      const { fetchApi } = await import("~/services/apiTransport/request")
+      vi.mocked(fetchApi).mockResolvedValueOnce({
+        success: true,
+        message: "",
+      })
+
+      await expect(checkInForTest(mockAccount)).resolves.toMatchObject({
+        status: "success",
+        messageKey: "autoCheckin:providerFallback.checkinSuccessful",
+      })
+    })
+
+    it("does not treat an empty message as already checked", async () => {
       const { fetchApi } = await import("~/services/apiTransport/request")
       const mockedFetchApi = vi.mocked(
         fetchApi as unknown as (...args: any[]) => Promise<any>,
@@ -187,7 +200,7 @@ describe("anyrouterProvider", () => {
       })
 
       const result = await checkInForTest(mockAccount)
-      expect(result.status).toBe("already_checked")
+      expect(result.status).toBe("success")
     })
 
     it("returns already_checked when response is success and message indicates a prior check-in", async () => {
@@ -238,25 +251,38 @@ describe("anyrouterProvider", () => {
       })
     })
 
-    it("returns failed when a success response has no success or already-checked signal", async () => {
+    it.each([
+      ["ret", { ret: 1, message: "queued" }],
+      ["code", { code: 0, message: "queued" }],
+    ])("accepts %s as an independent success signal", async (_, response) => {
       const { fetchApi } = await import("~/services/apiTransport/request")
       const mockedFetchApi = vi.mocked(
         fetchApi as unknown as (...args: any[]) => Promise<any>,
       )
-      mockedFetchApi.mockResolvedValueOnce({
-        code: 1,
-        ret: 1,
-        success: true,
-        message: "queued",
-      })
+      mockedFetchApi.mockResolvedValueOnce(response)
 
       const result = await checkInForTest(mockAccount)
 
-      expect(result.status).toBe("failed")
+      expect(result.status).toBe("success")
       expect(result.rawMessage).toBe("queued")
     })
 
-    it("returns failed when response is not success (even if message indicates already checked)", async () => {
+    it("does not infer already checked from a zero ret value", async () => {
+      const { fetchApi } = await import("~/services/apiTransport/request")
+      vi.mocked(fetchApi).mockResolvedValueOnce({
+        code: 1,
+        ret: 0,
+        success: true,
+        message: "No action was performed",
+      })
+
+      await expect(checkInForTest(mockAccount)).resolves.toMatchObject({
+        status: "success",
+        rawMessage: "No action was performed",
+      })
+    })
+
+    it("recognizes an explicit already-checked message on a negative response", async () => {
       const { fetchApi } = await import("~/services/apiTransport/request")
       const mockedFetchApi = vi.mocked(
         fetchApi as unknown as (...args: any[]) => Promise<any>,
@@ -269,7 +295,20 @@ describe("anyrouterProvider", () => {
       })
 
       const result = await checkInForTest(mockAccount)
-      expect(result.status).toBe("failed")
+      expect(result.status).toBe("already_checked")
+    })
+
+    it("recognizes the msg field used by compatible deployments", async () => {
+      const { fetchApi } = await import("~/services/apiTransport/request")
+      vi.mocked(fetchApi).mockResolvedValueOnce({
+        ret: 0,
+        msg: "already checked today",
+      })
+
+      await expect(checkInForTest(mockAccount)).resolves.toMatchObject({
+        status: "already_checked",
+        rawMessage: "already checked today",
+      })
     })
 
     it("returns failed when response indicates failure", async () => {
@@ -315,6 +354,15 @@ describe("anyrouterProvider", () => {
 
       const result = await checkInForTest(mockAccount)
       expect(result.status).toBe("already_checked")
+    })
+
+    it("does not treat an empty thrown message as already checked", async () => {
+      const { fetchApi } = await import("~/services/apiTransport/request")
+      vi.mocked(fetchApi).mockRejectedValueOnce(new Error(""))
+
+      await expect(checkInForTest(mockAccount)).resolves.toMatchObject({
+        status: "failed",
+      })
     })
 
     it("handles errors gracefully", async () => {

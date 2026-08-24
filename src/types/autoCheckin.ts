@@ -33,8 +33,10 @@ export const AUTO_CHECKIN_SKIP_REASON = {
   METHOD_DISABLED: "method_disabled",
   AUTO_CHECKIN_DISABLED: "auto_checkin_disabled",
   ALREADY_CHECKED_TODAY: "already_checked_today",
+  STATUS_UNAVAILABLE: "status_unavailable",
   NO_PROVIDER: "no_provider",
   PROVIDER_NOT_READY: "provider_not_ready",
+  ACCOUNT_UNAVAILABLE: "account_unavailable",
 } as const
 export type AutoCheckinSkipReason =
   (typeof AUTO_CHECKIN_SKIP_REASON)[keyof typeof AUTO_CHECKIN_SKIP_REASON]
@@ -59,10 +61,14 @@ export function getAutoCheckinSkipReasonTranslationKey(
       return "autoCheckin:skipReasons.auto_checkin_disabled"
     case AUTO_CHECKIN_SKIP_REASON.ALREADY_CHECKED_TODAY:
       return "autoCheckin:skipReasons.already_checked_today"
+    case AUTO_CHECKIN_SKIP_REASON.STATUS_UNAVAILABLE:
+      return "autoCheckin:skipReasons.status_unavailable"
     case AUTO_CHECKIN_SKIP_REASON.NO_PROVIDER:
       return "autoCheckin:skipReasons.no_provider"
     case AUTO_CHECKIN_SKIP_REASON.PROVIDER_NOT_READY:
       return "autoCheckin:skipReasons.provider_not_ready"
+    case AUTO_CHECKIN_SKIP_REASON.ACCOUNT_UNAVAILABLE:
+      return "autoCheckin:skipReasons.account_unavailable"
   }
 
   return "autoCheckin:skipReasons.unknown"
@@ -86,10 +92,14 @@ export function translateAutoCheckinSkipReason(
       return t("autoCheckin:skipReasons.auto_checkin_disabled")
     case AUTO_CHECKIN_SKIP_REASON.ALREADY_CHECKED_TODAY:
       return t("autoCheckin:skipReasons.already_checked_today")
+    case AUTO_CHECKIN_SKIP_REASON.STATUS_UNAVAILABLE:
+      return t("autoCheckin:skipReasons.status_unavailable")
     case AUTO_CHECKIN_SKIP_REASON.NO_PROVIDER:
       return t("autoCheckin:skipReasons.no_provider")
     case AUTO_CHECKIN_SKIP_REASON.PROVIDER_NOT_READY:
       return t("autoCheckin:skipReasons.provider_not_ready")
+    case AUTO_CHECKIN_SKIP_REASON.ACCOUNT_UNAVAILABLE:
+      return t("autoCheckin:skipReasons.account_unavailable")
   }
 }
 

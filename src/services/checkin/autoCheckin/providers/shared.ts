@@ -51,8 +51,7 @@ export function isAlreadyCheckedMessage(message: string): boolean {
 /**
  * Resolve common provider error handling into a normalized result.
  *
- * Providers can supply a custom "already checked" detector when needed
- * (e.g. AnyRouter treats an empty message as already-checked in some flows).
+ * Providers can supply a custom "already checked" detector when needed.
  */
 export function resolveProviderErrorResult(params: {
   error: unknown
@@ -93,7 +92,9 @@ export function resolveProviderErrorResult(params: {
     return typeof record.statusCode === "number" ? record.statusCode : null
   })()
 
-  if (statusCode === 404 || errorMessage.includes("404")) {
+  // Only structured transport status is protocol evidence. A backend message
+  // can contain the digits "404" for unrelated business data.
+  if (statusCode === 404) {
     return {
       status: CHECKIN_RESULT_STATUS.FAILED,
       messageKey:

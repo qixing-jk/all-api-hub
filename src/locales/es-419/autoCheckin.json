@@ -163,12 +163,14 @@
   },
   "skipReasons": {
     "account_disabled": "La cuenta está deshabilitada",
+    "account_unavailable": "La cuenta cambió o dejó de estar disponible antes del check-in",
     "already_checked_today": "Ya hizo check-in hoy",
     "auto_checkin_disabled": "Check-in automático deshabilitado",
     "detection_disabled": "Detección deshabilitada",
     "method_disabled": "La función de check-in de este sitio está deshabilitada",
     "no_provider": "El tipo de sitio de la cuenta actualmente no admite check-in",
-    "provider_not_ready": "La configuración de la cuenta actualmente no admite check-in"
+    "provider_not_ready": "La configuración de la cuenta actualmente no admite check-in",
+    "status_unavailable": "No se pudo confirmar el estado actual, por lo que no se intentó el check-in"
   },
   "snapshot": {
     "badges": {

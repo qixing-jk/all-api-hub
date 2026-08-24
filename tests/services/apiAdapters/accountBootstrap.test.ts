@@ -129,7 +129,7 @@ describe("account bootstrap adapters", () => {
   })
 
   it("delegates New API-family bootstrap operations to the family implementation", async () => {
-    const accountBootstrap = createNewApiAccountBootstrap(SITE_TYPES.VELOERA)
+    const accountBootstrap = createNewApiAccountBootstrap(SITE_TYPES.NEW_API)
     mockFetchUserInfo.mockResolvedValue(userInfo)
     mockGetOrCreateAccessToken.mockResolvedValue(tokenInfo)
     mockFetchSiteStatus.mockResolvedValue(siteStatus)
@@ -151,10 +151,10 @@ describe("account bootstrap adapters", () => {
     expect(accountBootstrap.extractDefaultExchangeRate(siteStatus)).toBe(500000)
     await expect(
       accountBootstrap.resolveRoutePath(
-        { baseUrl: "https://example.invalid", siteType: SITE_TYPES.VELOERA },
+        { baseUrl: "https://example.invalid", siteType: SITE_TYPES.NEW_API },
         ACCOUNT_BOOTSTRAP_ROUTE_KINDS.CheckIn,
       ),
-    ).resolves.toBe("/app/me")
+    ).resolves.toBe("/console/personal")
 
     expect(mockFetchUserInfo).toHaveBeenCalledWith(request)
     expect(mockGetOrCreateAccessToken).toHaveBeenCalledWith(request)

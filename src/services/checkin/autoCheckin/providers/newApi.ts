@@ -15,6 +15,7 @@ import type {
   NewApiCheckInResponse,
   NewApiCheckInStatus,
 } from "~/services/apiService/newApiFamily/checkInDto"
+import { fetchSupportCheckIn } from "~/services/apiService/newApiFamily/default/accountBootstrap"
 import { buildCompatUserIdHeaders } from "~/services/apiTransport/compatHeaders"
 import { REQUEST_CONFIG } from "~/services/apiTransport/constant"
 import { ApiError } from "~/services/apiTransport/errors"
@@ -78,6 +79,31 @@ const NEW_API_MESSAGE_KEYS = {
  */
 type CheckinResult = AutoCheckinProviderResult
 
+/** Build the authenticated request shared by New API check-in operations. */
+function createCheckInRequest(
+  account: SiteAccount,
+  tempWindowRequestSource?: TempWindowRequestSource,
+  protectionBypassExecution?: ProtectionBypassExecution,
+): ApiServiceRequest {
+  return {
+    baseUrl: account.site_url,
+    accountId: account.id,
+    cookieAuthSessionCookie: account.cookieAuth?.sessionCookie,
+    auth: {
+      authType: getEffectiveAuthType(account),
+      userId: account.account_info.id,
+      accessToken: account.account_info.access_token,
+    },
+    tempWindowRequestSource,
+    protectionBypassExecution,
+  }
+}
+
+/** Read the canonical public site flag instead of matching backend copy. */
+async function isCheckInDisabled(request: ApiServiceRequest): Promise<boolean> {
+  return (await fetchSupportCheckIn(request)) === false
+}
+
 /**
  * daily check-in endpoint.
  *
@@ -90,8 +116,13 @@ const NATIVE_PAGE_STATUS_POLL_TIMEOUT_MS = 8_000
 const NATIVE_PAGE_STATUS_POLL_INTERVAL_MS = 1_000
 const CHECKIN_STATUS_MONTH_FORMAT_LENGTH = 7
 
-// https://github.com/QuantumNous/new-api — GET /api/user/checkin is the
-// read-only status contract; POST to the same path performs the mutation.
+// New API exposes GET /api/user/checkin for readback and POST for mutation.
+// Its official UI treats the public /api/status checkin_enabled flag as the
+// availability contract, while check-in failures are HTTP 200 message-only
+// responses whose localized text is not stable enough for state detection:
+// https://github.com/QuantumNous/new-api/blob/2d8e50bf36e94200b809dfb39e73624ec48b1e23/controller/misc.go
+// https://github.com/QuantumNous/new-api/blob/2d8e50bf36e94200b809dfb39e73624ec48b1e23/controller/checkin.go
+// https://github.com/QuantumNous/new-api/blob/2d8e50bf36e94200b809dfb39e73624ec48b1e23/common/gin.go
 
 /**
  * Determine whether a check-in failure message indicates Turnstile verification is required.
@@ -282,7 +313,7 @@ async function fetchCheckedInTodayStatus(
   existingRequest?: ApiServiceRequest,
 ): Promise<
   | {
-      checkedInToday: boolean
+      checkedInToday?: boolean
       enabled: boolean
     }
   | undefined
@@ -290,38 +321,40 @@ async function fetchCheckedInTodayStatus(
   const currentMonth = new Date()
     .toISOString()
     .slice(0, CHECKIN_STATUS_MONTH_FORMAT_LENGTH)
+  const request =
+    existingRequest ??
+    (account
+      ? createCheckInRequest(
+          account,
+          tempWindowRequestSource,
+          protectionBypassExecution,
+        )
+      : undefined)
+  if (!request) return undefined
 
   try {
-    const request =
-      existingRequest ??
-      (account
-        ? {
-            baseUrl: account.site_url,
-            accountId: account.id,
-            cookieAuthSessionCookie: account.cookieAuth?.sessionCookie,
-            auth: {
-              authType: getEffectiveAuthType(account),
-              userId: account.account_info.id,
-              accessToken: account.account_info.access_token,
-            },
-            tempWindowRequestSource,
-            protectionBypassExecution,
-          }
-        : undefined)
-    if (!request) return undefined
     const checkInData = await fetchApiData<NewApiCheckInStatus>(request, {
       endpoint: `${ENDPOINT}?month=${currentMonth}`,
       ...(signal ? { options: { signal } } : {}),
     })
 
-    return typeof checkInData?.stats?.checked_in_today === "boolean" &&
+    if (
+      typeof checkInData?.stats?.checked_in_today === "boolean" &&
       (!strictResponse || typeof checkInData?.enabled === "boolean")
-      ? {
-          enabled: checkInData.enabled !== false,
-          checkedInToday: checkInData.stats.checked_in_today,
-        }
+    ) {
+      return {
+        enabled: checkInData.enabled !== false,
+        checkedInToday: checkInData.stats.checked_in_today,
+      }
+    }
+
+    return !signal?.aborted && (await isCheckInDisabled(request))
+      ? { enabled: false }
       : undefined
   } catch (error) {
+    if (!signal?.aborted && (await isCheckInDisabled(request))) {
+      return { enabled: false }
+    }
     if (strictResponse) throw error
     if (
       throwOnUnsupported &&
@@ -859,21 +892,12 @@ async function performCheckin(
   tempWindowRequestSource: TempWindowRequestSource,
   protectionBypassExecution: ProtectionBypassExecution,
 ): Promise<NewApiCheckInResponse> {
-  const { site_url, account_info } = account
-
   return await fetchApi<NewApiCheckInRecord>(
-    {
-      baseUrl: site_url,
-      accountId: account.id,
-      cookieAuthSessionCookie: account.cookieAuth?.sessionCookie,
-      auth: {
-        authType: getEffectiveAuthType(account),
-        userId: account_info.id,
-        accessToken: account_info.access_token,
-      },
+    createCheckInRequest(
+      account,
       tempWindowRequestSource,
       protectionBypassExecution,
-    },
+    ),
     {
       endpoint: ENDPOINT,
       options: {
@@ -915,6 +939,31 @@ async function checkinNewApi(
       context.protectionBypassExecution,
     )
     const responseMessage = normalizeCheckinMessage(checkinResponse.message)
+
+    if (!checkinResponse.success) {
+      const statusAfterFailure = await fetchCheckedInTodayStatus(
+        account,
+        tempWindowRequestSource,
+        context.protectionBypassExecution,
+      )
+      if (statusAfterFailure?.enabled === false) {
+        return {
+          status: CHECKIN_RESULT_STATUS.FAILED,
+          rawMessage: responseMessage || undefined,
+          messageKey: responseMessage
+            ? undefined
+            : AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinFailed,
+          data: checkinResponse,
+        }
+      }
+      if (statusAfterFailure?.checkedInToday === true) {
+        return {
+          status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
+          rawMessage: responseMessage || undefined,
+          data: checkinResponse.data,
+        }
+      }
+    }
 
     const standardResult = resolveStandardCheckinResult({
       payload: checkinResponse,
@@ -961,6 +1010,17 @@ async function checkinNewApi(
     }
   } catch (error: unknown) {
     const errorMessage = getProviderErrorMessage(error)
+    if (
+      await isCheckInDisabled(
+        createCheckInRequest(
+          account,
+          tempWindowRequestSource,
+          context.protectionBypassExecution,
+        ),
+      )
+    ) {
+      return resolveProviderErrorResult({ error })
+    }
     if (
       shouldAttemptNativePageCheckinFallback({
         success: false,
@@ -1021,9 +1081,13 @@ const getStatus: NonNullable<AutoCheckinProvider["getStatus"]> = async ({
         availability: observation.enabled
           ? CHECK_IN_METHOD_AVAILABILITIES.Enabled
           : CHECK_IN_METHOD_AVAILABILITIES.Disabled,
-        today: observation.checkedInToday
-          ? CHECK_IN_METHOD_TODAY_STATUSES.Checked
-          : CHECK_IN_METHOD_TODAY_STATUSES.NotChecked,
+        ...(typeof observation.checkedInToday === "boolean"
+          ? {
+              today: observation.checkedInToday
+                ? CHECK_IN_METHOD_TODAY_STATUSES.Checked
+                : CHECK_IN_METHOD_TODAY_STATUSES.NotChecked,
+            }
+          : {}),
         evidence: {
           source: CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Probe,
           observedAt,

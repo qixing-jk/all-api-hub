@@ -218,6 +218,20 @@ describe("wongGongyiProvider", () => {
       )
     })
 
+    it("does not let ambiguous copy override an explicit unchecked status", async () => {
+      const { fetchApi } = await import("~/services/apiTransport/request")
+      vi.mocked(fetchApi).mockResolvedValueOnce({
+        success: true,
+        message: "User was not already checked in",
+        data: { enabled: true, checked_in: false },
+      })
+
+      await expect(checkInForTest(mockAccount)).resolves.toMatchObject({
+        status: "success",
+        rawMessage: "User was not already checked in",
+      })
+    })
+
     it("returns failed when POST returns success=false without already-checked signal", async () => {
       const { fetchApi } = await import("~/services/apiTransport/request")
       const mockedFetchApi = vi.mocked(fetchApi)

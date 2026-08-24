@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import {
+  CHECK_IN_METHOD_AVAILABILITIES,
+  CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES,
   CHECK_IN_METHOD_STATUS_OUTCOMES,
   CHECK_IN_METHOD_TODAY_STATUSES,
 } from "~/constants/checkIn"
@@ -39,6 +41,33 @@ import { buildSiteAccount } from "~~/tests/test-utils/factories"
 describe("check-in methods compatibility activation", () => {
   afterEach(() => {
     vi.restoreAllMocks()
+  })
+
+  const getNewApiExecutionRegistration = () => {
+    const registration = autoCheckinMethodRegistry.resolveById(
+      "new-api:daily-checkin",
+    )
+    if (!registration?.provider.getStatus) {
+      throw new Error("New API check-in status reader is not registered")
+    }
+    return registration
+  }
+
+  const createNewApiExecutionAccount = () =>
+    buildSiteAccount({
+      site_type: SITE_TYPES.NEW_API,
+      checkIn: createCompatibilityCheckInConfig({
+        siteType: SITE_TYPES.NEW_API,
+        supported: true,
+        automaticExecutionEnabled: true,
+      }),
+    })
+
+  const createExecutionContext = () => ({
+    tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+    protectionBypassExecution: userCommandExecution(
+      PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
+    ),
   })
 
   it("turns a pre-registry support result into canonical evidence and selection", () => {
@@ -592,6 +621,133 @@ describe("check-in methods compatibility activation", () => {
     })
   })
 
+  it("rechecks a cached disabled method and executes after the site enables it", async () => {
+    const methodId = "new-api:daily-checkin"
+    const registration = getNewApiExecutionRegistration()
+    const account = createNewApiExecutionAccount()
+    account.checkIn.methodKnowledge.methods[methodId]!.status = {
+      outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
+      availability: CHECK_IN_METHOD_AVAILABILITIES.Disabled,
+      today: CHECK_IN_METHOD_TODAY_STATUSES.NotChecked,
+      evidence: {
+        source: CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Probe,
+        observedAt: 100,
+      },
+    }
+    const getStatus = vi
+      .spyOn(registration.provider, "getStatus")
+      .mockResolvedValue({
+        outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
+        availability: CHECK_IN_METHOD_AVAILABILITIES.Enabled,
+        today: CHECK_IN_METHOD_TODAY_STATUSES.NotChecked,
+        evidence: {
+          source: CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Probe,
+          observedAt: 200,
+        },
+      })
+    const checkInRequest = vi
+      .spyOn(registration.provider, "checkIn")
+      .mockResolvedValue({ status: "success" })
+
+    const result = await executeSelectedCheckIn({
+      account,
+      globalAutomaticExecutionEnabled: true,
+      context: createExecutionContext(),
+    })
+
+    expect(result.kind).toBe("executed")
+    expect(getStatus).toHaveBeenCalledOnce()
+    expect(checkInRequest).toHaveBeenCalledOnce()
+    expect(getStatus.mock.invocationCallOrder[0]).toBeLessThan(
+      checkInRequest.mock.invocationCallOrder[0],
+    )
+  })
+
+  it("does not post when execution-time status says the method is disabled", async () => {
+    const registration = getNewApiExecutionRegistration()
+    const account = createNewApiExecutionAccount()
+    vi.spyOn(registration.provider, "getStatus").mockResolvedValue({
+      outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
+      availability: CHECK_IN_METHOD_AVAILABILITIES.Disabled,
+      today: CHECK_IN_METHOD_TODAY_STATUSES.NotChecked,
+      evidence: {
+        source: CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Probe,
+        observedAt: 200,
+      },
+    })
+    const checkInRequest = vi
+      .spyOn(registration.provider, "checkIn")
+      .mockResolvedValue({ status: "success" })
+
+    const result = await executeSelectedCheckIn({
+      account,
+      globalAutomaticExecutionEnabled: true,
+      context: createExecutionContext(),
+    })
+
+    expect(result).toMatchObject({ kind: "skipped", reason: "method_disabled" })
+    expect(checkInRequest).not.toHaveBeenCalled()
+  })
+
+  it("does not post when execution-time status cannot be read", async () => {
+    const registration = getNewApiExecutionRegistration()
+    const account = createNewApiExecutionAccount()
+    vi.spyOn(registration.provider, "getStatus").mockRejectedValue(
+      new Error("status unavailable"),
+    )
+    const checkInRequest = vi
+      .spyOn(registration.provider, "checkIn")
+      .mockResolvedValue({ status: "success" })
+
+    const result = await executeSelectedCheckIn({
+      account,
+      globalAutomaticExecutionEnabled: true,
+      context: createExecutionContext(),
+    })
+
+    expect(result).toMatchObject({
+      kind: "skipped",
+      reason: "status_unavailable",
+    })
+    expect(checkInRequest).not.toHaveBeenCalled()
+  })
+
+  it("revalidates the latest account intent before posting", async () => {
+    const registration = getNewApiExecutionRegistration()
+    const account = createNewApiExecutionAccount()
+    vi.spyOn(registration.provider, "getStatus").mockResolvedValue({
+      outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
+      availability: CHECK_IN_METHOD_AVAILABILITIES.Enabled,
+      today: CHECK_IN_METHOD_TODAY_STATUSES.NotChecked,
+      evidence: {
+        source: CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Probe,
+        observedAt: 200,
+      },
+    })
+    const checkInRequest = vi
+      .spyOn(registration.provider, "checkIn")
+      .mockResolvedValue({ status: "success" })
+
+    const result = await executeSelectedCheckIn({
+      account,
+      globalAutomaticExecutionEnabled: true,
+      context: createExecutionContext(),
+      revalidateAccount: async (refreshedConfig) => ({
+        ...account,
+        checkIn: {
+          ...(refreshedConfig ?? account.checkIn),
+          automaticExecutionEnabled: false,
+        },
+      }),
+    })
+
+    expect(result).toMatchObject({
+      kind: "skipped",
+      reason: "automatic_execution_disabled",
+    })
+    expect(checkInRequest).not.toHaveBeenCalled()
+  })
+
   it.each([
     {
       siteType: SITE_TYPES.NEW_API,
@@ -643,6 +799,17 @@ describe("check-in methods compatibility activation", () => {
         : null
       expect(registration).toBeDefined()
       if (!registration) throw new Error(`Missing registration for ${siteType}`)
+      if (registration.provider.getStatus) {
+        vi.spyOn(registration.provider, "getStatus").mockResolvedValue({
+          outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
+          availability: CHECK_IN_METHOD_AVAILABILITIES.Enabled,
+          today: CHECK_IN_METHOD_TODAY_STATUSES.NotChecked,
+          evidence: {
+            source: CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Probe,
+            observedAt: 200,
+          },
+        })
+      }
 
       const cases = [
         {

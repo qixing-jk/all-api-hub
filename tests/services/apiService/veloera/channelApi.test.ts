@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { fetchSupportCheckIn } from "~/services/apiService/newApiFamily/variants/veloera"
 import {
   createChannel,
   deleteChannel,
@@ -38,6 +39,10 @@ const { mockFetchApiData } = vi.hoisted(() => ({
   mockFetchApiData: vi.fn(),
 }))
 
+const { mockFetchSiteStatus } = vi.hoisted(() => ({
+  mockFetchSiteStatus: vi.fn(),
+}))
+
 const { mockFetchApi, mockLoggerError } = vi.hoisted(() => ({
   mockFetchApi: vi.fn(),
   mockLoggerError: vi.fn(),
@@ -56,6 +61,16 @@ vi.mock("~/services/apiTransport/request", () => ({
   fetchApiData: mockFetchApiData,
   fetchApi: mockFetchApi,
 }))
+
+vi.mock(
+  "~/services/apiService/newApiFamily/default/accountBootstrap",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/apiService/newApiFamily/default/accountBootstrap")
+    >()),
+    fetchSiteStatus: mockFetchSiteStatus,
+  }),
+)
 
 vi.mock("~/services/accounts/accountHealth", () => ({
   determineHealthStatus: (...args: unknown[]) =>
@@ -79,6 +94,7 @@ describe("apiService veloera channel APIs", () => {
     vi.clearAllMocks()
     mockFetchApiData.mockReset()
     mockFetchApi.mockReset()
+    mockFetchSiteStatus.mockReset()
     mockFetchAccountQuota.mockResolvedValue(100)
     mockFetchTodayUsage.mockResolvedValue({
       today_prompt_tokens: 11,
@@ -669,6 +685,21 @@ describe("apiService veloera channel APIs", () => {
 
     await expect(fetchCheckInStatus(request as any)).resolves.toBe(true)
     await expect(fetchCheckInStatus(request as any)).resolves.toBeUndefined()
+  })
+
+  it("reads Veloera check-in support from its public status field", async () => {
+    const request = {
+      baseUrl: "https://example.com",
+      auth: { authType: AuthTypeEnum.AccessToken },
+    }
+    mockFetchSiteStatus
+      .mockResolvedValueOnce({ check_in_enabled: false })
+      .mockResolvedValueOnce({ check_in_enabled: true })
+      .mockResolvedValueOnce({ checkin_enabled: true })
+
+    await expect(fetchSupportCheckIn(request as any)).resolves.toBe(false)
+    await expect(fetchSupportCheckIn(request as any)).resolves.toBe(true)
+    await expect(fetchSupportCheckIn(request as any)).resolves.toBeUndefined()
   })
 
   it("treats 404 and other failures as unsupported check-in detection", async () => {

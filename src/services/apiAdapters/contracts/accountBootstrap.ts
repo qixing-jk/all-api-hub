@@ -40,6 +40,10 @@ export interface SiteStatusInfo {
    * 是否启用签到功能
    */
   checkin_enabled?: boolean
+  /**
+   * Veloera public status uses a distinct snake-case field.
+   */
+  check_in_enabled?: boolean
 }
 
 export type AccountBootstrapCapability = {

@@ -126,10 +126,14 @@ const toSchedulerSkipReason = (
       return AUTO_CHECKIN_SKIP_REASON.ALREADY_CHECKED_TODAY
     case CHECK_IN_EXECUTION_SKIP_REASONS.MethodDisabled:
       return AUTO_CHECKIN_SKIP_REASON.METHOD_DISABLED
+    case CHECK_IN_EXECUTION_SKIP_REASONS.StatusUnavailable:
+      return AUTO_CHECKIN_SKIP_REASON.STATUS_UNAVAILABLE
     case CHECK_IN_EXECUTION_SKIP_REASONS.NoProvider:
       return AUTO_CHECKIN_SKIP_REASON.NO_PROVIDER
     case CHECK_IN_EXECUTION_SKIP_REASONS.ProviderNotReady:
       return AUTO_CHECKIN_SKIP_REASON.PROVIDER_NOT_READY
+    case CHECK_IN_EXECUTION_SKIP_REASONS.AccountUnavailable:
+      return AUTO_CHECKIN_SKIP_REASON.ACCOUNT_UNAVAILABLE
     default:
       return AUTO_CHECKIN_SKIP_REASON.DETECTION_DISABLED
   }
@@ -1068,6 +1072,11 @@ class AutoCheckinScheduler {
           tempWindowRequestSource,
           protectionBypassExecution,
         },
+        revalidateAccount: (refreshedConfig) =>
+          accountStorage.prepareAccountForSelectedCheckIn(
+            account.id,
+            refreshedConfig,
+          ),
       })
       if (execution.kind === CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Skipped) {
         const reasonCode = toSchedulerSkipReason(execution.reason)

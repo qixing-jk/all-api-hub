@@ -1180,6 +1180,40 @@ class AccountStorageService {
     )
   }
 
+  /** Merges a preflight status observation and returns the latest locked account. */
+  async prepareAccountForSelectedCheckIn(
+    id: string,
+    refreshedConfig?: SiteAccount["checkIn"],
+  ): Promise<SiteAccount | null> {
+    try {
+      return await this.mutateAccountById(id, ({ account }) => {
+        const checkIn = refreshedConfig
+          ? mergeRefreshedCheckInStatus({
+              latest: account.checkIn,
+              refreshed: refreshedConfig,
+            })
+          : account.checkIn
+        const nextAccount =
+          checkIn === account.checkIn
+            ? account
+            : applySiteAccountUpdates({
+                account,
+                updates: { checkIn },
+                now: Date.now(),
+                userTimestampMode: AccountUpdateUserTimestampMode.Preserve,
+              })
+        return {
+          nextAccount,
+          result: nextAccount,
+          changed: nextAccount !== account,
+        }
+      })
+    } catch (error) {
+      logger.warn("准备账号签到状态失败", { accountId: id, error })
+      return null
+    }
+  }
+
   /** Mark the selected site method checked using execution evidence. */
   async markAccountAsSiteCheckedIn(id: string): Promise<boolean> {
     try {

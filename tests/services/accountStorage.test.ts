@@ -1209,6 +1209,82 @@ describe("accountStorage core behaviors", () => {
     }
   })
 
+  it("persists preflight status without overwriting current user intent", async () => {
+    const account = createAccount({
+      id: "preflight-check-in",
+      site_type: SITE_TYPES.NEW_API,
+      checkIn: {
+        automaticExecutionEnabled: false,
+        methodKnowledge: {
+          methods: {
+            "new-api:daily-checkin": {
+              detection: {
+                outcome: "matched",
+                evidence: { source: "compatibility_registration" },
+              },
+              status: {
+                outcome: "known",
+                availability: "enabled",
+                today: "not_checked",
+                evidence: { source: "probe", observedAt: 100 },
+              },
+            },
+          },
+        },
+        selection: {
+          mode: "manual",
+          methodId: "new-api:daily-checkin",
+        },
+        customCheckIn: { url: "https://check-in.example.invalid" },
+      },
+    })
+    seedStorage([account])
+    const refreshed = {
+      ...account.checkIn,
+      automaticExecutionEnabled: true,
+      selection: { mode: "automatic" as const },
+      customCheckIn: undefined,
+      methodKnowledge: {
+        ...account.checkIn.methodKnowledge,
+        methods: {
+          ...account.checkIn.methodKnowledge.methods,
+          "new-api:daily-checkin": {
+            ...account.checkIn.methodKnowledge.methods[
+              "new-api:daily-checkin"
+            ]!,
+            status: {
+              outcome: "known" as const,
+              availability: "disabled" as const,
+              today: "not_checked" as const,
+              evidence: {
+                source: "probe" as const,
+                observedAt: 200,
+              },
+            },
+          },
+        },
+      },
+    }
+
+    const prepared = await accountStorage.prepareAccountForSelectedCheckIn(
+      account.id,
+      refreshed,
+    )
+    const persisted = await accountStorage.getAccountById(account.id)
+
+    expect(prepared?.checkIn.automaticExecutionEnabled).toBe(false)
+    expect(prepared?.checkIn.selection).toEqual(account.checkIn.selection)
+    expect(prepared?.checkIn.customCheckIn).toMatchObject({
+      url: "https://check-in.example.invalid",
+    })
+    expect(
+      persisted?.checkIn.methodKnowledge.methods["new-api:daily-checkin"]
+        ?.status,
+    ).toEqual(
+      refreshed.methodKnowledge.methods["new-api:daily-checkin"]?.status,
+    )
+  })
+
   it("markAccountAsCustomCheckedIn should persist today's custom check-in state", async () => {
     const account = createAccount({
       id: "custom-1",

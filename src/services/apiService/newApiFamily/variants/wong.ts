@@ -102,25 +102,22 @@ export async function fetchCheckInStatus(
       false,
     )
 
-    const responseMessage = normalizeMessage(response.message)
-
-    if (responseMessage && isAlreadyCheckedMessage(responseMessage)) {
-      return false
-    }
-
     if (response.data?.enabled === false) {
       return undefined
     }
 
-    if (!response.success) {
-      if (response.data?.checked_in === true) {
-        return false
-      }
-      return undefined
+    if (typeof response.data?.checked_in === "boolean") {
+      if (response.data.checked_in) return false
+      return response.success ? true : undefined
     }
 
-    if (typeof response.data?.checked_in === "boolean") {
-      return !response.data.checked_in
+    const responseMessage = normalizeMessage(response.message)
+    if (responseMessage && isAlreadyCheckedMessage(responseMessage)) {
+      return false
+    }
+
+    if (!response.success) {
+      return undefined
     }
 
     return undefined

@@ -956,12 +956,14 @@ export type ProductAnalyticsAutoCheckinRunKind =
 
 export const PRODUCT_ANALYTICS_AUTO_CHECKIN_SKIP_REASONS = {
   AccountDisabled: "account_disabled",
+  AccountUnavailable: "account_unavailable",
   DetectionDisabled: "detection_disabled",
   MethodDisabled: "method_disabled",
   AutoCheckinDisabled: "auto_checkin_disabled",
   AlreadyCheckedToday: "already_checked_today",
   NoProvider: "no_provider",
   ProviderNotReady: "provider_not_ready",
+  StatusUnavailable: "status_unavailable",
 } as const
 
 export type ProductAnalyticsAutoCheckinSkipReason =

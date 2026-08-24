@@ -181,7 +181,7 @@ describe("voApiV2Provider", () => {
   it("treats repeated same-day sign-in as already checked", async () => {
     server.use(
       http.post("https://example.invalid/api/check_in", () =>
-        HttpResponse.json({ code: 1, data: null, msg: "Signed in today" }),
+        HttpResponse.json({ code: 1, data: null, msg: "No action performed" }),
       ),
       http.get("https://example.invalid/api/check_in/stats", () =>
         HttpResponse.json({ code: 0, data: { todaySigned: true } }),
@@ -196,6 +196,21 @@ describe("voApiV2Provider", () => {
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
       }),
     )
+  })
+
+  it("does not treat protocol code 1 as already checked without status confirmation", async () => {
+    server.use(
+      http.post("https://example.invalid/api/check_in", () =>
+        HttpResponse.json({ code: 1, data: null, msg: "Request rejected" }),
+      ),
+      http.get("https://example.invalid/api/check_in/stats", () =>
+        HttpResponse.json({ code: 0, data: { todaySigned: false } }),
+      ),
+    )
+
+    await expect(checkInForTest(account)).resolves.toMatchObject({
+      status: CHECKIN_RESULT_STATUS.FAILED,
+    })
   })
 
   it("does not run without the saved dashboard JWT", () => {

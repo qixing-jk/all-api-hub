@@ -21,6 +21,8 @@ import { t } from "~/utils/i18n/core"
 
 const logger = createLogger("NewApiFamily.Veloera")
 
+export { fetchSupportCheckIn } from "./veloeraCheckIn"
+
 /**
  * Fetch Veloera check-in capability for the user.
  */

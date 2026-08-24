@@ -1010,9 +1010,10 @@ export async function submitVoApiV2CheckIn(
   if (
     body &&
     typeof body === "object" &&
-    body.code === VOAPI_V2_PROTOCOL_CODES.AlreadySigned &&
-    /signed|check/i.test(body.msg ?? body.message ?? "")
+    body.code === VOAPI_V2_PROTOCOL_CODES.AlreadySigned
   ) {
+    // Code 1 is only a repeat candidate. The provider confirms the actual
+    // same-day state through the read-only stats endpoint before reporting it.
     return { alreadySigned: true }
   }
 

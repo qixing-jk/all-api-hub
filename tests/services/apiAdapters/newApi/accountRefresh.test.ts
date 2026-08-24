@@ -11,6 +11,7 @@ const {
   anyrouterRefreshAccountData,
   mockFetchSupportCheckIn,
   mockRefreshAccountData,
+  veloeraFetchSupportCheckIn,
   doneHubRefreshAccountData,
   veloeraRefreshAccountData,
   wongFetchSupportCheckIn,
@@ -20,6 +21,7 @@ const {
   anyrouterRefreshAccountData: vi.fn(),
   mockFetchSupportCheckIn: vi.fn(),
   mockRefreshAccountData: vi.fn(),
+  veloeraFetchSupportCheckIn: vi.fn(),
   doneHubRefreshAccountData: vi.fn(),
   veloeraRefreshAccountData: vi.fn(),
   wongFetchSupportCheckIn: vi.fn(),
@@ -43,6 +45,7 @@ vi.mock("~/services/apiService/newApiFamily/variants/doneHub", () => ({
 }))
 
 vi.mock("~/services/apiService/newApiFamily/variants/veloera", () => ({
+  fetchSupportCheckIn: veloeraFetchSupportCheckIn,
   refreshAccountData: veloeraRefreshAccountData,
 }))
 
@@ -114,6 +117,7 @@ describe("createNewApiAccountRefresh", () => {
       anyrouterFetchSupportCheckIn,
       anyrouterRefreshAccountData,
     ],
+    [SITE_TYPES.VELOERA, veloeraFetchSupportCheckIn, veloeraRefreshAccountData],
     [SITE_TYPES.WONG_GONGYI, wongFetchSupportCheckIn, wongRefreshAccountData],
   ])(
     "uses adapter-level support and refresh overrides for %s",
@@ -137,10 +141,7 @@ describe("createNewApiAccountRefresh", () => {
     },
   )
 
-  it.each([
-    [SITE_TYPES.DONE_HUB, doneHubRefreshAccountData],
-    [SITE_TYPES.VELOERA, veloeraRefreshAccountData],
-  ])(
+  it.each([[SITE_TYPES.DONE_HUB, doneHubRefreshAccountData]])(
     "keeps default support probing while using adapter-level refresh override for %s",
     async (siteType, refreshLoader) => {
       mockFetchSupportCheckIn.mockResolvedValueOnce(true)

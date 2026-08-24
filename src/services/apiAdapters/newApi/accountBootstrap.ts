@@ -2,6 +2,7 @@ import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import type { AccountBootstrapCapability } from "~/services/apiAdapters/contracts/accountBootstrap"
 import * as accountBootstrap from "~/services/apiService/newApiFamily/default/accountBootstrap"
 import * as anyrouter from "~/services/apiService/newApiFamily/variants/anyrouter"
+import * as veloera from "~/services/apiService/newApiFamily/variants/veloera"
 import * as wong from "~/services/apiService/newApiFamily/variants/wong"
 
 import { resolveStaticAccountRoutePath } from "../accountRoutes"
@@ -20,6 +21,9 @@ const accountBootstrapOverrides: Partial<
 > = {
   [SITE_TYPES.ANYROUTER]: {
     fetchSupportCheckIn: anyrouter.fetchSupportCheckIn,
+  },
+  [SITE_TYPES.VELOERA]: {
+    fetchSupportCheckIn: veloera.fetchSupportCheckIn,
   },
   [SITE_TYPES.WONG_GONGYI]: {
     fetchSupportCheckIn: wong.fetchSupportCheckIn,

@@ -161,6 +161,19 @@ describe("apiService wong", () => {
     await expect(fetchCheckInStatus(baseRequest)).resolves.toBe(false)
   })
 
+  it("prefers an explicit unchecked payload over ambiguous message text", async () => {
+    mockFetchApi.mockResolvedValueOnce({
+      success: true,
+      message: "User was not already checked in",
+      data: {
+        enabled: true,
+        checked_in: false,
+      },
+    })
+
+    await expect(fetchCheckInStatus(baseRequest)).resolves.toBe(true)
+  })
+
   it("returns undefined for unsupported or malformed check-in responses", async () => {
     mockFetchApi
       .mockResolvedValueOnce({

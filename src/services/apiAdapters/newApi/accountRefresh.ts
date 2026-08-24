@@ -20,6 +20,7 @@ const accountRefreshOverrides: Partial<
     refreshAccountData: doneHub.refreshAccountData,
   },
   [SITE_TYPES.VELOERA]: {
+    fetchSupportCheckIn: veloera.fetchSupportCheckIn,
     refreshAccountData: veloera.refreshAccountData,
   },
   [SITE_TYPES.WONG_GONGYI]: {

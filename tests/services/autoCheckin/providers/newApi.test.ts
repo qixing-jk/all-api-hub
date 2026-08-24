@@ -5,7 +5,7 @@ import {
   resolveAccountSiteRouteUrl,
   SITE_ROUTE_KINDS,
 } from "~/services/accounts/utils/siteRouteResolver"
-import { ApiError } from "~/services/apiTransport/errors"
+import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { fetchApi, fetchApiData } from "~/services/apiTransport/request"
 import { autoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers"
 import { newApiProvider } from "~/services/checkin/autoCheckin/providers/newApi"
@@ -22,10 +22,25 @@ import { userCommandExecution } from "~~/tests/services/protectionBypass/fixture
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 
+const { mockFetchSupportCheckIn } = vi.hoisted(() => ({
+  mockFetchSupportCheckIn: vi.fn(),
+}))
+
 vi.mock("~/services/apiTransport/request", () => ({
   fetchApi: vi.fn(),
   fetchApiData: vi.fn(),
 }))
+
+vi.mock(
+  "~/services/apiService/newApiFamily/default/accountBootstrap",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/apiService/newApiFamily/default/accountBootstrap")
+      >()
+    return { ...actual, fetchSupportCheckIn: mockFetchSupportCheckIn }
+  },
+)
 
 vi.mock("~/utils/browser/tempWindowFetch", () => ({
   tempWindowTriggerCheckinPageAction: vi.fn(),
@@ -89,9 +104,22 @@ const checkInForTest = (
   >[1] = DEFAULT_PROVIDER_CONTEXT,
 ) => newApiProvider.checkIn(account, context)
 
+const mockCheckInStatusSequence = (...checkedInToday: boolean[]) => {
+  const mock = vi.mocked(fetchApiData)
+  for (const checked of checkedInToday) {
+    mock.mockResolvedValueOnce({
+      stats: { checked_in_today: checked },
+    } as any)
+  }
+}
+
 describe("newApiProvider", () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    vi.resetAllMocks()
+    mockFetchSupportCheckIn.mockResolvedValue(undefined)
+    vi.mocked(resolveAccountSiteRouteUrl).mockResolvedValue(
+      "https://site.example.invalid/console/personal",
+    )
     vi.mocked(safeRandomUUID).mockImplementation((prefix?: string) =>
       prefix ? `${prefix}-mock-uuid` : "mock-uuid",
     )
@@ -165,6 +193,60 @@ describe("newApiProvider", () => {
   })
 
   describe("read-only status", () => {
+    it("uses public site status to classify a disabled deployment independently of error copy", async () => {
+      vi.mocked(fetchApiData).mockRejectedValueOnce(
+        new ApiError(
+          "check-in unavailable",
+          undefined,
+          "/api/user/checkin",
+          API_ERROR_CODES.BUSINESS_ERROR,
+        ),
+      )
+      mockFetchSupportCheckIn.mockResolvedValueOnce(false)
+
+      await expect(
+        newApiProvider.detect!({ account: mockAccount, observedAt: 199 }),
+      ).resolves.toEqual({
+        detection: {
+          outcome: "matched",
+          evidence: { source: "probe", observedAt: 199 },
+        },
+        status: {
+          outcome: "known",
+          availability: "disabled",
+          evidence: { source: "probe", observedAt: 199 },
+        },
+      })
+      expect(mockFetchSupportCheckIn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          baseUrl: mockAccount.site_url,
+          auth: expect.objectContaining({
+            authType: AuthTypeEnum.AccessToken,
+          }),
+        }),
+      )
+    })
+
+    it("does not misclassify other business errors while public status remains enabled", async () => {
+      vi.mocked(fetchApiData).mockRejectedValueOnce(
+        new ApiError(
+          "failed to update quota",
+          undefined,
+          "/api/user/checkin",
+          API_ERROR_CODES.BUSINESS_ERROR,
+        ),
+      )
+      mockFetchSupportCheckIn.mockResolvedValueOnce(true)
+
+      await expect(
+        newApiProvider.detect!({ account: mockAccount, observedAt: 200 }),
+      ).resolves.toEqual({
+        outcome: "unknown",
+        reason: "network",
+        attemptedAt: 200,
+      })
+    })
+
     it("selects a valid disabled deployment without issuing POST", async () => {
       vi.mocked(fetchApiData).mockResolvedValueOnce({
         enabled: false,
@@ -242,9 +324,7 @@ describe("newApiProvider", () => {
           },
         },
       })
-      vi.mocked(fetchApiData).mockResolvedValueOnce({
-        stats: { checked_in_today: true },
-      } as any)
+      mockCheckInStatusSequence(false, true)
 
       const result = await checkInForTest(mockAccount, {
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
@@ -309,9 +389,7 @@ describe("newApiProvider", () => {
         reason: "clicked",
         identity: { userId: "123", user: { id: "123" } },
       })
-      vi.mocked(fetchApiData).mockResolvedValueOnce({
-        stats: { checked_in_today: true },
-      } as any)
+      mockCheckInStatusSequence(false, true)
 
       const result = await checkInForTest(mockAccount)
 
@@ -331,9 +409,7 @@ describe("newApiProvider", () => {
         reason: "clicked",
         identity: { userId: "123", user: { id: "123" } },
       })
-      vi.mocked(fetchApiData).mockResolvedValueOnce({
-        stats: { checked_in_today: true },
-      } as any)
+      mockCheckInStatusSequence(false, true)
 
       const result = await checkInForTest(mockAccount)
 
@@ -355,9 +431,7 @@ describe("newApiProvider", () => {
         reason: "clicked",
         identity: { userId: "123", user: { id: "123" } },
       })
-      vi.mocked(fetchApiData).mockResolvedValue({
-        stats: { checked_in_today: true },
-      } as any)
+      mockCheckInStatusSequence(false, true, false, true)
 
       await checkInForTest(mockAccount)
       await checkInForTest(mockAccount)
@@ -371,6 +445,30 @@ describe("newApiProvider", () => {
         "native-checkin-test-id-first",
         "native-checkin-test-id-second",
       ])
+    })
+
+    it("keeps a failed response when public site status reports check-in disabled", async () => {
+      vi.mocked(fetchApi).mockResolvedValueOnce({
+        success: false,
+        message: "check-in unavailable",
+        data: null,
+      })
+      mockFetchSupportCheckIn.mockResolvedValueOnce(false)
+
+      const result = await checkInForTest(mockAccount)
+
+      expect(result).toEqual({
+        status: "failed",
+        rawMessage: "check-in unavailable",
+        messageKey: undefined,
+        data: {
+          success: false,
+          message: "check-in unavailable",
+          data: null,
+        },
+      })
+      expect(tempWindowTriggerCheckinPageAction).not.toHaveBeenCalled()
+      expect(tempWindowTurnstileFetch).not.toHaveBeenCalled()
     })
 
     it.each([
@@ -701,6 +799,27 @@ describe("newApiProvider", () => {
       })
     })
 
+    it("uses status readback to recognize already checked independently of error copy", async () => {
+      vi.mocked(fetchApi).mockResolvedValueOnce({
+        success: false,
+        message: "No action is necessary today",
+        data: null,
+      })
+      mockFetchSupportCheckIn.mockResolvedValueOnce(true)
+      vi.mocked(fetchApiData).mockResolvedValueOnce({
+        enabled: true,
+        stats: { checked_in_today: true },
+      } as any)
+
+      await expect(checkInForTest(mockAccount)).resolves.toEqual({
+        status: "already_checked",
+        rawMessage: "No action is necessary today",
+        data: null,
+      })
+      expect(tempWindowTriggerCheckinPageAction).not.toHaveBeenCalled()
+      expect(tempWindowTurnstileFetch).not.toHaveBeenCalled()
+    })
+
     it("uses an incognito Turnstile temp context first for access-token accounts", async () => {
       vi.mocked(fetchApi).mockResolvedValueOnce({
         success: false,
@@ -938,9 +1057,7 @@ describe("newApiProvider", () => {
         turnstile: { status: "not_present", hasTurnstile: false },
       })
 
-      vi.mocked(fetchApiData).mockResolvedValueOnce({
-        stats: { checked_in_today: true },
-      } as any)
+      mockCheckInStatusSequence(false, true)
 
       const result = await checkInForTest(mockAccount)
 
@@ -1009,9 +1126,7 @@ describe("newApiProvider", () => {
         turnstile: { status: "timeout", hasTurnstile: true },
       })
 
-      vi.mocked(fetchApiData).mockResolvedValueOnce({
-        stats: { checked_in_today: true },
-      } as any)
+      mockCheckInStatusSequence(false, true)
 
       const result = await checkInForTest(mockAccount)
 
@@ -1056,7 +1171,7 @@ describe("newApiProvider", () => {
           data: null,
         },
       })
-      expect(fetchApiData).not.toHaveBeenCalled()
+      expect(fetchApiData).toHaveBeenCalledTimes(1)
     })
 
     it("falls back to the generic failure key when assisted replay returns no usable payload", async () => {
@@ -1081,7 +1196,7 @@ describe("newApiProvider", () => {
         messageKey: "autoCheckin:providerFallback.checkinFailed",
         data: undefined,
       })
-      expect(fetchApiData).not.toHaveBeenCalled()
+      expect(fetchApiData).toHaveBeenCalledTimes(1)
     })
 
     it("falls back to a generic failure when assisted Turnstile fetch fails after token capture without an explicit error", async () => {

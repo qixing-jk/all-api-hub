@@ -15,6 +15,7 @@ import { createLogger } from "~/utils/core/logger"
 export {
   fetchAccountData,
   fetchCheckInStatus,
+  fetchSupportCheckIn,
   refreshAccountData,
 } from "~/services/apiService/newApiFamily/variants/veloera"
 
