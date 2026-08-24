@@ -2,9 +2,8 @@ import { fireEvent, render as rtlRender, screen } from "@testing-library/react"
 import { I18nextProvider } from "react-i18next"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-import FilterBar, {
-  FILTER_STATUS,
-} from "~/features/AutoCheckin/components/FilterBar"
+import FilterBar from "~/features/AutoCheckin/components/FilterBar"
+import { FILTER_STATUS } from "~/features/AutoCheckin/utils/autoCheckin"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -42,7 +41,8 @@ describe("AutoCheckin FilterBar", () => {
               accountId: "account-1",
               accountName: "Alpha",
               status: CHECKIN_RESULT_STATUS.SUCCESS,
-            } as any,
+              timestamp: 1,
+            },
           ]}
           status={FILTER_STATUS.ALL}
           keyword="Alpha"
@@ -71,13 +71,13 @@ describe("AutoCheckin FilterBar", () => {
               accountName: "Alpha",
               status: CHECKIN_RESULT_STATUS.FAILED,
               timestamp: 1,
-            } as any,
+            },
             {
               accountId: "account-2",
               accountName: "Beta",
               status: CHECKIN_RESULT_STATUS.SUCCESS,
               timestamp: 2,
-            } as any,
+            },
           ]}
           status={FILTER_STATUS.ALL}
           keyword=""
@@ -89,7 +89,7 @@ describe("AutoCheckin FilterBar", () => {
 
     fireEvent.click(
       screen.getByRole("button", {
-        name: /autoCheckin:execution\.filters\.failed/i,
+        name: /autoCheckin:execution\.filters\.failed \(\d+\)$/i,
       }),
     )
 
@@ -146,7 +146,7 @@ describe("AutoCheckin FilterBar", () => {
               accountName: "Private Account",
               status: CHECKIN_RESULT_STATUS.FAILED,
               timestamp: 1,
-            } as any,
+            },
           ]}
           status={FILTER_STATUS.FAILED}
           keyword="private-keyword"
@@ -190,21 +190,21 @@ describe("AutoCheckin FilterBar", () => {
               status: CHECKIN_RESULT_STATUS.FAILED,
               rawMessage: "needs private login",
               timestamp: 1,
-            } as any,
+            },
             {
               accountId: "account-2",
               accountName: "Beta",
               status: CHECKIN_RESULT_STATUS.FAILED,
               rawMessage: "different failure",
               timestamp: 2,
-            } as any,
+            },
             {
               accountId: "account-3",
               accountName: "Private Success",
               status: CHECKIN_RESULT_STATUS.SUCCESS,
               rawMessage: "ok",
               timestamp: 3,
-            } as any,
+            },
           ]}
           status={FILTER_STATUS.ALL}
           keyword="private"
@@ -216,7 +216,7 @@ describe("AutoCheckin FilterBar", () => {
 
     fireEvent.click(
       screen.getByRole("button", {
-        name: /autoCheckin:execution\.filters\.failed/i,
+        name: /autoCheckin:execution\.filters\.failed \(\d+\)$/i,
       }),
     )
 
@@ -244,13 +244,13 @@ describe("AutoCheckin FilterBar", () => {
               accountName: "Alpha",
               status: CHECKIN_RESULT_STATUS.FAILED,
               timestamp: 1,
-            } as any,
+            },
             {
               accountId: "account-2",
               accountName: "Beta",
               status: CHECKIN_RESULT_STATUS.SUCCESS,
               timestamp: 2,
-            } as any,
+            },
           ]}
           status={FILTER_STATUS.FAILED}
           keyword="Alpha"
@@ -272,5 +272,76 @@ describe("AutoCheckin FilterBar", () => {
 
     expect(onStatusChange).toHaveBeenCalledWith(FILTER_STATUS.ALL)
     expect(onKeywordChange).toHaveBeenCalledWith("")
+  })
+
+  it("filters failed and skipped outcomes together", () => {
+    const onStatusChange = vi.fn()
+
+    rtlRender(
+      <I18nextProvider i18n={testI18n}>
+        <FilterBar
+          accountResults={[
+            {
+              accountId: "failed",
+              accountName: "Failed",
+              status: CHECKIN_RESULT_STATUS.FAILED,
+              timestamp: 3,
+            },
+            {
+              accountId: "skipped",
+              accountName: "Skipped",
+              status: CHECKIN_RESULT_STATUS.SKIPPED,
+              timestamp: 2,
+            },
+            {
+              accountId: "success",
+              accountName: "Success",
+              status: CHECKIN_RESULT_STATUS.SUCCESS,
+              timestamp: 1,
+            },
+          ]}
+          status={FILTER_STATUS.ALL}
+          keyword=""
+          onStatusChange={onStatusChange}
+          onKeywordChange={vi.fn()}
+        />
+      </I18nextProvider>,
+    )
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /autoCheckin:execution\.filters\.failedOrSkipped/i,
+      }),
+    )
+
+    expect(onStatusChange).toHaveBeenCalledWith(FILTER_STATUS.FAILED_OR_SKIPPED)
+    expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        insights: expect.objectContaining({
+          filterCount: 1,
+          resultCount: 2,
+        }),
+      }),
+    )
+  })
+
+  it("leaves result sorting to the table column headers", () => {
+    rtlRender(
+      <I18nextProvider i18n={testI18n}>
+        <FilterBar
+          accountResults={[]}
+          status={FILTER_STATUS.ALL}
+          keyword=""
+          onStatusChange={vi.fn()}
+          onKeywordChange={vi.fn()}
+        />
+      </I18nextProvider>,
+    )
+
+    expect(
+      screen.queryByRole("combobox", {
+        name: "autoCheckin:execution.sort.label",
+      }),
+    ).not.toBeInTheDocument()
   })
 })

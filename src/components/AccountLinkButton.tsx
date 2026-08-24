@@ -1,6 +1,7 @@
 import { useCallback } from "react"
 
 import { WorkflowTransitionButton } from "~/components/ui"
+import { cn } from "~/lib/utils"
 import { openAccountManagerWithSearch } from "~/utils/navigation"
 
 interface AccountLinkButtonProps {
@@ -28,11 +29,12 @@ export default function AccountLinkButton({
   return (
     <WorkflowTransitionButton
       variant="link"
-      className={className}
+      className={cn("max-w-full min-w-0", className)}
       onClick={handleClick}
+      title={accountName}
       aria-label={`View account ${accountName} in manager`}
     >
-      <span className="truncate">{accountName}</span>
+      <span className="min-w-0 truncate">{accountName}</span>
     </WorkflowTransitionButton>
   )
 }

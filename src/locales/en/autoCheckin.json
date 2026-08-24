@@ -37,8 +37,9 @@
       "countFiltered": "Showing {{filtered}} of {{total}}",
       "countTotal": "{{total}} total",
       "failed": "Failed",
+      "failedOrSkipped": "Failed or skipped",
       "searchLabel": "Search execution results",
-      "searchPlaceholder": "Search by account name or message...",
+      "searchPlaceholder": "Search by account name, ID, or message...",
       "skipped": "Skipped",
       "statusLabel": "Filter by execution status",
       "success": "Success"
@@ -50,6 +51,12 @@
       "openExternalCheckIn": "Open unchecked external check-ins by default. Ctrl/Cmd opens all; Shift opens in a new window.",
       "openFailedManualNewWindow": "Open the site check-in page for every account whose latest auto check-in failed. Shift-click to open them in a new window.",
       "siteTypeCheckinUnsupported": "Solution: In 'Account Management → Edit Account', first verify that the selected site type matches the real site. If the type was auto-detected before, log back into the target site and run detection again. If the site type is correct but this message still appears, the site likely does not support automatic check-in yet, so use 'Open site' or 'Manual sign-in' instead."
+    },
+    "pagination": {
+      "next": "Next page",
+      "previous": "Previous page",
+      "rowsPerPage": "Rows per page",
+      "summary": "Showing {{start}}–{{end}} of {{total}}"
     },
     "refresh": "Refresh",
     "runNow": "Run now",
@@ -216,10 +223,7 @@
     },
     "table": {
       "autoCheckin": "Auto check-in",
-      "detection": "Check-in method",
       "lastResult": "Updated",
-      "provider": "Execution",
-      "skipReason": "Not executed because",
       "status": "Latest status"
     },
     "title": "Account readiness"
@@ -253,5 +257,9 @@
     "dialogDescription": "Today's scheduled daily run was triggered early when the UI opened.",
     "dialogTitle": "Auto check-in finished",
     "viewDetails": "View details"
+  },
+  "workspace": {
+    "label": "Auto check-in data",
+    "resultsTab": "Execution results"
   }
 }

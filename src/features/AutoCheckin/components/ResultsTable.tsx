@@ -1,385 +1,283 @@
 import {
-  Ban,
-  CalendarDays,
-  CircleCheck,
-  CircleX,
-  RefreshCw,
-  Trash2,
-  TriangleAlert,
-} from "lucide-react"
-import { useMemo, type ReactNode } from "react"
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable,
+  type ColumnDef,
+  type ColumnFiltersState,
+  type FilterFn,
+  type PaginationState,
+  type SortingState,
+} from "@tanstack/react-table"
+import { useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import AccountLinkButton from "~/components/AccountLinkButton"
-import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
-import { Button, Card } from "~/components/ui"
-import { Z_INDEX } from "~/constants/designTokens"
-import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import {
+  Card,
+  Table,
+  TableBody,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "~/components/ui"
+import { Z_INDEX } from "~/constants/designTokens"
+import {
+  FILTER_STATUS,
+  filterAutoCheckinResults,
   getAutoCheckinResultMessage,
-  resolveAutoCheckinTroubleshootingHintKey,
+  type FilterStatus,
 } from "~/features/AutoCheckin/utils/autoCheckin"
 import { cn } from "~/lib/utils"
+import { trackProductAnalyticsActionCompleted } from "~/services/productAnalytics/actions"
 import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_MODE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
+  PRODUCT_ANALYTICS_TARGET_KINDS,
 } from "~/services/productAnalytics/contracts"
 import {
-  AUTO_CHECKIN_SKIP_REASON,
   CHECKIN_RESULT_STATUS,
   type CheckinAccountResult,
 } from "~/types/autoCheckin"
 
-import { formatTimestamp } from "../utils/tableUtils"
+import { useClampedTablePagination } from "../hooks/useClampedTablePagination"
+import { compareAccountTableIdentity } from "../utils/tableUtils"
+import FilterBar from "./FilterBar"
+import type { ResultsTableActionsProps } from "./ResultsTable.types"
+import ResultsTableRow from "./ResultsTableRow"
+import SortableTableHead from "./SortableTableHead"
+import TableFilteredEmptyState from "./TableFilteredEmptyState"
+import TablePagination, {
+  DEFAULT_AUTO_CHECKIN_TABLE_PAGE_SIZE,
+} from "./TablePagination"
 
-interface ResultsTableProps {
+interface ResultsTableProps extends ResultsTableActionsProps {
   results: CheckinAccountResult[]
-  showDevActions?: boolean
-  retryingAccountId?: string | null
-  pendingOpeningSiteAccountIds?: Set<string>
-  openingManualAccountId?: string | null
-  openingExternalCheckInAccountId?: string | null
-  disablingAccountId?: string | null
-  deletingAccountId?: string | null
-  externalCheckInAccountIds?: Set<string>
-  onRetryAccount?: (accountId: string) => void | Promise<void>
-  onOpenAccountSite?: (accountId: string) => void | Promise<void>
-  onOpenManualSignIn?: (accountId: string) => void | Promise<void>
-  onOpenExternalCheckIn?: (accountId: string) => void | Promise<void>
-  onDisableAccount?: (accountId: string) => void | Promise<void>
-  onDeleteAccount?: (accountId: string) => void | Promise<void>
-  toolbar?: ReactNode
-  emptyState?: ReactNode
 }
-
-const optionsEntrypoint = PRODUCT_ANALYTICS_ENTRYPOINTS.Options
-const resultsTableSurface =
-  PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinResultsTable
 
 /**
  * Renders auto-checkin execution results with status badges, timestamps, and action buttons.
  */
 export default function ResultsTable({
   results,
-  showDevActions,
-  retryingAccountId,
-  pendingOpeningSiteAccountIds,
-  openingManualAccountId,
-  openingExternalCheckInAccountId,
-  disablingAccountId,
-  deletingAccountId,
-  externalCheckInAccountIds,
-  onRetryAccount,
-  onOpenAccountSite,
-  onOpenManualSignIn,
-  onOpenExternalCheckIn,
-  onDisableAccount,
-  onDeleteAccount,
-  toolbar,
-  emptyState,
+  ...actionProps
 }: ResultsTableProps) {
   const { t } = useTranslation(["autoCheckin", "account"])
-  const forceShowActions = Boolean(showDevActions)
-  const visibleResults = useMemo(
-    () =>
-      [...results].sort((a, b) => {
-        const aIsSkipped = a.status === CHECKIN_RESULT_STATUS.SKIPPED ? 1 : 0
-        const bIsSkipped = b.status === CHECKIN_RESULT_STATUS.SKIPPED ? 1 : 0
-        return aIsSkipped - bIsSkipped
-      }),
-    [results],
+  const forceShowActions = Boolean(actionProps.showDevActions)
+  const [keyword, setKeyword] = useState("")
+  const [status, setStatus] = useState<FilterStatus>(FILTER_STATUS.ALL)
+  const [sorting, setSorting] = useState<SortingState>([
+    { id: "status", desc: false },
+  ])
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: DEFAULT_AUTO_CHECKIN_TABLE_PAGE_SIZE,
+  })
+
+  const columns = useMemo<ColumnDef<CheckinAccountResult>[]>(
+    () => [
+      {
+        accessorKey: "accountName",
+        header: t("execution.table.accountName"),
+        enableGlobalFilter: true,
+        sortingFn: (left, right) =>
+          compareAccountTableIdentity(left.original, right.original),
+      },
+      {
+        accessorKey: "status",
+        header: t("execution.table.status"),
+        enableGlobalFilter: false,
+        sortingFn: (left, right) => {
+          const getRank = (value: string) => {
+            if (value === CHECKIN_RESULT_STATUS.FAILED) return 0
+            if (value === CHECKIN_RESULT_STATUS.SKIPPED) return 1
+            return 2
+          }
+          return (
+            getRank(left.original.status) - getRank(right.original.status) ||
+            right.original.timestamp - left.original.timestamp
+          )
+        },
+        filterFn: ((row, _columnId, value: FilterStatus) =>
+          filterAutoCheckinResults([row.original], value, "", t).length >
+          0) as FilterFn<CheckinAccountResult>,
+      },
+      {
+        id: "message",
+        accessorFn: (result) => getAutoCheckinResultMessage(t, result),
+        header: t("execution.table.message"),
+        enableGlobalFilter: false,
+        enableSorting: false,
+      },
+      {
+        accessorKey: "timestamp",
+        header: t("execution.table.time"),
+        enableGlobalFilter: false,
+        sortDescFirst: true,
+      },
+      {
+        id: "actions",
+        header: t("execution.table.actions"),
+        enableGlobalFilter: false,
+        enableSorting: false,
+      },
+    ],
+    [t],
   )
 
-  /**
-   * Map certain failure messages to a concise, localized troubleshooting hint shown under the raw message.
-   */
-  const getTroubleshootingHintKey = (
-    result: CheckinAccountResult,
-  ): string | null => {
-    return resolveAutoCheckinTroubleshootingHintKey({
-      status: result.status,
-      messageKey: result.messageKey,
-      message: getAutoCheckinResultMessage(t, result),
+  const globalFilterFn = useMemo<FilterFn<CheckinAccountResult>>(
+    () => (row, _columnId, value) =>
+      filterAutoCheckinResults(
+        [row.original],
+        FILTER_STATUS.ALL,
+        String(value),
+        t,
+      ).length > 0,
+    [t],
+  )
+
+  const columnFilters = useMemo<ColumnFiltersState>(
+    () =>
+      status === FILTER_STATUS.ALL ? [] : [{ id: "status", value: status }],
+    [status],
+  )
+
+  const table = useReactTable({
+    data: results,
+    columns,
+    state: { sorting, pagination, globalFilter: keyword, columnFilters },
+    onSortingChange: setSorting,
+    onPaginationChange: setPagination,
+    onGlobalFilterChange: setKeyword,
+    globalFilterFn,
+    getRowId: (result) => result.accountId,
+    getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    enableMultiSort: false,
+    enableSortingRemoval: false,
+  })
+
+  const filteredCount = table.getFilteredRowModel().rows.length
+  useClampedTablePagination(table)
+
+  const setFilterStatus = (nextStatus: FilterStatus) => {
+    setStatus(nextStatus)
+    table.setPageIndex(0)
+  }
+
+  const setSearchKeyword = (nextKeyword: string) => {
+    setKeyword(nextKeyword)
+    table.setPageIndex(0)
+  }
+
+  const trackColumnSort = () => {
+    void trackProductAnalyticsActionCompleted({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.FilterAutoCheckinResults,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinFilterBar,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
+      insights: {
+        targetKind: PRODUCT_ANALYTICS_TARGET_KINDS.ResultFilter,
+        mode: PRODUCT_ANALYTICS_MODE_IDS.SortFilter,
+        filterCount:
+          (status === FILTER_STATUS.ALL ? 0 : 1) + (keyword.trim() ? 1 : 0) + 1,
+        resultCount: filteredCount,
+      },
     })
   }
 
-  const getTroubleshootingHintLabel = (hintKey: string) => {
-    switch (hintKey) {
-      case "execution.hints.invalidAccessToken":
-        return t("execution.hints.invalidAccessToken")
-      case "execution.hints.manualVerificationRequired":
-        return t("execution.hints.manualVerificationRequired")
-      case "execution.hints.noTabWithId":
-        return t("execution.hints.noTabWithId")
-      case "execution.hints.siteTypeCheckinUnsupported":
-        return t("execution.hints.siteTypeCheckinUnsupported")
-      default:
-        return hintKey
-    }
-  }
+  const sortableHeader = (columnId: "accountName" | "status" | "timestamp") => {
+    const column = table.getColumn(columnId)
+    if (!column) return null
+    const label = String(column.columnDef.header)
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case CHECKIN_RESULT_STATUS.SUCCESS:
-        return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800 dark:bg-green-900 dark:text-green-200">
-            <CircleCheck className="h-3 w-3" />
-            {t("execution.status.success")}
-          </span>
-        )
-      case CHECKIN_RESULT_STATUS.ALREADY_CHECKED:
-        return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-            <CircleCheck className="h-3 w-3" />
-            {t("execution.status.alreadyChecked")}
-          </span>
-        )
-      case CHECKIN_RESULT_STATUS.FAILED:
-        return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-1 text-xs font-medium text-red-800 dark:bg-red-900 dark:text-red-200">
-            <CircleX className="h-3 w-3" />
-            {t("execution.status.failed")}
-          </span>
-        )
-      case CHECKIN_RESULT_STATUS.SKIPPED:
-        return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100">
-            <TriangleAlert className="h-3 w-3" />
-            {t("execution.status.skipped")}
-          </span>
-        )
-      default:
-        return (
-          <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-800 dark:bg-gray-700 dark:text-gray-200">
-            {status}
-          </span>
-        )
-    }
+    return (
+      <SortableTableHead
+        column={column}
+        label={label}
+        className={cn(
+          columnId === "accountName" &&
+            "w-40 max-w-40 min-w-40 pl-4 [@container(min-width:48rem)]:w-56 [@container(min-width:48rem)]:max-w-56 [@container(min-width:48rem)]:min-w-56 [@container(min-width:48rem)]:pl-6",
+          columnId === "status" && "px-4 [@container(min-width:48rem)]:px-6",
+        )}
+        onSort={trackColumnSort}
+      />
+    )
   }
 
   return (
     <Card padding="none">
-      {toolbar}
+      <FilterBar
+        accountResults={results}
+        status={status}
+        keyword={keyword}
+        onStatusChange={setFilterStatus}
+        onKeywordChange={setSearchKeyword}
+      />
       {forceShowActions && (
         <div className="border-b border-yellow-200 bg-yellow-50 px-6 py-2 text-xs text-yellow-900 dark:border-yellow-900/50 dark:bg-yellow-950/30 dark:text-yellow-200">
           {t("execution.actions.devModeHint")}
         </div>
       )}
-      {results.length === 0 && emptyState ? (
-        emptyState
+      {filteredCount === 0 ? (
+        <TableFilteredEmptyState
+          title={t("execution.empty.noResults")}
+          description={t("execution.empty.noResultsDesc")}
+          clearLabel={t("execution.filters.clearAll")}
+          onClearFilters={() => {
+            setFilterStatus(FILTER_STATUS.ALL)
+            setSearchKeyword("")
+          }}
+        />
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 dark:bg-gray-800">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
-                  {t("execution.table.accountName")}
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
-                  {t("execution.table.status")}
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
+        <div className="[container-type:inline-size]">
+          <Table className="min-w-[64rem]">
+            <TableHeader className="bg-gray-50 dark:bg-gray-800">
+              <TableRow className="border-gray-200 hover:bg-transparent dark:border-gray-700">
+                {sortableHeader("accountName")}
+                {sortableHeader("status")}
+                <TableHead className="h-auto px-6 py-3 text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
                   {t("execution.table.message")}
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
-                  {t("execution.table.time")}
-                </th>
-                <th
+                </TableHead>
+                {sortableHeader("timestamp")}
+                <TableHead
                   className={cn(
-                    "sticky right-0 border-l border-gray-200 bg-gray-50 px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400",
+                    "sticky right-0 h-auto w-12 min-w-12 border-l border-gray-200 bg-gray-50 px-2 py-3 text-xs font-medium tracking-wider text-gray-500 uppercase dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 [@container(min-width:48rem)]:w-auto [@container(min-width:48rem)]:min-w-0 [@container(min-width:48rem)]:px-6",
                     Z_INDEX.tableStickyHeader,
                   )}
                 >
                   {t("execution.table.actions")}
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-900">
-              {visibleResults.map((result) => {
-                const troubleshootingHintKey = getTroubleshootingHintKey(result)
-                const isOpeningSite =
-                  pendingOpeningSiteAccountIds?.has(result.accountId) ?? false
-                const isFailedResult =
-                  result.status === CHECKIN_RESULT_STATUS.FAILED
-                const canRetryResult =
-                  isFailedResult ||
-                  result.reasonCode ===
-                    AUTO_CHECKIN_SKIP_REASON.STATUS_UNAVAILABLE
-                const canOpenExternalCheckIn =
-                  externalCheckInAccountIds?.has(result.accountId) ?? false
-
-                return (
-                  <tr
-                    key={result.accountId}
-                    className="group hover:bg-gray-50 dark:hover:bg-gray-800"
-                  >
-                    <td className="px-6 py-4 text-sm font-medium whitespace-nowrap text-gray-900 dark:text-gray-100">
-                      <AccountLinkButton
-                        accountId={result.accountId}
-                        accountName={result.accountName}
-                      />
-                    </td>
-                    <td className="px-6 py-4 text-sm whitespace-nowrap">
-                      {getStatusBadge(result.status)}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                      <div className="space-y-1">
-                        <div>{getAutoCheckinResultMessage(t, result)}</div>
-                        {troubleshootingHintKey && (
-                          <div className="text-xs text-gray-400 dark:text-gray-500">
-                            {getTroubleshootingHintLabel(
-                              troubleshootingHintKey,
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-sm whitespace-nowrap text-gray-500 dark:text-gray-400">
-                      {formatTimestamp(result.timestamp)}
-                    </td>
-                    <td
-                      className={cn(
-                        "sticky right-0 border-l border-gray-200 bg-white px-6 py-4 text-sm text-gray-500 group-hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400 dark:group-hover:bg-gray-800",
-                        Z_INDEX.tableStickyCell,
-                      )}
-                    >
-                      <ProductAnalyticsScope
-                        entrypoint={optionsEntrypoint}
-                        surfaceId={resultsTableSurface}
-                      >
-                        <div className="flex flex-wrap gap-2">
-                          <ProductAnalyticsScope
-                            featureId={
-                              PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin
-                            }
-                          >
-                            {onRetryAccount &&
-                              (forceShowActions || canRetryResult) && (
-                                <Button
-                                  size="sm"
-                                  variant="secondary"
-                                  loading={
-                                    retryingAccountId === result.accountId
-                                  }
-                                  onClick={() =>
-                                    onRetryAccount(result.accountId)
-                                  }
-                                  leftIcon={
-                                    <RefreshCw className="h-3.5 w-3.5" />
-                                  }
-                                >
-                                  {retryingAccountId === result.accountId
-                                    ? t("common:status.retrying")
-                                    : t("execution.actions.retryAccount")}
-                                </Button>
-                              )}
-                            {onOpenManualSignIn &&
-                              (forceShowActions || isFailedResult) && (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  loading={
-                                    openingManualAccountId === result.accountId
-                                  }
-                                  onClick={() =>
-                                    onOpenManualSignIn(result.accountId)
-                                  }
-                                  leftIcon={
-                                    <WorkflowTransitionIcon className="h-3.5 w-3.5" />
-                                  }
-                                >
-                                  {openingManualAccountId === result.accountId
-                                    ? t("common:status.opening")
-                                    : t("execution.actions.openManual")}
-                                </Button>
-                              )}
-                            {onOpenExternalCheckIn &&
-                              canOpenExternalCheckIn && (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  loading={
-                                    openingExternalCheckInAccountId ===
-                                    result.accountId
-                                  }
-                                  onClick={() =>
-                                    onOpenExternalCheckIn(result.accountId)
-                                  }
-                                  leftIcon={
-                                    <CalendarDays className="h-3.5 w-3.5" />
-                                  }
-                                >
-                                  {openingExternalCheckInAccountId ===
-                                  result.accountId
-                                    ? t("common:status.opening")
-                                    : t("execution.actions.openExternal")}
-                                </Button>
-                              )}
-                          </ProductAnalyticsScope>
-                          <ProductAnalyticsScope
-                            featureId={
-                              PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement
-                            }
-                          >
-                            {onDisableAccount && isFailedResult && (
-                              <Button
-                                size="sm"
-                                variant="warning"
-                                loading={
-                                  disablingAccountId === result.accountId
-                                }
-                                onClick={() =>
-                                  onDisableAccount(result.accountId)
-                                }
-                                leftIcon={<Ban className="h-3.5 w-3.5" />}
-                              >
-                                {disablingAccountId === result.accountId
-                                  ? t("common:status.disabling")
-                                  : t("account:actions.disableAccount")}
-                              </Button>
-                            )}
-                            {onDeleteAccount && isFailedResult && (
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                loading={deletingAccountId === result.accountId}
-                                onClick={() =>
-                                  onDeleteAccount(result.accountId)
-                                }
-                                leftIcon={<Trash2 className="h-3.5 w-3.5" />}
-                              >
-                                {deletingAccountId === result.accountId
-                                  ? t("common:status.deleting")
-                                  : t("account:actions.delete")}
-                              </Button>
-                            )}
-                            {onOpenAccountSite && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                loading={isOpeningSite}
-                                onClick={() =>
-                                  onOpenAccountSite(result.accountId)
-                                }
-                                leftIcon={
-                                  <WorkflowTransitionIcon className="h-3.5 w-3.5" />
-                                }
-                              >
-                                {isOpeningSite
-                                  ? t("common:status.opening")
-                                  : t("execution.actions.openSite")}
-                              </Button>
-                            )}
-                          </ProductAnalyticsScope>
-                        </div>
-                      </ProductAnalyticsScope>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody className="bg-white dark:bg-gray-900">
+              {table.getRowModel().rows.map(({ original: result }) => (
+                <ResultsTableRow
+                  key={result.accountId}
+                  result={result}
+                  {...actionProps}
+                />
+              ))}
+            </TableBody>
+          </Table>
+          <TablePagination
+            id="auto-checkin-results"
+            pageIndex={pagination.pageIndex}
+            pageSize={pagination.pageSize}
+            total={filteredCount}
+            onPageIndexChange={table.setPageIndex}
+            onPageSizeChange={(nextPageSize) => {
+              table.setPageSize(nextPageSize)
+              table.setPageIndex(0)
+            }}
+          />
         </div>
       )}
     </Card>

@@ -1,9 +1,17 @@
-import { CircleCheck, CircleX, List, Search, TriangleAlert } from "lucide-react"
-import { type ReactNode } from "react"
+import {
+  CircleAlert,
+  CircleCheck,
+  CircleX,
+  List,
+  Search,
+  TriangleAlert,
+} from "lucide-react"
+import type { ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Input } from "~/components/ui"
 import {
+  countAutoCheckinResults,
   FILTER_STATUS,
   filterAutoCheckinResults,
   type FilterStatus,
@@ -18,15 +26,9 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
   PRODUCT_ANALYTICS_TARGET_KINDS,
 } from "~/services/productAnalytics/contracts"
-import {
-  CHECKIN_RESULT_STATUS,
-  type CheckinAccountResult,
-} from "~/types/autoCheckin"
+import type { CheckinAccountResult } from "~/types/autoCheckin"
 
 import TableFilterToolbar from "./TableFilterToolbar"
-
-export { FILTER_STATUS }
-export type { FilterStatus }
 
 interface FilterBarProps {
   accountResults: CheckinAccountResult[]
@@ -54,18 +56,8 @@ export default function FilterBar({
 }: FilterBarProps) {
   const { t } = useTranslation("autoCheckin")
 
-  const totalCount = accountResults.length
-  const successCount = accountResults.filter(
-    (r) =>
-      r.status === CHECKIN_RESULT_STATUS.SUCCESS ||
-      r.status === CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
-  ).length
-  const failedCount = accountResults.filter(
-    (r) => r.status === CHECKIN_RESULT_STATUS.FAILED,
-  ).length
-  const skippedCount = accountResults.filter(
-    (r) => r.status === CHECKIN_RESULT_STATUS.SKIPPED,
-  ).length
+  const resultCounts = countAutoCheckinResults(accountResults)
+  const failedOrSkippedCount = resultCounts.failed + resultCounts.skipped
   const getFilteredResultCount = (
     nextStatus: FilterStatus,
     nextKeyword: string,
@@ -76,9 +68,9 @@ export default function FilterBar({
   const countLabel = isFiltered
     ? t("execution.filters.countFiltered", {
         filtered: filteredCount,
-        total: totalCount,
+        total: resultCounts.total,
       })
-    : t("execution.filters.countTotal", { total: totalCount })
+    : t("execution.filters.countTotal", { total: resultCounts.total })
   const trackFilterSelection = (
     mode:
       | typeof PRODUCT_ANALYTICS_MODE_IDS.SearchFilter
@@ -112,6 +104,7 @@ export default function FilterBar({
   ) => (
     <button
       type="button"
+      aria-label={`${label} (${count})`}
       aria-pressed={status === value}
       onClick={() => {
         onStatusChange(value)
@@ -147,7 +140,7 @@ export default function FilterBar({
           "",
         )
       }}
-      controlsClassName="flex flex-col gap-2 lg:flex-row lg:items-center"
+      controlsClassName="grid gap-2 md:grid-cols-[minmax(14rem,1fr)_auto] md:items-center"
     >
       <div className="relative w-full lg:max-w-xs">
         <Input
@@ -177,25 +170,31 @@ export default function FilterBar({
           FILTER_STATUS.ALL,
           t("execution.filters.all"),
           <List className="h-4 w-4" />,
-          totalCount,
+          resultCounts.total,
+        )}
+        {renderFilterButton(
+          FILTER_STATUS.FAILED_OR_SKIPPED,
+          t("execution.filters.failedOrSkipped"),
+          <CircleAlert className="h-4 w-4" />,
+          failedOrSkippedCount,
         )}
         {renderFilterButton(
           FILTER_STATUS.SUCCESS,
           t("execution.filters.success"),
           <CircleCheck className="h-4 w-4" />,
-          successCount,
+          resultCounts.success,
         )}
         {renderFilterButton(
           FILTER_STATUS.FAILED,
           t("execution.filters.failed"),
           <CircleX className="h-4 w-4" />,
-          failedCount,
+          resultCounts.failed,
         )}
         {renderFilterButton(
           FILTER_STATUS.SKIPPED,
           t("execution.filters.skipped"),
           <TriangleAlert className="h-4 w-4" />,
-          skippedCount,
+          resultCounts.skipped,
         )}
       </div>
     </TableFilterToolbar>

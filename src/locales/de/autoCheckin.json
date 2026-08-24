@@ -37,8 +37,9 @@
       "countFiltered": "{{filtered}} von {{total}} angezeigt",
       "countTotal": "Insgesamt {{total}}",
       "failed": "Fehlgeschlagen",
+      "failedOrSkipped": "Fehlgeschlagen oder übersprungen",
       "searchLabel": "Ausführungsergebnisse durchsuchen",
-      "searchPlaceholder": "Suche nach Kontoname oder Nachricht...",
+      "searchPlaceholder": "Nach Kontoname, ID oder Nachricht suchen...",
       "skipped": "Übersprungen",
       "statusLabel": "Nach Ausführungsstatus filtern",
       "success": "Erfolg"
@@ -50,6 +51,12 @@
       "openExternalCheckIn": "Öffnen Sie standardmäßig ungeprüfte externe Check-ins. Ctrl/Cmd öffnet alle; mit Shift werden sie in einem neuen Fenster geöffnet.",
       "openFailedManualNewWindow": "Öffnet die Check-in-Seite der Website für jedes Konto, dessen letzter automatischer Check-in fehlgeschlagen ist. Mit Umschalt+Klick werden sie in einem neuen Fenster geöffnet.",
       "siteTypeCheckinUnsupported": "Lösung: Überprüfen Sie unter „Kontoverwaltung → Konto bearbeiten“ zunächst, ob der ausgewählte Website-Typ mit der tatsächlichen Website übereinstimmt. Wenn der Typ zuvor automatisch erkannt wurde, melden Sie sich erneut bei der Ziel-Website an und führen Sie die Erkennung erneut aus. Wenn der Website-Typ korrekt ist, diese Meldung jedoch weiterhin angezeigt wird, unterstützt die Website wahrscheinlich noch kein automatisches Einchecken. Verwenden Sie daher stattdessen „Website öffnen“ oder „Manuelle Check-in-Seite“."
+    },
+    "pagination": {
+      "next": "Nächste Seite",
+      "previous": "Vorherige Seite",
+      "rowsPerPage": "Zeilen pro Seite",
+      "summary": "{{start}}–{{end}} von {{total}}"
     },
     "refresh": "Aktualisieren",
     "runNow": "Jetzt ausführen",
@@ -216,10 +223,7 @@
     },
     "table": {
       "autoCheckin": "Automatischer Check-in",
-      "detection": "Check-in-Methode",
       "lastResult": "Aktualisiert",
-      "provider": "Ausführung",
-      "skipReason": "Grund für Nichtausführung",
       "status": "Letzter Status"
     },
     "title": "Kontobereitschaft"
@@ -253,5 +257,9 @@
     "dialogDescription": "Der heute geplante tägliche Lauf wurde früh ausgelöst, als die Benutzeroberfläche geöffnet wurde.",
     "dialogTitle": "Automatischer Check-in abgeschlossen",
     "viewDetails": "Details anzeigen"
+  },
+  "workspace": {
+    "label": "Auto-Check-in-Daten",
+    "resultsTab": "Ausführungsergebnisse"
   }
 }

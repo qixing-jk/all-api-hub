@@ -8,12 +8,45 @@ import {
 
 export const FILTER_STATUS = {
   ALL: "all",
+  FAILED_OR_SKIPPED: "failed_or_skipped",
   SUCCESS: "success",
   FAILED: "failed",
   SKIPPED: "skipped",
 } as const
 
 export type FilterStatus = (typeof FILTER_STATUS)[keyof typeof FILTER_STATUS]
+
+interface AutoCheckinResultCounts {
+  total: number
+  success: number
+  failed: number
+  skipped: number
+}
+
+/** Counts execution outcomes while treating already-checked as successful. */
+export function countAutoCheckinResults(
+  results: readonly CheckinAccountResult[],
+): AutoCheckinResultCounts {
+  return results.reduce<AutoCheckinResultCounts>(
+    (counts, result) => {
+      counts.total += 1
+      switch (result.status) {
+        case CHECKIN_RESULT_STATUS.SUCCESS:
+        case CHECKIN_RESULT_STATUS.ALREADY_CHECKED:
+          counts.success += 1
+          break
+        case CHECKIN_RESULT_STATUS.FAILED:
+          counts.failed += 1
+          break
+        case CHECKIN_RESULT_STATUS.SKIPPED:
+          counts.skipped += 1
+          break
+      }
+      return counts
+    },
+    { total: 0, success: 0, failed: 0, skipped: 0 },
+  )
+}
 
 /**
  * Checks whether a result belongs to the selected status filter.
@@ -23,6 +56,11 @@ function matchesAutoCheckinResultStatus(
   status: FilterStatus,
 ): boolean {
   switch (status) {
+    case FILTER_STATUS.FAILED_OR_SKIPPED:
+      return (
+        result.status === CHECKIN_RESULT_STATUS.FAILED ||
+        result.status === CHECKIN_RESULT_STATUS.SKIPPED
+      )
     case FILTER_STATUS.SUCCESS:
       return (
         result.status === CHECKIN_RESULT_STATUS.SUCCESS ||

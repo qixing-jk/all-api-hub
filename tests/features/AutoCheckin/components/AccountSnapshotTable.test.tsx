@@ -24,6 +24,74 @@ const renderSnapshotTable = (snapshots: AutoCheckinAccountSnapshot[]) =>
   })
 
 describe("AutoCheckin AccountSnapshotTable", () => {
+  it("sorts snapshots from the updated column header", async () => {
+    const user = userEvent.setup()
+    renderSnapshotTable([
+      {
+        accountId: "older",
+        accountName: "Alpha Older",
+        siteType: "new-api",
+        detectionEnabled: true,
+        autoCheckinEnabled: true,
+        providerAvailable: true,
+        lastResult: {
+          accountId: "older",
+          accountName: "Alpha Older",
+          status: CHECKIN_RESULT_STATUS.SUCCESS,
+          timestamp: 1,
+        },
+      },
+      {
+        accountId: "newer",
+        accountName: "Zulu Newer",
+        siteType: "new-api",
+        detectionEnabled: true,
+        autoCheckinEnabled: true,
+        providerAvailable: true,
+        lastResult: {
+          accountId: "newer",
+          accountName: "Zulu Newer",
+          status: CHECKIN_RESULT_STATUS.SUCCESS,
+          timestamp: 2,
+        },
+      },
+    ])
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "autoCheckin:snapshot.table.lastResult",
+      }),
+    )
+
+    const rows = screen.getAllByRole("row")
+    expect(rows[1]).toHaveTextContent("Zulu Newer")
+  })
+
+  it("paginates long readiness lists", async () => {
+    const user = userEvent.setup()
+    renderSnapshotTable(
+      Array.from({ length: 26 }, (_, index) => ({
+        accountId: `snapshot-${index + 1}`,
+        accountName: `Snapshot ${index + 1}`,
+        siteType: "new-api",
+        detectionEnabled: true,
+        autoCheckinEnabled: true,
+        providerAvailable: true,
+      })),
+    )
+
+    expect(screen.getByText("Snapshot 1")).toBeVisible()
+    expect(screen.queryByText("Snapshot 26")).not.toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "autoCheckin:execution.pagination.next",
+      }),
+    )
+
+    expect(screen.getByText("Snapshot 26")).toBeVisible()
+  })
+
   it("renders sorted snapshot rows with status badges and skip reasons", () => {
     const snapshots: AutoCheckinAccountSnapshot[] = [
       {

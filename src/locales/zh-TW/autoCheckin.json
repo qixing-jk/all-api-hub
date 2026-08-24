@@ -37,8 +37,9 @@
       "countFiltered": "顯示 {{filtered}} / {{total}} 筆",
       "countTotal": "共 {{total}} 筆",
       "failed": "失敗",
+      "failedOrSkipped": "失敗或未執行",
       "searchLabel": "搜尋執行結果",
-      "searchPlaceholder": "搜尋帳號名稱或訊息...",
+      "searchPlaceholder": "搜尋帳號名稱、ID 或結果訊息...",
       "skipped": "已跳過",
       "statusLabel": "依執行狀態篩選",
       "success": "成功"
@@ -50,6 +51,12 @@
       "openExternalCheckIn": "預設僅開啟今日未開啟過的外部簽到；Ctrl/Cmd 開啟全部；Shift 在新視窗開啟。",
       "openFailedManualNewWindow": "開啟最近一次自動簽到失敗的全部帳號所對應的站點簽到頁。按住 Shift 點擊可在新視窗中開啟。",
       "siteTypeCheckinUnsupported": "解決方案：先到「帳號管理 → 編輯帳號」檢查「站點型別」是否與實際站點一致；如果先前是自動識別出的結果，可在目標站點重新登入後再重新識別一次。若確認站點型別正確但仍顯示不支援，表示該站點目前可能尚未適配自動簽到，請改用「開啟網站」或「手動簽到」處理。"
+    },
+    "pagination": {
+      "next": "下一頁",
+      "previous": "上一頁",
+      "rowsPerPage": "每頁顯示",
+      "summary": "顯示第 {{start}}–{{end}} 筆，共 {{total}} 筆"
     },
     "refresh": "重新整理",
     "runNow": "立即執行",
@@ -214,10 +221,7 @@
     },
     "table": {
       "autoCheckin": "自動簽到",
-      "detection": "簽到方式",
       "lastResult": "更新時間",
-      "provider": "執行能力",
-      "skipReason": "未執行原因",
       "status": "最近狀態"
     },
     "title": "帳號準備狀態"
@@ -251,5 +255,9 @@
     "dialogDescription": "開啟擴充套件介面時觸發了今日計劃的自動簽到。",
     "dialogTitle": "自動簽到已完成",
     "viewDetails": "檢視詳情"
+  },
+  "workspace": {
+    "label": "自動簽到資料",
+    "resultsTab": "執行結果"
   }
 }

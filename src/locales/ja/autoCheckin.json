@@ -37,8 +37,9 @@
       "countFiltered": "{{total}} 件中 {{filtered}} 件を表示",
       "countTotal": "全 {{total}} 件",
       "failed": "失敗",
+      "failedOrSkipped": "失敗または未実行",
       "searchLabel": "実行結果を検索",
-      "searchPlaceholder": "アカウント名またはメッセージで検索...",
+      "searchPlaceholder": "アカウント名、ID、メッセージで検索...",
       "skipped": "スキップ",
       "statusLabel": "実行状態で絞り込む",
       "success": "成功"
@@ -50,6 +51,12 @@
       "openExternalCheckIn": "既定では未完了の外部チェックインだけを開きます。Ctrl/Cmd で全件、Shift で新しいウィンドウに開きます。",
       "openFailedManualNewWindow": "直近の自動チェックインに失敗した全アカウントについて、各サイトのチェックインページを開きます。Shift キーを押しながらクリックすると、新しいウィンドウで開きます。",
       "siteTypeCheckinUnsupported": "対処方法: まず「アカウント管理 → アカウント編集」で選択中のサイト種別が実際のサイトと一致しているか確認してください。以前に自動判定された種別であれば、対象サイトに再ログインしてから再度自動判定を行ってください。サイト種別が正しいのにこの表示が続く場合、そのサイトはまだ自動チェックイン未対応の可能性があるため、「サイトを開く」または「手動チェックイン」を利用してください。"
+    },
+    "pagination": {
+      "next": "次のページ",
+      "previous": "前のページ",
+      "rowsPerPage": "1 ページの表示件数",
+      "summary": "{{total}} 件中 {{start}}–{{end}} 件を表示"
     },
     "refresh": "更新",
     "runNow": "今すぐ実行",
@@ -214,10 +221,7 @@
     },
     "table": {
       "autoCheckin": "自動チェックイン",
-      "detection": "チェックイン方法",
       "lastResult": "更新日時",
-      "provider": "実行可否",
-      "skipReason": "未実行の理由",
       "status": "最新状態"
     },
     "title": "アカウント準備状況"
@@ -251,5 +255,9 @@
     "dialogDescription": "本日予定されていたデイリー実行が、UI を開いた際に前倒しで起動されました。",
     "dialogTitle": "自動チェックインが完了しました",
     "viewDetails": "詳細を見る"
+  },
+  "workspace": {
+    "label": "自動チェックインデータ",
+    "resultsTab": "実行結果"
   }
 }

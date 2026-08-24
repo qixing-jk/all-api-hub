@@ -1,4 +1,5 @@
-import { screen } from "@testing-library/react"
+import { fireEvent, screen, within } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
 import ResultsTable from "~/features/AutoCheckin/components/ResultsTable"
@@ -77,6 +78,123 @@ const failedResult: CheckinAccountResult = {
 }
 
 describe("AutoCheckin ResultsTable", () => {
+  it("sorts results from the account column header", async () => {
+    const user = userEvent.setup()
+    render(
+      <ResultsTable
+        results={[
+          {
+            accountId: "beta",
+            accountName: "Beta Account",
+            status: CHECKIN_RESULT_STATUS.SUCCESS,
+            timestamp: 2,
+          },
+          {
+            accountId: "alpha",
+            accountName: "Alpha Account",
+            status: CHECKIN_RESULT_STATUS.SUCCESS,
+            timestamp: 1,
+          },
+        ]}
+      />,
+      {
+        withReleaseUpdateStatusProvider: false,
+        withThemeProvider: false,
+        withUserPreferencesProvider: false,
+      },
+    )
+
+    const table = screen.getByRole("table")
+    expect(within(table).getAllByRole("row")[1]).toHaveTextContent(
+      "Beta Account",
+    )
+
+    const accountSort = screen.getByRole("button", {
+      name: "autoCheckin:execution.table.accountName",
+    })
+    await user.click(accountSort)
+
+    expect(within(table).getAllByRole("row")[1]).toHaveTextContent(
+      "Alpha Account",
+    )
+    expect(accountSort.closest("th")).toHaveAttribute("aria-sort", "ascending")
+  })
+
+  it("paginates long result lists so later accounts stay reachable", () => {
+    const results = Array.from({ length: 26 }, (_, index) => ({
+      accountId: `account-${index + 1}`,
+      accountName: `Account ${index + 1}`,
+      status: CHECKIN_RESULT_STATUS.SUCCESS,
+      timestamp: 1,
+    }))
+
+    render(<ResultsTable results={results} />, {
+      withReleaseUpdateStatusProvider: false,
+      withThemeProvider: false,
+      withUserPreferencesProvider: false,
+    })
+
+    expect(screen.getByRole("button", { name: "Account 1" })).toBeVisible()
+    expect(
+      screen.queryByRole("button", { name: "Account 26" }),
+    ).not.toBeInTheDocument()
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "autoCheckin:execution.pagination.next",
+      }),
+    )
+
+    expect(screen.getByRole("button", { name: "Account 26" })).toBeVisible()
+    expect(
+      screen.getByText("autoCheckin:execution.pagination.summary"),
+    ).toBeVisible()
+  })
+
+  it("changes page size and clamps the current page when results shrink", () => {
+    const createResults = (length: number) =>
+      Array.from({ length }, (_, index) => ({
+        accountId: `account-${index + 1}`,
+        accountName: `Account ${index + 1}`,
+        status: CHECKIN_RESULT_STATUS.SUCCESS,
+        timestamp: 1,
+      }))
+    const view = render(<ResultsTable results={createResults(26)} />, {
+      withReleaseUpdateStatusProvider: false,
+      withThemeProvider: false,
+      withUserPreferencesProvider: false,
+    })
+
+    fireEvent.click(
+      screen.getByRole("combobox", {
+        name: "autoCheckin:execution.pagination.rowsPerPage",
+      }),
+    )
+    expect(
+      screen.getAllByRole("option").map((option) => option.textContent),
+    ).toEqual(["10", "25", "50", "100"])
+    fireEvent.click(screen.getByRole("option", { name: "10" }))
+
+    expect(screen.getByRole("button", { name: "Account 10" })).toBeVisible()
+    expect(
+      screen.queryByRole("button", { name: "Account 11" }),
+    ).not.toBeInTheDocument()
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "autoCheckin:execution.pagination.next",
+      }),
+    )
+    expect(screen.getByRole("button", { name: "Account 11" })).toBeVisible()
+
+    view.rerender(<ResultsTable results={createResults(5)} />)
+
+    expect(screen.getByRole("button", { name: "Account 1" })).toBeVisible()
+    expect(
+      screen.queryByText("autoCheckin:execution.pagination.summary"),
+    ).not.toBeInTheDocument()
+  })
+
   it("shows a localized structured reason when a skipped row has no message key", async () => {
     render(
       <ResultsTable
@@ -103,6 +221,7 @@ describe("AutoCheckin ResultsTable", () => {
   })
 
   it("offers a retry when status discovery was temporarily unavailable", async () => {
+    const user = userEvent.setup()
     render(
       <ResultsTable
         results={[
@@ -128,9 +247,20 @@ describe("AutoCheckin ResultsTable", () => {
         name: "autoCheckin:execution.actions.retryAccount",
       }),
     ).toBeVisible()
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.more" }),
+    )
+
+    expect(
+      screen.getByRole("menuitem", {
+        name: "autoCheckin:execution.actions.retryAccount",
+      }),
+    ).toBeVisible()
   })
 
-  it("does not attach automatic analytics metadata to explicit-tracked row action buttons", () => {
+  it("does not attach automatic analytics metadata to explicit-tracked row actions", async () => {
+    const user = userEvent.setup()
     render(
       <ResultsTable
         results={[failedResult]}
@@ -152,23 +282,27 @@ describe("AutoCheckin ResultsTable", () => {
         name: "autoCheckin:execution.actions.retryAccount",
       }),
     ).not.toHaveAttribute("data-analytics-action")
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.more" }),
+    )
+
     expect(
-      screen.getByRole("button", {
+      screen.getByRole("menuitem", {
         name: "autoCheckin:execution.actions.openManual",
       }),
     ).not.toHaveAttribute("data-analytics-action")
     expect(
-      screen.getByRole("button", {
+      screen.getByRole("menuitem", {
         name: "account:actions.disableAccount",
       }),
     ).not.toHaveAttribute("data-analytics-action")
     expect(
-      screen.getByRole("button", {
+      screen.getByRole("menuitem", {
         name: "account:actions.delete",
       }),
     ).not.toHaveAttribute("data-analytics-action")
     expect(
-      screen.getByRole("button", {
+      screen.getByRole("menuitem", {
         name: "autoCheckin:execution.actions.openSite",
       }),
     ).not.toHaveAttribute("data-analytics-action")

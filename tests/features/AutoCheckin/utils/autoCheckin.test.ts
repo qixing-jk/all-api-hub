@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 
 import {
+  countAutoCheckinResults,
   FILTER_STATUS,
   filterAutoCheckinResults,
   isInvalidAccessTokenMessage,
@@ -11,6 +12,37 @@ import {
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 
 describe("autoCheckin utils", () => {
+  it("counts already-checked outcomes as successful", () => {
+    expect(
+      countAutoCheckinResults([
+        {
+          accountId: "success",
+          accountName: "Success",
+          status: CHECKIN_RESULT_STATUS.SUCCESS,
+          timestamp: 1,
+        },
+        {
+          accountId: "already-checked",
+          accountName: "Already checked",
+          status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
+          timestamp: 2,
+        },
+        {
+          accountId: "failed",
+          accountName: "Failed",
+          status: CHECKIN_RESULT_STATUS.FAILED,
+          timestamp: 3,
+        },
+        {
+          accountId: "skipped",
+          accountName: "Skipped",
+          status: CHECKIN_RESULT_STATUS.SKIPPED,
+          timestamp: 4,
+        },
+      ]),
+    ).toEqual({ total: 4, success: 2, failed: 1, skipped: 1 })
+  })
+
   describe("translateAutoCheckinMessageKey", () => {
     it.each([
       "autoCheckin:providerFallback.alreadyCheckedToday",
@@ -127,6 +159,38 @@ describe("autoCheckin utils", () => {
           t as any,
         ),
       ).toHaveLength(1)
+    })
+
+    it("groups failed and skipped results into one outcome filter", () => {
+      const results = [
+        {
+          accountId: "failed",
+          accountName: "Failed",
+          status: CHECKIN_RESULT_STATUS.FAILED,
+          timestamp: 3,
+        },
+        {
+          accountId: "skipped",
+          accountName: "Skipped",
+          status: CHECKIN_RESULT_STATUS.SKIPPED,
+          timestamp: 2,
+        },
+        {
+          accountId: "success",
+          accountName: "Success",
+          status: CHECKIN_RESULT_STATUS.SUCCESS,
+          timestamp: 1,
+        },
+      ]
+
+      expect(
+        filterAutoCheckinResults(
+          results,
+          FILTER_STATUS.FAILED_OR_SKIPPED,
+          "",
+          vi.fn((key: string) => key) as any,
+        ).map((result) => result.accountId),
+      ).toEqual(["failed", "skipped"])
     })
   })
 

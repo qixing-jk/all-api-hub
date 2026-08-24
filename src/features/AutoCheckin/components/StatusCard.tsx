@@ -1,6 +1,7 @@
+import type { ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 
-import { Card, CardContent } from "~/components/ui"
+import { Card, CardContent, CardFooter } from "~/components/ui"
 import {
   AUTO_CHECKIN_RUN_RESULT,
   CHECKIN_RESULT_STATUS,
@@ -14,6 +15,7 @@ import { formatLocaleDateTime } from "~/utils/core/formatters"
 interface StatusCardProps {
   status: AutoCheckinStatus
   preferences: AutoCheckinPreferences
+  actions?: ReactNode
 }
 
 /**
@@ -21,8 +23,13 @@ interface StatusCardProps {
  * @param props Component props container.
  * @param props.status Status payload from auto-checkin service.
  * @param props.preferences User preferences used to interpret missing schedules (disabled vs not scheduled).
+ * @param props.actions Optional controls rendered in the card footer.
  */
-export default function StatusCard({ status, preferences }: StatusCardProps) {
+export default function StatusCard({
+  status,
+  preferences,
+  actions,
+}: StatusCardProps) {
   const { t } = useTranslation("autoCheckin")
 
   // Backward compatibility: older status payloads only store `nextScheduledAt` (single-alarm model).
@@ -113,13 +120,13 @@ export default function StatusCard({ status, preferences }: StatusCardProps) {
 
   return (
     <Card>
-      <CardContent>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <CardContent className="space-y-4" padding="md">
+        <div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2 xl:grid-cols-4">
           <div>
             <div className="text-sm font-medium text-gray-500 dark:text-gray-400">
               {t("status.lastRun")}
             </div>
-            <div className="mt-1 text-lg font-semibold">
+            <div className="mt-1 text-base font-semibold">
               {formatLocaleDateTime(status.lastRunAt, t("status.notScheduled"))}
             </div>
           </div>
@@ -128,7 +135,7 @@ export default function StatusCard({ status, preferences }: StatusCardProps) {
             <div className="text-sm font-medium text-gray-500 dark:text-gray-400">
               {t("status.nextDaily")}
             </div>
-            <div className="mt-1 text-lg font-semibold">
+            <div className="mt-1 text-base font-semibold">
               {getNextDailyText()}
             </div>
           </div>
@@ -137,7 +144,7 @@ export default function StatusCard({ status, preferences }: StatusCardProps) {
             <div className="text-sm font-medium text-gray-500 dark:text-gray-400">
               {t("status.nextRetry")}
             </div>
-            <div className="mt-1 text-lg font-semibold">
+            <div className="mt-1 text-base font-semibold">
               {getNextRetryText()}
               {hasPendingRetry && isRetryEnabled && (
                 <span className="ml-2 inline-flex items-center rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-semibold text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100">
@@ -165,14 +172,14 @@ export default function StatusCard({ status, preferences }: StatusCardProps) {
             </div>
           </div>
         </div>
-        <div>
+        <div className="border-t border-gray-200 pt-4 dark:border-gray-700">
           <div className="text-sm font-medium text-gray-500 dark:text-gray-400">
             {t("status.summary.title")}
           </div>
-          <div className="mt-2 grid grid-cols-3 gap-2 text-sm text-gray-600 dark:text-gray-300">
+          <div className="mt-2 grid grid-cols-2 gap-x-6 gap-y-3 text-sm text-gray-600 sm:grid-cols-3 lg:grid-cols-5 dark:text-gray-300">
             {summaryItems.map((item) => (
               <div key={item.label} className="flex flex-col">
-                <span className="text-xs tracking-wide text-gray-400 uppercase dark:text-gray-500">
+                <span className="text-xs text-gray-500 dark:text-gray-400">
                   {item.label}
                 </span>
                 <span className="text-base font-semibold text-gray-900 dark:text-gray-100">
@@ -183,6 +190,11 @@ export default function StatusCard({ status, preferences }: StatusCardProps) {
           </div>
         </div>
       </CardContent>
+      {actions ? (
+        <CardFooter className="block px-4 py-3 sm:px-6" padding="none">
+          {actions}
+        </CardFooter>
+      ) : null}
     </Card>
   )
 }

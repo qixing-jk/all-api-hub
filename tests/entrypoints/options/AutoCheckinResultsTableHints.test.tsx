@@ -110,44 +110,4 @@ describe("AutoCheckin ResultsTable troubleshooting hints", () => {
       screen.queryByText("autoCheckin:execution.hints.invalidAccessToken"),
     ).not.toBeInTheDocument()
   })
-
-  it("pushes skipped accounts to the end of the table", async () => {
-    render(
-      <ResultsTable
-        results={[
-          {
-            accountId: "skipped-account",
-            accountName: "Skipped Account",
-            status: CHECKIN_RESULT_STATUS.SKIPPED,
-            rawMessage: "skipped",
-            timestamp: 0,
-          },
-          {
-            accountId: "failed-account",
-            accountName: "Failed Account",
-            status: CHECKIN_RESULT_STATUS.FAILED,
-            rawMessage: "failed",
-            timestamp: 0,
-          },
-          {
-            accountId: "success-account",
-            accountName: "Success Account",
-            status: CHECKIN_RESULT_STATUS.SUCCESS,
-            rawMessage: "success",
-            timestamp: 0,
-          },
-        ]}
-      />,
-    )
-
-    const accountButtons = await screen.findAllByRole("button", {
-      name: /View account .* in manager$/,
-    })
-
-    expect(accountButtons.map((button) => button.textContent)).toEqual([
-      "Failed Account",
-      "Success Account",
-      "Skipped Account",
-    ])
-  })
 })

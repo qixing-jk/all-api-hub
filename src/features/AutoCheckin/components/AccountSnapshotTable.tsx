@@ -1,14 +1,19 @@
 import {
-  CircleCheck,
-  CircleX,
-  Clock,
-  Search,
-  TriangleAlert,
-} from "lucide-react"
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable,
+  type ColumnDef,
+  type ColumnFiltersState,
+  type FilterFn,
+  type PaginationState,
+  type SortingState,
+} from "@tanstack/react-table"
+import { Search } from "lucide-react"
 import { useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import AccountLinkButton from "~/components/AccountLinkButton"
 import {
   Card,
   Input,
@@ -17,34 +22,37 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Table,
+  TableBody,
+  TableHeader,
+  TableRow,
 } from "~/components/ui"
 import {
   filterAutoCheckinSnapshots,
+  getAutoCheckinSnapshotReadinessCategory,
+  getAutoCheckinSnapshotStatus,
   SNAPSHOT_READINESS_FILTER,
   SNAPSHOT_STATUS_FILTER,
   type SnapshotReadinessFilter,
   type SnapshotStatusFilter,
 } from "~/features/AutoCheckin/utils/snapshotFilters"
-import {
-  CHECKIN_RESULT_STATUS,
-  translateAutoCheckinSkipReason,
-  type AutoCheckinAccountSnapshot,
-  type AutoCheckinSkipReason,
-} from "~/types/autoCheckin"
+import type { AutoCheckinAccountSnapshot } from "~/types/autoCheckin"
 
-import { formatTimestamp } from "../utils/tableUtils"
+import { useClampedTablePagination } from "../hooks/useClampedTablePagination"
+import { compareAccountTableIdentity } from "../utils/tableUtils"
+import AccountSnapshotTableRow from "./AccountSnapshotTableRow"
+import SortableTableHead from "./SortableTableHead"
 import TableFilteredEmptyState from "./TableFilteredEmptyState"
 import TableFilterToolbar from "./TableFilterToolbar"
+import TablePagination, {
+  DEFAULT_AUTO_CHECKIN_TABLE_PAGE_SIZE,
+} from "./TablePagination"
 
 interface AccountSnapshotTableProps {
   snapshots: AutoCheckinAccountSnapshot[]
 }
 
-/**
- * Displays per-account auto check-in snapshots with status badges and timestamps.
- * @param props Component props bundle.
- * @param props.snapshots Snapshot array produced by the auto check-in service.
- */
+/** Account readiness and latest execution outcome in a sortable table. */
 export default function AccountSnapshotTable({
   snapshots,
 }: AccountSnapshotTableProps) {
@@ -55,109 +63,133 @@ export default function AccountSnapshotTable({
   const [statusFilter, setStatusFilter] = useState<SnapshotStatusFilter>(
     SNAPSHOT_STATUS_FILTER.ALL,
   )
+  const [sorting, setSorting] = useState<SortingState>([
+    { id: "accountName", desc: false },
+  ])
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: DEFAULT_AUTO_CHECKIN_TABLE_PAGE_SIZE,
+  })
+
+  const columns = useMemo<ColumnDef<AutoCheckinAccountSnapshot>[]>(
+    () => [
+      {
+        accessorKey: "accountName",
+        header: t("execution.table.accountName"),
+        enableGlobalFilter: true,
+        sortingFn: (left, right) =>
+          compareAccountTableIdentity(left.original, right.original),
+      },
+      {
+        id: "autoCheckin",
+        accessorFn: (snapshot) => snapshot.autoCheckinEnabled,
+        header: t("snapshot.table.autoCheckin"),
+        enableGlobalFilter: false,
+      },
+      {
+        id: "readiness",
+        accessorFn: getAutoCheckinSnapshotReadinessCategory,
+        header: t("snapshot.filters.readinessLabel"),
+        enableGlobalFilter: false,
+        filterFn: ((row, _columnId, value: SnapshotReadinessFilter) =>
+          getAutoCheckinSnapshotReadinessCategory(row.original) ===
+          value) as FilterFn<AutoCheckinAccountSnapshot>,
+      },
+      {
+        id: "latestStatus",
+        accessorFn: getAutoCheckinSnapshotStatus,
+        header: t("snapshot.table.status"),
+        enableGlobalFilter: false,
+        filterFn: ((row, _columnId, value: SnapshotStatusFilter) =>
+          getAutoCheckinSnapshotStatus(row.original) ===
+          value) as FilterFn<AutoCheckinAccountSnapshot>,
+      },
+      {
+        id: "lastResult",
+        accessorFn: (snapshot) => snapshot.lastResult?.timestamp ?? 0,
+        header: t("snapshot.table.lastResult"),
+        enableGlobalFilter: false,
+        sortDescFirst: true,
+      },
+    ],
+    [t],
+  )
+
+  const columnFilters = useMemo<ColumnFiltersState>(() => {
+    const filters: ColumnFiltersState = []
+    if (readinessFilter !== SNAPSHOT_READINESS_FILTER.ALL)
+      filters.push({ id: "readiness", value: readinessFilter })
+    if (statusFilter !== SNAPSHOT_STATUS_FILTER.ALL)
+      filters.push({ id: "latestStatus", value: statusFilter })
+    return filters
+  }, [readinessFilter, statusFilter])
+
+  const globalFilterFn = useMemo<FilterFn<AutoCheckinAccountSnapshot>>(
+    () => (row, _columnId, value) =>
+      filterAutoCheckinSnapshots(
+        [row.original],
+        SNAPSHOT_READINESS_FILTER.ALL,
+        SNAPSHOT_STATUS_FILTER.ALL,
+        String(value),
+        t,
+      ).length > 0,
+    [t],
+  )
+
+  const table = useReactTable({
+    data: snapshots,
+    columns,
+    state: { sorting, pagination, globalFilter: keyword, columnFilters },
+    onSortingChange: setSorting,
+    onPaginationChange: setPagination,
+    onGlobalFilterChange: setKeyword,
+    globalFilterFn,
+    getRowId: (snapshot) => snapshot.accountId,
+    getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    enableMultiSort: false,
+    enableSortingRemoval: false,
+  })
+
+  const filteredCount = table.getFilteredRowModel().rows.length
+  useClampedTablePagination(table)
+
   const isFiltered =
     Boolean(keyword.trim()) ||
     readinessFilter !== SNAPSHOT_READINESS_FILTER.ALL ||
     statusFilter !== SNAPSHOT_STATUS_FILTER.ALL
-
-  const filteredSnapshots = useMemo(
-    () =>
-      filterAutoCheckinSnapshots(
-        snapshots,
-        readinessFilter,
-        statusFilter,
-        keyword,
-        t,
-      ),
-    [keyword, readinessFilter, snapshots, statusFilter, t],
-  )
-
-  const getSkipReasonLabel = (reason?: AutoCheckinSkipReason) => {
-    if (!reason) return "-"
-    return translateAutoCheckinSkipReason(t, reason)
-  }
-
-  const renderStatusBadge = (snapshot: AutoCheckinAccountSnapshot) => {
-    if (snapshot.lastResult) {
-      switch (snapshot.lastResult.status) {
-        case CHECKIN_RESULT_STATUS.SUCCESS:
-        case CHECKIN_RESULT_STATUS.ALREADY_CHECKED:
-          return (
-            <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900 dark:text-green-200">
-              <CircleCheck className="h-3.5 w-3.5" />
-              {t("execution.status.success")}
-            </span>
-          )
-        case CHECKIN_RESULT_STATUS.FAILED:
-          return (
-            <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800 dark:bg-red-900 dark:text-red-200">
-              <CircleX className="h-3.5 w-3.5" />
-              {t("execution.status.failed")}
-            </span>
-          )
-        case CHECKIN_RESULT_STATUS.SKIPPED:
-          return (
-            <span className="inline-flex items-center gap-1 rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100">
-              <TriangleAlert className="h-3.5 w-3.5" />
-              {t("execution.status.skipped")}
-            </span>
-          )
-        default:
-          break
-      }
-    }
-
-    if (snapshot.skipReason) {
-      return (
-        <span className="inline-flex items-center gap-1 rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100">
-          <TriangleAlert className="h-3.5 w-3.5" />
-          {t("execution.status.skipped")}
-        </span>
-      )
-    }
-
-    return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-200">
-        <Clock className="h-3.5 w-3.5" />
-        {t("snapshot.badges.pending")}
-      </span>
-    )
-  }
-
-  const renderBooleanBadge = (
-    value: boolean,
-    trueLabel: string,
-    falseLabel: string,
-  ) => {
-    return value ? (
-      <span className="inline-flex rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900 dark:text-green-200">
-        {trueLabel}
-      </span>
-    ) : (
-      <span className="inline-flex rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-300">
-        {falseLabel}
-      </span>
-    )
-  }
-
+  const countLabel = isFiltered
+    ? t("snapshot.filters.countFiltered", {
+        filtered: filteredCount,
+        total: snapshots.length,
+      })
+    : t("snapshot.filters.countTotal", { total: snapshots.length })
   const clearFilters = () => {
     setKeyword("")
     setReadinessFilter(SNAPSHOT_READINESS_FILTER.ALL)
     setStatusFilter(SNAPSHOT_STATUS_FILTER.ALL)
+    table.setPageIndex(0)
   }
-  const countLabel = isFiltered
-    ? t("snapshot.filters.countFiltered", {
-        filtered: filteredSnapshots.length,
-        total: snapshots.length,
-      })
-    : t("snapshot.filters.countTotal", { total: snapshots.length })
+
+  const sortableHeader = (columnId: string) => {
+    const column = table.getColumn(columnId)
+    if (!column) return null
+    const label = String(column.columnDef.header)
+    return (
+      <SortableTableHead column={column} label={label} className="first:pl-6" />
+    )
+  }
+
+  const resetPage = () => table.setPageIndex(0)
 
   return (
     <Card padding="none">
       <TableFilterToolbar
         countLabel={countLabel}
         clearLabel={t("snapshot.filters.clearAll")}
-        showClear={isFiltered && filteredSnapshots.length > 0}
+        showClear={isFiltered && filteredCount > 0}
         onClearFilters={clearFilters}
         controlsClassName="grid gap-2 md:grid-cols-[minmax(14rem,1fr)_13rem_11rem]"
       >
@@ -166,16 +198,20 @@ export default function AccountSnapshotTable({
           aria-label={t("snapshot.filters.searchLabel")}
           placeholder={t("snapshot.filters.searchPlaceholder")}
           value={keyword}
-          onChange={(event) => setKeyword(event.target.value)}
+          onChange={(event) => {
+            setKeyword(event.target.value)
+            resetPage()
+          }}
           leftIcon={<Search className="h-4 w-4" />}
           onClear={() => setKeyword("")}
           clearButtonLabel={t("common:actions.clear")}
         />
         <Select
           value={readinessFilter}
-          onValueChange={(value) =>
+          onValueChange={(value) => {
             setReadinessFilter(value as SnapshotReadinessFilter)
-          }
+            resetPage()
+          }}
         >
           <SelectTrigger
             className="h-9 w-full"
@@ -208,9 +244,10 @@ export default function AccountSnapshotTable({
         </Select>
         <Select
           value={statusFilter}
-          onValueChange={(value) =>
+          onValueChange={(value) => {
             setStatusFilter(value as SnapshotStatusFilter)
-          }
+            resetPage()
+          }}
         >
           <SelectTrigger
             className="h-9 w-full"
@@ -237,7 +274,8 @@ export default function AccountSnapshotTable({
           </SelectContent>
         </Select>
       </TableFilterToolbar>
-      {filteredSnapshots.length === 0 ? (
+
+      {filteredCount === 0 ? (
         <TableFilteredEmptyState
           title={t("snapshot.filters.noMatches")}
           description={t("snapshot.filters.noMatchesDescription")}
@@ -245,82 +283,38 @@ export default function AccountSnapshotTable({
           onClearFilters={clearFilters}
         />
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 dark:bg-gray-800">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
-                  {t("execution.table.accountName")}
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
-                  {t("snapshot.table.detection")}
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
-                  {t("snapshot.table.autoCheckin")}
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
-                  {t("snapshot.table.provider")}
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
-                  {t("snapshot.table.status")}
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
-                  {t("snapshot.table.skipReason")}
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">
-                  {t("snapshot.table.lastResult")}
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-900">
-              {filteredSnapshots.map((snapshot) => (
-                <tr
+        <>
+          <Table className="min-w-[58rem]">
+            <TableHeader className="bg-gray-50 dark:bg-gray-800">
+              <TableRow className="border-gray-200 hover:bg-transparent dark:border-gray-700">
+                {sortableHeader("accountName")}
+                {sortableHeader("autoCheckin")}
+                {sortableHeader("readiness")}
+                {sortableHeader("latestStatus")}
+                {sortableHeader("lastResult")}
+              </TableRow>
+            </TableHeader>
+            <TableBody className="bg-white dark:bg-gray-900">
+              {table.getRowModel().rows.map(({ original: snapshot }) => (
+                <AccountSnapshotTableRow
                   key={snapshot.accountId}
-                  className="hover:bg-gray-50 dark:hover:bg-gray-800"
-                >
-                  <td className="px-6 py-4 text-sm font-medium whitespace-nowrap text-gray-900 dark:text-gray-100">
-                    <AccountLinkButton
-                      accountId={snapshot.accountId}
-                      accountName={snapshot.accountName}
-                    />
-                  </td>
-                  <td className="px-6 py-4 text-sm whitespace-nowrap">
-                    {renderBooleanBadge(
-                      snapshot.detectionEnabled,
-                      t("snapshot.badges.methodSelected"),
-                      t("snapshot.badges.methodNotSelected"),
-                    )}
-                  </td>
-                  <td className="px-6 py-4 text-sm whitespace-nowrap">
-                    {renderBooleanBadge(
-                      snapshot.autoCheckinEnabled,
-                      t("snapshot.badges.enabled"),
-                      t("snapshot.badges.disabled"),
-                    )}
-                  </td>
-                  <td className="px-6 py-4 text-sm whitespace-nowrap">
-                    {renderBooleanBadge(
-                      snapshot.providerAvailable,
-                      t("snapshot.badges.providerAvailable"),
-                      t("snapshot.badges.providerUnavailable"),
-                    )}
-                  </td>
-                  <td className="px-6 py-4 text-sm whitespace-nowrap text-gray-700 dark:text-gray-300">
-                    {renderStatusBadge(snapshot)}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                    {getSkipReasonLabel(snapshot.skipReason)}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                    {snapshot.lastResult?.timestamp
-                      ? formatTimestamp(snapshot.lastResult.timestamp)
-                      : "-"}
-                  </td>
-                </tr>
+                  snapshot={snapshot}
+                />
               ))}
-            </tbody>
-          </table>
-        </div>
+            </TableBody>
+          </Table>
+          <TablePagination
+            id="auto-checkin-readiness"
+            pageIndex={pagination.pageIndex}
+            pageSize={pagination.pageSize}
+            total={filteredCount}
+            onPageIndexChange={table.setPageIndex}
+            onPageSizeChange={(pageSize) => {
+              table.setPageSize(pageSize)
+              table.setPageIndex(0)
+            }}
+          />
+        </>
       )}
     </Card>
   )

@@ -37,8 +37,9 @@
       "countFiltered": "显示 {{filtered}} / {{total}} 条",
       "countTotal": "共 {{total}} 条",
       "failed": "失败",
+      "failedOrSkipped": "失败或未执行",
       "searchLabel": "搜索执行结果",
-      "searchPlaceholder": "搜索账号名称或消息...",
+      "searchPlaceholder": "搜索账号名称、ID 或结果信息...",
       "skipped": "已跳过",
       "statusLabel": "按执行状态筛选",
       "success": "成功"
@@ -50,6 +51,12 @@
       "openExternalCheckIn": "默认仅打开今日未打开过的外部签到；Ctrl/Cmd 打开全部；Shift 在新窗口打开。",
       "openFailedManualNewWindow": "打开最近一次自动签到失败的全部账号对应的站点签到页。按住 Shift 点击可在新窗口中打开。",
       "siteTypeCheckinUnsupported": "解决方案：先在「账号管理 → 编辑账号」中检查“站点类型”是否与实际站点一致；如果此前是自动识别得到的结果，可在目标站点重新登录后重新识别一次。若确认站点类型无误但仍提示不支持，说明该站点当前可能未适配自动签到，请改用“打开网站”或“手动签到”处理。"
+    },
+    "pagination": {
+      "next": "下一页",
+      "previous": "上一页",
+      "rowsPerPage": "每页显示",
+      "summary": "显示第 {{start}}–{{end}} 条，共 {{total}} 条"
     },
     "refresh": "刷新",
     "runNow": "立即执行",
@@ -214,10 +221,7 @@
     },
     "table": {
       "autoCheckin": "自动签到",
-      "detection": "签到方式",
       "lastResult": "更新时间",
-      "provider": "执行能力",
-      "skipReason": "未执行原因",
       "status": "最近状态"
     },
     "title": "账号准备状态"
@@ -251,5 +255,9 @@
     "dialogDescription": "打开扩展界面时触发了今日计划的自动签到。",
     "dialogTitle": "自动签到已完成",
     "viewDetails": "查看详情"
+  },
+  "workspace": {
+    "label": "自动签到数据",
+    "resultsTab": "执行结果"
   }
 }

@@ -37,8 +37,9 @@
       "countFiltered": "Hiển thị {{filtered}} / {{total}}",
       "countTotal": "Tổng cộng {{total}}",
       "failed": "Thất bại",
+      "failedOrSkipped": "Thất bại hoặc bỏ qua",
       "searchLabel": "Tìm kiếm kết quả thực hiện",
-      "searchPlaceholder": "Tìm kiếm tên tài khoản hoặc tin nhắn...",
+      "searchPlaceholder": "Tìm theo tên tài khoản, ID hoặc tin nhắn...",
       "skipped": "Đã bỏ qua",
       "statusLabel": "Lọc theo trạng thái thực hiện",
       "success": "Thành công"
@@ -50,6 +51,12 @@
       "openExternalCheckIn": "Mặc định chỉ mở điểm danh bên ngoài chưa mở hôm nay. Ctrl/Cmd mở tất cả; Shift mở trong cửa sổ mới.",
       "openFailedManualNewWindow": "Mở trang điểm danh trên trang web cho mọi tài khoản có lần điểm danh tự động gần nhất thất bại. Nhấn giữ Shift khi nhấp để mở trong cửa sổ mới.",
       "siteTypeCheckinUnsupported": "Giải pháp: Trước tiên hãy kiểm tra xem \"Loại trang web\" trong \"Quản lý tài khoản → Chỉnh sửa tài khoản\" có khớp với trang web thực tế hay không; nếu đây là kết quả của việc nhận diện tự động trước đó, bạn có thể đăng nhập lại vào trang web đích và nhận diện lại. Nếu bạn xác nhận rằng loại trang web là chính xác nhưng hệ thống vẫn báo không hỗ trợ, điều đó có nghĩa là trang web này hiện có thể chưa được điều chỉnh cho điểm danh tự động, vui lòng chuyển sang sử dụng \"Mở trang web\" hoặc \"Điểm danh thủ công\" để xử lý."
+    },
+    "pagination": {
+      "next": "Trang sau",
+      "previous": "Trang trước",
+      "rowsPerPage": "Số hàng mỗi trang",
+      "summary": "Hiển thị {{start}}–{{end}} / {{total}}"
     },
     "refresh": "Làm mới",
     "runNow": "Thực hiện ngay",
@@ -214,10 +221,7 @@
     },
     "table": {
       "autoCheckin": "Điểm danh tự động",
-      "detection": "Phương thức điểm danh",
       "lastResult": "Thời gian cập nhật",
-      "provider": "Khả năng thực hiện",
-      "skipReason": "Lý do chưa thực hiện",
       "status": "Trạng thái gần nhất"
     },
     "title": "Trạng thái sẵn sàng của tài khoản"
@@ -251,5 +255,9 @@
     "dialogDescription": "Đã kích hoạt điểm danh tự động được lên lịch hôm nay khi mở giao diện tiện ích mở rộng.",
     "dialogTitle": "Điểm danh tự động đã hoàn tất",
     "viewDetails": "Xem chi tiết"
+  },
+  "workspace": {
+    "label": "Dữ liệu điểm danh tự động",
+    "resultsTab": "Kết quả thực thi"
   }
 }

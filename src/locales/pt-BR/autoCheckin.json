@@ -37,8 +37,9 @@
       "countFiltered": "Mostrando {{filtered}} de {{total}}",
       "countTotal": "{{total}} no total",
       "failed": "Falha",
+      "failedOrSkipped": "Falha ou ignorado",
       "searchLabel": "Pesquisar resultados da execução",
-      "searchPlaceholder": "Pesquise por nome de conta ou mensagem...",
+      "searchPlaceholder": "Pesquise por nome da conta, ID ou mensagem...",
       "skipped": "Ignorado",
       "statusLabel": "Filtrar por status da execução",
       "success": "Sucesso"
@@ -50,6 +51,12 @@
       "openExternalCheckIn": "Abra check-ins externos não verificados por padrão. Ctrl/Cmd abre tudo; Shift abre em uma nova janela.",
       "openFailedManualNewWindow": "Abre a página de check-in do site para cada conta cujo último check-in automático falhou. Mantenha Shift pressionado ao clicar para abri-las em uma nova janela.",
       "siteTypeCheckinUnsupported": "Solução: em “Gerenciamento de contas → Editar conta”, primeiro confirme se o tipo de site selecionado corresponde ao site real. Se ele foi detectado automaticamente, entre novamente no site de destino e repita a detecção. Se o tipo estiver correto e esta mensagem continuar aparecendo, o site provavelmente ainda não é compatível com check-in automático; por enquanto, use “Abrir site” ou “Check-in manual”."
+    },
+    "pagination": {
+      "next": "Próxima página",
+      "previous": "Página anterior",
+      "rowsPerPage": "Linhas por página",
+      "summary": "Mostrando {{start}}–{{end}} de {{total}}"
     },
     "refresh": "Atualizar",
     "runNow": "Executar agora",
@@ -218,10 +225,7 @@
     },
     "table": {
       "autoCheckin": "Check-in automático",
-      "detection": "Método de check-in",
       "lastResult": "Atualizado",
-      "provider": "Execução",
-      "skipReason": "Motivo da não execução",
       "status": "Status mais recente"
     },
     "title": "Preparação da conta"
@@ -255,5 +259,9 @@
     "dialogDescription": "A execução diária programada de hoje foi acionada antecipadamente quando a UI foi aberta.",
     "dialogTitle": "Check-in automático concluído",
     "viewDetails": "Ver detalhes"
+  },
+  "workspace": {
+    "label": "Dados de check-in automático",
+    "resultsTab": "Resultados da execução"
   }
 }

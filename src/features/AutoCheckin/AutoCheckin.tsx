@@ -13,18 +13,13 @@ import { useTranslation } from "react-i18next"
 import { AutoCheckinPretriggerCompletionDialog } from "~/components/AutoCheckinPretriggerCompletionDialog"
 import { OptionsPageSettingsTitleAction } from "~/components/OptionsPageSettingsTitleAction"
 import { PageHeader } from "~/components/PageHeader"
-import { Button, CollapsibleSection } from "~/components/ui"
+import { Button } from "~/components/ui"
 import { Modal } from "~/components/ui/Dialog/Modal"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import DelAccountDialog from "~/features/AccountManagement/components/DelAccountDialog"
 import { openExternalCheckIns } from "~/features/AccountManagement/utils/openExternalCheckIns"
-import {
-  FILTER_STATUS,
-  filterAutoCheckinResults,
-  type FilterStatus,
-} from "~/features/AutoCheckin/utils/autoCheckin"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { isAutomaticCheckInConfiguredForAccount } from "~/services/checkin/autoCheckin/inspection"
 import {
@@ -84,12 +79,11 @@ import {
 } from "./actionState"
 import AccountSnapshotTable from "./components/AccountSnapshotTable"
 import ActionBar from "./components/ActionBar"
+import AutoCheckinDataWorkspace from "./components/AutoCheckinDataWorkspace"
 import EmptyResults from "./components/EmptyResults"
-import FilterBar from "./components/FilterBar"
 import LoadingSkeleton from "./components/LoadingSkeleton"
 import ResultsTable from "./components/ResultsTable"
 import StatusCard from "./components/StatusCard"
-import TableFilteredEmptyState from "./components/TableFilteredEmptyState"
 
 /**
  * Unified logger scoped to the Auto Check-in options page.
@@ -222,10 +216,6 @@ export default function AutoCheckin(props: {
   const [accountSetupState, setAccountSetupState] = useState<
     "ready" | "no_accounts" | "no_detection_accounts" | null
   >(null)
-  const [filterStatus, setFilterStatus] = useState<FilterStatus>(
-    FILTER_STATUS.ALL,
-  )
-  const [searchKeyword, setSearchKeyword] = useState("")
   const [isLoading, setIsLoading] = useState(true)
   const [isRunning, setIsRunning] = useState(false)
   const [isManualRefreshing, setIsManualRefreshing] = useState(false)
@@ -1326,13 +1316,6 @@ export default function AutoCheckin(props: {
     )
   }
 
-  const filteredResults = filterAutoCheckinResults(
-    accountResults,
-    filterStatus,
-    searchKeyword,
-    t,
-  )
-
   const isInitialLoading = isLoading && status === null
 
   if (isInitialLoading) {
@@ -1340,7 +1323,56 @@ export default function AutoCheckin(props: {
   }
 
   const hasHistory = accountResults.length > 0
-  const hasResults = filteredResults.length > 0
+  const snapshots = status?.accountsSnapshot ?? []
+  const resultsContent = hasHistory ? (
+    <ResultsTable
+      results={accountResults}
+      showDevActions={showDebugButtons}
+      retryingAccountId={retryingAccountId}
+      disablingAccountId={disablingAccountId}
+      deletingAccountId={deletingAccountId}
+      pendingOpeningSiteAccountIds={pendingOpeningSiteAccountIds}
+      openingManualAccountId={openingManualAccountId}
+      openingExternalCheckInAccountId={openingExternalCheckInAccountId}
+      onRetryAccount={handleRetryAccount}
+      onDisableAccount={handleDisableAccount}
+      onDeleteAccount={handleDeleteAccount}
+      onOpenAccountSite={handleOpenAccountSite}
+      onOpenManualSignIn={handleOpenManualSignIn}
+      externalCheckInAccountIds={externalCheckInAccountIds}
+      onOpenExternalCheckIn={handleOpenAccountExternalCheckIn}
+    />
+  ) : (
+    <EmptyResults
+      hasHistory={false}
+      setupState={accountSetupState ?? "ready"}
+      onOpenAccounts={handleOpenAccountManagement}
+    />
+  )
+
+  const actionBar = (
+    <ActionBar
+      isRunning={isRunning}
+      isRefreshing={isManualRefreshing}
+      isRefreshLocked={isLoading}
+      activeDebugAction={activeDebugAction}
+      isOpeningFailedManualSignIns={isOpeningFailedManualSignIns}
+      isOpeningExternalCheckIns={isOpeningExternalCheckIns}
+      canOpenFailedManualSignIns={failedManualAccountIds.length > 0}
+      canOpenExternalCheckIns={canOpenExternalCheckIns}
+      onRunNow={handleRunNow}
+      onRefresh={handleRefresh}
+      onOpenFailedManualSignIns={handleOpenFailedManualSignIns}
+      onOpenExternalCheckIns={handleOpenExternalCheckIns}
+      showDebugButtons={showDebugButtons}
+      onDebugTriggerDailyAlarmNow={handleDebugTriggerDailyAlarmNow}
+      onDebugTriggerRetryAlarmNow={handleDebugTriggerRetryAlarmNow}
+      onDebugScheduleDailyAlarmForToday={handleDebugScheduleDailyAlarmForToday}
+      onDebugEvaluateUiOpenPretrigger={handleDebugEvaluateUiOpenPretrigger}
+      onDebugTriggerUiOpenPretrigger={handleDebugTriggerUiOpenPretrigger}
+      onDebugResetLastDailyRunDay={handleDebugResetLastDailyRunDay}
+    />
+  )
 
   return (
     <div className="p-6">
@@ -1357,101 +1389,29 @@ export default function AutoCheckin(props: {
         spacing="compact"
       />
 
-      {status && (
-        <div className="mb-6">
-          <StatusCard status={status} preferences={autoCheckinPreferences} />
-        </div>
-      )}
+      <div className="space-y-4">
+        {status ? (
+          <StatusCard
+            status={status}
+            preferences={autoCheckinPreferences}
+            actions={actionBar}
+          />
+        ) : (
+          actionBar
+        )}
 
-      <div className="mb-6">
-        <ActionBar
-          isRunning={isRunning}
-          isRefreshing={isManualRefreshing}
-          isRefreshLocked={isLoading}
-          activeDebugAction={activeDebugAction}
-          isOpeningFailedManualSignIns={isOpeningFailedManualSignIns}
-          isOpeningExternalCheckIns={isOpeningExternalCheckIns}
-          canOpenFailedManualSignIns={failedManualAccountIds.length > 0}
-          canOpenExternalCheckIns={canOpenExternalCheckIns}
-          onRunNow={handleRunNow}
-          onRefresh={handleRefresh}
-          onOpenFailedManualSignIns={handleOpenFailedManualSignIns}
-          onOpenExternalCheckIns={handleOpenExternalCheckIns}
-          showDebugButtons={showDebugButtons}
-          onDebugTriggerDailyAlarmNow={handleDebugTriggerDailyAlarmNow}
-          onDebugTriggerRetryAlarmNow={handleDebugTriggerRetryAlarmNow}
-          onDebugScheduleDailyAlarmForToday={
-            handleDebugScheduleDailyAlarmForToday
-          }
-          onDebugEvaluateUiOpenPretrigger={handleDebugEvaluateUiOpenPretrigger}
-          onDebugTriggerUiOpenPretrigger={handleDebugTriggerUiOpenPretrigger}
-          onDebugResetLastDailyRunDay={handleDebugResetLastDailyRunDay}
-        />
+        {snapshots.length > 0 ? (
+          <AutoCheckinDataWorkspace
+            hasHistory={hasHistory}
+            results={accountResults}
+            snapshots={snapshots}
+            resultsContent={resultsContent}
+            readinessContent={<AccountSnapshotTable snapshots={snapshots} />}
+          />
+        ) : (
+          resultsContent
+        )}
       </div>
-
-      {!hasHistory ? (
-        <EmptyResults
-          hasHistory={hasHistory}
-          setupState={accountSetupState ?? "ready"}
-          onOpenAccounts={handleOpenAccountManagement}
-        />
-      ) : (
-        <ResultsTable
-          results={filteredResults}
-          toolbar={
-            <FilterBar
-              accountResults={accountResults}
-              status={filterStatus}
-              keyword={searchKeyword}
-              onStatusChange={setFilterStatus}
-              onKeywordChange={setSearchKeyword}
-            />
-          }
-          emptyState={
-            !hasResults ? (
-              <TableFilteredEmptyState
-                title={t("execution.empty.noResults")}
-                description={t("execution.empty.noResultsDesc")}
-                clearLabel={t("execution.filters.clearAll")}
-                onClearFilters={() => {
-                  setFilterStatus(FILTER_STATUS.ALL)
-                  setSearchKeyword("")
-                }}
-              />
-            ) : undefined
-          }
-          showDevActions={showDebugButtons}
-          retryingAccountId={retryingAccountId}
-          disablingAccountId={disablingAccountId}
-          deletingAccountId={deletingAccountId}
-          pendingOpeningSiteAccountIds={pendingOpeningSiteAccountIds}
-          openingManualAccountId={openingManualAccountId}
-          openingExternalCheckInAccountId={openingExternalCheckInAccountId}
-          onRetryAccount={handleRetryAccount}
-          onDisableAccount={handleDisableAccount}
-          onDeleteAccount={handleDeleteAccount}
-          onOpenAccountSite={handleOpenAccountSite}
-          onOpenManualSignIn={handleOpenManualSignIn}
-          externalCheckInAccountIds={externalCheckInAccountIds}
-          onOpenExternalCheckIn={handleOpenAccountExternalCheckIn}
-        />
-      )}
-
-      {status?.accountsSnapshot && status.accountsSnapshot.length > 0 && (
-        <CollapsibleSection
-          title={t("snapshot.title")}
-          className="mt-6"
-          buttonClassName="border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-900 shadow-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
-          panelClassName="space-y-3 border-0 bg-transparent p-0 dark:bg-transparent"
-        >
-          <div className="px-1">
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              {t("snapshot.description")}
-            </p>
-          </div>
-          <AccountSnapshotTable snapshots={status.accountsSnapshot} />
-        </CollapsibleSection>
-      )}
 
       <AutoCheckinPretriggerCompletionDialog
         isOpen={uiOpenPretriggerCompletion.isOpen}
