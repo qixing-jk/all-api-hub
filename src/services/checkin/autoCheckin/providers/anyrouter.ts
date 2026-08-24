@@ -141,6 +141,8 @@ const canCheckIn = (account: SiteAccount): boolean => {
 }
 
 export const anyrouterProvider: AutoCheckinProvider = {
+  // /api/user/sign_in is a mutating POST, so this provider intentionally has
+  // no detect/getStatus implementation and uses the legacy registry bridge.
   canCheckIn,
   checkIn: checkinAnyRouter,
 }

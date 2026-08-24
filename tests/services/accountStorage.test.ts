@@ -2802,6 +2802,167 @@ describe("accountStorage core behaviors", () => {
     })
   })
 
+  it("commits trusted redetection knowledge and its automatic selection under the account lock", async () => {
+    const account = createAccount({
+      id: "redetected-check-in",
+      site_type: SITE_TYPES.NEW_API,
+      configVersion: 7,
+      checkIn: {
+        automaticExecutionEnabled: true,
+        methodKnowledge: { methods: {} },
+        selection: { mode: "automatic" },
+      },
+    } as any)
+    seedStorage([account])
+
+    const discovered = {
+      ...account.checkIn,
+      methodKnowledge: {
+        lastFullDiscoveryAt: 200,
+        methods: {
+          "new-api:daily-checkin": {
+            detection: {
+              outcome: "matched" as const,
+              evidence: { source: "probe" as const, observedAt: 200 },
+            },
+          },
+        },
+      },
+      selection: {
+        mode: "automatic" as const,
+        methodId: "new-api:daily-checkin" as const,
+      },
+    }
+
+    await expect(
+      accountStorage.updateAccountCheckInDraft(account.id, discovered, {
+        discoveryBaseSelection: { mode: "automatic" },
+      }),
+    ).resolves.toBe(true)
+
+    const updated = await accountStorage.getAccountById(account.id)
+    expect(updated?.checkIn.methodKnowledge).toEqual(discovered.methodKnowledge)
+    expect(updated?.checkIn.selection).toEqual(discovered.selection)
+  })
+
+  it("commits redetection knowledge without replacing a concurrent manual selection", async () => {
+    const account = createAccount({
+      id: "concurrent-manual-check-in",
+      site_type: SITE_TYPES.NEW_API,
+      configVersion: 7,
+      checkIn: {
+        automaticExecutionEnabled: true,
+        methodKnowledge: {
+          methods: {
+            "veloera:daily-checkin": {
+              detection: {
+                outcome: "matched",
+                evidence: { source: "probe", observedAt: 250 },
+              },
+              status: {
+                outcome: "known",
+                today: "checked",
+                evidence: { source: "probe", observedAt: 350 },
+              },
+            },
+          },
+        },
+        selection: {
+          mode: "manual",
+          methodId: "veloera:daily-checkin",
+        },
+      },
+    } as any)
+    seedStorage([account])
+
+    await expect(
+      accountStorage.updateAccountCheckInDraft(
+        account.id,
+        {
+          ...account.checkIn,
+          methodKnowledge: {
+            lastFullDiscoveryAt: 300,
+            methods: {
+              "new-api:daily-checkin": {
+                detection: {
+                  outcome: "unsupported",
+                  evidence: { source: "probe", observedAt: 300 },
+                },
+              },
+            },
+          },
+          selection: { mode: "automatic" },
+        },
+        { discoveryBaseSelection: { mode: "automatic" } },
+      ),
+    ).resolves.toBe(true)
+
+    const updated = await accountStorage.getAccountById(account.id)
+    expect(updated?.checkIn.methodKnowledge.lastFullDiscoveryAt).toBe(300)
+    expect(
+      updated?.checkIn.methodKnowledge.methods["veloera:daily-checkin"],
+    ).toEqual(account.checkIn.methodKnowledge.methods["veloera:daily-checkin"])
+    expect(updated?.checkIn.selection).toEqual(account.checkIn.selection)
+  })
+
+  it("does not apply an older automatic selection over newer discovery", async () => {
+    const account = createAccount({
+      id: "newer-concurrent-discovery",
+      site_type: SITE_TYPES.NEW_API,
+      configVersion: 7,
+      checkIn: {
+        automaticExecutionEnabled: true,
+        methodKnowledge: {
+          lastFullDiscoveryAt: 400,
+          methods: {
+            "new-api:daily-checkin": {
+              detection: {
+                outcome: "matched",
+                evidence: { source: "probe", observedAt: 400 },
+              },
+            },
+          },
+        },
+        selection: {
+          mode: "automatic",
+          methodId: "new-api:daily-checkin",
+        },
+      },
+    } as any)
+    seedStorage([account])
+
+    await expect(
+      accountStorage.updateAccountCheckInDraft(
+        account.id,
+        {
+          ...account.checkIn,
+          methodKnowledge: {
+            lastFullDiscoveryAt: 300,
+            methods: {
+              "new-api:daily-checkin": {
+                detection: {
+                  outcome: "unsupported",
+                  evidence: { source: "probe", observedAt: 300 },
+                },
+              },
+            },
+          },
+          selection: {
+            mode: "automatic",
+            methodId: "veloera:daily-checkin",
+          },
+        },
+        { discoveryBaseSelection: account.checkIn.selection },
+      ),
+    ).resolves.toBe(true)
+
+    const updated = await accountStorage.getAccountById(account.id)
+    expect(updated?.checkIn.methodKnowledge).toEqual(
+      account.checkIn.methodKnowledge,
+    )
+    expect(updated?.checkIn.selection).toEqual(account.checkIn.selection)
+  })
+
   it("updateAccountCheckInDraft removes a cleared custom check-in URL", async () => {
     const account = createAccount({
       id: "remove-custom-check-in",

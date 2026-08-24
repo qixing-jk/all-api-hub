@@ -3,7 +3,11 @@ import {
   BOOKMARK_IMPORT_ADD_ACCOUNT_PREFILL_SOURCE,
   type AddAccountPrefill,
 } from "~/features/AccountManagement/sponsors/types"
-import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
+import {
+  createCompatibilityCheckInConfig,
+  getNewAccountAutomaticExecutionDefault,
+  hasNewAccountCompatibilityRegistration,
+} from "~/services/checkin/autoCheckin/compatibilityConfig"
 import { AuthTypeEnum, type CheckInConfig } from "~/types"
 
 export const ACCOUNT_DIALOG_PHASES = {
@@ -48,7 +52,9 @@ export interface AccountDialogDraft {
 /**
  * Creates the default empty draft used before loading or detecting account data.
  */
-export function createEmptyAccountDialogDraft(): AccountDialogDraft {
+export function createEmptyAccountDialogDraft(
+  siteType: AccountSiteType = SITE_TYPES.UNKNOWN,
+): AccountDialogDraft {
   return {
     siteName: "",
     username: "",
@@ -61,9 +67,10 @@ export function createEmptyAccountDialogDraft(): AccountDialogDraft {
     excludeFromTotalBalance: false,
     excludeFromTodayIncome: false,
     checkIn: createCompatibilityCheckInConfig({
-      siteType: SITE_TYPES.UNKNOWN,
-      supported: false,
-      automaticExecutionEnabled: true,
+      siteType,
+      supported: hasNewAccountCompatibilityRegistration(siteType),
+      automaticExecutionEnabled:
+        getNewAccountAutomaticExecutionDefault(siteType),
       customCheckIn: {
         url: "",
         redeemUrl: "",
@@ -71,7 +78,7 @@ export function createEmptyAccountDialogDraft(): AccountDialogDraft {
         isCheckedInToday: false,
       },
     }),
-    siteType: SITE_TYPES.UNKNOWN,
+    siteType,
     authType: AuthTypeEnum.AccessToken,
     cookieAuthSessionCookie: "",
     sub2apiUseRefreshToken: false,

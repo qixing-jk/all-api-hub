@@ -69,6 +69,20 @@ describe("useAccountDialog auth defaults", () => {
     vi.clearAllMocks()
   })
 
+  it("starts an unknown new-account draft with automatic check-in disabled", async () => {
+    const { result } = renderAccountDialogHook({
+      mode: DIALOG_MODES.ADD,
+      isOpen: true,
+      onClose: vi.fn(),
+      onSuccess: vi.fn(),
+    })
+
+    await waitFor(() => {
+      expect(result.current.state.siteType).toBe(SITE_TYPES.UNKNOWN)
+    })
+    expect(result.current.state.checkIn.automaticExecutionEnabled).toBe(false)
+  })
+
   it("uses access-token auth when a sponsor prefill omits auth type and URL has no known default", async () => {
     const { result } = renderAccountDialogHook({
       mode: DIALOG_MODES.ADD,
@@ -87,6 +101,7 @@ describe("useAccountDialog auth defaults", () => {
       expect(result.current.state.siteType).toBe(SITE_TYPES.ANYROUTER)
       expect(result.current.state.authType).toBe(AuthTypeEnum.AccessToken)
     })
+    expect(result.current.state.checkIn.automaticExecutionEnabled).toBe(true)
   })
 
   it("lets sponsor auth prefill override the local AnyRouter default", async () => {
@@ -236,7 +251,7 @@ describe("useAccountDialog auth defaults", () => {
     })
   })
 
-  it("preserves enabled automatic execution through unsupported add-mode site types", async () => {
+  it("uses candidate-provider availability for untouched add-mode defaults", async () => {
     const { result } = renderAccountDialogHook({
       mode: DIALOG_MODES.ADD,
       isOpen: true,
@@ -252,7 +267,7 @@ describe("useAccountDialog auth defaults", () => {
     await act(async () => {
       result.current.setters.setSiteType(SITE_TYPES.SUB2API)
     })
-    expect(result.current.state.checkIn.automaticExecutionEnabled).toBe(true)
+    expect(result.current.state.checkIn.automaticExecutionEnabled).toBe(false)
 
     await act(async () => {
       result.current.setters.setSiteType(SITE_TYPES.VELOERA)

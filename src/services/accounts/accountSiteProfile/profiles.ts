@@ -24,7 +24,6 @@ export const DEFAULT_ACCOUNT_SITE_PRODUCT_PROFILE: AccountSiteProductProfile = {
     defaultAuthType: AuthTypeEnum.AccessToken,
     defaultAuthHostnames: [],
     supportsCookieAuth: true,
-    supportsBuiltInCheckInDetection: true,
   },
   authSession: {
     kind: ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS.None,

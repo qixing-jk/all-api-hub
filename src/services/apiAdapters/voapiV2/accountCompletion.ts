@@ -58,7 +58,6 @@ export const voApiV2AccountCompletion: AccountCompletionCapability = {
       authType: AuthTypeEnum.AccessToken,
       checkIn: helpers.createInitialCheckInConfig({
         supported: true,
-        automaticExecutionEnabled: true,
       }),
     }
   },

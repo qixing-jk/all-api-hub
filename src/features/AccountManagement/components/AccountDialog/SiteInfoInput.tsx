@@ -32,7 +32,6 @@ type SiteInfoInputPresentationSitePolicy = Pick<
   | "siteTypeLabel"
   | "forceAccessTokenAuth"
   | "allowCookieAuthSession"
-  | "allowBuiltInCheckInDetection"
   | "allowSub2ApiRefreshTokenState"
   | "lockSiteUrl"
 >

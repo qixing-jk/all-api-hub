@@ -2305,14 +2305,19 @@ describe("accountOperations validateAndSaveAccount", () => {
       false,
       false,
       undefined,
-      { deferDataRefresh: true },
+      { deferDataRefresh: true, selectionChanged: true },
     )
 
     expect(result).toEqual({
       success: false,
       message: "messages:errors.validation.updateAccountFailed",
     })
-    expect(updateAccountSpy).toHaveBeenCalled()
+    expect(updateAccountSpy).toHaveBeenCalledWith(
+      "existing-account-id",
+      expect.any(Object),
+      CHECK_IN_DISABLED,
+      expect.objectContaining({ selectionChanged: true }),
+    )
     expect(fetchAccountDataMock).not.toHaveBeenCalled()
   })
 

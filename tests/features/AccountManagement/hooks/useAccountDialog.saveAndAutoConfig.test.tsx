@@ -895,7 +895,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       true,
       false,
       undefined,
-      { deferDataRefresh: true },
+      { deferDataRefresh: true, selectionChanged: false },
     )
     expect(toast.success).toHaveBeenCalledWith(
       "accountDialog:messages.updateSuccess",

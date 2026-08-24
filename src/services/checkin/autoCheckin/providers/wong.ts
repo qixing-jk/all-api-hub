@@ -8,6 +8,12 @@
  * - Normalize backend variations (success flags, `checked_in`, and message strings)
  *   into the project-wide `CheckinResultStatus` shape.
  */
+import {
+  CHECK_IN_METHOD_AVAILABILITIES,
+  CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES,
+  CHECK_IN_METHOD_STATUS_OUTCOMES,
+  CHECK_IN_METHOD_TODAY_STATUSES,
+} from "~/constants/checkIn"
 import type {
   WongCheckinApiResponse,
   WongCheckinStatusData,
@@ -17,6 +23,7 @@ import type {
   AutoCheckinProvider,
   AutoCheckinProviderContext,
 } from "~/services/checkin/autoCheckin/providers/contracts"
+import { detectWithStatusReadback } from "~/services/checkin/autoCheckin/providers/detection"
 import {
   AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
   AUTO_CHECKIN_USER_CHECKIN_ENDPOINT,
@@ -39,6 +46,9 @@ import { normalizeTempWindowRequestSource } from "~/utils/browser/tempWindowRequ
  * - POST: perform check-in.
  */
 const ENDPOINT = AUTO_CHECKIN_USER_CHECKIN_ENDPOINT
+
+// The observed WONG deployment contract uses GET for readback and POST for
+// execution on this endpoint; passive discovery must use only the GET branch.
 
 /**
  * Call POST /api/user/checkin to perform the daily check-in.
@@ -159,7 +169,60 @@ function canCheckIn(account: SiteAccount): boolean {
 /**
  * Exported provider implementation for `site_type = wong-gongyi`.
  */
+const getStatus: NonNullable<AutoCheckinProvider["getStatus"]> = async ({
+  account,
+  request,
+  observedAt,
+  signal,
+}) => {
+  const statusRequest =
+    request ??
+    (account
+      ? {
+          baseUrl: account.site_url,
+          accountId: account.id,
+          cookieAuthSessionCookie: account.cookieAuth?.sessionCookie,
+          auth: {
+            authType: getEffectiveAuthType(account),
+            userId: account.account_info.id,
+            accessToken: account.account_info.access_token,
+          },
+        }
+      : undefined)
+  if (!statusRequest) return undefined
+  const response = await fetchApi<WongCheckinStatusData | undefined>(
+    statusRequest,
+    {
+      endpoint: ENDPOINT,
+      options: { method: "GET", cache: "no-store", signal },
+    },
+    false,
+  )
+  if (
+    typeof response.data?.enabled !== "boolean" ||
+    typeof response.data.checked_in !== "boolean" ||
+    (!response.success && response.data.checked_in !== true)
+  )
+    return undefined
+  return {
+    outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
+    availability:
+      response.data.enabled === false
+        ? CHECK_IN_METHOD_AVAILABILITIES.Disabled
+        : CHECK_IN_METHOD_AVAILABILITIES.Enabled,
+    today: response.data.checked_in
+      ? CHECK_IN_METHOD_TODAY_STATUSES.Checked
+      : CHECK_IN_METHOD_TODAY_STATUSES.NotChecked,
+    evidence: {
+      source: CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Probe,
+      observedAt,
+    },
+  }
+}
+
 export const wongGongyiProvider: AutoCheckinProvider = {
   canCheckIn,
+  detect: (context) => detectWithStatusReadback(context, getStatus),
+  getStatus,
   checkIn: checkinWongGongyi,
 }

@@ -19,10 +19,12 @@ import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 
 const {
   mockAutoDetectAccount,
+  mockDiscoverCheckInMethods,
   mockOpenWithAccount,
   mockOpenDefaultTokenQuickCreateDialogForAccount,
 } = vi.hoisted(() => ({
   mockAutoDetectAccount: vi.fn(),
+  mockDiscoverCheckInMethods: vi.fn(),
   mockOpenWithAccount: vi.fn(),
   mockOpenDefaultTokenQuickCreateDialogForAccount: vi.fn(),
 }))
@@ -78,6 +80,17 @@ vi.mock("~/services/accounts/accountOperations", async (importOriginal) => {
   return {
     ...actual,
     autoDetectAccount: mockAutoDetectAccount,
+  }
+})
+
+vi.mock("~/services/checkin/autoCheckin/discovery", async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import("~/services/checkin/autoCheckin/discovery")
+    >()
+  return {
+    ...actual,
+    discoverCheckInMethods: mockDiscoverCheckInMethods,
   }
 })
 
@@ -148,6 +161,111 @@ describe("useAccountDialog re-detect preservation", () => {
     expect(result.current.state.checkIn.automaticExecutionEnabled).toBe(true)
   })
 
+  it("re-detects only check-in methods without rerunning account auto-detection", async () => {
+    const detectedCheckIn = buildCheckInConfig({
+      automaticExecutionEnabled: true,
+      methodKnowledge: {
+        lastFullDiscoveryAt: 250,
+        methods: {
+          "new-api:daily-checkin": {
+            detection: {
+              outcome: "matched",
+              evidence: { source: "probe", observedAt: 250 },
+            },
+          },
+        },
+      },
+      selection: {
+        mode: "automatic",
+        methodId: "new-api:daily-checkin",
+      },
+    })
+    mockDiscoverCheckInMethods.mockResolvedValueOnce({
+      config: detectedCheckIn,
+      decision: { outcome: "resolved", methodId: "new-api:daily-checkin" },
+      detections: {
+        "new-api:daily-checkin":
+          detectedCheckIn.methodKnowledge.methods["new-api:daily-checkin"]!
+            .detection,
+      },
+      timedOutMethodIds: [],
+    })
+
+    const { result } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.ADD,
+        isOpen: true,
+        onClose: vi.fn(),
+        onSuccess: vi.fn(),
+      }),
+    )
+
+    await waitFor(() => {
+      expect(result.current).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://new-api.example.invalid")
+      result.current.setters.setSiteType(SITE_TYPES.NEW_API)
+      result.current.setters.setUserId("7")
+      result.current.setters.setAccessToken("account-token")
+    })
+    await act(async () => {
+      result.current.setters.setCheckIn({
+        ...result.current.state.checkIn,
+        automaticExecutionEnabled: false,
+        customCheckIn: {
+          url: "https://check-in.example.invalid",
+          redeemUrl: "https://redeem.example.invalid",
+          openRedeemWithCheckIn: false,
+          isCheckedInToday: false,
+        },
+      })
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleRedetectCheckInMethods()
+    })
+
+    expect(mockAutoDetectAccount).not.toHaveBeenCalled()
+    expect(mockDiscoverCheckInMethods).toHaveBeenCalledWith(
+      expect.objectContaining({
+        account: expect.objectContaining({
+          site_url: "https://new-api.example.invalid",
+          site_type: SITE_TYPES.NEW_API,
+          account_info: expect.objectContaining({
+            id: "7",
+            access_token: "account-token",
+          }),
+        }),
+        request: expect.objectContaining({
+          baseUrl: "https://new-api.example.invalid",
+          auth: {
+            authType: AuthTypeEnum.AccessToken,
+            userId: "7",
+            accessToken: "account-token",
+          },
+          protectionBypassExecution: expect.objectContaining({
+            command: expect.any(String),
+          }),
+        }),
+      }),
+    )
+    expect(result.current.state.checkIn).toMatchObject({
+      automaticExecutionEnabled: false,
+      methodKnowledge: detectedCheckIn.methodKnowledge,
+      selection: detectedCheckIn.selection,
+    })
+    expect(result.current.state.checkIn.customCheckIn).toMatchObject({
+      url: "https://check-in.example.invalid",
+      redeemUrl: "https://redeem.example.invalid",
+      openRedeemWithCheckIn: false,
+    })
+    expect(toast.success).toHaveBeenCalledWith(
+      "accountDialog:messages.checkInRedetectSuccess",
+    )
+  })
+
   it("preserves notes and custom check-in fields when re-detecting an existing account", async () => {
     const turnstilePreTrigger: TurnstilePreTrigger = {
       kind: "clickSelector",
@@ -201,9 +319,24 @@ describe("useAccountDialog re-detect preservation", () => {
         userId: "1",
         exchangeRate: 7,
         siteName: "Detected",
-        siteType: "unknown",
+        siteType: SITE_TYPES.NEW_API,
         checkIn: buildCheckInConfig({
           automaticExecutionEnabled: true,
+          methodKnowledge: {
+            lastFullDiscoveryAt: 200,
+            methods: {
+              "new-api:daily-checkin": {
+                detection: {
+                  outcome: "matched",
+                  evidence: { source: "probe", observedAt: 200 },
+                },
+              },
+            },
+          },
+          selection: {
+            mode: "automatic",
+            methodId: "new-api:daily-checkin",
+          },
           customCheckIn: {
             url: "",
             redeemUrl: "",
@@ -262,6 +395,24 @@ describe("useAccountDialog re-detect preservation", () => {
     expect(result.current.state.checkIn.automaticExecutionEnabled).toBe(
       existingCheckIn.automaticExecutionEnabled,
     )
+
+    await act(async () => {
+      await result.current.handlers.handleSaveAccount()
+    })
+
+    const saved = await accountStorage.getAccountById(accountId)
+    expect(saved?.checkIn.methodKnowledge.lastFullDiscoveryAt).toBe(200)
+    expect(
+      saved?.checkIn.methodKnowledge.methods["new-api:daily-checkin"]
+        ?.detection,
+    ).toEqual({
+      outcome: "matched",
+      evidence: { source: "probe", observedAt: 200 },
+    })
+    expect(saved?.checkIn.selection).toEqual({
+      mode: "automatic",
+      methodId: "new-api:daily-checkin",
+    })
   })
 
   it("shows a slow-detect hint for long-running auto-detect requests and clears it after completion", async () => {

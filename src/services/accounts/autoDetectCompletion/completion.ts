@@ -3,9 +3,11 @@ import {
   type AutoDetectFailureReason,
 } from "~/constants/autoDetect"
 import type { AccountSiteType } from "~/constants/siteType"
+import { createPersistedSiteAccount } from "~/services/accounts/accountDefaults"
 import { getSiteName } from "~/services/accounts/siteName"
 import type { SiteStatusInfo } from "~/services/apiAdapters/contracts/accountBootstrap"
 import type {
+  AccountCompletionAdapterResult,
   AccountCompletionHelpers,
   AccountCompletionRuntimeContext,
 } from "~/services/apiAdapters/contracts/accountCompletion"
@@ -15,8 +17,14 @@ import type {
   ApiServiceFetchContext,
   ApiServiceRequest,
 } from "~/services/apiTransport/type"
-import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
+import {
+  createCompatibilityCheckInConfig,
+  getNewAccountAutomaticExecutionDefault,
+} from "~/services/checkin/autoCheckin/compatibilityConfig"
+import { discoverCheckInMethods } from "~/services/checkin/autoCheckin/discovery"
+import type { AutoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers/registry"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
+import { SiteHealthStatus } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
@@ -101,13 +109,14 @@ function trimString(value: unknown): string {
  */
 function createInitialCheckInConfig(input: {
   supported: boolean
-  automaticExecutionEnabled: boolean
   siteType: AccountSiteType
 }) {
   return createCompatibilityCheckInConfig({
     siteType: input.siteType,
     supported: input.supported,
-    automaticExecutionEnabled: input.automaticExecutionEnabled,
+    automaticExecutionEnabled: getNewAccountAutomaticExecutionDefault(
+      input.siteType,
+    ),
     customCheckIn: {
       url: "",
       redeemUrl: "",
@@ -173,6 +182,10 @@ export async function completeAutoDetectedAccount(
   } = request
   const { siteType } = detected
   const autoDetectFetchContext = getAutoDetectFetchContext(detected)
+  const completionContext: AccountCompletionRuntimeContext = {
+    ...(autoDetectFetchContext ? { fetchContext: autoDetectFetchContext } : {}),
+    ...(protectionBypassExecution ? { protectionBypassExecution } : {}),
+  }
   const accountCompletion =
     getSiteTypeCapabilities(siteType).account?.completion
   if (!accountCompletion) {
@@ -188,12 +201,7 @@ export async function completeAutoDetectedAccount(
       requestedAuthType,
       detected,
       autoDetectContext,
-      context: {
-        ...(autoDetectFetchContext
-          ? { fetchContext: autoDetectFetchContext }
-          : {}),
-        ...(protectionBypassExecution ? { protectionBypassExecution } : {}),
-      },
+      context: completionContext,
     },
     createAccountCompletionHelpers({
       url,
@@ -201,10 +209,79 @@ export async function completeAutoDetectedAccount(
     }),
   )
 
+  const completedWithDiscovery = await discoverCompletedCheckIn({
+    url,
+    siteType,
+    completed,
+    request: createAutoDetectApiRequest({
+      baseUrl: url,
+      auth: {
+        authType: completed.authType,
+        userId: completed.userId,
+        accessToken: completed.accessToken,
+      },
+      fetchContext: completionContext.fetchContext,
+      protectionBypassExecution: completionContext.protectionBypassExecution,
+    }),
+  })
+
   return {
-    ...completed,
+    ...completedWithDiscovery,
     siteType,
     ...(autoDetectFetchContext ? { fetchContext: autoDetectFetchContext } : {}),
     autoDetectContext,
   }
+}
+
+/** Runs bounded check-in discovery against the completed account draft. */
+export async function discoverCompletedCheckIn(params: {
+  url: string
+  siteType: AccountSiteType
+  completed: AccountCompletionAdapterResult
+  request?: ApiServiceRequest
+  registry?: AutoCheckinMethodRegistry
+  observedAt?: number
+  perAdapterTimeoutMs?: number
+  deadlineMs?: number
+}): Promise<AccountCompletionAdapterResult> {
+  const account = createPersistedSiteAccount({
+    id: `auto-detect:${params.completed.userId}`,
+    now: Date.now(),
+    account: {
+      site_name: params.completed.siteName,
+      site_url: params.url,
+      site_type: params.siteType,
+      exchange_rate: params.completed.exchangeRate ?? 0,
+      account_info: {
+        id: params.completed.userId,
+        access_token: params.completed.accessToken,
+        username: params.completed.username,
+        quota: 0,
+        today_prompt_tokens: 0,
+        today_completion_tokens: 0,
+        today_quota_consumption: 0,
+        today_requests_count: 0,
+        today_income: 0,
+      },
+      authType: params.completed.authType,
+      checkIn: params.completed.checkIn,
+      health: { status: SiteHealthStatus.Unknown },
+      notes: "",
+      tagIds: [],
+      disabled: false,
+      excludeFromTotalBalance: false,
+      excludeFromTodayIncome: false,
+      last_sync_time: 0,
+    },
+  })
+  const discovery = await discoverCheckInMethods({
+    account,
+    config: params.completed.checkIn,
+    request: params.request,
+    registry: params.registry,
+    observedAt: params.observedAt,
+    perAdapterTimeoutMs: params.perAdapterTimeoutMs,
+    deadlineMs: params.deadlineMs,
+  })
+  return { ...params.completed, checkIn: discovery.config }
 }

@@ -4,7 +4,12 @@
  * Endpoint: POST `/api/user/check_in`.
  */
 
-import { fetchApi } from "~/services/apiTransport/request"
+import {
+  CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES,
+  CHECK_IN_METHOD_STATUS_OUTCOMES,
+  CHECK_IN_METHOD_TODAY_STATUSES,
+} from "~/constants/checkIn"
+import { fetchApi, fetchApiData } from "~/services/apiTransport/request"
 import {
   AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
   isAlreadyCheckedMessage,
@@ -22,10 +27,14 @@ import type {
   AutoCheckinProvider,
   AutoCheckinProviderContext,
 } from "./contracts"
+import { detectWithStatusReadback } from "./detection"
 
 type CheckinResult = AutoCheckinProviderResult
 
 const ENDPOINT = "/api/user/check_in"
+
+// https://github.com/Veloera/Veloera — /api/user/check_in_status is the
+// provider-owned read-only capability/status endpoint.
 
 /**
  * Perform check-in for a Veloera account
@@ -119,7 +128,48 @@ function canCheckIn(account: SiteAccount): boolean {
   return true
 }
 
+const getStatus: NonNullable<AutoCheckinProvider["getStatus"]> = async ({
+  account,
+  request,
+  observedAt,
+  signal,
+}) => {
+  const statusRequest =
+    request ??
+    (account
+      ? {
+          baseUrl: account.site_url,
+          accountId: account.id,
+          cookieAuthSessionCookie: account.cookieAuth?.sessionCookie,
+          auth: {
+            authType: account.authType,
+            userId: account.account_info.id,
+            accessToken: account.account_info.access_token,
+          },
+        }
+      : undefined)
+  if (!statusRequest) return undefined
+  const data = await fetchApiData<{ can_check_in?: boolean }>(statusRequest, {
+    endpoint: "/api/user/check_in_status",
+    ...(signal ? { options: { signal } } : {}),
+  })
+  return typeof data.can_check_in === "boolean"
+    ? {
+        outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
+        today: data.can_check_in
+          ? CHECK_IN_METHOD_TODAY_STATUSES.NotChecked
+          : CHECK_IN_METHOD_TODAY_STATUSES.Checked,
+        evidence: {
+          source: CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Probe,
+          observedAt,
+        },
+      }
+    : undefined
+}
+
 export const veloeraProvider: AutoCheckinProvider = {
   canCheckIn,
+  detect: (context) => detectWithStatusReadback(context, getStatus),
+  getStatus,
   checkIn: checkinVeloera,
 }

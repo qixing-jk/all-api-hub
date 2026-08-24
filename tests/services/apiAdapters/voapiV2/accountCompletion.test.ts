@@ -13,7 +13,10 @@ import { fetchVoApiV2UserInfo } from "~/services/apiService/voapiV2"
 import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
-import { createCheckInConfig } from "../checkInFixtures"
+import {
+  createAccountCompletionCheckInConfigMock,
+  createCheckInConfig,
+} from "../checkInFixtures"
 
 vi.mock("~/services/apiService/voapiV2", () => ({
   fetchVoApiV2UserInfo: vi.fn(),
@@ -52,20 +55,12 @@ const trimString = vi.fn((value: unknown) =>
   typeof value === "string" ? value.trim() : "",
 )
 
-const createInitialCheckInConfig = vi.fn(
-  ({ supported, automaticExecutionEnabled }) => ({
-    ...createCheckInConfig(SITE_TYPES.VO_API_V2, {
-      matched: supported,
-      automaticExecutionEnabled,
-      isCheckedInToday: false,
-    }),
-    customCheckIn: {
-      url: "",
-      redeemUrl: "",
-      openRedeemWithCheckIn: true,
-      isCheckedInToday: false,
-    },
-  }),
+const createInitialCheckInConfig = createAccountCompletionCheckInConfigMock(
+  SITE_TYPES.VO_API_V2,
+  {
+    automaticExecutionEnabled: true,
+    isCheckedInToday: false,
+  },
 )
 
 const helpers = {
@@ -120,7 +115,6 @@ describe("voApiV2AccountCompletion", () => {
     })
     expect(createInitialCheckInConfig).toHaveBeenCalledWith({
       supported: true,
-      automaticExecutionEnabled: true,
     })
     expect(result).toEqual({
       username: "dashboard-owner",

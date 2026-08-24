@@ -101,7 +101,6 @@ export const aihubmixAccountCompletion: AccountCompletionCapability = {
       authType: AuthTypeEnum.AccessToken,
       checkIn: helpers.createInitialCheckInConfig({
         supported: checkSupport ?? false,
-        automaticExecutionEnabled: true,
       }),
     }
   },

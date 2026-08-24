@@ -25,5 +25,8 @@ export const autoCheckinMethodRegistry = createAutoCheckinMethodRegistry(
     id,
     siteTypes,
     provider: PROVIDER_BY_METHOD_ID[id],
+    compatibilityRegistration:
+      AUTO_CHECKIN_METHOD_DEFINITIONS[id].legacy &&
+      AUTO_CHECKIN_METHOD_DEFINITIONS[id].newAccountCompatibility,
   })),
 )

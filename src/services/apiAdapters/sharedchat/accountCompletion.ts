@@ -41,7 +41,6 @@ export const sharedChatAccountCompletion: AccountCompletionCapability = {
       authType: AuthTypeEnum.Cookie,
       checkIn: helpers.createInitialCheckInConfig({
         supported: false,
-        automaticExecutionEnabled: false,
       }),
     }
   },

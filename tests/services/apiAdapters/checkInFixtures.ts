@@ -1,3 +1,5 @@
+import { vi } from "vitest"
+
 import {
   CHECK_IN_METHOD_DETECTION_EVIDENCE_SOURCES,
   CHECK_IN_METHOD_DETECTION_OUTCOMES,
@@ -67,4 +69,29 @@ export function createCheckInConfig(
       ...(hasMethod ? { methodId } : {}),
     },
   }
+}
+
+/** Creates the shared account-completion check-in helper test double. */
+export function createAccountCompletionCheckInConfigMock(
+  siteType: AccountSiteType,
+  options: {
+    automaticExecutionEnabled: boolean
+    isCheckedInToday?: boolean
+  },
+) {
+  return vi.fn(({ supported }: { supported: boolean }) => ({
+    ...createCheckInConfig(siteType, {
+      matched: supported,
+      automaticExecutionEnabled: options.automaticExecutionEnabled,
+      ...(typeof options.isCheckedInToday === "boolean"
+        ? { isCheckedInToday: options.isCheckedInToday }
+        : {}),
+    }),
+    customCheckIn: {
+      url: "",
+      redeemUrl: "",
+      openRedeemWithCheckIn: true,
+      isCheckedInToday: false,
+    },
+  }))
 }

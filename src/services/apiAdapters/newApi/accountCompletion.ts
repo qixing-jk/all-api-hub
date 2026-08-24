@@ -206,7 +206,6 @@ export const createNewApiAccountCompletion = (
       authType: effectiveAuthType,
       checkIn: helpers.createInitialCheckInConfig({
         supported: checkSupport ?? false,
-        automaticExecutionEnabled: true,
       }),
     }
   },

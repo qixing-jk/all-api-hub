@@ -68,7 +68,6 @@ describe("accountSiteProfile", () => {
     expect(profile.auth.defaultAuthType).toBe(AuthTypeEnum.AccessToken)
     expect(profile.auth.defaultAuthHostnames).toEqual([])
     expect(profile.auth.supportsCookieAuth).toBe(true)
-    expect(profile.auth.supportsBuiltInCheckInDetection).toBe(true)
     expect(profile.supplementalAuth.kind).toBe(
       ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS.None,
     )
@@ -97,7 +96,6 @@ describe("accountSiteProfile", () => {
     expect(profile.auth.defaultAuthType).toBe(AuthTypeEnum.Cookie)
     expect(profile.auth.defaultAuthHostnames).toEqual([MODELFLARE_HOSTNAME])
     expect(profile.auth.supportsCookieAuth).toBe(true)
-    expect(profile.auth.supportsBuiltInCheckInDetection).toBe(true)
   })
 
   it("keeps OpenRouter identity as ordinary optional account metadata", () => {
@@ -115,7 +113,6 @@ describe("accountSiteProfile", () => {
     expect(profile.identity.usernameRequired).toBe(false)
     expect(profile.auth.allowedAuthTypes).toEqual([AuthTypeEnum.AccessToken])
     expect(profile.auth.supportsCookieAuth).toBe(false)
-    expect(profile.auth.supportsBuiltInCheckInDetection).toBe(false)
     expect(profile.supplementalAuth.kind).toBe(
       ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS.Sub2ApiRefreshToken,
     )
@@ -152,7 +149,6 @@ describe("accountSiteProfile", () => {
     expect(profile.auth.allowedAuthTypes).toEqual([AuthTypeEnum.AccessToken])
     expect(profile.auth.defaultAuthType).toBe(AuthTypeEnum.AccessToken)
     expect(profile.auth.supportsCookieAuth).toBe(false)
-    expect(profile.auth.supportsBuiltInCheckInDetection).toBe(true)
     expect(profile.modelList.directPricing).toBe(
       ACCOUNT_SITE_MODEL_LIST_DIRECT_PRICING.Unsupported,
     )
@@ -224,7 +220,6 @@ describe("accountSiteProfile", () => {
     )
     expect(profile.auth.allowedAuthTypes).toEqual([AuthTypeEnum.AccessToken])
     expect(profile.auth.supportsCookieAuth).toBe(false)
-    expect(profile.auth.supportsBuiltInCheckInDetection).toBe(false)
     expect(profile.modelList.displayCapabilitiesSource).toBe(
       ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Profile,
     )

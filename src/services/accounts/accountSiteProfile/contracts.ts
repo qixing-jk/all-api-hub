@@ -107,7 +107,6 @@ export type AccountSiteAuthProfile = {
   defaultAuthType: AuthTypeEnum
   defaultAuthHostnames: readonly string[]
   supportsCookieAuth: boolean
-  supportsBuiltInCheckInDetection: boolean
 }
 
 export type AccountSiteAuthSessionProfile = {

@@ -164,6 +164,60 @@ describe("newApiProvider", () => {
     })
   })
 
+  describe("read-only status", () => {
+    it("selects a valid disabled deployment without issuing POST", async () => {
+      vi.mocked(fetchApiData).mockResolvedValueOnce({
+        enabled: false,
+        stats: { checked_in_today: false },
+      } as any)
+
+      await expect(
+        newApiProvider.detect!({ account: mockAccount, observedAt: 200 }),
+      ).resolves.toEqual({
+        detection: {
+          outcome: "matched",
+          evidence: { source: "probe", observedAt: 200 },
+        },
+        status: {
+          outcome: "known",
+          availability: "disabled",
+          today: "not_checked",
+          evidence: { source: "probe", observedAt: 200 },
+        },
+      })
+      expect(fetchApi).not.toHaveBeenCalled()
+    })
+
+    it("treats a malformed status envelope as unknown", async () => {
+      vi.mocked(fetchApiData).mockResolvedValueOnce({
+        enabled: true,
+        stats: {},
+      } as any)
+
+      await expect(
+        newApiProvider.detect!({ account: mockAccount, observedAt: 201 }),
+      ).resolves.toEqual({
+        outcome: "unknown",
+        reason: "invalid_response",
+        attemptedAt: 201,
+      })
+    })
+
+    it("classifies an authenticated status read failure without hiding it", async () => {
+      vi.mocked(fetchApiData).mockRejectedValueOnce(
+        new ApiError("authentication required", 401),
+      )
+
+      await expect(
+        newApiProvider.detect!({ account: mockAccount, observedAt: 202 }),
+      ).resolves.toEqual({
+        outcome: "unknown",
+        reason: "authentication_required",
+        attemptedAt: 202,
+      })
+    })
+  })
+
   describe("checkIn", () => {
     it("preserves the popup source through native page check-in and status polling", async () => {
       vi.mocked(fetchApi).mockResolvedValueOnce({

@@ -1142,6 +1142,36 @@ describe("product analytics privacy filtering", () => {
     })
   })
 
+  it("keeps only controlled check-in discovery and selection insights", () => {
+    expect(
+      sanitizeProductAnalyticsEvent(
+        PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+        {
+          feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+          action_id: PRODUCT_ANALYTICS_ACTION_IDS.SetCheckInMethodSelection,
+          result: PRODUCT_ANALYTICS_RESULTS.Success,
+          check_in_discovery_trigger: "redetect",
+          check_in_discovery_decision: "ambiguous",
+          check_in_candidate_count: 2,
+          check_in_selection_source: "manual",
+          check_in_recovery_action: "manual_override",
+          method_id: "private-method",
+          url: "https://private.example.invalid",
+          account_id: "private-account",
+        },
+      ),
+    ).toEqual({
+      feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+      action_id: PRODUCT_ANALYTICS_ACTION_IDS.SetCheckInMethodSelection,
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
+      check_in_discovery_trigger: "redetect",
+      check_in_discovery_decision: "ambiguous",
+      check_in_candidate_count: 2,
+      check_in_selection_source: "manual",
+      check_in_recovery_action: "manual_override",
+    })
+  })
+
   it("keeps action completion diagnostics and rejects raw failure reason strings", () => {
     const sanitized = sanitizeProductAnalyticsEvent(
       PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,

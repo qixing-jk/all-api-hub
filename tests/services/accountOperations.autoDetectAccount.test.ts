@@ -153,6 +153,19 @@ const browserFetchContext = () => ({
   cookieStoreId: "firefox-container-2",
 })
 
+const unknownNewApiCheckInDiscovery = () => ({
+  lastFullDiscoveryAt: expect.any(Number),
+  methods: {
+    "new-api:daily-checkin": {
+      detection: {
+        outcome: "unknown",
+        reason: "network",
+        attemptedAt: expect.any(Number),
+      },
+    },
+  },
+})
+
 const serializeLoggerCalls = () =>
   JSON.stringify(
     [loggerMock, otherLoggerMock].flatMap((logger) =>
@@ -581,7 +594,7 @@ describe("accountOperations autoDetectAccount", () => {
       exchangeRate: 8.8,
       checkIn: expect.objectContaining({
         automaticExecutionEnabled: true,
-        methodKnowledge: { methods: {} },
+        methodKnowledge: unknownNewApiCheckInDiscovery(),
       }),
     })
     expect(mockSendRuntimeMessage).toHaveBeenCalledWith({
@@ -1012,7 +1025,7 @@ describe("accountOperations autoDetectAccount", () => {
       exchangeRate: 6.9,
       checkIn: expect.objectContaining({
         automaticExecutionEnabled: true,
-        methodKnowledge: { methods: {} },
+        methodKnowledge: unknownNewApiCheckInDiscovery(),
       }),
     })
     expect(mockFetchSiteStatus).toHaveBeenCalledWith({
@@ -1690,7 +1703,7 @@ describe("accountOperations autoDetectAccount", () => {
       accessToken: "checkin-fallback-token",
       checkIn: expect.objectContaining({
         automaticExecutionEnabled: true,
-        methodKnowledge: { methods: {} },
+        methodKnowledge: unknownNewApiCheckInDiscovery(),
       }),
     })
   })

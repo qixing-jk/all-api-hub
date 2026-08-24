@@ -81,6 +81,19 @@ describe("autoCheckinMethodRegistry", () => {
     expect(getLegacyAutoCheckinMethodIds(SITE_TYPES.ONE_API)).toEqual([])
   })
 
+  it("exposes only safe read-only status operations", () => {
+    expect(anyrouterProvider.getStatus).toBeUndefined()
+    expect(anyrouterProvider.detect).toBeUndefined()
+    expect(newApiProvider.getStatus).toBeTypeOf("function")
+    expect(newApiProvider.detect).toBeTypeOf("function")
+    expect(veloeraProvider.getStatus).toBeTypeOf("function")
+    expect(veloeraProvider.detect).toBeTypeOf("function")
+    expect(wongGongyiProvider.getStatus).toBeTypeOf("function")
+    expect(wongGongyiProvider.detect).toBeTypeOf("function")
+    expect(voApiV2Provider.getStatus).toBeTypeOf("function")
+    expect(voApiV2Provider.detect).toBeTypeOf("function")
+  })
+
   it("keeps newly introduced candidates outside legacy and new-account compatibility", () => {
     const metadata = createAutoCheckinMethodMetadata([
       {

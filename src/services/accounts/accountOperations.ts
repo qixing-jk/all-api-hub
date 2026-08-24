@@ -78,6 +78,7 @@ import {
   type SiteAccount,
   type Sub2ApiAuthConfig,
 } from "~/types"
+import type { CheckInMethodSelection } from "~/types/checkIn"
 import type {
   AccountAutoDetectResponse,
   AccountSaveResponse,
@@ -572,6 +573,8 @@ interface ValidateAndSaveAccountOptions {
 
 interface ValidateAndUpdateAccountOptions {
   deferDataRefresh?: boolean
+  selectionChanged?: boolean
+  discoveryBaseSelection?: CheckInMethodSelection
 }
 
 /**
@@ -1249,6 +1252,8 @@ export async function validateAndUpdateAccount(
       checkInConfig,
       {
         userTimestampMode: AccountUpdateUserTimestampMode.Touch,
+        selectionChanged: options.selectionChanged,
+        discoveryBaseSelection: options.discoveryBaseSelection,
       },
     )
 
@@ -1371,6 +1376,8 @@ export async function validateAndUpdateAccount(
       checkInConfig,
       {
         userTimestampMode: AccountUpdateUserTimestampMode.Touch,
+        selectionChanged: options.selectionChanged,
+        discoveryBaseSelection: options.discoveryBaseSelection,
         refreshed: freshAccountData.checkIn,
       },
     )
@@ -1451,6 +1458,8 @@ export async function validateAndUpdateAccount(
       checkInConfig,
       {
         userTimestampMode: AccountUpdateUserTimestampMode.Touch,
+        selectionChanged: options.selectionChanged,
+        discoveryBaseSelection: options.discoveryBaseSelection,
       },
     )
 

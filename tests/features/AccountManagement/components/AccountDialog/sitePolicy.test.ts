@@ -60,7 +60,6 @@ describe("Account Dialog site policy", () => {
       requireUsername: false,
       requireUserId: false,
       allowCookieAuthSession: false,
-      allowBuiltInCheckInDetection: false,
     })
     expect(policy).not.toHaveProperty("credentialKind")
   })
@@ -183,7 +182,6 @@ describe("Account Dialog site policy", () => {
       SITE_TYPES.SUB2API,
     )
     expect(sub2apiPolicy.allowCookieAuthSession).toBe(false)
-    expect(sub2apiPolicy.allowBuiltInCheckInDetection).toBe(false)
     expect(sub2apiPolicy.allowSub2ApiRefreshTokenState).toBe(true)
 
     const aihubmixPolicy = getIsolatedSitePolicy(SITE_TYPES.AIHUBMIX)
@@ -191,7 +189,6 @@ describe("Account Dialog site policy", () => {
       SITE_TYPES.AIHUBMIX,
     )
     expect(aihubmixPolicy.allowCookieAuthSession).toBe(false)
-    expect(aihubmixPolicy.allowBuiltInCheckInDetection).toBe(false)
     expect(aihubmixPolicy.allowSub2ApiRefreshTokenState).toBe(false)
     expect(aihubmixPolicy.deferSuccessForOneTimeKeyPostSaveFlow).toBe(true)
     expect(aihubmixPolicy.requireUsername).toBe(true)

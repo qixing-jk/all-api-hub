@@ -8,10 +8,13 @@ import { SITE_TYPES } from "~/constants/siteType"
 import {
   AutoDetectCompletionError,
   completeAutoDetectedAccount,
+  discoverCompletedCheckIn,
 } from "~/services/accounts/autoDetectCompletion/completion"
 import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import type { ApiServiceFetchContext } from "~/services/apiTransport/type"
 import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
+import { inspectCheckInMethods } from "~/services/checkin/autoCheckin/domain"
+import { createAutoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers/registry"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
@@ -20,16 +23,23 @@ const {
   getSiteTypeCapabilitiesMock,
   accountCompletionMock,
   fetchSiteStatusMock,
+  fetchCheckInStatusMock,
 } = vi.hoisted(() => ({
   getSiteTypeCapabilitiesMock: vi.fn(),
   accountCompletionMock: {
     complete: vi.fn(),
   },
   fetchSiteStatusMock: vi.fn(),
+  fetchCheckInStatusMock: vi.fn(),
 }))
 
 vi.mock("~/services/apiAdapters/registry", () => ({
   getSiteTypeCapabilities: getSiteTypeCapabilitiesMock,
+}))
+
+vi.mock("~/services/apiTransport/request", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/services/apiTransport/request")>()),
+  fetchApiData: fetchCheckInStatusMock,
 }))
 
 const currentTabFetchContext = (origin: string) => ({
@@ -76,6 +86,10 @@ describe("auto-detect completion", () => {
       },
     })
     accountCompletionMock.complete.mockResolvedValue(completedAccountData)
+    fetchCheckInStatusMock.mockResolvedValue({
+      enabled: true,
+      stats: { checked_in_today: false },
+    })
   })
 
   it("routes completion through the adapter with valid current-tab context", async () => {
@@ -155,7 +169,6 @@ describe("auto-detect completion", () => {
     expect(
       helpers.createInitialCheckInConfig({
         supported: true,
-        automaticExecutionEnabled: true,
       }),
     ).toEqual(completedAccountData.checkIn)
     expect(
@@ -175,14 +188,57 @@ describe("auto-detect completion", () => {
     ).resolves.toBe("Status Portal")
     await expect(helpers.fetchSiteName(null)).resolves.toBe("Example")
     expect(fetchSiteStatusMock).not.toHaveBeenCalled()
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       ...completedAccountData,
+      checkIn: {
+        methodKnowledge: {
+          methods: {
+            "new-api:daily-checkin": {
+              detection: {
+                outcome: "matched",
+                evidence: {
+                  source: "probe",
+                  observedAt: expect.any(Number),
+                },
+              },
+              status: {
+                outcome: "known",
+                today: "not_checked",
+                evidence: {
+                  source: "probe",
+                  observedAt: expect.any(Number),
+                },
+              },
+            },
+          },
+          lastFullDiscoveryAt: expect.any(Number),
+        },
+        selection: {
+          mode: "automatic",
+          methodId: "new-api:daily-checkin",
+        },
+      },
       siteType: SITE_TYPES.NEW_API,
       fetchContext,
       autoDetectContext,
     })
     expect(result).not.toHaveProperty("mode")
     expect(result).not.toHaveProperty("status")
+    expect(fetchCheckInStatusMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        baseUrl: "https://status.example.com",
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          userId: "7",
+          accessToken: "service-token",
+        },
+        fetchContext,
+        protectionBypassExecution,
+      }),
+      expect.objectContaining({
+        endpoint: expect.stringMatching(/^\/api\/user\/checkin\?month=/),
+      }),
+    )
   })
 
   it("drops malformed current-tab context before adapter completion", async () => {
@@ -239,6 +295,117 @@ describe("auto-detect completion", () => {
       expect.any(Object),
     )
     expect(result.fetchContext).toEqual(fetchContext)
+  })
+
+  it.each([
+    {
+      name: "ambiguous",
+      outcomes: ["matched", "matched"] as const,
+      expectedDecision: "ambiguous",
+    },
+    {
+      name: "unsupported",
+      outcomes: ["unsupported", "unsupported"] as const,
+      expectedDecision: "unsupported",
+    },
+    {
+      name: "incomplete",
+      outcomes: ["matched", "unknown"] as const,
+      expectedDecision: "unknown",
+    },
+  ])(
+    "keeps the completion draft unselected when discovery is $name",
+    async ({ outcomes, expectedDecision }) => {
+      const methodIds = [
+        "new-api:daily-checkin",
+        "veloera:daily-checkin",
+      ] as const
+      const registry = createAutoCheckinMethodRegistry(
+        methodIds.map((id, index) => ({
+          id,
+          siteTypes: [SITE_TYPES.NEW_API],
+          provider: {
+            canCheckIn: () => true,
+            detect: async () =>
+              outcomes[index] === "matched"
+                ? {
+                    outcome: "matched" as const,
+                    evidence: { source: "probe" as const, observedAt: 50 },
+                  }
+                : outcomes[index] === "unsupported"
+                  ? {
+                      outcome: "unsupported" as const,
+                      evidence: { source: "probe" as const, observedAt: 50 },
+                    }
+                  : {
+                      outcome: "unknown" as const,
+                      reason: "network" as const,
+                      attemptedAt: 50,
+                    },
+            checkIn: async () => ({ status: "success" as const }),
+          },
+        })),
+      )
+      const completed = await discoverCompletedCheckIn({
+        url: "https://completion.example.invalid",
+        siteType: SITE_TYPES.NEW_API,
+        completed: {
+          ...completedAccountData,
+          checkIn: createCompatibilityCheckInConfig({
+            siteType: SITE_TYPES.NEW_API,
+            supported: false,
+            automaticExecutionEnabled: true,
+          }),
+        },
+        registry,
+        observedAt: 50,
+      })
+
+      expect(completed.checkIn.selection).toEqual({ mode: "automatic" })
+      expect(
+        inspectCheckInMethods({
+          config: completed.checkIn,
+          candidateMethodIds: [...methodIds],
+        }).decision.outcome,
+      ).toBe(expectedDecision)
+    },
+  )
+
+  it("records a bounded completion timeout without blocking the draft", async () => {
+    const registry = createAutoCheckinMethodRegistry([
+      {
+        id: "new-api:daily-checkin",
+        siteTypes: [SITE_TYPES.NEW_API],
+        provider: {
+          canCheckIn: () => true,
+          detect: async () => new Promise<never>(() => undefined),
+          checkIn: async () => ({ status: "success" }),
+        },
+      },
+    ])
+
+    const completed = await discoverCompletedCheckIn({
+      url: "https://timeout.example.invalid",
+      siteType: SITE_TYPES.NEW_API,
+      completed: {
+        ...completedAccountData,
+        checkIn: createCompatibilityCheckInConfig({
+          siteType: SITE_TYPES.NEW_API,
+          supported: false,
+          automaticExecutionEnabled: true,
+        }),
+      },
+      registry,
+      observedAt: 60,
+      perAdapterTimeoutMs: 1,
+      deadlineMs: 5,
+    })
+
+    expect(
+      completed.checkIn.methodKnowledge.methods["new-api:daily-checkin"]
+        ?.detection,
+    ).toEqual({ outcome: "unknown", reason: "timeout", attemptedAt: 60 })
+    expect(completed.checkIn.selection).toEqual({ mode: "automatic" })
   })
 
   it("rejects when the adapter does not implement account completion", async () => {

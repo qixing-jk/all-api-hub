@@ -274,6 +274,10 @@ describe("useAccountDialog analytics", () => {
           fetchContextKind: AUTO_DETECT_FETCH_CONTEXT_KINDS.CurrentTab,
           incognitoContextUsed: true,
           currentTabMatched: true,
+          checkInDiscoveryTrigger: "initial_detection",
+          checkInDiscoveryDecision: "unknown",
+          checkInCandidateCount: 1,
+          checkInSelectionSource: "none",
         },
       },
     )
@@ -287,6 +291,10 @@ describe("useAccountDialog analytics", () => {
       fetchContextKind: AUTO_DETECT_FETCH_CONTEXT_KINDS.CurrentTab,
       incognitoContextUsed: true,
       currentTabMatched: true,
+      checkInDiscoveryTrigger: "initial_detection",
+      checkInDiscoveryDecision: "unknown",
+      checkInCandidateCount: 1,
+      checkInSelectionSource: "none",
     })
     expectNoSensitiveAnalyticsFields()
   })
@@ -771,6 +779,10 @@ describe("useAccountDialog analytics", () => {
           fallbackUsed: false,
           requestedAuthMode: AuthTypeEnum.AccessToken,
           siteType: SITE_TYPES.NEW_API,
+          checkInDiscoveryTrigger: "initial_detection",
+          checkInDiscoveryDecision: "unknown",
+          checkInCandidateCount: 1,
+          checkInSelectionSource: "none",
         },
       },
     )

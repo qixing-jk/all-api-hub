@@ -420,7 +420,6 @@ describe("account site definition registry", () => {
       defaultAuthType: AuthTypeEnum.AccessToken,
       defaultAuthHostnames: [],
       supportsCookieAuth: false,
-      supportsBuiltInCheckInDetection: false,
     })
     expect(profile.identity).toMatchObject({
       usernameRequired: false,
@@ -614,7 +613,6 @@ describe("account site definition registry", () => {
         defaultAuthType: AuthTypeEnum.AccessToken,
         defaultAuthHostnames: [],
         supportsCookieAuth: false,
-        supportsBuiltInCheckInDetection: false,
       },
       authSession: {
         kind: ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS.Sub2ApiRefreshToken,
@@ -647,7 +645,6 @@ describe("account site definition registry", () => {
         defaultAuthType: AuthTypeEnum.AccessToken,
         defaultAuthHostnames: [],
         supportsCookieAuth: false,
-        supportsBuiltInCheckInDetection: false,
       },
       createdToken: {
         secretHandling:

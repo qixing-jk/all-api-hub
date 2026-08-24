@@ -256,9 +256,11 @@ export interface AutoCheckinMethodRegistration {
   /** Static candidate filter only; never proof that a deployment supports the method. */
   readonly siteTypes: readonly AccountSiteType[]
   readonly provider: AutoCheckinProvider
+  /** Existing-provider bridge used until a strict read-only probe is ready. */
+  readonly compatibilityRegistration?: boolean
 }
 
-interface AutoCheckinMethodRegistry {
+export interface AutoCheckinMethodRegistry {
   readonly registrations: readonly AutoCheckinMethodRegistration[]
   getCandidates(
     siteType: AccountSiteType,

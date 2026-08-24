@@ -11,7 +11,10 @@ import { sub2ApiAccountCompletion } from "~/services/apiAdapters/sub2api/account
 import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
-import { createCheckInConfig } from "../checkInFixtures"
+import {
+  createAccountCompletionCheckInConfigMock,
+  createCheckInConfig,
+} from "../checkInFixtures"
 
 const {
   mockExtractDefaultExchangeRate,
@@ -71,19 +74,11 @@ const trimString = vi.fn((value: unknown) =>
   typeof value === "string" ? value.trim() : "",
 )
 
-const createInitialCheckInConfig = vi.fn(
-  ({ supported, automaticExecutionEnabled }) => ({
-    ...createCheckInConfig(SITE_TYPES.SUB2API, {
-      matched: supported,
-      automaticExecutionEnabled,
-    }),
-    customCheckIn: {
-      url: "",
-      redeemUrl: "",
-      openRedeemWithCheckIn: true,
-      isCheckedInToday: false,
-    },
-  }),
+const createInitialCheckInConfig = createAccountCompletionCheckInConfigMock(
+  SITE_TYPES.SUB2API,
+  {
+    automaticExecutionEnabled: false,
+  },
 )
 
 const handleCheckInSupportFetchFailure = vi.fn(() => false as const)
@@ -150,7 +145,6 @@ describe("sub2ApiAccountCompletion", () => {
     })
     expect(createInitialCheckInConfig).toHaveBeenCalledWith({
       supported: false,
-      automaticExecutionEnabled: false,
     })
     expect(result).toEqual({
       username: "",

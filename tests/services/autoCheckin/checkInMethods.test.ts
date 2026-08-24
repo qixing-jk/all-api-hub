@@ -7,6 +7,10 @@ import {
 import { SITE_TYPES } from "~/constants/siteType"
 import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
 import {
+  discoverCheckInMethods,
+  setCheckInSelection,
+} from "~/services/checkin/autoCheckin/discovery"
+import {
   getSelectedCheckInStatus,
   isAutomaticCheckInConfiguredForAccount,
   resolveSelectedCheckInMethod,
@@ -16,7 +20,10 @@ import {
   markSelectedCheckInExecuted,
 } from "~/services/checkin/autoCheckin/methods"
 import { autoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers"
-import { getLegacyAutoCheckinMethodIds } from "~/services/checkin/autoCheckin/providers/registry"
+import {
+  createAutoCheckinMethodRegistry,
+  getLegacyAutoCheckinMethodIds,
+} from "~/services/checkin/autoCheckin/providers/registry"
 import { refreshSelectedStatus } from "~/services/checkin/autoCheckin/refresh"
 import {
   mergeCompatibilityCheckInStatus,
@@ -219,6 +226,294 @@ describe("check-in methods compatibility activation", () => {
       today: "not_checked",
       evidence: { source: "probe", observedAt: 654 },
     })
+  })
+
+  it("discovers a unique method and reuses its status observation", async () => {
+    const getStatus = vi.fn()
+    const registry = createAutoCheckinMethodRegistry([
+      {
+        id: "new-api:daily-checkin",
+        siteTypes: [SITE_TYPES.NEW_API],
+        provider: {
+          canCheckIn: () => true,
+          detect: async () => ({
+            detection: {
+              outcome: "matched",
+              evidence: { source: "probe", observedAt: 100 },
+            },
+            status: {
+              outcome: "known",
+              availability: "disabled",
+              today: "not_checked",
+              evidence: { source: "probe", observedAt: 100 },
+            },
+          }),
+          getStatus,
+          checkIn: async () => ({ status: "success" }),
+        },
+      },
+      {
+        id: "veloera:daily-checkin",
+        siteTypes: [SITE_TYPES.NEW_API],
+        provider: {
+          canCheckIn: () => true,
+          detect: async () => ({
+            outcome: "unsupported",
+            evidence: { source: "probe", observedAt: 100 },
+          }),
+          checkIn: async () => ({ status: "success" }),
+        },
+      },
+    ])
+    const account = buildSiteAccount({ site_type: SITE_TYPES.NEW_API })
+    const config = createCompatibilityCheckInConfig({
+      siteType: SITE_TYPES.NEW_API,
+      supported: false,
+      automaticExecutionEnabled: false,
+    })
+
+    const result = await discoverCheckInMethods({
+      account,
+      config,
+      registry,
+      observedAt: 100,
+    })
+
+    expect(result.decision).toEqual({
+      outcome: "resolved",
+      methodId: "new-api:daily-checkin",
+    })
+    expect(result.config.selection).toEqual({
+      mode: "automatic",
+      methodId: "new-api:daily-checkin",
+    })
+    expect(
+      result.config.methodKnowledge.methods["new-api:daily-checkin"]?.status,
+    ).toMatchObject({ availability: "disabled", today: "not_checked" })
+    expect(getStatus).not.toHaveBeenCalled()
+  })
+
+  it("keeps manual selection sticky across an incomplete discovery", async () => {
+    const abortSpy = vi.fn()
+    const registry = createAutoCheckinMethodRegistry([
+      {
+        id: "new-api:daily-checkin",
+        siteTypes: [SITE_TYPES.NEW_API],
+        provider: {
+          canCheckIn: () => true,
+          detect: async () => ({
+            outcome: "matched",
+            evidence: { source: "probe", observedAt: 200 },
+          }),
+          checkIn: async () => ({ status: "success" }),
+        },
+      },
+      {
+        id: "veloera:daily-checkin",
+        siteTypes: [SITE_TYPES.NEW_API],
+        provider: {
+          canCheckIn: () => true,
+          detect: async ({ signal }) =>
+            new Promise<never>(() =>
+              signal?.addEventListener("abort", abortSpy),
+            ),
+          checkIn: async () => ({ status: "success" }),
+        },
+      },
+    ])
+    const account = buildSiteAccount({ site_type: SITE_TYPES.NEW_API })
+    const automatic = createCompatibilityCheckInConfig({
+      siteType: SITE_TYPES.NEW_API,
+      supported: true,
+      automaticExecutionEnabled: true,
+    })
+    const config = setCheckInSelection({
+      config: automatic,
+      siteType: SITE_TYPES.NEW_API,
+      mode: "manual",
+      methodId: "new-api:daily-checkin",
+      registry,
+    })
+
+    const result = await discoverCheckInMethods({
+      account,
+      config,
+      registry,
+      observedAt: 200,
+      perAdapterTimeoutMs: 1,
+      deadlineMs: 20,
+    })
+
+    expect(result.decision.outcome).toBe("unknown")
+    expect(result.timedOutMethodIds).toEqual(["veloera:daily-checkin"])
+    expect(abortSpy).toHaveBeenCalledOnce()
+    expect(result.config.selection).toEqual({
+      mode: "manual",
+      methodId: "new-api:daily-checkin",
+    })
+  })
+
+  it.each([
+    {
+      name: "multiple matches",
+      outcomes: ["matched", "matched"] as const,
+      decision: "ambiguous",
+    },
+    {
+      name: "a match plus an unknown",
+      outcomes: ["matched", "unknown"] as const,
+      decision: "unknown",
+    },
+    {
+      name: "all authoritative negatives",
+      outcomes: ["unsupported", "unsupported"] as const,
+      decision: "unsupported",
+    },
+  ])(
+    "does not create a selection for $name",
+    async ({ outcomes, decision }) => {
+      const methodIds = [
+        "new-api:daily-checkin",
+        "veloera:daily-checkin",
+      ] as const
+      const registry = createAutoCheckinMethodRegistry(
+        methodIds.map((id, index) => ({
+          id,
+          siteTypes: [SITE_TYPES.NEW_API],
+          provider: {
+            canCheckIn: () => true,
+            detect: async () =>
+              outcomes[index] === "matched"
+                ? {
+                    outcome: "matched" as const,
+                    evidence: { source: "probe" as const, observedAt: 300 },
+                  }
+                : outcomes[index] === "unsupported"
+                  ? {
+                      outcome: "unsupported" as const,
+                      evidence: { source: "probe" as const, observedAt: 300 },
+                    }
+                  : {
+                      outcome: "unknown" as const,
+                      reason: "network" as const,
+                      attemptedAt: 300,
+                    },
+            checkIn: async () => ({ status: "success" as const }),
+          },
+        })),
+      )
+
+      const result = await discoverCheckInMethods({
+        account: buildSiteAccount({ site_type: SITE_TYPES.NEW_API }),
+        config: createCompatibilityCheckInConfig({
+          siteType: SITE_TYPES.NEW_API,
+          supported: false,
+          automaticExecutionEnabled: true,
+        }),
+        registry,
+        observedAt: 300,
+      })
+
+      expect(result.decision.outcome).toBe(decision)
+      expect(result.config.selection).toEqual({ mode: "automatic" })
+    },
+  )
+
+  it("turns an adapter failure into unknown without blocking discovery", async () => {
+    const registry = createAutoCheckinMethodRegistry([
+      {
+        id: "new-api:daily-checkin",
+        siteTypes: [SITE_TYPES.NEW_API],
+        provider: {
+          canCheckIn: () => true,
+          detect: async () => {
+            throw new Error("offline")
+          },
+          checkIn: async () => ({ status: "success" }),
+        },
+      },
+    ])
+
+    const result = await discoverCheckInMethods({
+      account: buildSiteAccount({ site_type: SITE_TYPES.NEW_API }),
+      config: createCompatibilityCheckInConfig({
+        siteType: SITE_TYPES.NEW_API,
+        supported: false,
+        automaticExecutionEnabled: true,
+      }),
+      registry,
+      observedAt: 400,
+    })
+
+    expect(result.detections["new-api:daily-checkin"]).toEqual({
+      outcome: "unknown",
+      reason: "network",
+      attemptedAt: 400,
+    })
+    expect(result.config.selection).toEqual({ mode: "automatic" })
+  })
+
+  it("leaves a matched method without status readback unchanged on refresh", async () => {
+    const account = buildSiteAccount({
+      site_type: SITE_TYPES.ANYROUTER,
+      checkIn: createCompatibilityCheckInConfig({
+        siteType: SITE_TYPES.ANYROUTER,
+        supported: true,
+        automaticExecutionEnabled: false,
+      }),
+    })
+    const original = structuredClone(account.checkIn)
+
+    const updated = await refreshSelectedStatus({
+      config: account.checkIn,
+      siteType: account.site_type,
+      account,
+    })
+
+    expect(updated).toEqual(original)
+    expect(updated.selection).toEqual(account.checkIn.selection)
+  })
+
+  it("isolates a selected 404 without enumerating or replacing the selection", async () => {
+    const account = buildSiteAccount({
+      site_type: SITE_TYPES.NEW_API,
+      checkIn: createCompatibilityCheckInConfig({
+        siteType: SITE_TYPES.NEW_API,
+        supported: true,
+        automaticExecutionEnabled: true,
+      }),
+    })
+    const registration = autoCheckinMethodRegistry.resolveById(
+      "new-api:daily-checkin",
+    )!
+    const originalGetStatus = registration.provider.getStatus
+    registration.provider.getStatus = vi
+      .fn()
+      .mockRejectedValue({ statusCode: 404 })
+    const enumerate = vi.spyOn(autoCheckinMethodRegistry, "getCandidates")
+
+    try {
+      const updated = await refreshSelectedStatus({
+        config: account.checkIn,
+        siteType: account.site_type,
+        account,
+        observedAt: 500,
+      })
+
+      expect(enumerate).not.toHaveBeenCalled()
+      expect(updated.selection).toEqual(account.checkIn.selection)
+      expect(updated.methodKnowledge.lastFullDiscoveryAt).toBe(
+        account.checkIn.methodKnowledge.lastFullDiscoveryAt,
+      )
+      expect(
+        updated.methodKnowledge.methods["new-api:daily-checkin"]?.detection,
+      ).toEqual({
+        outcome: "unsupported",
+        evidence: { source: "probe", observedAt: 500 },
+      })
+    } finally {
+      registration.provider.getStatus = originalGetStatus
+    }
   })
 
   it("merges user-owned draft fields without overwriting newer system facts", () => {

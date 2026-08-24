@@ -14,7 +14,10 @@ import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
-import { createCheckInConfig } from "../checkInFixtures"
+import {
+  createAccountCompletionCheckInConfigMock,
+  createCheckInConfig,
+} from "../checkInFixtures"
 
 const {
   mockCreateNewApiAccountBootstrap,
@@ -73,20 +76,12 @@ const trimString = vi.fn((value: unknown) =>
   typeof value === "string" ? value.trim() : "",
 )
 
-const createInitialCheckInConfig = vi.fn(
-  ({ supported, automaticExecutionEnabled }) => ({
-    ...createCheckInConfig(SITE_TYPES.NEW_API, {
-      matched: supported,
-      automaticExecutionEnabled,
-      isCheckedInToday: false,
-    }),
-    customCheckIn: {
-      url: "",
-      redeemUrl: "",
-      openRedeemWithCheckIn: true,
-      isCheckedInToday: false,
-    },
-  }),
+const createInitialCheckInConfig = createAccountCompletionCheckInConfigMock(
+  SITE_TYPES.NEW_API,
+  {
+    automaticExecutionEnabled: true,
+    isCheckedInToday: false,
+  },
 )
 
 const handleCheckInSupportFetchFailure = vi.fn(() => false as const)
@@ -177,7 +172,6 @@ describe("newApiAccountCompletion", () => {
     })
     expect(createInitialCheckInConfig).toHaveBeenCalledWith({
       supported: true,
-      automaticExecutionEnabled: true,
     })
     expect(result).toEqual({
       username: "token-user",
@@ -755,7 +749,6 @@ describe("newApiAccountCompletion", () => {
     expect(handleCheckInSupportFetchFailure).toHaveBeenCalledWith(supportError)
     expect(createInitialCheckInConfig).toHaveBeenCalledWith({
       supported: false,
-      automaticExecutionEnabled: true,
     })
     expect(result.checkIn.selection).not.toHaveProperty("methodId")
   })

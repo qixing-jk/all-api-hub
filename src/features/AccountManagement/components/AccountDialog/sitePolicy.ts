@@ -19,7 +19,6 @@ export interface AccountDialogSitePolicy {
   forceAccessTokenAuth: boolean
   allowCookieAuthSession: boolean
   allowCookieAutoImport: boolean
-  allowBuiltInCheckInDetection: boolean
   allowSub2ApiRefreshTokenState: boolean
   openSub2ApiTokenDialogPostSave: boolean
   deferSuccessForOneTimeKeyPostSaveFlow: boolean
@@ -94,8 +93,6 @@ export function getAccountDialogSitePolicy(
     requireUsername: productProfile.identity.usernameRequired,
     allowCookieAuthSession: productProfile.auth.supportsCookieAuth,
     allowCookieAutoImport: productProfile.auth.supportsCookieAuth,
-    allowBuiltInCheckInDetection:
-      productProfile.auth.supportsBuiltInCheckInDetection,
     allowSub2ApiRefreshTokenState:
       productProfile.supplementalAuth.kind ===
       ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS.Sub2ApiRefreshToken,

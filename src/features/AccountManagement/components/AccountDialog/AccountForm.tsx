@@ -5,7 +5,6 @@ import {
   Download,
   Globe2,
   KeyRound,
-  Ticket,
   User,
 } from "lucide-react"
 import { useTranslation } from "react-i18next"
@@ -23,8 +22,8 @@ import {
   Switch,
   Textarea,
 } from "~/components/ui"
-import { CHECK_IN_SELECTION_STATUSES } from "~/constants/checkIn"
 import { ACCOUNT_SITE_TYPES, SITE_TYPES } from "~/constants/siteType"
+import { AccountCheckInSection } from "~/features/AccountManagement/components/AccountDialog/AccountCheckInSection"
 import { AccountFormSection } from "~/features/AccountManagement/components/AccountDialog/AccountFormSection"
 import { ACCOUNT_FORM_MOBILE_DEFAULT_OPEN } from "~/features/AccountManagement/components/AccountDialog/accountFormSections"
 import {
@@ -39,20 +38,17 @@ import {
   getAccountManagementSiteTypeOptionTestId,
 } from "~/features/AccountManagement/testIds"
 import { isValidExchangeRate } from "~/services/accounts/accountOperations"
-import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/inspection"
 import { AuthTypeEnum, type CheckInConfig, type Tag } from "~/types"
 import { formatLocaleDateTime } from "~/utils/core/formatters"
 
 const ACCOUNT_FORM_SITE_TYPE_OPTIONS = ACCOUNT_SITE_TYPES.filter(
   (siteType) => siteType !== SITE_TYPES.UNKNOWN,
 )
-
 type AccountFormPresentationSitePolicy = Pick<
   AccountDialogSitePolicy,
   | "siteTypeLabel"
   | "forceAccessTokenAuth"
   | "allowCookieAuthSession"
-  | "allowBuiltInCheckInDetection"
   | "allowSub2ApiRefreshTokenState"
   | "requireUsername"
   | "requireUserId"
@@ -95,6 +91,9 @@ interface AccountFormProps {
   onSiteTypeChange: (value: string) => void
   onAuthTypeChange: (value: AuthTypeEnum) => void
   onCheckInChange: (value: CheckInConfig) => void
+  onCheckInSelectionChange: (value: CheckInConfig) => void
+  onRedetectCheckInMethods: () => void
+  isRedetectingCheckInMethods: boolean
 }
 
 /**
@@ -137,6 +136,9 @@ export default function AccountForm({
   onSiteTypeChange,
   onAuthTypeChange,
   onCheckInChange,
+  onCheckInSelectionChange,
+  onRedetectCheckInMethods,
+  isRedetectingCheckInMethods,
 }: AccountFormProps) {
   const { t } = useTranslation(["accountDialog", "common"])
   const {
@@ -158,17 +160,8 @@ export default function AccountForm({
     checkIn,
     siteType,
   } = draft
-  const checkInInspection = inspectAccountCheckIn({
-    config: checkIn,
-    siteType,
-  })
   const isAuthTypeLocked = sitePolicy.forceAccessTokenAuth
   const canUseCookieAuth = sitePolicy.allowCookieAuthSession
-  const canUseBuiltInCheckInDetection =
-    sitePolicy.allowBuiltInCheckInDetection &&
-    checkInInspection.selectionState.status ===
-      CHECK_IN_SELECTION_STATUSES.Selected
-  const showBuiltInAutoCheckIn = canUseBuiltInCheckInDetection
   const canUseSub2ApiRefreshToken = sitePolicy.allowSub2ApiRefreshTokenState
   const isOpenRouterManagementKey = siteType === SITE_TYPES.OPENROUTER
 
@@ -527,131 +520,14 @@ export default function AccountForm({
         </FormField>
       </AccountFormSection>
 
-      <AccountFormSection
-        title={t("sections.checkInConfig.title")}
-        defaultOpen={ACCOUNT_FORM_MOBILE_DEFAULT_OPEN["check-in"]}
-        testId={ACCOUNT_MANAGEMENT_TEST_IDS.accountFormSectionCheckIn}
-      >
-        <div className="space-y-1">
-          <p className="dark:text-dark-text-secondary text-sm font-medium text-gray-700">
-            {t("form.checkInStatus")}
-          </p>
-          {canUseBuiltInCheckInDetection ? (
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              {t("form.checkInStatusDesc")}
-            </p>
-          ) : (
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              {t("form.checkInStatusUnsupported", {
-                siteType,
-              })}
-            </p>
-          )}
-        </div>
-
-        {showBuiltInAutoCheckIn && (
-          <div className="flex w-full items-center justify-between gap-4">
-            <div className="flex-1">
-              <label
-                htmlFor="auto-checkin-enabled"
-                className="dark:text-dark-text-secondary text-sm font-medium text-gray-700"
-              >
-                {t("form.autoCheckInEnabled")}
-              </label>
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                {t("form.autoCheckInEnabledDesc")}
-              </p>
-            </div>
-            <Switch
-              checked={checkIn.automaticExecutionEnabled}
-              onChange={(automaticExecutionEnabled) =>
-                onCheckInChange({ ...checkIn, automaticExecutionEnabled })
-              }
-              id="auto-checkin-enabled"
-              className={`${
-                checkIn.automaticExecutionEnabled
-                  ? "bg-green-600"
-                  : "bg-gray-200"
-              } focus:ring-green-500`}
-            />
-          </div>
-        )}
-
-        <FormField
-          label={t("form.customCheckInUrl")}
-          description={t("form.customCheckInDesc")}
-        >
-          <Input
-            type="url"
-            id="custom-checkin-url"
-            value={checkIn.customCheckIn?.url ?? ""}
-            onChange={(e) =>
-              onCheckInChange({
-                ...checkIn,
-                customCheckIn: {
-                  ...(checkIn.customCheckIn ?? {
-                    openRedeemWithCheckIn: true,
-                  }),
-                  url: e.target.value,
-                },
-              })
-            }
-            placeholder="https://cdk.example.com/"
-            leftIcon={<CalendarDays className="h-5 w-5" />}
-          />
-        </FormField>
-
-        {checkIn.customCheckIn?.url && (
-          <div className="flex w-full items-center justify-between gap-4">
-            <label
-              htmlFor="open-redeem-with-checkin"
-              className="dark:text-dark-text-secondary text-sm font-medium text-gray-700"
-            >
-              {t("form.openRedeemWithCheckIn")}
-            </label>
-            <Switch
-              checked={checkIn.customCheckIn?.openRedeemWithCheckIn ?? true}
-              onChange={(openRedeemWithCheckIn) =>
-                onCheckInChange({
-                  ...checkIn,
-                  customCheckIn: {
-                    ...(checkIn.customCheckIn ?? { url: "" }),
-                    openRedeemWithCheckIn,
-                  },
-                })
-              }
-              id="open-redeem-with-checkin"
-              className={`${
-                checkIn.customCheckIn?.openRedeemWithCheckIn ?? true
-                  ? "bg-green-600"
-                  : "bg-gray-200"
-              } focus:ring-green-500`}
-            />
-          </div>
-        )}
-
-        <FormField
-          label={t("form.customRedeemUrl")}
-          description={t("form.customRedeemUrlDesc")}
-        >
-          <Input
-            type="text"
-            id="custom-redeem-url"
-            value={checkIn.customCheckIn?.redeemUrl ?? ""}
-            onChange={(e) =>
-              onCheckInChange({
-                ...checkIn,
-                customCheckIn: {
-                  ...(checkIn.customCheckIn ?? { url: "" }),
-                  redeemUrl: e.target.value,
-                },
-              })
-            }
-            placeholder="https://example.com/console/topup"
-            leftIcon={<Ticket className="h-5 w-5" />}
-          />
-        </FormField>
-      </AccountFormSection>
+      <AccountCheckInSection
+        checkIn={checkIn}
+        siteType={siteType}
+        onCheckInChange={onCheckInChange}
+        onCheckInSelectionChange={onCheckInSelectionChange}
+        onRedetectCheckInMethods={onRedetectCheckInMethods}
+        isRedetectingCheckInMethods={isRedetectingCheckInMethods}
+      />
 
       <AccountFormSection
         title={t("sections.balanceAndStats.title")}

@@ -12,7 +12,10 @@ import type { AccountCompletionHelpers } from "~/services/apiAdapters/contracts/
 import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
-import { createCheckInConfig } from "../checkInFixtures"
+import {
+  createAccountCompletionCheckInConfigMock,
+  createCheckInConfig,
+} from "../checkInFixtures"
 
 const {
   mockExtractDefaultExchangeRate,
@@ -72,19 +75,11 @@ const trimString = vi.fn((value: unknown) =>
   typeof value === "string" ? value.trim() : "",
 )
 
-const createInitialCheckInConfig = vi.fn(
-  ({ supported, automaticExecutionEnabled }) => ({
-    ...createCheckInConfig(SITE_TYPES.AIHUBMIX, {
-      matched: supported,
-      automaticExecutionEnabled,
-    }),
-    customCheckIn: {
-      url: "",
-      redeemUrl: "",
-      openRedeemWithCheckIn: true,
-      isCheckedInToday: false,
-    },
-  }),
+const createInitialCheckInConfig = createAccountCompletionCheckInConfigMock(
+  SITE_TYPES.AIHUBMIX,
+  {
+    automaticExecutionEnabled: false,
+  },
 )
 
 const handleCheckInSupportFetchFailure = vi.fn(() => false as const)
@@ -141,7 +136,6 @@ describe("aihubmixAccountCompletion", () => {
     expect(mockFetchSupportCheckIn).not.toHaveBeenCalled()
     expect(createInitialCheckInConfig).toHaveBeenCalledWith({
       supported: false,
-      automaticExecutionEnabled: true,
     })
     expect(result).toEqual({
       username: "aihubmix-user",
@@ -151,7 +145,10 @@ describe("aihubmixAccountCompletion", () => {
       exchangeRate: UI_CONSTANTS.EXCHANGE_RATE.DEFAULT,
       authType: AuthTypeEnum.AccessToken,
       checkIn: {
-        ...createCheckInConfig(SITE_TYPES.AIHUBMIX, { matched: false }),
+        ...createCheckInConfig(SITE_TYPES.AIHUBMIX, {
+          matched: false,
+          automaticExecutionEnabled: false,
+        }),
         customCheckIn: {
           url: "",
           redeemUrl: "",
@@ -212,7 +209,7 @@ describe("aihubmixAccountCompletion", () => {
       exchangeRate: UI_CONSTANTS.EXCHANGE_RATE.DEFAULT,
       authType: AuthTypeEnum.AccessToken,
       checkIn: expect.objectContaining({
-        automaticExecutionEnabled: true,
+        automaticExecutionEnabled: false,
       }),
     })
   })
@@ -344,7 +341,6 @@ describe("aihubmixAccountCompletion", () => {
     expect(handleCheckInSupportFetchFailure).toHaveBeenCalledWith(supportError)
     expect(createInitialCheckInConfig).toHaveBeenCalledWith({
       supported: false,
-      automaticExecutionEnabled: true,
     })
     expect(result.checkIn.selection).not.toHaveProperty("methodId")
   })

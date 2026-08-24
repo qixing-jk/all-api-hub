@@ -270,7 +270,6 @@ const ACCOUNT_SITE_DEFINITIONS = [
         defaultAuthType: ACCOUNT_SITE_AUTH_TYPES.AccessToken,
         defaultAuthHostnames: [],
         supportsCookieAuth: false,
-        supportsBuiltInCheckInDetection: false,
       },
       authSession: {
         kind: ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS.Sub2ApiRefreshToken,
@@ -345,7 +344,6 @@ const ACCOUNT_SITE_DEFINITIONS = [
         defaultAuthType: ACCOUNT_SITE_AUTH_TYPES.AccessToken,
         defaultAuthHostnames: [],
         supportsCookieAuth: false,
-        supportsBuiltInCheckInDetection: false,
       },
       createdToken: {
         secretHandling:
@@ -400,7 +398,6 @@ const ACCOUNT_SITE_DEFINITIONS = [
         defaultAuthType: ACCOUNT_SITE_AUTH_TYPES.Cookie,
         defaultAuthHostnames: SHAREDCHAT_HOSTNAMES,
         supportsCookieAuth: true,
-        supportsBuiltInCheckInDetection: false,
       },
       identity: {
         usernameRequired: false,
@@ -445,7 +442,6 @@ const ACCOUNT_SITE_DEFINITIONS = [
         defaultAuthType: ACCOUNT_SITE_AUTH_TYPES.AccessToken,
         defaultAuthHostnames: [],
         supportsCookieAuth: false,
-        supportsBuiltInCheckInDetection: true,
       },
       identity: {
         usernameRequired: false,
@@ -483,7 +479,6 @@ const ACCOUNT_SITE_DEFINITIONS = [
         defaultAuthType: ACCOUNT_SITE_AUTH_TYPES.AccessToken,
         defaultAuthHostnames: [],
         supportsCookieAuth: false,
-        supportsBuiltInCheckInDetection: false,
       },
       identity: {
         usernameRequired: false,

@@ -101,6 +101,47 @@ describe("wongGongyiProvider", () => {
     })
   })
 
+  it("uses a strict GET status envelope and never probes with POST", async () => {
+    const { fetchApi } = await import("~/services/apiTransport/request")
+    vi.mocked(fetchApi)
+      .mockResolvedValueOnce({
+        success: true,
+        message: "",
+        data: { enabled: false, checked_in: false },
+      })
+      .mockResolvedValueOnce({ success: true, message: "", data: {} })
+      .mockResolvedValueOnce({
+        success: false,
+        message: "backend rejected the request",
+        data: { enabled: true, checked_in: false },
+      })
+
+    await expect(
+      wongGongyiProvider.detect!({ account: mockAccount, observedAt: 220 }),
+    ).resolves.toMatchObject({
+      detection: { outcome: "matched" },
+      status: { availability: "disabled", today: "not_checked" },
+    })
+    await expect(
+      wongGongyiProvider.detect!({ account: mockAccount, observedAt: 221 }),
+    ).resolves.toEqual({
+      outcome: "unknown",
+      reason: "invalid_response",
+      attemptedAt: 221,
+    })
+    await expect(
+      wongGongyiProvider.detect!({ account: mockAccount, observedAt: 222 }),
+    ).resolves.toEqual({
+      outcome: "unknown",
+      reason: "invalid_response",
+      attemptedAt: 222,
+    })
+    expect(vi.mocked(fetchApi).mock.calls[0]?.[1]).toMatchObject({
+      endpoint: "/api/user/checkin",
+      options: { method: "GET" },
+    })
+  })
+
   describe("checkIn", () => {
     it("propagates the popup source when POST indicates checked_in true", async () => {
       const { fetchApi } = await import("~/services/apiTransport/request")

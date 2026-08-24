@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { fetchApi, fetchApiData } from "~/services/apiTransport/request"
 import { veloeraProvider } from "~/services/checkin/autoCheckin/providers/veloera"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum, SiteHealthStatus, type SiteAccount } from "~/types"
@@ -10,6 +11,7 @@ import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
 vi.mock("~/services/apiTransport/request", () => ({
   fetchApi: vi.fn(),
+  fetchApiData: vi.fn(),
 }))
 
 const mockAccount: SiteAccount = {
@@ -92,6 +94,30 @@ describe("veloeraProvider", () => {
 
       expect(veloeraProvider.canCheckIn(account)).toBe(true)
     })
+  })
+
+  it("uses only the safe GET reader and rejects malformed status", async () => {
+    vi.mocked(fetchApiData)
+      .mockResolvedValueOnce({ can_check_in: true })
+      .mockResolvedValueOnce({})
+
+    await expect(
+      veloeraProvider.detect!({ account: mockAccount, observedAt: 210 }),
+    ).resolves.toMatchObject({
+      detection: { outcome: "matched" },
+      status: { outcome: "known", today: "not_checked" },
+    })
+    await expect(
+      veloeraProvider.detect!({ account: mockAccount, observedAt: 211 }),
+    ).resolves.toEqual({
+      outcome: "unknown",
+      reason: "invalid_response",
+      attemptedAt: 211,
+    })
+    expect(vi.mocked(fetchApiData).mock.calls[0]?.[1]).toMatchObject({
+      endpoint: "/api/user/check_in_status",
+    })
+    expect(fetchApi).not.toHaveBeenCalled()
   })
 
   describe("checkIn", () => {

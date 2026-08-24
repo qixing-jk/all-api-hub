@@ -1,4 +1,3 @@
-import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { SITE_TYPES } from "~/constants/siteType"
 import type {
   AccountData,
@@ -518,19 +517,6 @@ export const fetchSupportCheckIn = async (
   _request: ApiServiceRequest,
 ): Promise<boolean | undefined> => true
 
-const fetchVoApiV2CheckedInToday = async (
-  request: ApiServiceRequest,
-): Promise<boolean | undefined> => {
-  try {
-    const stats = await fetchVoApiV2CheckInStats(request)
-    return typeof stats.todaySigned === "boolean"
-      ? stats.todaySigned
-      : undefined
-  } catch {
-    return undefined
-  }
-}
-
 /**
  * Maps VoAPI v2 balances and current-day statistics into account dashboard data.
  */
@@ -557,10 +543,7 @@ export async function fetchVoApiV2AccountData(
   const checkInPromise = refreshSelectedStatus({
     config: resolvedCheckIn,
     siteType: request.siteType ?? SITE_TYPES.VO_API_V2,
-    readStatus: async (methodId) =>
-      methodId === AUTO_CHECKIN_METHOD_IDS.VoApiV2DailyCheckIn
-        ? await fetchVoApiV2CheckedInToday(request)
-        : undefined,
+    request,
   })
 
   const [userInfo, statsResult, checkIn] = await Promise.all([

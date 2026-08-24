@@ -97,6 +97,53 @@ describe("voApiV2Provider", () => {
     ).toBe(voApiV2Provider as AutoCheckinProvider)
   })
 
+  it("accepts only a boolean GET status and treats malformed data as unknown", async () => {
+    server.use(
+      http.get("https://example.invalid/api/check_in/stats", () =>
+        HttpResponse.json({ code: 0, data: { todaySigned: false } }),
+      ),
+    )
+    await expect(
+      voApiV2Provider.detect!({ account, observedAt: 230 }),
+    ).resolves.toMatchObject({
+      detection: { outcome: "matched" },
+      status: { outcome: "known", today: "not_checked" },
+    })
+    expect(mockSubmitVoApiV2CheckIn).not.toHaveBeenCalled()
+
+    server.use(
+      http.get("https://example.invalid/api/check_in/stats", () =>
+        HttpResponse.json({ code: 0, data: {} }),
+      ),
+    )
+    await expect(
+      voApiV2Provider.detect!({ account, observedAt: 231 }),
+    ).resolves.toEqual({
+      outcome: "unknown",
+      reason: "invalid_response",
+      attemptedAt: 231,
+    })
+  })
+
+  it("propagates the discovery abort signal to the stats request", async () => {
+    server.use(
+      http.get("https://example.invalid/api/check_in/stats", () =>
+        HttpResponse.json({ code: 0, data: { todaySigned: false } }),
+      ),
+    )
+    const controller = new AbortController()
+
+    await voApiV2Provider.detect!({
+      account,
+      observedAt: 232,
+      signal: controller.signal,
+    })
+
+    expect(mockFetchVoApiV2CheckInStats).toHaveBeenCalledWith(
+      expect.objectContaining({ abortSignal: controller.signal }),
+    )
+  })
+
   it("propagates the popup source through VoAPI v2 check-in and stats requests", async () => {
     server.use(
       http.post("https://example.invalid/api/check_in", ({ request }) => {

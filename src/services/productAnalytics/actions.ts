@@ -12,6 +12,10 @@ import {
   type ProductAnalyticsAccountAutoDetectFetchContextKind,
   type ProductAnalyticsAccountAutoDetectStrategy,
   type ProductAnalyticsApiType,
+  type ProductAnalyticsCheckInDiscoveryDecision,
+  type ProductAnalyticsCheckInDiscoveryTrigger,
+  type ProductAnalyticsCheckInRecoveryAction,
+  type ProductAnalyticsCheckInSelectionSource,
   type ProductAnalyticsEditorMode,
   type ProductAnalyticsErrorCategory,
   type ProductAnalyticsFailureReason,
@@ -72,6 +76,11 @@ export type ProductAnalyticsActionInsights = {
   requestedAuthMode?: ProductAnalyticsRequestedAuthMode
   siteType?: ProductAnalyticsSiteType
   fetchContextKind?: ProductAnalyticsAccountAutoDetectFetchContextKind
+  checkInDiscoveryTrigger?: ProductAnalyticsCheckInDiscoveryTrigger
+  checkInDiscoveryDecision?: ProductAnalyticsCheckInDiscoveryDecision
+  checkInCandidateCount?: number
+  checkInSelectionSource?: ProductAnalyticsCheckInSelectionSource
+  checkInRecoveryAction?: ProductAnalyticsCheckInRecoveryAction
   cacheHit?: boolean
   cacheUsed?: boolean
   fallbackAvailable?: boolean
@@ -354,6 +363,21 @@ function mapProductAnalyticsActionInsights(
     ...(insights.siteType ? { site_type: insights.siteType } : {}),
     ...(insights.fetchContextKind
       ? { fetch_context_kind: insights.fetchContextKind }
+      : {}),
+    ...(insights.checkInDiscoveryTrigger
+      ? { check_in_discovery_trigger: insights.checkInDiscoveryTrigger }
+      : {}),
+    ...(insights.checkInDiscoveryDecision
+      ? { check_in_discovery_decision: insights.checkInDiscoveryDecision }
+      : {}),
+    ...(typeof insights.checkInCandidateCount === "number"
+      ? { check_in_candidate_count: insights.checkInCandidateCount }
+      : {}),
+    ...(insights.checkInSelectionSource
+      ? { check_in_selection_source: insights.checkInSelectionSource }
+      : {}),
+    ...(insights.checkInRecoveryAction
+      ? { check_in_recovery_action: insights.checkInRecoveryAction }
       : {}),
     ...(typeof insights.cacheHit === "boolean"
       ? { cache_hit: insights.cacheHit }

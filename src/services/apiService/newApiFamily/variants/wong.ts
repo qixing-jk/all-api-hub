@@ -1,4 +1,3 @@
-import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { SITE_TYPES } from "~/constants/siteType"
 import type {
   AccountData,
@@ -151,13 +150,7 @@ export async function fetchAccountData(
   const checkInPromise = refreshSelectedStatus({
     config: checkIn,
     siteType: request.siteType ?? SITE_TYPES.WONG_GONGYI,
-    readStatus: async (methodId) => {
-      if (methodId !== AUTO_CHECKIN_METHOD_IDS.WongGongyiDailyCheckIn) {
-        return undefined
-      }
-      const canCheckIn = await fetchCheckInStatus(request)
-      return typeof canCheckIn === "boolean" ? !canCheckIn : undefined
-    },
+    request,
   })
 
   const [quota, todayUsage, todayIncome, refreshedCheckIn] = await Promise.all([

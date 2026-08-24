@@ -18,6 +18,13 @@ import type {
   CheckInMethodId,
 } from "~/types/checkIn"
 
+export {
+  discover,
+  discoverCheckInMethods,
+  setCheckInSelection,
+  setSelection,
+} from "~/services/checkin/autoCheckin/discovery"
+
 /** Marks the selected method checked using execution evidence. */
 export function markSelectedCheckInExecuted(input: {
   config: CheckInConfig

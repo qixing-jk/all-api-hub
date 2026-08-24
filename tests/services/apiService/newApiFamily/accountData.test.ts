@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   defaultAccountDataImplementation,
@@ -808,6 +809,7 @@ describe("newApiFamily accountData", () => {
 
       if (String(endpoint).startsWith("/api/user/checkin?")) {
         return Promise.resolve({
+          enabled: true,
           stats: {
             checked_in_today: false,
           },
@@ -829,11 +831,55 @@ describe("newApiFamily accountData", () => {
     ).toEqual({
       outcome: "known",
       today: "not_checked",
+      availability: "enabled",
       evidence: {
         source: "probe",
         observedAt: Date.parse("2026-03-28T12:00:00.000Z"),
       },
     })
     vi.useRealTimers()
+  })
+
+  it("fetchAccountData marks only the selected method unsupported on 404", async () => {
+    mockFetchApiData.mockImplementation((_request, { endpoint }) => {
+      if (endpoint === "/api/user/self") {
+        return Promise.resolve({ quota: 99 })
+      }
+
+      if (String(endpoint).startsWith("/api/log/self/stat?")) {
+        return Promise.resolve({ quota: 0 })
+      }
+
+      if (String(endpoint).startsWith("/api/log/self?")) {
+        return Promise.resolve({ items: [], total: 0 })
+      }
+
+      if (String(endpoint).startsWith("/api/user/checkin?")) {
+        return Promise.reject(new ApiError("unsupported", 404))
+      }
+
+      return Promise.reject(new Error(`Unexpected endpoint: ${endpoint}`))
+    })
+
+    const result = await fetchAccountData({
+      ...baseRequest,
+      checkIn: createCheckInConfig(SITE_TYPES.NEW_API),
+    })
+    const methodId = AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn
+
+    expect(result.checkIn?.methodKnowledge.methods[methodId]).toMatchObject({
+      detection: {
+        outcome: "unsupported",
+      },
+    })
+    expect(result.checkIn?.selection).toEqual({
+      mode: "automatic",
+      methodId,
+    })
+    expect(
+      mockFetchApiData.mock.calls.filter(([, options]) =>
+        String(options.endpoint).startsWith("/api/user/checkin?"),
+      ),
+    ).toHaveLength(1)
   })
 })
