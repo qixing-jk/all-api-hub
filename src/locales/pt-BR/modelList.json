@@ -259,7 +259,6 @@
     "description": "Este catálogo foi carregado por uma alternativa baseada na chave da conta e, portanto, permite apenas descobrir e verificar modelos. A opção Atualizar dados tentará novamente o acesso direto pela conta.",
     "title": "Catálogo alternativo pela chave da conta"
   },
-  "groupRatio": "Multiplicador do grupo:",
   "groupRatioTooltip": "Multiplicador do grupo {{group}}: {{ratio}}x",
   "groupRatioUnavailable": "Multiplicador do grupo indisponível",
   "groupSelectionHint": "Deixe em branco para comparar todos os grupos; a ordenação por preço usa o melhor preço entre os grupos selecionados",
@@ -348,7 +347,6 @@
     },
     "selectionHint": "Quando vários recursos são selecionados, os modelos devem corresponder a todos eles."
   },
-  "modelRatio": "Multiplicador do modelo:",
   "noMatchingModels": "Nenhum modelo correspondente encontrado",
   "noSourcesDescription": "Adicione uma conta de site ou uma credencial de API antes de consultar a lista de modelos.",
   "noSourcesTitle": "Ainda não há fontes de modelos",
@@ -435,7 +433,6 @@
   "showing_one": "Exibindo {{count}} modelo",
   "showing_many": "Exibindo {{count}} modelos",
   "showing_other": "Exibindo {{count}} modelos",
-  "showRatio": "Mostrar multiplicador",
   "siteSupportedGroups": "Grupos compatíveis com o site",
   "sortBy": "Ordenar por",
   "sortOptions": {

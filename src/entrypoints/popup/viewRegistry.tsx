@@ -9,6 +9,7 @@ import {
 import { useTranslation } from "react-i18next"
 
 import AccountList from "~/features/AccountManagement/components/AccountList"
+import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import type { ApiCredentialProfilesPopupViewHandle } from "~/features/ApiCredentialProfiles/components/ApiCredentialProfilesPopupView"
 import { useBookmarkDialogContext } from "~/features/SiteBookmarks/hooks/BookmarkDialogStateContext"
 import { useAddAccountHandler } from "~/hooks/useAddAccountHandler"
@@ -121,6 +122,7 @@ export function usePopupViewRegistry(): Record<PopupViewType, PopupViewConfig> {
         featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
         actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenCreateAccountDialog,
       },
+      primaryActionTestId: ACCOUNT_MANAGEMENT_TEST_IDS.addAccountButton,
       content: <AccountList />,
     },
     bookmarks: {

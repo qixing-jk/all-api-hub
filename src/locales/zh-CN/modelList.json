@@ -242,7 +242,6 @@
     "description": "当前模型目录通过账号密钥回退加载，仅支持模型发现与验证。点击刷新数据会重新尝试账号接口。",
     "title": "账号密钥回退目录"
   },
-  "groupRatio": "分组倍率：",
   "groupRatioTooltip": "{{group}} 分组倍率: {{ratio}}x",
   "groupRatioUnavailable": "分组倍率不可用",
   "groupSelectionHint": "留空表示所有分组；价格排序会在已选分组范围内自动取最优价",
@@ -329,7 +328,6 @@
     },
     "selectionHint": "选择多个能力时，模型需要同时满足所有条件。"
   },
-  "modelRatio": "模型倍率：",
   "noMatchingModels": "没有找到匹配的模型",
   "noSourcesDescription": "请先添加站点账号或 API 凭据，然后查看模型列表。",
   "noSourcesTitle": "暂无可用数据源",
@@ -414,7 +412,6 @@
   "selectSource": "选择数据源",
   "selectSourceToContinue": "请先在上方选择一个数据源，然后查看模型列表。",
   "showing": "显示 {{count}} 个模型",
-  "showRatio": "显示倍率",
   "siteSupportedGroups": "站点支持的分组",
   "sortBy": "排序方式",
   "sortOptions": {

@@ -251,7 +251,6 @@
     "description": "This catalog is currently loaded through an account-key fallback, so it only supports model discovery and verification. Refresh Data will retry the direct account route.",
     "title": "Account-key fallback catalog"
   },
-  "groupRatio": "Group ratio:",
   "groupRatioTooltip": "Group {{group}} ratio: {{ratio}}x",
   "groupRatioUnavailable": "Group multiplier unavailable",
   "groupSelectionHint": "Leave this empty to compare across all groups; price sorting uses the best price within the selected group set",
@@ -339,7 +338,6 @@
     },
     "selectionHint": "When multiple capabilities are selected, models must match all selected capabilities."
   },
-  "modelRatio": "Model ratio:",
   "noMatchingModels": "No matching models found",
   "noSourcesDescription": "Add a site account or API credential before viewing the model list.",
   "noSourcesTitle": "No model sources yet",
@@ -425,7 +423,6 @@
   "selectSourceToContinue": "Select a source above before viewing the model list.",
   "showing_one": "Showing {{count}} model",
   "showing_other": "Showing {{count}} models",
-  "showRatio": "Show Ratio",
   "siteSupportedGroups": "Site-supported groups",
   "sortBy": "Sort By",
   "sortOptions": {

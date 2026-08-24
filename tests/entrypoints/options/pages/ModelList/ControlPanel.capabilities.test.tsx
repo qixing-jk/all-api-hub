@@ -102,8 +102,6 @@ describe("ControlPanel profile capabilities", () => {
           singleSourceGroupRatios={{}}
           showRealPrice={false}
           setShowRealPrice={vi.fn()}
-          showRatioColumn={false}
-          setShowRatioColumn={vi.fn()}
           showEndpointTypes={true}
           setShowEndpointTypes={vi.fn()}
           totalModels={2}
@@ -234,8 +232,6 @@ describe("ControlPanel profile capabilities", () => {
         singleSourceGroupRatios={{}}
         showRealPrice={false}
         setShowRealPrice={vi.fn()}
-        showRatioColumn={false}
-        setShowRatioColumn={vi.fn()}
         showEndpointTypes={true}
         setShowEndpointTypes={vi.fn()}
         totalModels={2}
@@ -308,8 +304,6 @@ describe("ControlPanel profile capabilities", () => {
         singleSourceGroupRatios={{ default: 1, vip: 2 }}
         showRealPrice={false}
         setShowRealPrice={vi.fn()}
-        showRatioColumn={false}
-        setShowRatioColumn={vi.fn()}
         showEndpointTypes={true}
         setShowEndpointTypes={vi.fn()}
         totalModels={2}
@@ -354,7 +348,6 @@ describe("ControlPanel profile capabilities", () => {
         }
         sourceCapabilities={{
           supportsPricing: false,
-          supportsRatioDisplay: false,
           supportsGroupFiltering: false,
           supportsAccountSummary: false,
           supportsTokenCompatibility: false,
@@ -374,8 +367,6 @@ describe("ControlPanel profile capabilities", () => {
         singleSourceGroupRatios={{ default: 1 }}
         showRealPrice={false}
         setShowRealPrice={vi.fn()}
-        showRatioColumn={false}
-        setShowRatioColumn={vi.fn()}
         showEndpointTypes={true}
         setShowEndpointTypes={vi.fn()}
         totalModels={1}
@@ -403,7 +394,7 @@ describe("ControlPanel profile capabilities", () => {
     ).not.toBeInTheDocument()
   })
 
-  it("keeps pricing controls but hides the ratio toggle when ratio display is unsupported", async () => {
+  it("keeps pricing controls when group filtering is unsupported", async () => {
     render(
       <ControlPanel
         selectedSource={
@@ -411,7 +402,6 @@ describe("ControlPanel profile capabilities", () => {
         }
         sourceCapabilities={{
           supportsPricing: true,
-          supportsRatioDisplay: false,
           supportsGroupFiltering: false,
           supportsAccountSummary: false,
           supportsTokenCompatibility: false,
@@ -431,8 +421,6 @@ describe("ControlPanel profile capabilities", () => {
         singleSourceGroupRatios={{}}
         showRealPrice={false}
         setShowRealPrice={vi.fn()}
-        showRatioColumn={false}
-        setShowRatioColumn={vi.fn()}
         showEndpointTypes={true}
         setShowEndpointTypes={vi.fn()}
         totalModels={1}
@@ -451,7 +439,6 @@ describe("ControlPanel profile capabilities", () => {
     const setSelectedBillingMode = vi.fn()
     const setSelectedGroups = vi.fn()
     const setShowRealPrice = vi.fn()
-    const setShowRatioColumn = vi.fn()
     const setShowEndpointTypes = vi.fn()
 
     render(
@@ -461,7 +448,6 @@ describe("ControlPanel profile capabilities", () => {
           {
             supportsGroupFiltering: true,
             supportsPricing: true,
-            supportsRatioDisplay: true,
           } as any
         }
         searchTerm="gpt"
@@ -476,8 +462,6 @@ describe("ControlPanel profile capabilities", () => {
         singleSourceGroupRatios={{ vip: 2 }}
         showRealPrice={false}
         setShowRealPrice={setShowRealPrice}
-        showRatioColumn={true}
-        setShowRatioColumn={setShowRatioColumn}
         showEndpointTypes={true}
         setShowEndpointTypes={setShowEndpointTypes}
         totalModels={5}
@@ -519,9 +503,6 @@ describe("ControlPanel profile capabilities", () => {
       screen.getByRole("switch", { name: "modelList:realAmount" }),
     )
     expect(setShowRealPrice).toHaveBeenCalledWith(true)
-
-    fireEvent.click(screen.getByRole("switch", { name: "modelList:showRatio" }))
-    expect(setShowRatioColumn).toHaveBeenCalledWith(false)
 
     fireEvent.click(
       screen.getByRole("switch", { name: "modelList:endpointTypes" }),
@@ -575,7 +556,6 @@ describe("ControlPanel profile capabilities", () => {
           {
             supportsGroupFiltering: false,
             supportsPricing: false,
-            supportsRatioDisplay: false,
           } as any
         }
         searchTerm=""
@@ -590,8 +570,6 @@ describe("ControlPanel profile capabilities", () => {
         singleSourceGroupRatios={{}}
         showRealPrice={false}
         setShowRealPrice={vi.fn()}
-        showRatioColumn={false}
-        setShowRatioColumn={vi.fn()}
         showEndpointTypes={true}
         setShowEndpointTypes={vi.fn()}
         totalModels={0}
@@ -622,7 +600,6 @@ describe("ControlPanel profile capabilities", () => {
           {
             supportsGroupFiltering: false,
             supportsPricing: false,
-            supportsRatioDisplay: false,
           } as any
         }
         searchTerm=""
@@ -637,8 +614,6 @@ describe("ControlPanel profile capabilities", () => {
         singleSourceGroupRatios={{}}
         showRealPrice={false}
         setShowRealPrice={vi.fn()}
-        showRatioColumn={false}
-        setShowRatioColumn={vi.fn()}
         showEndpointTypes={true}
         setShowEndpointTypes={vi.fn()}
         totalModels={1}
@@ -672,7 +647,6 @@ describe("ControlPanel profile capabilities", () => {
           {
             supportsGroupFiltering: false,
             supportsPricing: false,
-            supportsRatioDisplay: false,
           } as any
         }
         searchTerm=""
@@ -687,8 +661,6 @@ describe("ControlPanel profile capabilities", () => {
         singleSourceGroupRatios={{}}
         showRealPrice={false}
         setShowRealPrice={vi.fn()}
-        showRatioColumn={false}
-        setShowRatioColumn={vi.fn()}
         showEndpointTypes={true}
         setShowEndpointTypes={vi.fn()}
         totalModels={1}
@@ -716,7 +688,6 @@ describe("ControlPanel profile capabilities", () => {
           {
             supportsGroupFiltering: false,
             supportsPricing: true,
-            supportsRatioDisplay: true,
           } as any
         }
         searchTerm=""
@@ -731,8 +702,6 @@ describe("ControlPanel profile capabilities", () => {
         singleSourceGroupRatios={{}}
         showRealPrice={false}
         setShowRealPrice={vi.fn()}
-        showRatioColumn={false}
-        setShowRatioColumn={vi.fn()}
         showEndpointTypes={true}
         setShowEndpointTypes={vi.fn()}
         totalModels={2}
@@ -760,7 +729,6 @@ describe("ControlPanel profile capabilities", () => {
     const setSelectedBillingMode = vi.fn()
     const setSelectedGroups = vi.fn()
     const setShowRealPrice = vi.fn()
-    const setShowRatioColumn = vi.fn()
     const setShowEndpointTypes = vi.fn()
 
     render(
@@ -770,7 +738,6 @@ describe("ControlPanel profile capabilities", () => {
           {
             supportsGroupFiltering: true,
             supportsPricing: true,
-            supportsRatioDisplay: true,
           } as any
         }
         searchTerm="private-search"
@@ -785,8 +752,6 @@ describe("ControlPanel profile capabilities", () => {
         singleSourceGroupRatios={{ "private-group": 2 }}
         showRealPrice={false}
         setShowRealPrice={setShowRealPrice}
-        showRatioColumn={true}
-        setShowRatioColumn={setShowRatioColumn}
         showEndpointTypes={true}
         setShowEndpointTypes={setShowEndpointTypes}
         totalModels={5}
@@ -841,7 +806,6 @@ describe("ControlPanel profile capabilities", () => {
           {
             supportsGroupFiltering: true,
             supportsPricing: true,
-            supportsRatioDisplay: false,
           } as any
         }
         searchTerm=""
@@ -856,8 +820,6 @@ describe("ControlPanel profile capabilities", () => {
         singleSourceGroupRatios={{ vip: 2 }}
         showRealPrice={false}
         setShowRealPrice={vi.fn()}
-        showRatioColumn={false}
-        setShowRatioColumn={vi.fn()}
         showEndpointTypes={true}
         setShowEndpointTypes={vi.fn()}
         totalModels={3}
@@ -915,7 +877,6 @@ describe("ControlPanel profile capabilities", () => {
           {
             supportsGroupFiltering: false,
             supportsPricing: true,
-            supportsRatioDisplay: false,
           } as any
         }
         searchTerm="private-search"
@@ -930,8 +891,6 @@ describe("ControlPanel profile capabilities", () => {
         singleSourceGroupRatios={{}}
         showRealPrice={false}
         setShowRealPrice={vi.fn()}
-        showRatioColumn={false}
-        setShowRatioColumn={vi.fn()}
         showEndpointTypes={true}
         setShowEndpointTypes={vi.fn()}
         totalModels={10}

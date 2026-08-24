@@ -1,8 +1,3 @@
-import type { Locale } from "date-fns"
-import { de, enUS, es, ja, ptBR, vi, zhCN, zhTW } from "date-fns/locale"
-
-import { GERMAN_LANG } from "~/constants"
-
 const DATE_PICKER_VALUE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/
 const MIN_SUPPORTED_YEAR = 1000
 const MAX_SUPPORTED_YEAR = 9999
@@ -69,19 +64,4 @@ export function formatDatePickerTimestamp(
  */
 export function parseDatePickerTimestamp(value: string): number | null {
   return parseDatePickerValue(value)?.getTime() ?? null
-}
-
-/**
- * Maps the app language to the closest date-fns locale supported by the picker.
- */
-export function getDatePickerLocale(language?: string): Locale {
-  const normalizedLanguage = (language ?? "").toLowerCase()
-  if (normalizedLanguage.startsWith("zh-tw")) return zhTW
-  if (normalizedLanguage.startsWith("zh")) return zhCN
-  if (normalizedLanguage.startsWith(GERMAN_LANG)) return de
-  if (normalizedLanguage.startsWith("ja")) return ja
-  if (normalizedLanguage.startsWith("vi")) return vi
-  if (normalizedLanguage.startsWith("es")) return es
-  if (normalizedLanguage.startsWith("pt")) return ptBR
-  return enUS
 }

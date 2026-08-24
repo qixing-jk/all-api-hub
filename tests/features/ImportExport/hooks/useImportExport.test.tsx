@@ -206,7 +206,10 @@ describe("useImportExport", () => {
     )
     expect(loadPreferencesMock).toHaveBeenCalledTimes(1)
     expect(getLanguageMock).toHaveBeenCalledTimes(1)
-    expect(applyPreferenceLanguageMock).toHaveBeenCalledWith("ja")
+    expect(applyPreferenceLanguageMock).toHaveBeenCalledWith(
+      "ja",
+      expect.any(Function),
+    )
     expect(result.current.isImporting).toBe(false)
     expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ImportExport,
@@ -315,7 +318,10 @@ describe("useImportExport", () => {
 
     expect(loadPreferencesMock).toHaveBeenCalledTimes(1)
     expect(getLanguageMock).toHaveBeenCalledTimes(1)
-    expect(applyPreferenceLanguageMock).toHaveBeenCalledWith("ja")
+    expect(applyPreferenceLanguageMock).toHaveBeenCalledWith(
+      "ja",
+      expect.any(Function),
+    )
     expect(toastSuccessMock).toHaveBeenCalledWith(
       "importExport:import.importSelectedSuccess",
     )

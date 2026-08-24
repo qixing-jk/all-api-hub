@@ -126,7 +126,6 @@ export interface ModelListSourceInfo {
 
 /** Provider-neutral downgrades for actions and account-scoped presentation. */
 export interface ModelListSourceActionPolicy {
-  supportsRatioDisplay?: boolean
   supportsGroupFiltering?: boolean
   supportsAccountSummary?: boolean
   supportsTokenCompatibility?: boolean

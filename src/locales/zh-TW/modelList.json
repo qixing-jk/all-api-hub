@@ -243,7 +243,6 @@
     "description": "目前模型目錄是透過帳號金鑰回退載入，僅支援模型發現與驗證。點擊重新整理資料會重新嘗試帳號介面。",
     "title": "帳號金鑰回退目錄"
   },
-  "groupRatio": "分組倍率：",
   "groupRatioTooltip": "{{group}} 分組倍率: {{ratio}}x",
   "groupRatioUnavailable": "分組倍率不可用",
   "groupSelectionHint": "留空表示所有分組；價格排序會在已選分組範圍內自動取最優價",
@@ -331,7 +330,6 @@
     },
     "selectionHint": "選擇多個能力時，模型需要同時符合所有條件。"
   },
-  "modelRatio": "模型倍率：",
   "noMatchingModels": "沒有找到匹配的模型",
   "noSourcesDescription": "請先新增站點帳號或 API 憑據，然後查看模型列表。",
   "noSourcesTitle": "暫無可用資料來源",
@@ -416,7 +414,6 @@
   "selectSource": "選擇資料來源",
   "selectSourceToContinue": "請先在上方選擇一個資料來源，然後查看模型列表。",
   "showing_other": "顯示 {{count}} 個模型",
-  "showRatio": "顯示倍率",
   "siteSupportedGroups": "站點支援的分組",
   "sortBy": "排序方式",
   "sortOptions": {

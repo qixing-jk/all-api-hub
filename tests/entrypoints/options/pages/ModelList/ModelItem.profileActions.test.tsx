@@ -109,7 +109,6 @@ describe("ModelItem profile actions", () => {
         }}
         exchangeRate={1}
         showRealPrice={false}
-        showRatioColumn={false}
         showEndpointTypes={true}
         groupRatios={{}}
         groupContext={NOT_APPLICABLE_GROUP_CONTEXT}
@@ -221,7 +220,6 @@ describe("ModelItem profile actions", () => {
         }}
         exchangeRate={1}
         showRealPrice={false}
-        showRatioColumn={false}
         showEndpointTypes={true}
         groupRatios={{}}
         groupContext={NOT_APPLICABLE_GROUP_CONTEXT}
@@ -274,7 +272,6 @@ describe("ModelItem profile actions", () => {
         }}
         exchangeRate={1}
         showRealPrice={false}
-        showRatioColumn={false}
         showEndpointTypes={true}
         groupRatios={{}}
         groupContext={NOT_APPLICABLE_GROUP_CONTEXT}
@@ -330,7 +327,6 @@ describe("ModelItem profile actions", () => {
         }}
         exchangeRate={1}
         showRealPrice={false}
-        showRatioColumn={false}
         showEndpointTypes={true}
         groupRatios={{}}
         groupContext={NOT_APPLICABLE_GROUP_CONTEXT}
@@ -400,7 +396,6 @@ describe("ModelItem profile actions", () => {
         }}
         exchangeRate={1}
         showRealPrice={false}
-        showRatioColumn={false}
         showEndpointTypes={true}
         groupRatios={{ default: 1 }}
         effectiveGroup="default"
@@ -459,7 +454,6 @@ describe("ModelItem profile actions", () => {
         }}
         exchangeRate={1}
         showRealPrice={false}
-        showRatioColumn={false}
         showEndpointTypes={true}
         groupRatios={{ default: 1 }}
         effectiveGroup="default"
@@ -518,7 +512,6 @@ describe("ModelItem profile actions", () => {
         }}
         exchangeRate={1}
         showRealPrice={false}
-        showRatioColumn={true}
         showEndpointTypes={true}
         groupRatios={{ default: 1 }}
         effectiveGroup="default"
@@ -595,7 +588,6 @@ describe("ModelItem profile actions", () => {
         }}
         exchangeRate={1}
         showRealPrice={false}
-        showRatioColumn={true}
         showEndpointTypes={true}
         groupRatios={{ default: 1 }}
         groupContext={NOT_APPLICABLE_GROUP_CONTEXT}
@@ -667,7 +659,6 @@ describe("ModelItem profile actions", () => {
         }}
         exchangeRate={1}
         showRealPrice={false}
-        showRatioColumn={true}
         showEndpointTypes={true}
         groupRatios={{ default: 1 }}
         effectiveGroup="default"
@@ -735,7 +726,6 @@ describe("ModelItem profile actions", () => {
         }}
         exchangeRate={7}
         showRealPrice={true}
-        showRatioColumn={false}
         showEndpointTypes={true}
         groupRatios={{ default: 1 }}
         effectiveGroup="default"

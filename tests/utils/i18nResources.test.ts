@@ -1,75 +1,114 @@
-import { describe, expect, it } from "vitest"
+import type { i18n } from "i18next"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { mapToDayjsLocale, resources } from "~/utils/i18n/resources"
+const EN_RESOURCES = {
+  common: { actions: { cancel: "Cancel" } },
+  ui: { title: "UI" },
+}
+const ZH_CN_RESOURCES = {
+  common: { actions: { cancel: "取消" } },
+  ui: { title: "界面" },
+}
+
+function createJsonResponse(body: unknown, ok = true): Response {
+  return {
+    ok,
+    status: ok ? 200 : 404,
+    json: vi.fn().mockResolvedValue(body),
+  } as unknown as Response
+}
 
 describe("i18n resources", () => {
-  it("loads locale namespaces under their language keys", () => {
-    expect(resources.en).toMatchObject({
-      common: expect.objectContaining({
-        actions: expect.objectContaining({
-          cancel: "Cancel",
-        }),
-      }),
-      ui: expect.any(Object),
-    })
-    expect(resources.de).toMatchObject({
-      common: expect.objectContaining({
-        actions: expect.objectContaining({
-          cancel: "Abbrechen",
-        }),
-      }),
-      settings: expect.any(Object),
-    })
-    expect(resources.ja).toMatchObject({
-      common: expect.objectContaining({
-        actions: expect.objectContaining({
-          cancel: "キャンセル",
-        }),
-      }),
-      settings: expect.any(Object),
-    })
-    expect(resources.vi).toMatchObject({
-      common: expect.objectContaining({
-        actions: expect.objectContaining({
-          cancel: "Hủy",
-        }),
-      }),
-      settings: expect.any(Object),
-    })
-    expect(resources["pt-BR"]).toMatchObject({
-      common: expect.objectContaining({
-        actions: expect.objectContaining({
-          cancel: "Cancelar",
-        }),
-      }),
-      settings: expect.any(Object),
-    })
-    expect(resources["zh-CN"]).toMatchObject({
-      common: expect.objectContaining({
-        actions: expect.objectContaining({
-          cancel: "取消",
-        }),
-      }),
-      modelList: expect.any(Object),
-    })
-    expect(resources["zh-TW"]).toMatchObject({
-      common: expect.objectContaining({
-        actions: expect.objectContaining({
-          cancel: "取消",
-        }),
-      }),
-      managedSiteChannels: expect.any(Object),
+  beforeEach(() => {
+    vi.resetModules()
+    vi.stubGlobal("browser", {
+      runtime: {
+        getURL: vi.fn((path: string) => `extension://${path}`),
+      },
     })
   })
 
-  it("normalizes i18next language tags to dayjs-compatible locale names", () => {
-    expect(mapToDayjsLocale("EN")).toBe("en")
-    expect(mapToDayjsLocale("zh_TW")).toBe("zh-tw")
-    expect(mapToDayjsLocale("ja-JP")).toBe("ja-jp")
-    expect(mapToDayjsLocale("vi_VN")).toBe("vi-vn")
-    expect(mapToDayjsLocale("es-419")).toBe("es")
-    expect(mapToDayjsLocale("pt-BR")).toBe("pt-br")
-    expect(mapToDayjsLocale("de")).toBe("de")
-    expect(mapToDayjsLocale("de-DE")).toBe("de")
+  it("loads only the requested language and the configured fallback asset", async () => {
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.endsWith("/en.json")) return createJsonResponse(EN_RESOURCES)
+      if (url.endsWith("/zh-CN.json")) {
+        return createJsonResponse(ZH_CN_RESOURCES)
+      }
+      return createJsonResponse({}, false)
+    })
+    vi.stubGlobal("fetch", fetchMock)
+
+    const { loadAppLanguageResources } = await import("~/utils/i18n/resources")
+
+    await expect(loadAppLanguageResources("en")).resolves.toEqual({
+      en: EN_RESOURCES,
+      "zh-CN": ZH_CN_RESOURCES,
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(fetchMock).toHaveBeenCalledWith("extension://app-locales/en.json")
+    expect(fetchMock).toHaveBeenCalledWith("extension://app-locales/zh-CN.json")
+  })
+
+  it("deduplicates locale fetches and retries after a failed request", async () => {
+    let englishAttempts = 0
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.endsWith("/en.json") && englishAttempts++ === 0) {
+        return createJsonResponse({}, false)
+      }
+      return createJsonResponse(EN_RESOURCES)
+    })
+    vi.stubGlobal("fetch", fetchMock)
+
+    const { loadAppLanguageResources } = await import("~/utils/i18n/resources")
+
+    await expect(loadAppLanguageResources("en")).rejects.toThrow(
+      "Failed to load locale asset",
+    )
+    await expect(loadAppLanguageResources("en")).resolves.toEqual({
+      en: EN_RESOURCES,
+      "zh-CN": EN_RESOURCES,
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+  })
+
+  it("rejects locale assets that are not namespace objects", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(createJsonResponse([])))
+    const { loadAppLanguageResources } = await import("~/utils/i18n/resources")
+
+    await expect(loadAppLanguageResources("zh-CN")).rejects.toThrow(
+      "Locale asset for zh-CN is not a JSON object",
+    )
+  })
+
+  it("installs every loaded namespace before changing language", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(createJsonResponse(EN_RESOURCES)),
+    )
+    const addResourceBundle = vi.fn()
+    const changeLanguage = vi.fn().mockResolvedValue(undefined)
+    const instance = { addResourceBundle, changeLanguage } as unknown as i18n
+    const { changeAppLanguage } = await import("~/utils/i18n/resources")
+
+    await changeAppLanguage(instance, "en")
+
+    expect(addResourceBundle).toHaveBeenCalledWith(
+      "en",
+      "common",
+      EN_RESOURCES.common,
+      true,
+      true,
+    )
+    expect(addResourceBundle).toHaveBeenCalledWith(
+      "en",
+      "ui",
+      EN_RESOURCES.ui,
+      true,
+      true,
+    )
+    expect(changeLanguage).toHaveBeenCalledWith("en")
+    expect(addResourceBundle.mock.invocationCallOrder.at(-1)).toBeLessThan(
+      changeLanguage.mock.invocationCallOrder[0]!,
+    )
   })
 })

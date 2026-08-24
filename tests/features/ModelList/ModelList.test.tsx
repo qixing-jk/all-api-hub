@@ -258,7 +258,6 @@ const ACCOUNT = {
 
 const CAPABILITIES = {
   supportsPricing: true,
-  supportsRatioDisplay: true,
   supportsGroupFiltering: true,
   supportsAccountSummary: false,
   supportsTokenCompatibility: true,
@@ -337,8 +336,6 @@ function createModelListData() {
     setAllAccountsExcludedGroupsByAccountId: vi.fn(),
     showRealPrice: false,
     setShowRealPrice: vi.fn(),
-    showRatioColumn: false,
-    setShowRatioColumn: vi.fn(),
     showEndpointTypes: false,
     setShowEndpointTypes: vi.fn(),
     pricingData: {

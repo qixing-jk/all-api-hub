@@ -10,7 +10,6 @@ import {
 import { isValidProviderModelCatalogPricing } from "~/services/modelList/providerCatalogAdmission"
 
 const completeActionPolicy = {
-  supportsRatioDisplay: false,
   supportsGroupFiltering: false,
   supportsAccountSummary: false,
   supportsTokenCompatibility: false,

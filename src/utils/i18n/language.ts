@@ -1,5 +1,6 @@
 import {
   DEFAULT_LANG,
+  ENGLISH_LANG,
   GERMAN_LANG,
   JAPANESE_LANG,
   PORTUGUESE_BRAZIL_LANG,
@@ -9,8 +10,15 @@ import {
   type SupportedUiLanguage,
 } from "~/constants"
 
-const ENGLISH_LANG: SupportedUiLanguage = "en"
 const TRADITIONAL_CHINESE_REGIONS = new Set(["hk", "mo", "tw"])
+const APP_LANGUAGE_BY_FAMILY: Partial<Record<string, SupportedUiLanguage>> = {
+  en: ENGLISH_LANG,
+  [GERMAN_LANG]: GERMAN_LANG,
+  es: SPANISH_LATIN_AMERICA_LANG,
+  pt: PORTUGUESE_BRAZIL_LANG,
+  [JAPANESE_LANG]: JAPANESE_LANG,
+  [VIETNAMESE_LANG]: VIETNAMESE_LANG,
+}
 
 const isLanguageFamily = (
   language: string | undefined,
@@ -18,35 +26,6 @@ const isLanguageFamily = (
 ): boolean => {
   return language === family || language?.startsWith(`${family}-`) === true
 }
-
-export const UI_LANGUAGE_OPTIONS = [
-  {
-    code: ENGLISH_LANG,
-  },
-  {
-    code: GERMAN_LANG,
-  },
-  {
-    code: SPANISH_LATIN_AMERICA_LANG,
-  },
-  {
-    code: PORTUGUESE_BRAZIL_LANG,
-  },
-  {
-    code: JAPANESE_LANG,
-  },
-  {
-    code: VIETNAMESE_LANG,
-  },
-  {
-    code: DEFAULT_LANG,
-  },
-  {
-    code: TRADITIONAL_CHINESE_LANG,
-  },
-] as const satisfies ReadonlyArray<{
-  code: SupportedUiLanguage
-}>
 
 /**
  * Normalize a runtime language tag into a lowercase, hyphenated form.
@@ -68,11 +47,8 @@ export function isChineseLanguage(language?: string | null): boolean {
 /**
  * Return true when the language belongs to a Traditional Chinese variant.
  */
-function isTraditionalChineseLanguage(language?: string | null): boolean {
-  const normalized = normalizeLanguageTag(language)
-  if (!normalized || !isChineseLanguage(normalized)) return false
-
-  const subtags = normalized.split("-")
+function isTraditionalChineseLanguage(normalizedLanguage: string): boolean {
+  const subtags = normalizedLanguage.split("-")
   if (subtags.includes("hans")) return false
 
   return (
@@ -85,42 +61,14 @@ function isTraditionalChineseLanguage(language?: string | null): boolean {
  * Return true when the language belongs to the English locale family.
  */
 export function isEnglishLanguage(language?: string | null): boolean {
-  return isLanguageFamily(normalizeLanguageTag(language), "en")
-}
-
-/**
- * Return true when the language belongs to the German locale family.
- */
-function isGermanLanguage(language?: string | null): boolean {
-  return isLanguageFamily(normalizeLanguageTag(language), GERMAN_LANG)
+  return isLanguageFamily(normalizeLanguageTag(language), ENGLISH_LANG)
 }
 
 /**
  * Return true when the language belongs to the Japanese locale family.
  */
 export function isJapaneseLanguage(language?: string | null): boolean {
-  return isLanguageFamily(normalizeLanguageTag(language), "ja")
-}
-
-/**
- * Return true when the language belongs to the Vietnamese locale family.
- */
-function isVietnameseLanguage(language?: string | null): boolean {
-  return isLanguageFamily(normalizeLanguageTag(language), "vi")
-}
-
-/**
- * Return true when the language belongs to the Spanish locale family.
- */
-function isSpanishLanguage(language?: string | null): boolean {
-  return isLanguageFamily(normalizeLanguageTag(language), "es")
-}
-
-/**
- * Return true when the language belongs to the Portuguese locale family.
- */
-function isPortugueseLanguage(language?: string | null): boolean {
-  return isLanguageFamily(normalizeLanguageTag(language), "pt")
+  return isLanguageFamily(normalizeLanguageTag(language), JAPANESE_LANG)
 }
 
 /**
@@ -129,16 +77,17 @@ function isPortugueseLanguage(language?: string | null): boolean {
 export function normalizeAppLanguage(
   language?: string | null,
 ): SupportedUiLanguage | undefined {
-  if (isEnglishLanguage(language)) return ENGLISH_LANG
-  if (isGermanLanguage(language)) return GERMAN_LANG
-  if (isSpanishLanguage(language)) return SPANISH_LATIN_AMERICA_LANG
-  if (isPortugueseLanguage(language)) return PORTUGUESE_BRAZIL_LANG
-  if (isJapaneseLanguage(language)) return JAPANESE_LANG
-  if (isVietnameseLanguage(language)) return VIETNAMESE_LANG
-  if (isTraditionalChineseLanguage(language)) return TRADITIONAL_CHINESE_LANG
-  if (isChineseLanguage(language)) return DEFAULT_LANG
+  const normalizedLanguage = normalizeLanguageTag(language)
+  if (!normalizedLanguage) return undefined
 
-  return undefined
+  const languageFamily = normalizedLanguage.split("-")[0]
+  if (languageFamily !== "zh") {
+    return APP_LANGUAGE_BY_FAMILY[languageFamily]
+  }
+
+  return isTraditionalChineseLanguage(normalizedLanguage)
+    ? TRADITIONAL_CHINESE_LANG
+    : DEFAULT_LANG
 }
 
 /**

@@ -31,8 +31,15 @@ locales/
 │   └── (同上结构)
 ├── zh-TW/                  # 繁体中文翻译
 │   └── (同上结构)
+├── runtime-assets.ts       # 构建期语言资源聚合模块
 └── README.md               # 本文件
 ```
+
+---
+
+## ⚙️ 运行时加载
+
+各 namespace JSON 仍是唯一翻译源。WXT 构建时由 `runtime-assets.ts` 为每种语言生成一个压缩后的 `app-locales/<language>.json`；扩展运行时只加载当前语言与 `zh-CN` 回退，不要直接编辑 `.output/**/app-locales/` 中的生成文件。
 
 ---
 

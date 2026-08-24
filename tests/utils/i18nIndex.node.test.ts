@@ -7,8 +7,10 @@ import { I18NEXT_LANGUAGE_STORAGE_KEY } from "~/services/core/storageKeys"
 const {
   getLanguageMock,
   i18nCoreMock,
+  installAppLanguageResourcesMock,
   languageDetectorPlugin,
-  mapToDayjsLocaleMock,
+  loadDayjsLocaleMock,
+  loadAppLanguageResourcesMock,
   reactI18nextPlugin,
   resolveInitialAppLanguageMock,
 } = vi.hoisted(() => ({
@@ -21,8 +23,10 @@ const {
     language: "en",
     resolvedLanguage: "en" as string | undefined,
   },
+  installAppLanguageResourcesMock: vi.fn(),
   languageDetectorPlugin: { type: "languageDetector" },
-  mapToDayjsLocaleMock: vi.fn(),
+  loadDayjsLocaleMock: vi.fn(),
+  loadAppLanguageResourcesMock: vi.fn(),
   reactI18nextPlugin: { type: "3rdParty" },
   resolveInitialAppLanguageMock: vi.fn(),
 }))
@@ -43,10 +47,12 @@ vi.mock("~/utils/i18n/language", () => ({
 }))
 
 vi.mock("~/utils/i18n/resources", () => ({
-  mapToDayjsLocale: mapToDayjsLocaleMock,
-  resources: {
-    en: { common: { greeting: "Hello" } },
-  },
+  installAppLanguageResources: installAppLanguageResourcesMock,
+  loadAppLanguageResources: loadAppLanguageResourcesMock,
+}))
+
+vi.mock("~/utils/i18n/dayjsLocale", () => ({
+  loadDayjsLocale: loadDayjsLocaleMock,
 }))
 
 vi.mock("i18next-browser-languagedetector", () => ({
@@ -71,9 +77,14 @@ describe("app i18n initialization without a document", () => {
     i18nCoreMock.on.mockReset()
 
     getLanguageMock.mockReset()
+    installAppLanguageResourcesMock.mockReset()
+    loadAppLanguageResourcesMock.mockReset()
+    loadAppLanguageResourcesMock.mockResolvedValue({
+      en: { common: { greeting: "Hello" } },
+    })
     resolveInitialAppLanguageMock.mockReset()
-    mapToDayjsLocaleMock.mockReset()
-    mapToDayjsLocaleMock.mockImplementation((language: string) => language)
+    loadDayjsLocaleMock.mockReset()
+    loadDayjsLocaleMock.mockImplementation(async (language: string) => language)
 
     i18nCoreMock.language = "en"
     i18nCoreMock.resolvedLanguage = "en"
@@ -85,7 +96,8 @@ describe("app i18n initialization without a document", () => {
     resolveInitialAppLanguageMock.mockReturnValueOnce("ja")
 
     try {
-      await import("~/utils/i18n/index")
+      const { i18nReady } = await import("~/utils/i18n/index")
+      await i18nReady
 
       await vi.waitFor(() => {
         expect(getLanguageMock).toHaveBeenCalledTimes(1)

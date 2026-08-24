@@ -1,3 +1,4 @@
+import type { AccountSiteType } from "~/constants/siteType"
 import type { SortField } from "~/types"
 
 export const ACCOUNT_MANAGEMENT_TEST_IDS = {
@@ -124,6 +125,13 @@ export const ACCOUNT_MANAGEMENT_TEST_IDS = {
 /** Returns a stable test id for an account-list sort control. */
 export function getAccountManagementSortButtonTestId(field: SortField) {
   return `account-management-account-list-sort-${field}-button`
+}
+
+/** Returns a stable test id for a site-type option in the account form. */
+export function getAccountManagementSiteTypeOptionTestId(
+  siteType: AccountSiteType,
+) {
+  return `account-management-site-type-option-${siteType}`
 }
 
 /**

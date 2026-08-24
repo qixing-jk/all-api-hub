@@ -259,7 +259,6 @@
     "description": "Este catálogo se carga actualmente mediante una alternativa con clave de cuenta, por lo que solo admite descubrimiento y verificación de modelos. Actualizar datos reintentará la ruta directa de la cuenta.",
     "title": "Catálogo alternativo con clave de cuenta"
   },
-  "groupRatio": "Proporción del grupo:",
   "groupRatioTooltip": "Proporción del grupo {{group}}: {{ratio}}x",
   "groupRatioUnavailable": "Multiplicador de grupo no disponible",
   "groupSelectionHint": "Deja esto vacío para comparar entre todos los grupos; el ordenamiento por precio usa el mejor precio dentro del conjunto de grupos seleccionado",
@@ -348,7 +347,6 @@
     },
     "selectionHint": "Cuando se seleccionan varias capacidades, los modelos deben coincidir con todas las capacidades seleccionadas."
   },
-  "modelRatio": "Proporción del modelo:",
   "noMatchingModels": "No se encontraron modelos coincidentes",
   "noSourcesDescription": "Agrega una cuenta de sitio o una credencial de API antes de ver la lista de modelos.",
   "noSourcesTitle": "Aún no hay fuentes de modelos",
@@ -435,7 +433,6 @@
   "showing_one": "Mostrando {{count}} modelo",
   "showing_many": "Mostrando {{count}} modelos",
   "showing_other": "Mostrando {{count}} modelos",
-  "showRatio": "Mostrar proporción",
   "siteSupportedGroups": "Grupos compatibles con el sitio",
   "sortBy": "Ordenar por",
   "sortOptions": {

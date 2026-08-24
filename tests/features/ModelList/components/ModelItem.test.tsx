@@ -157,18 +157,8 @@ vi.mock(
 )
 
 vi.mock("~/features/ModelList/components/ModelItem/ModelItemPricing", () => ({
-  ModelItemPricing: ({
-    showPricing,
-    showRatioColumn,
-  }: {
-    showPricing: boolean
-    showRatioColumn: boolean
-  }) => (
-    <div
-      data-testid="model-pricing"
-      data-show-pricing={String(showPricing)}
-      data-show-ratio-column={String(showRatioColumn)}
-    />
+  ModelItemPricing: ({ showPricing }: { showPricing: boolean }) => (
+    <div data-testid="model-pricing" data-show-pricing={String(showPricing)} />
   ),
 }))
 
@@ -224,7 +214,6 @@ function createDefaultProps() {
     calculatedPrice,
     exchangeRate: 7,
     showRealPrice: false,
-    showRatioColumn: false,
     showEndpointTypes: false,
     groupRatios: {},
     groupContext: {
@@ -247,7 +236,6 @@ function createDefaultProps() {
       },
       capabilities: {
         supportsPricing: true,
-        supportsRatioDisplay: true,
         supportsGroupFiltering: true,
         supportsAccountSummary: false,
         supportsTokenCompatibility: false,
@@ -421,7 +409,6 @@ describe("ModelItem", () => {
           ...props.source,
           capabilities: {
             ...props.source.capabilities,
-            supportsRatioDisplay: false,
             supportsGroupFiltering: false,
             supportsTokenCompatibility: false,
             supportsCredentialVerification: false,
@@ -542,36 +529,12 @@ describe("ModelItem", () => {
     )
   })
 
-  it("suppresses the ratio column when either the row or display capabilities do not support ratios", () => {
-    const props = createDefaultProps()
-
-    render(
-      <ModelItem
-        {...props}
-        showRatioColumn={true}
-        source={{
-          ...props.source,
-          capabilities: {
-            ...props.source.capabilities,
-            supportsRatioDisplay: false,
-          },
-        }}
-      />,
-    )
-
-    expect(screen.getByTestId("model-pricing")).toHaveAttribute(
-      "data-show-ratio-column",
-      "false",
-    )
-  })
-
   it("suppresses pricing when display capabilities disable account pricing", () => {
     render(
       <ModelItem
         {...createDefaultProps()}
         displayCapabilities={{
           supportsPricing: false,
-          supportsRatioDisplay: true,
           supportsGroupFiltering: true,
           supportsAccountSummary: true,
           supportsTokenCompatibility: true,
@@ -609,7 +572,6 @@ describe("ModelItem", () => {
         }}
         displayCapabilities={{
           supportsPricing: true,
-          supportsRatioDisplay: true,
           supportsGroupFiltering: true,
           supportsAccountSummary: true,
           supportsTokenCompatibility: false,
@@ -667,7 +629,6 @@ describe("ModelItem", () => {
         }}
         displayCapabilities={{
           supportsPricing: true,
-          supportsRatioDisplay: true,
           supportsGroupFiltering: true,
           supportsAccountSummary: true,
           supportsTokenCompatibility: true,
@@ -790,7 +751,6 @@ describe("ModelItem", () => {
         showEndpointTypes: true,
         displayCapabilities: {
           supportsPricing: false,
-          supportsRatioDisplay: true,
           supportsGroupFiltering: true,
           supportsAccountSummary: true,
           supportsTokenCompatibility: true,
@@ -895,7 +855,6 @@ describe("ModelItem", () => {
     const catalogOnlyDisplayCapabilities = {
       ...props.source.capabilities,
       supportsPricing: false,
-      supportsRatioDisplay: false,
       supportsGroupFiltering: false,
       supportsAccountSummary: false,
     }

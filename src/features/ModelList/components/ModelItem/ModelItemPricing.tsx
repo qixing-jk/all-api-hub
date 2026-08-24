@@ -34,7 +34,6 @@ interface ModelItemPricingProps {
   exchangeRate: number
   showRealPrice: boolean
   showPricing: boolean
-  showRatioColumn: boolean
   isAvailableForUser: boolean
   isLowestPrice?: boolean
   effectiveGroup?: string
@@ -143,11 +142,7 @@ function resolvePriceMetaBadge(params: {
 }): PriceMetaBadgeViewModel | null {
   const { effectiveGroup, isLowestPrice, showsOptimalGroup } = params
 
-  if (effectiveGroup) {
-    if (!showsOptimalGroup && !isLowestPrice) {
-      return null
-    }
-
+  if (effectiveGroup && showsOptimalGroup) {
     return {
       kind: "optimal-group",
       variant: isLowestPrice ? "success" : "secondary",
@@ -170,7 +165,6 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
   exchangeRate,
   showRealPrice,
   showPricing,
-  showRatioColumn,
   isAvailableForUser,
   isLowestPrice = false,
   effectiveGroup,
@@ -189,17 +183,6 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
     { effectiveGroup, groupRatios },
   )
   const tokenBillingType = isTokenBillingType(model.quota_type)
-  const estimatedPriceUsesDirectTokenPrice =
-    usesEstimatedDirectTokenPrice(model)
-  const showsEffectiveGroupRatio =
-    estimatedPriceUsesDirectTokenPrice && Boolean(effectiveGroup)
-  const displayRatio =
-    showsEffectiveGroupRatio && effectiveGroup
-      ? resolveKnownGroupRatio(effectiveGroup, groupRatios)
-      : model.model_ratio
-  const ratioLabel = showsEffectiveGroupRatio
-    ? t("groupRatio")
-    : t("modelRatio")
   const effectiveGroupLabel = effectiveGroup
     ? formatGroupLabelFromRatios(effectiveGroup, groupRatios)
     : undefined
@@ -294,24 +277,8 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
             formatPriceCompact={formatPriceCompact}
           />
 
-          {(showRatioColumn || priceMeta || estimatedPriceMeta) && (
+          {(priceMeta || estimatedPriceMeta) && (
             <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-              {showRatioColumn && (
-                <>
-                  <span className="dark:text-dark-text-tertiary text-xs whitespace-nowrap text-gray-500 sm:text-sm">
-                    {ratioLabel}
-                  </span>
-                  <span
-                    className={`text-xs font-medium sm:text-sm ${
-                      isAvailableForUser
-                        ? "dark:text-dark-text-primary text-gray-900"
-                        : "dark:text-dark-text-tertiary text-gray-500"
-                    }`}
-                  >
-                    {displayRatio}x
-                  </span>
-                </>
-              )}
               {priceMeta}
               {estimatedPriceMeta}
             </div>

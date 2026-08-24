@@ -1,24 +1,19 @@
 import dayjs from "dayjs"
-
-import "dayjs/locale/de"
-import "dayjs/locale/es"
-import "dayjs/locale/ja"
-import "dayjs/locale/pt-br"
-import "dayjs/locale/vi"
-import "dayjs/locale/zh-cn"
-import "dayjs/locale/zh-tw"
-
 import LanguageDetector from "i18next-browser-languagedetector"
 import { initReactI18next } from "react-i18next"
 
-import { DEFAULT_LANG } from "~/constants"
+import { DEFAULT_I18N_NAMESPACE, DEFAULT_LANG } from "~/constants"
 import { I18NEXT_LANGUAGE_STORAGE_KEY } from "~/services/core/storageKeys"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { isDevBuild } from "~/utils/core/environment"
 
 import i18n from "./core"
+import { loadDayjsLocale } from "./dayjsLocale"
 import { normalizeAppLanguage, resolveInitialAppLanguage } from "./language"
-import { mapToDayjsLocale, resources } from "./resources"
+import {
+  installAppLanguageResources,
+  loadAppLanguageResources,
+} from "./resources"
 
 /**
  * Keep the extension page root language aligned with the active UI locale.
@@ -31,18 +26,18 @@ function syncDocumentLanguage(language: string) {
   document.documentElement.lang = normalizeAppLanguage(language) ?? language
 }
 
-i18n
+export const i18nReady = i18n
   .use(LanguageDetector)
   .use(initReactI18next)
   .init({
     debug: isDevBuild(),
     fallbackLng: DEFAULT_LANG,
-    defaultNS: "common",
+    defaultNS: DEFAULT_I18N_NAMESPACE,
     // default config: https://github.com/i18next/i18next-browser-languageDetector#detector-options
     detection: {
       lookupLocalStorage: I18NEXT_LANGUAGE_STORAGE_KEY,
     },
-    resources,
+    resources: {},
     interpolation: {
       escapeValue: false, // react already escapes by default
     },
@@ -69,20 +64,21 @@ i18n
       detectedLanguage,
     })
 
-    if (
-      initialLanguage !== i18n.resolvedLanguage &&
-      initialLanguage !== i18n.language
-    ) {
-      await i18n.changeLanguage(initialLanguage)
-    }
+    const [resources, dayjsLocale] = await Promise.all([
+      loadAppLanguageResources(initialLanguage),
+      loadDayjsLocale(initialLanguage),
+    ])
+    installAppLanguageResources(i18n, resources)
+    // Re-resolve even when the detector selected the same language because
+    // resources are intentionally installed only after detection completes.
+    await i18n.changeLanguage(initialLanguage)
 
-    dayjs.locale(mapToDayjsLocale(initialLanguage))
+    dayjs.locale(dayjsLocale)
     syncDocumentLanguage(initialLanguage)
   })
 
 export default i18n
 
-i18n.on("languageChanged", async (lng) => {
-  dayjs.locale(mapToDayjsLocale(lng))
+i18n.on("languageChanged", (lng) => {
   syncDocumentLanguage(lng)
 })

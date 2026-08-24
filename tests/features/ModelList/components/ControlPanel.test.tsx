@@ -212,7 +212,6 @@ vi.mock("~/components/ui", () => ({
 
 const CAPABILITIES: ModelManagementSourceCapabilities = {
   supportsPricing: true,
-  supportsRatioDisplay: true,
   supportsGroupFiltering: true,
   supportsAccountSummary: false,
   supportsTokenCompatibility: true,
@@ -260,8 +259,6 @@ function renderControlPanel(
     singleSourceGroupRatios: { vip: 1 },
     showRealPrice: false,
     setShowRealPrice: vi.fn(),
-    showRatioColumn: false,
-    setShowRatioColumn: vi.fn(),
     showEndpointTypes: false,
     setShowEndpointTypes: vi.fn(),
     totalModels: 2,
@@ -278,6 +275,12 @@ function renderControlPanel(
 describe("ControlPanel", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+  })
+
+  it("omits the internal ratio display control", () => {
+    renderControlPanel()
+
+    expect(screen.queryByText("showRatio")).not.toBeInTheDocument()
   })
 
   it("enables price comparison with one prominent action", async () => {

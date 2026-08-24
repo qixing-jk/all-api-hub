@@ -15,7 +15,6 @@ import {
 } from "~/components/ui"
 import {
   formatDatePickerTimestamp,
-  getDatePickerLocale,
   parseDatePickerTimestamp,
 } from "~/components/ui/datePickerValue"
 import { Modal } from "~/components/ui/Dialog/Modal"
@@ -220,11 +219,6 @@ export function ApiCredentialProfileDialog({
     const normalized = normalizeBaseUrl(apiType, baseUrl)
     return normalized ?? ""
   }, [apiType, baseUrl])
-  const datePickerLocale = useMemo(
-    () => getDatePickerLocale(i18n.language),
-    [i18n.language],
-  )
-
   const telemetryJsonPathFields = useMemo(
     () => [
       {
@@ -643,7 +637,7 @@ export function ApiCredentialProfileDialog({
                   preview: t("common:datePicker.naturalInput.preview"),
                 },
               }}
-              locale={datePickerLocale}
+              language={i18n.language}
               disabled={isSaving}
               naturalInput
             />

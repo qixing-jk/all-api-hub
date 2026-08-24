@@ -15,6 +15,13 @@ vi.mock("~/utils/i18n/core", () => ({
   default: i18nCoreMock,
 }))
 
+vi.mock("~/utils/i18n/resources", () => ({
+  changeAppLanguage: (
+    instance: { changeLanguage: (language: string) => Promise<void> },
+    language: string,
+  ) => instance.changeLanguage(language),
+}))
+
 describe("applyPreferenceLanguage", () => {
   beforeEach(() => {
     vi.clearAllMocks()

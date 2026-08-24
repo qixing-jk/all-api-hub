@@ -243,7 +243,6 @@
     "description": "Thư mục mô hình hiện tại được tải dự phòng thông qua khóa tài khoản, chỉ hỗ trợ phát hiện và xác minh mô hình. Nhấp vào làm mới dữ liệu sẽ thử lại API của tài khoản.",
     "title": "Thư mục dự phòng khóa tài khoản"
   },
-  "groupRatio": "Hệ số nhóm:",
   "groupRatioTooltip": "Tỷ lệ nhóm {{group}}: {{ratio}}x",
   "groupRatioUnavailable": "Không có hệ số nhóm",
   "groupSelectionHint": "Để trống biểu thị tất cả các nhóm; việc sắp xếp giá sẽ tự động lấy mức giá tốt nhất trong phạm vi các nhóm đã chọn",
@@ -331,7 +330,6 @@
     },
     "selectionHint": "Khi chọn nhiều năng lực, mô hình phải khớp với tất cả năng lực đã chọn."
   },
-  "modelRatio": "Hệ số mô hình:",
   "noMatchingModels": "Không tìm thấy mô hình nào phù hợp",
   "noSourcesDescription": "Vui lòng thêm tài khoản trang web hoặc thông tin xác thực API trước, sau đó xem danh sách mô hình.",
   "noSourcesTitle": "Hiện chưa có nguồn dữ liệu khả dụng",
@@ -416,7 +414,6 @@
   "selectSource": "Chọn nguồn dữ liệu",
   "selectSourceToContinue": "Vui lòng chọn một nguồn dữ liệu ở trên trước, sau đó xem danh sách mô hình.",
   "showing_other": "Đang hiển thị {{count}} mô hình",
-  "showRatio": "Hiển thị tỷ lệ",
   "siteSupportedGroups": "Nhóm được trang hỗ trợ",
   "sortBy": "Sắp xếp theo",
   "sortOptions": {

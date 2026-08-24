@@ -1,11 +1,10 @@
-import dayjs from "dayjs"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const {
   i18nCoreMock,
   getLanguageMock,
+  loadAppLanguageResourcesMock,
   resolveInitialAppLanguageMock,
-  mapToDayjsLocaleMock,
 } = vi.hoisted(() => ({
   i18nCoreMock: {
     init: vi.fn(),
@@ -13,8 +12,8 @@ const {
     on: vi.fn(),
   },
   getLanguageMock: vi.fn(),
+  loadAppLanguageResourcesMock: vi.fn(),
   resolveInitialAppLanguageMock: vi.fn(),
-  mapToDayjsLocaleMock: vi.fn(),
 }))
 
 vi.mock("~/utils/i18n/core", () => ({
@@ -32,8 +31,7 @@ vi.mock("~/utils/i18n/language", () => ({
 }))
 
 vi.mock("~/utils/i18n/resources", () => ({
-  mapToDayjsLocale: mapToDayjsLocaleMock,
-  resources: { en: { common: { hello: "Hello" } } },
+  loadAppLanguageResources: loadAppLanguageResourcesMock,
 }))
 
 describe("initBackgroundI18n", () => {
@@ -42,25 +40,22 @@ describe("initBackgroundI18n", () => {
     i18nCoreMock.changeLanguage.mockReset()
     i18nCoreMock.on.mockReset()
     getLanguageMock.mockReset()
+    loadAppLanguageResourcesMock.mockReset()
+    loadAppLanguageResourcesMock.mockResolvedValue({
+      en: { common: { hello: "Hello" } },
+    })
     resolveInitialAppLanguageMock.mockReset()
-    mapToDayjsLocaleMock.mockReset()
     vi.resetModules()
   })
 
-  it("initializes i18n, resolves the initial language, and syncs dayjs", async () => {
-    const localeSpy = vi.spyOn(dayjs, "locale").mockReturnValue("en")
+  it("initializes i18n and resolves the initial language", async () => {
     getLanguageMock.mockResolvedValueOnce("ja")
     resolveInitialAppLanguageMock.mockReturnValueOnce("ja")
-    mapToDayjsLocaleMock.mockReturnValue("ja")
 
     const { initBackgroundI18n } = await import("~/utils/i18n/background")
 
     await initBackgroundI18n()
 
-    expect(i18nCoreMock.on).toHaveBeenCalledWith(
-      "languageChanged",
-      expect.any(Function),
-    )
     expect(i18nCoreMock.init).toHaveBeenCalledWith({
       resources: { en: { common: { hello: "Hello" } } },
       fallbackLng: "zh-CN",
@@ -68,45 +63,19 @@ describe("initBackgroundI18n", () => {
       interpolation: { escapeValue: false },
       returnEmptyString: false,
     })
+    expect(loadAppLanguageResourcesMock).toHaveBeenCalledWith("ja")
     expect(resolveInitialAppLanguageMock).toHaveBeenCalledWith({
       userPreferenceLanguage: "ja",
       detectedLanguage:
         typeof navigator !== "undefined" ? navigator.language : undefined,
     })
     expect(i18nCoreMock.changeLanguage).toHaveBeenCalledWith("ja")
-    expect(localeSpy).toHaveBeenCalledWith("ja")
-
-    localeSpy.mockRestore()
-  })
-
-  it("updates dayjs when the registered language-change listener fires", async () => {
-    const localeSpy = vi.spyOn(dayjs, "locale").mockReturnValue("en")
-    getLanguageMock.mockResolvedValueOnce("en")
-    resolveInitialAppLanguageMock.mockReturnValueOnce("en")
-    mapToDayjsLocaleMock.mockImplementation((language: string) =>
-      language === "zh-TW" ? "zh-tw" : language,
-    )
-
-    await import("~/utils/i18n/background")
-
-    const languageChangedHandler = i18nCoreMock.on.mock.calls.find(
-      ([eventName]) => eventName === "languageChanged",
-    )?.[1] as ((language: string) => void) | undefined
-
-    expect(languageChangedHandler).toBeTypeOf("function")
-    languageChangedHandler?.("zh-TW")
-
-    expect(localeSpy).toHaveBeenCalledWith("zh-tw")
-
-    localeSpy.mockRestore()
   })
 
   it("resolves the initial language without navigator when the background runtime has no browser language", async () => {
     const originalNavigator = globalThis.navigator
-    const localeSpy = vi.spyOn(dayjs, "locale").mockReturnValue("en")
     getLanguageMock.mockResolvedValueOnce(undefined)
     resolveInitialAppLanguageMock.mockReturnValueOnce("en")
-    mapToDayjsLocaleMock.mockReturnValue("en")
 
     Object.defineProperty(globalThis, "navigator", {
       value: undefined,
@@ -124,14 +93,12 @@ describe("initBackgroundI18n", () => {
         detectedLanguage: undefined,
       })
       expect(i18nCoreMock.changeLanguage).toHaveBeenCalledWith("en")
-      expect(localeSpy).toHaveBeenCalledWith("en")
     } finally {
       Object.defineProperty(globalThis, "navigator", {
         value: originalNavigator,
         configurable: true,
         writable: true,
       })
-      localeSpy.mockRestore()
     }
   })
 })

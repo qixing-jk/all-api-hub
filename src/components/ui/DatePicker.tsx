@@ -19,6 +19,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "./popover"
+import { useDatePickerLocale } from "./useDatePickerLocale"
 
 export interface DatePickerNaturalInputLabels {
   invalid: string
@@ -47,6 +48,7 @@ export interface DatePickerProps {
   disabled?: boolean
   className?: string
   locale?: Locale
+  language?: string
   portalContainer?: HTMLElement | null
   naturalInput?: boolean
 }
@@ -62,11 +64,13 @@ export function DatePicker({
   disabled,
   className,
   locale,
+  language,
   portalContainer,
   naturalInput = false,
 }: DatePickerProps) {
   const [open, setOpen] = useState(false)
   const [naturalInputValue, setNaturalInputValue] = useState("")
+  const calendarLocale = useDatePickerLocale(locale, language)
   const generatedFeedbackId = useId()
   const selectedDate = useMemo(() => parseDatePickerValue(value), [value])
   const triggerLabel = selectedDate ? value : labels.placeholder
@@ -167,7 +171,7 @@ export function DatePicker({
         selected={selectedDate ?? undefined}
         defaultMonth={calendarDefaultMonth}
         onSelect={selectDate}
-        locale={locale}
+        locale={calendarLocale}
       />
       <div className="border-border grid grid-cols-2 gap-2 border-t p-2">
         <Button

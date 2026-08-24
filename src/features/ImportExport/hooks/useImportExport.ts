@@ -21,6 +21,7 @@ import {
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { applyPreferenceLanguage } from "~/utils/i18n/applyPreferenceLanguage"
+import { changePageLanguage } from "~/utils/i18n/pageLanguage"
 
 import { importFromBackupObject, parseBackupSummary } from "../utils"
 
@@ -139,7 +140,10 @@ export const useImportExport = () => {
       )
       if (result.sections?.preferences) {
         await loadPreferences()
-        await applyPreferenceLanguage(await userPreferences.getLanguage())
+        await applyPreferenceLanguage(
+          await userPreferences.getLanguage(),
+          changePageLanguage,
+        )
       }
       if (result.allImported) {
         toast.success(t("importExport:import.importSuccess"))
