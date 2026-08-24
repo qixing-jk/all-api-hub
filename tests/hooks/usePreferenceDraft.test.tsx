@@ -124,4 +124,23 @@ describe("usePreferenceDraft", () => {
     expect(result.current.isDirty).toBe(true)
     expect(result.current.expectedLastUpdated).toBe(2)
   })
+
+  it("ignores an older saved snapshot while the draft is clean", () => {
+    const { result, rerender } = renderHook(
+      ({ savedValue, savedVersion }) =>
+        usePreferenceDraft({ savedValue, savedVersion }),
+      {
+        initialProps: {
+          savedValue: "current",
+          savedVersion: 2,
+        },
+      },
+    )
+
+    rerender({ savedValue: "stale", savedVersion: 1 })
+
+    expect(result.current.draft).toBe("current")
+    expect(result.current.isDirty).toBe(false)
+    expect(result.current.expectedLastUpdated).toBe(2)
+  })
 })
