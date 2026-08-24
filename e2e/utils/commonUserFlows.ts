@@ -143,7 +143,7 @@ function installExtensionPageGuardsWithOptions(
       return
     }
 
-    const { url, lineNumber, columnNumber } = message.location()
+    const { url, lineNumber, columnNumber } = message.location?.() ?? {}
     const source = url
       ? ` (${url}:${lineNumber ?? 0}:${columnNumber ?? 0})`
       : ""
