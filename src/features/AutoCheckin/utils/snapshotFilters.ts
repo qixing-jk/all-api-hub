@@ -34,7 +34,7 @@ export type SnapshotStatusFilter =
 /**
  * Returns whether an account has every prerequisite needed for execution.
  */
-export function isAutoCheckinSnapshotReady(
+function isAutoCheckinSnapshotReady(
   snapshot: AutoCheckinAccountSnapshot,
 ): boolean {
   return (

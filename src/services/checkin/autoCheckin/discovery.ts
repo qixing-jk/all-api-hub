@@ -32,7 +32,7 @@ import type {
 const DEFAULT_PER_ADAPTER_TIMEOUT_MS = 3_000
 const DEFAULT_DISCOVERY_DEADLINE_MS = 10_000
 
-export interface CheckInDiscoveryInput {
+interface CheckInDiscoveryInput {
   account: SiteAccount
   config: CheckInConfig
   /** Optional runtime request context for browser-profile and protection bypass. */
@@ -43,7 +43,7 @@ export interface CheckInDiscoveryInput {
   deadlineMs?: number
 }
 
-export interface CheckInDiscoveryResult {
+interface CheckInDiscoveryResult {
   config: CheckInConfig
   decision: CheckInDiscoveryDecision
   detections: Partial<Record<CheckInMethodId, CheckInMethodDetection>>
@@ -236,8 +236,6 @@ export async function discoverCheckInMethods(
   return { config, decision, detections, timedOutMethodIds }
 }
 
-export const discover = discoverCheckInMethods
-
 /** Applies a user-owned manual choice or restores automatic selection. */
 export function setCheckInSelection(input: {
   config: CheckInConfig
@@ -266,5 +264,3 @@ export function setCheckInSelection(input: {
         : { mode: CHECK_IN_SELECTION_MODES.Automatic },
   })
 }
-
-export const setSelection = setCheckInSelection

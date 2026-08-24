@@ -11,7 +11,7 @@ export const AUTO_CHECKIN_ERROR_CATEGORIES = {
   Unknown: "unknown",
 } as const
 
-export type AutoCheckinErrorCategory =
+type AutoCheckinErrorCategory =
   (typeof AUTO_CHECKIN_ERROR_CATEGORIES)[keyof typeof AUTO_CHECKIN_ERROR_CATEGORIES]
 
 const NETWORK_ERROR_MESSAGE_PATTERN =
