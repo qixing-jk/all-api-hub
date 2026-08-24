@@ -79,8 +79,8 @@ describe("useAccountDialog auth defaults", () => {
 
     await waitFor(() => {
       expect(result.current.state.siteType).toBe(SITE_TYPES.UNKNOWN)
+      expect(result.current.state.checkIn.automaticExecutionEnabled).toBe(false)
     })
-    expect(result.current.state.checkIn.automaticExecutionEnabled).toBe(false)
   })
 
   it("uses access-token auth when a sponsor prefill omits auth type and URL has no known default", async () => {

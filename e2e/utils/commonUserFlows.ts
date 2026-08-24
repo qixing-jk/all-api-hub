@@ -143,7 +143,12 @@ function installExtensionPageGuardsWithOptions(
       return
     }
 
-    throw new Error(text)
+    const { url, lineNumber, columnNumber } = message.location()
+    const source = url
+      ? ` (${url}:${lineNumber ?? 0}:${columnNumber ?? 0})`
+      : ""
+
+    throw new Error(`${text}${source}`)
   })
 }
 
@@ -858,6 +863,23 @@ export async function stubNewApiSiteRoutes(
         body: JSON.stringify({
           success: false,
           message: "Management PAT required",
+        }),
+      })
+      return
+    }
+
+    if (method === "GET" && url.pathname === "/api/user/checkin") {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          success: true,
+          message: "ok",
+          data: {
+            stats: {
+              checked_in_today: false,
+            },
+          },
         }),
       })
       return

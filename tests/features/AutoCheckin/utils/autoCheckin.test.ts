@@ -4,6 +4,7 @@ import {
   countAutoCheckinResults,
   FILTER_STATUS,
   filterAutoCheckinResults,
+  getAutoCheckinResultMessage,
   isInvalidAccessTokenMessage,
   isNoTabWithIdMessage,
   resolveAutoCheckinTroubleshootingHintKey,
@@ -102,6 +103,34 @@ describe("autoCheckin utils", () => {
       ).toBe("backend failure: upstream temporarily unavailable")
       expect(t).not.toHaveBeenCalled()
     })
+  })
+
+  it("prefers controlled result reasons over backend copy", () => {
+    const t = vi.fn((key: string) => `translated:${key}`)
+
+    expect(
+      getAutoCheckinResultMessage(t as any, {
+        accountId: "account-1",
+        accountName: "Account",
+        status: CHECKIN_RESULT_STATUS.FAILED,
+        reasonCode: "authentication_required",
+        rawMessage: "deployment-controlled copy",
+        timestamp: 1,
+      }),
+    ).toBe("translated:autoCheckin:skipReasons.authentication_required")
+  })
+
+  it("uses the localized unknown fallback when a result has no message", () => {
+    const t = vi.fn((key: string) => `translated:${key}`)
+
+    expect(
+      getAutoCheckinResultMessage(t as any, {
+        accountId: "account-1",
+        accountName: "Account",
+        status: CHECKIN_RESULT_STATUS.FAILED,
+        timestamp: 1,
+      }),
+    ).toBe("translated:autoCheckin:providerFallback.unknownError")
   })
 
   describe("isInvalidAccessTokenMessage", () => {

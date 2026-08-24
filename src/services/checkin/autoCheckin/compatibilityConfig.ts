@@ -27,7 +27,10 @@ export function hasNewAccountCompatibilityRegistration(
   return getNewAccountCompatibilityMethodIds(siteType).length > 0
 }
 
-/** Applies a new-account default without overwriting an explicit user choice. */
+/**
+ * Applies the candidate-backed default while preserving an explicit choice only
+ * when the new site type can still execute automatically.
+ */
 export function resolveNewAccountAutomaticExecutionEnabled(input: {
   siteType: AccountSiteType
   currentAutomaticExecutionEnabled: boolean

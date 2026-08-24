@@ -16,6 +16,7 @@ import { fetchApi, fetchApiData } from "~/services/apiTransport/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import {
   AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
+  getEffectiveAuthType,
   isAlreadyCheckedMessage,
   normalizeCheckinMessage,
   resolveProviderErrorResult,
@@ -51,7 +52,7 @@ const createRequest = (
   accountId: account.id,
   cookieAuthSessionCookie: account.cookieAuth?.sessionCookie,
   auth: {
-    authType: account.authType,
+    authType: getEffectiveAuthType(account),
     userId: account.account_info.id,
     accessToken: account.account_info.access_token,
   },
@@ -69,7 +70,7 @@ async function fetchCheckInObservation(
   request: ApiServiceRequest,
   signal?: AbortSignal,
 ): Promise<VeloeraCheckInObservation | undefined> {
-  const enabled = await fetchSupportCheckIn(request)
+  const enabled = await fetchSupportCheckIn(request, signal)
   if (enabled === false) return { enabled }
 
   const data = await fetchApiData<{ can_check_in?: boolean }>(request, {
@@ -172,7 +173,7 @@ function getReadiness(account: SiteAccount) {
     } as const
   }
 
-  const authType = account.authType
+  const authType = getEffectiveAuthType(account)
 
   if (authType === AuthTypeEnum.AccessToken) {
     return account.account_info?.access_token
@@ -200,7 +201,7 @@ const getStatus: NonNullable<AutoCheckinProvider["getStatus"]> = async ({
           accountId: account.id,
           cookieAuthSessionCookie: account.cookieAuth?.sessionCookie,
           auth: {
-            authType: account.authType,
+            authType: getEffectiveAuthType(account),
             userId: account.account_info.id,
             accessToken: account.account_info.access_token,
           },

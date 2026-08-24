@@ -84,12 +84,16 @@ function getAutoDetectFetchContext(
 function createAutoDetectApiRequest(params: {
   baseUrl: string
   auth: ApiServiceRequest["auth"]
+  cookieAuthSessionCookie?: string
   fetchContext?: ApiServiceFetchContext
   protectionBypassExecution?: ProtectionBypassExecution
 }): ApiServiceRequest {
   return {
     baseUrl: params.baseUrl,
     auth: params.auth,
+    ...(params.cookieAuthSessionCookie
+      ? { cookieAuthSessionCookie: params.cookieAuthSessionCookie }
+      : {}),
     ...(params.fetchContext ? { fetchContext: params.fetchContext } : {}),
     ...(params.protectionBypassExecution
       ? { protectionBypassExecution: params.protectionBypassExecution }
@@ -176,6 +180,7 @@ export async function completeAutoDetectedAccount(
   const {
     url,
     requestedAuthType,
+    cookieAuthSessionCookie,
     detected,
     autoDetectContext,
     protectionBypassExecution,
@@ -213,6 +218,7 @@ export async function completeAutoDetectedAccount(
     url,
     siteType,
     completed,
+    cookieAuthSessionCookie,
     request: createAutoDetectApiRequest({
       baseUrl: url,
       auth: {
@@ -220,6 +226,7 @@ export async function completeAutoDetectedAccount(
         userId: completed.userId,
         accessToken: completed.accessToken,
       },
+      cookieAuthSessionCookie,
       fetchContext: completionContext.fetchContext,
       protectionBypassExecution: completionContext.protectionBypassExecution,
     }),
@@ -238,6 +245,7 @@ export async function discoverCompletedCheckIn(params: {
   url: string
   siteType: AccountSiteType
   completed: AccountCompletionAdapterResult
+  cookieAuthSessionCookie?: string
   request?: ApiServiceRequest
   registry?: AutoCheckinMethodRegistry
   observedAt?: number
@@ -264,6 +272,9 @@ export async function discoverCompletedCheckIn(params: {
         today_income: 0,
       },
       authType: params.completed.authType,
+      ...(params.cookieAuthSessionCookie
+        ? { cookieAuth: { sessionCookie: params.cookieAuthSessionCookie } }
+        : {}),
       checkIn: params.completed.checkIn,
       health: { status: SiteHealthStatus.Unknown },
       notes: "",

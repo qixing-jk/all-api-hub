@@ -25,6 +25,7 @@ export interface DetectedAccountIdentity {
 export interface AutoDetectCompletionRequest {
   url: string
   requestedAuthType: AuthTypeEnum
+  cookieAuthSessionCookie?: string
   detected: DetectedAccountIdentity
   autoDetectContext?: AutoDetectAnalyticsContext
   protectionBypassExecution?: ProtectionBypassExecution

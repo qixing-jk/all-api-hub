@@ -29,6 +29,7 @@ import {
 import { refreshSelectedStatus } from "~/services/checkin/autoCheckin/refresh"
 import {
   mergeCompatibilityCheckInStatus,
+  mergeDiscoveredCheckInDraft,
   mergeRefreshedCheckInStatus,
   mergeUserOwnedCheckInDraft,
 } from "~/services/checkin/autoCheckin/state"
@@ -621,6 +622,32 @@ describe("check-in methods compatibility activation", () => {
     })
   })
 
+  it("does not apply an older discovery round with the same timestamp", () => {
+    const latest = createCompatibilityCheckInConfig({
+      siteType: SITE_TYPES.NEW_API,
+      supported: true,
+      automaticExecutionEnabled: true,
+    })
+    latest.methodKnowledge.lastFullDiscoveryAt = 500
+    const draft = structuredClone(latest)
+    draft.methodKnowledge.methods["new-api:daily-checkin"]!.detection = {
+      outcome: "unsupported",
+      evidence: { source: "probe", observedAt: 500 },
+    }
+
+    const merged = mergeDiscoveredCheckInDraft({
+      latest,
+      draft,
+      candidateMethodIds: ["new-api:daily-checkin"],
+      discoveryBaseSelection: latest.selection,
+    })
+
+    expect(
+      merged.methodKnowledge.methods["new-api:daily-checkin"]?.detection
+        .outcome,
+    ).toBe("matched")
+  })
+
   it("merges refreshed status without rolling back newer user fields", () => {
     const opened = createCompatibilityCheckInConfig({
       siteType: SITE_TYPES.NEW_API,
@@ -721,7 +748,7 @@ describe("check-in methods compatibility activation", () => {
     expect(checkInRequest).not.toHaveBeenCalled()
   })
 
-  it("reports a network reason when execution-time status cannot connect", async () => {
+  it("executes when the optional status readback cannot connect", async () => {
     const registration = getNewApiExecutionRegistration()
     const account = createNewApiExecutionAccount()
     vi.spyOn(registration.provider, "getStatus").mockRejectedValue(
@@ -737,14 +764,11 @@ describe("check-in methods compatibility activation", () => {
       context: createExecutionContext(),
     })
 
-    expect(result).toMatchObject({
-      kind: "skipped",
-      reason: "network_error",
-    })
-    expect(checkInRequest).not.toHaveBeenCalled()
+    expect(result).toMatchObject({ kind: "executed" })
+    expect(checkInRequest).toHaveBeenCalledOnce()
   })
 
-  it("does not label an unstructured status error as a network problem", async () => {
+  it("executes when the optional status readback returns an invalid response", async () => {
     const registration = getNewApiExecutionRegistration()
     const account = createNewApiExecutionAccount()
     vi.spyOn(registration.provider, "getStatus").mockRejectedValue(
@@ -760,11 +784,8 @@ describe("check-in methods compatibility activation", () => {
       context: createExecutionContext(),
     })
 
-    expect(result).toMatchObject({
-      kind: "skipped",
-      reason: "status_unavailable",
-    })
-    expect(checkInRequest).not.toHaveBeenCalled()
+    expect(result).toMatchObject({ kind: "executed" })
+    expect(checkInRequest).toHaveBeenCalledOnce()
   })
 
   it("revalidates the latest account intent before posting", async () => {
@@ -816,7 +837,7 @@ describe("check-in methods compatibility activation", () => {
       missingTokenReady: false,
       cookieWithoutTokenReady: true,
       missingUserReady: false,
-      missingAuthTypeWithoutTokenReady: true,
+      missingAuthTypeWithoutTokenReady: false,
     },
     {
       siteType: SITE_TYPES.WONG_GONGYI,

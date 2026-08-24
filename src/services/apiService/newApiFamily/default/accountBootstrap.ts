@@ -39,6 +39,7 @@ interface AccountBootstrapImplementation {
  */
 export async function fetchSiteStatus(
   request: ApiServiceRequest,
+  signal?: AbortSignal,
 ): Promise<SiteStatusInfo | null> {
   const publicRequest: ApiServiceRequest = {
     ...request,
@@ -48,6 +49,7 @@ export async function fetchSiteStatus(
   try {
     return await fetchApiData<SiteStatusInfo>(publicRequest, {
       endpoint: "/api/status",
+      ...(signal ? { options: { signal } } : {}),
     })
   } catch (error) {
     logger.warn("获取站点状态信息失败", error)
@@ -164,8 +166,9 @@ export async function getOrCreateAccessToken(
  */
 export async function fetchSupportCheckIn(
   request: ApiServiceRequest,
+  signal?: AbortSignal,
 ): Promise<boolean | undefined> {
-  const siteStatus = await fetchSiteStatus(request)
+  const siteStatus = await fetchSiteStatus(request, signal)
   return siteStatus?.checkin_enabled
 }
 

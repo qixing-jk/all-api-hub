@@ -233,6 +233,7 @@ describe("newApiProvider", () => {
             authType: AuthTypeEnum.AccessToken,
           }),
         }),
+        undefined,
       )
     })
 

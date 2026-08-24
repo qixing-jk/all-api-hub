@@ -188,7 +188,6 @@ export function getAutoCheckinResultMessage(
   t: TFunction,
   result: CheckinAccountResult,
 ): string {
-  if (result.rawMessage) return result.rawMessage
   if (result.reasonCode) {
     return translateAutoCheckinSkipReason(t, result.reasonCode)
   }
@@ -199,7 +198,9 @@ export function getAutoCheckinResultMessage(
       result.messageParams,
     )
   }
-  return result.message ?? "-"
+  if (result.rawMessage) return result.rawMessage
+  if (result.message) return result.message
+  return t("autoCheckin:providerFallback.unknownError")
 }
 
 /**

@@ -127,21 +127,32 @@ describe("voApiV2Provider", () => {
 
   it("propagates the discovery abort signal to the stats request", async () => {
     server.use(
-      http.get("https://example.invalid/api/check_in/stats", () =>
-        HttpResponse.json({ code: 0, data: { todaySigned: false } }),
+      http.get(
+        "https://example.invalid/api/check_in/stats",
+        async () => new Promise<never>(() => undefined),
       ),
     )
     const controller = new AbortController()
 
-    await voApiV2Provider.detect!({
+    const detection = voApiV2Provider.detect!({
       account,
       observedAt: 232,
       signal: controller.signal,
     })
 
+    await vi.waitFor(() => {
+      expect(mockFetchVoApiV2CheckInStats).toHaveBeenCalled()
+    })
+    controller.abort()
+
     expect(mockFetchVoApiV2CheckInStats).toHaveBeenCalledWith(
       expect.objectContaining({ abortSignal: controller.signal }),
     )
+    await expect(detection).resolves.toEqual({
+      outcome: "unknown",
+      reason: "invalid_response",
+      attemptedAt: 232,
+    })
   })
 
   it("propagates the popup source through VoAPI v2 check-in and stats requests", async () => {

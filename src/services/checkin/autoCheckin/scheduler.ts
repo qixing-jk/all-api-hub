@@ -1148,7 +1148,7 @@ class AutoCheckinScheduler {
         error: errorMessage,
       })
       return {
-        result: buildResult(CHECKIN_RESULT_STATUS.FAILED, {
+        result: buildResult(normalizedError.status, {
           messageKey: normalizedError.messageKey,
           messageParams: normalizedError.messageParams,
           rawMessage: normalizedError.rawMessage,
@@ -2288,8 +2288,6 @@ class AutoCheckinScheduler {
         skippedCount,
         needsRetry: summaryNeedsRetry,
       }
-      const overallResult = getAutoCheckinRunResultFromSummary(summary)
-
       const updatedAccountIds = checkinOutcomes
         .filter((outcome) => isSuccessfulCheckinStatus(outcome.result.status))
         .map((outcome) => outcome.result.accountId)
@@ -2353,6 +2351,7 @@ class AutoCheckinScheduler {
         results,
       )
       const mergedSummary = mergeSummaryIfNeeded(summary, perAccount)
+      const overallResult = getAutoCheckinRunResultFromSummary(mergedSummary)
 
       await autoCheckinStorage.saveStatus({
         ...(currentStatus ?? {}),

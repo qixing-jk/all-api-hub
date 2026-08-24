@@ -364,6 +364,7 @@ export async function autoDetectAccount(
   url: string,
   authType: AuthTypeEnum,
   protectionBypassExecution?: ProtectionBypassExecution,
+  cookieAuthSessionCookie?: string,
 ): Promise<AccountAutoDetectResponse> {
   if (!url.trim()) {
     return {
@@ -458,6 +459,7 @@ export async function autoDetectAccount(
     const completed = await completeAutoDetectedAccount({
       url,
       requestedAuthType: authType,
+      cookieAuthSessionCookie,
       detected: detectResult.data,
       autoDetectContext,
       protectionBypassExecution,

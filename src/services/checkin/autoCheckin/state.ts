@@ -165,7 +165,7 @@ export function mergeDiscoveredCheckInDraft(input: {
   const latestDiscoveryAt =
     input.latest.methodKnowledge.lastFullDiscoveryAt ?? 0
   const draftDiscoveryAt = input.draft.methodKnowledge.lastFullDiscoveryAt ?? 0
-  const discoveryWasApplied = draftDiscoveryAt >= latestDiscoveryAt
+  const discoveryWasApplied = draftDiscoveryAt > latestDiscoveryAt
   const methods = { ...input.latest.methodKnowledge.methods }
   if (discoveryWasApplied) {
     for (const methodId of input.candidateMethodIds) {

@@ -101,8 +101,11 @@ function createCheckInRequest(
 }
 
 /** Read the canonical public site flag instead of matching backend copy. */
-async function isCheckInDisabled(request: ApiServiceRequest): Promise<boolean> {
-  return (await fetchSupportCheckIn(request)) === false
+async function isCheckInDisabled(
+  request: ApiServiceRequest,
+  signal?: AbortSignal,
+): Promise<boolean> {
+  return (await fetchSupportCheckIn(request, signal)) === false
 }
 
 /**
@@ -349,11 +352,11 @@ async function fetchCheckedInTodayStatus(
       }
     }
 
-    return !signal?.aborted && (await isCheckInDisabled(request))
+    return !signal?.aborted && (await isCheckInDisabled(request, signal))
       ? { enabled: false }
       : undefined
   } catch (error) {
-    if (!signal?.aborted && (await isCheckInDisabled(request))) {
+    if (!signal?.aborted && (await isCheckInDisabled(request, signal))) {
       return { enabled: false }
     }
     if (strictResponse) throw error

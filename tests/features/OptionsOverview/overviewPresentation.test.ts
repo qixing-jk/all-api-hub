@@ -38,6 +38,7 @@ describe("overview presentation constants", () => {
       success: "success",
       partial: "warning",
       failed: "danger",
+      skipped: "secondary",
       disabled: "secondary",
       not_run: "info",
     })

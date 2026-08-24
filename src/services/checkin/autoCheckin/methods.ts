@@ -1,7 +1,6 @@
 import {
   CHECK_IN_EXECUTION_SKIP_REASONS,
   CHECK_IN_METHOD_EXECUTION_RESULT_KINDS,
-  CHECK_IN_METHOD_STATUS_OUTCOMES,
   CHECK_IN_PROVIDER_READINESS_REASONS,
 } from "~/constants/checkIn"
 import type { AccountSiteType } from "~/constants/siteType"
@@ -165,30 +164,29 @@ export async function executeSelectedCheckIn(input: {
   }
 
   let refreshedConfig: CheckInConfig | undefined
-  let statusUnavailable = false
   if (registration.provider.getStatus) {
     try {
       const status = await registration.provider.getStatus({
         account: input.account,
         observedAt: Date.now(),
       })
-      if (!status) {
+      if (status) {
+        refreshedConfig = replaceCheckInMethodStatus({
+          config: input.account.checkIn,
+          methodId: registration.id,
+          status,
+        })
+      }
+    } catch (error) {
+      const reason = toStatusReadSkipReason(error)
+      if (
+        reason === CHECK_IN_EXECUTION_SKIP_REASONS.AuthenticationRequired ||
+        reason === CHECK_IN_EXECUTION_SKIP_REASONS.PermissionDenied
+      ) {
         return {
           kind: CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Skipped,
-          reason: CHECK_IN_EXECUTION_SKIP_REASONS.StatusUnavailable,
+          reason,
         }
-      }
-      refreshedConfig = replaceCheckInMethodStatus({
-        config: input.account.checkIn,
-        methodId: registration.id,
-        status,
-      })
-      statusUnavailable =
-        status.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Unknown
-    } catch (error) {
-      return {
-        kind: CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Skipped,
-        reason: toStatusReadSkipReason(error),
       }
     }
   }
@@ -209,13 +207,6 @@ export async function executeSelectedCheckIn(input: {
       reason: CHECK_IN_EXECUTION_SKIP_REASONS.AccountUnavailable,
     }
   }
-  if (statusUnavailable) {
-    return {
-      kind: CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Skipped,
-      reason: CHECK_IN_EXECUTION_SKIP_REASONS.StatusUnavailable,
-    }
-  }
-
   const currentState = inspectAccountCheckIn({
     config: currentAccount.checkIn,
     siteType: currentAccount.site_type,

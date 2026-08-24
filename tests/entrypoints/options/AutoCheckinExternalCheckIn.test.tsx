@@ -228,6 +228,23 @@ const expectPartialFailureToast = (failedCount: number, totalCount: number) => {
   )
 }
 
+const getRowExternalCheckInAction = async (
+  user: ReturnType<typeof userEvent.setup>,
+  row: HTMLElement,
+) => {
+  const directAction = within(row).queryByRole("button", {
+    name: "autoCheckin:execution.actions.openExternal",
+  })
+  if (directAction) return directAction
+
+  await user.click(
+    within(row).getByRole("button", { name: "common:actions.more" }),
+  )
+  return screen.findByRole("menuitem", {
+    name: "autoCheckin:execution.actions.openExternal",
+  })
+}
+
 describe("AutoCheckin external check-in actions", () => {
   beforeEach(() => {
     startProductAnalyticsActionMock.mockReturnValue({
@@ -436,11 +453,7 @@ describe("AutoCheckin external check-in actions", () => {
     render(<AutoCheckin routeParams={{}} />)
 
     const alphaRow = await screen.findByRole("row", { name: /Alpha/ })
-    await user.click(
-      await within(alphaRow).findByRole("button", {
-        name: "autoCheckin:execution.actions.openExternal",
-      }),
-    )
+    await user.click(await getRowExternalCheckInAction(user, alphaRow))
 
     await waitFor(() => {
       expect(sendExternalCheckInMessage).toHaveBeenCalledWith(
@@ -469,22 +482,15 @@ describe("AutoCheckin external check-in actions", () => {
     render(<AutoCheckin routeParams={{}} />)
 
     const alphaRow = await screen.findByRole("row", { name: /Alpha/ })
-    const button = await within(alphaRow).findByRole("button", {
-      name: "autoCheckin:execution.actions.openExternal",
+    const menuButton = within(alphaRow).getByRole("button", {
+      name: "common:actions.more",
     })
-    await user.click(button)
+    await user.click(await getRowExternalCheckInAction(user, alphaRow))
 
     await waitFor(() => {
-      expect(button).toBeDisabled()
+      expect(menuButton).toBeDisabled()
     })
-    await user.click(button)
-
-    const betaRow = await screen.findByRole("row", { name: /Beta/ })
-    await user.click(
-      await within(betaRow).findByRole("button", {
-        name: "autoCheckin:execution.actions.openExternal",
-      }),
-    )
+    await user.click(menuButton)
 
     expect(sendExternalCheckInMessage).toHaveBeenCalledTimes(1)
     deferred.resolve({
@@ -498,7 +504,7 @@ describe("AutoCheckin external check-in actions", () => {
       },
     })
     await waitFor(() => {
-      expect(button).not.toBeDisabled()
+      expect(menuButton).not.toBeDisabled()
     })
   })
 
@@ -517,11 +523,7 @@ describe("AutoCheckin external check-in actions", () => {
     render(<AutoCheckin routeParams={{}} />)
 
     const alphaRow = await screen.findByRole("row", { name: /Alpha/ })
-    await user.click(
-      await within(alphaRow).findByRole("button", {
-        name: "autoCheckin:execution.actions.openExternal",
-      }),
-    )
+    await user.click(await getRowExternalCheckInAction(user, alphaRow))
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
@@ -540,11 +542,7 @@ describe("AutoCheckin external check-in actions", () => {
     render(<AutoCheckin routeParams={{}} />)
 
     const alphaRow = await screen.findByRole("row", { name: /Alpha/ })
-    await user.click(
-      await within(alphaRow).findByRole("button", {
-        name: "autoCheckin:execution.actions.openExternal",
-      }),
-    )
+    await user.click(await getRowExternalCheckInAction(user, alphaRow))
 
     await waitFor(() => {
       expectPartialFailureToast(1, 2)
@@ -560,11 +558,7 @@ describe("AutoCheckin external check-in actions", () => {
     render(<AutoCheckin routeParams={{}} />)
 
     const alphaRow = await screen.findByRole("row", { name: /Alpha/ })
-    await user.click(
-      await within(alphaRow).findByRole("button", {
-        name: "autoCheckin:execution.actions.openExternal",
-      }),
-    )
+    await user.click(await getRowExternalCheckInAction(user, alphaRow))
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(

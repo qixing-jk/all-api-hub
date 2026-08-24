@@ -66,12 +66,18 @@ const withTimeout = async <T>(
   if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) return { timedOut: true }
   let timer: ReturnType<typeof setTimeout> | undefined
   try {
-    return await Promise.race([
-      task.then((value) => ({ timedOut: false, value })),
+    const taskResult = task.then(
+      (value) => ({ timedOut: false as const, value }),
+      (error) => ({ timedOut: false as const, error }),
+    )
+    const result = await Promise.race([
+      taskResult,
       new Promise<{ timedOut: true }>((resolve) => {
         timer = setTimeout(() => resolve({ timedOut: true }), timeoutMs)
       }),
     ])
+    if (!result.timedOut && "error" in result) throw result.error
+    return result
   } finally {
     if (timer) clearTimeout(timer)
   }

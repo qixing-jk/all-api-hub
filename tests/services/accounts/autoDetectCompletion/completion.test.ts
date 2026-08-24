@@ -191,6 +191,8 @@ describe("auto-detect completion", () => {
     expect(result).toMatchObject({
       ...completedAccountData,
       checkIn: {
+        automaticExecutionEnabled: true,
+        customCheckIn: completedAccountData.checkIn.customCheckIn,
         methodKnowledge: {
           methods: {
             "new-api:daily-checkin": {
@@ -238,6 +240,31 @@ describe("auto-detect completion", () => {
       expect.objectContaining({
         endpoint: expect.stringMatching(/^\/api\/user\/checkin\?month=/),
       }),
+    )
+  })
+
+  it("propagates the cookie-auth session into explicit discovery", async () => {
+    accountCompletionMock.complete.mockResolvedValueOnce({
+      ...completedAccountData,
+      authType: AuthTypeEnum.Cookie,
+    })
+
+    await completeAutoDetectedAccount({
+      url: "https://cookie.example.invalid",
+      requestedAuthType: AuthTypeEnum.Cookie,
+      cookieAuthSessionCookie: "session=example",
+      detected: {
+        userId: "7",
+        siteType: SITE_TYPES.NEW_API,
+      },
+    })
+
+    expect(fetchCheckInStatusMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        cookieAuthSessionCookie: "session=example",
+        auth: expect.objectContaining({ authType: AuthTypeEnum.Cookie }),
+      }),
+      expect.any(Object),
     )
   })
 

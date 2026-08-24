@@ -99,6 +99,19 @@ describe("veloeraProvider", () => {
       })
     })
 
+    it("defaults legacy accounts without auth type to access-token readiness", () => {
+      const account = {
+        ...mockAccount,
+        authType: undefined,
+        account_info: { ...mockAccount.account_info, access_token: "" },
+      } as unknown as SiteAccount
+
+      expect(veloeraProvider.getReadiness(account)).toEqual({
+        ready: false,
+        reason: "credentials_missing",
+      })
+    })
+
     it("allows cookie-auth accounts without an access token", () => {
       const account = {
         ...mockAccount,
@@ -144,6 +157,22 @@ describe("veloeraProvider", () => {
       status: { outcome: "known", availability: "disabled" },
     })
     expect(fetchApiData).not.toHaveBeenCalled()
+  })
+
+  it("propagates the discovery abort signal to the public support probe", async () => {
+    const controller = new AbortController()
+    mockFetchVeloeraCheckInSupport.mockResolvedValueOnce(false)
+
+    await veloeraProvider.detect!({
+      account: mockAccount,
+      observedAt: 213,
+      signal: controller.signal,
+    })
+
+    expect(mockFetchVeloeraCheckInSupport).toHaveBeenCalledWith(
+      expect.any(Object),
+      controller.signal,
+    )
   })
 
   describe("checkIn", () => {

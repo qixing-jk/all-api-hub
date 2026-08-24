@@ -10,8 +10,9 @@ import type { ApiServiceRequest } from "~/services/apiTransport/type"
  */
 export async function fetchSupportCheckIn(
   request: ApiServiceRequest,
+  signal?: AbortSignal,
 ): Promise<boolean | undefined> {
-  const siteStatus = await fetchSiteStatus(request)
+  const siteStatus = await fetchSiteStatus(request, signal)
   return typeof siteStatus?.check_in_enabled === "boolean"
     ? siteStatus.check_in_enabled
     : undefined

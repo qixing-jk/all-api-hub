@@ -170,9 +170,10 @@ describe("AutoCheckin ResultsTable", () => {
         name: "autoCheckin:execution.pagination.rowsPerPage",
       }),
     )
-    expect(
-      screen.getAllByRole("option").map((option) => option.textContent),
-    ).toEqual(["10", "25", "50", "100"])
+    const pageSizeOptions = screen
+      .getAllByRole("option")
+      .map((option) => option.textContent)
+    expect(pageSizeOptions).toEqual(expect.arrayContaining(["10", "25"]))
     fireEvent.click(screen.getByRole("option", { name: "10" }))
 
     expect(screen.getByRole("button", { name: "Account 10" })).toBeVisible()

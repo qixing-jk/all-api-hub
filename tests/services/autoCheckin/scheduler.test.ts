@@ -3252,6 +3252,7 @@ describe("autoCheckinScheduler targeting support", () => {
     expect(storedStatus.perAccount.other).toMatchObject({
       status: "failed",
     })
+    expect(storedStatus.lastRunResult).toBe("partial")
     expect(storedStatus.retryState).toEqual({
       day: "2024-01-01",
       pendingAccountIds: ["other"],
@@ -6437,6 +6438,31 @@ describe("autoCheckinScheduler private helpers", () => {
         reasonCode: "network_error",
         messageKey: "autoCheckin:skipReasons.network_error",
         rawMessage: undefined,
+      },
+    })
+  })
+
+  it("preserves an uncaught already-checked classification", async () => {
+    mockedMethods.executeSelectedCheckIn.mockRejectedValueOnce(
+      new Error("Already checked in today"),
+    )
+
+    await expect(
+      (autoCheckinScheduler as any).runAccountCheckin(
+        {
+          id: "uncaught-already-checked",
+          site_name: "Uncaught Already Checked",
+          site_type: SITE_TYPES.NEW_API,
+          disabled: false,
+          account_info: {},
+          checkIn: runnableCheckIn(true, SITE_TYPES.NEW_API),
+        },
+        "Uncaught Already Checked",
+      ),
+    ).resolves.toMatchObject({
+      result: {
+        status: "already_checked",
+        rawMessage: "Already checked in today",
       },
     })
   })

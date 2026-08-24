@@ -213,6 +213,7 @@ describe("useAccountDialog current tab detection", () => {
         PROTECTION_BYPASS_USER_COMMANDS.DetectAccount,
         "background",
       ),
+      undefined,
     )
   })
 

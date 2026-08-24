@@ -1,3 +1,4 @@
+import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
 import ResultsTable from "~/features/AutoCheckin/components/ResultsTable"
@@ -37,16 +38,21 @@ describe("AutoCheckin ResultsTable dev actions", () => {
         name: "autoCheckin:execution.actions.retryAccount",
       }),
     ).toBeInTheDocument()
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: "common:actions.more" }))
     expect(
-      screen.getByRole("button", {
+      await screen.findByRole("menuitem", {
         name: "autoCheckin:execution.actions.openManual",
       }),
     ).toBeInTheDocument()
     expect(
-      screen.queryByRole("button", { name: "account:actions.disableAccount" }),
+      screen.queryByRole("menuitem", {
+        name: "account:actions.disableAccount",
+      }),
     ).not.toBeInTheDocument()
     expect(
-      screen.queryByRole("button", { name: "account:actions.delete" }),
+      screen.queryByRole("menuitem", { name: "account:actions.delete" }),
     ).not.toBeInTheDocument()
   })
 
@@ -77,6 +83,7 @@ describe("AutoCheckin ResultsTable dev actions", () => {
   })
 
   it("shows disable and delete actions only for failed rows", async () => {
+    const user = userEvent.setup()
     render(
       <ResultsTable
         results={[
@@ -92,13 +99,16 @@ describe("AutoCheckin ResultsTable dev actions", () => {
       />,
     )
 
+    await user.click(
+      await screen.findByRole("button", { name: "common:actions.more" }),
+    )
     expect(
-      await screen.findByRole("button", {
+      await screen.findByRole("menuitem", {
         name: "account:actions.disableAccount",
       }),
     ).toBeInTheDocument()
     expect(
-      screen.getByRole("button", { name: "account:actions.delete" }),
+      screen.getByRole("menuitem", { name: "account:actions.delete" }),
     ).toBeInTheDocument()
   })
 })

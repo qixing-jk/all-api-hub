@@ -602,17 +602,14 @@ export function useAccountDialog({
   )
   const setCheckIn = useCallback(
     (value: CheckInConfig) => {
-      updateDraft((prev) => {
-        if (
-          value.automaticExecutionEnabled !==
-          prev.checkIn.automaticExecutionEnabled
-        ) {
-          automaticExecutionPreferenceChangedRef.current = true
-        }
-        return { ...prev, checkIn: value }
-      })
+      if (
+        value.automaticExecutionEnabled !== checkIn.automaticExecutionEnabled
+      ) {
+        automaticExecutionPreferenceChangedRef.current = true
+      }
+      updateDraft((prev) => ({ ...prev, checkIn: value }))
     },
-    [updateDraft],
+    [checkIn.automaticExecutionEnabled, updateDraft],
   )
   const setCheckInSelectionDraft = useCallback(
     (value: CheckInConfig) => {
@@ -1911,14 +1908,14 @@ export function useAccountDialog({
       : siteType
     const policy = getAccountDialogSitePolicy(nextSiteType)
 
+    if (
+      mode === DIALOG_MODES.EDIT &&
+      detectedCheckIn.methodKnowledge.lastFullDiscoveryAt !== undefined &&
+      !checkInDiscoveryBaseSelectionRef.current
+    ) {
+      checkInDiscoveryBaseSelectionRef.current = { ...checkIn.selection }
+    }
     setDraft((prev) => {
-      if (
-        mode === DIALOG_MODES.EDIT &&
-        detectedCheckIn.methodKnowledge.lastFullDiscoveryAt !== undefined &&
-        !checkInDiscoveryBaseSelectionRef.current
-      ) {
-        checkInDiscoveryBaseSelectionRef.current = { ...prev.checkIn.selection }
-      }
       return buildDraftFromAutoDetectResult({
         draft: prev,
         resultData,
@@ -2235,7 +2232,12 @@ export function useAccountDialog({
         PROTECTION_BYPASS_USER_COMMANDS.DetectAccount,
         getCurrentTempWindowRequestSource(),
         (protectionBypassExecution) =>
-          autoDetectAccount(requestedUrl, authType, protectionBypassExecution),
+          autoDetectAccount(
+            requestedUrl,
+            authType,
+            protectionBypassExecution,
+            cookieAuthSessionCookie.trim() || undefined,
+          ),
       )
       if (!result.success) {
         enterForm(ACCOUNT_DIALOG_FORM_SOURCES.MANUAL)
