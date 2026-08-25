@@ -54,6 +54,21 @@ Saved settings take effect immediately and reschedule the task without restartin
 - When the global switch is on, **Run Now** manually runs every eligible account once. When it is off, this bulk run does not execute. To process one account, click **Quick Check-in** in its "…" menu; that action is not controlled by the global switch.
 - The calendar icon at the top of the popup or side panel, labeled Quick Check-in, opens Automatic Check-in in Settings and immediately runs it when the global switch is on. The side panel reuses the popup entry point and has no separate page.
 - Failed rows can offer Retry, Manual Check-in, External Check-in, or Open Site. Manual Check-in requires you to finish the action on the site.
+- For "Pending Confirmation" results, the **Verify Status** action is available. It only reads today's status and updates the account configuration; it does not resubmit the check-in. If login or authentication repair is required, open the site to complete sign-in first, then verify again.
+
+### 4. Handle Detection and Execution States
+
+The account's check-in configuration retains your selected method and custom URL. It does not silently switch to another method after a detection failure. Take the corresponding action based on the state:
+
+| State | Meaning | Next Step |
+|------|------|--------|
+| Confirmed | The selected check-in method is confirmed usable | Keep automatic check-in enabled; usually no action is required |
+| Needs Selection | Multiple candidate methods detected | Select a method once, or keep the current selection |
+| Unknown | This detection did not complete | Click Re-detect |
+| Not Supported | No built-in method is confirmed usable | Use a custom check-in URL or Manual Check-in |
+| Disabled | The site explicitly disabled this method | Keep the method, disable automatic check-in, or switch to manual |
+| Status Unreadable | The method still exists, but today's status cannot be read temporarily | Keep the selection and auto check-in switch, retry later or confirm manually |
+| Pending Confirmation | The request result cannot be reliably confirmed | Click Verify Status; if authentication is required, open the site to log in, and do not blindly retry |
 
 ## How It Works
 
@@ -71,7 +86,7 @@ Saved settings take effect immediately and reschedule the task without restartin
 
 ## Supported Sites and Authentication
 
-The built-in providers currently cover these six exact site types:
+The built-in providers currently cover these seven exact site types:
 
 | Site type | Built-in automatic check-in | Authentication |
 |----------|------------------|----------|
@@ -81,12 +96,13 @@ The built-in providers currently cover these six exact site types:
 | `anyrouter` | Yes | Cookie session or browser sign-in context, plus account ID |
 | `wong-gongyi` | Yes | Access Token or Cookie, plus account ID |
 | `voapi-v2` | Yes | Saved dashboard JWT (Access Token) |
+| `sub2api` | Yes | Sub2API Pro Access Token or recoverable login session |
 
 ::: warning Deployment differences
 Even when the site type matches, a deployment can be customized: the expected endpoint may be missing and return 404/405, authentication may differ, or human verification may be required. Do not assume that every site "compatible with New API" has built-in automatic check-in.
 :::
 
-The following types currently have no built-in provider, but can still use an external URL or Manual Check-in: `one-api`, `one-hub`, `done-hub`, `v-api`, legacy `VoAPI`, `Super-API`, `Rix-Api`, `neo-Api`, `sub2api`, `AIHubMix`, `sharedchat`, `openrouter`, and others.
+The following types currently have no built-in provider, but can still use an external URL or Manual Check-in: `one-api`, `one-hub`, `done-hub`, `v-api`, legacy `VoAPI`, `Super-API`, `Rix-Api`, `neo-Api`, `AIHubMix`, `sharedchat`, `openrouter`, and others.
 
 ## Best Practices
 
@@ -102,7 +118,7 @@ The following types currently have no built-in provider, but can still use an ex
 |------|------|:---:|
 | Success / Already checked in today | The run confirmed a completed check-in, or the site confirmed today's check-in was already done | No |
 | Failed | API, authentication, verification, network, or site response failed | Only for the daily schedule when retries are enabled and the failure is safe to retry |
-| Pending confirmation | The request may have been submitted, but the site result could not be confirmed reliably. The extension performs one read-only status check and does not directly resend the check-in | No |
+| Pending confirmation | The request may have been submitted, but the site result could not be confirmed reliably. The extension performs one read-only status check and does not directly resend the check-in | No, use Verify Status or open the site to fix authentication |
 | Skipped | Account disabled, not detected, account-level setting off, no provider, or insufficient credentials | No |
 
 | Problem | Troubleshooting |
