@@ -40,8 +40,11 @@ import { getApiVerificationApiTypeLabel } from "~/services/verification/aiApiVer
 import type { ApiVerificationHistorySummary } from "~/services/verification/verificationResultHistory"
 import { SiteHealthStatus } from "~/types"
 import {
+  API_CREDENTIAL_TELEMETRY_HEALTH_REASONS,
   API_CREDENTIAL_TELEMETRY_SOURCES,
   type ApiCredentialProfile,
+  type ApiCredentialTelemetryBalanceFact,
+  type ApiCredentialTelemetryQuotaWindowFact,
   type ApiCredentialTelemetrySource,
 } from "~/types/apiCredentialProfiles"
 import {
@@ -196,6 +199,23 @@ function getHealthStatusLabel(
   return t("account:healthStatus.unknown")
 }
 
+/** Localizes known product-owned health reasons while preserving unknown diagnostics. */
+function getTelemetryHealthReason(
+  t: TFunction,
+  reason: string | undefined,
+): string | undefined {
+  if (
+    reason === API_CREDENTIAL_TELEMETRY_HEALTH_REASONS.InsufficientBalance ||
+    reason === "Provider account is unavailable" ||
+    reason === "Provider balance is insufficient for API calls"
+  ) {
+    return t(
+      "apiCredentialProfiles:telemetry.healthReasons.insufficientBalance",
+    )
+  }
+  return reason
+}
+
 /**
  * Formats the optional profile expiration as a calendar date.
  */
@@ -221,61 +241,83 @@ function formatProfileExpiration(
 function hasTelemetryDetailData(
   snapshot: ApiCredentialProfile["telemetrySnapshot"],
 ): boolean {
+  const facts = snapshot?.facts
   return Boolean(
     snapshot &&
-      (snapshot.balance !== undefined ||
-        snapshot.quota !== undefined ||
-        snapshot.balanceUsd !== undefined ||
-        snapshot.todayCostUsd !== undefined ||
-        snapshot.todayRequests !== undefined ||
-        snapshot.todayTokens !== undefined ||
-        snapshot.unlimitedQuota === true ||
-        snapshot.models !== undefined ||
+      (facts?.balances?.length ||
+        facts?.quota?.windows.length ||
+        facts?.usage ||
+        facts?.models ||
         Boolean(snapshot.lastError)),
   )
 }
 
-/** Formats a provider-native balance without converting its currency. */
+/** Formats a canonical money balance without converting its currency. */
 function formatProviderBalance(
-  balance: NonNullable<
-    NonNullable<ApiCredentialProfile["telemetrySnapshot"]>["balance"]
-  >,
+  balance: ApiCredentialTelemetryBalanceFact,
+  t: TFunction,
 ): string {
+  if (balance.unit.kind === "quota") {
+    const label =
+      balance.unit.code === "usd-equivalent"
+        ? t("apiCredentialProfiles:telemetry.balanceSemantics.budgetEquivalent")
+        : balance.unit.label
+    return `${balance.amount.toLocaleString()} ${label}`
+  }
   try {
     return new Intl.NumberFormat(undefined, {
       style: "currency",
-      currency: balance.currency,
+      currency: balance.unit.currency,
       maximumFractionDigits: 2,
     }).format(balance.amount)
   } catch {
-    return `${balance.currency} ${balance.amount.toFixed(2)}`
+    return `${balance.unit.currency} ${balance.amount.toFixed(2)}`
   }
 }
 
-/** Formats provider quota windows as a compact remaining-capacity summary. */
-function formatProviderQuota(
-  quota: NonNullable<
-    NonNullable<ApiCredentialProfile["telemetrySnapshot"]>["quota"]
-  >,
+/** Explains whether a displayed monetary figure is spendable cash or a quota equivalent. */
+function getBalanceSemanticsLabel(
+  balance: ApiCredentialTelemetryBalanceFact,
   t: TFunction,
-  balance:
-    | NonNullable<
-        NonNullable<ApiCredentialProfile["telemetrySnapshot"]>["balance"]
-      >
-    | undefined,
-): string {
-  const windowLabels = {
-    fiveHour: t("apiCredentialProfiles:telemetry.quotaWindows.fiveHour"),
-    weekly: t("apiCredentialProfiles:telemetry.quotaWindows.weekly"),
-    total: t("apiCredentialProfiles:telemetry.quotaWindows.total"),
-  } as const
-  const summary = quota.windows
-    .map(
-      (window) =>
-        `${windowLabels[window.type]} ${Math.round(window.percentRemaining)}%`,
+): string | null {
+  if (balance.semantics === "cash") {
+    return t("apiCredentialProfiles:telemetry.balanceSemantics.cash")
+  }
+  if (balance.semantics === "provider-wallet") {
+    return t("apiCredentialProfiles:telemetry.balanceSemantics.providerWallet")
+  }
+  if (balance.semantics === "budget-equivalent") {
+    return t(
+      "apiCredentialProfiles:telemetry.balanceSemantics.budgetEquivalent",
     )
-    .join(" · ")
-  return balance ? `${summary} · ${formatProviderBalance(balance)}` : summary
+  }
+  return null
+}
+
+/** Formats a quota window with its absolute unit when the provider supplies it. */
+function formatProviderQuotaWindow(
+  window: ApiCredentialTelemetryQuotaWindowFact,
+  t: TFunction,
+): string {
+  const label =
+    window.type === "fiveHour"
+      ? t("apiCredentialProfiles:telemetry.quotaWindows.fiveHour")
+      : window.type === "weekly"
+        ? t("apiCredentialProfiles:telemetry.quotaWindows.weekly")
+        : t("apiCredentialProfiles:telemetry.quotaWindows.total")
+  const percent = `${Math.round(window.remainingPercent)}%`
+  if (window.unit.kind === "percent" || window.remaining === undefined) {
+    return `${label}: ${percent}`
+  }
+  const unitLabel =
+    window.unit.kind === "quota" && window.unit.code === "glm-credit"
+      ? t("apiCredentialProfiles:telemetry.source.glmQuota")
+      : window.unit.kind === "quota" && window.unit.code === "usd-equivalent"
+        ? t("apiCredentialProfiles:telemetry.balanceSemantics.budgetEquivalent")
+        : window.unit.kind === "quota"
+          ? t("apiCredentialProfiles:telemetry.quota")
+          : ""
+  return `${label}: ${window.remaining.toLocaleString()} / ${window.limit?.toLocaleString() ?? "-"} ${unitLabel} (${percent})`
 }
 
 /**
@@ -328,6 +370,7 @@ export function ApiCredentialProfileListItem({
   ])
   const { currencyType } = useUserPreferencesContext()
   const telemetry = profile.telemetrySnapshot
+  const facts = telemetry?.facts
   const hasTelemetryDetails = hasTelemetryDetailData(telemetry)
   const [isTelemetryOpen, setIsTelemetryOpen] = useState(hasTelemetryDetails)
   const previousHasTelemetryDetailsRef = useRef(hasTelemetryDetails)
@@ -349,7 +392,7 @@ export function ApiCredentialProfileListItem({
   const healthTitle = [
     t("apiCredentialProfiles:telemetry.health"),
     getHealthStatusLabel(t, health?.status),
-    health?.reason || telemetry?.lastError || "",
+    getTelemetryHealthReason(t, health?.reason) || telemetry?.lastError || "",
   ]
     .filter(Boolean)
     .join(": ")
@@ -605,87 +648,113 @@ export function ApiCredentialProfileListItem({
                   </div>
 
                   <CollapsibleContent id={telemetryContentId}>
-                    <div className="grid flex-1 auto-rows-max grid-cols-[repeat(auto-fit,minmax(7rem,1fr))] content-evenly gap-2 pt-2 text-xs sm:grid-cols-4">
-                      <div className="flex min-w-0 flex-col gap-1">
-                        <div className="dark:text-dark-text-tertiary text-gray-500">
-                          {telemetry?.quota
-                            ? t("apiCredentialProfiles:telemetry.quota")
-                            : t("apiCredentialProfiles:telemetry.balance")}
-                        </div>
-                        <div
-                          className="dark:text-dark-text-primary font-semibold text-gray-900"
+                    <div className="space-y-3 pt-2 text-xs">
+                      {facts?.quota?.windows.length ? (
+                        <section
+                          data-testid={
+                            API_CREDENTIAL_PROFILES_TEST_IDS.telemetryQuota
+                          }
+                        >
+                          <div className="dark:text-dark-text-tertiary mb-1 text-gray-500">
+                            {t("apiCredentialProfiles:telemetry.quota")}
+                          </div>
+                          <div className="grid gap-1.5 sm:grid-cols-3">
+                            {facts.quota.windows.map((window) => (
+                              <div
+                                className="dark:bg-dark-bg-tertiary/60 rounded-md bg-white px-2 py-1.5 font-medium text-gray-800 dark:text-gray-200"
+                                key={window.type}
+                              >
+                                {formatProviderQuotaWindow(window, t)}
+                              </div>
+                            ))}
+                          </div>
+                        </section>
+                      ) : null}
+                      <div className="grid gap-2 sm:grid-cols-4">
+                        <section
                           data-testid={
                             API_CREDENTIAL_PROFILES_TEST_IDS.telemetryBalance
                           }
                         >
-                          {telemetry?.unlimitedQuota
-                            ? t("common:quota.unlimited")
-                            : telemetry?.quota
-                              ? formatProviderQuota(
-                                  telemetry.quota,
-                                  t,
-                                  telemetry.balance,
+                          <div className="dark:text-dark-text-tertiary mb-1 text-gray-500">
+                            {t("apiCredentialProfiles:telemetry.balance")}
+                          </div>
+                          <div className="flex min-w-0 flex-wrap items-baseline gap-1.5">
+                            {facts?.usage?.unlimited
+                              ? t("common:quota.unlimited")
+                              : facts?.balances?.length
+                                ? facts.balances.map((balance, index) => (
+                                    <div
+                                      className="flex min-w-0 flex-wrap items-baseline gap-1.5"
+                                      key={`${balance.unit.kind === "money" ? balance.unit.currency : balance.unit.code}-${index}`}
+                                    >
+                                      <span className="dark:text-dark-text-primary font-semibold text-gray-900">
+                                        {formatProviderBalance(balance, t)}
+                                      </span>
+                                      {getBalanceSemanticsLabel(balance, t) ? (
+                                        <span className="dark:text-dark-text-tertiary text-[10px] text-gray-500">
+                                          {getBalanceSemanticsLabel(balance, t)}
+                                        </span>
+                                      ) : null}
+                                    </div>
+                                  ))
+                                : missingTelemetryValue}
+                          </div>
+                        </section>
+                        <section className="min-w-0">
+                          <div className="dark:text-dark-text-tertiary mb-1 text-gray-500">
+                            {t("apiCredentialProfiles:telemetry.todayUsage")}
+                          </div>
+                          <div
+                            className="font-semibold text-emerald-600 dark:text-emerald-400"
+                            data-testid={
+                              API_CREDENTIAL_PROFILES_TEST_IDS.telemetryTodayUsage
+                            }
+                          >
+                            {facts?.usage?.todayCost !== undefined
+                              ? formatTelemetryMoney(
+                                  facts.usage.todayCost.value,
+                                  currencyType,
                                 )
-                              : telemetry?.balance
-                                ? formatProviderBalance(telemetry.balance)
-                                : telemetry?.balanceUsd !== undefined
-                                  ? formatTelemetryMoney(
-                                      telemetry.balanceUsd,
-                                      currencyType,
-                                    )
-                                  : missingTelemetryValue}
-                        </div>
-                      </div>
-                      <div className="flex min-w-0 flex-col gap-1">
-                        <div className="dark:text-dark-text-tertiary text-gray-500">
-                          {t("apiCredentialProfiles:telemetry.todayUsage")}
-                        </div>
-                        <div
-                          className="font-semibold text-emerald-600 dark:text-emerald-400"
-                          data-testid={
-                            API_CREDENTIAL_PROFILES_TEST_IDS.telemetryTodayUsage
-                          }
-                        >
-                          {telemetry?.todayCostUsd !== undefined
-                            ? formatTelemetryMoney(
-                                telemetry.todayCostUsd,
-                                currencyType,
-                              )
-                            : missingTelemetryValue}
-                        </div>
-                      </div>
-                      <div className="flex min-w-0 flex-col gap-1">
-                        <div className="dark:text-dark-text-tertiary text-gray-500">
-                          {t("apiCredentialProfiles:telemetry.todayRequests")}
-                        </div>
-                        <div
-                          className="dark:text-dark-text-primary font-semibold text-gray-900"
-                          data-testid={
-                            API_CREDENTIAL_PROFILES_TEST_IDS.telemetryTodayRequests
-                          }
-                        >
-                          {typeof telemetry?.todayRequests === "number"
-                            ? telemetry.todayRequests.toLocaleString()
-                            : missingTelemetryValue}
-                        </div>
-                      </div>
-                      <div className="flex min-w-0 flex-col gap-1">
-                        <div className="dark:text-dark-text-tertiary text-gray-500">
-                          {t("apiCredentialProfiles:telemetry.models")}
-                        </div>
-                        <div
-                          className="dark:text-dark-text-primary truncate font-semibold text-gray-900"
-                          data-testid={
-                            API_CREDENTIAL_PROFILES_TEST_IDS.telemetryModels
-                          }
-                          title={telemetry?.models?.preview.join(", ")}
-                        >
-                          {telemetry?.models
-                            ? t("apiCredentialProfiles:telemetry.modelCount", {
-                                count: telemetry.models.count,
-                              })
-                            : missingTelemetryValue}
-                        </div>
+                              : missingTelemetryValue}
+                          </div>
+                        </section>
+                        <section className="min-w-0">
+                          <div className="dark:text-dark-text-tertiary mb-1 text-gray-500">
+                            {t("apiCredentialProfiles:telemetry.todayRequests")}
+                          </div>
+                          <div
+                            className="dark:text-dark-text-primary font-semibold text-gray-900"
+                            data-testid={
+                              API_CREDENTIAL_PROFILES_TEST_IDS.telemetryTodayRequests
+                            }
+                          >
+                            {facts?.usage?.todayRequests !== undefined
+                              ? facts.usage.todayRequests.value.toLocaleString()
+                              : missingTelemetryValue}
+                          </div>
+                        </section>
+                        <section className="min-w-0">
+                          <div className="dark:text-dark-text-tertiary mb-1 text-gray-500">
+                            {t("apiCredentialProfiles:telemetry.models")}
+                          </div>
+                          <div
+                            className="dark:text-dark-text-primary truncate font-semibold text-gray-900"
+                            data-testid={
+                              API_CREDENTIAL_PROFILES_TEST_IDS.telemetryModels
+                            }
+                            title={facts?.models?.preview.join(", ")}
+                          >
+                            {facts?.models
+                              ? t(
+                                  "apiCredentialProfiles:telemetry.modelCount",
+                                  {
+                                    count: facts.models.count,
+                                  },
+                                )
+                              : missingTelemetryValue}
+                          </div>
+                        </section>
                       </div>
                     </div>
 
@@ -697,12 +766,12 @@ export function ApiCredentialProfileListItem({
                           t("common:labels.notAvailable"),
                         )}
                       </span>
-                      {telemetry?.todayTokens ? (
+                      {facts?.usage?.todayTokens ? (
                         <span>
                           {t("apiCredentialProfiles:telemetry.todayTokens")}:{" "}
                           {formatTokenCount(
-                            telemetry.todayTokens.upload +
-                              telemetry.todayTokens.download,
+                            facts.usage.todayTokens.upload +
+                              facts.usage.todayTokens.download,
                           )}
                         </span>
                       ) : null}

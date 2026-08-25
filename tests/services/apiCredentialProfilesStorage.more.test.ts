@@ -299,6 +299,8 @@ describe("apiCredentialProfilesStorage additional flows", () => {
   it("coerces telemetry config and snapshot fields for backup compatibility", () => {
     const coerced = coerceApiCredentialProfilesConfig(
       {
+        version: 5,
+        lastUpdated: 1000,
         profiles: [
           {
             id: "profile-1",
@@ -321,6 +323,10 @@ describe("apiCredentialProfilesStorage additional flows", () => {
               lastSyncTime: 1000,
               lastSuccessTime: 1000,
               balanceUsd: "12.5",
+              // These transient v6-development fields were never released and
+              // must not be resurrected by the published v5 migration.
+              balance: { amount: 999, currency: "USD" },
+              quota: { windows: [{ type: "weekly", remaining: 999 }] },
               todayTokens: { upload: "100", download: 50 },
               models: { count: 2, preview: ["gpt-4o", "", 1] },
               attempts: [
@@ -352,9 +358,23 @@ describe("apiCredentialProfilesStorage additional flows", () => {
         },
         telemetrySnapshot: expect.objectContaining({
           lastSyncTime: 1000,
-          balanceUsd: 12.5,
-          todayTokens: { upload: 100, download: 50 },
-          models: { count: 2, preview: ["gpt-4o"] },
+          facts: {
+            balances: [
+              {
+                amount: 12.5,
+                unit: { kind: "money", currency: "USD", decimalPlaces: 2 },
+                semantics: "legacy",
+              },
+            ],
+            usage: {
+              todayTokens: {
+                upload: 100,
+                download: 50,
+                unit: { kind: "count", code: "tokens" },
+              },
+            },
+            models: { count: 2, preview: ["gpt-4o", ""] },
+          },
           attempts: [
             {
               source: "newApiTokenUsage",
@@ -563,7 +583,11 @@ describe("apiCredentialProfilesStorage additional flows", () => {
       expect.objectContaining({
         id: "incoming-1",
         telemetryConfig: { mode: "newApiTokenUsage" },
-        telemetrySnapshot: expect.objectContaining({ balanceUsd: 9 }),
+        telemetrySnapshot: expect.objectContaining({
+          facts: expect.objectContaining({
+            balances: [expect.objectContaining({ amount: 9 })],
+          }),
+        }),
       }),
     )
   })
@@ -695,7 +719,11 @@ describe("apiCredentialProfilesStorage additional flows", () => {
     expect(merged.profiles[0]).toEqual(
       expect.objectContaining({
         id: "incoming-1",
-        telemetrySnapshot: expect.objectContaining({ balanceUsd: 2 }),
+        telemetrySnapshot: expect.objectContaining({
+          facts: expect.objectContaining({
+            balances: [expect.objectContaining({ amount: 2 })],
+          }),
+        }),
       }),
     )
   })
@@ -759,7 +787,11 @@ describe("apiCredentialProfilesStorage additional flows", () => {
       expect.objectContaining({
         id: "newer-auto",
         telemetryConfig: { mode: "newApiTokenUsage" },
-        telemetrySnapshot: expect.objectContaining({ balanceUsd: 3 }),
+        telemetrySnapshot: expect.objectContaining({
+          facts: expect.objectContaining({
+            balances: [expect.objectContaining({ amount: 3 })],
+          }),
+        }),
       }),
     )
   })

@@ -11,14 +11,18 @@ import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerificati
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import type {
   ApiCredentialProfile,
+  ApiCredentialTelemetryAmount,
   ApiCredentialTelemetryAttempt,
   ApiCredentialTelemetryCapabilityMode,
   ApiCredentialTelemetryConfig,
+  ApiCredentialTelemetryFacts,
   ApiCredentialTelemetryJsonPathMap,
   ApiCredentialTelemetrySnapshot,
+  ApiCredentialTelemetrySource,
 } from "~/types/apiCredentialProfiles"
 import {
   API_CREDENTIAL_TELEMETRY_ATTEMPT_STATUSES,
+  API_CREDENTIAL_TELEMETRY_HEALTH_REASONS,
   API_CREDENTIAL_TELEMETRY_MODES,
   API_CREDENTIAL_TELEMETRY_QUOTA_WINDOW_TYPES,
   API_CREDENTIAL_TELEMETRY_SOURCES,
@@ -43,7 +47,7 @@ type TelemetryPatch = Partial<
 >
 
 type AdapterSuccess = {
-  source: ApiCredentialTelemetryCapabilityMode
+  source: ApiCredentialTelemetrySource
   endpoint: string
   data: TelemetryPatch
 }
@@ -193,6 +197,7 @@ function parseDeepSeekBalance(json: unknown): TelemetryPatch {
 
 type QuotaWindowInput = {
   type: (typeof API_CREDENTIAL_TELEMETRY_QUOTA_WINDOW_TYPES)[keyof typeof API_CREDENTIAL_TELEMETRY_QUOTA_WINDOW_TYPES]
+  unit?: "percent" | "provider"
   limit?: unknown
   used?: unknown
   remaining?: unknown
@@ -237,6 +242,7 @@ function buildQuotaWindow(input: QuotaWindowInput) {
 
   return {
     type: input.type,
+    ...(input.unit ? { unit: input.unit } : {}),
     used: normalizedUsed,
     limit: normalizedLimit,
     remaining: normalizedRemaining,
@@ -275,6 +281,12 @@ function parseGlmQuota(json: unknown): TelemetryPatch {
           : undefined
     const window = buildQuotaWindow({
       type: windowType ?? API_CREDENTIAL_TELEMETRY_QUOTA_WINDOW_TYPES.FiveHour,
+      unit:
+        row.usage !== undefined ||
+        row.currentValue !== undefined ||
+        row.remaining !== undefined
+          ? "provider"
+          : "percent",
       limit: row.usage,
       used: row.currentValue,
       remaining: row.remaining,
@@ -320,6 +332,7 @@ function parseKimiQuota(json: unknown): TelemetryPatch {
   const weekly = usage
     ? buildQuotaWindow({
         type: API_CREDENTIAL_TELEMETRY_QUOTA_WINDOW_TYPES.Weekly,
+        unit: "provider",
         limit: usage.limit,
         used: usage.used,
         remaining: usage.remaining,
@@ -341,6 +354,7 @@ function parseKimiQuota(json: unknown): TelemetryPatch {
   const fiveHour = fiveHourDetail
     ? buildQuotaWindow({
         type: API_CREDENTIAL_TELEMETRY_QUOTA_WINDOW_TYPES.FiveHour,
+        unit: "provider",
         limit: fiveHourDetail.limit,
         used: fiveHourDetail.used,
         remaining: fiveHourDetail.remaining,
@@ -353,6 +367,7 @@ function parseKimiQuota(json: unknown): TelemetryPatch {
   const total = totalQuota
     ? buildQuotaWindow({
         type: API_CREDENTIAL_TELEMETRY_QUOTA_WINDOW_TYPES.Total,
+        unit: "provider",
         limit: totalQuota.limit,
         remaining: totalQuota.remaining,
       })
@@ -861,6 +876,135 @@ function mapCustomJson(
   }
 }
 
+/** Converts provider parser output into the unit-aware v6 product facts. */
+function normalizeTelemetryPatchToFacts(
+  data: TelemetryPatch,
+  source: ApiCredentialTelemetrySource,
+): ApiCredentialTelemetryFacts {
+  const facts: ApiCredentialTelemetryFacts = {}
+  const budgetSource =
+    source === API_CREDENTIAL_TELEMETRY_SOURCES.NewApiTokenUsage ||
+    source === API_CREDENTIAL_TELEMETRY_SOURCES.Sub2ApiUsage
+  const balances: NonNullable<ApiCredentialTelemetryFacts["balances"]> = []
+  const balance = data.balance
+  if (balance) {
+    const decimalPlaces = balance.currency === "JPY" ? 0 : 2
+    balances.push({
+      amount: balance.amount,
+      unit: {
+        kind: "money",
+        currency: balance.currency,
+        decimalPlaces,
+      },
+      semantics:
+        source === API_CREDENTIAL_TELEMETRY_SOURCES.DeepSeekBalance
+          ? "cash"
+          : "provider-wallet",
+      ...(balance.grantedAmount !== undefined
+        ? { grantedAmount: balance.grantedAmount }
+        : {}),
+      ...(balance.toppedUpAmount !== undefined
+        ? { toppedUpAmount: balance.toppedUpAmount }
+        : {}),
+      ...(balance.isAvailable !== undefined
+        ? { isAvailable: balance.isAvailable }
+        : {}),
+    })
+  }
+
+  if (data.balanceUsd !== undefined) {
+    balances.push({
+      amount: data.balanceUsd,
+      unit: budgetSource
+        ? {
+            kind: "quota",
+            code: "usd-equivalent",
+            label: "USD-equivalent budget",
+          }
+        : { kind: "money", currency: "USD", decimalPlaces: 2 },
+      semantics: budgetSource
+        ? "budget-equivalent"
+        : source === API_CREDENTIAL_TELEMETRY_SOURCES.OpenAiBilling
+          ? "cash"
+          : "legacy",
+    })
+  }
+  if (balances.length > 0) facts.balances = balances
+
+  if (data.quota) {
+    facts.quota = {
+      windows: data.quota.windows.map((window) => ({
+        type: window.type,
+        unit:
+          window.unit === "percent"
+            ? { kind: "percent" }
+            : {
+                kind: "quota",
+                code:
+                  source === API_CREDENTIAL_TELEMETRY_SOURCES.GlmQuota
+                    ? "glm-credit"
+                    : "provider-quota",
+                label:
+                  source === API_CREDENTIAL_TELEMETRY_SOURCES.GlmQuota
+                    ? "GLM credits"
+                    : "Provider quota",
+              },
+        ...(window.unit === "percent"
+          ? {}
+          : {
+              used: window.used,
+              limit: window.limit,
+              remaining: window.remaining,
+            }),
+        remainingPercent: window.percentRemaining,
+        ...(window.resetTime !== undefined
+          ? { resetTime: window.resetTime }
+          : {}),
+      })),
+      ...(data.quota.membershipLevel
+        ? { membershipLevel: data.quota.membershipLevel }
+        : {}),
+    }
+  }
+
+  const budgetUnit: ApiCredentialTelemetryAmount["unit"] = budgetSource
+    ? { kind: "quota", code: "usd-equivalent", label: "USD-equivalent budget" }
+    : { kind: "money", currency: "USD", decimalPlaces: 2 }
+  const usage: NonNullable<ApiCredentialTelemetryFacts["usage"]> = {}
+  if (data.todayCostUsd !== undefined) {
+    usage.todayCost = {
+      value: data.todayCostUsd,
+      unit: { kind: "money", currency: "USD", decimalPlaces: 2 },
+    }
+  }
+  if (data.todayRequests !== undefined) {
+    usage.todayRequests = {
+      value: data.todayRequests,
+      unit: { kind: "count", code: "requests" },
+    }
+  }
+  if (data.todayTokens) {
+    usage.todayTokens = {
+      ...data.todayTokens,
+      unit: { kind: "count", code: "tokens" },
+    }
+  }
+  if (data.totalUsedUsd !== undefined) {
+    usage.totalUsed = { value: data.totalUsedUsd, unit: budgetUnit }
+  }
+  if (data.totalGrantedUsd !== undefined) {
+    usage.totalGranted = { value: data.totalGrantedUsd, unit: budgetUnit }
+  }
+  if (data.totalAvailableUsd !== undefined) {
+    usage.totalAvailable = { value: data.totalAvailableUsd, unit: budgetUnit }
+  }
+  if (data.expiresAt !== undefined) usage.expiresAt = data.expiresAt
+  if (data.unlimitedQuota !== undefined) usage.unlimited = data.unlimitedQuota
+  if (Object.keys(usage).length > 0) facts.usage = usage
+
+  return facts
+}
+
 /**
  * Queries a configured custom read-only endpoint for telemetry data.
  */
@@ -1018,6 +1162,27 @@ function resolveModes(
   return [config.mode]
 }
 
+/** Maps an executable telemetry mode to its concrete persisted source. */
+function sourceForMode(
+  mode: ApiCredentialTelemetryCapabilityMode,
+): ApiCredentialTelemetrySource {
+  if (mode === API_CREDENTIAL_TELEMETRY_MODES.DeepSeekBalance)
+    return API_CREDENTIAL_TELEMETRY_SOURCES.DeepSeekBalance
+  if (mode === API_CREDENTIAL_TELEMETRY_MODES.GlmQuota)
+    return API_CREDENTIAL_TELEMETRY_SOURCES.GlmQuota
+  if (mode === API_CREDENTIAL_TELEMETRY_MODES.KimiQuota)
+    return API_CREDENTIAL_TELEMETRY_SOURCES.KimiQuota
+  if (mode === API_CREDENTIAL_TELEMETRY_MODES.OpenAiBilling)
+    return API_CREDENTIAL_TELEMETRY_SOURCES.OpenAiBilling
+  if (mode === API_CREDENTIAL_TELEMETRY_MODES.NewApiTokenUsage)
+    return API_CREDENTIAL_TELEMETRY_SOURCES.NewApiTokenUsage
+  if (mode === API_CREDENTIAL_TELEMETRY_MODES.Sub2ApiUsage)
+    return API_CREDENTIAL_TELEMETRY_SOURCES.Sub2ApiUsage
+  if (mode === API_CREDENTIAL_TELEMETRY_MODES.CustomReadOnlyEndpoint)
+    return API_CREDENTIAL_TELEMETRY_SOURCES.CustomReadOnlyEndpoint
+  throw new Error(`Unsupported telemetry source mode: ${mode}`)
+}
+
 /**
  * Checks whether an adapter returned user-facing usage data.
  */
@@ -1103,13 +1268,20 @@ export async function refreshApiCredentialProfileTelemetry(
                   : mode === API_CREDENTIAL_TELEMETRY_MODES.Sub2ApiUsage
                     ? TELEMETRY_ENDPOINTS.sub2ApiUsage
                     : config.customEndpoint?.endpoint || "custom"
-      attempts.push(attemptFromError(mode, endpoint, error, secrets))
+      attempts.push(
+        attemptFromError(sourceForMode(mode), endpoint, error, secrets),
+      )
     }
   }
 
   const modelSucceeded = Boolean(models && models.count > 0)
   const usageSucceeded = Boolean(usageResult)
-  const usageUnavailable = usageResult?.data.balance?.isAvailable === false
+  const usageFacts = usageResult
+    ? normalizeTelemetryPatchToFacts(usageResult.data, usageResult.source)
+    : {}
+  const usageUnavailable = Boolean(
+    usageFacts.balances?.some((balance) => balance.isAvailable === false),
+  )
   const customEndpointError = attempts.find(
     (attempt) =>
       attempt.status === API_CREDENTIAL_TELEMETRY_ATTEMPT_STATUSES.Error &&
@@ -1132,7 +1304,8 @@ export async function refreshApiCredentialProfileTelemetry(
         ? usageUnavailable
           ? {
               status: SiteHealthStatus.Warning,
-              reason: "Provider account is unavailable",
+              reason:
+                API_CREDENTIAL_TELEMETRY_HEALTH_REASONS.InsufficientBalance,
             }
           : { status: SiteHealthStatus.Healthy }
         : {
@@ -1143,8 +1316,10 @@ export async function refreshApiCredentialProfileTelemetry(
     ...(usageSucceeded || modelSucceeded ? { lastSuccessTime: now } : {}),
     ...(lastError ? { lastError } : {}),
     ...(usageResult?.source ? { source: usageResult.source } : {}),
-    ...(usageResult?.data ?? {}),
-    ...(models ? { models } : {}),
+    facts: {
+      ...usageFacts,
+      ...(models ? { models } : {}),
+    },
     attempts,
   }
 

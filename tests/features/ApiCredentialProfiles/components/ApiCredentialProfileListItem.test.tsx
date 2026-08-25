@@ -149,8 +149,19 @@ function buildProfile(
       lastSuccessTime: 1,
       lastSyncTime: 1,
       source: "newApiTokenUsage",
-      totalUsedUsd: 1.88131,
-      unlimitedQuota: true,
+      facts: {
+        usage: {
+          totalUsed: {
+            value: 1.88131,
+            unit: {
+              kind: "quota",
+              code: "usd-equivalent",
+              label: "USD-equivalent budget",
+            },
+          },
+          unlimited: true,
+        },
+      },
     },
     ...overrides,
   }
@@ -719,7 +730,14 @@ describe("ApiCredentialProfileListItem", () => {
           lastSuccessTime: 1,
           lastSyncTime: 1,
           source: "customReadOnlyEndpoint",
-          todayRequests: 42,
+          facts: {
+            usage: {
+              todayRequests: {
+                value: 42,
+                unit: { kind: "count", code: "requests" },
+              },
+            },
+          },
         },
       }),
     )
@@ -738,12 +756,17 @@ describe("ApiCredentialProfileListItem", () => {
           lastSyncTime: 1,
           lastSuccessTime: 1,
           source: "deepSeekBalance",
-          balance: {
-            amount: 12.34,
-            currency: "CNY",
-            grantedAmount: 2,
-            toppedUpAmount: 10.34,
-            isAvailable: true,
+          facts: {
+            balances: [
+              {
+                amount: 12.34,
+                unit: { kind: "money", currency: "CNY", decimalPlaces: 2 },
+                semantics: "cash",
+                grantedAmount: 2,
+                toppedUpAmount: 10.34,
+                isAvailable: true,
+              },
+            ],
           },
         },
       }),
@@ -763,31 +786,43 @@ describe("ApiCredentialProfileListItem", () => {
           lastSyncTime: 1,
           lastSuccessTime: 1,
           source: "kimiQuota",
-          quota: {
-            membershipLevel: "LEVEL_PRO",
-            windows: [
-              {
-                type: "fiveHour",
-                used: 25,
-                limit: 100,
-                remaining: 75,
-                percentRemaining: 75,
-              },
-              {
-                type: "weekly",
-                used: 200,
-                limit: 1000,
-                remaining: 800,
-                percentRemaining: 80,
-              },
-            ],
+          facts: {
+            quota: {
+              membershipLevel: "LEVEL_PRO",
+              windows: [
+                {
+                  type: "fiveHour",
+                  used: 25,
+                  limit: 100,
+                  remaining: 75,
+                  remainingPercent: 75,
+                  unit: {
+                    kind: "quota",
+                    code: "provider-quota",
+                    label: "Provider quota",
+                  },
+                },
+                {
+                  type: "weekly",
+                  used: 200,
+                  limit: 1000,
+                  remaining: 800,
+                  remainingPercent: 80,
+                  unit: {
+                    kind: "quota",
+                    code: "provider-quota",
+                    label: "Provider quota",
+                  },
+                },
+              ],
+            },
           },
         },
       }),
     )
 
     expect(
-      screen.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.telemetryBalance),
+      screen.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.telemetryQuota),
     ).toHaveTextContent(/75%.*80%/)
   })
 
@@ -798,7 +833,14 @@ describe("ApiCredentialProfileListItem", () => {
           attempts: [],
           health: { status: SiteHealthStatus.Healthy },
           lastSyncTime: 1,
-          todayRequests: 0,
+          facts: {
+            usage: {
+              todayRequests: {
+                value: 0,
+                unit: { kind: "count", code: "requests" },
+              },
+            },
+          },
         },
       }),
     )
@@ -843,7 +885,9 @@ describe("ApiCredentialProfileListItem", () => {
           health: { status: SiteHealthStatus.Healthy },
           lastSuccessTime: 1,
           lastSyncTime: 1,
-          models: { count: 2, preview: ["gpt-4o", "o3"] },
+          facts: {
+            models: { count: 2, preview: ["gpt-4o", "o3"] },
+          },
         },
       }),
     )
@@ -920,7 +964,19 @@ describe("ApiCredentialProfileListItem", () => {
             attempts: [],
             health: { status: SiteHealthStatus.Healthy },
             lastSyncTime: 2,
-            balanceUsd: 7.5,
+            facts: {
+              balances: [
+                {
+                  amount: 7.5,
+                  unit: {
+                    kind: "quota",
+                    code: "usd-equivalent",
+                    label: "USD-equivalent budget",
+                  },
+                  semantics: "budget-equivalent",
+                },
+              ],
+            },
           },
         })}
         verificationSummary={null}
@@ -974,6 +1030,34 @@ describe("ApiCredentialProfileListItem", () => {
         "apiCredentialProfiles:telemetry.health: account:healthStatus.warning: quota is low",
       ),
     ).toHaveAttribute("role", "img")
+  })
+
+  it("localizes the known insufficient-balance health reason", () => {
+    renderListItem(
+      buildProfile({
+        telemetrySnapshot: {
+          attempts: [],
+          health: {
+            reason: "insufficient-balance",
+            status: SiteHealthStatus.Warning,
+          },
+          lastSyncTime: 1,
+        },
+      }),
+    )
+
+    expect(
+      screen.getByRole("img", {
+        name: /apiCredentialProfiles:telemetry\.health: account:healthStatus.warning:/,
+      }),
+    ).toHaveAttribute(
+      "aria-label",
+      expect.stringContaining(
+        testI18n.t(
+          "apiCredentialProfiles:telemetry.healthReasons.insufficientBalance",
+        ),
+      ),
+    )
   })
 
   it("wires the telemetry refresh button and reflects the refreshing state", () => {

@@ -40,7 +40,9 @@ import type {
   ApiCredentialTelemetryAttempt,
   ApiCredentialTelemetryCapabilityMode,
   ApiCredentialTelemetryConfig,
+  ApiCredentialTelemetryFacts,
   ApiCredentialTelemetrySnapshot,
+  ApiCredentialTelemetrySource,
 } from "~/types/apiCredentialProfiles"
 import {
   API_CREDENTIAL_PROFILE_LINK_STATES,
@@ -206,6 +208,18 @@ function coerceFiniteNumber(raw: unknown): number | undefined {
   return undefined
 }
 
+/** Checks whether a persisted source is one of the released telemetry adapters. */
+function isTelemetrySource(
+  value: unknown,
+): value is ApiCredentialTelemetrySource {
+  return (
+    typeof value === "string" &&
+    Object.values(API_CREDENTIAL_TELEMETRY_SOURCES).includes(
+      value as ApiCredentialTelemetrySource,
+    )
+  )
+}
+
 /**
  * Coerces an optional user-maintained expiration timestamp.
  */
@@ -254,14 +268,9 @@ function coerceTelemetryAttempts(
       if (!item || typeof item !== "object") return null
       const candidate = item as Record<string, unknown>
       const rawSource = candidate.source
-      const source =
-        typeof rawSource === "string" &&
-        (rawSource === API_CREDENTIAL_TELEMETRY_SOURCES.Models ||
-          API_CREDENTIAL_TELEMETRY_CAPABILITY_MODES.includes(
-            rawSource as ApiCredentialTelemetryCapabilityMode,
-          ))
-          ? (rawSource as ApiCredentialTelemetryAttempt["source"])
-          : null
+      const source = isTelemetrySource(rawSource)
+        ? (rawSource as ApiCredentialTelemetryAttempt["source"])
+        : null
       const endpoint =
         typeof candidate.endpoint === "string" ? candidate.endpoint.trim() : ""
       const rawStatus = candidate.status
@@ -287,6 +296,313 @@ function coerceTelemetryAttempts(
       }
     })
     .filter((item): item is ApiCredentialTelemetryAttempt => item !== null)
+}
+
+/** Validates and normalizes the unit-aware v6 telemetry facts payload. */
+function coerceTelemetryFacts(
+  raw: unknown,
+): ApiCredentialTelemetryFacts | undefined {
+  if (!raw || typeof raw !== "object") return undefined
+  const obj = raw as Record<string, unknown>
+  const facts: ApiCredentialTelemetryFacts = {}
+
+  const rawBalances = Array.isArray(obj.balances) ? obj.balances : []
+  const balances = rawBalances
+    .filter((item): item is Record<string, unknown> =>
+      Boolean(item && typeof item === "object"),
+    )
+    .map((item) => {
+      const amount = coerceFiniteNumber(item.amount)
+      const unit =
+        item.unit && typeof item.unit === "object"
+          ? (item.unit as Record<string, unknown>)
+          : null
+      const currency =
+        typeof unit?.currency === "string" ? unit.currency.trim() : ""
+      const code = typeof unit?.code === "string" ? unit.code.trim() : ""
+      const label = typeof unit?.label === "string" ? unit.label.trim() : ""
+      const decimalPlaces = coerceFiniteNumber(unit?.decimalPlaces)
+      const semantics = item.semantics
+      if (
+        amount === undefined ||
+        (unit?.kind === "money" &&
+          (!currency || decimalPlaces === undefined)) ||
+        (unit?.kind === "quota" && (!code || !label)) ||
+        (unit?.kind !== "money" && unit?.kind !== "quota") ||
+        !["cash", "provider-wallet", "budget-equivalent", "legacy"].includes(
+          String(semantics),
+        )
+      ) {
+        return null
+      }
+      return {
+        amount,
+        unit:
+          unit.kind === "quota"
+            ? { kind: "quota" as const, code, label }
+            : {
+                kind: "money" as const,
+                currency,
+                decimalPlaces: decimalPlaces ?? 2,
+              },
+        semantics: semantics as
+          | "cash"
+          | "provider-wallet"
+          | "budget-equivalent"
+          | "legacy",
+        ...(coerceFiniteNumber(item.grantedAmount) !== undefined
+          ? { grantedAmount: coerceFiniteNumber(item.grantedAmount) }
+          : {}),
+        ...(coerceFiniteNumber(item.toppedUpAmount) !== undefined
+          ? { toppedUpAmount: coerceFiniteNumber(item.toppedUpAmount) }
+          : {}),
+        ...(typeof item.isAvailable === "boolean"
+          ? { isAvailable: item.isAvailable }
+          : {}),
+      }
+    })
+    .filter((item): item is NonNullable<typeof item> => item !== null)
+  if (balances.length > 0) facts.balances = balances
+
+  const rawQuota =
+    obj.quota && typeof obj.quota === "object"
+      ? (obj.quota as Record<string, unknown>)
+      : null
+  const rawWindows = Array.isArray(rawQuota?.windows) ? rawQuota.windows : []
+  const windows = rawWindows
+    .filter((item): item is Record<string, unknown> =>
+      Boolean(item && typeof item === "object"),
+    )
+    .map((item) => {
+      const type = item.type
+      const unit =
+        item.unit && typeof item.unit === "object"
+          ? (item.unit as Record<string, unknown>)
+          : null
+      const unitKind = unit?.kind
+      const validType = ["fiveHour", "weekly", "total"].includes(String(type))
+      const validUnit =
+        unitKind === "percent" ||
+        (unitKind === "quota" &&
+          typeof unit?.code === "string" &&
+          typeof unit.label === "string")
+      const remainingPercent = coerceFiniteNumber(item.remainingPercent)
+      if (!validType || !validUnit || remainingPercent === undefined)
+        return null
+      return {
+        type: type as "fiveHour" | "weekly" | "total",
+        unit:
+          unitKind === "percent"
+            ? { kind: "percent" as const }
+            : {
+                kind: "quota" as const,
+                code: String(unit?.code),
+                label: String(unit?.label),
+              },
+        ...(coerceFiniteNumber(item.used) !== undefined
+          ? { used: coerceFiniteNumber(item.used) }
+          : {}),
+        ...(coerceFiniteNumber(item.limit) !== undefined
+          ? { limit: coerceFiniteNumber(item.limit) }
+          : {}),
+        ...(coerceFiniteNumber(item.remaining) !== undefined
+          ? { remaining: coerceFiniteNumber(item.remaining) }
+          : {}),
+        remainingPercent,
+        ...(coerceFiniteNumber(item.resetTime) !== undefined
+          ? { resetTime: coerceFiniteNumber(item.resetTime) }
+          : {}),
+      }
+    })
+    .filter((item): item is NonNullable<typeof item> => item !== null)
+  if (windows.length > 0) {
+    facts.quota = {
+      windows,
+      ...(typeof rawQuota?.membershipLevel === "string" &&
+      rawQuota.membershipLevel.trim()
+        ? { membershipLevel: rawQuota.membershipLevel.trim() }
+        : {}),
+    }
+  }
+
+  const rawUsage =
+    obj.usage && typeof obj.usage === "object"
+      ? (obj.usage as Record<string, unknown>)
+      : null
+  if (rawUsage) {
+    const usage: NonNullable<ApiCredentialTelemetryFacts["usage"]> = {}
+    const coerceAmount = (rawAmount: unknown) => {
+      if (!rawAmount || typeof rawAmount !== "object") return undefined
+      const amount = rawAmount as Record<string, unknown>
+      const value = coerceFiniteNumber(amount.value)
+      const unit =
+        amount.unit && typeof amount.unit === "object"
+          ? (amount.unit as Record<string, unknown>)
+          : null
+      if (value === undefined || !unit?.kind) return undefined
+      if (unit.kind === "money" && typeof unit.currency === "string") {
+        return {
+          value,
+          unit: {
+            kind: "money" as const,
+            currency: unit.currency,
+            decimalPlaces: coerceFiniteNumber(unit.decimalPlaces) ?? 2,
+          },
+        }
+      }
+      if (
+        unit.kind === "quota" &&
+        typeof unit.code === "string" &&
+        typeof unit.label === "string"
+      ) {
+        return {
+          value,
+          unit: { kind: "quota" as const, code: unit.code, label: unit.label },
+        }
+      }
+      if (unit.kind === "count" && typeof unit.code === "string") {
+        return { value, unit: { kind: "count" as const, code: unit.code } }
+      }
+      return undefined
+    }
+    const todayCost = coerceAmount(rawUsage.todayCost)
+    const todayRequests = coerceAmount(rawUsage.todayRequests)
+    const totalUsed = coerceAmount(rawUsage.totalUsed)
+    const totalGranted = coerceAmount(rawUsage.totalGranted)
+    const totalAvailable = coerceAmount(rawUsage.totalAvailable)
+    if (todayCost) usage.todayCost = todayCost
+    if (todayRequests) usage.todayRequests = todayRequests
+    if (totalUsed) usage.totalUsed = totalUsed
+    if (totalGranted) usage.totalGranted = totalGranted
+    if (totalAvailable) usage.totalAvailable = totalAvailable
+    if (typeof rawUsage.unlimited === "boolean")
+      usage.unlimited = rawUsage.unlimited
+    if (coerceFiniteNumber(rawUsage.expiresAt) !== undefined)
+      usage.expiresAt = coerceFiniteNumber(rawUsage.expiresAt)
+    const rawTokens =
+      rawUsage.todayTokens && typeof rawUsage.todayTokens === "object"
+        ? (rawUsage.todayTokens as Record<string, unknown>)
+        : null
+    const upload = coerceFiniteNumber(rawTokens?.upload)
+    const download = coerceFiniteNumber(rawTokens?.download)
+    if (upload !== undefined || download !== undefined) {
+      usage.todayTokens = {
+        upload: upload ?? 0,
+        download: download ?? 0,
+        unit: { kind: "count", code: "tokens" },
+      }
+    }
+    if (Object.keys(usage).length > 0) facts.usage = usage
+  }
+
+  const rawModels =
+    obj.models && typeof obj.models === "object"
+      ? (obj.models as Record<string, unknown>)
+      : null
+  const modelCount = coerceFiniteNumber(rawModels?.count)
+  if (modelCount !== undefined) {
+    facts.models = {
+      count: Math.max(0, Math.trunc(modelCount)),
+      preview: Array.isArray(rawModels?.preview)
+        ? rawModels.preview
+            .filter((item): item is string => typeof item === "string")
+            .slice(0, 20)
+        : [],
+    }
+  }
+  return Object.keys(facts).length > 0 ? facts : undefined
+}
+
+/** Migrates the last released v5 flat telemetry fields into v6 facts. */
+function migrateLegacyTelemetryFacts(
+  obj: Record<string, unknown>,
+  source: ApiCredentialTelemetrySource | undefined,
+): ApiCredentialTelemetryFacts {
+  const facts: ApiCredentialTelemetryFacts = {}
+  const balanceUsd = coerceFiniteNumber(obj.balanceUsd)
+  if (balanceUsd !== undefined) {
+    facts.balances = [
+      {
+        amount: balanceUsd,
+        unit:
+          source === API_CREDENTIAL_TELEMETRY_SOURCES.NewApiTokenUsage ||
+          source === API_CREDENTIAL_TELEMETRY_SOURCES.Sub2ApiUsage
+            ? {
+                kind: "quota",
+                code: "usd-equivalent",
+                label: "USD-equivalent budget",
+              }
+            : { kind: "money", currency: "USD", decimalPlaces: 2 },
+        semantics:
+          source === API_CREDENTIAL_TELEMETRY_SOURCES.OpenAiBilling
+            ? "cash"
+            : source === API_CREDENTIAL_TELEMETRY_SOURCES.NewApiTokenUsage ||
+                source === API_CREDENTIAL_TELEMETRY_SOURCES.Sub2ApiUsage
+              ? "budget-equivalent"
+              : "legacy",
+      },
+    ]
+  }
+  const usage: NonNullable<ApiCredentialTelemetryFacts["usage"]> = {}
+  const todayCostUsd = coerceFiniteNumber(obj.todayCostUsd)
+  const todayRequests = coerceFiniteNumber(obj.todayRequests)
+  if (todayCostUsd !== undefined) {
+    usage.todayCost = {
+      value: todayCostUsd,
+      unit: { kind: "money", currency: "USD", decimalPlaces: 2 },
+    }
+  }
+  if (todayRequests !== undefined) {
+    usage.todayRequests = {
+      value: todayRequests,
+      unit: { kind: "count", code: "requests" },
+    }
+  }
+  const rawTokens = obj.todayTokens as Record<string, unknown> | undefined
+  const upload = coerceFiniteNumber(rawTokens?.upload)
+  const download = coerceFiniteNumber(rawTokens?.download)
+  if (upload !== undefined || download !== undefined) {
+    usage.todayTokens = {
+      upload: upload ?? 0,
+      download: download ?? 0,
+      unit: { kind: "count", code: "tokens" },
+    }
+  }
+  const budgetUnit = {
+    kind: "quota" as const,
+    code: "usd-equivalent",
+    label: "USD-equivalent budget",
+  }
+  for (const [key, field] of [
+    ["totalUsed", "totalUsedUsd"],
+    ["totalGranted", "totalGrantedUsd"],
+    ["totalAvailable", "totalAvailableUsd"],
+  ] as const) {
+    const value = coerceFiniteNumber(obj[field])
+    if (value !== undefined) usage[key] = { value, unit: budgetUnit }
+  }
+  if (typeof obj.unlimitedQuota === "boolean")
+    usage.unlimited = obj.unlimitedQuota
+  if (coerceFiniteNumber(obj.expiresAt) !== undefined)
+    usage.expiresAt = coerceFiniteNumber(obj.expiresAt)
+  if (Object.keys(usage).length > 0) facts.usage = usage
+
+  const rawModels =
+    obj.models && typeof obj.models === "object"
+      ? (obj.models as Record<string, unknown>)
+      : null
+  const modelCount = coerceFiniteNumber(rawModels?.count)
+  if (modelCount !== undefined) {
+    facts.models = {
+      count: Math.max(0, Math.trunc(modelCount)),
+      preview: Array.isArray(rawModels?.preview)
+        ? rawModels.preview
+            .filter((item): item is string => typeof item === "string")
+            .slice(0, 20)
+        : [],
+    }
+  }
+  return facts
 }
 
 /**
@@ -317,41 +633,12 @@ function coerceTelemetrySnapshot(
   } as ApiCredentialTelemetrySnapshot["health"]
 
   const rawSource = obj.source
-  const source =
-    typeof rawSource === "string" &&
-    (rawSource === API_CREDENTIAL_TELEMETRY_SOURCES.Models ||
-      API_CREDENTIAL_TELEMETRY_CAPABILITY_MODES.includes(
-        rawSource as ApiCredentialTelemetryCapabilityMode,
-      ))
-      ? (rawSource as ApiCredentialTelemetrySnapshot["source"])
-      : undefined
+  const source = isTelemetrySource(rawSource)
+    ? (rawSource as ApiCredentialTelemetrySnapshot["source"])
+    : undefined
 
-  const rawModels =
-    obj.models && typeof obj.models === "object"
-      ? (obj.models as Record<string, unknown>)
-      : null
-  const models =
-    rawModels &&
-    typeof rawModels.count === "number" &&
-    Number.isFinite(rawModels.count)
-      ? {
-          count: Math.max(0, Math.trunc(rawModels.count)),
-          preview: Array.isArray(rawModels.preview)
-            ? rawModels.preview
-                .filter((item): item is string => typeof item === "string")
-                .map((item) => item.trim())
-                .filter(Boolean)
-                .slice(0, 20)
-            : [],
-        }
-      : undefined
-
-  const todayPromptTokens = coerceFiniteNumber(
-    (obj.todayTokens as Record<string, unknown> | undefined)?.upload,
-  )
-  const todayCompletionTokens = coerceFiniteNumber(
-    (obj.todayTokens as Record<string, unknown> | undefined)?.download,
-  )
+  const facts =
+    coerceTelemetryFacts(obj.facts) ?? migrateLegacyTelemetryFacts(obj, source)
 
   return {
     health,
@@ -363,39 +650,7 @@ function coerceTelemetrySnapshot(
       ? { lastError: obj.lastError.trim() }
       : {}),
     ...(source ? { source } : {}),
-    ...(coerceFiniteNumber(obj.balanceUsd) !== undefined
-      ? { balanceUsd: coerceFiniteNumber(obj.balanceUsd) }
-      : {}),
-    ...(coerceFiniteNumber(obj.todayCostUsd) !== undefined
-      ? { todayCostUsd: coerceFiniteNumber(obj.todayCostUsd) }
-      : {}),
-    ...(coerceFiniteNumber(obj.todayRequests) !== undefined
-      ? { todayRequests: coerceFiniteNumber(obj.todayRequests) }
-      : {}),
-    ...(todayPromptTokens !== undefined || todayCompletionTokens !== undefined
-      ? {
-          todayTokens: {
-            upload: todayPromptTokens ?? 0,
-            download: todayCompletionTokens ?? 0,
-          },
-        }
-      : {}),
-    ...(typeof obj.unlimitedQuota === "boolean"
-      ? { unlimitedQuota: obj.unlimitedQuota }
-      : {}),
-    ...(coerceFiniteNumber(obj.totalUsedUsd) !== undefined
-      ? { totalUsedUsd: coerceFiniteNumber(obj.totalUsedUsd) }
-      : {}),
-    ...(coerceFiniteNumber(obj.totalGrantedUsd) !== undefined
-      ? { totalGrantedUsd: coerceFiniteNumber(obj.totalGrantedUsd) }
-      : {}),
-    ...(coerceFiniteNumber(obj.totalAvailableUsd) !== undefined
-      ? { totalAvailableUsd: coerceFiniteNumber(obj.totalAvailableUsd) }
-      : {}),
-    ...(coerceFiniteNumber(obj.expiresAt) !== undefined
-      ? { expiresAt: coerceFiniteNumber(obj.expiresAt) }
-      : {}),
-    ...(models ? { models } : {}),
+    facts,
     attempts: coerceTelemetryAttempts(obj.attempts),
   }
 }

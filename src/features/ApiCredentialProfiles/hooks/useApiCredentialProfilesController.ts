@@ -223,18 +223,12 @@ const analyticsStatusByHealthStatus: Record<
  * Detects whether a telemetry snapshot includes any usage-facing metrics.
  */
 function hasTelemetryUsageData(snapshot: ApiCredentialTelemetrySnapshot) {
-  return (
-    snapshot.balance !== undefined ||
-    snapshot.quota !== undefined ||
-    snapshot.balanceUsd !== undefined ||
-    snapshot.todayCostUsd !== undefined ||
-    snapshot.todayRequests !== undefined ||
-    snapshot.todayTokens !== undefined ||
-    snapshot.unlimitedQuota === true ||
-    snapshot.totalUsedUsd !== undefined ||
-    snapshot.totalGrantedUsd !== undefined ||
-    snapshot.totalAvailableUsd !== undefined ||
-    snapshot.expiresAt !== undefined
+  const facts = snapshot.facts
+  return Boolean(
+    facts?.balances?.length ||
+      facts?.quota?.windows?.length ||
+      facts?.usage ||
+      facts?.models,
   )
 }
 

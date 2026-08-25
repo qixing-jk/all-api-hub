@@ -81,10 +81,23 @@ describe("ApiCredentialProfilesStatsSection", () => {
           tagIds: ["team-a"],
           telemetrySnapshot: {
             attempts: [],
-            balanceUsd: 12.5,
             health: { status: SiteHealthStatus.Healthy },
             lastSyncTime: 1000,
-            todayCostUsd: 1.25,
+            facts: {
+              balances: [
+                {
+                  amount: 12.5,
+                  unit: { kind: "money", currency: "USD", decimalPlaces: 2 },
+                  semantics: "cash",
+                },
+              ],
+              usage: {
+                todayCost: {
+                  value: 1.25,
+                  unit: { kind: "money", currency: "USD", decimalPlaces: 2 },
+                },
+              },
+            },
           },
         }),
         buildProfile({
@@ -93,9 +106,17 @@ describe("ApiCredentialProfilesStatsSection", () => {
           tagIds: ["team-a", "team-b"],
           telemetrySnapshot: {
             attempts: [],
-            balanceUsd: 2,
             health: { status: SiteHealthStatus.Warning },
             lastSyncTime: 1000,
+            facts: {
+              balances: [
+                {
+                  amount: 2,
+                  unit: { kind: "money", currency: "USD", decimalPlaces: 2 },
+                  semantics: "cash",
+                },
+              ],
+            },
           },
         }),
       ],
@@ -143,7 +164,9 @@ describe("ApiCredentialProfilesStatsSection", () => {
             attempts: [],
             health: { status: SiteHealthStatus.Healthy },
             lastSyncTime: 1000,
-            models: { count: 2, preview: ["gpt-4o", "o3"] },
+            facts: {
+              models: { count: 2, preview: ["gpt-4o", "o3"] },
+            },
           },
         }),
       ],

@@ -5,7 +5,7 @@ import type { HealthStatus, TokenUsage } from "~/types"
 /**
  * Current schema version for the API credential profiles storage payload.
  */
-export const API_CREDENTIAL_PROFILES_CONFIG_VERSION = 5
+export const API_CREDENTIAL_PROFILES_CONFIG_VERSION = 6
 
 export const API_CREDENTIAL_PROFILE_LINK_STATES = {
   Active: "active",
@@ -57,8 +57,14 @@ export type ApiCredentialTelemetryCapabilityMode =
   (typeof API_CREDENTIAL_TELEMETRY_MODES)[keyof typeof API_CREDENTIAL_TELEMETRY_MODES]
 
 export const API_CREDENTIAL_TELEMETRY_SOURCES = {
-  ...API_CREDENTIAL_TELEMETRY_MODES,
   Models: "models",
+  DeepSeekBalance: "deepSeekBalance",
+  GlmQuota: "glmQuota",
+  KimiQuota: "kimiQuota",
+  OpenAiBilling: "openaiBilling",
+  NewApiTokenUsage: "newApiTokenUsage",
+  Sub2ApiUsage: "sub2apiUsage",
+  CustomReadOnlyEndpoint: "customReadOnlyEndpoint",
 } as const
 
 export type ApiCredentialTelemetrySource =
@@ -111,6 +117,11 @@ export const API_CREDENTIAL_TELEMETRY_ATTEMPT_STATUSES = {
   Error: "error",
 } as const
 
+/** Stable product-owned reasons for telemetry health warnings. */
+export const API_CREDENTIAL_TELEMETRY_HEALTH_REASONS = {
+  InsufficientBalance: "insufficient-balance",
+} as const
+
 export type ApiCredentialTelemetryAttemptStatus =
   (typeof API_CREDENTIAL_TELEMETRY_ATTEMPT_STATUSES)[keyof typeof API_CREDENTIAL_TELEMETRY_ATTEMPT_STATUSES]
 
@@ -142,6 +153,8 @@ export type ApiCredentialTelemetryQuotaWindowType =
 /** Provider-native quota window normalized to remaining-capacity semantics. */
 export type ApiCredentialTelemetryQuotaWindow = {
   type: ApiCredentialTelemetryQuotaWindowType
+  /** @deprecated Transient provider unit hint used while adapting v5 payloads. */
+  unit?: "percent" | "provider"
   used: number
   limit: number
   remaining: number
@@ -155,6 +168,74 @@ export type ApiCredentialTelemetryQuota = {
   membershipLevel?: string
 }
 
+export type ApiCredentialTelemetryUnit =
+  | {
+      kind: "money"
+      currency: string
+      decimalPlaces: number
+    }
+  | {
+      kind: "quota"
+      code: string
+      label: string
+    }
+  | {
+      kind: "count"
+      code: string
+    }
+  | {
+      kind: "percent"
+    }
+
+export type ApiCredentialTelemetryAmount = {
+  value: number
+  unit: ApiCredentialTelemetryUnit
+}
+
+export type ApiCredentialTelemetryBalanceFact = {
+  amount: number
+  unit: Extract<ApiCredentialTelemetryUnit, { kind: "money" | "quota" }>
+  semantics: "cash" | "provider-wallet" | "budget-equivalent" | "legacy"
+  grantedAmount?: number
+  toppedUpAmount?: number
+  isAvailable?: boolean
+}
+
+export type ApiCredentialTelemetryQuotaWindowFact = {
+  type: ApiCredentialTelemetryQuotaWindowType
+  unit: Extract<ApiCredentialTelemetryUnit, { kind: "quota" | "percent" }>
+  used?: number
+  limit?: number
+  remaining?: number
+  remainingPercent: number
+  resetTime?: number
+}
+
+export type ApiCredentialTelemetryUsageFacts = {
+  todayCost?: ApiCredentialTelemetryAmount
+  todayRequests?: ApiCredentialTelemetryAmount
+  todayTokens?: {
+    upload: number
+    download: number
+    unit: Extract<ApiCredentialTelemetryUnit, { kind: "count" }>
+  }
+  totalUsed?: ApiCredentialTelemetryAmount
+  totalGranted?: ApiCredentialTelemetryAmount
+  totalAvailable?: ApiCredentialTelemetryAmount
+  expiresAt?: number
+  unlimited?: boolean
+}
+
+export type ApiCredentialTelemetryFacts = {
+  balances?: ApiCredentialTelemetryBalanceFact[]
+  quota?: {
+    windows: ApiCredentialTelemetryQuotaWindowFact[]
+    membershipLevel?: string
+  }
+  usage?: ApiCredentialTelemetryUsageFacts
+  models?: ApiCredentialModelTelemetry
+}
+
 export type ApiCredentialModelTelemetry = {
   count: number
   preview: string[]
@@ -166,8 +247,13 @@ export type ApiCredentialTelemetrySnapshot = {
   lastSuccessTime?: number
   lastError?: string
   source?: ApiCredentialTelemetrySource
+  /** Canonical v6 product facts. New snapshots always populate this field. */
+  facts?: ApiCredentialTelemetryFacts
+  /** @deprecated Legacy v5 flat balance field; only used during migration. */
   balance?: ApiCredentialTelemetryBalance
+  /** @deprecated Legacy v5 flat quota field; only used during migration. */
   quota?: ApiCredentialTelemetryQuota
+  /** @deprecated Legacy v5 fields; use facts instead. */
   balanceUsd?: number
   todayCostUsd?: number
   todayRequests?: number

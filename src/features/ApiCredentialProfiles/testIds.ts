@@ -44,6 +44,7 @@ export const API_CREDENTIAL_PROFILES_TEST_IDS = {
   verifyProbeRunButton: "api-credential-profile-verify-probe-run-button",
   verifyModelId: "profile-verify-model-id",
   telemetryBalance: "api-credential-telemetry-balance",
+  telemetryQuota: "api-credential-telemetry-quota",
   telemetryPanel: "api-credential-telemetry-panel",
   telemetryToggle: "api-credential-telemetry-toggle",
   telemetryTodayUsage: "api-credential-telemetry-today-usage",
