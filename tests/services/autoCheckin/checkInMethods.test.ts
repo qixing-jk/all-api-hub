@@ -562,6 +562,9 @@ describe("check-in methods compatibility activation", () => {
         siteType: account.site_type,
         account,
         observedAt: 500,
+        onOutcome: (outcome) => {
+          expect(outcome).toBe("unsupported")
+        },
       })
 
       expect(enumerate).not.toHaveBeenCalled()
@@ -575,6 +578,70 @@ describe("check-in methods compatibility activation", () => {
         outcome: "unsupported",
         evidence: { source: "probe", observedAt: 500 },
       })
+    } finally {
+      registration.provider.getStatus = originalGetStatus
+    }
+  })
+
+  it("reports an unavailable outcome when a status provider returns no result", async () => {
+    const account = buildSiteAccount({
+      site_type: SITE_TYPES.NEW_API,
+      checkIn: createCompatibilityCheckInConfig({
+        siteType: SITE_TYPES.NEW_API,
+        supported: true,
+        automaticExecutionEnabled: true,
+      }),
+    })
+    const registration = autoCheckinMethodRegistry.resolveById(
+      "new-api:daily-checkin",
+    )!
+    const originalGetStatus = registration.provider.getStatus
+    registration.provider.getStatus = vi.fn().mockResolvedValue(undefined)
+
+    try {
+      await expect(
+        refreshSelectedStatus({
+          config: account.checkIn,
+          siteType: account.site_type,
+          account,
+          onOutcome: (outcome) => {
+            expect(outcome).toBe("unavailable")
+          },
+        }),
+      ).resolves.toEqual(account.checkIn)
+    } finally {
+      registration.provider.getStatus = originalGetStatus
+    }
+  })
+
+  it("reports an unavailable outcome for non-HTTP status provider errors", async () => {
+    const account = buildSiteAccount({
+      site_type: SITE_TYPES.NEW_API,
+      checkIn: createCompatibilityCheckInConfig({
+        siteType: SITE_TYPES.NEW_API,
+        supported: true,
+        automaticExecutionEnabled: true,
+      }),
+    })
+    const registration = autoCheckinMethodRegistry.resolveById(
+      "new-api:daily-checkin",
+    )!
+    const originalGetStatus = registration.provider.getStatus
+    registration.provider.getStatus = vi
+      .fn()
+      .mockRejectedValue(new Error("network unavailable"))
+
+    try {
+      await expect(
+        refreshSelectedStatus({
+          config: account.checkIn,
+          siteType: account.site_type,
+          account,
+          onOutcome: (outcome) => {
+            expect(outcome).toBe("unavailable")
+          },
+        }),
+      ).resolves.toEqual(account.checkIn)
     } finally {
       registration.provider.getStatus = originalGetStatus
     }

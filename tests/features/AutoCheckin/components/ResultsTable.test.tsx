@@ -333,6 +333,80 @@ describe("AutoCheckin ResultsTable", () => {
     expect(onVerifyAccountStatus).toHaveBeenCalledWith("uncertain-account")
   })
 
+  it("exposes verification in the row menu and shows its pending state", async () => {
+    const user = userEvent.setup()
+    const onVerifyAccountStatus = vi.fn()
+    render(
+      <ResultsTable
+        results={[
+          {
+            accountId: "uncertain-account",
+            accountName: "Uncertain Account",
+            status: CHECKIN_RESULT_STATUS.UNCERTAIN,
+            reconciliation: "unknown",
+            timestamp: 1,
+          },
+        ]}
+        onVerifyAccountStatus={onVerifyAccountStatus}
+        verifyingAccountId="uncertain-account"
+      />,
+      {
+        withReleaseUpdateStatusProvider: false,
+        withThemeProvider: false,
+        withUserPreferencesProvider: false,
+      },
+    )
+
+    expect(
+      await screen.findByRole("button", {
+        name: "common:status.refreshing",
+      }),
+    ).toBeVisible()
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.more" }),
+    )
+    expect(
+      screen.getByRole("menuitem", {
+        name: "common:status.refreshing",
+      }),
+    ).toHaveAttribute("aria-disabled", "true")
+  })
+
+  it("invokes verification from the row menu", async () => {
+    const user = userEvent.setup()
+    const onVerifyAccountStatus = vi.fn()
+    render(
+      <ResultsTable
+        results={[
+          {
+            accountId: "uncertain-account",
+            accountName: "Uncertain Account",
+            status: CHECKIN_RESULT_STATUS.UNCERTAIN,
+            reconciliation: "unknown",
+            timestamp: 1,
+          },
+        ]}
+        onVerifyAccountStatus={onVerifyAccountStatus}
+      />,
+      {
+        withReleaseUpdateStatusProvider: false,
+        withThemeProvider: false,
+        withUserPreferencesProvider: false,
+      },
+    )
+
+    await user.click(
+      await screen.findByRole("button", { name: "common:actions.more" }),
+    )
+    await user.click(
+      screen.getByRole("menuitem", {
+        name: "autoCheckin:execution.actions.verifyStatus",
+      }),
+    )
+    expect(onVerifyAccountStatus).toHaveBeenCalledWith("uncertain-account")
+  })
+
   it("does not attach automatic analytics metadata to explicit-tracked row actions", async () => {
     const user = userEvent.setup()
     render(

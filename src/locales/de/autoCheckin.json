@@ -98,7 +98,7 @@
       "retryAlarmTriggerFailed": "Wiederholungsalarm konnte nicht ausgelöst werden: {{error}}",
       "retryFailed": "Wiederholung fehlgeschlagen: {{error}}",
       "runFailed": "Fehler beim Ausführen des automatischen Check-ins: {{error}}",
-      "statusVerificationFailed": "Der ausgewählte Check-in-Status konnte nicht verifiziert werden. Versuche es erneut oder öffne die Kontoseite.",
+      "statusVerificationFailed": "Der ausgewählte Check-in-Status konnte nicht verifiziert werden. Versuchen Sie es erneut oder öffnen Sie die Kontoseite.",
       "uiOpenPretriggerDidNotStart": "UI-Open-Pre-Trigger wurde nicht gestartet: {{reason}}",
       "uiOpenPretriggerEvaluationFailed": "Fehler beim Auswerten des UI-Open-Pre-Triggers: {{error}}",
       "uiOpenPretriggerIneligible": "UI-Open-Pre-Trigger ist nicht berechtigt: {{reason}}",

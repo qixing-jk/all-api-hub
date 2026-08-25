@@ -820,8 +820,16 @@ export default function AutoCheckin(props: {
       )
       if (response.success) {
         toast.success(t("messages.success.statusVerified"))
-        const updatedStatus = await loadStatus()
-        await resolveAutoCheckinAccount(accountId, { includeDisabled: true })
+        let updatedStatus: AutoCheckinStatus | null = null
+        try {
+          updatedStatus = await loadStatus()
+          await resolveAutoCheckinAccount(accountId, { includeDisabled: true })
+        } catch (error: unknown) {
+          logger.warn(
+            "Status verification succeeded but the account view refresh failed",
+            { accountId, error },
+          )
+        }
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
           insights: getAutoCheckinStatusAnalyticsInsights(updatedStatus),
         })
@@ -831,7 +839,7 @@ export default function AutoCheckin(props: {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
         })
       }
-    } catch (error: unknown) {
+    } catch {
       toast.error(t("messages.error.statusVerificationFailed"))
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,

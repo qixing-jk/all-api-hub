@@ -4052,6 +4052,15 @@ describe("auto check-in operation helpers", () => {
     expect(mockedMethods.executeSelectedCheckIn).not.toHaveBeenCalled()
   })
 
+  it("rejects status verification when the account no longer exists", async () => {
+    mockedAccountStorage.getAccountById.mockResolvedValue(null)
+
+    await expect(
+      autoCheckinScheduler.verifyAccountStatus("missing-account"),
+    ).rejects.toThrow("messages:storage.accountNotFound")
+    expect(mockedRefreshSelectedStatus).not.toHaveBeenCalled()
+  })
+
   it("does not report success when the status read is unavailable", async () => {
     mockedAccountStorage.getAccountById.mockResolvedValue(verificationAccount)
     mockedRefreshSelectedStatus.mockImplementation(
