@@ -3,6 +3,12 @@ import {
   coerceApiCredentialTelemetryConfig,
 } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { fetchApiCredentialModelIds } from "~/services/apiCredentialProfiles/modelCatalog"
+import {
+  attemptFromError,
+  createAttempt,
+  prepareTelemetrySecrets,
+  TelemetryEndpointError,
+} from "~/services/apiCredentialProfiles/telemetryAttempts"
 import { resolveApiCredentialTelemetryRequestTarget } from "~/services/apiCredentialProfiles/telemetryConfig"
 import type { TelemetryPatch } from "~/services/apiCredentialProfiles/telemetryContracts"
 import { normalizeTelemetryPatchToFacts } from "~/services/apiCredentialProfiles/telemetryFacts"
@@ -27,7 +33,6 @@ import {
   API_AUTH_TOKEN_MODES,
   type ApiAuthTokenMode,
 } from "~/services/apiTransport/type"
-import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import type {
   ApiCredentialProfile,
@@ -44,8 +49,6 @@ import {
   API_CREDENTIAL_TELEMETRY_SOURCES,
 } from "~/types/apiCredentialProfiles"
 import { getErrorMessage } from "~/utils/core/error"
-
-const REDACTED_QUERY_VALUE = "[REDACTED]"
 
 type AdapterSuccess = {
   source: ApiCredentialTelemetrySource
@@ -75,47 +78,6 @@ const TELEMETRY_ENDPOINTS = {
   newApiTokenUsage: "/api/usage/token/",
   sub2ApiUsage: "/v1/usage",
 } as const
-
-class TelemetryEndpointError extends Error {
-  constructor(
-    message: string,
-    public endpoint: string,
-    public unsupported: boolean = false,
-  ) {
-    super(message)
-    this.name = "TelemetryEndpointError"
-  }
-}
-
-/**
- * Redacts sensitive query values before attempts are persisted with snapshots.
- */
-function sanitizeTelemetryEndpoint(
-  endpoint: string,
-  secrets: string[],
-): string {
-  const redactedEndpoint = toSanitizedErrorSummary(endpoint, secrets)
-  try {
-    const parsed = new URL(redactedEndpoint, "https://telemetry.local")
-
-    for (const key of Array.from(parsed.searchParams.keys())) {
-      parsed.searchParams.set(key, REDACTED_QUERY_VALUE)
-    }
-
-    return `${parsed.pathname}${parsed.search}`
-  } catch {
-    return redactedEndpoint
-  }
-}
-
-/**
- * Removes duplicate secrets and orders overlapping values for full redaction.
- */
-function prepareTelemetrySecrets(secrets: Array<string | undefined>): string[] {
-  return Array.from(
-    new Set(secrets.filter((secret): secret is string => !!secret)),
-  ).sort((first, second) => second.length - first.length)
-}
 
 /**
  * Resolves the model catalog endpoint used for telemetry attempts.
@@ -212,54 +174,6 @@ async function fetchJson(params: {
       params.endpoint,
     )
   }
-}
-
-/**
- * Creates a normalized telemetry attempt entry for the profile snapshot.
- */
-function createAttempt(
-  source: ApiCredentialTelemetryAttempt["source"],
-  endpoint: string,
-  status: ApiCredentialTelemetryAttempt["status"],
-  message?: string,
-  secrets: string[] = [],
-): ApiCredentialTelemetryAttempt {
-  return {
-    source,
-    endpoint: sanitizeTelemetryEndpoint(endpoint, secrets),
-    status,
-    ...(message ? { message } : {}),
-  }
-}
-
-/**
- * Converts thrown endpoint errors into sanitized telemetry attempt entries.
- */
-function attemptFromError(
-  source: ApiCredentialTelemetryAttempt["source"],
-  endpoint: string,
-  error: unknown,
-  secrets: string[],
-): ApiCredentialTelemetryAttempt {
-  if (error instanceof TelemetryEndpointError) {
-    return createAttempt(
-      source,
-      error.endpoint || endpoint,
-      error.unsupported
-        ? API_CREDENTIAL_TELEMETRY_ATTEMPT_STATUSES.Unsupported
-        : API_CREDENTIAL_TELEMETRY_ATTEMPT_STATUSES.Error,
-      toSanitizedErrorSummary(error, secrets),
-      secrets,
-    )
-  }
-
-  return createAttempt(
-    source,
-    endpoint,
-    API_CREDENTIAL_TELEMETRY_ATTEMPT_STATUSES.Error,
-    toSanitizedErrorSummary(error, secrets),
-    secrets,
-  )
 }
 
 /**
