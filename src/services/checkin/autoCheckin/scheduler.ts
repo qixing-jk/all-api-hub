@@ -23,6 +23,10 @@ import {
   inspectSelectedCheckInCompatibility,
 } from "~/services/checkin/autoCheckin/methods"
 import { resolveProviderErrorResult } from "~/services/checkin/autoCheckin/providers/shared"
+import {
+  CHECK_IN_STATUS_REFRESH_OUTCOMES,
+  refreshSelectedStatus,
+} from "~/services/checkin/autoCheckin/refresh"
 import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
 import { notifyTaskResult } from "~/services/notifications/taskNotificationService"
 import {
@@ -2890,6 +2894,39 @@ class AutoCheckinScheduler {
     }
   }
 
+  /** Read the selected method status without executing a check-in mutation. */
+  async verifyAccountStatus(accountId: string) {
+    const account = await accountStorage.getAccountById(accountId)
+    if (!account) {
+      throw new Error(t("messages:storage.accountNotFound", { id: accountId }))
+    }
+
+    let refreshOutcome
+    const refreshedCheckIn = await refreshSelectedStatus({
+      config: account.checkIn,
+      siteType: account.site_type,
+      account,
+      observedAt: Date.now(),
+      onOutcome: (outcome) => {
+        refreshOutcome = outcome
+      },
+    })
+    if (refreshOutcome !== CHECK_IN_STATUS_REFRESH_OUTCOMES.Read) {
+      throw new Error("Check-in status could not be verified")
+    }
+
+    const persistedAccount =
+      await accountStorage.prepareAccountForSelectedCheckIn(
+        account.id,
+        refreshedCheckIn,
+      )
+    if (!persistedAccount) {
+      throw new Error("Check-in status could not be saved")
+    }
+
+    return { verified: true as const }
+  }
+
   /**
    * Return display data for a specific account (used by UI).
    */
@@ -3132,6 +3169,15 @@ export async function retryAutoCheckinAccount(
   return { success: true as const }
 }
 
+/** Verify a selected method's current status without issuing a check-in POST. */
+async function verifyAutoCheckinAccountStatus(accountId?: string) {
+  if (!accountId) {
+    return { success: false as const, error: "Missing accountId" }
+  }
+  await autoCheckinScheduler.verifyAccountStatus(accountId)
+  return { success: true as const }
+}
+
 /**
  * Load display data for one account before opening manual check-in pages.
  */
@@ -3278,6 +3324,16 @@ export function setupAutoCheckinMessagingListeners() {
                 tempWindowRequestSource,
               ),
           )
+        } catch (error) {
+          return toAutoCheckinFailure(error)
+        }
+      },
+    ),
+    onAutoCheckinMessage(
+      AutoCheckinMessageTypes.VerifyAccountStatus,
+      async ({ data }) => {
+        try {
+          return await verifyAutoCheckinAccountStatus(data.accountId)
         } catch (error) {
           return toAutoCheckinFailure(error)
         }

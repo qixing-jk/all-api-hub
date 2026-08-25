@@ -15,6 +15,7 @@ interface AccountFormSectionProps {
   description?: string
   defaultOpen?: boolean
   testId: string
+  id?: string
   children: ReactNode
 }
 
@@ -27,6 +28,7 @@ export function AccountFormSection({
   description,
   defaultOpen = false,
   testId,
+  id,
   children,
 }: AccountFormSectionProps) {
   const isSmallScreen = useIsSmallScreen()
@@ -35,6 +37,7 @@ export function AccountFormSection({
     return (
       <div
         data-testid={testId}
+        id={id}
         data-default-open={defaultOpen ? "true" : "false"}
         data-layout="mobile-collapsible"
       >
@@ -65,6 +68,7 @@ export function AccountFormSection({
   return (
     <div
       data-testid={testId}
+      id={id}
       data-default-open={defaultOpen ? "true" : "false"}
       data-layout="desktop-card"
     >

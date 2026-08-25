@@ -1,6 +1,7 @@
 export interface ResultsTableActionsProps {
   showDevActions?: boolean
   retryingAccountId?: string | null
+  verifyingAccountId?: string | null
   pendingOpeningSiteAccountIds?: Set<string>
   openingManualAccountId?: string | null
   openingExternalCheckInAccountId?: string | null
@@ -8,6 +9,7 @@ export interface ResultsTableActionsProps {
   deletingAccountId?: string | null
   externalCheckInAccountIds?: Set<string>
   onRetryAccount?: (accountId: string) => void | Promise<void>
+  onVerifyAccountStatus?: (accountId: string) => void | Promise<void>
   onOpenAccountSite?: (accountId: string) => void | Promise<void>
   onOpenManualSignIn?: (accountId: string) => void | Promise<void>
   onOpenExternalCheckIn?: (accountId: string) => void | Promise<void>

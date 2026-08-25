@@ -14,6 +14,15 @@ import {
 import type { SiteAccount } from "~/types"
 import type { CheckInConfig, CheckInMethodId } from "~/types/checkIn"
 
+export const CHECK_IN_STATUS_REFRESH_OUTCOMES = {
+  Read: "read",
+  Unavailable: "unavailable",
+  Unsupported: "unsupported",
+  NoSelection: "no_selection",
+} as const
+type CheckInStatusRefreshOutcome =
+  (typeof CHECK_IN_STATUS_REFRESH_OUTCOMES)[keyof typeof CHECK_IN_STATUS_REFRESH_OUTCOMES]
+
 /** Refreshes only the selected method without exposing legacy config fields. */
 export async function refreshSelectedStatus(input: {
   config: CheckInConfig
@@ -23,9 +32,13 @@ export async function refreshSelectedStatus(input: {
   readStatus?: (methodId: CheckInMethodId) => Promise<boolean | undefined>
   registry?: AutoCheckinMethodRegistry
   observedAt?: number
+  onOutcome?: (outcome: CheckInStatusRefreshOutcome) => void
 }): Promise<CheckInConfig> {
   const methodId = resolveSelectedCheckInMethod(input)
-  if (!methodId) return input.config
+  if (!methodId) {
+    input.onOutcome?.(CHECK_IN_STATUS_REFRESH_OUTCOMES.NoSelection)
+    return input.config
+  }
 
   const observedAt = input.observedAt ?? Date.now()
   let isCheckedInToday: boolean | undefined
@@ -39,13 +52,21 @@ export async function refreshSelectedStatus(input: {
       (await import("~/services/checkin/autoCheckin/providers"))
         .autoCheckinMethodRegistry
     const registration = registry.resolveById(methodId)
-    if (!registration?.provider.getStatus) return input.config
+    if (!registration?.provider.getStatus) {
+      input.onOutcome?.(CHECK_IN_STATUS_REFRESH_OUTCOMES.Unsupported)
+      return input.config
+    }
     try {
       const status = await registration.provider.getStatus({
         account: input.account,
         request: input.request,
         observedAt,
       })
+      input.onOutcome?.(
+        status
+          ? CHECK_IN_STATUS_REFRESH_OUTCOMES.Read
+          : CHECK_IN_STATUS_REFRESH_OUTCOMES.Unavailable,
+      )
       return status
         ? replaceCheckInMethodStatus({
             config: input.config,
@@ -55,7 +76,13 @@ export async function refreshSelectedStatus(input: {
         : input.config
     } catch (error) {
       const statusCode = getHttpStatusCode(error)
-      return statusCode === 404 || statusCode === 405
+      const unsupported = statusCode === 404 || statusCode === 405
+      input.onOutcome?.(
+        unsupported
+          ? CHECK_IN_STATUS_REFRESH_OUTCOMES.Unsupported
+          : CHECK_IN_STATUS_REFRESH_OUTCOMES.Unavailable,
+      )
+      return unsupported
         ? replaceCheckInMethodDetection({
             config: input.config,
             methodId,
@@ -70,7 +97,12 @@ export async function refreshSelectedStatus(input: {
         : input.config
     }
   }
-  if (typeof isCheckedInToday !== "boolean") return input.config
+  if (typeof isCheckedInToday !== "boolean") {
+    input.onOutcome?.(CHECK_IN_STATUS_REFRESH_OUTCOMES.Unavailable)
+    return input.config
+  }
+
+  input.onOutcome?.(CHECK_IN_STATUS_REFRESH_OUTCOMES.Read)
 
   return mergeCompatibilityCheckInStatus({
     config: input.config,

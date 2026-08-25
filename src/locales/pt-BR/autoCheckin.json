@@ -7,7 +7,8 @@
       "openFailedManual": "Abrir páginas de check-in de todas as contas com falha",
       "openManual": "Check-in manual",
       "openSite": "Abrir site",
-      "retryAccount": "Tentar novamente"
+      "retryAccount": "Tentar novamente",
+      "verifyStatus": "Verificar status"
     },
     "debug": {
       "evaluateUiOpenPretrigger": "Dev: Avaliar se as condições de 'Pré-acionar o check-in de hoje quando a UI abrir' são atendidas",
@@ -97,6 +98,7 @@
       "retryAlarmTriggerFailed": "Falha ao acionar o alarme de nova tentativa: {{error}}",
       "retryFailed": "Falha na nova tentativa: {{error}}",
       "runFailed": "Falha ao executar o check-in automático: {{error}}",
+      "statusVerificationFailed": "Não foi possível verificar o status de check-in selecionado. Tente novamente ou abra o site da conta.",
       "uiOpenPretriggerDidNotStart": "O pré-acionamento ao abrir a UI não foi iniciado: {{reason}}",
       "uiOpenPretriggerEvaluationFailed": "Falha ao avaliar o pré-acionamento de abertura da UI: {{error}}",
       "uiOpenPretriggerIneligible": "O pré-acionamento de abertura da UI não é elegível: {{reason}}",
@@ -126,6 +128,7 @@
       "retryCompleted": "Nova tentativa concluída.",
       "runCompleted": "Check-in automático concluído.",
       "settingsSaved": "As configurações de check-in automático foram salvas.",
+      "statusVerified": "O status de check-in selecionado foi verificado.",
       "uiOpenPretriggerEligible": "O pré-acionamento de abertura da UI é elegível."
     }
   },

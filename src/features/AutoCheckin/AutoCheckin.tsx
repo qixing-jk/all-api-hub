@@ -228,6 +228,9 @@ export default function AutoCheckin(props: {
   const [retryingAccountId, setRetryingAccountId] = useState<string | null>(
     null,
   )
+  const [verifyingAccountId, setVerifyingAccountId] = useState<string | null>(
+    null,
+  )
   const [disablingAccountId, setDisablingAccountId] = useState<string | null>(
     null,
   )
@@ -799,6 +802,46 @@ export default function AutoCheckin(props: {
     }
   }
 
+  const handleVerifyAccountStatus = async (accountId: string) => {
+    if (manualCheckinInFlightRef.current) return
+    manualCheckinInFlightRef.current = true
+    const tracker = startProductAnalyticsAction({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.VerifyAutoCheckinAccountStatus,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinResultsTable,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+
+    try {
+      setVerifyingAccountId(accountId)
+      const response = await sendAutoCheckinMessage(
+        AutoCheckinMessageTypes.VerifyAccountStatus,
+        { accountId },
+      )
+      if (response.success) {
+        toast.success(t("messages.success.statusVerified"))
+        const updatedStatus = await loadStatus()
+        await resolveAutoCheckinAccount(accountId, { includeDisabled: true })
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+          insights: getAutoCheckinStatusAnalyticsInsights(updatedStatus),
+        })
+      } else {
+        toast.error(t("messages.error.statusVerificationFailed"))
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        })
+      }
+    } catch (error: unknown) {
+      toast.error(t("messages.error.statusVerificationFailed"))
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      })
+    } finally {
+      manualCheckinInFlightRef.current = false
+      setVerifyingAccountId(null)
+    }
+  }
+
   const resolveAutoCheckinAccount = useCallback(
     async (
       accountId: string,
@@ -1329,12 +1372,14 @@ export default function AutoCheckin(props: {
       results={accountResults}
       showDevActions={showDebugButtons}
       retryingAccountId={retryingAccountId}
+      verifyingAccountId={verifyingAccountId}
       disablingAccountId={disablingAccountId}
       deletingAccountId={deletingAccountId}
       pendingOpeningSiteAccountIds={pendingOpeningSiteAccountIds}
       openingManualAccountId={openingManualAccountId}
       openingExternalCheckInAccountId={openingExternalCheckInAccountId}
       onRetryAccount={handleRetryAccount}
+      onVerifyAccountStatus={handleVerifyAccountStatus}
       onDisableAccount={handleDisableAccount}
       onDeleteAccount={handleDeleteAccount}
       onOpenAccountSite={handleOpenAccountSite}

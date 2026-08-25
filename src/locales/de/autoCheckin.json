@@ -7,7 +7,8 @@
       "openFailedManual": "Check-in-Seiten für alle Konten mit fehlgeschlagenem automatischem Check-in öffnen",
       "openManual": "Manueller Check-in",
       "openSite": "Website öffnen",
-      "retryAccount": "Wiederholen"
+      "retryAccount": "Wiederholen",
+      "verifyStatus": "Status prüfen"
     },
     "debug": {
       "evaluateUiOpenPretrigger": "Entwickler: Bewerten Sie, ob die Bedingungen „Heutigen Check-in vorab auslösen, wenn die Benutzeroberfläche geöffnet wird“ erfüllt sind",
@@ -97,6 +98,7 @@
       "retryAlarmTriggerFailed": "Wiederholungsalarm konnte nicht ausgelöst werden: {{error}}",
       "retryFailed": "Wiederholung fehlgeschlagen: {{error}}",
       "runFailed": "Fehler beim Ausführen des automatischen Check-ins: {{error}}",
+      "statusVerificationFailed": "Der ausgewählte Check-in-Status konnte nicht verifiziert werden. Versuche es erneut oder öffne die Kontoseite.",
       "uiOpenPretriggerDidNotStart": "UI-Open-Pre-Trigger wurde nicht gestartet: {{reason}}",
       "uiOpenPretriggerEvaluationFailed": "Fehler beim Auswerten des UI-Open-Pre-Triggers: {{error}}",
       "uiOpenPretriggerIneligible": "UI-Open-Pre-Trigger ist nicht berechtigt: {{reason}}",
@@ -124,6 +126,7 @@
       "retryCompleted": "Wiederholung abgeschlossen.",
       "runCompleted": "Automatischer Check-in abgeschlossen.",
       "settingsSaved": "Die Einstellungen für den automatischen Check-in wurden gespeichert.",
+      "statusVerified": "Der ausgewählte Check-in-Status wurde geprüft.",
       "uiOpenPretriggerEligible": "UI-Open-Pre-Trigger ist berechtigt."
     }
   },

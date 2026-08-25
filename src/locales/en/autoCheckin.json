@@ -7,7 +7,8 @@
       "openFailedManual": "Open check-in pages for all accounts with failed auto check-ins",
       "openManual": "Manual sign-in",
       "openSite": "Open site",
-      "retryAccount": "Retry"
+      "retryAccount": "Retry",
+      "verifyStatus": "Verify status"
     },
     "debug": {
       "evaluateUiOpenPretrigger": "Dev: Evaluate if 'Pre-trigger today's check-in when UI opens' conditions are met",
@@ -97,6 +98,7 @@
       "retryAlarmTriggerFailed": "Failed to trigger retry alarm: {{error}}",
       "retryFailed": "Retry failed: {{error}}",
       "runFailed": "Failed to run auto check-in: {{error}}",
+      "statusVerificationFailed": "We couldn't verify the selected check-in status. Try again or open the account site.",
       "uiOpenPretriggerDidNotStart": "UI-open pre-trigger did not start: {{reason}}",
       "uiOpenPretriggerEvaluationFailed": "Failed to evaluate UI-open pre-trigger: {{error}}",
       "uiOpenPretriggerIneligible": "UI-open pre-trigger is not eligible: {{reason}}",
@@ -124,6 +126,7 @@
       "retryCompleted": "Retry completed.",
       "runCompleted": "Auto check-in completed.",
       "settingsSaved": "Auto check-in settings have been saved.",
+      "statusVerified": "The selected check-in status was verified.",
       "uiOpenPretriggerEligible": "UI-open pre-trigger is eligible."
     }
   },

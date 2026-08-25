@@ -290,6 +290,49 @@ describe("AutoCheckin ResultsTable", () => {
     ).toBeVisible()
   })
 
+  it("offers status verification for uncertain results without a retry", async () => {
+    const user = userEvent.setup()
+    const onVerifyAccountStatus = vi.fn()
+    render(
+      <ResultsTable
+        results={[
+          {
+            accountId: "uncertain-account",
+            accountName: "Uncertain Account",
+            status: CHECKIN_RESULT_STATUS.UNCERTAIN,
+            reconciliation: "unknown",
+            timestamp: 1,
+          },
+        ]}
+        onRetryAccount={vi.fn()}
+        onVerifyAccountStatus={onVerifyAccountStatus}
+      />,
+      {
+        withReleaseUpdateStatusProvider: false,
+        withThemeProvider: false,
+        withUserPreferencesProvider: false,
+      },
+    )
+
+    expect(
+      await screen.findByRole("button", {
+        name: "autoCheckin:execution.actions.verifyStatus",
+      }),
+    ).toBeVisible()
+    expect(
+      screen.queryByRole("button", {
+        name: "autoCheckin:execution.actions.retryAccount",
+      }),
+    ).not.toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "autoCheckin:execution.actions.verifyStatus",
+      }),
+    )
+    expect(onVerifyAccountStatus).toHaveBeenCalledWith("uncertain-account")
+  })
+
   it("does not attach automatic analytics metadata to explicit-tracked row actions", async () => {
     const user = userEvent.setup()
     render(

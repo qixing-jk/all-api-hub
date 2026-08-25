@@ -734,6 +734,7 @@ export const PRODUCT_ANALYTICS_ACTION_IDS = {
   RunPopupQuickCheckin: "run_popup_quick_checkin",
   RunQuickCheckin: "run_quick_checkin",
   RetryAutoCheckinAccount: "retry_auto_checkin_account",
+  VerifyAutoCheckinAccountStatus: "verify_auto_checkin_account_status",
   RetryFailedManagedSiteModelSync: "retry_failed_managed_site_model_sync",
   SaveAccountTokenToApiCredentialProfile:
     "save_account_token_to_api_credential_profile",

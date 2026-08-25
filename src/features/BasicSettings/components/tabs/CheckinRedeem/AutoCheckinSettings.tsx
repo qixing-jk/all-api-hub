@@ -31,6 +31,8 @@ import { createLogger } from "~/utils/core/logger"
 import { getPreferenceWriteFailureMessage } from "~/utils/core/toastHelpers"
 import { pushWithinOptionsPage } from "~/utils/navigation"
 
+import { AUTO_CHECKIN_TARGET_IDS } from "./searchTargets"
+
 /**
  * Unified logger scoped to the Basic Settings auto check-in section.
  */
@@ -261,7 +263,7 @@ export default function AutoCheckinSettings() {
 
   return (
     <SettingSection
-      id="auto-checkin"
+      id={AUTO_CHECKIN_TARGET_IDS.section}
       title={t("autoCheckin:settings.title")}
       description={t("autoCheckin:description")}
       onReset={async () => {
@@ -272,7 +274,7 @@ export default function AutoCheckinSettings() {
         <CardList>
           {/* Enable Auto Check-in */}
           <CardItem
-            id="auto-checkin-enable"
+            id={AUTO_CHECKIN_TARGET_IDS.enable}
             title={t("autoCheckin:settings.enable")}
             description={t("autoCheckin:settings.enableDesc")}
             rightContent={
@@ -287,7 +289,7 @@ export default function AutoCheckinSettings() {
 
           {/* UI-open daily pre-trigger */}
           <CardItem
-            id="auto-checkin-pretrigger-ui-open"
+            id={AUTO_CHECKIN_TARGET_IDS.pretriggerUiOpen}
             title={t("autoCheckin:settings.pretriggerDailyOnUiOpen")}
             description={t("autoCheckin:settings.pretriggerDailyOnUiOpenDesc")}
             rightContent={
@@ -302,7 +304,7 @@ export default function AutoCheckinSettings() {
 
           {/* Post-run UI refresh notification */}
           <CardItem
-            id="auto-checkin-notify-ui-on-completion"
+            id={AUTO_CHECKIN_TARGET_IDS.notifyUiOnCompletion}
             title={t("autoCheckin:settings.notifyUiOnCompletion")}
             description={t("autoCheckin:settings.notifyUiOnCompletionDesc")}
             rightContent={
@@ -317,7 +319,7 @@ export default function AutoCheckinSettings() {
 
           {/* Time Window Start */}
           <CardItem
-            id="auto-checkin-window-start"
+            id={AUTO_CHECKIN_TARGET_IDS.windowStart}
             title={t("autoCheckin:settings.windowStart")}
             description={t("autoCheckin:settings.windowStartDesc")}
             rightContent={
@@ -339,7 +341,7 @@ export default function AutoCheckinSettings() {
 
           {/* Time Window End */}
           <CardItem
-            id="auto-checkin-window-end"
+            id={AUTO_CHECKIN_TARGET_IDS.windowEnd}
             title={t("autoCheckin:settings.windowEnd")}
             description={t("autoCheckin:settings.windowEndDesc")}
             rightContent={
@@ -361,7 +363,7 @@ export default function AutoCheckinSettings() {
 
           {/* Schedule Mode */}
           <CardItem
-            id="auto-checkin-schedule-mode"
+            id={AUTO_CHECKIN_TARGET_IDS.scheduleMode}
             title={t("autoCheckin:settings.scheduleModeTitle")}
             description={t("autoCheckin:settings.scheduleModeDesc")}
             rightContent={
@@ -384,7 +386,7 @@ export default function AutoCheckinSettings() {
           {preferences.scheduleMode ===
             AUTO_CHECKIN_SCHEDULE_MODE.DETERMINISTIC && (
             <CardItem
-              id="auto-checkin-deterministic-time"
+              id={AUTO_CHECKIN_TARGET_IDS.deterministicTime}
               title={t("autoCheckin:settings.deterministicTimeTitle")}
               description={t("autoCheckin:settings.deterministicTimeDesc")}
               rightContent={
@@ -409,7 +411,7 @@ export default function AutoCheckinSettings() {
 
           {/* Retry Strategy */}
           <CardItem
-            id="auto-checkin-retry-enabled"
+            id={AUTO_CHECKIN_TARGET_IDS.retryEnabled}
             title={t("autoCheckin:settings.retryTitle")}
             description={t("autoCheckin:settings.retryDesc")}
             rightContent={
@@ -423,7 +425,7 @@ export default function AutoCheckinSettings() {
           />
 
           <CardItem
-            id="auto-checkin-retry-interval"
+            id={AUTO_CHECKIN_TARGET_IDS.retryInterval}
             title={t("autoCheckin:settings.retryInterval")}
             description={t("autoCheckin:settings.retryIntervalDesc")}
             rightContent={
@@ -447,7 +449,7 @@ export default function AutoCheckinSettings() {
           />
 
           <CardItem
-            id="auto-checkin-retry-max-attempts"
+            id={AUTO_CHECKIN_TARGET_IDS.retryMaxAttempts}
             title={t("autoCheckin:settings.retryMaxAttempts")}
             description={t("autoCheckin:settings.retryMaxAttemptsDesc")}
             rightContent={
@@ -473,7 +475,7 @@ export default function AutoCheckinSettings() {
 
           {/* View Execution Button */}
           <CardItem
-            id="auto-checkin-view-execution"
+            id={AUTO_CHECKIN_TARGET_IDS.viewExecution}
             title={t("autoCheckin:settings.viewExecution")}
             description={t("autoCheckin:settings.viewExecutionDesc")}
             rightContent={

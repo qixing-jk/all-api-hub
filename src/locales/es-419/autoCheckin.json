@@ -7,7 +7,8 @@
       "openFailedManual": "Abrir páginas de check-in de todas las cuentas con error",
       "openManual": "Inicio de sesión manual",
       "openSite": "Abrir sitio",
-      "retryAccount": "Reintentar"
+      "retryAccount": "Reintentar",
+      "verifyStatus": "Verificar estado"
     },
     "debug": {
       "evaluateUiOpenPretrigger": "Dev: Evaluar si se cumplen las condiciones de 'Preactivar el check-in de hoy al abrir la UI'",
@@ -97,6 +98,7 @@
       "retryAlarmTriggerFailed": "No se pudo activar la alarma de reintento: {{error}}",
       "retryFailed": "Falló el reintento: {{error}}",
       "runFailed": "No se pudo ejecutar el check-in automático: {{error}}",
+      "statusVerificationFailed": "No pudimos verificar el estado de check-in seleccionado. Inténtalo de nuevo o abre el sitio de la cuenta.",
       "uiOpenPretriggerDidNotStart": "La preactivación al abrir la UI no inició: {{reason}}",
       "uiOpenPretriggerEvaluationFailed": "No se pudo evaluar la preactivación al abrir la UI: {{error}}",
       "uiOpenPretriggerIneligible": "La preactivación al abrir la UI no es elegible: {{reason}}",
@@ -126,6 +128,7 @@
       "retryCompleted": "Reintento completado.",
       "runCompleted": "Check-in automático completado.",
       "settingsSaved": "La configuración de check-in automático se guardó.",
+      "statusVerified": "Se verificó el estado de check-in seleccionado.",
       "uiOpenPretriggerEligible": "La preactivación al abrir la UI es elegible."
     }
   },

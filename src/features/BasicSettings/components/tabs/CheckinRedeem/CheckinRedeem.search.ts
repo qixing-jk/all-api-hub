@@ -5,11 +5,13 @@ import {
 } from "~/entrypoints/options/search/registryHelpers"
 import type { OptionsSearchItemDefinition } from "~/entrypoints/options/search/types"
 
+import { AUTO_CHECKIN_TARGET_IDS } from "./searchTargets"
+
 export const checkinRedeemSearchSections: OptionsSearchItemDefinition[] = [
   buildSectionDefinition(
     "section:auto-checkin",
     "checkinRedeem",
-    "auto-checkin",
+    AUTO_CHECKIN_TARGET_IDS.section,
     "autoCheckin:settings.title",
     260,
   ),
@@ -26,7 +28,7 @@ export const checkinRedeemSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:auto-checkin-global-enabled",
     "checkinRedeem",
-    "auto-checkin-enable",
+    AUTO_CHECKIN_TARGET_IDS.enable,
     "autoCheckin:settings.enable",
     560,
     {
@@ -42,7 +44,7 @@ export const checkinRedeemSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:auto-checkin-window-start",
     "checkinRedeem",
-    "auto-checkin-window-start",
+    AUTO_CHECKIN_TARGET_IDS.windowStart,
     "autoCheckin:settings.windowStart",
     561,
     {
@@ -58,7 +60,7 @@ export const checkinRedeemSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:auto-checkin-window-end",
     "checkinRedeem",
-    "auto-checkin-window-end",
+    AUTO_CHECKIN_TARGET_IDS.windowEnd,
     "autoCheckin:settings.windowEnd",
     562,
     {
@@ -74,7 +76,7 @@ export const checkinRedeemSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:auto-checkin-schedule-mode",
     "checkinRedeem",
-    "auto-checkin-schedule-mode",
+    AUTO_CHECKIN_TARGET_IDS.scheduleMode,
     "autoCheckin:settings.scheduleModeTitle",
     563,
     {
@@ -90,7 +92,7 @@ export const checkinRedeemSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:auto-checkin-pretrigger-ui-open",
     "checkinRedeem",
-    "auto-checkin-pretrigger-ui-open",
+    AUTO_CHECKIN_TARGET_IDS.pretriggerUiOpen,
     "autoCheckin:settings.pretriggerDailyOnUiOpen",
     564,
     {
@@ -106,7 +108,7 @@ export const checkinRedeemSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:auto-checkin-notify-ui-on-completion",
     "checkinRedeem",
-    "auto-checkin-notify-ui-on-completion",
+    AUTO_CHECKIN_TARGET_IDS.notifyUiOnCompletion,
     "autoCheckin:settings.notifyUiOnCompletion",
     565,
     {
@@ -122,7 +124,7 @@ export const checkinRedeemSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:auto-checkin-deterministic-time",
     "checkinRedeem",
-    "auto-checkin-deterministic-time",
+    AUTO_CHECKIN_TARGET_IDS.deterministicTime,
     "autoCheckin:settings.deterministicTimeTitle",
     566,
     {
@@ -138,7 +140,7 @@ export const checkinRedeemSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:auto-checkin-retry-enabled",
     "checkinRedeem",
-    "auto-checkin-retry-enabled",
+    AUTO_CHECKIN_TARGET_IDS.retryEnabled,
     "autoCheckin:settings.retryTitle",
     567,
     {
@@ -154,7 +156,7 @@ export const checkinRedeemSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:auto-checkin-retry-interval",
     "checkinRedeem",
-    "auto-checkin-retry-interval",
+    AUTO_CHECKIN_TARGET_IDS.retryInterval,
     "autoCheckin:settings.retryInterval",
     568,
     {
@@ -170,7 +172,7 @@ export const checkinRedeemSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:auto-checkin-retry-max-attempts",
     "checkinRedeem",
-    "auto-checkin-retry-max-attempts",
+    AUTO_CHECKIN_TARGET_IDS.retryMaxAttempts,
     "autoCheckin:settings.retryMaxAttempts",
     569,
     {
@@ -186,7 +188,7 @@ export const checkinRedeemSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:auto-checkin-view-execution",
     "checkinRedeem",
-    "auto-checkin-view-execution",
+    AUTO_CHECKIN_TARGET_IDS.viewExecution,
     "autoCheckin:settings.viewExecution",
     570,
     {

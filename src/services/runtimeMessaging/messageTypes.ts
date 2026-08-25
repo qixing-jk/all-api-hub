@@ -7,6 +7,7 @@ export const AutoCheckinMessageTypes = {
     "autoCheckin:debugScheduleDailyAlarmForToday",
   PretriggerDailyOnUiOpen: "autoCheckin:pretriggerDailyOnUiOpen",
   RetryAccount: "autoCheckin:retryAccount",
+  VerifyAccountStatus: "autoCheckin:verifyAccountStatus",
   GetAccountInfo: "autoCheckin:getAccountInfo",
   GetStatus: "autoCheckin:getStatus",
   UpdateSettings: "autoCheckin:updateSettings",

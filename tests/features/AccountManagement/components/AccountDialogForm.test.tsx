@@ -955,6 +955,55 @@ describe("AccountDialog AccountForm", () => {
     ).toBeVisible()
   })
 
+  it("explains ambiguous and unknown detection without exposing site identifiers", async () => {
+    const props = createProps()
+    props.draft.siteType = SITE_TYPES.NEW_API
+    props.draft.checkIn = createCheckIn({
+      siteType: SITE_TYPES.NEW_API,
+      supported: true,
+    })
+    props.draft.checkIn.methodKnowledge.methods[
+      "new-api:daily-checkin"
+    ]!.detection = {
+      outcome: CHECK_IN_METHOD_DETECTION_OUTCOMES.Unknown,
+      reason: "timeout",
+      attemptedAt: 200,
+    }
+
+    render(<AccountForm {...withSitePolicy(props)} />)
+
+    expect(
+      await screen.findByText("accountDialog:form.checkInStatusUnknown"),
+    ).toBeVisible()
+  })
+
+  it("keeps the selected method and automatic control when status is unavailable", async () => {
+    const props = createProps()
+    props.draft.siteType = SITE_TYPES.NEW_API
+    props.draft.checkIn = createCheckIn({
+      siteType: SITE_TYPES.NEW_API,
+      supported: true,
+    })
+    props.draft.checkIn.methodKnowledge.methods[
+      "new-api:daily-checkin"
+    ]!.status = {
+      outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Unknown,
+      reason: "network",
+      attemptedAt: 200,
+    }
+
+    render(<AccountForm {...withSitePolicy(props)} />)
+
+    expect(
+      await screen.findByText("accountDialog:form.checkInStatusUnavailable"),
+    ).toBeVisible()
+    expect(
+      screen.getByRole("switch", {
+        name: "accountDialog:form.autoCheckInEnabled",
+      }),
+    ).toBeChecked()
+  })
+
   it("shows the automatic result in the trigger and explains it below", async () => {
     testI18n.addResourceBundle("en", "accountDialog", enAccountDialog)
     const props = createProps()

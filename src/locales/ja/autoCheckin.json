@@ -7,7 +7,8 @@
       "openFailedManual": "失敗した全アカウントのチェックインページを開く",
       "openManual": "手動チェックイン",
       "openSite": "サイトを開く",
-      "retryAccount": "再試行"
+      "retryAccount": "再試行",
+      "verifyStatus": "状態を確認"
     },
     "debug": {
       "evaluateUiOpenPretrigger": "開発用: 「UI を開いた時に今日のチェックインを事前起動」の条件を評価",
@@ -97,6 +98,7 @@
       "retryAlarmTriggerFailed": "再試行アラームの起動に失敗しました: {{error}}",
       "retryFailed": "再試行に失敗しました: {{error}}",
       "runFailed": "自動チェックインの実行に失敗しました: {{error}}",
+      "statusVerificationFailed": "選択したチェックイン状態を確認できませんでした。もう一度試すか、アカウントサイトを開いてください。",
       "uiOpenPretriggerDidNotStart": "UI 起動時の事前起動は開始されませんでした: {{reason}}",
       "uiOpenPretriggerEvaluationFailed": "UI 起動時の事前起動判定に失敗しました: {{error}}",
       "uiOpenPretriggerIneligible": "UI 起動時の事前起動対象ではありません: {{reason}}",
@@ -122,6 +124,7 @@
       "retryCompleted": "再試行が完了しました。",
       "runCompleted": "自動チェックインが完了しました。",
       "settingsSaved": "自動チェックイン設定を保存しました。",
+      "statusVerified": "選択したチェックイン状態を確認しました。",
       "uiOpenPretriggerEligible": "UI 起動時の事前起動条件を満たしています。"
     }
   },

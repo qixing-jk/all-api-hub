@@ -1459,7 +1459,7 @@ describe("typed runtime messaging setup", () => {
     scheduler.setupAutoCheckinMessagingListeners()
     scheduler.setupAutoCheckinMessagingListeners()
 
-    expect(onAutoCheckinMessage).toHaveBeenCalledTimes(10)
+    expect(onAutoCheckinMessage).toHaveBeenCalledTimes(11)
     const getStatusHandler = onAutoCheckinMessage.mock.calls.find(
       ([type]) => type === "autoCheckin:getStatus",
     )?.[1]
@@ -1485,6 +1485,7 @@ describe("typed runtime messaging setup", () => {
       summary: { executed: 1 },
       pendingRetry: false,
     })
+    const verifyAccountStatus = vi.fn().mockResolvedValue(undefined)
     const getAccountDisplayData = vi.fn().mockResolvedValue({
       id: "account-1",
       siteName: "Example",
@@ -1537,6 +1538,10 @@ describe("typed runtime messaging setup", () => {
     )
     vi.spyOn(
       scheduler.autoCheckinScheduler,
+      "verifyAccountStatus",
+    ).mockImplementation(verifyAccountStatus)
+    vi.spyOn(
+      scheduler.autoCheckinScheduler,
       "getAccountDisplayData",
     ).mockImplementation(getAccountDisplayData)
     vi.spyOn(
@@ -1561,6 +1566,12 @@ describe("typed runtime messaging setup", () => {
         },
         sender: OPTIONS_SENDER,
       }),
+    ).resolves.toEqual({ success: true })
+    await expect(
+      getRegisteredHandler(
+        onAutoCheckinMessage,
+        "autoCheckin:verifyAccountStatus",
+      )({ data: { accountId: "account-1" } }),
     ).resolves.toEqual({ success: true })
     await expect(
       getRegisteredHandler(
@@ -1739,6 +1750,7 @@ describe("typed runtime messaging setup", () => {
       protectionBypassExecution: MANUAL_CHECKIN_EXECUTION,
     })
     expect(runCheckins).toHaveBeenCalledTimes(1)
+    expect(verifyAccountStatus).toHaveBeenCalledWith("account-1")
     expect(scheduleNextRun).toHaveBeenCalledWith({ preserveExisting: true })
     expect(debugScheduleDailyAlarmForToday).toHaveBeenCalledWith({
       minutesFromNow: 5,

@@ -13,6 +13,10 @@ import {
   inspectSelectedCheckInCompatibility,
 } from "~/services/checkin/autoCheckin/methods"
 import {
+  CHECK_IN_STATUS_REFRESH_OUTCOMES,
+  refreshSelectedStatus,
+} from "~/services/checkin/autoCheckin/refresh"
+import {
   autoCheckinScheduler,
   getAutoCheckinAccountInfo,
   getAutoCheckinStatus,
@@ -199,8 +203,20 @@ vi.mock("~/services/accounts/accountStorage", () => ({
     getAccountById: vi.fn(),
     getDisplayDataById: vi.fn(),
     convertToDisplayData: vi.fn(),
+    prepareAccountForSelectedCheckIn: vi.fn(),
   },
 }))
+
+vi.mock("~/services/checkin/autoCheckin/refresh", async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import("~/services/checkin/autoCheckin/refresh")
+    >()
+  return {
+    ...actual,
+    refreshSelectedStatus: vi.fn(),
+  }
+})
 
 vi.mock("~/services/checkin/autoCheckin/methods", () => ({
   executeSelectedCheckIn: vi.fn(),
@@ -277,7 +293,11 @@ const mockedAccountStorage = accountStorage as unknown as {
   markAccountAsSiteCheckedIn: ReturnType<typeof vi.fn>
   refreshAccount: ReturnType<typeof vi.fn>
   convertToDisplayData: ReturnType<typeof vi.fn>
+  prepareAccountForSelectedCheckIn: ReturnType<typeof vi.fn>
 }
+
+const mockedRefreshSelectedStatus =
+  refreshSelectedStatus as unknown as ReturnType<typeof vi.fn>
 
 const resolveProviderForTest = vi.fn()
 
@@ -333,6 +353,7 @@ beforeEach(() => {
   resolveProviderForTest.mockReset()
   mockedMethods.inspectSelectedCheckInCompatibility.mockReset()
   mockedMethods.executeSelectedCheckIn.mockReset()
+  mockedRefreshSelectedStatus.mockReset()
   mockedInspection.getSelectedCheckInStatus.mockReset()
   mockedInspection.getSelectedCheckInStatus.mockReturnValue(undefined)
 
@@ -4001,6 +4022,68 @@ describe("auto check-in operation helpers", () => {
   beforeEach(() => {
     vi.restoreAllMocks()
     vi.clearAllMocks()
+  })
+
+  const verificationAccount = {
+    id: "verify-account",
+    site_type: SITE_TYPES.NEW_API,
+    checkIn: runnableCheckIn(),
+  } as any
+
+  it("verifies status before persisting the selected method", async () => {
+    mockedAccountStorage.getAccountById.mockResolvedValue(verificationAccount)
+    mockedAccountStorage.prepareAccountForSelectedCheckIn.mockResolvedValue(
+      verificationAccount,
+    )
+    mockedRefreshSelectedStatus.mockImplementation(
+      async ({ onOutcome, config }: any) => {
+        onOutcome(CHECK_IN_STATUS_REFRESH_OUTCOMES.Read)
+        return config
+      },
+    )
+
+    await expect(
+      autoCheckinScheduler.verifyAccountStatus(verificationAccount.id),
+    ).resolves.toEqual({ verified: true })
+
+    expect(
+      mockedAccountStorage.prepareAccountForSelectedCheckIn,
+    ).toHaveBeenCalledWith(verificationAccount.id, verificationAccount.checkIn)
+    expect(mockedMethods.executeSelectedCheckIn).not.toHaveBeenCalled()
+  })
+
+  it("does not report success when the status read is unavailable", async () => {
+    mockedAccountStorage.getAccountById.mockResolvedValue(verificationAccount)
+    mockedRefreshSelectedStatus.mockImplementation(
+      async ({ onOutcome, config }: any) => {
+        onOutcome(CHECK_IN_STATUS_REFRESH_OUTCOMES.Unavailable)
+        return config
+      },
+    )
+
+    await expect(
+      autoCheckinScheduler.verifyAccountStatus(verificationAccount.id),
+    ).rejects.toThrow("status could not be verified")
+    expect(
+      mockedAccountStorage.prepareAccountForSelectedCheckIn,
+    ).not.toHaveBeenCalled()
+  })
+
+  it("does not report success when persistence fails", async () => {
+    mockedAccountStorage.getAccountById.mockResolvedValue(verificationAccount)
+    mockedAccountStorage.prepareAccountForSelectedCheckIn.mockResolvedValue(
+      null,
+    )
+    mockedRefreshSelectedStatus.mockImplementation(
+      async ({ onOutcome, config }: any) => {
+        onOutcome(CHECK_IN_STATUS_REFRESH_OUTCOMES.Read)
+        return config
+      },
+    )
+
+    await expect(
+      autoCheckinScheduler.verifyAccountStatus(verificationAccount.id),
+    ).rejects.toThrow("status could not be saved")
   })
 
   it("should run checkins on autoCheckin:runNow", async () => {

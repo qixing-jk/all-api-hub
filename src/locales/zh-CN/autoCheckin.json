@@ -7,7 +7,8 @@
       "openFailedManual": "打开全部失败账号的签到页",
       "openManual": "手动签到",
       "openSite": "打开网站",
-      "retryAccount": "重新尝试"
+      "retryAccount": "重新尝试",
+      "verifyStatus": "验证状态"
     },
     "debug": {
       "evaluateUiOpenPretrigger": "开发：解释“打开界面时提前触发今日签到”是否满足条件",
@@ -97,6 +98,7 @@
       "retryAlarmTriggerFailed": "触发重试闹钟失败：{{error}}",
       "retryFailed": "重新尝试失败：{{error}}",
       "runFailed": "执行自动签到失败：{{error}}",
+      "statusVerificationFailed": "无法验证所选签到状态。请重试或打开账号站点。",
       "uiOpenPretriggerDidNotStart": "界面打开预触发未启动：{{reason}}",
       "uiOpenPretriggerEvaluationFailed": "评估界面打开预触发失败：{{error}}",
       "uiOpenPretriggerIneligible": "界面打开预触发条件不满足：{{reason}}",
@@ -122,6 +124,7 @@
       "retryCompleted": "重新尝试已完成。",
       "runCompleted": "自动签到已完成。",
       "settingsSaved": "自动签到设置已保存。",
+      "statusVerified": "已验证所选签到状态。",
       "uiOpenPretriggerEligible": "界面打开预触发条件满足。"
     }
   },

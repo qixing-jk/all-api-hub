@@ -7,7 +7,8 @@
       "openFailedManual": "Mở trang điểm danh của tất cả tài khoản thất bại",
       "openManual": "Điểm danh thủ công",
       "openSite": "Mở trang web",
-      "retryAccount": "Thử lại"
+      "retryAccount": "Thử lại",
+      "verifyStatus": "Xác minh trạng thái"
     },
     "debug": {
       "evaluateUiOpenPretrigger": "Phát triển: Giải thích xem \"Kích hoạt sớm điểm danh hôm nay khi mở giao diện\" có đáp ứng điều kiện không",
@@ -97,6 +98,7 @@
       "retryAlarmTriggerFailed": "Kích hoạt báo thức thử lại thất bại: {{error}}",
       "retryFailed": "Thử lại thất bại: {{error}}",
       "runFailed": "Thực hiện điểm danh tự động thất bại: {{error}}",
+      "statusVerificationFailed": "Không thể xác minh trạng thái điểm danh đã chọn. Hãy thử lại hoặc mở trang tài khoản.",
       "uiOpenPretriggerDidNotStart": "Kích hoạt trước khi mở giao diện chưa bắt đầu: {{reason}}",
       "uiOpenPretriggerEvaluationFailed": "Đánh giá kích hoạt trước khi mở giao diện thất bại: {{error}}",
       "uiOpenPretriggerIneligible": "Điều kiện kích hoạt trước khi mở giao diện không được đáp ứng: {{reason}}",
@@ -122,6 +124,7 @@
       "retryCompleted": "Thử lại đã hoàn tất.",
       "runCompleted": "Điểm danh tự động đã hoàn tất.",
       "settingsSaved": "Đã lưu cài đặt điểm danh tự động.",
+      "statusVerified": "Đã xác minh trạng thái điểm danh đã chọn.",
       "uiOpenPretriggerEligible": "Điều kiện kích hoạt trước khi mở giao diện đã được đáp ứng."
     }
   },

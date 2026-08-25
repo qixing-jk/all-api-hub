@@ -34,6 +34,7 @@ export default function ResultsTableRowActions({
   result,
   showDevActions,
   retryingAccountId,
+  verifyingAccountId,
   pendingOpeningSiteAccountIds,
   openingManualAccountId,
   openingExternalCheckInAccountId,
@@ -41,6 +42,7 @@ export default function ResultsTableRowActions({
   deletingAccountId,
   externalCheckInAccountIds,
   onRetryAccount,
+  onVerifyAccountStatus,
   onOpenAccountSite,
   onOpenManualSignIn,
   onOpenExternalCheckIn,
@@ -52,6 +54,7 @@ export default function ResultsTableRowActions({
   const forceShowActions = Boolean(showDevActions)
   const isOpeningSite = pendingOpeningSiteAccountIds?.has(accountId) ?? false
   const isFailedResult = result.status === CHECKIN_RESULT_STATUS.FAILED
+  const isUncertainResult = result.status === CHECKIN_RESULT_STATUS.UNCERTAIN
   const canRetryResult =
     isFailedResult ||
     result.reasonCode === AUTO_CHECKIN_SKIP_REASON.STATUS_UNAVAILABLE
@@ -60,6 +63,7 @@ export default function ResultsTableRowActions({
   const showRetryAction = Boolean(
     onRetryAccount && (forceShowActions || canRetryResult),
   )
+  const showVerifyAction = Boolean(onVerifyAccountStatus && isUncertainResult)
   const showManualAction = Boolean(
     onOpenManualSignIn && (forceShowActions || isFailedResult),
   )
@@ -67,10 +71,15 @@ export default function ResultsTableRowActions({
     onOpenExternalCheckIn && canOpenExternalCheckIn,
   )
   const hasPrimaryActions =
-    showRetryAction || showManualAction || showExternalAction
+    showRetryAction ||
+    showVerifyAction ||
+    showManualAction ||
+    showExternalAction
   const showDirectExternalAction = !showRetryAction && showExternalAction
   const hasExpandedPrimaryMenuActions =
-    showManualAction || (showRetryAction && showExternalAction)
+    showVerifyAction ||
+    showManualAction ||
+    (showRetryAction && showExternalAction)
   const hasSecondaryActions = Boolean(
     onOpenAccountSite ||
       (isFailedResult && (onDisableAccount || onDeleteAccount)),
@@ -80,6 +89,7 @@ export default function ResultsTableRowActions({
     hasExpandedPrimaryMenuActions || hasSecondaryActions
   const isPrimaryActionPending = Boolean(
     retryingAccountId === accountId ||
+      verifyingAccountId === accountId ||
       openingManualAccountId === accountId ||
       openingExternalCheckInAccountId === accountId,
   )
@@ -111,6 +121,22 @@ export default function ResultsTableRowActions({
                 {retryingAccountId === accountId
                   ? t("common:status.retrying")
                   : t("execution.actions.retryAccount")}
+              </span>
+            </Button>
+          )}
+          {showVerifyAction && onVerifyAccountStatus && (
+            <Button
+              size="sm"
+              variant="secondary"
+              className="hidden w-8 px-0 [@container(min-width:48rem)]:inline-flex [@container(min-width:64rem)]:w-auto [@container(min-width:64rem)]:px-3"
+              loading={verifyingAccountId === accountId}
+              onClick={() => onVerifyAccountStatus(accountId)}
+              leftIcon={<RefreshCw className="h-3.5 w-3.5" />}
+            >
+              <span className="sr-only [@container(min-width:64rem)]:not-sr-only">
+                {verifyingAccountId === accountId
+                  ? t("common:status.refreshing")
+                  : t("execution.actions.verifyStatus")}
               </span>
             </Button>
           )}
@@ -161,6 +187,17 @@ export default function ResultsTableRowActions({
                     {retryingAccountId === accountId
                       ? t("common:status.retrying")
                       : t("execution.actions.retryAccount")}
+                  </DropdownMenuItem>
+                ) : null}
+                {showVerifyAction && onVerifyAccountStatus ? (
+                  <DropdownMenuItem
+                    disabled={verifyingAccountId === accountId}
+                    onClick={() => onVerifyAccountStatus(accountId)}
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    {verifyingAccountId === accountId
+                      ? t("common:status.refreshing")
+                      : t("execution.actions.verifyStatus")}
                   </DropdownMenuItem>
                 ) : null}
                 {showManualAction && onOpenManualSignIn ? (

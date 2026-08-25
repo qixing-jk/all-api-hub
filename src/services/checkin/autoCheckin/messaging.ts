@@ -47,6 +47,10 @@ interface AutoCheckinRetryAccountRequest {
   protectionBypassExecution?: ProtectionBypassExecution
 }
 
+interface AutoCheckinVerifyAccountStatusRequest {
+  accountId?: string
+}
+
 export interface AutoCheckinGetAccountInfoRequest {
   accountId?: string
   includeDisabled?: boolean
@@ -105,6 +109,9 @@ interface AutoCheckinProtocolMap {
   ): AutoCheckinPretriggerDailyOnUiOpenResponse
   [AutoCheckinMessageTypes.RetryAccount](
     data: AutoCheckinRetryAccountRequest,
+  ): AutoCheckinBasicResponse
+  [AutoCheckinMessageTypes.VerifyAccountStatus](
+    data: AutoCheckinVerifyAccountStatusRequest,
   ): AutoCheckinBasicResponse
   [AutoCheckinMessageTypes.GetAccountInfo](
     data: AutoCheckinGetAccountInfoRequest,

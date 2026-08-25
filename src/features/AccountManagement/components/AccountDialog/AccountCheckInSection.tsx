@@ -14,7 +14,9 @@ import {
   Switch,
 } from "~/components/ui"
 import {
+  CHECK_IN_DISCOVERY_DECISION_OUTCOMES,
   CHECK_IN_METHOD_AVAILABILITIES,
+  CHECK_IN_METHOD_DETECTION_OUTCOMES,
   CHECK_IN_METHOD_STATUS_OUTCOMES,
   CHECK_IN_SELECTION_MODES,
   CHECK_IN_SELECTION_STATUSES,
@@ -34,9 +36,17 @@ import { setCheckInSelection } from "~/services/checkin/autoCheckin/methods"
 import type { CheckInConfig } from "~/types"
 
 const AUTOMATIC_CHECK_IN_SELECTION_VALUE = "automatic"
-const AUTO_CHECKIN_ENABLED_CONTROL_ID = "auto-checkin-enabled"
 const CHECK_IN_METHOD_HELPER_ID = "check-in-method-helper"
 const OPEN_REDEEM_WITH_CHECKIN_CONTROL_ID = "open-redeem-with-checkin"
+
+export const ACCOUNT_CHECK_IN_TARGET_IDS = {
+  section: "account-check-in-config",
+  method: "account-check-in-method",
+  automaticExecution: "account-check-in-automatic-execution",
+  redetect: "account-check-in-redetect",
+  customUrl: "account-custom-check-in-url",
+  redeemUrl: "account-custom-redeem-url",
+} as const
 
 interface AccountCheckInSectionProps {
   checkIn: CheckInConfig
@@ -62,6 +72,10 @@ export function AccountCheckInSection({
   const inspection = inspectAccountCheckIn({ config: checkIn, siteType })
   const candidateMethodIds = inspection.choices.map((choice) => choice.methodId)
   const hasCandidates = candidateMethodIds.length > 0
+  const shouldOfferRedetect =
+    hasCandidates ||
+    inspection.selectionState.status === CHECK_IN_SELECTION_STATUSES.Stale ||
+    inspection.decision.outcome === CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Unknown
   const selectionPresentation = getCheckInSelectionPresentation(
     t,
     inspection,
@@ -78,6 +92,16 @@ export function AccountCheckInSection({
   const isSelectedMethodDisabled =
     selectedStatus?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known &&
     selectedStatus.availability === CHECK_IN_METHOD_AVAILABILITIES.Disabled
+  const hasUnknownDetection =
+    inspection.decision.outcome ===
+      CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Unknown &&
+    Object.values(checkIn.methodKnowledge.methods).some(
+      (method) =>
+        method.detection?.outcome ===
+        CHECK_IN_METHOD_DETECTION_OUTCOMES.Unknown,
+    )
+  const isSelectedStatusUnavailable =
+    selectedStatus?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Unknown
   const redetectionFeedbackPresentation =
     getCheckInRedetectionFeedbackPresentation(t, checkInRedetectionFeedback)
 
@@ -96,6 +120,7 @@ export function AccountCheckInSection({
       title={t("sections.checkInConfig.title")}
       defaultOpen={ACCOUNT_FORM_MOBILE_DEFAULT_OPEN["check-in"]}
       testId={ACCOUNT_MANAGEMENT_TEST_IDS.accountFormSectionCheckIn}
+      id={ACCOUNT_CHECK_IN_TARGET_IDS.section}
     >
       <div className="flex flex-col gap-2.5 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
         <div className="space-y-1 sm:min-w-0 sm:flex-1">
@@ -105,20 +130,25 @@ export function AccountCheckInSection({
           <p className="text-xs text-gray-500 dark:text-gray-400">
             {isSelectedMethodDisabled
               ? t("form.checkInStatusDisabled")
-              : hasSelectedMethod
-                ? t("form.checkInStatusDesc")
-                : hasCandidates
-                  ? t("form.checkInStatusPending")
-                  : t("form.checkInStatusUnsupported", { siteType })}
+              : isSelectedStatusUnavailable
+                ? t("form.checkInStatusUnavailable")
+                : hasUnknownDetection
+                  ? t("form.checkInStatusUnknown")
+                  : hasSelectedMethod
+                    ? t("form.checkInStatusDesc")
+                    : hasCandidates
+                      ? t("form.checkInStatusPending")
+                      : t("form.checkInStatusUnsupported")}
           </p>
         </div>
-        {hasCandidates && (
+        {shouldOfferRedetect && (
           <Button
             type="button"
             variant="ghost"
             size="sm"
             onClick={onRedetectCheckInMethods}
             loading={isRedetectingCheckInMethods}
+            id={ACCOUNT_CHECK_IN_TARGET_IDS.redetect}
             leftIcon={<RefreshCw className="h-4 w-4" />}
             className="w-full sm:w-auto"
           >
@@ -175,6 +205,7 @@ export function AccountCheckInSection({
             >
               <SelectTrigger
                 className="w-full"
+                id={ACCOUNT_CHECK_IN_TARGET_IDS.method}
                 aria-label={t("form.checkInMethod")}
                 aria-describedby={CHECK_IN_METHOD_HELPER_ID}
                 title={selectionPresentation.triggerLabel}
@@ -222,7 +253,7 @@ export function AccountCheckInSection({
         <div className="flex w-full items-center justify-between gap-4">
           <div className="flex-1">
             <label
-              htmlFor={AUTO_CHECKIN_ENABLED_CONTROL_ID}
+              htmlFor={ACCOUNT_CHECK_IN_TARGET_IDS.automaticExecution}
               className="dark:text-dark-text-secondary text-sm font-medium text-gray-700"
             >
               {t("form.autoCheckInEnabled")}
@@ -240,7 +271,7 @@ export function AccountCheckInSection({
             onChange={(automaticExecutionEnabled) =>
               onCheckInChange({ ...checkIn, automaticExecutionEnabled })
             }
-            id={AUTO_CHECKIN_ENABLED_CONTROL_ID}
+            id={ACCOUNT_CHECK_IN_TARGET_IDS.automaticExecution}
             className={`${
               checkIn.automaticExecutionEnabled ? "bg-green-600" : "bg-gray-200"
             } focus:ring-green-500`}
@@ -254,7 +285,7 @@ export function AccountCheckInSection({
       >
         <Input
           type="url"
-          id="custom-checkin-url"
+          id={ACCOUNT_CHECK_IN_TARGET_IDS.customUrl}
           value={checkIn.customCheckIn?.url ?? ""}
           onChange={(event) =>
             onCheckInChange({
@@ -307,7 +338,7 @@ export function AccountCheckInSection({
       >
         <Input
           type="text"
-          id="custom-redeem-url"
+          id={ACCOUNT_CHECK_IN_TARGET_IDS.redeemUrl}
           value={checkIn.customCheckIn?.redeemUrl ?? ""}
           onChange={(event) =>
             onCheckInChange({

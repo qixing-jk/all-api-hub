@@ -7,7 +7,8 @@
       "openFailedManual": "開啟全部失敗帳號的簽到頁",
       "openManual": "手動簽到",
       "openSite": "開啟網站",
-      "retryAccount": "重新嘗試"
+      "retryAccount": "重新嘗試",
+      "verifyStatus": "驗證狀態"
     },
     "debug": {
       "evaluateUiOpenPretrigger": "開發：解釋“開啟介面時提前觸發今日簽到”是否滿足條件",
@@ -97,6 +98,7 @@
       "retryAlarmTriggerFailed": "觸發重試鬧鐘失敗：{{error}}",
       "retryFailed": "重新嘗試失敗：{{error}}",
       "runFailed": "執行自動簽到失敗：{{error}}",
+      "statusVerificationFailed": "無法驗證所選簽到狀態。請重試或開啟帳號網站。",
       "uiOpenPretriggerDidNotStart": "介面開啟預觸發未啟動：{{reason}}",
       "uiOpenPretriggerEvaluationFailed": "評估介面開啟預觸發失敗：{{error}}",
       "uiOpenPretriggerIneligible": "介面開啟預觸發條件不滿足：{{reason}}",
@@ -122,6 +124,7 @@
       "retryCompleted": "重新嘗試已完成。",
       "runCompleted": "自動簽到已完成。",
       "settingsSaved": "自動簽到設定已儲存。",
+      "statusVerified": "已驗證所選簽到狀態。",
       "uiOpenPretriggerEligible": "介面開啟預觸發條件滿足。"
     }
   },
