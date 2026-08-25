@@ -80,7 +80,8 @@ jobs:
             e2e_type: dnr-required
             build_variant: dnr-required
             shard: ""
-      shard-total: 8
+    env:
+      AAH_E2E_SHARD_TOTAL: "8"
 
     steps:
       - name: Checkout code
@@ -131,7 +132,7 @@ jobs:
           AAH_SKIP_E2E_BUILD: "1"
         run: >
           pnpm run e2e:${{ matrix.e2e_type }}
-          ${{ matrix.shard && format('--shard={0}/{1}', matrix.shard, matrix.shard-total) || '' }}
+          ${{ matrix.shard && format('--shard={0}/{1}', matrix.shard, env.AAH_E2E_SHARD_TOTAL) || '' }}
 
       - name: Upload Playwright artifacts (failure)
         if: failure()
