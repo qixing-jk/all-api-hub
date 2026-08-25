@@ -228,7 +228,53 @@ describe("api credential profile telemetry", () => {
       "https://open.bigmodel.cn/api/monitor/usage/quota/limit",
       expect.objectContaining({
         headers: expect.objectContaining({
-          Authorization: "Bearer glm.example-key",
+          Authorization: "glm.example-key",
+        }),
+      }),
+    )
+  })
+
+  it("auto-detects the international GLM quota endpoint", async () => {
+    const profile = await apiCredentialProfilesStorage.createProfile({
+      name: "GLM International",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      baseUrl: "https://api.z.ai/api/paas/v4",
+      apiKey: "zai.example-key",
+      telemetryConfig: { mode: "auto" },
+    })
+
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      if (String(input).endsWith("/api/monitor/usage/quota/limit")) {
+        return jsonResponse({
+          success: true,
+          data: {
+            level: "pro",
+            limits: [
+              {
+                type: "TOKENS_LIMIT",
+                unit: 3,
+                number: 5,
+                percentage: 20,
+              },
+            ],
+          },
+        })
+      }
+      return jsonResponse({ data: [] })
+    })
+    vi.stubGlobal("fetch", fetchMock)
+
+    const snapshot = await refreshApiCredentialProfileTelemetry(profile.id)
+
+    expect(snapshot.source).toBe("glmQuota")
+    expect(snapshot.facts?.quota?.windows).toEqual([
+      expect.objectContaining({ type: "fiveHour", remainingPercent: 80 }),
+    ])
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.z.ai/api/monitor/usage/quota/limit",
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: "zai.example-key",
         }),
       }),
     )
@@ -377,6 +423,100 @@ describe("api credential profile telemetry", () => {
         }),
       }),
     )
+  })
+
+  it("auto-detects Kimi international Open Platform balance in USD", async () => {
+    const profile = await apiCredentialProfilesStorage.createProfile({
+      name: "Kimi Open Platform International",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      baseUrl: "https://api.moonshot.ai",
+      apiKey: "sk-moonshot-intl",
+      telemetryConfig: { mode: "auto" },
+    })
+
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      if (String(input).endsWith("/v1/users/me/balance")) {
+        return jsonResponse({
+          code: 0,
+          data: {
+            available_balance: 4.25,
+            voucher_balance: 1.25,
+            cash_balance: 3,
+          },
+          status: true,
+        })
+      }
+      return jsonResponse({ data: [] })
+    })
+    vi.stubGlobal("fetch", fetchMock)
+
+    const snapshot = await refreshApiCredentialProfileTelemetry(profile.id)
+
+    expect(snapshot.facts?.balances).toEqual([
+      {
+        amount: 4.25,
+        unit: { kind: "money", currency: "USD", decimalPlaces: 2 },
+        semantics: "provider-wallet",
+        grantedAmount: 1.25,
+        toppedUpAmount: 3,
+        isAvailable: true,
+      },
+    ])
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.moonshot.ai/v1/users/me/balance",
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: "Bearer sk-moonshot-intl",
+        }),
+      }),
+    )
+  })
+
+  it("selects a non-zero DeepSeek USD balance when CNY is empty", async () => {
+    const profile = await apiCredentialProfilesStorage.createProfile({
+      name: "DeepSeek USD",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      baseUrl: "https://api.deepseek.com",
+      apiKey: "sk-deepseek-usd",
+      telemetryConfig: { mode: "deepSeekBalance" },
+    })
+
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      if (String(input).endsWith("/user/balance")) {
+        return jsonResponse({
+          is_available: true,
+          balance_infos: [
+            {
+              currency: "CNY",
+              total_balance: "0",
+              granted_balance: "0",
+              topped_up_balance: "0",
+            },
+            {
+              currency: "USD",
+              total_balance: "10.50",
+              granted_balance: "1.50",
+              topped_up_balance: "9.00",
+            },
+          ],
+        })
+      }
+      return jsonResponse({ data: [] })
+    })
+    vi.stubGlobal("fetch", fetchMock)
+
+    const snapshot = await refreshApiCredentialProfileTelemetry(profile.id)
+
+    expect(snapshot.facts?.balances).toEqual([
+      expect.objectContaining({
+        amount: 0,
+        unit: { kind: "money", currency: "CNY", decimalPlaces: 2 },
+      }),
+      expect.objectContaining({
+        amount: 10.5,
+        unit: { kind: "money", currency: "USD", decimalPlaces: 2 },
+      }),
+    ])
   })
 
   it("refreshes NewAPI token telemetry and persists a healthy snapshot", async () => {

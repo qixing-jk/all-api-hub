@@ -7,12 +7,17 @@ import { fetchApiCredentialModelIds } from "~/services/apiCredentialProfiles/mod
 import { resolveApiCredentialTelemetryRequestTarget } from "~/services/apiCredentialProfiles/telemetryConfig"
 import { ApiError } from "~/services/apiTransport/errors"
 import { fetchApi } from "~/services/apiTransport/request"
+import {
+  API_AUTH_TOKEN_MODES,
+  type ApiAuthTokenMode,
+} from "~/services/apiTransport/type"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import type {
   ApiCredentialProfile,
   ApiCredentialTelemetryAmount,
   ApiCredentialTelemetryAttempt,
+  ApiCredentialTelemetryBalance,
   ApiCredentialTelemetryCapabilityMode,
   ApiCredentialTelemetryConfig,
   ApiCredentialTelemetryFacts,
@@ -44,7 +49,10 @@ type TelemetryPatch = Partial<
     | "totalAvailableUsd"
     | "expiresAt"
   >
->
+> & {
+  /** Provider-native balances when a response contains multiple currencies. */
+  balances?: ApiCredentialTelemetryBalance[]
+}
 
 type AdapterSuccess = {
   source: ApiCredentialTelemetrySource
@@ -158,14 +166,7 @@ function parseDeepSeekBalance(json: unknown): TelemetryPatch {
   const infos = Array.isArray(record.balance_infos)
     ? record.balance_infos.filter(isRecord)
     : []
-  const selected =
-    infos.find((item) => item.currency === "CNY") ??
-    infos.find(
-      (item) => (parseDeepSeekAmount(item.total_balance) ?? 0) !== 0,
-    ) ??
-    infos[0]
-
-  if (!selected) {
+  if (infos.length === 0) {
     return {
       balance: {
         amount: 0,
@@ -175,25 +176,27 @@ function parseDeepSeekBalance(json: unknown): TelemetryPatch {
     }
   }
 
-  const amount = parseDeepSeekAmount(selected.total_balance)
-  if (amount === undefined) return {}
+  const balances = infos.flatMap((item) => {
+    const amount = parseDeepSeekAmount(item.total_balance)
+    if (amount === undefined) return []
+    const grantedAmount = parseDeepSeekAmount(item.granted_balance)
+    const toppedUpAmount = parseDeepSeekAmount(item.topped_up_balance)
+    const currency =
+      typeof item.currency === "string" && item.currency.trim()
+        ? item.currency.trim()
+        : "CNY"
+    return [
+      {
+        amount,
+        currency,
+        ...(grantedAmount !== undefined ? { grantedAmount } : {}),
+        ...(toppedUpAmount !== undefined ? { toppedUpAmount } : {}),
+        isAvailable: record.is_available === true,
+      },
+    ]
+  })
 
-  const grantedAmount = parseDeepSeekAmount(selected.granted_balance)
-  const toppedUpAmount = parseDeepSeekAmount(selected.topped_up_balance)
-  const currency =
-    typeof selected.currency === "string" && selected.currency.trim()
-      ? selected.currency.trim()
-      : "CNY"
-
-  return {
-    balance: {
-      amount,
-      currency,
-      ...(grantedAmount !== undefined ? { grantedAmount } : {}),
-      ...(toppedUpAmount !== undefined ? { toppedUpAmount } : {}),
-      isAvailable: record.is_available === true,
-    },
-  }
+  return balances.length > 0 ? { balances } : {}
 }
 
 type QuotaWindowInput = {
@@ -421,10 +424,14 @@ function parseKimiQuota(json: unknown): TelemetryPatch {
   }
 }
 
-// Kimi Open Platform contract: https://platform.kimi.com/docs/api/balance
-// The CN endpoint returns available, voucher, and cash balances in CNY.
-/** Parses Moonshot CN's Open Platform wallet response. */
-function parseKimiOpenPlatformBalance(json: unknown): TelemetryPatch {
+// Kimi Open Platform contract:
+// https://platform.kimi.com/docs/api/balance and
+// https://platform.kimi.ai/docs/api/balance
+/** Parses Kimi Open Platform's wallet response. */
+function parseKimiOpenPlatformBalance(
+  json: unknown,
+  currency: "CNY" | "USD",
+): TelemetryPatch {
   const record = dataLike(json)
   const available = readNumber(record.available_balance)
   if (available === undefined) return {}
@@ -434,7 +441,7 @@ function parseKimiOpenPlatformBalance(json: unknown): TelemetryPatch {
   return {
     balance: {
       amount: available,
-      currency: "CNY",
+      currency,
       ...(voucher !== undefined ? { grantedAmount: voucher } : {}),
       ...(cash !== undefined ? { toppedUpAmount: cash } : {}),
       isAvailable: available > 0,
@@ -499,6 +506,11 @@ function getModelsEndpoint(profile: ApiCredentialProfile): string {
     : TELEMETRY_ENDPOINTS.models.openAiCompatible
 }
 
+/** Resolves provider-owned telemetry routes from the provider origin. */
+function getTelemetryOrigin(baseUrl: string): string {
+  return new URL(baseUrl).origin
+}
+
 /**
  * Builds the OpenAI-compatible billing usage endpoint for the current date range.
  */
@@ -507,12 +519,13 @@ function createOpenAiBillingUsageEndpoint(start: string, end: string): string {
 }
 
 /**
- * Fetches a read-only telemetry endpoint with optional bearer authentication.
+ * Fetches a read-only telemetry endpoint with optional token authentication.
  */
 async function fetchJson(params: {
   baseUrl: string
   endpoint: string
   bearerToken?: string
+  authTokenMode?: ApiAuthTokenMode
 }): Promise<JsonFetchResult> {
   try {
     const json = await fetchApi<unknown>(
@@ -533,6 +546,9 @@ async function fetchJson(params: {
             Accept: "application/json",
           },
         },
+        ...(params.authTokenMode
+          ? { authTokenMode: params.authTokenMode }
+          : {}),
       },
       true,
     )
@@ -706,16 +722,19 @@ async function queryDeepSeekBalance(
   }
 }
 
-// GLM Coding Plan contract: https://open.bigmodel.cn/api/monitor/usage/quota/limit
-// returns TOKENS_LIMIT/CREDIT_LIMIT rows with five-hour and weekly windows.
+// GLM Coding Plan contract:
+// https://github.com/zai-org/zai-coding-plugins/blob/main/plugins/glm-plan-usage/skills/usage-query-skill/scripts/query-usage.mjs
+// Both open.bigmodel.cn and api.z.ai expose this path. The official usage
+// plugin sends the API token as a raw Authorization value (not Bearer).
 /** Queries GLM's provider-native quota endpoint. */
 async function queryGlmQuota(
   profile: ApiCredentialProfile,
 ): Promise<AdapterSuccess> {
   const result = await fetchJson({
-    baseUrl: profile.baseUrl,
+    baseUrl: getTelemetryOrigin(profile.baseUrl),
     endpoint: TELEMETRY_ENDPOINTS.glmQuota,
     bearerToken: profile.apiKey,
+    authTokenMode: API_AUTH_TOKEN_MODES.Raw,
   })
 
   return {
@@ -744,12 +763,12 @@ async function queryKimiQuota(
   }
 }
 
-/** Queries Kimi CN Open Platform's pay-as-you-go wallet endpoint. */
+/** Queries Kimi Open Platform's pay-as-you-go wallet endpoint. */
 async function queryKimiOpenPlatformBalance(
   profile: ApiCredentialProfile,
 ): Promise<AdapterSuccess> {
   const result = await fetchJson({
-    baseUrl: profile.baseUrl,
+    baseUrl: getTelemetryOrigin(profile.baseUrl),
     endpoint: TELEMETRY_ENDPOINTS.kimiOpenPlatformBalance,
     bearerToken: profile.apiKey,
   })
@@ -757,7 +776,10 @@ async function queryKimiOpenPlatformBalance(
   return {
     source: API_CREDENTIAL_TELEMETRY_SOURCES.KimiOpenPlatformBalance,
     endpoint: result.endpoint,
-    data: parseKimiOpenPlatformBalance(result.json),
+    data: parseKimiOpenPlatformBalance(
+      result.json,
+      new URL(profile.baseUrl).hostname === "api.moonshot.ai" ? "USD" : "CNY",
+    ),
   }
 }
 
@@ -925,8 +947,9 @@ function normalizeTelemetryPatchToFacts(
     source === API_CREDENTIAL_TELEMETRY_SOURCES.NewApiTokenUsage ||
     source === API_CREDENTIAL_TELEMETRY_SOURCES.Sub2ApiUsage
   const balances: NonNullable<ApiCredentialTelemetryFacts["balances"]> = []
-  const balance = data.balance
-  if (balance) {
+  const balancesToNormalize =
+    data.balances ?? (data.balance ? [data.balance] : [])
+  for (const balance of balancesToNormalize) {
     const decimalPlaces = balance.currency === "JPY" ? 0 : 2
     balances.push({
       amount: balance.amount,
@@ -1172,7 +1195,7 @@ function resolveModes(
           API_CREDENTIAL_TELEMETRY_MODES.OpenAiBilling,
         ]
       }
-      if (hostname === "open.bigmodel.cn") {
+      if (hostname === "open.bigmodel.cn" || hostname === "dev.bigmodel.cn") {
         return [
           API_CREDENTIAL_TELEMETRY_MODES.GlmQuota,
           API_CREDENTIAL_TELEMETRY_MODES.NewApiTokenUsage,
@@ -1188,7 +1211,15 @@ function resolveModes(
           API_CREDENTIAL_TELEMETRY_MODES.OpenAiBilling,
         ]
       }
-      if (hostname === "api.moonshot.cn") {
+      if (hostname === "api.z.ai") {
+        return [
+          API_CREDENTIAL_TELEMETRY_MODES.GlmQuota,
+          API_CREDENTIAL_TELEMETRY_MODES.NewApiTokenUsage,
+          API_CREDENTIAL_TELEMETRY_MODES.Sub2ApiUsage,
+          API_CREDENTIAL_TELEMETRY_MODES.OpenAiBilling,
+        ]
+      }
+      if (hostname === "api.moonshot.cn" || hostname === "api.moonshot.ai") {
         return [
           API_CREDENTIAL_TELEMETRY_MODES.KimiOpenPlatformBalance,
           API_CREDENTIAL_TELEMETRY_MODES.NewApiTokenUsage,
@@ -1241,6 +1272,7 @@ function sourceForMode(
 function hasUsageData(data: TelemetryPatch): boolean {
   return (
     data.balance !== undefined ||
+    data.balances !== undefined ||
     data.quota !== undefined ||
     data.balanceUsd !== undefined ||
     data.todayCostUsd !== undefined ||
