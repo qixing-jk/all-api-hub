@@ -1,5 +1,6 @@
 import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { newApiProvider } from "~/services/checkin/autoCheckin/providers/newApi"
+import { sub2ApiProvider } from "~/services/checkin/autoCheckin/providers/sub2api"
 import { voApiV2Provider } from "~/services/checkin/autoCheckin/providers/voapiV2"
 import type { CheckInMethodId } from "~/types/checkIn"
 
@@ -18,6 +19,7 @@ const PROVIDER_BY_METHOD_ID = {
   [AUTO_CHECKIN_METHOD_IDS.WongGongyiDailyCheckIn]: wongGongyiProvider,
   [AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn]: newApiProvider,
   [AUTO_CHECKIN_METHOD_IDS.VoApiV2DailyCheckIn]: voApiV2Provider,
+  [AUTO_CHECKIN_METHOD_IDS.Sub2ApiProDailyCheckIn]: sub2ApiProvider,
 } as const satisfies Record<CheckInMethodId, AutoCheckinProvider>
 
 export const autoCheckinMethodRegistry = createAutoCheckinMethodRegistry(

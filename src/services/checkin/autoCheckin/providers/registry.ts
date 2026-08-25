@@ -171,6 +171,12 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     legacy: true,
     newAccountCompatibility: true,
   },
+  [AUTO_CHECKIN_METHOD_IDS.Sub2ApiProDailyCheckIn]: {
+    id: AUTO_CHECKIN_METHOD_IDS.Sub2ApiProDailyCheckIn,
+    siteTypes: [SITE_TYPES.SUB2API],
+    legacy: false,
+    newAccountCompatibility: false,
+  },
 } as const satisfies Record<CheckInMethodId, AutoCheckinMethodDefinition>
 
 const AUTO_CHECKIN_METHOD_METADATA = createAutoCheckinMethodMetadata(

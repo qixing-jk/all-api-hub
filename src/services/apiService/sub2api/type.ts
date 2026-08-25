@@ -13,6 +13,48 @@ export const SUB2API_ANNOUNCEMENTS_ENDPOINT = "/api/v1/announcements"
 export const SUB2API_AVAILABLE_GROUPS_ENDPOINT = "/api/v1/groups/available"
 export const SUB2API_GROUP_RATES_ENDPOINT = "/api/v1/groups/rates"
 export const SUB2API_USAGE_STATS_ENDPOINT = "/api/v1/usage/stats"
+export const SUB2API_REDEEM_CHECKIN_ENDPOINT = "/api/v1/redeem/checkin"
+export const SUB2API_REDEEM_CHECKIN_STATUS_ENDPOINT =
+  "/api/v1/redeem/checkin/status"
+
+/**
+ * Machine-readable failure reasons carried in the top-level `reason` field of
+ * redeem check-in error envelopes. Numeric `code` mirrors the HTTP status;
+ * `reason` is the authoritative discriminator.
+ *
+ * Contract pinned to jiangmuran/sub2api_pro@3f858570 and Wei-Shaw/sub2api#510.
+ */
+export const SUB2API_REDEEM_CHECKIN_ERROR_REASONS = {
+  DailyCheckinDisabled: "DAILY_CHECKIN_DISABLED",
+  DailyCheckinRoleForbidden: "DAILY_CHECKIN_ROLE_FORBIDDEN",
+  DailyCheckinAlreadyDone: "DAILY_CHECKIN_ALREADY_DONE",
+} as const
+
+export type Sub2ApiRedeemCheckInErrorReason =
+  (typeof SUB2API_REDEEM_CHECKIN_ERROR_REASONS)[keyof typeof SUB2API_REDEEM_CHECKIN_ERROR_REASONS]
+
+/**
+ * Strict status DTO for `GET /api/v1/redeem/checkin/status`.
+ * Booleans must be real booleans, numbers finite, and reward bounds ordered.
+ * Extra unrelated fields may be present; alias probing is forbidden.
+ */
+export type Sub2ApiRedeemCheckInStatusData = {
+  enabled: boolean
+  checked_in_today: boolean
+  reward_min: number
+  reward_max: number
+  reward_amount?: number
+}
+
+/**
+ * Execution DTO for `POST /api/v1/redeem/checkin` on success.
+ */
+export type Sub2ApiRedeemCheckInResultData = {
+  message: string
+  reward_amount: number
+  new_balance: number
+  checked_in_at: string
+}
 
 type IntLike = number | string
 type NumericLike = number | string

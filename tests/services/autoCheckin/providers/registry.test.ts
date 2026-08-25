@@ -9,6 +9,7 @@ import {
   createAutoCheckinMethodMetadata,
   createAutoCheckinMethodRegistry,
   decodePersistedCheckInMethodId,
+  getAutoCheckinCandidateMethodIds,
   getLegacyAutoCheckinMethodIds,
   getNewAccountCompatibilityMethodIds,
 } from "~/services/checkin/autoCheckin/providers/registry"
@@ -16,6 +17,7 @@ import type {
   AutoCheckinMethodDefinition,
   AutoCheckinMethodRegistration,
 } from "~/services/checkin/autoCheckin/providers/registry"
+import { sub2ApiProvider } from "~/services/checkin/autoCheckin/providers/sub2api"
 import { veloeraProvider } from "~/services/checkin/autoCheckin/providers/veloera"
 import { voApiV2Provider } from "~/services/checkin/autoCheckin/providers/voapiV2"
 import { wongGongyiProvider } from "~/services/checkin/autoCheckin/providers/wong"
@@ -44,7 +46,7 @@ describe("autoCheckinMethodRegistry", () => {
       }),
     )
 
-    expect(registrationContracts).toHaveLength(5)
+    expect(registrationContracts).toHaveLength(6)
     expect(registrationContracts).toEqual(
       expect.arrayContaining([
         {
@@ -71,6 +73,11 @@ describe("autoCheckinMethodRegistry", () => {
           id: "voapi-v2:daily-checkin",
           candidateSiteTypes: [SITE_TYPES.VO_API_V2],
           provider: voApiV2Provider,
+        },
+        {
+          id: "sub2api-pro:daily-checkin",
+          candidateSiteTypes: [SITE_TYPES.SUB2API],
+          provider: sub2ApiProvider,
         },
       ]),
     )
@@ -158,6 +165,20 @@ describe("autoCheckinMethodRegistry", () => {
       "anyrouter:daily-checkin",
     ])
     expect(getNewAccountCompatibilityMethodIds(SITE_TYPES.SUB2API)).toEqual([])
+  })
+
+  it("registers Sub2API as a discovery-only candidate without a legacy bridge", () => {
+    expect(getAutoCheckinCandidateMethodIds(SITE_TYPES.SUB2API)).toEqual([
+      AUTO_CHECKIN_METHOD_IDS.Sub2ApiProDailyCheckIn,
+    ])
+    expect(getLegacyAutoCheckinMethodIds(SITE_TYPES.SUB2API)).toEqual([])
+    expect(getNewAccountCompatibilityMethodIds(SITE_TYPES.SUB2API)).toEqual([])
+    const registration = registrationFor(
+      AUTO_CHECKIN_METHOD_IDS.Sub2ApiProDailyCheckIn,
+    )
+    expect(registration.compatibilityRegistration).toBe(false)
+    expect(sub2ApiProvider.getStatus).toBeTypeOf("function")
+    expect(sub2ApiProvider.detect).toBeTypeOf("function")
   })
 
   it("rejects duplicate method IDs deterministically", () => {

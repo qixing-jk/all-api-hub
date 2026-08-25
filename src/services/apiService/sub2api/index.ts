@@ -200,6 +200,14 @@ class Sub2ApiAuthPersistenceError extends Error {
   }
 }
 
+/**
+ * Classifies rotated-credential persistence failures for protocol callers
+ * without exposing the private error class. Such failures must stop before
+ * any business mutation (e.g. check-in POST).
+ */
+export const isSub2ApiAuthPersistenceError = (error: unknown): boolean =>
+  error instanceof Sub2ApiAuthPersistenceError
+
 const throwIfSub2ApiAuthPersistenceFailed = (error: unknown): void => {
   if (error instanceof Sub2ApiAuthPersistenceError) {
     throw error
@@ -711,6 +719,18 @@ const executeAuthenticatedSub2ApiRequest = async <T>(
     })
   }
 }
+
+/**
+ * Narrow authenticated-execution seam for protocol transports that own their
+ * response parsing (e.g. the redeem check-in flow). The runner receives a fully
+ * hydrated request and inline 401 recovery has already been applied; persistence
+ * failures surface through {@link isSub2ApiAuthPersistenceError}.
+ */
+export const executeSub2ApiAuthenticatedRequest = <T>(
+  request: ApiServiceRequest,
+  endpoint: string,
+  runner: AuthenticatedSub2ApiRunner<T>,
+): Promise<T> => executeAuthenticatedSub2ApiRequest(request, endpoint, runner)
 
 const fetchSub2ApiDataWithRequest = async <T>(
   request: ApiServiceRequest,
@@ -1392,7 +1412,9 @@ export async function fetchSiteStatus(
 export const extractDefaultExchangeRate = extractNewApiFamilyDefaultExchangeRate
 
 /**
- * Sub2API does not support the extension's built-in check-in flow.
+ * The legacy boolean check-in contract stays unsupported; the verified redeem
+ * check-in method lives in ./redeemCheckIn and is reached through the
+ * Check-in Methods Module registry instead of this adapter surface.
  */
 export async function fetchSupportCheckIn(
   _request: ApiServiceRequest,
@@ -1401,7 +1423,8 @@ export async function fetchSupportCheckIn(
 }
 
 /**
- * Sub2API check-in is unsupported; always return undefined.
+ * Legacy boolean check-in status stays unsupported; see ./redeemCheckIn for
+ * the verified redeem check-in status contract.
  */
 export async function fetchCheckInStatus(
   _request: ApiServiceRequest,
