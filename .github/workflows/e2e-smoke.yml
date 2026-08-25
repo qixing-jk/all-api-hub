@@ -70,18 +70,12 @@ jobs:
           - name: default-shard-6
             e2e_type: default
             shard: 6
-          - name: default-shard-7
-            e2e_type: default
-            shard: 7
-          - name: default-shard-8
-            e2e_type: default
-            shard: 8
           - name: dnr-required
             e2e_type: dnr-required
             build_variant: dnr-required
             shard: ""
     env:
-      AAH_E2E_SHARD_TOTAL: "8"
+      AAH_E2E_SHARD_TOTAL: "6"
 
     steps:
       - name: Checkout code
