@@ -83,7 +83,9 @@ function createPage(
       request: {
         post,
         get: options.getRequest ?? vi.fn(),
-        delete: options.deleteRequest ?? vi.fn(),
+        delete:
+          options.deleteRequest ??
+          vi.fn().mockResolvedValue(createResponse(404, {})),
       },
       close: vi.fn().mockResolvedValue(undefined),
     } as any,
@@ -262,6 +264,27 @@ describe("compatible real-site login", () => {
         Origin: ORIGIN,
         Authorization: "Bearer access-token-placeholder",
         "X-Auth-Session": "session-id-placeholder",
+      },
+    })
+  })
+
+  it("also revokes the exact fresh session after a successful logout", async () => {
+    const post = vi
+      .fn()
+      .mockResolvedValueOnce(createResponse(401, { code: "AUTH_UNAUTHORIZED" }))
+      .mockResolvedValueOnce(createResponse(200, createAuthBundle()))
+      .mockResolvedValueOnce(createResponse(200, { success: true }))
+    const deleteRequest = vi.fn().mockResolvedValue(createResponse(200, {}))
+    const { page } = createPage(post, { deleteRequest })
+
+    const result = await loginToRealNewApiSite(page, config)
+    await result.cleanupOwnedSession?.()
+
+    expect(deleteRequest).toHaveBeenCalledWith(AUTH_SESSION_DELETE_URL, {
+      failOnStatusCode: false,
+      headers: {
+        Origin: ORIGIN,
+        Authorization: "Bearer access-token-placeholder",
       },
     })
   })

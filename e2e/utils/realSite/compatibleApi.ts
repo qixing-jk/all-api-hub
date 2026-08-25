@@ -788,6 +788,11 @@ function createOwnedAuthSessionCleanup(
         "cleanup",
       )
     }
+
+    // Some compatible deployments acknowledge logout while leaving the
+    // session row active. Revoke this run's exact SID as an idempotent
+    // backstop; never use revoke-others because the account may be shared.
+    await revokeOwnedAuthSession(page, config, options, authBundle)
   }
 }
 
@@ -822,6 +827,14 @@ async function revokeOwnedAuthSession(
   }
 
   if (!response.ok()) {
+    // Logout may already have revoked the session, which makes a follow-up
+    // exact revoke return an auth/not-found response. Those are safe,
+    // idempotent outcomes for cleanup. A missing endpoint also preserves
+    // compatibility with older deployments whose logout already worked.
+    if ([401, 403, 404, 405].includes(response.status())) {
+      return
+    }
+
     const responseText = await response.text()
     throw createAuthSessionStatusError(
       options,
