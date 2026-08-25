@@ -48,36 +48,39 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # The default suite is sharded across runners with Playwright's native
+        # --shard flag to cut wall-clock time; each shard builds nothing extra
+        # because the extension is built in this job's own step.
         include:
-          # The default suite is sharded across runners with Playwright's
-          # native --shard flag to cut wall-clock time; each shard rebuilds
-          # nothing (AAH_SKIP_E2E_BUILD=1) because the extension is built in
-          # this job's own step.
           - name: default-shard-1
             e2e_type: default
-            build_variant: ""
             shard: 1
-            timeout_minutes: 8
           - name: default-shard-2
             e2e_type: default
-            build_variant: ""
             shard: 2
-            timeout_minutes: 8
           - name: default-shard-3
             e2e_type: default
-            build_variant: ""
             shard: 3
-            timeout_minutes: 8
           - name: default-shard-4
             e2e_type: default
-            build_variant: ""
             shard: 4
-            timeout_minutes: 8
+          - name: default-shard-5
+            e2e_type: default
+            shard: 5
+          - name: default-shard-6
+            e2e_type: default
+            shard: 6
+          - name: default-shard-7
+            e2e_type: default
+            shard: 7
+          - name: default-shard-8
+            e2e_type: default
+            shard: 8
           - name: dnr-required
             e2e_type: dnr-required
             build_variant: dnr-required
             shard: ""
-            timeout_minutes: 5
+      shard-total: 8
 
     steps:
       - name: Checkout code
@@ -121,14 +124,14 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
 
       - name: Run E2E smoke
-        timeout-minutes: ${{ matrix.timeout_minutes }}
+        timeout-minutes: ${{ matrix.e2e_type == 'dnr-required' && 5 || 8 }}
         env:
           AAH_E2E_BUILD_VARIANT: ${{ matrix.build_variant }}
           AAH_E2E_WORKERS: "3"
           AAH_SKIP_E2E_BUILD: "1"
         run: >
           pnpm run e2e:${{ matrix.e2e_type }}
-          ${{ matrix.shard && format('--shard={0}/4', matrix.shard) || '' }}
+          ${{ matrix.shard && format('--shard={0}/{1}', matrix.shard, matrix.shard-total) || '' }}
 
       - name: Upload Playwright artifacts (failure)
         if: failure()
