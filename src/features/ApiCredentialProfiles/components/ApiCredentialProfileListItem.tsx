@@ -160,6 +160,12 @@ function getTelemetrySourceLabel(
   if (source === API_CREDENTIAL_TELEMETRY_SOURCES.DeepSeekBalance) {
     return t("apiCredentialProfiles:telemetry.source.deepSeekBalance")
   }
+  if (source === API_CREDENTIAL_TELEMETRY_SOURCES.GlmQuota) {
+    return t("apiCredentialProfiles:telemetry.source.glmQuota")
+  }
+  if (source === API_CREDENTIAL_TELEMETRY_SOURCES.KimiQuota) {
+    return t("apiCredentialProfiles:telemetry.source.kimiQuota")
+  }
   if (source === API_CREDENTIAL_TELEMETRY_SOURCES.OpenAiBilling) {
     return t("apiCredentialProfiles:telemetry.source.openaiBilling")
   }
@@ -218,6 +224,7 @@ function hasTelemetryDetailData(
   return Boolean(
     snapshot &&
       (snapshot.balance !== undefined ||
+        snapshot.quota !== undefined ||
         snapshot.balanceUsd !== undefined ||
         snapshot.todayCostUsd !== undefined ||
         snapshot.todayRequests !== undefined ||
@@ -243,6 +250,32 @@ function formatProviderBalance(
   } catch {
     return `${balance.currency} ${balance.amount.toFixed(2)}`
   }
+}
+
+/** Formats provider quota windows as a compact remaining-capacity summary. */
+function formatProviderQuota(
+  quota: NonNullable<
+    NonNullable<ApiCredentialProfile["telemetrySnapshot"]>["quota"]
+  >,
+  t: TFunction,
+  balance:
+    | NonNullable<
+        NonNullable<ApiCredentialProfile["telemetrySnapshot"]>["balance"]
+      >
+    | undefined,
+): string {
+  const windowLabels = {
+    fiveHour: t("apiCredentialProfiles:telemetry.quotaWindows.fiveHour"),
+    weekly: t("apiCredentialProfiles:telemetry.quotaWindows.weekly"),
+    total: t("apiCredentialProfiles:telemetry.quotaWindows.total"),
+  } as const
+  const summary = quota.windows
+    .map(
+      (window) =>
+        `${windowLabels[window.type]} ${Math.round(window.percentRemaining)}%`,
+    )
+    .join(" · ")
+  return balance ? `${summary} · ${formatProviderBalance(balance)}` : summary
 }
 
 /**
@@ -575,7 +608,9 @@ export function ApiCredentialProfileListItem({
                     <div className="grid flex-1 auto-rows-max grid-cols-[repeat(auto-fit,minmax(7rem,1fr))] content-evenly gap-2 pt-2 text-xs sm:grid-cols-4">
                       <div className="flex min-w-0 flex-col gap-1">
                         <div className="dark:text-dark-text-tertiary text-gray-500">
-                          {t("apiCredentialProfiles:telemetry.balance")}
+                          {telemetry?.quota
+                            ? t("apiCredentialProfiles:telemetry.quota")
+                            : t("apiCredentialProfiles:telemetry.balance")}
                         </div>
                         <div
                           className="dark:text-dark-text-primary font-semibold text-gray-900"
@@ -585,14 +620,20 @@ export function ApiCredentialProfileListItem({
                         >
                           {telemetry?.unlimitedQuota
                             ? t("common:quota.unlimited")
-                            : telemetry?.balance
-                              ? formatProviderBalance(telemetry.balance)
-                              : telemetry?.balanceUsd !== undefined
-                                ? formatTelemetryMoney(
-                                    telemetry.balanceUsd,
-                                    currencyType,
-                                  )
-                                : missingTelemetryValue}
+                            : telemetry?.quota
+                              ? formatProviderQuota(
+                                  telemetry.quota,
+                                  t,
+                                  telemetry.balance,
+                                )
+                              : telemetry?.balance
+                                ? formatProviderBalance(telemetry.balance)
+                                : telemetry?.balanceUsd !== undefined
+                                  ? formatTelemetryMoney(
+                                      telemetry.balanceUsd,
+                                      currencyType,
+                                    )
+                                  : missingTelemetryValue}
                         </div>
                       </div>
                       <div className="flex min-w-0 flex-col gap-1">

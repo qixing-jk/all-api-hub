@@ -20,6 +20,7 @@ import type {
 import {
   API_CREDENTIAL_TELEMETRY_ATTEMPT_STATUSES,
   API_CREDENTIAL_TELEMETRY_MODES,
+  API_CREDENTIAL_TELEMETRY_QUOTA_WINDOW_TYPES,
   API_CREDENTIAL_TELEMETRY_SOURCES,
 } from "~/types/apiCredentialProfiles"
 import { getErrorMessage } from "~/utils/core/error"
@@ -28,6 +29,7 @@ type TelemetryPatch = Partial<
   Pick<
     ApiCredentialTelemetrySnapshot,
     | "balance"
+    | "quota"
     | "balanceUsd"
     | "todayCostUsd"
     | "todayRequests"
@@ -56,6 +58,8 @@ const REDACTED_QUERY_VALUE = "[REDACTED]"
 
 const TELEMETRY_ENDPOINTS = {
   deepSeekBalance: "/user/balance",
+  glmQuota: "/api/monitor/usage/quota/limit",
+  kimiQuota: "/coding/v1/usages",
   models: {
     google: "/v1beta/models",
     openAiCompatible: "/v1/models",
@@ -184,6 +188,220 @@ function parseDeepSeekBalance(json: unknown): TelemetryPatch {
       ...(toppedUpAmount !== undefined ? { toppedUpAmount } : {}),
       isAvailable: record.is_available === true,
     },
+  }
+}
+
+type QuotaWindowInput = {
+  type: (typeof API_CREDENTIAL_TELEMETRY_QUOTA_WINDOW_TYPES)[keyof typeof API_CREDENTIAL_TELEMETRY_QUOTA_WINDOW_TYPES]
+  limit?: unknown
+  used?: unknown
+  remaining?: unknown
+  percentUsed?: unknown
+  resetTime?: unknown
+}
+
+/** Normalizes provider quota values into a finite remaining-capacity window. */
+function buildQuotaWindow(input: QuotaWindowInput) {
+  const limit = readNumber(input.limit)
+  const used = readNumber(input.used)
+  const remaining = readNumber(input.remaining)
+  const percentUsed = readNumber(input.percentUsed)
+  if (
+    limit === undefined &&
+    used === undefined &&
+    remaining === undefined &&
+    percentUsed === undefined
+  ) {
+    return undefined
+  }
+
+  const normalizedLimit = Math.max(
+    0,
+    limit ?? (percentUsed === undefined ? 0 : 100),
+  )
+  const normalizedUsed = Math.min(
+    normalizedLimit,
+    Math.max(
+      0,
+      used ??
+        (percentUsed === undefined
+          ? Math.max(0, normalizedLimit - (remaining ?? 0))
+          : (normalizedLimit * Math.min(100, Math.max(0, percentUsed))) / 100),
+    ),
+  )
+  const normalizedRemaining = Math.min(
+    normalizedLimit,
+    Math.max(0, remaining ?? normalizedLimit - normalizedUsed),
+  )
+  const resetTime = normalizeTimestamp(input.resetTime)
+
+  return {
+    type: input.type,
+    used: normalizedUsed,
+    limit: normalizedLimit,
+    remaining: normalizedRemaining,
+    percentRemaining:
+      normalizedLimit > 0 ? (normalizedRemaining / normalizedLimit) * 100 : 0,
+    ...(resetTime !== undefined ? { resetTime } : {}),
+  }
+}
+
+/** Parses an ISO timestamp from provider quota responses. */
+function parseIsoTimestamp(value: unknown): number | undefined {
+  if (typeof value !== "string" || !value.trim()) return undefined
+  const timestamp = Date.parse(value)
+  return Number.isFinite(timestamp) ? timestamp : undefined
+}
+
+/** Parses GLM Coding Plan's five-hour and weekly quota response. */
+function parseGlmQuota(json: unknown): TelemetryPatch {
+  const envelope = isRecord(json) ? json : {}
+  if (envelope.success !== true || !isRecord(envelope.data)) return {}
+
+  const rows = Array.isArray(envelope.data.limits)
+    ? envelope.data.limits.filter(isRecord)
+    : []
+  let fiveHour: ReturnType<typeof buildQuotaWindow>
+  let weekly: ReturnType<typeof buildQuotaWindow>
+  const fallback: NonNullable<ReturnType<typeof buildQuotaWindow>>[] = []
+
+  for (const row of rows) {
+    if (row.type !== "TOKENS_LIMIT" && row.type !== "CREDIT_LIMIT") continue
+    const windowType =
+      row.unit === 3 && row.number === 5
+        ? API_CREDENTIAL_TELEMETRY_QUOTA_WINDOW_TYPES.FiveHour
+        : row.unit === 6
+          ? API_CREDENTIAL_TELEMETRY_QUOTA_WINDOW_TYPES.Weekly
+          : undefined
+    const window = buildQuotaWindow({
+      type: windowType ?? API_CREDENTIAL_TELEMETRY_QUOTA_WINDOW_TYPES.FiveHour,
+      limit: row.usage,
+      used: row.currentValue,
+      remaining: row.remaining,
+      percentUsed: row.percentage,
+      resetTime: row.nextResetTime,
+    })
+    if (!window) continue
+    if (windowType === API_CREDENTIAL_TELEMETRY_QUOTA_WINDOW_TYPES.FiveHour) {
+      fiveHour ??= window
+    } else if (
+      windowType === API_CREDENTIAL_TELEMETRY_QUOTA_WINDOW_TYPES.Weekly
+    ) {
+      weekly ??= window
+    } else {
+      fallback.push(window)
+    }
+  }
+
+  fiveHour ??= fallback.shift()
+  weekly ??= fallback.shift()
+  const windows = [fiveHour, weekly].filter(
+    (window): window is NonNullable<typeof window> => Boolean(window),
+  )
+  if (windows.length === 0) return {}
+
+  const membershipLevel =
+    typeof envelope.data.level === "string" && envelope.data.level.trim()
+      ? envelope.data.level.trim()
+      : undefined
+  return {
+    quota: {
+      windows,
+      ...(membershipLevel ? { membershipLevel } : {}),
+    },
+  }
+}
+
+/** Parses Kimi Coding Plan's weekly, five-hour, total and booster facts. */
+function parseKimiQuota(json: unknown): TelemetryPatch {
+  const record = dataLike(json)
+  const windows: NonNullable<ReturnType<typeof buildQuotaWindow>>[] = []
+  const usage = isRecord(record.usage) ? record.usage : undefined
+  const weekly = usage
+    ? buildQuotaWindow({
+        type: API_CREDENTIAL_TELEMETRY_QUOTA_WINDOW_TYPES.Weekly,
+        limit: usage.limit,
+        used: usage.used,
+        remaining: usage.remaining,
+        resetTime: parseIsoTimestamp(usage.resetTime),
+      })
+    : undefined
+  if (weekly) windows.push(weekly)
+
+  const limits = Array.isArray(record.limits)
+    ? record.limits.filter(isRecord)
+    : []
+  const fiveHourEntry = limits.find(
+    (entry) => isRecord(entry.window) && entry.window.duration === 300,
+  )
+  const fiveHourDetail =
+    fiveHourEntry && isRecord(fiveHourEntry.detail)
+      ? fiveHourEntry.detail
+      : undefined
+  const fiveHour = fiveHourDetail
+    ? buildQuotaWindow({
+        type: API_CREDENTIAL_TELEMETRY_QUOTA_WINDOW_TYPES.FiveHour,
+        limit: fiveHourDetail.limit,
+        used: fiveHourDetail.used,
+        remaining: fiveHourDetail.remaining,
+        resetTime: parseIsoTimestamp(fiveHourDetail.resetTime),
+      })
+    : undefined
+  if (fiveHour) windows.push(fiveHour)
+
+  const totalQuota = isRecord(record.totalQuota) ? record.totalQuota : undefined
+  const total = totalQuota
+    ? buildQuotaWindow({
+        type: API_CREDENTIAL_TELEMETRY_QUOTA_WINDOW_TYPES.Total,
+        limit: totalQuota.limit,
+        remaining: totalQuota.remaining,
+      })
+    : undefined
+  if (total) windows.push(total)
+
+  const user = isRecord(record.user) ? record.user : undefined
+  const membership =
+    user && isRecord(user.membership) ? user.membership : undefined
+  const membershipLevel =
+    membership &&
+    typeof membership.level === "string" &&
+    membership.level.trim()
+      ? membership.level.trim()
+      : undefined
+
+  const boosterWallet = isRecord(record.boosterWallet)
+    ? record.boosterWallet
+    : undefined
+  const boosterStatus =
+    typeof boosterWallet?.status === "string"
+      ? boosterWallet.status.toUpperCase()
+      : ""
+  const boosterBalance =
+    boosterWallet && isRecord(boosterWallet.balance)
+      ? readNumber(boosterWallet.balance.amountLeft)
+      : undefined
+  const balance =
+    boosterStatus === "STATUS_ACTIVE" || boosterStatus === "STATUS_ENABLED"
+      ? boosterBalance !== undefined
+        ? {
+            amount: Math.max(0, boosterBalance / 100_000_000),
+            currency: "CNY",
+            isAvailable: true,
+          }
+        : undefined
+      : undefined
+
+  if (windows.length === 0 && !balance) return {}
+  return {
+    ...(windows.length > 0
+      ? {
+          quota: {
+            windows,
+            ...(membershipLevel ? { membershipLevel } : {}),
+          },
+        }
+      : {}),
+    ...(balance ? { balance } : {}),
   }
 }
 
@@ -451,6 +669,44 @@ async function queryDeepSeekBalance(
   }
 }
 
+// GLM Coding Plan contract: https://open.bigmodel.cn/api/monitor/usage/quota/limit
+// returns TOKENS_LIMIT/CREDIT_LIMIT rows with five-hour and weekly windows.
+/** Queries GLM's provider-native quota endpoint. */
+async function queryGlmQuota(
+  profile: ApiCredentialProfile,
+): Promise<AdapterSuccess> {
+  const result = await fetchJson({
+    baseUrl: profile.baseUrl,
+    endpoint: TELEMETRY_ENDPOINTS.glmQuota,
+    bearerToken: profile.apiKey,
+  })
+
+  return {
+    source: API_CREDENTIAL_TELEMETRY_SOURCES.GlmQuota,
+    endpoint: result.endpoint,
+    data: parseGlmQuota(result.json),
+  }
+}
+
+// Kimi Coding Plan contract: https://api.kimi.com/coding/v1/usages
+// exposes weekly/5-hour/total windows and an optional booster wallet.
+/** Queries Kimi's provider-native quota endpoint using an API key. */
+async function queryKimiQuota(
+  profile: ApiCredentialProfile,
+): Promise<AdapterSuccess> {
+  const result = await fetchJson({
+    baseUrl: profile.baseUrl,
+    endpoint: TELEMETRY_ENDPOINTS.kimiQuota,
+    bearerToken: profile.apiKey,
+  })
+
+  return {
+    source: API_CREDENTIAL_TELEMETRY_SOURCES.KimiQuota,
+    endpoint: result.endpoint,
+    data: parseKimiQuota(result.json),
+  }
+}
+
 /**
  * Queries New API token usage endpoints for quota-based usage data.
  */
@@ -689,6 +945,12 @@ async function runUsageAdapter(
   if (mode === API_CREDENTIAL_TELEMETRY_MODES.DeepSeekBalance) {
     return await queryDeepSeekBalance(profile)
   }
+  if (mode === API_CREDENTIAL_TELEMETRY_MODES.GlmQuota) {
+    return await queryGlmQuota(profile)
+  }
+  if (mode === API_CREDENTIAL_TELEMETRY_MODES.KimiQuota) {
+    return await queryKimiQuota(profile)
+  }
   if (mode === API_CREDENTIAL_TELEMETRY_MODES.OpenAiBilling) {
     return await queryOpenAiBilling(profile)
   }
@@ -715,9 +977,26 @@ function resolveModes(
   if (config.mode === API_CREDENTIAL_TELEMETRY_MODES.Disabled) return []
   if (config.mode === API_CREDENTIAL_TELEMETRY_MODES.Auto) {
     try {
-      if (new URL(profile.baseUrl).hostname === "api.deepseek.com") {
+      const hostname = new URL(profile.baseUrl).hostname
+      if (hostname === "api.deepseek.com") {
         return [
           API_CREDENTIAL_TELEMETRY_MODES.DeepSeekBalance,
+          API_CREDENTIAL_TELEMETRY_MODES.NewApiTokenUsage,
+          API_CREDENTIAL_TELEMETRY_MODES.Sub2ApiUsage,
+          API_CREDENTIAL_TELEMETRY_MODES.OpenAiBilling,
+        ]
+      }
+      if (hostname === "open.bigmodel.cn") {
+        return [
+          API_CREDENTIAL_TELEMETRY_MODES.GlmQuota,
+          API_CREDENTIAL_TELEMETRY_MODES.NewApiTokenUsage,
+          API_CREDENTIAL_TELEMETRY_MODES.Sub2ApiUsage,
+          API_CREDENTIAL_TELEMETRY_MODES.OpenAiBilling,
+        ]
+      }
+      if (hostname === "api.kimi.com") {
+        return [
+          API_CREDENTIAL_TELEMETRY_MODES.KimiQuota,
           API_CREDENTIAL_TELEMETRY_MODES.NewApiTokenUsage,
           API_CREDENTIAL_TELEMETRY_MODES.Sub2ApiUsage,
           API_CREDENTIAL_TELEMETRY_MODES.OpenAiBilling,
@@ -745,6 +1024,7 @@ function resolveModes(
 function hasUsageData(data: TelemetryPatch): boolean {
   return (
     data.balance !== undefined ||
+    data.quota !== undefined ||
     data.balanceUsd !== undefined ||
     data.todayCostUsd !== undefined ||
     data.todayRequests !== undefined ||
@@ -812,13 +1092,17 @@ export async function refreshApiCredentialProfileTelemetry(
       const endpoint =
         mode === API_CREDENTIAL_TELEMETRY_MODES.DeepSeekBalance
           ? TELEMETRY_ENDPOINTS.deepSeekBalance
-          : mode === API_CREDENTIAL_TELEMETRY_MODES.OpenAiBilling
-            ? TELEMETRY_ENDPOINTS.openAiBilling.subscription
-            : mode === API_CREDENTIAL_TELEMETRY_MODES.NewApiTokenUsage
-              ? TELEMETRY_ENDPOINTS.newApiTokenUsage
-              : mode === API_CREDENTIAL_TELEMETRY_MODES.Sub2ApiUsage
-                ? TELEMETRY_ENDPOINTS.sub2ApiUsage
-                : config.customEndpoint?.endpoint || "custom"
+          : mode === API_CREDENTIAL_TELEMETRY_MODES.GlmQuota
+            ? TELEMETRY_ENDPOINTS.glmQuota
+            : mode === API_CREDENTIAL_TELEMETRY_MODES.KimiQuota
+              ? TELEMETRY_ENDPOINTS.kimiQuota
+              : mode === API_CREDENTIAL_TELEMETRY_MODES.OpenAiBilling
+                ? TELEMETRY_ENDPOINTS.openAiBilling.subscription
+                : mode === API_CREDENTIAL_TELEMETRY_MODES.NewApiTokenUsage
+                  ? TELEMETRY_ENDPOINTS.newApiTokenUsage
+                  : mode === API_CREDENTIAL_TELEMETRY_MODES.Sub2ApiUsage
+                    ? TELEMETRY_ENDPOINTS.sub2ApiUsage
+                    : config.customEndpoint?.endpoint || "custom"
       attempts.push(attemptFromError(mode, endpoint, error, secrets))
     }
   }

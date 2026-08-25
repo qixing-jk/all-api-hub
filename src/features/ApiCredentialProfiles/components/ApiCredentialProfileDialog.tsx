@@ -673,6 +673,18 @@ export function ApiCredentialProfileDialog({
                   ),
                 },
                 {
+                  value: API_CREDENTIAL_TELEMETRY_MODES.GlmQuota,
+                  label: t(
+                    "apiCredentialProfiles:dialog.telemetryModes.glmQuota",
+                  ),
+                },
+                {
+                  value: API_CREDENTIAL_TELEMETRY_MODES.KimiQuota,
+                  label: t(
+                    "apiCredentialProfiles:dialog.telemetryModes.kimiQuota",
+                  ),
+                },
+                {
                   value: API_CREDENTIAL_TELEMETRY_MODES.NewApiTokenUsage,
                   label: t(
                     "apiCredentialProfiles:dialog.telemetryModes.newApiTokenUsage",

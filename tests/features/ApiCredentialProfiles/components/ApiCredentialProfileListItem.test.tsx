@@ -754,6 +754,43 @@ describe("ApiCredentialProfileListItem", () => {
     ).toHaveTextContent(/12\.34/)
   })
 
+  it("shows provider quota windows in the shared telemetry card", () => {
+    renderListItem(
+      buildProfile({
+        telemetrySnapshot: {
+          attempts: [],
+          health: { status: SiteHealthStatus.Healthy },
+          lastSyncTime: 1,
+          lastSuccessTime: 1,
+          source: "kimiQuota",
+          quota: {
+            membershipLevel: "LEVEL_PRO",
+            windows: [
+              {
+                type: "fiveHour",
+                used: 25,
+                limit: 100,
+                remaining: 75,
+                percentRemaining: 75,
+              },
+              {
+                type: "weekly",
+                used: 200,
+                limit: 1000,
+                remaining: 800,
+                percentRemaining: 80,
+              },
+            ],
+          },
+        },
+      }),
+    )
+
+    expect(
+      screen.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.telemetryBalance),
+    ).toHaveTextContent(/75%.*80%/)
+  })
+
   it("keeps explicit zero telemetry expanded", () => {
     renderListItem(
       buildProfile({

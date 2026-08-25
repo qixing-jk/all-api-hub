@@ -45,6 +45,8 @@ export const API_CREDENTIAL_TELEMETRY_MODES = {
   Disabled: "disabled",
   Auto: "auto",
   DeepSeekBalance: "deepSeekBalance",
+  GlmQuota: "glmQuota",
+  KimiQuota: "kimiQuota",
   OpenAiBilling: "openaiBilling",
   NewApiTokenUsage: "newApiTokenUsage",
   Sub2ApiUsage: "sub2apiUsage",
@@ -128,6 +130,31 @@ export type ApiCredentialTelemetryBalance = {
   isAvailable?: boolean
 }
 
+export const API_CREDENTIAL_TELEMETRY_QUOTA_WINDOW_TYPES = {
+  FiveHour: "fiveHour",
+  Weekly: "weekly",
+  Total: "total",
+} as const
+
+export type ApiCredentialTelemetryQuotaWindowType =
+  (typeof API_CREDENTIAL_TELEMETRY_QUOTA_WINDOW_TYPES)[keyof typeof API_CREDENTIAL_TELEMETRY_QUOTA_WINDOW_TYPES]
+
+/** Provider-native quota window normalized to remaining-capacity semantics. */
+export type ApiCredentialTelemetryQuotaWindow = {
+  type: ApiCredentialTelemetryQuotaWindowType
+  used: number
+  limit: number
+  remaining: number
+  percentRemaining: number
+  resetTime?: number
+}
+
+/** Time-window quota facts shared by GLM and Kimi providers. */
+export type ApiCredentialTelemetryQuota = {
+  windows: ApiCredentialTelemetryQuotaWindow[]
+  membershipLevel?: string
+}
+
 export type ApiCredentialModelTelemetry = {
   count: number
   preview: string[]
@@ -140,6 +167,7 @@ export type ApiCredentialTelemetrySnapshot = {
   lastError?: string
   source?: ApiCredentialTelemetrySource
   balance?: ApiCredentialTelemetryBalance
+  quota?: ApiCredentialTelemetryQuota
   balanceUsd?: number
   todayCostUsd?: number
   todayRequests?: number

@@ -143,6 +143,166 @@ describe("api credential profile telemetry", () => {
     )
   })
 
+  it("auto-detects GLM and normalizes five-hour and weekly quota windows", async () => {
+    const profile = await apiCredentialProfilesStorage.createProfile({
+      name: "GLM",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      baseUrl: "https://open.bigmodel.cn",
+      apiKey: "glm.example-key",
+      telemetryConfig: { mode: "auto" },
+    })
+
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      if (String(input).endsWith("/api/monitor/usage/quota/limit")) {
+        return jsonResponse({
+          success: true,
+          data: {
+            level: "pro",
+            limits: [
+              {
+                type: "TOKENS_LIMIT",
+                unit: 3,
+                number: 5,
+                percentage: 25,
+                nextResetTime: 1776556800000,
+              },
+              {
+                type: "CREDIT_LIMIT",
+                unit: 6,
+                number: 1,
+                usage: 10000,
+                currentValue: 2500,
+                remaining: 7500,
+              },
+            ],
+          },
+        })
+      }
+      return jsonResponse({ data: [] })
+    })
+    vi.stubGlobal("fetch", fetchMock)
+
+    const snapshot = await refreshApiCredentialProfileTelemetry(profile.id)
+
+    expect(snapshot).toEqual(
+      expect.objectContaining({
+        health: { status: SiteHealthStatus.Healthy },
+        source: "glmQuota",
+        quota: {
+          membershipLevel: "pro",
+          windows: [
+            expect.objectContaining({
+              type: "fiveHour",
+              percentRemaining: 75,
+              used: 25,
+              limit: 100,
+              remaining: 75,
+            }),
+            expect.objectContaining({
+              type: "weekly",
+              percentRemaining: 75,
+              used: 2500,
+              limit: 10000,
+              remaining: 7500,
+            }),
+          ],
+        },
+      }),
+    )
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://open.bigmodel.cn/api/monitor/usage/quota/limit",
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: "Bearer glm.example-key",
+        }),
+      }),
+    )
+  })
+
+  it("refreshes Kimi quota windows and an enabled booster balance", async () => {
+    const profile = await apiCredentialProfilesStorage.createProfile({
+      name: "Kimi",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      baseUrl: "https://api.kimi.com",
+      apiKey: "kimi.example-key",
+      telemetryConfig: { mode: "kimiQuota" },
+    })
+
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      if (String(input).endsWith("/coding/v1/usages")) {
+        return jsonResponse({
+          usage: {
+            limit: "1000",
+            used: "200",
+            remaining: "800",
+            resetTime: "2026-05-01T00:00:00.000Z",
+          },
+          limits: [
+            {
+              window: { duration: 300 },
+              detail: {
+                limit: "500",
+                used: "125",
+                remaining: "375",
+                resetTime: "2026-04-20T00:00:00.000Z",
+              },
+            },
+          ],
+          totalQuota: { limit: "1500", remaining: "1175" },
+          user: { membership: { level: "LEVEL_PRO" } },
+          boosterWallet: {
+            status: "STATUS_ACTIVE",
+            balance: { amountLeft: "315250700" },
+          },
+        })
+      }
+      return jsonResponse({ data: [] })
+    })
+    vi.stubGlobal("fetch", fetchMock)
+
+    const snapshot = await refreshApiCredentialProfileTelemetry(profile.id)
+
+    expect(snapshot).toEqual(
+      expect.objectContaining({
+        health: { status: SiteHealthStatus.Healthy },
+        source: "kimiQuota",
+        balance: {
+          amount: 3.152507,
+          currency: "CNY",
+          isAvailable: true,
+        },
+        quota: {
+          membershipLevel: "LEVEL_PRO",
+          windows: [
+            expect.objectContaining({
+              type: "weekly",
+              percentRemaining: 80,
+              remaining: 800,
+            }),
+            expect.objectContaining({
+              type: "fiveHour",
+              percentRemaining: 75,
+              remaining: 375,
+            }),
+            expect.objectContaining({
+              type: "total",
+              percentRemaining: 78.33333333333333,
+              remaining: 1175,
+            }),
+          ],
+        },
+      }),
+    )
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.kimi.com/coding/v1/usages",
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: "Bearer kimi.example-key",
+        }),
+      }),
+    )
+  })
+
   it("refreshes NewAPI token telemetry and persists a healthy snapshot", async () => {
     const profile = await apiCredentialProfilesStorage.createProfile({
       name: "NewAPI",

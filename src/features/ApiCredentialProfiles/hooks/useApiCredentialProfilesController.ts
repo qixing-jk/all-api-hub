@@ -171,6 +171,10 @@ const telemetryModeByConfigMode: Record<
     PRODUCT_ANALYTICS_MODE_IDS.TelemetryDisabled,
   [API_CREDENTIAL_TELEMETRY_MODES.DeepSeekBalance]:
     PRODUCT_ANALYTICS_MODE_IDS.TelemetryDeepSeekBalance,
+  [API_CREDENTIAL_TELEMETRY_MODES.GlmQuota]:
+    PRODUCT_ANALYTICS_MODE_IDS.TelemetryGlmQuota,
+  [API_CREDENTIAL_TELEMETRY_MODES.KimiQuota]:
+    PRODUCT_ANALYTICS_MODE_IDS.TelemetryKimiQuota,
   [API_CREDENTIAL_TELEMETRY_MODES.NewApiTokenUsage]:
     PRODUCT_ANALYTICS_MODE_IDS.TelemetryNewApiTokenUsage,
   [API_CREDENTIAL_TELEMETRY_MODES.Sub2ApiUsage]:
@@ -191,6 +195,10 @@ const telemetrySourceBySnapshotSource: Partial<
     PRODUCT_ANALYTICS_TELEMETRY_SOURCES.Models,
   [API_CREDENTIAL_TELEMETRY_SOURCES.DeepSeekBalance]:
     PRODUCT_ANALYTICS_TELEMETRY_SOURCES.DeepSeekBalance,
+  [API_CREDENTIAL_TELEMETRY_SOURCES.GlmQuota]:
+    PRODUCT_ANALYTICS_TELEMETRY_SOURCES.GlmQuota,
+  [API_CREDENTIAL_TELEMETRY_SOURCES.KimiQuota]:
+    PRODUCT_ANALYTICS_TELEMETRY_SOURCES.KimiQuota,
   [API_CREDENTIAL_TELEMETRY_SOURCES.OpenAiBilling]:
     PRODUCT_ANALYTICS_TELEMETRY_SOURCES.OpenAiBilling,
   [API_CREDENTIAL_TELEMETRY_SOURCES.NewApiTokenUsage]:
@@ -216,6 +224,8 @@ const analyticsStatusByHealthStatus: Record<
  */
 function hasTelemetryUsageData(snapshot: ApiCredentialTelemetrySnapshot) {
   return (
+    snapshot.balance !== undefined ||
+    snapshot.quota !== undefined ||
     snapshot.balanceUsd !== undefined ||
     snapshot.todayCostUsd !== undefined ||
     snapshot.todayRequests !== undefined ||
