@@ -316,6 +316,29 @@ describe("Sub2API Pro daily check-in authenticated transport", () => {
     expect(fetchApiResponse).toHaveBeenCalledTimes(2)
   })
 
+  it("does not send a recovered POST when the recheck is disabled", async () => {
+    vi.mocked(resyncSub2ApiAuthToken).mockResolvedValue({
+      accessToken: "recovered-access-token",
+      userId: "42",
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
+    })
+    vi.mocked(fetchApiResponse)
+      .mockResolvedValueOnce(
+        response(401, { code: 401, message: "unauthorized" }),
+      )
+      .mockResolvedValueOnce(
+        response(200, {
+          ...statusBody(false),
+          data: { ...statusBody(false).data, enabled: false },
+        }),
+      )
+
+    await expect(
+      performSub2ApiProDailyCheckIn(createRequest()),
+    ).resolves.toEqual({ kind: "disabled" })
+    expect(fetchApiResponse).toHaveBeenCalledTimes(2)
+  })
+
   it("revalidates selection before a recovered POST", async () => {
     vi.mocked(resyncSub2ApiAuthToken).mockResolvedValue({
       accessToken: "recovered-access-token",

@@ -140,6 +140,12 @@ describe("Sub2API Pro daily check-in method Adapter", () => {
     })
   })
 
+  it("rejects status reads without account data or an explicit request", async () => {
+    await expect(
+      sub2apiProProvider.getStatus?.({ observedAt: 300 }),
+    ).rejects.toThrow("Sub2API account data is unavailable")
+  })
+
   it("discovers only with status GET and selects the unique disabled match", async () => {
     vi.mocked(fetchSub2ApiProDailyCheckInStatus).mockResolvedValue({
       enabled: false,
@@ -250,6 +256,77 @@ describe("Sub2API Pro daily check-in method Adapter", () => {
       availability: CHECK_IN_METHOD_AVAILABILITIES.Enabled,
       today: CHECK_IN_METHOD_TODAY_STATUSES.NotChecked,
       evidence: { source: "probe", observedAt: 300 },
+    })
+  })
+
+  it("preserves disabled and already-checked status dimensions", async () => {
+    vi.mocked(fetchSub2ApiProDailyCheckInStatus).mockResolvedValue({
+      enabled: false,
+      checkedInToday: true,
+    })
+
+    await expect(
+      sub2apiProProvider.getStatus?.({
+        account: createAccount(),
+        observedAt: 301,
+      }),
+    ).resolves.toMatchObject({
+      availability: CHECK_IN_METHOD_AVAILABILITIES.Disabled,
+      today: CHECK_IN_METHOD_TODAY_STATUSES.Checked,
+    })
+  })
+
+  it("skips mutation when the status proof is unavailable", async () => {
+    await expect(
+      sub2apiProProvider.checkIn(createAccount(), {
+        ...executionContext(),
+        statusProof: {
+          ...notCheckedStatus,
+          availability: CHECK_IN_METHOD_AVAILABILITIES.Disabled,
+        },
+      }),
+    ).resolves.toMatchObject({
+      status: CHECKIN_RESULT_STATUS.FAILED,
+      reasonCode: "status_unavailable",
+    })
+    expect(performSub2ApiProDailyCheckIn).not.toHaveBeenCalled()
+  })
+
+  it("maps an applied mutation to a successful result", async () => {
+    await expect(
+      sub2apiProProvider.checkIn(createAccount(), {
+        ...executionContext(),
+        statusProof: notCheckedStatus,
+      }),
+    ).resolves.toMatchObject({
+      status: CHECKIN_RESULT_STATUS.SUCCESS,
+      data: { rewardAmount: 2, newBalance: 10 },
+    })
+  })
+
+  it.each([
+    [new ApiError("login required", 401), "authentication_required"],
+    [
+      Object.assign(new Error("login required"), { statusCode: 401 }),
+      "authentication_required",
+    ],
+    [new ApiError("unsupported", 404), "method_unsupported"],
+    [new ApiError("forbidden", 403), "permission_denied"],
+    [new TypeError("Failed to fetch"), "network_error"],
+    [Object.assign(new Error("timed out"), { statusCode: 408 }), "timeout"],
+    [new ApiError("server unavailable", 500), "source_unavailable"],
+    [new Error("unexpected"), "status_unavailable"],
+  ] as const)("maps mutation error %s to %s", async (error, reasonCode) => {
+    vi.mocked(performSub2ApiProDailyCheckIn).mockRejectedValue(error)
+
+    await expect(
+      sub2apiProProvider.checkIn(createAccount(), {
+        ...executionContext(),
+        statusProof: notCheckedStatus,
+      }),
+    ).resolves.toMatchObject({
+      status: CHECKIN_RESULT_STATUS.FAILED,
+      reasonCode,
     })
   })
 
@@ -574,6 +651,58 @@ describe("Sub2API Pro daily check-in method Adapter", () => {
         mutationLifecycle,
       }),
     ).resolves.toMatchObject({ status: CHECKIN_RESULT_STATUS.UNCERTAIN })
+  })
+
+  it("resets lifecycle evidence before classifying a recovered pre-dispatch failure", async () => {
+    vi.mocked(performSub2ApiProDailyCheckIn).mockImplementation(
+      async (request) => {
+        request.observer?.onDispatch()
+        request.observer?.onPreHandlerUnauthorized?.()
+        throw new TypeError("Failed to fetch")
+      },
+    )
+
+    const result = await executeSelectedCheckIn({
+      account: createAccount(),
+      globalAutomaticExecutionEnabled: true,
+      context: executionContext(),
+    })
+
+    expect(result).toMatchObject({
+      kind: "executed",
+      result: {
+        status: CHECKIN_RESULT_STATUS.FAILED,
+        reasonCode: "network_error",
+      },
+    })
+  })
+
+  it("blocks a recovered mutation when account revalidation throws", async () => {
+    const revalidateAccount = vi
+      .fn()
+      .mockResolvedValueOnce(createAccount())
+      .mockRejectedValueOnce(new Error("storage unavailable"))
+    vi.mocked(performSub2ApiProDailyCheckIn).mockImplementation(
+      async (_request, options) => {
+        await expect(options?.beforeRecoveredMutation?.()).resolves.toBe(false)
+        return { kind: "recovery_precondition_failed" }
+      },
+    )
+
+    await expect(
+      executeSelectedCheckIn({
+        account: createAccount(),
+        globalAutomaticExecutionEnabled: true,
+        context: executionContext(),
+        revalidateAccount,
+      }),
+    ).resolves.toMatchObject({
+      kind: "executed",
+      result: {
+        status: CHECKIN_RESULT_STATUS.FAILED,
+        reasonCode: "account_unavailable",
+      },
+    })
   })
 
   it("classifies a confirmed pre-dispatch network failure as retryable failure", async () => {

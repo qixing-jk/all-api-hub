@@ -93,6 +93,17 @@ describe("Sub2API Pro daily check-in protocol parsing", () => {
     )
   })
 
+  it("rejects a non-object status envelope with endpoint diagnostics", () => {
+    expect(() =>
+      parseSub2ApiProDailyCheckInStatusResponse(response(200, null)),
+    ).toThrowError(
+      expect.objectContaining({
+        code: API_ERROR_CODES.JSON_PARSE_ERROR,
+        endpoint: SUB2API_PRO_DAILY_CHECK_IN_STATUS_ENDPOINT,
+      }),
+    )
+  })
+
   it("keeps invalid status response diagnostics tied to the status endpoint", () => {
     expect(() =>
       parseSub2ApiProDailyCheckInStatusResponse(
@@ -117,6 +128,33 @@ describe("Sub2API Pro daily check-in protocol parsing", () => {
         code: API_ERROR_CODES.HTTP_OTHER,
         endpoint: SUB2API_PRO_DAILY_CHECK_IN_ENDPOINT,
       } satisfies Partial<ApiError>),
+    )
+  })
+
+  it("uses a controlled fallback for an HTTP error without a message", () => {
+    expect(() =>
+      parseSub2ApiProDailyCheckInMutationResponse(response(503, {})),
+    ).toThrowError(
+      expect.objectContaining({
+        message: "Sub2API Pro daily check-in request failed with HTTP 503",
+      }),
+    )
+  })
+
+  it("preserves the forbidden HTTP error category for an unknown reason", () => {
+    expect(() =>
+      parseSub2ApiProDailyCheckInMutationResponse(
+        response(403, {
+          code: 403,
+          message: "forbidden",
+          reason: "UNKNOWN_REASON",
+        }),
+      ),
+    ).toThrowError(
+      expect.objectContaining({
+        statusCode: 403,
+        code: API_ERROR_CODES.HTTP_403,
+      }),
     )
   })
 
