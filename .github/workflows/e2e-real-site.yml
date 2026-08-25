@@ -220,15 +220,14 @@ jobs:
           REAL_SITE_SPEC: ${{ matrix.spec }}
         run: pnpm exec playwright test "$REAL_SITE_SPEC" --project=chromium --reporter=list --no-deps
 
-      - name: Upload Playwright artifacts (failure)
+      - name: Upload failure screenshots
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: real-site-playwright-report-${{ matrix.category }}-${{ matrix.env_prefix }}-${{ github.run_attempt }}
-          path: |
-            playwright-report/
-            test-results/
-          retention-days: 7
+          name: real-site-failure-screenshots-${{ matrix.category }}-${{ matrix.env_prefix }}-${{ github.run_attempt }}
+          path: test-results/**/test-failed-*.png
+          if-no-files-found: ignore
+          retention-days: 3
 
   real-site-e2e-new-api:
     name: ${{ matrix.label }}

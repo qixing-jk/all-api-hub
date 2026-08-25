@@ -5,6 +5,7 @@ import { loadPlaywrightEnvFiles } from "./e2e/utils/playwrightEnv"
 loadPlaywrightEnvFiles()
 
 const isCI = !!process.env.CI
+const isRealSiteE2E = !!process.env.AAH_E2E_REAL_SITE_CATEGORY
 const configuredWorkerCount = Number(process.env.AAH_E2E_WORKERS)
 const workers =
   Number.isInteger(configuredWorkerCount) && configuredWorkerCount > 0
@@ -37,17 +38,20 @@ export default defineConfig({
   // Keeping local concurrency bounded avoids service-worker startup/teardown
   // timeouts on machines with many logical CPUs.
   workers,
-  reporter: isCI
-    ? [
-        ["github"],
-        ["html", { open: "never", outputFolder: "playwright-report" }],
-      ]
-    : [["list"]],
+  reporter:
+    isCI && !isRealSiteE2E
+      ? [
+          ["github"],
+          ["html", { open: "never", outputFolder: "playwright-report" }],
+        ]
+      : [["list"]],
   use: {
     headless: true,
     screenshot: "only-on-failure",
-    trace: "on-first-retry",
-    video: isCI ? "retain-on-failure" : "off",
+    // Real-site traces and videos can capture authenticated requests, cookies,
+    // response bodies, and credentials rendered by the extension.
+    trace: isRealSiteE2E ? "off" : "on-first-retry",
+    video: isCI && !isRealSiteE2E ? "retain-on-failure" : "off",
   },
   outputDir: "test-results",
 })
