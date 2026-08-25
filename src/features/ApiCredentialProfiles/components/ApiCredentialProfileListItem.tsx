@@ -172,6 +172,9 @@ function getTelemetrySourceLabel(
   if (source === API_CREDENTIAL_TELEMETRY_SOURCES.KimiOpenPlatformBalance) {
     return t("apiCredentialProfiles:telemetry.source.kimiOpenPlatformBalance")
   }
+  if (source === API_CREDENTIAL_TELEMETRY_SOURCES.OpenCodeGoUsage) {
+    return t("apiCredentialProfiles:telemetry.source.openCodeGoUsage")
+  }
   if (source === API_CREDENTIAL_TELEMETRY_SOURCES.OpenAiBilling) {
     return t("apiCredentialProfiles:telemetry.source.openaiBilling")
   }
@@ -307,7 +310,9 @@ function formatProviderQuotaWindow(
       ? t("apiCredentialProfiles:telemetry.quotaWindows.fiveHour")
       : window.type === "weekly"
         ? t("apiCredentialProfiles:telemetry.quotaWindows.weekly")
-        : t("apiCredentialProfiles:telemetry.quotaWindows.total")
+        : window.type === "monthly"
+          ? t("apiCredentialProfiles:telemetry.quotaWindows.monthly")
+          : t("apiCredentialProfiles:telemetry.quotaWindows.total")
   const percent = `${Math.round(window.remainingPercent)}%`
   if (window.unit.kind === "percent" || window.remaining === undefined) {
     return `${label}: ${percent}`

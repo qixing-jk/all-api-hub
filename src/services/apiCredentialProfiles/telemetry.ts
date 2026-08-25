@@ -73,6 +73,7 @@ const TELEMETRY_ENDPOINTS = {
   glmQuota: "/api/monitor/usage/quota/limit",
   kimiQuota: "/coding/v1/usages",
   kimiOpenPlatformBalance: "/v1/users/me/balance",
+  openCodeGoUsage: "/v1/usage",
   models: {
     google: "/v1beta/models",
     openAiCompatible: "/v1/models",
@@ -424,6 +425,43 @@ function parseKimiQuota(json: unknown): TelemetryPatch {
   }
 }
 
+/**
+ * Parses OpenCode Go's official usage contract.
+ *
+ * Source: https://dev.opencode.ai/docs/go/ and
+ * https://opencode.ai/zen/go/v1/usage. The endpoint reports *used* percent
+ * for rolling (5 hour), weekly, and monthly windows; the product quota model
+ * intentionally stores remaining capacity, so this adapter converts
+ * `percent` to `100 - percent`. Dollar balances and costs are not exposed by
+ * this endpoint and are deliberately not inferred.
+ */
+function parseOpenCodeGoUsage(json: unknown): TelemetryPatch {
+  const record = isRecord(json) ? json : {}
+  const usage = isRecord(record.usage) ? record.usage : {}
+  const windows: NonNullable<ReturnType<typeof buildQuotaWindow>>[] = []
+  const windowDefinitions = [
+    ["rolling", API_CREDENTIAL_TELEMETRY_QUOTA_WINDOW_TYPES.FiveHour],
+    ["weekly", API_CREDENTIAL_TELEMETRY_QUOTA_WINDOW_TYPES.Weekly],
+    ["monthly", API_CREDENTIAL_TELEMETRY_QUOTA_WINDOW_TYPES.Monthly],
+  ] as const
+
+  for (const [key, type] of windowDefinitions) {
+    const item = isRecord(usage[key]) ? usage[key] : undefined
+    const percent = item ? readNumber(item.percent) : undefined
+    if (percent === undefined || percent < 0 || percent > 100) continue
+
+    const window = buildQuotaWindow({
+      type,
+      unit: "percent",
+      percentUsed: percent,
+      resetTime: parseIsoTimestamp(item?.resetsAt),
+    })
+    if (window) windows.push(window)
+  }
+
+  return windows.length > 0 ? { quota: { windows } } : {}
+}
+
 // Kimi Open Platform contract:
 // https://platform.kimi.com/docs/api/balance and
 // https://platform.kimi.ai/docs/api/balance
@@ -516,6 +554,15 @@ function isGlmCodingPlanBaseUrl(baseUrl: string): boolean {
   const pathname = new URL(baseUrl).pathname.toLowerCase()
   return (
     pathname.includes("/api/coding/") || pathname.startsWith("/api/anthropic")
+  )
+}
+
+/** Detects OpenCode Go's provider API origin and path. */
+function isOpenCodeGoBaseUrl(baseUrl: string): boolean {
+  const url = new URL(baseUrl)
+  return (
+    url.hostname === "opencode.ai" &&
+    (url.pathname === "/zen/go" || url.pathname.startsWith("/zen/go/"))
   )
 }
 
@@ -788,6 +835,23 @@ async function queryKimiOpenPlatformBalance(
       result.json,
       new URL(profile.baseUrl).hostname === "api.moonshot.ai" ? "USD" : "CNY",
     ),
+  }
+}
+
+/** Queries OpenCode Go's provider-owned plan quota windows. */
+async function queryOpenCodeGoUsage(
+  profile: ApiCredentialProfile,
+): Promise<AdapterSuccess> {
+  const result = await fetchJson({
+    baseUrl: profile.baseUrl,
+    endpoint: TELEMETRY_ENDPOINTS.openCodeGoUsage,
+    bearerToken: profile.apiKey,
+  })
+
+  return {
+    source: API_CREDENTIAL_TELEMETRY_SOURCES.OpenCodeGoUsage,
+    endpoint: result.endpoint,
+    data: parseOpenCodeGoUsage(result.json),
   }
 }
 
@@ -1168,6 +1232,9 @@ async function runUsageAdapter(
   if (mode === API_CREDENTIAL_TELEMETRY_MODES.KimiOpenPlatformBalance) {
     return await queryKimiOpenPlatformBalance(profile)
   }
+  if (mode === API_CREDENTIAL_TELEMETRY_MODES.OpenCodeGoUsage) {
+    return await queryOpenCodeGoUsage(profile)
+  }
   if (mode === API_CREDENTIAL_TELEMETRY_MODES.OpenAiBilling) {
     return await queryOpenAiBilling(profile)
   }
@@ -1235,6 +1302,9 @@ function resolveModes(
           API_CREDENTIAL_TELEMETRY_MODES.OpenAiBilling,
         ]
       }
+      if (isOpenCodeGoBaseUrl(profile.baseUrl)) {
+        return [API_CREDENTIAL_TELEMETRY_MODES.OpenCodeGoUsage]
+      }
     } catch {
       // The profile storage boundary already validates base URLs. Keep the
       // generic fallback for legacy or partially migrated data.
@@ -1263,6 +1333,8 @@ function sourceForMode(
     return API_CREDENTIAL_TELEMETRY_SOURCES.KimiQuota
   if (mode === API_CREDENTIAL_TELEMETRY_MODES.KimiOpenPlatformBalance)
     return API_CREDENTIAL_TELEMETRY_SOURCES.KimiOpenPlatformBalance
+  if (mode === API_CREDENTIAL_TELEMETRY_MODES.OpenCodeGoUsage)
+    return API_CREDENTIAL_TELEMETRY_SOURCES.OpenCodeGoUsage
   if (mode === API_CREDENTIAL_TELEMETRY_MODES.OpenAiBilling)
     return API_CREDENTIAL_TELEMETRY_SOURCES.OpenAiBilling
   if (mode === API_CREDENTIAL_TELEMETRY_MODES.NewApiTokenUsage)
@@ -1355,13 +1427,15 @@ export async function refreshApiCredentialProfileTelemetry(
               ? TELEMETRY_ENDPOINTS.kimiQuota
               : mode === API_CREDENTIAL_TELEMETRY_MODES.KimiOpenPlatformBalance
                 ? TELEMETRY_ENDPOINTS.kimiOpenPlatformBalance
-                : mode === API_CREDENTIAL_TELEMETRY_MODES.OpenAiBilling
-                  ? TELEMETRY_ENDPOINTS.openAiBilling.subscription
-                  : mode === API_CREDENTIAL_TELEMETRY_MODES.NewApiTokenUsage
-                    ? TELEMETRY_ENDPOINTS.newApiTokenUsage
-                    : mode === API_CREDENTIAL_TELEMETRY_MODES.Sub2ApiUsage
-                      ? TELEMETRY_ENDPOINTS.sub2ApiUsage
-                      : config.customEndpoint?.endpoint || "custom"
+                : mode === API_CREDENTIAL_TELEMETRY_MODES.OpenCodeGoUsage
+                  ? TELEMETRY_ENDPOINTS.openCodeGoUsage
+                  : mode === API_CREDENTIAL_TELEMETRY_MODES.OpenAiBilling
+                    ? TELEMETRY_ENDPOINTS.openAiBilling.subscription
+                    : mode === API_CREDENTIAL_TELEMETRY_MODES.NewApiTokenUsage
+                      ? TELEMETRY_ENDPOINTS.newApiTokenUsage
+                      : mode === API_CREDENTIAL_TELEMETRY_MODES.Sub2ApiUsage
+                        ? TELEMETRY_ENDPOINTS.sub2ApiUsage
+                        : config.customEndpoint?.endpoint || "custom"
       attempts.push(
         attemptFromError(sourceForMode(mode), endpoint, error, secrets),
       )

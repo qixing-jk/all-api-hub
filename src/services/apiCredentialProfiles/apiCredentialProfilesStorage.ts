@@ -380,7 +380,9 @@ function coerceTelemetryFacts(
           ? (item.unit as Record<string, unknown>)
           : null
       const unitKind = unit?.kind
-      const validType = ["fiveHour", "weekly", "total"].includes(String(type))
+      const validType = ["fiveHour", "weekly", "monthly", "total"].includes(
+        String(type),
+      )
       const validUnit =
         unitKind === "percent" ||
         (unitKind === "quota" &&
@@ -390,7 +392,7 @@ function coerceTelemetryFacts(
       if (!validType || !validUnit || remainingPercent === undefined)
         return null
       return {
-        type: type as "fiveHour" | "weekly" | "total",
+        type: type as "fiveHour" | "weekly" | "monthly" | "total",
         unit:
           unitKind === "percent"
             ? { kind: "percent" as const }

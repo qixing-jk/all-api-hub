@@ -691,6 +691,12 @@ export function ApiCredentialProfileDialog({
                   ),
                 },
                 {
+                  value: API_CREDENTIAL_TELEMETRY_MODES.OpenCodeGoUsage,
+                  label: t(
+                    "apiCredentialProfiles:dialog.telemetryModes.openCodeGoUsage",
+                  ),
+                },
+                {
                   value: API_CREDENTIAL_TELEMETRY_MODES.NewApiTokenUsage,
                   label: t(
                     "apiCredentialProfiles:dialog.telemetryModes.newApiTokenUsage",

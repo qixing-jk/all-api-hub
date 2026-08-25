@@ -153,6 +153,111 @@ describe("api credential profile telemetry", () => {
     )
   })
 
+  it("auto-detects OpenCode Go usage and converts provider used-percent to remaining quota", async () => {
+    const profile = await apiCredentialProfilesStorage.createProfile({
+      name: "OpenCode Go",
+      apiType: API_TYPES.ANTHROPIC,
+      baseUrl: "https://opencode.ai/zen/go",
+      apiKey: "sk-opencode-go",
+      telemetryConfig: { mode: "auto" },
+    })
+
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      if (String(input).endsWith("/zen/go/v1/usage")) {
+        return jsonResponse({
+          usage: {
+            rolling: {
+              status: "ok",
+              percent: 25,
+              resetsAt: "2026-04-19T05:00:00.000Z",
+            },
+            weekly: { status: "ok", percent: 40, resetsAt: "invalid" },
+            monthly: { status: "ok", percent: 0 },
+          },
+        })
+      }
+      return jsonResponse({ data: [] })
+    })
+    vi.stubGlobal("fetch", fetchMock)
+
+    const snapshot = await refreshApiCredentialProfileTelemetry(profile.id)
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://opencode.ai/zen/go/v1/usage",
+      expect.objectContaining({
+        method: "GET",
+        headers: expect.objectContaining({
+          Authorization: "Bearer sk-opencode-go",
+        }),
+      }),
+    )
+    expect(snapshot).toEqual(
+      expect.objectContaining({
+        health: { status: SiteHealthStatus.Healthy },
+        source: "openCodeGoUsage",
+        facts: expect.objectContaining({
+          quota: {
+            windows: [
+              expect.objectContaining({
+                type: "fiveHour",
+                unit: { kind: "percent" },
+                remainingPercent: 75,
+                resetTime: new Date("2026-04-19T05:00:00.000Z").getTime(),
+              }),
+              expect.objectContaining({
+                type: "weekly",
+                unit: { kind: "percent" },
+                remainingPercent: 60,
+              }),
+              expect.objectContaining({
+                type: "monthly",
+                unit: { kind: "percent" },
+                remainingPercent: 100,
+              }),
+            ],
+          },
+        }),
+      }),
+    )
+  })
+
+  it("does not treat an incompatible OpenCode usage payload as quota data", async () => {
+    const profile = await apiCredentialProfilesStorage.createProfile({
+      name: "Invalid OpenCode",
+      apiType: API_TYPES.ANTHROPIC,
+      baseUrl: "https://opencode.ai/zen/go",
+      apiKey: "sk-opencode-invalid",
+      telemetryConfig: { mode: "openCodeGoUsage" },
+    })
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          usage: {
+            rolling: { status: "ok", percent: 125 },
+            weekly: { status: "ok", percent: "unknown" },
+            monthly: { status: "ok" },
+          },
+        }),
+      ),
+    )
+
+    const snapshot = await refreshApiCredentialProfileTelemetry(profile.id)
+
+    expect(snapshot.source).toBeUndefined()
+    expect(snapshot.facts?.quota).toBeUndefined()
+    expect(snapshot.attempts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          source: "openCodeGoUsage",
+          status: "unsupported",
+          message: "No usage fields returned",
+        }),
+      ]),
+    )
+  })
+
   it("auto-detects GLM and normalizes five-hour and weekly quota windows", async () => {
     const profile = await apiCredentialProfilesStorage.createProfile({
       name: "GLM",

@@ -48,6 +48,7 @@ export const API_CREDENTIAL_TELEMETRY_MODES = {
   GlmQuota: "glmQuota",
   KimiQuota: "kimiQuota",
   KimiOpenPlatformBalance: "kimiOpenPlatformBalance",
+  OpenCodeGoUsage: "openCodeGoUsage",
   OpenAiBilling: "openaiBilling",
   NewApiTokenUsage: "newApiTokenUsage",
   Sub2ApiUsage: "sub2apiUsage",
@@ -63,6 +64,7 @@ export const API_CREDENTIAL_TELEMETRY_SOURCES = {
   GlmQuota: "glmQuota",
   KimiQuota: "kimiQuota",
   KimiOpenPlatformBalance: "kimiOpenPlatformBalance",
+  OpenCodeGoUsage: "openCodeGoUsage",
   OpenAiBilling: "openaiBilling",
   NewApiTokenUsage: "newApiTokenUsage",
   Sub2ApiUsage: "sub2apiUsage",
@@ -146,6 +148,7 @@ export type ApiCredentialTelemetryBalance = {
 export const API_CREDENTIAL_TELEMETRY_QUOTA_WINDOW_TYPES = {
   FiveHour: "fiveHour",
   Weekly: "weekly",
+  Monthly: "monthly",
   Total: "total",
 } as const
 
