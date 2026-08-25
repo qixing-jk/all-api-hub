@@ -49,13 +49,34 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: default
+          # The default suite is sharded across runners with Playwright's
+          # native --shard flag to cut wall-clock time; each shard rebuilds
+          # nothing (AAH_SKIP_E2E_BUILD=1) because the extension is built in
+          # this job's own step.
+          - name: default-shard-1
             e2e_type: default
             build_variant: ""
-            timeout_minutes: 20
+            shard: 1
+            timeout_minutes: 8
+          - name: default-shard-2
+            e2e_type: default
+            build_variant: ""
+            shard: 2
+            timeout_minutes: 8
+          - name: default-shard-3
+            e2e_type: default
+            build_variant: ""
+            shard: 3
+            timeout_minutes: 8
+          - name: default-shard-4
+            e2e_type: default
+            build_variant: ""
+            shard: 4
+            timeout_minutes: 8
           - name: dnr-required
             e2e_type: dnr-required
             build_variant: dnr-required
+            shard: ""
             timeout_minutes: 5
 
     steps:
@@ -105,7 +126,9 @@ jobs:
           AAH_E2E_BUILD_VARIANT: ${{ matrix.build_variant }}
           AAH_E2E_WORKERS: "3"
           AAH_SKIP_E2E_BUILD: "1"
-        run: pnpm run e2e:${{ matrix.e2e_type }}
+        run: >
+          pnpm run e2e:${{ matrix.e2e_type }}
+          ${{ matrix.shard && format('--shard={0}/4', matrix.shard) || '' }}
 
       - name: Upload Playwright artifacts (failure)
         if: failure()
