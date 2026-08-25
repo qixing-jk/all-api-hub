@@ -55,6 +55,94 @@ describe("api credential profile telemetry", () => {
     vi.clearAllMocks()
   })
 
+  it("refreshes DeepSeek balance telemetry with provider currency facts", async () => {
+    const profile = await apiCredentialProfilesStorage.createProfile({
+      name: "DeepSeek",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      baseUrl: "https://api.deepseek.com",
+      apiKey: "sk-deepseek",
+      telemetryConfig: { mode: "auto" },
+    })
+
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      if (String(input).endsWith("/user/balance")) {
+        return jsonResponse({
+          is_available: true,
+          balance_infos: [
+            {
+              currency: "CNY",
+              total_balance: "12.34",
+              granted_balance: "2.00",
+              topped_up_balance: "10.34",
+            },
+          ],
+        })
+      }
+      return jsonResponse({ data: [] })
+    })
+    vi.stubGlobal("fetch", fetchMock)
+
+    const snapshot = await refreshApiCredentialProfileTelemetry(profile.id)
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.deepseek.com/user/balance",
+      expect.objectContaining({
+        method: "GET",
+        headers: expect.objectContaining({
+          Authorization: "Bearer sk-deepseek",
+        }),
+      }),
+    )
+    expect(snapshot).toEqual(
+      expect.objectContaining({
+        health: { status: SiteHealthStatus.Healthy },
+        source: "deepSeekBalance",
+        balance: {
+          amount: 12.34,
+          currency: "CNY",
+          grantedAmount: 2,
+          toppedUpAmount: 10.34,
+          isAvailable: true,
+        },
+      }),
+    )
+  })
+
+  it("marks an unavailable DeepSeek account as a warning", async () => {
+    const profile = await apiCredentialProfilesStorage.createProfile({
+      name: "Unavailable DeepSeek",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      baseUrl: "https://api.deepseek.com",
+      apiKey: "sk-deepseek-unavailable",
+      telemetryConfig: { mode: "deepSeekBalance" },
+    })
+
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      if (String(input).endsWith("/user/balance")) {
+        return jsonResponse({ is_available: false, balance_infos: [] })
+      }
+      return jsonResponse({ data: [] })
+    })
+    vi.stubGlobal("fetch", fetchMock)
+
+    const snapshot = await refreshApiCredentialProfileTelemetry(profile.id)
+
+    expect(snapshot).toEqual(
+      expect.objectContaining({
+        health: {
+          status: SiteHealthStatus.Warning,
+          reason: "Provider account is unavailable",
+        },
+        source: "deepSeekBalance",
+        balance: {
+          amount: 0,
+          currency: "CNY",
+          isAvailable: false,
+        },
+      }),
+    )
+  })
+
   it("refreshes NewAPI token telemetry and persists a healthy snapshot", async () => {
     const profile = await apiCredentialProfilesStorage.createProfile({
       name: "NewAPI",

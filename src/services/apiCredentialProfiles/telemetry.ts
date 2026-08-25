@@ -27,6 +27,7 @@ import { getErrorMessage } from "~/utils/core/error"
 type TelemetryPatch = Partial<
   Pick<
     ApiCredentialTelemetrySnapshot,
+    | "balance"
     | "balanceUsd"
     | "todayCostUsd"
     | "todayRequests"
@@ -54,6 +55,7 @@ const OPENAI_BILLING_LIMIT_BALANCE_MAX_USD = 1_000_000
 const REDACTED_QUERY_VALUE = "[REDACTED]"
 
 const TELEMETRY_ENDPOINTS = {
+  deepSeekBalance: "/user/balance",
   models: {
     google: "/v1beta/models",
     openAiCompatible: "/v1/models",
@@ -129,6 +131,60 @@ function normalizeTimestamp(value: unknown): number | undefined {
   const parsed = readNumber(value)
   if (parsed === undefined || parsed <= 0) return undefined
   return parsed < 1e12 ? Math.round(parsed * 1000) : Math.round(parsed)
+}
+
+/** Parses DeepSeek's string-or-number balance fields without accepting NaN. */
+function parseDeepSeekAmount(value: unknown): number | undefined {
+  if (typeof value === "number" && Number.isFinite(value)) return value
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value)
+    return Number.isFinite(parsed) ? parsed : undefined
+  }
+  return undefined
+}
+
+/** Normalizes the provider-native DeepSeek balance response. */
+function parseDeepSeekBalance(json: unknown): TelemetryPatch {
+  const record = dataLike(json)
+  const infos = Array.isArray(record.balance_infos)
+    ? record.balance_infos.filter(isRecord)
+    : []
+  const selected =
+    infos.find((item) => item.currency === "CNY") ??
+    infos.find(
+      (item) => (parseDeepSeekAmount(item.total_balance) ?? 0) !== 0,
+    ) ??
+    infos[0]
+
+  if (!selected) {
+    return {
+      balance: {
+        amount: 0,
+        currency: "CNY",
+        isAvailable: record.is_available === true,
+      },
+    }
+  }
+
+  const amount = parseDeepSeekAmount(selected.total_balance)
+  if (amount === undefined) return {}
+
+  const grantedAmount = parseDeepSeekAmount(selected.granted_balance)
+  const toppedUpAmount = parseDeepSeekAmount(selected.topped_up_balance)
+  const currency =
+    typeof selected.currency === "string" && selected.currency.trim()
+      ? selected.currency.trim()
+      : "CNY"
+
+  return {
+    balance: {
+      amount,
+      currency,
+      ...(grantedAmount !== undefined ? { grantedAmount } : {}),
+      ...(toppedUpAmount !== undefined ? { toppedUpAmount } : {}),
+      isAvailable: record.is_available === true,
+    },
+  }
 }
 
 /**
@@ -376,6 +432,25 @@ async function queryOpenAiBilling(
   }
 }
 
+// DeepSeek Open Platform contract: https://api.deepseek.com/user/balance
+// returns balance_infos with string-or-number currency amounts.
+/** Queries DeepSeek's provider-native balance endpoint. */
+async function queryDeepSeekBalance(
+  profile: ApiCredentialProfile,
+): Promise<AdapterSuccess> {
+  const result = await fetchJson({
+    baseUrl: profile.baseUrl,
+    endpoint: TELEMETRY_ENDPOINTS.deepSeekBalance,
+    bearerToken: profile.apiKey,
+  })
+
+  return {
+    source: API_CREDENTIAL_TELEMETRY_SOURCES.DeepSeekBalance,
+    endpoint: result.endpoint,
+    data: parseDeepSeekBalance(result.json),
+  }
+}
+
 /**
  * Queries New API token usage endpoints for quota-based usage data.
  */
@@ -611,6 +686,9 @@ async function runUsageAdapter(
   mode: ApiCredentialTelemetryCapabilityMode,
   config: ApiCredentialTelemetryConfig,
 ): Promise<AdapterSuccess> {
+  if (mode === API_CREDENTIAL_TELEMETRY_MODES.DeepSeekBalance) {
+    return await queryDeepSeekBalance(profile)
+  }
   if (mode === API_CREDENTIAL_TELEMETRY_MODES.OpenAiBilling) {
     return await queryOpenAiBilling(profile)
   }
@@ -631,10 +709,25 @@ async function runUsageAdapter(
  * Expands the configured telemetry mode into concrete adapter attempts.
  */
 function resolveModes(
+  profile: ApiCredentialProfile,
   config: ApiCredentialTelemetryConfig,
 ): ApiCredentialTelemetryCapabilityMode[] {
   if (config.mode === API_CREDENTIAL_TELEMETRY_MODES.Disabled) return []
   if (config.mode === API_CREDENTIAL_TELEMETRY_MODES.Auto) {
+    try {
+      if (new URL(profile.baseUrl).hostname === "api.deepseek.com") {
+        return [
+          API_CREDENTIAL_TELEMETRY_MODES.DeepSeekBalance,
+          API_CREDENTIAL_TELEMETRY_MODES.NewApiTokenUsage,
+          API_CREDENTIAL_TELEMETRY_MODES.Sub2ApiUsage,
+          API_CREDENTIAL_TELEMETRY_MODES.OpenAiBilling,
+        ]
+      }
+    } catch {
+      // The profile storage boundary already validates base URLs. Keep the
+      // generic fallback for legacy or partially migrated data.
+    }
+
     // Prefer provider-specific key telemetry. OpenAI billing endpoints often
     // expose compatibility limits, not spendable gateway balance.
     return [
@@ -651,6 +744,7 @@ function resolveModes(
  */
 function hasUsageData(data: TelemetryPatch): boolean {
   return (
+    data.balance !== undefined ||
     data.balanceUsd !== undefined ||
     data.todayCostUsd !== undefined ||
     data.todayRequests !== undefined ||
@@ -681,7 +775,7 @@ export async function refreshApiCredentialProfileTelemetry(
     profile.apiKey,
     config.customEndpoint?.bearerToken,
   ])
-  const modes = resolveModes(config)
+  const modes = resolveModes(profile, config)
   const attempts: ApiCredentialTelemetryAttempt[] = []
   const now = Date.now()
   const models =
@@ -716,19 +810,22 @@ export async function refreshApiCredentialProfileTelemetry(
       )
     } catch (error) {
       const endpoint =
-        mode === API_CREDENTIAL_TELEMETRY_MODES.OpenAiBilling
-          ? TELEMETRY_ENDPOINTS.openAiBilling.subscription
-          : mode === API_CREDENTIAL_TELEMETRY_MODES.NewApiTokenUsage
-            ? TELEMETRY_ENDPOINTS.newApiTokenUsage
-            : mode === API_CREDENTIAL_TELEMETRY_MODES.Sub2ApiUsage
-              ? TELEMETRY_ENDPOINTS.sub2ApiUsage
-              : config.customEndpoint?.endpoint || "custom"
+        mode === API_CREDENTIAL_TELEMETRY_MODES.DeepSeekBalance
+          ? TELEMETRY_ENDPOINTS.deepSeekBalance
+          : mode === API_CREDENTIAL_TELEMETRY_MODES.OpenAiBilling
+            ? TELEMETRY_ENDPOINTS.openAiBilling.subscription
+            : mode === API_CREDENTIAL_TELEMETRY_MODES.NewApiTokenUsage
+              ? TELEMETRY_ENDPOINTS.newApiTokenUsage
+              : mode === API_CREDENTIAL_TELEMETRY_MODES.Sub2ApiUsage
+                ? TELEMETRY_ENDPOINTS.sub2ApiUsage
+                : config.customEndpoint?.endpoint || "custom"
       attempts.push(attemptFromError(mode, endpoint, error, secrets))
     }
   }
 
   const modelSucceeded = Boolean(models && models.count > 0)
   const usageSucceeded = Boolean(usageResult)
+  const usageUnavailable = usageResult?.data.balance?.isAvailable === false
   const customEndpointError = attempts.find(
     (attempt) =>
       attempt.status === API_CREDENTIAL_TELEMETRY_ATTEMPT_STATUSES.Error &&
@@ -748,7 +845,12 @@ export async function refreshApiCredentialProfileTelemetry(
   const snapshot: ApiCredentialTelemetrySnapshot = {
     health:
       usageSucceeded || modelSucceeded
-        ? { status: SiteHealthStatus.Healthy }
+        ? usageUnavailable
+          ? {
+              status: SiteHealthStatus.Warning,
+              reason: "Provider account is unavailable",
+            }
+          : { status: SiteHealthStatus.Healthy }
         : {
             status: SiteHealthStatus.Warning,
             reason: lastError,

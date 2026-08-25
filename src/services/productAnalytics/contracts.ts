@@ -358,6 +358,7 @@ export const PRODUCT_ANALYTICS_MODE_IDS = {
   RetryFailed: "retry_failed",
   TelemetryAuto: "telemetry_auto",
   TelemetryDisabled: "telemetry_disabled",
+  TelemetryDeepSeekBalance: "telemetry_deepseek_balance",
   TelemetryNewApiTokenUsage: "telemetry_new_api_token_usage",
   TelemetrySub2ApiUsage: "telemetry_sub2api_usage",
   TelemetryOpenAiBilling: "telemetry_openai_billing",
@@ -433,6 +434,7 @@ export type ProductAnalyticsSortField =
 
 export const PRODUCT_ANALYTICS_TELEMETRY_SOURCES = {
   Models: "models",
+  DeepSeekBalance: "deepSeekBalance",
   OpenAiBilling: "openaiBilling",
   NewApiTokenUsage: "newApiTokenUsage",
   Sub2ApiUsage: "sub2apiUsage",

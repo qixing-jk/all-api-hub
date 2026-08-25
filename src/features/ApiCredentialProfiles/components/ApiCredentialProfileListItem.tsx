@@ -157,6 +157,9 @@ function getTelemetrySourceLabel(
   if (!source) return t("apiCredentialProfiles:telemetry.source.notAvailable")
   if (source === API_CREDENTIAL_TELEMETRY_SOURCES.Models)
     return t("apiCredentialProfiles:telemetry.source.models")
+  if (source === API_CREDENTIAL_TELEMETRY_SOURCES.DeepSeekBalance) {
+    return t("apiCredentialProfiles:telemetry.source.deepSeekBalance")
+  }
   if (source === API_CREDENTIAL_TELEMETRY_SOURCES.OpenAiBilling) {
     return t("apiCredentialProfiles:telemetry.source.openaiBilling")
   }
@@ -214,7 +217,8 @@ function hasTelemetryDetailData(
 ): boolean {
   return Boolean(
     snapshot &&
-      (snapshot.balanceUsd !== undefined ||
+      (snapshot.balance !== undefined ||
+        snapshot.balanceUsd !== undefined ||
         snapshot.todayCostUsd !== undefined ||
         snapshot.todayRequests !== undefined ||
         snapshot.todayTokens !== undefined ||
@@ -222,6 +226,23 @@ function hasTelemetryDetailData(
         snapshot.models !== undefined ||
         Boolean(snapshot.lastError)),
   )
+}
+
+/** Formats a provider-native balance without converting its currency. */
+function formatProviderBalance(
+  balance: NonNullable<
+    NonNullable<ApiCredentialProfile["telemetrySnapshot"]>["balance"]
+  >,
+): string {
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency: balance.currency,
+      maximumFractionDigits: 2,
+    }).format(balance.amount)
+  } catch {
+    return `${balance.currency} ${balance.amount.toFixed(2)}`
+  }
 }
 
 /**
@@ -564,12 +585,14 @@ export function ApiCredentialProfileListItem({
                         >
                           {telemetry?.unlimitedQuota
                             ? t("common:quota.unlimited")
-                            : telemetry?.balanceUsd !== undefined
-                              ? formatTelemetryMoney(
-                                  telemetry.balanceUsd,
-                                  currencyType,
-                                )
-                              : missingTelemetryValue}
+                            : telemetry?.balance
+                              ? formatProviderBalance(telemetry.balance)
+                              : telemetry?.balanceUsd !== undefined
+                                ? formatTelemetryMoney(
+                                    telemetry.balanceUsd,
+                                    currencyType,
+                                  )
+                                : missingTelemetryValue}
                         </div>
                       </div>
                       <div className="flex min-w-0 flex-col gap-1">

@@ -44,6 +44,7 @@ export type ApiCredentialProfileLinkTombstone = {
 export const API_CREDENTIAL_TELEMETRY_MODES = {
   Disabled: "disabled",
   Auto: "auto",
+  DeepSeekBalance: "deepSeekBalance",
   OpenAiBilling: "openaiBilling",
   NewApiTokenUsage: "newApiTokenUsage",
   Sub2ApiUsage: "sub2apiUsage",
@@ -118,6 +119,15 @@ export type ApiCredentialTelemetryAttempt = {
   message?: string
 }
 
+/** Provider-native balance facts whose currency is not necessarily USD. */
+export type ApiCredentialTelemetryBalance = {
+  amount: number
+  currency: string
+  grantedAmount?: number
+  toppedUpAmount?: number
+  isAvailable?: boolean
+}
+
 export type ApiCredentialModelTelemetry = {
   count: number
   preview: string[]
@@ -129,6 +139,7 @@ export type ApiCredentialTelemetrySnapshot = {
   lastSuccessTime?: number
   lastError?: string
   source?: ApiCredentialTelemetrySource
+  balance?: ApiCredentialTelemetryBalance
   balanceUsd?: number
   todayCostUsd?: number
   todayRequests?: number

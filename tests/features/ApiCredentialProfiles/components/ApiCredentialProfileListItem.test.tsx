@@ -729,6 +729,31 @@ describe("ApiCredentialProfileListItem", () => {
     ).toHaveTextContent("apiCredentialProfiles:telemetry.notProvided")
   })
 
+  it("shows provider-native currency balances without converting them to USD", () => {
+    renderListItem(
+      buildProfile({
+        telemetrySnapshot: {
+          attempts: [],
+          health: { status: SiteHealthStatus.Healthy },
+          lastSyncTime: 1,
+          lastSuccessTime: 1,
+          source: "deepSeekBalance",
+          balance: {
+            amount: 12.34,
+            currency: "CNY",
+            grantedAmount: 2,
+            toppedUpAmount: 10.34,
+            isAvailable: true,
+          },
+        },
+      }),
+    )
+
+    expect(
+      screen.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.telemetryBalance),
+    ).toHaveTextContent(/12\.34/)
+  })
+
   it("keeps explicit zero telemetry expanded", () => {
     renderListItem(
       buildProfile({

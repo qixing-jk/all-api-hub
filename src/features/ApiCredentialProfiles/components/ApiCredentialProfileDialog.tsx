@@ -667,6 +667,12 @@ export function ApiCredentialProfileDialog({
                   ),
                 },
                 {
+                  value: API_CREDENTIAL_TELEMETRY_MODES.DeepSeekBalance,
+                  label: t(
+                    "apiCredentialProfiles:dialog.telemetryModes.deepSeekBalance",
+                  ),
+                },
+                {
                   value: API_CREDENTIAL_TELEMETRY_MODES.NewApiTokenUsage,
                   label: t(
                     "apiCredentialProfiles:dialog.telemetryModes.newApiTokenUsage",
