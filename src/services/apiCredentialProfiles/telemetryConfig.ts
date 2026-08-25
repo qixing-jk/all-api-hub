@@ -6,19 +6,19 @@ import type {
 export type ApiCredentialTelemetryJsonPathField =
   keyof ApiCredentialTelemetryJsonPathMap
 
-const API_CREDENTIAL_TELEMETRY_JSON_PATH_FIELDS: ApiCredentialTelemetryJsonPathField[] =
-  [
-    "balanceUsd",
-    "todayCostUsd",
-    "todayRequests",
-    "todayPromptTokens",
-    "todayCompletionTokens",
-    "todayTotalTokens",
-    "totalUsedUsd",
-    "totalGrantedUsd",
-    "totalAvailableUsd",
-    "expiresAt",
-  ]
+/** Canonical persisted fields supported by custom read-only telemetry mapping. */
+export const API_CREDENTIAL_TELEMETRY_JSON_PATH_FIELDS = [
+  "balanceUsd",
+  "todayCostUsd",
+  "todayRequests",
+  "todayPromptTokens",
+  "todayCompletionTokens",
+  "todayTotalTokens",
+  "totalUsedUsd",
+  "totalGrantedUsd",
+  "totalAvailableUsd",
+  "expiresAt",
+] as const satisfies readonly ApiCredentialTelemetryJsonPathField[]
 
 /**
  * Accepts the simple dot-path format supported by custom telemetry mapping.

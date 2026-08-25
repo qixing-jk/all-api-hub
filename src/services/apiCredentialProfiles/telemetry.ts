@@ -68,6 +68,34 @@ type JsonFetchResult = {
 const OPENAI_BILLING_LIMIT_BALANCE_MAX_USD = 1_000_000
 const REDACTED_QUERY_VALUE = "[REDACTED]"
 
+/** Provider protocol values kept together so parser branches remain auditable. */
+const TELEMETRY_PROVIDER_PROTOCOL = {
+  currencies: {
+    Cny: "CNY",
+    Usd: "USD",
+    Jpy: "JPY",
+  },
+  glm: {
+    limitTypes: {
+      Tokens: "TOKENS_LIMIT",
+      Credits: "CREDIT_LIMIT",
+      Time: "TIME_LIMIT",
+    },
+    fiveHourUnit: 3,
+    fiveHourNumber: 5,
+    weeklyUnit: 6,
+  },
+  kimi: {
+    fiveHourDurationMinutes: 300,
+    boosterStatuses: ["STATUS_ACTIVE", "STATUS_ENABLED"] as const,
+    boosterCreditsPerUnit: 100_000_000,
+  },
+  openCodeGo: {
+    usageStatus: "ok",
+    windows: ["rolling", "weekly", "monthly"] as const,
+  },
+} as const
+
 const TELEMETRY_ENDPOINTS = {
   deepSeekBalance: "/user/balance",
   glmQuota: "/api/monitor/usage/quota/limit",
@@ -90,7 +118,6 @@ class TelemetryEndpointError extends Error {
   constructor(
     message: string,
     public endpoint: string,
-    public statusCode?: number,
     public unsupported: boolean = false,
   ) {
     super(message)
@@ -151,16 +178,6 @@ function normalizeTimestamp(value: unknown): number | undefined {
   return parsed < 1e12 ? Math.round(parsed * 1000) : Math.round(parsed)
 }
 
-/** Parses DeepSeek's string-or-number balance fields without accepting NaN. */
-function parseDeepSeekAmount(value: unknown): number | undefined {
-  if (typeof value === "number" && Number.isFinite(value)) return value
-  if (typeof value === "string" && value.trim()) {
-    const parsed = Number(value)
-    return Number.isFinite(parsed) ? parsed : undefined
-  }
-  return undefined
-}
-
 /** Normalizes the provider-native DeepSeek balance response. */
 function parseDeepSeekBalance(json: unknown): TelemetryPatch {
   const record = dataLike(json)
@@ -170,17 +187,17 @@ function parseDeepSeekBalance(json: unknown): TelemetryPatch {
     return {
       balance: {
         amount: 0,
-        currency: "CNY",
+        currency: TELEMETRY_PROVIDER_PROTOCOL.currencies.Cny,
         isAvailable: record.is_available === true,
       },
     }
   }
 
   const balances = infos.flatMap((item) => {
-    const amount = parseDeepSeekAmount(item.total_balance)
+    const amount = readNumber(item.total_balance)
     if (amount === undefined) return []
-    const grantedAmount = parseDeepSeekAmount(item.granted_balance)
-    const toppedUpAmount = parseDeepSeekAmount(item.topped_up_balance)
+    const grantedAmount = readNumber(item.granted_balance)
+    const toppedUpAmount = readNumber(item.topped_up_balance)
     const currency =
       typeof item.currency === "string" && item.currency.trim()
         ? item.currency.trim()
@@ -282,12 +299,12 @@ function parseGlmQuota(json: unknown): TelemetryPatch {
 
   for (const row of rows) {
     if (
-      row.type !== "TOKENS_LIMIT" &&
-      row.type !== "CREDIT_LIMIT" &&
-      row.type !== "TIME_LIMIT"
+      row.type !== TELEMETRY_PROVIDER_PROTOCOL.glm.limitTypes.Tokens &&
+      row.type !== TELEMETRY_PROVIDER_PROTOCOL.glm.limitTypes.Credits &&
+      row.type !== TELEMETRY_PROVIDER_PROTOCOL.glm.limitTypes.Time
     )
       continue
-    if (row.type === "TIME_LIMIT") {
+    if (row.type === TELEMETRY_PROVIDER_PROTOCOL.glm.limitTypes.Time) {
       const window = buildQuotaWindow({
         type: API_CREDENTIAL_TELEMETRY_QUOTA_WINDOW_TYPES.Monthly,
         unit:
@@ -306,9 +323,10 @@ function parseGlmQuota(json: unknown): TelemetryPatch {
       continue
     }
     const windowType =
-      row.unit === 3 && row.number === 5
+      row.unit === TELEMETRY_PROVIDER_PROTOCOL.glm.fiveHourUnit &&
+      row.number === TELEMETRY_PROVIDER_PROTOCOL.glm.fiveHourNumber
         ? API_CREDENTIAL_TELEMETRY_QUOTA_WINDOW_TYPES.FiveHour
-        : row.unit === 6
+        : row.unit === TELEMETRY_PROVIDER_PROTOCOL.glm.weeklyUnit
           ? API_CREDENTIAL_TELEMETRY_QUOTA_WINDOW_TYPES.Weekly
           : undefined
     const window = buildQuotaWindow({
@@ -377,7 +395,10 @@ function parseKimiQuota(json: unknown): TelemetryPatch {
     ? record.limits.filter(isRecord)
     : []
   const fiveHourEntry = limits.find(
-    (entry) => isRecord(entry.window) && entry.window.duration === 300,
+    (entry) =>
+      isRecord(entry.window) &&
+      entry.window.duration ===
+        TELEMETRY_PROVIDER_PROTOCOL.kimi.fiveHourDurationMinutes,
   )
   const fiveHourDetail =
     fiveHourEntry && isRecord(fiveHourEntry.detail)
@@ -427,16 +448,21 @@ function parseKimiQuota(json: unknown): TelemetryPatch {
     boosterWallet && isRecord(boosterWallet.balance)
       ? readNumber(boosterWallet.balance.amountLeft)
       : undefined
-  const balance =
-    boosterStatus === "STATUS_ACTIVE" || boosterStatus === "STATUS_ENABLED"
-      ? boosterBalance !== undefined
-        ? {
-            amount: Math.max(0, boosterBalance / 100_000_000),
-            currency: "CNY",
-            isAvailable: true,
-          }
-        : undefined
+  const balance = TELEMETRY_PROVIDER_PROTOCOL.kimi.boosterStatuses.includes(
+    boosterStatus as (typeof TELEMETRY_PROVIDER_PROTOCOL.kimi.boosterStatuses)[number],
+  )
+    ? boosterBalance !== undefined
+      ? {
+          amount: Math.max(
+            0,
+            boosterBalance /
+              TELEMETRY_PROVIDER_PROTOCOL.kimi.boosterCreditsPerUnit,
+          ),
+          currency: TELEMETRY_PROVIDER_PROTOCOL.currencies.Cny,
+          isAvailable: true,
+        }
       : undefined
+    : undefined
 
   if (windows.length === 0 && !balance) return {}
   return {
@@ -467,16 +493,25 @@ function parseOpenCodeGoUsage(json: unknown): TelemetryPatch {
   const usage = isRecord(record.usage) ? record.usage : {}
   const windows: NonNullable<ReturnType<typeof buildQuotaWindow>>[] = []
   const windowDefinitions = [
-    ["rolling", API_CREDENTIAL_TELEMETRY_QUOTA_WINDOW_TYPES.FiveHour],
-    ["weekly", API_CREDENTIAL_TELEMETRY_QUOTA_WINDOW_TYPES.Weekly],
-    ["monthly", API_CREDENTIAL_TELEMETRY_QUOTA_WINDOW_TYPES.Monthly],
+    [
+      TELEMETRY_PROVIDER_PROTOCOL.openCodeGo.windows[0],
+      API_CREDENTIAL_TELEMETRY_QUOTA_WINDOW_TYPES.FiveHour,
+    ],
+    [
+      TELEMETRY_PROVIDER_PROTOCOL.openCodeGo.windows[1],
+      API_CREDENTIAL_TELEMETRY_QUOTA_WINDOW_TYPES.Weekly,
+    ],
+    [
+      TELEMETRY_PROVIDER_PROTOCOL.openCodeGo.windows[2],
+      API_CREDENTIAL_TELEMETRY_QUOTA_WINDOW_TYPES.Monthly,
+    ],
   ] as const
 
   for (const [key, type] of windowDefinitions) {
     const item = isRecord(usage[key]) ? usage[key] : undefined
     const percent = item ? readNumber(item.percent) : undefined
     if (
-      item?.status !== "ok" ||
+      item?.status !== TELEMETRY_PROVIDER_PROTOCOL.openCodeGo.usageStatus ||
       percent === undefined ||
       percent < 0 ||
       percent > 100
@@ -501,7 +536,9 @@ function parseOpenCodeGoUsage(json: unknown): TelemetryPatch {
 /** Parses Kimi Open Platform's wallet response. */
 function parseKimiOpenPlatformBalance(
   json: unknown,
-  currency: "CNY" | "USD",
+  currency:
+    | typeof TELEMETRY_PROVIDER_PROTOCOL.currencies.Cny
+    | typeof TELEMETRY_PROVIDER_PROTOCOL.currencies.Usd,
 ): TelemetryPatch {
   const envelope = isRecord(json) ? json : {}
   if (
@@ -656,7 +693,6 @@ async function fetchJson(params: {
       throw new TelemetryEndpointError(
         error.message,
         error.endpoint ?? params.endpoint,
-        error.statusCode,
         error.statusCode === 404 || error.statusCode === 405,
       )
     }
@@ -872,7 +908,9 @@ async function queryKimiOpenPlatformBalance(
     endpoint: result.endpoint,
     data: parseKimiOpenPlatformBalance(
       result.json,
-      new URL(profile.baseUrl).hostname === "api.moonshot.ai" ? "USD" : "CNY",
+      new URL(profile.baseUrl).hostname === "api.moonshot.ai"
+        ? TELEMETRY_PROVIDER_PROTOCOL.currencies.Usd
+        : TELEMETRY_PROVIDER_PROTOCOL.currencies.Cny,
     ),
   }
 }
@@ -1061,7 +1099,8 @@ function normalizeTelemetryPatchToFacts(
   const balancesToNormalize =
     data.balances ?? (data.balance ? [data.balance] : [])
   for (const balance of balancesToNormalize) {
-    const decimalPlaces = balance.currency === "JPY" ? 0 : 2
+    const decimalPlaces =
+      balance.currency === TELEMETRY_PROVIDER_PROTOCOL.currencies.Jpy ? 0 : 2
     balances.push({
       amount: balance.amount,
       unit: {
@@ -1094,7 +1133,11 @@ function normalizeTelemetryPatchToFacts(
             code: "usd-equivalent",
             label: "USD-equivalent budget",
           }
-        : { kind: "money", currency: "USD", decimalPlaces: 2 },
+        : {
+            kind: "money",
+            currency: TELEMETRY_PROVIDER_PROTOCOL.currencies.Usd,
+            decimalPlaces: 2,
+          },
       semantics: budgetSource
         ? "budget-equivalent"
         : source === API_CREDENTIAL_TELEMETRY_SOURCES.OpenAiBilling
@@ -1142,12 +1185,20 @@ function normalizeTelemetryPatchToFacts(
 
   const budgetUnit: ApiCredentialTelemetryAmount["unit"] = budgetSource
     ? { kind: "quota", code: "usd-equivalent", label: "USD-equivalent budget" }
-    : { kind: "money", currency: "USD", decimalPlaces: 2 }
+    : {
+        kind: "money",
+        currency: TELEMETRY_PROVIDER_PROTOCOL.currencies.Usd,
+        decimalPlaces: 2,
+      }
   const usage: NonNullable<ApiCredentialTelemetryFacts["usage"]> = {}
   if (data.todayCostUsd !== undefined) {
     usage.todayCost = {
       value: data.todayCostUsd,
-      unit: { kind: "money", currency: "USD", decimalPlaces: 2 },
+      unit: {
+        kind: "money",
+        currency: TELEMETRY_PROVIDER_PROTOCOL.currencies.Usd,
+        decimalPlaces: 2,
+      },
     }
   }
   if (data.todayRequests !== undefined) {
@@ -1251,6 +1302,91 @@ async function queryModels(
   }
 }
 
+type TelemetryAdapterDefinition = {
+  source: ApiCredentialTelemetrySource
+  defaultEndpoint: string
+  query: (
+    profile: ApiCredentialProfile,
+    config: ApiCredentialTelemetryConfig,
+  ) => Promise<AdapterSuccess>
+}
+
+/** Single registry for executable modes, source labels, endpoints, and queries. */
+const TELEMETRY_ADAPTERS: Partial<
+  Record<ApiCredentialTelemetryCapabilityMode, TelemetryAdapterDefinition>
+> = {
+  [API_CREDENTIAL_TELEMETRY_MODES.DeepSeekBalance]: {
+    source: API_CREDENTIAL_TELEMETRY_SOURCES.DeepSeekBalance,
+    defaultEndpoint: TELEMETRY_ENDPOINTS.deepSeekBalance,
+    query: (profile) => queryDeepSeekBalance(profile),
+  },
+  [API_CREDENTIAL_TELEMETRY_MODES.GlmQuota]: {
+    source: API_CREDENTIAL_TELEMETRY_SOURCES.GlmQuota,
+    defaultEndpoint: TELEMETRY_ENDPOINTS.glmQuota,
+    query: (profile) => queryGlmQuota(profile),
+  },
+  [API_CREDENTIAL_TELEMETRY_MODES.KimiQuota]: {
+    source: API_CREDENTIAL_TELEMETRY_SOURCES.KimiQuota,
+    defaultEndpoint: TELEMETRY_ENDPOINTS.kimiQuota,
+    query: (profile) => queryKimiQuota(profile),
+  },
+  [API_CREDENTIAL_TELEMETRY_MODES.KimiOpenPlatformBalance]: {
+    source: API_CREDENTIAL_TELEMETRY_SOURCES.KimiOpenPlatformBalance,
+    defaultEndpoint: TELEMETRY_ENDPOINTS.kimiOpenPlatformBalance,
+    query: (profile) => queryKimiOpenPlatformBalance(profile),
+  },
+  [API_CREDENTIAL_TELEMETRY_MODES.OpenCodeGoUsage]: {
+    source: API_CREDENTIAL_TELEMETRY_SOURCES.OpenCodeGoUsage,
+    defaultEndpoint: TELEMETRY_ENDPOINTS.openCodeGoUsage,
+    query: (profile) => queryOpenCodeGoUsage(profile),
+  },
+  [API_CREDENTIAL_TELEMETRY_MODES.OpenAiBilling]: {
+    source: API_CREDENTIAL_TELEMETRY_SOURCES.OpenAiBilling,
+    defaultEndpoint: TELEMETRY_ENDPOINTS.openAiBilling.subscription,
+    query: (profile) => queryOpenAiBilling(profile),
+  },
+  [API_CREDENTIAL_TELEMETRY_MODES.NewApiTokenUsage]: {
+    source: API_CREDENTIAL_TELEMETRY_SOURCES.NewApiTokenUsage,
+    defaultEndpoint: TELEMETRY_ENDPOINTS.newApiTokenUsage,
+    query: (profile) => queryNewApiTokenUsage(profile),
+  },
+  [API_CREDENTIAL_TELEMETRY_MODES.Sub2ApiUsage]: {
+    source: API_CREDENTIAL_TELEMETRY_SOURCES.Sub2ApiUsage,
+    defaultEndpoint: TELEMETRY_ENDPOINTS.sub2ApiUsage,
+    query: (profile) => querySub2ApiUsage(profile),
+  },
+  [API_CREDENTIAL_TELEMETRY_MODES.CustomReadOnlyEndpoint]: {
+    source: API_CREDENTIAL_TELEMETRY_SOURCES.CustomReadOnlyEndpoint,
+    defaultEndpoint: "custom",
+    query: (profile, config) => queryCustomReadOnlyEndpoint(profile, config),
+  },
+}
+
+/** Resolves one executable mode from the telemetry adapter registry. */
+function getTelemetryAdapter(
+  mode: ApiCredentialTelemetryCapabilityMode,
+): TelemetryAdapterDefinition {
+  const adapter = TELEMETRY_ADAPTERS[mode]
+  if (!adapter) throw new Error(`Unsupported telemetry mode: ${mode}`)
+  return adapter
+}
+
+/** Ordered compatibility fallbacks used after provider-specific probes. */
+const AUTO_TELEMETRY_FALLBACK_MODES = [
+  API_CREDENTIAL_TELEMETRY_MODES.NewApiTokenUsage,
+  API_CREDENTIAL_TELEMETRY_MODES.Sub2ApiUsage,
+  API_CREDENTIAL_TELEMETRY_MODES.OpenAiBilling,
+] as const
+
+/** Hostname groups that select provider-specific automatic telemetry. */
+const AUTO_TELEMETRY_HOSTS = {
+  deepSeek: "api.deepseek.com",
+  glm: ["open.bigmodel.cn", "dev.bigmodel.cn"] as readonly string[],
+  kimi: "api.kimi.com",
+  zAi: "api.z.ai",
+  moonshot: ["api.moonshot.cn", "api.moonshot.ai"] as readonly string[],
+} as const
+
 /**
  * Runs the selected telemetry adapter for a profile.
  */
@@ -1259,35 +1395,7 @@ async function runUsageAdapter(
   mode: ApiCredentialTelemetryCapabilityMode,
   config: ApiCredentialTelemetryConfig,
 ): Promise<AdapterSuccess> {
-  if (mode === API_CREDENTIAL_TELEMETRY_MODES.DeepSeekBalance) {
-    return await queryDeepSeekBalance(profile)
-  }
-  if (mode === API_CREDENTIAL_TELEMETRY_MODES.GlmQuota) {
-    return await queryGlmQuota(profile)
-  }
-  if (mode === API_CREDENTIAL_TELEMETRY_MODES.KimiQuota) {
-    return await queryKimiQuota(profile)
-  }
-  if (mode === API_CREDENTIAL_TELEMETRY_MODES.KimiOpenPlatformBalance) {
-    return await queryKimiOpenPlatformBalance(profile)
-  }
-  if (mode === API_CREDENTIAL_TELEMETRY_MODES.OpenCodeGoUsage) {
-    return await queryOpenCodeGoUsage(profile)
-  }
-  if (mode === API_CREDENTIAL_TELEMETRY_MODES.OpenAiBilling) {
-    return await queryOpenAiBilling(profile)
-  }
-  if (mode === API_CREDENTIAL_TELEMETRY_MODES.NewApiTokenUsage) {
-    return await queryNewApiTokenUsage(profile)
-  }
-  if (mode === API_CREDENTIAL_TELEMETRY_MODES.Sub2ApiUsage) {
-    return await querySub2ApiUsage(profile)
-  }
-  if (mode === API_CREDENTIAL_TELEMETRY_MODES.CustomReadOnlyEndpoint) {
-    return await queryCustomReadOnlyEndpoint(profile, config)
-  }
-
-  throw new Error(`Unsupported telemetry mode: ${mode}`)
+  return await getTelemetryAdapter(mode).query(profile, config)
 }
 
 /**
@@ -1301,44 +1409,37 @@ function resolveModes(
   if (config.mode === API_CREDENTIAL_TELEMETRY_MODES.Auto) {
     try {
       const hostname = new URL(profile.baseUrl).hostname
-      if (hostname === "api.deepseek.com") {
+      if (hostname === AUTO_TELEMETRY_HOSTS.deepSeek) {
         return [
           API_CREDENTIAL_TELEMETRY_MODES.DeepSeekBalance,
-          API_CREDENTIAL_TELEMETRY_MODES.NewApiTokenUsage,
-          API_CREDENTIAL_TELEMETRY_MODES.Sub2ApiUsage,
-          API_CREDENTIAL_TELEMETRY_MODES.OpenAiBilling,
+          ...AUTO_TELEMETRY_FALLBACK_MODES,
         ]
       }
-      if (hostname === "open.bigmodel.cn" || hostname === "dev.bigmodel.cn") {
+      if (AUTO_TELEMETRY_HOSTS.glm.includes(hostname)) {
         return [
           API_CREDENTIAL_TELEMETRY_MODES.GlmQuota,
-          API_CREDENTIAL_TELEMETRY_MODES.NewApiTokenUsage,
-          API_CREDENTIAL_TELEMETRY_MODES.Sub2ApiUsage,
-          API_CREDENTIAL_TELEMETRY_MODES.OpenAiBilling,
+          ...AUTO_TELEMETRY_FALLBACK_MODES,
         ]
       }
-      if (hostname === "api.kimi.com") {
+      if (hostname === AUTO_TELEMETRY_HOSTS.kimi) {
         return [
           API_CREDENTIAL_TELEMETRY_MODES.KimiQuota,
-          API_CREDENTIAL_TELEMETRY_MODES.NewApiTokenUsage,
-          API_CREDENTIAL_TELEMETRY_MODES.Sub2ApiUsage,
-          API_CREDENTIAL_TELEMETRY_MODES.OpenAiBilling,
+          ...AUTO_TELEMETRY_FALLBACK_MODES,
         ]
       }
-      if (hostname === "api.z.ai" && isGlmCodingPlanBaseUrl(profile.baseUrl)) {
+      if (
+        hostname === AUTO_TELEMETRY_HOSTS.zAi &&
+        isGlmCodingPlanBaseUrl(profile.baseUrl)
+      ) {
         return [
           API_CREDENTIAL_TELEMETRY_MODES.GlmQuota,
-          API_CREDENTIAL_TELEMETRY_MODES.NewApiTokenUsage,
-          API_CREDENTIAL_TELEMETRY_MODES.Sub2ApiUsage,
-          API_CREDENTIAL_TELEMETRY_MODES.OpenAiBilling,
+          ...AUTO_TELEMETRY_FALLBACK_MODES,
         ]
       }
-      if (hostname === "api.moonshot.cn" || hostname === "api.moonshot.ai") {
+      if (AUTO_TELEMETRY_HOSTS.moonshot.includes(hostname)) {
         return [
           API_CREDENTIAL_TELEMETRY_MODES.KimiOpenPlatformBalance,
-          API_CREDENTIAL_TELEMETRY_MODES.NewApiTokenUsage,
-          API_CREDENTIAL_TELEMETRY_MODES.Sub2ApiUsage,
-          API_CREDENTIAL_TELEMETRY_MODES.OpenAiBilling,
+          ...AUTO_TELEMETRY_FALLBACK_MODES,
         ]
       }
       if (isOpenCodeGoBaseUrl(profile.baseUrl)) {
@@ -1351,11 +1452,7 @@ function resolveModes(
 
     // Prefer provider-specific key telemetry. OpenAI billing endpoints often
     // expose compatibility limits, not spendable gateway balance.
-    return [
-      API_CREDENTIAL_TELEMETRY_MODES.NewApiTokenUsage,
-      API_CREDENTIAL_TELEMETRY_MODES.Sub2ApiUsage,
-      API_CREDENTIAL_TELEMETRY_MODES.OpenAiBilling,
-    ]
+    return [...AUTO_TELEMETRY_FALLBACK_MODES]
   }
   return [config.mode]
 }
@@ -1364,25 +1461,7 @@ function resolveModes(
 function sourceForMode(
   mode: ApiCredentialTelemetryCapabilityMode,
 ): ApiCredentialTelemetrySource {
-  if (mode === API_CREDENTIAL_TELEMETRY_MODES.DeepSeekBalance)
-    return API_CREDENTIAL_TELEMETRY_SOURCES.DeepSeekBalance
-  if (mode === API_CREDENTIAL_TELEMETRY_MODES.GlmQuota)
-    return API_CREDENTIAL_TELEMETRY_SOURCES.GlmQuota
-  if (mode === API_CREDENTIAL_TELEMETRY_MODES.KimiQuota)
-    return API_CREDENTIAL_TELEMETRY_SOURCES.KimiQuota
-  if (mode === API_CREDENTIAL_TELEMETRY_MODES.KimiOpenPlatformBalance)
-    return API_CREDENTIAL_TELEMETRY_SOURCES.KimiOpenPlatformBalance
-  if (mode === API_CREDENTIAL_TELEMETRY_MODES.OpenCodeGoUsage)
-    return API_CREDENTIAL_TELEMETRY_SOURCES.OpenCodeGoUsage
-  if (mode === API_CREDENTIAL_TELEMETRY_MODES.OpenAiBilling)
-    return API_CREDENTIAL_TELEMETRY_SOURCES.OpenAiBilling
-  if (mode === API_CREDENTIAL_TELEMETRY_MODES.NewApiTokenUsage)
-    return API_CREDENTIAL_TELEMETRY_SOURCES.NewApiTokenUsage
-  if (mode === API_CREDENTIAL_TELEMETRY_MODES.Sub2ApiUsage)
-    return API_CREDENTIAL_TELEMETRY_SOURCES.Sub2ApiUsage
-  if (mode === API_CREDENTIAL_TELEMETRY_MODES.CustomReadOnlyEndpoint)
-    return API_CREDENTIAL_TELEMETRY_SOURCES.CustomReadOnlyEndpoint
-  throw new Error(`Unsupported telemetry source mode: ${mode}`)
+  return getTelemetryAdapter(mode).source
 }
 
 /**
@@ -1458,23 +1537,9 @@ export async function refreshApiCredentialProfileTelemetry(
       )
     } catch (error) {
       const endpoint =
-        mode === API_CREDENTIAL_TELEMETRY_MODES.DeepSeekBalance
-          ? TELEMETRY_ENDPOINTS.deepSeekBalance
-          : mode === API_CREDENTIAL_TELEMETRY_MODES.GlmQuota
-            ? TELEMETRY_ENDPOINTS.glmQuota
-            : mode === API_CREDENTIAL_TELEMETRY_MODES.KimiQuota
-              ? TELEMETRY_ENDPOINTS.kimiQuota
-              : mode === API_CREDENTIAL_TELEMETRY_MODES.KimiOpenPlatformBalance
-                ? TELEMETRY_ENDPOINTS.kimiOpenPlatformBalance
-                : mode === API_CREDENTIAL_TELEMETRY_MODES.OpenCodeGoUsage
-                  ? TELEMETRY_ENDPOINTS.openCodeGoUsage
-                  : mode === API_CREDENTIAL_TELEMETRY_MODES.OpenAiBilling
-                    ? TELEMETRY_ENDPOINTS.openAiBilling.subscription
-                    : mode === API_CREDENTIAL_TELEMETRY_MODES.NewApiTokenUsage
-                      ? TELEMETRY_ENDPOINTS.newApiTokenUsage
-                      : mode === API_CREDENTIAL_TELEMETRY_MODES.Sub2ApiUsage
-                        ? TELEMETRY_ENDPOINTS.sub2ApiUsage
-                        : config.customEndpoint?.endpoint || "custom"
+        mode === API_CREDENTIAL_TELEMETRY_MODES.CustomReadOnlyEndpoint
+          ? config.customEndpoint?.endpoint || "custom"
+          : getTelemetryAdapter(mode).defaultEndpoint
       attempts.push(
         attemptFromError(sourceForMode(mode), endpoint, error, secrets),
       )

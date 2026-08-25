@@ -61,7 +61,6 @@ export default function ApiCredentialProfilesStatsSection() {
       (acc, profile) => {
         const snapshot = profile.telemetrySnapshot
         if (!snapshot) return acc
-        acc.profileTelemetryCount += 1
         if (snapshot.health.status === SiteHealthStatus.Healthy) {
           acc.healthyCount += 1
         } else {
@@ -94,7 +93,6 @@ export default function ApiCredentialProfilesStatsSection() {
         healthyCount: 0,
         balanceUsd: 0,
         balanceSources: 0,
-        profileTelemetryCount: 0,
         unhealthyTelemetryCount: 0,
         todayUsageSources: 0,
         todayUsageUsd: 0,

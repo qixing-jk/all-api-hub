@@ -21,6 +21,7 @@ import { Modal } from "~/components/ui/Dialog/Modal"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { TagPicker } from "~/features/AccountManagement/components/TagPicker"
 import {
+  API_CREDENTIAL_TELEMETRY_JSON_PATH_FIELDS,
   coerceApiCredentialTelemetryJsonPathMap,
   isSupportedApiCredentialTelemetryEndpoint,
   type ApiCredentialTelemetryJsonPathField,
@@ -219,67 +220,42 @@ export function ApiCredentialProfileDialog({
     const normalized = normalizeBaseUrl(apiType, baseUrl)
     return normalized ?? ""
   }, [apiType, baseUrl])
-  const telemetryJsonPathFields = useMemo(
-    () => [
-      {
-        field: "balanceUsd" as const,
-        label: t("apiCredentialProfiles:dialog.telemetryJsonPaths.balanceUsd"),
-      },
-      {
-        field: "todayCostUsd" as const,
-        label: t(
-          "apiCredentialProfiles:dialog.telemetryJsonPaths.todayCostUsd",
-        ),
-      },
-      {
-        field: "todayRequests" as const,
-        label: t(
-          "apiCredentialProfiles:dialog.telemetryJsonPaths.todayRequests",
-        ),
-      },
-      {
-        field: "todayPromptTokens" as const,
-        label: t(
-          "apiCredentialProfiles:dialog.telemetryJsonPaths.todayPromptTokens",
-        ),
-      },
-      {
-        field: "todayCompletionTokens" as const,
-        label: t(
-          "apiCredentialProfiles:dialog.telemetryJsonPaths.todayCompletionTokens",
-        ),
-      },
-      {
-        field: "todayTotalTokens" as const,
-        label: t(
-          "apiCredentialProfiles:dialog.telemetryJsonPaths.todayTotalTokens",
-        ),
-      },
-      {
-        field: "totalUsedUsd" as const,
-        label: t(
-          "apiCredentialProfiles:dialog.telemetryJsonPaths.totalUsedUsd",
-        ),
-      },
-      {
-        field: "totalGrantedUsd" as const,
-        label: t(
-          "apiCredentialProfiles:dialog.telemetryJsonPaths.totalGrantedUsd",
-        ),
-      },
-      {
-        field: "totalAvailableUsd" as const,
-        label: t(
-          "apiCredentialProfiles:dialog.telemetryJsonPaths.totalAvailableUsd",
-        ),
-      },
-      {
-        field: "expiresAt" as const,
-        label: t("apiCredentialProfiles:dialog.telemetryJsonPaths.expiresAt"),
-      },
-    ],
-    [t],
-  )
+  const telemetryJsonPathFields = useMemo(() => {
+    const labels = {
+      balanceUsd: t(
+        "apiCredentialProfiles:dialog.telemetryJsonPaths.balanceUsd",
+      ),
+      todayCostUsd: t(
+        "apiCredentialProfiles:dialog.telemetryJsonPaths.todayCostUsd",
+      ),
+      todayRequests: t(
+        "apiCredentialProfiles:dialog.telemetryJsonPaths.todayRequests",
+      ),
+      todayPromptTokens: t(
+        "apiCredentialProfiles:dialog.telemetryJsonPaths.todayPromptTokens",
+      ),
+      todayCompletionTokens: t(
+        "apiCredentialProfiles:dialog.telemetryJsonPaths.todayCompletionTokens",
+      ),
+      todayTotalTokens: t(
+        "apiCredentialProfiles:dialog.telemetryJsonPaths.todayTotalTokens",
+      ),
+      totalUsedUsd: t(
+        "apiCredentialProfiles:dialog.telemetryJsonPaths.totalUsedUsd",
+      ),
+      totalGrantedUsd: t(
+        "apiCredentialProfiles:dialog.telemetryJsonPaths.totalGrantedUsd",
+      ),
+      totalAvailableUsd: t(
+        "apiCredentialProfiles:dialog.telemetryJsonPaths.totalAvailableUsd",
+      ),
+      expiresAt: t("apiCredentialProfiles:dialog.telemetryJsonPaths.expiresAt"),
+    }
+    return API_CREDENTIAL_TELEMETRY_JSON_PATH_FIELDS.map((field) => ({
+      field,
+      label: labels[field],
+    }))
+  }, [t])
 
   const validate = () => {
     const nextErrors: typeof errors = {}
