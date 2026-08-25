@@ -64,6 +64,7 @@ const TELEMETRY_ENDPOINTS = {
   deepSeekBalance: "/user/balance",
   glmQuota: "/api/monitor/usage/quota/limit",
   kimiQuota: "/coding/v1/usages",
+  kimiOpenPlatformBalance: "/v1/users/me/balance",
   models: {
     google: "/v1beta/models",
     openAiCompatible: "/v1/models",
@@ -420,6 +421,27 @@ function parseKimiQuota(json: unknown): TelemetryPatch {
   }
 }
 
+// Kimi Open Platform contract: https://platform.kimi.com/docs/api/balance
+// The CN endpoint returns available, voucher, and cash balances in CNY.
+/** Parses Moonshot CN's Open Platform wallet response. */
+function parseKimiOpenPlatformBalance(json: unknown): TelemetryPatch {
+  const record = dataLike(json)
+  const available = readNumber(record.available_balance)
+  if (available === undefined) return {}
+
+  const voucher = readNumber(record.voucher_balance)
+  const cash = readNumber(record.cash_balance)
+  return {
+    balance: {
+      amount: available,
+      currency: "CNY",
+      ...(voucher !== undefined ? { grantedAmount: voucher } : {}),
+      ...(cash !== undefined ? { toppedUpAmount: cash } : {}),
+      isAvailable: available > 0,
+    },
+  }
+}
+
 /**
  * Reads a nested value from an object using a dot-separated path.
  */
@@ -719,6 +741,23 @@ async function queryKimiQuota(
     source: API_CREDENTIAL_TELEMETRY_SOURCES.KimiQuota,
     endpoint: result.endpoint,
     data: parseKimiQuota(result.json),
+  }
+}
+
+/** Queries Kimi CN Open Platform's pay-as-you-go wallet endpoint. */
+async function queryKimiOpenPlatformBalance(
+  profile: ApiCredentialProfile,
+): Promise<AdapterSuccess> {
+  const result = await fetchJson({
+    baseUrl: profile.baseUrl,
+    endpoint: TELEMETRY_ENDPOINTS.kimiOpenPlatformBalance,
+    bearerToken: profile.apiKey,
+  })
+
+  return {
+    source: API_CREDENTIAL_TELEMETRY_SOURCES.KimiOpenPlatformBalance,
+    endpoint: result.endpoint,
+    data: parseKimiOpenPlatformBalance(result.json),
   }
 }
 
@@ -1095,6 +1134,9 @@ async function runUsageAdapter(
   if (mode === API_CREDENTIAL_TELEMETRY_MODES.KimiQuota) {
     return await queryKimiQuota(profile)
   }
+  if (mode === API_CREDENTIAL_TELEMETRY_MODES.KimiOpenPlatformBalance) {
+    return await queryKimiOpenPlatformBalance(profile)
+  }
   if (mode === API_CREDENTIAL_TELEMETRY_MODES.OpenAiBilling) {
     return await queryOpenAiBilling(profile)
   }
@@ -1146,6 +1188,14 @@ function resolveModes(
           API_CREDENTIAL_TELEMETRY_MODES.OpenAiBilling,
         ]
       }
+      if (hostname === "api.moonshot.cn") {
+        return [
+          API_CREDENTIAL_TELEMETRY_MODES.KimiOpenPlatformBalance,
+          API_CREDENTIAL_TELEMETRY_MODES.NewApiTokenUsage,
+          API_CREDENTIAL_TELEMETRY_MODES.Sub2ApiUsage,
+          API_CREDENTIAL_TELEMETRY_MODES.OpenAiBilling,
+        ]
+      }
     } catch {
       // The profile storage boundary already validates base URLs. Keep the
       // generic fallback for legacy or partially migrated data.
@@ -1172,6 +1222,8 @@ function sourceForMode(
     return API_CREDENTIAL_TELEMETRY_SOURCES.GlmQuota
   if (mode === API_CREDENTIAL_TELEMETRY_MODES.KimiQuota)
     return API_CREDENTIAL_TELEMETRY_SOURCES.KimiQuota
+  if (mode === API_CREDENTIAL_TELEMETRY_MODES.KimiOpenPlatformBalance)
+    return API_CREDENTIAL_TELEMETRY_SOURCES.KimiOpenPlatformBalance
   if (mode === API_CREDENTIAL_TELEMETRY_MODES.OpenAiBilling)
     return API_CREDENTIAL_TELEMETRY_SOURCES.OpenAiBilling
   if (mode === API_CREDENTIAL_TELEMETRY_MODES.NewApiTokenUsage)
@@ -1261,13 +1313,15 @@ export async function refreshApiCredentialProfileTelemetry(
             ? TELEMETRY_ENDPOINTS.glmQuota
             : mode === API_CREDENTIAL_TELEMETRY_MODES.KimiQuota
               ? TELEMETRY_ENDPOINTS.kimiQuota
-              : mode === API_CREDENTIAL_TELEMETRY_MODES.OpenAiBilling
-                ? TELEMETRY_ENDPOINTS.openAiBilling.subscription
-                : mode === API_CREDENTIAL_TELEMETRY_MODES.NewApiTokenUsage
-                  ? TELEMETRY_ENDPOINTS.newApiTokenUsage
-                  : mode === API_CREDENTIAL_TELEMETRY_MODES.Sub2ApiUsage
-                    ? TELEMETRY_ENDPOINTS.sub2ApiUsage
-                    : config.customEndpoint?.endpoint || "custom"
+              : mode === API_CREDENTIAL_TELEMETRY_MODES.KimiOpenPlatformBalance
+                ? TELEMETRY_ENDPOINTS.kimiOpenPlatformBalance
+                : mode === API_CREDENTIAL_TELEMETRY_MODES.OpenAiBilling
+                  ? TELEMETRY_ENDPOINTS.openAiBilling.subscription
+                  : mode === API_CREDENTIAL_TELEMETRY_MODES.NewApiTokenUsage
+                    ? TELEMETRY_ENDPOINTS.newApiTokenUsage
+                    : mode === API_CREDENTIAL_TELEMETRY_MODES.Sub2ApiUsage
+                      ? TELEMETRY_ENDPOINTS.sub2ApiUsage
+                      : config.customEndpoint?.endpoint || "custom"
       attempts.push(
         attemptFromError(sourceForMode(mode), endpoint, error, secrets),
       )

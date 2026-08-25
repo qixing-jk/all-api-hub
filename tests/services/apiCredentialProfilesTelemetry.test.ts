@@ -323,6 +323,62 @@ describe("api credential profile telemetry", () => {
     )
   })
 
+  it("auto-detects Kimi CN Open Platform balance telemetry", async () => {
+    const profile = await apiCredentialProfilesStorage.createProfile({
+      name: "Kimi Open Platform",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      baseUrl: "https://api.moonshot.cn",
+      apiKey: "sk-moonshot-cn",
+      telemetryConfig: { mode: "auto" },
+    })
+
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      if (String(input).endsWith("/v1/users/me/balance")) {
+        return jsonResponse({
+          code: 0,
+          data: {
+            available_balance: 49.58894,
+            voucher_balance: 46.58893,
+            cash_balance: 3.00001,
+          },
+          scode: "0x0",
+          status: true,
+        })
+      }
+      return jsonResponse({ data: [] })
+    })
+    vi.stubGlobal("fetch", fetchMock)
+
+    const snapshot = await refreshApiCredentialProfileTelemetry(profile.id)
+
+    expect(snapshot).toEqual(
+      expect.objectContaining({
+        health: { status: SiteHealthStatus.Healthy },
+        source: "kimiOpenPlatformBalance",
+        facts: expect.objectContaining({
+          balances: [
+            {
+              amount: 49.58894,
+              unit: { kind: "money", currency: "CNY", decimalPlaces: 2 },
+              semantics: "provider-wallet",
+              grantedAmount: 46.58893,
+              toppedUpAmount: 3.00001,
+              isAvailable: true,
+            },
+          ],
+        }),
+      }),
+    )
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.moonshot.cn/v1/users/me/balance",
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: "Bearer sk-moonshot-cn",
+        }),
+      }),
+    )
+  })
+
   it("refreshes NewAPI token telemetry and persists a healthy snapshot", async () => {
     const profile = await apiCredentialProfilesStorage.createProfile({
       name: "NewAPI",

@@ -685,6 +685,12 @@ export function ApiCredentialProfileDialog({
                   ),
                 },
                 {
+                  value: API_CREDENTIAL_TELEMETRY_MODES.KimiOpenPlatformBalance,
+                  label: t(
+                    "apiCredentialProfiles:dialog.telemetryModes.kimiOpenPlatformBalance",
+                  ),
+                },
+                {
                   value: API_CREDENTIAL_TELEMETRY_MODES.NewApiTokenUsage,
                   label: t(
                     "apiCredentialProfiles:dialog.telemetryModes.newApiTokenUsage",

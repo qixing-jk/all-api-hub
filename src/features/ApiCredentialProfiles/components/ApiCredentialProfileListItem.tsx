@@ -169,6 +169,9 @@ function getTelemetrySourceLabel(
   if (source === API_CREDENTIAL_TELEMETRY_SOURCES.KimiQuota) {
     return t("apiCredentialProfiles:telemetry.source.kimiQuota")
   }
+  if (source === API_CREDENTIAL_TELEMETRY_SOURCES.KimiOpenPlatformBalance) {
+    return t("apiCredentialProfiles:telemetry.source.kimiOpenPlatformBalance")
+  }
   if (source === API_CREDENTIAL_TELEMETRY_SOURCES.OpenAiBilling) {
     return t("apiCredentialProfiles:telemetry.source.openaiBilling")
   }
