@@ -1044,7 +1044,11 @@ describe("Octopus API service", () => {
           {
             ...currentChannelResponse({ id: 2 }),
             model: undefined,
-            models: [{ name: "model-a" }, { name: "model-b" }],
+            models: [
+              { name: "model-a" },
+              { name: "model-b" },
+              { unsupported: true },
+            ],
           },
           {
             ...currentChannelResponse({
