@@ -154,6 +154,44 @@ describe("ApiCredentialProfilesStatsSection", () => {
     expect(placeholders[1]).toHaveClass("block")
   })
 
+  it("aggregates multiple cash balances in the same currency", () => {
+    mockUseUserPreferencesContext.mockReturnValue({ currencyType: "USD" })
+    mockUseApiCredentialProfiles.mockReturnValue({
+      isLoading: false,
+      profiles: [
+        buildProfile({
+          telemetrySnapshot: {
+            attempts: [],
+            health: { status: SiteHealthStatus.Healthy },
+            lastSyncTime: 1000,
+            facts: {
+              balances: [
+                {
+                  amount: 4,
+                  unit: { kind: "money", currency: "USD", decimalPlaces: 2 },
+                  semantics: "cash",
+                },
+                {
+                  amount: 6,
+                  unit: { kind: "money", currency: "USD", decimalPlaces: 2 },
+                  semantics: "cash",
+                },
+              ],
+            },
+          },
+        }),
+      ],
+    })
+
+    render(<ApiCredentialProfilesStatsSection />, {
+      withReleaseUpdateStatusProvider: false,
+      withThemeProvider: false,
+      withUserPreferencesProvider: false,
+    })
+
+    expect(screen.getByText("$10.00")).toBeInTheDocument()
+  })
+
   it("does not present refreshed snapshots without balance as a zero balance", () => {
     mockUseUserPreferencesContext.mockReturnValue({ currencyType: "USD" })
     mockUseApiCredentialProfiles.mockReturnValue({

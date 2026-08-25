@@ -431,6 +431,41 @@ describe("apiCredentialProfilesStorage additional flows", () => {
     )
   })
 
+  it("drops persisted quota windows with impossible remaining percentages", () => {
+    const coerced = coerceApiCredentialProfilesConfig(
+      {
+        profiles: [
+          {
+            id: "profile-invalid-quota",
+            name: "Invalid quota",
+            apiType: API_TYPES.OPENAI_COMPATIBLE,
+            baseUrl: "https://example.com",
+            apiKey: "sk-invalid-quota",
+            telemetrySnapshot: {
+              health: { status: SiteHealthStatus.Healthy },
+              lastSyncTime: 1000,
+              facts: {
+                quota: {
+                  windows: [
+                    {
+                      type: "weekly",
+                      unit: { kind: "percent" },
+                      remainingPercent: 101,
+                    },
+                  ],
+                },
+              },
+              attempts: [],
+            },
+          },
+        ],
+      },
+      { now: 12345 },
+    )
+
+    expect(coerced.profiles[0].telemetrySnapshot?.facts?.quota).toBeUndefined()
+  })
+
   it("keeps cross-origin HTTP(S) custom telemetry endpoint details", () => {
     const coerced = coerceApiCredentialProfilesConfig(
       {

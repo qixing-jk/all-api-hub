@@ -153,6 +153,34 @@ describe("api credential profile telemetry", () => {
     )
   })
 
+  it("rejects a malformed DeepSeek balance response instead of inventing zero", async () => {
+    const profile = await apiCredentialProfilesStorage.createProfile({
+      name: "Malformed DeepSeek",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      baseUrl: "https://api.deepseek.com",
+      apiKey: "sk-deepseek-malformed",
+      telemetryConfig: { mode: "deepSeekBalance" },
+    })
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => jsonResponse({ is_available: false })),
+    )
+
+    const snapshot = await refreshApiCredentialProfileTelemetry(profile.id)
+
+    expect(snapshot.source).toBeUndefined()
+    expect(snapshot.facts?.balances).toBeUndefined()
+    expect(snapshot.attempts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          source: "deepSeekBalance",
+          status: "unsupported",
+        }),
+      ]),
+    )
+  })
+
   it("auto-detects OpenCode Go usage and converts provider used-percent to remaining quota", async () => {
     const profile = await apiCredentialProfilesStorage.createProfile({
       name: "OpenCode Go",
@@ -219,6 +247,34 @@ describe("api credential profile telemetry", () => {
         }),
       }),
     )
+  })
+
+  it("ignores OpenCode windows whose provider status is not ok", async () => {
+    const profile = await apiCredentialProfilesStorage.createProfile({
+      name: "OpenCode stale",
+      apiType: API_TYPES.ANTHROPIC,
+      baseUrl: "https://opencode.ai/zen/go",
+      apiKey: "sk-opencode-stale",
+      telemetryConfig: { mode: "openCodeGoUsage" },
+    })
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          usage: {
+            rolling: { status: "error", percent: 1 },
+            weekly: { status: "ok", percent: 20 },
+          },
+        }),
+      ),
+    )
+
+    const snapshot = await refreshApiCredentialProfileTelemetry(profile.id)
+
+    expect(snapshot.facts?.quota?.windows).toEqual([
+      expect.objectContaining({ type: "weekly", remainingPercent: 80 }),
+    ])
   })
 
   it("does not treat an incompatible OpenCode usage payload as quota data", async () => {
@@ -289,6 +345,13 @@ describe("api credential profile telemetry", () => {
                 currentValue: 2500,
                 remaining: 7500,
               },
+              {
+                type: "TIME_LIMIT",
+                percentage: 10,
+                usage: 100,
+                currentValue: 10,
+                nextResetTime: 1779235200000,
+              },
             ],
           },
         })
@@ -318,6 +381,18 @@ describe("api credential profile telemetry", () => {
                 used: 2500,
                 limit: 10000,
                 remaining: 7500,
+                unit: {
+                  kind: "quota",
+                  code: "glm-credit",
+                  label: "GLM credits",
+                },
+              }),
+              expect.objectContaining({
+                type: "monthly",
+                remainingPercent: 90,
+                used: 10,
+                limit: 100,
+                remaining: 90,
                 unit: {
                   kind: "quota",
                   code: "glm-credit",
@@ -596,6 +671,32 @@ describe("api credential profile telemetry", () => {
         }),
       }),
     )
+  })
+
+  it("rejects Kimi Open Platform balances without a successful envelope", async () => {
+    const profile = await apiCredentialProfilesStorage.createProfile({
+      name: "Kimi invalid balance",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      baseUrl: "https://api.moonshot.cn",
+      apiKey: "sk-moonshot-invalid",
+      telemetryConfig: { mode: "kimiOpenPlatformBalance" },
+    })
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          code: 1001,
+          data: { available_balance: 99 },
+          status: false,
+        }),
+      ),
+    )
+
+    const snapshot = await refreshApiCredentialProfileTelemetry(profile.id)
+
+    expect(snapshot.source).toBeUndefined()
+    expect(snapshot.facts?.balances).toBeUndefined()
   })
 
   it("selects a non-zero DeepSeek USD balance when CNY is empty", async () => {

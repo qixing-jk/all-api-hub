@@ -67,14 +67,17 @@ export default function ApiCredentialProfilesStatsSection() {
         } else {
           acc.unhealthyTelemetryCount += 1
         }
-        const usdCashBalance = snapshot.facts?.balances?.find(
+        const usdCashBalances = snapshot.facts?.balances?.filter(
           (balance) =>
             balance.unit.kind === "money" &&
             balance.unit.currency === "USD" &&
             balance.semantics === "cash",
         )
-        if (usdCashBalance) {
-          acc.balanceUsd += usdCashBalance.amount
+        if (usdCashBalances && usdCashBalances.length > 0) {
+          acc.balanceUsd += usdCashBalances.reduce(
+            (total, balance) => total + balance.amount,
+            0,
+          )
           acc.balanceSources += 1
         }
         const todayCost = snapshot.facts?.usage?.todayCost

@@ -826,6 +826,39 @@ describe("ApiCredentialProfileListItem", () => {
     ).toHaveTextContent(/75%.*80%/)
   })
 
+  it("shows a provider quota window reset time when available", () => {
+    const resetTime = new Date("2026-08-27T00:00:00.000Z").getTime()
+    renderListItem(
+      buildProfile({
+        telemetrySnapshot: {
+          attempts: [],
+          health: { status: SiteHealthStatus.Healthy },
+          lastSyncTime: 1,
+          source: "openCodeGoUsage",
+          facts: {
+            quota: {
+              windows: [
+                {
+                  type: "fiveHour",
+                  remainingPercent: 75,
+                  resetTime,
+                  unit: { kind: "percent" },
+                },
+              ],
+            },
+          },
+        },
+      }),
+    )
+
+    expect(
+      screen.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.telemetryQuota),
+    ).toHaveTextContent("apiCredentialProfiles:telemetry.quotaWindows.resetAt")
+    expect(
+      screen.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.telemetryQuota),
+    ).toHaveTextContent("2026")
+  })
+
   it("keeps explicit zero telemetry expanded", () => {
     renderListItem(
       buildProfile({

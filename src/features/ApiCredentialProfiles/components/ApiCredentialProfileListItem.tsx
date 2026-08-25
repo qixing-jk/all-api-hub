@@ -672,7 +672,20 @@ export function ApiCredentialProfileListItem({
                                 className="dark:bg-dark-bg-tertiary/60 rounded-md bg-white px-2 py-1.5 font-medium text-gray-800 dark:text-gray-200"
                                 key={window.type}
                               >
-                                {formatProviderQuotaWindow(window, t)}
+                                <div>
+                                  {formatProviderQuotaWindow(window, t)}
+                                </div>
+                                {window.resetTime !== undefined ? (
+                                  <div className="dark:text-dark-text-tertiary mt-0.5 text-[10px] font-normal text-gray-500">
+                                    {t(
+                                      "apiCredentialProfiles:telemetry.quotaWindows.resetAt",
+                                    )}{" "}
+                                    {formatLocaleDateTime(
+                                      window.resetTime,
+                                      t("common:labels.notAvailable"),
+                                    )}
+                                  </div>
+                                ) : null}
                               </div>
                             ))}
                           </div>

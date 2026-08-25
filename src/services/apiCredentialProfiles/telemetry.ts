@@ -164,10 +164,9 @@ function parseDeepSeekAmount(value: unknown): number | undefined {
 /** Normalizes the provider-native DeepSeek balance response. */
 function parseDeepSeekBalance(json: unknown): TelemetryPatch {
   const record = dataLike(json)
-  const infos = Array.isArray(record.balance_infos)
-    ? record.balance_infos.filter(isRecord)
-    : []
-  if (infos.length === 0) {
+  if (!Array.isArray(record.balance_infos)) return {}
+  const infos = record.balance_infos.filter(isRecord)
+  if (record.balance_infos.length === 0) {
     return {
       balance: {
         amount: 0,
@@ -264,7 +263,11 @@ function parseIsoTimestamp(value: unknown): number | undefined {
   return Number.isFinite(timestamp) ? timestamp : undefined
 }
 
-/** Parses GLM Coding Plan's five-hour and weekly quota response. */
+/**
+ * Parses GLM Coding Plan's five-hour, weekly, and monthly quota response.
+ * TIME_LIMIT is the official plugin's one-month MCP usage window:
+ * https://github.com/zai-org/zai-coding-plugins/blob/main/plugins/glm-plan-usage/skills/usage-query-skill/scripts/query-usage.mjs
+ */
 function parseGlmQuota(json: unknown): TelemetryPatch {
   const envelope = isRecord(json) ? json : {}
   if (envelope.success !== true || !isRecord(envelope.data)) return {}
@@ -274,10 +277,34 @@ function parseGlmQuota(json: unknown): TelemetryPatch {
     : []
   let fiveHour: ReturnType<typeof buildQuotaWindow>
   let weekly: ReturnType<typeof buildQuotaWindow>
+  let monthly: ReturnType<typeof buildQuotaWindow>
   const fallback: NonNullable<ReturnType<typeof buildQuotaWindow>>[] = []
 
   for (const row of rows) {
-    if (row.type !== "TOKENS_LIMIT" && row.type !== "CREDIT_LIMIT") continue
+    if (
+      row.type !== "TOKENS_LIMIT" &&
+      row.type !== "CREDIT_LIMIT" &&
+      row.type !== "TIME_LIMIT"
+    )
+      continue
+    if (row.type === "TIME_LIMIT") {
+      const window = buildQuotaWindow({
+        type: API_CREDENTIAL_TELEMETRY_QUOTA_WINDOW_TYPES.Monthly,
+        unit:
+          row.usage !== undefined ||
+          row.currentValue !== undefined ||
+          row.remaining !== undefined
+            ? "provider"
+            : "percent",
+        limit: row.usage,
+        used: row.currentValue,
+        remaining: row.remaining,
+        percentUsed: row.percentage,
+        resetTime: row.nextResetTime,
+      })
+      if (window) monthly ??= window
+      continue
+    }
     const windowType =
       row.unit === 3 && row.number === 5
         ? API_CREDENTIAL_TELEMETRY_QUOTA_WINDOW_TYPES.FiveHour
@@ -312,7 +339,7 @@ function parseGlmQuota(json: unknown): TelemetryPatch {
 
   fiveHour ??= fallback.shift()
   weekly ??= fallback.shift()
-  const windows = [fiveHour, weekly].filter(
+  const windows = [fiveHour, weekly, monthly].filter(
     (window): window is NonNullable<typeof window> => Boolean(window),
   )
   if (windows.length === 0) return {}
@@ -448,7 +475,13 @@ function parseOpenCodeGoUsage(json: unknown): TelemetryPatch {
   for (const [key, type] of windowDefinitions) {
     const item = isRecord(usage[key]) ? usage[key] : undefined
     const percent = item ? readNumber(item.percent) : undefined
-    if (percent === undefined || percent < 0 || percent > 100) continue
+    if (
+      item?.status !== "ok" ||
+      percent === undefined ||
+      percent < 0 ||
+      percent > 100
+    )
+      continue
 
     const window = buildQuotaWindow({
       type,
@@ -470,6 +503,12 @@ function parseKimiOpenPlatformBalance(
   json: unknown,
   currency: "CNY" | "USD",
 ): TelemetryPatch {
+  const envelope = isRecord(json) ? json : {}
+  if (
+    envelope.status !== true ||
+    (envelope.code !== 0 && envelope.code !== "0")
+  )
+    return {}
   const record = dataLike(json)
   const available = readNumber(record.available_balance)
   if (available === undefined) return {}

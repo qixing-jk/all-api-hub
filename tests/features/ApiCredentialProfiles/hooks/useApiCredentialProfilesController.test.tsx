@@ -722,7 +722,7 @@ describe("useApiCredentialProfilesController", () => {
       health: { status: SiteHealthStatus.Healthy },
       lastSyncTime: 1,
       source: "newApiTokenUsage",
-      models: { count: 14, preview: [] },
+      facts: { models: { count: 14, preview: [] } },
       attempts: [
         { source: "models", endpoint: "/v1/models", status: "success" },
         {

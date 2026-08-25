@@ -389,7 +389,13 @@ function coerceTelemetryFacts(
           typeof unit?.code === "string" &&
           typeof unit.label === "string")
       const remainingPercent = coerceFiniteNumber(item.remainingPercent)
-      if (!validType || !validUnit || remainingPercent === undefined)
+      if (
+        !validType ||
+        !validUnit ||
+        remainingPercent === undefined ||
+        remainingPercent < 0 ||
+        remainingPercent > 100
+      )
         return null
       return {
         type: type as "fiveHour" | "weekly" | "monthly" | "total",
