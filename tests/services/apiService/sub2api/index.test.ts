@@ -85,6 +85,7 @@ vi.mock("~/services/accounts/accountHealth", () => ({
 
 vi.mock("~/services/apiTransport/request", () => ({
   fetchApi: vi.fn(),
+  notifyApiTransportObserver: vi.fn(),
 }))
 
 vi.mock("~/services/apiService/sub2api/tokenResync", async (importOriginal) => {

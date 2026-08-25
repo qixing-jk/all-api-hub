@@ -863,6 +863,7 @@ export async function performSub2ApiProDailyCheckIn(
                 kind: SUB2API_PRO_DAILY_CHECK_IN_RESULT_KINDS.RecoveryPreconditionFailed,
               })
             }
+            // The status read shares the mutation observer; reset its lifecycle before retrying the POST.
             notifyApiTransportObserver(
               recoveredRequest.observer,
               "onPreHandlerUnauthorized",

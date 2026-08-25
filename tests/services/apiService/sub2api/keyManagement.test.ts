@@ -39,6 +39,7 @@ const {
 
 vi.mock("~/services/apiTransport/request", () => ({
   fetchApi: (...args: any[]) => fetchApiMock(...args),
+  notifyApiTransportObserver: vi.fn(),
 }))
 
 vi.mock("~/services/apiService/sub2api/tokenResync", () => ({

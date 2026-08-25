@@ -24,7 +24,9 @@ const t = ((key: string, options?: Record<string, unknown>) =>
       ? `${key}:${options.detail}`
       : options?.method
         ? `${key}:${options.method}`
-        : key) as TFunction<"accountDialog">
+        : options?.error
+          ? `${key}:${options.error}`
+          : key) as TFunction<"accountDialog">
 
 const createAmbiguousState = (): CheckInAccountState => ({
   decision: {
@@ -110,6 +112,35 @@ describe("check-in presentation", () => {
       title: "messages.checkInRedetectUnknown",
       description:
         "messages.checkInRedetectUnknownReasons.network messages.checkInRedetectUnknownReasons.timeout",
+    })
+  })
+
+  it("keeps the save instruction alongside unknown reasons", () => {
+    expect(
+      getCheckInRedetectionFeedbackPresentation(t, {
+        kind: "completed",
+        decisionOutcome: CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Unknown,
+        selectedMethodDisabled: false,
+        saveRequired: true,
+        unknownReasons: [CHECK_IN_METHOD_UNKNOWN_REASON_CODES.Network],
+      }),
+    ).toEqual({
+      tone: "warning",
+      title: "messages.checkInRedetectUnknown",
+      description:
+        "messages.checkInRedetectSaveRequired messages.checkInRedetectUnknownReasons.network",
+    })
+  })
+
+  it("falls back when a failed redetection message is empty", () => {
+    expect(
+      getCheckInRedetectionFeedbackPresentation(t, {
+        kind: "failed",
+        message: "  ",
+      }),
+    ).toEqual({
+      tone: "destructive",
+      title: "messages.operationFailed:messages.checkInRedetectUnknown",
     })
   })
 })

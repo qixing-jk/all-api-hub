@@ -127,17 +127,24 @@ export function getCheckInRedetectionFeedbackPresentation(
 ) {
   if (!feedback) return null
   if (feedback.kind === "failed") {
-    return { tone: "destructive" as const, title: feedback.message }
+    return {
+      tone: "destructive" as const,
+      title:
+        feedback.message.trim() ||
+        t("messages.operationFailed", {
+          error: t("messages.checkInRedetectUnknown"),
+        }),
+    }
   }
 
-  const description = feedback.saveRequired
-    ? t("messages.checkInRedetectSaveRequired")
-    : undefined
+  const descriptionParts = feedback.saveRequired
+    ? [t("messages.checkInRedetectSaveRequired")]
+    : []
   if (feedback.selectedMethodDisabled) {
     return {
       tone: "warning" as const,
       title: t("messages.checkInRedetectDisabled"),
-      description,
+      description: descriptionParts.join(" ") || undefined,
     }
   }
 
@@ -146,30 +153,35 @@ export function getCheckInRedetectionFeedbackPresentation(
       return {
         tone: "success" as const,
         title: t("messages.checkInRedetectResolved"),
-        description,
+        description: descriptionParts.join(" ") || undefined,
       }
     case CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Ambiguous:
       return {
         tone: "warning" as const,
         title: t("messages.checkInRedetectAmbiguous"),
-        description,
+        description: descriptionParts.join(" ") || undefined,
       }
     case CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Unsupported:
       return {
         tone: "info" as const,
         title: t("messages.checkInRedetectUnsupported"),
-        description,
+        description: descriptionParts.join(" ") || undefined,
       }
     case CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Unknown:
       return {
         tone: "warning" as const,
         title: t("messages.checkInRedetectUnknown"),
         description:
-          feedback.unknownReasons.length > 0
-            ? feedback.unknownReasons
-                .map((reason) => getUnknownReasonMessage(t, reason))
-                .join(" ")
-            : undefined,
+          [
+            ...descriptionParts,
+            ...(feedback.unknownReasons.length > 0
+              ? [
+                  feedback.unknownReasons
+                    .map((reason) => getUnknownReasonMessage(t, reason))
+                    .join(" "),
+                ]
+              : []),
+          ].join(" ") || undefined,
       }
   }
 }

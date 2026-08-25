@@ -519,7 +519,7 @@ describe("Sub2API Pro daily check-in method Adapter", () => {
       { kind: "recovery_precondition_failed" as const },
       CHECKIN_RESULT_STATUS.FAILED,
     ],
-  ])("maps protocol result $kind", async (protocolResult, expectedStatus) => {
+  ])("maps protocol result $0.kind", async (protocolResult, expectedStatus) => {
     vi.mocked(performSub2ApiProDailyCheckIn).mockResolvedValue(protocolResult)
 
     await expect(

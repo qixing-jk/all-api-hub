@@ -389,7 +389,7 @@ describe("auto-checkin product analytics", () => {
           lastResult: {
             accountId: "sub2api-account",
             accountName: "Private account name",
-            methodId: "sub2api-pro:daily-checkin",
+            methodId: AUTO_CHECKIN_METHOD_IDS.Sub2ApiProDailyCheckIn,
             status: CHECKIN_RESULT_STATUS.SUCCESS,
             timestamp: 1,
           },
