@@ -1,0 +1,167 @@
+import type { TelemetryPatch } from "~/services/apiCredentialProfiles/telemetryContracts"
+import type {
+  ApiCredentialTelemetryAmount,
+  ApiCredentialTelemetryFacts,
+  ApiCredentialTelemetrySource,
+} from "~/types/apiCredentialProfiles"
+import { API_CREDENTIAL_TELEMETRY_SOURCES } from "~/types/apiCredentialProfiles"
+
+const TELEMETRY_FACT_UNITS = {
+  currencies: { Usd: "USD", Jpy: "JPY" },
+  quota: {
+    usdEquivalentCode: "usd-equivalent",
+    usdEquivalentLabel: "USD-equivalent budget",
+    glmCreditCode: "glm-credit",
+    glmCreditLabel: "GLM credits",
+    providerCode: "provider-quota",
+    providerLabel: "Provider quota",
+  },
+  counts: { Requests: "requests", Tokens: "tokens" },
+} as const
+
+/** Converts provider parser output into the unit-aware v6 product facts. */
+export function normalizeTelemetryPatchToFacts(
+  data: TelemetryPatch,
+  source: ApiCredentialTelemetrySource,
+): ApiCredentialTelemetryFacts {
+  const facts: ApiCredentialTelemetryFacts = {}
+  const budgetSource =
+    source === API_CREDENTIAL_TELEMETRY_SOURCES.NewApiTokenUsage ||
+    source === API_CREDENTIAL_TELEMETRY_SOURCES.Sub2ApiUsage
+  const balances: NonNullable<ApiCredentialTelemetryFacts["balances"]> = []
+  const balancesToNormalize =
+    data.balances ?? (data.balance ? [data.balance] : [])
+  for (const balance of balancesToNormalize) {
+    const decimalPlaces =
+      balance.currency === TELEMETRY_FACT_UNITS.currencies.Jpy ? 0 : 2
+    balances.push({
+      amount: balance.amount,
+      unit: {
+        kind: "money",
+        currency: balance.currency,
+        decimalPlaces,
+      },
+      semantics:
+        source === API_CREDENTIAL_TELEMETRY_SOURCES.DeepSeekBalance
+          ? "cash"
+          : "provider-wallet",
+      ...(balance.grantedAmount !== undefined
+        ? { grantedAmount: balance.grantedAmount }
+        : {}),
+      ...(balance.toppedUpAmount !== undefined
+        ? { toppedUpAmount: balance.toppedUpAmount }
+        : {}),
+      ...(balance.isAvailable !== undefined
+        ? { isAvailable: balance.isAvailable }
+        : {}),
+    })
+  }
+
+  if (data.balanceUsd !== undefined) {
+    balances.push({
+      amount: data.balanceUsd,
+      unit: budgetSource
+        ? {
+            kind: "quota",
+            code: TELEMETRY_FACT_UNITS.quota.usdEquivalentCode,
+            label: TELEMETRY_FACT_UNITS.quota.usdEquivalentLabel,
+          }
+        : {
+            kind: "money",
+            currency: TELEMETRY_FACT_UNITS.currencies.Usd,
+            decimalPlaces: 2,
+          },
+      semantics: budgetSource
+        ? "budget-equivalent"
+        : source === API_CREDENTIAL_TELEMETRY_SOURCES.OpenAiBilling
+          ? "cash"
+          : "legacy",
+    })
+  }
+  if (balances.length > 0) facts.balances = balances
+
+  if (data.quota) {
+    facts.quota = {
+      windows: data.quota.windows.map((window) => ({
+        type: window.type,
+        unit:
+          window.unit === "percent"
+            ? { kind: "percent" }
+            : {
+                kind: "quota",
+                code:
+                  source === API_CREDENTIAL_TELEMETRY_SOURCES.GlmQuota
+                    ? TELEMETRY_FACT_UNITS.quota.glmCreditCode
+                    : TELEMETRY_FACT_UNITS.quota.providerCode,
+                label:
+                  source === API_CREDENTIAL_TELEMETRY_SOURCES.GlmQuota
+                    ? TELEMETRY_FACT_UNITS.quota.glmCreditLabel
+                    : TELEMETRY_FACT_UNITS.quota.providerLabel,
+              },
+        ...(window.unit === "percent"
+          ? {}
+          : {
+              used: window.used,
+              limit: window.limit,
+              remaining: window.remaining,
+            }),
+        remainingPercent: window.percentRemaining,
+        ...(window.resetTime !== undefined
+          ? { resetTime: window.resetTime }
+          : {}),
+      })),
+      ...(data.quota.membershipLevel
+        ? { membershipLevel: data.quota.membershipLevel }
+        : {}),
+    }
+  }
+
+  const budgetUnit: ApiCredentialTelemetryAmount["unit"] = budgetSource
+    ? {
+        kind: "quota",
+        code: TELEMETRY_FACT_UNITS.quota.usdEquivalentCode,
+        label: TELEMETRY_FACT_UNITS.quota.usdEquivalentLabel,
+      }
+    : {
+        kind: "money",
+        currency: TELEMETRY_FACT_UNITS.currencies.Usd,
+        decimalPlaces: 2,
+      }
+  const usage: NonNullable<ApiCredentialTelemetryFacts["usage"]> = {}
+  if (data.todayCostUsd !== undefined) {
+    usage.todayCost = {
+      value: data.todayCostUsd,
+      unit: {
+        kind: "money",
+        currency: TELEMETRY_FACT_UNITS.currencies.Usd,
+        decimalPlaces: 2,
+      },
+    }
+  }
+  if (data.todayRequests !== undefined) {
+    usage.todayRequests = {
+      value: data.todayRequests,
+      unit: { kind: "count", code: TELEMETRY_FACT_UNITS.counts.Requests },
+    }
+  }
+  if (data.todayTokens) {
+    usage.todayTokens = {
+      ...data.todayTokens,
+      unit: { kind: "count", code: TELEMETRY_FACT_UNITS.counts.Tokens },
+    }
+  }
+  if (data.totalUsedUsd !== undefined) {
+    usage.totalUsed = { value: data.totalUsedUsd, unit: budgetUnit }
+  }
+  if (data.totalGrantedUsd !== undefined) {
+    usage.totalGranted = { value: data.totalGrantedUsd, unit: budgetUnit }
+  }
+  if (data.totalAvailableUsd !== undefined) {
+    usage.totalAvailable = { value: data.totalAvailableUsd, unit: budgetUnit }
+  }
+  if (data.expiresAt !== undefined) usage.expiresAt = data.expiresAt
+  if (data.unlimitedQuota !== undefined) usage.unlimited = data.unlimitedQuota
+  if (Object.keys(usage).length > 0) facts.usage = usage
+
+  return facts
+}
