@@ -592,6 +592,46 @@ describe("apiCredentialProfilesStorage additional flows", () => {
     )
   })
 
+  it("keeps legacy OpenAI billing totals as money during v6 migration", () => {
+    const merged = mergeApiCredentialProfilesConfigs({
+      now: 67890,
+      local: {
+        version: 5,
+        lastUpdated: 1,
+        profiles: [
+          {
+            id: "legacy-openai-billing",
+            name: "Legacy OpenAI billing",
+            apiType: API_TYPES.OPENAI_COMPATIBLE,
+            baseUrl: "https://example.invalid",
+            apiKey: "sk-legacy-openai-billing",
+            tagIds: [],
+            notes: "",
+            createdAt: 1,
+            updatedAt: 1,
+            telemetryConfig: { mode: "openaiBilling" },
+            telemetrySnapshot: {
+              health: { status: SiteHealthStatus.Healthy },
+              lastSyncTime: 5000,
+              lastSuccessTime: 5000,
+              source: "openaiBilling",
+              totalUsedUsd: 12.5,
+              attempts: [],
+            },
+          },
+        ],
+      },
+      incoming: { version: 5, lastUpdated: 2, profiles: [] },
+    })
+
+    expect(
+      merged.profiles[0].telemetrySnapshot?.facts?.usage?.totalUsed,
+    ).toEqual({
+      value: 12.5,
+      unit: { kind: "money", currency: "USD", decimalPlaces: 2 },
+    })
+  })
+
   it("clears a stale telemetry snapshot when a duplicate selects a different config", () => {
     const merged = mergeApiCredentialProfilesConfigs({
       now: 67890,

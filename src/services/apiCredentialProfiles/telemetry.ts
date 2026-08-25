@@ -759,7 +759,7 @@ async function queryKimiQuota(
   profile: ApiCredentialProfile,
 ): Promise<AdapterSuccess> {
   const result = await fetchJson({
-    baseUrl: profile.baseUrl,
+    baseUrl: getTelemetryOrigin(profile.baseUrl),
     endpoint: TELEMETRY_ENDPOINTS.kimiQuota,
     bearerToken: profile.apiKey,
   })

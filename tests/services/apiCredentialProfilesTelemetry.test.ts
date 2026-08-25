@@ -305,7 +305,7 @@ describe("api credential profile telemetry", () => {
     const profile = await apiCredentialProfilesStorage.createProfile({
       name: "Kimi",
       apiType: API_TYPES.OPENAI_COMPATIBLE,
-      baseUrl: "https://api.kimi.com",
+      baseUrl: "https://api.kimi.com/coding/v1",
       apiKey: "kimi.example-key",
       telemetryConfig: { mode: "kimiQuota" },
     })

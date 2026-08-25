@@ -568,11 +568,15 @@ function migrateLegacyTelemetryFacts(
       unit: { kind: "count", code: "tokens" },
     }
   }
-  const budgetUnit = {
-    kind: "quota" as const,
-    code: "usd-equivalent",
-    label: "USD-equivalent budget",
-  }
+  const budgetUnit =
+    source === API_CREDENTIAL_TELEMETRY_SOURCES.NewApiTokenUsage ||
+    source === API_CREDENTIAL_TELEMETRY_SOURCES.Sub2ApiUsage
+      ? {
+          kind: "quota" as const,
+          code: "usd-equivalent",
+          label: "USD-equivalent budget",
+        }
+      : { kind: "money" as const, currency: "USD", decimalPlaces: 2 }
   for (const [key, field] of [
     ["totalUsed", "totalUsedUsd"],
     ["totalGranted", "totalGrantedUsd"],
