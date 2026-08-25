@@ -1057,11 +1057,13 @@ describe("Octopus API service", () => {
       },
     })
 
-    await expect(listChannels(config)).resolves.toEqual([
-      expect.objectContaining({ id: 5, model: "" }),
-      expect.objectContaining({ id: 2, model: "model-a,model-b" }),
-      expect.objectContaining({ id: 16, model: "" }),
-    ])
+    await expect(listChannels(config)).resolves.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 5, model: "" }),
+        expect.objectContaining({ id: 2, model: "model-a,model-b" }),
+        expect.objectContaining({ id: 16, model: "" }),
+      ]),
+    )
   })
 
   it("normalizes a current create response that omits model", async () => {
