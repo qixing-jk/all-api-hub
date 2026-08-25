@@ -184,6 +184,30 @@ const parseCurrentStats = (
   }
 }
 
+const normalizeCurrentModel = (value: Record<string, unknown>): string => {
+  if (typeof value.model === "string") {
+    return value.model
+  }
+
+  // Some Octopus deployments still return the legacy `models` array, while
+  // newly-created channels may omit both fields. Preserve those channels at
+  // the codec boundary instead of rejecting the complete channel list.
+  if (!Array.isArray(value.models)) {
+    return ""
+  }
+
+  return value.models
+    .map((model) => {
+      if (typeof model === "string") return model
+      if (isRecord(model) && typeof model.name === "string") {
+        return model.name
+      }
+      return null
+    })
+    .filter((model): model is string => Boolean(model?.trim()))
+    .join(",")
+}
+
 const toCurrentOctopusChannelType = (
   type: OctopusOutboundType,
 ): CurrentOctopusChannelType | null => {
@@ -245,7 +269,7 @@ const parseCurrentChannel = (value: unknown): CurrentOctopusChannelDto => {
     enabled: requireBoolean(value, "enabled"),
     base_url: requireString(value, "base_url"),
     key: requireString(value, "key"),
-    model: requireString(value, "model"),
+    model: normalizeCurrentModel(value),
     custom_model:
       typeof value.custom_model === "string" ? value.custom_model : undefined,
     proxy: requireBoolean(value, "proxy"),

@@ -1026,6 +1026,78 @@ describe("Octopus API service", () => {
     })
   })
 
+  it("accepts current deployments that omit model or return legacy models", async () => {
+    mockGetValidSession.mockResolvedValueOnce({
+      mode: OCTOPUS_AUTH_MODES.Cookie,
+      expireAt: 1_700_000_900_000,
+    })
+    mockTempWindowOctopusApiFetch.mockResolvedValueOnce({
+      success: true,
+      status: 200,
+      data: {
+        code: 200,
+        data: [
+          {
+            ...currentChannelResponse({ id: 5 }),
+            model: undefined,
+          },
+          {
+            ...currentChannelResponse({ id: 2 }),
+            model: undefined,
+            models: [{ name: "model-a" }, { name: "model-b" }],
+          },
+          {
+            ...currentChannelResponse({
+              id: 16,
+              type: "openai_responses",
+            }),
+            model: undefined,
+          },
+        ],
+      },
+    })
+
+    await expect(listChannels(config)).resolves.toEqual([
+      expect.objectContaining({ id: 5, model: "" }),
+      expect.objectContaining({ id: 2, model: "model-a,model-b" }),
+      expect.objectContaining({ id: 16, model: "" }),
+    ])
+  })
+
+  it("normalizes a current create response that omits model", async () => {
+    mockGetValidSession.mockResolvedValueOnce({
+      mode: OCTOPUS_AUTH_MODES.Cookie,
+      expireAt: 1_700_000_900_000,
+    })
+    mockTempWindowOctopusApiFetch.mockResolvedValueOnce({
+      success: true,
+      status: 200,
+      data: {
+        code: 200,
+        data: {
+          ...currentChannelResponse({
+            id: 16,
+            type: "openai_responses",
+            model: undefined,
+          }),
+        },
+      },
+    })
+
+    await expect(
+      createChannel(config, {
+        name: "Created",
+        type: OctopusOutboundType.OpenAIResponse,
+        baseUrl: "https://upstream.example.invalid/v1",
+        key: "credential-placeholder",
+        model: "model-a",
+      }),
+    ).resolves.toMatchObject({
+      success: true,
+      data: { id: 16, model: "" },
+    })
+  })
+
   it.each([
     {
       name: "a non-object channel",
