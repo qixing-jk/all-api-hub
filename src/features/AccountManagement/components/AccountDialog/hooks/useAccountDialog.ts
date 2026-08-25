@@ -212,7 +212,7 @@ function createCurrentTabBrowserSessionContext(
 const logger = createLogger("AccountDialogHook")
 
 /**
- * Refreshes saved account data within the originating save command.
+ * Refreshes saved account data after the save command has persisted the account.
  */
 async function refreshPostSaveAccount(
   accountId: string,
@@ -2455,7 +2455,9 @@ export function useAccountDialog({
               : null
 
           if (savedAccountId) {
-            await refreshPostSaveAccount(
+            // The execution metadata is immutable and validated at each protected request,
+            // so the refresh can continue after this save command returns.
+            void refreshPostSaveAccount(
               savedAccountId,
               tempWindowRequestSource,
               protectionBypassExecution,
