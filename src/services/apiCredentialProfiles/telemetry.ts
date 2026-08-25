@@ -511,6 +511,14 @@ function getTelemetryOrigin(baseUrl: string): string {
   return new URL(baseUrl).origin
 }
 
+/** Detects the documented Z.AI Coding Plan endpoints. */
+function isGlmCodingPlanBaseUrl(baseUrl: string): boolean {
+  const pathname = new URL(baseUrl).pathname.toLowerCase()
+  return (
+    pathname.includes("/api/coding/") || pathname.startsWith("/api/anthropic")
+  )
+}
+
 /**
  * Builds the OpenAI-compatible billing usage endpoint for the current date range.
  */
@@ -1211,7 +1219,7 @@ function resolveModes(
           API_CREDENTIAL_TELEMETRY_MODES.OpenAiBilling,
         ]
       }
-      if (hostname === "api.z.ai") {
+      if (hostname === "api.z.ai" && isGlmCodingPlanBaseUrl(profile.baseUrl)) {
         return [
           API_CREDENTIAL_TELEMETRY_MODES.GlmQuota,
           API_CREDENTIAL_TELEMETRY_MODES.NewApiTokenUsage,

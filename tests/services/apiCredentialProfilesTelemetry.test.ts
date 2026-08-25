@@ -238,7 +238,7 @@ describe("api credential profile telemetry", () => {
     const profile = await apiCredentialProfilesStorage.createProfile({
       name: "GLM International",
       apiType: API_TYPES.OPENAI_COMPATIBLE,
-      baseUrl: "https://api.z.ai/api/paas/v4",
+      baseUrl: "https://api.z.ai/api/coding/paas/v4",
       apiKey: "zai.example-key",
       telemetryConfig: { mode: "auto" },
     })
@@ -277,6 +277,27 @@ describe("api credential profile telemetry", () => {
           Authorization: "zai.example-key",
         }),
       }),
+    )
+  })
+
+  it("does not treat a general Z.AI API endpoint as a Coding Plan", async () => {
+    const profile = await apiCredentialProfilesStorage.createProfile({
+      name: "Z.AI General API",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      baseUrl: "https://api.z.ai/api/paas/v4",
+      apiKey: "zai-general-key",
+      telemetryConfig: { mode: "auto" },
+    })
+
+    const fetchMock = vi.fn(async () => jsonResponse({ data: [] }))
+    vi.stubGlobal("fetch", fetchMock)
+
+    const snapshot = await refreshApiCredentialProfileTelemetry(profile.id)
+
+    expect(snapshot.source).not.toBe("glmQuota")
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      "https://api.z.ai/api/monitor/usage/quota/limit",
+      expect.anything(),
     )
   })
 
