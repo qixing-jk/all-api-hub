@@ -555,6 +555,7 @@ describe("check-in methods compatibility activation", () => {
       .fn()
       .mockRejectedValue({ statusCode: 404 })
     const enumerate = vi.spyOn(autoCheckinMethodRegistry, "getCandidates")
+    const onOutcome = vi.fn()
 
     try {
       const updated = await refreshSelectedStatus({
@@ -562,11 +563,11 @@ describe("check-in methods compatibility activation", () => {
         siteType: account.site_type,
         account,
         observedAt: 500,
-        onOutcome: (outcome) => {
-          expect(outcome).toBe("unsupported")
-        },
+        onOutcome,
       })
 
+      expect(onOutcome).toHaveBeenCalledOnce()
+      expect(onOutcome).toHaveBeenCalledWith("unsupported")
       expect(enumerate).not.toHaveBeenCalled()
       expect(updated.selection).toEqual(account.checkIn.selection)
       expect(updated.methodKnowledge.lastFullDiscoveryAt).toBe(
@@ -597,6 +598,7 @@ describe("check-in methods compatibility activation", () => {
     )!
     const originalGetStatus = registration.provider.getStatus
     registration.provider.getStatus = vi.fn().mockResolvedValue(undefined)
+    const onOutcome = vi.fn()
 
     try {
       await expect(
@@ -604,11 +606,54 @@ describe("check-in methods compatibility activation", () => {
           config: account.checkIn,
           siteType: account.site_type,
           account,
-          onOutcome: (outcome) => {
-            expect(outcome).toBe("unavailable")
-          },
+          onOutcome,
         }),
       ).resolves.toEqual(account.checkIn)
+      expect(onOutcome).toHaveBeenCalledOnce()
+      expect(onOutcome).toHaveBeenCalledWith("unavailable")
+    } finally {
+      registration.provider.getStatus = originalGetStatus
+    }
+  })
+
+  it("reads a selected provider status and reports a successful outcome", async () => {
+    const account = buildSiteAccount({
+      site_type: SITE_TYPES.NEW_API,
+      checkIn: createCompatibilityCheckInConfig({
+        siteType: SITE_TYPES.NEW_API,
+        supported: true,
+        automaticExecutionEnabled: true,
+      }),
+    })
+    const registration = autoCheckinMethodRegistry.resolveById(
+      "new-api:daily-checkin",
+    )!
+    const originalGetStatus = registration.provider.getStatus
+    registration.provider.getStatus = vi.fn().mockResolvedValue({
+      outcome: "known",
+      today: "checked",
+      evidence: { source: "probe", observedAt: 700 },
+    })
+    const onOutcome = vi.fn()
+
+    try {
+      const updated = await refreshSelectedStatus({
+        config: account.checkIn,
+        siteType: account.site_type,
+        account,
+        observedAt: 700,
+        onOutcome,
+      })
+
+      expect(onOutcome).toHaveBeenCalledOnce()
+      expect(onOutcome).toHaveBeenCalledWith("read")
+      expect(
+        updated.methodKnowledge.methods["new-api:daily-checkin"]?.status,
+      ).toMatchObject({
+        outcome: "known",
+        today: "checked",
+        evidence: { source: "probe", observedAt: 700 },
+      })
     } finally {
       registration.provider.getStatus = originalGetStatus
     }
@@ -630,6 +675,7 @@ describe("check-in methods compatibility activation", () => {
     registration.provider.getStatus = vi
       .fn()
       .mockRejectedValue(new Error("network unavailable"))
+    const onOutcome = vi.fn()
 
     try {
       await expect(
@@ -637,11 +683,11 @@ describe("check-in methods compatibility activation", () => {
           config: account.checkIn,
           siteType: account.site_type,
           account,
-          onOutcome: (outcome) => {
-            expect(outcome).toBe("unavailable")
-          },
+          onOutcome,
         }),
       ).resolves.toEqual(account.checkIn)
+      expect(onOutcome).toHaveBeenCalledOnce()
+      expect(onOutcome).toHaveBeenCalledWith("unavailable")
     } finally {
       registration.provider.getStatus = originalGetStatus
     }
