@@ -58,6 +58,95 @@ describe("Button", () => {
     )
   })
 
+  it("lets text button sizes shrink, wrap, and grow within their container", async () => {
+    render(
+      <>
+        <Button>Default localized action label</Button>
+        <Button size="sm">Small localized action label</Button>
+        <Button size="lg">Large localized action label</Button>
+      </>,
+    )
+
+    const textButtons = [
+      await screen.findByRole("button", {
+        name: "Default localized action label",
+      }),
+      await screen.findByRole("button", {
+        name: "Small localized action label",
+      }),
+      await screen.findByRole("button", {
+        name: "Large localized action label",
+      }),
+    ]
+
+    for (const button of textButtons) {
+      expect(button).toHaveClass(
+        "h-auto",
+        "min-w-0",
+        "max-w-full",
+        "shrink",
+        "text-center",
+        "break-words",
+        "whitespace-normal",
+      )
+      expect(button).not.toHaveClass("shrink-0", "whitespace-nowrap")
+    }
+
+    expect(textButtons[0]).toHaveClass("min-h-9")
+    expect(textButtons[1]).toHaveClass("min-h-8")
+    expect(textButtons[2]).toHaveClass("min-h-10")
+  })
+
+  it("keeps icon-only button sizes fixed", async () => {
+    render(
+      <>
+        <Button size="icon" aria-label="Default icon" />
+        <Button size="icon-xs" aria-label="Extra-small icon" />
+        <Button size="icon-sm" aria-label="Small icon" />
+        <Button size="icon-lg" aria-label="Large icon" />
+      </>,
+    )
+
+    for (const name of [
+      "Default icon",
+      "Extra-small icon",
+      "Small icon",
+      "Large icon",
+    ]) {
+      const button = await screen.findByRole("button", { name })
+      expect(button).toHaveClass("max-w-none", "shrink-0", "whitespace-nowrap")
+      expect(button).not.toHaveClass(
+        "max-w-full",
+        "shrink",
+        "whitespace-normal",
+      )
+    }
+  })
+
+  it("lets compact text actions opt out of wrapping", async () => {
+    render(
+      <Button className="h-6 max-w-none shrink-0 whitespace-nowrap">
+        Compact action
+      </Button>,
+    )
+
+    const button = await screen.findByRole("button", {
+      name: "Compact action",
+    })
+    expect(button).toHaveClass(
+      "h-6",
+      "max-w-none",
+      "shrink-0",
+      "whitespace-nowrap",
+    )
+    expect(button).not.toHaveClass(
+      "h-auto",
+      "max-w-full",
+      "shrink",
+      "whitespace-normal",
+    )
+  })
+
   it("forwards the resolved visual size through asChild", async () => {
     render(
       <Button asChild size="sm" data-size="lg">

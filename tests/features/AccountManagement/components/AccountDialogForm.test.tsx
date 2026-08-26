@@ -604,8 +604,6 @@ describe("AccountDialog AccountForm", () => {
       name: "accountDialog:messages.importCookiesLoading",
     })
     expect(importButton).toHaveAttribute("aria-busy", "true")
-    expect(importButton).toHaveClass("h-auto", "whitespace-normal")
-    expect(importButton).not.toHaveClass("whitespace-nowrap")
     expect(importButton).toBeDisabled()
 
     await user.click(importButton)
@@ -615,8 +613,6 @@ describe("AccountDialog AccountForm", () => {
       name: "accountDialog:form.cookiePermissionHelpAction",
     })
     expect(permissionHelpButton).not.toHaveAttribute("aria-busy")
-    expect(permissionHelpButton).toHaveClass("h-auto", "whitespace-normal")
-    expect(permissionHelpButton).not.toHaveClass("whitespace-nowrap")
     await user.click(permissionHelpButton)
     fireEvent.change(screen.getByDisplayValue("session=abc"), {
       target: { value: "session=abc; Path=/" },
@@ -666,13 +662,11 @@ describe("AccountDialog AccountForm", () => {
       screen.queryByText("accountDialog:form.cookiePermissionManualFallback"),
     ).not.toBeInTheDocument()
 
-    const grantButton = screen.getByTestId(
-      ACCOUNT_MANAGEMENT_TEST_IDS.cookiePermissionGrantButton,
+    await user.click(
+      screen.getByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.cookiePermissionGrantButton,
+      ),
     )
-    expect(grantButton).toHaveClass("h-auto", "whitespace-normal")
-    expect(grantButton).not.toHaveClass("whitespace-nowrap")
-
-    await user.click(grantButton)
 
     expect(props.onRequestCookieAuthPermissions).toHaveBeenCalledTimes(1)
 
@@ -1220,12 +1214,11 @@ describe("AccountDialog AccountForm", () => {
       }),
     )
 
-    const restoreAutomaticButton = screen.getByRole("button", {
-      name: "accountDialog:form.restoreAutomaticCheckInSelection",
-    })
-    expect(restoreAutomaticButton).toHaveClass("whitespace-normal")
-    expect(restoreAutomaticButton).not.toHaveClass("whitespace-nowrap")
-    await user.click(restoreAutomaticButton)
+    await user.click(
+      screen.getByRole("button", {
+        name: "accountDialog:form.restoreAutomaticCheckInSelection",
+      }),
+    )
     expect(props.onCheckInSelectionChange).toHaveBeenLastCalledWith(
       expect.objectContaining({
         selection: {
@@ -1235,12 +1228,11 @@ describe("AccountDialog AccountForm", () => {
       }),
     )
 
-    const redetectButton = screen.getByRole("button", {
-      name: "accountDialog:form.redetectCheckInMethods",
-    })
-    expect(redetectButton).toHaveClass("whitespace-normal")
-    expect(redetectButton).not.toHaveClass("whitespace-nowrap")
-    await user.click(redetectButton)
+    await user.click(
+      screen.getByRole("button", {
+        name: "accountDialog:form.redetectCheckInMethods",
+      }),
+    )
     expect(props.onRedetectCheckInMethods).toHaveBeenCalledOnce()
   })
 
