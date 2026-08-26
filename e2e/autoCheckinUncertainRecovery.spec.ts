@@ -196,6 +196,13 @@ test("reconciles a persisted uncertain check-in on retry re-entry without a dupl
   // The options page is the persisted-state re-entry point: it must render the
   // uncertain result before the background retry alarm is allowed to reconcile.
   await openAutoCheckinOptionsPage(page, extensionId)
+  // Wait for the initial status load to paint the results table before arming
+  // the retry alarm. Otherwise the alarm can fire, rewrite perAccount to
+  // "skipped", and its RunCompleted refresh can beat the first GetStatus
+  // response under CI worker contention, so the uncertain badge never paints.
+  await expect(
+    page.getByRole("table").getByText(ACCOUNT_NAME, { exact: true }),
+  ).toBeVisible()
   await expect(
     page.getByText("Pending confirmation", { exact: true }),
   ).toBeVisible()

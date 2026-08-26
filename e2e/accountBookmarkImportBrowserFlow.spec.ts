@@ -174,6 +174,29 @@ async function startBookmarkImportServer(): Promise<BookmarkImportServer> {
       return
     }
 
+    // Site detection probes these endpoints on scanned bookmark targets:
+    // - /api/user/info (VoAPI v2) and /api/v1/auth/me (Sub2API). Answer both
+    //   with JSON that matches no known site type instead of a bare 404,
+    //   whose browser console error trips the extension page guard.
+    if (
+      method === "GET" &&
+      (url.pathname === "/api/user/info" || url.pathname === "/api/v1/auth/me")
+    ) {
+      sendJson(200, { success: false, message: "unknown target" })
+      return
+    }
+
+    // The New API check-in provider reads GET /api/user/checkin?month=... after
+    // account import; report check-in disabled so no mutation is attempted and
+    // no console error is logged for the missing route.
+    if (method === "GET" && url.pathname === "/api/user/checkin") {
+      sendJson(200, {
+        success: true,
+        data: { enabled: false, stats: { checked_in_today: false } },
+      })
+      return
+    }
+
     if (method === "GET" && url.pathname === "/api/log/self") {
       sendJson(200, {
         success: true,
@@ -241,6 +264,20 @@ async function startFailedBookmarkImportServer(): Promise<BookmarkImportServer> 
       response.writeHead(200, { "content-type": "text/html" })
       response.end(
         "<!doctype html><html><head><title>Unsupported Import Target</title></head><body>Unsupported Import Target</body></html>",
+      )
+      return
+    }
+
+    // Site detection probes these endpoints (VoAPI v2 /api/user/info, Sub2API
+    // /api/v1/auth/me); return JSON that matches no known site type so the
+    // probes resolve to UNKNOWN without a console error.
+    if (
+      request.method === "GET" &&
+      (url.pathname === "/api/user/info" || url.pathname === "/api/v1/auth/me")
+    ) {
+      response.writeHead(200, { "content-type": "application/json" })
+      response.end(
+        JSON.stringify({ success: false, message: "unknown target" }),
       )
       return
     }
