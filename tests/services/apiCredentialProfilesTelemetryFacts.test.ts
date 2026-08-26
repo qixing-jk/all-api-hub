@@ -28,18 +28,19 @@ describe("api credential telemetry facts", () => {
   })
 
   it("omits unavailable flags when providers do not supply them", () => {
-    expect(
-      normalizeTelemetryPatchToFacts(
-        { balance: { amount: 3, currency: "CNY" } },
-        API_CREDENTIAL_TELEMETRY_SOURCES.KimiOpenPlatformBalance,
-      )?.balances,
-    ).toEqual([
-      {
+    const balance = normalizeTelemetryPatchToFacts(
+      { balance: { amount: 3, currency: "CNY" } },
+      API_CREDENTIAL_TELEMETRY_SOURCES.KimiOpenPlatformBalance,
+    )?.balances?.[0]
+
+    expect(balance).toEqual(
+      expect.objectContaining({
         amount: 3,
         unit: { kind: "money", currency: "CNY", decimalPlaces: 2 },
         semantics: "provider-wallet",
-      },
-    ])
+      }),
+    )
+    expect(balance).not.toHaveProperty("isAvailable")
   })
 
   it("marks New API quota values as budget equivalents instead of cash", () => {

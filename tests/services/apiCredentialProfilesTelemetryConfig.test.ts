@@ -15,7 +15,6 @@ describe("api credential telemetry config", () => {
       "todayRequests",
       "todayPromptTokens",
       "todayCompletionTokens",
-      "todayTotalTokens",
       "totalUsedUsd",
       "totalGrantedUsd",
       "totalAvailableUsd",

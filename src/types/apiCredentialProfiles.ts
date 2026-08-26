@@ -80,7 +80,6 @@ export type ApiCredentialTelemetryJsonPathMap = {
   todayRequests?: string
   todayPromptTokens?: string
   todayCompletionTokens?: string
-  todayTotalTokens?: string
   totalUsedUsd?: string
   totalGrantedUsd?: string
   totalAvailableUsd?: string

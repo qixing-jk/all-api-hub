@@ -237,9 +237,6 @@ export function ApiCredentialProfileDialog({
       todayCompletionTokens: t(
         "apiCredentialProfiles:dialog.telemetryJsonPaths.todayCompletionTokens",
       ),
-      todayTotalTokens: t(
-        "apiCredentialProfiles:dialog.telemetryJsonPaths.todayTotalTokens",
-      ),
       totalUsedUsd: t(
         "apiCredentialProfiles:dialog.telemetryJsonPaths.totalUsedUsd",
       ),

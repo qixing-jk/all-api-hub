@@ -276,15 +276,6 @@ describe("api credential telemetry parsers", () => {
     })
   })
 
-  it("does not treat total tokens as upload tokens", () => {
-    expect(
-      mapCustomJson(
-        { usage: { total: 12 } },
-        { todayTotalTokens: "usage.total" },
-      ),
-    ).toEqual({ todayTokens: { upload: 0, download: 0 } })
-  })
-
   it("maps every configured custom value and leaves invalid paths undefined", () => {
     expect(
       mapCustomJson(
