@@ -121,7 +121,7 @@ export function DestructiveConfirmDialog({
             type="button"
             onClick={onClose}
             variant="secondary"
-            className="flex-1"
+            className="h-auto min-h-9 min-w-0 flex-1 shrink py-2 text-center break-words whitespace-normal"
             disabled={isWorking}
             data-testid={cancelButtonTestId}
           >
@@ -131,7 +131,7 @@ export function DestructiveConfirmDialog({
             type="button"
             onClick={onConfirm}
             variant={confirmVariant}
-            className="flex-1"
+            className="h-auto min-h-9 min-w-0 flex-1 shrink py-2 text-center break-words whitespace-normal"
             loading={isWorking}
             data-testid={confirmButtonTestId}
             data-variant={confirmVariant}

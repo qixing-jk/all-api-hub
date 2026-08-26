@@ -66,6 +66,7 @@ export default function AutoDetectSlowHintAlert({
               variant="outline"
               size="sm"
               leftIcon={<RefreshCw className="h-3 w-3" />}
+              className="h-auto min-h-9 max-w-full py-2 text-center break-words whitespace-normal"
             >
               {t("accountDialog:actions.reloadExtensionAndRetry")}
             </Button>

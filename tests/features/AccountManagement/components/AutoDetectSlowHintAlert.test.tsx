@@ -59,6 +59,8 @@ describe("AutoDetectSlowHintAlert", () => {
     const reloadButton = screen.getByRole("button", {
       name: "accountDialog:actions.reloadExtensionAndRetry",
     })
+    expect(reloadButton).toHaveClass("h-auto", "whitespace-normal")
+    expect(reloadButton).not.toHaveClass("whitespace-nowrap")
     fireEvent.click(reloadButton)
 
     const reloadDialog = await screen.findByRole("dialog", {
@@ -75,6 +77,7 @@ describe("AutoDetectSlowHintAlert", () => {
     const confirmButton = within(reloadDialog).getByRole("button", {
       name: "accountDialog:actions.reloadExtensionAndRetry",
     })
+    expect(confirmButton).toHaveClass("h-auto", "whitespace-normal")
     fireEvent.click(confirmButton)
 
     expect(reloadRuntime).toHaveBeenCalledTimes(1)

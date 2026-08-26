@@ -150,7 +150,7 @@ export function AccountCheckInSection({
             loading={isRedetectingCheckInMethods}
             id={ACCOUNT_CHECK_IN_TARGET_IDS.redetect}
             leftIcon={<RefreshCw className="h-4 w-4" />}
-            className="w-full sm:w-auto"
+            className="h-auto min-h-9 w-full max-w-full py-2 text-center break-words whitespace-normal sm:w-auto"
           >
             {isRedetectingCheckInMethods
               ? t("form.redetectingCheckInMethods")
@@ -242,6 +242,7 @@ export function AccountCheckInSection({
               type="button"
               variant="outline"
               onClick={setAutomaticSelection}
+              className="h-auto min-h-9 max-w-full py-2 text-center break-words whitespace-normal"
             >
               {t("form.restoreAutomaticCheckInSelection")}
             </Button>

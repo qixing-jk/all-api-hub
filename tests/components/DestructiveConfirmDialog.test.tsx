@@ -53,6 +53,26 @@ describe("DestructiveConfirmDialog", () => {
     ).toHaveTextContent("Delete")
   })
 
+  it("allows long localized action labels to wrap inside the dialog footer", async () => {
+    render(
+      <DestructiveConfirmDialog
+        isOpen
+        onClose={vi.fn()}
+        title="Erweiterung neu laden"
+        description="Die Erweiterung muss neu geladen werden."
+        confirmLabel="Erweiterung neu laden und erneut versuchen"
+        cancelLabel="Abbrechen"
+        onConfirm={vi.fn()}
+      />,
+    )
+
+    const confirmButton = await screen.findByRole("button", {
+      name: "Erweiterung neu laden und erneut versuchen",
+    })
+    expect(confirmButton).toHaveClass("min-w-0", "shrink", "whitespace-normal")
+    expect(confirmButton).not.toHaveClass("shrink-0", "whitespace-nowrap")
+  })
+
   it("exposes optional stable selectors for both dialog actions", async () => {
     render(
       <DestructiveConfirmDialog

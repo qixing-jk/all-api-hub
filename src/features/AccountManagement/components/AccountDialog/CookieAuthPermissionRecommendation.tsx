@@ -44,6 +44,7 @@ export function CookieAuthPermissionRecommendation({
           onClick={onRequestCookieAuthPermissions}
           data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.cookiePermissionGrantButton}
           leftIcon={<ShieldCheck className="h-4 w-4" />}
+          className="h-auto min-h-9 max-w-full py-2 text-center break-words whitespace-normal"
         >
           {isRequestingCookieAuthPermissions
             ? t("common:status.applying")

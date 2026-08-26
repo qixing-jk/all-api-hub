@@ -454,7 +454,7 @@ export default function AccountForm({
                 onClick={onImportCookieAuthSessionCookie}
                 loading={isImportingCookies}
                 leftIcon={<Download className="h-4 w-4" />}
-                className="w-full"
+                className="h-auto min-h-9 w-full max-w-full py-2 text-center break-words whitespace-normal"
               >
                 {isImportingCookies
                   ? t("messages.importCookiesLoading")
@@ -471,6 +471,7 @@ export default function AccountForm({
                       variant="outline"
                       size="sm"
                       onClick={onOpenCookiePermissionSettings}
+                      className="h-auto min-h-9 max-w-full py-2 text-center break-words whitespace-normal"
                     >
                       {t("form.cookiePermissionHelpAction")}
                     </Button>
