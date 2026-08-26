@@ -123,7 +123,7 @@ jobs:
         env:
           AAH_E2E_BUILD_VARIANT: ${{ matrix.build_variant }}
           AAH_E2E_SMOKE_ONLY: ${{ matrix.e2e_type != 'dnr-required' && '1' || '' }}
-          AAH_E2E_WORKERS: "3"
+          AAH_E2E_WORKERS: "4"
           AAH_SKIP_E2E_BUILD: "1"
         run: >
           pnpm run e2e:${{ matrix.e2e_type }}
