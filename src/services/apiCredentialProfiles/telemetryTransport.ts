@@ -10,6 +10,13 @@ type TelemetryJsonFetchResult = {
   json: unknown
 }
 
+/**
+ * Bounds each telemetry request so a stalled provider endpoint cannot hang
+ * the whole refresh flow; telemetry is best-effort and retried on the next
+ * scheduled refresh.
+ */
+const TELEMETRY_REQUEST_TIMEOUT_MS = 10_000
+
 /** Fetches one read-only telemetry endpoint and normalizes transport failures. */
 export async function fetchTelemetryJson(params: {
   baseUrl: string
@@ -27,6 +34,7 @@ export async function fetchTelemetryJson(params: {
             : AuthTypeEnum.None,
           accessToken: params.bearerToken,
         },
+        requestTimeoutMs: TELEMETRY_REQUEST_TIMEOUT_MS,
       },
       {
         endpoint: params.endpoint,
@@ -40,8 +48,9 @@ export async function fetchTelemetryJson(params: {
           ? { authTokenMode: params.authTokenMode }
           : {}),
       },
-      true,
     )
+    // Raw response mode: provider envelopes (success/data) stay intact so
+    // envelope-style parsers such as parseGlmQuota see the full payload.
 
     return {
       endpoint: params.endpoint,

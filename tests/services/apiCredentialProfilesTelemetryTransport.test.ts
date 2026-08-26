@@ -14,7 +14,10 @@ vi.mock("~/services/apiTransport/request", () => ({
 
 describe("api credential telemetry transport", () => {
   it("passes raw authorization mode and returns the requested endpoint", async () => {
-    fetchApiMock.mockResolvedValue({ balance: 1 })
+    fetchApiMock.mockResolvedValue({
+      success: true,
+      data: { balance: 1 },
+    })
 
     await expect(
       fetchTelemetryJson({
@@ -23,18 +26,21 @@ describe("api credential telemetry transport", () => {
         bearerToken: "token",
         authTokenMode: API_AUTH_TOKEN_MODES.Raw,
       }),
-    ).resolves.toEqual({ endpoint: "/usage", json: { balance: 1 } })
+    ).resolves.toEqual({
+      endpoint: "/usage",
+      json: { success: true, data: { balance: 1 } },
+    })
 
     expect(fetchApiMock).toHaveBeenCalledWith(
       expect.objectContaining({
         baseUrl: "https://example.invalid",
         auth: expect.objectContaining({ accessToken: "token" }),
+        requestTimeoutMs: 10_000,
       }),
       expect.objectContaining({
         endpoint: "/usage",
         authTokenMode: API_AUTH_TOKEN_MODES.Raw,
       }),
-      true,
     )
   })
 

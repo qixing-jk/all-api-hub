@@ -59,6 +59,6 @@ describe("api credential telemetry snapshot builder", () => {
     })
 
     expect(snapshot.lastError).toBe("custom failed")
-    expect(snapshot.health.reason).toBe("custom failed")
+    expect(snapshot.health.reason).toBeUndefined()
   })
 })

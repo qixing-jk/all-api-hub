@@ -1,37 +1,12 @@
 import { UI_CONSTANTS } from "~/constants/ui"
-import type { TelemetryPatch } from "~/services/apiCredentialProfiles/telemetryContracts"
+import {
+  TELEMETRY_PROVIDER_PROTOCOL,
+  type TelemetryPatch,
+} from "~/services/apiCredentialProfiles/telemetryContracts"
 import type { ApiCredentialTelemetryJsonPathMap } from "~/types/apiCredentialProfiles"
 import { API_CREDENTIAL_TELEMETRY_QUOTA_WINDOW_TYPES } from "~/types/apiCredentialProfiles"
 
 const OPENAI_BILLING_LIMIT_BALANCE_MAX_USD = 1_000_000
-
-/** Provider protocol values kept together so parser branches remain auditable. */
-export const TELEMETRY_PROVIDER_PROTOCOL = {
-  currencies: {
-    Cny: "CNY",
-    Usd: "USD",
-    Jpy: "JPY",
-  },
-  glm: {
-    limitTypes: {
-      Tokens: "TOKENS_LIMIT",
-      Credits: "CREDIT_LIMIT",
-      Time: "TIME_LIMIT",
-    },
-    fiveHourUnit: 3,
-    fiveHourNumber: 5,
-    weeklyUnit: 6,
-  },
-  kimi: {
-    fiveHourDurationMinutes: 300,
-    boosterStatuses: ["STATUS_ACTIVE", "STATUS_ENABLED"] as const,
-    boosterCreditsPerUnit: 100_000_000,
-  },
-  openCodeGo: {
-    usageStatus: "ok",
-    windows: ["rolling", "weekly", "monthly"] as const,
-  },
-} as const
 
 /**
  * Checks whether an unknown value can be safely read as a plain object.
@@ -111,7 +86,7 @@ export function parseDeepSeekBalance(json: unknown): TelemetryPatch {
     const currency =
       typeof item.currency === "string" && item.currency.trim()
         ? item.currency.trim()
-        : "CNY"
+        : TELEMETRY_PROVIDER_PROTOCOL.currencies.Cny
     return [
       {
         amount,
@@ -151,9 +126,16 @@ function buildQuotaWindow(input: QuotaWindowInput) {
     return undefined
   }
 
+  // Without an explicit limit, derive one from the remaining capacity so a
+  // window that only reports `remaining` does not collapse to fully exhausted.
   const normalizedLimit = Math.max(
     0,
-    limit ?? (percentUsed === undefined ? 0 : 100),
+    limit ??
+      (percentUsed !== undefined
+        ? 100
+        : used !== undefined || remaining !== undefined
+          ? (used ?? 0) + (remaining ?? 0)
+          : 0),
   )
   const normalizedUsed = Math.min(
     normalizedLimit,
@@ -265,8 +247,26 @@ export function parseGlmQuota(json: unknown): TelemetryPatch {
     }
   }
 
-  fiveHour ??= fallback.shift()
-  weekly ??= fallback.shift()
+  // Fallback windows keep their provider order but must adopt the slot type
+  // they fill; otherwise two windows can share one type and mislabel a slot.
+  if (!fiveHour) {
+    const candidate = fallback.shift()
+    if (candidate) {
+      fiveHour = {
+        ...candidate,
+        type: API_CREDENTIAL_TELEMETRY_QUOTA_WINDOW_TYPES.FiveHour,
+      }
+    }
+  }
+  if (!weekly) {
+    const candidate = fallback.shift()
+    if (candidate) {
+      weekly = {
+        ...candidate,
+        type: API_CREDENTIAL_TELEMETRY_QUOTA_WINDOW_TYPES.Weekly,
+      }
+    }
+  }
   const windows = [fiveHour, weekly, monthly].filter(
     (window): window is NonNullable<typeof window> => Boolean(window),
   )
@@ -530,6 +530,25 @@ export function parseOpenAiBillingUsage(
   }
 }
 
+/** Maps provider token counters to the normalized upload/download contract. */
+export function mapTodayTokenUsage(input: {
+  prompt?: number
+  completion?: number
+  total?: number
+}): { upload: number; download: number } | undefined {
+  if (
+    input.prompt === undefined &&
+    input.completion === undefined &&
+    input.total === undefined
+  ) {
+    return undefined
+  }
+  return {
+    upload: input.prompt ?? 0,
+    download: input.completion ?? 0,
+  }
+}
+
 /**
  * Maps a custom telemetry JSON response through configured JSON paths.
  */
@@ -546,6 +565,11 @@ export function mapCustomJson(
   const todayTotalTokens = paths.todayTotalTokens
     ? readNumber(getPathValue(json, paths.todayTotalTokens))
     : undefined
+  const todayTokens = mapTodayTokenUsage({
+    prompt: todayPromptTokens,
+    completion: todayCompletionTokens,
+    total: todayTotalTokens,
+  })
 
   return {
     ...(paths.balanceUsd
@@ -557,16 +581,7 @@ export function mapCustomJson(
     ...(paths.todayRequests
       ? { todayRequests: readNumber(getPathValue(json, paths.todayRequests)) }
       : {}),
-    ...(todayPromptTokens !== undefined ||
-    todayCompletionTokens !== undefined ||
-    todayTotalTokens !== undefined
-      ? {
-          todayTokens: {
-            upload: todayPromptTokens ?? todayTotalTokens ?? 0,
-            download: todayCompletionTokens ?? 0,
-          },
-        }
-      : {}),
+    ...(todayTokens ? { todayTokens } : {}),
     ...(paths.totalUsedUsd
       ? { totalUsedUsd: readNumber(getPathValue(json, paths.totalUsedUsd)) }
       : {}),

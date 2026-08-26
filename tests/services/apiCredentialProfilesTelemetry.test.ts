@@ -247,6 +247,12 @@ describe("api credential profile telemetry", () => {
         }),
       }),
     )
+    // The weekly fixture's invalid resetsAt must not leak through as a
+    // garbage resetTime on that window.
+    const weeklyWindow = snapshot.facts?.quota?.windows?.find(
+      (window) => window.type === "weekly",
+    )
+    expect(weeklyWindow?.resetTime).toBeUndefined()
   })
 
   it("ignores OpenCode windows whose provider status is not ok", async () => {
@@ -699,7 +705,7 @@ describe("api credential profile telemetry", () => {
     expect(snapshot.facts?.balances).toBeUndefined()
   })
 
-  it("selects a non-zero DeepSeek USD balance when CNY is empty", async () => {
+  it("keeps every DeepSeek currency balance in provider order", async () => {
     const profile = await apiCredentialProfilesStorage.createProfile({
       name: "DeepSeek USD",
       apiType: API_TYPES.OPENAI_COMPATIBLE,
@@ -1078,10 +1084,7 @@ describe("api credential profile telemetry", () => {
     expect(snapshot).toEqual(
       expect.objectContaining({
         attempts: [],
-        health: {
-          reason: "No supported telemetry endpoint returned data",
-          status: SiteHealthStatus.Warning,
-        },
+        health: { status: SiteHealthStatus.Warning },
       }),
     )
   })
@@ -1329,10 +1332,7 @@ describe("api credential profile telemetry", () => {
 
     const snapshot = await refreshApiCredentialProfileTelemetry(profile.id)
 
-    expect(snapshot.health).toEqual({
-      reason: "Custom endpoint is not configured",
-      status: SiteHealthStatus.Warning,
-    })
+    expect(snapshot.health).toEqual({ status: SiteHealthStatus.Warning })
     expect(snapshot.lastError).toBe("Custom endpoint is not configured")
     expect(snapshot.attempts).toEqual(
       expect.arrayContaining([

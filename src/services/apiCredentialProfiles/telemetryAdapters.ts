@@ -4,12 +4,16 @@ import {
   createAttempt,
 } from "~/services/apiCredentialProfiles/telemetryAttempts"
 import { resolveApiCredentialTelemetryRequestTarget } from "~/services/apiCredentialProfiles/telemetryConfig"
-import type { TelemetryPatch } from "~/services/apiCredentialProfiles/telemetryContracts"
+import {
+  TELEMETRY_PROVIDER_PROTOCOL,
+  type TelemetryPatch,
+} from "~/services/apiCredentialProfiles/telemetryContracts"
 import { API_CREDENTIAL_TELEMETRY_ENDPOINTS } from "~/services/apiCredentialProfiles/telemetryEndpoints"
 import {
   dataLike,
   isRecord,
   mapCustomJson,
+  mapTodayTokenUsage,
   nonNegativeQuotaToUsd,
   normalizeTimestamp,
   parseDeepSeekBalance,
@@ -19,7 +23,6 @@ import {
   parseOpenAiBillingUsage,
   parseOpenCodeGoUsage,
   readNumber,
-  TELEMETRY_PROVIDER_PROTOCOL,
 } from "~/services/apiCredentialProfiles/telemetryParsers"
 import { fetchTelemetryJson } from "~/services/apiCredentialProfiles/telemetryTransport"
 import { API_AUTH_TOKEN_MODES } from "~/services/apiTransport/type"
@@ -85,8 +88,10 @@ async function queryOpenAiBilling(
   }
 
   const now = new Date()
-  const start = `${now.getFullYear()}-01-01`
+  // Both range bounds derive from UTC so the year boundary cannot disagree
+  // with the ISO end date around New Year in positive UTC offsets.
   const end = now.toISOString().slice(0, 10)
+  const start = `${end.slice(0, 4)}-01-01`
   const usageEndpoint = createOpenAiBillingUsageEndpoint(start, end)
   const usage = await fetchTelemetryJson({
     baseUrl: profile.baseUrl,
@@ -176,7 +181,8 @@ async function queryKimiOpenPlatformBalance(
     endpoint: result.endpoint,
     data: parseKimiOpenPlatformBalance(
       result.json,
-      new URL(profile.baseUrl).hostname === "api.moonshot.ai"
+      new URL(profile.baseUrl).hostname ===
+        TELEMETRY_PROVIDER_PROTOCOL.kimi.moonshotAiHost
         ? TELEMETRY_PROVIDER_PROTOCOL.currencies.Usd
         : TELEMETRY_PROVIDER_PROTOCOL.currencies.Cny,
     ),
@@ -265,6 +271,11 @@ async function querySub2ApiUsage(
   const todayCompletionTokens = readNumber(today.completion_tokens)
   const todayTotalTokens =
     readNumber(today.tokens) ?? readNumber(today.total_tokens)
+  const todayTokens = mapTodayTokenUsage({
+    prompt: todayPromptTokens,
+    completion: todayCompletionTokens,
+    total: todayTotalTokens,
+  })
 
   return {
     source: API_CREDENTIAL_TELEMETRY_SOURCES.Sub2ApiUsage,
@@ -277,16 +288,7 @@ async function querySub2ApiUsage(
       ...(readNumber(today.requests) !== undefined
         ? { todayRequests: readNumber(today.requests) }
         : {}),
-      ...(todayPromptTokens !== undefined ||
-      todayCompletionTokens !== undefined ||
-      todayTotalTokens !== undefined
-        ? {
-            todayTokens: {
-              upload: todayPromptTokens ?? todayTotalTokens ?? 0,
-              download: todayCompletionTokens ?? 0,
-            },
-          }
-        : {}),
+      ...(todayTokens ? { todayTokens } : {}),
       ...(readNumber(total.cost) !== undefined
         ? { totalUsedUsd: readNumber(total.cost) }
         : {}),

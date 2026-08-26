@@ -15,6 +15,7 @@ import {
 } from "~/services/productAnalytics/contracts"
 import { trackProductAnalyticsEvent } from "~/services/productAnalytics/dispatch"
 import { SiteHealthStatus } from "~/types"
+import { API_CREDENTIAL_TELEMETRY_FACT_UNITS } from "~/types/apiCredentialProfiles"
 import { formatTelemetryMoney } from "~/utils/core/money"
 
 import { AnimatedStatValue } from "./AnimatedStatValue"
@@ -68,9 +69,12 @@ export default function ApiCredentialProfilesStatsSection() {
         }
         const usdCashBalances = snapshot.facts?.balances?.filter(
           (balance) =>
-            balance.unit.kind === "money" &&
-            balance.unit.currency === "USD" &&
-            balance.semantics === "cash",
+            balance.unit.kind ===
+              API_CREDENTIAL_TELEMETRY_FACT_UNITS.kinds.Money &&
+            balance.unit.currency ===
+              API_CREDENTIAL_TELEMETRY_FACT_UNITS.currencies.Usd &&
+            balance.semantics ===
+              API_CREDENTIAL_TELEMETRY_FACT_UNITS.semantics.Cash,
         )
         if (usdCashBalances && usdCashBalances.length > 0) {
           acc.balanceUsd += usdCashBalances.reduce(
@@ -81,8 +85,10 @@ export default function ApiCredentialProfilesStatsSection() {
         }
         const todayCost = snapshot.facts?.usage?.todayCost
         if (
-          todayCost?.unit.kind === "money" &&
-          todayCost.unit.currency === "USD"
+          todayCost?.unit.kind ===
+            API_CREDENTIAL_TELEMETRY_FACT_UNITS.kinds.Money &&
+          todayCost.unit.currency ===
+            API_CREDENTIAL_TELEMETRY_FACT_UNITS.currencies.Usd
         ) {
           acc.todayUsageUsd += todayCost.value
           acc.todayUsageSources += 1

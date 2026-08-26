@@ -53,7 +53,7 @@ export function buildTelemetrySnapshot({
           (attempt) =>
             attempt.status === API_CREDENTIAL_TELEMETRY_ATTEMPT_STATUSES.Error,
         )?.message ||
-        "No supported telemetry endpoint returned data"
+        undefined
 
   return {
     health:
@@ -65,10 +65,7 @@ export function buildTelemetrySnapshot({
                 API_CREDENTIAL_TELEMETRY_HEALTH_REASONS.InsufficientBalance,
             }
           : { status: SiteHealthStatus.Healthy }
-        : {
-            status: SiteHealthStatus.Warning,
-            reason: lastError,
-          },
+        : { status: SiteHealthStatus.Warning },
     lastSyncTime: now,
     ...(usageSucceeded || modelSucceeded ? { lastSuccessTime: now } : {}),
     ...(lastError ? { lastError } : {}),

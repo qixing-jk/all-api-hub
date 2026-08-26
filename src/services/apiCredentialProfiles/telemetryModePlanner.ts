@@ -1,4 +1,5 @@
 import type { TelemetryPatch } from "~/services/apiCredentialProfiles/telemetryContracts"
+import { TELEMETRY_PROVIDER_PROTOCOL } from "~/services/apiCredentialProfiles/telemetryContracts"
 import type {
   ApiCredentialProfile,
   ApiCredentialTelemetryCapabilityMode,
@@ -19,7 +20,10 @@ const AUTO_TELEMETRY_HOSTS = {
   glm: ["open.bigmodel.cn", "dev.bigmodel.cn"] as readonly string[],
   kimi: "api.kimi.com",
   zAi: "api.z.ai",
-  moonshot: ["api.moonshot.cn", "api.moonshot.ai"] as readonly string[],
+  moonshot: [
+    "api.moonshot.cn",
+    TELEMETRY_PROVIDER_PROTOCOL.kimi.moonshotAiHost,
+  ] as readonly string[],
 } as const
 
 /** Detects the documented Z.AI Coding Plan endpoints. */

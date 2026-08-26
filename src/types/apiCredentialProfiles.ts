@@ -126,6 +126,27 @@ export const API_CREDENTIAL_TELEMETRY_HEALTH_REASONS = {
   InsufficientBalance: "insufficient-balance",
 } as const
 
+/**
+ * Legacy English health-reason strings persisted by earlier telemetry builds.
+ * Kept as a shared constant so UI localization can still match old snapshots.
+ */
+export const LEGACY_INSUFFICIENT_BALANCE_REASONS: readonly string[] = [
+  "Provider account is unavailable",
+  "Provider balance is insufficient for API calls",
+]
+
+/** Runtime discriminators for normalized telemetry fact units and semantics. */
+export const API_CREDENTIAL_TELEMETRY_FACT_UNITS = {
+  kinds: { Money: "money", Quota: "quota", Count: "count", Percent: "percent" },
+  currencies: { Usd: "USD" },
+  semantics: {
+    Cash: "cash",
+    ProviderWallet: "provider-wallet",
+    BudgetEquivalent: "budget-equivalent",
+    Legacy: "legacy",
+  },
+} as const
+
 export type ApiCredentialTelemetryAttemptStatus =
   (typeof API_CREDENTIAL_TELEMETRY_ATTEMPT_STATUSES)[keyof typeof API_CREDENTIAL_TELEMETRY_ATTEMPT_STATUSES]
 

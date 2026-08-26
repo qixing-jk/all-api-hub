@@ -67,7 +67,13 @@ function getBalanceSemanticsLabel(
   if (balance.semantics === "provider-wallet") {
     return t("apiCredentialProfiles:telemetry.balanceSemantics.providerWallet")
   }
-  if (balance.semantics === "budget-equivalent") {
+  // formatProviderBalance already appends the budget-equivalent label for
+  // this unit, so a second identical suffix would render it twice.
+  if (
+    balance.semantics === "budget-equivalent" &&
+    balance.unit.kind === "quota" &&
+    balance.unit.code !== "usd-equivalent"
+  ) {
     return t(
       "apiCredentialProfiles:telemetry.balanceSemantics.budgetEquivalent",
     )
@@ -121,10 +127,10 @@ export function ApiCredentialProfileTelemetryDetails({
               {t("apiCredentialProfiles:telemetry.quota")}
             </div>
             <div className="grid gap-1.5 sm:grid-cols-3">
-              {facts.quota.windows.map((window) => (
+              {facts.quota.windows.map((window, index) => (
                 <div
                   className="dark:bg-dark-bg-tertiary/60 rounded-md bg-white px-2 py-1.5 font-medium text-gray-800 dark:text-gray-200"
-                  key={window.type}
+                  key={`${window.type}-${index}`}
                 >
                   <div>{formatProviderQuotaWindow(window, t)}</div>
                   {window.resetTime !== undefined ? (

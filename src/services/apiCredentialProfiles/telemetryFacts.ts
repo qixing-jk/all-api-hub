@@ -1,13 +1,18 @@
-import type { TelemetryPatch } from "~/services/apiCredentialProfiles/telemetryContracts"
+import {
+  TELEMETRY_PROVIDER_PROTOCOL,
+  type TelemetryPatch,
+} from "~/services/apiCredentialProfiles/telemetryContracts"
 import type {
   ApiCredentialTelemetryAmount,
   ApiCredentialTelemetryFacts,
   ApiCredentialTelemetrySource,
 } from "~/types/apiCredentialProfiles"
-import { API_CREDENTIAL_TELEMETRY_SOURCES } from "~/types/apiCredentialProfiles"
+import {
+  API_CREDENTIAL_TELEMETRY_FACT_UNITS,
+  API_CREDENTIAL_TELEMETRY_SOURCES,
+} from "~/types/apiCredentialProfiles"
 
 const TELEMETRY_FACT_UNITS = {
-  currencies: { Usd: "USD", Jpy: "JPY" },
   quota: {
     usdEquivalentCode: "usd-equivalent",
     usdEquivalentLabel: "USD-equivalent budget",
@@ -33,18 +38,18 @@ export function normalizeTelemetryPatchToFacts(
     data.balances ?? (data.balance ? [data.balance] : [])
   for (const balance of balancesToNormalize) {
     const decimalPlaces =
-      balance.currency === TELEMETRY_FACT_UNITS.currencies.Jpy ? 0 : 2
+      balance.currency === TELEMETRY_PROVIDER_PROTOCOL.currencies.Jpy ? 0 : 2
     balances.push({
       amount: balance.amount,
       unit: {
-        kind: "money",
+        kind: API_CREDENTIAL_TELEMETRY_FACT_UNITS.kinds.Money,
         currency: balance.currency,
         decimalPlaces,
       },
       semantics:
         source === API_CREDENTIAL_TELEMETRY_SOURCES.DeepSeekBalance
-          ? "cash"
-          : "provider-wallet",
+          ? API_CREDENTIAL_TELEMETRY_FACT_UNITS.semantics.Cash
+          : API_CREDENTIAL_TELEMETRY_FACT_UNITS.semantics.ProviderWallet,
       ...(balance.grantedAmount !== undefined
         ? { grantedAmount: balance.grantedAmount }
         : {}),
@@ -62,20 +67,20 @@ export function normalizeTelemetryPatchToFacts(
       amount: data.balanceUsd,
       unit: budgetSource
         ? {
-            kind: "quota",
+            kind: API_CREDENTIAL_TELEMETRY_FACT_UNITS.kinds.Quota,
             code: TELEMETRY_FACT_UNITS.quota.usdEquivalentCode,
             label: TELEMETRY_FACT_UNITS.quota.usdEquivalentLabel,
           }
         : {
-            kind: "money",
-            currency: TELEMETRY_FACT_UNITS.currencies.Usd,
+            kind: API_CREDENTIAL_TELEMETRY_FACT_UNITS.kinds.Money,
+            currency: TELEMETRY_PROVIDER_PROTOCOL.currencies.Usd,
             decimalPlaces: 2,
           },
       semantics: budgetSource
-        ? "budget-equivalent"
+        ? API_CREDENTIAL_TELEMETRY_FACT_UNITS.semantics.BudgetEquivalent
         : source === API_CREDENTIAL_TELEMETRY_SOURCES.OpenAiBilling
-          ? "cash"
-          : "legacy",
+          ? API_CREDENTIAL_TELEMETRY_FACT_UNITS.semantics.Cash
+          : API_CREDENTIAL_TELEMETRY_FACT_UNITS.semantics.Legacy,
     })
   }
   if (balances.length > 0) facts.balances = balances
@@ -118,13 +123,13 @@ export function normalizeTelemetryPatchToFacts(
 
   const budgetUnit: ApiCredentialTelemetryAmount["unit"] = budgetSource
     ? {
-        kind: "quota",
+        kind: API_CREDENTIAL_TELEMETRY_FACT_UNITS.kinds.Quota,
         code: TELEMETRY_FACT_UNITS.quota.usdEquivalentCode,
         label: TELEMETRY_FACT_UNITS.quota.usdEquivalentLabel,
       }
     : {
-        kind: "money",
-        currency: TELEMETRY_FACT_UNITS.currencies.Usd,
+        kind: API_CREDENTIAL_TELEMETRY_FACT_UNITS.kinds.Money,
+        currency: TELEMETRY_PROVIDER_PROTOCOL.currencies.Usd,
         decimalPlaces: 2,
       }
   const usage: NonNullable<ApiCredentialTelemetryFacts["usage"]> = {}
@@ -132,8 +137,8 @@ export function normalizeTelemetryPatchToFacts(
     usage.todayCost = {
       value: data.todayCostUsd,
       unit: {
-        kind: "money",
-        currency: TELEMETRY_FACT_UNITS.currencies.Usd,
+        kind: API_CREDENTIAL_TELEMETRY_FACT_UNITS.kinds.Money,
+        currency: TELEMETRY_PROVIDER_PROTOCOL.currencies.Usd,
         decimalPlaces: 2,
       },
     }
@@ -141,13 +146,19 @@ export function normalizeTelemetryPatchToFacts(
   if (data.todayRequests !== undefined) {
     usage.todayRequests = {
       value: data.todayRequests,
-      unit: { kind: "count", code: TELEMETRY_FACT_UNITS.counts.Requests },
+      unit: {
+        kind: API_CREDENTIAL_TELEMETRY_FACT_UNITS.kinds.Count,
+        code: TELEMETRY_FACT_UNITS.counts.Requests,
+      },
     }
   }
   if (data.todayTokens) {
     usage.todayTokens = {
       ...data.todayTokens,
-      unit: { kind: "count", code: TELEMETRY_FACT_UNITS.counts.Tokens },
+      unit: {
+        kind: API_CREDENTIAL_TELEMETRY_FACT_UNITS.kinds.Count,
+        code: TELEMETRY_FACT_UNITS.counts.Tokens,
+      },
     }
   }
   if (data.totalUsedUsd !== undefined) {

@@ -9,9 +9,10 @@ import {
 } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { SiteHealthStatus } from "~/types"
-import type {
-  ApiCredentialProfile,
-  ApiCredentialProfilesConfig,
+import {
+  API_CREDENTIAL_PROFILES_CONFIG_VERSION,
+  type ApiCredentialProfile,
+  type ApiCredentialProfilesConfig,
 } from "~/types/apiCredentialProfiles"
 
 const storageData = new Map<string, unknown>()
@@ -92,7 +93,7 @@ describe("apiCredentialProfileLinks", () => {
 
     await expect(apiCredentialProfilesStorage.getConfig()).resolves.toEqual(
       expect.objectContaining({
-        version: 5,
+        version: API_CREDENTIAL_PROFILES_CONFIG_VERSION,
         profiles: [expect.objectContaining({ id: result.profile.id })],
         links: [expect.objectContaining({ id: link?.id })],
       }),
@@ -426,7 +427,7 @@ describe("apiCredentialProfileLinks", () => {
 
     expect(migrated).toEqual(
       expect.objectContaining({
-        version: 5,
+        version: API_CREDENTIAL_PROFILES_CONFIG_VERSION,
         profiles: [expect.objectContaining({ id: "profile-legacy" })],
         links: [],
         linkTombstones: [],

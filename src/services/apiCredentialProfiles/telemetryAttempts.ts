@@ -49,6 +49,8 @@ export function prepareTelemetrySecrets(
 
 /**
  * Creates a normalized telemetry attempt entry for the profile snapshot.
+ * Messages are persisted with snapshots, so they are redacted here as well;
+ * callers that pre-sanitize remain unaffected because redaction is idempotent.
  */
 export function createAttempt(
   source: ApiCredentialTelemetryAttempt["source"],
@@ -61,7 +63,7 @@ export function createAttempt(
     source,
     endpoint: sanitizeTelemetryEndpoint(endpoint, secrets),
     status,
-    ...(message ? { message } : {}),
+    ...(message ? { message: toSanitizedErrorSummary(message, secrets) } : {}),
   }
 }
 

@@ -37,7 +37,7 @@ describe("api credential telemetry attempts", () => {
       source: API_CREDENTIAL_TELEMETRY_SOURCES.CustomReadOnlyEndpoint,
       endpoint: "/usage?secret=%5BREDACTED%5D",
       status: API_CREDENTIAL_TELEMETRY_ATTEMPT_STATUSES.Error,
-      message: "request failed: token",
+      message: "request failed: [REDACTED]",
     })
   })
 

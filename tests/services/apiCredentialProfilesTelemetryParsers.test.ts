@@ -4,6 +4,7 @@ import {
   mapCustomJson,
   parseDeepSeekBalance,
   parseGlmQuota,
+  parseKimiQuota,
   parseOpenAiBillingUsage,
   parseOpenCodeGoUsage,
 } from "~/services/apiCredentialProfiles/telemetryParsers"
@@ -93,6 +94,58 @@ describe("api credential telemetry parsers", () => {
     })
   })
 
+  it("derives a limit when a quota window reports only remaining capacity", () => {
+    const result = parseKimiQuota({
+      usage: {
+        limit: undefined,
+        used: undefined,
+        remaining: 7500,
+        resetTime: "2026-04-19T00:00:00.000Z",
+      },
+    })
+
+    expect(result.quota?.windows).toEqual([
+      expect.objectContaining({
+        type: "weekly",
+        limit: 7500,
+        used: 0,
+        remaining: 7500,
+        percentRemaining: 100,
+      }),
+    ])
+  })
+
+  it("adopts slot types when GLM fallback windows fill five-hour and weekly", () => {
+    const result = parseGlmQuota({
+      success: true,
+      data: {
+        limits: [
+          {
+            type: "TOKENS_LIMIT",
+            unit: 9,
+            number: 1,
+            usage: 100,
+            currentValue: 10,
+            remaining: 90,
+          },
+          {
+            type: "TOKENS_LIMIT",
+            unit: 9,
+            number: 2,
+            usage: 200,
+            currentValue: 50,
+            remaining: 150,
+          },
+        ],
+      },
+    })
+
+    expect(result.quota?.windows).toEqual([
+      expect.objectContaining({ type: "fiveHour", remaining: 90 }),
+      expect.objectContaining({ type: "weekly", remaining: 150 }),
+    ])
+  })
+
   it("does not expose a huge OpenAI-compatible hard limit as spendable balance", () => {
     expect(
       parseOpenAiBillingUsage(
@@ -119,5 +172,14 @@ describe("api credential telemetry parsers", () => {
       balanceUsd: 0,
       todayTokens: { upload: 0, download: 4 },
     })
+  })
+
+  it("does not treat total tokens as upload tokens", () => {
+    expect(
+      mapCustomJson(
+        { usage: { total: 12 } },
+        { todayTotalTokens: "usage.total" },
+      ),
+    ).toEqual({ todayTokens: { upload: 0, download: 0 } })
   })
 })

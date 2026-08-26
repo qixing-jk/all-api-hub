@@ -41,6 +41,7 @@ import { SiteHealthStatus } from "~/types"
 import {
   API_CREDENTIAL_TELEMETRY_HEALTH_REASONS,
   API_CREDENTIAL_TELEMETRY_SOURCES,
+  LEGACY_INSUFFICIENT_BALANCE_REASONS,
   type ApiCredentialProfile,
   type ApiCredentialTelemetrySource,
 } from "~/types/apiCredentialProfiles"
@@ -211,8 +212,8 @@ function getTelemetryHealthReason(
 ): string | undefined {
   if (
     reason === API_CREDENTIAL_TELEMETRY_HEALTH_REASONS.InsufficientBalance ||
-    reason === "Provider account is unavailable" ||
-    reason === "Provider balance is insufficient for API calls"
+    (reason !== undefined &&
+      LEGACY_INSUFFICIENT_BALANCE_REASONS.includes(reason))
   ) {
     return t(
       "apiCredentialProfiles:telemetry.healthReasons.insufficientBalance",

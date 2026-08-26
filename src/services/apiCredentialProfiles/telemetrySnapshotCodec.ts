@@ -21,6 +21,24 @@ function coerceFiniteNumber(raw: unknown): number | undefined {
   return undefined
 }
 
+/** Normalizes persisted model facts with finite counts and capped previews. */
+function coerceTelemetryModelsFact(
+  rawModels: unknown,
+): ApiCredentialTelemetryFacts["models"] | undefined {
+  if (!rawModels || typeof rawModels !== "object") return undefined
+  const models = rawModels as Record<string, unknown>
+  const count = coerceFiniteNumber(models.count)
+  if (count === undefined) return undefined
+  return {
+    count: Math.max(0, Math.trunc(count)),
+    preview: Array.isArray(models.preview)
+      ? models.preview
+          .filter((item): item is string => typeof item === "string")
+          .slice(0, 20)
+      : [],
+  }
+}
+
 /** Checks whether a persisted source is one of the released telemetry adapters. */
 function isTelemetrySource(
   value: unknown,
@@ -205,13 +223,15 @@ function coerceTelemetryFacts(
       }
     })
     .filter((item): item is NonNullable<typeof item> => item !== null)
-  if (windows.length > 0) {
+  const membershipLevel =
+    typeof rawQuota?.membershipLevel === "string" &&
+    rawQuota.membershipLevel.trim()
+      ? rawQuota.membershipLevel.trim()
+      : undefined
+  if (windows.length > 0 || membershipLevel) {
     facts.quota = {
       windows,
-      ...(typeof rawQuota?.membershipLevel === "string" &&
-      rawQuota.membershipLevel.trim()
-        ? { membershipLevel: rawQuota.membershipLevel.trim() }
-        : {}),
+      ...(membershipLevel ? { membershipLevel } : {}),
     }
   }
 
@@ -289,16 +309,9 @@ function coerceTelemetryFacts(
     obj.models && typeof obj.models === "object"
       ? (obj.models as Record<string, unknown>)
       : null
-  const modelCount = coerceFiniteNumber(rawModels?.count)
-  if (modelCount !== undefined) {
-    facts.models = {
-      count: Math.max(0, Math.trunc(modelCount)),
-      preview: Array.isArray(rawModels?.preview)
-        ? rawModels.preview
-            .filter((item): item is string => typeof item === "string")
-            .slice(0, 20)
-        : [],
-    }
+  const modelsFact = coerceTelemetryModelsFact(rawModels)
+  if (modelsFact) {
+    facts.models = modelsFact
   }
   return Object.keys(facts).length > 0 ? facts : undefined
 }
@@ -381,20 +394,9 @@ function migrateLegacyTelemetryFacts(
     usage.expiresAt = coerceFiniteNumber(obj.expiresAt)
   if (Object.keys(usage).length > 0) facts.usage = usage
 
-  const rawModels =
-    obj.models && typeof obj.models === "object"
-      ? (obj.models as Record<string, unknown>)
-      : null
-  const modelCount = coerceFiniteNumber(rawModels?.count)
-  if (modelCount !== undefined) {
-    facts.models = {
-      count: Math.max(0, Math.trunc(modelCount)),
-      preview: Array.isArray(rawModels?.preview)
-        ? rawModels.preview
-            .filter((item): item is string => typeof item === "string")
-            .slice(0, 20)
-        : [],
-    }
+  const modelsFact = coerceTelemetryModelsFact(obj.models)
+  if (modelsFact) {
+    facts.models = modelsFact
   }
   return facts
 }
