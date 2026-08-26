@@ -1,6 +1,7 @@
 import type {
   ApiCredentialTelemetryBalance,
-  ApiCredentialTelemetrySnapshot,
+  ApiCredentialTelemetryQuota,
+  ApiCredentialTelemetryTokenUsage,
 } from "~/types/apiCredentialProfiles"
 
 /** Provider protocol values shared by telemetry adapters and parsers. */
@@ -28,22 +29,32 @@ export const TELEMETRY_PROVIDER_PROTOCOL = {
   },
 } as const
 
-export type TelemetryPatch = Partial<
-  Pick<
-    ApiCredentialTelemetrySnapshot,
-    | "balance"
-    | "quota"
-    | "balanceUsd"
-    | "todayCostUsd"
-    | "todayRequests"
-    | "todayTokens"
-    | "unlimitedQuota"
-    | "totalUsedUsd"
-    | "totalGrantedUsd"
-    | "totalAvailableUsd"
-    | "expiresAt"
-  >
-> & {
+/**
+ * Ephemeral adapter output consumed by telemetry fact normalization.
+ *
+ * This shape is never persisted directly. Its flat fields describe the
+ * provider observations available at the adapter seam; snapshot persistence
+ * uses the unit-aware `facts` model instead.
+ */
+export type TelemetryPatch = {
+  /** Provider-native balance when the response contains one currency. */
+  balance?: ApiCredentialTelemetryBalance
   /** Provider-native balances when a response contains multiple currencies. */
   balances?: ApiCredentialTelemetryBalance[]
+  /** Provider-native quota windows normalized to remaining capacity. */
+  quota?: ApiCredentialTelemetryQuota
+  /** USD-denominated or USD-equivalent balance reported by the adapter. */
+  balanceUsd?: number
+  /** USD-denominated cost accumulated today. */
+  todayCostUsd?: number
+  todayRequests?: number
+  todayTokens?: ApiCredentialTelemetryTokenUsage
+  unlimitedQuota?: boolean
+  /** USD-denominated or USD-equivalent cumulative usage. */
+  totalUsedUsd?: number
+  /** USD-denominated or USD-equivalent cumulative grant. */
+  totalGrantedUsd?: number
+  /** USD-denominated or USD-equivalent cumulative availability. */
+  totalAvailableUsd?: number
+  expiresAt?: number
 }
