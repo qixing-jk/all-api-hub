@@ -355,7 +355,9 @@ describe("AccountActionButtons", () => {
     expect(enableButton).toHaveClass("text-emerald-600")
     expect(deleteButton).toHaveClass("text-red-600")
     expect(
-      screen.queryByRole("button", { name: "account:actions.disableAccount" }),
+      within(menu).queryByRole("menuitem", {
+        name: "account:actions.disableAccount",
+      }),
     ).toBeNull()
     expect(
       enableButton.compareDocumentPosition(deleteButton) &
@@ -434,7 +436,9 @@ describe("AccountActionButtons", () => {
     const deleteIndex = menuButtons.indexOf(deleteButton!)
     expect(deleteIndex - disableIndex).toBe(1)
     expect(
-      screen.queryByRole("button", { name: "account:actions.enableAccount" }),
+      within(menu).queryByRole("menuitem", {
+        name: "account:actions.enableAccount",
+      }),
     ).toBeNull()
   })
 
