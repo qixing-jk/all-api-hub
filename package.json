@@ -44,6 +44,7 @@
     "e2e": "playwright test",
     "e2e:default": "playwright test",
     "e2e:dnr-required": "playwright test e2e/dnrRequired --project=chromium --workers=1 --timeout=120000",
+    "e2e:bookmarks-required": "playwright test e2e/accountBookmarkImportBrowserFlow --project=chromium",
     "e2e:real-site": "node scripts/real-site-e2e-cli.mjs all",
     "e2e:real-site:account": "node scripts/real-site-e2e-cli.mjs account",
     "e2e:real-site:category": "node scripts/real-site-e2e-cli.mjs",

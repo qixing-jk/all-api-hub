@@ -74,6 +74,10 @@ jobs:
             e2e_type: dnr-required
             build_variant: dnr-required
             shard: ""
+          - name: bookmarks-required
+            e2e_type: bookmarks-required
+            build_variant: bookmarks-required
+            shard: ""
     env:
       AAH_E2E_SHARD_TOTAL: "6"
 
@@ -119,10 +123,10 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
 
       - name: Run E2E smoke
-        timeout-minutes: ${{ matrix.e2e_type == 'dnr-required' && 5 || 8 }}
+        timeout-minutes: ${{ matrix.e2e_type == 'default' && 8 || 5 }}
         env:
           AAH_E2E_BUILD_VARIANT: ${{ matrix.build_variant }}
-          AAH_E2E_SMOKE_ONLY: ${{ matrix.e2e_type != 'dnr-required' && '1' || '' }}
+          AAH_E2E_SMOKE_ONLY: ${{ matrix.e2e_type == 'default' && '1' || '' }}
           AAH_E2E_WORKERS: "4"
           AAH_SKIP_E2E_BUILD: "1"
         run: >
