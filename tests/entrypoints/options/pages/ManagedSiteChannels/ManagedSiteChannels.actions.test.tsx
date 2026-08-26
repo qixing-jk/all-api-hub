@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from "vitest"
 
 import { ChannelDialogContainer } from "~/components/dialogs/ChannelDialog"
 import { CLAUDE_CODE_HUB_PROVIDER_TYPE } from "~/constants/claudeCodeHub"
-import { SITE_TYPES } from "~/constants/siteType"
+import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import ManagedSiteChannels from "~/features/ManagedSiteChannels/ManagedSiteChannels"
 import { fetchChannelFilters } from "~/features/ManagedSiteChannels/utils/channelFilters"
@@ -52,6 +52,7 @@ import {
   expectManagedSiteChannelActionTracked,
   markGatewayGuidanceOnboardingCompletedMock,
   mockChannels,
+  mockMutablePreferencesContext,
   openRowActionsMenu,
   setupManagedSiteChannelsTest,
   succeededChannelDelete,
@@ -913,21 +914,11 @@ describe("ManagedSiteChannels", () => {
       ),
     } as any
 
-    vi.mocked(useUserPreferencesContext).mockImplementation(
-      () =>
-        ({
-          preferences: currentPreferences,
-          managedSiteType: currentManagedSiteType,
-          newApiBaseUrl: currentPreferences.newApi.baseUrl,
-          newApiUserId: currentPreferences.newApi.userId,
-          newApiUsername: currentPreferences.newApi.username,
-          newApiPassword: currentPreferences.newApi.password,
-          newApiTotpSecret: currentPreferences.newApi.totpSecret,
-          markGatewayGuidanceOnboardingCompleted:
-            markGatewayGuidanceOnboardingCompletedMock,
-          updateManagedSiteType: vi.fn().mockResolvedValue(true),
-        }) as any,
-    )
+    mockMutablePreferencesContext(() => ({
+      preferences: currentPreferences,
+      managedSiteType: currentManagedSiteType,
+      extras: { updateManagedSiteType: vi.fn().mockResolvedValue(true) },
+    }))
     vi.mocked(getManagedSiteService).mockImplementation(async () =>
       currentManagedSiteType === SITE_TYPES.DONE_HUB ? newService : oldService,
     )
@@ -1537,20 +1528,10 @@ describe("ManagedSiteChannels", () => {
       withMigrationTarget: true,
     })
 
-    vi.mocked(useUserPreferencesContext).mockImplementation(
-      () =>
-        ({
-          preferences: currentPreferences,
-          managedSiteType: SITE_TYPES.NEW_API,
-          newApiBaseUrl: currentPreferences.newApi.baseUrl,
-          newApiUserId: currentPreferences.newApi.userId,
-          newApiUsername: currentPreferences.newApi.username,
-          newApiPassword: currentPreferences.newApi.password,
-          newApiTotpSecret: currentPreferences.newApi.totpSecret,
-          markGatewayGuidanceOnboardingCompleted:
-            markGatewayGuidanceOnboardingCompletedMock,
-        }) as any,
-    )
+    mockMutablePreferencesContext(() => ({
+      preferences: currentPreferences,
+      managedSiteType: SITE_TYPES.NEW_API,
+    }))
 
     vi.mocked(getManagedSiteService).mockResolvedValue({
       siteType: SITE_TYPES.NEW_API,

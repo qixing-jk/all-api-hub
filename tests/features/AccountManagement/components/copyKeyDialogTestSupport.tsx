@@ -117,7 +117,7 @@ export const TOKEN = {
   group: "",
 } as any
 
-const SHAREDCHAT_SERVICE_CREDENTIAL = {
+export const SHAREDCHAT_SERVICE_CREDENTIAL = {
   kind: "singleton_service_key" as const,
   service: "codex" as const,
   label: "Codex service key",
@@ -217,6 +217,7 @@ export function setupCopyKeyDialogTestDefaults() {
   completeProductAnalyticsActionMock.mockReset()
   createApiCredentialProfileMock.mockReset()
   captureApiCredentialProfileMock.mockReset()
+  userPreferencesContextMock.markGatewayGuidanceOnboardingCompleted.mockReset()
   startProductAnalyticsActionMock.mockReturnValue({
     complete: completeProductAnalyticsActionMock,
   })

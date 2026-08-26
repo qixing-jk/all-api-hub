@@ -25,9 +25,9 @@ import {
   NEW_API_MANAGED_SESSION_STATUSES,
 } from "~/services/managedSites/providers/newApiSession"
 import {
-  type PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_FEATURE_IDS,
+  type PRODUCT_ANALYTICS_ACTION_IDS,
   type PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import { render, screen, waitFor, within } from "~~/tests/test-utils/render"
@@ -348,6 +348,30 @@ export const buildPreferences = (options?: {
             adminToken: "",
           },
   }
+}
+
+export const mockMutablePreferencesContext = (
+  getState: () => {
+    managedSiteType: ManagedSiteType
+    preferences: ReturnType<typeof buildPreferences>
+    extras?: Record<string, unknown>
+  },
+) => {
+  vi.mocked(useUserPreferencesContext).mockImplementation(() => {
+    const { managedSiteType, preferences, extras } = getState()
+    return {
+      preferences,
+      managedSiteType,
+      newApiBaseUrl: preferences.newApi.baseUrl,
+      newApiUserId: preferences.newApi.userId,
+      newApiUsername: preferences.newApi.username,
+      newApiPassword: preferences.newApi.password,
+      newApiTotpSecret: preferences.newApi.totpSecret,
+      markGatewayGuidanceOnboardingCompleted:
+        markGatewayGuidanceOnboardingCompletedMock,
+      ...extras,
+    } as any
+  })
 }
 
 export const buildChannelListData = (items: any[]) => ({

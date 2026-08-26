@@ -119,6 +119,7 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
 
           <div
             ref={refs.scrollContainerRef}
+            data-testid={WEB_AI_API_CHECK_TEST_IDS.scrollContainer}
             className="max-h-[calc(90vh-64px)] overflow-y-auto overscroll-contain p-4"
           >
             <div className="space-y-4">

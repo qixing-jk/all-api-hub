@@ -574,7 +574,7 @@ describe("CopyKeyDialog create flows", () => {
         onClose={() => {}}
         account={{
           ...ACCOUNT,
-          siteType: "sub2api",
+          siteType: SITE_TYPES.SUB2API,
           sub2apiAuth: {
             jwtToken: "jwt",
             refreshToken: "refresh",

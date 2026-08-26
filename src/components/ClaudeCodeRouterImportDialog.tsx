@@ -48,7 +48,7 @@ const logger = createLogger("ClaudeCodeRouterImportDialog")
 // Preserve the real debounce in dev/prod so endpoint edits do not spam
 // model-list requests, but skip the wall-clock delay in Vitest (mirrors
 // CCSwitchExportDialog).
-const UPSTREAM_MODEL_FETCH_DEBOUNCE_MS = isTestMode() ? 0 : 300
+export const UPSTREAM_MODEL_FETCH_DEBOUNCE_MS = isTestMode() ? 0 : 300
 
 /**
  * Build the default Claude Code Router `api_base_url` for a provider.

@@ -423,11 +423,8 @@ describe("ApiCheckModalHost", () => {
     })
     expect(within(historyList).getAllByRole("listitem")).toHaveLength(2)
 
-    const removeItem = await screen.findByRole("button", {
-      name: "https://remove.example.com/api",
-    })
     await user.click(
-      within(removeItem.parentElement as HTMLElement).getByRole("button", {
+      screen.getByRole("button", {
         name: "webAiApiCheck:modal.history.remove: https://remove.example.com/api",
       }),
     )
@@ -788,11 +785,9 @@ describe("ApiCheckModalHost", () => {
   it("allows wheel events inside the scrollable modal body without scrolling the host page", async () => {
     await openModal()
 
-    const sourceTextInput = screen.getByPlaceholderText(
-      "webAiApiCheck:modal.sourceText.placeholder",
+    const scrollContainer = screen.getByTestId(
+      WEB_AI_API_CHECK_TEST_IDS.scrollContainer,
     )
-    const scrollContainer = sourceTextInput.closest(".overflow-y-auto")
-    expect(scrollContainer).not.toBeNull()
 
     const hostPageWheel = vi.fn()
     window.addEventListener("wheel", hostPageWheel)
@@ -802,7 +797,7 @@ describe("ApiCheckModalHost", () => {
       cancelable: true,
       deltaY: 100,
     })
-    scrollContainer?.dispatchEvent(wheelEvent)
+    scrollContainer.dispatchEvent(wheelEvent)
 
     expect(hostPageWheel).not.toHaveBeenCalled()
     expect(wheelEvent.defaultPrevented).toBe(false)

@@ -97,7 +97,7 @@ describe("ApiCheckModalHost", () => {
           enhancedAutoPromptEligible: true,
         },
       },
-    } as any)
+    })
 
     await screen.findByTestId(WEB_AI_API_CHECK_TEST_IDS.modal)
     expect(
@@ -160,7 +160,7 @@ describe("ApiCheckModalHost", () => {
           enhancedAutoPromptEligible: true,
         },
       },
-    } as any)
+    })
 
     await user.click(
       await screen.findByRole("button", {
@@ -236,7 +236,7 @@ describe("ApiCheckModalHost", () => {
           enhancedAutoPromptEligible: true,
         },
       },
-    } as any)
+    })
 
     const apiKeyCandidate = await screen.findByRole("button", {
       name: "webAiApiCheck:modal.candidates.apiKey 2",
@@ -301,7 +301,7 @@ describe("ApiCheckModalHost", () => {
           enhancedAutoPromptEligible: true,
         },
       },
-    } as any)
+    })
 
     await screen.findByTestId(WEB_AI_API_CHECK_TEST_IDS.modal)
 
@@ -359,7 +359,7 @@ describe("ApiCheckModalHost", () => {
           enhancedAutoPromptEligible: true,
         },
       },
-    } as any)
+    })
 
     expect(
       screen.queryByText("webAiApiCheck:modal.enhanced.title"),
@@ -415,7 +415,7 @@ describe("ApiCheckModalHost", () => {
           enhancedAutoPromptEligible: true,
         },
       },
-    } as any)
+    })
 
     await waitFor(() => {
       expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(

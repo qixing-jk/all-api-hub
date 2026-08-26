@@ -1,7 +1,7 @@
 import "./copyKeyDialogMocks"
 
 import userEvent from "@testing-library/user-event"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import CopyKeyDialog from "~/features/AccountManagement/components/CopyKeyDialog"
@@ -67,6 +67,10 @@ async function renderExpandedDetails() {
 describe("CopyKeyDialog exports and service credentials", () => {
   beforeEach(() => {
     setupCopyKeyDialogTestDefaults()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it("copies the resolved full key when inventory is masked", async () => {
@@ -307,13 +311,9 @@ describe("CopyKeyDialog exports and service credentials", () => {
 
     // The dialog resets its copied label via a 2s timeout; advance fake
     // timers instead of waiting on real time.
-    try {
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(2000)
-      })
-    } finally {
-      vi.useRealTimers()
-    }
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2000)
+    })
 
     expect(
       screen.queryByRole("button", {

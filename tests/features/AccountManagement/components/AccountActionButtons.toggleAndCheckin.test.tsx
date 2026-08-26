@@ -285,6 +285,7 @@ describe("AccountActionButtons", () => {
   })
 
   it("coalesces rapid targeted Quick check-in clicks into one user command", async () => {
+    const user = userEvent.setup()
     const run = createDeferred<{ success: boolean }>()
     sendRuntimeMessageMock.mockImplementation(async (type: string) => {
       if (type === AutoCheckinMessageTypes.RunNow) return await run.promise
@@ -307,7 +308,7 @@ describe("AccountActionButtons", () => {
       />,
     )
 
-    await userEvent.click(
+    await user.click(
       screen.getByRole("button", { name: "common:actions.more" }),
     )
     const quickCheckinButton = (

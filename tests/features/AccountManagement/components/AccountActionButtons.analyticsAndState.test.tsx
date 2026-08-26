@@ -345,28 +345,24 @@ describe("AccountActionButtons", () => {
     )
 
     const menu = await screen.findByRole("menu")
-    const enableLabel = await within(menu).findByText(
-      "account:actions.enableAccount",
-    )
-    const deleteLabel = await within(menu).findByText("account:actions.delete")
-    const enableButton = enableLabel.closest("button")
-    const deleteButton = deleteLabel.closest("button")
-    expect(enableButton).not.toBeNull()
-    expect(deleteButton).not.toBeNull()
+    const enableButton = within(menu).getByRole("menuitem", {
+      name: "account:actions.enableAccount",
+    })
+    const deleteButton = within(menu).getByRole("menuitem", {
+      name: "account:actions.delete",
+    })
 
-    expect(enableButton!).toBeInTheDocument()
-    expect(enableButton!).toHaveClass("text-emerald-600")
-    expect(deleteButton!).toBeInTheDocument()
-    expect(deleteButton!).toHaveClass("text-red-600")
+    expect(enableButton).toHaveClass("text-emerald-600")
+    expect(deleteButton).toHaveClass("text-red-600")
     expect(
       screen.queryByRole("button", { name: "account:actions.disableAccount" }),
     ).toBeNull()
-    expect(Array.from(menu.querySelectorAll("button"))).toEqual([
-      enableButton!,
-      deleteButton!,
-    ])
+    expect(
+      enableButton.compareDocumentPosition(deleteButton) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
 
-    await user.click(enableButton!)
+    await user.click(enableButton)
     expect(mockHandleSetAccountDisabled).toHaveBeenCalledWith(
       expect.objectContaining({ id: "acc-1" }),
       false,

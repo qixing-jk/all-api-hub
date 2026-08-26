@@ -26,6 +26,7 @@ import {
   selectExportAction,
   setupCopyKeyDialogTestDefaults,
   SHAREDCHAT_ACCOUNT,
+  SHAREDCHAT_SERVICE_CREDENTIAL,
   TOKEN,
 } from "./copyKeyDialogTestSupport"
 
@@ -240,14 +241,10 @@ describe("CopyKeyDialog subcomponents", () => {
   })
 
   it("uses service-credential analytics for its Kelivo export dialog", async () => {
-    const runtimeKey = buildServiceCredentialRuntimeKey(SHAREDCHAT_ACCOUNT, {
-      kind: "singleton_service_key" as const,
-      service: "codex" as const,
-      label: "Codex service key",
-      key: "sk-service-credential-secret",
-      isAuthenticated: true,
-      baseUrl: "https://api.example.invalid/v1",
-    })
+    const runtimeKey = buildServiceCredentialRuntimeKey(
+      SHAREDCHAT_ACCOUNT,
+      SHAREDCHAT_SERVICE_CREDENTIAL,
+    )
     const user = userEvent.setup()
 
     render(

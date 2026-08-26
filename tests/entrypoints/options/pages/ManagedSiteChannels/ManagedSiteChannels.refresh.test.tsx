@@ -4,8 +4,7 @@ import userEvent from "@testing-library/user-event"
 import toast from "react-hot-toast"
 import { describe, expect, it, vi } from "vitest"
 
-import { SITE_TYPES } from "~/constants/siteType"
-import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import ManagedSiteChannels from "~/features/ManagedSiteChannels/ManagedSiteChannels"
 import {
   MANAGED_SITE_CHANNELS_REFRESH_STATE_ATTRIBUTE,
@@ -28,8 +27,8 @@ import {
   buildChannelListData,
   buildPreferences,
   expectManagedSiteChannelActionSpanStarted,
-  markGatewayGuidanceOnboardingCompletedMock,
   mockChannels,
+  mockMutablePreferencesContext,
   setupManagedSiteChannelsTest,
   setupStaleChannelResponseAfterSiteSwitch,
   waitForChannelsRefreshIdle,
@@ -114,20 +113,10 @@ describe("ManagedSiteChannels", () => {
       listChannels: vi.fn().mockResolvedValue(buildChannelListData([])),
     } as any
 
-    vi.mocked(useUserPreferencesContext).mockImplementation(
-      () =>
-        ({
-          preferences: currentPreferences,
-          managedSiteType: currentManagedSiteType,
-          newApiBaseUrl: currentPreferences.newApi.baseUrl,
-          newApiUserId: currentPreferences.newApi.userId,
-          newApiUsername: currentPreferences.newApi.username,
-          newApiPassword: currentPreferences.newApi.password,
-          newApiTotpSecret: currentPreferences.newApi.totpSecret,
-          markGatewayGuidanceOnboardingCompleted:
-            markGatewayGuidanceOnboardingCompletedMock,
-        }) as any,
-    )
+    mockMutablePreferencesContext(() => ({
+      preferences: currentPreferences,
+      managedSiteType: currentManagedSiteType,
+    }))
     vi.mocked(getManagedSiteService).mockImplementation(async () =>
       currentManagedSiteType === SITE_TYPES.DONE_HUB
         ? doneHubService

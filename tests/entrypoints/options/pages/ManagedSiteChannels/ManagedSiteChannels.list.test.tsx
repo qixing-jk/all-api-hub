@@ -6,8 +6,7 @@ import toast from "react-hot-toast"
 import { describe, expect, it, vi } from "vitest"
 
 import { ChannelDialogProvider } from "~/components/dialogs/ChannelDialog"
-import { SITE_TYPES } from "~/constants/siteType"
-import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import {
   attachChannelFilterResourceRef,
   isChannelRowLike,
@@ -29,7 +28,13 @@ import {
   openSettingsTab,
   pushWithinOptionsPage,
 } from "~/utils/navigation"
-import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "~~/tests/test-utils/render"
 
 import { mockCompleteProductAnalyticsAction } from "./managedSiteChannelsMocks"
 import {
@@ -38,6 +43,7 @@ import {
   buildPreferences,
   markGatewayGuidanceOnboardingCompletedMock,
   mockChannels,
+  mockMutablePreferencesContext,
   setupManagedSiteChannelsTest,
   setupStaleChannelResponseAfterSiteSwitch,
   waitForChannelsRefreshIdle,
@@ -517,8 +523,12 @@ describe("ManagedSiteChannels", () => {
     await waitForRowText("Gamma")
 
     const rows = Array.from(container.querySelectorAll("tbody tr"))
-    const names = rows.map((row) =>
-      row.querySelector("td:nth-child(3) .font-medium")?.textContent?.trim(),
+    const channelNames = ["Alpha", "Beta", "Gamma"]
+    const names = rows.map(
+      (row) =>
+        channelNames.find((name) =>
+          within(row as HTMLElement).queryByText(name),
+        ) ?? null,
     )
 
     expect(names).toEqual(["Gamma", "Beta", "Alpha"])
@@ -530,8 +540,11 @@ describe("ManagedSiteChannels", () => {
     )
 
     const ascendingRows = Array.from(container.querySelectorAll("tbody tr"))
-    const ascendingNames = ascendingRows.map((row) =>
-      row.querySelector("td:nth-child(3) .font-medium")?.textContent?.trim(),
+    const ascendingNames = ascendingRows.map(
+      (row) =>
+        channelNames.find((name) =>
+          within(row as HTMLElement).queryByText(name),
+        ) ?? null,
     )
 
     expect(ascendingNames).toEqual(["Alpha", "Beta", "Gamma"])
@@ -607,21 +620,11 @@ describe("ManagedSiteChannels", () => {
           }),
       )
 
-    vi.mocked(useUserPreferencesContext).mockImplementation(
-      () =>
-        ({
-          preferences: currentPreferences,
-          managedSiteType: currentManagedSiteType,
-          newApiBaseUrl: currentPreferences.newApi.baseUrl,
-          newApiUserId: currentPreferences.newApi.userId,
-          newApiUsername: currentPreferences.newApi.username,
-          newApiPassword: currentPreferences.newApi.password,
-          newApiTotpSecret: currentPreferences.newApi.totpSecret,
-          markGatewayGuidanceOnboardingCompleted:
-            markGatewayGuidanceOnboardingCompletedMock,
-          updateManagedSiteType: vi.fn().mockResolvedValue(true),
-        }) as any,
-    )
+    mockMutablePreferencesContext(() => ({
+      preferences: currentPreferences,
+      managedSiteType: currentManagedSiteType,
+      extras: { updateManagedSiteType: vi.fn().mockResolvedValue(true) },
+    }))
 
     vi.mocked(getManagedSiteService).mockImplementation(
       async () =>

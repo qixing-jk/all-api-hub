@@ -45,6 +45,7 @@ const mocks = vi.hoisted(() => ({
     cliProxyBaseUrl: "https://cliproxy.example.invalid",
     cliProxyManagementKey: "cliproxy-management-key",
     markGatewayGuidanceOnboardingCompleted: vi.fn(),
+    // vi.hoisted runs before imported constants are initialized.
     managedSiteType: "new-api",
     themeMode: "system",
     updateThemeMode: vi.fn(),
