@@ -1,5 +1,12 @@
 import { Check, Copy } from "lucide-react"
-import { useEffect, useMemo, useState, type MouseEvent } from "react"
+import {
+  lazy,
+  Suspense,
+  useEffect,
+  useMemo,
+  useState,
+  type MouseEvent,
+} from "react"
 import { useTranslation } from "react-i18next"
 
 import { ClaudeCodeRouterImportDialog } from "~/components/ClaudeCodeRouterImportDialog"
@@ -11,12 +18,10 @@ import {
   ExportActionsMenu,
 } from "~/components/ExportActionsMenu"
 import { KelivoExportDialog } from "~/components/KelivoExportDialog"
-import { KiloCodeExportDialog } from "~/components/KiloCodeExportDialog"
 import { ManagedSiteImportButton } from "~/components/ManagedSiteImportButton"
 import { IconButton } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
-import { KiloCodeProfileExportDialog } from "~/features/ApiCredentialProfiles/components/KiloCodeProfileExportDialog"
 import {
   createCliProxyExportPayload,
   createExportAccount,
@@ -33,7 +38,6 @@ import {
 } from "~/services/accounts/accountRuntimeKeys"
 import { resolveDisplayAccountRuntimeKeySecret } from "~/services/accounts/utils/apiServiceRequest"
 import { buildApiCredentialProfileName } from "~/services/apiCredentialProfiles/accountTokenProfileName"
-import { OpenInCherryStudio } from "~/services/integrations/cherryStudio"
 import type { KelivoProviderExportInput } from "~/services/integrations/kelivo"
 import { getManagedSiteLabel } from "~/services/managedSites/utils/managedSite"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
@@ -60,6 +64,20 @@ interface RuntimeKeyActionControlsProps {
   account: DisplaySiteData
   onOpenCCSwitchDialog?: (token: ApiToken, account: DisplaySiteData) => void
 }
+
+// Kilo Code export dialogs and the Cherry Studio integration are only needed
+// after the user picks those export targets; keep their bundles out of the
+// popup's first-paint import graph.
+const LazyKiloCodeExportDialog = lazy(() =>
+  import("~/components/KiloCodeExportDialog").then((m) => ({
+    default: m.KiloCodeExportDialog,
+  })),
+)
+const LazyKiloCodeProfileExportDialog = lazy(() =>
+  import(
+    "~/features/ApiCredentialProfiles/components/KiloCodeProfileExportDialog"
+  ).then((m) => ({ default: m.KiloCodeProfileExportDialog })),
+)
 
 const buildServiceCredentialExportProfile = (
   account: DisplaySiteData,
@@ -147,6 +165,9 @@ export function RuntimeKeyActionControls({
     })
 
     try {
+      const { OpenInCherryStudio } = await import(
+        "~/services/integrations/cherryStudio"
+      )
       if (serviceCredentialProfile) {
         OpenInCherryStudio(
           createExportAccount(serviceCredentialProfile),
@@ -320,25 +341,29 @@ export function RuntimeKeyActionControls({
 
     if (serviceCredentialProfile) {
       return (
-        <KiloCodeProfileExportDialog
-          isOpen={true}
-          onClose={() => setIsKiloCodeDialogOpen(false)}
-          profile={serviceCredentialProfile}
-        />
+        <Suspense fallback={null}>
+          <LazyKiloCodeProfileExportDialog
+            isOpen={true}
+            onClose={() => setIsKiloCodeDialogOpen(false)}
+            profile={serviceCredentialProfile}
+          />
+        </Suspense>
       )
     }
 
     if (!accountToken) return null
 
     return (
-      <KiloCodeExportDialog
-        isOpen={true}
-        onClose={() => setIsKiloCodeDialogOpen(false)}
-        initialSelectedSiteIds={[account.id]}
-        initialSelectedTokenIdsBySite={{
-          [account.id]: [`${accountToken.id}`],
-        }}
-      />
+      <Suspense fallback={null}>
+        <LazyKiloCodeExportDialog
+          isOpen={true}
+          onClose={() => setIsKiloCodeDialogOpen(false)}
+          initialSelectedSiteIds={[account.id]}
+          initialSelectedTokenIdsBySite={{
+            [account.id]: [`${accountToken.id}`],
+          }}
+        />
+      </Suspense>
     )
   }
 

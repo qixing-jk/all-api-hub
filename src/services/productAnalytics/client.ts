@@ -1,4 +1,4 @@
-import posthog, { type Properties } from "posthog-js/dist/module.no-external"
+import type { Properties } from "posthog-js/dist/module.no-external"
 
 import { getExtensionVersion } from "~/utils/browser/browserApi"
 import { detectBrowserFamily } from "~/utils/browser/userAgent"
@@ -12,6 +12,12 @@ import {
 } from "./contracts"
 import { productAnalyticsPreferences } from "./preferences"
 import { sanitizeProductAnalyticsEvent } from "./privacy"
+
+/**
+ * Lazily loaded PostHog SDK instance type.
+ */
+type PostHogClient =
+  (typeof import("posthog-js/dist/module.no-external"))["default"]
 
 const logger = createLogger("ProductAnalyticsClient")
 const DEVELOPMENT_DISTINCT_ID = "analytics-development"
@@ -35,6 +41,19 @@ type ProductAnalyticsPolicyPayload = {
 
 let initialized = false
 
+let posthogClientPromise: Promise<PostHogClient> | null = null
+
+/**
+ * Loads the PostHog SDK on first capture instead of at UI startup so the
+ * analytics bundle stays out of every surface's first-paint import graph.
+ */
+function loadPostHogClient(): Promise<PostHogClient> {
+  posthogClientPromise ??= import("posthog-js/dist/module.no-external").then(
+    (module) => module.default,
+  )
+  return posthogClientPromise
+}
+
 /**
  * Reads build-time PostHog configuration and disables analytics when incomplete.
  */
@@ -48,10 +67,14 @@ function readConfig(): PostHogConfig | null {
 /**
  * Initializes the bundled PostHog client once with passive collection disabled.
  */
-function initializePostHog(config: PostHogConfig, distinctId: string) {
+function initializePostHog(
+  client: PostHogClient,
+  config: PostHogConfig,
+  distinctId: string,
+) {
   if (initialized) return
 
-  posthog.init(config.projectToken, {
+  client.init(config.projectToken, {
     api_host: config.host,
     autocapture: false,
     capture_pageview: false,
@@ -116,8 +139,10 @@ function normalizeStringList(value: unknown): string[] {
 /**
  * Reads the optional PostHog-hosted analytics policy payload.
  */
-function readAnalyticsPolicyPayload(): ProductAnalyticsPolicyPayload {
-  const payload = posthog.getFeatureFlagPayload(
+function readAnalyticsPolicyPayload(
+  client: PostHogClient,
+): ProductAnalyticsPolicyPayload {
+  const payload = client.getFeatureFlagPayload(
     PRODUCT_ANALYTICS_POLICY_FLAG_KEY,
   )
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
@@ -136,10 +161,11 @@ function readAnalyticsPolicyPayload(): ProductAnalyticsPolicyPayload {
  * Checks whether the sanitized event is suppressed by the remote policy.
  */
 function isDisabledByPolicy(
+  client: PostHogClient,
   eventName: ProductAnalyticsEventName,
   properties: Properties,
 ): boolean {
-  const policy = readAnalyticsPolicyPayload()
+  const policy = readAnalyticsPolicyPayload(client)
   if (policy.disabledEvents?.includes(eventName)) return true
 
   const featureId =
@@ -187,15 +213,16 @@ async function captureWithAnonymousId(
 ): Promise<boolean> {
   const captured = await productAnalyticsPreferences.withAnonymousIdIfEnabled(
     async (anonymousId) => {
+      const client = await loadPostHogClient()
       const distinctId = resolveDistinctId(anonymousId)
 
-      initializePostHog(capture.config, distinctId)
+      initializePostHog(client, capture.config, distinctId)
 
-      if (isDisabledByPolicy(eventName, capture.properties)) {
+      if (isDisabledByPolicy(client, eventName, capture.properties)) {
         return false
       }
 
-      posthog.capture(eventName, {
+      client.capture(eventName, {
         ...buildSharedContext(),
         ...capture.properties,
       })

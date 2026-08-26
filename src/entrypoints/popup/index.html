@@ -14,7 +14,69 @@
     />
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Static first-paint skeleton; replaced when React mounts into #root.
+           Covers the i18n/storage startup window that renders a blank popup. -->
+      <style>
+        .popup-skeleton {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          box-sizing: border-box;
+          width: 100%;
+          height: 100vh;
+          padding: 16px;
+          background: #ffffff;
+        }
+        @media (prefers-color-scheme: dark) {
+          .popup-skeleton {
+            background: #111827;
+          }
+          .popup-skeleton__bar {
+            background: #1f2937;
+          }
+        }
+        .popup-skeleton__bar {
+          border-radius: 8px;
+          background: #f3f4f6;
+          animation: popup-skeleton-pulse 1.5s ease-in-out infinite;
+        }
+        .popup-skeleton__header {
+          height: 28px;
+          width: 60%;
+        }
+        .popup-skeleton__tabs {
+          height: 56px;
+          width: 100%;
+        }
+        .popup-skeleton__row {
+          height: 64px;
+          width: 100%;
+        }
+        @keyframes popup-skeleton-pulse {
+          0%,
+          100% {
+            opacity: 1;
+          }
+          50% {
+            opacity: 0.55;
+          }
+        }
+      </style>
+      <div class="popup-skeleton" aria-hidden="true">
+        <div class="popup-skeleton__bar popup-skeleton__header"></div>
+        <div class="popup-skeleton__bar popup-skeleton__tabs"></div>
+        <div class="popup-skeleton__bar popup-skeleton__row"></div>
+        <div
+          class="popup-skeleton__bar popup-skeleton__row"
+          style="animation-delay: 0.15s"
+        ></div>
+        <div
+          class="popup-skeleton__bar popup-skeleton__row"
+          style="animation-delay: 0.3s"
+        ></div>
+      </div>
+    </div>
     <script type="module" src="main.tsx"></script>
   </body>
 </html>
