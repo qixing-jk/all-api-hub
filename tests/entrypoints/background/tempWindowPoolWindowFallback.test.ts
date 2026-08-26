@@ -5079,7 +5079,6 @@ describe("tempWindowPool window fallback", () => {
   it("returns structured turnstile timeout metadata when no token becomes available", async () => {
     tempContextMode = "tab"
     createTabMock.mockResolvedValueOnce({ id: 809 })
-    vi.useRealTimers()
     sendMessageMock.mockImplementation(
       async (_tabId: number, message: { action: string }) => {
         switch (message.action) {
@@ -5107,7 +5106,7 @@ describe("tempWindowPool window fallback", () => {
     )
 
     const sendResponse = vi.fn()
-    const request = handleTempWindowTurnstileFetch(
+    handleTempWindowTurnstileFetch(
       {
         originUrl: "https://example.com",
         pageUrl: "https://example.com/checkin",
@@ -5120,7 +5119,13 @@ describe("tempWindowPool window fallback", () => {
       sendResponse,
     )
 
-    await request
+    // The turnstile wait resolves immediately in this fixture, but the
+    // delayed release needs clock advancement while the request settles.
+    const settled = vi.waitUntil(() => sendResponse.mock.calls.length > 0, {
+      timeout: 5000,
+    })
+    await vi.advanceTimersByTimeAsync(2500)
+    await settled
 
     expect(sendResponse).toHaveBeenCalledWith({
       success: false,
@@ -5151,7 +5156,9 @@ describe("tempWindowPool window fallback", () => {
     expect(recordTempWindowTurnstileFetchResultMock).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Failure,
     )
-    await new Promise((resolve) => setTimeout(resolve, 2500))
+    // The pool schedules the delayed release via setTimeout(2000); advance
+    // fake timers instead of sleeping on real time (matches other suites here).
+    await vi.advanceTimersByTimeAsync(2500)
     expect(removeTabMock).toHaveBeenCalledWith(809)
     expect(removeTempWindowCookieRuleMock).not.toHaveBeenCalled()
   })

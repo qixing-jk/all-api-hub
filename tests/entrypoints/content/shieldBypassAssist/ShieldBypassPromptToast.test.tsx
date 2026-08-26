@@ -117,18 +117,18 @@ describe("ShieldBypassPromptToast", () => {
       )
 
       await waitFor(() => {
-        expect(hostRestoreCount).toBeGreaterThan(0)
+        // 2 corrections by the toast + 1 final host restore means the
+        // correction loop exhausted and the toast disconnected its observer.
+        expect(hostRestoreCount).toBe(3)
       })
-
-      await new Promise((resolve) => window.setTimeout(resolve, 0))
-
-      expect(hostRestoreCount).toBe(3)
       expect(document.title).toBe("Host Owned Title")
 
       hostObserver.disconnect()
-      await new Promise((resolve) => window.setTimeout(resolve, 1100))
+      // The toast must have given up: a freshly prefixed title stays untouched.
+      document.title = "Shield Mode Untouched"
+      await new Promise((resolve) => window.setTimeout(resolve, 0))
 
-      expect(document.title).toBe("Host Owned Title")
+      expect(document.title).toBe("Shield Mode Untouched")
       expect(screen.getByText("Shield Prompt")).toBeVisible()
       expect(
         screen.getByRole("button", { name: "Open settings" }),
@@ -136,7 +136,8 @@ describe("ShieldBypassPromptToast", () => {
 
       unmount()
 
-      expect(document.title).toBe("Host Owned Title")
+      // Cleanup strips the prefix it owns, leaving the base title.
+      expect(document.title).toBe("Untouched")
     } finally {
       hostObserver.disconnect()
     }

@@ -648,7 +648,10 @@ describe("setupRedemptionAssistContent", () => {
 
     button.dispatchEvent(new MouseEvent("click", { bubbles: true }))
 
-    await new Promise((resolve) => setTimeout(resolve, 700))
+    // The handler defers via setTimeout(0); flush a macrotask instead of
+    // sleeping real time — the early-return path runs no further timers.
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    await Promise.resolve()
 
     expect(mockCheckPermissionViaMessage).not.toHaveBeenCalled()
     expect(mockSendRedemptionAssistMessage).not.toHaveBeenCalled()
