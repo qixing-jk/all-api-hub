@@ -119,7 +119,7 @@ export async function refreshAccountRowsAndReadStorage(params: {
     await openAccountRowActionsMenu(row)
     await params.page
       .locator(
-        `[data-testid="${ACCOUNT_MANAGEMENT_TEST_IDS.rowRefreshMenuItem}"]:not([aria-disabled="true"])`,
+        `[role="menu"][data-state="open"] [data-testid="${ACCOUNT_MANAGEMENT_TEST_IDS.rowRefreshMenuItem}"]:not([aria-disabled="true"])`,
       )
       .click()
 
