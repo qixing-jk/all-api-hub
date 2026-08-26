@@ -803,6 +803,10 @@ export function CompactMultiSelect({
               aria-labelledby={triggerAriaLabelledBy}
               className={cn(
                 "dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary dark:text-dark-text-primary dark:hover:bg-dark-bg-secondary/80 flex min-w-0 flex-1 items-center justify-between gap-2 overflow-hidden text-left",
+                "whitespace-nowrap",
+                size === "default" && "h-9",
+                size === "sm" && "h-8",
+                size === "lg" && "h-10",
                 !hasSelection && "text-muted-foreground",
                 className,
               )}

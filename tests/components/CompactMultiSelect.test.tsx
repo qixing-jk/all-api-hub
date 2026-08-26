@@ -778,4 +778,24 @@ describe("CompactMultiSelect", () => {
 
     expect(screen.getByRole("combobox")).toHaveClass("h-9")
   })
+
+  it.each([
+    ["small", "sm", "h-8"],
+    ["large", "lg", "h-10"],
+  ] as const)(
+    "keeps the %s summary trigger at its compact fixed height",
+    async (_label, size, expectedClass) => {
+      renderCompact(
+        <CompactMultiSelect
+          displayMode="summary"
+          size={size}
+          options={[{ value: "alpha", label: "Alpha" }]}
+          selected={[]}
+          onChange={vi.fn()}
+        />,
+      )
+
+      expect(screen.getByRole("combobox")).toHaveClass(expectedClass)
+    },
+  )
 })
