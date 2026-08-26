@@ -269,9 +269,12 @@ async function querySub2ApiUsage(
   const balance = readNumber(data.balance) ?? readNumber(data.remaining)
   const todayPromptTokens = readNumber(today.prompt_tokens)
   const todayCompletionTokens = readNumber(today.completion_tokens)
+  const todayTotalTokens =
+    readNumber(today.tokens) ?? readNumber(today.total_tokens)
   const todayTokens = mapTodayTokenUsage({
     prompt: todayPromptTokens,
     completion: todayCompletionTokens,
+    total: todayTotalTokens,
   })
 
   return {

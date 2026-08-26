@@ -1,6 +1,6 @@
 import type { AccountRuntimeKeyLocator } from "~/services/accounts/accountRuntimeKeys"
 import type { ApiVerificationApiType } from "~/services/verification/aiApiVerification"
-import type { HealthStatus, TokenUsage } from "~/types"
+import type { HealthStatus } from "~/types"
 
 /**
  * Current schema version for the API credential profiles storage payload.
@@ -80,6 +80,7 @@ export type ApiCredentialTelemetryJsonPathMap = {
   todayRequests?: string
   todayPromptTokens?: string
   todayCompletionTokens?: string
+  todayTotalTokens?: string
   totalUsedUsd?: string
   totalGrantedUsd?: string
   totalAvailableUsd?: string
@@ -236,12 +237,20 @@ export type ApiCredentialTelemetryQuotaWindowFact = {
   resetTime?: number
 }
 
+/** Token counters normalized from provider telemetry payloads. */
+export type ApiCredentialTelemetryTokenUsage = {
+  upload?: number
+  download?: number
+  total?: number
+}
+
 export type ApiCredentialTelemetryUsageFacts = {
   todayCost?: ApiCredentialTelemetryAmount
   todayRequests?: ApiCredentialTelemetryAmount
   todayTokens?: {
-    upload: number
-    download: number
+    upload?: number
+    download?: number
+    total?: number
     unit: Extract<ApiCredentialTelemetryUnit, { kind: "count" }>
   }
   totalUsed?: ApiCredentialTelemetryAmount
@@ -282,7 +291,7 @@ export type ApiCredentialTelemetrySnapshot = {
   balanceUsd?: number
   todayCostUsd?: number
   todayRequests?: number
-  todayTokens?: TokenUsage
+  todayTokens?: ApiCredentialTelemetryTokenUsage
   unlimitedQuota?: boolean
   totalUsedUsd?: number
   totalGrantedUsd?: number

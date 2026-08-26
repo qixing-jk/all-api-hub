@@ -13,6 +13,7 @@ export const API_CREDENTIAL_TELEMETRY_JSON_PATH_FIELDS = [
   "todayRequests",
   "todayPromptTokens",
   "todayCompletionTokens",
+  "todayTotalTokens",
   "totalUsedUsd",
   "totalGrantedUsd",
   "totalAvailableUsd",

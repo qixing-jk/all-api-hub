@@ -955,7 +955,9 @@ describe("api credential profile telemetry", () => {
     expect(snapshot.facts?.usage?.todayRequests).toEqual(
       expect.objectContaining({ value: 3 }),
     )
-    expect(snapshot.facts?.usage?.todayTokens).toBeUndefined()
+    expect(snapshot.facts?.usage?.todayTokens).toEqual(
+      expect.objectContaining({ total: 4000 }),
+    )
     expect(snapshot.attempts).toEqual(
       expect.arrayContaining([
         expect.objectContaining({

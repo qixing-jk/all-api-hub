@@ -534,13 +534,19 @@ export function parseOpenAiBillingUsage(
 export function mapTodayTokenUsage(input: {
   prompt?: number
   completion?: number
-}): { upload: number; download: number } | undefined {
-  if (input.prompt === undefined && input.completion === undefined) {
+  total?: number
+}): { upload?: number; download?: number; total?: number } | undefined {
+  if (
+    input.prompt === undefined &&
+    input.completion === undefined &&
+    input.total === undefined
+  ) {
     return undefined
   }
   return {
-    upload: input.prompt ?? 0,
-    download: input.completion ?? 0,
+    ...(input.prompt !== undefined ? { upload: input.prompt } : {}),
+    ...(input.completion !== undefined ? { download: input.completion } : {}),
+    ...(input.total !== undefined ? { total: input.total } : {}),
   }
 }
 
@@ -557,9 +563,13 @@ export function mapCustomJson(
   const todayCompletionTokens = paths.todayCompletionTokens
     ? readNumber(getPathValue(json, paths.todayCompletionTokens))
     : undefined
+  const todayTotalTokens = paths.todayTotalTokens
+    ? readNumber(getPathValue(json, paths.todayTotalTokens))
+    : undefined
   const todayTokens = mapTodayTokenUsage({
     prompt: todayPromptTokens,
     completion: todayCompletionTokens,
+    total: todayTotalTokens,
   })
 
   return {

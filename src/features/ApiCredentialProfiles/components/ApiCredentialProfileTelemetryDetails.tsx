@@ -245,7 +245,9 @@ export function ApiCredentialProfileTelemetryDetails({
           <span>
             {t("apiCredentialProfiles:telemetry.todayTokens")}{" "}
             {formatTokenCount(
-              facts.usage.todayTokens.upload + facts.usage.todayTokens.download,
+              facts.usage.todayTokens.total ??
+                (facts.usage.todayTokens.upload ?? 0) +
+                  (facts.usage.todayTokens.download ?? 0),
             )}
           </span>
         ) : null}

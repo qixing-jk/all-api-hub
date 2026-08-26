@@ -15,6 +15,7 @@ describe("api credential telemetry config", () => {
       "todayRequests",
       "todayPromptTokens",
       "todayCompletionTokens",
+      "todayTotalTokens",
       "totalUsedUsd",
       "totalGrantedUsd",
       "totalAvailableUsd",
@@ -28,10 +29,12 @@ describe("api credential telemetry config", () => {
         balanceUsd: "  account . balance ",
         todayCostUsd: " ",
         todayRequests: "usage..requests",
+        todayTotalTokens: "usage.total",
         expiresAt: "expires.at",
       }),
     ).toEqual({
       balanceUsd: "account.balance",
+      todayTotalTokens: "usage.total",
       expiresAt: "expires.at",
     })
   })

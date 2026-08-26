@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import {
   mapCustomJson,
+  mapTodayTokenUsage,
   parseDeepSeekBalance,
   parseGlmQuota,
   parseKimiQuota,
@@ -308,5 +309,18 @@ describe("api credential telemetry parsers", () => {
       totalAvailableUsd: 6,
       expiresAt: 1_800_000_000_000,
     })
+  })
+
+  it("maps a custom total token path without relabeling it as upload", () => {
+    expect(
+      mapCustomJson(
+        { usage: { total: 12 } },
+        { todayTotalTokens: "usage.total" },
+      ),
+    ).toEqual({ todayTokens: { total: 12 } })
+  })
+
+  it("preserves a provider total when split token counters are unavailable", () => {
+    expect(mapTodayTokenUsage({ total: 12 })).toEqual({ total: 12 })
   })
 })

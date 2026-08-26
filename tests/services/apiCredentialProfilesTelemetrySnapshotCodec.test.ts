@@ -209,4 +209,17 @@ describe("api credential telemetry snapshot codec", () => {
       attempts: [],
     })
   })
+
+  it("preserves total-only token facts without inventing split counters", () => {
+    expect(
+      coerceTelemetrySnapshot({
+        lastSyncTime: 10,
+        health: { status: SiteHealthStatus.Healthy },
+        facts: {
+          usage: { todayTokens: { total: "12" } },
+        },
+        attempts: [],
+      })?.facts?.usage?.todayTokens,
+    ).toEqual({ total: 12, unit: { kind: "count", code: "tokens" } })
+  })
 })

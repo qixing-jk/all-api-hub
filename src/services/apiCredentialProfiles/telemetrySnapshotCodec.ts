@@ -295,10 +295,13 @@ function coerceTelemetryFacts(
         : null
     const upload = coerceFiniteNumber(rawTokens?.upload)
     const download = coerceFiniteNumber(rawTokens?.download)
-    if (upload !== undefined || download !== undefined) {
+    const total = coerceFiniteNumber(rawTokens?.total)
+    if (upload !== undefined || download !== undefined || total !== undefined) {
       usage.todayTokens = {
-        upload: upload ?? 0,
-        download: download ?? 0,
+        ...(upload !== undefined || download !== undefined
+          ? { upload: upload ?? 0, download: download ?? 0 }
+          : {}),
+        ...(total !== undefined ? { total } : {}),
         unit: { kind: "count", code: "tokens" },
       }
     }
@@ -364,10 +367,13 @@ function migrateLegacyTelemetryFacts(
   const rawTokens = obj.todayTokens as Record<string, unknown> | undefined
   const upload = coerceFiniteNumber(rawTokens?.upload)
   const download = coerceFiniteNumber(rawTokens?.download)
-  if (upload !== undefined || download !== undefined) {
+  const total = coerceFiniteNumber(rawTokens?.total)
+  if (upload !== undefined || download !== undefined || total !== undefined) {
     usage.todayTokens = {
-      upload: upload ?? 0,
-      download: download ?? 0,
+      ...(upload !== undefined || download !== undefined
+        ? { upload: upload ?? 0, download: download ?? 0 }
+        : {}),
+      ...(total !== undefined ? { total } : {}),
       unit: { kind: "count", code: "tokens" },
     }
   }

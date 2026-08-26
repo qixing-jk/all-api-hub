@@ -890,6 +890,33 @@ describe("ApiCredentialProfileListItem", () => {
     ).toHaveTextContent("0")
   })
 
+  it("shows a provider total token count when split counters are unavailable", () => {
+    renderListItem(
+      buildProfile({
+        telemetrySnapshot: {
+          attempts: [],
+          health: { status: SiteHealthStatus.Healthy },
+          lastSyncTime: 1,
+          facts: {
+            usage: {
+              todayTokens: {
+                total: 12_000,
+                unit: { kind: "count", code: "tokens" },
+              },
+            },
+          },
+        },
+      }),
+    )
+
+    expect(
+      screen.getByText(/apiCredentialProfiles:telemetry\.todayTokens/),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.telemetryPanel),
+    ).toHaveTextContent("12.0K")
+  })
+
   it("keeps a telemetry error visible when no metrics were collected", () => {
     renderListItem(
       buildProfile({
