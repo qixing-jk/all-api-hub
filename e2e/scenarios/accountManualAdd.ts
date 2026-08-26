@@ -118,7 +118,9 @@ export async function refreshAccountRowsAndReadStorage(params: {
     )
     await openAccountRowActionsMenu(row)
     await params.page
-      .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowRefreshMenuItem)
+      .locator(
+        `[data-testid="${ACCOUNT_MANAGEMENT_TEST_IDS.rowRefreshMenuItem}"]:not([aria-disabled="true"])`,
+      )
       .click()
 
     await waitForStoredAccountQuota({
