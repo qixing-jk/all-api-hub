@@ -452,6 +452,31 @@ describe("DatePicker", () => {
 })
 
 describe("Calendar", () => {
+  it("keeps navigation controls square at the configured cell size", () => {
+    render(<Calendar mode="single" month={new Date(2026, 6, 1)} />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    const previousMonthButton = screen.getByRole("button", {
+      name: /previous month/i,
+    })
+    const nextMonthButton = screen.getByRole("button", {
+      name: /next month/i,
+    })
+
+    for (const button of [previousMonthButton, nextMonthButton]) {
+      expect(button).toHaveClass("size-(--cell-size)")
+      expect(button).toHaveClass("max-w-none")
+      expect(button).toHaveClass("shrink-0")
+      expect(button).toHaveClass("whitespace-nowrap")
+      expect(button).not.toHaveClass("min-h-9")
+      expect(button).not.toHaveClass("max-w-full")
+      expect(button).not.toHaveClass("shrink")
+      expect(button).not.toHaveClass("whitespace-normal")
+    }
+  })
+
   it("renders dropdown captions with week numbers", () => {
     render(
       <Calendar

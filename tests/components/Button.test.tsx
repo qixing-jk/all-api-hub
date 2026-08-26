@@ -89,12 +89,13 @@ describe("Button", () => {
         "break-words",
         "whitespace-normal",
       )
-      expect(button).not.toHaveClass("shrink-0", "whitespace-nowrap")
+      expect(button).not.toHaveClass("shrink-0")
+      expect(button).not.toHaveClass("whitespace-nowrap")
     }
 
-    expect(textButtons[0]).toHaveClass("min-h-9")
-    expect(textButtons[1]).toHaveClass("min-h-8")
-    expect(textButtons[2]).toHaveClass("min-h-10")
+    expect(textButtons[0]).not.toHaveClass("min-h-9")
+    expect(textButtons[1]).not.toHaveClass("min-h-8")
+    expect(textButtons[2]).not.toHaveClass("min-h-10")
   })
 
   it("keeps icon-only button sizes fixed", async () => {
@@ -115,11 +116,9 @@ describe("Button", () => {
     ]) {
       const button = await screen.findByRole("button", { name })
       expect(button).toHaveClass("max-w-none", "shrink-0", "whitespace-nowrap")
-      expect(button).not.toHaveClass(
-        "max-w-full",
-        "shrink",
-        "whitespace-normal",
-      )
+      expect(button).not.toHaveClass("max-w-full")
+      expect(button).not.toHaveClass("shrink")
+      expect(button).not.toHaveClass("whitespace-normal")
     }
   })
 
@@ -139,12 +138,11 @@ describe("Button", () => {
       "shrink-0",
       "whitespace-nowrap",
     )
-    expect(button).not.toHaveClass(
-      "h-auto",
-      "max-w-full",
-      "shrink",
-      "whitespace-normal",
-    )
+    expect(button).not.toHaveClass("h-auto")
+    expect(button).not.toHaveClass("min-h-9")
+    expect(button).not.toHaveClass("max-w-full")
+    expect(button).not.toHaveClass("shrink")
+    expect(button).not.toHaveClass("whitespace-normal")
   })
 
   it("forwards the resolved visual size through asChild", async () => {
