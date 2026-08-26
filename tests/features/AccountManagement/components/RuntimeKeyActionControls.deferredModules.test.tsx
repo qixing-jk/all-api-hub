@@ -73,41 +73,37 @@ vi.mock("~/components/KelivoExportDialog", () => ({
   KelivoExportDialog: () => null,
 }))
 
-// Load counters prove each deferred module stays unloaded until its action
-// selects it; the mocked component factories prove the resolved module renders.
+// Module-factory counters prove each deferred import stays unresolved until its
+// action selects it; component spies prove the resolved exports still run.
 const kiloCodeModuleLoadMock = vi.hoisted(() => ({ count: 0 }))
 const kiloCodeProfileModuleLoadMock = vi.hoisted(() => ({ count: 0 }))
 const cherryStudioModuleLoadMock = vi.hoisted(() => ({ count: 0 }))
 
-vi.mock("~/components/KiloCodeExportDialog", () => ({
-  get KiloCodeExportDialog() {
-    return (props: unknown) => {
-      kiloCodeModuleLoadMock.count += 1
-      return kiloCodeExportDialogMock(props) ?? null
-    }
-  },
-}))
+vi.mock("~/components/KiloCodeExportDialog", () => {
+  kiloCodeModuleLoadMock.count += 1
+  return {
+    KiloCodeExportDialog: (props: unknown) =>
+      kiloCodeExportDialogMock(props) ?? null,
+  }
+})
 
 vi.mock(
   "~/features/ApiCredentialProfiles/components/KiloCodeProfileExportDialog",
-  () => ({
-    get KiloCodeProfileExportDialog() {
-      return (props: unknown) => {
-        kiloCodeProfileModuleLoadMock.count += 1
-        return kiloCodeProfileExportDialogMock(props) ?? null
-      }
-    },
-  }),
-)
-
-vi.mock("~/services/integrations/cherryStudio", () => ({
-  get OpenInCherryStudio() {
-    return (...args: unknown[]) => {
-      cherryStudioModuleLoadMock.count += 1
-      return openInCherryStudioMock(...args)
+  () => {
+    kiloCodeProfileModuleLoadMock.count += 1
+    return {
+      KiloCodeProfileExportDialog: (props: unknown) =>
+        kiloCodeProfileExportDialogMock(props) ?? null,
     }
   },
-}))
+)
+
+vi.mock("~/services/integrations/cherryStudio", () => {
+  cherryStudioModuleLoadMock.count += 1
+  return {
+    OpenInCherryStudio: (...args: unknown[]) => openInCherryStudioMock(...args),
+  }
+})
 
 vi.mock(
   "~/services/accounts/utils/apiServiceRequest",
@@ -225,6 +221,8 @@ describe("RuntimeKeyActionControls deferred module loading", () => {
   })
 
   it("renders the service-credential profile dialog from its deferred module", async () => {
+    expect(kiloCodeProfileModuleLoadMock.count).toBe(0)
+
     const sharedChatAccount = {
       ...ACCOUNT,
       id: "sharedchat-account",
