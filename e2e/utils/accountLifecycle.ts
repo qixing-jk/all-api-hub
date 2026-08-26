@@ -224,21 +224,32 @@ async function openKeyManagementPageFromAccountRow(params: {
           baseUrl: requireAccountBaseUrl(params.baseUrl),
         })
 
-  await row.hover()
-  await row
-    .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowMoreActionsButton)
-    .click()
-  // The row menu opens with an animation; wait for the item to be stable and
-  // visible after the Radix open transition instead of clicking mid-animation
-  // (previously flaky: "element is not stable" / "element was detached").
-  const keyManagementMenuItem = params.page.getByTestId(
-    ACCOUNT_MANAGEMENT_TEST_IDS.rowKeyManagementMenuItem,
-  )
-  await keyManagementMenuItem.waitFor({
-    state: "visible",
-    timeout: 10_000,
-  })
-  await keyManagementMenuItem.click()
+  const openActionsMenu = async () => {
+    await row.hover()
+    await row
+      .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowMoreActionsButton)
+      .click({ timeout: 10_000 })
+  }
+
+  await openActionsMenu()
+  // Radix can replace the animated menu subtree under CI contention. Bound
+  // each click attempt so a detached item cannot consume the whole test, then
+  // reopen the idempotent navigation menu once with a fresh locator.
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    try {
+      await params.page
+        .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowKeyManagementMenuItem)
+        .click({ timeout: 10_000 })
+      break
+    } catch (error) {
+      if (attempt === 2 || params.page.isClosed()) {
+        throw error
+      }
+
+      await params.page.keyboard.press("Escape").catch(() => undefined)
+      await openActionsMenu()
+    }
+  }
 
   await expect(params.page).toHaveURL((url) => {
     return (
