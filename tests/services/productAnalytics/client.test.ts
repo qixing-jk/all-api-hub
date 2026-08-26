@@ -11,6 +11,7 @@ import {
 
 const {
   posthogMocks,
+  posthogModuleLoadMock,
   preferenceMocks,
   getExtensionVersionMock,
   i18nCoreMock,
@@ -22,6 +23,7 @@ const {
     capture: vi.fn(),
     getFeatureFlagPayload: vi.fn(),
   },
+  posthogModuleLoadMock: vi.fn(),
   preferenceMocks: {
     isEnabled: vi.fn(),
     getOrCreateAnonymousId: vi.fn(),
@@ -37,9 +39,10 @@ const {
   mockLoggerDebug: vi.fn(),
 }))
 
-vi.mock("posthog-js/dist/module.no-external", () => ({
-  default: posthogMocks,
-}))
+vi.mock("posthog-js/dist/module.no-external", () => {
+  posthogModuleLoadMock()
+  return { default: posthogMocks }
+})
 
 vi.mock("~/services/productAnalytics/preferences", () => ({
   productAnalyticsPreferences: preferenceMocks,
@@ -103,6 +106,25 @@ describe("productAnalyticsClient", () => {
   afterEach(() => {
     vi.unstubAllEnvs()
     vi.unstubAllGlobals()
+  })
+
+  it("defers loading PostHog until the first eligible capture", async () => {
+    vi.stubEnv("VITE_PUBLIC_POSTHOG_PROJECT_TOKEN", "phc_test")
+    vi.stubEnv("VITE_PUBLIC_POSTHOG_HOST", "https://posthog.example")
+
+    const client = await importClient()
+
+    expect(posthogModuleLoadMock).not.toHaveBeenCalled()
+
+    await expect(
+      client.capture(PRODUCT_ANALYTICS_EVENTS.AppOpened, {
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      }),
+    ).resolves.toBe(true)
+
+    expect(posthogModuleLoadMock).toHaveBeenCalledTimes(1)
+    expect(posthogMocks.init).toHaveBeenCalledTimes(1)
+    expect(posthogMocks.capture).toHaveBeenCalledTimes(1)
   })
 
   it("no-ops when analytics is disabled", async () => {
