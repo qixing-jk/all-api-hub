@@ -139,6 +139,18 @@ export const LEGACY_INSUFFICIENT_BALANCE_REASONS: readonly string[] = [
 export const API_CREDENTIAL_TELEMETRY_FACT_UNITS = {
   kinds: { Money: "money", Quota: "quota", Count: "count", Percent: "percent" },
   currencies: { Usd: "USD" },
+  codes: {
+    UsdEquivalent: "usd-equivalent",
+    GlmCredit: "glm-credit",
+    ProviderQuota: "provider-quota",
+    Requests: "requests",
+    Tokens: "tokens",
+  },
+  labels: {
+    UsdEquivalent: "USD-equivalent budget",
+    GlmCredit: "GLM credits",
+    ProviderQuota: "Provider quota",
+  },
   semantics: {
     Cash: "cash",
     ProviderWallet: "provider-wallet",
@@ -281,23 +293,8 @@ export type ApiCredentialTelemetrySnapshot = {
   lastSuccessTime?: number
   lastError?: string
   source?: ApiCredentialTelemetrySource
-  /** Canonical v6 product facts. New snapshots always populate this field. */
+  /** Canonical unit-aware product facts. */
   facts?: ApiCredentialTelemetryFacts
-  /** @deprecated Legacy v5 flat balance field; only used during migration. */
-  balance?: ApiCredentialTelemetryBalance
-  /** @deprecated Legacy v5 flat quota field; only used during migration. */
-  quota?: ApiCredentialTelemetryQuota
-  /** @deprecated Legacy v5 fields; use facts instead. */
-  balanceUsd?: number
-  todayCostUsd?: number
-  todayRequests?: number
-  todayTokens?: ApiCredentialTelemetryTokenUsage
-  unlimitedQuota?: boolean
-  totalUsedUsd?: number
-  totalGrantedUsd?: number
-  totalAvailableUsd?: number
-  expiresAt?: number
-  models?: ApiCredentialModelTelemetry
   attempts: ApiCredentialTelemetryAttempt[]
 }
 

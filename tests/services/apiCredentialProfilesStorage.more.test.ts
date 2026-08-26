@@ -1150,7 +1150,15 @@ describe("apiCredentialProfilesStorage additional flows", () => {
       health: { status: SiteHealthStatus.Healthy },
       lastSyncTime: 1000,
       lastSuccessTime: 1000,
-      balanceUsd: 8,
+      facts: {
+        balances: [
+          {
+            amount: 8,
+            unit: { kind: "money", currency: "USD", decimalPlaces: 2 },
+            semantics: "cash",
+          },
+        ],
+      },
       attempts: [],
     })
 
@@ -1206,7 +1214,15 @@ describe("apiCredentialProfilesStorage additional flows", () => {
       health: { status: SiteHealthStatus.Healthy },
       lastSyncTime: 1000,
       lastSuccessTime: 1000,
-      balanceUsd: 8,
+      facts: {
+        balances: [
+          {
+            amount: 8,
+            unit: { kind: "money", currency: "USD", decimalPlaces: 2 },
+            semantics: "cash",
+          },
+        ],
+      },
       attempts: [],
     })
 

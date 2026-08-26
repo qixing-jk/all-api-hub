@@ -304,9 +304,8 @@ function getApiCredentialTelemetryAnalyticsInsights(
       : {}),
     ...(typeof successCount === "number" ? { successCount } : {}),
     ...(typeof failureCount === "number" ? { failureCount } : {}),
-    ...(typeof (snapshot.facts?.models?.count ?? snapshot.models?.count) ===
-    "number"
-      ? { modelCount: snapshot.facts?.models?.count ?? snapshot.models?.count }
+    ...(typeof snapshot.facts?.models?.count === "number"
+      ? { modelCount: snapshot.facts.models.count }
       : {}),
     usageDataPresent: hasTelemetryUsageData(snapshot),
   }

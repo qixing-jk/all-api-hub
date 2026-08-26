@@ -7,9 +7,24 @@ import type {
 } from "~/types/apiCredentialProfiles"
 import {
   API_CREDENTIAL_TELEMETRY_ATTEMPT_STATUSES,
+  API_CREDENTIAL_TELEMETRY_FACT_UNITS,
   API_CREDENTIAL_TELEMETRY_QUOTA_WINDOW_TYPES,
   API_CREDENTIAL_TELEMETRY_SOURCES,
 } from "~/types/apiCredentialProfiles"
+
+/** Persisted flat fields accepted only when migrating pre-facts snapshots. */
+type LegacyTelemetrySnapshotFields = {
+  balanceUsd?: unknown
+  todayCostUsd?: unknown
+  todayRequests?: unknown
+  todayTokens?: unknown
+  unlimitedQuota?: unknown
+  totalUsedUsd?: unknown
+  totalGrantedUsd?: unknown
+  totalAvailableUsd?: unknown
+  expiresAt?: unknown
+  models?: unknown
+}
 
 /** Coerces a numeric-like value into a finite number. */
 function coerceFiniteNumber(raw: unknown): number | undefined {
@@ -298,11 +313,13 @@ function coerceTelemetryFacts(
     const total = coerceFiniteNumber(rawTokens?.total)
     if (upload !== undefined || download !== undefined || total !== undefined) {
       usage.todayTokens = {
-        ...(upload !== undefined || download !== undefined
-          ? { upload: upload ?? 0, download: download ?? 0 }
-          : {}),
+        ...(upload !== undefined ? { upload } : {}),
+        ...(download !== undefined ? { download } : {}),
         ...(total !== undefined ? { total } : {}),
-        unit: { kind: "count", code: "tokens" },
+        unit: {
+          kind: API_CREDENTIAL_TELEMETRY_FACT_UNITS.kinds.Count,
+          code: API_CREDENTIAL_TELEMETRY_FACT_UNITS.codes.Tokens,
+        },
       }
     }
     if (Object.keys(usage).length > 0) facts.usage = usage
@@ -321,7 +338,7 @@ function coerceTelemetryFacts(
 
 /** Migrates the last released v5 flat telemetry fields into v6 facts. */
 function migrateLegacyTelemetryFacts(
-  obj: Record<string, unknown>,
+  obj: Record<string, unknown> & LegacyTelemetrySnapshotFields,
   source: ApiCredentialTelemetrySource | undefined,
 ): ApiCredentialTelemetryFacts {
   const facts: ApiCredentialTelemetryFacts = {}
@@ -335,17 +352,17 @@ function migrateLegacyTelemetryFacts(
           source === API_CREDENTIAL_TELEMETRY_SOURCES.Sub2ApiUsage
             ? {
                 kind: "quota",
-                code: "usd-equivalent",
-                label: "USD-equivalent budget",
+                code: API_CREDENTIAL_TELEMETRY_FACT_UNITS.codes.UsdEquivalent,
+                label: API_CREDENTIAL_TELEMETRY_FACT_UNITS.labels.UsdEquivalent,
               }
             : { kind: "money", currency: "USD", decimalPlaces: 2 },
         semantics:
           source === API_CREDENTIAL_TELEMETRY_SOURCES.OpenAiBilling
-            ? "cash"
+            ? API_CREDENTIAL_TELEMETRY_FACT_UNITS.semantics.Cash
             : source === API_CREDENTIAL_TELEMETRY_SOURCES.NewApiTokenUsage ||
                 source === API_CREDENTIAL_TELEMETRY_SOURCES.Sub2ApiUsage
-              ? "budget-equivalent"
-              : "legacy",
+              ? API_CREDENTIAL_TELEMETRY_FACT_UNITS.semantics.BudgetEquivalent
+              : API_CREDENTIAL_TELEMETRY_FACT_UNITS.semantics.Legacy,
       },
     ]
   }
@@ -361,7 +378,10 @@ function migrateLegacyTelemetryFacts(
   if (todayRequests !== undefined) {
     usage.todayRequests = {
       value: todayRequests,
-      unit: { kind: "count", code: "requests" },
+      unit: {
+        kind: API_CREDENTIAL_TELEMETRY_FACT_UNITS.kinds.Count,
+        code: API_CREDENTIAL_TELEMETRY_FACT_UNITS.codes.Requests,
+      },
     }
   }
   const rawTokens = obj.todayTokens as Record<string, unknown> | undefined
@@ -370,11 +390,13 @@ function migrateLegacyTelemetryFacts(
   const total = coerceFiniteNumber(rawTokens?.total)
   if (upload !== undefined || download !== undefined || total !== undefined) {
     usage.todayTokens = {
-      ...(upload !== undefined || download !== undefined
-        ? { upload: upload ?? 0, download: download ?? 0 }
-        : {}),
+      ...(upload !== undefined ? { upload } : {}),
+      ...(download !== undefined ? { download } : {}),
       ...(total !== undefined ? { total } : {}),
-      unit: { kind: "count", code: "tokens" },
+      unit: {
+        kind: API_CREDENTIAL_TELEMETRY_FACT_UNITS.kinds.Count,
+        code: API_CREDENTIAL_TELEMETRY_FACT_UNITS.codes.Tokens,
+      },
     }
   }
   const budgetUnit =
@@ -382,8 +404,8 @@ function migrateLegacyTelemetryFacts(
     source === API_CREDENTIAL_TELEMETRY_SOURCES.Sub2ApiUsage
       ? {
           kind: "quota" as const,
-          code: "usd-equivalent",
-          label: "USD-equivalent budget",
+          code: API_CREDENTIAL_TELEMETRY_FACT_UNITS.codes.UsdEquivalent,
+          label: API_CREDENTIAL_TELEMETRY_FACT_UNITS.labels.UsdEquivalent,
         }
       : { kind: "money" as const, currency: "USD", decimalPlaces: 2 }
   for (const [key, field] of [

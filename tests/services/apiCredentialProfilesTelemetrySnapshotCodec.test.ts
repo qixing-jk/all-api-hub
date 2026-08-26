@@ -116,7 +116,6 @@ describe("api credential telemetry snapshot codec", () => {
           },
           todayTokens: {
             upload: 10,
-            download: 0,
             unit: { kind: "count", code: "tokens" },
           },
           unlimited: false,
@@ -173,7 +172,6 @@ describe("api credential telemetry snapshot codec", () => {
             unit: { kind: "count", code: "requests" },
           },
           todayTokens: {
-            upload: 0,
             download: 4,
             unit: { kind: "count", code: "tokens" },
           },

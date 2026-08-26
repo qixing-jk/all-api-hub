@@ -12,18 +12,6 @@ import {
   API_CREDENTIAL_TELEMETRY_SOURCES,
 } from "~/types/apiCredentialProfiles"
 
-const TELEMETRY_FACT_UNITS = {
-  quota: {
-    usdEquivalentCode: "usd-equivalent",
-    usdEquivalentLabel: "USD-equivalent budget",
-    glmCreditCode: "glm-credit",
-    glmCreditLabel: "GLM credits",
-    providerCode: "provider-quota",
-    providerLabel: "Provider quota",
-  },
-  counts: { Requests: "requests", Tokens: "tokens" },
-} as const
-
 /** Converts provider parser output into the unit-aware v6 product facts. */
 export function normalizeTelemetryPatchToFacts(
   data: TelemetryPatch,
@@ -68,8 +56,8 @@ export function normalizeTelemetryPatchToFacts(
       unit: budgetSource
         ? {
             kind: API_CREDENTIAL_TELEMETRY_FACT_UNITS.kinds.Quota,
-            code: TELEMETRY_FACT_UNITS.quota.usdEquivalentCode,
-            label: TELEMETRY_FACT_UNITS.quota.usdEquivalentLabel,
+            code: API_CREDENTIAL_TELEMETRY_FACT_UNITS.codes.UsdEquivalent,
+            label: API_CREDENTIAL_TELEMETRY_FACT_UNITS.labels.UsdEquivalent,
           }
         : {
             kind: API_CREDENTIAL_TELEMETRY_FACT_UNITS.kinds.Money,
@@ -91,17 +79,17 @@ export function normalizeTelemetryPatchToFacts(
         type: window.type,
         unit:
           window.unit === "percent"
-            ? { kind: "percent" }
+            ? { kind: API_CREDENTIAL_TELEMETRY_FACT_UNITS.kinds.Percent }
             : {
-                kind: "quota",
+                kind: API_CREDENTIAL_TELEMETRY_FACT_UNITS.kinds.Quota,
                 code:
                   source === API_CREDENTIAL_TELEMETRY_SOURCES.GlmQuota
-                    ? TELEMETRY_FACT_UNITS.quota.glmCreditCode
-                    : TELEMETRY_FACT_UNITS.quota.providerCode,
+                    ? API_CREDENTIAL_TELEMETRY_FACT_UNITS.codes.GlmCredit
+                    : API_CREDENTIAL_TELEMETRY_FACT_UNITS.codes.ProviderQuota,
                 label:
                   source === API_CREDENTIAL_TELEMETRY_SOURCES.GlmQuota
-                    ? TELEMETRY_FACT_UNITS.quota.glmCreditLabel
-                    : TELEMETRY_FACT_UNITS.quota.providerLabel,
+                    ? API_CREDENTIAL_TELEMETRY_FACT_UNITS.labels.GlmCredit
+                    : API_CREDENTIAL_TELEMETRY_FACT_UNITS.labels.ProviderQuota,
               },
         ...(window.unit === "percent"
           ? {}
@@ -124,8 +112,8 @@ export function normalizeTelemetryPatchToFacts(
   const budgetUnit: ApiCredentialTelemetryAmount["unit"] = budgetSource
     ? {
         kind: API_CREDENTIAL_TELEMETRY_FACT_UNITS.kinds.Quota,
-        code: TELEMETRY_FACT_UNITS.quota.usdEquivalentCode,
-        label: TELEMETRY_FACT_UNITS.quota.usdEquivalentLabel,
+        code: API_CREDENTIAL_TELEMETRY_FACT_UNITS.codes.UsdEquivalent,
+        label: API_CREDENTIAL_TELEMETRY_FACT_UNITS.labels.UsdEquivalent,
       }
     : {
         kind: API_CREDENTIAL_TELEMETRY_FACT_UNITS.kinds.Money,
@@ -148,7 +136,7 @@ export function normalizeTelemetryPatchToFacts(
       value: data.todayRequests,
       unit: {
         kind: API_CREDENTIAL_TELEMETRY_FACT_UNITS.kinds.Count,
-        code: TELEMETRY_FACT_UNITS.counts.Requests,
+        code: API_CREDENTIAL_TELEMETRY_FACT_UNITS.codes.Requests,
       },
     }
   }
@@ -157,7 +145,7 @@ export function normalizeTelemetryPatchToFacts(
       ...data.todayTokens,
       unit: {
         kind: API_CREDENTIAL_TELEMETRY_FACT_UNITS.kinds.Count,
-        code: TELEMETRY_FACT_UNITS.counts.Tokens,
+        code: API_CREDENTIAL_TELEMETRY_FACT_UNITS.codes.Tokens,
       },
     }
   }

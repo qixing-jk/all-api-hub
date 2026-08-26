@@ -8,6 +8,10 @@ import type {
   ApiCredentialTelemetryQuotaWindowFact,
   ApiCredentialTelemetrySnapshot,
 } from "~/types/apiCredentialProfiles"
+import {
+  API_CREDENTIAL_TELEMETRY_FACT_UNITS,
+  API_CREDENTIAL_TELEMETRY_QUOTA_WINDOW_TYPES,
+} from "~/types/apiCredentialProfiles"
 import { formatLocaleDateTime, formatTokenCount } from "~/utils/core/formatters"
 import { formatTelemetryMoney } from "~/utils/core/money"
 
@@ -38,9 +42,10 @@ function formatProviderBalance(
   balance: ApiCredentialTelemetryBalanceFact,
   t: TFunction,
 ): string {
-  if (balance.unit.kind === "quota") {
+  if (balance.unit.kind === API_CREDENTIAL_TELEMETRY_FACT_UNITS.kinds.Quota) {
     const label =
-      balance.unit.code === "usd-equivalent"
+      balance.unit.code ===
+      API_CREDENTIAL_TELEMETRY_FACT_UNITS.codes.UsdEquivalent
         ? t("apiCredentialProfiles:telemetry.balanceSemantics.budgetEquivalent")
         : balance.unit.label
     return `${balance.amount.toLocaleString()} ${label}`
@@ -61,18 +66,25 @@ function getBalanceSemanticsLabel(
   balance: ApiCredentialTelemetryBalanceFact,
   t: TFunction,
 ): string | null {
-  if (balance.semantics === "cash") {
+  if (
+    balance.semantics === API_CREDENTIAL_TELEMETRY_FACT_UNITS.semantics.Cash
+  ) {
     return t("apiCredentialProfiles:telemetry.balanceSemantics.cash")
   }
-  if (balance.semantics === "provider-wallet") {
+  if (
+    balance.semantics ===
+    API_CREDENTIAL_TELEMETRY_FACT_UNITS.semantics.ProviderWallet
+  ) {
     return t("apiCredentialProfiles:telemetry.balanceSemantics.providerWallet")
   }
   // formatProviderBalance already appends the budget-equivalent label for
   // this unit, so a second identical suffix would render it twice.
   if (
-    balance.semantics === "budget-equivalent" &&
-    balance.unit.kind === "quota" &&
-    balance.unit.code !== "usd-equivalent"
+    balance.semantics ===
+      API_CREDENTIAL_TELEMETRY_FACT_UNITS.semantics.BudgetEquivalent &&
+    balance.unit.kind === API_CREDENTIAL_TELEMETRY_FACT_UNITS.kinds.Quota &&
+    balance.unit.code !==
+      API_CREDENTIAL_TELEMETRY_FACT_UNITS.codes.UsdEquivalent
   ) {
     return t(
       "apiCredentialProfiles:telemetry.balanceSemantics.budgetEquivalent",
@@ -87,21 +99,25 @@ function formatProviderQuotaWindow(
   t: TFunction,
 ): string {
   const label =
-    window.type === "fiveHour"
+    window.type === API_CREDENTIAL_TELEMETRY_QUOTA_WINDOW_TYPES.FiveHour
       ? t("apiCredentialProfiles:telemetry.quotaWindows.fiveHour")
-      : window.type === "weekly"
+      : window.type === API_CREDENTIAL_TELEMETRY_QUOTA_WINDOW_TYPES.Weekly
         ? t("apiCredentialProfiles:telemetry.quotaWindows.weekly")
-        : window.type === "monthly"
+        : window.type === API_CREDENTIAL_TELEMETRY_QUOTA_WINDOW_TYPES.Monthly
           ? t("apiCredentialProfiles:telemetry.quotaWindows.monthly")
           : t("apiCredentialProfiles:telemetry.quotaWindows.total")
   const percent = `${Math.round(window.remainingPercent)}%`
-  if (window.unit.kind === "percent" || window.remaining === undefined) {
+  if (
+    window.unit.kind === API_CREDENTIAL_TELEMETRY_FACT_UNITS.kinds.Percent ||
+    window.remaining === undefined
+  ) {
     return `${label}: ${percent}`
   }
   const unitLabel =
-    window.unit.code === "glm-credit"
+    window.unit.code === API_CREDENTIAL_TELEMETRY_FACT_UNITS.codes.GlmCredit
       ? t("apiCredentialProfiles:telemetry.source.glmQuota")
-      : window.unit.code === "usd-equivalent"
+      : window.unit.code ===
+          API_CREDENTIAL_TELEMETRY_FACT_UNITS.codes.UsdEquivalent
         ? t("apiCredentialProfiles:telemetry.balanceSemantics.budgetEquivalent")
         : t("apiCredentialProfiles:telemetry.quota")
   return `${label}: ${window.remaining.toLocaleString()} / ${window.limit?.toLocaleString() ?? "-"} ${unitLabel} (${percent})`
@@ -168,7 +184,7 @@ export function ApiCredentialProfileTelemetryDetails({
                       return (
                         <div
                           className="flex min-w-0 flex-wrap items-baseline gap-1.5"
-                          key={`${balance.unit.kind === "money" ? balance.unit.currency : balance.unit.code}-${index}`}
+                          key={`${balance.unit.kind === API_CREDENTIAL_TELEMETRY_FACT_UNITS.kinds.Money ? balance.unit.currency : balance.unit.code}-${index}`}
                         >
                           <span className="dark:text-dark-text-primary font-semibold text-gray-900">
                             {formatProviderBalance(balance, t)}
