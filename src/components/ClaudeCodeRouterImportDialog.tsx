@@ -25,6 +25,7 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import type { ApiToken, DisplaySiteData } from "~/types"
+import { isTestMode } from "~/utils/core/environment"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { showResultToast } from "~/utils/core/toastHelpers"
@@ -43,6 +44,11 @@ interface ClaudeCodeRouterImportDialogProps {
  * Unified logger scoped to the Claude Code Router import dialog.
  */
 const logger = createLogger("ClaudeCodeRouterImportDialog")
+
+// Preserve the real debounce in dev/prod so endpoint edits do not spam
+// model-list requests, but skip the wall-clock delay in Vitest (mirrors
+// CCSwitchExportDialog).
+const UPSTREAM_MODEL_FETCH_DEBOUNCE_MS = isTestMode() ? 0 : 300
 
 /**
  * Build the default Claude Code Router `api_base_url` for a provider.
@@ -163,7 +169,7 @@ export function ClaudeCodeRouterImportDialog(
           }
         }
       })()
-    }, 300)
+    }, UPSTREAM_MODEL_FETCH_DEBOUNCE_MS)
 
     return () => {
       isMounted = false
