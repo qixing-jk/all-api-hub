@@ -11,7 +11,11 @@ import {
 } from "~/services/apiCredentialProfiles/telemetryAttempts"
 import { resolveApiCredentialTelemetryRequestTarget } from "~/services/apiCredentialProfiles/telemetryConfig"
 import type { TelemetryPatch } from "~/services/apiCredentialProfiles/telemetryContracts"
-import { normalizeTelemetryPatchToFacts } from "~/services/apiCredentialProfiles/telemetryFacts"
+import { API_CREDENTIAL_TELEMETRY_ENDPOINTS } from "~/services/apiCredentialProfiles/telemetryEndpoints"
+import {
+  hasTelemetryUsageData,
+  resolveTelemetryModes,
+} from "~/services/apiCredentialProfiles/telemetryModePlanner"
 import {
   dataLike,
   isRecord,
@@ -27,13 +31,14 @@ import {
   readNumber,
   TELEMETRY_PROVIDER_PROTOCOL,
 } from "~/services/apiCredentialProfiles/telemetryParsers"
+import { buildTelemetrySnapshot } from "~/services/apiCredentialProfiles/telemetrySnapshotBuilder"
 import { ApiError } from "~/services/apiTransport/errors"
 import { fetchApi } from "~/services/apiTransport/request"
 import {
   API_AUTH_TOKEN_MODES,
   type ApiAuthTokenMode,
 } from "~/services/apiTransport/type"
-import { AuthTypeEnum, SiteHealthStatus } from "~/types"
+import { AuthTypeEnum } from "~/types"
 import type {
   ApiCredentialProfile,
   ApiCredentialTelemetryAttempt,
@@ -44,7 +49,6 @@ import type {
 } from "~/types/apiCredentialProfiles"
 import {
   API_CREDENTIAL_TELEMETRY_ATTEMPT_STATUSES,
-  API_CREDENTIAL_TELEMETRY_HEALTH_REASONS,
   API_CREDENTIAL_TELEMETRY_MODES,
   API_CREDENTIAL_TELEMETRY_SOURCES,
 } from "~/types/apiCredentialProfiles"
@@ -61,31 +65,13 @@ type JsonFetchResult = {
   json: unknown
 }
 
-const TELEMETRY_ENDPOINTS = {
-  deepSeekBalance: "/user/balance",
-  glmQuota: "/api/monitor/usage/quota/limit",
-  kimiQuota: "/coding/v1/usages",
-  kimiOpenPlatformBalance: "/v1/users/me/balance",
-  openCodeGoUsage: "/v1/usage",
-  models: {
-    google: "/v1beta/models",
-    openAiCompatible: "/v1/models",
-  },
-  openAiBilling: {
-    subscription: "/v1/dashboard/billing/subscription",
-    usage: "/v1/dashboard/billing/usage",
-  },
-  newApiTokenUsage: "/api/usage/token/",
-  sub2ApiUsage: "/v1/usage",
-} as const
-
 /**
  * Resolves the model catalog endpoint used for telemetry attempts.
  */
 function getModelsEndpoint(profile: ApiCredentialProfile): string {
   return profile.apiType === "google"
-    ? TELEMETRY_ENDPOINTS.models.google
-    : TELEMETRY_ENDPOINTS.models.openAiCompatible
+    ? API_CREDENTIAL_TELEMETRY_ENDPOINTS.models.google
+    : API_CREDENTIAL_TELEMETRY_ENDPOINTS.models.openAiCompatible
 }
 
 /** Resolves provider-owned telemetry routes from the provider origin. */
@@ -93,28 +79,11 @@ function getTelemetryOrigin(baseUrl: string): string {
   return new URL(baseUrl).origin
 }
 
-/** Detects the documented Z.AI Coding Plan endpoints. */
-function isGlmCodingPlanBaseUrl(baseUrl: string): boolean {
-  const pathname = new URL(baseUrl).pathname.toLowerCase()
-  return (
-    pathname.includes("/api/coding/") || pathname.startsWith("/api/anthropic")
-  )
-}
-
-/** Detects OpenCode Go's provider API origin and path. */
-function isOpenCodeGoBaseUrl(baseUrl: string): boolean {
-  const url = new URL(baseUrl)
-  return (
-    url.hostname === "opencode.ai" &&
-    (url.pathname === "/zen/go" || url.pathname.startsWith("/zen/go/"))
-  )
-}
-
 /**
  * Builds the OpenAI-compatible billing usage endpoint for the current date range.
  */
 function createOpenAiBillingUsageEndpoint(start: string, end: string): string {
-  return `${TELEMETRY_ENDPOINTS.openAiBilling.usage}?start_date=${start}&end_date=${end}`
+  return `${API_CREDENTIAL_TELEMETRY_ENDPOINTS.openAiBilling.usage}?start_date=${start}&end_date=${end}`
 }
 
 /**
@@ -184,7 +153,7 @@ async function queryOpenAiBilling(
 ): Promise<AdapterSuccess> {
   const subscription = await fetchJson({
     baseUrl: profile.baseUrl,
-    endpoint: TELEMETRY_ENDPOINTS.openAiBilling.subscription,
+    endpoint: API_CREDENTIAL_TELEMETRY_ENDPOINTS.openAiBilling.subscription,
     bearerToken: profile.apiKey,
   })
   const subscriptionData = dataLike(subscription.json)
@@ -222,7 +191,7 @@ async function queryDeepSeekBalance(
 ): Promise<AdapterSuccess> {
   const result = await fetchJson({
     baseUrl: profile.baseUrl,
-    endpoint: TELEMETRY_ENDPOINTS.deepSeekBalance,
+    endpoint: API_CREDENTIAL_TELEMETRY_ENDPOINTS.deepSeekBalance,
     bearerToken: profile.apiKey,
   })
 
@@ -243,7 +212,7 @@ async function queryGlmQuota(
 ): Promise<AdapterSuccess> {
   const result = await fetchJson({
     baseUrl: getTelemetryOrigin(profile.baseUrl),
-    endpoint: TELEMETRY_ENDPOINTS.glmQuota,
+    endpoint: API_CREDENTIAL_TELEMETRY_ENDPOINTS.glmQuota,
     bearerToken: profile.apiKey,
     authTokenMode: API_AUTH_TOKEN_MODES.Raw,
   })
@@ -263,7 +232,7 @@ async function queryKimiQuota(
 ): Promise<AdapterSuccess> {
   const result = await fetchJson({
     baseUrl: getTelemetryOrigin(profile.baseUrl),
-    endpoint: TELEMETRY_ENDPOINTS.kimiQuota,
+    endpoint: API_CREDENTIAL_TELEMETRY_ENDPOINTS.kimiQuota,
     bearerToken: profile.apiKey,
   })
 
@@ -280,7 +249,7 @@ async function queryKimiOpenPlatformBalance(
 ): Promise<AdapterSuccess> {
   const result = await fetchJson({
     baseUrl: getTelemetryOrigin(profile.baseUrl),
-    endpoint: TELEMETRY_ENDPOINTS.kimiOpenPlatformBalance,
+    endpoint: API_CREDENTIAL_TELEMETRY_ENDPOINTS.kimiOpenPlatformBalance,
     bearerToken: profile.apiKey,
   })
 
@@ -302,7 +271,7 @@ async function queryOpenCodeGoUsage(
 ): Promise<AdapterSuccess> {
   const result = await fetchJson({
     baseUrl: profile.baseUrl,
-    endpoint: TELEMETRY_ENDPOINTS.openCodeGoUsage,
+    endpoint: API_CREDENTIAL_TELEMETRY_ENDPOINTS.openCodeGoUsage,
     bearerToken: profile.apiKey,
   })
 
@@ -321,7 +290,7 @@ async function queryNewApiTokenUsage(
 ): Promise<AdapterSuccess> {
   const result = await fetchJson({
     baseUrl: profile.baseUrl,
-    endpoint: TELEMETRY_ENDPOINTS.newApiTokenUsage,
+    endpoint: API_CREDENTIAL_TELEMETRY_ENDPOINTS.newApiTokenUsage,
     bearerToken: profile.apiKey,
   })
   const data = dataLike(result.json)
@@ -366,7 +335,7 @@ async function querySub2ApiUsage(
 ): Promise<AdapterSuccess> {
   const result = await fetchJson({
     baseUrl: profile.baseUrl,
-    endpoint: TELEMETRY_ENDPOINTS.sub2ApiUsage,
+    endpoint: API_CREDENTIAL_TELEMETRY_ENDPOINTS.sub2ApiUsage,
     bearerToken: profile.apiKey,
   })
   const data = dataLike(result.json)
@@ -495,42 +464,43 @@ const TELEMETRY_ADAPTERS: Partial<
 > = {
   [API_CREDENTIAL_TELEMETRY_MODES.DeepSeekBalance]: {
     source: API_CREDENTIAL_TELEMETRY_SOURCES.DeepSeekBalance,
-    defaultEndpoint: TELEMETRY_ENDPOINTS.deepSeekBalance,
+    defaultEndpoint: API_CREDENTIAL_TELEMETRY_ENDPOINTS.deepSeekBalance,
     query: (profile) => queryDeepSeekBalance(profile),
   },
   [API_CREDENTIAL_TELEMETRY_MODES.GlmQuota]: {
     source: API_CREDENTIAL_TELEMETRY_SOURCES.GlmQuota,
-    defaultEndpoint: TELEMETRY_ENDPOINTS.glmQuota,
+    defaultEndpoint: API_CREDENTIAL_TELEMETRY_ENDPOINTS.glmQuota,
     query: (profile) => queryGlmQuota(profile),
   },
   [API_CREDENTIAL_TELEMETRY_MODES.KimiQuota]: {
     source: API_CREDENTIAL_TELEMETRY_SOURCES.KimiQuota,
-    defaultEndpoint: TELEMETRY_ENDPOINTS.kimiQuota,
+    defaultEndpoint: API_CREDENTIAL_TELEMETRY_ENDPOINTS.kimiQuota,
     query: (profile) => queryKimiQuota(profile),
   },
   [API_CREDENTIAL_TELEMETRY_MODES.KimiOpenPlatformBalance]: {
     source: API_CREDENTIAL_TELEMETRY_SOURCES.KimiOpenPlatformBalance,
-    defaultEndpoint: TELEMETRY_ENDPOINTS.kimiOpenPlatformBalance,
+    defaultEndpoint: API_CREDENTIAL_TELEMETRY_ENDPOINTS.kimiOpenPlatformBalance,
     query: (profile) => queryKimiOpenPlatformBalance(profile),
   },
   [API_CREDENTIAL_TELEMETRY_MODES.OpenCodeGoUsage]: {
     source: API_CREDENTIAL_TELEMETRY_SOURCES.OpenCodeGoUsage,
-    defaultEndpoint: TELEMETRY_ENDPOINTS.openCodeGoUsage,
+    defaultEndpoint: API_CREDENTIAL_TELEMETRY_ENDPOINTS.openCodeGoUsage,
     query: (profile) => queryOpenCodeGoUsage(profile),
   },
   [API_CREDENTIAL_TELEMETRY_MODES.OpenAiBilling]: {
     source: API_CREDENTIAL_TELEMETRY_SOURCES.OpenAiBilling,
-    defaultEndpoint: TELEMETRY_ENDPOINTS.openAiBilling.subscription,
+    defaultEndpoint:
+      API_CREDENTIAL_TELEMETRY_ENDPOINTS.openAiBilling.subscription,
     query: (profile) => queryOpenAiBilling(profile),
   },
   [API_CREDENTIAL_TELEMETRY_MODES.NewApiTokenUsage]: {
     source: API_CREDENTIAL_TELEMETRY_SOURCES.NewApiTokenUsage,
-    defaultEndpoint: TELEMETRY_ENDPOINTS.newApiTokenUsage,
+    defaultEndpoint: API_CREDENTIAL_TELEMETRY_ENDPOINTS.newApiTokenUsage,
     query: (profile) => queryNewApiTokenUsage(profile),
   },
   [API_CREDENTIAL_TELEMETRY_MODES.Sub2ApiUsage]: {
     source: API_CREDENTIAL_TELEMETRY_SOURCES.Sub2ApiUsage,
-    defaultEndpoint: TELEMETRY_ENDPOINTS.sub2ApiUsage,
+    defaultEndpoint: API_CREDENTIAL_TELEMETRY_ENDPOINTS.sub2ApiUsage,
     query: (profile) => querySub2ApiUsage(profile),
   },
   [API_CREDENTIAL_TELEMETRY_MODES.CustomReadOnlyEndpoint]: {
@@ -549,22 +519,6 @@ function getTelemetryAdapter(
   return adapter
 }
 
-/** Ordered compatibility fallbacks used after provider-specific probes. */
-const AUTO_TELEMETRY_FALLBACK_MODES = [
-  API_CREDENTIAL_TELEMETRY_MODES.NewApiTokenUsage,
-  API_CREDENTIAL_TELEMETRY_MODES.Sub2ApiUsage,
-  API_CREDENTIAL_TELEMETRY_MODES.OpenAiBilling,
-] as const
-
-/** Hostname groups that select provider-specific automatic telemetry. */
-const AUTO_TELEMETRY_HOSTS = {
-  deepSeek: "api.deepseek.com",
-  glm: ["open.bigmodel.cn", "dev.bigmodel.cn"] as readonly string[],
-  kimi: "api.kimi.com",
-  zAi: "api.z.ai",
-  moonshot: ["api.moonshot.cn", "api.moonshot.ai"] as readonly string[],
-} as const
-
 /**
  * Runs the selected telemetry adapter for a profile.
  */
@@ -576,90 +530,11 @@ async function runUsageAdapter(
   return await getTelemetryAdapter(mode).query(profile, config)
 }
 
-/**
- * Expands the configured telemetry mode into concrete adapter attempts.
- */
-function resolveModes(
-  profile: ApiCredentialProfile,
-  config: ApiCredentialTelemetryConfig,
-): ApiCredentialTelemetryCapabilityMode[] {
-  if (config.mode === API_CREDENTIAL_TELEMETRY_MODES.Disabled) return []
-  if (config.mode === API_CREDENTIAL_TELEMETRY_MODES.Auto) {
-    try {
-      const hostname = new URL(profile.baseUrl).hostname
-      if (hostname === AUTO_TELEMETRY_HOSTS.deepSeek) {
-        return [
-          API_CREDENTIAL_TELEMETRY_MODES.DeepSeekBalance,
-          ...AUTO_TELEMETRY_FALLBACK_MODES,
-        ]
-      }
-      if (AUTO_TELEMETRY_HOSTS.glm.includes(hostname)) {
-        return [
-          API_CREDENTIAL_TELEMETRY_MODES.GlmQuota,
-          ...AUTO_TELEMETRY_FALLBACK_MODES,
-        ]
-      }
-      if (hostname === AUTO_TELEMETRY_HOSTS.kimi) {
-        return [
-          API_CREDENTIAL_TELEMETRY_MODES.KimiQuota,
-          ...AUTO_TELEMETRY_FALLBACK_MODES,
-        ]
-      }
-      if (
-        hostname === AUTO_TELEMETRY_HOSTS.zAi &&
-        isGlmCodingPlanBaseUrl(profile.baseUrl)
-      ) {
-        return [
-          API_CREDENTIAL_TELEMETRY_MODES.GlmQuota,
-          ...AUTO_TELEMETRY_FALLBACK_MODES,
-        ]
-      }
-      if (AUTO_TELEMETRY_HOSTS.moonshot.includes(hostname)) {
-        return [
-          API_CREDENTIAL_TELEMETRY_MODES.KimiOpenPlatformBalance,
-          ...AUTO_TELEMETRY_FALLBACK_MODES,
-        ]
-      }
-      if (isOpenCodeGoBaseUrl(profile.baseUrl)) {
-        return [API_CREDENTIAL_TELEMETRY_MODES.OpenCodeGoUsage]
-      }
-    } catch {
-      // The profile storage boundary already validates base URLs. Keep the
-      // generic fallback for legacy or partially migrated data.
-    }
-
-    // Prefer provider-specific key telemetry. OpenAI billing endpoints often
-    // expose compatibility limits, not spendable gateway balance.
-    return [...AUTO_TELEMETRY_FALLBACK_MODES]
-  }
-  return [config.mode]
-}
-
 /** Maps an executable telemetry mode to its concrete persisted source. */
 function sourceForMode(
   mode: ApiCredentialTelemetryCapabilityMode,
 ): ApiCredentialTelemetrySource {
   return getTelemetryAdapter(mode).source
-}
-
-/**
- * Checks whether an adapter returned user-facing usage data.
- */
-function hasUsageData(data: TelemetryPatch): boolean {
-  return (
-    data.balance !== undefined ||
-    data.balances !== undefined ||
-    data.quota !== undefined ||
-    data.balanceUsd !== undefined ||
-    data.todayCostUsd !== undefined ||
-    data.todayRequests !== undefined ||
-    data.todayTokens !== undefined ||
-    data.unlimitedQuota === true ||
-    data.totalUsedUsd !== undefined ||
-    data.totalGrantedUsd !== undefined ||
-    data.totalAvailableUsd !== undefined ||
-    data.expiresAt !== undefined
-  )
 }
 
 /**
@@ -680,7 +555,7 @@ export async function refreshApiCredentialProfileTelemetry(
     profile.apiKey,
     config.customEndpoint?.bearerToken,
   ])
-  const modes = resolveModes(profile, config)
+  const modes = resolveTelemetryModes(profile, config)
   const attempts: ApiCredentialTelemetryAttempt[] = []
   const now = Date.now()
   const models =
@@ -690,7 +565,7 @@ export async function refreshApiCredentialProfileTelemetry(
   for (const mode of modes) {
     try {
       const result = await runUsageAdapter(profile, mode, config)
-      if (hasUsageData(result.data)) {
+      if (hasTelemetryUsageData(result.data)) {
         usageResult = result
         attempts.push(
           createAttempt(
@@ -724,54 +599,12 @@ export async function refreshApiCredentialProfileTelemetry(
     }
   }
 
-  const modelSucceeded = Boolean(models && models.count > 0)
-  const usageSucceeded = Boolean(usageResult)
-  const usageFacts = usageResult
-    ? normalizeTelemetryPatchToFacts(usageResult.data, usageResult.source)
-    : {}
-  const usageUnavailable = Boolean(
-    usageFacts.balances?.some((balance) => balance.isAvailable === false),
-  )
-  const customEndpointError = attempts.find(
-    (attempt) =>
-      attempt.status === API_CREDENTIAL_TELEMETRY_ATTEMPT_STATUSES.Error &&
-      attempt.source ===
-        API_CREDENTIAL_TELEMETRY_SOURCES.CustomReadOnlyEndpoint,
-  )?.message
-  const lastError =
-    usageSucceeded || modelSucceeded
-      ? undefined
-      : customEndpointError ||
-        attempts.find(
-          (attempt) =>
-            attempt.status === API_CREDENTIAL_TELEMETRY_ATTEMPT_STATUSES.Error,
-        )?.message ||
-        "No supported telemetry endpoint returned data"
-
-  const snapshot: ApiCredentialTelemetrySnapshot = {
-    health:
-      usageSucceeded || modelSucceeded
-        ? usageUnavailable
-          ? {
-              status: SiteHealthStatus.Warning,
-              reason:
-                API_CREDENTIAL_TELEMETRY_HEALTH_REASONS.InsufficientBalance,
-            }
-          : { status: SiteHealthStatus.Healthy }
-        : {
-            status: SiteHealthStatus.Warning,
-            reason: lastError,
-          },
-    lastSyncTime: now,
-    ...(usageSucceeded || modelSucceeded ? { lastSuccessTime: now } : {}),
-    ...(lastError ? { lastError } : {}),
-    ...(usageResult?.source ? { source: usageResult.source } : {}),
-    facts: {
-      ...usageFacts,
-      ...(models ? { models } : {}),
-    },
+  const snapshot = buildTelemetrySnapshot({
+    now,
     attempts,
-  }
+    models,
+    usageResult,
+  })
 
   await apiCredentialProfilesStorage.updateTelemetrySnapshot(
     profile.id,
