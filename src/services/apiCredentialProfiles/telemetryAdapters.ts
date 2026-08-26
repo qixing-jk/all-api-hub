@@ -2,7 +2,6 @@ import { fetchApiCredentialModelIds } from "~/services/apiCredentialProfiles/mod
 import {
   attemptFromError,
   createAttempt,
-  TelemetryEndpointError,
 } from "~/services/apiCredentialProfiles/telemetryAttempts"
 import { resolveApiCredentialTelemetryRequestTarget } from "~/services/apiCredentialProfiles/telemetryConfig"
 import type { TelemetryPatch } from "~/services/apiCredentialProfiles/telemetryContracts"
@@ -22,13 +21,8 @@ import {
   readNumber,
   TELEMETRY_PROVIDER_PROTOCOL,
 } from "~/services/apiCredentialProfiles/telemetryParsers"
-import { ApiError } from "~/services/apiTransport/errors"
-import { fetchApi } from "~/services/apiTransport/request"
-import {
-  API_AUTH_TOKEN_MODES,
-  type ApiAuthTokenMode,
-} from "~/services/apiTransport/type"
-import { AuthTypeEnum } from "~/types"
+import { fetchTelemetryJson } from "~/services/apiCredentialProfiles/telemetryTransport"
+import { API_AUTH_TOKEN_MODES } from "~/services/apiTransport/type"
 import type {
   ApiCredentialProfile,
   ApiCredentialTelemetryAttempt,
@@ -41,17 +35,11 @@ import {
   API_CREDENTIAL_TELEMETRY_MODES,
   API_CREDENTIAL_TELEMETRY_SOURCES,
 } from "~/types/apiCredentialProfiles"
-import { getErrorMessage } from "~/utils/core/error"
 
 export type AdapterSuccess = {
   source: ApiCredentialTelemetrySource
   endpoint: string
   data: TelemetryPatch
-}
-
-type JsonFetchResult = {
-  endpoint: string
-  json: unknown
 }
 
 /**
@@ -76,71 +64,12 @@ function createOpenAiBillingUsageEndpoint(start: string, end: string): string {
 }
 
 /**
- * Fetches a read-only telemetry endpoint with optional token authentication.
- */
-async function fetchJson(params: {
-  baseUrl: string
-  endpoint: string
-  bearerToken?: string
-  authTokenMode?: ApiAuthTokenMode
-}): Promise<JsonFetchResult> {
-  try {
-    const json = await fetchApi<unknown>(
-      {
-        baseUrl: params.baseUrl,
-        auth: {
-          authType: params.bearerToken
-            ? AuthTypeEnum.AccessToken
-            : AuthTypeEnum.None,
-          accessToken: params.bearerToken,
-        },
-      },
-      {
-        endpoint: params.endpoint,
-        options: {
-          method: "GET",
-          headers: {
-            Accept: "application/json",
-          },
-        },
-        ...(params.authTokenMode
-          ? { authTokenMode: params.authTokenMode }
-          : {}),
-      },
-      true,
-    )
-
-    return {
-      endpoint: params.endpoint,
-      json,
-    }
-  } catch (error) {
-    if (error instanceof ApiError) {
-      throw new TelemetryEndpointError(
-        error.message,
-        error.endpoint ?? params.endpoint,
-        error.statusCode === 404 || error.statusCode === 405,
-      )
-    }
-
-    if (error instanceof SyntaxError) {
-      throw new TelemetryEndpointError("Non-JSON response", params.endpoint)
-    }
-
-    throw new TelemetryEndpointError(
-      `Network request failed: ${getErrorMessage(error)}`,
-      params.endpoint,
-    )
-  }
-}
-
-/**
  * Queries OpenAI-compatible billing endpoints for balance and usage data.
  */
 async function queryOpenAiBilling(
   profile: ApiCredentialProfile,
 ): Promise<AdapterSuccess> {
-  const subscription = await fetchJson({
+  const subscription = await fetchTelemetryJson({
     baseUrl: profile.baseUrl,
     endpoint: API_CREDENTIAL_TELEMETRY_ENDPOINTS.openAiBilling.subscription,
     bearerToken: profile.apiKey,
@@ -159,7 +88,7 @@ async function queryOpenAiBilling(
   const start = `${now.getFullYear()}-01-01`
   const end = now.toISOString().slice(0, 10)
   const usageEndpoint = createOpenAiBillingUsageEndpoint(start, end)
-  const usage = await fetchJson({
+  const usage = await fetchTelemetryJson({
     baseUrl: profile.baseUrl,
     endpoint: usageEndpoint,
     bearerToken: profile.apiKey,
@@ -178,7 +107,7 @@ async function queryOpenAiBilling(
 async function queryDeepSeekBalance(
   profile: ApiCredentialProfile,
 ): Promise<AdapterSuccess> {
-  const result = await fetchJson({
+  const result = await fetchTelemetryJson({
     baseUrl: profile.baseUrl,
     endpoint: API_CREDENTIAL_TELEMETRY_ENDPOINTS.deepSeekBalance,
     bearerToken: profile.apiKey,
@@ -199,7 +128,7 @@ async function queryDeepSeekBalance(
 async function queryGlmQuota(
   profile: ApiCredentialProfile,
 ): Promise<AdapterSuccess> {
-  const result = await fetchJson({
+  const result = await fetchTelemetryJson({
     baseUrl: getTelemetryOrigin(profile.baseUrl),
     endpoint: API_CREDENTIAL_TELEMETRY_ENDPOINTS.glmQuota,
     bearerToken: profile.apiKey,
@@ -219,7 +148,7 @@ async function queryGlmQuota(
 async function queryKimiQuota(
   profile: ApiCredentialProfile,
 ): Promise<AdapterSuccess> {
-  const result = await fetchJson({
+  const result = await fetchTelemetryJson({
     baseUrl: getTelemetryOrigin(profile.baseUrl),
     endpoint: API_CREDENTIAL_TELEMETRY_ENDPOINTS.kimiQuota,
     bearerToken: profile.apiKey,
@@ -236,7 +165,7 @@ async function queryKimiQuota(
 async function queryKimiOpenPlatformBalance(
   profile: ApiCredentialProfile,
 ): Promise<AdapterSuccess> {
-  const result = await fetchJson({
+  const result = await fetchTelemetryJson({
     baseUrl: getTelemetryOrigin(profile.baseUrl),
     endpoint: API_CREDENTIAL_TELEMETRY_ENDPOINTS.kimiOpenPlatformBalance,
     bearerToken: profile.apiKey,
@@ -258,7 +187,7 @@ async function queryKimiOpenPlatformBalance(
 async function queryOpenCodeGoUsage(
   profile: ApiCredentialProfile,
 ): Promise<AdapterSuccess> {
-  const result = await fetchJson({
+  const result = await fetchTelemetryJson({
     baseUrl: profile.baseUrl,
     endpoint: API_CREDENTIAL_TELEMETRY_ENDPOINTS.openCodeGoUsage,
     bearerToken: profile.apiKey,
@@ -277,7 +206,7 @@ async function queryOpenCodeGoUsage(
 async function queryNewApiTokenUsage(
   profile: ApiCredentialProfile,
 ): Promise<AdapterSuccess> {
-  const result = await fetchJson({
+  const result = await fetchTelemetryJson({
     baseUrl: profile.baseUrl,
     endpoint: API_CREDENTIAL_TELEMETRY_ENDPOINTS.newApiTokenUsage,
     bearerToken: profile.apiKey,
@@ -322,7 +251,7 @@ async function queryNewApiTokenUsage(
 async function querySub2ApiUsage(
   profile: ApiCredentialProfile,
 ): Promise<AdapterSuccess> {
-  const result = await fetchJson({
+  const result = await fetchTelemetryJson({
     baseUrl: profile.baseUrl,
     endpoint: API_CREDENTIAL_TELEMETRY_ENDPOINTS.sub2ApiUsage,
     bearerToken: profile.apiKey,
@@ -380,7 +309,7 @@ async function queryCustomReadOnlyEndpoint(
     profile.baseUrl,
     config.customEndpoint.endpoint,
   )
-  const result = await fetchJson({
+  const result = await fetchTelemetryJson({
     baseUrl: requestTarget.baseUrl,
     endpoint: requestTarget.endpoint,
     bearerToken:
