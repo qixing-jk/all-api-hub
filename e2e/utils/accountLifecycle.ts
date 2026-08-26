@@ -228,9 +228,17 @@ async function openKeyManagementPageFromAccountRow(params: {
   await row
     .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowMoreActionsButton)
     .click()
-  await params.page
-    .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowKeyManagementMenuItem)
-    .click()
+  // The row menu opens with an animation; wait for the item to be stable and
+  // visible after the Radix open transition instead of clicking mid-animation
+  // (previously flaky: "element is not stable" / "element was detached").
+  const keyManagementMenuItem = params.page.getByTestId(
+    ACCOUNT_MANAGEMENT_TEST_IDS.rowKeyManagementMenuItem,
+  )
+  await keyManagementMenuItem.waitFor({
+    state: "visible",
+    timeout: 10_000,
+  })
+  await keyManagementMenuItem.click()
 
   await expect(params.page).toHaveURL((url) => {
     return (
