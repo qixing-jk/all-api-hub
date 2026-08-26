@@ -14,8 +14,22 @@ const workers =
       ? 1
       : 4
 
+// The default smoke suite only covers specs that can actually run without
+// per-target environment secrets or a dedicated manifest build variant:
+// - e2e/realSite/** skips at runtime without real-site credentials and is run
+//   by the scheduled Real-Site E2E workflow with its own matrix.
+// - e2e/dnrRequired/** skips outside the dnr-required build variant and is run
+//   by the e2e:dnr-required script in the same workflow.
+// Excluding them keeps shard distribution even instead of assigning runners a
+// block of guaranteed skips.
+const smokeOnlyTestIgnore =
+  process.env.AAH_E2E_SMOKE_ONLY === "1"
+    ? [/e2e[\\/]realSite/u, /e2e[\\/]dnrRequired/u]
+    : []
+
 export default defineConfig({
   testDir: "./e2e",
+  testIgnore: smokeOnlyTestIgnore,
   projects: [
     {
       name: "build",
