@@ -60,4 +60,28 @@ describe("api credential telemetry transport", () => {
       unsupported: true,
     })
   })
+
+  it("classifies malformed JSON and generic network failures", async () => {
+    fetchApiMock.mockRejectedValueOnce(new SyntaxError("Unexpected token"))
+    await expect(
+      fetchTelemetryJson({
+        baseUrl: "https://example.invalid",
+        endpoint: "/invalid-json",
+      }),
+    ).rejects.toMatchObject({
+      name: "TelemetryEndpointError",
+      message: "Non-JSON response",
+    })
+
+    fetchApiMock.mockRejectedValueOnce(new Error("connection closed"))
+    await expect(
+      fetchTelemetryJson({
+        baseUrl: "https://example.invalid",
+        endpoint: "/network-error",
+      }),
+    ).rejects.toMatchObject({
+      name: "TelemetryEndpointError",
+      message: "Network request failed: connection closed",
+    })
+  })
 })

@@ -37,6 +37,28 @@ describe("api credential telemetry parsers", () => {
     })
   })
 
+  it("uses the provider currency fallback and preserves empty balance responses", () => {
+    expect(
+      parseDeepSeekBalance({
+        is_available: false,
+        balance_infos: [{ total_balance: "3.5" }],
+      }),
+    ).toEqual({
+      balances: [
+        expect.objectContaining({
+          amount: 3.5,
+          currency: "CNY",
+          isAvailable: false,
+        }),
+      ],
+    })
+    expect(
+      parseDeepSeekBalance({ is_available: true, balance_infos: [] }),
+    ).toEqual({
+      balance: { amount: 0, currency: "CNY", isAvailable: true },
+    })
+  })
+
   it("maps GLM-style limits to remaining-capacity windows", () => {
     const result = parseGlmQuota({
       success: true,
@@ -146,6 +168,67 @@ describe("api credential telemetry parsers", () => {
     ])
   })
 
+  it("ignores malformed GLM rows and preserves monthly percentage windows", () => {
+    expect(parseGlmQuota({ success: false, data: {} })).toEqual({})
+    expect(parseGlmQuota({ success: true, data: { limits: {} } })).toEqual({})
+    expect(
+      parseGlmQuota({
+        success: true,
+        data: {
+          level: " pro ",
+          limits: [
+            { type: "UNKNOWN_LIMIT", usage: 10 },
+            { type: "TOKENS_LIMIT" },
+            {
+              type: "TIME_LIMIT",
+              percentage: 25,
+              nextResetTime: 1_800_000_000,
+            },
+          ],
+        },
+      }),
+    ).toEqual({
+      quota: {
+        membershipLevel: "pro",
+        windows: [
+          expect.objectContaining({
+            type: "monthly",
+            unit: "percent",
+            limit: 100,
+            used: 25,
+            remaining: 75,
+            percentRemaining: 75,
+            resetTime: 1_800_000_000_000,
+          }),
+        ],
+      },
+    })
+  })
+
+  it("preserves provider-valued GLM monthly windows", () => {
+    expect(
+      parseGlmQuota({
+        success: true,
+        data: {
+          limits: [
+            {
+              type: "TIME_LIMIT",
+              usage: 20,
+              currentValue: 5,
+              remaining: 15,
+            },
+          ],
+        },
+      }).quota?.windows,
+    ).toEqual([
+      expect.objectContaining({
+        type: "monthly",
+        unit: "provider",
+        percentRemaining: 75,
+      }),
+    ])
+  })
+
   it("does not expose a huge OpenAI-compatible hard limit as spendable balance", () => {
     expect(
       parseOpenAiBillingUsage(
@@ -153,6 +236,25 @@ describe("api credential telemetry parsers", () => {
         { total_usage: 1234 },
       ),
     ).toEqual({ totalUsedUsd: 12.34 })
+  })
+
+  it("prefers explicit OpenAI balance and derives ordinary subscription balance", () => {
+    expect(parseOpenAiBillingUsage({ balance: 4.25 }, {})).toEqual({
+      balanceUsd: 4.25,
+    })
+    expect(
+      parseOpenAiBillingUsage({ hard_limit_usd: 20 }, { used_usd: 7.5 }),
+    ).toEqual({
+      balanceUsd: 12.5,
+      totalGrantedUsd: 20,
+      totalUsedUsd: 7.5,
+    })
+  })
+
+  it("drops Kimi responses without usable quota or booster balance", () => {
+    expect(
+      parseKimiQuota({ usage: {}, boosterWallet: { status: "VALID" } }),
+    ).toEqual({})
   })
 
   it("maps custom nested paths and preserves explicit zero token values", () => {
@@ -181,5 +283,39 @@ describe("api credential telemetry parsers", () => {
         { todayTotalTokens: "usage.total" },
       ),
     ).toEqual({ todayTokens: { upload: 0, download: 0 } })
+  })
+
+  it("maps every configured custom value and leaves invalid paths undefined", () => {
+    expect(
+      mapCustomJson(
+        {
+          values: {
+            cost: "1.5",
+            requests: 3,
+            used: 4,
+            granted: 10,
+            available: 6,
+            expires: 1_800_000_000,
+          },
+        },
+        {
+          balanceUsd: "missing.balance",
+          todayCostUsd: "values.cost",
+          todayRequests: "values.requests",
+          totalUsedUsd: "values.used",
+          totalGrantedUsd: "values.granted",
+          totalAvailableUsd: "values.available",
+          expiresAt: "values.expires",
+        },
+      ),
+    ).toEqual({
+      balanceUsd: undefined,
+      todayCostUsd: 1.5,
+      todayRequests: 3,
+      totalUsedUsd: 4,
+      totalGrantedUsd: 10,
+      totalAvailableUsd: 6,
+      expiresAt: 1_800_000_000_000,
+    })
   })
 })

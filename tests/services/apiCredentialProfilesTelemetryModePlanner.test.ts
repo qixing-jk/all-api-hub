@@ -35,6 +35,17 @@ describe("api credential telemetry mode planner", () => {
     ).toEqual([API_CREDENTIAL_TELEMETRY_MODES.OpenCodeGoUsage])
   })
 
+  it("recognizes the Kimi API host before compatibility fallbacks", () => {
+    expect(
+      resolveTelemetryModes(profile("https://api.kimi.com/coding"), autoConfig),
+    ).toEqual([
+      API_CREDENTIAL_TELEMETRY_MODES.KimiQuota,
+      API_CREDENTIAL_TELEMETRY_MODES.NewApiTokenUsage,
+      API_CREDENTIAL_TELEMETRY_MODES.Sub2ApiUsage,
+      API_CREDENTIAL_TELEMETRY_MODES.OpenAiBilling,
+    ])
+  })
+
   it("returns no modes when telemetry is disabled", () => {
     expect(
       resolveTelemetryModes(profile("https://example.invalid"), {

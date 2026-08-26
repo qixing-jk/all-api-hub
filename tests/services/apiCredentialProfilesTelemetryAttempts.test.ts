@@ -41,6 +41,12 @@ describe("api credential telemetry attempts", () => {
     })
   })
 
+  it("falls back to sanitized text when an endpoint cannot be parsed", () => {
+    expect(sanitizeTelemetryEndpoint("https://[invalid/token", ["token"])).toBe(
+      "https://[invalid/[REDACTED]",
+    )
+  })
+
   it("maps unsupported endpoint errors to unsupported attempts", () => {
     const error = new TelemetryEndpointError("HTTP 405", "/usage", true)
     expect(
