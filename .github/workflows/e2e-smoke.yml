@@ -42,9 +42,65 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  e2e-build:
+    name: E2E build (${{ matrix.name }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: ${{ github.event_name != 'pull_request' || !contains(github.event.pull_request.labels.*.name, 'skip-e2e') }}
+    continue-on-error: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'e2e-optional') }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Each build variant is produced once and reused by its test jobs.
+        include:
+          - name: default
+            build_variant: default
+            extension_dir: chrome-mv3-test
+          - name: dnr-required
+            build_variant: dnr-required
+            extension_dir: chrome-mv3-test-dnr-required
+          - name: bookmarks-required
+            build_variant: bookmarks-required
+            extension_dir: chrome-mv3-test-bookmarks-required
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v5
+        with:
+          version: 10
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: "pnpm"
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: Build E2E extension
+        env:
+          AAH_E2E_BUILD_VARIANT: ${{ matrix.build_variant }}
+        run: pnpm build:e2e
+
+      - name: Upload E2E extension
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-extension-${{ matrix.build_variant }}
+          path: .output/${{ matrix.extension_dir }}
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1
+
   e2e-smoke:
     name: E2E (${{ matrix.name }})
     runs-on: ubuntu-latest
+    needs: e2e-build
     timeout-minutes: 20
     if: ${{ github.event_name != 'pull_request' || !contains(github.event.pull_request.labels.*.name, 'skip-e2e') }}
     continue-on-error: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'e2e-optional') }}
@@ -57,29 +113,43 @@ jobs:
         include:
           - name: default-shard-1
             e2e_type: default
+            build_variant: default
+            extension_dir: chrome-mv3-test
             shard: 1
           - name: default-shard-2
             e2e_type: default
+            build_variant: default
+            extension_dir: chrome-mv3-test
             shard: 2
           - name: default-shard-3
             e2e_type: default
+            build_variant: default
+            extension_dir: chrome-mv3-test
             shard: 3
           - name: default-shard-4
             e2e_type: default
+            build_variant: default
+            extension_dir: chrome-mv3-test
             shard: 4
           - name: default-shard-5
             e2e_type: default
+            build_variant: default
+            extension_dir: chrome-mv3-test
             shard: 5
           - name: default-shard-6
             e2e_type: default
+            build_variant: default
+            extension_dir: chrome-mv3-test
             shard: 6
           - name: dnr-required
             e2e_type: dnr-required
             build_variant: dnr-required
+            extension_dir: chrome-mv3-test-dnr-required
             shard: ""
           - name: bookmarks-required
             e2e_type: bookmarks-required
             build_variant: bookmarks-required
+            extension_dir: chrome-mv3-test-bookmarks-required
             shard: ""
     env:
       AAH_E2E_SHARD_TOTAL: "6"
@@ -104,10 +174,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --prefer-offline
 
-      - name: Build extension
-        env:
-          AAH_E2E_BUILD_VARIANT: ${{ matrix.build_variant }}
-        run: pnpm build:e2e
+      - name: Download E2E extension
+        uses: actions/download-artifact@v7
+        with:
+          name: e2e-extension-${{ matrix.build_variant }}
+          path: .output/${{ matrix.extension_dir }}
 
       - name: Get Playwright version
         id: playwright_version
