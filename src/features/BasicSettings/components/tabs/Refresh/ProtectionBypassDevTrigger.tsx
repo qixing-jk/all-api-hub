@@ -292,7 +292,7 @@ export function ProtectionBypassDevTrigger() {
     <CardItem
       title={t("refresh.shieldDevTriggerTitle")}
       description={t("refresh.shieldDevTriggerDescription")}
-      rightContentClassName="sm:flex-1"
+      rightContentClassName="[@container(min-width:42rem)]:flex-1"
       rightContent={
         <div
           data-testid="shield-dev-trigger-form"

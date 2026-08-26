@@ -2,9 +2,10 @@ import { render, screen } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 
 import { CardItem } from "~/components/ui/CardItem"
+import { Switch } from "~/components/ui/Switch"
 
 describe("CardItem", () => {
-  it("keeps settings rows horizontal on wider viewports while allowing child content to respond to container width", () => {
+  it("stacks non-switch settings content until the card container is wide enough", () => {
     const { container } = render(
       <CardItem
         title="Title"
@@ -13,16 +14,52 @@ describe("CardItem", () => {
       />,
     )
 
-    expect(container.firstElementChild).toHaveClass(
-      "[container-type:inline-size]",
+    const cardItem = container.firstElementChild
+    const contentLayout = container.querySelector(
+      '[data-slot="card-item-content"]',
+    )
+
+    expect(cardItem).toHaveClass("[container-type:inline-size]")
+    expect(contentLayout).toHaveClass(
       "flex-col",
-      "sm:flex-row",
+      "items-start",
+      "text-left",
+      "[@container(min-width:42rem)]:flex-row",
+      "[@container(min-width:42rem)]:items-center",
     )
     expect(screen.getByTestId("right-content").parentElement).toHaveClass(
+      "flex",
       "w-full",
-      "sm:ml-auto",
-      "sm:w-auto",
-      "sm:flex-none",
+      "justify-end",
+      "[@container(min-width:42rem)]:ml-auto",
+      "[@container(min-width:42rem)]:block",
+      "[@container(min-width:42rem)]:w-auto",
+      "[@container(min-width:42rem)]:flex-none",
+    )
+  })
+
+  it("keeps a direct switch on the right in an inline layout", () => {
+    const { container } = render(
+      <CardItem
+        title="Title"
+        description="Description"
+        rightContent={<Switch checked={false} onChange={() => undefined} />}
+      />,
+    )
+
+    const contentLayout = container.querySelector(
+      '[data-slot="card-item-content"]',
+    )
+    const control = container.querySelector('[data-slot="card-item-control"]')
+
+    expect(contentLayout).toHaveClass(
+      "has-[>[data-slot=card-item-control]>[data-slot=switch]]:flex-row",
+      "has-[>[data-slot=card-item-control]>[data-slot=switch]]:items-center",
+    )
+    expect(control).toHaveClass(
+      "has-[>[data-slot=switch]]:ml-auto",
+      "has-[>[data-slot=switch]]:w-auto",
+      "has-[>[data-slot=switch]]:flex-none",
     )
   })
 
@@ -31,12 +68,14 @@ describe("CardItem", () => {
       <CardItem
         title="Title"
         rightContent={<span data-testid="right-content">Right</span>}
-        rightContentClassName="sm:flex-1 [@container(min-width:42rem)]:flex-none"
+        rightContentClassName="[@container(min-width:42rem)]:flex-1"
       />,
     )
 
     expect(screen.getByTestId("right-content").parentElement).toHaveClass(
-      "sm:flex-1",
+      "[@container(min-width:42rem)]:flex-1",
+    )
+    expect(screen.getByTestId("right-content").parentElement).not.toHaveClass(
       "[@container(min-width:42rem)]:flex-none",
     )
   })

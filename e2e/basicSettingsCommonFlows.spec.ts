@@ -265,3 +265,90 @@ test("updates toolbar action behavior from settings into the live extension acti
     await expectNativeSidePanelActionClickState(serviceWorker, false)
   }
 })
+
+test("uses control-specific layouts at narrow card widths", async ({
+  extensionId,
+  page,
+}) => {
+  await page.setViewportSize({ width: 560, height: 900 })
+  await page.goto(
+    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.BASIC}`,
+  )
+  await waitForExtensionRoot(page)
+
+  const card = page.locator("#appearance-theme-mode")
+  const content = card.locator('[data-slot="card-item-content"]')
+
+  await expect(card).toBeVisible()
+  await expect
+    .poll(async () =>
+      content.evaluate((element) => getComputedStyle(element).flexDirection),
+    )
+    .toBe("column")
+
+  const narrowLayout = await content.evaluate((element) => {
+    const control = element.querySelector<HTMLElement>(
+      '[data-slot="card-item-control"]',
+    )
+    if (!control) throw new Error("Card item control is missing")
+
+    const contentRect = element.getBoundingClientRect()
+    const controlRect = control.getBoundingClientRect()
+    const renderedControl = control.firstElementChild
+    if (!(renderedControl instanceof HTMLElement)) {
+      throw new Error("Rendered card item control is missing")
+    }
+    const renderedControlRect = renderedControl.getBoundingClientRect()
+
+    return {
+      renderedControlRightDifference: Math.abs(
+        renderedControlRect.right - contentRect.right,
+      ),
+      controlWidthDifference: Math.abs(controlRect.width - contentRect.width),
+    }
+  })
+
+  expect(narrowLayout.renderedControlRightDifference).toBeLessThanOrEqual(1)
+  expect(narrowLayout.controlWidthDifference).toBeLessThanOrEqual(1)
+
+  const switchCard = page.locator("#changelog-on-update-toggle")
+  const switchContent = switchCard.locator('[data-slot="card-item-content"]')
+
+  await expect(switchCard).toBeVisible()
+  await expect
+    .poll(async () =>
+      switchContent.evaluate(
+        (element) => getComputedStyle(element).flexDirection,
+      ),
+    )
+    .toBe("row")
+
+  const switchLayout = await switchContent.evaluate((element) => {
+    const control = element.querySelector<HTMLElement>(
+      '[data-slot="card-item-control"]',
+    )
+    if (!control) throw new Error("Switch control is missing")
+
+    const contentRect = element.getBoundingClientRect()
+    const controlRect = control.getBoundingClientRect()
+
+    return {
+      rightDifference: Math.abs(controlRect.right - contentRect.right),
+      verticalCenterDifference: Math.abs(
+        controlRect.top +
+          controlRect.height / 2 -
+          (contentRect.top + contentRect.height / 2),
+      ),
+    }
+  })
+
+  expect(switchLayout.rightDifference).toBeLessThanOrEqual(1)
+  expect(switchLayout.verticalCenterDifference).toBeLessThanOrEqual(1)
+
+  await page.setViewportSize({ width: 1400, height: 900 })
+  await expect
+    .poll(async () =>
+      content.evaluate((element) => getComputedStyle(element).flexDirection),
+    )
+    .toBe("row")
+})

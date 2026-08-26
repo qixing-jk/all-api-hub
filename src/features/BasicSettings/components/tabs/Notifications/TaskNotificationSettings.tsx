@@ -92,7 +92,10 @@ function NotificationSettingItem({
   return (
     <CardItem id={id} className="items-stretch sm:items-stretch">
       <div className="w-full space-y-4">
-        <div className="flex flex-col gap-3 [@container(min-width:42rem)]:flex-row [@container(min-width:42rem)]:items-center [@container(min-width:42rem)]:justify-between">
+        <div
+          data-slot="notification-setting-content"
+          className="flex flex-col gap-3 has-[>[data-slot=notification-setting-actions]>[data-slot=switch]]:flex-row has-[>[data-slot=notification-setting-actions]>[data-slot=switch]]:items-center has-[>[data-slot=notification-setting-actions]>[data-slot=switch]]:justify-between [@container(min-width:42rem)]:flex-row [@container(min-width:42rem)]:items-center [@container(min-width:42rem)]:justify-between"
+        >
           <div className="min-w-0 flex-1 space-y-1">
             {title && (
               <Label className="text-base font-semibold tracking-tight">
@@ -106,7 +109,10 @@ function NotificationSettingItem({
             )}
           </div>
           {actions && (
-            <div className="flex w-full flex-wrap items-center gap-3 [@container(min-width:42rem)]:w-auto [@container(min-width:42rem)]:shrink-0">
+            <div
+              data-slot="notification-setting-actions"
+              className="flex w-full flex-wrap items-center justify-end gap-3 has-[>[data-slot=switch]]:w-auto has-[>[data-slot=switch]]:shrink-0 [@container(min-width:42rem)]:w-auto [@container(min-width:42rem)]:shrink-0"
+            >
               {actions}
             </div>
           )}

@@ -214,7 +214,7 @@ export default function ShieldSettings() {
             id={SHIELD_SETTINGS_TARGET_IDS.method}
             title={t("refresh.shieldMethodTitle")}
             description={t("refresh.shieldMethodDesc")}
-            rightContentClassName="sm:flex-1"
+            rightContentClassName="[@container(min-width:42rem)]:flex-1"
             rightContent={
               <div className="flex flex-col items-stretch space-y-2 text-left">
                 <ResponsiveButtonGroup

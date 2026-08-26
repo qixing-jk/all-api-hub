@@ -181,7 +181,7 @@ describe("TaskNotificationSettings", () => {
   })
 
   it("uses container-width responsive layout for notification row actions", async () => {
-    render(<TaskNotificationSettings />, {
+    const { container } = render(<TaskNotificationSettings />, {
       withUserPreferencesProvider: false,
       withThemeProvider: false,
     })
@@ -201,8 +201,27 @@ describe("TaskNotificationSettings", () => {
     expect(actionBar).toHaveClass(
       "w-full",
       "flex-wrap",
+      "justify-end",
       "[@container(min-width:42rem)]:w-auto",
       "[@container(min-width:42rem)]:shrink-0",
+    )
+
+    const taskRow = container.querySelector("#task-notifications-autoCheckin")
+    const taskContent = taskRow?.querySelector(
+      '[data-slot="notification-setting-content"]',
+    )
+    const taskActions = taskRow?.querySelector(
+      '[data-slot="notification-setting-actions"]',
+    )
+
+    expect(taskContent).toHaveClass(
+      "has-[>[data-slot=notification-setting-actions]>[data-slot=switch]]:flex-row",
+      "has-[>[data-slot=notification-setting-actions]>[data-slot=switch]]:items-center",
+      "has-[>[data-slot=notification-setting-actions]>[data-slot=switch]]:justify-between",
+    )
+    expect(taskActions).toHaveClass(
+      "has-[>[data-slot=switch]]:w-auto",
+      "has-[>[data-slot=switch]]:shrink-0",
     )
   })
 

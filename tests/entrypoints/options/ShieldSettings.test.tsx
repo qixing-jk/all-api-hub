@@ -298,7 +298,7 @@ describe("ShieldSettings", () => {
 
     // JSDOM cannot resolve container-query geometry, so protect the three
     // constraints that prevent max-content buttons from crushing the copy.
-    expect(rightPane).toHaveClass("sm:flex-1")
+    expect(rightPane).toHaveClass("[@container(min-width:42rem)]:flex-1")
     expect(rightPane).not.toHaveClass("[@container(min-width:42rem)]:flex-none")
     expect(methodLayout).toHaveClass("items-stretch")
     expect(methodLayout).not.toHaveClass(
@@ -852,7 +852,7 @@ describe("ShieldSettings", () => {
 
     // JSDOM cannot calculate container-query widths, so protect the
     // shrinkability constraints exercised by the headed browser smoke.
-    expect(rightPane).toHaveClass("sm:flex-1")
+    expect(rightPane).toHaveClass("[@container(min-width:42rem)]:flex-1")
     expect(form).toHaveClass("min-w-0")
     expect(form).not.toHaveClass("[@container(min-width:42rem)]:min-w-[32rem]")
   })

@@ -80,7 +80,10 @@ const CardItem = React.forwardRef<HTMLDivElement, CardSectionProps>(
         {...props}
       >
         {children || (
-          <>
+          <div
+            data-slot="card-item-content"
+            className="flex w-full flex-col items-start justify-between gap-4 text-left has-[>[data-slot=card-item-control]>[data-slot=switch]]:flex-row has-[>[data-slot=card-item-control]>[data-slot=switch]]:items-center [@container(min-width:42rem)]:flex-row [@container(min-width:42rem)]:items-center"
+          >
             <div className="flex w-full min-w-0 flex-1 items-center gap-3 [@container(min-width:42rem)]:w-auto">
               {icon && (
                 <div className="dark:bg-dark-bg-tertiary shrink-0 rounded-lg bg-gray-100 p-1 transition-colors sm:p-2">
@@ -113,15 +116,16 @@ const CardItem = React.forwardRef<HTMLDivElement, CardSectionProps>(
             </div>
             {rightContent && (
               <div
+                data-slot="card-item-control"
                 className={cn(
-                  "w-full min-w-0 flex-1 sm:ml-auto sm:w-auto sm:flex-none",
+                  "flex w-full min-w-0 flex-1 justify-end has-[>[data-slot=switch]]:ml-auto has-[>[data-slot=switch]]:w-auto has-[>[data-slot=switch]]:flex-none [@container(min-width:42rem)]:ml-auto [@container(min-width:42rem)]:block [@container(min-width:42rem)]:w-auto [@container(min-width:42rem)]:flex-none",
                   rightContentClassName,
                 )}
               >
                 {rightContent}
               </div>
             )}
-          </>
+          </div>
         )}
       </Component>
     )
