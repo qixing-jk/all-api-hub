@@ -84,7 +84,7 @@ jobs:
   unit-tests:
     runs-on: ubuntu-latest
     env:
-      UNIT_TEST_SHARD_TOTAL: 5
+      UNIT_TEST_SHARD_TOTAL: 6
     strategy:
       fail-fast: false
       matrix:
@@ -94,6 +94,7 @@ jobs:
           - 3
           - 4
           - 5
+          - 6
 
     steps:
       - name: Checkout code

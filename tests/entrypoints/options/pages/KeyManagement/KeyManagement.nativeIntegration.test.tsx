@@ -1,4 +1,4 @@
-import { act, within } from "@testing-library/react"
+import { act, fireEvent, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { useState } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
@@ -1912,9 +1912,11 @@ describe("KeyManagement native page integration", () => {
     expect(screen.getByText("keyManagement:details.empty")).toBeVisible()
     expect(successful.collection.get).not.toHaveBeenCalled()
 
-    await user.type(
+    fireEvent.change(
       screen.getByPlaceholderText("keyManagement:searchPlaceholder"),
-      "Native one",
+      {
+        target: { value: "Native one" },
+      },
     )
     await waitFor(() =>
       expect(accountSummaryBarPropsSpy.mock.lastCall?.[0]).toMatchObject({

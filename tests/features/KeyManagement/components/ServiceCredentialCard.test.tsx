@@ -678,30 +678,26 @@ describe("ServiceCredentialCard", () => {
     ).not.toBeInTheDocument()
 
     await selectExportAction(user, "keyManagement:actions.exportToCCSwitch")
-    await waitFor(() => {
-      expect(mockCCSwitchDialog).toHaveBeenCalledWith(
-        expect.objectContaining({
-          isOpen: true,
-          account: expect.objectContaining({
-            baseUrl: "https://sharedchat.example.invalid/v1",
-          }),
-          token: expect.objectContaining({ key: "sk-service-credential" }),
+    expect(mockCCSwitchDialog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        isOpen: true,
+        account: expect.objectContaining({
+          baseUrl: "https://sharedchat.example.invalid/v1",
         }),
-      )
-    })
+        token: expect.objectContaining({ key: "sk-service-credential" }),
+      }),
+    )
 
     await selectExportAction(user, "keyManagement:actions.exportToKiloCode")
-    await waitFor(() => {
-      expect(mockKiloCodeDialog).toHaveBeenCalledWith(
-        expect.objectContaining({
-          isOpen: true,
-          profile: expect.objectContaining({
-            baseUrl: "https://sharedchat.example.invalid/v1",
-            apiKey: "sk-service-credential",
-          }),
+    expect(mockKiloCodeDialog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        isOpen: true,
+        profile: expect.objectContaining({
+          baseUrl: "https://sharedchat.example.invalid/v1",
+          apiKey: "sk-service-credential",
         }),
-      )
-    })
+      }),
+    )
 
     await selectExportAction(user, "keyManagement:actions.exportToCursorPlus")
     expect(
@@ -726,35 +722,31 @@ describe("ServiceCredentialCard", () => {
     ).not.toBeInTheDocument()
 
     await selectExportAction(user, "keyManagement:actions.importToCliProxy")
-    await waitFor(() => {
-      expect(mockCliProxyDialog).toHaveBeenCalledWith(
-        expect.objectContaining({
-          isOpen: true,
-          account: expect.objectContaining({
-            baseUrl: "https://sharedchat.example.invalid/v1",
-          }),
-          token: expect.objectContaining({ key: "sk-service-credential" }),
+    expect(mockCliProxyDialog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        isOpen: true,
+        account: expect.objectContaining({
+          baseUrl: "https://sharedchat.example.invalid/v1",
         }),
-      )
-    })
+        token: expect.objectContaining({ key: "sk-service-credential" }),
+      }),
+    )
 
     await selectExportAction(
       user,
       "keyManagement:actions.importToClaudeCodeRouter",
     )
-    await waitFor(() => {
-      expect(mockClaudeCodeRouterDialog).toHaveBeenCalledWith(
-        expect.objectContaining({
-          isOpen: true,
-          account: expect.objectContaining({
-            baseUrl: "https://sharedchat.example.invalid/v1",
-          }),
-          token: expect.objectContaining({ key: "sk-service-credential" }),
-          routerApiKey: "ccr-management-key",
-          routerBaseUrl: "https://router.example.invalid",
+    expect(mockClaudeCodeRouterDialog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        isOpen: true,
+        account: expect.objectContaining({
+          baseUrl: "https://sharedchat.example.invalid/v1",
         }),
-      )
-    })
+        token: expect.objectContaining({ key: "sk-service-credential" }),
+        routerApiKey: "ccr-management-key",
+        routerBaseUrl: "https://router.example.invalid",
+      }),
+    )
 
     await selectExportAction(user, "keyManagement:actions.importToManagedSite")
     expect(mockOpenWithCredentials).toHaveBeenCalledWith(

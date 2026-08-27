@@ -1,5 +1,4 @@
 import { act, fireEvent, within } from "@testing-library/react"
-import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
@@ -1211,7 +1210,6 @@ describe("TaskNotificationSettings", () => {
   })
 
   it("deduplicates blur and test-triggered saves for the same channel draft", async () => {
-    const user = userEvent.setup()
     const write = createDeferred<ReturnType<typeof preferenceWriteSuccess>>()
     updateTaskNotificationsMock.mockReturnValueOnce(write.promise)
     taskNotificationsMock.current = {
@@ -1242,9 +1240,11 @@ describe("TaskNotificationSettings", () => {
       name: "settings:taskNotifications.test.action",
     })
 
-    await user.type(webhookInput, "https://hooks.example.invalid/test")
+    fireEvent.change(webhookInput, {
+      target: { value: "https://hooks.example.invalid/test" },
+    })
     expect(testButton).toBeEnabled()
-    await user.click(testButton)
+    fireEvent.click(testButton)
 
     expect(updateTaskNotificationsMock).toHaveBeenCalledTimes(1)
     expect(updateTaskNotificationsMock).toHaveBeenCalledWith({

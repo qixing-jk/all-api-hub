@@ -539,14 +539,12 @@ describe("CopyKeyDialog exports and service credentials", () => {
     const user = await renderExpandedDetails()
 
     await selectExportAction(user, "keyManagement:actions.exportToCCSwitch")
-    await waitFor(() => {
-      expect(ccSwitchDialogMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          account: expect.objectContaining({ id: "acc-1" }),
-          token: expect.objectContaining({ id: 1, key: "sk-test" }),
-        }),
-      )
-    })
+    expect(ccSwitchDialogMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        account: expect.objectContaining({ id: "acc-1" }),
+        token: expect.objectContaining({ id: 1, key: "sk-test" }),
+      }),
+    )
 
     await selectExportAction(user, "keyManagement:actions.exportToKiloCode")
     await waitFor(() => {
@@ -565,14 +563,12 @@ describe("CopyKeyDialog exports and service credentials", () => {
     })
 
     await selectExportAction(user, "keyManagement:actions.importToCliProxy")
-    await waitFor(() => {
-      expect(cliProxyDialogMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          account: expect.objectContaining({ id: "acc-1" }),
-          token: expect.objectContaining({ id: 1, key: "sk-test" }),
-        }),
-      )
-    })
+    expect(cliProxyDialogMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        account: expect.objectContaining({ id: "acc-1" }),
+        token: expect.objectContaining({ id: 1, key: "sk-test" }),
+      }),
+    )
     act(() => {
       cliProxyDialogMock.mock.calls[0]?.[0].onClose()
     })
@@ -581,16 +577,14 @@ describe("CopyKeyDialog exports and service credentials", () => {
       user,
       "keyManagement:actions.importToClaudeCodeRouter",
     )
-    await waitFor(() => {
-      expect(claudeCodeRouterDialogMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          account: expect.objectContaining({ id: "acc-1" }),
-          token: expect.objectContaining({ id: 1, key: "sk-test" }),
-          routerApiKey: "ccr-management-key",
-          routerBaseUrl: "https://router.example.invalid",
-        }),
-      )
-    })
+    expect(claudeCodeRouterDialogMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        account: expect.objectContaining({ id: "acc-1" }),
+        token: expect.objectContaining({ id: 1, key: "sk-test" }),
+        routerApiKey: "ccr-management-key",
+        routerBaseUrl: "https://router.example.invalid",
+      }),
+    )
     act(() => {
       claudeCodeRouterDialogMock.mock.calls[0]?.[0].onClose()
     })
