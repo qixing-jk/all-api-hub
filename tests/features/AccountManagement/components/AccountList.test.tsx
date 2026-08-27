@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { DATA_TYPE_BALANCE } from "~/constants"
 import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import AccountList from "~/features/AccountManagement/components/AccountList"
+import * as accountListDndRuntimeLoader from "~/features/AccountManagement/components/AccountList/loadAccountListDndRuntime"
 import * as inviteLinkCopyWorkflow from "~/features/AccountManagement/inviteLinkCopyWorkflow"
 import {
   ACCOUNT_MANAGEMENT_TEST_IDS,
@@ -883,8 +884,12 @@ describe("AccountList", () => {
 
   it("enters an explicit unvirtualized reorder mode next to bulk management", async () => {
     const user = userEvent.setup()
+    const handleReorder = vi.fn()
     mockUseAccountDataContext.mockReturnValue(
-      createAccountDataContextValue({ isManualSortFeatureEnabled: true }),
+      createAccountDataContextValue({
+        handleReorder,
+        isManualSortFeatureEnabled: true,
+      }),
     )
 
     render(<AccountList />)
@@ -904,6 +909,64 @@ describe("AccountList", () => {
     expect(
       screen.getByRole("button", { name: "account:bulk.manage" }),
     ).toBeDisabled()
+
+    await user.click(
+      screen.getByRole("button", { name: "account:list.reorderDone" }),
+    )
+
+    expect(screen.getByTestId(TEST_IDS.virtuoso)).toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "account:list.dragHandle" }),
+    ).not.toBeInTheDocument()
+    expect(handleReorder).not.toHaveBeenCalled()
+  })
+
+  it("restores virtual browsing when the dnd runtime fails to load", async () => {
+    const user = userEvent.setup()
+    vi.spyOn(
+      accountListDndRuntimeLoader,
+      "loadAccountListDndRuntime",
+    ).mockRejectedValueOnce(new Error("dnd load failed"))
+    mockUseAccountDataContext.mockReturnValue(
+      createAccountDataContextValue({ isManualSortFeatureEnabled: true }),
+    )
+
+    render(<AccountList />)
+
+    await user.click(
+      screen.getByRole("button", { name: "account:list.reorder" }),
+    )
+
+    await waitFor(() => {
+      expect(toastErrorMock).toHaveBeenCalledWith(
+        "account:list.reorderLoadFailed",
+      )
+    })
+    expect(screen.getByTestId(TEST_IDS.virtuoso)).toBeInTheDocument()
+    expect(screen.queryByTestId(TEST_IDS.dndContext)).not.toBeInTheDocument()
+  })
+
+  it("keeps the detected account highlighted in browsing and reorder modes", async () => {
+    const user = userEvent.setup()
+    const contextValue = createAccountDataContextValue({
+      detectedAccount: { id: "enabled-alpha" },
+      isManualSortFeatureEnabled: true,
+    })
+    mockUseAccountDataContext.mockReturnValue(contextValue)
+
+    render(<AccountList />)
+
+    expect(
+      screen.getByText("Enabled Alpha").closest(".border-l-blue-500"),
+    ).toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole("button", { name: "account:list.reorder" }),
+    )
+
+    expect(
+      (await screen.findByText("Enabled Alpha")).closest(".border-l-blue-500"),
+    ).toBeInTheDocument()
   })
 
   it("loads reorder controls after StrictMode replays mount effects", async () => {
@@ -1192,6 +1255,14 @@ describe("AccountList", () => {
     expect(
       screen.getAllByRole("button", { name: "account:list.dragHandle" })[0],
     ).toBeDisabled()
+
+    act(() => {
+      dndState.onDragEnd?.({
+        active: { id: "enabled-gamma" },
+        over: { id: "disabled-beta" },
+      })
+    })
+    expect(handleReorder).toHaveBeenCalledTimes(1)
 
     await act(async () => {
       rejectReorder?.(new Error("storage unavailable"))

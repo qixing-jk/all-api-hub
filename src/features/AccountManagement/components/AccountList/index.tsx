@@ -82,6 +82,7 @@ import {
   getAccountCheckInFilterValue,
   type AccountCheckInFilterValue,
 } from "./checkInFilter"
+import * as accountListDndRuntimeLoader from "./loadAccountListDndRuntime"
 import { VirtualizedAccountList } from "./VirtualizedAccountList"
 
 interface AccountListProps {
@@ -135,15 +136,8 @@ interface AccountListFilterAggregation {
 
 type DndLoadState = "inactive" | "loading" | "ready"
 
-/**
- * Lazily loads the account list drag-and-drop runtime for manual ordering mode.
- */
-function loadAccountListDndRuntime() {
-  return import("./AccountListDndRuntime")
-}
-
 type AccountListDndRuntime = Awaited<
-  ReturnType<typeof loadAccountListDndRuntime>
+  ReturnType<typeof accountListDndRuntimeLoader.loadAccountListDndRuntime>
 >
 
 const ACCOUNT_REORDER_TOAST_ID = "account-reorder"
@@ -1247,7 +1241,8 @@ export default function AccountList({
 
     setDndLoadState("loading")
 
-    const loadPromise = loadAccountListDndRuntime()
+    const loadPromise = accountListDndRuntimeLoader
+      .loadAccountListDndRuntime()
       .then((runtime) => {
         dndRuntimeRef.current = runtime
         dndLoadPromiseRef.current = Promise.resolve(runtime)

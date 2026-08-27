@@ -3963,6 +3963,7 @@ describe("accountStorage bookmarks", () => {
   beforeEach(() => {
     storageData.clear()
     storageHooks.beforeGet = async () => {}
+    storageHooks.beforeSet = async () => {}
   })
 
   it("getAllBookmarks falls back to an empty list when bookmark reads fail", async () => {
@@ -4292,6 +4293,28 @@ describe("accountStorage bookmarks", () => {
       "a-1",
       "b-2",
     ])
+  })
+
+  it("setAccountListOrder reports a failed atomic storage write", async () => {
+    const writeError = new Error("storage unavailable")
+    storageData.set(ACCOUNT_STORAGE_KEYS.ACCOUNTS, {
+      accounts: [createAccount({ id: "a-1" }), createAccount({ id: "a-2" })],
+      bookmarks: [],
+      pinnedAccountIds: ["a-1"],
+      orderedAccountIds: ["a-1", "a-2"],
+      last_updated: Date.now(),
+    } satisfies AccountStorageConfig)
+    storageHooks.beforeSet = async () => {
+      throw writeError
+    }
+
+    await expect(
+      accountStorage.setAccountListOrder({
+        pinnedIds: ["a-2"],
+        orderedIds: ["a-2", "a-1"],
+      }),
+    ).resolves.toBe(false)
+    expect(mockLoggerError).toHaveBeenCalledWith("设置账号排序失败", writeError)
   })
 
   describe("replaceIdListSubset (via set*ListSubset APIs)", () => {
