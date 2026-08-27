@@ -83,18 +83,17 @@ jobs:
 
   unit-tests:
     runs-on: ubuntu-latest
+    env:
+      UNIT_TEST_SHARD_TOTAL: 5
     strategy:
       fail-fast: false
       matrix:
         shard:
-          - index: 1
-            total: 4
-          - index: 2
-            total: 4
-          - index: 3
-            total: 4
-          - index: 4
-            total: 4
+          - 1
+          - 2
+          - 3
+          - 4
+          - 5
 
     steps:
       - name: Checkout code
@@ -125,13 +124,13 @@ jobs:
           --coverage.thresholds.lines=0
           --reporter=default
           --reporter=blob
-          --shard=${{ matrix.shard.index }}/${{ matrix.shard.total }}
+          --shard=${{ matrix.shard }}/${{ env.UNIT_TEST_SHARD_TOTAL }}
 
       - name: Upload Vitest blob report
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         if: ${{ !cancelled() }}
         with:
-          name: vitest-blob-report-${{ matrix.shard.index }}
+          name: vitest-blob-report-${{ matrix.shard }}
           path: .vitest-reports/*.json
           include-hidden-files: true
           retention-days: 1
