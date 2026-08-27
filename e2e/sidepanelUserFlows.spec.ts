@@ -7,6 +7,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { getPopupViewTestId, POPUP_TEST_IDS } from "~/entrypoints/popup/testIds"
 import { SPONSOR_ADD_ACCOUNT_PREFILL_SOURCE } from "~/features/AccountManagement/sponsors/types"
 import {
+  ACCOUNT_MANAGEMENT_LIST_ITEM_TEST_ID_PREFIX,
   ACCOUNT_MANAGEMENT_TEST_IDS,
   getAccountManagementListItemTestId,
 } from "~/features/AccountManagement/testIds"
@@ -198,20 +199,24 @@ test("sidepanel virtualizes long account lists and enables explicit reordering",
   await expectPermissionOnboardingHidden(page)
 
   const renderedRows = page.locator(
-    '[data-testid^="account-management-account-list-item-"]',
+    `[data-testid^="${ACCOUNT_MANAGEMENT_LIST_ITEM_TEST_ID_PREFIX}"]`,
   )
-  await expect.poll(() => renderedRows.count()).toBeLessThan(accountCount)
+  await expect.poll(() => renderedRows.count()).toBeGreaterThan(0)
+  expect(await renderedRows.count()).toBeLessThan(accountCount)
 
-  await page.evaluate(() =>
-    window.scrollTo({ top: document.body.scrollHeight }),
-  )
-  await expect(
-    page.getByTestId(
-      getAccountManagementListItemTestId(
-        `sidepanel-virtual-account-${accountCount - 1}`,
-      ),
+  const lastRow = page.getByTestId(
+    getAccountManagementListItemTestId(
+      `sidepanel-virtual-account-${accountCount - 1}`,
     ),
-  ).toBeVisible()
+  )
+  await expect
+    .poll(async () => {
+      await page.evaluate(() =>
+        window.scrollTo({ top: document.body.scrollHeight }),
+      )
+      return lastRow.isVisible()
+    })
+    .toBe(true)
 
   await page.evaluate(() => window.scrollTo({ top: 0 }))
   await page.getByRole("button", { name: "Reorder" }).click()

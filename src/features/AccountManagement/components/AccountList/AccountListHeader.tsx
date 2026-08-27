@@ -109,6 +109,12 @@ export function AccountListHeader({
   sortOrder,
 }: AccountListHeaderProps) {
   const { t } = useTranslation(["account", "common"])
+  const reorderLabel = isReorderMode
+    ? t("account:list.reorderDone")
+    : t("account:list.reorder")
+  const bulkModeLabel = isBulkMode
+    ? t("account:bulk.exit")
+    : t("account:bulk.manage")
   const renderSortButton = (field: SortField, label: string) => (
     <AccountListSortButton
       activeSortField={sortField}
@@ -146,13 +152,12 @@ export function AccountListHeader({
         onReorderModeEnter()
       }}
       aria-disabled={reorderDisabledReason !== null}
+      aria-label={reorderLabel}
       aria-pressed={isReorderMode}
       loading={isReorderLoading}
       data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.accountListReorderButton}
     >
-      {isReorderMode
-        ? t("account:list.reorderDone")
-        : t("account:list.reorder")}
+      <span className="hidden sm:inline">{reorderLabel}</span>
     </Button>
   )
 
@@ -248,12 +253,13 @@ export function AccountListHeader({
               }
               onClick={isBulkMode ? onBulkModeExit : onBulkModeEnter}
               disabled={isBulkBusy || isReorderMode}
+              aria-label={bulkModeLabel}
               aria-pressed={isBulkMode}
               data-testid={
                 ACCOUNT_MANAGEMENT_TEST_IDS.accountListBulkManageButton
               }
             >
-              {isBulkMode ? t("account:bulk.exit") : t("account:bulk.manage")}
+              <span className="hidden sm:inline">{bulkModeLabel}</span>
             </Button>
           </div>
         </div>

@@ -83,11 +83,10 @@ function mapPopupViewToAnalyticsAction(view: PopupViewType): {
  * Popup body content for the extension popup and side panel.
  * Handles device-aware layout sizing, header/actions, and account list rendering.
  */
-function PopupContent() {
+function PopupContent({ inPopup }: { inPopup: boolean }) {
   const { t } = useTranslation(["bookmark", "apiCredentialProfiles"])
   const { isLoading } = useUserPreferencesContext()
   const inSidePanel = isExtensionSidePanel()
-  const inPopup = isExtensionPopup()
   const onMobile = isMobileDevice()
   const [activeView, setActiveView] = useState<PopupViewType>("accounts")
   const [scrollParent, setScrollParent] = useState<HTMLDivElement | null>(null)
@@ -110,7 +109,7 @@ function PopupContent() {
   })
 
   useEffect(() => {
-    if (!isExtensionPopup()) {
+    if (!inPopup) {
       return
     }
 
@@ -122,7 +121,7 @@ function PopupContent() {
     return () => {
       window.removeEventListener("pagehide", handlePageHide)
     }
-  }, [])
+  }, [inPopup])
 
   const popupWidthClass = onMobile
     ? "w-full"
@@ -208,11 +207,13 @@ function PopupContent() {
  * @returns Popup component tree rendered inside AppLayout.
  */
 function App() {
+  const [inPopup] = useState(isExtensionPopup)
+
   return (
     <AppLayout>
-      <SelectViewportResizeProvider preserveOpen={isExtensionPopup()}>
+      <SelectViewportResizeProvider preserveOpen={inPopup}>
         <AccountManagementProvider>
-          <PopupContent />
+          <PopupContent inPopup={inPopup} />
         </AccountManagementProvider>
       </SelectViewportResizeProvider>
     </AppLayout>

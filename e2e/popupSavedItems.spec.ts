@@ -5,6 +5,7 @@ import { OPTIONS_PAGE_PATH, POPUP_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { getPopupViewTestId, POPUP_TEST_IDS } from "~/entrypoints/popup/testIds"
 import {
+  ACCOUNT_MANAGEMENT_LIST_ITEM_TEST_ID_PREFIX,
   ACCOUNT_MANAGEMENT_TEST_IDS,
   getAccountManagementListItemTestId,
 } from "~/features/AccountManagement/testIds"
@@ -14,6 +15,7 @@ import {
   getSiteBookmarkListItemTestId,
   SITE_BOOKMARKS_TEST_IDS,
 } from "~/features/SiteBookmarks/testIds"
+import enAccount from "~/locales/en/account.json" with { type: "json" }
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import type { SiteAccount, SiteBookmark } from "~/types"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
@@ -298,7 +300,7 @@ test("opens the account manager from the default popup accounts tab", async ({
   )
   await expect(reorderButton).toHaveAttribute("aria-disabled", "true")
   await expect(reorderButton).toHaveAccessibleDescription(
-    "Reordering is unavailable in the popup. Open the side panel or account management page to reorder accounts.",
+    enAccount.list.reorderUnavailableInPopup,
   )
   await expect(
     page.getByRole("button", { name: "Popup Account" }),
@@ -451,19 +453,22 @@ test("virtualizes long popup account lists while keeping the final account reach
   await waitForExtensionRoot(page)
 
   const renderedRows = page.locator(
-    '[data-testid^="account-management-account-list-item-"]',
+    `[data-testid^="${ACCOUNT_MANAGEMENT_LIST_ITEM_TEST_ID_PREFIX}"]`,
   )
-  await expect.poll(() => renderedRows.count()).toBeLessThan(accountCount)
+  await expect.poll(() => renderedRows.count()).toBeGreaterThan(0)
+  expect(await renderedRows.count()).toBeLessThan(accountCount)
 
-  await page
-    .getByTestId(POPUP_TEST_IDS.scrollContainer)
-    .evaluate((element) => element.scrollTo({ top: element.scrollHeight }))
-
-  await expect(
-    page.getByTestId(
-      getAccountManagementListItemTestId(`virtual-account-${accountCount - 1}`),
-    ),
-  ).toBeVisible()
+  const lastRow = page.getByTestId(
+    getAccountManagementListItemTestId(`virtual-account-${accountCount - 1}`),
+  )
+  await expect
+    .poll(async () => {
+      await page
+        .getByTestId(POPUP_TEST_IDS.scrollContainer)
+        .evaluate((element) => element.scrollTo({ top: element.scrollHeight }))
+      return lastRow.isVisible()
+    })
+    .toBe(true)
 })
 
 test("downloads an overview share snapshot from the popup and copies the fallback caption", async ({

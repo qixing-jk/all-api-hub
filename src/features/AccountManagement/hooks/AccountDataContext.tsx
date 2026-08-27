@@ -1177,26 +1177,26 @@ export const AccountDataProvider = ({
       setOrderedAccountIds(optimisticOrderedIds)
 
       try {
-        if (shouldUpdatePinnedOrder) {
-          const didPersistPinned = await accountStorage.setPinnedListSubset({
-            entryType: "account",
-            ids: optimisticPinnedIds.filter((id) => allAccountIdSet.has(id)),
-          })
-
-          if (!didPersistPinned) {
-            throw new Error("Failed to persist pinned account order")
-          }
-        }
-
-        const didPersistOrder = await accountStorage.setOrderedListSubset({
-          entryType: "account",
-          ids: optimisticOrderedIds.filter((id) => allAccountIdSet.has(id)),
+        const didPersistOrder = await accountStorage.setAccountListOrder({
+          pinnedIds: optimisticPinnedIds.filter((id) =>
+            allAccountIdSet.has(id),
+          ),
+          orderedIds: optimisticOrderedIds.filter((id) =>
+            allAccountIdSet.has(id),
+          ),
         })
 
         if (!didPersistOrder) {
           throw new Error("Failed to persist account order")
         }
+      } catch (error) {
+        logger.error("Failed to persist account reorder", { ids, error })
+        setPinnedAccountIds(previousPinnedIds)
+        setOrderedAccountIds(previousOrderedIds)
+        throw error
+      }
 
+      try {
         const [nextPinnedIds, nextOrderedIds] = await Promise.all([
           accountStorage.getPinnedList(),
           accountStorage.getOrderedList(),
@@ -1205,10 +1205,9 @@ export const AccountDataProvider = ({
         setPinnedAccountIds(nextPinnedIds)
         setOrderedAccountIds(nextOrderedIds)
       } catch (error) {
-        logger.error("Failed to persist account reorder", { ids, error })
-        setPinnedAccountIds(previousPinnedIds)
-        setOrderedAccountIds(previousOrderedIds)
-        throw error
+        logger.warn("Persisted account reorder but failed to refresh order", {
+          error,
+        })
       }
     },
     [displayData, orderedAccountIds, pinnedAccountIds],

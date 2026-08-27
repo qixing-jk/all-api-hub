@@ -92,6 +92,7 @@ const {
   mockResetExpiredCheckIns,
   mockSetPinnedList,
   mockSetOrderedList,
+  mockSetAccountListOrder,
   mockSetPinnedListSubset,
   mockSetOrderedListSubset,
   mockGetTagStore,
@@ -134,6 +135,7 @@ const {
   mockResetExpiredCheckIns: vi.fn(),
   mockSetPinnedList: vi.fn(),
   mockSetOrderedList: vi.fn(),
+  mockSetAccountListOrder: vi.fn(),
   mockSetPinnedListSubset: vi.fn(),
   mockSetOrderedListSubset: vi.fn(),
   mockGetTagStore: vi.fn(),
@@ -248,6 +250,7 @@ vi.mock("~/services/accounts/accountStorage", () => ({
     convertToDisplayData: mockConvertToDisplayData,
     setPinnedList: mockSetPinnedList,
     setOrderedList: mockSetOrderedList,
+    setAccountListOrder: mockSetAccountListOrder,
     setPinnedListSubset: mockSetPinnedListSubset,
     setOrderedListSubset: mockSetOrderedListSubset,
     pinAccount: mockPinAccount,
@@ -387,6 +390,7 @@ beforeEach(() => {
   mockGetOrderedList.mockResolvedValue([])
   mockGetPinnedList.mockResolvedValue([])
   mockGetAccountStats.mockResolvedValue(createEmptyStats())
+  mockSetAccountListOrder.mockResolvedValue(true)
   mockConvertToDisplayData.mockImplementation((input: any) => {
     const accounts = Array.isArray(input) ? input : [input]
     const display = accounts.map((account: any) => ({
@@ -536,9 +540,6 @@ describe("AccountDataContext handleReorder", () => {
       { id: "p-2" },
       { id: "u-1" },
     ])
-    mockSetPinnedListSubset.mockResolvedValue(true)
-    mockSetOrderedListSubset.mockResolvedValue(true)
-
     let latestCtx: ReturnType<typeof useAccountDataContext> | null = null
 
     render(
@@ -558,13 +559,9 @@ describe("AccountDataContext handleReorder", () => {
       await latestCtx!.handleReorder(["p-2", "p-1", "u-1"])
     })
 
-    expect(mockSetPinnedListSubset).toHaveBeenCalledWith({
-      entryType: "account",
-      ids: ["p-2", "p-1"],
-    })
-    expect(mockSetOrderedListSubset).toHaveBeenCalledWith({
-      entryType: "account",
-      ids: ["p-2", "p-1", "u-1"],
+    expect(mockSetAccountListOrder).toHaveBeenCalledWith({
+      pinnedIds: ["p-2", "p-1"],
+      orderedIds: ["p-2", "p-1", "u-1"],
     })
   })
 
@@ -588,9 +585,6 @@ describe("AccountDataContext handleReorder", () => {
       { id: "p-2" },
       { id: "u-1" },
     ])
-    mockSetPinnedListSubset.mockResolvedValue(true)
-    mockSetOrderedListSubset.mockResolvedValue(true)
-
     let latestCtx: ReturnType<typeof useAccountDataContext> | null = null
 
     render(
@@ -606,17 +600,15 @@ describe("AccountDataContext handleReorder", () => {
       expect(latestCtx?.pinnedAccountIds).toEqual(["p-1", "p-2"])
     })
 
-    mockSetPinnedListSubset.mockClear()
-    mockSetOrderedListSubset.mockClear()
+    mockSetAccountListOrder.mockClear()
 
     await act(async () => {
       await latestCtx!.handleReorder(["u-1", "p-1", "p-2"])
     })
 
-    expect(mockSetPinnedListSubset).not.toHaveBeenCalled()
-    expect(mockSetOrderedListSubset).toHaveBeenCalledWith({
-      entryType: "account",
-      ids: ["p-1", "p-2", "u-1"],
+    expect(mockSetAccountListOrder).toHaveBeenCalledWith({
+      pinnedIds: ["p-1", "p-2"],
+      orderedIds: ["p-1", "p-2", "u-1"],
     })
   })
 
@@ -630,7 +622,7 @@ describe("AccountDataContext handleReorder", () => {
     mockGetOrderedList.mockResolvedValue(["acc-1", "acc-2"])
     mockGetPinnedList.mockResolvedValue([])
     mockGetAccountStats.mockResolvedValue(createEmptyStats())
-    mockSetOrderedListSubset.mockImplementation(
+    mockSetAccountListOrder.mockImplementation(
       () =>
         new Promise<boolean>((resolve) => {
           resolveOrderedWrite = resolve
@@ -678,9 +670,6 @@ describe("AccountDataContext handleReorder", () => {
     mockGetOrderedList.mockResolvedValue(["a1", "a2", "a3", "a4"])
     mockGetPinnedList.mockResolvedValue(["a1", "a2", "a3"])
     mockGetAccountStats.mockResolvedValue(createEmptyStats())
-    mockSetPinnedListSubset.mockResolvedValue(true)
-    mockSetOrderedListSubset.mockResolvedValue(true)
-
     const getLatestCtx = await renderAccountDataProvider()
 
     await waitFor(() => {
@@ -695,13 +684,9 @@ describe("AccountDataContext handleReorder", () => {
       await getLatestCtx().handleReorder(["a3", "a1", "a4"])
     })
 
-    expect(mockSetPinnedListSubset).toHaveBeenCalledWith({
-      entryType: "account",
-      ids: ["a3", "a2", "a1"],
-    })
-    expect(mockSetOrderedListSubset).toHaveBeenCalledWith({
-      entryType: "account",
-      ids: ["a3", "a2", "a1", "a4"],
+    expect(mockSetAccountListOrder).toHaveBeenCalledWith({
+      pinnedIds: ["a3", "a2", "a1"],
+      orderedIds: ["a3", "a2", "a1", "a4"],
     })
 
     await waitFor(() => {
@@ -718,7 +703,7 @@ describe("AccountDataContext handleReorder", () => {
     mockGetOrderedList.mockResolvedValue(["acc-1", "acc-2"])
     mockGetPinnedList.mockResolvedValue([])
     mockGetAccountStats.mockResolvedValue(createEmptyStats())
-    mockSetOrderedListSubset.mockResolvedValue(false)
+    mockSetAccountListOrder.mockResolvedValue(false)
 
     const getLatestCtx = await renderAccountDataProvider()
 
@@ -751,7 +736,7 @@ describe("AccountDataContext handleReorder", () => {
     expect(details.error.message).toBe("Failed to persist account order")
   })
 
-  it("rolls back account reorder when pinned persistence fails before ordered writes", async () => {
+  it("keeps the persisted optimistic order when storage readback fails", async () => {
     mockResetExpiredCheckIns.mockResolvedValue(undefined)
     mockGetTagStore.mockResolvedValue({ version: 1, tagsById: {} })
     mockGetAllAccounts.mockResolvedValue([
@@ -763,7 +748,6 @@ describe("AccountDataContext handleReorder", () => {
     mockGetOrderedList.mockResolvedValue(["p-1", "p-2", "u-1"])
     mockGetPinnedList.mockResolvedValue(["p-1", "p-2"])
     mockGetAccountStats.mockResolvedValue(createEmptyStats())
-    mockSetPinnedListSubset.mockResolvedValueOnce(false)
 
     const getLatestCtx = await renderAccountDataProvider()
 
@@ -772,93 +756,32 @@ describe("AccountDataContext handleReorder", () => {
       expect(getLatestCtx().orderedAccountIds).toEqual(["p-1", "p-2", "u-1"])
     })
 
-    mockLogger.error.mockClear()
+    mockGetPinnedList.mockRejectedValueOnce(new Error("readback failed"))
+    mockGetOrderedList.mockResolvedValueOnce(["p-2", "p-1", "u-1"])
+    mockLogger.warn.mockClear()
 
     await act(async () => {
       await expect(
         getLatestCtx().handleReorder(["p-2", "p-1", "u-1"]),
-      ).rejects.toThrow("Failed to persist pinned account order")
+      ).resolves.toBeUndefined()
     })
 
-    expect(mockSetPinnedListSubset).toHaveBeenCalledWith({
-      entryType: "account",
-      ids: ["p-2", "p-1"],
+    expect(mockSetAccountListOrder).toHaveBeenCalledWith({
+      pinnedIds: ["p-2", "p-1"],
+      orderedIds: ["p-2", "p-1", "u-1"],
     })
-    expect(mockSetOrderedListSubset).not.toHaveBeenCalled()
 
     await waitFor(() => {
-      expect(getLatestCtx().pinnedAccountIds).toEqual(["p-1", "p-2"])
-      expect(getLatestCtx().orderedAccountIds).toEqual(["p-1", "p-2", "u-1"])
+      expect(getLatestCtx().pinnedAccountIds).toEqual(["p-2", "p-1"])
+      expect(getLatestCtx().orderedAccountIds).toEqual(["p-2", "p-1", "u-1"])
     })
 
-    expect(mockLogger.error).toHaveBeenCalledWith(
-      "Failed to persist account reorder",
+    expect(mockLogger.warn).toHaveBeenCalledWith(
+      "Persisted account reorder but failed to refresh order",
       expect.objectContaining({
-        ids: ["p-2", "p-1", "u-1"],
         error: expect.any(Error),
       }),
     )
-
-    const [, details] = mockLogger.error.mock.calls.at(-1)!
-    expect(details.error).toBeInstanceOf(Error)
-    expect(details.error.message).toBe("Failed to persist pinned account order")
-  })
-
-  it("rolls back account reorder when ordered persistence fails after pinned writes", async () => {
-    mockResetExpiredCheckIns.mockResolvedValue(undefined)
-    mockGetTagStore.mockResolvedValue({ version: 1, tagsById: {} })
-    mockGetAllAccounts.mockResolvedValue([
-      { id: "p-1" },
-      { id: "p-2" },
-      { id: "u-1" },
-    ])
-    mockGetAllBookmarks.mockResolvedValue([])
-    mockGetOrderedList.mockResolvedValue(["p-1", "p-2", "u-1"])
-    mockGetPinnedList.mockResolvedValue(["p-1", "p-2"])
-    mockGetAccountStats.mockResolvedValue(createEmptyStats())
-    mockSetPinnedListSubset.mockResolvedValueOnce(true)
-    mockSetOrderedListSubset.mockResolvedValueOnce(false)
-
-    const getLatestCtx = await renderAccountDataProvider()
-
-    await waitFor(() => {
-      expect(getLatestCtx().pinnedAccountIds).toEqual(["p-1", "p-2"])
-      expect(getLatestCtx().orderedAccountIds).toEqual(["p-1", "p-2", "u-1"])
-    })
-
-    mockLogger.error.mockClear()
-
-    await act(async () => {
-      await expect(
-        getLatestCtx().handleReorder(["p-2", "p-1", "u-1"]),
-      ).rejects.toThrow("Failed to persist account order")
-    })
-
-    expect(mockSetPinnedListSubset).toHaveBeenCalledWith({
-      entryType: "account",
-      ids: ["p-2", "p-1"],
-    })
-    expect(mockSetOrderedListSubset).toHaveBeenCalledWith({
-      entryType: "account",
-      ids: ["p-2", "p-1", "u-1"],
-    })
-
-    await waitFor(() => {
-      expect(getLatestCtx().pinnedAccountIds).toEqual(["p-1", "p-2"])
-      expect(getLatestCtx().orderedAccountIds).toEqual(["p-1", "p-2", "u-1"])
-    })
-
-    expect(mockLogger.error).toHaveBeenCalledWith(
-      "Failed to persist account reorder",
-      expect.objectContaining({
-        ids: ["p-2", "p-1", "u-1"],
-        error: expect.any(Error),
-      }),
-    )
-
-    const [, details] = mockLogger.error.mock.calls.at(-1)!
-    expect(details.error).toBeInstanceOf(Error)
-    expect(details.error.message).toBe("Failed to persist account order")
   })
 })
 

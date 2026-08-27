@@ -1115,6 +1115,38 @@ class AccountStorageService {
   }
 
   /**
+   * Atomically update account-only pinned and manual ordering while preserving bookmarks.
+   */
+  async setAccountListOrder(input: {
+    pinnedIds: string[]
+    orderedIds: string[]
+  }): Promise<boolean> {
+    try {
+      return await this.mutateStorageConfig((config) => {
+        const { accountIds, entryIds } =
+          AccountStorageService.buildEntryIdSets(config)
+        const pinnedIds = AccountStorageService.replaceIdListSubset({
+          existingIds: config.pinnedAccountIds,
+          subsetIdSet: accountIds,
+          nextSubsetIds: Array.from(new Set(input.pinnedIds)),
+        })
+        const orderedIds = AccountStorageService.replaceIdListSubset({
+          existingIds: config.orderedAccountIds,
+          subsetIdSet: accountIds,
+          nextSubsetIds: Array.from(new Set(input.orderedIds)),
+        })
+
+        config.pinnedAccountIds = pinnedIds.filter((id) => entryIds.has(id))
+        config.orderedAccountIds = orderedIds.filter((id) => entryIds.has(id))
+        return { result: true, changed: true }
+      })
+    } catch (error) {
+      logger.error("设置账号排序失败", error)
+      return false
+    }
+  }
+
+  /**
    * Pin account (moves to front).
    */
   async pinAccount(id: string): Promise<boolean> {

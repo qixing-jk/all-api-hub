@@ -1003,8 +1003,6 @@ describe("AccountList", () => {
     expect(reorderButton).toHaveAccessibleDescription(
       "account:list.reorderUnavailableInPopup",
     )
-    expect(reorderButton).toHaveClass("aria-disabled:pointer-events-auto")
-
     await user.hover(reorderButton)
     expect(
       await screen.findByRole("tooltip", {

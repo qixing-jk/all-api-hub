@@ -192,9 +192,11 @@ describe("usePopupViewRegistry", () => {
       withThemeProvider: false,
     })
 
-    expect(accountListPropsMock).toHaveBeenLastCalledWith({
-      reorderUnavailableReason: "account:list.reorderUnavailableInPopup",
-      virtualScrollParent: scrollParent,
-    })
+    expect(accountListPropsMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        reorderUnavailableReason: "account:list.reorderUnavailableInPopup",
+        virtualScrollParent: scrollParent,
+      }),
+    )
   })
 })

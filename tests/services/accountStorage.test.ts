@@ -4259,6 +4259,41 @@ describe("accountStorage bookmarks", () => {
     ])
   })
 
+  it("setAccountListOrder atomically updates account order while preserving bookmark slots", async () => {
+    storageData.set(ACCOUNT_STORAGE_KEYS.ACCOUNTS, {
+      accounts: [createAccount({ id: "a-1" }), createAccount({ id: "a-2" })],
+      bookmarks: [createBookmark({ id: "b-1" }), createBookmark({ id: "b-2" })],
+      pinnedAccountIds: ["a-1", "b-1", "a-2", "b-2"],
+      orderedAccountIds: ["a-1", "b-1", "a-2", "b-2"],
+      last_updated: Date.now(),
+    } satisfies AccountStorageConfig)
+
+    let writeCount = 0
+    storageHooks.beforeSet = async () => {
+      writeCount += 1
+    }
+
+    const success = await accountStorage.setAccountListOrder({
+      pinnedIds: ["a-2", "a-1"],
+      orderedIds: ["a-2", "a-1"],
+    })
+
+    expect(success).toBe(true)
+    expect(writeCount).toBe(1)
+    expect(await accountStorage.getPinnedList()).toEqual([
+      "a-2",
+      "b-1",
+      "a-1",
+      "b-2",
+    ])
+    expect(await accountStorage.getOrderedList()).toEqual([
+      "a-2",
+      "b-1",
+      "a-1",
+      "b-2",
+    ])
+  })
+
   describe("replaceIdListSubset (via set*ListSubset APIs)", () => {
     it("appends subset ids when existingIds is empty", async () => {
       storageData.set(ACCOUNT_STORAGE_KEYS.ACCOUNTS, {
