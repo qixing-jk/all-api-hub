@@ -333,6 +333,7 @@ test("keeps account management controls reachable across constrained widths", as
     page.getByTestId(getAccountManagementSortButtonTestId("created_at")),
     page.getByTestId(getAccountManagementSortButtonTestId("balance")),
     clearSortAction,
+    page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accountListReorderButton),
     page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accountListBulkManageButton),
   ]
   for (const action of requiredAccountListHeaderActions) {

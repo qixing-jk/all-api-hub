@@ -181,6 +181,18 @@
       "todayConsumption": "今日消費",
       "todayIncome": "今日收入"
     },
+    "reorder": "調整順序",
+    "reorderDone": "完成排序",
+    "reorderFailed": "無法儲存帳號順序，已還原先前的順序，請重試。",
+    "reorderLoadFailed": "無法啟動排序，請重試。",
+    "reorderPinnedBoundary": "置頂帳號和一般帳號需分別排序。如需跨組移動，請先變更帳號的置頂狀態。",
+    "reorderPinnedHint": "置頂帳號和一般帳號僅能在各自群組內調整順序。",
+    "reorderSuccess": "帳號順序已儲存。",
+    "reorderSuccessFieldSortCleared": "帳號順序已儲存。為使手動順序生效，已清除目前的欄位排序。",
+    "reorderUnavailableInPopup": "彈出視窗暫不支援拖曳排序。請在側邊欄或帳號管理頁面中調整順序。",
+    "reorderUnavailableInSettings": "請先在排序優先順序中啟用手動排序。",
+    "reorderUnavailableWhileBulk": "請先退出批次操作，再調整帳號順序。",
+    "reorderUnavailableWhileSearch": "請先清除搜尋，再調整帳號順序。",
     "site": {
       "checkedInToday": "今日已簽到，點我檢視",
       "checkInStatusOutdated": "簽到狀態不是今日檢測（上次檢測時間：{{time}}），點我重新整理",

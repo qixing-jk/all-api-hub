@@ -181,6 +181,18 @@
       "todayConsumption": "今日消费",
       "todayIncome": "今日收入"
     },
+    "reorder": "调整顺序",
+    "reorderDone": "完成排序",
+    "reorderFailed": "无法保存账号顺序，已恢复之前的顺序，请重试。",
+    "reorderLoadFailed": "无法启动排序，请重试。",
+    "reorderPinnedBoundary": "置顶账号和普通账号需分别排序。如需跨组移动，请先更改账号的置顶状态。",
+    "reorderPinnedHint": "置顶账号和普通账号仅在各自组内调整顺序。",
+    "reorderSuccess": "账号顺序已保存。",
+    "reorderSuccessFieldSortCleared": "账号顺序已保存。为使手动顺序生效，已清除当前字段排序。",
+    "reorderUnavailableInPopup": "弹出窗口暂不支持拖拽排序。请在侧边栏或账号管理页面中调整顺序。",
+    "reorderUnavailableInSettings": "请先在排序优先级中启用手动排序。",
+    "reorderUnavailableWhileBulk": "请先退出批量操作，再调整账号顺序。",
+    "reorderUnavailableWhileSearch": "请先清除搜索，再调整账号顺序。",
     "site": {
       "checkedInToday": "今日已签到，点我查看",
       "checkInStatusOutdated": "签到状态不是今日检测（上次检测时间：{{time}}），点我刷新",

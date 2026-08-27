@@ -3,12 +3,14 @@ import userEvent from "@testing-library/user-event"
 import React from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { DATA_TYPE_BALANCE } from "~/constants"
 import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import AccountList from "~/features/AccountManagement/components/AccountList"
 import * as inviteLinkCopyWorkflow from "~/features/AccountManagement/inviteLinkCopyWorkflow"
 import {
   ACCOUNT_MANAGEMENT_TEST_IDS,
   getAccountManagementSelectionCheckboxTestId,
+  getAccountManagementSortButtonTestId,
 } from "~/features/AccountManagement/testIds"
 import enAccount from "~/locales/en/account.json"
 import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
@@ -56,6 +58,7 @@ type SortableMockState = {
 const TEST_IDS = vi.hoisted(() => ({
   dndContext: "dnd-context",
   sortableContext: "sortable-context",
+  virtuoso: "virtuoso",
   singleTagFilter: "single-tag-filter",
   multiTagFilter: "multi-tag-filter",
   accountRow: "account-row",
@@ -72,6 +75,7 @@ const {
   handleSetAccountsDisabledMock,
   startProductAnalyticsActionMock,
   clipboardWriteTextMock,
+  toastDefaultMock,
   toastErrorMock,
   toastSuccessMock,
   trackProductAnalyticsActionStartedMock,
@@ -92,6 +96,7 @@ const {
   handleSetAccountsDisabledMock: vi.fn(),
   startProductAnalyticsActionMock: vi.fn(),
   clipboardWriteTextMock: vi.fn(),
+  toastDefaultMock: vi.fn(),
   toastErrorMock: vi.fn(),
   toastSuccessMock: vi.fn(),
   trackProductAnalyticsActionStartedMock: vi.fn(),
@@ -116,13 +121,6 @@ const {
   useSortableMock: vi.fn(),
 }))
 
-const idleCallbackState = {
-  callback: null as
-    | ((deadline: { didTimeout: boolean; timeRemaining: () => number }) => void)
-    | null,
-  handle: 0,
-}
-
 vi.mock("@dnd-kit/core", () => ({
   closestCenter: vi.fn(),
   DndContext: ({
@@ -139,6 +137,44 @@ vi.mock("@dnd-kit/core", () => ({
   PointerSensor: vi.fn(),
   useSensor: useSensorMock,
   useSensors: () => [],
+}))
+
+vi.mock("react-virtuoso", () => ({
+  Virtuoso: ({
+    components,
+    computeItemKey,
+    customScrollParent,
+    data,
+    itemContent,
+    useWindowScroll,
+  }: {
+    components?: { List?: React.ComponentType<any> }
+    computeItemKey?: (index: number, item: any) => React.Key
+    customScrollParent?: HTMLElement
+    data: any[]
+    itemContent: (index: number, item: any) => React.ReactNode
+    useWindowScroll?: boolean
+  }) => {
+    const List = components?.List ?? ((props: any) => <div {...props} />)
+
+    return (
+      <div
+        data-testid={TEST_IDS.virtuoso}
+        data-custom-scroll-parent={customScrollParent ? "true" : "false"}
+        data-window-scroll={String(Boolean(useWindowScroll))}
+      >
+        <List>
+          {data.map((item, index) => (
+            <React.Fragment
+              key={computeItemKey?.(index, item) ?? String(index)}
+            >
+              {itemContent(index, item)}
+            </React.Fragment>
+          ))}
+        </List>
+      </div>
+    )
+  },
 }))
 
 vi.mock("@dnd-kit/sortable", () => ({
@@ -332,10 +368,10 @@ vi.mock("~/services/productAnalytics/actions", async (importOriginal) => {
 })
 
 vi.mock("react-hot-toast", () => ({
-  default: {
+  default: Object.assign(toastDefaultMock, {
     success: toastSuccessMock,
     error: toastErrorMock,
-  },
+  }),
 }))
 
 vi.mock("~/hooks/useMediaQuery", () => ({
@@ -536,6 +572,9 @@ function createAccountDataContextValue(
     sortField: "name",
     sortOrder: "asc",
     handleReorder: vi.fn(),
+    orderedAccountIds: [],
+    pinnedAccountIds: [],
+    isPinFeatureEnabled: false,
     tags: [
       buildTag({ id: "team-a", name: "Team A" }),
       buildTag({ id: "team-b", name: "Team B" }),
@@ -597,8 +636,6 @@ describe("AccountList", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     dndState.onDragEnd = undefined
-    idleCallbackState.callback = null
-    idleCallbackState.handle = 0
     sortableReturnState.current = {
       attributes: {},
       listeners: {},
@@ -608,15 +645,6 @@ describe("AccountList", () => {
       transition: undefined,
       isDragging: false,
     }
-    vi.stubGlobal(
-      "requestIdleCallback",
-      vi.fn((callback: NonNullable<typeof idleCallbackState.callback>) => {
-        idleCallbackState.callback = callback
-        idleCallbackState.handle += 1
-        return idleCallbackState.handle
-      }),
-    )
-    vi.stubGlobal("cancelIdleCallback", vi.fn())
     handleDeleteAccountsMock.mockResolvedValue({
       deletedCount: 0,
       deletedIds: [],
@@ -825,7 +853,7 @@ describe("AccountList", () => {
     expect(clearSortConfig).not.toHaveBeenCalled()
   })
 
-  it("auto-loads dnd during idle time after the first render settles", async () => {
+  it("virtualizes normal browsing and keeps dnd inactive until reorder is requested", () => {
     mockUseAccountDataContext.mockReturnValue(
       createAccountDataContextValue({
         isManualSortFeatureEnabled: true,
@@ -834,96 +862,165 @@ describe("AccountList", () => {
 
     render(<AccountList />)
 
-    expect(screen.queryByTestId(TEST_IDS.dndContext)).not.toBeInTheDocument()
-    expect(
-      screen.queryByTestId(TEST_IDS.sortableContext),
-    ).not.toBeInTheDocument()
-    expect(useSortableMock).not.toHaveBeenCalled()
-
-    await act(async () => {
-      idleCallbackState.callback?.({
-        didTimeout: false,
-        timeRemaining: () => 50,
-      })
-    })
-
-    expect(await screen.findByTestId(TEST_IDS.dndContext)).toBeInTheDocument()
-    expect(screen.getByTestId(TEST_IDS.sortableContext)).toBeInTheDocument()
-    expect(useSensorMock).toHaveBeenCalledWith(expect.any(Function))
-    expect(useSensorMock).toHaveBeenCalledWith(expect.any(Function), {
-      coordinateGetter: sortableKeyboardCoordinatesMock,
-    })
-    expect(useSortableMock).toHaveBeenCalledTimes(4)
-  })
-
-  it("falls back to timeout-based dnd loading when requestIdleCallback is unavailable", async () => {
-    vi.stubGlobal("requestIdleCallback", undefined)
-    vi.useFakeTimers()
-    try {
-      mockUseAccountDataContext.mockReturnValue(
-        createAccountDataContextValue({
-          isManualSortFeatureEnabled: true,
-        }),
-      )
-
-      render(<AccountList />)
-
-      expect(screen.queryByTestId(TEST_IDS.dndContext)).not.toBeInTheDocument()
-
-      await act(async () => {
-        await vi.runOnlyPendingTimersAsync()
-      })
-
-      vi.useRealTimers()
-      expect(await screen.findByTestId(TEST_IDS.dndContext)).toBeInTheDocument()
-      expect(screen.getByTestId(TEST_IDS.sortableContext)).toBeInTheDocument()
-    } finally {
-      vi.useRealTimers()
-    }
-  })
-
-  it("cancels the pending idle callback when the list unmounts before dnd preload runs", () => {
-    mockUseAccountDataContext.mockReturnValue(
-      createAccountDataContextValue({
-        isManualSortFeatureEnabled: true,
-      }),
+    expect(screen.getByTestId(TEST_IDS.virtuoso)).toHaveAttribute(
+      "data-window-scroll",
+      "true",
     )
-
-    const { unmount } = render(<AccountList />)
-
-    unmount()
-
-    expect(globalThis.cancelIdleCallback).toHaveBeenCalledWith(1)
+    expect(screen.queryByTestId(TEST_IDS.dndContext)).not.toBeInTheDocument()
+    expect(useSortableMock).not.toHaveBeenCalled()
+    expect(
+      screen.queryByRole("button", { name: "account:list.dragHandle" }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "account:list.reorder" }),
+    ).toBeEnabled()
+    expect(
+      screen.getByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.accountListBulkManageButton,
+      ),
+    ).toHaveAttribute("aria-pressed", "false")
   })
 
-  it("uses the drag handle as a manual fallback before idle loading finishes", async () => {
+  it("enters an explicit unvirtualized reorder mode next to bulk management", async () => {
     const user = userEvent.setup()
-
     mockUseAccountDataContext.mockReturnValue(
-      createAccountDataContextValue({
-        isManualSortFeatureEnabled: true,
-      }),
+      createAccountDataContextValue({ isManualSortFeatureEnabled: true }),
     )
 
     render(<AccountList />)
 
     await user.click(
-      screen.getAllByRole("button", {
-        name: "account:list.dragHandle",
-      })[0],
+      screen.getByRole("button", { name: "account:list.reorder" }),
     )
 
     expect(await screen.findByTestId(TEST_IDS.dndContext)).toBeInTheDocument()
-    expect(screen.getByTestId(TEST_IDS.sortableContext)).toBeInTheDocument()
-    expect(useSortableMock).toHaveBeenCalledTimes(4)
+    expect(screen.queryByTestId(TEST_IDS.virtuoso)).not.toBeInTheDocument()
+    expect(
+      screen.getAllByRole("button", { name: "account:list.dragHandle" }),
+    ).toHaveLength(4)
+    expect(
+      screen.getByRole("button", { name: "account:list.reorderDone" }),
+    ).toHaveAttribute("aria-pressed", "true")
+    expect(
+      screen.getByRole("button", { name: "account:bulk.manage" }),
+    ).toBeDisabled()
   })
 
-  it("keeps the existing reorder flow after dnd activation", async () => {
+  it("loads reorder controls after StrictMode replays mount effects", async () => {
     const user = userEvent.setup()
-    const handleReorder = vi.fn()
+    mockUseAccountDataContext.mockReturnValue(
+      createAccountDataContextValue({ isManualSortFeatureEnabled: true }),
+    )
+
+    render(
+      <React.StrictMode>
+        <AccountList />
+      </React.StrictMode>,
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: "account:list.reorder" }),
+    )
+
+    expect(await screen.findByTestId(TEST_IDS.dndContext)).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "account:list.reorderDone" }),
+    ).not.toBeDisabled()
+  })
+
+  it("uses the supplied popup scroller for virtualized browsing", () => {
+    const scrollParent = document.createElement("div")
+
+    render(<AccountList virtualScrollParent={scrollParent} />)
+
+    expect(screen.getByTestId(TEST_IDS.virtuoso)).toHaveAttribute(
+      "data-custom-scroll-parent",
+      "true",
+    )
+    expect(screen.getByTestId(TEST_IDS.virtuoso)).toHaveAttribute(
+      "data-window-scroll",
+      "false",
+    )
+  })
+
+  it("preserves the visible order and lets field sorting replace reorder mode", async () => {
+    const user = userEvent.setup()
+    const clearSortConfig = vi.fn()
+    const handleSort = vi.fn()
+    const contextValue = createAccountDataContextValue({
+      clearSortConfig,
+      handleSort,
+      isManualSortFeatureEnabled: true,
+      isPinFeatureEnabled: true,
+      orderedAccountIds: ["enabled-gamma", "enabled-alpha"],
+      pinnedAccountIds: ["disabled-beta"],
+    })
+    contextValue.sortedData = [...contextValue.sortedData].reverse()
+    mockUseAccountDataContext.mockReturnValue(contextValue)
+
+    render(<AccountList />)
+    const orderBeforeReorder = screen
+      .getAllByTestId(TEST_IDS.accountRow)
+      .map((row) => row.textContent)
+
+    await user.click(
+      screen.getByRole("button", { name: "account:list.reorder" }),
+    )
+
+    const rows = await screen.findAllByTestId(TEST_IDS.accountRow)
+    expect(rows.map((row) => row.textContent)).toEqual(orderBeforeReorder)
+    expect(
+      screen.getByTestId(getAccountManagementSortButtonTestId("name")),
+    ).toBeEnabled()
+    expect(
+      screen.getByRole("button", { name: "account:list.clearSort" }),
+    ).toBeInTheDocument()
+
+    await user.click(
+      screen.getByTestId(
+        getAccountManagementSortButtonTestId(DATA_TYPE_BALANCE),
+      ),
+    )
+    expect(handleSort).toHaveBeenCalledWith(DATA_TYPE_BALANCE)
+    expect(clearSortConfig).not.toHaveBeenCalled()
+    expect(screen.queryByTestId(TEST_IDS.dndContext)).not.toBeInTheDocument()
+  })
+
+  it("keeps popup reorder discoverable with a hoverable disabled explanation", async () => {
+    const user = userEvent.setup()
+    mockUseAccountDataContext.mockReturnValue(
+      createAccountDataContextValue({ isManualSortFeatureEnabled: true }),
+    )
+
+    render(
+      <AccountList reorderUnavailableReason="account:list.reorderUnavailableInPopup" />,
+    )
+
+    const reorderButton = screen.getByRole("button", {
+      name: "account:list.reorder",
+    })
+    expect(reorderButton).toHaveAttribute("aria-disabled", "true")
+    expect(reorderButton).toHaveAccessibleDescription(
+      "account:list.reorderUnavailableInPopup",
+    )
+    expect(reorderButton).toHaveClass("aria-disabled:pointer-events-auto")
+
+    await user.hover(reorderButton)
+    expect(
+      await screen.findByRole("tooltip", {
+        name: "account:list.reorderUnavailableInPopup",
+      }),
+    ).toBeInTheDocument()
+  })
+
+  it("keeps a successful drag in place and activates manual ordering", async () => {
+    const user = userEvent.setup()
+    const clearSortConfig = vi.fn()
+    const handleReorder = vi.fn().mockResolvedValue(undefined)
 
     mockUseAccountDataContext.mockReturnValue(
       createAccountDataContextValue({
+        clearSortConfig,
         isManualSortFeatureEnabled: true,
         handleReorder,
       }),
@@ -932,17 +1029,17 @@ describe("AccountList", () => {
     render(<AccountList />)
 
     await user.click(
-      screen.getAllByRole("button", {
-        name: "account:list.dragHandle",
-      })[0],
+      screen.getByRole("button", { name: "account:list.reorder" }),
     )
 
     expect(await screen.findByTestId(TEST_IDS.dndContext)).toBeInTheDocument()
     expect(dndState.onDragEnd).toBeTypeOf("function")
 
-    dndState.onDragEnd?.({
-      active: { id: "enabled-alpha" },
-      over: { id: "enabled-gamma" },
+    act(() => {
+      dndState.onDragEnd?.({
+        active: { id: "enabled-alpha" },
+        over: { id: "enabled-gamma" },
+      })
     })
 
     expect(handleReorder).toHaveBeenCalledWith([
@@ -951,16 +1048,182 @@ describe("AccountList", () => {
       "enabled-alpha",
       "unsynced-delta",
     ])
+    expect(
+      screen.getAllByTestId(TEST_IDS.accountRow).map((row) => row.textContent),
+    ).toEqual([
+      "Disabled Beta",
+      "Enabled Gamma",
+      "Enabled Alpha",
+      "Unsynced Delta",
+    ])
+    await waitFor(() => {
+      expect(clearSortConfig).toHaveBeenCalledOnce()
+      expect(toastSuccessMock).toHaveBeenCalledWith(
+        "account:list.reorderSuccessFieldSortCleared",
+        { id: "account-reorder" },
+      )
+    })
+  })
+
+  it("keeps pinned and unpinned accounts in separate reorder groups", async () => {
+    const user = userEvent.setup()
+    const clearSortConfig = vi.fn()
+    const handleReorder = vi.fn().mockResolvedValue(undefined)
+
+    mockUseAccountDataContext.mockReturnValue(
+      createAccountDataContextValue({
+        clearSortConfig,
+        handleReorder,
+        isManualSortFeatureEnabled: true,
+        pinnedAccountIds: ["enabled-alpha", "enabled-gamma"],
+      }),
+    )
+
+    render(<AccountList />)
+    const previousOrder = screen
+      .getAllByTestId(TEST_IDS.accountRow)
+      .map((row) => row.textContent)
+
+    await user.click(
+      screen.getByRole("button", { name: "account:list.reorder" }),
+    )
+    expect(await screen.findByTestId(TEST_IDS.dndContext)).toBeInTheDocument()
+    expect(screen.getByRole("note")).toHaveTextContent(
+      "account:list.reorderPinnedHint",
+    )
+
+    act(() => {
+      dndState.onDragEnd?.({
+        active: { id: "enabled-alpha" },
+        over: { id: "enabled-gamma" },
+      })
+    })
+
+    expect(handleReorder).not.toHaveBeenCalled()
+    expect(clearSortConfig).not.toHaveBeenCalled()
+    expect(
+      screen.getAllByTestId(TEST_IDS.accountRow).map((row) => row.textContent),
+    ).toEqual(previousOrder)
+    expect(toastDefaultMock).toHaveBeenCalledWith(
+      "account:list.reorderPinnedBoundary",
+      {
+        duration: 5000,
+        icon: expect.any(Object),
+        id: "account-reorder-boundary",
+      },
+    )
+  })
+
+  it("reorders pinned accounts within one contiguous group", async () => {
+    const user = userEvent.setup()
+    const handleReorder = vi.fn().mockResolvedValue(undefined)
+    const contextValue = createAccountDataContextValue({
+      handleReorder,
+      isManualSortFeatureEnabled: true,
+      pinnedAccountIds: ["enabled-alpha", "enabled-gamma"],
+      sortField: null,
+    })
+    const [alpha, beta, gamma, delta] = contextValue.sortedData
+    contextValue.sortedData = [alpha, gamma, beta, delta]
+    mockUseAccountDataContext.mockReturnValue(contextValue)
+
+    render(<AccountList />)
+
+    await user.click(
+      screen.getByRole("button", { name: "account:list.reorder" }),
+    )
+    expect(await screen.findByTestId(TEST_IDS.dndContext)).toBeInTheDocument()
+
+    await act(async () => {
+      dndState.onDragEnd?.({
+        active: { id: "enabled-alpha" },
+        over: { id: "enabled-gamma" },
+      })
+      await Promise.resolve()
+    })
+
+    expect(handleReorder).toHaveBeenCalledWith([
+      "enabled-gamma",
+      "enabled-alpha",
+      "disabled-beta",
+      "unsynced-delta",
+    ])
+    expect(toastDefaultMock).not.toHaveBeenCalled()
+  })
+
+  it("restores the previous order and explains a failed reorder save", async () => {
+    const user = userEvent.setup()
+    const clearSortConfig = vi.fn()
+    let rejectReorder: ((reason?: unknown) => void) | undefined
+    const handleReorder = vi.fn(
+      () =>
+        new Promise<void>((_resolve, reject) => {
+          rejectReorder = reject
+        }),
+    )
+
+    mockUseAccountDataContext.mockReturnValue(
+      createAccountDataContextValue({
+        clearSortConfig,
+        handleReorder,
+        isManualSortFeatureEnabled: true,
+      }),
+    )
+
+    render(<AccountList />)
+    const previousOrder = screen
+      .getAllByTestId(TEST_IDS.accountRow)
+      .map((row) => row.textContent)
+
+    await user.click(
+      screen.getByRole("button", { name: "account:list.reorder" }),
+    )
+    expect(await screen.findByTestId(TEST_IDS.dndContext)).toBeInTheDocument()
+
+    act(() => {
+      dndState.onDragEnd?.({
+        active: { id: "enabled-alpha" },
+        over: { id: "enabled-gamma" },
+      })
+    })
+
+    expect(
+      screen.getAllByTestId(TEST_IDS.accountRow).map((row) => row.textContent),
+    ).not.toEqual(previousOrder)
+    expect(screen.getByTestId(TEST_IDS.dndContext)).toBeInTheDocument()
+    expect(
+      screen.getAllByRole("button", { name: "account:list.dragHandle" })[0],
+    ).toBeDisabled()
+
+    await act(async () => {
+      rejectReorder?.(new Error("storage unavailable"))
+    })
+
+    await waitFor(() => {
+      expect(
+        screen
+          .getAllByTestId(TEST_IDS.accountRow)
+          .map((row) => row.textContent),
+      ).toEqual(previousOrder)
+      expect(clearSortConfig).not.toHaveBeenCalled()
+      expect(toastErrorMock).toHaveBeenCalledWith(
+        "account:list.reorderFailed",
+        { id: "account-reorder" },
+      )
+    })
   })
 
   it("reorders only the visible subset after filters are applied", async () => {
     const user = userEvent.setup()
+    const clearSortConfig = vi.fn()
     const handleReorder = vi.fn()
 
     mockUseAccountDataContext.mockReturnValue(
       createAccountDataContextValue({
+        clearSortConfig,
         isManualSortFeatureEnabled: true,
         handleReorder,
+        sortField: null,
       }),
     )
 
@@ -973,17 +1236,18 @@ describe("AccountList", () => {
     expect(screen.getAllByTestId(TEST_IDS.accountRow)).toHaveLength(3)
 
     await user.click(
-      screen.getAllByRole("button", {
-        name: "account:list.dragHandle",
-      })[0],
+      screen.getByRole("button", { name: "account:list.reorder" }),
     )
 
     expect(await screen.findByTestId(TEST_IDS.dndContext)).toBeInTheDocument()
     expect(dndState.onDragEnd).toBeTypeOf("function")
 
-    dndState.onDragEnd?.({
-      active: { id: "enabled-alpha" },
-      over: { id: "enabled-gamma" },
+    await act(async () => {
+      dndState.onDragEnd?.({
+        active: { id: "enabled-alpha" },
+        over: { id: "enabled-gamma" },
+      })
+      await Promise.resolve()
     })
 
     expect(handleReorder).toHaveBeenCalledWith([
@@ -991,6 +1255,11 @@ describe("AccountList", () => {
       "enabled-alpha",
       "unsynced-delta",
     ])
+    expect(clearSortConfig).not.toHaveBeenCalled()
+    expect(toastSuccessMock).toHaveBeenCalledWith(
+      "account:list.reorderSuccess",
+      { id: "account-reorder" },
+    )
   })
 
   it("tracks completed manual reorder with aggregate metadata only", async () => {
@@ -1007,17 +1276,18 @@ describe("AccountList", () => {
     render(<AccountList />)
 
     await user.click(
-      screen.getAllByRole("button", {
-        name: "account:list.dragHandle",
-      })[0],
+      screen.getByRole("button", { name: "account:list.reorder" }),
     )
 
     expect(await screen.findByTestId(TEST_IDS.dndContext)).toBeInTheDocument()
     expect(dndState.onDragEnd).toBeTypeOf("function")
 
-    dndState.onDragEnd?.({
-      active: { id: "enabled-alpha" },
-      over: { id: "enabled-gamma" },
+    await act(async () => {
+      dndState.onDragEnd?.({
+        active: { id: "enabled-alpha" },
+        over: { id: "enabled-gamma" },
+      })
+      await Promise.resolve()
     })
 
     await waitFor(() => {
@@ -1040,7 +1310,7 @@ describe("AccountList", () => {
     expect(completionPayload).not.toHaveProperty("toAccountId")
   })
 
-  it("does not activate dnd from disabled search handles or bulk mode", async () => {
+  it("does not activate dnd while search or bulk mode disables reorder", async () => {
     const user = userEvent.setup()
 
     mockUseAccountDataContext.mockReturnValue(
@@ -1051,12 +1321,13 @@ describe("AccountList", () => {
 
     const { unmount } = render(<AccountList initialSearchQuery="Alpha" />)
 
-    const searchHandle = screen.getByRole("button", {
-      name: "account:list.dragHandle",
+    const searchReorderButton = screen.getByRole("button", {
+      name: "account:list.reorder",
     })
-    expect(searchHandle).toBeDisabled()
-
-    await user.click(searchHandle)
+    expect(searchReorderButton).toHaveAttribute("aria-disabled", "true")
+    expect(searchReorderButton).toHaveAccessibleDescription(
+      "account:list.reorderUnavailableWhileSearch",
+    )
 
     expect(screen.queryByTestId(TEST_IDS.dndContext)).not.toBeInTheDocument()
     expect(useSortableMock).not.toHaveBeenCalled()
@@ -1068,10 +1339,19 @@ describe("AccountList", () => {
     await user.click(
       screen.getByRole("button", { name: "account:bulk.manage" }),
     )
-
     expect(
-      screen.queryByRole("button", { name: "account:list.dragHandle" }),
-    ).not.toBeInTheDocument()
+      screen.getByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.accountListBulkManageButton,
+      ),
+    ).toHaveAttribute("aria-pressed", "true")
+
+    const bulkReorderButton = screen.getByRole("button", {
+      name: "account:list.reorder",
+    })
+    expect(bulkReorderButton).toHaveAttribute("aria-disabled", "true")
+    expect(bulkReorderButton).toHaveAccessibleDescription(
+      "account:list.reorderUnavailableWhileBulk",
+    )
     expect(screen.queryByTestId(TEST_IDS.dndContext)).not.toBeInTheDocument()
     expect(useSortableMock).not.toHaveBeenCalled()
   })
@@ -1088,9 +1368,7 @@ describe("AccountList", () => {
     const { rerender } = render(<AccountList />)
 
     await user.click(
-      screen.getAllByRole("button", {
-        name: "account:list.dragHandle",
-      })[0],
+      screen.getByRole("button", { name: "account:list.reorder" }),
     )
 
     expect(await screen.findByTestId(TEST_IDS.dndContext)).toBeInTheDocument()
@@ -1105,8 +1383,9 @@ describe("AccountList", () => {
         screen.queryByTestId(TEST_IDS.sortableContext),
       ).not.toBeInTheDocument()
       expect(
-        screen.getByRole("button", { name: "account:list.dragHandle" }),
-      ).toBeDisabled()
+        screen.getByRole("button", { name: "account:list.reorder" }),
+      ).toHaveAttribute("aria-disabled", "true")
+      expect(screen.getByTestId(TEST_IDS.virtuoso)).toBeInTheDocument()
     })
   })
 
@@ -1132,9 +1411,7 @@ describe("AccountList", () => {
     render(<AccountList />)
 
     await user.click(
-      screen.getAllByRole("button", {
-        name: "account:list.dragHandle",
-      })[0],
+      screen.getByRole("button", { name: "account:list.reorder" }),
     )
 
     expect(await screen.findByTestId(TEST_IDS.dndContext)).toBeInTheDocument()

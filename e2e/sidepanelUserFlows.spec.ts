@@ -6,7 +6,10 @@ import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SITE_TYPES } from "~/constants/siteType"
 import { getPopupViewTestId, POPUP_TEST_IDS } from "~/entrypoints/popup/testIds"
 import { SPONSOR_ADD_ACCOUNT_PREFILL_SOURCE } from "~/features/AccountManagement/sponsors/types"
-import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
+import {
+  ACCOUNT_MANAGEMENT_TEST_IDS,
+  getAccountManagementListItemTestId,
+} from "~/features/AccountManagement/testIds"
 import { API_CREDENTIAL_PROFILES_TEST_IDS } from "~/features/ApiCredentialProfiles/testIds"
 import { SITE_BOOKMARKS_TEST_IDS } from "~/features/SiteBookmarks/testIds"
 import {
@@ -162,6 +165,62 @@ test("sidepanel switches common saved-item tabs and opens the matching managemen
   expect(new URL(profilesPage.url()).hash).toBe(
     `#${MENU_ITEM_IDS.API_CREDENTIAL_PROFILES}`,
   )
+})
+
+test("sidepanel virtualizes long account lists and enables explicit reordering", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  const serviceWorker = await getServiceWorker(context)
+  const now = Date.now()
+  const accountCount = 80
+  await setPlasmoStorageValue(
+    serviceWorker,
+    STORAGE_KEYS.ACCOUNTS,
+    normalizeAccountStorageConfigForWrite(
+      {
+        ...createDefaultAccountStorageConfig(now),
+        accounts: Array.from({ length: accountCount }, (_, index) =>
+          createStoredAccount({
+            id: `sidepanel-virtual-account-${index}`,
+            site_name: `Sidepanel Virtual Account ${String(index).padStart(2, "0")}`,
+            site_url: `https://sidepanel-account-${index}.example.invalid`,
+          }),
+        ),
+      },
+      now,
+    ),
+  )
+
+  await page.goto(SIDEPANEL_URL(extensionId))
+  await waitForExtensionRoot(page)
+  await expectPermissionOnboardingHidden(page)
+
+  const renderedRows = page.locator(
+    '[data-testid^="account-management-account-list-item-"]',
+  )
+  await expect.poll(() => renderedRows.count()).toBeLessThan(accountCount)
+
+  await page.evaluate(() =>
+    window.scrollTo({ top: document.body.scrollHeight }),
+  )
+  await expect(
+    page.getByTestId(
+      getAccountManagementListItemTestId(
+        `sidepanel-virtual-account-${accountCount - 1}`,
+      ),
+    ),
+  ).toBeVisible()
+
+  await page.evaluate(() => window.scrollTo({ top: 0 }))
+  await page.getByRole("button", { name: "Reorder" }).click()
+  await expect(
+    page.getByRole("button", { name: "Done reordering" }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole("button", { name: "Drag to reorder" }),
+  ).toHaveCount(accountCount)
 })
 
 test("sidepanel opens saved account and bookmark targets in browser tabs", async ({

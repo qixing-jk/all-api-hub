@@ -729,7 +729,9 @@ describe("AccountDataContext handleReorder", () => {
     mockLogger.error.mockClear()
 
     await act(async () => {
-      await getLatestCtx().handleReorder(["acc-2", "acc-1"])
+      await expect(
+        getLatestCtx().handleReorder(["acc-2", "acc-1"]),
+      ).rejects.toThrow("Failed to persist account order")
     })
 
     await waitFor(() => {
@@ -773,7 +775,9 @@ describe("AccountDataContext handleReorder", () => {
     mockLogger.error.mockClear()
 
     await act(async () => {
-      await getLatestCtx().handleReorder(["p-2", "p-1", "u-1"])
+      await expect(
+        getLatestCtx().handleReorder(["p-2", "p-1", "u-1"]),
+      ).rejects.toThrow("Failed to persist pinned account order")
     })
 
     expect(mockSetPinnedListSubset).toHaveBeenCalledWith({
@@ -825,7 +829,9 @@ describe("AccountDataContext handleReorder", () => {
     mockLogger.error.mockClear()
 
     await act(async () => {
-      await getLatestCtx().handleReorder(["p-2", "p-1", "u-1"])
+      await expect(
+        getLatestCtx().handleReorder(["p-2", "p-1", "u-1"]),
+      ).rejects.toThrow("Failed to persist account order")
     })
 
     expect(mockSetPinnedListSubset).toHaveBeenCalledWith({

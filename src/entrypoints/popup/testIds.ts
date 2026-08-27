@@ -7,6 +7,7 @@ export const POPUP_TEST_IDS = {
   accountsTab: "popup-accounts-tab",
   apiCredentialProfilesTab: "popup-api-credential-profiles-tab",
   bookmarksTab: "popup-bookmarks-tab",
+  scrollContainer: "popup-scroll-container",
   openAccountManagementButton: "popup-open-account-management-button",
   openApiCredentialProfilesButton: "popup-open-api-credential-profiles-button",
   openBookmarkManagementButton: "popup-open-bookmark-management-button",

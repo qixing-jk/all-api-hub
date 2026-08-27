@@ -1208,6 +1208,7 @@ export const AccountDataProvider = ({
         logger.error("Failed to persist account reorder", { ids, error })
         setPinnedAccountIds(previousPinnedIds)
         setOrderedAccountIds(previousOrderedIds)
+        throw error
       }
     },
     [displayData, orderedAccountIds, pinnedAccountIds],

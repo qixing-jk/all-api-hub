@@ -32,7 +32,7 @@ import HeaderSection from "./components/HeaderSection"
 import PopupViewSwitchTabs, {
   type PopupViewType,
 } from "./components/PopupViewSwitchTabs"
-import { getPopupViewTestId } from "./testIds"
+import { getPopupViewTestId, POPUP_TEST_IDS } from "./testIds"
 import { usePopupViewRegistry } from "./viewRegistry"
 
 /**
@@ -87,8 +87,14 @@ function PopupContent() {
   const { t } = useTranslation(["bookmark", "apiCredentialProfiles"])
   const { isLoading } = useUserPreferencesContext()
   const inSidePanel = isExtensionSidePanel()
+  const inPopup = isExtensionPopup()
+  const onMobile = isMobileDevice()
   const [activeView, setActiveView] = useState<PopupViewType>("accounts")
-  const viewConfig = usePopupViewRegistry()
+  const [scrollParent, setScrollParent] = useState<HTMLDivElement | null>(null)
+  const viewConfig = usePopupViewRegistry({
+    isPopup: inPopup,
+    scrollParent: inPopup && !onMobile ? scrollParent : null,
+  })
 
   const activeViewConfig = viewConfig[activeView]
   const entrypoint = inSidePanel
@@ -118,13 +124,13 @@ function PopupContent() {
     }
   }, [])
 
-  const popupWidthClass = isMobileDevice()
+  const popupWidthClass = onMobile
     ? "w-full"
     : inSidePanel
       ? ""
       : UI_CONSTANTS.POPUP.WIDTH
 
-  const popupHeightClass = isMobileDevice()
+  const popupHeightClass = onMobile
     ? ""
     : inSidePanel
       ? ""
@@ -132,6 +138,8 @@ function PopupContent() {
 
   return (
     <div
+      ref={setScrollParent}
+      data-testid={POPUP_TEST_IDS.scrollContainer}
       className={cn(
         "dark:bg-dark-bg-primary flex flex-col overflow-y-auto bg-white",
         popupWidthClass,

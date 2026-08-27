@@ -4,12 +4,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { usePopupViewRegistry } from "~/entrypoints/popup/viewRegistry"
 import { fireEvent, render, screen } from "~~/tests/test-utils/render"
 
-const { handleAddAccountClickMock, openAddBookmarkMock, openAddDialogMock } =
-  vi.hoisted(() => ({
-    handleAddAccountClickMock: vi.fn(),
-    openAddBookmarkMock: vi.fn(),
-    openAddDialogMock: vi.fn(),
-  }))
+const {
+  accountListPropsMock,
+  handleAddAccountClickMock,
+  openAddBookmarkMock,
+  openAddDialogMock,
+} = vi.hoisted(() => ({
+  accountListPropsMock: vi.fn(),
+  handleAddAccountClickMock: vi.fn(),
+  openAddBookmarkMock: vi.fn(),
+  openAddDialogMock: vi.fn(),
+}))
 
 vi.mock("~/hooks/useAddAccountHandler", () => ({
   useAddAccountHandler: () => ({
@@ -24,7 +29,10 @@ vi.mock("~/features/SiteBookmarks/hooks/BookmarkDialogStateContext", () => ({
 }))
 
 vi.mock("~/features/AccountManagement/components/AccountList", () => ({
-  default: () => <div>AccountList</div>,
+  default: (props: Record<string, unknown>) => {
+    accountListPropsMock(props)
+    return <div>AccountList</div>
+  },
 }))
 
 vi.mock("~/entrypoints/popup/components/BalanceSection", () => ({
@@ -64,11 +72,15 @@ vi.mock(
 )
 
 function RegistryProbe({
+  isPopup = false,
   mountApiContent = true,
+  scrollParent,
 }: {
+  isPopup?: boolean
   mountApiContent?: boolean
+  scrollParent?: HTMLElement | null
 }) {
-  const registry = usePopupViewRegistry()
+  const registry = usePopupViewRegistry({ isPopup, scrollParent })
 
   return (
     <div>
@@ -170,5 +182,19 @@ describe("usePopupViewRegistry", () => {
       await screen.findByText("ApiCredentialProfilesPopupView"),
     ).toBeInTheDocument()
     expect(openAddDialogMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("disables popup reordering and forwards its shared scroll container", () => {
+    const scrollParent = document.createElement("div")
+
+    render(<RegistryProbe isPopup scrollParent={scrollParent} />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    expect(accountListPropsMock).toHaveBeenLastCalledWith({
+      reorderUnavailableReason: "account:list.reorderUnavailableInPopup",
+      virtualScrollParent: scrollParent,
+    })
   })
 })

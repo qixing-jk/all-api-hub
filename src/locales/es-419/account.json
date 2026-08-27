@@ -225,6 +225,18 @@
       "todayConsumption": "Consumo de hoy",
       "todayIncome": "Ingresos de hoy"
     },
+    "reorder": "Reordenar",
+    "reorderDone": "Terminar de reordenar",
+    "reorderFailed": "No se pudo guardar el orden de las cuentas. Se restauró el orden anterior. Inténtalo de nuevo.",
+    "reorderLoadFailed": "No se pudo iniciar el reordenamiento. Inténtalo de nuevo.",
+    "reorderPinnedBoundary": "Las cuentas fijadas y no fijadas se ordenan por separado. Cambia primero el estado de fijación para mover la cuenta entre grupos.",
+    "reorderPinnedHint": "Las cuentas fijadas y no fijadas se ordenan dentro de sus propios grupos.",
+    "reorderSuccess": "Orden de cuentas guardado.",
+    "reorderSuccessFieldSortCleared": "Orden de cuentas guardado. Se quitó el orden por campo activo para aplicar tu orden manual.",
+    "reorderUnavailableInPopup": "No se puede reordenar en la ventana emergente. Abre el panel lateral o la página de administración de cuentas.",
+    "reorderUnavailableInSettings": "Activa el orden manual en las prioridades de clasificación.",
+    "reorderUnavailableWhileBulk": "Sal del modo masivo antes de reordenar las cuentas.",
+    "reorderUnavailableWhileSearch": "Borra la búsqueda antes de reordenar las cuentas.",
     "site": {
       "checkedInToday": "Check-in realizado hoy, haz clic para ver",
       "checkInStatusOutdated": "El estado de check-in no se detectó hoy (última comprobación: {{time}}). Haz clic para actualizar",

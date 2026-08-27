@@ -203,6 +203,18 @@
       "todayConsumption": "Heutiger Verbrauch",
       "todayIncome": "Heutiges Einkommen"
     },
+    "reorder": "Neu anordnen",
+    "reorderDone": "Anordnung abschließen",
+    "reorderFailed": "Die Kontoreihenfolge konnte nicht gespeichert werden. Die vorherige Reihenfolge wurde wiederhergestellt. Bitte erneut versuchen.",
+    "reorderLoadFailed": "Die Neuanordnung konnte nicht gestartet werden. Bitte erneut versuchen.",
+    "reorderPinnedBoundary": "Angeheftete und nicht angeheftete Konten werden getrennt sortiert. Ändern Sie zuerst den Anheftungsstatus, um das Konto zwischen den Gruppen zu verschieben.",
+    "reorderPinnedHint": "Angeheftete und nicht angeheftete Konten werden jeweils innerhalb ihrer eigenen Gruppe sortiert.",
+    "reorderSuccess": "Kontoreihenfolge gespeichert.",
+    "reorderSuccessFieldSortCleared": "Kontoreihenfolge gespeichert. Die aktive Feldsortierung wurde aufgehoben, damit die manuelle Reihenfolge wirksam wird.",
+    "reorderUnavailableInPopup": "Die Neuanordnung ist im Popup nicht verfügbar. Öffnen Sie die Seitenleiste oder die Kontoverwaltung.",
+    "reorderUnavailableInSettings": "Aktivieren Sie die manuelle Reihenfolge in den Sortierprioritäten.",
+    "reorderUnavailableWhileBulk": "Beenden Sie den Mehrfachmodus, bevor Sie Konten neu anordnen.",
+    "reorderUnavailableWhileSearch": "Löschen Sie die Suche, bevor Sie Konten neu anordnen.",
     "site": {
       "checkedInToday": "Heute eingecheckt, zum Ansehen klicken",
       "checkInStatusOutdated": "Der Check-in-Status wurde heute nicht erkannt (letzte Überprüfungszeit: {{time}}). Zum Aktualisieren klicken",

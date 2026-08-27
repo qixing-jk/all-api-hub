@@ -293,6 +293,13 @@ test("opens the account manager from the default popup accounts tab", async ({
   await waitForExtensionRoot(page)
 
   await expect(page.getByTestId(getPopupViewTestId("accounts"))).toBeVisible()
+  const reorderButton = page.getByTestId(
+    ACCOUNT_MANAGEMENT_TEST_IDS.accountListReorderButton,
+  )
+  await expect(reorderButton).toHaveAttribute("aria-disabled", "true")
+  await expect(reorderButton).toHaveAccessibleDescription(
+    "Reordering is unavailable in the popup. Open the side panel or account management page to reorder accounts.",
+  )
   await expect(
     page.getByRole("button", { name: "Popup Account" }),
   ).toBeVisible()
@@ -420,6 +427,43 @@ test("updates popup account totals after disabling an account from management", 
       getAccountManagementListItemTestId("popup-disable-account"),
     ),
   ).toContainText("Disabled")
+})
+
+test("virtualizes long popup account lists while keeping the final account reachable", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  const serviceWorker = await getServiceWorker(context)
+  const accountCount = 80
+  await seedStoredAccounts(
+    serviceWorker,
+    Array.from({ length: accountCount }, (_, index) =>
+      createStoredAccount({
+        id: `virtual-account-${index}`,
+        site_name: `Virtual Account ${String(index).padStart(2, "0")}`,
+        site_url: `https://account-${index}.example.invalid`,
+      }),
+    ),
+  )
+
+  await page.goto(`chrome-extension://${extensionId}/${POPUP_PAGE_PATH}`)
+  await waitForExtensionRoot(page)
+
+  const renderedRows = page.locator(
+    '[data-testid^="account-management-account-list-item-"]',
+  )
+  await expect.poll(() => renderedRows.count()).toBeLessThan(accountCount)
+
+  await page
+    .getByTestId(POPUP_TEST_IDS.scrollContainer)
+    .evaluate((element) => element.scrollTo({ top: element.scrollHeight }))
+
+  await expect(
+    page.getByTestId(
+      getAccountManagementListItemTestId(`virtual-account-${accountCount - 1}`),
+    ),
+  ).toBeVisible()
 })
 
 test("downloads an overview share snapshot from the popup and copies the fallback caption", async ({

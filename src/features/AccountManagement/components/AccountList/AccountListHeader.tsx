@@ -1,6 +1,14 @@
-import { ChevronDown, ChevronUp, XIcon } from "lucide-react"
+import {
+  Check,
+  ChevronDown,
+  ChevronUp,
+  ListChecks,
+  ListOrdered,
+  XIcon,
+} from "lucide-react"
 import { useTranslation } from "react-i18next"
 
+import Tooltip from "~/components/Tooltip"
 import { Button, IconButton } from "~/components/ui"
 import {
   DATA_TYPE_BALANCE,
@@ -20,10 +28,15 @@ interface AccountListHeaderProps {
   inSearchMode: boolean
   isBulkBusy: boolean
   isBulkMode: boolean
+  isReorderLoading: boolean
+  isReorderMode: boolean
   onBulkModeEnter: () => void
   onBulkModeExit: () => void
   onClearSort: () => void
+  onReorderModeEnter: () => void
+  onReorderModeExit: () => void
   onSort: (field: SortField) => void
+  reorderDisabledReason: string | null
   showTodayCashflow: boolean
   sortField: ActiveSortField
   sortOrder: SortOrder
@@ -82,10 +95,15 @@ export function AccountListHeader({
   inSearchMode,
   isBulkBusy,
   isBulkMode,
+  isReorderLoading,
+  isReorderMode,
   onBulkModeEnter,
   onBulkModeExit,
   onClearSort,
+  onReorderModeEnter,
+  onReorderModeExit,
   onSort,
+  reorderDisabledReason,
   showTodayCashflow,
   sortField,
   sortOrder,
@@ -101,6 +119,41 @@ export function AccountListHeader({
       sortLabel={t("account:list.sort")}
       sortOrder={sortOrder}
     />
+  )
+  const reorderButton = (
+    <Button
+      type="button"
+      variant={isReorderMode ? "secondary" : "outline"}
+      size="sm"
+      className={cn(
+        "h-7 max-w-none shrink-0 px-2 text-xs whitespace-nowrap",
+        reorderDisabledReason !== null &&
+          "aria-disabled:pointer-events-auto aria-disabled:cursor-not-allowed",
+      )}
+      leftIcon={
+        isReorderMode ? (
+          <Check aria-hidden="true" className="size-3.5" />
+        ) : (
+          <ListOrdered aria-hidden="true" className="size-3.5" />
+        )
+      }
+      onClick={() => {
+        if (reorderDisabledReason !== null) return
+        if (isReorderMode) {
+          onReorderModeExit()
+          return
+        }
+        onReorderModeEnter()
+      }}
+      aria-disabled={reorderDisabledReason !== null}
+      aria-pressed={isReorderMode}
+      loading={isReorderLoading}
+      data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.accountListReorderButton}
+    >
+      {isReorderMode
+        ? t("account:list.reorderDone")
+        : t("account:list.reorder")}
+    </Button>
   )
 
   return (
@@ -169,19 +222,40 @@ export function AccountListHeader({
           <span className="dark:text-dark-text-tertiary text-xs font-medium whitespace-nowrap text-gray-500">
             {t("common:total") + ": " + displayedResultCount}
           </span>
-          <Button
-            type="button"
-            variant={isBulkMode ? "secondary" : "outline"}
-            size="sm"
-            className="h-7 shrink-0 px-2 text-xs"
-            onClick={isBulkMode ? onBulkModeExit : onBulkModeEnter}
-            disabled={isBulkBusy}
-            data-testid={
-              ACCOUNT_MANAGEMENT_TEST_IDS.accountListBulkManageButton
-            }
-          >
-            {isBulkMode ? t("account:bulk.exit") : t("account:bulk.manage")}
-          </Button>
+          <div className="flex shrink-0 items-center gap-1.5">
+            {reorderDisabledReason === null ? (
+              reorderButton
+            ) : (
+              <Tooltip
+                anchorAsChild
+                content={reorderDisabledReason}
+                position="bottom-end"
+              >
+                {reorderButton}
+              </Tooltip>
+            )}
+            <Button
+              type="button"
+              variant={isBulkMode ? "secondary" : "outline"}
+              size="sm"
+              className="h-7 max-w-none shrink-0 px-2 text-xs whitespace-nowrap"
+              leftIcon={
+                isBulkMode ? (
+                  <Check aria-hidden="true" className="size-3.5" />
+                ) : (
+                  <ListChecks aria-hidden="true" className="size-3.5" />
+                )
+              }
+              onClick={isBulkMode ? onBulkModeExit : onBulkModeEnter}
+              disabled={isBulkBusy || isReorderMode}
+              aria-pressed={isBulkMode}
+              data-testid={
+                ACCOUNT_MANAGEMENT_TEST_IDS.accountListBulkManageButton
+              }
+            >
+              {isBulkMode ? t("account:bulk.exit") : t("account:bulk.manage")}
+            </Button>
+          </div>
         </div>
       </div>
     </div>

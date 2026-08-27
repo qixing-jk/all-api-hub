@@ -181,6 +181,18 @@
       "todayConsumption": "Tiêu dùng hôm nay",
       "todayIncome": "Thu nhập hôm nay"
     },
+    "reorder": "Sắp xếp lại",
+    "reorderDone": "Hoàn tất sắp xếp",
+    "reorderFailed": "Không thể lưu thứ tự tài khoản. Thứ tự trước đó đã được khôi phục. Vui lòng thử lại.",
+    "reorderLoadFailed": "Không thể bắt đầu sắp xếp. Vui lòng thử lại.",
+    "reorderPinnedBoundary": "Tài khoản đã ghim và chưa ghim được sắp xếp riêng. Hãy đổi trạng thái ghim trước khi chuyển tài khoản giữa các nhóm.",
+    "reorderPinnedHint": "Tài khoản đã ghim và chưa ghim chỉ được sắp xếp trong nhóm tương ứng.",
+    "reorderSuccess": "Đã lưu thứ tự tài khoản.",
+    "reorderSuccessFieldSortCleared": "Đã lưu thứ tự tài khoản. Kiểu sắp xếp theo trường đang dùng đã được xóa để áp dụng thứ tự thủ công.",
+    "reorderUnavailableInPopup": "Không thể sắp xếp trong cửa sổ bật lên. Hãy mở bảng bên hoặc trang quản lý tài khoản.",
+    "reorderUnavailableInSettings": "Hãy bật thứ tự thủ công trong ưu tiên sắp xếp.",
+    "reorderUnavailableWhileBulk": "Hãy thoát chế độ hàng loạt trước khi sắp xếp tài khoản.",
+    "reorderUnavailableWhileSearch": "Hãy xóa tìm kiếm trước khi sắp xếp tài khoản.",
     "site": {
       "checkedInToday": "Hôm nay đã điểm danh, nhấp vào tôi để xem",
       "checkInStatusOutdated": "Trạng thái điểm danh không phải là kiểm tra hôm nay (lần kiểm tra cuối: {{time}}), nhấp vào tôi để làm mới",
