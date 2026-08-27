@@ -1,5 +1,37 @@
 # Changelog
 
+## [3.59.0](https://github.com/qixing-jk/all-api-hub/compare/v3.58.0...v3.59.0) (2026-08-27)
+
+
+### Features
+
+* **api-credentials:** add DeepSeek/GLM/Kimi/OpenCode Go telemetry and isolate telemetry pipeline ([#1364](https://github.com/qixing-jk/all-api-hub/issues/1364)) ([d98b2a1](https://github.com/qixing-jk/all-api-hub/commit/d98b2a1abb4c5a57b36d10ef7699ec9bfde4b86c))
+* **checkin:** add method discovery and readiness workspace ([#1350](https://github.com/qixing-jk/all-api-hub/issues/1350)) ([fe2d33c](https://github.com/qixing-jk/all-api-hub/commit/fe2d33cbd4ecd5f3f58d06b6d453e652932ddb8b))
+* **checkin:** add Sub2API Pro method discovery and safe execution ([#1354](https://github.com/qixing-jk/all-api-hub/issues/1354)) ([aee1d39](https://github.com/qixing-jk/all-api-hub/commit/aee1d3974d4e817e0f8ee02f91d1bef211ea96fc))
+* **checkin:** complete release recovery experience ([#1357](https://github.com/qixing-jk/all-api-hub/issues/1357)) ([80c3909](https://github.com/qixing-jk/all-api-hub/commit/80c39098107480496ed31c16c0e1cb99de467bf2))
+* **checkin:** support method-aware account configuration ([#1340](https://github.com/qixing-jk/all-api-hub/issues/1340)) ([bcd689f](https://github.com/qixing-jk/all-api-hub/commit/bcd689f9822e21c8df4aafe36caf9680175802ad))
+
+
+### Bug Fixes
+
+* **account:** avoid blocking on post-save refresh ([#1359](https://github.com/qixing-jk/all-api-hub/issues/1359)) ([8eada8a](https://github.com/qixing-jk/all-api-hub/commit/8eada8ab660946d3847d533c517aff4da63cca3c))
+* **checkin:** harden execution certainty and retries ([#1352](https://github.com/qixing-jk/all-api-hub/issues/1352)) ([30ccce3](https://github.com/qixing-jk/all-api-hub/commit/30ccce34331e65b21e4bbed597baf9ca5a3dbb58))
+* **e2e:** harden real-site compatibility, cleanup, and artifacts ([#1356](https://github.com/qixing-jk/all-api-hub/issues/1356)) ([fcc000e](https://github.com/qixing-jk/all-api-hub/commit/fcc000eef90f7494db46fc3fd9f39a859e57e1dc))
+* **model-list:** correct ratio and optimal-group indicators ([#1348](https://github.com/qixing-jk/all-api-hub/issues/1348)) ([2d99ec4](https://github.com/qixing-jk/all-api-hub/commit/2d99ec4891d3b95256331517ff5e7fbe59da1208))
+* **popup:** stabilize selects across page zoom ([#1347](https://github.com/qixing-jk/all-api-hub/issues/1347)) ([8621fe5](https://github.com/qixing-jk/all-api-hub/commit/8621fe50d6228ce40e99f5e99f7ec9cec6a5913e))
+* **settings:** improve responsive card layouts ([#1361](https://github.com/qixing-jk/all-api-hub/issues/1361)) ([e5cc797](https://github.com/qixing-jk/all-api-hub/commit/e5cc797d6ca9464e3dcdddf7a54e6ac7302d59c7))
+* **settings:** save inputs on blur ([#1346](https://github.com/qixing-jk/all-api-hub/issues/1346)) ([81b9f15](https://github.com/qixing-jk/all-api-hub/commit/81b9f15f863e65941fc0a336281ded464754f11f))
+* **sub2api:** harden auth credential durability ([#1343](https://github.com/qixing-jk/all-api-hub/issues/1343)) ([634f28b](https://github.com/qixing-jk/all-api-hub/commit/634f28bfeff6d6ba20e61836c1961d7e26499a1a))
+* **ui:** wrap long localized dialog actions ([#1365](https://github.com/qixing-jk/all-api-hub/issues/1365)) ([e67ed0a](https://github.com/qixing-jk/all-api-hub/commit/e67ed0a55b0a23dc3f59c9a23079820c991736d9))
+
+
+### Performance Improvements
+
+* **account:** virtualize account list outside reorder mode ([#1369](https://github.com/qixing-jk/all-api-hub/issues/1369)) ([5ec9fd4](https://github.com/qixing-jk/all-api-hub/commit/5ec9fd476dd3aa03ecad6158d15a022202d9f32b))
+* **i18n:** lazy-load locale resources ([#1351](https://github.com/qixing-jk/all-api-hub/issues/1351)) ([e4d30db](https://github.com/qixing-jk/all-api-hub/commit/e4d30db46c5adc9d6f919976ce00eb357965477c))
+* **popup:** add startup skeleton and defer heavy export/analytics assets ([#1363](https://github.com/qixing-jk/all-api-hub/issues/1363)) ([e68ddda](https://github.com/qixing-jk/all-api-hub/commit/e68ddda408f37aa7b541dd76bf23efca59cc2176))
+* **test:** reduce CI unit-test wall time (real-wait removal + large-file splits) ([#1362](https://github.com/qixing-jk/all-api-hub/issues/1362)) ([66906f2](https://github.com/qixing-jk/all-api-hub/commit/66906f299b6d55d0f8032ff9e9327acdbe3c4256))
+
 ## [3.58.0](https://github.com/qixing-jk/all-api-hub/compare/v3.57.0...v3.58.0) (2026-08-21)
 
 
