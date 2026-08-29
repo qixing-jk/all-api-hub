@@ -181,7 +181,7 @@ test("overview action center opens disabled auto check-in settings", async ({
   await expect(
     page
       .locator(`#${SETTINGS_ANCHORS.AUTO_CHECKIN}`)
-      .getByRole("heading", { name: "Auto Check-in", exact: true }),
+      .getByRole("heading", { name: "Batch Check-in", exact: true }),
   ).toBeVisible()
 })
 
