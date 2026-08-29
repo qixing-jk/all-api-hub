@@ -150,7 +150,7 @@
     "deterministicTimeDesc": "Khi bật chế độ cố định, hãy chọn thời gian cụ thể (HH:mm) để bắt đầu điểm danh.",
     "deterministicTimeTitle": "Thời gian cố định",
     "enable": "Bật điểm danh tự động",
-    "enableDesc": "Kiểm soát công tắc chức năng điểm danh tự động toàn cầu, sau khi tắt, sẽ không có tác vụ điểm danh tự động nào được thực hiện.",
+    "enableDesc": "Điều khiển công tắc điểm danh tự động toàn cầu; khi tắt, các tác vụ tự động như tác vụ theo lịch sẽ dừng, nhưng vẫn có thể điểm danh thủ công.",
     "notifyUiOnCompletion": "Làm mới dữ liệu và giao diện sau khi hoàn thành điểm danh tự động",
     "notifyUiOnCompletionDesc": "Ngay lập tức làm mới dữ liệu của tài khoản điểm danh và các giao diện liên quan sau khi điểm danh tự động hoàn tất.",
     "pretriggerDailyOnUiOpen": "Kích hoạt sớm điểm danh hôm nay khi mở giao diện",

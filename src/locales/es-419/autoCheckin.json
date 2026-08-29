@@ -154,7 +154,7 @@
     "deterministicTimeDesc": "Elige la hora exacta (HH:mm) para iniciar el check-in cuando el modo determinista esté habilitado.",
     "deterministicTimeTitle": "Hora determinista",
     "enable": "Habilitar check-in automático",
-    "enableDesc": "Activa o desactiva la función global de check-in automático. Cuando está deshabilitada, no se ejecutan tareas de check-in.",
+    "enableDesc": "Controla el check-in automático global. Cuando se desactiva, se detienen las tareas automáticas, como las programadas, pero las acciones manuales siguen disponibles.",
     "notifyUiOnCompletion": "Actualizar datos e interfaz al completar el check-in automático",
     "notifyUiOnCompletionDesc": "Cuando se complete el check-in automático, actualiza inmediatamente los datos de la cuenta de check-in y las interfaces relevantes.",
     "pretriggerDailyOnUiOpen": "Preactivar ejecución diaria al abrir la UI",

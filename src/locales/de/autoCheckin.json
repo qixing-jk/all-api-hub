@@ -152,7 +152,7 @@
     "deterministicTimeDesc": "Wählen Sie den genauen Zeitpunkt (HH:mm), um mit dem Check-in zu beginnen, wenn der deterministische Modus aktiviert ist.",
     "deterministicTimeTitle": "Deterministische Zeit",
     "enable": "Automatisches Einchecken aktivieren",
-    "enableDesc": "Schalten Sie die globale automatische Check-in-Funktion um. Wenn diese Option deaktiviert ist, werden keine Check-in-Aufgaben ausgeführt.",
+    "enableDesc": "Steuert die globale automatische Check-in-Funktion. Wenn sie deaktiviert ist, werden geplante und andere automatische Aufgaben angehalten, manuelle Check-ins bleiben jedoch möglich.",
     "notifyUiOnCompletion": "Aktualisieren Sie Daten und Schnittstelle nach Abschluss des automatischen Check-ins",
     "notifyUiOnCompletionDesc": "Wenn der automatische Check-in abgeschlossen ist, aktualisieren Sie sofort die Daten des Check-in-Kontos und relevante Schnittstellen.",
     "pretriggerDailyOnUiOpen": "Täglichen Lauf vorab auslösen, wenn die Benutzeroberfläche geöffnet wird",

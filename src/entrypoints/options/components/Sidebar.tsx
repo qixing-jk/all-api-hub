@@ -5,8 +5,6 @@ import { useTranslation } from "react-i18next"
 
 import { Button, Heading3, IconButton, Separator } from "~/components/ui"
 import { Z_INDEX } from "~/constants/designTokens"
-import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
-import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import {
   getMenuCategoryLabel,
   getMenuItemLabel,
@@ -30,7 +28,7 @@ const MOBILE_WIDTH = 256
 
 /**
  * Animated sidebar for the Options page, supporting collapse and mobile overlay.
- * Handles menu rendering, accessibility labels, and user preference filters.
+ * Handles menu rendering and accessibility labels.
  * @param props Component props container.
  * @param props.activeMenuItem Currently selected menu id.
  * @param props.onMenuItemClick Callback fired when user picks another menu item.
@@ -48,18 +46,7 @@ function Sidebar({
   onCollapseToggle,
 }: SidebarProps) {
   const { t } = useTranslation("ui")
-  const { preferences } = useUserPreferencesContext()
   const shouldShowCollapsedState = isCollapsed && !isMobileOpen
-
-  const visibleMenuItems = menuItems.filter((item) => {
-    if (
-      item.id === MENU_ITEM_IDS.AUTO_CHECKIN &&
-      !preferences?.autoCheckin?.globalEnabled
-    ) {
-      return false
-    }
-    return true
-  })
 
   const targetWidth = isMobileOpen
     ? MOBILE_WIDTH
@@ -170,12 +157,12 @@ function Sidebar({
             className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto py-4"
           >
             <ul className="space-y-1 px-2">
-              {visibleMenuItems.map((item, index) => {
+              {menuItems.map((item, index) => {
                 const Icon = item.icon
                 const isActive = activeMenuItem === item.id
                 const label = getMenuItemLabel(t, item.id)
 
-                const prevItem = index > 0 ? visibleMenuItems[index - 1] : null
+                const prevItem = index > 0 ? menuItems[index - 1] : null
                 const isNewCategory =
                   item.category && item.category !== prevItem?.category
                 const categoryLabel = item.category

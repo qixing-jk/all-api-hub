@@ -150,7 +150,7 @@
     "deterministicTimeDesc": "固定モード有効時にチェックインを開始する正確な時刻（HH:mm）を指定します。",
     "deterministicTimeTitle": "固定時刻",
     "enable": "自動チェックインを有効化",
-    "enableDesc": "グローバル自動チェックイン機能を切り替えます。無効時はチェックインタスクは実行されません。",
+    "enableDesc": "グローバル自動チェックインのスイッチです。無効にするとスケジュールなどの自動タスクは停止しますが、手動操作は引き続き利用できます。",
     "notifyUiOnCompletion": "自動チェックイン完了時にデータと UI を更新",
     "notifyUiOnCompletionDesc": "自動チェックイン完了後、チェックイン対象アカウントのデータと関連 UI をすぐに更新します。",
     "pretriggerDailyOnUiOpen": "UI を開いた時に当日の実行を事前起動",

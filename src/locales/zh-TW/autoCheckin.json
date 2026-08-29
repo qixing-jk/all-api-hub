@@ -150,7 +150,7 @@
     "deterministicTimeDesc": "啟用固定模式時，選擇開始簽到的具體時間（HH:mm）。",
     "deterministicTimeTitle": "固定時間",
     "enable": "啟用自動簽到",
-    "enableDesc": "控制全域性自動簽到功能開關，關閉後不會執行任何自動簽到任務。",
+    "enableDesc": "控制全域自動簽到開關；關閉後會停止排程等自動任務，但仍可手動簽到。",
     "notifyUiOnCompletion": "自動簽到完成後重新整理資料和介面",
     "notifyUiOnCompletionDesc": "當自動簽到執行完成後，立即重新整理簽到帳號的資料並重新整理相關介面。",
     "pretriggerDailyOnUiOpen": "開啟介面時提前觸發今日簽到",

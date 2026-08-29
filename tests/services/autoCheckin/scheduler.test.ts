@@ -2012,7 +2012,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
     vi.useRealTimers()
   })
 
-  it("returns early without touching status when the global feature is disabled", async () => {
+  it("returns early without touching status when a daily run finds the global feature disabled", async () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date(2024, 0, 1, 9, 0, 0))
 
@@ -2031,7 +2031,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
 
     await expect(
       runCheckinsForTest({
-        runType: AUTO_CHECKIN_RUN_TYPE.MANUAL,
+        runType: AUTO_CHECKIN_RUN_TYPE.DAILY,
       }),
     ).resolves.toBeUndefined()
 
@@ -2114,6 +2114,73 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
       skippedCount: 0,
       needsRetry: false,
     })
+
+    vi.useRealTimers()
+  })
+
+  it("allows unscoped manual batch check-in while preserving account-level opt-out", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2024, 0, 1, 9, 0, 0))
+
+    mockedUserPreferences.getPreferences.mockResolvedValue({
+      autoCheckin: {
+        ...(DEFAULT_PREFERENCES as any).autoCheckin,
+        globalEnabled: false,
+        notifyUiOnCompletion: true,
+      },
+    })
+
+    const manuallyIncludedAccount: any = {
+      id: "manual-included",
+      disabled: false,
+      site_name: "Manual Included",
+      site_type: SITE_TYPES.VELOERA,
+      account_info: { username: "included-user" },
+      checkIn: runnableCheckIn(true),
+    }
+    const accountLevelOptOut: any = {
+      id: "account-level-opt-out",
+      disabled: false,
+      site_name: "Account Level Opt Out",
+      site_type: SITE_TYPES.VELOERA,
+      account_info: { username: "opt-out-user" },
+      checkIn: runnableCheckIn(false),
+    }
+    mockedAccountStorage.getAllAccounts.mockResolvedValue([
+      manuallyIncludedAccount,
+      accountLevelOptOut,
+    ])
+
+    const provider = {
+      getReadiness: vi.fn(() => ({ ready: true })),
+      checkIn: vi.fn(async () => ({ status: "success" })),
+    }
+    resolveProviderForTest.mockReturnValue(provider)
+
+    await runCheckinsForTest({
+      runType: AUTO_CHECKIN_RUN_TYPE.MANUAL,
+    })
+
+    expect(provider.checkIn).toHaveBeenCalledTimes(1)
+    expect(storedStatus.perAccount).toMatchObject({
+      "manual-included": {
+        status: "success",
+      },
+      "account-level-opt-out": {
+        status: "skipped",
+        reasonCode: "auto_checkin_disabled",
+      },
+    })
+    expect(storedStatus.summary).toMatchObject({
+      totalEligible: 2,
+      executed: 1,
+      successCount: 1,
+      failedCount: 0,
+      skippedCount: 1,
+      needsRetry: false,
+    })
+    expect(storedStatus.pendingRetry).toBe(false)
+    expect(storedStatus.retryState).toBeUndefined()
 
     vi.useRealTimers()
   })

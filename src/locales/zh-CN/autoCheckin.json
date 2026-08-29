@@ -150,7 +150,7 @@
     "deterministicTimeDesc": "启用固定模式时，选择开始签到的具体时间（HH:mm）。",
     "deterministicTimeTitle": "固定时间",
     "enable": "启用自动签到",
-    "enableDesc": "控制全局自动签到功能开关，关闭后不会执行任何自动签到任务。",
+    "enableDesc": "控制全局自动签到开关；关闭后会停止计划等自动任务，但仍可手动签到。",
     "notifyUiOnCompletion": "自动签到完成后刷新数据和界面",
     "notifyUiOnCompletionDesc": "当自动签到执行完成后，立即刷新签到账号的数据并刷新相关界面。",
     "pretriggerDailyOnUiOpen": "打开界面时提前触发今日签到",
