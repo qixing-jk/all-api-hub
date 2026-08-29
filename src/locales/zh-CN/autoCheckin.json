@@ -53,6 +53,7 @@
       "openFailedManualNewWindow": "打开最近一次自动签到失败的全部账号对应的站点签到页。按住 Shift 点击可在新窗口中打开。",
       "siteTypeCheckinUnsupported": "解决方案：先在「账号管理 → 编辑账号」中检查“站点类型”是否与实际站点一致；如果此前是自动识别得到的结果，可在目标站点重新登录后重新识别一次。若确认站点类型无误但仍提示不支持，说明该站点当前可能未适配自动签到，请改用“打开网站”或“手动签到”处理。"
     },
+    "manualTitle": "批量签到",
     "pagination": {
       "next": "下一页",
       "previous": "上一页",
@@ -80,6 +81,7 @@
     },
     "title": "自动签到"
   },
+  "manualDescription": "可以为符合条件的账号执行批量签到；下方结果列表显示已执行的签到记录，不是待签到队列。",
   "messages": {
     "error": {
       "accountDisabled": "账号已禁用",

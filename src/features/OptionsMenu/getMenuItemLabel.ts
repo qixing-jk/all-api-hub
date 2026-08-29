@@ -9,12 +9,17 @@ import {
 } from "~/constants/optionsMenuIds"
 import { assertNever } from "~/utils/core/assert"
 
+interface MenuItemLabelOptions {
+  autoCheckinGlobalEnabled?: boolean
+}
+
 /**
  * Returns the localized label for a given options menu item id.
  */
 export function getMenuItemLabel(
   t: TFunction,
   itemId: OptionsPageMenuItemId,
+  options?: MenuItemLabelOptions,
 ): string {
   switch (itemId) {
     case MENU_ITEM_IDS.OVERVIEW:
@@ -26,7 +31,11 @@ export function getMenuItemLabel(
     case MENU_ITEM_IDS.BOOKMARK:
       return t("ui:navigation.bookmark")
     case MENU_ITEM_IDS.AUTO_CHECKIN:
-      return t("ui:navigation.autoCheckin")
+      return t(
+        options?.autoCheckinGlobalEnabled === false
+          ? "ui:navigation.batchCheckin"
+          : "ui:navigation.autoCheckin",
+      )
     case MENU_ITEM_IDS.USAGE_ANALYTICS:
       return t("ui:navigation.usageAnalytics")
     case MENU_ITEM_IDS.BALANCE_HISTORY:

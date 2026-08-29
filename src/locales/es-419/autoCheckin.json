@@ -53,6 +53,7 @@
       "openFailedManualNewWindow": "Abre la página de check-in del sitio para cada cuenta cuyo último check-in automático falló. Usa Mayús+clic para abrirlas en una ventana nueva.",
       "siteTypeCheckinUnsupported": "Solución: en 'Administración de cuentas → Editar cuenta', primero verifica que el tipo de sitio seleccionado coincida con el sitio real. Si el tipo se detectó automáticamente antes, vuelve a iniciar sesión en el sitio de destino y ejecuta la detección otra vez. Si el tipo de sitio es correcto pero este mensaje sigue apareciendo, probablemente el sitio aún no admita check-in automático, así que usa 'Abrir sitio' o 'Inicio de sesión manual' en su lugar."
     },
+    "manualTitle": "Check-in por lotes",
     "pagination": {
       "next": "Página siguiente",
       "previous": "Página anterior",
@@ -80,6 +81,7 @@
     },
     "title": "Check-in automático"
   },
+  "manualDescription": "Puedes realizar un check-in por lotes para las cuentas elegibles. La lista de resultados de abajo muestra registros de ejecuciones completadas, no una cola pendiente.",
   "messages": {
     "error": {
       "accountDisabled": "La cuenta está deshabilitada",

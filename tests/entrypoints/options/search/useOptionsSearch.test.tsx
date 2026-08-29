@@ -66,7 +66,11 @@ describe("useOptionsSearch", () => {
 
   it("keeps the auto-checkin page searchable when automatic runs are disabled", () => {
     const { result } = renderHook(
-      () => useOptionsSearch(context, "ui:navigation.autoCheckin"),
+      () =>
+        useOptionsSearch(
+          { ...context, autoCheckinGlobalEnabled: false },
+          "ui:navigation.batchCheckin",
+        ),
       {
         withReleaseUpdateStatusProvider: false,
         withThemeProvider: false,
@@ -78,6 +82,7 @@ describe("useOptionsSearch", () => {
       id: "page:autoCheckin",
       pageId: MENU_ITEM_IDS.AUTO_CHECKIN,
       kind: "page",
+      title: "ui:navigation.batchCheckin",
     })
   })
 

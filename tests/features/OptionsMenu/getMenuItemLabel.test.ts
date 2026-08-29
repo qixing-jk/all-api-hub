@@ -29,6 +29,11 @@ describe("getMenuItemLabel", () => {
     expect(getMenuItemLabel(t as any, MENU_ITEM_IDS.AUTO_CHECKIN)).toBe(
       "ui:navigation.autoCheckin",
     )
+    expect(
+      getMenuItemLabel(t as any, MENU_ITEM_IDS.AUTO_CHECKIN, {
+        autoCheckinGlobalEnabled: false,
+      }),
+    ).toBe("ui:navigation.batchCheckin")
     expect(getMenuItemLabel(t as any, MENU_ITEM_IDS.USAGE_ANALYTICS)).toBe(
       "ui:navigation.usageAnalytics",
     )

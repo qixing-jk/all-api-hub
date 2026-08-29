@@ -535,6 +535,7 @@
     "autoCheckinRunNow": "Quick check-in",
     "balanceHistory": "Balance History",
     "basic": "Settings",
+    "batchCheckin": "Batch Check-in",
     "bookmark": "Bookmark Management",
     "categories": {
       "api": "API",

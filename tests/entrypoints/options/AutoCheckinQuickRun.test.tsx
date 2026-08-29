@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SITE_TYPES } from "~/constants/siteType"
+import * as userPreferencesContext from "~/contexts/UserPreferencesContext"
 import AutoCheckin from "~/entrypoints/options/pages/AutoCheckin"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
@@ -193,6 +194,32 @@ describe("AutoCheckin quick run", () => {
         },
       },
     )
+  })
+
+  it("uses the batch-check-in title and description when automatic runs are disabled", async () => {
+    vi.spyOn(
+      userPreferencesContext,
+      "useUserPreferencesContext",
+    ).mockReturnValue({
+      preferences: {
+        autoCheckin: {
+          globalEnabled: false,
+        },
+      },
+    } as any)
+    sendAutoCheckinMessageMock.mockResolvedValue({
+      success: true,
+      data: { perAccount: {} },
+    })
+
+    render(<AutoCheckin routeParams={{}} />)
+
+    expect(
+      await screen.findByText("autoCheckin:execution.manualTitle"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("autoCheckin:manualDescription"),
+    ).toBeInTheDocument()
   })
 
   it("shows an account setup empty state when no enabled account supports detection", async () => {

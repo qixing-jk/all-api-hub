@@ -16,6 +16,7 @@ import { menuItems } from "../constants"
 interface SidebarProps {
   activeMenuItem: string
   onMenuItemClick: (itemId: string) => void
+  autoCheckinGlobalEnabled?: boolean
   isMobileOpen?: boolean
   onMobileClose?: () => void
   isCollapsed?: boolean
@@ -32,6 +33,7 @@ const MOBILE_WIDTH = 256
  * @param props Component props container.
  * @param props.activeMenuItem Currently selected menu id.
  * @param props.onMenuItemClick Callback fired when user picks another menu item.
+ * @param props.autoCheckinGlobalEnabled Whether automatic check-ins are enabled globally.
  * @param props.isMobileOpen Whether the drawer is visible on mobile screens.
  * @param props.onMobileClose Close handler for the mobile drawer mask.
  * @param props.isCollapsed Whether the sidebar is collapsed on desktop.
@@ -40,6 +42,7 @@ const MOBILE_WIDTH = 256
 function Sidebar({
   activeMenuItem,
   onMenuItemClick,
+  autoCheckinGlobalEnabled = true,
   isMobileOpen,
   onMobileClose,
   isCollapsed = false,
@@ -160,7 +163,9 @@ function Sidebar({
               {menuItems.map((item, index) => {
                 const Icon = item.icon
                 const isActive = activeMenuItem === item.id
-                const label = getMenuItemLabel(t, item.id)
+                const label = getMenuItemLabel(t, item.id, {
+                  autoCheckinGlobalEnabled,
+                })
 
                 const prevItem = index > 0 ? menuItems[index - 1] : null
                 const isNewCategory =

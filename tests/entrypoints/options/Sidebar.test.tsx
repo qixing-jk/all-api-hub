@@ -92,18 +92,11 @@ describe("Options Sidebar", () => {
   })
 
   it("uses collapsed desktop labels and keeps all pages visible when global automatic check-in is disabled", () => {
-    useUserPreferencesContextMock.mockReturnValue({
-      preferences: {
-        autoCheckin: {
-          globalEnabled: false,
-        },
-      },
-    })
-
     render(
       <Sidebar
         activeMenuItem={MENU_ITEM_IDS.BASIC}
         onMenuItemClick={vi.fn()}
+        autoCheckinGlobalEnabled={false}
         isCollapsed={true}
         onCollapseToggle={vi.fn()}
       />,
@@ -119,7 +112,9 @@ describe("Options Sidebar", () => {
     expect(basicButton).toHaveAttribute("title", "ui:navigation.basic")
 
     expect(
-      within(nav).queryByRole("button", { name: "ui:navigation.autoCheckin" }),
+      within(nav).queryByRole("button", {
+        name: "ui:navigation.batchCheckin",
+      }),
     ).toBeInTheDocument()
     expect(
       within(nav).queryByText("ui:navigation.categories.general"),

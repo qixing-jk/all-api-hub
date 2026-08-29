@@ -53,6 +53,7 @@
       "openFailedManualNewWindow": "開啟最近一次自動簽到失敗的全部帳號所對應的站點簽到頁。按住 Shift 點擊可在新視窗中開啟。",
       "siteTypeCheckinUnsupported": "解決方案：先到「帳號管理 → 編輯帳號」檢查「站點型別」是否與實際站點一致；如果先前是自動識別出的結果，可在目標站點重新登入後再重新識別一次。若確認站點型別正確但仍顯示不支援，表示該站點目前可能尚未適配自動簽到，請改用「開啟網站」或「手動簽到」處理。"
     },
+    "manualTitle": "批量簽到",
     "pagination": {
       "next": "下一頁",
       "previous": "上一頁",
@@ -80,6 +81,7 @@
     },
     "title": "自動簽到"
   },
+  "manualDescription": "可以為符合條件的帳號執行批量簽到；下方結果列表顯示已執行的簽到記錄，不是待簽到佇列。",
   "messages": {
     "error": {
       "accountDisabled": "帳號已禁用",
