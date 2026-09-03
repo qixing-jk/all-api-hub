@@ -7,6 +7,28 @@ import {
 } from "~~/e2e/utils/scenarioErrors"
 
 describe("runScenarioWithCleanup", () => {
+  it("propagates an undefined primary failure", async () => {
+    await expect(
+      runScenarioWithCleanup({
+        run: async () => Promise.reject(undefined),
+        finalizers: [],
+        cleanupMessage: "Managed-site channel cleanup failed",
+        failureMessage: "Managed-site channel scenario failed",
+      }),
+    ).rejects.toBeUndefined()
+  })
+
+  it("propagates an undefined cleanup failure", async () => {
+    await expect(
+      runScenarioWithCleanup({
+        run: async () => "created",
+        finalizers: [async () => Promise.reject(undefined)],
+        cleanupMessage: "Managed-site channel cleanup failed",
+        failureMessage: "Managed-site channel scenario failed",
+      }),
+    ).rejects.toBeUndefined()
+  })
+
   it("keeps the primary scenario failure before a later cleanup failure", async () => {
     const primaryError = new Error("channel creation failed")
     const cleanupError = new Error("channel cleanup failed")

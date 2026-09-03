@@ -411,7 +411,7 @@ async function fetchOctopusApi<T>(
 
     if (
       session.mode === OCTOPUS_AUTH_MODES.Cookie &&
-      session.confirmed === false &&
+      (session.confirmed === false || session.apiVersion === undefined) &&
       (isMutation ||
         operation.kind === OCTOPUS_API_OPERATIONS.FetchRemoteModels)
     ) {

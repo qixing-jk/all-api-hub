@@ -91,6 +91,13 @@ describe("Octopus API service", () => {
     password: "secret",
   }
 
+  const currentCookieSession = () => ({
+    mode: OCTOPUS_AUTH_MODES.Cookie,
+    expireAt: 1_700_000_900_000,
+    confirmed: true,
+    apiVersion: OCTOPUS_COOKIE_API_VERSIONS.V012,
+  })
+
   const currentChannelResponse = (
     overrides: Record<string, unknown> = {},
   ): Record<string, unknown> => ({
@@ -474,6 +481,64 @@ describe("Octopus API service", () => {
     })
   })
 
+  it("detects the cookie API version before mutation after a version-agnostic read", async () => {
+    const session = {
+      mode: OCTOPUS_AUTH_MODES.Cookie,
+      expireAt: 1_700_000_900_000,
+      confirmed: false,
+    }
+    mockGetValidSession.mockResolvedValue(session)
+    mockTempWindowOctopusApiFetch
+      .mockResolvedValueOnce({
+        success: true,
+        status: 200,
+        data: { code: 200, data: [] },
+      })
+      .mockResolvedValueOnce({
+        success: false,
+        status: 404,
+        error: "404 page not found",
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        status: 200,
+        data: { code: 200, data: [] },
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        status: 200,
+        data: { code: 200, data: v013ChannelDetailResponse() },
+      })
+
+    await expect(fetchAvailableModels(config)).resolves.toEqual([])
+    await expect(
+      createChannel(config, {
+        name: "V0.13 channel",
+        type: OctopusOutboundType.OpenAIChat,
+        enabled: true,
+        baseUrl: "https://upstream.example.invalid",
+        key: "credential-placeholder",
+        model: "model-a",
+      }),
+    ).resolves.toMatchObject({ success: true })
+
+    expect(
+      mockTempWindowOctopusApiFetch.mock.calls.map(
+        ([request]) => new URL(request.fetchUrl).pathname,
+      ),
+    ).toEqual([
+      "/api/v1/model/list",
+      "/api/v1/channel/list",
+      "/api/v1/channel/stats",
+      "/api/v1/channel/create",
+    ])
+    expect(
+      JSON.parse(
+        mockTempWindowOctopusApiFetch.mock.calls[3][0].fetchOptions.body,
+      ),
+    ).toMatchObject({ dialect: "generic", models: ["model-a"] })
+  })
+
   it("preserves Octopus v0.13 detail fields while applying a partial update", async () => {
     const existing = v013ChannelDetailResponse({
       keys: [
@@ -625,10 +690,7 @@ describe("Octopus API service", () => {
   })
 
   it("establishes a same-origin cookie session after 401 and retries the mutation", async () => {
-    mockGetValidSession.mockResolvedValueOnce({
-      mode: OCTOPUS_AUTH_MODES.Cookie,
-      expireAt: 1_700_000_900_000,
-    })
+    mockGetValidSession.mockResolvedValueOnce(currentCookieSession())
     mockTempWindowOctopusApiFetch
       .mockResolvedValueOnce({
         success: false,
@@ -758,10 +820,7 @@ describe("Octopus API service", () => {
   ])(
     "fails closed after cookie 401 when login returns $name",
     async ({ login, expected }) => {
-      mockGetValidSession.mockResolvedValueOnce({
-        mode: OCTOPUS_AUTH_MODES.Cookie,
-        expireAt: 1_700_000_900_000,
-      })
+      mockGetValidSession.mockResolvedValueOnce(currentCookieSession())
       mockTempWindowOctopusApiFetch
         .mockResolvedValueOnce({
           success: false,
@@ -865,10 +924,7 @@ describe("Octopus API service", () => {
   )
 
   it("selects explicit current update and model-probe payloads", async () => {
-    mockGetValidSession.mockResolvedValue({
-      mode: OCTOPUS_AUTH_MODES.Cookie,
-      expireAt: 1_700_000_900_000,
-    })
+    mockGetValidSession.mockResolvedValue(currentCookieSession())
     mockTempWindowOctopusApiFetch
       .mockResolvedValueOnce({
         success: true,
@@ -979,10 +1035,7 @@ describe("Octopus API service", () => {
   })
 
   it("includes current-only channel settings in a current model probe", async () => {
-    mockGetValidSession.mockResolvedValueOnce({
-      mode: OCTOPUS_AUTH_MODES.Cookie,
-      expireAt: 1_700_000_900_000,
-    })
+    mockGetValidSession.mockResolvedValueOnce(currentCookieSession())
     mockTempWindowOctopusApiFetch.mockResolvedValueOnce({
       success: true,
       status: 200,
@@ -1030,10 +1083,7 @@ describe("Octopus API service", () => {
   })
 
   it("rejects the removed embedding-only type before a cookie request is dispatched", async () => {
-    mockGetValidSession.mockResolvedValueOnce({
-      mode: OCTOPUS_AUTH_MODES.Cookie,
-      expireAt: 1_700_000_900_000,
-    })
+    mockGetValidSession.mockResolvedValueOnce(currentCookieSession())
 
     await expect(
       fetchRemoteModels(
@@ -1050,10 +1100,7 @@ describe("Octopus API service", () => {
   })
 
   it("classifies an invalid cookie mutation type as not dispatched", async () => {
-    mockGetValidSession.mockResolvedValueOnce({
-      mode: OCTOPUS_AUTH_MODES.Cookie,
-      expireAt: 1_700_000_900_000,
-    })
+    mockGetValidSession.mockResolvedValueOnce(currentCookieSession())
 
     const failure = await createChannel(
       config,
@@ -1078,10 +1125,7 @@ describe("Octopus API service", () => {
   })
 
   it("does not forward legacy-only update fields to the current contract", async () => {
-    mockGetValidSession.mockResolvedValueOnce({
-      mode: OCTOPUS_AUTH_MODES.Cookie,
-      expireAt: 1_700_000_900_000,
-    })
+    mockGetValidSession.mockResolvedValueOnce(currentCookieSession())
     mockTempWindowOctopusApiFetch.mockResolvedValueOnce({
       success: true,
       status: 200,
@@ -1171,10 +1215,7 @@ describe("Octopus API service", () => {
   })
 
   it("treats missing cookie transport lifecycle as possibly dispatched", async () => {
-    mockGetValidSession.mockResolvedValue({
-      mode: OCTOPUS_AUTH_MODES.Cookie,
-      expireAt: 1_700_000_900_000,
-    })
+    mockGetValidSession.mockResolvedValue(currentCookieSession())
     const transportError = new Error("temporary context failed")
     mockTempWindowOctopusApiFetch.mockRejectedValueOnce(transportError)
 
@@ -1355,10 +1396,7 @@ describe("Octopus API service", () => {
   })
 
   it("normalizes a current create response that omits model", async () => {
-    mockGetValidSession.mockResolvedValueOnce({
-      mode: OCTOPUS_AUTH_MODES.Cookie,
-      expireAt: 1_700_000_900_000,
-    })
+    mockGetValidSession.mockResolvedValueOnce(currentCookieSession())
     mockTempWindowOctopusApiFetch.mockResolvedValueOnce({
       success: true,
       status: 200,
@@ -1449,10 +1487,7 @@ describe("Octopus API service", () => {
   })
 
   it("uses current model, group, and delete endpoints after cookie auth", async () => {
-    mockGetValidSession.mockResolvedValue({
-      mode: OCTOPUS_AUTH_MODES.Cookie,
-      expireAt: 1_700_000_900_000,
-    })
+    mockGetValidSession.mockResolvedValue(currentCookieSession())
     mockTempWindowOctopusApiFetch
       .mockResolvedValueOnce({
         success: true,
