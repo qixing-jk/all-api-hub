@@ -2226,6 +2226,60 @@ describe("apiTransport request helpers", () => {
     onResponse: vi.fn(),
   })
 
+  it("uses the temp-window route for an explicitly forced request", async () => {
+    forceTempWindowRoute()
+    mockSendRuntimeMessage.mockResolvedValueOnce({
+      success: true,
+      status: 200,
+      data: {
+        success: true,
+        data: { ok: true },
+        message: "temp",
+      },
+    })
+
+    let normalFetchCount = 0
+    server.use(
+      http.post(API_URL, () => {
+        normalFetchCount += 1
+        return HttpResponse.json({
+          success: true,
+          data: { ok: false },
+          message: "normal",
+        })
+      }),
+    )
+
+    await expect(
+      fetchApiData<{ ok: boolean }>(
+        {
+          baseUrl: BASE_URL,
+          auth: {
+            authType: AuthTypeEnum.Cookie,
+            cookie: "session=abc123",
+          },
+          forceTempWindow: true,
+          protectionBypassExecution: backgroundProtectionBypassExecution,
+        },
+        { endpoint: ENDPOINT, options: { method: "POST", body: "{}" } },
+      ),
+    ).resolves.toEqual({ ok: true })
+
+    expect(normalFetchCount).toBe(0)
+    expect(mockSendRuntimeMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: RuntimeActionIds.ProtectionBypassExecuteTask,
+        task: {
+          kind: "profile_isolated_fetch",
+          params: expect.objectContaining({
+            originUrl: BASE_URL,
+            fetchUrl: API_URL,
+          }),
+        },
+      }),
+    )
+  })
+
   it("keeps the observer local when a forced temp-window route is selected", async () => {
     const lifecycle: string[] = []
     let responseObserved = false

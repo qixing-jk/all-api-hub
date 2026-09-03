@@ -111,6 +111,7 @@ describe("anyrouterProvider", () => {
       expect(mockedFetchApi.mock.calls[0]?.[0]).toMatchObject({
         accountId: "test-id",
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+        forceTempWindow: true,
         protectionBypassExecution,
       })
     })
@@ -146,6 +147,7 @@ describe("anyrouterProvider", () => {
         accountId: "stored-account-id",
         cookieAuthSessionCookie: "session=stored-cookie",
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+        forceTempWindow: true,
         auth: {
           authType: AuthTypeEnum.Cookie,
           userId: 12345,

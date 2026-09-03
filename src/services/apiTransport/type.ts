@@ -121,6 +121,8 @@ export interface ApiTransportRequest {
   tempWindowRequestSource?: TempWindowRequestSource
   /** Invocation intent for protected temporary-context work. */
   protectionBypassExecution?: ProtectionBypassExecution
+  /** Force the request through the protected temporary context from the start. */
+  forceTempWindow?: boolean
   /** Skip the generic per-site limiter when the caller already applies a narrower limiter. */
   bypassSiteRequestLimit?: boolean
   /** Process-local lifecycle evidence; callbacks must never cross extension messaging. */

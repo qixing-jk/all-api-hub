@@ -54,6 +54,10 @@ const checkinAnyRouter = async (
           userId: account_info.id,
         },
         tempWindowRequestSource,
+        // AnyRouter's sign-in POST relies on browser-established WAF cookies;
+        // see https://github.com/millylee/anyrouter-check-in.
+        // Keep it in one protected context instead of replaying a mutating request.
+        forceTempWindow: true,
         ...(protectionBypassExecution ? { protectionBypassExecution } : {}),
         ...(context.mutationLifecycle
           ? { observer: context.mutationLifecycle }
