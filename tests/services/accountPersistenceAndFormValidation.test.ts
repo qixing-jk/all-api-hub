@@ -8,7 +8,7 @@ import {
   isValidExchangeRate,
   parseManualQuotaFromUsd,
 } from "~/services/accounts/accountFormValidation"
-import { validateAndUpdateAccount } from "~/services/accounts/accountPersistence"
+import { validateAndUpdateAccount } from "~/services/accounts/accountUpdate"
 import { extractDomainPrefix, getSiteName } from "~/services/accounts/siteName"
 import { AuthTypeEnum } from "~/types"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"

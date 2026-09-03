@@ -82,11 +82,9 @@ vi.mock("~/services/accounts/accountAutoDetection", () => ({
   autoDetectAccount: mockGenericAutoDetectAccount,
 }))
 
-vi.mock("~/services/accounts/accountPersistence", async (importOriginal) => {
+vi.mock("~/services/accounts/accountCreation", async (importOriginal) => {
   const actual =
-    await importOriginal<
-      typeof import("~/services/accounts/accountPersistence")
-    >()
+    await importOriginal<typeof import("~/services/accounts/accountCreation")>()
   return {
     ...actual,
     validateAndSaveAccount: (

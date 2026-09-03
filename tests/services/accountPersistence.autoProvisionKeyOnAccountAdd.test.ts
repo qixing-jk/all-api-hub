@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { Storage } from "@plasmohq/storage"
 
 import { OPENROUTER_WEB_ORIGIN, SITE_TYPES } from "~/constants/siteType"
-import { validateAndSaveAccount } from "~/services/accounts/accountPersistence"
+import { validateAndSaveAccount } from "~/services/accounts/accountCreation"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { DefaultTokenLifecyclePolicyBlockedError } from "~/services/accounts/defaultTokenLifecycle"
 import { TOKEN_PROVISIONING_BLOCK_REASONS } from "~/services/apiAdapters/contracts/tokenProvisioning"

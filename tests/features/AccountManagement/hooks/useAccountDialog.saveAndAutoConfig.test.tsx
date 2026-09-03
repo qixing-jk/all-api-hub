@@ -100,18 +100,13 @@ vi.mock("~/components/dialogs/ChannelDialog", () => ({
   }),
 }))
 
-vi.mock("~/services/accounts/accountPersistence", async (importOriginal) => {
-  const actual =
-    await importOriginal<
-      typeof import("~/services/accounts/accountPersistence")
-    >()
+vi.mock("~/services/accounts/accountCreation", () => ({
+  validateAndSaveAccount: mockValidateAndSaveAccount,
+}))
 
-  return {
-    ...actual,
-    validateAndSaveAccount: mockValidateAndSaveAccount,
-    validateAndUpdateAccount: mockValidateAndUpdateAccount,
-  }
-})
+vi.mock("~/services/accounts/accountUpdate", () => ({
+  validateAndUpdateAccount: mockValidateAndUpdateAccount,
+}))
 
 vi.mock(
   "~/services/accounts/accountPostSaveWorkflow",
