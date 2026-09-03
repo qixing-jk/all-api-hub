@@ -152,6 +152,7 @@ const createAccountCompletionHelpers = (params: {
     return createAutoDetectApiRequest({
       baseUrl: input.baseUrl,
       auth: input.auth,
+      cookieAuthSessionCookie: input.context.cookieAuthSessionCookie,
       fetchContext: input.context.fetchContext,
       protectionBypassExecution: input.context.protectionBypassExecution,
     })
@@ -193,6 +194,7 @@ export async function completeAutoDetectedAccount(
   const { siteType } = detected
   const autoDetectFetchContext = getAutoDetectFetchContext(detected)
   const completionContext: AccountCompletionRuntimeContext = {
+    ...(cookieAuthSessionCookie ? { cookieAuthSessionCookie } : {}),
     ...(autoDetectFetchContext ? { fetchContext: autoDetectFetchContext } : {}),
     ...(protectionBypassExecution ? { protectionBypassExecution } : {}),
   }

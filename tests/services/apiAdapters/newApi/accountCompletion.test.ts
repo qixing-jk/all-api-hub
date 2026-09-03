@@ -686,6 +686,43 @@ describe("newApiAccountCompletion", () => {
     expect(mockFetchCheckInSupport).not.toHaveBeenCalled()
   })
 
+  it("preserves completed probes when site metadata resolution fails", async () => {
+    const siteNameError = new Error("site name unavailable")
+    mockGetOrCreateAccessToken.mockResolvedValueOnce({
+      username: "token-user",
+      access_token: "generated-token",
+    })
+    mockFetchSiteStatus.mockResolvedValueOnce({
+      system_name: "Fallback Portal",
+      checkin_enabled: false,
+      price: 7,
+    })
+    mockExtractDefaultExchangeRate.mockReturnValueOnce(7)
+    fetchSiteName.mockRejectedValueOnce(siteNameError)
+
+    await expect(
+      newApiAccountCompletion.complete(
+        {
+          url: "https://metadata-failure.example.invalid",
+          requestedAuthType: AuthTypeEnum.AccessToken,
+          detected: {
+            userId: "12",
+            siteType: SITE_TYPES.NEW_API,
+          },
+          context: {},
+        },
+        helpers,
+      ),
+    ).rejects.toBe(siteNameError)
+
+    expect(captureRecoveryData).toHaveBeenCalledWith({
+      username: "token-user",
+      accessToken: "generated-token",
+      authType: AuthTypeEnum.AccessToken,
+    })
+    expect(captureRecoveryData).toHaveBeenCalledWith({ exchangeRate: 7 })
+  })
+
   it("falls back to disabled check-in detection when support probing fails", async () => {
     const supportError = new Error("support probe unavailable")
     mockGetOrCreateAccessToken.mockResolvedValueOnce({

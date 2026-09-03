@@ -77,8 +77,15 @@ export function mergeAutoDetectRecoveryIntoDraft(params: {
   recoveryData: AccountAutoDetectRecoveryData
   nextSiteType: AccountSiteType
   hasExplicitAuthType: boolean
+  sub2apiRefreshTokenPreferenceChanged: boolean
 }): AccountDialogDraft {
-  const { draft, recoveryData, nextSiteType, hasExplicitAuthType } = params
+  const {
+    draft,
+    recoveryData,
+    nextSiteType,
+    hasExplicitAuthType,
+    sub2apiRefreshTokenPreferenceChanged,
+  } = params
   const policy = getAccountDialogSitePolicy(nextSiteType)
   const recoverString = (
     current: string,
@@ -99,6 +106,9 @@ export function mergeAutoDetectRecoveryIntoDraft(params: {
   const recoveredCheckIn = recoveryData.checkIn
     ? normalizeDetectedCheckIn(recoveryData.checkIn)
     : undefined
+  const canRecoverSub2ApiRefreshToken =
+    policy.allowSub2ApiRefreshTokenState &&
+    !sub2apiRefreshTokenPreferenceChanged
   const nextDraft: AccountDialogDraft = {
     ...draft,
     siteType: nextSiteType,
@@ -129,19 +139,18 @@ export function mergeAutoDetectRecoveryIntoDraft(params: {
         })
       : draft.checkIn,
     sub2apiUseRefreshToken:
-      policy.allowSub2ApiRefreshTokenState &&
+      canRecoverSub2ApiRefreshToken &&
       Boolean(recoveryData.sub2apiAuth?.refreshToken.trim())
         ? true
         : draft.sub2apiUseRefreshToken,
-    sub2apiRefreshToken: policy.allowSub2ApiRefreshTokenState
+    sub2apiRefreshToken: canRecoverSub2ApiRefreshToken
       ? recoverString(
           draft.sub2apiRefreshToken,
           recoveryData.sub2apiAuth?.refreshToken,
         )
-      : "",
+      : draft.sub2apiRefreshToken,
     sub2apiTokenExpiresAt:
-      policy.allowSub2ApiRefreshTokenState &&
-      draft.sub2apiTokenExpiresAt === null
+      canRecoverSub2ApiRefreshToken && draft.sub2apiTokenExpiresAt === null
         ? recoveryData.sub2apiAuth?.tokenExpiresAt ?? null
         : draft.sub2apiTokenExpiresAt,
   }

@@ -13,6 +13,7 @@ import type {
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 
 export type AccountCompletionRuntimeContext = {
+  cookieAuthSessionCookie?: ApiServiceRequest["cookieAuthSessionCookie"]
   fetchContext?: ApiServiceFetchContext
   protectionBypassExecution?: ProtectionBypassExecution
 }

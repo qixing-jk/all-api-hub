@@ -477,6 +477,7 @@ export function useAccountDialog({
   // Also invalidates stale results when a reset reuses the same URL.
   const autoDetectRunGenerationRef = useRef(0)
   const automaticExecutionPreferenceChangedRef = useRef(false)
+  const sub2apiRefreshTokenPreferenceChangedRef = useRef(false)
 
   const siteName = draft.siteName
   const username = draft.username
@@ -1201,6 +1202,7 @@ export function useAccountDialog({
       })
       setUrl(nextUrl)
       automaticExecutionPreferenceChangedRef.current = false
+      sub2apiRefreshTokenPreferenceChangedRef.current = false
       const emptyDraft = createEmptyAccountDialogDraft(nextSiteType)
       const nextDraft = {
         ...emptyDraft,
@@ -2017,6 +2019,8 @@ export function useAccountDialog({
         recoveryData,
         nextSiteType: recovery.nextSiteType,
         hasExplicitAuthType: hasExplicitAuthTypeRef.current,
+        sub2apiRefreshTokenPreferenceChanged:
+          sub2apiRefreshTokenPreferenceChangedRef.current,
       })
     })
   }
@@ -3233,6 +3237,7 @@ export function useAccountDialog({
   }
 
   const handleSub2apiUseRefreshTokenChange = (enabled: boolean) => {
+    sub2apiRefreshTokenPreferenceChangedRef.current = true
     setSub2apiUseRefreshToken(enabled)
 
     // If the user explicitly disables refresh-token mode, clear any captured
