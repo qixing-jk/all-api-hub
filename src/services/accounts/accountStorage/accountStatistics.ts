@@ -22,6 +22,9 @@ export const calculateAccountStats = (
   accounts: SiteAccount[],
 ): AccountStats => {
   const enabledAccounts = accounts.filter((account) => !account.disabled)
+  const balanceAccounts = enabledAccounts.filter(
+    (account) => account.excludeFromTotalBalance !== true,
+  )
   const incomeAccounts = enabledAccounts.filter(
     (account) => account.excludeFromTodayIncome !== true,
   )
@@ -86,7 +89,7 @@ export const calculateAccountStats = (
   )
 
   return {
-    total_quota: enabledAccounts.reduce(
+    total_quota: balanceAccounts.reduce(
       (sum, account) => sum + account.account_info.quota,
       0,
     ),

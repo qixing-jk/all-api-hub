@@ -6576,6 +6576,44 @@ describe("autoCheckinScheduler private helpers", () => {
     })
   })
 
+  it("revalidates the selected method through the account check-in owner", async () => {
+    const account = {
+      id: "revalidate-owner",
+      site_name: "Revalidate Owner",
+      site_type: SITE_TYPES.NEW_API,
+      disabled: false,
+      account_info: {},
+      checkIn: runnableCheckIn(true, SITE_TYPES.NEW_API),
+    } as any
+    const refreshedConfig = runnableCheckIn(true, SITE_TYPES.NEW_API)
+    const preparedAccount = { ...account, checkIn: refreshedConfig }
+    mockedAccountStorage.prepareAccountForSelectedCheckIn.mockResolvedValueOnce(
+      preparedAccount,
+    )
+    mockedMethods.executeSelectedCheckIn.mockImplementationOnce(
+      async ({ revalidateAccount }: any) => {
+        await expect(revalidateAccount(refreshedConfig)).resolves.toBe(
+          preparedAccount,
+        )
+        return { kind: "skipped", reason: "account_unavailable" }
+      },
+    )
+
+    await expect(
+      (autoCheckinScheduler as any).runAccountCheckin(
+        account,
+        account.site_name,
+        TEMP_WINDOW_REQUEST_SOURCES.Background,
+        OPTIONS_MANUAL_EXECUTION,
+      ),
+    ).resolves.toMatchObject({
+      result: { status: "skipped", reasonCode: "account_unavailable" },
+    })
+    expect(
+      mockedAccountStorage.prepareAccountForSelectedCheckIn,
+    ).toHaveBeenCalledWith(account.id, refreshedConfig)
+  })
+
   it.each([
     {
       domainReason: "status_unavailable",

@@ -4,10 +4,14 @@ const {
   applyActionClickBehaviorMock,
   getPreferencesMock,
   getPreferencesStrictMock,
+  getAllAccountsMock,
+  exportAccountDataMock,
+  importAccountDataMock,
   initializeCookieInterceptorsMock,
   initializeServicesMock,
   loggerErrorMock,
   loggerWarnMock,
+  migrateAccountsConfigMock,
   setupActionClickBehaviorListenerMock,
   triggerStartupSettingsSnapshotMock,
   triggerStartupShieldBypassDailySummaryMock,
@@ -17,10 +21,14 @@ const {
   applyActionClickBehaviorMock: vi.fn(),
   getPreferencesMock: vi.fn(),
   getPreferencesStrictMock: vi.fn(),
+  getAllAccountsMock: vi.fn(),
+  exportAccountDataMock: vi.fn(),
+  importAccountDataMock: vi.fn(),
   initializeCookieInterceptorsMock: vi.fn(),
   initializeServicesMock: vi.fn(),
   loggerErrorMock: vi.fn(),
   loggerWarnMock: vi.fn(),
+  migrateAccountsConfigMock: vi.fn(),
   setupActionClickBehaviorListenerMock: vi.fn(),
   triggerStartupSettingsSnapshotMock: vi.fn(),
   triggerStartupShieldBypassDailySummaryMock: vi.fn(),
@@ -31,10 +39,14 @@ const {
 const originalBrowser = (globalThis as any).browser
 
 describe("background onSuspend temp-context cleanup", () => {
+  let onInstalledListener:
+    | ((details: { reason: string }) => void | Promise<void>)
+    | undefined
   let onSuspendListener: (() => void | Promise<void>) | undefined
   let cleanupTempContextsOnSuspendMock: ReturnType<typeof vi.fn>
 
   beforeEach(() => {
+    onInstalledListener = undefined
     onSuspendListener = undefined
     cleanupTempContextsOnSuspendMock = vi.fn().mockResolvedValue(undefined)
     applyActionClickBehaviorMock.mockReset().mockResolvedValue(undefined)
@@ -44,6 +56,13 @@ describe("background onSuspend temp-context cleanup", () => {
     getPreferencesStrictMock.mockReset().mockResolvedValue({
       actionClickBehavior: "popup",
     })
+    getAllAccountsMock.mockReset().mockResolvedValue([])
+    exportAccountDataMock.mockReset().mockResolvedValue({ accounts: [] })
+    importAccountDataMock.mockReset().mockResolvedValue(undefined)
+    migrateAccountsConfigMock.mockReset().mockImplementation((accounts) => ({
+      accounts,
+      migratedCount: 0,
+    }))
     initializeCookieInterceptorsMock.mockReset().mockResolvedValue(undefined)
     initializeServicesMock.mockReset().mockResolvedValue(undefined)
     loggerErrorMock.mockReset()
@@ -69,7 +88,11 @@ describe("background onSuspend temp-context cleanup", () => {
       return {
         ...actual,
         getManifest: vi.fn(() => ({ version: "2.39.0" })),
-        onInstalled: vi.fn(),
+        onInstalled: vi.fn(
+          (listener: (details: { reason: string }) => void | Promise<void>) => {
+            onInstalledListener = listener
+          },
+        ),
         onStartup: vi.fn(),
         onSuspend: vi.fn((listener: () => void | Promise<void>) => {
           onSuspendListener = listener
@@ -124,19 +147,16 @@ describe("background onSuspend temp-context cleanup", () => {
       },
     }))
     vi.doMock("~/services/accounts/accountStorage/accountQueries", () => ({
-      accountQueries: { getAllAccounts: vi.fn().mockResolvedValue([]) },
+      accountQueries: { getAllAccounts: getAllAccountsMock },
     }))
     vi.doMock("~/services/accounts/accountStorage/accountDataTransfer", () => ({
       accountDataTransfer: {
-        exportData: vi.fn().mockResolvedValue({ accounts: [] }),
-        importData: vi.fn().mockResolvedValue(undefined),
+        exportData: exportAccountDataMock,
+        importData: importAccountDataMock,
       },
     }))
     vi.doMock("~/services/accounts/migrations/accountDataMigration", () => ({
-      migrateAccountsConfig: vi.fn((accounts: any[]) => ({
-        accounts,
-        migratedCount: 0,
-      })),
+      migrateAccountsConfig: migrateAccountsConfigMock,
     }))
     vi.doMock("~/services/permissions/permissionManager", () => ({
       OPTIONAL_PERMISSIONS: [],
@@ -200,6 +220,34 @@ describe("background onSuspend temp-context cleanup", () => {
     onSuspendListener?.()
 
     expect(cleanupTempContextsOnSuspendMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("preserves the full account envelope while installing migrated accounts", async () => {
+    const accounts = [{ id: "legacy-account" }]
+    const migrated = [{ id: "migrated-account" }]
+    const exportedEnvelope = {
+      accounts,
+      bookmarks: [{ id: "bookmark-1" }],
+      pinnedAccountIds: ["legacy-account", "bookmark-1"],
+      orderedAccountIds: ["bookmark-1", "legacy-account"],
+      deletedEntryRecords: { removed: { deletedAt: 1 } },
+    }
+    getAllAccountsMock.mockResolvedValue(accounts)
+    migrateAccountsConfigMock.mockReturnValue({
+      accounts: migrated,
+      migratedCount: 1,
+    })
+    exportAccountDataMock.mockResolvedValue(exportedEnvelope)
+
+    await import("~/entrypoints/background/index")
+    expect(onInstalledListener).toBeTypeOf("function")
+
+    await onInstalledListener?.({ reason: "install" })
+
+    expect(importAccountDataMock).toHaveBeenCalledWith({
+      ...exportedEnvelope,
+      accounts: migrated,
+    })
   })
 
   it("registers toolbar clicks and starts services before background startup awaits", async () => {
