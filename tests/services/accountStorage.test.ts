@@ -4237,7 +4237,7 @@ describe("accountStorage core behaviors", () => {
       expect(result).toMatchObject({ refreshed: true })
       expect(
         (await accountStorage.getAccountById(account.id))?.last_sync_time,
-      ).toBe(result?.account.last_sync_time)
+      ).toBe(result?.account?.last_sync_time)
     } finally {
       captureSpy.mockRestore()
     }
