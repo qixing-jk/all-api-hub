@@ -1100,6 +1100,7 @@ describe("apiService sub2api key management service", () => {
     )
     expect(persistAuthUpdateMock).toHaveBeenCalledWith("acc-1", {
       accessToken: "resynced-jwt",
+      clearRefreshCredentials: true,
       userId: "1",
       expectedOrigin: "https://sub2.example.com",
       expectedUserId: "1",
