@@ -999,6 +999,21 @@ describe("apiService doneHub channel APIs", () => {
     ])
   })
 
+  it("fetchSiteUserGroups should return an empty list for a non-array payload", async () => {
+    const request = {
+      baseUrl: "https://example.com",
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        accessToken: "token",
+        userId: "1",
+      },
+    }
+
+    mockFetchApiData.mockResolvedValueOnce({ groups: [] })
+
+    await expect(fetchSiteUserGroups(request as any)).resolves.toEqual([])
+  })
+
   it("fetchTodayUsage should delegate to the New API-family helper with DoneHub log query overrides", async () => {
     const request = {
       baseUrl: "https://example.com",

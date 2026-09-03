@@ -47,4 +47,25 @@ describe("decodeOpenRouterResponseError", () => {
       }),
     ).toBeNull()
   })
+
+  it("returns null when the nested error has no usable message", () => {
+    expect(
+      decodeOpenRouterResponseError(
+        response({ error: { code: 401, message: "  " } }, 401),
+        { endpoint: "/key" },
+      ),
+    ).toBeNull()
+  })
+
+  it("preserves a message without exposing undocumented string codes", () => {
+    expect(
+      decodeOpenRouterResponseError(
+        response({ error: { code: "403", message: "Denied" } }, 403),
+        { endpoint: "/credits" },
+      ),
+    ).toEqual({
+      kind: "http",
+      message: "Denied",
+    })
+  })
 })
