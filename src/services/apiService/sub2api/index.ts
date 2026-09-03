@@ -627,6 +627,7 @@ const fetchCurrentUserAndTodayUsage = async (
   try {
     todayUsage = await fetchTodayUsageWithRequest(request)
   } catch (error) {
+    if (error instanceof ApiError && error.statusCode === 401) throw error
     logger.warn("Failed to fetch Sub2API today usage; using zero defaults", {
       accountId: request.accountId,
       error: getSafeErrorMessage(error),

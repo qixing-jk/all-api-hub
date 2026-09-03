@@ -46,6 +46,7 @@ type PersistableSub2ApiAuthUpdate = {
   userId?: string
   refreshToken?: string
   tokenExpiresAt?: number
+  clearRefreshCredentials?: boolean
 }
 
 type RefreshedSub2ApiRequest<
@@ -279,11 +280,17 @@ const persistSub2ApiAuthUpdate = async (
 const applySub2ApiAuthUpdate = <TRequest extends ApiServiceRequest>(
   request: TRequest,
   authUpdate: PersistableSub2ApiAuthUpdate,
-): TRequest =>
-  ({
+): TRequest => {
+  const auth = { ...request.auth }
+  if (authUpdate.clearRefreshCredentials) {
+    delete auth.refreshToken
+    delete auth.tokenExpiresAt
+  }
+
+  return {
     ...request,
     auth: {
-      ...request.auth,
+      ...auth,
       authType: AuthTypeEnum.AccessToken,
       accessToken: authUpdate.accessToken,
       ...(authUpdate.refreshToken
@@ -294,7 +301,8 @@ const applySub2ApiAuthUpdate = <TRequest extends ApiServiceRequest>(
         : {}),
       ...(authUpdate.userId ? { userId: authUpdate.userId } : {}),
     },
-  }) as TRequest
+  } as TRequest
+}
 
 const createSub2ApiAuthMutationLockKey = (
   request: ApiServiceRequest,
@@ -341,6 +349,9 @@ const createSub2ApiBrowserAuthUpdate = (
     : {}),
   ...(typeof browserAuth.sub2apiAuth?.tokenExpiresAt === "number"
     ? { tokenExpiresAt: browserAuth.sub2apiAuth.tokenExpiresAt }
+    : {}),
+  ...(!browserAuth.sub2apiAuth?.refreshToken
+    ? { clearRefreshCredentials: true }
     : {}),
 })
 

@@ -77,7 +77,7 @@ class Sub2ApiAuthPersistence {
             },
           }
           const refreshToken = update.refreshToken?.trim()
-          if (refreshToken) {
+          if (refreshToken && !update.clearRefreshCredentials) {
             authUpdates.sub2apiAuth = {
               refreshToken,
               ...(typeof update.tokenExpiresAt === "number" &&
@@ -86,12 +86,16 @@ class Sub2ApiAuthPersistence {
                 : {}),
             }
           }
-          config.accounts[index] = applySiteAccountUpdates({
+          const updatedAccount = applySiteAccountUpdates({
             account,
             updates: authUpdates,
             now: Date.now(),
             userTimestampMode: options.userTimestampMode,
           })
+          if (update.clearRefreshCredentials) {
+            delete updatedAccount.sub2apiAuth
+          }
+          config.accounts[index] = updatedAccount
           return {
             result: { status: SUB2API_AUTH_PERSISTENCE_STATUSES.PERSISTED },
             changed: true,

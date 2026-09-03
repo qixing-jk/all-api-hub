@@ -739,6 +739,51 @@ describe("apiService sub2api refreshAccountData", () => {
     )
   })
 
+  it("recovers authentication when the today-usage request returns 401", async () => {
+    vi.mocked(fetchApi)
+      .mockResolvedValueOnce({
+        code: 0,
+        message: "ok",
+        data: { id: 1, username: "alice", balance: 2 },
+      } as any)
+      .mockRejectedValueOnce(
+        new ApiError("Unauthorized", 401, "/api/v1/usage/stats?period=today"),
+      )
+      .mockResolvedValueOnce({
+        code: 0,
+        message: "ok",
+        data: { id: 1, username: "alice", balance: 2 },
+      } as any)
+      .mockResolvedValueOnce({
+        code: 0,
+        message: "ok",
+        data: {
+          total_requests: 4,
+          total_input_tokens: 120,
+          total_output_tokens: 45,
+          total_actual_cost: 1.25,
+        },
+      } as any)
+    vi.mocked(resyncSub2ApiAuthToken).mockResolvedValueOnce({
+      accessToken: "browser-jwt",
+      userId: "1",
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
+    })
+
+    const result = await refreshAccountData(createRequest())
+
+    expect(result.success).toBe(true)
+    expect(result.data?.today_requests_count).toBe(4)
+    expect(resyncSub2ApiAuthToken).toHaveBeenCalledTimes(1)
+    expect(fetchApi).toHaveBeenCalledTimes(4)
+    expect(vi.mocked(fetchApi).mock.calls[2]?.[0].auth?.accessToken).toBe(
+      "browser-jwt",
+    )
+    expect(vi.mocked(fetchApi).mock.calls[3]?.[0].auth?.accessToken).toBe(
+      "browser-jwt",
+    )
+  })
+
   it("keeps an ordinary first account request on the default transport", async () => {
     vi.mocked(resyncSub2ApiAuthToken).mockResolvedValueOnce({
       accessToken: "old-jwt",
@@ -798,12 +843,18 @@ describe("apiService sub2api refreshAccountData", () => {
 
     const result = await refreshAccountData(
       createRequest({
+        accountId: "account-1",
         includeTodayCashflow: false,
+        sub2apiAuthSession: {
+          getLatestAuth: (...args: any[]) => mockGetLatestAuth(...args),
+          persistAuthUpdate: (...args: any[]) => mockPersistAuthUpdate(...args),
+        },
         auth: {
           authType: AuthTypeEnum.AccessToken,
           userId: "1",
           accessToken: "old-jwt",
           refreshToken: "must-not-be-submitted",
+          tokenExpiresAt: Date.now() + 3_600_000,
         },
       }),
     )
@@ -823,6 +874,42 @@ describe("apiService sub2api refreshAccountData", () => {
       },
       currentTabFallback: API_TRANSPORT_CURRENT_TAB_FALLBACK_MODES.Forbid,
     })
+    expect(vi.mocked(fetchApi).mock.calls[1]?.[0].auth).not.toHaveProperty(
+      "refreshToken",
+    )
+    expect(vi.mocked(fetchApi).mock.calls[1]?.[0].auth).not.toHaveProperty(
+      "tokenExpiresAt",
+    )
+    expect(mockPersistAuthUpdate).toHaveBeenCalledWith("account-1", {
+      accessToken: "browser-jwt",
+      clearRefreshCredentials: true,
+      expectedOrigin: "https://sub2.example.com",
+      expectedUserId: "1",
+      userId: "1",
+    })
+  })
+
+  it("skips the public today-usage request when cashflow collection is disabled", async () => {
+    await expect(
+      fetchTodayUsage({
+        baseUrl: "https://sub2.example.invalid",
+        includeTodayCashflow: false,
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          accessToken: "dashboard-jwt",
+        },
+      } as ApiServiceAccountRequest),
+    ).resolves.toMatchObject({
+      today_quota_consumption: 0,
+      todayStatsAvailability: {
+        consumption: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.NotCollected,
+        },
+      },
+    })
+
+    expect(fetchApi).not.toHaveBeenCalled()
   })
 
   it("keeps a temp-context auth recovery in the protected request context", async () => {
@@ -2820,7 +2907,7 @@ describe("apiService sub2api exported operations", () => {
         baseUrl: "https://sub2.example.com",
         auth: {
           authType: AuthTypeEnum.AccessToken,
-          accessToken: "expired-jwt",
+          accessToken: "",
           refreshToken: "stored-refresh",
           tokenExpiresAt: now - 1,
         },
@@ -2833,6 +2920,45 @@ describe("apiService sub2api exported operations", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(resyncSub2ApiAuthToken).not.toHaveBeenCalled()
     nowSpy.mockRestore()
+  })
+
+  it("recovers through the browser when refresh-token restore fails without an access token", async () => {
+    const fetchMock = vi.fn().mockRejectedValueOnce(new Error("network down"))
+    vi.stubGlobal("fetch", fetchMock as any)
+    vi.mocked(resyncSub2ApiAuthToken).mockResolvedValueOnce({
+      accessToken: "browser-recovered-jwt",
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
+    })
+    vi.mocked(fetchApi).mockResolvedValueOnce({
+      code: 0,
+      message: "ok",
+      data: {
+        id: 12,
+        username: "alice",
+        email: "alice@example.invalid",
+        balance: "1.5",
+      },
+    } as any)
+
+    await expect(
+      getOrCreateAccessToken({
+        baseUrl: "https://sub2.example.invalid",
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          accessToken: "",
+          refreshToken: "stored-refresh",
+        },
+      }),
+    ).resolves.toEqual({
+      username: "alice",
+      access_token: "browser-recovered-jwt",
+    })
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(resyncSub2ApiAuthToken).toHaveBeenCalledTimes(1)
+    expect(vi.mocked(fetchApi).mock.calls[0]?.[0].auth).not.toHaveProperty(
+      "refreshToken",
+    )
   })
 
   it("getOrCreateAccessToken falls back to browser-session re-sync when proactive refresh fails", async () => {
@@ -3619,6 +3745,48 @@ describe("apiService sub2api exported operations", () => {
     )
 
     nowSpy.mockRestore()
+  })
+
+  it("reuses newer stored auth instead of opening a browser recovery context", async () => {
+    mockGetLatestAuth
+      .mockResolvedValueOnce({
+        accessToken: "old-jwt",
+        origin: "https://sub2.example.com",
+        userId: "7",
+      })
+      .mockResolvedValueOnce({
+        accessToken: "newer-stored-jwt",
+        origin: "https://sub2.example.com",
+        userId: "7",
+      })
+    vi.mocked(fetchApi)
+      .mockRejectedValueOnce(new ApiError("Unauthorized", 401, "/api/v1/keys"))
+      .mockResolvedValueOnce({
+        code: 0,
+        message: "ok",
+        data: [],
+      } as any)
+
+    await expect(
+      fetchAccountTokens({
+        ...baseRequest,
+        accountId: "account-1",
+        sub2apiAuthSession: {
+          getLatestAuth: (...args: any[]) => mockGetLatestAuth(...args),
+          persistAuthUpdate: (...args: any[]) => mockPersistAuthUpdate(...args),
+        },
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          userId: "7",
+          accessToken: "old-jwt",
+        },
+      } as any),
+    ).resolves.toEqual([])
+
+    expect(resyncSub2ApiAuthToken).not.toHaveBeenCalled()
+    expect(vi.mocked(fetchApi).mock.calls[1]?.[0].auth?.accessToken).toBe(
+      "newer-stored-jwt",
+    )
   })
 
   it("returns login-required for key requests when a resynced JWT still gets 401", async () => {

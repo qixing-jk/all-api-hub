@@ -311,6 +311,36 @@ describe("accountStorage core behaviors", () => {
       })
     })
 
+    it("clears stale refresh credentials after access-token-only browser recovery", async () => {
+      seedStorage([
+        createAccount({
+          id: "sub2-account",
+          site_type: SITE_TYPES.SUB2API,
+          site_url: "https://auth.example.invalid",
+          account_info: { id: "user-1" } as SiteAccount["account_info"],
+          sub2apiAuth: {
+            refreshToken: "consumed-refresh-token",
+            tokenExpiresAt: 1_700_000_000_000,
+          },
+        }),
+      ])
+
+      await expect(
+        accountStorage.updateSub2ApiAuth("sub2-account", {
+          accessToken: "browser-recovered-access-token",
+          clearRefreshCredentials: true,
+          expectedOrigin: "https://auth.example.invalid",
+          expectedUserId: "user-1",
+        }),
+      ).resolves.toEqual({ status: "persisted" })
+
+      const account = await accountStorage.getAccountById("sub2-account")
+      expect(account?.account_info.access_token).toBe(
+        "browser-recovered-access-token",
+      )
+      expect(account).not.toHaveProperty("sub2apiAuth")
+    })
+
     it("returns typed non-success outcomes for deletion, identity drift, and write failure", async () => {
       await expect(
         accountStorage.updateSub2ApiAuth("missing", authUpdate, {
