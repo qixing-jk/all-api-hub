@@ -5,6 +5,7 @@ import {
   createDetectedAccountRecoveryData,
   mergeAccountAutoDetectRecoveryData,
 } from "~/services/accounts/autoDetect/recovery"
+import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
 describe("account auto-detect recovery", () => {
@@ -57,6 +58,38 @@ describe("account auto-detect recovery", () => {
     ).toEqual({
       refreshToken: "new-refresh-token",
       tokenExpiresAt: 200,
+    })
+  })
+
+  it("ignores undefined patches while preserving null as recovery data", () => {
+    expect(
+      mergeAccountAutoDetectRecoveryData(
+        {
+          username: "first-user",
+          sub2apiAuth: { refreshToken: "first-refresh-token" },
+          fetchContext: {
+            kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+            tabId: 7,
+            origin: "https://panel.example.invalid",
+          },
+          exchangeRate: 7,
+        },
+        {
+          username: undefined,
+          sub2apiAuth: undefined,
+          fetchContext: undefined,
+          exchangeRate: null,
+        },
+      ),
+    ).toEqual({
+      username: "first-user",
+      sub2apiAuth: { refreshToken: "first-refresh-token" },
+      fetchContext: {
+        kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+        tabId: 7,
+        origin: "https://panel.example.invalid",
+      },
+      exchangeRate: null,
     })
   })
 })

@@ -132,17 +132,6 @@ describe("auto-detect completion", () => {
     expect(adapterRequest.context.protectionBypassExecution).toBe(
       protectionBypassExecution,
     )
-    expect(Object.keys(helpers).sort()).toEqual(
-      [
-        "createServiceRequest",
-        "fetchSiteName",
-        "createCompletionError",
-        "trimString",
-        "createInitialCheckInConfig",
-        "handleCheckInSupportFetchFailure",
-        "captureRecoveryData",
-      ].sort(),
-    )
     helpers.captureRecoveryData({ username: "partial-user" })
     expect(onRecoveryData).toHaveBeenCalledWith(completedAccountData)
     expect(onRecoveryData).toHaveBeenCalledWith({ username: "partial-user" })

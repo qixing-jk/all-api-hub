@@ -18,6 +18,7 @@ import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/con
 import { AuthTypeEnum } from "~/types"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
+import { createDeferred } from "~~/tests/test-utils/deferred"
 
 const {
   mockAutoDetectSmart,
@@ -1818,10 +1819,10 @@ describe("accountAutoDetection", () => {
   })
 
   it("waits for a slower New API token probe before returning a site-status failure", async () => {
-    let resolveToken!: (value: {
+    const tokenDeferred = createDeferred<{
       username: string
       access_token: string
-    }) => void
+    }>()
     mockSendRuntimeMessage.mockResolvedValueOnce(null)
     mockAutoDetectSmart.mockResolvedValueOnce({
       success: true,
@@ -1830,11 +1831,7 @@ describe("accountAutoDetection", () => {
         siteType: SITE_TYPES.NEW_API,
       },
     })
-    mockGetOrCreateAccessToken.mockReturnValueOnce(
-      new Promise((resolve) => {
-        resolveToken = resolve
-      }),
-    )
+    mockGetOrCreateAccessToken.mockReturnValueOnce(tokenDeferred.promise)
     mockFetchSiteStatus.mockRejectedValueOnce(new Error("status unavailable"))
 
     const resultPromise = autoDetectAccount(
@@ -1842,8 +1839,10 @@ describe("accountAutoDetection", () => {
       AuthTypeEnum.AccessToken,
     )
 
-    await new Promise((resolve) => setTimeout(resolve, 0))
-    resolveToken({
+    await vi.waitFor(() => {
+      expect(mockGetOrCreateAccessToken).toHaveBeenCalledOnce()
+    })
+    tokenDeferred.resolve({
       username: "slower-recovered-user",
       access_token: "slower-recovered-token",
     })

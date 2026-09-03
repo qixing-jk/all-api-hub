@@ -19,11 +19,10 @@ import type { AccountAutoDetectResponse } from "~/types/serviceResponse"
 
 type AutoDetectedAccountData = NonNullable<AccountAutoDetectResponse["data"]>
 
-export interface AutoDetectRecoveryResolution {
+interface AutoDetectRecoveryResolution {
   recoveredSiteType?: AccountSiteType
   shouldAdoptSiteType: boolean
   nextSiteType: AccountSiteType
-  retainedRecoveryData: AccountAutoDetectRecoveryData | null
 }
 
 const isKnownAccountSiteType = (value: unknown): value is AccountSiteType =>
@@ -48,20 +47,10 @@ export function resolveAutoDetectRecovery(params: {
     currentSiteType === SITE_TYPES.UNKNOWN &&
     recoveredSiteType !== undefined
   const nextSiteType = shouldAdoptSiteType ? recoveredSiteType : currentSiteType
-  const retainedRecoveryData = recoveryData
-    ? {
-        ...recoveryData,
-        ...(recoveredSiteType ? { siteType: recoveredSiteType } : {}),
-      }
-    : recoveredSiteType
-      ? { siteType: recoveredSiteType }
-      : null
-
   return {
     recoveredSiteType,
     shouldAdoptSiteType,
     nextSiteType,
-    retainedRecoveryData,
   }
 }
 

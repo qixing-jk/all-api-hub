@@ -8,6 +8,7 @@
     "confirmAdd": "确认添加",
     "helpDocument": "排查指南",
     "openApiCredentialProfiles": "前往 API 凭据库",
+    "openManualAddGuide": "查看该站点的手动添加指引",
     "reloadCurrentPage": "刷新当前页面",
     "reloadExtensionAndRetry": "重新加载扩展后重试",
     "reportUnsupportedSite": "申请站点适配",
@@ -150,7 +151,6 @@
     "manualAdd": "手动添加",
     "manualInfo": "手动填写账号信息。账号将被安全地保存在本地存储中",
     "openLdohSiteList": "打开 LDOH 站点列表",
-    "openManualAddGuide": "查看该站点的手动添加指引",
     "openrouterBootstrap": "创建 OpenRouter 管理密钥",
     "openrouterBootstrapInfo": "此操作会在 OpenRouter 创建新的管理密钥，然后使用该密钥识别并补全账号信息。",
     "reDetectInfo": "如果站点信息有变化，建议点击\"重新识别\"按钮（需要在目标站点先自行登录）"

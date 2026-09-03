@@ -23,7 +23,7 @@ export interface AccountAutoDetectRecoveryData {
   fetchContext?: ApiServiceFetchContext
 }
 
-export interface DetectedAccountRecoverySource {
+interface DetectedAccountRecoverySource {
   siteType: AccountSiteType
   userId?: unknown
   user?: unknown
@@ -85,6 +85,9 @@ export function mergeAccountAutoDetectRecoveryData(
   next: AccountAutoDetectRecoveryData | undefined,
 ): AccountAutoDetectRecoveryData | undefined {
   if (!next) return current
+  const definedNext = Object.fromEntries(
+    Object.entries(next).filter(([, value]) => value !== undefined),
+  ) as AccountAutoDetectRecoveryData
   const nextSiteType =
     next.siteType && next.siteType !== SITE_TYPES.UNKNOWN
       ? next.siteType
@@ -92,10 +95,7 @@ export function mergeAccountAutoDetectRecoveryData(
 
   return {
     ...current,
-    ...next,
+    ...definedNext,
     ...(nextSiteType ? { siteType: nextSiteType } : {}),
-    ...(next.sub2apiAuth || current?.sub2apiAuth
-      ? { sub2apiAuth: next.sub2apiAuth ?? current?.sub2apiAuth }
-      : {}),
   }
 }

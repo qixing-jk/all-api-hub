@@ -8,6 +8,7 @@
     "confirmAdd": "Hinzufügen bestätigen",
     "helpDocument": "Anleitung zur Fehlerbehebung",
     "openApiCredentialProfiles": "API-Anmeldeinformationen öffnen",
+    "openManualAddGuide": "Anleitung zum manuellen Hinzufügen dieser Website öffnen",
     "reloadCurrentPage": "Aktuelle Seite neu laden",
     "reloadExtensionAndRetry": "Erweiterung neu laden und erneut versuchen",
     "reportUnsupportedSite": "Website-Unterstützung anfordern",
@@ -151,7 +152,6 @@
     "manualAdd": "Manuell hinzufügen",
     "manualInfo": "Geben Sie die Kontoinformationen manuell ein. Das Konto wird sicher im lokalen Speicher gespeichert",
     "openLdohSiteList": "LDOH-Website-Liste öffnen",
-    "openManualAddGuide": "Anleitung zum manuellen Hinzufügen dieser Website öffnen",
     "openrouterBootstrap": "OpenRouter-Verwaltungsschlüssel erstellen",
     "openrouterBootstrapInfo": "Diese Aktion erstellt einen neuen OpenRouter-Verwaltungsschlüssel und verwendet ihn dann zum Erkennen und Ausfüllen der Kontodetails.",
     "reDetectInfo": "Wenn sich die Website-Informationen ändern, wird empfohlen, auf die Schaltfläche „Erneut erkennen“ zu klicken (Sie müssen sich zuerst selbst bei der Ziel-Website anmelden)"

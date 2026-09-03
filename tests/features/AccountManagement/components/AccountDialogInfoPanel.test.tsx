@@ -2,6 +2,11 @@ import { describe, expect, it, vi } from "vitest"
 
 import { DIALOG_MODES } from "~/constants/dialogModes"
 import InfoPanel from "~/features/AccountManagement/components/AccountDialog/InfoPanel"
+import {
+  ACCOUNT_DIALOG_FORM_SOURCES,
+  ACCOUNT_DIALOG_PHASES,
+} from "~/features/AccountManagement/components/AccountDialog/models"
+import { ACCOUNT_SITE_MANUAL_ADD_GUIDE_ANCHORS } from "~/services/accountSiteDefinitions"
 import { LDOH_ORIGIN } from "~/services/integrations/ldohSiteLookup/constants"
 import { fireEvent, render, screen } from "~~/tests/test-utils/render"
 
@@ -10,8 +15,8 @@ describe("AccountDialog InfoPanel", () => {
     render(
       <InfoPanel
         mode={DIALOG_MODES.ADD}
-        phase="site-input"
-        formSource="manual"
+        phase={ACCOUNT_DIALOG_PHASES.SITE_INPUT}
+        formSource={ACCOUNT_DIALOG_FORM_SOURCES.MANUAL}
         autoDetectPresentation={{
           title: "accountDialog:infoPanel.openrouterBootstrap",
           description: "accountDialog:infoPanel.openrouterBootstrapInfo",
@@ -34,8 +39,8 @@ describe("AccountDialog InfoPanel", () => {
     render(
       <InfoPanel
         mode={DIALOG_MODES.ADD}
-        phase="site-input"
-        formSource="manual"
+        phase={ACCOUNT_DIALOG_PHASES.SITE_INPUT}
+        formSource={ACCOUNT_DIALOG_FORM_SOURCES.MANUAL}
       />,
     )
 
@@ -55,8 +60,8 @@ describe("AccountDialog InfoPanel", () => {
     render(
       <InfoPanel
         mode={DIALOG_MODES.ADD}
-        phase="site-input"
-        formSource="manual"
+        phase={ACCOUNT_DIALOG_PHASES.SITE_INPUT}
+        formSource={ACCOUNT_DIALOG_FORM_SOURCES.MANUAL}
       />,
     )
 
@@ -77,15 +82,20 @@ describe("AccountDialog InfoPanel", () => {
     render(
       <InfoPanel
         mode={DIALOG_MODES.ADD}
-        phase="account-form"
-        formSource="detected"
-        manualAddGuideAnchor="manual-new-api"
+        phase={ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM}
+        formSource={ACCOUNT_DIALOG_FORM_SOURCES.DETECTED}
+        manualAddGuideAnchor={ACCOUNT_SITE_MANUAL_ADD_GUIDE_ANCHORS.NewApi}
       />,
     )
 
     expect(
       screen.queryByRole("button", {
         name: "accountDialog:infoPanel.openLdohSiteList",
+      }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", {
+        name: "accountDialog:actions.openManualAddGuide",
       }),
     ).not.toBeInTheDocument()
   })
@@ -98,15 +108,15 @@ describe("AccountDialog InfoPanel", () => {
     render(
       <InfoPanel
         mode={DIALOG_MODES.ADD}
-        phase="account-form"
-        formSource="manual"
-        manualAddGuideAnchor="manual-new-api"
+        phase={ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM}
+        formSource={ACCOUNT_DIALOG_FORM_SOURCES.MANUAL}
+        manualAddGuideAnchor={ACCOUNT_SITE_MANUAL_ADD_GUIDE_ANCHORS.NewApi}
       />,
     )
 
     fireEvent.click(
       await screen.findByRole("button", {
-        name: "accountDialog:infoPanel.openManualAddGuide",
+        name: "accountDialog:actions.openManualAddGuide",
       }),
     )
 
@@ -122,19 +132,14 @@ describe("AccountDialog InfoPanel", () => {
     render(
       <InfoPanel
         mode={DIALOG_MODES.ADD}
-        phase="account-form"
-        formSource="manual"
+        phase={ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM}
+        formSource={ACCOUNT_DIALOG_FORM_SOURCES.MANUAL}
       />,
     )
 
     expect(
       screen.queryByRole("button", {
-        name: "accountDialog:infoPanel.openManualAddGuide",
-      }),
-    ).not.toBeInTheDocument()
-    expect(
-      screen.queryByRole("button", {
-        name: "accountDialog:infoPanel.openManualAddGuide",
+        name: "accountDialog:actions.openManualAddGuide",
       }),
     ).not.toBeInTheDocument()
   })

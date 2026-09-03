@@ -8,6 +8,7 @@
     "confirmAdd": "追加を確認",
     "helpDocument": "トラブルシューティング",
     "openApiCredentialProfiles": "API 資格情報を開く",
+    "openManualAddGuide": "このサイトの手動追加ガイドを開く",
     "reloadCurrentPage": "現在のページを再読み込み",
     "reloadExtensionAndRetry": "拡張機能を再読み込みして再試行",
     "reportUnsupportedSite": "サイト対応を申請",
@@ -150,7 +151,6 @@
     "manualAdd": "手動追加",
     "manualInfo": "アカウント情報を手動入力します。アカウントはローカルストレージに安全に保存されます",
     "openLdohSiteList": "LDOH サイト一覧を開く",
-    "openManualAddGuide": "このサイトの手動追加ガイドを開く",
     "openrouterBootstrap": "OpenRouter 管理キーを作成",
     "openrouterBootstrapInfo": "この操作は OpenRouter に新しい管理キーを作成し、そのキーを使用してアカウント情報を検出・補完します。",
     "reDetectInfo": "サイト情報が変わった場合は「再検出」ボタンを押すことを推奨します（事前に対象サイトへ自分でログインしておく必要があります）"

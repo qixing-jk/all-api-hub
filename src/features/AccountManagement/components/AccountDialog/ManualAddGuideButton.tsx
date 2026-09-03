@@ -34,7 +34,7 @@ export function ManualAddGuideButton({
       className={className}
       leftIcon={<BookOpen className="h-3.5 w-3.5" />}
     >
-      {t("infoPanel.openManualAddGuide")}
+      {t("actions.openManualAddGuide")}
     </Button>
   )
 }

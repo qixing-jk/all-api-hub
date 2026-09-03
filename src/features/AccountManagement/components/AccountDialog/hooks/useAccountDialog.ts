@@ -398,8 +398,6 @@ export function useAccountDialog({
   const [detectionError, setDetectionError] = useState<AutoDetectError | null>(
     null,
   )
-  const [autoDetectRecoveryData, setAutoDetectRecoveryData] =
-    useState<AccountAutoDetectRecoveryData | null>(null)
   const [currentTabUrl, setCurrentTabUrl] = useState<string | null>(null)
   const [isAutoConfiguring, setIsAutoConfiguring] = useState(false)
   const {
@@ -476,6 +474,7 @@ export function useAccountDialog({
   // Serializes ownership of analytics, detection UI, and popup lifecycle
   // across provider changes until the admitted workflow fully unwinds.
   const autoDetectInvocationLeaseRef = useRef<symbol | null>(null)
+  // Also invalidates stale results when a reset reuses the same URL.
   const autoDetectRunGenerationRef = useRef(0)
   const automaticExecutionPreferenceChangedRef = useRef(false)
 
@@ -543,7 +542,6 @@ export function useAccountDialog({
     (value: string) => {
       autoDetectRunGenerationRef.current += 1
       resetCheckInRedetection()
-      setAutoDetectRecoveryData(null)
       notifyOpenRouterUrlChange(value)
       selectedSiteUrlRef.current = value
       setUrl(value)
@@ -1221,7 +1219,6 @@ export function useAccountDialog({
       )
       setShowAccessToken(false)
       setDetectionError(null)
-      setAutoDetectRecoveryData(null)
       resetCheckInRedetection()
       setCurrentTabUrl(null)
       setIsAutoConfiguring(false)
@@ -2004,8 +2001,6 @@ export function useAccountDialog({
       setSiteType(recovery.recoveredSiteType)
     }
 
-    setAutoDetectRecoveryData(recovery.retainedRecoveryData)
-
     if (!recoveryData) return
 
     if (
@@ -2170,7 +2165,6 @@ export function useAccountDialog({
     }
     setIsDetecting(true)
     setDetectionError(null)
-    setAutoDetectRecoveryData(null)
     detectedCookieStoreIdRef.current = null
     const shouldTrackPopupInterruption = isExtensionPopup()
     if (shouldTrackPopupInterruption) {
@@ -2340,7 +2334,6 @@ export function useAccountDialog({
 
       const resultData = result.data
       if (resultData) {
-        setAutoDetectRecoveryData(null)
         await applyAutoDetectedData(resultData)
         analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
           insights: createAutoDetectAnalyticsInsights(result, false),
@@ -3291,7 +3284,6 @@ export function useAccountDialog({
       isSaving,
       showAccessToken,
       detectionError,
-      autoDetectRecoveryData,
       showManualForm,
       exchangeRate,
       manualBalanceUsd,

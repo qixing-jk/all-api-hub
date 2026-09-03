@@ -8,6 +8,7 @@
     "confirmAdd": "Xác nhận thêm",
     "helpDocument": "Hướng dẫn khắc phục",
     "openApiCredentialProfiles": "Mở API Credentials",
+    "openManualAddGuide": "Mở hướng dẫn thêm thủ công cho trang web này",
     "reloadCurrentPage": "Làm mới trang hiện tại",
     "reloadExtensionAndRetry": "Tải lại tiện ích rồi thử lại",
     "reportUnsupportedSite": "Yêu cầu hỗ trợ trang",
@@ -150,7 +151,6 @@
     "manualAdd": "Thêm thủ công",
     "manualInfo": "Điền thông tin tài khoản theo cách thủ công. Tài khoản sẽ được lưu trữ an toàn trong bộ nhớ cục bộ",
     "openLdohSiteList": "Mở danh sách trang web LDOH",
-    "openManualAddGuide": "Mở hướng dẫn thêm thủ công cho trang web này",
     "openrouterBootstrap": "Tạo Management Key trên OpenRouter",
     "openrouterBootstrapInfo": "Thao tác này tạo một Management Key mới trên OpenRouter, sau đó dùng khóa đó để nhận dạng và điền thông tin tài khoản.",
     "reDetectInfo": "Nếu thông tin trang web thay đổi, bạn nên nhấp vào nút \"Nhận dạng lại\" (cần tự đăng nhập vào trang web đích trước)"

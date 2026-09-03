@@ -11,12 +11,17 @@ import { BOOKMARK_IMPORT_ADD_ACCOUNT_PREFILL_SOURCE } from "~/features/AccountMa
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { AutoDetectErrorType } from "~/services/accounts/utils/autoDetectUtils"
 import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
+import type { discoverCheckInMethods } from "~/services/checkin/autoCheckin/discovery"
 import { PROTECTION_BYPASS_EXECUTION_VERSION } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum, SiteHealthStatus, type CheckInConfig } from "~/types"
+import type { AccountAutoDetectResponse } from "~/types/serviceResponse"
 import type { TurnstilePreTrigger } from "~/types/turnstile"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
+import { createDeferred } from "~~/tests/test-utils/deferred"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
+
+type CheckInDiscoveryResult = Awaited<ReturnType<typeof discoverCheckInMethods>>
 
 const {
   mockAutoDetectAccount,
@@ -157,12 +162,8 @@ describe("useAccountDialog re-detect preservation", () => {
   })
 
   it("ignores a redetection result after the requested URL changes", async () => {
-    let resolveDiscovery!: (value: unknown) => void
-    mockDiscoverCheckInMethods.mockReturnValueOnce(
-      new Promise((resolve) => {
-        resolveDiscovery = resolve
-      }),
-    )
+    const discoveryDeferred = createDeferred<CheckInDiscoveryResult>()
+    mockDiscoverCheckInMethods.mockReturnValueOnce(discoveryDeferred.promise)
     const { result } = renderHook(() =>
       useAccountDialog({
         mode: DIALOG_MODES.ADD,
@@ -185,7 +186,7 @@ describe("useAccountDialog re-detect preservation", () => {
     act(() => {
       result.current.setters.setUrl("https://second.example.invalid")
     })
-    resolveDiscovery({
+    discoveryDeferred.resolve({
       config: buildCheckInConfig({ automaticExecutionEnabled: true }),
       decision: { outcome: "resolved", methodId: "new-api:daily-checkin" },
       detections: {},
@@ -770,9 +771,18 @@ describe("useAccountDialog re-detect preservation", () => {
       existingCheckIn.automaticExecutionEnabled,
     )
 
+    const refreshAccountSpy = vi
+      .spyOn(accountStorage, "refreshAccount")
+      .mockResolvedValue({
+        account: buildSiteAccount({ id: accountId }),
+        refreshed: false,
+      })
+
     await act(async () => {
       await result.current.handlers.handleSaveAccount()
     })
+    await waitFor(() => expect(refreshAccountSpy).toHaveBeenCalledOnce())
+    refreshAccountSpy.mockRestore()
 
     const saved = await accountStorage.getAccountById(accountId)
     expect(saved?.checkIn.methodKnowledge.lastFullDiscoveryAt).toBe(200)
@@ -810,12 +820,8 @@ describe("useAccountDialog re-detect preservation", () => {
     vi.useFakeTimers()
 
     try {
-      let resolveDetect!: (value: any) => void
-      mockAutoDetectAccount.mockReturnValueOnce(
-        new Promise((resolve) => {
-          resolveDetect = resolve
-        }),
-      )
+      const detectDeferred = createDeferred<AccountAutoDetectResponse>()
+      mockAutoDetectAccount.mockReturnValueOnce(detectDeferred.promise)
 
       let detectPromise!: Promise<void>
       await act(async () => {
@@ -832,7 +838,8 @@ describe("useAccountDialog re-detect preservation", () => {
 
       expect(result.current.state.isDetectingSlow).toBe(true)
 
-      resolveDetect({
+      detectDeferred.resolve({
+        kind: "detected",
         success: true,
         message: "ok",
         data: {
@@ -842,7 +849,7 @@ describe("useAccountDialog re-detect preservation", () => {
           exchangeRate: 7,
           siteName: "Detected Site",
           siteType: "unknown",
-          checkIn: {},
+          checkIn: buildCheckInConfig(),
         },
       })
 
@@ -1087,23 +1094,14 @@ describe("useAccountDialog re-detect preservation", () => {
     expect(result.current.state.cookieAuthSessionCookie).toBe(
       "session=detected-cookie",
     )
-    expect(result.current.state.autoDetectRecoveryData).toMatchObject({
-      transientAuth: {
-        token: "temporary-dashboard-token",
-      },
-    })
     expect(result.current.state.url).toBe("https://failing.example.com")
     expect(result.current.state.isDetected).toBe(false)
     expect(result.current.state.isDetecting).toBe(false)
   })
 
   it("ignores recovery from an auto-detect request after the URL changes", async () => {
-    let resolveDetect!: (value: unknown) => void
-    mockAutoDetectAccount.mockReturnValueOnce(
-      new Promise((resolve) => {
-        resolveDetect = resolve
-      }),
-    )
+    const detectDeferred = createDeferred<AccountAutoDetectResponse>()
+    mockAutoDetectAccount.mockReturnValueOnce(detectDeferred.promise)
 
     const { result } = renderHook(() =>
       useAccountDialog({
@@ -1140,8 +1138,10 @@ describe("useAccountDialog re-detect preservation", () => {
     act(() => {
       result.current.setters.setUrl("https://second.example.invalid")
     })
-    resolveDetect({
+    detectDeferred.resolve({
+      kind: "detected",
       success: false,
+      message: "Detection incomplete",
       detailedError: {
         type: AutoDetectErrorType.INVALID_RESPONSE,
         message: "Detection incomplete",
@@ -1162,16 +1162,11 @@ describe("useAccountDialog re-detect preservation", () => {
     expect(result.current.state.detectionError).toBeNull()
     expect(result.current.state.userId).toBe("")
     expect(result.current.state.accessToken).toBe("")
-    expect(result.current.state.autoDetectRecoveryData).toBeNull()
   })
 
   it("ignores recovery from an auto-detect request after the dialog reopens", async () => {
-    let resolveDetect!: (value: unknown) => void
-    mockAutoDetectAccount.mockReturnValueOnce(
-      new Promise((resolve) => {
-        resolveDetect = resolve
-      }),
-    )
+    const detectDeferred = createDeferred<AccountAutoDetectResponse>()
+    mockAutoDetectAccount.mockReturnValueOnce(detectDeferred.promise)
 
     const prefill = {
       source: BOOKMARK_IMPORT_ADD_ACCOUNT_PREFILL_SOURCE,
@@ -1209,8 +1204,10 @@ describe("useAccountDialog re-detect preservation", () => {
     await waitFor(() => {
       expect(result.current.state.url).toBe("https://first.example.invalid")
     })
-    resolveDetect({
+    detectDeferred.resolve({
+      kind: "detected",
       success: false,
+      message: "Detection incomplete",
       detailedError: {
         type: AutoDetectErrorType.INVALID_RESPONSE,
         message: "Detection incomplete",
@@ -1230,7 +1227,6 @@ describe("useAccountDialog re-detect preservation", () => {
     expect(result.current.state.detectionError).toBeNull()
     expect(result.current.state.userId).toBe("")
     expect(result.current.state.accessToken).toBe("")
-    expect(result.current.state.autoDetectRecoveryData).toBeNull()
   })
 
   it("recovers Sub2API refresh credentials for manual completion after auto-detect fails", async () => {

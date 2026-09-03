@@ -30,6 +30,33 @@ function createModernAuthExchangeError(error: unknown): Error {
   return safeError
 }
 
+/** Normalizes the provider token payload once for recovery and final validation. */
+function normalizeTokenInfo(
+  tokenInfo: unknown,
+  siteType: AccountSiteType,
+  trimString: (value: unknown) => string,
+) {
+  const tokenData =
+    tokenInfo && typeof tokenInfo === "object"
+      ? (tokenInfo as {
+          username?: unknown
+          access_token?: unknown
+          user?: { display_name?: unknown }
+        })
+      : {}
+
+  return {
+    username:
+      trimString(tokenData.username) ||
+      // ModelFlare exposes the account label as display_name in /api/user/self.
+      // https://modelflare.dev/
+      (siteType === SITE_TYPES.MODELFLARE
+        ? trimString(tokenData.user?.display_name)
+        : ""),
+    accessToken: trimString(tokenData.access_token),
+  }
+}
+
 export const createNewApiAccountCompletion = (
   siteType: AccountSiteType,
 ): AccountCompletionCapability => ({
@@ -126,26 +153,21 @@ export const createNewApiAccountCompletion = (
     }
 
     const tokenPromise = fetchTokenInfo().then((tokenInfo) => {
-      const tokenData =
-        tokenInfo && typeof tokenInfo === "object"
-          ? (tokenInfo as {
-              username?: unknown
-              access_token?: unknown
-              user?: { display_name?: unknown }
-            })
-          : {}
-      const recoveredUsername =
-        helpers.trimString(tokenData.username) ||
-        (siteType === SITE_TYPES.MODELFLARE
-          ? helpers.trimString(tokenData.user?.display_name)
-          : "")
-      const recoveredAccessToken = helpers.trimString(tokenData.access_token)
+      const normalizedTokenInfo = normalizeTokenInfo(
+        tokenInfo,
+        siteType,
+        helpers.trimString,
+      )
       helpers.captureRecoveryData({
-        ...(recoveredUsername ? { username: recoveredUsername } : {}),
-        ...(recoveredAccessToken ? { accessToken: recoveredAccessToken } : {}),
+        ...(normalizedTokenInfo.username
+          ? { username: normalizedTokenInfo.username }
+          : {}),
+        ...(normalizedTokenInfo.accessToken
+          ? { accessToken: normalizedTokenInfo.accessToken }
+          : {}),
         authType: effectiveAuthType,
       })
-      return tokenInfo
+      return normalizedTokenInfo
     })
 
     const siteStatusPromise = accountBootstrap
@@ -209,22 +231,7 @@ export const createNewApiAccountCompletion = (
     const checkSupport = checkSupportResult.value
     const siteMetadata = siteMetadataResult.value
 
-    const tokenData =
-      tokenInfo && typeof tokenInfo === "object"
-        ? (tokenInfo as {
-            username?: unknown
-            access_token?: unknown
-            user?: { display_name?: unknown }
-          })
-        : {}
-    const username =
-      helpers.trimString(tokenData.username) ||
-      // ModelFlare leaves username empty and exposes the account label as
-      // display_name in /api/user/self: https://modelflare.dev/
-      (siteType === SITE_TYPES.MODELFLARE
-        ? helpers.trimString(tokenData.user?.display_name)
-        : "")
-    const accessToken = helpers.trimString(tokenData.access_token)
+    const { username, accessToken } = tokenInfo
 
     if (effectiveAuthType === AuthTypeEnum.AccessToken && !accessToken) {
       throw helpers.createCompletionError(

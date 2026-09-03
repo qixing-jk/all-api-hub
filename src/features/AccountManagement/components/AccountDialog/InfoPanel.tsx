@@ -97,6 +97,7 @@ export default function InfoPanel({
   const textColor = isAddMode
     ? "text-blue-700 dark:text-blue-400"
     : "text-green-700 dark:text-green-400"
+  const description = getDescription()
 
   return (
     <div className={`${bgColor} border ${borderColor} rounded-lg p-3`}>
@@ -107,10 +108,10 @@ export default function InfoPanel({
         <div className="ml-3">
           <h3 className={`text-xs font-medium ${titleColor}`}>{getTitle()}</h3>
           <div className={`mt-1 text-xs ${textColor}`}>
-            {typeof getDescription() === "string" ? (
-              <p>{getDescription()}</p>
+            {typeof description === "string" ? (
+              <p>{description}</p>
             ) : (
-              getDescription()
+              description
             )}
 
             {showLdohSiteListLink && (

@@ -6,6 +6,7 @@ import AutoDetectErrorAlert from "~/features/AccountManagement/components/Accoun
 import { DuplicateAccountWarningDialog } from "~/features/AccountManagement/components/AccountDialog/DuplicateAccountWarningDialog"
 import { ManagedSiteConfigPromptDialog } from "~/features/AccountManagement/components/AccountDialog/ManagedSiteConfigPromptDialog"
 import { AutoDetectErrorType } from "~/services/accounts/utils/autoDetectUtils"
+import { ACCOUNT_SITE_MANUAL_ADD_GUIDE_ANCHORS } from "~/services/accountSiteDefinitions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -242,17 +243,18 @@ describe("AccountDialog warnings", () => {
         }}
         siteUrl="https://relay.example.invalid"
         siteType={SITE_TYPES.NEW_API}
-        manualAddGuideAnchor="manual-new-api"
+        manualAddGuideAnchor={ACCOUNT_SITE_MANUAL_ADD_GUIDE_ANCHORS.NewApi}
       />,
     )
 
+    expect(screen.getByText("manualAddRecovery.title")).toBeInTheDocument()
     expect(
       screen.getByText("manualAddRecovery.description"),
     ).toBeInTheDocument()
 
     fireEvent.click(
       screen.getByRole("button", {
-        name: "infoPanel.openManualAddGuide",
+        name: "actions.openManualAddGuide",
       }),
     )
 

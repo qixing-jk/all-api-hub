@@ -21,7 +21,6 @@ describe("account dialog auto-detect draft mapping", () => {
       recoveredSiteType: SITE_TYPES.NEW_API,
       shouldAdoptSiteType: true,
       nextSiteType: SITE_TYPES.NEW_API,
-      retainedRecoveryData: { siteType: SITE_TYPES.NEW_API },
     })
   })
 

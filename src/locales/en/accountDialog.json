@@ -8,6 +8,7 @@
     "confirmAdd": "Confirm Add",
     "helpDocument": "Troubleshooting guide",
     "openApiCredentialProfiles": "Open API credentials",
+    "openManualAddGuide": "Open this site's manual addition guide",
     "reloadCurrentPage": "Reload current page",
     "reloadExtensionAndRetry": "Reload extension and retry",
     "reportUnsupportedSite": "Request site support",
@@ -151,7 +152,6 @@
     "manualAdd": "Manual Add",
     "manualInfo": "Manually fill in the account information. The account will be saved securely in local storage",
     "openLdohSiteList": "Open LDOH site list",
-    "openManualAddGuide": "Open this site's manual addition guide",
     "openrouterBootstrap": "Create an OpenRouter Management Key",
     "openrouterBootstrapInfo": "This action creates a new Management Key in OpenRouter, then uses it to detect and fill in the account details.",
     "reDetectInfo": "If the site information changes, it is recommended to click the 'Re-detect' button (you need to log in to the target site first by yourself)"

@@ -714,8 +714,7 @@ describe("AccountDialog", () => {
     expect(handleOpenBookmarkImport).toHaveBeenCalledTimes(1)
   })
 
-  it("opens API credential profiles and closes from auto-detect fallback guidance", async () => {
-    const user = userEvent.setup()
+  it("exposes manual recovery guidance for a documented site type", () => {
     mockState.phase = ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM
     mockState.formSource = ACCOUNT_DIALOG_FORM_SOURCES.MANUAL
     mockState.siteType = SITE_TYPES.NEW_API
@@ -739,13 +738,38 @@ describe("AccountDialog", () => {
       screen.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.autoDetectErrorMessage),
     ).toHaveTextContent("Detection returned unexpected data")
     expect(
+      screen.getByText("accountDialog:manualAddRecovery.title"),
+    ).toBeVisible()
+    expect(
       screen.getByText("accountDialog:manualAddRecovery.description"),
     ).toBeVisible()
     expect(
       screen.getByRole("button", {
-        name: "accountDialog:infoPanel.openManualAddGuide",
+        name: "accountDialog:actions.openManualAddGuide",
       }),
     ).toBeVisible()
+  })
+
+  it("opens API credential profiles and closes from auto-detect fallback guidance", async () => {
+    const user = userEvent.setup()
+    mockState.phase = ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM
+    mockState.formSource = ACCOUNT_DIALOG_FORM_SOURCES.MANUAL
+    mockState.siteType = SITE_TYPES.NEW_API
+    mockState.draft.siteType = SITE_TYPES.NEW_API
+    mockState.detectionError = {
+      type: AutoDetectErrorType.INVALID_RESPONSE,
+      message: "Detection returned unexpected data",
+    }
+
+    render(
+      <AccountDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        mode={DIALOG_MODES.ADD}
+        onSuccess={vi.fn()}
+        onError={vi.fn()}
+      />,
+    )
 
     await user.click(
       screen.getByRole("button", {

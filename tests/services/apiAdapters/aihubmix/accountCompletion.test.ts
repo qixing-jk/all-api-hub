@@ -1,19 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import {
-  AUTO_DETECT_FAILURE_REASONS,
-  type AutoDetectFailureReason,
-} from "~/constants/autoDetect"
+import { AUTO_DETECT_FAILURE_REASONS } from "~/constants/autoDetect"
 import { SITE_TYPES } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
-import { AutoDetectCompletionError } from "~/services/accounts/autoDetectCompletion/types"
 import { aihubmixAccountCompletion } from "~/services/apiAdapters/aihubmix/accountCompletion"
-import type { AccountCompletionHelpers } from "~/services/apiAdapters/contracts/accountCompletion"
 import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
 import {
-  createAccountCompletionCheckInConfigMock,
+  createAccountCompletionHelpersMock,
   createCheckInConfig,
 } from "../checkInFixtures"
 
@@ -48,51 +43,14 @@ const currentTabFetchContext = {
   origin: "https://aihubmix.com",
 }
 
-const createServiceRequest = vi.fn(
-  ({
-    baseUrl,
-    auth,
-    context,
-  }: Parameters<AccountCompletionHelpers["createServiceRequest"]>[0]) => ({
-    baseUrl,
-    auth,
-    ...(context.fetchContext ? { fetchContext: context.fetchContext } : {}),
-  }),
-)
-
-const fetchSiteName = vi.fn(async (siteStatus) =>
-  typeof siteStatus?.system_name === "string" && siteStatus.system_name.trim()
-    ? siteStatus.system_name.trim()
-    : "Example API",
-)
-
-const createCompletionError = vi.fn(
-  (reason: AutoDetectFailureReason, cause: unknown) =>
-    new AutoDetectCompletionError(reason, cause),
-)
-
-const trimString = vi.fn((value: unknown) =>
-  typeof value === "string" ? value.trim() : "",
-)
-
-const createInitialCheckInConfig = createAccountCompletionCheckInConfigMock(
-  SITE_TYPES.AIHUBMIX,
-  {
-    automaticExecutionEnabled: false,
-  },
-)
-
-const handleCheckInSupportFetchFailure = vi.fn(() => false as const)
-
-const helpers = {
-  createServiceRequest,
-  fetchSiteName,
+const {
+  helpers,
   createCompletionError,
-  trimString,
   createInitialCheckInConfig,
   handleCheckInSupportFetchFailure,
-  captureRecoveryData: vi.fn(),
-} satisfies AccountCompletionHelpers
+} = createAccountCompletionHelpersMock(SITE_TYPES.AIHUBMIX, {
+  automaticExecutionEnabled: false,
+})
 
 describe("aihubmixAccountCompletion", () => {
   beforeEach(() => {
