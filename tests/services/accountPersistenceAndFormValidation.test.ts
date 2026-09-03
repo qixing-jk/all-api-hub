@@ -592,9 +592,10 @@ describe("account persistence and form validation", () => {
       )
     })
 
-    it("rejects blank, negative, and non-finite manual balances", () => {
+    it("rejects blank, malformed, negative, and non-finite manual balances", () => {
       expect(parseManualQuotaFromUsd(undefined)).toBeUndefined()
       expect(parseManualQuotaFromUsd("   ")).toBeUndefined()
+      expect(parseManualQuotaFromUsd("10usd")).toBeUndefined()
       expect(parseManualQuotaFromUsd("-1")).toBeUndefined()
       expect(parseManualQuotaFromUsd("Infinity")).toBeUndefined()
     })

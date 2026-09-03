@@ -15,7 +15,7 @@ export function parseManualQuotaFromUsd(
   const trimmed = value.trim()
   if (!trimmed) return undefined
 
-  const amount = Number.parseFloat(trimmed)
+  const amount = Number(trimmed)
   if (!Number.isFinite(amount) || amount < 0) return undefined
 
   return Math.round(amount * UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR)

@@ -210,7 +210,7 @@ export async function autoDetectAccount(
     }
 
     const completed = await completeAutoDetectedAccount({
-      url,
+      url: normalizedUrl,
       requestedAuthType: authType,
       cookieAuthSessionCookie,
       detected: detectResult.data,

@@ -433,6 +433,35 @@ describe("accountAutoDetection", () => {
     )
   })
 
+  it("uses the trimmed URL throughout successful detection completion", async () => {
+    mockSendRuntimeMessage.mockResolvedValueOnce(null)
+    mockAutoDetectSmart.mockResolvedValueOnce({
+      success: true,
+      data: {
+        userId: "1",
+        user: { id: 1, username: "user" },
+        siteType: SITE_TYPES.SUB2API,
+        accessToken: "access-token-placeholder",
+      },
+    })
+    mockFetchSiteStatus.mockResolvedValueOnce(null)
+    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
+
+    const result = await autoDetectAccount(
+      "  https://sub2.example.com  ",
+      AuthTypeEnum.AccessToken,
+    )
+
+    expect(result.success).toBe(true)
+    expect(mockAutoDetectSmart).toHaveBeenCalledWith(
+      "https://sub2.example.com",
+      undefined,
+    )
+    expect(mockFetchSiteStatus).toHaveBeenCalledWith(
+      expect.objectContaining({ baseUrl: "https://sub2.example.com" }),
+    )
+  })
+
   it("returns Sub2API result with default exchange rate and empty username", async () => {
     const protectionBypassExecution = userCommandExecution(
       PROTECTION_BYPASS_USER_COMMANDS.DetectAccount,
