@@ -9,13 +9,17 @@ import {
   fetchGroups,
   fetchRemoteModels,
   fetchSiteUserGroups,
+  getChannel,
   listChannels,
   OctopusMutationApiError,
   searchChannels,
   updateChannel,
   validateOctopusConfig,
 } from "~/services/apiService/octopus"
-import { OCTOPUS_AUTH_MODES } from "~/services/apiService/octopus/auth"
+import {
+  OCTOPUS_AUTH_MODES,
+  OCTOPUS_COOKIE_API_VERSIONS,
+} from "~/services/apiService/octopus/auth"
 import {
   createAutomaticProtectionBypassExecution,
   PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
@@ -99,6 +103,68 @@ describe("Octopus API service", () => {
     model: "model-a",
     proxy: false,
     auto_sync: true,
+    ...overrides,
+  })
+
+  const v013ChannelDetailResponse = (
+    overrides: Record<string, unknown> = {},
+  ): Record<string, unknown> => ({
+    id: 7,
+    name: "V0.13 channel",
+    dialect: "generic",
+    enabled: true,
+    base_url: "https://upstream.example.invalid",
+    openai_chat_completion_path: "/v1/chat/completions",
+    openai_response_path: "/v1/responses",
+    anthropic_message_path: "/v1/messages",
+    keys: [{ name: "default", key: "credential-placeholder", enabled: true }],
+    models: ["model-a"],
+    grants: [{ model_name: "model-a", key_name: "default", protocols: 2 }],
+    proxy: false,
+    custom_header: [],
+    param_override: "",
+    channel_proxy: "",
+    match_regex: "",
+    ...overrides,
+  })
+
+  const v013ChannelStatsResponse = (
+    overrides: Record<string, unknown> = {},
+  ): Record<string, unknown> => ({
+    channel_id: 7,
+    channel_name: "V0.13 channel",
+    enabled: true,
+    models: [
+      {
+        model_id: 11,
+        model_name: "model-a",
+        input_token: 6,
+        output_token: 3,
+        input_cost: 0.15,
+        output_cost: 0.3,
+        wait_time: 1,
+        request_success: 2,
+        request_failed: 0,
+      },
+      {
+        model_id: 12,
+        model_name: "model-b",
+        input_token: 4,
+        output_token: 1,
+        input_cost: 0.1,
+        output_cost: 0.2,
+        wait_time: 0.5,
+        request_success: 1,
+        request_failed: 1,
+      },
+    ],
+    input_token: 10,
+    output_token: 4,
+    input_cost: 0.25,
+    output_cost: 0.5,
+    wait_time: 1.5,
+    request_success: 3,
+    request_failed: 1,
     ...overrides,
   })
 
@@ -258,6 +324,224 @@ describe("Octopus API service", () => {
     expect(request.fetchUrl).toBe(
       "https://octopus.example.com/api/v1/channel/list",
     )
+  })
+
+  it("uses Octopus v0.13 stats as channel summaries without loading detail", async () => {
+    const session = {
+      mode: OCTOPUS_AUTH_MODES.Cookie,
+      expireAt: 1_700_000_900_000,
+      confirmed: false,
+    } as const
+    mockGetValidSession.mockResolvedValue(session)
+    mockTempWindowOctopusApiFetch
+      .mockResolvedValueOnce({
+        success: false,
+        status: 404,
+        error: "404 page not found",
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        status: 200,
+        data: { code: 200, data: [v013ChannelStatsResponse()] },
+      })
+
+    await expect(listChannels(config)).resolves.toEqual([
+      expect.objectContaining({
+        id: 7,
+        name: "V0.13 channel",
+        type: OctopusOutboundType.OpenAIChat,
+        base_urls: [],
+        keys: [],
+        model: "model-a,model-b",
+        auto_group: OctopusAutoGroupType.None,
+        stats: {
+          channel_id: 7,
+          input_token: 10,
+          output_token: 4,
+          input_cost: 0.25,
+          output_cost: 0.5,
+          wait_time: 1.5,
+          request_success: 3,
+          request_failed: 1,
+        },
+      }),
+    ])
+
+    expect(
+      mockTempWindowOctopusApiFetch.mock.calls.map(
+        ([request]) => new URL(request.fetchUrl).pathname,
+      ),
+    ).toEqual(["/api/v1/channel/list", "/api/v1/channel/stats"])
+  })
+
+  it("loads one Octopus v0.13 channel detail only when explicitly requested", async () => {
+    mockGetValidSession.mockResolvedValue({
+      mode: OCTOPUS_AUTH_MODES.Cookie,
+      expireAt: 1_700_000_900_000,
+      confirmed: true,
+      apiVersion: OCTOPUS_COOKIE_API_VERSIONS.V013,
+    })
+    mockTempWindowOctopusApiFetch.mockResolvedValueOnce({
+      success: true,
+      status: 200,
+      data: { code: 200, data: v013ChannelDetailResponse() },
+    })
+
+    await expect(getChannel(config, 7)).resolves.toEqual(
+      expect.objectContaining({
+        id: 7,
+        name: "V0.13 channel",
+        base_urls: [{ url: "https://upstream.example.invalid" }],
+        keys: [{ enabled: true, channel_key: "credential-placeholder" }],
+        model: "model-a",
+      }),
+    )
+    expect(
+      mockTempWindowOctopusApiFetch.mock.calls.map(
+        ([request]) => new URL(request.fetchUrl).pathname,
+      ),
+    ).toEqual(["/api/v1/channel/detail/7"])
+  })
+
+  it("encodes Octopus v0.13 channel creation after a harmless contract probe", async () => {
+    const session = {
+      mode: OCTOPUS_AUTH_MODES.Cookie,
+      expireAt: 1_700_000_900_000,
+      confirmed: false,
+    }
+    mockGetValidSession.mockResolvedValue(session)
+    mockTempWindowOctopusApiFetch
+      .mockResolvedValueOnce({
+        success: false,
+        status: 404,
+        error: "404 page not found",
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        status: 200,
+        data: { code: 200, data: [] },
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        status: 200,
+        data: { code: 200, data: v013ChannelDetailResponse() },
+      })
+
+    await expect(
+      createChannel(config, {
+        name: "V0.13 channel",
+        type: OctopusOutboundType.OpenAIChat,
+        enabled: true,
+        baseUrl: "https://upstream.example.invalid",
+        key: "credential-placeholder",
+        model: "model-a",
+      }),
+    ).resolves.toMatchObject({
+      success: true,
+      data: { id: 7, name: "V0.13 channel" },
+    })
+
+    expect(
+      mockTempWindowOctopusApiFetch.mock.calls.map(
+        ([request]) => new URL(request.fetchUrl).pathname,
+      ),
+    ).toEqual([
+      "/api/v1/channel/list",
+      "/api/v1/channel/stats",
+      "/api/v1/channel/create",
+    ])
+    expect(
+      JSON.parse(
+        mockTempWindowOctopusApiFetch.mock.calls[2][0].fetchOptions.body,
+      ),
+    ).toEqual({
+      id: 0,
+      name: "V0.13 channel",
+      dialect: "generic",
+      enabled: true,
+      base_url: "https://upstream.example.invalid",
+      openai_chat_completion_path: "/v1/chat/completions",
+      openai_response_path: "/v1/responses",
+      anthropic_message_path: "/v1/messages",
+      keys: [{ name: "default", key: "credential-placeholder", enabled: true }],
+      models: ["model-a"],
+      grants: [{ model_name: "model-a", key_name: "default", protocols: 2 }],
+      proxy: false,
+      custom_header: [],
+      param_override: "",
+      channel_proxy: "",
+      match_regex: "",
+    })
+  })
+
+  it("preserves Octopus v0.13 detail fields while applying a partial update", async () => {
+    const existing = v013ChannelDetailResponse({
+      keys: [
+        { name: "default", key: "credential-placeholder", enabled: true },
+        { name: "backup", key: "credential-backup", enabled: false },
+      ],
+      custom_header: [{ header_key: "x-example", header_value: "preserve" }],
+      channel_proxy: "http://proxy.example.invalid:8080",
+    })
+    const updated = {
+      ...existing,
+      name: "Updated v0.13 channel",
+      models: ["model-a", "model-b"],
+      grants: [
+        { model_name: "model-a", key_name: "default", protocols: 2 },
+        { model_name: "model-b", key_name: "default", protocols: 2 },
+      ],
+    }
+    mockGetValidSession.mockResolvedValue({
+      mode: OCTOPUS_AUTH_MODES.Cookie,
+      expireAt: 1_700_000_900_000,
+      confirmed: false,
+    })
+    mockTempWindowOctopusApiFetch
+      .mockResolvedValueOnce({ success: false, status: 404 })
+      .mockResolvedValueOnce({
+        success: true,
+        status: 200,
+        data: { code: 200, data: [] },
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        status: 200,
+        data: { code: 200, data: existing },
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        status: 200,
+        data: { code: 200, data: updated },
+      })
+
+    await expect(
+      updateChannel(config, {
+        id: 7,
+        name: "Updated v0.13 channel",
+        type: OctopusOutboundType.OpenAIChat,
+        model: "model-a,model-b",
+      }),
+    ).resolves.toMatchObject({
+      success: true,
+      data: { id: 7, name: "Updated v0.13 channel", model: "model-a,model-b" },
+    })
+
+    expect(
+      mockTempWindowOctopusApiFetch.mock.calls.map(
+        ([request]) => new URL(request.fetchUrl).pathname,
+      ),
+    ).toEqual([
+      "/api/v1/channel/list",
+      "/api/v1/channel/stats",
+      "/api/v1/channel/detail/7",
+      "/api/v1/channel/update",
+    ])
+    expect(
+      JSON.parse(
+        mockTempWindowOctopusApiFetch.mock.calls[3][0].fetchOptions.body,
+      ),
+    ).toEqual(updated)
   })
 
   it("validates cookie configurations through a protected channel read", async () => {

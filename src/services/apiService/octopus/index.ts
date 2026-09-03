@@ -34,6 +34,7 @@ import { normalizeBaseUrl } from "~/utils/core/url"
 
 import {
   OCTOPUS_AUTH_MODES,
+  OCTOPUS_COOKIE_API_VERSIONS,
   octopusAuthManager,
   type OctopusAuthSession,
 } from "./auth"
@@ -42,6 +43,7 @@ import { legacyOctopusContract } from "./legacy"
 import { OCTOPUS_API_OPERATIONS, type OctopusApiOperation } from "./operations"
 import { tempWindowOctopusApiFetch } from "./tempContextClient"
 import { buildOctopusAuthHeaders } from "./utils"
+import { octopusV013Contract } from "./v013"
 
 const logger = createLogger("OctopusAPI")
 
@@ -203,6 +205,167 @@ const parseOctopusEnvelope = (
   return data as Record<string, unknown>
 }
 
+const getOctopusEnvelopeData = (endpoint: string, data: unknown): unknown => {
+  const envelope = parseOctopusEnvelope(endpoint, data)
+  if (
+    envelope.success === false ||
+    (envelope.code !== undefined && envelope.code !== 200)
+  ) {
+    throw new Error(
+      typeof envelope.message === "string"
+        ? envelope.message
+        : "API request failed",
+    )
+  }
+  return envelope.data
+}
+
+const fetchOctopusV013Channels = async (params: {
+  config: OctopusConfig
+  session: Extract<OctopusAuthSession, { mode: "cookie" }>
+  baseUrl: string
+  signal?: AbortSignal
+  protectionBypassExecution?: ProtectionBypassExecution
+  resourceBinding?: OctopusApiResourceBinding
+}): Promise<OctopusChannel[]> => {
+  const request = async (endpoint: string) => {
+    const remote = await fetchOctopusCookieApi({
+      config: params.config,
+      session: params.session,
+      baseUrl: params.baseUrl,
+      endpoint,
+      fetchOptions: params.signal ? { signal: params.signal } : {},
+      protectionBypassExecution: params.protectionBypassExecution,
+      resourceBinding: params.resourceBinding,
+    })
+    if (!remote.success) {
+      throw new Error(
+        remote.status
+          ? "HTTP " +
+            remote.status +
+            ": " +
+            (remote.error || "Octopus request failed")
+          : remote.error || "Octopus request failed",
+      )
+    }
+    return getOctopusEnvelopeData(endpoint, remote.data)
+  }
+
+  return octopusV013Contract
+    .parseStatsList(await request(octopusV013Contract.statsEndpoint))
+    .map(octopusV013Contract.normalizeStatsChannel)
+}
+
+const fetchOctopusV013ChannelDetail = async (params: {
+  config: OctopusConfig
+  session: Extract<OctopusAuthSession, { mode: "cookie" }>
+  baseUrl: string
+  channelId: number
+  signal?: AbortSignal
+  protectionBypassExecution?: ProtectionBypassExecution
+  resourceBinding?: OctopusApiResourceBinding
+}): Promise<OctopusChannel> => {
+  const endpoint = octopusV013Contract.detailEndpoint(params.channelId)
+  const remote = await fetchOctopusCookieApi({
+    config: params.config,
+    session: params.session,
+    baseUrl: params.baseUrl,
+    endpoint,
+    fetchOptions: params.signal ? { signal: params.signal } : {},
+    protectionBypassExecution: params.protectionBypassExecution,
+    resourceBinding: params.resourceBinding,
+  })
+  if (!remote.success) {
+    throw new Error(
+      remote.status
+        ? "HTTP " +
+          remote.status +
+          ": " +
+          (remote.error || "Octopus request failed")
+        : remote.error || "Octopus request failed",
+    )
+  }
+  return octopusV013Contract.normalizeChannel(
+    getOctopusEnvelopeData(endpoint, remote.data),
+  )
+}
+
+const resolveOctopusCookieApiVersion = async (params: {
+  config: OctopusConfig
+  session: Extract<OctopusAuthSession, { mode: "cookie" }>
+  baseUrl: string
+  signal?: AbortSignal
+  protectionBypassExecution?: ProtectionBypassExecution
+  resourceBinding?: OctopusApiResourceBinding
+}) => {
+  if (params.session.apiVersion) return params.session.apiVersion
+
+  const probeOperation: OctopusApiOperation = {
+    kind: OCTOPUS_API_OPERATIONS.ListChannels,
+  }
+  const probeRequest = currentOctopusContract.createRequest(
+    probeOperation,
+    params.signal ? { signal: params.signal } : {},
+  )
+  const probe = await fetchOctopusCookieApi({
+    config: params.config,
+    session: params.session,
+    baseUrl: params.baseUrl,
+    endpoint: probeRequest.endpoint,
+    fetchOptions: probeRequest.init,
+    protectionBypassExecution: params.protectionBypassExecution,
+    resourceBinding: params.resourceBinding,
+  })
+
+  if (probe.success) {
+    currentOctopusContract.normalizeResponse(
+      probeOperation,
+      getOctopusEnvelopeData(probeRequest.endpoint, probe.data),
+    )
+    params.session.apiVersion = OCTOPUS_COOKIE_API_VERSIONS.V012
+    params.session.confirmed = true
+    return params.session.apiVersion
+  }
+
+  if (probe.status !== 404) {
+    throw new Error(
+      probe.status
+        ? "HTTP " +
+          probe.status +
+          ": " +
+          (probe.error || "Octopus session confirmation failed")
+        : probe.error || "Octopus session confirmation failed",
+    )
+  }
+
+  const statsEndpoint = octopusV013Contract.statsEndpoint
+  const statsProbe = await fetchOctopusCookieApi({
+    config: params.config,
+    session: params.session,
+    baseUrl: params.baseUrl,
+    endpoint: statsEndpoint,
+    fetchOptions: params.signal ? { signal: params.signal } : {},
+    protectionBypassExecution: params.protectionBypassExecution,
+    resourceBinding: params.resourceBinding,
+  })
+  if (!statsProbe.success) {
+    throw new Error(
+      statsProbe.status
+        ? "HTTP " +
+          statsProbe.status +
+          ": " +
+          (statsProbe.error || "Octopus session confirmation failed")
+        : statsProbe.error || "Octopus session confirmation failed",
+    )
+  }
+  octopusV013Contract.parseStatsList(
+    getOctopusEnvelopeData(statsEndpoint, statsProbe.data),
+  )
+  params.session.apiVersion = OCTOPUS_COOKIE_API_VERSIONS.V013
+  params.session.confirmed = true
+  return params.session.apiVersion
+}
+
 /**
  * 执行 Octopus API 请求
  */
@@ -229,11 +392,85 @@ async function fetchOctopusApi<T>(
 
     const { protectionBypassExecution, resourceBinding, ...fetchOptions } =
       options
+    if (
+      session.mode === OCTOPUS_AUTH_MODES.Cookie &&
+      session.apiVersion === OCTOPUS_COOKIE_API_VERSIONS.V013 &&
+      operation.kind === OCTOPUS_API_OPERATIONS.ListChannels
+    ) {
+      const channels = await fetchOctopusV013Channels({
+        config,
+        session,
+        baseUrl,
+        signal,
+        protectionBypassExecution: options.protectionBypassExecution,
+        resourceBinding: options.resourceBinding,
+      })
+      session.confirmed = true
+      return { success: true, data: channels as T, message: "success" }
+    }
+
+    if (
+      session.mode === OCTOPUS_AUTH_MODES.Cookie &&
+      session.confirmed === false &&
+      (isMutation ||
+        operation.kind === OCTOPUS_API_OPERATIONS.FetchRemoteModels)
+    ) {
+      await resolveOctopusCookieApiVersion({
+        config,
+        session,
+        baseUrl,
+        signal,
+        protectionBypassExecution,
+        resourceBinding,
+      })
+    }
+
+    const usesV013Contract =
+      session.mode === OCTOPUS_AUTH_MODES.Cookie &&
+      session.apiVersion === OCTOPUS_COOKIE_API_VERSIONS.V013
+    let existingV013Detail
+    if (
+      usesV013Contract &&
+      operation.kind === OCTOPUS_API_OPERATIONS.UpdateChannel
+    ) {
+      const detailEndpoint = octopusV013Contract.detailEndpoint(
+        operation.input.id,
+      )
+      const detailResponse = await fetchOctopusCookieApi({
+        config,
+        session,
+        baseUrl,
+        endpoint: detailEndpoint,
+        fetchOptions: signal ? { signal } : {},
+        protectionBypassExecution,
+        resourceBinding,
+      })
+      if (!detailResponse.success) {
+        throw new Error(
+          detailResponse.status
+            ? "HTTP " +
+              detailResponse.status +
+              ": " +
+              (detailResponse.error || "Octopus request failed")
+            : detailResponse.error || "Octopus request failed",
+        )
+      }
+      existingV013Detail = octopusV013Contract.parseDetail(
+        getOctopusEnvelopeData(detailEndpoint, detailResponse.data),
+      )
+    }
+
     const contract =
-      session.mode === OCTOPUS_AUTH_MODES.Cookie
-        ? currentOctopusContract
-        : legacyOctopusContract
-    const nativeRequest = contract.createRequest(operation, fetchOptions)
+      session.mode === OCTOPUS_AUTH_MODES.Bearer
+        ? legacyOctopusContract
+        : currentOctopusContract
+    const nativeRequest = usesV013Contract
+      ? octopusV013Contract.createRequest(
+          operation,
+          fetchOptions,
+          existingV013Detail,
+        )
+      : contract.createRequest(operation, fetchOptions)
     const { endpoint } = nativeRequest
     let data: unknown
 
@@ -303,6 +540,22 @@ async function fetchOctopusApi<T>(
         remote.status !== undefined
       responseStatus = remote.status
       if (!remote.success) {
+        if (
+          operation.kind === OCTOPUS_API_OPERATIONS.ListChannels &&
+          remote.status === 404
+        ) {
+          const channels = await fetchOctopusV013Channels({
+            config,
+            session,
+            baseUrl,
+            signal,
+            protectionBypassExecution,
+            resourceBinding,
+          })
+          session.apiVersion = OCTOPUS_COOKIE_API_VERSIONS.V013
+          session.confirmed = true
+          return { success: true, data: channels as T, message: "success" }
+        }
         throw new Error(
           remote.status
             ? `HTTP ${remote.status}: ${remote.error || "Octopus request failed"}`
@@ -310,6 +563,9 @@ async function fetchOctopusApi<T>(
         )
       }
       data = remote.data
+      if (operation.kind === OCTOPUS_API_OPERATIONS.ListChannels) {
+        session.apiVersion = OCTOPUS_COOKIE_API_VERSIONS.V012
+      }
       session.confirmed = true
     } else {
       fetchStarted = true
@@ -399,10 +655,9 @@ async function fetchOctopusApi<T>(
       throw new Error(message)
     }
 
-    const normalizedData = contract.normalizeResponse(
-      operation,
-      responseData.data,
-    )
+    const normalizedData = usesV013Contract
+      ? octopusV013Contract.normalizeResponse(operation, responseData.data)
+      : contract.normalizeResponse(operation, responseData.data)
     return {
       success: true,
       data: (normalizedData as T | undefined) ?? null,
@@ -444,6 +699,50 @@ export async function listChannels(
     logger.error("Failed to list channels", error)
     throw error
   }
+}
+
+/** Loads one full channel configuration for editing. */
+export async function getChannel(
+  config: OctopusConfig,
+  channelId: number,
+  options?: Pick<
+    OctopusRequestInit,
+    "signal" | "protectionBypassExecution" | "resourceBinding"
+  >,
+): Promise<OctopusChannel> {
+  const signal = options?.signal ?? undefined
+  const session = await octopusAuthManager.getValidSession(config, { signal })
+  const loadV013Detail = (
+    cookieSession: Extract<OctopusAuthSession, { mode: "cookie" }>,
+  ) =>
+    fetchOctopusV013ChannelDetail({
+      config,
+      session: cookieSession,
+      baseUrl: normalizeBaseUrl(config.baseUrl),
+      channelId,
+      signal,
+      protectionBypassExecution: options?.protectionBypassExecution,
+      resourceBinding: options?.resourceBinding,
+    })
+
+  if (
+    session.mode === OCTOPUS_AUTH_MODES.Cookie &&
+    session.apiVersion === OCTOPUS_COOKIE_API_VERSIONS.V013
+  ) {
+    return await loadV013Detail(session)
+  }
+
+  const channels = await listChannels(config, options)
+  if (
+    session.mode === OCTOPUS_AUTH_MODES.Cookie &&
+    session.apiVersion === OCTOPUS_COOKIE_API_VERSIONS.V013
+  ) {
+    return await loadV013Detail(session)
+  }
+
+  const channel = channels.find((item) => item.id === channelId)
+  if (!channel) throw new Error(`Channel ${channelId} was not found`)
+  return channel
 }
 
 /** Validates both authentication and a harmless protected Octopus read. */

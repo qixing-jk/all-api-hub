@@ -12,6 +12,7 @@ import {
   deleteChannel as deleteOctopusChannel,
   fetchGroups,
   fetchAvailableModels as fetchOctopusAvailableModels,
+  getChannel,
   listChannels,
   OctopusMutationApiError,
   searchChannels,
@@ -374,14 +375,7 @@ const findOctopusChannelByRef = async (
 ): Promise<OctopusChannel> => {
   assertOctopusResourceRef(config, ref)
 
-  const channels = await listChannels(config)
-  const channel = channels.find((item) => String(item.id) === ref.resourceId)
-
-  if (!channel) {
-    throw new Error(`Channel ${ref.resourceId} was not found`)
-  }
-
-  return channel
+  return await getChannel(config, Number(ref.resourceId))
 }
 
 const prepareOctopusEditDraft = (

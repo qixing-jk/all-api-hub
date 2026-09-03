@@ -62,6 +62,7 @@ const octopusApi = vi.hoisted(() => {
 
   return {
     OctopusMutationApiError,
+    getChannel: vi.fn(),
     listChannels: vi.fn(),
     searchChannels: vi.fn(),
     createChannel: vi.fn(),
@@ -914,7 +915,7 @@ describe("Octopus managed-site channel capability", () => {
   })
 
   it("loads Octopus detail from native channel data and prepares channel-worded edit drafts", async () => {
-    octopusApi.listChannels.mockResolvedValue([octopusChannel])
+    octopusApi.getChannel.mockResolvedValue(octopusChannel)
     const { octopusManagedSiteCapabilities } = await import(
       "~/services/apiAdapters/managedSites/octopus"
     )
@@ -957,6 +958,7 @@ describe("Octopus managed-site channel capability", () => {
       weight: 0,
       status: 1,
     })
+    expect(octopusApi.getChannel).toHaveBeenCalledWith(config, 7)
   })
 
   it("rejects stale Octopus resource refs from a different site or scope before native access", async () => {
@@ -979,7 +981,7 @@ describe("Octopus managed-site channel capability", () => {
       }),
     ).rejects.toThrow("Resource reference does not match this managed site")
 
-    expect(octopusApi.listChannels).not.toHaveBeenCalled()
+    expect(octopusApi.getChannel).not.toHaveBeenCalled()
     expect(octopusApi.deleteChannel).not.toHaveBeenCalled()
   })
 

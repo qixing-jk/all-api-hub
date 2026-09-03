@@ -587,6 +587,16 @@ describe("protection bypass runtime contracts", () => {
     ["unowned endpoint", "https://example.invalid/api/v1/user/list", "GET"],
     ["wrong method", "https://example.invalid/api/v1/channel/create", "GET"],
     [
+      "invalid channel detail ID",
+      "https://example.invalid/api/v1/channel/detail/0",
+      "GET",
+    ],
+    [
+      "wrong channel detail method",
+      "https://example.invalid/api/v1/channel/detail/7",
+      "POST",
+    ],
+    [
       "query authority",
       "https://example.invalid/api/v1/channel/list?target=other",
       "GET",
@@ -628,6 +638,8 @@ describe("protection bypass runtime contracts", () => {
 
   it.each([
     ["channel list", "/api/v1/channel/list", "GET"],
+    ["channel stats", "/api/v1/channel/stats", "GET"],
+    ["channel detail", "/api/v1/channel/detail/7", "GET"],
     ["cookie login", "/api/v1/user/login", "POST"],
   ])("allows Octopus configuration-test %s", (_case, pathname, method) => {
     expect(
