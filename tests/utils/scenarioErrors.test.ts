@@ -2,8 +2,31 @@ import { describe, expect, it } from "vitest"
 
 import {
   collectCleanupError,
+  runScenarioWithCleanup,
   throwScenarioError,
 } from "~~/e2e/utils/scenarioErrors"
+
+describe("runScenarioWithCleanup", () => {
+  it("keeps the primary scenario failure before a later cleanup failure", async () => {
+    const primaryError = new Error("channel creation failed")
+    const cleanupError = new Error("channel cleanup failed")
+
+    await expect(
+      runScenarioWithCleanup({
+        run: async () => {
+          throw primaryError
+        },
+        finalizers: [async () => Promise.reject(cleanupError)],
+        cleanupMessage: "Managed-site channel cleanup failed",
+        failureMessage: "Managed-site channel scenario failed",
+      }),
+    ).rejects.toMatchObject({
+      errors: [primaryError, cleanupError],
+      message:
+        "Managed-site channel scenario failed: primary=channel creation failed; cleanup=channel cleanup failed",
+    })
+  })
+})
 
 describe("throwScenarioError", () => {
   it("preserves both the primary failure and a later cleanup failure", () => {

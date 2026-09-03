@@ -50,3 +50,31 @@ export function throwScenarioError(params: {
     throw params.cleanupError
   }
 }
+
+export async function runScenarioWithCleanup<TResult>(params: {
+  run: () => Promise<TResult>
+  finalizers: Array<() => Promise<void>>
+  cleanupMessage: string
+  failureMessage: string
+}): Promise<TResult> {
+  let result: TResult | undefined
+  let primaryError: unknown
+
+  try {
+    result = await params.run()
+  } catch (error) {
+    primaryError = error
+  }
+
+  const cleanupError = await collectCleanupError(
+    params.finalizers,
+    params.cleanupMessage,
+  )
+  throwScenarioError({
+    primaryError,
+    cleanupError,
+    message: params.failureMessage,
+  })
+
+  return result as TResult
+}
