@@ -1,22 +1,23 @@
 import { describe, expect, it, vi } from "vitest"
 
 import { fetchTelemetryJson } from "~/services/apiCredentialProfiles/telemetryTransport"
-import { ApiError } from "~/services/apiTransport/errors"
 import { API_AUTH_TOKEN_MODES } from "~/services/apiTransport/type"
 
-const { fetchApiMock } = vi.hoisted(() => ({
-  fetchApiMock: vi.fn(),
+const { fetchApiResponseMock } = vi.hoisted(() => ({
+  fetchApiResponseMock: vi.fn(),
 }))
 
 vi.mock("~/services/apiTransport/request", () => ({
-  fetchApi: (...args: unknown[]) => fetchApiMock(...args),
+  fetchApiResponse: (...args: unknown[]) => fetchApiResponseMock(...args),
 }))
 
 describe("api credential telemetry transport", () => {
   it("passes raw authorization mode and returns the requested endpoint", async () => {
-    fetchApiMock.mockResolvedValue({
-      success: true,
-      data: { balance: 1 },
+    fetchApiResponseMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: {},
+      body: { success: true, data: { balance: 1 } },
     })
 
     await expect(
@@ -31,7 +32,7 @@ describe("api credential telemetry transport", () => {
       json: { success: true, data: { balance: 1 } },
     })
 
-    expect(fetchApiMock).toHaveBeenCalledWith(
+    expect(fetchApiResponseMock).toHaveBeenCalledWith(
       expect.objectContaining({
         baseUrl: "https://example.invalid",
         auth: expect.objectContaining({ accessToken: "token" }),
@@ -45,9 +46,12 @@ describe("api credential telemetry transport", () => {
   })
 
   it("preserves unsupported endpoint classification for 404 and 405", async () => {
-    fetchApiMock.mockRejectedValue(
-      new ApiError("method not allowed", 405, "/usage"),
-    )
+    fetchApiResponseMock.mockResolvedValue({
+      ok: false,
+      status: 405,
+      headers: {},
+      body: { message: "provider detail must not be parsed" },
+    })
 
     await expect(
       fetchTelemetryJson({
@@ -58,11 +62,14 @@ describe("api credential telemetry transport", () => {
       name: "TelemetryEndpointError",
       endpoint: "/usage",
       unsupported: true,
+      message: "请求失败: 405",
     })
   })
 
   it("classifies malformed JSON and generic network failures", async () => {
-    fetchApiMock.mockRejectedValueOnce(new SyntaxError("Unexpected token"))
+    fetchApiResponseMock.mockRejectedValueOnce(
+      new SyntaxError("Unexpected token"),
+    )
     await expect(
       fetchTelemetryJson({
         baseUrl: "https://example.invalid",
@@ -73,7 +80,7 @@ describe("api credential telemetry transport", () => {
       message: "Non-JSON response",
     })
 
-    fetchApiMock.mockRejectedValueOnce(new Error("connection closed"))
+    fetchApiResponseMock.mockRejectedValueOnce(new Error("connection closed"))
     await expect(
       fetchTelemetryJson({
         baseUrl: "https://example.invalid",

@@ -11,6 +11,7 @@ import {
   rememberAnthropicBearerAuth,
   type AnthropicAuthMode,
 } from "./auth"
+import { decodeAnthropicResponseError } from "./responseError"
 
 type AnthropicAuthParams = {
   baseUrl: string
@@ -62,6 +63,7 @@ export async function fetchAnthropicModelIds(
         request,
         {
           endpoint,
+          errorResponseDecoder: decodeAnthropicResponseError,
           options: {
             signal: params.abortSignal,
             headers: createAnthropicAuthHeaders(params.apiKey, mode),

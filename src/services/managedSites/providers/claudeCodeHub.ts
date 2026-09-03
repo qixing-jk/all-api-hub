@@ -16,6 +16,7 @@ import {
   userPreferences,
   type UserPreferences,
 } from "~/services/preferences/userPreferences"
+import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import type { AccountToken, ApiToken, DisplaySiteData } from "~/types"
 import type {
   ClaudeCodeHubAllowedModel,
@@ -34,13 +35,36 @@ import {
   type ManagedSiteChannelListData,
   type UpdateChannelPayload,
 } from "~/types/managedSite"
-import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { normalizeList, parseDelimitedList } from "~/utils/core/string"
 import { t } from "~/utils/i18n/core"
 
 const logger = createLogger("ClaudeCodeHubService")
 const DEFAULT_GROUP_TAG = "default"
+
+/** Creates a detached error safe for user-facing and local-log disclosure. */
+export function toClaudeCodeHubDisclosureError(
+  error: unknown,
+  config: ClaudeCodeHubConfig,
+  extraSecrets: readonly string[] = [],
+): Error {
+  const message = toSanitizedErrorSummary(error, [
+    config.adminToken,
+    ...extraSecrets,
+  ])
+  return new Error(message || "Claude Code Hub request failed")
+}
+
+const runClaudeCodeHubRead = async <T>(
+  config: ClaudeCodeHubConfig,
+  operation: () => Promise<T>,
+): Promise<T> => {
+  try {
+    return await operation()
+  } catch (error) {
+    throw toClaudeCodeHubDisclosureError(error, config)
+  }
+}
 
 /**
  * Checks whether preferences contain a usable Claude Code Hub admin config.
@@ -55,15 +79,21 @@ function hasValidClaudeCodeHubConfig(prefs: UserPreferences | null): boolean {
  * Verifies the saved Claude Code Hub config can authenticate successfully.
  */
 export async function checkValidClaudeCodeHubConfig(): Promise<boolean> {
+  let config: ClaudeCodeHubConfig | undefined
   try {
     const prefs = await userPreferences.getPreferences()
     if (!hasValidClaudeCodeHubConfig(prefs) || !prefs.claudeCodeHub) {
       return false
     }
-    const config = prefs.claudeCodeHub
+    config = prefs.claudeCodeHub
     return await claudeCodeHubApi.validateClaudeCodeHubConfig(config)
   } catch (error) {
-    logger.warn("Claude Code Hub config validation failed", error)
+    logger.warn(
+      "Claude Code Hub config validation failed",
+      config
+        ? toClaudeCodeHubDisclosureError(error, config).message
+        : toSanitizedErrorSummary(error, []),
+    )
     return false
   }
 }
@@ -79,7 +109,10 @@ export async function getClaudeCodeHubConfig(): Promise<ManagedSiteConfig | null
     }
     return null
   } catch (error) {
-    logger.error("Error getting Claude Code Hub config", error)
+    logger.error(
+      "Error getting Claude Code Hub config",
+      toSanitizedErrorSummary(error, []),
+    )
     return null
   }
 }
@@ -266,9 +299,10 @@ async function hydrateComparableChannelKey(
       key: key.trim(),
     }
   } catch (error) {
+    const disclosed = toClaudeCodeHubDisclosureError(error, config)
     logger.warn("Failed to hydrate Claude Code Hub provider key", {
       channelId: channel.id,
-      error: getErrorMessage(error),
+      error: disclosed.message,
     })
     return null
   }
@@ -384,7 +418,10 @@ export async function searchChannel(
   try {
     return await searchClaudeCodeHubChannels(config, keyword)
   } catch (error) {
-    logger.error("Failed to search Claude Code Hub providers", error)
+    logger.error(
+      "Failed to search Claude Code Hub providers",
+      toClaudeCodeHubDisclosureError(error, config).message,
+    )
     return null
   }
 }
@@ -400,9 +437,13 @@ export async function listChannels(
   },
 ): Promise<ManagedSiteChannelListData> {
   await options?.beforeRequest?.()
-  const providers = await claudeCodeHubApi.listProviders(config, {
-    ...(options?.signal ? { signal: options.signal } : {}),
-  })
+  const providers = await runClaudeCodeHubRead(
+    config,
+    async () =>
+      await claudeCodeHubApi.listProviders(config, {
+        ...(options?.signal ? { signal: options.signal } : {}),
+      }),
+  )
   return toManagedSiteChannelListData(providers)
 }
 
@@ -413,7 +454,11 @@ export async function fetchChannelSecretKey(
   config: ClaudeCodeHubConfig,
   channelId: number,
 ): Promise<string> {
-  return await claudeCodeHubApi.getUnmaskedProviderKey(config, channelId)
+  return await runClaudeCodeHubRead(
+    config,
+    async () =>
+      await claudeCodeHubApi.getUnmaskedProviderKey(config, channelId),
+  )
 }
 
 /**

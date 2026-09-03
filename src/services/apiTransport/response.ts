@@ -1,4 +1,5 @@
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import { getErrorMessage } from "~/utils/core/error"
 import { t } from "~/utils/i18n/core"
 
 /**
@@ -37,7 +38,7 @@ export function extractDataFromApiResponseBody<T>(
   }
 
   if (body.success === false) {
-    const message = body.message || invalidResponseMessage
+    const message = getErrorMessage(body.message, invalidResponseMessage)
     throw new ApiError(
       message,
       undefined,

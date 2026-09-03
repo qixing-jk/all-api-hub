@@ -9,7 +9,9 @@ import { getErrorMessage } from "~/utils/core/error"
 interface ClaudeCodeHubActionResponse<T> {
   ok: boolean
   data?: T
-  error?: unknown
+  error?: string
+  errorCode?: string
+  errorParams?: Record<string, string | number>
 }
 
 interface ActionSignalHandle {
@@ -78,44 +80,20 @@ export function normalizeClaudeCodeHubBaseUrl(baseUrl: string): string {
   return baseUrl.trim().replace(/\/+$/, "")
 }
 
-/**
- * Removes bearer tokens and configured secrets from error messages.
- */
-export function redactClaudeCodeHubSecrets(
-  message: string,
-  secrets: Array<string | undefined | null>,
-): string {
-  let redacted = message.replace(/Bearer\s+\S+/gi, "Bearer [REDACTED]")
-  for (const secret of secrets) {
-    const trimmed = secret?.trim()
-    if (!trimmed || trimmed.length < 4) continue
-    redacted = redacted.split(trimmed).join("[REDACTED]")
-  }
-  return redacted
-}
-
-/**
- * Converts unknown provider-action failures into sanitized error text.
- */
-function normalizeActionError(
-  error: unknown,
-  config: ClaudeCodeHubConfig,
-  extraSecrets: Array<string | undefined | null> = [],
-) {
-  return redactClaudeCodeHubSecrets(getErrorMessage(error), [
-    config.adminToken,
-    ...extraSecrets,
-  ])
-}
+const getClaudeCodeHubRequestErrorMessage = (error: unknown, status?: number) =>
+  getErrorMessage(
+    error,
+    status === undefined
+      ? "Claude Code Hub request failed"
+      : `Claude Code Hub request failed (${status})`,
+  )
 
 /**
  * Parses and validates a Claude Code Hub provider action response body.
+ * Upstream ErrorResult uses `error`, optional `errorCode`, and `errorParams`:
+ * https://github.com/ding113/claude-code-hub/blob/dfeb14331cb350f672e92a3684adecf1052dd476/src/actions/types.ts
  */
-async function parseActionResponse<T>(
-  response: Response,
-  config: ClaudeCodeHubConfig,
-  extraSecrets: Array<string | undefined | null>,
-): Promise<T> {
+async function parseActionResponse<T>(response: Response): Promise<T> {
   let parsed: ClaudeCodeHubActionResponse<T>
   try {
     parsed = (await response.json()) as ClaudeCodeHubActionResponse<T>
@@ -150,21 +128,22 @@ async function parseActionResponse<T>(
   }
 
   if (!response.ok || !parsed.ok) {
-    const fallbackMessage =
-      response.statusText ||
-      `Claude Code Hub request failed (${response.status})`
-    const message =
-      getErrorMessage(parsed.error, fallbackMessage) || fallbackMessage
-    throw new ClaudeCodeHubApiError(
-      redactClaudeCodeHubSecrets(message, [config.adminToken, ...extraSecrets]),
-      response.status,
-      {
-        dispatch: "dispatched",
-        responseReceived: true,
-        confirmedNonApplication: parsed.ok === false,
-        raw: parsed,
-      },
+    const fallbackMessage = `Claude Code Hub request failed (${response.status})`
+    const message = getErrorMessage(
+      typeof parsed.error === "string" ? parsed.error : undefined,
+      fallbackMessage,
     )
+    const code =
+      typeof parsed.errorCode === "string" && parsed.errorCode.trim()
+        ? parsed.errorCode.trim()
+        : undefined
+    throw new ClaudeCodeHubApiError(message, response.status, {
+      dispatch: "dispatched",
+      responseReceived: true,
+      confirmedNonApplication: parsed.ok === false,
+      raw: parsed,
+      ...(code ? { code } : {}),
+    })
   }
 
   return parsed.data as T
@@ -172,12 +151,10 @@ async function parseActionResponse<T>(
 
 /**
  * Parses a Claude Code Hub v1 JSON response and normalizes problem+json errors.
+ * Upstream ProblemJson defines `detail`, `title`, `errorCode`, and `errorParams`:
+ * https://github.com/ding113/claude-code-hub/blob/dfeb14331cb350f672e92a3684adecf1052dd476/src/lib/api/v1/_shared/error-envelope.ts
  */
-async function parseV1JsonResponse<T>(
-  response: Response,
-  config: ClaudeCodeHubConfig,
-  extraSecrets: Array<string | undefined | null>,
-): Promise<T> {
+async function parseV1JsonResponse<T>(response: Response): Promise<T> {
   let parsed: unknown
   try {
     parsed = await response.json()
@@ -189,23 +166,36 @@ async function parseV1JsonResponse<T>(
   }
 
   if (!response.ok) {
-    const fallbackMessage =
-      response.statusText ||
-      `Claude Code Hub request failed (${response.status})`
+    const fallbackMessage = `Claude Code Hub request failed (${response.status})`
     const problem =
       parsed && typeof parsed === "object"
-        ? (parsed as { detail?: unknown; error?: unknown; title?: unknown })
+        ? (parsed as {
+            detail?: unknown
+            title?: unknown
+            errorCode?: unknown
+            errorParams?: unknown
+          })
         : undefined
-    const message =
-      getErrorMessage(
-        problem?.detail ?? problem?.error ?? problem?.title,
-        fallbackMessage,
-      ) || fallbackMessage
-
-    throw new ClaudeCodeHubApiError(
-      redactClaudeCodeHubSecrets(message, [config.adminToken, ...extraSecrets]),
-      response.status,
+    const titleMessage = getErrorMessage(
+      typeof problem?.title === "string" ? problem.title : undefined,
+      fallbackMessage,
     )
+    const message = getErrorMessage(
+      typeof problem?.detail === "string" ? problem.detail : undefined,
+      titleMessage,
+    )
+    const code =
+      typeof problem?.errorCode === "string" && problem.errorCode.trim()
+        ? problem.errorCode.trim()
+        : undefined
+
+    throw new ClaudeCodeHubApiError(message, response.status, {
+      dispatch: "dispatched",
+      responseReceived: true,
+      confirmedNonApplication: true,
+      raw: parsed,
+      ...(code ? { code } : {}),
+    })
   }
 
   return parsed as T
@@ -323,7 +313,6 @@ async function callProviderAction<T>(
   action: ClaudeCodeHubProviderAction,
   payload: object = {},
   options?: {
-    secrets?: Array<string | undefined | null>
     signal?: AbortSignal
     timeoutMs?: number
   },
@@ -339,7 +328,7 @@ async function callProviderAction<T>(
         actionSignal.signal.reason ??
         new DOMException("The operation was aborted", "AbortError")
       throw new ClaudeCodeHubApiError(
-        normalizeActionError(raw, config, options?.secrets ?? []),
+        getClaudeCodeHubRequestErrorMessage(raw),
         undefined,
         {
           dispatch: "not-dispatched",
@@ -360,17 +349,13 @@ async function callProviderAction<T>(
       },
       body: JSON.stringify(payload),
     })
-    return await parseActionResponse<T>(
-      response,
-      config,
-      options?.secrets ?? [],
-    )
+    return await parseActionResponse<T>(response)
   } catch (error) {
     if (error instanceof ClaudeCodeHubApiError) {
       throw error
     }
     throw new ClaudeCodeHubApiError(
-      normalizeActionError(error, config, options?.secrets ?? []),
+      getClaudeCodeHubRequestErrorMessage(error, response?.status),
       response?.status,
       {
         dispatch: fetchStarted ? "dispatched" : "not-dispatched",
@@ -499,15 +484,22 @@ async function fetchV1ProviderList(
         },
       },
     )
-    const data = await parseV1JsonResponse<unknown>(response, config, [])
+    const data = await parseV1JsonResponse<unknown>(response)
     return extractProviderList(data)
   } catch (error) {
     if (error instanceof ClaudeCodeHubApiError) {
       throw error
     }
     throw new ClaudeCodeHubApiError(
-      normalizeActionError(error, config),
+      getClaudeCodeHubRequestErrorMessage(error, response?.status),
       response?.status,
+      {
+        dispatch: "dispatched",
+        responseReceived: response !== undefined,
+        confirmedNonApplication: false,
+        raw: error,
+        code: getOperationalErrorCode(error),
+      },
     )
   } finally {
     actionSignal.cleanup()
@@ -540,7 +532,6 @@ export async function createProvider(
   },
 ): Promise<unknown> {
   return await callProviderAction(config, "addProvider", payload, {
-    secrets: [payload.key],
     signal: options?.signal,
     timeoutMs: options?.timeoutMs,
   })
@@ -576,7 +567,7 @@ export async function getUnmaskedProviderKey(
         },
       },
     )
-    const data = await parseV1JsonResponse<unknown>(response, config, [])
+    const data = await parseV1JsonResponse<unknown>(response)
 
     const key =
       data && typeof data === "object"
@@ -595,8 +586,15 @@ export async function getUnmaskedProviderKey(
       throw error
     }
     throw new ClaudeCodeHubApiError(
-      normalizeActionError(error, config),
+      getClaudeCodeHubRequestErrorMessage(error, response?.status),
       response?.status,
+      {
+        dispatch: "dispatched",
+        responseReceived: response !== undefined,
+        confirmedNonApplication: false,
+        raw: error,
+        code: getOperationalErrorCode(error),
+      },
     )
   } finally {
     actionSignal.cleanup()
@@ -615,7 +613,6 @@ export async function updateProvider(
   },
 ): Promise<unknown> {
   return await callProviderAction(config, "editProvider", payload, {
-    secrets: [payload.key],
     signal: options?.signal,
     timeoutMs: options?.timeoutMs,
   })

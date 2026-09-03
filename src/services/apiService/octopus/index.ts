@@ -28,6 +28,7 @@ import {
   type TempWindowFetch,
 } from "~/types/tempWindowFetch"
 import { getCurrentTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
+import { getErrorMessage } from "~/utils/core/error"
 import { safeRandomUUID } from "~/utils/core/identifier"
 import { createLogger } from "~/utils/core/logger"
 import { normalizeBaseUrl } from "~/utils/core/url"
@@ -190,10 +191,15 @@ const getOctopusErrorCode = (error: unknown) => {
     : undefined
 }
 
-const getOctopusMutationErrorMessage = (error: unknown) =>
-  error instanceof Error && error.message
-    ? error.message
-    : "Octopus mutation failed"
+const getOctopusMutationErrorMessage = (error: unknown) => {
+  const providerMessage =
+    error instanceof Error
+      ? error.message
+      : typeof error === "object" && error !== null && "message" in error
+        ? (error as { message?: unknown }).message
+        : undefined
+  return getErrorMessage(providerMessage, "Octopus mutation failed")
+}
 
 const parseOctopusEnvelope = (
   endpoint: string,
@@ -211,11 +217,7 @@ const getOctopusEnvelopeData = (endpoint: string, data: unknown): unknown => {
     envelope.success === false ||
     (envelope.code !== undefined && envelope.code !== 200)
   ) {
-    throw new Error(
-      typeof envelope.message === "string"
-        ? envelope.message
-        : "API request failed",
-    )
+    throw new Error(getErrorMessage(envelope.message, "API request failed"))
   }
   return envelope.data
 }
@@ -602,9 +604,17 @@ async function fetchOctopusApi<T>(
         if (contentType.includes("application/json")) {
           // 尝试解析 JSON 错误响应
           try {
-            const errorData = JSON.parse(rawBody)
-            errorMessage =
-              errorData.message || errorData.error || JSON.stringify(errorData)
+            const errorData = JSON.parse(rawBody) as unknown
+            const errorRecord =
+              typeof errorData === "object" &&
+              errorData !== null &&
+              !Array.isArray(errorData)
+                ? (errorData as Record<string, unknown>)
+                : undefined
+            errorMessage = getErrorMessage(
+              errorRecord?.message,
+              getErrorMessage(errorRecord?.error, "Octopus request failed"),
+            )
           } catch {
             errorMessage = rawBody
           }
@@ -641,7 +651,10 @@ async function fetchOctopusApi<T>(
       responseData.success === false ||
       (responseData.code !== undefined && responseData.code !== 200)
     ) {
-      const message = (responseData.message as string) || "API request failed"
+      const message = getErrorMessage(
+        responseData.message,
+        "API request failed",
+      )
       if (isMutation) {
         throw new OctopusMutationApiError(message, {
           dispatch: "dispatched",

@@ -294,6 +294,28 @@ describe("Veloera managed-site channel capability", () => {
     ).rejects.toBe(responseError)
   })
 
+  it("uses fixed diagnostic copy when a Veloera void error message is blank", async () => {
+    const responseError = new ApiError("   ")
+    veloeraApi.updateChannelModels.mockImplementationOnce(async (request) => {
+      request.observer?.onDispatch()
+      request.observer?.onResponse()
+      throw responseError
+    })
+    const { veloeraManagedSiteChannels } = await import(
+      "~/services/apiAdapters/managedSites/veloera"
+    )
+
+    await expect(
+      veloeraManagedSiteChannels.updateModels!(config, 7, models),
+    ).resolves.toEqual({
+      outcome: "rejected",
+      diagnostic: {
+        message: "Provider rejected the mutation",
+        raw: responseError,
+      },
+    })
+  })
+
   it("keeps response-valued Veloera error identity in the diagnostic", async () => {
     const responseError = new ApiError(
       "malformed provider response",

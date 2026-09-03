@@ -203,10 +203,10 @@ describe("Octopus managed-site channel capability", () => {
     await expect(mutation).rejects.toBe(programmingError)
   })
 
-  it("uses a local fallback for an empty Octopus API error message", async () => {
+  it("uses a local fallback for a blank Octopus API error message", async () => {
     const raw = { detail: "provider detail" }
     octopusApi.createChannel.mockRejectedValueOnce(
-      new octopusApi.OctopusMutationApiError("", {
+      new octopusApi.OctopusMutationApiError("   ", {
         dispatch: "dispatched",
         responseReceived: true,
         confirmedNonApplication: true,
@@ -231,7 +231,7 @@ describe("Octopus managed-site channel capability", () => {
   })
 
   it("rejects an Octopus success-false response with a local fallback", async () => {
-    const response = { success: false, data: null, message: "" }
+    const response = { success: false, data: null, message: "   " }
     octopusApi.createChannel.mockResolvedValueOnce(response)
     const { octopusManagedSiteChannels } = await import(
       "~/services/apiAdapters/managedSites/octopus"

@@ -69,6 +69,7 @@ import {
 } from "~/types/managedUpstreamResource"
 import { CHANNEL_STATUS } from "~/types/newApi"
 import type { NewApiConfig } from "~/types/newApiConfig"
+import { getErrorMessage } from "~/utils/core/error"
 import { parseDelimitedList } from "~/utils/core/string"
 
 import { createManagedSiteConfigCapability } from "./config"
@@ -90,7 +91,10 @@ const toNewApiMutationResponse = <TData>(response: ApiResponse<TData>) =>
     : {
         outcome: NEW_API_MUTATION_STEP_OUTCOMES.Rejected,
         diagnostic: {
-          message: response.message || "Provider rejected the mutation",
+          message: getErrorMessage(
+            response.message,
+            "Provider rejected the mutation",
+          ),
           raw: response,
         },
       }

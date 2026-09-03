@@ -60,6 +60,7 @@ describe("AI API model fetchers", () => {
         },
         expect.objectContaining({
           endpoint: "/v1/models?limit=200",
+          errorResponseDecoder: expect.any(Function),
           options: {
             headers: {
               "x-api-key": "synthetic-anthropic-key",
@@ -259,6 +260,7 @@ describe("AI API model fetchers", () => {
         },
         expect.objectContaining({
           endpoint: "/v1beta/models",
+          errorResponseDecoder: expect.any(Function),
           options: {
             headers: {
               "x-goog-api-key": "synthetic-google-key",

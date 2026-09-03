@@ -12,9 +12,11 @@ import {
   type AccountTodayStatsAvailability,
   type ApiToken,
 } from "~/types"
+import { getErrorMessage } from "~/utils/core/error"
 import { toOptionalFiniteNumber } from "~/utils/core/number"
 import { t } from "~/utils/i18n/core"
 
+import { readSub2ApiFailureEnvelope } from "./responseError"
 import type {
   Sub2ApiAuthMeData,
   Sub2ApiCreateKeyPayload,
@@ -282,14 +284,14 @@ export const parseSub2ApiEnvelope = <T>(
   }
 
   if (envelope.code !== 0) {
-    const message = envelope.message.trim()
-      ? envelope.message.trim()
-      : invalidResponseMessage
+    const failure = readSub2ApiFailureEnvelope(envelope)
+    const message = getErrorMessage(failure?.message, invalidResponseMessage)
     throw new ApiError(
       message,
       undefined,
       endpoint,
       API_ERROR_CODES.BUSINESS_ERROR,
+      failure?.upstreamCode,
     )
   }
 

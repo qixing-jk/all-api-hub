@@ -29,6 +29,7 @@ import {
   SHAREDCHAT_CODEX_RESET_KEY_ENDPOINT,
   SHAREDCHAT_GETME_ENDPOINT,
 } from "./constants"
+import { decodeSharedChatResponseError } from "./responseError"
 
 type SharedChatEnvelope<T> = {
   code?: unknown
@@ -173,18 +174,18 @@ const fetchSharedChatData = async <T>(
   endpoint: string,
   options: RequestInit = {},
 ): Promise<T> => {
-  const body = await fetchApi<SharedChatEnvelope<T>>(
-    request,
-    {
-      endpoint,
-      options: {
-        cache: "no-store",
-        ...options,
-      },
+  const body = await fetchApi<SharedChatEnvelope<T>>(request, {
+    endpoint,
+    errorResponseDecoder: decodeSharedChatResponseError,
+    options: {
+      cache: "no-store",
+      ...options,
     },
-    true,
+  })
+  return extractSharedChatData<T>(
+    body as unknown as SharedChatEnvelope<T>,
+    endpoint,
   )
-  return extractSharedChatData<T>(body, endpoint)
 }
 
 const getCodexQuota = async (

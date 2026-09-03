@@ -59,6 +59,7 @@ import type {
   OctopusUpdateChannelInput,
 } from "~/types/octopus"
 import type { OctopusConfig } from "~/types/octopusConfig"
+import { getErrorMessage } from "~/utils/core/error"
 
 import { createManagedSiteConfigCapability } from "./config"
 
@@ -70,7 +71,10 @@ const toOctopusMutationResponse = <TData>(
     : {
         outcome: "rejected" as const,
         diagnostic: {
-          message: response.message || "Provider rejected the mutation",
+          message: getErrorMessage(
+            response.message,
+            "Provider rejected the mutation",
+          ),
           raw: response,
         },
       }
@@ -90,7 +94,7 @@ const toOctopusMutationDiagnostic = (error: OctopusMutationApiError) => {
       ? error.statusCode
       : undefined
   return {
-    message: error.message || "Octopus mutation failed",
+    message: getErrorMessage(error, "Octopus mutation failed"),
     ...(code === undefined ? {} : { code }),
     ...(statusCode === undefined ? {} : { statusCode }),
     raw: diagnosticRaw,

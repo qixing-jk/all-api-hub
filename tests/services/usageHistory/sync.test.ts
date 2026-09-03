@@ -1,7 +1,8 @@
 import { http, HttpResponse } from "msw"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
 import { accountMutations } from "~/services/accounts/accountStorage/accountMutations"
+import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import { USAGE_HISTORY_LIMITS } from "~/services/history/usageHistory/constants"
 import { getDayKeyFromUnixSeconds } from "~/services/history/usageHistory/core"
 import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
@@ -85,6 +86,34 @@ async function createTestAccount(baseUrl: string): Promise<string> {
 }
 
 describe("usageHistory sync (MSW)", () => {
+  it("routes log pages through the New API-family request seam", async () => {
+    const baseUrl = "https://usage-history.example.invalid"
+    const accountId = await createTestAccount(baseUrl)
+    const dataSpy = vi
+      .spyOn(newApiFamilyRequests, "data")
+      .mockResolvedValue({ items: [], total: 0 })
+
+    await syncUsageHistoryForAccount({
+      accountId,
+      trigger: "manual",
+      force: true,
+      config: {
+        enabled: true,
+        retentionDays: 30,
+        scheduleMode: USAGE_HISTORY_SCHEDULE_MODE.MANUAL,
+        syncIntervalMinutes: 60,
+      },
+    })
+
+    expect(dataSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ baseUrl }),
+      expect.objectContaining({
+        endpoint: expect.stringContaining("/api/log/self?"),
+      }),
+    )
+    dataSpy.mockRestore()
+  })
+
   it("skips disabled sync and mismatched scheduled triggers before loading accounts", async () => {
     const disabledConfig: UsageHistoryPreferences = {
       enabled: false,

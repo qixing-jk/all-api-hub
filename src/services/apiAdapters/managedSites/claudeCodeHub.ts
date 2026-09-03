@@ -35,6 +35,7 @@ import {
   prepareChannelFormData,
   providerToManagedSiteChannel,
   searchChannel,
+  toClaudeCodeHubDisclosureError,
 } from "~/services/managedSites/providers/claudeCodeHub"
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/managedSite"
 import type {
@@ -57,6 +58,7 @@ import {
   type ManagedUpstreamResourceRef,
   type ManagedUpstreamResourceSummary,
 } from "~/types/managedUpstreamResource"
+import { getErrorMessage } from "~/utils/core/error"
 import { normalizeList } from "~/utils/core/string"
 
 import { createManagedSiteConfigCapability } from "./config"
@@ -85,10 +87,21 @@ const toClaudeCodeHubDiagnostic = (error: ClaudeCodeHubApiError) => {
       ? error.status
       : undefined
   return {
-    message: error.message || "Claude Code Hub mutation failed",
+    message: getErrorMessage(error, "Claude Code Hub mutation failed"),
     ...(code === undefined ? {} : { code }),
     ...(statusCode === undefined ? {} : { statusCode }),
     raw: error,
+  }
+}
+
+const runClaudeCodeHubResourceRead = async <T>(
+  config: ClaudeCodeHubConfig,
+  operation: () => Promise<T>,
+): Promise<T> => {
+  try {
+    return await operation()
+  } catch (error) {
+    throw toClaudeCodeHubDisclosureError(error, config)
   }
 }
 
@@ -365,7 +378,10 @@ const findClaudeCodeHubProviderByRef = async (
 ): Promise<ClaudeCodeHubProviderDisplay> => {
   assertClaudeCodeHubResourceRef(config, ref)
 
-  const providers = await listProviders(config)
+  const providers = await runClaudeCodeHubResourceRead(
+    config,
+    async () => await listProviders(config),
+  )
   const provider = providers.find((item) => String(item.id) === ref.resourceId)
 
   if (!provider) {
@@ -480,12 +496,18 @@ const claudeCodeHubManagedUpstreamResources: ManagedUpstreamResourcesCapability<
     list: async (config, options) =>
       toClaudeCodeHubResourceListData(
         config,
-        await listProviders(config, { signal: options?.signal }),
+        await runClaudeCodeHubResourceRead(
+          config,
+          async () => await listProviders(config, { signal: options?.signal }),
+        ),
       ),
     search: async (config, keyword) =>
       toClaudeCodeHubResourceListData(
         config,
-        await searchProviders(config, keyword),
+        await runClaudeCodeHubResourceRead(
+          config,
+          async () => await searchProviders(config, keyword),
+        ),
       ),
     getDetail: async (config, ref) => {
       const native = await findClaudeCodeHubProviderByRef(config, ref)
@@ -582,9 +604,10 @@ const claudeCodeHubManagedUpstreamResources: ManagedUpstreamResourcesCapability<
   },
   secrets: {
     revealSecret: async (config, ref) => {
-      const secret = await getUnmaskedProviderKey(
+      const secret = await runClaudeCodeHubResourceRead(
         config,
-        Number(ref.resourceId),
+        async () =>
+          await getUnmaskedProviderKey(config, Number(ref.resourceId)),
       )
       if (hasUsableManagedSiteChannelKey(secret)) {
         return {

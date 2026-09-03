@@ -170,6 +170,24 @@ describe("OpenRouter public model catalog transport", () => {
     })
   })
 
+  it("preserves documented OpenRouter error details for catalog failures", async () => {
+    server.use(
+      http.get(`${OPENROUTER_API_BASE_URL}/models`, () =>
+        HttpResponse.json(
+          { error: { code: 429, message: "Catalog rate limit reached" } },
+          { status: 429 },
+        ),
+      ),
+    )
+
+    await expect(fetchOpenRouterPublicModelCatalog()).rejects.toMatchObject({
+      statusCode: 429,
+      code: API_ERROR_CODES.HTTP_429,
+      upstreamCode: "429",
+      message: "Catalog rate limit reached",
+    })
+  })
+
   it("rejects cyclic pagination", async () => {
     server.use(
       http.get(`${OPENROUTER_API_BASE_URL}/models`, ({ request }) => {

@@ -81,6 +81,7 @@ import {
   translateSub2ApiUpdateTokenRequest,
 } from "./parsing"
 import { getSafeErrorMessage } from "./redaction"
+import { decodeSub2ApiResponseError } from "./responseError"
 import { Sub2ApiTokenRefreshError } from "./tokenRefresh"
 import {
   SUB2API_AFFILIATE_ENDPOINT,
@@ -132,14 +133,11 @@ const fetchSub2ApiDataWithRequest = async <T>(
     request,
     endpoint,
     async (authRequest) => {
-      const body = await fetchApi<unknown>(
-        authRequest,
-        {
-          endpoint,
-          options,
-        },
-        true,
-      )
+      const body = await fetchApi<unknown>(authRequest, {
+        endpoint,
+        options,
+        errorResponseDecoder: decodeSub2ApiResponseError,
+      })
 
       return {
         data: parseSub2ApiEnvelope<T>(body, endpoint, parserOptions),
@@ -277,8 +275,8 @@ const fetchSub2ApiPublicSettings = async (
     {
       endpoint: SUB2API_PUBLIC_SETTINGS_ENDPOINT,
       options: { method: "GET", cache: "no-store" },
+      errorResponseDecoder: decodeSub2ApiResponseError,
     },
-    true,
   )
 
   return parseSub2ApiEnvelope<Sub2ApiPublicSettingsData>(
@@ -813,17 +811,14 @@ const fetchTodayUsageWithRequest = async (
   }
 
   const endpoint = createSub2ApiUsageStatsEndpoint()
-  const body = await fetchApi<unknown>(
-    request,
-    {
-      endpoint,
-      options: {
-        method: "GET",
-        cache: "no-store",
-      },
+  const body = await fetchApi<unknown>(request, {
+    endpoint,
+    options: {
+      method: "GET",
+      cache: "no-store",
     },
-    true,
-  )
+    errorResponseDecoder: decodeSub2ApiResponseError,
+  })
   const data = parseSub2ApiEnvelope<Sub2ApiUsageStatsData>(body, endpoint)
 
   return parseSub2ApiTodayUsage(data, endpoint)

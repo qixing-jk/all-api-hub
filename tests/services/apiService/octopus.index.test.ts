@@ -434,7 +434,7 @@ describe("Octopus API service", () => {
     mockTempWindowOctopusApiFetch.mockResolvedValueOnce({
       success: true,
       status: 200,
-      data: { code: 500 },
+      data: { code: 500, message: "   " },
     })
 
     await expect(listChannels(config)).rejects.toThrow("API request failed")
@@ -2246,6 +2246,36 @@ describe("Octopus API service", () => {
     },
   )
 
+  it("uses a fixed mutation message for a blank Octopus failure envelope", async () => {
+    const envelope = { success: false, data: null, message: "   " }
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(
+        new Response(JSON.stringify(envelope), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      ),
+    )
+
+    await expect(
+      createChannel(
+        config,
+        createInput({
+          name: "Blank rejection",
+          type: OctopusOutboundType.OpenAIChat,
+          base_urls: [{ url: "https://api.example.invalid/v1" }],
+          keys: [{ enabled: true, channel_key: "sk-example" }],
+          auto_group: OctopusAutoGroupType.None,
+        }),
+      ),
+    ).rejects.toMatchObject({
+      name: "OctopusMutationApiError",
+      message: "API request failed",
+      raw: envelope,
+    })
+  })
+
   it.each(mutations)(
     "$name keeps generic HTTP client errors ambiguous after dispatch",
     async ({ log, invoke }) => {
@@ -2289,6 +2319,19 @@ describe("Octopus API service", () => {
       expect(mockLogger.error).toHaveBeenLastCalledWith(log)
     },
   )
+
+  it("uses a fixed mutation message when a dispatched failure is blank", async () => {
+    const networkError = new TypeError("   ")
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValueOnce(networkError))
+
+    await expect(mutations[0].invoke()).rejects.toMatchObject({
+      name: "OctopusMutationApiError",
+      message: "Octopus mutation failed",
+      dispatch: "dispatched",
+      responseReceived: false,
+      raw: networkError,
+    })
+  })
 
   it.each(mutations)(
     "$name marks auth failure before mutation fetch as not dispatched",
@@ -2575,6 +2618,23 @@ describe("Octopus API service", () => {
 
     await expect(listChannels(config)).rejects.toThrow(
       "HTTP 500 Internal Server Error: {not-json",
+    )
+  })
+
+  it("uses a fixed HTTP error message when Octopus JSON candidates are blank", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(
+        new Response(JSON.stringify({ message: "   ", error: "  " }), {
+          status: 500,
+          statusText: "Internal Server Error",
+          headers: { "Content-Type": "application/json" },
+        }),
+      ),
+    )
+
+    await expect(listChannels(config)).rejects.toThrow(
+      "HTTP 500 Internal Server Error: Octopus request failed",
     )
   })
 

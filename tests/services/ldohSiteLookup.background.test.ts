@@ -138,6 +138,32 @@ describe("ldohSiteLookup background refresh", () => {
     expect(vi.mocked(writeLdohSiteListCache)).not.toHaveBeenCalled()
   })
 
+  it("uses a fixed HTTP error without parsing the provider response body", async () => {
+    vi.resetModules()
+
+    const { writeLdohSiteListCache } = await import(
+      "~/services/integrations/ldohSiteLookup/cache"
+    )
+    const { repairLdohSiteListCache } = await import(
+      "~/services/integrations/ldohSiteLookup/background"
+    )
+
+    server.use(
+      http.get(ldohSitesUrl, () =>
+        HttpResponse.json(
+          { message: "provider detail must not be parsed" },
+          { status: 418 },
+        ),
+      ),
+    )
+
+    await expect(repairLdohSiteListCache()).resolves.toMatchObject({
+      success: false,
+      error: "请求失败: 418",
+    })
+    expect(vi.mocked(writeLdohSiteListCache)).not.toHaveBeenCalled()
+  })
+
   it("invokes temp-window fallback for HTTP 403", async () => {
     vi.resetModules()
 

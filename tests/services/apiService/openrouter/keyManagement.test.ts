@@ -651,7 +651,7 @@ describe("OpenRouter management key API", () => {
     server.use(
       http.get(`${OPENROUTER_API_BASE_URL}/keys/missing-example`, () =>
         HttpResponse.json(
-          { error: { code: "not_found", message: "Key not found" } },
+          { error: { code: 404, message: "Key not found" } },
           { status: 404 },
         ),
       ),
@@ -659,10 +659,10 @@ describe("OpenRouter management key API", () => {
 
     await expect(
       fetchOpenRouterKey(request, "missing-example"),
-    ).rejects.toMatchObject({ statusCode: 404, upstreamCode: "not_found" })
+    ).rejects.toMatchObject({ statusCode: 404, upstreamCode: "404" })
   })
 
-  it("keeps the provider message but drops an unsafe upstream code", async () => {
+  it("uses fixed copy for an undocumented OpenRouter error code", async () => {
     server.use(
       http.get(`${OPENROUTER_API_BASE_URL}/keys/missing-example`, () =>
         HttpResponse.json(
@@ -683,11 +683,11 @@ describe("OpenRouter management key API", () => {
     ).rejects.toMatchObject({
       statusCode: 404,
       upstreamCode: undefined,
-      message: "Key lookup failed",
+      message: "请求失败: 404",
     })
   })
 
-  it("redacts provider-echoed credentials and key hashes from failures", async () => {
+  it("preserves provider details until the adapter disclosure boundary", async () => {
     const opaqueHash = "hash/opaque-example"
     const managementKey = request.auth.accessToken.trim()
     server.use(
@@ -695,7 +695,7 @@ describe("OpenRouter management key API", () => {
         HttpResponse.json(
           {
             error: {
-              code: "key_forbidden",
+              code: 403,
               message: `Access denied for ${opaqueHash} using ${managementKey}`,
             },
           },
@@ -712,15 +712,15 @@ describe("OpenRouter management key API", () => {
     expect(error).toMatchObject({
       statusCode: 403,
       code: "HTTP_403",
-      upstreamCode: "key_forbidden",
-      endpoint: "/keys/{hash}",
+      upstreamCode: "403",
+      endpoint: "/keys/hash%2Fopaque-example",
     })
-    expect(error.message).toContain("Access denied for")
-    expect(error.message).not.toContain(opaqueHash)
-    expect(error.message).not.toContain(managementKey)
+    expect(error.message).toBe(
+      `Access denied for ${opaqueHash} using ${managementKey}`,
+    )
   })
 
-  it("redacts workspace IDs and uses a safe member endpoint template", async () => {
+  it("preserves provider workspace details before user disclosure", async () => {
     const opaqueWorkspaceId = "workspace/opaque example"
     server.use(
       http.get(
@@ -729,7 +729,7 @@ describe("OpenRouter management key API", () => {
           HttpResponse.json(
             {
               error: {
-                code: "workspace_failed",
+                code: 500,
                 message: `Workspace ${opaqueWorkspaceId} is unavailable`,
               },
             },
@@ -747,11 +747,10 @@ describe("OpenRouter management key API", () => {
     expect(error).toMatchObject({
       statusCode: 500,
       code: "HTTP_OTHER",
-      upstreamCode: "workspace_failed",
-      endpoint: "/workspaces/{id}/members",
+      upstreamCode: "500",
+      endpoint: "/workspaces/workspace%2Fopaque%20example/members",
     })
-    expect(error.message).toContain("Workspace")
-    expect(error.message).not.toContain(opaqueWorkspaceId)
+    expect(error.message).toBe(`Workspace ${opaqueWorkspaceId} is unavailable`)
   })
 
   it("does not replay update or delete after a failed response", async () => {

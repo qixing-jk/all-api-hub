@@ -49,21 +49,22 @@ function isLdohUiLifecycleExecution(
 }
 
 /**
- * Fetches the site directory from LDOH using the shared `fetchApi` wrapper.
+ * Configures the raw LDOH site-directory request.
  *
  * - Tries background fetch first (credentials include).
  * - Falls back to the temp-window flow when needed.
  */
 const LDOH_SITE_LIST_REQUEST = {
   baseUrl: LDOH_ORIGIN,
-  // Sentinel value to avoid fetchApi warning noise about missing accountId.
+  // Sentinel value to avoid shared transport warning noise about missing accountId.
   accountId: "__ldoh_site_lookup__",
   // LDOH is session-cookie based; we do not have per-account auth here.
   auth: { authType: AuthTypeEnum.None },
 } satisfies ApiServiceRequest
 
 /**
- * Fetches the site directory from LDOH using the shared `fetchApi` wrapper.
+ * Fetches the raw LDOH success body while retaining the existing protected
+ * request fallback and lifecycle ownership.
  */
 async function fetchLdohSites(
   protectionBypassExecution: ProtectionBypassExecution,

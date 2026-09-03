@@ -92,7 +92,10 @@ const toVeloeraResponseError = (error: unknown) => {
   ) {
     return {
       outcome: "rejected" as const,
-      diagnostic: { message: error.message, raw: error },
+      diagnostic: {
+        message: getErrorMessage(error, "Provider rejected the mutation"),
+        raw: error,
+      },
     }
   }
   throw error

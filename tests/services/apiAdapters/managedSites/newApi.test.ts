@@ -291,6 +291,28 @@ describe("newApi managed-site channel capability", () => {
     ).rejects.toBe(responseError)
   })
 
+  it("uses fixed diagnostic copy when a New API rejection message is blank", async () => {
+    const rejectionResponse = { success: false, data: null, message: "   " }
+    channelManagement.createChannel.mockImplementationOnce(async (request) => {
+      request.observer?.onDispatch()
+      request.observer?.onResponse()
+      return rejectionResponse
+    })
+    const { newApiManagedSiteChannels } = await import(
+      "~/services/apiAdapters/managedSites/newApi"
+    )
+
+    await expect(
+      newApiManagedSiteChannels.create(config, createPayload),
+    ).resolves.toEqual({
+      outcome: "rejected",
+      diagnostic: {
+        message: "Provider rejected the mutation",
+        raw: rejectionResponse,
+      },
+    })
+  })
+
   const resourceDraft = {
     name: "Resource channel",
     type: 1,

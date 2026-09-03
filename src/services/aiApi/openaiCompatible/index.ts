@@ -9,6 +9,8 @@ import { AuthTypeEnum } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 import { coerceBaseUrlToPathSuffix, normalizeHttpUrl } from "~/utils/core/url"
 
+import { decodeOpenAICompatibleResponseError } from "./responseError"
+
 /**
  * Unified logger scoped to OpenAI-compatible upstream model fetch helpers.
  */
@@ -71,6 +73,7 @@ export const discoverOpenAICompatibleModels = async (
     try {
       const models = await fetchApiData<unknown>(request, {
         endpoint,
+        errorResponseDecoder: decodeOpenAICompatibleResponseError,
         ...(params.abortSignal
           ? { options: { signal: params.abortSignal } }
           : {}),

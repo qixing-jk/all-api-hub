@@ -1,4 +1,5 @@
 import type { TempWindowResponseType } from "~/types/tempWindowFetch"
+import { getErrorMessage } from "~/utils/core/error"
 import { t } from "~/utils/i18n/core"
 
 import { API_ERROR_CODES, ApiError, type ApiErrorCode } from "./errors"
@@ -40,7 +41,10 @@ function createProviderBusinessError(
   if (decoded?.kind !== "business") return null
 
   return new ApiError(
-    decoded.message || t("messages:errors.api.invalidResponseFormat"),
+    getErrorMessage(
+      decoded.message,
+      t("messages:errors.api.invalidResponseFormat"),
+    ),
     undefined,
     context.endpoint,
     API_ERROR_CODES.BUSINESS_ERROR,
@@ -99,13 +103,7 @@ function createCompatibilityHttpError(
     errorCode = API_ERROR_CODES.BUSINESS_ERROR
   }
 
-  const message =
-    decoded?.message &&
-    (context.errorResponseDecoder ||
-      decoded.kind === "business" ||
-      response.status !== 403)
-      ? decoded.message
-      : fixedFallback
+  const message = getErrorMessage(decoded?.message, fixedFallback)
 
   return new ApiError(
     message,

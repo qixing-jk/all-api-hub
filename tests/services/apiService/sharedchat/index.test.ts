@@ -202,6 +202,46 @@ describe("apiService SharedChat", () => {
     })
   })
 
+  it("owns non-2xx SharedChat messages without consulting legacy fields", async () => {
+    server.use(
+      http.get("https://new.sharedchat.cc/frontend-api/getme", () =>
+        HttpResponse.json(
+          {
+            code: 0,
+            msg: "  SharedChat session expired  ",
+            data: null,
+          },
+          { status: 401 },
+        ),
+      ),
+    )
+
+    await expect(fetchUserInfo(baseRequest)).rejects.toMatchObject({
+      message: "SharedChat session expired",
+      statusCode: 401,
+      code: API_ERROR_CODES.HTTP_401,
+    })
+
+    server.use(
+      http.get("https://new.sharedchat.cc/frontend-api/getme", () =>
+        HttpResponse.json(
+          {
+            code: 0,
+            msg: "   ",
+            message: "legacy field must not be inferred",
+          },
+          { status: 503 },
+        ),
+      ),
+    )
+
+    await expect(fetchUserInfo(baseRequest)).rejects.toMatchObject({
+      message: "SharedChat request failed: 503",
+      statusCode: 503,
+      code: API_ERROR_CODES.HTTP_OTHER,
+    })
+  })
+
   it("maps codex quota into AccountData product usage and subscription fields", async () => {
     server.use(
       http.get("https://new.sharedchat.cc/frontend-api/vibe-code/quota", () =>

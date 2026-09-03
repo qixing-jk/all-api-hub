@@ -23,6 +23,7 @@ import {
   prepareChannelFormData,
   providerToManagedSiteChannel,
   searchChannel,
+  toClaudeCodeHubDisclosureError,
 } from "~/services/managedSites/providers/claudeCodeHub"
 import { CHANNEL_STATUS } from "~/types/managedSite"
 
@@ -400,6 +401,37 @@ describe("Claude Code Hub managed-site provider", () => {
     expect(mockSearchProviders).not.toHaveBeenCalled()
   })
 
+  it("discloses provider failures as detached sanitized errors", async () => {
+    const raw = Object.assign(
+      new Error(
+        "bad token passed-admin-token at https://passed-cch.example.com/private",
+      ),
+      {
+        raw: { adminToken: "passed-admin-token" },
+        cause: new Error("passed-admin-token"),
+      },
+    )
+    const disclosed = toClaudeCodeHubDisclosureError(
+      raw,
+      passedClaudeCodeHubConfig,
+    )
+
+    expect(disclosed).toBeInstanceOf(Error)
+    expect(disclosed.message).not.toContain("passed-admin-token")
+    expect(disclosed).not.toHaveProperty("raw")
+    expect(disclosed).not.toHaveProperty("cause")
+    expect(Object.keys(disclosed)).toEqual([])
+
+    mockListProviders.mockRejectedValueOnce(raw)
+    const failure = await listChannels(passedClaudeCodeHubConfig).catch(
+      (error: unknown) => error,
+    )
+    expect(failure).toBeInstanceOf(Error)
+    expect((failure as Error).message).toBe(disclosed.message)
+    expect(failure).not.toHaveProperty("raw")
+    expect(failure).not.toHaveProperty("cause")
+  })
+
   it("searches providers with passed admin config and maps failures to null", async () => {
     mockSearchProviders.mockResolvedValueOnce([
       {
@@ -455,6 +487,23 @@ describe("Claude Code Hub managed-site provider", () => {
     await expect(
       fetchChannelSecretKey(passedClaudeCodeHubConfig, 42),
     ).rejects.toThrow("reveal failed")
+  })
+
+  it("sanitizes provider key reveal failures at the facade boundary", async () => {
+    const raw = Object.assign(new Error("token passed-admin-token rejected"), {
+      raw: { token: "passed-admin-token" },
+    })
+    mockGetUnmaskedProviderKey.mockRejectedValueOnce(raw)
+
+    const failure = await fetchChannelSecretKey(
+      passedClaudeCodeHubConfig,
+      42,
+    ).catch((error: unknown) => error)
+
+    expect(failure).toBeInstanceOf(Error)
+    expect((failure as Error).message).not.toContain("passed-admin-token")
+    expect(failure).not.toHaveProperty("raw")
+    expect(Object.keys(failure as object)).toEqual([])
   })
 
   it("hydrates provided Claude Code Hub candidates through provider key reveal", async () => {

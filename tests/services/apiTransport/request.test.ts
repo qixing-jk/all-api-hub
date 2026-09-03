@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { decodeNewApiResponseError } from "~/services/apiService/newApiFamily/responseError"
+import { decodeVoApiV2ResponseError } from "~/services/apiService/voapiV2/responseError"
 import { createDeferredAbortDeadline } from "~/services/apiTransport/abortableTask"
 import {
   ApiError,
@@ -3302,7 +3303,7 @@ describe("apiTransport request helpers", () => {
     })
   })
 
-  it("preserves backend JSON error messages for non-2xx responses", async () => {
+  it("does not infer provider errors without an explicit decoder", async () => {
     server.use(
       http.get(API_URL, () => {
         return HttpResponse.json(
@@ -3325,12 +3326,13 @@ describe("apiTransport request helpers", () => {
       ),
     ).rejects.toMatchObject({
       statusCode: 400,
-      message: "error: invalid user new-api",
+      message: "请求失败: 400",
       code: ApiErrorCodes.HTTP_OTHER,
+      upstreamCode: undefined,
     })
   })
 
-  it("prefers a provider decoder message over the compatibility fallback", async () => {
+  it("prefers a provider decoder message over the fixed fallback", async () => {
     server.use(
       http.get(API_URL, () =>
         HttpResponse.json(
@@ -3360,7 +3362,7 @@ describe("apiTransport request helpers", () => {
     })
   })
 
-  it("falls back when the provider decoder has no usable message", async () => {
+  it("uses the fixed fallback when the provider decoder has no usable message", async () => {
     server.use(
       http.get(API_URL, () =>
         HttpResponse.json(
@@ -3387,11 +3389,11 @@ describe("apiTransport request helpers", () => {
     ).rejects.toMatchObject({
       statusCode: 400,
       code: ApiErrorCodes.HTTP_OTHER,
-      message: "Compatibility message",
+      message: "请求失败: 400",
     })
   })
 
-  it("preserves a safe top-level backend code for provider recovery logic", async () => {
+  it("does not infer a top-level provider code without a decoder", async () => {
     server.use(
       http.get(API_URL, () =>
         HttpResponse.json(
@@ -3416,12 +3418,12 @@ describe("apiTransport request helpers", () => {
     ).rejects.toMatchObject({
       statusCode: 409,
       code: ApiErrorCodes.HTTP_OTHER,
-      upstreamCode: "AUTH_SESSION_LIMIT",
-      message: "Active session limit reached",
+      upstreamCode: undefined,
+      message: "请求失败: 409",
     })
   })
 
-  it("preserves a generic nested provider message and safe code", async () => {
+  it("does not infer a generic nested provider error", async () => {
     server.use(
       http.get(API_URL, () =>
         HttpResponse.json(
@@ -3448,13 +3450,13 @@ describe("apiTransport request helpers", () => {
     ).rejects.toMatchObject({
       statusCode: 400,
       code: ApiErrorCodes.HTTP_OTHER,
-      upstreamCode: "invalid_limit",
-      message: "Limit must be non-negative",
+      upstreamCode: undefined,
+      message: "请求失败: 400",
     })
   })
 
   it.each([undefined, null, {}, [], "bad code!", "x".repeat(65)])(
-    "preserves nested messages without exposing unsafe code %j",
+    "does not infer nested errors with code %j",
     async (code) => {
       server.use(
         http.get(API_URL, () =>
@@ -3480,7 +3482,7 @@ describe("apiTransport request helpers", () => {
         ),
       ).rejects.toMatchObject({
         statusCode: 400,
-        message: "Private malformed code message",
+        message: "请求失败: 400",
         upstreamCode: undefined,
       })
     },
@@ -3517,7 +3519,7 @@ describe("apiTransport request helpers", () => {
     ).rejects.toMatchObject({
       statusCode: 403,
       code: ApiErrorCodes.HTTP_403,
-      upstreamCode: "key_forbidden",
+      upstreamCode: undefined,
       message: "请求失败: 403",
     })
   })
@@ -3792,6 +3794,27 @@ describe("apiTransport request helpers", () => {
     ).rejects.toMatchObject({ message: "bad request" } as any)
   })
 
+  it("uses invalid-response copy when a projected failure message is blank", async () => {
+    server.use(
+      http.get(API_URL, () =>
+        HttpResponse.json({ success: false, data: null, message: "   " }),
+      ),
+    )
+
+    await expect(
+      fetchApiData(
+        {
+          baseUrl: BASE_URL,
+          auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+        },
+        { endpoint: ENDPOINT },
+      ),
+    ).rejects.toMatchObject({
+      code: ApiErrorCodes.BUSINESS_ERROR,
+      message: "messages:errors.api.invalidResponseFormat",
+    })
+  })
+
   it("lets the provider decoder own HTTP 200 business error messages", async () => {
     server.use(
       http.get(API_URL, () =>
@@ -3975,7 +3998,10 @@ describe("apiTransport request helpers", () => {
           baseUrl: BASE_URL,
           auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
         },
-        { endpoint: modelsEndpoint },
+        {
+          endpoint: modelsEndpoint,
+          errorResponseDecoder: decodeVoApiV2ResponseError,
+        },
       ),
     ).rejects.toMatchObject({
       endpoint: modelsEndpoint,

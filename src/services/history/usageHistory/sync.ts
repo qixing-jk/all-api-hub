@@ -1,8 +1,8 @@
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { createAccountApiRequestFromStoredAccount } from "~/services/accounts/utils/apiServiceRequest"
+import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import { REQUEST_CONFIG } from "~/services/apiTransport/constant"
 import { ApiError } from "~/services/apiTransport/errors"
-import { fetchApiData } from "~/services/apiTransport/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { LogType } from "~/services/history/usageHistory/usageLogModel"
 import type {
@@ -84,7 +84,7 @@ async function fetchConsumeLogPage(params: {
     group: "",
   })
 
-  return await fetchApiData<LogResponseData>(request, {
+  return await newApiFamilyRequests.data<LogResponseData>(request, {
     endpoint: `/api/log/self?${searchParams.toString()}`,
   })
 }

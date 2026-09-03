@@ -8,7 +8,7 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { blurInputOnEnter } from "~/hooks/useDeferredPreferenceField"
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
 import { validateClaudeCodeHubConfig } from "~/services/apiService/claudeCodeHub"
-import { getErrorMessage } from "~/utils/core/error"
+import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import {
   createVersionedPreferenceSaveOptions,
   getPreferenceWriteFailureMessage,
@@ -109,9 +109,12 @@ export default function ClaudeCodeHubSettings() {
         )
       }
     } catch (error) {
+      const safeError =
+        toSanitizedErrorSummary(error, [adminToken]) ||
+        "Claude Code Hub request failed"
       toast.error(
         t("claudeCodeHub.validation.failed", {
-          error: getErrorMessage(error),
+          error: safeError,
         }),
       )
     } finally {

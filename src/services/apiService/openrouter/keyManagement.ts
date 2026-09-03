@@ -9,7 +9,6 @@ import {
   OPENROUTER_KEYS_ENDPOINT,
   OPENROUTER_WORKSPACES_ENDPOINT,
 } from "./constants"
-import { OpenRouterManagementKeyRequiredError } from "./errors"
 import {
   openRouterCreateKeyInputSchema,
   openRouterCreateKeyResponseSchema,
@@ -34,6 +33,7 @@ import {
   type OpenRouterWorkspacePaginationInput,
 } from "./keyManagementSchemas"
 import { createOpenRouterManagementRequest } from "./request"
+import { createOpenRouterHttpError } from "./responseError"
 
 const managementFetchOptions = {
   currentTabTransport: "disabled" as const,
@@ -44,94 +44,6 @@ type RawResponse = unknown
 
 const KEY_RESOURCE_ENDPOINT_TEMPLATE = `${OPENROUTER_KEYS_ENDPOINT}/{hash}`
 const WORKSPACE_MEMBER_ENDPOINT_TEMPLATE = `${OPENROUTER_WORKSPACES_ENDPOINT}/{id}/members`
-const REDACTED_PROVIDER_VALUE = "[REDACTED]"
-
-interface ProviderFailureContext {
-  safeEndpoint: string
-  sensitiveValues?: Array<string | null | undefined>
-}
-
-const redactProviderValues = (message: string, values: string[]): string =>
-  values.reduce((sanitized, value) => {
-    const variants = new Set([value, encodeURIComponent(value)])
-    return [...variants].reduce(
-      (current, variant) =>
-        variant
-          ? current.split(variant).join(REDACTED_PROVIDER_VALUE)
-          : current,
-      sanitized,
-    )
-  }, message)
-
-const getBoundedUpstreamCode = (
-  value: string | undefined,
-  sensitiveValues: string[],
-): string | undefined => {
-  if (!value || value.length > 64 || !/^[A-Za-z0-9_.-]+$/.test(value)) {
-    return undefined
-  }
-  return redactProviderValues(value, sensitiveValues) === value
-    ? value
-    : undefined
-}
-
-const getProviderErrorDetails = (
-  body: unknown,
-): { message: string; upstreamCode?: string } | null => {
-  if (!body || typeof body !== "object" || Array.isArray(body)) return null
-  const error = (body as { error?: unknown }).error
-  if (!error || typeof error !== "object" || Array.isArray(error)) return null
-
-  const messageValue = (error as { message?: unknown }).message
-  const message =
-    typeof messageValue === "string" ? messageValue.trim() : undefined
-  if (!message) return null
-
-  const codeValue = (error as { code?: unknown }).code
-  const upstreamCode =
-    typeof codeValue === "string" || typeof codeValue === "number"
-      ? getBoundedUpstreamCode(String(codeValue).trim(), [])
-      : undefined
-  return { message, upstreamCode }
-}
-
-const getHttpErrorCode = (status: number) => {
-  if (status === 401) return API_ERROR_CODES.HTTP_401
-  if (status === 403) return API_ERROR_CODES.HTTP_403
-  if (status === 429) return API_ERROR_CODES.HTTP_429
-  return API_ERROR_CODES.HTTP_OTHER
-}
-
-const normalizeProviderFailure = (
-  error: unknown,
-  request: ApiServiceRequest,
-  context: ProviderFailureContext,
-): Error => {
-  const sensitiveValues = [
-    request.auth.accessToken?.trim(),
-    ...(context.sensitiveValues ?? []).map((value) => value?.trim()),
-  ].filter((value): value is string => Boolean(value))
-  const message =
-    error instanceof Error
-      ? redactProviderValues(error.message, sensitiveValues)
-      : t("messages:errors.api.invalidResponseFormat")
-
-  if (error instanceof OpenRouterManagementKeyRequiredError) return error
-  if (error instanceof ApiError) {
-    return new ApiError(
-      message,
-      error.statusCode,
-      context.safeEndpoint,
-      error.code,
-      getBoundedUpstreamCode(error.upstreamCode, sensitiveValues),
-    )
-  }
-  if (error instanceof TypeError) return new TypeError(message)
-
-  const normalized = new Error(message)
-  if (error instanceof Error) normalized.name = error.name
-  return normalized
-}
 
 const invalidResponse = (endpoint: string): ApiError =>
   new ApiError(
@@ -185,28 +97,19 @@ async function fetchRaw(
   request: ApiServiceRequest,
   endpoint: string,
   options: RequestInit,
-  failureContext?: ProviderFailureContext,
 ): Promise<RawResponse> {
-  const context = failureContext ?? { safeEndpoint: endpoint }
-  try {
-    const response = await fetchApiResponse<RawResponse>(
-      createOpenRouterManagementRequest(request),
-      { endpoint, options, ...managementFetchOptions },
+  const response = await fetchApiResponse<RawResponse>(
+    createOpenRouterManagementRequest(request),
+    { endpoint, options, ...managementFetchOptions },
+  )
+  if (!response.ok) {
+    throw createOpenRouterHttpError(
+      response,
+      endpoint,
+      `请求失败: ${response.status}`,
     )
-    if (!response.ok) {
-      const providerError = getProviderErrorDetails(response.body)
-      throw new ApiError(
-        providerError?.message ?? `请求失败: ${response.status}`,
-        response.status,
-        context.safeEndpoint,
-        getHttpErrorCode(response.status),
-        providerError?.upstreamCode,
-      )
-    }
-    return response.body
-  } catch (error) {
-    throw normalizeProviderFailure(error, request, context)
   }
+  return response.body
 }
 
 /**
@@ -233,15 +136,7 @@ export async function fetchOpenRouterKeys(
     : OPENROUTER_KEYS_ENDPOINT
   return parseResponse(
     openRouterKeyListResponseSchema,
-    await fetchRaw(
-      request,
-      endpoint,
-      { method: "GET", cache: "no-store" },
-      {
-        safeEndpoint: OPENROUTER_KEYS_ENDPOINT,
-        sensitiveValues: [parsed.data.workspaceId],
-      },
-    ),
+    await fetchRaw(request, endpoint, { method: "GET", cache: "no-store" }),
     OPENROUTER_KEYS_ENDPOINT,
   ).data
 }
@@ -277,18 +172,10 @@ export async function createOpenRouterKey(
   }
   const response = parseResponse(
     openRouterCreateKeyResponseSchema,
-    await fetchRaw(
-      request,
-      OPENROUTER_KEYS_ENDPOINT,
-      {
-        method: "POST",
-        body: JSON.stringify(body),
-      },
-      {
-        safeEndpoint: OPENROUTER_KEYS_ENDPOINT,
-        sensitiveValues: [workspaceId, creatorUserId],
-      },
-    ),
+    await fetchRaw(request, OPENROUTER_KEYS_ENDPOINT, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
     OPENROUTER_KEYS_ENDPOINT,
   )
   return { key: response.data, plaintextKey: response.key }
@@ -304,12 +191,7 @@ export async function fetchOpenRouterKey(
   const endpoint = keyEndpoint(hash)
   return parseResponse(
     openRouterKeyResponseSchema,
-    await fetchRaw(
-      request,
-      endpoint,
-      { method: "GET", cache: "no-store" },
-      { safeEndpoint: KEY_RESOURCE_ENDPOINT_TEMPLATE, sensitiveValues: [hash] },
-    ),
+    await fetchRaw(request, endpoint, { method: "GET", cache: "no-store" }),
     KEY_RESOURCE_ENDPOINT_TEMPLATE,
   ).data
 }
@@ -337,15 +219,10 @@ export async function updateOpenRouterKey(
   }
   return parseResponse(
     openRouterKeyResponseSchema,
-    await fetchRaw(
-      request,
-      endpoint,
-      {
-        method: "PATCH",
-        body: JSON.stringify(body),
-      },
-      { safeEndpoint: KEY_RESOURCE_ENDPOINT_TEMPLATE, sensitiveValues: [hash] },
-    ),
+    await fetchRaw(request, endpoint, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
     KEY_RESOURCE_ENDPOINT_TEMPLATE,
   ).data
 }
@@ -360,15 +237,7 @@ export async function deleteOpenRouterKey(
   const endpoint = keyEndpoint(hash)
   return parseResponse(
     openRouterDeleteKeyResponseSchema,
-    await fetchRaw(
-      request,
-      endpoint,
-      { method: "DELETE" },
-      {
-        safeEndpoint: KEY_RESOURCE_ENDPOINT_TEMPLATE,
-        sensitiveValues: [hash],
-      },
-    ),
+    await fetchRaw(request, endpoint, { method: "DELETE" }),
     KEY_RESOURCE_ENDPOINT_TEMPLATE,
   )
 }
@@ -405,12 +274,7 @@ export async function fetchOpenRouterWorkspaces(
     : OPENROUTER_WORKSPACES_ENDPOINT
   const response = parseResponse(
     openRouterWorkspaceListResponseSchema,
-    await fetchRaw(
-      request,
-      endpoint,
-      { method: "GET", cache: "no-store" },
-      { safeEndpoint: OPENROUTER_WORKSPACES_ENDPOINT },
-    ),
+    await fetchRaw(request, endpoint, { method: "GET", cache: "no-store" }),
     OPENROUTER_WORKSPACES_ENDPOINT,
   )
   return { data: response.data, totalCount: response.total_count }
@@ -442,15 +306,7 @@ export async function fetchOpenRouterWorkspaceMembers(
   const endpoint = params.size ? `${baseEndpoint}?${params}` : baseEndpoint
   const response = parseResponse(
     openRouterWorkspaceMemberListResponseSchema,
-    await fetchRaw(
-      request,
-      endpoint,
-      { method: "GET", cache: "no-store" },
-      {
-        safeEndpoint: WORKSPACE_MEMBER_ENDPOINT_TEMPLATE,
-        sensitiveValues: [normalizedWorkspaceId],
-      },
-    ),
+    await fetchRaw(request, endpoint, { method: "GET", cache: "no-store" }),
     WORKSPACE_MEMBER_ENDPOINT_TEMPLATE,
   )
   return { data: response.data, totalCount: response.total_count }

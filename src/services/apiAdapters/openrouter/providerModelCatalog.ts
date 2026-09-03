@@ -5,6 +5,7 @@ import { normalizeOpenRouterModel } from "~/services/apiAdapters/openrouter/mode
 import { fetchOpenRouterPersonalizedModelCatalog } from "~/services/apiService/openrouter/personalizedModelCatalog"
 import { fetchOpenRouterPublicModelCatalog } from "~/services/apiService/openrouter/publicModelCatalog"
 import type { OpenRouterPublicModel } from "~/services/apiService/openrouter/publicModelCatalogSchemas"
+import { ApiError } from "~/services/apiTransport/errors"
 import {
   MODEL_CATALOG_SCOPES,
   MODEL_LIST_SOURCE_KINDS,
@@ -14,9 +15,33 @@ import {
   type ModelCatalogScope,
 } from "~/services/modelList/pricingModel"
 import type { ProviderModelCatalogModel } from "~/services/modelList/providerCatalogAdmission"
+import {
+  isAbortError,
+  toSanitizedErrorSummary,
+} from "~/services/verification/aiApiVerification/utils"
 
 const OPENROUTER_PUBLIC_MODEL_CATALOG_CACHE_TTL_MS = 5 * 60 * 1000
 const OPENROUTER_PROVIDER_MODEL_CATALOG_SOURCE_ID = "openrouter-public"
+
+const toCatalogDisclosureError = (
+  error: unknown,
+  secrets: string[],
+  abortSignal?: AbortSignal,
+): unknown => {
+  if (isAbortError(error, abortSignal)) return error
+  const message = toSanitizedErrorSummary(error, secrets)
+  if (error instanceof ApiError) {
+    return new ApiError(
+      message,
+      error.statusCode,
+      error.endpoint,
+      error.code,
+      error.upstreamCode,
+    )
+  }
+  if (error instanceof TypeError) return new TypeError(message)
+  return new Error(message)
+}
 
 /** Maps one OpenRouter DTO into the product-owned canonical model shape. */
 function adaptOpenRouterModel(
@@ -118,11 +143,17 @@ export const openRouterProviderModelCatalog: ProviderModelCatalogCapability = {
     cacheTtlMs: OPENROUTER_PUBLIC_MODEL_CATALOG_CACHE_TTL_MS,
   },
   async fetchPricing(request) {
-    const models = await fetchOpenRouterPublicModelCatalog(request.abortSignal)
-    return createOpenRouterCatalogPricingResponse(
-      models,
-      MODEL_CATALOG_SCOPES.PROVIDER,
-    )
+    try {
+      const models = await fetchOpenRouterPublicModelCatalog(
+        request.abortSignal,
+      )
+      return createOpenRouterCatalogPricingResponse(
+        models,
+        MODEL_CATALOG_SCOPES.PROVIDER,
+      )
+    } catch (error) {
+      throw toCatalogDisclosureError(error, [], request.abortSignal)
+    }
   },
   personalized: {
     // Ticket 01's sanitized live response recorded `private, no-store`:
@@ -131,15 +162,23 @@ export const openRouterProviderModelCatalog: ProviderModelCatalogCapability = {
     // always immediately stale and never enters the provider-wide cache.
     cacheTtlMs: 0,
     async fetchPricing(request) {
-      const models = await fetchOpenRouterPersonalizedModelCatalog({
-        accountId: request.accountId,
-        managementKey: request.credential,
-        abortSignal: request.abortSignal,
-      })
-      return createOpenRouterCatalogPricingResponse(
-        models,
-        MODEL_CATALOG_SCOPES.PERSONALIZED,
-      )
+      try {
+        const models = await fetchOpenRouterPersonalizedModelCatalog({
+          accountId: request.accountId,
+          managementKey: request.credential,
+          abortSignal: request.abortSignal,
+        })
+        return createOpenRouterCatalogPricingResponse(
+          models,
+          MODEL_CATALOG_SCOPES.PERSONALIZED,
+        )
+      } catch (error) {
+        throw toCatalogDisclosureError(
+          error,
+          [request.credential],
+          request.abortSignal,
+        )
+      }
     },
   },
 }

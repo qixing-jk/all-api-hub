@@ -297,12 +297,12 @@ describe("apiService sub2api parsing", () => {
       expect.anything(),
       expect.objectContaining({
         endpoint: expect.stringContaining("unread_only=1"),
+        errorResponseDecoder: expect.any(Function),
         options: expect.objectContaining({
           method: "GET",
           cache: "no-store",
         }),
       }),
-      true,
     )
   })
 
@@ -2887,12 +2887,12 @@ describe("apiService sub2api exported operations", () => {
       }),
       expect.objectContaining({
         endpoint: "/api/v1/auth/me",
+        errorResponseDecoder: expect.any(Function),
         options: expect.objectContaining({
           method: "GET",
           cache: "no-store",
         }),
       }),
-      true,
     )
   })
 
@@ -3318,8 +3318,8 @@ describe("apiService sub2api exported operations", () => {
       {
         endpoint: "/api/v1/settings/public",
         options: { method: "GET", cache: "no-store" },
+        errorResponseDecoder: expect.any(Function),
       },
-      true,
     )
   })
 

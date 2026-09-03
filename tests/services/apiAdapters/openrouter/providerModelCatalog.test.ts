@@ -93,6 +93,36 @@ describe("OpenRouter provider model catalog Adapter", () => {
     expect(publicRequestCount).toBe(0)
   })
 
+  it("redacts the Management Key when personalized provider errors are disclosed", async () => {
+    server.use(
+      http.get(`${OPENROUTER_API_BASE_URL}/models/user`, () =>
+        HttpResponse.json(
+          {
+            error: {
+              code: 403,
+              message:
+                "Management key management-key-example cannot access the catalog",
+            },
+          },
+          { status: 403 },
+        ),
+      ),
+    )
+
+    const error = await openRouterProviderModelCatalog
+      .personalized!.fetchPricing({
+        accountId: "account-example-a",
+        credential: "management-key-example",
+      })
+      .catch((caught: unknown) => caught)
+
+    expect(error).toBeInstanceOf(Error)
+    expect((error as Error).message).toBe(
+      "Management key [REDACTED] cannot access the catalog",
+    )
+    expect((error as Error).cause).toBeUndefined()
+  })
+
   it("normalizes primary prices and core display facts into the product model", async () => {
     server.use(
       http.get(`${OPENROUTER_API_BASE_URL}/models`, () =>

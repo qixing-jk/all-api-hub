@@ -57,15 +57,12 @@ describe("decodeOpenRouterResponseError", () => {
     ).toBeNull()
   })
 
-  it("preserves a message without exposing undocumented string codes", () => {
+  it("rejects undocumented string codes instead of guessing the envelope", () => {
     expect(
       decodeOpenRouterResponseError(
         response({ error: { code: "403", message: "Denied" } }, 403),
         { endpoint: "/credits" },
       ),
-    ).toEqual({
-      kind: "http",
-      message: "Denied",
-    })
+    ).toBeNull()
   })
 })

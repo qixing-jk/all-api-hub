@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { CLAUDE_CODE_HUB_PROVIDER_TYPE } from "~/constants/claudeCodeHub"
 import { SITE_TYPES } from "~/constants/siteType"
+import { toPrivateManagedSiteMutationOutput } from "~/services/managedSites/mutations"
 import { CHANNEL_STATUS } from "~/types/managedSite"
 import {
   CHANNEL_MUTATION_SCENARIOS,
@@ -63,6 +64,14 @@ const claudeCodeHubProvider = vi.hoisted(() => ({
   buildChannelName: vi.fn(),
   prepareChannelFormData: vi.fn(),
   buildChannelPayload: vi.fn(),
+  toClaudeCodeHubDisclosureError: vi.fn(
+    (error, config) =>
+      new Error(
+        error instanceof Error
+          ? error.message.replaceAll(config.adminToken, "[REDACTED]")
+          : "Claude Code Hub request failed",
+      ),
+  ),
 }))
 
 const claudeCodeHubApi = vi.hoisted(() => {
@@ -335,6 +344,39 @@ describe("Claude Code Hub managed-site channel capability", () => {
       })
     },
   )
+
+  it("redacts Claude Code Hub mutation diagnostics only at disclosure", async () => {
+    const error = new claudeCodeHubApi.ClaudeCodeHubApiError(
+      "token admin-token rejected",
+      403,
+      {
+        dispatch: "dispatched",
+        responseReceived: true,
+        confirmedNonApplication: true,
+        raw: { token: "admin-token" },
+      },
+    )
+    claudeCodeHubApi.deleteProvider.mockRejectedValueOnce(error)
+    const { claudeCodeHubManagedSiteChannels } = await import(
+      "~/services/apiAdapters/managedSites/claudeCodeHub"
+    )
+
+    const mutation = await claudeCodeHubManagedSiteChannels.delete(config, 7)
+    expect(mutation).toMatchObject({
+      outcome: "rejected",
+      diagnostic: { message: "token admin-token rejected", raw: error },
+    })
+
+    const disclosed = toPrivateManagedSiteMutationOutput(mutation, {
+      knownSecrets: [config.adminToken],
+    })
+    expect(disclosed).toEqual({
+      outcome: "rejected",
+      statusCode: 403,
+      message: "token [REDACTED] rejected",
+    })
+    expect(disclosed).not.toHaveProperty("raw")
+  })
 
   it.each([99, 600, Number.NaN])(
     "ignores invalid Claude Code Hub status %s without changing certainty",
@@ -657,6 +699,53 @@ describe("Claude Code Hub managed-site channel capability", () => {
         }),
       ],
     })
+  })
+
+  it.each([
+    {
+      name: "list",
+      reject: claudeCodeHubApi.listProviders,
+      invoke: async (capabilities: any) =>
+        await capabilities.resources.items.list(config),
+    },
+    {
+      name: "search",
+      reject: claudeCodeHubApi.searchProviders,
+      invoke: async (capabilities: any) =>
+        await capabilities.resources.items.search(config, "provider"),
+    },
+    {
+      name: "reveal",
+      reject: claudeCodeHubApi.getUnmaskedProviderKey,
+      invoke: async (capabilities: any) =>
+        await capabilities.resources.secrets.revealSecret(config, {
+          managedSiteType: SITE_TYPES.CLAUDE_CODE_HUB,
+          scopeKey: "https://claude-code-hub.example.invalid",
+          resourceId: "7",
+        }),
+    },
+  ])("sanitizes direct resource $name failures", async ({ reject, invoke }) => {
+    const raw = Object.assign(new Error("token admin-token rejected"), {
+      raw: { token: "admin-token" },
+      cause: new Error("admin-token"),
+    })
+    reject.mockRejectedValueOnce(raw)
+    const { claudeCodeHubManagedSiteCapabilities } = await import(
+      "~/services/apiAdapters/managedSites/claudeCodeHub"
+    )
+
+    const failure = await invoke(claudeCodeHubManagedSiteCapabilities).catch(
+      (error: unknown) => error,
+    )
+
+    expect(failure).toBeInstanceOf(Error)
+    expect((failure as Error).message).toBe("token [REDACTED] rejected")
+    expect(failure).not.toHaveProperty("raw")
+    expect(failure).not.toHaveProperty("cause")
+    expect(Object.keys(failure as object)).toEqual([])
+    expect(
+      claudeCodeHubProvider.toClaudeCodeHubDisclosureError,
+    ).toHaveBeenCalledWith(raw, config)
   })
 
   it("maps Claude Code Hub fallback labels and secret states", async () => {

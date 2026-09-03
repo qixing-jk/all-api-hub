@@ -26,6 +26,7 @@ import type {
   SiteStatusInfo,
   UserInfo,
 } from "~/services/apiAdapters/contracts/accountBootstrap"
+import { decodeAIHubMixResponseError } from "~/services/apiService/aihubmix/responseError"
 import {
   composeAbortSignals,
   startAbortableTask,
@@ -62,6 +63,7 @@ import {
   type AccountTodayStatsAvailability,
   type ApiToken,
 } from "~/types"
+import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { joinUrl } from "~/utils/core/url"
 import { t } from "~/utils/i18n/core"
@@ -202,7 +204,10 @@ const extractAIHubMixData = <T>(body: unknown, endpoint: string): T => {
   const response = body as Partial<ApiResponse<T>>
   if (response.success === false) {
     throw new ApiError(
-      response.message || t("messages:errors.api.invalidResponseFormat"),
+      getErrorMessage(
+        response.message,
+        t("messages:errors.api.invalidResponseFormat"),
+      ),
       undefined,
       endpoint,
       API_ERROR_CODES.BUSINESS_ERROR,
@@ -252,13 +257,18 @@ const fetchAIHubMixData = async <T>(
   }
 
   if (!response.ok) {
-    const message =
-      body &&
-      typeof body === "object" &&
-      typeof (body as any).message === "string"
-        ? (body as any).message
-        : t("messages:errors.api.requestFailed", { status: response.status })
-    throw new ApiError(message, response.status, endpoint)
+    const providerError = decodeAIHubMixResponseError(
+      { ok: false, status: response.status, headers: {}, body },
+      { endpoint },
+    )
+    throw new ApiError(
+      getErrorMessage(
+        providerError?.message,
+        t("messages:errors.api.requestFailed", { status: response.status }),
+      ),
+      response.status,
+      endpoint,
+    )
   }
 
   return extractAIHubMixData<T>(body, endpoint)
@@ -541,6 +551,7 @@ export async function fetchUserInfo(request: ApiServiceRequest): Promise<{
             options: {
               cache: "no-store",
             },
+            errorResponseDecoder: decodeAIHubMixResponseError,
           },
         )
 
@@ -580,6 +591,7 @@ export async function createAccessToken(
       options: {
         cache: "no-store",
       },
+      errorResponseDecoder: decodeAIHubMixResponseError,
     },
   )
 

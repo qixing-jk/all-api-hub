@@ -8,8 +8,9 @@ import { validateClaudeCodeHubConfig } from "~/services/apiService/claudeCodeHub
 import { showUpdateToast } from "~/utils/core/toastHelpers"
 import { testI18n } from "~~/tests/test-utils/i18n"
 
-const { showUpdateToastMock } = vi.hoisted(() => ({
+const { showUpdateToastMock, toSanitizedErrorSummaryMock } = vi.hoisted(() => ({
   showUpdateToastMock: vi.fn(),
+  toSanitizedErrorSummaryMock: vi.fn(),
 }))
 
 vi.mock("~/contexts/UserPreferencesContext", () => ({
@@ -18,6 +19,10 @@ vi.mock("~/contexts/UserPreferencesContext", () => ({
 
 vi.mock("~/services/apiService/claudeCodeHub", () => ({
   validateClaudeCodeHubConfig: vi.fn(),
+}))
+
+vi.mock("~/services/verification/aiApiVerification/utils", () => ({
+  toSanitizedErrorSummary: toSanitizedErrorSummaryMock,
 }))
 
 vi.mock("~/utils/core/toastHelpers", () => ({
@@ -65,6 +70,7 @@ const createDeferred = <T,>() => {
 describe("ClaudeCodeHubSettings", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    toSanitizedErrorSummaryMock.mockReturnValue("safe provider failure")
   })
 
   const renderSubject = () =>
@@ -352,5 +358,38 @@ describe("ClaudeCodeHubSettings", () => {
         "settings:claudeCodeHub.validation.failed",
       )
     })
+  })
+
+  it("redacts the draft admin token at the validation toast boundary", async () => {
+    const toast = await import("react-hot-toast")
+    mockedValidateClaudeCodeHubConfig.mockRejectedValueOnce(
+      new Error("token admin-token rejected"),
+    )
+    vi.mocked(useUserPreferencesContext).mockReturnValue({
+      preferences: { lastUpdated: 5 },
+      claudeCodeHubBaseUrl: "https://cch.example.com",
+      claudeCodeHubAdminToken: "admin-token",
+      updateClaudeCodeHubBaseUrl: vi.fn(),
+      updateClaudeCodeHubAdminToken: vi.fn(),
+      updateClaudeCodeHubConfig: vi.fn(),
+      resetClaudeCodeHubConfig: vi.fn(),
+    } as any)
+
+    renderSubject()
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "settings:claudeCodeHub.validation.validate",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(vi.mocked(toast.default.error)).toHaveBeenCalledWith(
+        "settings:claudeCodeHub.validation.failed",
+      )
+    })
+    expect(toSanitizedErrorSummaryMock).toHaveBeenCalledWith(
+      expect.any(Error),
+      ["admin-token"],
+    )
   })
 })

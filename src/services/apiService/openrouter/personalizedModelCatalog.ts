@@ -5,6 +5,7 @@ import { AuthTypeEnum } from "~/types"
 
 import { openRouterPersonalizedModelCatalogPageSchema } from "./personalizedModelCatalogSchemas"
 import type { OpenRouterPublicModel } from "./publicModelCatalogSchemas"
+import { createOpenRouterHttpError } from "./responseError"
 
 const OPENROUTER_PERSONALIZED_MODELS_ENDPOINT = "/models/user"
 const OPENROUTER_PERSONALIZED_CATALOG_MAX_PAGES = 50
@@ -77,20 +78,10 @@ async function fetchOpenRouterPersonalizedModelCatalogPage(
   )
 
   if (!response.ok) {
-    const code =
-      response.status === 401
-        ? API_ERROR_CODES.HTTP_401
-        : response.status === 403
-          ? API_ERROR_CODES.HTTP_403
-          : response.status === 429
-            ? API_ERROR_CODES.HTTP_429
-            : API_ERROR_CODES.HTTP_OTHER
-
-    throw new ApiError(
+    throw createOpenRouterHttpError(
+      response,
+      endpoint,
       "OpenRouter personalized model catalog request failed",
-      response.status,
-      OPENROUTER_PERSONALIZED_MODELS_ENDPOINT,
-      code,
     )
   }
 

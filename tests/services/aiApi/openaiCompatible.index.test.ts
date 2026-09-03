@@ -5,6 +5,7 @@ import {
   fetchOpenAICompatibleModelIds,
   fetchOpenAICompatibleModels,
 } from "~/services/aiApi/openaiCompatible"
+import { decodeOpenAICompatibleResponseError } from "~/services/aiApi/openaiCompatible/responseError"
 import { ApiError } from "~/services/apiTransport/errors"
 import { AuthTypeEnum } from "~/types"
 
@@ -57,6 +58,7 @@ describe("OpenAI-compatible model fetchers", () => {
       },
       {
         endpoint: "/v1/models",
+        errorResponseDecoder: decodeOpenAICompatibleResponseError,
       },
     )
   })
@@ -86,7 +88,10 @@ describe("OpenAI-compatible model fetchers", () => {
 
       expect(mockFetchApiData).toHaveBeenCalledWith(
         expect.objectContaining({ baseUrl }),
-        { endpoint: "/v1/models" },
+        {
+          endpoint: "/v1/models",
+          errorResponseDecoder: decodeOpenAICompatibleResponseError,
+        },
       )
     },
   )
@@ -118,9 +123,11 @@ describe("OpenAI-compatible model fetchers", () => {
 
       expect(mockFetchApiData).toHaveBeenNthCalledWith(1, expectedRequest, {
         endpoint: "/v1/models",
+        errorResponseDecoder: decodeOpenAICompatibleResponseError,
       })
       expect(mockFetchApiData).toHaveBeenNthCalledWith(2, expectedRequest, {
         endpoint: "/models",
+        errorResponseDecoder: decodeOpenAICompatibleResponseError,
       })
     },
   )
@@ -173,9 +180,11 @@ describe("OpenAI-compatible model fetchers", () => {
 
     expect(mockFetchApiData).toHaveBeenNthCalledWith(1, expect.any(Object), {
       endpoint: "/v1/models",
+      errorResponseDecoder: decodeOpenAICompatibleResponseError,
     })
     expect(mockFetchApiData).toHaveBeenNthCalledWith(2, expect.any(Object), {
       endpoint: "/models",
+      errorResponseDecoder: decodeOpenAICompatibleResponseError,
     })
   })
 
@@ -201,6 +210,7 @@ describe("OpenAI-compatible model fetchers", () => {
       },
       {
         endpoint: "/v1/models",
+        errorResponseDecoder: decodeOpenAICompatibleResponseError,
         options: {
           signal: abortController.signal,
         },
