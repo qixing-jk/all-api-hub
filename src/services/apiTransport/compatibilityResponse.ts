@@ -100,7 +100,10 @@ function createCompatibilityHttpError(
   }
 
   const message =
-    decoded?.message && (decoded.kind === "business" || response.status !== 403)
+    decoded?.message &&
+    (context.errorResponseDecoder ||
+      decoded.kind === "business" ||
+      response.status !== 403)
       ? decoded.message
       : fixedFallback
 

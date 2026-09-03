@@ -8,7 +8,6 @@ import { determineHealthStatus } from "~/services/accounts/accountHealth"
 import { createUnsupportedTodayStatsAvailability } from "~/services/accounts/accountTodayStats"
 import { OPENROUTER_API_BASE_URL } from "~/services/accountSiteDefinitions/identifiers"
 import { ApiError } from "~/services/apiTransport/errors"
-import { fetchApiData } from "~/services/apiTransport/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { AuthTypeEnum, SiteHealthStatus, type AccountIdentity } from "~/types"
 import { createLogger } from "~/utils/core/logger"
@@ -19,7 +18,10 @@ import {
   OPENROUTER_KEY_ENDPOINT,
 } from "./constants"
 import { OpenRouterManagementKeyRequiredError } from "./errors"
-import { createOpenRouterManagementRequest } from "./request"
+import {
+  createOpenRouterManagementRequest,
+  openRouterRequests,
+} from "./request"
 
 export * from "./keyManagement"
 export * from "./keyManagementSchemas"
@@ -99,7 +101,7 @@ export async function validateManagementKey(
 ): Promise<OpenRouterManagementKeyValidation> {
   const request = createCredentialRequest(input)
 
-  const data = await fetchApiData<OpenRouterKeyData>(request, {
+  const data = await openRouterRequests.data<OpenRouterKeyData>(request, {
     endpoint: OPENROUTER_KEY_ENDPOINT,
     options: { method: "GET", cache: "no-store" },
     tempWindowFallback: { statusCodes: [], codes: [] },
@@ -129,11 +131,14 @@ const fetchCredits = async (
 ): Promise<OpenRouterCreditsData> => {
   const canonicalRequest = createAccountRequest(request)
 
-  return await fetchApiData<OpenRouterCreditsData>(canonicalRequest, {
-    endpoint: OPENROUTER_CREDITS_ENDPOINT,
-    options: { method: "GET", cache: "no-store" },
-    tempWindowFallback: { statusCodes: [], codes: [] },
-  })
+  return await openRouterRequests.data<OpenRouterCreditsData>(
+    canonicalRequest,
+    {
+      endpoint: OPENROUTER_CREDITS_ENDPOINT,
+      options: { method: "GET", cache: "no-store" },
+      tempWindowFallback: { statusCodes: [], codes: [] },
+    },
+  )
 }
 
 const normalizeCredits = (
