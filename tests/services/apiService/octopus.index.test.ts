@@ -698,6 +698,14 @@ describe("Octopus API service", () => {
       ],
       expected: "stats bridge unavailable",
     },
+    {
+      name: "an HTTP v0.13 stats probe failure",
+      responses: [
+        { success: false, status: 404 },
+        { success: false, status: 503 },
+      ],
+      expected: "HTTP 503: Octopus session confirmation failed",
+    },
   ])(
     "does not dispatch a mutation after $name",
     async ({ responses, expected }) => {
@@ -725,21 +733,34 @@ describe("Octopus API service", () => {
     },
   )
 
-  it("stops a v0.13 update when current detail cannot be loaded", async () => {
-    mockGetValidSession.mockResolvedValue(v013CookieSession())
-    mockTempWindowOctopusApiFetch.mockResolvedValueOnce({
-      success: false,
-      status: 503,
-    })
+  it.each([
+    {
+      response: { success: false, status: 503 },
+      expected: "HTTP 503: Octopus request failed",
+    },
+    {
+      response: { success: false, error: "detail bridge unavailable" },
+      expected: "detail bridge unavailable",
+    },
+    {
+      response: { success: false },
+      expected: "Octopus request failed",
+    },
+  ])(
+    "stops a v0.13 update when detail loading fails as $expected",
+    async ({ response, expected }) => {
+      mockGetValidSession.mockResolvedValue(v013CookieSession())
+      mockTempWindowOctopusApiFetch.mockResolvedValueOnce(response)
 
-    await expect(
-      updateChannel(config, { id: 7, name: "Updated" }),
-    ).rejects.toMatchObject({
-      message: "HTTP 503: Octopus request failed",
-      dispatch: "not-dispatched",
-      confirmedNonApplication: true,
-    })
-  })
+      await expect(
+        updateChannel(config, { id: 7, name: "Updated" }),
+      ).rejects.toMatchObject({
+        message: expected,
+        dispatch: "not-dispatched",
+        confirmedNonApplication: true,
+      })
+    },
+  )
 
   it("preserves Octopus v0.13 detail fields while applying a partial update", async () => {
     const existing = v013ChannelDetailResponse({
