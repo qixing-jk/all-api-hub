@@ -21,7 +21,7 @@ import {
   type TagIdsInput,
 } from "~/services/accounts/accountPersistence/shared"
 import { getAccountSiteProductProfile } from "~/services/accounts/accountSiteProfile"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { accountMutations } from "~/services/accounts/accountStorage/accountMutations"
 import { resolveOpenRouterAccountUserId } from "~/services/apiAdapters/openrouter/accountIdentity"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import type { OpenRouterManagementKeyValidation } from "~/services/apiService/openrouter"
@@ -50,7 +50,7 @@ interface ValidateAndSaveAccountOptions {
  * 验证并保存账号信息（用于新增）
  *
  * Validates user-supplied account form data, fetches the freshest remote
- * account metrics, and persists the resulting record via accountStorage.
+ * account metrics, and persists the resulting record via accountMutations.
  * @param url - Target site URL entered by the user.
  * @param siteName - Display name for the account.
  * @param username - Username retrieved from the remote site.
@@ -196,7 +196,7 @@ export async function validateAndSaveAccount(
     }
 
     try {
-      const accountId = await accountStorage.addAccount(accountData)
+      const accountId = await accountMutations.addAccount(accountData)
       logger.info(
         "Account saved before deferred data refresh",
         getAccountOperationLogDetails(
@@ -306,7 +306,7 @@ export async function validateAndSaveAccount(
       last_sync_time: Date.now(),
     }
 
-    const accountId = await accountStorage.addAccount(accountData)
+    const accountId = await accountMutations.addAccount(accountData)
     logger.info(
       "Account saved with data refresh",
       getAccountOperationLogDetails(
@@ -368,7 +368,7 @@ export async function validateAndSaveAccount(
 
     // Try to save partial account data
     try {
-      const accountId = await accountStorage.addAccount(partialAccountData)
+      const accountId = await accountMutations.addAccount(partialAccountData)
       logger.warn(
         "Account saved without data refresh",
         getAccountOperationLogDetails(

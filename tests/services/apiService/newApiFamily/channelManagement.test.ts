@@ -35,10 +35,6 @@ vi.mock("~/constants/ui", () => ({
   UI_CONSTANTS: {},
 }))
 
-vi.mock("~/services/accounts/accountStorage", () => ({
-  accountStorage: {},
-}))
-
 vi.mock("~/services/apiService/newApiFamily/request", () => ({
   fetchApi: mockFetchApi,
   fetchApiData: mockFetchApiData,

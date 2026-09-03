@@ -7,8 +7,8 @@ const { mockGetAccountByBaseUrlAndUserId } = vi.hoisted(() => ({
   mockGetAccountByBaseUrlAndUserId: vi.fn(),
 }))
 
-vi.mock("~/services/accounts/accountStorage", () => ({
-  accountStorage: {
+vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
+  accountQueries: {
     getAccountByBaseUrlAndUserId: mockGetAccountByBaseUrlAndUserId,
   },
 }))

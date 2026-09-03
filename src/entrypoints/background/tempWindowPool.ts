@@ -7,7 +7,7 @@ import {
 } from "~/constants/tempContextMode"
 import { TURNSTILE_DEFAULT_QUERY_PARAM_NAME } from "~/constants/turnstile"
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import {
   API_ERROR_CODES,
   type ApiErrorCode,
@@ -301,7 +301,7 @@ async function prepareTempContextFetchOptions(params: {
       params.cookieAuthSessionCookie.trim()
         ? params.cookieAuthSessionCookie
         : params.accountId
-          ? (await accountStorage.getAccountById(params.accountId))?.cookieAuth
+          ? (await accountQueries.getAccountById(params.accountId))?.cookieAuth
               ?.sessionCookie
           : undefined
 

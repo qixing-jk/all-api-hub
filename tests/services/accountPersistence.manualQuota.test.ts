@@ -3,10 +3,10 @@ import { beforeEach, describe, expect, it } from "vitest"
 
 import { UI_CONSTANTS } from "~/constants/ui"
 import { validateAndSaveAccount } from "~/services/accounts/accountCreation"
-import { accountStorage } from "~/services/accounts/accountStorage"
 import { validateAndUpdateAccount } from "~/services/accounts/accountUpdate"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import { server } from "~~/tests/msw/server"
+import { accountStorageTestSurface as accountStorage } from "~~/tests/test-utils/accountStorageTestSurface"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
 const CHECK_IN_DISABLED = buildCheckInConfig({

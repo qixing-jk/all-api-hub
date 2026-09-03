@@ -36,13 +36,20 @@ vi.mock("~/services/protectionBypass/client", async (importOriginal) => {
   }
 })
 
-vi.mock("~/services/accounts/accountStorage", () => ({
-  accountStorage: {
-    getAllAccounts: mockGetAllAccounts,
-    getAccountStats: mockGetAccountStats,
-    convertToDisplayData: mockConvertToDisplayData,
-    refreshAllAccounts: mockRefreshAllAccounts,
+vi.mock("~/services/accounts/accountStorage/accountReadModels", () => ({
+  accountReadModels: {
+    getAccountOverviewSnapshot: async () => {
+      const accounts = await mockGetAllAccounts()
+      return {
+        accounts,
+        displayAccounts: mockConvertToDisplayData(accounts),
+        stats: await mockGetAccountStats(),
+      }
+    },
   },
+}))
+vi.mock("~/services/accounts/accountStorage/accountRefresh", () => ({
+  accountRefresh: { refreshAllAccounts: mockRefreshAllAccounts },
 }))
 
 beforeEach(() => {

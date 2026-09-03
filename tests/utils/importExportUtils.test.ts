@@ -10,7 +10,7 @@ import {
   type BackupV2,
   type RawBackupData,
 } from "~/features/ImportExport/utils"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { accountDataTransfer as accountStorage } from "~/services/accounts/accountStorage/accountDataTransfer"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { channelConfigStorage } from "~/services/managedSites/channelConfigStorage"
 import {
@@ -39,8 +39,8 @@ vi.mock("~/services/managedSites/legacyChannelConfigMigration", () => {
   }
 })
 
-vi.mock("~/services/accounts/accountStorage", () => ({
-  accountStorage: {
+vi.mock("~/services/accounts/accountStorage/accountDataTransfer", () => ({
+  accountDataTransfer: {
     importData: vi.fn(),
     exportData: vi.fn(),
   },

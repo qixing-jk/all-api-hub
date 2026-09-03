@@ -1,7 +1,7 @@
 import { http, HttpResponse } from "msw"
 import { describe, expect, it } from "vitest"
 
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { accountMutations as accountStorage } from "~/services/accounts/accountStorage/accountMutations"
 import { USAGE_HISTORY_LIMITS } from "~/services/history/usageHistory/constants"
 import { getDayKeyFromUnixSeconds } from "~/services/history/usageHistory/core"
 import { usageHistoryStorage } from "~/services/history/usageHistory/storage"

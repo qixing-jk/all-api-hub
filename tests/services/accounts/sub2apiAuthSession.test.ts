@@ -8,9 +8,13 @@ const { getAccountByIdMock, updateSub2ApiAuthMock } = vi.hoisted(() => ({
   updateSub2ApiAuthMock: vi.fn(),
 }))
 
-vi.mock("~/services/accounts/accountStorage", () => ({
-  accountStorage: {
+vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
+  accountQueries: {
     getAccountById: (...args: unknown[]) => getAccountByIdMock(...args),
+  },
+}))
+vi.mock("~/services/accounts/accountStorage/sub2ApiAuthPersistence", () => ({
+  sub2ApiAuthPersistence: {
     updateSub2ApiAuth: (...args: unknown[]) => updateSub2ApiAuthMock(...args),
   },
 }))

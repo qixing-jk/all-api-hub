@@ -2,7 +2,7 @@ import { fireEvent } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 
 import UsageAnalytics from "~/entrypoints/options/pages/UsageAnalytics"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { accountQueries as accountStorage } from "~/services/accounts/accountStorage/accountQueries"
 import {
   createEmptyUsageHistoryAccountStore,
   createEmptyUsageHistoryLatencyAggregate,
@@ -69,8 +69,8 @@ vi.mock("~/components/charts/EChart", () => ({
   ),
 }))
 
-vi.mock("~/services/accounts/accountStorage", () => ({
-  accountStorage: { getAllAccounts: vi.fn() },
+vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
+  accountQueries: { getAllAccounts: vi.fn() },
 }))
 
 vi.mock("~/services/history/usageHistory/storage", () => ({

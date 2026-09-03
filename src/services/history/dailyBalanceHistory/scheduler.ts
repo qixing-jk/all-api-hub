@@ -1,9 +1,8 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import {
-  accountStorage,
-  resolveAccountTodayStatsAvailability,
-} from "~/services/accounts/accountStorage"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
+import { accountRefresh } from "~/services/accounts/accountStorage/accountRefresh"
 import { isAccountTodayMetricComplete } from "~/services/accounts/accountTodayStats"
+import { resolveAccountTodayStatsAvailability } from "~/services/accounts/accountTodayStatsResolver"
 import { notifyTaskResult } from "~/services/notifications/taskNotificationService"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { createAutomaticProtectionBypassExecution } from "~/services/protectionBypass/client"
@@ -227,7 +226,7 @@ class DailyBalanceHistoryScheduler {
       : undefined
 
     if (accountIds == null) {
-      const result = await accountStorage.refreshAllAccounts(true, {
+      const result = await accountRefresh.refreshAllAccounts(true, {
         protectionBypassExecution,
         ...(tempWindowRequestSource ? { tempWindowRequestSource } : {}),
       })
@@ -244,7 +243,7 @@ class DailyBalanceHistoryScheduler {
 
     const results = await Promise.allSettled(
       ids.map((id) =>
-        accountStorage.refreshAccount(id, true, {
+        accountRefresh.refreshAccount(id, true, {
           protectionBypassExecution,
           ...(tempWindowRequestSource ? { tempWindowRequestSource } : {}),
         }),
@@ -284,7 +283,7 @@ class DailyBalanceHistoryScheduler {
     const nowMs = Date.now()
     const todayKey = getDayKeyFromUnixSeconds(Math.floor(nowMs / 1000))
     const yesterdayKey = subtractDaysFromDayKey(todayKey, 1)
-    const accounts = await accountStorage.getEnabledAccounts()
+    const accounts = await accountQueries.getEnabledAccounts()
     let seeded = 0
     let skipped = 0
 
@@ -379,7 +378,7 @@ class DailyBalanceHistoryScheduler {
         return { started: false, skipped: true }
       }
 
-      const accounts = await accountStorage.getEnabledAccounts()
+      const accounts = await accountQueries.getEnabledAccounts()
       const protectionBypassExecution =
         createAutomaticProtectionBypassExecution(
           PROTECTION_BYPASS_FEATURES.BalanceHistory,
@@ -388,7 +387,7 @@ class DailyBalanceHistoryScheduler {
         )
       const results = await Promise.allSettled(
         accounts.map((account) =>
-          accountStorage.refreshAccount(account.id, true, {
+          accountRefresh.refreshAccount(account.id, true, {
             includeTodayCashflow: true,
             balanceHistoryCaptureSource: params.trigger,
             protectionBypassExecution,

@@ -2,7 +2,9 @@ import { useCallback, useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { isManagedSiteType } from "~/constants/siteType"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { accountPresentation } from "~/services/accounts/accountStorage/accountPresentation"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
+import { accountStatistics } from "~/services/accounts/accountStorage/accountStatistics"
 import { createEmptyAccountTodayStatsCoverage } from "~/services/accounts/accountTodayStats"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
@@ -86,8 +88,8 @@ export function useOptionsOverviewData(): OptionsOverviewDataState {
       setIsLoading(true)
       try {
         const results = await Promise.allSettled([
-          accountStorage.getAllAccounts(),
-          accountStorage.getAccountStats(),
+          accountQueries.getAllAccounts(),
+          accountStatistics.getAccountStats(),
           usageHistoryStorage.getStore(),
           apiCredentialProfilesStorage.listProfiles(),
           userPreferences.getPreferences(),
@@ -164,7 +166,7 @@ export function useOptionsOverviewData(): OptionsOverviewDataState {
         const managedSiteType = isManagedSiteType(configuredManagedSiteType)
           ? configuredManagedSiteType
           : undefined
-        const displayData = accountStorage.convertToDisplayData(accounts)
+        const displayData = accountPresentation.convertToDisplayData(accounts)
         setViewModel(
           buildOptionsOverviewViewModel({
             accounts,

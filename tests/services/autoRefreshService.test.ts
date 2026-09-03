@@ -8,7 +8,7 @@ import {
   vi,
 } from "vitest"
 
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { accountRefresh as accountStorage } from "~/services/accounts/accountStorage/accountRefresh"
 import { AutoRefreshMessageTypes } from "~/services/accounts/autoRefreshMessaging"
 import {
   autoRefreshService,
@@ -57,8 +57,8 @@ vi.mock("~/utils/core/error", () => ({
   getErrorMessage: vi.fn((error) => `${String(error)}`),
 }))
 
-vi.mock("~/services/accounts/accountStorage", () => ({
-  accountStorage: {
+vi.mock("~/services/accounts/accountStorage/accountRefresh", () => ({
+  accountRefresh: {
     refreshAllAccounts: vi.fn(),
   },
 }))

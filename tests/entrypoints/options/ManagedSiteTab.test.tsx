@@ -24,11 +24,11 @@ const {
   mockedUseUserPreferencesContext: vi.fn(),
 }))
 
-vi.mock("~/services/accounts/accountStorage", () => ({
-  accountStorage: {
-    getAllAccounts: mockedGetAllAccounts,
-    convertToDisplayData: mockedConvertToDisplayData,
-  },
+vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
+  accountQueries: { getAllAccounts: mockedGetAllAccounts },
+}))
+vi.mock("~/services/accounts/accountStorage/accountPresentation", () => ({
+  accountPresentation: { convertToDisplayData: mockedConvertToDisplayData },
 }))
 
 vi.mock("~/services/accounts/keyProductCapabilities", () => ({

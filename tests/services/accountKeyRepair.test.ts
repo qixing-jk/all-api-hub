@@ -90,11 +90,11 @@ vi.mock("@plasmohq/storage", () => ({
   Storage: mocks.StorageMock,
 }))
 
-vi.mock("~/services/accounts/accountStorage", () => ({
-  accountStorage: {
-    getAllAccounts: mocks.getAllAccounts,
-    convertToDisplayData: mocks.convertToDisplayData,
-  },
+vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
+  accountQueries: { getAllAccounts: mocks.getAllAccounts },
+}))
+vi.mock("~/services/accounts/accountStorage/accountPresentation", () => ({
+  accountPresentation: { convertToDisplayData: mocks.convertToDisplayData },
 }))
 
 vi.mock("~/services/apiAdapters/registry", () => ({

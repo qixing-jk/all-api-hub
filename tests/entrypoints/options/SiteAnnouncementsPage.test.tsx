@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import SiteAnnouncementsPage from "~/entrypoints/options/pages/SiteAnnouncements"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { accountQueries as accountStorage } from "~/services/accounts/accountStorage/accountQueries"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
@@ -54,8 +54,8 @@ vi.mock("~/services/siteAnnouncements/messaging", () => ({
   sendSiteAnnouncementsMessage: sendSiteAnnouncementsMessageMock,
 }))
 
-vi.mock("~/services/accounts/accountStorage", () => ({
-  accountStorage: {
+vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
+  accountQueries: {
     getAllAccounts: vi.fn(),
   },
 }))

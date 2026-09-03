@@ -10,7 +10,8 @@ import {
   KEY_MANAGEMENT_GUIDED_IMPORT_TARGETS,
   KEY_MANAGEMENT_ROUTE_PARAMS,
 } from "~/features/KeyManagement/constants"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { accountPresentation } from "~/services/accounts/accountStorage/accountPresentation"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { canResolveAccountRuntimeKeySecret } from "~/services/accounts/keyProductCapabilities"
 import { hasValidManagedSiteConfig } from "~/services/managedSites/managedSiteService"
 import { pushWithinOptionsPage } from "~/utils/navigation"
@@ -51,9 +52,9 @@ export default function ManagedSiteTab() {
   useEffect(() => {
     let isCurrent = true
 
-    void accountStorage
+    void accountQueries
       .getAllAccounts()
-      .then((accounts) => accountStorage.convertToDisplayData(accounts))
+      .then((accounts) => accountPresentation.convertToDisplayData(accounts))
       .then((accounts) => {
         if (isCurrent) {
           setGuidedImportAccountId(

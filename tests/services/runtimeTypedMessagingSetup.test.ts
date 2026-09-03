@@ -507,11 +507,11 @@ describe("typed runtime messaging setup", () => {
         onAccountKeyRepairMessage,
       }),
     )
-    vi.doMock("~/services/accounts/accountStorage", () => ({
-      accountStorage: {
-        getAllAccounts,
-        convertToDisplayData,
-      },
+    vi.doMock("~/services/accounts/accountStorage/accountQueries", () => ({
+      accountQueries: { getAllAccounts },
+    }))
+    vi.doMock("~/services/accounts/accountStorage/accountPresentation", () => ({
+      accountPresentation: { convertToDisplayData },
     }))
     vi.doMock("@plasmohq/storage", () => ({
       Storage: class {
@@ -978,8 +978,10 @@ describe("typed runtime messaging setup", () => {
     vi.doMock("~/services/history/dailyBalanceHistory/messaging", () => ({
       onBalanceHistoryMessage,
     }))
-    vi.doMock("~/services/accounts/accountStorage", () => ({
-      accountStorage: { refreshAllAccounts },
+    vi.doMock("~/services/accounts/accountStorage/accountRefresh", () => ({
+      accountRefresh: { refreshAllAccounts },
+    }))
+    vi.doMock("~/services/accounts/accountTodayStatsResolver", () => ({
       resolveAccountTodayStatsAvailability: vi.fn(),
     }))
     vi.doMock("~/services/preferences/userPreferences", async () => {
@@ -1839,45 +1841,58 @@ describe("typed runtime messaging setup", () => {
         },
       }
     })
-    vi.doMock("~/services/accounts/accountStorage", () => ({
-      accountStorage: {
-        getAllAccounts: vi.fn().mockResolvedValue([
-          {
-            id: "account-1",
-            disabled: false,
-            site_name: "Example",
-            site_type: "Veloera",
-            account_info: { username: "user" },
-            checkIn: buildCheckInConfig({
-              automaticExecutionEnabled: true,
-              methodKnowledge: {
-                methods: {
-                  [AUTO_CHECKIN_METHOD_IDS.VeloeraDailyCheckIn]: {
-                    detection: {
-                      outcome: CHECK_IN_METHOD_DETECTION_OUTCOMES.Matched,
-                      evidence: {
-                        source:
-                          CHECK_IN_METHOD_DETECTION_EVIDENCE_SOURCES.CompatibilityRegistration,
-                      },
+    const accountSurface = {
+      getAllAccounts: vi.fn().mockResolvedValue([
+        {
+          id: "account-1",
+          disabled: false,
+          site_name: "Example",
+          site_type: "Veloera",
+          account_info: { username: "user" },
+          checkIn: buildCheckInConfig({
+            automaticExecutionEnabled: true,
+            methodKnowledge: {
+              methods: {
+                [AUTO_CHECKIN_METHOD_IDS.VeloeraDailyCheckIn]: {
+                  detection: {
+                    outcome: CHECK_IN_METHOD_DETECTION_OUTCOMES.Matched,
+                    evidence: {
+                      source:
+                        CHECK_IN_METHOD_DETECTION_EVIDENCE_SOURCES.CompatibilityRegistration,
                     },
                   },
                 },
               },
-              selection: {
-                mode: "automatic",
-                methodId: AUTO_CHECKIN_METHOD_IDS.VeloeraDailyCheckIn,
-              },
-            }),
-          },
-        ]),
-        getEnabledAccounts: vi.fn(),
-        updateAccount: vi.fn(),
-        markAccountAsSiteCheckedIn: vi.fn().mockResolvedValue(undefined),
-        refreshAccount: vi.fn(),
-        getAccountById: vi.fn(),
-        getDisplayDataById: vi.fn(),
-        convertToDisplayData: vi.fn(),
-      },
+            },
+            selection: {
+              mode: "automatic",
+              methodId: AUTO_CHECKIN_METHOD_IDS.VeloeraDailyCheckIn,
+            },
+          }),
+        },
+      ]),
+      getEnabledAccounts: vi.fn(),
+      updateAccount: vi.fn(),
+      markAccountAsSiteCheckedIn: vi.fn().mockResolvedValue(undefined),
+      refreshAccount: vi.fn(),
+      getAccountById: vi.fn(),
+      getDisplayDataById: vi.fn(),
+      convertToDisplayData: vi.fn(),
+    }
+    vi.doMock("~/services/accounts/accountStorage/accountQueries", () => ({
+      accountQueries: accountSurface,
+    }))
+    vi.doMock("~/services/accounts/accountStorage/accountCheckInState", () => ({
+      accountCheckInState: accountSurface,
+    }))
+    vi.doMock("~/services/accounts/accountStorage/accountRefresh", () => ({
+      accountRefresh: accountSurface,
+    }))
+    vi.doMock("~/services/accounts/accountStorage/accountReadModels", () => ({
+      accountReadModels: accountSurface,
+    }))
+    vi.doMock("~/services/accounts/accountStorage/accountPresentation", () => ({
+      accountPresentation: accountSurface,
     }))
     vi.doMock("~/services/checkin/autoCheckin/storage", () => ({
       AUTO_CHECKIN_STATUS_STORAGE_LOCK: "all-api-hub:auto-checkin-status",

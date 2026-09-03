@@ -24,7 +24,7 @@ import {
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { accountDataTransfer } from "~/services/accounts/accountStorage/accountDataTransfer"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { channelConfigStorage } from "~/services/managedSites/channelConfigStorage"
 import { ensureLegacyChannelConfigMigrationReady } from "~/services/managedSites/legacyChannelConfigMigration"
@@ -406,7 +406,7 @@ export default function WebDAVSettings() {
         channelConfigs,
         apiCredentialProfiles,
       ] = await Promise.all([
-        accountStorage.exportData(),
+        accountDataTransfer.exportData(),
         tagStorage.exportTagStore(),
         userPreferences.exportPreferences(),
         channelConfigStorage.exportConfigs(),

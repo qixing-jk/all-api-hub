@@ -1,7 +1,7 @@
 import toast from "react-hot-toast"
 
 import { ensureDefaultApiTokenForAccount } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { DefaultTokenLifecyclePolicyBlockedError } from "~/services/accounts/defaultTokenLifecycle"
 import {
   canRunAccountDefaultTokenAutomation,
@@ -23,7 +23,7 @@ export async function autoProvisionKeyOnAccountAdd(
   if (!enabled) return
 
   try {
-    const account = await accountStorage.getAccountById(accountId)
+    const account = await accountQueries.getAccountById(accountId)
     if (!account) {
       logger.warn("Auto-provision skipped: account not found", { accountId })
       return

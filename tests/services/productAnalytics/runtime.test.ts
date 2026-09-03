@@ -105,12 +105,9 @@ vi.mock("~/services/productAnalytics/state", async (importOriginal) => {
   }
 })
 
-vi.mock("~/services/accounts/accountStorage", () => ({
-  accountStorage: {
+vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
+  accountQueries: {
     getAllAccounts: getAllAccountsMock,
-  },
-  ACCOUNT_STORAGE_KEYS: {
-    ACCOUNTS: "site_accounts",
   },
 }))
 

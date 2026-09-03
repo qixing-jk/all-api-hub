@@ -17,7 +17,8 @@ import {
   KEY_MANAGEMENT_ROUTE_PARAMS,
 } from "~/features/KeyManagement/constants"
 import { buildGuidedAccountKeyImportTarget } from "~/features/UnifiedApiGuidance/navigation"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { accountPresentation } from "~/services/accounts/accountStorage/accountPresentation"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { canResolveAccountRuntimeKeySecret } from "~/services/accounts/keyProductCapabilities"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import {
@@ -69,7 +70,7 @@ export function useManagedSiteChannelPageExperience({
     let isCurrent = true
 
     void Promise.all([
-      accountStorage.getAllAccounts().catch((error) => {
+      accountQueries.getAllAccounts().catch((error) => {
         logger.warn(
           "Failed to load account context for gateway guidance",
           error,
@@ -85,7 +86,7 @@ export function useManagedSiteChannelPageExperience({
       }),
     ]).then(([accounts, profiles]) => {
       if (!isCurrent) return
-      const displayAccounts = accountStorage.convertToDisplayData(accounts)
+      const displayAccounts = accountPresentation.convertToDisplayData(accounts)
       setImportAccountId(
         displayAccounts.find(canResolveAccountRuntimeKeySecret)?.id,
       )

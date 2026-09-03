@@ -60,7 +60,10 @@ import {
   type AccountPostSaveWorkflowStep,
 } from "~/services/accounts/accountPostSaveWorkflow"
 import { doAccountSiteIdentitiesMatch } from "~/services/accounts/accountSiteProfile"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { accountPresentation } from "~/services/accounts/accountStorage/accountPresentation"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
+import { accountReadModels } from "~/services/accounts/accountStorage/accountReadModels"
+import { accountRefresh } from "~/services/accounts/accountStorage/accountRefresh"
 import { validateAndUpdateAccount } from "~/services/accounts/accountUpdate"
 import type { AccountAutoDetectRecoveryData } from "~/services/accounts/autoDetect/recovery"
 import type { CreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
@@ -227,7 +230,7 @@ async function refreshPostSaveAccount(
   onPostSaveAccountRefresh?: (accountIds: string[]) => Promise<void>,
 ) {
   try {
-    const result = await accountStorage.refreshAccount(accountId, true, {
+    const result = await accountRefresh.refreshAccount(accountId, true, {
       tempWindowRequestSource,
       protectionBypassExecution,
     })
@@ -853,9 +856,9 @@ export function useAccountDialog({
       return true
     }
 
-    let accounts: Awaited<ReturnType<typeof accountStorage.getAllAccounts>>
+    let accounts: Awaited<ReturnType<typeof accountQueries.getAllAccounts>>
     try {
-      accounts = await accountStorage.getAllAccountsOrThrow()
+      accounts = await accountQueries.getAllAccountsOrThrow()
     } catch {
       logger.warn(
         "Exact-credential duplicate lookup failed; continuing without warning",
@@ -920,9 +923,9 @@ export function useAccountDialog({
       return true
     }
 
-    let accounts: Awaited<ReturnType<typeof accountStorage.getAllAccounts>>
+    let accounts: Awaited<ReturnType<typeof accountQueries.getAllAccounts>>
     try {
-      accounts = await accountStorage.getAllAccountsOrThrow()
+      accounts = await accountQueries.getAllAccountsOrThrow()
     } catch (error) {
       logger.warn(
         "Duplicate-account lookup failed; continuing without warning",
@@ -1146,7 +1149,7 @@ export function useAccountDialog({
       }
 
       try {
-        const savedAccount = await accountStorage.getAccountById(savedAccountId)
+        const savedAccount = await accountQueries.getAccountById(savedAccountId)
         if (!isCurrentRun()) return
 
         if (!savedAccount) {
@@ -1155,8 +1158,8 @@ export function useAccountDialog({
         }
 
         const displaySiteData =
-          (await accountStorage.getDisplayDataById(savedAccountId)) ??
-          accountStorage.convertToDisplayData(savedAccount)
+          (await accountReadModels.getDisplayDataById(savedAccountId)) ??
+          accountPresentation.convertToDisplayData(savedAccount)
         if (!isCurrentRun()) return
 
         const inventoryState = await inspectAccountTokenInventory({
@@ -1241,7 +1244,7 @@ export function useAccountDialog({
   const loadAccountData = useCallback(
     async (accountId: string) => {
       try {
-        const siteAccount = await accountStorage.getAccountById(accountId)
+        const siteAccount = await accountQueries.getAccountById(accountId)
         if (siteAccount) {
           setUrl(siteAccount.site_url)
           const refreshToken = siteAccount.sub2apiAuth?.refreshToken ?? ""
@@ -2602,7 +2605,7 @@ export function useAccountDialog({
                         : PROTECTION_BYPASS_USER_COMMANDS.ReauthenticateAccount,
                       tempWindowRequestSource,
                       (protectionBypassExecution) =>
-                        accountStorage.refreshAccount(warningAccountId, true, {
+                        accountRefresh.refreshAccount(warningAccountId, true, {
                           tempWindowRequestSource,
                           protectionBypassExecution,
                         }),
@@ -2659,7 +2662,7 @@ export function useAccountDialog({
       ) {
         try {
           const savedDisplaySiteData =
-            (await accountStorage.getDisplayDataById(savedAccountId)) ?? null
+            (await accountReadModels.getDisplayDataById(savedAccountId)) ?? null
 
           if (
             shouldOpenSub2ApiTokenDialogForAccountDialogSite({
@@ -2727,7 +2730,7 @@ export function useAccountDialog({
     }))
 
     try {
-      const savedAccount = await accountStorage.getAccountById(accountId)
+      const savedAccount = await accountQueries.getAccountById(accountId)
       if (!isCurrentRun()) return
       if (!savedAccount) {
         toast.error(t("messages:toast.error.findAccountDetailsFailed"))
@@ -2742,8 +2745,8 @@ export function useAccountDialog({
       }
 
       const displaySiteData =
-        (await accountStorage.getDisplayDataById(accountId)) ??
-        accountStorage.convertToDisplayData(savedAccount)
+        (await accountReadModels.getDisplayDataById(accountId)) ??
+        accountPresentation.convertToDisplayData(savedAccount)
       if (!isCurrentRun()) return
 
       const ensureResult = await ensureAccountTokenForPostSaveWorkflow({
@@ -3095,7 +3098,7 @@ export function useAccountDialog({
           ACCOUNT_POST_SAVE_WORKFLOW_STEPS.LoadingSavedAccount,
         )
         // 获取账户详细信息
-        const siteAccount = await accountStorage.getAccountById(targetAccount)
+        const siteAccount = await accountQueries.getAccountById(targetAccount)
         if (!isCurrentRun()) {
           return
         }
@@ -3108,8 +3111,8 @@ export function useAccountDialog({
         }
         savedSiteAccount = siteAccount
         displaySiteData =
-          (await accountStorage.getDisplayDataById(siteAccount.id)) ??
-          accountStorage.convertToDisplayData(siteAccount)
+          (await accountReadModels.getDisplayDataById(siteAccount.id)) ??
+          accountPresentation.convertToDisplayData(siteAccount)
         if (!isCurrentRun()) {
           return
         }

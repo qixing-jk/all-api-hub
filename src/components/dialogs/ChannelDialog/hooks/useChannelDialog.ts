@@ -11,7 +11,9 @@ import {
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import { SITE_TYPES } from "~/constants/siteType"
 import { selectSingleNewApiTokenByIdDiff } from "~/services/accounts/accountPostSaveWorkflow"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { accountPresentation } from "~/services/accounts/accountStorage/accountPresentation"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
+import { accountReadModels } from "~/services/accounts/accountStorage/accountReadModels"
 import { createUnsupportedTodayStatsAvailability } from "~/services/accounts/accountTodayStats"
 import { ensureAccountApiToken } from "~/services/accounts/ensureAccountApiToken"
 import {
@@ -381,11 +383,11 @@ export function useChannelDialog() {
       if (isSiteAccount(account)) {
         siteAccount = account
         displaySiteData =
-          (await accountStorage.getDisplayDataById(account.id)) ??
-          accountStorage.convertToDisplayData(account)
+          (await accountReadModels.getDisplayDataById(account.id)) ??
+          accountPresentation.convertToDisplayData(account)
       } else {
         displaySiteData = account
-        const fetchedAccount = await accountStorage.getAccountById(account.id)
+        const fetchedAccount = await accountQueries.getAccountById(account.id)
         if (!fetchedAccount) {
           throw new Error(t("messages:toast.error.findAccountDetailsFailed"))
         }

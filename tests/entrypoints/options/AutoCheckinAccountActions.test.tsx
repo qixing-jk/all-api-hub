@@ -93,8 +93,8 @@ const {
   trackProductAnalyticsActionStartedMock: vi.fn(),
 }))
 
-vi.mock("~/services/accounts/accountStorage", () => ({
-  accountStorage: {
+vi.mock("~/services/accounts/accountStorage/accountMutations", () => ({
+  accountMutations: {
     setAccountDisabled: (...args: any[]) => setAccountDisabledMock(...args),
     deleteAccount: (...args: any[]) => deleteAccountMock(...args),
   },

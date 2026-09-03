@@ -9,7 +9,7 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import ManagedSiteChannels from "~/features/ManagedSiteChannels/ManagedSiteChannels"
 import type { ChannelRow } from "~/features/ManagedSiteChannels/types"
 import { fetchChannelFilters } from "~/features/ManagedSiteChannels/utils/channelFilters"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { accountQueries as accountStorage } from "~/services/accounts/accountStorage/accountQueries"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import {
   getManagedSiteService,

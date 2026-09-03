@@ -34,7 +34,7 @@ import { ANIMATIONS, COLORS } from "~/constants/designTokens"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { useTheme } from "~/contexts/ThemeContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import {
   buildAccountDisplayNameMap,
   compareAccountDisplayNames,
@@ -230,7 +230,7 @@ export default function BalanceHistory() {
     try {
       setIsLoading(true)
       const [nextAccounts, nextStore, nextTagStore] = await Promise.all([
-        accountStorage.getEnabledAccounts(),
+        accountQueries.getEnabledAccounts(),
         dailyBalanceHistoryStorage.getStore(),
         tagStorage.getTagStore(),
       ])

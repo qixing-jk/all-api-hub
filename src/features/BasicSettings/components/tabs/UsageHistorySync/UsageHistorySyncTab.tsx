@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next"
 import { SettingSection } from "~/components/SettingSection"
 import { Card, CardContent, Input } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { buildAccountDisplayNameMap } from "~/services/accounts/utils/accountDisplayName"
 import { sendUsageHistoryMessage } from "~/services/history/usageHistory/messaging"
 import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
@@ -95,7 +95,7 @@ export default function UsageHistorySyncTab() {
     try {
       setIsLoading(true)
       const [nextAccounts, nextStore] = await Promise.all([
-        accountStorage.getEnabledAccounts(),
+        accountQueries.getEnabledAccounts(),
         usageHistoryStorage.getStore(),
       ])
       setAccounts(nextAccounts)

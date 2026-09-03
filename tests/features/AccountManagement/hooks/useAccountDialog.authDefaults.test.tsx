@@ -5,7 +5,7 @@ import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { DIALOG_MODES } from "~/constants/dialogModes"
 import { SITE_TYPES } from "~/constants/siteType"
 import { useAccountDialog } from "~/features/AccountManagement/components/AccountDialog/hooks/useAccountDialog"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { accountQueries as accountStorage } from "~/services/accounts/accountStorage/accountQueries"
 import { AuthTypeEnum } from "~/types"
 import {
   buildCheckInConfig,

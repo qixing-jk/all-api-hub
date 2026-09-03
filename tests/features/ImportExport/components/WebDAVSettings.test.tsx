@@ -158,8 +158,8 @@ vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
   }
 })
 
-vi.mock("~/services/accounts/accountStorage", () => ({
-  accountStorage: mockAccountStorage,
+vi.mock("~/services/accounts/accountStorage/accountDataTransfer", () => ({
+  accountDataTransfer: mockAccountStorage,
 }))
 
 vi.mock("~/services/tags/tagStorage", () => ({

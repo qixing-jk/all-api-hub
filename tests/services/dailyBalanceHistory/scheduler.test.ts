@@ -89,12 +89,16 @@ vi.mock("~/services/preferences/userPreferences", () => ({
   },
 }))
 
-vi.mock("~/services/accounts/accountStorage", () => ({
-  accountStorage: {
-    getEnabledAccounts: mockGetEnabledAccounts,
+vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
+  accountQueries: { getEnabledAccounts: mockGetEnabledAccounts },
+}))
+vi.mock("~/services/accounts/accountStorage/accountRefresh", () => ({
+  accountRefresh: {
     refreshAccount: mockRefreshAccount,
     refreshAllAccounts: mockRefreshAllAccounts,
   },
+}))
+vi.mock("~/services/accounts/accountTodayStatsResolver", () => ({
   resolveAccountTodayStatsAvailability: (...args: unknown[]) =>
     mockResolveAccountTodayStatsAvailability(...args),
 }))

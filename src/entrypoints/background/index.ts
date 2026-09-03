@@ -4,7 +4,8 @@ import {
   cleanupTempContextsOnSuspend,
   setupTempWindowListeners,
 } from "~/entrypoints/background/tempWindowPool"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { accountDataTransfer } from "~/services/accounts/accountStorage/accountDataTransfer"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { migrateAccountsConfig } from "~/services/accounts/migrations/accountDataMigration"
 import {
   hasNewOptionalPermissions,
@@ -109,14 +110,17 @@ export default defineBackground(() => {
         logger.info("Tag store migration completed")
 
         // Load all accounts and migrate
-        const accounts = await accountStorage.getAllAccounts()
+        const accounts = await accountQueries.getAllAccounts()
         const { accounts: migrated, migratedCount } =
           migrateAccountsConfig(accounts)
 
         if (migratedCount > 0) {
           // Save migrated accounts back
-          const config = await accountStorage.exportData()
-          await accountStorage.importData({ ...config, accounts: migrated })
+          const config = await accountDataTransfer.exportData()
+          await accountDataTransfer.importData({
+            ...config,
+            accounts: migrated,
+          })
           logger.info("Account migration completed", { migratedCount })
         }
 

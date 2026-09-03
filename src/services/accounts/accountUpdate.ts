@@ -16,7 +16,8 @@ import {
   validateOpenRouterManagementKeyIfRequired,
   type TagIdsInput,
 } from "~/services/accounts/accountPersistence/shared"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { accountCheckInState } from "~/services/accounts/accountStorage/accountCheckInState"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { resolveOpenRouterAccountUserId } from "~/services/apiAdapters/openrouter/accountIdentity"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import type { OpenRouterManagementKeyValidation } from "~/services/apiService/openrouter"
@@ -113,7 +114,7 @@ export async function validateAndUpdateAccount(
   if (isOpenRouter) {
     let existingAccount: SiteAccount | undefined
     try {
-      existingAccount = (await accountStorage.getAllAccountsOrThrow()).find(
+      existingAccount = (await accountQueries.getAllAccountsOrThrow()).find(
         (account) => account.id === accountId,
       )
     } catch {
@@ -203,7 +204,7 @@ export async function validateAndUpdateAccount(
       },
     }
 
-    const success = await accountStorage.updateAccountWithCheckInDraft(
+    const success = await accountCheckInState.updateAccountWithCheckInDraft(
       accountId,
       updateData,
       checkInConfig,
@@ -308,7 +309,7 @@ export async function validateAndUpdateAccount(
       last_sync_time: Date.now(),
     }
 
-    const success = await accountStorage.updateAccountWithCheckInDraft(
+    const success = await accountCheckInState.updateAccountWithCheckInDraft(
       accountId,
       updateData,
       checkInConfig,
@@ -374,7 +375,7 @@ export async function validateAndUpdateAccount(
     }
 
     // Try to save partial update
-    const success = await accountStorage.updateAccountWithCheckInDraft(
+    const success = await accountCheckInState.updateAccountWithCheckInDraft(
       accountId,
       partialUpdateData,
       checkInConfig,

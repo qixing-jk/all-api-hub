@@ -9,7 +9,7 @@ import { UI_CONSTANTS } from "~/constants/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import BalanceHistory from "~/entrypoints/options/pages/BalanceHistory"
 import { BALANCE_HISTORY_TEST_IDS } from "~/features/BalanceHistory/testIds"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { accountQueries as accountStorage } from "~/services/accounts/accountStorage/accountQueries"
 import {
   getDayKeyFromUnixSeconds,
   subtractDaysFromDayKey,
@@ -81,8 +81,8 @@ vi.mock("~/components/charts/echarts", async () => {
   }
 })
 
-vi.mock("~/services/accounts/accountStorage", () => ({
-  accountStorage: { getAllAccounts: vi.fn(), getEnabledAccounts: vi.fn() },
+vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
+  accountQueries: { getAllAccounts: vi.fn(), getEnabledAccounts: vi.fn() },
 }))
 
 vi.mock("~/services/history/dailyBalanceHistory/storage", () => ({

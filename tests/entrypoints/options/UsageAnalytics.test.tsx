@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import UsageAnalytics from "~/entrypoints/options/pages/UsageAnalytics"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { accountQueries as accountStorage } from "~/services/accounts/accountStorage/accountQueries"
 import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
 import { openSettingsTab, pushWithinOptionsPage } from "~/utils/navigation"
 import { render, screen } from "~~/tests/test-utils/render"
@@ -19,8 +19,8 @@ vi.mock("~/components/charts/EChart", () => ({
   ),
 }))
 
-vi.mock("~/services/accounts/accountStorage", () => ({
-  accountStorage: { getAllAccounts: vi.fn() },
+vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
+  accountQueries: { getAllAccounts: vi.fn() },
 }))
 
 vi.mock("~/services/history/usageHistory/storage", () => ({

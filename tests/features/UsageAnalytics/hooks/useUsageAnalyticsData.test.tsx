@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useUsageAnalyticsData } from "~/features/UsageAnalytics/hooks/useUsageAnalyticsData"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { accountQueries as accountStorage } from "~/services/accounts/accountStorage/accountQueries"
 import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -20,8 +20,8 @@ const { startProductAnalyticsActionMock, completeProductAnalyticsActionMock } =
     completeProductAnalyticsActionMock: vi.fn(),
   }))
 
-vi.mock("~/services/accounts/accountStorage", () => ({
-  accountStorage: { getAllAccounts: vi.fn() },
+vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
+  accountQueries: { getAllAccounts: vi.fn() },
 }))
 
 vi.mock("~/services/history/usageHistory/storage", () => ({

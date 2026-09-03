@@ -83,8 +83,8 @@ vi.mock(
 
 const mockAccountStorageExportData = vi.fn()
 const mockAccountStorageImportData = vi.fn()
-vi.mock("~/services/accounts/accountStorage", () => ({
-  accountStorage: {
+vi.mock("~/services/accounts/accountStorage/accountDataTransfer", () => ({
+  accountDataTransfer: {
     exportData: (...args: any[]) => mockAccountStorageExportData(...args),
     importData: (...args: any[]) => mockAccountStorageImportData(...args),
   },

@@ -64,8 +64,8 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => ({
   onAlarm: onAlarmMock,
 }))
 
-vi.mock("~/services/accounts/accountStorage", () => ({
-  accountStorage: {
+vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
+  accountQueries: {
     getEnabledAccounts: getEnabledAccountsMock,
     getAccountById: getAccountByIdMock,
   },

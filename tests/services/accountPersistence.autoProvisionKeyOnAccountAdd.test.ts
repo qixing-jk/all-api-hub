@@ -5,7 +5,6 @@ import { Storage } from "@plasmohq/storage"
 import { OPENROUTER_WEB_ORIGIN, SITE_TYPES } from "~/constants/siteType"
 import { validateAndSaveAccount } from "~/services/accounts/accountCreation"
 import { autoProvisionKeyOnAccountAdd } from "~/services/accounts/accountKeyAutoProvisioning/autoProvisionOnAccountAdd"
-import { accountStorage } from "~/services/accounts/accountStorage"
 import { DefaultTokenLifecyclePolicyBlockedError } from "~/services/accounts/defaultTokenLifecycle"
 import { TOKEN_PROVISIONING_BLOCK_REASONS } from "~/services/apiAdapters/contracts/tokenProvisioning"
 import { USER_PREFERENCES_STORAGE_KEYS } from "~/services/core/storageKeys"
@@ -14,6 +13,7 @@ import {
   userPreferences,
 } from "~/services/preferences/userPreferences"
 import { AuthTypeEnum, type DisplaySiteData } from "~/types"
+import { accountStorageTestSurface as accountStorage } from "~~/tests/test-utils/accountStorageTestSurface"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
 const {

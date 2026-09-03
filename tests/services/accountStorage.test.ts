@@ -5,7 +5,6 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { ACCOUNT_BROWSER_SESSION_SOURCES } from "~/services/accountBrowserSession"
 import { AccountUpdateUserTimestampMode } from "~/services/accounts/accountDefaults"
-import { accountStorage } from "~/services/accounts/accountStorage"
 import { refreshAccountData as refreshVoApiV2AccountData } from "~/services/apiService/voapiV2"
 import {
   ACCOUNT_STORAGE_KEYS,
@@ -30,6 +29,7 @@ import {
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { server } from "~~/tests/msw/server"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
+import { accountStorageTestSurface as accountStorage } from "~~/tests/test-utils/accountStorageTestSurface"
 import {
   buildCompleteTodayStatsAvailability,
   buildTodayStatsAvailabilityReplacementCases,
@@ -945,6 +945,21 @@ describe("accountStorage core behaviors", () => {
 
     await accountStorage.pinAccount("a-1")
     expect(await accountStorage.getPinnedList()).toEqual(["a-1", "a-3", "a-2"])
+  })
+
+  it("pinAccount preserves every id across concurrent mutations", async () => {
+    const accounts = Array.from({ length: 8 }, (_, index) =>
+      createAccount({ id: `pin-${index + 1}` }),
+    )
+    seedStorage(accounts)
+
+    await Promise.all(
+      accounts.map((account) => accountStorage.pinAccount(account.id)),
+    )
+
+    expect(new Set(await accountStorage.getPinnedList())).toEqual(
+      new Set(accounts.map((account) => account.id)),
+    )
   })
 
   it("setPinnedList should drop invalid ids and keep order", async () => {

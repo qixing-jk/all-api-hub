@@ -4,7 +4,7 @@ import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import ExportSection from "~/features/ImportExport/components/ExportSection"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { accountDataTransfer as accountStorage } from "~/services/accounts/accountStorage/accountDataTransfer"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import {
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
@@ -43,8 +43,8 @@ vi.mock("~/services/productAnalytics/actions", () => ({
   startProductAnalyticsAction: startProductAnalyticsActionMock,
 }))
 
-vi.mock("~/services/accounts/accountStorage", () => ({
-  accountStorage: {
+vi.mock("~/services/accounts/accountStorage/accountDataTransfer", () => ({
+  accountDataTransfer: {
     exportData: vi.fn(),
   },
 }))

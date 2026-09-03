@@ -1,4 +1,4 @@
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { notifyTaskResult } from "~/services/notifications/taskNotificationService"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { UsageHistoryMessageTypes } from "~/services/runtimeMessaging/messageTypes"
@@ -237,7 +237,7 @@ class UsageHistoryScheduler {
 
       const accounts = params.accountIds?.length
         ? await Promise.all(
-            params.accountIds.map((id) => accountStorage.getAccountById(id)),
+            params.accountIds.map((id) => accountQueries.getAccountById(id)),
           ).then((values) =>
             values
               .filter((value): value is NonNullable<typeof value> =>
@@ -245,7 +245,7 @@ class UsageHistoryScheduler {
               )
               .filter((account) => account.disabled !== true),
           )
-        : await accountStorage.getEnabledAccounts()
+        : await accountQueries.getEnabledAccounts()
 
       const perAccount: Array<
         Awaited<ReturnType<typeof syncUsageHistoryForAccount>>

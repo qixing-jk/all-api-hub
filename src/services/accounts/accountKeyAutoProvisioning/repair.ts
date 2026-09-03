@@ -12,7 +12,8 @@ import {
   buildAccountKeyResourceRuntimeKeyId,
   buildTargetScopedAccountKeyResourceId,
 } from "~/services/accounts/accountRuntimeKeys"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { accountPresentation } from "~/services/accounts/accountStorage/accountPresentation"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { createAccountApiRequestFromStoredAccount } from "~/services/accounts/utils/apiServiceRequest"
 import {
   ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
@@ -529,7 +530,7 @@ class AccountKeyRepairRunner {
         return
       }
 
-      const allAccounts = await accountStorage.getAllAccounts()
+      const allAccounts = await accountQueries.getAllAccounts()
       if (this.isCurrentJobCancelled(jobId, abortSignal)) {
         return
       }
@@ -537,7 +538,7 @@ class AccountKeyRepairRunner {
         (account) => account.disabled !== true,
       )
       const displaySiteDataById = new Map(
-        accountStorage
+        accountPresentation
           .convertToDisplayData(allAccounts, allAccounts)
           .map((account) => [account.id, account] as const),
       )
@@ -888,7 +889,7 @@ class AccountKeyRepairRunner {
         ),
       ),
     )
-    const allAccounts = await accountStorage.getAllAccounts()
+    const allAccounts = await accountQueries.getAllAccounts()
     const accountById = new Map(
       allAccounts.map((account) => [account.id, account] as const),
     )

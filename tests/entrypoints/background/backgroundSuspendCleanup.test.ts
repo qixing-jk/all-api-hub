@@ -123,9 +123,11 @@ describe("background onSuspend temp-context cleanup", () => {
         ensureLegacyMigration: vi.fn().mockResolvedValue(undefined),
       },
     }))
-    vi.doMock("~/services/accounts/accountStorage", () => ({
-      accountStorage: {
-        getAllAccounts: vi.fn().mockResolvedValue([]),
+    vi.doMock("~/services/accounts/accountStorage/accountQueries", () => ({
+      accountQueries: { getAllAccounts: vi.fn().mockResolvedValue([]) },
+    }))
+    vi.doMock("~/services/accounts/accountStorage/accountDataTransfer", () => ({
+      accountDataTransfer: {
         exportData: vi.fn().mockResolvedValue({ accounts: [] }),
         importData: vi.fn().mockResolvedValue(undefined),
       },
@@ -177,7 +179,8 @@ describe("background onSuspend temp-context cleanup", () => {
     vi.doUnmock("~/services/productAnalytics/runtime")
     vi.doUnmock("~/services/preferences/userPreferences")
     vi.doUnmock("~/services/tags/tagStorage")
-    vi.doUnmock("~/services/accounts/accountStorage")
+    vi.doUnmock("~/services/accounts/accountStorage/accountQueries")
+    vi.doUnmock("~/services/accounts/accountStorage/accountDataTransfer")
     vi.doUnmock("~/services/accounts/migrations/accountDataMigration")
     vi.doUnmock("~/services/permissions/permissionManager")
     vi.doUnmock("~/services/permissions/optionalPermissionState")

@@ -12,7 +12,6 @@ import {
   ACCOUNT_TOKEN_INVENTORY_STATE_KINDS,
   ENSURE_ACCOUNT_TOKEN_RESULT_KINDS,
 } from "~/services/accounts/accountPostSaveWorkflow"
-import { accountStorage } from "~/services/accounts/accountStorage"
 import * as apiServiceRequest from "~/services/accounts/utils/apiServiceRequest"
 import {
   DEFAULT_PREFERENCES,
@@ -41,6 +40,7 @@ import {
 } from "~/types"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
+import { accountStorageTestSurface as accountStorage } from "~~/tests/test-utils/accountStorageTestSurface"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"

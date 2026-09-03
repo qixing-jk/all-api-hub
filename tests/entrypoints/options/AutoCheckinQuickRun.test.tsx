@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SITE_TYPES } from "~/constants/siteType"
 import AutoCheckin from "~/entrypoints/options/pages/AutoCheckin"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { accountQueries as accountStorage } from "~/services/accounts/accountStorage/accountQueries"
 import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -76,8 +76,8 @@ vi.mock("~/services/productAnalytics/actions", () => ({
   trackProductAnalyticsActionStarted: trackProductAnalyticsActionStartedMock,
 }))
 
-vi.mock("~/services/accounts/accountStorage", () => ({
-  accountStorage: {
+vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
+  accountQueries: {
     getAllAccounts: vi.fn(),
   },
 }))

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
@@ -73,7 +73,7 @@ export const useUsageAnalyticsData = () => {
       try {
         setIsLoading(true)
         const [nextAccounts, nextStore] = await Promise.all([
-          accountStorage.getAllAccounts(),
+          accountQueries.getAllAccounts(),
           usageHistoryStorage.getStore(),
         ])
         setAccounts(nextAccounts)

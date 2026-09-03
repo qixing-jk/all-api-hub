@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { useOptionsOverviewData } from "~/features/OptionsOverview/useOptionsOverviewData"
-import { accountStorage } from "~/services/accounts/accountStorage"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
 import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
@@ -12,6 +11,7 @@ import {
 } from "~/services/preferences/userPreferences"
 import { siteAnnouncementStorage } from "~/services/siteAnnouncements/storage"
 import { SiteHealthStatus } from "~/types"
+import { accountStorageTestSurface as accountStorage } from "~~/tests/test-utils/accountStorageTestSurface"
 import { buildAccountStats } from "~~/tests/test-utils/accountTodayStats"
 import { buildCheckInConfig } from "~~/tests/test-utils/factories"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
@@ -33,10 +33,20 @@ vi.mock("~/utils/core/logger", async (importOriginal) => {
   }
 })
 
-vi.mock("~/services/accounts/accountStorage", () => ({
-  accountStorage: {
+vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
+  accountQueries: {
     getAllAccounts: vi.fn(),
+  },
+}))
+
+vi.mock("~/services/accounts/accountStorage/accountStatistics", () => ({
+  accountStatistics: {
     getAccountStats: vi.fn(),
+  },
+}))
+
+vi.mock("~/services/accounts/accountStorage/accountPresentation", () => ({
+  accountPresentation: {
     convertToDisplayData: vi.fn(),
   },
 }))

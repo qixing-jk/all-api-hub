@@ -10,7 +10,7 @@ import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -64,7 +64,7 @@ const logger = createLogger("SiteAnnouncementsPage")
  */
 async function resolveEnabledAccountCount(): Promise<number | null> {
   try {
-    const accounts = await accountStorage.getAllAccounts()
+    const accounts = await accountQueries.getAllAccounts()
     return accounts.filter((account) => account.disabled !== true).length
   } catch (error) {
     logger.warn(

@@ -238,16 +238,36 @@ vi.mock("react-hot-toast", () => ({
   },
 }))
 
-vi.mock("~/services/accounts/accountStorage", () => ({
-  accountStorage: {
-    resetExpiredCheckIns: mockResetExpiredCheckIns,
-    getAllAccounts: mockGetAllAccounts,
-    getAllBookmarks: mockGetAllBookmarks,
+vi.mock("~/services/accounts/accountStorage/accountCheckInState", () => ({
+  accountCheckInState: { resetExpiredCheckIns: mockResetExpiredCheckIns },
+}))
+vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
+  accountQueries: {
     getAccountById: mockGetAccountById,
-    getOrderedList: mockGetOrderedList,
+    checkUrlExists: vi.fn(async () => null),
+  },
+}))
+vi.mock("~/services/accounts/accountStorage/accountReadModels", () => ({
+  accountReadModels: {
+    getAccountManagementSnapshot: async () => {
+      const accounts = await mockGetAllAccounts()
+      return {
+        accounts,
+        bookmarks: await mockGetAllBookmarks(),
+        orderedIds: await mockGetOrderedList(),
+        pinnedIds: await mockGetPinnedList(),
+        stats: await mockGetAccountStats(),
+      }
+    },
+  },
+}))
+vi.mock("~/services/accounts/accountStorage/accountPresentation", () => ({
+  accountPresentation: { convertToDisplayData: mockConvertToDisplayData },
+}))
+vi.mock("~/services/accounts/accountStorage/accountEntryLayout", () => ({
+  accountEntryLayout: {
     getPinnedList: mockGetPinnedList,
-    getAccountStats: mockGetAccountStats,
-    convertToDisplayData: mockConvertToDisplayData,
+    getOrderedList: mockGetOrderedList,
     setPinnedList: mockSetPinnedList,
     setOrderedList: mockSetOrderedList,
     setAccountListOrder: mockSetAccountListOrder,
@@ -255,9 +275,12 @@ vi.mock("~/services/accounts/accountStorage", () => ({
     setOrderedListSubset: mockSetOrderedListSubset,
     pinAccount: mockPinAccount,
     unpinAccount: mockUnpinAccount,
+  },
+}))
+vi.mock("~/services/accounts/accountStorage/accountRefresh", () => ({
+  accountRefresh: {
     refreshAllAccounts: mockRefreshAllAccounts,
     refreshDisabledAccounts: mockRefreshDisabledAccounts,
-    checkUrlExists: vi.fn(async () => null),
   },
 }))
 
@@ -347,6 +370,12 @@ afterEach(() => {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  mockGetAllAccounts.mockReset()
+  mockGetAllBookmarks.mockReset()
+  mockGetOrderedList.mockReset()
+  mockGetPinnedList.mockReset()
+  mockGetAccountStats.mockReset()
+  mockConvertToDisplayData.mockReset()
   mockGetCurrentTempWindowRequestSource.mockReturnValue(
     TEMP_WINDOW_REQUEST_SOURCES.Background,
   )

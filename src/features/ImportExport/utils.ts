@@ -1,6 +1,6 @@
 import toast from "react-hot-toast"
 
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { accountDataTransfer } from "~/services/accounts/accountStorage/accountDataTransfer"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import {
   BACKUP_VERSION,
@@ -100,7 +100,7 @@ export const handleExportAll = async (
       channelConfigs,
       apiCredentialProfiles,
     ] = await Promise.all([
-      accountStorage.exportData(),
+      accountDataTransfer.exportData(),
       tagStorage.exportTagStore(),
       userPreferences.exportPreferences(),
       channelConfigStorage.exportConfigs(),
@@ -152,7 +152,7 @@ export const handleExportAccounts = async (
     setIsExporting(true)
 
     const [accountData, tagStore] = await Promise.all([
-      accountStorage.exportData(),
+      accountDataTransfer.exportData(),
       tagStorage.exportTagStore(),
     ])
     const exportData: BackupAccountsPartialV2 = {

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { accountQueries as accountStorage } from "~/services/accounts/accountStorage/accountQueries"
 import {
   resolveUsageHistoryPruneMessage,
   resolveUsageHistorySyncNowMessage,
@@ -34,8 +34,8 @@ const registeredAlarmListeners: Array<
 > = []
 const notifyTaskResultMock = vi.fn()
 
-vi.mock("~/services/accounts/accountStorage", () => ({
-  accountStorage: {
+vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
+  accountQueries: {
     getAccountById: vi.fn(),
     getEnabledAccounts: vi.fn(),
   },

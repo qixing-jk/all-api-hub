@@ -1,4 +1,4 @@
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import {
   ACCOUNT_STORAGE_KEYS,
   USER_PREFERENCES_STORAGE_KEYS,
@@ -69,7 +69,7 @@ async function captureSiteEcosystemSnapshot(): Promise<boolean> {
     return false
   }
 
-  const accounts = await accountStorage.getAllAccounts()
+  const accounts = await accountQueries.getAllAccounts()
   const events = buildSiteEcosystemAnalyticsEvents(accounts)
 
   for (const event of events) {

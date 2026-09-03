@@ -7,7 +7,7 @@ import { Button, FormField, Input, Modal, Textarea } from "~/components/ui"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { TagPicker } from "~/features/AccountManagement/components/TagPicker"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { bookmarkRepository } from "~/services/accounts/accountStorage/bookmarkRepository"
 import { getSiteName } from "~/services/accounts/siteName"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
@@ -199,7 +199,7 @@ export default function BookmarkDialog({
 
     try {
       if (mode === "add") {
-        await accountStorage.addBookmark({
+        await bookmarkRepository.addBookmark({
           name,
           url,
           notes,
@@ -211,7 +211,7 @@ export default function BookmarkDialog({
           t("messages:toast.success.bookmarkAdded", { name: name.trim() }),
         )
       } else if (bookmark) {
-        const success = await accountStorage.updateBookmark(bookmark.id, {
+        const success = await bookmarkRepository.updateBookmark(bookmark.id, {
           name,
           url,
           notes,

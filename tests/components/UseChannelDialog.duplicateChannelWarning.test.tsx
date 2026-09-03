@@ -7,7 +7,7 @@ import {
 import { ChannelType } from "~/constants"
 import { DIALOG_MODES } from "~/constants/dialogModes"
 import { SITE_TYPES } from "~/constants/siteType"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { accountQueries as accountStorage } from "~/services/accounts/accountStorage/accountQueries"
 import * as accountTokenOperations from "~/services/accounts/ensureAccountApiToken"
 import * as tokenQuickCreateResolution from "~/services/accounts/tokenQuickCreateResolution"
 import {

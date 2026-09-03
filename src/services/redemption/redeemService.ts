@@ -1,5 +1,7 @@
 import { UI_CONSTANTS } from "~/constants/ui"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { accountPresentation } from "~/services/accounts/accountStorage/accountPresentation"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
+import { accountReadModels } from "~/services/accounts/accountStorage/accountReadModels"
 import { createAccountApiRequestFromStoredAccount } from "~/services/accounts/utils/apiServiceRequest"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import type { DisplaySiteData } from "~/types"
@@ -31,7 +33,7 @@ class RedeemService {
     code: string,
   ): Promise<RedeemResult> {
     try {
-      const account = await accountStorage.getAccountById(accountId)
+      const account = await accountQueries.getAccountById(accountId)
       if (!account) {
         return {
           success: false,
@@ -60,8 +62,8 @@ class RedeemService {
       })
 
       const displayAccount =
-        (await accountStorage.getDisplayDataById(accountId)) ??
-        accountStorage.convertToDisplayData(account)
+        (await accountReadModels.getDisplayDataById(accountId)) ??
+        accountPresentation.convertToDisplayData(account)
 
       const amountStr =
         typeof creditedAmount === "number"

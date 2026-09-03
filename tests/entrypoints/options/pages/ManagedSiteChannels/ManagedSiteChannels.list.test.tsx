@@ -13,7 +13,7 @@ import {
   default as ManagedSiteChannels,
   upsertChannelRow,
 } from "~/features/ManagedSiteChannels/ManagedSiteChannels"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { accountQueries as accountStorage } from "~/services/accounts/accountStorage/accountQueries"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { getManagedSiteService } from "~/services/managedSites/managedSiteService"
 import { sendModelSyncMessage } from "~/services/models/modelSync/messaging"

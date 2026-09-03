@@ -55,11 +55,11 @@ vi.mock("~/services/managedSites/managedUpstreamResourceService", () => ({
   resolveManagedUpstreamResourceCapabilities: () => ({ supported: false }),
 }))
 
-vi.mock("~/services/accounts/accountStorage", () => ({
-  accountStorage: {
-    getAllAccounts: vi.fn().mockResolvedValue([]),
-    convertToDisplayData: vi.fn(() => []),
-  },
+vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
+  accountQueries: { getAllAccounts: vi.fn().mockResolvedValue([]) },
+}))
+vi.mock("~/services/accounts/accountStorage/accountPresentation", () => ({
+  accountPresentation: { convertToDisplayData: vi.fn(() => []) },
 }))
 
 vi.mock(

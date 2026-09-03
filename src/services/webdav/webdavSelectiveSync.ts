@@ -1,4 +1,4 @@
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { accountDataTransfer } from "~/services/accounts/accountStorage/accountDataTransfer"
 import {
   apiCredentialProfilesStorage,
   coerceApiCredentialProfilesConfig,
@@ -971,7 +971,7 @@ export async function buildWebdavImportPayloadBySelection(input: {
     channelConfigs,
     apiCredentialProfiles,
   ] = await Promise.all([
-    accountStorage.exportData(),
+    accountDataTransfer.exportData(),
     tagStorage.exportTagStore(),
     userPreferences.exportPreferences(),
     channelConfigStorage.exportConfigs(),

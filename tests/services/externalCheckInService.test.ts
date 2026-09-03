@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { accountStorage } from "~/services/accounts/accountStorage"
 import { SITE_ROUTE_KINDS } from "~/services/accounts/utils/siteRouteResolver"
 import { ExternalCheckInMessageTypes } from "~/services/checkin/externalCheckInMessaging"
 import {
@@ -12,14 +11,20 @@ import {
   createWindow,
   hasWindowsAPI,
 } from "~/utils/browser/browserApi"
+import { accountStorageTestSurface as accountStorage } from "~~/tests/test-utils/accountStorageTestSurface"
 
 const { mockOnExternalCheckInMessage } = vi.hoisted(() => ({
   mockOnExternalCheckInMessage: vi.fn(() => vi.fn()),
 }))
 
-vi.mock("~/services/accounts/accountStorage", () => ({
-  accountStorage: {
+vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
+  accountQueries: {
     getAccountById: vi.fn(),
+  },
+}))
+
+vi.mock("~/services/accounts/accountStorage/accountCheckInState", () => ({
+  accountCheckInState: {
     markAccountAsCustomCheckedIn: vi.fn(),
   },
 }))

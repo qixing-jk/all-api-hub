@@ -2,7 +2,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SITE_TYPES } from "~/constants/siteType"
-import { accountStorage } from "~/services/accounts/accountStorage"
 import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
 import {
   getSelectedCheckInStatus,
@@ -73,6 +72,7 @@ import {
   automaticExecution,
   userCommandExecution,
 } from "~~/tests/services/protectionBypass/fixtures"
+import { accountStorageTestSurface as accountStorage } from "~~/tests/test-utils/accountStorageTestSurface"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
 const manualExecution = (
@@ -193,17 +193,29 @@ vi.mock("~/services/preferences/userPreferences", () => ({
   },
 }))
 
-vi.mock("~/services/accounts/accountStorage", () => ({
-  accountStorage: {
+vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
+  accountQueries: {
     getAllAccounts: vi.fn(),
     getEnabledAccounts: vi.fn(),
+    getAccountById: vi.fn(),
+  },
+}))
+vi.mock("~/services/accounts/accountStorage/accountCheckInState", () => ({
+  accountCheckInState: {
     updateAccount: vi.fn(),
     markAccountAsSiteCheckedIn: vi.fn(),
-    refreshAccount: vi.fn(),
-    getAccountById: vi.fn(),
-    getDisplayDataById: vi.fn(),
-    convertToDisplayData: vi.fn(),
     prepareAccountForSelectedCheckIn: vi.fn(),
+  },
+}))
+vi.mock("~/services/accounts/accountStorage/accountRefresh", () => ({
+  accountRefresh: { refreshAccount: vi.fn() },
+}))
+vi.mock("~/services/accounts/accountStorage/accountReadModels", () => ({
+  accountReadModels: { getDisplayDataById: vi.fn() },
+}))
+vi.mock("~/services/accounts/accountStorage/accountPresentation", () => ({
+  accountPresentation: {
+    convertToDisplayData: vi.fn(),
   },
 }))
 

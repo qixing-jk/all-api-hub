@@ -10,7 +10,9 @@ import {
 import toast from "react-hot-toast"
 
 import { openExternalCheckIns } from "~/features/AccountManagement/utils/openExternalCheckIns"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { accountCheckInState } from "~/services/accounts/accountStorage/accountCheckInState"
+import { accountMutations } from "~/services/accounts/accountStorage/accountMutations"
+import { accountRefresh } from "~/services/accounts/accountStorage/accountRefresh"
 import { buildAccountRefreshDiagnostics } from "~/services/productAnalytics/accountRefresh"
 import {
   startProductAnalyticsAction,
@@ -114,7 +116,7 @@ export const AccountActionsProvider = ({
             let analyticsCompleted = false
 
             const refreshPromise = async () => {
-              const result = await accountStorage.refreshAccount(
+              const result = await accountRefresh.refreshAccount(
                 account.id,
                 force,
                 {
@@ -214,7 +216,7 @@ export const AccountActionsProvider = ({
 
   const handleSetAccountDisabled = useCallback(
     async (account: DisplaySiteData, disabled: boolean) => {
-      const success = await accountStorage.setAccountDisabled(
+      const success = await accountMutations.setAccountDisabled(
         account.id,
         disabled,
       )
@@ -257,7 +259,7 @@ export const AccountActionsProvider = ({
         return { updatedCount: 0, updatedIds: [] }
       }
 
-      const result = await accountStorage.setAccountsDisabled(
+      const result = await accountMutations.setAccountsDisabled(
         accountIds,
         disabled,
       )
@@ -299,7 +301,7 @@ export const AccountActionsProvider = ({
       }
 
       const result = await toast.promise(
-        accountStorage.deleteAccounts(accountIds),
+        accountMutations.deleteAccounts(accountIds),
         {
           loading: t("account:bulk.deleting", { count: accountIds.length }),
           success: (deleteResult) =>
@@ -341,7 +343,7 @@ export const AccountActionsProvider = ({
     async (account: DisplaySiteData) => {
       if (account.disabled === true) return
       try {
-        const success = await accountStorage.markAccountAsCustomCheckedIn(
+        const success = await accountCheckInState.markAccountAsCustomCheckedIn(
           account.id,
         )
         if (success) {

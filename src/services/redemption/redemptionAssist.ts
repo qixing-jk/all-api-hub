@@ -1,4 +1,6 @@
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { accountPresentation } from "~/services/accounts/accountStorage/accountPresentation"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
+import { accountRefresh } from "~/services/accounts/accountStorage/accountRefresh"
 import {
   resolveAccountSiteRouteUrl,
   SITE_ROUTE_KINDS,
@@ -43,7 +45,7 @@ async function bestEffortRefreshAccountAfterSuccessfulRedeem(
   accountId: string,
 ) {
   try {
-    const result = await accountStorage.refreshAccount(accountId, true, {
+    const result = await accountRefresh.refreshAccount(accountId, true, {
       protectionBypassExecution: createAutomaticProtectionBypassExecution(
         PROTECTION_BYPASS_FEATURES.RedemptionAssist,
         PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.BackgroundRecovery,
@@ -216,8 +218,8 @@ class RedemptionAssistService {
    * Fetch accounts and convert to display data used by search/filter utilities.
    */
   private async getDisplayAccounts(): Promise<DisplaySiteData[]> {
-    const siteAccounts = await accountStorage.getAllAccounts()
-    const displayAccounts = accountStorage.convertToDisplayData(
+    const siteAccounts = await accountQueries.getAllAccounts()
+    const displayAccounts = accountPresentation.convertToDisplayData(
       siteAccounts,
       siteAccounts,
     )

@@ -9,7 +9,7 @@ import {
   scanDuplicateAccounts,
   type AccountDedupeKeepStrategy,
 } from "~/services/accounts/accountDedupe"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { accountMutations } from "~/services/accounts/accountStorage/accountMutations"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -190,7 +190,7 @@ export default function DedupeAccountsDialog({
     setIsWorking(true)
     try {
       const { deletedCount } = await toast.promise(
-        accountStorage.deleteAccounts(idsToDelete),
+        accountMutations.deleteAccounts(idsToDelete),
         {
           loading: t("ui:dialog.dedupeAccounts.deleting"),
           success: (result) =>

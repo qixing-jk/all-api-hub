@@ -1,5 +1,5 @@
 import { BACKUP_VERSION } from "~/constants/importExport"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { accountDataTransfer } from "~/services/accounts/accountStorage/accountDataTransfer"
 import { migrateAccountConfig } from "~/services/accounts/migrations/accountDataMigration"
 import {
   apiCredentialProfilesStorage,
@@ -388,7 +388,7 @@ async function importV1Backup(
       data.accounts
 
     if (accountsData) {
-      await accountStorage.importData({
+      await accountDataTransfer.importData({
         accounts: canonicalizeV6Accounts(accountsData) as SiteAccount[],
       })
       // Ensure legacy imports (string tags) are migrated to tag ids.
@@ -794,7 +794,7 @@ async function importV2AccountsWithReplace(data: BackupV2) {
       ? (accountsConfig as AccountStorageConfig).orderedAccountIds
       : []
 
-  await accountStorage.importData({
+  await accountDataTransfer.importData({
     accounts: canonicalizeV6Accounts(accounts) as SiteAccount[],
     bookmarks,
     pinnedAccountIds,
@@ -881,7 +881,7 @@ async function importV2AccountsWithMerge(
   remoteApiCredentialProfiles: ApiCredentialProfilesConfig["profiles"] = [],
 ) {
   const [localAccountsConfig, localTagStore] = await Promise.all([
-    accountStorage.exportData(),
+    accountDataTransfer.exportData(),
     tagStorage.exportTagStore(),
   ])
   const normalizedRemote = normalizeV2BackupForMerge(data as BackupFullV2, null)
@@ -911,7 +911,7 @@ async function importV2AccountsWithMerge(
   ])
 
   await tagStorage.importTagStore(tagMerge.tagStore)
-  await accountStorage.importData({
+  await accountDataTransfer.importData({
     accounts,
     bookmarks,
     pinnedAccountIds: mergeEntryIdList({

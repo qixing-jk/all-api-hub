@@ -13,7 +13,7 @@ import {
   type AccountRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
 import { shouldDecorateAccountApiRequestWithAuthSession } from "~/services/accounts/accountSiteProfile"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import {
   canCreateAccountApiTokens,
   canListAccountRuntimeKeys,
@@ -307,7 +307,7 @@ export async function resolveStoredAccountApiContext(
     )
   }
 
-  const account = await accountStorage.getAccountById(accountId)
+  const account = await accountQueries.getAccountById(accountId)
 
   if (!account) {
     throw new StoredAccountApiContextError(

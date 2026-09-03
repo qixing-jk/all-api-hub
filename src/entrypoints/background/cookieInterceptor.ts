@@ -1,7 +1,5 @@
-import {
-  ACCOUNT_STORAGE_KEYS,
-  accountStorage,
-} from "~/services/accounts/accountStorage"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
+import { ACCOUNT_STORAGE_KEYS } from "~/services/core/storageKeys"
 import { type AccountStorageConfig, type SiteAccount } from "~/types"
 import { isSameStringSet } from "~/utils"
 import {
@@ -136,7 +134,7 @@ export async function initializeCookieInterceptors(): Promise<void> {
     if (!(await checkCookieInterceptorRequirement())) {
       return
     }
-    const accounts = await accountStorage.getAllAccounts()
+    const accounts = await accountQueries.getAllAccounts()
     const urlPatterns = mergeUrlPatterns(extractAccountUrlPatterns(accounts))
     setupWebRequestInterceptor(urlPatterns)
   } catch (error) {
@@ -153,7 +151,7 @@ async function updateCookieInterceptor(): Promise<void> {
     if (!(await checkCookieInterceptorRequirement())) {
       return
     }
-    const accounts = await accountStorage.getAllAccounts()
+    const accounts = await accountQueries.getAllAccounts()
     const urlPatterns = mergeUrlPatterns(extractAccountUrlPatterns(accounts))
     registerWebRequestInterceptor(urlPatterns)
   } catch (error) {

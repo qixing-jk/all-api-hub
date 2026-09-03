@@ -41,21 +41,18 @@ vi.mock("~/services/apiService/openrouter", () => ({
   validateManagementKey: mockValidateManagementKey,
 }))
 
-vi.mock("~/services/accounts/accountStorage", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("~/services/accounts/accountStorage")>()
-
-  return {
-    ...actual,
-    accountStorage: {
-      ...actual.accountStorage,
-      getAllAccountsOrThrow: mockGetAllAccountsOrThrow,
-      updateAccount: mockUpdateAccount,
-      updateAccountWithCheckInDraft: mockUpdateAccountWithCheckInDraft,
-      updateAccountCheckInDraft: mockUpdateAccountCheckInDraft,
-    },
-  }
-})
+vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
+  accountQueries: { getAllAccountsOrThrow: mockGetAllAccountsOrThrow },
+}))
+vi.mock("~/services/accounts/accountStorage/accountMutations", () => ({
+  accountMutations: { updateAccount: mockUpdateAccount },
+}))
+vi.mock("~/services/accounts/accountStorage/accountCheckInState", () => ({
+  accountCheckInState: {
+    updateAccountWithCheckInDraft: mockUpdateAccountWithCheckInDraft,
+    updateAccountCheckInDraft: mockUpdateAccountCheckInDraft,
+  },
+}))
 
 describe("account persistence and form validation", () => {
   beforeEach(() => {

@@ -1,6 +1,7 @@
 import { AccountUpdateUserTimestampMode } from "~/services/accounts/accountDefaults"
 import { normalizeAccountSiteProfileUrlForOriginKey } from "~/services/accounts/accountSiteProfile"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
+import { sub2ApiAuthPersistence } from "~/services/accounts/accountStorage/sub2ApiAuthPersistence"
 import type {
   Sub2ApiAuthSession,
   Sub2ApiStoredAuthSnapshot,
@@ -53,11 +54,11 @@ const buildStoredAuthSnapshot = (
 
 export const accountSub2ApiAuthSession: Sub2ApiAuthSession = {
   async getLatestAuth(accountId) {
-    const account = await accountStorage.getAccountById(accountId)
+    const account = await accountQueries.getAccountById(accountId)
     return account ? buildStoredAuthSnapshot(account) : null
   },
   async persistAuthUpdate(accountId, update) {
-    return accountStorage.updateSub2ApiAuth(accountId, update, {
+    return sub2ApiAuthPersistence.updateSub2ApiAuth(accountId, update, {
       userTimestampMode: AccountUpdateUserTimestampMode.Preserve,
     })
   },

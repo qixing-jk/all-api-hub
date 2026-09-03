@@ -27,8 +27,8 @@ vi.mock(
   }),
 )
 
-vi.mock("~/services/accounts/accountStorage", () => ({
-  accountStorage: { deleteAccount: deleteAccountMock },
+vi.mock("~/services/accounts/accountStorage/accountMutations", () => ({
+  accountMutations: { deleteAccount: deleteAccountMock },
 }))
 
 vi.mock("~/services/productAnalytics/actions", () => ({

@@ -29,7 +29,7 @@ import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 import { useBookmarkDialogContext } from "~/features/SiteBookmarks/hooks/BookmarkDialogStateContext"
 import { useIsDesktop, useIsSmallScreen } from "~/hooks/useMediaQuery"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { bookmarkRepository } from "~/services/accounts/accountStorage/bookmarkRepository"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -352,7 +352,7 @@ export default function BookmarksList({
     })
 
     try {
-      const success = await accountStorage.deleteBookmark(target.id)
+      const success = await bookmarkRepository.deleteBookmark(target.id)
       if (!success) {
         throw new Error(t("messages:toast.error.saveFailed"))
       }

@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { Storage } from "@plasmohq/storage"
 
 import { BACKUP_VERSION } from "~/constants/importExport"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { accountDataTransfer as accountStorage } from "~/services/accounts/accountStorage/accountDataTransfer"
 import { USER_PREFERENCES_STORAGE_KEYS } from "~/services/core/storageKeys"
 import { ensureLegacyChannelConfigMigrationReady } from "~/services/managedSites/legacyChannelConfigMigration"
 import {

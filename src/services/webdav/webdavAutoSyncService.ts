@@ -60,7 +60,7 @@ import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
 
-import { accountStorage } from "../accounts/accountStorage"
+import { accountDataTransfer } from "../accounts/accountStorage/accountDataTransfer"
 import { ACCOUNT_STORAGE_KEYS, STORAGE_LOCKS } from "../core/storageKeys"
 import { withExtensionStorageWriteLock } from "../core/storageWriteLock"
 import { channelConfigStorage } from "../managedSites/channelConfigStorage"
@@ -518,7 +518,7 @@ class WebdavAutoSyncService {
       localChannelConfigs,
       localApiCredentialProfiles,
     ] = await Promise.all([
-      accountStorage.exportData(),
+      accountDataTransfer.exportData(),
       tagStorage.exportTagStore(),
       userPreferences.exportPreferences(),
       channelConfigStorage.exportConfigs(),
@@ -1080,7 +1080,7 @@ class WebdavAutoSyncService {
               input.syncDataSelection.accounts ||
               input.syncDataSelection.bookmarks
             ) {
-              await accountStorage.importData({
+              await accountDataTransfer.importData({
                 accounts: input.accountsToSave,
                 pinnedAccountIds: input.pinnedAccountIdsToSave,
                 orderedAccountIds: input.orderedAccountIdsToSave,
@@ -1089,7 +1089,7 @@ class WebdavAutoSyncService {
               })
 
               rollbackSteps.push(async () => {
-                await accountStorage.importData({
+                await accountDataTransfer.importData({
                   accounts: input.localAccountsConfig.accounts,
                   bookmarks: input.localAccountsConfig.bookmarks || [],
                   pinnedAccountIds:

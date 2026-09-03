@@ -13,11 +13,11 @@ const mocks = vi.hoisted(() => ({
   createTab: vi.fn(async () => undefined),
 }))
 
-vi.mock("~/services/accounts/accountStorage", () => ({
-  accountStorage: {
-    getAllAccounts: mocks.getAllAccounts,
-    convertToDisplayData: mocks.convertToDisplayData,
-  },
+vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
+  accountQueries: { getAllAccounts: mocks.getAllAccounts },
+}))
+vi.mock("~/services/accounts/accountStorage/accountPresentation", () => ({
+  accountPresentation: { convertToDisplayData: mocks.convertToDisplayData },
 }))
 vi.mock(
   "~/services/apiCredentialProfiles/apiCredentialProfilesStorage",

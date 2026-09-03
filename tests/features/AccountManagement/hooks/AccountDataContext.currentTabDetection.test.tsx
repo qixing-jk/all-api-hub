@@ -50,16 +50,25 @@ const {
   mockGetTagStore: vi.fn(),
 }))
 
-vi.mock("~/services/accounts/accountStorage", () => ({
-  accountStorage: {
-    resetExpiredCheckIns: mockResetExpiredCheckIns,
-    getAllAccounts: mockGetAllAccounts,
-    getAllBookmarks: mockGetAllBookmarks,
-    getOrderedList: mockGetOrderedList,
-    getPinnedList: mockGetPinnedList,
-    getAccountStats: mockGetAccountStats,
-    convertToDisplayData: mockConvertToDisplayData,
+vi.mock("~/services/accounts/accountStorage/accountCheckInState", () => ({
+  accountCheckInState: { resetExpiredCheckIns: mockResetExpiredCheckIns },
+}))
+vi.mock("~/services/accounts/accountStorage/accountReadModels", () => ({
+  accountReadModels: {
+    getAccountManagementSnapshot: async () => {
+      const accounts = await mockGetAllAccounts()
+      return {
+        accounts,
+        bookmarks: await mockGetAllBookmarks(),
+        orderedIds: await mockGetOrderedList(),
+        pinnedIds: await mockGetPinnedList(),
+        stats: await mockGetAccountStats(),
+      }
+    },
   },
+}))
+vi.mock("~/services/accounts/accountStorage/accountPresentation", () => ({
+  accountPresentation: { convertToDisplayData: mockConvertToDisplayData },
 }))
 
 vi.mock("~/services/tags/tagStorage", () => ({

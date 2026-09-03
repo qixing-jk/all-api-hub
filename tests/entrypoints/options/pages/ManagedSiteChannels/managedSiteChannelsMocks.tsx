@@ -41,11 +41,11 @@ vi.mock("~/services/models/modelSync/messaging", () => ({
   sendModelSyncMessage: vi.fn(),
 }))
 
-vi.mock("~/services/accounts/accountStorage", () => ({
-  accountStorage: {
-    getAllAccounts: vi.fn(),
-    convertToDisplayData: vi.fn((accounts) => accounts),
-  },
+vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
+  accountQueries: { getAllAccounts: vi.fn() },
+}))
+vi.mock("~/services/accounts/accountStorage/accountPresentation", () => ({
+  accountPresentation: { convertToDisplayData: vi.fn((accounts) => accounts) },
 }))
 
 vi.mock(

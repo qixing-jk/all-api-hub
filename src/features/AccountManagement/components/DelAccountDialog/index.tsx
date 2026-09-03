@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next"
 
 import { DestructiveConfirmDialog } from "~/components/ui"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { accountMutations } from "~/services/accounts/accountStorage/accountMutations"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -49,7 +49,7 @@ export default function DelAccountDialog({
     })
 
     setIsDeleting(true)
-    const deletePromise = accountStorage.deleteAccount(account.id)
+    const deletePromise = accountMutations.deleteAccount(account.id)
     try {
       await toast.promise(deletePromise, {
         loading: t("ui:dialog.delete.deleting", { name: account.name }),

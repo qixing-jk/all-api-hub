@@ -250,8 +250,8 @@ describe("tempWindowPool window fallback", () => {
         createBrowserFocusObservation: createBrowserFocusObservationMock,
       }
     })
-    vi.doMock("~/services/accounts/accountStorage", () => ({
-      accountStorage: {
+    vi.doMock("~/services/accounts/accountStorage/accountQueries", () => ({
+      accountQueries: {
         getAccountById: getAccountByIdMock,
       },
     }))
@@ -315,7 +315,7 @@ describe("tempWindowPool window fallback", () => {
     ;(globalThis as any).browser = originalBrowser
 
     vi.useRealTimers()
-    vi.doUnmock("~/services/accounts/accountStorage")
+    vi.doUnmock("~/services/accounts/accountStorage/accountQueries")
     vi.doUnmock("~/utils/browser/cookieHelper")
     vi.doUnmock("~/utils/browser/dnrCookieInjector")
     vi.doUnmock("~/utils/browser/firefoxTempWindowDownloadBlocker")

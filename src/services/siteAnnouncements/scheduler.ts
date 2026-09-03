@@ -1,5 +1,5 @@
 import { SITE_TYPES } from "~/constants/siteType"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { createAccountApiRequestFromStoredAccount } from "~/services/accounts/utils/apiServiceRequest"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { SiteAnnouncementsMessageTypes } from "~/services/runtimeMessaging/messageTypes"
@@ -311,7 +311,7 @@ class SiteAnnouncementScheduler {
     }
 
     const siteStates = await siteAnnouncementStorage.getStatus()
-    const accounts = await accountStorage.getEnabledAccounts()
+    const accounts = await accountQueries.getEnabledAccounts()
     const delayInMinutes = getAnnouncementAlarmDelayMinutes({
       intervalMinutes,
       siteStates,
@@ -414,13 +414,13 @@ class SiteAnnouncementScheduler {
 
       const accounts = params.accountIds?.length
         ? await Promise.all(
-            params.accountIds.map((id) => accountStorage.getAccountById(id)),
+            params.accountIds.map((id) => accountQueries.getAccountById(id)),
           ).then((items) =>
             items
               .filter((item): item is SiteAccount => Boolean(item))
               .filter((account) => account.disabled !== true),
           )
-        : await accountStorage.getEnabledAccounts()
+        : await accountQueries.getEnabledAccounts()
       let nextCooldownExpiresAt: number | undefined
 
       for (const account of dedupeCommonAccounts(accounts)) {
@@ -615,7 +615,7 @@ async function syncSub2ApiAnnouncementRead(recordId: string): Promise<void> {
     return
   }
 
-  const account = await accountStorage.getAccountById(record.accountId)
+  const account = await accountQueries.getAccountById(record.accountId)
   if (!account) {
     logger.warn(
       "Cannot sync Sub2API announcement read state; account missing",

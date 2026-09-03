@@ -7,7 +7,11 @@ import {
   CHECK_IN_SELECTION_STATUSES,
 } from "~/constants/checkIn"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { accountCheckInState } from "~/services/accounts/accountStorage/accountCheckInState"
+import { accountPresentation } from "~/services/accounts/accountStorage/accountPresentation"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
+import { accountReadModels } from "~/services/accounts/accountStorage/accountReadModels"
+import { accountRefresh } from "~/services/accounts/accountStorage/accountRefresh"
 import { buildAccountDisplayNameMap } from "~/services/accounts/utils/accountDisplayName"
 import { getSelectedCheckInStatus } from "~/services/checkin/autoCheckin/inspection"
 import {
@@ -312,7 +316,7 @@ class AutoCheckinScheduler {
           async (accountId): Promise<PostCheckinRefreshOutcome> => {
             try {
               const result = params.tempWindowRequestSource
-                ? await accountStorage.refreshAccount(accountId, force, {
+                ? await accountRefresh.refreshAccount(accountId, force, {
                     tempWindowRequestSource: params.tempWindowRequestSource,
                     ...(params.protectionBypassExecution
                       ? {
@@ -321,7 +325,7 @@ class AutoCheckinScheduler {
                         }
                       : {}),
                   })
-                : await accountStorage.refreshAccount(accountId, force)
+                : await accountRefresh.refreshAccount(accountId, force)
               if (result?.refreshed === true) return "refreshed"
               if (result == null) return "failed"
               return "unchanged"
@@ -1118,7 +1122,7 @@ class AutoCheckinScheduler {
           protectionBypassExecution,
         },
         revalidateAccount: (refreshedConfig) =>
-          accountStorage.prepareAccountForSelectedCheckIn(
+          accountCheckInState.prepareAccountForSelectedCheckIn(
             account.id,
             refreshedConfig,
           ),
@@ -1157,7 +1161,7 @@ class AutoCheckinScheduler {
         providerResult.status === CHECKIN_RESULT_STATUS.SUCCESS ||
         providerResult.status === CHECKIN_RESULT_STATUS.ALREADY_CHECKED
       ) {
-        const persisted = await accountStorage.markAccountAsSiteCheckedIn(
+        const persisted = await accountCheckInState.markAccountAsSiteCheckedIn(
           account.id,
         )
         result.accountStateDurability =
@@ -2159,7 +2163,7 @@ class AutoCheckinScheduler {
       // Get all accounts, then exclude disabled accounts from runnable selection.
       // Disabled accounts must not participate, but we still record an explicit
       // skip reason so background status/history can explain why an account was skipped.
-      const availableAccounts = await accountStorage.getAllAccounts()
+      const availableAccounts = await accountQueries.getAllAccounts()
       const accountDisplayNameById =
         buildAccountDisplayNameMap(availableAccounts)
       const allAccounts = targetAccountIdSet
@@ -2538,7 +2542,7 @@ class AutoCheckinScheduler {
     // Treat missing values as enabled to preserve backward compatibility with older stored prefs.
     const notifyUiOnCompletion = config.notifyUiOnCompletion !== false
     const currentStatus = await autoCheckinStorage.getStatus()
-    const allAccounts = await accountStorage.getAllAccounts()
+    const allAccounts = await accountQueries.getAllAccounts()
     const accountDisplayNameById = buildAccountDisplayNameMap(allAccounts)
 
     if (!config.globalEnabled || !config.retryStrategy?.enabled) {
@@ -2585,7 +2589,7 @@ class AutoCheckinScheduler {
         continue
       }
 
-      const account = await accountStorage.getAccountById(accountId)
+      const account = await accountQueries.getAccountById(accountId)
       if (!account || account.disabled === true) {
         updates[accountId] = {
           accountId,
@@ -2801,7 +2805,7 @@ class AutoCheckinScheduler {
     protectionBypassExecution: ProtectionBypassExecution,
   ) {
     const today = this.getLocalDay()
-    const allAccounts = await accountStorage.getAllAccounts()
+    const allAccounts = await accountQueries.getAllAccounts()
     const account = allAccounts.find((item) => item.id === accountId)
     const accountDisplayNameById = buildAccountDisplayNameMap(allAccounts)
 
@@ -2896,7 +2900,7 @@ class AutoCheckinScheduler {
 
   /** Read the selected method status without executing a check-in mutation. */
   async verifyAccountStatus(accountId: string) {
-    const account = await accountStorage.getAccountById(accountId)
+    const account = await accountQueries.getAccountById(accountId)
     if (!account) {
       throw new Error(t("messages:storage.accountNotFound", { id: accountId }))
     }
@@ -2916,7 +2920,7 @@ class AutoCheckinScheduler {
     }
 
     const persistedAccount =
-      await accountStorage.prepareAccountForSelectedCheckIn(
+      await accountCheckInState.prepareAccountForSelectedCheckIn(
         account.id,
         refreshedCheckIn,
       )
@@ -2934,7 +2938,7 @@ class AutoCheckinScheduler {
     accountId: string,
     options?: { includeDisabled?: boolean },
   ): Promise<DisplaySiteData> {
-    const account = await accountStorage.getAccountById(accountId)
+    const account = await accountQueries.getAccountById(accountId)
 
     if (!account) {
       throw new Error(t("messages:storage.accountNotFound", { id: accountId }))
@@ -2943,9 +2947,9 @@ class AutoCheckinScheduler {
       throw new Error(t("messages:storage.accountDisabled", { id: accountId }))
     }
 
-    const displayAccount = await accountStorage.getDisplayDataById(accountId)
+    const displayAccount = await accountReadModels.getDisplayDataById(accountId)
 
-    return displayAccount ?? accountStorage.convertToDisplayData(account)
+    return displayAccount ?? accountPresentation.convertToDisplayData(account)
   }
 }
 

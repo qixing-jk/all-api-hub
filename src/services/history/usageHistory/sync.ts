@@ -1,4 +1,4 @@
-import { accountStorage } from "~/services/accounts/accountStorage"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { createAccountApiRequestFromStoredAccount } from "~/services/accounts/utils/apiServiceRequest"
 import { REQUEST_CONFIG } from "~/services/apiTransport/constant"
 import { ApiError } from "~/services/apiTransport/errors"
@@ -179,7 +179,7 @@ export async function syncUsageHistoryForAccount(params: {
   }
 
   // Load account info.
-  const account = await accountStorage.getAccountById(accountId)
+  const account = await accountQueries.getAccountById(accountId)
   if (!account) {
     return {
       accountId,

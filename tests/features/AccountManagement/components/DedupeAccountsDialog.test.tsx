@@ -109,18 +109,23 @@ vi.mock("react-hot-toast", () => ({
   },
 }))
 
-vi.mock("~/services/accounts/accountStorage", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("~/services/accounts/accountStorage")>()
+vi.mock(
+  "~/services/accounts/accountStorage/accountMutations",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/accounts/accountStorage/accountMutations")
+      >()
 
-  return {
-    ...actual,
-    accountStorage: {
-      ...actual.accountStorage,
-      deleteAccounts: (...args: any[]) => deleteAccountsMock(...args),
-    },
-  }
-})
+    return {
+      ...actual,
+      accountMutations: {
+        ...actual.accountMutations,
+        deleteAccounts: (...args: any[]) => deleteAccountsMock(...args),
+      },
+    }
+  },
+)
 
 vi.mock("~/services/productAnalytics/actions", () => ({
   startProductAnalyticsAction: (...args: any[]) =>
