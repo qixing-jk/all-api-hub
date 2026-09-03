@@ -7,7 +7,7 @@ import {
 } from "~/constants/autoDetect"
 import { SITE_TYPES } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
-import { autoDetectAccount } from "~/services/accounts/accountOperations"
+import { autoDetectAccount } from "~/services/accounts/accountAutoDetection"
 import {
   AUTO_DETECT_FAILURE_REASONS,
   AutoDetectErrorType,
@@ -185,7 +185,7 @@ const serializeLoggerCalls = () =>
     ),
   )
 
-describe("accountOperations autoDetectAccount", () => {
+describe("accountAutoDetection", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockAutoDetectSmart.mockReset()

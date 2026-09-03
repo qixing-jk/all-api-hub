@@ -78,14 +78,17 @@ vi.mock("~/services/productAnalytics/actions", async (importOriginal) => {
   }
 })
 
-vi.mock("~/services/accounts/accountOperations", async (importOriginal) => {
+vi.mock("~/services/accounts/accountAutoDetection", () => ({
+  autoDetectAccount: mockGenericAutoDetectAccount,
+}))
+
+vi.mock("~/services/accounts/accountPersistence", async (importOriginal) => {
   const actual =
     await importOriginal<
-      typeof import("~/services/accounts/accountOperations")
+      typeof import("~/services/accounts/accountPersistence")
     >()
   return {
     ...actual,
-    autoDetectAccount: mockGenericAutoDetectAccount,
     validateAndSaveAccount: (
       ...args: Parameters<typeof actual.validateAndSaveAccount>
     ) => {

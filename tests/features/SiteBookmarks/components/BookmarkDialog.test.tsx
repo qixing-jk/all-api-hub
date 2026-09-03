@@ -73,7 +73,7 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   }
 })
 
-vi.mock("~/services/accounts/accountOperations", () => ({
+vi.mock("~/services/accounts/siteName", () => ({
   getSiteName: getSiteNameMock,
 }))
 

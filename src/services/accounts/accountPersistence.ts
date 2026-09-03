@@ -1,19 +1,18 @@
-/**
- * 账号操作服务模块
- */
+/** Account creation and update persistence workflows. */
 
 import toast from "react-hot-toast"
 
-import type { AutoDetectErrorCode } from "~/constants/autoDetect"
-import { AUTO_DETECT_ERROR_CODES } from "~/constants/autoDetect"
-import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
   isAccountSiteType,
   SITE_TYPES,
   type AccountSiteType,
 } from "~/constants/siteType"
-import { UI_CONSTANTS } from "~/constants/ui"
 import { AccountUpdateUserTimestampMode } from "~/services/accounts/accountDefaults"
+import {
+  isValidAccount,
+  parseManualQuotaFromUsd,
+  resolveExchangeRate,
+} from "~/services/accounts/accountFormValidation"
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
 import { ensureDefaultApiTokenForAccount } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
 import {
@@ -21,36 +20,13 @@ import {
   normalizeAccountSiteSupplementalAuth,
 } from "~/services/accounts/accountSiteProfile"
 import { accountStorage } from "~/services/accounts/accountStorage"
-import {
-  completeAutoDetectedAccount,
-  getAutoDetectCompletionFailureReason,
-} from "~/services/accounts/autoDetectCompletion/completion"
-import {
-  DEFAULT_TOKEN_LIFECYCLE_BLOCK_REASONS,
-  DEFAULT_TOKEN_LIFECYCLE_RESULT_KINDS,
-  DefaultTokenLifecyclePolicyBlockedError,
-  ensureDefaultTokenLifecycle,
-} from "~/services/accounts/defaultTokenLifecycle"
+import { DefaultTokenLifecyclePolicyBlockedError } from "~/services/accounts/defaultTokenLifecycle"
 import {
   canRunAccountDefaultTokenAutomation,
   createStoredAccountKeyProductContext,
 } from "~/services/accounts/keyProductCapabilities"
-import {
-  analyzeAutoDetectError,
-  AUTO_DETECT_FAILURE_REASONS,
-  AutoDetectErrorType,
-  getAutoDetectErrorByCode,
-  type AutoDetectAnalyticsContext,
-  type AutoDetectFailureReason,
-} from "~/services/accounts/utils/autoDetectUtils"
 import { normalizeAccountSiteUrlForStorage } from "~/services/accounts/utils/siteUrlNormalization"
-import { isCanonicalOpenRouterUrl } from "~/services/accountSiteDefinitions/identifiers"
-import type { CreateTokenRequest } from "~/services/accountTokens/tokenProvisioningModel"
 import type { AccountDataCapability } from "~/services/apiAdapters/contracts/accountData"
-import {
-  TOKEN_PROVISIONING_BLOCK_REASONS,
-  TOKEN_PROVISIONING_WORKFLOWS,
-} from "~/services/apiAdapters/contracts/tokenProvisioning"
 import { resolveOpenRouterAccountUserId } from "~/services/apiAdapters/openrouter/accountIdentity"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import {
@@ -67,23 +43,15 @@ import {
   DEFAULT_PREFERENCES,
   userPreferences,
 } from "~/services/preferences/userPreferences"
-import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
-import { autoDetectSmart } from "~/services/siteDetection/autoDetectService"
 import {
   AuthTypeEnum,
   SiteHealthStatus,
-  type ApiToken,
   type CheckInConfig,
-  type DisplaySiteData,
   type SiteAccount,
   type Sub2ApiAuthConfig,
 } from "~/types"
 import type { CheckInMethodSelection } from "~/types/checkIn"
-import type {
-  AccountAutoDetectResponse,
-  AccountSaveResponse,
-} from "~/types/serviceResponse"
-import { sendRuntimeMessage } from "~/utils/browser/browserApi"
+import type { AccountSaveResponse } from "~/types/serviceResponse"
 import { extractSessionCookieHeader } from "~/utils/browser/cookieString"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
@@ -98,104 +66,6 @@ const isDefaultTokenAutoProvisionPolicyBlock = (
   error: unknown,
 ): error is DefaultTokenLifecyclePolicyBlockedError =>
   error instanceof DefaultTokenLifecyclePolicyBlockedError
-
-export { extractDomainPrefix, getSiteName } from "~/services/accounts/siteName"
-
-/**
- * Pins analytics metadata to the final site type selected for account handling.
- */
-function withFinalAutoDetectSiteType(
-  autoDetectContext: AutoDetectAnalyticsContext | undefined,
-  siteType: AccountSiteType,
-): AutoDetectAnalyticsContext {
-  return {
-    ...(autoDetectContext ?? {}),
-    siteType,
-  }
-}
-
-/**
- * Maps machine-readable auto-detect service errors into analytics-safe failure reasons.
- */
-function getAutoDetectFailureReasonByErrorCode(
-  errorCode?: AutoDetectErrorCode,
-): AutoDetectFailureReason | undefined {
-  switch (errorCode) {
-    case AUTO_DETECT_ERROR_CODES.CURRENT_TAB_CONTENT_SCRIPT_UNAVAILABLE:
-      return AUTO_DETECT_FAILURE_REASONS.CurrentTabContentScriptUnavailable
-    case AUTO_DETECT_ERROR_CODES.SITE_TYPE_DETECTION_FAILED:
-      return AUTO_DETECT_FAILURE_REASONS.SiteTypeDetectionFailed
-    default:
-      return undefined
-  }
-}
-
-/**
- * Returns local user-facing guidance for known completion failures.
- */
-function getAutoDetectCompletionFailureMessage(
-  reason: AutoDetectFailureReason,
-  fallbackErrorMessage: string,
-) {
-  switch (reason) {
-    case AUTO_DETECT_FAILURE_REASONS.TokenFetchFailed:
-    case AUTO_DETECT_FAILURE_REASONS.AccessTokenMissing:
-      return t("messages:operations.detection.getAccessTokenFailedDetailed")
-    case AUTO_DETECT_FAILURE_REASONS.SiteStatusFetchFailed:
-      return t("messages:operations.detection.getSiteStatusFailedDetailed")
-    case AUTO_DETECT_FAILURE_REASONS.UsernameMissing:
-      return t("messages:operations.detection.getUsernameFailedDetailed")
-    default:
-      return t("accountDialog:messages.autoDetectFailed", {
-        error: fallbackErrorMessage,
-      })
-  }
-}
-
-/**
- * Preserves invalid-response details for completion validation failures.
- */
-function getAutoDetectCompletionDetailedError(
-  error: unknown,
-  reason: AutoDetectFailureReason,
-  message: string,
-) {
-  switch (reason) {
-    case AUTO_DETECT_FAILURE_REASONS.UsernameMissing:
-    case AUTO_DETECT_FAILURE_REASONS.AccessTokenMissing:
-      return {
-        type: AutoDetectErrorType.INVALID_RESPONSE,
-        message,
-      }
-    default:
-      return analyzeAutoDetectError(error)
-  }
-}
-
-/** Builds an OpenRouter failure response from controlled local copy only. */
-function getControlledOpenRouterFailure(
-  message: string,
-  reason: AutoDetectFailureReason,
-) {
-  return {
-    message,
-    detailedError: {
-      ...getAutoDetectCompletionDetailedError(message, reason, message),
-      message,
-    },
-  }
-}
-
-/** Returns local manual-entry guidance without exposing OpenRouter detection details. */
-function getOpenRouterReadOnlyDetectionFailure(
-  reason: AutoDetectFailureReason,
-) {
-  return getControlledOpenRouterFailure(
-    t("messages:openrouter.managementKeyRequired"),
-    reason,
-  )
-}
-
 /**
  * Create a localized timeout error for manual account data fetching.
  * @param timeoutMs Timeout threshold in milliseconds.
@@ -330,242 +200,6 @@ function getAccountOperationLogDetails(
   return siteType === SITE_TYPES.OPENROUTER ? safeDetails : ordinaryDetails
 }
 
-/**
- * Parses a manual balance in USD from a string value and converts it to quota
- * units.
- *
- * Returns undefined when the value is empty/undefined, not a finite number, or
- * negative.
- */
-export function parseManualQuotaFromUsd(
-  value: string | undefined,
-): number | undefined {
-  if (value === undefined) return undefined
-  const trimmed = value.trim()
-  if (!trimmed) return undefined
-
-  const amount = Number.parseFloat(trimmed)
-  if (!Number.isFinite(amount) || amount < 0) return undefined
-
-  return Math.round(amount * UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR)
-}
-
-/**
- * 智能自动识别账号信息
- * 工作流程：
- * 1. 调用 `autoDetectSmart` 按当前标签页、background、直接 API 的顺序选择识别方式
- * 2. 在可用路径中读取用户信息与站点类型
- * 3. 调用 API 获取访问令牌和账号补充数据
- * 4. 保存或更新账号信息到本地存储
- * @param url 站点地址（将被自动标准化并请求）
- * @param authType 当前选择的认证方式（Cookie / AccessToken / None）
- */
-export async function autoDetectAccount(
-  url: string,
-  authType: AuthTypeEnum,
-  protectionBypassExecution?: ProtectionBypassExecution,
-  cookieAuthSessionCookie?: string,
-): Promise<AccountAutoDetectResponse> {
-  if (!url.trim()) {
-    return {
-      kind: "detected",
-      success: false,
-      message: t("messages:errors.validation.urlRequired"),
-    }
-  }
-
-  let autoDetectContext: AutoDetectAnalyticsContext | undefined
-  const normalizedUrl = url.trim()
-  const isCanonicalOpenRouter = isCanonicalOpenRouterUrl(normalizedUrl)
-
-  try {
-    try {
-      await sendRuntimeMessage({
-        action: RuntimeActionIds.CookieInterceptorTrackUrl,
-        url: url.trim(),
-      })
-    } catch (error) {
-      logger.warn(
-        "Failed to track cookie interceptor url",
-        isCanonicalOpenRouter
-          ? {
-              siteType: SITE_TYPES.OPENROUTER,
-              status: "tracking_failed",
-            }
-          : {
-              url: normalizedUrl,
-              error: getErrorMessage(error),
-            },
-      )
-    }
-
-    // 使用智能自动识别服务
-    const detectResult = await autoDetectSmart(
-      url.trim(),
-      protectionBypassExecution,
-    )
-    autoDetectContext = detectResult.autoDetectContext
-
-    if (!detectResult.success || !detectResult.data) {
-      const autoDetectFailureReason =
-        getAutoDetectFailureReasonByErrorCode(detectResult.errorCode) ??
-        AUTO_DETECT_FAILURE_REASONS.UserDataMissing
-
-      if (isCanonicalOpenRouter) {
-        return {
-          kind: "detected",
-          success: false,
-          ...getOpenRouterReadOnlyDetectionFailure(autoDetectFailureReason),
-          autoDetectContext,
-          autoDetectFailureReason,
-        }
-      }
-
-      const errorMsg =
-        detectResult.error || t("messages:operations.detection.failed")
-      const detailedError =
-        getAutoDetectErrorByCode(detectResult.errorCode) ??
-        analyzeAutoDetectError(errorMsg)
-      return {
-        kind: "detected",
-        success: false,
-        message: detailedError.message || errorMsg,
-        detailedError,
-        autoDetectContext,
-        autoDetectFailureReason,
-      }
-    }
-
-    const { userId, siteType } = detectResult.data
-    autoDetectContext = withFinalAutoDetectSiteType(
-      detectResult.autoDetectContext,
-      siteType,
-    )
-
-    if (!userId) {
-      return {
-        kind: "detected",
-        success: false,
-        message: t("messages:operations.detection.getUserIdFailedDetailed"),
-        detailedError: {
-          type: AutoDetectErrorType.INVALID_RESPONSE,
-          message: t("messages:operations.detection.getUserIdFailedDetailed"),
-        },
-        autoDetectContext,
-        autoDetectFailureReason: AUTO_DETECT_FAILURE_REASONS.UserIdMissing,
-      }
-    }
-
-    const completed = await completeAutoDetectedAccount({
-      url,
-      requestedAuthType: authType,
-      cookieAuthSessionCookie,
-      detected: detectResult.data,
-      autoDetectContext,
-      protectionBypassExecution,
-    })
-
-    return {
-      kind: "detected",
-      success: true,
-      message: t("accountDialog:messages.autoDetectSuccess"),
-      data: completed,
-    }
-  } catch (error) {
-    const autoDetectFailureReason = getAutoDetectCompletionFailureReason(error)
-
-    if (isCanonicalOpenRouter) {
-      const failure = getOpenRouterReadOnlyDetectionFailure(
-        autoDetectFailureReason,
-      )
-      logger.error("OpenRouter account detection failed", {
-        siteType: SITE_TYPES.OPENROUTER,
-        status: "failed",
-        reason: autoDetectFailureReason,
-      })
-      return {
-        kind: "detected",
-        success: false,
-        ...failure,
-        autoDetectContext,
-        autoDetectFailureReason,
-      }
-    }
-
-    const errorMessage = getErrorMessage(error)
-    const message = getAutoDetectCompletionFailureMessage(
-      autoDetectFailureReason,
-      errorMessage,
-    )
-    logger.error(
-      t("messages:autodetect.failed", { error: errorMessage }),
-      error,
-    )
-    const detailedError = getAutoDetectCompletionDetailedError(
-      error,
-      autoDetectFailureReason,
-      message,
-    )
-    return {
-      kind: "detected",
-      success: false,
-      message,
-      detailedError,
-      autoDetectContext,
-      autoDetectFailureReason,
-    }
-  }
-}
-
-/**
- * 校验账号必填字段是否合法（主要用于表单提交前的快速判断）。
- * @param params 账号核心字段集合
- * @param params.siteName 站点名称
- * @param params.username 用户名
- * @param params.userId 用户 ID
- * @param params.siteType 站点类型（用于特殊站点校验差异）
- * @param params.authType 认证类型
- * @param params.accessToken 访问令牌
- * @param params.cookieAuthSessionCookie Cookie 认证所需的会话 Cookie（Header 值）
- * @param params.exchangeRate 汇率配置
- * @returns 是否满足最基本的账号信息要求
- */
-export function isValidAccount({
-  siteName,
-  username,
-  userId,
-  siteType,
-  authType,
-  accessToken,
-  cookieAuthSessionCookie,
-  exchangeRate,
-}: {
-  siteName: string
-  username: string
-  userId: string
-  siteType?: AccountSiteType
-  authType: AuthTypeEnum
-  accessToken: string
-  cookieAuthSessionCookie?: string
-  exchangeRate: string
-}) {
-  const normalizedSiteType = isAccountSiteType(siteType)
-    ? siteType
-    : SITE_TYPES.UNKNOWN
-  const profile = getAccountSiteProductProfile(normalizedSiteType)
-
-  return (
-    !!siteName.trim() &&
-    (authType === AuthTypeEnum.None ||
-      profile.auth.allowedAuthTypes.includes(authType)) &&
-    (!profile.identity.usernameRequired || !!username.trim()) &&
-    (normalizedSiteType === SITE_TYPES.OPENROUTER || !!userId.trim()) &&
-    isValidExchangeRate(exchangeRate) &&
-    (authType !== AuthTypeEnum.AccessToken || !!accessToken.trim()) &&
-    (authType !== AuthTypeEnum.Cookie || !!cookieAuthSessionCookie?.trim())
-  )
-}
-
 type TagIdsInput = string[] | undefined
 
 interface ValidateAndSaveAccountOptions {
@@ -608,38 +242,6 @@ function normalizeSub2ApiAuthInput(
 ): Sub2ApiAuthConfig | undefined {
   return normalizeAccountSiteSupplementalAuth({ siteType, sub2apiAuth })
     .sub2apiAuth
-}
-
-/**
- * Parses the user-provided exchange rate (CNY per USD).
- *
- * Returns undefined when the input is empty or invalid.
- */
-function parsePositiveExchangeRate(input: string): number | undefined {
-  const trimmed = input.trim()
-  if (!trimmed) return undefined
-
-  const value = Number(trimmed)
-  if (!Number.isFinite(value) || value <= 0) {
-    return undefined
-  }
-
-  return value
-}
-
-/**
- * Parses the user-provided exchange rate (CNY per USD) with a safe fallback.
- *
- * Returns {@link UI_CONSTANTS.EXCHANGE_RATE.DEFAULT} when the input is empty or invalid.
- */
-function resolveExchangeRate(input: string): number {
-  return parsePositiveExchangeRate(input) ?? UI_CONSTANTS.EXCHANGE_RATE.DEFAULT
-}
-
-type EnsureAccountApiTokenOptions = {
-  toastId?: string
-  defaultTokenData?: CreateTokenRequest
-  explicitGroup?: string
 }
 
 /**
@@ -1481,85 +1083,6 @@ export async function validateAndUpdateAccount(
       feedbackLevel: "warning",
     }
   }
-}
-
-/**
- * Checks if a given exchange rate is valid.
- * @param rate - The exchange rate to check.
- * @returns True if the exchange rate is valid, false otherwise.
- * A valid exchange rate is a number greater than 0.
- */
-export function isValidExchangeRate(rate: string): boolean {
-  return parsePositiveExchangeRate(rate) !== undefined
-}
-
-/**
- * Ensures that an API token exists for the supplied account by checking the
- * remote token inventory and lazily issuing a default token when none exist.
- * Provides toast updates for the long-running request to improve UX feedback.
- * @param account - The underlying account record (includes credentials).
- * @param displaySiteData - Derived display data used by token APIs.
- * @param toastIdOrOptions - Optional toast identifier or Sub2API create options.
- * @returns The ensured ApiToken ready for downstream use.
- * @throws {Error} 当密钥获取或生成都失败时抛出异常
- */
-export async function ensureAccountApiToken(
-  account: SiteAccount,
-  displaySiteData: DisplaySiteData,
-  toastIdOrOptions?: string | EnsureAccountApiTokenOptions,
-): Promise<ApiToken> {
-  const options =
-    typeof toastIdOrOptions === "string"
-      ? { toastId: toastIdOrOptions }
-      : toastIdOrOptions ?? {}
-
-  toast.loading(t("messages:accountOperations.checkingApiKeys"), {
-    id: options.toastId,
-  })
-
-  const result = await ensureDefaultTokenLifecycle({
-    workflow: TOKEN_PROVISIONING_WORKFLOWS.SharedEnsure,
-    account,
-    displaySiteData,
-    defaultTokenData: options.defaultTokenData,
-    explicitGroup: options.explicitGroup,
-  })
-
-  if (
-    result.kind === DEFAULT_TOKEN_LIFECYCLE_RESULT_KINDS.Ready ||
-    result.kind === DEFAULT_TOKEN_LIFECYCLE_RESULT_KINDS.Created
-  ) {
-    return result.token
-  }
-
-  if (
-    result.kind === DEFAULT_TOKEN_LIFECYCLE_RESULT_KINDS.Blocked &&
-    (result.reason === TOKEN_PROVISIONING_BLOCK_REASONS.OneTimeSecretRequired ||
-      result.reason ===
-        TOKEN_PROVISIONING_BLOCK_REASONS.CreatedTokenSecretUnavailable)
-  ) {
-    throw new Error(
-      t("messages:tokenProvisioning.createRequiresOneTimeSecretHandling"),
-    )
-  }
-
-  if (
-    result.kind === DEFAULT_TOKEN_LIFECYCLE_RESULT_KINDS.Blocked &&
-    result.reason === DEFAULT_TOKEN_LIFECYCLE_BLOCK_REASONS.CreateTokenFailed
-  ) {
-    throw new Error(t("messages:accountOperations.createTokenFailed"))
-  }
-
-  if (
-    result.kind === DEFAULT_TOKEN_LIFECYCLE_RESULT_KINDS.Blocked &&
-    (result.reason === DEFAULT_TOKEN_LIFECYCLE_BLOCK_REASONS.TokenNotFound ||
-      result.reason ===
-        DEFAULT_TOKEN_LIFECYCLE_BLOCK_REASONS.AmbiguousCreatedToken)
-  ) {
-    throw new Error(t("messages:accountOperations.tokenNotFound"))
-  }
-
-  throw new Error(t("messages:tokenProvisioning.createRequiresGroup"))
 }
 
 /**

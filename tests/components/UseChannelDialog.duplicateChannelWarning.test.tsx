@@ -7,8 +7,8 @@ import {
 import { ChannelType } from "~/constants"
 import { DIALOG_MODES } from "~/constants/dialogModes"
 import { SITE_TYPES } from "~/constants/siteType"
-import * as accountOperations from "~/services/accounts/accountOperations"
 import { accountStorage } from "~/services/accounts/accountStorage"
+import * as accountTokenOperations from "~/services/accounts/ensureAccountApiToken"
 import * as tokenQuickCreateResolution from "~/services/accounts/tokenQuickCreateResolution"
 import {
   TOKEN_QUICK_CREATE_RESOLUTION_KINDS,
@@ -65,7 +65,7 @@ const getManagedSiteServiceSpy = vi.spyOn(
 )
 const getAccountByIdSpy = vi.spyOn(accountStorage, "getAccountById")
 const ensureAccountApiTokenSpy = vi.spyOn(
-  accountOperations,
+  accountTokenOperations,
   "ensureAccountApiToken",
 )
 const resolveDefaultTokenQuickCreateResolutionSpy = vi.spyOn(

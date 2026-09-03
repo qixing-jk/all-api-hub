@@ -4,13 +4,12 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { AccountUpdateUserTimestampMode } from "~/services/accounts/accountDefaults"
 import {
-  extractDomainPrefix,
-  getSiteName,
   isValidAccount,
   isValidExchangeRate,
   parseManualQuotaFromUsd,
-  validateAndUpdateAccount,
-} from "~/services/accounts/accountOperations"
+} from "~/services/accounts/accountFormValidation"
+import { validateAndUpdateAccount } from "~/services/accounts/accountPersistence"
+import { extractDomainPrefix, getSiteName } from "~/services/accounts/siteName"
 import { AuthTypeEnum } from "~/types"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
@@ -58,7 +57,7 @@ vi.mock("~/services/accounts/accountStorage", async (importOriginal) => {
   }
 })
 
-describe("accountOperations", () => {
+describe("account persistence and form validation", () => {
   beforeEach(() => {
     mockFetchAccountData.mockReset()
     mockFetchSiteStatus.mockReset()

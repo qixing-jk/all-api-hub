@@ -36,16 +36,17 @@ import {
   type AccountBrowserSession,
   type ResolveAccountBrowserSessionOptions,
 } from "~/services/accountBrowserSession"
+import { autoDetectAccount } from "~/services/accounts/accountAutoDetection"
 import { findExactCredentialDuplicateAccountId } from "~/services/accounts/accountDedupe"
-import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
 import {
-  autoDetectAccount,
-  getSiteName,
   isValidAccount,
   parseManualQuotaFromUsd,
+} from "~/services/accounts/accountFormValidation"
+import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
+import {
   validateAndSaveAccount,
   validateAndUpdateAccount,
-} from "~/services/accounts/accountOperations"
+} from "~/services/accounts/accountPersistence"
 import {
   ACCOUNT_POST_SAVE_WORKFLOW_STEPS,
   ACCOUNT_TOKEN_INVENTORY_STATE_KINDS,
@@ -58,6 +59,7 @@ import {
 import { doAccountSiteIdentitiesMatch } from "~/services/accounts/accountSiteProfile"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import type { CreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
+import { getSiteName } from "~/services/accounts/siteName"
 import {
   createDisplayAccountApiContext,
   requireDisplayAccountKeyManagement,

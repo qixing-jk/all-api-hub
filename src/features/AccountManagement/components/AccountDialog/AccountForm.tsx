@@ -40,7 +40,7 @@ import {
   ACCOUNT_MANAGEMENT_TEST_IDS,
   getAccountManagementSiteTypeOptionTestId,
 } from "~/features/AccountManagement/testIds"
-import { isValidExchangeRate } from "~/services/accounts/accountOperations"
+import { isValidExchangeRate } from "~/services/accounts/accountFormValidation"
 import { AuthTypeEnum, type CheckInConfig, type Tag } from "~/types"
 import { formatLocaleDateTime } from "~/utils/core/formatters"
 

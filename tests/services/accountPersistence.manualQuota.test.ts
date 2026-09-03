@@ -5,7 +5,7 @@ import { UI_CONSTANTS } from "~/constants/ui"
 import {
   validateAndSaveAccount,
   validateAndUpdateAccount,
-} from "~/services/accounts/accountOperations"
+} from "~/services/accounts/accountPersistence"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import { server } from "~~/tests/msw/server"
@@ -20,7 +20,7 @@ const CHECK_IN_DISABLED = buildCheckInConfig({
   },
 })
 
-describe("accountOperations manual quota", () => {
+describe("accountPersistence manual quota", () => {
   beforeEach(async () => {
     server.resetHandlers()
     await accountStorage.clearAllData()

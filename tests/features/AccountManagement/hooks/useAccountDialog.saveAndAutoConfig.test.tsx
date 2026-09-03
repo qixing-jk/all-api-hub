@@ -100,10 +100,10 @@ vi.mock("~/components/dialogs/ChannelDialog", () => ({
   }),
 }))
 
-vi.mock("~/services/accounts/accountOperations", async (importOriginal) => {
+vi.mock("~/services/accounts/accountPersistence", async (importOriginal) => {
   const actual =
     await importOriginal<
-      typeof import("~/services/accounts/accountOperations")
+      typeof import("~/services/accounts/accountPersistence")
     >()
 
   return {

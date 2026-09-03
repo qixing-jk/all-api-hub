@@ -7,8 +7,8 @@ import { Button, FormField, Input, Modal, Textarea } from "~/components/ui"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { TagPicker } from "~/features/AccountManagement/components/TagPicker"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
-import { getSiteName } from "~/services/accounts/accountOperations"
 import { accountStorage } from "~/services/accounts/accountStorage"
+import { getSiteName } from "~/services/accounts/siteName"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,

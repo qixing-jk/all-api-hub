@@ -143,7 +143,7 @@ vi.mock("~/services/apiAdapters/registry", () => ({
     mockgetSiteTypeCapabilities(...args),
 }))
 
-vi.mock("~/services/accounts/accountOperations", () => ({
+vi.mock("~/services/accounts/ensureAccountApiToken", () => ({
   ensureAccountApiToken: (...args: unknown[]) =>
     mockEnsureAccountApiToken(...args),
 }))

@@ -5,7 +5,7 @@ import {
   MANUAL_ADD_ACCOUNT_DATA_FETCH_TIMEOUT_MS,
   validateAndSaveAccount,
   validateAndUpdateAccount,
-} from "~/services/accounts/accountOperations"
+} from "~/services/accounts/accountPersistence"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { OpenRouterManagementKeyRequiredError } from "~/services/apiService/openrouter/errors"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
@@ -271,7 +271,7 @@ const updateAccountForLogTest = (
     { deferDataRefresh },
   )
 
-describe("accountOperations validateAndSaveAccount", () => {
+describe("accountPersistence save and update", () => {
   afterEach(() => {
     vi.restoreAllMocks()
   })

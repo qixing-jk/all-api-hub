@@ -7,7 +7,7 @@ import {
   ensureDefaultApiTokenForAccount,
   generateDefaultTokenRequest,
 } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
-import { ensureAccountApiToken } from "~/services/accounts/accountOperations"
+import { ensureAccountApiToken } from "~/services/accounts/ensureAccountApiToken"
 import {
   resolveDefaultTokenQuickCreateResolution,
   TOKEN_QUICK_CREATE_RESOLUTION_KINDS,
@@ -186,7 +186,7 @@ const createAIHubMixAccounts = () => {
   return { displayAccount, siteAccount }
 }
 
-describe("accountOperations Sub2API token creation guards", () => {
+describe("ensureAccountApiToken Sub2API token creation guards", () => {
   let DISPLAY_ACCOUNT: ReturnType<typeof buildSub2ApiAccount>
   let SITE_ACCOUNT: ReturnType<typeof buildSiteAccount>
 

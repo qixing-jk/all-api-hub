@@ -1,9 +1,7 @@
 import { isAccountSiteType, SITE_TYPES } from "~/constants/siteType"
 import { createEmptyAccountDialogDraft } from "~/features/AccountManagement/components/AccountDialog/models"
-import {
-  autoDetectAccount as defaultAutoDetectAccount,
-  validateAndSaveAccount as defaultValidateAndSaveAccount,
-} from "~/services/accounts/accountOperations"
+import { autoDetectAccount as defaultAutoDetectAccount } from "~/services/accounts/accountAutoDetection"
+import { validateAndSaveAccount as defaultValidateAndSaveAccount } from "~/services/accounts/accountPersistence"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum, type CheckInConfig } from "~/types"
 import type {
