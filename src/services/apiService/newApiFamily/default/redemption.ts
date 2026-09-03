@@ -1,4 +1,4 @@
-import { fetchApiData } from "~/services/apiService/newApiFamily/request"
+import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { createLogger } from "~/utils/core/logger"
 
@@ -14,7 +14,7 @@ interface RedemptionImplementation {
 export const defaultRedemptionImplementation: RedemptionImplementation = {
   redeemCode: async (request, redemptionCode) => {
     try {
-      return await fetchApiData<number>(request, {
+      return await newApiFamilyRequests.data<number>(request, {
         endpoint: "/api/user/topup",
         options: {
           method: "POST",

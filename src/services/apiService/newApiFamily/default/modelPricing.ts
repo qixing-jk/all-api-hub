@@ -1,4 +1,4 @@
-import { fetchApi } from "~/services/apiService/newApiFamily/request"
+import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { createLogger } from "~/utils/core/logger"
 
@@ -12,11 +12,9 @@ interface ModelPricingImplementation {
 export const defaultModelPricingImplementation: ModelPricingImplementation = {
   fetchModelPricing: async (request) => {
     try {
-      return await fetchApi<unknown>(
-        request,
-        { endpoint: MODEL_PRICING_ENDPOINT },
-        true,
-      )
+      return await newApiFamilyRequests.payload<unknown>(request, {
+        endpoint: MODEL_PRICING_ENDPOINT,
+      })
     } catch (error) {
       logger.error("获取模型定价失败", error)
       throw error

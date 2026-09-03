@@ -1,6 +1,6 @@
 import type { UserGroupInfo } from "~/services/accountTokens/tokenProvisioningModel"
 import { fetchAccountAvailableModels as fetchLegacyAccountAvailableModels } from "~/services/apiService/newApiFamily/default/keyManagement"
-import { fetchApiData } from "~/services/apiService/newApiFamily/request"
+import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import { ApiError } from "~/services/apiTransport/errors"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { isRecord } from "~/utils/core/object"
@@ -49,7 +49,7 @@ export const fetchAccountAvailableModels = async (
   // endpoint; `/api/user/models` is permission-gated on this generation. Keep
   // the legacy New API-family endpoint as a read-only compatibility fallback.
   try {
-    return await fetchApiData<string[]>(request, {
+    return await newApiFamilyRequests.data<string[]>(request, {
       endpoint: CURRENT_AVAILABLE_MODELS_ENDPOINT,
     })
   } catch (currentEndpointError) {
@@ -72,7 +72,7 @@ export const fetchUserGroups = async (
   // The current deployment returns `description=x N倍` strings, while older
   // V-API-compatible deployments return New API-style `{ desc, ratio }` values:
   // https://gpt.ge/api/user/self/groups
-  const rawGroups = await fetchApiData<unknown>(request, {
+  const rawGroups = await newApiFamilyRequests.data<unknown>(request, {
     endpoint: USER_GROUPS_ENDPOINT,
   })
   if (!isRecord(rawGroups)) {

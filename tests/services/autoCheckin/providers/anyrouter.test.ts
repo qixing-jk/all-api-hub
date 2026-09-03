@@ -11,7 +11,9 @@ import { createAutoCheckinMutationLifecycle } from "~~/tests/test-utils/autoChec
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
 vi.mock("~/services/apiService/newApiFamily/request", () => ({
-  fetchApi: vi.fn(),
+  newApiFamilyRequests: {
+    payload: vi.fn(),
+  },
 }))
 
 const mockAccount: SiteAccount = {
@@ -89,11 +91,13 @@ describe("anyrouterProvider", () => {
 
   describe("checkIn", () => {
     it("propagates the popup source on a successful check-in", async () => {
-      const { fetchApi } = await import(
+      const { newApiFamilyRequests } = await import(
         "~/services/apiService/newApiFamily/request"
       )
       const mockedFetchApi = vi.mocked(
-        fetchApi as unknown as (...args: any[]) => Promise<any>,
+        newApiFamilyRequests.payload as unknown as (
+          ...args: any[]
+        ) => Promise<any>,
       )
       mockedFetchApi.mockResolvedValueOnce({
         code: 1,
@@ -118,12 +122,14 @@ describe("anyrouterProvider", () => {
       })
     })
 
-    it("passes lightweight AnyRouter account context to fetchApi", async () => {
-      const { fetchApi } = await import(
+    it("passes lightweight AnyRouter account context to the provider request", async () => {
+      const { newApiFamilyRequests } = await import(
         "~/services/apiService/newApiFamily/request"
       )
       const mockedFetchApi = vi.mocked(
-        fetchApi as unknown as (...args: any[]) => Promise<any>,
+        newApiFamilyRequests.payload as unknown as (
+          ...args: any[]
+        ) => Promise<any>,
       )
       mockedFetchApi.mockResolvedValueOnce({
         code: 1,
@@ -160,11 +166,13 @@ describe("anyrouterProvider", () => {
     })
 
     it("returns success for English success messages", async () => {
-      const { fetchApi } = await import(
+      const { newApiFamilyRequests } = await import(
         "~/services/apiService/newApiFamily/request"
       )
       const mockedFetchApi = vi.mocked(
-        fetchApi as unknown as (...args: any[]) => Promise<any>,
+        newApiFamilyRequests.payload as unknown as (
+          ...args: any[]
+        ) => Promise<any>,
       )
       mockedFetchApi.mockResolvedValueOnce({
         code: 1,
@@ -189,10 +197,10 @@ describe("anyrouterProvider", () => {
     })
 
     it("returns success when success is true and optional result fields are omitted", async () => {
-      const { fetchApi } = await import(
+      const { newApiFamilyRequests } = await import(
         "~/services/apiService/newApiFamily/request"
       )
-      vi.mocked(fetchApi).mockResolvedValueOnce({
+      vi.mocked(newApiFamilyRequests.payload).mockResolvedValueOnce({
         success: true,
         message: "",
       })
@@ -204,11 +212,13 @@ describe("anyrouterProvider", () => {
     })
 
     it("does not treat an empty message as already checked", async () => {
-      const { fetchApi } = await import(
+      const { newApiFamilyRequests } = await import(
         "~/services/apiService/newApiFamily/request"
       )
       const mockedFetchApi = vi.mocked(
-        fetchApi as unknown as (...args: any[]) => Promise<any>,
+        newApiFamilyRequests.payload as unknown as (
+          ...args: any[]
+        ) => Promise<any>,
       )
       mockedFetchApi.mockResolvedValueOnce({
         code: 1,
@@ -222,11 +232,13 @@ describe("anyrouterProvider", () => {
     })
 
     it("returns already_checked when response is success and message indicates a prior check-in", async () => {
-      const { fetchApi } = await import(
+      const { newApiFamilyRequests } = await import(
         "~/services/apiService/newApiFamily/request"
       )
       const mockedFetchApi = vi.mocked(
-        fetchApi as unknown as (...args: any[]) => Promise<any>,
+        newApiFamilyRequests.payload as unknown as (
+          ...args: any[]
+        ) => Promise<any>,
       )
       mockedFetchApi.mockResolvedValueOnce({
         code: 1,
@@ -245,11 +257,13 @@ describe("anyrouterProvider", () => {
     })
 
     it("returns the fallback failure key when the backend fails without a message", async () => {
-      const { fetchApi } = await import(
+      const { newApiFamilyRequests } = await import(
         "~/services/apiService/newApiFamily/request"
       )
       const mockedFetchApi = vi.mocked(
-        fetchApi as unknown as (...args: any[]) => Promise<any>,
+        newApiFamilyRequests.payload as unknown as (
+          ...args: any[]
+        ) => Promise<any>,
       )
       mockedFetchApi.mockResolvedValueOnce({
         code: 1,
@@ -277,11 +291,13 @@ describe("anyrouterProvider", () => {
       ["ret", { ret: 1, message: "queued" }],
       ["code", { code: 0, message: "queued" }],
     ])("accepts %s as an independent success signal", async (_, response) => {
-      const { fetchApi } = await import(
+      const { newApiFamilyRequests } = await import(
         "~/services/apiService/newApiFamily/request"
       )
       const mockedFetchApi = vi.mocked(
-        fetchApi as unknown as (...args: any[]) => Promise<any>,
+        newApiFamilyRequests.payload as unknown as (
+          ...args: any[]
+        ) => Promise<any>,
       )
       mockedFetchApi.mockResolvedValueOnce(response)
 
@@ -292,10 +308,10 @@ describe("anyrouterProvider", () => {
     })
 
     it("does not infer already checked from a zero ret value", async () => {
-      const { fetchApi } = await import(
+      const { newApiFamilyRequests } = await import(
         "~/services/apiService/newApiFamily/request"
       )
-      vi.mocked(fetchApi).mockResolvedValueOnce({
+      vi.mocked(newApiFamilyRequests.payload).mockResolvedValueOnce({
         code: 1,
         ret: 0,
         success: true,
@@ -309,11 +325,13 @@ describe("anyrouterProvider", () => {
     })
 
     it("recognizes an explicit already-checked message on a negative response", async () => {
-      const { fetchApi } = await import(
+      const { newApiFamilyRequests } = await import(
         "~/services/apiService/newApiFamily/request"
       )
       const mockedFetchApi = vi.mocked(
-        fetchApi as unknown as (...args: any[]) => Promise<any>,
+        newApiFamilyRequests.payload as unknown as (
+          ...args: any[]
+        ) => Promise<any>,
       )
       mockedFetchApi.mockResolvedValueOnce({
         code: 1,
@@ -327,10 +345,10 @@ describe("anyrouterProvider", () => {
     })
 
     it("recognizes the msg field used by compatible deployments", async () => {
-      const { fetchApi } = await import(
+      const { newApiFamilyRequests } = await import(
         "~/services/apiService/newApiFamily/request"
       )
-      vi.mocked(fetchApi).mockResolvedValueOnce({
+      vi.mocked(newApiFamilyRequests.payload).mockResolvedValueOnce({
         ret: 0,
         msg: "already checked today",
       })
@@ -342,11 +360,13 @@ describe("anyrouterProvider", () => {
     })
 
     it("returns failed when response indicates failure", async () => {
-      const { fetchApi } = await import(
+      const { newApiFamilyRequests } = await import(
         "~/services/apiService/newApiFamily/request"
       )
       const mockedFetchApi = vi.mocked(
-        fetchApi as unknown as (...args: any[]) => Promise<any>,
+        newApiFamilyRequests.payload as unknown as (
+          ...args: any[]
+        ) => Promise<any>,
       )
       mockedFetchApi.mockResolvedValueOnce({
         code: 1,
@@ -360,11 +380,13 @@ describe("anyrouterProvider", () => {
     })
 
     it("maps 404 errors to endpoint-not-supported", async () => {
-      const { fetchApi } = await import(
+      const { newApiFamilyRequests } = await import(
         "~/services/apiService/newApiFamily/request"
       )
       const mockedFetchApi = vi.mocked(
-        fetchApi as unknown as (...args: any[]) => Promise<any>,
+        newApiFamilyRequests.payload as unknown as (
+          ...args: any[]
+        ) => Promise<any>,
       )
       mockedFetchApi.mockRejectedValueOnce({
         statusCode: 404,
@@ -380,11 +402,13 @@ describe("anyrouterProvider", () => {
     })
 
     it("returns already_checked when request throws and error message indicates already checked", async () => {
-      const { fetchApi } = await import(
+      const { newApiFamilyRequests } = await import(
         "~/services/apiService/newApiFamily/request"
       )
       const mockedFetchApi = vi.mocked(
-        fetchApi as unknown as (...args: any[]) => Promise<any>,
+        newApiFamilyRequests.payload as unknown as (
+          ...args: any[]
+        ) => Promise<any>,
       )
       mockedFetchApi.mockRejectedValueOnce(new Error("已签到"))
 
@@ -393,10 +417,12 @@ describe("anyrouterProvider", () => {
     })
 
     it("does not treat an empty thrown message as already checked", async () => {
-      const { fetchApi } = await import(
+      const { newApiFamilyRequests } = await import(
         "~/services/apiService/newApiFamily/request"
       )
-      vi.mocked(fetchApi).mockRejectedValueOnce(new Error(""))
+      vi.mocked(newApiFamilyRequests.payload).mockRejectedValueOnce(
+        new Error(""),
+      )
 
       await expect(checkInForTest(mockAccount)).resolves.toMatchObject({
         status: "failed",
@@ -404,11 +430,13 @@ describe("anyrouterProvider", () => {
     })
 
     it("handles errors gracefully", async () => {
-      const { fetchApi } = await import(
+      const { newApiFamilyRequests } = await import(
         "~/services/apiService/newApiFamily/request"
       )
       const mockedFetchApi = vi.mocked(
-        fetchApi as unknown as (...args: any[]) => Promise<any>,
+        newApiFamilyRequests.payload as unknown as (
+          ...args: any[]
+        ) => Promise<any>,
       )
       mockedFetchApi.mockRejectedValueOnce(new Error("Network error"))
 
@@ -417,14 +445,16 @@ describe("anyrouterProvider", () => {
     })
 
     it("returns uncertain when the response is lost after dispatch", async () => {
-      const { fetchApi } = await import(
+      const { newApiFamilyRequests } = await import(
         "~/services/apiService/newApiFamily/request"
       )
       const mutationLifecycle = createAutoCheckinMutationLifecycle()
-      vi.mocked(fetchApi).mockImplementationOnce(async (request) => {
-        request.observer?.onDispatch()
-        throw new TypeError("Failed to fetch")
-      })
+      vi.mocked(newApiFamilyRequests.payload).mockImplementationOnce(
+        async (request) => {
+          request.observer?.onDispatch()
+          throw new TypeError("Failed to fetch")
+        },
+      )
 
       await expect(
         checkInForTest(mockAccount, {

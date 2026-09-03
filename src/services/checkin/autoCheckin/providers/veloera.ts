@@ -11,10 +11,7 @@ import {
   CHECK_IN_METHOD_TODAY_STATUSES,
   CHECK_IN_PROVIDER_READINESS_REASONS,
 } from "~/constants/checkIn"
-import {
-  fetchApi,
-  fetchApiData,
-} from "~/services/apiService/newApiFamily/request"
+import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import { fetchSupportCheckIn } from "~/services/apiService/newApiFamily/variants/veloeraCheckIn"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import {
@@ -78,10 +75,13 @@ async function fetchCheckInObservation(
   const enabled = await fetchSupportCheckIn(request, signal)
   if (enabled === false) return { enabled }
 
-  const data = await fetchApiData<{ can_check_in?: boolean }>(request, {
-    endpoint: "/api/user/check_in_status",
-    ...(signal ? { options: { signal } } : {}),
-  })
+  const data = await newApiFamilyRequests.data<{ can_check_in?: boolean }>(
+    request,
+    {
+      endpoint: "/api/user/check_in_status",
+      ...(signal ? { options: { signal } } : {}),
+    },
+  )
   if (typeof data.can_check_in === "boolean") {
     return { enabled, canCheckIn: data.can_check_in }
   }
@@ -110,7 +110,7 @@ async function checkinVeloera(
 
   try {
     // Call the check-in API endpoint
-    const response = await fetchApi<unknown>(request, {
+    const response = await newApiFamilyRequests.envelope<unknown>(request, {
       endpoint: ENDPOINT,
       options: { method: "POST" },
     })

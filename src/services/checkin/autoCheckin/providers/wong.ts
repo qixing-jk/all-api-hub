@@ -15,7 +15,7 @@ import {
   CHECK_IN_METHOD_TODAY_STATUSES,
   CHECK_IN_PROVIDER_READINESS_REASONS,
 } from "~/constants/checkIn"
-import { fetchApi } from "~/services/apiService/newApiFamily/request"
+import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import type {
   WongCheckinApiResponse,
   WongCheckinStatusData,
@@ -62,7 +62,7 @@ async function performCheckin(
 ): Promise<WongCheckinApiResponse> {
   const { site_url, account_info } = account
 
-  return await fetchApi<WongCheckinStatusData | undefined>(
+  return await newApiFamilyRequests.envelope<WongCheckinStatusData | undefined>(
     {
       baseUrl: site_url,
       accountId: account.id,
@@ -83,7 +83,6 @@ async function performCheckin(
         body: "{}",
       },
     },
-    false,
   )
 }
 
@@ -210,14 +209,12 @@ const getStatus: NonNullable<AutoCheckinProvider["getStatus"]> = async ({
         }
       : undefined)
   if (!statusRequest) return undefined
-  const response = await fetchApi<WongCheckinStatusData | undefined>(
-    statusRequest,
-    {
-      endpoint: ENDPOINT,
-      options: { method: "GET", cache: "no-store", signal },
-    },
-    false,
-  )
+  const response = await newApiFamilyRequests.envelope<
+    WongCheckinStatusData | undefined
+  >(statusRequest, {
+    endpoint: ENDPOINT,
+    options: { method: "GET", cache: "no-store", signal },
+  })
   if (
     typeof response.data?.enabled !== "boolean" ||
     typeof response.data.checked_in !== "boolean" ||

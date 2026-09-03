@@ -15,7 +15,9 @@ const { fetchApiDataMock, fetchLegacyAccountAvailableModelsMock } = vi.hoisted(
 )
 
 vi.mock("~/services/apiService/newApiFamily/request", () => ({
-  fetchApiData: fetchApiDataMock,
+  newApiFamilyRequests: {
+    data: fetchApiDataMock,
+  },
 }))
 
 vi.mock("~/services/apiService/newApiFamily/default/keyManagement", () => ({

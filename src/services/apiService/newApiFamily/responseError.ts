@@ -1,16 +1,6 @@
-import { readSafeUpstreamCode } from "~/services/apiTransport/responseError"
-import type {
-  ApiResponseErrorDecoder,
-  DecodedApiResponseError,
-} from "~/services/apiTransport/type"
+import { createMessageEnvelopeResponseErrorDecoder } from "~/services/apiService/common/responseError"
 
 const NEW_API_ERROR_TYPE = "new_api_error"
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value)
-
-const readMessage = (value: unknown): string | undefined =>
-  typeof value === "string" && value.trim() ? value.trim() : undefined
 
 const isFailedBusinessEnvelope = (body: Record<string, unknown>): boolean => {
   if (body.success === false) return true
@@ -24,37 +14,17 @@ const isFailedBusinessEnvelope = (body: Record<string, unknown>): boolean => {
 /**
  * Interprets New API's `{ success, message }` and nested `new_api_error`
  * envelopes before transport fallback.
- * https://github.com/QuantumNous/new-api/blob/9df450fe54e1a874a5339b7c38a61014217f02c3/common/gin.go
- * https://github.com/QuantumNous/new-api/blob/9df450fe54e1a874a5339b7c38a61014217f02c3/middleware/utils.go
+ * https://github.com/QuantumNous/new-api/blob/32c261923a9786c64d2af087327ef057e7bde7e3/common/gin.go#L199-L228
+ * https://github.com/QuantumNous/new-api/blob/32c261923a9786c64d2af087327ef057e7bde7e3/middleware/utils.go#L14-L37
  */
-export const decodeNewApiResponseError: ApiResponseErrorDecoder = (
-  response,
-) => {
-  if (!isRecord(response.body)) return null
-
-  const body = response.body
-  const message = readMessage(body.message)
-  const upstreamCode = readSafeUpstreamCode(body.code)
-  if (isFailedBusinessEnvelope(body)) {
-    return {
+export const decodeNewApiResponseError =
+  createMessageEnvelopeResponseErrorDecoder({
+    isBusinessEnvelope: isFailedBusinessEnvelope,
+    captureBusinessCode: true,
+    standaloneHttpMessage: true,
+    nestedError: {
+      type: NEW_API_ERROR_TYPE,
       kind: "business",
-      ...(message ? { message } : {}),
-      ...(upstreamCode ? { upstreamCode } : {}),
-    }
-  }
-  if (message) {
-    return { kind: "http", message }
-  }
-
-  if (!isRecord(body.error)) return null
-  const error = body.error
-  if (readMessage(error.type) !== NEW_API_ERROR_TYPE) return null
-
-  const nestedMessage = readMessage(error.message)
-  const nestedUpstreamCode = readSafeUpstreamCode(error.code)
-  return {
-    kind: "business",
-    ...(nestedMessage ? { message: nestedMessage } : {}),
-    ...(nestedUpstreamCode ? { upstreamCode: nestedUpstreamCode } : {}),
-  } satisfies DecodedApiResponseError
-}
+      captureCode: true,
+    },
+  })

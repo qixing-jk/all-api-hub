@@ -1,10 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import {
-  fetchApi,
-  fetchApiData,
-} from "~/services/apiService/newApiFamily/request"
+import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import { ApiError } from "~/services/apiTransport/errors"
 import { veloeraProvider } from "~/services/checkin/autoCheckin/providers/veloera"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
@@ -18,8 +15,10 @@ const { mockFetchVeloeraCheckInSupport } = vi.hoisted(() => ({
 }))
 
 vi.mock("~/services/apiService/newApiFamily/request", () => ({
-  fetchApi: vi.fn(),
-  fetchApiData: vi.fn(),
+  newApiFamilyRequests: {
+    data: vi.fn(),
+    envelope: vi.fn(),
+  },
 }))
 
 vi.mock("~/services/apiService/newApiFamily/variants/veloeraCheckIn", () => ({
@@ -127,7 +126,7 @@ describe("veloeraProvider", () => {
   })
 
   it("uses only the safe GET reader and rejects malformed status", async () => {
-    vi.mocked(fetchApiData)
+    vi.mocked(newApiFamilyRequests.data)
       .mockResolvedValueOnce({ can_check_in: true })
       .mockResolvedValueOnce({})
 
@@ -144,10 +143,12 @@ describe("veloeraProvider", () => {
       reason: "invalid_response",
       attemptedAt: 211,
     })
-    expect(vi.mocked(fetchApiData).mock.calls[0]?.[1]).toMatchObject({
+    expect(
+      vi.mocked(newApiFamilyRequests.data).mock.calls[0]?.[1],
+    ).toMatchObject({
       endpoint: "/api/user/check_in_status",
     })
-    expect(fetchApi).not.toHaveBeenCalled()
+    expect(newApiFamilyRequests.envelope).not.toHaveBeenCalled()
   })
 
   it("uses the public Veloera capability flag before the per-user status", async () => {
@@ -159,7 +160,7 @@ describe("veloeraProvider", () => {
       detection: { outcome: "matched" },
       status: { outcome: "known", availability: "disabled" },
     })
-    expect(fetchApiData).not.toHaveBeenCalled()
+    expect(newApiFamilyRequests.data).not.toHaveBeenCalled()
   })
 
   it("propagates the discovery abort signal to the public support probe", async () => {
@@ -180,10 +181,10 @@ describe("veloeraProvider", () => {
 
   describe("checkIn", () => {
     it("propagates the popup source when the backend omits a message", async () => {
-      const { fetchApi } = await import(
+      const { newApiFamilyRequests } = await import(
         "~/services/apiService/newApiFamily/request"
       )
-      vi.mocked(fetchApi).mockResolvedValueOnce({
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
         success: true,
         data: { quota_awarded: 2 },
         message: "",
@@ -202,17 +203,19 @@ describe("veloeraProvider", () => {
         messageKey: "autoCheckin:providerFallback.checkinSuccessful",
         data: { quota_awarded: 2 },
       })
-      expect(vi.mocked(fetchApi).mock.calls[0]?.[0]).toMatchObject({
+      expect(
+        vi.mocked(newApiFamilyRequests.envelope).mock.calls[0]?.[0],
+      ).toMatchObject({
         accountId: "test-id",
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
       })
     })
 
     it("returns success on successful check-in", async () => {
-      const { fetchApi } = await import(
+      const { newApiFamilyRequests } = await import(
         "~/services/apiService/newApiFamily/request"
       )
-      vi.mocked(fetchApi).mockResolvedValueOnce({
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
         success: true,
         data: null,
         message: "Success",
@@ -220,16 +223,18 @@ describe("veloeraProvider", () => {
 
       const result = await checkInForTest(mockAccount)
       expect(result.status).toBe("success")
-      expect(vi.mocked(fetchApi).mock.calls[0]?.[0]).toMatchObject({
+      expect(
+        vi.mocked(newApiFamilyRequests.envelope).mock.calls[0]?.[0],
+      ).toMatchObject({
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
       })
     })
 
     it("returns already_checked when already checked in", async () => {
-      const { fetchApi } = await import(
+      const { newApiFamilyRequests } = await import(
         "~/services/apiService/newApiFamily/request"
       )
-      vi.mocked(fetchApi).mockResolvedValueOnce({
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
         success: true,
         data: null,
         message: "已签到",
@@ -240,10 +245,10 @@ describe("veloeraProvider", () => {
     })
 
     it("returns the fallback failure key when the backend fails without a message", async () => {
-      const { fetchApi } = await import(
+      const { newApiFamilyRequests } = await import(
         "~/services/apiService/newApiFamily/request"
       )
-      vi.mocked(fetchApi).mockResolvedValueOnce({
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
         success: false,
         data: { code: 500 },
         message: "",
@@ -264,13 +269,15 @@ describe("veloeraProvider", () => {
     })
 
     it("uses status readback to recognize an already completed check-in", async () => {
-      vi.mocked(fetchApi).mockResolvedValueOnce({
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
         success: false,
         data: null,
         message: "No action was performed",
       })
       mockFetchVeloeraCheckInSupport.mockResolvedValueOnce(true)
-      vi.mocked(fetchApiData).mockResolvedValueOnce({ can_check_in: false })
+      vi.mocked(newApiFamilyRequests.data).mockResolvedValueOnce({
+        can_check_in: false,
+      })
 
       await expect(checkInForTest(mockAccount)).resolves.toMatchObject({
         status: "already_checked",
@@ -279,7 +286,7 @@ describe("veloeraProvider", () => {
     })
 
     it("does not infer endpoint support from unrelated error text", async () => {
-      vi.mocked(fetchApi).mockRejectedValueOnce(
+      vi.mocked(newApiFamilyRequests.envelope).mockRejectedValueOnce(
         new Error("Quota bucket 404 is unavailable"),
       )
 
@@ -293,7 +300,7 @@ describe("veloeraProvider", () => {
     })
 
     it("maps a structured 404 response to endpoint-not-supported", async () => {
-      vi.mocked(fetchApi).mockRejectedValueOnce(
+      vi.mocked(newApiFamilyRequests.envelope).mockRejectedValueOnce(
         new ApiError("Not found", 404, "/api/user/check_in"),
       )
 
@@ -304,10 +311,12 @@ describe("veloeraProvider", () => {
     })
 
     it("handles errors gracefully", async () => {
-      const { fetchApi } = await import(
+      const { newApiFamilyRequests } = await import(
         "~/services/apiService/newApiFamily/request"
       )
-      vi.mocked(fetchApi).mockRejectedValueOnce(new Error("Network error"))
+      vi.mocked(newApiFamilyRequests.envelope).mockRejectedValueOnce(
+        new Error("Network error"),
+      )
 
       const result = await checkInForTest(mockAccount)
       expect(result.status).toBe("failed")

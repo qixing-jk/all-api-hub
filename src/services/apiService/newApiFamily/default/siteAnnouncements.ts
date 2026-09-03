@@ -3,7 +3,7 @@ import {
   type SiteStructuredAnnouncement,
   type SiteStructuredAnnouncementType,
 } from "~/services/apiAdapters/contracts/siteStructuredAnnouncements"
-import { fetchApiData } from "~/services/apiService/newApiFamily/request"
+import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { createLogger } from "~/utils/core/logger"
@@ -75,13 +75,14 @@ export async function fetchSiteAnnouncements(
   request: ApiServiceRequest,
 ): Promise<SiteStructuredAnnouncement[]> {
   try {
-    const response = await fetchApiData<NewApiStatusAnnouncementsResponse>(
-      {
-        ...request,
-        auth: { authType: AuthTypeEnum.None },
-      },
-      { endpoint: "/api/status" },
-    )
+    const response =
+      await newApiFamilyRequests.data<NewApiStatusAnnouncementsResponse>(
+        {
+          ...request,
+          auth: { authType: AuthTypeEnum.None },
+        },
+        { endpoint: "/api/status" },
+      )
 
     if (response?.announcements_enabled === false) {
       return []

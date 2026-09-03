@@ -10,7 +10,9 @@ import { createAutoCheckinMutationLifecycle } from "~~/tests/test-utils/autoChec
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
 vi.mock("~/services/apiService/newApiFamily/request", () => ({
-  fetchApi: vi.fn(),
+  newApiFamilyRequests: {
+    envelope: vi.fn(),
+  },
 }))
 
 const mockAccount: SiteAccount = {
@@ -111,10 +113,10 @@ describe("wongGongyiProvider", () => {
   })
 
   it("uses a strict GET status envelope and never probes with POST", async () => {
-    const { fetchApi } = await import(
+    const { newApiFamilyRequests } = await import(
       "~/services/apiService/newApiFamily/request"
     )
-    vi.mocked(fetchApi)
+    vi.mocked(newApiFamilyRequests.envelope)
       .mockResolvedValueOnce({
         success: true,
         message: "",
@@ -147,7 +149,9 @@ describe("wongGongyiProvider", () => {
       reason: "invalid_response",
       attemptedAt: 222,
     })
-    expect(vi.mocked(fetchApi).mock.calls[0]?.[1]).toMatchObject({
+    expect(
+      vi.mocked(newApiFamilyRequests.envelope).mock.calls[0]?.[1],
+    ).toMatchObject({
       endpoint: "/api/user/checkin",
       options: { method: "GET" },
     })
@@ -155,10 +159,10 @@ describe("wongGongyiProvider", () => {
 
   describe("checkIn", () => {
     it("propagates the popup source when POST indicates checked_in true", async () => {
-      const { fetchApi } = await import(
+      const { newApiFamilyRequests } = await import(
         "~/services/apiService/newApiFamily/request"
       )
-      const mockedFetchApi = vi.mocked(fetchApi)
+      const mockedFetchApi = vi.mocked(newApiFamilyRequests.envelope)
 
       mockedFetchApi.mockResolvedValueOnce({
         success: false,
@@ -183,10 +187,10 @@ describe("wongGongyiProvider", () => {
     })
 
     it("returns already_checked when POST success=true but message indicates already checked", async () => {
-      const { fetchApi } = await import(
+      const { newApiFamilyRequests } = await import(
         "~/services/apiService/newApiFamily/request"
       )
-      const mockedFetchApi = vi.mocked(fetchApi)
+      const mockedFetchApi = vi.mocked(newApiFamilyRequests.envelope)
 
       mockedFetchApi.mockResolvedValueOnce({
         success: true,
@@ -202,10 +206,10 @@ describe("wongGongyiProvider", () => {
     })
 
     it("returns failed when POST indicates enabled false", async () => {
-      const { fetchApi } = await import(
+      const { newApiFamilyRequests } = await import(
         "~/services/apiService/newApiFamily/request"
       )
-      const mockedFetchApi = vi.mocked(fetchApi)
+      const mockedFetchApi = vi.mocked(newApiFamilyRequests.envelope)
 
       mockedFetchApi.mockResolvedValueOnce({
         success: true,
@@ -219,10 +223,10 @@ describe("wongGongyiProvider", () => {
     })
 
     it("returns success when POST succeeds and user was not checked in", async () => {
-      const { fetchApi } = await import(
+      const { newApiFamilyRequests } = await import(
         "~/services/apiService/newApiFamily/request"
       )
-      const mockedFetchApi = vi.mocked(fetchApi)
+      const mockedFetchApi = vi.mocked(newApiFamilyRequests.envelope)
 
       mockedFetchApi.mockResolvedValueOnce({
         success: true,
@@ -238,10 +242,10 @@ describe("wongGongyiProvider", () => {
     })
 
     it("does not let ambiguous copy override an explicit unchecked status", async () => {
-      const { fetchApi } = await import(
+      const { newApiFamilyRequests } = await import(
         "~/services/apiService/newApiFamily/request"
       )
-      vi.mocked(fetchApi).mockResolvedValueOnce({
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
         success: true,
         message: "User was not already checked in",
         data: { enabled: true, checked_in: false },
@@ -254,10 +258,10 @@ describe("wongGongyiProvider", () => {
     })
 
     it("returns failed when POST returns success=false without already-checked signal", async () => {
-      const { fetchApi } = await import(
+      const { newApiFamilyRequests } = await import(
         "~/services/apiService/newApiFamily/request"
       )
-      const mockedFetchApi = vi.mocked(fetchApi)
+      const mockedFetchApi = vi.mocked(newApiFamilyRequests.envelope)
 
       mockedFetchApi.mockResolvedValueOnce({
         success: false,
@@ -273,10 +277,10 @@ describe("wongGongyiProvider", () => {
     })
 
     it("returns already_checked when POST returns already checked message", async () => {
-      const { fetchApi } = await import(
+      const { newApiFamilyRequests } = await import(
         "~/services/apiService/newApiFamily/request"
       )
-      const mockedFetchApi = vi.mocked(fetchApi)
+      const mockedFetchApi = vi.mocked(newApiFamilyRequests.envelope)
 
       mockedFetchApi.mockResolvedValueOnce({
         success: false,
@@ -289,10 +293,10 @@ describe("wongGongyiProvider", () => {
     })
 
     it("handles network errors gracefully", async () => {
-      const { fetchApi } = await import(
+      const { newApiFamilyRequests } = await import(
         "~/services/apiService/newApiFamily/request"
       )
-      const mockedFetchApi = vi.mocked(fetchApi)
+      const mockedFetchApi = vi.mocked(newApiFamilyRequests.envelope)
 
       mockedFetchApi.mockRejectedValueOnce(new TypeError("Failed to fetch"))
 
@@ -306,14 +310,16 @@ describe("wongGongyiProvider", () => {
     })
 
     it("marks a lost response after POST dispatch as uncertain", async () => {
-      const { fetchApi } = await import(
+      const { newApiFamilyRequests } = await import(
         "~/services/apiService/newApiFamily/request"
       )
       const mutationLifecycle = createAutoCheckinMutationLifecycle()
-      vi.mocked(fetchApi).mockImplementationOnce(async (request) => {
-        request.observer?.onDispatch()
-        throw new TypeError("Failed to fetch")
-      })
+      vi.mocked(newApiFamilyRequests.envelope).mockImplementationOnce(
+        async (request) => {
+          request.observer?.onDispatch()
+          throw new TypeError("Failed to fetch")
+        },
+      )
 
       await expect(
         checkInForTest(mockAccount, {
@@ -327,10 +333,10 @@ describe("wongGongyiProvider", () => {
     })
 
     it("returns endpointNotSupported when API returns 404", async () => {
-      const { fetchApi } = await import(
+      const { newApiFamilyRequests } = await import(
         "~/services/apiService/newApiFamily/request"
       )
-      const mockedFetchApi = vi.mocked(fetchApi)
+      const mockedFetchApi = vi.mocked(newApiFamilyRequests.envelope)
 
       mockedFetchApi.mockRejectedValueOnce({
         statusCode: 404,

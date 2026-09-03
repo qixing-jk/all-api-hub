@@ -4,10 +4,7 @@ import {
   parseNewApiDashboardAuthBundleResponse,
   type NewApiDashboardAuthBundle,
 } from "~/services/apiService/newApi/dashboardAuth"
-import {
-  fetchApi,
-  fetchApiData,
-} from "~/services/apiService/newApiFamily/request"
+import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import { runAbortableTask } from "~/services/apiTransport/abortableTask"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { fetchApiResponse } from "~/services/apiTransport/request"
@@ -713,10 +710,10 @@ async function readNewApiVerificationMethods(
   state.methodsPromise = (async () => {
     const request = createManagedSessionRequest(baseUrl, userId)
     const results = await Promise.allSettled([
-      fetchApiData<NewApiTwoFactorStatusResponse>(request, {
+      newApiFamilyRequests.data<NewApiTwoFactorStatusResponse>(request, {
         endpoint: "/api/user/2fa/status",
       }),
-      fetchApiData<NewApiPasskeyStatusResponse>(request, {
+      newApiFamilyRequests.data<NewApiPasskeyStatusResponse>(request, {
         endpoint: "/api/user/passkey",
       }),
     ])
@@ -827,16 +824,19 @@ async function postNewApiLogin(
   await cleanupNewApiOwnedSession(config.baseUrl)
 
   const request = createCookieAuthRequest(config.baseUrl, config.userId)
-  const response = await fetchApi<NewApiLoginResponse>(request, {
-    endpoint: "/api/user/login",
-    options: {
-      method: "POST",
-      body: JSON.stringify({
-        username: config.username?.trim(),
-        password: config.password ?? "",
-      }),
+  const response = await newApiFamilyRequests.envelope<NewApiLoginResponse>(
+    request,
+    {
+      endpoint: "/api/user/login",
+      options: {
+        method: "POST",
+        body: JSON.stringify({
+          username: config.username?.trim(),
+          password: config.password ?? "",
+        }),
+      },
     },
-  })
+  )
 
   if (!isRecord(response)) {
     throw new ApiError(
@@ -970,13 +970,16 @@ async function verifyNewApiSession(
       : params
     let response: NewApiVerifyResponse
     try {
-      response = await fetchApiData<NewApiVerifyResponse>(request, {
-        endpoint: "/api/verify",
-        options: {
-          method: "POST",
-          body: JSON.stringify(requestParams),
+      response = await newApiFamilyRequests.data<NewApiVerifyResponse>(
+        request,
+        {
+          endpoint: "/api/verify",
+          options: {
+            method: "POST",
+            body: JSON.stringify(requestParams),
+          },
         },
-      })
+      )
     } catch (error) {
       throw sanitizeNewApiErrorForOrigin(error, config.baseUrl)
     }
@@ -1159,7 +1162,7 @@ export async function submitNewApiLoginTwoFactorCode(
   const request = createCookieAuthRequest(config.baseUrl, config.userId)
   let response
   try {
-    response = await fetchApi<unknown>(request, {
+    response = await newApiFamilyRequests.envelope<unknown>(request, {
       endpoint: "/api/user/login/2fa",
       options: {
         method: "POST",
@@ -1306,21 +1309,24 @@ export async function fetchNewApiChannelKey(params: {
       : undefined
     let response: { key?: string } | string
     try {
-      response = await fetchApiData<{ key?: string } | string>(sessionRequest, {
-        endpoint,
-        options: {
-          method: "POST",
-          body: JSON.stringify({}),
-          ...(securityProof
-            ? {
-                // Modern New API channel-key routes validate this scoped proof
-                // separately from the dashboard Bearer.
-                // https://github.com/QuantumNous/new-api/commit/31d70fca393ff2e09bbae012af2e3ccefdd389a1
-                headers: { "X-Security-Proof": securityProof.token },
-              }
-            : {}),
+      response = await newApiFamilyRequests.data<{ key?: string } | string>(
+        sessionRequest,
+        {
+          endpoint,
+          options: {
+            method: "POST",
+            body: JSON.stringify({}),
+            ...(securityProof
+              ? {
+                  // Modern New API channel-key routes validate this scoped proof
+                  // separately from the dashboard Bearer.
+                  // https://github.com/QuantumNous/new-api/commit/31d70fca393ff2e09bbae012af2e3ccefdd389a1
+                  headers: { "X-Security-Proof": securityProof.token },
+                }
+              : {}),
+          },
         },
-      })
+      )
     } catch (error) {
       const protectionBypassExecution = params.protectionBypassExecution
       if (

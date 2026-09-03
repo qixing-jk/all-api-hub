@@ -1,5 +1,5 @@
 import { CHECK_IN_PROVIDER_READINESS_REASONS } from "~/constants/checkIn"
-import { fetchApi } from "~/services/apiService/newApiFamily/request"
+import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import {
   AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
   isAlreadyCheckedMessage,
@@ -44,37 +44,37 @@ const checkinAnyRouter = async (
     : account.cookieAuthSessionCookie
 
   try {
-    const response = await fetchApi<AnyrouterCheckInResponse>(
-      {
-        baseUrl: site_url,
-        ...(account.id ? { accountId: account.id } : {}),
-        ...(cookieAuthSessionCookie ? { cookieAuthSessionCookie } : {}),
-        auth: {
-          authType: AuthTypeEnum.Cookie,
-          userId: account_info.id,
+    const response =
+      await newApiFamilyRequests.payload<AnyrouterCheckInResponse>(
+        {
+          baseUrl: site_url,
+          ...(account.id ? { accountId: account.id } : {}),
+          ...(cookieAuthSessionCookie ? { cookieAuthSessionCookie } : {}),
+          auth: {
+            authType: AuthTypeEnum.Cookie,
+            userId: account_info.id,
+          },
+          tempWindowRequestSource,
+          // AnyRouter's sign-in POST relies on browser-established WAF cookies;
+          // see https://github.com/millylee/anyrouter-check-in.
+          // Keep it in one protected context instead of replaying a mutating request.
+          forceTempWindow: true,
+          ...(protectionBypassExecution ? { protectionBypassExecution } : {}),
+          ...(context.mutationLifecycle
+            ? { observer: context.mutationLifecycle }
+            : {}),
         },
-        tempWindowRequestSource,
-        // AnyRouter's sign-in POST relies on browser-established WAF cookies;
-        // see https://github.com/millylee/anyrouter-check-in.
-        // Keep it in one protected context instead of replaying a mutating request.
-        forceTempWindow: true,
-        ...(protectionBypassExecution ? { protectionBypassExecution } : {}),
-        ...(context.mutationLifecycle
-          ? { observer: context.mutationLifecycle }
-          : {}),
-      },
-      {
-        endpoint: "/api/user/sign_in",
-        options: {
-          method: "POST",
-          body: "{}",
-          headers: {
-            "X-Requested-With": "XMLHttpRequest",
+        {
+          endpoint: "/api/user/sign_in",
+          options: {
+            method: "POST",
+            body: "{}",
+            headers: {
+              "X-Requested-With": "XMLHttpRequest",
+            },
           },
         },
-      },
-      true,
-    )
+      )
 
     const rawResponseMessage = normalizeCheckinMessage(
       response.message ?? response.msg,

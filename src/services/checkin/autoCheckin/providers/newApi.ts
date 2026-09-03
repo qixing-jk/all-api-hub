@@ -17,10 +17,7 @@ import type {
   NewApiCheckInStatus,
 } from "~/services/apiService/newApiFamily/checkInDto"
 import { fetchSupportCheckIn } from "~/services/apiService/newApiFamily/default/accountBootstrap"
-import {
-  fetchApi,
-  fetchApiData,
-} from "~/services/apiService/newApiFamily/request"
+import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import { buildCompatUserIdHeaders } from "~/services/apiTransport/compatHeaders"
 import { REQUEST_CONFIG } from "~/services/apiTransport/constant"
 import { ApiError } from "~/services/apiTransport/errors"
@@ -342,10 +339,13 @@ async function fetchCheckedInTodayStatus(
   if (!request) return undefined
 
   try {
-    const checkInData = await fetchApiData<NewApiCheckInStatus>(request, {
-      endpoint: `${ENDPOINT}?month=${currentMonth}`,
-      ...(signal ? { options: { signal } } : {}),
-    })
+    const checkInData = await newApiFamilyRequests.data<NewApiCheckInStatus>(
+      request,
+      {
+        endpoint: `${ENDPOINT}?month=${currentMonth}`,
+        ...(signal ? { options: { signal } } : {}),
+      },
+    )
 
     if (
       typeof checkInData?.stats?.checked_in_today === "boolean" &&
@@ -902,7 +902,7 @@ async function performCheckin(
   protectionBypassExecution: ProtectionBypassExecution,
   mutationLifecycle?: AutoCheckinProviderContext["mutationLifecycle"],
 ): Promise<NewApiCheckInResponse> {
-  return await fetchApi<NewApiCheckInRecord>(
+  return await newApiFamilyRequests.envelope<NewApiCheckInRecord>(
     createCheckInRequest(
       account,
       tempWindowRequestSource,
@@ -916,7 +916,6 @@ async function performCheckin(
         body: "{}",
       },
     },
-    false,
   )
 }
 

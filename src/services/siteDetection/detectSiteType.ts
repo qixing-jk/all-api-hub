@@ -4,7 +4,7 @@ import {
   getAccountSiteDomainRules,
   getAccountSiteTitleRules,
 } from "~/services/accountSiteOnboarding/registry"
-import { fetchApiData as fetchNewApiFamilyData } from "~/services/apiService/newApiFamily/request"
+import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import { SUB2API_AUTH_ME_ENDPOINT } from "~/services/apiService/sub2api/type"
 import { ApiError } from "~/services/apiTransport/errors"
 import { fetchApi } from "~/services/apiTransport/request"
@@ -128,7 +128,7 @@ async function detectNewApiFamilySiteTypeFromCompatAuthError(
   protectionBypassExecution?: ProtectionBypassExecution,
 ): Promise<AccountSiteType> {
   try {
-    await fetchNewApiFamilyData<unknown>(
+    await newApiFamilyRequests.data<unknown>(
       {
         baseUrl: url,
         auth: { authType: AuthTypeEnum.Cookie },

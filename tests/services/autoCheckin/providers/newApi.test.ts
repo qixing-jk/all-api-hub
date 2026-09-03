@@ -5,10 +5,7 @@ import {
   resolveAccountSiteRouteUrl,
   SITE_ROUTE_KINDS,
 } from "~/services/accounts/utils/siteRouteResolver"
-import {
-  fetchApi,
-  fetchApiData,
-} from "~/services/apiService/newApiFamily/request"
+import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { autoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers"
 import { newApiProvider } from "~/services/checkin/autoCheckin/providers/newApi"
@@ -32,8 +29,10 @@ const { mockFetchSupportCheckIn } = vi.hoisted(() => ({
 }))
 
 vi.mock("~/services/apiService/newApiFamily/request", () => ({
-  fetchApi: vi.fn(),
-  fetchApiData: vi.fn(),
+  newApiFamilyRequests: {
+    data: vi.fn(),
+    envelope: vi.fn(),
+  },
 }))
 
 vi.mock(
@@ -110,7 +109,7 @@ const checkInForTest = (
 ) => newApiProvider.checkIn(account, context)
 
 const mockCheckInStatusSequence = (...checkedInToday: boolean[]) => {
-  const mock = vi.mocked(fetchApiData)
+  const mock = vi.mocked(newApiFamilyRequests.data)
   for (const checked of checkedInToday) {
     mock.mockResolvedValueOnce({
       stats: { checked_in_today: checked },
@@ -208,7 +207,7 @@ describe("newApiProvider", () => {
 
   describe("read-only status", () => {
     it("uses public site status to classify a disabled deployment independently of error copy", async () => {
-      vi.mocked(fetchApiData).mockRejectedValueOnce(
+      vi.mocked(newApiFamilyRequests.data).mockRejectedValueOnce(
         new ApiError(
           "check-in unavailable",
           undefined,
@@ -243,7 +242,7 @@ describe("newApiProvider", () => {
     })
 
     it("does not misclassify other business errors while public status remains enabled", async () => {
-      vi.mocked(fetchApiData).mockRejectedValueOnce(
+      vi.mocked(newApiFamilyRequests.data).mockRejectedValueOnce(
         new ApiError(
           "failed to update quota",
           undefined,
@@ -263,7 +262,7 @@ describe("newApiProvider", () => {
     })
 
     it("selects a valid disabled deployment without issuing POST", async () => {
-      vi.mocked(fetchApiData).mockResolvedValueOnce({
+      vi.mocked(newApiFamilyRequests.data).mockResolvedValueOnce({
         enabled: false,
         stats: { checked_in_today: false },
       } as any)
@@ -282,11 +281,11 @@ describe("newApiProvider", () => {
           evidence: { source: "probe", observedAt: 200 },
         },
       })
-      expect(fetchApi).not.toHaveBeenCalled()
+      expect(newApiFamilyRequests.envelope).not.toHaveBeenCalled()
     })
 
     it("treats a malformed status envelope as unknown", async () => {
-      vi.mocked(fetchApiData).mockResolvedValueOnce({
+      vi.mocked(newApiFamilyRequests.data).mockResolvedValueOnce({
         enabled: true,
         stats: {},
       } as any)
@@ -301,7 +300,7 @@ describe("newApiProvider", () => {
     })
 
     it("classifies an authenticated status read failure without hiding it", async () => {
-      vi.mocked(fetchApiData).mockRejectedValueOnce(
+      vi.mocked(newApiFamilyRequests.data).mockRejectedValueOnce(
         new ApiError("authentication required", 401),
       )
 
@@ -317,7 +316,7 @@ describe("newApiProvider", () => {
 
   describe("checkIn", () => {
     it("preserves the popup source through native page check-in and status polling", async () => {
-      vi.mocked(fetchApi).mockResolvedValueOnce({
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
         success: false,
         message: "missing check-in signature header",
         data: null,
@@ -355,7 +354,9 @@ describe("newApiProvider", () => {
           reason: "clicked",
         }),
       })
-      expect(vi.mocked(fetchApi).mock.calls[0]?.[0]).toMatchObject({
+      expect(
+        vi.mocked(newApiFamilyRequests.envelope).mock.calls[0]?.[0],
+      ).toMatchObject({
         accountId: "test-id",
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
         protectionBypassExecution: expect.objectContaining({
@@ -364,7 +365,9 @@ describe("newApiProvider", () => {
           surface: "options",
         }),
       })
-      expect(vi.mocked(fetchApiData).mock.calls[0]?.[0]).toMatchObject({
+      expect(
+        vi.mocked(newApiFamilyRequests.data).mock.calls[0]?.[0],
+      ).toMatchObject({
         accountId: "test-id",
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
         protectionBypassExecution: expect.objectContaining({
@@ -394,7 +397,7 @@ describe("newApiProvider", () => {
     })
 
     it("uses native page check-in for generic check-in API failures", async () => {
-      vi.mocked(fetchApi).mockResolvedValueOnce({
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
         success: false,
         message: "server rejected the check-in request",
         data: null,
@@ -414,7 +417,7 @@ describe("newApiProvider", () => {
     })
 
     it("does not treat unrelated authority errors as auth blocks for native fallback", async () => {
-      vi.mocked(fetchApi).mockResolvedValueOnce({
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
         success: false,
         message: "upstream authority rejected the dynamic signature",
         data: null,
@@ -436,7 +439,7 @@ describe("newApiProvider", () => {
       vi.mocked(safeRandomUUID)
         .mockReturnValueOnce("native-checkin-test-id-first")
         .mockReturnValueOnce("native-checkin-test-id-second")
-      vi.mocked(fetchApi).mockResolvedValue({
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValue({
         success: false,
         message: "missing check-in signature header",
         data: null,
@@ -463,7 +466,7 @@ describe("newApiProvider", () => {
     })
 
     it("keeps a failed response when public site status reports check-in disabled", async () => {
-      vi.mocked(fetchApi).mockResolvedValueOnce({
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
         success: false,
         message: "check-in unavailable",
         data: null,
@@ -487,7 +490,7 @@ describe("newApiProvider", () => {
     })
 
     it("keeps a pre-dispatch error failed when public status disables check-in", async () => {
-      vi.mocked(fetchApi).mockRejectedValueOnce(
+      vi.mocked(newApiFamilyRequests.envelope).mockRejectedValueOnce(
         new Error("missing check-in signature header"),
       )
       mockFetchSupportCheckIn.mockResolvedValueOnce(false)
@@ -514,7 +517,7 @@ describe("newApiProvider", () => {
     ])(
       "does not use native page check-in for blocked failure message: %s",
       async (message) => {
-        vi.mocked(fetchApi).mockResolvedValueOnce({
+        vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
           success: false,
           message,
           data: null,
@@ -540,7 +543,7 @@ describe("newApiProvider", () => {
     it("does not use native page check-in when the API endpoint rejects POST with 405", async () => {
       const error = new ApiError("请求失败: 405", 405, "/api/user/checkin")
 
-      vi.mocked(fetchApi).mockRejectedValueOnce(error)
+      vi.mocked(newApiFamilyRequests.envelope).mockRejectedValueOnce(error)
 
       const result = await checkInForTest(mockAccount)
 
@@ -554,7 +557,7 @@ describe("newApiProvider", () => {
     })
 
     it("refuses native page check-in when temp page identity is missing", async () => {
-      vi.mocked(fetchApi).mockResolvedValueOnce({
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
         success: false,
         message: "missing check-in signature header",
         data: null,
@@ -578,7 +581,7 @@ describe("newApiProvider", () => {
     })
 
     it("refuses native page check-in when temp page identity does not match", async () => {
-      vi.mocked(fetchApi).mockResolvedValueOnce({
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
         success: false,
         message: "missing check-in signature header",
         data: null,
@@ -606,7 +609,7 @@ describe("newApiProvider", () => {
     })
 
     it("returns manual-required messaging when native page trigger target is missing", async () => {
-      vi.mocked(fetchApi).mockResolvedValueOnce({
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
         success: false,
         message: "missing check-in signature header",
         data: null,
@@ -642,7 +645,7 @@ describe("newApiProvider", () => {
     })
 
     it("maps throttled native page actions to trigger failure messaging", async () => {
-      vi.mocked(fetchApi).mockResolvedValueOnce({
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
         success: false,
         message: "missing check-in signature header",
         data: null,
@@ -668,7 +671,7 @@ describe("newApiProvider", () => {
     })
 
     it("returns native trigger failure messaging when native page action rejects after response signature failure", async () => {
-      vi.mocked(fetchApi).mockResolvedValueOnce({
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
         success: false,
         message: "missing check-in signature header",
         data: null,
@@ -693,7 +696,7 @@ describe("newApiProvider", () => {
       vi.useFakeTimers()
 
       try {
-        vi.mocked(fetchApi).mockResolvedValueOnce({
+        vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
           success: false,
           message: "missing check-in signature header",
           data: null,
@@ -715,7 +718,7 @@ describe("newApiProvider", () => {
             },
           },
         })
-        vi.mocked(fetchApiData).mockResolvedValue({
+        vi.mocked(newApiFamilyRequests.data).mockResolvedValue({
           stats: { checked_in_today: false },
         } as any)
 
@@ -737,7 +740,7 @@ describe("newApiProvider", () => {
     })
 
     it("does not add native page identity matching to Turnstile replay failures", async () => {
-      vi.mocked(fetchApi).mockResolvedValueOnce({
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
         success: false,
         message: "Turnstile token invalid",
         data: null,
@@ -748,7 +751,7 @@ describe("newApiProvider", () => {
         error: "Turnstile token not available",
         turnstile: { status: "timeout", hasTurnstile: true },
       })
-      vi.mocked(fetchApiData).mockResolvedValueOnce({
+      vi.mocked(newApiFamilyRequests.data).mockResolvedValueOnce({
         stats: { checked_in_today: false },
       } as any)
 
@@ -760,7 +763,7 @@ describe("newApiProvider", () => {
     })
 
     it("uses native page check-in for thrown dynamic signature errors", async () => {
-      vi.mocked(fetchApi).mockRejectedValueOnce(
+      vi.mocked(newApiFamilyRequests.envelope).mockRejectedValueOnce(
         new Error("missing check-in signature header"),
       )
       vi.mocked(tempWindowTriggerCheckinPageAction).mockResolvedValueOnce({
@@ -768,7 +771,7 @@ describe("newApiProvider", () => {
         reason: "clicked",
         identity: { userId: "123", user: { id: "123" } },
       })
-      vi.mocked(fetchApiData).mockResolvedValueOnce({
+      vi.mocked(newApiFamilyRequests.data).mockResolvedValueOnce({
         stats: { checked_in_today: true },
       } as any)
 
@@ -779,7 +782,7 @@ describe("newApiProvider", () => {
     })
 
     it("does not start a second mutation after a dispatched request loses its result", async () => {
-      vi.mocked(fetchApi).mockRejectedValueOnce(
+      vi.mocked(newApiFamilyRequests.envelope).mockRejectedValueOnce(
         new Error("missing check-in signature header"),
       )
       const mutationLifecycle = createAutoCheckinMutationLifecycle()
@@ -794,13 +797,13 @@ describe("newApiProvider", () => {
         status: CHECKIN_RESULT_STATUS.UNCERTAIN,
         rawMessage: "missing check-in signature header",
       })
-      expect(fetchApiData).not.toHaveBeenCalled()
+      expect(newApiFamilyRequests.data).not.toHaveBeenCalled()
       expect(tempWindowTriggerCheckinPageAction).not.toHaveBeenCalled()
       expect(tempWindowTurnstileFetch).not.toHaveBeenCalled()
     })
 
     it("returns native trigger failure messaging when native page action rejects after thrown signature error", async () => {
-      vi.mocked(fetchApi).mockRejectedValueOnce(
+      vi.mocked(newApiFamilyRequests.envelope).mockRejectedValueOnce(
         new Error("missing check-in signature header"),
       )
       vi.mocked(tempWindowTriggerCheckinPageAction).mockRejectedValueOnce(
@@ -818,7 +821,7 @@ describe("newApiProvider", () => {
     })
 
     it("returns the default success message key when the upstream check-in succeeds without a message", async () => {
-      vi.mocked(fetchApi).mockResolvedValueOnce({
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
         success: true,
         message: "",
         data: { checkin_date: "2026-01-01", quota_awarded: 1 },
@@ -831,13 +834,15 @@ describe("newApiProvider", () => {
         messageKey: "autoCheckin:providerFallback.checkinSuccessful",
         data: { checkin_date: "2026-01-01", quota_awarded: 1 },
       })
-      expect(vi.mocked(fetchApi).mock.calls[0]?.[0]).toMatchObject({
+      expect(
+        vi.mocked(newApiFamilyRequests.envelope).mock.calls[0]?.[0],
+      ).toMatchObject({
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
       })
     })
 
     it("treats upstream already-checked responses as already_checked results", async () => {
-      vi.mocked(fetchApi).mockResolvedValueOnce({
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
         success: false,
         message: "今日已签到",
         data: { checkin_date: "2026-01-01" },
@@ -853,13 +858,13 @@ describe("newApiProvider", () => {
     })
 
     it("uses status readback to recognize already checked independently of error copy", async () => {
-      vi.mocked(fetchApi).mockResolvedValueOnce({
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
         success: false,
         message: "No action is necessary today",
         data: null,
       })
       mockFetchSupportCheckIn.mockResolvedValueOnce(true)
-      vi.mocked(fetchApiData).mockResolvedValueOnce({
+      vi.mocked(newApiFamilyRequests.data).mockResolvedValueOnce({
         enabled: true,
         stats: { checked_in_today: true },
       } as any)
@@ -874,7 +879,7 @@ describe("newApiProvider", () => {
     })
 
     it("uses an incognito Turnstile temp context first for access-token accounts", async () => {
-      vi.mocked(fetchApi).mockResolvedValueOnce({
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
         success: false,
         message: "Turnstile token 为空",
         data: null,
@@ -920,7 +925,7 @@ describe("newApiProvider", () => {
     })
 
     it("uses the theme-aware New API route for Turnstile-assisted verification pages", async () => {
-      vi.mocked(fetchApi).mockResolvedValueOnce({
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
         success: false,
         message: "Turnstile token 为空",
         data: null,
@@ -952,7 +957,7 @@ describe("newApiProvider", () => {
     })
 
     it("falls back to normal Turnstile temp context when access-token incognito access is unavailable", async () => {
-      vi.mocked(fetchApi).mockResolvedValueOnce({
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
         success: false,
         message: "Turnstile token 为空",
         data: null,
@@ -980,7 +985,7 @@ describe("newApiProvider", () => {
     })
 
     it("defaults missing authType to AccessToken for direct check-in requests", async () => {
-      vi.mocked(fetchApi).mockResolvedValueOnce({
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
         success: true,
         message: "签到成功",
         data: { checkin_date: "2026-01-01", quota_awarded: 1 },
@@ -991,19 +996,18 @@ describe("newApiProvider", () => {
         authType: undefined as any,
       })
 
-      expect(fetchApi).toHaveBeenCalledWith(
+      expect(newApiFamilyRequests.envelope).toHaveBeenCalledWith(
         expect.objectContaining({
           auth: expect.objectContaining({
             authType: AuthTypeEnum.AccessToken,
           }),
         }),
         expect.any(Object),
-        false,
       )
     })
 
     it("uses cookie-auth temp-context options when Turnstile assistance runs for cookie-auth accounts", async () => {
-      vi.mocked(fetchApi).mockResolvedValueOnce({
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
         success: false,
         message: "Turnstile verify failed",
         data: null,
@@ -1015,7 +1019,7 @@ describe("newApiProvider", () => {
         turnstile: { status: "timeout", hasTurnstile: true },
       })
 
-      vi.mocked(fetchApiData).mockResolvedValueOnce({
+      vi.mocked(newApiFamilyRequests.data).mockResolvedValueOnce({
         stats: { checked_in_today: false },
       } as any)
 
@@ -1062,7 +1066,7 @@ describe("newApiProvider", () => {
     })
 
     it("returns manual-required messaging with the site check-in URL when Turnstile token cannot be obtained", async () => {
-      vi.mocked(fetchApi).mockResolvedValueOnce({
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
         success: false,
         message: "Turnstile 校验失败，请刷新重试！",
         data: null,
@@ -1074,7 +1078,7 @@ describe("newApiProvider", () => {
         turnstile: { status: "timeout", hasTurnstile: true },
       })
 
-      vi.mocked(fetchApiData).mockResolvedValueOnce({
+      vi.mocked(newApiFamilyRequests.data).mockResolvedValueOnce({
         stats: { checked_in_today: false },
       } as any)
 
@@ -1098,7 +1102,7 @@ describe("newApiProvider", () => {
     })
 
     it("returns already-checked when Turnstile token is missing but status confirms checked_in_today", async () => {
-      vi.mocked(fetchApi).mockResolvedValueOnce({
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
         success: false,
         message: "Turnstile token 为空",
         data: null,
@@ -1121,7 +1125,7 @@ describe("newApiProvider", () => {
     })
 
     it("returns manual-required when Turnstile assistance succeeds but still cannot obtain a usable token", async () => {
-      vi.mocked(fetchApi).mockResolvedValueOnce({
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
         success: false,
         message: "Turnstile token invalid",
         data: null,
@@ -1139,7 +1143,7 @@ describe("newApiProvider", () => {
         turnstile: { status: "timeout", hasTurnstile: true },
       })
 
-      vi.mocked(fetchApiData).mockResolvedValueOnce({
+      vi.mocked(newApiFamilyRequests.data).mockResolvedValueOnce({
         stats: { checked_in_today: false },
       } as any)
 
@@ -1161,7 +1165,7 @@ describe("newApiProvider", () => {
     })
 
     it("returns already-checked when assisted success payload still shows a non-token-obtained Turnstile status", async () => {
-      vi.mocked(fetchApi).mockResolvedValueOnce({
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
         success: false,
         message: "Turnstile verify failed",
         data: null,
@@ -1195,7 +1199,7 @@ describe("newApiProvider", () => {
     })
 
     it("surfaces the assisted backend failure when Turnstile replay returns a concrete rejection without widget status", async () => {
-      vi.mocked(fetchApi).mockResolvedValueOnce({
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
         success: false,
         message: "Turnstile verify failed",
         data: null,
@@ -1224,11 +1228,11 @@ describe("newApiProvider", () => {
           data: null,
         },
       })
-      expect(fetchApiData).toHaveBeenCalledTimes(1)
+      expect(newApiFamilyRequests.data).toHaveBeenCalledTimes(1)
     })
 
     it("falls back to the generic failure key when assisted replay returns no usable payload", async () => {
-      vi.mocked(fetchApi).mockResolvedValueOnce({
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
         success: false,
         message: "Turnstile verify failed",
         data: null,
@@ -1249,11 +1253,11 @@ describe("newApiProvider", () => {
         messageKey: "autoCheckin:providerFallback.checkinFailed",
         data: undefined,
       })
-      expect(fetchApiData).toHaveBeenCalledTimes(1)
+      expect(newApiFamilyRequests.data).toHaveBeenCalledTimes(1)
     })
 
     it("falls back to a generic failure when assisted Turnstile fetch fails after token capture without an explicit error", async () => {
-      vi.mocked(fetchApi).mockResolvedValueOnce({
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
         success: false,
         message: "Turnstile token invalid",
         data: null,
@@ -1278,7 +1282,7 @@ describe("newApiProvider", () => {
     })
 
     it("uses the assisted error directly when token capture succeeds but replay still fails", async () => {
-      vi.mocked(fetchApi).mockResolvedValueOnce({
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
         success: false,
         message: "Turnstile token invalid",
         data: null,
@@ -1305,7 +1309,7 @@ describe("newApiProvider", () => {
     })
 
     it("preserves the popup source across preferred and fallback Turnstile attempts", async () => {
-      vi.mocked(fetchApi).mockResolvedValueOnce({
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
         success: false,
         message: "Turnstile token 为空",
         data: null,
@@ -1329,7 +1333,7 @@ describe("newApiProvider", () => {
           turnstile: { status: "token_obtained", hasTurnstile: true },
         })
 
-      vi.mocked(fetchApiData).mockResolvedValueOnce({
+      vi.mocked(newApiFamilyRequests.data).mockResolvedValueOnce({
         stats: { checked_in_today: false },
       } as any)
 
@@ -1360,16 +1364,20 @@ describe("newApiProvider", () => {
       expect(
         vi.mocked(tempWindowTurnstileFetch).mock.calls[1]?.[0].useIncognito,
       ).toBeUndefined()
-      expect(vi.mocked(fetchApi).mock.calls[0]?.[0]).toMatchObject({
+      expect(
+        vi.mocked(newApiFamilyRequests.envelope).mock.calls[0]?.[0],
+      ).toMatchObject({
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
       })
-      expect(vi.mocked(fetchApiData).mock.calls[0]?.[0]).toMatchObject({
+      expect(
+        vi.mocked(newApiFamilyRequests.data).mock.calls[0]?.[0],
+      ).toMatchObject({
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
       })
     })
 
     it("falls back to manual verification when the incognito retry still cannot complete the assisted request", async () => {
-      vi.mocked(fetchApi).mockResolvedValueOnce({
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
         success: false,
         message: "Turnstile token 为空",
         data: null,
@@ -1387,7 +1395,7 @@ describe("newApiProvider", () => {
           turnstile: { status: "error", hasTurnstile: true },
         })
 
-      vi.mocked(fetchApiData).mockResolvedValueOnce({
+      vi.mocked(newApiFamilyRequests.data).mockResolvedValueOnce({
         stats: { checked_in_today: false },
       } as any)
       vi.mocked(isAllowedIncognitoAccess).mockResolvedValueOnce(true)
@@ -1410,7 +1418,7 @@ describe("newApiProvider", () => {
     })
 
     it("prompts to enable incognito access when incognito retry is needed but extension is not allowed in incognito", async () => {
-      vi.mocked(fetchApi).mockResolvedValueOnce({
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
         success: false,
         message: "Turnstile token 为空",
         data: null,
@@ -1422,7 +1430,7 @@ describe("newApiProvider", () => {
         turnstile: { status: "not_present", hasTurnstile: false },
       })
 
-      vi.mocked(fetchApiData).mockResolvedValueOnce({
+      vi.mocked(newApiFamilyRequests.data).mockResolvedValueOnce({
         stats: { checked_in_today: false },
       } as any)
 
@@ -1441,7 +1449,7 @@ describe("newApiProvider", () => {
     })
 
     it("does not trigger Turnstile flow for non-Turnstile failures", async () => {
-      vi.mocked(fetchApi).mockResolvedValueOnce({
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
         success: false,
         message: "Something went wrong",
         data: null,
@@ -1460,7 +1468,7 @@ describe("newApiProvider", () => {
     })
 
     it("does not treat every Turnstile mention as a Turnstile-required failure", async () => {
-      vi.mocked(fetchApi).mockResolvedValueOnce({
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
         success: false,
         message: "Turnstile challenge rendered on page",
         data: { reason: "manual step still needed" },
@@ -1482,7 +1490,7 @@ describe("newApiProvider", () => {
     })
 
     it("maps endpoint-style errors from the direct request to endpoint-not-supported", async () => {
-      vi.mocked(fetchApi).mockRejectedValueOnce({
+      vi.mocked(newApiFamilyRequests.envelope).mockRejectedValueOnce({
         statusCode: 404,
         message: "Not found",
       })
@@ -1496,7 +1504,7 @@ describe("newApiProvider", () => {
     })
 
     it("returns a generic failed result when the Turnstile-assisted fetch cannot start", async () => {
-      vi.mocked(fetchApi).mockResolvedValueOnce({
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
         success: false,
         message: "Turnstile token invalid",
         data: null,
@@ -1514,7 +1522,7 @@ describe("newApiProvider", () => {
     })
 
     it("uses the generic failure key when the direct request fails without any upstream message", async () => {
-      vi.mocked(fetchApi).mockResolvedValueOnce({
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
         success: false,
         message: "",
         data: { details: "unknown failure" },

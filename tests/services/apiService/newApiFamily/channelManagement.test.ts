@@ -36,8 +36,10 @@ vi.mock("~/constants/ui", () => ({
 }))
 
 vi.mock("~/services/apiService/newApiFamily/request", () => ({
-  fetchApi: mockFetchApi,
-  fetchApiData: mockFetchApiData,
+  newApiFamilyRequests: {
+    data: mockFetchApiData,
+    envelope: mockFetchApi,
+  },
 }))
 
 const baseRequest = {
@@ -276,7 +278,6 @@ describe("newApiFamily channel management APIs", () => {
           body: JSON.stringify({ status: 1 }),
         },
       }),
-      false,
     )
   })
 
@@ -307,7 +308,6 @@ describe("newApiFamily channel management APIs", () => {
           body: JSON.stringify({ status: 2 }),
         },
       }),
-      false,
     )
   })
 
@@ -428,7 +428,6 @@ describe("newApiFamily channel management APIs", () => {
       expect.objectContaining({
         endpoint: expect.stringContaining("/api/channel/?"),
       }),
-      false,
     )
     expect(mockFetchApi).toHaveBeenNthCalledWith(
       2,
@@ -436,7 +435,6 @@ describe("newApiFamily channel management APIs", () => {
       expect.objectContaining({
         endpoint: expect.stringContaining("/api/channel/?"),
       }),
-      false,
     )
 
     const firstEndpoint = mockFetchApi.mock.calls[0][1].endpoint as string
@@ -491,11 +489,9 @@ describe("newApiFamily channel management APIs", () => {
 
     const result = await fetchChannelModels(request as any, 123)
 
-    expect(mockFetchApi).toHaveBeenCalledWith(
-      request,
-      { endpoint: "/api/channel/fetch_models/123" },
-      false,
-    )
+    expect(mockFetchApi).toHaveBeenCalledWith(request, {
+      endpoint: "/api/channel/fetch_models/123",
+    })
     expect(result).toEqual(["gpt-4"])
   })
 
@@ -517,22 +513,18 @@ describe("newApiFamily channel management APIs", () => {
         { signal },
       ),
     ).resolves.toEqual(["model-example-a", "model-example-b"])
-    expect(mockFetchApi).toHaveBeenCalledWith(
-      baseRequest,
-      {
-        endpoint: "/api/channel/fetch_models",
-        options: {
-          method: "POST",
-          body: JSON.stringify({
-            type: 1,
-            base_url: "https://upstream.example.invalid",
-            key: "credential-placeholder",
-          }),
-          signal,
-        },
+    expect(mockFetchApi).toHaveBeenCalledWith(baseRequest, {
+      endpoint: "/api/channel/fetch_models",
+      options: {
+        method: "POST",
+        body: JSON.stringify({
+          type: 1,
+          base_url: "https://upstream.example.invalid",
+          key: "credential-placeholder",
+        }),
+        signal,
       },
-      false,
-    )
+    })
   })
 
   it("preserves New API model lookup messages from provider failure envelopes", async () => {

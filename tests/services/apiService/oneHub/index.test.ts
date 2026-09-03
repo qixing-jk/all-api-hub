@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { fetchApiData } from "~/services/apiService/newApiFamily/request"
+import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import {
   fetchAccountAvailableModels,
   fetchAccountTokens,
@@ -24,7 +24,9 @@ vi.mock("~/services/accountTokens/tokenKeyResolver", () => ({
 }))
 
 vi.mock("~/services/apiService/newApiFamily/request", () => ({
-  fetchApiData: vi.fn(),
+  newApiFamilyRequests: {
+    data: vi.fn(),
+  },
 }))
 
 vi.mock("~/services/apiService/oneHub/transform", () => ({
@@ -32,7 +34,9 @@ vi.mock("~/services/apiService/oneHub/transform", () => ({
   transformUserGroup: vi.fn(),
 }))
 
-const mockedFetchApiData = fetchApiData as unknown as ReturnType<typeof vi.fn>
+const mockedFetchApiData = newApiFamilyRequests.data as unknown as ReturnType<
+  typeof vi.fn
+>
 const mockedTransformModelPricing =
   transformModelPricing as unknown as ReturnType<typeof vi.fn>
 const mockedTransformUserGroup = transformUserGroup as unknown as ReturnType<
@@ -53,7 +57,7 @@ describe("OneHub API service", () => {
     vi.clearAllMocks()
   })
 
-  it("fetchAvailableModel should call fetchApiData with correct endpoint", async () => {
+  it("fetchAvailableModel should call newApiFamilyRequests.data with correct endpoint", async () => {
     mockedFetchApiData.mockResolvedValueOnce({})
 
     await fetchAvailableModel(baseRequest as any)
@@ -63,7 +67,7 @@ describe("OneHub API service", () => {
     })
   })
 
-  it("fetchUserGroupMap should call fetchApiData with correct endpoint", async () => {
+  it("fetchUserGroupMap should call newApiFamilyRequests.data with correct endpoint", async () => {
     mockedFetchApiData.mockResolvedValueOnce({})
 
     await fetchUserGroupMap(baseRequest as any)

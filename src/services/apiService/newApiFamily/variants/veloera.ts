@@ -11,7 +11,7 @@ import {
   fetchTodayUsage,
 } from "~/services/apiService/newApiFamily/default/accountData"
 import { getTodayTimestampRange } from "~/services/apiService/newApiFamily/default/accountDataUtils"
-import { fetchApiData } from "~/services/apiService/newApiFamily/request"
+import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import { ApiError } from "~/services/apiTransport/errors"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { refreshSelectedStatus } from "~/services/checkin/autoCheckin/refresh"
@@ -30,12 +30,11 @@ export async function fetchCheckInStatus(
   request: ApiServiceRequest,
 ): Promise<boolean | undefined> {
   try {
-    const checkInData = await fetchApiData<{ can_check_in?: boolean }>(
-      request,
-      {
-        endpoint: "/api/user/check_in_status",
-      },
-    )
+    const checkInData = await newApiFamilyRequests.data<{
+      can_check_in?: boolean
+    }>(request, {
+      endpoint: "/api/user/check_in_status",
+    })
     if (typeof checkInData.can_check_in === "boolean") {
       return checkInData.can_check_in
     }

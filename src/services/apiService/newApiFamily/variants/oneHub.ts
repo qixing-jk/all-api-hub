@@ -1,7 +1,7 @@
 import { normalizeApiTokenKey } from "~/services/accountTokens/apiTokenKey"
 import { syncResolvedApiTokenKeyCache } from "~/services/accountTokens/tokenKeyResolver"
 import type { UserGroupInfo } from "~/services/accountTokens/tokenProvisioningModel"
-import { fetchApiData } from "~/services/apiService/newApiFamily/request"
+import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import {
   transformModelPricing,
   transformUserGroup,
@@ -25,13 +25,13 @@ import { isRecord } from "~/utils/core/object"
 const logger = createLogger("NewApiFamily.OneHub")
 
 export const fetchAvailableModel = async (request: ApiServiceRequest) => {
-  return fetchApiData<OneHubModelPricing>(request, {
+  return newApiFamilyRequests.data<OneHubModelPricing>(request, {
     endpoint: "/api/available_model",
   })
 }
 
 export const fetchUserGroupMap = async (request: ApiServiceRequest) => {
-  return fetchApiData<OneHubUserGroupMap>(request, {
+  return newApiFamilyRequests.data<OneHubUserGroupMap>(request, {
     endpoint: "/api/user_group_map",
   })
 }
@@ -77,7 +77,7 @@ export const fetchAccountTokens = async (
         page: upstreamPage.toString(),
         size: REQUEST_CONFIG.DEFAULT_PAGE_SIZE.toString(),
       })
-      const tokensData = await fetchApiData<unknown>(request, {
+      const tokensData = await newApiFamilyRequests.data<unknown>(request, {
         endpoint: `/api/token/?${searchParams.toString()}`,
       })
 
@@ -120,12 +120,11 @@ export const fetchUserGroups = async (
   request: ApiServiceRequest,
 ): Promise<Record<string, UserGroupInfo>> => {
   try {
-    const response = await fetchApiData<OneHubUserGroupsResponse["data"]>(
-      request,
-      {
-        endpoint: "/api/user_group_map",
-      },
-    )
+    const response = await newApiFamilyRequests.data<
+      OneHubUserGroupsResponse["data"]
+    >(request, {
+      endpoint: "/api/user_group_map",
+    })
     return transformUserGroup(response)
   } catch (error) {
     logger.error("获取分组信息失败", error)

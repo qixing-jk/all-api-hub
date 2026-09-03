@@ -32,13 +32,18 @@ const {
 
 vi.mock("~/services/accountTokens/tokenKeyResolver", () => ({
   invalidateResolvedApiTokenKeyCache: mockInvalidateResolvedApiTokenKeyCache,
-  resolveApiTokenKey: mockResolveApiTokenKey,
   syncResolvedApiTokenKeyCache: mockSyncResolvedApiTokenKeyCache,
 }))
 
+vi.mock("~/services/apiService/newApiFamily/default/tokenKeyResolver", () => ({
+  resolveApiTokenKey: mockResolveApiTokenKey,
+}))
+
 vi.mock("~/services/apiService/newApiFamily/request", () => ({
-  fetchApi: mockFetchApi,
-  fetchApiData: mockFetchApiData,
+  newApiFamilyRequests: {
+    data: mockFetchApiData,
+    envelope: mockFetchApi,
+  },
 }))
 
 vi.mock("~/utils/core/logger", () => ({

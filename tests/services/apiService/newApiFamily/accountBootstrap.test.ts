@@ -16,7 +16,9 @@ const { mockFetchApiData } = vi.hoisted(() => ({
 }))
 
 vi.mock("~/services/apiService/newApiFamily/request", () => ({
-  fetchApiData: mockFetchApiData,
+  newApiFamilyRequests: {
+    data: mockFetchApiData,
+  },
 }))
 
 vi.mock("~/utils/core/logger", () => ({

@@ -1,8 +1,5 @@
 import type { ManagedSitePaginatedChannelRequestOptions } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
-import {
-  fetchApi,
-  fetchApiData,
-} from "~/services/apiService/newApiFamily/request"
+import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import { REQUEST_CONFIG } from "~/services/apiTransport/constant"
 import { ApiError } from "~/services/apiTransport/errors"
 import { fetchAllItems } from "~/services/apiTransport/pagination"
@@ -70,17 +67,13 @@ export const updateChannelStatus = async (
 ) => {
   // QuantumNous/new-api router/channel-router.go maps manual status changes to
   // POST /api/channel/:id/status and rejects `status` in PUT /api/channel/.
-  return await fetchApi<boolean>(
-    request,
-    {
-      endpoint: `${CHANNEL_API_BASE}${channelId}/status`,
-      options: {
-        method: "POST",
-        body: JSON.stringify({ status }),
-      },
+  return await newApiFamilyRequests.envelope<boolean>(request, {
+    endpoint: `${CHANNEL_API_BASE}${channelId}/status`,
+    options: {
+      method: "POST",
+      body: JSON.stringify({ status }),
     },
-    false,
-  )
+  })
 }
 
 export const isNewApiManualStatus = (status: number) =>
@@ -107,9 +100,12 @@ export async function searchChannel(
   keyword: string,
 ): Promise<ManagedSiteChannelListData | null> {
   try {
-    return await fetchApiData<ManagedSiteChannelListData>(request, {
-      endpoint: `${CHANNEL_API_BASE}search?keyword=${encodeURIComponent(keyword)}`,
-    })
+    return await newApiFamilyRequests.data<ManagedSiteChannelListData>(
+      request,
+      {
+        endpoint: `${CHANNEL_API_BASE}search?keyword=${encodeURIComponent(keyword)}`,
+      },
+    )
   } catch (error) {
     if (error instanceof ApiError) {
       logger.error("API 请求失败", error)
@@ -135,7 +131,7 @@ export async function createChannel(
       channel: serializeChannelGroups(channelData.channel),
     }
 
-    return await fetchApi<void>(request, {
+    return await newApiFamilyRequests.envelope<void>(request, {
       endpoint: CHANNEL_API_BASE,
       options: {
         method: "POST",
@@ -205,7 +201,7 @@ export async function updateChannelFields(
   options?: Pick<RequestInit, "signal">,
 ) {
   const { payload } = serializeUpdateChannelPayload(channelData)
-  return await fetchApi<void>(request, {
+  return await newApiFamilyRequests.envelope<void>(request, {
     endpoint: CHANNEL_API_BASE,
     options: {
       method: "PUT",
@@ -225,7 +221,7 @@ export async function deleteChannel(
   channelId: number,
 ) {
   try {
-    return await fetchApi<void>(request, {
+    return await newApiFamilyRequests.envelope<void>(request, {
       endpoint: `${CHANNEL_API_BASE}${channelId}`,
       options: {
         method: "DELETE",
@@ -277,14 +273,14 @@ export async function listAllChannels(
 
       await beforeRequest?.()
 
-      const response = await fetchApi<ManagedSiteChannelListData>(
-        request,
-        {
-          endpoint: `${endpoint}?${params.toString()}`,
-          options: { signal: options?.signal },
-        },
-        false,
-      )
+      const response =
+        await newApiFamilyRequests.envelope<ManagedSiteChannelListData>(
+          request,
+          {
+            endpoint: `${endpoint}?${params.toString()}`,
+            options: { signal: options?.signal },
+          },
+        )
 
       if (!response.success || !response.data) {
         throw new ApiError(
@@ -333,7 +329,7 @@ export async function fetchChannel(
   channelId: number,
   options?: Pick<RequestInit, "signal">,
 ): Promise<ManagedSiteChannel> {
-  return await fetchApiData<ManagedSiteChannel>(request, {
+  return await newApiFamilyRequests.data<ManagedSiteChannel>(request, {
     endpoint: `${CHANNEL_API_BASE}${channelId}`,
     options: { signal: options?.signal },
   })
@@ -368,14 +364,10 @@ export async function fetchChannelModels(
   options?: Pick<RequestInit, "signal">,
 ): Promise<string[]> {
   const endpoint = `${CHANNEL_API_BASE}fetch_models/${channelId}`
-  const response = await fetchApi<string[]>(
-    request,
-    {
-      endpoint,
-      options,
-    },
-    false,
-  )
+  const response = await newApiFamilyRequests.envelope<string[]>(request, {
+    endpoint,
+    options,
+  })
 
   return readChannelModelResponse(response, endpoint)
 }
@@ -391,22 +383,18 @@ export async function fetchDraftChannelModels(
   options?: Pick<RequestInit, "signal">,
 ): Promise<string[]> {
   const endpoint = `${CHANNEL_API_BASE}fetch_models`
-  const response = await fetchApi<string[]>(
-    request,
-    {
-      endpoint,
-      options: {
-        method: "POST",
-        body: JSON.stringify({
-          type: draft.type,
-          base_url: draft.baseUrl,
-          key: draft.key,
-        }),
-        signal: options?.signal,
-      },
+  const response = await newApiFamilyRequests.envelope<string[]>(request, {
+    endpoint,
+    options: {
+      method: "POST",
+      body: JSON.stringify({
+        type: draft.type,
+        base_url: draft.baseUrl,
+        key: draft.key,
+      }),
+      signal: options?.signal,
     },
-    false,
-  )
+  })
 
   return readChannelModelResponse(response, endpoint)
 }
@@ -428,18 +416,14 @@ export async function updateChannelModels(
     models,
   }
 
-  const response = await fetchApi<void>(
-    request,
-    {
-      endpoint: CHANNEL_API_BASE,
-      options: {
-        method: "PUT",
-        body: JSON.stringify(payload),
-        signal: options?.signal,
-      },
+  const response = await newApiFamilyRequests.envelope<void>(request, {
+    endpoint: CHANNEL_API_BASE,
+    options: {
+      method: "PUT",
+      body: JSON.stringify(payload),
+      signal: options?.signal,
     },
-    false,
-  )
+  })
 
   if (!response.success) {
     throw new ApiError(
@@ -469,18 +453,14 @@ export async function updateChannelModelMapping(
     model_mapping: modelMappingJson,
   }
 
-  const response = await fetchApi<void>(
-    request,
-    {
-      endpoint: CHANNEL_API_BASE,
-      options: {
-        method: "PUT",
-        body: JSON.stringify(payload),
-        signal: options?.signal,
-      },
+  const response = await newApiFamilyRequests.envelope<void>(request, {
+    endpoint: CHANNEL_API_BASE,
+    options: {
+      method: "PUT",
+      body: JSON.stringify(payload),
+      signal: options?.signal,
     },
-    false,
-  )
+  })
 
   if (!response.success) {
     throw new ApiError(

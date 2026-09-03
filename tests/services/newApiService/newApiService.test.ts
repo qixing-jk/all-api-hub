@@ -324,6 +324,7 @@ describe("newApiService", () => {
       expect(mockFetchApiData).toHaveBeenCalledWith(request, {
         endpoint: "/api/channel/search?keyword=https%3A%2F%2Fapi.example.com",
         errorResponseDecoder: decodeNewApiResponseError,
+        responseType: "json",
       })
     })
 
@@ -416,6 +417,7 @@ describe("newApiService", () => {
             body: expect.stringContaining('"name":"Test Channel"'),
           }),
         }),
+        false,
       )
     })
 
@@ -525,6 +527,7 @@ describe("newApiService", () => {
             body: JSON.stringify(updateData),
           },
         }),
+        false,
       )
     })
 

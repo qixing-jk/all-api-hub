@@ -4,7 +4,7 @@ import type {
   SiteStatusInfo,
   UserInfo,
 } from "~/services/apiAdapters/contracts/accountBootstrap"
-import { fetchApiData } from "~/services/apiService/newApiFamily/request"
+import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import { ApiError } from "~/services/apiTransport/errors"
 import type {
   ApiServiceRequest,
@@ -47,7 +47,7 @@ export async function fetchSiteStatus(
   }
 
   try {
-    return await fetchApiData<SiteStatusInfo>(publicRequest, {
+    return await newApiFamilyRequests.data<SiteStatusInfo>(publicRequest, {
       endpoint: "/api/status",
       ...(signal ? { options: { signal } } : {}),
     })
@@ -91,7 +91,7 @@ export async function fetchUserInfo(request: ApiServiceRequest): Promise<{
   access_token: string
   user: UserInfo
 }> {
-  const userData = await fetchApiData<UserInfo>(request, {
+  const userData = await newApiFamilyRequests.data<UserInfo>(request, {
     endpoint: "/api/user/self",
   })
   const userId = normalizeAccountIdentity(userData.id)
@@ -119,7 +119,7 @@ export async function createAccessToken(
   request: ApiServiceRequest,
   creationPolicy?: AccessTokenCreationPolicy,
 ): Promise<string> {
-  const accessToken = await fetchApiData<string>(request, {
+  const accessToken = await newApiFamilyRequests.data<string>(request, {
     endpoint: "/api/user/token",
     ...creationPolicy,
   })

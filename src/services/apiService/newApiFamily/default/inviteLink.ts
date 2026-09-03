@@ -1,4 +1,4 @@
-import { fetchApiData } from "~/services/apiService/newApiFamily/request"
+import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import {
   INVITE_LINK_FAILURE_REASONS,
@@ -26,7 +26,7 @@ export const defaultInviteLinkImplementation: InviteLinkImplementation = {
     try {
       // Verified against QuantumNous/new-api frontend: GET /api/user/aff returns
       // the affiliate code, and the registration page consumes /register?aff=.
-      const inviteCode = await fetchApiData<string>(request, {
+      const inviteCode = await newApiFamilyRequests.data<string>(request, {
         endpoint: INVITE_CODE_ENDPOINT,
       })
 

@@ -1,4 +1,4 @@
-import { fetchApi } from "~/services/apiService/newApiFamily/request"
+import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { createLogger } from "~/utils/core/logger"
@@ -12,7 +12,7 @@ export async function fetchSiteNotice(
   request: ApiServiceRequest,
 ): Promise<string | null> {
   try {
-    const response = await fetchApi<string | null>(
+    const response = await newApiFamilyRequests.envelope<string | null>(
       {
         ...request,
         auth: {
@@ -21,7 +21,6 @@ export async function fetchSiteNotice(
         },
       },
       { endpoint: "/api/notice" },
-      false,
     )
 
     if (

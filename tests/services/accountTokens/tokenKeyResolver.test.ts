@@ -10,18 +10,18 @@ import {
   normalizeApiTokenKeyValue,
 } from "~/services/accountTokens/apiTokenKey"
 import {
-  fetchTokenSecretKeyById,
-  fetchTokenSecretKeyByIdWithMethod,
   invalidateResolvedApiTokenKeyCache,
-  resolveApiTokenKey,
   resolveApiTokenKeyWithFetcher,
   syncResolvedApiTokenKeyCache,
 } from "~/services/accountTokens/tokenKeyResolver"
-import { fetchApiData } from "~/services/apiTransport/request"
+import {
+  fetchTokenSecretKeyById,
+  resolveApiTokenKey,
+} from "~/services/apiService/newApiFamily/default/tokenKeyResolver"
+import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import { AuthTypeEnum } from "~/types"
 
-const { mockFetchApi, mockFetchApiData } = vi.hoisted(() => ({
-  mockFetchApi: vi.fn(),
+const { mockFetchApiData } = vi.hoisted(() => ({
   mockFetchApiData: vi.fn(),
 }))
 
@@ -29,18 +29,20 @@ vi.mock("~/constants/ui", () => ({
   UI_CONSTANTS: {},
 }))
 
-vi.mock("~/services/apiTransport/request", () => ({
-  fetchApi: mockFetchApi,
-  fetchApiData: mockFetchApiData,
+vi.mock("~/services/apiService/newApiFamily/request", () => ({
+  newApiFamilyRequests: {
+    data: mockFetchApiData,
+  },
 }))
 
-const mockedFetchApiData = fetchApiData as unknown as ReturnType<typeof vi.fn>
+const mockedFetchApiData = newApiFamilyRequests.data as unknown as ReturnType<
+  typeof vi.fn
+>
 
 describe("token key resolver", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockedFetchApiData.mockReset()
-    mockFetchApi.mockReset()
   })
 
   it("normalizeApiTokenKeyValue trims whitespace without adding sk- prefixes", () => {
@@ -142,31 +144,6 @@ describe("token key resolver", () => {
       },
     })
     expect(result).toBe("resolved-secret")
-  })
-
-  it("fetchTokenSecretKeyByIdWithMethod uses the caller-provided HTTP method", async () => {
-    mockedFetchApiData.mockResolvedValueOnce({ key: "resolved-via-get" })
-
-    const request = {
-      baseUrl: "https://example.com",
-      accountId: "account-get-secret",
-      auth: {
-        authType: AuthTypeEnum.AccessToken,
-        userId: "1",
-        accessToken: "token",
-      },
-    }
-
-    await expect(
-      fetchTokenSecretKeyByIdWithMethod(request as any, 70, "GET"),
-    ).resolves.toBe("resolved-via-get")
-
-    expect(mockedFetchApiData).toHaveBeenCalledWith(request, {
-      endpoint: "/api/token/70/key",
-      options: {
-        method: "GET",
-      },
-    })
   })
 
   it("resolveApiTokenKey passes through legacy full keys without an extra fetch", async () => {

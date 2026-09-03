@@ -5,17 +5,15 @@ import type {
   RefreshAccountResult,
 } from "~/services/accounts/accountDataModel"
 import { determineHealthStatus } from "~/services/accounts/accountHealth"
-import {
-  fetchTokenSecretKeyByIdWithMethod,
-  resolveApiTokenKeyWithFetcher,
-} from "~/services/accountTokens/tokenKeyResolver"
+import { normalizeApiTokenKeyValue } from "~/services/accountTokens/apiTokenKey"
+import { resolveApiTokenKeyWithFetcher } from "~/services/accountTokens/tokenKeyResolver"
 import {
   fetchAccountQuota,
   fetchTodayIncome,
   fetchTodayUsage,
 } from "~/services/apiService/newApiFamily/default/accountData"
 import { getTodayTimestampRange } from "~/services/apiService/newApiFamily/default/accountDataUtils"
-import { fetchApi } from "~/services/apiService/newApiFamily/request"
+import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { refreshSelectedStatus } from "~/services/checkin/autoCheckin/refresh"
 import {
@@ -55,10 +53,20 @@ export async function fetchSupportCheckIn(
   return siteStatus !== undefined
 }
 
-const fetchWongTokenSecretKeyById = (
+const fetchWongTokenSecretKeyById = async (
   request: ApiServiceRequest,
   tokenId: number,
-) => fetchTokenSecretKeyByIdWithMethod(request, tokenId, "GET")
+) => {
+  const response = await newApiFamilyRequests.data<{ key?: string }>(request, {
+    // Observed canonical deployment contract; downstream forks may differ.
+    // https://wzw.pp.ua/assets/index-JGp5IMg4.js
+    endpoint: `/api/token/${tokenId}/key`,
+    options: { method: "GET" },
+  })
+  const key = normalizeApiTokenKeyValue(response?.key ?? "")
+  if (!key) throw new Error("token_secret_key_missing")
+  return key
+}
 
 const normalizeMessage = (message: unknown): string =>
   typeof message === "string" ? message : ""
@@ -90,17 +98,15 @@ export async function fetchCheckInStatus(
       : request
 
   try {
-    const response = await fetchApi<WongCheckinStatusData | undefined>(
-      normalizedRequest,
-      {
-        endpoint: ENDPOINT,
-        options: {
-          method: "GET",
-          cache: "no-store",
-        },
+    const response = await newApiFamilyRequests.envelope<
+      WongCheckinStatusData | undefined
+    >(normalizedRequest, {
+      endpoint: ENDPOINT,
+      options: {
+        method: "GET",
+        cache: "no-store",
       },
-      false,
-    )
+    })
 
     if (response.data?.enabled === false) {
       return undefined

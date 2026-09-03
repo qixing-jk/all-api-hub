@@ -17,7 +17,7 @@ import {
   type MetricAggregationCoverage,
   type TodayTimestampRange,
 } from "~/services/apiService/newApiFamily/default/accountDataUtils"
-import { fetchApiData } from "~/services/apiService/newApiFamily/request"
+import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import { REQUEST_CONFIG } from "~/services/apiTransport/constant"
 import { ApiError } from "~/services/apiTransport/errors"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
@@ -142,9 +142,12 @@ const classifyMetricCollection = <T>(
 export async function fetchAccountQuota(
   request: ApiServiceRequest,
 ): Promise<number> {
-  const userData = await fetchApiData<{ quota?: number }>(request, {
-    endpoint: "/api/user/self",
-  })
+  const userData = await newApiFamilyRequests.data<{ quota?: number }>(
+    request,
+    {
+      endpoint: "/api/user/self",
+    },
+  )
 
   return userData.quota || 0
 }
@@ -159,9 +162,12 @@ export async function fetchCheckInStatus(
 ): Promise<boolean | undefined> {
   const currentMonth = new Date().toISOString().slice(0, 7)
   try {
-    const checkInData = await fetchApiData<NewApiCheckInStatus>(request, {
-      endpoint: `/api/user/checkin?month=${currentMonth}`,
-    })
+    const checkInData = await newApiFamilyRequests.data<NewApiCheckInStatus>(
+      request,
+      {
+        endpoint: `/api/user/checkin?month=${currentMonth}`,
+      },
+    )
     return !checkInData.stats.checked_in_today
   } catch (error) {
     if (
@@ -325,7 +331,7 @@ const fetchPaginatedLogs = async <T>(
           resolvedQueryConfig,
         )
 
-        const logData = await fetchApiData<unknown>(request, {
+        const logData = await newApiFamilyRequests.data<unknown>(request, {
           endpoint: `${resolvedQueryConfig.endpoint}?${params.toString()}`,
         })
 
@@ -493,9 +499,12 @@ const fetchTodayUsageFast = async (
     undefined,
     resolvedQueryConfig,
   )
-  const statData = await fetchApiData<LogStatResponseData>(request, {
-    endpoint: `/api/log/self/stat?${statParams.toString()}`,
-  })
+  const statData = await newApiFamilyRequests.data<LogStatResponseData>(
+    request,
+    {
+      endpoint: `/api/log/self/stat?${statParams.toString()}`,
+    },
+  )
 
   if (typeof statData?.quota !== "number" || !Number.isFinite(statData.quota)) {
     throw new Error("Today usage stat quota is missing or non-finite")
