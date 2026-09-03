@@ -1,4 +1,4 @@
-import { fetchApi } from "~/services/apiTransport/request"
+import { fetchApi } from "~/services/apiService/newApiFamily/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { createLogger } from "~/utils/core/logger"

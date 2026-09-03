@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { fetchApiData } from "~/services/apiService/newApiFamily/request"
 import {
   fetchAccountAvailableModels,
   fetchAccountTokens,
@@ -13,7 +14,6 @@ import {
   transformUserGroup,
 } from "~/services/apiService/oneHub/transform"
 import { PaginationLimitError } from "~/services/apiTransport/pagination"
-import { fetchApiData } from "~/services/apiTransport/request"
 
 const { mockSyncResolvedApiTokenKeyCache } = vi.hoisted(() => ({
   mockSyncResolvedApiTokenKeyCache: vi.fn(),
@@ -23,7 +23,7 @@ vi.mock("~/services/accountTokens/tokenKeyResolver", () => ({
   syncResolvedApiTokenKeyCache: mockSyncResolvedApiTokenKeyCache,
 }))
 
-vi.mock("~/services/apiTransport/request", () => ({
+vi.mock("~/services/apiService/newApiFamily/request", () => ({
   fetchApiData: vi.fn(),
 }))
 

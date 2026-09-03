@@ -36,7 +36,7 @@ vi.mock("~/services/accountTokens/tokenKeyResolver", () => ({
   syncResolvedApiTokenKeyCache: mockSyncResolvedApiTokenKeyCache,
 }))
 
-vi.mock("~/services/apiTransport/request", () => ({
+vi.mock("~/services/apiService/newApiFamily/request", () => ({
   fetchApi: mockFetchApi,
   fetchApiData: mockFetchApiData,
 }))

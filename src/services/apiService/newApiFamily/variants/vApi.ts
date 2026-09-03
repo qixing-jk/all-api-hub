@@ -1,7 +1,7 @@
 import type { UserGroupInfo } from "~/services/accountTokens/tokenProvisioningModel"
 import { fetchAccountAvailableModels as fetchLegacyAccountAvailableModels } from "~/services/apiService/newApiFamily/default/keyManagement"
+import { fetchApiData } from "~/services/apiService/newApiFamily/request"
 import { ApiError } from "~/services/apiTransport/errors"
-import { fetchApiData } from "~/services/apiTransport/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { isRecord } from "~/utils/core/object"
 

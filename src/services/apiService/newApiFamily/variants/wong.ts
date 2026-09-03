@@ -15,7 +15,7 @@ import {
   fetchTodayUsage,
 } from "~/services/apiService/newApiFamily/default/accountData"
 import { getTodayTimestampRange } from "~/services/apiService/newApiFamily/default/accountDataUtils"
-import { fetchApi } from "~/services/apiTransport/request"
+import { fetchApi } from "~/services/apiService/newApiFamily/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { refreshSelectedStatus } from "~/services/checkin/autoCheckin/refresh"
 import {

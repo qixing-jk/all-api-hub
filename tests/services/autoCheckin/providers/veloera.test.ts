@@ -1,8 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import {
+  fetchApi,
+  fetchApiData,
+} from "~/services/apiService/newApiFamily/request"
 import { ApiError } from "~/services/apiTransport/errors"
-import { fetchApi, fetchApiData } from "~/services/apiTransport/request"
 import { veloeraProvider } from "~/services/checkin/autoCheckin/providers/veloera"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum, SiteHealthStatus, type SiteAccount } from "~/types"
@@ -14,7 +17,7 @@ const { mockFetchVeloeraCheckInSupport } = vi.hoisted(() => ({
   mockFetchVeloeraCheckInSupport: vi.fn(),
 }))
 
-vi.mock("~/services/apiTransport/request", () => ({
+vi.mock("~/services/apiService/newApiFamily/request", () => ({
   fetchApi: vi.fn(),
   fetchApiData: vi.fn(),
 }))
@@ -177,7 +180,9 @@ describe("veloeraProvider", () => {
 
   describe("checkIn", () => {
     it("propagates the popup source when the backend omits a message", async () => {
-      const { fetchApi } = await import("~/services/apiTransport/request")
+      const { fetchApi } = await import(
+        "~/services/apiService/newApiFamily/request"
+      )
       vi.mocked(fetchApi).mockResolvedValueOnce({
         success: true,
         data: { quota_awarded: 2 },
@@ -204,7 +209,9 @@ describe("veloeraProvider", () => {
     })
 
     it("returns success on successful check-in", async () => {
-      const { fetchApi } = await import("~/services/apiTransport/request")
+      const { fetchApi } = await import(
+        "~/services/apiService/newApiFamily/request"
+      )
       vi.mocked(fetchApi).mockResolvedValueOnce({
         success: true,
         data: null,
@@ -219,7 +226,9 @@ describe("veloeraProvider", () => {
     })
 
     it("returns already_checked when already checked in", async () => {
-      const { fetchApi } = await import("~/services/apiTransport/request")
+      const { fetchApi } = await import(
+        "~/services/apiService/newApiFamily/request"
+      )
       vi.mocked(fetchApi).mockResolvedValueOnce({
         success: true,
         data: null,
@@ -231,7 +240,9 @@ describe("veloeraProvider", () => {
     })
 
     it("returns the fallback failure key when the backend fails without a message", async () => {
-      const { fetchApi } = await import("~/services/apiTransport/request")
+      const { fetchApi } = await import(
+        "~/services/apiService/newApiFamily/request"
+      )
       vi.mocked(fetchApi).mockResolvedValueOnce({
         success: false,
         data: { code: 500 },
@@ -293,7 +304,9 @@ describe("veloeraProvider", () => {
     })
 
     it("handles errors gracefully", async () => {
-      const { fetchApi } = await import("~/services/apiTransport/request")
+      const { fetchApi } = await import(
+        "~/services/apiService/newApiFamily/request"
+      )
       vi.mocked(fetchApi).mockRejectedValueOnce(new Error("Network error"))
 
       const result = await checkInForTest(mockAccount)

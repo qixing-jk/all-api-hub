@@ -4,6 +4,7 @@ import {
   startAbortableTask,
 } from "~/services/apiTransport/abortableTask"
 import { buildCompatUserIdHeaders } from "~/services/apiTransport/compatHeaders"
+import { mapCompatibilityResponse } from "~/services/apiTransport/compatibilityResponse"
 import { REQUEST_CONFIG } from "~/services/apiTransport/constant"
 import {
   API_ERROR_CODES,
@@ -137,12 +138,6 @@ export function notifyApiTransportObserver(
   }
 }
 
-interface BackendErrorDetails {
-  message: string
-  isBackendError: boolean
-  upstreamCode?: string
-}
-
 // Throttle log endpoints (`/api/log*`) to reduce burst traffic that can trigger
 // upstream rate limits (e.g. concurrent paging for usage + income).
 const LOG_REQUEST_MIN_INTERVAL_MS = 200
@@ -150,69 +145,6 @@ const LOG_REQUEST_MIN_INTERVAL_MS = 200
 const logRequestRateLimiter = createMinIntervalLimiter({
   minIntervalMs: isTestMode() ? 0 : LOG_REQUEST_MIN_INTERVAL_MS,
 })
-
-const getNonEmptyString = (value: unknown): string | undefined =>
-  typeof value === "string" && value.trim() ? value.trim() : undefined
-
-const KNOWN_BACKEND_ERROR_TYPES = new Set(["new_api_error"])
-
-const isKnownBackendErrorType = (value: unknown): boolean =>
-  typeof value === "string" && KNOWN_BACKEND_ERROR_TYPES.has(value.trim())
-
-const getSafeUpstreamCode = (value: unknown): string | undefined => {
-  if (typeof value !== "string" && typeof value !== "number") return undefined
-  const code = String(value).trim()
-  return code.length <= 64 && /^[A-Za-z0-9_.-]+$/.test(code) ? code : undefined
-}
-
-/**
- * Extracts known backend-shaped JSON errors so they are not treated as
- * WAF/challenge 403s that temp-window fallback can recover.
- */
-function extractBackendErrorDetails(body: unknown): BackendErrorDetails | null {
-  if (!body || typeof body !== "object" || Array.isArray(body)) {
-    return null
-  }
-
-  const topLevelMessage =
-    getNonEmptyString((body as { message?: unknown }).message) ??
-    getNonEmptyString((body as { msg?: unknown }).msg)
-  if (topLevelMessage) {
-    const code = (body as { code?: unknown }).code
-    const isBusinessEnvelope =
-      (typeof code === "number" && code !== 0) ||
-      (typeof code === "string" && code.trim() !== "" && code.trim() !== "0")
-
-    return {
-      message: topLevelMessage,
-      isBackendError: Boolean(
-        (body as { success?: unknown }).success === false || isBusinessEnvelope,
-      ),
-      upstreamCode: getSafeUpstreamCode(code),
-    }
-  }
-
-  const error = (body as { error?: unknown }).error
-  if (!error || typeof error !== "object" || Array.isArray(error)) {
-    return null
-  }
-
-  const message = getNonEmptyString((error as { message?: unknown }).message)
-  if (!message) {
-    return null
-  }
-
-  const isBackendError = isKnownBackendErrorType(
-    (error as { type?: unknown }).type,
-  )
-  const upstreamCode = getSafeUpstreamCode((error as { code?: unknown }).code)
-
-  return {
-    message,
-    isBackendError,
-    upstreamCode,
-  }
-}
 
 /**
  * Determine if a given endpoint string matches log API patterns.
@@ -654,91 +586,6 @@ const apiRequestResponse = async <T>(
   }
 }
 
-/** Converts an unsuccessful HTTP result into the legacy shared ApiError. */
-function createCompatibilityHttpError(
-  response: ApiTransportResponse<unknown>,
-  endpoint: string,
-  responseType: TempWindowResponseType,
-): ApiError {
-  let errorCode: ApiErrorCode = API_ERROR_CODES.HTTP_OTHER
-  let errorMessage = `请求失败: ${response.status}`
-  let backendError: BackendErrorDetails | null = null
-
-  if (response.status === 401) {
-    errorCode = API_ERROR_CODES.HTTP_401
-  } else if (response.status === 403) {
-    errorCode = API_ERROR_CODES.HTTP_403
-  } else if (response.status === 429) {
-    errorCode = API_ERROR_CODES.HTTP_429
-  }
-
-  if (
-    responseType === "json" &&
-    (response.status === 401 || response.status === 429)
-  ) {
-    const retryAfter =
-      response.status === 429 ? response.headers["retry-after"] : undefined
-    const hasRetryAfter = response.status === 429 && retryAfter !== undefined
-    const contentType = response.headers["content-type"] || ""
-    const looksLikeHtml =
-      /\btext\/html\b/i.test(contentType) ||
-      /\bapplication\/xhtml\+xml\b/i.test(contentType)
-
-    if (!hasRetryAfter && looksLikeHtml) {
-      errorCode = API_ERROR_CODES.CONTENT_TYPE_MISMATCH
-    }
-  }
-
-  if (
-    responseType === "json" &&
-    errorCode !== API_ERROR_CODES.CONTENT_TYPE_MISMATCH
-  ) {
-    backendError = extractBackendErrorDetails(response.body)
-    if (backendError) {
-      if (backendError.isBackendError || response.status !== 403) {
-        errorMessage = backendError.message
-      }
-      if (backendError.isBackendError && response.status === 403) {
-        errorCode = API_ERROR_CODES.BUSINESS_ERROR
-      }
-    }
-  }
-
-  return new ApiError(
-    errorMessage,
-    response.status,
-    endpoint,
-    errorCode,
-    backendError?.upstreamCode,
-  )
-}
-
-/** Applies the existing envelope and error behavior above raw HTTP transport. */
-function mapCompatibilityResponse<T>(
-  response: AcquiredTransportResponse<T>,
-  context: {
-    endpoint: string
-    responseType: TempWindowResponseType
-    onlyData: boolean
-  },
-): T | ApiResponse<T> {
-  if (!response.ok) {
-    throw createCompatibilityHttpError(
-      response,
-      context.endpoint,
-      context.responseType,
-    )
-  }
-
-  if (response.decodeError) throw response.decodeError
-
-  if (context.responseType === "json" && context.onlyData) {
-    return extractDataFromApiResponseBody<T>(response.body, context.endpoint)
-  }
-
-  return response.body as T | ApiResponse<T>
-}
-
 /** Normalizes a message-channel fetch result without discarding its body. */
 function normalizeMessageFetchResponse<T>(
   response: TempWindowFetch,
@@ -961,6 +808,7 @@ const _fetchApi = async <T>(
   request: ApiTransportRequest,
   options: FetchApiOptions,
   onlyData: boolean = false,
+  decodeApplicationError: boolean = onlyData,
 ): Promise<T | ApiResponse<T>> => {
   const responseType = options.responseType ?? "json"
   return await _fetchApiWithMapper<T, T | ApiResponse<T>>(
@@ -972,25 +820,20 @@ const _fetchApi = async <T>(
         endpoint: options.endpoint,
         responseType,
         onlyData,
+        decodeApplicationError,
+        errorResponseDecoder: options.errorResponseDecoder,
       }),
-    (response) => {
-      if (!response.success) {
-        throw new ApiError(
-          response.error || "Temp window fetch failed",
-          response.status,
-          options.endpoint,
-          response.code,
-        )
-      }
-      return mapCompatibilityResponse(
+    (response) =>
+      mapCompatibilityResponse(
         normalizeMessageFetchResponse<T>(response, options.endpoint),
         {
           endpoint: options.endpoint,
           responseType,
           onlyData,
+          decodeApplicationError,
+          errorResponseDecoder: options.errorResponseDecoder,
         },
-      )
-    },
+      ),
   )
 }
 
@@ -1071,7 +914,12 @@ export async function fetchApi<T>(
   options: FetchApiOptions,
   _normalResponseType?: boolean,
 ): Promise<T | ApiResponse<T>> {
-  const response = await _fetchApi<T>(request, options)
+  const response = await _fetchApi<T>(
+    request,
+    options,
+    false,
+    _normalResponseType === true,
+  )
   const responseType = options.responseType ?? "json"
   if (!_normalResponseType) {
     if (responseType !== "json") {

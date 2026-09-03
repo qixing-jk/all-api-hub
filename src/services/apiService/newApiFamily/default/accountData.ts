@@ -17,9 +17,9 @@ import {
   type MetricAggregationCoverage,
   type TodayTimestampRange,
 } from "~/services/apiService/newApiFamily/default/accountDataUtils"
+import { fetchApiData } from "~/services/apiService/newApiFamily/request"
 import { REQUEST_CONFIG } from "~/services/apiTransport/constant"
 import { ApiError } from "~/services/apiTransport/errors"
-import { fetchApiData } from "~/services/apiTransport/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { refreshSelectedStatus } from "~/services/checkin/autoCheckin/refresh"
 import { LogType } from "~/services/history/usageHistory/usageLogModel"

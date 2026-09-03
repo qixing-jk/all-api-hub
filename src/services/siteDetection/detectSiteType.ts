@@ -4,9 +4,10 @@ import {
   getAccountSiteDomainRules,
   getAccountSiteTitleRules,
 } from "~/services/accountSiteOnboarding/registry"
+import { fetchApiData as fetchNewApiFamilyData } from "~/services/apiService/newApiFamily/request"
 import { SUB2API_AUTH_ME_ENDPOINT } from "~/services/apiService/sub2api/type"
 import { ApiError } from "~/services/apiTransport/errors"
-import { fetchApi, fetchApiData } from "~/services/apiTransport/request"
+import { fetchApi } from "~/services/apiTransport/request"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
 import {
@@ -127,7 +128,7 @@ async function detectNewApiFamilySiteTypeFromCompatAuthError(
   protectionBypassExecution?: ProtectionBypassExecution,
 ): Promise<AccountSiteType> {
   try {
-    await fetchApiData<unknown>(
+    await fetchNewApiFamilyData<unknown>(
       {
         baseUrl: url,
         auth: { authType: AuthTypeEnum.Cookie },

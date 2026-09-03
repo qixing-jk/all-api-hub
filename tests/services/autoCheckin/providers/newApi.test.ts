@@ -5,8 +5,11 @@ import {
   resolveAccountSiteRouteUrl,
   SITE_ROUTE_KINDS,
 } from "~/services/accounts/utils/siteRouteResolver"
+import {
+  fetchApi,
+  fetchApiData,
+} from "~/services/apiService/newApiFamily/request"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
-import { fetchApi, fetchApiData } from "~/services/apiTransport/request"
 import { autoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers"
 import { newApiProvider } from "~/services/checkin/autoCheckin/providers/newApi"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
@@ -28,7 +31,7 @@ const { mockFetchSupportCheckIn } = vi.hoisted(() => ({
   mockFetchSupportCheckIn: vi.fn(),
 }))
 
-vi.mock("~/services/apiTransport/request", () => ({
+vi.mock("~/services/apiService/newApiFamily/request", () => ({
   fetchApi: vi.fn(),
   fetchApiData: vi.fn(),
 }))

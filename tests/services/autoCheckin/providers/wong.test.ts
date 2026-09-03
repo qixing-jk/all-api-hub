@@ -9,7 +9,7 @@ import { userCommandExecution } from "~~/tests/services/protectionBypass/fixture
 import { createAutoCheckinMutationLifecycle } from "~~/tests/test-utils/autoCheckin"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
-vi.mock("~/services/apiTransport/request", () => ({
+vi.mock("~/services/apiService/newApiFamily/request", () => ({
   fetchApi: vi.fn(),
 }))
 
@@ -111,7 +111,9 @@ describe("wongGongyiProvider", () => {
   })
 
   it("uses a strict GET status envelope and never probes with POST", async () => {
-    const { fetchApi } = await import("~/services/apiTransport/request")
+    const { fetchApi } = await import(
+      "~/services/apiService/newApiFamily/request"
+    )
     vi.mocked(fetchApi)
       .mockResolvedValueOnce({
         success: true,
@@ -153,7 +155,9 @@ describe("wongGongyiProvider", () => {
 
   describe("checkIn", () => {
     it("propagates the popup source when POST indicates checked_in true", async () => {
-      const { fetchApi } = await import("~/services/apiTransport/request")
+      const { fetchApi } = await import(
+        "~/services/apiService/newApiFamily/request"
+      )
       const mockedFetchApi = vi.mocked(fetchApi)
 
       mockedFetchApi.mockResolvedValueOnce({
@@ -179,7 +183,9 @@ describe("wongGongyiProvider", () => {
     })
 
     it("returns already_checked when POST success=true but message indicates already checked", async () => {
-      const { fetchApi } = await import("~/services/apiTransport/request")
+      const { fetchApi } = await import(
+        "~/services/apiService/newApiFamily/request"
+      )
       const mockedFetchApi = vi.mocked(fetchApi)
 
       mockedFetchApi.mockResolvedValueOnce({
@@ -196,7 +202,9 @@ describe("wongGongyiProvider", () => {
     })
 
     it("returns failed when POST indicates enabled false", async () => {
-      const { fetchApi } = await import("~/services/apiTransport/request")
+      const { fetchApi } = await import(
+        "~/services/apiService/newApiFamily/request"
+      )
       const mockedFetchApi = vi.mocked(fetchApi)
 
       mockedFetchApi.mockResolvedValueOnce({
@@ -211,7 +219,9 @@ describe("wongGongyiProvider", () => {
     })
 
     it("returns success when POST succeeds and user was not checked in", async () => {
-      const { fetchApi } = await import("~/services/apiTransport/request")
+      const { fetchApi } = await import(
+        "~/services/apiService/newApiFamily/request"
+      )
       const mockedFetchApi = vi.mocked(fetchApi)
 
       mockedFetchApi.mockResolvedValueOnce({
@@ -228,7 +238,9 @@ describe("wongGongyiProvider", () => {
     })
 
     it("does not let ambiguous copy override an explicit unchecked status", async () => {
-      const { fetchApi } = await import("~/services/apiTransport/request")
+      const { fetchApi } = await import(
+        "~/services/apiService/newApiFamily/request"
+      )
       vi.mocked(fetchApi).mockResolvedValueOnce({
         success: true,
         message: "User was not already checked in",
@@ -242,7 +254,9 @@ describe("wongGongyiProvider", () => {
     })
 
     it("returns failed when POST returns success=false without already-checked signal", async () => {
-      const { fetchApi } = await import("~/services/apiTransport/request")
+      const { fetchApi } = await import(
+        "~/services/apiService/newApiFamily/request"
+      )
       const mockedFetchApi = vi.mocked(fetchApi)
 
       mockedFetchApi.mockResolvedValueOnce({
@@ -259,7 +273,9 @@ describe("wongGongyiProvider", () => {
     })
 
     it("returns already_checked when POST returns already checked message", async () => {
-      const { fetchApi } = await import("~/services/apiTransport/request")
+      const { fetchApi } = await import(
+        "~/services/apiService/newApiFamily/request"
+      )
       const mockedFetchApi = vi.mocked(fetchApi)
 
       mockedFetchApi.mockResolvedValueOnce({
@@ -273,7 +289,9 @@ describe("wongGongyiProvider", () => {
     })
 
     it("handles network errors gracefully", async () => {
-      const { fetchApi } = await import("~/services/apiTransport/request")
+      const { fetchApi } = await import(
+        "~/services/apiService/newApiFamily/request"
+      )
       const mockedFetchApi = vi.mocked(fetchApi)
 
       mockedFetchApi.mockRejectedValueOnce(new TypeError("Failed to fetch"))
@@ -288,7 +306,9 @@ describe("wongGongyiProvider", () => {
     })
 
     it("marks a lost response after POST dispatch as uncertain", async () => {
-      const { fetchApi } = await import("~/services/apiTransport/request")
+      const { fetchApi } = await import(
+        "~/services/apiService/newApiFamily/request"
+      )
       const mutationLifecycle = createAutoCheckinMutationLifecycle()
       vi.mocked(fetchApi).mockImplementationOnce(async (request) => {
         request.observer?.onDispatch()
@@ -307,7 +327,9 @@ describe("wongGongyiProvider", () => {
     })
 
     it("returns endpointNotSupported when API returns 404", async () => {
-      const { fetchApi } = await import("~/services/apiTransport/request")
+      const { fetchApi } = await import(
+        "~/services/apiService/newApiFamily/request"
+      )
       const mockedFetchApi = vi.mocked(fetchApi)
 
       mockedFetchApi.mockRejectedValueOnce({

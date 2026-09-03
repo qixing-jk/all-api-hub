@@ -3,7 +3,7 @@ import {
   type SiteStructuredAnnouncement,
   type SiteStructuredAnnouncementType,
 } from "~/services/apiAdapters/contracts/siteStructuredAnnouncements"
-import { fetchApiData } from "~/services/apiTransport/request"
+import { fetchApiData } from "~/services/apiService/newApiFamily/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { createLogger } from "~/utils/core/logger"

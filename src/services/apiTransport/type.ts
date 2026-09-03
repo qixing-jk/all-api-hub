@@ -21,6 +21,24 @@ export interface ApiTransportResponse<T = unknown> {
   body: T
 }
 
+export type ApiResponseErrorKind = "business" | "http"
+
+export interface DecodedApiResponseError {
+  kind: ApiResponseErrorKind
+  message?: string
+  upstreamCode?: string
+}
+
+/**
+ * Interprets one provider response without performing disclosure or redaction.
+ * Implementations must be total for unknown bodies and return null when the
+ * response does not match their protocol.
+ */
+export type ApiResponseErrorDecoder = (
+  response: ApiTransportResponse<unknown>,
+  context: { endpoint: string },
+) => DecodedApiResponseError | null
+
 export interface AuthConfig {
   /** 认证类型: cookie | access_token | none */
   authType: AuthTypeEnum
@@ -138,6 +156,8 @@ export interface FetchApiOptions {
   tempWindowFallback?: TempWindowFallbackAllowlist
   currentTabTransport?: "prefer" | "disabled"
   authTokenMode?: ApiAuthTokenMode
+  /** Process-local provider decoder; it never crosses extension messaging. */
+  errorResponseDecoder?: ApiResponseErrorDecoder
 }
 
 export interface OpenAIAuthParams {

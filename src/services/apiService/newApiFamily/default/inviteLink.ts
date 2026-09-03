@@ -1,4 +1,4 @@
-import { fetchApiData } from "~/services/apiTransport/request"
+import { fetchApiData } from "~/services/apiService/newApiFamily/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import {
   INVITE_LINK_FAILURE_REASONS,

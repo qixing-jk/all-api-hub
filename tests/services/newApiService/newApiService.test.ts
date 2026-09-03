@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { decodeNewApiResponseError } from "~/services/apiService/newApiFamily/responseError"
 import { MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS } from "~/services/managedSites/channelMatch"
 import type { ApiToken, DisplaySiteData } from "~/types"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
@@ -322,6 +323,7 @@ describe("newApiService", () => {
       expect(result).toEqual(mockChannelData)
       expect(mockFetchApiData).toHaveBeenCalledWith(request, {
         endpoint: "/api/channel/search?keyword=https%3A%2F%2Fapi.example.com",
+        errorResponseDecoder: decodeNewApiResponseError,
       })
     })
 

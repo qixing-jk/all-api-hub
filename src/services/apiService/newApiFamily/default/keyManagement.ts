@@ -9,13 +9,16 @@ import type {
   CreateTokenResult,
   UserGroupInfo,
 } from "~/services/accountTokens/tokenProvisioningModel"
+import {
+  fetchApi,
+  fetchApiData,
+} from "~/services/apiService/newApiFamily/request"
 import { REQUEST_CONFIG } from "~/services/apiTransport/constant"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import {
   fetchAllItems,
   inferHasMoreFromNumberedPage,
 } from "~/services/apiTransport/pagination"
-import { fetchApi, fetchApiData } from "~/services/apiTransport/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import type { ApiToken } from "~/types"
 import { createLogger } from "~/utils/core/logger"

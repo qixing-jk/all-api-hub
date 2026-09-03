@@ -2,6 +2,7 @@ import { http, HttpResponse } from "msw"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { decodeNewApiResponseError } from "~/services/apiService/newApiFamily/responseError"
 import { createDeferredAbortDeadline } from "~/services/apiTransport/abortableTask"
 import {
   ApiError,
@@ -2286,6 +2287,41 @@ describe("apiTransport request helpers", () => {
     )
   })
 
+  it("applies the provider decoder to a forced temp-window error response", async () => {
+    forceTempWindowRoute()
+    mockSendRuntimeMessage.mockResolvedValueOnce({
+      success: false,
+      status: 403,
+      data: {
+        error: {
+          code: "group_forbidden",
+          message: "Access denied for test group",
+          type: "new_api_error",
+        },
+      },
+    })
+
+    await expect(
+      fetchApiData(
+        {
+          baseUrl: BASE_URL,
+          auth: { authType: AuthTypeEnum.Cookie },
+          forceTempWindow: true,
+          protectionBypassExecution: backgroundProtectionBypassExecution,
+        },
+        {
+          endpoint: ENDPOINT,
+          errorResponseDecoder: decodeNewApiResponseError,
+        },
+      ),
+    ).rejects.toMatchObject({
+      statusCode: 403,
+      code: ApiErrorCodes.BUSINESS_ERROR,
+      upstreamCode: "group_forbidden",
+      message: "Access denied for test group",
+    })
+  })
+
   it("keeps the observer local when a forced temp-window route is selected", async () => {
     const lifecycle: string[] = []
     let responseObserved = false
@@ -3261,6 +3297,67 @@ describe("apiTransport request helpers", () => {
     })
   })
 
+  it("prefers a provider decoder message over the compatibility fallback", async () => {
+    server.use(
+      http.get(API_URL, () =>
+        HttpResponse.json(
+          { success: false, message: "Compatibility message" },
+          { status: 400 },
+        ),
+      ),
+    )
+
+    await expect(
+      fetchApiData(
+        {
+          baseUrl: BASE_URL,
+          auth: { authType: AuthTypeEnum.Cookie },
+        },
+        {
+          endpoint: ENDPOINT,
+          errorResponseDecoder: () => ({
+            kind: "business",
+            message: "Provider message",
+          }),
+        },
+      ),
+    ).rejects.toMatchObject({
+      statusCode: 400,
+      message: "Provider message",
+    })
+  })
+
+  it("falls back when the provider decoder has no usable message", async () => {
+    server.use(
+      http.get(API_URL, () =>
+        HttpResponse.json(
+          { success: false, message: "Compatibility message" },
+          { status: 400 },
+        ),
+      ),
+    )
+
+    await expect(
+      fetchApiData(
+        {
+          baseUrl: BASE_URL,
+          auth: { authType: AuthTypeEnum.Cookie },
+        },
+        {
+          endpoint: ENDPOINT,
+          errorResponseDecoder: () => ({
+            kind: "business",
+            message: "   ",
+          }),
+        },
+      ),
+    ).rejects.toMatchObject({
+      statusCode: 400,
+      code: ApiErrorCodes.HTTP_OTHER,
+      message: "Compatibility message",
+    })
+  })
+
   it("preserves a safe top-level backend code for provider recovery logic", async () => {
     server.use(
       http.get(API_URL, () =>
@@ -3662,6 +3759,61 @@ describe("apiTransport request helpers", () => {
     ).rejects.toMatchObject({ message: "bad request" } as any)
   })
 
+  it("lets the provider decoder own HTTP 200 business error messages", async () => {
+    server.use(
+      http.get(API_URL, () =>
+        HttpResponse.json({
+          success: false,
+          data: null,
+          message: "Compatibility message",
+        }),
+      ),
+    )
+
+    const request = {
+      baseUrl: BASE_URL,
+      auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+    }
+    const options = {
+      endpoint: ENDPOINT,
+      errorResponseDecoder: () => ({
+        kind: "business" as const,
+        message: "Provider message",
+      }),
+    }
+
+    await expect(fetchApiData(request, options)).rejects.toMatchObject({
+      code: ApiErrorCodes.BUSINESS_ERROR,
+      message: "Provider message",
+    })
+    await expect(fetchApi(request, options, true)).rejects.toMatchObject({
+      code: ApiErrorCodes.BUSINESS_ERROR,
+      message: "Provider message",
+    })
+  })
+
+  it("keeps HTTP 200 error envelopes available to explicit response consumers", async () => {
+    const body = {
+      success: false,
+      data: null,
+      message: "Provider-owned response",
+    }
+    server.use(http.get(API_URL, () => HttpResponse.json(body)))
+
+    await expect(
+      fetchApi(
+        {
+          baseUrl: BASE_URL,
+          auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+        },
+        {
+          endpoint: ENDPOINT,
+          errorResponseDecoder: decodeNewApiResponseError,
+        },
+      ),
+    ).resolves.toEqual(body)
+  })
+
   it("fetchApiData rejects successful JSON envelopes without data", async () => {
     server.use(
       http.get(API_URL, () => {
@@ -3711,13 +3863,57 @@ describe("apiTransport request helpers", () => {
           baseUrl: BASE_URL,
           auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
         },
-        { endpoint: modelsEndpoint },
+        {
+          endpoint: modelsEndpoint,
+          errorResponseDecoder: decodeNewApiResponseError,
+        },
       ),
     ).rejects.toMatchObject({
       endpoint: modelsEndpoint,
       statusCode: 403,
       code: ApiErrorCodes.BUSINESS_ERROR,
       message: "Access denied for test group",
+    })
+
+    expect(mockSendRuntimeMessage).not.toHaveBeenCalled()
+  })
+
+  it("keeps provider business classification when its message is blank", async () => {
+    const modelsEndpoint = "/v1/models"
+    const modelsUrl = "https://example.com/base/v1/models"
+
+    server.use(
+      http.get(modelsUrl, () =>
+        HttpResponse.json(
+          {
+            error: {
+              code: "group_forbidden",
+              message: "   ",
+              type: "new_api_error",
+            },
+          },
+          { status: 403 },
+        ),
+      ),
+    )
+
+    await expect(
+      fetchApiData(
+        {
+          baseUrl: BASE_URL,
+          auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+        },
+        {
+          endpoint: modelsEndpoint,
+          errorResponseDecoder: decodeNewApiResponseError,
+        },
+      ),
+    ).rejects.toMatchObject({
+      endpoint: modelsEndpoint,
+      statusCode: 403,
+      code: ApiErrorCodes.BUSINESS_ERROR,
+      message: "请求失败: 403",
+      upstreamCode: "group_forbidden",
     })
 
     expect(mockSendRuntimeMessage).not.toHaveBeenCalled()

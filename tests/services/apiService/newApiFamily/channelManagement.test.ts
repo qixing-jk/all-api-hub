@@ -39,7 +39,7 @@ vi.mock("~/services/accounts/accountStorage", () => ({
   accountStorage: {},
 }))
 
-vi.mock("~/services/apiTransport/request", () => ({
+vi.mock("~/services/apiService/newApiFamily/request", () => ({
   fetchApi: mockFetchApi,
   fetchApiData: mockFetchApiData,
 }))

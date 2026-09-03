@@ -17,10 +17,13 @@ import type {
   NewApiCheckInStatus,
 } from "~/services/apiService/newApiFamily/checkInDto"
 import { fetchSupportCheckIn } from "~/services/apiService/newApiFamily/default/accountBootstrap"
+import {
+  fetchApi,
+  fetchApiData,
+} from "~/services/apiService/newApiFamily/request"
 import { buildCompatUserIdHeaders } from "~/services/apiTransport/compatHeaders"
 import { REQUEST_CONFIG } from "~/services/apiTransport/constant"
 import { ApiError } from "~/services/apiTransport/errors"
-import { fetchApi, fetchApiData } from "~/services/apiTransport/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import type {
   AutoCheckinProvider,

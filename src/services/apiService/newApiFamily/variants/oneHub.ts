@@ -1,6 +1,7 @@
 import { normalizeApiTokenKey } from "~/services/accountTokens/apiTokenKey"
 import { syncResolvedApiTokenKeyCache } from "~/services/accountTokens/tokenKeyResolver"
 import type { UserGroupInfo } from "~/services/accountTokens/tokenProvisioningModel"
+import { fetchApiData } from "~/services/apiService/newApiFamily/request"
 import {
   transformModelPricing,
   transformUserGroup,
@@ -15,7 +16,6 @@ import {
   fetchAllItems,
   inferHasMoreFromNumberedPage,
 } from "~/services/apiTransport/pagination"
-import { fetchApiData } from "~/services/apiTransport/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import type { PricingResponse } from "~/services/modelList/pricingModel"
 import type { ApiToken } from "~/types"

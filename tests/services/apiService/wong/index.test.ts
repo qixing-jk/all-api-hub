@@ -42,8 +42,12 @@ vi.mock("~/services/apiService/newApiFamily/default/accountData", () => ({
   fetchTodayUsage: mockFetchTodayUsage,
 }))
 
-vi.mock("~/services/apiTransport/request", () => ({
+vi.mock("~/services/apiService/newApiFamily/request", () => ({
   fetchApi: mockFetchApi,
+  fetchApiData: mockFetchApiData,
+}))
+
+vi.mock("~/services/apiTransport/request", () => ({
   fetchApiData: mockFetchApiData,
 }))
 

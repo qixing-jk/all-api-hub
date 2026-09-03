@@ -15,11 +15,11 @@ import {
   CHECK_IN_METHOD_TODAY_STATUSES,
   CHECK_IN_PROVIDER_READINESS_REASONS,
 } from "~/constants/checkIn"
+import { fetchApi } from "~/services/apiService/newApiFamily/request"
 import type {
   WongCheckinApiResponse,
   WongCheckinStatusData,
 } from "~/services/apiService/wong"
-import { fetchApi } from "~/services/apiTransport/request"
 import type {
   AutoCheckinProvider,
   AutoCheckinProviderContext,

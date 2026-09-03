@@ -1,5 +1,5 @@
 import { CHECK_IN_PROVIDER_READINESS_REASONS } from "~/constants/checkIn"
-import { fetchApi } from "~/services/apiTransport/request"
+import { fetchApi } from "~/services/apiService/newApiFamily/request"
 import {
   AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
   isAlreadyCheckedMessage,
