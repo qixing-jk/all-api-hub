@@ -1,10 +1,17 @@
+import { fetchApiResponse } from "~/services/apiTransport/request"
+import type { ApiServiceRequest } from "~/services/apiTransport/type"
+
+import { SUB2API_SESSION_BINDING_MISMATCH_CODE } from "./browserAuth"
+
 /**
  * Match upstream buffer: refresh ~2 minutes before expiry.
  */
 export const SUB2API_TOKEN_REFRESH_BUFFER_MS = 120 * 1000
 
+const SUB2API_AUTH_REFRESH_ENDPOINT = "/api/v1/auth/refresh"
+
 type Sub2ApiEnvelope<T> = {
-  code: number
+  code: number | string
   message?: string
   data?: T
   detail?: string
@@ -24,6 +31,7 @@ type Sub2ApiRefreshedCredentials = {
 
 export const SUB2API_TOKEN_REFRESH_FAILURE_REASONS = {
   INVALID_REFRESH_TOKEN: "invalid_refresh_token",
+  SESSION_BINDING_MISMATCH: "session_binding_mismatch",
   UNCERTAIN_ROTATION: "uncertain_rotation",
 } as const
 
@@ -51,34 +59,44 @@ const normalizeExpiresInSeconds = (value: unknown): number =>
  * uncertain credential mutation and must not replay the submitted token.
  */
 export async function refreshSub2ApiTokens(params: {
-  baseUrl: string
-  accessToken?: string
+  request: ApiServiceRequest
   refreshToken: string
 }): Promise<Sub2ApiRefreshedCredentials> {
-  const { baseUrl, refreshToken } = params
-  const accessToken = normalizeString(params.accessToken)
+  const { request, refreshToken } = params
+  const accessToken = normalizeString(request.auth.accessToken)
   const normalizedRefreshToken = normalizeString(refreshToken)
   if (!normalizedRefreshToken) {
     throw new Error("Sub2API refresh token missing")
   }
 
-  const endpoint = new URL("/api/v1/auth/refresh", baseUrl).toString()
   let payload: Sub2ApiEnvelope<Sub2ApiRefreshTokenData> | null
   let responseStatus: number | undefined
 
   try {
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+    // Some downstream deployments bind the refresh-token family to the login
+    // session's IP and user agent. Preserve the request's browser fetch context
+    // so rotation runs in the same context as the dashboard session.
+    // Source: https://github.com/LuckyKuang/sub2api-plus/blob/cd1d8438cbe19358936605af7e6b20954283bf15/backend/internal/service/auth_service.go#L1837-L1844
+    const response = await fetchApiResponse<
+      Sub2ApiEnvelope<Sub2ApiRefreshTokenData>
+    >(
+      {
+        ...request,
+        auth: {
+          ...request.auth,
+          ...(accessToken ? { accessToken } : { accessToken: undefined }),
+        },
       },
-      body: JSON.stringify({ refresh_token: normalizedRefreshToken }),
-    })
+      {
+        endpoint: SUB2API_AUTH_REFRESH_ENDPOINT,
+        options: {
+          method: "POST",
+          body: JSON.stringify({ refresh_token: normalizedRefreshToken }),
+        },
+      },
+    )
     responseStatus = response.status
-
-    payload =
-      (await response.json()) as Sub2ApiEnvelope<Sub2ApiRefreshTokenData>
+    payload = response.body
   } catch {
     throw new Sub2ApiTokenRefreshError(
       SUB2API_TOKEN_REFRESH_FAILURE_REASONS.UNCERTAIN_ROTATION,
@@ -88,6 +106,12 @@ export async function refreshSub2ApiTokens(params: {
   if (!payload || typeof payload !== "object") {
     throw new Sub2ApiTokenRefreshError(
       SUB2API_TOKEN_REFRESH_FAILURE_REASONS.UNCERTAIN_ROTATION,
+    )
+  }
+
+  if (payload.code === SUB2API_SESSION_BINDING_MISMATCH_CODE) {
+    throw new Sub2ApiTokenRefreshError(
+      SUB2API_TOKEN_REFRESH_FAILURE_REASONS.SESSION_BINDING_MISMATCH,
     )
   }
 

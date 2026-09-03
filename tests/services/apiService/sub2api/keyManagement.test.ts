@@ -37,15 +37,23 @@ const {
   persistAuthUpdateMock: vi.fn(),
 }))
 
-vi.mock("~/services/apiTransport/request", () => ({
+vi.mock("~/services/apiTransport/request", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/services/apiTransport/request")>()),
   fetchApi: (...args: any[]) => fetchApiMock(...args),
   notifyApiTransportObserver: vi.fn(),
 }))
 
-vi.mock("~/services/apiService/sub2api/tokenResync", () => ({
-  resyncSub2ApiAuthToken: (...args: any[]) =>
-    resyncSub2ApiAuthTokenMock(...args),
-}))
+vi.mock(
+  "~/services/apiService/sub2api/browserAuth",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/apiService/sub2api/browserAuth")
+    >()),
+    findSub2ApiBrowserAuth: vi.fn(),
+    recoverSub2ApiBrowserAuth: (...args: any[]) =>
+      resyncSub2ApiAuthTokenMock(...args),
+  }),
+)
 
 const createRequest = (
   overrides: Partial<Sub2ApiAuthSessionRequest<ApiServiceRequest>> = {},
@@ -1085,10 +1093,10 @@ describe("apiService sub2api key management service", () => {
 
     expect(tokens).toHaveLength(1)
     expect(resyncSub2ApiAuthTokenMock).toHaveBeenCalledWith(
-      "https://sub2.example.com",
-      undefined,
-      undefined,
-      "1",
+      expect.objectContaining({
+        baseUrl: "https://sub2.example.com",
+        expectedUserId: "1",
+      }),
     )
     expect(persistAuthUpdateMock).toHaveBeenCalledWith("acc-1", {
       accessToken: "resynced-jwt",

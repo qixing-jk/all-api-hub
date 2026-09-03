@@ -8,20 +8,30 @@ import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
 
-type Sub2ApiResyncedAuth = {
+export const SUB2API_SESSION_BINDING_MISMATCH_CODE = "SESSION_BINDING_MISMATCH"
+
+export type Sub2ApiBrowserAuth = {
   accessToken: string
   userId?: string
   sub2apiAuth?: AccountBrowserSession["sub2apiAuth"]
+  fetchContext?: AccountBrowserSession["fetchContext"]
   source:
     | typeof ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB
     | typeof ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW
+}
+
+type Sub2ApiBrowserAuthOptions = {
+  baseUrl: string
+  expectedUserId?: string
+  tempWindowRequestSource?: TempWindowRequestSource
+  protectionBypassExecution?: ProtectionBypassExecution
 }
 
 const hasUsableAccessToken = (session: AccountBrowserSession): boolean =>
   typeof session.accessToken === "string" &&
   session.accessToken.trim().length > 0
 
-const SUB2API_RESYNC_SOURCE_BY_BROWSER_SESSION_SOURCE = {
+const SUB2API_AUTH_SOURCE_BY_BROWSER_SESSION_SOURCE = {
   [ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB]:
     ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
   [ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB]:
@@ -30,13 +40,8 @@ const SUB2API_RESYNC_SOURCE_BY_BROWSER_SESSION_SOURCE = {
     ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW,
 } as const satisfies Record<
   AccountBrowserSession["source"],
-  Sub2ApiResyncedAuth["source"]
+  Sub2ApiBrowserAuth["source"]
 >
-
-const mapResyncSource = (
-  source: AccountBrowserSession["source"],
-): Sub2ApiResyncedAuth["source"] =>
-  SUB2API_RESYNC_SOURCE_BY_BROWSER_SESSION_SOURCE[source]
 
 export class Sub2ApiAuthIdentityMismatchError extends Error {
   constructor() {
@@ -45,29 +50,26 @@ export class Sub2ApiAuthIdentityMismatchError extends Error {
   }
 }
 
-/**
- * Re-sync Sub2API JWT from browser-session state.
- *
- * Strategy:
- * 1) Prefer an already-open same-origin tab through the browser-session reader.
- * 2) Fall back to the temp-window auto-detect context.
- */
-export async function resyncSub2ApiAuthToken(
-  baseUrl: string,
-  tempWindowRequestSource?: TempWindowRequestSource,
-  protectionBypassExecution?: ProtectionBypassExecution,
-  expectedUserId?: string,
-): Promise<Sub2ApiResyncedAuth | null> {
-  const normalizedExpectedUserId = normalizeAccountIdentity(expectedUserId)
+/** Recovers Sub2API auth through the shared TempContext policy. */
+export async function recoverSub2ApiBrowserAuth(
+  options: Sub2ApiBrowserAuthOptions,
+): Promise<Sub2ApiBrowserAuth | null> {
+  const normalizedExpectedUserId = normalizeAccountIdentity(
+    options.expectedUserId,
+  )
   let foundMismatchedCredential = false
   const session = await resolveAccountBrowserSession({
-    baseUrl,
+    baseUrl: options.baseUrl,
     siteType: SITE_TYPES.SUB2API,
     useExistingTabs: true,
     useTempWindow: true,
-    requestIdPrefix: "sub2api-token-resync",
-    ...(tempWindowRequestSource ? { tempWindowRequestSource } : {}),
-    ...(protectionBypassExecution ? { protectionBypassExecution } : {}),
+    requestIdPrefix: "sub2api-auth-recovery",
+    ...(options.tempWindowRequestSource
+      ? { tempWindowRequestSource: options.tempWindowRequestSource }
+      : {}),
+    ...(options.protectionBypassExecution
+      ? { protectionBypassExecution: options.protectionBypassExecution }
+      : {}),
     isUsableSession: (candidate) => {
       if (!hasUsableAccessToken(candidate)) {
         return false
@@ -76,9 +78,7 @@ export async function resyncSub2ApiAuthToken(
       const identityMatches =
         !normalizedExpectedUserId ||
         normalizeAccountIdentity(candidate.userId) === normalizedExpectedUserId
-      if (!identityMatches) {
-        foundMismatchedCredential = true
-      }
+      if (!identityMatches) foundMismatchedCredential = true
       return identityMatches
     },
   })
@@ -92,8 +92,7 @@ export async function resyncSub2ApiAuthToken(
   if ((foundMismatchedCredential && !session) || returnedIdentityMismatch) {
     throw new Sub2ApiAuthIdentityMismatchError()
   }
-
-  if (!session || !accessToken) {
+  if (!session || !accessToken || returnedIdentityMismatch) {
     return null
   }
 
@@ -102,6 +101,7 @@ export async function resyncSub2ApiAuthToken(
     accessToken,
     ...(userId ? { userId } : {}),
     ...(session.sub2apiAuth ? { sub2apiAuth: session.sub2apiAuth } : {}),
-    source: mapResyncSource(session.source),
+    ...(session.fetchContext ? { fetchContext: session.fetchContext } : {}),
+    source: SUB2API_AUTH_SOURCE_BY_BROWSER_SESSION_SOURCE[session.source],
   }
 }

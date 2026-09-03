@@ -4,7 +4,6 @@
  * Sub2API differs from One-API/New-API backends in that authenticated endpoints
  * live under `/api/v1/*` and require a dashboard JWT.
  */
-import { SITE_TYPES } from "~/constants/siteType"
 import type {
   AccountData,
   ApiServiceAccountRequest,
@@ -14,8 +13,6 @@ import type {
   TodayUsageDataWithAvailability,
 } from "~/services/accounts/accountDataModel"
 import { determineHealthStatus } from "~/services/accounts/accountHealth"
-import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
-import { normalizeAccountSiteProfileUrlForOriginKey } from "~/services/accounts/accountSiteProfile"
 import { hasUsableApiTokenKey } from "~/services/accountTokens/apiTokenKey"
 import { resolveApiTokenKeyWithFetcher } from "~/services/accountTokens/tokenKeyResolver"
 import type {
@@ -52,12 +49,17 @@ import {
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
 
+import { fetchSub2ApiAuthIdentity } from "./authIdentity"
 import {
-  getSub2ApiAuthSession,
-  SUB2API_AUTH_PERSISTENCE_STATUSES,
-  type Sub2ApiAuthPersistenceResult,
-  type Sub2ApiAuthSession,
-} from "./authSession"
+  didSub2ApiAuthChange,
+  executeAuthenticatedSub2ApiRequest,
+  isSub2ApiRefreshTokenInvalidError,
+  normalizeSub2ApiAccessToken as normalizeAccessToken,
+  normalizeSub2ApiJwtRequest as normalizeJwtRequest,
+  normalizeSub2ApiRefreshToken as normalizeRefreshToken,
+  normalizeSub2ApiTokenExpiresAt as normalizeTokenExpiresAt,
+} from "./authLifecycle"
+import { getSub2ApiAuthPersistenceStatus } from "./authSession"
 import {
   parseSub2ApiProDailyCheckInMutationResponse,
   parseSub2ApiProDailyCheckInStatusResponse,
@@ -74,22 +76,12 @@ import {
   parseSub2ApiGroupRates,
   parseSub2ApiKey,
   parseSub2ApiTodayUsage,
-  parseSub2ApiUserIdentity,
   resolveSub2ApiGroupId,
   translateSub2ApiCreateTokenRequest,
   translateSub2ApiUpdateTokenRequest,
 } from "./parsing"
 import { getSafeErrorMessage } from "./redaction"
-import {
-  refreshSub2ApiTokens,
-  SUB2API_TOKEN_REFRESH_BUFFER_MS,
-  SUB2API_TOKEN_REFRESH_FAILURE_REASONS,
-  Sub2ApiTokenRefreshError,
-} from "./tokenRefresh"
-import {
-  resyncSub2ApiAuthToken,
-  Sub2ApiAuthIdentityMismatchError,
-} from "./tokenResync"
+import { Sub2ApiTokenRefreshError } from "./tokenRefresh"
 import {
   SUB2API_AFFILIATE_ENDPOINT,
   SUB2API_ANNOUNCEMENTS_ENDPOINT,
@@ -102,8 +94,6 @@ import {
   type Sub2ApiAffiliateData,
   type Sub2ApiAnnouncementData,
   type Sub2ApiAnnouncementListData,
-  type Sub2ApiAuthMeData,
-  type Sub2ApiAuthMeResponse,
   type Sub2ApiGroupDescriptor,
   type Sub2ApiKeyData,
   type Sub2ApiKeyListData,
@@ -126,627 +116,10 @@ const SUB2API_KEY_INVENTORY_FAILURE_CODES = {
   PageDidNotAdvance: "sub2api_key_inventory_page_did_not_advance",
 } as const
 const SUB2API_RUNTIME_MODELS_ENDPOINT = "/v1/models"
-const sub2ApiAuthMutationLocks = new Map<string, Promise<void>>()
-
-const isCloseToExpiry = (tokenExpiresAt: number): boolean => {
-  const msUntilExpiry = tokenExpiresAt - Date.now()
-  return msUntilExpiry <= SUB2API_TOKEN_REFRESH_BUFFER_MS
-}
-
-const normalizeAccessToken = (value: unknown): string =>
-  typeof value === "string" ? value.trim() : ""
-
-const normalizeRefreshToken = (value: unknown): string =>
-  normalizeAccessToken(value)
 
 const normalizeRuntimeApiKey = (request: ApiServiceRequest): string => {
   const auth = request.auth as typeof request.auth & { apiKey?: unknown }
   return normalizeAccessToken(auth.apiKey)
-}
-
-const normalizeTokenExpiresAt = (value: unknown): number | undefined =>
-  typeof value === "number" && Number.isFinite(value) ? value : undefined
-
-const normalizeJwtRequest = <TRequest extends ApiServiceRequest>(
-  request: TRequest,
-): TRequest => {
-  const accessToken = normalizeAccessToken(request.auth?.accessToken)
-
-  if (request.auth?.authType !== AuthTypeEnum.AccessToken || !accessToken) {
-    throw new ApiError(
-      t("messages:sub2api.loginRequired"),
-      401,
-      SUB2API_AUTH_ME_ENDPOINT,
-      API_ERROR_CODES.HTTP_401,
-    )
-  }
-
-  return {
-    ...request,
-    auth: {
-      ...request.auth,
-      authType: AuthTypeEnum.AccessToken,
-      accessToken,
-    },
-  } as TRequest
-}
-
-const createLoginRequiredError = (endpoint: string) =>
-  new ApiError(
-    t("messages:sub2api.loginRequired"),
-    401,
-    endpoint,
-    API_ERROR_CODES.HTTP_401,
-  )
-
-const createRefreshTokenInvalidError = (endpoint: string) =>
-  new ApiError(
-    t("messages:sub2api.refreshTokenInvalid"),
-    401,
-    endpoint,
-    API_ERROR_CODES.HTTP_401,
-  )
-
-const isSub2ApiRefreshTokenContractError = (error: unknown): boolean =>
-  error instanceof Sub2ApiTokenRefreshError &&
-  error.reason === SUB2API_TOKEN_REFRESH_FAILURE_REASONS.INVALID_REFRESH_TOKEN
-
-const isUncertainSub2ApiRefreshRotation = (error: unknown): boolean =>
-  error instanceof Sub2ApiTokenRefreshError &&
-  error.reason === SUB2API_TOKEN_REFRESH_FAILURE_REASONS.UNCERTAIN_ROTATION
-
-const isUnauthorizedError = (error: unknown): error is ApiError =>
-  error instanceof ApiError && error.statusCode === 401
-
-type PersistableSub2ApiAuthUpdate = {
-  accessToken: string
-  userId?: string
-  refreshToken?: string
-  tokenExpiresAt?: number
-}
-
-class Sub2ApiAuthPersistenceError extends Error {
-  constructor(public readonly result: Sub2ApiAuthPersistenceResult) {
-    super(t("messages:sub2api.authPersistenceFailed"))
-    this.name = "Sub2ApiAuthPersistenceError"
-  }
-}
-
-const throwIfSub2ApiAuthPersistenceFailed = (error: unknown): void => {
-  if (error instanceof Sub2ApiAuthPersistenceError) {
-    throw error
-  }
-}
-
-type RefreshedSub2ApiRequest<
-  TRequest extends ApiServiceRequest = ApiServiceRequest,
-> = {
-  request: TRequest
-  refreshToken: string
-  tokenExpiresAt: number
-}
-
-type HydratedSub2ApiAuth<
-  TRequest extends ApiServiceRequest = ApiServiceRequest,
-> = {
-  request: TRequest
-  authSession?: Sub2ApiAuthSession
-}
-
-const hydrateSub2ApiAuthRequest = async <TRequest extends ApiServiceRequest>(
-  request: TRequest,
-): Promise<HydratedSub2ApiAuth<TRequest>> => {
-  let accessToken = normalizeAccessToken(request.auth?.accessToken)
-  let refreshToken = normalizeRefreshToken(request.auth?.refreshToken)
-  let tokenExpiresAt = normalizeTokenExpiresAt(request.auth?.tokenExpiresAt)
-  let userId = request.auth?.userId
-  const authSession = getSub2ApiAuthSession(request)
-
-  if (request.accountId && authSession) {
-    const storedAuth = await authSession.getLatestAuth(request.accountId)
-    if (storedAuth) {
-      const expectedUserId = normalizeAccountIdentity(userId)
-      const storedUserId = normalizeAccountIdentity(storedAuth.userId)
-      const expectedOrigin = normalizeAccountSiteProfileUrlForOriginKey({
-        siteType: SITE_TYPES.SUB2API,
-        url: request.baseUrl,
-      })
-      if (
-        (storedUserId && expectedUserId && storedUserId !== expectedUserId) ||
-        (storedAuth.origin && storedAuth.origin !== expectedOrigin)
-      ) {
-        throw new Sub2ApiAuthPersistenceError({
-          status: SUB2API_AUTH_PERSISTENCE_STATUSES.IDENTITY_MISMATCH,
-        })
-      }
-
-      const storedAccessToken = normalizeAccessToken(storedAuth.accessToken)
-      const storedRefreshToken = normalizeRefreshToken(
-        storedAuth.sub2apiAuth?.refreshToken,
-      )
-      const storedTokenExpiresAt = normalizeTokenExpiresAt(
-        storedAuth.sub2apiAuth?.tokenExpiresAt,
-      )
-
-      const shouldPreferStoredAccess = Boolean(storedAccessToken)
-
-      if (shouldPreferStoredAccess) {
-        accessToken = storedAccessToken
-      }
-      if (storedRefreshToken) {
-        refreshToken = storedRefreshToken
-      }
-      if (typeof storedTokenExpiresAt === "number") {
-        tokenExpiresAt = storedTokenExpiresAt
-      }
-      if (userId === undefined) {
-        userId = storedUserId ?? undefined
-      }
-    }
-  }
-
-  const hydratedRequest: TRequest = {
-    ...request,
-    auth: {
-      ...request.auth,
-      authType: AuthTypeEnum.AccessToken,
-      accessToken,
-      ...(refreshToken ? { refreshToken } : {}),
-      ...(typeof tokenExpiresAt === "number" ? { tokenExpiresAt } : {}),
-      ...(userId !== undefined ? { userId } : {}),
-    },
-  } as TRequest
-
-  return {
-    request: hydratedRequest,
-    authSession,
-  }
-}
-
-const persistSub2ApiAuthUpdate = async (
-  request: ApiServiceRequest,
-  authUpdate: PersistableSub2ApiAuthUpdate,
-  authSession: Sub2ApiAuthSession | undefined,
-) => {
-  if (!request.accountId) {
-    return { status: SUB2API_AUTH_PERSISTENCE_STATUSES.PERSISTED } as const
-  }
-
-  if (!authSession) {
-    return { status: SUB2API_AUTH_PERSISTENCE_STATUSES.PERSISTED } as const
-  }
-
-  const expectedUserId = normalizeAccountIdentity(request.auth?.userId)
-  if (!expectedUserId) {
-    throw new Sub2ApiAuthPersistenceError({
-      status: SUB2API_AUTH_PERSISTENCE_STATUSES.IDENTITY_MISMATCH,
-    })
-  }
-
-  let result: Sub2ApiAuthPersistenceResult
-  try {
-    result = await authSession.persistAuthUpdate(request.accountId, {
-      ...authUpdate,
-      expectedOrigin: request.baseUrl,
-      expectedUserId,
-    })
-  } catch (error) {
-    logger.warn("Failed to persist Sub2API auth update", {
-      accountId: request.accountId,
-      error: getSafeErrorMessage(error),
-    })
-    throw new Sub2ApiAuthPersistenceError({
-      status: SUB2API_AUTH_PERSISTENCE_STATUSES.WRITE_FAILED,
-    })
-  }
-
-  if (result.status !== SUB2API_AUTH_PERSISTENCE_STATUSES.PERSISTED) {
-    throw new Sub2ApiAuthPersistenceError(result)
-  }
-  return result
-}
-
-const applySub2ApiAuthUpdate = <TRequest extends ApiServiceRequest>(
-  request: TRequest,
-  authUpdate: PersistableSub2ApiAuthUpdate,
-): TRequest =>
-  ({
-    ...request,
-    auth: {
-      ...request.auth,
-      authType: AuthTypeEnum.AccessToken,
-      accessToken: authUpdate.accessToken,
-      ...(authUpdate.refreshToken
-        ? { refreshToken: authUpdate.refreshToken }
-        : {}),
-      ...(typeof authUpdate.tokenExpiresAt === "number"
-        ? { tokenExpiresAt: authUpdate.tokenExpiresAt }
-        : {}),
-      ...(authUpdate.userId ? { userId: authUpdate.userId } : {}),
-    },
-  }) as TRequest
-
-const createSub2ApiAuthMutationLockKey = (
-  request: ApiServiceRequest,
-): string => {
-  if (request.accountId) {
-    return `account:${request.accountId}`
-  }
-
-  const lockToken =
-    normalizeRefreshToken(request.auth?.refreshToken) ||
-    normalizeAccessToken(request.auth?.accessToken) ||
-    "anonymous"
-
-  return `origin:${request.baseUrl}:${lockToken}`
-}
-
-const withSub2ApiAuthMutationLock = async <T>(
-  request: ApiServiceRequest,
-  runner: () => Promise<T>,
-): Promise<T> => {
-  const lockKey = createSub2ApiAuthMutationLockKey(request)
-  const previous = sub2ApiAuthMutationLocks.get(lockKey) ?? Promise.resolve()
-  let releaseCurrent!: () => void
-  const current = new Promise<void>((resolve) => {
-    releaseCurrent = resolve
-  })
-  const queued = previous.catch(() => undefined).then(() => current)
-
-  sub2ApiAuthMutationLocks.set(lockKey, queued)
-  await previous.catch(() => undefined)
-
-  try {
-    return await runner()
-  } finally {
-    releaseCurrent()
-    if (sub2ApiAuthMutationLocks.get(lockKey) === queued) {
-      sub2ApiAuthMutationLocks.delete(lockKey)
-    }
-  }
-}
-
-const didSub2ApiAuthChange = (
-  previousRequest: ApiServiceRequest,
-  nextRequest: ApiServiceRequest,
-): boolean => {
-  return (
-    normalizeAccessToken(previousRequest.auth?.accessToken) !==
-      normalizeAccessToken(nextRequest.auth?.accessToken) ||
-    normalizeRefreshToken(previousRequest.auth?.refreshToken) !==
-      normalizeRefreshToken(nextRequest.auth?.refreshToken) ||
-    normalizeTokenExpiresAt(previousRequest.auth?.tokenExpiresAt) !==
-      normalizeTokenExpiresAt(nextRequest.auth?.tokenExpiresAt)
-  )
-}
-
-const verifySub2ApiAuthIdentity = async <TRequest extends ApiServiceRequest>(
-  request: TRequest,
-  authUpdate: PersistableSub2ApiAuthUpdate,
-): Promise<PersistableSub2ApiAuthUpdate> => {
-  const expectedUserId = normalizeAccountIdentity(request.auth?.userId)
-  if (!request.accountId || !getSub2ApiAuthSession(request)) {
-    return authUpdate
-  }
-  if (!expectedUserId) {
-    throw new Sub2ApiAuthPersistenceError({
-      status: SUB2API_AUTH_PERSISTENCE_STATUSES.IDENTITY_MISMATCH,
-    })
-  }
-
-  const verificationRequest = applySub2ApiAuthUpdate(request, authUpdate)
-  let verified: Awaited<ReturnType<typeof fetchUserInfo>>
-  try {
-    verified = await fetchUserInfo(verificationRequest)
-  } catch {
-    throw new Sub2ApiTokenRefreshError(
-      SUB2API_TOKEN_REFRESH_FAILURE_REASONS.UNCERTAIN_ROTATION,
-    )
-  }
-  const verifiedUserId = normalizeAccountIdentity(verified.id)
-  if (verifiedUserId !== expectedUserId) {
-    throw new Sub2ApiAuthPersistenceError({
-      status: SUB2API_AUTH_PERSISTENCE_STATUSES.IDENTITY_MISMATCH,
-    })
-  }
-
-  return { ...authUpdate, userId: verifiedUserId }
-}
-
-const refreshSub2ApiRequestAuth = async <
-  TRequest extends ApiServiceRequest,
->(params: {
-  request: TRequest
-  refreshToken: string
-  authSession?: Sub2ApiAuthSession
-}): Promise<RefreshedSub2ApiRequest<TRequest>> => {
-  return withSub2ApiAuthMutationLock(params.request, async () => {
-    const latestHydrated = await hydrateSub2ApiAuthRequest(params.request)
-    const latestRequest = latestHydrated.request
-    const latestAuthSession = latestHydrated.authSession ?? params.authSession
-    const latestRefreshToken =
-      normalizeRefreshToken(latestRequest.auth?.refreshToken) ||
-      normalizeRefreshToken(params.refreshToken)
-    const latestTokenExpiresAt = normalizeTokenExpiresAt(
-      latestRequest.auth?.tokenExpiresAt,
-    )
-
-    if (
-      didSub2ApiAuthChange(params.request, latestRequest) &&
-      latestRefreshToken &&
-      typeof latestTokenExpiresAt === "number"
-    ) {
-      return {
-        request: latestRequest,
-        refreshToken: latestRefreshToken,
-        tokenExpiresAt: latestTokenExpiresAt,
-      }
-    }
-
-    const refreshed = await refreshSub2ApiTokens({
-      baseUrl: latestRequest.baseUrl,
-      accessToken: latestRequest.auth?.accessToken,
-      refreshToken: latestRefreshToken,
-    })
-
-    const verifiedRefresh = await verifySub2ApiAuthIdentity(
-      latestRequest,
-      refreshed,
-    )
-    const refreshedRequest = applySub2ApiAuthUpdate(
-      latestRequest,
-      verifiedRefresh,
-    )
-    await persistSub2ApiAuthUpdate(
-      refreshedRequest,
-      verifiedRefresh,
-      latestAuthSession,
-    )
-
-    return {
-      request: refreshedRequest,
-      refreshToken: refreshed.refreshToken,
-      tokenExpiresAt: refreshed.tokenExpiresAt,
-    }
-  })
-}
-
-const resyncSub2ApiRequestAuth = async <
-  TRequest extends ApiServiceRequest,
->(params: {
-  request: TRequest
-  endpoint: string
-  authSession?: Sub2ApiAuthSession
-}): Promise<TRequest> => {
-  return withSub2ApiAuthMutationLock(params.request, async () => {
-    const latestHydrated = await hydrateSub2ApiAuthRequest(params.request)
-    const latestRequest = latestHydrated.request
-    const latestAuthSession = latestHydrated.authSession ?? params.authSession
-
-    if (didSub2ApiAuthChange(params.request, latestRequest)) {
-      return latestRequest
-    }
-
-    const expectedUserId = normalizeAccountIdentity(latestRequest.auth?.userId)
-    let resynced
-    try {
-      resynced = await resyncSub2ApiAuthToken(
-        latestRequest.baseUrl,
-        latestRequest.tempWindowRequestSource,
-        latestRequest.protectionBypassExecution,
-        expectedUserId ?? undefined,
-      )
-    } catch (error) {
-      if (error instanceof Sub2ApiAuthIdentityMismatchError) {
-        throw new Sub2ApiAuthPersistenceError({
-          status: SUB2API_AUTH_PERSISTENCE_STATUSES.IDENTITY_MISMATCH,
-        })
-      }
-      throw error
-    }
-    if (!resynced) {
-      throw createLoginRequiredError(params.endpoint)
-    }
-
-    logger.info("Retrying Sub2API authenticated request after JWT re-sync", {
-      endpoint: params.endpoint,
-      source: resynced.source,
-    })
-
-    const resyncedUpdate: PersistableSub2ApiAuthUpdate = {
-      accessToken: resynced.accessToken,
-      ...(resynced.userId ? { userId: resynced.userId } : {}),
-      ...(resynced.sub2apiAuth?.refreshToken
-        ? { refreshToken: resynced.sub2apiAuth.refreshToken }
-        : {}),
-      ...(typeof resynced.sub2apiAuth?.tokenExpiresAt === "number"
-        ? { tokenExpiresAt: resynced.sub2apiAuth.tokenExpiresAt }
-        : {}),
-    }
-    const resyncedRequest = applySub2ApiAuthUpdate(
-      latestRequest,
-      resyncedUpdate,
-    )
-
-    await persistSub2ApiAuthUpdate(
-      resyncedRequest,
-      resyncedUpdate,
-      latestAuthSession,
-    )
-
-    return resyncedRequest
-  })
-}
-
-type AuthenticatedSub2ApiRunner<T> = (request: ApiServiceRequest) => Promise<T>
-
-type AuthenticatedSub2ApiRequestOptions = {
-  proactiveRefresh?: boolean
-  recoverUnauthorized?: boolean
-  beforeUnauthorizedRetry?: (request: ApiServiceRequest) => Promise<void>
-}
-
-const runRecoveredSub2ApiRequest = async <T>(params: {
-  request: ApiServiceRequest
-  endpoint: string
-  runner: AuthenticatedSub2ApiRunner<T>
-  beforeUnauthorizedRetry?: (request: ApiServiceRequest) => Promise<void>
-}): Promise<T> => {
-  await params.beforeUnauthorizedRetry?.(params.request)
-  try {
-    return await params.runner(params.request)
-  } catch (retryError) {
-    if (isUnauthorizedError(retryError)) {
-      throw createLoginRequiredError(params.endpoint)
-    }
-    throw retryError
-  }
-}
-
-const retrySub2ApiRunnerWithResyncedAuth = async <T>(params: {
-  request: ApiServiceRequest
-  endpoint: string
-  authSession?: Sub2ApiAuthSession
-  runner: AuthenticatedSub2ApiRunner<T>
-  beforeUnauthorizedRetry?: (request: ApiServiceRequest) => Promise<void>
-}): Promise<T> => {
-  const updatedRequest = await resyncSub2ApiRequestAuth({
-    request: params.request,
-    endpoint: params.endpoint,
-    authSession: params.authSession,
-  })
-
-  return runRecoveredSub2ApiRequest({
-    request: updatedRequest,
-    endpoint: params.endpoint,
-    runner: params.runner,
-    beforeUnauthorizedRetry: params.beforeUnauthorizedRetry,
-  })
-}
-
-/**
- * Execute a Sub2API API request with automatic handling of JWT hydration, proactive refresh, and reactive refresh/resync on 401 errors.
- * @param request The initial API request, which may have incomplete auth info that will be hydrated.
- * @param endpoint The API endpoint being called, used for logging and error messages.
- * @param runner A function that executes the actual API call with a fully hydrated and refreshed request.
- */
-const executeAuthenticatedSub2ApiRequest = async <T>(
-  request: ApiServiceRequest,
-  endpoint: string,
-  runner: AuthenticatedSub2ApiRunner<T>,
-  options: AuthenticatedSub2ApiRequestOptions = {},
-): Promise<T> => {
-  const hydrated = await hydrateSub2ApiAuthRequest(request)
-  let effectiveRequest = normalizeJwtRequest(hydrated.request)
-  let refreshToken = normalizeRefreshToken(effectiveRequest.auth?.refreshToken)
-  const tokenExpiresAt = normalizeTokenExpiresAt(
-    effectiveRequest.auth?.tokenExpiresAt,
-  )
-
-  if (
-    options.proactiveRefresh !== false &&
-    refreshToken &&
-    typeof tokenExpiresAt === "number" &&
-    isCloseToExpiry(tokenExpiresAt)
-  ) {
-    try {
-      const refreshed = await refreshSub2ApiRequestAuth({
-        request: effectiveRequest,
-        refreshToken,
-        authSession: hydrated.authSession,
-      })
-
-      effectiveRequest = refreshed.request
-      refreshToken = refreshed.refreshToken
-    } catch (refreshError) {
-      throwIfSub2ApiAuthPersistenceFailed(refreshError)
-      if (isUncertainSub2ApiRefreshRotation(refreshError)) {
-        effectiveRequest = await resyncSub2ApiRequestAuth({
-          request: effectiveRequest,
-          endpoint,
-          authSession: hydrated.authSession,
-        })
-        refreshToken = normalizeRefreshToken(
-          effectiveRequest.auth?.refreshToken,
-        )
-      } else {
-        logger.warn("Sub2API proactive key auth refresh failed", {
-          endpoint,
-          error: getSafeErrorMessage(refreshError),
-        })
-      }
-    }
-  }
-
-  try {
-    return await runner(effectiveRequest)
-  } catch (error) {
-    if (!isUnauthorizedError(error)) {
-      throw error
-    }
-    notifyApiTransportObserver(request.observer, "onPreHandlerUnauthorized")
-    if (options.recoverUnauthorized === false) {
-      throw error
-    }
-
-    if (refreshToken) {
-      let refreshed: RefreshedSub2ApiRequest
-      try {
-        refreshed = await refreshSub2ApiRequestAuth({
-          request: effectiveRequest,
-          refreshToken,
-          authSession: hydrated.authSession,
-        })
-      } catch (refreshError) {
-        throwIfSub2ApiAuthPersistenceFailed(refreshError)
-        logger.warn(
-          "Failed to restore Sub2API authenticated request via refresh token",
-          {
-            endpoint,
-            error: getSafeErrorMessage(refreshError),
-          },
-        )
-        if (isSub2ApiRefreshTokenContractError(refreshError)) {
-          throw createRefreshTokenInvalidError(endpoint)
-        }
-
-        let updatedRequest: ApiServiceRequest
-        try {
-          updatedRequest = await resyncSub2ApiRequestAuth({
-            request: effectiveRequest,
-            endpoint,
-            authSession: hydrated.authSession,
-          })
-        } catch (resyncError) {
-          throwIfSub2ApiAuthPersistenceFailed(resyncError)
-          throw refreshError
-        }
-
-        return await runRecoveredSub2ApiRequest({
-          request: updatedRequest,
-          endpoint,
-          runner,
-          beforeUnauthorizedRetry: options.beforeUnauthorizedRetry,
-        })
-      }
-
-      effectiveRequest = refreshed.request
-      return await runRecoveredSub2ApiRequest({
-        request: effectiveRequest,
-        endpoint,
-        runner,
-        beforeUnauthorizedRetry: options.beforeUnauthorizedRetry,
-      })
-    }
-
-    return await retrySub2ApiRunnerWithResyncedAuth({
-      request: effectiveRequest,
-      endpoint,
-      authSession: hydrated.authSession,
-      runner,
-      beforeUnauthorizedRetry: options.beforeUnauthorizedRetry,
-    })
-  }
 }
 
 const fetchSub2ApiDataWithRequest = async <T>(
@@ -1246,13 +619,13 @@ const fetchCurrentUserAndTodayUsage = async (
   currentUser: Sub2ApiCurrentUser
   todayUsage: TodayUsageDataWithAvailability
 }> => {
-  const currentUser = await fetchCurrentUser(request)
+  const currentUser = await fetchCurrentUserWithRequest(request)
   let todayUsage = createZeroTodayUsage(
     ACCOUNT_TODAY_METRIC_REASONS.RequestFailed,
   )
 
   try {
-    todayUsage = await fetchTodayUsage(request)
+    todayUsage = await fetchTodayUsageWithRequest(request)
   } catch (error) {
     logger.warn("Failed to fetch Sub2API today usage; using zero defaults", {
       accountId: request.accountId,
@@ -1263,51 +636,14 @@ const fetchCurrentUserAndTodayUsage = async (
   return { currentUser, todayUsage }
 }
 
-const refreshSub2ApiAccountViaResync = async (params: {
-  request: ApiServiceRequest
-  authSession?: Sub2ApiAuthSession
-  checkIn: CheckInConfig
-}): Promise<RefreshAccountResult> => {
-  const retryRequest = await resyncSub2ApiRequestAuth({
-    request: params.request,
-    endpoint: SUB2API_AUTH_ME_ENDPOINT,
-    authSession: params.authSession,
-  })
-
-  const { currentUser, todayUsage } = await fetchCurrentUserAndTodayUsage(
-    retryRequest as ApiServiceAccountRequest,
-  )
-
-  return createRefreshSuccessResult(currentUser, params.checkIn, todayUsage, {
-    accessToken: retryRequest.auth.accessToken,
-  })
-}
-
 /**
  * Fetch the currently logged-in Sub2API user.
  */
-export async function fetchCurrentUser(
+const fetchCurrentUserWithRequest = async (
   request: ApiServiceRequest,
-): Promise<Sub2ApiCurrentUser> {
+): Promise<Sub2ApiCurrentUser> => {
   const jwtRequest = normalizeJwtRequest(request)
-
-  const body = (await fetchApi<Sub2ApiAuthMeResponse>(
-    jwtRequest,
-    {
-      endpoint: SUB2API_AUTH_ME_ENDPOINT,
-      options: {
-        method: "GET",
-        cache: "no-store",
-      },
-    },
-    true,
-  )) as Sub2ApiAuthMeResponse
-
-  const data = parseSub2ApiEnvelope<Sub2ApiAuthMeData>(
-    body,
-    SUB2API_AUTH_ME_ENDPOINT,
-  )
-  const identity = parseSub2ApiUserIdentity(data)
+  const { identity } = await fetchSub2ApiAuthIdentity(jwtRequest)
 
   return {
     userId: identity.userId,
@@ -1315,6 +651,17 @@ export async function fetchCurrentUser(
     balanceUsd: identity.balanceUsd,
     quota: identity.quota,
   }
+}
+
+/** Fetch the authenticated Sub2API dashboard identity. */
+export async function fetchCurrentUser(
+  request: ApiServiceRequest,
+): Promise<Sub2ApiCurrentUser> {
+  return await executeAuthenticatedSub2ApiRequest(
+    request,
+    SUB2API_AUTH_ME_ENDPOINT,
+    fetchCurrentUserWithRequest,
+  )
 }
 
 /**
@@ -1325,31 +672,19 @@ export async function fetchCurrentUser(
  * This adapter intentionally does not fall back to common `/api/user/self`
  * or `/api/user/token` semantics.
  */
-export async function fetchUserInfo(request: ApiServiceRequest): Promise<{
+type Sub2ApiUserInfo = {
   id: string
   username: string
   access_token: string
   user: UserInfo
-}> {
+}
+
+const fetchUserInfoWithRequest = async (
+  request: ApiServiceRequest,
+): Promise<Sub2ApiUserInfo> => {
   const jwtRequest = normalizeJwtRequest(request)
   const accessToken = normalizeAccessToken(jwtRequest.auth.accessToken)
-  const body = (await fetchApi<Sub2ApiAuthMeResponse>(
-    jwtRequest,
-    {
-      endpoint: SUB2API_AUTH_ME_ENDPOINT,
-      options: {
-        method: "GET",
-        cache: "no-store",
-      },
-    },
-    true,
-  )) as Sub2ApiAuthMeResponse
-
-  const data = parseSub2ApiEnvelope<Sub2ApiAuthMeData>(
-    body,
-    SUB2API_AUTH_ME_ENDPOINT,
-  )
-  const identity = parseSub2ApiUserIdentity(data)
+  const { data, identity } = await fetchSub2ApiAuthIdentity(jwtRequest)
 
   return {
     id: String(identity.userId),
@@ -1364,73 +699,15 @@ export async function fetchUserInfo(request: ApiServiceRequest): Promise<{
   }
 }
 
-const fetchSub2ApiAccessTokenInfo = async (
+/** Fetch the authenticated Sub2API account profile. */
+export async function fetchUserInfo(
   request: ApiServiceRequest,
-): Promise<AccessTokenInfo> => {
-  const userInfo = await fetchUserInfo(request)
-
-  return {
-    username: userInfo.username,
-    access_token: userInfo.access_token,
-  }
-}
-
-const fetchSub2ApiAccessTokenInfoWithResyncedAuth = async (params: {
-  request: ApiServiceRequest
-  authSession?: Sub2ApiAuthSession
-}): Promise<AccessTokenInfo> => {
-  const resyncedRequest = await resyncSub2ApiRequestAuth({
-    request: params.request,
-    endpoint: SUB2API_AUTH_ME_ENDPOINT,
-    authSession: params.authSession,
-  })
-
-  try {
-    return await fetchSub2ApiAccessTokenInfo(resyncedRequest)
-  } catch (retryError) {
-    if (isUnauthorizedError(retryError)) {
-      throw createLoginRequiredError(SUB2API_AUTH_ME_ENDPOINT)
-    }
-
-    throw retryError
-  }
-}
-
-const fetchSub2ApiAccessTokenInfoWithAuthRecovery = async (params: {
-  request: ApiServiceRequest
-  refreshToken: string
-  authSession?: Sub2ApiAuthSession
-}): Promise<AccessTokenInfo> => {
-  try {
-    return await fetchSub2ApiAccessTokenInfo(params.request)
-  } catch (error) {
-    if (!isUnauthorizedError(error)) {
-      throw error
-    }
-
-    if (params.refreshToken) {
-      try {
-        const refreshed = await refreshSub2ApiRequestAuth({
-          request: params.request,
-          refreshToken: params.refreshToken,
-          authSession: params.authSession,
-        })
-
-        return await fetchSub2ApiAccessTokenInfo(refreshed.request)
-      } catch (refreshError) {
-        throwIfSub2ApiAuthPersistenceFailed(refreshError)
-        logger.warn("Failed to restore Sub2API user info via refresh token", {
-          endpoint: SUB2API_AUTH_ME_ENDPOINT,
-          error: getSafeErrorMessage(refreshError),
-        })
-      }
-    }
-
-    return await fetchSub2ApiAccessTokenInfoWithResyncedAuth({
-      request: params.request,
-      authSession: params.authSession,
-    })
-  }
+): Promise<Sub2ApiUserInfo> {
+  return await executeAuthenticatedSub2ApiRequest(
+    request,
+    SUB2API_AUTH_ME_ENDPOINT,
+    fetchUserInfoWithRequest,
+  )
 }
 
 /**
@@ -1439,52 +716,20 @@ const fetchSub2ApiAccessTokenInfoWithAuthRecovery = async (params: {
 export async function getOrCreateAccessToken(
   request: ApiServiceRequest,
 ): Promise<AccessTokenInfo> {
-  const hydrated = await hydrateSub2ApiAuthRequest(request)
-  let effectiveRequest = hydrated.request
-  let accessToken = normalizeAccessToken(effectiveRequest.auth?.accessToken)
-  const refreshToken = normalizeRefreshToken(
-    effectiveRequest.auth?.refreshToken,
-  )
-  const tokenExpiresAt = normalizeTokenExpiresAt(
-    effectiveRequest.auth?.tokenExpiresAt,
-  )
-
-  if (accessToken && (!tokenExpiresAt || !isCloseToExpiry(tokenExpiresAt))) {
-    return await fetchSub2ApiAccessTokenInfoWithAuthRecovery({
-      request: effectiveRequest,
-      refreshToken,
-      authSession: hydrated.authSession,
-    })
-  }
-
-  if (refreshToken) {
-    try {
-      const refreshed = await refreshSub2ApiRequestAuth({
-        request: effectiveRequest,
-        refreshToken,
-        authSession: hydrated.authSession,
-      })
-      effectiveRequest = refreshed.request
-      accessToken = normalizeAccessToken(effectiveRequest.auth?.accessToken)
-
-      const userInfo = await fetchUserInfo(effectiveRequest)
+  return await executeAuthenticatedSub2ApiRequest(
+    request,
+    SUB2API_AUTH_ME_ENDPOINT,
+    async (authenticatedRequest) => {
+      const userInfo = await fetchUserInfoWithRequest(authenticatedRequest)
       return {
         username: userInfo.username,
-        access_token: accessToken,
+        access_token: normalizeAccessToken(
+          authenticatedRequest.auth.accessToken,
+        ),
       }
-    } catch (refreshError) {
-      throwIfSub2ApiAuthPersistenceFailed(refreshError)
-      logger.warn("Failed to restore Sub2API user info via refresh token", {
-        endpoint: SUB2API_AUTH_ME_ENDPOINT,
-        error: getSafeErrorMessage(refreshError),
-      })
-    }
-  }
-
-  return await fetchSub2ApiAccessTokenInfoWithResyncedAuth({
-    request: effectiveRequest,
-    authSession: hydrated.authSession,
-  })
+    },
+    { recoverInvalidRefreshTokenViaBrowser: true },
+  )
 }
 
 /**
@@ -1559,6 +804,31 @@ const createSub2ApiUsageStatsEndpoint = (): string =>
  * User routes register authenticated `GET /api/v1/usage/stats`; `period=today`
  * is the server-configured current day and maps to the extension's today fields.
  */
+const fetchTodayUsageWithRequest = async (
+  request: ApiServiceAccountRequest,
+): Promise<TodayUsageDataWithAvailability> => {
+  if (request.includeTodayCashflow === false) {
+    return createZeroTodayUsage(ACCOUNT_TODAY_METRIC_REASONS.NotCollected)
+  }
+
+  const endpoint = createSub2ApiUsageStatsEndpoint()
+  const body = await fetchApi<unknown>(
+    request,
+    {
+      endpoint,
+      options: {
+        method: "GET",
+        cache: "no-store",
+      },
+    },
+    true,
+  )
+  const data = parseSub2ApiEnvelope<Sub2ApiUsageStatsData>(body, endpoint)
+
+  return parseSub2ApiTodayUsage(data, endpoint)
+}
+
+/** Fetch today's Sub2API usage through the authenticated session lifecycle. */
 export async function fetchTodayUsage(
   request: ApiServiceAccountRequest,
 ): Promise<TodayUsageDataWithAvailability> {
@@ -1566,17 +836,14 @@ export async function fetchTodayUsage(
     return createZeroTodayUsage(ACCOUNT_TODAY_METRIC_REASONS.NotCollected)
   }
 
-  const endpoint = createSub2ApiUsageStatsEndpoint()
-  const data = await fetchSub2ApiData<Sub2ApiUsageStatsData>(
+  return await executeAuthenticatedSub2ApiRequest(
     request,
-    endpoint,
-    {
-      method: "GET",
-      cache: "no-store",
-    },
+    createSub2ApiUsageStatsEndpoint(),
+    (authenticatedRequest) =>
+      fetchTodayUsageWithRequest(
+        authenticatedRequest as ApiServiceAccountRequest,
+      ),
   )
-
-  return parseSub2ApiTodayUsage(data, endpoint)
 }
 
 /**
@@ -1597,12 +864,16 @@ export async function fetchTodayIncome(
 export async function fetchAccountData(
   request: ApiServiceAccountRequest,
 ): Promise<AccountData> {
-  const checkIn = request.checkIn
-
-  const { currentUser, todayUsage } =
-    await fetchCurrentUserAndTodayUsage(request)
-
-  return createAccountData(currentUser, checkIn, todayUsage)
+  return await executeAuthenticatedSub2ApiRequest(
+    request,
+    SUB2API_AUTH_ME_ENDPOINT,
+    async (authenticatedRequest) => {
+      const { currentUser, todayUsage } = await fetchCurrentUserAndTodayUsage(
+        authenticatedRequest as ApiServiceAccountRequest,
+      )
+      return createAccountData(currentUser, request.checkIn, todayUsage)
+    },
+  )
 }
 
 /**
@@ -1611,161 +882,64 @@ export async function fetchAccountData(
 export async function refreshAccountData(
   request: ApiServiceAccountRequest,
 ): Promise<RefreshAccountResult> {
-  const checkIn = request.checkIn
-  let hydratedRequest: HydratedSub2ApiAuth<ApiServiceAccountRequest> | null =
-    null
-  let effectiveRequest = request
-  let refreshToken = normalizeRefreshToken(request.auth?.refreshToken)
-  let tokenExpiresAt = normalizeTokenExpiresAt(request.auth?.tokenExpiresAt)
-
   try {
-    hydratedRequest = await hydrateSub2ApiAuthRequest(request)
-    effectiveRequest = hydratedRequest.request
-    refreshToken = normalizeRefreshToken(effectiveRequest.auth?.refreshToken)
-    tokenExpiresAt = normalizeTokenExpiresAt(
-      effectiveRequest.auth?.tokenExpiresAt,
+    const refreshed = await executeAuthenticatedSub2ApiRequest(
+      request,
+      SUB2API_AUTH_ME_ENDPOINT,
+      async (authenticatedRequest) => {
+        const accountRequest = authenticatedRequest as ApiServiceAccountRequest
+        const accountData = await fetchCurrentUserAndTodayUsage(accountRequest)
+        return { ...accountData, request: accountRequest }
+      },
+      { recoverInvalidRefreshTokenViaBrowser: true },
     )
-    const hasStoredRefreshToken = Boolean(refreshToken)
-    let hasProactiveRefreshUpdate = false
+    const authChanged = didSub2ApiAuthChange(request, refreshed.request)
+    const refreshToken = normalizeRefreshToken(
+      refreshed.request.auth?.refreshToken,
+    )
+    const tokenExpiresAt = normalizeTokenExpiresAt(
+      refreshed.request.auth?.tokenExpiresAt,
+    )
 
-    if (hasStoredRefreshToken && typeof tokenExpiresAt === "number") {
-      if (isCloseToExpiry(tokenExpiresAt)) {
-        try {
-          const refreshed = await refreshSub2ApiRequestAuth({
-            request: effectiveRequest,
-            refreshToken,
-            authSession: hydratedRequest.authSession,
-          })
-
-          effectiveRequest = refreshed.request
-          refreshToken = refreshed.refreshToken
-          tokenExpiresAt = refreshed.tokenExpiresAt
-          hasProactiveRefreshUpdate = true
-        } catch (refreshError) {
-          throwIfSub2ApiAuthPersistenceFailed(refreshError)
-          if (isUncertainSub2ApiRefreshRotation(refreshError)) {
-            effectiveRequest = await resyncSub2ApiRequestAuth({
-              request: effectiveRequest,
-              endpoint: SUB2API_AUTH_ME_ENDPOINT,
-              authSession: hydratedRequest.authSession,
-            })
-            refreshToken = normalizeRefreshToken(
-              effectiveRequest.auth?.refreshToken,
-            )
-            tokenExpiresAt = normalizeTokenExpiresAt(
-              effectiveRequest.auth?.tokenExpiresAt,
-            )
-            hasProactiveRefreshUpdate = true
-          } else {
-            logger.warn("Sub2API proactive token refresh failed", {
-              error: getSafeErrorMessage(refreshError),
-            })
-          }
-        }
-      }
-    }
-
-    const { currentUser, todayUsage } =
-      await fetchCurrentUserAndTodayUsage(effectiveRequest)
-
-    return createRefreshSuccessResult(currentUser, checkIn, todayUsage, {
-      ...(hasProactiveRefreshUpdate
+    return createRefreshSuccessResult(
+      refreshed.currentUser,
+      request.checkIn,
+      refreshed.todayUsage,
+      authChanged
         ? {
-            accessToken: effectiveRequest.auth.accessToken,
-            sub2apiAuth: {
-              refreshToken,
-              ...(typeof tokenExpiresAt === "number" ? { tokenExpiresAt } : {}),
-            },
+            accessToken: refreshed.request.auth.accessToken,
+            ...(refreshToken
+              ? {
+                  sub2apiAuth: {
+                    refreshToken,
+                    ...(typeof tokenExpiresAt === "number"
+                      ? { tokenExpiresAt }
+                      : {}),
+                  },
+                }
+              : {}),
           }
-        : {}),
-    })
+        : undefined,
+    )
   } catch (error) {
-    if (error instanceof Sub2ApiAuthPersistenceError) {
+    if (getSub2ApiAuthPersistenceStatus(error)) {
       return {
         success: false,
         healthStatus: createAuthPersistenceFailureHealthStatus(),
       }
     }
     if (error instanceof ApiError && error.statusCode === 401) {
-      hydratedRequest ??= await hydrateSub2ApiAuthRequest(request)
-      effectiveRequest = didSub2ApiAuthChange(request, effectiveRequest)
-        ? effectiveRequest
-        : hydratedRequest.request
-      refreshToken = normalizeRefreshToken(effectiveRequest.auth?.refreshToken)
-      const hasStoredRefreshToken = Boolean(refreshToken)
-
-      if (hasStoredRefreshToken) {
-        try {
-          const refreshed = await refreshSub2ApiRequestAuth({
-            request: effectiveRequest,
-            refreshToken,
-            authSession: hydratedRequest.authSession,
-          })
-
-          const retryRequest = refreshed.request
-
-          const { currentUser, todayUsage } =
-            await fetchCurrentUserAndTodayUsage(retryRequest)
-
-          return createRefreshSuccessResult(currentUser, checkIn, todayUsage, {
-            accessToken: retryRequest.auth.accessToken,
-            sub2apiAuth: {
-              refreshToken: refreshed.refreshToken,
-              tokenExpiresAt: refreshed.tokenExpiresAt,
-            },
-          })
-        } catch (refreshError) {
-          throwIfSub2ApiAuthPersistenceFailed(refreshError)
-          logger.warn("Failed to restore Sub2API session via refresh token", {
-            error: getSafeErrorMessage(refreshError),
-          })
-
-          try {
-            return await refreshSub2ApiAccountViaResync({
-              request: effectiveRequest,
-              authSession: hydratedRequest.authSession,
-              checkIn,
-            })
-          } catch (resyncError) {
-            return {
-              success: false,
-              healthStatus:
-                resyncError instanceof Sub2ApiAuthPersistenceError
-                  ? createAuthPersistenceFailureHealthStatus()
-                  : createRefreshTokenRestoreRequiredHealthStatus(),
-            }
-          }
-        }
+      return {
+        success: false,
+        healthStatus: isSub2ApiRefreshTokenInvalidError(error)
+          ? createRefreshTokenRestoreRequiredHealthStatus()
+          : createLoginRequiredHealthStatus(),
       }
-
-      try {
-        return await refreshSub2ApiAccountViaResync({
-          request: hydratedRequest.request,
-          authSession: hydratedRequest.authSession,
-          checkIn,
-        })
-      } catch (retryError) {
-        if (retryError instanceof Sub2ApiAuthPersistenceError) {
-          return {
-            success: false,
-            healthStatus: createAuthPersistenceFailureHealthStatus(),
-          }
-        }
-        if (retryError instanceof ApiError && retryError.statusCode === 401) {
-          return {
-            success: false,
-            healthStatus: createLoginRequiredHealthStatus(),
-          }
-        }
-
-        logger.error("Failed to refresh Sub2API account after JWT re-sync", {
-          error: getSafeErrorMessage(retryError),
-        })
-
-        return {
-          success: false,
-          healthStatus: determineHealthStatus(retryError),
-        }
+    }
+    if (error instanceof Sub2ApiTokenRefreshError) {
+      return {
+        success: false,
+        healthStatus: createRefreshTokenRestoreRequiredHealthStatus(),
       }
     }
 

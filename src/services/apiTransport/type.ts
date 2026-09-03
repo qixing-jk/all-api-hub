@@ -61,6 +61,14 @@ export const API_TRANSPORT_FETCH_CONTEXT_KINDS = {
 
 export const API_SERVICE_FETCH_CONTEXT_KINDS = API_TRANSPORT_FETCH_CONTEXT_KINDS
 
+export const API_TRANSPORT_CURRENT_TAB_FALLBACK_MODES = {
+  Allow: "allow",
+  Forbid: "forbid",
+} as const
+
+export type ApiTransportCurrentTabFallbackMode =
+  (typeof API_TRANSPORT_CURRENT_TAB_FALLBACK_MODES)[keyof typeof API_TRANSPORT_CURRENT_TAB_FALLBACK_MODES]
+
 export type ApiTransportFetchContextKind =
   (typeof API_TRANSPORT_FETCH_CONTEXT_KINDS)[keyof typeof API_TRANSPORT_FETCH_CONTEXT_KINDS]
 
@@ -135,6 +143,8 @@ export interface ApiTransportRequest {
   abortDeadline?: DeferredAbortDeadline
   cookieAuthSessionCookie?: string
   fetchContext?: ApiTransportFetchContext
+  /** Controls whether a failed current-tab dispatch may fall back to extension fetch. */
+  currentTabFallback?: ApiTransportCurrentTabFallbackMode
   /** Originating extension surface for temporary-window presentation policy. */
   tempWindowRequestSource?: TempWindowRequestSource
   /** Invocation intent for protected temporary-context work. */

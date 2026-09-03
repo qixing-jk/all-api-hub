@@ -10,9 +10,9 @@ import {
   type Sub2ApiAuthSessionRequest,
 } from "~/services/apiService/sub2api/authSession"
 import {
-  resyncSub2ApiAuthToken,
+  recoverSub2ApiBrowserAuth as resyncSub2ApiAuthToken,
   Sub2ApiAuthIdentityMismatchError,
-} from "~/services/apiService/sub2api/tokenResync"
+} from "~/services/apiService/sub2api/browserAuth"
 import { fetchApiResponse } from "~/services/apiTransport/request"
 import type { ApiTransportResponse } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
@@ -28,12 +28,16 @@ vi.mock("~/services/apiTransport/request", async (importOriginal) => ({
   fetchApiResponse: vi.fn(),
 }))
 
-vi.mock("~/services/apiService/sub2api/tokenResync", async (importOriginal) => {
+vi.mock("~/services/apiService/sub2api/browserAuth", async (importOriginal) => {
   const actual =
     await importOriginal<
-      typeof import("~/services/apiService/sub2api/tokenResync")
+      typeof import("~/services/apiService/sub2api/browserAuth")
     >()
-  return { ...actual, resyncSub2ApiAuthToken: vi.fn() }
+  return {
+    ...actual,
+    findSub2ApiBrowserAuth: vi.fn(),
+    recoverSub2ApiBrowserAuth: vi.fn(),
+  }
 })
 
 const response = (
@@ -192,10 +196,11 @@ describe("Sub2API Pro daily check-in authenticated transport", () => {
       ["POST", "/api/v1/redeem/checkin"],
     ])
     expect(resyncSub2ApiAuthToken).toHaveBeenCalledWith(
-      "https://checkin.example.invalid",
-      TEMP_WINDOW_REQUEST_SOURCES.Background,
-      undefined,
-      "42",
+      expect.objectContaining({
+        baseUrl: "https://checkin.example.invalid",
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+        expectedUserId: "42",
+      }),
     )
     expect(persistAuthUpdate).toHaveBeenCalledWith(
       "account-1",

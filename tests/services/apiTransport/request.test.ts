@@ -19,6 +19,7 @@ import {
 } from "~/services/apiTransport/response"
 import {
   API_AUTH_TOKEN_MODES,
+  API_TRANSPORT_CURRENT_TAB_FALLBACK_MODES,
   API_TRANSPORT_FETCH_CONTEXT_KINDS,
 } from "~/services/apiTransport/type"
 import { DEFAULT_AUTOMATIC_FEATURE_BYPASS } from "~/services/preferences/tempWindowFallbackPreferences"
@@ -1174,6 +1175,38 @@ describe("apiTransport request helpers", () => {
     expect(directRequestCount).toBe(1)
     expect(observer.onDispatch).toHaveBeenCalledTimes(1)
     expect(observer.onResponse).toHaveBeenCalledTimes(1)
+  })
+
+  it("does not leave a required current-tab context after a pre-dispatch receiver failure", async () => {
+    const receiverUnavailable = new Error(
+      "Could not establish connection. Receiving end does not exist.",
+    )
+    let directRequestCount = 0
+    mockSendTabMessageWithRetry.mockRejectedValueOnce(receiverUnavailable)
+    server.use(
+      http.post(API_URL, () => {
+        directRequestCount += 1
+        return HttpResponse.json({ success: true, data: { ok: true } })
+      }),
+    )
+
+    await expect(
+      fetchApiData<{ ok: boolean }>(
+        {
+          baseUrl: BASE_URL,
+          auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+          fetchContext: {
+            kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+            tabId: 456,
+            origin: "https://example.com",
+          },
+          currentTabFallback: API_TRANSPORT_CURRENT_TAB_FALLBACK_MODES.Forbid,
+        },
+        { endpoint: ENDPOINT, options: { method: "POST", body: "{}" } },
+      ),
+    ).rejects.toBe(receiverUnavailable)
+
+    expect(directRequestCount).toBe(0)
   })
 
   it("falls back after structured current-tab pre-dispatch failure evidence", async () => {

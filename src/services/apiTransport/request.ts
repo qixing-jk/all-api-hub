@@ -33,6 +33,7 @@ import type {
 } from "~/services/apiTransport/type"
 import {
   API_AUTH_TOKEN_MODES,
+  API_TRANSPORT_CURRENT_TAB_FALLBACK_MODES,
   API_TRANSPORT_FETCH_CONTEXT_KINDS,
   summarizeApiTransportFetchContext,
 } from "~/services/apiTransport/type"
@@ -470,7 +471,10 @@ async function executeWithCurrentTabContentPreference<T, TResult>(
     const replaySafe = isReplaySafeRemoteFetch(context.fetchOptions)
     const dispatched = context.wasDispatched()
     const mustNotFallback =
-      responseInspectionFailed || (dispatched && !replaySafe)
+      context.request.currentTabFallback ===
+        API_TRANSPORT_CURRENT_TAB_FALLBACK_MODES.Forbid ||
+      responseInspectionFailed ||
+      (dispatched && !replaySafe)
     logger.debug(
       mustNotFallback
         ? "Current-tab content fetch failed without a safe fallback"
