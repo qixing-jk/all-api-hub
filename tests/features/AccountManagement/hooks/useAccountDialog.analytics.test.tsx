@@ -366,6 +366,7 @@ describe("useAccountDialog analytics", () => {
   })
 
   it("tracks failed account auto-detect with safe context and a safe error category", async () => {
+    const recoverySecret = "private-recovery-secret"
     mockAutoDetectAccount.mockResolvedValueOnce({
       success: false,
       message: "backend leaked private host",
@@ -380,6 +381,19 @@ describe("useAccountDialog analytics", () => {
       detailedError: {
         type: AutoDetectErrorType.UNAUTHORIZED,
         message: "private backend text",
+      },
+      recoveryData: {
+        siteType: SITE_TYPES.NEW_API,
+        username: "private-recovery-user",
+        accessToken: recoverySecret,
+        cookieAuthSessionCookie: `session=${recoverySecret}`,
+        transientAuth: {
+          kind: "new-api-dashboard-bearer",
+          token: recoverySecret,
+          expiresAt: 4_102_444_800,
+          sessionId: "private-recovery-session",
+          origin: "https://private.example.com",
+        },
       },
     })
 
@@ -422,6 +436,12 @@ describe("useAccountDialog analytics", () => {
       },
     )
     expectNoSensitiveAnalyticsFields()
+    expect(
+      JSON.stringify(mockStartProductAnalyticsAction.mock.calls),
+    ).not.toContain(recoverySecret)
+    expect(
+      JSON.stringify(mockCompleteProductAnalyticsAction.mock.calls),
+    ).not.toContain(recoverySecret)
   })
 
   it("tracks completion failures with the final hinted site type", async () => {

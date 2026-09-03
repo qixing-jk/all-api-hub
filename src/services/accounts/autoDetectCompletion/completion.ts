@@ -4,6 +4,7 @@ import {
 } from "~/constants/autoDetect"
 import type { AccountSiteType } from "~/constants/siteType"
 import { createPersistedSiteAccount } from "~/services/accounts/accountDefaults"
+import type { AccountAutoDetectRecoveryData } from "~/services/accounts/autoDetect/recovery"
 import { getSiteName } from "~/services/accounts/siteName"
 import type { SiteStatusInfo } from "~/services/apiAdapters/contracts/accountBootstrap"
 import type {
@@ -141,6 +142,7 @@ const createCompletionError = (
 const createAccountCompletionHelpers = (params: {
   url: string
   siteType: AccountSiteType
+  onRecoveryData?: (data: AccountAutoDetectRecoveryData) => void
 }): AccountCompletionHelpers => ({
   createServiceRequest(input: {
     baseUrl: string
@@ -168,6 +170,9 @@ const createAccountCompletionHelpers = (params: {
       error: getErrorMessage(error),
     })
     return false as const
+  },
+  captureRecoveryData(data) {
+    params.onRecoveryData?.(data)
   },
 })
 
@@ -211,8 +216,11 @@ export async function completeAutoDetectedAccount(
     createAccountCompletionHelpers({
       url,
       siteType,
+      onRecoveryData: request.onRecoveryData,
     }),
   )
+
+  request.onRecoveryData?.(completed)
 
   const completedWithDiscovery = await discoverCompletedCheckIn({
     url,

@@ -63,6 +63,8 @@ const createInitialCheckInConfig = createAccountCompletionCheckInConfigMock(
   },
 )
 
+const captureRecoveryData = vi.fn()
+
 const helpers = {
   createServiceRequest,
   fetchSiteName,
@@ -70,6 +72,7 @@ const helpers = {
   trimString,
   createInitialCheckInConfig,
   handleCheckInSupportFetchFailure: vi.fn(() => false as const),
+  captureRecoveryData,
 } satisfies AccountCompletionHelpers
 
 describe("voApiV2AccountCompletion", () => {
@@ -115,6 +118,12 @@ describe("voApiV2AccountCompletion", () => {
     })
     expect(createInitialCheckInConfig).toHaveBeenCalledWith({
       supported: true,
+    })
+    expect(captureRecoveryData).toHaveBeenCalledWith({
+      username: "dashboard-owner",
+      accessToken: "dashboard-jwt",
+      userId: "42",
+      authType: AuthTypeEnum.AccessToken,
     })
     expect(result).toEqual({
       username: "dashboard-owner",

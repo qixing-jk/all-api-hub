@@ -1,3 +1,4 @@
+import type { AccountAutoDetectRecoveryData } from "~/services/accounts/autoDetect/recovery"
 import type {
   AutoDetectAnalyticsContext,
   AutoDetectError,
@@ -41,6 +42,7 @@ export interface AccountValidationResponse
 
 export type AccountAutoDetectDetectedResponse = AccountValidationResponse & {
   kind: "detected"
+  recoveryData?: AccountAutoDetectRecoveryData
 }
 
 export type AccountAutoDetectResponse = AccountAutoDetectDetectedResponse
@@ -52,3 +54,5 @@ export interface AccountSaveResponse extends ServiceResponse<void> {
   accountId?: string // Present on success
   feedbackLevel?: "success" | "warning"
 }
+
+export type { AccountAutoDetectRecoveryData } from "~/services/accounts/autoDetect/recovery"

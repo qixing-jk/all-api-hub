@@ -106,6 +106,7 @@ describe("auto-detect completion", () => {
       siteType: SITE_TYPES.NEW_API,
       fetchContext,
     }
+    const onRecoveryData = vi.fn()
 
     const result = await completeAutoDetectedAccount({
       url: "https://status.example.com",
@@ -113,6 +114,7 @@ describe("auto-detect completion", () => {
       autoDetectContext,
       protectionBypassExecution,
       detected,
+      onRecoveryData,
     })
 
     expect(getSiteTypeCapabilitiesMock).toHaveBeenCalledWith(SITE_TYPES.NEW_API)
@@ -138,8 +140,12 @@ describe("auto-detect completion", () => {
         "trimString",
         "createInitialCheckInConfig",
         "handleCheckInSupportFetchFailure",
+        "captureRecoveryData",
       ].sort(),
     )
+    helpers.captureRecoveryData({ username: "partial-user" })
+    expect(onRecoveryData).toHaveBeenCalledWith(completedAccountData)
+    expect(onRecoveryData).toHaveBeenCalledWith({ username: "partial-user" })
     expect(
       helpers.createServiceRequest({
         baseUrl: "https://status.example.com",

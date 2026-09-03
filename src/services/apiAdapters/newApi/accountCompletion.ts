@@ -125,7 +125,28 @@ export const createNewApiAccountCompletion = (
       return Promise.resolve(null)
     }
 
-    const tokenPromise = fetchTokenInfo()
+    const tokenPromise = fetchTokenInfo().then((tokenInfo) => {
+      const tokenData =
+        tokenInfo && typeof tokenInfo === "object"
+          ? (tokenInfo as {
+              username?: unknown
+              access_token?: unknown
+              user?: { display_name?: unknown }
+            })
+          : {}
+      const recoveredUsername =
+        helpers.trimString(tokenData.username) ||
+        (siteType === SITE_TYPES.MODELFLARE
+          ? helpers.trimString(tokenData.user?.display_name)
+          : "")
+      const recoveredAccessToken = helpers.trimString(tokenData.access_token)
+      helpers.captureRecoveryData({
+        ...(recoveredUsername ? { username: recoveredUsername } : {}),
+        ...(recoveredAccessToken ? { accessToken: recoveredAccessToken } : {}),
+        authType: effectiveAuthType,
+      })
+      return tokenInfo
+    })
 
     const siteStatusPromise = accountBootstrap
       .fetchSiteStatus(
@@ -152,17 +173,41 @@ export const createNewApiAccountCompletion = (
             .catch(helpers.handleCheckInSupportFetchFailure),
     )
 
-    const [tokenInfo, siteStatus, checkSupport, siteName] = await Promise.all([
-      tokenPromise.catch((error) => {
-        throw helpers.createCompletionError(
-          AUTO_DETECT_FAILURE_REASONS.TokenFetchFailed,
-          modernDashboardAuth ? createModernAuthExchangeError(error) : error,
-        )
-      }),
-      siteStatusPromise,
-      checkSupportPromise,
-      siteStatusPromise.then(helpers.fetchSiteName),
-    ])
+    const siteMetadataPromise = siteStatusPromise.then(async (siteStatus) => {
+      const exchangeRate =
+        accountBootstrap.extractDefaultExchangeRate(siteStatus) ??
+        UI_CONSTANTS.EXCHANGE_RATE.DEFAULT
+      helpers.captureRecoveryData({ exchangeRate })
+      const siteName = await helpers.fetchSiteName(siteStatus)
+      helpers.captureRecoveryData({ siteName })
+      return { siteName, exchangeRate }
+    })
+
+    const [tokenResult, checkSupportResult, siteMetadataResult] =
+      await Promise.allSettled([
+        tokenPromise.catch((error) => {
+          throw helpers.createCompletionError(
+            AUTO_DETECT_FAILURE_REASONS.TokenFetchFailed,
+            modernDashboardAuth ? createModernAuthExchangeError(error) : error,
+          )
+        }),
+        checkSupportPromise,
+        siteMetadataPromise,
+      ])
+
+    if (tokenResult.status === "rejected") {
+      throw tokenResult.reason
+    }
+    if (checkSupportResult.status === "rejected") {
+      throw checkSupportResult.reason
+    }
+    if (siteMetadataResult.status === "rejected") {
+      throw siteMetadataResult.reason
+    }
+
+    const tokenInfo = tokenResult.value
+    const checkSupport = checkSupportResult.value
+    const siteMetadata = siteMetadataResult.value
 
     const tokenData =
       tokenInfo && typeof tokenInfo === "object"
@@ -197,12 +242,10 @@ export const createNewApiAccountCompletion = (
 
     return {
       username,
-      siteName,
+      siteName: siteMetadata.siteName,
       accessToken,
       userId: detected.userId.toString(),
-      exchangeRate:
-        accountBootstrap.extractDefaultExchangeRate(siteStatus) ??
-        UI_CONSTANTS.EXCHANGE_RATE.DEFAULT,
+      exchangeRate: siteMetadata.exchangeRate,
       authType: effectiveAuthType,
       checkIn: helpers.createInitialCheckInConfig({
         supported: checkSupport ?? false,

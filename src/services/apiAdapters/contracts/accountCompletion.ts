@@ -1,4 +1,5 @@
 import type { AutoDetectFailureReason } from "~/constants/autoDetect"
+import type { AccountAutoDetectRecoveryData } from "~/services/accounts/autoDetect/recovery"
 import type {
   AutoDetectCompletionData,
   AutoDetectCompletionError,
@@ -45,6 +46,7 @@ export type AccountCompletionHelpers = {
     supported: boolean
   }): AutoDetectCompletionData["checkIn"]
   handleCheckInSupportFetchFailure(error: unknown): false
+  captureRecoveryData(data: AccountAutoDetectRecoveryData): void
 }
 
 export type AccountCompletionCapability = {

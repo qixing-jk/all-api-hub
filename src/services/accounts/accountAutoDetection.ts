@@ -1,11 +1,20 @@
 import type { AutoDetectErrorCode } from "~/constants/autoDetect"
 import { AUTO_DETECT_ERROR_CODES } from "~/constants/autoDetect"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
+import {
+  isAccountSiteType,
+  SITE_TYPES,
+  type AccountSiteType,
+} from "~/constants/siteType"
 import {
   completeAutoDetectedAccount,
   getAutoDetectCompletionFailureReason,
 } from "~/services/accounts/autoDetectCompletion/completion"
+import {
+  createDetectedAccountRecoveryData,
+  mergeAccountAutoDetectRecoveryData,
+  type AccountAutoDetectRecoveryData,
+} from "~/services/accounts/autoDetect/recovery"
 import {
   analyzeAutoDetectError,
   AUTO_DETECT_FAILURE_REASONS,
@@ -128,9 +137,16 @@ export async function autoDetectAccount(
     }
   }
 
-  let autoDetectContext: AutoDetectAnalyticsContext | undefined
   const normalizedUrl = url.trim()
   const isCanonicalOpenRouter = isCanonicalOpenRouterUrl(normalizedUrl)
+  let autoDetectContext: AutoDetectAnalyticsContext | undefined
+  let recoveryData: AccountAutoDetectRecoveryData | undefined = {
+    ...(isCanonicalOpenRouter ? { siteType: SITE_TYPES.OPENROUTER } : {}),
+    authType,
+    ...(cookieAuthSessionCookie?.trim()
+      ? { cookieAuthSessionCookie: cookieAuthSessionCookie.trim() }
+      : {}),
+  }
 
   try {
     try {
@@ -158,6 +174,12 @@ export async function autoDetectAccount(
       protectionBypassExecution,
     )
     autoDetectContext = detectResult.autoDetectContext
+    recoveryData = mergeAccountAutoDetectRecoveryData(
+      recoveryData,
+      isAccountSiteType(autoDetectContext?.siteType)
+        ? { siteType: autoDetectContext.siteType }
+        : undefined,
+    )
 
     if (!detectResult.success || !detectResult.data) {
       const autoDetectFailureReason =
@@ -171,6 +193,7 @@ export async function autoDetectAccount(
           ...getOpenRouterReadOnlyDetectionFailure(autoDetectFailureReason),
           autoDetectContext,
           autoDetectFailureReason,
+          recoveryData,
         }
       }
 
@@ -186,10 +209,19 @@ export async function autoDetectAccount(
         detailedError,
         autoDetectContext,
         autoDetectFailureReason,
+        recoveryData,
       }
     }
 
     const { userId, siteType } = detectResult.data
+    recoveryData = mergeAccountAutoDetectRecoveryData(
+      recoveryData,
+      createDetectedAccountRecoveryData({
+        detected: detectResult.data,
+        requestedAuthType: authType,
+        cookieAuthSessionCookie,
+      }),
+    )
     autoDetectContext = withFinalAutoDetectSiteType(
       detectResult.autoDetectContext,
       siteType,
@@ -206,6 +238,7 @@ export async function autoDetectAccount(
         },
         autoDetectContext,
         autoDetectFailureReason: AUTO_DETECT_FAILURE_REASONS.UserIdMissing,
+        recoveryData,
       }
     }
 
@@ -216,6 +249,12 @@ export async function autoDetectAccount(
       detected: detectResult.data,
       autoDetectContext,
       protectionBypassExecution,
+      onRecoveryData(nextRecoveryData) {
+        recoveryData = mergeAccountAutoDetectRecoveryData(
+          recoveryData,
+          nextRecoveryData,
+        )
+      },
     })
 
     return {
@@ -242,6 +281,7 @@ export async function autoDetectAccount(
         ...failure,
         autoDetectContext,
         autoDetectFailureReason,
+        recoveryData,
       }
     }
 
@@ -266,6 +306,7 @@ export async function autoDetectAccount(
       detailedError,
       autoDetectContext,
       autoDetectFailureReason,
+      recoveryData,
     }
   }
 }

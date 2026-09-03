@@ -14,6 +14,12 @@ import {
 } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { startAccountDialogAnalyticsAction } from "~/features/AccountManagement/components/AccountDialog/analytics"
+import {
+  buildDraftFromAutoDetectResult,
+  mergeAutoDetectRecoveryIntoDraft,
+  normalizeDetectedCheckIn,
+  resolveAutoDetectRecovery,
+} from "~/features/AccountManagement/components/AccountDialog/autoDetectDraft"
 import { useAccountCheckInRedetection } from "~/features/AccountManagement/components/AccountDialog/hooks/useAccountCheckInRedetection"
 import {
   buildSub2ApiAuthFromAccountDialogDraft,
@@ -22,7 +28,6 @@ import {
   shouldAutoImportCookieAuthForAccountDialogSite,
   shouldDeferAccountSaveSuccessForAccountDialogSite,
   shouldOpenSub2ApiTokenDialogForAccountDialogSite,
-  type AccountDialogSitePolicy,
 } from "~/features/AccountManagement/components/AccountDialog/sitePolicy"
 import { normalizeAddAccountPrefill } from "~/features/AccountManagement/sponsors/pendingAddAccountIntent"
 import { BOOKMARK_IMPORT_ADD_ACCOUNT_PREFILL_SOURCE } from "~/features/AccountManagement/sponsors/types"
@@ -57,6 +62,7 @@ import {
 import { doAccountSiteIdentitiesMatch } from "~/services/accounts/accountSiteProfile"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { validateAndUpdateAccount } from "~/services/accounts/accountUpdate"
+import type { AccountAutoDetectRecoveryData } from "~/services/accounts/autoDetect/recovery"
 import type { CreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
 import { getSiteName } from "~/services/accounts/siteName"
 import {
@@ -81,7 +87,6 @@ import {
 } from "~/services/checkin/autoCheckin/compatibilityConfig"
 import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/inspection"
 import { getAutoCheckinCandidateMethodIds } from "~/services/checkin/autoCheckin/providers/registry"
-import { mergeUserOwnedCheckInDraft } from "~/services/checkin/autoCheckin/state"
 import { getManagedSiteServiceForType } from "~/services/managedSites/managedSiteService"
 import {
   getManagedSiteConfigMissingMessage,
@@ -393,6 +398,8 @@ export function useAccountDialog({
   const [detectionError, setDetectionError] = useState<AutoDetectError | null>(
     null,
   )
+  const [autoDetectRecoveryData, setAutoDetectRecoveryData] =
+    useState<AccountAutoDetectRecoveryData | null>(null)
   const [currentTabUrl, setCurrentTabUrl] = useState<string | null>(null)
   const [isAutoConfiguring, setIsAutoConfiguring] = useState(false)
   const {
@@ -469,6 +476,7 @@ export function useAccountDialog({
   // Serializes ownership of analytics, detection UI, and popup lifecycle
   // across provider changes until the admitted workflow fully unwinds.
   const autoDetectInvocationLeaseRef = useRef<symbol | null>(null)
+  const autoDetectRunGenerationRef = useRef(0)
   const automaticExecutionPreferenceChangedRef = useRef(false)
 
   const siteName = draft.siteName
@@ -533,7 +541,9 @@ export function useAccountDialog({
   })
   const setDialogUrl = useCallback(
     (value: string) => {
+      autoDetectRunGenerationRef.current += 1
       resetCheckInRedetection()
+      setAutoDetectRecoveryData(null)
       notifyOpenRouterUrlChange(value)
       selectedSiteUrlRef.current = value
       setUrl(value)
@@ -1172,6 +1182,7 @@ export function useAccountDialog({
 
   const resetForm = useCallback(
     (nextPrefill?: AddAccountPrefill | null) => {
+      autoDetectRunGenerationRef.current += 1
       newAccountRef.current = null
       isCloseTransitionStartedRef.current = false
       detectedCookieStoreIdRef.current = null
@@ -1210,6 +1221,7 @@ export function useAccountDialog({
       )
       setShowAccessToken(false)
       setDetectionError(null)
+      setAutoDetectRecoveryData(null)
       resetCheckInRedetection()
       setCurrentTabUrl(null)
       setIsAutoConfiguring(false)
@@ -1508,6 +1520,7 @@ export function useAccountDialog({
   const handleClose = useCallback(async () => {
     if (isCloseTransitionStartedRef.current) return
     isCloseTransitionStartedRef.current = true
+    autoDetectRunGenerationRef.current += 1
     try {
       await beforeOpenRouterOnboardingClose()
     } catch {
@@ -1976,8 +1989,48 @@ export function useAccountDialog({
     }
   }
 
-  const runAutoDetectInvocation = async () => {
+  const applyAutoDetectRecoveryData = (
+    recoveryData: AccountAutoDetectRecoveryData | undefined,
+    contextSiteType: AccountSiteType | undefined,
+  ) => {
+    const recovery = resolveAutoDetectRecovery({
+      recoveryData,
+      contextSiteType,
+      currentSiteType: selectedSiteTypeRef.current,
+      canAdoptSiteType: mode === DIALOG_MODES.ADD,
+    })
+
+    if (recovery.shouldAdoptSiteType && recovery.recoveredSiteType) {
+      setSiteType(recovery.recoveredSiteType)
+    }
+
+    setAutoDetectRecoveryData(recovery.retainedRecoveryData)
+
+    if (!recoveryData) return
+
+    if (
+      recoveryData.fetchContext?.cookieStoreId &&
+      recoveryData.fetchContext.cookieStoreId.trim()
+    ) {
+      detectedCookieStoreIdRef.current =
+        recoveryData.fetchContext.cookieStoreId.trim()
+    }
+
+    updateDraft((prev) => {
+      return mergeAutoDetectRecoveryIntoDraft({
+        draft: prev,
+        recoveryData,
+        nextSiteType: recovery.nextSiteType,
+        hasExplicitAuthType: hasExplicitAuthTypeRef.current,
+      })
+    })
+  }
+
+  const runAutoDetectInvocation = async (runGeneration: number) => {
     const requestedUrl = url.trim()
+    const isCurrentAutoDetectRun = () =>
+      autoDetectRunGenerationRef.current === runGeneration &&
+      selectedSiteUrlRef.current.trim() === requestedUrl
     const isRequestedOpenRouterBootstrap =
       isCanonicalOpenRouterUrl(requestedUrl)
     const openRouterAdmission = isRequestedOpenRouterBootstrap
@@ -2117,6 +2170,7 @@ export function useAccountDialog({
     }
     setIsDetecting(true)
     setDetectionError(null)
+    setAutoDetectRecoveryData(null)
     detectedCookieStoreIdRef.current = null
     const shouldTrackPopupInterruption = isExtensionPopup()
     if (shouldTrackPopupInterruption) {
@@ -2240,15 +2294,17 @@ export function useAccountDialog({
             cookieAuthSessionCookie.trim() || undefined,
           ),
       )
+      if (!isCurrentAutoDetectRun()) {
+        analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled, {
+          insights: createAutoDetectAnalyticsInsights(result, false),
+        })
+        return
+      }
       if (!result.success) {
-        const detectedSiteType = result.autoDetectContext?.siteType
-        if (
-          mode === DIALOG_MODES.ADD &&
-          selectedSiteTypeRef.current === SITE_TYPES.UNKNOWN &&
-          isAccountSiteType(detectedSiteType)
-        ) {
-          setSiteType(detectedSiteType)
-        }
+        applyAutoDetectRecoveryData(
+          result.recoveryData,
+          result.autoDetectContext?.siteType,
+        )
         enterForm(ACCOUNT_DIALOG_FORM_SOURCES.MANUAL)
         setDetectionError(result.detailedError || null)
         analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
@@ -2284,12 +2340,19 @@ export function useAccountDialog({
 
       const resultData = result.data
       if (resultData) {
+        setAutoDetectRecoveryData(null)
         await applyAutoDetectedData(resultData)
         analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
           insights: createAutoDetectAnalyticsInsights(result, false),
         })
       }
     } catch (error) {
+      if (!isCurrentAutoDetectRun()) {
+        analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled, {
+          insights: createAutoDetectAnalyticsInsights(undefined, false),
+        })
+        return
+      }
       logger.error("Auto-detect failed", { error, url: url.trim(), authType })
       const detectionError = analyzeAutoDetectError(error)
       setDetectionError(detectionError)
@@ -2322,9 +2385,11 @@ export function useAccountDialog({
     if (autoDetectInvocationLeaseRef.current) return
 
     const lease = Symbol("account-auto-detect-invocation")
+    const runGeneration = autoDetectRunGenerationRef.current + 1
+    autoDetectRunGenerationRef.current = runGeneration
     autoDetectInvocationLeaseRef.current = lease
     try {
-      await runAutoDetectInvocation()
+      await runAutoDetectInvocation(runGeneration)
     } finally {
       if (autoDetectInvocationLeaseRef.current === lease) {
         autoDetectInvocationLeaseRef.current = null
@@ -3226,6 +3291,7 @@ export function useAccountDialog({
       isSaving,
       showAccessToken,
       detectionError,
+      autoDetectRecoveryData,
       showManualForm,
       exchangeRate,
       manualBalanceUsd,
@@ -3414,99 +3480,6 @@ function resolvePrefillFormSource(
   }
 
   return ACCOUNT_DIALOG_FORM_SOURCES.SPONSOR
-}
-
-/** Normalizes detected check-in data for both live and recovered results. */
-function normalizeDetectedCheckIn(checkIn: CheckInConfig): CheckInConfig {
-  return {
-    ...checkIn,
-    customCheckIn: {
-      ...checkIn.customCheckIn,
-      url: checkIn.customCheckIn?.url ?? "",
-      redeemUrl: checkIn.customCheckIn?.redeemUrl ?? "",
-      openRedeemWithCheckIn:
-        checkIn.customCheckIn?.openRedeemWithCheckIn ?? true,
-      isCheckedInToday: checkIn.customCheckIn?.isCheckedInToday ?? false,
-    },
-  }
-}
-
-/**
- * Merges auto-detected account data into the current draft while preserving user-owned fields when requested.
- */
-function buildDraftFromAutoDetectResult(params: {
-  draft: AccountDialogDraft
-  resultData: NonNullable<Awaited<ReturnType<typeof autoDetectAccount>>["data"]>
-  nextSiteType: AccountSiteType
-  nextCheckIn: CheckInConfig
-  preserveExistingCheckIn: boolean
-  automaticExecutionPreferenceChanged: boolean
-  mode: DialogMode
-  policy: AccountDialogSitePolicy
-}): AccountDialogDraft {
-  const {
-    draft,
-    resultData,
-    nextSiteType,
-    nextCheckIn,
-    preserveExistingCheckIn,
-    automaticExecutionPreferenceChanged,
-    mode,
-    policy,
-  } = params
-
-  const mergedCheckIn = preserveExistingCheckIn
-    ? mergeUserOwnedCheckInDraft({
-        latest: nextCheckIn,
-        draft: draft.checkIn,
-        selectionChanged:
-          draft.checkIn.selection.mode === CHECK_IN_SELECTION_MODES.Manual,
-      })
-    : nextCheckIn
-  const checkIn = preserveExistingCheckIn
-    ? mergedCheckIn
-    : {
-        ...mergedCheckIn,
-        automaticExecutionEnabled: resolveNewAccountAutomaticExecutionEnabled({
-          siteType: nextSiteType,
-          currentAutomaticExecutionEnabled:
-            mergedCheckIn.automaticExecutionEnabled,
-          userPreferenceChanged: automaticExecutionPreferenceChanged,
-        }),
-      }
-  const nextDraft: AccountDialogDraft = {
-    ...draft,
-    username: resultData.username,
-    accessToken: resultData.accessToken,
-    userId: resultData.userId,
-    siteName: resultData.siteName,
-    exchangeRate: resultData.exchangeRate
-      ? resultData.exchangeRate.toString()
-      : mode === DIALOG_MODES.ADD
-        ? ""
-        : draft.exchangeRate,
-    siteType: nextSiteType,
-    authType:
-      resultData.authType ??
-      (policy.forceAccessTokenAuth ? AuthTypeEnum.AccessToken : draft.authType),
-    cookieAuthSessionCookie: policy.allowCookieAuthSession
-      ? draft.cookieAuthSessionCookie
-      : "",
-    checkIn,
-    sub2apiRefreshToken:
-      policy.allowSub2ApiRefreshTokenState && resultData.sub2apiAuth
-        ? resultData.sub2apiAuth.refreshToken
-        : draft.sub2apiRefreshToken,
-    sub2apiTokenExpiresAt:
-      policy.allowSub2ApiRefreshTokenState && resultData.sub2apiAuth
-        ? resultData.sub2apiAuth.tokenExpiresAt ?? null
-        : draft.sub2apiTokenExpiresAt,
-  }
-
-  return normalizeAccountDialogDraftForSitePolicy({
-    draft: nextDraft,
-    policy,
-  })
 }
 
 /**

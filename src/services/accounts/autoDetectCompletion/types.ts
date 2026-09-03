@@ -3,6 +3,7 @@ import type {
   AutoDetectFailureReason,
 } from "~/constants/autoDetect"
 import type { AccountSiteType } from "~/constants/siteType"
+import type { AccountAutoDetectRecoveryData } from "~/services/accounts/autoDetect/recovery"
 import type { ContentSessionTransientAuth } from "~/services/accountSiteOnboarding/contracts"
 import type { ApiServiceFetchContext } from "~/services/apiTransport/type"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
@@ -29,6 +30,7 @@ export interface AutoDetectCompletionRequest {
   detected: DetectedAccountIdentity
   autoDetectContext?: AutoDetectAnalyticsContext
   protectionBypassExecution?: ProtectionBypassExecution
+  onRecoveryData?: (data: AccountAutoDetectRecoveryData) => void
 }
 
 export interface AutoDetectCompletionData {

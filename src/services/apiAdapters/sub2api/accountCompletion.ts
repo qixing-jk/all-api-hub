@@ -35,14 +35,19 @@ export const sub2ApiAccountCompletion: AccountCompletionCapability = {
       )
     }
 
+    const exchangeRate =
+      sub2ApiAccountBootstrap.extractDefaultExchangeRate(siteStatus) ??
+      UI_CONSTANTS.EXCHANGE_RATE.DEFAULT
+    helpers.captureRecoveryData({ exchangeRate })
+    const siteName = await helpers.fetchSiteName(siteStatus)
+    helpers.captureRecoveryData({ siteName })
+
     return {
       username: helpers.trimString(detected.user?.username),
-      siteName: await helpers.fetchSiteName(siteStatus),
+      siteName,
       accessToken,
       userId: detected.userId.toString(),
-      exchangeRate:
-        sub2ApiAccountBootstrap.extractDefaultExchangeRate(siteStatus) ??
-        UI_CONSTANTS.EXCHANGE_RATE.DEFAULT,
+      exchangeRate,
       authType: AuthTypeEnum.AccessToken,
       checkIn: helpers.createInitialCheckInConfig({
         supported: false,

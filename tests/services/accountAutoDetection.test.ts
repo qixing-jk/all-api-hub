@@ -264,6 +264,10 @@ describe("accountAutoDetection", () => {
         message: "messages:openrouter.managementKeyRequired",
       },
       autoDetectFailureReason: AUTO_DETECT_FAILURE_REASONS.UserDataMissing,
+      recoveryData: {
+        siteType: SITE_TYPES.OPENROUTER,
+        authType: AuthTypeEnum.AccessToken,
+      },
     })
     expect(JSON.stringify(result)).not.toContain(privateError)
     expect(mockAutoDetectSmart).toHaveBeenCalledTimes(1)
@@ -715,7 +719,7 @@ describe("accountAutoDetection", () => {
     expect(JSON.stringify(result.data)).not.toContain("dashboard-jwt")
   })
 
-  it("does not expose or log reflected rc22 dashboard credentials", async () => {
+  it("retains rc22 dashboard credentials for local recovery without logging them", async () => {
     const dashboardToken = "dashboard-jwt-sensitive-example"
     const reflectedMessage = `upstream reflected ${dashboardToken}`
     mockSendRuntimeMessage.mockResolvedValueOnce(null)
@@ -744,6 +748,8 @@ describe("accountAutoDetection", () => {
     const result = await autoDetectAccount(
       "https://panel.example.invalid",
       AuthTypeEnum.Cookie,
+      undefined,
+      "session=private-cookie-example",
     )
 
     expect(result).toMatchObject({
@@ -752,8 +758,20 @@ describe("accountAutoDetection", () => {
       detailedError: expect.objectContaining({
         type: AutoDetectErrorType.UNKNOWN,
       }),
+      recoveryData: {
+        siteType: SITE_TYPES.NEW_API,
+        userId: "42",
+        authType: AuthTypeEnum.Cookie,
+        cookieAuthSessionCookie: "session=private-cookie-example",
+        transientAuth: {
+          kind: NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND,
+          token: dashboardToken,
+          expiresAt: 4_102_444_800,
+          sessionId: "session-example",
+          origin: "https://panel.example.invalid",
+        },
+      },
     })
-    expect(JSON.stringify(result)).not.toContain(dashboardToken)
     expect(JSON.stringify(result)).not.toContain(reflectedMessage)
     expect(loggerMock.error).toHaveBeenCalledTimes(1)
     const [logMessage, logError] = loggerMock.error.mock.calls[0]
@@ -1078,7 +1096,6 @@ describe("accountAutoDetection", () => {
     mockAutoDetectSmart.mockResolvedValueOnce({
       success: true,
       data: {
-        userId: "",
         siteType: "new-api",
       },
     })
@@ -1526,6 +1543,41 @@ describe("accountAutoDetection", () => {
     })
   })
 
+  it("retains token data obtained before a later completion probe fails", async () => {
+    mockSendRuntimeMessage.mockResolvedValueOnce(null)
+    mockAutoDetectSmart.mockResolvedValueOnce({
+      success: true,
+      data: {
+        userId: "11",
+        user: { id: 11 },
+        siteType: SITE_TYPES.AIHUBMIX,
+      },
+    })
+    mockGetOrCreateAccessToken.mockResolvedValueOnce({
+      username: "recovered-user",
+      access_token: "recovered-token",
+    })
+    mockFetchSiteStatus.mockRejectedValueOnce(new Error("status unavailable"))
+
+    const result = await autoDetectAccount(
+      "https://aihubmix.com",
+      AuthTypeEnum.Cookie,
+    )
+
+    expect(result).toMatchObject({
+      success: false,
+      autoDetectFailureReason:
+        AUTO_DETECT_FAILURE_REASONS.SiteStatusFetchFailed,
+      recoveryData: {
+        siteType: SITE_TYPES.AIHUBMIX,
+        userId: "11",
+        username: "recovered-user",
+        accessToken: "recovered-token",
+        authType: AuthTypeEnum.AccessToken,
+      },
+    })
+  })
+
   it("fails AIHubMix auto-detect when the detected user has no username", async () => {
     mockSendRuntimeMessage.mockResolvedValueOnce(null)
     mockAutoDetectSmart.mockResolvedValueOnce({
@@ -1728,6 +1780,86 @@ describe("accountAutoDetection", () => {
       detailedError: expect.objectContaining({
         type: AutoDetectErrorType.UNKNOWN,
       }),
+    })
+  })
+
+  it("retains a New API token when the concurrent site-status probe fails", async () => {
+    mockSendRuntimeMessage.mockResolvedValueOnce(null)
+    mockAutoDetectSmart.mockResolvedValueOnce({
+      success: true,
+      data: {
+        userId: "5",
+        siteType: SITE_TYPES.NEW_API,
+      },
+    })
+    mockGetOrCreateAccessToken.mockResolvedValueOnce({
+      username: "parallel-recovered-user",
+      access_token: "parallel-recovered-token",
+    })
+    mockFetchSiteStatus.mockRejectedValueOnce(new Error("status unavailable"))
+
+    const result = await autoDetectAccount(
+      "https://parallel.example.com",
+      AuthTypeEnum.AccessToken,
+    )
+
+    expect(result).toMatchObject({
+      success: false,
+      autoDetectFailureReason:
+        AUTO_DETECT_FAILURE_REASONS.SiteStatusFetchFailed,
+      recoveryData: {
+        siteType: SITE_TYPES.NEW_API,
+        userId: "5",
+        username: "parallel-recovered-user",
+        accessToken: "parallel-recovered-token",
+        authType: AuthTypeEnum.AccessToken,
+      },
+    })
+  })
+
+  it("waits for a slower New API token probe before returning a site-status failure", async () => {
+    let resolveToken!: (value: {
+      username: string
+      access_token: string
+    }) => void
+    mockSendRuntimeMessage.mockResolvedValueOnce(null)
+    mockAutoDetectSmart.mockResolvedValueOnce({
+      success: true,
+      data: {
+        userId: "5",
+        siteType: SITE_TYPES.NEW_API,
+      },
+    })
+    mockGetOrCreateAccessToken.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveToken = resolve
+      }),
+    )
+    mockFetchSiteStatus.mockRejectedValueOnce(new Error("status unavailable"))
+
+    const resultPromise = autoDetectAccount(
+      "https://parallel.example.com",
+      AuthTypeEnum.AccessToken,
+    )
+
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    resolveToken({
+      username: "slower-recovered-user",
+      access_token: "slower-recovered-token",
+    })
+    const result = await resultPromise
+
+    expect(result).toMatchObject({
+      success: false,
+      autoDetectFailureReason:
+        AUTO_DETECT_FAILURE_REASONS.SiteStatusFetchFailed,
+      recoveryData: {
+        siteType: SITE_TYPES.NEW_API,
+        userId: "5",
+        username: "slower-recovered-user",
+        accessToken: "slower-recovered-token",
+        authType: AuthTypeEnum.AccessToken,
+      },
     })
   })
 

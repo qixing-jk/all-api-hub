@@ -93,6 +93,7 @@ const helpers = {
   trimString,
   createInitialCheckInConfig,
   handleCheckInSupportFetchFailure,
+  captureRecoveryData: vi.fn(),
 } satisfies AccountCompletionHelpers
 
 describe("newApiAccountCompletion", () => {

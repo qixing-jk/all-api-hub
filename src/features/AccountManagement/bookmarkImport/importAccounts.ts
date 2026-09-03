@@ -5,8 +5,8 @@ import { validateAndSaveAccount as defaultValidateAndSaveAccount } from "~/servi
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum, type CheckInConfig } from "~/types"
 import type {
+  AccountAutoDetectResponse,
   AccountSaveResponse,
-  AccountValidationResponse,
 } from "~/types/serviceResponse"
 
 import type {
@@ -23,7 +23,7 @@ interface RunBookmarkAccountImportInput {
     url: string,
     authType: AuthTypeEnum,
     protectionBypassExecution?: ProtectionBypassExecution,
-  ) => Promise<AccountValidationResponse>
+  ) => Promise<AccountAutoDetectResponse>
   validateAndSaveAccount?: typeof defaultValidateAndSaveAccount
   onProgress?: (progress: BookmarkAccountImportProgress) => void
   protectionBypassExecution?: ProtectionBypassExecution
