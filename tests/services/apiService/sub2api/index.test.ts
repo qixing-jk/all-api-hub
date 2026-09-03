@@ -58,8 +58,16 @@ import type {
 import { createDeferredAbortDeadline } from "~/services/apiTransport/abortableTask"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { fetchApi } from "~/services/apiTransport/request"
-import { API_TRANSPORT_CURRENT_TAB_FALLBACK_MODES } from "~/services/apiTransport/type"
+import {
+  API_TRANSPORT_CURRENT_TAB_FALLBACK_MODES,
+  API_TRANSPORT_FETCH_CONTEXT_KINDS,
+} from "~/services/apiTransport/type"
 import { INVITE_LINK_FAILURE_REASONS } from "~/services/inviteLinks/errors"
+import {
+  PROTECTION_BYPASS_EXECUTION_KINDS,
+  PROTECTION_BYPASS_EXECUTION_VERSION,
+  PROTECTION_BYPASS_USER_COMMANDS,
+} from "~/services/protectionBypass/contracts"
 import {
   ACCOUNT_TODAY_METRIC_REASONS,
   ACCOUNT_TODAY_METRIC_STATUSES,
@@ -931,6 +939,10 @@ describe("apiService sub2api refreshAccountData", () => {
     vi.mocked(resyncSub2ApiAuthToken).mockResolvedValueOnce({
       accessToken: "temp-context-jwt",
       userId: "1",
+      fetchContext: {
+        kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.BROWSER_CONTEXT,
+        cookieStoreId: "temporary-container",
+      },
       source: ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW,
     })
 
@@ -941,7 +953,41 @@ describe("apiService sub2api refreshAccountData", () => {
     expect(result.success).toBe(true)
     expect(vi.mocked(fetchApi).mock.calls[1]?.[0]).toMatchObject({
       auth: { accessToken: "temp-context-jwt" },
+      fetchContext: {
+        kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.BROWSER_CONTEXT,
+        cookieStoreId: "temporary-container",
+      },
       forceTempWindow: true,
+    })
+    expect(vi.mocked(fetchApi).mock.calls[1]?.[0]).not.toHaveProperty(
+      "currentTabFallback",
+    )
+  })
+
+  it("returns browser-recovered refresh credentials without inventing an expiry", async () => {
+    vi.mocked(fetchApi)
+      .mockRejectedValueOnce(
+        new ApiError("Unauthorized", 401, "/api/v1/auth/me"),
+      )
+      .mockResolvedValueOnce({
+        code: 0,
+        message: "ok",
+        data: { id: 1, username: "alice", balance: 2 },
+      } as any)
+    vi.mocked(resyncSub2ApiAuthToken).mockResolvedValueOnce({
+      accessToken: "browser-jwt",
+      userId: "1",
+      sub2apiAuth: { refreshToken: "browser-refresh-token" },
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
+    })
+
+    const result = await refreshAccountData(
+      createRequest({ includeTodayCashflow: false }),
+    )
+
+    expect(result.success).toBe(true)
+    expect(result.authUpdate?.sub2apiAuth).toEqual({
+      refreshToken: "browser-refresh-token",
     })
   })
 
@@ -1038,8 +1084,15 @@ describe("apiService sub2api refreshAccountData", () => {
       source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
     })
 
+    const protectionBypassExecution = {
+      version: PROTECTION_BYPASS_EXECUTION_VERSION,
+      kind: PROTECTION_BYPASS_EXECUTION_KINDS.UserCommand,
+      command: PROTECTION_BYPASS_USER_COMMANDS.RefreshAccount,
+      surface: "popup",
+    } as const
     const request = createRequest({
       tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      protectionBypassExecution,
     })
     const result = await refreshAccountData(request)
 
@@ -1047,6 +1100,7 @@ describe("apiService sub2api refreshAccountData", () => {
       expect.objectContaining({
         baseUrl: request.baseUrl,
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+        protectionBypassExecution,
         expectedUserId: "1",
       }),
     )
