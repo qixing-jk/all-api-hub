@@ -17,6 +17,15 @@ export interface AccountSiteDetectionMetadata {
   compatUserIdHeaderNames?: readonly string[]
 }
 
+export const ACCOUNT_SITE_MANUAL_ADD_GUIDE_ANCHORS = {
+  NewApi: "manual-new-api",
+  Sub2Api: "manual-sub2api",
+  OpenRouter: "manual-openrouter",
+} as const
+
+export type AccountSiteManualAddGuideAnchor =
+  (typeof ACCOUNT_SITE_MANUAL_ADD_GUIDE_ANCHORS)[keyof typeof ACCOUNT_SITE_MANUAL_ADD_GUIDE_ANCHORS]
+
 export const ACCOUNT_SITE_ADAPTER_FAMILIES = {
   NewApiFamily: "newApiFamily",
   Sub2Api: "sub2api",
@@ -82,6 +91,7 @@ export interface ManagedResourceProductPolicy {
 export interface AccountSiteDefinitionOnboardingMetadata {
   detection?: AccountSiteDetectionMetadata
   routes?: AccountSiteRouteConfig
+  manualAddGuideAnchor?: AccountSiteManualAddGuideAnchor
 }
 
 export const ACCOUNT_SITE_MODEL_LIST_EXPECTED_ROUTES = {

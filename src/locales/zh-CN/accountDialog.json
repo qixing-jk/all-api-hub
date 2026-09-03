@@ -150,9 +150,14 @@
     "manualAdd": "手动添加",
     "manualInfo": "手动填写账号信息。账号将被安全地保存在本地存储中",
     "openLdohSiteList": "打开 LDOH 站点列表",
+    "openManualAddGuide": "查看该站点的手动添加指引",
     "openrouterBootstrap": "创建 OpenRouter 管理密钥",
     "openrouterBootstrapInfo": "此操作会在 OpenRouter 创建新的管理密钥，然后使用该密钥识别并补全账号信息。",
     "reDetectInfo": "如果站点信息有变化，建议点击\"重新识别\"按钮（需要在目标站点先自行登录）"
+  },
+  "manualAddRecovery": {
+    "description": "下方已切换为对应站点的手动添加表单。请参照指引补全必填信息，然后保存账号。",
+    "title": "继续手动补全账号"
   },
   "messages": {
     "addSuccess": "账号 {{name}} 添加成功!",

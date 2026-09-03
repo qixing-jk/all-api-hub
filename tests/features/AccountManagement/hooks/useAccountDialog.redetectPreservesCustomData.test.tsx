@@ -1017,7 +1017,7 @@ describe("useAccountDialog re-detect preservation", () => {
     expect(result.current.state.showManualForm).toBe(false)
   })
 
-  it("shows the manual form with the returned detailed error when auto-detect responds unsuccessfully", async () => {
+  it("uses a detected site type to prepare manual completion after auto-detect fails", async () => {
     const detailedError = {
       type: AutoDetectErrorType.UNAUTHORIZED,
       message: "Login required",
@@ -1028,6 +1028,9 @@ describe("useAccountDialog re-detect preservation", () => {
     mockAutoDetectAccount.mockResolvedValueOnce({
       success: false,
       detailedError,
+      autoDetectContext: {
+        siteType: SITE_TYPES.NEW_API,
+      },
     })
 
     const { result } = renderHook(() =>
@@ -1045,6 +1048,7 @@ describe("useAccountDialog re-detect preservation", () => {
 
     await act(async () => {
       result.current.setters.setUrl("https://failing.example.com")
+      result.current.setters.setSiteName("My relay")
     })
 
     await waitFor(() => {
@@ -1057,8 +1061,49 @@ describe("useAccountDialog re-detect preservation", () => {
 
     expect(result.current.state.detectionError).toEqual(detailedError)
     expect(result.current.state.showManualForm).toBe(true)
+    expect(result.current.state.siteType).toBe(SITE_TYPES.NEW_API)
+    expect(result.current.state.siteName).toBe("My relay")
+    expect(result.current.state.url).toBe("https://failing.example.com")
     expect(result.current.state.isDetected).toBe(false)
     expect(result.current.state.isDetecting).toBe(false)
+  })
+
+  it("does not replace an explicitly selected site type after auto-detect fails", async () => {
+    mockAutoDetectAccount.mockResolvedValueOnce({
+      success: false,
+      detailedError: {
+        type: AutoDetectErrorType.INVALID_RESPONSE,
+        message: "Detection incomplete",
+      },
+      autoDetectContext: {
+        siteType: SITE_TYPES.NEW_API,
+      },
+    })
+
+    const { result } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.ADD,
+        isOpen: true,
+        onClose: vi.fn(),
+        onSuccess: vi.fn(),
+      }),
+    )
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://failing.example.com")
+      result.current.setters.setSiteType(SITE_TYPES.SUB2API)
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleAutoDetect()
+    })
+
+    expect(result.current.state.siteType).toBe(SITE_TYPES.SUB2API)
+    expect(result.current.state.showManualForm).toBe(true)
   })
 
   it("auto-imports cookie auth headers after a successful cookie-based auto-detect", async () => {

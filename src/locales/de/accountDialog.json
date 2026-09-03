@@ -151,9 +151,14 @@
     "manualAdd": "Manuell hinzufügen",
     "manualInfo": "Geben Sie die Kontoinformationen manuell ein. Das Konto wird sicher im lokalen Speicher gespeichert",
     "openLdohSiteList": "LDOH-Website-Liste öffnen",
+    "openManualAddGuide": "Anleitung zum manuellen Hinzufügen dieser Website öffnen",
     "openrouterBootstrap": "OpenRouter-Verwaltungsschlüssel erstellen",
     "openrouterBootstrapInfo": "Diese Aktion erstellt einen neuen OpenRouter-Verwaltungsschlüssel und verwendet ihn dann zum Erkennen und Ausfüllen der Kontodetails.",
     "reDetectInfo": "Wenn sich die Website-Informationen ändern, wird empfohlen, auf die Schaltfläche „Erneut erkennen“ zu klicken (Sie müssen sich zuerst selbst bei der Ziel-Website anmelden)"
+  },
+  "manualAddRecovery": {
+    "description": "Das passende Formular zum manuellen Hinzufügen ist unten geöffnet. Folgen Sie der Anleitung, ergänzen Sie die Pflichtfelder und speichern Sie das Konto.",
+    "title": "Kontodaten manuell vervollständigen"
   },
   "messages": {
     "addSuccess": "Konto {{name}} erfolgreich hinzugefügt!",

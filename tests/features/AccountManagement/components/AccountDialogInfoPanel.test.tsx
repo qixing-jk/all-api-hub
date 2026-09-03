@@ -73,18 +73,68 @@ describe("AccountDialog InfoPanel", () => {
     createSpy.mockRestore()
   })
 
-  it("hides LDOH site list link when detection succeeds", () => {
+  it("hides onboarding links when detection succeeds", () => {
     render(
       <InfoPanel
         mode={DIALOG_MODES.ADD}
         phase="account-form"
         formSource="detected"
+        manualAddGuideAnchor="manual-new-api"
       />,
     )
 
     expect(
       screen.queryByRole("button", {
         name: "accountDialog:infoPanel.openLdohSiteList",
+      }),
+    ).not.toBeInTheDocument()
+  })
+
+  it("opens the selected site type manual-add guide from the manual form", async () => {
+    const createSpy = vi
+      .spyOn(browser.tabs, "create")
+      .mockResolvedValue({} as browser.tabs.Tab)
+
+    render(
+      <InfoPanel
+        mode={DIALOG_MODES.ADD}
+        phase="account-form"
+        formSource="manual"
+        manualAddGuideAnchor="manual-new-api"
+      />,
+    )
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "accountDialog:infoPanel.openManualAddGuide",
+      }),
+    )
+
+    expect(createSpy).toHaveBeenCalledTimes(1)
+    const createdUrl = new URL(createSpy.mock.calls[0][0].url!)
+    expect(createdUrl.pathname).toContain("/add-account")
+    expect(createdUrl.hash).toBe("#manual-new-api")
+
+    createSpy.mockRestore()
+  })
+
+  it("hides the manual-add guide entry when the site type has no guide", () => {
+    render(
+      <InfoPanel
+        mode={DIALOG_MODES.ADD}
+        phase="account-form"
+        formSource="manual"
+      />,
+    )
+
+    expect(
+      screen.queryByRole("button", {
+        name: "accountDialog:infoPanel.openManualAddGuide",
+      }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", {
+        name: "accountDialog:infoPanel.openManualAddGuide",
       }),
     ).not.toBeInTheDocument()
   })

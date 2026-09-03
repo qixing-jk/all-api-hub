@@ -34,6 +34,7 @@ import { AuthTypeEnum } from "~/types/auth"
 import {
   ACCOUNT_SITE_ADAPTER_FAMILIES,
   ACCOUNT_SITE_DEFINITION_SCOPES,
+  ACCOUNT_SITE_MANUAL_ADD_GUIDE_ANCHORS,
   ACCOUNT_SITE_MODEL_LIST_EXPECTED_ROUTES,
   MANAGED_RESOURCE_KINDS,
   MANAGED_RESOURCE_MODES,
@@ -183,6 +184,7 @@ const ACCOUNT_SITE_DEFINITIONS = [
       ],
     },
     onboarding: {
+      manualAddGuideAnchor: ACCOUNT_SITE_MANUAL_ADD_GUIDE_ANCHORS.NewApi,
       detection: {
         titlePatterns: [makeTitleRegex(SITE_TYPES.NEW_API)],
         compatUserIdHeaderNames: ["New-API-User"],
@@ -257,6 +259,7 @@ const ACCOUNT_SITE_DEFINITIONS = [
       },
     },
     onboarding: {
+      manualAddGuideAnchor: ACCOUNT_SITE_MANUAL_ADD_GUIDE_ANCHORS.Sub2Api,
       detection: { titlePatterns: [makeTitleRegex(SITE_TYPES.SUB2API)] },
       routes: {
         usagePath: "/usage",
@@ -465,6 +468,7 @@ const ACCOUNT_SITE_DEFINITIONS = [
     scopes: ACCOUNT_SCOPE,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.OpenRouter,
     onboarding: {
+      manualAddGuideAnchor: ACCOUNT_SITE_MANUAL_ADD_GUIDE_ANCHORS.OpenRouter,
       detection: { hostnames: OPENROUTER_HOSTNAMES },
       routes: { adminCredentialsPath: "/settings/management-keys" },
     },

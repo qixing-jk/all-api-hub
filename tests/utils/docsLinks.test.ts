@@ -8,6 +8,7 @@ import {
   getDocsCommunityUrl,
   getDocsGetStartedUrl,
   getDocsHomepageUrl,
+  getDocsManualAddGuideUrl,
   getDocsPageUrl,
   getDocsTaskNotificationsDingtalkUrl,
   getDocsTaskNotificationsNtfyUrl,
@@ -88,5 +89,14 @@ describe("docsLinks", () => {
     expect(url.endsWith("#dingtalk")).toBe(true)
     expect(ntfyUrl).toContain("/en/task-notifications")
     expect(ntfyUrl.endsWith("#ntfy")).toBe(true)
+  })
+
+  it("builds locale-aware manual account guide urls", () => {
+    expect(getDocsManualAddGuideUrl("manual-new-api", "en")).toContain(
+      "/en/add-account#manual-new-api",
+    )
+    expect(getDocsManualAddGuideUrl("manual-openrouter", "zh-CN")).toContain(
+      "/add-account#manual-openrouter",
+    )
   })
 })

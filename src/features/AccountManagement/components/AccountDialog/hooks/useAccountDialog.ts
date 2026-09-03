@@ -2241,6 +2241,14 @@ export function useAccountDialog({
           ),
       )
       if (!result.success) {
+        const detectedSiteType = result.autoDetectContext?.siteType
+        if (
+          mode === DIALOG_MODES.ADD &&
+          selectedSiteTypeRef.current === SITE_TYPES.UNKNOWN &&
+          isAccountSiteType(detectedSiteType)
+        ) {
+          setSiteType(detectedSiteType)
+        }
         enterForm(ACCOUNT_DIALOG_FORM_SOURCES.MANUAL)
         setDetectionError(result.detailedError || null)
         analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {

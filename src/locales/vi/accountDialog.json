@@ -150,9 +150,14 @@
     "manualAdd": "Thêm thủ công",
     "manualInfo": "Điền thông tin tài khoản theo cách thủ công. Tài khoản sẽ được lưu trữ an toàn trong bộ nhớ cục bộ",
     "openLdohSiteList": "Mở danh sách trang web LDOH",
+    "openManualAddGuide": "Mở hướng dẫn thêm thủ công cho trang web này",
     "openrouterBootstrap": "Tạo Management Key trên OpenRouter",
     "openrouterBootstrapInfo": "Thao tác này tạo một Management Key mới trên OpenRouter, sau đó dùng khóa đó để nhận dạng và điền thông tin tài khoản.",
     "reDetectInfo": "Nếu thông tin trang web thay đổi, bạn nên nhấp vào nút \"Nhận dạng lại\" (cần tự đăng nhập vào trang web đích trước)"
+  },
+  "manualAddRecovery": {
+    "description": "Biểu mẫu thêm thủ công phù hợp đã mở bên dưới. Hãy làm theo hướng dẫn, điền các trường bắt buộc rồi lưu tài khoản.",
+    "title": "Hoàn tất tài khoản theo cách thủ công"
   },
   "messages": {
     "addSuccess": "Thêm tài khoản {{name}} thành công!",

@@ -151,9 +151,14 @@
     "manualAdd": "Manual Add",
     "manualInfo": "Manually fill in the account information. The account will be saved securely in local storage",
     "openLdohSiteList": "Open LDOH site list",
+    "openManualAddGuide": "Open this site's manual addition guide",
     "openrouterBootstrap": "Create an OpenRouter Management Key",
     "openrouterBootstrapInfo": "This action creates a new Management Key in OpenRouter, then uses it to detect and fill in the account details.",
     "reDetectInfo": "If the site information changes, it is recommended to click the 'Re-detect' button (you need to log in to the target site first by yourself)"
+  },
+  "manualAddRecovery": {
+    "description": "The matching manual-add form is open below. Follow the guide, complete the required fields, then save the account.",
+    "title": "Continue by completing the account manually"
   },
   "messages": {
     "addSuccess": "Account {{name}} added successfully!",

@@ -11,6 +11,7 @@ import {
   reloadCurrentTab,
   type AutoDetectErrorProps,
 } from "~/services/accounts/utils/autoDetectUtils"
+import type { AccountSiteManualAddGuideAnchor } from "~/services/accountSiteDefinitions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -28,6 +29,12 @@ import {
   openSiteSupportRequestPage,
 } from "~/utils/navigation"
 
+import { ManualAddGuideButton } from "./ManualAddGuideButton"
+
+interface AutoDetectErrorAlertProps extends AutoDetectErrorProps {
+  manualAddGuideAnchor?: AccountSiteManualAddGuideAnchor
+}
+
 const apiCredentialRecoveryErrorTypes = new Set<AutoDetectErrorType>([
   AutoDetectErrorType.INVALID_RESPONSE,
   AutoDetectErrorType.NOT_FOUND,
@@ -44,6 +51,7 @@ const apiCredentialRecoveryErrorTypes = new Set<AutoDetectErrorType>([
  * @param props.onHelpClick Optional handler invoked when help action is triggered.
  * @param props.onActionClick Optional handler invoked when custom action button is pressed.
  * @param props.onApiCredentialProfilesClick Optional handler invoked when API credential fallback is selected.
+ * @param props.manualAddGuideAnchor Optional site-specific manual completion guide.
  */
 export default function AutoDetectErrorAlert({
   error,
@@ -52,7 +60,8 @@ export default function AutoDetectErrorAlert({
   onHelpClick,
   onActionClick,
   onApiCredentialProfilesClick,
-}: AutoDetectErrorProps) {
+  manualAddGuideAnchor,
+}: AutoDetectErrorAlertProps) {
   const { t } = useTranslation("accountDialog")
 
   const handleActionClick = async () => {
@@ -155,6 +164,19 @@ export default function AutoDetectErrorAlert({
           )}
         </div>
       </Alert>
+
+      {manualAddGuideAnchor && (
+        <Alert variant="info" compact>
+          <div className="space-y-2 text-sm leading-relaxed">
+            <p className="font-semibold">{t("manualAddRecovery.title")}</p>
+            <p>{t("manualAddRecovery.description")}</p>
+            <ManualAddGuideButton
+              anchor={manualAddGuideAnchor}
+              variant="default"
+            />
+          </div>
+        </Alert>
+      )}
 
       {canShowApiCredentialFallback && (
         <Alert variant="info" compact>

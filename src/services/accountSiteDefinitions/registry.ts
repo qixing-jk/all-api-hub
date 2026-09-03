@@ -52,6 +52,7 @@ function cloneOnboarding(
   if (!onboarding) return undefined
 
   return {
+    manualAddGuideAnchor: onboarding.manualAddGuideAnchor,
     detection: onboarding.detection
       ? {
           titlePatterns: onboarding.detection.titlePatterns?.map(cloneRegExp),

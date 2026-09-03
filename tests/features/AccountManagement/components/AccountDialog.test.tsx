@@ -716,8 +716,10 @@ describe("AccountDialog", () => {
 
   it("opens API credential profiles and closes from auto-detect fallback guidance", async () => {
     const user = userEvent.setup()
-    mockState.phase = ACCOUNT_DIALOG_PHASES.SITE_INPUT
+    mockState.phase = ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM
     mockState.formSource = ACCOUNT_DIALOG_FORM_SOURCES.MANUAL
+    mockState.siteType = SITE_TYPES.NEW_API
+    mockState.draft.siteType = SITE_TYPES.NEW_API
     mockState.detectionError = {
       type: AutoDetectErrorType.INVALID_RESPONSE,
       message: "Detection returned unexpected data",
@@ -736,6 +738,14 @@ describe("AccountDialog", () => {
     expect(
       screen.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.autoDetectErrorMessage),
     ).toHaveTextContent("Detection returned unexpected data")
+    expect(
+      screen.getByText("accountDialog:manualAddRecovery.description"),
+    ).toBeVisible()
+    expect(
+      screen.getByRole("button", {
+        name: "accountDialog:infoPanel.openManualAddGuide",
+      }),
+    ).toBeVisible()
 
     await user.click(
       screen.getByRole("button", {

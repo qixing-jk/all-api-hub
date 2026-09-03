@@ -150,9 +150,14 @@
     "manualAdd": "手動追加",
     "manualInfo": "アカウント情報を手動入力します。アカウントはローカルストレージに安全に保存されます",
     "openLdohSiteList": "LDOH サイト一覧を開く",
+    "openManualAddGuide": "このサイトの手動追加ガイドを開く",
     "openrouterBootstrap": "OpenRouter 管理キーを作成",
     "openrouterBootstrapInfo": "この操作は OpenRouter に新しい管理キーを作成し、そのキーを使用してアカウント情報を検出・補完します。",
     "reDetectInfo": "サイト情報が変わった場合は「再検出」ボタンを押すことを推奨します（事前に対象サイトへ自分でログインしておく必要があります）"
+  },
+  "manualAddRecovery": {
+    "description": "下に該当サイトの手動追加フォームを表示しました。ガイドを参照して必須項目を補完し、アカウントを保存してください。",
+    "title": "手動でアカウント情報を補完する"
   },
   "messages": {
     "addSuccess": "アカウント {{name}} を正常に追加しました",

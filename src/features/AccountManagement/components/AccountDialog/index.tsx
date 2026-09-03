@@ -19,6 +19,7 @@ import { buildDefaultTokenCreatePrefill } from "~/features/TokenProvisioning/com
 import { OneTimeSecretDialog } from "~/features/TokenProvisioning/components/OneTimeSecretDialog"
 import { useLegacyApiTokenSecretResult } from "~/features/TokenProvisioning/hooks/useLegacyApiTokenSecretResult"
 import { buildOneTimeApiKeyProfileSaveAction } from "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction"
+import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions"
 import { isCanonicalOpenRouterUrl } from "~/services/accountSiteDefinitions/identifiers"
 import type { DisplaySiteData } from "~/types"
 import { createLogger } from "~/utils/core/logger"
@@ -152,6 +153,8 @@ export default function AccountDialog({
     onRequestCookieAuthPermissions: handlers.handleRequestCookieAuthPermissions,
   }
   const currentSitePolicy = getAccountDialogSitePolicy(state.siteType)
+  const manualAddGuideAnchor = getAccountSiteDefinition(state.siteType)
+    ?.onboarding?.manualAddGuideAnchor
   const isOpenRouterBootstrap = isCanonicalOpenRouterUrl(state.url)
   const autoDetectPresentation = isOpenRouterBootstrap
     ? {
@@ -288,6 +291,9 @@ export default function AccountDialog({
                 error={state.detectionError}
                 siteUrl={state.url}
                 siteType={state.siteType}
+                manualAddGuideAnchor={
+                  mode === DIALOG_MODES.ADD ? manualAddGuideAnchor : undefined
+                }
                 onApiCredentialProfilesClick={
                   handleOpenApiCredentialProfilesFromDetectFailure
                 }
@@ -462,6 +468,9 @@ export default function AccountDialog({
           phase={state.phase}
           formSource={state.formSource}
           autoDetectPresentation={autoDetectPresentation?.info}
+          manualAddGuideAnchor={
+            state.detectionError ? undefined : manualAddGuideAnchor
+          }
         />
       </Modal>
 

@@ -4,9 +4,11 @@ import { useTranslation } from "react-i18next"
 import { LdohIcon } from "~/components/icons/LdohIcon"
 import { Button } from "~/components/ui"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
+import type { AccountSiteManualAddGuideAnchor } from "~/services/accountSiteDefinitions"
 import { LDOH_ORIGIN } from "~/services/integrations/ldohSiteLookup/constants"
 import { createTab } from "~/utils/browser/browserApi"
 
+import { ManualAddGuideButton } from "./ManualAddGuideButton"
 import {
   ACCOUNT_DIALOG_FORM_SOURCES,
   ACCOUNT_DIALOG_PHASES,
@@ -22,6 +24,7 @@ interface InfoPanelProps {
     title: string
     description: string
   }
+  manualAddGuideAnchor?: AccountSiteManualAddGuideAnchor
 }
 
 /**
@@ -31,12 +34,14 @@ interface InfoPanelProps {
  * @param props.phase Current dialog phase determining whether the form is shown.
  * @param props.formSource Source that led the dialog into form mode.
  * @param props.autoDetectPresentation Optional site-specific detection copy.
+ * @param props.manualAddGuideAnchor Optional docs anchor for the selected site type.
  */
 export default function InfoPanel({
   mode,
   phase,
   formSource,
   autoDetectPresentation,
+  manualAddGuideAnchor,
 }: InfoPanelProps) {
   const { t } = useTranslation("accountDialog")
   const isAddMode = mode === DIALOG_MODES.ADD
@@ -46,6 +51,8 @@ export default function InfoPanel({
     formSource !== ACCOUNT_DIALOG_FORM_SOURCES.DETECTED
   const showLdohSiteListLink =
     isAddMode && phase === ACCOUNT_DIALOG_PHASES.SITE_INPUT
+  const showManualAddGuideLink =
+    isAddMode && isManualForm && manualAddGuideAnchor
 
   const handleOpenLdohSiteList = () => {
     void createTab(LDOH_ORIGIN, true)
@@ -123,6 +130,15 @@ export default function InfoPanel({
                 >
                   {t("infoPanel.openLdohSiteList")}
                 </Button>
+              </div>
+            )}
+
+            {showManualAddGuideLink && (
+              <div className={`${borderColor} mt-2 border-t pt-2`}>
+                <ManualAddGuideButton
+                  anchor={manualAddGuideAnchor}
+                  className="h-auto justify-start p-0 text-left"
+                />
               </div>
             )}
           </div>

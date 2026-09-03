@@ -152,9 +152,14 @@
     "manualAdd": "Agregado manual",
     "manualInfo": "Completa manualmente la información de la cuenta. La cuenta se guardará de forma segura en el almacenamiento local",
     "openLdohSiteList": "Abrir lista de sitios LDOH",
+    "openManualAddGuide": "Abrir la guía de adición manual de este sitio",
     "openrouterBootstrap": "Crear una clave de administración de OpenRouter",
     "openrouterBootstrapInfo": "Esta acción crea una nueva clave de administración en OpenRouter y luego la usa para detectar y completar los datos de la cuenta.",
     "reDetectInfo": "Si cambia la información del sitio, se recomienda hacer clic en el botón 'Volver a detectar' (debes iniciar sesión por tu cuenta en el sitio de destino primero)"
+  },
+  "manualAddRecovery": {
+    "description": "El formulario de adición manual correspondiente está abierto abajo. Sigue la guía, completa los campos obligatorios y guarda la cuenta.",
+    "title": "Completar la cuenta manualmente"
   },
   "messages": {
     "addSuccess": "La cuenta {{name}} se agregó correctamente.",

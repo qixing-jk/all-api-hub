@@ -491,6 +491,25 @@ describe("account site definition registry", () => {
     })
   })
 
+  it("registers manual-add guide anchors only for documented site types", () => {
+    expect(
+      getAccountSiteDefinition(SITE_TYPES.NEW_API)?.onboarding
+        ?.manualAddGuideAnchor,
+    ).toBe("manual-new-api")
+    expect(
+      getAccountSiteDefinition(SITE_TYPES.SUB2API)?.onboarding
+        ?.manualAddGuideAnchor,
+    ).toBe("manual-sub2api")
+    expect(
+      getAccountSiteDefinition(SITE_TYPES.OPENROUTER)?.onboarding
+        ?.manualAddGuideAnchor,
+    ).toBe("manual-openrouter")
+    expect(
+      getAccountSiteDefinition(SITE_TYPES.AIHUBMIX)?.onboarding
+        ?.manualAddGuideAnchor,
+    ).toBeUndefined()
+  })
+
   it("returns defensive definition and projection copies", () => {
     const definition = getAccountSiteDefinition(SITE_TYPES.AIHUBMIX)
     const onboardingDefinition = getAccountSiteOnboardingDefinitions().find(
