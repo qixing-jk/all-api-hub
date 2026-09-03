@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { useAccountData } from "~/hooks/useAccountData"
+import type { AccountOverviewSnapshot } from "~/services/accounts/accountStorage/accountReadModels"
 import type {
   ProtectionBypassSurface,
   ProtectionBypassUserCommand,
@@ -11,18 +12,17 @@ import type { DisplaySiteData } from "~/types"
 import { ACCOUNT_TODAY_METRIC_STATUSES } from "~/types/accountTodayStats"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 import { buildAccountStats } from "~~/tests/test-utils/accountTodayStats"
-import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
+import {
+  buildDisplaySiteData,
+  buildSiteAccount,
+} from "~~/tests/test-utils/factories"
 
 const {
-  mockGetAllAccounts,
-  mockGetAccountStats,
-  mockConvertToDisplayData,
+  mockGetAccountOverviewSnapshot,
   mockRefreshAllAccounts,
   mockWithProtectionBypassUserCommand,
 } = vi.hoisted(() => ({
-  mockGetAllAccounts: vi.fn(),
-  mockGetAccountStats: vi.fn(),
-  mockConvertToDisplayData: vi.fn(),
+  mockGetAccountOverviewSnapshot: vi.fn(),
   mockRefreshAllAccounts: vi.fn(),
   mockWithProtectionBypassUserCommand: vi.fn(),
 }))
@@ -38,14 +38,7 @@ vi.mock("~/services/protectionBypass/client", async (importOriginal) => {
 
 vi.mock("~/services/accounts/accountStorage/accountReadModels", () => ({
   accountReadModels: {
-    getAccountOverviewSnapshot: async () => {
-      const accounts = await mockGetAllAccounts()
-      return {
-        accounts,
-        displayAccounts: mockConvertToDisplayData(accounts),
-        stats: await mockGetAccountStats(),
-      }
-    },
+    getAccountOverviewSnapshot: mockGetAccountOverviewSnapshot,
   },
 }))
 vi.mock("~/services/accounts/accountStorage/accountRefresh", () => ({
@@ -69,11 +62,18 @@ const createDisplayAccount = (
   ...buildDisplaySiteData({ siteType: SITE_TYPES.UNKNOWN, ...overrides }),
 })
 
+const createOverviewSnapshot = (
+  overrides: Partial<AccountOverviewSnapshot> = {},
+): AccountOverviewSnapshot => ({
+  accounts: [],
+  displayAccounts: [],
+  stats: buildAccountStats(),
+  ...overrides,
+})
+
 describe("useAccountData enabled slices", () => {
   it("wraps handleRefresh in one refresh-all intent and forwards its execution", async () => {
-    mockGetAllAccounts.mockResolvedValue([])
-    mockGetAccountStats.mockResolvedValue(buildAccountStats())
-    mockConvertToDisplayData.mockReturnValue([])
+    mockGetAccountOverviewSnapshot.mockResolvedValue(createOverviewSnapshot())
     mockRefreshAllAccounts.mockResolvedValue({ success: 0, failed: 0 })
 
     const { result } = renderHook(() => useAccountData())
@@ -108,9 +108,7 @@ describe("useAccountData enabled slices", () => {
         return work(userCommandExecution(command, surface))
       },
     )
-    mockGetAllAccounts.mockResolvedValue([])
-    mockGetAccountStats.mockResolvedValue(buildAccountStats())
-    mockConvertToDisplayData.mockReturnValue([])
+    mockGetAccountOverviewSnapshot.mockResolvedValue(createOverviewSnapshot())
     mockRefreshAllAccounts.mockResolvedValue({ success: 0, failed: 0 })
 
     const { result } = renderHook(() => useAccountData())
@@ -134,7 +132,7 @@ describe("useAccountData enabled slices", () => {
   })
 
   it("starts with unavailable empty statistics coverage", () => {
-    mockGetAllAccounts.mockReturnValue(new Promise(() => undefined))
+    mockGetAccountOverviewSnapshot.mockReturnValue(new Promise(() => undefined))
 
     const { result } = renderHook(() => useAccountData())
 
@@ -144,24 +142,30 @@ describe("useAccountData enabled slices", () => {
   })
 
   it("provides enabledAccounts and enabledDisplayData excluding disabled entries", async () => {
-    mockGetAllAccounts.mockResolvedValue([
-      { id: "enabled", last_sync_time: 0 },
-      { id: "disabled", last_sync_time: 0, disabled: true },
-    ])
-    mockGetAccountStats.mockResolvedValue(buildAccountStats())
-
     const enabledDisplay = createDisplayAccount({
       id: "enabled",
       name: "Enabled",
     })
-    mockConvertToDisplayData.mockReturnValue([
-      enabledDisplay,
-      createDisplayAccount({
-        id: "disabled",
-        name: "Disabled",
-        disabled: true,
+    mockGetAccountOverviewSnapshot.mockResolvedValue(
+      createOverviewSnapshot({
+        accounts: [
+          buildSiteAccount({ id: "enabled", last_sync_time: 0 }),
+          buildSiteAccount({
+            id: "disabled",
+            last_sync_time: 0,
+            disabled: true,
+          }),
+        ],
+        displayAccounts: [
+          enabledDisplay,
+          createDisplayAccount({
+            id: "disabled",
+            name: "Disabled",
+            disabled: true,
+          }),
+        ],
       }),
-    ])
+    )
 
     const { result } = renderHook(() => useAccountData())
 

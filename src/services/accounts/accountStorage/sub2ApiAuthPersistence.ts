@@ -2,6 +2,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import {
   AccountUpdateUserTimestampMode,
   applySiteAccountUpdates,
+  type AccountUpdateOptions,
 } from "~/services/accounts/accountDefaults"
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
 import { normalizeAccountSiteProfileUrlForOriginKey } from "~/services/accounts/accountSiteProfile"
@@ -16,7 +17,6 @@ import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
 import { accountConfigStore } from "./accountConfigStore"
-import type { UpdateAccountOptions } from "./accountMutations"
 
 const logger = createLogger("Sub2ApiAuthPersistence")
 
@@ -24,7 +24,7 @@ class Sub2ApiAuthPersistence {
   async updateSub2ApiAuth(
     id: string,
     update: Sub2ApiPersistAuthUpdate,
-    options: UpdateAccountOptions = {
+    options: AccountUpdateOptions = {
       userTimestampMode: AccountUpdateUserTimestampMode.Preserve,
     },
   ): Promise<Sub2ApiAuthPersistenceResult> {
@@ -38,8 +38,8 @@ class Sub2ApiAuthPersistence {
 
       return await accountConfigStore.mutate<Sub2ApiAuthPersistenceResult>(
         (config) => {
-          const account = config.accounts.find((item) => item.id === id)
-          if (!account) {
+          const index = config.accounts.findIndex((item) => item.id === id)
+          if (index === -1) {
             return {
               result: {
                 status: SUB2API_AUTH_PERSISTENCE_STATUSES.ACCOUNT_MISSING,
@@ -47,6 +47,7 @@ class Sub2ApiAuthPersistence {
               changed: false,
             }
           }
+          const account = config.accounts[index]
 
           const actualOrigin = normalizeAccountSiteProfileUrlForOriginKey({
             siteType: account.site_type,
@@ -85,7 +86,6 @@ class Sub2ApiAuthPersistence {
                 : {}),
             }
           }
-          const index = config.accounts.indexOf(account)
           config.accounts[index] = applySiteAccountUpdates({
             account,
             updates: authUpdates,

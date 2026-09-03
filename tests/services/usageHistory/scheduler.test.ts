@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { accountQueries as accountStorage } from "~/services/accounts/accountStorage/accountQueries"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import {
   resolveUsageHistoryPruneMessage,
   resolveUsageHistorySyncNowMessage,
@@ -115,11 +115,11 @@ describe("usageHistoryScheduler", () => {
     })
     vi.mocked(hasAlarmsAPI).mockReturnValue(true)
     vi.mocked(getAlarm).mockResolvedValue(undefined)
-    vi.mocked(accountStorage.getEnabledAccounts).mockResolvedValue([
+    vi.mocked(accountQueries.getEnabledAccounts).mockResolvedValue([
       { id: "account-1", disabled: false },
       { id: "account-2", disabled: false },
     ] as any)
-    vi.mocked(accountStorage.getAccountById).mockImplementation(async (id) => {
+    vi.mocked(accountQueries.getAccountById).mockImplementation(async (id) => {
       if (id === "missing") return null
       if (id === "disabled") return { id, disabled: true } as any
       return { id, disabled: false } as any
@@ -335,7 +335,7 @@ describe("usageHistoryScheduler", () => {
       "account-2",
     ])
 
-    expect(accountStorage.getAccountById).toHaveBeenCalledTimes(4)
+    expect(accountQueries.getAccountById).toHaveBeenCalledTimes(4)
     expect(syncUsageHistoryForAccount).toHaveBeenCalledTimes(2)
     expect(syncUsageHistoryForAccount).toHaveBeenNthCalledWith(1, {
       accountId: "account-1",

@@ -471,6 +471,10 @@ export const AccountUpdateUserTimestampMode = {
 export type AccountUpdateUserTimestampMode =
   (typeof AccountUpdateUserTimestampMode)[keyof typeof AccountUpdateUserTimestampMode]
 
+export type AccountUpdateOptions = {
+  userTimestampMode: AccountUpdateUserTimestampMode
+}
+
 /**
  * Applies a partial update to a stored `SiteAccount`.
  *

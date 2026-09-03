@@ -10,7 +10,7 @@ import {
   type BackupV2,
   type RawBackupData,
 } from "~/features/ImportExport/utils"
-import { accountDataTransfer as accountStorage } from "~/services/accounts/accountStorage/accountDataTransfer"
+import { accountDataTransfer } from "~/services/accounts/accountStorage/accountDataTransfer"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { channelConfigStorage } from "~/services/managedSites/channelConfigStorage"
 import {
@@ -110,9 +110,9 @@ vi.mock("react-hot-toast", () => ({
 }))
 
 const mockAccountStorageImportData =
-  accountStorage.importData as unknown as ReturnType<typeof vi.fn>
+  accountDataTransfer.importData as unknown as ReturnType<typeof vi.fn>
 const mockAccountStorageExportData =
-  accountStorage.exportData as unknown as ReturnType<typeof vi.fn>
+  accountDataTransfer.exportData as unknown as ReturnType<typeof vi.fn>
 
 const mockUserPreferencesImport =
   userPreferences.importPreferences as unknown as ReturnType<typeof vi.fn>

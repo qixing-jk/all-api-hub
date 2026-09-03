@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import SiteAnnouncementsPage from "~/entrypoints/options/pages/SiteAnnouncements"
-import { accountQueries as accountStorage } from "~/services/accounts/accountStorage/accountQueries"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
@@ -143,7 +143,7 @@ describe("SiteAnnouncementsPage", () => {
     vi.spyOn(userPreferences, "getPreferences").mockResolvedValue(
       structuredClone(DEFAULT_PREFERENCES),
     )
-    vi.mocked(accountStorage.getAllAccounts).mockResolvedValue([
+    vi.mocked(accountQueries.getAllAccounts).mockResolvedValue([
       {
         id: "account-1",
         disabled: false,
@@ -262,7 +262,7 @@ describe("SiteAnnouncementsPage", () => {
 
   it("routes the empty announcement setup state to account management when no account exists", async () => {
     const user = userEvent.setup()
-    vi.mocked(accountStorage.getAllAccounts).mockResolvedValue([] as any)
+    vi.mocked(accountQueries.getAllAccounts).mockResolvedValue([] as any)
     sendSiteAnnouncementsMessageMock.mockImplementation(
       async (type: string) => {
         switch (type) {
@@ -294,7 +294,7 @@ describe("SiteAnnouncementsPage", () => {
   })
 
   it("does not block announcement records when account setup lookup fails", async () => {
-    vi.mocked(accountStorage.getAllAccounts).mockRejectedValue(
+    vi.mocked(accountQueries.getAllAccounts).mockRejectedValue(
       new Error("account storage unavailable"),
     )
 
@@ -779,7 +779,7 @@ describe("SiteAnnouncementsPage", () => {
 
   it("keeps filtered empty copy when cached records exist without enabled accounts", async () => {
     const user = userEvent.setup()
-    vi.mocked(accountStorage.getAllAccounts).mockResolvedValue([] as any)
+    vi.mocked(accountQueries.getAllAccounts).mockResolvedValue([] as any)
 
     sendSiteAnnouncementsMessageMock.mockImplementation(
       async (type: string) => {

@@ -7,6 +7,11 @@ import {
 } from "~/services/accounts/utils/accountDisplayName"
 import type { DisplaySiteData, SiteAccount } from "~/types"
 
+const convertQuotaToCurrency = (quota: number, exchangeRate: number) => {
+  const USD = quota / UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
+  return { USD, CNY: USD * exchangeRate }
+}
+
 class AccountPresentation {
   convertToDisplayData(
     input: SiteAccount,
@@ -40,33 +45,18 @@ class AccountPresentation {
       disabled: account.disabled,
       excludeFromTotalBalance: account.excludeFromTotalBalance,
       excludeFromTodayIncome: account.excludeFromTodayIncome,
-      balance: {
-        USD:
-          account.account_info.quota /
-          UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR,
-        CNY:
-          (account.account_info.quota /
-            UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR) *
-          account.exchange_rate,
-      },
-      todayConsumption: {
-        USD:
-          account.account_info.today_quota_consumption /
-          UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR,
-        CNY:
-          (account.account_info.today_quota_consumption /
-            UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR) *
-          account.exchange_rate,
-      },
-      todayIncome: {
-        USD:
-          account.account_info.today_income /
-          UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR,
-        CNY:
-          (account.account_info.today_income /
-            UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR) *
-          account.exchange_rate,
-      },
+      balance: convertQuotaToCurrency(
+        account.account_info.quota,
+        account.exchange_rate,
+      ),
+      todayConsumption: convertQuotaToCurrency(
+        account.account_info.today_quota_consumption,
+        account.exchange_rate,
+      ),
+      todayIncome: convertQuotaToCurrency(
+        account.account_info.today_income,
+        account.exchange_rate,
+      ),
       todayTokens: {
         upload: account.account_info.today_prompt_tokens,
         download: account.account_info.today_completion_tokens,
@@ -107,11 +97,7 @@ class AccountPresentation {
         ),
       ).values(),
     )
-    return (
-      this.convertToDisplayData(contextWithAccount).find(
-        (displayAccount) => displayAccount.id === normalizedAccount.id,
-      ) ?? this.convertToDisplayData(normalizedAccount, contextWithAccount)
-    )
+    return this.convertToDisplayData(normalizedAccount, contextWithAccount)
   }
 }
 

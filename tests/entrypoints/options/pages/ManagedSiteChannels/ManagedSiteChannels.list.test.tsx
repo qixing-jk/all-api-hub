@@ -13,7 +13,7 @@ import {
   default as ManagedSiteChannels,
   upsertChannelRow,
 } from "~/features/ManagedSiteChannels/ManagedSiteChannels"
-import { accountQueries as accountStorage } from "~/services/accounts/accountStorage/accountQueries"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { getManagedSiteService } from "~/services/managedSites/managedSiteService"
 import { sendModelSyncMessage } from "~/services/models/modelSync/messaging"
@@ -284,7 +284,7 @@ describe("ManagedSiteChannels", () => {
   it("pushes configured empty channel lists to both credential source workflows", async () => {
     const user = userEvent.setup()
 
-    vi.mocked(accountStorage.getAllAccounts).mockResolvedValue([
+    vi.mocked(accountQueries.getAllAccounts).mockResolvedValue([
       {
         id: "account-1",
         disabled: false,
@@ -364,7 +364,7 @@ describe("ManagedSiteChannels", () => {
   })
 
   it("does not render gateway import actions while source inventory is loading", async () => {
-    vi.mocked(accountStorage.getAllAccounts).mockImplementation(
+    vi.mocked(accountQueries.getAllAccounts).mockImplementation(
       () => new Promise(() => {}),
     )
     vi.mocked(apiCredentialProfilesStorage.listProfiles).mockImplementation(
@@ -387,7 +387,7 @@ describe("ManagedSiteChannels", () => {
   })
 
   it("keeps API credential import primary when account inventory fails", async () => {
-    vi.mocked(accountStorage.getAllAccounts).mockRejectedValue(
+    vi.mocked(accountQueries.getAllAccounts).mockRejectedValue(
       new Error("account inventory unavailable"),
     )
     vi.mocked(apiCredentialProfilesStorage.listProfiles).mockResolvedValue([
@@ -407,7 +407,7 @@ describe("ManagedSiteChannels", () => {
   })
 
   it("keeps account Key import available when API credential inventory fails", async () => {
-    vi.mocked(accountStorage.getAllAccounts).mockResolvedValue([
+    vi.mocked(accountQueries.getAllAccounts).mockResolvedValue([
       {
         id: "account-1",
         disabled: false,
@@ -435,7 +435,7 @@ describe("ManagedSiteChannels", () => {
   })
 
   it("keeps account Key import primary when an account source is available", async () => {
-    vi.mocked(accountStorage.getAllAccounts).mockResolvedValue([
+    vi.mocked(accountQueries.getAllAccounts).mockResolvedValue([
       {
         id: "account-1",
         disabled: false,

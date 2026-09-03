@@ -2,9 +2,11 @@ import {
   AccountUpdateUserTimestampMode,
   applySiteAccountUpdates,
   createPersistedSiteAccount,
+  type AccountUpdateOptions,
 } from "~/services/accounts/accountDefaults"
+import { removeEntryIdsFromLayout } from "~/services/accounts/accountEntryLayoutPolicy"
 import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
-import type { SiteAccount } from "~/types"
+import type { AccountStorageConfig, SiteAccount } from "~/types"
 import type { DeepPartial } from "~/types/utils"
 import { safeRandomUUID } from "~/utils/core/identifier"
 import { createLogger } from "~/utils/core/logger"
@@ -15,8 +17,28 @@ import { createAccountDeletedEntryRecord } from "./configPolicies"
 
 const logger = createLogger("AccountMutations")
 
-export type UpdateAccountOptions = {
-  userTimestampMode: AccountUpdateUserTimestampMode
+type UpdateAccountOptions = AccountUpdateOptions
+
+const removeAccountsFromConfig = (
+  config: AccountStorageConfig,
+  deletedAccounts: SiteAccount[],
+  layoutIdsToRemove: Set<string>,
+  now: number,
+): void => {
+  const deletedIds = new Set(deletedAccounts.map((account) => account.id))
+  config.accounts = config.accounts.filter(
+    (account) => !deletedIds.has(account.id),
+  )
+  removeEntryIdsFromLayout(config, layoutIdsToRemove)
+  config.deletedEntryRecords = {
+    ...(config.deletedEntryRecords || {}),
+    ...Object.fromEntries(
+      deletedAccounts.map((account) => [
+        account.id,
+        createAccountDeletedEntryRecord(account, now),
+      ]),
+    ),
+  }
 }
 
 class AccountMutations {
@@ -168,17 +190,7 @@ class AccountMutations {
           throw new Error(t("messages:storage.accountNotFound", { id }))
         }
 
-        config.accounts = config.accounts.filter((item) => item.id !== id)
-        config.pinnedAccountIds = config.pinnedAccountIds.filter(
-          (entryId) => entryId !== id,
-        )
-        config.orderedAccountIds = config.orderedAccountIds.filter(
-          (entryId) => entryId !== id,
-        )
-        config.deletedEntryRecords = {
-          ...(config.deletedEntryRecords || {}),
-          [id]: createAccountDeletedEntryRecord(account, Date.now()),
-        }
+        removeAccountsFromConfig(config, [account], new Set([id]), Date.now())
         return { result: true, changed: true }
       })
       void autoCheckinStorage.pruneStatusForAccountIds([id]).catch((error) => {
@@ -211,25 +223,8 @@ class AccountMutations {
           }
         }
 
-        config.accounts = config.accounts.filter(
-          (account) => !idSet.has(account.id),
-        )
-        config.pinnedAccountIds = config.pinnedAccountIds.filter(
-          (entryId) => !idSet.has(entryId),
-        )
-        config.orderedAccountIds = config.orderedAccountIds.filter(
-          (entryId) => !idSet.has(entryId),
-        )
         const now = Date.now()
-        config.deletedEntryRecords = {
-          ...(config.deletedEntryRecords || {}),
-          ...Object.fromEntries(
-            deletedAccounts.map((account) => [
-              account.id,
-              createAccountDeletedEntryRecord(account, now),
-            ]),
-          ),
-        }
+        removeAccountsFromConfig(config, deletedAccounts, idSet, now)
         return {
           result: { deletedCount: deletedIds.length, deletedIds },
           changed: true,

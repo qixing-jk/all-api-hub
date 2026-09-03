@@ -219,10 +219,8 @@ class RedemptionAssistService {
    */
   private async getDisplayAccounts(): Promise<DisplaySiteData[]> {
     const siteAccounts = await accountQueries.getAllAccounts()
-    const displayAccounts = accountPresentation.convertToDisplayData(
-      siteAccounts,
-      siteAccounts,
-    )
+    const displayAccounts =
+      accountPresentation.convertToDisplayData(siteAccounts)
     return displayAccounts.filter((account) => account.disabled !== true)
   }
 

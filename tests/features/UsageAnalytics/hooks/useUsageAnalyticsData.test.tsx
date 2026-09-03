@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useUsageAnalyticsData } from "~/features/UsageAnalytics/hooks/useUsageAnalyticsData"
-import { accountQueries as accountStorage } from "~/services/accounts/accountStorage/accountQueries"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -50,7 +50,7 @@ describe("useUsageAnalyticsData", () => {
       disabled: true,
     })
 
-    vi.mocked(accountStorage.getAllAccounts)
+    vi.mocked(accountQueries.getAllAccounts)
       .mockResolvedValueOnce([enabledAccount, disabledAccount] as any)
       .mockResolvedValueOnce([enabledAccount] as any)
     vi.mocked(usageHistoryStorage.getStore)
@@ -94,7 +94,7 @@ describe("useUsageAnalyticsData", () => {
     })
 
     await waitFor(() => {
-      expect(accountStorage.getAllAccounts).toHaveBeenCalledTimes(2)
+      expect(accountQueries.getAllAccounts).toHaveBeenCalledTimes(2)
       expect(usageHistoryStorage.getStore).toHaveBeenCalledTimes(2)
       expect(result.current.accounts.map((account) => account.id)).toEqual([
         "enabled-account",
@@ -131,7 +131,7 @@ describe("useUsageAnalyticsData", () => {
     })
     const initialStore = { schemaVersion: 2, accounts: {} }
 
-    vi.mocked(accountStorage.getAllAccounts)
+    vi.mocked(accountQueries.getAllAccounts)
       .mockResolvedValueOnce([account] as any)
       .mockRejectedValueOnce(new Error("accounts exploded"))
     vi.mocked(usageHistoryStorage.getStore)

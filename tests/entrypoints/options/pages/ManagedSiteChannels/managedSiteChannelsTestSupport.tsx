@@ -9,7 +9,7 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import ManagedSiteChannels from "~/features/ManagedSiteChannels/ManagedSiteChannels"
 import type { ChannelRow } from "~/features/ManagedSiteChannels/types"
 import { fetchChannelFilters } from "~/features/ManagedSiteChannels/utils/channelFilters"
-import { accountQueries as accountStorage } from "~/services/accounts/accountStorage/accountQueries"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import {
   getManagedSiteService,
@@ -264,7 +264,7 @@ export const setupManagedSiteChannelsTest = () => {
       siteType: SITE_TYPES.NEW_API,
       reason: "core-slice-disabled",
     })
-    vi.mocked(accountStorage.getAllAccounts).mockResolvedValue([])
+    vi.mocked(accountQueries.getAllAccounts).mockResolvedValue([])
     vi.mocked(apiCredentialProfilesStorage.listProfiles).mockResolvedValue([])
   })
 

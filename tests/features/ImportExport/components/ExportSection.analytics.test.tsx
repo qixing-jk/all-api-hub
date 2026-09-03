@@ -4,7 +4,7 @@ import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import ExportSection from "~/features/ImportExport/components/ExportSection"
-import { accountDataTransfer as accountStorage } from "~/services/accounts/accountStorage/accountDataTransfer"
+import { accountDataTransfer } from "~/services/accounts/accountStorage/accountDataTransfer"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import {
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
@@ -87,7 +87,7 @@ describe("ExportSection analytics", () => {
       complete: completeProductAnalyticsActionMock,
     })
     ;(
-      accountStorage.exportData as unknown as ReturnType<typeof vi.fn>
+      accountDataTransfer.exportData as unknown as ReturnType<typeof vi.fn>
     ).mockRejectedValue(new Error("export failed"))
     ;(
       userPreferences.exportPreferences as unknown as ReturnType<typeof vi.fn>

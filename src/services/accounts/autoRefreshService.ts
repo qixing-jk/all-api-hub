@@ -1,3 +1,4 @@
+import { accountRefresh } from "~/services/accounts/accountStorage/accountRefresh"
 import {
   AutoRefreshMessageTypes,
   onAutoRefreshMessage,
@@ -8,6 +9,7 @@ import {
   type AutoRefreshUpdateSettingsRequest,
 } from "~/services/accounts/autoRefreshMessaging"
 import { usageHistoryScheduler } from "~/services/history/usageHistory/scheduler"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import { createAutomaticProtectionBypassExecution } from "~/services/protectionBypass/client"
 import {
   INVALID_PROTECTION_BYPASS_EXECUTION_ERROR,
@@ -25,9 +27,6 @@ import {
 } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
-
-import { userPreferences } from "../preferences/userPreferences"
-import { accountRefresh } from "./accountStorage/accountRefresh"
 
 const logger = createLogger("AutoRefresh")
 

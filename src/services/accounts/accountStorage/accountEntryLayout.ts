@@ -1,36 +1,28 @@
 import { createLogger } from "~/utils/core/logger"
 
+import {
+  buildEntryIdSets,
+  filterKnownUniqueEntryIds,
+  replaceIdListSubset,
+} from "../accountEntryLayoutPolicy"
 import { accountConfigStore } from "./accountConfigStore"
-import { buildEntryIdSets, replaceIdListSubset } from "./configPolicies"
 
 const logger = createLogger("AccountEntryLayout")
 
 class AccountEntryLayout {
   async getPinnedList(): Promise<string[]> {
-    try {
-      return (await accountConfigStore.readOrDefault()).pinnedAccountIds
-    } catch (error) {
-      logger.error("获取置顶账号列表失败", error)
-      return []
-    }
+    return (await accountConfigStore.readOrDefault()).pinnedAccountIds
   }
 
   async getOrderedList(): Promise<string[]> {
-    try {
-      return (await accountConfigStore.readOrDefault()).orderedAccountIds
-    } catch (error) {
-      logger.error("获取自定义排序列表失败", error)
-      return []
-    }
+    return (await accountConfigStore.readOrDefault()).orderedAccountIds
   }
 
   async setPinnedList(ids: string[]): Promise<boolean> {
     try {
       return await accountConfigStore.mutate((config) => {
         const { entryIds } = buildEntryIdSets(config)
-        config.pinnedAccountIds = Array.from(new Set(ids)).filter((id) =>
-          entryIds.has(id),
-        )
+        config.pinnedAccountIds = filterKnownUniqueEntryIds(ids, entryIds)
         return { result: true, changed: true }
       })
     } catch (error) {
@@ -43,9 +35,7 @@ class AccountEntryLayout {
     try {
       return await accountConfigStore.mutate((config) => {
         const { entryIds } = buildEntryIdSets(config)
-        config.orderedAccountIds = Array.from(new Set(ids)).filter((id) =>
-          entryIds.has(id),
-        )
+        config.orderedAccountIds = filterKnownUniqueEntryIds(ids, entryIds)
         return { result: true, changed: true }
       })
     } catch (error) {
@@ -78,12 +68,12 @@ class AccountEntryLayout {
         config.pinnedAccountIds = replaceIdListSubset({
           existingIds: config.pinnedAccountIds,
           subsetIdSet: accountIds,
-          nextSubsetIds: Array.from(new Set(input.pinnedIds)),
+          nextSubsetIds: input.pinnedIds,
         }).filter((id) => entryIds.has(id))
         config.orderedAccountIds = replaceIdListSubset({
           existingIds: config.orderedAccountIds,
           subsetIdSet: accountIds,
-          nextSubsetIds: Array.from(new Set(input.orderedIds)),
+          nextSubsetIds: input.orderedIds,
         }).filter((id) => entryIds.has(id))
         return { result: true, changed: true }
       })
@@ -144,7 +134,7 @@ class AccountEntryLayout {
         config[key] = replaceIdListSubset({
           existingIds: config[key],
           subsetIdSet,
-          nextSubsetIds: Array.from(new Set(input.ids)),
+          nextSubsetIds: input.ids,
         }).filter((id) => entryIds.has(id))
         return { result: true, changed: true }
       })

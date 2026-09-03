@@ -8,6 +8,7 @@ import {
   AccountDataProvider,
   useAccountDataContext,
 } from "~/features/AccountManagement/hooks/AccountDataContext"
+import type { AccountManagementSnapshot } from "~/services/accounts/accountStorage/accountReadModels"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import { getActiveTabs } from "~/utils/browser/browserApi"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
@@ -55,16 +56,18 @@ vi.mock("~/services/accounts/accountStorage/accountCheckInState", () => ({
 }))
 vi.mock("~/services/accounts/accountStorage/accountReadModels", () => ({
   accountReadModels: {
-    getAccountManagementSnapshot: async () => {
-      const accounts = await mockGetAllAccounts()
-      return {
-        accounts,
-        bookmarks: await mockGetAllBookmarks(),
-        orderedIds: await mockGetOrderedList(),
-        pinnedIds: await mockGetPinnedList(),
-        stats: await mockGetAccountStats(),
-      }
-    },
+    getAccountManagementSnapshot:
+      async (): Promise<AccountManagementSnapshot> => {
+        const accounts = await mockGetAllAccounts()
+        return {
+          accounts,
+          displayAccounts: [],
+          bookmarks: await mockGetAllBookmarks(),
+          orderedIds: await mockGetOrderedList(),
+          pinnedIds: await mockGetPinnedList(),
+          stats: await mockGetAccountStats(),
+        }
+      },
   },
 }))
 vi.mock("~/services/accounts/accountStorage/accountPresentation", () => ({

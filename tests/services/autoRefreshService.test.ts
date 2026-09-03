@@ -8,7 +8,7 @@ import {
   vi,
 } from "vitest"
 
-import { accountRefresh as accountStorage } from "~/services/accounts/accountStorage/accountRefresh"
+import { accountRefresh } from "~/services/accounts/accountStorage/accountRefresh"
 import { AutoRefreshMessageTypes } from "~/services/accounts/autoRefreshMessaging"
 import {
   autoRefreshService,
@@ -160,7 +160,7 @@ describe("AutoRefreshService", () => {
       vi.mocked(userPreferences.getPreferences).mockResolvedValue(
         mockPreferences,
       )
-      vi.mocked(accountStorage.refreshAllAccounts).mockResolvedValue({
+      vi.mocked(accountRefresh.refreshAllAccounts).mockResolvedValue({
         success: 5,
         failed: 0,
         refreshedCount: 5,
@@ -244,7 +244,7 @@ describe("AutoRefreshService", () => {
       vi.mocked(userPreferences.getPreferences).mockResolvedValue(
         mockPreferences,
       )
-      vi.mocked(accountStorage.refreshAllAccounts).mockResolvedValue({
+      vi.mocked(accountRefresh.refreshAllAccounts).mockResolvedValue({
         success: 2,
         failed: 1,
         refreshedCount: 2,
@@ -260,7 +260,7 @@ describe("AutoRefreshService", () => {
       expect(autoRefreshService.getStatus().isRunning).toBe(true)
       await vi.advanceTimersByTimeAsync(interval * 1000)
 
-      expect(accountStorage.refreshAllAccounts).toHaveBeenCalledWith(false, {
+      expect(accountRefresh.refreshAllAccounts).toHaveBeenCalledWith(false, {
         protectionBypassExecution: automaticExecution(
           "account_refresh",
           "scheduled",
@@ -297,7 +297,7 @@ describe("AutoRefreshService", () => {
       vi.mocked(userPreferences.getPreferences).mockResolvedValue(
         mockPreferences,
       )
-      vi.mocked(accountStorage.refreshAllAccounts).mockRejectedValue(
+      vi.mocked(accountRefresh.refreshAllAccounts).mockRejectedValue(
         new Error("background failed"),
       )
 
@@ -374,11 +374,11 @@ describe("AutoRefreshService", () => {
         latestSyncTime: Date.now(),
       }
 
-      vi.mocked(accountStorage.refreshAllAccounts).mockResolvedValue(mockResult)
+      vi.mocked(accountRefresh.refreshAllAccounts).mockResolvedValue(mockResult)
 
       const result = await autoRefreshService.refreshNow(refreshAllExecution)
 
-      expect(accountStorage.refreshAllAccounts).toHaveBeenCalledWith(true, {
+      expect(accountRefresh.refreshAllAccounts).toHaveBeenCalledWith(true, {
         protectionBypassExecution: refreshAllExecution,
       })
       expect(result).toEqual(mockResult)
@@ -387,7 +387,7 @@ describe("AutoRefreshService", () => {
     it("should propagate errors from refreshAllAccounts", async () => {
       const error = new Error("Refresh failed")
 
-      vi.mocked(accountStorage.refreshAllAccounts).mockRejectedValue(error)
+      vi.mocked(accountRefresh.refreshAllAccounts).mockRejectedValue(error)
 
       await expect(
         autoRefreshService.refreshNow(refreshAllExecution),
@@ -600,13 +600,13 @@ describe("auto-refresh typed message resolvers", () => {
         refreshedCount: 3,
         latestSyncTime: Date.now(),
       }
-      vi.mocked(accountStorage.refreshAllAccounts).mockResolvedValue(mockResult)
+      vi.mocked(accountRefresh.refreshAllAccounts).mockResolvedValue(mockResult)
 
       const response = await resolveAutoRefreshRefreshNowMessage({
         protectionBypassExecution: refreshAllExecution,
       })
 
-      expect(accountStorage.refreshAllAccounts).toHaveBeenCalledWith(true, {
+      expect(accountRefresh.refreshAllAccounts).toHaveBeenCalledWith(true, {
         protectionBypassExecution: refreshAllExecution,
       })
       expect(response).toEqual({
@@ -617,7 +617,7 @@ describe("auto-refresh typed message resolvers", () => {
 
     it("should handle refresh errors", async () => {
       const error = new Error("Refresh failed")
-      vi.mocked(accountStorage.refreshAllAccounts).mockRejectedValue(error)
+      vi.mocked(accountRefresh.refreshAllAccounts).mockRejectedValue(error)
 
       const response = await resolveAutoRefreshRefreshNowMessage({
         protectionBypassExecution: refreshAllExecution,
@@ -636,7 +636,7 @@ describe("auto-refresh typed message resolvers", () => {
         success: false,
         error: "Invalid protection bypass execution",
       })
-      expect(accountStorage.refreshAllAccounts).not.toHaveBeenCalled()
+      expect(accountRefresh.refreshAllAccounts).not.toHaveBeenCalled()
     })
 
     it.each([
@@ -669,7 +669,7 @@ describe("auto-refresh typed message resolvers", () => {
         success: false,
         error: "Invalid protection bypass execution",
       })
-      expect(accountStorage.refreshAllAccounts).not.toHaveBeenCalled()
+      expect(accountRefresh.refreshAllAccounts).not.toHaveBeenCalled()
     })
 
     it("should reject a well-formed command from another workflow", async () => {
@@ -683,7 +683,7 @@ describe("auto-refresh typed message resolvers", () => {
         success: false,
         error: "Invalid protection bypass execution",
       })
-      expect(accountStorage.refreshAllAccounts).not.toHaveBeenCalled()
+      expect(accountRefresh.refreshAllAccounts).not.toHaveBeenCalled()
     })
   })
 
@@ -805,7 +805,7 @@ describe("auto-refresh typed message resolvers", () => {
         sendResponse({ success: decision.kind === "allowed" })
       },
     )
-    vi.mocked(accountStorage.refreshAllAccounts).mockImplementation(
+    vi.mocked(accountRefresh.refreshAllAccounts).mockImplementation(
       async (_force, options) => {
         const response = await protectionBypassCoordinator.execute({
           task: {
@@ -835,7 +835,7 @@ describe("auto-refresh typed message resolvers", () => {
         sender,
       } as any),
     ).resolves.toMatchObject({ success: true })
-    expect(accountStorage.refreshAllAccounts).toHaveBeenCalledWith(true, {
+    expect(accountRefresh.refreshAllAccounts).toHaveBeenCalledWith(true, {
       protectionBypassExecution: execution,
       tempWindowRequestSource: "options",
     })
@@ -876,6 +876,6 @@ describe("auto-refresh typed message resolvers", () => {
       success: false,
       error: "Invalid protection bypass execution",
     })
-    expect(accountStorage.refreshAllAccounts).toHaveBeenCalledTimes(1)
+    expect(accountRefresh.refreshAllAccounts).toHaveBeenCalledTimes(1)
   })
 })

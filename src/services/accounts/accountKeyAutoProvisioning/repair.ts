@@ -539,7 +539,7 @@ class AccountKeyRepairRunner {
       )
       const displaySiteDataById = new Map(
         accountPresentation
-          .convertToDisplayData(allAccounts, allAccounts)
+          .convertToDisplayData(allAccounts)
           .map((account) => [account.id, account] as const),
       )
 

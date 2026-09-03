@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { Storage } from "@plasmohq/storage"
 
 import { BACKUP_VERSION } from "~/constants/importExport"
-import { accountDataTransfer as accountStorage } from "~/services/accounts/accountStorage/accountDataTransfer"
+import { accountDataTransfer } from "~/services/accounts/accountStorage/accountDataTransfer"
 import { USER_PREFERENCES_STORAGE_KEYS } from "~/services/core/storageKeys"
 import { ensureLegacyChannelConfigMigrationReady } from "~/services/managedSites/legacyChannelConfigMigration"
 import {
@@ -1118,7 +1118,7 @@ describe("createWebdavImportPayloadBySelection", () => {
 
 describe("buildWebdavImportPayloadBySelection", () => {
   it("propagates migration deferral before reading local backup state", async () => {
-    const exportAccounts = vi.spyOn(accountStorage, "exportData")
+    const exportAccounts = vi.spyOn(accountDataTransfer, "exportData")
     ensureLegacyChannelConfigMigrationReadyMock.mockRejectedValueOnce(
       new Error("migration deferred"),
     )

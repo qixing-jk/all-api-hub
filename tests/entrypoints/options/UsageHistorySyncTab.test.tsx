@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import UsageHistorySyncTab from "~/features/BasicSettings/components/tabs/UsageHistorySync/UsageHistorySyncTab"
-import { accountQueries as accountStorage } from "~/services/accounts/accountStorage/accountQueries"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { sendUsageHistoryMessage } from "~/services/history/usageHistory/messaging"
 import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
 import { UsageHistoryMessageTypes } from "~/services/runtimeMessaging/messageTypes"
@@ -117,7 +117,7 @@ describe("UsageHistorySyncTab", () => {
     vi.mocked(useUserPreferencesContext).mockReturnValue(
       createContextValue() as any,
     )
-    vi.mocked(accountStorage.getEnabledAccounts).mockResolvedValue(
+    vi.mocked(accountQueries.getEnabledAccounts).mockResolvedValue(
       createEnabledAccounts(),
     )
     vi.mocked(usageHistoryStorage.getStore).mockResolvedValue(createStore())
@@ -140,7 +140,7 @@ describe("UsageHistorySyncTab", () => {
       loadPreferences,
     } as any)
 
-    vi.mocked(accountStorage.getEnabledAccounts).mockResolvedValue([
+    vi.mocked(accountQueries.getEnabledAccounts).mockResolvedValue([
       { id: "a1", site_name: "Account 1" },
     ] as any)
     vi.mocked(usageHistoryStorage.getStore).mockResolvedValue({
@@ -202,7 +202,7 @@ describe("UsageHistorySyncTab", () => {
 
     expect(toast.success).not.toHaveBeenCalled()
     expect(loadPreferences).toHaveBeenCalledTimes(1)
-    expect(accountStorage.getEnabledAccounts).toHaveBeenCalledTimes(2)
+    expect(accountQueries.getEnabledAccounts).toHaveBeenCalledTimes(2)
     expect(usageHistoryStorage.getStore).toHaveBeenCalledTimes(2)
   })
 
@@ -231,7 +231,7 @@ describe("UsageHistorySyncTab", () => {
     })
 
     expect(loadPreferences).not.toHaveBeenCalled()
-    expect(accountStorage.getEnabledAccounts).toHaveBeenCalledTimes(1)
+    expect(accountQueries.getEnabledAccounts).toHaveBeenCalledTimes(1)
     expect(usageHistoryStorage.getStore).toHaveBeenCalledTimes(1)
   })
 
@@ -241,7 +241,7 @@ describe("UsageHistorySyncTab", () => {
         preferences: {},
       }) as any,
     )
-    vi.mocked(accountStorage.getEnabledAccounts).mockResolvedValue([] as any)
+    vi.mocked(accountQueries.getEnabledAccounts).mockResolvedValue([] as any)
     vi.mocked(usageHistoryStorage.getStore).mockResolvedValue({
       schemaVersion: 2,
       accounts: {},
@@ -298,7 +298,7 @@ describe("UsageHistorySyncTab", () => {
       loadPreferences: vi.fn().mockResolvedValue(undefined),
     } as any)
 
-    vi.mocked(accountStorage.getEnabledAccounts).mockResolvedValue([
+    vi.mocked(accountQueries.getEnabledAccounts).mockResolvedValue([
       { id: "a1", site_name: "Account 1" },
       { id: "a2", site_name: "Account 2" },
     ] as any)
@@ -509,14 +509,14 @@ describe("UsageHistorySyncTab", () => {
       )
     })
 
-    expect(accountStorage.getEnabledAccounts).toHaveBeenCalledTimes(2)
+    expect(accountQueries.getEnabledAccounts).toHaveBeenCalledTimes(2)
     expect(usageHistoryStorage.getStore).toHaveBeenCalledTimes(2)
   })
 
   it("keeps the current status rows visible while refreshing the sync state", async () => {
     const deferredStore = createDeferred<any>()
 
-    vi.mocked(accountStorage.getEnabledAccounts).mockResolvedValue(
+    vi.mocked(accountQueries.getEnabledAccounts).mockResolvedValue(
       createEnabledAccounts(),
     )
     vi.mocked(usageHistoryStorage.getStore)
@@ -649,7 +649,7 @@ describe("UsageHistorySyncTab", () => {
       loadPreferences: vi.fn().mockResolvedValue(undefined),
     } as any)
 
-    vi.mocked(accountStorage.getEnabledAccounts).mockResolvedValue([
+    vi.mocked(accountQueries.getEnabledAccounts).mockResolvedValue([
       {
         id: "a1",
         site_name: "Shared Site",
@@ -698,7 +698,7 @@ describe("UsageHistorySyncTab", () => {
   })
 
   it("filters by the computed display name and shows the filtered empty state when no rows match", async () => {
-    vi.mocked(accountStorage.getEnabledAccounts).mockResolvedValue([
+    vi.mocked(accountQueries.getEnabledAccounts).mockResolvedValue([
       {
         id: "a1",
         site_name: "Shared Site",

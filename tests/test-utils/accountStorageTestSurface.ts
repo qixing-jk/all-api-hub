@@ -1,5 +1,4 @@
 import { accountCheckInState } from "~/services/accounts/accountStorage/accountCheckInState"
-import { accountConfigStore } from "~/services/accounts/accountStorage/accountConfigStore"
 import { accountDataTransfer } from "~/services/accounts/accountStorage/accountDataTransfer"
 import { accountEntryLayout } from "~/services/accounts/accountStorage/accountEntryLayout"
 import { accountMutations } from "~/services/accounts/accountStorage/accountMutations"
@@ -12,7 +11,6 @@ import { bookmarkRepository } from "~/services/accounts/accountStorage/bookmarkR
 import { sub2ApiAuthPersistence } from "~/services/accounts/accountStorage/sub2ApiAuthPersistence"
 
 const modules = [
-  accountConfigStore,
   accountQueries,
   accountMutations,
   sub2ApiAuthPersistence,
@@ -27,7 +25,6 @@ const modules = [
 ] as const
 
 type TestSurface = typeof accountQueries &
-  typeof accountConfigStore &
   typeof accountMutations &
   typeof sub2ApiAuthPersistence &
   typeof accountCheckInState &
@@ -42,7 +39,10 @@ type TestSurface = typeof accountQueries &
 const findOwner = (property: PropertyKey) =>
   modules.find((module) => property in module)
 
-/** Lets legacy characterization tests spy on the real owning module. */
+/**
+ * Lets legacy characterization tests spy on the real owning module.
+ * Remove after the legacy accountStorage suites import each owner directly.
+ */
 export const accountStorageTestSurface = new Proxy({} as TestSurface, {
   get(target, property, receiver) {
     if (Reflect.has(target, property)) {

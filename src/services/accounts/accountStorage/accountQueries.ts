@@ -29,15 +29,9 @@ class AccountQueries {
   }
 
   async getAccountById(id: string): Promise<SiteAccount | null> {
-    try {
-      return (
-        (await this.getAllAccounts()).find((account) => account.id === id) ||
-        null
-      )
-    } catch (error) {
-      logger.error("获取账号信息失败", error)
-      return null
-    }
+    return (
+      (await this.getAllAccounts()).find((account) => account.id === id) || null
+    )
   }
 
   async getAccountByBaseUrlAndUserId(

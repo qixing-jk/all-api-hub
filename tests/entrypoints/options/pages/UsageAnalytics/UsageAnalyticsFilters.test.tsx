@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 
 import UsageAnalytics from "~/entrypoints/options/pages/UsageAnalytics"
-import { accountQueries as accountStorage } from "~/services/accounts/accountStorage/accountQueries"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { createEmptyUsageHistoryAccountStore } from "~/services/history/usageHistory/core"
 import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
 import { fireEvent, render, screen, within } from "~~/tests/test-utils/render"
@@ -45,7 +45,7 @@ describe("UsageAnalytics filters", () => {
   }
 
   it("cascades filters from site to account to token", async () => {
-    vi.mocked(accountStorage.getAllAccounts).mockResolvedValue([
+    vi.mocked(accountQueries.getAllAccounts).mockResolvedValue([
       {
         id: "a1",
         site_name: "Site A",
@@ -138,7 +138,7 @@ describe("UsageAnalytics filters", () => {
   })
 
   it("excludes disabled accounts from the all-accounts view", async () => {
-    vi.mocked(accountStorage.getAllAccounts).mockResolvedValue([
+    vi.mocked(accountQueries.getAllAccounts).mockResolvedValue([
       {
         id: "a1",
         site_name: "Site A",
@@ -216,7 +216,7 @@ describe("UsageAnalytics filters", () => {
   })
 
   it("disambiguates duplicate account names in site and account filters", async () => {
-    vi.mocked(accountStorage.getAllAccounts).mockResolvedValue([
+    vi.mocked(accountQueries.getAllAccounts).mockResolvedValue([
       {
         id: "a1",
         site_name: "Site A",

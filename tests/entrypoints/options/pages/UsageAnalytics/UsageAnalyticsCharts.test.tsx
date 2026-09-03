@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { UI_CONSTANTS } from "~/constants/ui"
 import UsageAnalytics from "~/entrypoints/options/pages/UsageAnalytics"
-import { accountQueries as accountStorage } from "~/services/accounts/accountStorage/accountQueries"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import {
   createEmptyUsageHistoryAccountStore,
   createEmptyUsageHistoryLatencyAggregate,
@@ -95,7 +95,7 @@ describe("UsageAnalytics charts", () => {
   }
 
   it("mounts the ECharts dashboard without throwing", async () => {
-    vi.mocked(accountStorage.getAllAccounts).mockResolvedValue([
+    vi.mocked(accountQueries.getAllAccounts).mockResolvedValue([
       {
         id: "a1",
         site_name: "Site A",
@@ -144,7 +144,7 @@ describe("UsageAnalytics charts", () => {
   })
 
   it("defaults breakdown charts to pie and allows switching to histogram", async () => {
-    vi.mocked(accountStorage.getAllAccounts).mockResolvedValue([
+    vi.mocked(accountQueries.getAllAccounts).mockResolvedValue([
       {
         id: "a1",
         site_name: "Site A",
@@ -221,7 +221,7 @@ describe("UsageAnalytics charts", () => {
       currencyType: "CNY",
     })
 
-    vi.mocked(accountStorage.getAllAccounts).mockResolvedValue([
+    vi.mocked(accountQueries.getAllAccounts).mockResolvedValue([
       {
         id: "a1",
         site_name: "Site A",
@@ -273,7 +273,7 @@ describe("UsageAnalytics charts", () => {
   })
 
   it("applies legend selection updates coming from the daily overview chart", async () => {
-    vi.mocked(accountStorage.getAllAccounts).mockResolvedValue([
+    vi.mocked(accountQueries.getAllAccounts).mockResolvedValue([
       {
         id: "a1",
         site_name: "Site A",
@@ -331,7 +331,7 @@ describe("UsageAnalytics charts", () => {
   })
 
   it("shows the empty reminder instead of charts when there are no available usage days", async () => {
-    vi.mocked(accountStorage.getAllAccounts).mockResolvedValue([
+    vi.mocked(accountQueries.getAllAccounts).mockResolvedValue([
       {
         id: "a1",
         site_name: "Site A",
@@ -358,7 +358,7 @@ describe("UsageAnalytics charts", () => {
   })
 
   it("reloads account and usage-history data when refresh is clicked", async () => {
-    vi.mocked(accountStorage.getAllAccounts).mockResolvedValue([
+    vi.mocked(accountQueries.getAllAccounts).mockResolvedValue([
       {
         id: "a1",
         site_name: "Site A",
@@ -385,7 +385,7 @@ describe("UsageAnalytics charts", () => {
     await screen.findByText("usageAnalytics:charts.dailyOverview.title")
 
     await waitFor(() => {
-      expect(accountStorage.getAllAccounts).toHaveBeenCalledTimes(1)
+      expect(accountQueries.getAllAccounts).toHaveBeenCalledTimes(1)
       expect(usageHistoryStorage.getStore).toHaveBeenCalledTimes(1)
     })
 
@@ -395,13 +395,13 @@ describe("UsageAnalytics charts", () => {
     )
 
     await waitFor(() => {
-      expect(accountStorage.getAllAccounts).toHaveBeenCalledTimes(2)
+      expect(accountQueries.getAllAccounts).toHaveBeenCalledTimes(2)
       expect(usageHistoryStorage.getStore).toHaveBeenCalledTimes(2)
     })
   })
 
   it("ignores redundant breakdown chart type selections", async () => {
-    vi.mocked(accountStorage.getAllAccounts).mockResolvedValue([
+    vi.mocked(accountQueries.getAllAccounts).mockResolvedValue([
       {
         id: "a1",
         site_name: "Site A",
@@ -452,7 +452,7 @@ describe("UsageAnalytics charts", () => {
   })
 
   it("switches the remaining breakdown cards to histogram mode", async () => {
-    vi.mocked(accountStorage.getAllAccounts).mockResolvedValue([
+    vi.mocked(accountQueries.getAllAccounts).mockResolvedValue([
       {
         id: "a1",
         site_name: "Site A",
@@ -516,7 +516,7 @@ describe("UsageAnalytics charts", () => {
   })
 
   it("focuses and unfocuses a clicked model across related charts", async () => {
-    vi.mocked(accountStorage.getAllAccounts).mockResolvedValue([
+    vi.mocked(accountQueries.getAllAccounts).mockResolvedValue([
       {
         id: "a1",
         site_name: "Site A",

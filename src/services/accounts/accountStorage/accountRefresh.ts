@@ -36,7 +36,7 @@ const createMissingAccountRefreshResult = (
   },
 })
 
-export type RefreshAccountOptions = {
+type RefreshAccountOptions = {
   includeTodayCashflow?: boolean
   balanceHistoryCaptureSource?: DailyBalanceHistoryCaptureSource
   allowDisabled?: boolean
@@ -45,7 +45,7 @@ export type RefreshAccountOptions = {
   protectionBypassExecution?: ProtectionBypassExecution
 }
 
-export type RefreshAccountsOptions = Pick<
+type RefreshAccountsOptions = Pick<
   RefreshAccountOptions,
   "tempWindowRequestSource" | "protectionBypassExecution"
 >
@@ -269,21 +269,7 @@ class AccountRefresh {
     options?: RefreshAccountsOptions,
   ) {
     const accounts = await accountQueries.getEnabledAccounts()
-    const includeTodayCashflow =
-      (await userPreferences.getPreferences()).showTodayCashflow ?? true
-    const results = await Promise.allSettled(
-      accounts.map((account) =>
-        this.refreshAccount(account.id, force, {
-          includeTodayCashflow,
-          ...(options?.tempWindowRequestSource
-            ? { tempWindowRequestSource: options.tempWindowRequestSource }
-            : {}),
-          ...(options?.protectionBypassExecution
-            ? { protectionBypassExecution: options.protectionBypassExecution }
-            : {}),
-        }),
-      ),
-    )
+    const results = await this.runAccountRefreshes(accounts, force, options)
     let successCount = 0
     let failedCount = 0
     let refreshedCount = 0
@@ -320,23 +306,10 @@ class AccountRefresh {
     const accounts = (await accountQueries.getAllAccounts()).filter(
       (account) => account.disabled,
     )
-    const includeTodayCashflow =
-      (await userPreferences.getPreferences()).showTodayCashflow ?? true
-    const results = await Promise.allSettled(
-      accounts.map((account) =>
-        this.refreshAccount(account.id, force, {
-          includeTodayCashflow,
-          allowDisabled: true,
-          reEnableOnSuccess: true,
-          ...(options?.tempWindowRequestSource
-            ? { tempWindowRequestSource: options.tempWindowRequestSource }
-            : {}),
-          ...(options?.protectionBypassExecution
-            ? { protectionBypassExecution: options.protectionBypassExecution }
-            : {}),
-        }),
-      ),
-    )
+    const results = await this.runAccountRefreshes(accounts, force, options, {
+      allowDisabled: true,
+      reEnableOnSuccess: true,
+    })
     let processedCount = 0
     let failedCount = 0
     let reEnabledCount = 0
@@ -359,6 +332,33 @@ class AccountRefresh {
       }
     })
     return { processedCount, failedCount, reEnabledCount, latestSyncTime }
+  }
+
+  private async runAccountRefreshes(
+    accounts: SiteAccount[],
+    force: boolean,
+    options: RefreshAccountsOptions | undefined,
+    additionalOptions: Pick<
+      RefreshAccountOptions,
+      "allowDisabled" | "reEnableOnSuccess"
+    > = {},
+  ) {
+    const includeTodayCashflow =
+      (await userPreferences.getPreferences()).showTodayCashflow ?? true
+    return Promise.allSettled(
+      accounts.map((account) =>
+        this.refreshAccount(account.id, force, {
+          includeTodayCashflow,
+          ...additionalOptions,
+          ...(options?.tempWindowRequestSource
+            ? { tempWindowRequestSource: options.tempWindowRequestSource }
+            : {}),
+          ...(options?.protectionBypassExecution
+            ? { protectionBypassExecution: options.protectionBypassExecution }
+            : {}),
+        }),
+      ),
+    )
   }
 
   private async shouldSkipRefresh(

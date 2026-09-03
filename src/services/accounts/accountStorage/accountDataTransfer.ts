@@ -2,13 +2,16 @@ import {
   normalizeAccountStorageConfigForWrite,
   normalizeSiteAccount,
 } from "~/services/accounts/accountDefaults"
+import {
+  buildEntryIdSets,
+  filterKnownUniqueEntryIds,
+} from "~/services/accounts/accountEntryLayoutPolicy"
 import { migrateAccountsConfig } from "~/services/accounts/migrations/accountDataMigration"
 import type { AccountStorageConfig, SiteAccount, SiteBookmark } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 
 import { accountConfigStore } from "./accountConfigStore"
 import {
-  buildEntryIdSets,
   mergeDeletedEntryRecordMaps,
   sanitizeBookmarks,
 } from "./configPolicies"
@@ -30,12 +33,7 @@ class AccountDataTransfer {
 
   async exportData(): Promise<AccountStorageConfig> {
     await accountConfigStore.ensureTagsMigrated()
-    const config = await accountConfigStore.readOrDefault()
-    const { accounts } = migrateAccountsConfig(config.accounts)
-    return {
-      ...config,
-      accounts: accounts.map(normalizeSiteAccount),
-    }
+    return accountConfigStore.readOrDefault()
   }
 
   async importData(data: {
@@ -73,14 +71,10 @@ class AccountDataTransfer {
           entryIds.has(id),
         )
         const pinnedAccountIds = data.pinnedAccountIds
-          ? Array.from(new Set(data.pinnedAccountIds)).filter((id) =>
-              entryIds.has(id),
-            )
+          ? filterKnownUniqueEntryIds(data.pinnedAccountIds, entryIds)
           : fallbackPinnedIds
         const orderedAccountIds = data.orderedAccountIds
-          ? Array.from(new Set(data.orderedAccountIds)).filter((id) =>
-              entryIds.has(id),
-            )
+          ? filterKnownUniqueEntryIds(data.orderedAccountIds, entryIds)
           : fallbackOrderedIds
         const deletedEntryRecords = mergeDeletedEntryRecordMaps({
           existing: backupConfig.deletedEntryRecords,

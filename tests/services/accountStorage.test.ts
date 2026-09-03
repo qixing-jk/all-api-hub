@@ -2293,8 +2293,8 @@ describe("accountStorage core behaviors", () => {
     storageData.set(ACCOUNT_STORAGE_KEYS.ACCOUNTS, {
       accounts,
       bookmarks: [],
-      pinnedAccountIds: ["bulk-b", "bulk-c", "missing"],
-      orderedAccountIds: ["bulk-a", "bulk-b", "bulk-c", "missing"],
+      pinnedAccountIds: ["bulk-b", "bulk-c", "stale", "unrequested"],
+      orderedAccountIds: ["bulk-a", "bulk-b", "bulk-c", "stale", "unrequested"],
       last_updated: Date.now(),
     } satisfies AccountStorageConfig)
 
@@ -2302,6 +2302,7 @@ describe("accountStorage core behaviors", () => {
       "bulk-b",
       "bulk-c",
       "bulk-b",
+      "stale",
       "",
     ])
 
@@ -2314,8 +2315,8 @@ describe("accountStorage core behaviors", () => {
       ACCOUNT_STORAGE_KEYS.ACCOUNTS,
     ) as AccountStorageConfig
     expect(config.accounts.map((account) => account.id)).toEqual(["bulk-a"])
-    expect(config.pinnedAccountIds).toEqual(["missing"])
-    expect(config.orderedAccountIds).toEqual(["bulk-a", "missing"])
+    expect(config.pinnedAccountIds).toEqual(["unrequested"])
+    expect(config.orderedAccountIds).toEqual(["bulk-a", "unrequested"])
     expect(pruneStatusForAccountIdsMock).toHaveBeenCalledWith([
       "bulk-b",
       "bulk-c",

@@ -116,12 +116,7 @@ class AccountConfigStore {
       async () =>
         work({
           read: () => this.read(),
-          write: async (config) => {
-            await this.storage.set(
-              ACCOUNT_STORAGE_KEYS.ACCOUNTS,
-              normalizeAccountStorageConfigForWrite(config),
-            )
-          },
+          write: (config) => this.writeSnapshot(config),
           remove: async () => {
             await this.storage.remove(ACCOUNT_STORAGE_KEYS.ACCOUNTS)
           },
@@ -143,6 +138,13 @@ class AccountConfigStore {
     return canonicalizeAccountStorageConfig(config)
   }
 
+  private async writeSnapshot(config: AccountStorageConfig): Promise<void> {
+    await this.storage.set(
+      ACCOUNT_STORAGE_KEYS.ACCOUNTS,
+      normalizeAccountStorageConfigForWrite(config),
+    )
+  }
+
   /** Re-reads inside the lock so a stale migration snapshot cannot win a race. */
   private async persistReadMigration(): Promise<void> {
     await withExtensionStorageWriteLock(
@@ -151,10 +153,7 @@ class AccountConfigStore {
         const { config, migratedCount } = await this.readSnapshot()
         if (migratedCount === 0) return
 
-        await this.storage.set(
-          ACCOUNT_STORAGE_KEYS.ACCOUNTS,
-          normalizeAccountStorageConfigForWrite(config),
-        )
+        await this.writeSnapshot(config)
       },
     )
   }

@@ -1,7 +1,7 @@
 import { http, HttpResponse } from "msw"
 import { describe, expect, it } from "vitest"
 
-import { accountMutations as accountStorage } from "~/services/accounts/accountStorage/accountMutations"
+import { accountMutations } from "~/services/accounts/accountStorage/accountMutations"
 import { USAGE_HISTORY_LIMITS } from "~/services/history/usageHistory/constants"
 import { getDayKeyFromUnixSeconds } from "~/services/history/usageHistory/core"
 import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
@@ -81,7 +81,7 @@ async function createTestAccount(baseUrl: string): Promise<string> {
     checkIn: buildCheckInConfig(),
   }
 
-  return await accountStorage.addAccount(accountData)
+  return await accountMutations.addAccount(accountData)
 }
 
 describe("usageHistory sync (MSW)", () => {

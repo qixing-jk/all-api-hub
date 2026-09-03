@@ -1,3 +1,7 @@
+import {
+  buildEntryIdSets,
+  removeEntryIdsFromLayout,
+} from "~/services/accounts/accountEntryLayoutPolicy"
 import type { SiteBookmark } from "~/types"
 import { safeRandomUUID } from "~/utils/core/identifier"
 import { createLogger } from "~/utils/core/logger"
@@ -17,25 +21,15 @@ class BookmarkRepository {
   }
 
   async getAllBookmarks(): Promise<SiteBookmark[]> {
-    try {
-      return (await accountConfigStore.readOrDefault()).bookmarks || []
-    } catch (error) {
-      logger.error("获取书签信息失败", error)
-      return []
-    }
+    return (await accountConfigStore.readOrDefault()).bookmarks
   }
 
   async getBookmarkById(id: string): Promise<SiteBookmark | null> {
     if (!id) return null
-    try {
-      return (
-        (await this.getAllBookmarks()).find((bookmark) => bookmark.id === id) ||
-        null
-      )
-    } catch (error) {
-      logger.error("根据ID获取书签失败", { bookmarkId: id, error })
-      return null
-    }
+    return (
+      (await this.getAllBookmarks()).find((bookmark) => bookmark.id === id) ||
+      null
+    )
   }
 
   async addBookmark(input: {
@@ -48,12 +42,9 @@ class BookmarkRepository {
       const normalized = normalizeBookmarkInput(input)
       return await accountConfigStore.mutate((config) => {
         const now = Date.now()
-        const existingEntryIds = new Set([
-          ...config.accounts.map((account) => account.id),
-          ...config.bookmarks.map((bookmark) => bookmark.id),
-        ])
+        const { entryIds } = buildEntryIdSets(config)
         let id = this.generateBookmarkId()
-        while (existingEntryIds.has(id)) id = this.generateBookmarkId()
+        while (entryIds.has(id)) id = this.generateBookmarkId()
 
         config.bookmarks.push({
           id,
@@ -120,12 +111,7 @@ class BookmarkRepository {
         config.bookmarks = config.bookmarks.filter(
           (bookmark) => bookmark.id !== id,
         )
-        config.pinnedAccountIds = config.pinnedAccountIds.filter(
-          (entryId) => entryId !== id,
-        )
-        config.orderedAccountIds = config.orderedAccountIds.filter(
-          (entryId) => entryId !== id,
-        )
+        removeEntryIdsFromLayout(config, new Set([id]))
         config.deletedEntryRecords = {
           ...(config.deletedEntryRecords || {}),
           [id]: createBookmarkDeletedEntryRecord(current, Date.now()),

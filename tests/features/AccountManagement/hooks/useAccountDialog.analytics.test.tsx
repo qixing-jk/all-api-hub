@@ -776,7 +776,7 @@ describe("useAccountDialog analytics", () => {
       },
     })
     const storageGetSpy = vi
-      .spyOn((accountStorage as any).storage, "get")
+      .spyOn(accountStorage, "getAllAccountsOrThrow")
       .mockRejectedValueOnce(new Error("private storage failure"))
 
     const { result } = renderAddHook()

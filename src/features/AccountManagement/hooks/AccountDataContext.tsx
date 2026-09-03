@@ -23,6 +23,7 @@ import {
   ACCOUNT_BROWSER_SESSION_SOURCES,
   readAccountBrowserSessionFromTab,
 } from "~/services/accountBrowserSession"
+import { replaceIdListSubset } from "~/services/accounts/accountEntryLayoutPolicy"
 import {
   doAccountSiteIdentitiesMatch,
   resolveAccountSiteContentSessionHintForOrigin,
@@ -89,69 +90,6 @@ import { createLogger } from "~/utils/core/logger"
  * Unified logger scoped to account data context and refresh orchestration.
  */
 const logger = createLogger("AccountDataContext")
-
-/**
- * Replaces only IDs that belong to `subsetIdSet`, preserving non-subset IDs in place.
- */
-function replaceIdListSubset(input: {
-  existingIds: string[]
-  subsetIdSet: Set<string>
-  nextSubsetIds: string[]
-}): string[] {
-  const existingIds = Array.isArray(input.existingIds) ? input.existingIds : []
-  const subsetIdSet = input.subsetIdSet
-
-  const seenSubset = new Set<string>()
-  const uniqueNextSubsetIds: string[] = []
-  for (const raw of input.nextSubsetIds) {
-    if (!subsetIdSet.has(raw)) continue
-    if (seenSubset.has(raw)) continue
-    seenSubset.add(raw)
-    uniqueNextSubsetIds.push(raw)
-  }
-
-  const existingSubsetIds = existingIds.filter((id) => subsetIdSet.has(id))
-  const missingExistingSubsetIds = existingSubsetIds.filter(
-    (id) => !seenSubset.has(id),
-  )
-  const queue = [...uniqueNextSubsetIds, ...missingExistingSubsetIds]
-
-  const result: string[] = []
-  const seen = new Set<string>()
-  let queueIndex = 0
-
-  const takeNextSubset = () => {
-    while (queueIndex < queue.length) {
-      const next = queue[queueIndex]
-      queueIndex += 1
-      if (seen.has(next)) continue
-      seen.add(next)
-      return next
-    }
-    return null
-  }
-
-  for (const id of existingIds) {
-    if (subsetIdSet.has(id)) {
-      const next = takeNextSubset()
-      if (next) {
-        result.push(next)
-      }
-      continue
-    }
-    if (seen.has(id)) continue
-    seen.add(id)
-    result.push(id)
-  }
-
-  while (queueIndex < queue.length) {
-    const next = takeNextSubset()
-    if (!next) break
-    result.push(next)
-  }
-
-  return result
-}
 
 // 1. 定义 Context 的值类型
 interface AccountDataContextType {

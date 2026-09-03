@@ -2,6 +2,7 @@ import { isAccountSiteType } from "~/constants/siteType"
 import {
   AccountUpdateUserTimestampMode,
   applySiteAccountUpdates,
+  type AccountUpdateOptions,
 } from "~/services/accounts/accountDefaults"
 import {
   getAutoCheckinCandidateMethodIds,
@@ -20,16 +21,17 @@ import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
 
 import { accountConfigStore } from "./accountConfigStore"
-import type { UpdateAccountOptions } from "./accountMutations"
 
 const logger = createLogger("AccountCheckInState")
+
+const getUtcDayKey = (): string => new Date().toISOString().split("T")[0]
 
 class AccountCheckInState {
   async updateAccountWithCheckInDraft(
     id: string,
     updates: Omit<DeepPartial<SiteAccount>, "checkIn">,
     draft: SiteAccount["checkIn"],
-    options: UpdateAccountOptions & {
+    options: AccountUpdateOptions & {
       selectionChanged?: boolean
       discoveryBaseSelection?: CheckInMethodSelection
       refreshed?: SiteAccount["checkIn"]
@@ -109,7 +111,7 @@ class AccountCheckInState {
           })
         }
 
-        const today = new Date().toISOString().split("T")[0]
+        const today = getUtcDayKey()
         if (
           refreshedCheckIn &&
           checkIn.customCheckIn?.url &&
@@ -226,7 +228,7 @@ class AccountCheckInState {
           customCheckIn: {
             ...customCheckIn,
             isCheckedInToday: true,
-            lastCheckInDate: new Date().toISOString().split("T")[0],
+            lastCheckInDate: getUtcDayKey(),
           },
         }
         return {
@@ -248,7 +250,7 @@ class AccountCheckInState {
 
   async resetExpiredCheckIns(): Promise<void> {
     try {
-      const today = new Date().toISOString().split("T")[0]
+      const today = getUtcDayKey()
       const didReset = await accountConfigStore.mutate((config) => {
         let changed = false
         for (const account of config.accounts) {

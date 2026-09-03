@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import UsageAnalytics from "~/entrypoints/options/pages/UsageAnalytics"
-import { accountQueries as accountStorage } from "~/services/accounts/accountStorage/accountQueries"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
 import { openSettingsTab, pushWithinOptionsPage } from "~/utils/navigation"
 import { render, screen } from "~~/tests/test-utils/render"
@@ -62,7 +62,7 @@ describe("UsageAnalytics (settings moved)", () => {
   })
 
   it("does not render sync-now or apply-settings controls", async () => {
-    vi.mocked(accountStorage.getAllAccounts).mockResolvedValue([] as any)
+    vi.mocked(accountQueries.getAllAccounts).mockResolvedValue([] as any)
     vi.mocked(usageHistoryStorage.getStore).mockResolvedValue({
       schemaVersion: 2,
       accounts: {},
@@ -83,7 +83,7 @@ describe("UsageAnalytics (settings moved)", () => {
   })
 
   it("pushes back-stack history when opening account usage settings", async () => {
-    vi.mocked(accountStorage.getAllAccounts).mockResolvedValue([] as any)
+    vi.mocked(accountQueries.getAllAccounts).mockResolvedValue([] as any)
     vi.mocked(usageHistoryStorage.getStore).mockResolvedValue({
       schemaVersion: 2,
       accounts: {},
@@ -112,7 +112,7 @@ describe("UsageAnalytics (settings moved)", () => {
   })
 
   it("opens account usage settings from the title shortcut", async () => {
-    vi.mocked(accountStorage.getAllAccounts).mockResolvedValue([] as any)
+    vi.mocked(accountQueries.getAllAccounts).mockResolvedValue([] as any)
     vi.mocked(usageHistoryStorage.getStore).mockResolvedValue({
       schemaVersion: 2,
       accounts: {},

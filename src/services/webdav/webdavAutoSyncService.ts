@@ -1,3 +1,4 @@
+import { accountDataTransfer } from "~/services/accounts/accountStorage/accountDataTransfer"
 import {
   apiCredentialProfilesStorage,
   mergeApiCredentialProfilesConfigs,
@@ -60,7 +61,6 @@ import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
 
-import { accountDataTransfer } from "../accounts/accountStorage/accountDataTransfer"
 import { ACCOUNT_STORAGE_KEYS, STORAGE_LOCKS } from "../core/storageKeys"
 import { withExtensionStorageWriteLock } from "../core/storageWriteLock"
 import { channelConfigStorage } from "../managedSites/channelConfigStorage"

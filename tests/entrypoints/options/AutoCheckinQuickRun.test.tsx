@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SITE_TYPES } from "~/constants/siteType"
 import AutoCheckin from "~/entrypoints/options/pages/AutoCheckin"
-import { accountQueries as accountStorage } from "~/services/accounts/accountStorage/accountQueries"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -135,7 +135,7 @@ describe("AutoCheckin quick run", () => {
     startProductAnalyticsActionMock.mockReturnValue({
       complete: completeProductAnalyticsActionMock,
     })
-    vi.mocked(accountStorage.getAllAccounts).mockResolvedValue([] as any)
+    vi.mocked(accountQueries.getAllAccounts).mockResolvedValue([] as any)
     withProtectionBypassUserCommandMock.mockImplementation(
       async (
         command: unknown,
@@ -197,7 +197,7 @@ describe("AutoCheckin quick run", () => {
 
   it("shows an account setup empty state when no enabled account supports detection", async () => {
     const user = userEvent.setup()
-    vi.mocked(accountStorage.getAllAccounts).mockResolvedValue([
+    vi.mocked(accountQueries.getAllAccounts).mockResolvedValue([
       {
         id: "manual-account",
         disabled: false,
@@ -240,7 +240,7 @@ describe("AutoCheckin quick run", () => {
   })
 
   it("recognizes a selected method as ready for auto check-in", async () => {
-    vi.mocked(accountStorage.getAllAccounts).mockResolvedValue([
+    vi.mocked(accountQueries.getAllAccounts).mockResolvedValue([
       {
         id: "ready-account",
         disabled: false,
@@ -270,7 +270,7 @@ describe("AutoCheckin quick run", () => {
   })
 
   it("does not block auto check-in results when account setup lookup fails", async () => {
-    vi.mocked(accountStorage.getAllAccounts).mockRejectedValue(
+    vi.mocked(accountQueries.getAllAccounts).mockRejectedValue(
       new Error("account storage unavailable"),
     )
     sendAutoCheckinMessageMock.mockImplementation(async (type: string) => {

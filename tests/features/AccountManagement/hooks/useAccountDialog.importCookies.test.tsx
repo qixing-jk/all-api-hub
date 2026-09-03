@@ -6,7 +6,7 @@ import { COOKIE_IMPORT_FAILURE_REASONS } from "~/constants/cookieImport"
 import { DIALOG_MODES } from "~/constants/dialogModes"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { useAccountDialog } from "~/features/AccountManagement/components/AccountDialog/hooks/useAccountDialog"
-import { accountDataTransfer as accountStorage } from "~/services/accounts/accountStorage/accountDataTransfer"
+import { accountDataTransfer } from "~/services/accounts/accountStorage/accountDataTransfer"
 import {
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_EVENTS,
@@ -160,7 +160,7 @@ describe("useAccountDialog cookie import feedback", () => {
         return []
       }
     })
-    await accountStorage.clearAllData()
+    await accountDataTransfer.clearAllData()
   })
 
   it("shows the empty-cookie message when no cookies are available", async () => {

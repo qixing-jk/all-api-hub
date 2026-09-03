@@ -2,7 +2,7 @@ import { fireEvent, waitFor, within } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import UsageAnalytics from "~/entrypoints/options/pages/UsageAnalytics"
-import { accountQueries as accountStorage } from "~/services/accounts/accountStorage/accountQueries"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { createEmptyUsageHistoryAccountStore } from "~/services/history/usageHistory/core"
 import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
 import {
@@ -86,7 +86,7 @@ describe("UsageAnalytics navigation", () => {
   it("navigates to account usage settings from header", async () => {
     vi.mocked(openSettingsTab).mockClear()
     vi.mocked(pushWithinOptionsPage).mockClear()
-    vi.mocked(accountStorage.getAllAccounts).mockResolvedValue([] as any)
+    vi.mocked(accountQueries.getAllAccounts).mockResolvedValue([] as any)
     const accountStore = createEmptyUsageHistoryAccountStore()
     accountStore.daily["2026-01-01"] = {
       requests: 1,
@@ -121,7 +121,7 @@ describe("UsageAnalytics navigation", () => {
   it("shows a settings shortcut in the empty reminder", async () => {
     vi.mocked(openSettingsTab).mockClear()
     vi.mocked(pushWithinOptionsPage).mockClear()
-    vi.mocked(accountStorage.getAllAccounts).mockResolvedValue([] as any)
+    vi.mocked(accountQueries.getAllAccounts).mockResolvedValue([] as any)
     vi.mocked(usageHistoryStorage.getStore).mockResolvedValue({
       schemaVersion: 2,
       accounts: {},
@@ -152,7 +152,7 @@ describe("UsageAnalytics navigation", () => {
   })
 
   it("keeps refresh and export actions out of started-only click tracking", async () => {
-    vi.mocked(accountStorage.getAllAccounts).mockResolvedValue([] as any)
+    vi.mocked(accountQueries.getAllAccounts).mockResolvedValue([] as any)
     const accountStore = createEmptyUsageHistoryAccountStore()
     accountStore.daily["2026-01-01"] = {
       requests: 1,
