@@ -57,9 +57,18 @@ vi.mock("~/utils/core/logger", () => ({
   }),
 }))
 
-vi.mock("~/services/apiTransport/request", () => ({
-  fetchApiData: mockFetchApiData,
-  fetchApi: mockFetchApi,
+vi.mock("~/services/apiService/veloera/request", () => ({
+  veloeraRequests: {
+    data: mockFetchApiData,
+    envelope: mockFetchApi,
+  },
+}))
+
+vi.mock("~/services/apiService/newApiFamily/request", () => ({
+  newApiFamilyRequests: {
+    data: mockFetchApiData,
+    envelope: mockFetchApi,
+  },
 }))
 
 vi.mock(
@@ -281,14 +290,10 @@ describe("apiService veloera channel APIs", () => {
     await expect(
       fetchChannelModels(request as any, 9, { signal }),
     ).resolves.toEqual(["gpt-4o", "claude-3"])
-    expect(mockFetchApi).toHaveBeenCalledWith(
-      request,
-      {
-        endpoint: "/api/channel/fetch_models/9",
-        options: { signal },
-      },
-      false,
-    )
+    expect(mockFetchApi).toHaveBeenCalledWith(request, {
+      endpoint: "/api/channel/fetch_models/9",
+      options: { signal },
+    })
   })
 
   it("fetchChannelModels should reject unsupported payloads", async () => {
@@ -328,21 +333,17 @@ describe("apiService veloera channel APIs", () => {
       signal,
     })
 
-    expect(mockFetchApi).toHaveBeenCalledWith(
-      request,
-      {
-        endpoint: "/api/channel",
-        options: {
-          method: "PUT",
-          body: JSON.stringify({
-            id: 9,
-            models: "gpt-4o,claude-3",
-          }),
-          signal,
-        },
+    expect(mockFetchApi).toHaveBeenCalledWith(request, {
+      endpoint: "/api/channel",
+      options: {
+        method: "PUT",
+        body: JSON.stringify({
+          id: 9,
+          models: "gpt-4o,claude-3",
+        }),
+        signal,
       },
-      false,
-    )
+    })
   })
 
   it("updateChannelModels should reject failed Veloera responses", async () => {
@@ -387,21 +388,17 @@ describe("apiService veloera channel APIs", () => {
       JSON.stringify({ "gpt-4o": "gpt-4o" }),
     )
 
-    expect(mockFetchApi).toHaveBeenCalledWith(
-      request,
-      {
-        endpoint: "/api/channel",
-        options: {
-          method: "PUT",
-          body: JSON.stringify({
-            id: 9,
-            models: "gpt-4o,claude-3",
-            model_mapping: JSON.stringify({ "gpt-4o": "gpt-4o" }),
-          }),
-        },
+    expect(mockFetchApi).toHaveBeenCalledWith(request, {
+      endpoint: "/api/channel",
+      options: {
+        method: "PUT",
+        body: JSON.stringify({
+          id: 9,
+          models: "gpt-4o,claude-3",
+          model_mapping: JSON.stringify({ "gpt-4o": "gpt-4o" }),
+        }),
       },
-      false,
-    )
+    })
   })
 
   it("updateChannelModelMapping should reject failed Veloera responses", async () => {
@@ -563,7 +560,7 @@ describe("apiService veloera channel APIs", () => {
     mockFetchApi.mockRejectedValueOnce(new Error("delete failed"))
 
     await expect(deleteChannel(request as any, 9)).rejects.toThrow(
-      "删除渠道失败，请检查网络或 Veloera 配置",
+      "delete failed",
     )
   })
 
@@ -575,7 +572,6 @@ describe("apiService veloera channel APIs", () => {
           mode: "none" as any,
           channel: { groups: ["default"] } as any,
         }),
-      message: "创建渠道失败，请检查网络或 Veloera 配置",
     },
     {
       operation: "update",
@@ -585,16 +581,14 @@ describe("apiService veloera channel APIs", () => {
           name: "Updated",
           groups: ["default"],
         }),
-      message: "更新渠道失败，请检查网络或 Veloera 配置",
     },
     {
       operation: "delete",
       invoke: (request: any) => deleteChannel(request, 1),
-      message: "删除渠道失败，请检查网络或 Veloera 配置",
     },
   ])(
     "$operation mutation preserves ApiError details as cause without logging it",
-    async ({ invoke, message }) => {
+    async ({ invoke }) => {
       const request = {
         baseUrl: "https://example.com",
         auth: {
@@ -608,20 +602,64 @@ describe("apiService veloera channel APIs", () => {
         502,
         "/api/channel",
         API_ERROR_CODES.HTTP_OTHER,
+        "provider_limit",
       )
       mockFetchApi.mockRejectedValueOnce(cause)
 
       const error = await invoke(request).catch((caught) => caught)
 
       expect(error).toMatchObject({
-        message,
+        message: "upstream denied",
         statusCode: 502,
         endpoint: "/api/channel",
         code: API_ERROR_CODES.HTTP_OTHER,
+        upstreamCode: "provider_limit",
         cause,
       })
       expect(mockLoggerError).toHaveBeenCalledWith(expect.any(String))
       expect(mockLoggerError.mock.calls.flat()).not.toContain(cause)
+    },
+  )
+
+  it.each([
+    {
+      operation: "create",
+      message: "创建渠道失败，请检查网络或 Veloera 配置",
+      invoke: (request: any) =>
+        createChannel(request, {
+          mode: "none" as any,
+          channel: { groups: ["default"] } as any,
+        }),
+    },
+    {
+      operation: "update",
+      message: "更新渠道失败，请检查网络或 Veloera 配置",
+      invoke: (request: any) =>
+        updateChannel(request, {
+          id: 1,
+          name: "Updated",
+          groups: ["default"],
+        }),
+    },
+    {
+      operation: "delete",
+      message: "删除渠道失败，请检查网络或 Veloera 配置",
+      invoke: (request: any) => deleteChannel(request, 1),
+    },
+  ])(
+    "$operation mutation uses fixed copy when the thrown message is blank",
+    async ({ invoke, message }) => {
+      const request = {
+        baseUrl: "https://example.com",
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          accessToken: "token",
+          userId: "1",
+        },
+      }
+      mockFetchApi.mockRejectedValueOnce(new Error("   "))
+
+      await expect(invoke(request)).rejects.toThrow(message)
     },
   )
 

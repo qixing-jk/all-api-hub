@@ -59,6 +59,7 @@ import {
   type ManagedUpstreamResourceSummary,
 } from "~/types/managedUpstreamResource"
 import { CHANNEL_STATUS } from "~/types/newApi"
+import { getErrorMessage } from "~/utils/core/error"
 
 import { createManagedSiteConfigCapability } from "./config"
 import {
@@ -74,7 +75,10 @@ const toDoneHubMutationResponse = (response: ApiResponse<unknown>) =>
     : {
         outcome: "rejected" as const,
         diagnostic: {
-          message: response.message || "Provider rejected the mutation",
+          message: getErrorMessage(
+            response.message,
+            "Provider rejected the mutation",
+          ),
           raw: response,
         },
       }

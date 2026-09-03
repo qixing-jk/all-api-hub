@@ -2,7 +2,6 @@ import type { ManagedSitePaginatedChannelRequestOptions } from "~/services/apiAd
 import { REQUEST_CONFIG } from "~/services/apiTransport/constant"
 import { ApiError } from "~/services/apiTransport/errors"
 import { fetchAllItems } from "~/services/apiTransport/pagination"
-import { fetchApi, fetchApiData } from "~/services/apiTransport/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import type {
   CreateChannelPayload,
@@ -10,7 +9,10 @@ import type {
   ManagedSiteChannelListData,
   UpdateChannelPayload,
 } from "~/types/managedSite"
+import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
+
+import { veloeraRequests } from "./request"
 
 export {
   fetchAccountData,
@@ -25,6 +27,16 @@ export {
 const logger = createLogger("ApiService.Veloera")
 
 const VELOERA_CHANNEL_ENDPOINT = "/api/channel"
+
+const wrapChannelMutationError = (error: unknown, fallback: string) =>
+  new ApiError(
+    getErrorMessage(error, fallback),
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    error,
+  )
 
 type VeloeraChannelInfo = {
   is_multi_key?: boolean
@@ -133,7 +145,7 @@ export async function createChannel(
       group: (groups ?? []).join(","),
     }
 
-    return await fetchApi<void>(request, {
+    return await veloeraRequests.envelope<void>(request, {
       endpoint: VELOERA_CHANNEL_ENDPOINT,
       options: {
         method: "POST",
@@ -142,13 +154,9 @@ export async function createChannel(
     })
   } catch (error) {
     logger.error("Failed to create channel")
-    throw new ApiError(
-      "创建渠道失败，请检查网络或 Veloera 配置",
-      undefined,
-      undefined,
-      undefined,
-      undefined,
+    throw wrapChannelMutationError(
       error,
+      "创建渠道失败，请检查网络或 Veloera 配置",
     )
   }
 }
@@ -170,7 +178,7 @@ export async function updateChannel(
       group: rest.group ?? (groups ?? []).join(","),
     }
 
-    return await fetchApi<void>(request, {
+    return await veloeraRequests.envelope<void>(request, {
       endpoint: VELOERA_CHANNEL_ENDPOINT,
       options: {
         method: "PUT",
@@ -179,13 +187,9 @@ export async function updateChannel(
     })
   } catch (error) {
     logger.error("Failed to update channel")
-    throw new ApiError(
-      "更新渠道失败，请检查网络或 Veloera 配置",
-      undefined,
-      undefined,
-      undefined,
-      undefined,
+    throw wrapChannelMutationError(
       error,
+      "更新渠道失败，请检查网络或 Veloera 配置",
     )
   }
 }
@@ -198,7 +202,7 @@ export async function deleteChannel(
   channelId: number,
 ) {
   try {
-    return await fetchApi<void>(request, {
+    return await veloeraRequests.envelope<void>(request, {
       endpoint: `${VELOERA_CHANNEL_ENDPOINT}/${channelId}`,
       options: {
         method: "DELETE",
@@ -206,13 +210,9 @@ export async function deleteChannel(
     })
   } catch (error) {
     logger.error("Failed to delete channel")
-    throw new ApiError(
-      "删除渠道失败，请检查网络或 Veloera 配置",
-      undefined,
-      undefined,
-      undefined,
-      undefined,
+    throw wrapChannelMutationError(
       error,
+      "删除渠道失败，请检查网络或 Veloera 配置",
     )
   }
 }
@@ -236,7 +236,7 @@ export async function listAllChannels(
       await beforeRequest?.()
 
       const endpoint = `/api/channel/?p=${page}&page_size=${pageSize}`
-      const data = await fetchApiData<unknown>(request, {
+      const data = await veloeraRequests.data<unknown>(request, {
         endpoint,
         options: { signal: options?.signal },
       })
@@ -290,7 +290,7 @@ export async function searchChannel(
 ): Promise<ManagedSiteChannelListData | null> {
   try {
     const endpoint = `/api/channel/search?keyword=${encodeURIComponent(keyword)}`
-    const data = await fetchApiData<unknown>(request, { endpoint })
+    const data = await veloeraRequests.data<unknown>(request, { endpoint })
 
     const rawItems: VeloeraChannelRaw[] | null = Array.isArray(data)
       ? (data as VeloeraChannelRaw[])
@@ -329,7 +329,7 @@ export async function fetchChannel(
   channelId: number,
 ): Promise<ManagedSiteChannel> {
   const endpoint = `${VELOERA_CHANNEL_ENDPOINT}/${channelId}`
-  const result = await fetchApiData<unknown>(request, { endpoint })
+  const result = await veloeraRequests.data<unknown>(request, { endpoint })
 
   return normalizeChannel(result as VeloeraChannelRaw)
 }
@@ -346,18 +346,14 @@ export async function fetchChannelModels(
   options?: Pick<RequestInit, "signal">,
 ): Promise<string[]> {
   const endpoint = `${VELOERA_CHANNEL_ENDPOINT}/fetch_models/${channelId}`
-  const response = await fetchApi<string[]>(
-    request,
-    {
-      endpoint,
-      options,
-    },
-    false,
-  )
+  const response = await veloeraRequests.envelope<string[]>(request, {
+    endpoint,
+    options,
+  })
 
   if (!response.success || !Array.isArray(response.data)) {
     throw new ApiError(
-      response.message || "Failed to fetch models",
+      getErrorMessage(response.message, "Failed to fetch models"),
       undefined,
       endpoint,
     )
@@ -375,25 +371,21 @@ export async function updateChannelModels(
   models: string,
   options?: Pick<RequestInit, "signal">,
 ): Promise<void> {
-  const response = await fetchApi<void>(
-    request,
-    {
-      endpoint: VELOERA_CHANNEL_ENDPOINT,
-      options: {
-        method: "PUT",
-        body: JSON.stringify({
-          id: channelId,
-          models,
-        } satisfies UpdateChannelPayload),
-        signal: options?.signal,
-      },
+  const response = await veloeraRequests.envelope<void>(request, {
+    endpoint: VELOERA_CHANNEL_ENDPOINT,
+    options: {
+      method: "PUT",
+      body: JSON.stringify({
+        id: channelId,
+        models,
+      } satisfies UpdateChannelPayload),
+      signal: options?.signal,
     },
-    false,
-  )
+  })
 
   if (!response.success) {
     throw new ApiError(
-      response.message || "Failed to update channel",
+      getErrorMessage(response.message, "Failed to update channel"),
       undefined,
       VELOERA_CHANNEL_ENDPOINT,
     )
@@ -410,26 +402,22 @@ export async function updateChannelModelMapping(
   modelMappingJson: string,
   options?: Pick<RequestInit, "signal">,
 ): Promise<void> {
-  const response = await fetchApi<void>(
-    request,
-    {
-      endpoint: VELOERA_CHANNEL_ENDPOINT,
-      options: {
-        method: "PUT",
-        body: JSON.stringify({
-          id: channelId,
-          models,
-          model_mapping: modelMappingJson,
-        } satisfies UpdateChannelPayload),
-        signal: options?.signal,
-      },
+  const response = await veloeraRequests.envelope<void>(request, {
+    endpoint: VELOERA_CHANNEL_ENDPOINT,
+    options: {
+      method: "PUT",
+      body: JSON.stringify({
+        id: channelId,
+        models,
+        model_mapping: modelMappingJson,
+      } satisfies UpdateChannelPayload),
+      signal: options?.signal,
     },
-    false,
-  )
+  })
 
   if (!response.success) {
     throw new ApiError(
-      response.message || "Failed to update channel mapping",
+      getErrorMessage(response.message, "Failed to update channel mapping"),
       undefined,
       VELOERA_CHANNEL_ENDPOINT,
     )

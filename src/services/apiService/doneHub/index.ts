@@ -2,7 +2,6 @@ import type { ManagedSitePaginatedChannelRequestOptions } from "~/services/apiAd
 import { REQUEST_CONFIG } from "~/services/apiTransport/constant"
 import { ApiError } from "~/services/apiTransport/errors"
 import { fetchAllItems } from "~/services/apiTransport/pagination"
-import { fetchApi, fetchApiData } from "~/services/apiTransport/request"
 import type {
   ApiResponse,
   ApiServiceRequest,
@@ -13,7 +12,10 @@ import type {
   ManagedSiteChannelListData,
   UpdateChannelPayload,
 } from "~/types/managedSite"
+import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
+
+import { doneHubRequests } from "./request"
 
 export {
   fetchAccountData,
@@ -31,6 +33,17 @@ const logger = createLogger("ApiService.DoneHub")
 const DONE_HUB_CHANNEL_ENDPOINT = "/api/channel/"
 const DONE_HUB_PROVIDER_MODELS_ENDPOINT = "/api/channel/provider_models_list"
 const DONE_HUB_GROUP_ENDPOINT = "/api/group/"
+
+const wrapChannelMutationError = (error: unknown, fallback: string) =>
+  new ApiError(
+    getErrorMessage(error, fallback),
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    error,
+  )
+
 type DoneHubDataResult<T> = {
   data?: T[] | null
   page?: number
@@ -152,9 +165,12 @@ export async function searchChannel(
     })
 
     const endpoint = `${DONE_HUB_CHANNEL_ENDPOINT}?${params.toString()}`
-    const result = await fetchApiData<DoneHubDataResult<unknown>>(request, {
-      endpoint,
-    })
+    const result = await doneHubRequests.data<DoneHubDataResult<unknown>>(
+      request,
+      {
+        endpoint,
+      },
+    )
 
     if (!Array.isArray(result?.data)) {
       throw new ApiError("Failed to search channels", undefined, endpoint)
@@ -202,7 +218,7 @@ export async function createChannel(
       model_mapping: channel.model_mapping ?? "{}",
     }
 
-    return await fetchApi<void>(request, {
+    return await doneHubRequests.envelope<void>(request, {
       endpoint: DONE_HUB_CHANNEL_ENDPOINT,
       options: {
         method: "POST",
@@ -211,13 +227,9 @@ export async function createChannel(
     })
   } catch (error) {
     logger.error("Failed to create channel")
-    throw new ApiError(
-      "创建渠道失败，请检查网络或 Done Hub 配置。",
-      undefined,
-      undefined,
-      undefined,
-      undefined,
+    throw wrapChannelMutationError(
       error,
+      "创建渠道失败，请检查网络或 Done Hub 配置。",
     )
   }
 }
@@ -239,7 +251,7 @@ export async function updateChannel(
       group: rest.group ?? (groups ?? []).join(","),
     }
 
-    return await fetchApi<void>(request, {
+    return await doneHubRequests.envelope<void>(request, {
       endpoint: DONE_HUB_CHANNEL_ENDPOINT,
       options: {
         method: "PUT",
@@ -248,13 +260,9 @@ export async function updateChannel(
     })
   } catch (error) {
     logger.error("Failed to update channel")
-    throw new ApiError(
-      "更新渠道失败，请检查网络或 Done Hub 配置。",
-      undefined,
-      undefined,
-      undefined,
-      undefined,
+    throw wrapChannelMutationError(
       error,
+      "更新渠道失败，请检查网络或 Done Hub 配置。",
     )
   }
 }
@@ -267,7 +275,7 @@ export async function deleteChannel(
   channelId: number,
 ) {
   try {
-    return await fetchApi<void>(request, {
+    return await doneHubRequests.envelope<void>(request, {
       endpoint: `${DONE_HUB_CHANNEL_ENDPOINT}${channelId}`,
       options: {
         method: "DELETE",
@@ -275,13 +283,9 @@ export async function deleteChannel(
     })
   } catch (error) {
     logger.error("Failed to delete channel")
-    throw new ApiError(
-      "删除渠道失败，请检查网络或 Done Hub 配置。",
-      undefined,
-      undefined,
-      undefined,
-      undefined,
+    throw wrapChannelMutationError(
       error,
+      "删除渠道失败，请检查网络或 Done Hub 配置。",
     )
   }
 }
@@ -313,10 +317,13 @@ export async function listAllChannels(
       await beforeRequest?.()
 
       const endpoint = `${endpointBase}?${params.toString()}`
-      const result = await fetchApiData<DoneHubDataResult<unknown>>(request, {
-        endpoint,
-        options: { signal: options?.signal },
-      })
+      const result = await doneHubRequests.data<DoneHubDataResult<unknown>>(
+        request,
+        {
+          endpoint,
+          options: { signal: options?.signal },
+        },
+      )
 
       if (page === pageStart) {
         totalCount =
@@ -381,7 +388,7 @@ export async function fetchChannelRaw(
   options?: Pick<RequestInit, "signal">,
 ): Promise<DoneHubChannelRaw> {
   const endpoint = `${DONE_HUB_CHANNEL_ENDPOINT}${channelId}`
-  const result = await fetchApiData<unknown>(request, {
+  const result = await doneHubRequests.data<unknown>(request, {
     endpoint,
     options,
   })
@@ -411,7 +418,7 @@ export async function fetchChannelModels(
     model_headers: "",
   }
 
-  const models = await fetchApiData<unknown>(request, {
+  const models = await doneHubRequests.data<unknown>(request, {
     endpoint: DONE_HUB_PROVIDER_MODELS_ENDPOINT,
     options: {
       method: "POST",
@@ -448,7 +455,7 @@ export async function updateChannelModels(
   options?: Pick<RequestInit, "signal">,
 ): Promise<void> {
   const channelEndpoint = `${DONE_HUB_CHANNEL_ENDPOINT}${channelId}`
-  const channel = await fetchApiData<Record<string, unknown>>(request, {
+  const channel = await doneHubRequests.data<Record<string, unknown>>(request, {
     endpoint: channelEndpoint,
     options,
   })
@@ -462,7 +469,7 @@ export async function updateChannelModels(
 
   if (!response.success) {
     throw new ApiError(
-      response.message || "Failed to update channel models",
+      getErrorMessage(response.message, "Failed to update channel models"),
       undefined,
       DONE_HUB_CHANNEL_ENDPOINT,
     )
@@ -483,7 +490,7 @@ export async function updateChannelModelMapping(
   options?: Pick<RequestInit, "signal">,
 ): Promise<void> {
   const channelEndpoint = `${DONE_HUB_CHANNEL_ENDPOINT}${channelId}`
-  const channel = await fetchApiData<Record<string, unknown>>(request, {
+  const channel = await doneHubRequests.data<Record<string, unknown>>(request, {
     endpoint: channelEndpoint,
     options,
   })
@@ -498,7 +505,10 @@ export async function updateChannelModelMapping(
 
   if (!response.success) {
     throw new ApiError(
-      response.message || "Failed to update channel model mapping",
+      getErrorMessage(
+        response.message,
+        "Failed to update channel model mapping",
+      ),
       undefined,
       DONE_HUB_CHANNEL_ENDPOINT,
     )
@@ -511,61 +521,31 @@ export async function updateDoneHubChannelFields(
   payload: Record<string, unknown>,
   options?: Pick<RequestInit, "signal">,
 ): Promise<ApiResponse<void>> {
-  return await fetchApi<void>(
-    request,
-    {
-      endpoint: DONE_HUB_CHANNEL_ENDPOINT,
-      options: {
-        method: "PUT",
-        body: JSON.stringify(payload),
-        signal: options?.signal,
-      },
+  return await doneHubRequests.envelope<void>(request, {
+    endpoint: DONE_HUB_CHANNEL_ENDPOINT,
+    options: {
+      method: "PUT",
+      body: JSON.stringify(payload),
+      signal: options?.signal,
     },
-    false,
-  )
+  })
 }
 
 /**
  * Fetch the complete list of user groups defined on DoneHub.
  *
- * DoneHub returns a paginated `DataResult[UserGroup]` for `GET /api/group/`.
- * We paginate and return the `symbol` fields for admin UI.
+ * DoneHub returns the complete group array in the envelope `data` field.
+ * https://github.com/deanxv/done-hub/blob/1c09e7d75dc170a53d47af1e88c498816a5b85fb/controller/group.go#L19-L37
  */
 export async function fetchSiteUserGroups(
   request: ApiServiceRequest,
 ): Promise<Array<string>> {
-  const pageSize = REQUEST_CONFIG.DEFAULT_PAGE_SIZE
-
-  const allGroups = await fetchAllItems<DoneHubUserGroupRaw>(
-    async (page) => {
-      const params = new URLSearchParams({
-        page: page.toString(),
-        size: pageSize.toString(),
-      })
-      const endpoint = `${DONE_HUB_GROUP_ENDPOINT}?${params.toString()}`
-      const result = await fetchApiData<DoneHubDataResult<unknown>>(request, {
-        endpoint,
-      })
-
-      const items = Array.isArray(result?.data)
-        ? (result.data as DoneHubUserGroupRaw[])
-        : []
-      const total =
-        typeof result?.total_count === "number"
-          ? result.total_count
-          : items.length
-
-      return {
-        items,
-        total,
-      }
-    },
-    {
-      pageSize,
-      startPage: 1,
-      maxPages: REQUEST_CONFIG.MAX_PAGES,
-    },
-  )
+  const result = await doneHubRequests.data<unknown>(request, {
+    endpoint: DONE_HUB_GROUP_ENDPOINT,
+  })
+  const allGroups = Array.isArray(result)
+    ? (result as DoneHubUserGroupRaw[])
+    : []
 
   const symbols = allGroups
     .map((group) => (group?.symbol ?? "").trim())

@@ -55,9 +55,11 @@ const {
   mockFetchTodayUsage: vi.fn(),
 }))
 
-vi.mock("~/services/apiTransport/request", () => ({
-  fetchApiData: mockFetchApiData,
-  fetchApi: mockFetchApi,
+vi.mock("~/services/apiService/doneHub/request", () => ({
+  doneHubRequests: {
+    data: mockFetchApiData,
+    envelope: mockFetchApi,
+  },
 }))
 
 vi.mock("~/services/accounts/accountHealth", () => ({
@@ -430,7 +432,7 @@ describe("apiService doneHub channel APIs", () => {
           status: 1 as any,
         },
       }),
-    ).rejects.toThrow("创建渠道失败，请检查网络或 Done Hub 配置。")
+    ).rejects.toThrow("request failed")
   })
 
   it("updateChannel should put flat payload with group string", async () => {
@@ -512,7 +514,7 @@ describe("apiService doneHub channel APIs", () => {
         models: "gpt-4",
         groups: ["default"],
       }),
-    ).rejects.toThrow("更新渠道失败，请检查网络或 Done Hub 配置。")
+    ).rejects.toThrow("request failed")
   })
 
   it("deleteChannel should issue a DELETE request and wrap failures", async () => {
@@ -545,7 +547,7 @@ describe("apiService doneHub channel APIs", () => {
     )
 
     await expect(deleteChannel(request as any, 100)).rejects.toThrow(
-      "删除渠道失败，请检查网络或 Done Hub 配置。",
+      "request failed",
     )
   })
 
@@ -557,7 +559,6 @@ describe("apiService doneHub channel APIs", () => {
           mode: "none" as any,
           channel: { groups: ["default"] } as any,
         }),
-      message: "创建渠道失败，请检查网络或 Done Hub 配置。",
     },
     {
       operation: "update",
@@ -567,16 +568,14 @@ describe("apiService doneHub channel APIs", () => {
           name: "Updated",
           groups: ["default"],
         }),
-      message: "更新渠道失败，请检查网络或 Done Hub 配置。",
     },
     {
       operation: "delete",
       invoke: (request: any) => deleteChannel(request, 1),
-      message: "删除渠道失败，请检查网络或 Done Hub 配置。",
     },
   ])(
     "$operation mutation preserves ApiError details as cause without logging it",
-    async ({ invoke, message }) => {
+    async ({ invoke }) => {
       const request = {
         baseUrl: "https://example.com",
         auth: {
@@ -590,20 +589,64 @@ describe("apiService doneHub channel APIs", () => {
         504,
         "/api/channel/",
         API_ERROR_CODES.HTTP_OTHER,
+        "provider_limit",
       )
       mockFetchApi.mockRejectedValueOnce(cause)
 
       const error = await invoke(request).catch((caught) => caught)
 
       expect(error).toMatchObject({
-        message,
+        message: "upstream denied",
         statusCode: 504,
         endpoint: "/api/channel/",
         code: API_ERROR_CODES.HTTP_OTHER,
+        upstreamCode: "provider_limit",
         cause,
       })
       expect(mockLoggerError).toHaveBeenCalledWith(expect.any(String))
       expect(mockLoggerError.mock.calls.flat()).not.toContain(cause)
+    },
+  )
+
+  it.each([
+    {
+      operation: "create",
+      message: "创建渠道失败，请检查网络或 Done Hub 配置。",
+      invoke: (request: any) =>
+        createChannel(request, {
+          mode: "none" as any,
+          channel: { groups: ["default"] } as any,
+        }),
+    },
+    {
+      operation: "update",
+      message: "更新渠道失败，请检查网络或 Done Hub 配置。",
+      invoke: (request: any) =>
+        updateChannel(request, {
+          id: 1,
+          name: "Updated",
+          groups: ["default"],
+        }),
+    },
+    {
+      operation: "delete",
+      message: "删除渠道失败，请检查网络或 Done Hub 配置。",
+      invoke: (request: any) => deleteChannel(request, 1),
+    },
+  ])(
+    "$operation mutation uses fixed copy when the thrown message is blank",
+    async ({ invoke, message }) => {
+      const request = {
+        baseUrl: "https://example.com",
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          accessToken: "token",
+          userId: "1",
+        },
+      }
+      mockFetchApi.mockRejectedValueOnce(new Error("   "))
+
+      await expect(invoke(request)).rejects.toThrow(message)
     },
   )
 
@@ -904,7 +947,7 @@ describe("apiService doneHub channel APIs", () => {
     ).rejects.toThrow("Failed to update channel model mapping")
   })
 
-  it("fetchSiteUserGroups should paginate /api/group/ and return symbols", async () => {
+  it("fetchSiteUserGroups should read DoneHub's bare group array", async () => {
     const request = {
       baseUrl: "https://example.com",
       auth: {
@@ -914,38 +957,19 @@ describe("apiService doneHub channel APIs", () => {
       },
     }
 
-    const firstPageGroups = Array.from({ length: 100 }, (_, index) => ({
+    const groups = Array.from({ length: 101 }, (_, index) => ({
       symbol: index === 0 ? "default" : `group-${index}`,
     }))
+    groups[100] = { symbol: "vip" }
 
-    mockFetchApiData
-      .mockResolvedValueOnce({
-        data: firstPageGroups,
-        page: 1,
-        size: 100,
-        total_count: 101,
-      })
-      .mockResolvedValueOnce({
-        data: [{ symbol: "vip" }],
-        page: 2,
-        size: 100,
-        total_count: 101,
-      })
+    mockFetchApiData.mockResolvedValueOnce(groups)
 
     const result = await fetchSiteUserGroups(request as any)
 
-    expect(mockFetchApiData).toHaveBeenCalledTimes(2)
-
-    const firstEndpoint = mockFetchApiData.mock.calls[0][1].endpoint as string
-    const secondEndpoint = mockFetchApiData.mock.calls[1][1].endpoint as string
-
-    expect(firstEndpoint).toContain("/api/group/?")
-    expect(firstEndpoint).toContain("page=1")
-    expect(firstEndpoint).toContain("size=100")
-
-    expect(secondEndpoint).toContain("/api/group/?")
-    expect(secondEndpoint).toContain("page=2")
-    expect(secondEndpoint).toContain("size=100")
+    expect(mockFetchApiData).toHaveBeenCalledOnce()
+    expect(mockFetchApiData).toHaveBeenCalledWith(request, {
+      endpoint: "/api/group/",
+    })
 
     expect(result).toHaveLength(101)
     expect(result[0]).toBe("default")
@@ -962,16 +986,12 @@ describe("apiService doneHub channel APIs", () => {
       },
     }
 
-    mockFetchApiData.mockResolvedValueOnce({
-      data: [
-        { symbol: " default " },
-        { symbol: "" },
-        { symbol: "default" },
-        { symbol: "vip" },
-      ],
-      page: 1,
-      size: 100,
-    })
+    mockFetchApiData.mockResolvedValueOnce([
+      { symbol: " default " },
+      { symbol: "" },
+      { symbol: "default" },
+      { symbol: "vip" },
+    ])
 
     await expect(fetchSiteUserGroups(request as any)).resolves.toEqual([
       "default",

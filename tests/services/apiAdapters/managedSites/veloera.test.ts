@@ -323,6 +323,28 @@ describe("Veloera managed-site channel capability", () => {
     })
   })
 
+  it("uses fixed diagnostic copy when a Veloera rejection message is blank", async () => {
+    const rejectionResponse = { success: false, data: null, message: "   " }
+    veloeraApi.createChannel.mockImplementationOnce(async (request) => {
+      request.observer?.onDispatch()
+      request.observer?.onResponse()
+      return rejectionResponse
+    })
+    const { veloeraManagedSiteChannels } = await import(
+      "~/services/apiAdapters/managedSites/veloera"
+    )
+
+    await expect(
+      veloeraManagedSiteChannels.create(config, createPayload),
+    ).resolves.toEqual({
+      outcome: "rejected",
+      diagnostic: {
+        message: "Provider rejected the mutation",
+        raw: rejectionResponse,
+      },
+    })
+  })
+
   const resourceDraft: ChannelFormData = {
     name: "Resource channel",
     type: 1,

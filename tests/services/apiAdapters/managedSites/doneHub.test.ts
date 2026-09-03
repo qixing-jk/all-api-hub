@@ -297,6 +297,28 @@ describe("DoneHub managed-site channel capability", () => {
     ).rejects.toBe(responseError)
   })
 
+  it("uses fixed diagnostic copy when a DoneHub rejection message is blank", async () => {
+    const rejectionResponse = { success: false, data: null, message: "   " }
+    doneHubApi.createChannel.mockImplementationOnce(async (request) => {
+      request.observer?.onDispatch()
+      request.observer?.onResponse()
+      return rejectionResponse
+    })
+    const { doneHubManagedSiteChannels } = await import(
+      "~/services/apiAdapters/managedSites/doneHub"
+    )
+
+    await expect(
+      doneHubManagedSiteChannels.create(config, createPayload),
+    ).resolves.toEqual({
+      outcome: "rejected",
+      diagnostic: {
+        message: "Provider rejected the mutation",
+        raw: rejectionResponse,
+      },
+    })
+  })
+
   const resourceDraft: ChannelFormData = {
     name: "Resource channel",
     type: 1,
