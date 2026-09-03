@@ -739,6 +739,37 @@ describe("ensureDefaultApiTokenForAccount non-Sub2API branches", () => {
     expect(fetchAccountTokensMock).toHaveBeenCalledTimes(1)
   })
 
+  it("uses the legacy string argument as the loading toast id", async () => {
+    const { displayAccount, siteAccount } = createNonSub2ApiAccounts()
+    const existingToken = {
+      id: 24,
+      user_id: displayAccount.userId,
+      key: "sk-existing",
+      status: 1,
+      name: "existing",
+      created_time: 1,
+      accessed_time: 1,
+      expired_time: -1,
+      remain_quota: -1,
+      unlimited_quota: true,
+      used_quota: 0,
+    }
+    fetchAccountTokensMock.mockResolvedValueOnce([existingToken])
+
+    await expect(
+      ensureAccountApiToken(
+        siteAccount as any,
+        displayAccount as any,
+        "toast-existing",
+      ),
+    ).resolves.toEqual(existingToken)
+
+    expect(toastLoadingMock).toHaveBeenCalledWith(
+      "messages:accountOperations.checkingApiKeys",
+      { id: "toast-existing" },
+    )
+  })
+
   it("uses display account fields for shared inventory reads and stored account fields for shared token creation", async () => {
     const displayAccount = {
       id: "shared-display-account-id",
@@ -923,6 +954,17 @@ describe("ensureDefaultApiTokenForAccount non-Sub2API branches", () => {
     await expect(
       ensureAccountApiToken(siteAccount as any, displayAccount as any),
     ).rejects.toThrow("messages:accountOperations.createTokenFailed")
+  })
+
+  it("reports when a created token cannot be found after inventory refresh", async () => {
+    const { displayAccount, siteAccount } = createNonSub2ApiAccounts()
+
+    fetchAccountTokensMock.mockResolvedValueOnce([]).mockResolvedValueOnce([])
+    createApiTokenMock.mockResolvedValueOnce(true)
+
+    await expect(
+      ensureAccountApiToken(siteAccount as any, displayAccount as any),
+    ).rejects.toThrow("messages:accountOperations.tokenNotFound")
   })
 
   it("blocks background token ensure when created token secret cannot be recovered", async () => {

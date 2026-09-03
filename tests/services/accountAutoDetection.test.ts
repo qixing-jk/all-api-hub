@@ -1669,6 +1669,37 @@ describe("accountAutoDetection", () => {
     })
   })
 
+  it("returns local guidance when site status cannot be fetched", async () => {
+    mockSendRuntimeMessage.mockResolvedValueOnce(null)
+    mockAutoDetectSmart.mockResolvedValueOnce({
+      success: true,
+      data: {
+        userId: "5",
+        siteType: SITE_TYPES.NEW_API,
+      },
+    })
+    mockGetOrCreateAccessToken.mockResolvedValueOnce({
+      username: "status-user",
+      access_token: "status-token",
+    })
+    mockFetchSiteStatus.mockRejectedValueOnce(
+      new Error("site status unavailable"),
+    )
+
+    const result = await autoDetectAccount(
+      "https://status.example.invalid",
+      AuthTypeEnum.AccessToken,
+    )
+
+    expect(result).toMatchObject({
+      success: false,
+      message: "messages:operations.detection.getSiteStatusFailedDetailed",
+      autoDetectFailureReason:
+        AUTO_DETECT_FAILURE_REASONS.SiteStatusFetchFailed,
+    })
+    expect(mockFetchSupportCheckIn).not.toHaveBeenCalled()
+  })
+
   it("classifies token creation exceptions during auto-detect completion", async () => {
     mockSendRuntimeMessage.mockResolvedValueOnce(null)
     mockAutoDetectSmart.mockResolvedValueOnce({

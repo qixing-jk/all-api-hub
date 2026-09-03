@@ -295,6 +295,30 @@ describe("accountPersistence save and update", () => {
     })
   })
 
+  it("defaults legacy preferences to including today's cashflow on update", async () => {
+    const legacyPreferences = {
+      ...DEFAULT_PREFERENCES,
+    }
+    delete (legacyPreferences as Partial<typeof DEFAULT_PREFERENCES>)
+      .showTodayCashflow
+    vi.mocked(userPreferences.getPreferences).mockResolvedValueOnce(
+      legacyPreferences,
+    )
+    fetchAccountDataMock.mockResolvedValueOnce(LOG_TEST_ACCOUNT_DATA)
+    const accountId = await addStoredAccountForLogTest(SITE_TYPES.NEW_API)
+
+    const result = await updateAccountForLogTest(
+      accountId,
+      SITE_TYPES.NEW_API,
+      false,
+    )
+
+    expect(result.success).toBe(true)
+    expect(fetchAccountDataMock).toHaveBeenCalledWith(
+      expect.objectContaining({ includeTodayCashflow: true }),
+    )
+  })
+
   it("validates an OpenRouter management key before deferred persistence", async () => {
     const events: string[] = []
     validateManagementKeyMock.mockImplementation(
