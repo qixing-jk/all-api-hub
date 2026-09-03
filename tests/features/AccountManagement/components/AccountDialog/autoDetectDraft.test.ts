@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest"
 
-import { CHECK_IN_SELECTION_MODES } from "~/constants/checkIn"
+import {
+  AUTO_CHECKIN_METHOD_IDS,
+  CHECK_IN_SELECTION_MODES,
+} from "~/constants/checkIn"
 import { DIALOG_MODES } from "~/constants/dialogModes"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
@@ -98,7 +101,7 @@ describe("account dialog auto-detect draft mapping", () => {
         ...emptyDraft.checkIn,
         selection: {
           mode: CHECK_IN_SELECTION_MODES.Manual,
-          methodId: "new-api:daily-checkin",
+          methodId: AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn,
         },
       },
     }
