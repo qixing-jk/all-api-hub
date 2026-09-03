@@ -892,6 +892,10 @@ const _fetchApiWithMapper = async <T, TResult>(
             )
           }
 
+          if (dispatchedContext.forceTempWindow) {
+            return await fallback()
+          }
+
           return await executeWithCurrentTabContentPreference<T, TResult>(
             {
               request,

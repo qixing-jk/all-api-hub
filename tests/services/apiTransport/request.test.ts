@@ -2258,6 +2258,11 @@ describe("apiTransport request helpers", () => {
             authType: AuthTypeEnum.Cookie,
             cookie: "session=abc123",
           },
+          fetchContext: {
+            kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+            tabId: 456,
+            origin: "https://example.com",
+          },
           forceTempWindow: true,
           protectionBypassExecution: backgroundProtectionBypassExecution,
         },
@@ -2266,6 +2271,7 @@ describe("apiTransport request helpers", () => {
     ).resolves.toEqual({ ok: true })
 
     expect(normalFetchCount).toBe(0)
+    expect(mockSendTabMessageWithRetry).not.toHaveBeenCalled()
     expect(mockSendRuntimeMessage).toHaveBeenCalledWith(
       expect.objectContaining({
         action: RuntimeActionIds.ProtectionBypassExecuteTask,
