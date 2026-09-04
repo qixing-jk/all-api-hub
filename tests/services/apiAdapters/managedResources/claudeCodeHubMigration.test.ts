@@ -307,7 +307,7 @@ describe("Claude Code Hub native migration capability", () => {
         status: 2,
       },
       adjustments: {
-        remappedType: true,
+        remappedType: false,
         normalizedBaseUrl: false,
         forcedDefaultGroup: true,
         ignoredPriority: true,
@@ -332,6 +332,19 @@ describe("Claude Code Hub native migration capability", () => {
       },
       undefined,
     )
+
+    const remappedPreparation =
+      await claudeCodeHubManagedSiteMigrationCapability.target!.prepare(
+        buildSource(ChannelType.Azure),
+      )
+    expect(remappedPreparation).toMatchObject({
+      projection: {
+        type: CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE,
+      },
+      adjustments: {
+        remappedType: true,
+      },
+    })
   })
 
   it("classifies a missing target configuration as unavailable", async () => {

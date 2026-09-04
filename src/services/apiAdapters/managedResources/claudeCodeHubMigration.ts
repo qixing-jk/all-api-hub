@@ -288,6 +288,8 @@ export const claudeCodeHubManagedSiteMigrationCapability: ManagedSiteMigrationCa
         const type = mapChannelTypeToClaudeCodeHubProviderType(
           source.resourceType,
         )
+        const roundTripType =
+          mapClaudeCodeHubProviderTypeToChannelTypeStrict(type)
         const groups = [
           source.groups[0]?.trim() || DEFAULT_CHANNEL_FIELDS.groups[0],
         ]
@@ -305,7 +307,9 @@ export const claudeCodeHubManagedSiteMigrationCapability: ManagedSiteMigrationCa
             status: source.status === "enabled" ? 1 : 2,
           },
           adjustments: {
-            remappedType: String(type) !== String(source.resourceType),
+            remappedType:
+              roundTripType.status === "unsupported" ||
+              roundTripType.value !== source.resourceType,
             normalizedBaseUrl: false,
             forcedDefaultGroup:
               source.groups.length !== 1 || source.groups[0] !== groups[0],

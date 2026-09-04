@@ -1177,6 +1177,70 @@ describe("Claude Code Hub managed-site channel capability", () => {
     ).not.toHaveProperty("key")
   })
 
+  it.each([
+    { label: "null", allowedModels: null },
+    { label: "an empty array", allowedModels: [] },
+  ])(
+    "allows ordinary edits when unrestricted models are represented by $label",
+    async ({ allowedModels }) => {
+      const { claudeCodeHubManagedSiteCapabilities } = await import(
+        "~/services/apiAdapters/managedSites/claudeCodeHub"
+      )
+      const unrestrictedProvider = {
+        ...provider,
+        allowedModels,
+      }
+      claudeCodeHubApi.listProviders.mockResolvedValue([unrestrictedProvider])
+      claudeCodeHubApi.updateProvider.mockResolvedValue(unrestrictedProvider)
+
+      const detail =
+        await claudeCodeHubManagedSiteCapabilities.resources.items.getDetail(
+          config,
+          {
+            managedSiteType: SITE_TYPES.CLAUDE_CODE_HUB,
+            scopeKey: "https://claude-code-hub.example.invalid",
+            resourceId: "7",
+          },
+        )
+      const draft =
+        claudeCodeHubManagedSiteCapabilities.resources.drafts.prepareEditDraft(
+          detail,
+        )
+
+      expect(draft).toMatchObject({
+        models: [],
+        _claudeCodeHubNativeAllowedModels: allowedModels,
+      })
+      expect(
+        claudeCodeHubManagedSiteCapabilities.resources.drafts.validateDraft(
+          draft,
+        ),
+      ).toEqual({ valid: true, errors: [] })
+
+      await claudeCodeHubManagedSiteCapabilities.resources.items.update(
+        config,
+        detail,
+        {
+          ...draft,
+          name: "Edited Unrestricted Provider",
+        },
+      )
+
+      expect(claudeCodeHubApi.updateProvider).toHaveBeenCalledWith(
+        config,
+        expect.objectContaining({
+          providerId: 7,
+          name: "Edited Unrestricted Provider",
+          allowed_models: allowedModels,
+          providerOnlyFlag: true,
+        }),
+      )
+      expect(
+        claudeCodeHubApi.updateProvider.mock.calls.at(-1)?.[1],
+      ).not.toHaveProperty("key")
+    },
+  )
+
   it("prepares and validates Claude Code Hub resource import drafts", async () => {
     const { claudeCodeHubManagedSiteCapabilities } = await import(
       "~/services/apiAdapters/managedSites/claudeCodeHub"

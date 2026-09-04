@@ -18,4 +18,13 @@ describe("Claude Code Hub channel type mapping", () => {
       CLAUDE_CODE_HUB_PROVIDER_TYPE.CODEX,
     )
   })
+
+  it.each(["constructor", "toString", "__proto__"])(
+    "rejects inherited object key %s as an unsupported provider type",
+    (providerType) => {
+      expect(
+        mapClaudeCodeHubProviderTypeToChannelTypeStrict(providerType),
+      ).toEqual({ status: "unsupported" })
+    },
+  )
 })

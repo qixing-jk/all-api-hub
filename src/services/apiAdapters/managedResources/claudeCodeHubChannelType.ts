@@ -1,5 +1,6 @@
 import {
   CLAUDE_CODE_HUB_PROVIDER_TYPE,
+  isClaudeCodeHubProviderType,
   type ClaudeCodeHubProviderType,
 } from "~/constants/claudeCodeHub"
 import { ChannelType } from "~/constants/managedSite"
@@ -25,10 +26,11 @@ const CHANNEL_TO_PROVIDER_TYPE: Partial<
 export const mapClaudeCodeHubProviderTypeToChannelTypeStrict = (
   value: string,
 ) => {
-  const mapped = PROVIDER_TO_CHANNEL_TYPE[value as ClaudeCodeHubProviderType]
-  return mapped === undefined
-    ? { status: "unsupported" as const }
-    : { status: "mapped" as const, value: mapped }
+  if (!isClaudeCodeHubProviderType(value)) {
+    return { status: "unsupported" as const }
+  }
+
+  return { status: "mapped" as const, value: PROVIDER_TO_CHANNEL_TYPE[value] }
 }
 
 export const mapChannelTypeToClaudeCodeHubProviderType = (

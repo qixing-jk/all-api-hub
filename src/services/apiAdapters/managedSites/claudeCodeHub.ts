@@ -196,14 +196,10 @@ const haveSameAllowedModelDraft = (
   )
 }
 
-const hasNativeAllowedModelRules = (
-  allowedModels?: ClaudeCodeHubAllowedModel[] | null,
-) => (allowedModels?.length ?? 0) > 0
-
 const hasNativeOnlyAllowedModelRules = (
   allowedModels?: ClaudeCodeHubAllowedModel[] | null,
 ) =>
-  hasNativeAllowedModelRules(allowedModels) &&
+  allowedModels !== undefined &&
   normalizeAllowedModels(allowedModels).length === 0
 
 const resolveAllowedModelRules = (
@@ -334,8 +330,7 @@ const prepareClaudeCodeHubEditDraft = (
     priority: channel.priority,
     weight: channel.weight,
     status: channel.status,
-    [CLAUDE_CODE_HUB_NATIVE_ALLOWED_MODELS_FIELD]:
-      detail.native.allowedModels ?? [],
+    [CLAUDE_CODE_HUB_NATIVE_ALLOWED_MODELS_FIELD]: detail.native.allowedModels,
   }
 }
 
