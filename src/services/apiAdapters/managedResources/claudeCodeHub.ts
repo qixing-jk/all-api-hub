@@ -724,7 +724,7 @@ const runMutation = async <T>(
   }
 }
 
-export type ClaudeCodeHubNativeResourceOperations = {
+type ClaudeCodeHubNativeResourceOperations = {
   scopeKey: string
   list(
     query?: ResourceListQuery,
