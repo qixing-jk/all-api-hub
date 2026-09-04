@@ -7,6 +7,7 @@ import {
 } from "~/constants/checkIn"
 import { SITE_TYPES } from "~/services/accountSiteDefinitions/identifiers"
 import { fetchSub2ApiProDailyCheckInStatus } from "~/services/apiService/sub2api"
+import { SUB2API_AUTH_PERSISTENCE_STATUSES } from "~/services/apiService/sub2api/authSession"
 import {
   DENXIO_DAILY_CHECK_IN_ERROR_CODES,
   fetchDenxioDailyCheckInStatus,
@@ -94,12 +95,33 @@ describe("Denxio daily check-in method Adapter", () => {
 
   it("requires a persisted Sub2API access token", () => {
     const account = createAccount()
+    expect(denxioProvider.getReadiness(account)).toEqual({ ready: true })
     account.account_info.access_token = ""
 
     expect(denxioProvider.getReadiness(account)).toEqual({
       ready: false,
       reason: "credentials_missing",
     })
+  })
+
+  it.each(["id", "site_url", "account_info.id"] as const)(
+    "requires persisted account data: %s",
+    (field) => {
+      const account = createAccount()
+      if (field === "account_info.id") account.account_info.id = ""
+      else account[field] = ""
+
+      expect(denxioProvider.getReadiness(account)).toEqual({
+        ready: false,
+        reason: "account_data_missing",
+      })
+    },
+  )
+
+  it("rejects a status read without account or request data", async () => {
+    await expect(
+      denxioProvider.getStatus?.({ observedAt: 300 }),
+    ).rejects.toThrow("Sub2API account data is unavailable")
   })
 
   it("maps the deployment status to canonical discovery evidence", async () => {
@@ -118,6 +140,26 @@ describe("Denxio daily check-in method Adapter", () => {
       },
     })
   })
+
+  it.each([
+    [false, false, "disabled", "not_checked"],
+    [true, true, "enabled", "checked"],
+  ] as const)(
+    "maps enabled=%s and checked=%s status evidence",
+    async (enabled, checkedInToday, availability, today) => {
+      vi.mocked(fetchDenxioDailyCheckInStatus).mockResolvedValue({
+        enabled,
+        checkedInToday,
+      })
+
+      await expect(
+        denxioProvider.getStatus?.({
+          account: createAccount(),
+          observedAt: 300,
+        }),
+      ).resolves.toMatchObject({ availability, today })
+    },
+  )
 
   it("wins Sub2API discovery only when its read-only deployment probe matches", async () => {
     const account = createAccount()
@@ -179,6 +221,65 @@ describe("Denxio daily check-in method Adapter", () => {
   })
 
   it.each([
+    [{ kind: "already_checked" as const }, "already_checked", undefined],
+    [{ kind: "disabled" as const }, "failed", "method_disabled"],
+    [
+      { kind: "recovery_status_unavailable" as const },
+      "failed",
+      "status_unavailable",
+    ],
+    [
+      { kind: "recovery_precondition_failed" as const },
+      "failed",
+      "account_unavailable",
+    ],
+  ])(
+    "maps protocol result $0.kind",
+    async (protocolResult, status, reasonCode) => {
+      vi.mocked(performDenxioDailyCheckIn).mockResolvedValue(protocolResult)
+
+      await expect(
+        denxioProvider.checkIn(createAccount(), {
+          ...executionContext(),
+          statusProof: notCheckedStatus,
+        }),
+      ).resolves.toMatchObject({
+        status,
+        ...(reasonCode ? { reasonCode, retryable: false } : {}),
+      })
+    },
+  )
+
+  it.each([
+    [
+      SUB2API_AUTH_PERSISTENCE_STATUSES.IDENTITY_MISMATCH,
+      "authentication_required",
+    ],
+    [SUB2API_AUTH_PERSISTENCE_STATUSES.ACCOUNT_MISSING, "account_unavailable"],
+    [SUB2API_AUTH_PERSISTENCE_STATUSES.WRITE_FAILED, "status_unavailable"],
+  ] as const)(
+    "stops after auth persistence result %s",
+    async (persistenceStatus, reasonCode) => {
+      vi.mocked(performDenxioDailyCheckIn).mockRejectedValue(
+        Object.assign(new Error("controlled persistence failure"), {
+          result: { status: persistenceStatus },
+        }),
+      )
+
+      await expect(
+        denxioProvider.checkIn(createAccount(), {
+          ...executionContext(),
+          statusProof: notCheckedStatus,
+        }),
+      ).resolves.toMatchObject({
+        status: CHECKIN_RESULT_STATUS.FAILED,
+        reasonCode,
+        retryable: false,
+      })
+    },
+  )
+
+  it.each([
     [DENXIO_DAILY_CHECK_IN_ERROR_CODES.AlreadyChecked, "already_checked"],
     [DENXIO_DAILY_CHECK_IN_ERROR_CODES.Disabled, "failed"],
   ])("maps stable business code %s", async (upstreamCode, status) => {
@@ -219,6 +320,69 @@ describe("Denxio daily check-in method Adapter", () => {
     ).resolves.toMatchObject({
       status: CHECKIN_RESULT_STATUS.FAILED,
       rawMessage: "Bearer [REDACTED] was rejected",
+    })
+  })
+
+  it.each([
+    [new ApiError("unauthorized", 401), "authentication_required", undefined],
+    [
+      Object.assign(new Error("unauthorized"), { statusCode: 401 }),
+      "authentication_required",
+      undefined,
+    ],
+    [new ApiError("missing", 404), "method_unsupported", false],
+    [new ApiError("not allowed", 405), "method_unsupported", false],
+    [new ApiError("forbidden", 403), "permission_denied", undefined],
+    [new TypeError("Failed to fetch"), "network_error", undefined],
+    [
+      Object.assign(new Error("timed out"), { name: "TimeoutError" }),
+      "timeout",
+      undefined,
+    ],
+    [new ApiError("unavailable", 503), "source_unavailable", undefined],
+    [new Error("unexpected"), "status_unavailable", undefined],
+  ] as const)(
+    "maps mutation failure to %s",
+    async (error, reasonCode, retryable) => {
+      vi.mocked(performDenxioDailyCheckIn).mockRejectedValue(error)
+
+      await expect(
+        denxioProvider.checkIn(createAccount(), {
+          ...executionContext(),
+          statusProof: notCheckedStatus,
+        }),
+      ).resolves.toMatchObject({
+        status: CHECKIN_RESULT_STATUS.FAILED,
+        reasonCode,
+        ...(typeof retryable === "boolean" ? { retryable } : {}),
+      })
+    },
+  )
+
+  it.each([
+    DENXIO_DAILY_CHECK_IN_ERROR_CODES.NoSponsor,
+    DENXIO_DAILY_CHECK_IN_ERROR_CODES.SessionPending,
+  ])("maps unavailable session code %s", async (upstreamCode) => {
+    vi.mocked(performDenxioDailyCheckIn).mockRejectedValue(
+      new ApiError(
+        "controlled session error",
+        409,
+        "/example",
+        API_ERROR_CODES.BUSINESS_ERROR,
+        upstreamCode,
+      ),
+    )
+
+    await expect(
+      denxioProvider.checkIn(createAccount(), {
+        ...executionContext(),
+        statusProof: notCheckedStatus,
+      }),
+    ).resolves.toMatchObject({
+      status: CHECKIN_RESULT_STATUS.FAILED,
+      reasonCode: "status_unavailable",
+      retryable: false,
+      rawMessage: "controlled session error",
     })
   })
 

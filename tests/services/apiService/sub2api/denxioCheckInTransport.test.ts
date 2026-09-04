@@ -117,6 +117,29 @@ describe("Denxio daily check-in authenticated transport", () => {
     )
   })
 
+  it("falls back to UTC when the runtime timezone is unavailable", async () => {
+    const dateTimeFormat = vi
+      .spyOn(Intl, "DateTimeFormat")
+      .mockImplementation(() => {
+        throw new Error("timezone unavailable")
+      })
+    vi.mocked(fetchApiResponse).mockResolvedValue(response(200, statusBody()))
+
+    try {
+      await expect(
+        fetchDenxioDailyCheckInStatus(createRequest()),
+      ).resolves.toEqual({ enabled: true, checkedInToday: false })
+      expect(fetchApiResponse).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          endpoint: `${DENXIO_DAILY_CHECK_IN_STATUS_ENDPOINT}?timezone=UTC`,
+        }),
+      )
+    } finally {
+      dateTimeFormat.mockRestore()
+    }
+  })
+
   it("does not recover a passive status 401 through browser auth", async () => {
     vi.mocked(fetchApiResponse).mockResolvedValue(
       response(401, { code: 401, message: "unauthorized" }),
@@ -177,6 +200,24 @@ describe("Denxio daily check-in authenticated transport", () => {
       observer,
       "onPreHandlerUnauthorized",
     )
+  })
+
+  it("uses the default short challenge delay when no wait override is supplied", async () => {
+    vi.useFakeTimers()
+    vi.mocked(fetchApiResponse)
+      .mockResolvedValueOnce(response(200, beginBody))
+      .mockResolvedValueOnce(response(200, claimBody))
+
+    try {
+      const result = performDenxioDailyCheckIn(createRequest())
+      await vi.advanceTimersByTimeAsync(3_000)
+      await expect(result).resolves.toEqual({
+        kind: "applied",
+        rewardAmount: 0.5,
+      })
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it("persists recovered auth before status recheck and one recovered begin", async () => {

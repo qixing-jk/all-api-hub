@@ -79,6 +79,17 @@ describe("Denxio daily check-in protocol parsing", () => {
     )
   })
 
+  it("rejects a scalar success body as an invalid response", () => {
+    expect(() =>
+      parseDenxioDailyCheckInStatusResponse(response(200, null)),
+    ).toThrowError(
+      expect.objectContaining({
+        code: API_ERROR_CODES.JSON_PARSE_ERROR,
+        endpoint: DENXIO_DAILY_CHECK_IN_STATUS_ENDPOINT,
+      }),
+    )
+  })
+
   it("parses a bounded begin challenge without exposing sponsor data", () => {
     expect(
       parseDenxioDailyCheckInBeginResponse(
@@ -162,6 +173,37 @@ describe("Denxio daily check-in protocol parsing", () => {
         code: API_ERROR_CODES.HTTP_OTHER,
         endpoint: DENXIO_DAILY_CHECK_IN_CLAIM_ENDPOINT,
       } satisfies Partial<ApiError>),
+    )
+  })
+
+  it("uses a local fallback when an error envelope has a blank message", () => {
+    expect(() =>
+      parseDenxioDailyCheckInClaimResponse(
+        response(503, { code: 503, message: " " }),
+      ),
+    ).toThrowError(
+      expect.objectContaining({
+        message: "Denxio daily check-in request failed with HTTP 503",
+        statusCode: 503,
+        endpoint: DENXIO_DAILY_CHECK_IN_CLAIM_ENDPOINT,
+      }),
+    )
+  })
+
+  it("rejects a claim without a finite reward amount", () => {
+    expect(() =>
+      parseDenxioDailyCheckInClaimResponse(
+        response(200, {
+          code: 0,
+          message: "success",
+          data: { record: { amount: Number.NaN } },
+        }),
+      ),
+    ).toThrowError(
+      expect.objectContaining({
+        code: API_ERROR_CODES.JSON_PARSE_ERROR,
+        endpoint: DENXIO_DAILY_CHECK_IN_CLAIM_ENDPOINT,
+      }),
     )
   })
 
