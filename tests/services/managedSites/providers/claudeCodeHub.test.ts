@@ -387,6 +387,21 @@ describe("Claude Code Hub managed-site provider", () => {
     )
   })
 
+  it("logs a normalized summary when preferences fail before config is loaded", async () => {
+    const preferencesError = new Error("preferences unavailable")
+    mockGetPreferences.mockRejectedValueOnce(preferencesError)
+
+    await expect(checkValidClaudeCodeHubConfig()).resolves.toBe(false)
+    expect(mockLogger.warn).toHaveBeenCalledWith(
+      "Claude Code Hub config validation failed",
+      "preferences unavailable",
+    )
+    expect(mockLogger.warn).not.toHaveBeenCalledWith(
+      expect.anything(),
+      preferencesError,
+    )
+  })
+
   it("logs only a normalized summary when reading preferences fails", async () => {
     const preferencesError = new Error("preferences unavailable")
     mockGetPreferences.mockRejectedValueOnce(preferencesError)
