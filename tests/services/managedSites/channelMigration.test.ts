@@ -2878,7 +2878,7 @@ describe("channelMigration", () => {
       status: "ready",
       draft: {
         name: "Codex Provider",
-        type: ChannelType.OpenAI,
+        type: ChannelType.Codex,
         key: "cch-real-key",
         base_url: "https://cch-upstream.example.com/v1",
         models: ["gpt-4o", "gpt-4.1"],
