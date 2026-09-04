@@ -9,6 +9,7 @@ export const AUTO_CHECKIN_METHOD_IDS = {
   AnyrouterDailyCheckIn: "anyrouter:daily-checkin",
   VoApiV2DailyCheckIn: "voapi-v2:daily-checkin",
   Sub2ApiProDailyCheckIn: "sub2api-pro:daily-checkin",
+  DenxioDailyCheckIn: "denxio:daily-checkin",
 } as const
 
 export const CHECK_IN_METHOD_UNKNOWN_REASON_CODES = {

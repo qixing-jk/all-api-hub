@@ -371,39 +371,45 @@ describe("auto-checkin product analytics", () => {
     ])
   })
 
-  it("reports only an allow-listed method category for Sub2API Pro", () => {
-    const [group] = buildAutoCheckinAccountGroupProperties({
-      runKind: "daily",
-      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
-      accountsById: new Map([
-        ["sub2api-account", { authType: AuthTypeEnum.AccessToken }],
-      ]),
-      snapshots: [
-        {
-          accountId: "sub2api-account",
-          accountName: "Private account name",
-          siteType: "sub2api",
-          detectionEnabled: true,
-          autoCheckinEnabled: true,
-          providerAvailable: true,
-          lastResult: {
+  it.each([
+    AUTO_CHECKIN_METHOD_IDS.Sub2ApiProDailyCheckIn,
+    AUTO_CHECKIN_METHOD_IDS.DenxioDailyCheckIn,
+  ])(
+    "reports only an allow-listed category for strict method %s",
+    (methodId) => {
+      const [group] = buildAutoCheckinAccountGroupProperties({
+        runKind: "daily",
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
+        accountsById: new Map([
+          ["sub2api-account", { authType: AuthTypeEnum.AccessToken }],
+        ]),
+        snapshots: [
+          {
             accountId: "sub2api-account",
             accountName: "Private account name",
-            methodId: AUTO_CHECKIN_METHOD_IDS.Sub2ApiProDailyCheckIn,
-            status: CHECKIN_RESULT_STATUS.SUCCESS,
-            timestamp: 1,
+            siteType: "sub2api",
+            detectionEnabled: true,
+            autoCheckinEnabled: true,
+            providerAvailable: true,
+            lastResult: {
+              accountId: "sub2api-account",
+              accountName: "Private account name",
+              methodId,
+              status: CHECKIN_RESULT_STATUS.SUCCESS,
+              timestamp: 1,
+            },
           },
-        },
-      ],
-    })
+        ],
+      })
 
-    expect(group).toMatchObject({
-      method_category:
-        PRODUCT_ANALYTICS_AUTO_CHECKIN_METHOD_CATEGORIES.StrictReadback,
-    })
-    expect(JSON.stringify(group)).not.toContain("sub2api-pro:daily-checkin")
-    expect(JSON.stringify(group)).not.toContain("Private account name")
-  })
+      expect(group).toMatchObject({
+        method_category:
+          PRODUCT_ANALYTICS_AUTO_CHECKIN_METHOD_CATEGORIES.StrictReadback,
+      })
+      expect(JSON.stringify(group)).not.toContain(methodId)
+      expect(JSON.stringify(group)).not.toContain("Private account name")
+    },
+  )
 
   it("groups registered methods by privacy-reviewed category and omits unknown IDs", () => {
     const groups = buildAutoCheckinAccountGroupProperties({

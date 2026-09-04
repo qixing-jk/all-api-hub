@@ -4,6 +4,7 @@ import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { SITE_TYPES } from "~/constants/siteType"
 import { autoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers"
 import { anyrouterProvider } from "~/services/checkin/autoCheckin/providers/anyrouter"
+import { denxioProvider } from "~/services/checkin/autoCheckin/providers/denxio"
 import { newApiProvider } from "~/services/checkin/autoCheckin/providers/newApi"
 import {
   AUTO_CHECKIN_METHOD_SOURCE_KINDS,
@@ -51,7 +52,7 @@ describe("autoCheckinMethodRegistry", () => {
       }),
     )
 
-    expect(registrationContracts).toHaveLength(6)
+    expect(registrationContracts).toHaveLength(7)
     expect(registrationContracts).toEqual(
       expect.arrayContaining([
         {
@@ -84,6 +85,11 @@ describe("autoCheckinMethodRegistry", () => {
           candidateSiteTypes: [SITE_TYPES.SUB2API],
           provider: sub2apiProProvider,
         },
+        {
+          id: "denxio:daily-checkin",
+          candidateSiteTypes: [SITE_TYPES.SUB2API],
+          provider: denxioProvider,
+        },
       ]),
     )
 
@@ -106,6 +112,8 @@ describe("autoCheckinMethodRegistry", () => {
     expect(voApiV2Provider.detect).toBeTypeOf("function")
     expect(sub2apiProProvider.getStatus).toBeTypeOf("function")
     expect(sub2apiProProvider.detect).toBeTypeOf("function")
+    expect(denxioProvider.getStatus).toBeTypeOf("function")
+    expect(denxioProvider.detect).toBeTypeOf("function")
   })
 
   it("distinguishes official methods from third-party protocol methods", () => {
@@ -119,6 +127,12 @@ describe("autoCheckinMethodRegistry", () => {
     ).toEqual({
       kind: AUTO_CHECKIN_METHOD_SOURCE_KINDS.ThirdParty,
       sourceName: "Sub2API Pro",
+    })
+    expect(
+      getAutoCheckinMethodSource(AUTO_CHECKIN_METHOD_IDS.DenxioDailyCheckIn),
+    ).toEqual({
+      kind: AUTO_CHECKIN_METHOD_SOURCE_KINDS.ThirdParty,
+      sourceName: "登仙公益站",
     })
   })
 
@@ -187,6 +201,19 @@ describe("autoCheckinMethodRegistry", () => {
     expect(getNewAccountCompatibilityMethodIds(SITE_TYPES.ANYROUTER)).toEqual([
       "anyrouter:daily-checkin",
     ])
+    expect(getNewAccountCompatibilityMethodIds(SITE_TYPES.SUB2API)).toEqual([])
+  })
+
+  it("keeps deployment-specific Sub2API methods discovery-only", () => {
+    expect(
+      autoCheckinMethodRegistry
+        .getCandidates(SITE_TYPES.SUB2API)
+        .map(({ id }) => id),
+    ).toEqual([
+      AUTO_CHECKIN_METHOD_IDS.Sub2ApiProDailyCheckIn,
+      AUTO_CHECKIN_METHOD_IDS.DenxioDailyCheckIn,
+    ])
+    expect(getLegacyAutoCheckinMethodIds(SITE_TYPES.SUB2API)).toEqual([])
     expect(getNewAccountCompatibilityMethodIds(SITE_TYPES.SUB2API)).toEqual([])
   })
 
