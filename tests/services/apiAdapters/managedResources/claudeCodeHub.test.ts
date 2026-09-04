@@ -569,10 +569,13 @@ describe("Claude Code Hub native managed resource", () => {
     const ref = (await workspace.list()).items[0].ref
     const editor = await workspace.openEditEditor(ref)
 
+    const typeField = editor.fields.find(
+      ({ fieldId }) => fieldId === fields.Type,
+    )
     expect(
-      editor.fields
-        .find(({ fieldId }) => fieldId === fields.Type)
-        ?.options?.map(({ value }) => value),
+      typeField && "options" in typeField
+        ? typeField.options.map(({ value }) => value)
+        : [],
     ).toContain("deployment-specific")
     expect(editor.validate(editor.initialValues)).toEqual({ valid: true })
     expect(
