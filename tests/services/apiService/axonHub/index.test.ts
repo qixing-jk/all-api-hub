@@ -3031,6 +3031,118 @@ describe("AxonHub API service", () => {
     })
   })
 
+  it("falls back to and caches the stable legacy detail contract", async () => {
+    const queries: string[] = []
+    let rejectedLegacyQuery = false
+
+    useAxonHubGraphqlRoutes({
+      token: "legacy-detail-fallback-token",
+      routes: [
+        {
+          matches: matchesGraphqlOperation("query GetAxonHubChannel"),
+          respond: ({ query, variables }) => {
+            queries.push(query)
+            if (
+              !query.includes("query GetAxonHubChannelCore") &&
+              !rejectedLegacyQuery
+            ) {
+              rejectedLegacyQuery = true
+              return HttpResponse.json({
+                errors: [
+                  {
+                    message: "Cannot query optional legacy channel fields",
+                    extensions: { code: "GRAPHQL_VALIDATION_FAILED" },
+                  },
+                ],
+              })
+            }
+            return HttpResponse.json({
+              data: {
+                node: buildNativeChannelDetail(String(variables?.id), {
+                  name: "Fallback legacy channel",
+                }),
+              },
+            })
+          },
+        },
+        {
+          matches: matchesGraphqlOperation("query QueryChannels"),
+          respond: () =>
+            HttpResponse.json({
+              data: {
+                queryChannels: {
+                  edges: [{ node: nativeNullBaseUrlChannel }],
+                  pageInfo: { hasNextPage: false, endCursor: null },
+                  totalCount: 1,
+                },
+              },
+            }),
+        },
+      ],
+    })
+    const fallbackConfig = {
+      ...config,
+      email: "legacy-fallback@example.com",
+    }
+
+    const first = await listChannels(fallbackConfig)
+    const second = await listChannels(fallbackConfig)
+
+    expect(queries).toHaveLength(3)
+    expect(queries[0]).not.toContain("query GetAxonHubChannelCore")
+    for (const query of queries.slice(1)) {
+      expect(query).toContain("query GetAxonHubChannelCore")
+    }
+    expect(first.items[0].name).toBe("Fallback legacy channel")
+    expect(second.items[0].name).toBe("Fallback legacy channel")
+  })
+
+  it("rejects malformed stable detail after a legacy schema fallback", async () => {
+    useAxonHubGraphqlRoutes({
+      token: "legacy-malformed-fallback-token",
+      routes: [
+        {
+          matches: matchesGraphqlOperation("query GetAxonHubChannel"),
+          respond: ({ query }) =>
+            query.includes("query GetAxonHubChannelCore")
+              ? HttpResponse.json({
+                  data: {
+                    node: buildNativeChannelDetail("different-channel-id"),
+                  },
+                })
+              : HttpResponse.json({
+                  errors: [
+                    {
+                      message: "Cannot query optional legacy channel fields",
+                      extensions: { code: "GRAPHQL_VALIDATION_FAILED" },
+                    },
+                  ],
+                }),
+        },
+        {
+          matches: matchesGraphqlOperation("query QueryChannels"),
+          respond: () =>
+            HttpResponse.json({
+              data: {
+                queryChannels: {
+                  edges: [{ node: nativeNullBaseUrlChannel }],
+                  pageInfo: { hasNextPage: false, endCursor: null },
+                  totalCount: 1,
+                },
+              },
+            }),
+        },
+      ],
+    })
+
+    await expect(
+      listChannels({ ...config, email: "legacy-malformed@example.com" }),
+    ).rejects.toMatchObject({
+      kind: "protocol",
+      dispatch: "not-dispatched",
+    })
+  })
+
   it("rejects missing, absent, malformed, and retargeted legacy details", async () => {
     const requestedId = "legacy-detail-id"
     const detailResponses = [

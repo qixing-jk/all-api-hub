@@ -429,6 +429,45 @@ describe("AxonHub managed-site channel capability", () => {
     expect(axonHubApi.updateAxonHubChannelStatus).not.toHaveBeenCalled()
   })
 
+  it.each([
+    {
+      label: "legacy apiKey",
+      credentials: { apiKey: "legacy-key" },
+      submittedKey: "legacy-key",
+    },
+    {
+      label: "unavailable credentials",
+      credentials: undefined,
+      submittedKey: "",
+    },
+  ])(
+    "does not replace $label while patching another field",
+    async ({ credentials, submittedKey }) => {
+      axonHubApi.getAxonHubChannel.mockResolvedValueOnce({
+        ...currentChannel,
+        credentials,
+      })
+      axonHubApi.updateAxonHubChannel.mockResolvedValue({
+        id: currentChannel.id,
+      })
+      const { axonHubManagedSiteChannels } = await import(
+        "~/services/apiAdapters/managedSites/axonHub"
+      )
+
+      await axonHubManagedSiteChannels.update(config, {
+        id: 1,
+        name: "renamed",
+        key: submittedKey,
+      })
+
+      expect(axonHubApi.updateAxonHubChannel).toHaveBeenCalledWith(
+        config,
+        currentChannel.id,
+        { name: "renamed" },
+      )
+    },
+  )
+
   it("does not dispatch an AxonHub mutation when the submitted channel is unchanged", async () => {
     const { axonHubManagedSiteChannels } = await import(
       "~/services/apiAdapters/managedSites/axonHub"
@@ -592,6 +631,19 @@ describe("AxonHub managed-site channel capability", () => {
       expect(axonHubApi.deleteAxonHubChannel).not.toHaveBeenCalled()
     },
   )
+
+  it("rethrows update detail-read programming errors before dispatch", async () => {
+    const programmingError = new Error("detail invariant failed")
+    axonHubApi.getAxonHubChannel.mockRejectedValueOnce(programmingError)
+    const { axonHubManagedSiteChannels } = await import(
+      "~/services/apiAdapters/managedSites/axonHub"
+    )
+
+    await expect(
+      axonHubManagedSiteChannels.update(config, { id: 1, name: "updated" }),
+    ).rejects.toBe(programmingError)
+    expect(axonHubApi.updateAxonHubChannel).not.toHaveBeenCalled()
+  })
 
   it.each(["update", "delete"] as const)(
     "rejects %s ID-resolution schema failures without confirming a mutation attempt",
