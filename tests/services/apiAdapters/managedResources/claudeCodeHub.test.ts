@@ -288,6 +288,53 @@ describe("Claude Code Hub native managed resource", () => {
     )
   })
 
+  it("omits an unchanged null allowed-model contract from PATCH payloads", async () => {
+    const unrestrictedProvider: ClaudeCodeHubProviderDisplay = {
+      ...provider,
+      allowedModels: null,
+    }
+    mocks.listProviders.mockResolvedValue([unrestrictedProvider])
+    mocks.getProvider.mockResolvedValue(unrestrictedProvider)
+    const workspace = await claudeCodeHubManagedResourceRegistration.open()
+    const ref = (await workspace.list()).items[0].ref
+    const editor = await workspace.openEditEditor(ref)
+
+    await editor.submit({
+      ...editor.initialValues,
+      [fields.Name]: "Renamed unrestricted provider",
+    })
+
+    expect(mocks.updateProviderV1).toHaveBeenCalledWith(
+      config,
+      23,
+      { name: "Renamed unrestricted provider" },
+      expect.any(Object),
+    )
+  })
+
+  it("keeps a native create outcome uncertain after a 5xx response", async () => {
+    mocks.createProviderV1.mockRejectedValue(
+      new ClaudeCodeHubApiError("temporary upstream failure", 503, {
+        dispatch: "dispatched",
+        responseReceived: true,
+        confirmedNonApplication: false,
+      }),
+    )
+    const workspace = await claudeCodeHubManagedResourceRegistration.open()
+    const editor = await workspace.openCreateEditor()
+    const result = await editor.submit({
+      ...editor.initialValues,
+      [fields.Name]: "Uncertain provider",
+      [fields.BaseUrl]: "https://upstream.example.invalid",
+      [fields.Key]: {
+        kind: MANAGED_RESOURCE_SECRET_EDIT_INTENT_KINDS.Replace,
+        value: "credential-placeholder",
+      },
+    })
+
+    expect(result.outcome).toBe(MANAGED_SITE_MUTATION_OUTCOMES.Uncertain)
+  })
+
   it("deletes through the native v1 resource operation", async () => {
     const workspace = await claudeCodeHubManagedResourceRegistration.open()
     const ref = (await workspace.list()).items[0].ref
