@@ -6,6 +6,10 @@ export const AXON_HUB_CHANNEL_STATUS = {
   ARCHIVED: "archived",
 } as const
 
+export const AXON_HUB_GRAPHQL_ERROR_CODES = {
+  VALIDATION_FAILED: "GRAPHQL_VALIDATION_FAILED",
+} as const
+
 export type AxonHubChannelStatus =
   (typeof AXON_HUB_CHANNEL_STATUS)[keyof typeof AXON_HUB_CHANNEL_STATUS]
 
@@ -58,8 +62,18 @@ export const AXON_HUB_CHANNEL_FIELD_IDS = {
 export type AxonHubChannelFieldId =
   (typeof AXON_HUB_CHANNEL_FIELD_IDS)[keyof typeof AXON_HUB_CHANNEL_FIELD_IDS]
 
-export const AXON_HUB_EDITABLE_FIELD_IDS: readonly AxonHubChannelFieldId[] =
+export const AXON_HUB_DETAIL_FIELD_IDS: readonly AxonHubChannelFieldId[] =
   Object.freeze(Object.values(AXON_HUB_CHANNEL_FIELD_IDS))
+
+export const AXON_HUB_CREATE_FIELD_IDS: readonly AxonHubChannelFieldId[] =
+  Object.freeze([...AXON_HUB_DETAIL_FIELD_IDS])
+
+export const AXON_HUB_EDITABLE_FIELD_IDS: readonly AxonHubChannelFieldId[] =
+  Object.freeze(
+    AXON_HUB_DETAIL_FIELD_IDS.filter(
+      (fieldId) => fieldId !== AXON_HUB_CHANNEL_FIELD_IDS.EXTRA_MODEL_PREFIX,
+    ),
+  )
 
 export const AXON_HUB_TABLE_FIELD_IDS = [
   AXON_HUB_CHANNEL_FIELD_IDS.NAME,

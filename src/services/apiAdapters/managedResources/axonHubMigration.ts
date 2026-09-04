@@ -22,6 +22,7 @@ import {
   mapAxonHubChannelTypeToChannelTypeStrict,
   mapChannelTypeToAxonHubChannelTypeStrict,
 } from "~/services/apiAdapters/managedResources/axonHubChannelType"
+import { hasCompleteAxonHubAdvancedDetail } from "~/services/apiService/axonHub"
 import {
   MANAGED_SITE_MUTATION_EFFECT_KINDS,
   MANAGED_SITE_MUTATION_OUTCOMES,
@@ -102,30 +103,38 @@ const hasAdvancedSettings = (channel: AxonHubChannel): boolean =>
 const toCanonicalSource = (
   channel: AxonHubChannel,
   resourceType: ManagedSiteMigrationSource["resourceType"],
-): ManagedSiteMigrationSource => ({
-  sourceSiteType: SITE_TYPES.AXON_HUB,
-  resourceType,
-  baseUrl: channel.baseURL?.trim() ?? "",
-  models: normalizeList([
-    ...(channel.supportedModels ?? []),
-    ...(channel.manualModels ?? []),
-  ]),
-  groups: [],
-  priority: DEFAULT_CHANNEL_FIELDS.priority,
-  weight: channel.orderingWeight ?? DEFAULT_CHANNEL_FIELDS.weight,
-  status:
-    channel.status === AXON_HUB_CHANNEL_STATUS.ENABLED
-      ? "enabled"
-      : channel.status === AXON_HUB_CHANNEL_STATUS.DISABLED
-        ? "disabled"
-        : "other",
-  lossSignals: {
-    hasModelMapping: Boolean(channel.settings?.modelMappings?.length),
-    hasStatusCodeMapping: false,
-    hasAdvancedSettings: hasAdvancedSettings(channel),
-    hasMultiKeyState: getAxonHubCredentialCandidates(channel).length > 1,
-  },
-})
+): ManagedSiteMigrationSource => {
+  const advancedDetailComplete = hasCompleteAxonHubAdvancedDetail(channel)
+  return {
+    sourceSiteType: SITE_TYPES.AXON_HUB,
+    resourceType,
+    baseUrl: channel.baseURL?.trim() ?? "",
+    models: normalizeList([
+      ...(channel.supportedModels ?? []),
+      ...(channel.manualModels ?? []),
+    ]),
+    groups: [],
+    priority: DEFAULT_CHANNEL_FIELDS.priority,
+    weight: channel.orderingWeight ?? DEFAULT_CHANNEL_FIELDS.weight,
+    status:
+      channel.status === AXON_HUB_CHANNEL_STATUS.ENABLED
+        ? "enabled"
+        : channel.status === AXON_HUB_CHANNEL_STATUS.DISABLED
+          ? "disabled"
+          : "other",
+    lossSignals: {
+      // A schema-validation fallback means advanced aggregates could not be
+      // inspected. Warn conservatively instead of claiming a lossless move.
+      hasModelMapping:
+        !advancedDetailComplete ||
+        Boolean(channel.settings?.modelMappings?.length),
+      hasStatusCodeMapping: false,
+      hasAdvancedSettings:
+        !advancedDetailComplete || hasAdvancedSettings(channel),
+      hasMultiKeyState: getAxonHubCredentialCandidates(channel).length > 1,
+    },
+  }
+}
 
 const toConfirmedFailureCodeFromDiagnostic = (
   diagnostic: ManagedSiteMutationDiagnostic,

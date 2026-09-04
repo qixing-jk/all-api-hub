@@ -64,6 +64,7 @@ import { resolveManagedSiteRuntimeConfigForType } from "~/services/managedSites/
 import { userPreferences } from "~/services/preferences/userPreferences"
 import type {
   AxonHubChannel,
+  AxonHubChannelMutationReceipt,
   AxonHubCreateChannelInput,
   AxonHubUpdateChannelInput,
 } from "~/types/axonHub"
@@ -119,7 +120,7 @@ export interface AxonHubNativeResourceOperations {
   ): Promise<ManagedSiteMutationResult<AxonHubChannel>>
   update(
     detail: AxonHubChannel,
-    input: AxonHubUpdateChannelInput,
+    input: AxonHubNativeChannelPatch,
     options?: ResourceOperationOptions,
   ): Promise<ManagedSiteMutationResult<AxonHubChannel>>
   delete(
@@ -132,6 +133,29 @@ type AxonHubCreateCommand = {
   input: AxonHubCreateChannelInput
   desiredStatus: AxonHubChannelStatus
 }
+
+// Keep the product-facing edit contract narrower than AxonHub's generated
+// UpdateChannelInput. Aggregate replacements such as settings, policies, and
+// endpoints are intentionally absent because an older client cannot preserve
+// members added by a newer server.
+type AxonHubNativeChannelPatch = Pick<
+  AxonHubUpdateChannelInput,
+  | "type"
+  | "baseURL"
+  | "name"
+  | "status"
+  | "credentials"
+  | "supportedModels"
+  | "manualModels"
+  | "autoSyncSupportedModels"
+  | "autoSyncModelPattern"
+  | "clearAutoSyncModelPattern"
+  | "tags"
+  | "defaultTestModel"
+  | "orderingWeight"
+  | "remark"
+  | "clearRemark"
+>
 
 // beta5 requires apiKeys for these audited regular-key types; structured
 // AWS/GCP/OAuth and unknown future types stay excluded by default.
@@ -385,6 +409,21 @@ const finishAxonHubNativeMutation = <TData>(
     diagnostic: step.diagnostic,
   })
 
+const applyAxonHubNativeChannelPatch = (
+  detail: AxonHubChannel,
+  input: Omit<AxonHubNativeChannelPatch, "status">,
+  receipt: AxonHubChannelMutationReceipt,
+): AxonHubChannel => {
+  const { clearAutoSyncModelPattern, clearRemark, ...changedValues } = input
+  return {
+    ...detail,
+    ...changedValues,
+    ...receipt,
+    ...(clearAutoSyncModelPattern ? { autoSyncModelPattern: null } : {}),
+    ...(clearRemark ? { remark: null } : {}),
+  }
+}
+
 const callRead = async <T>(operation: () => Promise<T>): Promise<T> => {
   try {
     return await operation()
@@ -548,7 +587,7 @@ export async function openAxonHubNativeResourceOperations(
         return finishAxonHubNativeMutation(sequence, createStep)
       }
 
-      const created = createStep.data
+      const created = { ...input, ...createStep.data }
       if (desiredStatus !== AXON_HUB_CHANNEL_STATUS.ENABLED) {
         return sequence.finish({ finalState: "confirmed", data: created })
       }
@@ -583,17 +622,7 @@ export async function openAxonHubNativeResourceOperations(
     update: async (detail, input, operationOptions) => {
       const { status, ...ordinaryInput } = input
       const statusChanged = status !== undefined && status !== detail.status
-      const mergedOrdinaryInput = ordinaryInput.settings
-        ? {
-            ...ordinaryInput,
-            settings: {
-              ...(detail.settings ?? {}),
-              ...ordinaryInput.settings,
-            },
-          }
-        : ordinaryInput
-      const hasOrdinaryPatch =
-        Object.keys(mergedOrdinaryInput).length > 0 || status === undefined
+      const hasOrdinaryPatch = Object.keys(ordinaryInput).length > 0
       const sequence = createManagedSiteMutationSequence({ idempotent: true })
       let updated = detail
 
@@ -610,14 +639,18 @@ export async function openAxonHubNativeResourceOperations(
             await updateAxonHubChannel(
               config,
               detail.id,
-              mergedOrdinaryInput,
+              ordinaryInput,
               requestOptions(operationOptions),
             ),
         })
         if (updateStep.outcome !== "applied") {
           return finishAxonHubNativeMutation(sequence, updateStep)
         }
-        updated = updateStep.data
+        updated = applyAxonHubNativeChannelPatch(
+          detail,
+          ordinaryInput,
+          updateStep.data,
+        )
       }
 
       if (statusChanged) {
@@ -1341,7 +1374,11 @@ const createFieldDescriptors = (
       fieldId: AXON_HUB_CHANNEL_FIELD_IDS.EXTRA_MODEL_PREFIX,
       type: MANAGED_RESOURCE_FIELD_TYPES.Text,
     },
-  ]
+  ].filter(
+    ({ fieldId }) =>
+      detail === undefined ||
+      fieldId !== AXON_HUB_CHANNEL_FIELD_IDS.EXTRA_MODEL_PREFIX,
+  )
 }
 
 const createInitialValues = (): EditableResourceProjection => ({
@@ -1410,8 +1447,6 @@ const editInitialValues = (
   [AXON_HUB_CHANNEL_FIELD_IDS.TAGS]: [...(detail.tags ?? [])],
   [AXON_HUB_CHANNEL_FIELD_IDS.ORDERING_WEIGHT]: detail.orderingWeight ?? 0,
   [AXON_HUB_CHANNEL_FIELD_IDS.REMARK]: detail.remark ?? "",
-  [AXON_HUB_CHANNEL_FIELD_IDS.EXTRA_MODEL_PREFIX]:
-    detail.settings?.extraModelPrefix ?? "",
 })
 
 const buildCreateCommand = (
@@ -1486,14 +1521,13 @@ const fieldChanged = (
 }
 
 const addNullableTextDiff = (
-  input: AxonHubUpdateChannelInput,
+  input: AxonHubNativeChannelPatch,
   values: EditableResourceProjection,
   baseline: EditableResourceProjection,
   fieldId:
-    | typeof AXON_HUB_CHANNEL_FIELD_IDS.BASE_URL
     | typeof AXON_HUB_CHANNEL_FIELD_IDS.AUTO_SYNC_MODEL_PATTERN
     | typeof AXON_HUB_CHANNEL_FIELD_IDS.REMARK,
-  clearField: "clearBaseURL" | "clearAutoSyncModelPattern" | "clearRemark",
+  clearField: "clearAutoSyncModelPattern" | "clearRemark",
 ) => {
   if (!fieldChanged(values, baseline, fieldId)) return
   const next = readString(values, fieldId)
@@ -1505,8 +1539,8 @@ const buildUpdateCommand = (
   detail: AxonHubChannel,
   baseline: EditableResourceProjection,
   values: EditableResourceProjection,
-): AxonHubUpdateChannelInput => {
-  const input: AxonHubUpdateChannelInput = {}
+): AxonHubNativeChannelPatch => {
+  const input: AxonHubNativeChannelPatch = {}
   const name = readString(values, AXON_HUB_CHANNEL_FIELD_IDS.NAME)
   const type = readString(values, AXON_HUB_CHANNEL_FIELD_IDS.TYPE)
   const status = readString(values, AXON_HUB_CHANNEL_FIELD_IDS.STATUS)
@@ -1520,13 +1554,11 @@ const buildUpdateCommand = (
     input.status = status
   }
 
-  addNullableTextDiff(
-    input,
-    values,
-    baseline,
-    AXON_HUB_CHANNEL_FIELD_IDS.BASE_URL,
-    "clearBaseURL",
-  )
+  if (fieldChanged(values, baseline, AXON_HUB_CHANNEL_FIELD_IDS.BASE_URL)) {
+    // AxonHub beta8/beta9's custom updater ignores generated clearBaseURL but
+    // applies a non-nil empty baseURL. Source: https://github.com/looplj/axonhub/blob/v1.0.0-beta9/internal/server/biz/channel.go
+    input.baseURL = readString(values, AXON_HUB_CHANNEL_FIELD_IDS.BASE_URL)
+  }
   addNullableTextDiff(
     input,
     values,
@@ -1564,8 +1596,8 @@ const buildUpdateCommand = (
   if (
     fieldChanged(values, baseline, AXON_HUB_CHANNEL_FIELD_IDS.MANUAL_MODELS)
   ) {
-    if (manualModels.length) input.manualModels = manualModels
-    else input.clearManualModels = true
+    // The same updater accepts [] but ignores generated clearManualModels.
+    input.manualModels = manualModels
   }
   const tags = normalizeList(readList(values, AXON_HUB_CHANNEL_FIELD_IDS.TAGS))
   if (fieldChanged(values, baseline, AXON_HUB_CHANNEL_FIELD_IDS.TAGS)) {
@@ -1610,19 +1642,6 @@ const buildUpdateCommand = (
     input.orderingWeight = orderingWeight
   }
 
-  const extraModelPrefix = readString(
-    values,
-    AXON_HUB_CHANNEL_FIELD_IDS.EXTRA_MODEL_PREFIX,
-  )
-  if (
-    fieldChanged(
-      values,
-      baseline,
-      AXON_HUB_CHANNEL_FIELD_IDS.EXTRA_MODEL_PREFIX,
-    )
-  ) {
-    input.settings = { extraModelPrefix }
-  }
   return input
 }
 
@@ -1636,8 +1655,8 @@ const createEditor =
 
 const editEditor = (
   detail: AxonHubChannel,
-  loadSecret?: NativeResourceEditorDefinition<AxonHubUpdateChannelInput>["loadSecret"],
-): NativeResourceEditorDefinition<AxonHubUpdateChannelInput> => {
+  loadSecret?: NativeResourceEditorDefinition<AxonHubNativeChannelPatch>["loadSecret"],
+): NativeResourceEditorDefinition<AxonHubNativeChannelPatch> => {
   const initialValues = editInitialValues(detail)
   return {
     fields: createFieldDescriptors(detail),
@@ -1743,7 +1762,7 @@ const axonHubNativeDefinition = {
   update: (
     operations: AxonHubNativeResourceOperations,
     detail: AxonHubChannel,
-    command: AxonHubUpdateChannelInput,
+    command: AxonHubNativeChannelPatch,
     options?: ResourceOperationOptions,
   ) => {
     // UpdateChannelInput.credentials.apiKeys is replacement data, so a scalar

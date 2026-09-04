@@ -21,6 +21,7 @@ import {
 
 const mocks = vi.hoisted(() => ({
   hasUsableApiTokenKey: vi.fn(),
+  hasCompleteAxonHubAdvancedDetail: vi.fn(),
   openAxonHubNativeResourceOperations: vi.fn(),
 }))
 
@@ -41,6 +42,10 @@ vi.mock(
 
 vi.mock("~/services/accountTokens/apiTokenKey", () => ({
   hasUsableApiTokenKey: mocks.hasUsableApiTokenKey,
+}))
+
+vi.mock("~/services/apiService/axonHub", () => ({
+  hasCompleteAxonHubAdvancedDetail: mocks.hasCompleteAxonHubAdvancedDetail,
 }))
 
 const selection: ManagedSiteMigrationSelection = {
@@ -96,6 +101,7 @@ describe("AxonHub migration type boundary", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.hasUsableApiTokenKey.mockReturnValue(true)
+    mocks.hasCompleteAxonHubAdvancedDetail.mockReturnValue(true)
     vi.spyOn(userPreferences, "getPreferences").mockResolvedValue({
       axonHub: {
         baseUrl: "https://axon.example.invalid",
@@ -290,6 +296,35 @@ describe("AxonHub migration type boundary", () => {
       ),
     ).resolves.toMatchObject({
       projection: { type: AXON_HUB_CHANNEL_TYPE.ANTHROPIC },
+    })
+  })
+
+  it("marks advanced migration loss conservatively when detail used the core fallback", async () => {
+    mocks.hasCompleteAxonHubAdvancedDetail.mockReturnValue(false)
+    const get = vi.fn().mockResolvedValue({
+      id: "resource-safe-token",
+      name: "Example channel",
+      type: AXON_HUB_CHANNEL_TYPE.OPENAI,
+      status: AXON_HUB_CHANNEL_STATUS.ENABLED,
+      baseURL: "https://source.example.invalid",
+      supportedModels: ["model-example"],
+      credentials: { apiKeys: ["credential-placeholder"] },
+    } as AxonHubChannel)
+    vi.spyOn(
+      axonHubNativeResources,
+      "openAxonHubNativeResourceOperations",
+    ).mockResolvedValue({ get } as never)
+
+    await expect(
+      axonHubManagedSiteMigrationCapability.source!.prepare(selection),
+    ).resolves.toMatchObject({
+      status: "ready",
+      source: {
+        lossSignals: {
+          hasModelMapping: true,
+          hasAdvancedSettings: true,
+        },
+      },
     })
   })
 

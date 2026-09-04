@@ -1,5 +1,5 @@
 import {
-  AXON_HUB_EDITABLE_FIELD_IDS,
+  AXON_HUB_DETAIL_FIELD_IDS,
   AXON_HUB_TABLE_FIELD_IDS,
 } from "~/constants/axonHub"
 import {
@@ -525,7 +525,7 @@ const MANAGED_ONLY_SITE_DEFINITIONS = [
       ...LEGACY_MANAGED_CHANNEL_POLICY,
       mode: MANAGED_RESOURCE_MODES.NativeResource,
       tableFieldIds: AXON_HUB_TABLE_FIELD_IDS,
-      detailFieldIds: AXON_HUB_EDITABLE_FIELD_IDS,
+      detailFieldIds: AXON_HUB_DETAIL_FIELD_IDS,
       actions: [
         MANAGED_RESOURCE_PRODUCT_ACTIONS.Create,
         MANAGED_RESOURCE_PRODUCT_ACTIONS.DeleteSelected,

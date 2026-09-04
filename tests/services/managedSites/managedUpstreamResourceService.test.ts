@@ -25,6 +25,13 @@ const expectResolvedResources = (
   resources: ManagedUpstreamResourcesCapability,
 ) => resources
 
+const expectedDisabledReason = (
+  siteType: (typeof MANAGED_SITE_TYPES)[number],
+) =>
+  siteType === SITE_TYPES.AXON_HUB
+    ? "core-slice-disabled"
+    : "feature-slice-disabled"
+
 describe("managed upstream resource service", () => {
   beforeEach(() => {
     getSiteTypeCapabilitiesMock.mockReset()
@@ -52,14 +59,13 @@ describe("managed upstream resource service", () => {
           siteType === SITE_TYPES.VELOERA ||
           siteType === SITE_TYPES.DONE_HUB ||
           siteType === SITE_TYPES.OCTOPUS ||
-          siteType === SITE_TYPES.AXON_HUB ||
           siteType === SITE_TYPES.CLAUDE_CODE_HUB ||
           siteType === SITE_TYPES.SUB2API,
       })),
     )
   })
 
-  it("resolves AxonHub core resources after its migration gate is enabled", () => {
+  it("keeps removed AxonHub legacy resources outside the core gate", () => {
     const resources = buildResourcesCapability()
     getSiteTypeCapabilitiesMock.mockReturnValue({
       siteType: SITE_TYPES.AXON_HUB,
@@ -74,9 +80,9 @@ describe("managed upstream resource service", () => {
     expect(
       resolveManagedUpstreamResourceCapabilities(SITE_TYPES.AXON_HUB),
     ).toEqual({
-      supported: true,
+      supported: false,
       siteType: SITE_TYPES.AXON_HUB,
-      capabilities: expectResolvedResources(resources),
+      reason: "core-slice-disabled",
     })
   })
 
@@ -247,7 +253,7 @@ describe("managed upstream resource service", () => {
           supported: false,
           siteType,
           feature: MANAGED_UPSTREAM_RESOURCE_FEATURES.ModelRedirect,
-          reason: "feature-slice-disabled",
+          reason: expectedDisabledReason(siteType),
         }),
       ),
     )
@@ -299,7 +305,7 @@ describe("managed upstream resource service", () => {
           supported: false,
           siteType,
           feature: MANAGED_UPSTREAM_RESOURCE_FEATURES.ModelSync,
-          reason: "feature-slice-disabled",
+          reason: expectedDisabledReason(siteType),
         }),
       ),
     )
@@ -384,7 +390,7 @@ describe("managed upstream resource service", () => {
           supported: false,
           siteType,
           feature: MANAGED_UPSTREAM_RESOURCE_FEATURES.TokenBatchExport,
-          reason: "feature-slice-disabled",
+          reason: expectedDisabledReason(siteType),
         }),
       ),
     )
@@ -444,7 +450,7 @@ describe("managed upstream resource service", () => {
         supported: false,
         siteType,
         feature: MANAGED_UPSTREAM_RESOURCE_FEATURES.TokenChannelStatus,
-        reason: "feature-slice-disabled",
+        reason: expectedDisabledReason(siteType),
       })),
     )
   })
@@ -492,7 +498,7 @@ describe("managed upstream resource service", () => {
       supported: false,
       siteType: SITE_TYPES.AXON_HUB,
       feature: MANAGED_UPSTREAM_RESOURCE_FEATURES.ChannelMigration,
-      reason: "feature-slice-disabled",
+      reason: "core-slice-disabled",
     })
   })
 
@@ -543,7 +549,7 @@ describe("managed upstream resource service", () => {
           supported: false,
           siteType,
           feature,
-          reason: "feature-slice-disabled",
+          reason: expectedDisabledReason(siteType),
         })),
       )
     }

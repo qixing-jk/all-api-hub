@@ -47,6 +47,10 @@ const expectedManagedSiteTypes = [
   SITE_TYPES.SUB2API,
 ] as const
 
+const transitionalResourceSiteTypes = expectedManagedSiteTypes.filter(
+  (siteType) => siteType !== SITE_TYPES.AXON_HUB,
+)
+
 describe("managed-site mutation conformance", () => {
   it("keeps execution evidence and consumption on the mutation vocabulary", () => {
     type DispatchState =
@@ -133,7 +137,7 @@ describe("managed-site mutation conformance", () => {
       ManagedSiteMutationResult<void>
     >()
 
-    for (const siteType of MANAGED_SITE_TYPES) {
+    for (const siteType of transitionalResourceSiteTypes) {
       expect(
         getSiteTypeCapabilities(siteType).managedSites?.resources?.items,
         `${siteType} resources`,

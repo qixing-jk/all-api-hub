@@ -3,16 +3,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import {
   AXON_HUB_CHANNEL_STATUS,
   AXON_HUB_CHANNEL_TYPE,
+  AXON_HUB_GRAPHQL_ERROR_CODES,
 } from "~/constants/axonHub"
-import { SITE_TYPES } from "~/constants/siteType"
-import type { AxonHubChannel } from "~/types/axonHub"
-import { CHANNEL_STATUS, type ChannelFormData } from "~/types/managedSite"
+import { CHANNEL_STATUS } from "~/types/managedSite"
 import {
   CHANNEL_MUTATION_SCENARIOS,
   testManagedSiteChannelMutationContract,
   type ChannelMutationScenario,
 } from "~~/tests/services/apiAdapters/managedSites/channelMutationContract"
-import { testManagedUpstreamResourceMutationContract } from "~~/tests/services/apiAdapters/managedSites/resourceMutationContract"
 
 const axonHubProvider = vi.hoisted(() => ({
   checkValidAxonHubConfig: vi.fn(),
@@ -98,6 +96,19 @@ describe("AxonHub managed-site channel capability", () => {
     email: "admin@example.invalid",
     password: "password",
   }
+  const currentChannel = {
+    __typename: "Channel" as const,
+    id: "gid://axonhub/Channel/1",
+    type: AXON_HUB_CHANNEL_TYPE.OPENAI,
+    name: "current",
+    baseURL: "https://current.example.invalid/v1",
+    status: AXON_HUB_CHANNEL_STATUS.DISABLED,
+    credentials: { apiKeys: ["key-current"] },
+    supportedModels: ["model-current"],
+    manualModels: ["model-current"],
+    defaultTestModel: "model-current",
+    orderingWeight: 0,
+  }
 
   const dispatchedFailureCases = [
     ["authentication", 401, "UNAUTHENTICATED", "authentication failed"],
@@ -137,13 +148,6 @@ describe("AxonHub managed-site channel capability", () => {
       message,
     })),
   ]
-  const resourceTerminalMutationCases = (["create", "update"] as const).flatMap(
-    (operation) =>
-      terminalMutationCases.map((terminalCase) => ({
-        operation,
-        ...terminalCase,
-      })),
-  )
 
   const createNativeRequestError = (input: {
     kind: (typeof dispatchedFailureCases)[number][0]
@@ -171,6 +175,7 @@ describe("AxonHub managed-site channel capability", () => {
     axonHubApi.resolveAxonHubGraphqlIdForMutation.mockResolvedValue(
       "gid://axonhub/Channel/1",
     )
+    axonHubApi.getAxonHubChannel.mockResolvedValue(currentChannel)
   })
 
   const arrangeNativeMutation =
@@ -319,6 +324,31 @@ describe("AxonHub managed-site channel capability", () => {
     expect(axonHubApi.createAxonHubChannel).not.toHaveBeenCalled()
   })
 
+  it("treats a GraphQL validation failure as confirmed non-application", async () => {
+    axonHubApi.createAxonHubChannel.mockRejectedValue(
+      createNativeRequestError({
+        kind: "upstream-rejected",
+        dispatch: "dispatched",
+        status: 422,
+        code: AXON_HUB_GRAPHQL_ERROR_CODES.VALIDATION_FAILED,
+        message: "mutation document was rejected",
+      }),
+    )
+    const { axonHubManagedSiteChannels } = await import(
+      "~/services/apiAdapters/managedSites/axonHub"
+    )
+
+    await expect(
+      axonHubManagedSiteChannels.create(config, createPayload),
+    ).resolves.toEqual({
+      outcome: "rejected",
+      diagnostic: expect.objectContaining({
+        code: AXON_HUB_GRAPHQL_ERROR_CODES.VALIDATION_FAILED,
+        statusCode: 422,
+      }),
+    })
+  })
+
   it("defaults a blank AxonHub channel type to OpenAI", async () => {
     axonHubApi.createAxonHubChannel.mockResolvedValue({
       id: "gid://axonhub/Channel/default-type",
@@ -372,6 +402,58 @@ describe("AxonHub managed-site channel capability", () => {
     )
   })
 
+  it("only forwards fields that differ from the current AxonHub channel", async () => {
+    axonHubApi.updateAxonHubChannel.mockResolvedValue({
+      id: "gid://axonhub/Channel/1",
+    })
+    const { axonHubManagedSiteChannels } = await import(
+      "~/services/apiAdapters/managedSites/axonHub"
+    )
+
+    await axonHubManagedSiteChannels.update(config, {
+      id: 1,
+      type: "openai",
+      name: " renamed ",
+      base_url: " https://current.example.invalid/v1 ",
+      key: " key-current ",
+      models: "model-current",
+      weight: 0,
+      status: CHANNEL_STATUS.ManuallyDisabled,
+    })
+
+    expect(axonHubApi.updateAxonHubChannel).toHaveBeenCalledWith(
+      config,
+      "gid://axonhub/Channel/1",
+      { name: "renamed" },
+    )
+    expect(axonHubApi.updateAxonHubChannelStatus).not.toHaveBeenCalled()
+  })
+
+  it("does not dispatch an AxonHub mutation when the submitted channel is unchanged", async () => {
+    const { axonHubManagedSiteChannels } = await import(
+      "~/services/apiAdapters/managedSites/axonHub"
+    )
+
+    await expect(
+      axonHubManagedSiteChannels.update(config, {
+        id: 1,
+        type: "openai",
+        name: "current",
+        base_url: "https://current.example.invalid/v1",
+        key: "key-current",
+        models: "model-current",
+        weight: 0,
+        status: CHANNEL_STATUS.ManuallyDisabled,
+      }),
+    ).resolves.toEqual({
+      outcome: "succeeded",
+      data: { id: "gid://axonhub/Channel/1" },
+      confirmedEffects: [],
+    })
+    expect(axonHubApi.updateAxonHubChannel).not.toHaveBeenCalled()
+    expect(axonHubApi.updateAxonHubChannelStatus).not.toHaveBeenCalled()
+  })
+
   it("treats a false AxonHub delete response as confirmed non-application", async () => {
     axonHubApi.deleteAxonHubChannel.mockResolvedValue(false)
     const { axonHubManagedSiteChannels } = await import(
@@ -388,253 +470,6 @@ describe("AxonHub managed-site channel capability", () => {
       },
     )
   })
-
-  const resourceNative: AxonHubChannel = {
-    id: "gid://axonhub/Channel/resource",
-    name: "Axon Resource",
-    type: "openai",
-    status: AXON_HUB_CHANNEL_STATUS.DISABLED,
-    baseURL: "https://resource.example.invalid/v1",
-    credentials: { apiKeys: ["sk-resource"] },
-    supportedModels: ["gpt-example"],
-    manualModels: ["gpt-example"],
-    defaultTestModel: "gpt-example",
-    settings: { passThroughBody: true },
-    orderingWeight: 3,
-    remark: "preserve",
-  }
-  const resourceDraft: ChannelFormData = {
-    name: "Axon Resource Edited",
-    type: "openai",
-    key: "sk-resource",
-    base_url: "https://resource.example.invalid/v1",
-    models: ["gpt-example"],
-    groups: [],
-    priority: 0,
-    weight: 3,
-    status: CHANNEL_STATUS.ManuallyDisabled,
-  }
-  const resourceDetail = {
-    summary: {
-      ref: {
-        managedSiteType: SITE_TYPES.AXON_HUB,
-        scopeKey: "https://axonhub.example.invalid",
-        resourceId: resourceNative.id,
-      },
-      displayName: resourceNative.name,
-      nativeKind: "channel",
-      status: "disabled",
-      secretState: "available",
-      capabilities: { canUpdate: true },
-    },
-    native: resourceNative,
-  } as const
-
-  testManagedUpstreamResourceMutationContract([
-    {
-      name: "create",
-      effect: { kind: "resource-created", resourceKind: "channel" },
-      successData: expect.objectContaining({
-        displayName: resourceNative.name,
-        nativeKind: "channel",
-      }),
-      arrange: arrangeNativeMutation(
-        axonHubApi.createAxonHubChannel,
-        resourceNative,
-      ),
-      invoke: async () => {
-        const { axonHubManagedSiteCapabilities } = await import(
-          "~/services/apiAdapters/managedSites/axonHub"
-        )
-        return await axonHubManagedSiteCapabilities.resources!.items.create(
-          config,
-          { ...resourceDraft, name: resourceNative.name },
-        )
-      },
-      assertRequestPayload: () =>
-        expect(axonHubApi.createAxonHubChannel.mock.calls.at(-1)?.[1]).toEqual(
-          expect.objectContaining({
-            name: resourceNative.name,
-            settings: {},
-          }),
-        ),
-    },
-    {
-      name: "update",
-      effect: {
-        kind: "resource-updated",
-        resourceKind: "channel",
-        resourceId: resourceNative.id,
-      },
-      successData: expect.objectContaining({
-        displayName: resourceNative.name,
-        nativeKind: "channel",
-      }),
-      arrange: arrangeNativeMutation(
-        axonHubApi.updateAxonHubChannel,
-        resourceNative,
-      ),
-      invoke: async () => {
-        const { axonHubManagedSiteCapabilities } = await import(
-          "~/services/apiAdapters/managedSites/axonHub"
-        )
-        return await axonHubManagedSiteCapabilities.resources!.items.update(
-          config,
-          resourceDetail,
-          { ...resourceDraft, name: resourceNative.name },
-        )
-      },
-      assertRequestPayload: () =>
-        expect(axonHubApi.updateAxonHubChannel.mock.calls.at(-1)?.[2]).toEqual(
-          expect.objectContaining({
-            settings: { passThroughBody: true },
-            remark: "preserve",
-            supportedModels: ["gpt-example"],
-          }),
-        ),
-    },
-    {
-      name: "delete",
-      effect: {
-        kind: "resource-deleted",
-        resourceKind: "channel",
-        resourceId: resourceNative.id,
-      },
-      successData: undefined,
-      arrange: arrangeNativeMutation(axonHubApi.deleteAxonHubChannel, true),
-      invoke: async () => {
-        const { axonHubManagedSiteCapabilities } = await import(
-          "~/services/apiAdapters/managedSites/axonHub"
-        )
-        return await axonHubManagedSiteCapabilities.resources!.items.delete(
-          config,
-          resourceDetail.summary.ref,
-        )
-      },
-      assertRequestPayload: () =>
-        expect(axonHubApi.deleteAxonHubChannel.mock.calls.at(-1)?.[1]).toBe(
-          resourceNative.id,
-        ),
-    },
-  ])
-
-  it.each(resourceTerminalMutationCases)(
-    "composes AxonHub resource $operation plus $terminal status evidence",
-    async ({ operation, terminal, kind, dispatch, status, code, message }) => {
-      const first = {
-        ...resourceNative,
-        status: AXON_HUB_CHANNEL_STATUS.DISABLED,
-      }
-      if (operation === "create") {
-        axonHubApi.createAxonHubChannel.mockResolvedValue(first)
-      } else {
-        axonHubApi.updateAxonHubChannel.mockResolvedValue(first)
-      }
-      const terminalError = kind
-        ? createNativeRequestError({ kind, dispatch, status, code, message })
-        : undefined
-      if (terminalError) {
-        axonHubApi.updateAxonHubChannelStatus.mockRejectedValue(terminalError)
-      } else {
-        axonHubApi.updateAxonHubChannelStatus.mockResolvedValue({
-          ...first,
-          status: AXON_HUB_CHANNEL_STATUS.ENABLED,
-        })
-      }
-      const { axonHubManagedSiteCapabilities } = await import(
-        "~/services/apiAdapters/managedSites/axonHub"
-      )
-      const resources = axonHubManagedSiteCapabilities.resources!
-      const result =
-        operation === "create"
-          ? await resources.items.create(config, {
-              ...resourceDraft,
-              name: resourceNative.name,
-              status: CHANNEL_STATUS.Enable,
-            })
-          : await resources.items.update(config, resourceDetail, {
-              ...resourceDraft,
-              name: resourceNative.name,
-              status: CHANNEL_STATUS.Enable,
-            })
-      const firstEffect = {
-        kind:
-          operation === "create"
-            ? ("resource-created" as const)
-            : ("resource-updated" as const),
-        resourceKind: "channel" as const,
-        ...(operation === "update" ? { resourceId: resourceNative.id } : {}),
-      }
-
-      if (terminal === "applied") {
-        expect(result).toEqual({
-          outcome: "succeeded",
-          data: expect.objectContaining({
-            status: "enabled",
-            ref: expect.objectContaining({
-              resourceId: resourceNative.id,
-            }),
-          }),
-          confirmedEffects: [
-            firstEffect,
-            {
-              kind: "status-updated",
-              resourceKind: "channel",
-              resourceId: resourceNative.id,
-            },
-          ],
-        })
-      } else {
-        expect(result).toEqual({
-          outcome: "partial",
-          confirmedEffects: [firstEffect],
-          completion: terminal,
-          diagnostic: {
-            message,
-            code,
-            statusCode: status,
-            raw: terminalError,
-          },
-        })
-      }
-    },
-  )
-
-  it.each(["create", "update"] as const)(
-    "does not dispatch AxonHub resource %s status after first-step rejection",
-    async (operation) => {
-      const error = new axonHubApi.AxonHubRequestError(
-        "upstream-rejected",
-        "not-dispatched",
-        "provider rejected",
-      )
-      if (operation === "create") {
-        axonHubApi.createAxonHubChannel.mockRejectedValue(error)
-      } else {
-        axonHubApi.updateAxonHubChannel.mockRejectedValue(error)
-      }
-      const { axonHubManagedSiteCapabilities } = await import(
-        "~/services/apiAdapters/managedSites/axonHub"
-      )
-      const resources = axonHubManagedSiteCapabilities.resources!
-      const result =
-        operation === "create"
-          ? await resources.items.create(config, {
-              ...resourceDraft,
-              status: CHANNEL_STATUS.Enable,
-            })
-          : await resources.items.update(config, resourceDetail, {
-              ...resourceDraft,
-              status: CHANNEL_STATUS.Enable,
-            })
-
-      expect(result).toEqual({
-        outcome: "rejected",
-        diagnostic: { message: "provider rejected", raw: error },
-      })
-      expect(axonHubApi.updateAxonHubChannelStatus).not.toHaveBeenCalled()
-    },
-  )
 
   it.each([
     ["create", axonHubApi.createAxonHubChannel],
@@ -907,6 +742,7 @@ describe("AxonHub managed-site channel capability", () => {
             })
           : axonHubManagedSiteChannels.update(config, {
               id: 1,
+              name: "updated",
               status: CHANNEL_STATUS.Enable,
             })
 
@@ -1000,803 +836,4 @@ describe("AxonHub managed-site channel capability", () => {
       axonHubManagedSiteCapabilities.config.get(),
     ).resolves.toBeNull()
   })
-
-  it("maps AxonHub GraphQL channels into string-id resource summaries", async () => {
-    const native = buildAxonHubChannel({
-      id: "gid://axonhub/Channel/native-string-id",
-      type: "custom_native",
-      supportedModels: ["gpt-4o"],
-      manualModels: ["claude-3-5-sonnet"],
-      orderingWeight: 7,
-    })
-    axonHubProvider.listChannels.mockResolvedValue({
-      items: [buildAxonHubChannelRow(native)],
-      total: 1,
-      type_counts: { custom_native: 1 },
-    })
-
-    const { axonHubManagedSiteCapabilities } = await import(
-      "~/services/apiAdapters/managedSites/axonHub"
-    )
-
-    await expect(
-      axonHubManagedSiteCapabilities.resources?.items.list(config),
-    ).resolves.toEqual({
-      items: [
-        expect.objectContaining({
-          ref: {
-            managedSiteType: SITE_TYPES.AXON_HUB,
-            scopeKey: "https://axonhub.example.invalid",
-            resourceId: "gid://axonhub/Channel/native-string-id",
-          },
-          displayName: "Axon Native",
-          nativeKind: "channel",
-          status: "enabled",
-          typeLabel: "custom_native",
-          endpointLabel: "https://upstream.example.invalid/v1",
-          modelCount: 2,
-          modelPreview: ["gpt-4o", "claude-3-5-sonnet"],
-          secretState: "available",
-          capabilities: {
-            canCreate: true,
-            canUpdate: true,
-            canDelete: true,
-            canRevealSecret: false,
-          },
-        }),
-      ],
-      total: 1,
-    })
-  })
-
-  it("maps AxonHub resource search results into string-id resource summaries", async () => {
-    const native = buildAxonHubChannel({
-      id: "gid://axonhub/Channel/search-string-id",
-      name: "Search Result",
-      type: "openrouter",
-      supportedModels: ["openrouter/auto"],
-      manualModels: [],
-    })
-    axonHubProvider.searchChannel.mockResolvedValue({
-      items: [buildAxonHubChannelRow(native)],
-      total: 1,
-      type_counts: { openrouter: 1 },
-    })
-
-    const { axonHubManagedSiteCapabilities } = await import(
-      "~/services/apiAdapters/managedSites/axonHub"
-    )
-
-    await expect(
-      axonHubManagedSiteCapabilities.resources?.items.search(config, "search"),
-    ).resolves.toEqual({
-      items: [
-        expect.objectContaining({
-          ref: expect.objectContaining({
-            managedSiteType: SITE_TYPES.AXON_HUB,
-            resourceId: "gid://axonhub/Channel/search-string-id",
-          }),
-          displayName: "Search Result",
-          typeLabel: "OpenRouter",
-          modelCount: 1,
-          modelPreview: ["openrouter/auto"],
-        }),
-      ],
-      total: 1,
-    })
-  })
-
-  it("returns null when AxonHub resource search misses", async () => {
-    axonHubProvider.searchChannel.mockResolvedValue(null)
-
-    const { axonHubManagedSiteCapabilities } = await import(
-      "~/services/apiAdapters/managedSites/axonHub"
-    )
-
-    await expect(
-      axonHubManagedSiteCapabilities.resources?.items.search(config, "missing"),
-    ).resolves.toBeNull()
-  })
-
-  it("maps AxonHub single-key and unavailable credential states", async () => {
-    const singleKeyNative = buildAxonHubChannel({
-      id: "gid://axonhub/Channel/single-key",
-      credentials: {
-        apiKey: "sk-single-key",
-      },
-    })
-    const noKeyNative = buildAxonHubChannel({
-      id: "gid://axonhub/Channel/no-key",
-      credentials: {},
-    })
-    axonHubProvider.listChannels.mockResolvedValue({
-      items: [
-        buildAxonHubChannelRow(singleKeyNative),
-        buildAxonHubChannelRow(noKeyNative),
-      ],
-      total: 2,
-      type_counts: { openai: 2 },
-    })
-
-    const { axonHubManagedSiteCapabilities } = await import(
-      "~/services/apiAdapters/managedSites/axonHub"
-    )
-
-    await expect(
-      axonHubManagedSiteCapabilities.resources?.items.list(config),
-    ).resolves.toEqual({
-      items: [
-        expect.objectContaining({
-          ref: expect.objectContaining({ resourceId: singleKeyNative.id }),
-          secretState: "available",
-        }),
-        expect.objectContaining({
-          ref: expect.objectContaining({ resourceId: noKeyNative.id }),
-          secretState: "unavailable",
-        }),
-      ],
-      total: 2,
-    })
-  })
-
-  it("fetches native detail before edit and preserves AxonHub-only fields on update", async () => {
-    const native = buildAxonHubChannel({
-      id: "gid://axonhub/Channel/native-string-id",
-      type: "anthropic_gcp",
-      credentials: {
-        apiKeys: ["sk-live-native"],
-        gcp: {
-          region: "us-central1",
-          projectID: "example-project",
-          jsonData: '{"client_email":"svc@example.invalid"}',
-        },
-      },
-      supportedModels: ["claude-3-5-sonnet"],
-      manualModels: ["claude-3-opus"],
-      defaultTestModel: "claude-3-opus",
-      settings: {
-        hideMappedModels: true,
-        modelMappings: [{ from: "claude-3", to: "claude-3-5-sonnet" }],
-      },
-      orderingWeight: 12,
-      remark: "native remark",
-    })
-    const updated = { ...native, name: "Axon Updated" }
-    axonHubApi.getAxonHubChannel.mockResolvedValue(native)
-    axonHubApi.updateAxonHubChannel.mockResolvedValue(updated)
-    axonHubApi.axonHubChannelToManagedSite.mockReturnValue(
-      buildAxonHubChannelRow(updated),
-    )
-
-    const { axonHubManagedSiteCapabilities } = await import(
-      "~/services/apiAdapters/managedSites/axonHub"
-    )
-    const resources = axonHubManagedSiteCapabilities.resources!
-    const ref = {
-      managedSiteType: SITE_TYPES.AXON_HUB,
-      scopeKey: "https://axonhub.example.invalid",
-      resourceId: native.id,
-    }
-    const listCallsBefore = axonHubProvider.listChannels.mock.calls.length
-
-    const detail = await resources.items.getDetail(config, ref)
-    const draft = resources.drafts.prepareEditDraft(detail)
-    await resources.items.update(config, detail, {
-      ...draft,
-      name: "Axon Updated",
-    })
-
-    expect(detail.native).toBe(native)
-    expect(axonHubApi.getAxonHubChannel).toHaveBeenCalledWith(config, native.id)
-    expect(axonHubProvider.listChannels).toHaveBeenCalledTimes(listCallsBefore)
-    expect(draft).toEqual({
-      name: "Axon Native",
-      type: "anthropic_gcp",
-      key: "sk-live-native",
-      base_url: "https://upstream.example.invalid/v1",
-      models: ["claude-3-5-sonnet", "claude-3-opus"],
-      groups: [],
-      priority: 0,
-      weight: 12,
-      status: CHANNEL_STATUS.Enable,
-    })
-    expect(axonHubApi.updateAxonHubChannel).toHaveBeenCalledWith(
-      config,
-      "gid://axonhub/Channel/native-string-id",
-      {
-        type: "anthropic_gcp",
-        name: "Axon Updated",
-        baseURL: "https://upstream.example.invalid/v1",
-        credentials: native.credentials,
-        supportedModels: ["claude-3-5-sonnet"],
-        manualModels: ["claude-3-opus"],
-        defaultTestModel: "claude-3-opus",
-        settings: native.settings,
-        orderingWeight: 12,
-        remark: "native remark",
-      },
-    )
-    expect(axonHubApi.updateAxonHubChannelStatus).not.toHaveBeenCalled()
-  })
-
-  it("rejects stale AxonHub resource refs from a different site or scope before native access", async () => {
-    const { axonHubManagedSiteCapabilities } = await import(
-      "~/services/apiAdapters/managedSites/axonHub"
-    )
-    const resources = axonHubManagedSiteCapabilities.resources!
-
-    await expect(
-      resources.items.getDetail(config, {
-        managedSiteType: SITE_TYPES.NEW_API,
-        scopeKey: "https://axonhub.example.invalid",
-        resourceId: "gid://axonhub/Channel/native-string-id",
-      }),
-    ).rejects.toThrow("Resource reference does not match this managed site")
-    await expect(
-      resources.items.delete(config, {
-        managedSiteType: SITE_TYPES.AXON_HUB,
-        scopeKey: "https://other.example.invalid",
-        resourceId: "gid://axonhub/Channel/native-string-id",
-      }),
-    ).rejects.toThrow("Resource reference does not match this managed site")
-
-    expect(axonHubProvider.listChannels).not.toHaveBeenCalled()
-    expect(axonHubApi.deleteAxonHubChannel).not.toHaveBeenCalled()
-  })
-
-  it("preserves null AxonHub settings when building resource update payloads", async () => {
-    const native = buildAxonHubChannel({
-      settings: null,
-    })
-    axonHubApi.getAxonHubChannel.mockResolvedValue(native)
-    axonHubApi.updateAxonHubChannel.mockResolvedValue(native)
-    axonHubApi.axonHubChannelToManagedSite.mockReturnValue(
-      buildAxonHubChannelRow(native),
-    )
-
-    const { axonHubManagedSiteCapabilities } = await import(
-      "~/services/apiAdapters/managedSites/axonHub"
-    )
-    const resources = axonHubManagedSiteCapabilities.resources!
-    const detail = await resources.items.getDetail(config, {
-      managedSiteType: SITE_TYPES.AXON_HUB,
-      scopeKey: "https://axonhub.example.invalid",
-      resourceId: native.id,
-    })
-
-    await resources.items.update(
-      config,
-      detail,
-      resources.drafts.prepareEditDraft(detail),
-    )
-
-    expect(axonHubApi.updateAxonHubChannel).toHaveBeenCalledWith(
-      config,
-      native.id,
-      expect.objectContaining({
-        settings: null,
-      }),
-    )
-  })
-
-  it("preserves multi-key AxonHub credentials when the draft key is unchanged", async () => {
-    const native = buildAxonHubChannel({
-      credentials: {
-        apiKeys: ["sk-primary", "sk-secondary"],
-      },
-    })
-    axonHubApi.getAxonHubChannel.mockResolvedValue(native)
-    axonHubApi.updateAxonHubChannel.mockResolvedValue({
-      ...native,
-      name: "Renamed Axon",
-    })
-    axonHubApi.axonHubChannelToManagedSite.mockReturnValue(
-      buildAxonHubChannelRow({ ...native, name: "Renamed Axon" }),
-    )
-
-    const { axonHubManagedSiteCapabilities } = await import(
-      "~/services/apiAdapters/managedSites/axonHub"
-    )
-    const resources = axonHubManagedSiteCapabilities.resources!
-    const detail = await resources.items.getDetail(config, {
-      managedSiteType: SITE_TYPES.AXON_HUB,
-      scopeKey: "https://axonhub.example.invalid",
-      resourceId: native.id,
-    })
-    const draft = resources.drafts.prepareEditDraft(detail)
-
-    expect(draft.key).toBe("sk-primary")
-
-    await resources.items.update(config, detail, {
-      ...draft,
-      name: "Renamed Axon",
-    })
-
-    expect(axonHubApi.updateAxonHubChannel).toHaveBeenLastCalledWith(
-      config,
-      native.id,
-      expect.objectContaining({
-        credentials: native.credentials,
-      }),
-    )
-  })
-
-  it("preserves native AxonHub model arrays even when the generic model draft changes", async () => {
-    const native = buildAxonHubChannel({
-      supportedModels: ["native-supported"],
-      manualModels: ["native-manual"],
-      defaultTestModel: "native-manual",
-    })
-    axonHubApi.getAxonHubChannel.mockResolvedValue(native)
-    axonHubApi.updateAxonHubChannel.mockResolvedValue(native)
-    axonHubApi.axonHubChannelToManagedSite.mockReturnValue(
-      buildAxonHubChannelRow(native),
-    )
-
-    const { axonHubManagedSiteCapabilities } = await import(
-      "~/services/apiAdapters/managedSites/axonHub"
-    )
-    const resources = axonHubManagedSiteCapabilities.resources!
-    const detail = await resources.items.getDetail(config, {
-      managedSiteType: SITE_TYPES.AXON_HUB,
-      scopeKey: "https://axonhub.example.invalid",
-      resourceId: native.id,
-    })
-
-    await resources.items.update(config, detail, {
-      ...resources.drafts.prepareEditDraft(detail),
-      models: ["draft-edited-model"],
-    })
-
-    expect(axonHubApi.updateAxonHubChannel).toHaveBeenCalledWith(
-      config,
-      native.id,
-      expect.objectContaining({
-        supportedModels: ["native-supported"],
-        manualModels: ["native-manual"],
-        defaultTestModel: "native-manual",
-      }),
-    )
-  })
-
-  it("preserves nullable AxonHub default model and ordering weight on no-op edits", async () => {
-    const native = buildAxonHubChannel({
-      supportedModels: ["native-supported"],
-      manualModels: ["native-manual"],
-      defaultTestModel: null,
-      orderingWeight: null,
-    })
-    axonHubApi.getAxonHubChannel.mockResolvedValue(native)
-    axonHubApi.updateAxonHubChannel.mockResolvedValue(native)
-    axonHubApi.axonHubChannelToManagedSite.mockReturnValue(
-      buildAxonHubChannelRow(native),
-    )
-
-    const { axonHubManagedSiteCapabilities } = await import(
-      "~/services/apiAdapters/managedSites/axonHub"
-    )
-    const resources = axonHubManagedSiteCapabilities.resources!
-    const detail = await resources.items.getDetail(config, {
-      managedSiteType: SITE_TYPES.AXON_HUB,
-      scopeKey: "https://axonhub.example.invalid",
-      resourceId: native.id,
-    })
-
-    await resources.items.update(
-      config,
-      detail,
-      resources.drafts.prepareEditDraft(detail),
-    )
-
-    expect(axonHubApi.updateAxonHubChannel).toHaveBeenCalledWith(
-      config,
-      native.id,
-      expect.objectContaining({
-        defaultTestModel: null,
-        orderingWeight: null,
-      }),
-    )
-  })
-
-  it("does not expose an editable generic models field for AxonHub resource edits", async () => {
-    const native = buildAxonHubChannel({
-      supportedModels: ["native-supported"],
-      manualModels: ["native-manual"],
-    })
-
-    const { axonHubManagedSiteCapabilities } = await import(
-      "~/services/apiAdapters/managedSites/axonHub"
-    )
-    const descriptors =
-      axonHubManagedSiteCapabilities.resources!.drafts.describeFields({
-        mode: "edit",
-        detail: {
-          summary: {
-            ref: {
-              managedSiteType: SITE_TYPES.AXON_HUB,
-              scopeKey: "https://axonhub.example.invalid",
-              resourceId: native.id,
-            },
-            displayName: native.name,
-            nativeKind: "channel",
-            status: "enabled",
-            secretState: "available",
-            capabilities: { canUpdate: true },
-          },
-          native,
-        },
-      })
-
-    expect(descriptors.map((descriptor) => descriptor.name)).not.toContain(
-      "models",
-    )
-  })
-
-  it("prepares and validates AxonHub resource import drafts", async () => {
-    const { axonHubManagedSiteCapabilities } = await import(
-      "~/services/apiAdapters/managedSites/axonHub"
-    )
-    const resources = axonHubManagedSiteCapabilities.resources!
-    const sourceDraft = {
-      name: "Source Axon",
-      type: "openai",
-      key: "sk-source",
-      base_url: "https://source.example.invalid/v1",
-      models: ["gpt-4o"],
-      groups: [],
-      priority: 0,
-      weight: 3,
-      status: CHANNEL_STATUS.Enable,
-    }
-
-    await expect(
-      resources.drafts.prepareImportDraft({ source: sourceDraft }),
-    ).resolves.toBe(sourceDraft)
-    await expect(
-      resources.drafts.prepareImportDraft({
-        resource: {
-          ref: {
-            managedSiteType: SITE_TYPES.AXON_HUB,
-            scopeKey: "https://axonhub.example.invalid",
-            resourceId: "gid://axonhub/Channel/imported",
-          },
-          displayName: "Imported Axon",
-          nativeKind: "channel",
-          status: "enabled",
-          endpointLabel: "https://imported.example.invalid/v1",
-          modelPreview: ["gpt-4o"],
-          secretState: "masked",
-          capabilities: {},
-        },
-      }),
-    ).resolves.toEqual({
-      name: "Imported Axon",
-      type: "openai",
-      key: "",
-      base_url: "https://imported.example.invalid/v1",
-      models: ["gpt-4o"],
-      groups: [],
-      priority: 0,
-      weight: 0,
-      status: CHANNEL_STATUS.Enable,
-    })
-
-    expect(
-      resources.drafts.validateDraft({
-        ...sourceDraft,
-        name: " ",
-        base_url: "",
-      }),
-    ).toEqual({
-      valid: false,
-      errors: [
-        { field: "name", message: "Channel name is required" },
-        { field: "base_url", message: "Base URL is required" },
-      ],
-    })
-  })
-
-  it("allows AxonHub resource edits when native model arrays are empty or nullable", async () => {
-    const native = buildAxonHubChannel({
-      supportedModels: null,
-      manualModels: [],
-      defaultTestModel: null,
-    })
-    axonHubApi.getAxonHubChannel.mockResolvedValue(native)
-    axonHubApi.updateAxonHubChannel.mockResolvedValue({
-      ...native,
-      name: "Renamed Axon",
-    })
-    axonHubApi.axonHubChannelToManagedSite.mockReturnValue(
-      buildAxonHubChannelRow({ ...native, name: "Renamed Axon" }),
-    )
-
-    const { axonHubManagedSiteCapabilities } = await import(
-      "~/services/apiAdapters/managedSites/axonHub"
-    )
-    const resources = axonHubManagedSiteCapabilities.resources!
-    const detail = await resources.items.getDetail(config, {
-      managedSiteType: SITE_TYPES.AXON_HUB,
-      scopeKey: "https://axonhub.example.invalid",
-      resourceId: native.id,
-    })
-    const draft = {
-      ...resources.drafts.prepareEditDraft(detail),
-      name: "Renamed Axon",
-    }
-
-    expect(resources.drafts.validateDraft(draft)).toEqual({
-      valid: true,
-      errors: [],
-    })
-
-    await resources.items.update(config, detail, draft)
-
-    expect(axonHubApi.updateAxonHubChannel).toHaveBeenCalledWith(
-      config,
-      native.id,
-      expect.objectContaining({
-        name: "Renamed Axon",
-        supportedModels: null,
-        manualModels: [],
-        defaultTestModel: null,
-      }),
-    )
-  })
-
-  it("preserves archived AxonHub status on resource edits", async () => {
-    const native = buildAxonHubChannel({
-      status: AXON_HUB_CHANNEL_STATUS.ARCHIVED,
-    })
-    axonHubApi.getAxonHubChannel.mockResolvedValue(native)
-    axonHubApi.updateAxonHubChannel.mockResolvedValue(native)
-    axonHubApi.axonHubChannelToManagedSite.mockReturnValue(
-      buildAxonHubChannelRow(native),
-    )
-
-    const { axonHubManagedSiteCapabilities } = await import(
-      "~/services/apiAdapters/managedSites/axonHub"
-    )
-    const resources = axonHubManagedSiteCapabilities.resources!
-    const detail = await resources.items.getDetail(config, {
-      managedSiteType: SITE_TYPES.AXON_HUB,
-      scopeKey: "https://axonhub.example.invalid",
-      resourceId: native.id,
-    })
-
-    const result = await resources.items.update(
-      config,
-      detail,
-      resources.drafts.prepareEditDraft(detail),
-    )
-
-    expect(axonHubApi.updateAxonHubChannelStatus).not.toHaveBeenCalled()
-    expect(result).toMatchObject({
-      outcome: "succeeded",
-      data: {
-        status: "unknown",
-      },
-      confirmedEffects: [
-        {
-          kind: "resource-updated",
-          resourceKind: "channel",
-          resourceId: native.id,
-        },
-      ],
-    })
-  })
-
-  it("updates AxonHub native status when a resource edit changes it", async () => {
-    const native = buildAxonHubChannel({
-      status: AXON_HUB_CHANNEL_STATUS.ENABLED,
-    })
-    axonHubApi.getAxonHubChannel.mockResolvedValue(native)
-    axonHubApi.updateAxonHubChannel.mockResolvedValue(native)
-    axonHubApi.axonHubChannelToManagedSite.mockReturnValue(
-      buildAxonHubChannelRow({
-        ...native,
-        status: AXON_HUB_CHANNEL_STATUS.DISABLED,
-      }),
-    )
-
-    const { axonHubManagedSiteCapabilities } = await import(
-      "~/services/apiAdapters/managedSites/axonHub"
-    )
-    const resources = axonHubManagedSiteCapabilities.resources!
-    const detail = await resources.items.getDetail(config, {
-      managedSiteType: SITE_TYPES.AXON_HUB,
-      scopeKey: "https://axonhub.example.invalid",
-      resourceId: native.id,
-    })
-
-    await resources.items.update(config, detail, {
-      ...resources.drafts.prepareEditDraft(detail),
-      status: CHANNEL_STATUS.ManuallyDisabled,
-    })
-
-    expect(axonHubApi.updateAxonHubChannelStatus).toHaveBeenCalledWith(
-      config,
-      native.id,
-      AXON_HUB_CHANNEL_STATUS.DISABLED,
-    )
-  })
-
-  it("fails closed when an AxonHub resource row is missing native channel detail", async () => {
-    axonHubProvider.listChannels.mockResolvedValue({
-      items: [
-        {
-          ...buildAxonHubChannelRow(buildAxonHubChannel()),
-          _axonHubData: undefined,
-        },
-      ],
-      total: 1,
-      type_counts: { openai: 1 },
-    })
-
-    const { axonHubManagedSiteCapabilities } = await import(
-      "~/services/apiAdapters/managedSites/axonHub"
-    )
-
-    await expect(
-      axonHubManagedSiteCapabilities.resources?.items.list(config),
-    ).rejects.toThrow("AxonHub channel row is missing native channel detail")
-  })
-
-  it("does not write masked AxonHub credentials back as real secrets", async () => {
-    const native = buildAxonHubChannel({
-      credentials: {
-        apiKeys: ["sk-********"],
-      },
-    })
-    axonHubApi.getAxonHubChannel.mockResolvedValue(native)
-    axonHubApi.updateAxonHubChannel.mockResolvedValue(native)
-    axonHubApi.axonHubChannelToManagedSite.mockReturnValue(
-      buildAxonHubChannelRow(native),
-    )
-
-    const { axonHubManagedSiteCapabilities } = await import(
-      "~/services/apiAdapters/managedSites/axonHub"
-    )
-    const resources = axonHubManagedSiteCapabilities.resources!
-    const detail = await resources.items.getDetail(config, {
-      managedSiteType: SITE_TYPES.AXON_HUB,
-      scopeKey: "https://axonhub.example.invalid",
-      resourceId: native.id,
-    })
-
-    await resources.items.update(
-      config,
-      detail,
-      resources.drafts.prepareEditDraft(detail),
-    )
-
-    expect(axonHubApi.updateAxonHubChannel).toHaveBeenCalledWith(
-      config,
-      native.id,
-      expect.not.objectContaining({
-        credentials: expect.anything(),
-      }),
-    )
-  })
-
-  it("creates and deletes resources through AxonHub GraphQL-native ids", async () => {
-    const created = buildAxonHubChannel({
-      id: "gid://axonhub/Channel/created-string-id",
-      name: "Created Axon",
-    })
-    axonHubApi.createAxonHubChannel.mockResolvedValue(created)
-    axonHubApi.deleteAxonHubChannel.mockResolvedValue(true)
-    axonHubApi.axonHubChannelToManagedSite.mockReturnValue(
-      buildAxonHubChannelRow(created),
-    )
-
-    const { axonHubManagedSiteCapabilities } = await import(
-      "~/services/apiAdapters/managedSites/axonHub"
-    )
-    const resources = axonHubManagedSiteCapabilities.resources!
-
-    await expect(
-      resources.items.create(config, {
-        name: "Created Axon",
-        type: "openai",
-        key: "sk-created",
-        base_url: "https://created.example.invalid/v1",
-        models: ["gpt-4o"],
-        groups: [],
-        priority: 0,
-        weight: 5,
-        status: CHANNEL_STATUS.Enable,
-      }),
-    ).resolves.toEqual({
-      outcome: "succeeded",
-      confirmedEffects: [
-        { kind: "resource-created", resourceKind: "channel" },
-        {
-          kind: "status-updated",
-          resourceKind: "channel",
-          resourceId: "gid://axonhub/Channel/created-string-id",
-        },
-      ],
-      data: expect.objectContaining({
-        ref: expect.objectContaining({
-          resourceId: "gid://axonhub/Channel/created-string-id",
-        }),
-      }),
-    })
-    expect(axonHubApi.createAxonHubChannel).toHaveBeenCalledWith(config, {
-      type: "openai",
-      name: "Created Axon",
-      baseURL: "https://created.example.invalid/v1",
-      credentials: { apiKeys: ["sk-created"] },
-      supportedModels: ["gpt-4o"],
-      manualModels: ["gpt-4o"],
-      defaultTestModel: "gpt-4o",
-      settings: {},
-      orderingWeight: 5,
-    })
-
-    await expect(
-      resources.items.delete(config, {
-        managedSiteType: SITE_TYPES.AXON_HUB,
-        scopeKey: "https://axonhub.example.invalid",
-        resourceId: "gid://axonhub/Channel/created-string-id",
-      }),
-    ).resolves.toEqual({
-      outcome: "succeeded",
-      data: undefined,
-      confirmedEffects: [
-        {
-          kind: "resource-deleted",
-          resourceKind: "channel",
-          resourceId: "gid://axonhub/Channel/created-string-id",
-        },
-      ],
-    })
-    expect(axonHubApi.deleteAxonHubChannel).toHaveBeenCalledWith(
-      config,
-      "gid://axonhub/Channel/created-string-id",
-    )
-  })
-})
-
-const buildAxonHubChannel = (
-  overrides: Partial<AxonHubChannel> = {},
-): AxonHubChannel => ({
-  id: "gid://axonhub/Channel/native-string-id",
-  name: "Axon Native",
-  type: "openai",
-  status: AXON_HUB_CHANNEL_STATUS.ENABLED,
-  baseURL: "https://upstream.example.invalid/v1",
-  credentials: {
-    apiKeys: ["sk-live"],
-  },
-  supportedModels: ["gpt-4o"],
-  manualModels: ["gpt-4o"],
-  defaultTestModel: "gpt-4o",
-  settings: {},
-  orderingWeight: 0,
-  remark: null,
-  ...overrides,
-})
-
-const buildAxonHubChannelRow = (native: AxonHubChannel) => ({
-  id: 408,
-  name: native.name,
-  type: native.type,
-  key:
-    native.credentials?.apiKeys?.find((key) => key.trim()) ??
-    native.credentials?.apiKey ??
-    "",
-  base_url: native.baseURL,
-  models: [...(native.supportedModels ?? []), ...(native.manualModels ?? [])]
-    .filter(Boolean)
-    .join(","),
-  status:
-    native.status === AXON_HUB_CHANNEL_STATUS.ENABLED
-      ? CHANNEL_STATUS.Enable
-      : CHANNEL_STATUS.ManuallyDisabled,
-  priority: 0,
-  weight: native.orderingWeight ?? 0,
-  group: "",
-  _axonHubData: native,
 })

@@ -336,7 +336,10 @@ const axonHubManagedResourceFieldPolicy = defineManagedResourceFieldPolicy({
       ],
     },
     [MANAGED_RESOURCE_EDITOR_MODES.Edit]: {
-      fields: axonHubFields,
+      fields: axonHubFields.filter(
+        ({ fieldId }) =>
+          fieldId !== AXON_HUB_CHANNEL_FIELD_IDS.EXTRA_MODEL_PREFIX,
+      ),
       hiddenFields: [
         {
           fieldId: AXON_HUB_CHANNEL_FIELD_IDS.MANUAL_MODELS,

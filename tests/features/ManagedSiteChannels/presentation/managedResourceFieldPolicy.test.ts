@@ -5,6 +5,7 @@ import {
   AXON_HUB_CHANNEL_FIELD_IDS,
   AXON_HUB_CHANNEL_STATUS,
   AXON_HUB_CHANNEL_TYPE,
+  AXON_HUB_CREATE_FIELD_IDS,
   AXON_HUB_EDITABLE_FIELD_IDS,
 } from "~/constants/axonHub"
 import { SITE_TYPES } from "~/constants/siteType"
@@ -288,7 +289,11 @@ describe("managed resource field policy", () => {
 
       expect(policy).toBeDefined()
       const resolved = resolveManagedResourceFieldPolicy(
-        createDescriptors(),
+        createDescriptors().filter(
+          ({ fieldId }) =>
+            mode === "create" ||
+            fieldId !== AXON_HUB_CHANNEL_FIELD_IDS.EXTRA_MODEL_PREFIX,
+        ),
         policy!,
       )
 
@@ -301,7 +306,10 @@ describe("managed resource field policy", () => {
         ),
       ).toEqual(
         new Set(
-          AXON_HUB_EDITABLE_FIELD_IDS.filter(
+          (mode === "create"
+            ? AXON_HUB_CREATE_FIELD_IDS
+            : AXON_HUB_EDITABLE_FIELD_IDS
+          ).filter(
             (fieldId) => fieldId !== AXON_HUB_CHANNEL_FIELD_IDS.MANUAL_MODELS,
           ),
         ),
@@ -309,7 +317,12 @@ describe("managed resource field policy", () => {
       expect(
         new Set(resolved.fields.map(({ presentation }) => presentation.fieldId))
           .size,
-      ).toBe(AXON_HUB_EDITABLE_FIELD_IDS.length - 1)
+      ).toBe(
+        (mode === "create"
+          ? AXON_HUB_CREATE_FIELD_IDS
+          : AXON_HUB_EDITABLE_FIELD_IDS
+        ).length - 1,
+      )
       for (const { descriptor, presentation } of resolved.fields) {
         expect(presentation.renderer).toBe(descriptor.type)
       }
@@ -456,10 +469,6 @@ describe("managed resource field policy", () => {
     const expectedCopy = {
       tags: ["tags.help", "tags.placeholder"],
       remark: ["remark.help", "remark.placeholder"],
-      extraModelPrefix: [
-        "extraModelPrefix.help",
-        "extraModelPrefix.placeholder",
-      ],
     } as const
     for (const [fieldId, [helpKey, placeholderKey]] of Object.entries(
       expectedCopy,
@@ -474,6 +483,13 @@ describe("managed resource field policy", () => {
         `managedSiteChannels:editor.fields.${placeholderKey}`,
       )
     }
+
+    expect(
+      policy.fields.some(
+        ({ fieldId }) =>
+          fieldId === AXON_HUB_CHANNEL_FIELD_IDS.EXTRA_MODEL_PREFIX,
+      ),
+    ).toBe(false)
   })
 
   it("maps approved options to controlled labels and unknown values to one fallback", () => {

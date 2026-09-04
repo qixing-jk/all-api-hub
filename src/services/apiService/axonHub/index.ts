@@ -1,10 +1,10 @@
-import { AXON_HUB_CHANNEL_STATUS } from "~/constants/axonHub"
-import type {
-  ApiResponse,
-  ApiServiceRequest,
-} from "~/services/apiTransport/type"
+import {
+  AXON_HUB_CHANNEL_STATUS,
+  AXON_HUB_GRAPHQL_ERROR_CODES,
+} from "~/constants/axonHub"
 import type {
   AxonHubChannel,
+  AxonHubChannelMutationReceipt,
   AxonHubCreateChannelInput,
   AxonHubUpdateChannelInput,
 } from "~/types/axonHub"
@@ -13,11 +13,7 @@ import {
   CHANNEL_STATUS,
   type ManagedSiteChannelListData,
 } from "~/types/managedSite"
-import { getErrorMessage } from "~/utils/core/error"
-import { createLogger } from "~/utils/core/logger"
 import { normalizeList } from "~/utils/core/string"
-
-const logger = createLogger("AxonHubApiService")
 
 // Channel list responses are cached briefly, so keep this selection limited to
 // non-secret summary fields and sanitize over-returned nodes before caching.
@@ -32,11 +28,38 @@ const AXON_HUB_CHANNEL_LIST_SELECTION = `
   manualModels
 `
 
-// AxonHub v1.0.0-beta5 keeps ChannelSettingsInput as a replacement value, so
-// detail reads select every pinned settings member before callers rebuild it.
-// Its credential resolver may return null for an existing channel when the
-// caller lacks write scope. Sources: https://github.com/looplj/axonhub/blob/d061ac7df6aef0c5ec6cdfa9dc5002546a1c5a57/internal/server/gql/axonhub.graphql#L151-L205
-// and https://github.com/looplj/axonhub/blob/d061ac7df6aef0c5ec6cdfa9dc5002546a1c5a57/internal/server/gql/axonhub.resolvers.go#L50-L55
+// This is the minimum detail contract required by AxonHub editing and
+// credential handling. Optional advanced aggregates are queried separately so
+// their schema drift can safely fall back without disabling core management.
+const AXON_HUB_CHANNEL_CORE_DETAIL_SELECTION = `
+  __typename
+  id
+  createdAt
+  updatedAt
+  type
+  baseURL
+  name
+  status
+  credentials {
+    apiKey
+    apiKeys
+  }
+  supportedModels
+  autoSyncSupportedModels
+  autoSyncModelPattern
+  manualModels
+  tags
+  defaultTestModel
+  orderingWeight
+  errorMessage
+  remark
+`
+
+// Keep detail reads aligned with product-owned display, edit-safety, and
+// migration facts. In particular, do not round-trip ChannelSettings: AxonHub
+// replaces that aggregate and beta9 already added members unknown to older
+// clients. Sources: https://github.com/looplj/axonhub/blob/v1.0.0-beta8/internal/server/biz/channel.go
+// and https://github.com/looplj/axonhub/blob/v1.0.0-beta9/internal/server/gql/axonhub.graphql
 const AXON_HUB_CHANNEL_DETAIL_SELECTION = `
   __typename
   id
@@ -78,73 +101,6 @@ const AXON_HUB_CHANNEL_DETAIL_SELECTION = `
       from
       to
     }
-    autoTrimedModelPrefixes
-    hideOriginalModels
-    hideMappedModels
-    lowercaseModelId
-    proxy {
-      type
-      url
-      username
-      password
-    }
-    transformOptions {
-      forceArrayInstructions
-      forceArrayInputs
-      replaceDeveloperRoleWithSystem
-      reasoningEffortMapping {
-        from
-        to
-      }
-    }
-    headerOverrideOperations {
-      op
-      path
-      from
-      to
-      value
-      condition
-      match {
-        path
-        eq
-      }
-      index
-      splat
-    }
-    bodyOverrideOperations {
-      op
-      path
-      from
-      to
-      value
-      condition
-      match {
-        path
-        eq
-      }
-      index
-      splat
-    }
-    passThroughUserAgent
-    passThroughBody
-    rateLimit {
-      rpm
-      tpm
-      maxConcurrent
-      queueSize
-      queueTimeoutMs
-    }
-    retryableStatusCodes
-    retryableErrorPatterns {
-      pattern
-      regex
-    }
-    providerQuota {
-      opencodeGo {
-        workspaceId
-        authCookie
-      }
-    }
   }
   orderingWeight
   errorMessage
@@ -155,12 +111,17 @@ const AXON_HUB_CHANNEL_DETAIL_SELECTION = `
     baseURL
     transport
   }
-  disabledAPIKeys {
-    key
-    disabledAt
-    errorCode
-    reason
-  }
+`
+
+// Mutation responses are receipts, not detail reads. Keeping this projection
+// narrow prevents unrelated Channel fields from making every write invalid.
+const AXON_HUB_CHANNEL_MUTATION_SELECTION = `
+  __typename
+  id
+  type
+  baseURL
+  name
+  status
 `
 
 // The legacy table still needs the primary API key and model mappings, but it
@@ -187,33 +148,6 @@ const AXON_HUB_LEGACY_CHANNEL_SELECTION = `
     modelMappings {
       from
       to
-    }
-    autoTrimedModelPrefixes
-    hideOriginalModels
-    hideMappedModels
-    lowercaseModelId
-    transformOptions {
-      forceArrayInstructions
-      forceArrayInputs
-      replaceDeveloperRoleWithSystem
-      reasoningEffortMapping {
-        from
-        to
-      }
-    }
-    passThroughUserAgent
-    passThroughBody
-    rateLimit {
-      rpm
-      tpm
-      maxConcurrent
-      queueSize
-      queueTimeoutMs
-    }
-    retryableStatusCodes
-    retryableErrorPatterns {
-      pattern
-      regex
     }
   }
   orderingWeight
@@ -267,6 +201,16 @@ const GET_AXON_HUB_CHANNEL = `
   }
 `
 
+const GET_AXON_HUB_CHANNEL_CORE = `
+  query GetAxonHubChannelCore($id: ID!) {
+    node(id: $id) {
+      ... on Channel {
+        ${AXON_HUB_CHANNEL_CORE_DETAIL_SELECTION}
+      }
+    }
+  }
+`
+
 const GET_AXON_HUB_LEGACY_CHANNEL = `
   query GetAxonHubChannel($id: ID!) {
     node(id: $id) {
@@ -280,7 +224,7 @@ const GET_AXON_HUB_LEGACY_CHANNEL = `
 const CREATE_CHANNEL = `
   mutation CreateChannel($input: CreateChannelInput!) {
     createChannel(input: $input) {
-      ${AXON_HUB_CHANNEL_DETAIL_SELECTION}
+      ${AXON_HUB_CHANNEL_MUTATION_SELECTION}
     }
   }
 `
@@ -288,7 +232,7 @@ const CREATE_CHANNEL = `
 const UPDATE_CHANNEL = `
   mutation UpdateChannel($id: ID!, $input: UpdateChannelInput!) {
     updateChannel(id: $id, input: $input) {
-      ${AXON_HUB_CHANNEL_DETAIL_SELECTION}
+      ${AXON_HUB_CHANNEL_MUTATION_SELECTION}
     }
   }
 `
@@ -302,11 +246,6 @@ const UPDATE_CHANNEL_STATUS = `
     }
   }
 `
-
-const toAxonHubStatus = (status: number) =>
-  status === CHANNEL_STATUS.Enable
-    ? AXON_HUB_CHANNEL_STATUS.ENABLED
-    : AXON_HUB_CHANNEL_STATUS.DISABLED
 
 const DELETE_CHANNEL = `
   mutation DeleteChannel($id: ID!) {
@@ -394,6 +333,9 @@ const safeChannelListCache = new Map<
     expiresAt: number
   }
 >()
+const advancedDetailUnsupportedScopes = new Set<string>()
+const legacyDetailUnsupportedScopes = new Set<string>()
+const incompleteAdvancedDetails = new WeakSet<object>()
 const numericIdToGraphqlId = new Map<number, string>()
 const CHANNEL_LIST_CACHE_TTL_MS = 15_000
 const MAX_LIST_CHANNEL_PAGES = 100
@@ -412,14 +354,10 @@ export const __resetCachesForTesting = () => {
   tokenCache.clear()
   inflightSignIns.clear()
   safeChannelListCache.clear()
+  advancedDetailUnsupportedScopes.clear()
+  legacyDetailUnsupportedScopes.clear()
   numericIdToGraphqlId.clear()
 }
-
-const extractRequestConfig = (request: ApiServiceRequest): AxonHubConfig => ({
-  baseUrl: request.baseUrl,
-  email: String(request.auth.userId ?? ""),
-  password: request.auth.accessToken ?? "",
-})
 
 const reserveNumericIdSlot = (preferredNumericId: number, id: string) => {
   let numericId = preferredNumericId
@@ -479,12 +417,6 @@ export async function resolveAxonHubGraphqlIdForMutation(
     "not-dispatched",
     `Unable to resolve AxonHub GraphQL id for channel ${id}`,
   )
-}
-
-const toSafeErrorMessage = (error: unknown, fallback: string) => {
-  const message = getErrorMessage(error)
-  if (!message) return fallback
-  return message.replace(/Bearer\s+[A-Za-z0-9._-]+/g, "Bearer [redacted]")
 }
 
 const isAbortError = (error: unknown) =>
@@ -571,9 +503,6 @@ const isOutputNullableString = (value: unknown) =>
 const isOutputNullableBoolean = (value: unknown) =>
   value === null || typeof value === "boolean"
 
-const isOutputNullableInteger = (value: unknown) =>
-  value === null || (typeof value === "number" && Number.isInteger(value))
-
 const isOutputStringArray = (value: unknown) =>
   Array.isArray(value) && value.every((item) => typeof item === "string")
 
@@ -597,11 +526,16 @@ const isOutputGcpCredential = (value: unknown) =>
     typeof value.projectID === "string" &&
     typeof value.jsonData === "string")
 
-const isOutputCredentials = (value: unknown) =>
+const isOutputPrimaryCredentials = (value: unknown) =>
   value === null ||
   (isRecord(value) &&
     isOutputNullableString(value.apiKey) &&
-    isOutputNullableStringArray(value.apiKeys) &&
+    isOutputNullableStringArray(value.apiKeys))
+
+const isOutputCredentials = (value: unknown) =>
+  value === null ||
+  (isOutputPrimaryCredentials(value) &&
+    isRecord(value) &&
     isOutputGcpCredential(value.gcp) &&
     isOutputOAuthCredentials(value.oauth))
 
@@ -615,101 +549,11 @@ const isOutputModelMappings = (value: unknown) =>
         typeof mapping.to === "string",
     ))
 
-const isOutputOverrideMatch = (value: unknown) =>
-  value === null ||
-  (isRecord(value) &&
-    typeof value.path === "string" &&
-    typeof value.eq === "string")
-
-const isOutputOverrideOperations = (value: unknown) =>
-  Array.isArray(value) &&
-  value.every(
-    (operation) =>
-      isRecord(operation) &&
-      typeof operation.op === "string" &&
-      isOutputNullableString(operation.path) &&
-      isOutputNullableString(operation.from) &&
-      isOutputNullableString(operation.to) &&
-      isOutputNullableString(operation.value) &&
-      isOutputNullableString(operation.condition) &&
-      isOutputOverrideMatch(operation.match) &&
-      isOutputNullableInteger(operation.index) &&
-      isOutputNullableBoolean(operation.splat),
-  )
-
-const isOutputProxy = (value: unknown) =>
-  value === null ||
-  (isRecord(value) &&
-    typeof value.type === "string" &&
-    isOutputNullableString(value.url) &&
-    isOutputNullableString(value.username) &&
-    isOutputNullableString(value.password))
-
-const isOutputTransformOptions = (value: unknown) =>
-  value === null ||
-  (isRecord(value) &&
-    typeof value.forceArrayInstructions === "boolean" &&
-    typeof value.forceArrayInputs === "boolean" &&
-    typeof value.replaceDeveloperRoleWithSystem === "boolean" &&
-    (value.reasoningEffortMapping === null ||
-      (Array.isArray(value.reasoningEffortMapping) &&
-        value.reasoningEffortMapping.every(
-          (mapping) =>
-            isRecord(mapping) &&
-            typeof mapping.from === "string" &&
-            typeof mapping.to === "string",
-        ))))
-
-const isOutputRateLimit = (value: unknown) =>
-  value === null ||
-  (isRecord(value) &&
-    isOutputNullableInteger(value.rpm) &&
-    isOutputNullableInteger(value.tpm) &&
-    isOutputNullableInteger(value.maxConcurrent) &&
-    isOutputNullableInteger(value.queueSize) &&
-    isOutputNullableInteger(value.queueTimeoutMs))
-
-const isOutputRetryableStatusCodes = (value: unknown) =>
-  value === null ||
-  (Array.isArray(value) && value.every((code) => Number.isInteger(code)))
-
-const isOutputRetryableErrorPatterns = (value: unknown) =>
-  value === null ||
-  (Array.isArray(value) &&
-    value.every(
-      (entry) =>
-        isRecord(entry) &&
-        typeof entry.pattern === "string" &&
-        typeof entry.regex === "boolean",
-    ))
-
-const isOutputProviderQuota = (value: unknown) =>
-  value === null ||
-  (isRecord(value) &&
-    (value.opencodeGo === null ||
-      (isRecord(value.opencodeGo) &&
-        isOutputNullableString(value.opencodeGo.workspaceId) &&
-        isOutputNullableString(value.opencodeGo.authCookie))))
-
 const isOutputSettings = (value: unknown) =>
   value === null ||
   (isRecord(value) &&
     isOutputNullableString(value.extraModelPrefix) &&
-    isOutputModelMappings(value.modelMappings) &&
-    isOutputNullableStringArray(value.autoTrimedModelPrefixes) &&
-    isOutputNullableBoolean(value.hideOriginalModels) &&
-    isOutputNullableBoolean(value.hideMappedModels) &&
-    isOutputNullableBoolean(value.lowercaseModelId) &&
-    isOutputProxy(value.proxy) &&
-    isOutputTransformOptions(value.transformOptions) &&
-    isOutputOverrideOperations(value.headerOverrideOperations) &&
-    isOutputOverrideOperations(value.bodyOverrideOperations) &&
-    isOutputNullableBoolean(value.passThroughUserAgent) &&
-    isOutputNullableBoolean(value.passThroughBody) &&
-    isOutputRateLimit(value.rateLimit) &&
-    isOutputRetryableStatusCodes(value.retryableStatusCodes) &&
-    isOutputRetryableErrorPatterns(value.retryableErrorPatterns) &&
-    isOutputProviderQuota(value.providerQuota))
+    isOutputModelMappings(value.modelMappings))
 
 const isOutputPolicies = (value: unknown) =>
   value === null || (isRecord(value) && isOutputNullableString(value.stream))
@@ -724,19 +568,6 @@ const isOutputEndpoints = (value: unknown) =>
         isOutputNullableString(endpoint.path) &&
         isOutputNullableString(endpoint.baseURL) &&
         isOutputNullableString(endpoint.transport),
-    ))
-
-const isOutputDisabledApiKeys = (value: unknown) =>
-  value === null ||
-  (Array.isArray(value) &&
-    value.every(
-      (entry) =>
-        isRecord(entry) &&
-        typeof entry.key === "string" &&
-        typeof entry.disabledAt === "string" &&
-        typeof entry.errorCode === "number" &&
-        Number.isInteger(entry.errorCode) &&
-        isOutputNullableString(entry.reason),
     ))
 
 const isAuthoritativeAxonHubChannel = (
@@ -764,30 +595,50 @@ const isAuthoritativeAxonHubChannel = (
   Number.isInteger(value.orderingWeight) &&
   isOutputNullableString(value.errorMessage) &&
   isOutputNullableString(value.remark) &&
-  isOutputEndpoints(value.endpoints) &&
-  isOutputDisabledApiKeys(value.disabledAPIKeys)
+  isOutputEndpoints(value.endpoints)
 
-const isLegacyOutputCredentials = (value: unknown) =>
-  value === null ||
-  (isRecord(value) &&
-    isOutputNullableString(value.apiKey) &&
-    isOutputNullableStringArray(value.apiKeys))
+const isAxonHubChannelCoreDetail = (
+  value: unknown,
+): value is AxonHubChannel & { __typename: "Channel" } =>
+  isRecord(value) &&
+  value.__typename === "Channel" &&
+  isNonEmptyString(value.id) &&
+  typeof value.createdAt === "string" &&
+  typeof value.updatedAt === "string" &&
+  typeof value.type === "string" &&
+  isOutputNullableString(value.baseURL) &&
+  typeof value.name === "string" &&
+  typeof value.status === "string" &&
+  isOutputPrimaryCredentials(value.credentials) &&
+  isOutputStringArray(value.supportedModels) &&
+  isOutputNullableBoolean(value.autoSyncSupportedModels) &&
+  isOutputNullableString(value.autoSyncModelPattern) &&
+  isOutputNullableStringArray(value.manualModels) &&
+  isOutputNullableStringArray(value.tags) &&
+  typeof value.defaultTestModel === "string" &&
+  typeof value.orderingWeight === "number" &&
+  Number.isInteger(value.orderingWeight) &&
+  isOutputNullableString(value.errorMessage) &&
+  isOutputNullableString(value.remark)
+
+const isAxonHubChannelMutationProjection = (
+  value: unknown,
+): value is AxonHubChannelMutationReceipt =>
+  isRecord(value) &&
+  value.__typename === "Channel" &&
+  isNonEmptyString(value.id) &&
+  typeof value.type === "string" &&
+  isOutputNullableString(value.baseURL) &&
+  typeof value.name === "string" &&
+  typeof value.status === "string"
+
+const isLegacyOutputCredentials = isOutputPrimaryCredentials
 
 const isLegacyOutputSettings = (value: unknown) =>
   value === null ||
   (isRecord(value) &&
     isOutputNullableString(value.extraModelPrefix) &&
-    isOutputModelMappings(value.modelMappings) &&
-    isOutputNullableStringArray(value.autoTrimedModelPrefixes) &&
-    isOutputNullableBoolean(value.hideOriginalModels) &&
-    isOutputNullableBoolean(value.hideMappedModels) &&
-    isOutputNullableBoolean(value.lowercaseModelId) &&
-    isOutputTransformOptions(value.transformOptions) &&
-    isOutputNullableBoolean(value.passThroughUserAgent) &&
-    isOutputNullableBoolean(value.passThroughBody) &&
-    isOutputRateLimit(value.rateLimit) &&
-    isOutputRetryableStatusCodes(value.retryableStatusCodes) &&
-    isOutputRetryableErrorPatterns(value.retryableErrorPatterns))
+    isOutputModelMappings(value.modelMappings))
 
 const isLegacyAxonHubChannel = (
   value: unknown,
@@ -840,50 +691,6 @@ const sanitizeLegacyAxonHubChannel = (
             modelMappings:
               settings.modelMappings?.map(({ from, to }) => ({ from, to })) ??
               null,
-            autoTrimedModelPrefixes:
-              settings.autoTrimedModelPrefixes == null
-                ? null
-                : [...settings.autoTrimedModelPrefixes],
-            hideOriginalModels: settings.hideOriginalModels ?? null,
-            hideMappedModels: settings.hideMappedModels ?? null,
-            lowercaseModelId: settings.lowercaseModelId ?? null,
-            transformOptions:
-              settings.transformOptions == null
-                ? null
-                : {
-                    forceArrayInstructions:
-                      settings.transformOptions.forceArrayInstructions ?? null,
-                    forceArrayInputs:
-                      settings.transformOptions.forceArrayInputs ?? null,
-                    replaceDeveloperRoleWithSystem:
-                      settings.transformOptions
-                        .replaceDeveloperRoleWithSystem ?? null,
-                    reasoningEffortMapping:
-                      settings.transformOptions.reasoningEffortMapping?.map(
-                        ({ from, to }) => ({ from, to }),
-                      ) ?? null,
-                  },
-            passThroughUserAgent: settings.passThroughUserAgent ?? null,
-            passThroughBody: settings.passThroughBody ?? null,
-            rateLimit:
-              settings.rateLimit == null
-                ? null
-                : {
-                    rpm: settings.rateLimit.rpm ?? null,
-                    tpm: settings.rateLimit.tpm ?? null,
-                    maxConcurrent: settings.rateLimit.maxConcurrent ?? null,
-                    queueSize: settings.rateLimit.queueSize ?? null,
-                    queueTimeoutMs: settings.rateLimit.queueTimeoutMs ?? null,
-                  },
-            retryableStatusCodes:
-              settings.retryableStatusCodes == null
-                ? null
-                : [...settings.retryableStatusCodes],
-            retryableErrorPatterns:
-              settings.retryableErrorPatterns?.map(({ pattern, regex }) => ({
-                pattern,
-                regex: regex ?? null,
-              })) ?? null,
           },
     createdAt: value.createdAt ?? null,
     updatedAt: value.updatedAt ?? null,
@@ -891,12 +698,6 @@ const sanitizeLegacyAxonHubChannel = (
     errorMessage: value.errorMessage ?? null,
     remark: value.remark ?? null,
   }
-}
-
-const toLegacyAxonHubChannel = (value: unknown): AxonHubChannel | null => {
-  if (!isLegacyAxonHubChannel(value)) return null
-
-  return sanitizeLegacyAxonHubChannel(value)
 }
 
 const toSafeAxonHubChannelSummary = (value: unknown): AxonHubChannel | null => {
@@ -1496,6 +1297,31 @@ export async function listAxonHubChannelPage(
   )
 }
 
+const isAxonHubSchemaValidationError = (error: unknown) =>
+  error instanceof AxonHubRequestError &&
+  error.code === AXON_HUB_GRAPHQL_ERROR_CODES.VALIDATION_FAILED
+
+const requestAxonHubChannelNode = async (
+  config: AxonHubConfig,
+  id: string,
+  query: string,
+  options?: Pick<RequestInit, "signal">,
+) => {
+  const data = await graphqlRequest<unknown>(config, query, { id }, options)
+  if (!isRecord(data) || !("node" in data)) {
+    throw new AxonHubRequestError("protocol", "not-dispatched")
+  }
+  if (data.node === null) {
+    throw new AxonHubRequestError("not-found", "not-dispatched")
+  }
+  return data.node
+}
+
+/** Returns whether an AxonHub detail read included all optional aggregates. */
+export const hasCompleteAxonHubAdvancedDetail = (
+  channel: AxonHubChannel,
+): boolean => !incompleteAdvancedDetails.has(channel)
+
 /**
  * Load one native AxonHub channel by its opaque GraphQL id.
  */
@@ -1504,28 +1330,41 @@ export async function getAxonHubChannel(
   id: string,
   options?: Pick<RequestInit, "signal">,
 ): Promise<AxonHubChannel> {
-  const data = await graphqlRequest<unknown>(
-    config,
-    GET_AXON_HUB_CHANNEL,
-    { id },
-    options,
-  )
+  const scopeKey = cacheKeyForConfig(config)
+  let complete = !advancedDetailUnsupportedScopes.has(scopeKey)
+  let node: unknown
+  try {
+    node = await requestAxonHubChannelNode(
+      config,
+      id,
+      complete ? GET_AXON_HUB_CHANNEL : GET_AXON_HUB_CHANNEL_CORE,
+      options,
+    )
+  } catch (error) {
+    if (!complete || !isAxonHubSchemaValidationError(error)) throw error
+    complete = false
+    advancedDetailUnsupportedScopes.add(scopeKey)
+    node = await requestAxonHubChannelNode(
+      config,
+      id,
+      GET_AXON_HUB_CHANNEL_CORE,
+      options,
+    )
+  }
 
-  if (!isRecord(data) || !("node" in data)) {
+  if (complete) {
+    if (!isAuthoritativeAxonHubChannel(node) || node.id !== id) {
+      throw new AxonHubRequestError("protocol", "not-dispatched")
+    }
+    return node
+  }
+
+  if (!isAxonHubChannelCoreDetail(node) || node.id !== id) {
     throw new AxonHubRequestError("protocol", "not-dispatched")
   }
-  if (data.node === null) {
-    throw new AxonHubRequestError("not-found", "not-dispatched")
-  }
-  if (
-    !isRecord(data.node) ||
-    !isAuthoritativeAxonHubChannel(data.node) ||
-    data.node.id !== id
-  ) {
-    throw new AxonHubRequestError("protocol", "not-dispatched")
-  }
 
-  return data.node
+  incompleteAdvancedDetails.add(node)
+  return node
 }
 
 const getLegacyAxonHubChannel = async (
@@ -1533,25 +1372,39 @@ const getLegacyAxonHubChannel = async (
   id: string,
   options?: Pick<RequestInit, "signal">,
 ): Promise<AxonHubChannel> => {
-  const data = await graphqlRequest<unknown>(
-    config,
-    GET_AXON_HUB_LEGACY_CHANNEL,
-    { id },
-    options,
-  )
+  const scopeKey = cacheKeyForConfig(config)
+  let complete = !legacyDetailUnsupportedScopes.has(scopeKey)
+  let node: unknown
+  try {
+    node = await requestAxonHubChannelNode(
+      config,
+      id,
+      complete ? GET_AXON_HUB_LEGACY_CHANNEL : GET_AXON_HUB_CHANNEL_CORE,
+      options,
+    )
+  } catch (error) {
+    if (!complete || !isAxonHubSchemaValidationError(error)) throw error
+    complete = false
+    legacyDetailUnsupportedScopes.add(scopeKey)
+    node = await requestAxonHubChannelNode(
+      config,
+      id,
+      GET_AXON_HUB_CHANNEL_CORE,
+      options,
+    )
+  }
 
-  if (!isRecord(data) || !("node" in data)) {
+  if (complete) {
+    if (!isLegacyAxonHubChannel(node) || node.id !== id) {
+      throw new AxonHubRequestError("protocol", "not-dispatched")
+    }
+    return sanitizeLegacyAxonHubChannel(node)
+  }
+
+  if (!isAxonHubChannelCoreDetail(node) || node.id !== id) {
     throw new AxonHubRequestError("protocol", "not-dispatched")
   }
-  if (data.node === null) {
-    throw new AxonHubRequestError("not-found", "not-dispatched")
-  }
-
-  const channel = toLegacyAxonHubChannel(data.node)
-  if (!channel || channel.id !== id) {
-    throw new AxonHubRequestError("protocol", "not-dispatched")
-  }
-  return channel
+  return sanitizeLegacyAxonHubChannel(node)
 }
 
 const hydrateLegacyAxonHubChannels = async (
@@ -1726,7 +1579,10 @@ export async function createAxonHubChannel(
     { input },
     options,
   )
-  if (!isRecord(data) || !isAuthoritativeAxonHubChannel(data.createChannel)) {
+  if (
+    !isRecord(data) ||
+    !isAxonHubChannelMutationProjection(data.createChannel)
+  ) {
     throw new AxonHubRequestError("protocol", "dispatched")
   }
   invalidateChannelListCache(config)
@@ -1742,9 +1598,10 @@ export async function updateAxonHubChannel(
   input: AxonHubUpdateChannelInput,
   options?: Pick<RequestInit, "signal">,
 ) {
-  // beta5 UpdateChannelInput treats settings as replacement data and exposes
-  // only these generated append/clear fields; forward the verified input
-  // unchanged. Source: https://github.com/looplj/axonhub/blob/d061ac7df6aef0c5ec6cdfa9dc5002546a1c5a57/internal/server/gql/ent.graphql#L5993-L6033
+  // This transport forwards UpdateChannelInput unchanged. Product adapters
+  // must account for AxonHub's custom updater semantics instead of assuming
+  // every generated append/clear field is implemented. Source:
+  // https://github.com/looplj/axonhub/blob/v1.0.0-beta9/internal/server/biz/channel.go
   const data = await graphqlRequest<unknown>(
     config,
     UPDATE_CHANNEL,
@@ -1753,7 +1610,7 @@ export async function updateAxonHubChannel(
   )
   if (
     !isRecord(data) ||
-    !isAuthoritativeAxonHubChannel(data.updateChannel) ||
+    !isAxonHubChannelMutationProjection(data.updateChannel) ||
     data.updateChannel.id !== id
   ) {
     throw new AxonHubRequestError("protocol", "dispatched")
@@ -1809,132 +1666,6 @@ export async function deleteAxonHubChannel(
   }
   invalidateChannelListCache(config)
   return data.deleteChannel
-}
-
-/**
- * API-service adapter for model-sync channel listing.
- */
-export async function listAllChannels(
-  request: ApiServiceRequest,
-): Promise<ManagedSiteChannelListData> {
-  return listChannels(extractRequestConfig(request))
-}
-
-/**
- * API-service adapter for channel search.
- */
-export async function searchChannel(
-  request: ApiServiceRequest,
-  keyword: string,
-): Promise<ManagedSiteChannelListData | null> {
-  return searchChannels(extractRequestConfig(request), keyword)
-}
-
-/**
- * API-service adapter for channel creation.
- */
-export async function createChannel(
-  request: ApiServiceRequest,
-  channelData: {
-    channel: AxonHubCreateChannelInput & { status?: number }
-  },
-): Promise<ApiResponse<unknown>> {
-  try {
-    const config = extractRequestConfig(request)
-    const { status, ...input } = channelData.channel
-    const created = await createAxonHubChannel(config, input)
-    const finalChannel = { ...created }
-    invalidateChannelListCache(config)
-    if (status === CHANNEL_STATUS.Enable) {
-      const axonHubStatus = toAxonHubStatus(status)
-      await updateAxonHubChannelStatus(config, created.id, axonHubStatus)
-      finalChannel.status = axonHubStatus
-    }
-
-    return {
-      success: true,
-      data: axonHubChannelToManagedSite(finalChannel),
-      message: "success",
-    }
-  } catch (error) {
-    logger.error("Failed to create AxonHub channel", error)
-    return {
-      success: false,
-      data: null,
-      message: toSafeErrorMessage(error, "Failed to create AxonHub channel"),
-    }
-  }
-}
-
-/**
- * API-service adapter for channel updates.
- */
-export async function updateChannel(
-  request: ApiServiceRequest,
-  channelData: Omit<AxonHubUpdateChannelInput, "status"> & {
-    id: number
-    status?: number
-  },
-): Promise<ApiResponse<unknown>> {
-  try {
-    const config = extractRequestConfig(request)
-    const { id, status, ...input } = channelData
-    const graphqlId = await resolveAxonHubGraphqlIdForMutation(config, id)
-    const updated = await updateAxonHubChannel(config, graphqlId, input)
-    const finalChannel = { ...updated }
-    invalidateChannelListCache(config)
-
-    if (status !== undefined) {
-      const axonHubStatus = toAxonHubStatus(status)
-      await updateAxonHubChannelStatus(config, graphqlId, axonHubStatus)
-      finalChannel.status = axonHubStatus
-    }
-
-    return {
-      success: true,
-      data: axonHubChannelToManagedSite(finalChannel),
-      message: "success",
-    }
-  } catch (error) {
-    logger.error("Failed to update AxonHub channel", error)
-    return {
-      success: false,
-      data: null,
-      message: toSafeErrorMessage(error, "Failed to update AxonHub channel"),
-    }
-  }
-}
-
-/**
- * API-service adapter for channel deletion.
- */
-export async function deleteChannel(
-  request: ApiServiceRequest,
-  channelId: number,
-): Promise<ApiResponse<unknown>> {
-  try {
-    const config = extractRequestConfig(request)
-    const deleted = await deleteAxonHubChannel(
-      config,
-      await resolveAxonHubGraphqlIdForMutation(config, channelId),
-    )
-    if (deleted) {
-      invalidateChannelListCache(config)
-    }
-
-    return {
-      success: deleted,
-      data: deleted,
-      message: deleted ? "success" : "Failed to delete AxonHub channel",
-    }
-  } catch (error) {
-    logger.error("Failed to delete AxonHub channel", error)
-    return {
-      success: false,
-      data: null,
-      message: toSafeErrorMessage(error, "Failed to delete AxonHub channel"),
-    }
-  }
 }
 
 /**
