@@ -677,7 +677,7 @@ describe("apiService AIHubMix", () => {
     })
   })
 
-  it("does not consume legacy msg fields from AIHubMix cookie-session errors", async () => {
+  it("falls back to the shared msg heuristic for an unrecognized AIHubMix error", async () => {
     server.use(
       http.get("https://aihubmix.com/call/usr/self", () =>
         HttpResponse.json(
@@ -694,7 +694,7 @@ describe("apiService AIHubMix", () => {
       }),
     ).rejects.toMatchObject({
       statusCode: 400,
-      message: "请求失败: 400",
+      message: "legacy guessed message",
     })
   })
 

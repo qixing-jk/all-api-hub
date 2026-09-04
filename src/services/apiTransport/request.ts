@@ -16,7 +16,10 @@ import {
   isReplaySafeRemoteFetch,
   observeRemoteFetchLifecycle,
 } from "~/services/apiTransport/remoteLifecycle"
-import { extractDataFromApiResponseBody } from "~/services/apiTransport/response"
+import {
+  extractDataFromApiResponseBody,
+  isApiResponseBody,
+} from "~/services/apiTransport/response"
 import {
   resolveSiteRequestLimitKey,
   withSiteApiRequestLease,
@@ -74,7 +77,10 @@ type NonJsonFetchApiOptions = Omit<FetchApiOptions, "responseType"> & {
   responseType: Exclude<TempWindowResponseType, "json">
 }
 
-type NormalizedAuthContext = AuthConfig
+type NormalizedAuthContext = Pick<
+  AuthConfig,
+  "authType" | "userId" | "accessToken" | "cookie"
+>
 
 interface AcquiredTransportResponse<T> extends ApiTransportResponse<T> {
   decodeError?: ApiError
@@ -815,28 +821,23 @@ const _fetchApi = async <T>(
   decodeApplicationError: boolean = onlyData,
 ): Promise<T | ApiResponse<T>> => {
   const responseType = options.responseType ?? "json"
+  const compatibilityContext = {
+    endpoint: options.endpoint,
+    responseType,
+    onlyData,
+    decodeApplicationError,
+    errorResponseDecoder: options.errorResponseDecoder,
+  }
+
   return await _fetchApiWithMapper<T, T | ApiResponse<T>>(
     request,
     options,
     onlyData,
-    (response) =>
-      mapCompatibilityResponse(response, {
-        endpoint: options.endpoint,
-        responseType,
-        onlyData,
-        decodeApplicationError,
-        errorResponseDecoder: options.errorResponseDecoder,
-      }),
+    (response) => mapCompatibilityResponse(response, compatibilityContext),
     (response) =>
       mapCompatibilityResponse(
         normalizeMessageFetchResponse<T>(response, options.endpoint),
-        {
-          endpoint: options.endpoint,
-          responseType,
-          onlyData,
-          decodeApplicationError,
-          errorResponseDecoder: options.errorResponseDecoder,
-        },
+        compatibilityContext,
       ),
   )
 }
@@ -934,16 +935,6 @@ export async function fetchApi<T>(
 
   if (responseType !== "json") {
     return response as T
-  }
-
-  const isApiResponseBody = (value: unknown): value is ApiResponse<unknown> => {
-    if (!value || typeof value !== "object") return false
-    const record = value as Record<string, unknown>
-    return (
-      typeof record.success === "boolean" &&
-      typeof record.message === "string" &&
-      "data" in record
-    )
   }
 
   if (isApiResponseBody(response)) {

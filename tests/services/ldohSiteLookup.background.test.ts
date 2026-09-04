@@ -138,7 +138,7 @@ describe("ldohSiteLookup background refresh", () => {
     expect(vi.mocked(writeLdohSiteListCache)).not.toHaveBeenCalled()
   })
 
-  it("uses a fixed HTTP error without parsing the provider response body", async () => {
+  it("uses the shared heuristic message for an unowned HTTP error", async () => {
     vi.resetModules()
 
     const { writeLdohSiteListCache } = await import(
@@ -151,7 +151,7 @@ describe("ldohSiteLookup background refresh", () => {
     server.use(
       http.get(ldohSitesUrl, () =>
         HttpResponse.json(
-          { message: "provider detail must not be parsed" },
+          { message: "provider detail may be surfaced" },
           { status: 418 },
         ),
       ),
@@ -159,7 +159,7 @@ describe("ldohSiteLookup background refresh", () => {
 
     await expect(repairLdohSiteListCache()).resolves.toMatchObject({
       success: false,
-      error: "请求失败: 418",
+      error: "provider detail may be surfaced",
     })
     expect(vi.mocked(writeLdohSiteListCache)).not.toHaveBeenCalled()
   })

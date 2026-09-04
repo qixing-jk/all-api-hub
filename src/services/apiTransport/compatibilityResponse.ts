@@ -4,7 +4,10 @@ import { t } from "~/utils/i18n/core"
 
 import { API_ERROR_CODES, ApiError, type ApiErrorCode } from "./errors"
 import { extractDataFromApiResponseBody } from "./response"
-import { resolveResponseErrorDetails } from "./responseError"
+import {
+  extractHeuristicResponseErrorMessage,
+  resolveResponseErrorDetails,
+} from "./responseError"
 import type {
   ApiResponse,
   ApiResponseErrorDecoder,
@@ -15,15 +18,18 @@ type CompatibilityTransportResponse<T> = ApiTransportResponse<T> & {
   decodeError?: ApiError
 }
 
+type CompatibilityResponseContext = {
+  endpoint: string
+  responseType: TempWindowResponseType
+  onlyData: boolean
+  decodeApplicationError: boolean
+  errorResponseDecoder?: ApiResponseErrorDecoder
+}
+
 /** Maps provider-declared application failures carried by a successful HTTP response. */
 function createProviderBusinessError(
   response: ApiTransportResponse<unknown>,
-  context: {
-    endpoint: string
-    responseType: TempWindowResponseType
-    decodeApplicationError: boolean
-    errorResponseDecoder?: ApiResponseErrorDecoder
-  },
+  context: CompatibilityResponseContext,
 ): ApiError | null {
   if (
     context.responseType !== "json" ||
@@ -55,11 +61,7 @@ function createProviderBusinessError(
 /** Converts an unsuccessful HTTP result into the legacy shared ApiError. */
 function createCompatibilityHttpError(
   response: ApiTransportResponse<unknown>,
-  context: {
-    endpoint: string
-    responseType: TempWindowResponseType
-    errorResponseDecoder?: ApiResponseErrorDecoder
-  },
+  context: CompatibilityResponseContext,
 ): ApiError {
   let errorCode: ApiErrorCode = API_ERROR_CODES.HTTP_OTHER
   const fixedFallback = `请求失败: ${response.status}`
@@ -103,7 +105,16 @@ function createCompatibilityHttpError(
     errorCode = API_ERROR_CODES.BUSINESS_ERROR
   }
 
-  const message = getErrorMessage(decoded?.message, fixedFallback)
+  const heuristicMessage =
+    !decoded?.message &&
+    context.responseType === "json" &&
+    errorCode !== API_ERROR_CODES.CONTENT_TYPE_MISMATCH
+      ? extractHeuristicResponseErrorMessage(response.body)
+      : undefined
+  const message = getErrorMessage(
+    decoded?.message,
+    getErrorMessage(heuristicMessage, fixedFallback),
+  )
 
   return new ApiError(
     message,
@@ -117,13 +128,7 @@ function createCompatibilityHttpError(
 /** Applies the existing envelope and error behavior above raw HTTP transport. */
 export function mapCompatibilityResponse<T>(
   response: CompatibilityTransportResponse<T>,
-  context: {
-    endpoint: string
-    responseType: TempWindowResponseType
-    onlyData: boolean
-    decodeApplicationError: boolean
-    errorResponseDecoder?: ApiResponseErrorDecoder
-  },
+  context: CompatibilityResponseContext,
 ): T | ApiResponse<T> {
   if (!response.ok) {
     throw createCompatibilityHttpError(response, context)

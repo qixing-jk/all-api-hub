@@ -11,10 +11,7 @@ import {
   observeRemoteFetchLifecycle,
   type RemoteFetchLifecycleAssessment,
 } from "~/services/apiTransport/remoteLifecycle"
-import {
-  extractDataFromApiResponseBody,
-  isHttpUrl,
-} from "~/services/apiTransport/response"
+import { extractDataFromApiResponseBody } from "~/services/apiTransport/response"
 import {
   COOKIE_INTERCEPTOR_PERMISSIONS,
   hasCookieInterceptorPermissions,
@@ -55,6 +52,7 @@ import { isProtectionBypassFirefoxEnv } from "~/utils/browser/protectionBypass"
 import { normalizeRequestInitForMessage } from "~/utils/browser/requestInitMessage"
 import { safeRandomUUID } from "~/utils/core/identifier"
 import { createLogger } from "~/utils/core/logger"
+import { isHttpUrl } from "~/utils/core/urlParsing"
 
 /**
  * Unified logger scoped to temp window fetch helpers and fallback behavior.

@@ -1,19 +1,19 @@
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import type { ApiResponse } from "~/services/apiTransport/type"
 import { getErrorMessage } from "~/utils/core/error"
 import { t } from "~/utils/i18n/core"
 
-/**
- * Validate whether a string is an HTTP(S) URL.
- * @param url Candidate URL string.
- * @returns true when protocol is http/https; false on invalid or other schemes.
- */
-export function isHttpUrl(url: string): boolean {
-  try {
-    const parsed = new URL(url)
-    return parsed.protocol === "http:" || parsed.protocol === "https:"
-  } catch {
-    return false
-  }
+/** Returns whether a value is the shared API response envelope. */
+export function isApiResponseBody(
+  value: unknown,
+): value is ApiResponse<unknown> {
+  if (!value || typeof value !== "object") return false
+  const record = value as Record<string, unknown>
+  return (
+    typeof record.success === "boolean" &&
+    typeof record.message === "string" &&
+    "data" in record
+  )
 }
 
 /**
@@ -23,7 +23,7 @@ export function isHttpUrl(url: string): boolean {
  * @returns Extracted `data` payload cast to T.
  */
 export function extractDataFromApiResponseBody<T>(
-  body: any,
+  body: unknown,
   endpoint?: string,
 ): T {
   const invalidResponseMessage = t("messages:errors.api.invalidResponseFormat")
@@ -37,8 +37,10 @@ export function extractDataFromApiResponseBody<T>(
     )
   }
 
-  if (body.success === false) {
-    const message = getErrorMessage(body.message, invalidResponseMessage)
+  const record = body as Record<string, unknown>
+
+  if (record.success === false) {
+    const message = getErrorMessage(record.message, invalidResponseMessage)
     throw new ApiError(
       message,
       undefined,
@@ -47,7 +49,7 @@ export function extractDataFromApiResponseBody<T>(
     )
   }
 
-  if (!("data" in body) || body.data === undefined) {
+  if (!("data" in record) || record.data === undefined) {
     throw new ApiError(
       invalidResponseMessage,
       undefined,
@@ -56,5 +58,5 @@ export function extractDataFromApiResponseBody<T>(
     )
   }
 
-  return body.data as T
+  return record.data as T
 }
