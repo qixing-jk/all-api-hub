@@ -250,6 +250,10 @@ function normalizeContextPreferenceSnapshot(
       DEFAULT_PREFERENCES.gatewayGuidance ?? {},
       preferences.gatewayGuidance ?? {},
     ),
+    productTour: deepOverride(
+      DEFAULT_PREFERENCES.productTour ?? {},
+      preferences.productTour ?? {},
+    ),
   }
 }
 
@@ -502,6 +506,8 @@ interface UserPreferencesContextType {
   dismissGatewayGuidanceSurface: (
     surface: GatewayGuidanceSurface,
   ) => PreferenceWritePromise
+  completeProductTour: (version: number) => PreferenceWritePromise
+  dismissProductTour: (version: number) => PreferenceWritePromise
   resetToDefaults: () => PreferenceWritePromise
   resetDisplaySettings: () => PreferenceWritePromise
   resetAutoRefreshConfig: () => PreferenceWritePromise
@@ -652,6 +658,52 @@ export const UserPreferencesProvider = ({
             ...(preferences?.gatewayGuidance?.dismissedAtBySurface ?? {}),
             [surface]: Date.now(),
           },
+        },
+      })
+    },
+    [persistPreferenceUpdates, preferences],
+  )
+
+  const completeProductTour = useCallback(
+    async (version: number) => {
+      if (
+        preferences &&
+        (preferences.productTour?.completedVersion ?? 0) >= version
+      ) {
+        return {
+          ok: true,
+          preferences,
+        } satisfies PreferenceWriteResult
+      }
+
+      return persistPreferenceUpdates({
+        productTour: {
+          ...(preferences?.productTour ?? {}),
+          completedVersion: version,
+          completedAt: Date.now(),
+        },
+      })
+    },
+    [persistPreferenceUpdates, preferences],
+  )
+
+  const dismissProductTour = useCallback(
+    async (version: number) => {
+      if (
+        preferences &&
+        (preferences.productTour?.dismissedVersion ?? 0) >= version
+      ) {
+        return {
+          ok: true,
+          preferences,
+        } satisfies PreferenceWriteResult
+      }
+
+      return persistPreferenceUpdates({
+        productTour: {
+          ...(preferences?.productTour ?? {}),
+          dismissedVersion: version,
+          dismissedAt: Date.now(),
         },
       })
     },
@@ -2080,6 +2132,8 @@ export const UserPreferencesProvider = ({
     updateSiteAnnouncementNotifications,
     markGatewayGuidanceOnboardingCompleted,
     dismissGatewayGuidanceSurface,
+    completeProductTour,
+    dismissProductTour,
     resetToDefaults,
     resetDisplaySettings,
     resetAutoRefreshConfig,

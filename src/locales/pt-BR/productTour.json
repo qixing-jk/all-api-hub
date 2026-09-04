@@ -1,0 +1,65 @@
+{
+  "actions": {
+    "back": "Voltar",
+    "close": "Fechar tour",
+    "finish": "Concluir",
+    "later": "Mais tarde",
+    "next": "Avançar",
+    "replay": "Ver tour novamente",
+    "skip": "Pular",
+    "start": "Iniciar tour"
+  },
+  "errors": {
+    "saveProgress": "Não foi possível salvar o progresso do tour. Você pode vê-lo novamente mais tarde."
+  },
+  "invitation": {
+    "description": "Veja em um minuto como reunir contas, modelos, chaves e tarefas rotineiras para alternar menos entre sites.",
+    "title": "Centralize o gerenciamento de vários sites"
+  },
+  "replay": {
+    "description": "Reveja o que cada módulo ajuda você a fazer e como alternar entre os recursos.",
+    "title": "Tour de recursos"
+  },
+  "steps": {
+    "api": {
+      "description": "Consulte os modelos disponíveis nas suas contas e gerencie chaves de API para facilitar a escolha de modelos e a configuração de clientes.",
+      "title": "Gerencie modelos e chaves em conjunto"
+    },
+    "automation": {
+      "description": "Quando houver suporte, automatize check-ins e reúna anúncios de sites para reduzir tarefas repetitivas e atualizações perdidas.",
+      "title": "Automatize tarefas rotineiras"
+    },
+    "general": {
+      "description": "Reúna contas, perfis de credenciais de API e favoritos de sites para reduzir trocas entre páginas e organização repetida.",
+      "title": "Mantenha os recursos das contas juntos"
+    },
+    "insights": {
+      "description": "Use o histórico de saldo e as análises de uso para ver tendências, mudanças incomuns e contas que precisam de atenção.",
+      "title": "Veja mudanças de uso rapidamente"
+    },
+    "mobileContent": {
+      "description": "Os dados, ajustes e ações do recurso escolhido aparecem aqui, reduzindo a troca entre sites e páginas.",
+      "title": "Conclua cada tarefa em um só lugar"
+    },
+    "mobileMenu": {
+      "description": "O menu no canto superior esquerdo reúne todos os recursos, para você alternar tarefas sem sair deste espaço.",
+      "title": "Todos os recursos ao seu alcance"
+    },
+    "mobileNavigation": {
+      "description": "Gerencie contas, modelos, chaves e uso em conjunto. Sites compatíveis permitem check-in automático. Após configurar um gateway próprio, importe as chaves como canais para que os clientes acessem modelos por meio dele.",
+      "title": "Gerencie vários sites em um só lugar"
+    },
+    "siteManagement": {
+      "description": "Após configurar um gateway de IA próprio, importe rapidamente as chaves como canais para que os clientes acessem modelos por meio dele. Também é possível sincronizar modelos quando necessário.",
+      "title": "Conecte um gateway para acesso unificado"
+    },
+    "system": {
+      "description": "Ajuste a extensão e use a importação ou exportação para mover ou fazer backup dos dados. Reveja este tour quando quiser em Sobre.",
+      "title": "Mantenha configurações e dados sob controle"
+    },
+    "workspace": {
+      "description": "Vá direto a páginas e configurações específicas por palavra-chave, sem procurar em menus aninhados.",
+      "title": "Encontre tudo rapidamente"
+    }
+  }
+}

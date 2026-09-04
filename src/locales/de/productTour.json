@@ -1,0 +1,65 @@
+{
+  "actions": {
+    "back": "Zurück",
+    "close": "Tour schließen",
+    "finish": "Fertig",
+    "later": "Später",
+    "next": "Weiter",
+    "replay": "Tour erneut ansehen",
+    "skip": "Überspringen",
+    "start": "Tour starten"
+  },
+  "errors": {
+    "saveProgress": "Der Fortschritt der Tour konnte nicht gespeichert werden. Du kannst sie später erneut ansehen."
+  },
+  "invitation": {
+    "description": "Sieh in einer Minute, wie du Konten, Modelle, Schlüssel und Routineaufgaben bündelst und seltener zwischen Websites wechselst.",
+    "title": "Mehrere Websites zentral verwalten"
+  },
+  "replay": {
+    "description": "Sieh erneut, was du mit den Modulen erledigen kannst und wie du zwischen Funktionen wechselst.",
+    "title": "Funktionstour"
+  },
+  "steps": {
+    "api": {
+      "description": "Sieh die Modelle deiner Konten an und verwalte API-Schlüssel zentral, damit Modellauswahl und Client-Einrichtung leichter werden.",
+      "title": "Modelle und Schlüssel gemeinsam verwalten"
+    },
+    "automation": {
+      "description": "Automatisiere, sofern unterstützt, Website-Check-ins und bündele Mitteilungen, damit weniger Routinearbeit und wichtige Updates verloren gehen.",
+      "title": "Routineaufgaben automatisieren"
+    },
+    "general": {
+      "description": "Bündele Konten, API-Zugangsprofile und Website-Lesezeichen, um weniger zu wechseln und doppelt zu ordnen.",
+      "title": "Kontoinformationen zentral verwalten"
+    },
+    "insights": {
+      "description": "Erkenne mit Kontostandverlauf und Nutzungsanalyse Verbrauchstrends, ungewöhnliche Änderungen und Konten mit Handlungsbedarf.",
+      "title": "Nutzungsänderungen auf einen Blick"
+    },
+    "mobileContent": {
+      "description": "Daten, Einstellungen und Aktionen der gewählten Funktion erscheinen hier, sodass du weniger zwischen Websites und Seiten wechseln musst.",
+      "title": "Jede Aufgabe an einem Ort erledigen"
+    },
+    "mobileMenu": {
+      "description": "Das Menü oben links bündelt alle Funktionen, sodass du Aufgaben wechseln kannst, ohne diesen Bereich zu verlassen.",
+      "title": "Alle Funktionen griffbereit"
+    },
+    "mobileNavigation": {
+      "description": "Verwalte Konten, Modelle, Schlüssel und Nutzung zusammen. Unterstützte Websites können automatisch einchecken. Nach dem Einrichten eines eigenen Gateways lassen sich vorhandene Schlüssel als Kanäle importieren, damit Clients Modelle über das Gateway aufrufen können.",
+      "title": "Mehrere Websites an einem Ort verwalten"
+    },
+    "siteManagement": {
+      "description": "Nach dem Einrichten eines eigenen AI-Gateways kannst du vorhandene Schlüssel schnell als Gateway-Kanäle importieren, damit Clients Modelle über das Gateway aufrufen können. Modelllisten lassen sich bei Bedarf synchronisieren.",
+      "title": "Gateway für einheitlichen Zugriff anbinden"
+    },
+    "system": {
+      "description": "Passe die Erweiterung an und nutze Import oder Export zum Übertragen und Sichern von Daten. Unter „Über“ kannst du diese Tour jederzeit wiederholen.",
+      "title": "Einstellungen und Daten im Griff"
+    },
+    "workspace": {
+      "description": "Springe per Stichwort direkt zu Seiten und konkreten Einstellungen, statt verschachtelte Menüs zu durchsuchen.",
+      "title": "Gesuchtes sofort finden"
+    }
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "actions": {
+    "back": "Back",
+    "close": "Close tour",
+    "finish": "Finish",
+    "later": "Maybe later",
+    "next": "Next",
+    "replay": "View tour again",
+    "skip": "Skip",
+    "start": "Start tour"
+  },
+  "errors": {
+    "saveProgress": "The tour progress could not be saved. You can view it again later."
+  },
+  "invitation": {
+    "description": "See how to bring accounts, models, keys, and routine tasks together, with less switching between sites.",
+    "title": "Bring multi-site management together"
+  },
+  "replay": {
+    "description": "Review what each module helps you accomplish and how to move between features.",
+    "title": "Feature tour"
+  },
+  "steps": {
+    "api": {
+      "description": "Browse models available across your accounts and manage API keys, making model selection and client setup easier.",
+      "title": "Manage models and keys together"
+    },
+    "automation": {
+      "description": "When supported, automate site check-ins and gather announcements, reducing repetitive work and missed updates.",
+      "title": "Automate routine tasks"
+    },
+    "general": {
+      "description": "Bring accounts, API credential profiles, and site bookmarks together to reduce switching and repeated organization.",
+      "title": "Keep account resources together"
+    },
+    "insights": {
+      "description": "Use balance history and usage analytics to see spending trends and spot unusual changes or accounts that need attention.",
+      "title": "See usage changes at a glance"
+    },
+    "mobileContent": {
+      "description": "Data, settings, and actions for the selected feature appear here, reducing back-and-forth between sites and pages.",
+      "title": "Finish each task in one place"
+    },
+    "mobileMenu": {
+      "description": "The top-left menu keeps every feature together, so you can switch tasks without leaving this workspace.",
+      "title": "All features within reach"
+    },
+    "mobileNavigation": {
+      "description": "Manage accounts, models, keys, and usage together. Supported sites can check in automatically. After configuring a self-hosted gateway, import existing keys as channels so clients can access models through the gateway.",
+      "title": "Multi-site management in one place"
+    },
+    "siteManagement": {
+      "description": "After configuring a self-hosted AI gateway, quickly import existing keys as gateway channels so clients can access models through the gateway. Model lists can also be synchronized as needed.",
+      "title": "Connect a gateway for unified access"
+    },
+    "system": {
+      "description": "Adjust extension preferences and use import or export to move or back up data. Revisit this tour any time from About.",
+      "title": "Keep settings and data in your control"
+    },
+    "workspace": {
+      "description": "Jump directly to pages and specific settings by keyword instead of digging through nested menus.",
+      "title": "Find anything, right away"
+    }
+  }
+}

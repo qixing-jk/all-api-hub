@@ -11,6 +11,11 @@ import {
   getMenuCategoryLabel,
   getMenuItemLabel,
 } from "~/features/OptionsMenu/getMenuItemLabel"
+import {
+  PRODUCT_TOUR_CATEGORY_TARGETS,
+  PRODUCT_TOUR_TARGET_ATTRIBUTE,
+  PRODUCT_TOUR_TARGETS,
+} from "~/features/ProductTour/constants"
 import { cn } from "~/lib/utils"
 
 import { menuItems } from "../constants"
@@ -60,6 +65,22 @@ function Sidebar({
     }
     return true
   })
+  const menuGroups = visibleMenuItems.reduce<
+    Array<{
+      category: (typeof menuItems)[number]["category"]
+      items: typeof menuItems
+    }>
+  >((groups, item) => {
+    const previousGroup = groups[groups.length - 1]
+
+    if (previousGroup?.category === item.category) {
+      previousGroup.items.push(item)
+    } else {
+      groups.push({ category: item.category, items: [item] })
+    }
+
+    return groups
+  }, [])
 
   const targetWidth = isMobileOpen
     ? MOBILE_WIDTH
@@ -116,13 +137,16 @@ function Sidebar({
         animate={{ width: targetWidth }}
         style={{ width: targetWidth, height: sidebarHeight, top: sidebarTop }}
         className={cn(
-          "shrink-0 transform transition-transform duration-300 ease-in-out",
+          "shrink-0 transform transition-transform duration-300 ease-in-out motion-reduce:transition-none",
           Z_INDEX.sidebar,
           isMobileOpen
             ? "fixed inset-y-0 left-0 translate-x-0"
             : "fixed inset-y-0 left-0 -translate-x-full md:translate-x-0",
           "md:sticky md:inset-auto md:left-auto md:translate-x-0 md:self-start md:overflow-hidden",
         )}
+        {...{
+          [PRODUCT_TOUR_TARGET_ATTRIBUTE]: PRODUCT_TOUR_TARGETS.Navigation,
+        }}
       >
         <div className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary flex h-full flex-col border-r border-gray-200 bg-white shadow-sm">
           <div
@@ -169,66 +193,93 @@ function Sidebar({
             aria-label={navAriaLabel}
             className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto py-4"
           >
-            <ul className="space-y-1 px-2">
-              {visibleMenuItems.map((item, index) => {
-                const Icon = item.icon
-                const isActive = activeMenuItem === item.id
-                const label = getMenuItemLabel(t, item.id)
+            {menuGroups.map((group, groupIndex) => {
+              const categoryLabel = group.category
+                ? getMenuCategoryLabel(t, group.category)
+                : null
+              const categoryHeadingId = group.category
+                ? `options-menu-category-${group.category}`
+                : undefined
 
-                const prevItem = index > 0 ? visibleMenuItems[index - 1] : null
-                const isNewCategory =
-                  item.category && item.category !== prevItem?.category
-                const categoryLabel = item.category
-                  ? getMenuCategoryLabel(t, item.category)
-                  : null
+              return (
+                <section
+                  key={group.category ?? `uncategorized-${groupIndex}`}
+                  aria-label={
+                    shouldShowCollapsedState || !categoryHeadingId
+                      ? categoryLabel ?? navAriaLabel
+                      : undefined
+                  }
+                  aria-labelledby={
+                    !shouldShowCollapsedState ? categoryHeadingId : undefined
+                  }
+                  className={cn("mx-2", group.category && "mt-4")}
+                  {...{
+                    [PRODUCT_TOUR_TARGET_ATTRIBUTE]:
+                      group.category && !shouldShowCollapsedState
+                        ? PRODUCT_TOUR_CATEGORY_TARGETS[group.category]
+                        : undefined,
+                  }}
+                >
+                  {categoryLabel && !shouldShowCollapsedState && (
+                    <div className="mb-2 px-3">
+                      <Heading3
+                        id={categoryHeadingId}
+                        className="dark:text-dark-text-tertiary text-xs font-semibold tracking-wide text-gray-400 uppercase"
+                      >
+                        {categoryLabel}
+                      </Heading3>
+                    </div>
+                  )}
 
-                return (
-                  <li key={item.id}>
-                    {isNewCategory &&
-                      categoryLabel &&
-                      !shouldShowCollapsedState && (
-                        <div className="mt-4 mb-2 px-3">
-                          <Heading3 className="dark:text-dark-text-tertiary text-xs font-semibold tracking-wide text-gray-400 uppercase">
-                            {categoryLabel}
-                          </Heading3>
-                        </div>
-                      )}
-                    <button
-                      onClick={() => onMenuItemClick(item.id)}
-                      title={shouldShowCollapsedState ? label : undefined}
-                      aria-label={shouldShowCollapsedState ? label : undefined}
-                      className={cn(
-                        "group relative flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors",
-                        shouldShowCollapsedState && "justify-center px-0",
-                        isActive
-                          ? "bg-blue-600 text-white dark:bg-blue-500"
-                          : "dark:text-dark-text-secondary text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-white/10 dark:hover:text-white",
-                      )}
-                    >
-                      <Icon
-                        className={cn(
-                          "h-5 w-5 shrink-0",
-                          isActive
-                            ? "text-white"
-                            : "dark:text-dark-text-tertiary text-gray-400 group-hover:text-gray-600 dark:group-hover:text-white",
-                        )}
-                      />
+                  <ul className="space-y-1">
+                    {group.items.map((item) => {
+                      const Icon = item.icon
+                      const isActive = activeMenuItem === item.id
+                      const label = getMenuItemLabel(t, item.id)
 
-                      {!shouldShowCollapsedState && (
-                        <div
-                          className={cn(
-                            "flex-1 overflow-hidden text-sm font-medium transition-all duration-200 sm:text-base",
-                          )}
-                          aria-hidden={shouldShowCollapsedState}
-                        >
-                          <span className="block truncate">{label}</span>
-                        </div>
-                      )}
-                    </button>
-                  </li>
-                )
-              })}
-            </ul>
+                      return (
+                        <li key={item.id}>
+                          <button
+                            onClick={() => onMenuItemClick(item.id)}
+                            title={shouldShowCollapsedState ? label : undefined}
+                            aria-label={
+                              shouldShowCollapsedState ? label : undefined
+                            }
+                            className={cn(
+                              "group relative flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors",
+                              shouldShowCollapsedState && "justify-center px-0",
+                              isActive
+                                ? "bg-blue-600 text-white dark:bg-blue-500"
+                                : "dark:text-dark-text-secondary text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-white/10 dark:hover:text-white",
+                            )}
+                          >
+                            <Icon
+                              className={cn(
+                                "h-5 w-5 shrink-0",
+                                isActive
+                                  ? "text-white"
+                                  : "dark:text-dark-text-tertiary text-gray-400 group-hover:text-gray-600 dark:group-hover:text-white",
+                              )}
+                            />
+
+                            {!shouldShowCollapsedState && (
+                              <div
+                                className={cn(
+                                  "flex-1 overflow-hidden text-sm font-medium transition-all duration-200 sm:text-base",
+                                )}
+                                aria-hidden={shouldShowCollapsedState}
+                              >
+                                <span className="block truncate">{label}</span>
+                              </div>
+                            )}
+                          </button>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                </section>
+              )
+            })}
           </nav>
 
           <Separator className="mx-3" />

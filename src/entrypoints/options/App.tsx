@@ -6,6 +6,12 @@ import PopupInterruptionHintBanner from "~/components/PopupInterruptionHintBanne
 import { Spinner } from "~/components/ui"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { ProductTourProvider } from "~/features/ProductTour"
+import {
+  PRODUCT_TOUR_FOCUS_RETURN_ATTRIBUTE,
+  PRODUCT_TOUR_TARGET_ATTRIBUTE,
+  PRODUCT_TOUR_TARGETS,
+} from "~/features/ProductTour/constants"
 import { useProductAnalyticsPageView } from "~/hooks/useProductAnalyticsPageView"
 import {
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -124,56 +130,70 @@ function OptionsPage() {
   }
 
   return (
-    <div
-      className="dark:bg-dark-bg-primary flex min-h-screen flex-col bg-gray-50"
-      data-testid={OPTIONS_TEST_IDS.app}
+    <ProductTourProvider
+      isSidebarCollapsed={isSidebarCollapsed}
+      onExpandSidebar={() => setIsSidebarCollapsed(false)}
+      isMobileSidebarOpen={isMobileSidebarOpen}
+      onMobileSidebarOpenChange={setIsMobileSidebarOpen}
     >
-      <Header
-        onSearchOpen={() => setIsSearchOpen(true)}
-        onTitleClick={handleTitleClick}
-        onMenuToggle={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
-        isMobileSidebarOpen={isMobileSidebarOpen}
-      />
-
-      <div className="dark:bg-dark-bg-primary flex flex-1 flex-col bg-gray-50 md:flex-row">
-        <Sidebar
-          activeMenuItem={activeMenuItem}
-          onMenuItemClick={handleMenuItemClick}
-          isMobileOpen={isMobileSidebarOpen}
-          onMobileClose={() => setIsMobileSidebarOpen(false)}
-          isCollapsed={isSidebarCollapsed}
-          onCollapseToggle={() => setIsSidebarCollapsed((prev) => !prev)}
+      <div
+        className="dark:bg-dark-bg-primary flex min-h-screen flex-col bg-gray-50"
+        data-testid={OPTIONS_TEST_IDS.app}
+      >
+        <Header
+          onSearchOpen={() => setIsSearchOpen(true)}
+          onTitleClick={handleTitleClick}
+          onMenuToggle={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
+          isMobileSidebarOpen={isMobileSidebarOpen}
         />
 
-        {/* 右侧内容区域 */}
-        <main className="min-w-0 flex-1">
-          <div className="mx-auto w-full max-w-7xl px-2 py-3 sm:px-4 sm:py-5 md:px-6 md:py-6">
-            <PopupInterruptionHintBanner className="mb-3 sm:mb-4" />
-            <div
-              className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary min-h-[400px] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm md:min-h-[600px]"
-              data-testid={OPTIONS_TEST_IDS.contentCard}
-            >
-              <Suspense fallback={<OptionsPageContentFallback />}>
-                <ActiveComponent
-                  routeParams={routeParams}
-                  refreshKey={refreshKey}
-                />
-              </Suspense>
-            </div>
-          </div>
-        </main>
-      </div>
+        <div className="dark:bg-dark-bg-primary flex flex-1 flex-col bg-gray-50 md:flex-row">
+          <Sidebar
+            activeMenuItem={activeMenuItem}
+            onMenuItemClick={handleMenuItemClick}
+            isMobileOpen={isMobileSidebarOpen}
+            onMobileClose={() => setIsMobileSidebarOpen(false)}
+            isCollapsed={isSidebarCollapsed}
+            onCollapseToggle={() => setIsSidebarCollapsed((prev) => !prev)}
+          />
 
-      <OptionsSearchDialog
-        open={isSearchOpen}
-        onOpenChange={setIsSearchOpen}
-        onPageNavigate={(pageId, params) => {
-          handleMenuItemChange(pageId, params)
-          setIsMobileSidebarOpen(false)
-        }}
-        context={searchContext}
-      />
-    </div>
+          {/* 右侧内容区域 */}
+          <main
+            className="min-w-0 flex-1 focus:outline-none"
+            tabIndex={-1}
+            {...{ [PRODUCT_TOUR_FOCUS_RETURN_ATTRIBUTE]: true }}
+          >
+            <div className="mx-auto w-full max-w-7xl px-2 py-3 sm:px-4 sm:py-5 md:px-6 md:py-6">
+              <PopupInterruptionHintBanner className="mb-3 sm:mb-4" />
+              <div
+                className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary min-h-[400px] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm md:min-h-[600px]"
+                data-testid={OPTIONS_TEST_IDS.contentCard}
+                {...{
+                  [PRODUCT_TOUR_TARGET_ATTRIBUTE]: PRODUCT_TOUR_TARGETS.Content,
+                }}
+              >
+                <Suspense fallback={<OptionsPageContentFallback />}>
+                  <ActiveComponent
+                    routeParams={routeParams}
+                    refreshKey={refreshKey}
+                  />
+                </Suspense>
+              </div>
+            </div>
+          </main>
+        </div>
+
+        <OptionsSearchDialog
+          open={isSearchOpen}
+          onOpenChange={setIsSearchOpen}
+          onPageNavigate={(pageId, params) => {
+            handleMenuItemChange(pageId, params)
+            setIsMobileSidebarOpen(false)
+          }}
+          context={searchContext}
+        />
+      </div>
+    </ProductTourProvider>
   )
 }
 

@@ -3,6 +3,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import Sidebar from "~/entrypoints/options/components/Sidebar"
+import {
+  PRODUCT_TOUR_TARGET_ATTRIBUTE,
+  PRODUCT_TOUR_TARGETS,
+} from "~/features/ProductTour/constants"
 import { fireEvent, render, screen, within } from "~~/tests/test-utils/render"
 
 const { useUserPreferencesContextMock } = vi.hoisted(() => ({
@@ -57,7 +61,7 @@ describe("Options Sidebar", () => {
     const onMenuItemClick = vi.fn()
     const onCollapseToggle = vi.fn()
 
-    render(
+    const { container } = render(
       <Sidebar
         activeMenuItem={MENU_ITEM_IDS.BASIC}
         onMenuItemClick={onMenuItemClick}
@@ -69,6 +73,11 @@ describe("Options Sidebar", () => {
     const nav = screen.getByRole("navigation", {
       name: "ui:navigation.settingsOptions",
     })
+    const navigationTarget = container.querySelector(
+      `[${PRODUCT_TOUR_TARGET_ATTRIBUTE}="${PRODUCT_TOUR_TARGETS.Navigation}"]`,
+    )
+
+    expect(navigationTarget).toContainElement(nav)
 
     expect(
       within(nav).getByRole("button", { name: "ui:navigation.overview" }),
@@ -76,6 +85,23 @@ describe("Options Sidebar", () => {
     expect(
       within(nav).getByText("ui:navigation.categories.general"),
     ).toBeInTheDocument()
+
+    const generalTarget = container.querySelector(
+      `[${PRODUCT_TOUR_TARGET_ATTRIBUTE}="${PRODUCT_TOUR_TARGETS.General}"]`,
+    )
+    expect(generalTarget).toHaveAccessibleName(
+      "ui:navigation.categories.general",
+    )
+    expect(
+      within(generalTarget as HTMLElement).getByRole("button", {
+        name: "ui:navigation.bookmark",
+      }),
+    ).toBeInTheDocument()
+    expect(
+      within(generalTarget as HTMLElement).queryByRole("button", {
+        name: "ui:navigation.models",
+      }),
+    ).not.toBeInTheDocument()
 
     fireEvent.click(
       within(nav).getByRole("button", { name: "ui:navigation.models" }),

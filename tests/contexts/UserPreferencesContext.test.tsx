@@ -627,6 +627,22 @@ describe("UserPreferencesContext", () => {
     ).toBe(completedAt)
   })
 
+  it("persists versioned product tour completion and dismissal independently", async () => {
+    const context = await renderProvider()
+
+    await act(async () => {
+      await context.dismissProductTour(1)
+      await context.completeProductTour(2)
+    })
+
+    expect((latestContext as any)?.preferences.productTour).toMatchObject({
+      dismissedVersion: 1,
+      dismissedAt: expect.any(Number),
+      completedVersion: 2,
+      completedAt: expect.any(Number),
+    })
+  })
+
   it("updates scalar, nested, and runtime-backed preferences through the provider", async () => {
     const context = await renderProvider()
 

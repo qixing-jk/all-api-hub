@@ -54,6 +54,30 @@ import { SETTINGS_SNAPSHOT_AUTOMATIC_FEATURE_BYPASS_PROPERTIES } from "~/service
 import { AuthTypeEnum } from "~/types"
 
 describe("product analytics privacy filtering", () => {
+  it("keeps only controlled product tour progress fields", () => {
+    const sanitized = sanitizeProductAnalyticsEvent(
+      PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+      {
+        feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.ProductTour,
+        action_id: PRODUCT_ANALYTICS_ACTION_IDS.ViewProductTourStep,
+        surface_id: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsProductTourTooltip,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        result: PRODUCT_ANALYTICS_RESULTS.Success,
+        item_count: 2,
+        step_title: "private copy",
+      },
+    )
+
+    expect(sanitized).toEqual({
+      feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.ProductTour,
+      action_id: PRODUCT_ANALYTICS_ACTION_IDS.ViewProductTourStep,
+      surface_id: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsProductTourTooltip,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
+      item_count: 2,
+    })
+  })
+
   it.each(Object.values(OPENROUTER_BOOTSTRAP_ATTEMPT_OUTCOMES))(
     "allows the controlled OpenRouter attempt outcome %s and no secret context",
     (attemptOutcome) => {

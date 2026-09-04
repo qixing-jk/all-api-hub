@@ -1,0 +1,65 @@
+{
+  "actions": {
+    "back": "Atrás",
+    "close": "Cerrar recorrido",
+    "finish": "Finalizar",
+    "later": "Más tarde",
+    "next": "Siguiente",
+    "replay": "Ver recorrido de nuevo",
+    "skip": "Omitir",
+    "start": "Iniciar recorrido"
+  },
+  "errors": {
+    "saveProgress": "No se pudo guardar el progreso del recorrido. Puedes volver a verlo más tarde."
+  },
+  "invitation": {
+    "description": "Descubre en un minuto cómo reunir cuentas, modelos, claves y tareas habituales para cambiar menos entre sitios.",
+    "title": "Centraliza la gestión de varios sitios"
+  },
+  "replay": {
+    "description": "Revisa qué puedes lograr con cada módulo y cómo cambiar de una función a otra.",
+    "title": "Recorrido de funciones"
+  },
+  "steps": {
+    "api": {
+      "description": "Consulta los modelos disponibles en tus cuentas y administra claves de API para facilitar la elección de modelos y la conexión de clientes.",
+      "title": "Administra modelos y claves en conjunto"
+    },
+    "automation": {
+      "description": "Cuando sea compatible, automatiza los registros y reúne los anuncios de sitios para reducir tareas repetitivas y avisos perdidos.",
+      "title": "Automatiza las tareas habituales"
+    },
+    "general": {
+      "description": "Reúne cuentas, perfiles de credenciales de API y marcadores para reducir cambios entre sitios y organización repetida.",
+      "title": "Mantén juntos los recursos de tus cuentas"
+    },
+    "insights": {
+      "description": "Usa el historial de saldo y el análisis de uso para ver tendencias, cambios inusuales y cuentas que necesitan atención.",
+      "title": "Detecta cambios de uso de un vistazo"
+    },
+    "mobileContent": {
+      "description": "Los datos, ajustes y acciones de la función elegida aparecen aquí, para que cambies menos entre sitios y páginas.",
+      "title": "Completa cada tarea en un solo lugar"
+    },
+    "mobileMenu": {
+      "description": "El menú superior izquierdo reúne todas las funciones, para que cambies de tarea sin salir de este espacio.",
+      "title": "Todas las funciones a tu alcance"
+    },
+    "mobileNavigation": {
+      "description": "Administra cuentas, modelos, claves y uso en conjunto. Los sitios compatibles admiten registros automáticos. Tras configurar una puerta de enlace propia, importa las claves como canales para que los clientes accedan a los modelos a través de ella.",
+      "title": "Gestiona varios sitios en un solo lugar"
+    },
+    "siteManagement": {
+      "description": "Tras configurar una puerta de enlace de IA propia, importa rápidamente las claves como canales para que los clientes accedan a los modelos a través de ella. También puedes sincronizar los modelos cuando sea necesario.",
+      "title": "Conecta una puerta de enlace para un acceso unificado"
+    },
+    "system": {
+      "description": "Ajusta la extensión y usa la importación o exportación para trasladar o respaldar datos. Puedes repetir este recorrido desde Acerca de.",
+      "title": "Mantén el control de ajustes y datos"
+    },
+    "workspace": {
+      "description": "Ve directamente a páginas y ajustes concretos por palabra clave, sin recorrer menús anidados.",
+      "title": "Encuentra lo que buscas al instante"
+    }
+  }
+}

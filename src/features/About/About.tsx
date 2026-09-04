@@ -20,6 +20,7 @@ import { ReleaseUpdateStatusPanel } from "~/components/ReleaseUpdateStatusPanel"
 import { Heading4 } from "~/components/ui"
 import { FEATURES, FUTURE_FEATURES } from "~/constants/about"
 import { EXTENSION_STORE_LISTING_URLS } from "~/constants/extensionStores"
+import { ProductTourReplayCard } from "~/features/ProductTour"
 import { isNotEmptyArray } from "~/utils"
 import type { ExtensionStoreId } from "~/utils/browser"
 import { detectExtensionStore } from "~/utils/browser"
@@ -103,6 +104,10 @@ export default function About() {
         {/* 插件信息 */}
         <section>
           <PluginIntroCard version={version} />
+        </section>
+
+        <section>
+          <ProductTourReplayCard />
         </section>
 
         {/* 项目链接 */}

@@ -503,6 +503,7 @@ export const PRODUCT_ANALYTICS_FEATURE_IDS = {
   PermissionRequest: "permission_request",
   ProductAnalyticsSettings: "product_analytics_settings",
   ProductAnnouncements: "product_announcements",
+  ProductTour: "product_tour",
   RedemptionAssist: "redemption_assist",
   ShareSnapshots: "share_snapshots",
   ShieldBypassAssist: "shield_bypass_assist",
@@ -820,6 +821,9 @@ export const PRODUCT_ANALYTICS_ACTION_IDS = {
   VisitRedemptionAssistSettingsFromPrompt:
     "visit_redemption_assist_settings_from_prompt",
   ViewSponsorRecommendations: "view_sponsor_recommendations",
+  RunProductTour: "run_product_tour",
+  DeferProductTour: "defer_product_tour",
+  ViewProductTourStep: "view_product_tour_step",
 } as const
 
 export type ProductAnalyticsActionId =
@@ -897,6 +901,9 @@ export const PRODUCT_ANALYTICS_SURFACE_IDS = {
   OptionsOverviewUnifiedApiGuidance: "options_overview_unified_api_guidance",
   OptionsProductAnnouncementsBanner: "options_product_announcements_banner",
   OptionsProductAnnouncementsHeader: "options_product_announcements_header",
+  OptionsProductTourAboutReplay: "options_product_tour_about_replay",
+  OptionsProductTourOverviewPrompt: "options_product_tour_overview_prompt",
+  OptionsProductTourTooltip: "options_product_tour_tooltip",
   OptionsSiteAnnouncementCard: "options_site_announcement_card",
   OptionsSiteAnnouncementsEmptyState: "options_site_announcements_empty_state",
   OptionsSiteAnnouncementsPage: "options_site_announcements_page",

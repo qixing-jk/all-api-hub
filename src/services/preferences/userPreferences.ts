@@ -237,6 +237,15 @@ export interface GatewayGuidancePreferences {
   dismissedAtBySurface?: Partial<Record<GatewayGuidanceSurface, number>>
 }
 
+export interface ProductTourPreferences {
+  /** Latest product-tour content version the user completed. */
+  completedVersion?: number
+  completedAt?: number
+  /** Latest product-tour content version the user explicitly skipped. */
+  dismissedVersion?: number
+  dismissedAt?: number
+}
+
 // 用户偏好设置类型定义
 export interface UserPreferences {
   themeMode: ThemeMode
@@ -348,6 +357,8 @@ export interface UserPreferences {
   showHealthStatus: boolean
 
   gatewayGuidance?: GatewayGuidancePreferences
+
+  productTour?: ProductTourPreferences
 
   // WebDAV 备份/同步配置
   webdav: WebDAVSettings
@@ -597,6 +608,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   balanceHistory: DEFAULT_BALANCE_HISTORY_PREFERENCES,
   showHealthStatus: true, // 默认显示健康状态
   gatewayGuidance: {},
+  productTour: {},
   webdav: DEFAULT_WEBDAV_SETTINGS,
   lastUpdated: 0,
   sharedPreferencesLastUpdated: 0,

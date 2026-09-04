@@ -1,0 +1,65 @@
+{
+  "actions": {
+    "back": "Quay lại",
+    "close": "Đóng chuyến tham quan",
+    "finish": "Hoàn tất",
+    "later": "Để sau",
+    "next": "Tiếp theo",
+    "replay": "Xem lại chuyến tham quan",
+    "skip": "Bỏ qua",
+    "start": "Bắt đầu"
+  },
+  "errors": {
+    "saveProgress": "Không thể lưu tiến trình. Bạn vẫn có thể xem lại chuyến tham quan sau."
+  },
+  "invitation": {
+    "description": "Dành một phút để xem cách tập trung tài khoản, mô hình, khóa và tác vụ thường ngày, giúp bạn bớt chuyển đổi giữa các trang.",
+    "title": "Tập trung quản lý nhiều trang tại một nơi"
+  },
+  "replay": {
+    "description": "Xem lại những gì mỗi mô-đun giúp bạn thực hiện và cách chuyển đổi giữa các tính năng.",
+    "title": "Tham quan tính năng"
+  },
+  "steps": {
+    "api": {
+      "description": "Xem mô hình khả dụng trong các tài khoản và quản lý khóa API tập trung để chọn mô hình và thiết lập ứng dụng dễ dàng hơn.",
+      "title": "Quản lý mô hình và khóa cùng nhau"
+    },
+    "automation": {
+      "description": "Khi được hỗ trợ, hãy tự động điểm danh và tập hợp thông báo trang để giảm việc lặp lại và tránh bỏ lỡ cập nhật quan trọng.",
+      "title": "Tự động hóa tác vụ thường ngày"
+    },
+    "general": {
+      "description": "Tập hợp tài khoản, hồ sơ thông tin xác thực API và dấu trang để giảm chuyển đổi giữa các trang và sắp xếp lặp lại.",
+      "title": "Tập trung tài nguyên tài khoản"
+    },
+    "insights": {
+      "description": "Dùng lịch sử số dư và phân tích sử dụng để thấy xu hướng, thay đổi bất thường và tài khoản cần được chú ý.",
+      "title": "Xem nhanh thay đổi sử dụng"
+    },
+    "mobileContent": {
+      "description": "Dữ liệu, cài đặt và thao tác của tính năng đã chọn xuất hiện tại đây, giúp bạn bớt chuyển đổi giữa các trang và màn hình.",
+      "title": "Hoàn thành từng tác vụ tại một nơi"
+    },
+    "mobileMenu": {
+      "description": "Menu góc trên bên trái tập hợp mọi tính năng, giúp bạn chuyển tác vụ mà không rời khỏi không gian này.",
+      "title": "Mọi tính năng trong tầm tay"
+    },
+    "mobileNavigation": {
+      "description": "Quản lý tài khoản, mô hình, khóa và mức sử dụng cùng nhau. Trang được hỗ trợ có thể tự động điểm danh. Sau khi cấu hình cổng tự lưu trữ, hãy nhập khóa làm kênh để ứng dụng truy cập mô hình thông qua cổng.",
+      "title": "Quản lý nhiều trang tại một nơi"
+    },
+    "siteManagement": {
+      "description": "Sau khi cấu hình cổng AI tự lưu trữ, hãy nhanh chóng nhập khóa hiện có làm kênh để ứng dụng truy cập mô hình thông qua cổng. Danh sách mô hình cũng có thể được đồng bộ khi cần.",
+      "title": "Kết nối cổng để truy cập thống nhất"
+    },
+    "system": {
+      "description": "Điều chỉnh tiện ích và dùng nhập hoặc xuất để di chuyển hay sao lưu dữ liệu. Bạn có thể xem lại chuyến tham quan từ Giới thiệu bất kỳ lúc nào.",
+      "title": "Kiểm soát cài đặt và dữ liệu"
+    },
+    "workspace": {
+      "description": "Đi thẳng đến trang và cài đặt cụ thể bằng từ khóa thay vì tìm qua nhiều lớp menu.",
+      "title": "Tìm mọi thứ ngay lập tức"
+    }
+  }
+}

@@ -120,6 +120,7 @@
     "react-dom": "^19.1.1",
     "react-hot-toast": "^2.5.2",
     "react-i18next": "^16.0.1",
+    "react-joyride": "3.2.0",
     "react-tooltip": "^5.30.0",
     "react-virtuoso": "^4.7.10",
     "safe-regex2": "^5.1.1",
