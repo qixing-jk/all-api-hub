@@ -527,7 +527,7 @@ class WebdavAutoSyncService {
       accountDataTransfer.exportData(),
       tagStorage.exportTagStore(),
       userPreferences.exportPreferences(),
-      featureGuidanceState.getState(),
+      featureGuidanceState.getStateStrict(),
       channelConfigStorage.exportConfigs(),
       apiCredentialProfilesStorage.exportConfig(),
     ])
@@ -1020,6 +1020,7 @@ class WebdavAutoSyncService {
         orderedAccountIdsToSave,
         tagStoreToSave,
         preferencesToSave,
+        featureGuidanceToSave,
         channelConfigsToSave,
         mergeChannelConfigsOnApply,
         apiCredentialProfilesToSave,
@@ -1028,9 +1029,6 @@ class WebdavAutoSyncService {
         localPreferences,
         localApiCredentialProfiles,
       })
-      if (syncDataSelection.preferences) {
-        await featureGuidanceState.mergeState(featureGuidanceToSave)
-      }
     }
 
     // 上传到WebDAV
@@ -1080,6 +1078,7 @@ class WebdavAutoSyncService {
     orderedAccountIdsToSave: string[]
     tagStoreToSave: TagStore
     preferencesToSave: UserPreferences
+    featureGuidanceToSave: FeatureGuidanceState
     channelConfigsToSave: ChannelConfigSnapshot
     mergeChannelConfigsOnApply: boolean
     apiCredentialProfilesToSave: ApiCredentialProfilesConfig
@@ -1162,14 +1161,27 @@ class WebdavAutoSyncService {
 
             // Apply channel configs last so a failure in another storage domain
             // never requires replacing concurrent channel edits during rollback.
-            if (input.mergeChannelConfigsOnApply) {
-              return await channelConfigStorage.mergeConfigs(
+            const applyChannelConfigs = async () => {
+              if (input.mergeChannelConfigsOnApply) {
+                return await channelConfigStorage.mergeConfigs(
+                  input.channelConfigsToSave,
+                )
+              }
+
+              await channelConfigStorage.importConfigs(
                 input.channelConfigsToSave,
+              )
+              return input.channelConfigsToSave
+            }
+
+            if (input.syncDataSelection.preferences) {
+              return await featureGuidanceState.withMergedStateTransaction(
+                input.featureGuidanceToSave,
+                applyChannelConfigs,
               )
             }
 
-            await channelConfigStorage.importConfigs(input.channelConfigsToSave)
-            return input.channelConfigsToSave
+            return await applyChannelConfigs()
           } catch (error) {
             for (const rollback of rollbackSteps.reverse()) {
               try {

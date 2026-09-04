@@ -32,6 +32,7 @@ import {
   kelivoExportDialogMock,
   kiloCodeExportDialogMock,
   kiloCodeProfileExportDialogMock,
+  loggerErrorMock,
   openInCherryStudioMock,
   openWithAccountMock,
   openWithCredentialsMock,
@@ -249,6 +250,33 @@ describe("CopyKeyDialog exports and service credentials", () => {
       expect(
         userPreferencesContextMock.markGatewayGuidanceOnboardingCompleted,
       ).toHaveBeenCalledTimes(1)
+      expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Skipped,
+      )
+    })
+  })
+
+  it("handles rejected guidance writes after a successful managed-site import", async () => {
+    const guidanceWriteError = new Error("guidance storage unavailable")
+    fetchAccountTokensMock.mockResolvedValueOnce([TOKEN])
+    userPreferencesContextMock.markGatewayGuidanceOnboardingCompleted.mockRejectedValueOnce(
+      guidanceWriteError,
+    )
+    openWithAccountMock.mockImplementationOnce(
+      async (_account, _token, onResult) => {
+        onResult({ success: true })
+        return { opened: false, deferred: false }
+      },
+    )
+    const user = await renderExpandedDetails()
+
+    await selectExportAction(user, "keyManagement:actions.importToManagedSite")
+
+    await waitFor(() => {
+      expect(loggerErrorMock).toHaveBeenCalledWith(
+        "Failed to mark gateway guidance onboarding complete",
+        guidanceWriteError,
+      )
       expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
         PRODUCT_ANALYTICS_RESULTS.Skipped,
       )

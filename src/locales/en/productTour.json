@@ -20,6 +20,13 @@
     "description": "Review what each module helps you accomplish and how to move between features.",
     "title": "Feature tour"
   },
+  "search": {
+    "keywords": {
+      "guide": "guide",
+      "introduction": "introduction",
+      "tour": "tour"
+    }
+  },
   "steps": {
     "api": {
       "description": "Browse models available across your accounts and manage API keys, making model selection and client setup easier.",

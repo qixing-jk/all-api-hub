@@ -21,6 +21,7 @@ export default defineConfig({
     preservePatterns: [
       "settings:refresh.shieldAutomaticFeature*",
       "modelList:displayFacts.*",
+      "productTour:search.keywords.*",
     ],
     primaryLanguage: DEFAULT_LANG,
     secondaryLanguages,

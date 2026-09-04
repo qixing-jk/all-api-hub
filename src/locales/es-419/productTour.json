@@ -20,6 +20,13 @@
     "description": "Revisa qué puedes lograr con cada módulo y cómo cambiar de una función a otra.",
     "title": "Recorrido de funciones"
   },
+  "search": {
+    "keywords": {
+      "guide": "guía",
+      "introduction": "introducción",
+      "tour": "recorrido"
+    }
+  },
   "steps": {
     "api": {
       "description": "Consulta los modelos disponibles en tus cuentas y administra claves de API para facilitar la elección de modelos y la conexión de clientes.",

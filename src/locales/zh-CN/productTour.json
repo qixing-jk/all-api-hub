@@ -20,6 +20,13 @@
     "description": "再次了解各模块能帮你完成什么，以及如何在页面中切换功能。",
     "title": "功能导览"
   },
+  "search": {
+    "keywords": {
+      "guide": "引导",
+      "introduction": "介绍",
+      "tour": "导览"
+    }
+  },
   "steps": {
     "api": {
       "description": "集中查看各账户可用的模型并管理 API 密钥，让选择模型和接入客户端更省事。",

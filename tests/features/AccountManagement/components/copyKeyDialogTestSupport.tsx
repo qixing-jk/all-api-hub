@@ -27,6 +27,7 @@ import {
   kiloCodeExportDialogMock,
   kiloCodeProfileExportDialogMock,
   listAccountKeyResourcesMock,
+  loggerErrorMock,
   openAccountKeyCollectionMock,
   openAccountKeyResourcesMock,
   openInCherryStudioMock,
@@ -208,6 +209,7 @@ export function setupCopyKeyDialogTestDefaults() {
   resolveDefaultAccountKeyScopeMock.mockReset()
   openAccountKeyCollectionMock.mockReset()
   listAccountKeyResourcesMock.mockReset()
+  loggerErrorMock.mockReset()
   openKeysPageMock.mockReset()
   resolveApiTokenKeyMock.mockReset()
   openInCherryStudioMock.mockReset()

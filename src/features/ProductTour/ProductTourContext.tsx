@@ -3,6 +3,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -166,7 +167,10 @@ export function ProductTourProvider({
   const mobileSidebarOpenRef = useRef(isMobileSidebarOpen)
   const tourViewportRef = useRef<boolean | null>(null)
   const startedVariantRef = useRef<ProductTourVariant>(activeVariant)
-  mobileSidebarOpenRef.current = isMobileSidebarOpen
+
+  useLayoutEffect(() => {
+    mobileSidebarOpenRef.current = isMobileSidebarOpen
+  }, [isMobileSidebarOpen])
 
   const prepareMobileSurface = useCallback(
     async (surface: ProductTourMobileSurface) => {

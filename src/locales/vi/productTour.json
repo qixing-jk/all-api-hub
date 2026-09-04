@@ -20,6 +20,13 @@
     "description": "Xem lại những gì mỗi mô-đun giúp bạn thực hiện và cách chuyển đổi giữa các tính năng.",
     "title": "Tham quan tính năng"
   },
+  "search": {
+    "keywords": {
+      "guide": "hướng dẫn",
+      "introduction": "giới thiệu",
+      "tour": "tham quan"
+    }
+  },
   "steps": {
     "api": {
       "description": "Xem mô hình khả dụng trong các tài khoản và quản lý khóa API tập trung để chọn mô hình và thiết lập ứng dụng dễ dàng hơn.",

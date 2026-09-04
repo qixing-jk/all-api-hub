@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { Storage } from "@plasmohq/storage"
 
@@ -106,6 +106,63 @@ describe("feature guidance state", () => {
     })
   })
 
+  it("prefers completion and the newest timestamp for the same tour version", () => {
+    const local = createEmptyFeatureGuidanceState()
+    local.productTour.expanded = {
+      handledVersion: 2,
+      outcome: PRODUCT_TOUR_OUTCOMES.Dismissed,
+      handledAt: 300,
+    }
+
+    const merged = mergeFeatureGuidanceStates(local, {
+      productTour: {
+        expanded: {
+          handledVersion: 2,
+          outcome: PRODUCT_TOUR_OUTCOMES.Completed,
+          handledAt: 200,
+        },
+      },
+    })
+
+    expect(merged.productTour.expanded).toEqual({
+      handledVersion: 2,
+      outcome: PRODUCT_TOUR_OUTCOMES.Completed,
+      handledAt: 300,
+    })
+  })
+
+  it("discards a tour record with an unknown outcome", () => {
+    const merged = mergeFeatureGuidanceStates(
+      {},
+      {
+        productTour: {
+          compact: {
+            handledVersion: 1,
+            outcome: "unknown",
+            handledAt: 200,
+          },
+        },
+      },
+    )
+
+    expect(merged.productTour).toEqual({})
+  })
+
+  it("returns an empty state when persisted guidance cannot be read", async () => {
+    const service = new FeatureGuidanceStateService()
+    const getSpy = vi
+      .spyOn((service as any).preferencesStorage, "get")
+      .mockRejectedValueOnce(new Error("storage unavailable"))
+
+    try {
+      await expect(service.getState()).resolves.toEqual(
+        createEmptyFeatureGuidanceState(),
+      )
+    } finally {
+      getSpy.mockRestore()
+    }
+  })
+
   it("migrates released gateway guidance but discards unreleased product-tour preferences", async () => {
     await storage.set(STORAGE_KEYS.USER_PREFERENCES, {
       themeMode: "dark",
@@ -158,5 +215,101 @@ describe("feature guidance state", () => {
     })
     expect(preferences).not.toHaveProperty("gatewayGuidance")
     expect(preferences).not.toHaveProperty("productTour")
+  })
+
+  it("migrates local gateway guidance before importing a backup without guidance", async () => {
+    await storage.set(STORAGE_KEYS.USER_PREFERENCES, {
+      ...DEFAULT_PREFERENCES,
+      gatewayGuidance: {
+        onboardingCompletedAt: 300,
+        dismissedAtBySurface: { account: 200 },
+      },
+    })
+
+    await expect(
+      userPreferences.importPreferences({
+        ...DEFAULT_PREFERENCES,
+        themeMode: "light",
+      }),
+    ).resolves.toMatchObject({ ok: true })
+
+    await expect(
+      storage.get(STORAGE_KEYS.FEATURE_GUIDANCE_STATE),
+    ).resolves.toMatchObject({
+      gatewayGuidance: {
+        onboardingCompletedAt: 300,
+        dismissedAtBySurface: { account: 200 },
+      },
+    })
+  })
+
+  it("rolls a failed transaction back before applying concurrent progress", async () => {
+    const service = new FeatureGuidanceStateService()
+    const concurrentService = new FeatureGuidanceStateService()
+    await service.markProductTourHandled(
+      PRODUCT_TOUR_VARIANTS.Expanded,
+      1,
+      PRODUCT_TOUR_OUTCOMES.Dismissed,
+      100,
+    )
+
+    let markWorkStarted: () => void = () => {}
+    const workStarted = new Promise<void>((resolve) => {
+      markWorkStarted = resolve
+    })
+    let releaseWork: () => void = () => {}
+    const workGate = new Promise<void>((resolve) => {
+      releaseWork = resolve
+    })
+
+    const transaction = service.withMergedStateTransaction(
+      {
+        productTour: {
+          expanded: {
+            handledVersion: 2,
+            outcome: PRODUCT_TOUR_OUTCOMES.Completed,
+            handledAt: 200,
+          },
+          compact: {
+            handledVersion: 1,
+            outcome: PRODUCT_TOUR_OUTCOMES.Completed,
+            handledAt: 200,
+          },
+        },
+      },
+      async () => {
+        markWorkStarted()
+        await workGate
+        throw new Error("dependent write failed")
+      },
+    )
+
+    await workStarted
+    let concurrentWriteSettled = false
+    const concurrentWrite = concurrentService
+      .markProductTourHandled(
+        PRODUCT_TOUR_VARIANTS.Expanded,
+        3,
+        PRODUCT_TOUR_OUTCOMES.Completed,
+        300,
+      )
+      .then(() => {
+        concurrentWriteSettled = true
+      })
+
+    await Promise.resolve()
+    expect(concurrentWriteSettled).toBe(false)
+
+    releaseWork()
+    await expect(transaction).rejects.toThrow("dependent write failed")
+    await concurrentWrite
+
+    const state = await service.getState()
+    expect(state.productTour.expanded).toEqual({
+      handledVersion: 3,
+      outcome: PRODUCT_TOUR_OUTCOMES.Completed,
+      handledAt: 300,
+    })
+    expect(state.productTour.compact).toBeUndefined()
   })
 })

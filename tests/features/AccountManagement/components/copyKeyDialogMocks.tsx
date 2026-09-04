@@ -39,6 +39,7 @@ const mocks = vi.hoisted(() => ({
   openAccountKeyCollectionMock: vi.fn(),
   listAccountKeyResourcesMock: vi.fn(),
   openKeysPageMock: vi.fn(),
+  loggerErrorMock: vi.fn(),
   userPreferencesContextMock: {
     claudeCodeRouterApiKey: "ccr-management-key",
     claudeCodeRouterBaseUrl: "https://router.example.invalid",
@@ -80,6 +81,7 @@ export const {
   openAccountKeyCollectionMock,
   listAccountKeyResourcesMock,
   openKeysPageMock,
+  loggerErrorMock,
   userPreferencesContextMock,
 } = mocks
 
@@ -219,6 +221,15 @@ vi.mock("~/utils/navigation", async (importOriginal) => {
     openKeysPage: (...args: unknown[]) => openKeysPageMock(...args),
   }
 })
+
+vi.mock("~/utils/core/logger", () => ({
+  createLogger: () => ({
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: loggerErrorMock,
+  }),
+}))
 
 vi.mock("~/components/dialogs/ChannelDialog", () => ({
   ChannelDialogProvider: ({ children }: { children: ReactNode }) => children,

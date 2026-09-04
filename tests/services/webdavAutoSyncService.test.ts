@@ -23,6 +23,39 @@ vi.mock("~/services/managedSites/legacyChannelConfigMigration", () => ({
   ensureLegacyChannelConfigMigrationReady: vi.fn().mockResolvedValue(undefined),
 }))
 
+const mockFeatureGuidanceGetStateStrict = vi
+  .fn()
+  .mockImplementation(async () => ({
+    schemaVersion: 1,
+    productTour: {},
+    gatewayGuidance: { dismissedAtBySurface: {} },
+  }))
+const mockEnsureLegacyFeatureGuidanceMigration = vi
+  .fn()
+  .mockResolvedValue(undefined)
+const mockFeatureGuidanceTransaction = vi
+  .fn()
+  .mockImplementation(async (_incoming, work: () => Promise<unknown>) => work())
+
+vi.mock(
+  import("~/services/featureGuidance/featureGuidanceState"),
+  async (importOriginal) => {
+    const actual = await importOriginal()
+    Object.assign(actual.featureGuidanceState, {
+      ensureLegacyPreferenceMigration: (...args: any[]) =>
+        mockEnsureLegacyFeatureGuidanceMigration(...args),
+      getStateStrict: (...args: any[]) =>
+        mockFeatureGuidanceGetStateStrict(...args),
+      withMergedStateTransaction: (...args: any[]) =>
+        mockFeatureGuidanceTransaction(...args),
+    })
+    return {
+      ...actual,
+      featureGuidanceState: actual.featureGuidanceState,
+    }
+  },
+)
+
 // Basic getErrorMessage passthrough to avoid noisy output
 vi.mock("~/utils/core/error", () => ({
   getErrorMessage: (e: unknown) => String(e),
@@ -887,6 +920,32 @@ describe("WebdavAutoSyncService.syncWithWebdav (selective sync)", () => {
     } as any)
 
     await expect(service.syncWithWebdav()).rejects.toThrow()
+  })
+
+  it("stops before WebDAV IO when the guidance snapshot cannot be read", async () => {
+    const service = createService()
+    mockGetPreferences.mockResolvedValue({
+      webdav: {
+        syncStrategy: "merge",
+        syncData: {
+          accounts: false,
+          bookmarks: false,
+          apiCredentialProfiles: false,
+          preferences: true,
+        },
+      },
+    } as any)
+    mockFeatureGuidanceGetStateStrict.mockRejectedValueOnce(
+      new Error("guidance storage unavailable"),
+    )
+
+    await expect(service.syncWithWebdav()).rejects.toThrow(
+      "guidance storage unavailable",
+    )
+
+    expect(mockTestConnection).not.toHaveBeenCalled()
+    expect(mockImportPreferences).not.toHaveBeenCalled()
+    expect(mockUploadBackup).not.toHaveBeenCalled()
   })
 
   it("treats a missing remote backup as first upload", async () => {
@@ -2445,6 +2504,72 @@ describe("WebdavAutoSyncService local apply phase", () => {
       orderedAccountIds: ["local-account", "local-bookmark"],
     })
     expect(mockApiCredentialProfilesImport).toHaveBeenCalledTimes(2)
+    expect(mockFeatureGuidanceTransaction).toHaveBeenCalledTimes(1)
+    expect(mockUploadBackup).not.toHaveBeenCalled()
+  })
+
+  it("rolls preferences back when feature guidance cannot be committed", async () => {
+    const service = createService()
+    const remoteFeatureGuidance = {
+      schemaVersion: 1,
+      productTour: {},
+      gatewayGuidance: {
+        onboardingCompletedAt: 200,
+        dismissedAtBySurface: {},
+      },
+    }
+    mockFeatureGuidanceTransaction.mockRejectedValueOnce(
+      new Error("guidance failed"),
+    )
+
+    await expect(
+      service.applyLocalSyncResult({
+        syncDataSelection: {
+          accounts: false,
+          bookmarks: false,
+          apiCredentialProfiles: false,
+          preferences: true,
+        },
+        accountsToSave: [],
+        bookmarksToSave: [],
+        pinnedAccountIdsToSave: [],
+        orderedAccountIdsToSave: [],
+        tagStoreToSave: createDefaultTagStore(),
+        preferencesToSave: { themeMode: "light" },
+        featureGuidanceToSave: remoteFeatureGuidance,
+        channelConfigsToSave: remoteChannelConfigs,
+        mergeChannelConfigsOnApply: false,
+        apiCredentialProfilesToSave: {
+          version: 2,
+          profiles: [],
+          lastUpdated: 0,
+        },
+        localAccountsConfig: { accounts: [] },
+        localTagStore: createDefaultTagStore(),
+        localPreferences: { themeMode: "dark" },
+        localApiCredentialProfiles: {
+          version: 2,
+          profiles: [],
+          lastUpdated: 0,
+        },
+      }),
+    ).rejects.toThrow("guidance failed")
+
+    expect(mockImportPreferences).toHaveBeenNthCalledWith(
+      1,
+      { themeMode: "light" },
+      { preserveWebdav: true },
+    )
+    expect(mockFeatureGuidanceTransaction).toHaveBeenCalledWith(
+      remoteFeatureGuidance,
+      expect.any(Function),
+    )
+    expect(mockImportPreferences).toHaveBeenNthCalledWith(
+      2,
+      { themeMode: "dark" },
+      { preserveWebdav: true },
+    )
+    expect(mockChannelConfigImport).not.toHaveBeenCalled()
     expect(mockUploadBackup).not.toHaveBeenCalled()
   })
 
@@ -2491,6 +2616,11 @@ describe("WebdavAutoSyncService local apply phase", () => {
         orderedAccountIdsToSave: ["remote-account", "remote-bookmark"],
         tagStoreToSave: { version: 1, tagsById: {} },
         preferencesToSave: { themeMode: "light" },
+        featureGuidanceToSave: {
+          schemaVersion: 1,
+          productTour: {},
+          gatewayGuidance: { dismissedAtBySurface: {} },
+        },
         channelConfigsToSave: { 2: { enabled: false } },
         apiCredentialProfilesToSave: {
           version: 2,

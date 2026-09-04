@@ -20,6 +20,13 @@
     "description": "Sieh erneut, was du mit den Modulen erledigen kannst und wie du zwischen Funktionen wechselst.",
     "title": "Funktionstour"
   },
+  "search": {
+    "keywords": {
+      "guide": "Anleitung",
+      "introduction": "Einführung",
+      "tour": "Tour"
+    }
+  },
   "steps": {
     "api": {
       "description": "Sieh die Modelle deiner Konten an und verwalte API-Schlüssel zentral, damit Modellauswahl und Client-Einrichtung leichter werden.",

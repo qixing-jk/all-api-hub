@@ -20,6 +20,13 @@
     "description": "Reveja o que cada módulo ajuda você a fazer e como alternar entre os recursos.",
     "title": "Tour de recursos"
   },
+  "search": {
+    "keywords": {
+      "guide": "guia",
+      "introduction": "introdução",
+      "tour": "tour"
+    }
+  },
   "steps": {
     "api": {
       "description": "Consulte os modelos disponíveis nas suas contas e gerencie chaves de API para facilitar a escolha de modelos e a configuração de clientes.",

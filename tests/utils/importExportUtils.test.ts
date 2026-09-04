@@ -12,6 +12,11 @@ import {
 } from "~/features/ImportExport/utils"
 import { accountDataTransfer } from "~/services/accounts/accountStorage/accountDataTransfer"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
+import {
+  createEmptyFeatureGuidanceState,
+  featureGuidanceState,
+  PRODUCT_TOUR_OUTCOMES,
+} from "~/services/featureGuidance/featureGuidanceState"
 import { channelConfigStorage } from "~/services/managedSites/channelConfigStorage"
 import {
   ensureLegacyChannelConfigMigrationReady,
@@ -1259,6 +1264,36 @@ describe("importFromBackupObject", () => {
       channelConfigs: false,
       apiCredentialProfiles: false,
     })
+  })
+
+  it("merges guidance carried by an imported preferences backup", async () => {
+    const incomingGuidance = {
+      ...createEmptyFeatureGuidanceState(),
+      productTour: {
+        expanded: {
+          handledVersion: 2,
+          outcome: PRODUCT_TOUR_OUTCOMES.Completed,
+          handledAt: 200,
+        },
+      },
+    }
+    const mergeGuidance = vi
+      .spyOn(featureGuidanceState, "mergeState")
+      .mockResolvedValueOnce(incomingGuidance)
+
+    try {
+      await importFromBackupObject({
+        version: BACKUP_VERSION,
+        timestamp: Date.now(),
+        type: "preferences",
+        preferences: { themeMode: "light" } as any,
+        featureGuidance: incomingGuidance,
+      })
+
+      expect(mergeGuidance).toHaveBeenCalledWith(incomingGuidance)
+    } finally {
+      mergeGuidance.mockRestore()
+    }
   })
 
   it("rejects backups created by a newer unsupported version", async () => {

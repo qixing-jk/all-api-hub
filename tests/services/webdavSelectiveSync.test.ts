@@ -1206,6 +1206,37 @@ describe("createWebdavImportPayloadBySelection", () => {
     })
   })
 
+  it("imports remote guidance with the selected preference domain", () => {
+    const remoteGuidance = {
+      ...createEmptyFeatureGuidanceState(),
+      productTour: {
+        expanded: {
+          handledVersion: 2,
+          outcome: PRODUCT_TOUR_OUTCOMES.Completed,
+          handledAt: 200,
+        },
+      },
+    }
+    const payload = createWebdavImportPayloadBySelection({
+      rawBackup: {
+        version: BACKUP_VERSION,
+        timestamp: 200,
+        preferences: DEFAULT_PREFERENCES,
+        featureGuidance: remoteGuidance,
+        channelConfigs: { schemaVersion: 1, configs: {} },
+      },
+      selection: {
+        accounts: false,
+        bookmarks: false,
+        apiCredentialProfiles: false,
+        preferences: true,
+      },
+      localState: baseLocalState,
+    })
+
+    expect(payload.featureGuidance).toEqual(remoteGuidance)
+  })
+
   it("always emits a canonical V4 payload even for legacy WebDAV backups", () => {
     const payload = createWebdavImportPayloadBySelection({
       rawBackup: {

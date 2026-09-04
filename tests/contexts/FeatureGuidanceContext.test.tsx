@@ -10,6 +10,7 @@ import {
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import {
   featureGuidanceState,
+  PRODUCT_TOUR_OUTCOMES,
   PRODUCT_TOUR_VARIANTS,
 } from "~/services/featureGuidance/featureGuidanceState"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
@@ -20,6 +21,7 @@ function Harness() {
   const {
     state,
     completeProductTour,
+    dismissProductTour,
     dismissGatewayGuidanceSurface,
     markGatewayGuidanceOnboardingCompleted,
   } = useFeatureGuidanceContext()
@@ -31,6 +33,11 @@ function Harness() {
         onClick={() => completeProductTour(PRODUCT_TOUR_VARIANTS.Expanded, 2)}
       >
         complete tour
+      </button>
+      <button
+        onClick={() => dismissProductTour(PRODUCT_TOUR_VARIANTS.Compact, 3)}
+      >
+        dismiss compact tour
       </button>
       <button onClick={() => dismissGatewayGuidanceSurface("account")}>
         dismiss gateway
@@ -65,17 +72,38 @@ describe("FeatureGuidanceContext", () => {
 
     await screen.findByRole("button", { name: "complete tour" })
     await user.click(screen.getByRole("button", { name: "complete tour" }))
+    await user.click(
+      screen.getByRole("button", { name: "dismiss compact tour" }),
+    )
     await user.click(screen.getByRole("button", { name: "dismiss gateway" }))
     await user.click(screen.getByRole("button", { name: "complete gateway" }))
 
     await waitFor(async () => {
       await expect(featureGuidanceState.getState()).resolves.toMatchObject({
-        productTour: { expanded: { handledVersion: 2 } },
+        productTour: {
+          expanded: { handledVersion: 2 },
+          compact: {
+            handledVersion: 3,
+            outcome: PRODUCT_TOUR_OUTCOMES.Dismissed,
+          },
+        },
         gatewayGuidance: {
           onboardingCompletedAt: expect.any(Number),
           dismissedAtBySurface: { account: expect.any(Number) },
         },
       })
     })
+  })
+
+  it("rejects consumers outside the feature guidance provider", () => {
+    expect(() =>
+      render(<Harness />, {
+        withUserPreferencesProvider: false,
+        withFeatureGuidanceProvider: false,
+        withThemeProvider: false,
+      }),
+    ).toThrow(
+      "useFeatureGuidanceContext must be used within FeatureGuidanceProvider",
+    )
   })
 })

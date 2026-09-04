@@ -20,6 +20,13 @@
     "description": "再次了解各模組能幫你完成什麼，以及如何在頁面中切換功能。",
     "title": "功能導覽"
   },
+  "search": {
+    "keywords": {
+      "guide": "引導",
+      "introduction": "介紹",
+      "tour": "導覽"
+    }
+  },
   "steps": {
     "api": {
       "description": "集中查看各帳戶可用的模型並管理 API 金鑰，讓選擇模型和連接用戶端更省事。",

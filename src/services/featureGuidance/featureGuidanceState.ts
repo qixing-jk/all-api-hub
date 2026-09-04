@@ -265,10 +265,14 @@ export class FeatureGuidanceStateService {
     )
   }
 
+  async getStateStrict(): Promise<FeatureGuidanceState> {
+    await this.ensureLegacyPreferenceMigration()
+    return this.readStoredState()
+  }
+
   async getState(): Promise<FeatureGuidanceState> {
     try {
-      await this.ensureLegacyPreferenceMigration()
-      return await this.readStoredState()
+      return await this.getStateStrict()
     } catch (error) {
       logger.warn("Failed to load feature guidance state", error)
       return createEmptyFeatureGuidanceState()
@@ -278,6 +282,43 @@ export class FeatureGuidanceStateService {
   async mergeState(incoming: unknown): Promise<FeatureGuidanceState> {
     await this.ensureLegacyPreferenceMigration()
     return this.mergeStoredState(incoming)
+  }
+
+  /**
+   * Holds the guidance write lock until dependent storage work commits.
+   * Concurrent guidance actions therefore run only after a failed merge has
+   * been restored, so rollback cannot overwrite newer user progress.
+   */
+  async withMergedStateTransaction<T>(
+    incoming: unknown,
+    work: () => Promise<T>,
+  ): Promise<T> {
+    await this.ensureLegacyPreferenceMigration()
+    return withExtensionStorageWriteLock(
+      STORAGE_LOCKS.FEATURE_GUIDANCE,
+      async () => {
+        const previous = await this.readStoredState()
+        const merged = mergeFeatureGuidanceStates(previous, incoming)
+
+        try {
+          await this.storage.set(STORAGE_KEYS.FEATURE_GUIDANCE_STATE, merged)
+          return await work()
+        } catch (error) {
+          try {
+            await this.storage.set(
+              STORAGE_KEYS.FEATURE_GUIDANCE_STATE,
+              previous,
+            )
+          } catch (rollbackError) {
+            logger.error(
+              "Failed to rollback feature guidance transaction",
+              rollbackError,
+            )
+          }
+          throw error
+        }
+      },
+    )
   }
 
   async markProductTourHandled(
