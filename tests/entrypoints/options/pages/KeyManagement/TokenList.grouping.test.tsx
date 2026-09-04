@@ -27,6 +27,12 @@ import {
   createToken,
 } from "~~/tests/utils/keyManagementFactories"
 
+vi.mock("~/contexts/FeatureGuidanceContext", () => ({
+  useFeatureGuidanceContext: () => ({
+    markGatewayGuidanceOnboardingCompleted: vi.fn(),
+  }),
+}))
+
 const { openApiCredentialProfilesPageMock } = vi.hoisted(() => ({
   openApiCredentialProfilesPageMock: vi.fn(),
 }))

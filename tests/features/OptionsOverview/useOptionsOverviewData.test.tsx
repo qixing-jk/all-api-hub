@@ -4,6 +4,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { useOptionsOverviewData } from "~/features/OptionsOverview/useOptionsOverviewData"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
+import { featureGuidanceState } from "~/services/featureGuidance/featureGuidanceState"
 import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
 import {
   DEFAULT_PREFERENCES,
@@ -71,6 +72,20 @@ vi.mock("~/services/history/usageHistory/storage", () => ({
     getStore: vi.fn(),
   },
 }))
+
+vi.mock(
+  "~/services/featureGuidance/featureGuidanceState",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/featureGuidance/featureGuidanceState")
+      >()
+    return {
+      ...actual,
+      featureGuidanceState: { getState: vi.fn() },
+    }
+  },
+)
 
 vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
   const actual =
@@ -240,6 +255,7 @@ describe("useOptionsOverviewData", () => {
       failure,
     )
     vi.mocked(userPreferences.getPreferences).mockRejectedValueOnce(failure)
+    vi.mocked(featureGuidanceState.getState).mockRejectedValueOnce(failure)
     vi.mocked(autoCheckinStorage.getStatus).mockRejectedValueOnce(failure)
     vi.mocked(siteAnnouncementStorage.listRecords).mockRejectedValueOnce(
       failure,
@@ -265,6 +281,11 @@ function mockSuccessfulLoad() {
   vi.clearAllMocks()
   vi.mocked(accountStorage.getAllAccounts).mockResolvedValue([account])
   vi.mocked(accountStorage.getAccountStats).mockResolvedValue(accountStats)
+  vi.mocked(featureGuidanceState.getState).mockResolvedValue({
+    schemaVersion: 1,
+    productTour: {},
+    gatewayGuidance: { dismissedAtBySurface: {} },
+  })
   vi.mocked(accountStorage.convertToDisplayData).mockReturnValue([
     displayAccount,
   ])

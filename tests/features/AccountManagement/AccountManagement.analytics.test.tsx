@@ -60,7 +60,6 @@ type UserPreferencesContextMockState = {
   current: {
     preferences: UserPreferences | null
     managedSiteType: ManagedSiteType
-    dismissGatewayGuidanceSurface?: (surface: string) => Promise<unknown>
   }
 }
 
@@ -73,6 +72,16 @@ const userPreferencesContextState = vi.hoisted<UserPreferencesContextMockState>(
   }),
 )
 const dismissGatewayGuidanceSurfaceMock = vi.hoisted(() => vi.fn())
+const featureGuidanceContextState = vi.hoisted(() => ({
+  current: {
+    schemaVersion: 1,
+    productTour: {},
+    gatewayGuidance: { dismissedAtBySurface: {} } as {
+      dismissedAtBySurface: Record<string, number>
+      onboardingCompletedAt?: number
+    },
+  },
+}))
 const apiCredentialProfilesState = vi.hoisted(() => ({
   current: {
     profiles: [] as unknown[],
@@ -149,6 +158,14 @@ vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
   }
 })
 
+vi.mock("~/contexts/FeatureGuidanceContext", () => ({
+  FeatureGuidanceProvider: ({ children }: { children: ReactNode }) => children,
+  useFeatureGuidanceContext: () => ({
+    state: featureGuidanceContextState.current,
+    dismissGatewayGuidanceSurface: dismissGatewayGuidanceSurfaceMock,
+  }),
+}))
+
 vi.mock("~/services/productAnalytics/actions", () => ({
   startProductAnalyticsAction: (...args: unknown[]) =>
     startProductAnalyticsActionMock(...args),
@@ -195,6 +212,11 @@ beforeEach(() => {
   userPreferencesContextState.current = {
     preferences: null,
     managedSiteType: SITE_TYPES.NEW_API,
+  }
+  featureGuidanceContextState.current = {
+    schemaVersion: 1,
+    productTour: {},
+    gatewayGuidance: { dismissedAtBySurface: {} },
   }
   accountDataContextState.current = {
     displayData: [],
@@ -428,14 +450,12 @@ describe("AccountManagement unified API guidance", () => {
       ...accountDataContextState.current,
       displayData: [{ id: "account-1", disabled: false }],
     }
+    featureGuidanceContextState.current.gatewayGuidance = {
+      dismissedAtBySurface: {},
+      onboardingCompletedAt: 1,
+    }
     userPreferencesContextState.current = {
-      preferences: {
-        ...DEFAULT_PREFERENCES,
-        lastUpdated: 1,
-        gatewayGuidance: {
-          onboardingCompletedAt: 1,
-        },
-      },
+      preferences: { ...DEFAULT_PREFERENCES, lastUpdated: 1 },
       managedSiteType: SITE_TYPES.NEW_API,
     }
 
@@ -458,10 +478,8 @@ describe("AccountManagement unified API guidance", () => {
       preferences: {
         ...DEFAULT_PREFERENCES,
         lastUpdated: 1,
-        gatewayGuidance: {},
       },
       managedSiteType: SITE_TYPES.NEW_API,
-      dismissGatewayGuidanceSurface: dismissGatewayGuidanceSurfaceMock,
     }
 
     render(<AccountManagement />, {
@@ -486,17 +504,7 @@ describe("AccountManagement unified API guidance", () => {
   })
 
   it("permanently dismisses account gateway guidance for the account surface", async () => {
-    dismissGatewayGuidanceSurfaceMock.mockResolvedValueOnce({
-      ok: true,
-      preferences: {
-        ...DEFAULT_PREFERENCES,
-        gatewayGuidance: {
-          dismissedAtBySurface: {
-            account: 1,
-          },
-        },
-      },
-    })
+    dismissGatewayGuidanceSurfaceMock.mockResolvedValueOnce(undefined)
     accountDataContextState.current = {
       ...accountDataContextState.current,
       displayData: [{ id: "account-1", disabled: false }],
@@ -505,10 +513,8 @@ describe("AccountManagement unified API guidance", () => {
       preferences: {
         ...DEFAULT_PREFERENCES,
         lastUpdated: 1,
-        gatewayGuidance: {},
       },
       managedSiteType: SITE_TYPES.NEW_API,
-      dismissGatewayGuidanceSurface: dismissGatewayGuidanceSurfaceMock,
     }
 
     render(<AccountManagement />, {
@@ -540,10 +546,9 @@ describe("AccountManagement unified API guidance", () => {
   })
 
   it("shows a safe local error when permanent dismissal is not saved", async () => {
-    dismissGatewayGuidanceSurfaceMock.mockResolvedValueOnce({
-      ok: false,
-      error: "sensitive backend detail",
-    })
+    dismissGatewayGuidanceSurfaceMock.mockRejectedValueOnce(
+      new Error("sensitive backend detail"),
+    )
     accountDataContextState.current = {
       ...accountDataContextState.current,
       displayData: [{ id: "account-1", disabled: false }],
@@ -552,10 +557,8 @@ describe("AccountManagement unified API guidance", () => {
       preferences: {
         ...DEFAULT_PREFERENCES,
         lastUpdated: 1,
-        gatewayGuidance: {},
       },
       managedSiteType: SITE_TYPES.NEW_API,
-      dismissGatewayGuidanceSurface: dismissGatewayGuidanceSurfaceMock,
     }
 
     render(<AccountManagement />, {

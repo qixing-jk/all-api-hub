@@ -3,6 +3,7 @@ import {
   buildUnifiedApiGuidanceModel,
   getGatewayGuidanceImportableAccounts,
 } from "~/features/UnifiedApiGuidance"
+import type { FeatureGuidanceState } from "~/services/featureGuidance/featureGuidanceState"
 import { hasValidManagedSiteConfig } from "~/services/managedSites/managedSiteService"
 import type { UserPreferences } from "~/services/preferences/userPreferences"
 import {
@@ -34,6 +35,7 @@ interface BuildOptionsOverviewViewModelInput {
   apiCredentialProfiles: ApiCredentialProfile[]
   usageStore: UsageHistoryStore
   preferences: UserPreferences | null | undefined
+  guidanceState?: FeatureGuidanceState | null
   managedSiteType: ManagedSiteType | undefined
   autoCheckinStatus: AutoCheckinStatus | null | undefined
   siteAnnouncementRecords: SiteAnnouncementRecord[]
@@ -104,6 +106,7 @@ export function buildOptionsOverviewViewModel(
               unifiedApiGuidanceDiagnostics.keyAccessibleAccountCount,
             profileCount: unifiedApiGuidanceDiagnostics.profileCount,
             preferences: input.preferences,
+            guidanceState: input.guidanceState,
             managedSiteType: input.managedSiteType,
           }),
     unifiedApiGuidanceDiagnostics,

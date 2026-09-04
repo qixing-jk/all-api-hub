@@ -84,6 +84,10 @@ vi.mock("~/contexts/UserPreferencesContext", async (importActual) => {
   return { ...actual, useUserPreferencesContext: vi.fn() }
 })
 
+vi.mock("~/contexts/FeatureGuidanceContext", () => ({
+  useFeatureGuidanceContext: vi.fn(),
+}))
+
 vi.mock("~/utils/navigation", async (importActual) => {
   const actual = (await importActual()) as any
   return {

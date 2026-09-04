@@ -3,9 +3,11 @@ import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import {
   PRODUCT_TOUR_TARGET_ATTRIBUTE,
   PRODUCT_TOUR_TARGETS,
-  PRODUCT_TOUR_VERSION,
+  PRODUCT_TOUR_VERSIONS,
 } from "~/features/ProductTour/constants"
 import { PRODUCT_TOUR_TEST_IDS } from "~/features/ProductTour/testIds"
+import { STORAGE_KEYS } from "~/services/core/storageKeys"
+import { PRODUCT_TOUR_VARIANTS } from "~/services/featureGuidance/featureGuidanceState"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {
   forceExtensionLanguage,
@@ -15,8 +17,8 @@ import {
 } from "~~/e2e/utils/commonUserFlows"
 import {
   expectPermissionOnboardingHidden,
+  getPlasmoStorageJsonValue,
   getServiceWorker,
-  getStoredUserPreferences,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 
@@ -32,7 +34,7 @@ test("introduces options modules without navigating or performing actions", asyn
   page,
 }) => {
   const serviceWorker = await getServiceWorker(context)
-  await seedUserPreferences(serviceWorker, { productTour: {} })
+  await seedUserPreferences(serviceWorker)
 
   await page.goto(
     `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.OVERVIEW}`,
@@ -108,13 +110,12 @@ test("introduces options modules without navigating or performing actions", asyn
 
   await expect
     .poll(async () => {
-      const preferences = await getStoredUserPreferences(serviceWorker)
-      const productTour = preferences.productTour as
-        | { completedVersion?: number }
-        | undefined
-      return productTour?.completedVersion
+      const guidance = await getPlasmoStorageJsonValue<{
+        productTour?: { expanded?: { handledVersion?: number } }
+      }>(serviceWorker, STORAGE_KEYS.FEATURE_GUIDANCE_STATE)
+      return guidance?.productTour?.expanded?.handledVersion
     })
-    .toBe(PRODUCT_TOUR_VERSION)
+    .toBe(PRODUCT_TOUR_VERSIONS[PRODUCT_TOUR_VARIANTS.Expanded])
 
   await page.goto(
     `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.BASIC}`,

@@ -15,6 +15,10 @@ import {
 } from "~/features/KeyManagement/constants"
 import { ACCOUNT_RUNTIME_KEY_SOURCES } from "~/services/accounts/accountRuntimeKeys"
 import {
+  createEmptyFeatureGuidanceState,
+  type FeatureGuidanceState,
+} from "~/services/featureGuidance/featureGuidanceState"
+import {
   DEFAULT_PREFERENCES,
   type UserPreferences,
 } from "~/services/preferences/userPreferences"
@@ -54,6 +58,8 @@ const replaceWithinOptionsPageMock = vi.fn()
 const mockOpenKeysPage = vi.fn()
 const mockUseUserPreferencesContext = vi.fn()
 const mockDismissGatewayGuidanceSurface = vi.fn()
+let mockFeatureGuidanceState: FeatureGuidanceState =
+  createEmptyFeatureGuidanceState()
 const CC_SWITCH_EXPORT_DIALOG_NAME = "CCSwitch export"
 const CC_SWITCH_EXPORT_DIALOG_CLOSE_NAME = "Close CCSwitch export"
 const KILO_CODE_EXPORT_DIALOG_NAME = "Kilo Code export"
@@ -163,7 +169,6 @@ type ApiCredentialProfilesContextValue = Pick<
   | "claudeCodeRouterApiKey"
   | "cliProxyBaseUrl"
   | "cliProxyManagementKey"
-  | "dismissGatewayGuidanceSurface"
 >
 
 const createManagedSitePreferences = (
@@ -191,7 +196,6 @@ const createApiCredentialProfilesContextValue = (
     claudeCodeRouterApiKey: preferences.claudeCodeRouter?.apiKey ?? "",
     cliProxyBaseUrl: preferences.cliProxy?.baseUrl ?? "",
     cliProxyManagementKey: preferences.cliProxy?.managementKey ?? "",
-    dismissGatewayGuidanceSurface: mockDismissGatewayGuidanceSurface,
   }) satisfies ApiCredentialProfilesContextValue
 
 const seedActiveAssociation = () => {
@@ -340,6 +344,14 @@ vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
   }
 })
 
+vi.mock("~/contexts/FeatureGuidanceContext", () => ({
+  FeatureGuidanceProvider: ({ children }: { children: ReactNode }) => children,
+  useFeatureGuidanceContext: () => ({
+    state: mockFeatureGuidanceState,
+    dismissGatewayGuidanceSurface: mockDismissGatewayGuidanceSurface,
+  }),
+}))
+
 vi.mock("~/utils/navigation", () => ({
   openModelsPage: (...args: unknown[]) => mockOpenModelsPage(...args),
   openSettingsTab: (...args: unknown[]) => mockOpenSettingsTab(...args),
@@ -384,6 +396,7 @@ describe("ApiCredentialProfiles page", () => {
     replaceWithinOptionsPageMock.mockReset()
     mockOpenKeysPage.mockReset()
     mockDismissGatewayGuidanceSurface.mockReset()
+    mockFeatureGuidanceState = createEmptyFeatureGuidanceState()
     mockRelinkProfileLink.mockReset()
     mockRelinkProfileLink.mockResolvedValue(undefined)
     mockUnlinkProfileLink.mockReset()
@@ -985,14 +998,13 @@ describe("ApiCredentialProfiles page", () => {
   })
 
   it("hides API credential gateway guidance after gateway onboarding has completed once", async () => {
-    mockUseUserPreferencesContext.mockReturnValue(
-      createApiCredentialProfilesContextValue({
-        ...createManagedSitePreferences(),
-        gatewayGuidance: {
-          onboardingCompletedAt: 1,
-        },
-      }),
-    )
+    mockFeatureGuidanceState = {
+      ...createEmptyFeatureGuidanceState(),
+      gatewayGuidance: {
+        dismissedAtBySurface: {},
+        onboardingCompletedAt: 1,
+      },
+    }
 
     render(<ApiCredentialProfiles />)
 
@@ -1027,17 +1039,7 @@ describe("ApiCredentialProfiles page", () => {
 
   it("permanently dismisses API credential gateway guidance for the API credential surface", async () => {
     const user = userEvent.setup()
-    mockDismissGatewayGuidanceSurface.mockResolvedValueOnce({
-      ok: true,
-      preferences: {
-        ...DEFAULT_PREFERENCES,
-        gatewayGuidance: {
-          dismissedAtBySurface: {
-            apiCredentialProfiles: 1,
-          },
-        },
-      },
-    })
+    mockDismissGatewayGuidanceSurface.mockResolvedValueOnce(undefined)
 
     render(<ApiCredentialProfiles />)
 

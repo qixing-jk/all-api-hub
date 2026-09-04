@@ -9,12 +9,13 @@ import {
   ACCOUNT_MANAGEMENT_ROUTE_ACTIONS,
   ACCOUNT_MANAGEMENT_ROUTE_PARAMS,
 } from "~/features/AccountManagement/routeParams"
+import type {
+  FeatureGuidanceState,
+  GatewayGuidanceSurface,
+} from "~/services/featureGuidance/featureGuidanceState"
 import { hasValidManagedSiteConfig } from "~/services/managedSites/managedSiteService"
 import { supportsManagedSiteModelSync } from "~/services/managedSites/utils/managedSite"
-import type {
-  GatewayGuidanceSurface,
-  UserPreferences,
-} from "~/services/preferences/userPreferences"
+import type { UserPreferences } from "~/services/preferences/userPreferences"
 import {
   PRODUCT_ANALYTICS_UNIFIED_API_GUIDANCE_ACTION_KINDS,
   PRODUCT_ANALYTICS_UNIFIED_API_GUIDANCE_STATUSES,
@@ -140,33 +141,33 @@ const buildGuidanceSteps = (
  * channel-count or gateway-health signal.
  */
 function hasCompletedGatewayGuidanceOnboarding(
-  preferences: UserPreferences | null | undefined,
+  guidanceState: FeatureGuidanceState | null | undefined,
 ): boolean {
-  return Boolean(preferences?.gatewayGuidance?.onboardingCompletedAt)
+  return Boolean(guidanceState?.gatewayGuidance.onboardingCompletedAt)
 }
 
 /**
  * Returns whether a source surface has been explicitly hidden by the user.
  */
 function hasDismissedGatewayGuidanceSurface(
-  preferences: UserPreferences | null | undefined,
+  guidanceState: FeatureGuidanceState | null | undefined,
   surface: GatewayGuidanceSurface,
 ): boolean {
-  return Boolean(preferences?.gatewayGuidance?.dismissedAtBySurface?.[surface])
+  return Boolean(guidanceState?.gatewayGuidance.dismissedAtBySurface[surface])
 }
 
 /**
  * Resolves whether source-surface gateway guidance should be shown.
  */
 export function shouldShowGatewayGuidanceSurface(
-  preferences: UserPreferences | null | undefined,
+  guidanceState: FeatureGuidanceState | null | undefined,
   surface: GatewayGuidanceSurface,
   dismissedForSession = false,
 ): boolean {
   return (
     !dismissedForSession &&
-    !hasCompletedGatewayGuidanceOnboarding(preferences) &&
-    !hasDismissedGatewayGuidanceSurface(preferences, surface)
+    !hasCompletedGatewayGuidanceOnboarding(guidanceState) &&
+    !hasDismissedGatewayGuidanceSurface(guidanceState, surface)
   )
 }
 
@@ -175,6 +176,7 @@ interface BuildUnifiedApiGuidanceModelInput {
   keyAccessibleAccountCount: number
   profileCount: number
   preferences: UserPreferences | null | undefined
+  guidanceState?: FeatureGuidanceState | null
   managedSiteType: ManagedSiteType | undefined
 }
 
@@ -316,7 +318,7 @@ export function buildUnifiedApiGuidanceModel(
     sourceKind === UNIFIED_API_GUIDANCE_SOURCE_KINDS.Account ||
     sourceKind === UNIFIED_API_GUIDANCE_SOURCE_KINDS.Both
 
-  if (hasCompletedGatewayGuidanceOnboarding(input.preferences)) {
+  if (hasCompletedGatewayGuidanceOnboarding(input.guidanceState)) {
     return {
       status: UNIFIED_API_GUIDANCE_STATUSES.HasGatewayChannels,
       sourceKind,

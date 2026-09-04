@@ -12,8 +12,12 @@ import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 import { EVENTS, Joyride, STATUS, type EventData } from "react-joyride"
 
-import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { useFeatureGuidanceContext } from "~/contexts/FeatureGuidanceContext"
 import { useIsMobile, useMediaQuery } from "~/hooks/useMediaQuery"
+import {
+  PRODUCT_TOUR_VARIANTS,
+  type ProductTourVariant,
+} from "~/services/featureGuidance/featureGuidanceState"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -29,7 +33,7 @@ import {
   PRODUCT_TOUR_FOCUS_RETURN_ATTRIBUTE,
   PRODUCT_TOUR_SOURCES,
   PRODUCT_TOUR_TARGETS,
-  PRODUCT_TOUR_VERSION,
+  PRODUCT_TOUR_VERSIONS,
   type ProductTourSource,
 } from "./constants"
 import {
@@ -141,9 +145,12 @@ export function ProductTourProvider({
   onMobileSidebarOpenChange,
 }: ProductTourProviderProps) {
   const { t } = useTranslation("productTour")
-  const { preferences, completeProductTour, dismissProductTour } =
-    useUserPreferencesContext()
+  const { state, completeProductTour, dismissProductTour } =
+    useFeatureGuidanceContext()
   const isMobile = useIsMobile()
+  const activeVariant = isMobile
+    ? PRODUCT_TOUR_VARIANTS.Compact
+    : PRODUCT_TOUR_VARIANTS.Expanded
   const prefersReducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)")
   const [isRunning, setIsRunning] = useState(false)
   const [invitationDeferred, setInvitationDeferred] = useState(
@@ -158,6 +165,7 @@ export function ProductTourProvider({
   const initialMobileSidebarOpenRef = useRef(false)
   const mobileSidebarOpenRef = useRef(isMobileSidebarOpen)
   const tourViewportRef = useRef<boolean | null>(null)
+  const startedVariantRef = useRef<ProductTourVariant>(activeVariant)
   mobileSidebarOpenRef.current = isMobileSidebarOpen
 
   const prepareMobileSurface = useCallback(
@@ -225,13 +233,11 @@ export function ProductTourProvider({
       )
 
       try {
-        const result = completed
-          ? await completeProductTour(PRODUCT_TOUR_VERSION)
-          : await dismissProductTour(PRODUCT_TOUR_VERSION)
-
-        if (!result.ok) {
-          toast.error(t("productTour:errors.saveProgress"))
-        }
+        const variant = startedVariantRef.current
+        const version = PRODUCT_TOUR_VERSIONS[variant]
+        await (completed
+          ? completeProductTour(variant, version)
+          : dismissProductTour(variant, version))
       } catch {
         toast.error(t("productTour:errors.saveProgress"))
       }
@@ -253,6 +259,7 @@ export function ProductTourProvider({
       }
 
       startedOnMobileRef.current = isMobile
+      startedVariantRef.current = activeVariant
       initialMobileSidebarOpenRef.current = isMobileSidebarOpen
       tourViewportRef.current = isMobile
 
@@ -277,6 +284,7 @@ export function ProductTourProvider({
     },
     [
       isMobile,
+      activeVariant,
       isMobileSidebarOpen,
       isRunning,
       isSidebarCollapsed,
@@ -362,7 +370,7 @@ export function ProductTourProvider({
         !isRunning &&
         !invitationDeferred &&
         !handledInSession &&
-        shouldOfferProductTour(preferences.productTour),
+        shouldOfferProductTour(state.productTour, activeVariant),
       startTour,
       deferTourInvitation,
     }),
@@ -371,7 +379,8 @@ export function ProductTourProvider({
       handledInSession,
       invitationDeferred,
       isRunning,
-      preferences.productTour,
+      activeVariant,
+      state.productTour,
       startTour,
     ],
   )

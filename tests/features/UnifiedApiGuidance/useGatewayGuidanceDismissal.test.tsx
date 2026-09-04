@@ -2,12 +2,16 @@ import { act, renderHook, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useGatewayGuidanceDismissal } from "~/features/UnifiedApiGuidance/useGatewayGuidanceDismissal"
-import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 
 const dismissGatewayGuidanceSurfaceMock = vi.hoisted(() => vi.fn())
 
-vi.mock("~/contexts/UserPreferencesContext", () => ({
-  useUserPreferencesContext: () => ({
+vi.mock("~/contexts/FeatureGuidanceContext", () => ({
+  useFeatureGuidanceContext: () => ({
+    state: {
+      schemaVersion: 1,
+      productTour: {},
+      gatewayGuidance: { dismissedAtBySurface: {} },
+    },
     dismissGatewayGuidanceSurface: dismissGatewayGuidanceSurfaceMock,
   }),
 }))
@@ -25,21 +29,17 @@ describe("useGatewayGuidanceDismissal", () => {
         throw new Error("session storage unavailable")
       })
 
-    const { result } = renderHook(() =>
-      useGatewayGuidanceDismissal("account", DEFAULT_PREFERENCES),
-    )
+    const { result } = renderHook(() => useGatewayGuidanceDismissal("account"))
 
     expect(result.current.shouldShow).toBe(true)
     getItem.mockRestore()
   })
 
-  it("keeps the dialog open on ok:false and clears the error after retry", async () => {
+  it("keeps the dialog open after a failed write and clears the error after retry", async () => {
     dismissGatewayGuidanceSurfaceMock
-      .mockResolvedValueOnce({ ok: false })
-      .mockResolvedValueOnce({ ok: true, preferences: DEFAULT_PREFERENCES })
-    const { result } = renderHook(() =>
-      useGatewayGuidanceDismissal("account", DEFAULT_PREFERENCES),
-    )
+      .mockRejectedValueOnce(new Error("storage unavailable"))
+      .mockResolvedValueOnce(undefined)
+    const { result } = renderHook(() => useGatewayGuidanceDismissal("account"))
 
     act(() => result.current.requestPermanentDismiss())
     await act(async () => {
@@ -62,7 +62,7 @@ describe("useGatewayGuidanceDismissal", () => {
       new Error("sensitive backend detail"),
     )
     const { result } = renderHook(() =>
-      useGatewayGuidanceDismissal("apiCredentialProfiles", DEFAULT_PREFERENCES),
+      useGatewayGuidanceDismissal("apiCredentialProfiles"),
     )
 
     act(() => result.current.requestPermanentDismiss())

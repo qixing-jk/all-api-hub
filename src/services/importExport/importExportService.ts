@@ -7,6 +7,11 @@ import {
   coerceApiCredentialProfilesConfig,
 } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import {
+  featureGuidanceState,
+  mergeFeatureGuidanceStates,
+  type FeatureGuidanceState,
+} from "~/services/featureGuidance/featureGuidanceState"
+import {
   channelConfigStorage,
   coerceChannelConfigSnapshot,
 } from "~/services/managedSites/channelConfigStorage"
@@ -126,6 +131,8 @@ export interface BackupFullV2 {
    */
   tagStore?: TagStore
   preferences: UserPreferences
+  /** Feature-introduction progress synchronized with the preferences section. */
+  featureGuidance?: FeatureGuidanceState
   channelConfigs: ChannelConfigSnapshot
   /**
    * Standalone API credential profiles snapshot (contains secrets).
@@ -160,6 +167,7 @@ export interface BackupPreferencesPartialV2 {
   timestamp: number
   type: "preferences"
   preferences: UserPreferences
+  featureGuidance?: FeatureGuidanceState
 }
 
 export type BackupV2 =
@@ -177,6 +185,7 @@ type LegacyBackupLike = {
   type?: "accounts" | "preferences" | "channelConfigs" | string
   accounts?: any
   preferences?: any
+  featureGuidance?: any
   channelConfigs?: any
   tagStore?: any
   apiCredentialProfiles?: any
@@ -193,6 +202,36 @@ type LegacyBackupLike = {
  * that what we write conforms to the latest schema.
  */
 export type RawBackupData = LegacyBackupLike
+
+/** Reads current guidance state plus released legacy gateway progress. */
+export function readBackupFeatureGuidance(
+  data: RawBackupData,
+): FeatureGuidanceState | null {
+  const nestedData =
+    data.data && typeof data.data === "object" ? data.data : undefined
+  const rootGuidance = data.featureGuidance ?? nestedData?.featureGuidance
+  const preferences = data.preferences ?? nestedData?.preferences
+  const legacyGatewayGuidance =
+    preferences && typeof preferences === "object"
+      ? preferences.gatewayGuidance
+      : undefined
+
+  if (rootGuidance === undefined && legacyGatewayGuidance === undefined) {
+    return null
+  }
+
+  return mergeFeatureGuidanceStates(rootGuidance, {
+    gatewayGuidance: legacyGatewayGuidance,
+  })
+}
+
+/** Merges guidance carried by the preferences backup section into local state. */
+async function importBackupFeatureGuidance(data: RawBackupData): Promise<void> {
+  const incoming = readBackupFeatureGuidance(data)
+  if (incoming) {
+    await featureGuidanceState.mergeState(incoming)
+  }
+}
 
 /** Finds a channel-config section without conflating absence with invalid data. */
 function readRawChannelConfigSection(data: RawBackupData): {
@@ -410,6 +449,7 @@ async function importV1Backup(
           })
         : await userPreferences.importPreferences(preferencesData)
       if (writeResult.ok) {
+        await importBackupFeatureGuidance(data)
         preferencesImported = true
       } else {
         logger.error("Failed to import user preferences from legacy backup")
@@ -466,6 +506,7 @@ export function normalizeBackupForMerge(
   deletedEntryRecords: AccountStorageConfig["deletedEntryRecords"]
   accountsTimestamp: number
   preferences: any | null
+  featureGuidance: FeatureGuidanceState | null
   channelConfigs: ChannelConfigSnapshot | null
   tagStore: TagStore | null
   apiCredentialProfiles: ApiCredentialProfilesConfig | null
@@ -479,6 +520,7 @@ export function normalizeBackupForMerge(
       deletedEntryRecords: {},
       accountsTimestamp: 0,
       preferences: null,
+      featureGuidance: null,
       channelConfigs: null,
       tagStore: null,
       apiCredentialProfiles: null,
@@ -518,6 +560,7 @@ function normalizeV2BackupForMerge(
   deletedEntryRecords: AccountStorageConfig["deletedEntryRecords"]
   accountsTimestamp: number
   preferences: any | null
+  featureGuidance: FeatureGuidanceState | null
   channelConfigs: ChannelConfigSnapshot | null
   tagStore: TagStore | null
   apiCredentialProfiles: ApiCredentialProfilesConfig | null
@@ -558,6 +601,7 @@ function normalizeV2BackupForMerge(
     deletedEntryRecords,
     accountsTimestamp,
     preferences: data.preferences || localPreferences,
+    featureGuidance: readBackupFeatureGuidance(data),
     channelConfigs,
     tagStore: data.tagStore ?? null,
     apiCredentialProfiles: data.apiCredentialProfiles
@@ -580,6 +624,7 @@ function normalizeV1BackupForMerge(
   deletedEntryRecords: AccountStorageConfig["deletedEntryRecords"]
   accountsTimestamp: number
   preferences: any | null
+  featureGuidance: FeatureGuidanceState | null
   channelConfigs: ChannelConfigSnapshot | null
   tagStore: TagStore | null
   apiCredentialProfiles: ApiCredentialProfilesConfig | null
@@ -634,6 +679,7 @@ function normalizeV1BackupForMerge(
     deletedEntryRecords,
     accountsTimestamp,
     preferences,
+    featureGuidance: readBackupFeatureGuidance(data),
     channelConfigs,
     tagStore: (data as any).tagStore ?? (data.data as any)?.tagStore ?? null,
     apiCredentialProfiles: null,
@@ -692,6 +738,7 @@ async function importV2Backup(
         })
       : await userPreferences.importPreferences(preferences)
     if (writeResult.ok) {
+      await importBackupFeatureGuidance(data)
       preferencesImported = true
     } else {
       logger.error("Failed to import user preferences from V2 backup")
@@ -822,6 +869,8 @@ async function importV2PreferencesWithReplace(
     logger.error("Failed to import user preferences from V2 backup")
     throw new ImportExportError("IMPORT_FAILED")
   }
+
+  await importBackupFeatureGuidance(data)
 }
 
 /** Imports V2 channel configuration by replacing current channel configuration. */

@@ -142,6 +142,13 @@ vi.mock("~/contexts/UserPreferencesContext", () => ({
   useUserPreferencesContext: () => mockUserPreferences,
 }))
 
+vi.mock("~/contexts/FeatureGuidanceContext", () => ({
+  useFeatureGuidanceContext: () => ({
+    markGatewayGuidanceOnboardingCompleted:
+      mockUserPreferences.markGatewayGuidanceOnboardingCompleted,
+  }),
+}))
+
 vi.mock("~/services/integrations/cherryStudio", () => ({
   OpenInCherryStudio: (...args: unknown[]) => mockOpenInCherryStudio(...args),
 }))

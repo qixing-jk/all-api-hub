@@ -5,6 +5,11 @@ import { Storage } from "@plasmohq/storage"
 import { BACKUP_VERSION } from "~/constants/importExport"
 import { accountDataTransfer } from "~/services/accounts/accountStorage/accountDataTransfer"
 import { USER_PREFERENCES_STORAGE_KEYS } from "~/services/core/storageKeys"
+import {
+  createEmptyFeatureGuidanceState,
+  PRODUCT_TOUR_OUTCOMES,
+} from "~/services/featureGuidance/featureGuidanceState"
+import { readBackupFeatureGuidance } from "~/services/importExport/importExportService"
 import { ensureLegacyChannelConfigMigrationReady } from "~/services/managedSites/legacyChannelConfigMigration"
 import {
   DEFAULT_PREFERENCES,
@@ -26,6 +31,22 @@ vi.mock("~/services/managedSites/legacyChannelConfigMigration", () => ({
 
 const ensureLegacyChannelConfigMigrationReadyMock =
   ensureLegacyChannelConfigMigrationReady as unknown as ReturnType<typeof vi.fn>
+
+describe("readBackupFeatureGuidance", () => {
+  it("migrates released gateway progress but ignores the draft product tour preference", () => {
+    const guidance = readBackupFeatureGuidance({
+      version: BACKUP_VERSION,
+      timestamp: 1,
+      preferences: {
+        gatewayGuidance: { onboardingCompletedAt: 123 },
+        productTour: { completedVersion: 99, completedAt: 456 },
+      },
+    })
+
+    expect(guidance?.gatewayGuidance.onboardingCompletedAt).toBe(123)
+    expect(guidance?.productTour).toEqual({})
+  })
+})
 
 describe("filterWebdavBackupPayloadBySelection", () => {
   const baseBackup: any = {
@@ -67,6 +88,16 @@ describe("filterWebdavBackupPayloadBySelection", () => {
         },
       },
     },
+    featureGuidance: {
+      ...createEmptyFeatureGuidanceState(),
+      productTour: {
+        expanded: {
+          handledVersion: 2,
+          outcome: PRODUCT_TOUR_OUTCOMES.Completed,
+          handledAt: 200,
+        },
+      },
+    },
     channelConfigs: { 1: { enabled: true } },
     apiCredentialProfiles: { version: 1, profiles: [], lastUpdated: 0 },
   }
@@ -83,6 +114,7 @@ describe("filterWebdavBackupPayloadBySelection", () => {
     })
 
     expect(payload.preferences).toBeUndefined()
+    expect(payload.featureGuidance).toBeUndefined()
     expect(payload.apiCredentialProfiles).toBeUndefined()
     expect(payload.tagStore).toBeDefined()
 
@@ -115,6 +147,7 @@ describe("filterWebdavBackupPayloadBySelection", () => {
     })
 
     expect(payload.preferences).toBeUndefined()
+    expect(payload.featureGuidance).toBeUndefined()
     expect(payload.apiCredentialProfiles).toBeUndefined()
     expect(payload.tagStore).toBeDefined()
 
@@ -151,11 +184,107 @@ describe("filterWebdavBackupPayloadBySelection", () => {
       sharedPreferencesLastUpdated: 1,
       themeMode: "dark",
     })
+    expect(payload.featureGuidance).toEqual(baseBackup.featureGuidance)
     expect(payload.channelConfigs).toEqual(baseBackup.channelConfigs)
   })
 })
 
 describe("mergeWebdavBackupPayloadBySelection", () => {
+  it("monotonically merges guidance when preferences are selected", () => {
+    const localGuidance = {
+      ...createEmptyFeatureGuidanceState(),
+      productTour: {
+        expanded: {
+          handledVersion: 1,
+          outcome: PRODUCT_TOUR_OUTCOMES.Completed,
+          handledAt: 100,
+        },
+      },
+    }
+    const remoteGuidance = {
+      ...createEmptyFeatureGuidanceState(),
+      productTour: {
+        expanded: {
+          handledVersion: 2,
+          outcome: PRODUCT_TOUR_OUTCOMES.Dismissed,
+          handledAt: 200,
+        },
+      },
+    }
+    const payload = mergeWebdavBackupPayloadBySelection({
+      backup: {
+        version: BACKUP_VERSION,
+        timestamp: 2,
+        accounts: {
+          accounts: [],
+          bookmarks: [],
+          pinnedAccountIds: [],
+          orderedAccountIds: [],
+          last_updated: 2,
+        },
+        preferences: DEFAULT_PREFERENCES,
+        featureGuidance: localGuidance,
+        channelConfigs: { schemaVersion: 1, configs: {} },
+      },
+      selection: {
+        accounts: false,
+        bookmarks: false,
+        apiCredentialProfiles: false,
+        preferences: true,
+      },
+      remoteBackup: {
+        version: BACKUP_VERSION,
+        timestamp: 1,
+        preferences: DEFAULT_PREFERENCES,
+        featureGuidance: remoteGuidance,
+      },
+    })
+
+    expect((payload.featureGuidance as any).productTour.expanded).toEqual(
+      remoteGuidance.productTour.expanded,
+    )
+  })
+
+  it("preserves remote guidance when preferences are not selected", () => {
+    const remoteGuidance = {
+      ...createEmptyFeatureGuidanceState(),
+      gatewayGuidance: {
+        onboardingCompletedAt: 123,
+        dismissedAtBySurface: {},
+      },
+    }
+    const payload = mergeWebdavBackupPayloadBySelection({
+      backup: {
+        version: BACKUP_VERSION,
+        timestamp: 2,
+        accounts: {
+          accounts: [],
+          bookmarks: [],
+          pinnedAccountIds: [],
+          orderedAccountIds: [],
+          last_updated: 2,
+        },
+        preferences: DEFAULT_PREFERENCES,
+        featureGuidance: createEmptyFeatureGuidanceState(),
+        channelConfigs: { schemaVersion: 1, configs: {} },
+      },
+      selection: {
+        accounts: true,
+        bookmarks: false,
+        apiCredentialProfiles: false,
+        preferences: false,
+      },
+      remoteBackup: {
+        version: BACKUP_VERSION,
+        timestamp: 1,
+        preferences: DEFAULT_PREFERENCES,
+        featureGuidance: remoteGuidance,
+      },
+    })
+
+    expect(payload.featureGuidance).toEqual(remoteGuidance)
+  })
+
   it("rejects future nested profile configs before replacing the remote backup", () => {
     expect(() =>
       mergeWebdavBackupPayloadBySelection({

@@ -12,6 +12,17 @@ import {
 } from "~/services/productAnalytics/contracts"
 import { render, screen } from "~~/tests/test-utils/render"
 
+vi.mock("~/contexts/FeatureGuidanceContext", () => ({
+  useFeatureGuidanceContext: () => ({
+    state: {
+      schemaVersion: 1,
+      productTour: {},
+      gatewayGuidance: { dismissedAtBySurface: {} },
+    },
+    dismissGatewayGuidanceSurface: vi.fn(),
+  }),
+}))
+
 const openAddAccountMock = vi.fn()
 const handleRefreshMock = vi.fn()
 const handleRefreshDisabledAccountsMock = vi.fn()

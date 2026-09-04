@@ -5,6 +5,12 @@ import { TokenList } from "~/features/KeyManagement/components/TokenList"
 import { render, screen } from "~~/tests/test-utils/render"
 import { createAccount } from "~~/tests/utils/keyManagementFactories"
 
+vi.mock("~/contexts/FeatureGuidanceContext", () => ({
+  useFeatureGuidanceContext: () => ({
+    markGatewayGuidanceOnboardingCompleted: vi.fn(),
+  }),
+}))
+
 const { openSiteSupportRequestPageMock } = vi.hoisted(() => ({
   openSiteSupportRequestPageMock: vi.fn(),
 }))

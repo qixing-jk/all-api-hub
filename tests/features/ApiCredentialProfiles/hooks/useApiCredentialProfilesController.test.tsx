@@ -74,6 +74,13 @@ vi.mock("~/contexts/UserPreferencesContext", () => ({
   }),
 }))
 
+vi.mock("~/contexts/FeatureGuidanceContext", () => ({
+  useFeatureGuidanceContext: () => ({
+    markGatewayGuidanceOnboardingCompleted:
+      markGatewayGuidanceOnboardingCompletedMock,
+  }),
+}))
+
 vi.mock("~/services/apiCredentialProfiles/telemetry", () => ({
   refreshApiCredentialProfileTelemetry: (...args: unknown[]) =>
     refreshTelemetryMock(...args),

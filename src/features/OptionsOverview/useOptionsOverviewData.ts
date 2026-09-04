@@ -8,6 +8,7 @@ import { accountStatistics } from "~/services/accounts/accountStorage/accountSta
 import { createEmptyAccountTodayStatsCoverage } from "~/services/accounts/accountTodayStats"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
+import { featureGuidanceState } from "~/services/featureGuidance/featureGuidanceState"
 import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { siteAnnouncementStorage } from "~/services/siteAnnouncements/storage"
@@ -48,6 +49,7 @@ const OPTIONS_OVERVIEW_DATA_SOURCES = [
   "usageHistory",
   "apiCredentialProfiles",
   "preferences",
+  "featureGuidance",
   "autoCheckinStatus",
   "siteAnnouncementRecords",
   "siteAnnouncementStatuses",
@@ -93,6 +95,7 @@ export function useOptionsOverviewData(): OptionsOverviewDataState {
           usageHistoryStorage.getStore(),
           apiCredentialProfilesStorage.listProfiles(),
           userPreferences.getPreferences(),
+          featureGuidanceState.getState(),
           autoCheckinStorage.getStatus(),
           siteAnnouncementStorage.listRecords(),
           siteAnnouncementStorage.getStatus(),
@@ -104,6 +107,7 @@ export function useOptionsOverviewData(): OptionsOverviewDataState {
           usageStoreResult,
           apiCredentialProfilesResult,
           preferencesResult,
+          featureGuidanceResult,
           autoCheckinStatusResult,
           siteAnnouncementRecordsResult,
           siteAnnouncementStatusesResult,
@@ -147,6 +151,7 @@ export function useOptionsOverviewData(): OptionsOverviewDataState {
           [],
         )
         const preferences = settledValue(preferencesResult, null)
+        const guidanceState = settledValue(featureGuidanceResult, null)
         const autoCheckinStatus = settledValue(autoCheckinStatusResult, null)
         const siteAnnouncementRecords = settledValue(
           siteAnnouncementRecordsResult,
@@ -160,6 +165,7 @@ export function useOptionsOverviewData(): OptionsOverviewDataState {
           accountsResult,
           apiCredentialProfilesResult,
           preferencesResult,
+          featureGuidanceResult,
         ].every((result) => result.status === "fulfilled")
 
         const configuredManagedSiteType = preferences?.managedSiteType
@@ -175,6 +181,7 @@ export function useOptionsOverviewData(): OptionsOverviewDataState {
             apiCredentialProfiles,
             usageStore,
             preferences,
+            guidanceState,
             managedSiteType,
             autoCheckinStatus,
             siteAnnouncementRecords:

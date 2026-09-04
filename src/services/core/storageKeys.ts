@@ -49,6 +49,8 @@ export const STORAGE_LOCKS = {
    * preferences storage.
    */
   USER_PREFERENCES: "all-api-hub:user-preferences",
+  /** Exclusive lock for versioned product-guidance experience state. */
+  FEATURE_GUIDANCE: "all-api-hub:feature-guidance",
   /**
    * Exclusive lock used for read-modify-write sequences touching product
    * analytics preferences and cadence state.
@@ -102,6 +104,10 @@ export const TAG_STORAGE_KEYS = {
 
 export const USER_PREFERENCES_STORAGE_KEYS = {
   USER_PREFERENCES: "user_preferences",
+} as const
+
+export const FEATURE_GUIDANCE_STORAGE_KEYS = {
+  FEATURE_GUIDANCE_STATE: "featureGuidance_state_v1",
 } as const
 
 export const PRODUCT_ANALYTICS_STORAGE_KEYS = {
@@ -191,6 +197,7 @@ export const STORAGE_KEYS = {
   ...ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS,
   ...OPTIONS_SEARCH_STORAGE_KEYS,
   ...USER_PREFERENCES_STORAGE_KEYS,
+  ...FEATURE_GUIDANCE_STORAGE_KEYS,
   ...PRODUCT_ANALYTICS_STORAGE_KEYS,
   CHANGELOG_ON_UPDATE_PENDING_VERSION:
     CHANGELOG_ON_UPDATE_STORAGE_KEYS.PENDING_VERSION,

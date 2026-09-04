@@ -6,25 +6,58 @@ import {
   PRODUCT_TOUR_STEP_IDS,
   PRODUCT_TOUR_TARGET_ATTRIBUTE,
   PRODUCT_TOUR_TARGETS,
-  PRODUCT_TOUR_VERSION,
+  PRODUCT_TOUR_VERSIONS,
 } from "~/features/ProductTour/constants"
 import {
   buildProductTourSteps,
   shouldOfferProductTour,
 } from "~/features/ProductTour/model"
+import {
+  PRODUCT_TOUR_OUTCOMES,
+  PRODUCT_TOUR_VARIANTS,
+} from "~/services/featureGuidance/featureGuidanceState"
 
 describe("product tour model", () => {
   it("offers the current tour only until it is completed or dismissed", () => {
-    expect(shouldOfferProductTour(undefined)).toBe(true)
     expect(
-      shouldOfferProductTour({ completedVersion: PRODUCT_TOUR_VERSION - 1 }),
+      shouldOfferProductTour(undefined, PRODUCT_TOUR_VARIANTS.Expanded),
     ).toBe(true)
     expect(
-      shouldOfferProductTour({ completedVersion: PRODUCT_TOUR_VERSION }),
+      shouldOfferProductTour(
+        {
+          expanded: {
+            handledVersion: PRODUCT_TOUR_VERSIONS.expanded - 1,
+            outcome: PRODUCT_TOUR_OUTCOMES.Completed,
+            handledAt: 1,
+          },
+        },
+        PRODUCT_TOUR_VARIANTS.Expanded,
+      ),
+    ).toBe(true)
+    expect(
+      shouldOfferProductTour(
+        {
+          expanded: {
+            handledVersion: PRODUCT_TOUR_VERSIONS.expanded,
+            outcome: PRODUCT_TOUR_OUTCOMES.Completed,
+            handledAt: 1,
+          },
+        },
+        PRODUCT_TOUR_VARIANTS.Expanded,
+      ),
     ).toBe(false)
     expect(
-      shouldOfferProductTour({ dismissedVersion: PRODUCT_TOUR_VERSION }),
-    ).toBe(false)
+      shouldOfferProductTour(
+        {
+          compact: {
+            handledVersion: PRODUCT_TOUR_VERSIONS.compact,
+            outcome: PRODUCT_TOUR_OUTCOMES.Dismissed,
+            handledAt: 1,
+          },
+        },
+        PRODUCT_TOUR_VARIANTS.Expanded,
+      ),
+    ).toBe(true)
   })
 
   it("builds an explanatory step for every options module group", () => {

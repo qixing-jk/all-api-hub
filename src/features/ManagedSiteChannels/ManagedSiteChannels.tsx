@@ -24,6 +24,7 @@ import { ChannelTypeNames } from "~/constants/managedSite"
 import { OctopusOutboundTypeNames } from "~/constants/octopus"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
+import { useFeatureGuidanceContext } from "~/contexts/FeatureGuidanceContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { loadNewApiChannelKeyWithVerification } from "~/features/ManagedSiteVerification/loadNewApiChannelKeyWithVerification"
 import { NewApiManagedVerificationDialog } from "~/features/ManagedSiteVerification/NewApiManagedVerificationDialog"
@@ -314,9 +315,9 @@ export default function ManagedSiteChannels({
     newApiUsername,
     newApiPassword,
     newApiTotpSecret,
-    markGatewayGuidanceOnboardingCompleted,
     updateManagedSiteType,
   } = useUserPreferencesContext()
+  const { markGatewayGuidanceOnboardingCompleted } = useFeatureGuidanceContext()
   const managedSiteType = siteType ?? contextManagedSiteType
   const isOctopus = managedSiteType === SITE_TYPES.OCTOPUS
   const isAxonHub = managedSiteType === SITE_TYPES.AXON_HUB

@@ -4,6 +4,11 @@ import {
   mergeApiCredentialProfilesConfigs,
 } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import {
+  featureGuidanceState,
+  mergeFeatureGuidanceStates,
+  type FeatureGuidanceState,
+} from "~/services/featureGuidance/featureGuidanceState"
+import {
   BACKUP_VERSION,
   normalizeBackupForMerge,
   type BackupFullV2,
@@ -515,12 +520,14 @@ class WebdavAutoSyncService {
       localAccountsConfig,
       localTagStore,
       localPreferences,
+      localFeatureGuidance,
       localChannelConfigs,
       localApiCredentialProfiles,
     ] = await Promise.all([
       accountDataTransfer.exportData(),
       tagStorage.exportTagStore(),
       userPreferences.exportPreferences(),
+      featureGuidanceState.getState(),
       channelConfigStorage.exportConfigs(),
       apiCredentialProfilesStorage.exportConfig(),
     ])
@@ -531,6 +538,7 @@ class WebdavAutoSyncService {
       localAccountsConfig,
       localTagStore,
       localPreferences,
+      localFeatureGuidance,
       localChannelConfigs,
       localApiCredentialProfiles,
     }
@@ -544,6 +552,7 @@ class WebdavAutoSyncService {
     deletedEntryRecords?: AccountStorageConfig["deletedEntryRecords"]
     tagStore: TagStore
     preferences: UserPreferences
+    featureGuidance: FeatureGuidanceState
     channelConfigs: ChannelConfigSnapshot
     apiCredentialProfiles: ApiCredentialProfilesConfig
   }): BackupFullV2 {
@@ -560,6 +569,7 @@ class WebdavAutoSyncService {
       },
       tagStore: input.tagStore,
       preferences: input.preferences,
+      featureGuidance: input.featureGuidance,
       channelConfigs: input.channelConfigs,
       apiCredentialProfiles: input.apiCredentialProfiles,
     }
@@ -589,6 +599,7 @@ class WebdavAutoSyncService {
       localAccountsConfig,
       localTagStore,
       localPreferences,
+      localFeatureGuidance,
       localChannelConfigs,
       localApiCredentialProfiles,
     } = await this.collectLocalSyncSnapshot()
@@ -615,6 +626,7 @@ class WebdavAutoSyncService {
       deletedEntryRecords: localAccountsConfig.deletedEntryRecords,
       tagStore: localTagStore,
       preferences: localPreferences,
+      featureGuidance: localFeatureGuidance,
       channelConfigs: localChannelConfigs,
       apiCredentialProfiles: localApiCredentialProfiles,
     })
@@ -655,6 +667,7 @@ class WebdavAutoSyncService {
       localAccountsConfig,
       localTagStore,
       localPreferences,
+      localFeatureGuidance,
       localChannelConfigs,
       localApiCredentialProfiles,
     } = await this.collectLocalSyncSnapshot()
@@ -690,6 +703,15 @@ class WebdavAutoSyncService {
     // 决定同步策略
     const strategy =
       preferences.webdav.syncStrategy || WEBDAV_SYNC_STRATEGIES.MERGE
+    const featureGuidanceToSave =
+      remoteData &&
+      syncDataSelection.preferences &&
+      strategy !== WEBDAV_SYNC_STRATEGIES.UPLOAD_ONLY
+        ? mergeFeatureGuidanceStates(
+            localFeatureGuidance,
+            normalizedRemote.featureGuidance,
+          )
+        : localFeatureGuidance
     const mergeChannelConfigsOnApply =
       strategy === WEBDAV_SYNC_STRATEGIES.MERGE ||
       normalizedRemote.channelConfigs === null
@@ -1006,6 +1028,9 @@ class WebdavAutoSyncService {
         localPreferences,
         localApiCredentialProfiles,
       })
+      if (syncDataSelection.preferences) {
+        await featureGuidanceState.mergeState(featureGuidanceToSave)
+      }
     }
 
     // 上传到WebDAV
@@ -1017,6 +1042,7 @@ class WebdavAutoSyncService {
       deletedEntryRecords: deletedEntryRecordsToSave,
       tagStore: tagStoreToSave,
       preferences: preferencesToSave,
+      featureGuidance: featureGuidanceToSave,
       channelConfigs: channelConfigsToSave,
       apiCredentialProfiles: apiCredentialProfilesToSave,
     })

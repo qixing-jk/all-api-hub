@@ -20,6 +20,7 @@ import {
 import { KelivoExportDialog } from "~/components/KelivoExportDialog"
 import { ManagedSiteImportButton } from "~/components/ManagedSiteImportButton"
 import { IconButton } from "~/components/ui"
+import { useFeatureGuidanceContext } from "~/contexts/FeatureGuidanceContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import {
@@ -119,8 +120,8 @@ export function RuntimeKeyActionControls({
     claudeCodeRouterApiKey,
     cliProxyBaseUrl,
     cliProxyManagementKey,
-    markGatewayGuidanceOnboardingCompleted,
   } = useUserPreferencesContext()
+  const { markGatewayGuidanceOnboardingCompleted } = useFeatureGuidanceContext()
   const { openWithAccount, openWithCredentials } = useChannelDialog()
 
   const [isClaudeCodeRouterOpen, setIsClaudeCodeRouterOpen] = useState(false)

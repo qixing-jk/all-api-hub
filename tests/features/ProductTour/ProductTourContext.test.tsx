@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
   PRODUCT_TOUR_SOURCES,
-  PRODUCT_TOUR_VERSION,
+  PRODUCT_TOUR_VERSIONS,
 } from "~/features/ProductTour/constants"
 import {
   ProductTourProvider,
@@ -12,6 +12,10 @@ import {
 } from "~/features/ProductTour/ProductTourContext"
 import { ProductTourInvitation } from "~/features/ProductTour/ProductTourInvitation"
 import { ProductTourReplayCard } from "~/features/ProductTour/ProductTourReplayCard"
+import {
+  PRODUCT_TOUR_OUTCOMES,
+  PRODUCT_TOUR_VARIANTS,
+} from "~/services/featureGuidance/featureGuidanceState"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_EVENTS,
@@ -25,19 +29,27 @@ const mocks = vi.hoisted(() => ({
   expandSidebar: vi.fn(),
   isMobile: false,
   mobileSidebarOpenChange: vi.fn(),
-  preferences: { productTour: {} } as {
+  guidanceState: { productTour: {} } as {
     productTour: {
-      completedVersion?: number
-      dismissedVersion?: number
+      expanded?: {
+        handledVersion: number
+        outcome: "completed" | "dismissed"
+        handledAt: number
+      }
+      compact?: {
+        handledVersion: number
+        outcome: "completed" | "dismissed"
+        handledAt: number
+      }
     }
   },
   toastError: vi.fn(),
   track: vi.fn(),
 }))
 
-vi.mock("~/contexts/UserPreferencesContext", () => ({
-  useUserPreferencesContext: () => ({
-    preferences: mocks.preferences,
+vi.mock("~/contexts/FeatureGuidanceContext", () => ({
+  useFeatureGuidanceContext: () => ({
+    state: mocks.guidanceState,
     completeProductTour: mocks.complete,
     dismissProductTour: mocks.dismiss,
   }),
@@ -162,20 +174,14 @@ function renderTour(
 describe("ProductTourProvider", () => {
   beforeEach(() => {
     sessionStorage.clear()
-    mocks.complete.mockReset().mockResolvedValue({
-      ok: true,
-      preferences: mocks.preferences,
-    })
-    mocks.dismiss.mockReset().mockResolvedValue({
-      ok: true,
-      preferences: mocks.preferences,
-    })
+    mocks.complete.mockReset().mockResolvedValue(undefined)
+    mocks.dismiss.mockReset().mockResolvedValue(undefined)
     mocks.expandSidebar.mockReset()
     mocks.mobileSidebarOpenChange.mockReset()
     mocks.track.mockReset()
     mocks.toastError.mockReset()
     mocks.isMobile = false
-    mocks.preferences.productTour = {}
+    mocks.guidanceState.productTour = {}
   })
 
   it("expands the desktop sidebar, tracks step views, and persists completion", async () => {
@@ -207,7 +213,10 @@ describe("ProductTourProvider", () => {
     await user.click(screen.getByRole("button", { name: "finish tour" }))
 
     await waitFor(() => {
-      expect(mocks.complete).toHaveBeenCalledWith(PRODUCT_TOUR_VERSION)
+      expect(mocks.complete).toHaveBeenCalledWith(
+        PRODUCT_TOUR_VARIANTS.Expanded,
+        PRODUCT_TOUR_VERSIONS.expanded,
+      )
     })
     expect(mocks.track).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
@@ -230,7 +239,10 @@ describe("ProductTourProvider", () => {
     await user.click(screen.getByRole("button", { name: "skip tour" }))
 
     await waitFor(() => {
-      expect(mocks.dismiss).toHaveBeenCalledWith(PRODUCT_TOUR_VERSION)
+      expect(mocks.dismiss).toHaveBeenCalledWith(
+        PRODUCT_TOUR_VARIANTS.Expanded,
+        PRODUCT_TOUR_VERSIONS.expanded,
+      )
     })
     expect(mocks.track).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
@@ -312,8 +324,12 @@ describe("ProductTourProvider", () => {
   })
 
   it("does not offer a tour version that was already completed", () => {
-    mocks.preferences.productTour = {
-      completedVersion: PRODUCT_TOUR_VERSION,
+    mocks.guidanceState.productTour = {
+      expanded: {
+        handledVersion: PRODUCT_TOUR_VERSIONS.expanded,
+        outcome: PRODUCT_TOUR_OUTCOMES.Completed,
+        handledAt: 1,
+      },
     }
 
     renderTour(<ProductTourInvitation />)

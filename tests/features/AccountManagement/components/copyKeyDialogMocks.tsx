@@ -301,6 +301,14 @@ vi.mock("~/contexts/UserPreferencesContext", () => ({
   useUserPreferencesContext: () => userPreferencesContextMock,
 }))
 
+vi.mock("~/contexts/FeatureGuidanceContext", () => ({
+  FeatureGuidanceProvider: ({ children }: { children: ReactNode }) => children,
+  useFeatureGuidanceContext: () => ({
+    markGatewayGuidanceOnboardingCompleted:
+      userPreferencesContextMock.markGatewayGuidanceOnboardingCompleted,
+  }),
+}))
+
 vi.mock("~/services/integrations/cherryStudio", () => ({
   OpenInCherryStudio: (...args: unknown[]) => openInCherryStudioMock(...args),
 }))

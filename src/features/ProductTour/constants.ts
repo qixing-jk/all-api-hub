@@ -1,6 +1,13 @@
 import { OPTIONS_MENU_CATEGORY_IDS } from "~/constants/optionsMenuIds"
+import {
+  PRODUCT_TOUR_VARIANTS,
+  type ProductTourVariant,
+} from "~/services/featureGuidance/featureGuidanceState"
 
-export const PRODUCT_TOUR_VERSION = 1
+export const PRODUCT_TOUR_VERSIONS = {
+  [PRODUCT_TOUR_VARIANTS.Expanded]: 1,
+  [PRODUCT_TOUR_VARIANTS.Compact]: 1,
+} as const satisfies Record<ProductTourVariant, number>
 
 export const PRODUCT_TOUR_STEP_IDS = [
   "workspace",

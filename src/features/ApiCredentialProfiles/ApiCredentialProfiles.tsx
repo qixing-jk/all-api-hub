@@ -8,6 +8,7 @@ import { PageHeader } from "~/components/PageHeader"
 import { Button } from "~/components/ui"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import type { ManagedSiteType } from "~/constants/siteType"
+import { useFeatureGuidanceContext } from "~/contexts/FeatureGuidanceContext"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import {
@@ -32,7 +33,10 @@ import {
 import { useAccountData } from "~/hooks/useAccountData"
 import { useApiCredentialProfileLinks } from "~/hooks/useApiCredentialProfileLinks"
 import { apiCredentialProfileLinks } from "~/services/apiCredentialProfiles/apiCredentialProfileLinks"
-import { GATEWAY_GUIDANCE_SURFACES } from "~/services/preferences/userPreferences"
+import {
+  GATEWAY_GUIDANCE_SURFACES,
+  type FeatureGuidanceState,
+} from "~/services/featureGuidance/featureGuidanceState"
 import type { UserPreferences } from "~/services/preferences/userPreferences"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -86,16 +90,17 @@ export default function ApiCredentialProfiles({
   } = useApiCredentialProfileLinks()
   const { openAddDialog } = controller
   const { preferences, managedSiteType } = useUserPreferencesContext()
+  const { state: guidanceState } = useFeatureGuidanceContext()
   const [guidedImportEntryRequest, setGuidedImportEntryRequest] = useState(0)
   const [targetProfileRequest, setTargetProfileRequest] = useState(0)
   const unifiedApiGuidance = buildApiCredentialGatewayGuidanceModel(
     controller.profiles.length,
     preferences,
+    guidanceState,
     managedSiteType,
   )
   const guidanceDismissal = useGatewayGuidanceDismissal(
     GATEWAY_GUIDANCE_SURFACES.ApiCredentialProfiles,
-    preferences,
   )
   const consumedCreatePrefillKeyRef = useRef<string | null>(null)
   const consumedGuidedImportRef = useRef(false)
@@ -528,6 +533,7 @@ function getApiCredentialGuidanceActionLabel(
 export function buildApiCredentialGatewayGuidanceModel(
   profileCount: number,
   preferences: UserPreferences | null | undefined,
+  guidanceState: FeatureGuidanceState | null | undefined,
   managedSiteType: ManagedSiteType | undefined,
 ): UnifiedApiGuidanceModel {
   const model = buildUnifiedApiGuidanceModel({
@@ -535,6 +541,7 @@ export function buildApiCredentialGatewayGuidanceModel(
     keyAccessibleAccountCount: 0,
     profileCount,
     preferences,
+    guidanceState,
     managedSiteType,
   })
 

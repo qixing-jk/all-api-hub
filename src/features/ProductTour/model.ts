@@ -1,14 +1,17 @@
 import type { TFunction } from "i18next"
 import type { Step } from "react-joyride"
 
-import type { ProductTourPreferences } from "~/services/preferences/userPreferences"
+import type {
+  FeatureGuidanceState,
+  ProductTourVariant,
+} from "~/services/featureGuidance/featureGuidanceState"
 
 import {
   getProductTourTargetSelector,
   PRODUCT_TOUR_MOBILE_STEP_IDS,
   PRODUCT_TOUR_STEP_IDS,
   PRODUCT_TOUR_TARGETS,
-  PRODUCT_TOUR_VERSION,
+  PRODUCT_TOUR_VERSIONS,
   type ProductTourStepId,
 } from "./constants"
 
@@ -21,11 +24,11 @@ interface BuildProductTourStepsOptions {
 
 /** Return whether the current tour version should still be offered automatically. */
 export function shouldOfferProductTour(
-  preferences?: ProductTourPreferences,
+  state: FeatureGuidanceState["productTour"] | null | undefined,
+  variant: ProductTourVariant,
 ): boolean {
   return (
-    (preferences?.completedVersion ?? 0) < PRODUCT_TOUR_VERSION &&
-    (preferences?.dismissedVersion ?? 0) < PRODUCT_TOUR_VERSION
+    (state?.[variant]?.handledVersion ?? 0) < PRODUCT_TOUR_VERSIONS[variant]
   )
 }
 

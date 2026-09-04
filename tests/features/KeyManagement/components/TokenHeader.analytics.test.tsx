@@ -79,6 +79,13 @@ vi.mock("~/contexts/UserPreferencesContext", () => ({
   useUserPreferencesContext: () => userPreferencesContextMock(),
 }))
 
+vi.mock("~/contexts/FeatureGuidanceContext", () => ({
+  useFeatureGuidanceContext: () => ({
+    markGatewayGuidanceOnboardingCompleted:
+      markGatewayGuidanceOnboardingCompletedMock,
+  }),
+}))
+
 vi.mock("~/components/KiloCodeExportDialog", () => ({
   KiloCodeExportDialog: (props: unknown) => {
     kiloCodeDialogRenderMock(props)

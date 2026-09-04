@@ -23,6 +23,7 @@ import {
   IconButton,
   WorkflowTransitionButton,
 } from "~/components/ui"
+import { useFeatureGuidanceContext } from "~/contexts/FeatureGuidanceContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { KiloCodeProfileExportDialog } from "~/features/ApiCredentialProfiles/components/KiloCodeProfileExportDialog"
 import { VerifyApiCredentialProfileDialog } from "~/features/ApiCredentialProfiles/components/VerifyApiCredentialProfileDialog"
@@ -125,8 +126,8 @@ export function ServiceCredentialCard({
     claudeCodeRouterApiKey,
     cliProxyBaseUrl,
     cliProxyManagementKey,
-    markGatewayGuidanceOnboardingCompleted,
   } = useUserPreferencesContext()
+  const { markGatewayGuidanceOnboardingCompleted } = useFeatureGuidanceContext()
   const { openWithCredentials } = useChannelDialog()
   const identityKey = `${account.id}:${credential.service}`
   const visibleKeys = new Set<string>()

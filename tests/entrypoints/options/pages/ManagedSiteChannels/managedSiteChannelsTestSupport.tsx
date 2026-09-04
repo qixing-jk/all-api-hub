@@ -5,12 +5,14 @@ import { useChannelDialogContext } from "~/components/dialogs/ChannelDialog"
 import { CHANNEL_DIALOG_TEST_IDS } from "~/components/dialogs/ChannelDialog/testIds"
 import { ChannelType } from "~/constants"
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
+import { useFeatureGuidanceContext } from "~/contexts/FeatureGuidanceContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import ManagedSiteChannels from "~/features/ManagedSiteChannels/ManagedSiteChannels"
 import type { ChannelRow } from "~/features/ManagedSiteChannels/types"
 import { fetchChannelFilters } from "~/features/ManagedSiteChannels/utils/channelFilters"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
+import { createEmptyFeatureGuidanceState } from "~/services/featureGuidance/featureGuidanceState"
 import {
   getManagedSiteService,
   getManagedSiteServiceForType,
@@ -266,6 +268,15 @@ export const setupManagedSiteChannelsTest = () => {
     })
     vi.mocked(accountQueries.getAllAccounts).mockResolvedValue([])
     vi.mocked(apiCredentialProfilesStorage.listProfiles).mockResolvedValue([])
+    vi.mocked(useFeatureGuidanceContext).mockReturnValue({
+      state: createEmptyFeatureGuidanceState(),
+      completeProductTour: vi.fn(),
+      dismissProductTour: vi.fn(),
+      markGatewayGuidanceOnboardingCompleted:
+        markGatewayGuidanceOnboardingCompletedMock,
+      dismissGatewayGuidanceSurface: vi.fn(),
+      reloadFeatureGuidance: vi.fn(),
+    })
   })
 
   afterEach(() => {

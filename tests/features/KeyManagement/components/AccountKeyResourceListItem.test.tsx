@@ -10,6 +10,12 @@ import { maskSecretForDisplay } from "~/utils/core/formatters"
 import { server } from "~~/tests/msw/server"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
+vi.mock("~/contexts/FeatureGuidanceContext", () => ({
+  useFeatureGuidanceContext: () => ({
+    markGatewayGuidanceOnboardingCompleted: vi.fn(),
+  }),
+}))
+
 const AccountKeyResourceListItem = (props: any) => (
   <NativeAccountKeyResourceListItem
     cardAdapter={openRouterKeyResourceCardAdapter}

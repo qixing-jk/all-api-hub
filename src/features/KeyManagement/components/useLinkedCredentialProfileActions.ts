@@ -2,6 +2,7 @@ import { useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { useChannelDialog } from "~/components/dialogs/ChannelDialog"
+import { useFeatureGuidanceContext } from "~/contexts/FeatureGuidanceContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import {
   createCliProxyExportPayload,
@@ -55,8 +56,8 @@ export function useLinkedCredentialProfileActions(
     cliProxyBaseUrl,
     cliProxyManagementKey,
     managedSiteType,
-    markGatewayGuidanceOnboardingCompleted,
   } = useUserPreferencesContext()
+  const { markGatewayGuidanceOnboardingCompleted } = useFeatureGuidanceContext()
   const { openWithCredentials } = useChannelDialog()
   const [activeDialog, setActiveDialog] = useState<ActiveDialog>(null)
   const exportAccount = useMemo(() => createExportAccount(profile), [profile])

@@ -1609,6 +1609,7 @@ describe("normalizeBackupForMerge", () => {
       deletedEntryRecords: {},
       accountsTimestamp: 0,
       preferences: null,
+      featureGuidance: null,
       channelConfigs: null,
       tagStore: null,
       apiCredentialProfiles: null,

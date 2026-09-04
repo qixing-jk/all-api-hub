@@ -26,6 +26,7 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
 import { accountDataTransfer } from "~/services/accounts/accountStorage/accountDataTransfer"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
+import { featureGuidanceState } from "~/services/featureGuidance/featureGuidanceState"
 import { channelConfigStorage } from "~/services/managedSites/channelConfigStorage"
 import { ensureLegacyChannelConfigMigrationReady } from "~/services/managedSites/legacyChannelConfigMigration"
 import { userPreferences } from "~/services/preferences/userPreferences"
@@ -403,12 +404,14 @@ export default function WebDAVSettings() {
         accountData,
         tagStore,
         preferencesData,
+        featureGuidance,
         channelConfigs,
         apiCredentialProfiles,
       ] = await Promise.all([
         accountDataTransfer.exportData(),
         tagStorage.exportTagStore(),
         userPreferences.exportPreferences(),
+        featureGuidanceState.getState(),
         channelConfigStorage.exportConfigs(),
         apiCredentialProfilesStorage.exportConfig(),
       ])
@@ -418,6 +421,7 @@ export default function WebDAVSettings() {
         accounts: accountData,
         tagStore,
         preferences: preferencesData,
+        featureGuidance,
         channelConfigs,
         apiCredentialProfiles,
       }

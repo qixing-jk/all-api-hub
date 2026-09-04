@@ -35,6 +35,18 @@ vi.mock("~/components/AppLayout", () => ({
   AppLayout: ({ children }: { children: ReactNode }) => children,
 }))
 
+vi.mock("~/contexts/FeatureGuidanceContext", () => ({
+  useFeatureGuidanceContext: () => ({
+    state: {
+      schemaVersion: 1,
+      productTour: {},
+      gatewayGuidance: { dismissedAtBySurface: {} },
+    },
+    completeProductTour: vi.fn(),
+    dismissProductTour: vi.fn(),
+  }),
+}))
+
 vi.mock("~/components/PopupInterruptionHintBanner", () => ({
   default: () => <div>PopupInterruptionHintBanner</div>,
 }))

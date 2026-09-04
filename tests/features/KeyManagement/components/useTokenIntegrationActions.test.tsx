@@ -43,6 +43,12 @@ vi.mock("~/contexts/UserPreferencesContext", () => ({
   useUserPreferencesContext: () => preferences,
 }))
 
+vi.mock("~/contexts/FeatureGuidanceContext", () => ({
+  useFeatureGuidanceContext: () => ({
+    markGatewayGuidanceOnboardingCompleted: markOnboardingCompletedMock,
+  }),
+}))
+
 vi.mock("~/components/dialogs/ChannelDialog", () => ({
   useChannelDialog: () => ({ openWithAccount: openWithAccountMock }),
 }))

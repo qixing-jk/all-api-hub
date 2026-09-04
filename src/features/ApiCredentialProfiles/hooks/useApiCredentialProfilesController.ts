@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next"
 
 import { useChannelDialog } from "~/components/dialogs/ChannelDialog"
 import { RuntimeMessageTypes } from "~/constants/runtimeActions"
+import { useFeatureGuidanceContext } from "~/contexts/FeatureGuidanceContext"
 import { useProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import {
@@ -328,8 +329,8 @@ export function useApiCredentialProfilesController() {
     claudeCodeRouterApiKey,
     cliProxyBaseUrl,
     cliProxyManagementKey,
-    markGatewayGuidanceOnboardingCompleted,
   } = useUserPreferencesContext()
+  const { markGatewayGuidanceOnboardingCompleted } = useFeatureGuidanceContext()
   const analyticsScope = useProductAnalyticsScope()
   const { openWithCredentials } = useChannelDialog()
 

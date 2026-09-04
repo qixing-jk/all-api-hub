@@ -3,6 +3,7 @@ import {
   apiCredentialProfilesStorage,
   coerceApiCredentialProfilesConfig,
 } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
+import { mergeFeatureGuidanceStates } from "~/services/featureGuidance/featureGuidanceState"
 import type {
   BackupFullV2,
   RawBackupData,
@@ -180,6 +181,7 @@ type WebdavBackupPresence = {
   hasAccountsList: boolean
   hasBookmarksList: boolean
   hasPreferences: boolean
+  hasFeatureGuidance: boolean
   hasApiCredentialProfiles: boolean
   hasTagStore: boolean
   hasChannelConfigs: boolean
@@ -484,6 +486,7 @@ export function detectWebdavBackupPresence(raw: unknown): WebdavBackupPresence {
       hasAccountsList: false,
       hasBookmarksList: false,
       hasPreferences: false,
+      hasFeatureGuidance: false,
       hasApiCredentialProfiles: false,
       hasTagStore: false,
       hasChannelConfigs: false,
@@ -550,6 +553,12 @@ export function detectWebdavBackupPresence(raw: unknown): WebdavBackupPresence {
       ? Object.prototype.hasOwnProperty.call(legacyData, "preferences")
       : false)
 
+  const hasFeatureGuidance =
+    Object.prototype.hasOwnProperty.call(root, "featureGuidance") ||
+    (legacyData
+      ? Object.prototype.hasOwnProperty.call(legacyData, "featureGuidance")
+      : false)
+
   const hasApiCredentialProfiles =
     Object.prototype.hasOwnProperty.call(root, "apiCredentialProfiles") ||
     (legacyData
@@ -576,6 +585,7 @@ export function detectWebdavBackupPresence(raw: unknown): WebdavBackupPresence {
     hasAccountsList,
     hasBookmarksList,
     hasPreferences,
+    hasFeatureGuidance,
     hasApiCredentialProfiles,
     hasTagStore,
     hasChannelConfigs,
@@ -613,6 +623,10 @@ export function mergeWebdavBackupPayloadBySelection(input: {
     backup.preferences,
   )
   const remotePreferences = readBackupSection(remoteBackup, "preferences")
+  const remoteFeatureGuidance = readBackupSection(
+    remoteBackup,
+    "featureGuidance",
+  )
   const remoteApiCredentialProfiles = readBackupSection(
     remoteBackup,
     "apiCredentialProfiles",
@@ -727,6 +741,15 @@ export function mergeWebdavBackupPayloadBySelection(input: {
   })
   if (preferences !== undefined) {
     payload.preferences = preferences as any
+  }
+
+  if (selection.preferences && backup.featureGuidance) {
+    payload.featureGuidance = mergeFeatureGuidanceStates(
+      backup.featureGuidance,
+      normalizedRemote.featureGuidance,
+    )
+  } else if (remotePresence.hasFeatureGuidance) {
+    payload.featureGuidance = remoteFeatureGuidance
   }
 
   if (selection.apiCredentialProfiles && backup.apiCredentialProfiles) {
@@ -943,6 +966,9 @@ export function createWebdavImportPayloadBySelection(input: {
         localState.preferences) as UserPreferences,
       localState.preferences,
     )
+    if (normalizedRemote.featureGuidance) {
+      payload.featureGuidance = normalizedRemote.featureGuidance
+    }
   }
 
   if (importApiCredentialProfilesFromRemote) {
@@ -1041,6 +1067,9 @@ export function filterWebdavBackupPayloadBySelection(input: {
 
   if (selection.preferences) {
     payload.preferences = buildWebdavSharedPreferences(backup.preferences)
+    if (backup.featureGuidance) {
+      payload.featureGuidance = backup.featureGuidance
+    }
   }
 
   if (selection.apiCredentialProfiles && backup.apiCredentialProfiles) {

@@ -38,6 +38,13 @@ vi.mock("~/contexts/UserPreferencesContext", () => ({
   useUserPreferencesContext: () => mocks.userContext,
 }))
 
+vi.mock("~/contexts/FeatureGuidanceContext", () => ({
+  useFeatureGuidanceContext: () => ({
+    markGatewayGuidanceOnboardingCompleted:
+      mocks.userContext.markGatewayGuidanceOnboardingCompleted,
+  }),
+}))
+
 vi.mock("~/services/managedSites/managedSiteService", () => ({
   getManagedSiteService: mocks.getManagedSiteService,
   hasValidManagedSiteConfig: () => true,
