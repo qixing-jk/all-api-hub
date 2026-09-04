@@ -86,14 +86,18 @@ test("introduces options modules without navigating or performing actions", asyn
       await expect(
         category.getByRole("button", { name: "Bookmark Management" }),
       ).toHaveCount(1)
-      const categoryBox = await category.boundingBox()
-      const lastItemBox = await lastCategoryItem.boundingBox()
+      const lastItemHandle = await lastCategoryItem.elementHandle()
 
-      expect(categoryBox).not.toBeNull()
-      expect(lastItemBox).not.toBeNull()
-      expect(categoryBox!.y + categoryBox!.height).toBe(
-        lastItemBox!.y + lastItemBox!.height,
+      expect(lastItemHandle).not.toBeNull()
+      const bottomEdges = await category.evaluate(
+        (categoryElement, lastItemElement) => ({
+          category: categoryElement.getBoundingClientRect().bottom,
+          lastItem: lastItemElement.getBoundingClientRect().bottom,
+        }),
+        lastItemHandle!,
       )
+
+      expect(bottomEdges.category).toBe(bottomEdges.lastItem)
     }
 
     if (index < expectedStepTitles.length - 1) {
