@@ -197,6 +197,7 @@ const renderTokenList = (props?: Partial<Parameters<typeof TokenList>[0]>) =>
       filteredTokens={[token1, token2] as any}
       {...props}
     />,
+    { withFeatureGuidanceProvider: true },
   )
 
 describe("TokenList batch export selection", () => {
