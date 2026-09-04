@@ -528,6 +528,7 @@
     "autoCheckinRunNow": "快速簽到",
     "balanceHistory": "餘額歷史",
     "basic": "設定",
+    "batchCheckin": "批量簽到",
     "bookmark": "書籤管理",
     "categories": {
       "api": "介面",

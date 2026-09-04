@@ -3,6 +3,7 @@ import type { Page, Worker } from "@playwright/test"
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SITE_TYPES } from "~/constants/siteType"
+import { BASIC_SETTINGS_TEST_IDS } from "~/features/BasicSettings/testIds"
 import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import { AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageTypes"
@@ -33,6 +34,9 @@ const AUTO_CHECKIN_DAILY_ALARM_NAME = "autoCheckinDaily"
 const PRETRIGGER_ACCOUNT_ID = "ui-open-pretrigger-account"
 const PRETRIGGER_ACCOUNT_NAME = "UI Open Pretrigger Account"
 const PRETRIGGER_SITE_URL = "https://auto-checkin-pretrigger.example.com"
+const MANUAL_BATCH_ACCOUNT_ID = "global-off-manual-batch-account"
+const MANUAL_BATCH_ACCOUNT_NAME = "Global Off Manual Batch Account"
+const MANUAL_BATCH_SITE_URL = "https://auto-checkin-manual-batch.example.com"
 
 type AutoCheckinRuntimeStubState = {
   calls: string[]
@@ -416,6 +420,102 @@ test("auto-checkin quick-run route triggers the runtime action once and consumes
   expect(postReloadRuntimeSnapshot.calls).toContain(
     AutoCheckinMessageTypes.RunNow,
   )
+})
+
+test("keeps manual batch check-in available when global automatic check-in is disabled", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  const serviceWorker = await getServiceWorker(context)
+  let checkinRequests = 0
+
+  await context.route(`${MANUAL_BATCH_SITE_URL}/api/user/checkin`, (route) => {
+    checkinRequests += 1
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        success: true,
+        message: "check-in completed",
+        data: { checkin_date: getLocalDay(), quota_awarded: 1 },
+      }),
+    })
+  })
+
+  await seedUserPreferences(serviceWorker, {
+    autoCheckin: {
+      ...DEFAULT_PREFERENCES.autoCheckin!,
+      globalEnabled: false,
+      pretriggerDailyOnUiOpen: true,
+      notifyUiOnCompletion: true,
+      windowStart: "00:00",
+      windowEnd: "23:59",
+      scheduleMode: AUTO_CHECKIN_SCHEDULE_MODE.DETERMINISTIC,
+      deterministicTime: "23:58",
+      retryStrategy: {
+        enabled: false,
+        intervalMinutes: 30,
+        maxAttemptsPerDay: 1,
+      },
+    },
+  })
+  await seedStoredAccounts(serviceWorker, [
+    createStoredAccount({
+      id: MANUAL_BATCH_ACCOUNT_ID,
+      site_name: MANUAL_BATCH_ACCOUNT_NAME,
+      site_url: MANUAL_BATCH_SITE_URL,
+      site_type: SITE_TYPES.NEW_API,
+      account_info: {
+        id: "82",
+        username: "global-off-manual-batch-user",
+        access_token: "global-off-manual-batch-token",
+      },
+      checkIn: createCompatibilityCheckInConfig({
+        siteType: SITE_TYPES.NEW_API,
+        supported: true,
+        automaticExecutionEnabled: true,
+      }),
+    }),
+  ])
+
+  await installUiOpenPretriggerObservation(page)
+  await openAutoCheckinOptionsPage(page, extensionId)
+
+  expect(await readUiOpenPretriggerObservation(page)).toMatchObject({
+    requestCount: 0,
+    completedCount: 0,
+  })
+
+  await page
+    .getByTestId(BASIC_SETTINGS_TEST_IDS.autoCheckinRunNowButton)
+    .click()
+
+  await expect
+    .poll(() => readAutoCheckinStatus(serviceWorker))
+    .toMatchObject({
+      summary: {
+        totalEligible: 1,
+        executed: 1,
+        successCount: 1,
+        failedCount: 0,
+        skippedCount: 0,
+        needsRetry: false,
+      },
+      perAccount: {
+        [MANUAL_BATCH_ACCOUNT_ID]: {
+          accountId: MANUAL_BATCH_ACCOUNT_ID,
+          accountName: MANUAL_BATCH_ACCOUNT_NAME,
+          status: "success",
+        },
+      },
+    })
+
+  expect(checkinRequests).toBe(1)
+  expect(await readUiOpenPretriggerObservation(page)).toMatchObject({
+    requestCount: 0,
+    completedCount: 0,
+  })
 })
 
 test("auto-checkin UI-open pretrigger runs once through the real MV3 scheduler boundary", async ({

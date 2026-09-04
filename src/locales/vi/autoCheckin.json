@@ -53,6 +53,7 @@
       "openFailedManualNewWindow": "Mở trang điểm danh trên trang web cho mọi tài khoản có lần điểm danh tự động gần nhất thất bại. Nhấn giữ Shift khi nhấp để mở trong cửa sổ mới.",
       "siteTypeCheckinUnsupported": "Giải pháp: Trước tiên hãy kiểm tra xem \"Loại trang web\" trong \"Quản lý tài khoản → Chỉnh sửa tài khoản\" có khớp với trang web thực tế hay không; nếu đây là kết quả của việc nhận diện tự động trước đó, bạn có thể đăng nhập lại vào trang web đích và nhận diện lại. Nếu bạn xác nhận rằng loại trang web là chính xác nhưng hệ thống vẫn báo không hỗ trợ, điều đó có nghĩa là trang web này hiện có thể chưa được điều chỉnh cho điểm danh tự động, vui lòng chuyển sang sử dụng \"Mở trang web\" hoặc \"Điểm danh thủ công\" để xử lý."
     },
+    "manualTitle": "Điểm danh hàng loạt",
     "pagination": {
       "next": "Trang sau",
       "previous": "Trang trước",
@@ -80,6 +81,7 @@
     },
     "title": "Điểm danh tự động"
   },
+  "manualDescription": "Có thể thực hiện điểm danh hàng loạt cho các tài khoản đủ điều kiện; danh sách kết quả bên dưới hiển thị lịch sử điểm danh đã thực hiện, không phải là hàng đợi chờ điểm danh.",
   "messages": {
     "error": {
       "accountDisabled": "Tài khoản đã bị vô hiệu hóa",
@@ -150,7 +152,7 @@
     "deterministicTimeDesc": "Khi bật chế độ cố định, hãy chọn thời gian cụ thể (HH:mm) để bắt đầu điểm danh.",
     "deterministicTimeTitle": "Thời gian cố định",
     "enable": "Bật điểm danh tự động",
-    "enableDesc": "Kiểm soát công tắc chức năng điểm danh tự động toàn cầu, sau khi tắt, sẽ không có tác vụ điểm danh tự động nào được thực hiện.",
+    "enableDesc": "Điều khiển công tắc điểm danh tự động toàn cầu; khi tắt, các tác vụ tự động như tác vụ theo lịch sẽ dừng, nhưng vẫn có thể điểm danh thủ công.",
     "notifyUiOnCompletion": "Làm mới dữ liệu và giao diện sau khi hoàn thành điểm danh tự động",
     "notifyUiOnCompletionDesc": "Ngay lập tức làm mới dữ liệu của tài khoản điểm danh và các giao diện liên quan sau khi điểm danh tự động hoàn tất.",
     "pretriggerDailyOnUiOpen": "Kích hoạt sớm điểm danh hôm nay khi mở giao diện",

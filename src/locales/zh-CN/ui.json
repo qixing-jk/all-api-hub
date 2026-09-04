@@ -522,6 +522,7 @@
     "autoCheckinRunNow": "快速签到",
     "balanceHistory": "余额历史",
     "basic": "设置",
+    "batchCheckin": "批量签到",
     "bookmark": "书签管理",
     "categories": {
       "api": "接口",

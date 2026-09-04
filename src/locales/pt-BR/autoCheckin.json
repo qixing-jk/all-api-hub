@@ -53,6 +53,7 @@
       "openFailedManualNewWindow": "Abre a página de check-in do site para cada conta cujo último check-in automático falhou. Mantenha Shift pressionado ao clicar para abri-las em uma nova janela.",
       "siteTypeCheckinUnsupported": "Solução: em “Gerenciamento de contas → Editar conta”, primeiro confirme se o tipo de site selecionado corresponde ao site real. Se ele foi detectado automaticamente, entre novamente no site de destino e repita a detecção. Se o tipo estiver correto e esta mensagem continuar aparecendo, o site provavelmente ainda não é compatível com check-in automático; por enquanto, use “Abrir site” ou “Check-in manual”."
     },
+    "manualTitle": "Check-in em lote",
     "pagination": {
       "next": "Próxima página",
       "previous": "Página anterior",
@@ -80,6 +81,7 @@
     },
     "title": "Check-in automático"
   },
+  "manualDescription": "Você pode executar um check-in em lote para contas qualificadas. A lista de resultados abaixo mostra registros de execução concluídos, não uma fila pendente.",
   "messages": {
     "error": {
       "accountDisabled": "Conta desativada",
@@ -154,7 +156,7 @@
     "deterministicTimeDesc": "Escolha o horário exato (HH:mm) para iniciar o check-in quando o modo determinístico estiver habilitado.",
     "deterministicTimeTitle": "Horário fixo",
     "enable": "Habilitar check-in automático",
-    "enableDesc": "Ative o recurso de check-in automático global. Quando desativado, nenhuma tarefa de check-in será executada.",
+    "enableDesc": "Controla o check-in automático global. Quando desativado, as tarefas automáticas, como as agendadas, param, mas as ações manuais continuam disponíveis.",
     "notifyUiOnCompletion": "Atualizar dados e interface após a conclusão do check-in automático",
     "notifyUiOnCompletionDesc": "Quando o check-in automático for concluído, atualize imediatamente os dados da conta de check-in e as interfaces relevantes.",
     "pretriggerDailyOnUiOpen": "Antecipar a execução diária ao abrir a interface",

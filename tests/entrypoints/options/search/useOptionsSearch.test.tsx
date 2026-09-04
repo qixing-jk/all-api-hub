@@ -10,7 +10,6 @@ import * as browserApi from "~/utils/browser/browserApi"
 import { renderHook } from "~~/tests/test-utils/render"
 
 const context: OptionsSearchContext = {
-  autoCheckinEnabled: true,
   hasOptionalPermissions: true,
   managedSiteType: "new-api",
   modelRedirectEnabled: true,
@@ -62,6 +61,28 @@ describe("useOptionsSearch", () => {
       id: "page:overview",
       pageId: MENU_ITEM_IDS.OVERVIEW,
       kind: "page",
+    })
+  })
+
+  it("keeps the auto-checkin page searchable when automatic runs are disabled", () => {
+    const { result } = renderHook(
+      () =>
+        useOptionsSearch(
+          { ...context, autoCheckinGlobalEnabled: false },
+          "ui:navigation.batchCheckin",
+        ),
+      {
+        withReleaseUpdateStatusProvider: false,
+        withThemeProvider: false,
+        withUserPreferencesProvider: false,
+      },
+    )
+
+    expect(result.current.results[0]).toMatchObject({
+      id: "page:autoCheckin",
+      pageId: MENU_ITEM_IDS.AUTO_CHECKIN,
+      kind: "page",
+      title: "ui:navigation.batchCheckin",
     })
   })
 
@@ -157,7 +178,6 @@ describe("useOptionsSearchContext", () => {
     const { result } = renderHook(
       () =>
         useOptionsSearchContext({
-          autoCheckinEnabled: true,
           hasOptionalPermissions: true,
           managedSiteType: "new-api",
           modelRedirectEnabled: false,
@@ -172,7 +192,6 @@ describe("useOptionsSearchContext", () => {
     )
 
     expect(result.current).toEqual({
-      autoCheckinEnabled: true,
       hasOptionalPermissions: true,
       managedSiteType: "new-api",
       modelRedirectEnabled: false,

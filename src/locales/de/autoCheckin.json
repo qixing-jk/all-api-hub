@@ -53,6 +53,7 @@
       "openFailedManualNewWindow": "Öffnet die Check-in-Seite der Website für jedes Konto, dessen letzter automatischer Check-in fehlgeschlagen ist. Mit Umschalt+Klick werden sie in einem neuen Fenster geöffnet.",
       "siteTypeCheckinUnsupported": "Lösung: Überprüfen Sie unter „Kontoverwaltung → Konto bearbeiten“ zunächst, ob der ausgewählte Website-Typ mit der tatsächlichen Website übereinstimmt. Wenn der Typ zuvor automatisch erkannt wurde, melden Sie sich erneut bei der Ziel-Website an und führen Sie die Erkennung erneut aus. Wenn der Website-Typ korrekt ist, diese Meldung jedoch weiterhin angezeigt wird, unterstützt die Website wahrscheinlich noch kein automatisches Einchecken. Verwenden Sie daher stattdessen „Website öffnen“ oder „Manuelle Check-in-Seite“."
     },
+    "manualTitle": "Batch-Check-in",
     "pagination": {
       "next": "Nächste Seite",
       "previous": "Vorherige Seite",
@@ -80,6 +81,7 @@
     },
     "title": "Automatischer Check-in"
   },
+  "manualDescription": "Batch-Check-in für berechtigte Konten ausführen. Die Ergebnisliste unten zeigt abgeschlossene Laufdatensätze und keine ausstehende Warteschlange.",
   "messages": {
     "error": {
       "accountDisabled": "Konto ist deaktiviert",
@@ -152,7 +154,7 @@
     "deterministicTimeDesc": "Wählen Sie den genauen Zeitpunkt (HH:mm), um mit dem Check-in zu beginnen, wenn der deterministische Modus aktiviert ist.",
     "deterministicTimeTitle": "Deterministische Zeit",
     "enable": "Automatisches Einchecken aktivieren",
-    "enableDesc": "Schalten Sie die globale automatische Check-in-Funktion um. Wenn diese Option deaktiviert ist, werden keine Check-in-Aufgaben ausgeführt.",
+    "enableDesc": "Steuert die globale automatische Check-in-Funktion. Wenn sie deaktiviert ist, werden geplante und andere automatische Aufgaben angehalten, manuelle Check-ins bleiben jedoch möglich.",
     "notifyUiOnCompletion": "Aktualisieren Sie Daten und Schnittstelle nach Abschluss des automatischen Check-ins",
     "notifyUiOnCompletionDesc": "Wenn der automatische Check-in abgeschlossen ist, aktualisieren Sie sofort die Daten des Check-in-Kontos und relevante Schnittstellen.",
     "pretriggerDailyOnUiOpen": "Täglichen Lauf vorab auslösen, wenn die Benutzeroberfläche geöffnet wird",

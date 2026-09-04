@@ -123,6 +123,28 @@ describe("AutoCheckinSettings", () => {
     })
   })
 
+  it("uses the batch-check-in title and description when automatic runs are disabled", () => {
+    useUserPreferencesContextMock.mockReturnValue({
+      preferences: {
+        autoCheckin: createPreferences({ globalEnabled: false }),
+      },
+      updateAutoCheckin,
+      resetAutoCheckinConfig,
+    })
+
+    render(<AutoCheckinSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    expect(
+      screen.getByText("autoCheckin:execution.manualTitle"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("autoCheckin:manualDescription"),
+    ).toBeInTheDocument()
+  })
+
   it("validates time inputs before saving and reports invalid values", async () => {
     render(<AutoCheckinSettings />, {
       withUserPreferencesProvider: false,

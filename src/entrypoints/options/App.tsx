@@ -102,7 +102,7 @@ function OptionsPage() {
     BasicSettings
 
   const searchContext = useOptionsSearchContext({
-    autoCheckinEnabled: Boolean(preferences?.autoCheckin?.globalEnabled),
+    autoCheckinGlobalEnabled: preferences?.autoCheckin?.globalEnabled ?? true,
     hasOptionalPermissions,
     managedSiteType,
     modelRedirectEnabled: Boolean(preferences?.modelRedirect?.enabled),
@@ -139,6 +139,9 @@ function OptionsPage() {
         <Sidebar
           activeMenuItem={activeMenuItem}
           onMenuItemClick={handleMenuItemClick}
+          autoCheckinGlobalEnabled={
+            preferences?.autoCheckin?.globalEnabled ?? true
+          }
           isMobileOpen={isMobileSidebarOpen}
           onMobileClose={() => setIsMobileSidebarOpen(false)}
           isCollapsed={isSidebarCollapsed}

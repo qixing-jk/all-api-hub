@@ -2153,9 +2153,9 @@ class AutoCheckinScheduler {
       // Treat missing values as enabled to preserve backward compatibility with older stored prefs.
       notifyUiOnCompletion = config.notifyUiOnCompletion !== false
 
-      // The global switch controls scheduled/bulk auto check-in. An explicit
-      // per-account manual run from the account menu should still execute.
-      if (!config.globalEnabled && !targetAccountIdSet) {
+      // The global switch controls unattended automatic runs. Explicit manual
+      // runs, including an unscoped batch run from the UI, remain available.
+      if (!config.globalEnabled && isDailyRun) {
         logger.info("Global feature disabled; skipping")
         return
       }
