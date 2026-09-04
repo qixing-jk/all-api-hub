@@ -558,6 +558,19 @@ describe("Claude Code Hub native managed resource", () => {
     expect(sentPayload).not.toHaveProperty("key")
   })
 
+  it("hydrates disabled status when opening an existing disabled provider", async () => {
+    const disabledProvider = { ...provider, isEnabled: false }
+    mocks.listProviders.mockResolvedValueOnce([disabledProvider])
+    mocks.getProvider.mockResolvedValue(disabledProvider)
+    const workspace = await claudeCodeHubManagedResourceRegistration.open()
+    const ref = (await workspace.list()).items[0].ref
+    const editor = await workspace.openEditEditor(ref)
+
+    expect(editor.initialValues[fields.Status]).toBe(
+      MANAGED_RESOURCE_STATUSES.Disabled,
+    )
+  })
+
   it("validates edit-only secret rules and preserves an upstream custom type", async () => {
     const customProvider: ClaudeCodeHubProviderDisplay = {
       ...provider,
