@@ -5,13 +5,13 @@ import {
   type DeferredPreferenceCommitResult as GenericDeferredPreferenceCommitResult,
 } from "~/hooks/useDeferredPreferenceDraft"
 
-export type DeferredPreferenceCommitResult =
+export type DeferredPreferenceFieldCommitResult =
   GenericDeferredPreferenceCommitResult<string>
 
 type UseDeferredPreferenceFieldOptions = {
   savedValue: string
   savedVersion: number
-  onCommit: (draft: string) => Promise<DeferredPreferenceCommitResult>
+  onCommit: (draft: string) => Promise<DeferredPreferenceFieldCommitResult>
 }
 
 /** Treat Enter as the same commit boundary as leaving a single-line input. */

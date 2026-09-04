@@ -5,13 +5,13 @@ import { describe, expect, it, vi } from "vitest"
 
 import {
   useDeferredPreferenceField,
-  type DeferredPreferenceCommitResult,
+  type DeferredPreferenceFieldCommitResult,
 } from "~/hooks/useDeferredPreferenceField"
 
 type HarnessProps = {
   savedValue: string
   savedVersion: number
-  onCommit: (draft: string) => Promise<DeferredPreferenceCommitResult>
+  onCommit: (draft: string) => Promise<DeferredPreferenceFieldCommitResult>
   onImmediateAction?: () => void
 }
 
@@ -49,11 +49,11 @@ function DeferredFieldHarness({
 describe("useDeferredPreferenceField", () => {
   it("lets the next control receive its click while the field saves on blur", async () => {
     let resolveCommit:
-      | ((result: DeferredPreferenceCommitResult) => void)
+      | ((result: DeferredPreferenceFieldCommitResult) => void)
       | null = null
     const onCommit = vi.fn(
       () =>
-        new Promise<DeferredPreferenceCommitResult>((resolve) => {
+        new Promise<DeferredPreferenceFieldCommitResult>((resolve) => {
           resolveCommit = resolve
         }),
     )
