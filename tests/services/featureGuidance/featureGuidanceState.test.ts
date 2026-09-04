@@ -14,6 +14,7 @@ import {
   DEFAULT_PREFERENCES,
   userPreferences,
 } from "~/services/preferences/userPreferences"
+import { setLoggingPreferences } from "~/utils/core/logger"
 
 const storage = new Storage({ area: "local" })
 
@@ -127,6 +128,31 @@ describe("feature guidance state", () => {
     expect(merged.productTour.expanded).toEqual({
       handledVersion: 2,
       outcome: PRODUCT_TOUR_OUTCOMES.Completed,
+      handledAt: 300,
+    })
+  })
+
+  it("keeps dismissal and the newest timestamp when both same-version records are dismissed", () => {
+    const local = createEmptyFeatureGuidanceState()
+    local.productTour.compact = {
+      handledVersion: 2,
+      outcome: PRODUCT_TOUR_OUTCOMES.Dismissed,
+      handledAt: 100,
+    }
+
+    const merged = mergeFeatureGuidanceStates(local, {
+      productTour: {
+        compact: {
+          handledVersion: 2,
+          outcome: PRODUCT_TOUR_OUTCOMES.Dismissed,
+          handledAt: 300,
+        },
+      },
+    })
+
+    expect(merged.productTour.compact).toEqual({
+      handledVersion: 2,
+      outcome: PRODUCT_TOUR_OUTCOMES.Dismissed,
       handledAt: 300,
     })
   })
@@ -311,5 +337,36 @@ describe("feature guidance state", () => {
       handledAt: 300,
     })
     expect(state.productTour.compact).toBeUndefined()
+  })
+
+  it("propagates the dependent failure when restoring the transaction also fails", async () => {
+    const service = new FeatureGuidanceStateService()
+    const dependentError = new Error("dependent write failed")
+    const rollbackError = new Error("rollback storage failed")
+    const setSpy = vi
+      .spyOn((service as any).storage, "set")
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(rollbackError)
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {})
+    setLoggingPreferences({ consoleEnabled: true, level: "error" })
+
+    try {
+      await expect(
+        service.withMergedStateTransaction({}, async () => {
+          throw dependentError
+        }),
+      ).rejects.toBe(dependentError)
+
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining(
+          "Failed to rollback feature guidance transaction",
+        ),
+        expect.objectContaining({ message: "rollback storage failed" }),
+      )
+    } finally {
+      setLoggingPreferences({ consoleEnabled: false, level: "debug" })
+      setSpy.mockRestore()
+      errorSpy.mockRestore()
+    }
   })
 })

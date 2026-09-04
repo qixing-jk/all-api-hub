@@ -1296,6 +1296,36 @@ describe("importFromBackupObject", () => {
     }
   })
 
+  it("merges guidance from a missing-version V1 preferences backup", async () => {
+    const incomingGuidance = {
+      ...createEmptyFeatureGuidanceState(),
+      gatewayGuidance: {
+        onboardingCompletedAt: 300,
+        dismissedAtBySurface: { account: 200 },
+      },
+    }
+    const mergeGuidance = vi
+      .spyOn(featureGuidanceState, "mergeState")
+      .mockResolvedValueOnce(incomingGuidance)
+
+    try {
+      const result = await importFromBackupObject({
+        timestamp: Date.now(),
+        type: "preferences",
+        preferences: { themeMode: "light" } as any,
+        featureGuidance: incomingGuidance,
+      })
+
+      expect(mockUserPreferencesImport).toHaveBeenCalledWith({
+        themeMode: "light",
+      })
+      expect(mergeGuidance).toHaveBeenCalledWith(incomingGuidance)
+      expect(result.sections.preferences).toBe(true)
+    } finally {
+      mergeGuidance.mockRestore()
+    }
+  })
+
   it("rejects backups created by a newer unsupported version", async () => {
     const payload: RawBackupData = {
       version: "5.0",
