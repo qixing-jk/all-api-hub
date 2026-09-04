@@ -2110,7 +2110,14 @@ describe("AxonHub native managed-resource Adapter", () => {
 
     expect(result).toEqual({
       outcome: "succeeded",
-      data: { ...input, ...receipt },
+      data: {
+        ...receipt,
+        supportedModels: input.supportedModels,
+        manualModels: input.manualModels,
+        defaultTestModel: input.defaultTestModel,
+        settings: input.settings,
+        orderingWeight: input.orderingWeight,
+      },
       confirmedEffects: [
         {
           kind: "resource-created",
@@ -2119,6 +2126,7 @@ describe("AxonHub native managed-resource Adapter", () => {
         },
       ],
     })
+    expect(JSON.stringify(result)).not.toContain("credential-placeholder")
     expect(result).not.toHaveProperty("certainty")
     expect(mocks.createChannel).toHaveBeenCalledWith(config, input, {
       signal: controller.signal,
@@ -2340,6 +2348,8 @@ describe("AxonHub native managed-resource Adapter", () => {
       status: AXON_HUB_CHANNEL_STATUS.DISABLED,
     })
     const statusError = new mocks.RequestError("unavailable", "dispatched")
+    const { credentials: createdCredentials, ...credentialFreeCreated } =
+      created
     mocks.createChannel.mockResolvedValue(created)
     mocks.updateStatus.mockRejectedValue(statusError)
     const operations = await openAxonHubNativeResourceOperations()
@@ -2361,7 +2371,7 @@ describe("AxonHub native managed-resource Adapter", () => {
 
     expect(result).toEqual({
       outcome: "partial",
-      data: created,
+      data: credentialFreeCreated,
       confirmedEffects: [
         {
           kind: "resource-created",
@@ -2376,6 +2386,8 @@ describe("AxonHub native managed-resource Adapter", () => {
         raw: statusError,
       },
     })
+    expect(createdCredentials).toBeDefined()
+    expect(JSON.stringify(result)).not.toContain("sk-placeholder-value")
     expect(result).not.toHaveProperty("certainty")
     expect(mocks.createChannel).toHaveBeenCalledOnce()
     expect(mocks.updateStatus).toHaveBeenCalledWith(
@@ -2395,6 +2407,8 @@ describe("AxonHub native managed-resource Adapter", () => {
       "upstream-rejected",
       "not-dispatched",
     )
+    const { credentials: createdCredentials, ...credentialFreeCreated } =
+      created
     mocks.createChannel.mockResolvedValue(created)
     mocks.updateStatus.mockRejectedValue(statusError)
     const operations = await openAxonHubNativeResourceOperations()
@@ -2415,7 +2429,7 @@ describe("AxonHub native managed-resource Adapter", () => {
       ),
     ).resolves.toEqual({
       outcome: MANAGED_SITE_MUTATION_OUTCOMES.Partial,
-      data: created,
+      data: credentialFreeCreated,
       confirmedEffects: [
         {
           kind: "resource-created",
@@ -2430,6 +2444,10 @@ describe("AxonHub native managed-resource Adapter", () => {
         raw: statusError,
       },
     })
+    expect(JSON.stringify(credentialFreeCreated)).not.toContain(
+      "sk-placeholder-value",
+    )
+    expect(createdCredentials).toBeDefined()
     expect(mocks.mutationSequenceStepCounts).toEqual([2])
   })
 

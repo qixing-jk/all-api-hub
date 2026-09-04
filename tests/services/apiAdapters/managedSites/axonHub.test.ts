@@ -593,6 +593,45 @@ describe("AxonHub managed-site channel capability", () => {
     },
   )
 
+  it.each(["update", "delete"] as const)(
+    "rejects %s ID-resolution schema failures without confirming a mutation attempt",
+    async (operation) => {
+      const error = new axonHubApi.AxonHubRequestError(
+        "upstream-rejected",
+        "not-dispatched",
+        "channel lookup document was rejected",
+        {
+          responseReceived: true,
+          statusCode: 422,
+          code: AXON_HUB_GRAPHQL_ERROR_CODES.VALIDATION_FAILED,
+        },
+      )
+      axonHubApi.resolveAxonHubGraphqlIdForMutation.mockRejectedValueOnce(error)
+      const { axonHubManagedSiteChannels } = await import(
+        "~/services/apiAdapters/managedSites/axonHub"
+      )
+      const mutation =
+        operation === "update"
+          ? axonHubManagedSiteChannels.update(config, {
+              id: 1,
+              name: "updated",
+            })
+          : axonHubManagedSiteChannels.delete(config, 1)
+
+      await expect(mutation).resolves.toEqual({
+        outcome: "rejected",
+        diagnostic: {
+          message: "channel lookup document was rejected",
+          code: AXON_HUB_GRAPHQL_ERROR_CODES.VALIDATION_FAILED,
+          statusCode: 422,
+          raw: error,
+        },
+      })
+      expect(axonHubApi.updateAxonHubChannel).not.toHaveBeenCalled()
+      expect(axonHubApi.deleteAxonHubChannel).not.toHaveBeenCalled()
+    },
+  )
+
   it.each(terminalMutationCases)(
     "composes create plus enable when the status step is $terminal",
     async ({ terminal, kind, dispatch, status, code, message }) => {

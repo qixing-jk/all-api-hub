@@ -221,6 +221,7 @@ const runAxonHubMutationStep = async <TData>(input: {
       error instanceof AxonHubRequestError ? error.dispatch : "not-dispatched"
     const confirmedNonApplication =
       error instanceof AxonHubRequestError &&
+      dispatch === "dispatched" &&
       error.responseReceived &&
       error.code === AXON_HUB_GRAPHQL_ERROR_CODES.VALIDATION_FAILED
     if (dispatch === "dispatched") {

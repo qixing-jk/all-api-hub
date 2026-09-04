@@ -44,9 +44,14 @@ vi.mock("~/services/accountTokens/apiTokenKey", () => ({
   hasUsableApiTokenKey: mocks.hasUsableApiTokenKey,
 }))
 
-vi.mock("~/services/apiService/axonHub", () => ({
-  hasCompleteAxonHubAdvancedDetail: mocks.hasCompleteAxonHubAdvancedDetail,
-}))
+vi.mock("~/services/apiService/axonHub", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/services/apiService/axonHub")>()
+  return {
+    ...actual,
+    hasCompleteAxonHubAdvancedDetail: mocks.hasCompleteAxonHubAdvancedDetail,
+  }
+})
 
 const selection: ManagedSiteMigrationSelection = {
   selectionId: "selection-safe-token",

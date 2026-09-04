@@ -350,6 +350,12 @@ const invalidateChannelListCache = (config: AxonHubConfig) => {
   safeChannelListCache.delete(cacheKeyForConfig(config))
 }
 
+const invalidateDetailSchemaCapabilityCache = (config: AxonHubConfig) => {
+  const scopeKey = cacheKeyForConfig(config)
+  advancedDetailUnsupportedScopes.delete(scopeKey)
+  legacyDetailUnsupportedScopes.delete(scopeKey)
+}
+
 export const __resetCachesForTesting = () => {
   tokenCache.clear()
   inflightSignIns.clear()
@@ -814,6 +820,9 @@ export async function signIn(
   }
 
   tokenCache.set(cacheKeyForConfig(config), data.token)
+  // A successful authentication is a bounded capability-renewal boundary: a
+  // deployment may have upgraded since an optional detail shape was rejected.
+  invalidateDetailSchemaCapabilityCache(config)
   return data.token
 }
 
@@ -1356,6 +1365,7 @@ export async function getAxonHubChannel(
     if (!isAuthoritativeAxonHubChannel(node) || node.id !== id) {
       throw new AxonHubRequestError("protocol", "not-dispatched")
     }
+    advancedDetailUnsupportedScopes.delete(scopeKey)
     return node
   }
 
@@ -1398,6 +1408,7 @@ const getLegacyAxonHubChannel = async (
     if (!isLegacyAxonHubChannel(node) || node.id !== id) {
       throw new AxonHubRequestError("protocol", "not-dispatched")
     }
+    legacyDetailUnsupportedScopes.delete(scopeKey)
     return sanitizeLegacyAxonHubChannel(node)
   }
 

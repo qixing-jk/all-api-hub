@@ -513,7 +513,7 @@ describe("AxonHub API service", () => {
     }
   })
 
-  it("falls back to the stable detail contract and caches advanced schema rejection", async () => {
+  it("reprobes the advanced detail contract after a successful sign-in", async () => {
     const queries: string[] = []
     let rejectedAdvancedQuery = false
 
@@ -537,11 +537,16 @@ describe("AxonHub API service", () => {
             }
             return HttpResponse.json({
               data: {
-                node: buildNativeChannelDetail(String(variables?.id), {
-                  settings: undefined,
-                  policies: undefined,
-                  endpoints: undefined,
-                }),
+                node: buildNativeChannelDetail(
+                  String(variables?.id),
+                  query.includes("query GetAxonHubChannelCore")
+                    ? {
+                        settings: undefined,
+                        policies: undefined,
+                        endpoints: undefined,
+                      }
+                    : {},
+                ),
               },
             })
           },
@@ -551,18 +556,22 @@ describe("AxonHub API service", () => {
 
     const first = await getAxonHubChannel(config, "fallback-detail-one")
     const second = await getAxonHubChannel(config, "fallback-detail-two")
+    await signIn(config)
+    const third = await getAxonHubChannel(config, "fallback-detail-three")
 
-    expect(queries).toHaveLength(3)
+    expect(queries).toHaveLength(4)
     expect(queries[0]).toContain("settings {")
-    for (const query of queries.slice(1)) {
+    for (const query of queries.slice(1, 3)) {
       expect(query).toContain("query GetAxonHubChannelCore")
       expect(query).not.toContain("settings {")
       expect(query).not.toContain("policies {")
       expect(query).not.toContain("endpoints {")
       expect(query).not.toContain("oauth {")
     }
+    expect(queries[3]).toContain("settings {")
     expect(hasCompleteAxonHubAdvancedDetail(first)).toBe(false)
     expect(hasCompleteAxonHubAdvancedDetail(second)).toBe(false)
+    expect(hasCompleteAxonHubAdvancedDetail(third)).toBe(true)
   })
 
   it("rejects malformed native detail nodes as controlled protocol failures", async () => {

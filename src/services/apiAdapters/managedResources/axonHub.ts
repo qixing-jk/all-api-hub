@@ -409,6 +409,14 @@ const finishAxonHubNativeMutation = <TData>(
     diagnostic: step.diagnostic,
   })
 
+const omitAxonHubChannelCredentials = (
+  channel: AxonHubChannel,
+): AxonHubChannel => {
+  const credentialFreeChannel = { ...channel }
+  delete credentialFreeChannel.credentials
+  return credentialFreeChannel
+}
+
 const applyAxonHubNativeChannelPatch = (
   detail: AxonHubChannel,
   input: Omit<AxonHubNativeChannelPatch, "status">,
@@ -587,7 +595,10 @@ export async function openAxonHubNativeResourceOperations(
         return finishAxonHubNativeMutation(sequence, createStep)
       }
 
-      const created = { ...input, ...createStep.data }
+      const created = omitAxonHubChannelCredentials({
+        ...input,
+        ...createStep.data,
+      })
       if (desiredStatus !== AXON_HUB_CHANNEL_STATUS.ENABLED) {
         return sequence.finish({ finalState: "confirmed", data: created })
       }
