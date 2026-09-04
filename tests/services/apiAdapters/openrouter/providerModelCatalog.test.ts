@@ -1,11 +1,14 @@
 import { http, HttpResponse } from "msw"
-import { beforeEach, describe, expect, it } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
   OPENROUTER_API_BASE_URL,
   SITE_TYPES,
 } from "~/services/accountSiteDefinitions/identifiers"
 import { openRouterProviderModelCatalog } from "~/services/apiAdapters/openrouter/providerModelCatalog"
+import * as personalizedModelCatalogService from "~/services/apiService/openrouter/personalizedModelCatalog"
+import * as publicModelCatalogService from "~/services/apiService/openrouter/publicModelCatalog"
+import { ApiError } from "~/services/apiTransport/errors"
 import {
   MODEL_CATALOG_SCOPES,
   MODEL_LIST_SOURCE_KINDS,
@@ -45,6 +48,7 @@ function getFact(
 
 describe("OpenRouter provider model catalog Adapter", () => {
   beforeEach(() => server.resetHandlers())
+  afterEach(() => vi.restoreAllMocks())
 
   it("normalizes the verified personalized catalog behind an account-authenticated capability", async () => {
     let publicRequestCount = 0
@@ -122,6 +126,70 @@ describe("OpenRouter provider model catalog Adapter", () => {
     )
     expect((error as Error).cause).toBeUndefined()
   })
+
+  it("returns a safe abort error when cancellation races a provider rejection", async () => {
+    const credential = "management-key-example"
+    const controller = new AbortController()
+    controller.abort(new Error(`unsafe abort reason ${credential}`))
+    vi.spyOn(
+      personalizedModelCatalogService,
+      "fetchOpenRouterPersonalizedModelCatalog",
+    ).mockRejectedValue(
+      new ApiError(`Provider rejected ${credential}`, 403, "/models/user"),
+    )
+
+    const error = await openRouterProviderModelCatalog
+      .personalized!.fetchPricing({
+        accountId: "account-example-a",
+        credential,
+        abortSignal: controller.signal,
+      })
+      .catch((caught: unknown) => caught)
+
+    expect(error).toMatchObject({
+      name: "AbortError",
+      message: "The operation was aborted",
+    })
+    expect(JSON.stringify(error)).not.toContain(credential)
+    expect((error as Error).message).not.toContain("Provider rejected")
+    expect((error as Error).message).not.toContain("unsafe abort reason")
+    expect((error as Error).cause).toBeUndefined()
+  })
+
+  it("preserves a provider abort error", async () => {
+    const abortError = new DOMException("Cancelled", "AbortError")
+    vi.spyOn(
+      publicModelCatalogService,
+      "fetchOpenRouterPublicModelCatalog",
+    ).mockRejectedValue(abortError)
+
+    await expect(openRouterProviderModelCatalog.fetchPricing({})).rejects.toBe(
+      abortError,
+    )
+  })
+
+  it.each([
+    ["network", new TypeError("Network unavailable"), TypeError],
+    ["generic", new Error("Catalog unavailable"), Error],
+  ])(
+    "preserves the %s error category at the public catalog disclosure boundary",
+    async (_label, providerError, expectedType) => {
+      vi.spyOn(
+        publicModelCatalogService,
+        "fetchOpenRouterPublicModelCatalog",
+      ).mockRejectedValue(providerError)
+
+      const error = await openRouterProviderModelCatalog
+        .fetchPricing({})
+        .catch((caught: unknown) => caught)
+
+      expect(error).toBeInstanceOf(expectedType)
+      expect((error as Error).constructor).toBe(expectedType)
+      expect(error).not.toBe(providerError)
+      expect((error as Error).message).toBe(providerError.message)
+      expect((error as Error).cause).toBeUndefined()
+    },
+  )
 
   it("normalizes primary prices and core display facts into the product model", async () => {
     server.use(

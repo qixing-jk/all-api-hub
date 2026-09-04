@@ -40,7 +40,10 @@ export function extractDataFromApiResponseBody<T>(
   const record = body as Record<string, unknown>
 
   if (record.success === false) {
-    const message = getErrorMessage(record.message, invalidResponseMessage)
+    const message =
+      typeof record.message === "string"
+        ? getErrorMessage(record.message, invalidResponseMessage)
+        : invalidResponseMessage
     throw new ApiError(
       message,
       undefined,

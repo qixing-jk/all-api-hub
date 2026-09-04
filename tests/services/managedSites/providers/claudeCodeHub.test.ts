@@ -36,6 +36,10 @@ const mockUpdateProvider = vi.fn()
 const mockDeleteProvider = vi.fn()
 const mockGetUnmaskedProviderKey = vi.fn()
 const mockGetPreferences = vi.fn()
+const mockLogger = vi.hoisted(() => ({
+  warn: vi.fn(),
+  error: vi.fn(),
+}))
 
 vi.mock("~/services/managedSites/utils/fetchTokenScopedModels", () => ({
   fetchTokenScopedModels: (...args: unknown[]) =>
@@ -72,6 +76,10 @@ vi.mock("~/utils/i18n/core", () => ({
   t: (key: string) => key,
 }))
 
+vi.mock("~/utils/core/logger", () => ({
+  createLogger: () => mockLogger,
+}))
+
 describe("Claude Code Hub managed-site provider", () => {
   const storedClaudeCodeHubConfig = {
     baseUrl: "https://stored-cch.example.com",
@@ -93,6 +101,8 @@ describe("Claude Code Hub managed-site provider", () => {
     mockDeleteProvider.mockReset()
     mockGetUnmaskedProviderKey.mockReset()
     mockGetPreferences.mockReset()
+    mockLogger.warn.mockReset()
+    mockLogger.error.mockReset()
   })
 
   it("normalizes provider display records into managed-site channels", () => {
@@ -359,6 +369,37 @@ describe("Claude Code Hub managed-site provider", () => {
 
     await expect(checkValidClaudeCodeHubConfig()).resolves.toBe(false)
     expect(claudeCodeHubApi.validateClaudeCodeHubConfig).not.toHaveBeenCalled()
+  })
+
+  it("redacts saved credentials when config validation fails", async () => {
+    const claudeCodeHubApi = await import("~/services/apiService/claudeCodeHub")
+    mockGetPreferences.mockResolvedValueOnce({
+      claudeCodeHub: storedClaudeCodeHubConfig,
+    })
+    vi.mocked(
+      claudeCodeHubApi.validateClaudeCodeHubConfig,
+    ).mockRejectedValueOnce(new Error("token stored-admin-token rejected"))
+
+    await expect(checkValidClaudeCodeHubConfig()).resolves.toBe(false)
+    expect(mockLogger.warn).toHaveBeenCalledWith(
+      "Claude Code Hub config validation failed",
+      expect.not.stringContaining("stored-admin-token"),
+    )
+  })
+
+  it("logs only a normalized summary when reading preferences fails", async () => {
+    const preferencesError = new Error("preferences unavailable")
+    mockGetPreferences.mockRejectedValueOnce(preferencesError)
+
+    await expect(getClaudeCodeHubConfig()).resolves.toBeNull()
+    expect(mockLogger.error).toHaveBeenCalledWith(
+      "Error getting Claude Code Hub config",
+      "preferences unavailable",
+    )
+    expect(mockLogger.error).not.toHaveBeenCalledWith(
+      expect.anything(),
+      preferencesError,
+    )
   })
 
   it("lists providers through the same normalized channel list shape", async () => {

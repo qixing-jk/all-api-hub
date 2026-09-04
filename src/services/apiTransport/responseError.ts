@@ -70,7 +70,6 @@ type HeuristicMessageCandidate = {
 type HeuristicQueueEntry = {
   value: object
   depth: number
-  allowGenericStrings: boolean
 }
 
 const preferHeuristicCandidate = (
@@ -102,9 +101,7 @@ export function extractHeuristicResponseErrorMessage(
   if (scalarMessage) return scalarMessage
   if (!body || typeof body !== "object") return undefined
 
-  const queue: HeuristicQueueEntry[] = [
-    { value: body, depth: 0, allowGenericStrings: true },
-  ]
+  const queue: HeuristicQueueEntry[] = [{ value: body, depth: 0 }]
   const visited = new Set<object>()
   let inspectedValues = 0
   let best: HeuristicMessageCandidate | undefined
@@ -116,8 +113,7 @@ export function extractHeuristicResponseErrorMessage(
   ) => {
     const sensitiveKey = isSensitiveHeuristicKey(key)
     const priority = HEURISTIC_MESSAGE_KEY_PRIORITY.get(key.toLowerCase())
-    const maySelect =
-      !sensitiveKey && (priority !== undefined || current.allowGenericStrings)
+    const maySelect = !sensitiveKey
     const message = maySelect ? readGenericMessageString(value) : undefined
     if (message) {
       best = preferHeuristicCandidate(best, {
@@ -128,6 +124,7 @@ export function extractHeuristicResponseErrorMessage(
     }
 
     if (
+      !sensitiveKey &&
       current.depth < MAX_HEURISTIC_DEPTH &&
       value &&
       typeof value === "object"
@@ -135,7 +132,6 @@ export function extractHeuristicResponseErrorMessage(
       queue.push({
         value,
         depth: current.depth + 1,
-        allowGenericStrings: current.allowGenericStrings && !sensitiveKey,
       })
     }
   }

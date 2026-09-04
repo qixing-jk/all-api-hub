@@ -30,6 +30,24 @@ describe("decodeGoogleResponseError", () => {
     })
   })
 
+  it("uses the numeric status code when the symbolic status is absent", () => {
+    expect(
+      decodeGoogleResponseError(
+        response({
+          error: {
+            code: 429,
+            message: "Quota exceeded",
+          },
+        }),
+        { endpoint: "/v1beta/models" },
+      ),
+    ).toEqual({
+      kind: "http",
+      message: "Quota exceeded",
+      upstreamCode: "429",
+    })
+  })
+
   it("returns null for successful and non-Google error shapes", () => {
     expect(
       decodeGoogleResponseError(

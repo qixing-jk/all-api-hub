@@ -68,7 +68,7 @@ describe("extractHeuristicResponseErrorMessage", () => {
     ).toBe("gateway_denied")
   })
 
-  it("skips sensitive values while retaining known messages below them", () => {
+  it("skips sensitive values while retaining non-sensitive messages", () => {
     expect(
       extractHeuristicResponseErrorMessage({
         hint: "Request blocked by the upstream gateway",
@@ -76,15 +76,37 @@ describe("extractHeuristicResponseErrorMessage", () => {
           "credential-value-that-is-deliberately-longer-than-the-safe-error-hint",
       }),
     ).toBe("Request blocked by the upstream gateway")
+  })
 
+  it.each([
+    "session",
+    "token",
+    "access_token",
+    "refresh_token",
+    "authorization",
+    "cookie",
+    "credential",
+    "secret",
+  ])("rejects a known message below the sensitive %s key", (sensitiveKey) => {
     expect(
       extractHeuristicResponseErrorMessage({
-        session: {
-          message: "Session expired",
-          token: "credential-value-must-not-be-selected",
+        [sensitiveKey]: {
+          message: "credential-value-must-not-be-selected",
         },
       }),
-    ).toBe("Session expired")
+    ).toBeUndefined()
+  })
+
+  it("rejects known messages nested anywhere below a sensitive key", () => {
+    expect(
+      extractHeuristicResponseErrorMessage({
+        access_token: {
+          metadata: {
+            detail: "credential-detail-must-not-be-selected",
+          },
+        },
+      }),
+    ).toBeUndefined()
   })
 
   it("rejects obvious payload strings even under known fields", () => {
@@ -157,7 +179,13 @@ describe("extractHeuristicResponseErrorMessage", () => {
     )
   })
 
-  it("stops at the depth limit", () => {
+  it("accepts messages at the depth limit and rejects messages beyond it", () => {
+    expect(
+      extractHeuristicResponseErrorMessage({
+        a: { b: { c: { d: { message: "At the depth limit" } } } },
+      }),
+    ).toBe("At the depth limit")
+
     expect(
       extractHeuristicResponseErrorMessage({
         a: { b: { c: { d: { e: { message: "Too deeply nested" } } } } },

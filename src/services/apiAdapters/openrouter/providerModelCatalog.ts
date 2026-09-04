@@ -28,7 +28,10 @@ const toCatalogDisclosureError = (
   secrets: string[],
   abortSignal?: AbortSignal,
 ): unknown => {
-  if (isAbortError(error, abortSignal)) return error
+  if (isAbortError(error)) return error
+  if (abortSignal?.aborted) {
+    return new DOMException("The operation was aborted", "AbortError")
+  }
   const message = toSanitizedErrorSummary(error, secrets)
   if (error instanceof ApiError) {
     return new ApiError(

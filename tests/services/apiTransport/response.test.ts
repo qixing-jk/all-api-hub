@@ -35,4 +35,21 @@ describe("apiTransport response helpers", () => {
       expect.objectContaining({ code: API_ERROR_CODES.BUSINESS_ERROR }),
     )
   })
+
+  it.each([{ secret: "credential-example" }, ["credential-example"], 42])(
+    "does not serialize a non-string business error message",
+    (message) => {
+      expect(() =>
+        extractDataFromApiResponseBody(
+          { success: false, data: null, message },
+          "/api/invalid",
+        ),
+      ).toThrowError(
+        expect.objectContaining({
+          code: API_ERROR_CODES.BUSINESS_ERROR,
+          message: "messages:errors.api.invalidResponseFormat",
+        }),
+      )
+    },
+  )
 })

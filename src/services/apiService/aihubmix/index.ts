@@ -205,7 +205,7 @@ const extractAIHubMixData = <T>(body: unknown, endpoint: string): T => {
   if (response.success === false) {
     throw new ApiError(
       getErrorMessage(
-        response.message,
+        typeof response.message === "string" ? response.message : undefined,
         t("messages:errors.api.invalidResponseFormat"),
       ),
       undefined,

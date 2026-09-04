@@ -2330,4 +2330,34 @@ describe("apiService AIHubMix", () => {
       message: "messages:errors.api.invalidResponseFormat",
     })
   })
+
+  it.each([
+    { name: "an object", message: { token: "provider-secret-placeholder" } },
+    { name: "a number", message: 503 },
+  ])(
+    "falls back to invalid response copy for $name business message",
+    async ({ message }) => {
+      server.use(
+        http.get("https://aihubmix.com/api/token/", () =>
+          HttpResponse.json({
+            success: false,
+            message,
+            data: null,
+          }),
+        ),
+      )
+
+      const failure = await fetchAccountTokens(baseRequest).catch(
+        (error: unknown) => error,
+      )
+
+      expect(failure).toMatchObject({
+        code: API_ERROR_CODES.BUSINESS_ERROR,
+        message: "messages:errors.api.invalidResponseFormat",
+      })
+      expect((failure as Error).message).not.toContain(
+        "provider-secret-placeholder",
+      )
+    },
+  )
 })

@@ -240,6 +240,24 @@ describe("apiService SharedChat", () => {
       statusCode: 503,
       code: API_ERROR_CODES.HTTP_OTHER,
     })
+
+    server.use(
+      http.get("https://new.sharedchat.cc/frontend-api/getme", () =>
+        HttpResponse.json(
+          {
+            code: 1,
+            msg: "successful-envelope text must not be used for an HTTP error",
+          },
+          { status: 503 },
+        ),
+      ),
+    )
+
+    await expect(fetchUserInfo(baseRequest)).rejects.toMatchObject({
+      message: "SharedChat request failed: 503",
+      statusCode: 503,
+      code: API_ERROR_CODES.HTTP_OTHER,
+    })
   })
 
   it("maps codex quota into AccountData product usage and subscription fields", async () => {

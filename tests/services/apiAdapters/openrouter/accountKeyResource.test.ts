@@ -753,6 +753,27 @@ describe("openRouterAccountKeyResources", () => {
     )
   })
 
+  it("redacts the selected workspace from creator-option failures", async () => {
+    const workspaceId = "workspace-default-id"
+    const session = await openSession()
+    const editor = await session.openCreateEditor(workspaceId)
+    fetchOpenRouterWorkspaceMembers.mockRejectedValue(
+      new ApiError(`Workspace ${workspaceId} rejected the member request`, 403),
+    )
+
+    const error = await editor
+      .loadOptions?.(OPENROUTER_KEY_FIELD_IDS.Creator, editor.initialValues)
+      .catch((caught: unknown) => caught)
+
+    expect(error).toMatchObject({
+      failure: {
+        code: "permission_denied",
+        message: "Workspace [REDACTED] rejected the member request",
+      },
+    })
+    expect(JSON.stringify(error)).not.toContain(workspaceId)
+  })
+
   it("rejects incomplete and inconsistent member totals", async () => {
     const session = await openSession()
     const editor = await session.openCreateEditor("workspace-default-id")

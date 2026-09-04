@@ -6,7 +6,7 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import ClaudeCodeHubSettings from "~/features/BasicSettings/components/tabs/ManagedSite/ClaudeCodeHubSettings"
 import { validateClaudeCodeHubConfig } from "~/services/apiService/claudeCodeHub"
 import { showUpdateToast } from "~/utils/core/toastHelpers"
-import { testI18n } from "~~/tests/test-utils/i18n"
+import { createResourceTestI18n, testI18n } from "~~/tests/test-utils/i18n"
 
 const { showUpdateToastMock, toSanitizedErrorSummaryMock } = vi.hoisted(() => ({
   showUpdateToastMock: vi.fn(),
@@ -73,9 +73,9 @@ describe("ClaudeCodeHubSettings", () => {
     toSanitizedErrorSummaryMock.mockReturnValue("safe provider failure")
   })
 
-  const renderSubject = () =>
+  const renderSubject = (i18n = testI18n) =>
     render(
-      <I18nextProvider i18n={testI18n}>
+      <I18nextProvider i18n={i18n}>
         <ClaudeCodeHubSettings />
       </I18nextProvider>,
     )
@@ -391,5 +391,43 @@ describe("ClaudeCodeHubSettings", () => {
       expect.any(Error),
       ["admin-token"],
     )
+  })
+
+  it("shows a fixed validation error when sanitization yields no message", async () => {
+    const toast = await import("react-hot-toast")
+    const i18n = await createResourceTestI18n({
+      en: {
+        settings: {
+          claudeCodeHub: {
+            validation: {
+              validate: "Validate configuration",
+              failed: "Validation failed: {{error}}",
+            },
+          },
+        },
+      },
+    })
+    toSanitizedErrorSummaryMock.mockReturnValueOnce("")
+    mockedValidateClaudeCodeHubConfig.mockRejectedValueOnce(undefined)
+    vi.mocked(useUserPreferencesContext).mockReturnValue({
+      preferences: { lastUpdated: 5 },
+      claudeCodeHubBaseUrl: "https://cch.example.invalid",
+      claudeCodeHubAdminToken: "admin-token",
+      updateClaudeCodeHubBaseUrl: vi.fn(),
+      updateClaudeCodeHubAdminToken: vi.fn(),
+      updateClaudeCodeHubConfig: vi.fn(),
+      resetClaudeCodeHubConfig: vi.fn(),
+    } as any)
+
+    renderSubject(i18n)
+    fireEvent.click(
+      screen.getByRole("button", { name: "Validate configuration" }),
+    )
+
+    await waitFor(() => {
+      expect(vi.mocked(toast.default.error)).toHaveBeenCalledWith(
+        "Validation failed: Claude Code Hub request failed",
+      )
+    })
   })
 })

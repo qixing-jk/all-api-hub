@@ -2333,6 +2333,19 @@ describe("Octopus API service", () => {
     })
   })
 
+  it("preserves a string message from a non-Error mutation failure", async () => {
+    const providerFailure = { message: "provider mutation failed" }
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValueOnce(providerFailure))
+
+    await expect(mutations[0].invoke()).rejects.toMatchObject({
+      name: "OctopusMutationApiError",
+      message: "provider mutation failed",
+      dispatch: "dispatched",
+      responseReceived: false,
+      raw: providerFailure,
+    })
+  })
+
   it.each(mutations)(
     "$name marks auth failure before mutation fetch as not dispatched",
     async ({ log, invoke }) => {
@@ -2626,6 +2639,23 @@ describe("Octopus API service", () => {
       "fetch",
       vi.fn().mockResolvedValueOnce(
         new Response(JSON.stringify({ message: "   ", error: "  " }), {
+          status: 500,
+          statusText: "Internal Server Error",
+          headers: { "Content-Type": "application/json" },
+        }),
+      ),
+    )
+
+    await expect(listChannels(config)).rejects.toThrow(
+      "HTTP 500 Internal Server Error: Octopus request failed",
+    )
+  })
+
+  it("uses a fixed HTTP error message for a non-object JSON body", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(
+        new Response(JSON.stringify([]), {
           status: 500,
           statusText: "Internal Server Error",
           headers: { "Content-Type": "application/json" },
