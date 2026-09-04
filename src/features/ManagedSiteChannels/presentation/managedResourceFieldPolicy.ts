@@ -7,6 +7,10 @@ import {
   isAxonHubModelAutoSyncSupported,
 } from "~/constants/axonHub"
 import {
+  CLAUDE_CODE_HUB_MANAGED_RESOURCE_FIELD_IDS,
+  ClaudeCodeHubProviderTypeNames,
+} from "~/constants/claudeCodeHub"
+import {
   ChannelTypeNames,
   NEW_API_MANAGED_RESOURCE_FIELD_IDS,
 } from "~/constants/newApi"
@@ -583,6 +587,114 @@ const sub2ApiManagedResourceFieldPolicy = defineManagedResourceFieldPolicy({
   },
 })
 
+const claudeCodeHubTypeOptionLabelResolvers = Object.fromEntries(
+  Object.entries(ClaudeCodeHubProviderTypeNames).map(([value, label]) => [
+    value,
+    () => label,
+  ]),
+) satisfies Readonly<Record<string, ManagedResourceTextResolver>>
+
+const claudeCodeHubStatusOptionLabelResolvers = {
+  [MANAGED_RESOURCE_STATUSES.Enabled]: (t: TFunction) =>
+    t("common:status.enabled"),
+  [MANAGED_RESOURCE_STATUSES.Disabled]: (t: TFunction) =>
+    t("common:status.disabled"),
+} as const satisfies Readonly<Record<string, ManagedResourceTextResolver>>
+
+const claudeCodeHubFields = [
+  {
+    fieldId: CLAUDE_CODE_HUB_MANAGED_RESOURCE_FIELD_IDS.Name,
+    section: MANAGED_RESOURCE_SECTIONS.Basic,
+    order: 10,
+    resolveLabel: (t) => t("channelDialog:fields.name.label"),
+    renderer: MANAGED_RESOURCE_FIELD_RENDERERS.Text,
+    channelFieldRole: MANAGED_RESOURCE_CHANNEL_FIELD_ROLES.Name,
+  },
+  {
+    fieldId: CLAUDE_CODE_HUB_MANAGED_RESOURCE_FIELD_IDS.Type,
+    section: MANAGED_RESOURCE_SECTIONS.Basic,
+    order: 20,
+    resolveLabel: (t) => t("channelDialog:fields.type.label"),
+    optionLabelResolvers: claudeCodeHubTypeOptionLabelResolvers,
+    resolveOptionFallback: MANAGED_RESOURCE_UNKNOWN_OPTION_LABEL_RESOLVER,
+    renderer: MANAGED_RESOURCE_FIELD_RENDERERS.Select,
+    channelFieldRole: MANAGED_RESOURCE_CHANNEL_FIELD_ROLES.Type,
+  },
+  {
+    fieldId: CLAUDE_CODE_HUB_MANAGED_RESOURCE_FIELD_IDS.Status,
+    section: MANAGED_RESOURCE_SECTIONS.Basic,
+    order: 30,
+    resolveLabel: (t) => t("channelDialog:fields.status.label"),
+    optionLabelResolvers: claudeCodeHubStatusOptionLabelResolvers,
+    resolveOptionFallback: managedResourceStatusFallbackLabelResolver,
+    renderer: MANAGED_RESOURCE_FIELD_RENDERERS.Select,
+    channelFieldRole: MANAGED_RESOURCE_CHANNEL_FIELD_ROLES.Status,
+  },
+  {
+    fieldId: CLAUDE_CODE_HUB_MANAGED_RESOURCE_FIELD_IDS.BaseUrl,
+    section: MANAGED_RESOURCE_SECTIONS.Connection,
+    order: 10,
+    resolveLabel: (t) => t("channelDialog:fields.baseUrl.label"),
+    renderer: MANAGED_RESOURCE_FIELD_RENDERERS.Text,
+    channelFieldRole: MANAGED_RESOURCE_CHANNEL_FIELD_ROLES.BaseUrl,
+  },
+  {
+    fieldId: CLAUDE_CODE_HUB_MANAGED_RESOURCE_FIELD_IDS.Key,
+    section: MANAGED_RESOURCE_SECTIONS.Connection,
+    order: 20,
+    resolveLabel: (t) => t("channelDialog:fields.key.label"),
+    resolveHelp: (t) => t("managedSiteChannels:editor.secret.keepExistingHint"),
+    renderer: MANAGED_RESOURCE_FIELD_RENDERERS.Secret,
+    channelFieldRole: MANAGED_RESOURCE_CHANNEL_FIELD_ROLES.Secret,
+  },
+  {
+    fieldId: CLAUDE_CODE_HUB_MANAGED_RESOURCE_FIELD_IDS.Models,
+    section: MANAGED_RESOURCE_SECTIONS.Models,
+    order: 10,
+    resolveLabel: (t) => t("channelDialog:fields.models.label"),
+    renderer: MANAGED_RESOURCE_FIELD_RENDERERS.MultiSelect,
+    channelFieldRole: MANAGED_RESOURCE_CHANNEL_FIELD_ROLES.Models,
+  },
+  {
+    fieldId: CLAUDE_CODE_HUB_MANAGED_RESOURCE_FIELD_IDS.GroupTag,
+    section: MANAGED_RESOURCE_SECTIONS.Models,
+    order: 20,
+    resolveLabel: (t) => t("channelDialog:fields.groups.label"),
+    resolveHelp: (t) => t("channelDialog:fields.groups.hint"),
+    renderer: MANAGED_RESOURCE_FIELD_RENDERERS.Text,
+  },
+  {
+    fieldId: CLAUDE_CODE_HUB_MANAGED_RESOURCE_FIELD_IDS.Priority,
+    section: MANAGED_RESOURCE_SECTIONS.Routing,
+    order: 10,
+    resolveLabel: (t) => t("channelDialog:fields.priority.label"),
+    renderer: MANAGED_RESOURCE_FIELD_RENDERERS.Number,
+  },
+  {
+    fieldId: CLAUDE_CODE_HUB_MANAGED_RESOURCE_FIELD_IDS.Weight,
+    section: MANAGED_RESOURCE_SECTIONS.Routing,
+    order: 20,
+    resolveLabel: (t) => t("channelDialog:fields.weight.label"),
+    renderer: MANAGED_RESOURCE_FIELD_RENDERERS.Number,
+  },
+] as const satisfies readonly ManagedResourceFieldPresentation[]
+
+const claudeCodeHubManagedResourceFieldPolicy =
+  defineManagedResourceFieldPolicy({
+    siteType: SITE_TYPES.CLAUDE_CODE_HUB,
+    kind: MANAGED_RESOURCE_KINDS.Channel,
+    modes: {
+      [MANAGED_RESOURCE_EDITOR_MODES.Create]: {
+        fields: claudeCodeHubFields,
+        hiddenFields: [],
+      },
+      [MANAGED_RESOURCE_EDITOR_MODES.Edit]: {
+        fields: claudeCodeHubFields,
+        hiddenFields: [],
+      },
+    },
+  })
+
 const registryKey = (siteType: ManagedSiteType, kind: ManagedResourceKind) =>
   `${siteType}:${kind}`
 
@@ -617,6 +729,7 @@ const managedResourceFieldPolicyRegistry =
     newApiManagedResourceFieldPolicy,
     axonHubManagedResourceFieldPolicy,
     sub2ApiManagedResourceFieldPolicy,
+    claudeCodeHubManagedResourceFieldPolicy,
   ])
 
 export const getManagedResourceFieldPolicy = (

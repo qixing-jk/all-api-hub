@@ -8,6 +8,12 @@ import {
   AXON_HUB_CREATE_FIELD_IDS,
   AXON_HUB_EDITABLE_FIELD_IDS,
 } from "~/constants/axonHub"
+import {
+  CLAUDE_CODE_HUB_MANAGED_RESOURCE_DETAIL_FIELD_IDS,
+  CLAUDE_CODE_HUB_MANAGED_RESOURCE_FIELD_IDS,
+  CLAUDE_CODE_HUB_PROVIDER_TYPE,
+  ClaudeCodeHubProviderTypeNames,
+} from "~/constants/claudeCodeHub"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   SUB2API_API_KEY_ACCOUNT_PLATFORM_LABELS,
@@ -277,6 +283,46 @@ describe("managed resource field policy", () => {
       ),
     ).toBe("managedSiteChannels:statusLabels.autoDisabled")
   })
+
+  it.each(["create", "edit"] as const)(
+    "covers every Claude Code Hub %s field and provider-owned option label",
+    (mode) => {
+      const policy = getManagedResourceFieldPolicy(
+        SITE_TYPES.CLAUDE_CODE_HUB,
+        MANAGED_RESOURCE_KINDS.Channel,
+        mode,
+      )!
+      const fieldIds = policy.fields.map(({ fieldId }) => fieldId)
+      const typeField = policy.fields.find(
+        ({ fieldId }) =>
+          fieldId === CLAUDE_CODE_HUB_MANAGED_RESOURCE_FIELD_IDS.Type,
+      )!
+      const statusField = policy.fields.find(
+        ({ fieldId }) =>
+          fieldId === CLAUDE_CODE_HUB_MANAGED_RESOURCE_FIELD_IDS.Status,
+      )!
+
+      expect(new Set(fieldIds)).toEqual(
+        new Set(CLAUDE_CODE_HUB_MANAGED_RESOURCE_DETAIL_FIELD_IDS),
+      )
+      expect(policy.hiddenFields).toEqual([])
+      for (const type of Object.values(CLAUDE_CODE_HUB_PROVIDER_TYPE)) {
+        expect(
+          getManagedResourceFieldOptionLabel(typeField, type, resolveKey),
+        ).toBe(ClaudeCodeHubProviderTypeNames[type])
+      }
+      expect(
+        getManagedResourceFieldOptionLabel(statusField, "enabled", resolveKey),
+      ).toBe("common:status.enabled")
+      expect(
+        getManagedResourceFieldOptionLabel(
+          typeField,
+          "future-provider",
+          resolveKey,
+        ),
+      ).toBe(typeField.resolveOptionFallback?.(resolveKey))
+    },
+  )
 
   it.each(["create", "edit"] as const)(
     "covers every AxonHub %s descriptor exactly once with compatible renderers",

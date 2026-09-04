@@ -10,7 +10,6 @@ import type {
 } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import type { ManagedUpstreamResourcesCapability } from "~/services/apiAdapters/contracts/managedUpstreamResources"
 import {
-  ClaudeCodeHubApiError,
   createProvider,
   deleteProvider,
   getUnmaskedProviderKey,
@@ -18,10 +17,6 @@ import {
   searchProviders,
   updateProvider,
 } from "~/services/apiService/claudeCodeHub"
-import {
-  createManagedSiteMutationSequence,
-  type ManagedSiteMutationConfirmedEffect,
-} from "~/services/managedSites/mutations"
 import {
   buildChannelName,
   buildChannelPayload,
@@ -58,41 +53,14 @@ import {
   type ManagedUpstreamResourceRef,
   type ManagedUpstreamResourceSummary,
 } from "~/types/managedUpstreamResource"
-import { getErrorMessage } from "~/utils/core/error"
 import { normalizeList } from "~/utils/core/string"
 
+import {
+  claudeCodeHubChannelEffect,
+  runClaudeCodeHubMutation,
+} from "./claudeCodeHubMutation"
 import { createManagedSiteConfigCapability } from "./config"
 import { emptyManagedSiteQueries } from "./unsupportedQueries"
-
-const claudeCodeHubChannelEffect = (
-  kind: ManagedSiteMutationConfirmedEffect["kind"],
-  resourceId?: number,
-): ManagedSiteMutationConfirmedEffect => ({
-  kind,
-  resourceKind: "channel",
-  ...(resourceId === undefined ? {} : { resourceId }),
-})
-
-const toClaudeCodeHubDiagnostic = (error: ClaudeCodeHubApiError) => {
-  const code =
-    typeof error.code === "string" ||
-    (typeof error.code === "number" && Number.isSafeInteger(error.code))
-      ? error.code
-      : undefined
-  const statusCode =
-    typeof error.status === "number" &&
-    Number.isSafeInteger(error.status) &&
-    error.status >= 100 &&
-    error.status <= 599
-      ? error.status
-      : undefined
-  return {
-    message: getErrorMessage(error, "Claude Code Hub mutation failed"),
-    ...(code === undefined ? {} : { code }),
-    ...(statusCode === undefined ? {} : { statusCode }),
-    raw: error,
-  }
-}
 
 const runClaudeCodeHubResourceRead = async <T>(
   config: ClaudeCodeHubConfig,
@@ -102,48 +70,6 @@ const runClaudeCodeHubResourceRead = async <T>(
     return await operation()
   } catch (error) {
     throw toClaudeCodeHubDisclosureError(error, config)
-  }
-}
-
-const runClaudeCodeHubMutation = async <TData, TResult = TData>(input: {
-  effect: ManagedSiteMutationConfirmedEffect
-  execute(): Promise<TData>
-  successData?: (data: TData) => TResult
-}) => {
-  const sequence = createManagedSiteMutationSequence({ idempotent: false })
-  const attempt = sequence.beginStep()
-  try {
-    const data = await input.execute()
-    attempt.markPossiblyDispatched()
-    attempt.markResponseReceived()
-    attempt.confirmEffect(input.effect)
-    attempt.complete()
-    return sequence.finish({
-      finalState: "confirmed",
-      data: input.successData
-        ? input.successData(data)
-        : (data as unknown as TResult),
-    })
-  } catch (error) {
-    if (!(error instanceof ClaudeCodeHubApiError) || !error.dispatch) {
-      throw error
-    }
-    if (error.dispatch === "dispatched") {
-      attempt.markPossiblyDispatched()
-    }
-    if (error.responseReceived) {
-      attempt.markResponseReceived()
-    }
-    if (error.confirmedNonApplication) {
-      if (error.dispatch === "dispatched" && error.responseReceived) {
-        attempt.confirmNonApplication()
-      }
-    }
-    attempt.complete()
-    return sequence.finish({
-      finalState: "unconfirmed",
-      diagnostic: toClaudeCodeHubDiagnostic(error),
-    })
   }
 }
 
@@ -216,7 +142,9 @@ const CLAUDE_CODE_HUB_NATIVE_ALLOWED_MODELS_FIELD =
   "_claudeCodeHubNativeAllowedModels"
 
 type ClaudeCodeHubChannelFormData = ChannelFormData & {
-  [CLAUDE_CODE_HUB_NATIVE_ALLOWED_MODELS_FIELD]?: ClaudeCodeHubAllowedModel[]
+  [CLAUDE_CODE_HUB_NATIVE_ALLOWED_MODELS_FIELD]?:
+    | ClaudeCodeHubAllowedModel[]
+    | null
 }
 
 const assertClaudeCodeHubResourceRef = (
@@ -229,7 +157,7 @@ const assertClaudeCodeHubResourceRef = (
   })
 
 const normalizeAllowedModels = (
-  allowedModels?: ClaudeCodeHubAllowedModel[],
+  allowedModels?: ClaudeCodeHubAllowedModel[] | null,
 ): string[] =>
   normalizeList(
     (allowedModels ?? [])
@@ -248,7 +176,7 @@ const toAllowedModelRules = (models: string[]): ClaudeCodeHubAllowedModel[] =>
   }))
 
 const getNativeNonExactAllowedModelRules = (
-  allowedModels?: ClaudeCodeHubAllowedModel[],
+  allowedModels?: ClaudeCodeHubAllowedModel[] | null,
 ): ClaudeCodeHubAllowedModel[] =>
   (allowedModels ?? []).filter(
     (item) =>
@@ -269,11 +197,11 @@ const haveSameAllowedModelDraft = (
 }
 
 const hasNativeAllowedModelRules = (
-  allowedModels?: ClaudeCodeHubAllowedModel[],
+  allowedModels?: ClaudeCodeHubAllowedModel[] | null,
 ) => (allowedModels?.length ?? 0) > 0
 
 const hasNativeOnlyAllowedModelRules = (
-  allowedModels?: ClaudeCodeHubAllowedModel[],
+  allowedModels?: ClaudeCodeHubAllowedModel[] | null,
 ) =>
   hasNativeAllowedModelRules(allowedModels) &&
   normalizeAllowedModels(allowedModels).length === 0
@@ -627,6 +555,9 @@ const claudeCodeHubManagedUpstreamResources: ManagedUpstreamResourcesCapability<
 
 export const claudeCodeHubManagedSiteCapabilities = {
   channels: claudeCodeHubManagedSiteChannels,
+  // Compatibility for token/key workflows that still consume the old
+  // ManagedUpstreamResources contract. The channel UI and migration now use
+  // the native registration; remove this facade after those callers migrate.
   resources: claudeCodeHubManagedUpstreamResources,
   config: claudeCodeHubManagedSiteConfig,
   queries: emptyManagedSiteQueries,

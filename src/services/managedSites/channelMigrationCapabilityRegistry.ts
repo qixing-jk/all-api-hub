@@ -1,5 +1,6 @@
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import { axonHubManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/axonHubMigration"
+import { claudeCodeHubManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/claudeCodeHubMigration"
 import { newApiManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/newApiMigration"
 import type { ManagedSiteMigrationCapability } from "~/types/managedSiteMigrationCapability"
 
@@ -14,6 +15,10 @@ const registrations: readonly {
   {
     siteType: SITE_TYPES.AXON_HUB,
     capability: axonHubManagedSiteMigrationCapability,
+  },
+  {
+    siteType: SITE_TYPES.CLAUDE_CODE_HUB,
+    capability: claudeCodeHubManagedSiteMigrationCapability,
   },
 ]
 

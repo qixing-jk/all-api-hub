@@ -304,7 +304,7 @@ describe("account site definition registry", () => {
       [SITE_TYPES.DONE_HUB, MANAGED_RESOURCE_MODES.LegacyChannel],
       [SITE_TYPES.OCTOPUS, MANAGED_RESOURCE_MODES.LegacyChannel],
       [SITE_TYPES.AXON_HUB, MANAGED_RESOURCE_MODES.NativeResource],
-      [SITE_TYPES.CLAUDE_CODE_HUB, MANAGED_RESOURCE_MODES.LegacyChannel],
+      [SITE_TYPES.CLAUDE_CODE_HUB, MANAGED_RESOURCE_MODES.NativeResource],
       [SITE_TYPES.SUB2API, MANAGED_RESOURCE_MODES.NativeResource],
     ])
 

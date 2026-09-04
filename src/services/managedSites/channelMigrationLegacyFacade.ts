@@ -1,5 +1,4 @@
 import { AXON_HUB_CHANNEL_TYPE } from "~/constants/axonHub"
-import { CLAUDE_CODE_HUB_PROVIDER_TYPE } from "~/constants/claudeCodeHub"
 import { ChannelType, DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
@@ -8,6 +7,10 @@ import {
   mapAxonHubChannelTypeToChannelTypeStrict,
   mapChannelTypeToAxonHubChannelTypeStrict,
 } from "~/services/apiAdapters/managedResources/axonHubChannelType"
+import {
+  mapChannelTypeToClaudeCodeHubProviderType,
+  mapClaudeCodeHubProviderTypeToChannelTypeStrict,
+} from "~/services/apiAdapters/managedResources/claudeCodeHubChannelType"
 import {
   buildOctopusBaseUrl,
   mapChannelTypeToOctopusOutboundType,
@@ -56,15 +59,6 @@ const areStringArraysEqual = (
 
 type LegacyMigrationPreviewDraft = Omit<ChannelFormData, "key">
 
-const CLAUDE_CODE_HUB_TO_SHARED_CHANNEL_TYPE: Partial<
-  Record<string, ChannelType>
-> = {
-  [CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE]: ChannelType.OpenAI,
-  [CLAUDE_CODE_HUB_PROVIDER_TYPE.CODEX]: ChannelType.OpenAI,
-  [CLAUDE_CODE_HUB_PROVIDER_TYPE.CLAUDE]: ChannelType.Anthropic,
-  [CLAUDE_CODE_HUB_PROVIDER_TYPE.GEMINI]: ChannelType.Gemini,
-}
-
 const mapAxonHubChannelTypeWithLegacyOpenAiFallback = (
   type: string,
 ): ChannelType => {
@@ -79,6 +73,13 @@ const mapChannelTypeToAxonHubWithLegacyOpenAiFallback = (type: ChannelType) => {
     : AXON_HUB_CHANNEL_TYPE.OPENAI
 }
 
+const mapClaudeCodeHubProviderTypeWithLegacyOpenAiFallback = (
+  type: string,
+): ChannelType => {
+  const mappedType = mapClaudeCodeHubProviderTypeToChannelTypeStrict(type)
+  return mappedType.status === "mapped" ? mappedType.value : ChannelType.OpenAI
+}
+
 const getSharedChannelType = (
   sourceSiteType: ManagedSiteType,
   channel: ManagedSiteChannel,
@@ -89,20 +90,11 @@ const getSharedChannelType = (
       : sourceSiteType === SITE_TYPES.AXON_HUB
         ? mapAxonHubChannelTypeWithLegacyOpenAiFallback(channel.type)
         : sourceSiteType === SITE_TYPES.CLAUDE_CODE_HUB
-          ? CLAUDE_CODE_HUB_TO_SHARED_CHANNEL_TYPE[channel.type] ??
-            ChannelType.OpenAI
+          ? mapClaudeCodeHubProviderTypeWithLegacyOpenAiFallback(channel.type)
           : ChannelType.OpenAI
   return sourceSiteType === SITE_TYPES.OCTOPUS
     ? mapOctopusOutboundTypeToChannelType(channelType)
     : (channelType as ChannelType)
-}
-
-const SHARED_TO_CLAUDE_CODE_HUB_PROVIDER_TYPE: Partial<
-  Record<ChannelType, string>
-> = {
-  [ChannelType.Anthropic]: CLAUDE_CODE_HUB_PROVIDER_TYPE.CLAUDE,
-  [ChannelType.Gemini]: CLAUDE_CODE_HUB_PROVIDER_TYPE.GEMINI,
-  [ChannelType.VertexAi]: CLAUDE_CODE_HUB_PROVIDER_TYPE.GEMINI,
 }
 
 const getLegacyTargetType = (
@@ -116,10 +108,7 @@ const getLegacyTargetType = (
     return mapChannelTypeToAxonHubWithLegacyOpenAiFallback(resourceType)
   }
   if (targetSiteType === SITE_TYPES.CLAUDE_CODE_HUB) {
-    return (
-      SHARED_TO_CLAUDE_CODE_HUB_PROVIDER_TYPE[resourceType] ??
-      CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE
-    )
+    return mapChannelTypeToClaudeCodeHubProviderType(resourceType)
   }
   return resourceType
 }

@@ -3,6 +3,10 @@ import {
   AXON_HUB_TABLE_FIELD_IDS,
 } from "~/constants/axonHub"
 import {
+  CLAUDE_CODE_HUB_MANAGED_RESOURCE_DETAIL_FIELD_IDS,
+  CLAUDE_CODE_HUB_MANAGED_RESOURCE_TABLE_FIELD_IDS,
+} from "~/constants/claudeCodeHubManagedResource"
+import {
   NEW_API_MANAGED_RESOURCE_DETAIL_FIELD_IDS,
   NEW_API_MANAGED_RESOURCE_TABLE_FIELD_IDS,
 } from "~/constants/newApi"
@@ -541,7 +545,17 @@ const MANAGED_ONLY_SITE_DEFINITIONS = [
     siteType: SITE_TYPES.CLAUDE_CODE_HUB,
     scopes: MANAGED_SCOPE,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Unsupported,
-    managedResource: { ...LEGACY_MANAGED_CHANNEL_POLICY },
+    managedResource: {
+      ...LEGACY_MANAGED_CHANNEL_POLICY,
+      mode: MANAGED_RESOURCE_MODES.NativeResource,
+      tableFieldIds: CLAUDE_CODE_HUB_MANAGED_RESOURCE_TABLE_FIELD_IDS,
+      detailFieldIds: CLAUDE_CODE_HUB_MANAGED_RESOURCE_DETAIL_FIELD_IDS,
+      actions: [
+        MANAGED_RESOURCE_PRODUCT_ACTIONS.Create,
+        MANAGED_RESOURCE_PRODUCT_ACTIONS.DeleteSelected,
+        MANAGED_RESOURCE_PRODUCT_ACTIONS.Migrate,
+      ],
+    },
   },
 ] as const satisfies readonly AccountSiteDefinition[]
 

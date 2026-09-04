@@ -3,12 +3,14 @@ import type { ManagedResourceKind } from "~/services/accountSiteDefinitions/cont
 import type { ManagedResourceRegistration } from "~/services/apiAdapters/contracts/managedResourceNative"
 
 import { axonHubManagedResourceRegistration } from "./axonHub"
+import { claudeCodeHubManagedResourceRegistration } from "./claudeCodeHub"
 import { newApiManagedResourceRegistration } from "./newApi"
 import { sub2ApiManagedResourceRegistration } from "./sub2api"
 
 const MANAGED_RESOURCE_REGISTRATIONS = [
   newApiManagedResourceRegistration,
   axonHubManagedResourceRegistration,
+  claudeCodeHubManagedResourceRegistration,
   sub2ApiManagedResourceRegistration,
 ] satisfies readonly ManagedResourceRegistration[]
 

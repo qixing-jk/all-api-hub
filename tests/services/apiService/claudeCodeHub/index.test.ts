@@ -4,13 +4,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import {
   ClaudeCodeHubApiError,
   createProvider,
+  createProviderV1,
   deleteProvider,
+  deleteProviderV1,
+  getProvider,
   getUnmaskedProviderKey,
   listProviders,
   listProvidersFromAction,
   normalizeClaudeCodeHubBaseUrl,
   searchProviders,
   updateProvider,
+  updateProviderV1,
   validateClaudeCodeHubConfig,
 } from "~/services/apiService/claudeCodeHub"
 import { server } from "~~/tests/msw/server"
@@ -305,6 +309,147 @@ describe("Claude Code Hub action API adapter", () => {
       "sk-real-provider-key",
     )
     expect(capturedAuthorization).toBe("Bearer admin-secret")
+  })
+
+  it("uses the native v1 resource methods and strict request bodies", async () => {
+    const requests: Array<{ method: string; path: string; body?: unknown }> = []
+    const summary = {
+      id: 42,
+      name: "Native provider",
+      url: "https://api.example.invalid",
+      providerType: "openai-compatible",
+      allowedModels: [{ matchType: "exact", pattern: "model-example" }],
+    }
+
+    server.use(
+      http.get(`${PROVIDER_V1_BASE}/42`, ({ request }) => {
+        requests.push({
+          method: request.method,
+          path: new URL(request.url).pathname,
+        })
+        return HttpResponse.json(summary)
+      }),
+      http.post(PROVIDER_V1_BASE, async ({ request }) => {
+        requests.push({
+          method: request.method,
+          path: new URL(request.url).pathname,
+          body: await request.json(),
+        })
+        return HttpResponse.json(summary, { status: 201 })
+      }),
+      http.patch(`${PROVIDER_V1_BASE}/42`, async ({ request }) => {
+        requests.push({
+          method: request.method,
+          path: new URL(request.url).pathname,
+          body: await request.json(),
+        })
+        return HttpResponse.json({ ...summary, name: "Updated provider" })
+      }),
+      http.delete(`${PROVIDER_V1_BASE}/42`, ({ request }) => {
+        requests.push({
+          method: request.method,
+          path: new URL(request.url).pathname,
+        })
+        return new HttpResponse(null, { status: 204 })
+      }),
+    )
+
+    await expect(getProvider(config, 42)).resolves.toEqual(summary)
+    await expect(
+      createProviderV1(config, {
+        name: "Native provider",
+        url: "https://api.example.invalid",
+        key: "credential-placeholder",
+        provider_type: "openai-compatible",
+        allowed_models: [{ matchType: "exact", pattern: "model-example" }],
+      }),
+    ).resolves.toEqual(summary)
+    await expect(
+      updateProviderV1(config, 42, {
+        name: "Updated provider",
+        is_enabled: false,
+      }),
+    ).resolves.toEqual({ ...summary, name: "Updated provider" })
+    await expect(deleteProviderV1(config, 42)).resolves.toBeUndefined()
+
+    expect(requests).toEqual([
+      { method: "GET", path: "/api/v1/providers/42" },
+      {
+        method: "POST",
+        path: "/api/v1/providers",
+        body: {
+          name: "Native provider",
+          url: "https://api.example.invalid",
+          key: "credential-placeholder",
+          provider_type: "openai-compatible",
+          allowed_models: [{ matchType: "exact", pattern: "model-example" }],
+        },
+      },
+      {
+        method: "PATCH",
+        path: "/api/v1/providers/42",
+        body: { name: "Updated provider", is_enabled: false },
+      },
+      { method: "DELETE", path: "/api/v1/providers/42" },
+    ])
+  })
+
+  it("marks deterministic v1 rejections as confirmed and uncertain failures as ambiguous", async () => {
+    server.use(
+      http.post(PROVIDER_V1_BASE, () =>
+        HttpResponse.json(
+          {
+            type: "about:blank",
+            title: "Provider rejected",
+            detail: "Provider input is invalid",
+          },
+          { status: 422 },
+        ),
+      ),
+    )
+    const invoke = () =>
+      createProviderV1(config, {
+        name: "Native provider",
+        url: "https://api.example.invalid",
+        key: "credential-placeholder",
+        provider_type: "openai-compatible",
+        allowed_models: [],
+      })
+
+    await expect(invoke()).rejects.toMatchObject({
+      name: "ClaudeCodeHubApiError",
+      status: 422,
+      dispatch: "dispatched",
+      responseReceived: true,
+      confirmedNonApplication: true,
+    })
+
+    server.use(
+      http.post(PROVIDER_V1_BASE, () =>
+        HttpResponse.json(
+          {
+            title: "Temporary upstream failure",
+            detail: "The response was lost after dispatch",
+          },
+          { status: 503 },
+        ),
+      ),
+    )
+    await expect(invoke()).rejects.toMatchObject({
+      name: "ClaudeCodeHubApiError",
+      status: 503,
+      dispatch: "dispatched",
+      responseReceived: true,
+      confirmedNonApplication: false,
+    })
+
+    server.use(http.post(PROVIDER_V1_BASE, () => HttpResponse.error()))
+    await expect(invoke()).rejects.toMatchObject({
+      name: "ClaudeCodeHubApiError",
+      dispatch: "dispatched",
+      responseReceived: false,
+      confirmedNonApplication: false,
+    })
   })
 
   it("throws when the provider v1 reveal API omits a usable string key", async () => {

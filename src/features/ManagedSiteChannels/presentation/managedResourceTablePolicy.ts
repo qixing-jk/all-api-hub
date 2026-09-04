@@ -1,6 +1,7 @@
 import type { TFunction } from "i18next"
 
 import { AXON_HUB_CHANNEL_FIELD_IDS } from "~/constants/axonHub"
+import { CLAUDE_CODE_HUB_MANAGED_RESOURCE_FIELD_IDS } from "~/constants/claudeCodeHub"
 import { NEW_API_MANAGED_RESOURCE_FIELD_IDS } from "~/constants/newApi"
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import { SUB2API_MANAGED_RESOURCE_FIELD_IDS } from "~/constants/sub2api"
@@ -117,6 +118,23 @@ const nativeTablePresentationPolicies: Partial<
       { id: SUB2API_MANAGED_RESOURCE_FIELD_IDS.Name, desc: true },
     ],
     columnLayout: NATIVE_TABLE_COLUMN_LAYOUTS.Sub2Api,
+  },
+  [SITE_TYPES.CLAUDE_CODE_HUB]: {
+    semantics: {
+      baseUrlFieldId: CLAUDE_CODE_HUB_MANAGED_RESOURCE_FIELD_IDS.BaseUrl,
+      statusFieldId: CLAUDE_CODE_HUB_MANAGED_RESOURCE_FIELD_IDS.Status,
+      fieldValuePresentations: {
+        [CLAUDE_CODE_HUB_MANAGED_RESOURCE_FIELD_IDS.Type]:
+          requireFieldValuePresentation(
+            SITE_TYPES.CLAUDE_CODE_HUB,
+            CLAUDE_CODE_HUB_MANAGED_RESOURCE_FIELD_IDS.Type,
+          ),
+      },
+    },
+    defaultSorting: [
+      { id: MANAGED_CHANNELS_COLUMN_IDS.Identifier, desc: true },
+    ],
+    columnLayout: NATIVE_TABLE_COLUMN_LAYOUTS.Canonical,
   },
 }
 

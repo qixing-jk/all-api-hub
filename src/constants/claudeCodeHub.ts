@@ -1,5 +1,11 @@
 import { CHANNEL_STATUS, type ChannelDefaults } from "~/types/managedSite"
 
+export {
+  CLAUDE_CODE_HUB_MANAGED_RESOURCE_DETAIL_FIELD_IDS,
+  CLAUDE_CODE_HUB_MANAGED_RESOURCE_FIELD_IDS,
+  CLAUDE_CODE_HUB_MANAGED_RESOURCE_TABLE_FIELD_IDS,
+} from "./claudeCodeHubManagedResource"
+
 export const CLAUDE_CODE_HUB_PROVIDER_TYPE = {
   OPENAI_COMPATIBLE: "openai-compatible",
   CODEX: "codex",

@@ -192,7 +192,8 @@ async function parseV1JsonResponse<T>(response: Response): Promise<T> {
     throw new ClaudeCodeHubApiError(message, response.status, {
       dispatch: "dispatched",
       responseReceived: true,
-      confirmedNonApplication: true,
+      // A 5xx response can be emitted after the server applied a mutation.
+      confirmedNonApplication: response.status >= 400 && response.status < 500,
       raw: parsed,
       ...(code ? { code } : {}),
     })
@@ -418,6 +419,85 @@ type ClaudeCodeHubV1ProviderListOptions = {
   timeoutMs?: number
 }
 
+type ClaudeCodeHubV1RequestOptions = {
+  signal?: AbortSignal
+  timeoutMs?: number
+}
+
+/**
+ * Claude Code Hub v0.9.5 exposes authenticated provider CRUD at this route.
+ * Routes: https://github.com/ding113/claude-code-hub/blob/dfeb14331cb350f672e92a3684adecf1052dd476/src/app/api/v1/resources/providers/router.ts
+ * Strict bodies: https://github.com/ding113/claude-code-hub/blob/dfeb14331cb350f672e92a3684adecf1052dd476/src/lib/api/v1/schemas/providers.ts
+ */
+const callV1ProviderRoute = async <T>(input: {
+  config: ClaudeCodeHubConfig
+  path: string
+  method: "GET" | "POST" | "PATCH" | "DELETE"
+  body?: object
+  expectsJson?: boolean
+  options?: ClaudeCodeHubV1RequestOptions
+}): Promise<T> => {
+  const baseUrl = normalizeClaudeCodeHubBaseUrl(input.config.baseUrl)
+  const actionSignal = buildActionSignal(input.options)
+  let response: Response | undefined
+  let fetchStarted = false
+
+  try {
+    if (actionSignal.signal.aborted) {
+      const raw =
+        actionSignal.signal.reason ??
+        new DOMException("The operation was aborted", "AbortError")
+      throw new ClaudeCodeHubApiError(
+        getClaudeCodeHubRequestErrorMessage(raw),
+        undefined,
+        {
+          dispatch: "not-dispatched",
+          responseReceived: false,
+          confirmedNonApplication: true,
+          raw,
+          code: getOperationalErrorCode(raw),
+        },
+      )
+    }
+
+    fetchStarted = true
+    response = await fetch(`${baseUrl}/api/v1/providers${input.path}`, {
+      method: input.method,
+      signal: actionSignal.signal,
+      headers: {
+        ...(input.body ? { "Content-Type": "application/json" } : {}),
+        Authorization: `Bearer ${input.config.adminToken}`,
+      },
+      ...(input.body ? { body: JSON.stringify(input.body) } : {}),
+    })
+
+    if (input.expectsJson === false && response.ok) {
+      return undefined as T
+    }
+    return await parseV1JsonResponse<T>(response)
+  } catch (error) {
+    if (error instanceof ClaudeCodeHubApiError && error.evidence) {
+      throw error
+    }
+    throw new ClaudeCodeHubApiError(
+      getClaudeCodeHubRequestErrorMessage(error, response?.status),
+      response?.status,
+      {
+        dispatch: fetchStarted ? "dispatched" : "not-dispatched",
+        responseReceived: response !== undefined,
+        confirmedNonApplication: !fetchStarted,
+        raw: error,
+        code:
+          error instanceof ClaudeCodeHubApiError
+            ? error.code
+            : getOperationalErrorCode(error),
+      },
+    )
+  } finally {
+    actionSignal.cleanup()
+  }
+}
+
 /**
  * Lists Claude Code Hub providers through the admin v1 provider list API.
  *
@@ -452,6 +532,66 @@ export async function searchProviders(
   return await fetchV1ProviderList(config, {
     ...options,
     keyword,
+  })
+}
+
+/** Reads one native provider through the v0.9.5 admin resource route. */
+export async function getProvider(
+  config: ClaudeCodeHubConfig,
+  providerId: number,
+  options?: ClaudeCodeHubV1RequestOptions,
+): Promise<ClaudeCodeHubProviderDisplay> {
+  return await callV1ProviderRoute({
+    config,
+    path: `/${providerId}`,
+    method: "GET",
+    options,
+  })
+}
+
+/** Creates one native provider through the strict v0.9.5 resource schema. */
+export async function createProviderV1(
+  config: ClaudeCodeHubConfig,
+  payload: ClaudeCodeHubProviderCreatePayload,
+  options?: ClaudeCodeHubV1RequestOptions,
+): Promise<ClaudeCodeHubProviderDisplay> {
+  return await callV1ProviderRoute({
+    config,
+    path: "",
+    method: "POST",
+    body: payload,
+    options,
+  })
+}
+
+/** Updates only an explicit native provider patch through the strict schema. */
+export async function updateProviderV1(
+  config: ClaudeCodeHubConfig,
+  providerId: number,
+  payload: Omit<ClaudeCodeHubProviderUpdatePayload, "providerId">,
+  options?: ClaudeCodeHubV1RequestOptions,
+): Promise<ClaudeCodeHubProviderDisplay> {
+  return await callV1ProviderRoute({
+    config,
+    path: `/${providerId}`,
+    method: "PATCH",
+    body: payload,
+    options,
+  })
+}
+
+/** Deletes one native provider through the v0.9.5 resource route. */
+export async function deleteProviderV1(
+  config: ClaudeCodeHubConfig,
+  providerId: number,
+  options?: ClaudeCodeHubV1RequestOptions,
+): Promise<void> {
+  return await callV1ProviderRoute({
+    config,
+    path: `/${providerId}`,
+    method: "DELETE",
+    expectsJson: false,
+    options,
   })
 }
 

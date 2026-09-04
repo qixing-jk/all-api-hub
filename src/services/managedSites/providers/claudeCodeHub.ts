@@ -149,7 +149,7 @@ function preserveProviderType(value: unknown) {
  * Normalizes allowed-model rules into a flat list of exact model identifiers.
  */
 function normalizeAllowedModels(
-  allowedModels?: ClaudeCodeHubAllowedModel[],
+  allowedModels?: ClaudeCodeHubAllowedModel[] | null,
 ): string[] {
   return normalizeList(
     (allowedModels ?? [])
