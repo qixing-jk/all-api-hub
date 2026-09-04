@@ -118,9 +118,7 @@ function sanitizeGatewayGuidanceState(value: unknown): GatewayGuidanceState {
 }
 
 /** Sanitizes imported or persisted experience state at its storage boundary. */
-export function sanitizeFeatureGuidanceState(
-  value: unknown,
-): FeatureGuidanceState {
+function sanitizeFeatureGuidanceState(value: unknown): FeatureGuidanceState {
   const state = createEmptyFeatureGuidanceState()
   if (!isPlainObject(value)) return state
 

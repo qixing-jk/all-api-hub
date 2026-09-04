@@ -106,7 +106,7 @@ export const USER_PREFERENCES_STORAGE_KEYS = {
   USER_PREFERENCES: "user_preferences",
 } as const
 
-export const FEATURE_GUIDANCE_STORAGE_KEYS = {
+const FEATURE_GUIDANCE_STORAGE_KEYS = {
   FEATURE_GUIDANCE_STATE: "featureGuidance_state_v1",
 } as const
 
