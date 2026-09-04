@@ -15,6 +15,7 @@ import * as claudeCodeHubNativeResources from "~/services/apiAdapters/managedRes
 import { claudeCodeHubManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/claudeCodeHubMigration"
 import { resolveManagedSiteMigrationCapability } from "~/services/managedSites/channelMigrationCapabilityRegistry"
 import {
+  MANAGED_SITE_MUTATION_COMPLETIONS,
   MANAGED_SITE_MUTATION_EFFECT_KINDS,
   MANAGED_SITE_MUTATION_OUTCOMES,
 } from "~/services/managedSites/mutations"
@@ -91,6 +92,27 @@ const buildSource = (
     hasAdvancedSettings: false,
     hasMultiKeyState: false,
   },
+})
+
+const buildCreateCommand = (
+  projectionOverrides: Partial<
+    ManagedSiteMigrationExecutionCommand["projection"]
+  > = {},
+): ManagedSiteMigrationExecutionCommand => ({
+  source: buildSource(),
+  targetSiteType: SITE_TYPES.CLAUDE_CODE_HUB,
+  projection: {
+    name: "Migrated provider",
+    type: CLAUDE_CODE_HUB_PROVIDER_TYPE.CLAUDE,
+    baseUrl: "https://target.example.invalid",
+    models: ["model-example"],
+    groups: ["team"],
+    priority: 0,
+    weight: 100,
+    status: 1,
+    ...projectionOverrides,
+  },
+  credential: "credential-placeholder",
 })
 
 describe("Claude Code Hub native migration capability", () => {
@@ -176,6 +198,7 @@ describe("Claude Code Hub native migration capability", () => {
         limit5hResetMode: "rolling",
         dailyResetMode: "fixed",
         dailyResetTime: "00:00",
+        customHeaders: {},
       })),
     })
     vi.spyOn(
@@ -202,6 +225,10 @@ describe("Claude Code Hub native migration capability", () => {
     ["limit5hResetMode", "fixed"],
     ["dailyResetMode", "rolling"],
     ["dailyResetTime", "12:00"],
+    ["providerVendorId", "vendor-example"],
+    ["limit5hUsd", 1],
+    ["preserveClientIp", true],
+    ["customHeaders", { "x-example": "value" }],
   ])(
     "discloses non-default %s configuration as lossy",
     async (field, value) => {
@@ -238,6 +265,77 @@ describe("Claude Code Hub native migration capability", () => {
       })
     },
   )
+
+  it("blocks an invalid source ref before provider access", async () => {
+    const operations = buildOperations()
+    vi.spyOn(
+      claudeCodeHubNativeResources,
+      "openClaudeCodeHubNativeResourceOperations",
+    ).mockResolvedValue(operations as never)
+    const invalidSelection = {
+      ...selection,
+      ref: { ...selection.ref, resourceId: "0" },
+    }
+
+    await expect(
+      claudeCodeHubManagedSiteMigrationCapability.source!.prepare(
+        invalidSelection,
+      ),
+    ).resolves.toEqual({
+      status: "blocked",
+      reasonCode:
+        MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_RESOLUTION_FAILED,
+    })
+    await expect(
+      claudeCodeHubManagedSiteMigrationCapability.source!.resolveCredential(
+        invalidSelection,
+      ),
+    ).resolves.toEqual({
+      status: "blocked",
+      reasonCode:
+        MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_RESOLUTION_FAILED,
+    })
+    expect(operations.get).not.toHaveBeenCalled()
+    expect(operations.loadSecret).not.toHaveBeenCalled()
+  })
+
+  it("defaults a provider without a native type to OpenAI compatibility", async () => {
+    const operations = buildOperations({
+      get: vi.fn(async () => ({
+        ...provider,
+        providerType: undefined,
+      })),
+    })
+    vi.spyOn(
+      claudeCodeHubNativeResources,
+      "openClaudeCodeHubNativeResourceOperations",
+    ).mockResolvedValue(operations as never)
+
+    await expect(
+      claudeCodeHubManagedSiteMigrationCapability.source!.prepare(selection),
+    ).resolves.toMatchObject({
+      status: "ready",
+      source: { resourceType: ChannelType.OpenAI },
+    })
+  })
+
+  it("propagates an aborted source lookup", async () => {
+    const operations = buildOperations({
+      get: vi.fn(async () => {
+        throw new claudeCodeHubNativeResources.ClaudeCodeHubNativeError({
+          code: MANAGED_RESOURCE_FAILURE_CODES.Aborted,
+        })
+      }),
+    })
+    vi.spyOn(
+      claudeCodeHubNativeResources,
+      "openClaudeCodeHubNativeResourceOperations",
+    ).mockResolvedValue(operations as never)
+
+    await expect(
+      claudeCodeHubManagedSiteMigrationCapability.source!.prepare(selection),
+    ).rejects.toMatchObject({ name: "AbortError" })
+  })
 
   it("blocks unknown provider types before credential resolution", async () => {
     const operations = buildOperations({
@@ -277,6 +375,93 @@ describe("Claude Code Hub native migration capability", () => {
       credential: "credential-placeholder",
     })
     expect(operations.loadSecret).toHaveBeenCalledWith(23, undefined)
+  })
+
+  it("blocks a source whose resolved credential is empty", async () => {
+    const operations = buildOperations({
+      loadSecret: vi.fn(async () => "   "),
+    })
+    vi.spyOn(
+      claudeCodeHubNativeResources,
+      "openClaudeCodeHubNativeResourceOperations",
+    ).mockResolvedValue(operations as never)
+
+    await expect(
+      claudeCodeHubManagedSiteMigrationCapability.source!.resolveCredential(
+        selection,
+      ),
+    ).resolves.toEqual({
+      status: "blocked",
+      reasonCode:
+        MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_MISSING,
+    })
+  })
+
+  it("blocks credential resolution when the native request fails", async () => {
+    const operations = buildOperations({
+      loadSecret: vi.fn(async () => {
+        throw new Error("credential lookup failed")
+      }),
+    })
+    vi.spyOn(
+      claudeCodeHubNativeResources,
+      "openClaudeCodeHubNativeResourceOperations",
+    ).mockResolvedValue(operations as never)
+
+    await expect(
+      claudeCodeHubManagedSiteMigrationCapability.source!.resolveCredential(
+        selection,
+      ),
+    ).resolves.toEqual({
+      status: "blocked",
+      reasonCode:
+        MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_RESOLUTION_FAILED,
+    })
+  })
+
+  it("propagates a native abort during credential resolution", async () => {
+    const operations = buildOperations({
+      loadSecret: vi.fn(async () => {
+        throw new claudeCodeHubNativeResources.ClaudeCodeHubNativeError({
+          code: MANAGED_RESOURCE_FAILURE_CODES.Aborted,
+        })
+      }),
+    })
+    vi.spyOn(
+      claudeCodeHubNativeResources,
+      "openClaudeCodeHubNativeResourceOperations",
+    ).mockResolvedValue(operations as never)
+
+    await expect(
+      claudeCodeHubManagedSiteMigrationCapability.source!.resolveCredential(
+        selection,
+      ),
+    ).rejects.toMatchObject({ name: "AbortError" })
+  })
+
+  it("propagates the original failure when credential resolution is cancelled", async () => {
+    const controller = new AbortController()
+    const failure = new Error("cancelled credential request")
+    controller.abort()
+    const operations = buildOperations({
+      loadSecret: vi.fn(
+        async (_providerId, options?: { signal?: AbortSignal }) => {
+          if (options?.signal?.aborted) throw failure
+          throw new Error("expected an aborted signal")
+        },
+      ),
+    })
+    vi.spyOn(
+      claudeCodeHubNativeResources,
+      "openClaudeCodeHubNativeResourceOperations",
+    ).mockResolvedValue(operations as never)
+
+    await expect(
+      claudeCodeHubManagedSiteMigrationCapability.source!.resolveCredential(
+        selection,
+        { signal: controller.signal },
+      ),
+    ).rejects.toBe(failure)
   })
 
   it("normalizes the target projection and creates through native operations", async () => {
@@ -345,6 +530,161 @@ describe("Claude Code Hub native migration capability", () => {
         remappedType: true,
       },
     })
+  })
+
+  it("uses the default group when the source has no usable group", async () => {
+    const operations = buildOperations()
+    vi.spyOn(
+      claudeCodeHubNativeResources,
+      "openClaudeCodeHubNativeResourceOperations",
+    ).mockResolvedValue(operations as never)
+    const preparation =
+      await claudeCodeHubManagedSiteMigrationCapability.target!.prepare({
+        ...buildSource(),
+        groups: ["   "],
+      })
+
+    expect(preparation).toMatchObject({
+      projection: { groups: ["default"] },
+      adjustments: { forcedDefaultGroup: true },
+    })
+    await expect(
+      claudeCodeHubManagedSiteMigrationCapability.target!.create(
+        buildCreateCommand({ groups: [] }),
+      ),
+    ).resolves.toEqual({ status: "created" })
+    expect(operations.create).toHaveBeenLastCalledWith(
+      expect.objectContaining({ group_tag: "default" }),
+      undefined,
+    )
+  })
+
+  it("rejects an unsupported target provider type before opening native operations", async () => {
+    const openOperations = vi.spyOn(
+      claudeCodeHubNativeResources,
+      "openClaudeCodeHubNativeResourceOperations",
+    )
+
+    await expect(
+      claudeCodeHubManagedSiteMigrationCapability.target!.create(
+        buildCreateCommand({ type: "future-provider" }),
+      ),
+    ).resolves.toEqual({
+      status: "failed",
+      failureCode:
+        MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES.TargetRejected,
+    })
+    expect(openOperations).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    [
+      MANAGED_SITE_MUTATION_OUTCOMES.Rejected,
+      {
+        outcome: MANAGED_SITE_MUTATION_OUTCOMES.Rejected,
+        diagnostic: { message: "provider rejected" },
+      },
+      {
+        status: "failed",
+        failureCode:
+          MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES.TargetRejected,
+      },
+    ],
+    [
+      MANAGED_SITE_MUTATION_OUTCOMES.Partial,
+      {
+        outcome: MANAGED_SITE_MUTATION_OUTCOMES.Partial,
+        confirmedEffects: [
+          {
+            kind: MANAGED_SITE_MUTATION_EFFECT_KINDS.ResourceCreated,
+            resourceKind: MANAGED_RESOURCE_KINDS.Channel,
+          },
+        ],
+        completion: MANAGED_SITE_MUTATION_COMPLETIONS.Uncertain,
+        diagnostic: { message: "completion unknown" },
+      },
+      { status: "uncertain" },
+    ],
+    [
+      MANAGED_SITE_MUTATION_OUTCOMES.Uncertain,
+      {
+        outcome: MANAGED_SITE_MUTATION_OUTCOMES.Uncertain,
+        diagnostic: { message: "completion unknown" },
+      },
+      { status: "uncertain" },
+    ],
+  ])("maps a native %s create outcome", async (_outcome, result, expected) => {
+    const operations = buildOperations({
+      create: vi.fn(async () => result),
+    })
+    vi.spyOn(
+      claudeCodeHubNativeResources,
+      "openClaudeCodeHubNativeResourceOperations",
+    ).mockResolvedValue(operations as never)
+
+    await expect(
+      claudeCodeHubManagedSiteMigrationCapability.target!.create(
+        buildCreateCommand(),
+      ),
+    ).resolves.toEqual(expected)
+  })
+
+  it("propagates an aborted target create", async () => {
+    const operations = buildOperations({
+      create: vi.fn(async () => {
+        throw new claudeCodeHubNativeResources.ClaudeCodeHubNativeError({
+          code: MANAGED_RESOURCE_FAILURE_CODES.Aborted,
+        })
+      }),
+    })
+    vi.spyOn(
+      claudeCodeHubNativeResources,
+      "openClaudeCodeHubNativeResourceOperations",
+    ).mockResolvedValue(operations as never)
+
+    await expect(
+      claudeCodeHubManagedSiteMigrationCapability.target!.create(
+        buildCreateCommand(),
+      ),
+    ).rejects.toMatchObject({ name: "AbortError" })
+  })
+
+  it.each([
+    [
+      "validation failure",
+      new claudeCodeHubNativeResources.ClaudeCodeHubNativeError({
+        code: MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed,
+      }),
+      MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES.TargetRejected,
+    ],
+    [
+      "unexpected native failure",
+      new claudeCodeHubNativeResources.ClaudeCodeHubNativeError({
+        code: MANAGED_RESOURCE_FAILURE_CODES.Unexpected,
+      }),
+      MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES.Unexpected,
+    ],
+    [
+      "untyped failure",
+      new Error("unexpected create failure"),
+      MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES.Unexpected,
+    ],
+  ])("maps a %s during target creation", async (_name, error, failureCode) => {
+    const operations = buildOperations({
+      create: vi.fn(async () => {
+        throw error
+      }),
+    })
+    vi.spyOn(
+      claudeCodeHubNativeResources,
+      "openClaudeCodeHubNativeResourceOperations",
+    ).mockResolvedValue(operations as never)
+
+    await expect(
+      claudeCodeHubManagedSiteMigrationCapability.target!.create(
+        buildCreateCommand(),
+      ),
+    ).resolves.toEqual({ status: "failed", failureCode })
   })
 
   it("classifies a missing target configuration as unavailable", async () => {

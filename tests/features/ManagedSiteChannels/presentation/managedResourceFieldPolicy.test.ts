@@ -301,11 +301,44 @@ describe("managed resource field policy", () => {
         ({ fieldId }) =>
           fieldId === CLAUDE_CODE_HUB_MANAGED_RESOURCE_FIELD_IDS.Status,
       )!
-
       expect(new Set(fieldIds)).toEqual(
         new Set(CLAUDE_CODE_HUB_MANAGED_RESOURCE_DETAIL_FIELD_IDS),
       )
       expect(policy.hiddenFields).toEqual([])
+      expect(
+        Object.fromEntries(
+          policy.fields.map((field) => [
+            field.fieldId,
+            field.resolveLabel(resolveKey),
+          ]),
+        ),
+      ).toEqual({
+        name: "channelDialog:fields.name.label",
+        type: "channelDialog:fields.type.label",
+        status: "channelDialog:fields.status.label",
+        baseURL: "channelDialog:fields.baseUrl.label",
+        key: "channelDialog:fields.key.label",
+        supportedModels: "channelDialog:fields.models.label",
+        groupTag: "channelDialog:fields.groups.label",
+        priority: "channelDialog:fields.priority.label",
+        orderingWeight: "channelDialog:fields.weight.label",
+      })
+      expect(
+        policy.fields
+          .find(
+            ({ fieldId }) =>
+              fieldId === CLAUDE_CODE_HUB_MANAGED_RESOURCE_FIELD_IDS.Key,
+          )!
+          .resolveHelp?.(resolveKey),
+      ).toBe("managedSiteChannels:editor.secret.keepExistingHint")
+      expect(
+        policy.fields
+          .find(
+            ({ fieldId }) =>
+              fieldId === CLAUDE_CODE_HUB_MANAGED_RESOURCE_FIELD_IDS.GroupTag,
+          )!
+          .resolveHelp?.(resolveKey),
+      ).toBe("channelDialog:fields.groups.hint")
       for (const type of Object.values(CLAUDE_CODE_HUB_PROVIDER_TYPE)) {
         expect(
           getManagedResourceFieldOptionLabel(typeField, type, resolveKey),
@@ -314,6 +347,9 @@ describe("managed resource field policy", () => {
       expect(
         getManagedResourceFieldOptionLabel(statusField, "enabled", resolveKey),
       ).toBe("common:status.enabled")
+      expect(
+        getManagedResourceFieldOptionLabel(statusField, "disabled", resolveKey),
+      ).toBe("common:status.disabled")
       expect(
         getManagedResourceFieldOptionLabel(
           typeField,

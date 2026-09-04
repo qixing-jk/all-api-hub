@@ -452,6 +452,76 @@ describe("Claude Code Hub action API adapter", () => {
     })
   })
 
+  it("uses a default AbortError when a pre-cancelled v1 mutation has no reason", async () => {
+    const any = vi
+      .spyOn(AbortSignal, "any")
+      .mockReturnValue({ aborted: true, reason: undefined } as AbortSignal)
+
+    try {
+      const failure = await createProviderV1(
+        config,
+        {
+          name: "Native provider",
+          url: "https://api.example.invalid",
+          key: "credential-placeholder",
+          provider_type: "openai-compatible",
+          allowed_models: [],
+        },
+        { signal: new AbortController().signal },
+      ).catch((error: unknown) => error)
+
+      expect(failure).toMatchObject({
+        name: "ClaudeCodeHubApiError",
+        message: "The operation was aborted",
+        dispatch: "not-dispatched",
+        responseReceived: false,
+        confirmedNonApplication: true,
+        raw: expect.objectContaining({ name: "AbortError" }),
+        code: DOMException.ABORT_ERR,
+      })
+    } finally {
+      any.mockRestore()
+    }
+  })
+
+  it("wraps evidence-less v1 parse errors with mutation evidence", async () => {
+    server.use(
+      http.post(
+        PROVIDER_V1_BASE,
+        () =>
+          new HttpResponse("not json", {
+            status: 502,
+            headers: { "Content-Type": "text/plain" },
+          }),
+      ),
+    )
+
+    const failure = await createProviderV1(config, {
+      name: "Native provider",
+      url: "https://api.example.invalid",
+      key: "credential-placeholder",
+      provider_type: "openai-compatible",
+      allowed_models: [],
+    }).catch((error: unknown) => error)
+
+    expect(failure).toMatchObject({
+      name: "ClaudeCodeHubApiError",
+      message: "Claude Code Hub returned a non-JSON response (502)",
+      status: 502,
+      dispatch: "dispatched",
+      responseReceived: true,
+      confirmedNonApplication: false,
+      code: undefined,
+    })
+    expect((failure as ClaudeCodeHubApiError).raw).toBeInstanceOf(
+      ClaudeCodeHubApiError,
+    )
+    expect(
+      ((failure as ClaudeCodeHubApiError).raw as ClaudeCodeHubApiError)
+        .evidence,
+    ).toBeUndefined()
+  })
+
   it("throws when the provider v1 reveal API omits a usable string key", async () => {
     server.use(
       http.get(`${PROVIDER_V1_BASE}/42/key:reveal`, () =>
