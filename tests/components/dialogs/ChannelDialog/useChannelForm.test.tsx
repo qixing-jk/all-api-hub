@@ -247,6 +247,58 @@ describe("useChannelForm", () => {
     })
   })
 
+  it("keeps fallback groups when validated managed-site config is unavailable", async () => {
+    mockCheckValidConfig.mockResolvedValue(true)
+    mockGetConfig.mockResolvedValue(null)
+
+    const { result } = renderHook(() =>
+      useChannelForm({
+        mode: DIALOG_MODES.ADD,
+        channel: null,
+        isOpen: true,
+        onClose: vi.fn(),
+        initialGroups: ["existing"],
+      }),
+    )
+
+    await waitFor(() => {
+      expect(result.current.groupDiscoveryStatus).toBe("not-ready")
+      expect(result.current.availableGroups).toEqual([
+        { label: "default", value: "default" },
+        { label: "existing", value: "existing" },
+      ])
+      expect(result.current.isLoadingGroups).toBe(false)
+    })
+  })
+
+  it("keeps fallback groups when managed-site group discovery fails", async () => {
+    mockCheckValidConfig.mockResolvedValue(true)
+    mockGetConfig.mockResolvedValue({
+      baseUrl: "https://managed.example.invalid",
+      adminToken: "admin-token-placeholder",
+    })
+    mockFetchSiteUserGroups.mockRejectedValue(new Error("groups unavailable"))
+
+    const { result } = renderHook(() =>
+      useChannelForm({
+        mode: DIALOG_MODES.ADD,
+        channel: null,
+        isOpen: true,
+        onClose: vi.fn(),
+        initialGroups: ["existing"],
+      }),
+    )
+
+    await waitFor(() => {
+      expect(result.current.groupDiscoveryStatus).toBe("failed")
+      expect(result.current.availableGroups).toEqual([
+        { label: "default", value: "default" },
+        { label: "existing", value: "existing" },
+      ])
+      expect(result.current.isLoadingGroups).toBe(false)
+    })
+  })
+
   it("loads groups through Octopus service config", async () => {
     const octopusConfig = {
       baseUrl: "https://octopus.example.com",

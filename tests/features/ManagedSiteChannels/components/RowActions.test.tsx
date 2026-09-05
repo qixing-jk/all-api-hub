@@ -1,4 +1,4 @@
-import { fireEvent } from "@testing-library/react"
+import { createEvent, fireEvent } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
@@ -26,14 +26,24 @@ vi.mock("~/components/ui/dropdown-menu", () => ({
     children,
     disabled,
     onClick,
+    onSelect,
     ...props
   }: {
     children: ReactNode
     disabled?: boolean
     onClick?: () => void
+    onSelect?: (event: { preventDefault: () => void }) => void
     "aria-disabled"?: boolean | "true" | "false"
   }) => (
-    <button disabled={disabled} onClick={onClick} role="menuitem" {...props}>
+    <button
+      disabled={disabled}
+      onClick={(event) => {
+        onSelect?.(event)
+        if (!event.defaultPrevented) onClick?.()
+      }}
+      role="menuitem"
+      {...props}
+    >
       {children}
     </button>
   ),
@@ -163,7 +173,10 @@ describe("ManagedSiteChannels RowActions", () => {
     })
     expect(syncItem).toHaveAttribute("aria-disabled", "true")
 
-    fireEvent.click(syncItem)
+    const selectEvent = createEvent.click(syncItem)
+    fireEvent(syncItem, selectEvent)
+
+    expect(selectEvent.defaultPrevented).toBe(true)
     expect(onSync).not.toHaveBeenCalled()
   })
 

@@ -77,11 +77,6 @@ export default function ModelRedirectSettings() {
 
       setModelDiscoveryStatus("loading")
 
-      if (!hasValidManagedSiteConfig(preferences)) {
-        setModelDiscoveryStatus("not-ready")
-        return
-      }
-
       const managedConfig = getManagedSiteAdminConfig(preferences)
       if (!managedConfig) {
         setModelDiscoveryStatus("not-ready")

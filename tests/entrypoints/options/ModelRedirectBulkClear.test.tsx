@@ -7,6 +7,7 @@ import {
   getManagedSiteServiceForType,
   hasValidManagedSiteConfig,
 } from "~/services/managedSites/managedSiteService"
+import { getManagedSiteAdminConfig } from "~/services/managedSites/utils/managedSite"
 import { ModelRedirectService } from "~/services/models/modelRedirect"
 import { supportsManagedSiteModelRedirect } from "~/services/models/modelRedirect/capabilities"
 import { buildManagedSiteChannel } from "~~/tests/test-utils/factories"
@@ -179,6 +180,39 @@ describe("Model redirect bulk clear flow", () => {
       await screen.findByText("modelRedirect:modelDiscovery.unsupported.title"),
     ).toBeVisible()
     expect(screen.getByRole("switch", { name: "Toggle" })).toBeVisible()
+  })
+
+  it("explains that model discovery is not ready while preferences are unavailable", async () => {
+    mockedUseUserPreferencesContext.mockReturnValue({
+      preferences: undefined,
+      updateModelRedirect: vi.fn(),
+      resetModelRedirectConfig: vi.fn(),
+    })
+
+    renderSubject()
+
+    expect(
+      await screen.findByText("modelRedirect:modelDiscovery.not-ready.title"),
+    ).toBeVisible()
+    expect(screen.getByRole("switch", { name: "Toggle" })).toBeVisible()
+    expect(
+      screen.getByRole("button", { name: t("bulkClear.action") }),
+    ).toBeDisabled()
+  })
+
+  it("explains that model discovery is not ready when managed-site setup is invalid", async () => {
+    mockedHasValidManagedSiteConfig.mockReturnValue(false)
+    vi.mocked(getManagedSiteAdminConfig).mockReturnValueOnce(null)
+
+    renderSubject()
+
+    expect(
+      await screen.findByText("modelRedirect:modelDiscovery.not-ready.title"),
+    ).toBeVisible()
+    expect(screen.getByRole("switch", { name: "Toggle" })).toBeVisible()
+    expect(
+      screen.getByRole("button", { name: t("bulkClear.action") }),
+    ).toBeDisabled()
   })
 
   it("reports model discovery failures instead of silently using presets", async () => {

@@ -8,6 +8,7 @@ import {
   ChannelCommonFieldsBody,
   ChannelModelsField,
   ChannelSecretField,
+  type ChannelCommonFieldsBodyProps,
 } from "~/components/dialogs/ChannelDialog/components/ChannelCommonFieldsBody"
 import { CHANNEL_DIALOG_TEST_IDS } from "~/components/dialogs/ChannelDialog/testIds"
 
@@ -50,6 +51,61 @@ function FilterableModelsHarness({
       />
       <output aria-label="Selected models">{selected.join(",")}</output>
     </>
+  )
+}
+
+function renderGroupDiscoveryStatus(
+  status: ChannelCommonFieldsBodyProps["groupDiscoveryStatus"],
+) {
+  render(
+    <ChannelCommonFieldsBody
+      t={t}
+      values={{
+        name: "Example channel",
+        type: "openai",
+        key: "secret-placeholder",
+        baseURL: "https://api.example.invalid",
+        models: [],
+        groups: ["default"],
+        priority: 0,
+        weight: 0,
+        status: "enabled",
+      }}
+      channelTypeOptions={[]}
+      availableModels={[]}
+      availableGroups={[{ value: "default", label: "Default" }]}
+      statusOptions={[]}
+      isViewMode={false}
+      isAddMode
+      isInteractionDisabled={false}
+      isKeyRequired
+      isBaseURLRequired={false}
+      isKeyRevealed={false}
+      canLoadRealKey={false}
+      isLoadingRealKey={false}
+      isLoadingModels={false}
+      isLoadingGroups={false}
+      groupDiscoveryStatus={status}
+      showUnknownStringType={false}
+      showGenericModelsField={false}
+      showGroupsField
+      showPriorityAndWeight={false}
+      showModelPrefillWarning={false}
+      onNameChange={vi.fn()}
+      onTypeChange={vi.fn()}
+      onKeyChange={vi.fn()}
+      onKeyRevealedChange={vi.fn()}
+      onLoadRealKey={vi.fn()}
+      onBaseURLChange={vi.fn()}
+      onModelsChange={vi.fn()}
+      onGroupsChange={vi.fn()}
+      onSelectAllModels={vi.fn()}
+      onInverseModels={vi.fn()}
+      onDeselectAllModels={vi.fn()}
+      onPriorityChange={vi.fn()}
+      onWeightChange={vi.fn()}
+      onStatusChange={vi.fn()}
+    />,
   )
 }
 
@@ -456,74 +512,19 @@ describe("ChannelCommonFieldsBody", () => {
     expect(screen.getByRole("option", { name: "Enabled" })).toHaveFocus()
   })
 
-  it("explains when managed-site group discovery is unsupported", () => {
-    render(
-      <ChannelCommonFieldsBody
-        t={t}
-        values={{
-          name: "Example channel",
-          type: "openai",
-          key: "secret-placeholder",
-          baseURL: "https://api.example.invalid",
-          models: [],
-          groups: ["default"],
-          priority: 0,
-          weight: 0,
-          status: "enabled",
-        }}
-        channelTypeOptions={[]}
-        availableModels={[]}
-        availableGroups={[{ value: "default", label: "Default" }]}
-        statusOptions={[]}
-        isViewMode={false}
-        isAddMode
-        isInteractionDisabled={false}
-        isKeyRequired
-        isBaseURLRequired={false}
-        isKeyRevealed={false}
-        canLoadRealKey={false}
-        isLoadingRealKey={false}
-        isLoadingModels={false}
-        isLoadingGroups={false}
-        groupDiscoveryStatus="unsupported"
-        showUnknownStringType={false}
-        showGenericModelsField={false}
-        showGroupsField
-        showPriorityAndWeight={false}
-        showModelPrefillWarning={false}
-        onNameChange={vi.fn()}
-        onTypeChange={vi.fn()}
-        onKeyChange={vi.fn()}
-        onKeyRevealedChange={vi.fn()}
-        onLoadRealKey={vi.fn()}
-        onBaseURLChange={vi.fn()}
-        onModelsChange={vi.fn()}
-        onGroupsChange={vi.fn()}
-        onSelectAllModels={vi.fn()}
-        onInverseModels={vi.fn()}
-        onDeselectAllModels={vi.fn()}
-        onPriorityChange={vi.fn()}
-        onWeightChange={vi.fn()}
-        onStatusChange={vi.fn()}
-      />,
-    )
+  it.each(["unsupported", "not-ready", "failed"] as const)(
+    "explains when managed-site group discovery is %s",
+    (status) => {
+      renderGroupDiscoveryStatus(status)
+      const message = `channelDialog:fields.groups.discoveryStatus.${status}`
 
-    expect(
-      screen.getByText(
-        "channelDialog:fields.groups.discoveryStatus.unsupported",
-      ),
-    ).toBeVisible()
-    expect(
-      screen.getByRole("combobox", {
-        name: "channelDialog:fields.groups.label",
-      }),
-    ).toHaveAccessibleDescription(
-      "channelDialog:fields.groups.discoveryStatus.unsupported",
-    )
-    expect(
-      screen.getByRole("status", {
-        name: "channelDialog:fields.groups.discoveryStatus.unsupported",
-      }),
-    ).toBeVisible()
-  })
+      expect(screen.getByText(message)).toBeVisible()
+      expect(
+        screen.getByRole("combobox", {
+          name: "channelDialog:fields.groups.label",
+        }),
+      ).toHaveAccessibleDescription(message)
+      expect(screen.getByRole("status", { name: message })).toBeVisible()
+    },
+  )
 })

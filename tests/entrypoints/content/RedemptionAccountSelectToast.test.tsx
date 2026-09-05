@@ -5,6 +5,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import type { ReactElement } from "react"
 import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
@@ -253,7 +254,8 @@ describe("RedemptionAccountSelectToast", () => {
     expect(onSelect).not.toHaveBeenCalled()
   })
 
-  it("explains unsupported accounts and selects the first supported account", () => {
+  it("opens an unsupported account site without selecting it and selects the first supported account", async () => {
+    const user = userEvent.setup()
     const onSelect = vi.fn()
     const accounts = [
       makeAccount({
@@ -290,11 +292,39 @@ describe("RedemptionAccountSelectToast", () => {
       name: "redemptionAssist:accountSelect.openSiteManual",
     })
     expect(manualLink).toHaveAttribute("href", "https://example.com")
-    fireEvent.keyDown(manualLink, { key: "Enter" })
+    await user.click(manualLink)
     expect(onSelect).not.toHaveBeenCalled()
     expect(
       screen.getByRole("radio", { name: /Supported Account/ }),
     ).toBeChecked()
+  })
+
+  it("does not offer a manual site link when an unsupported account has no site url", () => {
+    const unsupportedAccount = makeAccount({
+      id: "unsupported-account",
+      name: "Unsupported Account",
+      baseUrl: "",
+      automaticRedemptionSupport: {
+        status: REDEMPTION_ACCOUNT_SUPPORT_STATUSES.Unsupported,
+        reason: "capability-missing",
+      },
+    })
+
+    renderWithI18n(
+      <RedemptionAccountSelectToast
+        accounts={[unsupportedAccount]}
+        onSelect={vi.fn()}
+      />,
+    )
+
+    expect(
+      screen.getByRole("radio", { name: /Unsupported Account/ }),
+    ).toBeDisabled()
+    expect(
+      screen.queryByRole("link", {
+        name: "redemptionAssist:accountSelect.openSiteManual",
+      }),
+    ).not.toBeInTheDocument()
   })
 
   it("explains when none of the saved accounts support automatic redemption", () => {

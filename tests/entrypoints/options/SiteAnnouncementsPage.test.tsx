@@ -20,6 +20,7 @@ import {
 import { SiteAnnouncementsMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import { sendSiteAnnouncementsMessage } from "~/services/siteAnnouncements/messaging"
 import type {
+  SiteAnnouncementCheckResult,
   SiteAnnouncementRecord,
   SiteAnnouncementSiteState,
 } from "~/types/siteAnnouncements"
@@ -223,6 +224,23 @@ describe("SiteAnnouncementsPage", () => {
       surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsSiteAnnouncementCard,
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
     })
+  }
+
+  const mockManualCheckResult = (checkResult: SiteAnnouncementCheckResult) => {
+    sendSiteAnnouncementsMessageMock.mockImplementation(
+      async (type: string) => {
+        switch (type) {
+          case SiteAnnouncementsMessageTypes.ListRecords:
+            return { success: true, data: records }
+          case SiteAnnouncementsMessageTypes.GetStatus:
+            return { success: true, data: status }
+          case SiteAnnouncementsMessageTypes.CheckNow:
+            return { success: true, data: checkResult }
+          default:
+            return { success: true }
+        }
+      },
+    )
   }
 
   it("renders overview, notification summary, and route-expanded announcement card", async () => {
@@ -646,6 +664,88 @@ describe("SiteAnnouncementsPage", () => {
         ([type]) => type === SiteAnnouncementsMessageTypes.ListRecords,
       ),
     ).toHaveLength(2)
+  })
+
+  it("shows success feedback when every manual announcement check succeeds", async () => {
+    const user = userEvent.setup()
+
+    mockManualCheckResult({
+      checked: 2,
+      created: 0,
+      notified: 0,
+      failed: 0,
+      unsupported: 0,
+      records: [],
+    })
+
+    render(<SiteAnnouncementsPage />)
+
+    await screen.findByText("siteAnnouncements:title")
+    await user.click(
+      screen.getByRole("button", {
+        name: "siteAnnouncements:actions.checkNow",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(showResultToast).toHaveBeenCalledWith({
+        success: true,
+        message: undefined,
+        successFallback: "siteAnnouncements:messages.checkCompleted",
+        errorFallback: "siteAnnouncements:messages.checkFailed",
+      })
+    })
+    expect(showWarningToast).not.toHaveBeenCalled()
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+      {
+        insights: {
+          itemCount: 2,
+          successCount: 2,
+          failureCount: 0,
+        },
+      },
+    )
+  })
+
+  it("classifies an unsupported-only manual check as an actionable partial result", async () => {
+    const user = userEvent.setup()
+
+    mockManualCheckResult({
+      checked: 2,
+      created: 0,
+      notified: 0,
+      failed: 0,
+      unsupported: 1,
+      records: [],
+    })
+
+    render(<SiteAnnouncementsPage />)
+
+    await screen.findByText("siteAnnouncements:title")
+    await user.click(
+      screen.getByRole("button", {
+        name: "siteAnnouncements:actions.checkNow",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(showWarningToast).toHaveBeenCalledWith(
+        "siteAnnouncements:messages.checkCompletedWithIssues",
+      )
+    })
+    expect(showResultToast).not.toHaveBeenCalled()
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unsupported,
+        insights: {
+          itemCount: 2,
+          successCount: 1,
+          failureCount: 0,
+        },
+      },
+    )
   })
 
   it("shows aggregate failure and unsupported status in the all-sites view", async () => {
