@@ -161,7 +161,7 @@ describe("Veloera native managed resource", () => {
         {
           fieldId: VELOERA_MANAGED_RESOURCE_FIELD_IDS.Type,
           kind: "text",
-          value: "GitHub Models",
+          value: String(VeloeraChannelType.GitHubModels),
         },
         {
           fieldId: VELOERA_MANAGED_RESOURCE_FIELD_IDS.Key,

@@ -82,13 +82,13 @@ describe("native managed-channel import", () => {
       managedResourceRegistry,
       "getManagedResourceRegistration",
     ).mockReturnValue({
-      siteType: SITE_TYPES.DONE_HUB,
+      siteType: SITE_TYPES.OCTOPUS,
       kind: MANAGED_RESOURCE_KINDS.Channel,
       open: vi.fn(),
     } as unknown as ManagedResourceRegistration)
 
     await expect(
-      openNativeManagedChannelImportSession(SITE_TYPES.DONE_HUB),
+      openNativeManagedChannelImportSession(SITE_TYPES.OCTOPUS),
     ).resolves.toBeNull()
   })
 

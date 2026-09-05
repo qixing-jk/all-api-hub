@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next"
 
 import { AxonHubChannelTypeNames } from "~/constants/axonHub"
 import { ClaudeCodeHubProviderTypeNames } from "~/constants/claudeCodeHub"
+import { DoneHubChannelTypeNames } from "~/constants/doneHub"
 import { ChannelTypeNames, type ChannelType } from "~/constants/managedSite"
 import { OctopusOutboundTypeNames } from "~/constants/octopus"
 import {
@@ -228,16 +229,29 @@ const getChannelTypeText = (
     )
   }
 
+  if (siteType === SITE_TYPES.DONE_HUB && typeof type === "string") {
+    const numericType = Number(type)
+    return Number.isInteger(numericType)
+      ? DoneHubChannelTypeNames[
+          numericType as keyof typeof DoneHubChannelTypeNames
+        ] ?? type
+      : type
+  }
+
   if (typeof type !== "number") {
     return "—"
   }
 
   return siteType === SITE_TYPES.OCTOPUS
     ? OctopusOutboundTypeNames[type] ?? String(type)
-    : siteType === SITE_TYPES.VELOERA
-      ? VeloeraChannelTypeNames[type as keyof typeof VeloeraChannelTypeNames] ??
+    : siteType === SITE_TYPES.DONE_HUB
+      ? DoneHubChannelTypeNames[type as keyof typeof DoneHubChannelTypeNames] ??
         String(type)
-      : ChannelTypeNames[type as ChannelType] ?? String(type)
+      : siteType === SITE_TYPES.VELOERA
+        ? VeloeraChannelTypeNames[
+            type as keyof typeof VeloeraChannelTypeNames
+          ] ?? String(type)
+        : ChannelTypeNames[type as ChannelType] ?? String(type)
 }
 
 const formatDelimitedValues = (value: string | null | undefined) => {

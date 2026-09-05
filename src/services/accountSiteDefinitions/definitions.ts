@@ -7,6 +7,10 @@ import {
   CLAUDE_CODE_HUB_MANAGED_RESOURCE_TABLE_FIELD_IDS,
 } from "~/constants/claudeCodeHubManagedResource"
 import {
+  DONE_HUB_MANAGED_RESOURCE_DETAIL_FIELD_IDS,
+  DONE_HUB_MANAGED_RESOURCE_TABLE_FIELD_IDS,
+} from "~/constants/doneHub"
+import {
   NEW_API_MANAGED_RESOURCE_DETAIL_FIELD_IDS,
   NEW_API_MANAGED_RESOURCE_TABLE_FIELD_IDS,
 } from "~/constants/newApi"
@@ -600,7 +604,20 @@ const ACCOUNT_SITE_DEFINITION_OVERRIDES = [
     siteType: SITE_TYPES.DONE_HUB,
     scopes: ACCOUNT_AND_MANAGED_SCOPES,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
-    managedResource: { ...LEGACY_MANAGED_CHANNEL_POLICY },
+    managedResource: {
+      ...LEGACY_MANAGED_CHANNEL_POLICY,
+      mode: MANAGED_RESOURCE_MODES.NativeResource,
+      tableFieldIds: DONE_HUB_MANAGED_RESOURCE_TABLE_FIELD_IDS,
+      detailFieldIds: DONE_HUB_MANAGED_RESOURCE_DETAIL_FIELD_IDS,
+      actions: [
+        MANAGED_RESOURCE_PRODUCT_ACTIONS.Create,
+        MANAGED_RESOURCE_PRODUCT_ACTIONS.DeleteSelected,
+        MANAGED_RESOURCE_PRODUCT_ACTIONS.Migrate,
+        MANAGED_RESOURCE_PRODUCT_ACTIONS.SyncModels,
+        MANAGED_RESOURCE_PRODUCT_ACTIONS.ConfigureModelSync,
+        MANAGED_RESOURCE_PRODUCT_ACTIONS.ConfigureModelFilters,
+      ],
+    },
     onboarding: {
       detection: { titlePatterns: [makeTitleRegex(SITE_TYPES.DONE_HUB)] },
       routes: {

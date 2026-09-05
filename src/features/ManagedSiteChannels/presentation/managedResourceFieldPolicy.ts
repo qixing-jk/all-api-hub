@@ -11,6 +11,10 @@ import {
   ClaudeCodeHubProviderTypeNames,
 } from "~/constants/claudeCodeHub"
 import {
+  DONE_HUB_MANAGED_RESOURCE_FIELD_IDS,
+  DoneHubChannelTypeNames,
+} from "~/constants/doneHub"
+import {
   ChannelTypeNames,
   NEW_API_MANAGED_RESOURCE_FIELD_IDS,
 } from "~/constants/newApi"
@@ -372,6 +376,13 @@ const veloeraTypeOptionLabelResolvers = Object.fromEntries(
   ]),
 ) satisfies Readonly<Record<string, ManagedResourceTextResolver>>
 
+const doneHubTypeOptionLabelResolvers = Object.fromEntries(
+  Object.entries(DoneHubChannelTypeNames).map(([value, label]) => [
+    value,
+    () => label,
+  ]),
+) satisfies Readonly<Record<string, ManagedResourceTextResolver>>
+
 const newApiStatusOptionLabelResolvers = {
   [String(CHANNEL_STATUS.Unknown)]: (t: TFunction) =>
     t("managedSiteChannels:statusLabels.unknown"),
@@ -483,6 +494,11 @@ const veloeraFields = createNewApiFamilyFields(
   veloeraTypeOptionLabelResolvers,
 )
 
+const doneHubFields = createNewApiFamilyFields(
+  DONE_HUB_MANAGED_RESOURCE_FIELD_IDS,
+  doneHubTypeOptionLabelResolvers,
+)
+
 const newApiManagedResourceFieldPolicy = defineManagedResourceFieldPolicy({
   siteType: SITE_TYPES.NEW_API,
   kind: MANAGED_RESOURCE_KINDS.Channel,
@@ -508,6 +524,21 @@ const veloeraManagedResourceFieldPolicy = defineManagedResourceFieldPolicy({
     },
     [MANAGED_RESOURCE_EDITOR_MODES.Edit]: {
       fields: veloeraFields,
+      hiddenFields: [],
+    },
+  },
+})
+
+const doneHubManagedResourceFieldPolicy = defineManagedResourceFieldPolicy({
+  siteType: SITE_TYPES.DONE_HUB,
+  kind: MANAGED_RESOURCE_KINDS.Channel,
+  modes: {
+    [MANAGED_RESOURCE_EDITOR_MODES.Create]: {
+      fields: doneHubFields,
+      hiddenFields: [],
+    },
+    [MANAGED_RESOURCE_EDITOR_MODES.Edit]: {
+      fields: doneHubFields,
       hiddenFields: [],
     },
   },
@@ -775,6 +806,7 @@ const managedResourceFieldPolicyRegistry =
   createManagedResourceFieldPolicyRegistry([
     newApiManagedResourceFieldPolicy,
     veloeraManagedResourceFieldPolicy,
+    doneHubManagedResourceFieldPolicy,
     axonHubManagedResourceFieldPolicy,
     sub2ApiManagedResourceFieldPolicy,
     claudeCodeHubManagedResourceFieldPolicy,

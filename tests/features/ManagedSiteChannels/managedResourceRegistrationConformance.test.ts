@@ -1,7 +1,11 @@
 import type { TFunction } from "i18next"
 import { describe, expect, it } from "vitest"
 
-import { isManagedSiteType, SITE_TYPES } from "~/constants/siteType"
+import {
+  isManagedSiteType,
+  SITE_TYPES,
+  type ManagedSiteType,
+} from "~/constants/siteType"
 import {
   getManagedResourceFieldPolicy,
   MANAGED_RESOURCE_EDITOR_MODES,
@@ -65,8 +69,12 @@ describe("native managed-resource registration conformance", () => {
     }
   })
 
-  it("declares numeric channel deep links only for the New API table contract", () => {
+  it("declares numeric channel deep links for compatible native table contracts", () => {
     const resolveLabel = ((key: string) => key) as TFunction
+    const expectedIdFieldBySiteType = new Map<ManagedSiteType, string>([
+      [SITE_TYPES.NEW_API, "newApi.id"],
+      [SITE_TYPES.DONE_HUB, "doneHub.id"],
+    ])
 
     for (const { definition, siteType } of nativeDefinitions) {
       const routeFilterColumns = createManagedResourceColumns(
@@ -76,9 +84,10 @@ describe("native managed-resource registration conformance", () => {
         {},
       ).filter((column) => column.routeFilter?.queryKey === "channelId")
 
-      if (siteType === SITE_TYPES.NEW_API) {
+      const expectedIdField = expectedIdFieldBySiteType.get(siteType)
+      if (expectedIdField) {
         expect(routeFilterColumns).toHaveLength(1)
-        expect(routeFilterColumns[0]?.id).toBe("newApi.id")
+        expect(routeFilterColumns[0]?.id).toBe(expectedIdField)
       } else {
         expect(routeFilterColumns, siteType).toHaveLength(0)
       }

@@ -14,6 +14,11 @@ import {
   CLAUDE_CODE_HUB_PROVIDER_TYPE,
   ClaudeCodeHubProviderTypeNames,
 } from "~/constants/claudeCodeHub"
+import {
+  DONE_HUB_MANAGED_RESOURCE_FIELD_IDS,
+  DoneHubChannelType,
+  DoneHubChannelTypeNames,
+} from "~/constants/doneHub"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   SUB2API_API_KEY_ACCOUNT_PLATFORM_LABELS,
@@ -185,6 +190,25 @@ describe("managed resource field policy", () => {
     expect(keyField.resolveHelp?.(resolveKey)).toBe(
       "managedSiteChannels:editor.secret.keepExistingHint",
     )
+  })
+
+  it("resolves DoneHub-owned type labels without canonical id collisions", () => {
+    const policy = getManagedResourceFieldPolicy(
+      SITE_TYPES.DONE_HUB,
+      MANAGED_RESOURCE_KINDS.Channel,
+      "edit",
+    )!
+    const typeField = policy.fields.find(
+      ({ fieldId }) => fieldId === DONE_HUB_MANAGED_RESOURCE_FIELD_IDS.Type,
+    )!
+
+    expect(
+      getManagedResourceFieldOptionLabel(
+        typeField,
+        String(DoneHubChannelType.GitHubModels),
+        resolveKey,
+      ),
+    ).toBe(DoneHubChannelTypeNames[DoneHubChannelType.GitHubModels])
   })
 
   it.each(["create", "edit"] as const)(

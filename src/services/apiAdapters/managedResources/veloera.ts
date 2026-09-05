@@ -8,28 +8,22 @@ import {
 import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
 import {
   MANAGED_RESOURCE_CREATE_SEED_KINDS,
-  MANAGED_RESOURCE_DISPLAY_FACT_KINDS,
   MANAGED_RESOURCE_FAILURE_CODES,
-  MANAGED_RESOURCE_SECRET_STATES,
-  MANAGED_RESOURCE_STATUSES,
   ManagedResourceError,
   type ManagedResourceRef,
-  type ResourceDisplayFacts,
   type ResourceFailure,
   type ResourceListQuery,
   type ResourceOperationOptions,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 import type { ManagedSiteChannelModelProbe } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
+import { attributeCreatedNativeResource } from "~/services/apiAdapters/managedResources/createAttribution"
 import { defineNativeResourceKind } from "~/services/apiAdapters/managedResources/factory"
 import { createNewApiFamilyEditorBindings } from "~/services/apiAdapters/managedResources/newApiEditor"
-import {
-  parseNewApiResourceList,
-  throwIfNewApiResourceOperationAborted,
-} from "~/services/apiAdapters/managedResources/newApiResourceUtils"
+import { createNewApiFamilyResourceFacts } from "~/services/apiAdapters/managedResources/newApiFamilyResourceFacts"
+import { throwIfNewApiResourceOperationAborted } from "~/services/apiAdapters/managedResources/newApiResourceUtils"
 import { veloeraManagedSiteCapabilities } from "~/services/apiAdapters/managedSites/veloera"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import {
-  MANAGED_SITE_MUTATION_COMPLETIONS,
   MANAGED_SITE_MUTATION_OUTCOMES,
   type ManagedSiteMutationResult,
 } from "~/services/managedSites/mutations"
@@ -100,28 +94,6 @@ const veloeraEditor = createNewApiFamilyEditorBindings({
   unsupportedCreateTypes: new Set([VeloeraChannelType.VertexAi]),
   baseUrlRequiredTypes: new Set(),
 })
-const createAttributionTailsByScope = new Map<string, Promise<void>>()
-
-const withSerializedCreateAttribution = async <T>(
-  scopeKey: string,
-  operation: () => Promise<T>,
-): Promise<T> => {
-  const previous = createAttributionTailsByScope.get(scopeKey)
-  const current = (previous ?? Promise.resolve()).then(operation, operation)
-  const tail = current.then(
-    () => undefined,
-    () => undefined,
-  )
-  createAttributionTailsByScope.set(scopeKey, tail)
-  try {
-    return await current
-  } finally {
-    if (createAttributionTailsByScope.get(scopeKey) === tail) {
-      createAttributionTailsByScope.delete(scopeKey)
-    }
-  }
-}
-
 const mapFailure = (error: unknown): ResourceFailure => {
   if (error instanceof ManagedResourceError) return error.failure
   if (error instanceof ApiError) {
@@ -174,117 +146,11 @@ const openConfig = async (): Promise<VeloeraNativeConfig> => {
   }
 }
 
-const channelTypeLabel = (channel: VeloeraManagedSiteChannel) =>
-  VeloeraChannelTypeNames[
-    Number(channel.type) as keyof typeof VeloeraChannelTypeNames
-  ] ?? String(channel.type)
-
-const channelSearchValues = (channel: VeloeraManagedSiteChannel) => [
-  channelTypeLabel(channel),
-  channel.base_url ?? "",
-  ...parseNewApiResourceList(channel.models),
-  ...parseNewApiResourceList(channel.group),
-]
-
-const toVeloeraResourceFacts = (
-  channel: VeloeraManagedSiteChannel,
-  ref: ManagedResourceRef,
-  options: { inventory: boolean },
-): ResourceDisplayFacts => {
-  const fields = VELOERA_MANAGED_RESOURCE_FIELD_IDS
-  const models = parseNewApiResourceList(channel.models)
-  const groups = parseNewApiResourceList(channel.group)
-  const typeLabel = channelTypeLabel(channel)
-  const status =
-    channel.status === 1
-      ? MANAGED_RESOURCE_STATUSES.Enabled
-      : channel.status === 2
-        ? MANAGED_RESOURCE_STATUSES.ManuallyDisabled
-        : channel.status === 3
-          ? MANAGED_RESOURCE_STATUSES.AutoDisabled
-          : MANAGED_RESOURCE_STATUSES.Unknown
-  const secretState = hasUsableManagedSiteChannelKey(channel.key)
-    ? MANAGED_RESOURCE_SECRET_STATES.Available
-    : options.inventory
-      ? MANAGED_RESOURCE_SECRET_STATES.Masked
-      : channel.key?.trim()
-        ? MANAGED_RESOURCE_SECRET_STATES.Masked
-        : MANAGED_RESOURCE_SECRET_STATES.Unavailable
-  return {
-    ref,
-    displayName: channel.name || `Channel ${channel.id}`,
-    status,
-    fields: [
-      {
-        fieldId: fields.Id,
-        kind: MANAGED_RESOURCE_DISPLAY_FACT_KINDS.Number,
-        value: channel.id,
-      },
-      {
-        fieldId: fields.Name,
-        kind: MANAGED_RESOURCE_DISPLAY_FACT_KINDS.Text,
-        value: channel.name,
-      },
-      {
-        fieldId: fields.Type,
-        kind: MANAGED_RESOURCE_DISPLAY_FACT_KINDS.Text,
-        value: typeLabel,
-      },
-      {
-        fieldId: fields.Status,
-        kind: MANAGED_RESOURCE_DISPLAY_FACT_KINDS.Text,
-        value: status,
-      },
-      {
-        fieldId: fields.BaseUrl,
-        kind: MANAGED_RESOURCE_DISPLAY_FACT_KINDS.Text,
-        value: channel.base_url ?? "",
-      },
-      {
-        fieldId: fields.Key,
-        kind: MANAGED_RESOURCE_DISPLAY_FACT_KINDS.Secret,
-        state: secretState,
-      },
-      {
-        fieldId: fields.Models,
-        kind: MANAGED_RESOURCE_DISPLAY_FACT_KINDS.List,
-        value: models,
-      },
-      {
-        fieldId: fields.ModelCount,
-        kind: MANAGED_RESOURCE_DISPLAY_FACT_KINDS.Number,
-        value: models.length,
-      },
-      {
-        fieldId: fields.Groups,
-        kind: MANAGED_RESOURCE_DISPLAY_FACT_KINDS.List,
-        value: groups,
-      },
-      {
-        fieldId: fields.Priority,
-        kind: MANAGED_RESOURCE_DISPLAY_FACT_KINDS.Number,
-        value: channel.priority,
-      },
-      {
-        fieldId: fields.Weight,
-        kind: MANAGED_RESOURCE_DISPLAY_FACT_KINDS.Number,
-        value: channel.weight,
-      },
-    ],
-    searchValues: channelSearchValues(channel),
-    actions: {
-      canUpdate: true,
-      canDelete: true,
-      channel: {
-        channelId: channel.id,
-        channelType: channel.type,
-        canSyncModels: true,
-        canOpenModelSync: true,
-        canConfigureModelFilters: true,
-      },
-    },
-  }
-}
+const veloeraResourceFacts = createNewApiFamilyResourceFacts({
+  fields: VELOERA_MANAGED_RESOURCE_FIELD_IDS,
+  typeNames: VeloeraChannelTypeNames,
+  emptyInventorySecretState: "masked",
+})
 
 const listChannels = async (
   nativeConfig: VeloeraNativeConfig,
@@ -302,9 +168,10 @@ const listChannels = async (
   const search = query?.search?.trim().toLocaleLowerCase()
   if (!search) return result
   const items = result.items.filter((channel) =>
-    [channel.name, ...channelSearchValues(channel)].some((value) =>
-      value.toLocaleLowerCase().includes(search),
-    ),
+    [
+      channel.name,
+      ...veloeraResourceFacts.getSearchData(channel).searchValues,
+    ].some((value) => value.toLocaleLowerCase().includes(search)),
   )
   return { items, total: items.length }
 }
@@ -324,62 +191,22 @@ const listCompleteChannelInventory = async (
   })
 }
 
-const withoutUnknownData = (
-  result: Exclude<
-    ManagedSiteMutationResult<unknown>,
-    { outcome: typeof MANAGED_SITE_MUTATION_OUTCOMES.Succeeded }
-  >,
-): ManagedSiteMutationResult<VeloeraManagedSiteChannel> => {
-  if (result.outcome !== MANAGED_SITE_MUTATION_OUTCOMES.Partial) return result
-  const { data: _data, ...rest } = result
-  return rest
-}
-
-const unresolvedCreatedIdentity = (
-  result: Extract<
-    ManagedSiteMutationResult<unknown>,
-    { outcome: typeof MANAGED_SITE_MUTATION_OUTCOMES.Succeeded }
-  >,
-): ManagedSiteMutationResult<VeloeraManagedSiteChannel> => ({
-  outcome: MANAGED_SITE_MUTATION_OUTCOMES.Partial,
-  confirmedEffects: result.confirmedEffects as readonly [
-    (typeof result.confirmedEffects)[number],
-    ...(typeof result.confirmedEffects)[number][],
-  ],
-  completion: MANAGED_SITE_MUTATION_COMPLETIONS.Uncertain,
-  diagnostic: {
-    code: MANAGED_RESOURCE_FAILURE_CODES.MutationStateUncertain,
-    message: MANAGED_RESOURCE_FAILURE_CODES.MutationStateUncertain,
-  },
-})
-
 const createChannel = async (
   nativeConfig: VeloeraNativeConfig,
   draft: ChannelFormData,
   options?: ResourceOperationOptions,
 ): Promise<ManagedSiteMutationResult<VeloeraManagedSiteChannel>> =>
-  await withSerializedCreateAttribution(nativeConfig.scopeKey, async () => {
-    const before = await listCompleteChannelInventory(nativeConfig, options)
-    const existingIds = new Set(before.items.map((item) => item.id))
-    const result = await channels.create(
-      nativeConfig.config,
-      veloeraManagedSiteCapabilities.channelDrafts.buildPayload(draft),
-      options,
-    )
-    if (result.outcome !== MANAGED_SITE_MUTATION_OUTCOMES.Succeeded) {
-      return withoutUnknownData(result)
-    }
-    try {
-      // Veloera confirms creation without returning the new channel identity:
-      // https://github.com/Veloera/Veloera/blob/6525dfce816beaa270e78f0d8b762e19e54d13b8/controller/channel.go
-      const after = await listCompleteChannelInventory(nativeConfig, options)
-      const created = after.items.filter((item) => !existingIds.has(item.id))
-      return created.length === 1
-        ? { ...result, data: created[0] }
-        : unresolvedCreatedIdentity(result)
-    } catch {
-      return unresolvedCreatedIdentity(result)
-    }
+  await attributeCreatedNativeResource({
+    attributionKey: `${SITE_TYPES.VELOERA}:${nativeConfig.scopeKey}`,
+    listInventory: async () =>
+      (await listCompleteChannelInventory(nativeConfig, options)).items,
+    create: async () =>
+      await channels.create(
+        nativeConfig.config,
+        veloeraManagedSiteCapabilities.channelDrafts.buildPayload(draft),
+        options,
+      ),
+    identity: (item) => item.id,
   })
 
 const toUpdatePayload = (
@@ -538,11 +365,11 @@ const veloeraNativeDefinition = {
     options?: ResourceOperationOptions,
   ) => operations.get(locator, options),
   toListFacts: (channel: VeloeraManagedSiteChannel, ref: ManagedResourceRef) =>
-    toVeloeraResourceFacts(channel, ref, { inventory: true }),
+    veloeraResourceFacts.toFacts(channel, ref, { inventory: true }),
   toDetailFacts: (
     channel: VeloeraManagedSiteChannel,
     ref: ManagedResourceRef,
-  ) => toVeloeraResourceFacts(channel, ref, { inventory: false }),
+  ) => veloeraResourceFacts.toFacts(channel, ref, { inventory: false }),
   createEditor: veloeraEditor.createEditor,
   editEditor: veloeraEditor.editEditor,
   sanitizeEditDetail: veloeraEditor.sanitizeEditDetail,
