@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { AXON_HUB_CHANNEL_TYPE } from "~/constants/axonHub"
 import { CLAUDE_CODE_HUB_PROVIDER_TYPE } from "~/constants/claudeCodeHub"
 import { SITE_TYPES } from "~/constants/siteType"
+import { VeloeraChannelType } from "~/constants/veloera"
 import { ManagedSiteChannelMigrationDialog } from "~/features/ManagedSiteChannels/components/ManagedSiteChannelMigrationDialog"
 import enManagedSiteChannels from "~/locales/en/managedSiteChannels.json"
 import {
@@ -682,6 +683,45 @@ describe("ManagedSiteChannelMigrationDialog", () => {
       .closest("section")
     expect(missingTypeSection).toBeTruthy()
     expect(within(missingTypeSection!).getByText("—")).toBeInTheDocument()
+  })
+
+  it("renders Veloera channel type labels and numeric fallbacks", async () => {
+    mockedPreparePreview.mockResolvedValueOnce({
+      ...previewPayload,
+      targetSiteType: SITE_TYPES.VELOERA,
+      items: [
+        {
+          ...previewPayload.items[0],
+          draft: {
+            ...previewPayload.items[0].draft,
+            type: VeloeraChannelType.GitHubModels,
+          },
+        },
+        {
+          ...previewPayload.items[1],
+          draft: {
+            ...previewPayload.items[1].draft,
+            type: 999,
+          },
+        },
+      ],
+    })
+
+    render(
+      <ManagedSiteChannelMigrationDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        channels={channels}
+        preferences={{} as any}
+        sourceSiteType={SITE_TYPES.NEW_API}
+        availableTargets={
+          [{ siteType: SITE_TYPES.VELOERA, label: "Veloera" }] as any
+        }
+      />,
+    )
+
+    expect(await screen.findByText("GitHub Models")).toBeInTheDocument()
+    expect(screen.getByText("999")).toBeInTheDocument()
   })
 
   it("renders Claude Code Hub string provider type labels and unknown type fallbacks", async () => {

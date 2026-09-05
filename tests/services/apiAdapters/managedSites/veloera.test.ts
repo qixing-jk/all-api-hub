@@ -568,6 +568,11 @@ describe("Veloera managed-site channel capability", () => {
       veloeraManagedSiteChannels.get?.(config, 23, { signal: detailSignal }),
     ).resolves.toBe(detail)
     await expect(
+      veloeraManagedSiteChannels.fetchSecretKey?.(config, 23, {
+        signal: detailSignal,
+      }),
+    ).resolves.toBe(detail.key)
+    await expect(
       veloeraManagedSiteChannels.fetchDraftModels?.(
         config,
         {

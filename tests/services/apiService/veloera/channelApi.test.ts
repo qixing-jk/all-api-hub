@@ -341,6 +341,33 @@ describe("apiService veloera channel APIs", () => {
     })
   })
 
+  it("fetchDraftChannelModels should reject unsupported payloads", async () => {
+    const request = {
+      baseUrl: "https://example.invalid",
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        accessToken: "token",
+        userId: "1",
+      },
+    }
+    mockFetchApi.mockResolvedValueOnce({
+      success: false,
+      data: { models: ["model-example"] },
+      message: "draft probe failed",
+    })
+
+    await expect(
+      fetchDraftChannelModels(request as never, {
+        type: 49,
+        baseUrl: "https://upstream.example.invalid",
+        key: "credential-placeholder",
+      }),
+    ).rejects.toMatchObject({
+      message: "draft probe failed",
+      endpoint: "/api/channel/fetch_models",
+    })
+  })
+
   it("fetchChannelModels should reject unsupported payloads", async () => {
     const request = {
       baseUrl: "https://example.com",

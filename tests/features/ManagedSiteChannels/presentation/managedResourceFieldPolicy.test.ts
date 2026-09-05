@@ -23,6 +23,11 @@ import {
   SUB2API_MANAGED_RESOURCE_STATUS,
 } from "~/constants/sub2api"
 import {
+  VELOERA_MANAGED_RESOURCE_FIELD_IDS,
+  VeloeraChannelType,
+  VeloeraChannelTypeNames,
+} from "~/constants/veloera"
+import {
   createManagedResourceFieldPolicyRegistry,
   defineManagedResourceFieldPolicy,
   getManagedResourceFieldOptionLabel,
@@ -154,6 +159,31 @@ describe("managed resource field policy", () => {
     )
     expect(tagsField.resolvePlaceholder?.(resolveKey)).toBe(
       "managedSiteChannels:editor.fields.tags.placeholder",
+    )
+  })
+
+  it("resolves Veloera-owned type labels and edit-secret guidance", () => {
+    const policy = getManagedResourceFieldPolicy(
+      SITE_TYPES.VELOERA,
+      MANAGED_RESOURCE_KINDS.Channel,
+      "edit",
+    )!
+    const typeField = policy.fields.find(
+      ({ fieldId }) => fieldId === VELOERA_MANAGED_RESOURCE_FIELD_IDS.Type,
+    )!
+    const keyField = policy.fields.find(
+      ({ fieldId }) => fieldId === VELOERA_MANAGED_RESOURCE_FIELD_IDS.Key,
+    )!
+
+    expect(
+      getManagedResourceFieldOptionLabel(
+        typeField,
+        String(VeloeraChannelType.GitHubModels),
+        resolveKey,
+      ),
+    ).toBe(VeloeraChannelTypeNames[VeloeraChannelType.GitHubModels])
+    expect(keyField.resolveHelp?.(resolveKey)).toBe(
+      "managedSiteChannels:editor.secret.keepExistingHint",
     )
   })
 
