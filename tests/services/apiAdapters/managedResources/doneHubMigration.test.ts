@@ -190,4 +190,163 @@ describe("DoneHub native channel migration", () => {
         MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_MISSING,
     })
   })
+
+  it("blocks malformed selections before accessing a DoneHub channel", async () => {
+    const malformed = {
+      ...selection,
+      ref: { ...selection.ref, resourceId: "invalid" },
+    }
+
+    await expect(
+      doneHubManagedSiteMigrationCapability.source!.prepare(malformed),
+    ).resolves.toEqual({
+      status: "blocked",
+      reasonCode:
+        MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_RESOLUTION_FAILED,
+    })
+    await expect(
+      doneHubManagedSiteMigrationCapability.source!.resolveCredential(
+        malformed,
+      ),
+    ).resolves.toEqual({
+      status: "blocked",
+      reasonCode:
+        MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_RESOLUTION_FAILED,
+    })
+    expect(mocks.get).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    [1, "enabled"],
+    [2, "disabled"],
+    [3, "other"],
+  ] as const)(
+    "normalizes DoneHub status %s and missing ordering values",
+    async (status, expectedStatus) => {
+      mocks.get.mockResolvedValue({
+        ...buildManagedSiteChannel({
+          id: 17,
+          type: DoneHubChannelType.OpenAI,
+          status,
+        }),
+        priority: undefined,
+        weight: undefined,
+        other: true,
+      })
+
+      await expect(
+        doneHubManagedSiteMigrationCapability.source!.prepare(selection),
+      ).resolves.toMatchObject({
+        status: "ready",
+        source: {
+          priority: 0,
+          weight: 0,
+          status: expectedStatus,
+          lossSignals: { hasAdvancedSettings: true },
+        },
+      })
+    },
+  )
+
+  it("preserves cancellation while converting credential failures to blockers", async () => {
+    mocks.get.mockResolvedValue(
+      buildManagedSiteChannel({ id: 17, type: DoneHubChannelType.OpenAI }),
+    )
+    const controller = new AbortController()
+    const reason = new Error("cancelled")
+    controller.abort(reason)
+    await expect(
+      doneHubManagedSiteMigrationCapability.source!.resolveCredential(
+        selection,
+        { signal: controller.signal },
+      ),
+    ).rejects.toBe(reason)
+
+    const abortError = new DOMException("cancelled", "AbortError")
+    mocks.loadSecret.mockRejectedValueOnce(abortError)
+    await expect(
+      doneHubManagedSiteMigrationCapability.source!.resolveCredential(
+        selection,
+      ),
+    ).rejects.toBe(abortError)
+
+    mocks.loadSecret.mockRejectedValueOnce(new Error("unavailable"))
+    await expect(
+      doneHubManagedSiteMigrationCapability.source!.resolveCredential(
+        selection,
+      ),
+    ).resolves.toEqual({
+      status: "blocked",
+      reasonCode:
+        MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_RESOLUTION_FAILED,
+    })
+  })
+
+  it("projects default groups and simplified disabled status", async () => {
+    await expect(
+      doneHubManagedSiteMigrationCapability.target!.prepare({
+        sourceSiteType: SITE_TYPES.NEW_API,
+        resourceType: ChannelType.OpenAI,
+        baseUrl: "https://upstream.example.invalid",
+        models: [],
+        groups: [],
+        priority: 0,
+        weight: 0,
+        status: "other",
+        lossSignals: {
+          hasModelMapping: false,
+          hasStatusCodeMapping: false,
+          hasAdvancedSettings: false,
+          hasMultiKeyState: false,
+        },
+      }),
+    ).resolves.toMatchObject({
+      projection: { groups: ["default"], status: 2 },
+      adjustments: { forcedDefaultGroup: true, simplifiedStatus: true },
+    })
+  })
+
+  it.each([
+    [MANAGED_SITE_MUTATION_OUTCOMES.Rejected, "failed"],
+    [MANAGED_SITE_MUTATION_OUTCOMES.Partial, "uncertain"],
+    [MANAGED_SITE_MUTATION_OUTCOMES.Uncertain, "uncertain"],
+  ] as const)("maps target create outcome %s", async (outcome, status) => {
+    mocks.create.mockResolvedValueOnce({
+      outcome,
+      diagnostic: { message: "example outcome" },
+    })
+
+    await expect(
+      doneHubManagedSiteMigrationCapability.target!.create({
+        source: {
+          sourceSiteType: SITE_TYPES.NEW_API,
+          resourceType: ChannelType.OpenAI,
+          baseUrl: "https://upstream.example.invalid",
+          models: [],
+          groups: ["default"],
+          priority: 0,
+          weight: 0,
+          status: "enabled",
+          lossSignals: {
+            hasModelMapping: false,
+            hasStatusCodeMapping: false,
+            hasAdvancedSettings: false,
+            hasMultiKeyState: false,
+          },
+        },
+        targetSiteType: SITE_TYPES.DONE_HUB,
+        projection: {
+          name: "Migrated channel",
+          type: String(DoneHubChannelType.OpenAI),
+          baseUrl: "https://upstream.example.invalid",
+          models: [],
+          groups: ["default"],
+          priority: 0,
+          weight: 0,
+          status: 1,
+        },
+        credential: "credential-placeholder",
+      }),
+    ).resolves.toMatchObject({ status })
+  })
 })

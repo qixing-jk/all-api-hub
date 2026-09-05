@@ -216,6 +216,39 @@ describe("managedResourceMigrationPresentation", () => {
     )
   })
 
+  it("uses DoneHub's provider-owned vocabulary for numeric target types", () => {
+    const readyItem = preview.items[0]!
+    if (readyItem.status !== "ready") throw new Error("expected ready item")
+    const doneHubPreview: ManagedSiteMigrationCanonicalPreview = {
+      ...preview,
+      targetSiteType: SITE_TYPES.DONE_HUB,
+      items: [
+        {
+          ...readyItem,
+          target: {
+            ...readyItem.target,
+            projection: {
+              ...readyItem.target.projection,
+              type: DoneHubChannelType.GitHubModels,
+            },
+          },
+        },
+      ],
+      totalCount: 1,
+      readyCount: 1,
+      blockedCount: 0,
+    }
+
+    const mapped = mapManagedResourceMigrationPreview(doneHubPreview, {
+      t,
+      getSiteLabel: String,
+    })
+
+    expect(mapped.rows[0].comparisons.find(({ id }) => id === "type")).toEqual(
+      expect.objectContaining({ target: "GitHub Models" }),
+    )
+  })
+
   it("keeps canonical source types distinct from Veloera target types", () => {
     const readyItem = preview.items[0]!
     if (readyItem.status !== "ready") throw new Error("expected ready item")

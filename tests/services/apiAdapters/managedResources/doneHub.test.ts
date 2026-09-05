@@ -15,7 +15,9 @@ import {
   doneHubManagedResourceRegistration,
   openDoneHubNativeResourceOperations,
 } from "~/services/apiAdapters/managedResources/doneHub"
+import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import {
+  MANAGED_SITE_MUTATION_COMPLETIONS,
   MANAGED_SITE_MUTATION_EFFECT_KINDS,
   MANAGED_SITE_MUTATION_OUTCOMES,
 } from "~/services/managedSites/mutations"
@@ -400,5 +402,179 @@ describe("DoneHub native managed resource", () => {
       operations.loadSecret(channel.id),
       MANAGED_RESOURCE_FAILURE_CODES.PermissionDenied,
     )
+  })
+
+  it("reports missing and malformed DoneHub managed-site configuration", async () => {
+    mocks.getPreferences.mockResolvedValueOnce({})
+    await expectFailureCode(
+      doneHubManagedResourceRegistration.open(),
+      MANAGED_RESOURCE_FAILURE_CODES.ConfigurationRequired,
+    )
+
+    mocks.getPreferences.mockResolvedValueOnce({
+      doneHub: { ...config, baseUrl: "ftp://done-hub.example.invalid" },
+    })
+    await expectFailureCode(
+      doneHubManagedResourceRegistration.open(),
+      MANAGED_RESOURCE_FAILURE_CODES.InvalidConfiguration,
+    )
+
+    mocks.getPreferences.mockResolvedValueOnce({
+      doneHub: {
+        ...config,
+        baseUrl: "https://user:password@done-hub.example.invalid",
+      },
+    })
+    await expectFailureCode(
+      doneHubManagedResourceRegistration.open(),
+      MANAGED_RESOURCE_FAILURE_CODES.InvalidConfiguration,
+    )
+  })
+
+  it("keeps HTTP origins available for self-hosted DoneHub deployments", async () => {
+    mocks.getPreferences.mockResolvedValueOnce({
+      doneHub: { ...config, baseUrl: "http://done-hub.example.invalid/admin" },
+    })
+
+    await expect(openDoneHubNativeResourceOperations()).resolves.toMatchObject({
+      scopeKey: "http://done-hub.example.invalid",
+    })
+  })
+
+  it("filters native channels and tolerates unavailable editor groups", async () => {
+    mocks.list.mockResolvedValueOnce({
+      items: [channel, { ...channel, id: 18, name: "Secondary channel" }],
+      total: 2,
+    })
+    mocks.fetchSiteUserGroups.mockRejectedValueOnce(new Error("unavailable"))
+    const workspace = await doneHubManagedResourceRegistration.open()
+
+    await expect(workspace.list({ search: " 17 " })).resolves.toMatchObject({
+      total: 1,
+      items: [expect.objectContaining({ displayName: "Primary channel" })],
+    })
+    const editor = await workspace.openEditEditor(
+      (await workspace.list()).items[0].ref,
+    )
+    expect(mocks.fetchSiteUserGroups).toHaveBeenCalledWith(config, undefined)
+    expect(
+      editor.fields.find(
+        ({ fieldId }) => fieldId === DONE_HUB_MANAGED_RESOURCE_FIELD_IDS.Groups,
+      ),
+    ).toMatchObject({ options: [{ value: "default" }, { value: "vip" }] })
+  })
+
+  it("delegates saved and draft model discovery", async () => {
+    mocks.fetchModels.mockResolvedValueOnce(["saved-model"])
+    mocks.fetchDraftModels.mockResolvedValueOnce(["draft-model"])
+    const operations = await openDoneHubNativeResourceOperations()
+
+    await expect(operations.fetchModels(channel.id)).resolves.toEqual([
+      "saved-model",
+    ])
+    await expect(
+      operations.fetchDraftModels({
+        channelType: String(DoneHubChannelType.OpenAI),
+        baseUrl: "https://upstream.example.invalid",
+        credential: "credential-placeholder",
+      }),
+    ).resolves.toEqual(["draft-model"])
+  })
+
+  it.each([
+    [
+      new ApiError("unauthenticated", 401),
+      MANAGED_RESOURCE_FAILURE_CODES.AuthenticationFailed,
+    ],
+    [
+      new ApiError("forbidden", 403),
+      MANAGED_RESOURCE_FAILURE_CODES.PermissionDenied,
+    ],
+    [new ApiError("missing", 404), MANAGED_RESOURCE_FAILURE_CODES.NotFound],
+    [
+      new ApiError(
+        "offline",
+        undefined,
+        undefined,
+        API_ERROR_CODES.NETWORK_ERROR,
+      ),
+      MANAGED_RESOURCE_FAILURE_CODES.Unavailable,
+    ],
+    [
+      new ApiError(
+        "rejected",
+        500,
+        undefined,
+        API_ERROR_CODES.HTTP_OTHER,
+        "UPSTREAM_EXAMPLE",
+      ),
+      MANAGED_RESOURCE_FAILURE_CODES.UpstreamRejected,
+    ],
+    [
+      new DOMException("cancelled", "AbortError"),
+      MANAGED_RESOURCE_FAILURE_CODES.Aborted,
+    ],
+    [new Error("unexpected"), MANAGED_RESOURCE_FAILURE_CODES.Unexpected],
+  ])("maps native list failures to %s", async (error, expectedCode) => {
+    mocks.list.mockRejectedValueOnce(error)
+    const workspace = await doneHubManagedResourceRegistration.open()
+
+    await expectFailureCode(workspace.list(), expectedCode)
+  })
+
+  it("rejects invalid refs and malformed native channel identities", async () => {
+    const workspace = await doneHubManagedResourceRegistration.open()
+    const ref = (await workspace.list()).items[0].ref
+
+    await expectFailureCode(
+      workspace.openEditEditor({ ...ref, resourceId: "invalid" }),
+      MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed,
+    )
+
+    mocks.fetchChannelRaw.mockResolvedValueOnce({ ...channel, id: 0 })
+    await expectFailureCode(
+      workspace.openEditEditor(ref),
+      MANAGED_RESOURCE_FAILURE_CODES.Unexpected,
+    )
+  })
+
+  it("preserves partial update data and forwards rejected updates", async () => {
+    mocks.update.mockResolvedValueOnce({
+      outcome: MANAGED_SITE_MUTATION_OUTCOMES.Partial,
+      confirmedEffects: [
+        {
+          kind: MANAGED_SITE_MUTATION_EFFECT_KINDS.ResourceUpdated,
+          resourceKind: "channel",
+          resourceId: channel.id,
+        },
+      ],
+      completion: MANAGED_SITE_MUTATION_COMPLETIONS.Uncertain,
+      diagnostic: { message: "partially applied" },
+    })
+    const workspace = await doneHubManagedResourceRegistration.open()
+    const ref = (await workspace.list()).items[0].ref
+    const editor = await workspace.openEditEditor(ref)
+
+    await expect(
+      editor.submit({
+        ...editor.initialValues,
+        [DONE_HUB_MANAGED_RESOURCE_FIELD_IDS.Name]: "Partially renamed",
+      }),
+    ).resolves.toMatchObject({
+      outcome: MANAGED_SITE_MUTATION_OUTCOMES.Partial,
+    })
+
+    mocks.update.mockResolvedValueOnce({
+      outcome: MANAGED_SITE_MUTATION_OUTCOMES.Rejected,
+      diagnostic: { message: "rejected" },
+    })
+    await expect(
+      editor.submit({
+        ...editor.initialValues,
+        [DONE_HUB_MANAGED_RESOURCE_FIELD_IDS.Name]: "Rejected rename",
+      }),
+    ).resolves.toMatchObject({
+      outcome: MANAGED_SITE_MUTATION_OUTCOMES.Rejected,
+    })
   })
 })
