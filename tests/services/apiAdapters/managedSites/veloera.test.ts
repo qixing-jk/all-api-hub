@@ -30,6 +30,7 @@ const veloeraApi = vi.hoisted(() => ({
   deleteChannel: vi.fn(),
   fetchChannel: vi.fn(),
   fetchChannelModels: vi.fn(),
+  fetchDraftChannelModels: vi.fn(),
   updateChannelModels: vi.fn(),
   updateChannelModelMapping: vi.fn(),
 }))
@@ -550,6 +551,46 @@ describe("Veloera managed-site channel capability", () => {
       "gpt-4o,claude-3",
       JSON.stringify({ "gpt-4o": "gpt-4o" }),
       { signal: expect.any(AbortSignal) },
+    )
+  })
+
+  it("exposes native detail and draft-model reads with request cancellation", async () => {
+    const { veloeraManagedSiteChannels } = await import(
+      "~/services/apiAdapters/managedSites/veloera"
+    )
+    const detailSignal = new AbortController().signal
+    const draftSignal = new AbortController().signal
+    const detail = buildManagedSiteChannel({ id: 23 })
+    veloeraApi.fetchChannel.mockResolvedValue(detail)
+    veloeraApi.fetchDraftChannelModels.mockResolvedValue(["model-example"])
+
+    await expect(
+      veloeraManagedSiteChannels.get?.(config, 23, { signal: detailSignal }),
+    ).resolves.toBe(detail)
+    await expect(
+      veloeraManagedSiteChannels.fetchDraftModels?.(
+        config,
+        {
+          channelType: 49,
+          baseUrl: "https://upstream.example.invalid",
+          credential: "credential-placeholder",
+        },
+        { signal: draftSignal },
+      ),
+    ).resolves.toEqual(["model-example"])
+    expect(veloeraApi.fetchChannel).toHaveBeenCalledWith(
+      expect.objectContaining({ baseUrl: config.baseUrl }),
+      23,
+      { signal: detailSignal },
+    )
+    expect(veloeraApi.fetchDraftChannelModels).toHaveBeenCalledWith(
+      expect.objectContaining({ baseUrl: config.baseUrl }),
+      {
+        type: 49,
+        baseUrl: "https://upstream.example.invalid",
+        key: "credential-placeholder",
+      },
+      { signal: draftSignal },
     )
   })
 

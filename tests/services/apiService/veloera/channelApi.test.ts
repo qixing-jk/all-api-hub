@@ -9,6 +9,7 @@ import {
   fetchChannel,
   fetchChannelModels,
   fetchCheckInStatus,
+  fetchDraftChannelModels,
   listAllChannels,
   refreshAccountData,
   searchChannel,
@@ -212,6 +213,8 @@ describe("apiService veloera channel APIs", () => {
       key: "sk-veloera-detail-key",
       base_url: "https://upstream.example.com",
       models: "gpt-4o",
+      model_prefix: "tenant-",
+      system_prompt: "Use the tenant policy.",
     })
 
     const result = await fetchChannel(request as any, 9)
@@ -225,6 +228,8 @@ describe("apiService veloera channel APIs", () => {
       key: "sk-veloera-detail-key",
       base_url: "https://upstream.example.com",
       models: "gpt-4o",
+      model_prefix: "tenant-",
+      system_prompt: "Use the tenant policy.",
     })
   })
 
@@ -293,6 +298,46 @@ describe("apiService veloera channel APIs", () => {
     expect(mockFetchApi).toHaveBeenCalledWith(request, {
       endpoint: "/api/channel/fetch_models/9",
       options: { signal },
+    })
+  })
+
+  it("fetchDraftChannelModels should probe an unsaved Veloera channel", async () => {
+    const request = {
+      baseUrl: "https://example.com",
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        accessToken: "token",
+        userId: "1",
+      },
+    }
+    const signal = new AbortController().signal
+    mockFetchApi.mockResolvedValueOnce({
+      success: true,
+      data: ["model-example-a", "model-example-b"],
+    })
+
+    await expect(
+      fetchDraftChannelModels(
+        request as never,
+        {
+          type: 49,
+          baseUrl: "https://upstream.example.invalid",
+          key: "credential-placeholder",
+        },
+        { signal },
+      ),
+    ).resolves.toEqual(["model-example-a", "model-example-b"])
+    expect(mockFetchApi).toHaveBeenCalledWith(request, {
+      endpoint: "/api/channel/fetch_models",
+      options: {
+        method: "POST",
+        body: JSON.stringify({
+          type: 49,
+          base_url: "https://upstream.example.invalid",
+          key: "credential-placeholder",
+        }),
+        signal,
+      },
     })
   })
 

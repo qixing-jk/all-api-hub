@@ -15,6 +15,7 @@ import {
   deleteChannel,
   fetchChannel,
   fetchChannelModels,
+  fetchDraftChannelModels,
   listAllChannels,
   searchChannel,
   updateChannel,
@@ -128,11 +129,15 @@ const runVeloeraVoidStep = async (input: {
     classifyResponseError: toVeloeraResponseError,
   })
 
-const fetchSecretKey = async (config: VeloeraConfig, channelId: number) => {
-  const channel = await fetchChannel(
-    toManagedSiteApiServiceRequest(config),
-    channelId,
-  )
+const fetchSecretKey = async (
+  config: VeloeraConfig,
+  channelId: number,
+  options?: Pick<RequestInit, "signal">,
+) => {
+  const request = toManagedSiteApiServiceRequest(config, options)
+  const channel = options
+    ? await fetchChannel(request, channelId, options)
+    : await fetchChannel(request, channelId)
   return channel.key
 }
 
@@ -162,6 +167,12 @@ export const veloeraManagedSiteChannels: ManagedSiteChannelsCapability<VeloeraCo
     list: async (config, options) =>
       await listAllChannels(
         toManagedSiteApiServiceRequest(config, options),
+        options,
+      ),
+    get: async (config, channelId, options) =>
+      await fetchChannel(
+        toManagedSiteApiServiceRequest(config, options),
+        channelId,
         options,
       ),
     create: async (config, channelData) => {
@@ -205,6 +216,16 @@ export const veloeraManagedSiteChannels: ManagedSiteChannelsCapability<VeloeraCo
       await fetchChannelModels(
         toManagedSiteApiServiceRequest(config, options),
         channelId,
+        options,
+      ),
+    fetchDraftModels: async (config, probe, options) =>
+      await fetchDraftChannelModels(
+        toManagedSiteApiServiceRequest(config, options),
+        {
+          type: Number(probe.channelType),
+          baseUrl: probe.baseUrl,
+          key: probe.credential,
+        },
         options,
       ),
     updateModels: async (config, channelId, models, options) => {
@@ -570,6 +591,8 @@ const veloeraManagedUpstreamResources: ManagedUpstreamResourcesCapability<
 
 export const veloeraManagedSiteCapabilities = {
   channels: veloeraManagedSiteChannels,
+  // Compatibility for duplicate matching and legacy import callers. The
+  // managed-site UI and canonical migration flow use the native registration.
   resources: veloeraManagedUpstreamResources,
   config: veloeraManagedSiteConfig,
   queries: veloeraManagedSiteQueries,

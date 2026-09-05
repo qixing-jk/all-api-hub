@@ -1,0 +1,132 @@
+/**
+ * Veloera channel types at the pinned upstream contract.
+ * @see https://github.com/Veloera/Veloera/blob/6525dfce816beaa270e78f0d8b762e19e54d13b8/web/src/constants/channel.constants.js
+ */
+export const VeloeraChannelType = {
+  OpenAI: 1,
+  Midjourney: 2,
+  Azure: 3,
+  Ollama: 4,
+  MidjourneyPlus: 5,
+  Custom: 8,
+  PaLM: 11,
+  Anthropic: 14,
+  Baidu: 15,
+  Zhipu: 16,
+  Ali: 17,
+  Xunfei: 18,
+  Ai360: 19,
+  OpenRouter: 20,
+  AiProxyLibrary: 21,
+  FastGPT: 22,
+  Tencent: 23,
+  Gemini: 24,
+  Moonshot: 25,
+  LingYiWanWu: 31,
+  Aws: 33,
+  Cohere: 34,
+  MiniMax: 35,
+  SunoAPI: 36,
+  Dify: 37,
+  Jina: 38,
+  Cloudflare: 39,
+  SiliconFlow: 40,
+  VertexAi: 41,
+  Mistral: 42,
+  DeepSeek: 43,
+  MokaAI: 44,
+  VolcEngine: 45,
+  BaiduV2: 46,
+  Xinference: 47,
+  Xai: 48,
+  GitHubModels: 49,
+} as const
+
+export type VeloeraChannelType =
+  (typeof VeloeraChannelType)[keyof typeof VeloeraChannelType]
+
+export const VeloeraChannelTypeNames = {
+  [VeloeraChannelType.OpenAI]: "OpenAI",
+  [VeloeraChannelType.Midjourney]: "Midjourney Proxy",
+  [VeloeraChannelType.Azure]: "Azure OpenAI",
+  [VeloeraChannelType.Ollama]: "Ollama",
+  [VeloeraChannelType.MidjourneyPlus]: "Midjourney Proxy Plus",
+  [VeloeraChannelType.Custom]: "Custom",
+  [VeloeraChannelType.PaLM]: "Google PaLM2",
+  [VeloeraChannelType.Anthropic]: "Anthropic Claude",
+  [VeloeraChannelType.Baidu]: "Baidu Wenxin",
+  [VeloeraChannelType.Zhipu]: "Zhipu BigModel",
+  [VeloeraChannelType.Ali]: "Alibaba Qwen",
+  [VeloeraChannelType.Xunfei]: "iFlytek Spark",
+  [VeloeraChannelType.Ai360]: "360 Brain",
+  [VeloeraChannelType.OpenRouter]: "OpenRouter",
+  [VeloeraChannelType.AiProxyLibrary]: "AI Proxy",
+  [VeloeraChannelType.FastGPT]: "FastGPT",
+  [VeloeraChannelType.Tencent]: "Tencent Hunyuan",
+  [VeloeraChannelType.Gemini]: "Google Gemini",
+  [VeloeraChannelType.Moonshot]: "Moonshot",
+  [VeloeraChannelType.LingYiWanWu]: "01.AI",
+  [VeloeraChannelType.Aws]: "AWS Claude",
+  [VeloeraChannelType.Cohere]: "Cohere",
+  [VeloeraChannelType.MiniMax]: "MiniMax",
+  [VeloeraChannelType.SunoAPI]: "Suno API",
+  [VeloeraChannelType.Dify]: "Dify",
+  [VeloeraChannelType.Jina]: "Jina",
+  [VeloeraChannelType.Cloudflare]: "Cloudflare",
+  [VeloeraChannelType.SiliconFlow]: "SiliconCloud",
+  [VeloeraChannelType.VertexAi]: "Vertex AI",
+  [VeloeraChannelType.Mistral]: "Mistral AI",
+  [VeloeraChannelType.DeepSeek]: "DeepSeek",
+  [VeloeraChannelType.MokaAI]: "MokaAI M3E",
+  [VeloeraChannelType.VolcEngine]: "Volcengine Ark",
+  [VeloeraChannelType.BaiduV2]: "Baidu Wenxin V2",
+  [VeloeraChannelType.Xinference]: "Xinference",
+  [VeloeraChannelType.Xai]: "xAI",
+  [VeloeraChannelType.GitHubModels]: "GitHub Models",
+} as const satisfies Record<VeloeraChannelType, string>
+
+export const VeloeraChannelTypeOptions = Object.entries(
+  VeloeraChannelTypeNames,
+).map(([value, label]) => ({
+  value: Number(value) as VeloeraChannelType,
+  label,
+}))
+
+export const VELOERA_MANAGED_RESOURCE_FIELD_IDS = {
+  Id: "veloera.id",
+  Name: "veloera.name",
+  Type: "veloera.type",
+  Status: "veloera.status",
+  BaseUrl: "veloera.baseUrl",
+  Key: "veloera.key",
+  Models: "veloera.models",
+  ModelCount: "veloera.modelCount",
+  Groups: "veloera.groups",
+  Priority: "veloera.priority",
+  Weight: "veloera.weight",
+} as const
+
+export const VELOERA_MANAGED_RESOURCE_TABLE_FIELD_IDS = [
+  VELOERA_MANAGED_RESOURCE_FIELD_IDS.Id,
+  VELOERA_MANAGED_RESOURCE_FIELD_IDS.Name,
+  VELOERA_MANAGED_RESOURCE_FIELD_IDS.Type,
+  VELOERA_MANAGED_RESOURCE_FIELD_IDS.BaseUrl,
+  VELOERA_MANAGED_RESOURCE_FIELD_IDS.ModelCount,
+  VELOERA_MANAGED_RESOURCE_FIELD_IDS.Groups,
+  VELOERA_MANAGED_RESOURCE_FIELD_IDS.Status,
+  VELOERA_MANAGED_RESOURCE_FIELD_IDS.Priority,
+  VELOERA_MANAGED_RESOURCE_FIELD_IDS.Weight,
+] as const
+
+export const VELOERA_MANAGED_RESOURCE_DETAIL_FIELD_IDS = [
+  VELOERA_MANAGED_RESOURCE_FIELD_IDS.Id,
+  VELOERA_MANAGED_RESOURCE_FIELD_IDS.Name,
+  VELOERA_MANAGED_RESOURCE_FIELD_IDS.Type,
+  VELOERA_MANAGED_RESOURCE_FIELD_IDS.Status,
+  VELOERA_MANAGED_RESOURCE_FIELD_IDS.BaseUrl,
+  VELOERA_MANAGED_RESOURCE_FIELD_IDS.Key,
+  VELOERA_MANAGED_RESOURCE_FIELD_IDS.Models,
+  VELOERA_MANAGED_RESOURCE_FIELD_IDS.Groups,
+  VELOERA_MANAGED_RESOURCE_FIELD_IDS.Priority,
+  VELOERA_MANAGED_RESOURCE_FIELD_IDS.Weight,
+] as const

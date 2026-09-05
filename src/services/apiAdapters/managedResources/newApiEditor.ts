@@ -59,6 +59,43 @@ type NewApiEditorOperations = {
 }
 
 const fields = NEW_API_MANAGED_RESOURCE_FIELD_IDS
+
+type NewApiFamilyEditorFieldIds = {
+  readonly Id: string
+  readonly Name: string
+  readonly Type: string
+  readonly Status: string
+  readonly BaseUrl: string
+  readonly Key: string
+  readonly Models: string
+  readonly ModelCount: string
+  readonly Groups: string
+  readonly Priority: string
+  readonly Weight: string
+}
+
+type NewApiFamilyEditorPolicy = {
+  fields: NewApiFamilyEditorFieldIds
+  typeNames: Readonly<Record<number, string>>
+  typeOptions: readonly { value: number; label: string }[]
+  unsupportedCreateTypes: ReadonlySet<number>
+  baseUrlRequiredTypes: ReadonlySet<number>
+}
+
+const newApiEditorPolicy: NewApiFamilyEditorPolicy = {
+  fields,
+  typeNames: ChannelTypeNames,
+  typeOptions: ChannelTypeOptions,
+  unsupportedCreateTypes: new Set<number>([
+    ChannelType.VertexAi,
+    ChannelType.AdvancedCustom,
+  ]),
+  baseUrlRequiredTypes: new Set<number>([
+    ChannelType.VolcEngine,
+    ChannelType.SunoAPI,
+    ChannelType.NewAPI,
+  ]),
+}
 const editorSecretStates = new WeakMap<
   ManagedSiteChannel,
   ResourceSecretState
@@ -81,8 +118,9 @@ const readList = (values: EditableResourceProjection, fieldId: string) => {
 
 const readSecretIntent = (
   values: EditableResourceProjection,
+  editorFields: NewApiFamilyEditorFieldIds = fields,
 ): SecretEditIntent => {
-  const value = values[fields.Key]
+  const value = values[editorFields.Key]
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return { kind: MANAGED_RESOURCE_SECRET_EDIT_INTENT_KINDS.Unchanged }
   }
@@ -223,35 +261,29 @@ const statusOptions = (detail?: ManagedSiteChannel) => [
     : []),
 ]
 
-const commonEditorUnsupportedCreateTypes = new Set<number>([
-  ChannelType.VertexAi,
-  ChannelType.AdvancedCustom,
-])
-
-const baseUrlRequiredChannelTypes = new Set<number>([
-  ChannelType.VolcEngine,
-  ChannelType.SunoAPI,
-  ChannelType.NewAPI,
-])
-
 // New API validates type-specific `other`/`settings` payloads during create.
 // Until the native editor owns those fields, do not offer incomplete drafts:
 // https://github.com/QuantumNous/new-api/blob/f116414284162ad15d8925f7bca494c109b83e93/controller/channel.go
-const supportsCommonEditorCreate = (type: number) =>
-  !commonEditorUnsupportedCreateTypes.has(type)
+const supportsCommonEditorCreate = (
+  type: number,
+  policy: NewApiFamilyEditorPolicy,
+) => !policy.unsupportedCreateTypes.has(type)
 
 // Upstream keeps Type editable for sensitive administrators and audits changes.
 // Preserve that native capability for targets represented by this editor while
 // retaining an existing unknown/unsupported Type as an unchanged option:
 // https://github.com/QuantumNous/new-api/blob/f116414284162ad15d8925f7bca494c109b83e93/web/src/features/channels/components/drawers/channel-mutate-drawer.tsx#L1976-L2030
 // https://github.com/QuantumNous/new-api/blob/f116414284162ad15d8925f7bca494c109b83e93/controller/channel.go#L1082-L1116
-const typeOptions = (detail?: ManagedSiteChannel) => {
-  const options = ChannelTypeOptions.filter(({ value }) =>
-    supportsCommonEditorCreate(value),
-  ).map(({ value, label }) => ({
-    value: String(value),
-    displayLabel: label,
-  }))
+const typeOptions = (
+  policy: NewApiFamilyEditorPolicy,
+  detail?: ManagedSiteChannel,
+) => {
+  const options = policy.typeOptions
+    .filter(({ value }) => supportsCommonEditorCreate(value, policy))
+    .map(({ value, label }) => ({
+      value: String(value),
+      displayLabel: label,
+    }))
   const currentType = detail ? Number(detail.type) : undefined
   if (
     currentType !== undefined &&
@@ -259,100 +291,106 @@ const typeOptions = (detail?: ManagedSiteChannel) => {
   ) {
     options.push({
       value: String(currentType),
-      displayLabel:
-        ChannelTypeNames[currentType as keyof typeof ChannelTypeNames] ??
-        String(currentType),
+      displayLabel: policy.typeNames[currentType] ?? String(currentType),
     })
   }
   return options
 }
 
 const fieldDescriptors = (
+  policy: NewApiFamilyEditorPolicy,
   detail?: ManagedSiteChannel,
   groupSuggestions: readonly string[] = [],
   canLoadSecret = false,
-): readonly ResourceFieldDescriptor[] => [
-  {
-    fieldId: fields.Name,
-    type: MANAGED_RESOURCE_FIELD_TYPES.Text,
-    required: true,
-  },
-  {
-    fieldId: fields.Type,
-    type: MANAGED_RESOURCE_FIELD_TYPES.Select,
-    required: true,
-    options: typeOptions(detail),
-  },
-  {
-    fieldId: fields.Status,
-    type: MANAGED_RESOURCE_FIELD_TYPES.Select,
-    required: true,
-    options: statusOptions(detail),
-  },
-  { fieldId: fields.BaseUrl, type: MANAGED_RESOURCE_FIELD_TYPES.Text },
-  {
-    fieldId: fields.Key,
-    type: MANAGED_RESOURCE_FIELD_TYPES.Secret,
-    required: detail === undefined,
-    secretState:
-      detail === undefined
-        ? MANAGED_RESOURCE_SECRET_STATES.Unavailable
-        : editorSecretStates.get(detail) ?? getInventorySecretState(detail.key),
-    canLoadSecret: detail !== undefined && canLoadSecret,
-    canReplace: true,
-    allowClear: false,
-  },
-  {
-    fieldId: fields.Models,
-    type: MANAGED_RESOURCE_FIELD_TYPES.MultiSelect,
-    required: true,
-    options: parseNewApiResourceList(detail?.models).map((value) => ({
-      value,
-    })),
-    optionLoader: {
-      dependsOn: [fields.Type, fields.BaseUrl, fields.Key],
-      trigger: MANAGED_RESOURCE_FIELD_OPTION_LOAD_TRIGGERS.Manual,
+): readonly ResourceFieldDescriptor[] => {
+  const editorFields = policy.fields
+  return [
+    {
+      fieldId: editorFields.Name,
+      type: MANAGED_RESOURCE_FIELD_TYPES.Text,
+      required: true,
     },
-  },
-  {
-    fieldId: fields.Groups,
-    type: MANAGED_RESOURCE_FIELD_TYPES.MultiSelect,
-    options: normalizeList([
-      ...parseNewApiResourceList(detail?.group),
-      ...groupSuggestions,
-    ]).map((value) => ({ value })),
-  },
-  {
-    fieldId: fields.Priority,
-    type: MANAGED_RESOURCE_FIELD_TYPES.Number,
-    min: 0,
-  },
-  {
-    fieldId: fields.Weight,
-    type: MANAGED_RESOURCE_FIELD_TYPES.Number,
-    min: 0,
-  },
-]
+    {
+      fieldId: editorFields.Type,
+      type: MANAGED_RESOURCE_FIELD_TYPES.Select,
+      required: true,
+      options: typeOptions(policy, detail),
+    },
+    {
+      fieldId: editorFields.Status,
+      type: MANAGED_RESOURCE_FIELD_TYPES.Select,
+      required: true,
+      options: statusOptions(detail),
+    },
+    { fieldId: editorFields.BaseUrl, type: MANAGED_RESOURCE_FIELD_TYPES.Text },
+    {
+      fieldId: editorFields.Key,
+      type: MANAGED_RESOURCE_FIELD_TYPES.Secret,
+      required: detail === undefined,
+      secretState:
+        detail === undefined
+          ? MANAGED_RESOURCE_SECRET_STATES.Unavailable
+          : editorSecretStates.get(detail) ??
+            getInventorySecretState(detail.key),
+      canLoadSecret: detail !== undefined && canLoadSecret,
+      canReplace: true,
+      allowClear: false,
+    },
+    {
+      fieldId: editorFields.Models,
+      type: MANAGED_RESOURCE_FIELD_TYPES.MultiSelect,
+      required: true,
+      options: parseNewApiResourceList(detail?.models).map((value) => ({
+        value,
+      })),
+      optionLoader: {
+        dependsOn: [editorFields.Type, editorFields.BaseUrl, editorFields.Key],
+        trigger: MANAGED_RESOURCE_FIELD_OPTION_LOAD_TRIGGERS.Manual,
+      },
+    },
+    {
+      fieldId: editorFields.Groups,
+      type: MANAGED_RESOURCE_FIELD_TYPES.MultiSelect,
+      options: normalizeList([
+        ...parseNewApiResourceList(detail?.group),
+        ...groupSuggestions,
+      ]).map((value) => ({ value })),
+    },
+    {
+      fieldId: editorFields.Priority,
+      type: MANAGED_RESOURCE_FIELD_TYPES.Number,
+      min: 0,
+    },
+    {
+      fieldId: editorFields.Weight,
+      type: MANAGED_RESOURCE_FIELD_TYPES.Number,
+      min: 0,
+    },
+  ]
+}
 
 const validateValues = (
   values: EditableResourceProjection,
   existing?: ManagedSiteChannel,
+  policy: NewApiFamilyEditorPolicy = newApiEditorPolicy,
 ): ResourceValidationResult => {
+  const editorFields = policy.fields
   const issues: ResourceFieldIssue[] = []
-  if (!readString(values, fields.Name)) {
+  if (!readString(values, editorFields.Name)) {
     issues.push({
-      fieldId: fields.Name,
+      fieldId: editorFields.Name,
       code: MANAGED_RESOURCE_FIELD_ISSUE_CODES.Required,
     })
   }
-  const type = Number(readString(values, fields.Type))
+  const type = Number(readString(values, editorFields.Type))
   if (
     !Number.isInteger(type) ||
-    (!(type in ChannelTypeNames) && type !== Number(existing?.type)) ||
-    (!supportsCommonEditorCreate(type) && type !== Number(existing?.type))
+    (!(type in policy.typeNames) && type !== Number(existing?.type)) ||
+    (!supportsCommonEditorCreate(type, policy) &&
+      type !== Number(existing?.type))
   ) {
     issues.push({
-      fieldId: fields.Type,
+      fieldId: editorFields.Type,
       code: MANAGED_RESOURCE_FIELD_ISSUE_CODES.UnsupportedOption,
     })
   }
@@ -360,42 +398,42 @@ const validateValues = (
   // legacy editor also requires it for VolcEngine and SunoAPI integrations:
   // https://github.com/QuantumNous/new-api/blob/f116414284162ad15d8925f7bca494c109b83e93/controller/channel.go
   if (
-    baseUrlRequiredChannelTypes.has(type) &&
-    !readString(values, fields.BaseUrl)
+    policy.baseUrlRequiredTypes.has(type) &&
+    !readString(values, editorFields.BaseUrl)
   ) {
     issues.push({
-      fieldId: fields.BaseUrl,
+      fieldId: editorFields.BaseUrl,
       code: MANAGED_RESOURCE_FIELD_ISSUE_CODES.Required,
     })
   }
-  const status = Number(readString(values, fields.Status))
+  const status = Number(readString(values, editorFields.Status))
   if (
     !Object.values(CHANNEL_STATUS).includes(status as never) &&
     status !== Number(existing?.status)
   ) {
     issues.push({
-      fieldId: fields.Status,
+      fieldId: editorFields.Status,
       code: MANAGED_RESOURCE_FIELD_ISSUE_CODES.UnsupportedOption,
     })
   }
-  const keyIntent = readSecretIntent(values)
+  const keyIntent = readSecretIntent(values, editorFields)
   if (
     !existing &&
     (keyIntent.kind !== MANAGED_RESOURCE_SECRET_EDIT_INTENT_KINDS.Replace ||
       !keyIntent.value.trim())
   ) {
     issues.push({
-      fieldId: fields.Key,
+      fieldId: editorFields.Key,
       code: MANAGED_RESOURCE_FIELD_ISSUE_CODES.Required,
     })
   }
-  if (readList(values, fields.Models).length === 0) {
+  if (readList(values, editorFields.Models).length === 0) {
     issues.push({
-      fieldId: fields.Models,
+      fieldId: editorFields.Models,
       code: MANAGED_RESOURCE_FIELD_ISSUE_CODES.Required,
     })
   }
-  for (const fieldId of [fields.Priority, fields.Weight]) {
+  for (const fieldId of [editorFields.Priority, editorFields.Weight]) {
     const value = readNumber(values, fieldId)
     if (!Number.isFinite(value)) {
       issues.push({
@@ -412,79 +450,88 @@ const validateValues = (
   return issues.length ? { valid: false, issues } : { valid: true }
 }
 
-const createInitialValues = (): EditableResourceProjection => ({
-  [fields.Name]: "",
-  [fields.Type]: String(DEFAULT_CHANNEL_FIELDS.type),
-  [fields.Status]: String(DEFAULT_CHANNEL_FIELDS.status),
-  [fields.BaseUrl]: "",
-  [fields.Key]: {
+const createInitialValues = (
+  editorFields: NewApiFamilyEditorFieldIds = fields,
+): EditableResourceProjection => ({
+  [editorFields.Name]: "",
+  [editorFields.Type]: String(DEFAULT_CHANNEL_FIELDS.type),
+  [editorFields.Status]: String(DEFAULT_CHANNEL_FIELDS.status),
+  [editorFields.BaseUrl]: "",
+  [editorFields.Key]: {
     kind: MANAGED_RESOURCE_SECRET_EDIT_INTENT_KINDS.Replace,
     value: "",
   },
-  [fields.Models]: [],
-  [fields.Groups]: [...DEFAULT_CHANNEL_FIELDS.groups],
-  [fields.Priority]: DEFAULT_CHANNEL_FIELDS.priority,
-  [fields.Weight]: DEFAULT_CHANNEL_FIELDS.weight,
+  [editorFields.Models]: [],
+  [editorFields.Groups]: [...DEFAULT_CHANNEL_FIELDS.groups],
+  [editorFields.Priority]: DEFAULT_CHANNEL_FIELDS.priority,
+  [editorFields.Weight]: DEFAULT_CHANNEL_FIELDS.weight,
 })
 
 const editInitialValues = (
   detail: ManagedSiteChannel,
+  editorFields: NewApiFamilyEditorFieldIds = fields,
 ): EditableResourceProjection => ({
-  [fields.Name]: detail.name,
-  [fields.Type]: String(detail.type),
-  [fields.Status]: String(detail.status),
-  [fields.BaseUrl]: detail.base_url ?? "",
-  [fields.Key]: { kind: MANAGED_RESOURCE_SECRET_EDIT_INTENT_KINDS.Unchanged },
-  [fields.Models]: parseNewApiResourceList(detail.models),
-  [fields.Groups]: parseNewApiResourceList(detail.group),
-  [fields.Priority]: detail.priority,
-  [fields.Weight]: detail.weight,
+  [editorFields.Name]: detail.name,
+  [editorFields.Type]: String(detail.type),
+  [editorFields.Status]: String(detail.status),
+  [editorFields.BaseUrl]: detail.base_url ?? "",
+  [editorFields.Key]: {
+    kind: MANAGED_RESOURCE_SECRET_EDIT_INTENT_KINDS.Unchanged,
+  },
+  [editorFields.Models]: parseNewApiResourceList(detail.models),
+  [editorFields.Groups]: parseNewApiResourceList(detail.group),
+  [editorFields.Priority]: detail.priority,
+  [editorFields.Weight]: detail.weight,
 })
 
-const toDraft = (values: EditableResourceProjection): ChannelFormData => ({
-  name: readString(values, fields.Name),
-  type: Number(readString(values, fields.Type)),
+const toDraft = (
+  values: EditableResourceProjection,
+  editorFields: NewApiFamilyEditorFieldIds = fields,
+): ChannelFormData => ({
+  name: readString(values, editorFields.Name),
+  type: Number(readString(values, editorFields.Type)),
   key: (() => {
-    const intent = readSecretIntent(values)
+    const intent = readSecretIntent(values, editorFields)
     return intent.kind === MANAGED_RESOURCE_SECRET_EDIT_INTENT_KINDS.Replace
       ? intent.value.trim()
       : ""
   })(),
-  base_url: readString(values, fields.BaseUrl),
-  models: readList(values, fields.Models),
-  groups: readList(values, fields.Groups),
-  priority: readNumber(values, fields.Priority),
-  weight: readNumber(values, fields.Weight),
+  base_url: readString(values, editorFields.BaseUrl),
+  models: readList(values, editorFields.Models),
+  groups: readList(values, editorFields.Groups),
+  priority: readNumber(values, editorFields.Priority),
+  weight: readNumber(values, editorFields.Weight),
   status: Number(
-    readString(values, fields.Status),
+    readString(values, editorFields.Status),
   ) as ChannelFormData["status"],
 })
 
 export const projectNewApiImportSeed = (
   seed: ManagedChannelImportCreateSeed,
+  editorFields: NewApiFamilyEditorFieldIds = fields,
 ): EditableResourceProjection => ({
-  [fields.Name]: seed.name,
-  [fields.Type]: seed.channelType,
-  [fields.Status]: String(
+  [editorFields.Name]: seed.name,
+  [editorFields.Type]: seed.channelType,
+  [editorFields.Status]: String(
     seed.enabled ? CHANNEL_STATUS.Enable : CHANNEL_STATUS.ManuallyDisabled,
   ),
-  [fields.BaseUrl]: seed.baseUrl,
-  [fields.Key]: {
+  [editorFields.BaseUrl]: seed.baseUrl,
+  [editorFields.Key]: {
     kind: MANAGED_RESOURCE_SECRET_EDIT_INTENT_KINDS.Replace,
     value: seed.credential,
   },
-  [fields.Models]: normalizeList(seed.models),
-  [fields.Groups]: [...DEFAULT_CHANNEL_FIELDS.groups],
-  [fields.Priority]: seed.priority,
-  [fields.Weight]: seed.orderingWeight,
+  [editorFields.Models]: normalizeList(seed.models),
+  [editorFields.Groups]: [...DEFAULT_CHANNEL_FIELDS.groups],
+  [editorFields.Priority]: seed.priority,
+  [editorFields.Weight]: seed.orderingWeight,
 })
 
-const invalidModelProbe = () =>
+const invalidModelProbe = (editorFields: NewApiFamilyEditorFieldIds = fields) =>
   new ManagedResourceError({
     code: MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed,
     fieldIssues: [
       {
-        fieldId: fields.Key,
+        fieldId: editorFields.Key,
         code: MANAGED_RESOURCE_FIELD_ISSUE_CODES.Required,
       },
     ],
@@ -500,15 +547,16 @@ const loadModelOptions = async (
   values: EditableResourceProjection,
   existing?: ManagedSiteChannel,
   options?: ResourceOperationOptions,
+  editorFields: NewApiFamilyEditorFieldIds = fields,
 ) => {
   throwIfNewApiResourceOperationAborted(options)
-  const type = Number(readString(values, fields.Type))
-  const baseUrl = readString(values, fields.BaseUrl)
-  const keyIntent = readSecretIntent(values)
+  const type = Number(readString(values, editorFields.Type))
+  const baseUrl = readString(values, editorFields.BaseUrl)
+  const keyIntent = readSecretIntent(values, editorFields)
 
   if (keyIntent.kind === MANAGED_RESOURCE_SECRET_EDIT_INTENT_KINDS.Replace) {
     const key = keyIntent.value.trim()
-    if (!key) throw invalidModelProbe()
+    if (!key) throw invalidModelProbe(editorFields)
     return normalizeList(
       await operations.fetchDraftModels(
         { channelType: type, baseUrl, credential: key },
@@ -516,7 +564,7 @@ const loadModelOptions = async (
       ),
     ).map((value) => ({ value }))
   }
-  if (!existing) throw invalidModelProbe()
+  if (!existing) throw invalidModelProbe(editorFields)
 
   const connectionChanged =
     type !== Number(existing.type) ||
@@ -538,49 +586,78 @@ const createModelOptionLoader =
   (
     operations: NewApiEditorOperations,
     existing?: ManagedSiteChannel,
+    editorFields: NewApiFamilyEditorFieldIds = fields,
   ): NonNullable<
     NativeResourceEditorDefinition<ChannelFormData>["loadOptions"]
   > =>
   async (fieldId, values, options) => {
-    if (fieldId !== fields.Models) throw invalidOptionField()
-    return await loadModelOptions(operations, values, existing, options)
+    if (fieldId !== editorFields.Models) throw invalidOptionField()
+    return await loadModelOptions(
+      operations,
+      values,
+      existing,
+      options,
+      editorFields,
+    )
   }
 
 export const createNewApiCreateEditor = async (
   operations: NewApiEditorOperations,
   options?: ResourceOperationOptions,
+  policy: NewApiFamilyEditorPolicy = newApiEditorPolicy,
 ): Promise<NativeResourceEditorDefinition<ChannelFormData>> => ({
   fields: fieldDescriptors(
+    policy,
     undefined,
     await operations.loadEditorGroups(options),
   ),
-  initialValues: createInitialValues(),
-  validate: (values) => validateValues(values),
-  buildCommand: toDraft,
-  loadOptions: createModelOptionLoader(operations),
+  initialValues: createInitialValues(policy.fields),
+  validate: (values) => validateValues(values, undefined, policy),
+  buildCommand: (values) => toDraft(values, policy.fields),
+  loadOptions: createModelOptionLoader(operations, undefined, policy.fields),
 })
 
 export const createNewApiEditEditor = async (
   operations: NewApiEditorOperations,
   detail: ManagedSiteChannel,
   options?: ResourceOperationOptions,
+  policy: NewApiFamilyEditorPolicy = newApiEditorPolicy,
 ): Promise<NativeResourceEditorDefinition<ChannelFormData>> => ({
   fields: fieldDescriptors(
+    policy,
     detail,
     await operations.loadEditorGroups(options),
     operations.canLoadSecret,
   ),
-  initialValues: editInitialValues(detail),
+  initialValues: editInitialValues(detail, policy.fields),
   // Preserve an unchanged future upstream enum while still rejecting a newly
   // entered unsupported value. This keeps edits forward-compatible.
-  validate: (values) => validateValues(values, detail),
-  buildCommand: toDraft,
-  loadOptions: createModelOptionLoader(operations, detail),
+  validate: (values) => validateValues(values, detail, policy),
+  buildCommand: (values) => toDraft(values, policy.fields),
+  loadOptions: createModelOptionLoader(operations, detail, policy.fields),
   loadSecret: async (fieldId, loadOptions) => {
     throwIfNewApiResourceOperationAborted(loadOptions)
-    if (fieldId !== fields.Key || !operations.canLoadSecret) {
+    if (fieldId !== policy.fields.Key || !operations.canLoadSecret) {
       throw invalidOptionField()
     }
     return await operations.loadSecret(detail.id, loadOptions)
   },
+})
+
+/** Binds the shared New API-family editor mechanics to provider-owned fields and types. */
+export const createNewApiFamilyEditorBindings = (
+  policy: NewApiFamilyEditorPolicy,
+) => ({
+  projectImportSeed: (seed: ManagedChannelImportCreateSeed) =>
+    projectNewApiImportSeed(seed, policy.fields),
+  createEditor: (
+    operations: NewApiEditorOperations,
+    options?: ResourceOperationOptions,
+  ) => createNewApiCreateEditor(operations, options, policy),
+  editEditor: (
+    operations: NewApiEditorOperations,
+    detail: ManagedSiteChannel,
+    options?: ResourceOperationOptions,
+  ) => createNewApiEditEditor(operations, detail, options, policy),
+  sanitizeEditDetail: sanitizeNewApiEditorDetail,
 })

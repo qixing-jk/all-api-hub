@@ -7,8 +7,11 @@ import type {
   CreateChannelPayload,
   ManagedSiteChannel,
   ManagedSiteChannelListData,
-  UpdateChannelPayload,
 } from "~/types/managedSite"
+import type {
+  VeloeraManagedSiteChannel,
+  VeloeraUpdateChannelPayload,
+} from "~/types/veloera"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
@@ -47,7 +50,7 @@ type VeloeraChannelInfo = {
 }
 
 type VeloeraChannelRaw = Partial<
-  Omit<ManagedSiteChannel, "channel_info"> & {
+  Omit<VeloeraManagedSiteChannel, "channel_info"> & {
     channel_info?: VeloeraChannelInfo
   }
 >
@@ -80,7 +83,9 @@ const toNumberOrZero = (value: unknown): number => {
 /**
  * Normalize Veloera channel payloads to match New API's `ManagedSiteChannel`.
  */
-const normalizeChannel = (raw: VeloeraChannelRaw): ManagedSiteChannel => {
+const normalizeChannel = (
+  raw: VeloeraChannelRaw,
+): VeloeraManagedSiteChannel => {
   const rawInfo = raw.channel_info
   const channelInfo = rawInfo
     ? {
@@ -125,6 +130,8 @@ const normalizeChannel = (raw: VeloeraChannelRaw): ManagedSiteChannel => {
     channel_info: channelInfo,
     setting: raw.setting ?? "",
     settings: raw.settings ?? raw.setting ?? "",
+    model_prefix: raw.model_prefix ?? null,
+    system_prompt: raw.system_prompt ?? null,
   }
 }
 
@@ -169,7 +176,7 @@ export async function createChannel(
  */
 export async function updateChannel(
   request: ApiServiceRequest,
-  channelData: UpdateChannelPayload,
+  channelData: VeloeraUpdateChannelPayload,
 ): Promise<any> {
   try {
     const { groups, ...rest } = channelData
@@ -327,9 +334,13 @@ export async function searchChannel(
 export async function fetchChannel(
   request: ApiServiceRequest,
   channelId: number,
-): Promise<ManagedSiteChannel> {
+  options?: Pick<RequestInit, "signal">,
+): Promise<VeloeraManagedSiteChannel> {
   const endpoint = `${VELOERA_CHANNEL_ENDPOINT}/${channelId}`
-  const result = await veloeraRequests.data<unknown>(request, { endpoint })
+  const result = await veloeraRequests.data<unknown>(request, {
+    endpoint,
+    ...(options?.signal ? { options: { signal: options.signal } } : {}),
+  })
 
   return normalizeChannel(result as VeloeraChannelRaw)
 }
@@ -362,6 +373,47 @@ export async function fetchChannelModels(
   return response.data
 }
 
+type VeloeraDraftChannelModelProbe = {
+  type: number
+  baseUrl: string
+  key: string
+}
+
+/**
+ * Probes models from an unsaved Veloera channel configuration.
+ * Veloera accepts `type`, `base_url`, and `key` at this provider-owned route:
+ * https://github.com/Veloera/Veloera/blob/6525dfce816beaa270e78f0d8b762e19e54d13b8/controller/channel.go
+ */
+export async function fetchDraftChannelModels(
+  request: ApiServiceRequest,
+  draft: VeloeraDraftChannelModelProbe,
+  options?: Pick<RequestInit, "signal">,
+): Promise<string[]> {
+  const endpoint = `${VELOERA_CHANNEL_ENDPOINT}/fetch_models`
+  const response = await veloeraRequests.envelope<string[]>(request, {
+    endpoint,
+    options: {
+      method: "POST",
+      body: JSON.stringify({
+        type: draft.type,
+        base_url: draft.baseUrl,
+        key: draft.key,
+      }),
+      signal: options?.signal,
+    },
+  })
+
+  if (!response.success || !Array.isArray(response.data)) {
+    throw new ApiError(
+      getErrorMessage(response.message, "Failed to fetch models"),
+      undefined,
+      endpoint,
+    )
+  }
+
+  return response.data
+}
+
 /**
  * Update the `models` field for a Veloera channel.
  */
@@ -378,7 +430,7 @@ export async function updateChannelModels(
       body: JSON.stringify({
         id: channelId,
         models,
-      } satisfies UpdateChannelPayload),
+      } satisfies VeloeraUpdateChannelPayload),
       signal: options?.signal,
     },
   })
@@ -410,7 +462,7 @@ export async function updateChannelModelMapping(
         id: channelId,
         models,
         model_mapping: modelMappingJson,
-      } satisfies UpdateChannelPayload),
+      } satisfies VeloeraUpdateChannelPayload),
       signal: options?.signal,
     },
   })
