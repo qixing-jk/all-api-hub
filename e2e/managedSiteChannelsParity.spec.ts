@@ -7,6 +7,7 @@ import {
 } from "~/features/ManagedSiteChannels/testIds"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {
+  DONE_HUB_PRIMARY_ID,
   getInterceptedAxonHubDeleteRequestCount,
   getInterceptedAxonHubListRequestCount,
   getInterceptedAxonHubUpdateVariables,
@@ -20,6 +21,7 @@ import {
   getInterceptedOctopusStatusRequestCount,
   NEW_API_CREATED_ID,
   openInterceptedAxonHubManagedSiteChannels,
+  openInterceptedDoneHubManagedSiteChannels,
   openInterceptedNewApiManagedSiteChannels,
   openInterceptedOctopusManagedSiteChannels,
 } from "~~/e2e/fixtures/managedSiteChannelsIntercepted"
@@ -200,6 +202,39 @@ test("runs New API native CRUD through the shared UI", async ({
     models: "gpt-4o-mini,gpt-4.1-mini",
   })
   expect(updatePayload).not.toHaveProperty("key")
+})
+
+test("keeps DoneHub channel deep links editable in the native table", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  await openInterceptedDoneHubManagedSiteChannels({
+    context,
+    extensionId,
+    page,
+    channelId: DONE_HUB_PRIMARY_ID,
+  })
+  await waitForExtensionRoot(page)
+
+  const primaryRow = channelRowByName(page, "DoneHub primary")
+  await expect(primaryRow).toBeVisible()
+  await expect(channelRowByName(page, "DoneHub secondary")).toHaveCount(0)
+
+  const { rowTestToken } = await openManagedSiteChannelRowActions(
+    page,
+    "DoneHub primary",
+  )
+  await page
+    .getByTestId(getManagedSiteChannelRowEditActionTestId(rowTestToken))
+    .click()
+  await page
+    .getByTestId(CHANNEL_DIALOG_TEST_IDS.nameInput)
+    .fill("DoneHub primary edited")
+  await page.getByTestId(CHANNEL_DIALOG_TEST_IDS.submitButton).click()
+
+  await expect(channelRowByName(page, "DoneHub primary edited")).toBeVisible()
+  await expect(channelRowByName(page, "DoneHub secondary")).toHaveCount(0)
 })
 
 test("reconciles confirmed New API edits and deletes without reloading the collection", async ({
