@@ -313,6 +313,32 @@ describe("DoneHub native managed resource", () => {
     )
   })
 
+  it("uses a replacement credential when a model change requires a full update", async () => {
+    const workspace = await doneHubManagedResourceRegistration.open()
+    const ref = (await workspace.list()).items[0].ref
+    const editor = await workspace.openEditEditor(ref)
+
+    await editor.submit({
+      ...editor.initialValues,
+      [DONE_HUB_MANAGED_RESOURCE_FIELD_IDS.Key]: {
+        kind: "replace",
+        value: "replacement-credential",
+      },
+      [DONE_HUB_MANAGED_RESOURCE_FIELD_IDS.Models]: ["model-a", "model-b"],
+    })
+
+    expect(mocks.update).toHaveBeenCalledWith(
+      config,
+      expect.objectContaining({
+        id: channel.id,
+        key: "replacement-credential",
+        models: "model-a,model-b",
+        future_field: { preserved: true },
+      }),
+      undefined,
+    )
+  })
+
   it("attributes create identity and routes delete through native operations", async () => {
     const created = { ...channel, id: 18, name: "Created channel" }
     mocks.list
@@ -568,9 +594,10 @@ describe("DoneHub native managed resource", () => {
       outcome: MANAGED_SITE_MUTATION_OUTCOMES.Rejected,
       diagnostic: { message: "rejected" },
     })
+    const rejectedEditor = await workspace.openEditEditor(ref)
     await expect(
-      editor.submit({
-        ...editor.initialValues,
+      rejectedEditor.submit({
+        ...rejectedEditor.initialValues,
         [DONE_HUB_MANAGED_RESOURCE_FIELD_IDS.Name]: "Rejected rename",
       }),
     ).resolves.toMatchObject({

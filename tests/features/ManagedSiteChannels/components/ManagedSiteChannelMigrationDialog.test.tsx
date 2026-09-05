@@ -745,6 +745,24 @@ describe("ManagedSiteChannelMigrationDialog", () => {
             type: DoneHubChannelType.OpenAI,
           },
         },
+        {
+          ...previewPayload.items[0],
+          channelId: 3,
+          channelName: "Unknown numeric type",
+          draft: {
+            ...previewPayload.items[0].draft,
+            type: "999",
+          },
+        },
+        {
+          ...previewPayload.items[1],
+          channelId: 4,
+          channelName: "Unknown string type",
+          draft: {
+            ...previewPayload.items[1].draft,
+            type: "future-provider",
+          },
+        },
       ],
     })
 
@@ -766,7 +784,14 @@ describe("ManagedSiteChannelMigrationDialog", () => {
       screen
         .getAllByTestId(getManagedSiteMigrationComparisonTargetTestId("type"))
         .map((cell) => cell.textContent),
-    ).toEqual(expect.arrayContaining(["GitHub Models", "OpenAI"]))
+    ).toEqual(
+      expect.arrayContaining([
+        "GitHub Models",
+        "OpenAI",
+        "999",
+        "future-provider",
+      ]),
+    )
   })
 
   it("renders Claude Code Hub string provider type labels and unknown type fallbacks", async () => {
