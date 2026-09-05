@@ -7,6 +7,7 @@ import { DoneHubChannelType } from "~/constants/doneHub"
 import { SITE_TYPES } from "~/constants/siteType"
 import { VeloeraChannelType } from "~/constants/veloera"
 import { ManagedSiteChannelMigrationDialog } from "~/features/ManagedSiteChannels/components/ManagedSiteChannelMigrationDialog"
+import { getManagedSiteMigrationComparisonTargetTestId } from "~/features/ManagedSiteChannels/testIds"
 import enManagedSiteChannels from "~/locales/en/managedSiteChannels.json"
 import {
   executeManagedSiteChannelMigration,
@@ -760,8 +761,12 @@ describe("ManagedSiteChannelMigrationDialog", () => {
       />,
     )
 
-    expect(await screen.findByText("GitHub Models")).toBeInTheDocument()
-    expect(screen.getAllByText("OpenAI").length).toBeGreaterThan(0)
+    await screen.findByText("GitHub Models")
+    expect(
+      screen
+        .getAllByTestId(getManagedSiteMigrationComparisonTargetTestId("type"))
+        .map((cell) => cell.textContent),
+    ).toEqual(expect.arrayContaining(["GitHub Models", "OpenAI"]))
   })
 
   it("renders Claude Code Hub string provider type labels and unknown type fallbacks", async () => {
