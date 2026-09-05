@@ -90,6 +90,10 @@ const {
   mockCompleteProductAnalyticsAction,
   mockTestWebdavConnection,
   mockUploadBackup,
+  mockCreateCloudSyncBackup,
+  mockDownloadCloudSyncBackup,
+  mockTestCloudSyncConnection,
+  mockUploadCloudSyncBackup,
   mockImportFromBackupObject,
   mockSendWebdavAutoSyncMessage,
   loggerMocks,
@@ -101,6 +105,7 @@ const {
     savePreferences: vi.fn(),
     savePreferencesWithResult: vi.fn(),
     exportPreferences: vi.fn(),
+    exportPreferencesForBackup: vi.fn(),
   },
   mockAccountStorage: { exportData: vi.fn() },
   mockTagStorage: { exportTagStore: vi.fn() },
@@ -118,6 +123,10 @@ const {
   mockCompleteProductAnalyticsAction: vi.fn(),
   mockTestWebdavConnection: vi.fn(),
   mockUploadBackup: vi.fn(),
+  mockCreateCloudSyncBackup: vi.fn(),
+  mockDownloadCloudSyncBackup: vi.fn(),
+  mockTestCloudSyncConnection: vi.fn(),
+  mockUploadCloudSyncBackup: vi.fn(),
   mockImportFromBackupObject: vi.fn(),
   mockSendWebdavAutoSyncMessage: vi.fn(),
   loggerMocks: {
@@ -195,6 +204,13 @@ vi.mock("~/services/webdav/webdavService", () => ({
   isWebdavFileNotFoundError: mockIsWebdavFileNotFoundError,
   testWebdavConnection: mockTestWebdavConnection,
   uploadBackup: mockUploadBackup,
+}))
+
+vi.mock("~/services/webdav/cloudSyncService", () => ({
+  createCloudSyncBackup: mockCreateCloudSyncBackup,
+  downloadCloudSyncBackup: mockDownloadCloudSyncBackup,
+  testCloudSyncConnection: mockTestCloudSyncConnection,
+  uploadCloudSyncBackup: mockUploadCloudSyncBackup,
 }))
 
 vi.mock("~/utils/browser/browserApi", () => ({}))
@@ -458,6 +474,9 @@ describe("WebDAVSettings", () => {
     mockUserPreferences.exportPreferences.mockResolvedValue({
       themeMode: "dark",
     })
+    mockUserPreferences.exportPreferencesForBackup.mockImplementation(() =>
+      mockUserPreferences.exportPreferences(),
+    )
     mockAccountStorage.exportData.mockResolvedValue([{ id: "acc-1" }])
     mockTagStorage.exportTagStore.mockResolvedValue({ tags: [] })
     mockChannelConfigStorage.exportConfigs.mockResolvedValue([{ id: 1 }])
@@ -478,6 +497,42 @@ describe("WebDAVSettings", () => {
     mockDecryptWebdavBackupEnvelope.mockResolvedValue('{"version":2}')
     mockTestWebdavConnection.mockResolvedValue(undefined)
     mockUploadBackup.mockResolvedValue(undefined)
+    mockCreateCloudSyncBackup.mockResolvedValue({
+      provider: "github_gist",
+      gistId: "new-gist",
+      htmlUrl: "https://gist.github.com/new-gist",
+      revision: "gist-revision-1",
+    })
+    mockDownloadCloudSyncBackup.mockResolvedValue({
+      content: '{"version":2,"accounts":[]}',
+      remote: {
+        provider: "github_gist",
+        gistId: "existing-gist",
+        revision: "gist-revision-1",
+      },
+    })
+    mockTestCloudSyncConnection.mockImplementation(async (settings: any) =>
+      settings.provider === "github_gist"
+        ? {
+            gistId: "existing-gist",
+            htmlUrl: "https://gist.github.com/existing-gist",
+            revision: "gist-revision-1",
+          }
+        : mockTestWebdavConnection(settings),
+    )
+    mockUploadCloudSyncBackup.mockImplementation(
+      async (content: string, settings: any) => {
+        if (settings.provider === "github_gist") {
+          return {
+            provider: "github_gist",
+            gistId: "existing-gist",
+            revision: "gist-revision-2",
+          }
+        }
+        await mockUploadBackup(content, settings)
+        return { provider: "webdav" }
+      },
+    )
     mockSendWebdavAutoSyncMessage.mockImplementation(async (type: string) => {
       switch (type) {
         case WebdavAutoSyncMessageTypes.GetStatus:
@@ -526,6 +581,44 @@ describe("WebDAVSettings", () => {
         name: "importExport:webdav.downloadImport",
       }),
     ).not.toHaveAttribute("data-analytics-action")
+  })
+
+  it("uses the latest preference version when saving a newly created Gist id", async () => {
+    render(<WebDAVSettings />)
+
+    fireEvent.click(await screen.findByRole("combobox"))
+    fireEvent.click(
+      await screen.findByRole("option", {
+        name: "importExport:webdav.provider.githubGist",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(document.getElementById(WEBDAV_TARGET_IDS.gistToken)).toBeTruthy()
+    })
+    fireEvent.change(
+      document.getElementById(WEBDAV_TARGET_IDS.gistToken) as HTMLInputElement,
+      { target: { value: "github-token" } },
+    )
+
+    clickWebdavAction(WEBDAV_TARGET_IDS.createGist)
+
+    await waitFor(() => {
+      expect(mockCreateCloudSyncBackup).toHaveBeenCalledTimes(1)
+      expect(
+        mockUserPreferences.savePreferencesWithResult,
+      ).toHaveBeenCalledTimes(2)
+    })
+    expect(
+      mockUserPreferences.savePreferencesWithResult,
+    ).toHaveBeenNthCalledWith(1, expect.anything(), {
+      expectedLastUpdated: 0,
+    })
+    expect(
+      mockUserPreferences.savePreferencesWithResult,
+    ).toHaveBeenNthCalledWith(2, expect.anything(), {
+      expectedLastUpdated: 1,
+    })
   })
 
   it("completes WebDAV config save analytics as success", async () => {

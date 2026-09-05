@@ -27,7 +27,10 @@ import {
 } from "~/types/taskNotifications"
 import { USAGE_HISTORY_SCHEDULE_MODE } from "~/types/usageHistory"
 import type { DeepPartial } from "~/types/utils"
-import { resolveWebdavSyncDataSelection } from "~/types/webdav"
+import {
+  CLOUD_SYNC_PROVIDERS,
+  resolveWebdavSyncDataSelection,
+} from "~/types/webdav"
 import { deepOverride } from "~/utils"
 import { normalizeAppLanguage } from "~/utils/i18n/language"
 
@@ -550,12 +553,18 @@ function buildWebdavSnapshot(
 ): SettingChangedPayload {
   const config = preferences.webdav ?? DEFAULT_PREFERENCES.webdav
   const syncData = resolveWebdavSyncDataSelection(config.syncData)
+  const isGithubGist = config.provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST
   return {
     setting_id: PRODUCT_ANALYTICS_SETTING_IDS.WebDavConfigSnapshot,
     entrypoint,
-    configured: hasText(config.url) && hasText(config.username),
+    configured: isGithubGist
+      ? hasText(config.githubGist?.token) &&
+        hasText(config.githubGist?.gistId) &&
+        hasText(config.backupEncryptionPassword)
+      : hasText(config.url) && hasText(config.username),
     auto_sync_enabled: config.autoSync === true,
-    backup_encryption_enabled: config.backupEncryptionEnabled === true,
+    backup_encryption_enabled:
+      isGithubGist || config.backupEncryptionEnabled === true,
     sync_strategy: getWebdavSyncStrategyMode(config.syncStrategy),
     sync_interval_minutes: normalizeNonNegativeMinutes(
       config.syncInterval / 60,

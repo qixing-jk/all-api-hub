@@ -118,6 +118,39 @@ describe("webdavService", () => {
         parseWebdavBackupJson('{"version":"2.0","accounts":"'),
       ).toThrow("messages:webdav.invalidBackupJson")
     })
+
+    it("rejects metadata-only remote content in strict mode", () => {
+      expect(() =>
+        parseWebdavBackupJson('{"version":"4.0","timestamp":1}', {
+          requireBackupShape: true,
+        }),
+      ).toThrow("messages:webdav.invalidBackupJson")
+    })
+
+    it("rejects an empty accounts object in strict mode", () => {
+      expect(() =>
+        parseWebdavBackupJson('{"version":"4.0","timestamp":1,"accounts":{}}', {
+          requireBackupShape: true,
+        }),
+      ).toThrow("messages:webdav.invalidBackupJson")
+    })
+
+    it("rejects a null preferences section in strict mode", () => {
+      expect(() =>
+        parseWebdavBackupJson(
+          '{"version":"4.0","timestamp":1,"preferences":null}',
+          { requireBackupShape: true },
+        ),
+      ).toThrow("messages:webdav.invalidBackupJson")
+    })
+
+    it("rejects an empty legacy data wrapper in strict mode", () => {
+      expect(() =>
+        parseWebdavBackupJson('{"version":"1.0","data":{}}', {
+          requireBackupShape: true,
+        }),
+      ).toThrow("messages:webdav.invalidBackupJson")
+    })
   })
 
   describe("testWebdavConnection", () => {

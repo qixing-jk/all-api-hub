@@ -313,4 +313,68 @@ describe("userPreferences", () => {
       expect(setSpy).toHaveBeenCalled()
     })
   })
+
+  describe("backup export", () => {
+    it("keeps legacy WebDAV export behavior while removing Gist credentials", async () => {
+      await userPreferences.resetToDefaults()
+      await userPreferences.updateWebdavSettings({
+        provider: "webdav",
+        url: "https://dav.example/backup.json",
+        username: "dav-user",
+        password: "dav-password",
+        backupEncryptionPassword: "encryption-password",
+        githubGist: {
+          token: "ghp-secret",
+          gistId: "gist-secret",
+          gistUrl: "https://gist.github.com/example/gist-secret",
+        },
+      })
+
+      const exported = await userPreferences.exportPreferencesForBackup()
+
+      expect(exported.webdav).toMatchObject({
+        provider: "webdav",
+        url: "https://dav.example/backup.json",
+        username: "dav-user",
+        password: "dav-password",
+        backupEncryptionPassword: "encryption-password",
+        githubGist: {
+          token: "",
+          gistId: "",
+          gistUrl: "",
+        },
+      })
+    })
+
+    it("removes all cloud credentials when GitHub Gist is active", async () => {
+      await userPreferences.resetToDefaults()
+      await userPreferences.updateWebdavSettings({
+        provider: "github_gist",
+        url: "https://dav.example/backup.json",
+        username: "dav-user",
+        password: "dav-password",
+        backupEncryptionPassword: "encryption-password",
+        githubGist: {
+          token: "ghp-secret",
+          gistId: "gist-secret",
+          gistUrl: "https://gist.github.com/example/gist-secret",
+        },
+      })
+
+      const exported = await userPreferences.exportPreferencesForBackup()
+
+      expect(exported.webdav).toMatchObject({
+        provider: "github_gist",
+        url: "",
+        username: "",
+        password: "",
+        backupEncryptionPassword: "",
+        githubGist: {
+          token: "",
+          gistId: "",
+          gistUrl: "",
+        },
+      })
+    })
+  })
 })

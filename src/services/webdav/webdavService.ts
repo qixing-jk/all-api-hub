@@ -60,9 +60,105 @@ export class WebdavFileNotFoundError extends Error {
  * Parse a downloaded WebDAV backup payload and convert malformed JSON into a
  * stable user-facing backup error instead of exposing engine-specific parser text.
  */
-export function parseWebdavBackupJson<T = unknown>(content: string): T {
+export function parseWebdavBackupJson<T = unknown>(
+  content: string,
+  options?: { requireBackupShape?: boolean },
+): T {
   try {
-    return JSON.parse(content) as T
+    if (typeof content !== "string" || content.trim() === "") {
+      throw new Error("empty backup")
+    }
+
+    const parsed = JSON.parse(content) as unknown
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      throw new Error("backup root is not an object")
+    }
+
+    const root = parsed as Record<string, unknown>
+    if (options?.requireBackupShape) {
+      // A valid selective backup may omit individual sections, but it must
+      // still carry at least one data section. This prevents transport
+      // failures, empty responses, and metadata-only objects from being
+      // interpreted as an empty data set.
+      const dataKeys = [
+        "accounts",
+        "preferences",
+        "tagStore",
+        "featureGuidance",
+        "channelConfigs",
+        "apiCredentialProfiles",
+        "data",
+      ]
+      const hasRootDataSection = dataKeys.some(
+        (key) =>
+          key !== "data" && Object.prototype.hasOwnProperty.call(root, key),
+      )
+      const nestedData = root.data
+      const hasNestedDataSection =
+        nestedData &&
+        typeof nestedData === "object" &&
+        !Array.isArray(nestedData) &&
+        dataKeys.some((key) =>
+          Object.prototype.hasOwnProperty.call(nestedData, key),
+        )
+
+      if (!hasRootDataSection && !hasNestedDataSection) {
+        throw new Error("backup has no recognized sections")
+      }
+    }
+
+    if ("accounts" in root) {
+      if (Array.isArray(root.accounts)) {
+        // Legacy V1 backups may put the account list directly at the root.
+      } else if (!root.accounts || typeof root.accounts !== "object") {
+        throw new Error("accounts section is invalid")
+      } else {
+        const accountsSection = root.accounts as Record<string, unknown>
+        const accountSectionKeys = [
+          "accounts",
+          "bookmarks",
+          "pinnedAccountIds",
+          "orderedAccountIds",
+          "deletedEntryRecords",
+          "last_updated",
+        ]
+        if (
+          !accountSectionKeys.some((key) =>
+            Object.prototype.hasOwnProperty.call(accountsSection, key),
+          )
+        ) {
+          throw new Error("accounts section is empty")
+        }
+        for (const key of [
+          "accounts",
+          "bookmarks",
+          "pinnedAccountIds",
+          "orderedAccountIds",
+        ]) {
+          if (key in accountsSection && !Array.isArray(accountsSection[key])) {
+            throw new Error(`${key} section is invalid`)
+          }
+        }
+        if (
+          "deletedEntryRecords" in accountsSection &&
+          (!accountsSection.deletedEntryRecords ||
+            typeof accountsSection.deletedEntryRecords !== "object" ||
+            Array.isArray(accountsSection.deletedEntryRecords))
+        ) {
+          throw new Error("deletedEntryRecords section is invalid")
+        }
+      }
+    }
+    if (
+      "preferences" in root &&
+      (!root.preferences ||
+        typeof root.preferences !== "object" ||
+        Array.isArray(root.preferences))
+    ) {
+      throw new Error("preferences section is invalid")
+    }
+
+    return parsed as T
   } catch {
     throw new Error(t("messages:webdav.invalidBackupJson"))
   }
