@@ -23,7 +23,7 @@ export function normalizeAccountSiteSupplementalAuth({
 }): NormalizedAccountSiteSupplementalAuth {
   const profile = getAccountSiteProductProfile(siteType)
   if (
-    profile.supplementalAuth.kind !==
+    profile.authSession.kind !==
     ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS.Sub2ApiRefreshToken
   ) {
     return {}

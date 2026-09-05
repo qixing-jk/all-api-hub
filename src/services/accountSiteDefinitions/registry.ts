@@ -4,7 +4,6 @@ import {
   ACCOUNT_SITE_DEFINITION_SCOPES,
   type AccountSiteDefinition,
   type AccountSiteDefinitionOnboardingMetadata,
-  type AccountSiteDefinitionReadiness,
 } from "./contracts"
 import {
   ACCOUNT_SITE_TYPE_ORDER,
@@ -112,9 +111,6 @@ function cloneProductProfile(
           ),
         }
       : undefined,
-    supplementalAuth: productProfile.supplementalAuth
-      ? { ...productProfile.supplementalAuth }
-      : undefined,
     tokenForm: productProfile.tokenForm
       ? { ...productProfile.tokenForm }
       : undefined,
@@ -126,19 +122,6 @@ function cloneProductProfile(
           ),
         }
       : undefined,
-  }
-}
-
-/**
- * Clones readiness expectation data before exposing definition copies.
- */
-function cloneReadiness(
-  readiness: AccountSiteDefinitionReadiness | undefined,
-): AccountSiteDefinitionReadiness | undefined {
-  if (!readiness) return undefined
-
-  return {
-    modelList: readiness.modelList ? { ...readiness.modelList } : undefined,
   }
 }
 
@@ -156,13 +139,11 @@ function cloneDefinition(
           ...definition.managedResource,
           tableFieldIds: [...definition.managedResource.tableFieldIds],
           detailFieldIds: [...definition.managedResource.detailFieldIds],
-          actions: [...definition.managedResource.actions],
           settingsTarget: { ...definition.managedResource.settingsTarget },
         }
       : undefined,
     onboarding: cloneOnboarding(definition.onboarding),
     productProfile: cloneProductProfile(definition.productProfile),
-    readiness: cloneReadiness(definition.readiness),
   }
 }
 

@@ -60,7 +60,6 @@ import {
   runClaudeCodeHubMutation,
 } from "./claudeCodeHubMutation"
 import { createManagedSiteConfigCapability } from "./config"
-import { emptyManagedSiteQueries } from "./unsupportedQueries"
 
 const runClaudeCodeHubResourceRead = async <T>(
   config: ClaudeCodeHubConfig,
@@ -555,6 +554,5 @@ export const claudeCodeHubManagedSiteCapabilities = {
   // the native registration; remove this facade after those callers migrate.
   resources: claudeCodeHubManagedUpstreamResources,
   config: claudeCodeHubManagedSiteConfig,
-  queries: emptyManagedSiteQueries,
   channelDrafts: claudeCodeHubManagedSiteChannelDrafts,
 }

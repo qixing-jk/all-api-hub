@@ -71,7 +71,7 @@
     "toggleLabel": "新增账号时自动填充当前站点网址"
   },
   "autoProvisionKeyOnAccountAdd": {
-    "description": "控制添加账号后是否自动创建默认 API 密钥。",
+    "description": "控制添加支持的账号后是否自动创建默认 API 密钥。",
     "title": "API 密钥",
     "toggleDesc": "开启后，账号保存完成会检查远端密钥列表；若没有密钥则自动创建一个默认密钥。",
     "toggleLabel": "添加账号后自动创建默认密钥"

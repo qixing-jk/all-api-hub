@@ -64,6 +64,20 @@
     "updateFailed": "Modellumleitungseinstellungen konnten nicht aktualisiert werden",
     "updateSuccess": "Modellumleitungseinstellungen aktualisiert"
   },
+  "modelDiscovery": {
+    "failed": {
+      "description": "Modelle konnten nicht von der verwalteten Site geladen werden. Stattdessen wird die voreingestellte Modellliste verwendet. Prüfen Sie Verbindung oder Anmeldedaten und versuchen Sie es erneut.",
+      "title": "Modellabfrage fehlgeschlagen"
+    },
+    "not-ready": {
+      "description": "Konfigurieren Sie zuerst die URL und Administrator-Anmeldedaten der verwalteten Site. Vorerst wird die voreingestellte Modellliste verwendet.",
+      "title": "Modellabfrage ist nicht konfiguriert"
+    },
+    "unsupported": {
+      "description": "Für diese Site ist keine Abfragefunktion für Kontomodelle registriert. Daher wird die voreingestellte Modellliste verwendet.",
+      "title": "Automatische Modellabfrage wird nicht unterstützt"
+    }
+  },
   "pruneMissingTargetsOnModelSync": "Ungültige Weiterleitungsziele nach der Synchronisierung entfernen",
   "pruneMissingTargetsOnModelSyncDesc": "Destruktiv: Löscht nach einer Modellsynchronisierungsaktualisierung vorhandene model_mapping-Einträge, deren Zielmodelle in der aktualisierten Modellliste fehlen",
   "regenerateButton": "Mapping jetzt neu generieren",
@@ -71,5 +85,9 @@
   "standardModels": "Standardmodelle",
   "standardModelsDesc": "Wählen Sie die Standardmodelle aus, für die Weiterleitungszuordnungen generiert werden sollen.",
   "standardModelsPlaceholder": "Modelle auswählen...",
-  "title": "Modellumleitung"
+  "title": "Modellumleitung",
+  "unsupported": {
+    "description": "Diese verwaltete Website stellt die zum Lesen und Aktualisieren von Modellzuordnungen benötigten Kanaloperationen nicht bereit.",
+    "title": "Modellumleitung wird für diese Website nicht unterstützt"
+  }
 }

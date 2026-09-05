@@ -3,6 +3,8 @@
     "autoProvisionAlreadyHad": "{{accountName}} にはすでに API キーがあります。自動作成をスキップしました。",
     "autoProvisionCreated": "{{accountName}} 用の既定 API キーを作成しました。",
     "autoProvisionFailed": "アカウントは保存されましたが、API キーの自動作成に失敗しました。キー管理の「{{actionLabel}}」から再試行できます。",
+    "autoProvisionNeedsManualAction": "{{accountName}} は保存されましたが、既定キーには手動選択または一回限りのシークレット処理が必要です。キー管理の「{{actionLabel}}」で完了してください。",
+    "autoProvisionUnsupported": "{{accountName}} は保存されましたが、このサイトタイプは既定の API キーの自動作成に対応していません。",
     "checkingApiKeys": "API キーを確認中...",
     "createTokenFailed": "API トークンの作成に失敗しました",
     "tokenNotFound": "API トークンの作成または検索に失敗しました"

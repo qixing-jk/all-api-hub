@@ -312,10 +312,13 @@ export async function openVeloeraNativeResourceOperations(): Promise<VeloeraNati
       )
     },
     loadEditorGroups: async (options) => {
+      throwIfNewApiResourceOperationAborted(options)
+      const fetchSiteUserGroups = queries.siteUserGroups?.fetch
+      if (!fetchSiteUserGroups) return []
       try {
-        return normalizeList(
-          await queries.fetchSiteUserGroups(nativeConfig.config, options),
-        )
+        const groups = await fetchSiteUserGroups(nativeConfig.config, options)
+        throwIfNewApiResourceOperationAborted(options)
+        return normalizeList(groups)
       } catch {
         throwIfNewApiResourceOperationAborted(options)
         return []

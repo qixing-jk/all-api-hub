@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui"
-import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
+import { MANAGED_SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { cn } from "~/lib/utils"
 import {
@@ -17,16 +17,6 @@ import {
   getManagedSiteLabel,
 } from "~/services/managedSites/utils/managedSite"
 import { showUpdateToast } from "~/utils/core/toastHelpers"
-
-const MANAGED_SITE_TYPES: ManagedSiteType[] = [
-  SITE_TYPES.NEW_API,
-  SITE_TYPES.DONE_HUB,
-  SITE_TYPES.VELOERA,
-  SITE_TYPES.OCTOPUS,
-  SITE_TYPES.AXON_HUB,
-  SITE_TYPES.CLAUDE_CODE_HUB,
-  SITE_TYPES.SUB2API,
-]
 
 interface ManagedSiteTypeSwitcherProps {
   ariaLabel?: string

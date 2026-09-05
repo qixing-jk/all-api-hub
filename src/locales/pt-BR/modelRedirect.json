@@ -68,6 +68,20 @@
     "updateFailed": "Falha ao atualizar as configurações de redirecionamento de modelos",
     "updateSuccess": "Configurações de redirecionamento de modelos atualizadas"
   },
+  "modelDiscovery": {
+    "failed": {
+      "description": "Não foi possível carregar os modelos do site gerenciado. A lista predefinida está sendo usada. Verifique a conexão ou as credenciais e tente novamente.",
+      "title": "Falha ao obter modelos"
+    },
+    "not-ready": {
+      "description": "Configure primeiro a URL e as credenciais de administrador do site. Por enquanto, a lista predefinida será usada.",
+      "title": "A obtenção de modelos não está configurada"
+    },
+    "unsupported": {
+      "description": "Este site não possui uma capacidade registrada para consultar modelos da conta, então a lista predefinida será usada.",
+      "title": "A obtenção automática de modelos não é suportada"
+    }
+  },
   "pruneMissingTargetsOnModelSync": "Remover destinos de redirecionamento inválidos após a sincronização",
   "pruneMissingTargetsOnModelSyncDesc": "Destrutivo: após atualizar a sincronização de modelos, exclui as entradas existentes de model_mapping cujos modelos de destino não aparecem na lista atualizada",
   "regenerateButton": "Gerar mapeamento novamente agora",
@@ -75,5 +89,9 @@
   "standardModels": "Modelos padrão",
   "standardModelsDesc": "Selecione os modelos padrão para os quais deseja gerar mapeamentos de redirecionamento",
   "standardModelsPlaceholder": "Selecione modelos...",
-  "title": "Redirecionamento de modelos"
+  "title": "Redirecionamento de modelos",
+  "unsupported": {
+    "description": "Este site gerenciado não fornece as operações de canal necessárias para ler e atualizar mapeamentos de modelos.",
+    "title": "Este site não oferece suporte ao redirecionamento de modelos"
+  }
 }

@@ -46,6 +46,11 @@ const keyManagement = vi.hoisted(() => ({
     fetchAccountAvailableModels: vi.fn(),
   },
   fetchAccountTokens: vi.fn(),
+  fetchCurrentUserGroup: vi.fn(),
+  createApiToken: vi.fn(),
+  updateApiToken: vi.fn(),
+  deleteApiToken: vi.fn(),
+  fetchUserGroups: vi.fn(),
   fetchAccountAvailableModels: vi.fn(),
   fetchSiteUserGroups: vi.fn(),
 }))
@@ -654,8 +659,8 @@ describe("Veloera managed-site channel capability", () => {
       },
     }
 
-    await veloeraManagedSiteCapabilities.queries.fetchSiteUserGroups(config)
-    await veloeraManagedSiteCapabilities.queries.fetchAccountAvailableModels(
+    await veloeraManagedSiteCapabilities.queries.siteUserGroups!.fetch(config)
+    await veloeraManagedSiteCapabilities.queries.accountAvailableModels!.fetch(
       config,
     )
 

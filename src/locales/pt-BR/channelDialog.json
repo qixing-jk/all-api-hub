@@ -21,6 +21,11 @@
       "placeholder": "https://api.example.com"
     },
     "groups": {
+      "discoveryStatus": {
+        "failed": "Não foi possível carregar os grupos. Você ainda pode inseri-los manualmente.",
+        "not-ready": "Configure primeiro o site gerenciado. Você ainda pode inserir grupos manualmente.",
+        "unsupported": "Este site gerenciado não oferece descoberta de grupos. Use os padrões ou insira os grupos manualmente."
+      },
       "hint": "Os grupos são obtidos do seu site gerenciado",
       "label": "Grupos do Canal",
       "loading": "Carregando grupos...",
@@ -29,7 +34,8 @@
     "key": {
       "label": "Chave de API",
       "placeholder": "Insira a chave de API do provedor upstream",
-      "realKeyHint": "Se a lista de canais omitiu ou mascarou a chave completa, carregue a chave real aqui. Alguns tipos de sites gerenciados podem exigir verificação adicional."
+      "realKeyHint": "Se a lista de canais omitiu ou mascarou a chave completa, carregue a chave real aqui. Alguns tipos de sites gerenciados podem exigir verificação adicional.",
+      "realKeyUnavailable": "Este tipo de site não permite visualizar a chave salva. Insira uma nova chave se precisar substituí-la."
     },
     "models": {
       "hint": "Digite para pesquisar ou pressione Enter para adicionar um nome de modelo personalizado",

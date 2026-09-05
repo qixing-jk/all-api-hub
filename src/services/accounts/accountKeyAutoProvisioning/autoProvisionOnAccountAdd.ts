@@ -7,6 +7,11 @@ import {
   canRunAccountDefaultTokenAutomation,
   createStoredAccountKeyProductContext,
 } from "~/services/accounts/keyProductCapabilities"
+import {
+  ACCOUNT_USER_FEATURE_IDS,
+  resolveAccountUserFeatureAvailability,
+} from "~/services/apiAdapters/accountCapabilitySupport"
+import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { AuthTypeEnum } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
@@ -22,6 +27,7 @@ export async function autoProvisionKeyOnAccountAdd(
 ): Promise<void> {
   if (!enabled) return
 
+  let accountName = ""
   try {
     const account = await accountQueries.getAccountById(accountId)
     if (!account) {
@@ -29,7 +35,29 @@ export async function autoProvisionKeyOnAccountAdd(
       return
     }
 
+    accountName = account.site_name
+
     if (account.disabled === true || account.authType === AuthTypeEnum.None) {
+      return
+    }
+
+    const capabilities = getSiteTypeCapabilities(account.site_type)
+    const featureAvailability = resolveAccountUserFeatureAvailability(
+      account.site_type,
+      ACCOUNT_USER_FEATURE_IDS.DefaultTokenAutomation,
+      capabilities,
+    )
+    if (featureAvailability.status === "unsupported") {
+      showWarningToast(
+        t("messages:accountOperations.autoProvisionUnsupported", {
+          accountName: account.site_name,
+        }),
+      )
+      logger.info("Auto-provision unavailable for account site type", {
+        accountId,
+        siteType: account.site_type,
+        reason: featureAvailability.reason,
+      })
       return
     }
 
@@ -37,9 +65,8 @@ export async function autoProvisionKeyOnAccountAdd(
       !canRunAccountDefaultTokenAutomation(
         createStoredAccountKeyProductContext(account),
       )
-    ) {
+    )
       return
-    }
 
     const { created } = await ensureDefaultApiTokenForAccount({ account })
 
@@ -58,6 +85,16 @@ export async function autoProvisionKeyOnAccountAdd(
     }
   } catch (error) {
     if (error instanceof DefaultTokenLifecyclePolicyBlockedError) {
+      showWarningToast(
+        t("messages:accountOperations.autoProvisionNeedsManualAction", {
+          accountName,
+          actionLabel: t("keyManagement:dialog.createToken"),
+        }),
+      )
+      logger.info("Auto-provision requires a manual key workflow", {
+        accountId,
+        reason: error.reason,
+      })
       return
     }
 

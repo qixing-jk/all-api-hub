@@ -10,14 +10,6 @@ export const ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS = {
 export type AccountSiteSupplementalAuthKind =
   (typeof ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS)[keyof typeof ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS]
 
-export const ACCOUNT_SITE_AUTH_SESSION_REFRESH_LOCK_SCOPES = {
-  None: "none",
-  Account: "account",
-} as const
-
-export type AccountSiteAuthSessionRefreshLockScope =
-  (typeof ACCOUNT_SITE_AUTH_SESSION_REFRESH_LOCK_SCOPES)[keyof typeof ACCOUNT_SITE_AUTH_SESSION_REFRESH_LOCK_SCOPES]
-
 export const ACCOUNT_SITE_CREATED_TOKEN_SECRET_HANDLING = {
   ResponseKey: "response_key",
   OneTimeSecretDialog: "one_time_secret_dialog",
@@ -33,30 +25,6 @@ export const ACCOUNT_SITE_TOKEN_FORM_NETWORK_LIMIT_POLICIES = {
 
 export type AccountSiteTokenFormNetworkLimitPolicy =
   (typeof ACCOUNT_SITE_TOKEN_FORM_NETWORK_LIMIT_POLICIES)[keyof typeof ACCOUNT_SITE_TOKEN_FORM_NETWORK_LIMIT_POLICIES]
-
-export const ACCOUNT_SITE_MODEL_LIST_DIRECT_PRICING = {
-  Supported: "supported",
-  Unsupported: "unsupported",
-} as const
-
-export type AccountSiteModelListDirectPricing =
-  (typeof ACCOUNT_SITE_MODEL_LIST_DIRECT_PRICING)[keyof typeof ACCOUNT_SITE_MODEL_LIST_DIRECT_PRICING]
-
-export const ACCOUNT_SITE_MODEL_LIST_TOKEN_SCOPED_CATALOG_FALLBACKS = {
-  None: "none",
-  RuntimeKey: "runtime_key",
-} as const
-
-export type AccountSiteModelListTokenScopedCatalogFallback =
-  (typeof ACCOUNT_SITE_MODEL_LIST_TOKEN_SCOPED_CATALOG_FALLBACKS)[keyof typeof ACCOUNT_SITE_MODEL_LIST_TOKEN_SCOPED_CATALOG_FALLBACKS]
-
-export const ACCOUNT_SITE_MODEL_LIST_PROVIDER_CATALOGS = {
-  None: "none",
-  Public: "public",
-} as const
-
-export type AccountSiteModelListProviderCatalog =
-  (typeof ACCOUNT_SITE_MODEL_LIST_PROVIDER_CATALOGS)[keyof typeof ACCOUNT_SITE_MODEL_LIST_PROVIDER_CATALOGS]
 
 export const ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS = {
   None: "none",
@@ -106,13 +74,10 @@ export type AccountSiteAuthProfile = {
   allowedAuthTypes: readonly AuthTypeEnum[]
   defaultAuthType: AuthTypeEnum
   defaultAuthHostnames: readonly string[]
-  supportsCookieAuth: boolean
 }
 
 export type AccountSiteAuthSessionProfile = {
   kind: AccountSiteSupplementalAuthKind
-  decoratesAccountApiRequests: boolean
-  refreshLockScope: AccountSiteAuthSessionRefreshLockScope
 }
 
 export type AccountSiteCreatedTokenProfile = {
@@ -124,9 +89,6 @@ export type AccountSiteTokenFormProfile = {
 }
 
 export type AccountSiteModelListProfile = {
-  directPricing: AccountSiteModelListDirectPricing
-  providerCatalog: AccountSiteModelListProviderCatalog
-  tokenScopedCatalogFallback: AccountSiteModelListTokenScopedCatalogFallback
   dashboardEstimateLoader: AccountSiteModelListDashboardEstimateLoader
   statusScope: AccountSiteModelListStatusScope
   displayCapabilitiesSource: AccountSiteModelListDisplayCapabilitySource
@@ -146,9 +108,6 @@ export type AccountSiteProductProfile = {
   identity: AccountSiteIdentityProfile
   modelList: AccountSiteModelListProfile
   metrics: AccountSiteMetricProfile
-  supplementalAuth: {
-    kind: AccountSiteSupplementalAuthKind
-  }
   tokenForm: AccountSiteTokenFormProfile
   urls: AccountSiteUrlProfile
 }

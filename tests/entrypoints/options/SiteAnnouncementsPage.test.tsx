@@ -24,7 +24,7 @@ import type {
   SiteAnnouncementSiteState,
 } from "~/types/siteAnnouncements"
 import { deepOverride } from "~/utils"
-import { showResultToast } from "~/utils/core/toastHelpers"
+import { showResultToast, showWarningToast } from "~/utils/core/toastHelpers"
 import { openSettingsTab } from "~/utils/navigation"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
@@ -62,6 +62,7 @@ vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
 
 vi.mock("~/utils/core/toastHelpers", () => ({
   showResultToast: vi.fn(),
+  showWarningToast: vi.fn(),
 }))
 
 vi.mock("~/utils/navigation", () => ({
@@ -608,7 +609,7 @@ describe("SiteAnnouncementsPage", () => {
     })
   })
 
-  it("shows success feedback and reloads after a manual check", async () => {
+  it("warns about unsupported sites and reloads after a manual check", async () => {
     const user = userEvent.setup()
 
     render(<SiteAnnouncementsPage />)
@@ -625,8 +626,9 @@ describe("SiteAnnouncementsPage", () => {
 
     await waitFor(() => {
       expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
-        PRODUCT_ANALYTICS_RESULTS.Success,
+        PRODUCT_ANALYTICS_RESULTS.Failure,
         {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
           insights: {
             itemCount: 3,
             successCount: 1,
@@ -634,17 +636,27 @@ describe("SiteAnnouncementsPage", () => {
           },
         },
       )
-      expect(showResultToast).toHaveBeenCalledWith({
-        success: true,
-        successFallback: "siteAnnouncements:messages.checkCompleted",
-        errorFallback: "siteAnnouncements:messages.checkFailed",
-      })
+      expect(showWarningToast).toHaveBeenCalledWith(
+        "siteAnnouncements:messages.checkCompletedWithIssues",
+      )
+      expect(showResultToast).not.toHaveBeenCalled()
     })
     expect(
       sendSiteAnnouncementsMessageMock.mock.calls.filter(
         ([type]) => type === SiteAnnouncementsMessageTypes.ListRecords,
       ),
     ).toHaveLength(2)
+  })
+
+  it("shows aggregate failure and unsupported status in the all-sites view", async () => {
+    render(<SiteAnnouncementsPage />)
+
+    expect(
+      await screen.findByText("siteAnnouncements:status.aggregateIssuesTitle"),
+    ).toBeVisible()
+    expect(
+      screen.getByText("siteAnnouncements:status.aggregateIssues"),
+    ).toBeVisible()
   })
 
   it("checks all visible site accounts when no filters are selected", async () => {

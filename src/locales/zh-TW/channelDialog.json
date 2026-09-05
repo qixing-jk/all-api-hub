@@ -21,6 +21,11 @@
       "placeholder": "https://api.example.com"
     },
     "groups": {
+      "discoveryStatus": {
+        "failed": "無法從託管站點載入分組，您仍可手動輸入。",
+        "not-ready": "請先完成託管站點設定；您仍可手動輸入分組。",
+        "unsupported": "目前託管站點不提供分組探索，請使用預設分組或手動輸入。"
+      },
       "hint": "分組來源於您管理的站點",
       "label": "渠道分組",
       "loading": "載入分組中...",
@@ -29,7 +34,8 @@
     "key": {
       "label": "API 金鑰",
       "placeholder": "輸入上游提供商的 API 金鑰",
-      "realKeyHint": "當列表介面未回傳完整渠道 key 時，可在此載入真實 key；部分渠道類型可能還需要額外驗證。"
+      "realKeyHint": "當列表介面未回傳完整渠道 key 時，可在此載入真實 key；部分渠道類型可能還需要額外驗證。",
+      "realKeyUnavailable": "目前站點類型暫不支援查看已儲存的密鑰；如需變更，請輸入新密鑰。"
     },
     "models": {
       "hint": "輸入搜尋或按 Enter 新增自定義模型名稱",

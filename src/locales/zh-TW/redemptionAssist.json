@@ -2,9 +2,12 @@
   "accountSelect": {
     "confirm": "確認兌換",
     "noResults": "未找到匹配的帳號，請調整搜尋條件",
+    "noSupportedAccounts": "已儲存的帳號都暫不支援自動兌換，請前往對應站點手動兌換。",
+    "openSiteManual": "前往站點手動兌換",
     "title": "選擇要用於兌換的帳號",
     "titleFallback": "未找到與當前站點匹配的帳號，請手動選擇一個帳號",
-    "titleMultiple": "檢測到多個可用帳號，請選擇一個用於兌換"
+    "titleMultiple": "檢測到多個可用帳號，請選擇一個用於兌換",
+    "unsupported": "此站點類型暫不支援自動兌換"
   },
   "actions": {
     "autoRedeem": "自動兌換"
@@ -25,7 +28,8 @@
     "selectAll": "全選",
     "success": {
       "settingsSaved": "兌換助手設定已儲存"
-    }
+    },
+    "unsupportedSiteType": "此帳號的站點類型暫不支援自動兌換，請選擇其他帳號或前往對應站點手動兌換。"
   },
   "settings": {
     "contextMenu": {

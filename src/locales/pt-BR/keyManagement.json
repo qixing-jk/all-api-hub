@@ -372,6 +372,7 @@
     "verifyApiFailed": "Falha ao abrir a verificação da API",
     "verifyCliSupportFailed": "Falha ao abrir a verificação de compatibilidade com CLI"
   },
+  "noAccountsSupportKeyCreation": "Nenhuma conta nesta visualização permite criar chaves de API. Selecione outra conta ou adicione uma conta compatível.",
   "noKeys": "Ainda não há dados de chaves",
   "noMatchingKeys": "Nenhuma chave correspondente encontrada",
   "oneTimeKey": {

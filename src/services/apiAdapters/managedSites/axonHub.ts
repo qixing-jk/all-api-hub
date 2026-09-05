@@ -50,7 +50,6 @@ import {
 import { normalizeList } from "~/utils/core/string"
 
 import { createManagedSiteConfigCapability } from "./config"
-import { emptyManagedSiteQueries } from "./unsupportedQueries"
 
 const axonHubManagedSiteConfig: ManagedSiteConfigCapability<AxonHubConfig> =
   createManagedSiteConfigCapability(
@@ -405,6 +404,5 @@ export const axonHubManagedSiteChannels: ManagedSiteChannelsCapability<AxonHubCo
 export const axonHubManagedSiteCapabilities = {
   channels: axonHubManagedSiteChannels,
   config: axonHubManagedSiteConfig,
-  queries: emptyManagedSiteQueries,
   channelDrafts: axonHubManagedSiteChannelDrafts,
 }

@@ -162,6 +162,7 @@ export function ChannelDialog({
     isFormValid,
     isSaving,
     isLoadingGroups,
+    groupDiscoveryStatus,
     isLoadingModels,
     isResourceEditLoading,
     isResourceEditReady,
@@ -719,6 +720,7 @@ export function ChannelDialog({
           isLoadingRealKey={isLoadingRealKey}
           isLoadingModels={isLoadingModels}
           isLoadingGroups={isLoadingGroups}
+          groupDiscoveryStatus={groupDiscoveryStatus}
           showUnknownStringType={Boolean(shouldShowUnknownStringType)}
           showGenericModelsField={shouldShowGenericModelsField}
           showGroupsField={!isOctopus && !isAxonHub && !isSub2Api}

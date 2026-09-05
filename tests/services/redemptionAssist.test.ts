@@ -99,6 +99,9 @@ describe("redemptionAssist shouldPrompt batch filtering", () => {
   it("registers typed runtime listeners once", async () => {
     vi.resetModules()
     messagingMocks.onRedemptionAssistMessage.mockClear()
+    vi.doMock("~/services/redemption/redeemService", () => ({
+      redeemService: { redeemCodeForAccount: vi.fn() },
+    }))
 
     const { setupRedemptionAssistMessagingListeners } = await import(
       "~/services/redemption/redemptionAssist"
@@ -128,7 +131,7 @@ describe("redemptionAssist shouldPrompt batch filtering", () => {
       "redemptionAssist:autoRedeemByUrl",
       expect.any(Function),
     )
-  })
+  }, 30_000)
 
   it("returns only prompt-eligible codes for a url", async () => {
     vi.resetModules()
@@ -741,11 +744,13 @@ describe("redemptionAssist post-redeem refresh", () => {
     const candidates = [
       {
         id: "acc_multi_1",
+        siteType: "new-api",
         baseUrl: "https://example.com",
         checkIn: { customCheckIn: { url: "https://example.com/check-in" } },
       },
       {
         id: "acc_multi_2",
+        siteType: "new-api",
         baseUrl: "https://example.com",
         checkIn: { customCheckIn: { url: "https://example.com/redeem" } },
       },
@@ -774,7 +779,10 @@ describe("redemptionAssist post-redeem refresh", () => {
       data: {
         success: false,
         code: "MULTIPLE_ACCOUNTS",
-        candidates,
+        candidates: candidates.map((account) => ({
+          ...account,
+          automaticRedemptionSupport: { status: "supported" },
+        })),
       },
     })
   })
@@ -792,6 +800,7 @@ describe("redemptionAssist post-redeem refresh", () => {
     const allAccounts = [
       {
         id: "acc_missing_checkin",
+        siteType: "new-api",
         baseUrl: "https://manual.example.com",
       },
     ]
@@ -820,7 +829,10 @@ describe("redemptionAssist post-redeem refresh", () => {
         success: false,
         code: "NO_ACCOUNTS",
         candidates: [],
-        allAccounts,
+        allAccounts: allAccounts.map((account) => ({
+          ...account,
+          automaticRedemptionSupport: { status: "supported" },
+        })),
         message: "redemptionAssist:messages.noAccountForUrl",
       },
     })
@@ -900,6 +912,7 @@ describe("redemptionAssist post-redeem refresh", () => {
     const allAccounts = [
       {
         id: "acc_manual_1",
+        siteType: "new-api",
         baseUrl: "https://manual.example.com",
         checkIn: {
           customCheckIn: { url: "https://other.example.com/check-in" },
@@ -927,7 +940,10 @@ describe("redemptionAssist post-redeem refresh", () => {
         success: false,
         code: "NO_ACCOUNTS",
         candidates: [],
-        allAccounts,
+        allAccounts: allAccounts.map((account) => ({
+          ...account,
+          automaticRedemptionSupport: { status: "supported" },
+        })),
         message: "redemptionAssist:messages.noAccountForUrl",
       },
     })

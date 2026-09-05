@@ -5,24 +5,36 @@ import {
   ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES,
   ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES,
 } from "~/services/accounts/accountSiteProfile"
-import {
-  getAccountSiteDefinition,
-  getAccountSiteTypeValues,
-} from "~/services/accountSiteDefinitions"
+import { getAccountSiteTypeValues } from "~/services/accountSiteDefinitions"
+import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import {
   MODEL_LIST_ACCOUNT_SOURCE_ROUTES,
   resolveModelListAccountSourceReadiness,
 } from "~/services/modelList/accountSources/readiness"
 
-describe("Model List readiness definition expectations", () => {
-  it("resolves each expected account site route without throwing", () => {
+describe("Model List readiness capability routing", () => {
+  it("derives every route from the registered capability object", () => {
     for (const siteType of getAccountSiteTypeValues()) {
-      const expectation = getAccountSiteDefinition(siteType)?.readiness
+      const capabilities = getSiteTypeCapabilities(siteType).account
       const readiness = resolveModelListAccountSourceReadiness({ siteType })
 
-      expect(readiness.route, `${siteType} readiness route`).toBe(
-        expectation?.modelList?.expectedRoute,
-      )
+      if (capabilities?.modelPricing) {
+        expect(readiness.route, `${siteType} direct pricing route`).toBe(
+          MODEL_LIST_ACCOUNT_SOURCE_ROUTES.DirectPricing,
+        )
+      } else if (capabilities?.providerModelCatalog) {
+        expect(readiness.route, `${siteType} provider catalog route`).toBe(
+          MODEL_LIST_ACCOUNT_SOURCE_ROUTES.ProviderCatalog,
+        )
+      } else if (capabilities?.modelCatalog) {
+        expect(readiness.route, `${siteType} runtime catalog route`).toBe(
+          MODEL_LIST_ACCOUNT_SOURCE_ROUTES.TokenScopedRuntimeCatalog,
+        )
+      } else {
+        expect(readiness.route, `${siteType} unsupported route`).toBe(
+          MODEL_LIST_ACCOUNT_SOURCE_ROUTES.Unsupported,
+        )
+      }
     }
   })
 

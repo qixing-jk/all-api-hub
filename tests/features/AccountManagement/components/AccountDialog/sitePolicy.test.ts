@@ -64,6 +64,21 @@ describe("Account Dialog site policy", () => {
     expect(policy).not.toHaveProperty("credentialKind")
   })
 
+  it.each([
+    SITE_TYPES.SUB2API,
+    SITE_TYPES.AIHUBMIX,
+    SITE_TYPES.VO_API_V2,
+    SITE_TYPES.OPENROUTER,
+  ])("locks %s when access token is its only allowed auth type", (siteType) => {
+    expect(getAccountDialogSitePolicy(siteType).forceAccessTokenAuth).toBe(true)
+  })
+
+  it("does not mistake cookie-only authentication for access-token locking", () => {
+    expect(
+      getAccountDialogSitePolicy(SITE_TYPES.SHAREDCHAT).forceAccessTokenAuth,
+    ).toBe(false)
+  })
+
   it.each([SITE_TYPES.SUB2API, SITE_TYPES.SHAREDCHAT, SITE_TYPES.VO_API_V2])(
     "does not require a username for %s",
     (siteType) => {
@@ -157,10 +172,10 @@ describe("Account Dialog site policy", () => {
               ...profile,
               auth: {
                 ...profile.auth,
-                supportsCookieAuth: false,
+                allowedAuthTypes: [AuthTypeEnum.AccessToken],
               },
-              supplementalAuth: {
-                ...profile.supplementalAuth,
+              authSession: {
+                ...profile.authSession,
                 kind: actual.ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS.None,
               },
             }

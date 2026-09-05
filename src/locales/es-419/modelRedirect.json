@@ -68,6 +68,20 @@
     "updateFailed": "No se pudo actualizar la configuración de redirección de modelos",
     "updateSuccess": "Configuración de redirección de modelos actualizada"
   },
+  "modelDiscovery": {
+    "failed": {
+      "description": "No se pudieron cargar los modelos del sitio administrado. Se usa la lista preestablecida. Revisa la conexión o las credenciales e inténtalo de nuevo.",
+      "title": "Falló la obtención de modelos"
+    },
+    "not-ready": {
+      "description": "Configura primero la URL y las credenciales de administrador del sitio. Por ahora se usa la lista preestablecida.",
+      "title": "La obtención de modelos no está configurada"
+    },
+    "unsupported": {
+      "description": "Este sitio no tiene registrada la capacidad de consultar modelos de cuenta, por lo que se usa la lista preestablecida.",
+      "title": "La obtención automática de modelos no es compatible"
+    }
+  },
   "pruneMissingTargetsOnModelSync": "Eliminar destinos de redirección no válidos después de sincronizar",
   "pruneMissingTargetsOnModelSyncDesc": "Destructivo: después de actualizar la sincronización de modelos, elimina las entradas existentes de model_mapping cuyos modelos de destino no estén en la lista de modelos actualizada",
   "regenerateButton": "Regenerar asignación ahora",
@@ -75,5 +89,9 @@
   "standardModels": "Modelos estándar",
   "standardModelsDesc": "Selecciona los modelos estándar para generar asignaciones de redirección",
   "standardModelsPlaceholder": "Seleccionar modelos...",
-  "title": "Redirección de modelos"
+  "title": "Redirección de modelos",
+  "unsupported": {
+    "description": "Este sitio administrado no proporciona las operaciones de canal necesarias para leer y actualizar asignaciones de modelos.",
+    "title": "Este sitio no admite la redirección de modelos"
+  }
 }

@@ -42,6 +42,7 @@ export type RowActionsProps = {
   onSync?: (rowKey: string) => Promise<void>
   onOpenSync?: (rowKey: string) => Promise<void>
   onFilters?: (rowKey: string) => void
+  modelSyncUnavailableReason?: string
   labels: RowActionsLabels
   testIds: {
     trigger: string
@@ -65,6 +66,7 @@ export default function RowActions({
   onSync,
   onOpenSync,
   onFilters,
+  modelSyncUnavailableReason,
   labels,
   testIds,
 }: RowActionsProps) {
@@ -91,6 +93,7 @@ export default function RowActions({
   const canOpenSync = capabilities.canOpenSync && onOpenSync
   const canSync = capabilities.canSync && onSync
   const canDelete = capabilities.canDelete && onDelete
+  const showUnavailableSync = !canSync && Boolean(modelSyncUnavailableReason)
 
   return (
     <DropdownMenu>
@@ -134,7 +137,8 @@ export default function RowActions({
                 {labels.edit}
               </DropdownMenuItem>
             ) : null}
-            {(canFilter || canOpenSync || canSync) && canEdit ? (
+            {(canFilter || canOpenSync || canSync || showUnavailableSync) &&
+            canEdit ? (
               <DropdownMenuSeparator />
             ) : null}
             {canFilter ? (
@@ -158,8 +162,26 @@ export default function RowActions({
               >
                 {isSyncing ? labels.syncing : labels.sync}
               </DropdownMenuItem>
+            ) : showUnavailableSync ? (
+              <DropdownMenuItem
+                data-testid={testIds.sync}
+                aria-disabled="true"
+                onSelect={(event) => event.preventDefault()}
+              >
+                <span className="flex flex-col items-start gap-0.5">
+                  <span>{labels.sync}</span>
+                  <span className="text-muted-foreground text-xs font-normal whitespace-normal">
+                    {modelSyncUnavailableReason}
+                  </span>
+                </span>
+              </DropdownMenuItem>
             ) : null}
-            {canDelete && (canEdit || canFilter || canOpenSync || canSync) ? (
+            {canDelete &&
+            (canEdit ||
+              canFilter ||
+              canOpenSync ||
+              canSync ||
+              showUnavailableSync) ? (
               <DropdownMenuSeparator />
             ) : null}
             {canDelete ? (

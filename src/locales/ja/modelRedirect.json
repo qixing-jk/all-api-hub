@@ -60,6 +60,20 @@
     "updateFailed": "モデルリダイレクト設定の更新に失敗しました",
     "updateSuccess": "モデルリダイレクト設定を更新しました"
   },
+  "modelDiscovery": {
+    "failed": {
+      "description": "管理対象サイトからモデルを取得できなかったため、プリセット一覧を使用しています。接続または認証情報を確認して再試行してください。",
+      "title": "モデルの取得に失敗しました"
+    },
+    "not-ready": {
+      "description": "先に管理対象サイトの URL と管理者認証情報を設定してください。現在はプリセット一覧を使用しています。",
+      "title": "モデル取得が未設定です"
+    },
+    "unsupported": {
+      "description": "このサイトにはアカウントモデル照会機能が登録されていないため、プリセット一覧を使用します。",
+      "title": "モデルの自動取得はサポートされていません"
+    }
+  },
   "pruneMissingTargetsOnModelSync": "同期後に無効なリダイレクト先を削除",
   "pruneMissingTargetsOnModelSyncDesc": "破壊的操作: モデル同期更新後、更新済みモデル一覧に存在しないリダイレクト先を持つ model_mapping エントリを削除します",
   "regenerateButton": "今すぐマッピングを再生成",
@@ -67,5 +81,9 @@
   "standardModels": "標準モデル",
   "standardModelsDesc": "リダイレクトマッピングを生成する標準モデルを選択します",
   "standardModelsPlaceholder": "モデルを選択...",
-  "title": "モデルリダイレクト"
+  "title": "モデルリダイレクト",
+  "unsupported": {
+    "description": "この管理対象サイトには、モデルマッピングの読み取りと更新に必要なチャネル操作がありません。",
+    "title": "このサイトはモデルリダイレクトに対応していません"
+  }
 }

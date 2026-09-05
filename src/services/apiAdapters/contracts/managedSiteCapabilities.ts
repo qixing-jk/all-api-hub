@@ -122,11 +122,15 @@ export type ManagedSiteConfigCapability<
 export type ManagedSiteQueriesCapability<
   TConfig = ManagedSiteRuntimeConfigValue,
 > = {
-  fetchSiteUserGroups(
-    config: TConfig,
-    options?: ManagedSiteChannelRequestOptions,
-  ): Promise<string[]>
-  fetchAccountAvailableModels(config: TConfig): Promise<string[]>
+  siteUserGroups?: {
+    fetch(
+      config: TConfig,
+      options?: ManagedSiteChannelRequestOptions,
+    ): Promise<string[]>
+  }
+  accountAvailableModels?: {
+    fetch(config: TConfig): Promise<string[]>
+  }
 }
 
 export type ManagedSiteChannelDraftRequestOptions = {

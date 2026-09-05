@@ -52,7 +52,7 @@ describe("resolveModelListAccountSourceReadiness", () => {
     vi.clearAllMocks()
   })
 
-  it("returns direct pricing when profile policy and adapter capability both support it", () => {
+  it("returns direct pricing when the adapter capability is registered", () => {
     vi.mocked(getSiteTypeCapabilities).mockReturnValue({
       siteType: SITE_TYPES.NEW_API,
       account: {
@@ -73,7 +73,7 @@ describe("resolveModelListAccountSourceReadiness", () => {
     })
   })
 
-  it("returns missing model-pricing capability for compatible accounts without modelPricing", () => {
+  it("returns unsupported when no model-list source capability is registered", () => {
     vi.mocked(getSiteTypeCapabilities).mockReturnValue({
       siteType: SITE_TYPES.NEW_API,
     } as any)
@@ -84,15 +84,14 @@ describe("resolveModelListAccountSourceReadiness", () => {
       }),
     ).toEqual({
       route: MODEL_LIST_ACCOUNT_SOURCE_ROUTES.Unsupported,
-      reason:
-        MODEL_LIST_ACCOUNT_SOURCE_UNSUPPORTED_REASONS.MissingModelPricingCapability,
+      reason: MODEL_LIST_ACCOUNT_SOURCE_UNSUPPORTED_REASONS.NoSupportedRoute,
       statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Account,
       displayCapabilitiesSource:
         ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Response,
     })
   })
 
-  it("returns token-scoped runtime catalog when profile policy and adapter capability both support it", () => {
+  it("returns token-scoped runtime catalog when modelCatalog is registered", () => {
     vi.mocked(getSiteTypeCapabilities).mockReturnValue({
       siteType: SITE_TYPES.SUB2API,
       account: {
@@ -135,7 +134,7 @@ describe("resolveModelListAccountSourceReadiness", () => {
     })
   })
 
-  it("returns missing provider-catalog capability when the profile has no matching adapter capability", () => {
+  it("returns unsupported when the provider registers no model-list source", () => {
     vi.mocked(getSiteTypeCapabilities).mockReturnValue({
       siteType: SITE_TYPES.OPENROUTER,
     } as any)
@@ -146,8 +145,7 @@ describe("resolveModelListAccountSourceReadiness", () => {
       }),
     ).toMatchObject({
       route: MODEL_LIST_ACCOUNT_SOURCE_ROUTES.Unsupported,
-      reason:
-        MODEL_LIST_ACCOUNT_SOURCE_UNSUPPORTED_REASONS.MissingProviderModelCatalogCapability,
+      reason: MODEL_LIST_ACCOUNT_SOURCE_UNSUPPORTED_REASONS.NoSupportedRoute,
     })
   })
 
@@ -178,7 +176,7 @@ describe("resolveModelListAccountSourceReadiness", () => {
     ).toBe(false)
   })
 
-  it("returns missing model-catalog capability for token-scoped profiles without modelCatalog", () => {
+  it("does not infer a runtime catalog from presentation profile data", () => {
     vi.mocked(getSiteTypeCapabilities).mockReturnValue({
       siteType: SITE_TYPES.SUB2API,
     } as any)
@@ -189,8 +187,7 @@ describe("resolveModelListAccountSourceReadiness", () => {
       }),
     ).toEqual({
       route: MODEL_LIST_ACCOUNT_SOURCE_ROUTES.Unsupported,
-      reason:
-        MODEL_LIST_ACCOUNT_SOURCE_UNSUPPORTED_REASONS.MissingModelCatalogCapability,
+      reason: MODEL_LIST_ACCOUNT_SOURCE_UNSUPPORTED_REASONS.NoSupportedRoute,
       statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Token,
       displayCapabilitiesSource:
         ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Response,
@@ -213,8 +210,7 @@ describe("resolveModelListAccountSourceReadiness", () => {
       }),
     ).toMatchObject({
       route: MODEL_LIST_ACCOUNT_SOURCE_ROUTES.Unsupported,
-      reason:
-        MODEL_LIST_ACCOUNT_SOURCE_UNSUPPORTED_REASONS.MissingModelPricingCapability,
+      reason: MODEL_LIST_ACCOUNT_SOURCE_UNSUPPORTED_REASONS.NoSupportedRoute,
     })
   })
 

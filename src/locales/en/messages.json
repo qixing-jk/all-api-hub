@@ -3,6 +3,8 @@
     "autoProvisionAlreadyHad": "{{accountName}} already has an API key. Skipped auto-creation.",
     "autoProvisionCreated": "Created a default API key for {{accountName}}.",
     "autoProvisionFailed": "Account saved, but failed to auto-create an API key. You can use “{{actionLabel}}” in Key Management to retry.",
+    "autoProvisionNeedsManualAction": "{{accountName}} was saved, but its default key needs a manual choice or one-time secret handling. Use “{{actionLabel}}” in Key Management to finish.",
+    "autoProvisionUnsupported": "{{accountName}} was saved, but this site type does not support automatic default API key creation.",
     "checkingApiKeys": "Checking API key...",
     "createTokenFailed": "Failed to create API token",
     "tokenNotFound": "Failed to create or find an API token"

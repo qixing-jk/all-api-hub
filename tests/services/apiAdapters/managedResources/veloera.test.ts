@@ -54,7 +54,7 @@ vi.mock("~/services/apiAdapters/managedSites/veloera", () => ({
       fetchDraftModels: mocks.fetchDraftModels,
     },
     channelDrafts: { buildPayload: mocks.buildPayload },
-    queries: { fetchSiteUserGroups: mocks.fetchSiteUserGroups },
+    queries: { siteUserGroups: { fetch: mocks.fetchSiteUserGroups } },
   },
 }))
 

@@ -42,6 +42,7 @@
   "loading": "Cargando anuncios...",
   "messages": {
     "checkCompleted": "Comprobación de anuncios completada",
+    "checkCompletedWithIssues": "Comprobación terminada: {{failed}} con error y {{unsupported}} sin soporte. Selecciona un sitio para ver detalles.",
     "checkFailed": "Error al comprobar anuncios",
     "loadFailed": "No se pudieron cargar los anuncios",
     "markAllReadFailed": "No se pudieron marcar los anuncios como leídos",
@@ -54,6 +55,8 @@
     "title": "{{site}} tiene anuncios nuevos"
   },
   "status": {
+    "aggregateIssues": "{{failed}} sitio(s) fallaron y {{unsupported}} no admiten la comprobación de anuncios. Selecciona un sitio para ver detalles y reintentar.",
+    "aggregateIssuesTitle": "Algunos sitios requieren atención",
     "failed": "La última comprobación de anuncios falló: {{error}}",
     "failedTitle": "Comprobación fallida",
     "lastChecked": "Última comprobación: {{time}}",

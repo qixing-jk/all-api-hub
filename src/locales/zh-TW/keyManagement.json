@@ -354,6 +354,7 @@
     "verifyApiFailed": "開啟介面驗證失敗",
     "verifyCliSupportFailed": "開啟 CLI 相容性驗證失敗"
   },
+  "noAccountsSupportKeyCreation": "目前檢視中的帳號都不支援建立 API 金鑰。請選擇其他帳號或新增受支援的帳號。",
   "noKeys": "暫無金鑰資料",
   "noMatchingKeys": "沒有找到匹配的金鑰",
   "oneTimeKey": {

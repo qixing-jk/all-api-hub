@@ -1,6 +1,7 @@
 import type { AccountSiteType } from "~/constants/siteType"
 import { normalizeAccountTodayStatsAvailability } from "~/services/accounts/accountTodayStats"
 import { getAccountSiteProductProfileOverride } from "~/services/accountSiteDefinitions"
+import type { AuthTypeEnum } from "~/types"
 
 import type {
   AccountSiteProductProfile,
@@ -40,7 +41,6 @@ const cloneAccountSiteProductProfile = (
       profile.metrics.legacyTodayStatsAvailability,
     ),
   },
-  supplementalAuth: { ...profile.supplementalAuth },
   tokenForm: { ...profile.tokenForm },
   urls: {
     ...profile.urls,
@@ -103,10 +103,6 @@ const mergeAccountSiteProductProfile = (
           .legacyTodayStatsAvailability,
       ),
     },
-    supplementalAuth: {
-      ...DEFAULT_ACCOUNT_SITE_PRODUCT_PROFILE.supplementalAuth,
-      ...override?.supplementalAuth,
-    },
     tokenForm: {
       ...DEFAULT_ACCOUNT_SITE_PRODUCT_PROFILE.tokenForm,
       ...override?.tokenForm,
@@ -135,5 +131,15 @@ export function getAccountSiteProductProfile(
       siteType,
       getAccountSiteProductProfileOverride(siteType),
     ),
+  )
+}
+
+/** Uses the allowed-auth list as the single runtime discriminator for auth support. */
+export function isAccountAuthTypeAllowed(
+  siteType: AccountSiteType,
+  authType: AuthTypeEnum,
+): boolean {
+  return getAccountSiteProductProfile(siteType).auth.allowedAuthTypes.includes(
+    authType,
   )
 }

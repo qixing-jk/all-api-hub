@@ -116,6 +116,7 @@ export function ManagedSiteChannelsView({
     labels,
     isDeleteReplayBlocked,
     isResourceInteractionBlocked,
+    modelSyncUnavailableReason: capabilities.modelSyncUnavailableReason,
   })
   const emptyTableMessage =
     state.searchValue.trim() ||
@@ -439,6 +440,23 @@ export function ManagedSiteChannelsView({
                   >
                     {labels.syncSelected}
                   </Button>
+                ) : !state.migrationMode &&
+                  capabilities.modelSyncUnavailableReason ? (
+                  <Tooltip
+                    content={capabilities.modelSyncUnavailableReason}
+                    anchorAsChild
+                  >
+                    <span className="inline-flex" tabIndex={0}>
+                      <Button
+                        variant="outline"
+                        disabled
+                        tabIndex={-1}
+                        leftIcon={<RefreshCcw className="h-4 w-4" />}
+                      >
+                        {labels.syncSelected}
+                      </Button>
+                    </span>
+                  </Tooltip>
                 ) : null}
                 {!state.migrationMode && capabilities.canCreate ? (
                   <Button

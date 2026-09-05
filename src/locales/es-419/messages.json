@@ -3,6 +3,8 @@
     "autoProvisionAlreadyHad": "{{accountName}} ya tiene una clave de API. Se omitió la creación automática.",
     "autoProvisionCreated": "Se creó una clave de API predeterminada para {{accountName}}.",
     "autoProvisionFailed": "La cuenta se guardó, pero no se pudo crear automáticamente una clave de API. Puedes usar “{{actionLabel}}” en Gestión de claves para reintentar.",
+    "autoProvisionNeedsManualAction": "Se guardó {{accountName}}, pero la clave predeterminada requiere una selección manual o gestionar un secreto de un solo uso. Termina con “{{actionLabel}}” en Gestión de claves.",
+    "autoProvisionUnsupported": "Se guardó {{accountName}}, pero este tipo de sitio no admite la creación automática de una clave de API predeterminada.",
     "checkingApiKeys": "Comprobando clave de API...",
     "createTokenFailed": "No se pudo crear el token de API",
     "tokenNotFound": "No se pudo crear ni encontrar un token de API"

@@ -2,9 +2,12 @@
   "accountSelect": {
     "confirm": "Confirmar resgate",
     "noResults": "Nenhuma conta correspondente encontrada",
+    "noSupportedAccounts": "Nenhuma das suas contas salvas oferece resgate automático. Resgate o código manualmente no site correspondente.",
+    "openSiteManual": "Abrir o site para resgatar manualmente",
     "title": "Selecione uma conta para usar no resgate",
     "titleFallback": "Nenhuma conta corresponde a este site. Selecione uma manualmente",
-    "titleMultiple": "Várias contas disponíveis, selecione uma para resgate"
+    "titleMultiple": "Várias contas disponíveis, selecione uma para resgate",
+    "unsupported": "Este tipo de site não oferece resgate automático"
   },
   "actions": {
     "autoRedeem": "Resgate automático"
@@ -27,7 +30,8 @@
     "selectAll": "Selecionar tudo",
     "success": {
       "settingsSaved": "As configurações de assistência de resgate foram salvas"
-    }
+    },
+    "unsupportedSiteType": "O tipo de site desta conta não oferece resgate automático. Escolha outra conta ou resgate o código manualmente no site."
   },
   "settings": {
     "contextMenu": {

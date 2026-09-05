@@ -332,7 +332,7 @@ describe("accountPersistence auto-provision key on add", () => {
     expect(ensureDefaultApiTokenForAccountMock).not.toHaveBeenCalled()
   })
 
-  it("silently ignores policy-blocked auto-provision for sub2api accounts", async () => {
+  it("explains when auto-provision needs a manual group selection", async () => {
     ensureDefaultApiTokenForAccountMock.mockRejectedValueOnce(
       new DefaultTokenLifecyclePolicyBlockedError({
         reason: TOKEN_PROVISIONING_BLOCK_REASONS.GroupSelectionRequired,
@@ -363,9 +363,10 @@ describe("accountPersistence auto-provision key on add", () => {
     expect(ensureDefaultApiTokenForAccountMock).toHaveBeenCalledTimes(1)
     expect(toastSuccessMock).not.toHaveBeenCalled()
     expect(toastErrorMock).not.toHaveBeenCalled()
+    expect(toastCustomMock).toHaveBeenCalledTimes(1)
   })
 
-  it("silently ignores policy-blocked auto-provision for AIHubMix accounts", async () => {
+  it("explains when a one-time key must be created manually", async () => {
     ensureDefaultApiTokenForAccountMock.mockRejectedValueOnce(
       new DefaultTokenLifecyclePolicyBlockedError({
         reason: TOKEN_PROVISIONING_BLOCK_REASONS.OneTimeSecretRequired,
@@ -397,9 +398,10 @@ describe("accountPersistence auto-provision key on add", () => {
     expect(ensureDefaultApiTokenForAccountMock).toHaveBeenCalledTimes(1)
     expect(toastSuccessMock).not.toHaveBeenCalled()
     expect(toastErrorMock).not.toHaveBeenCalled()
+    expect(toastCustomMock).toHaveBeenCalledTimes(1)
   })
 
-  it("does not route OpenRouter accounts into legacy automatic key creation", async () => {
+  it("explains that OpenRouter does not use legacy automatic key creation", async () => {
     getSiteTypeCapabilitiesMock.mockReturnValue({
       siteType: SITE_TYPES.OPENROUTER,
       account: {
@@ -429,6 +431,7 @@ describe("accountPersistence auto-provision key on add", () => {
     await flushPromises()
 
     expect(ensureDefaultApiTokenForAccountMock).not.toHaveBeenCalled()
+    expect(toastCustomMock).toHaveBeenCalledTimes(1)
   })
 
   it("skips auto-provision for none-auth accounts", async () => {
@@ -457,7 +460,7 @@ describe("accountPersistence auto-provision key on add", () => {
     expect(toastErrorMock).not.toHaveBeenCalled()
   })
 
-  it("skips auto-provision for service-credential-only accounts", async () => {
+  it("explains that service-credential-only accounts do not support automatic key creation", async () => {
     getSiteTypeCapabilitiesMock.mockReturnValue({
       siteType: SITE_TYPES.SHAREDCHAT,
       account: {
@@ -493,7 +496,7 @@ describe("accountPersistence auto-provision key on add", () => {
 
     expect(ensureDefaultApiTokenForAccountMock).not.toHaveBeenCalled()
     expect(toastSuccessMock).not.toHaveBeenCalled()
-    expect(toastCustomMock).not.toHaveBeenCalled()
+    expect(toastCustomMock).toHaveBeenCalledTimes(1)
     expect(toastErrorMock).not.toHaveBeenCalled()
   })
 

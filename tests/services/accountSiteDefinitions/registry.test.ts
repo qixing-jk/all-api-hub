@@ -12,13 +12,10 @@ import {
 } from "~/constants/siteType"
 import { getAccountSiteProductProfile } from "~/services/accounts/accountSiteProfile"
 import {
-  ACCOUNT_SITE_AUTH_SESSION_REFRESH_LOCK_SCOPES,
   ACCOUNT_SITE_CREATED_TOKEN_SECRET_HANDLING,
   ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS,
-  ACCOUNT_SITE_MODEL_LIST_DIRECT_PRICING,
   ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES,
   ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES,
-  ACCOUNT_SITE_MODEL_LIST_TOKEN_SCOPED_CATALOG_FALLBACKS,
   ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS,
   ACCOUNT_SITE_TOKEN_FORM_NETWORK_LIMIT_POLICIES,
 } from "~/services/accounts/accountSiteProfile/contracts"
@@ -26,7 +23,6 @@ import {
   ACCOUNT_SITE_ADAPTER_FAMILIES,
   ACCOUNT_SITE_DEFINITION_SCOPES,
   ACCOUNT_SITE_MANUAL_ADD_GUIDE_ANCHORS,
-  ACCOUNT_SITE_MODEL_LIST_EXPECTED_ROUTES,
   ACCOUNT_SITE_TYPE_VALUES,
   ACCOUNT_SITE_TYPES,
   AIHUBMIX_API_ORIGIN,
@@ -39,7 +35,6 @@ import {
   getAccountSiteTypeValues,
   getManagedSiteTypeValues,
   MANAGED_RESOURCE_KINDS,
-  MANAGED_RESOURCE_MODES,
   MANAGED_SITE_TYPES,
   OPENROUTER_HOSTNAMES,
   OPENROUTER_WEB_ORIGIN,
@@ -56,7 +51,6 @@ import {
 } from "~/services/accountSiteDefinitions/definitions"
 import type { SiteType } from "~/services/accountSiteDefinitions/identifiers"
 import { getManagedResourceRegistration } from "~/services/apiAdapters/managedResources/registry"
-import { MODEL_LIST_ACCOUNT_SOURCE_ROUTES } from "~/services/modelList/accountSources/readiness"
 import { AuthTypeEnum } from "~/types"
 import { ACCOUNT_TODAY_METRIC_REASONS } from "~/types/accountTodayStats"
 
@@ -211,7 +205,6 @@ describe("account site definition registry", () => {
       authSession: sub2apiOverride?.authSession,
       identity: sub2apiOverride?.identity,
       modelList: sub2apiOverride?.modelList,
-      supplementalAuth: sub2apiOverride?.supplementalAuth,
     })
     expect(getAccountSiteProductProfile(SITE_TYPES.AIHUBMIX)).toMatchObject({
       auth: aihubmixOverride?.auth,
@@ -297,25 +290,15 @@ describe("account site definition registry", () => {
     expect(MANAGED_SITE_TYPES).not.toContain(SITE_TYPES.MODELFLARE)
   })
 
-  it("keeps every managed-resource mode explicit in the static definitions", () => {
-    const expectedModes = new Map<ManagedSiteType, string>([
-      [SITE_TYPES.NEW_API, MANAGED_RESOURCE_MODES.NativeResource],
-      [SITE_TYPES.VELOERA, MANAGED_RESOURCE_MODES.NativeResource],
-      [SITE_TYPES.DONE_HUB, MANAGED_RESOURCE_MODES.NativeResource],
-      [SITE_TYPES.OCTOPUS, MANAGED_RESOURCE_MODES.LegacyChannel],
-      [SITE_TYPES.AXON_HUB, MANAGED_RESOURCE_MODES.NativeResource],
-      [SITE_TYPES.CLAUDE_CODE_HUB, MANAGED_RESOURCE_MODES.NativeResource],
-      [SITE_TYPES.SUB2API, MANAGED_RESOURCE_MODES.NativeResource],
-    ])
-
+  it("keeps managed-resource presentation policy for every managed site", () => {
     for (const siteType of MANAGED_SITE_TYPES) {
-      expect(getAccountSiteDefinition(siteType)?.managedResource).toMatchObject(
-        {
-          mode: expectedModes.get(siteType),
-          primaryKind: MANAGED_RESOURCE_KINDS.Channel,
-          settingsTarget: { tabId: "managedSite" },
-        },
-      )
+      const policy = getAccountSiteDefinition(siteType)?.managedResource
+      expect(policy).toMatchObject({
+        primaryKind: MANAGED_RESOURCE_KINDS.Channel,
+        settingsTarget: { tabId: "managedSite" },
+      })
+      expect(policy).not.toHaveProperty("mode")
+      expect(policy).not.toHaveProperty("actions")
     }
   })
 
@@ -325,13 +308,11 @@ describe("account site definition registry", () => {
     )?.managedResource
 
     expect(policy).toMatchObject({
-      mode: MANAGED_RESOURCE_MODES.NativeResource,
       primaryKind: MANAGED_RESOURCE_KINDS.Channel,
       settingsTarget: {
         tabId: "managedSite",
         anchor: SETTINGS_ANCHORS.AXON_HUB,
       },
-      actions: ["create", "delete-selected", "migrate"],
     })
     expect(
       getManagedResourceRegistration(
@@ -344,21 +325,14 @@ describe("account site definition registry", () => {
     })
   })
 
-  it("switches Veloera to the native channel product policy", () => {
+  it("keeps Veloera channel presentation policy separate from registration", () => {
     const policy = getAccountSiteDefinition(SITE_TYPES.VELOERA)?.managedResource
 
     expect(policy).toMatchObject({
-      mode: MANAGED_RESOURCE_MODES.NativeResource,
       primaryKind: MANAGED_RESOURCE_KINDS.Channel,
-      actions: [
-        "create",
-        "delete-selected",
-        "migrate",
-        "sync-models",
-        "configure-model-sync",
-        "configure-model-filters",
-      ],
     })
+    expect(policy).not.toHaveProperty("mode")
+    expect(policy).not.toHaveProperty("actions")
   })
 
   it("registers the Veloera native channel workspace", () => {
@@ -373,21 +347,16 @@ describe("account site definition registry", () => {
     })
   })
 
-  it("switches DoneHub to the native channel product policy", () => {
-    expect(
-      getAccountSiteDefinition(SITE_TYPES.DONE_HUB)?.managedResource,
-    ).toMatchObject({
-      mode: MANAGED_RESOURCE_MODES.NativeResource,
+  it("keeps DoneHub channel presentation policy separate from registration", () => {
+    const policy = getAccountSiteDefinition(
+      SITE_TYPES.DONE_HUB,
+    )?.managedResource
+
+    expect(policy).toMatchObject({
       primaryKind: MANAGED_RESOURCE_KINDS.Channel,
-      actions: [
-        "create",
-        "delete-selected",
-        "migrate",
-        "sync-models",
-        "configure-model-sync",
-        "configure-model-filters",
-      ],
     })
+    expect(policy).not.toHaveProperty("mode")
+    expect(policy).not.toHaveProperty("actions")
   })
 
   it("registers the DoneHub native channel workspace", () => {
@@ -422,7 +391,7 @@ describe("account site definition registry", () => {
     ).toBe("name")
   })
 
-  it("keeps managed-resource field and action policy values unique", () => {
+  it("keeps managed-resource field policy values unique", () => {
     for (const siteType of MANAGED_SITE_TYPES) {
       const policy = getAccountSiteDefinition(siteType)?.managedResource
 
@@ -432,7 +401,6 @@ describe("account site definition registry", () => {
       expect(new Set(policy?.detailFieldIds).size).toBe(
         policy?.detailFieldIds.length,
       )
-      expect(new Set(policy?.actions).size).toBe(policy?.actions.length)
     }
   })
 
@@ -458,12 +426,6 @@ describe("account site definition registry", () => {
     expect(getAccountSiteDefinition(SITE_TYPES.OPENROUTER)).toMatchObject({
       scopes: [ACCOUNT_SITE_DEFINITION_SCOPES.Account],
       adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.OpenRouter,
-      readiness: {
-        modelList: {
-          expectedRoute:
-            ACCOUNT_SITE_MODEL_LIST_EXPECTED_ROUTES.ProviderCatalog,
-        },
-      },
     })
   })
 
@@ -478,7 +440,6 @@ describe("account site definition registry", () => {
       allowedAuthTypes: [AuthTypeEnum.AccessToken],
       defaultAuthType: AuthTypeEnum.AccessToken,
       defaultAuthHostnames: [],
-      supportsCookieAuth: false,
     })
     expect(profile.identity).toMatchObject({
       usernameRequired: false,
@@ -493,7 +454,6 @@ describe("account site definition registry", () => {
       duplicateOrigin: OPENROUTER_WEB_ORIGIN,
       recognizedHostnames: OPENROUTER_HOSTNAMES,
     })
-    expect(profile.modelList.directPricing).toBe("unsupported")
   })
 
   it("defines VoAPI v2 before old VoAPI with account-only policy", () => {
@@ -672,18 +632,6 @@ describe("account site definition registry", () => {
     ).toBe(ACCOUNT_TODAY_METRIC_REASONS.WrongPeriod)
   })
 
-  it("returns defensive readiness expectation copies", () => {
-    const readiness = getAccountSiteDefinition(SITE_TYPES.SUB2API)?.readiness
-
-    readiness!.modelList!.expectedRoute =
-      MODEL_LIST_ACCOUNT_SOURCE_ROUTES.Unsupported
-
-    expect(
-      getAccountSiteDefinition(SITE_TYPES.SUB2API)?.readiness?.modelList
-        ?.expectedRoute,
-    ).toBe(MODEL_LIST_ACCOUNT_SOURCE_ROUTES.TokenScopedRuntimeCatalog)
-  })
-
   it("projects product-profile overrides", () => {
     expect(
       getAccountSiteProductProfileOverride(SITE_TYPES.ANYROUTER),
@@ -700,29 +648,20 @@ describe("account site definition registry", () => {
         allowedAuthTypes: [AuthTypeEnum.AccessToken],
         defaultAuthType: AuthTypeEnum.AccessToken,
         defaultAuthHostnames: [],
-        supportsCookieAuth: false,
       },
       authSession: {
         kind: ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS.Sub2ApiRefreshToken,
-        decoratesAccountApiRequests: true,
-        refreshLockScope: ACCOUNT_SITE_AUTH_SESSION_REFRESH_LOCK_SCOPES.Account,
       },
       identity: {
         usernameRequired: false,
         storedUserIdentityFields: ["id"],
       },
       modelList: {
-        directPricing: ACCOUNT_SITE_MODEL_LIST_DIRECT_PRICING.Unsupported,
-        tokenScopedCatalogFallback:
-          ACCOUNT_SITE_MODEL_LIST_TOKEN_SCOPED_CATALOG_FALLBACKS.RuntimeKey,
         dashboardEstimateLoader:
           ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS.Sub2Api,
         statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Token,
         displayCapabilitiesSource:
           ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Response,
-      },
-      supplementalAuth: {
-        kind: ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS.Sub2ApiRefreshToken,
       },
     })
     expect(
@@ -732,7 +671,6 @@ describe("account site definition registry", () => {
         allowedAuthTypes: [AuthTypeEnum.AccessToken],
         defaultAuthType: AuthTypeEnum.AccessToken,
         defaultAuthHostnames: [],
-        supportsCookieAuth: false,
       },
       createdToken: {
         secretHandling:
@@ -743,9 +681,6 @@ describe("account site definition registry", () => {
         storedUserIdentityFields: ["username"],
       },
       modelList: {
-        directPricing: ACCOUNT_SITE_MODEL_LIST_DIRECT_PRICING.Supported,
-        tokenScopedCatalogFallback:
-          ACCOUNT_SITE_MODEL_LIST_TOKEN_SCOPED_CATALOG_FALLBACKS.None,
         dashboardEstimateLoader:
           ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS.None,
         statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Account,
@@ -762,39 +697,6 @@ describe("account site definition registry", () => {
         duplicateOrigin: AIHUBMIX_WEB_ORIGIN,
         managedChannelOrigin: AIHUBMIX_API_ORIGIN,
       },
-    })
-  })
-
-  it("projects model-list readiness expectations", () => {
-    expect(
-      getAccountSiteDefinition(SITE_TYPES.NEW_API)?.readiness?.modelList
-        ?.expectedRoute,
-    ).toBe(MODEL_LIST_ACCOUNT_SOURCE_ROUTES.DirectPricing)
-    expect(
-      getAccountSiteDefinition(SITE_TYPES.SUB2API)?.readiness?.modelList
-        ?.expectedRoute,
-    ).toBe(MODEL_LIST_ACCOUNT_SOURCE_ROUTES.TokenScopedRuntimeCatalog)
-    expect(
-      getAccountSiteDefinition(SITE_TYPES.AIHUBMIX)?.readiness?.modelList
-        ?.expectedRoute,
-    ).toBe(MODEL_LIST_ACCOUNT_SOURCE_ROUTES.DirectPricing)
-    expect(
-      getAccountSiteDefinition(SITE_TYPES.VO_API_V2)?.readiness?.modelList
-        ?.expectedRoute,
-    ).toBe(MODEL_LIST_ACCOUNT_SOURCE_ROUTES.Unsupported)
-    expect(
-      getAccountSiteDefinition(SITE_TYPES.SHAREDCHAT)?.readiness?.modelList
-        ?.expectedRoute,
-    ).toBe(MODEL_LIST_ACCOUNT_SOURCE_ROUTES.TokenScopedRuntimeCatalog)
-  })
-
-  it("keeps definition expectation route constants synchronized with runtime routes", () => {
-    expect(ACCOUNT_SITE_MODEL_LIST_EXPECTED_ROUTES).toEqual({
-      DirectPricing: MODEL_LIST_ACCOUNT_SOURCE_ROUTES.DirectPricing,
-      ProviderCatalog: MODEL_LIST_ACCOUNT_SOURCE_ROUTES.ProviderCatalog,
-      TokenScopedRuntimeCatalog:
-        MODEL_LIST_ACCOUNT_SOURCE_ROUTES.TokenScopedRuntimeCatalog,
-      Unsupported: MODEL_LIST_ACCOUNT_SOURCE_ROUTES.Unsupported,
     })
   })
 })

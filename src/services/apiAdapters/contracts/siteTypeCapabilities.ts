@@ -67,3 +67,7 @@ export type SiteTypeCapabilities = {
     channelDrafts?: ManagedSiteChannelDraftsCapability
   }
 }
+
+export type AccountSiteCapabilities = NonNullable<
+  SiteTypeCapabilities["account"]
+>

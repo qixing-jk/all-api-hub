@@ -3,15 +3,20 @@ import { accountPresentation } from "~/services/accounts/accountStorage/accountP
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { accountReadModels } from "~/services/accounts/accountStorage/accountReadModels"
 import { createAccountApiRequestFromStoredAccount } from "~/services/accounts/utils/apiServiceRequest"
-import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
+import { resolveAutomaticRedemptionAvailability } from "~/services/redemption/accountSupport"
 import type { DisplaySiteData } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
 import { formatMoneyFixed } from "~/utils/core/money"
 import { t } from "~/utils/i18n/core"
 
+export const REDEMPTION_RESULT_CODES = {
+  UnsupportedSiteType: "UNSUPPORTED_SITE_TYPE",
+} as const
+
 interface RedeemResult {
   success: boolean
   message: string
+  code?: (typeof REDEMPTION_RESULT_CODES)[keyof typeof REDEMPTION_RESULT_CODES]
   creditedAmount?: unknown
   account?: DisplaySiteData
 }
@@ -47,16 +52,18 @@ class RedeemService {
         }
       }
 
-      const redemption = getSiteTypeCapabilities(account.site_type).account
-        ?.redemption
-      if (!redemption) {
+      const redemptionAvailability = resolveAutomaticRedemptionAvailability({
+        siteType: account.site_type,
+      })
+      if (redemptionAvailability.status === "unsupported") {
         return {
           success: false,
-          message: t("redemptionAssist:messages.redeemFailed"),
+          code: REDEMPTION_RESULT_CODES.UnsupportedSiteType,
+          message: t("redemptionAssist:messages.unsupportedSiteType"),
         }
       }
 
-      const creditedAmount = await redemption.redeem({
+      const creditedAmount = await redemptionAvailability.capability.redeem({
         request: createAccountApiRequestFromStoredAccount(account).request,
         code,
       })

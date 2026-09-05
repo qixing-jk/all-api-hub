@@ -71,7 +71,7 @@
     "toggleLabel": "Prefill URL from current site when adding accounts"
   },
   "autoProvisionKeyOnAccountAdd": {
-    "description": "Control whether All API Hub automatically provisions a default API key after you add an account.",
+    "description": "Control whether All API Hub automatically provisions a default API key after you add a supported account.",
     "title": "API keys",
     "toggleDesc": "When enabled, All API Hub checks your token inventory after saving an account and creates a default token if none exist.",
     "toggleLabel": "Auto-create a default key on account add"

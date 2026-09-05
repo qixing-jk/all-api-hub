@@ -65,8 +65,8 @@ const createManagedSiteCapabilities = (
       get: vi.fn(async () => await getMockRuntimeConfigForType(siteType)),
     },
     queries: {
-      fetchSiteUserGroups: vi.fn(),
-      fetchAccountAvailableModels: vi.fn(),
+      siteUserGroups: { fetch: vi.fn() },
+      accountAvailableModels: { fetch: vi.fn() },
     },
     channelDrafts: {
       fetchAvailableModels: vi.fn(),
@@ -468,10 +468,10 @@ describe("managedSiteService", () => {
     expect(service.checkValidConfig).toBe(capabilities.config.checkValid)
     expect(service.getConfig).toBe(capabilities.config.get)
     expect(service.fetchSiteUserGroups).toBe(
-      capabilities.queries.fetchSiteUserGroups,
+      capabilities.queries.siteUserGroups.fetch,
     )
     expect(service.fetchAccountAvailableModels).toBe(
-      capabilities.queries.fetchAccountAvailableModels,
+      capabilities.queries.accountAvailableModels.fetch,
     )
     expect(service.fetchAvailableModels).toBe(
       capabilities.channelDrafts.fetchAvailableModels,
@@ -492,7 +492,37 @@ describe("managedSiteService", () => {
     expect(service).not.toHaveProperty("autoConfigToManagedSite")
   })
 
-  it("throws when managed-site capability groups are incomplete", async () => {
+  it("omits optional query methods when the registry does not provide them", async () => {
+    const { getManagedSiteServiceForType } = await import(
+      "~/services/managedSites/managedSiteService"
+    )
+
+    capabilityFnsBySiteType.set(SITE_TYPES.DONE_HUB, {
+      channels: {
+        search: vi.fn(),
+        create: vi.fn(),
+        update: vi.fn(),
+        delete: vi.fn(),
+      },
+      config: {
+        checkValid: vi.fn(),
+        get: vi.fn(),
+      },
+      channelDrafts: {
+        fetchAvailableModels: vi.fn(),
+        buildName: vi.fn(),
+        prepareFormData: vi.fn(),
+        buildPayload: vi.fn(),
+      },
+    })
+
+    const service = getManagedSiteServiceForType(SITE_TYPES.DONE_HUB)
+
+    expect(service).not.toHaveProperty("fetchSiteUserGroups")
+    expect(service).not.toHaveProperty("fetchAccountAvailableModels")
+  })
+
+  it("throws when a required managed-site capability group is incomplete", async () => {
     const { getManagedSiteServiceForType } = await import(
       "~/services/managedSites/managedSiteService"
     )
@@ -509,12 +539,7 @@ describe("managedSiteService", () => {
         get: vi.fn(),
       },
       queries: undefined,
-      channelDrafts: {
-        fetchAvailableModels: vi.fn(),
-        buildName: vi.fn(),
-        prepareFormData: vi.fn(),
-        buildPayload: vi.fn(),
-      },
+      channelDrafts: undefined,
     })
 
     expect(() => getManagedSiteServiceForType(SITE_TYPES.DONE_HUB)).toThrow(

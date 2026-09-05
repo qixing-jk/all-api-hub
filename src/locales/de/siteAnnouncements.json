@@ -42,6 +42,7 @@
   "loading": "Ankündigungen werden geladen...",
   "messages": {
     "checkCompleted": "Ankündigungsprüfung abgeschlossen",
+    "checkCompletedWithIssues": "Prüfung abgeschlossen: {{failed}} fehlgeschlagen, {{unsupported}} nicht unterstützt. Wählen Sie eine Website für Details.",
     "checkFailed": "Ankündigungsprüfung fehlgeschlagen",
     "loadFailed": "Ankündigungen konnten nicht geladen werden",
     "markAllReadFailed": "Ankündigungen konnten nicht als gelesen markiert werden",
@@ -53,6 +54,8 @@
     "title": "{{site}} hat neue Ankündigungen"
   },
   "status": {
+    "aggregateIssues": "{{failed}} Website(s) sind fehlgeschlagen und {{unsupported}} unterstützen keine Ankündigungsprüfung. Wählen Sie eine Website für Details und Wiederholung.",
+    "aggregateIssuesTitle": "Einige Websites benötigen Aufmerksamkeit",
     "failed": "Die letzte Ankündigungsprüfung ist fehlgeschlagen: {{error}}",
     "failedTitle": "Prüfung fehlgeschlagen",
     "lastChecked": "Zuletzt überprüft: {{time}}",

@@ -3,10 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS,
-  ACCOUNT_SITE_MODEL_LIST_DIRECT_PRICING,
   ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES,
   ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES,
-  ACCOUNT_SITE_MODEL_LIST_TOKEN_SCOPED_CATALOG_FALLBACKS,
 } from "~/services/accounts/accountSiteProfile"
 
 const { getAccountSiteModelListProfileMock, getSiteTypeCapabilitiesMock } =
@@ -38,9 +36,6 @@ describe("resolveModelListAccountSourceReadiness route fallbacks", () => {
     getSiteTypeCapabilitiesMock.mockReset()
 
     getAccountSiteModelListProfileMock.mockReturnValue({
-      directPricing: ACCOUNT_SITE_MODEL_LIST_DIRECT_PRICING.Unsupported,
-      tokenScopedCatalogFallback:
-        ACCOUNT_SITE_MODEL_LIST_TOKEN_SCOPED_CATALOG_FALLBACKS.None,
       dashboardEstimateLoader:
         ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS.None,
       statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Account,
@@ -52,7 +47,7 @@ describe("resolveModelListAccountSourceReadiness route fallbacks", () => {
     })
   })
 
-  it("returns no supported route when profile policy disables every account-backed source", async () => {
+  it("returns no supported route when the registry exposes no account-backed source", async () => {
     const {
       MODEL_LIST_ACCOUNT_SOURCE_ROUTES,
       MODEL_LIST_ACCOUNT_SOURCE_UNSUPPORTED_REASONS,
@@ -69,6 +64,50 @@ describe("resolveModelListAccountSourceReadiness route fallbacks", () => {
       statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Account,
       displayCapabilitiesSource:
         ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Response,
+    })
+  })
+
+  it("uses registry capability presence even when the product profile does not opt in", async () => {
+    const fetchPricing = vi.fn()
+    getSiteTypeCapabilitiesMock.mockReturnValue({
+      siteType: SITE_TYPES.NEW_API,
+      account: { modelPricing: { fetchPricing } },
+    })
+
+    const {
+      MODEL_LIST_ACCOUNT_SOURCE_ROUTES,
+      resolveModelListAccountSourceReadiness,
+    } = await import("~/services/modelList/accountSources/readiness")
+
+    expect(
+      resolveModelListAccountSourceReadiness({ siteType: SITE_TYPES.NEW_API }),
+    ).toMatchObject({
+      route: MODEL_LIST_ACCOUNT_SOURCE_ROUTES.DirectPricing,
+      modelPricing: { fetchPricing },
+    })
+  })
+
+  it("uses a stable capability precedence when multiple sources are registered", async () => {
+    const modelPricing = { fetchPricing: vi.fn() }
+    getSiteTypeCapabilitiesMock.mockReturnValue({
+      siteType: SITE_TYPES.NEW_API,
+      account: {
+        modelPricing,
+        providerModelCatalog: { fetchModels: vi.fn() },
+        modelCatalog: { fetchModels: vi.fn() },
+      },
+    })
+
+    const {
+      MODEL_LIST_ACCOUNT_SOURCE_ROUTES,
+      resolveModelListAccountSourceReadiness,
+    } = await import("~/services/modelList/accountSources/readiness")
+
+    expect(
+      resolveModelListAccountSourceReadiness({ siteType: SITE_TYPES.NEW_API }),
+    ).toMatchObject({
+      route: MODEL_LIST_ACCOUNT_SOURCE_ROUTES.DirectPricing,
+      modelPricing,
     })
   })
 })

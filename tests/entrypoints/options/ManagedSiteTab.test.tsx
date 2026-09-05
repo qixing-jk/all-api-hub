@@ -411,7 +411,7 @@ describe("ManagedSiteTab", () => {
     ).not.toBeInTheDocument()
   })
 
-  it("hides model-sync and redirect settings for AxonHub", () => {
+  it("explains unsupported model sync and keeps model redirect discoverable for AxonHub", () => {
     mockedUseUserPreferencesContext.mockReturnValue(
       createContextValue({
         managedSiteType: SITE_TYPES.AXON_HUB,
@@ -432,8 +432,9 @@ describe("ManagedSiteTab", () => {
       screen.queryByTestId("managed-site-model-sync-settings"),
     ).not.toBeInTheDocument()
     expect(
-      screen.queryByTestId("model-redirect-settings"),
-    ).not.toBeInTheDocument()
+      screen.getByText("managedSiteModelSync:execution.unsupported.title"),
+    ).toBeVisible()
+    expect(screen.getByTestId("model-redirect-settings")).toBeInTheDocument()
   })
 
   it("renders Claude Code Hub settings and hides unsupported model controls", () => {
@@ -458,9 +459,7 @@ describe("ManagedSiteTab", () => {
     expect(
       screen.queryByTestId("managed-site-model-sync-settings"),
     ).not.toBeInTheDocument()
-    expect(
-      screen.queryByTestId("model-redirect-settings"),
-    ).not.toBeInTheDocument()
+    expect(screen.getByTestId("model-redirect-settings")).toBeInTheDocument()
   })
 
   it("renders Sub2API settings and hides unsupported model controls", () => {
@@ -491,9 +490,7 @@ describe("ManagedSiteTab", () => {
     expect(
       screen.queryByTestId("managed-site-model-sync-settings"),
     ).not.toBeInTheDocument()
-    expect(
-      screen.queryByTestId("model-redirect-settings"),
-    ).not.toBeInTheDocument()
+    expect(screen.getByTestId("model-redirect-settings")).toBeInTheDocument()
   })
 
   it.each([

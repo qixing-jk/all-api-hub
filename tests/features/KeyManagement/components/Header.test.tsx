@@ -95,6 +95,31 @@ describe("KeyManagement Header", () => {
     expect(refreshButton).not.toHaveAttribute("aria-busy")
   })
 
+  it("makes an unsupported add-key reason keyboard discoverable", () => {
+    render(
+      <Header
+        selectedAccount="all"
+        onAddToken={vi.fn()}
+        onRefresh={vi.fn()}
+        isLoading={false}
+        isAddTokenDisabled
+        addTokenDisabledReason="No account supports creating keys"
+        isRepairDisabled
+      />,
+      {
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+      },
+    )
+
+    expect(
+      screen.getByRole("group", {
+        name: "keyManagement:dialog.addToken",
+      }),
+    ).toHaveAccessibleDescription("No account supports creating keys")
+    expect(screen.getByTestId("key-management-add-token-button")).toBeDisabled()
+  })
+
   it("keeps refresh idle and non-busy when no account is selected", () => {
     const onRefresh = vi.fn()
 

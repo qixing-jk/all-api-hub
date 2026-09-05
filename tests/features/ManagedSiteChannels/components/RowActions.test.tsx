@@ -26,12 +26,14 @@ vi.mock("~/components/ui/dropdown-menu", () => ({
     children,
     disabled,
     onClick,
+    ...props
   }: {
     children: ReactNode
     disabled?: boolean
     onClick?: () => void
+    "aria-disabled"?: boolean | "true" | "false"
   }) => (
-    <button disabled={disabled} onClick={onClick} role="menuitem">
+    <button disabled={disabled} onClick={onClick} role="menuitem" {...props}>
       {children}
     </button>
   ),
@@ -142,6 +144,27 @@ describe("ManagedSiteChannels RowActions", () => {
     expect(screen.queryByRole("menuitem", { name: labels.filters })).toBeNull()
     expect(screen.queryByRole("menuitem", { name: labels.openSync })).toBeNull()
     expect(screen.queryByRole("menuitem", { name: labels.sync })).toBeNull()
+  })
+
+  it("keeps unsupported model sync visible with a keyboard-readable reason", () => {
+    const onSync = vi.fn()
+    setup({
+      capabilities: {
+        canEdit: true,
+        canDelete: true,
+      },
+      onSync,
+      modelSyncUnavailableReason:
+        "This site type does not support channel model sync.",
+    })
+
+    const syncItem = screen.getByRole("menuitem", {
+      name: /Sync.*This site type does not support channel model sync/,
+    })
+    expect(syncItem).toHaveAttribute("aria-disabled", "true")
+
+    fireEvent.click(syncItem)
+    expect(onSync).not.toHaveBeenCalled()
   })
 
   it("passes opaque native row keys through without coercion", async () => {

@@ -294,12 +294,16 @@ const doneHubManagedSiteConfig: ManagedSiteConfigCapability<DoneHubConfig> =
 const doneHubKeyManagement = createNewApiKeyManagement(SITE_TYPES.DONE_HUB)
 
 const doneHubManagedSiteQueries: ManagedSiteQueriesCapability<DoneHubConfig> = {
-  fetchSiteUserGroups: async (config) =>
-    await fetchSiteUserGroups(toManagedSiteApiServiceRequest(config)),
-  fetchAccountAvailableModels: async (config) =>
-    await doneHubKeyManagement.fetchAvailableModels(
-      toManagedSiteApiServiceRequest(config),
-    ),
+  siteUserGroups: {
+    fetch: async (config) =>
+      await fetchSiteUserGroups(toManagedSiteApiServiceRequest(config)),
+  },
+  accountAvailableModels: {
+    fetch: async (config) =>
+      await doneHubKeyManagement.fetchAvailableModels(
+        toManagedSiteApiServiceRequest(config),
+      ),
+  },
 }
 
 const fetchDoneHubManagedSiteAvailableModels: ManagedSiteChannelDraftsCapability["fetchAvailableModels"] =

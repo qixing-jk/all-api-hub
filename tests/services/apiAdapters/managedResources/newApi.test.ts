@@ -7,11 +7,7 @@ import {
   NEW_API_MANAGED_RESOURCE_TABLE_FIELD_IDS,
 } from "~/constants/newApi"
 import { SITE_TYPES } from "~/constants/siteType"
-import {
-  MANAGED_RESOURCE_KINDS,
-  MANAGED_RESOURCE_MODES,
-  MANAGED_RESOURCE_PRODUCT_ACTIONS,
-} from "~/services/accountSiteDefinitions/contracts"
+import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
 import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions/registry"
 import {
   MANAGED_RESOURCE_CREATE_SEED_KINDS,
@@ -73,8 +69,8 @@ vi.mock("~/services/apiAdapters/managedSites/newApi", () => ({
     },
     channelDrafts: { buildPayload: mocks.buildPayload },
     queries: {
-      fetchSiteUserGroups: mocks.fetchSiteUserGroups,
-      fetchAccountAvailableModels: mocks.fetchAccountAvailableModels,
+      siteUserGroups: { fetch: mocks.fetchSiteUserGroups },
+      accountAvailableModels: { fetch: mocks.fetchAccountAvailableModels },
     },
   },
 }))
@@ -187,23 +183,14 @@ describe("New API native managed resource", () => {
     )
   })
 
-  it("registers New API with native channel policy and every preserved action", () => {
+  it("registers New API with native channel presentation policy", () => {
     expect(
       getAccountSiteDefinition(SITE_TYPES.NEW_API)?.managedResource,
     ).toEqual(
       expect.objectContaining({
-        mode: MANAGED_RESOURCE_MODES.NativeResource,
         primaryKind: MANAGED_RESOURCE_KINDS.Channel,
         tableFieldIds: NEW_API_MANAGED_RESOURCE_TABLE_FIELD_IDS,
         detailFieldIds: NEW_API_MANAGED_RESOURCE_DETAIL_FIELD_IDS,
-        actions: expect.arrayContaining([
-          MANAGED_RESOURCE_PRODUCT_ACTIONS.Create,
-          MANAGED_RESOURCE_PRODUCT_ACTIONS.DeleteSelected,
-          MANAGED_RESOURCE_PRODUCT_ACTIONS.Migrate,
-          MANAGED_RESOURCE_PRODUCT_ACTIONS.SyncModels,
-          MANAGED_RESOURCE_PRODUCT_ACTIONS.ConfigureModelSync,
-          MANAGED_RESOURCE_PRODUCT_ACTIONS.ConfigureModelFilters,
-        ]),
       }),
     )
     expect(

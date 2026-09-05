@@ -24,15 +24,11 @@ import {
   VELOERA_MANAGED_RESOURCE_TABLE_FIELD_IDS,
 } from "~/constants/veloera"
 import {
-  ACCOUNT_SITE_AUTH_SESSION_REFRESH_LOCK_SCOPES,
   ACCOUNT_SITE_CREATED_TOKEN_SECRET_HANDLING,
   ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS,
-  ACCOUNT_SITE_MODEL_LIST_DIRECT_PRICING,
   ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES,
   ACCOUNT_SITE_MODEL_LIST_GROUP_SEMANTICS,
-  ACCOUNT_SITE_MODEL_LIST_PROVIDER_CATALOGS,
   ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES,
-  ACCOUNT_SITE_MODEL_LIST_TOKEN_SCOPED_CATALOG_FALLBACKS,
   ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS,
   ACCOUNT_SITE_TOKEN_FORM_NETWORK_LIMIT_POLICIES,
 } from "~/services/accounts/accountSiteProfile/contracts"
@@ -47,10 +43,7 @@ import {
   ACCOUNT_SITE_ADAPTER_FAMILIES,
   ACCOUNT_SITE_DEFINITION_SCOPES,
   ACCOUNT_SITE_MANUAL_ADD_GUIDE_ANCHORS,
-  ACCOUNT_SITE_MODEL_LIST_EXPECTED_ROUTES,
   MANAGED_RESOURCE_KINDS,
-  MANAGED_RESOURCE_MODES,
-  MANAGED_RESOURCE_PRODUCT_ACTIONS,
   type AccountSiteDefinition,
   type ManagedResourceProductPolicy,
 } from "./contracts"
@@ -95,40 +88,13 @@ const ACCOUNT_AND_MANAGED_SCOPES = [
 ] as const
 
 const LEGACY_MANAGED_CHANNEL_POLICY = {
-  mode: MANAGED_RESOURCE_MODES.LegacyChannel,
   primaryKind: MANAGED_RESOURCE_KINDS.Channel,
   titleKey: "managedSiteChannels:title",
   itemLabelKey: "managedSiteChannels:table.columns.name",
   tableFieldIds: [],
   detailFieldIds: [],
-  actions: [],
   settingsTarget: { tabId: "managedSite" },
 } as const satisfies ManagedResourceProductPolicy
-
-const directPricingReadiness = {
-  modelList: {
-    expectedRoute: ACCOUNT_SITE_MODEL_LIST_EXPECTED_ROUTES.DirectPricing,
-  },
-} as const
-
-const tokenScopedRuntimeModelListReadiness = {
-  modelList: {
-    expectedRoute:
-      ACCOUNT_SITE_MODEL_LIST_EXPECTED_ROUTES.TokenScopedRuntimeCatalog,
-  },
-} as const
-
-const providerCatalogReadiness = {
-  modelList: {
-    expectedRoute: ACCOUNT_SITE_MODEL_LIST_EXPECTED_ROUTES.ProviderCatalog,
-  },
-} as const
-
-const unsupportedModelListReadiness = {
-  modelList: {
-    expectedRoute: ACCOUNT_SITE_MODEL_LIST_EXPECTED_ROUTES.Unsupported,
-  },
-} as const
 
 export const ACCOUNT_SITE_TYPE_ORDER = [
   SITE_TYPES.ONE_API,
@@ -175,7 +141,6 @@ const ACCOUNT_SITE_DEFINITIONS = [
       detection: { titlePatterns: [makeTitleRegex(SITE_TYPES.ONE_API)] },
       routes: { usagePath: DEFAULT_USAGE_PATH },
     },
-    readiness: directPricingReadiness,
   },
   {
     siteType: SITE_TYPES.NEW_API,
@@ -183,17 +148,8 @@ const ACCOUNT_SITE_DEFINITIONS = [
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
     managedResource: {
       ...LEGACY_MANAGED_CHANNEL_POLICY,
-      mode: MANAGED_RESOURCE_MODES.NativeResource,
       tableFieldIds: NEW_API_MANAGED_RESOURCE_TABLE_FIELD_IDS,
       detailFieldIds: NEW_API_MANAGED_RESOURCE_DETAIL_FIELD_IDS,
-      actions: [
-        MANAGED_RESOURCE_PRODUCT_ACTIONS.Create,
-        MANAGED_RESOURCE_PRODUCT_ACTIONS.DeleteSelected,
-        MANAGED_RESOURCE_PRODUCT_ACTIONS.Migrate,
-        MANAGED_RESOURCE_PRODUCT_ACTIONS.SyncModels,
-        MANAGED_RESOURCE_PRODUCT_ACTIONS.ConfigureModelSync,
-        MANAGED_RESOURCE_PRODUCT_ACTIONS.ConfigureModelFilters,
-      ],
     },
     onboarding: {
       manualAddGuideAnchor: ACCOUNT_SITE_MANUAL_ADD_GUIDE_ANCHORS.NewApi,
@@ -207,7 +163,6 @@ const ACCOUNT_SITE_DEFINITIONS = [
         adminCredentialsPath: DEFAULT_CHECKIN_PATH,
       },
     },
-    readiness: directPricingReadiness,
   },
   {
     siteType: SITE_TYPES.MODELFLARE,
@@ -233,7 +188,6 @@ const ACCOUNT_SITE_DEFINITIONS = [
         defaultAuthHostnames: [MODELFLARE_HOSTNAME],
       },
     },
-    readiness: directPricingReadiness,
   },
   {
     siteType: SITE_TYPES.ANYROUTER,
@@ -249,7 +203,6 @@ const ACCOUNT_SITE_DEFINITIONS = [
         defaultAuthHostnames: ["anyrouter.top"],
       },
     },
-    readiness: directPricingReadiness,
   },
   {
     siteType: SITE_TYPES.SUB2API,
@@ -257,14 +210,8 @@ const ACCOUNT_SITE_DEFINITIONS = [
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Sub2Api,
     managedResource: {
       ...LEGACY_MANAGED_CHANNEL_POLICY,
-      mode: MANAGED_RESOURCE_MODES.NativeResource,
       tableFieldIds: SUB2API_MANAGED_RESOURCE_TABLE_FIELD_IDS,
       detailFieldIds: SUB2API_MANAGED_RESOURCE_DETAIL_FIELD_IDS,
-      actions: [
-        MANAGED_RESOURCE_PRODUCT_ACTIONS.Create,
-        MANAGED_RESOURCE_PRODUCT_ACTIONS.DeleteSelected,
-        MANAGED_RESOURCE_PRODUCT_ACTIONS.Migrate,
-      ],
       settingsTarget: {
         ...LEGACY_MANAGED_CHANNEL_POLICY.settingsTarget,
         anchor: SETTINGS_ANCHORS.SUB2API,
@@ -284,35 +231,20 @@ const ACCOUNT_SITE_DEFINITIONS = [
         allowedAuthTypes: [ACCOUNT_SITE_AUTH_TYPES.AccessToken],
         defaultAuthType: ACCOUNT_SITE_AUTH_TYPES.AccessToken,
         defaultAuthHostnames: [],
-        supportsCookieAuth: false,
       },
       authSession: {
         kind: ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS.Sub2ApiRefreshToken,
-        decoratesAccountApiRequests: true,
-        refreshLockScope: ACCOUNT_SITE_AUTH_SESSION_REFRESH_LOCK_SCOPES.Account,
       },
       identity: {
         usernameRequired: false,
         storedUserIdentityFields: ["id"],
       },
       modelList: {
-        directPricing: ACCOUNT_SITE_MODEL_LIST_DIRECT_PRICING.Unsupported,
-        tokenScopedCatalogFallback:
-          ACCOUNT_SITE_MODEL_LIST_TOKEN_SCOPED_CATALOG_FALLBACKS.RuntimeKey,
         dashboardEstimateLoader:
           ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS.Sub2Api,
         statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Token,
         displayCapabilitiesSource:
           ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Response,
-      },
-      supplementalAuth: {
-        kind: ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS.Sub2ApiRefreshToken,
-      },
-    },
-    readiness: {
-      modelList: {
-        expectedRoute:
-          ACCOUNT_SITE_MODEL_LIST_EXPECTED_ROUTES.TokenScopedRuntimeCatalog,
       },
     },
   },
@@ -358,7 +290,6 @@ const ACCOUNT_SITE_DEFINITIONS = [
         allowedAuthTypes: [ACCOUNT_SITE_AUTH_TYPES.AccessToken],
         defaultAuthType: ACCOUNT_SITE_AUTH_TYPES.AccessToken,
         defaultAuthHostnames: [],
-        supportsCookieAuth: false,
       },
       createdToken: {
         secretHandling:
@@ -369,9 +300,6 @@ const ACCOUNT_SITE_DEFINITIONS = [
         storedUserIdentityFields: ["username"],
       },
       modelList: {
-        directPricing: ACCOUNT_SITE_MODEL_LIST_DIRECT_PRICING.Supported,
-        tokenScopedCatalogFallback:
-          ACCOUNT_SITE_MODEL_LIST_TOKEN_SCOPED_CATALOG_FALLBACKS.None,
         dashboardEstimateLoader:
           ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS.None,
         statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Account,
@@ -390,7 +318,6 @@ const ACCOUNT_SITE_DEFINITIONS = [
         managedChannelOrigin: AIHUBMIX_API_ORIGIN,
       },
     },
-    readiness: directPricingReadiness,
   },
   {
     siteType: SITE_TYPES.SHAREDCHAT,
@@ -412,16 +339,12 @@ const ACCOUNT_SITE_DEFINITIONS = [
         allowedAuthTypes: [ACCOUNT_SITE_AUTH_TYPES.Cookie],
         defaultAuthType: ACCOUNT_SITE_AUTH_TYPES.Cookie,
         defaultAuthHostnames: SHAREDCHAT_HOSTNAMES,
-        supportsCookieAuth: true,
       },
       identity: {
         usernameRequired: false,
         storedUserIdentityFields: ["id", "username"],
       },
       modelList: {
-        directPricing: ACCOUNT_SITE_MODEL_LIST_DIRECT_PRICING.Unsupported,
-        tokenScopedCatalogFallback:
-          ACCOUNT_SITE_MODEL_LIST_TOKEN_SCOPED_CATALOG_FALLBACKS.RuntimeKey,
         dashboardEstimateLoader:
           ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS.None,
         statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Account,
@@ -435,7 +358,6 @@ const ACCOUNT_SITE_DEFINITIONS = [
         duplicateOrigin: SHAREDCHAT_WEB_ORIGIN,
       },
     },
-    readiness: tokenScopedRuntimeModelListReadiness,
   },
   {
     siteType: SITE_TYPES.VO_API_V2,
@@ -456,16 +378,12 @@ const ACCOUNT_SITE_DEFINITIONS = [
         allowedAuthTypes: [ACCOUNT_SITE_AUTH_TYPES.AccessToken],
         defaultAuthType: ACCOUNT_SITE_AUTH_TYPES.AccessToken,
         defaultAuthHostnames: [],
-        supportsCookieAuth: false,
       },
       identity: {
         usernameRequired: false,
         storedUserIdentityFields: ["id", "username"],
       },
       modelList: {
-        directPricing: ACCOUNT_SITE_MODEL_LIST_DIRECT_PRICING.Unsupported,
-        tokenScopedCatalogFallback:
-          ACCOUNT_SITE_MODEL_LIST_TOKEN_SCOPED_CATALOG_FALLBACKS.None,
         dashboardEstimateLoader:
           ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS.None,
         statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Account,
@@ -473,7 +391,6 @@ const ACCOUNT_SITE_DEFINITIONS = [
           ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Response,
       },
     },
-    readiness: unsupportedModelListReadiness,
   },
   {
     siteType: SITE_TYPES.OPENROUTER,
@@ -494,17 +411,12 @@ const ACCOUNT_SITE_DEFINITIONS = [
         allowedAuthTypes: [ACCOUNT_SITE_AUTH_TYPES.AccessToken],
         defaultAuthType: ACCOUNT_SITE_AUTH_TYPES.AccessToken,
         defaultAuthHostnames: [],
-        supportsCookieAuth: false,
       },
       identity: {
         usernameRequired: false,
         storedUserIdentityFields: [],
       },
       modelList: {
-        directPricing: ACCOUNT_SITE_MODEL_LIST_DIRECT_PRICING.Unsupported,
-        providerCatalog: ACCOUNT_SITE_MODEL_LIST_PROVIDER_CATALOGS.Public,
-        tokenScopedCatalogFallback:
-          ACCOUNT_SITE_MODEL_LIST_TOKEN_SCOPED_CATALOG_FALLBACKS.None,
         dashboardEstimateLoader:
           ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS.None,
         statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Account,
@@ -518,7 +430,6 @@ const ACCOUNT_SITE_DEFINITIONS = [
         duplicateOrigin: OPENROUTER_WEB_ORIGIN,
       },
     },
-    readiness: providerCatalogReadiness,
   },
 ] as const satisfies readonly AccountSiteDefinition[]
 
@@ -535,14 +446,8 @@ const MANAGED_ONLY_SITE_DEFINITIONS = [
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Unsupported,
     managedResource: {
       ...LEGACY_MANAGED_CHANNEL_POLICY,
-      mode: MANAGED_RESOURCE_MODES.NativeResource,
       tableFieldIds: AXON_HUB_TABLE_FIELD_IDS,
       detailFieldIds: AXON_HUB_DETAIL_FIELD_IDS,
-      actions: [
-        MANAGED_RESOURCE_PRODUCT_ACTIONS.Create,
-        MANAGED_RESOURCE_PRODUCT_ACTIONS.DeleteSelected,
-        MANAGED_RESOURCE_PRODUCT_ACTIONS.Migrate,
-      ],
       settingsTarget: {
         ...LEGACY_MANAGED_CHANNEL_POLICY.settingsTarget,
         anchor: SETTINGS_ANCHORS.AXON_HUB,
@@ -555,14 +460,8 @@ const MANAGED_ONLY_SITE_DEFINITIONS = [
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Unsupported,
     managedResource: {
       ...LEGACY_MANAGED_CHANNEL_POLICY,
-      mode: MANAGED_RESOURCE_MODES.NativeResource,
       tableFieldIds: CLAUDE_CODE_HUB_MANAGED_RESOURCE_TABLE_FIELD_IDS,
       detailFieldIds: CLAUDE_CODE_HUB_MANAGED_RESOURCE_DETAIL_FIELD_IDS,
-      actions: [
-        MANAGED_RESOURCE_PRODUCT_ACTIONS.Create,
-        MANAGED_RESOURCE_PRODUCT_ACTIONS.DeleteSelected,
-        MANAGED_RESOURCE_PRODUCT_ACTIONS.Migrate,
-      ],
     },
   },
 ] as const satisfies readonly AccountSiteDefinition[]
@@ -574,17 +473,8 @@ const ACCOUNT_SITE_DEFINITION_OVERRIDES = [
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
     managedResource: {
       ...LEGACY_MANAGED_CHANNEL_POLICY,
-      mode: MANAGED_RESOURCE_MODES.NativeResource,
       tableFieldIds: VELOERA_MANAGED_RESOURCE_TABLE_FIELD_IDS,
       detailFieldIds: VELOERA_MANAGED_RESOURCE_DETAIL_FIELD_IDS,
-      actions: [
-        MANAGED_RESOURCE_PRODUCT_ACTIONS.Create,
-        MANAGED_RESOURCE_PRODUCT_ACTIONS.DeleteSelected,
-        MANAGED_RESOURCE_PRODUCT_ACTIONS.Migrate,
-        MANAGED_RESOURCE_PRODUCT_ACTIONS.SyncModels,
-        MANAGED_RESOURCE_PRODUCT_ACTIONS.ConfigureModelSync,
-        MANAGED_RESOURCE_PRODUCT_ACTIONS.ConfigureModelFilters,
-      ],
     },
     onboarding: {
       detection: {
@@ -598,7 +488,6 @@ const ACCOUNT_SITE_DEFINITION_OVERRIDES = [
         adminCredentialsPath: "/app/me",
       },
     },
-    readiness: directPricingReadiness,
   },
   {
     siteType: SITE_TYPES.DONE_HUB,
@@ -606,17 +495,8 @@ const ACCOUNT_SITE_DEFINITION_OVERRIDES = [
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
     managedResource: {
       ...LEGACY_MANAGED_CHANNEL_POLICY,
-      mode: MANAGED_RESOURCE_MODES.NativeResource,
       tableFieldIds: DONE_HUB_MANAGED_RESOURCE_TABLE_FIELD_IDS,
       detailFieldIds: DONE_HUB_MANAGED_RESOURCE_DETAIL_FIELD_IDS,
-      actions: [
-        MANAGED_RESOURCE_PRODUCT_ACTIONS.Create,
-        MANAGED_RESOURCE_PRODUCT_ACTIONS.DeleteSelected,
-        MANAGED_RESOURCE_PRODUCT_ACTIONS.Migrate,
-        MANAGED_RESOURCE_PRODUCT_ACTIONS.SyncModels,
-        MANAGED_RESOURCE_PRODUCT_ACTIONS.ConfigureModelSync,
-        MANAGED_RESOURCE_PRODUCT_ACTIONS.ConfigureModelFilters,
-      ],
     },
     onboarding: {
       detection: { titlePatterns: [makeTitleRegex(SITE_TYPES.DONE_HUB)] },
@@ -626,7 +506,6 @@ const ACCOUNT_SITE_DEFINITION_OVERRIDES = [
         adminCredentialsPath: "/panel/profile",
       },
     },
-    readiness: directPricingReadiness,
   },
 ] as const satisfies readonly AccountSiteDefinition[]
 
@@ -643,7 +522,6 @@ const COMPATIBLE_ACCOUNT_SITE_DEFINITIONS = [
         adminCredentialsPath: "/panel/profile",
       },
     },
-    readiness: directPricingReadiness,
   },
   {
     siteType: SITE_TYPES.V_API,
@@ -661,7 +539,6 @@ const COMPATIBLE_ACCOUNT_SITE_DEFINITIONS = [
         adminCredentialsPath: "/panel/profile",
       },
     },
-    readiness: directPricingReadiness,
   },
   {
     siteType: SITE_TYPES.VO_API,
@@ -674,7 +551,6 @@ const COMPATIBLE_ACCOUNT_SITE_DEFINITIONS = [
       },
       routes: { usagePath: DEFAULT_USAGE_PATH, redeemPath: "/wallet" },
     },
-    readiness: directPricingReadiness,
   },
   {
     siteType: SITE_TYPES.SUPER_API,
@@ -683,7 +559,6 @@ const COMPATIBLE_ACCOUNT_SITE_DEFINITIONS = [
     onboarding: {
       detection: { titlePatterns: [makeTitleRegex(SITE_TYPES.SUPER_API)] },
     },
-    readiness: directPricingReadiness,
   },
   {
     siteType: SITE_TYPES.RIX_API,
@@ -700,7 +575,6 @@ const COMPATIBLE_ACCOUNT_SITE_DEFINITIONS = [
         redeemPath: "/topup",
       },
     },
-    readiness: directPricingReadiness,
   },
   {
     siteType: SITE_TYPES.NEO_API,
@@ -712,7 +586,6 @@ const COMPATIBLE_ACCOUNT_SITE_DEFINITIONS = [
         compatUserIdHeaderNames: ["neo-api-user"],
       },
     },
-    readiness: directPricingReadiness,
   },
   {
     siteType: SITE_TYPES.WONG_GONGYI,
@@ -722,7 +595,6 @@ const COMPATIBLE_ACCOUNT_SITE_DEFINITIONS = [
       detection: { titlePatterns: [/wong\s*公益站/i] },
       routes: { checkInPath: "/console/topup" },
     },
-    readiness: directPricingReadiness,
   },
   {
     siteType: SITE_TYPES.UNKNOWN,
@@ -731,7 +603,6 @@ const COMPATIBLE_ACCOUNT_SITE_DEFINITIONS = [
     onboarding: {
       detection: { titlePatterns: [makeTitleRegex(SITE_TYPES.UNKNOWN)] },
     },
-    readiness: directPricingReadiness,
   },
 ] as const satisfies readonly AccountSiteDefinition[]
 

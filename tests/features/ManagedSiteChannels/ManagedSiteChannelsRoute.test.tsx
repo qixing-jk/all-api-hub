@@ -35,11 +35,6 @@ import {
   getManagedSiteChannelRowTestId,
   MANAGED_SITE_CHANNELS_TEST_IDS,
 } from "~/features/ManagedSiteChannels/testIds"
-import {
-  MANAGED_RESOURCE_MODES,
-  MANAGED_RESOURCE_PRODUCT_ACTIONS,
-  type ManagedResourceProductAction,
-} from "~/services/accountSiteDefinitions/contracts"
 import * as definitionRegistry from "~/services/accountSiteDefinitions/registry"
 import type {
   EditableResourceProjection,
@@ -451,7 +446,6 @@ const installNativeDefinition = (
     | typeof SITE_TYPES.NEW_API
     | typeof SITE_TYPES.AXON_HUB
     | typeof SITE_TYPES.CLAUDE_CODE_HUB,
-  actions?: readonly ManagedResourceProductAction[],
 ) => {
   const nativeDefinitionTemplate = definitionRegistry.getAccountSiteDefinition(
     SITE_TYPES.AXON_HUB,
@@ -461,8 +455,6 @@ const installNativeDefinition = (
     siteType,
     managedResource: {
       ...nativeDefinitionTemplate.managedResource!,
-      mode: MANAGED_RESOURCE_MODES.NativeResource,
-      ...(actions ? { actions } : {}),
     },
   })
   vi.spyOn(nativeRegistry, "getManagedResourceRegistration").mockReturnValue(
@@ -660,10 +652,6 @@ describe("ManagedSiteChannelsRoute", () => {
     )
 
     expect(screen.getByText("Native example")).toBeVisible()
-    expect(
-      definitionRegistry.getAccountSiteDefinition(SITE_TYPES.NEW_API)
-        ?.managedResource?.mode,
-    ).toBe(MANAGED_RESOURCE_MODES.NativeResource)
     expect(legacyRender).not.toHaveBeenCalled()
     expect(useListController).toHaveBeenCalledWith(
       expect.objectContaining({ refreshKey: 7, search: "example" }),
@@ -693,9 +681,11 @@ describe("ManagedSiteChannelsRoute", () => {
     )
 
     expect(
-      definitionRegistry.getAccountSiteDefinition(SITE_TYPES.VELOERA)
-        ?.managedResource?.mode,
-    ).toBe(MANAGED_RESOURCE_MODES.NativeResource)
+      nativeRegistry.getManagedResourceRegistration(
+        SITE_TYPES.VELOERA,
+        "channel",
+      ),
+    ).toMatchObject({ siteType: SITE_TYPES.VELOERA, kind: "channel" })
     expect(screen.getByText("Native example")).toBeVisible()
     expect(legacyRender).not.toHaveBeenCalled()
     expect(useListController).toHaveBeenCalled()
@@ -714,9 +704,11 @@ describe("ManagedSiteChannelsRoute", () => {
     )
 
     expect(
-      definitionRegistry.getAccountSiteDefinition(SITE_TYPES.DONE_HUB)
-        ?.managedResource?.mode,
-    ).toBe(MANAGED_RESOURCE_MODES.NativeResource)
+      nativeRegistry.getManagedResourceRegistration(
+        SITE_TYPES.DONE_HUB,
+        "channel",
+      ),
+    ).toMatchObject({ siteType: SITE_TYPES.DONE_HUB, kind: "channel" })
     expect(screen.getByText("Native example")).toBeVisible()
     expect(legacyRender).not.toHaveBeenCalled()
     expect(useListController).toHaveBeenCalled()
@@ -734,10 +726,6 @@ describe("ManagedSiteChannelsRoute", () => {
       />,
     )
 
-    expect(
-      definitionRegistry.getAccountSiteDefinition(SITE_TYPES.AXON_HUB)
-        ?.managedResource?.mode,
-    ).toBe(MANAGED_RESOURCE_MODES.NativeResource)
     expect(
       screen.getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.refreshButton),
     ).toBeVisible()
@@ -796,10 +784,6 @@ describe("ManagedSiteChannelsRoute", () => {
       />,
     )
 
-    expect(
-      definitionRegistry.getAccountSiteDefinition(SITE_TYPES.SUB2API)
-        ?.managedResource?.mode,
-    ).toBe(MANAGED_RESOURCE_MODES.NativeResource)
     expect(legacyRender).not.toHaveBeenCalled()
     expect(useListController).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -808,7 +792,7 @@ describe("ManagedSiteChannelsRoute", () => {
     )
   })
 
-  it("wires policy-approved native model and filter actions to real channel targets", async () => {
+  it("wires capable native model and filter actions to real channel targets", async () => {
     const user = userEvent.setup()
     const actionRow: ManagedChannelsRowViewModel = {
       ...nativeRow,
@@ -820,11 +804,7 @@ describe("ManagedSiteChannelsRoute", () => {
         canConfigureModelFilters: true,
       },
     }
-    installNativeDefinition(SITE_TYPES.AXON_HUB, [
-      MANAGED_RESOURCE_PRODUCT_ACTIONS.SyncModels,
-      MANAGED_RESOURCE_PRODUCT_ACTIONS.ConfigureModelSync,
-      MANAGED_RESOURCE_PRODUCT_ACTIONS.ConfigureModelFilters,
-    ])
+    installNativeDefinition(SITE_TYPES.AXON_HUB)
     installNativeControllers({
       list: {
         rows: [actionRow],
@@ -899,7 +879,7 @@ describe("ManagedSiteChannelsRoute", () => {
     )
   })
 
-  it("keeps native channel actions hidden until the product policy enables them", async () => {
+  it("derives native channel actions from the resource capabilities", async () => {
     const user = userEvent.setup()
     const actionRow: ManagedChannelsRowViewModel = {
       ...nativeRow,
@@ -911,7 +891,7 @@ describe("ManagedSiteChannelsRoute", () => {
         canConfigureModelFilters: true,
       },
     }
-    installNativeDefinition(SITE_TYPES.AXON_HUB, [])
+    installNativeDefinition(SITE_TYPES.AXON_HUB)
     installNativeControllers({
       list: { rows: [actionRow], allRows: [actionRow] },
     })
@@ -930,20 +910,20 @@ describe("ManagedSiteChannelsRoute", () => {
     )
 
     expect(
-      screen.queryByRole("menuitem", {
+      screen.getByRole("menuitem", {
         name: "managedSiteChannels:table.rowActions.sync",
       }),
-    ).toBeNull()
+    ).toBeVisible()
     expect(
-      screen.queryByRole("menuitem", {
+      screen.getByRole("menuitem", {
         name: "managedSiteChannels:table.rowActions.openSync",
       }),
-    ).toBeNull()
+    ).toBeVisible()
     expect(
-      screen.queryByRole("menuitem", {
+      screen.getByRole("menuitem", {
         name: "managedSiteChannels:table.rowActions.filters",
       }),
-    ).toBeNull()
+    ).toBeVisible()
   })
 
   it("resets native sorting to the default for each site type", () => {
@@ -1869,7 +1849,7 @@ describe("ManagedSiteChannelsRoute", () => {
     ).toBe(legacyFocused)
   })
 
-  it("renders a controlled integration failure without falling back when a native registration is missing", () => {
+  it("uses the legacy route when no native registration is present", () => {
     const axonHubDefinition = definitionRegistry.getAccountSiteDefinition(
       SITE_TYPES.AXON_HUB,
     )
@@ -1877,10 +1857,7 @@ describe("ManagedSiteChannelsRoute", () => {
     vi.spyOn(definitionRegistry, "getAccountSiteDefinition").mockReturnValue({
       ...axonHubDefinition!,
       siteType: SITE_TYPES.CLAUDE_CODE_HUB,
-      managedResource: {
-        ...axonHubDefinition!.managedResource!,
-        mode: MANAGED_RESOURCE_MODES.NativeResource,
-      },
+      managedResource: { ...axonHubDefinition!.managedResource! },
     })
     vi.spyOn(nativeRegistry, "getManagedResourceRegistration").mockReturnValue(
       null,
@@ -1894,10 +1871,8 @@ describe("ManagedSiteChannelsRoute", () => {
       />,
     )
 
-    expect(screen.getByRole("alert")).toHaveTextContent(
-      "common:rootErrorBoundary.genericDescription",
-    )
-    expect(legacyRender).not.toHaveBeenCalled()
+    expect(legacyRender).toHaveBeenCalled()
+    expect(screen.queryByRole("alert")).toBeNull()
   })
 
   it("renders a controlled integration failure when product policy is missing", () => {
@@ -2083,8 +2058,8 @@ describe("ManagedSiteChannelsRoute", () => {
     expect(screen.queryByText("Native 01")).toBeNull()
   })
 
-  it("requires both adapter and product policy create capability", () => {
-    installNativeDefinition(SITE_TYPES.CLAUDE_CODE_HUB, [])
+  it("derives create capability from the resource workspace", () => {
+    installNativeDefinition(SITE_TYPES.CLAUDE_CODE_HUB)
     installNativeControllers()
     vi.mocked(useUserPreferencesContext).mockReturnValue({
       preferences: buildUserPreferences({
@@ -2105,16 +2080,42 @@ describe("ManagedSiteChannelsRoute", () => {
     )
 
     expect(
-      screen.queryByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.addChannelButton),
+      screen.getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.addChannelButton),
+    ).toBeVisible()
+  })
+
+  it("does not expose migration without a registered source capability", () => {
+    installNativeControllers()
+    configureNativePreferences(SITE_TYPES.SUB2API)
+    getTargetOptions.mockReturnValue([
+      {
+        siteType: SITE_TYPES.NEW_API,
+        labelKey: "settings:managedSite.newApi",
+        messagesKey: "newapi",
+        config: {
+          baseUrl: "https://target.example.invalid",
+          adminToken: "example-credential",
+          userId: "example-user",
+        },
+      },
+    ])
+
+    render(
+      <ManagedSiteChannelsRoute
+        siteType={SITE_TYPES.SUB2API}
+        onReplaceRouteQuery={vi.fn()}
+      />,
+    )
+
+    expect(
+      screen.queryByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.migrationModeButton),
     ).toBeNull()
   })
 
-  it("enables the native row migration action only when policy and targets allow it", async () => {
+  it("enables native migration when a source capability and target exist", async () => {
     const user = userEvent.setup()
     const openDetail = vi.fn(async () => undefined)
-    installNativeDefinition(SITE_TYPES.CLAUDE_CODE_HUB, [
-      MANAGED_RESOURCE_PRODUCT_ACTIONS.Migrate,
-    ])
+    installNativeDefinition(SITE_TYPES.CLAUDE_CODE_HUB)
     installNativeControllers({ mutation: { openDetail } })
     getTargetOptions.mockReturnValue([
       {

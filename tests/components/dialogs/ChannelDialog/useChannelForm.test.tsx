@@ -320,7 +320,7 @@ describe("useChannelForm", () => {
     expect(mockUpdateChannel).not.toHaveBeenCalled()
   })
 
-  it("preserves AxonHub string channel types and skips New API group loading", async () => {
+  it("preserves string channel types and reports unsupported group discovery from capability absence", async () => {
     vi.mocked(getManagedSiteService).mockResolvedValue({
       siteType: SITE_TYPES.AXON_HUB,
       messagesKey: "axonhub",
@@ -350,7 +350,10 @@ describe("useChannelForm", () => {
     })
 
     expect(result.current.isBaseUrlRequired).toBe(true)
-    expect(result.current.availableGroups).toEqual([])
+    expect(result.current.availableGroups).toEqual([
+      { label: "default", value: "default" },
+    ])
+    expect(result.current.groupDiscoveryStatus).toBe("unsupported")
     expect(mockCheckValidConfig).not.toHaveBeenCalled()
     expect(mockGetConfig).not.toHaveBeenCalled()
 

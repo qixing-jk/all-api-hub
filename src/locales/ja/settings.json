@@ -71,7 +71,7 @@
     "toggleLabel": "アカウント追加時に現在サイトの URL を事前入力"
   },
   "autoProvisionKeyOnAccountAdd": {
-    "description": "アカウント追加後に All API Hub が既定の API キーを自動作成するかどうかを制御します。",
+    "description": "対応アカウントの追加後に All API Hub が既定の API キーを自動作成するかどうかを制御します。",
     "title": "API キー",
     "toggleDesc": "有効にすると、アカウント保存後にトークン一覧を確認し、存在しない場合は既定のトークンを自動作成します。",
     "toggleLabel": "アカウント追加時に既定キーを自動作成"

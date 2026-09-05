@@ -104,10 +104,6 @@ const expectManagedSiteCapabilities = (
     checkValid: expect.any(Function),
     get: expect.any(Function),
   })
-  expect(capabilities.managedSites?.queries).toEqual({
-    fetchSiteUserGroups: expect.any(Function),
-    fetchAccountAvailableModels: expect.any(Function),
-  })
   expect(capabilities.managedSites?.channelDrafts).toEqual({
     fetchAvailableModels: expect.any(Function),
     buildName: expect.any(Function),
@@ -115,6 +111,15 @@ const expectManagedSiteCapabilities = (
     buildPayload: expect.any(Function),
   })
   expect(capabilities.managedSites).not.toHaveProperty("imports")
+}
+
+const expectManagedSiteQueries = (
+  capabilities: ReturnType<typeof getSiteTypeCapabilities>,
+) => {
+  expect(capabilities.managedSites?.queries).toEqual({
+    siteUserGroups: { fetch: expect.any(Function) },
+    accountAvailableModels: { fetch: expect.any(Function) },
+  })
 }
 
 describe("apiAdapters registry", () => {
@@ -209,6 +214,7 @@ describe("apiAdapters registry", () => {
     })
     expectInviteLinkCapability(capabilities)
     expectManagedSiteCapabilities(capabilities)
+    expect(capabilities.managedSites?.queries).toBeUndefined()
     expect(capabilities.site?.notice).toBeUndefined()
   })
 
@@ -332,6 +338,7 @@ describe("apiAdapters registry", () => {
 
       expect(capabilities.siteType).toBe(siteType)
       expectManagedSiteCapabilities(capabilities)
+      expectManagedSiteQueries(capabilities)
     }
   })
 
@@ -342,8 +349,16 @@ describe("apiAdapters registry", () => {
   })
 
   it("returns managed-only capabilities without account capabilities", () => {
+    for (const siteType of [SITE_TYPES.OCTOPUS] satisfies SiteType[]) {
+      const capabilities = getSiteTypeCapabilities(siteType)
+
+      expect(capabilities.siteType).toBe(siteType)
+      expectManagedSiteCapabilities(capabilities)
+      expectManagedSiteQueries(capabilities)
+      expect(capabilities.account).toBeUndefined()
+    }
+
     for (const siteType of [
-      SITE_TYPES.OCTOPUS,
       SITE_TYPES.AXON_HUB,
       SITE_TYPES.CLAUDE_CODE_HUB,
     ] satisfies SiteType[]) {
@@ -351,6 +366,7 @@ describe("apiAdapters registry", () => {
 
       expect(capabilities.siteType).toBe(siteType)
       expectManagedSiteCapabilities(capabilities)
+      expect(capabilities.managedSites?.queries).toBeUndefined()
       expect(capabilities.account).toBeUndefined()
     }
   })

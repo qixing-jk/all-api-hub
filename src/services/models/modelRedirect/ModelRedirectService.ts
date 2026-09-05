@@ -6,7 +6,6 @@
 
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import type { ManagedSiteChannelsCapability } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
-import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import {
   MANAGED_UPSTREAM_RESOURCE_FEATURES,
   type ManagedUpstreamResourceFeature,
@@ -52,6 +51,7 @@ import {
   userPreferences,
   type UserPreferences,
 } from "../../preferences/userPreferences"
+import { resolveManagedSiteModelRedirectCapabilities } from "./capabilities"
 import { extractActualModel, renameModel } from "./modelNormalization"
 import { isEmptyModelMapping } from "./utils"
 
@@ -444,14 +444,6 @@ export class ModelRedirectService {
 
     const runtimeConfig = resolveCurrentManagedSiteRuntimeConfig(resolvedPrefs)
 
-    if (runtimeConfig?.siteType === SITE_TYPES.OCTOPUS) {
-      return {
-        ok: false,
-        errors: ["Model redirect is not supported for Octopus sites"],
-        message: "Model redirect is not supported for Octopus sites",
-      }
-    }
-
     if (!runtimeConfig) {
       return {
         ok: false,
@@ -460,9 +452,10 @@ export class ModelRedirectService {
       }
     }
 
-    const channels = getSiteTypeCapabilities(runtimeConfig.siteType)
-      .managedSites?.channels
-    if (!channels?.list || !channels.updateModelMapping) {
+    const resolution = resolveManagedSiteModelRedirectCapabilities(
+      runtimeConfig.siteType,
+    )
+    if (!resolution.supported) {
       return {
         ok: false,
         errors: ["Model redirect is not supported for this managed site"],
@@ -473,7 +466,7 @@ export class ModelRedirectService {
     return {
       ok: true,
       runtimeConfig,
-      channels: channels as ModelRedirectChannelCapabilities,
+      channels: resolution.capabilities,
     }
   }
 

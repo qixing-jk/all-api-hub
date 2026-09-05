@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next"
 
 import { OptionsPageSettingsTitleAction } from "~/components/OptionsPageSettingsTitleAction"
 import { PageHeader } from "~/components/PageHeader"
-import { Button } from "~/components/ui"
+import { Button, Notice } from "~/components/ui"
 import { EmptyState } from "~/components/ui/EmptyState"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
@@ -32,9 +32,10 @@ import type {
   SiteAnnouncementRecord,
   SiteAnnouncementSiteState,
 } from "~/types/siteAnnouncements"
+import { SITE_ANNOUNCEMENT_STATUS } from "~/types/siteAnnouncements"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
-import { showResultToast } from "~/utils/core/toastHelpers"
+import { showResultToast, showWarningToast } from "~/utils/core/toastHelpers"
 import { openSettingsTab, pushWithinOptionsPage } from "~/utils/navigation"
 
 import { SiteAnnouncementsFiltersCard } from "./components/SiteAnnouncementsFiltersCard"
@@ -179,6 +180,14 @@ export default function SiteAnnouncementsPage({
   )
 
   const selectedStatus = status.find((item) => item.siteKey === siteKey)
+  const aggregateFailedSiteCount = status.filter(
+    (item) => item.status === SITE_ANNOUNCEMENT_STATUS.Error,
+  ).length
+  const aggregateUnsupportedSiteCount = status.filter(
+    (item) => item.status === SITE_ANNOUNCEMENT_STATUS.Unsupported,
+  ).length
+  const hasAggregateIssues =
+    aggregateFailedSiteCount + aggregateUnsupportedSiteCount > 0
   const manualCheckAccountIds = useMemo(
     () => [...new Set(filteredRecords.map((record) => record.accountId))],
     [filteredRecords],
@@ -258,11 +267,27 @@ export default function SiteAnnouncementsPage({
                 typeof checkResult.failed === "number" ? checkResult.failed : 0,
             }
           : undefined
+      const failedCount = checkResult?.failed ?? 0
+      const unsupportedCount = checkResult?.unsupported ?? 0
+      const hasPartialIssues = success && failedCount + unsupportedCount > 0
       if (success) {
         if (checkInsights) {
-          tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
-            insights: checkInsights,
-          })
+          tracker.complete(
+            hasPartialIssues
+              ? PRODUCT_ANALYTICS_RESULTS.Failure
+              : PRODUCT_ANALYTICS_RESULTS.Success,
+            {
+              ...(hasPartialIssues
+                ? {
+                    errorCategory:
+                      failedCount > 0
+                        ? PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown
+                        : PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unsupported,
+                  }
+                : {}),
+              insights: checkInsights,
+            },
+          )
         } else {
           tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
         }
@@ -277,12 +302,21 @@ export default function SiteAnnouncementsPage({
             : { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
         )
       }
-      showResultToast({
-        success,
-        message: getRuntimeMessageToastMessage(response),
-        successFallback: t("messages.checkCompleted"),
-        errorFallback: t("messages.checkFailed"),
-      })
+      if (hasPartialIssues) {
+        showWarningToast(
+          t("messages.checkCompletedWithIssues", {
+            failed: failedCount,
+            unsupported: unsupportedCount,
+          }),
+        )
+      } else {
+        showResultToast({
+          success,
+          message: getRuntimeMessageToastMessage(response),
+          successFallback: t("messages.checkCompleted"),
+          errorFallback: t("messages.checkFailed"),
+        })
+      }
       await loadData()
     } catch (error) {
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
@@ -501,6 +535,17 @@ export default function SiteAnnouncementsPage({
         onSiteTypeChange={setSiteType}
         onUnreadFilterChange={setUnreadFilter}
       />
+
+      {siteKey === "all" && hasAggregateIssues ? (
+        <Notice
+          tone="warning"
+          title={t("status.aggregateIssuesTitle")}
+          description={t("status.aggregateIssues", {
+            failed: aggregateFailedSiteCount,
+            unsupported: aggregateUnsupportedSiteCount,
+          })}
+        />
+      ) : null}
 
       {selectedStatus && (
         <SiteAnnouncementsStatusAlert status={selectedStatus} />

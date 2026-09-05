@@ -21,6 +21,11 @@
       "placeholder": "https://api.example.com"
     },
     "groups": {
+      "discoveryStatus": {
+        "failed": "Không thể tải nhóm từ trang được quản lý. Bạn vẫn có thể nhập thủ công.",
+        "not-ready": "Hãy cấu hình trang được quản lý trước. Bạn vẫn có thể nhập nhóm thủ công.",
+        "unsupported": "Trang được quản lý này không hỗ trợ khám phá nhóm. Hãy dùng giá trị mặc định hoặc nhập thủ công."
+      },
       "hint": "Nhóm bắt nguồn từ các trang web bạn quản lý",
       "label": "Nhóm kênh",
       "loading": "Đang tải nhóm...",
@@ -29,7 +34,8 @@
     "key": {
       "label": "Khóa API",
       "placeholder": "Nhập khóa API của nhà cung cấp thượng nguồn",
-      "realKeyHint": "Khi giao diện danh sách không trả về khóa kênh đầy đủ, bạn có thể tải khóa thực tại đây; một số loại kênh cũng có thể yêu cầu xác minh bổ sung."
+      "realKeyHint": "Khi giao diện danh sách không trả về khóa kênh đầy đủ, bạn có thể tải khóa thực tại đây; một số loại kênh cũng có thể yêu cầu xác minh bổ sung.",
+      "realKeyUnavailable": "Loại trang này không hỗ trợ xem khóa đã lưu. Hãy nhập khóa mới nếu bạn cần thay thế."
     },
     "models": {
       "hint": "Nhập để tìm kiếm hoặc nhấn Enter để thêm tên mô hình tùy chỉnh",

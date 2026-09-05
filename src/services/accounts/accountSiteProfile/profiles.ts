@@ -3,15 +3,11 @@ import { createLegacyTodayStatsAvailability } from "~/services/accounts/accountT
 import { AuthTypeEnum } from "~/types"
 
 import {
-  ACCOUNT_SITE_AUTH_SESSION_REFRESH_LOCK_SCOPES,
   ACCOUNT_SITE_CREATED_TOKEN_SECRET_HANDLING,
   ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS,
-  ACCOUNT_SITE_MODEL_LIST_DIRECT_PRICING,
   ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES,
   ACCOUNT_SITE_MODEL_LIST_GROUP_SEMANTICS,
-  ACCOUNT_SITE_MODEL_LIST_PROVIDER_CATALOGS,
   ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES,
-  ACCOUNT_SITE_MODEL_LIST_TOKEN_SCOPED_CATALOG_FALLBACKS,
   ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS,
   ACCOUNT_SITE_TOKEN_FORM_NETWORK_LIMIT_POLICIES,
   type AccountSiteProductProfile,
@@ -23,12 +19,9 @@ export const DEFAULT_ACCOUNT_SITE_PRODUCT_PROFILE: AccountSiteProductProfile = {
     allowedAuthTypes: [AuthTypeEnum.AccessToken, AuthTypeEnum.Cookie],
     defaultAuthType: AuthTypeEnum.AccessToken,
     defaultAuthHostnames: [],
-    supportsCookieAuth: true,
   },
   authSession: {
     kind: ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS.None,
-    decoratesAccountApiRequests: false,
-    refreshLockScope: ACCOUNT_SITE_AUTH_SESSION_REFRESH_LOCK_SCOPES.None,
   },
   createdToken: {
     secretHandling: ACCOUNT_SITE_CREATED_TOKEN_SECRET_HANDLING.ResponseKey,
@@ -38,10 +31,6 @@ export const DEFAULT_ACCOUNT_SITE_PRODUCT_PROFILE: AccountSiteProductProfile = {
     storedUserIdentityFields: ["id"],
   },
   modelList: {
-    directPricing: ACCOUNT_SITE_MODEL_LIST_DIRECT_PRICING.Supported,
-    providerCatalog: ACCOUNT_SITE_MODEL_LIST_PROVIDER_CATALOGS.None,
-    tokenScopedCatalogFallback:
-      ACCOUNT_SITE_MODEL_LIST_TOKEN_SCOPED_CATALOG_FALLBACKS.None,
     dashboardEstimateLoader:
       ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS.None,
     statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Account,
@@ -53,9 +42,6 @@ export const DEFAULT_ACCOUNT_SITE_PRODUCT_PROFILE: AccountSiteProductProfile = {
   metrics: {
     deferredTodayStatsAvailability: createLegacyTodayStatsAvailability(),
     legacyTodayStatsAvailability: createLegacyTodayStatsAvailability(),
-  },
-  supplementalAuth: {
-    kind: ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS.None,
   },
   tokenForm: {
     networkLimitPolicy: ACCOUNT_SITE_TOKEN_FORM_NETWORK_LIMIT_POLICIES.IpList,

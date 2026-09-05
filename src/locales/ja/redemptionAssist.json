@@ -2,9 +2,12 @@
   "accountSelect": {
     "confirm": "引き換えを確認",
     "noResults": "一致するアカウントが見つかりません",
+    "noSupportedAccounts": "保存済みアカウントはいずれも自動引き換えに対応していません。該当サイトでコードを手動で引き換えてください。",
+    "openSiteManual": "サイトを開いて手動で引き換える",
     "title": "引き換えに使用するアカウントを選択してください",
     "titleFallback": "このサイトに一致するアカウントがありません。手動で選択してください",
-    "titleMultiple": "利用可能なアカウントが複数あります。引き換えに使うアカウントを選択してください"
+    "titleMultiple": "利用可能なアカウントが複数あります。引き換えに使うアカウントを選択してください",
+    "unsupported": "このサイトタイプは自動引き換えに対応していません"
   },
   "actions": {
     "autoRedeem": "自動引き換え"
@@ -25,7 +28,8 @@
     "selectAll": "すべて選択",
     "success": {
       "settingsSaved": "Redemption Assist の設定を保存しました"
-    }
+    },
+    "unsupportedSiteType": "このアカウントのサイトタイプは自動引き換えに対応していません。別のアカウントを選択するか、サイトで手動で引き換えてください。"
   },
   "settings": {
     "contextMenu": {

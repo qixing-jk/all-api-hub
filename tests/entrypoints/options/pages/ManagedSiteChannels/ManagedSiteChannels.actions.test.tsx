@@ -1628,10 +1628,24 @@ describe("ManagedSiteChannels", () => {
       }),
     ).toBeInTheDocument()
     expect(
-      screen.queryByRole("button", {
+      screen.getByRole("button", {
         name: "managedSiteChannels:toolbar.syncSelected",
       }),
-    ).not.toBeInTheDocument()
+    ).toBeDisabled()
+    expect(
+      screen.getByRole("button", {
+        name: "managedSiteChannels:toolbar.syncSelected",
+      }).parentElement,
+    ).toHaveAccessibleDescription("messages:managedSite.unsupportedModelSync")
+
+    const row = screen.getByText("Claude Provider").closest("tr")
+    expect(row).toBeTruthy()
+    await openRowActionsMenu(row!, userEvent.setup())
+    expect(
+      await screen.findByRole("menuitem", {
+        name: /managedSiteChannels:table.rowActions.sync.*messages:managedSite.unsupportedModelSync/,
+      }),
+    ).toHaveAttribute("aria-disabled", "true")
   })
 
   it("keeps refresh and migration row actions available in migration mode", async () => {

@@ -71,7 +71,7 @@
     "toggleLabel": "Tự động điền URL trang hiện tại khi thêm tài khoản"
   },
   "autoProvisionKeyOnAccountAdd": {
-    "description": "Kiểm soát việc có tự động tạo API Key mặc định sau khi thêm tài khoản hay không.",
+    "description": "Kiểm soát việc có tự động tạo API Key mặc định sau khi thêm tài khoản được hỗ trợ hay không.",
     "title": "API Key",
     "toggleDesc": "Sau khi bật, khi lưu tài khoản xong, hệ thống sẽ kiểm tra danh sách key từ xa; nếu chưa có key thì tự động tạo một key mặc định.",
     "toggleLabel": "Tự động tạo API Key mặc định sau khi thêm tài khoản"

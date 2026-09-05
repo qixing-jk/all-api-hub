@@ -38,8 +38,8 @@ const buildCapabilities = (overrides?: {
       get: vi.fn(),
     },
     queries: {
-      fetchSiteUserGroups: vi.fn().mockResolvedValue([]),
-      fetchAccountAvailableModels: vi.fn().mockResolvedValue([]),
+      siteUserGroups: { fetch: vi.fn().mockResolvedValue([]) },
+      accountAvailableModels: { fetch: vi.fn().mockResolvedValue([]) },
     },
     channelDrafts: {
       fetchAvailableModels: vi.fn(),
@@ -63,14 +63,14 @@ describe("managed site service facade", () => {
     const service = getManagedSiteServiceForType(SITE_TYPES.AXON_HUB)
 
     await expect(
-      service.fetchSiteUserGroups({
+      service.fetchSiteUserGroups!({
         baseUrl: "https://managed.example.invalid",
         email: "admin@example.invalid",
         password: "password",
       }),
     ).resolves.toEqual([])
     await expect(
-      service.fetchAccountAvailableModels({
+      service.fetchAccountAvailableModels!({
         baseUrl: "https://managed.example.invalid",
         email: "admin@example.invalid",
         password: "password",

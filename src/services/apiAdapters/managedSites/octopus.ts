@@ -294,8 +294,8 @@ const octopusManagedSiteConfig: ManagedSiteConfigCapability<OctopusConfig> =
   createManagedSiteConfigCapability(SITE_TYPES.OCTOPUS, checkValidOctopusConfig)
 
 const octopusManagedSiteQueries: ManagedSiteQueriesCapability<OctopusConfig> = {
-  fetchSiteUserGroups: fetchGroups,
-  fetchAccountAvailableModels: fetchOctopusAvailableModels,
+  siteUserGroups: { fetch: fetchGroups },
+  accountAvailableModels: { fetch: fetchOctopusAvailableModels },
 }
 
 const octopusManagedSiteChannelDrafts: ManagedSiteChannelDraftsCapability = {

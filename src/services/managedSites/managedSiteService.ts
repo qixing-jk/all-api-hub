@@ -78,9 +78,9 @@ export interface ManagedSiteService<
   checkValidConfig(): Promise<boolean>
   getConfig(): Promise<TConfig | null>
 
-  fetchSiteUserGroups(config: TConfig): Promise<string[]>
+  fetchSiteUserGroups?(config: TConfig): Promise<string[]>
 
-  fetchAccountAvailableModels(config: TConfig): Promise<string[]>
+  fetchAccountAvailableModels?(config: TConfig): Promise<string[]>
 
   fetchAvailableModels(
     account: DisplaySiteData,
@@ -126,7 +126,7 @@ type ManagedSiteCapabilities = NonNullable<
 type RequiredManagedSiteCapabilities = {
   channels: NonNullable<ManagedSiteCapabilities["channels"]>
   config: NonNullable<ManagedSiteCapabilities["config"]>
-  queries: NonNullable<ManagedSiteCapabilities["queries"]>
+  queries?: ManagedSiteCapabilities["queries"]
   channelDrafts: NonNullable<ManagedSiteCapabilities["channelDrafts"]>
 }
 
@@ -141,7 +141,6 @@ function requireManagedSiteCapabilities(
   if (
     !managedSites?.channels ||
     !managedSites.config ||
-    !managedSites.queries ||
     !managedSites.channelDrafts
   ) {
     throw new Error(
@@ -249,9 +248,15 @@ export function getManagedSiteServiceForType(
     deleteChannel: capabilities.channels.delete,
     checkValidConfig: capabilities.config.checkValid,
     getConfig: capabilities.config.get,
-    fetchSiteUserGroups: capabilities.queries.fetchSiteUserGroups,
-    fetchAccountAvailableModels:
-      capabilities.queries.fetchAccountAvailableModels,
+    ...(capabilities.queries?.siteUserGroups
+      ? { fetchSiteUserGroups: capabilities.queries.siteUserGroups.fetch }
+      : {}),
+    ...(capabilities.queries?.accountAvailableModels
+      ? {
+          fetchAccountAvailableModels:
+            capabilities.queries.accountAvailableModels.fetch,
+        }
+      : {}),
     fetchAvailableModels: capabilities.channelDrafts.fetchAvailableModels,
     buildChannelName: capabilities.channelDrafts.buildName,
     prepareChannelFormData: capabilities.channelDrafts.prepareFormData,

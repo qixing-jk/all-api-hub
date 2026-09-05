@@ -21,6 +21,11 @@
       "placeholder": "https://api.example.com"
     },
     "groups": {
+      "discoveryStatus": {
+        "failed": "Gruppen konnten nicht geladen werden. Sie können sie weiterhin manuell eingeben.",
+        "not-ready": "Konfigurieren Sie zuerst die verwaltete Website. Gruppen können weiterhin manuell eingegeben werden.",
+        "unsupported": "Diese verwaltete Website unterstützt keine Gruppenerkennung. Verwenden Sie Standardwerte oder geben Sie Gruppen manuell ein."
+      },
       "hint": "Gruppen stammen von Ihrer verwalteten Website",
       "label": "Kanalgruppen",
       "loading": "Gruppen werden geladen...",
@@ -29,7 +34,8 @@
     "key": {
       "label": "API-Schlüssel",
       "placeholder": "Geben Sie den API-Schlüssel des Upstream-Anbieters ein",
-      "realKeyHint": "Wenn in der Kanalliste der vollständige Schlüssel weggelassen oder maskiert wurde, laden Sie hier den echten Schlüssel. Für einige verwaltete Website-Typen ist möglicherweise eine zusätzliche Überprüfung erforderlich."
+      "realKeyHint": "Wenn in der Kanalliste der vollständige Schlüssel weggelassen oder maskiert wurde, laden Sie hier den echten Schlüssel. Für einige verwaltete Website-Typen ist möglicherweise eine zusätzliche Überprüfung erforderlich.",
+      "realKeyUnavailable": "Dieser Website-Typ unterstützt das Anzeigen des gespeicherten Schlüssels nicht. Geben Sie zum Ersetzen einen neuen Schlüssel ein."
     },
     "models": {
       "hint": "Geben Sie zum Suchen ein oder drücken Sie die Eingabetaste, um einen benutzerdefinierten Modellnamen hinzuzufügen",

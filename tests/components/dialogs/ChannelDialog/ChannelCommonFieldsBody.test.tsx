@@ -116,6 +116,30 @@ describe("ChannelCommonFieldsBody", () => {
     expect(onCancelLoadRealKey).toHaveBeenCalledOnce()
   })
 
+  it("associates an unavailable saved-key explanation with the secret input", () => {
+    render(
+      <ChannelSecretField
+        t={t}
+        value=""
+        onChange={vi.fn()}
+        disabled={false}
+        revealed={false}
+        onRevealedChange={vi.fn()}
+        realKeyUnavailableMessage="This site type cannot show saved keys. Enter a new key to replace it."
+      />,
+    )
+
+    const input = screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.keyInput)
+    expect(input).toHaveAccessibleDescription(
+      "This site type cannot show saved keys. Enter a new key to replace it.",
+    )
+    expect(
+      screen.getByText(
+        "This site type cannot show saved keys. Enter a new key to replace it.",
+      ),
+    ).toBeVisible()
+  })
+
   it("renders injected model actions beside the shared bulk actions", async () => {
     const user = userEvent.setup()
     const onInjectedAction = vi.fn()
@@ -331,6 +355,7 @@ describe("ChannelCommonFieldsBody", () => {
         isLoadingRealKey={false}
         isLoadingModels={false}
         isLoadingGroups={false}
+        groupDiscoveryStatus="available"
         showUnknownStringType={false}
         showGenericModelsField
         showGroupsField={false}
@@ -429,5 +454,76 @@ describe("ChannelCommonFieldsBody", () => {
     await user.click(statusSelect)
     expect(statusSelect).toHaveAttribute("aria-expanded", "true")
     expect(screen.getByRole("option", { name: "Enabled" })).toHaveFocus()
+  })
+
+  it("explains when managed-site group discovery is unsupported", () => {
+    render(
+      <ChannelCommonFieldsBody
+        t={t}
+        values={{
+          name: "Example channel",
+          type: "openai",
+          key: "secret-placeholder",
+          baseURL: "https://api.example.invalid",
+          models: [],
+          groups: ["default"],
+          priority: 0,
+          weight: 0,
+          status: "enabled",
+        }}
+        channelTypeOptions={[]}
+        availableModels={[]}
+        availableGroups={[{ value: "default", label: "Default" }]}
+        statusOptions={[]}
+        isViewMode={false}
+        isAddMode
+        isInteractionDisabled={false}
+        isKeyRequired
+        isBaseURLRequired={false}
+        isKeyRevealed={false}
+        canLoadRealKey={false}
+        isLoadingRealKey={false}
+        isLoadingModels={false}
+        isLoadingGroups={false}
+        groupDiscoveryStatus="unsupported"
+        showUnknownStringType={false}
+        showGenericModelsField={false}
+        showGroupsField
+        showPriorityAndWeight={false}
+        showModelPrefillWarning={false}
+        onNameChange={vi.fn()}
+        onTypeChange={vi.fn()}
+        onKeyChange={vi.fn()}
+        onKeyRevealedChange={vi.fn()}
+        onLoadRealKey={vi.fn()}
+        onBaseURLChange={vi.fn()}
+        onModelsChange={vi.fn()}
+        onGroupsChange={vi.fn()}
+        onSelectAllModels={vi.fn()}
+        onInverseModels={vi.fn()}
+        onDeselectAllModels={vi.fn()}
+        onPriorityChange={vi.fn()}
+        onWeightChange={vi.fn()}
+        onStatusChange={vi.fn()}
+      />,
+    )
+
+    expect(
+      screen.getByText(
+        "channelDialog:fields.groups.discoveryStatus.unsupported",
+      ),
+    ).toBeVisible()
+    expect(
+      screen.getByRole("combobox", {
+        name: "channelDialog:fields.groups.label",
+      }),
+    ).toHaveAccessibleDescription(
+      "channelDialog:fields.groups.discoveryStatus.unsupported",
+    )
+    expect(
+      screen.getByRole("status", {
+        name: "channelDialog:fields.groups.discoveryStatus.unsupported",
+      }),
+    ).toBeVisible()
   })
 })

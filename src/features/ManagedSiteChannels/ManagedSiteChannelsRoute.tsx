@@ -14,11 +14,7 @@ import {
 } from "~/components/ui"
 import type { ManagedSiteType } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import {
-  MANAGED_RESOURCE_MODES,
-  MANAGED_RESOURCE_PRODUCT_ACTIONS,
-  type ManagedResourceProductPolicy,
-} from "~/services/accountSiteDefinitions/contracts"
+import type { ManagedResourceProductPolicy } from "~/services/accountSiteDefinitions/contracts"
 import {
   getAccountSiteDefinition,
   getManagedSiteTypeValues,
@@ -33,12 +29,15 @@ import {
   type ResourceOperationOptions,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { getManagedResourceRegistration } from "~/services/apiAdapters/managedResources/registry"
+import { resolveManagedSiteMigrationCapability } from "~/services/managedSites/channelMigrationCapabilityRegistry"
 import {
   getManagedSiteAdminConfigForType,
   getManagedSiteConfigMissingMessage,
   getManagedSiteLabel,
   getManagedSiteMessagesKeyFromSiteType,
   getManagedSiteTargetOptions,
+  getManagedSiteUnsupportedModelSyncMessage,
+  supportsManagedSiteModelSync,
 } from "~/services/managedSites/utils/managedSite"
 import {
   startProductAnalyticsAction,
@@ -473,17 +472,8 @@ function NativeManagedSiteChannels({
     [t],
   )
   const canMigrate =
-    policy.actions.includes(MANAGED_RESOURCE_PRODUCT_ACTIONS.Migrate) &&
+    resolveManagedSiteMigrationCapability(siteType)?.source !== undefined &&
     targets.length > 0
-  const canSyncModels = policy.actions.includes(
-    MANAGED_RESOURCE_PRODUCT_ACTIONS.SyncModels,
-  )
-  const canConfigureModelSync = policy.actions.includes(
-    MANAGED_RESOURCE_PRODUCT_ACTIONS.ConfigureModelSync,
-  )
-  const canConfigureModelFilters = policy.actions.includes(
-    MANAGED_RESOURCE_PRODUCT_ACTIONS.ConfigureModelFilters,
-  )
   const nativeRows = useMemo(
     () =>
       list.allRows.map((row) => {
@@ -493,27 +483,16 @@ function NativeManagedSiteChannels({
           capabilities: {
             ...row.capabilities,
             canMigrate: canMigrate && row.capabilities.canView,
-            canSync: canSyncModels && channelActions?.canSyncModels === true,
-            canOpenSync:
-              canConfigureModelSync &&
-              channelActions?.canOpenModelSync === true,
-            canFilter:
-              canConfigureModelFilters &&
-              channelActions?.canConfigureModelFilters === true,
+            canSync: channelActions?.canSyncModels === true,
+            canOpenSync: channelActions?.canOpenModelSync === true,
+            canFilter: channelActions?.canConfigureModelFilters === true,
           },
           isSyncing:
             channelActions !== undefined &&
             syncingChannelIds.has(channelActions.channelId),
         }
       }),
-    [
-      canConfigureModelFilters,
-      canConfigureModelSync,
-      canMigrate,
-      canSyncModels,
-      list.allRows,
-      syncingChannelIds,
-    ],
+    [canMigrate, list.allRows, syncingChannelIds],
   )
   const rowsByKey = useMemo(
     () => new Map(nativeRows.map((row) => [row.rowKey, row])),
@@ -610,14 +589,13 @@ function NativeManagedSiteChannels({
     },
   }
   const capabilities: ManagedChannelsCapabilities = {
-    canCreate:
-      mutation.capabilities.canCreate &&
-      policy.actions.includes(MANAGED_RESOURCE_PRODUCT_ACTIONS.Create),
+    canCreate: mutation.capabilities.canCreate,
     canRefresh: true,
-    canDeleteSelected:
-      mutation.capabilities.canDelete &&
-      policy.actions.includes(MANAGED_RESOURCE_PRODUCT_ACTIONS.DeleteSelected),
+    canDeleteSelected: mutation.capabilities.canDelete,
     canSyncSelected: nativeRows.some((row) => row.capabilities.canSync),
+    modelSyncUnavailableReason: supportsManagedSiteModelSync(siteType)
+      ? undefined
+      : getManagedSiteUnsupportedModelSyncMessage(t, siteType),
     canToggleMigration: canMigrate || migrationMode,
     canMigrateSelected: canMigrate,
     canMigrateFiltered: canMigrate,
@@ -966,7 +944,11 @@ export function ManagedSiteChannelsRoute({
 
   if (!policy) return <ManagedSiteChannelsIntegrationFailure />
 
-  if (policy.mode === MANAGED_RESOURCE_MODES.LegacyChannel) {
+  const registration = getManagedResourceRegistration(
+    siteType,
+    policy.primaryKind,
+  )
+  if (!registration) {
     return (
       <ManagedSiteChannels
         siteType={siteType}
@@ -976,12 +958,6 @@ export function ManagedSiteChannelsRoute({
       />
     )
   }
-
-  const registration = getManagedResourceRegistration(
-    siteType,
-    policy.primaryKind,
-  )
-  if (!registration) return <ManagedSiteChannelsIntegrationFailure />
 
   return (
     <NativeManagedSiteChannels
