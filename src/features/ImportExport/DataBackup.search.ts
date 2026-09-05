@@ -39,6 +39,70 @@ export const dataBackupSearchSections: OptionsSearchItemDefinition[] = [
 
 export const dataBackupSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
+    "control:webdav-provider",
+    "dataBackup",
+    WEBDAV_TARGET_IDS.provider,
+    "importExport:webdav.provider.label",
+    719,
+    {
+      descriptionKey: "importExport:webdav.configDesc",
+      breadcrumbsKeys: [
+        ...DEFAULT_BREADCRUMBS,
+        "settings:tabs.dataBackup",
+        "importExport:webdav.title",
+      ],
+      keywords: ["sync", "provider", "webdav", "gist", "github"],
+    },
+  ),
+  buildControlDefinition(
+    "control:github-gist-token",
+    "dataBackup",
+    WEBDAV_TARGET_IDS.gistToken,
+    "importExport:webdav.gist.token",
+    719.1,
+    {
+      descriptionKey: "importExport:webdav.gist.tokenDesc",
+      breadcrumbsKeys: [
+        ...DEFAULT_BREADCRUMBS,
+        "settings:tabs.dataBackup",
+        "importExport:webdav.gist.title",
+      ],
+      keywords: ["github", "gist", "token", "secret"],
+    },
+  ),
+  buildControlDefinition(
+    "control:github-gist-id",
+    "dataBackup",
+    WEBDAV_TARGET_IDS.gistId,
+    "importExport:webdav.gist.id",
+    719.2,
+    {
+      descriptionKey: "importExport:webdav.gist.idDesc",
+      breadcrumbsKeys: [
+        ...DEFAULT_BREADCRUMBS,
+        "settings:tabs.dataBackup",
+        "importExport:webdav.gist.title",
+      ],
+      keywords: ["github", "gist", "id", "url"],
+    },
+  ),
+  buildControlDefinition(
+    "control:github-gist-create",
+    "dataBackup",
+    WEBDAV_TARGET_IDS.createGist,
+    "importExport:webdav.gist.create",
+    719.3,
+    {
+      descriptionKey: "importExport:webdav.gist.secretDescription",
+      breadcrumbsKeys: [
+        ...DEFAULT_BREADCRUMBS,
+        "settings:tabs.dataBackup",
+        "importExport:webdav.gist.title",
+      ],
+      keywords: ["github", "gist", "create", "upload", "backup"],
+    },
+  ),
+  buildControlDefinition(
     "control:webdav-url",
     "dataBackup",
     WEBDAV_TARGET_IDS.url,

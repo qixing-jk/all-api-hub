@@ -14,6 +14,7 @@ import {
   type UserPreferences,
 } from "~/services/preferences/userPreferences"
 import type { SiteAccount } from "~/types"
+import { CLOUD_SYNC_PROVIDERS } from "~/types/webdav"
 
 const readyCheckinAccount = {
   disabled: false,
@@ -175,6 +176,36 @@ describe("overview configuration model", () => {
         },
       ],
     ])
+  })
+
+  it("treats an encrypted Secret Gist as the configured backup provider", () => {
+    const items = buildConfigurationOverviewItems({
+      enabledAccountCount: 0,
+      accounts: [],
+      profileCount: 0,
+      preferences: {
+        ...basePreferences,
+        webdav: {
+          ...basePreferences.webdav,
+          provider: CLOUD_SYNC_PROVIDERS.GITHUB_GIST,
+          backupEncryptionPassword: "local-only-password",
+          githubGist: {
+            token: "local-only-token",
+            gistId: "gist-id",
+          },
+        },
+      },
+      managedSiteType: undefined,
+      hasUsageData: false,
+    })
+
+    expect(items.find((item) => item.id === "backupSync")).toMatchObject({
+      status: "configured",
+      subItems: [
+        { id: "webdavManual", status: "configured" },
+        { id: "webdavAutoSync", status: "disabled" },
+      ],
+    })
   })
 
   it("shows managed-site setup and model sync states for the selected managed site", () => {

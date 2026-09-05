@@ -108,6 +108,7 @@ import {
   type VeloeraConfig,
 } from "~/types/veloeraConfig"
 import {
+  CLOUD_SYNC_PROVIDERS,
   DEFAULT_WEBDAV_SETTINGS,
   type WebDAVSettings,
   type WebDAVSyncStrategy,
@@ -954,12 +955,14 @@ class UserPreferencesService {
    * Update WebDAV credentials/settings.
    */
   async updateWebdavSettings(settings: {
+    provider?: WebDAVSettings["provider"]
     url?: string
     username?: string
     password?: string
     backupEncryptionEnabled?: boolean
     backupEncryptionPassword?: string
     syncData?: WebDAVSettings["syncData"]
+    githubGist?: WebDAVSettings["githubGist"]
   }): Promise<PreferenceWriteResult> {
     return this.savePreferences({
       webdav: settings,
@@ -1040,6 +1043,49 @@ class UserPreferencesService {
    */
   async exportPreferences(): Promise<UserPreferences> {
     return this.getPreferences()
+  }
+
+  /**
+   * Export preferences for a backup file without GitHub Gist credentials.
+   *
+   * Existing WebDAV exports historically contained the active WebDAV fields,
+   * so keep that behavior for WebDAV users. Gist credentials and identifiers
+   * are always local-only; when Gist is active, the WebDAV fields are also
+   * blanked so a Gist backup cannot carry stale cloud credentials.
+   */
+  async exportPreferencesForBackup(): Promise<UserPreferences> {
+    const preferences = await this.getPreferences()
+    const isGistProvider =
+      preferences.webdav.provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST
+    const sanitized = {
+      ...structuredClone(preferences),
+      webdav: {
+        ...preferences.webdav,
+        ...(isGistProvider
+          ? {
+              url: "",
+              username: "",
+              password: "",
+              backupEncryptionPassword: "",
+            }
+          : {}),
+        githubGist: {
+          ...(preferences.webdav.githubGist ?? {}),
+          token: "",
+          gistId: "",
+          gistUrl: "",
+        },
+      },
+    }
+
+    // Older installations may still expose the pre-nested WebDAV fields while
+    // a migration is being completed. Never copy those legacy fields into a
+    // new backup; the nested WebDAV object remains the compatibility shape.
+    delete sanitized.webdavUrl
+    delete sanitized.webdavUsername
+    delete sanitized.webdavPassword
+
+    return sanitized
   }
 
   /**

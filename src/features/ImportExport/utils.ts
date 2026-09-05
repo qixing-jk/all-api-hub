@@ -32,6 +32,14 @@ import { t } from "~/utils/i18n/core"
  */
 const logger = createLogger("ImportExportUtils")
 
+/** Export a backup-safe preference snapshot, with compatibility for older test doubles. */
+async function exportPreferencesForBackup() {
+  if (typeof userPreferences.exportPreferencesForBackup === "function") {
+    return userPreferences.exportPreferencesForBackup()
+  }
+  return userPreferences.exportPreferences()
+}
+
 export { BACKUP_VERSION, normalizeBackupForMerge, parseBackupSummary }
 export type {
   BackupFullV2,
@@ -104,7 +112,7 @@ export const handleExportAll = async (
     ] = await Promise.all([
       accountDataTransfer.exportData(),
       tagStorage.exportTagStore(),
-      userPreferences.exportPreferences(),
+      exportPreferencesForBackup(),
       featureGuidanceState.getState(),
       channelConfigStorage.exportConfigs(),
       apiCredentialProfilesStorage.exportConfig(),
@@ -201,7 +209,7 @@ export const handleExportPreferences = async (
     setIsExporting(true)
 
     const [preferencesData, featureGuidance] = await Promise.all([
-      userPreferences.exportPreferences(),
+      exportPreferencesForBackup(),
       featureGuidanceState.getState(),
     ])
     const exportData: BackupPreferencesPartialV2 = {

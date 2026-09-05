@@ -82,7 +82,10 @@ vi.mock(import("~/utils/browser/browserApi"), async (importOriginal) => {
 const mockGetPreferences = vi.fn()
 const mockSavePreferences = vi.fn()
 const mockExportPreferences = vi.fn()
+const mockExportPreferencesForBackup = vi.fn()
 const mockImportPreferences = vi.fn()
+
+mockExportPreferencesForBackup.mockImplementation(() => mockExportPreferences())
 
 const preferenceWriteSuccess = () => ({
   ok: true,
@@ -105,6 +108,8 @@ vi.mock(
       getPreferences: (...args: any[]) => mockGetPreferences(...args),
       savePreferences: (...args: any[]) => mockSavePreferences(...args),
       exportPreferences: (...args: any[]) => mockExportPreferences(...args),
+      exportPreferencesForBackup: (...args: any[]) =>
+        mockExportPreferencesForBackup(...args),
       importPreferences: (...args: any[]) => mockImportPreferences(...args),
     })
     return {
@@ -896,6 +901,9 @@ describe("WebdavAutoSyncService.syncWithWebdav (selective sync)", () => {
 
     mockTagStoreExport.mockResolvedValue({ version: 1, tagsById: {} })
     mockExportPreferences.mockResolvedValue({ lastUpdated: 1 } as any)
+    mockExportPreferencesForBackup.mockImplementation(() =>
+      mockExportPreferences(),
+    )
     mockChannelConfigExport.mockResolvedValue({ schemaVersion: 1, configs: {} })
     mockApiCredentialProfilesExport.mockResolvedValue({
       version: 2,
@@ -1712,6 +1720,36 @@ describe("WebdavAutoSyncService scheduling (alarms)", () => {
 
     expect(mockClearAlarm).not.toHaveBeenCalled()
     expect(mockCreateAlarm).not.toHaveBeenCalled()
+    expect(service.getStatus().isRunning).toBe(true)
+  })
+
+  it("schedules GitHub Gist auto-sync with a five-minute minimum interval", async () => {
+    const service = createService()
+
+    mockGetPreferences.mockResolvedValueOnce({
+      webdav: {
+        ...basePreferences.webdav,
+        provider: "github_gist",
+        url: "",
+        username: "",
+        password: "",
+        backupEncryptionPassword: "encryption-password",
+        githubGist: { token: "token", gistId: "gist-1" },
+        syncInterval: 60,
+      },
+    })
+    mockGetAlarm.mockResolvedValueOnce(undefined).mockResolvedValueOnce({
+      name: "webdavAutoSync",
+      periodInMinutes: 5,
+      scheduledTime: Date.now(),
+    })
+
+    await service.setupAutoSync()
+
+    expect(mockCreateAlarm).toHaveBeenCalledWith("webdavAutoSync", {
+      delayInMinutes: 5,
+      periodInMinutes: 5,
+    })
     expect(service.getStatus().isRunning).toBe(true)
   })
 })

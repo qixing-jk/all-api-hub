@@ -60,6 +60,50 @@ export const importExportPageSearchSections: OptionsSearchItemDefinition[] = [
 
 export const importExportPageSearchControls: OptionsSearchItemDefinition[] = [
   buildPageControlDefinition(
+    "control:import-export-webdav-provider",
+    MENU_ITEM_IDS.IMPORT_EXPORT,
+    WEBDAV_TARGET_IDS.provider,
+    "importExport:webdav.provider.label",
+    739,
+    {
+      descriptionKey: "importExport:webdav.configDesc",
+      keywords: ["sync", "provider", "webdav", "gist", "github"],
+    },
+  ),
+  buildPageControlDefinition(
+    "control:import-export-github-gist-token",
+    MENU_ITEM_IDS.IMPORT_EXPORT,
+    WEBDAV_TARGET_IDS.gistToken,
+    "importExport:webdav.gist.token",
+    739.1,
+    {
+      descriptionKey: "importExport:webdav.gist.tokenDesc",
+      keywords: ["github", "gist", "token", "secret"],
+    },
+  ),
+  buildPageControlDefinition(
+    "control:import-export-github-gist-id",
+    MENU_ITEM_IDS.IMPORT_EXPORT,
+    WEBDAV_TARGET_IDS.gistId,
+    "importExport:webdav.gist.id",
+    739.2,
+    {
+      descriptionKey: "importExport:webdav.gist.idDesc",
+      keywords: ["github", "gist", "id", "url"],
+    },
+  ),
+  buildPageControlDefinition(
+    "control:import-export-github-gist-create",
+    MENU_ITEM_IDS.IMPORT_EXPORT,
+    WEBDAV_TARGET_IDS.createGist,
+    "importExport:webdav.gist.create",
+    739.3,
+    {
+      descriptionKey: "importExport:webdav.gist.secretDescription",
+      keywords: ["github", "gist", "create", "upload", "backup"],
+    },
+  ),
+  buildPageControlDefinition(
     "control:export-full-backup",
     MENU_ITEM_IDS.IMPORT_EXPORT,
     "export-full-backup",

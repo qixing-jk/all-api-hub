@@ -46,9 +46,11 @@ import {
   TASK_NOTIFICATION_TASKS,
 } from "~/types/taskNotifications"
 import {
+  CLOUD_SYNC_PROVIDERS,
   isWebdavSyncDataSelectionEmpty,
   resolveWebdavSyncDataSelection,
   WEBDAV_SYNC_STRATEGIES,
+  type CloudSyncProvider,
   type WebDAVSettings,
   type WebDAVSyncDataSelection,
 } from "~/types/webdav"
@@ -80,6 +82,13 @@ import {
   type RuntimeMessageResponse,
 } from "../runtimeMessaging/result"
 import {
+  downloadCloudSyncBackup,
+  getCloudSyncProvider,
+  testCloudSyncConnection,
+  uploadCloudSyncBackup,
+  type CloudSyncRemote,
+} from "./cloudSyncService"
+import {
   onWebdavAutoSyncMessage,
   type WebdavAutoSyncMutationResponse,
   type WebdavAutoSyncStatusResponse,
@@ -92,14 +101,19 @@ import {
   normalizeWebdavOrderedEntryIds,
 } from "./webdavSelectiveSync"
 import {
-  downloadBackup,
   isWebdavFileNotFoundError,
   parseWebdavBackupJson,
-  testWebdavConnection,
-  uploadBackup,
 } from "./webdavService"
 
 const logger = createLogger("WebdavAutoSync")
+
+/** Keep background sync compatible with older preference test doubles/builds. */
+async function exportPreferencesForBackup() {
+  if (typeof userPreferences.exportPreferencesForBackup === "function") {
+    return userPreferences.exportPreferencesForBackup()
+  }
+  return userPreferences.exportPreferences()
+}
 
 type UpdateWebdavAutoSyncSettingsResult =
   | {
@@ -118,11 +132,32 @@ type UpdateWebdavAutoSyncSettingsResult =
  * - `browser.alarms` operates in minutes and generally requires >= 1 minute.
  * - The options UI constrains WebDAV interval to [60..86400] seconds in 60s steps, but we still clamp defensively.
  */
-function clampWebdavSyncIntervalMinutes(value: unknown): number {
+function clampWebdavSyncIntervalMinutes(
+  value: unknown,
+  provider: CloudSyncProvider = CLOUD_SYNC_PROVIDERS.WEBDAV,
+): number {
   const seconds = Number(value)
   const safeSeconds = Number.isFinite(seconds) ? seconds : 3600
   const minutes = Math.trunc(safeSeconds / 60)
-  return Math.min(24 * 60, Math.max(1, minutes))
+  const minimumMinutes = provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST ? 5 : 1
+  return Math.min(24 * 60, Math.max(minimumMinutes, minutes))
+}
+
+/** Check the active provider's minimum credentials for scheduled sync. */
+function isCloudSyncConfigured(settings: WebDAVSettings): boolean {
+  if (getCloudSyncProvider(settings) === CLOUD_SYNC_PROVIDERS.GITHUB_GIST) {
+    return Boolean(
+      settings.githubGist?.token?.trim() &&
+        settings.githubGist?.gistId?.trim() &&
+        settings.backupEncryptionPassword?.trim(),
+    )
+  }
+
+  return Boolean(
+    settings.url?.trim() &&
+      settings.username?.trim() &&
+      settings.password?.trim(),
+  )
 }
 
 /**
@@ -206,16 +241,14 @@ class WebdavAutoSyncService {
         return
       }
 
-      // 检查WebDAV配置是否完整；缺失凭据时跳过自动同步
-      if (
-        !preferences.webdav.url ||
-        !preferences.webdav.username ||
-        !preferences.webdav.password
-      ) {
+      const provider = getCloudSyncProvider(preferences.webdav)
+
+      // 检查当前同步服务配置是否完整；缺失凭据时跳过自动同步。
+      if (!isCloudSyncConfigured(preferences.webdav)) {
         await clearAlarm(WebdavAutoSyncService.ALARM_NAME)
         await clearAlarm(WebdavAutoSyncService.BEST_EFFORT_UPLOAD_ALARM_NAME)
         this.isScheduled = false
-        logger.warn("WebDAV配置不完整，无法启动自动同步")
+        logger.warn("云端同步配置不完整，无法启动自动同步", { provider })
         return
       }
 
@@ -251,6 +284,7 @@ class WebdavAutoSyncService {
 
       const intervalMinutes = clampWebdavSyncIntervalMinutes(
         preferences.webdav.syncInterval,
+        provider,
       )
 
       // Preserve a matching alarm when possible so background restarts do not shift the schedule.
@@ -426,11 +460,7 @@ class WebdavAutoSyncService {
       return false
     }
 
-    if (
-      !preferences.webdav.url ||
-      !preferences.webdav.username ||
-      !preferences.webdav.password
-    ) {
+    if (!isCloudSyncConfigured(preferences.webdav)) {
       return false
     }
 
@@ -526,7 +556,7 @@ class WebdavAutoSyncService {
     ] = await Promise.all([
       accountDataTransfer.exportData(),
       tagStorage.exportTagStore(),
-      userPreferences.exportPreferences(),
+      exportPreferencesForBackup(),
       featureGuidanceState.getStateStrict(),
       channelConfigStorage.exportConfigs(),
       apiCredentialProfilesStorage.exportConfig(),
@@ -575,18 +605,28 @@ class WebdavAutoSyncService {
     }
   }
 
-  private async downloadRemoteBackupForWrite() {
+  private async downloadRemoteBackupForWrite(): Promise<{
+    data: BackupFullV2 | null
+    remote?: CloudSyncRemote
+  }> {
+    const preferences = await userPreferences.getPreferences()
+    const provider = getCloudSyncProvider(preferences.webdav)
     try {
-      const content = await downloadBackup(undefined, {
+      const result = await downloadCloudSyncBackup(preferences.webdav, {
         prepareForWrite: true,
       })
-      const remoteData = parseWebdavBackupJson<BackupFullV2>(content)
+      const remoteData = parseWebdavBackupJson<BackupFullV2>(result.content, {
+        requireBackupShape: true,
+      })
       logger.info("成功下载远程数据", { timestamp: remoteData?.timestamp })
-      return remoteData
+      return { data: remoteData, remote: result.remote }
     } catch (error: any) {
-      if (isWebdavFileNotFoundError(error)) {
+      if (
+        provider === CLOUD_SYNC_PROVIDERS.WEBDAV &&
+        isWebdavFileNotFoundError(error)
+      ) {
         logger.info("远程文件不存在，将创建新备份")
-        return null
+        return { data: null }
       }
 
       throw error
@@ -610,7 +650,8 @@ class WebdavAutoSyncService {
       ...localAccounts.map((account) => account.id),
       ...localBookmarks.map((bookmark) => bookmark.id),
     ])
-    const remoteData = await this.downloadRemoteBackupForWrite()
+    const remoteResult = await this.downloadRemoteBackupForWrite()
+    const remoteData = remoteResult.data
     const exportData = this.buildBackupExportData({
       accounts: localAccounts,
       bookmarks: localBookmarks,
@@ -637,8 +678,12 @@ class WebdavAutoSyncService {
       remoteBackup: remoteData,
     })
 
-    await uploadBackup(JSON.stringify(payload, null, 2))
-    logger.info("本地快照已尽力上传到 WebDAV")
+    await uploadCloudSyncBackup(
+      JSON.stringify(payload, null, 2),
+      (await userPreferences.getPreferences()).webdav,
+      remoteResult.remote?.revision,
+    )
+    logger.info("本地快照已尽力上传到云端同步服务")
   }
 
   /**
@@ -672,16 +717,22 @@ class WebdavAutoSyncService {
       localApiCredentialProfiles,
     } = await this.collectLocalSyncSnapshot()
 
+    const provider = getCloudSyncProvider(preferences.webdav)
+
     // 测试连接
     try {
-      await testWebdavConnection()
+      await testCloudSyncConnection(preferences.webdav)
     } catch (error) {
-      logger.error("WebDAV连接失败", error)
+      logger.error("云端同步服务连接失败", error)
+      if (provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST) {
+        throw error
+      }
       throw new Error(t("messages:webdav.connectionFailed", { status: "N/A" }))
     }
 
     // 下载远程数据
-    const remoteData = await this.downloadRemoteBackupForWrite()
+    const remoteResult = await this.downloadRemoteBackupForWrite()
+    const remoteData = remoteResult.data
 
     const localPinnedAccountIds = localAccountsConfig.pinnedAccountIds || []
     const localOrderedAccountIds = localAccountsConfig.orderedAccountIds || []
@@ -1051,8 +1102,12 @@ class WebdavAutoSyncService {
       remoteBackup: remoteData,
     })
 
-    await uploadBackup(JSON.stringify(payload, null, 2))
-    logger.info("数据已上传到WebDAV")
+    await uploadCloudSyncBackup(
+      JSON.stringify(payload, null, 2),
+      preferences.webdav,
+      remoteResult.remote?.revision,
+    )
+    logger.info("数据已上传到云端同步服务")
   }
 
   private async importPreferencesOrThrow(preferences: UserPreferences) {

@@ -7,6 +7,7 @@ import {
 } from "~/features/ImportExport/searchTargets"
 import type { UserPreferences } from "~/services/preferences/userPreferences"
 import type { SiteAccount } from "~/types"
+import { CLOUD_SYNC_PROVIDERS } from "~/types/webdav"
 
 import {
   resolveAutoCheckinConfigurationStatus,
@@ -279,10 +280,21 @@ function resolveBackupSyncStatus(
   autoSyncStatus: ConfigurationStatus
 } {
   const webdav = preferences?.webdav
-  const manualStatus: ConfigurationStatus =
-    webdav?.url.trim() && webdav.username.trim() && webdav.password.trim()
-      ? CONFIGURATION_STATUSES.configured
-      : CONFIGURATION_STATUSES.disabled
+  const hasConfiguredManualSync =
+    webdav?.provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST
+      ? Boolean(
+          webdav.githubGist?.token?.trim() &&
+            webdav.githubGist?.gistId?.trim() &&
+            webdav.backupEncryptionPassword?.trim(),
+        )
+      : Boolean(
+          webdav?.url.trim() &&
+            webdav.username.trim() &&
+            webdav.password.trim(),
+        )
+  const manualStatus: ConfigurationStatus = hasConfiguredManualSync
+    ? CONFIGURATION_STATUSES.configured
+    : CONFIGURATION_STATUSES.disabled
   const autoSyncStatus: ConfigurationStatus =
     webdav?.autoSync === true
       ? CONFIGURATION_STATUSES.configured

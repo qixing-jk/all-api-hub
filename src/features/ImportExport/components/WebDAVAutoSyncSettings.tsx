@@ -41,7 +41,11 @@ import {
 } from "~/services/productAnalytics/webDavSync"
 import { WebdavAutoSyncMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import { sendWebdavAutoSyncMessage } from "~/services/webdav/webdavAutoSyncMessaging"
-import { WEBDAV_SYNC_STRATEGIES, type WebDAVSettings } from "~/types/webdav"
+import {
+  CLOUD_SYNC_PROVIDERS,
+  WEBDAV_SYNC_STRATEGIES,
+  type WebDAVSettings,
+} from "~/types/webdav"
 import { formatTimestamp } from "~/utils/core/formatters"
 import { createLogger } from "~/utils/core/logger"
 
@@ -90,6 +94,18 @@ export default function WebDAVAutoSyncSettings() {
   const syncInterval = localConfig.syncInterval
   const syncStrategy =
     localConfig.syncStrategy as WebDAVSettings["syncStrategy"]
+  const isGithubGist =
+    persistedWebdavSettings.provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST
+  const minimumIntervalSeconds = isGithubGist ? 300 : 60
+  const autoSyncTitleKey = isGithubGist
+    ? "webdav.gist.autoSyncTitle"
+    : "webdav.autoSync.title"
+  const autoSyncDescriptionKey = isGithubGist
+    ? "webdav.gist.autoSyncDescription"
+    : "webdav.autoSync.description"
+  const autoSyncEnableDescriptionKey = isGithubGist
+    ? "webdav.gist.autoSyncEnableDesc"
+    : "webdav.autoSync.enableDesc"
 
   // Status
   const [isSyncing, setIsSyncing] = useState(false)
@@ -133,10 +149,13 @@ export default function WebDAVAutoSyncSettings() {
 
     setSavingSettings(true)
     try {
+      const normalizedSyncInterval = Number.isFinite(syncInterval)
+        ? Math.max(minimumIntervalSeconds, syncInterval)
+        : minimumIntervalSeconds
       const response = await updateWebdavAutoSyncSettings(
         {
           autoSync: autoSyncEnabled,
-          syncInterval,
+          syncInterval: normalizedSyncInterval,
           syncStrategy,
         },
         {
@@ -147,7 +166,7 @@ export default function WebDAVAutoSyncSettings() {
       if (response.success) {
         toast.success(
           t("settings:messages.updateSuccess", {
-            name: t("webdav.autoSync.title"),
+            name: t(autoSyncTitleKey),
           }),
         )
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
@@ -156,7 +175,7 @@ export default function WebDAVAutoSyncSettings() {
         toast.error(
           response.error ||
             t("settings:messages.updateFailed", {
-              name: t("webdav.autoSync.title"),
+              name: t(autoSyncTitleKey),
             }),
         )
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
@@ -168,7 +187,7 @@ export default function WebDAVAutoSyncSettings() {
       toast.error(
         error?.message ||
           t("settings:messages.updateFailed", {
-            name: t("webdav.autoSync.title"),
+            name: t(autoSyncTitleKey),
           }),
       )
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
@@ -285,18 +304,18 @@ export default function WebDAVAutoSyncSettings() {
         <div className="mb-1 flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <WebdavSyncIcon className="h-5 w-5 text-sky-600 dark:text-sky-400" />
-            <CardTitle className="mb-0">{t("webdav.autoSync.title")}</CardTitle>
+            <CardTitle className="mb-0">{t(autoSyncTitleKey)}</CardTitle>
           </div>
           {getStatusBadge()}
         </div>
-        <CardDescription>{t("webdav.autoSync.description")}</CardDescription>
+        <CardDescription>{t(autoSyncDescriptionKey)}</CardDescription>
       </CardHeader>
 
       <CardContent padding="md" className="space-y-4">
         {/* Auto-sync toggle */}
         <FormField
           label={t("webdav.autoSync.enable")}
-          description={t("webdav.autoSync.enableDesc")}
+          description={t(autoSyncEnableDescriptionKey)}
         >
           <div
             id={WEBDAV_AUTO_SYNC_TARGET_IDS.enable}
@@ -329,7 +348,7 @@ export default function WebDAVAutoSyncSettings() {
               <Input
                 id={WEBDAV_AUTO_SYNC_TARGET_IDS.interval}
                 type="number"
-                min={60}
+                min={minimumIntervalSeconds}
                 max={86400}
                 step={60}
                 value={syncInterval}
@@ -413,8 +432,12 @@ export default function WebDAVAutoSyncSettings() {
               variant={autoSyncConfigDirty ? "warning" : "info"}
               description={t(
                 autoSyncConfigDirty
-                  ? "webdav.autoSync.actionState.unsaved"
-                  : "webdav.autoSync.actionState.saved",
+                  ? isGithubGist
+                    ? "webdav.gist.autoSyncActionStateUnsaved"
+                    : "webdav.autoSync.actionState.unsaved"
+                  : isGithubGist
+                    ? "webdav.gist.autoSyncActionStateSaved"
+                    : "webdav.autoSync.actionState.saved",
               )}
               className="basis-full"
             />

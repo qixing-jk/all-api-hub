@@ -19,6 +19,11 @@ import {
   Input,
   Label,
   Modal,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
   Switch,
 } from "~/components/ui"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
@@ -44,7 +49,15 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import { buildWebDavSyncDiagnostics } from "~/services/productAnalytics/webDavSync"
+import { WebdavAutoSyncMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import { tagStorage } from "~/services/tags/tagStorage"
+import {
+  createCloudSyncBackup,
+  downloadCloudSyncBackup,
+  testCloudSyncConnection,
+  uploadCloudSyncBackup,
+} from "~/services/webdav/cloudSyncService"
+import { sendWebdavAutoSyncMessage } from "~/services/webdav/webdavAutoSyncMessaging"
 import {
   decryptWebdavBackupEnvelope,
   tryParseEncryptedWebdavBackupEnvelope,
@@ -59,10 +72,9 @@ import {
   downloadBackupRaw,
   isWebdavFileNotFoundError,
   parseWebdavBackupJson,
-  testWebdavConnection,
-  uploadBackup,
 } from "~/services/webdav/webdavService"
 import {
+  CLOUD_SYNC_PROVIDERS,
   DEFAULT_WEBDAV_SYNC_DATA_SELECTION,
   isWebdavSyncDataSelectionEmpty,
   resolveWebdavSyncDataSelection,
@@ -99,6 +111,14 @@ import { WebDAVDecryptPasswordModal } from "./WebDAVDecryptPasswordModal"
  */
 const logger = createLogger("WebDAVSettings")
 const WebdavSyncIcon = OPTIONS_CAPABILITY_ICONS.webdavSync
+
+/** Keep manual UI flows compatible with older preference test doubles. */
+async function exportPreferencesForBackup() {
+  if (typeof userPreferences.exportPreferencesForBackup === "function") {
+    return userPreferences.exportPreferencesForBackup()
+  }
+  return userPreferences.exportPreferences()
+}
 
 const WEBDAV_SYNC_DATA_INPUT_IDS: Record<WebDAVSyncDataKey, string> = {
   accounts: WEBDAV_TARGET_IDS.syncDataAccounts,
@@ -167,9 +187,15 @@ export default function WebDAVSettings() {
 
   const savedConfig = useMemo(
     () => ({
+      provider: persistedWebdavSettings.provider ?? CLOUD_SYNC_PROVIDERS.WEBDAV,
       url: persistedWebdavSettings.url ?? "",
       username: persistedWebdavSettings.username ?? "",
       password: persistedWebdavSettings.password ?? "",
+      githubGist: {
+        token: persistedWebdavSettings.githubGist?.token ?? "",
+        gistId: persistedWebdavSettings.githubGist?.gistId ?? "",
+        gistUrl: persistedWebdavSettings.githubGist?.gistUrl ?? "",
+      },
       syncData: resolveWebdavSyncDataSelection(
         persistedWebdavSettings.syncData,
       ),
@@ -182,6 +208,8 @@ export default function WebDAVSettings() {
     [
       persistedWebdavSettings.backupEncryptionEnabled,
       persistedWebdavSettings.backupEncryptionPassword,
+      persistedWebdavSettings.githubGist,
+      persistedWebdavSettings.provider,
       persistedWebdavSettings.password,
       persistedWebdavSettings.syncData,
       persistedWebdavSettings.url,
@@ -199,6 +227,14 @@ export default function WebDAVSettings() {
   const webdavUrl = localConfig.url
   const webdavUsername = localConfig.username
   const webdavPassword = localConfig.password
+  const provider = localConfig.provider ?? CLOUD_SYNC_PROVIDERS.WEBDAV
+  const githubGist = localConfig.githubGist ?? {
+    token: "",
+    gistId: "",
+    gistUrl: "",
+  }
+  const githubGistToken = githubGist.token
+  const githubGistId = githubGist.gistId
   const syncDataSelection = localConfig.syncData
   const backupEncryptionEnabled = localConfig.backupEncryptionEnabled
   const backupEncryptionPassword = localConfig.backupEncryptionPassword
@@ -219,9 +255,22 @@ export default function WebDAVSettings() {
   const [downloading, setDownloading] = useState(false)
 
   const webdavConfigFilled = useMemo(
-    () => Boolean(webdavUrl && webdavUsername && webdavPassword),
-    [webdavUrl, webdavUsername, webdavPassword],
+    () =>
+      provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST
+        ? Boolean(githubGistToken && githubGistId)
+        : Boolean(webdavUrl && webdavUsername && webdavPassword),
+    [
+      githubGistId,
+      githubGistToken,
+      provider,
+      webdavPassword,
+      webdavUrl,
+      webdavUsername,
+    ],
   )
+  const gistCreateReady =
+    provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST &&
+    Boolean(githubGistToken && backupEncryptionPassword)
 
   const syncDataOptions = useMemo(
     () =>
@@ -256,22 +305,58 @@ export default function WebDAVSettings() {
   }
 
   const webdavConfig = {
+    provider,
     url: webdavUrl,
     username: webdavUsername,
     password: webdavPassword,
-    backupEncryptionEnabled,
+    backupEncryptionEnabled:
+      provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST
+        ? true
+        : backupEncryptionEnabled,
     backupEncryptionPassword,
     syncData: syncDataSelection,
+    githubGist,
+    autoSync: persistedWebdavSettings.autoSync ?? false,
+    syncInterval: persistedWebdavSettings.syncInterval ?? 3600,
+    syncStrategy:
+      persistedWebdavSettings.syncStrategy ??
+      ("merge" as WebDAVSettings["syncStrategy"]),
+  }
+  const webdavConfigForSave: Partial<WebDAVSettings> =
+    provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST ||
+    persistedWebdavSettings.provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST
+      ? webdavConfig
+      : {
+          url: webdavUrl,
+          username: webdavUsername,
+          password: webdavPassword,
+          backupEncryptionEnabled,
+          backupEncryptionPassword,
+          syncData: syncDataSelection,
+        }
+
+  const handleProviderChange = (nextProvider: string) => {
+    setLocalConfig((previousConfig) => ({
+      ...previousConfig,
+      provider: nextProvider as NonNullable<WebDAVSettings["provider"]>,
+      ...(nextProvider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST
+        ? { backupEncryptionEnabled: true }
+        : {}),
+    }))
   }
 
   const persistWebdavConfig = async (
-    updates: Partial<WebDAVSettings> = webdavConfig,
+    updates: Partial<WebDAVSettings> = webdavConfigForSave,
     options?: {
       expectedLastUpdated?: number
       force?: boolean
     },
   ) => {
-    if (!options?.force && updates === webdavConfig && !webdavConfigDirty) {
+    if (
+      !options?.force &&
+      updates === webdavConfigForSave &&
+      !webdavConfigDirty
+    ) {
       return
     }
 
@@ -289,6 +374,24 @@ export default function WebDAVSettings() {
         failure: result.reason,
       })
     }
+
+    // Provider/credential changes must take effect for an already-running
+    // background alarm without waiting for the next service-worker restart.
+    try {
+      const setupResult = await sendWebdavAutoSyncMessage(
+        WebdavAutoSyncMessageTypes.Setup,
+      )
+      if (!setupResult.success) {
+        logger.warn("Failed to refresh cloud sync schedule after settings save")
+      }
+    } catch (error) {
+      logger.warn(
+        "Failed to refresh cloud sync schedule after settings save",
+        error,
+      )
+    }
+
+    return result
   }
 
   const handleSaveConfig = async () => {
@@ -298,10 +401,14 @@ export default function WebDAVSettings() {
 
     setSaving(true)
     try {
-      await persistWebdavConfig(webdavConfig, { force: true })
+      await persistWebdavConfig(webdavConfigForSave, { force: true })
       toast.success(
         t("settings:messages.updateSuccess", {
-          name: t("webdav.title"),
+          name: t(
+            provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST
+              ? "webdav.gist.title"
+              : "webdav.title",
+          ),
         }),
       )
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
@@ -311,7 +418,11 @@ export default function WebDAVSettings() {
         e instanceof PersistWebdavConfigError
           ? getPersistWebdavConfigErrorMessage(e, t)
           : t("settings:messages.updateFailed", {
-              name: t("webdav.title"),
+              name: t(
+                provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST
+                  ? "webdav.gist.title"
+                  : "webdav.title",
+              ),
             }),
       )
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
@@ -335,15 +446,40 @@ export default function WebDAVSettings() {
     setTesting(true)
     try {
       await persistWebdavConfig()
-      await testWebdavConnection(webdavConfig)
-      toast.success(t("webdav.testSuccess"))
+      const remote = await testCloudSyncConnection(webdavConfig)
+      if (
+        provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST &&
+        remote &&
+        typeof remote === "object" &&
+        "htmlUrl" in remote
+      ) {
+        setLocalConfig((previousConfig) => ({
+          ...previousConfig,
+          githubGist: {
+            ...previousConfig.githubGist,
+            gistUrl: typeof remote.htmlUrl === "string" ? remote.htmlUrl : "",
+          },
+        }))
+      }
+      toast.success(
+        t(
+          provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST
+            ? "webdav.gist.testSuccess"
+            : "webdav.testSuccess",
+        ),
+      )
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
     } catch (e: any) {
       logger.error("WebDAV connection test failed", e)
       toast.error(
         e instanceof PersistWebdavConfigError
           ? getPersistWebdavConfigErrorMessage(e, t)
-          : e?.message || t("webdav.testFailed"),
+          : e?.message ||
+              t(
+                provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST
+                  ? "webdav.gist.testFailed"
+                  : "webdav.testFailed",
+              ),
       )
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: getWebdavAnalyticsErrorCategory(e),
@@ -366,6 +502,7 @@ export default function WebDAVSettings() {
    */
   const uploadWebdavBackup = async (options?: {
     forceFullRebuild?: boolean
+    createGist?: boolean
   }) => {
     const tracker = startProductAnalyticsAction(
       webDavAnalyticsContext(PRODUCT_ANALYTICS_ACTION_IDS.UploadWebDavBackup),
@@ -394,7 +531,7 @@ export default function WebDAVSettings() {
         return
       }
 
-      await persistWebdavConfig()
+      const persistedConfigResult = await persistWebdavConfig()
       const selectionForUpload: WebDAVSyncDataSelection =
         options?.forceFullRebuild
           ? DEFAULT_WEBDAV_SYNC_DATA_SELECTION
@@ -410,7 +547,7 @@ export default function WebDAVSettings() {
       ] = await Promise.all([
         accountDataTransfer.exportData(),
         tagStorage.exportTagStore(),
-        userPreferences.exportPreferences(),
+        exportPreferencesForBackup(),
         featureGuidanceState.getState(),
         channelConfigStorage.exportConfigs(),
         apiCredentialProfilesStorage.exportConfig(),
@@ -427,14 +564,29 @@ export default function WebDAVSettings() {
       }
 
       let remoteBackup: any | null = null
+      let remoteRevision: string | undefined
 
-      if (!options?.forceFullRebuild) {
+      const shouldCreateGist =
+        provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST &&
+        (options?.createGist ?? !githubGistId)
+
+      if (!options?.forceFullRebuild && !shouldCreateGist) {
         try {
-          const remoteContent = await downloadBackup(webdavConfig, {
-            prepareForWrite: true,
-          })
+          const remoteResult =
+            provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST
+              ? await downloadCloudSyncBackup(webdavConfig)
+              : {
+                  content: await downloadBackup(webdavConfig, {
+                    prepareForWrite: true,
+                  }),
+                  remote: undefined,
+                }
+          const remoteContent = remoteResult.content
+          remoteRevision = remoteResult.remote?.revision
           try {
-            remoteBackup = parseWebdavBackupJson(remoteContent)
+            remoteBackup = parseWebdavBackupJson(remoteContent, {
+              requireBackupShape: true,
+            })
           } catch (error) {
             if (isInvalidWebdavBackupError(error)) {
               throw new ExistingWebdavBackupMalformedError(error)
@@ -443,7 +595,10 @@ export default function WebDAVSettings() {
             throw error
           }
         } catch (error: any) {
-          if (!isWebdavFileNotFoundError(error)) {
+          if (
+            provider !== CLOUD_SYNC_PROVIDERS.WEBDAV ||
+            !isWebdavFileNotFoundError(error)
+          ) {
             if (error instanceof ExistingWebdavBackupMalformedError) {
               logger.warn(
                 "Existing WebDAV backup is malformed; awaiting rebuild confirmation",
@@ -464,8 +619,52 @@ export default function WebDAVSettings() {
         remoteBackup,
       })
 
-      await uploadBackup(JSON.stringify(payload, null, 2), webdavConfig)
-      toast.success(t("webdav.uploadSuccess"))
+      const serializedPayload = JSON.stringify(payload, null, 2)
+      if (shouldCreateGist) {
+        const remote = await createCloudSyncBackup(
+          serializedPayload,
+          webdavConfig,
+        )
+        setLocalConfig((previousConfig) => ({
+          ...previousConfig,
+          githubGist: {
+            ...previousConfig.githubGist,
+            gistId:
+              "gistId" in remote && typeof remote.gistId === "string"
+                ? remote.gistId
+                : previousConfig.githubGist?.gistId ?? "",
+            gistUrl: remote.htmlUrl ?? "",
+          },
+        }))
+        await persistWebdavConfig(
+          {
+            githubGist: {
+              ...githubGist,
+              gistId: remote.gistId ?? githubGistId,
+              gistUrl: remote.htmlUrl ?? githubGist.gistUrl,
+            },
+          },
+          {
+            force: true,
+            expectedLastUpdated: persistedConfigResult?.ok
+              ? persistedConfigResult.preferences.lastUpdated
+              : preferences.lastUpdated,
+          },
+        )
+      } else {
+        await uploadCloudSyncBackup(
+          serializedPayload,
+          webdavConfig,
+          remoteRevision,
+        )
+      }
+      toast.success(
+        t(
+          provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST
+            ? "webdav.gist.uploadSuccess"
+            : "webdav.uploadSuccess",
+        ),
+      )
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
         diagnostics: buildWebDavSyncDiagnostics({
           sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
@@ -497,7 +696,11 @@ export default function WebDAVSettings() {
           ? getPersistWebdavConfigErrorMessage(e, t)
           : getImportExportErrorMessage(e) ||
               e?.message ||
-              t("webdav.uploadFailed"),
+              t(
+                provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST
+                  ? "webdav.gist.uploadFailed"
+                  : "webdav.uploadFailed",
+              ),
       )
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: getWebdavAnalyticsErrorCategory(e),
@@ -523,6 +726,10 @@ export default function WebDAVSettings() {
 
   const handleUploadBackup = async () => {
     await uploadWebdavBackup()
+  }
+
+  const handleCreateGist = async () => {
+    await uploadWebdavBackup({ createGist: true })
   }
 
   const handleConfirmRebuildBackup = async () => {
@@ -584,7 +791,10 @@ export default function WebDAVSettings() {
       }
 
       await persistWebdavConfig()
-      const raw = await downloadBackupRaw(webdavConfig)
+      const raw =
+        provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST
+          ? (await downloadCloudSyncBackup(webdavConfig)).content
+          : await downloadBackupRaw(webdavConfig)
       const envelope = tryParseEncryptedWebdavBackupEnvelope(raw)
 
       let content = raw
@@ -636,7 +846,9 @@ export default function WebDAVSettings() {
         }
       }
 
-      const data = parseWebdavBackupJson(content)
+      const data = parseWebdavBackupJson(content, {
+        requireBackupShape: true,
+      })
       const result = await handleImportWithSelection(data)
       if (result.allImported || result.sections?.preferences) {
         await loadPreferences()
@@ -736,7 +948,9 @@ export default function WebDAVSettings() {
       })
       decryptCompleted = true
 
-      const data = parseWebdavBackupJson(content)
+      const data = parseWebdavBackupJson(content, {
+        requireBackupShape: true,
+      })
       const result = await handleImportWithSelection(data)
       let importedPreferencesLastUpdated: number | null = null
       let decryptPasswordPersistFailed = false
@@ -859,9 +1073,21 @@ export default function WebDAVSettings() {
         <CardHeader>
           <div className="mb-1 flex items-center space-x-2">
             <WebdavSyncIcon className="h-5 w-5 text-sky-600 dark:text-sky-400" />
-            <CardTitle className="mb-0">{t("webdav.title")}</CardTitle>
+            <CardTitle className="mb-0">
+              {t(
+                provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST
+                  ? "webdav.gist.title"
+                  : "webdav.title",
+              )}
+            </CardTitle>
           </div>
-          <CardDescription>{t("webdav.configDesc")}</CardDescription>
+          <CardDescription>
+            {t(
+              provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST
+                ? "webdav.gist.configDesc"
+                : "webdav.configDesc",
+            )}
+          </CardDescription>
         </CardHeader>
 
         <CardContent padding="md" className="space-y-4">
@@ -869,67 +1095,188 @@ export default function WebDAVSettings() {
             id={WEBDAV_TARGET_IDS.restorePolicy}
             variant="info"
             title={t("webdav.restorePolicy.title")}
-            description={t("webdav.restorePolicy.description")}
+            description={t(
+              provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST
+                ? "webdav.gist.restorePolicyDescription"
+                : "webdav.restorePolicy.description",
+            )}
           />
 
           {/* 配置表单 */}
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div className="md:col-span-2">
-              <FormField label={t("webdav.webdavUrl")}>
-                <Input
-                  id={WEBDAV_TARGET_IDS.url}
-                  title={t("webdav.webdavUrl")}
-                  type="url"
-                  placeholder={t("webdav.webdavUrlExample")}
-                  value={webdavUrl}
-                  onChange={(e) =>
-                    setLocalConfig((prev) => ({
-                      ...prev,
-                      url: e.target.value,
-                    }))
-                  }
-                />
-              </FormField>
-            </div>
-
-            <FormField label={t("webdav.username")}>
-              <Input
-                id={WEBDAV_TARGET_IDS.username}
-                title={t("webdav.username")}
-                type="text"
-                placeholder={t("webdav.username")}
-                value={webdavUsername}
-                onChange={(e) =>
-                  setLocalConfig((prev) => ({
-                    ...prev,
-                    username: e.target.value,
-                  }))
-                }
-              />
+          <div className="space-y-4">
+            <FormField label={t("webdav.provider.label")}>
+              <Select value={provider} onValueChange={handleProviderChange}>
+                <SelectTrigger id={WEBDAV_TARGET_IDS.provider}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={CLOUD_SYNC_PROVIDERS.WEBDAV}>
+                    {t("webdav.provider.webdav")}
+                  </SelectItem>
+                  <SelectItem value={CLOUD_SYNC_PROVIDERS.GITHUB_GIST}>
+                    {t("webdav.provider.githubGist")}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             </FormField>
 
-            <FormField label={t("webdav.password")}>
-              <div className="relative">
-                <Input
-                  id={WEBDAV_TARGET_IDS.password}
-                  title={t("webdav.password")}
-                  type="password"
-                  revealable
-                  revealLabels={{
-                    show: t("webdav.showPassword"),
-                    hide: t("webdav.hidePassword"),
-                  }}
-                  placeholder={t("webdav.password")}
-                  value={webdavPassword}
-                  onChange={(e) =>
-                    setLocalConfig((prev) => ({
-                      ...prev,
-                      password: e.target.value,
-                    }))
-                  }
+            {provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST ? (
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <FormField
+                  label={t("webdav.gist.token")}
+                  description={t("webdav.gist.tokenDesc")}
+                >
+                  <Input
+                    id={WEBDAV_TARGET_IDS.gistToken}
+                    title={t("webdav.gist.token")}
+                    type="password"
+                    revealable
+                    revealLabels={{
+                      show: t("webdav.showPassword"),
+                      hide: t("webdav.hidePassword"),
+                    }}
+                    placeholder={t("webdav.gist.tokenPlaceholder")}
+                    value={githubGistToken}
+                    onChange={(e) =>
+                      setLocalConfig((prev) => ({
+                        ...prev,
+                        githubGist: {
+                          ...prev.githubGist,
+                          token: e.target.value,
+                        },
+                      }))
+                    }
+                  />
+                </FormField>
+
+                <FormField
+                  label={t("webdav.gist.id")}
+                  description={t("webdav.gist.idDesc")}
+                >
+                  <Input
+                    id={WEBDAV_TARGET_IDS.gistId}
+                    title={t("webdav.gist.id")}
+                    type="text"
+                    placeholder={t("webdav.gist.idPlaceholder")}
+                    value={githubGistId}
+                    onChange={(e) =>
+                      setLocalConfig((prev) => ({
+                        ...prev,
+                        githubGist: {
+                          ...prev.githubGist,
+                          gistId: e.target.value,
+                        },
+                      }))
+                    }
+                  />
+                </FormField>
+
+                <Alert
+                  className="md:col-span-2"
+                  variant="info"
+                  title={t("webdav.gist.secretTitle")}
+                  description={t("webdav.gist.secretDescription")}
                 />
+
+                <FormField
+                  label={t("webdav.gist.encryptionPassword")}
+                  description={t("webdav.gist.encryptionPasswordDesc")}
+                >
+                  <Input
+                    id={WEBDAV_TARGET_IDS.encryptionPassword}
+                    title={t("webdav.gist.encryptionPassword")}
+                    type="password"
+                    revealable
+                    revealLabels={{
+                      show: t("webdav.showPassword"),
+                      hide: t("webdav.hidePassword"),
+                    }}
+                    placeholder={t("webdav.gist.encryptionPasswordPlaceholder")}
+                    value={backupEncryptionPassword}
+                    onChange={(e) =>
+                      setLocalConfig((prev) => ({
+                        ...prev,
+                        backupEncryptionEnabled: true,
+                        backupEncryptionPassword: e.target.value,
+                      }))
+                    }
+                  />
+                </FormField>
+
+                {githubGist.gistUrl && (
+                  <BodySmall className="m-0 md:col-span-2">
+                    <a
+                      id={WEBDAV_TARGET_IDS.gistUrl}
+                      href={githubGist.gistUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-sky-600 underline dark:text-sky-400"
+                    >
+                      {t("webdav.gist.openLink")}
+                    </a>
+                  </BodySmall>
+                )}
               </div>
-            </FormField>
+            ) : (
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="md:col-span-2">
+                  <FormField label={t("webdav.webdavUrl")}>
+                    <Input
+                      id={WEBDAV_TARGET_IDS.url}
+                      title={t("webdav.webdavUrl")}
+                      type="url"
+                      placeholder={t("webdav.webdavUrlExample")}
+                      value={webdavUrl}
+                      onChange={(e) =>
+                        setLocalConfig((prev) => ({
+                          ...prev,
+                          url: e.target.value,
+                        }))
+                      }
+                    />
+                  </FormField>
+                </div>
+
+                <FormField label={t("webdav.username")}>
+                  <Input
+                    id={WEBDAV_TARGET_IDS.username}
+                    title={t("webdav.username")}
+                    type="text"
+                    placeholder={t("webdav.username")}
+                    value={webdavUsername}
+                    onChange={(e) =>
+                      setLocalConfig((prev) => ({
+                        ...prev,
+                        username: e.target.value,
+                      }))
+                    }
+                  />
+                </FormField>
+
+                <FormField label={t("webdav.password")}>
+                  <div className="relative">
+                    <Input
+                      id={WEBDAV_TARGET_IDS.password}
+                      title={t("webdav.password")}
+                      type="password"
+                      revealable
+                      revealLabels={{
+                        show: t("webdav.showPassword"),
+                        hide: t("webdav.hidePassword"),
+                      }}
+                      placeholder={t("webdav.password")}
+                      value={webdavPassword}
+                      onChange={(e) =>
+                        setLocalConfig((prev) => ({
+                          ...prev,
+                          password: e.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+                </FormField>
+              </div>
+            )}
           </div>
 
           <div
@@ -939,7 +1286,11 @@ export default function WebDAVSettings() {
             <div className="space-y-1">
               <Heading4 className="m-0">{t("webdav.syncData.title")}</Heading4>
               <BodySmall className="m-0">
-                {t("webdav.syncData.description")}
+                {t(
+                  provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST
+                    ? "webdav.gist.syncDataDescription"
+                    : "webdav.syncData.description",
+                )}
               </BodySmall>
             </div>
 
@@ -965,73 +1316,86 @@ export default function WebDAVSettings() {
             )}
           </div>
 
-          <div
-            id={WEBDAV_TARGET_IDS.encryption}
-            className="rounded-md bg-gray-50 p-3 dark:bg-gray-800"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div
-                id={WEBDAV_TARGET_IDS.encryptionEnable}
-                className="space-y-1"
-              >
-                <Heading4 className="m-0">
-                  {t("webdav.encryption.title")}
-                </Heading4>
-                <BodySmall className="m-0">
-                  {t("webdav.encryption.enableDesc")}
-                </BodySmall>
-              </div>
-              <Switch
-                checked={backupEncryptionEnabled}
-                onChange={(checked) =>
-                  setLocalConfig((prev) => ({
-                    ...prev,
-                    backupEncryptionEnabled: checked,
-                  }))
-                }
-              />
-            </div>
-
-            <div className="mt-3">
-              <FormField
-                label={t("webdav.encryption.password")}
-                description={t("webdav.encryption.passwordDesc")}
-              >
-                <Input
-                  id={WEBDAV_TARGET_IDS.encryptionPassword}
-                  title={t("webdav.encryption.password")}
-                  type="password"
-                  revealable
-                  revealLabels={{
-                    show: t("webdav.showPassword"),
-                    hide: t("webdav.hidePassword"),
-                  }}
-                  placeholder={t("webdav.encryption.passwordPlaceholder")}
-                  value={backupEncryptionPassword}
-                  onChange={(e) =>
+          {provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST ? (
+            <Alert
+              id={WEBDAV_TARGET_IDS.encryption}
+              variant="success"
+              title={t("webdav.gist.encryptionTitle")}
+              description={t("webdav.gist.encryptionDescription")}
+            />
+          ) : (
+            <div
+              id={WEBDAV_TARGET_IDS.encryption}
+              className="rounded-md bg-gray-50 p-3 dark:bg-gray-800"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div
+                  id={WEBDAV_TARGET_IDS.encryptionEnable}
+                  className="space-y-1"
+                >
+                  <Heading4 className="m-0">
+                    {t("webdav.encryption.title")}
+                  </Heading4>
+                  <BodySmall className="m-0">
+                    {t("webdav.encryption.enableDesc")}
+                  </BodySmall>
+                </div>
+                <Switch
+                  checked={backupEncryptionEnabled}
+                  onChange={(checked) =>
                     setLocalConfig((prev) => ({
                       ...prev,
-                      backupEncryptionPassword: e.target.value,
+                      backupEncryptionEnabled: checked,
                     }))
                   }
                 />
-              </FormField>
+              </div>
+
+              <div className="mt-3">
+                <FormField
+                  label={t("webdav.encryption.password")}
+                  description={t("webdav.encryption.passwordDesc")}
+                >
+                  <Input
+                    id={WEBDAV_TARGET_IDS.encryptionPassword}
+                    title={t("webdav.encryption.password")}
+                    type="password"
+                    revealable
+                    revealLabels={{
+                      show: t("webdav.showPassword"),
+                      hide: t("webdav.hidePassword"),
+                    }}
+                    placeholder={t("webdav.encryption.passwordPlaceholder")}
+                    value={backupEncryptionPassword}
+                    onChange={(e) =>
+                      setLocalConfig((prev) => ({
+                        ...prev,
+                        backupEncryptionPassword: e.target.value,
+                      }))
+                    }
+                  />
+                </FormField>
+              </div>
             </div>
-          </div>
+          )}
 
           <ProductAnalyticsScope
             entrypoint={PRODUCT_ANALYTICS_ENTRYPOINTS.Options}
             featureId={PRODUCT_ANALYTICS_FEATURE_IDS.WebDavSync}
             surfaceId={webDavSettingsSurface}
           >
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
               <Alert
                 compact
                 variant={webdavConfigDirty ? "warning" : "info"}
                 description={t(
                   webdavConfigDirty
-                    ? "webdav.actionState.unsaved"
-                    : "webdav.actionState.saved",
+                    ? provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST
+                      ? "webdav.gist.actionStateUnsaved"
+                      : "webdav.actionState.unsaved"
+                    : provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST
+                      ? "webdav.gist.actionStateSaved"
+                      : "webdav.actionState.saved",
                 )}
                 className="sm:col-span-2 lg:col-span-4"
               />
@@ -1067,6 +1431,23 @@ export default function WebDAVSettings() {
                     )}
               </Button>
 
+              {provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST &&
+                !githubGistId && (
+                  <Button
+                    id={WEBDAV_TARGET_IDS.createGist}
+                    onClick={handleCreateGist}
+                    disabled={!gistCreateReady}
+                    loading={uploading}
+                    variant="success"
+                    size="sm"
+                    bleed
+                  >
+                    {uploading
+                      ? t("common:status.uploading")
+                      : t("webdav.gist.create")}
+                  </Button>
+                )}
+
               {/* 上传备份 */}
               <Button
                 id={WEBDAV_TARGET_IDS.uploadBackup}
@@ -1082,8 +1463,12 @@ export default function WebDAVSettings() {
                   ? t("common:status.uploading")
                   : t(
                       webdavConfigDirty
-                        ? "webdav.uploadBackupWithSave"
-                        : "webdav.uploadBackup",
+                        ? provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST
+                          ? "webdav.gist.uploadWithSave"
+                          : "webdav.uploadBackupWithSave"
+                        : provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST
+                          ? "webdav.gist.upload"
+                          : "webdav.uploadBackup",
                     )}
               </Button>
 
@@ -1102,8 +1487,12 @@ export default function WebDAVSettings() {
                   ? t("common:status.processing")
                   : t(
                       webdavConfigDirty
-                        ? "webdav.downloadImportWithSave"
-                        : "webdav.downloadImport",
+                        ? provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST
+                          ? "webdav.gist.downloadImportWithSave"
+                          : "webdav.downloadImportWithSave"
+                        : provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST
+                          ? "webdav.gist.downloadImport"
+                          : "webdav.downloadImport",
                     )}
               </Button>
             </div>
