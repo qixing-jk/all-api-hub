@@ -292,6 +292,8 @@ describe("RedemptionAccountSelectToast", () => {
       name: "redemptionAssist:accountSelect.openSiteManual",
     })
     expect(manualLink).toHaveAttribute("href", "https://example.com")
+    fireEvent.keyDown(manualLink, { key: "Enter" })
+    expect(onSelect).not.toHaveBeenCalled()
     await user.click(manualLink)
     expect(onSelect).not.toHaveBeenCalled()
     expect(
