@@ -300,7 +300,7 @@ describe("account site definition registry", () => {
   it("keeps every managed-resource mode explicit in the static definitions", () => {
     const expectedModes = new Map<ManagedSiteType, string>([
       [SITE_TYPES.NEW_API, MANAGED_RESOURCE_MODES.NativeResource],
-      [SITE_TYPES.VELOERA, MANAGED_RESOURCE_MODES.LegacyChannel],
+      [SITE_TYPES.VELOERA, MANAGED_RESOURCE_MODES.NativeResource],
       [SITE_TYPES.DONE_HUB, MANAGED_RESOURCE_MODES.LegacyChannel],
       [SITE_TYPES.OCTOPUS, MANAGED_RESOURCE_MODES.LegacyChannel],
       [SITE_TYPES.AXON_HUB, MANAGED_RESOURCE_MODES.NativeResource],
@@ -340,6 +340,35 @@ describe("account site definition registry", () => {
       ),
     ).toMatchObject({
       siteType: SITE_TYPES.AXON_HUB,
+      kind: MANAGED_RESOURCE_KINDS.Channel,
+    })
+  })
+
+  it("switches Veloera to the native channel product policy", () => {
+    const policy = getAccountSiteDefinition(SITE_TYPES.VELOERA)?.managedResource
+
+    expect(policy).toMatchObject({
+      mode: MANAGED_RESOURCE_MODES.NativeResource,
+      primaryKind: MANAGED_RESOURCE_KINDS.Channel,
+      actions: [
+        "create",
+        "delete-selected",
+        "migrate",
+        "sync-models",
+        "configure-model-sync",
+        "configure-model-filters",
+      ],
+    })
+  })
+
+  it("registers the Veloera native channel workspace", () => {
+    expect(
+      getManagedResourceRegistration(
+        SITE_TYPES.VELOERA,
+        MANAGED_RESOURCE_KINDS.Channel,
+      ),
+    ).toMatchObject({
+      siteType: SITE_TYPES.VELOERA,
       kind: MANAGED_RESOURCE_KINDS.Channel,
     })
   })

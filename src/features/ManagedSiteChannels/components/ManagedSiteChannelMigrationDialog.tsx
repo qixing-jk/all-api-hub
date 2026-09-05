@@ -11,6 +11,7 @@ import {
   type PreviewLoadOrigin,
 } from "~/constants/previewLoadOrigin"
 import { SITE_TYPES } from "~/constants/siteType"
+import { VeloeraChannelTypeNames } from "~/constants/veloera"
 import {
   executeManagedSiteChannelMigration,
   prepareManagedSiteChannelMigrationPreview,
@@ -233,7 +234,10 @@ const getChannelTypeText = (
 
   return siteType === SITE_TYPES.OCTOPUS
     ? OctopusOutboundTypeNames[type] ?? String(type)
-    : ChannelTypeNames[type as ChannelType] ?? String(type)
+    : siteType === SITE_TYPES.VELOERA
+      ? VeloeraChannelTypeNames[type as keyof typeof VeloeraChannelTypeNames] ??
+        String(type)
+      : ChannelTypeNames[type as ChannelType] ?? String(type)
 }
 
 const formatDelimitedValues = (value: string | null | undefined) => {

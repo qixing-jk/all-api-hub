@@ -54,4 +54,22 @@ describe("managed site migration capability registry", () => {
       resolveManagedUpstreamResourceFeatureCapabilitiesMock,
     ).not.toHaveBeenCalled()
   })
+
+  it("resolves Veloera without falling back to the legacy feature gate", () => {
+    expect(
+      resolveManagedSiteMigrationCapability(SITE_TYPES.VELOERA),
+    ).toMatchObject({
+      source: {
+        prepare: expect.any(Function),
+        resolveCredential: expect.any(Function),
+      },
+      target: {
+        prepare: expect.any(Function),
+        create: expect.any(Function),
+      },
+    })
+    expect(
+      resolveManagedUpstreamResourceFeatureCapabilitiesMock,
+    ).not.toHaveBeenCalled()
+  })
 })

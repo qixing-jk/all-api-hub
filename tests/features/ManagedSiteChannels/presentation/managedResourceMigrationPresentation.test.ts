@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest"
 import { AXON_HUB_CHANNEL_TYPE } from "~/constants/axonHub"
 import { ChannelType } from "~/constants/managedSite"
 import { SITE_TYPES } from "~/constants/siteType"
+import { VeloeraChannelType } from "~/constants/veloera"
 import {
   mapManagedResourceMigrationExecutionResult,
   mapManagedResourceMigrationPreview,
@@ -181,6 +182,47 @@ const preview: ManagedSiteMigrationCanonicalPreview = {
 }
 
 describe("managedResourceMigrationPresentation", () => {
+  it("uses Veloera's provider-owned numeric type vocabulary", () => {
+    const readyItem = preview.items[0]!
+    if (readyItem.status !== "ready") throw new Error("expected ready item")
+    const veloeraPreview: ManagedSiteMigrationCanonicalPreview = {
+      ...preview,
+      sourceSiteType: SITE_TYPES.VELOERA,
+      targetSiteType: SITE_TYPES.VELOERA,
+      items: [
+        {
+          ...readyItem,
+          source: buildSource({
+            sourceSiteType: SITE_TYPES.VELOERA,
+            resourceType: VeloeraChannelType.GitHubModels,
+          }),
+          target: {
+            ...readyItem.target,
+            projection: {
+              ...readyItem.target.projection,
+              type: VeloeraChannelType.GitHubModels,
+            },
+          },
+        },
+      ],
+      totalCount: 1,
+      readyCount: 1,
+      blockedCount: 0,
+    }
+
+    const mapped = mapManagedResourceMigrationPreview(veloeraPreview, {
+      t,
+      getSiteLabel: String,
+    })
+
+    expect(mapped.rows[0].comparisons.find(({ id }) => id === "type")).toEqual(
+      expect.objectContaining({
+        source: "GitHub Models",
+        target: "GitHub Models",
+      }),
+    )
+  })
+
   it("preserves opaque row order and all seven canonical comparison values", () => {
     const mapped = mapManagedResourceMigrationPreview(preview, {
       t,

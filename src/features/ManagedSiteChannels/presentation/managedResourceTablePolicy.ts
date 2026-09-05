@@ -5,6 +5,7 @@ import { CLAUDE_CODE_HUB_MANAGED_RESOURCE_FIELD_IDS } from "~/constants/claudeCo
 import { NEW_API_MANAGED_RESOURCE_FIELD_IDS } from "~/constants/newApi"
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import { SUB2API_MANAGED_RESOURCE_FIELD_IDS } from "~/constants/sub2api"
+import { VELOERA_MANAGED_RESOURCE_FIELD_IDS } from "~/constants/veloera"
 import {
   MANAGED_RESOURCE_KINDS,
   type ManagedResourceProductPolicy,
@@ -36,16 +37,30 @@ type NativeTablePresentationPolicy = {
   semantics: ManagedResourcePresentationSemantics
   defaultSorting: ManagedChannelsSorting
   columnLayout: NativeTableColumnLayout
+  numericChannelFieldIds?: NumericChannelTableFieldIds
+  supportsNumericChannelDeepLink?: boolean
 }
 
 const NATIVE_TABLE_COLUMN_LAYOUTS = {
   Canonical: "canonical",
-  NewApi: "new-api",
+  NumericChannel: "numeric-channel",
   Sub2Api: "sub2api",
 } as const
 
 type NativeTableColumnLayout =
   (typeof NATIVE_TABLE_COLUMN_LAYOUTS)[keyof typeof NATIVE_TABLE_COLUMN_LAYOUTS]
+
+type NumericChannelTableFieldIds = {
+  readonly Id: string
+  readonly Name: string
+  readonly Type: string
+  readonly Status: string
+  readonly BaseUrl: string
+  readonly ModelCount: string
+  readonly Groups: string
+  readonly Priority: string
+  readonly Weight: string
+}
 
 const CANONICAL_NATIVE_CHANNEL_FIELD_IDS = {
   Type: "type",
@@ -107,7 +122,25 @@ const nativeTablePresentationPolicies: Partial<
       },
     },
     defaultSorting: [{ id: NEW_API_MANAGED_RESOURCE_FIELD_IDS.Id, desc: true }],
-    columnLayout: NATIVE_TABLE_COLUMN_LAYOUTS.NewApi,
+    columnLayout: NATIVE_TABLE_COLUMN_LAYOUTS.NumericChannel,
+    numericChannelFieldIds: NEW_API_MANAGED_RESOURCE_FIELD_IDS,
+    supportsNumericChannelDeepLink: true,
+  },
+  [SITE_TYPES.VELOERA]: {
+    semantics: {
+      baseUrlFieldId: VELOERA_MANAGED_RESOURCE_FIELD_IDS.BaseUrl,
+      statusFieldId: VELOERA_MANAGED_RESOURCE_FIELD_IDS.Status,
+      fieldValuePresentations: {
+        [VELOERA_MANAGED_RESOURCE_FIELD_IDS.Type]:
+          requireFieldValuePresentation(
+            SITE_TYPES.VELOERA,
+            VELOERA_MANAGED_RESOURCE_FIELD_IDS.Type,
+          ),
+      },
+    },
+    defaultSorting: [{ id: VELOERA_MANAGED_RESOURCE_FIELD_IDS.Id, desc: true }],
+    columnLayout: NATIVE_TABLE_COLUMN_LAYOUTS.NumericChannel,
+    numericChannelFieldIds: VELOERA_MANAGED_RESOURCE_FIELD_IDS,
   },
   [SITE_TYPES.SUB2API]: {
     semantics: {
@@ -228,59 +261,46 @@ type ColumnBuilderOptions = {
   visibility: Readonly<Record<string, boolean>>
 }
 
-const createNewApiColumns = ({
-  t,
-  policy,
-  visibility,
-}: ColumnBuilderOptions): ManagedChannelsColumn[] => {
+const createNumericChannelColumns = (
+  { t, siteType, policy, visibility }: ColumnBuilderOptions,
+  fields: NumericChannelTableFieldIds,
+): ManagedChannelsColumn[] => {
   const fieldLabels: Readonly<Record<string, string>> = {
-    [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Id]: t(
-      "managedSiteChannels:table.columns.id",
-    ),
-    [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Type]: t(
-      "managedSiteChannels:table.columns.type",
-    ),
-    [NEW_API_MANAGED_RESOURCE_FIELD_IDS.ModelCount]: t(
-      "managedSiteChannels:table.columns.models",
-    ),
-    [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Groups]: t(
-      "managedSiteChannels:table.columns.group",
-    ),
-    [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Status]: t(
-      "managedSiteChannels:table.columns.status",
-    ),
-    [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Priority]: t(
-      "managedSiteChannels:table.columns.priority",
-    ),
-    [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Weight]: t(
-      "managedSiteChannels:table.columns.weight",
-    ),
+    [fields.Id]: t("managedSiteChannels:table.columns.id"),
+    [fields.Type]: t("managedSiteChannels:table.columns.type"),
+    [fields.ModelCount]: t("managedSiteChannels:table.columns.models"),
+    [fields.Groups]: t("managedSiteChannels:table.columns.group"),
+    [fields.Status]: t("managedSiteChannels:table.columns.status"),
+    [fields.Priority]: t("managedSiteChannels:table.columns.priority"),
+    [fields.Weight]: t("managedSiteChannels:table.columns.weight"),
   }
   return [
     selectionColumn,
     ...policy.tableFieldIds.flatMap((fieldId) => {
-      if (fieldId === NEW_API_MANAGED_RESOURCE_FIELD_IDS.Name) {
+      if (fieldId === fields.Name) {
         return [createChannelColumn(t, MANAGED_CHANNELS_COLUMN_IDS.Name, 300)]
       }
       // The channel cell already shows the Base URL below the name.
-      if (fieldId === NEW_API_MANAGED_RESOURCE_FIELD_IDS.BaseUrl) return []
+      if (fieldId === fields.BaseUrl) return []
       return [
         createValueColumn(
           visibility,
           fieldId,
           fieldLabels[fieldId] ?? fieldId,
-          fieldId === NEW_API_MANAGED_RESOURCE_FIELD_IDS.Status
+          fieldId === fields.Status
             ? MANAGED_CHANNELS_COLUMN_IDS.Status
             : fieldId,
           {
-            ...(fieldId === NEW_API_MANAGED_RESOURCE_FIELD_IDS.Status
+            ...(fieldId === fields.Status
               ? {
                   facet: {
                     kind: MANAGED_CHANNELS_COLUMN_FACET_KINDS.Status,
                   },
                 }
               : {}),
-            ...(fieldId === NEW_API_MANAGED_RESOURCE_FIELD_IDS.Id
+            ...(fieldId === fields.Id &&
+            getNativeTablePresentationPolicy(siteType)
+              .supportsNumericChannelDeepLink
               ? {
                   routeFilter: {
                     kind: MANAGED_CHANNELS_ROUTE_FILTER_KINDS.Exact,
@@ -288,7 +308,7 @@ const createNewApiColumns = ({
                   },
                 }
               : {}),
-            size: fieldId === NEW_API_MANAGED_RESOURCE_FIELD_IDS.Id ? 45 : 90,
+            size: fieldId === fields.Id ? 45 : 90,
           },
         ),
       ]
@@ -439,9 +459,16 @@ export const createManagedResourceColumns = (
   visibility: Readonly<Record<string, boolean>>,
 ): ManagedChannelsColumn[] => {
   const options = { t, siteType, policy, visibility }
-  switch (getNativeTablePresentationPolicy(siteType).columnLayout) {
-    case NATIVE_TABLE_COLUMN_LAYOUTS.NewApi:
-      return createNewApiColumns(options)
+  const presentationPolicy = getNativeTablePresentationPolicy(siteType)
+  switch (presentationPolicy.columnLayout) {
+    case NATIVE_TABLE_COLUMN_LAYOUTS.NumericChannel:
+      if (!presentationPolicy.numericChannelFieldIds) {
+        throw new Error("missing numeric channel table field ids")
+      }
+      return createNumericChannelColumns(
+        options,
+        presentationPolicy.numericChannelFieldIds,
+      )
     case NATIVE_TABLE_COLUMN_LAYOUTS.Sub2Api:
       return createSub2ApiColumns(options)
     default:

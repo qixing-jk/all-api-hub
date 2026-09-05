@@ -500,6 +500,7 @@ const installNativeControllers = (
     setSelectedRowKeys: vi.fn(),
     refresh,
     refreshSilently: refresh,
+    reconcile: vi.fn(),
     acceptMutationResult: vi.fn(() => true),
     acceptDeletionResults: vi.fn(() => true),
     cancelCollection: vi.fn(),
@@ -559,6 +560,7 @@ const installNativeControllers = (
 
 type NativePreferenceSiteType =
   | typeof SITE_TYPES.NEW_API
+  | typeof SITE_TYPES.VELOERA
   | typeof SITE_TYPES.AXON_HUB
   | typeof SITE_TYPES.CLAUDE_CODE_HUB
   | typeof SITE_TYPES.SUB2API
@@ -570,6 +572,14 @@ const getNativePreferenceOverrides = (
     case SITE_TYPES.NEW_API:
       return {
         newApi: {
+          baseUrl: "https://console.example.invalid",
+          adminToken: "example-credential",
+          userId: "42",
+        },
+      }
+    case SITE_TYPES.VELOERA:
+      return {
+        veloera: {
           baseUrl: "https://console.example.invalid",
           adminToken: "example-credential",
           userId: "42",
@@ -659,6 +669,27 @@ describe("ManagedSiteChannelsRoute", () => {
         name: "managedSiteChannels:gatewayGuidance.openTokenConsole",
       }),
     ).toHaveAttribute("href", "https://console.example.invalid/keys")
+  })
+
+  it("routes the production Veloera definition through native controllers", () => {
+    installNativeControllers()
+    configureNativePreferences(SITE_TYPES.VELOERA)
+
+    render(
+      <ManagedSiteChannelsRoute
+        siteType={SITE_TYPES.VELOERA}
+        routeParams={{ nativeView: "compact" }}
+        onReplaceRouteQuery={vi.fn()}
+      />,
+    )
+
+    expect(
+      definitionRegistry.getAccountSiteDefinition(SITE_TYPES.VELOERA)
+        ?.managedResource?.mode,
+    ).toBe(MANAGED_RESOURCE_MODES.NativeResource)
+    expect(screen.getByText("Native example")).toBeVisible()
+    expect(legacyRender).not.toHaveBeenCalled()
+    expect(useListController).toHaveBeenCalled()
   })
 
   it("routes the production AxonHub definition through native controllers", () => {
@@ -1085,7 +1116,7 @@ describe("ManagedSiteChannelsRoute", () => {
 
     render(
       <ManagedSiteChannelsRoute
-        siteType={SITE_TYPES.VELOERA}
+        siteType={SITE_TYPES.DONE_HUB}
         onReplaceRouteQuery={vi.fn()}
       />,
     )
@@ -1134,7 +1165,7 @@ describe("ManagedSiteChannelsRoute", () => {
       legacyFixtureScenario.current = scenario
       render(
         <ManagedSiteChannelsRoute
-          siteType={SITE_TYPES.VELOERA}
+          siteType={SITE_TYPES.DONE_HUB}
           onReplaceRouteQuery={vi.fn()}
         />,
       )
@@ -1674,7 +1705,7 @@ describe("ManagedSiteChannelsRoute", () => {
     legacyFixtureScenario.current = "editor"
     render(
       <ManagedSiteChannelsRoute
-        siteType={SITE_TYPES.VELOERA}
+        siteType={SITE_TYPES.DONE_HUB}
         onReplaceRouteQuery={vi.fn()}
       />,
     )
@@ -1726,7 +1757,7 @@ describe("ManagedSiteChannelsRoute", () => {
     legacyFixtureScenario.current = "migration"
     render(
       <ManagedSiteChannelsRoute
-        siteType={SITE_TYPES.VELOERA}
+        siteType={SITE_TYPES.DONE_HUB}
         onReplaceRouteQuery={vi.fn()}
       />,
     )
@@ -1777,7 +1808,7 @@ describe("ManagedSiteChannelsRoute", () => {
     legacyFixtureScenario.current = "focus"
     render(
       <ManagedSiteChannelsRoute
-        siteType={SITE_TYPES.VELOERA}
+        siteType={SITE_TYPES.DONE_HUB}
         onReplaceRouteQuery={vi.fn()}
       />,
     )

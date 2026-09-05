@@ -2,6 +2,7 @@ import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import { axonHubManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/axonHubMigration"
 import { claudeCodeHubManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/claudeCodeHubMigration"
 import { newApiManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/newApiMigration"
+import { veloeraManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/veloeraMigration"
 import type { ManagedSiteMigrationCapability } from "~/types/managedSiteMigrationCapability"
 
 const registrations: readonly {
@@ -11,6 +12,10 @@ const registrations: readonly {
   {
     siteType: SITE_TYPES.NEW_API,
     capability: newApiManagedSiteMigrationCapability,
+  },
+  {
+    siteType: SITE_TYPES.VELOERA,
+    capability: veloeraManagedSiteMigrationCapability,
   },
   {
     siteType: SITE_TYPES.AXON_HUB,

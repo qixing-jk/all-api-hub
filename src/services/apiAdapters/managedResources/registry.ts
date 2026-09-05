@@ -6,12 +6,14 @@ import { axonHubManagedResourceRegistration } from "./axonHub"
 import { claudeCodeHubManagedResourceRegistration } from "./claudeCodeHub"
 import { newApiManagedResourceRegistration } from "./newApi"
 import { sub2ApiManagedResourceRegistration } from "./sub2api"
+import { veloeraManagedResourceRegistration } from "./veloera"
 
 const MANAGED_RESOURCE_REGISTRATIONS = [
   newApiManagedResourceRegistration,
   axonHubManagedResourceRegistration,
   claudeCodeHubManagedResourceRegistration,
   sub2ApiManagedResourceRegistration,
+  veloeraManagedResourceRegistration,
 ] satisfies readonly ManagedResourceRegistration[]
 
 const managedResourceKey = (

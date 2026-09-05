@@ -21,6 +21,10 @@ import {
   SUB2API_MANAGED_RESOURCE_STATUS,
 } from "~/constants/sub2api"
 import {
+  VELOERA_MANAGED_RESOURCE_FIELD_IDS,
+  VeloeraChannelTypeNames,
+} from "~/constants/veloera"
+import {
   defineResourceEditorFieldPolicy,
   resolveResourceFieldPolicy,
   type ResourceEditorFieldPolicy,
@@ -361,6 +365,13 @@ const newApiTypeOptionLabelResolvers = Object.fromEntries(
   ]),
 ) satisfies Readonly<Record<string, ManagedResourceTextResolver>>
 
+const veloeraTypeOptionLabelResolvers = Object.fromEntries(
+  Object.entries(VeloeraChannelTypeNames).map(([value, label]) => [
+    value,
+    () => label,
+  ]),
+) satisfies Readonly<Record<string, ManagedResourceTextResolver>>
+
 const newApiStatusOptionLabelResolvers = {
   [String(CHANNEL_STATUS.Unknown)]: (t: TFunction) =>
     t("managedSiteChannels:statusLabels.unknown"),
@@ -372,84 +383,105 @@ const newApiStatusOptionLabelResolvers = {
     t("managedSiteChannels:statusLabels.autoDisabled"),
 } as const satisfies Readonly<Record<string, ManagedResourceTextResolver>>
 
-const newApiFields = [
-  {
-    fieldId: NEW_API_MANAGED_RESOURCE_FIELD_IDS.Name,
-    section: MANAGED_RESOURCE_SECTIONS.Basic,
-    order: 10,
-    resolveLabel: (t) => t("channelDialog:fields.name.label"),
-    renderer: MANAGED_RESOURCE_FIELD_RENDERERS.Text,
-    channelFieldRole: MANAGED_RESOURCE_CHANNEL_FIELD_ROLES.Name,
-  },
-  {
-    fieldId: NEW_API_MANAGED_RESOURCE_FIELD_IDS.Type,
-    section: MANAGED_RESOURCE_SECTIONS.Basic,
-    order: 20,
-    resolveLabel: (t) => t("channelDialog:fields.type.label"),
-    optionLabelResolvers: newApiTypeOptionLabelResolvers,
-    resolveOptionFallback: MANAGED_RESOURCE_UNKNOWN_OPTION_LABEL_RESOLVER,
-    renderer: MANAGED_RESOURCE_FIELD_RENDERERS.Select,
-    channelFieldRole: MANAGED_RESOURCE_CHANNEL_FIELD_ROLES.Type,
-  },
-  {
-    fieldId: NEW_API_MANAGED_RESOURCE_FIELD_IDS.Status,
-    section: MANAGED_RESOURCE_SECTIONS.Basic,
-    order: 30,
-    resolveLabel: (t) => t("channelDialog:fields.status.label"),
-    optionLabelResolvers: newApiStatusOptionLabelResolvers,
-    resolveOptionFallback: managedResourceStatusFallbackLabelResolver,
-    renderer: MANAGED_RESOURCE_FIELD_RENDERERS.Select,
-    channelFieldRole: MANAGED_RESOURCE_CHANNEL_FIELD_ROLES.Status,
-  },
-  {
-    fieldId: NEW_API_MANAGED_RESOURCE_FIELD_IDS.BaseUrl,
-    section: MANAGED_RESOURCE_SECTIONS.Connection,
-    order: 10,
-    resolveLabel: (t) => t("channelDialog:fields.baseUrl.label"),
-    renderer: MANAGED_RESOURCE_FIELD_RENDERERS.Text,
-    channelFieldRole: MANAGED_RESOURCE_CHANNEL_FIELD_ROLES.BaseUrl,
-  },
-  {
-    fieldId: NEW_API_MANAGED_RESOURCE_FIELD_IDS.Key,
-    section: MANAGED_RESOURCE_SECTIONS.Connection,
-    order: 20,
-    resolveLabel: (t) => t("channelDialog:fields.key.label"),
-    resolveHelp: (t) => t("managedSiteChannels:editor.secret.keepExistingHint"),
-    renderer: MANAGED_RESOURCE_FIELD_RENDERERS.Secret,
-    channelFieldRole: MANAGED_RESOURCE_CHANNEL_FIELD_ROLES.Secret,
-  },
-  {
-    fieldId: NEW_API_MANAGED_RESOURCE_FIELD_IDS.Models,
-    section: MANAGED_RESOURCE_SECTIONS.Models,
-    order: 10,
-    resolveLabel: (t) => t("channelDialog:fields.models.label"),
-    renderer: MANAGED_RESOURCE_FIELD_RENDERERS.MultiSelect,
-    channelFieldRole: MANAGED_RESOURCE_CHANNEL_FIELD_ROLES.Models,
-  },
-  {
-    fieldId: NEW_API_MANAGED_RESOURCE_FIELD_IDS.Groups,
-    section: MANAGED_RESOURCE_SECTIONS.Models,
-    order: 20,
-    resolveLabel: (t) => t("channelDialog:fields.groups.label"),
-    resolveHelp: (t) => t("channelDialog:fields.groups.hint"),
-    resolvePlaceholder: (t) => t("channelDialog:fields.groups.placeholder"),
-    renderer: MANAGED_RESOURCE_FIELD_RENDERERS.MultiSelect,
-  },
-  {
-    fieldId: NEW_API_MANAGED_RESOURCE_FIELD_IDS.Priority,
-    section: MANAGED_RESOURCE_SECTIONS.Routing,
-    order: 10,
-    resolveLabel: (t) => t("channelDialog:fields.priority.label"),
-    renderer: MANAGED_RESOURCE_FIELD_RENDERERS.Number,
-  },
-  {
-    fieldId: NEW_API_MANAGED_RESOURCE_FIELD_IDS.Weight,
-    section: MANAGED_RESOURCE_SECTIONS.Routing,
-    order: 20,
-    resolveLabel: (t) => t("channelDialog:fields.weight.label"),
-    renderer: MANAGED_RESOURCE_FIELD_RENDERERS.Number,
-  },
-] as const satisfies readonly ManagedResourceFieldPresentation[]
+type NewApiFamilyFieldIds = {
+  [TKey in keyof typeof NEW_API_MANAGED_RESOURCE_FIELD_IDS]: string
+}
+
+const createNewApiFamilyFields = (
+  fieldIds: NewApiFamilyFieldIds,
+  typeOptionLabelResolvers: Readonly<
+    Record<string, ManagedResourceTextResolver>
+  >,
+) =>
+  [
+    {
+      fieldId: fieldIds.Name,
+      section: MANAGED_RESOURCE_SECTIONS.Basic,
+      order: 10,
+      resolveLabel: (t) => t("channelDialog:fields.name.label"),
+      renderer: MANAGED_RESOURCE_FIELD_RENDERERS.Text,
+      channelFieldRole: MANAGED_RESOURCE_CHANNEL_FIELD_ROLES.Name,
+    },
+    {
+      fieldId: fieldIds.Type,
+      section: MANAGED_RESOURCE_SECTIONS.Basic,
+      order: 20,
+      resolveLabel: (t) => t("channelDialog:fields.type.label"),
+      optionLabelResolvers: typeOptionLabelResolvers,
+      resolveOptionFallback: MANAGED_RESOURCE_UNKNOWN_OPTION_LABEL_RESOLVER,
+      renderer: MANAGED_RESOURCE_FIELD_RENDERERS.Select,
+      channelFieldRole: MANAGED_RESOURCE_CHANNEL_FIELD_ROLES.Type,
+    },
+    {
+      fieldId: fieldIds.Status,
+      section: MANAGED_RESOURCE_SECTIONS.Basic,
+      order: 30,
+      resolveLabel: (t) => t("channelDialog:fields.status.label"),
+      optionLabelResolvers: newApiStatusOptionLabelResolvers,
+      resolveOptionFallback: managedResourceStatusFallbackLabelResolver,
+      renderer: MANAGED_RESOURCE_FIELD_RENDERERS.Select,
+      channelFieldRole: MANAGED_RESOURCE_CHANNEL_FIELD_ROLES.Status,
+    },
+    {
+      fieldId: fieldIds.BaseUrl,
+      section: MANAGED_RESOURCE_SECTIONS.Connection,
+      order: 10,
+      resolveLabel: (t) => t("channelDialog:fields.baseUrl.label"),
+      renderer: MANAGED_RESOURCE_FIELD_RENDERERS.Text,
+      channelFieldRole: MANAGED_RESOURCE_CHANNEL_FIELD_ROLES.BaseUrl,
+    },
+    {
+      fieldId: fieldIds.Key,
+      section: MANAGED_RESOURCE_SECTIONS.Connection,
+      order: 20,
+      resolveLabel: (t) => t("channelDialog:fields.key.label"),
+      resolveHelp: (t) =>
+        t("managedSiteChannels:editor.secret.keepExistingHint"),
+      renderer: MANAGED_RESOURCE_FIELD_RENDERERS.Secret,
+      channelFieldRole: MANAGED_RESOURCE_CHANNEL_FIELD_ROLES.Secret,
+    },
+    {
+      fieldId: fieldIds.Models,
+      section: MANAGED_RESOURCE_SECTIONS.Models,
+      order: 10,
+      resolveLabel: (t) => t("channelDialog:fields.models.label"),
+      renderer: MANAGED_RESOURCE_FIELD_RENDERERS.MultiSelect,
+      channelFieldRole: MANAGED_RESOURCE_CHANNEL_FIELD_ROLES.Models,
+    },
+    {
+      fieldId: fieldIds.Groups,
+      section: MANAGED_RESOURCE_SECTIONS.Models,
+      order: 20,
+      resolveLabel: (t) => t("channelDialog:fields.groups.label"),
+      resolveHelp: (t) => t("channelDialog:fields.groups.hint"),
+      resolvePlaceholder: (t) => t("channelDialog:fields.groups.placeholder"),
+      renderer: MANAGED_RESOURCE_FIELD_RENDERERS.MultiSelect,
+    },
+    {
+      fieldId: fieldIds.Priority,
+      section: MANAGED_RESOURCE_SECTIONS.Routing,
+      order: 10,
+      resolveLabel: (t) => t("channelDialog:fields.priority.label"),
+      renderer: MANAGED_RESOURCE_FIELD_RENDERERS.Number,
+    },
+    {
+      fieldId: fieldIds.Weight,
+      section: MANAGED_RESOURCE_SECTIONS.Routing,
+      order: 20,
+      resolveLabel: (t) => t("channelDialog:fields.weight.label"),
+      renderer: MANAGED_RESOURCE_FIELD_RENDERERS.Number,
+    },
+  ] satisfies readonly ManagedResourceFieldPresentation[]
+
+const newApiFields = createNewApiFamilyFields(
+  NEW_API_MANAGED_RESOURCE_FIELD_IDS,
+  newApiTypeOptionLabelResolvers,
+)
+
+const veloeraFields = createNewApiFamilyFields(
+  VELOERA_MANAGED_RESOURCE_FIELD_IDS,
+  veloeraTypeOptionLabelResolvers,
+)
 
 const newApiManagedResourceFieldPolicy = defineManagedResourceFieldPolicy({
   siteType: SITE_TYPES.NEW_API,
@@ -461,6 +493,21 @@ const newApiManagedResourceFieldPolicy = defineManagedResourceFieldPolicy({
     },
     [MANAGED_RESOURCE_EDITOR_MODES.Edit]: {
       fields: newApiFields,
+      hiddenFields: [],
+    },
+  },
+})
+
+const veloeraManagedResourceFieldPolicy = defineManagedResourceFieldPolicy({
+  siteType: SITE_TYPES.VELOERA,
+  kind: MANAGED_RESOURCE_KINDS.Channel,
+  modes: {
+    [MANAGED_RESOURCE_EDITOR_MODES.Create]: {
+      fields: veloeraFields,
+      hiddenFields: [],
+    },
+    [MANAGED_RESOURCE_EDITOR_MODES.Edit]: {
+      fields: veloeraFields,
       hiddenFields: [],
     },
   },
@@ -727,6 +774,7 @@ export function createManagedResourceFieldPolicyRegistry(
 const managedResourceFieldPolicyRegistry =
   createManagedResourceFieldPolicyRegistry([
     newApiManagedResourceFieldPolicy,
+    veloeraManagedResourceFieldPolicy,
     axonHubManagedResourceFieldPolicy,
     sub2ApiManagedResourceFieldPolicy,
     claudeCodeHubManagedResourceFieldPolicy,

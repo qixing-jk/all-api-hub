@@ -7,6 +7,7 @@ import {
 import { ChannelTypeNames } from "~/constants/managedSite"
 import type { ManagedSiteType } from "~/constants/siteType"
 import { SITE_TYPES } from "~/constants/siteType"
+import { VeloeraChannelTypeNames } from "~/constants/veloera"
 import {
   MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES,
   MANAGED_SITE_CHANNEL_MIGRATION_GENERAL_WARNING_CODES,
@@ -191,6 +192,13 @@ const getTypeText = (
   siteType: ManagedSiteType,
   type: ManagedSiteMigrationSource["resourceType"] | string,
 ): string => {
+  if (
+    siteType === SITE_TYPES.VELOERA &&
+    typeof type === "number" &&
+    hasOwn(VeloeraChannelTypeNames, type)
+  ) {
+    return VeloeraChannelTypeNames[type as keyof typeof VeloeraChannelTypeNames]
+  }
   if (typeof type === "number" && hasOwn(ChannelTypeNames, type)) {
     return ChannelTypeNames[type as keyof typeof ChannelTypeNames]
   }
