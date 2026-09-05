@@ -10,6 +10,7 @@ import {
   type ResourceOperationOptions,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 import type { ManagedSiteChannelModelProbe } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
+import { attributeCreatedNativeResource } from "~/services/apiAdapters/managedResources/createAttribution"
 import { defineNativeResourceKind } from "~/services/apiAdapters/managedResources/factory"
 import {
   createNewApiCreateEditor,
@@ -29,7 +30,6 @@ import {
   isTempWindowUnsupportedErrorCode,
 } from "~/services/apiTransport/errors"
 import {
-  MANAGED_SITE_MUTATION_COMPLETIONS,
   MANAGED_SITE_MUTATION_EFFECT_KINDS,
   MANAGED_SITE_MUTATION_OUTCOMES,
   type ManagedSiteMutationResult,
@@ -102,29 +102,6 @@ type NewApiCreateCommand = ChannelFormData
 type NewApiUpdateCommand = ChannelFormData
 const channels = newApiManagedSiteCapabilities.channels
 const queries = newApiManagedSiteCapabilities.queries
-const createAttributionTailsByScope = new Map<string, Promise<void>>()
-
-const withSerializedCreateAttribution = async <T>(
-  scopeKey: string,
-  operation: () => Promise<T>,
-): Promise<T> => {
-  const previous = createAttributionTailsByScope.get(scopeKey)
-  const current = (previous ?? Promise.resolve()).then(operation, operation)
-  const tail = current.then(
-    () => undefined,
-    () => undefined,
-  )
-  createAttributionTailsByScope.set(scopeKey, tail)
-
-  try {
-    return await current
-  } finally {
-    if (createAttributionTailsByScope.get(scopeKey) === tail) {
-      createAttributionTailsByScope.delete(scopeKey)
-    }
-  }
-}
-
 const mapApiErrorFailureCode = (error: ApiError): ResourceFailure["code"] => {
   if (isTempWindowUnsupportedErrorCode(error.code)) {
     return MANAGED_RESOURCE_FAILURE_CODES.PermissionDenied
@@ -251,66 +228,22 @@ const getChannel = async (
   return await channels.get(nativeConfig.config, locator, options)
 }
 
-const withoutUnknownData = (
-  result: Exclude<
-    ManagedSiteMutationResult<unknown>,
-    { outcome: typeof MANAGED_SITE_MUTATION_OUTCOMES.Succeeded }
-  >,
-): ManagedSiteMutationResult<ManagedSiteChannel> => {
-  if (result.outcome !== MANAGED_SITE_MUTATION_OUTCOMES.Partial) return result
-  const { data: _data, ...rest } = result
-  return rest
-}
-
-const unresolvedCreatedIdentity = (
-  result: Extract<
-    ManagedSiteMutationResult<unknown>,
-    { outcome: typeof MANAGED_SITE_MUTATION_OUTCOMES.Succeeded }
-  >,
-): ManagedSiteMutationResult<ManagedSiteChannel> => ({
-  outcome: MANAGED_SITE_MUTATION_OUTCOMES.Partial,
-  confirmedEffects: result.confirmedEffects as readonly [
-    (typeof result.confirmedEffects)[number],
-    ...(typeof result.confirmedEffects)[number][],
-  ],
-  completion: MANAGED_SITE_MUTATION_COMPLETIONS.Uncertain,
-  diagnostic: {
-    code: MANAGED_RESOURCE_FAILURE_CODES.MutationStateUncertain,
-    message: MANAGED_RESOURCE_FAILURE_CODES.MutationStateUncertain,
-  },
-})
-
 const createChannel = async (
   nativeConfig: NewApiNativeConfig,
   draft: NewApiCreateCommand,
   options?: ResourceOperationOptions,
 ): Promise<ManagedSiteMutationResult<ManagedSiteChannel>> =>
-  await withSerializedCreateAttribution(nativeConfig.scopeKey, async () => {
-    const before = await listCompleteChannelInventory(nativeConfig, options)
-    const existingIds = new Set(before.items.map((item) => item.id))
-    const result = await channels.create(
-      nativeConfig.config,
-      newApiManagedSiteCapabilities.channelDrafts.buildPayload(draft),
-      options,
-    )
-    if (result.outcome !== MANAGED_SITE_MUTATION_OUTCOMES.Succeeded) {
-      return withoutUnknownData(result)
-    }
-
-    // New API's AddChannel response confirms the write but returns no ID:
-    // https://github.com/QuantumNous/new-api/blob/f116414284162ad15d8925f7bca494c109b83e93/controller/channel.go#L612-L700
-    // Serialize local creates per inventory scope, then compare authoritative
-    // inventories without matching mutable channel fields. External races stay
-    // ambiguous and non-replayable instead of fabricating resource identity.
-    try {
-      const after = await listCompleteChannelInventory(nativeConfig, options)
-      const created = after.items.filter((item) => !existingIds.has(item.id))
-      return created.length === 1
-        ? { ...result, data: created[0] }
-        : unresolvedCreatedIdentity(result)
-    } catch {
-      return unresolvedCreatedIdentity(result)
-    }
+  await attributeCreatedNativeResource({
+    attributionKey: `${SITE_TYPES.NEW_API}:${nativeConfig.scopeKey}`,
+    listInventory: async () =>
+      (await listCompleteChannelInventory(nativeConfig, options)).items,
+    create: async () =>
+      await channels.create(
+        nativeConfig.config,
+        newApiManagedSiteCapabilities.channelDrafts.buildPayload(draft),
+        options,
+      ),
+    identity: (item) => item.id,
   })
 
 const applyUpdate = (

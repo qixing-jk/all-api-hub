@@ -54,7 +54,8 @@ type DoneHubDataResult<T> = {
 type DoneHubChannelInfo = Partial<ManagedSiteChannel["channel_info"]>
 
 export type DoneHubChannelRaw = Partial<
-  Omit<ManagedSiteChannel, "channel_info"> & {
+  Omit<ManagedSiteChannel, "channel_info" | "type"> & {
+    type: number | string
     channel_info?: DoneHubChannelInfo
   }
 > &
@@ -237,18 +238,21 @@ export async function createChannel(
 /**
  * Update a channel for DoneHub-managed sites.
  *
- * DoneHub expects the update payload to be flat and typically uses `group`
- * instead of `groups`. We ensure `group` is populated and omit `groups`.
+ * DoneHub expects the update payload to be flat and uses `group` instead of
+ * `groups`. Preserve exact minimal patches and only derive `group` when the
+ * caller actually supplied `groups`.
  */
-export async function updateChannel(
+export async function updateChannel<TChannel extends UpdateChannelPayload>(
   request: ApiServiceRequest,
-  channelData: UpdateChannelPayload,
+  channelData: TChannel,
 ) {
   try {
     const { groups, ...rest } = channelData
     const payload = {
       ...rest,
-      group: rest.group ?? (groups ?? []).join(","),
+      ...(rest.group === undefined && groups !== undefined
+        ? { group: groups.join(",") }
+        : {}),
     }
 
     return await doneHubRequests.envelope<void>(request, {
@@ -410,6 +414,14 @@ export async function fetchChannelModels(
 ): Promise<string[]> {
   const channel = await fetchChannel(request, channelId, options)
 
+  return await fetchDoneHubProviderModels(request, channel, options)
+}
+
+const fetchDoneHubProviderModels = async (
+  request: ApiServiceRequest,
+  channel: DoneHubChannelRaw | ManagedSiteChannel,
+  options?: Pick<RequestInit, "signal">,
+): Promise<string[]> => {
   const requestData = {
     ...channel,
     // Keep request payload minimal and aligned with DoneHub's admin UI call.
@@ -438,6 +450,27 @@ export async function fetchChannelModels(
   return (models as unknown[])
     .map((model) => (typeof model === "string" ? model.trim() : ""))
     .filter(Boolean)
+}
+
+/**
+ * Probes provider models from an unsaved DoneHub channel draft.
+ * DoneHub's admin editor sends the draft itself to this endpoint:
+ * https://github.com/deanxv/done-hub/blob/1c09e7d75dc170a53d47af1e88c498816a5b85fb/web/src/views/Channel/component/EditModal.jsx
+ */
+export async function fetchDraftChannelModels(
+  request: ApiServiceRequest,
+  probe: { type: number; baseUrl: string; key: string },
+  options?: Pick<RequestInit, "signal">,
+): Promise<string[]> {
+  return await fetchDoneHubProviderModels(
+    request,
+    {
+      type: probe.type,
+      base_url: probe.baseUrl,
+      key: probe.key,
+    },
+    options,
+  )
 }
 
 /**

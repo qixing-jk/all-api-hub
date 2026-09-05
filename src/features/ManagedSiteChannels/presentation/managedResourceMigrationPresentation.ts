@@ -4,6 +4,7 @@ import {
   AxonHubChannelTypeNames,
   isAxonHubChannelType,
 } from "~/constants/axonHub"
+import { DoneHubChannelTypeNames } from "~/constants/doneHub"
 import { ChannelTypeNames } from "~/constants/managedSite"
 import type { ManagedSiteType } from "~/constants/siteType"
 import { SITE_TYPES } from "~/constants/siteType"
@@ -192,6 +193,24 @@ const getTypeText = (
   siteType: ManagedSiteType,
   type: ManagedSiteMigrationSource["resourceType"] | string,
 ): string => {
+  if (siteType === SITE_TYPES.DONE_HUB && typeof type === "string") {
+    const numericType = Number(type)
+    if (
+      Number.isInteger(numericType) &&
+      hasOwn(DoneHubChannelTypeNames, numericType)
+    ) {
+      return DoneHubChannelTypeNames[
+        numericType as keyof typeof DoneHubChannelTypeNames
+      ]
+    }
+  }
+  if (
+    siteType === SITE_TYPES.DONE_HUB &&
+    typeof type === "number" &&
+    hasOwn(DoneHubChannelTypeNames, type)
+  ) {
+    return DoneHubChannelTypeNames[type as keyof typeof DoneHubChannelTypeNames]
+  }
   if (
     siteType === SITE_TYPES.VELOERA &&
     typeof type === "number" &&
@@ -274,7 +293,7 @@ const getComparisonValues = (
   return {
     baseUrl: [source?.baseUrl ?? "", target?.baseUrl ?? ""],
     type: [
-      source ? getTypeText(t, preview.sourceSiteType, source.resourceType) : "",
+      source ? getTypeText(t, SITE_TYPES.NEW_API, source.resourceType) : "",
       target ? getTypeText(t, preview.targetSiteType, target.type) : "",
     ],
     models: [

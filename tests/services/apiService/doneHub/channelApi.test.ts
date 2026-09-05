@@ -5,6 +5,7 @@ import {
   createChannel,
   deleteChannel,
   fetchChannelModels,
+  fetchDraftChannelModels,
   fetchSiteUserGroups,
   fetchTodayIncome,
   fetchTodayUsage,
@@ -469,6 +470,55 @@ describe("apiService doneHub channel APIs", () => {
     expect(body.groups).toBeUndefined()
   })
 
+  it("updateChannel preserves an exact minimal patch without inventing group", async () => {
+    const request = {
+      baseUrl: "https://example.com",
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        accessToken: "token",
+        userId: "1",
+      },
+    }
+    mockFetchApi.mockResolvedValueOnce({ success: true, message: "ok" })
+
+    await updateChannel(request as any, { id: 1, name: "Updated Channel" })
+
+    const body = JSON.parse(
+      mockFetchApi.mock.calls[0][1].options?.body as string,
+    )
+    expect(body).toEqual({ id: 1, name: "Updated Channel" })
+  })
+
+  it("updateChannel preserves fields from a latest-detail full update", async () => {
+    const request = {
+      baseUrl: "https://example.com",
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        accessToken: "token",
+        userId: "1",
+      },
+    }
+    mockFetchApi.mockResolvedValueOnce({ success: true, message: "ok" })
+
+    await updateChannel(request as any, {
+      id: 1,
+      name: "Updated Channel",
+      models: "gpt-4",
+      group: "default",
+      future_field: { enabled: true },
+    })
+
+    const body = JSON.parse(
+      mockFetchApi.mock.calls[0][1].options?.body as string,
+    )
+    expect(body).toMatchObject({
+      id: 1,
+      models: "gpt-4",
+      group: "default",
+      future_field: { enabled: true },
+    })
+  })
+
   it("updateChannel should prefer an explicit group over derived groups", async () => {
     const request = {
       baseUrl: "https://example.com",
@@ -697,6 +747,42 @@ describe("apiService doneHub channel APIs", () => {
     })
 
     expect(result).toEqual(["gpt-4", "gpt-3.5-turbo"])
+  })
+
+  it("fetchDraftChannelModels should probe an unsaved DoneHub channel without a detail read", async () => {
+    const request = {
+      baseUrl: "https://example.com",
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        accessToken: "token",
+        userId: "1",
+      },
+    }
+    mockFetchApiData.mockResolvedValueOnce([" model-a ", "", "model-b"])
+
+    await expect(
+      fetchDraftChannelModels(request as any, {
+        type: 39,
+        baseUrl: "https://upstream.example.invalid",
+        key: "credential-placeholder",
+      }),
+    ).resolves.toEqual(["model-a", "model-b"])
+
+    expect(mockFetchApiData).toHaveBeenCalledOnce()
+    expect(mockFetchApiData.mock.calls[0][1]).toMatchObject({
+      endpoint: "/api/channel/provider_models_list",
+      options: { method: "POST" },
+    })
+    expect(
+      JSON.parse(mockFetchApiData.mock.calls[0][1].options.body as string),
+    ).toMatchObject({
+      type: 39,
+      base_url: "https://upstream.example.invalid",
+      key: "credential-placeholder",
+      models: "",
+      model_mapping: "",
+      model_headers: "",
+    })
   })
 
   it("fetchChannelModels should trim and filter blank model names", async () => {

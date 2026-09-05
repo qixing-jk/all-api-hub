@@ -18,6 +18,9 @@ export const MANAGED_SITE_CHANNELS_TEST_IDS = {
 export const MANAGED_SITE_CHANNEL_ROW_TEST_ID_PREFIX =
   "managed-site-channel-row-" as const
 
+const MANAGED_SITE_MIGRATION_COMPARISON_TARGET_TEST_ID_PREFIX =
+  "managed-site-channels-migration-comparison-target-" as const
+
 export const MANAGED_SITE_CHANNELS_REFRESH_STATE_ATTRIBUTE =
   "data-refresh-state" as const
 
@@ -31,6 +34,11 @@ export const MANAGED_SITE_CHANNELS_REFRESH_STATES = {
  */
 export function getManagedSiteChannelRowTestId(rowTestToken: string) {
   return `${MANAGED_SITE_CHANNEL_ROW_TEST_ID_PREFIX}${rowTestToken}`
+}
+
+/** Returns the stable test id for one destination comparison field. */
+export function getManagedSiteMigrationComparisonTargetTestId(fieldId: string) {
+  return `${MANAGED_SITE_MIGRATION_COMPARISON_TARGET_TEST_ID_PREFIX}${fieldId}`
 }
 
 /**

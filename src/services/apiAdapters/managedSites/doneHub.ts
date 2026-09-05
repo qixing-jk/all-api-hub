@@ -13,6 +13,7 @@ import {
   fetchChannel,
   fetchChannelModels,
   fetchChannelRaw,
+  fetchDraftChannelModels,
   fetchSiteUserGroups,
   listAllChannels,
   normalizeDoneHubChannel,
@@ -207,6 +208,16 @@ export const doneHubManagedSiteChannels: ManagedSiteChannelsCapability<DoneHubCo
       await fetchChannelModels(
         toManagedSiteApiServiceRequest(config, options),
         channelId,
+        options,
+      ),
+    fetchDraftModels: async (config, probe, options) =>
+      await fetchDraftChannelModels(
+        toManagedSiteApiServiceRequest(config, options),
+        {
+          type: Number(probe.channelType),
+          baseUrl: probe.baseUrl,
+          key: probe.credential,
+        },
         options,
       ),
     updateModels: async (config, channelId, models, options) => {

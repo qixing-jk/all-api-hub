@@ -6,19 +6,16 @@ import {
   NEW_API_MANAGED_RESOURCE_FIELD_IDS,
 } from "~/constants/newApi"
 import {
-  MANAGED_RESOURCE_DISPLAY_FACT_KINDS,
   MANAGED_RESOURCE_FAILURE_CODES,
   MANAGED_RESOURCE_FIELD_ISSUE_CODES,
   MANAGED_RESOURCE_FIELD_OPTION_LOAD_TRIGGERS,
   MANAGED_RESOURCE_FIELD_TYPES,
   MANAGED_RESOURCE_SECRET_EDIT_INTENT_KINDS,
   MANAGED_RESOURCE_SECRET_STATES,
-  MANAGED_RESOURCE_STATUSES,
   ManagedResourceError,
   type EditableResourceProjection,
   type ManagedChannelImportCreateSeed,
   type ManagedResourceRef,
-  type ResourceDisplayFact,
   type ResourceDisplayFacts,
   type ResourceFieldDescriptor,
   type ResourceFieldIssue,
@@ -29,8 +26,8 @@ import {
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 import type { ManagedSiteChannelModelProbe } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import type { NativeResourceEditorDefinition } from "~/services/apiAdapters/managedResources/factory"
+import { createNewApiFamilyResourceFacts } from "~/services/apiAdapters/managedResources/newApiFamilyResourceFacts"
 import {
-  getNewApiResourceSearchData,
   parseNewApiResourceList,
   throwIfNewApiResourceOperationAborted,
 } from "~/services/apiAdapters/managedResources/newApiResourceUtils"
@@ -137,17 +134,6 @@ const readSecretIntent = (
   return { kind: MANAGED_RESOURCE_SECRET_EDIT_INTENT_KINDS.Unchanged }
 }
 
-const statusToDisplay = (
-  status: ManagedSiteChannel["status"],
-): ResourceDisplayFacts["status"] => {
-  if (status === CHANNEL_STATUS.Enable) return MANAGED_RESOURCE_STATUSES.Enabled
-  if (status === CHANNEL_STATUS.ManuallyDisabled)
-    return MANAGED_RESOURCE_STATUSES.ManuallyDisabled
-  if (status === CHANNEL_STATUS.AutoDisabled)
-    return MANAGED_RESOURCE_STATUSES.AutoDisabled
-  return MANAGED_RESOURCE_STATUSES.Unknown
-}
-
 const getInventorySecretState = (
   key: ManagedSiteChannel["key"],
 ): ResourceSecretState => {
@@ -166,89 +152,17 @@ export const sanitizeNewApiEditorDetail = (
   return sanitized
 }
 
+const newApiResourceFacts = createNewApiFamilyResourceFacts({
+  fields,
+  typeNames: ChannelTypeNames,
+  emptyInventorySecretState: MANAGED_RESOURCE_SECRET_STATES.Unavailable,
+})
+
 export const toNewApiResourceFacts = (
   channel: ManagedSiteChannel,
   ref: ManagedResourceRef,
-): ResourceDisplayFacts => {
-  const { models, groups, channelType, searchValues } =
-    getNewApiResourceSearchData(channel)
-  const projectedFields: ResourceDisplayFact[] = [
-    {
-      fieldId: fields.Id,
-      kind: MANAGED_RESOURCE_DISPLAY_FACT_KINDS.Number,
-      value: channel.id,
-    },
-    {
-      fieldId: fields.Name,
-      kind: MANAGED_RESOURCE_DISPLAY_FACT_KINDS.Text,
-      value: channel.name,
-    },
-    {
-      fieldId: fields.Type,
-      kind: MANAGED_RESOURCE_DISPLAY_FACT_KINDS.Text,
-      value: channelType,
-    },
-    {
-      fieldId: fields.Status,
-      kind: MANAGED_RESOURCE_DISPLAY_FACT_KINDS.Text,
-      value: statusToDisplay(channel.status),
-    },
-    {
-      fieldId: fields.BaseUrl,
-      kind: MANAGED_RESOURCE_DISPLAY_FACT_KINDS.Text,
-      value: channel.base_url ?? "",
-    },
-    {
-      fieldId: fields.Key,
-      kind: MANAGED_RESOURCE_DISPLAY_FACT_KINDS.Secret,
-      state: getInventorySecretState(channel.key),
-    },
-    {
-      fieldId: fields.Models,
-      kind: MANAGED_RESOURCE_DISPLAY_FACT_KINDS.List,
-      value: models,
-    },
-    {
-      fieldId: fields.ModelCount,
-      kind: MANAGED_RESOURCE_DISPLAY_FACT_KINDS.Number,
-      value: models.length,
-    },
-    {
-      fieldId: fields.Groups,
-      kind: MANAGED_RESOURCE_DISPLAY_FACT_KINDS.List,
-      value: groups,
-    },
-    {
-      fieldId: fields.Priority,
-      kind: MANAGED_RESOURCE_DISPLAY_FACT_KINDS.Number,
-      value: channel.priority,
-    },
-    {
-      fieldId: fields.Weight,
-      kind: MANAGED_RESOURCE_DISPLAY_FACT_KINDS.Number,
-      value: channel.weight,
-    },
-  ]
-
-  return {
-    ref,
-    displayName: channel.name || `Channel ${channel.id}`,
-    status: statusToDisplay(channel.status),
-    fields: projectedFields,
-    searchValues,
-    actions: {
-      canUpdate: true,
-      canDelete: true,
-      channel: {
-        channelId: channel.id,
-        channelType: channel.type,
-        canSyncModels: true,
-        canOpenModelSync: true,
-        canConfigureModelFilters: true,
-      },
-    },
-  }
-}
+): ResourceDisplayFacts =>
+  newApiResourceFacts.toFacts(channel, ref, { inventory: true })
 
 const statusOptions = (detail?: ManagedSiteChannel) => [
   { value: String(CHANNEL_STATUS.Enable) },

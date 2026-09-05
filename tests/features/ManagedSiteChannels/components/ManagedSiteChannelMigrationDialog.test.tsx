@@ -3,9 +3,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { AXON_HUB_CHANNEL_TYPE } from "~/constants/axonHub"
 import { CLAUDE_CODE_HUB_PROVIDER_TYPE } from "~/constants/claudeCodeHub"
+import { DoneHubChannelType } from "~/constants/doneHub"
 import { SITE_TYPES } from "~/constants/siteType"
 import { VeloeraChannelType } from "~/constants/veloera"
 import { ManagedSiteChannelMigrationDialog } from "~/features/ManagedSiteChannels/components/ManagedSiteChannelMigrationDialog"
+import { getManagedSiteMigrationComparisonTargetTestId } from "~/features/ManagedSiteChannels/testIds"
 import enManagedSiteChannels from "~/locales/en/managedSiteChannels.json"
 import {
   executeManagedSiteChannelMigration,
@@ -722,6 +724,74 @@ describe("ManagedSiteChannelMigrationDialog", () => {
 
     expect(await screen.findByText("GitHub Models")).toBeInTheDocument()
     expect(screen.getByText("999")).toBeInTheDocument()
+  })
+
+  it("renders DoneHub string and numeric channel type labels", async () => {
+    mockedPreparePreview.mockResolvedValueOnce({
+      ...previewPayload,
+      targetSiteType: SITE_TYPES.DONE_HUB,
+      items: [
+        {
+          ...previewPayload.items[0],
+          draft: {
+            ...previewPayload.items[0].draft,
+            type: String(DoneHubChannelType.GitHubModels),
+          },
+        },
+        {
+          ...previewPayload.items[1],
+          draft: {
+            ...previewPayload.items[1].draft,
+            type: DoneHubChannelType.OpenAI,
+          },
+        },
+        {
+          ...previewPayload.items[0],
+          channelId: 3,
+          channelName: "Unknown numeric type",
+          draft: {
+            ...previewPayload.items[0].draft,
+            type: "999",
+          },
+        },
+        {
+          ...previewPayload.items[1],
+          channelId: 4,
+          channelName: "Unknown string type",
+          draft: {
+            ...previewPayload.items[1].draft,
+            type: "future-provider",
+          },
+        },
+      ],
+    })
+
+    render(
+      <ManagedSiteChannelMigrationDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        channels={channels}
+        preferences={{} as any}
+        sourceSiteType={SITE_TYPES.NEW_API}
+        availableTargets={
+          [{ siteType: SITE_TYPES.DONE_HUB, label: "DoneHub" }] as any
+        }
+      />,
+    )
+
+    await screen.findByText("GitHub Models")
+    expect(
+      screen
+        .getAllByTestId(getManagedSiteMigrationComparisonTargetTestId("type"))
+        .map((cell) => cell.textContent),
+    ).toEqual(
+      expect.arrayContaining([
+        "GitHub Models",
+        "OpenAI",
+        "999",
+        "future-provider",
+      ]),
+    )
   })
 
   it("renders Claude Code Hub string provider type labels and unknown type fallbacks", async () => {

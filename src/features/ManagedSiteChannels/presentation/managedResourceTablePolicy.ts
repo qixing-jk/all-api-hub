@@ -2,6 +2,7 @@ import type { TFunction } from "i18next"
 
 import { AXON_HUB_CHANNEL_FIELD_IDS } from "~/constants/axonHub"
 import { CLAUDE_CODE_HUB_MANAGED_RESOURCE_FIELD_IDS } from "~/constants/claudeCodeHub"
+import { DONE_HUB_MANAGED_RESOURCE_FIELD_IDS } from "~/constants/doneHub"
 import { NEW_API_MANAGED_RESOURCE_FIELD_IDS } from "~/constants/newApi"
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import { SUB2API_MANAGED_RESOURCE_FIELD_IDS } from "~/constants/sub2api"
@@ -141,6 +142,25 @@ const nativeTablePresentationPolicies: Partial<
     defaultSorting: [{ id: VELOERA_MANAGED_RESOURCE_FIELD_IDS.Id, desc: true }],
     columnLayout: NATIVE_TABLE_COLUMN_LAYOUTS.NumericChannel,
     numericChannelFieldIds: VELOERA_MANAGED_RESOURCE_FIELD_IDS,
+  },
+  [SITE_TYPES.DONE_HUB]: {
+    semantics: {
+      baseUrlFieldId: DONE_HUB_MANAGED_RESOURCE_FIELD_IDS.BaseUrl,
+      statusFieldId: DONE_HUB_MANAGED_RESOURCE_FIELD_IDS.Status,
+      fieldValuePresentations: {
+        [DONE_HUB_MANAGED_RESOURCE_FIELD_IDS.Type]:
+          requireFieldValuePresentation(
+            SITE_TYPES.DONE_HUB,
+            DONE_HUB_MANAGED_RESOURCE_FIELD_IDS.Type,
+          ),
+      },
+    },
+    defaultSorting: [
+      { id: DONE_HUB_MANAGED_RESOURCE_FIELD_IDS.Id, desc: true },
+    ],
+    columnLayout: NATIVE_TABLE_COLUMN_LAYOUTS.NumericChannel,
+    numericChannelFieldIds: DONE_HUB_MANAGED_RESOURCE_FIELD_IDS,
+    supportsNumericChannelDeepLink: true,
   },
   [SITE_TYPES.SUB2API]: {
     semantics: {

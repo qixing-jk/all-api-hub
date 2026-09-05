@@ -301,7 +301,7 @@ describe("account site definition registry", () => {
     const expectedModes = new Map<ManagedSiteType, string>([
       [SITE_TYPES.NEW_API, MANAGED_RESOURCE_MODES.NativeResource],
       [SITE_TYPES.VELOERA, MANAGED_RESOURCE_MODES.NativeResource],
-      [SITE_TYPES.DONE_HUB, MANAGED_RESOURCE_MODES.LegacyChannel],
+      [SITE_TYPES.DONE_HUB, MANAGED_RESOURCE_MODES.NativeResource],
       [SITE_TYPES.OCTOPUS, MANAGED_RESOURCE_MODES.LegacyChannel],
       [SITE_TYPES.AXON_HUB, MANAGED_RESOURCE_MODES.NativeResource],
       [SITE_TYPES.CLAUDE_CODE_HUB, MANAGED_RESOURCE_MODES.NativeResource],
@@ -369,6 +369,35 @@ describe("account site definition registry", () => {
       ),
     ).toMatchObject({
       siteType: SITE_TYPES.VELOERA,
+      kind: MANAGED_RESOURCE_KINDS.Channel,
+    })
+  })
+
+  it("switches DoneHub to the native channel product policy", () => {
+    expect(
+      getAccountSiteDefinition(SITE_TYPES.DONE_HUB)?.managedResource,
+    ).toMatchObject({
+      mode: MANAGED_RESOURCE_MODES.NativeResource,
+      primaryKind: MANAGED_RESOURCE_KINDS.Channel,
+      actions: [
+        "create",
+        "delete-selected",
+        "migrate",
+        "sync-models",
+        "configure-model-sync",
+        "configure-model-filters",
+      ],
+    })
+  })
+
+  it("registers the DoneHub native channel workspace", () => {
+    expect(
+      getManagedResourceRegistration(
+        SITE_TYPES.DONE_HUB,
+        MANAGED_RESOURCE_KINDS.Channel,
+      ),
+    ).toMatchObject({
+      siteType: SITE_TYPES.DONE_HUB,
       kind: MANAGED_RESOURCE_KINDS.Channel,
     })
   })

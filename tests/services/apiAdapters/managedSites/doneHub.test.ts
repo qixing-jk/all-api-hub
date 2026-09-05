@@ -31,6 +31,7 @@ const doneHubApi = vi.hoisted(() => ({
   fetchChannelRaw: vi.fn(),
   normalizeDoneHubChannel: vi.fn((channel) => channel),
   fetchChannelModels: vi.fn(),
+  fetchDraftChannelModels: vi.fn(),
   updateChannelModels: vi.fn(),
   updateChannelModelMapping: vi.fn(),
   updateDoneHubChannelFields: vi.fn(),
@@ -557,6 +558,15 @@ describe("DoneHub managed-site channel capability", () => {
     await doneHubManagedSiteChannels.update(config, { id: 1 })
     await doneHubManagedSiteChannels.delete(config, 1)
     await doneHubManagedSiteChannels.fetchModels?.(config, 1)
+    await doneHubManagedSiteChannels.fetchDraftModels?.(
+      config,
+      {
+        channelType: "1",
+        baseUrl: "https://upstream.example.invalid",
+        credential: "credential-placeholder",
+      },
+      { bypassSiteRequestLimit: true },
+    )
     await doneHubManagedSiteChannels.updateModels?.(config, 1, ["model-a"])
     await doneHubManagedSiteChannels.updateModelMapping?.(
       config,
@@ -589,6 +599,15 @@ describe("DoneHub managed-site channel capability", () => {
       request,
       1,
       undefined,
+    )
+    expect(doneHubApi.fetchDraftChannelModels).toHaveBeenCalledWith(
+      { ...request, bypassSiteRequestLimit: true },
+      {
+        type: 1,
+        baseUrl: "https://upstream.example.invalid",
+        key: "credential-placeholder",
+      },
+      { bypassSiteRequestLimit: true },
     )
     expect(doneHubApi.fetchChannelRaw).toHaveBeenCalledWith(
       request,

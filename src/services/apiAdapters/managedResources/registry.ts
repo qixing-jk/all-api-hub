@@ -4,6 +4,7 @@ import type { ManagedResourceRegistration } from "~/services/apiAdapters/contrac
 
 import { axonHubManagedResourceRegistration } from "./axonHub"
 import { claudeCodeHubManagedResourceRegistration } from "./claudeCodeHub"
+import { doneHubManagedResourceRegistration } from "./doneHub"
 import { newApiManagedResourceRegistration } from "./newApi"
 import { sub2ApiManagedResourceRegistration } from "./sub2api"
 import { veloeraManagedResourceRegistration } from "./veloera"
@@ -12,6 +13,7 @@ const MANAGED_RESOURCE_REGISTRATIONS = [
   newApiManagedResourceRegistration,
   axonHubManagedResourceRegistration,
   claudeCodeHubManagedResourceRegistration,
+  doneHubManagedResourceRegistration,
   sub2ApiManagedResourceRegistration,
   veloeraManagedResourceRegistration,
 ] satisfies readonly ManagedResourceRegistration[]

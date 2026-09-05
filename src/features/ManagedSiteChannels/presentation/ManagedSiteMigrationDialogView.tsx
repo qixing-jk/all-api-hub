@@ -13,7 +13,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui"
-import { MANAGED_SITE_CHANNELS_TEST_IDS } from "~/features/ManagedSiteChannels/testIds"
+import {
+  getManagedSiteMigrationComparisonTargetTestId,
+  MANAGED_SITE_CHANNELS_TEST_IDS,
+} from "~/features/ManagedSiteChannels/testIds"
 
 import type {
   ManagedSiteMigrationCallbacks,
@@ -49,11 +52,13 @@ function WarningTooltipContent({ items }: { items: string[] }) {
 
 /** Renders one source-to-target comparison row in the migration preview. */
 function PreviewComparisonRow({
+  fieldId,
   label,
   sourceValue,
   targetValue,
   missingValue,
 }: {
+  fieldId: string
   label: string
   sourceValue: string
   targetValue: string
@@ -67,7 +72,10 @@ function PreviewComparisonRow({
       <div className="bg-background px-3 py-2 text-sm break-words">
         {sourceValue || missingValue}
       </div>
-      <div className="bg-background px-3 py-2 text-sm break-words">
+      <div
+        data-testid={getManagedSiteMigrationComparisonTargetTestId(fieldId)}
+        className="bg-background px-3 py-2 text-sm break-words"
+      >
         {targetValue || missingValue}
       </div>
     </div>
@@ -381,6 +389,7 @@ export function ManagedSiteMigrationDialogView({
                           {row.comparisons.map((comparison) => (
                             <PreviewComparisonRow
                               key={comparison.id}
+                              fieldId={comparison.id}
                               label={comparison.label}
                               sourceValue={comparison.source}
                               targetValue={comparison.target}
