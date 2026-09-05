@@ -10,6 +10,7 @@ import {
   MANAGED_SITE_MUTATION_OUTCOMES,
 } from "~/services/managedSites/mutations"
 import { MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES } from "~/types/managedSiteMigration"
+import { CHANNEL_STATUS } from "~/types/newApi"
 import { buildManagedSiteChannel } from "~~/tests/test-utils/factories"
 
 const mocks = vi.hoisted(() => ({
@@ -204,12 +205,12 @@ describe("Veloera native channel migration", () => {
 
   it.each([
     {
-      status: 2,
+      status: CHANNEL_STATUS.ManuallyDisabled,
       expectedStatus: "disabled",
       expectedLoss: false,
     },
     {
-      status: 3,
+      status: CHANNEL_STATUS.AutoDisabled,
       expectedStatus: "other",
       expectedLoss: true,
     },
@@ -222,7 +223,7 @@ describe("Veloera native channel migration", () => {
           type: VeloeraChannelType.OpenAI,
           status,
           model_mapping: expectedLoss ? "true" : "{}",
-          status_code_mapping: expectedLoss ? ["mapping"] : [],
+          status_code_mapping: expectedLoss ? '["mapping"]' : "[]",
           group: "",
         }),
         setting: expectedLoss ? { retry: 1 } : "",

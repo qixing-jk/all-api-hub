@@ -569,6 +569,12 @@ describe("Veloera managed-site channel capability", () => {
     ).resolves.toBe(detail)
     await expect(
       veloeraManagedSiteChannels.fetchSecretKey?.(config, 23, {
+        protectionBypassExecution: {
+          version: 2,
+          kind: "user_command",
+          command: "manage_site_channels",
+          surface: "options",
+        },
         signal: detailSignal,
       }),
     ).resolves.toBe(detail.key)
