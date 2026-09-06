@@ -754,6 +754,18 @@ async function installAxonHubIntercepts(context: BrowserContext) {
 }
 
 async function installOctopusCookieAuthIntercepts(context: BrowserContext) {
+  let channel = {
+    id: 17,
+    name: "Example outbound",
+    type: "anthropic",
+    enabled: true,
+    base_url: "https://upstream.example.invalid",
+    key: "fixture-channel-secret",
+    model: "model-a",
+    proxy: false,
+    auto_sync: true,
+    custom_header: [],
+  }
   interceptedOctopusCookieHeader = null
   interceptedOctopusRootRequestCount = 0
   interceptedOctopusStatusRequestCount = 0
@@ -815,7 +827,14 @@ async function installOctopusCookieAuthIntercepts(context: BrowserContext) {
         return
       }
 
-      await fulfill(route, { code: 200, data: [] })
+      await fulfill(route, { code: 200, data: [channel] })
+      return
+    }
+
+    if (path === "/api/v1/channel/update" && request.method() === "POST") {
+      const payload = request.postDataJSON()
+      channel = { ...channel, ...payload }
+      await fulfill(route, { code: 200, data: channel })
       return
     }
 

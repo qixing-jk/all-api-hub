@@ -14,6 +14,10 @@ import {
   NEW_API_MANAGED_RESOURCE_DETAIL_FIELD_IDS,
   NEW_API_MANAGED_RESOURCE_TABLE_FIELD_IDS,
 } from "~/constants/newApi"
+import {
+  OCTOPUS_MANAGED_RESOURCE_DETAIL_FIELD_IDS,
+  OCTOPUS_MANAGED_RESOURCE_TABLE_FIELD_IDS,
+} from "~/constants/octopus"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import {
   SUB2API_MANAGED_RESOURCE_DETAIL_FIELD_IDS,
@@ -438,7 +442,11 @@ const MANAGED_ONLY_SITE_DEFINITIONS = [
     siteType: SITE_TYPES.OCTOPUS,
     scopes: MANAGED_SCOPE,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Unsupported,
-    managedResource: { ...LEGACY_MANAGED_CHANNEL_POLICY },
+    managedResource: {
+      ...LEGACY_MANAGED_CHANNEL_POLICY,
+      tableFieldIds: OCTOPUS_MANAGED_RESOURCE_TABLE_FIELD_IDS,
+      detailFieldIds: OCTOPUS_MANAGED_RESOURCE_DETAIL_FIELD_IDS,
+    },
   },
   {
     siteType: SITE_TYPES.AXON_HUB,

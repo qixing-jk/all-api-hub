@@ -14,6 +14,7 @@ import {
   OctopusMutationApiError,
   searchChannels,
   updateChannel,
+  usesChannelProtocolPaths,
   validateOctopusConfig,
 } from "~/services/apiService/octopus"
 import {
@@ -1365,6 +1366,54 @@ describe("Octopus API service", () => {
         mockTempWindowOctopusApiFetch.mock.calls[0][0].fetchOptions.body,
       ),
     ).toEqual({ id: 7 })
+  })
+
+  it("reuses the confirmed deployment generation when resolving protocol path behavior", async () => {
+    mockGetValidSession.mockResolvedValue(v013CookieSession())
+    await expect(usesChannelProtocolPaths(config)).resolves.toBe(true)
+    mockGetValidSession.mockResolvedValue(currentCookieSession())
+    await expect(usesChannelProtocolPaths(config)).resolves.toBe(false)
+    expect(mockTempWindowOctopusApiFetch).not.toHaveBeenCalled()
+    const controller = new AbortController()
+    controller.abort()
+    await expect(
+      usesChannelProtocolPaths(config, { signal: controller.signal }),
+    ).rejects.toMatchObject({ name: "AbortError" })
+    expect(mockGetValidSession).toHaveBeenCalledTimes(2)
+  })
+
+  it("passes the cancellation signal and protection execution into create and delete", async () => {
+    const execution = createAutomaticProtectionBypassExecution(
+      PROTECTION_BYPASS_FEATURES.ManagedSiteModelSync,
+      PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.Scheduled,
+      PROTECTION_BYPASS_SURFACES.Background,
+    )
+    const signal = new AbortController().signal
+    mockGetValidSession.mockResolvedValue(currentCookieSession())
+    mockTempWindowOctopusApiFetch.mockResolvedValue({
+      success: true,
+      status: 200,
+      data: { code: 200, data: null },
+    })
+    await createChannel(
+      config,
+      {
+        name: "Example",
+        type: OctopusOutboundType.OpenAIChat,
+        baseUrl: "https://upstream.example.invalid",
+        key: "credential-placeholder",
+      },
+      { signal, protectionBypassExecution: execution },
+    )
+    await deleteChannel(config, 7, {
+      signal,
+      protectionBypassExecution: execution,
+    })
+    expect(mockTempWindowOctopusApiFetch).toHaveBeenCalledTimes(2)
+    for (const [request] of mockTempWindowOctopusApiFetch.mock.calls) {
+      expect(request.protectionBypassExecution).toBe(execution)
+      expect(request.fetchOptions.signal).toBe(signal)
+    }
   })
 
   it("preserves one model-sync execution across cookie login and retry", async () => {

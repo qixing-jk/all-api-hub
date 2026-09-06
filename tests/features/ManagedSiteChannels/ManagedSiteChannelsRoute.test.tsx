@@ -551,6 +551,7 @@ const installNativeControllers = (
 }
 
 type NativePreferenceSiteType =
+  | typeof SITE_TYPES.OCTOPUS
   | typeof SITE_TYPES.NEW_API
   | typeof SITE_TYPES.VELOERA
   | typeof SITE_TYPES.DONE_HUB
@@ -562,6 +563,14 @@ const getNativePreferenceOverrides = (
   siteType: NativePreferenceSiteType,
 ): Partial<ReturnType<typeof buildUserPreferences>> => {
   switch (siteType) {
+    case SITE_TYPES.OCTOPUS:
+      return {
+        octopus: {
+          baseUrl: "https://console.example.invalid",
+          username: "example-user",
+          password: "example-credential",
+        },
+      }
     case SITE_TYPES.NEW_API:
       return {
         newApi: {
@@ -712,6 +721,19 @@ describe("ManagedSiteChannelsRoute", () => {
     expect(screen.getByText("Native example")).toBeVisible()
     expect(legacyRender).not.toHaveBeenCalled()
     expect(useListController).toHaveBeenCalled()
+  })
+
+  it("routes the production Octopus definition through native controllers", () => {
+    installNativeControllers()
+    configureNativePreferences(SITE_TYPES.OCTOPUS)
+    render(
+      <ManagedSiteChannelsRoute
+        siteType={SITE_TYPES.OCTOPUS}
+        onReplaceRouteQuery={vi.fn()}
+      />,
+    )
+    expect(screen.getByText("Native example")).toBeVisible()
+    expect(legacyRender).not.toHaveBeenCalled()
   })
 
   it("routes the production AxonHub definition through native controllers", () => {
@@ -1102,6 +1124,9 @@ describe("ManagedSiteChannelsRoute", () => {
   })
 
   it("keeps the shared legacy and native route surfaces structurally aligned", () => {
+    vi.spyOn(nativeRegistry, "getManagedResourceRegistration").mockReturnValue(
+      null,
+    )
     const readSurface = (testToken: string) => {
       const buttons = screen.getAllByRole("button")
       const refresh = screen.getByTestId(
@@ -1173,6 +1198,10 @@ describe("ManagedSiteChannelsRoute", () => {
       }
 
       legacyFixtureScenario.current = scenario
+      vi.spyOn(
+        nativeRegistry,
+        "getManagedResourceRegistration",
+      ).mockReturnValue(null)
       render(
         <ManagedSiteChannelsRoute
           siteType={SITE_TYPES.OCTOPUS}
@@ -1712,6 +1741,9 @@ describe("ManagedSiteChannelsRoute", () => {
   })
 
   it("keeps editor shell behavior aligned between legacy and native routes", () => {
+    vi.spyOn(nativeRegistry, "getManagedResourceRegistration").mockReturnValue(
+      null,
+    )
     legacyFixtureScenario.current = "editor"
     render(
       <ManagedSiteChannelsRoute
@@ -1764,6 +1796,9 @@ describe("ManagedSiteChannelsRoute", () => {
   })
 
   it("keeps migration dialog behavior aligned between legacy and native routes", async () => {
+    vi.spyOn(nativeRegistry, "getManagedResourceRegistration").mockReturnValue(
+      null,
+    )
     legacyFixtureScenario.current = "migration"
     render(
       <ManagedSiteChannelsRoute
@@ -1814,6 +1849,9 @@ describe("ManagedSiteChannelsRoute", () => {
   })
 
   it("keeps focused search recovery aligned between legacy and native routes", async () => {
+    vi.spyOn(nativeRegistry, "getManagedResourceRegistration").mockReturnValue(
+      null,
+    )
     const user = userEvent.setup()
     legacyFixtureScenario.current = "focus"
     render(

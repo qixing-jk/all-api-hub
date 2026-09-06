@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest"
 
 import { OCTOPUS_API_OPERATIONS } from "~/services/apiService/octopus/operations"
 import { octopusV013Contract } from "~/services/apiService/octopus/v013"
-import { OctopusOutboundType } from "~/types/octopus"
+import {
+  OCTOPUS_CHANNEL_DETAIL_AVAILABILITY,
+  OctopusOutboundType,
+} from "~/types/octopus"
 
 const detailResponse = (overrides: Record<string, unknown> = {}) => ({
   id: 7,
@@ -44,6 +47,36 @@ const parseRequestBody = (
 ) => JSON.parse(request.init.body as string) as Record<string, unknown>
 
 describe("Octopus v0.13 contract", () => {
+  it.each([
+    { dialect: "custom" },
+    { openai_chat_completion_path: "/custom/chat" },
+    { grants: [{ model_name: "model-a", key_name: "default", protocols: 6 }] },
+    { grants: [] },
+    {
+      grants: [{ model_name: "model-a", key_name: "secondary", protocols: 2 }],
+    },
+  ])(
+    "marks protocol details that single-type migration cannot represent: %j",
+    (overrides) => {
+      expect(
+        octopusV013Contract.normalizeChannel(detailResponse(overrides))
+          .hasUnrepresentedProtocolSettings,
+      ).toBe(true)
+      expect(
+        octopusV013Contract.normalizeChannel(detailResponse())
+          .hasUnrepresentedProtocolSettings,
+      ).toBe(false)
+    },
+  )
+  it("marks stats inventories as summaries so missing protocol data is not treated as a native type", () => {
+    const stats = octopusV013Contract.parseStatsList([statsResponse()])[0]
+    expect(
+      octopusV013Contract.normalizeStatsChannel(stats).detailAvailability,
+    ).toBe(OCTOPUS_CHANNEL_DETAIL_AVAILABILITY.Summary)
+    expect(
+      octopusV013Contract.normalizeChannel(detailResponse()).detailAvailability,
+    ).not.toBe(OCTOPUS_CHANNEL_DETAIL_AVAILABILITY.Summary)
+  })
   it.each([
     {
       name: "OpenAI Responses",

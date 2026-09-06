@@ -4,6 +4,7 @@ import { AXON_HUB_CHANNEL_FIELD_IDS } from "~/constants/axonHub"
 import { CLAUDE_CODE_HUB_MANAGED_RESOURCE_FIELD_IDS } from "~/constants/claudeCodeHub"
 import { DONE_HUB_MANAGED_RESOURCE_FIELD_IDS } from "~/constants/doneHub"
 import { NEW_API_MANAGED_RESOURCE_FIELD_IDS } from "~/constants/newApi"
+import { OCTOPUS_MANAGED_RESOURCE_FIELD_IDS } from "~/constants/octopus"
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import { SUB2API_MANAGED_RESOURCE_FIELD_IDS } from "~/constants/sub2api"
 import { VELOERA_MANAGED_RESOURCE_FIELD_IDS } from "~/constants/veloera"
@@ -94,6 +95,23 @@ const requireFieldValuePresentation = (
 const nativeTablePresentationPolicies: Partial<
   Record<ManagedSiteType, NativeTablePresentationPolicy>
 > = {
+  [SITE_TYPES.OCTOPUS]: {
+    semantics: {
+      baseUrlFieldId: OCTOPUS_MANAGED_RESOURCE_FIELD_IDS.BaseUrl,
+      statusFieldId: OCTOPUS_MANAGED_RESOURCE_FIELD_IDS.Status,
+      fieldValuePresentations: {
+        [OCTOPUS_MANAGED_RESOURCE_FIELD_IDS.Type]:
+          requireFieldValuePresentation(
+            SITE_TYPES.OCTOPUS,
+            OCTOPUS_MANAGED_RESOURCE_FIELD_IDS.Type,
+          ),
+      },
+    },
+    defaultSorting: [
+      { id: MANAGED_CHANNELS_COLUMN_IDS.Identifier, desc: true },
+    ],
+    columnLayout: NATIVE_TABLE_COLUMN_LAYOUTS.Canonical,
+  },
   [SITE_TYPES.AXON_HUB]: {
     semantics: {
       baseUrlFieldId: AXON_HUB_CHANNEL_FIELD_IDS.BASE_URL,

@@ -2743,15 +2743,6 @@ describe("AxonHub native managed-resource Adapter", () => {
     ).not.toBeNull()
   })
 
-  it("leaves Octopus out of the native registration table", () => {
-    expect(
-      getManagedResourceRegistration(
-        SITE_TYPES.OCTOPUS,
-        MANAGED_RESOURCE_KINDS.Channel,
-      ),
-    ).toBeNull()
-  })
-
   it("maps native Axon detail to a secret-free canonical migration source", async () => {
     mocks.getChannel.mockResolvedValue(
       buildDetailChannel({

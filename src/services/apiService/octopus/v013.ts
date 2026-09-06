@@ -1,4 +1,5 @@
 import {
+  OCTOPUS_CHANNEL_DETAIL_AVAILABILITY,
   OctopusAutoGroupType,
   OctopusOutboundType,
   type OctopusChannel,
@@ -234,6 +235,30 @@ const splitModels = (...values: Array<string | undefined>): string[] => {
   return [...new Set(models.map((model) => model.trim()).filter(Boolean))]
 }
 
+const hasUnrepresentedProtocolSettings = (
+  detail: OctopusV013ChannelDetailDto,
+): boolean => {
+  const type = inferOutboundType(detail.grants)
+  const paths = protocolPathsForOutboundType(type)
+  const protocol = protocolForOutboundType(type)
+  const primaryKey = detail.keys[0]?.name
+  return (
+    detail.dialect !== "generic" ||
+    detail.openai_chat_completion_path !== paths.openai_chat_completion_path ||
+    detail.openai_response_path !== paths.openai_response_path ||
+    detail.anthropic_message_path !== paths.anthropic_message_path ||
+    detail.grants.length !== detail.models.length ||
+    detail.models.some(
+      (model) =>
+        detail.grants.filter((grant) => grant.model_name === model).length !==
+        1,
+    ) ||
+    detail.grants.some(
+      (grant) => grant.protocols !== protocol || grant.key_name !== primaryKey,
+    )
+  )
+}
+
 const createGrants = (
   models: string[],
   keyName: string | undefined,
@@ -366,6 +391,7 @@ export const octopusV013Contract = {
 
   normalizeStatsChannel(stats: OctopusV013ChannelStatsDto): OctopusChannel {
     return {
+      detailAvailability: OCTOPUS_CHANNEL_DETAIL_AVAILABILITY.Summary,
       id: stats.channel_id,
       name: stats.channel_name,
       // The stats contract intentionally omits dialect/protocol details.
@@ -403,6 +429,8 @@ export const octopusV013Contract = {
       id: detail.id,
       name: detail.name,
       type: inferOutboundType(detail.grants),
+      hasUnrepresentedProtocolSettings:
+        hasUnrepresentedProtocolSettings(detail),
       enabled: detail.enabled,
       base_urls: [{ url: detail.base_url }],
       keys: detail.keys.map((key) => ({

@@ -3,6 +3,7 @@
  * 提供与 Octopus 后端的所有 API 交互
  */
 import { OCTOPUS_LOGIN_PATH } from "~/constants/octopus"
+import { ApiError } from "~/services/apiTransport/errors"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { createUserCommandProtectionBypassExecution } from "~/services/protectionBypass/client"
@@ -714,6 +715,28 @@ export async function listChannels(
   }
 }
 
+/** Resolves whether this deployment appends protocol paths to channel origins. */
+export async function usesChannelProtocolPaths(
+  config: OctopusConfig,
+  options?: Pick<OctopusRequestInit, "signal" | "protectionBypassExecution">,
+): Promise<boolean> {
+  options?.signal?.throwIfAborted()
+  const session = await octopusAuthManager.getValidSession(config, {
+    signal: options?.signal ?? undefined,
+  })
+  options?.signal?.throwIfAborted()
+  if (session.mode !== OCTOPUS_AUTH_MODES.Cookie) return false
+  const version = await resolveOctopusCookieApiVersion({
+    config,
+    session,
+    baseUrl: normalizeBaseUrl(config.baseUrl),
+    signal: options?.signal ?? undefined,
+    protectionBypassExecution: options?.protectionBypassExecution,
+  })
+  options?.signal?.throwIfAborted()
+  return version === OCTOPUS_COOKIE_API_VERSIONS.V013
+}
+
 /** Loads one full channel configuration for editing. */
 export async function getChannel(
   config: OctopusConfig,
@@ -754,7 +777,7 @@ export async function getChannel(
   }
 
   const channel = channels.find((item) => item.id === channelId)
-  if (!channel) throw new Error(`Channel ${channelId} was not found`)
+  if (!channel) throw new ApiError(`Channel ${channelId} was not found`, 404)
   return channel
 }
 
@@ -807,12 +830,13 @@ export async function searchChannels(
 export async function createChannel(
   config: OctopusConfig,
   data: OctopusCreateChannelInput,
+  options?: Pick<OctopusRequestInit, "signal" | "protectionBypassExecution">,
 ): Promise<OctopusApiResponse<OctopusChannel>> {
   try {
     const result = await fetchOctopusApi<OctopusChannel>(
       config,
       { kind: OCTOPUS_API_OPERATIONS.CreateChannel, input: data },
-      {},
+      options ?? {},
       "mutation",
     )
     logger.info("Channel created", { name: data.name })
@@ -855,12 +879,13 @@ export async function updateChannel(
 export async function deleteChannel(
   config: OctopusConfig,
   channelId: number,
+  options?: Pick<OctopusRequestInit, "signal" | "protectionBypassExecution">,
 ): Promise<OctopusApiResponse<null>> {
   try {
     const result = await fetchOctopusApi<null>(
       config,
       { kind: OCTOPUS_API_OPERATIONS.DeleteChannel, channelId },
-      {},
+      options ?? {},
       "mutation",
     )
     logger.info("Channel deleted", { id: channelId })
