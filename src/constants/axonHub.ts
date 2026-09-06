@@ -105,13 +105,6 @@ export const AxonHubChannelTypeNames: Record<AxonHubChannelType, string> = {
   [AXON_HUB_CHANNEL_TYPE.OLLAMA]: "Ollama",
 }
 
-export const AxonHubChannelTypeOptions = Object.entries(
-  AxonHubChannelTypeNames,
-).map(([value, label]) => ({
-  value: value as AxonHubChannelType,
-  label,
-}))
-
 export const isAxonHubChannelType = (
   value: unknown,
 ): value is AxonHubChannelType =>

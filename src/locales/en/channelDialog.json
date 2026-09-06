@@ -12,8 +12,7 @@
   },
   "description": {
     "add": "Configure a new channel for your managed site",
-    "edit": "Update channel settings and routing information",
-    "view": "Review the current channel settings and routing information"
+    "edit": "Update channel settings and routing information"
   },
   "fields": {
     "baseUrl": {
@@ -21,21 +20,14 @@
       "placeholder": "https://api.example.com"
     },
     "groups": {
-      "discoveryStatus": {
-        "failed": "Could not load groups from the managed site. You can still enter them manually.",
-        "not-ready": "Configure the managed site before loading groups. You can still enter them manually.",
-        "unsupported": "This managed site does not provide group discovery. Use the defaults or enter groups manually."
-      },
       "hint": "Groups are sourced from your managed site",
       "label": "Channel Groups",
-      "loading": "Loading groups...",
       "placeholder": "Select groups"
     },
     "key": {
       "label": "API Key",
       "placeholder": "Enter the upstream provider API key",
-      "realKeyHint": "If the channel list omitted or masked the full key, load the real key here. Some managed-site types may require extra verification.",
-      "realKeyUnavailable": "This site type does not support viewing the saved key. Enter a new key if you need to replace it."
+      "realKeyHint": "If the channel list omitted or masked the full key, load the real key here. Some managed-site types may require extra verification."
     },
     "models": {
       "hint": "Type to search or press Enter to add a custom model name",
@@ -48,12 +40,9 @@
       "placeholder": "Enter a descriptive channel name"
     },
     "priority": {
-      "hint": "Channels with larger priority numbers are used before others",
       "label": "Priority"
     },
     "status": {
-      "disabled": "Disabled",
-      "enabled": "Enabled",
       "label": "Status"
     },
     "type": {
@@ -62,28 +51,13 @@
       "placeholder": "Select channel type"
     },
     "weight": {
-      "hint": "Controls load balancing within the same priority (0 = equal distribution)",
       "label": "Weight"
     }
-  },
-  "messages": {
-    "loadRealKeyFailed": "Failed to load the real channel key: {{error}}",
-    "missingChannelId": "Existing channel ID is missing",
-    "saveFailed": "Failed to save channel: {{error}}"
-  },
-  "sections": {
-    "advanced": "Advanced Settings"
   },
   "title": {
     "add": "Create Channel",
     "edit": "Edit Channel",
     "view": "View Channel"
-  },
-  "validation": {
-    "baseUrlRequired": "Base URL is required for this channel type",
-    "keyRequired": "API key is required",
-    "modelsRequired": "At least one model is required",
-    "nameRequired": "Channel name is required"
   },
   "warnings": {
     "channelExists": {
@@ -107,9 +81,6 @@
       "title": "Review potential duplicate candidates"
     },
     "verificationRequired": {
-      "actions": {
-        "verifyNow": "Verify now"
-      },
       "description": "Candidate channels were found, but an additional verification step is required before the real channel key can be read, so exact duplicate confirmation is currently unavailable. You can still continue creating the channel; complete verification first if you need an exact deduplication check.",
       "title": "Potential duplicate needs verification"
     }

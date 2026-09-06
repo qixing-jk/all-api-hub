@@ -3,12 +3,10 @@ import { useTranslation } from "react-i18next"
 
 import type { ChannelDialogAdvisoryWarning } from "~/components/dialogs/ChannelDialog/context/ChannelDialogContext"
 import { useChannelDialogContext } from "~/components/dialogs/ChannelDialog/context/ChannelDialogContext"
-import type { ChannelResourceEditContext } from "~/components/dialogs/ChannelDialog/hooks/useChannelForm"
 import {
   buildChannelDialogAdvisoryWarning,
   CHANNEL_DIALOG_ADVISORY_WARNING_KINDS,
 } from "~/components/dialogs/ChannelDialog/utils/advisoryWarning"
-import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import { SITE_TYPES } from "~/constants/siteType"
 import { selectSingleNewApiTokenByIdDiff } from "~/services/accounts/accountPostSaveWorkflow"
 import { accountPresentation } from "~/services/accounts/accountStorage/accountPresentation"
@@ -65,7 +63,6 @@ import {
   type DisplaySiteData,
   type SiteAccount,
 } from "~/types"
-import type { ManagedSiteChannel } from "~/types/managedSite"
 import { getCurrentTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
@@ -115,7 +112,6 @@ function getApiTokenIds(tokens: ApiToken[]): number[] {
 export function useChannelDialog() {
   const { t } = useTranslation(["messages", "channelDialog"])
   const {
-    openDialog,
     openNativeCreateDialog,
     openDefaultTokenQuickCreateDialog,
     requestDuplicateChannelWarning,
@@ -134,26 +130,13 @@ export function useChannelDialog() {
     )
     if (params.shouldContinue && !params.shouldContinue()) return false
 
-    if (nativeCreate) {
-      openNativeCreateDialog({
-        nativeCreate: {
-          ...nativeCreate,
-          showModelPrefillWarning:
-            params.formData.modelPrefillFetchFailed === true,
-          advisoryWarning: params.advisoryWarning,
-        },
-        onSuccess: params.onSuccess,
-      })
-      return true
-    }
-
-    openDialog({
-      mode: DIALOG_MODES.ADD,
-      initialValues: params.formData,
-      initialModels: params.formData.models,
-      initialGroups: params.formData.groups,
-      showModelPrefillWarning: params.formData.modelPrefillFetchFailed === true,
-      advisoryWarning: params.advisoryWarning,
+    openNativeCreateDialog({
+      nativeCreate: {
+        ...nativeCreate,
+        showModelPrefillWarning:
+          params.formData.modelPrefillFetchFailed === true,
+        advisoryWarning: params.advisoryWarning,
+      },
       onSuccess: params.onSuccess,
     })
     return true
@@ -674,30 +657,9 @@ export function useChannelDialog() {
     }
   }
 
-  /**
-   * Open dialog with custom initial values
-   */
-  const openWithCustom = async (options: {
-    mode?: DialogMode
-    channel?: ManagedSiteChannel
-    initialValues?: any
-    initialModels?: string[]
-    initialGroups?: string[]
-    advisoryWarning?: ChannelDialogAdvisoryWarning | null
-    onRequestRealKey?: (options: {
-      setKey: (key: string) => void
-    }) => Promise<void>
-    onSuccess?: (channel: any) => void
-    onMutationOutcome?: Parameters<typeof openDialog>[0]["onMutationOutcome"]
-    resourceEdit?: ChannelResourceEditContext | null
-  }) => {
-    openDialog(options)
-  }
-
   return {
     openWithAccount,
     openDefaultTokenQuickCreateDialogForAccount,
     openWithCredentials,
-    openWithCustom,
   }
 }

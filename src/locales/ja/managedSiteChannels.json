@@ -13,7 +13,6 @@
       "title": "チャネルを保存できません"
     },
     "loadError": {
-      "description": "{{error}}",
       "title": "チャネルを読み込めません"
     },
     "partialMutation": {

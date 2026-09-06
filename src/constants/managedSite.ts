@@ -1,6 +1,1 @@
-export {
-  ChannelType,
-  ChannelTypeOptions,
-  ChannelTypeNames,
-  DEFAULT_CHANNEL_FIELDS,
-} from "./newApi"
+export { ChannelType, ChannelTypeNames, DEFAULT_CHANNEL_FIELDS } from "./newApi"

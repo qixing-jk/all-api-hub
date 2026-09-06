@@ -7,28 +7,11 @@ import React, {
   useState,
 } from "react"
 
-import type { ChannelResourceEditContext } from "~/components/dialogs/ChannelDialog/hooks/useChannelForm"
-import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import type { ManagedSiteType } from "~/constants/siteType"
 import type { ManagedResourceKind } from "~/services/accountSiteDefinitions/contracts"
 import type { ResourceEditor } from "~/services/apiAdapters/contracts/managedResourceNative"
 import type { ManagedSiteChannelAssessmentSignals } from "~/services/managedSites/channelAssessmentSignals"
 import type { ApiToken, DisplaySiteData } from "~/types"
-import type { ChannelFormData, ManagedSiteChannel } from "~/types/managedSite"
-
-export const CHANNEL_DIALOG_MUTATION_RESULTS = {
-  Success: "success",
-  Failure: "failure",
-} as const
-
-export type ChannelDialogMutationResult =
-  (typeof CHANNEL_DIALOG_MUTATION_RESULTS)[keyof typeof CHANNEL_DIALOG_MUTATION_RESULTS]
-
-type ChannelDialogMutationOutcomeHandler = (outcome: {
-  mode: DialogMode
-  result: ChannelDialogMutationResult
-  siteType: string
-}) => void
 
 export interface ChannelDialogAdvisoryWarning {
   kind: string
@@ -52,19 +35,7 @@ export interface NativeChannelCreateDialogState
 
 interface ChannelDialogState {
   isOpen: boolean
-  mode: DialogMode
-  channel?: ManagedSiteChannel | null
-  initialValues?: Partial<ChannelFormData>
-  initialModels?: string[]
-  initialGroups?: string[]
-  showModelPrefillWarning?: boolean
-  advisoryWarning?: ChannelDialogAdvisoryWarning | null
-  onRequestRealKey?:
-    | ((options: { setKey: (key: string) => void }) => Promise<void>)
-    | null
   onSuccessCallback?: (result: any) => void
-  onMutationOutcome?: ChannelDialogMutationOutcomeHandler | null
-  resourceEdit?: ChannelResourceEditContext | null
   nativeCreate?: NativeChannelCreateDialogState | null
 }
 
@@ -86,21 +57,6 @@ interface ChannelDialogContextValue {
   state: ChannelDialogState
   duplicateChannelWarning: DuplicateChannelWarningState
   defaultTokenQuickCreateDialog: DefaultTokenQuickCreateDialogState
-  openDialog: (config: {
-    mode?: DialogMode
-    channel?: ManagedSiteChannel | null
-    initialValues?: Partial<ChannelFormData>
-    initialModels?: string[]
-    initialGroups?: string[]
-    showModelPrefillWarning?: boolean
-    advisoryWarning?: ChannelDialogAdvisoryWarning | null
-    onRequestRealKey?: (options: {
-      setKey: (key: string) => void
-    }) => Promise<void>
-    onSuccess?: (result: any) => void
-    onMutationOutcome?: ChannelDialogMutationOutcomeHandler
-    resourceEdit?: ChannelResourceEditContext | null
-  }) => void
   openNativeCreateDialog: (config: {
     nativeCreate: NativeChannelCreateDialogConfig
     onSuccess?: (result: any) => void
@@ -139,8 +95,6 @@ export function ChannelDialogProvider({
 }) {
   const [state, setState] = useState<ChannelDialogState>({
     isOpen: false,
-    mode: DIALOG_MODES.ADD,
-    channel: null,
   })
   const [duplicateChannelWarning, setDuplicateChannelWarning] =
     useState<DuplicateChannelWarningState>({
@@ -164,41 +118,6 @@ export function ChannelDialogProvider({
   )
   const nativeCreateSessionIdRef = useRef(0)
 
-  const openDialog = useCallback(
-    (config: {
-      mode?: DialogMode
-      channel?: ManagedSiteChannel | null
-      initialValues?: Partial<ChannelFormData>
-      initialModels?: string[]
-      initialGroups?: string[]
-      showModelPrefillWarning?: boolean
-      advisoryWarning?: ChannelDialogAdvisoryWarning | null
-      onRequestRealKey?: (options: {
-        setKey: (key: string) => void
-      }) => Promise<void>
-      onSuccess?: (result: any) => void
-      onMutationOutcome?: ChannelDialogMutationOutcomeHandler
-      resourceEdit?: ChannelResourceEditContext | null
-    }) => {
-      setState({
-        isOpen: true,
-        mode: config.mode ?? DIALOG_MODES.ADD,
-        channel: config.channel ?? null,
-        initialValues: config.initialValues,
-        initialModels: config.initialModels,
-        initialGroups: config.initialGroups,
-        showModelPrefillWarning: config.showModelPrefillWarning ?? false,
-        advisoryWarning: config.advisoryWarning ?? null,
-        onRequestRealKey: config.onRequestRealKey ?? null,
-        onSuccessCallback: config.onSuccess,
-        onMutationOutcome: config.onMutationOutcome ?? null,
-        resourceEdit: config.resourceEdit ?? null,
-        nativeCreate: null,
-      })
-    },
-    [],
-  )
-
   const openNativeCreateDialog = useCallback(
     (config: {
       nativeCreate: NativeChannelCreateDialogConfig
@@ -208,8 +127,6 @@ export function ChannelDialogProvider({
       nativeCreateSessionIdRef.current = sessionId
       setState({
         isOpen: true,
-        mode: DIALOG_MODES.ADD,
-        channel: null,
         onSuccessCallback: config.onSuccess,
         nativeCreate: { ...config.nativeCreate, sessionId },
       })
@@ -231,8 +148,6 @@ export function ChannelDialogProvider({
         return prev
       return {
         isOpen: false,
-        mode: DIALOG_MODES.ADD,
-        channel: null,
         nativeCreate: null,
       }
     })
@@ -363,7 +278,6 @@ export function ChannelDialogProvider({
         state,
         duplicateChannelWarning,
         defaultTokenQuickCreateDialog,
-        openDialog,
         openNativeCreateDialog,
         closeDialog,
         completeNativeDialogClose,

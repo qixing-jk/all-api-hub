@@ -36,7 +36,7 @@ export const MANAGED_CHANNELS_COLUMN_ACCESSOR_KINDS = {
 } as const
 
 export const MANAGED_CHANNELS_COLUMN_EXTENSION_KINDS = {
-  LegacyCommon: "legacy-common",
+  Common: "common",
   Native: "native",
 } as const
 
@@ -136,7 +136,7 @@ export type ManagedChannelsColumnAccessor =
     }
 
 export type ManagedChannelsColumnExtension =
-  | { kind: typeof MANAGED_CHANNELS_COLUMN_EXTENSION_KINDS.LegacyCommon }
+  | { kind: typeof MANAGED_CHANNELS_COLUMN_EXTENSION_KINDS.Common }
   | {
       kind: typeof MANAGED_CHANNELS_COLUMN_EXTENSION_KINDS.Native
       namespace: string

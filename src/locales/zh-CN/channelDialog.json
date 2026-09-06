@@ -12,8 +12,7 @@
   },
   "description": {
     "add": "为您管理的站点配置新的转发渠道",
-    "edit": "更新渠道设置和路由信息",
-    "view": "查看当前渠道的配置和路由信息"
+    "edit": "更新渠道设置和路由信息"
   },
   "fields": {
     "baseUrl": {
@@ -21,21 +20,14 @@
       "placeholder": "https://api.example.com"
     },
     "groups": {
-      "discoveryStatus": {
-        "failed": "无法从托管站点加载分组，您仍可手动输入。",
-        "not-ready": "请先完成托管站点配置；您仍可手动输入分组。",
-        "unsupported": "当前托管站点不提供分组发现，请使用默认分组或手动输入。"
-      },
       "hint": "分组来源于您管理的站点",
       "label": "渠道分组",
-      "loading": "加载分组中...",
       "placeholder": "选择分组"
     },
     "key": {
       "label": "API 密钥",
       "placeholder": "输入上游提供商的 API 密钥",
-      "realKeyHint": "当列表接口未返回完整渠道 key 时，可在此加载真实 key；部分渠道类型可能还需要额外验证。",
-      "realKeyUnavailable": "当前站点类型暂不支持查看已保存的密钥；如需变更，请输入新密钥。"
+      "realKeyHint": "当列表接口未返回完整渠道 key 时，可在此加载真实 key；部分渠道类型可能还需要额外验证。"
     },
     "models": {
       "hint": "输入搜索或按 Enter 添加自定义模型名称",
@@ -48,12 +40,9 @@
       "placeholder": "输入一个描述性的渠道名称"
     },
     "priority": {
-      "hint": "优先级数字越大的渠道优先使用",
       "label": "优先级"
     },
     "status": {
-      "disabled": "禁用",
-      "enabled": "启用",
       "label": "状态"
     },
     "type": {
@@ -62,28 +51,13 @@
       "placeholder": "选择渠道类型"
     },
     "weight": {
-      "hint": "控制相同优先级内的负载均衡（0 = 平均分配）",
       "label": "权重"
     }
-  },
-  "messages": {
-    "loadRealKeyFailed": "加载真实渠道 key 失败：{{error}}",
-    "missingChannelId": "缺少现有渠道 ID",
-    "saveFailed": "保存渠道失败：{{error}}"
-  },
-  "sections": {
-    "advanced": "高级设置"
   },
   "title": {
     "add": "创建渠道",
     "edit": "编辑渠道",
     "view": "查看渠道"
-  },
-  "validation": {
-    "baseUrlRequired": "此渠道类型需要填写基础 URL",
-    "keyRequired": "API 密钥必填",
-    "modelsRequired": "请至少填写一个模型",
-    "nameRequired": "渠道名称必填"
   },
   "warnings": {
     "channelExists": {
@@ -107,9 +81,6 @@
       "title": "请检查可能重复的渠道"
     },
     "verificationRequired": {
-      "actions": {
-        "verifyNow": "立即验证"
-      },
       "description": "已发现候选渠道，但读取真实渠道 key 前还需完成额外验证，因此暂时无法自动确认是否重复。你仍可以继续创建；若要精确去重，请先完成验证后再重试。",
       "title": "可能存在重复渠道，需验证后才能精确确认"
     }

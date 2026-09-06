@@ -12,8 +12,7 @@
   },
   "description": {
     "add": "Konfigurieren Sie einen neuen Kanal für Ihre verwaltete Website",
-    "edit": "Kanaleinstellungen und Routing-Informationen aktualisieren",
-    "view": "Überprüfen Sie die aktuellen Kanaleinstellungen und Routing-Informationen"
+    "edit": "Kanaleinstellungen und Routing-Informationen aktualisieren"
   },
   "fields": {
     "baseUrl": {
@@ -21,21 +20,14 @@
       "placeholder": "https://api.example.com"
     },
     "groups": {
-      "discoveryStatus": {
-        "failed": "Gruppen konnten nicht geladen werden. Sie können sie weiterhin manuell eingeben.",
-        "not-ready": "Konfigurieren Sie zuerst die verwaltete Website. Gruppen können weiterhin manuell eingegeben werden.",
-        "unsupported": "Diese verwaltete Website unterstützt keine Gruppenerkennung. Verwenden Sie Standardwerte oder geben Sie Gruppen manuell ein."
-      },
       "hint": "Gruppen stammen von Ihrer verwalteten Website",
       "label": "Kanalgruppen",
-      "loading": "Gruppen werden geladen...",
       "placeholder": "Gruppen auswählen"
     },
     "key": {
       "label": "API-Schlüssel",
       "placeholder": "Geben Sie den API-Schlüssel des Upstream-Anbieters ein",
-      "realKeyHint": "Wenn in der Kanalliste der vollständige Schlüssel weggelassen oder maskiert wurde, laden Sie hier den echten Schlüssel. Für einige verwaltete Website-Typen ist möglicherweise eine zusätzliche Überprüfung erforderlich.",
-      "realKeyUnavailable": "Dieser Website-Typ unterstützt das Anzeigen des gespeicherten Schlüssels nicht. Geben Sie zum Ersetzen einen neuen Schlüssel ein."
+      "realKeyHint": "Wenn in der Kanalliste der vollständige Schlüssel weggelassen oder maskiert wurde, laden Sie hier den echten Schlüssel. Für einige verwaltete Website-Typen ist möglicherweise eine zusätzliche Überprüfung erforderlich."
     },
     "models": {
       "hint": "Geben Sie zum Suchen ein oder drücken Sie die Eingabetaste, um einen benutzerdefinierten Modellnamen hinzuzufügen",
@@ -48,12 +40,9 @@
       "placeholder": "Geben Sie einen beschreibenden Kanalnamen ein"
     },
     "priority": {
-      "hint": "Kanäle mit größeren Prioritätsnummern werden vor anderen verwendet",
       "label": "Priorität"
     },
     "status": {
-      "disabled": "Deaktiviert",
-      "enabled": "Aktiviert",
       "label": "Status"
     },
     "type": {
@@ -62,28 +51,13 @@
       "placeholder": "Kanaltyp auswählen"
     },
     "weight": {
-      "hint": "Steuert den Lastausgleich innerhalb derselben Priorität (0 = Gleichverteilung)",
       "label": "Gewicht"
     }
-  },
-  "messages": {
-    "loadRealKeyFailed": "Der echte Kanalschlüssel konnte nicht geladen werden: {{error}}",
-    "missingChannelId": "Vorhandene Kanal-ID fehlt",
-    "saveFailed": "Kanal konnte nicht gespeichert werden: {{error}}"
-  },
-  "sections": {
-    "advanced": "Erweiterte Einstellungen"
   },
   "title": {
     "add": "Kanal erstellen",
     "edit": "Kanal bearbeiten",
     "view": "Kanal ansehen"
-  },
-  "validation": {
-    "baseUrlRequired": "Für diesen Kanaltyp ist eine Basis-URL erforderlich",
-    "keyRequired": "API-Schlüssel ist erforderlich",
-    "modelsRequired": "Mindestens ein Modell ist erforderlich",
-    "nameRequired": "Kanalname ist erforderlich"
   },
   "warnings": {
     "channelExists": {
@@ -107,9 +81,6 @@
       "title": "Überprüfen Sie mögliche doppelte Kandidaten"
     },
     "verificationRequired": {
-      "actions": {
-        "verifyNow": "Jetzt bestätigen"
-      },
       "description": "Kandidatenkanäle wurden gefunden, aber zum Lesen des echten Kanalschlüssels ist ein zusätzlicher Überprüfungsschritt erforderlich, sodass eine genaue Duplikatbestätigung derzeit nicht verfügbar ist. Sie können weiterhin mit der Erstellung des Kanals fortfahren. Führen Sie zunächst die Überprüfung durch, wenn Sie eine genaue Deduplizierungsprüfung benötigen.",
       "title": "Mögliches Duplikat muss überprüft werden"
     }

@@ -13,7 +13,6 @@
       "title": "无法保存渠道"
     },
     "loadError": {
-      "description": "{{error}}",
       "title": "无法加载渠道"
     },
     "partialMutation": {

@@ -13,7 +13,6 @@
       "title": "Kanal kann nicht gespeichert werden"
     },
     "loadError": {
-      "description": "{{error}}",
       "title": "Kanäle können nicht geladen werden"
     },
     "partialMutation": {

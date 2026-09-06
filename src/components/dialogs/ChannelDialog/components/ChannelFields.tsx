@@ -1,7 +1,6 @@
 import type { TFunction } from "i18next"
 import type { ReactNode } from "react"
 
-import type { ChannelGroupDiscoveryStatus } from "~/components/dialogs/ChannelDialog/hooks/useChannelForm"
 import { CHANNEL_DIALOG_TEST_IDS } from "~/components/dialogs/ChannelDialog/testIds"
 import {
   Alert,
@@ -17,60 +16,9 @@ import {
   SelectValue,
 } from "~/components/ui"
 
-export type ChannelCommonFieldsValues = {
-  name: string
-  type: string
-  key: string
-  baseURL: string
-  models: string[]
-  groups: string[]
-  priority: number
-  weight: number
-  status: string
-}
-
 export type ChannelCommonFieldsOption = {
   value: string
   label: string
-}
-
-export type ChannelCommonFieldsBodyProps = {
-  t: TFunction
-  values: ChannelCommonFieldsValues
-  channelTypeOptions: ChannelCommonFieldsOption[]
-  availableModels: ChannelCommonFieldsOption[]
-  availableGroups: ChannelCommonFieldsOption[]
-  statusOptions: ChannelCommonFieldsOption[]
-  isViewMode: boolean
-  isAddMode: boolean
-  isInteractionDisabled: boolean
-  isKeyRequired: boolean
-  isBaseURLRequired: boolean
-  isKeyRevealed: boolean
-  canLoadRealKey: boolean
-  isLoadingRealKey: boolean
-  isLoadingModels: boolean
-  isLoadingGroups: boolean
-  groupDiscoveryStatus: ChannelGroupDiscoveryStatus
-  showUnknownStringType: boolean
-  showGenericModelsField: boolean
-  showGroupsField: boolean
-  showPriorityAndWeight: boolean
-  showModelPrefillWarning: boolean
-  onNameChange: (value: string) => void
-  onTypeChange: (value: string) => void
-  onKeyChange: (value: string) => void
-  onKeyRevealedChange: (revealed: boolean) => void
-  onLoadRealKey: () => void
-  onBaseURLChange: (value: string) => void
-  onModelsChange: (models: string[]) => void
-  onGroupsChange: (groups: string[]) => void
-  onSelectAllModels: () => void
-  onInverseModels: () => void
-  onDeselectAllModels: () => void
-  onPriorityChange: (priority: number) => void
-  onWeightChange: (weight: number) => void
-  onStatusChange: (status: string) => void
 }
 
 const fieldDescriptionIds = (
@@ -78,22 +26,6 @@ const fieldDescriptionIds = (
 ): string | undefined => {
   const definedIds = ids.filter((id): id is string => Boolean(id))
   return definedIds.length > 0 ? definedIds.join(" ") : undefined
-}
-
-const getGroupDiscoveryMessage = (
-  t: TFunction,
-  status: ChannelGroupDiscoveryStatus,
-) => {
-  switch (status) {
-    case "unsupported":
-      return t("channelDialog:fields.groups.discoveryStatus.unsupported")
-    case "not-ready":
-      return t("channelDialog:fields.groups.discoveryStatus.not-ready")
-    case "failed":
-      return t("channelDialog:fields.groups.discoveryStatus.failed")
-    default:
-      return t("channelDialog:fields.groups.hint")
-  }
 }
 
 /** Renders shared field help or an accessible validation message. */
@@ -121,7 +53,7 @@ function ChannelFieldMessage({
   )
 }
 
-/** Shared name control used by legacy and resource-native channel binders. */
+/** Shared name control for native managed resources. */
 export function ChannelNameField({
   t,
   value,
@@ -167,7 +99,7 @@ export function ChannelNameField({
   )
 }
 
-/** Shared type control used by legacy and resource-native channel binders. */
+/** Shared type control for native managed resources. */
 export function ChannelTypeField({
   t,
   value,
@@ -377,7 +309,7 @@ export function ChannelSecretField({
   )
 }
 
-/** Shared base URL control used by legacy and resource-native channel binders. */
+/** Shared base URL control for native managed resources. */
 export function ChannelBaseUrlField({
   t,
   value,
@@ -423,7 +355,7 @@ export function ChannelBaseUrlField({
   )
 }
 
-/** Shared models control used by legacy and resource-native channel binders. */
+/** Shared models control for native managed resources. */
 export function ChannelModelsField({
   t,
   options,
@@ -544,7 +476,7 @@ export function ChannelModelsField({
   )
 }
 
-/** Shared status control used by legacy and resource-native channel binders. */
+/** Shared status control for native managed resources. */
 export function ChannelStatusField({
   t,
   value,
@@ -598,210 +530,3 @@ export function ChannelStatusField({
     </div>
   )
 }
-
-/** Controlled presentation for fields shared by channel create/edit/detail. */
-export function ChannelCommonFieldsBody({
-  t,
-  values,
-  channelTypeOptions,
-  availableModels,
-  availableGroups,
-  statusOptions,
-  isViewMode,
-  isAddMode,
-  isInteractionDisabled,
-  isKeyRequired,
-  isBaseURLRequired,
-  isKeyRevealed,
-  canLoadRealKey,
-  isLoadingRealKey,
-  isLoadingModels,
-  isLoadingGroups,
-  groupDiscoveryStatus,
-  showUnknownStringType,
-  showGenericModelsField,
-  showGroupsField,
-  showPriorityAndWeight,
-  showModelPrefillWarning,
-  onNameChange,
-  onTypeChange,
-  onKeyChange,
-  onKeyRevealedChange,
-  onLoadRealKey,
-  onBaseURLChange,
-  onModelsChange,
-  onGroupsChange,
-  onSelectAllModels,
-  onInverseModels,
-  onDeselectAllModels,
-  onPriorityChange,
-  onWeightChange,
-  onStatusChange,
-}: ChannelCommonFieldsBodyProps) {
-  const groupDiscoveryMessage = getGroupDiscoveryMessage(
-    t,
-    groupDiscoveryStatus,
-  )
-  const groupDiscoveryMessageId = "channel-groups-discovery-status"
-
-  return (
-    <>
-      <ChannelNameField
-        t={t}
-        value={values.name}
-        onChange={onNameChange}
-        disabled={isInteractionDisabled}
-        readOnly={isViewMode}
-        required={!isViewMode}
-      />
-
-      <ChannelTypeField
-        t={t}
-        value={values.type}
-        options={channelTypeOptions}
-        onChange={onTypeChange}
-        disabled={isInteractionDisabled || !isAddMode}
-        required={!isViewMode}
-        showUnknownStringType={showUnknownStringType}
-      />
-
-      <ChannelSecretField
-        t={t}
-        value={values.key}
-        onChange={onKeyChange}
-        disabled={isInteractionDisabled}
-        readOnly={isViewMode}
-        required={!isViewMode && isKeyRequired}
-        revealed={isKeyRevealed}
-        onRevealedChange={onKeyRevealedChange}
-        canLoadRealKey={canLoadRealKey}
-        isLoadingRealKey={isLoadingRealKey}
-        onLoadRealKey={onLoadRealKey}
-        realKeyUnavailableMessage={
-          !isAddMode && !isViewMode && !canLoadRealKey
-            ? t("channelDialog:fields.key.realKeyUnavailable")
-            : undefined
-        }
-      />
-
-      <ChannelBaseUrlField
-        t={t}
-        value={values.baseURL}
-        onChange={onBaseURLChange}
-        disabled={isInteractionDisabled}
-        readOnly={isViewMode}
-        required={!isViewMode && isBaseURLRequired}
-      />
-
-      {showGenericModelsField ? (
-        <ChannelModelsField
-          t={t}
-          options={availableModels}
-          selected={values.models}
-          onChange={onModelsChange}
-          disabled={isViewMode || isInteractionDisabled}
-          isLoading={isLoadingModels}
-          showPrefillWarning={showModelPrefillWarning}
-          onSelectAll={isViewMode ? undefined : onSelectAllModels}
-          onInverse={isViewMode ? undefined : onInverseModels}
-          onDeselectAll={isViewMode ? undefined : onDeselectAllModels}
-        />
-      ) : null}
-
-      {showGroupsField ? (
-        <div>
-          <CompactMultiSelect
-            label={t("channelDialog:fields.groups.label")}
-            options={availableGroups}
-            selected={values.groups}
-            onChange={onGroupsChange}
-            size="default"
-            placeholder={
-              isLoadingGroups
-                ? t("channelDialog:fields.groups.loading")
-                : t("channelDialog:fields.groups.placeholder")
-            }
-            disabled={isViewMode || isInteractionDisabled || isLoadingGroups}
-            allowCustom
-            aria-describedby={groupDiscoveryMessageId}
-          />
-          <p
-            id={groupDiscoveryMessageId}
-            role="status"
-            aria-label={groupDiscoveryMessage}
-            aria-live="polite"
-            className={
-              groupDiscoveryStatus === "available"
-                ? "dark:text-dark-text-secondary mt-1 text-xs text-gray-500"
-                : "mt-1 text-xs text-amber-700 dark:text-amber-300"
-            }
-          >
-            {groupDiscoveryMessage}
-          </p>
-        </div>
-      ) : null}
-
-      <details className="dark:border-dark-bg-tertiary rounded-lg border border-gray-200 p-3">
-        <summary className="dark:text-dark-text-primary cursor-pointer text-sm font-medium text-gray-700">
-          {t("channelDialog:sections.advanced")}
-        </summary>
-        <div className="mt-3 space-y-4">
-          {showPriorityAndWeight ? (
-            <>
-              <div>
-                <Label htmlFor="channel-priority">
-                  {t("channelDialog:fields.priority.label")}
-                </Label>
-                <Input
-                  id="channel-priority"
-                  type="number"
-                  value={values.priority}
-                  onChange={(event) =>
-                    onPriorityChange(parseInt(event.target.value) || 0)
-                  }
-                  placeholder="0"
-                  disabled={isInteractionDisabled}
-                  readOnly={isViewMode}
-                  min="0"
-                />
-                <p className="dark:text-dark-text-secondary mt-1 text-xs text-gray-500">
-                  {t("channelDialog:fields.priority.hint")}
-                </p>
-              </div>
-              <div>
-                <Label htmlFor="channel-weight">
-                  {t("channelDialog:fields.weight.label")}
-                </Label>
-                <Input
-                  id="channel-weight"
-                  type="number"
-                  value={values.weight}
-                  onChange={(event) =>
-                    onWeightChange(parseInt(event.target.value) || 0)
-                  }
-                  placeholder="0"
-                  disabled={isInteractionDisabled}
-                  readOnly={isViewMode}
-                  min="0"
-                />
-                <p className="dark:text-dark-text-secondary mt-1 text-xs text-gray-500">
-                  {t("channelDialog:fields.weight.hint")}
-                </p>
-              </div>
-            </>
-          ) : null}
-
-          <ChannelStatusField
-            t={t}
-            value={values.status}
-            options={statusOptions}
-            onChange={onStatusChange}
-            disabled={isViewMode || isInteractionDisabled}
-          />
-        </div>
-      </details>
-    </>
-  )
-}
-
-export default ChannelCommonFieldsBody

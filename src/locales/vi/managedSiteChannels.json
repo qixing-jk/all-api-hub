@@ -13,7 +13,6 @@
       "title": "Không thể lưu kênh"
     },
     "loadError": {
-      "description": "{{error}}",
       "title": "Không thể tải kênh"
     },
     "partialMutation": {

@@ -13,7 +13,6 @@
       "title": "Não foi possível salvar o canal"
     },
     "loadError": {
-      "description": "{{error}}",
       "title": "Não foi possível carregar os canais"
     },
     "partialMutation": {

@@ -111,7 +111,7 @@ const columns = [
     canHide: false,
     defaultVisible: true,
     visible: true,
-    extension: { kind: "legacy-common" as const },
+    extension: { kind: "common" as const },
   },
   {
     id: "id" as const,
@@ -128,7 +128,7 @@ const columns = [
       missing: "last" as const,
     },
     size: 40,
-    extension: { kind: "legacy-common" as const },
+    extension: { kind: "common" as const },
   },
   {
     id: "name" as const,
@@ -144,7 +144,7 @@ const columns = [
       missing: "last" as const,
     },
     size: 300,
-    extension: { kind: "legacy-common" as const },
+    extension: { kind: "common" as const },
   },
   ...(["type", "models", "group", "priority", "weight"] as const).map((id) => ({
     id,
@@ -159,7 +159,7 @@ const columns = [
       defaultDirection: "asc" as const,
       missing: "last" as const,
     },
-    extension: { kind: "legacy-common" as const },
+    extension: { kind: "common" as const },
   })),
   {
     id: "status" as const,
@@ -175,7 +175,7 @@ const columns = [
       missing: "last" as const,
     },
     facet: { kind: "status" as const },
-    extension: { kind: "legacy-common" as const },
+    extension: { kind: "common" as const },
   },
   {
     id: "actions" as const,
@@ -184,7 +184,7 @@ const columns = [
     canHide: false,
     defaultVisible: true,
     visible: true,
-    extension: { kind: "legacy-common" as const },
+    extension: { kind: "common" as const },
   },
 ]
 

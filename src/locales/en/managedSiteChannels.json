@@ -13,7 +13,6 @@
       "title": "Unable to save channel"
     },
     "loadError": {
-      "description": "{{error}}",
       "title": "Unable to load channels"
     },
     "partialMutation": {

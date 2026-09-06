@@ -77,7 +77,7 @@ describe("native managed-channel import", () => {
     })
   })
 
-  it("keeps registrations without the import capability on the legacy path", async () => {
+  it("rejects registrations without import support", async () => {
     vi.spyOn(
       managedResourceRegistry,
       "getManagedResourceRegistration",
@@ -89,10 +89,10 @@ describe("native managed-channel import", () => {
 
     await expect(
       openNativeManagedChannelImportSession(SITE_TYPES.OCTOPUS),
-    ).resolves.toBeNull()
+    ).rejects.toMatchObject({ failure: { code: "unavailable" } })
   })
 
-  it("uses the legacy path when a registration has no import capability", async () => {
+  it("rejects a provider without the import capability", async () => {
     vi.spyOn(
       managedResourceRegistry,
       "getManagedResourceRegistration",
@@ -104,10 +104,10 @@ describe("native managed-channel import", () => {
 
     await expect(
       openNativeManagedChannelImportSession(SITE_TYPES.AXON_HUB),
-    ).resolves.toBeNull()
+    ).rejects.toMatchObject({ failure: { code: "unavailable" } })
   })
 
-  it("uses the legacy path when no native registration exists", async () => {
+  it("rejects a missing native registration", async () => {
     vi.spyOn(
       managedResourceRegistry,
       "getManagedResourceRegistration",
@@ -115,7 +115,32 @@ describe("native managed-channel import", () => {
 
     await expect(
       openNativeManagedChannelImportSession(SITE_TYPES.AXON_HUB),
-    ).resolves.toBeNull()
+    ).rejects.toMatchObject({ failure: { code: "unavailable" } })
+  })
+
+  it("reconciles through the same native workspace without replaying creation", async () => {
+    const list = vi.fn(async () => ({ items: [] }))
+    const openCreateEditor = vi.fn()
+    const open = vi.fn(async () => ({ list, openCreateEditor }))
+    vi.spyOn(
+      managedResourceRegistry,
+      "getManagedResourceRegistration",
+    ).mockReturnValue({
+      siteType: SITE_TYPES.NEW_API,
+      kind: MANAGED_RESOURCE_KINDS.Channel,
+      createSeedKinds: [
+        MANAGED_RESOURCE_CREATE_SEED_KINDS.ManagedChannelImport,
+      ],
+      open,
+    } as unknown as ManagedResourceRegistration)
+    const session = await openNativeManagedChannelImportSession(
+      SITE_TYPES.NEW_API,
+    )
+    const signal = new AbortController().signal
+    await session.reconcile({ signal })
+    expect(open).toHaveBeenCalledOnce()
+    expect(list).toHaveBeenCalledWith(undefined, { signal })
+    expect(openCreateEditor).not.toHaveBeenCalled()
   })
 
   it("normalizes a disabled draft into a disabled provider-neutral seed", async () => {

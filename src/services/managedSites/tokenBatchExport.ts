@@ -729,7 +729,10 @@ export async function executeManagedSiteTokenBatchExport(params: {
           target.config,
           item.draft,
         )
-        if (nativeImportSessionResult.error) {
+        if (
+          nativeImportSessionResult.error ||
+          !nativeImportSessionResult.session
+        ) {
           const message = preDispatchSecretCollection.complete
             ? toPrivateManagedSiteThrownErrorMessage(
                 nativeImportSessionResult.error,
@@ -748,9 +751,9 @@ export async function executeManagedSiteTokenBatchExport(params: {
               : FALLBACK_EXECUTION_ERROR,
           }
         }
-        let secretCollection = preDispatchSecretCollection
+        const secretCollection = preDispatchSecretCollection
         let mutation: ManagedSiteMutationResult<unknown>
-        if (nativeImportSessionResult.session) {
+        {
           try {
             mutation = await nativeImportSessionResult.session.submit(
               item.draft,
@@ -768,56 +771,6 @@ export async function executeManagedSiteTokenBatchExport(params: {
               result: isDefiniteNativeImportFailure(error)
                 ? MANAGED_SITE_TOKEN_BATCH_EXPORT_EXECUTION_RESULTS.FAILED
                 : MANAGED_SITE_TOKEN_BATCH_EXPORT_EXECUTION_RESULTS.UNCERTAIN,
-              success: false,
-              skipped: false,
-              error: message
-                ? `${FALLBACK_EXECUTION_ERROR}: ${message}`
-                : FALLBACK_EXECUTION_ERROR,
-            }
-          }
-        } else {
-          let payload: ReturnType<typeof target.service.buildChannelPayload>
-          try {
-            payload = target.service.buildChannelPayload(item.draft)
-          } catch (error) {
-            const message = preDispatchSecretCollection.complete
-              ? toPrivateManagedSiteThrownErrorMessage(error, {
-                  knownSecrets: preDispatchSecretCollection.knownSecrets,
-                })
-              : undefined
-            return {
-              id: item.id,
-              accountName: item.accountName,
-              runtimeKeyName: item.runtimeKeyName,
-              result: MANAGED_SITE_TOKEN_BATCH_EXPORT_EXECUTION_RESULTS.FAILED,
-              success: false,
-              skipped: false,
-              error: message
-                ? `${FALLBACK_EXECUTION_ERROR}: ${message}`
-                : FALLBACK_EXECUTION_ERROR,
-            }
-          }
-          secretCollection = mergeManagedResourceSecretCollections(
-            preDispatchSecretCollection,
-            collectManagedResourceSecrets(payload),
-          )
-          try {
-            mutation = await target.service.createChannel(
-              target.config,
-              payload,
-            )
-          } catch (error) {
-            const message = secretCollection.complete
-              ? toPrivateManagedSiteThrownErrorMessage(error, {
-                  knownSecrets: secretCollection.knownSecrets,
-                })
-              : undefined
-            return {
-              id: item.id,
-              accountName: item.accountName,
-              runtimeKeyName: item.runtimeKeyName,
-              result:
-                MANAGED_SITE_TOKEN_BATCH_EXPORT_EXECUTION_RESULTS.UNCERTAIN,
               success: false,
               skipped: false,
               error: message
@@ -888,7 +841,7 @@ export async function executeManagedSiteTokenBatchExport(params: {
     )
   } catch (error) {
     try {
-      await target.service.listChannels(target.config)
+      await nativeImportSessionResult.session?.reconcile()
     } catch {
       // Reconciliation is best effort; post-invocation failures stay non-replayable.
     }
@@ -903,7 +856,7 @@ export async function executeManagedSiteTokenBatchExport(params: {
     )
   ) {
     try {
-      await target.service.listChannels(target.config)
+      await nativeImportSessionResult.session?.reconcile()
     } catch {
       // Reconciliation is best effort; ambiguous creates remain non-replayable.
     }

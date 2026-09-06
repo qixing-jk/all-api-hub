@@ -5,7 +5,6 @@ import {
   useChannelDialogContext,
 } from "~/components/dialogs/ChannelDialog"
 import { ChannelType } from "~/constants"
-import { DIALOG_MODES } from "~/constants/dialogModes"
 import { SITE_TYPES } from "~/constants/siteType"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import * as accountTokenOperations from "~/services/accounts/ensureAccountApiToken"
@@ -22,8 +21,8 @@ import {
   MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
   MatchResolutionUnresolvedError,
 } from "~/services/managedSites/channelMatch"
-import * as managedSiteService from "~/services/managedSites/managedSiteService"
 import type { ManagedSiteService } from "~/services/managedSites/managedSiteService"
+import * as managedSiteService from "~/services/managedSites/managedSiteService"
 import {
   MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS,
   MANAGED_SITE_TOKEN_CHANNEL_STATUSES,
@@ -350,6 +349,7 @@ describe("useChannelDialog", () => {
   it("shows warning and cancels when user does not continue", async () => {
     const existingChannel = buildManagedSiteChannel()
     const mockService: Partial<ManagedSiteService> = {
+      siteType: SITE_TYPES.NEW_API,
       messagesKey: "newapi",
       getConfig: vi.fn(async () => ({
         baseUrl: "https://managed.example.com",
@@ -564,7 +564,7 @@ describe("useChannelDialog", () => {
     expect(mockToastError).not.toHaveBeenCalled()
   })
 
-  it("uses the legacy dialog when no native import registration exists", async () => {
+  it("reports unavailable import support without opening a dialog", async () => {
     registrationSpy = vi
       .spyOn(nativeResourceRegistry, "getManagedResourceRegistration")
       .mockReturnValue(null)
@@ -586,10 +586,10 @@ describe("useChannelDialog", () => {
       )
     })
 
-    expect(openResult!).toEqual({ opened: true })
-    expect(result.current.context.state.isOpen).toBe(true)
-    expect(result.current.context.state.nativeCreate).toBeNull()
-    expect(mockToastError).not.toHaveBeenCalled()
+    expect(openResult!).toEqual({ opened: false })
+    expect(result.current.context.state.isOpen).toBe(false)
+    expect(result.current.context.state.nativeCreate).toBeUndefined()
+    expect(mockToastError).toHaveBeenCalled()
   })
 
   it("shows duplicate channel warning from migrated resource candidates", async () => {
@@ -642,6 +642,7 @@ describe("useChannelDialog", () => {
   it("opens ChannelDialog when user continues despite duplicate", async () => {
     const existingChannel = buildManagedSiteChannel()
     const mockService: Partial<ManagedSiteService> = {
+      siteType: SITE_TYPES.NEW_API,
       messagesKey: "newapi",
       getConfig: vi.fn(async () => ({
         baseUrl: "https://managed.example.com",
@@ -702,14 +703,11 @@ describe("useChannelDialog", () => {
     expect(openResult).toEqual({ opened: true })
     expect(result.current.context.state).toMatchObject({
       isOpen: true,
-      mode: DIALOG_MODES.ADD,
-      initialValues: {
-        name: "Auto channel",
-        models: ["gpt-4"],
-        groups: ["default"],
-      },
-      initialModels: ["gpt-4"],
-      initialGroups: ["default"],
+      nativeCreate: expect.objectContaining({
+        editor: expect.objectContaining({
+          initialValues: { name: "Auto channel" },
+        }),
+      }),
     })
     expect(mockToastError).not.toHaveBeenCalled()
     expect(mockToastDismiss).toHaveBeenCalledWith("toast-id")
@@ -760,6 +758,7 @@ describe("useChannelDialog", () => {
       key: "",
     })
     const mockService: Partial<ManagedSiteService> = {
+      siteType: SITE_TYPES.NEW_API,
       messagesKey: "newapi",
       getConfig: vi.fn(async () => ({
         baseUrl: "https://managed.example.com",
@@ -817,19 +816,14 @@ describe("useChannelDialog", () => {
     })
     expect(result.current.context.state).toMatchObject({
       isOpen: true,
-      mode: DIALOG_MODES.ADD,
-      initialValues: {
-        name: "Auto channel",
-        models: ["gpt-4"],
-        groups: ["default"],
-      },
-      initialModels: ["gpt-4"],
-      initialGroups: ["default"],
-      advisoryWarning: {
-        kind: "verificationRequired",
-        title: "channelDialog:warnings.verificationRequired.title",
-        description: "channelDialog:warnings.verificationRequired.description",
-      },
+      nativeCreate: expect.objectContaining({
+        editor: expect.objectContaining({
+          initialValues: { name: "Auto channel" },
+        }),
+        advisoryWarning: expect.objectContaining({
+          kind: "verificationRequired",
+        }),
+      }),
     })
     expect(mockToastError).not.toHaveBeenCalled()
     expect(mockToastDismiss).toHaveBeenCalledWith("toast-id")
@@ -911,6 +905,7 @@ describe("useChannelDialog", () => {
 
   it("opens ChannelDialog with a prefill warning when the provider marks model preload as failed", async () => {
     const mockService: Partial<ManagedSiteService> = {
+      siteType: SITE_TYPES.NEW_API,
       messagesKey: "newapi",
       getConfig: vi.fn(async () => ({
         baseUrl: "https://managed.example.com",
@@ -960,15 +955,7 @@ describe("useChannelDialog", () => {
 
     expect(result.current.context.state).toMatchObject({
       isOpen: true,
-      mode: DIALOG_MODES.ADD,
-      initialValues: {
-        name: "Auto channel",
-        models: [],
-        groups: ["default"],
-      },
-      initialModels: [],
-      initialGroups: ["default"],
-      showModelPrefillWarning: true,
+      nativeCreate: expect.objectContaining({ showModelPrefillWarning: true }),
     })
     expect(mockToastError).not.toHaveBeenCalled()
     expect(mockToastDismiss).toHaveBeenCalledWith("toast-id")
@@ -976,6 +963,7 @@ describe("useChannelDialog", () => {
 
   it("does not show a prefill warning for an intentionally empty model list", async () => {
     const mockService: Partial<ManagedSiteService> = {
+      siteType: SITE_TYPES.NEW_API,
       messagesKey: "newapi",
       getConfig: vi.fn(async () => ({
         baseUrl: "https://managed.example.com",
@@ -1024,15 +1012,7 @@ describe("useChannelDialog", () => {
 
     expect(result.current.context.state).toMatchObject({
       isOpen: true,
-      mode: DIALOG_MODES.ADD,
-      initialValues: {
-        name: "Auto channel",
-        models: [],
-        groups: ["default"],
-      },
-      initialModels: [],
-      initialGroups: ["default"],
-      showModelPrefillWarning: false,
+      nativeCreate: expect.objectContaining({ showModelPrefillWarning: false }),
     })
     expect(mockToastError).not.toHaveBeenCalled()
     expect(mockToastDismiss).toHaveBeenCalledWith("toast-id")
@@ -1040,6 +1020,7 @@ describe("useChannelDialog", () => {
 
   it("opens the global Sub2API token dialog when multiple groups are available", async () => {
     const mockService: Partial<ManagedSiteService> = {
+      siteType: SITE_TYPES.NEW_API,
       messagesKey: "newapi",
       getConfig: vi.fn(async () => ({
         baseUrl: "https://managed.example.com",
@@ -1086,6 +1067,7 @@ describe("useChannelDialog", () => {
 
   it("resumes the Sub2API token ensure flow after the token dialog succeeds", async () => {
     const mockService: Partial<ManagedSiteService> = {
+      siteType: SITE_TYPES.NEW_API,
       messagesKey: "newapi",
       getConfig: vi.fn(async () => ({
         baseUrl: "https://managed.example.com",
@@ -1171,6 +1153,7 @@ describe("useChannelDialog", () => {
     const createdToken = buildApiToken({ id: 30, key: "sk-created" })
 
     const mockService: Partial<ManagedSiteService> = {
+      siteType: SITE_TYPES.NEW_API,
       messagesKey: "newapi",
       getConfig: vi.fn(async () => ({
         baseUrl: "https://managed.example.com",
