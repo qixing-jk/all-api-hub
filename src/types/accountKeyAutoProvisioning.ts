@@ -5,6 +5,14 @@ import type {
   ResourceFailure,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
 
+export const ACCOUNT_KEY_AUTO_PROVISION_MODES = {
+  Default: "default",
+  AllGroups: "all-groups",
+} as const
+
+export type AccountKeyAutoProvisionMode =
+  (typeof ACCOUNT_KEY_AUTO_PROVISION_MODES)[keyof typeof ACCOUNT_KEY_AUTO_PROVISION_MODES]
+
 export const ACCOUNT_KEY_REPAIR_PROGRESS_SCHEMA_VERSION = 2 as const
 
 export const ACCOUNT_KEY_REPAIR_JOB_STATES = {

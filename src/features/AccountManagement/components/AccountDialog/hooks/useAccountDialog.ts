@@ -136,6 +136,7 @@ import {
   type DisplaySiteData,
   type SiteAccount,
 } from "~/types"
+import { ACCOUNT_KEY_AUTO_PROVISION_MODES } from "~/types/accountKeyAutoProvisioning"
 import type { CheckInMethodSelection } from "~/types/checkIn"
 import type { AccountSaveResponse } from "~/types/serviceResponse"
 import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
@@ -379,6 +380,7 @@ export function useAccountDialog({
     managedSiteType,
     autoFillCurrentSiteUrlOnAccountAdd,
     autoProvisionKeyOnAccountAdd,
+    autoProvisionKeyOnAccountAddMode,
     updateWarnOnDuplicateAccountAdd,
   } = useUserPreferencesContext()
 
@@ -1647,6 +1649,7 @@ export function useAccountDialog({
           policy,
           isAddMode: mode === DIALOG_MODES.ADD,
           autoProvisionKeyOnAccountAdd,
+          autoProvisionKeyOnAccountAddMode,
           skipAutoProvisionKeyOnAccountAdd: false,
         }) &&
         result.success === true &&
@@ -1654,7 +1657,12 @@ export function useAccountDialog({
         result.accountId.trim().length > 0
       )
     },
-    [autoProvisionKeyOnAccountAdd, mode, siteType],
+    [
+      autoProvisionKeyOnAccountAdd,
+      autoProvisionKeyOnAccountAddMode,
+      mode,
+      siteType,
+    ],
   )
 
   const handleImportCookieAuthSessionCookie = async () => {
@@ -2449,6 +2457,7 @@ export function useAccountDialog({
           policy,
           isAddMode: mode === DIALOG_MODES.ADD,
           autoProvisionKeyOnAccountAdd,
+          autoProvisionKeyOnAccountAddMode,
           skipAutoProvisionKeyOnAccountAdd:
             options?.skipAutoProvisionKeyOnAccountAdd === true,
         })
@@ -2654,7 +2663,16 @@ export function useAccountDialog({
         })
       }
 
-      const skipSub2ApiKeyPrompt = options?.skipSub2ApiKeyPrompt === true
+      // Background group provisioning owns key creation for this add operation;
+      // a foreground default-key prompt could race it and create an extra key.
+      const autoProvisioningAllGroups =
+        mode === DIALOG_MODES.ADD &&
+        autoProvisionKeyOnAccountAdd &&
+        autoProvisionKeyOnAccountAddMode ===
+          ACCOUNT_KEY_AUTO_PROVISION_MODES.AllGroups &&
+        options?.skipAutoProvisionKeyOnAccountAdd !== true
+      const skipSub2ApiKeyPrompt =
+        options?.skipSub2ApiKeyPrompt === true || autoProvisioningAllGroups
       if (
         savedAccountId &&
         policy.openSub2ApiTokenDialogPostSave &&

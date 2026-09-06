@@ -599,7 +599,7 @@
       "title_one": "{{count}} ungültigen Schlüssel löschen?",
       "title_other": "{{count}} ungültige Schlüssel löschen?"
     },
-    "description": "Prüft, ob gespeicherte Konten verwendbare Schlüssel haben. Fehlende Schlüssel werden nach Möglichkeit automatisch erstellt; andere Probleme erscheinen unten.",
+    "description": "Alle verfügbaren Gruppen gespeicherter Konten prüfen und fehlende nutzbare Schlüssel automatisch erstellen, soweit unterstützt. Weitere Probleme werden unten aufgeführt.",
     "failureGuidance": {
       "aborted": "Der Vorgang wurde vor Abschluss abgebrochen. Starten Sie die Prüfung erneut, wenn Sie bereit sind.",
       "authenticationFailed": "Melden Sie sich erneut an oder aktualisieren Sie die Zugangsdaten dieses Kontos und versuchen Sie es erneut.",
@@ -614,7 +614,7 @@
       "validationFailed": "Prüfen Sie die erforderlichen Schlüsseleinstellungen, korrigieren Sie sie und versuchen Sie es erneut."
     },
     "historyNote": "Dies zeigt das vorherige Prüfergebnis. Derzeit wird kein Job ausgeführt und Sie können die Prüfung erneut ausführen.",
-    "initialNotice": "Gespeicherte Konten werden auf nutzbare Schlüssel geprüft. Fehlt bei einem unterstützten Konto ein Schlüssel, kann die Erweiterung einen neuen erstellen.",
+    "initialNotice": "Gespeicherte Konten Gruppe für Gruppe prüfen und fehlende Schlüssel erstellen, soweit unterstützt. Gruppen mit nutzbaren Schlüsseln werden übersprungen.",
     "invalidKeys": {
       "badge": "Ungültig",
       "deleteFailed": "Ungültige Schlüssel konnten nicht gelöscht werden",

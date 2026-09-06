@@ -14,6 +14,7 @@ import {
   shouldOpenSub2ApiTokenDialogForAccountDialogSite,
 } from "~/features/AccountManagement/components/AccountDialog/sitePolicy"
 import { AuthTypeEnum } from "~/types"
+import { ACCOUNT_KEY_AUTO_PROVISION_MODES } from "~/types/accountKeyAutoProvisioning"
 
 function createDraft(
   overrides: Partial<AccountDialogDraft> = {},
@@ -340,6 +341,19 @@ describe("Account Dialog site policy", () => {
     ).toBeUndefined()
   })
 
+  it("does not substitute one-time default-key creation for all-group provisioning", () => {
+    expect(
+      shouldDeferAccountSaveSuccessForAccountDialogSite({
+        policy: getAccountDialogSitePolicy(SITE_TYPES.AIHUBMIX),
+        isAddMode: true,
+        autoProvisionKeyOnAccountAdd: true,
+        autoProvisionKeyOnAccountAddMode:
+          ACCOUNT_KEY_AUTO_PROVISION_MODES.AllGroups,
+        skipAutoProvisionKeyOnAccountAdd: false,
+      }),
+    ).toBe(false)
+  })
+
   it("keeps post-save decisions policy-driven", () => {
     expect(
       shouldOpenSub2ApiTokenDialogForAccountDialogSite({
@@ -378,6 +392,8 @@ describe("Account Dialog site policy", () => {
         policy: getAccountDialogSitePolicy(SITE_TYPES.AIHUBMIX),
         isAddMode: true,
         autoProvisionKeyOnAccountAdd: true,
+        autoProvisionKeyOnAccountAddMode:
+          ACCOUNT_KEY_AUTO_PROVISION_MODES.Default,
         skipAutoProvisionKeyOnAccountAdd: false,
       }),
     ).toBe(true)
@@ -387,6 +403,8 @@ describe("Account Dialog site policy", () => {
         policy: getAccountDialogSitePolicy(SITE_TYPES.UNKNOWN),
         isAddMode: true,
         autoProvisionKeyOnAccountAdd: true,
+        autoProvisionKeyOnAccountAddMode:
+          ACCOUNT_KEY_AUTO_PROVISION_MODES.Default,
         skipAutoProvisionKeyOnAccountAdd: false,
       }),
     ).toBe(false)
@@ -396,6 +414,8 @@ describe("Account Dialog site policy", () => {
         policy: getAccountDialogSitePolicy(SITE_TYPES.AIHUBMIX),
         isAddMode: true,
         autoProvisionKeyOnAccountAdd: true,
+        autoProvisionKeyOnAccountAddMode:
+          ACCOUNT_KEY_AUTO_PROVISION_MODES.Default,
         skipAutoProvisionKeyOnAccountAdd: true,
       }),
     ).toBe(false)

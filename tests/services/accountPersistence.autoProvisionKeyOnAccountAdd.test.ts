@@ -6,6 +6,7 @@ import { OPENROUTER_WEB_ORIGIN, SITE_TYPES } from "~/constants/siteType"
 import { validateAndSaveAccount } from "~/services/accounts/accountCreation"
 import { autoProvisionKeyOnAccountAdd } from "~/services/accounts/accountKeyAutoProvisioning/autoProvisionOnAccountAdd"
 import { DefaultTokenLifecyclePolicyBlockedError } from "~/services/accounts/defaultTokenLifecycle"
+import type { AccountKeyResourceSession } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { TOKEN_PROVISIONING_BLOCK_REASONS } from "~/services/apiAdapters/contracts/tokenProvisioning"
 import { USER_PREFERENCES_STORAGE_KEYS } from "~/services/core/storageKeys"
 import {
@@ -181,6 +182,85 @@ describe("accountPersistence auto-provision key on add", () => {
     expect(toastSuccessMock).toHaveBeenCalledTimes(1)
     expect(toastCustomMock).not.toHaveBeenCalled()
     expect(toastErrorMock).not.toHaveBeenCalled()
+  })
+
+  it("uses the saved all-groups mode to fill missing groups through native provisioning", async () => {
+    const remoteGroups = new Set(["group:existing"])
+    const session: AccountKeyResourceSession = {
+      resolveDefaultScope: vi.fn(),
+      listScopes: vi.fn(),
+      openCollection: vi.fn(),
+      openCreateEditor: vi.fn(),
+      provisioning: {
+        inspect: async () => ({
+          requirements: ["group:existing", "group:missing"].map((group) => ({
+            requirementKey: group,
+            displayName: group,
+            provisioning: { kind: "automatic" as const },
+          })),
+          items: [...remoteGroups].map((group) => ({
+            ref: {
+              accountId: "account",
+              siteType: SITE_TYPES.NEW_API,
+              scopeKey: "account",
+              resourceId: group,
+            },
+            placement: {
+              kind: "requirement" as const,
+              requirementKeys: [group],
+            },
+            coverage: "usable" as const,
+          })),
+        }),
+        provision: async (group) => {
+          remoteGroups.add(group)
+          return {
+            certainty: "applied",
+            value: {
+              ref: {
+                accountId: "account",
+                siteType: SITE_TYPES.NEW_API,
+                scopeKey: "account",
+                resourceId: group,
+              },
+            },
+          }
+        },
+      },
+    }
+    getSiteTypeCapabilitiesMock.mockReturnValue({
+      account: {
+        data: { fetchData: fetchAccountDataMock },
+        keyResources: { open: async () => session },
+      },
+    })
+    await userPreferences.savePreferences({
+      autoProvisionKeyOnAccountAdd: true,
+      autoProvisionKeyOnAccountAddMode: "all-groups",
+    })
+
+    const result = await validateAndSaveAccount(
+      "https://api.example.com",
+      "Test Site",
+      "tester",
+      "test-token",
+      "1",
+      "7.0",
+      "",
+      [],
+      CHECK_IN_DISABLED,
+      SITE_TYPES.NEW_API,
+      AuthTypeEnum.AccessToken,
+      "",
+    )
+
+    expect(result.success).toBe(true)
+    await vi.waitFor(() => expect(remoteGroups.has("group:missing")).toBe(true))
+    expect(remoteGroups.size).toBe(2)
+    expect(ensureDefaultApiTokenForAccountMock).not.toHaveBeenCalled()
+    expect(toastSuccessMock).toHaveBeenCalledWith(
+      "messages:accountOperations.autoProvisionGroupsCreated",
+    )
   })
 
   it("uses warning toast when auto-provision is skipped because an API key already exists", async () => {

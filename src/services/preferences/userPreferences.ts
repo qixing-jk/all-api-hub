@@ -43,6 +43,10 @@ import {
   type AccountAutoRefresh,
 } from "~/types/accountAutoRefresh"
 import {
+  ACCOUNT_KEY_AUTO_PROVISION_MODES,
+  type AccountKeyAutoProvisionMode,
+} from "~/types/accountKeyAutoProvisioning"
+import {
   AUTO_CHECKIN_SCHEDULE_MODE,
   type AutoCheckinPreferences,
 } from "~/types/autoCheckin"
@@ -243,13 +247,16 @@ export interface UserPreferences {
   openChangelogOnUpdate?: boolean
 
   /**
-   * Controls whether the extension automatically provisions a default API key
-   * (token) after successfully adding an account.
+   * Controls whether the extension automatically provisions API keys after
+   * successfully adding an account, using autoProvisionKeyOnAccountAddMode.
    *
    * Optional for backward compatibility with stored preferences created before
-   * this flag existed. Missing values MUST be treated as enabled via defaults.
+   * this flag existed. Missing values are treated as disabled via defaults.
    */
   autoProvisionKeyOnAccountAdd?: boolean
+
+  /** Creation scope after account add; legacy and invalid values normalize to Default. */
+  autoProvisionKeyOnAccountAddMode: AccountKeyAutoProvisionMode
 
   /**
    * Controls whether the add-account dialog automatically prefills the site URL
@@ -569,6 +576,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   actionClickBehavior: TOOLBAR_ACTION_CLICK_BEHAVIORS.Popup,
   openChangelogOnUpdate: true,
   autoProvisionKeyOnAccountAdd: false, // 默认关闭，避免添加账号时无意创建密钥
+  autoProvisionKeyOnAccountAddMode: ACCOUNT_KEY_AUTO_PROVISION_MODES.Default,
   autoFillCurrentSiteUrlOnAccountAdd: false,
   warnOnDuplicateAccountAdd: true,
   accountAutoRefresh: DEFAULT_ACCOUNT_AUTO_REFRESH,
@@ -678,6 +686,11 @@ function migrateAndNormalizePreferences(
 
   return normalizeSharedPreferencesMetadata({
     ...currentPreferences,
+    autoProvisionKeyOnAccountAddMode:
+      currentPreferences.autoProvisionKeyOnAccountAddMode ===
+      ACCOUNT_KEY_AUTO_PROVISION_MODES.AllGroups
+        ? ACCOUNT_KEY_AUTO_PROVISION_MODES.AllGroups
+        : ACCOUNT_KEY_AUTO_PROVISION_MODES.Default,
     tempWindowFallback: normalizeTempWindowFallbackPreferences(
       currentPreferences.tempWindowFallback,
     ),
@@ -886,6 +899,13 @@ class UserPreferencesService {
     enabled: boolean,
   ): Promise<PreferenceWriteResult> {
     return this.savePreferences({ autoProvisionKeyOnAccountAdd: enabled })
+  }
+
+  /** Updates the creation scope without enabling automatic provisioning. */
+  async updateAutoProvisionKeyOnAccountAddMode(
+    mode: AccountKeyAutoProvisionMode,
+  ): Promise<PreferenceWriteResult> {
+    return this.savePreferences({ autoProvisionKeyOnAccountAddMode: mode })
   }
 
   /**

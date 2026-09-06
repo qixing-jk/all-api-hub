@@ -65,6 +65,7 @@ import type {
   SortOrder,
 } from "~/types"
 import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/types/accountAutoRefresh"
+import type { AccountKeyAutoProvisionMode } from "~/types/accountKeyAutoProvisioning"
 import type { AutoCheckinPreferences } from "~/types/autoCheckin"
 import {
   DEFAULT_AXON_HUB_CONFIG,
@@ -265,6 +266,7 @@ interface UserPreferencesContextType {
   actionClickBehavior: ToolbarActionClickBehavior
   openChangelogOnUpdate: boolean
   autoProvisionKeyOnAccountAdd: boolean
+  autoProvisionKeyOnAccountAddMode: AccountKeyAutoProvisionMode
   autoFillCurrentSiteUrlOnAccountAdd: boolean
   warnOnDuplicateAccountAdd: boolean
   newApiBaseUrl: string
@@ -323,6 +325,9 @@ interface UserPreferencesContextType {
   updateOpenChangelogOnUpdate: (enabled: boolean) => PreferenceWritePromise
   updateAutoProvisionKeyOnAccountAdd: (
     enabled: boolean,
+  ) => PreferenceWritePromise
+  updateAutoProvisionKeyOnAccountAddMode: (
+    mode: AccountKeyAutoProvisionMode,
   ) => PreferenceWritePromise
   updateAutoFillCurrentSiteUrlOnAccountAdd: (
     enabled: boolean,
@@ -680,6 +685,19 @@ export const UserPreferencesProvider = ({
         await userPreferences.updateAutoProvisionKeyOnAccountAdd(enabled)
       applySuccessfulPreferenceWrite(result, {
         autoProvisionKeyOnAccountAdd: enabled,
+      })
+      return result
+    },
+    [applySuccessfulPreferenceWrite],
+  )
+
+  /** Persists which key requirements should be filled after account creation. */
+  const updateAutoProvisionKeyOnAccountAddMode = useCallback(
+    async (mode: AccountKeyAutoProvisionMode) => {
+      const result =
+        await userPreferences.updateAutoProvisionKeyOnAccountAddMode(mode)
+      applySuccessfulPreferenceWrite(result, {
+        autoProvisionKeyOnAccountAddMode: mode,
       })
       return result
     },
@@ -1907,6 +1925,9 @@ export const UserPreferencesProvider = ({
       preferences?.autoProvisionKeyOnAccountAdd ??
       DEFAULT_PREFERENCES.autoProvisionKeyOnAccountAdd ??
       false,
+    autoProvisionKeyOnAccountAddMode:
+      preferences?.autoProvisionKeyOnAccountAddMode ??
+      DEFAULT_PREFERENCES.autoProvisionKeyOnAccountAddMode,
     autoFillCurrentSiteUrlOnAccountAdd:
       preferences?.autoFillCurrentSiteUrlOnAccountAdd ??
       DEFAULT_PREFERENCES.autoFillCurrentSiteUrlOnAccountAdd ??
@@ -1983,6 +2004,7 @@ export const UserPreferencesProvider = ({
     updateActionClickBehavior,
     updateOpenChangelogOnUpdate,
     updateAutoProvisionKeyOnAccountAdd,
+    updateAutoProvisionKeyOnAccountAddMode,
     updateAutoFillCurrentSiteUrlOnAccountAdd,
     updateWarnOnDuplicateAccountAdd,
     updateNewApiBaseUrl,
