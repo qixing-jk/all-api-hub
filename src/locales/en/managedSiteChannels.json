@@ -327,6 +327,7 @@
       "compare": {
         "fieldLabel": "Field"
       },
+      "loadFailed": "Failed to load migration preview: {{error}}",
       "loading": "Building migration preview...",
       "status": {
         "blocked": "Blocked",

@@ -327,6 +327,7 @@
       "compare": {
         "fieldLabel": "Campo"
       },
+      "loadFailed": "Falha ao carregar a prévia da migração: {{error}}",
       "loading": "Criando prévia da migração...",
       "status": {
         "blocked": "Bloqueado",

@@ -327,6 +327,7 @@
       "compare": {
         "fieldLabel": "項目"
       },
+      "loadFailed": "移行プレビューの読み込みに失敗しました: {{error}}",
       "loading": "移行プレビューを構築中...",
       "status": {
         "blocked": "ブロック済み",

@@ -80,6 +80,12 @@ type UseManagedResourceMigrationControllerOptions = {
   executeMigration?: ExecuteMigration
 }
 
+/** Translate controlled migration failures without exposing service errors. */
+const getMigrationPreviewErrorMessage = (t: TFunction) =>
+  t("managedSiteChannels:migration.preview.loadFailed", {
+    error: t("common:labels.unknown"),
+  })
+
 const createPreviewState = ({
   sourceLabel,
   targetLabel,
@@ -308,10 +314,7 @@ export function useManagedResourceMigrationController({
           sourceLabel,
           targetLabel: targetOption?.label,
           totalCount,
-          error: tRef.current(
-            "managedSiteChannels:migration.preview.loadFailed",
-            { error: tRef.current("common:labels.unknown") },
-          ),
+          error: getMigrationPreviewErrorMessage(tRef.current),
         }),
       )
       completeAnalytics(PRODUCT_ANALYTICS_RESULTS.Failure, {
@@ -381,10 +384,7 @@ export function useManagedResourceMigrationController({
             sourceLabel,
             targetLabel: targetOption.label,
             totalCount,
-            error: tRef.current(
-              "managedSiteChannels:migration.preview.loadFailed",
-              { error: tRef.current("common:labels.unknown") },
-            ),
+            error: getMigrationPreviewErrorMessage(tRef.current),
           }),
         )
         completeAnalytics(PRODUCT_ANALYTICS_RESULTS.Failure, {
@@ -494,12 +494,7 @@ export function useManagedResourceMigrationController({
         currentPreview
           ? {
               ...currentPreview,
-              error: tRef.current(
-                "managedSiteChannels:migration.preview.loadFailed",
-                {
-                  error: tRef.current("common:labels.unknown"),
-                },
-              ),
+              error: getMigrationPreviewErrorMessage(tRef.current),
             }
           : currentPreview,
       )

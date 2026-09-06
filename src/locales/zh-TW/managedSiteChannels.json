@@ -327,6 +327,7 @@
       "compare": {
         "fieldLabel": "欄位"
       },
+      "loadFailed": "載入遷移預覽失敗：{{error}}",
       "loading": "正在建立遷移預覽…",
       "status": {
         "blocked": "已阻止",

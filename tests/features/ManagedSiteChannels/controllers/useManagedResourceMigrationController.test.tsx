@@ -6,6 +6,10 @@ import { describe, expect, it, vi } from "vitest"
 import { ChannelType } from "~/constants/managedSite"
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import { useManagedResourceMigrationController } from "~/features/ManagedSiteChannels/controllers/useManagedResourceMigrationController"
+import enCommon from "~/locales/en/common.json"
+import enManagedSiteChannels from "~/locales/en/managedSiteChannels.json"
+import zhCnCommon from "~/locales/zh-CN/common.json"
+import zhCnManagedSiteChannels from "~/locales/zh-CN/managedSiteChannels.json"
 import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
 import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { axonHubManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/axonHubMigration"
@@ -27,6 +31,12 @@ import type {
   ManagedSiteMigrationTargetPreparation,
 } from "~/types/managedSiteMigrationCapability"
 import { MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES } from "~/types/managedSiteMigrationCapability"
+import { createResourceTestI18n } from "~~/tests/test-utils/i18n"
+
+const resourceI18n = await createResourceTestI18n({
+  en: { common: enCommon, managedSiteChannels: enManagedSiteChannels },
+  "zh-CN": { common: zhCnCommon, managedSiteChannels: zhCnManagedSiteChannels },
+})
 
 const t = ((key: string, options?: Record<string, unknown>) =>
   options ? `${key}:${JSON.stringify(options)}` : key) as TFunction
@@ -167,6 +177,72 @@ const buildOptions = (overrides: Record<string, unknown> = {}) => {
 }
 
 describe("useManagedResourceMigrationController", () => {
+  describe.each([
+    {
+      language: "en",
+      errorMessage: "Failed to load migration preview: Unknown",
+    },
+    { language: "zh-CN", errorMessage: "迁移预览加载失败：未知" },
+  ])(
+    "localized migration failures ($language)",
+    ({ language, errorMessage }) => {
+      it("localizes invalid selections with real locale resources", async () => {
+        const options = buildOptions({
+          t: resourceI18n.getFixedT(language),
+          selectedRowKeys: ["stale-row"],
+          prepareMigration: vi.fn(),
+        })
+        const { result } = renderHook(() =>
+          useManagedResourceMigrationController(options),
+        )
+
+        await waitFor(() =>
+          expect(result.current.preview?.error).toBe(errorMessage),
+        )
+      })
+
+      it("localizes preview failures with real locale resources", async () => {
+        const options = buildOptions({
+          t: resourceI18n.getFixedT(language),
+          prepareMigration: vi.fn(async () => {
+            throw new Error("preview-sensitive-error")
+          }),
+        })
+        const { result } = renderHook(() =>
+          useManagedResourceMigrationController(options),
+        )
+
+        await waitFor(() =>
+          expect(result.current.preview?.error).toBe(errorMessage),
+        )
+      })
+
+      it("localizes execution failures with real locale resources", async () => {
+        const options = buildOptions({
+          t: resourceI18n.getFixedT(language),
+          prepareMigration: vi.fn(
+            async ({
+              selections,
+            }: {
+              selections: readonly ManagedSiteMigrationSelection[]
+            }) => buildPreview(selections),
+          ),
+          executeMigration: vi.fn(async () => {
+            throw new Error("execution-sensitive-error")
+          }),
+        })
+        const { result } = renderHook(() =>
+          useManagedResourceMigrationController(options),
+        )
+
+        await waitFor(() => expect(result.current.preview?.readyCount).toBe(2))
+        await act(async () => result.current.callbacks.onConfirm())
+
+        expect(result.current.preview?.error).toBe(errorMessage)
+      })
+    },
+  )
+
   it("preserves opaque selection ids and order without publishing refs in UI state", async () => {
     const prepareMigration = vi.fn(
       async ({

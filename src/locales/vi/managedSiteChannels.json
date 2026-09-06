@@ -327,6 +327,7 @@
       "compare": {
         "fieldLabel": "Trường"
       },
+      "loadFailed": "Tải bản xem trước di chuyển thất bại: {{error}}",
       "loading": "Đang tạo bản xem trước di chuyển…",
       "status": {
         "blocked": "Đã chặn",

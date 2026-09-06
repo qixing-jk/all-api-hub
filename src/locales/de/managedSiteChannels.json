@@ -327,6 +327,7 @@
       "compare": {
         "fieldLabel": "Feld"
       },
+      "loadFailed": "Migrationsvorschau konnte nicht geladen werden: {{error}}",
       "loading": "Migrationsvorschau wird erstellt...",
       "status": {
         "blocked": "Blockiert",
