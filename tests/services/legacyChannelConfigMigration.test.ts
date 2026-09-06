@@ -327,6 +327,50 @@ describe("legacyChannelConfigMigration", () => {
     expect(hasLegacyNumericConfigsMock).toHaveBeenCalledTimes(1)
   })
 
+  it("preserves legacy data when a configured site has no native registration", async () => {
+    hasLegacyNumericConfigsMock.mockResolvedValue(true)
+    resolveRuntimeConfigMock.mockImplementation((_preferences, siteType) =>
+      siteType === "new-api"
+        ? { siteType, config: { baseUrl: "https://new-api.example.invalid" } }
+        : null,
+    )
+    getManagedResourceRegistrationMock.mockReturnValue(undefined)
+    const { legacyChannelConfigMigration } = await loadMigration()
+
+    await expect(legacyChannelConfigMigration.initialize()).resolves.toEqual({
+      status: "deferred",
+      reason: "inventory-failed",
+    })
+    expect(migrateLegacyNumericConfigsMock).not.toHaveBeenCalled()
+  })
+
+  it.each(["opaque-id", "01", "9007199254740992"])(
+    "preserves legacy data when native resource id %s cannot identify a numeric channel",
+    async (resourceId) => {
+      hasLegacyNumericConfigsMock.mockResolvedValue(true)
+      resolveRuntimeConfigMock.mockImplementation((_preferences, siteType) =>
+        siteType === "new-api"
+          ? { siteType, config: { baseUrl: "https://new-api.example.invalid" } }
+          : null,
+      )
+      getManagedResourceRegistrationMock.mockReturnValue(
+        registration(
+          vi.fn().mockResolvedValue({
+            items: [nativeFact(9), nativeFact(resourceId)],
+            total: 2,
+          }),
+        ),
+      )
+      const { legacyChannelConfigMigration } = await loadMigration()
+
+      await expect(legacyChannelConfigMigration.initialize()).resolves.toEqual({
+        status: "deferred",
+        reason: "inventory-failed",
+      })
+      expect(migrateLegacyNumericConfigsMock).not.toHaveBeenCalled()
+    },
+  )
+
   it("persists a retry backoff across extension-context restarts", async () => {
     hasLegacyNumericConfigsMock.mockResolvedValue(true)
     resolveRuntimeConfigMock.mockImplementation((_preferences, siteType) =>

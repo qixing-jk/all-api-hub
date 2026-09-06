@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { ChannelType } from "~/constants"
 import { SITE_TYPES } from "~/constants/siteType"
 import { axonHubManagedSiteCapabilities } from "~/services/apiAdapters/managedSites/axonHub"
 import { claudeCodeHubManagedSiteCapabilities } from "~/services/apiAdapters/managedSites/claudeCodeHub"
@@ -9,13 +10,18 @@ import {
   getAxonHubChannelSecretKey,
   listAxonHubChannelPage,
 } from "~/services/apiService/axonHub"
-import { searchProviders } from "~/services/apiService/claudeCodeHub"
+import {
+  getUnmaskedProviderKey,
+  searchProviders,
+} from "~/services/apiService/claudeCodeHub"
 import { listAllChannels, searchChannel } from "~/services/apiService/veloera"
 import { resolveManagedSiteChannelMatch } from "~/services/managedSites/channelMatchResolver"
 import {
   listSub2ApiApiKeyAccounts,
   revealSub2ApiApiKey,
   searchSub2ApiApiKeyAccounts,
+  SUB2API_STEP_UP_ADMIN_KEY_FORBIDDEN_CODE,
+  Sub2ApiAdminApiError,
 } from "~/services/managedSites/providers/sub2api"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
@@ -42,6 +48,7 @@ vi.mock("~/services/managedSites/providers/sub2api", async (original) => ({
 vi.mock("~/services/apiService/claudeCodeHub", async (original) => ({
   ...(await original<typeof import("~/services/apiService/claudeCodeHub")>()),
   searchProviders: vi.fn(),
+  getUnmaskedProviderKey: vi.fn(),
 }))
 
 const axonConfig = {
@@ -242,6 +249,9 @@ describe("native managed-resource matching", () => {
         allowedModels: [
           { matchType: "prefix", pattern: "claude-" },
           { matchType: "exact", pattern: "claude-sonnet" },
+          " gpt-4o ",
+          { pattern: "gpt-4o" },
+          { matchType: "exact" },
         ],
       },
     ])
@@ -255,8 +265,234 @@ describe("native managed-resource matching", () => {
       type: "claude",
       base_url: "https://upstream.example",
       key: "********",
-      models: "claude-sonnet",
+      models: "claude-sonnet,gpt-4o",
     })
+  })
+
+  it("handles incomplete Sub2API metadata without treating OAuth accounts as API-key candidates", async () => {
+    vi.mocked(listSub2ApiApiKeyAccounts).mockResolvedValue({
+      items: [
+        {
+          id: 9,
+          name: "",
+          type: "apikey",
+          platform: "anthropic",
+          credentials: { base_url: 42 },
+          credentials_status: { has_api_key: false },
+        },
+        { id: 10, name: "Unconfigured", type: "apikey", platform: "openai" },
+        { id: 11, name: "OAuth", type: "oauth", platform: "openai" },
+      ],
+      total: 3,
+    })
+
+    await expect(
+      sub2ApiManagedSiteCapabilities.matching.search(subConfig, "upstream"),
+    ).resolves.toEqual({
+      items: [
+        {
+          id: 9,
+          name: "Sub2API Account 9",
+          type: ChannelType.Anthropic,
+          base_url: "",
+          key: "",
+          models: "",
+        },
+        {
+          id: 10,
+          name: "Unconfigured",
+          type: ChannelType.OpenAI,
+          base_url: "",
+          key: "",
+          models: "",
+        },
+      ],
+      total: 3,
+      type_counts: {},
+    })
+  })
+
+  it("resolves Sub2API masked keys while preserving usable keys and candidate metadata", async () => {
+    const matching = sub2ApiManagedSiteCapabilities.matching
+    const masked = {
+      id: 8,
+      name: "Masked account",
+      type: ChannelType.OpenAI,
+      base_url: "https://upstream.example",
+      models: "gpt-4o",
+      key: "********",
+    }
+    const usable = { ...masked, id: 9, key: "existing-key" }
+    vi.mocked(revealSub2ApiApiKey).mockResolvedValue("resolved-key")
+
+    await expect(matching.fetchSecretKey!(subConfig, 8)).resolves.toBe(
+      "resolved-key",
+    )
+    await expect(
+      matching.hydrateComparableKeys!(subConfig, [masked, usable]),
+    ).resolves.toEqual([{ ...masked, key: "resolved-key" }, usable])
+    expect(masked.key).toBe("********")
+    expect(revealSub2ApiApiKey).toHaveBeenCalledTimes(2)
+    expect(revealSub2ApiApiKey).toHaveBeenLastCalledWith(subConfig, 8)
+  })
+
+  it.each([
+    {
+      name: "step-up verification",
+      error: new Sub2ApiAdminApiError(
+        "Provider requires verification",
+        403,
+        SUB2API_STEP_UP_ADMIN_KEY_FORBIDDEN_CODE,
+        {
+          dispatch: "dispatched",
+          responseReceived: true,
+          confirmedNonApplication: true,
+        },
+      ),
+      reason: "verification-required",
+    },
+    {
+      name: "other provider rejection",
+      error: new Sub2ApiAdminApiError(
+        "Private provider diagnostic",
+        500,
+        "FAILED",
+        {
+          dispatch: "dispatched",
+          responseReceived: true,
+          confirmedNonApplication: true,
+        },
+      ),
+      reason: "key-resolution-failed",
+    },
+    {
+      name: "transport failure",
+      error: new Error("Private transport diagnostic"),
+      reason: "key-resolution-failed",
+    },
+  ])(
+    "keeps Sub2API $name unresolved with a safe reason",
+    async ({ error, reason }) => {
+      vi.mocked(revealSub2ApiApiKey).mockRejectedValue(error)
+
+      await expect(
+        sub2ApiManagedSiteCapabilities.matching.hydrateComparableKeys!(
+          subConfig,
+          [
+            {
+              id: 8,
+              name: "Masked account",
+              type: ChannelType.OpenAI,
+              base_url: "https://upstream.example",
+              models: "",
+              key: "********",
+            },
+          ],
+        ),
+      ).rejects.toMatchObject({
+        name: "MatchResolutionUnresolvedError",
+        message: reason,
+        reason,
+      })
+    },
+  )
+
+  it.each(["AbortError", "TimeoutError"])(
+    "preserves Sub2API %s cancellation instead of reporting a failed comparison",
+    async (name) => {
+      const error = new DOMException("Cancelled", name)
+      vi.mocked(revealSub2ApiApiKey).mockRejectedValue(error)
+
+      await expect(
+        sub2ApiManagedSiteCapabilities.matching.hydrateComparableKeys!(
+          subConfig,
+          [
+            {
+              id: 8,
+              name: "Masked account",
+              type: ChannelType.OpenAI,
+              base_url: "https://upstream.example",
+              models: "",
+              key: "********",
+            },
+          ],
+        ),
+      ).rejects.toBe(error)
+    },
+  )
+
+  it("defaults incomplete Claude Code Hub metadata and retains an available unmasked key", async () => {
+    vi.mocked(searchProviders).mockResolvedValue([
+      { id: 8, name: "", key: "available-key" },
+      { id: 9, name: "Unconfigured" },
+    ])
+
+    await expect(
+      claudeCodeHubManagedSiteCapabilities.matching.search(
+        subConfig,
+        "upstream",
+      ),
+    ).resolves.toEqual({
+      items: [
+        {
+          id: 8,
+          name: "Provider 8",
+          type: "openai-compatible",
+          base_url: "",
+          key: "available-key",
+          models: "",
+        },
+        {
+          id: 9,
+          name: "Unconfigured",
+          type: "openai-compatible",
+          base_url: "",
+          key: "",
+          models: "",
+        },
+      ],
+      total: 2,
+      type_counts: {},
+    })
+  })
+
+  it("resolves Claude Code Hub keys through native provider identities without mutating candidates", async () => {
+    const matching = claudeCodeHubManagedSiteCapabilities.matching
+    const masked = {
+      id: 8,
+      name: "Masked provider",
+      type: "claude",
+      base_url: "https://upstream.example",
+      models: "claude-sonnet",
+      key: "********",
+    }
+    const usable = { ...masked, id: 9, key: "existing-key" }
+    vi.mocked(getUnmaskedProviderKey)
+      .mockResolvedValueOnce("direct-key")
+      .mockResolvedValueOnce(" hydrated-key ")
+
+    await expect(matching.fetchSecretKey!(subConfig, 7)).resolves.toBe(
+      "direct-key",
+    )
+    await expect(
+      matching.hydrateComparableKeys!(subConfig, [masked, usable]),
+    ).resolves.toEqual([{ ...masked, key: "hydrated-key" }, usable])
+    expect(masked.key).toBe("********")
+    expect(getUnmaskedProviderKey).toHaveBeenCalledTimes(2)
+    expect(getUnmaskedProviderKey).toHaveBeenNthCalledWith(1, subConfig, 7)
+    expect(getUnmaskedProviderKey).toHaveBeenNthCalledWith(2, subConfig, 8)
+  })
+
+  it("redacts the Claude Code Hub admin key from failed matching reads", async () => {
+    vi.mocked(searchProviders).mockRejectedValue(
+      new Error(`Request rejected for ${subConfig.adminToken}`),
+    )
+
+    const result = await claudeCodeHubManagedSiteCapabilities.matching
+      .search(subConfig, "upstream")
+      .catch((error: unknown) => error)
+    expect(result).toBeInstanceOf(Error)
+    expect((result as Error).message).not.toContain(subConfig.adminToken)
   })
 
   it("refuses opaque ids before a numeric provider secret request", async () => {

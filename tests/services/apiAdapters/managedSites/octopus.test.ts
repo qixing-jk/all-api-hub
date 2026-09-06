@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { octopusManagedResourceModels } from "~/services/apiAdapters/managedSites/octopus"
+import {
+  octopusManagedResourceModels,
+  octopusManagedSiteCapabilities,
+} from "~/services/apiAdapters/managedSites/octopus"
+import type { OctopusChannel } from "~/types/octopus"
 
 const octopusApi = vi.hoisted(() => {
   class OctopusMutationApiError extends Error {
@@ -77,6 +81,89 @@ describe("Octopus managed-site channel capability", () => {
     userPreferences.getPreferences.mockResolvedValue({
       octopus: config,
     })
+  })
+
+  const channel: OctopusChannel = {
+    id: 7,
+    name: "Native channel",
+    type: 0,
+    enabled: true,
+    base_urls: [{ url: "https://upstream.example" }],
+    keys: [
+      { channel_key: "first-key", enabled: true },
+      { channel_key: "", enabled: false },
+      { channel_key: "second-key", enabled: true },
+    ],
+    model: "model-a,model-b",
+    custom_model: "custom-model",
+    proxy: true,
+    auto_sync: true,
+    auto_group: 0,
+    custom_header: [{ header_key: "x-provider", header_value: "native" }],
+  }
+
+  it("counts native model inventory types and retains the settings needed for probing", async () => {
+    octopusApi.listChannels.mockResolvedValue([
+      channel,
+      { ...channel, id: 8, enabled: false, base_urls: [], keys: [], model: "" },
+      { ...channel, id: 9, type: 2 },
+    ])
+
+    const result = await octopusManagedResourceModels.list(config)
+
+    expect(result.total).toBe(3)
+    expect(result.type_counts).toEqual({ "0": 2, "2": 1 })
+    expect(result.items[0]).toEqual({
+      id: 7,
+      name: "Native channel",
+      type: 0,
+      base_url: "https://upstream.example",
+      key: "first-key",
+      models: "model-a,model-b",
+      status: 1,
+      model_mapping: "",
+      native: { kind: "octopus", data: channel },
+    })
+    expect(result.items[1]).toMatchObject({
+      id: 8,
+      base_url: "",
+      key: "",
+      models: "",
+      status: 2,
+    })
+  })
+
+  it("includes every available Octopus key in matching evidence without native CRUD settings", async () => {
+    octopusApi.searchChannels.mockResolvedValue([
+      channel,
+      { ...channel, id: 8, base_urls: [], keys: [], model: "" },
+    ])
+
+    await expect(
+      octopusManagedSiteCapabilities.matching.search(config, "upstream"),
+    ).resolves.toEqual({
+      items: [
+        {
+          id: 7,
+          name: "Native channel",
+          type: 0,
+          base_url: "https://upstream.example",
+          models: "model-a,model-b",
+          key: "first-key\nsecond-key",
+        },
+        {
+          id: 8,
+          name: "Native channel",
+          type: 0,
+          base_url: "",
+          models: "",
+          key: "",
+        },
+      ],
+      total: 2,
+      type_counts: {},
+    })
+    expect(octopusApi.searchChannels).toHaveBeenCalledWith(config, "upstream")
   })
 
   it("awaits the request gate before loading model inventory", async () => {
