@@ -10,11 +10,6 @@ import type {
   ManagedSiteService,
 } from "~/services/managedSites/managedSiteService"
 import { getManagedSiteService } from "~/services/managedSites/managedSiteService"
-import { MANAGED_UPSTREAM_RESOURCE_FEATURES } from "~/services/managedSites/managedUpstreamResourceMigration"
-import {
-  resolveManagedUpstreamResourceFeatureCapabilities,
-  type ManagedSiteUpstreamResourcesCapability,
-} from "~/services/managedSites/managedUpstreamResourceService"
 import type { ManagedSiteOperationContext } from "~/services/managedSites/operationContext"
 import { getNewApiLoginAssistConfig } from "~/services/managedSites/providers/newApi"
 import {
@@ -22,11 +17,7 @@ import {
   hasNewApiLoginAssistCredentials,
 } from "~/services/managedSites/providers/newApiSession"
 import { hasNewApiTotpSecret } from "~/services/managedSites/providers/newApiTotp"
-import {
-  getManagedSiteDuplicateCandidateSource,
-  normalizeManagedSiteChannelBaseUrl,
-  searchManagedUpstreamResourceChannelsForDuplicateMatching,
-} from "~/services/managedSites/utils/channelMatching"
+import { normalizeManagedSiteChannelBaseUrl } from "~/services/managedSites/utils/channelMatching"
 import {
   collectManagedConfigSecrets,
   supportsManagedSiteBaseUrlChannelLookup,
@@ -82,9 +73,6 @@ export interface ManagedSiteTokenChannelRecovery {
 interface ManagedSiteTokenChannelResolvedKeys {
   resolvedChannelKeysById?: Record<number, string>
 }
-
-type TokenChannelStatusResourceCapabilities =
-  ManagedSiteUpstreamResourcesCapability<ManagedSiteConfig>
 
 export type ManagedSiteTokenChannelStatus =
   ManagedSiteTokenChannelResolvedKeys &
@@ -148,47 +136,6 @@ const findAssessmentChannelSummary = (
     assessment.models.channel,
     assessment.url.channel,
   ].find((channel) => channel?.id === channelId)
-}
-
-const resolveTokenChannelStatusResourceCapabilities = (
-  siteType: ManagedSiteService["siteType"],
-): TokenChannelStatusResourceCapabilities | null => {
-  const resolution = resolveManagedUpstreamResourceFeatureCapabilities(
-    siteType,
-    MANAGED_UPSTREAM_RESOURCE_FEATURES.TokenChannelStatus,
-  )
-
-  if (!resolution.supported) {
-    return null
-  }
-
-  return resolution.capabilities as TokenChannelStatusResourceCapabilities
-}
-
-export const buildTokenChannelStatusChannelMatchService = (params: {
-  service: ManagedSiteService
-}): ManagedSiteService => {
-  const matchService: ManagedSiteService = { ...params.service }
-  delete matchService.searchResourceDuplicateChannels
-
-  const resources = resolveTokenChannelStatusResourceCapabilities(
-    params.service.siteType,
-  )
-  if (!resources) {
-    return matchService
-  }
-
-  matchService.searchResourceDuplicateChannels = async (config, searchParams) =>
-    await searchManagedUpstreamResourceChannelsForDuplicateMatching({
-      resources,
-      config,
-      accountBaseUrl: searchParams.accountBaseUrl,
-      candidateSource: getManagedSiteDuplicateCandidateSource(
-        params.service.siteType,
-      ),
-    })
-
-  return matchService
 }
 
 const collectSecrets = (
@@ -379,7 +326,7 @@ export async function getManagedSiteTokenChannelStatus(
     // The match module owns which evidence is required for an exact match.
     // Empty optional dimensions must reach it instead of being rejected here.
     const resolution = await resolveManagedSiteChannelMatch({
-      service: buildTokenChannelStatusChannelMatchService({ service }),
+      service,
       managedConfig,
       accountBaseUrl: searchBaseUrl,
       models: formData.models,

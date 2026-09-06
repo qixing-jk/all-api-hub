@@ -11,7 +11,6 @@ import {
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { API_ERROR_CODES } from "~/services/apiTransport/errors"
 import type { ManagedSiteService } from "~/services/managedSites/managedSiteService"
-import { MANAGED_UPSTREAM_RESOURCE_FEATURES } from "~/services/managedSites/managedUpstreamResourceMigration"
 import {
   PROTECTION_BYPASS_SURFACES,
   PROTECTION_BYPASS_USER_COMMANDS,
@@ -25,7 +24,6 @@ import {
   MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES,
   MANAGED_SITE_TOKEN_BATCH_EXPORT_WARNING_CODES,
 } from "~/types/managedSiteTokenBatchExport"
-import { createManagedUpstreamResourceRef } from "~/types/managedUpstreamResource"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 import {
   buildApiToken,
@@ -1153,187 +1151,29 @@ describe("managed-site token batch export", () => {
     })
   })
 
-  it("uses feature-gated resource target candidates for channel-shaped migrated token matching", async () => {
-    vi.resetModules()
-    vi.doUnmock("~/services/managedSites/channelMatchResolver")
-
-    try {
-      const resourceChannel = buildManagedSiteChannel({
-        id: 64,
-        key: "token-secret",
-        base_url: "https://upstream.example.com/v1",
-        models: "gpt-4o",
-        name: "Resource duplicate",
-      })
-      const resourceRef = createManagedUpstreamResourceRef({
-        managedSiteType: SITE_TYPES.NEW_API,
-        scopeKey: "https://target.example.com",
-        resourceId: 64,
-      })
-      const search = vi.fn().mockResolvedValue({
-        items: [
-          {
-            ref: resourceRef,
-            displayName: "Resource duplicate",
-            endpointLabel: "https://upstream.example.com/v1",
-            modelPreview: ["gpt-4o"],
-          },
-        ],
-        total: 1,
-      })
-      const getDetail = vi.fn().mockResolvedValue({
-        summary: {
-          ref: resourceRef,
-          displayName: "Resource duplicate",
-          endpointLabel: "https://upstream.example.com/v1",
-          modelPreview: ["gpt-4o"],
-        },
-        native: resourceChannel,
-      })
-      mockResolveManagedUpstreamResourceFeatureCapabilities.mockImplementation(
-        (siteType: string, feature: string) =>
-          siteType === SITE_TYPES.NEW_API &&
-          feature === MANAGED_UPSTREAM_RESOURCE_FEATURES.TokenBatchExport
-            ? {
-                supported: true,
-                siteType,
-                feature,
-                capabilities: {
-                  items: {
-                    list: vi.fn(),
-                    search,
-                    getDetail,
-                    create: vi.fn(),
-                    update: vi.fn(),
-                    delete: vi.fn(),
-                  },
-                  drafts: {
-                    prepareImportDraft: vi.fn(),
-                    prepareEditDraft: vi.fn(),
-                    describeFields: vi.fn(),
-                    validateDraft: vi.fn(),
-                  },
-                },
-              }
-            : {
-                supported: false,
-                siteType,
-                feature,
-                reason: "feature-slice-disabled",
-              },
-      )
-      const service = buildService({
-        searchChannel: vi.fn().mockResolvedValue({
-          items: [],
-          total: 0,
-          type_counts: {},
-        }),
-      })
-      mockGetManagedSiteService.mockResolvedValue(service)
-
-      const { prepareManagedSiteTokenBatchExportPreview } = await import(
-        "~/services/managedSites/tokenBatchExport"
-      )
-
-      const preview = await prepareManagedSiteTokenBatchExportPreview({
-        items: [
-          buildAccountTokenInput(
-            buildDisplaySiteData({
-              baseUrl: "https://upstream.example.com/v1",
-            }),
-          ),
-        ],
-      })
-
-      expect(search).toHaveBeenCalledWith(
-        {
-          baseUrl: "https://target.example.com",
-          adminToken: "admin-token",
-          userId: "1",
-        },
-        "https://upstream.example.com",
-      )
-      expect(getDetail).toHaveBeenCalledTimes(1)
-      expect(service.searchChannel).not.toHaveBeenCalled()
-      expect(preview.skippedCount).toBe(1)
-      expect(preview.items[0]).toMatchObject({
-        status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.SKIPPED,
-        matchedChannel: {
-          id: 64,
-          name: "Resource duplicate",
-        },
-      })
-    } finally {
-      vi.doMock("~/services/managedSites/channelMatchResolver", () => ({
-        createManagedSiteChannelMatchRequestCache:
-          buildChannelMatchRequestCache,
-        resolveManagedSiteChannelMatch: mockResolveManagedSiteChannelMatch,
-      }))
-      vi.resetModules()
-    }
-  })
-
   it("deduplicates Sub2API imports by URL and revealed key without model fields", async () => {
     vi.resetModules()
     vi.doUnmock("~/services/managedSites/channelMatchResolver")
 
     try {
-      const resourceRef = createManagedUpstreamResourceRef({
-        managedSiteType: SITE_TYPES.SUB2API,
-        scopeKey: "https://target.example.com",
-        resourceId: 64,
-      })
-      const summary = {
-        ref: resourceRef,
-        displayName: "Existing API-key account",
-        endpointLabel: "https://upstream.example.com/v1",
-      }
-      const list = vi.fn().mockResolvedValue({ items: [summary], total: 1 })
-      const search = vi.fn()
-      const getDetail = vi.fn().mockResolvedValue({
-        summary,
-        native: {
-          id: 64,
-          name: "Existing API-key account",
-          type: "apikey",
-          platform: "openai",
-          credentials: { base_url: "https://upstream.example.com/v1" },
-          credentials_status: { has_api_key: true },
-        },
-      })
-      mockResolveManagedUpstreamResourceFeatureCapabilities.mockImplementation(
-        (siteType: string, feature: string) =>
-          siteType === SITE_TYPES.SUB2API &&
-          feature === MANAGED_UPSTREAM_RESOURCE_FEATURES.TokenBatchExport
-            ? {
-                supported: true,
-                siteType,
-                feature,
-                capabilities: {
-                  items: {
-                    list,
-                    search,
-                    getDetail,
-                    create: vi.fn(),
-                    update: vi.fn(),
-                    delete: vi.fn(),
-                  },
-                  drafts: {
-                    prepareImportDraft: vi.fn(),
-                    prepareEditDraft: vi.fn(),
-                    describeFields: vi.fn(),
-                    validateDraft: vi.fn(),
-                  },
-                },
-              }
-            : {
-                supported: false,
-                siteType,
-                feature,
-                reason: "feature-slice-disabled",
-              },
-      )
+      const searchChannel = vi
+        .fn()
+        .mockResolvedValue({
+          items: [
+            {
+              id: 64,
+              name: "Existing API-key account",
+              type: 1,
+              base_url: "https://upstream.example.com/v1",
+              models: "",
+              key: "********",
+            },
+          ],
+          total: 1,
+          type_counts: {},
+        })
       const service = buildService({
+        searchChannel,
         siteType: SITE_TYPES.SUB2API,
         messagesKey: "sub2api",
         prepareChannelFormData: vi.fn(async (account, token) => ({
@@ -1369,9 +1209,7 @@ describe("managed-site token batch export", () => {
         ),
       })
 
-      expect(list).toHaveBeenCalledTimes(1)
-      expect(search).not.toHaveBeenCalled()
-      expect(getDetail).toHaveBeenCalledTimes(1)
+      expect(searchChannel).toHaveBeenCalledTimes(1)
       expect(service.fetchChannelSecretKey).toHaveBeenCalledWith(
         expect.anything(),
         64,
@@ -1382,82 +1220,6 @@ describe("managed-site token batch export", () => {
         matchedChannel: {
           id: 64,
           name: "Existing API-key account",
-        },
-      })
-    } finally {
-      vi.doMock("~/services/managedSites/channelMatchResolver", () => ({
-        createManagedSiteChannelMatchRequestCache:
-          buildChannelMatchRequestCache,
-        resolveManagedSiteChannelMatch: mockResolveManagedSiteChannelMatch,
-      }))
-      vi.resetModules()
-    }
-  })
-
-  it("falls back to legacy target matching when the token batch export resource feature is unavailable", async () => {
-    vi.resetModules()
-    vi.doUnmock("~/services/managedSites/channelMatchResolver")
-
-    try {
-      const legacyChannel = buildManagedSiteChannel({
-        id: 65,
-        key: "token-secret",
-        base_url: "https://upstream.example.com/v1",
-        models: "gpt-4o",
-        name: "Legacy duplicate",
-      })
-      const searchResourceDuplicateChannels = vi.fn().mockResolvedValue({
-        items: [
-          buildManagedSiteChannel({
-            id: 66,
-            key: "token-secret",
-            base_url: "https://upstream.example.com/v1",
-            models: "gpt-4o",
-            name: "Wrong resource duplicate",
-          }),
-        ],
-        total: 1,
-        type_counts: {},
-      })
-      const service = buildService({
-        searchChannel: vi.fn().mockResolvedValue({
-          items: [legacyChannel],
-          total: 1,
-          type_counts: {},
-        }),
-        searchResourceDuplicateChannels,
-      })
-      mockGetManagedSiteService.mockResolvedValue(service)
-
-      const { prepareManagedSiteTokenBatchExportPreview } = await import(
-        "~/services/managedSites/tokenBatchExport"
-      )
-
-      const preview = await prepareManagedSiteTokenBatchExportPreview({
-        items: [
-          buildAccountTokenInput(
-            buildDisplaySiteData({
-              baseUrl: "https://upstream.example.com/v1",
-            }),
-          ),
-        ],
-      })
-
-      expect(searchResourceDuplicateChannels).not.toHaveBeenCalled()
-      expect(service.searchChannel).toHaveBeenCalledWith(
-        {
-          baseUrl: "https://target.example.com",
-          adminToken: "admin-token",
-          userId: "1",
-        },
-        "https://upstream.example.com",
-      )
-      expect(preview.skippedCount).toBe(1)
-      expect(preview.items[0]).toMatchObject({
-        status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.SKIPPED,
-        matchedChannel: {
-          id: 65,
-          name: "Legacy duplicate",
         },
       })
     } finally {
@@ -1550,7 +1312,7 @@ describe("managed-site token batch export", () => {
     const service = buildService({
       siteType: SITE_TYPES.VELOERA,
       messagesKey: "veloera",
-      searchResourceDuplicateChannels: vi.fn(),
+      searchChannel: vi.fn(),
     })
     mockGetManagedSiteService.mockResolvedValue(service)
 

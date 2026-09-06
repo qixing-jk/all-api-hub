@@ -1,4 +1,5 @@
 import { SITE_TYPES } from "~/constants/siteType"
+import type { ManagedResourceMatchingCapability } from "~/services/apiAdapters/contracts/managedResourceMatching"
 import type { ManagedResourceModelsCapability } from "~/services/apiAdapters/contracts/managedResourceModels"
 import type {
   ManagedSiteChannelDraftsCapability,
@@ -7,6 +8,10 @@ import type {
   ManagedSiteQueriesCapability,
 } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import type { ManagedUpstreamResourcesCapability } from "~/services/apiAdapters/contracts/managedUpstreamResources"
+import {
+  requireNumericManagedResourceId,
+  toManagedResourceMatchList,
+} from "~/services/apiAdapters/managedResources/matchingInputs"
 import { toManagedModelChannelList } from "~/services/apiAdapters/managedResources/modelInputs"
 import {
   fetchAccountAvailableModels,
@@ -42,6 +47,7 @@ import {
   prepareChannelFormData,
 } from "~/services/managedSites/providers/veloera"
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/managedSite"
+import type { ManagedResourceMatchCandidate } from "~/types/managedResourceMatching"
 import type {
   ChannelFormData,
   ManagedSiteChannel,
@@ -143,11 +149,11 @@ const fetchSecretKey = async (
   return channel.key
 }
 
-const hydrateComparableKeys = async (
+const hydrateComparableKeys = async <T extends ManagedResourceMatchCandidate>(
   config: VeloeraConfig,
-  candidates: ManagedSiteChannel[],
+  candidates: T[],
 ) => {
-  const hydratedCandidates: ManagedSiteChannel[] = []
+  const hydratedCandidates: T[] = []
 
   for (const candidate of candidates) {
     if (hasUsableManagedSiteChannelKey(candidate.key)) {
@@ -155,7 +161,10 @@ const hydrateComparableKeys = async (
       continue
     }
 
-    const key = await fetchSecretKey(config, candidate.id)
+    const key = await fetchSecretKey(
+      config,
+      requireNumericManagedResourceId(candidate.id),
+    )
     hydratedCandidates.push({ ...candidate, key })
   }
 
@@ -606,7 +615,20 @@ const veloeraManagedUpstreamResources: ManagedUpstreamResourcesCapability<
   },
 }
 
+const matching: ManagedResourceMatchingCapability<VeloeraConfig> = {
+  fetchSecretKey: async (config, id) =>
+    fetchSecretKey(config, requireNumericManagedResourceId(id)),
+  hydrateComparableKeys,
+  search: async (config) =>
+    toManagedResourceMatchList(
+      await listAllChannels(toManagedSiteApiServiceRequest(config), {
+        requireCompleteInventory: true,
+      }),
+    ),
+}
+
 export const veloeraManagedSiteCapabilities = {
+  matching,
   channels: veloeraManagedSiteChannels,
   models: veloeraManagedResourceModels,
   // Compatibility for duplicate matching and legacy import callers. The

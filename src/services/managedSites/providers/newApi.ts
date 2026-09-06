@@ -4,6 +4,7 @@ import type {
   ManagedSiteChannelDraftRequestOptions,
   ManagedSiteChannelSecretReadOptions,
 } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
+import { requireNumericManagedResourceId } from "~/services/apiAdapters/managedResources/matchingInputs"
 import { searchChannel as searchNewApiChannel } from "~/services/apiService/newApiFamily/channelManagement"
 import {
   fetchAccountAvailableModels,
@@ -22,13 +23,13 @@ import {
   type FetchManagedSiteAvailableModelsOptions,
 } from "~/services/managedSites/utils/fetchManagedSiteAvailableModels"
 import { fetchTokenScopedModels } from "~/services/managedSites/utils/fetchTokenScopedModels"
-import { AuthTypeEnum, type ApiToken, type DisplaySiteData } from "~/types"
 import type { AccountToken } from "~/types"
+import { AuthTypeEnum, type ApiToken, type DisplaySiteData } from "~/types"
+import type { ManagedResourceMatchCandidate } from "~/types/managedResourceMatching"
 import type {
   ChannelFormData,
   ChannelMode,
   CreateChannelPayload,
-  ManagedSiteChannel,
   ManagedSiteChannelListData,
 } from "~/types/managedSite"
 import type { NewApiConfig } from "~/types/newApiConfig"
@@ -93,13 +94,15 @@ export async function fetchChannelSecretKey(
 /**
  * Hydrates hidden New API channel keys so the shared resolver can compare them.
  */
-export async function hydrateComparableChannelKeys(
+export async function hydrateComparableChannelKeys<
+  T extends ManagedResourceMatchCandidate,
+>(
   config: NewApiConfig,
-  candidates: ManagedSiteChannel[],
+  candidates: T[],
   options: ManagedSiteChannelSecretReadOptions,
-): Promise<ManagedSiteChannel[]> {
+): Promise<T[]> {
   const sessionConfig = await getNewApiManagedSessionConfig(config)
-  const hydratedCandidates: ManagedSiteChannel[] = []
+  const hydratedCandidates: T[] = []
 
   for (const candidate of candidates) {
     if (candidate.key?.trim()) {
@@ -110,7 +113,7 @@ export async function hydrateComparableChannelKeys(
     try {
       const resolvedKey = await fetchNewApiChannelKey({
         ...sessionConfig,
-        channelId: candidate.id,
+        channelId: requireNumericManagedResourceId(candidate.id),
         protectionBypassExecution: options.protectionBypassExecution,
         signal: options.signal,
       })
@@ -131,7 +134,7 @@ export async function hydrateComparableChannelKeys(
 
       logger.warn("Failed to hydrate hidden New API channel key", {
         baseUrl: config.baseUrl,
-        channelId: candidate.id,
+        channelId: requireNumericManagedResourceId(candidate.id),
         error: getErrorMessage(error),
       })
 

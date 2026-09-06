@@ -18,24 +18,20 @@ import {
 } from "~/services/managedSites/utils/channelMatching"
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/managedSite"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
-import type { ManagedSiteChannelListData } from "~/types/managedSite"
+import type { ManagedResourceMatchList } from "~/types/managedResourceMatching"
 
 export type ManagedSiteChannelMatchService = Pick<
   ManagedSiteService,
   | "siteType"
   | "searchChannel"
-  | "searchResourceDuplicateChannels"
   | "hydrateComparableChannelKeys"
   | "fetchChannelSecretKey"
 >
 
 export interface ManagedSiteChannelMatchRequestCache {
-  searchResultsByBaseUrl: Map<
-    string,
-    Promise<ManagedSiteChannelListData | null>
-  >
-  channelSecretKeysById: Map<number, Promise<string>>
-  resolvedChannelKeysById: Record<number, string>
+  searchResultsByBaseUrl: Map<string, Promise<ManagedResourceMatchList | null>>
+  channelSecretKeysById: Map<number | string, Promise<string>>
+  resolvedChannelKeysById: Record<number | string, string>
 }
 
 export const createManagedSiteChannelMatchRequestCache =
@@ -51,22 +47,24 @@ interface ResolveManagedSiteChannelMatchParams {
   accountBaseUrl: string
   models: string[]
   key?: string
-  resolvedChannelKeysById?: Record<number, string>
+  resolvedChannelKeysById?: Record<number | string, string>
   resolveHiddenKeys?: boolean
-  hiddenKeyChannelIds?: readonly number[]
+  hiddenKeyChannelIds?: readonly (number | string)[]
   requestCache?: ManagedSiteChannelMatchRequestCache
   protectionBypassExecution?: ProtectionBypassExecution
 }
 
 interface ManagedSiteChannelMatchResolution
   extends ManagedSiteChannelMatchInspection {
-  resolvedChannelKeysById?: Record<number, string>
+  resolvedChannelKeysById?: Record<number | string, string>
   unresolvedReason?: ManagedSiteChannelMatchUnresolvedReason
 }
 
-const applyResolvedChannelKeys = <T extends { id: number; key?: string }>(
+const applyResolvedChannelKeys = <
+  T extends { id: number | string; key?: string },
+>(
   channels: T[],
-  resolvedChannelKeysById?: Record<number, string>,
+  resolvedChannelKeysById?: Record<number | string, string>,
 ) => {
   if (
     !resolvedChannelKeysById ||
@@ -92,7 +90,7 @@ const applyResolvedChannelKeys = <T extends { id: number; key?: string }>(
 const fetchRecoverableCandidateSecretKey = async (params: {
   service: ManagedSiteChannelMatchService
   managedConfig: ManagedSiteRuntimeConfigValue
-  channelId: number
+  channelId: number | string
   requestCache?: ManagedSiteChannelMatchRequestCache
   protectionBypassExecution: ProtectionBypassExecution
 }) => {
@@ -165,12 +163,7 @@ export async function resolveManagedSiteChannelMatch(
 
   if (!searchResultsPromise) {
     const cache = requestCache
-    searchResultsPromise =
-      typeof service.searchResourceDuplicateChannels === "function"
-        ? service.searchResourceDuplicateChannels(managedConfig, {
-            accountBaseUrl: searchBaseUrl,
-          })
-        : service.searchChannel(managedConfig, searchBaseUrl)
+    searchResultsPromise = service.searchChannel(managedConfig, searchBaseUrl)
     cache?.searchResultsByBaseUrl.set(searchBaseUrl, searchResultsPromise)
     searchResultsPromise.catch(() => {
       if (
@@ -210,7 +203,7 @@ export async function resolveManagedSiteChannelMatch(
   const searchResultItems = Array.isArray(searchResults.items)
     ? searchResults.items
     : []
-  const mergedResolvedChannelKeysById: Record<number, string> = {
+  const mergedResolvedChannelKeysById: Record<number | string, string> = {
     ...(requestCache?.resolvedChannelKeysById ?? {}),
     ...(resolvedChannelKeysById ?? {}),
   }

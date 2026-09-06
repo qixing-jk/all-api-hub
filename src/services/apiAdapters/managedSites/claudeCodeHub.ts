@@ -3,12 +3,14 @@ import {
   ClaudeCodeHubProviderTypeNames,
 } from "~/constants/claudeCodeHub"
 import { SITE_TYPES } from "~/constants/siteType"
+import type { ManagedResourceMatchingCapability } from "~/services/apiAdapters/contracts/managedResourceMatching"
 import type {
   ManagedSiteChannelDraftsCapability,
   ManagedSiteChannelsCapability,
   ManagedSiteConfigCapability,
 } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import type { ManagedUpstreamResourcesCapability } from "~/services/apiAdapters/contracts/managedUpstreamResources"
+import { requireNumericManagedResourceId } from "~/services/apiAdapters/managedResources/matchingInputs"
 import {
   createProvider,
   deleteProvider,
@@ -547,7 +549,46 @@ const claudeCodeHubManagedUpstreamResources: ManagedUpstreamResourcesCapability<
   },
 }
 
+const matching: ManagedResourceMatchingCapability<ClaudeCodeHubConfig> = {
+  search: async (config, keyword) =>
+    runClaudeCodeHubResourceRead(config, async () => {
+      const items = (await searchProviders(config, keyword)).map(
+        (provider) => ({
+          id: provider.id,
+          name: provider.name || `Provider ${provider.id}`,
+          type:
+            provider.providerType ||
+            CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE,
+          base_url: provider.url ?? "",
+          key: provider.maskedKey ?? provider.key ?? "",
+          models: normalizeList(
+            (provider.allowedModels ?? []).map((model) =>
+              typeof model === "string"
+                ? model
+                : !model.matchType || model.matchType === "exact"
+                  ? model.pattern ?? ""
+                  : "",
+            ),
+          ).join(","),
+        }),
+      )
+      return { items, total: items.length, type_counts: {} }
+    }),
+  fetchSecretKey: async (config, id) =>
+    fetchChannelSecretKey(config, requireNumericManagedResourceId(id)),
+  hydrateComparableKeys: async (config, candidates) => {
+    const hydrated = []
+    for (const candidate of candidates) {
+      const [result] = await hydrateComparableChannelKeys(config, [
+        { ...candidate, id: requireNumericManagedResourceId(candidate.id) },
+      ])
+      hydrated.push(result)
+    }
+    return hydrated
+  },
+}
 export const claudeCodeHubManagedSiteCapabilities = {
+  matching,
   channels: claudeCodeHubManagedSiteChannels,
   // Compatibility for token/key workflows that still consume the old
   // ManagedUpstreamResources contract. The channel UI and migration now use

@@ -5,8 +5,6 @@ import type {
   ManagedSiteChannelSecretReadOptions,
 } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
-import { MANAGED_UPSTREAM_RESOURCE_FEATURES } from "~/services/managedSites/managedUpstreamResourceMigration"
-import { resolveManagedUpstreamResourceFeatureCapabilities } from "~/services/managedSites/managedUpstreamResourceService"
 import type {
   ManagedSiteMutationResult,
   ManagedSiteVoidMutationResult,
@@ -16,10 +14,6 @@ import {
   type ManagedSiteRuntimeConfigValue,
   type ManagedSiteRuntimeConfigValueForType,
 } from "~/services/managedSites/runtimeConfig"
-import {
-  getManagedSiteDuplicateCandidateSource,
-  searchManagedUpstreamResourceChannelsForDuplicateMatching,
-} from "~/services/managedSites/utils/channelMatching"
 import type { ManagedSiteMessagesKey } from "~/services/managedSites/utils/managedSite"
 import {
   getManagedSiteAdminConfig,
@@ -28,10 +22,13 @@ import {
 } from "~/services/managedSites/utils/managedSite"
 import type { AccountToken, ApiToken, DisplaySiteData } from "~/types"
 import type {
+  ManagedResourceMatchCandidate,
+  ManagedResourceMatchList,
+} from "~/types/managedResourceMatching"
+import type {
   ChannelFormData,
   ChannelMode,
   CreateChannelPayload,
-  ManagedSiteChannel,
   ManagedSiteChannelListData,
   UpdateChannelPayload,
 } from "~/types/managedSite"
@@ -53,7 +50,7 @@ export interface ManagedSiteService<
   searchChannel(
     config: TConfig,
     keyword: string,
-  ): Promise<ManagedSiteChannelListData | null>
+  ): Promise<ManagedResourceMatchList | null>
 
   listChannels(
     config: TConfig,
@@ -100,20 +97,15 @@ export interface ManagedSiteService<
     mode?: ChannelMode,
   ): CreateChannelPayload
 
-  searchResourceDuplicateChannels?(
-    config: TConfig,
-    params: { accountBaseUrl: string },
-  ): Promise<ManagedSiteChannelListData | null>
-
   hydrateComparableChannelKeys?(
     config: TConfig,
-    candidates: ManagedSiteChannel[],
+    candidates: ManagedResourceMatchCandidate[],
     options?: ManagedSiteChannelSecretReadOptions,
-  ): Promise<ManagedSiteChannel[]>
+  ): Promise<ManagedResourceMatchCandidate[]>
 
   fetchChannelSecretKey?(
     config: TConfig,
-    channelId: number,
+    channelId: number | string,
     options?: ManagedSiteChannelSecretReadOptions,
   ): Promise<string>
 }
@@ -124,6 +116,7 @@ type ManagedSiteCapabilities = NonNullable<
   ReturnType<typeof getSiteTypeCapabilities>["managedSites"]
 >
 type RequiredManagedSiteCapabilities = {
+  matching: NonNullable<ManagedSiteCapabilities["matching"]>
   channels: NonNullable<ManagedSiteCapabilities["channels"]>
   config: NonNullable<ManagedSiteCapabilities["config"]>
   queries?: ManagedSiteCapabilities["queries"]
@@ -140,6 +133,7 @@ function requireManagedSiteCapabilities(
 
   if (
     !managedSites?.channels ||
+    !managedSites.matching ||
     !managedSites.config ||
     !managedSites.channelDrafts
   ) {
@@ -150,6 +144,7 @@ function requireManagedSiteCapabilities(
 
   return {
     channels: managedSites.channels,
+    matching: managedSites.matching,
     config: managedSites.config,
     queries: managedSites.queries,
     channelDrafts: managedSites.channelDrafts,
@@ -226,16 +221,11 @@ export function getManagedSiteServiceForType(
   const messagesKey: ManagedSiteMessagesKey =
     getManagedSiteMessagesKeyFromSiteType(siteType)
   const capabilities = requireManagedSiteCapabilities(siteType)
-  const resourceDuplicateMatching =
-    resolveManagedUpstreamResourceFeatureCapabilities(
-      siteType,
-      MANAGED_UPSTREAM_RESOURCE_FEATURES.DuplicateMatching,
-    )
 
   return {
     siteType,
     messagesKey,
-    searchChannel: capabilities.channels.search,
+    searchChannel: capabilities.matching.search,
     listChannels: async (config, options) => {
       const channelList = capabilities.channels.list
         ? await capabilities.channels.list(config, options)
@@ -261,18 +251,7 @@ export function getManagedSiteServiceForType(
     buildChannelName: capabilities.channelDrafts.buildName,
     prepareChannelFormData: capabilities.channelDrafts.prepareFormData,
     buildChannelPayload: capabilities.channelDrafts.buildPayload,
-    ...(resourceDuplicateMatching.supported
-      ? {
-          searchResourceDuplicateChannels: async (config, params) =>
-            await searchManagedUpstreamResourceChannelsForDuplicateMatching({
-              resources: resourceDuplicateMatching.capabilities,
-              config,
-              accountBaseUrl: params.accountBaseUrl,
-              candidateSource: getManagedSiteDuplicateCandidateSource(siteType),
-            }),
-        }
-      : {}),
-    hydrateComparableChannelKeys: capabilities.channels.hydrateComparableKeys,
-    fetchChannelSecretKey: capabilities.channels.fetchSecretKey,
+    hydrateComparableChannelKeys: capabilities.matching.hydrateComparableKeys,
+    fetchChannelSecretKey: capabilities.matching.fetchSecretKey,
   }
 }

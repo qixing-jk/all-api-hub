@@ -3,6 +3,7 @@ import {
   isClaudeCodeHubProviderType,
 } from "~/constants/claudeCodeHub"
 import { normalizeAccountForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
+import { requireNumericManagedResourceId } from "~/services/apiAdapters/managedResources/matchingInputs"
 import * as claudeCodeHubApi from "~/services/apiService/claudeCodeHub"
 import {
   MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
@@ -26,12 +27,12 @@ import type {
   ClaudeCodeHubProviderUpdatePayload,
 } from "~/types/claudeCodeHub"
 import type { ClaudeCodeHubConfig } from "~/types/claudeCodeHubConfig"
+import type { ManagedResourceMatchCandidate } from "~/types/managedResourceMatching"
 import {
   CHANNEL_STATUS,
   type ChannelFormData,
   type ChannelMode,
   type CreateChannelPayload,
-  type ManagedSiteChannel,
   type ManagedSiteChannelListData,
   type UpdateChannelPayload,
 } from "~/types/managedSite"
@@ -278,10 +279,9 @@ async function searchClaudeCodeHubChannels(
 /**
  * Resolves a real provider key when list data only contains a masked key.
  */
-async function hydrateComparableChannelKey(
-  config: ClaudeCodeHubConfig,
-  channel: ManagedSiteChannel,
-): Promise<ManagedSiteChannel | null> {
+async function hydrateComparableChannelKey<
+  T extends ManagedResourceMatchCandidate,
+>(config: ClaudeCodeHubConfig, channel: T): Promise<T | null> {
   if (hasUsableManagedSiteChannelKey(channel.key)) {
     return channel
   }
@@ -289,7 +289,7 @@ async function hydrateComparableChannelKey(
   try {
     const key = await claudeCodeHubApi.getUnmaskedProviderKey(
       config,
-      channel.id,
+      requireNumericManagedResourceId(channel.id),
     )
     if (!hasUsableManagedSiteChannelKey(key)) {
       throw new Error("Claude Code Hub returned an unusable provider key")
@@ -311,11 +311,10 @@ async function hydrateComparableChannelKey(
 /**
  * Hydrates Claude Code Hub provider keys for shared channel comparison.
  */
-export async function hydrateComparableChannelKeys(
-  config: ClaudeCodeHubConfig,
-  candidates: ManagedSiteChannel[],
-): Promise<ManagedSiteChannel[]> {
-  const hydratedCandidates: ManagedSiteChannel[] = []
+export async function hydrateComparableChannelKeys<
+  T extends ManagedResourceMatchCandidate,
+>(config: ClaudeCodeHubConfig, candidates: T[]): Promise<T[]> {
+  const hydratedCandidates: T[] = []
 
   for (const candidate of candidates) {
     if (hasUsableManagedSiteChannelKey(candidate.key)) {

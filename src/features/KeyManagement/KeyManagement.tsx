@@ -619,11 +619,12 @@ export default function KeyManagement(props: {
     const candidateChannel =
       getRecoverableNewApiCandidateChannel(managedSiteStatus)
 
-    if (candidateChannel) {
+    if (candidateChannel && typeof candidateChannel.id === "number") {
+      const channelId = candidateChannel.id
       let resolvedChannelKey = ""
 
       await loadNewApiChannelKeyWithVerification({
-        channelId: candidateChannel.id,
+        channelId,
         command: PROTECTION_BYPASS_USER_COMMANDS.ManageApiKeys,
         label: token.name,
         requestKind: "token",
@@ -642,7 +643,7 @@ export default function KeyManagement(props: {
             token,
             managedSiteStatus,
             {
-              channelId: candidateChannel.id,
+              channelId,
               channelKey: resolvedChannelKey,
             },
           )

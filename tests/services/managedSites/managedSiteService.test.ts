@@ -16,6 +16,7 @@ const buildCapabilities = (overrides?: {
   search?: (config: unknown, keyword: string) => Promise<unknown>
 }) => ({
   managedSites: {
+    matching: { search: overrides?.search ?? vi.fn() },
     channels: {
       search:
         overrides?.search ??

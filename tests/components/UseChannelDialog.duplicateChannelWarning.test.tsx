@@ -269,6 +269,7 @@ vi.mock("react-hot-toast", () => ({
 
 vi.mock("~/services/apiAdapters/registry", () => ({
   getSiteTypeCapabilities: () => ({
+    managedSites: { matching: { search: vi.fn() } },
     account: {
       keyManagement: {
         fetchTokens: (...args: any[]) => mockFetchAccountTokens(...args),
@@ -593,14 +594,8 @@ describe("useChannelDialog", () => {
   })
 
   it("shows duplicate channel warning from migrated resource candidates", async () => {
-    const searchChannel = vi.fn(async () => ({
-      items: [],
-      total: 0,
-      type_counts: {},
-    }))
     const mockService = buildManagedSiteServiceMock({
-      searchChannel,
-      searchResourceDuplicateChannels: vi.fn(async () => ({
+      searchChannel: vi.fn(async () => ({
         items: [
           buildManagedSiteChannel({
             id: 81,
@@ -634,8 +629,7 @@ describe("useChannelDialog", () => {
       await openPromise
     })
 
-    expect(searchChannel).not.toHaveBeenCalled()
-    expect(mockService.searchResourceDuplicateChannels).toHaveBeenCalled()
+    expect(mockService.searchChannel).toHaveBeenCalled()
     expect(result.current.context.state.isOpen).toBe(false)
   })
 

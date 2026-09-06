@@ -19,9 +19,9 @@ describe("supportsManagedSiteBaseUrlChannelLookup", () => {
     ).toBe(true)
   })
 
-  it("returns false for backends without reliable base-url lookup", () => {
+  it("supports Veloera through its registered inventory matching", () => {
     expect(supportsManagedSiteBaseUrlChannelLookup(SITE_TYPES.VELOERA)).toBe(
-      false,
+      true,
     )
   })
 })

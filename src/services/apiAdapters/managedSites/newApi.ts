@@ -1,4 +1,5 @@
 import { SITE_TYPES } from "~/constants/siteType"
+import type { ManagedResourceMatchingCapability } from "~/services/apiAdapters/contracts/managedResourceMatching"
 import type { ManagedResourceModelsCapability } from "~/services/apiAdapters/contracts/managedResourceModels"
 import type {
   ManagedSiteChannelDraftsCapability,
@@ -8,6 +9,10 @@ import type {
   ManagedSiteQueriesCapability,
 } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import type { ManagedUpstreamResourcesCapability } from "~/services/apiAdapters/contracts/managedUpstreamResources"
+import {
+  requireNumericManagedResourceId,
+  toManagedResourceMatchList,
+} from "~/services/apiAdapters/managedResources/matchingInputs"
 import { toManagedModelChannelList } from "~/services/apiAdapters/managedResources/modelInputs"
 import {
   createChannel,
@@ -610,7 +615,27 @@ const newApiManagedUpstreamResources: ManagedUpstreamResourcesCapability<
   },
 }
 
+const matching: ManagedResourceMatchingCapability<NewApiConfig> = {
+  hydrateComparableKeys: async (config, candidates, options) =>
+    hydrateComparableChannelKeys(
+      config,
+      candidates,
+      requireProtectionBypassExecution(options),
+    ),
+  search: async (config, keyword) =>
+    toManagedResourceMatchList(
+      await searchChannel(toManagedSiteApiServiceRequest(config), keyword),
+    ),
+  fetchSecretKey: async (config, id, options) =>
+    await newApiManagedSiteChannels.fetchSecretKey!(
+      config,
+      requireNumericManagedResourceId(id),
+      options,
+    ),
+}
+
 export const newApiManagedSiteCapabilities = {
+  matching,
   channels: newApiManagedSiteChannels,
   models: newApiManagedResourceModels,
   resources: newApiManagedUpstreamResources,

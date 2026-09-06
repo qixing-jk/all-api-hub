@@ -650,7 +650,7 @@ describe("managedSite utils", () => {
     ).toBe("messages:newapi.noChannelsToSync")
 
     expect(supportsManagedSiteBaseUrlChannelLookup(SITE_TYPES.VELOERA)).toBe(
-      false,
+      true,
     )
     expect(
       supportsManagedSiteBaseUrlChannelLookup(SITE_TYPES.CLAUDE_CODE_HUB),

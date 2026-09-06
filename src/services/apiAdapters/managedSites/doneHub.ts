@@ -1,4 +1,5 @@
 import { SITE_TYPES } from "~/constants/siteType"
+import type { ManagedResourceMatchingCapability } from "~/services/apiAdapters/contracts/managedResourceMatching"
 import type { ManagedResourceModelsCapability } from "~/services/apiAdapters/contracts/managedResourceModels"
 import type {
   ManagedSiteChannelDraftsCapability,
@@ -7,6 +8,10 @@ import type {
   ManagedSiteQueriesCapability,
 } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import type { ManagedUpstreamResourcesCapability } from "~/services/apiAdapters/contracts/managedUpstreamResources"
+import {
+  requireNumericManagedResourceId,
+  toManagedResourceMatchList,
+} from "~/services/apiAdapters/managedResources/matchingInputs"
 import { toManagedModelChannelList } from "~/services/apiAdapters/managedResources/modelInputs"
 import { createNewApiKeyManagement } from "~/services/apiAdapters/newApi/keyManagement"
 import {
@@ -43,6 +48,7 @@ import {
 } from "~/services/managedSites/providers/doneHubService"
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/managedSite"
 import type { DoneHubConfig } from "~/types/doneHubConfig"
+import type { ManagedResourceMatchCandidate } from "~/types/managedResourceMatching"
 import type {
   ChannelFormData,
   ManagedSiteChannel,
@@ -141,11 +147,11 @@ const fetchSecretKey = async (config: DoneHubConfig, channelId: number) => {
   return channel.key
 }
 
-const hydrateComparableKeys = async (
+const hydrateComparableKeys = async <T extends ManagedResourceMatchCandidate>(
   config: DoneHubConfig,
-  candidates: ManagedSiteChannel[],
+  candidates: T[],
 ) => {
-  const hydratedCandidates: ManagedSiteChannel[] = []
+  const hydratedCandidates: T[] = []
 
   for (const candidate of candidates) {
     if (hasUsableManagedSiteChannelKey(candidate.key)) {
@@ -153,7 +159,10 @@ const hydrateComparableKeys = async (
       continue
     }
 
-    const key = await fetchSecretKey(config, candidate.id)
+    const key = await fetchSecretKey(
+      config,
+      requireNumericManagedResourceId(candidate.id),
+    )
     hydratedCandidates.push({ ...candidate, key })
   }
 
@@ -632,7 +641,18 @@ const doneHubManagedUpstreamResources: ManagedUpstreamResourcesCapability<
   },
 }
 
+const matching: ManagedResourceMatchingCapability<DoneHubConfig> = {
+  fetchSecretKey: async (config, id) =>
+    fetchSecretKey(config, requireNumericManagedResourceId(id)),
+  hydrateComparableKeys,
+  search: async (config, keyword) =>
+    toManagedResourceMatchList(
+      await searchChannel(toManagedSiteApiServiceRequest(config), keyword),
+    ),
+}
+
 export const doneHubManagedSiteCapabilities = {
+  matching,
   channels: doneHubManagedSiteChannels,
   models: doneHubManagedResourceModels,
   resources: doneHubManagedUpstreamResources,

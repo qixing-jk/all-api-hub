@@ -60,6 +60,7 @@ const createManagedSiteCapabilities = (
 
   return {
     channels,
+    matching: channels,
     config: {
       checkValid: vi.fn(async () => true),
       get: vi.fn(async () => await getMockRuntimeConfigForType(siteType)),
@@ -498,6 +499,7 @@ describe("managedSiteService", () => {
     )
 
     capabilityFnsBySiteType.set(SITE_TYPES.DONE_HUB, {
+      matching: { search: vi.fn() },
       channels: {
         search: vi.fn(),
         create: vi.fn(),
@@ -528,6 +530,7 @@ describe("managedSiteService", () => {
     )
 
     capabilityFnsBySiteType.set(SITE_TYPES.DONE_HUB, {
+      matching: { search: vi.fn() },
       channels: {
         search: vi.fn(),
         create: vi.fn(),

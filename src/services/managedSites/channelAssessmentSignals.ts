@@ -5,7 +5,7 @@ import type {
 } from "~/services/managedSites/channelMatch"
 
 export interface ManagedSiteChannelAssessmentSignalChannel {
-  id?: number
+  id?: number | string
   name: string
 }
 

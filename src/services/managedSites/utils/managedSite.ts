@@ -366,7 +366,7 @@ export function getManagedSiteType(prefs: UserPreferences): ManagedSiteType {
 export function supportsManagedSiteBaseUrlChannelLookup(
   siteType: ManagedSiteType,
 ): boolean {
-  return siteType !== SITE_TYPES.VELOERA
+  return Boolean(getSiteTypeCapabilities(siteType).managedSites?.matching)
 }
 
 /** Whether the registered managed-site channel adapter supports model writes. */

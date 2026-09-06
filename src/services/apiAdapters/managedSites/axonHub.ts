@@ -5,6 +5,7 @@ import {
 } from "~/constants/axonHub"
 import { SITE_TYPES } from "~/constants/siteType"
 import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
+import type { ManagedResourceMatchingCapability } from "~/services/apiAdapters/contracts/managedResourceMatching"
 import type {
   ManagedSiteChannelDraftsCapability,
   ManagedSiteChannelsCapability,
@@ -16,6 +17,7 @@ import {
   createAxonHubChannel,
   deleteAxonHubChannel,
   getAxonHubChannel,
+  listAxonHubChannelPage,
   resolveAxonHubGraphqlIdForMutation,
   updateAxonHubChannel,
   updateAxonHubChannelStatus,
@@ -42,6 +44,7 @@ import type {
   AxonHubUpdateChannelInput,
 } from "~/types/axonHub"
 import type { AxonHubConfig } from "~/types/axonHubConfig"
+import type { ManagedResourceMatchCandidate } from "~/types/managedResourceMatching"
 import {
   CHANNEL_STATUS,
   type CreateChannelPayload,
@@ -401,7 +404,41 @@ export const axonHubManagedSiteChannels: ManagedSiteChannelsCapability<AxonHubCo
     },
   }
 
+const matching: ManagedResourceMatchingCapability<AxonHubConfig> = {
+  search: async (config) => {
+    const items: ManagedResourceMatchCandidate[] = []
+    const cursors = new Set<string>()
+    let cursor: string | undefined
+    do {
+      const page = await listAxonHubChannelPage(config, { cursor, limit: 100 })
+      items.push(
+        ...page.items.map((channel) => ({
+          id: channel.id,
+          name: channel.name,
+          type: channel.type,
+          base_url: channel.baseURL ?? "",
+          models: normalizeList([
+            ...(channel.supportedModels ?? []),
+            ...(channel.manualModels ?? []),
+          ]).join(","),
+          key: [
+            ...(channel.credentials?.apiKeys ?? []),
+            channel.credentials?.apiKey ?? "",
+          ]
+            .filter(Boolean)
+            .join("\n"),
+        })),
+      )
+      cursor = page.nextCursor
+      if (cursor && cursors.has(cursor))
+        throw new Error("Incomplete AxonHub matching inventory")
+      if (cursor) cursors.add(cursor)
+    } while (cursor)
+    return { items, total: items.length, type_counts: {} }
+  },
+}
 export const axonHubManagedSiteCapabilities = {
+  matching,
   channels: axonHubManagedSiteChannels,
   config: axonHubManagedSiteConfig,
   channelDrafts: axonHubManagedSiteChannelDrafts,

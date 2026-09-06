@@ -10,10 +10,10 @@ import {
   getManagedSiteChannelKeyComparisonMode,
   inspectManagedSiteChannelKeyValueMatch,
 } from "~/services/managedSites/utils/channelMatching"
-import type { ManagedSiteChannel } from "~/types/managedSite"
+import type { ManagedResourceMatchCandidate } from "~/types/managedResourceMatching"
 
 export interface ManagedSiteAssessmentChannel {
-  id: number
+  id: number | string
   name: string
   resourceId?: string | number
 }
@@ -44,7 +44,7 @@ export interface ManagedSiteVerifiedKeyAssessment<
 }
 
 export const toManagedSiteAssessmentChannel = (
-  channel: ManagedSiteChannel,
+  channel: ManagedResourceMatchCandidate,
   siteType?: ManagedSiteType,
 ): ManagedSiteAssessmentChannel => ({
   id: channel.id,
@@ -55,7 +55,7 @@ export const toManagedSiteAssessmentChannel = (
 })
 
 const toOptionalManagedSiteAssessmentChannel = (
-  channel: ManagedSiteChannel | null,
+  channel: ManagedResourceMatchCandidate | null,
   siteType?: ManagedSiteType,
 ) => (channel ? toManagedSiteAssessmentChannel(channel, siteType) : undefined)
 

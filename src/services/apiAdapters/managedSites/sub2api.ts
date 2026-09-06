@@ -3,12 +3,14 @@ import {
   SUB2API_DEFAULT_ACCOUNT_PLATFORM,
   SUB2API_MANAGED_RESOURCE_STATUS,
 } from "~/constants/sub2api"
+import type { ManagedResourceMatchingCapability } from "~/services/apiAdapters/contracts/managedResourceMatching"
 import type {
   ManagedSiteChannelDraftsCapability,
   ManagedSiteChannelsCapability,
   ManagedSiteConfigCapability,
 } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import type { ManagedUpstreamResourcesCapability } from "~/services/apiAdapters/contracts/managedUpstreamResources"
+import { requireNumericManagedResourceId } from "~/services/apiAdapters/managedResources/matchingInputs"
 import {
   MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
   MatchResolutionUnresolvedError,
@@ -588,7 +590,57 @@ const resources: ManagedUpstreamResourcesCapability<
   },
 }
 
+const matching: ManagedResourceMatchingCapability<Sub2ApiManagedSiteConfig> = {
+  // The upstream search is name-only; inspect the URL bucket from a full API-key inventory.
+  search: async (config) => {
+    const data = await listSub2ApiApiKeyAccounts(config)
+    const items = data.items
+      .filter((account) => account.type === "apikey")
+      .map((account) => ({
+        id: account.id,
+        name: account.name || `Sub2API Account ${account.id}`,
+        type: sub2ApiPlatformToChannelType(account.platform),
+        base_url:
+          typeof account.credentials?.base_url === "string"
+            ? account.credentials.base_url
+            : "",
+        key: account.credentials_status?.has_api_key ? "********" : "",
+        models: "",
+      }))
+    return { items, total: data.total, type_counts: {} }
+  },
+  fetchSecretKey: async (config, id) =>
+    revealSub2ApiApiKey(config, requireNumericManagedResourceId(id)),
+  hydrateComparableKeys: async (config, candidates) => {
+    const hydrated = []
+    for (const candidate of candidates) {
+      if (hasUsableManagedSiteChannelKey(candidate.key)) {
+        hydrated.push(candidate)
+        continue
+      }
+      try {
+        hydrated.push({
+          ...candidate,
+          key: await revealSub2ApiApiKey(
+            config,
+            requireNumericManagedResourceId(candidate.id),
+          ),
+        })
+      } catch (error) {
+        if (isAbortLikeError(error)) throw error
+        throw new MatchResolutionUnresolvedError(
+          error instanceof Sub2ApiAdminApiError &&
+          error.code === SUB2API_STEP_UP_ADMIN_KEY_FORBIDDEN_CODE
+            ? MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.VERIFICATION_REQUIRED
+            : MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.KEY_RESOLUTION_FAILED,
+        )
+      }
+    }
+    return hydrated
+  },
+}
 export const sub2ApiManagedSiteCapabilities = {
+  matching,
   channels: sub2ApiManagedSiteChannels,
   resources,
   config: configCapability,

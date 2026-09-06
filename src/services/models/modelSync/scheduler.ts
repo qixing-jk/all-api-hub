@@ -1,11 +1,7 @@
 import { SITE_TYPES } from "~/constants/siteType"
 import { toOctopusModelChannel } from "~/services/apiAdapters/managedResources/modelInputs"
 import { ensureLegacyChannelConfigMigrationReady } from "~/services/managedSites/legacyChannelConfigMigration"
-import { getManagedSiteServiceForType } from "~/services/managedSites/managedSiteService"
-import {
-  resolveCurrentManagedSiteRuntimeConfig,
-  resolveManagedSiteRuntimeConfigForType,
-} from "~/services/managedSites/runtimeConfig"
+import { resolveCurrentManagedSiteRuntimeConfig } from "~/services/managedSites/runtimeConfig"
 import {
   getManagedSiteConfigMissingMessage,
   getManagedSiteContext,
@@ -436,21 +432,6 @@ class ModelSyncScheduler {
         total: channels.length,
         type_counts: {},
       }
-    }
-
-    if (siteType === SITE_TYPES.CLAUDE_CODE_HUB) {
-      const managedConfig = resolveManagedSiteRuntimeConfigForType(
-        userPrefs,
-        SITE_TYPES.CLAUDE_CODE_HUB,
-      )
-      if (!managedConfig) {
-        throw new Error(getManagedSiteConfigMissingMessage(t, messagesKey))
-      }
-
-      const service = getManagedSiteServiceForType(siteType)
-      const channels = await service.searchChannel(managedConfig.config, "")
-
-      return channels ?? { items: [], total: 0, type_counts: {} }
     }
 
     const service = await this.createService()

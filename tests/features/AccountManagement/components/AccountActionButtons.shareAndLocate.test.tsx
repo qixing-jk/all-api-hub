@@ -6,8 +6,6 @@ import { describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import AccountActionButtons from "~/features/AccountManagement/components/AccountActionButtons"
-import type { ManagedUpstreamResourcesCapability } from "~/services/apiAdapters/contracts/managedUpstreamResources"
-import { MANAGED_UPSTREAM_RESOURCE_FEATURES } from "~/services/managedSites/managedUpstreamResourceMigration"
 import type { UserPreferences } from "~/services/preferences/userPreferences"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -21,12 +19,6 @@ import {
   ACCOUNT_TODAY_METRIC_REASONS,
   ACCOUNT_TODAY_METRIC_STATUSES,
 } from "~/types/accountTodayStats"
-import {
-  MANAGED_UPSTREAM_RESOURCE_NATIVE_KINDS,
-  MANAGED_UPSTREAM_RESOURCE_SECRET_STATES,
-  MANAGED_UPSTREAM_RESOURCE_STATUSES,
-  type ManagedUpstreamResourceSummary,
-} from "~/types/managedUpstreamResource"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { render } from "~~/tests/test-utils/render"
 
@@ -41,7 +33,6 @@ import {
   openManagedSiteChannelsForChannelMock,
   openManagedSiteChannelsPageMock,
   resolveDisplayAccountRuntimeKeySecretMock,
-  resolveManagedUpstreamResourceFeatureCapabilitiesMock,
   startProductAnalyticsActionMock,
   toastCustomMock,
   toastErrorMock,
@@ -538,49 +529,9 @@ describe("AccountActionButtons", () => {
     )
   })
 
-  it("uses resource-backed channel candidates for account shortcut locate when feature-gated", async () => {
+  it("locates the account shortcut through registered native matching", async () => {
     fetchAccountTokensMock.mockResolvedValueOnce([{ key: "sk-resource" }])
 
-    const resourceSummary = buildResourceSummary({
-      id: 654,
-      name: "Resource Managed Channel",
-      baseUrl: "https://api.example.com",
-      models: ["gpt-4"],
-    })
-    const resources: ManagedUpstreamResourcesCapability = {
-      items: {
-        list: vi.fn(),
-        search: vi.fn().mockResolvedValue({
-          items: [resourceSummary],
-          total: 1,
-        }),
-        getDetail: vi.fn().mockResolvedValue({
-          summary: resourceSummary,
-          native: {
-            id: 654,
-            name: "Resource Managed Channel",
-            base_url: "https://api.example.com",
-            models: "gpt-4",
-            key: "sk-resource",
-          },
-        }),
-        create: vi.fn(),
-        update: vi.fn(),
-        delete: vi.fn(),
-      },
-      drafts: {
-        prepareImportDraft: vi.fn(),
-        prepareEditDraft: vi.fn(),
-        describeFields: vi.fn(),
-        validateDraft: vi.fn(),
-      },
-    }
-    resolveManagedUpstreamResourceFeatureCapabilitiesMock.mockReturnValue({
-      supported: true,
-      siteType: SITE_TYPES.NEW_API,
-      feature: MANAGED_UPSTREAM_RESOURCE_FEATURES.TokenChannelStatus,
-      capabilities: resources,
-    })
     const managedService = {
       siteType: SITE_TYPES.NEW_API,
       messagesKey: "newapi",
@@ -596,10 +547,20 @@ describe("AccountActionButtons", () => {
       }),
       searchChannel: vi
         .fn()
-        .mockRejectedValue(new Error("legacy search should not run")),
-      searchResourceDuplicateChannels: vi
-        .fn()
-        .mockRejectedValue(new Error("stale duplicate-matching resource path")),
+        .mockResolvedValue({
+          items: [
+            {
+              id: 654,
+              name: "Resource Managed Channel",
+              type: 1,
+              base_url: "https://api.example.com",
+              models: "gpt-4",
+              key: "sk-resource",
+            },
+          ],
+          total: 1,
+          type_counts: {},
+        }),
     }
 
     getManagedSiteServiceMock.mockResolvedValueOnce(managedService as any)
@@ -635,11 +596,7 @@ describe("AccountActionButtons", () => {
     await waitFor(() => {
       expect(openManagedSiteChannelsForChannelMock).toHaveBeenCalledWith(654)
     })
-    expect(
-      managedService.searchResourceDuplicateChannels,
-    ).not.toHaveBeenCalled()
-    expect(managedService.searchChannel).not.toHaveBeenCalled()
-    expect(resources.items.search).toHaveBeenCalledWith(
+    expect(managedService.searchChannel).toHaveBeenCalledWith(
       expect.any(Object),
       "https://api.example.com",
     )
@@ -967,7 +924,7 @@ describe("AccountActionButtons", () => {
       "Veloera Site",
     ],
   ])(
-    "shows a disabled locate action with visible unsupported guidance for %s",
+    "enables native inventory lookup for %s",
     async (_label, preferences, siteName) => {
       userPreferencesContextValue.preferences =
         preferences as Partial<UserPreferences>
@@ -997,27 +954,14 @@ describe("AccountActionButtons", () => {
       )
       const button = label.closest("button")
       expect(button).not.toBeNull()
-      expect(button!).toBeDisabled()
-      const hint = within(menu).getByText(
-        "account:actions.locateManagedSiteChannelUnsupportedHint",
-      )
-      expect(hint).toBeInTheDocument()
-      const description = within(menu).getByText(
-        "account:actions.locateManagedSiteChannelUnsupported",
-      )
-      expect(button!).toHaveAttribute(
-        "title",
-        "account:actions.locateManagedSiteChannelUnsupported",
-      )
-      expect(button!).toHaveAttribute("aria-describedby", description.id)
-
-      await user.click(button!)
-
-      expect(getManagedSiteServiceMock).not.toHaveBeenCalled()
-      expect(openManagedSiteChannelsPageMock).not.toHaveBeenCalled()
+      expect(button!).not.toBeDisabled()
+      expect(
+        within(menu).queryByText(
+          "account:actions.locateManagedSiteChannelUnsupportedHint",
+        ),
+      ).toBeNull()
     },
   )
-
   it("shows an actionable locate action for Claude Code Hub", async () => {
     userPreferencesContextValue.preferences = {
       managedSiteType: SITE_TYPES.CLAUDE_CODE_HUB,
@@ -1200,29 +1144,4 @@ describe("AccountActionButtons", () => {
     })
     expect(managedService.prepareChannelFormData).not.toHaveBeenCalled()
   })
-})
-
-const buildResourceSummary = ({
-  id,
-  name,
-  baseUrl,
-  models,
-}: {
-  id: number
-  name: string
-  baseUrl: string
-  models: string[]
-}): ManagedUpstreamResourceSummary => ({
-  ref: {
-    managedSiteType: SITE_TYPES.NEW_API,
-    scopeKey: "https://admin.example",
-    resourceId: String(id),
-  },
-  displayName: name,
-  nativeKind: MANAGED_UPSTREAM_RESOURCE_NATIVE_KINDS.Channel,
-  status: MANAGED_UPSTREAM_RESOURCE_STATUSES.Enabled,
-  endpointLabel: baseUrl,
-  modelPreview: models,
-  secretState: MANAGED_UPSTREAM_RESOURCE_SECRET_STATES.Available,
-  capabilities: {},
 })

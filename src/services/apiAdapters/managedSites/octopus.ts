@@ -1,5 +1,6 @@
 import { OctopusOutboundTypeNames } from "~/constants/octopus"
 import { SITE_TYPES } from "~/constants/siteType"
+import type { ManagedResourceMatchingCapability } from "~/services/apiAdapters/contracts/managedResourceMatching"
 import type { ManagedResourceModelsCapability } from "~/services/apiAdapters/contracts/managedResourceModels"
 import type {
   ManagedSiteChannelDraftsCapability,
@@ -476,7 +477,24 @@ const octopusManagedUpstreamResources: ManagedUpstreamResourcesCapability<
   },
 }
 
+const matching: ManagedResourceMatchingCapability<OctopusConfig> = {
+  search: async (config, keyword) => {
+    const items = (await searchChannels(config, keyword)).map((channel) => ({
+      id: channel.id,
+      name: channel.name,
+      type: channel.type,
+      base_url: channel.base_urls[0]?.url ?? "",
+      models: channel.model ?? "",
+      key: channel.keys
+        .map((key) => key.channel_key)
+        .filter(Boolean)
+        .join("\n"),
+    }))
+    return { items, total: items.length, type_counts: {} }
+  },
+}
 export const octopusManagedSiteCapabilities = {
+  matching,
   channels: octopusManagedSiteChannels,
   models: octopusManagedResourceModels,
   resources: octopusManagedUpstreamResources,

@@ -79,7 +79,6 @@ import {
   getManagedSiteService,
   hasValidManagedSiteConfig,
 } from "~/services/managedSites/managedSiteService"
-import { buildTokenChannelStatusChannelMatchService } from "~/services/managedSites/tokenChannelStatus"
 import { normalizeManagedSiteChannelBaseUrl } from "~/services/managedSites/utils/channelMatching"
 import {
   collectManagedConfigSecrets,
@@ -591,7 +590,7 @@ export default function AccountActionButtons({
 
       const requestCache = createManagedSiteChannelMatchRequestCache()
       const matchParams = {
-        service: buildTokenChannelStatusChannelMatchService({ service }),
+        service,
         managedConfig,
         accountBaseUrl: searchBaseUrl,
         models: formData.models,

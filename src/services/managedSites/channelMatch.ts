@@ -1,5 +1,5 @@
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
-import type { ManagedSiteChannel } from "~/types/managedSite"
+import type { ManagedResourceMatchCandidate } from "~/types/managedResourceMatching"
 
 export const MANAGED_SITE_CHANNEL_MATCH_LEVELS = {
   EXACT: "exact",
@@ -65,13 +65,13 @@ export class MatchResolutionUnresolvedError extends Error {
 export interface ManagedSiteChannelMatchResult {
   level: ManagedSiteChannelMatchLevelValue
   reason: ManagedSiteChannelMatchReasonValue
-  channel: ManagedSiteChannel | null
+  channel: ManagedResourceMatchCandidate | null
   similarityScore?: number
 }
 
 export interface ManagedSiteChannelUrlAssessment {
   matched: boolean
-  channel: ManagedSiteChannel | null
+  channel: ManagedResourceMatchCandidate | null
   candidateCount: number
 }
 
@@ -79,14 +79,14 @@ export interface ManagedSiteChannelKeyAssessment {
   comparable: boolean
   matched: boolean
   reason: ManagedSiteChannelKeyMatchReasonValue
-  channel: ManagedSiteChannel | null
+  channel: ManagedResourceMatchCandidate | null
 }
 
 export interface ManagedSiteChannelModelsAssessment {
   comparable: boolean
   matched: boolean
   reason: ManagedSiteChannelModelsMatchReasonValue
-  channel: ManagedSiteChannel | null
+  channel: ManagedResourceMatchCandidate | null
   similarityScore?: number
 }
 
@@ -112,7 +112,7 @@ interface RecoverableManagedSiteChannelAssessment<TChannel> {
 export const getManagedSiteChannelExactMatch = (
   inspection: ManagedSiteChannelMatchInspection,
   siteType?: ManagedSiteType,
-): ManagedSiteChannel | null => {
+): ManagedResourceMatchCandidate | null => {
   if (siteType === SITE_TYPES.SUB2API) {
     if (
       !inspection.url.matched ||

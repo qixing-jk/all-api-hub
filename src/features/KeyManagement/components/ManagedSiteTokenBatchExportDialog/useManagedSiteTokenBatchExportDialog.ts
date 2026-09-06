@@ -559,6 +559,8 @@ export function useManagedSiteTokenBatchExportDialog({
         if (!isActive()) return
 
         const { item, candidate } = targets[index]
+        if (typeof candidate.id !== "number") continue
+        const channelId = candidate.id
         let resolvedChannelKey = ""
         let shouldContinueAfterDeferredLoad = false
         let loadCompleted = false
@@ -572,7 +574,7 @@ export function useManagedSiteTokenBatchExportDialog({
           if (resolvedChannelKey) {
             mergeResolvedChannelKeyForItem(
               item.id,
-              candidate.id,
+              channelId,
               resolvedChannelKey,
             )
             applyResolvedChannelKeyForItem(item, candidate, resolvedChannelKey)
@@ -585,7 +587,7 @@ export function useManagedSiteTokenBatchExportDialog({
 
         try {
           const loadedImmediately = await loadNewApiChannelKeyWithVerification({
-            channelId: candidate.id,
+            channelId,
             command: PROTECTION_BYPASS_USER_COMMANDS.ManageApiKeys,
             label: candidate.name,
             requestKind: "channel",
