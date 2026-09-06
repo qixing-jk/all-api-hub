@@ -80,15 +80,11 @@ const createManagedSiteCapabilities = (
 
 const baseService = {
   searchChannel: expect.any(Function),
-  createChannel: expect.any(Function),
-  updateChannel: expect.any(Function),
-  deleteChannel: expect.any(Function),
   checkValidConfig: expect.any(Function),
   getConfig: expect.any(Function),
   fetchAvailableModels: expect.any(Function),
   buildChannelName: expect.any(Function),
   prepareChannelFormData: expect.any(Function),
-  buildChannelPayload: expect.any(Function),
 }
 
 vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
@@ -125,13 +121,9 @@ vi.mock("~/services/apiAdapters/registry", () => ({
 vi.mock("~/services/managedSites/providers/newApi", () => ({
   checkValidNewApiConfig: vi.fn(async () => true),
   searchChannel: vi.fn(),
-  createChannel: vi.fn(),
-  updateChannel: vi.fn(),
-  deleteChannel: vi.fn(),
   fetchAvailableModels: vi.fn(),
   buildChannelName: vi.fn(),
   prepareChannelFormData: vi.fn(),
-  buildChannelPayload: vi.fn(),
   hydrateComparableChannelKeys: vi.fn(),
   fetchChannelSecretKey: vi.fn(),
 }))
@@ -139,13 +131,9 @@ vi.mock("~/services/managedSites/providers/newApi", () => ({
 vi.mock("~/services/managedSites/providers/veloera", () => ({
   checkValidVeloeraConfig: vi.fn(async () => true),
   searchChannel: vi.fn(),
-  createChannel: vi.fn(),
-  updateChannel: vi.fn(),
-  deleteChannel: vi.fn(),
   fetchAvailableModels: vi.fn(),
   buildChannelName: vi.fn(),
   prepareChannelFormData: vi.fn(),
-  buildChannelPayload: vi.fn(),
   hydrateComparableChannelKeys: vi.fn(),
   fetchChannelSecretKey: vi.fn(),
 }))
@@ -153,13 +141,9 @@ vi.mock("~/services/managedSites/providers/veloera", () => ({
 vi.mock("~/services/managedSites/providers/doneHubService", () => ({
   checkValidDoneHubConfig: vi.fn(async () => true),
   searchChannel: vi.fn(),
-  createChannel: vi.fn(),
-  updateChannel: vi.fn(),
-  deleteChannel: vi.fn(),
   fetchAvailableModels: vi.fn(),
   buildChannelName: vi.fn(),
   prepareChannelFormData: vi.fn(),
-  buildChannelPayload: vi.fn(),
   hydrateComparableChannelKeys: vi.fn(),
   fetchChannelSecretKey: vi.fn(),
 }))
@@ -167,37 +151,25 @@ vi.mock("~/services/managedSites/providers/doneHubService", () => ({
 vi.mock("~/services/managedSites/providers/octopus", () => ({
   checkValidOctopusConfig: vi.fn(async () => true),
   searchChannel: vi.fn(),
-  createChannel: vi.fn(),
-  updateChannel: vi.fn(),
-  deleteChannel: vi.fn(),
   fetchAvailableModels: vi.fn(),
   buildChannelName: vi.fn(),
   prepareChannelFormData: vi.fn(),
-  buildChannelPayload: vi.fn(),
 }))
 
 vi.mock("~/services/managedSites/providers/axonHub", () => ({
   checkValidAxonHubConfig: vi.fn(async () => true),
   searchChannel: vi.fn(),
-  createChannel: vi.fn(),
-  updateChannel: vi.fn(),
-  deleteChannel: vi.fn(),
   fetchAvailableModels: vi.fn(),
   buildChannelName: vi.fn(),
   prepareChannelFormData: vi.fn(),
-  buildChannelPayload: vi.fn(),
 }))
 
 vi.mock("~/services/managedSites/providers/claudeCodeHub", () => ({
   checkValidClaudeCodeHubConfig: vi.fn(async () => true),
   searchChannel: vi.fn(),
-  createChannel: vi.fn(),
-  updateChannel: vi.fn(),
-  deleteChannel: vi.fn(),
   fetchAvailableModels: vi.fn(),
   buildChannelName: vi.fn(),
   prepareChannelFormData: vi.fn(),
-  buildChannelPayload: vi.fn(),
   hydrateComparableChannelKeys: vi.fn(),
   fetchChannelSecretKey: vi.fn(),
 }))
@@ -441,31 +413,9 @@ describe("managedSiteService", () => {
     capabilityFnsBySiteType.set(SITE_TYPES.DONE_HUB, capabilities)
 
     const service = getManagedSiteServiceForType(SITE_TYPES.DONE_HUB)
-    const config = {
-      baseUrl: "https://donehub.example.invalid",
-      adminToken: "admin-token",
-      userId: "2",
-    }
-    const createPayload = {
-      mode: "single" as const,
-      channel: { name: "channel", status: 1 as const },
-    }
 
     expect(getSiteTypeCapabilities).toHaveBeenCalledWith(SITE_TYPES.DONE_HUB)
     expect(service.searchChannel).toBe(capabilities.channels.search)
-    await expect(service.createChannel(config, createPayload)).resolves.toBe(
-      createResult,
-    )
-    await expect(service.updateChannel(config, { id: 7 })).resolves.toBe(
-      updateResult,
-    )
-    await expect(service.deleteChannel(config, 7)).resolves.toBe(deleteResult)
-    expect(capabilities.channels.create).toHaveBeenCalledWith(
-      config,
-      createPayload,
-    )
-    expect(capabilities.channels.update).toHaveBeenCalledWith(config, { id: 7 })
-    expect(capabilities.channels.delete).toHaveBeenCalledWith(config, 7)
     expect(service.checkValidConfig).toBe(capabilities.config.checkValid)
     expect(service.getConfig).toBe(capabilities.config.get)
     expect(service.fetchSiteUserGroups).toBe(
@@ -480,9 +430,6 @@ describe("managedSiteService", () => {
     expect(service.buildChannelName).toBe(capabilities.channelDrafts.buildName)
     expect(service.prepareChannelFormData).toBe(
       capabilities.channelDrafts.prepareFormData,
-    )
-    expect(service.buildChannelPayload).toBe(
-      capabilities.channelDrafts.buildPayload,
     )
     expect(service.hydrateComparableChannelKeys).toBe(
       capabilities.channels.hydrateComparableKeys,

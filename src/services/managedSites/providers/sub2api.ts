@@ -3,7 +3,6 @@ import {
   isSub2ApiManagedResourceStatus,
   SUB2API_ADMIN_REQUEST_TIMEOUT_MS,
   SUB2API_MANAGED_RESOURCE_STATUS,
-  sub2ApiChannelTypeToPlatform,
   sub2ApiPlatformToChannelType,
 } from "~/constants/sub2api"
 import { normalizeAccountForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
@@ -525,7 +524,7 @@ export async function deleteSub2ApiApiKeyAccount(
   )
 }
 
-export { sub2ApiChannelTypeToPlatform, sub2ApiPlatformToChannelType }
+export { sub2ApiPlatformToChannelType }
 
 /** Projects a redacted Sub2API account into the legacy channel contract. */
 export function sub2ApiAccountToManagedSiteChannel(

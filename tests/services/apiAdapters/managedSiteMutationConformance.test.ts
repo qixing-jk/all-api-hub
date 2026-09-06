@@ -10,7 +10,6 @@ import type {
   ResourceEditor,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 import type { ManagedSiteChannelsCapability } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
-import type { ManagedUpstreamResourceItemsCapability } from "~/services/apiAdapters/contracts/managedUpstreamResources"
 import { getManagedResourceRegistration } from "~/services/apiAdapters/managedResources/registry"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import {
@@ -35,7 +34,6 @@ import {
   type collectManagedResourceSecrets,
   type ManagedResourceSecretCollection,
 } from "~/services/managedSites/utils/managedSite"
-import type { ManagedUpstreamResourceSummary } from "~/types/managedUpstreamResource"
 
 const expectedManagedSiteTypes = [
   SITE_TYPES.NEW_API,
@@ -46,10 +44,6 @@ const expectedManagedSiteTypes = [
   SITE_TYPES.CLAUDE_CODE_HUB,
   SITE_TYPES.SUB2API,
 ] as const
-
-const transitionalResourceSiteTypes = expectedManagedSiteTypes.filter(
-  (siteType) => siteType !== SITE_TYPES.AXON_HUB,
-)
 
 describe("managed-site mutation conformance", () => {
   it("keeps execution evidence and consumption on the mutation vocabulary", () => {
@@ -97,7 +91,11 @@ describe("managed-site mutation conformance", () => {
     expect(new Set(MANAGED_SITE_TYPES)).toEqual(
       new Set(expectedManagedSiteTypes),
     )
-    for (const siteType of MANAGED_SITE_TYPES) {
+    for (const siteType of [
+      SITE_TYPES.NEW_API,
+      SITE_TYPES.VELOERA,
+      SITE_TYPES.DONE_HUB,
+    ]) {
       const channels = getSiteTypeCapabilities(siteType).managedSites?.channels
 
       expect(channels, `${siteType} channels`).toMatchObject({
@@ -108,55 +106,28 @@ describe("managed-site mutation conformance", () => {
     }
   })
 
-  it("keeps every transitional-resource and native workspace write on the common result", () => {
-    type ResourceCreateResult = Awaited<
-      ReturnType<ManagedUpstreamResourceItemsCapability["create"]>
-    >
-    type ResourceUpdateResult = Awaited<
-      ReturnType<ManagedUpstreamResourceItemsCapability["update"]>
-    >
-    type ResourceDeleteResult = Awaited<
-      ReturnType<ManagedUpstreamResourceItemsCapability["delete"]>
-    >
-    type NativeSubmitResult = Awaited<ReturnType<ResourceEditor["submit"]>>
-    type NativeDeleteResult = Awaited<
-      ReturnType<ManagedResourceWorkspace["delete"]>
-    >
-
-    expectTypeOf<ResourceCreateResult>().toEqualTypeOf<
-      ManagedSiteMutationResult<ManagedUpstreamResourceSummary | null>
-    >()
-    expectTypeOf<ResourceUpdateResult>().toEqualTypeOf<
-      ManagedSiteMutationResult<ManagedUpstreamResourceSummary | null>
-    >()
-    expectTypeOf<ResourceDeleteResult>().toEqualTypeOf<ManagedSiteVoidMutationResult>()
-    expectTypeOf<NativeSubmitResult>().toEqualTypeOf<
+  it("keeps every native workspace write on the common mutation result", () => {
+    expectTypeOf<Awaited<ReturnType<ResourceEditor["submit"]>>>().toEqualTypeOf<
       ManagedSiteMutationResult<ResourceDisplayFacts>
     >()
-    expectTypeOf<NativeDeleteResult>().toEqualTypeOf<
-      ManagedSiteMutationResult<void>
-    >()
-
-    for (const siteType of transitionalResourceSiteTypes) {
+    expectTypeOf<
+      Awaited<ReturnType<ManagedResourceWorkspace["delete"]>>
+    >().toEqualTypeOf<ManagedSiteMutationResult<void>>()
+    for (const siteType of MANAGED_SITE_TYPES) {
       expect(
-        getSiteTypeCapabilities(siteType).managedSites?.resources?.items,
-        `${siteType} resources`,
+        getManagedResourceRegistration(
+          siteType,
+          MANAGED_RESOURCE_KINDS.Channel,
+        ),
       ).toMatchObject({
-        create: expect.any(Function),
-        update: expect.any(Function),
-        delete: expect.any(Function),
+        siteType,
+        kind: MANAGED_RESOURCE_KINDS.Channel,
+        open: expect.any(Function),
       })
+      expect(getSiteTypeCapabilities(siteType).managedSites).not.toHaveProperty(
+        "resources",
+      )
     }
-    expect(
-      getManagedResourceRegistration(
-        SITE_TYPES.AXON_HUB,
-        MANAGED_RESOURCE_KINDS.Channel,
-      ),
-    ).toMatchObject({
-      siteType: SITE_TYPES.AXON_HUB,
-      kind: MANAGED_RESOURCE_KINDS.Channel,
-      open: expect.any(Function),
-    })
   })
 
   it("removes the legacy mutation-certainty module", () => {

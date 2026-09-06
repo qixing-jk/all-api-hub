@@ -31,11 +31,6 @@ vi.mock("~/services/apiAdapters/registry", () => ({
     getSiteTypeCapabilitiesMock(...args),
 }))
 
-vi.mock("~/services/managedSites/managedUpstreamResourceService", () => ({
-  resolveManagedUpstreamResourceFeatureCapabilities: (...args: unknown[]) =>
-    resolveManagedUpstreamResourceFeatureCapabilitiesMock(...args),
-}))
-
 vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
   const actual =
     await importOriginal<

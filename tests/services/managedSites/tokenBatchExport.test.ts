@@ -75,11 +75,6 @@ vi.mock("~/services/managedSites/channelMatchResolver", () => ({
   resolveManagedSiteChannelMatch: mockResolveManagedSiteChannelMatch,
 }))
 
-vi.mock("~/services/managedSites/managedUpstreamResourceService", () => ({
-  resolveManagedUpstreamResourceFeatureCapabilities:
-    mockResolveManagedUpstreamResourceFeatureCapabilities,
-}))
-
 vi.mock("~/services/apiAdapters/managedResources/channelImport", () => ({
   openNativeManagedChannelImportSession:
     mockOpenNativeManagedChannelImportSession,
@@ -143,6 +138,7 @@ const buildMatchInspection = (overrides: Record<string, any> = {}) => ({
 
 type ImportTestService = ManagedSiteService & {
   submit: ReturnType<typeof vi.fn>
+  reconcile: ReturnType<typeof vi.fn>
 }
 
 const buildService = (
@@ -167,17 +163,6 @@ const buildService = (
       weight: 0,
       status: 1,
     })),
-    buildChannelPayload: vi.fn((draft) => ({
-      mode: "single",
-      channel: {
-        name: draft.name,
-        key: draft.key,
-        models: draft.models.join(","),
-        groups: draft.groups,
-        group: draft.groups.join(","),
-        status: draft.status,
-      },
-    })),
     submit: vi.fn().mockResolvedValue({
       outcome: "succeeded",
       data: null,
@@ -187,13 +172,11 @@ const buildService = (
       message: "ok",
     }),
     searchChannel: vi.fn(),
-    listChannels: vi.fn().mockResolvedValue({
+    reconcile: vi.fn().mockResolvedValue({
       items: [],
       total: 0,
       type_counts: {},
     }),
-    updateChannel: vi.fn(),
-    deleteChannel: vi.fn(),
     checkValidConfig: vi.fn(),
     fetchSiteUserGroups: vi.fn().mockResolvedValue([]),
     fetchAccountAvailableModels: vi.fn().mockResolvedValue([]),
@@ -318,7 +301,7 @@ describe("managed-site token batch export", () => {
     )
     mockOpenNativeManagedChannelImportSession.mockImplementation(async () => ({
       submit: (await mockGetManagedSiteService()).submit,
-      reconcile: async () => (await mockGetManagedSiteService()).listChannels(),
+      reconcile: async () => (await mockGetManagedSiteService()).reconcile(),
     }))
   })
 
@@ -429,7 +412,6 @@ describe("managed-site token batch export", () => {
         weight: 3,
       }),
     )
-    expect(service.buildChannelPayload).not.toHaveBeenCalled()
     expect(service.submit).not.toHaveBeenCalled()
     expect(result).toMatchObject({ createdCount: 1, failedCount: 0 })
   })
@@ -440,8 +422,6 @@ describe("managed-site token batch export", () => {
     )
 
     const { result, service } = await executeSingleNativeBatchImport()
-
-    expect(service.buildChannelPayload).not.toHaveBeenCalled()
     expect(service.submit).not.toHaveBeenCalled()
     expect(result).toMatchObject({ createdCount: 0, failedCount: 1 })
     expect(result.items[0]).toMatchObject({
@@ -498,8 +478,6 @@ describe("managed-site token batch export", () => {
     })
 
     const { result, service } = await executeSingleNativeBatchImport()
-
-    expect(service.buildChannelPayload).not.toHaveBeenCalled()
     expect(service.submit).not.toHaveBeenCalled()
     expect(result).toMatchObject({ createdCount: 0, ...expectedCounts })
     expect(result.items[0]).toMatchObject({
@@ -797,7 +775,7 @@ describe("managed-site token batch export", () => {
       })
 
       expect(service.submit).toHaveBeenCalledOnce()
-      expect(service.listChannels).toHaveBeenCalledOnce()
+      expect(service.reconcile).toHaveBeenCalledOnce()
       expect(result.items[0]).toMatchObject({
         result: "uncertain",
         success: false,
@@ -834,10 +812,6 @@ describe("managed-site token batch export", () => {
       })
     const service = buildService({
       getConfig: vi.fn().mockResolvedValue(config),
-      buildChannelPayload: vi.fn((draft) => ({
-        mode: "single" as const,
-        channel: { ...draft, key: payloadSecret },
-      })),
       submit,
     })
     mockGetManagedSiteService.mockResolvedValue(service)
@@ -869,7 +843,7 @@ describe("managed-site token batch export", () => {
     })
 
     expect(service.submit).toHaveBeenCalledTimes(2)
-    expect(service.listChannels).toHaveBeenCalledOnce()
+    expect(service.reconcile).toHaveBeenCalledOnce()
     expect(result).toMatchObject({
       attemptedCount: 2,
       createdCount: 1,
@@ -928,17 +902,6 @@ describe("managed-site token batch export", () => {
             },
           ),
       ),
-      buildChannelPayload: vi.fn((draft) => ({
-        mode: "single" as const,
-        channel: {
-          name: draft.name,
-          key: draft.key,
-          models: draft.models.join(","),
-          groups: draft.groups,
-          group: draft.groups.join(","),
-          status: draft.status,
-        },
-      })),
       submit,
     })
     configureManagedSiteService(service)
@@ -1001,7 +964,7 @@ describe("managed-site token batch export", () => {
     ).rejects.toThrow("Invalid managed site mutation result")
 
     expect(service.submit).toHaveBeenCalledOnce()
-    expect(service.listChannels).toHaveBeenCalledOnce()
+    expect(service.reconcile).toHaveBeenCalledOnce()
   })
 
   it("settles all writes and preserves every result after one create throws", async () => {
@@ -1054,7 +1017,7 @@ describe("managed-site token batch export", () => {
     })
 
     await vi.waitFor(() => expect(submit).toHaveBeenCalledTimes(5))
-    expect(service.listChannels).not.toHaveBeenCalled()
+    expect(service.reconcile).not.toHaveBeenCalled()
     releaseInFlight()
 
     await expect(execution).resolves.toMatchObject({
@@ -1064,7 +1027,7 @@ describe("managed-site token batch export", () => {
       failedCount: 0,
     })
     expect(submit).toHaveBeenCalledTimes(6)
-    expect(service.listChannels).toHaveBeenCalledOnce()
+    expect(service.reconcile).toHaveBeenCalledOnce()
   })
 
   it("reconciles once after all ambiguous batch writes settle", async () => {
@@ -1102,7 +1065,7 @@ describe("managed-site token batch export", () => {
     })
 
     expect(service.submit).toHaveBeenCalledTimes(2)
-    expect(service.listChannels).toHaveBeenCalledOnce()
+    expect(service.reconcile).toHaveBeenCalledOnce()
     expect(result.items.map((item) => item.error)).toEqual([
       "Failed to create channel: private ambiguous provider text",
       "Failed to create channel: private ambiguous provider text",
@@ -1156,22 +1119,20 @@ describe("managed-site token batch export", () => {
     vi.doUnmock("~/services/managedSites/channelMatchResolver")
 
     try {
-      const searchChannel = vi
-        .fn()
-        .mockResolvedValue({
-          items: [
-            {
-              id: 64,
-              name: "Existing API-key account",
-              type: 1,
-              base_url: "https://upstream.example.com/v1",
-              models: "",
-              key: "********",
-            },
-          ],
-          total: 1,
-          type_counts: {},
-        })
+      const searchChannel = vi.fn().mockResolvedValue({
+        items: [
+          {
+            id: 64,
+            name: "Existing API-key account",
+            type: 1,
+            base_url: "https://upstream.example.com/v1",
+            models: "",
+            key: "********",
+          },
+        ],
+        total: 1,
+        type_counts: {},
+      })
       const service = buildService({
         searchChannel,
         siteType: SITE_TYPES.SUB2API,
@@ -2241,7 +2202,6 @@ describe("managed-site token batch export", () => {
     expect(
       vi.mocked(service.submit).mock.calls.map(([draft]) => draft.key),
     ).toEqual(preview.items.map((item) => item.draft!.key))
-    expect(service.buildChannelPayload).not.toHaveBeenCalled()
   })
 
   it.each([

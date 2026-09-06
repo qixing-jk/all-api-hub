@@ -8,7 +8,6 @@ import type { ProtectionBypassExecution } from "~/services/protectionBypass/cont
 import type { AccountToken, ApiToken, DisplaySiteData } from "~/types"
 import type {
   ChannelFormData,
-  ChannelMode,
   CreateChannelPayload,
   ManagedSiteChannel,
   ManagedSiteChannelListData,
@@ -125,8 +124,4 @@ export type ManagedSiteChannelDraftsCapability = {
     token: ApiToken | AccountToken,
     options?: ManagedSiteChannelDraftRequestOptions,
   ): Promise<ChannelFormData>
-  buildPayload(
-    formData: ChannelFormData,
-    mode?: ChannelMode,
-  ): CreateChannelPayload
 }

@@ -51,11 +51,6 @@ vi.mock("~/services/managedSites/managedSiteService", () => ({
   hasValidManagedSiteConfig: vi.fn(),
 }))
 
-vi.mock("~/services/managedSites/managedUpstreamResourceService", () => ({
-  resolveManagedUpstreamResourceFeatureCapabilities: (...args: unknown[]) =>
-    resolveManagedUpstreamResourceFeatureCapabilitiesMock(...args),
-}))
-
 vi.mock("~/services/preferences/userPreferences", () => ({
   userPreferences: {
     getPreferences: vi.fn(),

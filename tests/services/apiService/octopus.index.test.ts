@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { octopusManagedSiteChannels } from "~/services/apiAdapters/managedSites/octopus"
+import {
+  octopusChannelEffect,
+  runOctopusMutation,
+} from "~/services/apiAdapters/managedSites/octopusMutation"
 import {
   createChannel,
   deleteChannel,
@@ -2477,19 +2480,34 @@ describe("Octopus API service", () => {
     {
       name: "create",
       invoke: () =>
-        octopusManagedSiteChannels.create(config, {
-          mode: "single",
-          channel: { name: "Created", status: 1 },
+        runOctopusMutation({
+          effect: octopusChannelEffect("resource-created"),
+          execute: () =>
+            createChannel(config, {
+              name: "Created",
+              type: 1,
+              enabled: true,
+              baseUrl: "https://upstream.example",
+              key: "test-key",
+              model: "gpt-4o",
+            }),
         }),
     },
     {
       name: "update",
       invoke: () =>
-        octopusManagedSiteChannels.update(config, { id: 1, name: "Updated" }),
+        runOctopusMutation({
+          effect: octopusChannelEffect("resource-updated", 1),
+          execute: () => updateChannel(config, { id: 1, name: "Updated" }),
+        }),
     },
     {
       name: "delete",
-      invoke: () => octopusManagedSiteChannels.delete(config, 1),
+      invoke: () =>
+        runOctopusMutation({
+          effect: octopusChannelEffect("resource-deleted", 1),
+          execute: () => deleteChannel(config, 1),
+        }),
     },
   ] as const
 

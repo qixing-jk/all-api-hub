@@ -1,14 +1,9 @@
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import type {
   ManagedSiteChannelDraftRequestOptions,
-  ManagedSiteChannelRequestOptions,
   ManagedSiteChannelSecretReadOptions,
 } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
-import type {
-  ManagedSiteMutationResult,
-  ManagedSiteVoidMutationResult,
-} from "~/services/managedSites/mutations"
 import {
   getCurrentManagedSiteRuntimeConfig,
   type ManagedSiteRuntimeConfigValue,
@@ -25,13 +20,7 @@ import type {
   ManagedResourceMatchCandidate,
   ManagedResourceMatchList,
 } from "~/types/managedResourceMatching"
-import type {
-  ChannelFormData,
-  ChannelMode,
-  CreateChannelPayload,
-  ManagedSiteChannelListData,
-  UpdateChannelPayload,
-} from "~/types/managedSite"
+import type { ChannelFormData } from "~/types/managedSite"
 
 import {
   userPreferences,
@@ -51,26 +40,6 @@ export interface ManagedSiteService<
     config: TConfig,
     keyword: string,
   ): Promise<ManagedResourceMatchList | null>
-
-  listChannels(
-    config: TConfig,
-    options?: ManagedSiteChannelRequestOptions,
-  ): Promise<ManagedSiteChannelListData>
-
-  createChannel(
-    config: TConfig,
-    channelData: CreateChannelPayload,
-  ): Promise<ManagedSiteMutationResult<unknown>>
-
-  updateChannel(
-    config: TConfig,
-    channelData: UpdateChannelPayload,
-  ): Promise<ManagedSiteMutationResult<unknown>>
-
-  deleteChannel(
-    config: TConfig,
-    channelId: number,
-  ): Promise<ManagedSiteVoidMutationResult>
 
   checkValidConfig(): Promise<boolean>
   getConfig(): Promise<TConfig | null>
@@ -92,11 +61,6 @@ export interface ManagedSiteService<
     options?: ManagedSiteChannelDraftRequestOptions,
   ): Promise<ChannelFormData>
 
-  buildChannelPayload(
-    formData: ChannelFormData,
-    mode?: ChannelMode,
-  ): CreateChannelPayload
-
   hydrateComparableChannelKeys?(
     config: TConfig,
     candidates: ManagedResourceMatchCandidate[],
@@ -117,7 +81,6 @@ type ManagedSiteCapabilities = NonNullable<
 >
 type RequiredManagedSiteCapabilities = {
   matching: NonNullable<ManagedSiteCapabilities["matching"]>
-  channels: NonNullable<ManagedSiteCapabilities["channels"]>
   config: NonNullable<ManagedSiteCapabilities["config"]>
   queries?: ManagedSiteCapabilities["queries"]
   channelDrafts: NonNullable<ManagedSiteCapabilities["channelDrafts"]>
@@ -132,8 +95,7 @@ function requireManagedSiteCapabilities(
   const managedSites = getSiteTypeCapabilities(siteType).managedSites
 
   if (
-    !managedSites?.channels ||
-    !managedSites.matching ||
+    !managedSites?.matching ||
     !managedSites.config ||
     !managedSites.channelDrafts
   ) {
@@ -143,7 +105,6 @@ function requireManagedSiteCapabilities(
   }
 
   return {
-    channels: managedSites.channels,
     matching: managedSites.matching,
     config: managedSites.config,
     queries: managedSites.queries,
@@ -226,16 +187,6 @@ export function getManagedSiteServiceForType(
     siteType,
     messagesKey,
     searchChannel: capabilities.matching.search,
-    listChannels: async (config, options) => {
-      const channelList = capabilities.channels.list
-        ? await capabilities.channels.list(config, options)
-        : await capabilities.channels.search(config, "")
-
-      return channelList ?? { items: [], total: 0, type_counts: {} }
-    },
-    createChannel: capabilities.channels.create,
-    updateChannel: capabilities.channels.update,
-    deleteChannel: capabilities.channels.delete,
     checkValidConfig: capabilities.config.checkValid,
     getConfig: capabilities.config.get,
     ...(capabilities.queries?.siteUserGroups
@@ -250,7 +201,6 @@ export function getManagedSiteServiceForType(
     fetchAvailableModels: capabilities.channelDrafts.fetchAvailableModels,
     buildChannelName: capabilities.channelDrafts.buildName,
     prepareChannelFormData: capabilities.channelDrafts.prepareFormData,
-    buildChannelPayload: capabilities.channelDrafts.buildPayload,
     hydrateComparableChannelKeys: capabilities.matching.hydrateComparableKeys,
     fetchChannelSecretKey: capabilities.matching.fetchSecretKey,
   }

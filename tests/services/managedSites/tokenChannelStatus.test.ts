@@ -95,11 +95,6 @@ vi.mock("~/services/accounts/utils/apiServiceRequest", () => ({
     resolveDisplayAccountTokenForSecretMock(...args),
 }))
 
-vi.mock("~/services/managedSites/managedUpstreamResourceService", () => ({
-  resolveManagedUpstreamResourceFeatureCapabilities: (...args: unknown[]) =>
-    resolveManagedUpstreamResourceFeatureCapabilitiesMock(...args),
-}))
-
 vi.mock("~/services/managedSites/providers/newApi", async (importOriginal) => {
   const actual =
     await importOriginal<

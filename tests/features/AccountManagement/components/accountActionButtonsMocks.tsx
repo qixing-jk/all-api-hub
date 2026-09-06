@@ -125,11 +125,6 @@ vi.mock("~/services/managedSites/managedSiteService", () => ({
   hasValidManagedSiteConfig: hasValidManagedSiteConfigMock,
 }))
 
-vi.mock("~/services/managedSites/managedUpstreamResourceService", () => ({
-  resolveManagedUpstreamResourceFeatureCapabilities: (...args: unknown[]) =>
-    resolveManagedUpstreamResourceFeatureCapabilitiesMock(...args),
-}))
-
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   const actual =
     await importOriginal<typeof import("~/utils/browser/browserApi")>()
@@ -276,36 +271,36 @@ vi.mock(
 )
 
 export {
-  mockHandleSetAccountDisabled,
-  mockHandleRefreshAccount,
-  mockTogglePinAccount,
+  accountActionsContextValue,
+  accountDataContextValue,
+  canFetchDisplayAccountInviteLinkMock,
+  clipboardWriteTextMock,
+  completeProductAnalyticsActionMock,
+  exportShareSnapshotWithToastMock,
   fetchAccountTokensMock,
   fetchDisplayAccountInviteLinkMock,
-  canFetchDisplayAccountInviteLinkMock,
+  getCurrentTempWindowRequestSourceMock,
   getManagedSiteServiceMock,
+  hasValidManagedSiteConfigMock,
+  loadAccountDataMock,
+  mockHandleRefreshAccount,
+  mockHandleSetAccountDisabled,
+  mockTogglePinAccount,
   openKeysPageMock,
   openManagedSiteChannelsForChannelMock,
   openManagedSiteChannelsPageMock,
   openModelsPageMock,
-  sendRuntimeMessageMock,
-  loadAccountDataMock,
-  exportShareSnapshotWithToastMock,
-  userPreferencesContextValue,
-  accountDataContextValue,
-  accountActionsContextValue,
-  toastDismissMock,
-  toastLoadingMock,
-  toastSuccessMock,
-  toastErrorMock,
-  toastCustomMock,
-  hasValidManagedSiteConfigMock,
-  clipboardWriteTextMock,
-  trackStartedMock,
-  startProductAnalyticsActionMock,
-  completeProductAnalyticsActionMock,
-  resolveProductAnalyticsErrorCategoryFromErrorMock,
   resolveDisplayAccountRuntimeKeySecretMock,
   resolveManagedUpstreamResourceFeatureCapabilitiesMock,
-  getCurrentTempWindowRequestSourceMock,
+  resolveProductAnalyticsErrorCategoryFromErrorMock,
+  sendRuntimeMessageMock,
+  startProductAnalyticsActionMock,
+  toastCustomMock,
+  toastDismissMock,
+  toastErrorMock,
+  toastLoadingMock,
+  toastSuccessMock,
+  trackStartedMock,
+  userPreferencesContextValue,
   withProtectionBypassUserCommandMock,
 }

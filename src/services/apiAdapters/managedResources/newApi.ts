@@ -34,6 +34,7 @@ import {
   MANAGED_SITE_MUTATION_OUTCOMES,
   type ManagedSiteMutationResult,
 } from "~/services/managedSites/mutations"
+import { buildChannelPayload } from "~/services/managedSites/providers/newApi"
 import { buildNewApiUpdatePayload } from "~/services/managedSites/providers/newApiChannelPayload"
 import { NewApiChannelKeyRequirementError } from "~/services/managedSites/providers/newApiSession"
 import { resolveManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
@@ -240,7 +241,7 @@ const createChannel = async (
     create: async () =>
       await channels.create(
         nativeConfig.config,
-        newApiManagedSiteCapabilities.channelDrafts.buildPayload(draft),
+        buildChannelPayload(draft),
         options,
       ),
     identity: (item) => item.id,

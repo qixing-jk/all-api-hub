@@ -16,7 +16,6 @@ import type {
   ManagedSiteConfigCapability,
   ManagedSiteQueriesCapability,
 } from "./managedSiteCapabilities"
-import type { ManagedUpstreamResourcesCapability } from "./managedUpstreamResources"
 import type { ModelCatalogCapability } from "./modelCatalog"
 import type { ModelPricingCapability } from "./modelPricing"
 import type { ProviderModelCatalogCapability } from "./providerModelCatalog"
@@ -65,7 +64,6 @@ export type SiteTypeCapabilities = {
     matching?: ManagedResourceMatchingCapability
     models?: ManagedResourceModelsCapability
     channels?: ManagedSiteChannelsCapability
-    resources?: ManagedUpstreamResourcesCapability
     config?: ManagedSiteConfigCapability
     queries?: ManagedSiteQueriesCapability
     channelDrafts?: ManagedSiteChannelDraftsCapability

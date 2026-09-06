@@ -12,14 +12,14 @@ const {
   getPreferencesStrictMock,
   hasRuntimeConfigInputMock,
   resolveRuntimeConfigMock,
-  getManagedSiteServiceForTypeMock,
+  getManagedResourceRegistrationMock,
 } = vi.hoisted(() => ({
   hasLegacyNumericConfigsMock: vi.fn(),
   migrateLegacyNumericConfigsMock: vi.fn(),
   getPreferencesStrictMock: vi.fn(),
   hasRuntimeConfigInputMock: vi.fn(),
   resolveRuntimeConfigMock: vi.fn(),
-  getManagedSiteServiceForTypeMock: vi.fn(),
+  getManagedResourceRegistrationMock: vi.fn(),
 }))
 
 vi.mock("@plasmohq/storage", () => {
@@ -56,9 +56,19 @@ vi.mock("~/services/managedSites/runtimeConfig", () => ({
   resolveManagedSiteRuntimeConfigForType: resolveRuntimeConfigMock,
 }))
 
-vi.mock("~/services/managedSites/managedSiteService", () => ({
-  getManagedSiteServiceForType: getManagedSiteServiceForTypeMock,
+vi.mock("~/services/apiAdapters/managedResources/registry", () => ({
+  getManagedResourceRegistration: getManagedResourceRegistrationMock,
 }))
+
+const nativeFact = (
+  id: number | string,
+  siteType = "new-api",
+  scopeKey = `https://${siteType}.example.invalid`,
+) => ({ ref: { siteType, kind: "channel", scopeKey, resourceId: String(id) } })
+const registration = (list: ReturnType<typeof vi.fn>) => ({
+  kind: "channel",
+  open: vi.fn(async () => ({ list })),
+})
 
 const loadMigration = async () => {
   vi.resetModules()
@@ -89,7 +99,7 @@ describe("legacyChannelConfigMigration", () => {
       status: "not-needed",
     })
     expect(getPreferencesStrictMock).not.toHaveBeenCalled()
-    expect(getManagedSiteServiceForTypeMock).not.toHaveBeenCalled()
+    expect(getManagedResourceRegistrationMock).not.toHaveBeenCalled()
   })
 
   it("ignores malformed retry state instead of treating it as active backoff", async () => {
@@ -145,16 +155,18 @@ describe("legacyChannelConfigMigration", () => {
       }
       return null
     })
-    getManagedSiteServiceForTypeMock.mockImplementation((siteType) => ({
-      listChannels: vi.fn().mockResolvedValue({
-        items:
-          siteType === "new-api"
-            ? [{ id: 9, name: "Target" }]
-            : [{ id: 10, name: "Other" }],
-        total: 1,
-        type_counts: {},
-      }),
-    }))
+    getManagedResourceRegistrationMock.mockImplementation((siteType) =>
+      registration(
+        vi.fn().mockResolvedValue({
+          items:
+            siteType === "new-api"
+              ? [nativeFact(9, siteType)]
+              : [nativeFact(10, siteType)],
+          total: 1,
+          type_counts: {},
+        }),
+      ),
+    )
     migrateLegacyNumericConfigsMock.mockResolvedValue({
       migrated: 1,
       ambiguous: 0,
@@ -168,11 +180,12 @@ describe("legacyChannelConfigMigration", () => {
       ambiguous: 0,
       unmatched: 0,
     })
-    expect(getManagedSiteServiceForTypeMock).toHaveBeenCalledTimes(2)
-    for (const service of getManagedSiteServiceForTypeMock.mock.results) {
-      expect(service.value.listChannels).toHaveBeenCalledWith(
-        expect.anything(),
-        expect.objectContaining({ requireCompleteInventory: true }),
+    expect(getManagedResourceRegistrationMock).toHaveBeenCalledTimes(2)
+    for (const result of getManagedResourceRegistrationMock.mock.results) {
+      const workspace = await result.value.open.mock.results[0].value
+      expect(workspace.list).toHaveBeenCalledWith(
+        { cursor: undefined, limit: 100 },
+        expect.objectContaining({ signal: expect.any(AbortSignal) }),
       )
     }
     expect(migrateLegacyNumericConfigsMock).toHaveBeenCalledWith([
@@ -195,6 +208,65 @@ describe("legacyChannelConfigMigration", () => {
     ])
   })
 
+  it("follows native cursor pages before migrating numeric identities", async () => {
+    hasLegacyNumericConfigsMock.mockResolvedValue(true)
+    resolveRuntimeConfigMock.mockImplementation((_preferences, siteType) =>
+      siteType === "new-api"
+        ? { siteType, config: { baseUrl: "https://new-api.example.invalid" } }
+        : null,
+    )
+    const list = vi
+      .fn()
+      .mockResolvedValueOnce({
+        items: [nativeFact(9)],
+        total: 2,
+        nextCursor: "page-2",
+      })
+      .mockResolvedValueOnce({ items: [nativeFact(10)], total: 2 })
+    getManagedResourceRegistrationMock.mockReturnValue(registration(list))
+    const { legacyChannelConfigMigration } = await loadMigration()
+    await expect(
+      legacyChannelConfigMigration.initialize(),
+    ).resolves.toMatchObject({ status: "completed" })
+    expect(list).toHaveBeenLastCalledWith(
+      { cursor: "page-2", limit: 100 },
+      expect.any(Object),
+    )
+    expect(migrateLegacyNumericConfigsMock).toHaveBeenCalledWith([
+      expect.objectContaining({ channelId: 9 }),
+      expect.objectContaining({ channelId: 10 }),
+    ])
+  })
+
+  it.each(["scope", "duplicate", "cursor"])(
+    "preserves old data when native inventory has invalid %s evidence",
+    async (mode) => {
+      hasLegacyNumericConfigsMock.mockResolvedValue(true)
+      resolveRuntimeConfigMock.mockImplementation((_preferences, siteType) =>
+        siteType === "new-api"
+          ? { siteType, config: { baseUrl: "https://new-api.example.invalid" } }
+          : null,
+      )
+      const page =
+        mode === "scope"
+          ? { items: [nativeFact(9, "new-api", "https://other.example")] }
+          : mode === "duplicate"
+            ? { items: [nativeFact(9), nativeFact(9)] }
+            : { items: [], nextCursor: "repeated" }
+      getManagedResourceRegistrationMock.mockReturnValue(
+        registration(vi.fn().mockResolvedValue(page)),
+      )
+      const { legacyChannelConfigMigration } = await loadMigration()
+      await expect(
+        legacyChannelConfigMigration.initialize(),
+      ).resolves.toMatchObject({
+        status: "deferred",
+        reason: "inventory-failed",
+      })
+      expect(migrateLegacyNumericConfigsMock).not.toHaveBeenCalled()
+    },
+  )
+
   it("preserves legacy data when any configured site cannot be enumerated", async () => {
     hasLegacyNumericConfigsMock.mockResolvedValue(true)
     resolveRuntimeConfigMock.mockImplementation((_preferences, siteType) => {
@@ -206,16 +278,17 @@ describe("legacyChannelConfigMigration", () => {
       }
       return null
     })
-    getManagedSiteServiceForTypeMock.mockImplementation((siteType) => ({
-      listChannels:
+    getManagedResourceRegistrationMock.mockImplementation((siteType) =>
+      registration(
         siteType === "new-api"
           ? vi.fn().mockResolvedValue({
-              items: [{ id: 9, name: "Target" }],
+              items: [nativeFact(9)],
               total: 1,
               type_counts: {},
             })
           : vi.fn().mockRejectedValue(new Error("site unavailable")),
-    }))
+      ),
+    )
     const { legacyChannelConfigMigration } = await loadMigration()
 
     await expect(legacyChannelConfigMigration.initialize()).resolves.toEqual({
@@ -237,7 +310,9 @@ describe("legacyChannelConfigMigration", () => {
         : null,
     )
     const listChannels = vi.fn().mockRejectedValue(new Error("offline"))
-    getManagedSiteServiceForTypeMock.mockReturnValue({ listChannels })
+    getManagedResourceRegistrationMock.mockReturnValue(
+      registration(listChannels),
+    )
     const firstModule = await loadMigration()
 
     await expect(
@@ -248,7 +323,7 @@ describe("legacyChannelConfigMigration", () => {
     })
     expect(listChannels).toHaveBeenCalledTimes(1)
 
-    getManagedSiteServiceForTypeMock.mockClear()
+    getManagedResourceRegistrationMock.mockClear()
     const secondModule = await loadMigration()
     await expect(
       secondModule.legacyChannelConfigMigration.initialize(),
@@ -256,7 +331,7 @@ describe("legacyChannelConfigMigration", () => {
       status: "deferred",
       reason: "backoff-active",
     })
-    expect(getManagedSiteServiceForTypeMock).not.toHaveBeenCalled()
+    expect(getManagedResourceRegistrationMock).not.toHaveBeenCalled()
 
     await expect(
       secondModule.ensureLegacyChannelConfigMigrationReady({
@@ -265,7 +340,7 @@ describe("legacyChannelConfigMigration", () => {
     ).rejects.toThrow(
       "Legacy channel config migration deferred: inventory-failed",
     )
-    expect(getManagedSiteServiceForTypeMock).toHaveBeenCalledTimes(1)
+    expect(getManagedResourceRegistrationMock).toHaveBeenCalledTimes(1)
   })
 
   it("fails closed when preferences cannot be read", async () => {
@@ -277,7 +352,7 @@ describe("legacyChannelConfigMigration", () => {
       status: "deferred",
       reason: "storage-failed",
     })
-    expect(getManagedSiteServiceForTypeMock).not.toHaveBeenCalled()
+    expect(getManagedResourceRegistrationMock).not.toHaveBeenCalled()
     expect(migrateLegacyNumericConfigsMock).not.toHaveBeenCalled()
   })
 
@@ -300,7 +375,7 @@ describe("legacyChannelConfigMigration", () => {
       status: "deferred",
       reason: "inventory-failed",
     })
-    expect(getManagedSiteServiceForTypeMock).not.toHaveBeenCalled()
+    expect(getManagedResourceRegistrationMock).not.toHaveBeenCalled()
     expect(migrateLegacyNumericConfigsMock).not.toHaveBeenCalled()
   })
 
@@ -319,13 +394,15 @@ describe("legacyChannelConfigMigration", () => {
           }
         : null,
     )
-    getManagedSiteServiceForTypeMock.mockReturnValue({
-      listChannels: vi.fn().mockResolvedValue({
-        items: [{ id: 9, name: "Target" }],
-        total: 1,
-        type_counts: {},
-      }),
-    })
+    getManagedResourceRegistrationMock.mockReturnValue(
+      registration(
+        vi.fn().mockResolvedValue({
+          items: [nativeFact(9, "new-api", "https://initial.example.invalid")],
+          total: 1,
+          type_counts: {},
+        }),
+      ),
+    )
     const { legacyChannelConfigMigration } = await loadMigration()
 
     await expect(legacyChannelConfigMigration.initialize()).resolves.toEqual({
@@ -345,13 +422,15 @@ describe("legacyChannelConfigMigration", () => {
           }
         : null,
     )
-    getManagedSiteServiceForTypeMock.mockReturnValue({
-      listChannels: vi.fn().mockResolvedValue({
-        items: [{ id: 9, name: "Partial" }],
-        total: 2,
-        type_counts: {},
-      }),
-    })
+    getManagedResourceRegistrationMock.mockReturnValue(
+      registration(
+        vi.fn().mockResolvedValue({
+          items: [nativeFact(9)],
+          total: 2,
+          type_counts: {},
+        }),
+      ),
+    )
     const { legacyChannelConfigMigration } = await loadMigration()
 
     await expect(legacyChannelConfigMigration.initialize()).resolves.toEqual({
@@ -375,19 +454,17 @@ describe("legacyChannelConfigMigration", () => {
           }
         : null,
     )
-    getManagedSiteServiceForTypeMock.mockReturnValue({
-      listChannels: vi.fn().mockResolvedValue({
-        items: [
-          {
-            id: 123456,
-            name: "Numeric native id",
-            _axonHubData: { id: 123456 },
-          },
-        ],
-        total: 1,
-        type_counts: {},
-      }),
-    })
+    getManagedResourceRegistrationMock.mockReturnValue(
+      registration(
+        vi.fn().mockResolvedValue({
+          items: [
+            nativeFact("123456", "axonhub", "https://axon.example.invalid"),
+          ],
+          total: 1,
+          type_counts: {},
+        }),
+      ),
+    )
     migrateLegacyNumericConfigsMock.mockResolvedValue({
       migrated: 0,
       ambiguous: 0,
@@ -411,7 +488,7 @@ describe("legacyChannelConfigMigration", () => {
       status: "deferred",
       reason: "no-configured-sites",
     })
-    expect(getManagedSiteServiceForTypeMock).not.toHaveBeenCalled()
+    expect(getManagedResourceRegistrationMock).not.toHaveBeenCalled()
     expect(migrateLegacyNumericConfigsMock).not.toHaveBeenCalled()
   })
 
@@ -454,13 +531,15 @@ describe("legacyChannelConfigMigration", () => {
           }
         : null,
     )
-    getManagedSiteServiceForTypeMock.mockReturnValue({
-      listChannels: vi.fn().mockResolvedValue({
-        items: [{ id: 9, name: "Target" }],
-        total: 1,
-        type_counts: {},
-      }),
-    })
+    getManagedResourceRegistrationMock.mockReturnValue(
+      registration(
+        vi.fn().mockResolvedValue({
+          items: [nativeFact(9)],
+          total: 1,
+          type_counts: {},
+        }),
+      ),
+    )
     migrateLegacyNumericConfigsMock.mockResolvedValue({
       migrated: 1,
       ambiguous: 0,

@@ -2,9 +2,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { axonHubManagedSiteCapabilities } from "~/services/apiAdapters/managedSites/axonHub"
+import { claudeCodeHubManagedSiteCapabilities } from "~/services/apiAdapters/managedSites/claudeCodeHub"
 import { sub2ApiManagedSiteCapabilities } from "~/services/apiAdapters/managedSites/sub2api"
 import { veloeraManagedSiteCapabilities } from "~/services/apiAdapters/managedSites/veloera"
 import { listAxonHubChannelPage } from "~/services/apiService/axonHub"
+import { searchProviders } from "~/services/apiService/claudeCodeHub"
 import { listAllChannels, searchChannel } from "~/services/apiService/veloera"
 import { resolveManagedSiteChannelMatch } from "~/services/managedSites/channelMatchResolver"
 import {
@@ -29,6 +31,11 @@ vi.mock("~/services/managedSites/providers/sub2api", async (original) => ({
   listSub2ApiApiKeyAccounts: vi.fn(),
   searchSub2ApiApiKeyAccounts: vi.fn(),
   revealSub2ApiApiKey: vi.fn(),
+}))
+
+vi.mock("~/services/apiService/claudeCodeHub", async (original) => ({
+  ...(await original<typeof import("~/services/apiService/claudeCodeHub")>()),
+  searchProviders: vi.fn(),
 }))
 
 const axonConfig = {
@@ -161,6 +168,34 @@ describe("native managed-resource matching", () => {
       key: "********",
     })
     expect(JSON.stringify(result)).not.toContain("must-not-leak")
+  })
+
+  it("uses only exact Claude Code Hub model rules for duplicate evidence", async () => {
+    vi.mocked(searchProviders).mockResolvedValue([
+      {
+        id: 7,
+        name: "Provider",
+        url: "https://upstream.example",
+        providerType: "claude",
+        maskedKey: "********",
+        allowedModels: [
+          { matchType: "prefix", pattern: "claude-" },
+          { matchType: "exact", pattern: "claude-sonnet" },
+        ],
+      },
+    ])
+    const result = await claudeCodeHubManagedSiteCapabilities.matching.search(
+      { baseUrl: "https://managed.example", adminToken: "test-admin" },
+      "https://upstream.example",
+    )
+    expect(result?.items[0]).toEqual({
+      id: 7,
+      name: "Provider",
+      type: "claude",
+      base_url: "https://upstream.example",
+      key: "********",
+      models: "claude-sonnet",
+    })
   })
 
   it("refuses opaque ids before a numeric provider secret request", async () => {

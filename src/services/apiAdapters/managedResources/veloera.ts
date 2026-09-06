@@ -27,6 +27,7 @@ import {
   MANAGED_SITE_MUTATION_OUTCOMES,
   type ManagedSiteMutationResult,
 } from "~/services/managedSites/mutations"
+import { buildChannelPayload } from "~/services/managedSites/providers/veloera"
 import { resolveManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/managedSite"
 import { userPreferences } from "~/services/preferences/userPreferences"
@@ -202,7 +203,7 @@ const createChannel = async (
     create: async () =>
       await channels.create(
         nativeConfig.config,
-        veloeraManagedSiteCapabilities.channelDrafts.buildPayload(draft),
+        buildChannelPayload(draft),
         options,
       ),
     identity: (item) => item.id,

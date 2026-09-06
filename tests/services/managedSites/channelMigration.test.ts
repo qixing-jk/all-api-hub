@@ -48,11 +48,6 @@ vi.mock("~/services/managedSites/managedSiteService", () => ({
   getManagedSiteServiceForType: mockGetManagedSiteServiceForType,
 }))
 
-vi.mock("~/services/managedSites/managedUpstreamResourceService", () => ({
-  resolveManagedUpstreamResourceFeatureCapabilities:
-    mockResolveManagedUpstreamResourceFeatureCapabilities,
-}))
-
 vi.mock("~/services/managedSites/channelMigrationCapabilityRegistry", () => ({
   resolveManagedSiteMigrationCapability:
     mockResolveManagedSiteMigrationCapability,

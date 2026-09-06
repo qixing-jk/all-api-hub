@@ -23,10 +23,6 @@ export const createManagedSiteServiceStub = (
       total: 0,
       type_counts: {},
     }),
-    createChannel: vi.fn(),
-    updateChannel: vi.fn(),
-    deleteChannel: vi.fn(),
-    listChannels: vi.fn().mockResolvedValue([]),
     checkValidConfig: vi.fn().mockResolvedValue(true),
     getConfig: vi.fn().mockResolvedValue(buildManagedSiteRuntimeConfig()),
     fetchSiteUserGroups: vi.fn().mockResolvedValue([]),
@@ -44,7 +40,6 @@ export const createManagedSiteServiceStub = (
       weight: 0,
       status: 1,
     }),
-    buildChannelPayload: vi.fn(),
     hydrateComparableChannelKeys: vi.fn(
       async (_config, candidates) => candidates,
     ),

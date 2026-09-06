@@ -16,13 +16,11 @@ import {
 import type { AccountToken, ApiToken, DisplaySiteData } from "~/types"
 import type {
   ChannelFormData,
-  ChannelMode,
-  CreateChannelPayload,
   ManagedSiteChannelListData,
   OctopusChannelWithData,
 } from "~/types/managedSite"
-import { OctopusOutboundType } from "~/types/octopus"
 import type { OctopusChannel } from "~/types/octopus"
+import { OctopusOutboundType } from "~/types/octopus"
 import type { OctopusConfig } from "~/types/octopusConfig"
 import { createLogger } from "~/utils/core/logger"
 import { normalizeList } from "~/utils/core/string"
@@ -273,28 +271,5 @@ export async function prepareChannelFormData(
     priority: 0,
     weight: 0,
     status: 1,
-  }
-}
-
-/**
- * 构建渠道创建 payload
- */
-export function buildChannelPayload(
-  formData: ChannelFormData,
-  mode: ChannelMode = "single",
-): CreateChannelPayload {
-  return {
-    mode,
-    channel: {
-      name: formData.name.trim(),
-      type: formData.type,
-      key: formData.key.trim(),
-      base_url: formData.base_url.trim(),
-      models: normalizeList(formData.models ?? []).join(","),
-      groups: formData.groups || ["default"],
-      priority: formData.priority,
-      weight: formData.weight,
-      status: formData.status,
-    },
   }
 }
