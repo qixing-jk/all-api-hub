@@ -1128,18 +1128,19 @@ class AutoCheckinScheduler {
           ),
         requireStatusConfirmationBeforeMutation,
       })
-      if (execution.kind === CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Skipped) {
+      if (execution.kind !== CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Executed) {
         const reasonCode = toSchedulerSkipReason(execution.reason)
-        const retryablePreMutationFailure = execution.retryable === true
+        const blocked =
+          execution.kind === CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Blocked
         return {
           result: buildResult(
-            retryablePreMutationFailure
+            blocked
               ? CHECKIN_RESULT_STATUS.FAILED
               : CHECKIN_RESULT_STATUS.SKIPPED,
             {
               messageKey: getAutoCheckinSkipReasonTranslationKey(reasonCode),
               reasonCode,
-              ...(retryablePreMutationFailure ? { retryable: true } : {}),
+              ...(blocked ? { retryable: execution.retryable } : {}),
             },
           ),
         }

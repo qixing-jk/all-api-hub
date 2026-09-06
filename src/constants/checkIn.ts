@@ -121,4 +121,5 @@ export const CHECK_IN_EXECUTION_SKIP_REASONS = {
 export const CHECK_IN_METHOD_EXECUTION_RESULT_KINDS = {
   Executed: "executed",
   Skipped: "skipped",
+  Blocked: "blocked",
 } as const

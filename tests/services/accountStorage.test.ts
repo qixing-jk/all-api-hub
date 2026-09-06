@@ -1446,6 +1446,63 @@ describe("accountStorage core behaviors", () => {
     )
   })
 
+  it.each([100, 300])(
+    "persists only newer unsupported evidence while retaining manual intent (latest %s)",
+    async (observedAt) => {
+      const methodId = "new-api:daily-checkin" as const
+      const account = createAccount({
+        id: "unsupported-execution",
+        checkIn: {
+          automaticExecutionEnabled: true,
+          selection: { mode: "manual", methodId },
+          customCheckIn: { url: "https://check-in.example.invalid" },
+          methodKnowledge: {
+            methods: {
+              [methodId]: {
+                detection: {
+                  outcome: "matched",
+                  evidence: { source: "probe", observedAt },
+                },
+              },
+            },
+          },
+        },
+      })
+      seedStorage([account])
+      await accountStorage.prepareAccountForSelectedCheckIn(account.id, {
+        ...account.checkIn,
+        selection: { mode: "automatic" },
+        automaticExecutionEnabled: false,
+        customCheckIn: undefined,
+        methodKnowledge: {
+          methods: {
+            [methodId]: {
+              detection: {
+                outcome: "unsupported",
+                evidence: { source: "probe", observedAt: 200 },
+              },
+            },
+          },
+        },
+      })
+      const persisted = await accountStorage.getAccountById(account.id)
+      expect(persisted?.checkIn).toMatchObject({
+        selection: account.checkIn.selection,
+        automaticExecutionEnabled: true,
+        customCheckIn: account.checkIn.customCheckIn,
+        methodKnowledge: {
+          methods: {
+            [methodId]: {
+              detection: {
+                outcome: observedAt < 200 ? "unsupported" : "matched",
+              },
+            },
+          },
+        },
+      })
+    },
+  )
+
   it("prepares the current account without writing when no refreshed check-in is provided", async () => {
     const account = createAccount({ id: "prepare-current" })
     seedStorage([account])
