@@ -84,20 +84,24 @@ const BASE_REQUEST = {
   },
 }
 
+async function createVerificationI18n() {
+  return createResourceTestI18n({
+    en: {
+      newApiManagedVerification: (
+        await import("~/locales/en/newApiManagedVerification.json")
+      ).default,
+    },
+    "zh-CN": {
+      newApiManagedVerification: (
+        await import("~/locales/zh-CN/newApiManagedVerification.json")
+      ).default,
+    },
+  })
+}
+
 describe("useNewApiManagedVerification", () => {
   it("retranslates busy and validation states without restarting login or losing the code", async () => {
-    const i18n = await createResourceTestI18n({
-      en: {
-        newApiManagedVerification: (
-          await import("~/locales/en/newApiManagedVerification.json")
-        ).default,
-      },
-      "zh-CN": {
-        newApiManagedVerification: (
-          await import("~/locales/zh-CN/newApiManagedVerification.json")
-        ).default,
-      },
-    })
+    const i18n = await createVerificationI18n()
     const pending = createDeferred<{ status: "login-2fa-required" }>()
     ensureNewApiManagedSessionMock.mockReturnValue(pending.promise)
     const { result } = renderHook(() => useNewApiManagedVerification(), {
@@ -139,12 +143,19 @@ describe("useNewApiManagedVerification", () => {
     vi.mocked(toast.error).mockReset()
   })
 
-  it("cleans an extension-owned session before retrying an active-session limit", async () => {
+  it("retranslates pending session cleanup without repeating cleanup or starting login early", async () => {
+    const i18n = await createVerificationI18n()
+    const pendingCleanup = createDeferred<{ status: "cleaned" }>()
+    cleanupOwnedSessionMock.mockReturnValue(pendingCleanup.promise)
     ensureNewApiManagedSessionMock.mockResolvedValueOnce({
       status: NEW_API_MANAGED_SESSION_STATUSES.VERIFIED,
       methods: { twoFactorEnabled: false, passkeyEnabled: false },
     })
-    const { result } = renderHook(() => useNewApiManagedVerification())
+    const { result } = renderHook(() => useNewApiManagedVerification(), {
+      wrapper: ({ children }: { children: ReactNode }) => (
+        <I18nextProvider i18n={i18n}>{children}</I18nextProvider>
+      ),
+    })
 
     act(() => {
       result.current.openNewApiManagedVerification({
@@ -162,8 +173,22 @@ describe("useNewApiManagedVerification", () => {
       )
     })
 
+    act(() => {
+      void result.current.retryVerification()
+    })
+    expect(result.current.dialogState.busyMessage).toBe(
+      i18n.t("newApiManagedVerification:dialog.messages.cleaningOwnedSession"),
+    )
     await act(async () => {
-      await result.current.retryVerification()
+      await i18n.changeLanguage("zh-CN")
+    })
+    expect(result.current.dialogState.busyMessage).toBe(
+      i18n.t("newApiManagedVerification:dialog.messages.cleaningOwnedSession"),
+    )
+    expect(cleanupOwnedSessionMock).toHaveBeenCalledTimes(1)
+    expect(ensureNewApiManagedSessionMock).not.toHaveBeenCalled()
+    await act(async () => {
+      pendingCleanup.resolve({ status: "cleaned" })
     })
 
     expect(cleanupOwnedSessionMock).toHaveBeenCalledWith(
@@ -907,51 +932,67 @@ describe("useNewApiManagedVerification", () => {
     })
   })
 
-  it("shows the finishing busy state while settings verification waits for onVerified", async () => {
-    let resolveVerified: (() => void) | null = null
-    const onVerified = vi.fn(
-      () =>
-        new Promise<void>((resolve) => {
-          resolveVerified = resolve
-        }),
-    )
+  it.each([
+    ["settings", "finishing"],
+    ["token", "refreshingToken"],
+    ["channel", "refreshingChannel"],
+  ] as const)(
+    "retranslates pending %s completion without replaying its callback",
+    async (kind, messageKey) => {
+      const i18n = await createVerificationI18n()
+      const pending = createDeferred<void>()
+      const onVerified = vi.fn(() => pending.promise)
 
-    const { result } = renderHook(() => useNewApiManagedVerification())
-
-    act(() => {
-      result.current.openNewApiManagedVerification({
-        ...BASE_REQUEST,
-        kind: "settings",
-        onVerified,
-        closeMode:
-          NEW_API_MANAGED_VERIFICATION_CLOSE_MODES.CLOSE_AFTER_CALLBACK,
-        initialSessionResult: {
-          status: NEW_API_MANAGED_SESSION_STATUSES.VERIFIED,
-          methods: {
-            twoFactorEnabled: true,
-            passkeyEnabled: false,
-          },
-        },
+      const { result } = renderHook(() => useNewApiManagedVerification(), {
+        wrapper: ({ children }: { children: ReactNode }) => (
+          <I18nextProvider i18n={i18n}>{children}</I18nextProvider>
+        ),
       })
-    })
 
-    await waitFor(() => {
-      expect(result.current.dialogState.isBusy).toBe(true)
+      act(() => {
+        result.current.openNewApiManagedVerification({
+          ...BASE_REQUEST,
+          kind,
+          onVerified,
+          closeMode:
+            NEW_API_MANAGED_VERIFICATION_CLOSE_MODES.CLOSE_AFTER_CALLBACK,
+          initialSessionResult: {
+            status: NEW_API_MANAGED_SESSION_STATUSES.VERIFIED,
+            methods: {
+              twoFactorEnabled: true,
+              passkeyEnabled: false,
+            },
+          },
+        })
+      })
+
+      await waitFor(() => {
+        expect(result.current.dialogState.isBusy).toBe(true)
+        expect(result.current.dialogState.busyMessage).toBe(
+          i18n.t(`newApiManagedVerification:dialog.messages.${messageKey}`),
+        )
+        expect(onVerified).toHaveBeenCalledTimes(1)
+      })
+
+      await act(async () => {
+        await i18n.changeLanguage("zh-CN")
+      })
       expect(result.current.dialogState.busyMessage).toBe(
-        "newApiManagedVerification:dialog.messages.finishing",
+        i18n.t(`newApiManagedVerification:dialog.messages.${messageKey}`),
       )
       expect(onVerified).toHaveBeenCalledTimes(1)
-    })
+      expect(ensureNewApiManagedSessionMock).not.toHaveBeenCalled()
+      expect(toast.success).not.toHaveBeenCalled()
+      await act(async () => {
+        pending.resolve()
+      })
 
-    act(() => {
-      resolveVerified?.()
-    })
-
-    await waitFor(() => {
-      expect(toast.success).toHaveBeenCalledTimes(1)
-      expect(result.current.dialogState.isOpen).toBe(false)
-    })
-  })
+      await waitFor(() => {
+        expect(toast.success).toHaveBeenCalledTimes(1)
+        expect(result.current.dialogState.isOpen).toBe(false)
+      })
+    },
+  )
 
   it("closes immediately after verification by default while onVerified continues", async () => {
     let resolveVerified: (() => void) | null = null

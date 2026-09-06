@@ -745,15 +745,21 @@ export function BatchVerifyModelsDialog({
                   ])
 
             const sanitizedMessage = toSanitizedErrorSummary(error, redactions)
+            const diagnostics = buildSafeProbeFailureDiagnostics(
+              error,
+              sanitizedMessage,
+            )
             results.push({
               id: probe.id,
               status: API_VERIFICATION_PROBE_STATUSES.Fail,
               latencyMs: 0,
               summary: sanitizedMessage || "Unexpected error",
-              ...(sanitizedMessage
-                ? {}
-                : { summaryKey: "verifyDialog.errors.unexpected" }),
-              ...buildSafeProbeFailureDiagnostics(error, sanitizedMessage),
+              ...diagnostics,
+              summaryKey:
+                diagnostics.summaryKey ??
+                (sanitizedMessage
+                  ? undefined
+                  : "verifyDialog.errors.unexpected"),
             })
           }
         }
@@ -821,13 +827,16 @@ export function BatchVerifyModelsDialog({
           message,
         })
 
+        const diagnostics = buildSafeProbeFailureDiagnostics(error, message)
         const result: ApiVerificationProbeResult = {
           id: getFirstApplicableProbeId(apiType, selectedProbeIds),
           status: BATCH_VERIFY_ROW_STATUSES.FAIL,
           latencyMs: Date.now() - startedAt,
           summary: message || "Unexpected error",
-          ...(message ? {} : { summaryKey: "verifyDialog.errors.unexpected" }),
-          ...buildSafeProbeFailureDiagnostics(error, message),
+          ...diagnostics,
+          summaryKey:
+            diagnostics.summaryKey ??
+            (message ? undefined : "verifyDialog.errors.unexpected"),
         }
         const errorCategory =
           resolveProductAnalyticsErrorCategoryFromError(error)

@@ -172,35 +172,46 @@ describe("key workflow language changes", () => {
     expect(mocks.create).not.toHaveBeenCalled()
   })
 
-  it("retranslates a blocked quick-create reason without repeating policy checks", async () => {
-    mocks.resolution.mockResolvedValue({
-      kind: "blocked",
-      reason: TOKEN_PROVISIONING_BLOCK_REASONS.AvailableGroupRequired,
-      message: i18n.t(
-        "messages:tokenProvisioning.createRequiresAvailableGroup",
-      ),
-    })
-    const { result } = renderHook(
-      () =>
-        useDefaultTokenQuickCreate({
-          isActive: true,
-          account,
-          canCreate: true,
-          onCreated: vi.fn(),
-        }),
-      { wrapper },
-    )
-    await act(async () => result.current.start())
-    await act(async () => {
-      await i18n.changeLanguage("zh-CN")
-    })
+  it.each([
+    [
+      TOKEN_PROVISIONING_BLOCK_REASONS.AvailableGroupRequired,
+      "createRequiresAvailableGroup",
+    ],
+    [TOKEN_PROVISIONING_BLOCK_REASONS.GroupRequired, "createRequiresGroup"],
+    [
+      TOKEN_PROVISIONING_BLOCK_REASONS.OneTimeSecretRequired,
+      "createRequiresOneTimeSecretHandling",
+    ],
+  ] as const)(
+    "retranslates %s without repeating policy checks or creating a key",
+    async (reason, messageKey) => {
+      mocks.resolution.mockResolvedValue({
+        kind: "blocked",
+        reason,
+        message: i18n.t(`messages:tokenProvisioning.${messageKey}`),
+      })
+      const { result } = renderHook(
+        () =>
+          useDefaultTokenQuickCreate({
+            isActive: true,
+            account,
+            canCreate: true,
+            onCreated: vi.fn(),
+          }),
+        { wrapper },
+      )
+      await act(async () => result.current.start())
+      await act(async () => {
+        await i18n.changeLanguage("zh-CN")
+      })
 
-    expect(result.current.view.error).toBe(
-      i18n.t("messages:tokenProvisioning.createRequiresAvailableGroup"),
-    )
-    expect(mocks.resolution).toHaveBeenCalledTimes(1)
-    expect(mocks.create).not.toHaveBeenCalled()
-  })
+      expect(result.current.view.error).toBe(
+        i18n.t(`messages:tokenProvisioning.${messageKey}`),
+      )
+      expect(mocks.resolution).toHaveBeenCalledTimes(1)
+      expect(mocks.create).not.toHaveBeenCalled()
+    },
+  )
 
   it("retranslates a failed quick-create attempt without repeating it", async () => {
     mocks.resolution.mockRejectedValue(new Error("Creation unavailable"))
