@@ -287,11 +287,6 @@
       "running": "Migrando...",
       "start": "Iniciar migração"
     },
-    "alerts": {
-      "noTargets": {
-        "description": "Configure outro site gerenciado de destino nos ajustes antes de usar a migração de canais."
-      }
-    },
     "betaBadge": "Beta",
     "blockedReasons": {
       "sourceKeyMissing": "A chave do canal de origem está indisponível, portanto este canal ainda não pode ser migrado.",
@@ -333,9 +328,7 @@
       "compare": {
         "fieldLabel": "Campo"
       },
-      "loadFailed": "Falha ao carregar a prévia da migração: {{error}}",
       "loading": "Criando prévia da migração...",
-      "selectedCount": "Canais selecionados: {{selectedCount}}",
       "status": {
         "blocked": "Bloqueado",
         "ready": "Pronto"
@@ -418,21 +411,9 @@
     "selectAll": "Selecionar todas as linhas",
     "selectRow": "Selecionar linha"
   },
-  "title": "Gerenciamento de canais",
   "toasts": {
-    "channelDeleted": "Canal excluído",
     "channelSaved": "Canal salvo",
-    "channelsDeleted_one": "{{count}} canal excluído",
-    "channelsDeleted_many": "{{count}} canais excluídos",
-    "channelsDeleted_other": "{{count}} canais excluídos",
     "channelUpdated": "Canal atualizado",
-    "revealKeyFailed": "Falha ao carregar a chave real do canal: {{error}}",
-    "revealKeyMasked": "A chave do canal ainda está mascarada",
-    "revealKeyUnavailable": "A chave do canal está indisponível",
-    "revealKeyUnsupported": "Este site gerenciado não permite revelar as chaves dos canais",
-    "someDeletesFailed_one": "Falha ao excluir {{count}} canal: {{error}}",
-    "someDeletesFailed_many": "Falha ao excluir {{count}} canais: {{error}}",
-    "someDeletesFailed_other": "Falha ao excluir {{count}} canais: {{error}}",
     "syncCompleted": "Sincronização de modelos concluída ({{success}}/{{total}})",
     "syncCompletedRefreshFailed": "Os modelos foram sincronizados ({{success}}/{{total}}), mas não foi possível atualizar a lista de canais. Atualize e tente novamente.",
     "syncFailed": "Falha na sincronização de modelos: {{error}}",

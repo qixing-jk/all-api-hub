@@ -287,11 +287,6 @@
       "running": "Đang di chuyển…",
       "start": "Bắt đầu di chuyển"
     },
-    "alerts": {
-      "noTargets": {
-        "description": "Vui lòng cấu hình một trang web lưu trữ mục tiêu khả dụng khác trong phần cài đặt trước khi bật tính năng di chuyển kênh."
-      }
-    },
     "betaBadge": "Beta",
     "blockedReasons": {
       "sourceKeyMissing": "Thiếu khóa kênh nguồn, hiện không thể di chuyển.",
@@ -333,9 +328,7 @@
       "compare": {
         "fieldLabel": "Trường"
       },
-      "loadFailed": "Tải bản xem trước di chuyển thất bại: {{error}}",
       "loading": "Đang tạo bản xem trước di chuyển…",
-      "selectedCount": "Đã chọn {{selectedCount}} kênh",
       "status": {
         "blocked": "Đã chặn",
         "ready": "Sẵn sàng"
@@ -413,17 +406,9 @@
     "selectAll": "Chọn tất cả",
     "selectRow": "Chọn hàng"
   },
-  "title": "Quản lý kênh",
   "toasts": {
-    "channelDeleted": "Đã xóa 1 kênh",
     "channelSaved": "Đã lưu kênh",
-    "channelsDeleted_other": "Đã xóa {{count}} kênh",
     "channelUpdated": "Đã cập nhật kênh",
-    "revealKeyFailed": "Tải key của kênh thật thất bại: {{error}}",
-    "revealKeyMasked": "Key của kênh vẫn đang bị che",
-    "revealKeyUnavailable": "Không thể lấy key của kênh",
-    "revealKeyUnsupported": "Trang được quản lý này không hỗ trợ hiển thị key của kênh",
-    "someDeletesFailed_other": "Xóa {{count}} kênh thất bại: {{error}}",
     "syncCompleted": "Đồng bộ mô hình hoàn tất ({{success}}/{{total}})",
     "syncCompletedRefreshFailed": "Đã đồng bộ mô hình ({{success}}/{{total}}), nhưng không thể làm mới danh sách kênh. Hãy làm mới rồi thử lại.",
     "syncFailed": "Đồng bộ mô hình thất bại: {{error}}",

@@ -287,11 +287,6 @@
       "running": "Migration...",
       "start": "Migration starten"
     },
-    "alerts": {
-      "noTargets": {
-        "description": "Konfigurieren Sie in den Einstellungen eine weitere verwaltete Website als Ziel, bevor Sie die Kanalmigration verwenden."
-      }
-    },
     "betaBadge": "Beta",
     "blockedReasons": {
       "sourceKeyMissing": "Der Quellkanalschlüssel ist nicht verfügbar, daher kann dieser Kanal noch nicht migriert werden.",
@@ -333,9 +328,7 @@
       "compare": {
         "fieldLabel": "Feld"
       },
-      "loadFailed": "Migrationsvorschau konnte nicht geladen werden: {{error}}",
       "loading": "Migrationsvorschau wird erstellt...",
-      "selectedCount": "Ausgewählte Kanäle: {{selectedCount}}",
       "status": {
         "blocked": "Blockiert",
         "ready": "Bereit"
@@ -413,19 +406,9 @@
     "selectAll": "Alle Zeilen auswählen",
     "selectRow": "Zeile auswählen"
   },
-  "title": "Kanalverwaltung",
   "toasts": {
-    "channelDeleted": "Kanal gelöscht",
     "channelSaved": "Kanal gespeichert",
-    "channelsDeleted_one": "{{count}} Kanal gelöscht",
-    "channelsDeleted_other": "{{count}} Kanäle gelöscht",
     "channelUpdated": "Kanal aktualisiert",
-    "revealKeyFailed": "Der echte Kanalschlüssel konnte nicht geladen werden: {{error}}",
-    "revealKeyMasked": "Der Kanalschlüssel ist weiterhin maskiert",
-    "revealKeyUnavailable": "Der Kanalschlüssel ist nicht verfügbar",
-    "revealKeyUnsupported": "Diese verwaltete Website unterstützt die Offenlegung von Kanalschlüsseln nicht",
-    "someDeletesFailed_one": "Fehler beim Löschen von {{count}} Kanal: {{error}}",
-    "someDeletesFailed_other": "Fehler beim Löschen von {{count}} Kanälen: {{error}}",
     "syncCompleted": "Modellsynchronisierung abgeschlossen ({{success}}/{{total}})",
     "syncCompletedRefreshFailed": "Die Modelle wurden synchronisiert ({{success}}/{{total}}), aber die Kanalliste konnte nicht aktualisiert werden. Aktualisieren Sie die Liste und versuchen Sie es erneut.",
     "syncFailed": "Modellsynchronisierung fehlgeschlagen: {{error}}",

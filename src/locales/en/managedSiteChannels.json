@@ -287,11 +287,6 @@
       "running": "Migrating...",
       "start": "Start migration"
     },
-    "alerts": {
-      "noTargets": {
-        "description": "Configure another managed-site target in settings before channel migration can be used."
-      }
-    },
     "betaBadge": "Beta",
     "blockedReasons": {
       "sourceKeyMissing": "The source channel key is unavailable, so this channel cannot be migrated yet.",
@@ -333,9 +328,7 @@
       "compare": {
         "fieldLabel": "Field"
       },
-      "loadFailed": "Failed to load migration preview: {{error}}",
       "loading": "Building migration preview...",
-      "selectedCount": "{{selectedCount}} channels selected",
       "status": {
         "blocked": "Blocked",
         "ready": "Ready"
@@ -413,19 +406,9 @@
     "selectAll": "Select all rows",
     "selectRow": "Select Row"
   },
-  "title": "Channels management",
   "toasts": {
-    "channelDeleted": "Channel deleted",
     "channelSaved": "Channel saved",
-    "channelsDeleted_one": "{{count}} channel deleted",
-    "channelsDeleted_other": "{{count}} channels deleted",
     "channelUpdated": "Channel updated",
-    "revealKeyFailed": "Failed to load the real channel key: {{error}}",
-    "revealKeyMasked": "The channel key is still masked",
-    "revealKeyUnavailable": "The channel key is unavailable",
-    "revealKeyUnsupported": "This managed site does not support revealing channel keys",
-    "someDeletesFailed_one": "Failed to delete {{count}} channel: {{error}}",
-    "someDeletesFailed_other": "Failed to delete {{count}} channels: {{error}}",
     "syncCompleted": "Model sync completed ({{success}}/{{total}})",
     "syncCompletedRefreshFailed": "Models were synced ({{success}}/{{total}}), but the channel list could not be refreshed. Refresh and try again.",
     "syncFailed": "Model sync failed: {{error}}",

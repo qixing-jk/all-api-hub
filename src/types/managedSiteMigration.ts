@@ -1,12 +1,3 @@
-import type { ManagedSiteType } from "~/constants/siteType"
-
-import type { ChannelFormData, ManagedSiteChannel } from "./managedSite"
-import type {
-  ManagedSiteMigrationSelection,
-  ManagedSiteMigrationSource,
-  ManagedSiteMigrationTargetPreparation,
-} from "./managedSiteMigrationCapability"
-
 export const MANAGED_SITE_CHANNEL_MIGRATION_GENERAL_WARNING_CODES = {
   CREATE_ONLY: "create-only",
   NO_DEDUPE_OR_SYNC: "no-dedupe-or-sync",
@@ -41,51 +32,3 @@ export const MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES = {
 
 export type ManagedSiteChannelMigrationBlockedReasonCode =
   (typeof MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES)[keyof typeof MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES]
-
-export type ManagedSiteMigrationCanonicalPreparation = {
-  selection: ManagedSiteMigrationSelection
-  source: ManagedSiteMigrationSource
-  target: ManagedSiteMigrationTargetPreparation
-}
-
-export interface ManagedSiteChannelMigrationPreviewItem {
-  channelId: number
-  channelName: string
-  sourceChannel: ManagedSiteChannel
-  draft: ChannelFormData | null
-  status: "ready" | "blocked"
-  warningCodes: ManagedSiteChannelMigrationItemWarningCode[]
-  blockingReasonCode?: ManagedSiteChannelMigrationBlockedReasonCode
-  blockingMessage?: string
-  canonicalPreparation?: ManagedSiteMigrationCanonicalPreparation
-}
-
-export interface ManagedSiteChannelMigrationPreview {
-  sourceSiteType: ManagedSiteType
-  targetSiteType: ManagedSiteType
-  generalWarningCodes: ManagedSiteChannelMigrationGeneralWarningCode[]
-  items: ManagedSiteChannelMigrationPreviewItem[]
-  totalCount: number
-  readyCount: number
-  blockedCount: number
-}
-
-export interface ManagedSiteChannelMigrationExecutionItem {
-  channelId: number
-  channelName: string
-  success: boolean
-  skipped: boolean
-  uncertain?: boolean
-  blockingReasonCode?: ManagedSiteChannelMigrationBlockedReasonCode
-  error?: string
-}
-
-export interface ManagedSiteChannelMigrationExecutionResult {
-  totalSelected: number
-  attemptedCount: number
-  createdCount: number
-  failedCount: number
-  skippedCount: number
-  uncertainCount?: number
-  items: ManagedSiteChannelMigrationExecutionItem[]
-}

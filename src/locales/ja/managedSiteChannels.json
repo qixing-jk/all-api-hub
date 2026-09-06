@@ -287,11 +287,6 @@
       "running": "移行中...",
       "start": "移行を開始"
     },
-    "alerts": {
-      "noTargets": {
-        "description": "チャネル移行を使う前に、設定で別の管理対象サイトを移行先として構成してください。"
-      }
-    },
     "betaBadge": "Beta",
     "blockedReasons": {
       "sourceKeyMissing": "元チャネルのキーが取得できないため、このチャネルはまだ移行できません。",
@@ -333,9 +328,7 @@
       "compare": {
         "fieldLabel": "項目"
       },
-      "loadFailed": "移行プレビューの読み込みに失敗しました: {{error}}",
       "loading": "移行プレビューを構築中...",
-      "selectedCount": "{{selectedCount}} 件のチャネルを選択中",
       "status": {
         "blocked": "ブロック済み",
         "ready": "移行可能"
@@ -413,17 +406,9 @@
     "selectAll": "すべての行を選択",
     "selectRow": "行を選択"
   },
-  "title": "チャネル管理",
   "toasts": {
-    "channelDeleted": "チャネルを削除しました",
     "channelSaved": "チャネルを保存しました",
-    "channelsDeleted_other": "{{count}} 個のチャネルを削除しました",
     "channelUpdated": "チャネルを更新しました",
-    "revealKeyFailed": "実際のチャネルキーの読み込みに失敗しました: {{error}}",
-    "revealKeyMasked": "チャネルキーはまだマスクされています",
-    "revealKeyUnavailable": "チャネルキーを取得できません",
-    "revealKeyUnsupported": "この管理対象サイトではチャネルキーを表示できません",
-    "someDeletesFailed_other": "{{count}} 個のチャネル削除に失敗しました: {{error}}",
     "syncCompleted": "モデル同期が完了しました ({{success}}/{{total}})",
     "syncCompletedRefreshFailed": "モデルは同期されました（{{success}}/{{total}}）が、チャネル一覧を更新できませんでした。更新してもう一度お試しください。",
     "syncFailed": "モデル同期に失敗しました: {{error}}",

@@ -48,7 +48,7 @@ type ManagedSiteMigrationResultCounts = {
 }
 
 /** Composes independently pluralized migration metrics into one locale-owned summary. */
-export const formatManagedSiteMigrationResultSummary = (
+const formatManagedSiteMigrationResultSummary = (
   t: TFunction,
   counts: ManagedSiteMigrationResultCounts,
 ) =>

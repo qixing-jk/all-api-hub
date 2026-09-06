@@ -287,11 +287,6 @@
       "running": "Migrando...",
       "start": "Iniciar migración"
     },
-    "alerts": {
-      "noTargets": {
-        "description": "Configura otro destino de sitio administrado en la configuración antes de usar la migración de canales."
-      }
-    },
     "betaBadge": "Beta",
     "blockedReasons": {
       "sourceKeyMissing": "La clave del canal de origen no está disponible, por lo que este canal aún no se puede migrar.",
@@ -333,9 +328,7 @@
       "compare": {
         "fieldLabel": "Campo"
       },
-      "loadFailed": "No se pudo cargar la vista previa de migración: {{error}}",
       "loading": "Construyendo vista previa de migración...",
-      "selectedCount": "{{selectedCount}} canales seleccionados",
       "status": {
         "blocked": "Bloqueado",
         "ready": "Listo"
@@ -418,21 +411,9 @@
     "selectAll": "Seleccionar todas las filas",
     "selectRow": "Seleccionar fila"
   },
-  "title": "Administración de canales",
   "toasts": {
-    "channelDeleted": "Canal eliminado",
     "channelSaved": "Canal guardado",
-    "channelsDeleted_one": "{{count}} canal eliminado",
-    "channelsDeleted_many": "{{count}} canales eliminados",
-    "channelsDeleted_other": "{{count}} canales eliminados",
     "channelUpdated": "Canal actualizado",
-    "revealKeyFailed": "No se pudo cargar la clave real del canal: {{error}}",
-    "revealKeyMasked": "La clave del canal sigue oculta",
-    "revealKeyUnavailable": "La clave del canal no está disponible",
-    "revealKeyUnsupported": "Este sitio administrado no permite revelar claves de canal",
-    "someDeletesFailed_one": "No se pudo eliminar {{count}} canal: {{error}}",
-    "someDeletesFailed_many": "No se pudieron eliminar {{count}} canales: {{error}}",
-    "someDeletesFailed_other": "No se pudieron eliminar {{count}} canales: {{error}}",
     "syncCompleted": "Sincronización de modelos completada ({{success}}/{{total}})",
     "syncCompletedRefreshFailed": "Los modelos se sincronizaron ({{success}}/{{total}}), pero no se pudo actualizar la lista de canales. Actualízala y vuelve a intentarlo.",
     "syncFailed": "Falló la sincronización de modelos: {{error}}",

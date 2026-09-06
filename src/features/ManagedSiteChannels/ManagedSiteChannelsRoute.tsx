@@ -64,7 +64,6 @@ import { useManagedResourceListController } from "./controllers/useManagedResour
 import { useManagedResourceMigrationController } from "./controllers/useManagedResourceMigrationController"
 import { useManagedResourceMutationController } from "./controllers/useManagedResourceMutationController"
 import { useManagedSiteChannelModelSync } from "./hooks/useManagedSiteChannelModelSync"
-import ManagedSiteChannels from "./ManagedSiteChannels"
 import type {
   ManagedChannelsCallbacks,
   ManagedChannelsCapabilities,
@@ -974,16 +973,7 @@ export function ManagedSiteChannelsRoute({
     siteType,
     policy.primaryKind,
   )
-  if (!registration) {
-    return (
-      <ManagedSiteChannels
-        siteType={siteType}
-        refreshKey={refreshKey}
-        routeParams={routeParams}
-        onReplaceRouteQuery={onReplaceRouteQuery}
-      />
-    )
-  }
+  if (!registration) return <ManagedSiteChannelsIntegrationFailure />
 
   return (
     <NativeManagedSiteChannels

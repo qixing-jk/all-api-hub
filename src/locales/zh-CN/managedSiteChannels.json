@@ -287,11 +287,6 @@
       "running": "迁移中…",
       "start": "开始迁移"
     },
-    "alerts": {
-      "noTargets": {
-        "description": "请先在设置中配置另一个可用的托管站点目标，才能启用渠道迁移。"
-      }
-    },
     "betaBadge": "Beta",
     "blockedReasons": {
       "sourceKeyMissing": "缺少源渠道密钥，当前无法迁移。",
@@ -333,9 +328,7 @@
       "compare": {
         "fieldLabel": "字段"
       },
-      "loadFailed": "迁移预览加载失败：{{error}}",
       "loading": "正在构建迁移预览…",
-      "selectedCount": "已选择 {{selectedCount}} 个渠道",
       "status": {
         "blocked": "已阻止",
         "ready": "可迁移"
@@ -408,17 +401,9 @@
     "selectAll": "选择所有行",
     "selectRow": "选择行"
   },
-  "title": "渠道管理",
   "toasts": {
-    "channelDeleted": "已删除 1 个渠道",
     "channelSaved": "渠道已保存",
-    "channelsDeleted": "已删除 {{count}} 个渠道",
     "channelUpdated": "渠道已更新",
-    "revealKeyFailed": "加载真实渠道 key 失败：{{error}}",
-    "revealKeyMasked": "渠道 key 仍处于遮罩状态",
-    "revealKeyUnavailable": "渠道 key 不可用",
-    "revealKeyUnsupported": "当前托管站点不支持显示渠道 key",
-    "someDeletesFailed": "删除 {{count}} 个渠道失败：{{error}}",
     "syncCompleted": "模型同步完成（{{success}}/{{total}}）",
     "syncCompletedRefreshFailed": "模型已同步（{{success}}/{{total}}），但渠道列表刷新失败。请刷新后重试。",
     "syncFailed": "模型同步失败：{{error}}",
