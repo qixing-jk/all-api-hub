@@ -13,7 +13,10 @@ import {
   API_CREDENTIAL_PROFILES_TEST_IDS,
   getApiCredentialEndpointOptionTestId,
 } from "~/features/ApiCredentialProfiles/testIds"
-import { WEBDAV_AUTO_SYNC_TARGET_IDS } from "~/features/ImportExport/searchTargets"
+import {
+  WEBDAV_AUTO_SYNC_TARGET_IDS,
+  WEBDAV_TARGET_IDS,
+} from "~/features/ImportExport/searchTargets"
 import { IMPORT_EXPORT_TEST_IDS } from "~/features/ImportExport/testIds"
 import { SITE_BOOKMARKS_TEST_IDS } from "~/features/SiteBookmarks/testIds"
 import {
@@ -1377,6 +1380,18 @@ test("uploads a WebDAV backup and restores it through the WebDAV download flow",
   await page.locator("#webdav-url").fill(webdavFileUrl)
   await page.locator("#webdav-username").fill("webdav-user")
   await page.locator("#webdav-password").fill("webdav-password")
+
+  await page.locator(`#${WEBDAV_TARGET_IDS.testConnection}`).click()
+  await expect(page.getByText("Connection test successful")).toBeVisible()
+
+  await page
+    .getByTestId(IMPORT_EXPORT_TEST_IDS.webdavUploadBackupButton)
+    .click()
+  await page
+    .getByTestId(IMPORT_EXPORT_TEST_IDS.webdavManualCancelButton)
+    .click()
+  await expect.poll(() => uploadedPayloads.length).toBe(0)
+
   await page
     .getByTestId(IMPORT_EXPORT_TEST_IDS.webdavUploadBackupButton)
     .click()

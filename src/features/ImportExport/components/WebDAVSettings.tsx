@@ -1825,6 +1825,7 @@ export default function WebDAVSettings({
               size="sm"
               onClick={() => setPendingManualAction(null)}
               disabled={uploading || downloading}
+              data-testid={IMPORT_EXPORT_TEST_IDS.webdavManualCancelButton}
             >
               {t("webdav.manual.confirmCancel")}
             </Button>
