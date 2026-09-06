@@ -181,7 +181,10 @@ function FieldHelpPopover({
           className="text-muted-foreground hover:text-foreground focus-visible:ring-ring inline-flex size-5 shrink-0 items-center justify-center rounded-full transition-colors outline-none focus-visible:ring-2 focus-visible:ring-offset-1"
           onPointerEnter={keepOpen}
           onPointerLeave={releasePointer}
-          onFocus={keepOpen}
+          onFocus={() => {
+            clearCloseTimer()
+            setOpen(true)
+          }}
           onBlur={(event) => {
             if (!(event.relatedTarget instanceof Node)) scheduleClose()
             else if (!event.currentTarget.contains(event.relatedTarget)) {

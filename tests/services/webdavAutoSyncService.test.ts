@@ -1018,6 +1018,38 @@ describe("WebdavAutoSyncService.syncWithWebdav (selective sync)", () => {
     expect(uploaded.preferences).toBeUndefined()
   })
 
+  it("falls back to the legacy preference export when the backup helper is unavailable", async () => {
+    const service = createService()
+    const originalExportPreferencesForBackup = (userPreferences as any)
+      .exportPreferencesForBackup
+    ;(userPreferences as any).exportPreferencesForBackup = undefined
+
+    mockGetPreferences.mockResolvedValue({
+      webdav: {
+        syncStrategy: "upload_only",
+        syncData: {
+          accounts: false,
+          bookmarks: false,
+          apiCredentialProfiles: false,
+          preferences: true,
+        },
+      },
+    } as any)
+    mockExportPreferences.mockResolvedValue({ lastUpdated: 2 } as any)
+    mockDownloadBackup.mockRejectedValue({
+      code: "WEBDAV_FILE_NOT_FOUND",
+      message: "messages:webdav.fileNotFound",
+    })
+
+    try {
+      await expect(service.syncWithWebdav()).resolves.toBeUndefined()
+      expect(mockExportPreferences).toHaveBeenCalled()
+    } finally {
+      ;(userPreferences as any).exportPreferencesForBackup =
+        originalExportPreferencesForBackup
+    }
+  })
+
   it("surfaces safe commit failure during upload-only first upload", async () => {
     const service = createService()
 

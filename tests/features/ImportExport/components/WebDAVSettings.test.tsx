@@ -644,6 +644,75 @@ describe("WebDAVSettings", () => {
     })
   })
 
+  it("keeps field help usable across hover, focus, click, and dismissal", async () => {
+    render(<WebDAVSettings />)
+
+    const help = await screen.findByRole("button", {
+      name: "importExport:webdav.encryption.password",
+    })
+    const description = "importExport:webdav.encryption.passwordDesc"
+
+    fireEvent.pointerEnter(help)
+    expect(await screen.findByText(description)).toBeInTheDocument()
+
+    // Re-entering before the delayed close expires keeps the popover open.
+    fireEvent.pointerLeave(help)
+    fireEvent.pointerEnter(help)
+    expect(screen.getByText(description)).toBeInTheDocument()
+
+    fireEvent.pointerLeave(help)
+    await waitFor(() => {
+      expect(screen.queryByText(description)).not.toBeInTheDocument()
+    })
+
+    fireEvent.focus(help)
+    expect(await screen.findByText(description)).toBeInTheDocument()
+    fireEvent.blur(help, { relatedTarget: document.body })
+    await waitFor(() => {
+      expect(screen.queryByText(description)).not.toBeInTheDocument()
+    })
+
+    fireEvent.click(help)
+    expect(await screen.findByText(description)).toBeInTheDocument()
+    const popoverContent = screen.getByRole("dialog")
+    fireEvent.pointerEnter(popoverContent)
+    fireEvent.pointerLeave(popoverContent)
+    expect(screen.getByText(description)).toBeInTheDocument()
+
+    fireEvent.keyDown(document, { key: "Escape" })
+    await waitFor(() => {
+      expect(screen.queryByText(description)).not.toBeInTheDocument()
+    })
+  })
+
+  it("switches the provider draft in both directions", async () => {
+    render(<WebDAVSettings />)
+
+    expect(await screen.findByDisplayValue("alice")).toBeInTheDocument()
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "importExport:webdav.provider.githubGist",
+      }),
+    )
+    expect(
+      await screen.findByPlaceholderText(
+        "importExport:webdav.gist.tokenPlaceholder",
+      ),
+    ).toBeInTheDocument()
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "importExport:webdav.provider.webdav",
+      }),
+    )
+    expect(screen.getByDisplayValue("alice")).toBeInTheDocument()
+    expect(
+      screen.queryByPlaceholderText(
+        "importExport:webdav.gist.tokenPlaceholder",
+      ),
+    ).not.toBeInTheDocument()
+  })
+
   it("exercises GitHub Gist settings, connection, upload, and failure states", async () => {
     const gistPreferences = createPersistedPreferencesFixture({
       webdav: {
@@ -745,6 +814,14 @@ describe("WebDAVSettings", () => {
       expect(toast.error).toHaveBeenCalledWith("gist upload failed")
     })
 
+    mockUploadCloudSyncBackup.mockRejectedValueOnce({})
+    await clickWebdavAction("webdav-upload-backup")
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(
+        "importExport:webdav.gist.uploadFailed",
+      )
+    })
+
     mockTestCloudSyncConnection.mockRejectedValueOnce({})
     await clickWebdavAction("webdav-test-connection")
     await waitFor(() => {
@@ -761,6 +838,131 @@ describe("WebDAVSettings", () => {
       expect(toast.error).toHaveBeenCalledWith(
         "settings:messages.saveSettingsFailed",
       )
+    })
+  })
+
+  it("requires a Gist encryption password before saving or using manual actions", async () => {
+    const gistPreferences = createPersistedPreferencesFixture({
+      webdav: {
+        provider: "github_gist",
+        backupEncryptionEnabled: true,
+        backupEncryptionPassword: "",
+        githubGist: { token: "saved-token", gistId: "existing-gist" },
+        syncData: {
+          accounts: true,
+          bookmarks: true,
+          apiCredentialProfiles: true,
+          preferences: true,
+        },
+      },
+    })
+    mockUserPreferences.getPreferences.mockResolvedValue(gistPreferences)
+
+    render(<WebDAVSettings />)
+
+    expect(await screen.findByDisplayValue("existing-gist")).toBeInTheDocument()
+    const requiredMessage =
+      "importExport:webdav.gist.encryptionPasswordRequired"
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "importExport:webdav.saveConfig" }),
+    )
+    expect(await screen.findByText(requiredMessage)).toBeInTheDocument()
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "importExport:webdav.testConnection",
+      }),
+    )
+    expect(await screen.findByText(requiredMessage)).toBeInTheDocument()
+
+    await clickWebdavAction(WEBDAV_TARGET_IDS.uploadBackup)
+    expect(screen.getByText(requiredMessage)).toBeInTheDocument()
+    expect(mockUploadCloudSyncBackup).not.toHaveBeenCalled()
+
+    await clickWebdavAction(WEBDAV_TARGET_IDS.downloadImport)
+    expect(screen.getByText(requiredMessage)).toBeInTheDocument()
+    expect(mockDownloadCloudSyncBackup).not.toHaveBeenCalled()
+  })
+
+  it("keeps the current Gist id when creation returns no id", async () => {
+    const gistPreferences = createPersistedPreferencesFixture({
+      webdav: {
+        provider: "github_gist",
+        backupEncryptionEnabled: true,
+        backupEncryptionPassword: "stored-secret",
+        githubGist: { token: "saved-token", gistId: "" },
+        syncData: {
+          accounts: true,
+          bookmarks: true,
+          apiCredentialProfiles: true,
+          preferences: true,
+        },
+      },
+    })
+    mockUserPreferences.getPreferences.mockResolvedValue(gistPreferences)
+    mockCreateCloudSyncBackup.mockResolvedValueOnce({
+      htmlUrl: "https://gist.github.com/created-without-id",
+    })
+
+    render(<WebDAVSettings />)
+
+    expect(await screen.findByDisplayValue("saved-token")).toBeInTheDocument()
+    await clickWebdavAction(WEBDAV_TARGET_IDS.createGist)
+
+    await waitFor(() => {
+      expect(mockCreateCloudSyncBackup).toHaveBeenCalledTimes(1)
+      expect(
+        mockUserPreferences.savePreferencesWithResult,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          webdav: expect.objectContaining({
+            githubGist: expect.objectContaining({
+              gistId: "",
+              gistUrl: "https://gist.github.com/created-without-id",
+            }),
+          }),
+        }),
+        { expectedLastUpdated: 0 },
+      )
+    })
+    expect(screen.getByDisplayValue("saved-token")).toBeInTheDocument()
+  })
+
+  it("allows cancelling a directional action before it reaches the provider", async () => {
+    render(<WebDAVSettings />)
+
+    expect(await screen.findByDisplayValue("alice")).toBeInTheDocument()
+    fireEvent.click(
+      screen.getByRole("button", { name: "importExport:webdav.uploadBackup" }),
+    )
+    expect(
+      await screen.findByText("importExport:webdav.manual.confirmUploadTitle"),
+    ).toBeInTheDocument()
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "importExport:webdav.manual.confirmCancel",
+      }),
+    )
+    await waitFor(() => {
+      expect(
+        screen.queryByText("importExport:webdav.manual.confirmUploadTitle"),
+      ).not.toBeInTheDocument()
+    })
+    expect(mockUploadBackup).not.toHaveBeenCalled()
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "importExport:webdav.uploadBackup" }),
+    )
+    expect(
+      await screen.findByText("importExport:webdav.manual.confirmUploadTitle"),
+    ).toBeInTheDocument()
+    fireEvent.click(screen.getByLabelText("common:actions.close"))
+    await waitFor(() => {
+      expect(
+        screen.queryByText("importExport:webdav.manual.confirmUploadTitle"),
+      ).not.toBeInTheDocument()
     })
   })
 

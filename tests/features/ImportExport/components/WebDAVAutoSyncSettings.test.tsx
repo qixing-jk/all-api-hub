@@ -622,4 +622,92 @@ describe("WebDAVAutoSyncSettings", () => {
       }),
     ).toBeInTheDocument()
   })
+
+  it("requires a Gist encryption password before saving or running auto-sync", async () => {
+    const gistPreferences = {
+      lastUpdated: 1,
+      webdav: {
+        provider: "github_gist",
+        autoSync: true,
+        syncInterval: 3600,
+        syncStrategy: WEBDAV_SYNC_STRATEGIES.MERGE,
+        backupEncryptionPassword: "",
+        githubGist: { token: "saved-token", gistId: "gist-1" },
+      },
+    }
+    const onGistEncryptionPasswordErrorChange = vi.fn()
+    mockUserPreferences.getPreferences.mockResolvedValue(gistPreferences)
+
+    render(
+      <WebDAVAutoSyncSettings
+        onGistEncryptionPasswordErrorChange={
+          onGistEncryptionPasswordErrorChange
+        }
+      />,
+    )
+
+    const requiredMessage =
+      "importExport:webdav.gist.encryptionPasswordRequired"
+    const saveButton = await screen.findByRole("button", {
+      name: "importExport:webdav.autoSync.saveSettings",
+    })
+    fireEvent.click(saveButton)
+    await waitFor(() => {
+      expect(onGistEncryptionPasswordErrorChange).toHaveBeenCalledWith(
+        requiredMessage,
+      )
+    })
+    expect(mockSendWebdavAutoSyncMessage).not.toHaveBeenCalledWith(
+      WebdavAutoSyncMessageTypes.UpdateSettings,
+      expect.anything(),
+    )
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "importExport:webdav.autoSync.syncNow",
+      }),
+    )
+    await waitFor(() => {
+      expect(onGistEncryptionPasswordErrorChange).toHaveBeenCalledTimes(2)
+    })
+    expect(mockSendWebdavAutoSyncMessage).not.toHaveBeenCalledWith(
+      WebdavAutoSyncMessageTypes.SyncNow,
+    )
+  })
+
+  it("uses the provider minimum when the interval draft is not a number", async () => {
+    const gistPreferences = {
+      lastUpdated: 1,
+      webdav: {
+        provider: "github_gist",
+        autoSync: true,
+        syncInterval: 3600,
+        syncStrategy: WEBDAV_SYNC_STRATEGIES.MERGE,
+        backupEncryptionPassword: "stored-secret",
+        githubGist: { token: "saved-token", gistId: "gist-1" },
+      },
+    }
+    mockUserPreferences.getPreferences.mockResolvedValue(gistPreferences)
+
+    render(<WebDAVAutoSyncSettings />)
+
+    const intervalInput = (await screen.findByDisplayValue(
+      "3600",
+    )) as HTMLInputElement
+    fireEvent.change(intervalInput, { target: { value: "not-a-number" } })
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "importExport:webdav.autoSync.saveSettings",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockSendWebdavAutoSyncMessage).toHaveBeenCalledWith(
+        WebdavAutoSyncMessageTypes.UpdateSettings,
+        expect.objectContaining({
+          settings: expect.objectContaining({ syncInterval: 300 }),
+        }),
+      )
+    })
+  })
 })
