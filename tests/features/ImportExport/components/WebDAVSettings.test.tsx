@@ -6,7 +6,7 @@ import {
   within,
 } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import type { ReactNode } from "react"
+import { cloneElement, isValidElement, type ReactNode } from "react"
 import toast from "react-hot-toast"
 import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
@@ -250,6 +250,7 @@ vi.mock("~/components/ui", async (importOriginal) => {
     ...actual,
     Button: ({
       analyticsAction,
+      asChild = false,
       children,
       leftIcon,
       rightIcon,
@@ -264,17 +265,26 @@ vi.mock("~/components/ui", async (importOriginal) => {
         analyticsAction,
         scope,
       )
+      const analyticsProps = {
+        "data-analytics-action": resolvedAction
+          ? `${resolvedAction.featureId}:${resolvedAction.actionId}:${resolvedAction.surfaceId}:${resolvedAction.entrypoint}`
+          : undefined,
+      }
+
+      if (asChild && isValidElement(children)) {
+        return cloneElement(children, {
+          ...props,
+          ...analyticsProps,
+          "aria-busy": loading ? true : ariaBusy,
+        })
+      }
 
       return (
         <button
           type="button"
           disabled={disabled || loading}
           aria-busy={loading ? true : ariaBusy}
-          data-analytics-action={
-            resolvedAction
-              ? `${resolvedAction.featureId}:${resolvedAction.actionId}:${resolvedAction.surfaceId}:${resolvedAction.entrypoint}`
-              : undefined
-          }
+          {...analyticsProps}
           {...props}
         >
           {leftIcon}

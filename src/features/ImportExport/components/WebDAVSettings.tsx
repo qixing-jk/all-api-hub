@@ -1431,20 +1431,6 @@ export default function WebDAVSettings({
                     }}
                   />
                 </FormField>
-
-                {githubGist.gistUrl && (
-                  <BodySmall className="m-0 md:col-span-2">
-                    <a
-                      id={WEBDAV_TARGET_IDS.gistUrl}
-                      href={githubGist.gistUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-sky-600 underline dark:text-sky-400"
-                    >
-                      {t("webdav.gist.openLink")}
-                    </a>
-                  </BodySmall>
-                )}
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -1559,6 +1545,23 @@ export default function WebDAVSettings({
                 >
                   {saving ? t("common:status.saving") : t("webdav.saveConfig")}
                 </Button>
+                {githubGist.gistUrl && (
+                  <Button
+                    asChild
+                    variant="secondary"
+                    size="sm"
+                    className="ml-auto"
+                  >
+                    <a
+                      id={WEBDAV_TARGET_IDS.gistUrl}
+                      href={githubGist.gistUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {t("webdav.gist.openLink")}
+                    </a>
+                  </Button>
+                )}
               </div>
             </ProductAnalyticsScope>
           </div>
