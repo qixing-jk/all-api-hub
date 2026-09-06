@@ -1,4 +1,22 @@
 {
+  "accessTokenVerification": {
+    "continueFailed": "暫時無法開啟側邊欄或完整頁面，目前的表單已保留，請重試。",
+    "continueInFullPage": "在完整頁面繼續",
+    "continueInSidePanel": "轉到側邊欄繼續",
+    "continuing": "正在準備表單…",
+    "description": "此站點要求先完成安全驗證，擴充功能暫時無法自動取得 Access Token。已識別的資訊已保留，請手動填寫帳號管理權杖。",
+    "destinationBusy": "這裡已有未完成的帳號表單。儲存或關閉後，將繼續從彈出視窗帶來的表單。",
+    "fullPageHint": "在完整頁面繼續可保留目前的表單，切換到站點複製權杖時不會關閉。",
+    "generateStep": "已有有效的完整 Access Token 時可直接填寫；否則，開啟站點的「安全設定 → Access Token」，完成驗證並產生權杖。",
+    "openSecurity": "開啟站點安全設定",
+    "openSecurityFailed": "無法開啟頁面。請手動進入站點的「安全設定 → Access Token」，複製權杖後回到這裡填寫。",
+    "pasteStep": "立即複製完整的 Access Token，貼到下方「存取權杖」欄位，確認帳號資訊後儲存。",
+    "popupHint": "轉到側邊欄後，目前的表單會保留；你可以在站點完成驗證、複製權杖，同時繼續填寫。若無法開啟側邊欄，會在完整頁面繼續。",
+    "prepareFailed": "無法暫存目前的表單。請先複製需要保留的資訊，再從側邊欄重新開啟帳號表單。",
+    "restoreFailed": "無法還原未完成的表單，可能已過期。請重新開啟帳號表單。",
+    "rotationWarning": "重新產生會使舊的 Access Token 失效，其他使用舊權杖的工具也需要更新。",
+    "title": "手動填寫 Access Token"
+  },
   "actions": {
     "autoConfigAriaLabel": "儲存帳號並前往 {{managedSite}} 渠道設定",
     "autoConfigRequiresValidAccount": "請先補齊目前帳號資訊",

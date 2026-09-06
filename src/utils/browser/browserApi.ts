@@ -721,6 +721,14 @@ export async function setSessionStorageValues(
   }
 }
 
+/** Removes ephemeral values without falling back to persistent storage. */
+export async function removeSessionStorageValues(
+  keys: string | string[],
+): Promise<void> {
+  if (!hasSessionStorageArea()) return
+  await (globalThis as any).browser.storage.session.remove(keys)
+}
+
 /**
  * 监听标签页激活事件
  * 返回清理函数

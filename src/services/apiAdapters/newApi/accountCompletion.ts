@@ -25,6 +25,7 @@ function createModernAuthExchangeError(error: unknown): Error {
     error.statusCode,
     error.endpoint,
     error.code,
+    error.upstreamCode,
   )
   safeError.originalCode = error.originalCode
   return safeError
@@ -208,6 +209,21 @@ export const createNewApiAccountCompletion = (
     const [tokenResult, checkSupportResult, siteMetadataResult] =
       await Promise.allSettled([
         tokenPromise.catch((error) => {
+          // New API requires a dashboard security proof before generating a PAT.
+          // Match the token endpoint's structured code, not a generic 403/login error.
+          // https://github.com/QuantumNous/new-api/commit/a8729b5c3709cc01d88fc3f2db5b91347fc9129e
+          if (
+            siteType === SITE_TYPES.NEW_API &&
+            error instanceof ApiError &&
+            error.endpoint === "/api/user/token" &&
+            error.upstreamCode?.startsWith("SECURITY_PROOF_")
+          ) {
+            helpers.captureRecoveryData({ authType: AuthTypeEnum.AccessToken })
+            throw helpers.createCompletionError(
+              AUTO_DETECT_FAILURE_REASONS.AccessTokenVerificationRequired,
+              createModernAuthExchangeError(error),
+            )
+          }
           throw helpers.createCompletionError(
             AUTO_DETECT_FAILURE_REASONS.TokenFetchFailed,
             modernDashboardAuth ? createModernAuthExchangeError(error) : error,

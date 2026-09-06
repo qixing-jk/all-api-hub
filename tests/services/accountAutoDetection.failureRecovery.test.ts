@@ -6,6 +6,7 @@ import {
   AutoDetectErrorType,
 } from "~/services/accounts/utils/autoDetectUtils"
 import { NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND } from "~/services/accountSiteOnboarding/contracts"
+import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { AuthTypeEnum } from "~/types"
 import { createDeferred } from "~~/tests/test-utils/deferred"
 
@@ -73,6 +74,118 @@ describe("accountAutoDetection", () => {
   beforeEach(() => {
     resetAccountAutoDetectionMocks()
   })
+
+  it.each([
+    "SECURITY_PROOF_REQUIRED",
+    "SECURITY_PROOF_INVALID",
+    "SECURITY_PROOF_EXPIRED",
+    "SECURITY_PROOF_CONSUMED",
+  ])(
+    "offers manual access-token recovery for New API %s",
+    async (upstreamCode) => {
+      mockAutoDetectSmart.mockResolvedValueOnce({
+        success: true,
+        data: {
+          userId: "42",
+          user: { id: 42, username: "new-api-user" },
+          siteType: SITE_TYPES.NEW_API,
+          transientAuth: {
+            kind: NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND,
+            token: "private-dashboard-token",
+            expiresAt: 4_102_444_800,
+            sessionId: "private-session-id",
+            origin: "https://panel.example.invalid",
+          },
+        },
+      })
+      mockGetOrCreateAccessToken.mockRejectedValueOnce(
+        new ApiError(
+          "upstream reflected private-dashboard-token",
+          403,
+          "/api/user/token",
+          API_ERROR_CODES.HTTP_403,
+          upstreamCode,
+        ),
+      )
+      mockFetchSiteStatus.mockResolvedValueOnce({
+        system_name: "New API portal",
+        checkin_enabled: false,
+      })
+
+      const result = await autoDetectAccount(
+        "https://panel.example.invalid",
+        AuthTypeEnum.Cookie,
+      )
+
+      expect(result).toMatchObject({
+        success: false,
+        autoDetectFailureReason: "access_token_verification_required",
+        message: "accountDialog:accessTokenVerification.description",
+        detailedError: {
+          type: "access_token_verification_required",
+          message: "accountDialog:accessTokenVerification.description",
+        },
+        recoveryData: {
+          siteType: SITE_TYPES.NEW_API,
+          userId: "42",
+          username: "new-api-user",
+          authType: AuthTypeEnum.AccessToken,
+        },
+      })
+      expect(JSON.stringify(result)).not.toContain("upstream reflected")
+      expect(
+        JSON.stringify(snapshotOwnProperties(loggerMock.error.mock.calls)),
+      ).not.toContain("private-dashboard-token")
+    },
+  )
+
+  it.each([
+    {
+      siteType: SITE_TYPES.NEW_API,
+      endpoint: "/api/user/token",
+      upstreamCode: undefined,
+    },
+    {
+      siteType: SITE_TYPES.NEW_API,
+      endpoint: "/api/user/self",
+      upstreamCode: "SECURITY_PROOF_REQUIRED",
+    },
+    {
+      siteType: SITE_TYPES.VELOERA,
+      endpoint: "/api/user/token",
+      upstreamCode: "SECURITY_PROOF_REQUIRED",
+    },
+  ])(
+    "keeps unrelated token failures out of New API verification guidance: $siteType $endpoint $upstreamCode",
+    async ({ siteType, endpoint, upstreamCode }) => {
+      mockAutoDetectSmart.mockResolvedValueOnce({
+        success: true,
+        data: { userId: "42", siteType },
+      })
+      mockGetOrCreateAccessToken.mockRejectedValueOnce(
+        new ApiError(
+          "SECURITY_PROOF_REQUIRED mentioned in an unrelated error",
+          403,
+          endpoint,
+          API_ERROR_CODES.HTTP_403,
+          upstreamCode,
+        ),
+      )
+      mockFetchSiteStatus.mockResolvedValueOnce({ checkin_enabled: false })
+
+      const result = await autoDetectAccount(
+        "https://panel.example.invalid",
+        AuthTypeEnum.AccessToken,
+      )
+
+      expect(result.autoDetectFailureReason).toBe(
+        AUTO_DETECT_FAILURE_REASONS.TokenFetchFailed,
+      )
+      expect(result.detailedError?.type).not.toBe(
+        AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED,
+      )
+    },
+  )
 
   it("retains rc22 dashboard credentials for local recovery without logging them", async () => {
     const dashboardToken = "dashboard-jwt-sensitive-example"

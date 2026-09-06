@@ -1,4 +1,22 @@
 {
+  "accessTokenVerification": {
+    "continueFailed": "No se pudo abrir el panel lateral ni la página completa. Tu formulario se conservó. Inténtalo de nuevo.",
+    "continueInFullPage": "Continuar en una página completa",
+    "continueInSidePanel": "Continuar en el panel lateral",
+    "continuing": "Preparando tu formulario…",
+    "description": "Este sitio requiere una verificación de seguridad antes de generar un Access Token, por lo que no se puede obtener automáticamente. Se conservaron los datos detectados de tu cuenta. Ingresa un Access Token de administración de cuenta para continuar.",
+    "destinationBusy": "Ya hay un formulario de cuenta sin terminar aquí. Guárdalo o ciérralo para continuar con el formulario de la ventana emergente.",
+    "fullPageHint": "Continúa en una página completa para mantener abierto este formulario mientras copias el token en el sitio.",
+    "generateStep": "Si ya tienes un Access Token válido y completo, úsalo directamente. De lo contrario, abre Seguridad → Access Token en el sitio, completa la verificación y genera un token.",
+    "openSecurity": "Abrir la seguridad del sitio",
+    "openSecurityFailed": "No se pudo abrir la página. Abre Seguridad → Access Token manualmente en el sitio y vuelve aquí para pegar el token.",
+    "pasteStep": "Copia de inmediato el Access Token completo, pégalo en el campo Access Token de abajo, revisa los datos de tu cuenta y guarda.",
+    "popupHint": "Continúa en el panel lateral para conservar este formulario mientras verificas tu identidad y copias el token en el sitio. Si no se puede abrir el panel lateral, el formulario se abrirá en una página completa.",
+    "prepareFailed": "No se pudo conservar este formulario. Copia los datos que necesites antes de volver a abrir el formulario de cuenta en el panel lateral.",
+    "restoreFailed": "No se pudo recuperar el formulario sin terminar. Es posible que haya vencido. Vuelve a abrir el formulario de cuenta.",
+    "rotationWarning": "Generar un Access Token nuevo invalida el anterior. Actualiza las otras herramientas que usen el token anterior.",
+    "title": "Ingresa un Access Token manualmente"
+  },
   "actions": {
     "autoConfigAriaLabel": "Guardar cuenta y abrir configuración de canal de {{managedSite}}",
     "autoConfigRequiresValidAccount": "Completa primero el formulario de la cuenta",

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
@@ -164,6 +164,7 @@ import {
   type AccountDialogDraft,
   type AccountDialogFormSource,
   type AccountDialogPhase,
+  type AccountDialogRecoveryState,
   type AddAccountPrefill,
 } from "../models"
 import { useOpenRouterAccountOnboarding } from "./useOpenRouterAccountOnboarding"
@@ -336,6 +337,7 @@ interface UseAccountDialogProps {
   mode: DialogMode
   account?: DisplaySiteData | null
   prefill?: AddAccountPrefill | null
+  recoveryState?: AccountDialogRecoveryState | null
   isOpen: boolean
   onClose: () => void
   onPostSaveAccountRefresh?: (accountIds: string[]) => Promise<void>
@@ -361,6 +363,7 @@ interface AihubmixPostSaveKeyPromptState {
  * @param props.mode Current dialog mode (add or edit).
  * @param props.account Account record to edit when in edit mode.
  * @param props.prefill Optional add-mode prefill.
+ * @param props.recoveryState Form carried from a popup for manual token recovery.
  * @param props.isOpen Whether the dialog is currently open.
  * @param props.onClose Handler invoked when dialog closes.
  * @param props.onPostSaveAccountRefresh Optional handler invoked after deferred account refresh completes.
@@ -371,6 +374,7 @@ export function useAccountDialog({
   mode,
   account,
   prefill,
+  recoveryState,
   isOpen,
   onClose,
   onPostSaveAccountRefresh,
@@ -557,6 +561,14 @@ export function useAccountDialog({
   const setDialogUrl = useCallback(
     (value: string) => {
       autoDetectRunGenerationRef.current += 1
+      if (value !== selectedSiteUrlRef.current) {
+        setDetectionError((current) =>
+          current?.type ===
+          AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED
+            ? null
+            : current,
+        )
+      }
       resetCheckInRedetection()
       notifyOpenRouterUrlChange(value)
       selectedSiteUrlRef.current = value
@@ -665,6 +677,14 @@ export function useAccountDialog({
     (value: string) => {
       resetCheckInRedetection()
       const nextSiteType = isAccountSiteType(value) ? value : SITE_TYPES.UNKNOWN
+      if (nextSiteType !== SITE_TYPES.NEW_API) {
+        setDetectionError((current) =>
+          current?.type ===
+          AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED
+            ? null
+            : current,
+        )
+      }
       const nextPolicy = getAccountDialogSitePolicy(nextSiteType)
       selectedSiteTypeRef.current = nextSiteType
       const { clearCreatedCredential } =
@@ -724,6 +744,14 @@ export function useAccountDialog({
     (value: AuthTypeEnum) => {
       if (!isAccountAuthType(value)) return
 
+      if (value !== AuthTypeEnum.AccessToken) {
+        setDetectionError((current) =>
+          current?.type ===
+          AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED
+            ? null
+            : current,
+        )
+      }
       hasExplicitAuthTypeRef.current = true
       updateDraft((prev) => ({ ...prev, authType: value }))
     },
@@ -1395,7 +1423,35 @@ export function useAccountDialog({
       const nextPrefill =
         mode === DIALOG_MODES.ADD ? normalizeAddAccountPrefill(prefill) : null
       resetForm(nextPrefill)
-      if (mode === DIALOG_MODES.EDIT && account) {
+      if (recoveryState) {
+        const recoveredDraft = recoveryState.draft
+        selectedSiteUrlRef.current = recoveryState.url
+        selectedSiteTypeRef.current = recoveredDraft.siteType
+        hasConsumedAutoFillCurrentSiteUrlRef.current = true
+        hasExplicitAuthTypeRef.current = true
+        automaticExecutionPreferenceChangedRef.current = true
+        checkInSelectionChangedRef.current =
+          recoveryState.checkInSelectionChanged
+        checkInDiscoveryBaseSelectionRef.current =
+          recoveryState.checkInDiscoveryBaseSelection
+        setUrl(recoveryState.url)
+        setDraft(
+          normalizeAccountDialogDraftForSitePolicy({
+            draft: recoveredDraft,
+            policy: getAccountDialogSitePolicy(recoveredDraft.siteType),
+          }),
+        )
+        setPhase(ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM)
+        setFormSource(
+          mode === DIALOG_MODES.EDIT
+            ? ACCOUNT_DIALOG_FORM_SOURCES.EXISTING_ACCOUNT
+            : ACCOUNT_DIALOG_FORM_SOURCES.MANUAL,
+        )
+        setDetectionError({
+          type: AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED,
+          message: t("accessTokenVerification.description"),
+        })
+      } else if (mode === DIALOG_MODES.EDIT && account) {
         loadAccountData(account.id)
       } else {
         // Get current tab URL for add mode
@@ -1407,9 +1463,11 @@ export function useAccountDialog({
     mode,
     account,
     prefill,
+    recoveryState,
     resetForm,
     loadAccountData,
     checkCurrentTab,
+    t,
   ])
 
   useEffect(() => {
@@ -2321,6 +2379,12 @@ export function useAccountDialog({
           result.recoveryData,
           result.autoDetectContext?.siteType,
         )
+        if (
+          result.detailedError?.type ===
+          AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED
+        ) {
+          setAuthType(AuthTypeEnum.AccessToken)
+        }
         enterForm(ACCOUNT_DIALOG_FORM_SOURCES.MANUAL)
         setDetectionError(result.detailedError || null)
         analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
@@ -3299,12 +3363,30 @@ export function useAccountDialog({
   const isAccountFormValid =
     isFormValid && isSub2ApiRefreshTokenValid && !isManualBalanceUsdInvalid
 
+  const tokenRecoveryState = useMemo<AccountDialogRecoveryState | null>(() => {
+    if (
+      detectionError?.type !==
+      AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED
+    )
+      return null
+    return {
+      url,
+      draft,
+      ...(mode === DIALOG_MODES.EDIT && account
+        ? { accountId: account.id }
+        : {}),
+      checkInSelectionChanged: checkInSelectionChangedRef.current,
+      checkInDiscoveryBaseSelection: checkInDiscoveryBaseSelectionRef.current,
+    }
+  }, [account, detectionError?.type, draft, mode, url])
+
   return {
     state: {
       url,
       phase,
       formSource,
       draft,
+      tokenRecoveryState,
       isDetecting,
       isDetectingSlow,
       isRedetectingCheckInMethods,
@@ -3440,6 +3522,7 @@ function getAutoDetectAnalyticsErrorCategory(
   structuredError?: unknown,
 ): ProductAnalyticsErrorCategory {
   switch (errorType) {
+    case AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED:
     case AutoDetectErrorType.UNAUTHORIZED:
     case AutoDetectErrorType.FORBIDDEN:
       return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth

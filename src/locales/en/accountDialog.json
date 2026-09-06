@@ -1,4 +1,22 @@
 {
+  "accessTokenVerification": {
+    "continueFailed": "Could not open the side panel or full page. Your form has been kept. Please try again.",
+    "continueInFullPage": "Continue in full page",
+    "continueInSidePanel": "Continue in side panel",
+    "continuing": "Preparing your form…",
+    "description": "This site requires security verification before an Access Token can be generated automatically. Your detected account details have been kept. Enter an account management Access Token to continue.",
+    "destinationBusy": "There is an unfinished account form here. Save or close it to continue with the form from the popup.",
+    "fullPageHint": "Continue in a full page to keep this form open while you copy the token on the site.",
+    "generateStep": "Use an existing valid, complete Access Token if you have one. Otherwise, open Security → Access Token on the site, complete verification, and generate a token.",
+    "openSecurity": "Open site security settings",
+    "openSecurityFailed": "Could not open the page. Open Security → Access Token on the site manually, then return here to paste the token.",
+    "pasteStep": "Copy the full Access Token immediately, paste it into the Access Token field below, then check your account details and save.",
+    "popupHint": "Continue in the side panel to keep this form while you verify your identity and copy the token on the site. If the side panel cannot open, the form will open in a full page.",
+    "prepareFailed": "Could not preserve this form. Copy any details you need before reopening the account form in the side panel.",
+    "restoreFailed": "Could not restore the unfinished form. It may have expired. Please reopen the account form.",
+    "rotationWarning": "Generating a new Access Token invalidates the old one. Update any other tools that use the old token.",
+    "title": "Enter an Access Token manually"
+  },
   "actions": {
     "autoConfigAriaLabel": "Save account and open {{managedSite}} channel setup",
     "autoConfigRequiresValidAccount": "Complete the account form first",

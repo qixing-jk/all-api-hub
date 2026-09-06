@@ -53,6 +53,15 @@ export interface AccountDialogDraft {
   sub2apiTokenExpiresAt: number | null
 }
 
+/** Form state carried from a popup into manual New API token recovery. */
+export interface AccountDialogRecoveryState {
+  url: string
+  draft: AccountDialogDraft
+  accountId?: string
+  checkInSelectionChanged: boolean
+  checkInDiscoveryBaseSelection: CheckInConfig["selection"] | null
+}
+
 export type AccountCheckInRedetectionFeedback =
   | {
       kind: "completed"

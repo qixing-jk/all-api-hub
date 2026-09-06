@@ -36,6 +36,7 @@ import { getDocsAutoDetectUrl } from "~/utils/navigation/docsLinks"
 export enum AutoDetectErrorType {
   TIMEOUT = "timeout",
   UNAUTHORIZED = "unauthorized",
+  ACCESS_TOKEN_VERIFICATION_REQUIRED = "access_token_verification_required",
   CURRENT_TAB_RELOAD_REQUIRED = "current_tab_reload_required",
   INVALID_RESPONSE = "invalid_response",
   NETWORK_ERROR = "network_error",

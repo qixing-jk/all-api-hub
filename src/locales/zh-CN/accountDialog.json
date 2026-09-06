@@ -1,4 +1,22 @@
 {
+  "accessTokenVerification": {
+    "continueFailed": "暂时无法打开侧边栏或完整页面，当前表单已保留，请重试。",
+    "continueInFullPage": "在完整页面继续",
+    "continueInSidePanel": "转到侧边栏继续",
+    "continuing": "正在准备表单…",
+    "description": "该站点要求先完成安全验证，扩展暂时无法自动获取 Access Token。已识别的信息已保留，请手动填写账号管理令牌。",
+    "destinationBusy": "这里已有未完成的账号表单。保存或关闭后，将继续从弹窗带来的表单。",
+    "fullPageHint": "在完整页面继续可保留当前表单，切换到站点复制令牌时不会关闭。",
+    "generateStep": "已有有效的完整 Access Token 时可直接填写；否则，打开站点的「安全设置 → Access Token」，完成验证并生成令牌。",
+    "openSecurity": "打开站点安全设置",
+    "openSecurityFailed": "无法打开页面。请手动进入该站点的「安全设置 → Access Token」，复制令牌后回到这里填写。",
+    "pasteStep": "立即复制完整的 Access Token，粘贴到下方「访问令牌」字段，核对账号信息后保存。",
+    "popupHint": "转到侧边栏后，当前表单会保留；你可以在站点完成验证、复制令牌，同时继续填写。侧边栏无法打开时，会在完整页面继续。",
+    "prepareFailed": "无法暂存当前表单。请先复制需要保留的信息，再从侧边栏重新打开账号表单。",
+    "restoreFailed": "无法恢复未完成的表单，可能已过期。请重新打开账号表单。",
+    "rotationWarning": "重新生成会使旧 Access Token 失效，其他使用旧令牌的工具也需要更新。",
+    "title": "手动填写 Access Token"
+  },
   "actions": {
     "autoConfigAriaLabel": "保存账号并前往 {{managedSite}} 渠道配置",
     "autoConfigRequiresValidAccount": "请先补全当前账号信息",

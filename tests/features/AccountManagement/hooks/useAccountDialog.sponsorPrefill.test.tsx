@@ -4,7 +4,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { DIALOG_MODES } from "~/constants/dialogModes"
 import { SITE_TYPES } from "~/constants/siteType"
 import { useAccountDialog } from "~/features/AccountManagement/components/AccountDialog/hooks/useAccountDialog"
-import { ACCOUNT_DIALOG_FORM_SOURCES } from "~/features/AccountManagement/components/AccountDialog/models"
+import {
+  ACCOUNT_DIALOG_FORM_SOURCES,
+  ACCOUNT_DIALOG_PHASES,
+  createEmptyAccountDialogDraft,
+} from "~/features/AccountManagement/components/AccountDialog/models"
 import { BOOKMARK_IMPORT_ADD_ACCOUNT_PREFILL_SOURCE } from "~/features/AccountManagement/sponsors/types"
 import { AuthTypeEnum } from "~/types"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
@@ -111,6 +115,43 @@ describe("useAccountDialog sponsor prefill", () => {
       return () => {}
     })
     onTabUpdatedMock.mockImplementation(() => () => {})
+  })
+
+  it("resumes manual token recovery without replacing the carried form with the active tab", async () => {
+    const recoveryState = {
+      url: "https://original-site.example.com",
+      draft: {
+        ...createEmptyAccountDialogDraft(SITE_TYPES.NEW_API),
+        username: "retained-user",
+        userId: "42",
+        siteName: "My original site",
+        notes: "Notes entered in the popup",
+        tagIds: ["personal"],
+        accessToken: "manually-entered-token",
+        exchangeRate: "7.2",
+      },
+      checkInSelectionChanged: false,
+      checkInDiscoveryBaseSelection: null,
+    }
+    const { result } = renderAccountDialogHook({
+      mode: DIALOG_MODES.ADD,
+      isOpen: true,
+      onClose: vi.fn(),
+      onSuccess: vi.fn(),
+      recoveryState,
+    })
+
+    await waitFor(() => {
+      expect(result.current.state.phase).toBe(
+        ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM,
+      )
+      expect(result.current.state.url).toBe(recoveryState.url)
+      expect(result.current.state.draft).toEqual(recoveryState.draft)
+      expect(result.current.state.detectionError?.type).toBe(
+        "access_token_verification_required",
+      )
+    })
+    expect(result.current.state.showAccessToken).toBe(false)
   })
 
   it("keeps the current-site prompt live while binding title updates to the selected URL", async () => {

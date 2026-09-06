@@ -1,4 +1,22 @@
 {
+  "accessTokenVerification": {
+    "continueFailed": "サイドパネルも通常のページも開けませんでした。フォームは保持されています。もう一度お試しください。",
+    "continueInFullPage": "通常のページで続行",
+    "continueInSidePanel": "サイドパネルで続行",
+    "continuing": "フォームを準備中…",
+    "description": "このサイトでは Access Token の生成前にセキュリティ確認が必要なため、自動取得できません。検出済みのアカウント情報は保持されています。アカウント管理用の Access Token を入力してください。",
+    "destinationBusy": "ここには未完了のアカウントフォームがあります。保存または閉じると、ポップアップから引き継いだフォームに進みます。",
+    "fullPageHint": "通常のページで続行すると、サイトでトークンをコピーしている間もフォームを開いたままにできます。",
+    "generateStep": "有効な Access Token の全文を保存している場合は、そのまま入力できます。それ以外は、サイトの「セキュリティ → Access Token」を開き、認証を完了してトークンを生成してください。",
+    "openSecurity": "サイトのセキュリティ設定を開く",
+    "openSecurityFailed": "ページを開けませんでした。サイトの「セキュリティ → Access Token」を手動で開き、トークンをコピーしてここに貼り付けてください。",
+    "pasteStep": "完全な Access Token をすぐにコピーし、下の「アクセストークン」欄に貼り付けて、アカウント情報を確認して保存してください。",
+    "popupHint": "サイドパネルに移動すると、フォームを保持したままサイトで本人確認を行い、トークンをコピーできます。サイドパネルを開けない場合は、通常のページで続行します。",
+    "prepareFailed": "フォームを一時保存できませんでした。必要な情報をコピーしてから、サイドパネルでアカウントフォームを開き直してください。",
+    "restoreFailed": "未完了のフォームを復元できませんでした。有効期限が切れた可能性があります。アカウントフォームを開き直してください。",
+    "rotationWarning": "再生成すると古い Access Token は無効になります。古いトークンを使用する他のツールも更新してください。",
+    "title": "Access Token を手動で入力"
+  },
   "actions": {
     "autoConfigAriaLabel": "アカウントを保存して {{managedSite}} のチャネル設定を開く",
     "autoConfigRequiresValidAccount": "先にアカウント情報を入力してください",

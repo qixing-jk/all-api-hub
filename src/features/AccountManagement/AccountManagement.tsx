@@ -524,6 +524,9 @@ function AccountManagement({
     <AccountManagementProvider
       refreshKey={refreshKey}
       onOpenBookmarkImport={openBookmarkImportDialog}
+      initialRecoveryId={
+        routeParams?.[ACCOUNT_MANAGEMENT_ROUTE_PARAMS.AccountDialogRecovery]
+      }
     >
       <AccountManagementContent
         searchQuery={routeParams?.search}

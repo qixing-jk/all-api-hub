@@ -7,14 +7,14 @@ import {
   type AccountSiteType,
 } from "~/constants/siteType"
 import {
-  completeAutoDetectedAccount,
-  getAutoDetectCompletionFailureReason,
-} from "~/services/accounts/autoDetectCompletion/completion"
-import {
   createDetectedAccountRecoveryData,
   mergeAccountAutoDetectRecoveryData,
   type AccountAutoDetectRecoveryData,
 } from "~/services/accounts/autoDetect/recovery"
+import {
+  completeAutoDetectedAccount,
+  getAutoDetectCompletionFailureReason,
+} from "~/services/accounts/autoDetectCompletion/completion"
 import {
   analyzeAutoDetectError,
   AUTO_DETECT_FAILURE_REASONS,
@@ -66,6 +66,8 @@ function getAutoDetectCompletionFailureMessage(
   fallbackErrorMessage: string,
 ) {
   switch (reason) {
+    case AUTO_DETECT_FAILURE_REASONS.AccessTokenVerificationRequired:
+      return t("accountDialog:accessTokenVerification.description")
     case AUTO_DETECT_FAILURE_REASONS.TokenFetchFailed:
     case AUTO_DETECT_FAILURE_REASONS.AccessTokenMissing:
       return t("messages:operations.detection.getAccessTokenFailedDetailed")
@@ -87,6 +89,11 @@ function getAutoDetectCompletionDetailedError(
   message: string,
 ) {
   switch (reason) {
+    case AUTO_DETECT_FAILURE_REASONS.AccessTokenVerificationRequired:
+      return {
+        type: AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED,
+        message,
+      }
     case AUTO_DETECT_FAILURE_REASONS.UsernameMissing:
     case AUTO_DETECT_FAILURE_REASONS.AccessTokenMissing:
       return {

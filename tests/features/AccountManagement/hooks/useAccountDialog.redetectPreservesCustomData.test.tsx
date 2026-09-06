@@ -1057,6 +1057,69 @@ describe("useAccountDialog re-detect preservation", () => {
     expect(result.current.state.showManualForm).toBe(false)
   })
 
+  it.each(["url", "site type", "auth type"])(
+    "switches Cookie detection to manual token entry and clears verification guidance when the %s changes",
+    async (changedField) => {
+      const detailedError = {
+        type: AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED,
+        message: "Security verification required",
+      }
+      mockAutoDetectAccount.mockResolvedValueOnce({
+        success: false,
+        detailedError,
+        autoDetectContext: { siteType: SITE_TYPES.NEW_API },
+        recoveryData: {
+          siteType: SITE_TYPES.NEW_API,
+          userId: "42",
+          username: "detected-user",
+          authType: AuthTypeEnum.AccessToken,
+        },
+      })
+      const { result } = renderHook(() =>
+        useAccountDialog({
+          mode: DIALOG_MODES.ADD,
+          isOpen: true,
+          onClose: vi.fn(),
+        }),
+      )
+      await waitFor(() => expect(result.current.state).toBeTruthy())
+      await act(async () => {
+        result.current.setters.setUrl("https://verification.example.invalid")
+        result.current.setters.setAuthType(AuthTypeEnum.Cookie)
+        result.current.setters.setNotes("Keep my notes")
+      })
+      expect(result.current.state.authType).toBe(AuthTypeEnum.Cookie)
+      await act(async () => {
+        await result.current.handlers.handleAutoDetect()
+      })
+
+      expect(result.current.state.authType).toBe(AuthTypeEnum.AccessToken)
+      expect(result.current.state.showManualForm).toBe(true)
+      expect(result.current.state.detectionError).toEqual(detailedError)
+      expect(result.current.state.tokenRecoveryState?.draft).toMatchObject({
+        siteType: SITE_TYPES.NEW_API,
+        authType: AuthTypeEnum.AccessToken,
+        userId: "42",
+        username: "detected-user",
+        notes: "Keep my notes",
+      })
+
+      await act(async () => {
+        if (changedField === "url") {
+          result.current.handlers.handleUrlChange(
+            "https://other.example.invalid",
+          )
+        } else if (changedField === "site type") {
+          result.current.setters.setSiteType(SITE_TYPES.VELOERA)
+        } else {
+          result.current.setters.setAuthType(AuthTypeEnum.Cookie)
+        }
+      })
+      expect(result.current.state.detectionError).toBeNull()
+      expect(result.current.state.tokenRecoveryState).toBeNull()
+    },
+  )
+
   it("uses a detected site type to prepare manual completion after auto-detect fails", async () => {
     const detailedError = {
       type: AutoDetectErrorType.UNAUTHORIZED,

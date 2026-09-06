@@ -1,4 +1,22 @@
 {
+  "accessTokenVerification": {
+    "continueFailed": "Weder Seitenleiste noch vollständige Seite konnten geöffnet werden. Dein Formular bleibt erhalten. Bitte versuche es erneut.",
+    "continueInFullPage": "Auf vollständiger Seite fortfahren",
+    "continueInSidePanel": "In der Seitenleiste fortfahren",
+    "continuing": "Formular wird vorbereitet…",
+    "description": "Diese Website verlangt vor dem Erstellen eines Access Tokens eine Sicherheitsprüfung. Das Token kann daher nicht automatisch abgerufen werden. Erkannte Kontodaten bleiben erhalten. Gib ein Access Token zur Kontoverwaltung ein.",
+    "destinationBusy": "Hier ist bereits ein Kontoformular geöffnet. Speichere oder schließe es, um mit dem Formular aus dem Popup fortzufahren.",
+    "fullPageHint": "Auf einer vollständigen Seite bleibt dieses Formular geöffnet, während du das Token auf der Website kopierst.",
+    "generateStep": "Verwende einen vorhandenen gültigen, vollständigen Access Token. Andernfalls öffne auf der Website Sicherheit → Access Token, schließe die Verifizierung ab und erstelle einen Token.",
+    "openSecurity": "Sicherheitseinstellungen der Website öffnen",
+    "openSecurityFailed": "Die Seite konnte nicht geöffnet werden. Öffne Sicherheit → Access Token auf der Website manuell und kehre zum Einfügen des Tokens hierher zurück.",
+    "pasteStep": "Kopiere das vollständige Access Token sofort, füge es unten im Feld „Access Token“ ein, prüfe die Kontodaten und speichere sie.",
+    "popupHint": "In der Seitenleiste bleibt dieses Formular erhalten, während du dich auf der Website verifizierst und das Token kopierst. Lässt sich die Seitenleiste nicht öffnen, wird das Formular auf einer vollständigen Seite geöffnet.",
+    "prepareFailed": "Das Formular konnte nicht zwischengespeichert werden. Kopiere benötigte Angaben, bevor du das Kontoformular in der Seitenleiste erneut öffnest.",
+    "restoreFailed": "Das unvollständige Formular konnte nicht wiederhergestellt werden. Es ist möglicherweise abgelaufen. Öffne das Kontoformular erneut.",
+    "rotationWarning": "Ein neues Access Token macht das alte ungültig. Aktualisiere auch andere Tools, die das alte Token verwenden.",
+    "title": "Access Token manuell eingeben"
+  },
   "actions": {
     "autoConfigAriaLabel": "Konto speichern und Kanaleinrichtung {{managedSite}} öffnen",
     "autoConfigRequiresValidAccount": "Füllen Sie zuerst das Kontoformular aus",

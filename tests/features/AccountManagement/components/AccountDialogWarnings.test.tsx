@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, within } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
@@ -87,6 +88,88 @@ describe("AccountDialog warnings", () => {
     trackProductAnalyticsEventMock.mockReset()
     trackProductAnalyticsEventMock.mockResolvedValue(true)
     ;(browser.tabs as any).create = vi.fn()
+  })
+
+  it("keeps access-token recovery in the popup until the user continues in a persistent view", async () => {
+    const user = userEvent.setup()
+    const onContinue = vi.fn()
+
+    render(
+      <AutoDetectErrorAlert
+        error={{
+          type: AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED,
+          message: "Complete security verification on the site",
+        }}
+        siteUrl="https://site.example.com"
+        siteType={SITE_TYPES.NEW_API}
+        manualAddGuideAnchor={ACCOUNT_SITE_MANUAL_ADD_GUIDE_ANCHORS.NewApi}
+        accessTokenContinuation={{
+          onContinue,
+          isPending: false,
+          sidePanelSupported: true,
+        }}
+      />,
+    )
+
+    expect(screen.getByText("accessTokenVerification.title")).toBeVisible()
+    expect(screen.getByText("accessTokenVerification.popupHint")).toBeVisible()
+    expect(
+      screen.queryByRole("button", {
+        name: "accessTokenVerification.openSecurity",
+      }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "actions.openManualAddGuide" }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText("apiCredentialFallback.title"),
+    ).not.toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "accessTokenVerification.continueInSidePanel",
+      }),
+    )
+
+    expect(onContinue).toHaveBeenCalledTimes(1)
+    expect(browser.tabs.create).not.toHaveBeenCalled()
+  })
+
+  it("opens New API security settings from a persistent view and explains token rotation", async () => {
+    const user = userEvent.setup()
+    render(
+      <AutoDetectErrorAlert
+        error={{
+          type: AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED,
+          message: "Verify on the site",
+        }}
+        siteUrl="http://local.example.test/new-api"
+        siteType={SITE_TYPES.NEW_API}
+        manualAddGuideAnchor={ACCOUNT_SITE_MANUAL_ADD_GUIDE_ANCHORS.NewApi}
+      />,
+    )
+    expect(
+      screen.getByText("accessTokenVerification.generateStep"),
+    ).toBeVisible()
+    expect(screen.getByText("accessTokenVerification.pasteStep")).toBeVisible()
+    expect(
+      screen.getByText("accessTokenVerification.rotationWarning"),
+    ).toBeVisible()
+    await user.click(
+      screen.getByRole("button", {
+        name: "accessTokenVerification.openSecurity",
+      }),
+    )
+    expect(browser.tabs.create).toHaveBeenCalledWith({
+      url: "http://local.example.test/new-api/security",
+      active: true,
+    })
+    expect(
+      screen.getByRole("button", { name: "actions.openManualAddGuide" }),
+    ).toBeVisible()
+    expect(
+      screen.queryByText("apiCredentialFallback.title"),
+    ).not.toBeInTheDocument()
   })
 
   it("shows only the message when no action or help recovery is available", () => {

@@ -92,6 +92,8 @@ export const STORAGE_LOCKS = {
    * recommendation catalog cache.
    */
   SPONSOR_CATALOG: "all-api-hub:sponsor-catalog",
+  /** Exclusive claim of a popup account draft by its destination view. */
+  ACCOUNT_DIALOG_RECOVERY: "all-api-hub:account-dialog-recovery",
 } as const
 
 export const ACCOUNT_STORAGE_KEYS = {
@@ -178,6 +180,11 @@ const SPONSOR_ADD_ACCOUNT_INTENT_STORAGE_KEYS = {
 
 const POPUP_INTERRUPTION_STORAGE_KEYS = {
   HINT: "popupInterruption_hint_v1",
+} as const
+
+export const ACCOUNT_DIALOG_RECOVERY_STORAGE_KEYS = {
+  DRAFT_PREFIX: "accountDialogRecovery_draft_v1:",
+  PENDING_PREFIX: "accountDialogRecovery_pending_v1:",
 } as const
 
 /**
