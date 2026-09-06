@@ -50,6 +50,34 @@ import zhTwManagedSiteChannels from "~/locales/zh-TW/managedSiteChannels.json"
 import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
 import type { ResourceFieldDescriptor } from "~/services/apiAdapters/contracts/managedResourceNative"
 
+describe("Octopus native editor vocabulary", () => {
+  it("exposes native outbound types and only the supported channel controls", () => {
+    for (const mode of ["create", "edit"] as const) {
+      const policy = getManagedResourceFieldPolicy(
+        SITE_TYPES.OCTOPUS,
+        MANAGED_RESOURCE_KINDS.Channel,
+        mode,
+      )
+      expect(policy).toBeDefined()
+      const type = policy!.fields.find(
+        (field) => field.channelFieldRole === "type",
+      )!
+      expect(
+        type.optionLabelResolvers?.["0"]?.(((key: string) => key) as TFunction),
+      ).toBe("OpenAI Chat")
+      expect(
+        type.optionLabelResolvers?.["2"]?.(((key: string) => key) as TFunction),
+      ).toBe("Anthropic")
+      expect(
+        policy!.fields.some((field) => field.channelFieldRole === "secret"),
+      ).toBe(true)
+      expect(
+        policy!.fields.some((field) => field.channelFieldRole === "models"),
+      ).toBe(true)
+    }
+  })
+})
+
 const createDescriptors = (): readonly ResourceFieldDescriptor[] => [
   { fieldId: AXON_HUB_CHANNEL_FIELD_IDS.NAME, type: "text", required: true },
   {

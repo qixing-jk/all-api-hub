@@ -18,6 +18,7 @@ import { discoverCheckInMethods } from "~/services/checkin/autoCheckin/discovery
 import { executeSelectedCheckIn } from "~/services/checkin/autoCheckin/methods"
 import { autoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers"
 import { sub2apiProProvider } from "~/services/checkin/autoCheckin/providers/sub2apiPro"
+import { mergeRefreshedCheckInStatus } from "~/services/checkin/autoCheckin/state"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
@@ -348,6 +349,157 @@ describe("Sub2API Pro daily check-in method Adapter", () => {
     })
   })
 
+  it("persists mutation-time capability loss without replacing manual selection", async () => {
+    let account = createAccount()
+    account.checkIn.selection = { mode: "manual", methodId: METHOD_ID }
+    vi.mocked(performSub2ApiProDailyCheckIn).mockRejectedValue(
+      new ApiError("unsupported", 404),
+    )
+    const result = await executeSelectedCheckIn({
+      account,
+      globalAutomaticExecutionEnabled: true,
+      context: executionContext(),
+      revalidateAccount: async (refreshed) => {
+        if (refreshed)
+          account = {
+            ...account,
+            checkIn: mergeRefreshedCheckInStatus({
+              latest: account.checkIn,
+              refreshed,
+            }),
+          }
+        return account
+      },
+    })
+    expect(result).toMatchObject({
+      kind: "executed",
+      retryable: false,
+      result: { reasonCode: "method_unsupported" },
+    })
+    expect(account.checkIn.selection).toEqual({
+      mode: "manual",
+      methodId: METHOD_ID,
+    })
+    expect(
+      account.checkIn.methodKnowledge.methods[METHOD_ID]?.detection.outcome,
+    ).toBe("unsupported")
+    vi.mocked(performSub2ApiProDailyCheckIn).mockClear()
+    await expect(
+      executeSelectedCheckIn({
+        account,
+        globalAutomaticExecutionEnabled: true,
+        context: executionContext(),
+      }),
+    ).resolves.toMatchObject({ kind: "skipped", reason: "method_unsupported" })
+    expect(performSub2ApiProDailyCheckIn).not.toHaveBeenCalled()
+  })
+
+  it.each([false, true])(
+    "allows bounded status recovery before a mutation (retry %s)",
+    async (retry) => {
+      vi.mocked(fetchSub2ApiProDailyCheckInStatus).mockRejectedValue(
+        new TypeError("Failed to fetch"),
+      )
+      await expect(
+        executeSelectedCheckIn({
+          account: createAccount(),
+          globalAutomaticExecutionEnabled: true,
+          context: executionContext(),
+          requireStatusConfirmationBeforeMutation: retry,
+        }),
+      ).resolves.toMatchObject({
+        kind: "blocked",
+        reason: "network_error",
+        retryable: true,
+      })
+      expect(performSub2ApiProDailyCheckIn).not.toHaveBeenCalled()
+    },
+  )
+
+  it.each([
+    SUB2API_AUTH_PERSISTENCE_STATUSES.IDENTITY_MISMATCH,
+    SUB2API_AUTH_PERSISTENCE_STATUSES.WRITE_FAILED,
+    SUB2API_AUTH_PERSISTENCE_STATUSES.ACCOUNT_MISSING,
+  ])(
+    "does not retry an unclassified status failure from auth persistence: %s",
+    async (status) => {
+      vi.mocked(fetchSub2ApiProDailyCheckInStatus).mockRejectedValue(
+        Object.assign(new Error("controlled auth failure"), {
+          result: { status },
+        }),
+      )
+      const result = await executeSelectedCheckIn({
+        account: createAccount(),
+        globalAutomaticExecutionEnabled: true,
+        context: executionContext(),
+      })
+      expect(result).not.toHaveProperty("retryable", true)
+      expect(performSub2ApiProDailyCheckIn).not.toHaveBeenCalled()
+    },
+  )
+
+  it.each([404, 405])(
+    "never retries an authoritative HTTP %s capability loss",
+    async (code) => {
+      vi.mocked(fetchSub2ApiProDailyCheckInStatus).mockRejectedValue(
+        new ApiError("unsupported", code),
+      )
+      const result = await executeSelectedCheckIn({
+        account: createAccount(),
+        globalAutomaticExecutionEnabled: true,
+        context: executionContext(),
+        requireStatusConfirmationBeforeMutation: true,
+      })
+      expect(result).toMatchObject({
+        kind: "skipped",
+        reason: "method_unsupported",
+      })
+      expect(result).not.toHaveProperty("retryable", true)
+      expect(performSub2ApiProDailyCheckIn).not.toHaveBeenCalled()
+    },
+  )
+
+  it.each([
+    ["status", "returns null"],
+    ["mutation", "returns null"],
+    ["status", "throws"],
+    ["mutation", "throws"],
+  ])(
+    "reports a local failure when %s capability persistence %s",
+    async (phase, failure) => {
+      const account = createAccount()
+      if (phase === "status")
+        vi.mocked(fetchSub2ApiProDailyCheckInStatus).mockRejectedValue(
+          new ApiError("unsupported", 404),
+        )
+      else
+        vi.mocked(performSub2ApiProDailyCheckIn).mockRejectedValue(
+          new ApiError("unsupported", 404),
+        )
+      await expect(
+        executeSelectedCheckIn({
+          account,
+          globalAutomaticExecutionEnabled: true,
+          context: executionContext(),
+          revalidateAccount: async (config) => {
+            if (
+              config?.methodKnowledge.methods[METHOD_ID]?.detection.outcome ===
+              "unsupported"
+            ) {
+              if (failure === "throws") throw new Error("storage write failed")
+              return null
+            }
+            return account
+          },
+        }),
+      ).resolves.toMatchObject({
+        kind: "blocked",
+        reason: "account_unavailable",
+        retryable: false,
+      })
+    },
+  )
+
   it("reuses the same-cycle status proof before sending one mutation", async () => {
     const registration = autoCheckinMethodRegistry.resolveById(METHOD_ID)
     if (!registration?.provider.getStatus) throw new Error("Missing Adapter")
@@ -526,6 +678,25 @@ describe("Sub2API Pro daily check-in method Adapter", () => {
       expect(revalidateAccount).toHaveBeenCalledTimes(2)
     },
   )
+
+  it("does not queue another mutation when reconciliation reports the method disabled", async () => {
+    vi.mocked(fetchSub2ApiProDailyCheckInStatus)
+      .mockResolvedValueOnce({ enabled: true, checkedInToday: false })
+      .mockResolvedValueOnce({ enabled: false, checkedInToday: false })
+    vi.mocked(performSub2ApiProDailyCheckIn).mockImplementation(
+      async (_request) => {
+        _request.observer?.onDispatch?.()
+        throw new TypeError("Failed to fetch")
+      },
+    )
+    const result = await executeSelectedCheckIn({
+      account: createAccount(),
+      globalAutomaticExecutionEnabled: true,
+      context: executionContext(),
+    })
+    expect(result).toMatchObject({ kind: "executed", retryable: false })
+    expect(performSub2ApiProDailyCheckIn).toHaveBeenCalledOnce()
+  })
 
   it("turns authoritative not-checked reconciliation into one later safe retry", async () => {
     const registration = autoCheckinMethodRegistry.resolveById(METHOD_ID)

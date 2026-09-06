@@ -987,7 +987,7 @@ export const openManagedSiteChannelsPage = withPopupClose(
  * Open Managed Site channel management focused on a single channel id.
  */
 export const openManagedSiteChannelsForChannel = withPopupClose(
-  (channelId: number) => _openManagedSiteChannelsPage({ channelId }),
+  (channelId: number | string) => _openManagedSiteChannelsPage({ channelId }),
 )
 
 /**

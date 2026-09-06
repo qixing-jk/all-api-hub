@@ -363,6 +363,7 @@
     "verifyApiFailed": "Failed to open API verification",
     "verifyCliSupportFailed": "Failed to open CLI compatibility verification"
   },
+  "noAccountsSupportKeyCreation": "None of the accounts in this view support creating API keys. Select another account or add a supported account.",
   "noKeys": "No key data yet",
   "noMatchingKeys": "No matching keys found",
   "oneTimeKey": {

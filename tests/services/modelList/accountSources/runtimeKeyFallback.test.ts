@@ -168,8 +168,13 @@ const createModelCatalogAdapter = (
 const mockSub2ApiModelCatalogAdapter = (
   fetchModels = fetchSub2ApiRuntimeModelsMock,
 ) => {
-  getSiteTypeCapabilitiesMock.mockReturnValue(
-    createSub2ApiModelCatalogAdapter(fetchModels),
+  getSiteTypeCapabilitiesMock.mockImplementation((siteType) =>
+    siteType === SITE_TYPES.SUB2API
+      ? createSub2ApiModelCatalogAdapter(fetchModels)
+      : {
+          siteType,
+          account: { modelPricing: { fetchPricing: vi.fn() } },
+        },
   )
 }
 
@@ -433,51 +438,38 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
           models: "",
         },
       }),
-    ).rejects.toThrow("modelPricing is not implemented for AIHubMix")
+    ).rejects.toThrow(
+      "No model-list source capability is registered for AIHubMix",
+    )
 
     expect(resolveDisplayAccountTokenForSecretMock).not.toHaveBeenCalled()
     expect(fetchOpenAICompatibleModelIdsMock).not.toHaveBeenCalled()
   })
 
-  it("does not use the Sub2API runtime-key fallback for compatible accounts without direct pricing adapters", async () => {
+  it("reports unsupported when a compatible account has no registered model-list source", async () => {
     getSiteTypeCapabilitiesMock.mockReturnValueOnce({
       siteType: SITE_TYPES.NEW_API,
     })
-    resolveDisplayAccountTokenForSecretMock.mockResolvedValueOnce({
-      ...TOKEN,
-      key: "sk-real-secret",
-    })
-    fetchOpenAICompatibleModelIdsMock.mockResolvedValueOnce(["gpt-compatible"])
-
-    const result = await loadAccountRuntimeKeyFallbackPricingResponseFromToken({
-      account: {
-        ...ACCOUNT,
-        siteType: SITE_TYPES.NEW_API,
-        baseUrl: "https://compatible.example.invalid",
-      },
-      token: {
-        ...TOKEN,
-        key: "sk-compatible-masked",
-        models: "",
-      },
-    })
-
-    expect(resolveDisplayAccountRuntimeKeySecretMock).toHaveBeenCalled()
-    expect(fetchOpenAICompatibleModelIdsMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        apiType: "openai-compatible",
-        baseUrl: "https://compatible.example.invalid",
-        apiKey: "sk-real-secret",
+    await expect(
+      loadAccountRuntimeKeyFallbackPricingResponseFromToken({
+        account: {
+          ...ACCOUNT,
+          siteType: SITE_TYPES.NEW_API,
+          baseUrl: "https://compatible.example.invalid",
+        },
+        token: {
+          ...TOKEN,
+          key: "sk-compatible-masked",
+          models: "",
+        },
       }),
+    ).rejects.toThrow(
+      "No model-list source capability is registered for new-api",
     )
+
+    expect(resolveDisplayAccountRuntimeKeySecretMock).not.toHaveBeenCalled()
+    expect(fetchOpenAICompatibleModelIdsMock).not.toHaveBeenCalled()
     expect(fetchSub2ApiRuntimeModelsMock).not.toHaveBeenCalled()
-    expect(result.data.map((item) => item.model_name)).toEqual([
-      "gpt-compatible",
-    ])
-    expect(result.model_list_source).toEqual({
-      kind: MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
-      supportsPricing: false,
-    })
   })
 
   it("preserves Sub2API evidence when estimate fetching fails", async () => {
@@ -872,7 +864,9 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
           key: "sk-masked-sub2api",
         },
       }),
-    ).rejects.toThrow("modelCatalog is not implemented for sub2api")
+    ).rejects.toThrow(
+      "No model-list source capability is registered for sub2api",
+    )
 
     expect(fetchSub2ApiRuntimeModelsMock).not.toHaveBeenCalled()
   })

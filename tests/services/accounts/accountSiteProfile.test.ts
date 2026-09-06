@@ -1,19 +1,17 @@
 import { describe, expect, it } from "vitest"
 
 import {
-  ACCOUNT_SITE_AUTH_SESSION_REFRESH_LOCK_SCOPES,
   ACCOUNT_SITE_CREATED_TOKEN_SECRET_HANDLING,
   ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS,
-  ACCOUNT_SITE_MODEL_LIST_DIRECT_PRICING,
   ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES,
   ACCOUNT_SITE_MODEL_LIST_GROUP_SEMANTICS,
   ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES,
-  ACCOUNT_SITE_MODEL_LIST_TOKEN_SCOPED_CATALOG_FALLBACKS,
   ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS,
   ACCOUNT_SITE_TOKEN_FORM_NETWORK_LIMIT_POLICIES,
   doAccountSiteIdentitiesMatch,
   getAccountSiteModelListProfile,
   getAccountSiteProductProfile,
+  isAccountAuthTypeAllowed,
   isAccountSiteProfileUrl,
   normalizeAccountSiteProfileUrlForDuplicateCheck,
   normalizeAccountSiteProfileUrlForManagedChannel,
@@ -26,7 +24,6 @@ import {
   resolveAccountSiteTokenFormNetworkLimitPolicy,
   resolveAccountSiteUserIdentity,
   shouldDecorateAccountApiRequestWithAuthSession,
-  shouldUseAccountSiteRuntimeKeyCatalogFallback,
 } from "~/services/accounts/accountSiteProfile"
 import * as accountSiteProfileApi from "~/services/accounts/accountSiteProfile"
 import {
@@ -42,6 +39,21 @@ import {
 } from "~/types/accountTodayStats"
 
 describe("accountSiteProfile", () => {
+  it("derives auth support from the allowed authentication types", () => {
+    expect(
+      isAccountAuthTypeAllowed(SITE_TYPES.AIHUBMIX, AuthTypeEnum.AccessToken),
+    ).toBe(true)
+    expect(
+      isAccountAuthTypeAllowed(SITE_TYPES.AIHUBMIX, AuthTypeEnum.Cookie),
+    ).toBe(false)
+    expect(
+      isAccountAuthTypeAllowed(SITE_TYPES.SHAREDCHAT, AuthTypeEnum.Cookie),
+    ).toBe(true)
+    expect(
+      isAccountAuthTypeAllowed(SITE_TYPES.SHAREDCHAT, AuthTypeEnum.AccessToken),
+    ).toBe(false)
+  })
+
   it("returns independent deferred and legacy metric policies", () => {
     const profile = getAccountSiteProductProfile(SITE_TYPES.NEW_API)
 
@@ -65,21 +77,18 @@ describe("accountSiteProfile", () => {
       AuthTypeEnum.AccessToken,
       AuthTypeEnum.Cookie,
     ])
+    expect(profile.auth).not.toHaveProperty("supportsCookieAuth")
     expect(profile.auth.defaultAuthType).toBe(AuthTypeEnum.AccessToken)
     expect(profile.auth.defaultAuthHostnames).toEqual([])
-    expect(profile.auth.supportsCookieAuth).toBe(true)
-    expect(profile.supplementalAuth.kind).toBe(
-      ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS.None,
-    )
-    expect(profile.authSession.decoratesAccountApiRequests).toBe(false)
+    expect(profile.authSession).toEqual({
+      kind: ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS.None,
+    })
+    expect(profile).not.toHaveProperty("supplementalAuth")
     expect(profile.createdToken.secretHandling).toBe(
       ACCOUNT_SITE_CREATED_TOKEN_SECRET_HANDLING.ResponseKey,
     )
     expect(profile.tokenForm.networkLimitPolicy).toBe(
       ACCOUNT_SITE_TOKEN_FORM_NETWORK_LIMIT_POLICIES.IpList,
-    )
-    expect(profile.modelList.directPricing).toBe(
-      ACCOUNT_SITE_MODEL_LIST_DIRECT_PRICING.Supported,
     )
     expect(profile.modelList.statusScope).toBe(
       ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Account,
@@ -95,7 +104,6 @@ describe("accountSiteProfile", () => {
     expect(profile.siteType).toBe(SITE_TYPES.MODELFLARE)
     expect(profile.auth.defaultAuthType).toBe(AuthTypeEnum.Cookie)
     expect(profile.auth.defaultAuthHostnames).toEqual([MODELFLARE_HOSTNAME])
-    expect(profile.auth.supportsCookieAuth).toBe(true)
   })
 
   it("keeps OpenRouter identity as ordinary optional account metadata", () => {
@@ -112,21 +120,10 @@ describe("accountSiteProfile", () => {
 
     expect(profile.identity.usernameRequired).toBe(false)
     expect(profile.auth.allowedAuthTypes).toEqual([AuthTypeEnum.AccessToken])
-    expect(profile.auth.supportsCookieAuth).toBe(false)
-    expect(profile.supplementalAuth.kind).toBe(
-      ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS.Sub2ApiRefreshToken,
-    )
-    expect(profile.authSession).toMatchObject({
+    expect(profile.authSession).toEqual({
       kind: ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS.Sub2ApiRefreshToken,
-      decoratesAccountApiRequests: true,
-      refreshLockScope: ACCOUNT_SITE_AUTH_SESSION_REFRESH_LOCK_SCOPES.Account,
     })
-    expect(profile.modelList.directPricing).toBe(
-      ACCOUNT_SITE_MODEL_LIST_DIRECT_PRICING.Unsupported,
-    )
-    expect(profile.modelList.tokenScopedCatalogFallback).toBe(
-      ACCOUNT_SITE_MODEL_LIST_TOKEN_SCOPED_CATALOG_FALLBACKS.RuntimeKey,
-    )
+    expect(profile).not.toHaveProperty("supplementalAuth")
     expect(profile.modelList.dashboardEstimateLoader).toBe(
       ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS.Sub2Api,
     )
@@ -148,13 +145,6 @@ describe("accountSiteProfile", () => {
     ])
     expect(profile.auth.allowedAuthTypes).toEqual([AuthTypeEnum.AccessToken])
     expect(profile.auth.defaultAuthType).toBe(AuthTypeEnum.AccessToken)
-    expect(profile.auth.supportsCookieAuth).toBe(false)
-    expect(profile.modelList.directPricing).toBe(
-      ACCOUNT_SITE_MODEL_LIST_DIRECT_PRICING.Unsupported,
-    )
-    expect(profile.modelList.tokenScopedCatalogFallback).toBe(
-      ACCOUNT_SITE_MODEL_LIST_TOKEN_SCOPED_CATALOG_FALLBACKS.None,
-    )
     expect(profile.modelList.groupSemantics).toBe(
       ACCOUNT_SITE_MODEL_LIST_GROUP_SEMANTICS.ACCOUNT_OR_RUNTIME_KEY,
     )
@@ -168,34 +158,23 @@ describe("accountSiteProfile", () => {
     expect(
       getAccountSiteProductProfileOverride(SITE_TYPES.SUB2API),
     ).toMatchObject({
-      supplementalAuth: {
+      authSession: {
         kind: ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS.Sub2ApiRefreshToken,
       },
     })
     expect(getAccountSiteProductProfile(SITE_TYPES.SUB2API)).toMatchObject({
-      supplementalAuth: {
+      authSession: {
         kind: ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS.Sub2ApiRefreshToken,
       },
       modelList: {
-        tokenScopedCatalogFallback:
-          ACCOUNT_SITE_MODEL_LIST_TOKEN_SCOPED_CATALOG_FALLBACKS.RuntimeKey,
+        dashboardEstimateLoader:
+          ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS.Sub2Api,
       },
     })
   })
 
-  it("resolves Model List source-account policy", () => {
-    expect(
-      shouldUseAccountSiteRuntimeKeyCatalogFallback({
-        siteType: SITE_TYPES.SUB2API,
-      }),
-    ).toBe(true)
-    expect(
-      shouldUseAccountSiteRuntimeKeyCatalogFallback({
-        siteType: SITE_TYPES.NEW_API,
-      }),
-    ).toBe(false)
+  it("resolves Model List presentation policy", () => {
     expect(getAccountSiteModelListProfile(SITE_TYPES.SUB2API)).toMatchObject({
-      directPricing: ACCOUNT_SITE_MODEL_LIST_DIRECT_PRICING.Unsupported,
       statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Token,
     })
   })
@@ -219,7 +198,6 @@ describe("accountSiteProfile", () => {
       ACCOUNT_SITE_TOKEN_FORM_NETWORK_LIMIT_POLICIES.SubnetLimit,
     )
     expect(profile.auth.allowedAuthTypes).toEqual([AuthTypeEnum.AccessToken])
-    expect(profile.auth.supportsCookieAuth).toBe(false)
     expect(profile.modelList.displayCapabilitiesSource).toBe(
       ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Profile,
     )

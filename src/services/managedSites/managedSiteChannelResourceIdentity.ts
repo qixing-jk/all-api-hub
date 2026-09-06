@@ -6,6 +6,16 @@ export function getManagedSiteChannelResourceId(
   managedSiteType: ManagedSiteType,
   channel: ManagedSiteChannel,
 ): string | number {
+  return (
+    getManagedSiteChannelNavigationId(managedSiteType, channel) ?? channel.id
+  )
+}
+
+/** Returns a stable deep-link identity; process-local projections cannot identify a native resource. */
+export function getManagedSiteChannelNavigationId(
+  managedSiteType: ManagedSiteType,
+  channel: ManagedSiteChannel,
+): string | number | undefined {
   if (managedSiteType === SITE_TYPES.AXON_HUB) {
     const nativeId = (
       channel as ManagedSiteChannel & {
@@ -15,6 +25,7 @@ export function getManagedSiteChannelResourceId(
     if (nativeId !== undefined && nativeId !== null) {
       return nativeId
     }
+    return undefined
   }
 
   return channel.id

@@ -9,6 +9,18 @@
 
 ## 1. Goals and Non-Goals
 
+### 2026-09-06 execution recovery amendment
+
+This amendment refines issue #1270's blanket exclusion of `unknown` and `skipped` from retries. It changes execution policy and account-state merging, without changing account V7, the backup envelope, or persisted result shapes.
+
+- Authoritative method-unsupported evidence from either selected status readback or a definitive mutation failure is persisted. The merge preserves manual/automatic selection, automatic intent, custom URLs, and newer discovery facts. A missing account or failed write produces a visible, non-retryable account-unavailable failure instead of silently losing the write.
+- Before a mutation is sent, a required status query may be retried within the scheduler's existing daily attempt limit only for classified network, timeout, or source-unavailable failures. Authentication, permission, identity, credential-persistence, malformed-response, and missing-status problems do not enter ordinary automatic retry.
+- Internal `blocked` results distinguish failed execution prerequisites/local persistence from deliberate `skipped` outcomes. The scheduler persists them using the existing `failed` result and explicit `retryable` field. Legacy persisted failures retain their existing compatibility behavior.
+- A retry still requires a fresh usable status read before mutation. An uncertain mutation is never replayed inline; a later retry requires a provider's verified idempotency policy and authoritative enabled/not-checked reconciliation. Disabled or unresolved reconciliation never admits a retry.
+- Existing providers retain best-effort status readback on first attempts where their protocol permits it. Explicit unsupported or authentication/permission evidence stops execution even on that compatibility path.
+
+Issue #1270 acceptance wording should therefore require **evidence-based safe retry admission**, rather than prohibiting every unknown observation from being queried again. The focused acceptance seams are selected execution, account-state persistence, and the scheduler's public run/retry behavior.
+
 ### Goals
 
 Establish a general check-in method model for each account so the system can:

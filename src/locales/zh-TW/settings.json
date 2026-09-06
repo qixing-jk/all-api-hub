@@ -71,7 +71,7 @@
     "toggleLabel": "新增帳號時自動填入目前站點網址"
   },
   "autoProvisionKeyOnAccountAdd": {
-    "description": "控制新增帳號後是否自動建立預設 API 金鑰。",
+    "description": "控制新增支援的帳號後是否自動建立預設 API 金鑰。",
     "title": "API 金鑰",
     "toggleDesc": "開啟後，帳號儲存完成會檢查遠端金鑰列表；若沒有金鑰則自動建立一個預設金鑰。",
     "toggleLabel": "新增帳號後自動建立預設金鑰"

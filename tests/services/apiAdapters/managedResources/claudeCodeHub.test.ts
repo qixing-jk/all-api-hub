@@ -7,11 +7,7 @@ import {
   CLAUDE_CODE_HUB_MANAGED_RESOURCE_FIELD_IDS as fields,
 } from "~/constants/claudeCodeHub"
 import { SITE_TYPES } from "~/constants/siteType"
-import {
-  MANAGED_RESOURCE_KINDS,
-  MANAGED_RESOURCE_MODES,
-  MANAGED_RESOURCE_PRODUCT_ACTIONS,
-} from "~/services/accountSiteDefinitions/contracts"
+import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
 import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions/registry"
 import {
   MANAGED_RESOURCE_CREATE_SEED_KINDS,
@@ -115,20 +111,14 @@ describe("Claude Code Hub native managed resource", () => {
     mocks.deleteProviderV1.mockResolvedValue(undefined)
   })
 
-  it("registers the native channel surface and preserved product actions", () => {
+  it("registers the native channel presentation policy", () => {
     expect(
       getAccountSiteDefinition(SITE_TYPES.CLAUDE_CODE_HUB)?.managedResource,
     ).toEqual(
       expect.objectContaining({
-        mode: MANAGED_RESOURCE_MODES.NativeResource,
         primaryKind: MANAGED_RESOURCE_KINDS.Channel,
         tableFieldIds: CLAUDE_CODE_HUB_MANAGED_RESOURCE_TABLE_FIELD_IDS,
         detailFieldIds: CLAUDE_CODE_HUB_MANAGED_RESOURCE_DETAIL_FIELD_IDS,
-        actions: [
-          MANAGED_RESOURCE_PRODUCT_ACTIONS.Create,
-          MANAGED_RESOURCE_PRODUCT_ACTIONS.DeleteSelected,
-          MANAGED_RESOURCE_PRODUCT_ACTIONS.Migrate,
-        ],
       }),
     )
     expect(

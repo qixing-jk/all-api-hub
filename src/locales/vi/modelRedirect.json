@@ -60,6 +60,20 @@
     "updateFailed": "Cập nhật cài đặt chuyển hướng mô hình thất bại",
     "updateSuccess": "Đã cập nhật cài đặt chuyển hướng mô hình"
   },
+  "modelDiscovery": {
+    "failed": {
+      "description": "Không thể tải mô hình từ trang được quản lý. Danh sách cài sẵn đang được sử dụng. Hãy kiểm tra kết nối hoặc thông tin xác thực rồi thử lại.",
+      "title": "Không thể lấy mô hình"
+    },
+    "not-ready": {
+      "description": "Trước tiên hãy cấu hình URL và thông tin xác thực quản trị viên. Hiện tại danh sách cài sẵn được sử dụng.",
+      "title": "Chưa cấu hình việc lấy mô hình"
+    },
+    "unsupported": {
+      "description": "Trang này không đăng ký khả năng truy vấn mô hình tài khoản, vì vậy danh sách cài sẵn được sử dụng.",
+      "title": "Không hỗ trợ tự động lấy mô hình"
+    }
+  },
   "pruneMissingTargetsOnModelSync": "Dọn dẹp các mục tiêu chuyển hướng không hợp lệ sau khi đồng bộ",
   "pruneMissingTargetsOnModelSyncDesc": "Thao tác nguy hiểm: Sau khi làm mới đồng bộ mô hình, sẽ xóa các ánh xạ trong model_mapping có mô hình mục tiêu không nằm trong danh sách mô hình mới nhất",
   "regenerateButton": "Tạo lại ánh xạ ngay",
@@ -67,5 +81,9 @@
   "standardModels": "Mô hình tiêu chuẩn",
   "standardModelsDesc": "Chọn các mô hình tiêu chuẩn cần tạo ánh xạ chuyển hướng",
   "standardModelsPlaceholder": "Vui lòng chọn mô hình…",
-  "title": "Chuyển hướng mô hình"
+  "title": "Chuyển hướng mô hình",
+  "unsupported": {
+    "description": "Trang được quản lý này không cung cấp các thao tác kênh cần thiết để đọc và cập nhật ánh xạ mô hình.",
+    "title": "Trang này không hỗ trợ chuyển hướng mô hình"
+  }
 }

@@ -359,18 +359,21 @@ describe("Sub2API API-key account managed-site provider", () => {
       )
 
     await expect(
-      searchSub2ApiApiKeyAccounts(config, " Example "),
+      searchSub2ApiApiKeyAccounts(config, " Example & 渠道 + #1 "),
     ).resolves.toMatchObject({
       items: [account, expect.objectContaining({ id: 18 })],
       total: 2,
     })
 
     const url = new URL(String(mockFetch.mock.calls[0][0]))
-    expect(url.searchParams.get("search")).toBe("Example")
+    expect(url.searchParams.get("search")).toBe("Example & 渠道 + #1")
     expect(url.searchParams.get("type")).toBe("apikey")
     expect(
       new URL(String(mockFetch.mock.calls[1][0])).searchParams.get("page"),
     ).toBe("2")
+    expect(
+      new URL(String(mockFetch.mock.calls[1][0])).searchParams.get("search"),
+    ).toBe("Example & 渠道 + #1")
   })
 
   it("runs the pre-request hook before every paginated request", async () => {

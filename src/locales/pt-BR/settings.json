@@ -71,7 +71,7 @@
     "toggleLabel": "Preencher a URL com o site atual ao adicionar contas"
   },
   "autoProvisionKeyOnAccountAdd": {
-    "description": "Controle se o All API Hub provisiona automaticamente uma chave de API padrão após você adicionar uma conta.",
+    "description": "Controle se o All API Hub provisiona automaticamente uma chave de API padrão após você adicionar uma conta compatível.",
     "title": "Chaves API",
     "toggleDesc": "Quando ativado, All API Hub verifica seu inventário de tokens após salvar uma conta e cria um token padrão se não existir nenhum.",
     "toggleLabel": "Criar automaticamente uma chave padrão ao adicionar conta"

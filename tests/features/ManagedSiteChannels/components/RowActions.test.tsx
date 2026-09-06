@@ -1,4 +1,4 @@
-import { fireEvent } from "@testing-library/react"
+import { createEvent, fireEvent } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
@@ -26,12 +26,24 @@ vi.mock("~/components/ui/dropdown-menu", () => ({
     children,
     disabled,
     onClick,
+    onSelect,
+    ...props
   }: {
     children: ReactNode
     disabled?: boolean
     onClick?: () => void
+    onSelect?: (event: { preventDefault: () => void }) => void
+    "aria-disabled"?: boolean | "true" | "false"
   }) => (
-    <button disabled={disabled} onClick={onClick} role="menuitem">
+    <button
+      disabled={disabled}
+      onClick={(event) => {
+        onSelect?.(event)
+        if (!event.defaultPrevented) onClick?.()
+      }}
+      role="menuitem"
+      {...props}
+    >
       {children}
     </button>
   ),
@@ -142,6 +154,30 @@ describe("ManagedSiteChannels RowActions", () => {
     expect(screen.queryByRole("menuitem", { name: labels.filters })).toBeNull()
     expect(screen.queryByRole("menuitem", { name: labels.openSync })).toBeNull()
     expect(screen.queryByRole("menuitem", { name: labels.sync })).toBeNull()
+  })
+
+  it("keeps unsupported model sync visible with a keyboard-readable reason", () => {
+    const onSync = vi.fn()
+    setup({
+      capabilities: {
+        canEdit: true,
+        canDelete: true,
+      },
+      onSync,
+      modelSyncUnavailableReason:
+        "This site type does not support channel model sync.",
+    })
+
+    const syncItem = screen.getByRole("menuitem", {
+      name: /Sync.*This site type does not support channel model sync/,
+    })
+    expect(syncItem).toHaveAttribute("aria-disabled", "true")
+
+    const selectEvent = createEvent.click(syncItem)
+    fireEvent(syncItem, selectEvent)
+
+    expect(selectEvent.defaultPrevented).toBe(true)
+    expect(onSync).not.toHaveBeenCalled()
   })
 
   it("passes opaque native row keys through without coercion", async () => {

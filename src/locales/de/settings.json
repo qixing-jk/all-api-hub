@@ -71,7 +71,7 @@
     "toggleLabel": "Füllen Sie beim Hinzufügen von Konten die URL der aktuellen Website vorab aus"
   },
   "autoProvisionKeyOnAccountAdd": {
-    "description": "Steuern Sie, ob All API Hub automatisch einen Standard-API-Schlüssel bereitstellt, nachdem Sie ein Konto hinzugefügt haben.",
+    "description": "Steuern Sie, ob All API Hub nach dem Hinzufügen eines unterstützten Kontos automatisch einen Standard-API-Schlüssel bereitstellt.",
     "title": "API-Schlüssel",
     "toggleDesc": "Wenn aktiviert, überprüft All API Hub Ihren Token-Bestand nach dem Speichern eines Kontos und erstellt einen Standard-Token, falls keiner vorhanden ist.",
     "toggleLabel": "Beim Hinzufügen eines Kontos automatisch einen Standardschlüssel erstellen"

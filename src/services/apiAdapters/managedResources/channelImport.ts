@@ -1,10 +1,8 @@
 import type { ManagedSiteType } from "~/constants/siteType"
 import {
   MANAGED_RESOURCE_KINDS,
-  MANAGED_RESOURCE_MODES,
   type ManagedResourceKind,
 } from "~/services/accountSiteDefinitions/contracts"
-import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions/registry"
 import type {
   ManagedChannelImportCreateSeed,
   ResourceDisplayFacts,
@@ -67,25 +65,12 @@ export async function openNativeManagedChannelImportSession(
 ): Promise<NativeManagedChannelImportSession | null> {
   const kind = MANAGED_RESOURCE_KINDS.Channel
   const registration = getManagedResourceRegistration(siteType, kind)
-  const rejectMissingNativeCapability = () => {
-    const policy = getAccountSiteDefinition(siteType)?.managedResource
-    if (
-      policy?.mode === MANAGED_RESOURCE_MODES.NativeResource &&
-      policy.primaryKind === kind
-    ) {
-      throw new Error("native managed channel import capability missing")
-    }
-  }
-  if (!registration) {
-    rejectMissingNativeCapability()
-    return null
-  }
+  if (!registration) return null
   if (
     !registration.createSeedKinds?.includes(
       MANAGED_RESOURCE_CREATE_SEED_KINDS.ManagedChannelImport,
     )
   ) {
-    rejectMissingNativeCapability()
     return null
   }
 

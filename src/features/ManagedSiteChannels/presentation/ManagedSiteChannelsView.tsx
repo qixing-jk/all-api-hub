@@ -116,6 +116,7 @@ export function ManagedSiteChannelsView({
     labels,
     isDeleteReplayBlocked,
     isResourceInteractionBlocked,
+    modelSyncUnavailableReason: capabilities.modelSyncUnavailableReason,
   })
   const emptyTableMessage =
     state.searchValue.trim() ||
@@ -277,7 +278,7 @@ export function ManagedSiteChannelsView({
                 data-testid={MANAGED_SITE_CHANNELS_TEST_IDS.searchInput}
               />
               <ListFilter className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-              {state.searchValue ? (
+              {state.searchValue || state.channelIdFilterValue ? (
                 <button
                   type="button"
                   aria-label={labels.clearSearch}
@@ -439,6 +440,23 @@ export function ManagedSiteChannelsView({
                   >
                     {labels.syncSelected}
                   </Button>
+                ) : !state.migrationMode &&
+                  capabilities.modelSyncUnavailableReason ? (
+                  <Tooltip
+                    content={capabilities.modelSyncUnavailableReason}
+                    anchorAsChild
+                  >
+                    <span className="inline-flex" tabIndex={0}>
+                      <Button
+                        variant="outline"
+                        disabled
+                        tabIndex={-1}
+                        leftIcon={<RefreshCcw className="h-4 w-4" />}
+                      >
+                        {labels.syncSelected}
+                      </Button>
+                    </span>
+                  </Tooltip>
                 ) : null}
                 {!state.migrationMode && capabilities.canCreate ? (
                   <Button

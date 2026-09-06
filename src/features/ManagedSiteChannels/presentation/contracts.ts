@@ -225,6 +225,7 @@ export type ManagedChannelsCapabilities = {
   canRefresh: boolean
   canDeleteSelected: boolean
   canSyncSelected: boolean
+  modelSyncUnavailableReason?: string
   canToggleMigration: boolean
   canMigrateSelected: boolean
   canMigrateFiltered: boolean

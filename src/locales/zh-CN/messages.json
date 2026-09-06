@@ -3,6 +3,8 @@
     "autoProvisionAlreadyHad": "{{accountName}} 已存在 API 密钥，已跳过自动创建。",
     "autoProvisionCreated": "已为 {{accountName}} 自动创建默认 API 密钥。",
     "autoProvisionFailed": "账号已保存，但自动创建 API 密钥失败。你可以在密钥管理中使用“{{actionLabel}}”重试。",
+    "autoProvisionNeedsManualAction": "{{accountName}} 已保存，但默认密钥需要手动选择或处理一次性密钥。请前往密钥管理使用“{{actionLabel}}”完成。",
+    "autoProvisionUnsupported": "{{accountName}} 已保存，但该站点类型暂不支持自动创建默认 API 密钥。",
     "checkingApiKeys": "正在检查 API 密钥...",
     "createTokenFailed": "创建 API 令牌失败",
     "tokenNotFound": "无法创建或找到 API 令牌"

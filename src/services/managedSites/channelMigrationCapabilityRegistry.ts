@@ -3,6 +3,7 @@ import { axonHubManagedSiteMigrationCapability } from "~/services/apiAdapters/ma
 import { claudeCodeHubManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/claudeCodeHubMigration"
 import { doneHubManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/doneHubMigration"
 import { newApiManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/newApiMigration"
+import { octopusManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/octopusMigration"
 import { veloeraManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/veloeraMigration"
 import type { ManagedSiteMigrationCapability } from "~/types/managedSiteMigrationCapability"
 
@@ -10,6 +11,10 @@ const registrations: readonly {
   siteType: ManagedSiteType
   capability: ManagedSiteMigrationCapability
 }[] = [
+  {
+    siteType: SITE_TYPES.OCTOPUS,
+    capability: octopusManagedSiteMigrationCapability,
+  },
   {
     siteType: SITE_TYPES.NEW_API,
     capability: newApiManagedSiteMigrationCapability,

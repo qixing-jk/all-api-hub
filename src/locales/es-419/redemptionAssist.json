@@ -2,9 +2,12 @@
   "accountSelect": {
     "confirm": "Confirmar canje",
     "noResults": "No se encontraron cuentas coincidentes",
+    "noSupportedAccounts": "Ninguna de tus cuentas guardadas admite el canje automático. Canjea el código manualmente en el sitio correspondiente.",
+    "openSiteManual": "Abrir el sitio para canjear manualmente",
     "title": "Selecciona una cuenta para usar en el canje",
     "titleFallback": "Ninguna cuenta coincidió con este sitio; selecciona una manualmente",
-    "titleMultiple": "Hay varias cuentas disponibles; selecciona una para el canje"
+    "titleMultiple": "Hay varias cuentas disponibles; selecciona una para el canje",
+    "unsupported": "Este tipo de sitio no admite el canje automático"
   },
   "actions": {
     "autoRedeem": "Canjear automáticamente"
@@ -27,7 +30,8 @@
     "selectAll": "Seleccionar todo",
     "success": {
       "settingsSaved": "La configuración del asistente de canje se guardó"
-    }
+    },
+    "unsupportedSiteType": "El tipo de sitio de esta cuenta no admite el canje automático. Elige otra cuenta o canjea el código manualmente en el sitio."
   },
   "settings": {
     "contextMenu": {

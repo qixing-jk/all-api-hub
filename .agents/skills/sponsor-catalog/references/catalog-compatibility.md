@@ -4,7 +4,7 @@ Use this reference when a sponsor change touches the in-app recommendation catal
 
 ## Current version map
 
-Re-check this map against current code and tags before relying on it. A later schema may have been introduced.
+For schema coverage decisions, confirm served artifacts against current files. Check tags and old-client contracts when new fields, actions, support values, or targeting make release compatibility uncertain; reuse established evidence for unchanged contracts. Ordinary copy changes do not require rediscovering release history.
 
 | Schema | Public artifact | First released client | Known client band | Shape summary |
 | --- | --- | --- | --- | --- |

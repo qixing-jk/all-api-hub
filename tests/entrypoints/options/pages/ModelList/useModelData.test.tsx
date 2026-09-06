@@ -2054,7 +2054,7 @@ describe("useModelData all-accounts loading", () => {
     expect(fetchPricing).not.toHaveBeenCalled()
   })
 
-  it("reports unsupported non-Sub2API accounts as direct pricing failures", async () => {
+  it("marks any account without a model-list source capability as unsupported", async () => {
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
     const fetchPricing = vi
@@ -2085,12 +2085,11 @@ describe("useModelData all-accounts loading", () => {
 
     await waitFor(
       () => {
-        expect(result.current.loadErrorMessage).toBe(
-          "modelList:status.loadFailed",
-        )
+        expect(result.current.unsupportedSource).toBe(true)
       },
       { timeout: 3000 },
     )
+    expect(result.current.loadErrorMessage).toBeNull()
     expect(fetchPricing).not.toHaveBeenCalled()
     expect(mockFetchDisplayAccountTokens).not.toHaveBeenCalled()
   })
@@ -3752,10 +3751,9 @@ describe("useModelData all-accounts loading", () => {
       )
 
       await waitFor(() => {
-        expect(result.current.loadErrorMessage).toBe(
-          "modelList:status.loadFailed",
-        )
+        expect(result.current.unsupportedSource).toBe(true)
       })
+      expect(result.current.loadErrorMessage).toBeNull()
       expect(fetchPricing).not.toHaveBeenCalled()
       expect(mockFetchDisplayAccountTokens).not.toHaveBeenCalled()
       expect(result.current.pricingData).toBeNull()

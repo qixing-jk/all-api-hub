@@ -7,7 +7,9 @@ import {
   getManagedSiteServiceForType,
   hasValidManagedSiteConfig,
 } from "~/services/managedSites/managedSiteService"
+import { getManagedSiteAdminConfig } from "~/services/managedSites/utils/managedSite"
 import { ModelRedirectService } from "~/services/models/modelRedirect"
+import { supportsManagedSiteModelRedirect } from "~/services/models/modelRedirect/capabilities"
 import { buildManagedSiteChannel } from "~~/tests/test-utils/factories"
 import { testI18n } from "~~/tests/test-utils/i18n"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
@@ -46,6 +48,10 @@ vi.mock("~/services/models/modelRedirect", () => ({
   },
 }))
 
+vi.mock("~/services/models/modelRedirect/capabilities", () => ({
+  supportsManagedSiteModelRedirect: vi.fn(),
+}))
+
 vi.mock("react-hot-toast", () => ({
   default: {
     success: vi.fn(),
@@ -71,6 +77,7 @@ describe("Model redirect bulk clear flow", () => {
     vi.clearAllMocks()
 
     mockedHasValidManagedSiteConfig.mockReturnValue(true)
+    vi.mocked(supportsManagedSiteModelRedirect).mockReturnValue(true)
     mockedGetManagedSiteServiceForType.mockReturnValue({
       fetchAccountAvailableModels: vi.fn().mockResolvedValue([]),
     })
@@ -136,6 +143,91 @@ describe("Model redirect bulk clear flow", () => {
         "modelRedirect:messages.updateFailed",
       )
     })
+  })
+
+  it("shows an unsupported explanation instead of controls when the registry methods are absent", async () => {
+    vi.mocked(supportsManagedSiteModelRedirect).mockReturnValue(false)
+    mockedUseUserPreferencesContext.mockReturnValue({
+      preferences: {
+        managedSiteType: "octopus",
+        modelRedirect: {
+          enabled: false,
+          standardModels: [],
+        },
+      },
+      updateModelRedirect: vi.fn(),
+      resetModelRedirectConfig: vi.fn(),
+    })
+
+    renderSubject()
+
+    expect(
+      await screen.findByText("modelRedirect:unsupported.title"),
+    ).toBeVisible()
+    expect(supportsManagedSiteModelRedirect).toHaveBeenCalledWith("octopus")
+    expect(screen.queryByRole("switch")).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: t("bulkClear.action") }),
+    ).not.toBeInTheDocument()
+  })
+
+  it("explains when model discovery is unsupported but keeps preset configuration available", async () => {
+    mockedGetManagedSiteServiceForType.mockReturnValue({})
+
+    renderSubject()
+
+    expect(
+      await screen.findByText("modelRedirect:modelDiscovery.unsupported.title"),
+    ).toBeVisible()
+    expect(screen.getByRole("switch", { name: "Toggle" })).toBeVisible()
+  })
+
+  it("explains that model discovery is not ready while preferences are unavailable", async () => {
+    mockedUseUserPreferencesContext.mockReturnValue({
+      preferences: undefined,
+      updateModelRedirect: vi.fn(),
+      resetModelRedirectConfig: vi.fn(),
+    })
+
+    renderSubject()
+
+    expect(
+      await screen.findByText("modelRedirect:modelDiscovery.not-ready.title"),
+    ).toBeVisible()
+    expect(screen.getByRole("switch", { name: "Toggle" })).toBeVisible()
+    expect(
+      screen.getByRole("button", { name: t("bulkClear.action") }),
+    ).toBeDisabled()
+  })
+
+  it("explains that model discovery is not ready when managed-site setup is invalid", async () => {
+    mockedHasValidManagedSiteConfig.mockReturnValue(false)
+    vi.mocked(getManagedSiteAdminConfig).mockReturnValueOnce(null)
+
+    renderSubject()
+
+    expect(
+      await screen.findByText("modelRedirect:modelDiscovery.not-ready.title"),
+    ).toBeVisible()
+    expect(screen.getByRole("switch", { name: "Toggle" })).toBeVisible()
+    expect(
+      screen.getByRole("button", { name: t("bulkClear.action") }),
+    ).toBeDisabled()
+  })
+
+  it("reports model discovery failures instead of silently using presets", async () => {
+    mockedGetManagedSiteServiceForType.mockReturnValue({
+      fetchAccountAvailableModels: vi
+        .fn()
+        .mockRejectedValue(new Error("request failed")),
+    })
+
+    renderSubject()
+
+    expect(
+      await screen.findByText("modelRedirect:modelDiscovery.failed.title"),
+    ).toBeVisible()
+    expect(screen.getByRole("switch", { name: "Toggle" })).toBeVisible()
   })
 
   it("does not clear when confirmation is canceled", async () => {

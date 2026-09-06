@@ -307,71 +307,83 @@ describe("AccountActionButtons", () => {
     })
   })
 
-  it("navigates to managed site channels focused by channelId when an exact match is found", async () => {
-    fetchAccountTokensMock.mockResolvedValueOnce([{ key: "sk-1" }])
+  it.each([
+    { siteType: SITE_TYPES.NEW_API, resourceId: 123 },
+    { siteType: SITE_TYPES.AXON_HUB, resourceId: "native/123+=" },
+  ])(
+    "navigates to the stable $siteType channel identity for an exact match",
+    async ({ siteType, resourceId }) => {
+      fetchAccountTokensMock.mockResolvedValueOnce([{ key: "sk-1" }])
 
-    const managedService = {
-      messagesKey: "newapi",
-      getConfig: vi.fn().mockResolvedValue({
-        baseUrl: "https://admin.example",
-        token: "t",
-        userId: "1",
-      }),
-      prepareChannelFormData: vi.fn().mockResolvedValue({
-        base_url: "https://api.example.com",
-        models: ["gpt-4"],
-        key: "sk-1",
-      }),
-      searchChannel: vi.fn().mockResolvedValue({
-        items: [
-          {
-            id: 123,
-            name: "Managed Channel 123",
-            base_url: "https://api.example.com",
-            models: "gpt-4",
-            key: "sk-1",
-          },
-        ],
-        total: 1,
-        type_counts: {},
-      }),
-    }
+      const managedService = {
+        siteType,
+        messagesKey: "newapi",
+        getConfig: vi.fn().mockResolvedValue({
+          baseUrl: "https://admin.example",
+          token: "t",
+          userId: "1",
+        }),
+        prepareChannelFormData: vi.fn().mockResolvedValue({
+          base_url: "https://api.example.com",
+          models: ["gpt-4"],
+          key: "sk-1",
+        }),
+        searchChannel: vi.fn().mockResolvedValue({
+          items: [
+            {
+              id: 123,
+              ...(siteType === SITE_TYPES.AXON_HUB
+                ? { _axonHubData: { id: resourceId } }
+                : {}),
+              name: "Managed Channel 123",
+              base_url: "https://api.example.com",
+              models: "gpt-4",
+              key: "sk-1",
+            },
+          ],
+          total: 1,
+          type_counts: {},
+        }),
+      }
 
-    getManagedSiteServiceMock.mockResolvedValueOnce(managedService as any)
+      getManagedSiteServiceMock.mockResolvedValueOnce(managedService as any)
 
-    const user = userEvent.setup()
+      const user = userEvent.setup()
 
-    render(
-      <AccountActionButtons
-        site={buildDisplaySiteData({
-          id: "acc-6",
-          disabled: false,
-          name: "Site",
-          baseUrl: "https://api.example.com",
-        })}
-        onCopyKey={vi.fn()}
-        onDeleteAccount={vi.fn()}
-      />,
-    )
+      render(
+        <AccountActionButtons
+          site={buildDisplaySiteData({
+            id: "acc-6",
+            disabled: false,
+            name: "Site",
+            baseUrl: "https://api.example.com",
+          })}
+          onCopyKey={vi.fn()}
+          onDeleteAccount={vi.fn()}
+        />,
+      )
 
-    await user.click(
-      screen.getByRole("button", { name: "common:actions.more" }),
-    )
+      await user.click(
+        screen.getByRole("button", { name: "common:actions.more" }),
+      )
 
-    const menu = await screen.findByRole("menu")
-    const label = await within(menu).findByText(
-      "account:actions.locateManagedSiteChannel",
-    )
-    const button = label.closest("button")
-    expect(button).not.toBeNull()
+      const menu = await screen.findByRole("menu")
+      const label = await within(menu).findByText(
+        "account:actions.locateManagedSiteChannel",
+      )
+      const button = label.closest("button")
+      expect(button).not.toBeNull()
 
-    await user.click(button!)
+      await user.click(button!)
 
-    await waitFor(() => {
-      expect(openManagedSiteChannelsForChannelMock).toHaveBeenCalledWith(123)
-    })
-    expect(openManagedSiteChannelsPageMock).not.toHaveBeenCalled()
-  })
+      await waitFor(() => {
+        expect(openManagedSiteChannelsForChannelMock).toHaveBeenCalledWith(
+          resourceId,
+        )
+      })
+      expect(openManagedSiteChannelsPageMock).not.toHaveBeenCalled()
+    },
+  )
 
   it("uses legacy channel search for account shortcut locate when token status resources are not feature-gated", async () => {
     fetchAccountTokensMock.mockResolvedValueOnce([{ key: "sk-legacy" }])

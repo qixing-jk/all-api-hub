@@ -433,6 +433,7 @@ const REDEMPTION_PROMPT_ANALYTICS_RESULT_CODES = {
   InvalidUrl: "INVALID_URL",
   MultipleAccounts: "MULTIPLE_ACCOUNTS",
   NoAccounts: "NO_ACCOUNTS",
+  UnsupportedSiteType: "UNSUPPORTED_SITE_TYPE",
   AccountSelectionCancelled: "ACCOUNT_SELECTION_CANCELLED",
 } as const
 
@@ -447,6 +448,7 @@ function getRedemptionPromptAnalyticsErrorCategory(
     case REDEMPTION_PROMPT_ANALYTICS_RESULT_CODES.InvalidUrl:
     case REDEMPTION_PROMPT_ANALYTICS_RESULT_CODES.MultipleAccounts:
     case REDEMPTION_PROMPT_ANALYTICS_RESULT_CODES.NoAccounts:
+    case REDEMPTION_PROMPT_ANALYTICS_RESULT_CODES.UnsupportedSiteType:
     case REDEMPTION_PROMPT_ANALYTICS_RESULT_CODES.AccountSelectionCancelled:
       return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation
     default:
@@ -650,6 +652,7 @@ function getFixedRedemptionPromptResultCode(
     case REDEMPTION_PROMPT_ANALYTICS_RESULT_CODES.InvalidUrl:
     case REDEMPTION_PROMPT_ANALYTICS_RESULT_CODES.MultipleAccounts:
     case REDEMPTION_PROMPT_ANALYTICS_RESULT_CODES.NoAccounts:
+    case REDEMPTION_PROMPT_ANALYTICS_RESULT_CODES.UnsupportedSiteType:
       return code
     default:
       return undefined

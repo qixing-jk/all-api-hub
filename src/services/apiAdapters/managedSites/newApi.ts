@@ -337,13 +337,19 @@ const newApiManagedSiteConfig: ManagedSiteConfigCapability<NewApiConfig> =
   createManagedSiteConfigCapability(SITE_TYPES.NEW_API, checkValidNewApiConfig)
 
 const newApiManagedSiteQueries: ManagedSiteQueriesCapability<NewApiConfig> = {
-  fetchSiteUserGroups: async (
-    config: NewApiConfig,
-    options?: Pick<ManagedSiteChannelRequestOptions, "signal">,
-  ) =>
-    await fetchSiteUserGroups(toManagedSiteApiServiceRequest(config, options)),
-  fetchAccountAvailableModels: async (config) =>
-    await fetchAccountAvailableModels(toManagedSiteApiServiceRequest(config)),
+  siteUserGroups: {
+    fetch: async (
+      config: NewApiConfig,
+      options?: Pick<ManagedSiteChannelRequestOptions, "signal">,
+    ) =>
+      await fetchSiteUserGroups(
+        toManagedSiteApiServiceRequest(config, options),
+      ),
+  },
+  accountAvailableModels: {
+    fetch: async (config) =>
+      await fetchAccountAvailableModels(toManagedSiteApiServiceRequest(config)),
+  },
 }
 
 const fetchNewApiManagedSiteAvailableModels: ManagedSiteChannelDraftsCapability["fetchAvailableModels"] =

@@ -1,83 +1,28 @@
 # Git Hooks
 
-This project uses [Husky](https://typicode.github.io/husky/) to manage Git hooks and ensure code quality before commits and pushes.
+See [CONTRIBUTING.md](../CONTRIBUTING.md#git-hooks) for the development and validation workflow. Hook entrypoints and `package.json` own the commands; the selectors below own conditional execution.
 
-## Configured Hooks
+## Trigger ownership
 
-### pre-commit
-Runs before each commit to ensure code quality:
-- **Unified staged validation**: Runs `pnpm run validate:staged`
-  - Internally runs `pnpm lint-staged --concurrent false` to format staged source and script files, apply ESLint fixes, and run staged Vitest test files without related-test lookup
-  - Then runs `pnpm run i18n:check:staged` as a repo-level guard
-  - The i18n guard only triggers when staged files touch `src/**`, `package.json`, `pnpm-lock.yaml`, or `i18next.config.ts`
-  - Internally the i18n guard runs `pnpm run i18n:extract:ci` to ensure locale files stay in sync with code
+- `pre-commit` runs `validate:staged`. The `lint-staged` configuration formats/lints applicable staged files and runs only staged `tests/**/*.test.{ts,tsx}` files in Vitest. Related behavior tests remain part of development validation.
+- `scripts/run-i18n-check-if-staged.mjs` selects extraction inputs, locale resources, and relevant configuration, including deleted paths and both sides of renames. It then runs extraction integrity and completeness checks against the checkout. Inspect unrelated local edits if they cause a failure; preserve the user's work and index.
+- `pre-push` runs `validate:push:changed`. `scripts/run-push-check-if-needed.mjs` reads Git's stdin ref updates and compares each remote/local object pair, including deletions and both sides of file renames. Only known prose paths can skip `compile` and `knip`; source Markdown and docs tooling still trigger them. Missing input, new refs, or unavailable objects retain the full gate. Documentation rendering and link checks remain separate, risk-based validation.
 
-### pre-push
-Runs before each push to catch repository-wide issues that staged-file checks can miss:
-- **Push validation**: Runs `pnpm run validate:push`
-  - Internally runs `pnpm compile` to catch TypeScript regressions locally before the push reaches CI
-  - Then runs `pnpm knip` to catch unused files, exports, and dependencies before the push reaches CI
+## Manual checks and troubleshooting
 
-## Manual Commands
-
-You can also run these checks manually:
+Use the complete gates when their hook will not run or to diagnose a failure:
 
 ```bash
-# Format code
-pnpm format
-
-# Check formatting without fixing
-pnpm format:check
-
-# Run linter
-pnpm lint
-
-# Fix linting issues
-pnpm lint:fix
-
-# Run full i18n extract CI guard
-pnpm run i18n:extract:ci
-
-# Run the full staged pre-commit-equivalent validation manually
 pnpm run validate:staged
-
-# Run the full pre-push-equivalent validation manually
 pnpm run validate:push
-
-# Run only the staged i18n guard manually
-pnpm run i18n:check:staged
-
 ```
 
-## Skipping Hooks (Not Recommended)
+`validate:push` is unconditional. The conditional selector is normally invoked by Git with its ref-update input, not with paths supplied manually. Avoid repeating an imminent hook's gate on unchanged relevant state.
 
-In rare cases where you need to skip hooks:
+After a hook fails, inspect the error and any formatter/index changes, fix task-owned issues, and retry. Follow [the authorized-exception policy](../CONTRIBUTING.md#skipping-hooks-not-recommended) if bypassing a required gate is necessary.
 
-```bash
-# Skip pre-commit hook
-git commit --no-verify
-
-# Skip pre-push hook
-git push --no-verify
-```
-
-⚠️ **Warning**: Skipping hooks is not recommended as it bypasses quality checks. Only do this if you have a valid reason and understand the consequences.
-
-## Troubleshooting
-
-### Hooks not running
-If hooks are not running after cloning the repository:
+If hooks are missing after cloning, `pnpm install` runs the `prepare` script that installs Husky. Check `git config --get core.hooksPath` and the actual hook before changing configuration. On systems requiring executable permissions:
 
 ```bash
-pnpm install
-```
-
-This will trigger the `prepare` script which sets up Husky.
-
-### Permission issues
-If you get permission errors:
-
-```bash
-chmod +x .husky/pre-commit
-chmod +x .husky/pre-push
+chmod +x .husky/pre-commit .husky/pre-push
 ```

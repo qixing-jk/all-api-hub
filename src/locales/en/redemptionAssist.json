@@ -2,9 +2,12 @@
   "accountSelect": {
     "confirm": "Confirm redemption",
     "noResults": "No matching accounts found",
+    "noSupportedAccounts": "None of your saved accounts support automatic redemption. Redeem the code manually on the relevant site.",
+    "openSiteManual": "Open site to redeem manually",
     "title": "Select an account to use for redemption",
     "titleFallback": "No account matched this site, please select one manually",
-    "titleMultiple": "Multiple accounts available, please select one for redemption"
+    "titleMultiple": "Multiple accounts available, please select one for redemption",
+    "unsupported": "Automatic redemption is not supported for this site type"
   },
   "actions": {
     "autoRedeem": "Auto redeem"
@@ -26,7 +29,8 @@
     "selectAll": "Select all",
     "success": {
       "settingsSaved": "Redemption assist settings have been saved"
-    }
+    },
+    "unsupportedSiteType": "This account's site type does not support automatic redemption. Choose another account or redeem the code manually on the site."
   },
   "settings": {
     "contextMenu": {

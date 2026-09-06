@@ -15,8 +15,8 @@ You represent that you have the right to submit the contribution and that it doe
 
 ### Prerequisites
 
-- Node.js 20 LTS or higher
-- pnpm 10 or higher
+- Node.js from `.nvmrc`, satisfying `package.json` engines
+- pnpm satisfying `package.json` engines
 
 ## Tech Stack
 
@@ -64,7 +64,7 @@ pnpm dev:firefox
 
 ### Overview
 
-This project uses [Vitest](https://vitest.dev/) for unit and component testing. Tests run in a jsdom environment with mocked browser APIs and storage.
+This project uses [Vitest](https://vitest.dev/) for unit and component testing. The `dom` project runs component and browser-dependent tests in jsdom through `tests/setup.ts`; the `node` project runs other TypeScript tests through `tests/setup.node.ts`. Choose the environment needed by the behavior under test; `vitest.config.ts` owns project selection and both setups provide the applicable shared mocks.
 
 ### Running Tests
 
@@ -96,6 +96,14 @@ The repository enforces global Vitest coverage thresholds in CI. Treat `vitest.c
 ### Writing Tests
 
 Add or update tests when a change modifies meaningful executable behavior. A useful test should protect an observable behavior, regression, relevant edge case, or contract. Do not add tests solely to execute lines, mirror implementation details, or satisfy coverage. Documentation, copy, formatting, type-only, and mechanical changes generally do not need new tests.
+
+#### Choosing coverage
+
+- Reuse existing tests when they already protect the changed behavior. Cover relevant failure paths and direct consumers of changed shared APIs; behavior-preserving refactors still need regression evidence.
+- Assert meaningful results or boundary contracts rather than whole internal structures, mock sequences, or incidental styles. Exact shapes and mock calls are appropriate when that shape or external call is itself the contract.
+- Use Vitest/Testing Library for state, parsing, filtering, and isolated components. Reserve E2E for unresolved browser-extension runtime, cross-entrypoint, navigation, persistence, or interaction risks; one representative browser workflow usually complements focused state coverage better than a UI matrix.
+- Prefer semantic selectors; for workflow-critical E2E controls that need a stable copy-independent selector, use feature-local `testIds.ts` constants rather than position or DOM structure. Assert user-visible copy for outcomes where appropriate.
+- Keep temporary verification tests only when deterministic and valuable as regression coverage. Decide locally unless retention requires a material expansion in infrastructure, maintenance cost, or task scope.
 
 #### Unit Tests
 
@@ -175,9 +183,9 @@ If you add resource bundles to the shared `testI18n`, prefer cleaning them up in
 
 #### Mocks
 
-The test setup (`tests/setup.ts`) provides the following mocks:
+The shared setup (`tests/setup.shared.ts`, loaded by both test environments) provides browser/storage and i18n support. The DOM setup adds browser-specific behavior; consult the applicable setup when a test needs a particular mock:
 
-- **Browser APIs + storage**: `wxt/testing/fake-browser` (wired up in `tests/setup.ts`) sets `globalThis.browser` / `globalThis.chrome`, including `browser.storage.*`. `@plasmohq/storage` works on top of this without extra mocks.
+- **Browser APIs + storage**: `wxt/testing/fake-browser` sets `globalThis.browser` / `globalThis.chrome`, including `browser.storage.*`. `@plasmohq/storage` works on top of this without extra mocks.
 - **i18next**: Lightweight test instance configured in `tests/test-utils/i18n.ts`
 - **MSW**: Mock Service Worker for API endpoint mocking
 
@@ -238,27 +246,15 @@ pnpm compile
 
 This project uses [Husky](https://typicode.github.io/husky) to enforce code quality through Git hooks:
 
-- **pre-commit**: Runs `pnpm run validate:staged` (see `.husky/pre-commit` and `package.json`)
-  - Runs `pnpm lint-staged --concurrent false` to format staged source and script files with Prettier, fix ESLint issues, and run `vitest related --run` for staged JS/TS files
-  - Then runs `pnpm run i18n:check:staged` so repo-level translation extraction and completeness checks are not skipped when `lint-staged` passes
-- **pre-push**: Runs `pnpm run validate:push` (see `.husky/pre-push` and `package.json`)
-  - Internally runs `pnpm compile` to catch full-repo TypeScript issues locally before push
-  - Then runs `pnpm knip` to catch unused files, exports, and dependencies before push
+- **pre-commit**: `validate:staged` formats and lints applicable staged files, runs staged Vitest test files, then runs extraction and completeness checks when staged inputs affect i18n. Staged test execution does not find related tests or replace affected-behavior validation.
+- **pre-push**: `validate:push:changed` examines every ref update supplied by Git. Known documentation-only ranges and ref deletions skip the extension gate; other changes and unknown ranges run `validate:push` (`compile` + `knip`). New remote refs conservatively run the full gate. Checks execute in the current checkout, so keep the checkout aligned with the code being delivered.
 
 The hooks are automatically set up when you run `pnpm install` (via the `prepare` script).
-If you want to reproduce the full pre-commit validation manually, run `pnpm run validate:staged`. Do not treat bare `pnpm lint-staged` as equivalent to the repo's complete pre-commit flow.
-If you want to reproduce the pre-push validation manually, run `pnpm run validate:push`.
+Use `pnpm run validate:staged` or the unconditional `pnpm run validate:push` manually for troubleshooting or when the corresponding hook will not run. Let an imminent hook execute its gate once rather than pre-running it on unchanged state. Bare `pnpm lint-staged` is not the complete pre-commit flow. See [.husky/README.md](.husky/README.md) for trigger ownership and troubleshooting.
 
 #### Skipping Hooks (Not Recommended)
 
-In rare cases where you need to bypass hooks:
-
-```bash
-# Skip Husky hooks (e.g., pre-commit)
-git commit --no-verify
-```
-
-⚠️ **Warning**: Only skip hooks if you have a valid reason, as they ensure code quality and prevent common issues.
+Fix hook failures or report the blocked delivery. Bypassing a required gate needs an explicit authorized exception with the skipped validation and remaining risk disclosed; it is not an automatic fallback for a failed check.
 
 ## Building
 
@@ -303,13 +299,15 @@ GitHub Actions runs the test workflow for pull requests and for pushes to `main`
 
 Before submitting a pull request, run the focused tests and local validation relevant to your change. The pull request CI is the authoritative full-suite and coverage check.
 
+CI evidence covers only workflows that actually ran for the relevant changes. The regular E2E workflow is path-triggered; browser-compatibility and real-site workflows are scheduled or manually dispatched, so ordinary PR success does not establish those results. Run additional focused checks when the task's unresolved risk requires them.
+
 ## Pull Request Guidelines
 
 1. **Create a feature branch** from `main`
 2. **Add meaningful tests for behavior changes**: Protect observable behavior, regressions, relevant edge cases, or contracts; do not add tests only to increase coverage
 3. **Run affected tests**: Prefer `pnpm exec vitest related --run <changed files>` or focused test files; rely on CI for the full suite and coverage by default
-4. **Run the staged-file gate**: Use `pnpm run validate:staged` after staging only the files for your change
-5. **Run broader static checks when justified**: Use `pnpm run validate:push` for changes to TypeScript contracts, exports, dependencies, generated wiring, or repository structure
+4. **Commit through the staged-file gate**: Stage only task-owned changes without disturbing unrelated index state and let pre-commit run `validate:staged`
+5. **Validate shared risks and requested pushes**: Broaden focused checks for shared contracts, consumers, dependencies, generated wiring, or repository structure. Let a requested push run its applicable hook checks; reuse valid evidence for unchanged relevant state
 6. **Write clear commit messages** describing your changes
 7. **Update documentation** if you're adding new features
 

@@ -42,6 +42,7 @@
   "loading": "Đang tải thông báo...",
   "messages": {
     "checkCompleted": "Kiểm tra thông báo đã hoàn tất",
+    "checkCompletedWithIssues": "Đã kiểm tra: {{failed}} trang thất bại và {{unsupported}} trang không hỗ trợ. Hãy chọn một trang để xem chi tiết.",
     "checkFailed": "Kiểm tra thông báo thất bại",
     "loadFailed": "Tải thông báo thất bại",
     "markAllReadFailed": "Không thể đánh dấu tất cả thông báo là đã đọc",
@@ -52,6 +53,8 @@
     "title": "{{site}} có thông báo mới"
   },
   "status": {
+    "aggregateIssues": "{{failed}} trang thất bại và {{unsupported}} trang không hỗ trợ kiểm tra thông báo. Hãy chọn trang để xem chi tiết và thử lại.",
+    "aggregateIssuesTitle": "Một số trang cần được xử lý",
     "failed": "Lần kiểm tra thông báo gần nhất của trang web này đã thất bại: {{error}}",
     "failedTitle": "Kiểm tra thất bại",
     "lastChecked": "Lần kiểm tra gần nhất: {{time}}",

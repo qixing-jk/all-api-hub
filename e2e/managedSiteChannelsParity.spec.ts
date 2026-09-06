@@ -7,6 +7,7 @@ import {
 } from "~/features/ManagedSiteChannels/testIds"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {
+  AXON_HUB_PRIMARY_ID,
   DONE_HUB_PRIMARY_ID,
   getInterceptedAxonHubDeleteRequestCount,
   getInterceptedAxonHubListRequestCount,
@@ -19,6 +20,7 @@ import {
   getInterceptedOctopusCookieHeader,
   getInterceptedOctopusRootRequestCount,
   getInterceptedOctopusStatusRequestCount,
+  INTERCEPTED_OCTOPUS_ORIGIN,
   NEW_API_CREATED_ID,
   openInterceptedAxonHubManagedSiteChannels,
   openInterceptedDoneHubManagedSiteChannels,
@@ -220,6 +222,9 @@ test("keeps DoneHub channel deep links editable in the native table", async ({
   const primaryRow = channelRowByName(page, "DoneHub primary")
   await expect(primaryRow).toBeVisible()
   await expect(channelRowByName(page, "DoneHub secondary")).toHaveCount(0)
+  await expect(
+    page.getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.paginationSummary),
+  ).toHaveAttribute("data-total", "1")
 
   const { rowTestToken } = await openManagedSiteChannelRowActions(
     page,
@@ -235,6 +240,19 @@ test("keeps DoneHub channel deep links editable in the native table", async ({
 
   await expect(channelRowByName(page, "DoneHub primary edited")).toBeVisible()
   await expect(channelRowByName(page, "DoneHub secondary")).toHaveCount(0)
+
+  const searchInput = page.getByTestId(
+    MANAGED_SITE_CHANNELS_TEST_IDS.searchInput,
+  )
+  await searchInput.fill("DoneHub primary edited")
+  await expect(channelRowByName(page, "DoneHub primary edited")).toBeVisible()
+  await searchInput.fill("no-matching-channel")
+  await expect(channelRowByName(page, "DoneHub primary edited")).toHaveCount(0)
+  await searchInput.fill("  PRIMARY EDITED  ")
+  await expect(channelRowByName(page, "DoneHub primary edited")).toBeVisible()
+  await searchInput.fill("")
+  await expect(channelRowByName(page, "DoneHub primary edited")).toBeVisible()
+  await expect(channelRowByName(page, "DoneHub secondary")).toBeVisible()
 })
 
 test("reconciles confirmed New API edits and deletes without reloading the collection", async ({
@@ -292,17 +310,19 @@ test("uses the current Octopus cookie session in a real extension browser", asyn
   extensionId,
   page,
 }) => {
-  await openInterceptedOctopusManagedSiteChannels({
+  const { getChannelKey } = await openInterceptedOctopusManagedSiteChannels({
     context,
     extensionId,
     page,
   })
   await waitForExtensionRoot(page)
 
+  const originalKey = getChannelKey()
+  expect(originalKey).not.toBe("")
   await expect(page.getByRole("table")).toBeVisible()
   await expect
     .poll(async () =>
-      (await context.cookies("https://octopus.example.invalid")).find(
+      (await context.cookies(INTERCEPTED_OCTOPUS_ORIGIN)).find(
         (cookie) => cookie.name === "auth",
       ),
     )
@@ -311,6 +331,60 @@ test("uses the current Octopus cookie session in a real extension browser", asyn
   await expect.poll(getInterceptedOctopusStatusRequestCount).toBeGreaterThan(0)
   expect(getInterceptedOctopusRootRequestCount()).toBe(0)
   await expect(page.getByText("Unable to load channels")).toBeHidden()
+  await expect(channelRowByName(page, "Example outbound")).toContainText(
+    "Anthropic",
+  )
+  const focusedUrl = new URL(page.url())
+  focusedUrl.searchParams.set("channelId", "17")
+  focusedUrl.searchParams.set("search", "stale-search")
+  await page.goto(focusedUrl.toString())
+  await expect(channelRowByName(page, "Example outbound")).toBeVisible()
+  const searchInput = page.getByTestId(
+    MANAGED_SITE_CHANNELS_TEST_IDS.searchInput,
+  )
+  await searchInput.fill("no-matching-channel")
+  await expect(channelRowByName(page, "Example outbound")).toHaveCount(0)
+  await searchInput.fill("  EXAMPLE OUTBOUND  ")
+  await expect(channelRowByName(page, "Example outbound")).toBeVisible()
+  await searchInput.fill("")
+  const { rowTestToken } = await openManagedSiteChannelRowActions(
+    page,
+    "Example outbound",
+  )
+  await page
+    .getByTestId(getManagedSiteChannelRowEditActionTestId(rowTestToken))
+    .click()
+  await expect(
+    page.getByTestId(CHANNEL_DIALOG_TEST_IDS.typeSelect),
+  ).toContainText("Anthropic")
+  await expect(page.getByTestId(CHANNEL_DIALOG_TEST_IDS.keyInput)).toHaveValue(
+    "",
+  )
+  await page
+    .getByTestId(CHANNEL_DIALOG_TEST_IDS.nameInput)
+    .fill("Example outbound renamed")
+  await page.getByTestId(CHANNEL_DIALOG_TEST_IDS.submitButton).click()
+  await expect(page.getByTestId(CHANNEL_DIALOG_TEST_IDS.form)).toBeHidden()
+  await expect(
+    channelRowByName(page, "Example outbound renamed"),
+  ).toContainText("Anthropic")
+  await page.reload()
+  await expect(channelRowByName(page, "Example outbound renamed")).toBeVisible()
+  expect(getChannelKey()).toBe(originalKey)
+
+  const unauthorizedStatus = await page.evaluate(async (origin) => {
+    const response = await fetch(`${origin}/api/v1/channel/update`, {
+      method: "POST",
+      credentials: "omit",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: 17, name: "Unauthorized edit", key: "" }),
+    })
+    return response.status
+  }, INTERCEPTED_OCTOPUS_ORIGIN)
+  expect(unauthorizedStatus).toBe(401)
+  expect(getChannelKey()).toBe(originalKey)
+  await page.reload()
+  await expect(channelRowByName(page, "Example outbound renamed")).toBeVisible()
 })
 
 test("runs the AxonHub native edit and migration preview through the shared UI", async ({
@@ -345,6 +419,17 @@ test("runs the AxonHub native edit and migration preview through the shared UI",
   await expect(page.getByText("Example primary")).toBeHidden()
   await page.getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.searchInput).fill("")
   await expect(page.getByText("Example primary")).toBeVisible()
+
+  const channelUrl = new URL(page.url())
+  channelUrl.searchParams.set("channelId", AXON_HUB_PRIMARY_ID)
+  channelUrl.searchParams.set("search", "stale-search")
+  await page.goto(channelUrl.toString())
+  await waitForExtensionRoot(page)
+  await expect(channelRowByName(page, "Example primary")).toBeVisible()
+  await expect(channelRowByName(page, "Example secondary")).toHaveCount(0)
+  await expect(
+    page.getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.paginationSummary),
+  ).toHaveAttribute("data-total", "1")
 
   await openManagedSiteChannelRowActions(page, "Example primary")
   const editAction = page.getByRole("menuitem", { name: "Edit" })

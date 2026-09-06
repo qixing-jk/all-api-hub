@@ -23,12 +23,17 @@ import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import { ChannelTypeNames } from "~/constants/managedSite"
 import { OctopusOutboundTypeNames } from "~/constants/octopus"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
-import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
+import {
+  MANAGED_SITE_TYPES,
+  SITE_TYPES,
+  type ManagedSiteType,
+} from "~/constants/siteType"
 import { useFeatureGuidanceContext } from "~/contexts/FeatureGuidanceContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { loadNewApiChannelKeyWithVerification } from "~/features/ManagedSiteVerification/loadNewApiChannelKeyWithVerification"
 import { NewApiManagedVerificationDialog } from "~/features/ManagedSiteVerification/NewApiManagedVerificationDialog"
 import { useNewApiManagedVerification } from "~/features/ManagedSiteVerification/useNewApiManagedVerification"
+import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { getManagedSiteChannelResourceId } from "~/services/managedSites/managedSiteChannelResourceIdentity"
 import {
   getManagedSiteService,
@@ -43,7 +48,9 @@ import {
   getManagedSiteLabel,
   getManagedSiteMessagesKeyFromSiteType,
   getManagedSiteTargetOptions,
+  getManagedSiteUnsupportedModelSyncMessage,
   needsManagedSiteChannelKeyResolution,
+  supportsManagedSiteModelSync,
 } from "~/services/managedSites/utils/managedSite"
 import {
   startProductAnalyticsAction,
@@ -116,15 +123,6 @@ const channelsToolbarSurface =
 const channelsRowActionsSurface =
   PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsRowActions
 const logger = createLogger("ManagedSiteChannels")
-
-const MANAGED_SITE_TYPE_OPTIONS: ManagedSiteType[] = [
-  SITE_TYPES.NEW_API,
-  SITE_TYPES.DONE_HUB,
-  SITE_TYPES.VELOERA,
-  SITE_TYPES.OCTOPUS,
-  SITE_TYPES.AXON_HUB,
-  SITE_TYPES.CLAUDE_CODE_HUB,
-]
 
 const normalizeRouteQuery = (
   query: Readonly<Record<string, string | undefined>>,
@@ -322,15 +320,13 @@ export default function ManagedSiteChannels({
   const isOctopus = managedSiteType === SITE_TYPES.OCTOPUS
   const isAxonHub = managedSiteType === SITE_TYPES.AXON_HUB
   const isClaudeCodeHub = managedSiteType === SITE_TYPES.CLAUDE_CODE_HUB
-  // Migration has provider-specific create-only adapters; New API-only channel
-  // controls stay gated separately below.
   const supportsChannelMigration = true
-  const supportsNewApiOnlyChannelActions = !isAxonHub && !isClaudeCodeHub
+  const supportsChannelModelSync = supportsManagedSiteModelSync(managedSiteType)
   const isNewApiManagedSite = managedSiteType === SITE_TYPES.NEW_API
-  const supportsDetailBackedRealKeyLoading =
-    managedSiteType === SITE_TYPES.DONE_HUB ||
-    managedSiteType === SITE_TYPES.VELOERA ||
-    managedSiteType === SITE_TYPES.CLAUDE_CODE_HUB
+  const supportsChannelSecretRead = Boolean(
+    getSiteTypeCapabilities(managedSiteType).managedSites?.channels
+      ?.fetchSecretKey,
+  )
   const isConfigMissing = !hasValidManagedSiteConfig(
     preferences,
     managedSiteType,
@@ -730,9 +726,13 @@ export default function ManagedSiteChannels({
         mode === DIALOG_MODES.EDIT
           ? resolveManagedUpstreamResourceCapabilities(managedSiteType)
           : null
+      const supportsResourceSecretRead = Boolean(
+        resourceResolution?.supported &&
+          resourceResolution.capabilities.secrets?.revealSecret,
+      )
       const shouldOfferRealKeyLoading =
         needsManagedSiteChannelKeyResolution(channel.key) &&
-        (isNewApiManagedSite || supportsDetailBackedRealKeyLoading)
+        (supportsChannelSecretRead || supportsResourceSecretRead)
 
       const dialogOptions: Parameters<typeof openWithCustom>[0] = {
         mode,
@@ -940,7 +940,7 @@ export default function ManagedSiteChannels({
       newApiUsername,
       openWithCustom,
       refreshChannels,
-      supportsDetailBackedRealKeyLoading,
+      supportsChannelSecretRead,
       t,
       openNewApiManagedVerification,
     ],
@@ -1413,9 +1413,9 @@ export default function ManagedSiteChannels({
             canView: true,
             canDelete: true,
             canMigrate: hasMigrationTargets,
-            canSync: supportsNewApiOnlyChannelActions,
-            canOpenSync: supportsNewApiOnlyChannelActions,
-            canFilter: supportsNewApiOnlyChannelActions,
+            canSync: supportsChannelModelSync,
+            canOpenSync: supportsChannelModelSync,
+            canFilter: supportsChannelModelSync,
           },
           isSyncing: syncingIds.has(channel.id),
         }
@@ -1423,7 +1423,7 @@ export default function ManagedSiteChannels({
     [
       channels,
       hasMigrationTargets,
-      supportsNewApiOnlyChannelActions,
+      supportsChannelModelSync,
       syncingIds,
       t,
       typeNames,
@@ -1656,7 +1656,7 @@ export default function ManagedSiteChannels({
       rows: presentationRows,
       routeQuery: normalizeRouteQuery(routeParams ?? {}),
       siteTypeValue: managedSiteType,
-      siteTypeOptions: MANAGED_SITE_TYPE_OPTIONS.map((siteType) => ({
+      siteTypeOptions: MANAGED_SITE_TYPES.map((siteType) => ({
         value: siteType,
         label: getManagedSiteLabel(t, siteType),
       })),
@@ -1716,7 +1716,10 @@ export default function ManagedSiteChannels({
       canCreate: true,
       canRefresh: true,
       canDeleteSelected: true,
-      canSyncSelected: supportsNewApiOnlyChannelActions,
+      canSyncSelected: supportsChannelModelSync,
+      modelSyncUnavailableReason: supportsChannelModelSync
+        ? undefined
+        : getManagedSiteUnsupportedModelSyncMessage(t, managedSiteType),
       canToggleMigration:
         supportsChannelMigration && (hasMigrationTargets || isMigrationMode),
       canMigrateSelected: hasMigrationTargets,
@@ -1727,7 +1730,9 @@ export default function ManagedSiteChannels({
       hasMigrationTargets,
       isMigrationMode,
       supportsChannelMigration,
-      supportsNewApiOnlyChannelActions,
+      supportsChannelModelSync,
+      t,
+      managedSiteType,
     ],
   )
 

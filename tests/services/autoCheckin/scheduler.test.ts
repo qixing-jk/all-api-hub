@@ -1652,6 +1652,58 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
     vi.useRealTimers()
   })
 
+  it.each([
+    { reason: "network_error", retryable: true },
+    { reason: "account_unavailable", retryable: false },
+    { reason: "status_unavailable", retryable: false },
+  ])(
+    "persists blocked $reason as a failure with explicit retry policy",
+    async ({ reason, retryable }) => {
+      vi.useFakeTimers()
+      vi.setSystemTime(new Date(2024, 0, 1, 9, 30, 0))
+      mockedUserPreferences.getPreferences.mockResolvedValue({
+        autoCheckin: {
+          ...DEFAULT_PREFERENCES.autoCheckin,
+          globalEnabled: true,
+          retryStrategy: {
+            enabled: true,
+            intervalMinutes: 30,
+            maxAttemptsPerDay: 3,
+          },
+        },
+      })
+      const account = {
+        id: "blocked-account",
+        disabled: false,
+        site_name: "Example Site",
+        site_type: SITE_TYPES.VELOERA,
+        account_info: { username: "example-user" },
+        checkIn: runnableCheckIn(),
+      }
+      mockedAccountStorage.getAllAccounts.mockResolvedValue([account])
+      resolveProviderForTest.mockReturnValue({
+        getReadiness: vi.fn(() => ({ ready: true })),
+        checkIn: vi.fn(),
+      })
+      mockedMethods.executeSelectedCheckIn.mockResolvedValueOnce({
+        kind: "blocked",
+        reason,
+        retryable,
+      })
+      await runCheckinsForTest({ runType: AUTO_CHECKIN_RUN_TYPE.DAILY })
+      expect(storedStatus.perAccount[account.id]).toMatchObject({
+        status: "failed",
+        reasonCode: reason,
+        retryable,
+        messageKey: `autoCheckin:skipReasons.${reason}`,
+      })
+      expect(storedStatus.retryState?.pendingAccountIds ?? []).toEqual(
+        retryable ? [account.id] : [],
+      )
+      vi.useRealTimers()
+    },
+  )
+
   it("keeps a bounded retry queued when authoritative status is temporarily unavailable", async () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date(2024, 0, 1, 9, 30, 0))
@@ -1704,7 +1756,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
       checkIn: vi.fn(),
     })
     mockedMethods.executeSelectedCheckIn.mockResolvedValueOnce({
-      kind: "skipped",
+      kind: "blocked",
       reason: "network_error",
       retryable: true,
     })

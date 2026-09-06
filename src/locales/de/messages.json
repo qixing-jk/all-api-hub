@@ -3,6 +3,8 @@
     "autoProvisionAlreadyHad": "{{accountName}} hat bereits einen API-Schlüssel. Automatische Erstellung übersprungen.",
     "autoProvisionCreated": "Für {{accountName}} wurde ein Standardschlüssel erstellt.",
     "autoProvisionFailed": "Konto gespeichert, aber es konnte kein API-Schlüssel automatisch erstellt werden. Sie können „{{actionLabel}}“ in der Schlüsselverwaltung verwenden, um es erneut zu versuchen.",
+    "autoProvisionNeedsManualAction": "{{accountName}} wurde gespeichert, aber der Standardschlüssel benötigt eine manuelle Auswahl oder die Verarbeitung eines einmaligen Geheimnisses. Schließen Sie den Vorgang mit „{{actionLabel}}“ in der Schlüsselverwaltung ab.",
+    "autoProvisionUnsupported": "{{accountName}} wurde gespeichert, aber dieser Website-Typ unterstützt das automatische Erstellen eines Standard-API-Schlüssels nicht.",
     "checkingApiKeys": "API-Schlüssel prüfen...",
     "createTokenFailed": "Fehler beim Erstellen des API-Tokens",
     "tokenNotFound": "Fehler beim Erstellen oder Finden eines API-Tokens"

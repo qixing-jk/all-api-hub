@@ -10,17 +10,14 @@ import {
   AXON_HUB_TABLE_FIELD_IDS,
 } from "~/constants/axonHub"
 import { ChannelType } from "~/constants/managedSite"
-import { isManagedSiteType, SITE_TYPES } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import {
   getManagedResourceFieldPolicy,
   resolveManagedResourceFieldPolicy,
   type ManagedResourceEditorMode,
 } from "~/features/ManagedSiteChannels/presentation/managedResourceFieldPolicy"
 import { createManagedResourcePresentationMapper } from "~/features/ManagedSiteChannels/presentation/managedResourcePresentation"
-import {
-  MANAGED_RESOURCE_KINDS,
-  MANAGED_RESOURCE_MODES,
-} from "~/services/accountSiteDefinitions/contracts"
+import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
 import * as accountSiteDefinitionRegistry from "~/services/accountSiteDefinitions/registry"
 import {
   MANAGED_RESOURCE_CREATE_SEED_KINDS,
@@ -1001,6 +998,8 @@ describe("AxonHub native managed-resource Adapter", () => {
           name: "Plain name",
           supportedModels: ["model-searchable"],
           tags: ["tag-searchable"],
+          credentials: { apiKey: "private-search-secret" },
+          settings: pinnedSettings,
         }),
       ],
     })
@@ -1008,7 +1007,7 @@ describe("AxonHub native managed-resource Adapter", () => {
 
     for (const term of [
       "opaque-search",
-      "plain name",
+      "  PLAIN NAME  ",
       "model-searchable",
       "tag-searchable",
       "gateway.example.invalid",
@@ -1020,6 +1019,12 @@ describe("AxonHub native managed-resource Adapter", () => {
     await expect(
       workspace.list({ search: "proxy-password" }),
     ).resolves.toMatchObject({ items: [] })
+    await expect(
+      workspace.list({ search: "private-search-secret" }),
+    ).resolves.toMatchObject({ items: [] })
+    await expect(workspace.list({ search: "   " })).resolves.toMatchObject({
+      items: [{ ref: { resourceId: "opaque-search-id" } }],
+    })
     expect(mocks.getChannel).not.toHaveBeenCalled()
   })
 
@@ -2737,41 +2742,13 @@ describe("AxonHub native managed-resource Adapter", () => {
     expect(newApiRegistration).not.toBe(registration)
   })
 
-  it("keeps registration presence and native rollout mode explicit", () => {
+  it("uses registration presence as the native resource discriminator", () => {
     expect(
       getManagedResourceRegistration(
         SITE_TYPES.AXON_HUB,
         MANAGED_RESOURCE_KINDS.Channel,
       ),
     ).not.toBeNull()
-    expect(
-      accountSiteDefinitionRegistry.getAccountSiteDefinition(
-        SITE_TYPES.AXON_HUB,
-      )?.managedResource?.mode,
-    ).toBe(MANAGED_RESOURCE_MODES.NativeResource)
-  })
-
-  it("has a registration for every definition currently marked native-resource", () => {
-    const nativeDefinitions = accountSiteDefinitionRegistry
-      .getAccountSiteDefinitions()
-      .filter(
-        (definition) =>
-          definition.managedResource?.mode ===
-          MANAGED_RESOURCE_MODES.NativeResource,
-      )
-
-    expect(
-      nativeDefinitions.every((definition) => {
-        const policy = definition.managedResource
-        if (!policy || !isManagedSiteType(definition.siteType)) return false
-        return Boolean(
-          getManagedResourceRegistration(
-            definition.siteType,
-            policy.primaryKind,
-          ),
-        )
-      }),
-    ).toBe(true)
   })
 
   it("maps native Axon detail to a secret-free canonical migration source", async () => {

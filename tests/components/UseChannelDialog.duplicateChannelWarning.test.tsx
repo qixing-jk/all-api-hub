@@ -564,7 +564,7 @@ describe("useChannelDialog", () => {
     expect(mockToastError).not.toHaveBeenCalled()
   })
 
-  it("does not downgrade a native provider when its import registration is missing", async () => {
+  it("uses the legacy dialog when no native import registration exists", async () => {
     registrationSpy = vi
       .spyOn(nativeResourceRegistry, "getManagedResourceRegistration")
       .mockReturnValue(null)
@@ -586,10 +586,10 @@ describe("useChannelDialog", () => {
       )
     })
 
-    expect(openResult!).toEqual({ opened: false })
-    expect(result.current.context.state.isOpen).toBe(false)
-    expect(result.current.context.state.nativeCreate).toBeUndefined()
-    expect(mockToastError).toHaveBeenCalled()
+    expect(openResult!).toEqual({ opened: true })
+    expect(result.current.context.state.isOpen).toBe(true)
+    expect(result.current.context.state.nativeCreate).toBeNull()
+    expect(mockToastError).not.toHaveBeenCalled()
   })
 
   it("shows duplicate channel warning from migrated resource candidates", async () => {

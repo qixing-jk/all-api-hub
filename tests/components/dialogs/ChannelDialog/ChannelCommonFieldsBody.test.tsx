@@ -8,6 +8,7 @@ import {
   ChannelCommonFieldsBody,
   ChannelModelsField,
   ChannelSecretField,
+  type ChannelCommonFieldsBodyProps,
 } from "~/components/dialogs/ChannelDialog/components/ChannelCommonFieldsBody"
 import { CHANNEL_DIALOG_TEST_IDS } from "~/components/dialogs/ChannelDialog/testIds"
 
@@ -50,6 +51,61 @@ function FilterableModelsHarness({
       />
       <output aria-label="Selected models">{selected.join(",")}</output>
     </>
+  )
+}
+
+function renderGroupDiscoveryStatus(
+  status: ChannelCommonFieldsBodyProps["groupDiscoveryStatus"],
+) {
+  render(
+    <ChannelCommonFieldsBody
+      t={t}
+      values={{
+        name: "Example channel",
+        type: "openai",
+        key: "secret-placeholder",
+        baseURL: "https://api.example.invalid",
+        models: [],
+        groups: ["default"],
+        priority: 0,
+        weight: 0,
+        status: "enabled",
+      }}
+      channelTypeOptions={[]}
+      availableModels={[]}
+      availableGroups={[{ value: "default", label: "Default" }]}
+      statusOptions={[]}
+      isViewMode={false}
+      isAddMode
+      isInteractionDisabled={false}
+      isKeyRequired
+      isBaseURLRequired={false}
+      isKeyRevealed={false}
+      canLoadRealKey={false}
+      isLoadingRealKey={false}
+      isLoadingModels={false}
+      isLoadingGroups={false}
+      groupDiscoveryStatus={status}
+      showUnknownStringType={false}
+      showGenericModelsField={false}
+      showGroupsField
+      showPriorityAndWeight={false}
+      showModelPrefillWarning={false}
+      onNameChange={vi.fn()}
+      onTypeChange={vi.fn()}
+      onKeyChange={vi.fn()}
+      onKeyRevealedChange={vi.fn()}
+      onLoadRealKey={vi.fn()}
+      onBaseURLChange={vi.fn()}
+      onModelsChange={vi.fn()}
+      onGroupsChange={vi.fn()}
+      onSelectAllModels={vi.fn()}
+      onInverseModels={vi.fn()}
+      onDeselectAllModels={vi.fn()}
+      onPriorityChange={vi.fn()}
+      onWeightChange={vi.fn()}
+      onStatusChange={vi.fn()}
+    />,
   )
 }
 
@@ -114,6 +170,30 @@ describe("ChannelCommonFieldsBody", () => {
     expect(cancelButton).toHaveAttribute("aria-live", "polite")
     await user.click(cancelButton)
     expect(onCancelLoadRealKey).toHaveBeenCalledOnce()
+  })
+
+  it("associates an unavailable saved-key explanation with the secret input", () => {
+    render(
+      <ChannelSecretField
+        t={t}
+        value=""
+        onChange={vi.fn()}
+        disabled={false}
+        revealed={false}
+        onRevealedChange={vi.fn()}
+        realKeyUnavailableMessage="This site type cannot show saved keys. Enter a new key to replace it."
+      />,
+    )
+
+    const input = screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.keyInput)
+    expect(input).toHaveAccessibleDescription(
+      "This site type cannot show saved keys. Enter a new key to replace it.",
+    )
+    expect(
+      screen.getByText(
+        "This site type cannot show saved keys. Enter a new key to replace it.",
+      ),
+    ).toBeVisible()
   })
 
   it("renders injected model actions beside the shared bulk actions", async () => {
@@ -331,6 +411,7 @@ describe("ChannelCommonFieldsBody", () => {
         isLoadingRealKey={false}
         isLoadingModels={false}
         isLoadingGroups={false}
+        groupDiscoveryStatus="available"
         showUnknownStringType={false}
         showGenericModelsField
         showGroupsField={false}
@@ -430,4 +511,20 @@ describe("ChannelCommonFieldsBody", () => {
     expect(statusSelect).toHaveAttribute("aria-expanded", "true")
     expect(screen.getByRole("option", { name: "Enabled" })).toHaveFocus()
   })
+
+  it.each(["unsupported", "not-ready", "failed"] as const)(
+    "explains when managed-site group discovery is %s",
+    (status) => {
+      renderGroupDiscoveryStatus(status)
+      const message = `channelDialog:fields.groups.discoveryStatus.${status}`
+
+      expect(screen.getByText(message)).toBeVisible()
+      expect(
+        screen.getByRole("combobox", {
+          name: "channelDialog:fields.groups.label",
+        }),
+      ).toHaveAccessibleDescription(message)
+      expect(screen.getByRole("status", { name: message })).toBeVisible()
+    },
+  )
 })

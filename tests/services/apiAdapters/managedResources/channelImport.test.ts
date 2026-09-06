@@ -92,7 +92,7 @@ describe("native managed-channel import", () => {
     ).resolves.toBeNull()
   })
 
-  it("fails closed when a native provider loses its import capability", async () => {
+  it("uses the legacy path when a registration has no import capability", async () => {
     vi.spyOn(
       managedResourceRegistry,
       "getManagedResourceRegistration",
@@ -104,10 +104,10 @@ describe("native managed-channel import", () => {
 
     await expect(
       openNativeManagedChannelImportSession(SITE_TYPES.AXON_HUB),
-    ).rejects.toThrow("native managed channel import capability missing")
+    ).resolves.toBeNull()
   })
 
-  it("fails closed when a native provider loses its exact registration", async () => {
+  it("uses the legacy path when no native registration exists", async () => {
     vi.spyOn(
       managedResourceRegistry,
       "getManagedResourceRegistration",
@@ -115,7 +115,7 @@ describe("native managed-channel import", () => {
 
     await expect(
       openNativeManagedChannelImportSession(SITE_TYPES.AXON_HUB),
-    ).rejects.toThrow("native managed channel import capability missing")
+    ).resolves.toBeNull()
   })
 
   it("normalizes a disabled draft into a disabled provider-neutral seed", async () => {

@@ -6,11 +6,13 @@ import { axonHubManagedResourceRegistration } from "./axonHub"
 import { claudeCodeHubManagedResourceRegistration } from "./claudeCodeHub"
 import { doneHubManagedResourceRegistration } from "./doneHub"
 import { newApiManagedResourceRegistration } from "./newApi"
+import { octopusManagedResourceRegistration } from "./octopus"
 import { sub2ApiManagedResourceRegistration } from "./sub2api"
 import { veloeraManagedResourceRegistration } from "./veloera"
 
 const MANAGED_RESOURCE_REGISTRATIONS = [
   newApiManagedResourceRegistration,
+  octopusManagedResourceRegistration,
   axonHubManagedResourceRegistration,
   claudeCodeHubManagedResourceRegistration,
   doneHubManagedResourceRegistration,

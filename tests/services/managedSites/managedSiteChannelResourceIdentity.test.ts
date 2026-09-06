@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import {
+  getManagedSiteChannelNavigationId,
   getManagedSiteChannelResourceId,
   getStableLegacyChannelId,
 } from "~/services/managedSites/managedSiteChannelResourceIdentity"
@@ -17,18 +18,32 @@ describe("managed-site channel resource identity", () => {
       "native-provider-id",
     )
     expect(getStableLegacyChannelId("axonhub", channel)).toBeNull()
+    expect(getManagedSiteChannelNavigationId("axonhub", channel)).toBe(
+      "native-provider-id",
+    )
   })
 
   it("falls back to the row id when AxonHub native detail is unavailable", () => {
     const channel = { id: 42 } as ManagedSiteChannel
 
     expect(getManagedSiteChannelResourceId("axonhub", channel)).toBe(42)
+    expect(
+      getManagedSiteChannelNavigationId("axonhub", channel),
+    ).toBeUndefined()
   })
 
-  it("uses the stable row id for managed-site families with native numeric ids", () => {
+  it.each([
+    "new-api",
+    "Veloera",
+    "done-hub",
+    "octopus",
+    "claude-code-hub",
+    "sub2api",
+  ] as const)("uses the stable row id for %s", (siteType) => {
     const channel = { id: 9 } as ManagedSiteChannel
 
-    expect(getManagedSiteChannelResourceId("new-api", channel)).toBe(9)
-    expect(getStableLegacyChannelId("new-api", channel)).toBe(9)
+    expect(getManagedSiteChannelResourceId(siteType, channel)).toBe(9)
+    expect(getStableLegacyChannelId(siteType, channel)).toBe(9)
+    expect(getManagedSiteChannelNavigationId(siteType, channel)).toBe(9)
   })
 })

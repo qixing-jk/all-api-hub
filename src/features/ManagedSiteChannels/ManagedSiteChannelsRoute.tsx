@@ -14,11 +14,7 @@ import {
 } from "~/components/ui"
 import type { ManagedSiteType } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import {
-  MANAGED_RESOURCE_MODES,
-  MANAGED_RESOURCE_PRODUCT_ACTIONS,
-  type ManagedResourceProductPolicy,
-} from "~/services/accountSiteDefinitions/contracts"
+import type { ManagedResourceProductPolicy } from "~/services/accountSiteDefinitions/contracts"
 import {
   getAccountSiteDefinition,
   getManagedSiteTypeValues,
@@ -33,12 +29,15 @@ import {
   type ResourceOperationOptions,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { getManagedResourceRegistration } from "~/services/apiAdapters/managedResources/registry"
+import { resolveManagedSiteMigrationCapability } from "~/services/managedSites/channelMigrationCapabilityRegistry"
 import {
   getManagedSiteAdminConfigForType,
   getManagedSiteConfigMissingMessage,
   getManagedSiteLabel,
   getManagedSiteMessagesKeyFromSiteType,
   getManagedSiteTargetOptions,
+  getManagedSiteUnsupportedModelSyncMessage,
+  supportsManagedSiteModelSync,
 } from "~/services/managedSites/utils/managedSite"
 import {
   startProductAnalyticsAction,
@@ -298,7 +297,9 @@ function NativeManagedSiteChannels({
       ),
     [t],
   )
-  const [searchValue, setSearchValue] = useState(routeParams.search ?? "")
+  const channelIdFilterValue = routeParams.channelId?.trim() ?? ""
+  const routeSearch = channelIdFilterValue ? "" : routeParams.search ?? ""
+  const [searchValue, setSearchValue] = useState(routeSearch)
   const [sorting, setSorting] = useState(() =>
     getDefaultManagedResourceSorting(siteType),
   )
@@ -323,8 +324,8 @@ function NativeManagedSiteChannels({
   }, [siteType])
 
   useEffect(
-    () => setSearchValue(routeParams.search ?? ""),
-    [routeParams.search],
+    () => setSearchValue(routeSearch),
+    [routeSearch, channelIdFilterValue],
   )
   useEffect(
     () => setSorting(getDefaultManagedResourceSorting(siteType)),
@@ -342,6 +343,15 @@ function NativeManagedSiteChannels({
     semantics: getManagedResourcePresentationSemantics(siteType),
     analytics,
   })
+  const previousChannelId = useRef(channelIdFilterValue)
+  const { setPageIndex, setSelectedRowKeys, setStatusFilter } = list
+  useEffect(() => {
+    if (previousChannelId.current === channelIdFilterValue) return
+    previousChannelId.current = channelIdFilterValue
+    setPageIndex(0)
+    setSelectedRowKeys({})
+    setStatusFilter([])
+  }, [channelIdFilterValue, setPageIndex, setSelectedRowKeys, setStatusFilter])
   const { syncingChannelIds, syncChannels } = useManagedSiteChannelModelSync({
     siteType,
     onModelsChanged: list.reconcile,
@@ -473,45 +483,38 @@ function NativeManagedSiteChannels({
     [t],
   )
   const canMigrate =
-    policy.actions.includes(MANAGED_RESOURCE_PRODUCT_ACTIONS.Migrate) &&
+    resolveManagedSiteMigrationCapability(siteType)?.source !== undefined &&
     targets.length > 0
-  const canSyncModels = policy.actions.includes(
-    MANAGED_RESOURCE_PRODUCT_ACTIONS.SyncModels,
-  )
-  const canConfigureModelSync = policy.actions.includes(
-    MANAGED_RESOURCE_PRODUCT_ACTIONS.ConfigureModelSync,
-  )
-  const canConfigureModelFilters = policy.actions.includes(
-    MANAGED_RESOURCE_PRODUCT_ACTIONS.ConfigureModelFilters,
-  )
+  const { resolveRef } = list
   const nativeRows = useMemo(
     () =>
-      list.allRows.map((row) => {
-        const channelActions = row.channelActions
-        return {
-          ...row,
-          capabilities: {
-            ...row.capabilities,
-            canMigrate: canMigrate && row.capabilities.canView,
-            canSync: canSyncModels && channelActions?.canSyncModels === true,
-            canOpenSync:
-              canConfigureModelSync &&
-              channelActions?.canOpenModelSync === true,
-            canFilter:
-              canConfigureModelFilters &&
-              channelActions?.canConfigureModelFilters === true,
-          },
-          isSyncing:
-            channelActions !== undefined &&
-            syncingChannelIds.has(channelActions.channelId),
-        }
-      }),
+      list.allRows
+        .filter(
+          (row) =>
+            !channelIdFilterValue ||
+            resolveRef(row.rowKey)?.resourceId === channelIdFilterValue,
+        )
+        .map((row) => {
+          const channelActions = row.channelActions
+          return {
+            ...row,
+            capabilities: {
+              ...row.capabilities,
+              canMigrate: canMigrate && row.capabilities.canView,
+              canSync: channelActions?.canSyncModels === true,
+              canOpenSync: channelActions?.canOpenModelSync === true,
+              canFilter: channelActions?.canConfigureModelFilters === true,
+            },
+            isSyncing:
+              channelActions !== undefined &&
+              syncingChannelIds.has(channelActions.channelId),
+          }
+        }),
     [
-      canConfigureModelFilters,
-      canConfigureModelSync,
       canMigrate,
-      canSyncModels,
+      channelIdFilterValue,
       list.allRows,
+      resolveRef,
       syncingChannelIds,
     ],
   )
@@ -582,7 +585,7 @@ function NativeManagedSiteChannels({
     channelIdFilterValue: routeParams.channelId ?? "",
     statusFilterValues: [...list.statusFilter],
     pagination,
-    total: list.totalRows,
+    total: channelIdFilterValue ? nativeRows.length : list.totalRows,
     isLoading: list.isLoading,
     isRefreshing: list.isLoading,
     isResourceInteractionBlocked: mutation.deleteState.requiresFreshRead,
@@ -610,14 +613,13 @@ function NativeManagedSiteChannels({
     },
   }
   const capabilities: ManagedChannelsCapabilities = {
-    canCreate:
-      mutation.capabilities.canCreate &&
-      policy.actions.includes(MANAGED_RESOURCE_PRODUCT_ACTIONS.Create),
+    canCreate: mutation.capabilities.canCreate,
     canRefresh: true,
-    canDeleteSelected:
-      mutation.capabilities.canDelete &&
-      policy.actions.includes(MANAGED_RESOURCE_PRODUCT_ACTIONS.DeleteSelected),
+    canDeleteSelected: mutation.capabilities.canDelete,
     canSyncSelected: nativeRows.some((row) => row.capabilities.canSync),
+    modelSyncUnavailableReason: supportsManagedSiteModelSync(siteType)
+      ? undefined
+      : getManagedSiteUnsupportedModelSyncMessage(t, siteType),
     canToggleMigration: canMigrate || migrationMode,
     canMigrateSelected: canMigrate,
     canMigrateFiltered: canMigrate,
@@ -747,7 +749,9 @@ function NativeManagedSiteChannels({
     onDeleteSelected: () => {
       void mutation.openBulkDelete(
         Object.keys(list.selectedRowKeys).filter(
-          (rowKey) => list.selectedRowKeys[rowKey],
+          (rowKey) =>
+            list.selectedRowKeys[rowKey] &&
+            (!channelIdFilterValue || rowsByKey.has(rowKey)),
         ),
       )
     },
@@ -966,7 +970,11 @@ export function ManagedSiteChannelsRoute({
 
   if (!policy) return <ManagedSiteChannelsIntegrationFailure />
 
-  if (policy.mode === MANAGED_RESOURCE_MODES.LegacyChannel) {
+  const registration = getManagedResourceRegistration(
+    siteType,
+    policy.primaryKind,
+  )
+  if (!registration) {
     return (
       <ManagedSiteChannels
         siteType={siteType}
@@ -976,12 +984,6 @@ export function ManagedSiteChannelsRoute({
       />
     )
   }
-
-  const registration = getManagedResourceRegistration(
-    siteType,
-    policy.primaryKind,
-  )
-  if (!registration) return <ManagedSiteChannelsIntegrationFailure />
 
   return (
     <NativeManagedSiteChannels

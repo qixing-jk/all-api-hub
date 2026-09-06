@@ -1446,6 +1446,75 @@ describe("accountStorage core behaviors", () => {
     )
   })
 
+  it.each([
+    [100, "matched", "unsupported"],
+    [300, "matched", "matched"],
+    [100, "unknown", "unsupported"],
+    [300, "unknown", "unknown"],
+  ] as const)(
+    "persists only newer unsupported evidence while retaining manual intent (latest %s, %s)",
+    async (observedAt, latestOutcome, expectedOutcome) => {
+      const methodId = "new-api:daily-checkin" as const
+      const account = createAccount({
+        id: "unsupported-execution",
+        checkIn: {
+          automaticExecutionEnabled: true,
+          selection: { mode: "manual", methodId },
+          customCheckIn: { url: "https://check-in.example.invalid" },
+          methodKnowledge: {
+            methods: {
+              [methodId]: {
+                detection:
+                  latestOutcome === "unknown"
+                    ? {
+                        outcome: "unknown",
+                        reason: "network",
+                        attemptedAt: observedAt,
+                      }
+                    : {
+                        outcome: "matched",
+                        evidence: { source: "probe", observedAt },
+                      },
+              },
+            },
+          },
+        },
+      })
+      seedStorage([account])
+      await accountStorage.prepareAccountForSelectedCheckIn(account.id, {
+        ...account.checkIn,
+        selection: { mode: "automatic" },
+        automaticExecutionEnabled: false,
+        customCheckIn: undefined,
+        methodKnowledge: {
+          methods: {
+            [methodId]: {
+              detection: {
+                outcome: "unsupported",
+                evidence: { source: "probe", observedAt: 200 },
+              },
+            },
+          },
+        },
+      })
+      const persisted = await accountStorage.getAccountById(account.id)
+      expect(persisted?.checkIn).toMatchObject({
+        selection: account.checkIn.selection,
+        automaticExecutionEnabled: true,
+        customCheckIn: account.checkIn.customCheckIn,
+        methodKnowledge: {
+          methods: {
+            [methodId]: {
+              detection: {
+                outcome: expectedOutcome,
+              },
+            },
+          },
+        },
+      })
+    },
+  )
+
   it("prepares the current account without writing when no refreshed check-in is provided", async () => {
     const account = createAccount({ id: "prepare-current" })
     seedStorage([account])

@@ -23,12 +23,7 @@ import {
   hasUsableAccountRuntimeKeySecret,
   type AccountRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
-import {
-  ACCOUNT_SITE_MODEL_LIST_TOKEN_SCOPED_CATALOG_FALLBACKS,
-  getAccountSiteModelListProfile,
-  shouldUseAccountSiteRuntimeKeyCatalogFallback,
-  supportsAccountSiteDirectModelPricing,
-} from "~/services/accounts/accountSiteProfile"
+import { getAccountSiteModelListProfile } from "~/services/accounts/accountSiteProfile"
 import {
   canManageDisplayAccountTokens,
   fetchDisplayAccountRuntimeKeys,
@@ -1405,7 +1400,11 @@ function useSingleAccountModelData(params: {
       return
     }
     if (!fallbackAvailable) return
-    if (!shouldUseAccountSiteRuntimeKeyCatalogFallback(currentAccount)) return
+    if (
+      currentReadiness?.route !==
+      MODEL_LIST_ACCOUNT_SOURCE_ROUTES.TokenScopedRuntimeCatalog
+    )
+      return
     if (!query.isError) return
     if (!isUnsupportedModelPricingError(query.error)) return
     if (!scopedHasLoadedFallbackRuntimeKeys) return
@@ -1418,6 +1417,7 @@ function useSingleAccountModelData(params: {
     void loadFallbackCatalog()
   }, [
     currentAccount,
+    currentReadiness,
     fallbackAvailable,
     loadFallbackCatalog,
     query.error,
@@ -1496,7 +1496,17 @@ function useSingleAccountModelData(params: {
 
       setDataFormatError(false)
       if (
-        !supportsAccountSiteDirectModelPricing(currentAccount) &&
+        currentReadiness?.route ===
+          MODEL_LIST_ACCOUNT_SOURCE_ROUTES.Unsupported &&
+        isUnsupportedModelPricingError(query.error)
+      ) {
+        setLoadErrorMessage(null)
+        return
+      }
+
+      if (
+        currentReadiness?.route ===
+          MODEL_LIST_ACCOUNT_SOURCE_ROUTES.TokenScopedRuntimeCatalog &&
         isUnsupportedModelPricingError(query.error) &&
         fallbackAvailable
       ) {
@@ -1530,6 +1540,7 @@ function useSingleAccountModelData(params: {
     query.dataUpdatedAt,
     query.errorUpdatedAt,
     currentAccount,
+    currentReadiness,
     currentAccountScopeKey,
     fallbackAvailable,
     selectedSource?.kind,
@@ -1581,9 +1592,7 @@ function useSingleAccountModelData(params: {
     query.isError &&
       isUnsupportedModelPricingError(query.error) &&
       currentAccount &&
-      getAccountSiteModelListProfile(currentAccount.siteType)
-        .tokenScopedCatalogFallback !==
-        ACCOUNT_SITE_MODEL_LIST_TOKEN_SCOPED_CATALOG_FALLBACKS.RuntimeKey,
+      currentReadiness?.route === MODEL_LIST_ACCOUNT_SOURCE_ROUTES.Unsupported,
   )
 
   const pricingContexts: AccountPricingContext[] = useMemo(() => {

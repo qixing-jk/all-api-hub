@@ -47,6 +47,11 @@ const keyManagement = vi.hoisted(() => ({
     fetchAccountAvailableModels: vi.fn(),
   },
   fetchAccountTokens: vi.fn(),
+  fetchCurrentUserGroup: vi.fn(),
+  createApiToken: vi.fn(),
+  updateApiToken: vi.fn(),
+  deleteApiToken: vi.fn(),
+  fetchUserGroups: vi.fn(),
   fetchSiteUserGroups: vi.fn(),
   fetchAccountAvailableModels: vi.fn(),
 }))
@@ -795,10 +800,10 @@ describe("newApi managed-site channel capability", () => {
     }
     const signal = new AbortController().signal
 
-    await newApiManagedSiteCapabilities.queries.fetchSiteUserGroups(config, {
+    await newApiManagedSiteCapabilities.queries.siteUserGroups!.fetch(config, {
       signal,
     })
-    await newApiManagedSiteCapabilities.queries.fetchAccountAvailableModels(
+    await newApiManagedSiteCapabilities.queries.accountAvailableModels!.fetch(
       config,
     )
 

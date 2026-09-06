@@ -18,13 +18,13 @@ const INTERCEPTED_NEW_API_ORIGIN = "https://managed.example.invalid"
 const INTERCEPTED_DONE_HUB_TARGET_ORIGIN =
   "https://managed-target.example.invalid"
 const INTERCEPTED_AXON_HUB_ORIGIN = "https://axonhub.example.invalid"
-const INTERCEPTED_OCTOPUS_ORIGIN = "https://octopus.example.invalid"
+export const INTERCEPTED_OCTOPUS_ORIGIN = "https://octopus.example.invalid"
 const INTERCEPTED_OCTOPUS_COOKIE = "auth=octopus-cookie-session"
 
 export const NEW_API_CREATED_ID = 303
 export const DONE_HUB_PRIMARY_ID = 701
 
-const AXON_HUB_PRIMARY_ID = "gid://axonhub/Channel/opaque-primary"
+export const AXON_HUB_PRIMARY_ID = "gid://axonhub/Channel/opaque-primary"
 const AXON_HUB_SECONDARY_ID = "gid://axonhub/Channel/opaque-secondary"
 const AXON_HUB_CREATED_ID = "gid://axonhub/Channel/opaque-created"
 const AXON_HUB_NEXT_CURSOR = "axonhub-cursor-page-2"
@@ -753,7 +753,20 @@ async function installAxonHubIntercepts(context: BrowserContext) {
   })
 }
 
+/** Models cookie-authenticated channel persistence and exposes its stored key for assertions. */
 async function installOctopusCookieAuthIntercepts(context: BrowserContext) {
+  let channel = {
+    id: 17,
+    name: "Example outbound",
+    type: "anthropic",
+    enabled: true,
+    base_url: "https://upstream.example.invalid",
+    key: "fixture-channel-secret",
+    model: "model-a",
+    proxy: false,
+    auto_sync: true,
+    custom_header: [],
+  }
   interceptedOctopusCookieHeader = null
   interceptedOctopusRootRequestCount = 0
   interceptedOctopusStatusRequestCount = 0
@@ -802,7 +815,10 @@ async function installOctopusCookieAuthIntercepts(context: BrowserContext) {
       return
     }
 
-    if (path === "/api/v1/channel/list") {
+    if (
+      path === "/api/v1/channel/list" ||
+      (path === "/api/v1/channel/update" && request.method() === "POST")
+    ) {
       interceptedOctopusCookieHeader = request.headers().cookie ?? null
       if (
         !interceptedOctopusCookieHeader?.includes(INTERCEPTED_OCTOPUS_COOKIE)
@@ -814,13 +830,24 @@ async function installOctopusCookieAuthIntercepts(context: BrowserContext) {
         })
         return
       }
+    }
 
-      await fulfill(route, { code: 200, data: [] })
+    if (path === "/api/v1/channel/list") {
+      await fulfill(route, { code: 200, data: [channel] })
+      return
+    }
+
+    if (path === "/api/v1/channel/update" && request.method() === "POST") {
+      const payload = request.postDataJSON()
+      channel = { ...channel, ...payload }
+      await fulfill(route, { code: 200, data: channel })
       return
     }
 
     await route.fulfill({ status: 404, body: "fixture route not configured" })
   })
+
+  return { getChannelKey: () => channel.key }
 }
 
 async function openManagedSiteChannelsPage(params: {
@@ -906,13 +933,14 @@ export async function openInterceptedAxonHubManagedSiteChannels(params: {
   await openManagedSiteChannelsPage(params)
 }
 
+/** Opens the native Octopus workspace with a seeded cookie session and isolated channel state. */
 export async function openInterceptedOctopusManagedSiteChannels(params: {
   context: BrowserContext
   page: Page
   extensionId: string
 }) {
   await forceExtensionLanguage(params.page, "en")
-  await installOctopusCookieAuthIntercepts(params.context)
+  const fixture = await installOctopusCookieAuthIntercepts(params.context)
   await seedUserPreferences(await getServiceWorker(params.context), {
     managedSiteType: SITE_TYPES.OCTOPUS,
     octopus: {
@@ -922,4 +950,5 @@ export async function openInterceptedOctopusManagedSiteChannels(params: {
     },
   })
   await openManagedSiteChannelsPage(params)
+  return fixture
 }

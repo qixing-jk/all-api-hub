@@ -21,6 +21,11 @@
       "placeholder": "https://api.example.com"
     },
     "groups": {
+      "discoveryStatus": {
+        "failed": "Could not load groups from the managed site. You can still enter them manually.",
+        "not-ready": "Configure the managed site before loading groups. You can still enter them manually.",
+        "unsupported": "This managed site does not provide group discovery. Use the defaults or enter groups manually."
+      },
       "hint": "Groups are sourced from your managed site",
       "label": "Channel Groups",
       "loading": "Loading groups...",
@@ -29,7 +34,8 @@
     "key": {
       "label": "API Key",
       "placeholder": "Enter the upstream provider API key",
-      "realKeyHint": "If the channel list omitted or masked the full key, load the real key here. Some managed-site types may require extra verification."
+      "realKeyHint": "If the channel list omitted or masked the full key, load the real key here. Some managed-site types may require extra verification.",
+      "realKeyUnavailable": "This site type does not support viewing the saved key. Enter a new key if you need to replace it."
     },
     "models": {
       "hint": "Type to search or press Enter to add a custom model name",

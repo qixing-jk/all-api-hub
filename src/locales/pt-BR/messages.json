@@ -3,6 +3,8 @@
     "autoProvisionAlreadyHad": "{{accountName}} já possui uma chave de API. Criação automática ignorada.",
     "autoProvisionCreated": "Uma chave de API padrão foi criada para {{accountName}}.",
     "autoProvisionFailed": "A conta foi salva, mas não foi possível criar automaticamente uma chave de API. Você pode usar “{{actionLabel}}” no Gerenciamento de Chaves para tentar novamente.",
+    "autoProvisionNeedsManualAction": "{{accountName}} foi salva, mas a chave padrão exige uma seleção manual ou o tratamento de um segredo de uso único. Conclua com “{{actionLabel}}” no Gerenciamento de Chaves.",
+    "autoProvisionUnsupported": "{{accountName}} foi salva, mas este tipo de site não oferece criação automática de uma chave de API padrão.",
     "checkingApiKeys": "Verificando chave de API...",
     "createTokenFailed": "Falha ao criar token de API",
     "tokenNotFound": "Falha ao criar ou encontrar um token de API"

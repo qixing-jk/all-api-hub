@@ -404,6 +404,31 @@ describe("ManagedSiteChannelsView", () => {
     expect(onRefresh).toHaveBeenCalledOnce()
   })
 
+  it("keeps unsupported bulk model sync visible and explains why it is unavailable", () => {
+    const onSyncSelected = vi.fn()
+    render(
+      <ManagedSiteChannelsView
+        {...commonProps}
+        capabilities={{
+          ...commonProps.capabilities,
+          canSyncSelected: false,
+          modelSyncUnavailableReason:
+            "This site type does not support channel model sync.",
+        }}
+        state={createState()}
+        callbacks={createCallbacks({ onSyncSelected })}
+      />,
+    )
+
+    const syncButton = screen.getByRole("button", { name: "Sync selected" })
+    expect(syncButton).toBeDisabled()
+    expect(syncButton.parentElement).toHaveAttribute("tabindex", "0")
+    expect(syncButton.parentElement).toHaveAccessibleDescription(
+      "This site type does not support channel model sync.",
+    )
+    expect(onSyncSelected).not.toHaveBeenCalled()
+  })
+
   it("keeps toolbar order and common columns while emitting opaque row keys", async () => {
     const user = userEvent.setup()
     const onSelectedRowKeysChange = vi.fn()

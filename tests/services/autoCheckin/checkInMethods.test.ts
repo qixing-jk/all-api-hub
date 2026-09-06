@@ -8,6 +8,7 @@ import {
   CHECK_IN_METHOD_UNKNOWN_REASON_CODES,
 } from "~/constants/checkIn"
 import { SITE_TYPES } from "~/constants/siteType"
+import { ApiError } from "~/services/apiTransport/errors"
 import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
 import {
   discoverCheckInMethods,
@@ -930,9 +931,9 @@ describe("check-in methods compatibility activation", () => {
       })
 
       expect(result).toMatchObject({
-        kind: "skipped",
+        kind: "blocked",
         reason: expectedReason,
-        retryable: true,
+        retryable: expectedReason !== "status_unavailable",
       })
       expect(checkInRequest).not.toHaveBeenCalled()
     },
@@ -954,9 +955,9 @@ describe("check-in methods compatibility activation", () => {
     })
 
     expect(result).toMatchObject({
-      kind: "skipped",
+      kind: "blocked",
       reason: "status_unavailable",
-      retryable: true,
+      retryable: false,
     })
     expect(checkInRequest).not.toHaveBeenCalled()
   })
@@ -981,12 +982,129 @@ describe("check-in methods compatibility activation", () => {
     })
 
     expect(result).toMatchObject({
-      kind: "skipped",
+      kind: "blocked",
       reason: "status_unavailable",
-      retryable: true,
+      retryable: false,
     })
     expect(checkInRequest).not.toHaveBeenCalled()
   })
+
+  it.each([
+    [
+      "authentication_required",
+      { kind: "skipped", reason: "authentication_required" },
+    ],
+    ["permission_denied", { kind: "skipped", reason: "permission_denied" }],
+    [
+      "identity_mismatch",
+      { kind: "skipped", reason: "authentication_required" },
+    ],
+    [
+      "credential_persistence_failed",
+      { kind: "blocked", reason: "account_unavailable", retryable: false },
+    ],
+  ] as const)(
+    "does not retry a status observation requiring repair: %s",
+    async (reason, expected) => {
+      const registration = getNewApiExecutionRegistration()
+      vi.spyOn(registration.provider, "getStatus").mockResolvedValue({
+        outcome: "unknown",
+        reason,
+        attemptedAt: 200,
+      })
+      const mutate = vi
+        .spyOn(registration.provider, "checkIn")
+        .mockResolvedValue({ status: "success" })
+      for (const requireStatusConfirmationBeforeMutation of [false, true]) {
+        const result = await executeSelectedCheckIn({
+          account: createNewApiExecutionAccount(),
+          globalAutomaticExecutionEnabled: true,
+          context: createExecutionContext(),
+          requireStatusConfirmationBeforeMutation,
+        })
+        expect(result).toEqual(expected)
+      }
+      expect(mutate).not.toHaveBeenCalled()
+    },
+  )
+
+  it.each([
+    ["network", "network_error"],
+    ["timeout", "timeout"],
+    ["source_unavailable", "source_unavailable"],
+  ] as const)(
+    "allows status-only recovery for a transient %s observation",
+    async (reason, expectedReason) => {
+      const registration = getNewApiExecutionRegistration()
+      vi.spyOn(registration.provider, "getStatus").mockResolvedValue({
+        outcome: "unknown",
+        reason,
+        attemptedAt: 200,
+      })
+      const mutate = vi
+        .spyOn(registration.provider, "checkIn")
+        .mockResolvedValue({ status: "success" })
+      await expect(
+        executeSelectedCheckIn({
+          account: createNewApiExecutionAccount(),
+          globalAutomaticExecutionEnabled: true,
+          context: createExecutionContext(),
+          requireStatusConfirmationBeforeMutation: true,
+        }),
+      ).resolves.toEqual({
+        kind: "blocked",
+        reason: expectedReason,
+        retryable: true,
+      })
+      expect(mutate).not.toHaveBeenCalled()
+    },
+  )
+
+  it("does not submit a retry when a known observation lacks today's status", async () => {
+    const registration = getNewApiExecutionRegistration()
+    vi.spyOn(registration.provider, "getStatus").mockResolvedValue({
+      outcome: "known",
+      availability: "enabled",
+      evidence: { source: "probe", observedAt: Date.now() },
+    })
+    const mutate = vi
+      .spyOn(registration.provider, "checkIn")
+      .mockResolvedValue({ status: "success" })
+    await expect(
+      executeSelectedCheckIn({
+        account: createNewApiExecutionAccount(),
+        globalAutomaticExecutionEnabled: true,
+        context: createExecutionContext(),
+        requireStatusConfirmationBeforeMutation: true,
+      }),
+    ).resolves.toMatchObject({
+      kind: "blocked",
+      reason: "status_unavailable",
+      retryable: false,
+    })
+    expect(mutate).not.toHaveBeenCalled()
+  })
+
+  it.each([404, 405])(
+    "stops the compatibility first attempt after authoritative status HTTP %s",
+    async (statusCode) => {
+      const registration = getNewApiExecutionRegistration()
+      vi.spyOn(registration.provider, "getStatus").mockRejectedValue(
+        new ApiError("unsupported", statusCode),
+      )
+      const mutate = vi
+        .spyOn(registration.provider, "checkIn")
+        .mockResolvedValue({ status: "success" })
+      await expect(
+        executeSelectedCheckIn({
+          account: createNewApiExecutionAccount(),
+          globalAutomaticExecutionEnabled: true,
+          context: createExecutionContext(),
+        }),
+      ).resolves.toEqual({ kind: "skipped", reason: "method_unsupported" })
+      expect(mutate).not.toHaveBeenCalled()
+    },
+  )
 
   it("marks a failed mutation retryable only when the next attempt can confirm status", async () => {
     const registration = getNewApiExecutionRegistration()
@@ -1359,7 +1477,6 @@ describe("check-in methods compatibility activation", () => {
     expect(result).toMatchObject({
       kind: "skipped",
       reason: "status_unavailable",
-      retryable: false,
     })
     expect(checkInRequest).not.toHaveBeenCalled()
   })

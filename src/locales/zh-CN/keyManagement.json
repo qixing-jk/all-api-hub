@@ -354,6 +354,7 @@
     "verifyApiFailed": "打开接口验证失败",
     "verifyCliSupportFailed": "打开 CLI 兼容性验证失败"
   },
+  "noAccountsSupportKeyCreation": "当前视图中的账号都不支持创建 API 密钥。请选择其他账号或添加受支持的账号。",
   "noKeys": "暂无密钥数据",
   "noMatchingKeys": "没有找到匹配的密钥",
   "oneTimeKey": {

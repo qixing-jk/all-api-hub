@@ -3,7 +3,13 @@ import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { SettingSection } from "~/components/SettingSection"
-import { Button, Card, CardContent, CompactMultiSelect } from "~/components/ui"
+import {
+  Button,
+  Card,
+  CardContent,
+  CompactMultiSelect,
+  Notice,
+} from "~/components/ui"
 import { Switch } from "~/components/ui/Switch"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { BASIC_SETTINGS_TEST_IDS } from "~/features/BasicSettings/testIds"
@@ -13,6 +19,7 @@ import {
 } from "~/services/managedSites/managedSiteService"
 import { getManagedSiteAdminConfig } from "~/services/managedSites/utils/managedSite"
 import { ModelRedirectService } from "~/services/models/modelRedirect"
+import { supportsManagedSiteModelRedirect } from "~/services/models/modelRedirect/capabilities"
 import { ALL_PRESET_STANDARD_MODELS } from "~/types/managedSiteModelRedirect"
 import { createLogger } from "~/utils/core/logger"
 import { getPreferenceWriteFailureMessage } from "~/utils/core/toastHelpers"
@@ -23,6 +30,13 @@ import { ClearModelRedirectMappingsDialog } from "../../dialogs/ClearModelRedire
  * Unified logger scoped to the Basic Settings model redirect section.
  */
 const logger = createLogger("ModelRedirectSettings")
+
+type ModelDiscoveryStatus =
+  | "loading"
+  | "available"
+  | "unsupported"
+  | "not-ready"
+  | "failed"
 
 /**
  * Configures model redirect feature: enable toggle, model list, regeneration.
@@ -35,39 +49,73 @@ export default function ModelRedirectSettings() {
   const [isRegenerating, setIsRegenerating] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
   const [isBulkClearOpen, setIsBulkClearOpen] = useState(false)
+  const [modelDiscoveryStatus, setModelDiscoveryStatus] =
+    useState<ModelDiscoveryStatus>("loading")
 
   const modelRedirect = preferences?.modelRedirect
+  const isSupported = preferences
+    ? supportsManagedSiteModelRedirect(preferences.managedSiteType)
+    : null
 
   const [modelList, setModelList] = useState(ALL_PRESET_STANDARD_MODELS)
 
   useEffect(() => {
+    let cancelled = false
+
     /**
-     * Fetches available standard models when New API configuration exists.
+     * Fetches available standard models when managed-site configuration exists.
      */
     async function getModelList() {
       if (!preferences) {
+        setModelDiscoveryStatus("not-ready")
         return
       }
 
-      if (!hasValidManagedSiteConfig(preferences)) {
+      if (isSupported === false) {
         return
       }
+
+      setModelDiscoveryStatus("loading")
 
       const managedConfig = getManagedSiteAdminConfig(preferences)
       if (!managedConfig) {
+        setModelDiscoveryStatus("not-ready")
         return
       }
 
-      return await getManagedSiteServiceForType(
+      const fetchAccountAvailableModels = getManagedSiteServiceForType(
         preferences.managedSiteType,
-      ).fetchAccountAvailableModels(managedConfig)
+      ).fetchAccountAvailableModels
+      if (!fetchAccountAvailableModels) {
+        setModelDiscoveryStatus("unsupported")
+        return
+      }
+
+      try {
+        const models = await fetchAccountAvailableModels(managedConfig)
+        if (!cancelled) {
+          setModelDiscoveryStatus("available")
+        }
+        return models
+      } catch (error) {
+        logger.error("Failed to discover managed-site models", error)
+        if (!cancelled) {
+          setModelDiscoveryStatus("failed")
+        }
+      }
     }
 
     ;(async () => {
       const modelList = await getModelList()
-      setModelList(modelList ?? ALL_PRESET_STANDARD_MODELS)
+      if (!cancelled) {
+        setModelList(modelList ?? ALL_PRESET_STANDARD_MODELS)
+      }
     })()
-  }, [preferences])
+
+    return () => {
+      cancelled = true
+    }
+  }, [isSupported, preferences])
 
   const handleUpdate = async (updates: Record<string, unknown>) => {
     try {
@@ -110,8 +158,41 @@ export default function ModelRedirectSettings() {
   }
 
   const canUseManagedSiteAdmin = Boolean(
-    preferences && hasValidManagedSiteConfig(preferences),
+    isSupported === true &&
+      preferences &&
+      hasValidManagedSiteConfig(preferences),
   )
+  const modelDiscoveryCopy =
+    modelDiscoveryStatus === "unsupported"
+      ? {
+          title: t("modelDiscovery.unsupported.title"),
+          description: t("modelDiscovery.unsupported.description"),
+        }
+      : modelDiscoveryStatus === "failed"
+        ? {
+            title: t("modelDiscovery.failed.title"),
+            description: t("modelDiscovery.failed.description"),
+          }
+        : {
+            title: t("modelDiscovery.not-ready.title"),
+            description: t("modelDiscovery.not-ready.description"),
+          }
+
+  if (isSupported === false) {
+    return (
+      <SettingSection
+        id="managed-site-model-redirect"
+        title={t("title")}
+        description={t("description")}
+      >
+        <Notice
+          tone="warning"
+          title={t("unsupported.title")}
+          description={t("unsupported.description")}
+        />
+      </SettingSection>
+    )
+  }
 
   return (
     <SettingSection
@@ -120,6 +201,14 @@ export default function ModelRedirectSettings() {
       description={t("description")}
       onReset={resetModelRedirectConfig}
     >
+      {modelDiscoveryStatus !== "available" &&
+        modelDiscoveryStatus !== "loading" && (
+          <Notice
+            tone="warning"
+            title={modelDiscoveryCopy.title}
+            description={modelDiscoveryCopy.description}
+          />
+        )}
       <Card>
         <CardContent>
           <div

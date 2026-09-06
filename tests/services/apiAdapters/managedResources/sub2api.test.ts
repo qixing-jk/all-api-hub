@@ -7,10 +7,7 @@ import {
   SUB2API_MANAGED_RESOURCE_FIELD_IDS,
   SUB2API_MANAGED_RESOURCE_TABLE_FIELD_IDS,
 } from "~/constants/sub2api"
-import {
-  MANAGED_RESOURCE_KINDS,
-  MANAGED_RESOURCE_MODES,
-} from "~/services/accountSiteDefinitions/contracts"
+import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
 import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions/registry"
 import {
   MANAGED_RESOURCE_CREATE_SEED_KINDS,
@@ -122,7 +119,6 @@ describe("Sub2API native managed resource", () => {
       getAccountSiteDefinition(SITE_TYPES.SUB2API)?.managedResource,
     ).toEqual(
       expect.objectContaining({
-        mode: MANAGED_RESOURCE_MODES.NativeResource,
         primaryKind: MANAGED_RESOURCE_KINDS.Channel,
         tableFieldIds: SUB2API_MANAGED_RESOURCE_TABLE_FIELD_IDS,
         detailFieldIds: SUB2API_MANAGED_RESOURCE_DETAIL_FIELD_IDS,

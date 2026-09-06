@@ -180,7 +180,8 @@ describe("site announcement providers", () => {
     const result = await commonSiteAnnouncementProvider.fetch(baseRequest)
 
     expect(result).toMatchObject({
-      status: SITE_ANNOUNCEMENT_STATUS.Success,
+      status: SITE_ANNOUNCEMENT_STATUS.Error,
+      error: "notice unavailable",
       announcements: [
         {
           content: "Structured",
@@ -191,7 +192,7 @@ describe("site announcement providers", () => {
     })
   })
 
-  it("marks common provider failures as unsupported with the upstream error text", async () => {
+  it("marks common provider failures as errors with the upstream error text", async () => {
     getSiteTypeCapabilitiesMock.mockReturnValueOnce(
       createNoticeAdapter(
         vi.fn().mockRejectedValue(new Error("not supported")),
@@ -201,7 +202,7 @@ describe("site announcement providers", () => {
     const result = await commonSiteAnnouncementProvider.fetch(baseRequest)
 
     expect(result).toMatchObject({
-      status: SITE_ANNOUNCEMENT_STATUS.Unsupported,
+      status: SITE_ANNOUNCEMENT_STATUS.Error,
       announcements: [],
       error: "not supported",
     })
@@ -346,7 +347,7 @@ describe("site announcement providers", () => {
     })
   })
 
-  it("returns an error result when Sub2API siteAnnouncements capability is missing", async () => {
+  it("returns an unsupported result when Sub2API siteAnnouncements capability is missing", async () => {
     getSiteTypeCapabilitiesMock.mockReturnValue({
       siteType: SITE_TYPES.SUB2API,
     })
@@ -359,7 +360,7 @@ describe("site announcement providers", () => {
     const result = await sub2ApiSiteAnnouncementProvider.fetch(request)
 
     expect(result).toMatchObject({
-      status: SITE_ANNOUNCEMENT_STATUS.Error,
+      status: SITE_ANNOUNCEMENT_STATUS.Unsupported,
       announcements: [],
       error: "siteAnnouncements is not implemented for sub2api",
     })

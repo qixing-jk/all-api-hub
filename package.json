@@ -3,7 +3,7 @@
   "displayName": "All API Hub - 你的全能 AI 资产管家",
   "private": true,
   "type": "module",
-  "version": "3.59.0",
+  "version": "3.60.0",
   "description": "一站式聚合管理所有AI中转站账号的余额、模型和密钥，告别繁琐登录。",
   "engines": {
     "node": ">=24",
@@ -31,6 +31,7 @@
     "format:check": "prettier --check .",
     "validate:staged": "pnpm lint-staged --concurrent false && pnpm run i18n:check:staged",
     "validate:push": "pnpm compile && pnpm knip",
+    "validate:push:changed": "node scripts/run-push-check-if-needed.mjs",
     "i18n:check:staged": "node scripts/run-i18n-check-if-staged.mjs",
     "i18n:status": "i18next-cli status",
     "i18n:extract": "i18next-cli extract",
@@ -62,8 +63,10 @@
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
       "prettier --write",
-      "eslint --fix",
-      "vitest --run --passWithNoTests"
+      "eslint --fix"
+    ],
+    "tests/**/*.test.{ts,tsx}": [
+      "vitest --run"
     ],
     "*.{mjs,cjs}": [
       "prettier --write",

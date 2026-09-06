@@ -1,6 +1,7 @@
 import type { TFunction } from "i18next"
 import type { ReactNode } from "react"
 
+import type { ChannelGroupDiscoveryStatus } from "~/components/dialogs/ChannelDialog/hooks/useChannelForm"
 import { CHANNEL_DIALOG_TEST_IDS } from "~/components/dialogs/ChannelDialog/testIds"
 import {
   Alert,
@@ -50,6 +51,7 @@ export type ChannelCommonFieldsBodyProps = {
   isLoadingRealKey: boolean
   isLoadingModels: boolean
   isLoadingGroups: boolean
+  groupDiscoveryStatus: ChannelGroupDiscoveryStatus
   showUnknownStringType: boolean
   showGenericModelsField: boolean
   showGroupsField: boolean
@@ -76,6 +78,22 @@ const fieldDescriptionIds = (
 ): string | undefined => {
   const definedIds = ids.filter((id): id is string => Boolean(id))
   return definedIds.length > 0 ? definedIds.join(" ") : undefined
+}
+
+const getGroupDiscoveryMessage = (
+  t: TFunction,
+  status: ChannelGroupDiscoveryStatus,
+) => {
+  switch (status) {
+    case "unsupported":
+      return t("channelDialog:fields.groups.discoveryStatus.unsupported")
+    case "not-ready":
+      return t("channelDialog:fields.groups.discoveryStatus.not-ready")
+    case "failed":
+      return t("channelDialog:fields.groups.discoveryStatus.failed")
+    default:
+      return t("channelDialog:fields.groups.hint")
+  }
 }
 
 /** Renders shared field help or an accessible validation message. */
@@ -236,6 +254,7 @@ export function ChannelSecretField({
   loadingRealKeyLabel,
   cancelLoadRealKeyLabel,
   realKeyHint,
+  realKeyUnavailableMessage,
   actions,
 }: {
   t: TFunction
@@ -257,6 +276,7 @@ export function ChannelSecretField({
   loadingRealKeyLabel?: string
   cancelLoadRealKeyLabel?: string
   realKeyHint?: string
+  realKeyUnavailableMessage?: string
   actions?: ReactNode
 }) {
   const isCancelableRealKeyLoad =
@@ -264,6 +284,10 @@ export function ChannelSecretField({
 
   const descriptionId = description ? "channel-key-description" : undefined
   const realKeyHintId = canLoadRealKey ? "channel-key-real-key-hint" : undefined
+  const realKeyUnavailableMessageId =
+    !canLoadRealKey && realKeyUnavailableMessage
+      ? "channel-key-real-key-unavailable"
+      : undefined
   const errorId = errorMessage ? "channel-key-error" : undefined
   return (
     <div>
@@ -292,6 +316,7 @@ export function ChannelSecretField({
         aria-describedby={fieldDescriptionIds(
           descriptionId,
           realKeyHintId,
+          realKeyUnavailableMessageId,
           errorId,
         )}
       />
@@ -339,6 +364,11 @@ export function ChannelSecretField({
             </Button>
           </div>
         </div>
+      ) : null}
+      {realKeyUnavailableMessageId ? (
+        <ChannelFieldMessage id={realKeyUnavailableMessageId}>
+          {realKeyUnavailableMessage}
+        </ChannelFieldMessage>
       ) : null}
       {actions ? (
         <div className="mt-2 flex flex-wrap gap-2">{actions}</div>
@@ -587,6 +617,7 @@ export function ChannelCommonFieldsBody({
   isLoadingRealKey,
   isLoadingModels,
   isLoadingGroups,
+  groupDiscoveryStatus,
   showUnknownStringType,
   showGenericModelsField,
   showGroupsField,
@@ -607,6 +638,12 @@ export function ChannelCommonFieldsBody({
   onWeightChange,
   onStatusChange,
 }: ChannelCommonFieldsBodyProps) {
+  const groupDiscoveryMessage = getGroupDiscoveryMessage(
+    t,
+    groupDiscoveryStatus,
+  )
+  const groupDiscoveryMessageId = "channel-groups-discovery-status"
+
   return (
     <>
       <ChannelNameField
@@ -640,6 +677,11 @@ export function ChannelCommonFieldsBody({
         canLoadRealKey={canLoadRealKey}
         isLoadingRealKey={isLoadingRealKey}
         onLoadRealKey={onLoadRealKey}
+        realKeyUnavailableMessage={
+          !isAddMode && !isViewMode && !canLoadRealKey
+            ? t("channelDialog:fields.key.realKeyUnavailable")
+            : undefined
+        }
       />
 
       <ChannelBaseUrlField
@@ -681,9 +723,20 @@ export function ChannelCommonFieldsBody({
             }
             disabled={isViewMode || isInteractionDisabled || isLoadingGroups}
             allowCustom
+            aria-describedby={groupDiscoveryMessageId}
           />
-          <p className="dark:text-dark-text-secondary mt-1 text-xs text-gray-500">
-            {t("channelDialog:fields.groups.hint")}
+          <p
+            id={groupDiscoveryMessageId}
+            role="status"
+            aria-label={groupDiscoveryMessage}
+            aria-live="polite"
+            className={
+              groupDiscoveryStatus === "available"
+                ? "dark:text-dark-text-secondary mt-1 text-xs text-gray-500"
+                : "mt-1 text-xs text-amber-700 dark:text-amber-300"
+            }
+          >
+            {groupDiscoveryMessage}
           </p>
         </div>
       ) : null}

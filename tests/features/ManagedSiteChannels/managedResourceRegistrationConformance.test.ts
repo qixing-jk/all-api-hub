@@ -14,17 +14,25 @@ import {
   createManagedResourceColumns,
   getManagedResourcePresentationSemantics,
 } from "~/features/ManagedSiteChannels/presentation/managedResourceTablePolicy"
-import { MANAGED_RESOURCE_MODES } from "~/services/accountSiteDefinitions/contracts"
 import { getAccountSiteDefinitions } from "~/services/accountSiteDefinitions/registry"
 import { getManagedResourceRegistration } from "~/services/apiAdapters/managedResources/registry"
 
 describe("native managed-resource registration conformance", () => {
-  const nativeDefinitions = getAccountSiteDefinitions().flatMap((definition) =>
-    definition.managedResource?.mode ===
-      MANAGED_RESOURCE_MODES.NativeResource &&
-    isManagedSiteType(definition.siteType)
-      ? [{ definition, siteType: definition.siteType }]
-      : [],
+  const nativeDefinitions = getAccountSiteDefinitions().flatMap(
+    (definition) => {
+      if (
+        !definition.managedResource ||
+        !isManagedSiteType(definition.siteType)
+      ) {
+        return []
+      }
+      return getManagedResourceRegistration(
+        definition.siteType,
+        definition.managedResource.primaryKind,
+      )
+        ? [{ definition, siteType: definition.siteType }]
+        : []
+    },
   )
 
   it("keeps product policy, native registration, and editor policy in sync", () => {

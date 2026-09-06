@@ -354,6 +354,7 @@
     "verifyApiFailed": "Không thể mở xác minh API",
     "verifyCliSupportFailed": "Không thể mở xác minh tính tương thích CLI"
   },
+  "noAccountsSupportKeyCreation": "Không có tài khoản nào trong chế độ xem này hỗ trợ tạo khóa API. Hãy chọn tài khoản khác hoặc thêm tài khoản được hỗ trợ.",
   "noKeys": "Chưa có dữ liệu khóa",
   "noMatchingKeys": "Không tìm thấy khóa khớp",
   "oneTimeKey": {

@@ -74,6 +74,7 @@ import {
   createManagedSiteChannelMatchRequestCache,
   resolveManagedSiteChannelMatch,
 } from "~/services/managedSites/channelMatchResolver"
+import { getManagedSiteChannelNavigationId } from "~/services/managedSites/managedSiteChannelResourceIdentity"
 import {
   getManagedSiteService,
   hasValidManagedSiteConfig,
@@ -628,8 +629,14 @@ export default function AccountActionButtons({
         resolution.models.reason ===
           MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.EXACT
       ) {
-        openManagedSiteChannelsForChannel(exactMatch.id)
-        return
+        const navigationId = getManagedSiteChannelNavigationId(
+          service.siteType,
+          exactMatch,
+        )
+        if (navigationId !== undefined) {
+          openManagedSiteChannelsForChannel(navigationId)
+          return
+        }
       }
 
       openManagedSiteChannelsPage({ search: resolution.searchBaseUrl })

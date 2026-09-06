@@ -483,33 +483,43 @@ describe("ManagedSiteChannels", () => {
     ).not.toBeInTheDocument()
   })
 
-  it("uses routeParams.channelId to focus a channel and restores the full list when cleared", async () => {
-    mockChannels([
-      { id: 1, name: "Alpha", base_url: "https://site-a.example" },
-      { id: 21, name: "Twenty One", base_url: "https://site-b.example" },
-    ])
-
-    render(<ManagedSiteChannels routeParams={{ channelId: "21" }} />)
-
-    await waitForRowText("Twenty One")
-
-    const input = screen.getByRole("textbox") as HTMLInputElement
-    expect(input.value).toBe("21")
-
-    await waitFor(() => {
-      expect(screen.queryByText("Alpha")).not.toBeInTheDocument()
-    })
-
-    fireEvent.change(input, { target: { value: "" } })
-
-    await waitFor(() => {
-      expect(screen.getByText("Alpha")).toBeInTheDocument()
-      expect(navigateWithinOptionsPage).toHaveBeenCalledWith(
-        "#managedSiteChannels",
-        {},
+  it.each([SITE_TYPES.NEW_API, SITE_TYPES.OCTOPUS])(
+    "uses routeParams.channelId to focus a %s channel and restores the full list when cleared",
+    async (managedSiteType) => {
+      mockChannels(
+        [
+          { id: 1, name: "Alpha", base_url: "https://site-a.example" },
+          { id: 21, name: "Twenty One", base_url: "https://site-b.example" },
+        ],
+        { managedSiteType },
       )
-    })
-  })
+
+      render(
+        <ManagedSiteChannels
+          routeParams={{ channelId: "21", search: "unrelated old query" }}
+        />,
+      )
+
+      await waitForRowText("Twenty One")
+
+      const input = screen.getByRole("textbox") as HTMLInputElement
+      expect(input.value).toBe("21")
+
+      await waitFor(() => {
+        expect(screen.queryByText("Alpha")).not.toBeInTheDocument()
+      })
+
+      fireEvent.change(input, { target: { value: "" } })
+
+      await waitFor(() => {
+        expect(screen.getByText("Alpha")).toBeInTheDocument()
+        expect(navigateWithinOptionsPage).toHaveBeenCalledWith(
+          "#managedSiteChannels",
+          {},
+        )
+      })
+    },
+  )
 
   it("sorts channels by id descending by default", async () => {
     mockChannels([

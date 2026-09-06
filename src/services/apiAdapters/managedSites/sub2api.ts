@@ -67,7 +67,6 @@ import {
   createManagedSiteChannelEffect,
   finishManagedSiteMutationStep,
 } from "./request"
-import { emptyManagedSiteQueries } from "./unsupportedQueries"
 
 type MutationAttempt<T> =
   | { kind: "applied"; data: T }
@@ -593,6 +592,5 @@ export const sub2ApiManagedSiteCapabilities = {
   channels: sub2ApiManagedSiteChannels,
   resources,
   config: configCapability,
-  queries: emptyManagedSiteQueries,
   channelDrafts,
 }

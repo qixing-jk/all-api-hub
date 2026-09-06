@@ -735,6 +735,16 @@ export default function KeyManagement(props: {
   const canCreateKeyInCurrentScope = isSelectedOpenRouterAccount
     ? canCreateNativeKey
     : canCreateTokensInCurrentScope
+  const addTokenDisabledReason = !selectedAccount
+    ? t("keyManagement:selectAccountToContinue")
+    : selectedAccount === KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE &&
+        addTokenAvailableAccounts.length === 0
+      ? t("keyManagement:noAccountsSupportKeyCreation")
+      : selectedAddTokenScopeAccount &&
+          !isSelectedOpenRouterAccount &&
+          !canCreateTokensInCurrentScope
+        ? t("keyManagement:dialog.createNotSupported")
+        : undefined
 
   const handleRequestAddToken = useCallback(() => {
     if (isSelectedOpenRouterAccount) {
@@ -1082,6 +1092,7 @@ export default function KeyManagement(props: {
             ? !canCreateNativeKey
             : !canCreateTokensInCurrentScope
         }
+        addTokenDisabledReason={addTokenDisabledReason}
         isRepairDisabled={displayData.length === 0}
         isManagedSiteStatusRefreshDisabled={
           !selectedAccount || tokens.length === 0 || isLoading

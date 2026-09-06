@@ -42,6 +42,7 @@
   "loading": "Loading announcements...",
   "messages": {
     "checkCompleted": "Announcement check completed",
+    "checkCompletedWithIssues": "The check completed with {{failed}} failed and {{unsupported}} unsupported site(s). Select a site to review details.",
     "checkFailed": "Announcement check failed",
     "loadFailed": "Failed to load announcements",
     "markAllReadFailed": "Failed to mark announcements as read",
@@ -53,6 +54,8 @@
     "title": "{{site}} has new announcements"
   },
   "status": {
+    "aggregateIssues": "{{failed}} site(s) failed and {{unsupported}} do not support announcement checks. Select a site to view details and retry failures.",
+    "aggregateIssuesTitle": "Some sites need attention",
     "failed": "The latest announcement check failed: {{error}}",
     "failedTitle": "Check failed",
     "lastChecked": "Last checked: {{time}}",

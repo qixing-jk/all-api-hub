@@ -4,7 +4,10 @@ import {
   type AccountSiteType,
 } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
-import { getAccountSiteProductProfile } from "~/services/accounts/accountSiteProfile"
+import {
+  getAccountSiteProductProfile,
+  isAccountAuthTypeAllowed,
+} from "~/services/accounts/accountSiteProfile"
 import { AuthTypeEnum } from "~/types"
 
 /** Converts a non-negative manual USD balance to quota units. */
@@ -49,7 +52,7 @@ export function isValidAccount({
   return (
     !!siteName.trim() &&
     (authType === AuthTypeEnum.None ||
-      profile.auth.allowedAuthTypes.includes(authType)) &&
+      isAccountAuthTypeAllowed(normalizedSiteType, authType)) &&
     (!profile.identity.usernameRequired || !!username.trim()) &&
     (normalizedSiteType === SITE_TYPES.OPENROUTER || !!userId.trim()) &&
     isValidExchangeRate(exchangeRate) &&

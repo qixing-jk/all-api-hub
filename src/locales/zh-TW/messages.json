@@ -3,6 +3,8 @@
     "autoProvisionAlreadyHad": "{{accountName}} 已存在 API 金鑰，已跳過自動建立。",
     "autoProvisionCreated": "已為 {{accountName}} 自動建立預設 API 金鑰。",
     "autoProvisionFailed": "帳號已儲存，但自動建立 API 金鑰失敗。你可以在金鑰管理中使用“{{actionLabel}}”重試。",
+    "autoProvisionNeedsManualAction": "{{accountName}} 已儲存，但預設金鑰需要手動選擇或處理一次性金鑰。請前往金鑰管理使用“{{actionLabel}}”完成。",
+    "autoProvisionUnsupported": "{{accountName}} 已儲存，但該站點類型暫不支援自動建立預設 API 金鑰。",
     "checkingApiKeys": "正在檢查 API 金鑰...",
     "createTokenFailed": "建立 API 令牌失敗",
     "tokenNotFound": "無法建立或找到 API 令牌"

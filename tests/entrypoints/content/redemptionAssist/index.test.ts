@@ -1067,7 +1067,7 @@ describe("setupRedemptionAssistContent", () => {
     cleanup()
   })
 
-  it("maps manual redemption fixed failure codes to validation prompt analytics", async () => {
+  it("maps unsupported manual redemption to validation prompt analytics", async () => {
     mockShowAccountSelectToast.mockResolvedValueOnce({
       id: "chosen-account",
       siteName: "Chosen",
@@ -1087,8 +1087,8 @@ describe("setupRedemptionAssistContent", () => {
         return {
           data: {
             success: false,
-            code: "NO_ACCOUNTS",
-            message: "No account matched this private code",
+            code: "UNSUPPORTED_SITE_TYPE",
+            message: "Automatic redemption is unavailable for this site type",
           },
         }
       }
@@ -1122,7 +1122,7 @@ describe("setupRedemptionAssistContent", () => {
             code: codeA,
             preview: "a1b2****c5d6",
             success: false,
-            message: "No account matched this private code",
+            message: "Automatic redemption is unavailable for this site type",
           },
         ],
         expect.any(Function),
@@ -1149,7 +1149,7 @@ describe("setupRedemptionAssistContent", () => {
     )
     expect(analyticsPayloads).not.toContain(codeA)
     expect(analyticsPayloads).not.toContain("chosen-account")
-    expect(analyticsPayloads).not.toContain("No account matched")
+    expect(analyticsPayloads).not.toContain("Automatic redemption")
 
     cleanup()
   })

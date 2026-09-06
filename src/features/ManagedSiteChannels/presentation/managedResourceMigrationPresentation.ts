@@ -6,6 +6,7 @@ import {
 } from "~/constants/axonHub"
 import { DoneHubChannelTypeNames } from "~/constants/doneHub"
 import { ChannelTypeNames } from "~/constants/managedSite"
+import { OctopusOutboundTypeNames } from "~/constants/octopus"
 import type { ManagedSiteType } from "~/constants/siteType"
 import { SITE_TYPES } from "~/constants/siteType"
 import { VeloeraChannelTypeNames } from "~/constants/veloera"
@@ -193,6 +194,14 @@ const getTypeText = (
   siteType: ManagedSiteType,
   type: ManagedSiteMigrationSource["resourceType"] | string,
 ): string => {
+  if (siteType === SITE_TYPES.OCTOPUS) {
+    const numericType =
+      typeof type === "string" && !type.trim() ? NaN : Number(type)
+    return Number.isInteger(numericType) &&
+      hasOwn(OctopusOutboundTypeNames, numericType)
+      ? OctopusOutboundTypeNames[numericType]
+      : resolveUnsupportedChannelTypeLabel(t)
+  }
   if (siteType === SITE_TYPES.DONE_HUB && typeof type === "string") {
     const numericType = Number(type)
     if (

@@ -479,7 +479,10 @@ const preparePreviewItem = async (params: {
       }
     }
 
-    if (!supportsManagedSiteBaseUrlChannelLookup(service.siteType)) {
+    if (
+      !service.searchResourceDuplicateChannels &&
+      !supportsManagedSiteBaseUrlChannelLookup(service.siteType)
+    ) {
       warningCodes.push(
         MANAGED_SITE_TOKEN_BATCH_EXPORT_WARNING_CODES.DEDUPE_UNSUPPORTED,
       )

@@ -2,6 +2,7 @@ import type { TFunction } from "i18next"
 
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import { hasUsableApiTokenKey } from "~/services/accountTokens/apiTokenKey"
+import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import {
   getManagedSiteLegacyAdminConfig,
   resolveManagedSiteRuntimeConfigForType,
@@ -368,22 +369,12 @@ export function supportsManagedSiteBaseUrlChannelLookup(
   return siteType !== SITE_TYPES.VELOERA
 }
 
-/**
- * Whether the managed-site provider supports reading upstream models and
- * writing them back to channel definitions through the model-sync executor.
- * Contract: AxonHub and Claude Code Hub expose dedicated admin integrations
- * without the One API/New API channel model required by model sync.
- * Sources: https://github.com/looplj/axonhub and
- * https://github.com/ding113/claude-code-hub
- */
+/** Whether the registered managed-site channel adapter supports model writes. */
 export function supportsManagedSiteModelSync(
   siteType: ManagedSiteType,
 ): boolean {
-  return (
-    siteType === SITE_TYPES.NEW_API ||
-    siteType === SITE_TYPES.VELOERA ||
-    siteType === SITE_TYPES.DONE_HUB ||
-    siteType === SITE_TYPES.OCTOPUS
+  return Boolean(
+    getSiteTypeCapabilities(siteType).managedSites?.channels?.updateModels,
   )
 }
 

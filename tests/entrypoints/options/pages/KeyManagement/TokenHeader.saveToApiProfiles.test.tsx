@@ -629,90 +629,120 @@ describe("TokenHeader save to API profiles", () => {
     expect(screen.getByText(label)).toBeInTheDocument()
   })
 
-  it("renders the exact-match explanation when the token is already added", async () => {
-    const account = createAccountStub()
+  it.each([
+    { siteType: SITE_TYPES.NEW_API, resourceId: undefined, expectedId: 99 },
+    {
+      siteType: SITE_TYPES.AXON_HUB,
+      resourceId: "native/99+=",
+      expectedId: "native/99+=",
+    },
+    {
+      siteType: SITE_TYPES.AXON_HUB,
+      resourceId: undefined,
+      expectedId: undefined,
+    },
+  ])(
+    "links an added token to the stable $siteType channel identity",
+    async ({ siteType, resourceId, expectedId }) => {
+      mockedUseUserPreferencesContext.mockReturnValue({
+        managedSiteType: siteType,
+      })
+      const account = createAccountStub()
 
-    const token = {
-      id: 4,
-      user_id: 1,
-      key: "sk-added",
-      status: 1,
-      name: "Added Token",
-      created_time: 0,
-      accessed_time: 0,
-      expired_time: 0,
-      remain_quota: 0,
-      unlimited_quota: false,
-      used_quota: 0,
-      accountId: account.id,
-      accountName: account.name,
-    }
+      const token = {
+        id: 4,
+        user_id: 1,
+        key: "sk-added",
+        status: 1,
+        name: "Added Token",
+        created_time: 0,
+        accessed_time: 0,
+        expired_time: 0,
+        remain_quota: 0,
+        unlimited_quota: false,
+        used_quota: 0,
+        accountId: account.id,
+        accountName: account.name,
+      }
 
-    render(
-      <TokenHeader
-        token={token as any}
-        copyKey={vi.fn()}
-        handleEditToken={vi.fn()}
-        handleDeleteToken={vi.fn()}
-        account={account}
-        managedSiteStatus={{
-          status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.ADDED,
-          matchedChannel: {
-            id: 99,
-            name: "Managed Channel 99",
-          },
-          assessment: createManagedSiteAssessment({
-            url: {
-              matched: true,
-              candidateCount: 1,
-              channel: {
-                id: 99,
-                name: "Managed Channel 99",
-              },
+      render(
+        <TokenHeader
+          token={token as any}
+          copyKey={vi.fn()}
+          handleEditToken={vi.fn()}
+          handleDeleteToken={vi.fn()}
+          account={account}
+          managedSiteStatus={{
+            status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.ADDED,
+            matchedChannel: {
+              id: 99,
+              name: "Managed Channel 99",
+              resourceId,
             },
-            key: {
-              comparable: true,
-              matched: true,
-              reason: MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.MATCHED,
-              channel: {
-                id: 99,
-                name: "Managed Channel 99",
+            assessment: createManagedSiteAssessment({
+              url: {
+                matched: true,
+                candidateCount: 1,
+                channel: {
+                  id: 99,
+                  name: "Managed Channel 99",
+                },
               },
-            },
-            models: {
-              comparable: true,
-              matched: true,
-              reason: MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.EXACT,
-              channel: {
-                id: 99,
-                name: "Managed Channel 99",
+              key: {
+                comparable: true,
+                matched: true,
+                reason: MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.MATCHED,
+                channel: {
+                  id: 99,
+                  name: "Managed Channel 99",
+                },
               },
-              similarityScore: 1,
-            },
-          }),
-        }}
-      />,
-    )
+              models: {
+                comparable: true,
+                matched: true,
+                reason: MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.EXACT,
+                channel: {
+                  id: 99,
+                  name: "Managed Channel 99",
+                },
+                similarityScore: 1,
+              },
+            }),
+          }}
+        />,
+      )
 
-    expect(
-      screen.getByText("keyManagement:managedSiteStatus.badges.added"),
-    ).toBeInTheDocument()
-    expectNoVisibleManagedSiteDescription()
-    expect(
-      screen.getByText("keyManagement:managedSiteStatus.signals.key.matched"),
-    ).toBeInTheDocument()
-    expect(
-      screen.getByText("keyManagement:managedSiteStatus.signals.models.exact"),
-    ).toBeInTheDocument()
+      expect(
+        screen.getByText("keyManagement:managedSiteStatus.badges.added"),
+      ).toBeInTheDocument()
+      expectNoVisibleManagedSiteDescription()
+      expect(
+        screen.getByText("keyManagement:managedSiteStatus.signals.key.matched"),
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText(
+          "keyManagement:managedSiteStatus.signals.models.exact",
+        ),
+      ).toBeInTheDocument()
 
-    await userEvent.setup().click(
-      screen.getByRole("button", {
-        name: `${testI18n.t("managedSiteModelSync:execution.table.manageChannel")}: Managed Channel 99`,
-      }),
-    )
+      await userEvent.setup().click(
+        screen.getByRole("button", {
+          name: `${testI18n.t("managedSiteModelSync:execution.table.manageChannel")}: Managed Channel 99`,
+        }),
+      )
 
-    expect(mockOpenManagedSiteChannelsForChannel).toHaveBeenCalledWith(99)
-  })
+      if (expectedId === undefined) {
+        expect(mockOpenManagedSiteChannelsForChannel).not.toHaveBeenCalled()
+        expect(mockOpenManagedSiteChannelsPage).toHaveBeenCalledWith({
+          search: "https://example.com",
+        })
+      } else {
+        expect(mockOpenManagedSiteChannelsForChannel).toHaveBeenCalledWith(
+          expectedId,
+        )
+      }
+    },
+  )
 
   it("adds the New API 2FA hint when exact key verification is unavailable", async () => {
     const account = createAccountStub()

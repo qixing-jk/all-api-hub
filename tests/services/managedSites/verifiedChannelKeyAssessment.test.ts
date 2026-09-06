@@ -7,6 +7,7 @@ import {
 } from "~/services/managedSites/channelMatch"
 import {
   applyVerifiedManagedSiteChannelKey,
+  toManagedSiteAssessmentChannel,
   toManagedSiteVerifiedKeyAssessment,
 } from "~/services/managedSites/verifiedChannelKeyAssessment"
 import { buildManagedSiteChannel } from "~~/tests/test-utils/factories"
@@ -94,6 +95,24 @@ describe("applyVerifiedManagedSiteChannelKey", () => {
 })
 
 describe("toManagedSiteVerifiedKeyAssessment", () => {
+  it("retains the native route identity without exposing the provider payload or key", () => {
+    const channel = {
+      ...buildManagedSiteChannel({ id: 42, name: "Example channel" }),
+      _axonHubData: {
+        id: "native/42+=",
+        credentials: { apiKey: "example-secret" },
+      },
+    }
+
+    expect(
+      toManagedSiteAssessmentChannel(channel, SITE_TYPES.AXON_HUB),
+    ).toEqual({
+      id: 42,
+      name: "Example channel",
+      resourceId: "native/42+=",
+    })
+  })
+
   it("maps match inspection channels to lightweight channel summaries", () => {
     const assessment = toManagedSiteVerifiedKeyAssessment({
       searchBaseUrl: "https://api.example.invalid",

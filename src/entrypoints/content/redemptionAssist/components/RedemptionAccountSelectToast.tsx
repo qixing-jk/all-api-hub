@@ -5,19 +5,23 @@ import { Button } from "~/components/ui"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import AccountSearchInput from "~/features/AccountManagement/components/AccountList/AccountSearchInput"
 import { useAccountSearch } from "~/features/AccountManagement/hooks/useAccountSearch"
+import { cn } from "~/lib/utils"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
-import type { DisplaySiteData } from "~/types"
+import {
+  REDEMPTION_ACCOUNT_SUPPORT_STATUSES,
+  type RedemptionAccountCandidate,
+} from "~/services/redemption/accountCandidate"
 
 export interface RedemptionAccountSelectToastProps {
   title?: string
   message?: string
-  accounts: DisplaySiteData[]
-  onSelect: (account: DisplaySiteData | null) => void
+  accounts: RedemptionAccountCandidate[]
+  onSelect: (account: RedemptionAccountCandidate | null) => void
 }
 
 export const RedemptionAccountSelectToast: React.FC<
@@ -27,32 +31,49 @@ export const RedemptionAccountSelectToast: React.FC<
   const { query, setQuery, clearSearch, searchResults, inSearchMode } =
     useAccountSearch(accounts)
 
-  const displayedAccounts = useMemo<DisplaySiteData[]>(() => {
+  const displayedAccounts = useMemo<RedemptionAccountCandidate[]>(() => {
     if (!inSearchMode) return accounts
     if (searchResults.length === 0) return []
-    return searchResults.map((result) => result.account)
+    return searchResults
+      .map((result) =>
+        accounts.find((account) => account.id === result.account.id),
+      )
+      .filter((account): account is RedemptionAccountCandidate =>
+        Boolean(account),
+      )
   }, [accounts, inSearchMode, searchResults])
 
+  const selectableAccounts = useMemo(
+    () =>
+      displayedAccounts.filter(
+        (account) =>
+          account.automaticRedemptionSupport.status ===
+          REDEMPTION_ACCOUNT_SUPPORT_STATUSES.Supported,
+      ),
+    [displayedAccounts],
+  )
+
   const [selectedId, setSelectedId] = useState<string | null>(
-    displayedAccounts[0]?.id ?? null,
+    selectableAccounts[0]?.id ?? null,
   )
 
   const selectedAccount = useMemo(() => {
-    if (!selectedId) return displayedAccounts[0] ?? null
+    if (!selectedId) return selectableAccounts[0] ?? null
     return (
-      displayedAccounts.find((account) => account.id === selectedId) ??
-      displayedAccounts[0] ??
+      selectableAccounts.find((account) => account.id === selectedId) ??
+      selectableAccounts[0] ??
       null
     )
-  }, [displayedAccounts, selectedId])
+  }, [selectableAccounts, selectedId])
 
-  const accountRefs = useRef(new Map<string, HTMLLabelElement>())
+  const accountRefs = useRef(new Map<string, HTMLDivElement>())
+  const titleId = React.useId()
 
   useEffect(() => {
-    if (!displayedAccounts.some((account) => account.id === selectedId)) {
-      setSelectedId(displayedAccounts[0]?.id ?? null)
+    if (!selectableAccounts.some((account) => account.id === selectedId)) {
+      setSelectedId(selectableAccounts[0]?.id ?? null)
     }
-  }, [displayedAccounts, selectedId])
+  }, [selectableAccounts, selectedId])
 
   useEffect(() => {
     if (!selectedAccount) return
@@ -65,22 +86,30 @@ export const RedemptionAccountSelectToast: React.FC<
   }
 
   const moveSelection = (direction: -1 | 1) => {
-    if (displayedAccounts.length === 0) return
+    if (selectableAccounts.length === 0) return
 
-    const currentIndex = displayedAccounts.findIndex(
+    const currentIndex = selectableAccounts.findIndex(
       (account) => account.id === selectedAccount?.id,
     )
     const startIndex = currentIndex >= 0 ? currentIndex : 0
     const nextIndex =
-      (startIndex + direction + displayedAccounts.length) %
-      displayedAccounts.length
+      (startIndex + direction + selectableAccounts.length) %
+      selectableAccounts.length
 
-    setSelectedId(displayedAccounts[nextIndex]?.id ?? null)
+    setSelectedId(selectableAccounts[nextIndex]?.id ?? null)
   }
 
   const handleKeyDownCapture = (e: React.KeyboardEvent) => {
     if (e.defaultPrevented) return
     if (e.altKey || e.ctrlKey || e.metaKey) return
+
+    if (
+      e.key === "Enter" &&
+      e.target instanceof HTMLElement &&
+      e.target.closest("a, button")
+    ) {
+      return
+    }
 
     if (e.key === "ArrowDown") {
       e.preventDefault()
@@ -126,7 +155,7 @@ export const RedemptionAccountSelectToast: React.FC<
         onKeyDownCapture={handleKeyDownCapture}
       >
         <div className="flex flex-col gap-1">
-          <div className="text-foreground text-sm font-medium">
+          <div id={titleId} className="text-foreground text-sm font-medium">
             {title || t("accountSelect.title")}
           </div>
           {message && (
@@ -142,17 +171,37 @@ export const RedemptionAccountSelectToast: React.FC<
           onClear={clearSearch}
         />
 
-        <div className="max-h-56 space-y-1 overflow-y-auto pr-1">
+        <div
+          className="max-h-56 space-y-1 overflow-y-auto pr-1"
+          role="radiogroup"
+          aria-labelledby={titleId}
+        >
+          {accounts.length > 0 &&
+            accounts.every(
+              (account) =>
+                account.automaticRedemptionSupport.status ===
+                REDEMPTION_ACCOUNT_SUPPORT_STATUSES.Unsupported,
+            ) && (
+              <div className="bg-muted text-muted-foreground mb-2 rounded-md px-2 py-1.5 text-xs">
+                {t("accountSelect.noSupportedAccounts")}
+              </div>
+            )}
           {displayedAccounts.length === 0 ? (
             <div className="text-muted-foreground py-4 text-center text-xs">
               {t("accountSelect.noResults")}
             </div>
           ) : (
-            displayedAccounts.map((account) => {
+            displayedAccounts.map((account, index) => {
+              const isSupported =
+                account.automaticRedemptionSupport.status ===
+                REDEMPTION_ACCOUNT_SUPPORT_STATUSES.Supported
               const checkInUrl =
                 account.checkIn?.customCheckIn?.url || account.baseUrl
+              const unsupportedReasonId = !isSupported
+                ? `${titleId}-unsupported-${index}`
+                : undefined
               return (
-                <label
+                <div
                   key={account.id}
                   ref={(el) => {
                     if (el) {
@@ -161,25 +210,59 @@ export const RedemptionAccountSelectToast: React.FC<
                       accountRefs.current.delete(account.id)
                     }
                   }}
-                  className="border-border/60 hover:bg-muted/70 flex cursor-pointer flex-col gap-0.5 rounded-md border px-2 py-1.5 text-xs"
+                  className={cn(
+                    "border-border/60 flex flex-col gap-0.5 rounded-md border px-2 py-1.5 text-xs",
+                    isSupported
+                      ? "hover:bg-muted/70"
+                      : "bg-muted/40 opacity-70",
+                  )}
                 >
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      className="h-3 w-3"
-                      checked={selectedAccount?.id === account.id}
-                      onChange={() => setSelectedId(account.id)}
-                    />
-                    <span className="text-foreground font-medium">
-                      {account.name}
+                  <label
+                    className={cn(
+                      "flex flex-col gap-0.5",
+                      isSupported ? "cursor-pointer" : "cursor-not-allowed",
+                    )}
+                  >
+                    <span className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        className="h-3 w-3"
+                        disabled={!isSupported}
+                        aria-describedby={unsupportedReasonId}
+                        checked={selectedAccount?.id === account.id}
+                        onChange={() => {
+                          if (isSupported) setSelectedId(account.id)
+                        }}
+                      />
+                      <span className="text-foreground font-medium">
+                        {account.name}
+                      </span>
                     </span>
-                  </div>
-                  {checkInUrl && (
-                    <div className="text-muted-foreground truncate pl-5 text-[11px]">
-                      {checkInUrl}
+                    {checkInUrl && (
+                      <div className="text-muted-foreground truncate pl-5 text-[11px]">
+                        {checkInUrl}
+                      </div>
+                    )}
+                  </label>
+                  {!isSupported && (
+                    <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1 pl-5 text-[11px]">
+                      <span id={unsupportedReasonId}>
+                        {t("accountSelect.unsupported")}
+                      </span>
+                      {checkInUrl ? (
+                        <a
+                          href={checkInUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary underline underline-offset-2"
+                          onClick={(event) => event.stopPropagation()}
+                        >
+                          {t("accountSelect.openSiteManual")}
+                        </a>
+                      ) : null}
                     </div>
                   )}
-                </label>
+                </div>
               )
             })
           )}

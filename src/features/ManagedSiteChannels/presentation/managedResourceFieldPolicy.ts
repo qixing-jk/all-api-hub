@@ -18,6 +18,10 @@ import {
   ChannelTypeNames,
   NEW_API_MANAGED_RESOURCE_FIELD_IDS,
 } from "~/constants/newApi"
+import {
+  OCTOPUS_MANAGED_RESOURCE_FIELD_IDS,
+  OctopusOutboundTypeNames,
+} from "~/constants/octopus"
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import {
   SUB2API_API_KEY_ACCOUNT_PLATFORM_LABELS,
@@ -672,16 +676,28 @@ const claudeCodeHubTypeOptionLabelResolvers = Object.fromEntries(
   ]),
 ) satisfies Readonly<Record<string, ManagedResourceTextResolver>>
 
-const claudeCodeHubStatusOptionLabelResolvers = {
+const nativeChannelStatusOptionLabelResolvers = {
   [MANAGED_RESOURCE_STATUSES.Enabled]: (t: TFunction) =>
     t("common:status.enabled"),
   [MANAGED_RESOURCE_STATUSES.Disabled]: (t: TFunction) =>
     t("common:status.disabled"),
 } as const satisfies Readonly<Record<string, ManagedResourceTextResolver>>
 
-const claudeCodeHubFields = [
+const createNativeChannelFields = (
+  fields: {
+    readonly Name: string
+    readonly Type: string
+    readonly Status: string
+    readonly BaseUrl: string
+    readonly Key: string
+    readonly Models: string
+  },
+  typeOptionLabelResolvers: Readonly<
+    Record<string, ManagedResourceTextResolver>
+  >,
+): readonly ManagedResourceFieldPresentation[] => [
   {
-    fieldId: CLAUDE_CODE_HUB_MANAGED_RESOURCE_FIELD_IDS.Name,
+    fieldId: fields.Name,
     section: MANAGED_RESOURCE_SECTIONS.Basic,
     order: 10,
     resolveLabel: (t) => t("channelDialog:fields.name.label"),
@@ -689,27 +705,27 @@ const claudeCodeHubFields = [
     channelFieldRole: MANAGED_RESOURCE_CHANNEL_FIELD_ROLES.Name,
   },
   {
-    fieldId: CLAUDE_CODE_HUB_MANAGED_RESOURCE_FIELD_IDS.Type,
+    fieldId: fields.Type,
     section: MANAGED_RESOURCE_SECTIONS.Basic,
     order: 20,
     resolveLabel: (t) => t("channelDialog:fields.type.label"),
-    optionLabelResolvers: claudeCodeHubTypeOptionLabelResolvers,
+    optionLabelResolvers: typeOptionLabelResolvers,
     resolveOptionFallback: MANAGED_RESOURCE_UNKNOWN_OPTION_LABEL_RESOLVER,
     renderer: MANAGED_RESOURCE_FIELD_RENDERERS.Select,
     channelFieldRole: MANAGED_RESOURCE_CHANNEL_FIELD_ROLES.Type,
   },
   {
-    fieldId: CLAUDE_CODE_HUB_MANAGED_RESOURCE_FIELD_IDS.Status,
+    fieldId: fields.Status,
     section: MANAGED_RESOURCE_SECTIONS.Basic,
     order: 30,
     resolveLabel: (t) => t("channelDialog:fields.status.label"),
-    optionLabelResolvers: claudeCodeHubStatusOptionLabelResolvers,
+    optionLabelResolvers: nativeChannelStatusOptionLabelResolvers,
     resolveOptionFallback: managedResourceStatusFallbackLabelResolver,
     renderer: MANAGED_RESOURCE_FIELD_RENDERERS.Select,
     channelFieldRole: MANAGED_RESOURCE_CHANNEL_FIELD_ROLES.Status,
   },
   {
-    fieldId: CLAUDE_CODE_HUB_MANAGED_RESOURCE_FIELD_IDS.BaseUrl,
+    fieldId: fields.BaseUrl,
     section: MANAGED_RESOURCE_SECTIONS.Connection,
     order: 10,
     resolveLabel: (t) => t("channelDialog:fields.baseUrl.label"),
@@ -717,7 +733,7 @@ const claudeCodeHubFields = [
     channelFieldRole: MANAGED_RESOURCE_CHANNEL_FIELD_ROLES.BaseUrl,
   },
   {
-    fieldId: CLAUDE_CODE_HUB_MANAGED_RESOURCE_FIELD_IDS.Key,
+    fieldId: fields.Key,
     section: MANAGED_RESOURCE_SECTIONS.Connection,
     order: 20,
     resolveLabel: (t) => t("channelDialog:fields.key.label"),
@@ -726,13 +742,20 @@ const claudeCodeHubFields = [
     channelFieldRole: MANAGED_RESOURCE_CHANNEL_FIELD_ROLES.Secret,
   },
   {
-    fieldId: CLAUDE_CODE_HUB_MANAGED_RESOURCE_FIELD_IDS.Models,
+    fieldId: fields.Models,
     section: MANAGED_RESOURCE_SECTIONS.Models,
     order: 10,
     resolveLabel: (t) => t("channelDialog:fields.models.label"),
     renderer: MANAGED_RESOURCE_FIELD_RENDERERS.MultiSelect,
     channelFieldRole: MANAGED_RESOURCE_CHANNEL_FIELD_ROLES.Models,
   },
+]
+
+const claudeCodeHubFields = [
+  ...createNativeChannelFields(
+    CLAUDE_CODE_HUB_MANAGED_RESOURCE_FIELD_IDS,
+    claudeCodeHubTypeOptionLabelResolvers,
+  ),
   {
     fieldId: CLAUDE_CODE_HUB_MANAGED_RESOURCE_FIELD_IDS.GroupTag,
     section: MANAGED_RESOURCE_SECTIONS.Models,
@@ -773,6 +796,31 @@ const claudeCodeHubManagedResourceFieldPolicy =
     },
   })
 
+const octopusFields = createNativeChannelFields(
+  OCTOPUS_MANAGED_RESOURCE_FIELD_IDS,
+  Object.fromEntries(
+    Object.entries(OctopusOutboundTypeNames).map(([value, label]) => [
+      value,
+      () => label,
+    ]),
+  ),
+)
+
+const octopusManagedResourceFieldPolicy = defineManagedResourceFieldPolicy({
+  siteType: SITE_TYPES.OCTOPUS,
+  kind: MANAGED_RESOURCE_KINDS.Channel,
+  modes: {
+    [MANAGED_RESOURCE_EDITOR_MODES.Create]: {
+      fields: octopusFields,
+      hiddenFields: [],
+    },
+    [MANAGED_RESOURCE_EDITOR_MODES.Edit]: {
+      fields: octopusFields,
+      hiddenFields: [],
+    },
+  },
+})
+
 const registryKey = (siteType: ManagedSiteType, kind: ManagedResourceKind) =>
   `${siteType}:${kind}`
 
@@ -810,6 +858,7 @@ const managedResourceFieldPolicyRegistry =
     axonHubManagedResourceFieldPolicy,
     sub2ApiManagedResourceFieldPolicy,
     claudeCodeHubManagedResourceFieldPolicy,
+    octopusManagedResourceFieldPolicy,
   ])
 
 export const getManagedResourceFieldPolicy = (

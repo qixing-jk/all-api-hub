@@ -14,6 +14,7 @@ import {
   OctopusMutationApiError,
   searchChannels,
   updateChannel,
+  usesChannelProtocolPaths,
   validateOctopusConfig,
 } from "~/services/apiService/octopus"
 import {
@@ -1367,6 +1368,54 @@ describe("Octopus API service", () => {
     ).toEqual({ id: 7 })
   })
 
+  it("reuses the confirmed deployment generation when resolving protocol path behavior", async () => {
+    mockGetValidSession.mockResolvedValue(v013CookieSession())
+    await expect(usesChannelProtocolPaths(config)).resolves.toBe(true)
+    mockGetValidSession.mockResolvedValue(currentCookieSession())
+    await expect(usesChannelProtocolPaths(config)).resolves.toBe(false)
+    expect(mockTempWindowOctopusApiFetch).not.toHaveBeenCalled()
+    const controller = new AbortController()
+    controller.abort()
+    await expect(
+      usesChannelProtocolPaths(config, { signal: controller.signal }),
+    ).rejects.toMatchObject({ name: "AbortError" })
+    expect(mockGetValidSession).toHaveBeenCalledTimes(2)
+  })
+
+  it("passes the cancellation signal and protection execution into create and delete", async () => {
+    const execution = createAutomaticProtectionBypassExecution(
+      PROTECTION_BYPASS_FEATURES.ManagedSiteModelSync,
+      PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.Scheduled,
+      PROTECTION_BYPASS_SURFACES.Background,
+    )
+    const signal = new AbortController().signal
+    mockGetValidSession.mockResolvedValue(currentCookieSession())
+    mockTempWindowOctopusApiFetch.mockResolvedValue({
+      success: true,
+      status: 200,
+      data: { code: 200, data: null },
+    })
+    await createChannel(
+      config,
+      {
+        name: "Example",
+        type: OctopusOutboundType.OpenAIChat,
+        baseUrl: "https://upstream.example.invalid",
+        key: "credential-placeholder",
+      },
+      { signal, protectionBypassExecution: execution },
+    )
+    await deleteChannel(config, 7, {
+      signal,
+      protectionBypassExecution: execution,
+    })
+    expect(mockTempWindowOctopusApiFetch).toHaveBeenCalledTimes(2)
+    for (const [request] of mockTempWindowOctopusApiFetch.mock.calls) {
+      expect(request.protectionBypassExecution).toBe(execution)
+      expect(request.fetchOptions.signal).toBe(signal)
+    }
+  })
+
   it("preserves one model-sync execution across cookie login and retry", async () => {
     const execution = createAutomaticProtectionBypassExecution(
       PROTECTION_BYPASS_FEATURES.ManagedSiteModelSync,
@@ -1810,7 +1859,7 @@ describe("Octopus API service", () => {
     expect(mockClearCache).toHaveBeenCalledTimes(1)
   })
 
-  it("filters searched channels by name and upstream URL", async () => {
+  it("filters searched channels by trimmed name and upstream URL without matching secrets", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockImplementation(() =>
@@ -1821,13 +1870,14 @@ describe("Octopus API service", () => {
               data: [
                 {
                   id: 1,
-                  name: "OpenAI Main",
-                  base_urls: [{ url: "https://api.openai.com/v1" }],
+                  name: "Primary channel",
+                  base_urls: [{ url: "https://primary.example.invalid/v1" }],
+                  keys: [{ channel_key: "private-search-secret" }],
                 },
                 {
                   id: 2,
-                  name: "Claude",
-                  base_urls: [{ url: "https://claude.example.com/v1" }],
+                  name: "Secondary channel",
+                  base_urls: [{ url: "https://secondary.example.invalid/v1" }],
                 },
               ],
             }),
@@ -1840,16 +1890,22 @@ describe("Octopus API service", () => {
       ),
     )
 
-    await expect(searchChannels(config, "openai")).resolves.toHaveLength(1)
-    await expect(searchChannels(config, "claude.example.com")).resolves.toEqual(
-      [
-        {
-          id: 2,
-          name: "Claude",
-          base_urls: [{ url: "https://claude.example.com/v1" }],
-        },
-      ],
-    )
+    await expect(
+      searchChannels(config, "  PRIMARY CHANNEL  "),
+    ).resolves.toMatchObject([{ id: 1 }])
+    await expect(
+      searchChannels(config, "SECONDARY.EXAMPLE.INVALID"),
+    ).resolves.toEqual([
+      {
+        id: 2,
+        name: "Secondary channel",
+        base_urls: [{ url: "https://secondary.example.invalid/v1" }],
+      },
+    ])
+    await expect(
+      searchChannels(config, "private-search-secret"),
+    ).resolves.toEqual([])
+    await expect(searchChannels(config, "   ")).resolves.toHaveLength(2)
   })
 
   it("returns all channels when the search keyword is blank", async () => {

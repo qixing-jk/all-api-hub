@@ -1627,10 +1627,11 @@ describe("managed-site token batch export", () => {
     })
   })
 
-  it("keeps dedupe-unsupported targets executable with a warning", async () => {
+  it("uses registered resource duplicate matching for Veloera", async () => {
     const service = buildService({
       siteType: SITE_TYPES.VELOERA,
       messagesKey: "veloera",
+      searchResourceDuplicateChannels: vi.fn(),
     })
     mockGetManagedSiteService.mockResolvedValue(service)
 
@@ -1642,14 +1643,12 @@ describe("managed-site token batch export", () => {
       items: [buildAccountTokenInput()],
     })
 
-    expect(preview.warningCount).toBe(1)
+    expect(preview.warningCount).toBe(0)
     expect(preview.items[0]).toMatchObject({
-      status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.WARNING,
-      warningCodes: [
-        MANAGED_SITE_TOKEN_BATCH_EXPORT_WARNING_CODES.DEDUPE_UNSUPPORTED,
-      ],
+      status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.READY,
+      warningCodes: [],
     })
-    expect(mockResolveManagedSiteChannelMatch).not.toHaveBeenCalled()
+    expect(mockResolveManagedSiteChannelMatch).toHaveBeenCalledOnce()
   })
 
   it.each([

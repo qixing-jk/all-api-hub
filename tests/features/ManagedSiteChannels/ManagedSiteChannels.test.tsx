@@ -120,6 +120,9 @@ vi.mock(
         <div data-testid="delete-requires-refresh">
           {String(state.deleteState.requiresRefresh)}
         </div>
+        <div data-testid="first-row-can-sync">
+          {String(state.rows[0]?.capabilities.canSync ?? false)}
+        </div>
         {state.rows[0] ? (
           <button
             type="button"
@@ -217,6 +220,16 @@ describe("ManagedSiteChannels ordinary delete outcomes", () => {
       getConfig: mocks.getConfig,
       listChannels: mocks.listChannels,
       deleteChannel: mocks.deleteChannel,
+    })
+  })
+
+  it("does not expose model-sync actions when the registered write capability is absent", async () => {
+    render(<ManagedSiteChannels siteType={SITE_TYPES.SUB2API} />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId("first-row-can-sync")).toHaveTextContent(
+        "false",
+      )
     })
   })
 

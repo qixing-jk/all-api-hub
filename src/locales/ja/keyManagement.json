@@ -354,6 +354,7 @@
     "verifyApiFailed": "API 検証を開けませんでした",
     "verifyCliSupportFailed": "CLI 互換性検証を開けませんでした"
   },
+  "noAccountsSupportKeyCreation": "このビューのアカウントはいずれも API キーの作成に対応していません。別のアカウントを選択するか、対応するアカウントを追加してください。",
   "noKeys": "まだキーデータがありません",
   "noMatchingKeys": "一致するキーが見つかりません",
   "oneTimeKey": {

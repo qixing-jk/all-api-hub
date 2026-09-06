@@ -278,10 +278,14 @@ const veloeraManagedSiteConfig: ManagedSiteConfigCapability<VeloeraConfig> =
   createManagedSiteConfigCapability(SITE_TYPES.VELOERA, checkValidVeloeraConfig)
 
 const veloeraManagedSiteQueries: ManagedSiteQueriesCapability<VeloeraConfig> = {
-  fetchSiteUserGroups: async (config) =>
-    await fetchSiteUserGroups(toManagedSiteApiServiceRequest(config)),
-  fetchAccountAvailableModels: async (config) =>
-    await fetchAccountAvailableModels(toManagedSiteApiServiceRequest(config)),
+  siteUserGroups: {
+    fetch: async (config) =>
+      await fetchSiteUserGroups(toManagedSiteApiServiceRequest(config)),
+  },
+  accountAvailableModels: {
+    fetch: async (config) =>
+      await fetchAccountAvailableModels(toManagedSiteApiServiceRequest(config)),
+  },
 }
 
 const fetchVeloeraManagedSiteAvailableModels: ManagedSiteChannelDraftsCapability["fetchAvailableModels"] =

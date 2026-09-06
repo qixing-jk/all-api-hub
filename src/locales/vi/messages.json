@@ -3,6 +3,8 @@
     "autoProvisionAlreadyHad": "{{accountName}} đã có API Key, đã bỏ qua việc tạo tự động.",
     "autoProvisionCreated": "Đã tự động tạo API Key mặc định cho {{accountName}}.",
     "autoProvisionFailed": "Tài khoản đã được lưu, nhưng việc tự động tạo API Key thất bại. Bạn có thể sử dụng \"{{actionLabel}}\" trong phần quản lý khóa để thử lại.",
+    "autoProvisionNeedsManualAction": "Đã lưu {{accountName}}, nhưng khóa mặc định cần lựa chọn thủ công hoặc xử lý bí mật dùng một lần. Hãy dùng \"{{actionLabel}}\" trong phần quản lý khóa để hoàn tất.",
+    "autoProvisionUnsupported": "Đã lưu {{accountName}}, nhưng loại trang này không hỗ trợ tự động tạo API Key mặc định.",
     "checkingApiKeys": "Đang kiểm tra các API Key...",
     "createTokenFailed": "Tạo API token thất bại",
     "tokenNotFound": "Không thể tạo hoặc tìm thấy API token"

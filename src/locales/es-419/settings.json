@@ -71,7 +71,7 @@
     "toggleLabel": "Completar URL del sitio actual al agregar cuentas"
   },
   "autoProvisionKeyOnAccountAdd": {
-    "description": "Controla si All API Hub aprovisiona automáticamente una API key predeterminada después de agregar una cuenta.",
+    "description": "Controla si All API Hub aprovisiona automáticamente una API key predeterminada después de agregar una cuenta compatible.",
     "title": "API keys",
     "toggleDesc": "Cuando está habilitado, All API Hub revisa tu inventario de tokens después de guardar una cuenta y crea un token predeterminado si no existe ninguno.",
     "toggleLabel": "Crear automáticamente una clave predeterminada al agregar cuenta"

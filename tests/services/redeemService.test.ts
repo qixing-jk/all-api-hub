@@ -2,7 +2,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
-import { redeemService } from "~/services/redemption/redeemService"
+import {
+  redeemService,
+  REDEMPTION_RESULT_CODES,
+} from "~/services/redemption/redeemService"
 import { accountStorageTestSurface as accountStorage } from "~~/tests/test-utils/accountStorageTestSurface"
 
 vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
@@ -275,7 +278,8 @@ describe("redeemService.redeemCodeForAccount", () => {
 
     expect(result).toEqual({
       success: false,
-      message: "redemptionAssist:messages.redeemFailed",
+      code: REDEMPTION_RESULT_CODES.UnsupportedSiteType,
+      message: "redemptionAssist:messages.unsupportedSiteType",
     })
   })
 
@@ -307,7 +311,8 @@ describe("redeemService.redeemCodeForAccount", () => {
 
     expect(result).toEqual({
       success: false,
-      message: "redemptionAssist:messages.redeemFailed",
+      code: REDEMPTION_RESULT_CODES.UnsupportedSiteType,
+      message: "redemptionAssist:messages.unsupportedSiteType",
     })
   })
 })

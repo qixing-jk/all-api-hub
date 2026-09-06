@@ -88,6 +88,12 @@ export type ChannelResourceEditContext = {
   }
 }
 
+export type ChannelGroupDiscoveryStatus =
+  | "available"
+  | "unsupported"
+  | "not-ready"
+  | "failed"
+
 /**
  * Manages Channel dialog form state, remote group/model loading, and submissions.
  * Abstracts validation, payload building, and success handling for add/edit flows.
@@ -178,6 +184,8 @@ export function useChannelForm({
   // UI state
   const [isSaving, setIsSaving] = useState(false)
   const [isLoadingGroups, setIsLoadingGroups] = useState(false)
+  const [groupDiscoveryStatus, setGroupDiscoveryStatus] =
+    useState<ChannelGroupDiscoveryStatus>("available")
   const [isLoadingModels, setIsLoadingModels] = useState(false)
   const [managedSiteType, setManagedSiteType] = useState<string | null>(null)
   const [availableGroups, setAvailableGroups] = useState<
@@ -348,46 +356,40 @@ export function useChannelForm({
     setIsLoadingGroups(true)
     try {
       const service = serviceOverride ?? (await loadManagedSiteType())
-      if (service.siteType === SITE_TYPES.AXON_HUB) {
-        setAvailableGroups([])
-        return
-      }
-      if (service.siteType === SITE_TYPES.CLAUDE_CODE_HUB) {
-        const fallback = createDefaultChannelGroupOptions()
-        const preselectedGroups = (
-          initialValues?.groups ??
-          initialGroups ??
-          []
-        ).map((value) => ({ label: value, value }))
-        setAvailableGroups(mergeUniqueOptions(fallback, preselectedGroups))
-        return
-      }
-      const hasConfig = await service.checkValidConfig()
       const preselectedGroups = (
         initialValues?.groups ??
         initialGroups ??
         []
       ).map((value) => ({ label: value, value }))
+      const fallbackGroups = mergeUniqueOptions(
+        createDefaultChannelGroupOptions(),
+        preselectedGroups,
+      )
+
+      if (!service.fetchSiteUserGroups) {
+        setGroupDiscoveryStatus("unsupported")
+        setAvailableGroups(fallbackGroups)
+        return
+      }
+
+      const hasConfig = await service.checkValidConfig()
 
       if (!hasConfig) {
         logger.warn("No valid managed-site configuration")
-        const fallback = createDefaultChannelGroupOptions()
-        setAvailableGroups(mergeUniqueOptions(fallback, preselectedGroups))
+        setGroupDiscoveryStatus("not-ready")
+        setAvailableGroups(fallbackGroups)
         return
       }
 
       const config = await service.getConfig()
       if (!config) {
-        setAvailableGroups(
-          mergeUniqueOptions(
-            createDefaultChannelGroupOptions(),
-            preselectedGroups,
-          ),
-        )
+        setGroupDiscoveryStatus("not-ready")
+        setAvailableGroups(fallbackGroups)
         return
       }
 
       const groupsData = await service.fetchSiteUserGroups(config)
+      setGroupDiscoveryStatus("available")
 
       let groupOptions = groupsData.map((group) => ({
         label: group,
@@ -409,6 +411,7 @@ export function useChannelForm({
       setAvailableGroups(groupOptions)
     } catch (error) {
       logger.error("Failed to load groups", error)
+      setGroupDiscoveryStatus("failed")
       const fallback = createDefaultChannelGroupOptions()
       const preselectedGroups = (
         initialValues?.groups ??
@@ -836,6 +839,7 @@ export function useChannelForm({
     isFormValid,
     isSaving,
     isLoadingGroups,
+    groupDiscoveryStatus,
     isLoadingModels,
     isResourceEditLoading: isLoadingResourceEdit,
     isResourceEditReady,

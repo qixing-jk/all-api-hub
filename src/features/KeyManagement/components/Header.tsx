@@ -27,6 +27,7 @@ interface HeaderProps {
   isLoading: boolean
   isManagedSiteStatusRefreshing?: boolean
   isAddTokenDisabled: boolean
+  addTokenDisabledReason?: string
   isRepairDisabled: boolean
   isManagedSiteStatusRefreshDisabled?: boolean
 }
@@ -45,6 +46,7 @@ export function Header({
   isManagedSiteStatusRefreshing = false,
   selectedAccount,
   isAddTokenDisabled,
+  addTokenDisabledReason,
   isRepairDisabled,
   isManagedSiteStatusRefreshDisabled = false,
 }: HeaderProps) {
@@ -70,6 +72,19 @@ export function Header({
       setIsManualRefreshLoading(false)
     }
   }
+
+  const addTokenButton = (
+    <Button
+      onClick={onAddToken}
+      disabled={isAddTokenDisabled}
+      size="sm"
+      variant="success"
+      leftIcon={<Plus className="h-4 w-4" />}
+      data-testid={KEY_MANAGEMENT_TEST_IDS.addTokenButton}
+    >
+      {t("dialog.addToken")}
+    </Button>
+  )
 
   if (managedSiteStatusHint) {
     description = (
@@ -118,16 +133,21 @@ export function Header({
           description={description}
           actions={
             <>
-              <Button
-                onClick={onAddToken}
-                disabled={isAddTokenDisabled}
-                size="sm"
-                variant="success"
-                leftIcon={<Plus className="h-4 w-4" />}
-                data-testid={KEY_MANAGEMENT_TEST_IDS.addTokenButton}
-              >
-                {t("dialog.addToken")}
-              </Button>
+              {addTokenDisabledReason ? (
+                <Tooltip content={addTokenDisabledReason} anchorAsChild>
+                  <span
+                    className="inline-flex"
+                    role="group"
+                    tabIndex={0}
+                    aria-disabled="true"
+                    aria-label={t("dialog.addToken")}
+                  >
+                    {addTokenButton}
+                  </span>
+                </Tooltip>
+              ) : (
+                addTokenButton
+              )}
               {onRepairMissingKeys ? (
                 <Button
                   onClick={onRepairMissingKeys}

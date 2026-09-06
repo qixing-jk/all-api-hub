@@ -29,7 +29,10 @@ import {
 } from "~~/tests/test-utils/factories"
 import { createManagedSiteServiceStub } from "~~/tests/test-utils/managedSiteServiceFactory"
 
-const buildExpectedAssessment = (overrides: Record<string, unknown> = {}) => ({
+const buildExpectedAssessment = (
+  overrides: Record<string, unknown> = {},
+  resourceId?: string | number,
+) => ({
   searchBaseUrl: "https://api.example.com",
   searchCompleted: true,
   url: {
@@ -37,6 +40,7 @@ const buildExpectedAssessment = (overrides: Record<string, unknown> = {}) => ({
     candidateCount: 1,
     channel: {
       id: 12,
+      ...(resourceId !== undefined ? { resourceId } : {}),
       name: "Managed Channel 12",
     },
   },
@@ -46,6 +50,7 @@ const buildExpectedAssessment = (overrides: Record<string, unknown> = {}) => ({
     reason: MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.MATCHED,
     channel: {
       id: 12,
+      ...(resourceId !== undefined ? { resourceId } : {}),
       name: "Managed Channel 12",
     },
   },
@@ -55,6 +60,7 @@ const buildExpectedAssessment = (overrides: Record<string, unknown> = {}) => ({
     reason: MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.EXACT,
     channel: {
       id: 12,
+      ...(resourceId !== undefined ? { resourceId } : {}),
       name: "Managed Channel 12",
     },
     similarityScore: 1,
@@ -334,39 +340,54 @@ describe("getManagedSiteTokenChannelStatus", () => {
     )
   })
 
-  it("returns added when an exact comparable channel match exists", async () => {
-    const account = buildDisplaySiteData({ baseUrl: "https://api.example.com" })
-    const token = buildApiToken({ key: "test-token-key" })
-    const exactMatch = buildManagedSiteChannel({
-      id: 12,
-      name: "Managed Channel 12",
-      base_url: "https://api.example.com",
-      models: "gpt-4o",
-      key: "test-token-key",
-    })
-    const service = createManagedSiteServiceStub({
-      searchChannel: vi.fn().mockResolvedValue({
-        items: [exactMatch],
-        total: 1,
-        type_counts: {},
-      }),
-    })
+  it.each([
+    { siteType: SITE_TYPES.NEW_API, resourceId: 12 },
+    { siteType: SITE_TYPES.AXON_HUB, resourceId: "native/12+=" },
+  ])(
+    "preserves the stable $siteType identity when an exact comparable channel match exists",
+    async ({ siteType, resourceId }) => {
+      const account = buildDisplaySiteData({
+        baseUrl: "https://api.example.com",
+      })
+      const token = buildApiToken({ key: "test-token-key" })
+      const exactMatch = {
+        ...buildManagedSiteChannel({
+          id: 12,
+          name: "Managed Channel 12",
+          base_url: "https://api.example.com",
+          models: "gpt-4o",
+          key: "test-token-key",
+        }),
+        ...(siteType === SITE_TYPES.AXON_HUB
+          ? { _axonHubData: { id: resourceId } }
+          : {}),
+      }
+      const service = createManagedSiteServiceStub({
+        siteType,
+        searchChannel: vi.fn().mockResolvedValue({
+          items: [exactMatch],
+          total: 1,
+          type_counts: {},
+        }),
+      })
 
-    const result = await getManagedSiteTokenChannelStatus({
-      account,
-      token,
-      service,
-    })
+      const result = await getManagedSiteTokenChannelStatus({
+        account,
+        token,
+        service,
+      })
 
-    expect(result).toEqual({
-      status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.ADDED,
-      matchedChannel: {
-        id: 12,
-        name: "Managed Channel 12",
-      },
-      assessment: buildExpectedAssessment(),
-    })
-  })
+      expect(result).toEqual({
+        status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.ADDED,
+        matchedChannel: {
+          id: 12,
+          resourceId,
+          name: "Managed Channel 12",
+        },
+        assessment: buildExpectedAssessment({}, resourceId),
+      })
+    },
+  )
 
   it("lets the provider match policy evaluate an empty model list", async () => {
     const account = buildDisplaySiteData({ baseUrl: "https://api.example.com" })
@@ -588,6 +609,7 @@ describe("getManagedSiteTokenChannelStatus", () => {
           candidateCount: 1,
           channel: {
             id: 23,
+            resourceId: 23,
             name: "Managed Channel 23",
           },
         },
@@ -603,6 +625,7 @@ describe("getManagedSiteTokenChannelStatus", () => {
           reason: MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.EXACT,
           channel: {
             id: 23,
+            resourceId: 23,
             name: "Managed Channel 23",
           },
           similarityScore: 1,
@@ -648,6 +671,7 @@ describe("getManagedSiteTokenChannelStatus", () => {
           candidateCount: 1,
           channel: {
             id: 23_1,
+            resourceId: 23_1,
             name: "Managed Channel 23 Hidden Key",
           },
         },
@@ -663,6 +687,7 @@ describe("getManagedSiteTokenChannelStatus", () => {
           reason: MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.EXACT,
           channel: {
             id: 23_1,
+            resourceId: 23_1,
             name: "Managed Channel 23 Hidden Key",
           },
           similarityScore: 1,
@@ -747,6 +772,7 @@ describe("getManagedSiteTokenChannelStatus", () => {
       status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.ADDED,
       matchedChannel: {
         id: 23_1,
+        resourceId: 23_1,
         name: "Managed Channel 23 Hidden Key",
       },
       resolvedChannelKeysById: {
@@ -760,6 +786,7 @@ describe("getManagedSiteTokenChannelStatus", () => {
           candidateCount: 1,
           channel: {
             id: 23_1,
+            resourceId: 23_1,
             name: "Managed Channel 23 Hidden Key",
           },
         },
@@ -769,6 +796,7 @@ describe("getManagedSiteTokenChannelStatus", () => {
           reason: MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.MATCHED,
           channel: {
             id: 23_1,
+            resourceId: 23_1,
             name: "Managed Channel 23 Hidden Key",
           },
         },
@@ -778,6 +806,7 @@ describe("getManagedSiteTokenChannelStatus", () => {
           reason: MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.EXACT,
           channel: {
             id: 23_1,
+            resourceId: 23_1,
             name: "Managed Channel 23 Hidden Key",
           },
           similarityScore: 1,
@@ -954,6 +983,7 @@ describe("getManagedSiteTokenChannelStatus", () => {
           candidateCount: 1,
           channel: {
             id: 24,
+            resourceId: 24,
             name: "Managed Channel 24",
           },
         },
@@ -963,6 +993,7 @@ describe("getManagedSiteTokenChannelStatus", () => {
           reason: MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.MATCHED,
           channel: {
             id: 24,
+            resourceId: 24,
             name: "Managed Channel 24",
           },
         },
@@ -1075,6 +1106,7 @@ describe("getManagedSiteTokenChannelStatus", () => {
           candidateCount: 1,
           channel: {
             id: 23_1,
+            resourceId: 23_1,
             name: "Managed Channel 23 Hidden Key",
           },
         },
@@ -1090,6 +1122,7 @@ describe("getManagedSiteTokenChannelStatus", () => {
           reason: MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.EXACT,
           channel: {
             id: 23_1,
+            resourceId: 23_1,
             name: "Managed Channel 23 Hidden Key",
           },
           similarityScore: 1,

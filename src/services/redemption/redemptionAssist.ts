@@ -37,6 +37,14 @@ import {
  */
 const logger = createLogger("RedemptionAssist")
 
+/** Loads picker-only support metadata outside the background startup path. */
+async function toRedemptionAccountCandidates(accounts: DisplaySiteData[]) {
+  const { toRedemptionAccountCandidate } = await import(
+    "~/services/redemption/accountCandidate"
+  )
+  return accounts.map(toRedemptionAccountCandidate)
+}
+
 /**
  * After a successful redeem, attempt to refresh the account data to reflect any changes.
  * @param accountId ID of the account that was redeemed against.
@@ -502,7 +510,7 @@ class RedemptionAssistService {
       return {
         success: false,
         code: "MULTIPLE_ACCOUNTS",
-        candidates: sameDomainCandidates,
+        candidates: await toRedemptionAccountCandidates(sameDomainCandidates),
       }
     }
 
@@ -511,7 +519,7 @@ class RedemptionAssistService {
       success: false,
       code: "NO_ACCOUNTS",
       candidates: [],
-      allAccounts: displayAccounts,
+      allAccounts: await toRedemptionAccountCandidates(displayAccounts),
       message: t("redemptionAssist:messages.noAccountForUrl"),
     }
   }

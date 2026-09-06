@@ -168,10 +168,9 @@ const listChannels = async (
   const search = query?.search?.trim().toLocaleLowerCase()
   if (!search) return result
   const items = result.items.filter((channel) =>
-    [
-      channel.name,
-      ...veloeraResourceFacts.getSearchData(channel).searchValues,
-    ].some((value) => value.toLocaleLowerCase().includes(search)),
+    veloeraResourceFacts
+      .getSearchData(channel)
+      .searchValues.some((value) => value.toLocaleLowerCase().includes(search)),
   )
   return { items, total: items.length }
 }
@@ -312,10 +311,13 @@ export async function openVeloeraNativeResourceOperations(): Promise<VeloeraNati
       )
     },
     loadEditorGroups: async (options) => {
+      throwIfNewApiResourceOperationAborted(options)
+      const fetchSiteUserGroups = queries.siteUserGroups?.fetch
+      if (!fetchSiteUserGroups) return []
       try {
-        return normalizeList(
-          await queries.fetchSiteUserGroups(nativeConfig.config, options),
-        )
+        const groups = await fetchSiteUserGroups(nativeConfig.config, options)
+        throwIfNewApiResourceOperationAborted(options)
+        return normalizeList(groups)
       } catch {
         throwIfNewApiResourceOperationAborted(options)
         return []

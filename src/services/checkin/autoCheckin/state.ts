@@ -1,4 +1,6 @@
 import {
+  CHECK_IN_METHOD_DETECTION_EVIDENCE_SOURCES,
+  CHECK_IN_METHOD_DETECTION_OUTCOMES,
   CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES,
   CHECK_IN_METHOD_STATUS_OUTCOMES,
   CHECK_IN_METHOD_TODAY_STATUSES,
@@ -207,7 +209,7 @@ export function mergeDiscoveredCheckInDraft(input: {
   }
 }
 
-/** Applies refreshed Status facts without rolling back user or discovery state. */
+/** Applies status and authoritative capability loss without rolling back user choices or newer discovery. */
 export function mergeRefreshedCheckInStatus(input: {
   latest: CheckInConfig
   refreshed: CheckInConfig
@@ -219,7 +221,25 @@ export function mergeRefreshedCheckInStatus(input: {
     input.refreshed.methodKnowledge.methods,
   ) as Array<[CheckInMethodId, CheckInMethodKnowledge]>) {
     const latestKnowledge = methods[methodId]
-    if (!latestKnowledge || !refreshedKnowledge.status) continue
+    if (!latestKnowledge) continue
+    const detection = refreshedKnowledge.detection
+    const latestDetection = latestKnowledge.detection
+    const latestDetectionTimestamp =
+      latestDetection.outcome === CHECK_IN_METHOD_DETECTION_OUTCOMES.Unknown
+        ? latestDetection.attemptedAt
+        : latestDetection.evidence.source ===
+            CHECK_IN_METHOD_DETECTION_EVIDENCE_SOURCES.Probe
+          ? latestDetection.evidence.observedAt
+          : undefined
+    if (
+      detection.outcome === CHECK_IN_METHOD_DETECTION_OUTCOMES.Unsupported &&
+      (latestDetectionTimestamp === undefined ||
+        detection.evidence.observedAt > latestDetectionTimestamp)
+    ) {
+      methods[methodId] = { ...latestKnowledge, detection }
+      changed = true
+    }
+    if (!refreshedKnowledge.status) continue
     const latestTimestamp = getCheckInMethodStatusTimestamp(
       latestKnowledge.status,
     )
@@ -234,7 +254,7 @@ export function mergeRefreshedCheckInStatus(input: {
       continue
     }
     methods[methodId] = {
-      ...latestKnowledge,
+      ...methods[methodId]!,
       status: refreshedKnowledge.status,
     }
     changed = true

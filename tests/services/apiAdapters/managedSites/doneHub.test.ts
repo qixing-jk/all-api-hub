@@ -641,8 +641,8 @@ describe("DoneHub managed-site channel capability", () => {
       },
     }
 
-    await doneHubManagedSiteCapabilities.queries.fetchSiteUserGroups(config)
-    await doneHubManagedSiteCapabilities.queries.fetchAccountAvailableModels(
+    await doneHubManagedSiteCapabilities.queries.siteUserGroups!.fetch(config)
+    await doneHubManagedSiteCapabilities.queries.accountAvailableModels!.fetch(
       config,
     )
 
