@@ -115,13 +115,16 @@
         "saved": "Sync Now uses the saved WebDAV and auto-sync settings.",
         "unsaved": "Auto-sync settings have unsaved changes. Sync Now will not use them; save the auto-sync settings first."
       },
-      "description": "Configure automatic sync for shared data. Device-local settings stay on the current device.",
+      "currentProvider": "Sync service: {{provider}}",
+      "description": "Automatically sync shared data through the selected sync service. Device-local settings stay on this device.",
       "enable": "Enable auto sync",
       "enableDesc": "When enabled, shared data will be synchronized to WebDAV at set intervals.",
       "interval": "Sync interval (seconds)",
       "intervalDesc": "Set how often the automatic sync runs",
       "intervalHint": "About {{minutes}} minutes",
       "lastSync": "Last sync",
+      "providerSwitchPending": "Save the service configuration above to switch automatic sync from {{from}} to {{to}}.",
+      "providerSwitchPendingTitle": "Save the sync service change first",
       "saveSettings": "Save Settings",
       "strategy": "Sync strategy",
       "strategyDesc": "Choose how data should be synchronized",
@@ -129,9 +132,13 @@
       "strategyMerge": "Smart merge - merge local and remote data based on timestamps",
       "strategyRemoteFirst": "Remote first - remote data overwrites local data",
       "syncNow": "Sync Now",
-      "title": "WebDAV Auto Sync"
+      "title": "Automatic sync"
     },
-    "configDesc": "Configure WebDAV to sync shared data. Some device-local settings stay on this device and are not uploaded or overwritten.",
+    "configDesc": "Choose one cloud service to sync shared data. Connection credentials and device-local settings stay on this device.",
+    "connection": {
+      "title": "Connection settings",
+      "webdavDescription": "Enter the WebDAV address and credentials used by this device."
+    },
     "downloadImport": "Import from WebDAV",
     "downloadImportWithSave": "Save and Import from WebDAV",
     "encryption": {
@@ -153,9 +160,7 @@
       "actionStateUnsaved": "Configuration has unsaved changes. These Gist actions will save the changes first.",
       "autoSyncActionStateSaved": "Sync Now uses the saved Secret Gist and auto-sync settings.",
       "autoSyncActionStateUnsaved": "Auto-sync settings have unsaved changes. Save them before using Sync Now.",
-      "autoSyncDescription": "Configure automatic sync for shared data through the active cloud provider. Device-local settings stay on this device.",
       "autoSyncEnableDesc": "When enabled, shared data will be synchronized to the Secret Gist at the selected interval.",
-      "autoSyncTitle": "Cloud Auto Sync",
       "configDesc": "Sync shared data through an encrypted GitHub Secret Gist. A Secret Gist is an unlisted link, not an access-control boundary.",
       "create": "Create and upload Secret Gist",
       "downloadImport": "Import from Secret Gist",
@@ -185,9 +190,14 @@
       "uploadWithSave": "Save and Upload to Secret Gist"
     },
     "hidePassword": "Hide password",
+    "manual": {
+      "description": "Save the selected service configuration, test the connection, or manually upload and download sync data.",
+      "title": "Save and sync manually"
+    },
     "notSynced": "Not synced",
     "password": "Password",
     "provider": {
+      "description": "This selection controls both manual and automatic sync. Only one service is active at a time.",
       "githubGist": "GitHub Secret Gist",
       "label": "Sync service",
       "webdav": "WebDAV"
@@ -224,7 +234,7 @@
     "testConnectionWithSave": "Save and Test Connection",
     "testFailed": "Connection test failed",
     "testSuccess": "Connection test successful",
-    "title": "WebDAV Sync",
+    "title": "Cloud sync",
     "uploadBackup": "Upload to WebDAV",
     "uploadBackupWithSave": "Save and Upload to WebDAV",
     "uploadFailed": "Upload to WebDAV failed",

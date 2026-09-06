@@ -44,6 +44,7 @@ import { sendWebdavAutoSyncMessage } from "~/services/webdav/webdavAutoSyncMessa
 import {
   CLOUD_SYNC_PROVIDERS,
   WEBDAV_SYNC_STRATEGIES,
+  type CloudSyncProvider,
   type WebDAVSettings,
 } from "~/types/webdav"
 import { formatTimestamp } from "~/utils/core/formatters"
@@ -60,9 +61,17 @@ const autoSyncSurface =
 const WebdavSyncIcon = OPTIONS_CAPABILITY_ICONS.webdavSync
 
 /**
- * WebDAV automatic sync configuration card: toggles auto-sync, schedule, strategy, and shows status/actions.
+ * Automatic sync configuration card: toggles schedule and strategy, and shows status/actions.
  */
-export default function WebDAVAutoSyncSettings() {
+/** Allows the shared auto-sync card to preview an unsaved provider selection. */
+interface WebDAVAutoSyncSettingsProps {
+  providerPreview?: CloudSyncProvider
+}
+
+/** Renders the shared automatic-sync settings for the selected provider. */
+export default function WebDAVAutoSyncSettings({
+  providerPreview,
+}: WebDAVAutoSyncSettingsProps = {}) {
   const { t } = useTranslation("importExport")
   const { preferences, updateWebdavAutoSyncSettings, loadPreferences } =
     useUserPreferencesContext()
@@ -94,15 +103,20 @@ export default function WebDAVAutoSyncSettings() {
   const syncInterval = localConfig.syncInterval
   const syncStrategy =
     localConfig.syncStrategy as WebDAVSettings["syncStrategy"]
-  const isGithubGist =
-    persistedWebdavSettings.provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST
+  const persistedProvider =
+    persistedWebdavSettings.provider ?? CLOUD_SYNC_PROVIDERS.WEBDAV
+  const displayedProvider = providerPreview ?? persistedProvider
+  const providerChangePending = displayedProvider !== persistedProvider
+  const isGithubGist = displayedProvider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST
   const minimumIntervalSeconds = isGithubGist ? 300 : 60
-  const autoSyncTitleKey = isGithubGist
-    ? "webdav.gist.autoSyncTitle"
-    : "webdav.autoSync.title"
-  const autoSyncDescriptionKey = isGithubGist
-    ? "webdav.gist.autoSyncDescription"
-    : "webdav.autoSync.description"
+  const displayedProviderLabel = t(
+    isGithubGist ? "webdav.provider.githubGist" : "webdav.provider.webdav",
+  )
+  const persistedProviderLabel = t(
+    persistedProvider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST
+      ? "webdav.provider.githubGist"
+      : "webdav.provider.webdav",
+  )
   const autoSyncEnableDescriptionKey = isGithubGist
     ? "webdav.gist.autoSyncEnableDesc"
     : "webdav.autoSync.enableDesc"
@@ -166,7 +180,7 @@ export default function WebDAVAutoSyncSettings() {
       if (response.success) {
         toast.success(
           t("settings:messages.updateSuccess", {
-            name: t(autoSyncTitleKey),
+            name: t("webdav.autoSync.title"),
           }),
         )
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
@@ -175,7 +189,7 @@ export default function WebDAVAutoSyncSettings() {
         toast.error(
           response.error ||
             t("settings:messages.updateFailed", {
-              name: t(autoSyncTitleKey),
+              name: t("webdav.autoSync.title"),
             }),
         )
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
@@ -187,7 +201,7 @@ export default function WebDAVAutoSyncSettings() {
       toast.error(
         error?.message ||
           t("settings:messages.updateFailed", {
-            name: t(autoSyncTitleKey),
+            name: t("webdav.autoSync.title"),
           }),
       )
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
@@ -304,14 +318,32 @@ export default function WebDAVAutoSyncSettings() {
         <div className="mb-1 flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <WebdavSyncIcon className="h-5 w-5 text-sky-600 dark:text-sky-400" />
-            <CardTitle className="mb-0">{t(autoSyncTitleKey)}</CardTitle>
+            <CardTitle className="mb-0">{t("webdav.autoSync.title")}</CardTitle>
           </div>
           {getStatusBadge()}
         </div>
-        <CardDescription>{t(autoSyncDescriptionKey)}</CardDescription>
+        <CardDescription>{t("webdav.autoSync.description")}</CardDescription>
+        <div className="mt-2">
+          <Badge variant={providerChangePending ? "warning" : "outline"}>
+            {t("webdav.autoSync.currentProvider", {
+              provider: displayedProviderLabel,
+            })}
+          </Badge>
+        </div>
       </CardHeader>
 
       <CardContent padding="md" className="space-y-4">
+        {providerChangePending && (
+          <Alert
+            variant="warning"
+            title={t("webdav.autoSync.providerSwitchPendingTitle")}
+            description={t("webdav.autoSync.providerSwitchPending", {
+              from: persistedProviderLabel,
+              to: displayedProviderLabel,
+            })}
+          />
+        )}
+
         {/* Auto-sync toggle */}
         <FormField
           label={t("webdav.autoSync.enable")}
@@ -323,6 +355,7 @@ export default function WebDAVAutoSyncSettings() {
           >
             <Switch
               checked={autoSyncEnabled}
+              disabled={providerChangePending}
               onChange={(checked) =>
                 setLocalConfig((prev) => ({
                   ...prev,
@@ -352,6 +385,7 @@ export default function WebDAVAutoSyncSettings() {
                 max={86400}
                 step={60}
                 value={syncInterval}
+                disabled={providerChangePending}
                 onChange={(e) =>
                   setLocalConfig((prev) => ({
                     ...prev,
@@ -381,7 +415,10 @@ export default function WebDAVAutoSyncSettings() {
                   }))
                 }
               >
-                <SelectTrigger id={WEBDAV_AUTO_SYNC_TARGET_IDS.strategy}>
+                <SelectTrigger
+                  id={WEBDAV_AUTO_SYNC_TARGET_IDS.strategy}
+                  disabled={providerChangePending}
+                >
                   <SelectValue placeholder={t("webdav.autoSync.strategy")} />
                 </SelectTrigger>
                 <SelectContent>
@@ -445,6 +482,7 @@ export default function WebDAVAutoSyncSettings() {
             <Button
               id={WEBDAV_AUTO_SYNC_TARGET_IDS.saveSettings}
               onClick={handleSaveSettings}
+              disabled={providerChangePending}
               loading={savingSettings}
               variant="default"
               size="sm"
@@ -458,6 +496,7 @@ export default function WebDAVAutoSyncSettings() {
             <Button
               id={WEBDAV_AUTO_SYNC_TARGET_IDS.syncNow}
               onClick={handleSyncNow}
+              disabled={providerChangePending}
               loading={syncing || isSyncing}
               variant="success"
               size="sm"

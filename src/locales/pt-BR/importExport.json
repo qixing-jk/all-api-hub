@@ -115,13 +115,16 @@
         "saved": "Sincronizar agora usa as configurações salvas do WebDAV e da sincronização automática.",
         "unsaved": "Há alterações não salvas nas configurações de sincronização automática. Sincronizar agora não as utilizará; salve primeiro essas configurações."
       },
-      "description": "Configure a sincronização automática dos dados compartilhados. As configurações locais do dispositivo permanecem no dispositivo atual.",
+      "currentProvider": "Serviço de sincronização: {{provider}}",
+      "description": "Sincronize automaticamente os dados compartilhados pelo serviço selecionado. As configurações locais permanecem neste dispositivo.",
       "enable": "Ativar sincronização automática",
       "enableDesc": "Quando ativada, os dados compartilhados serão sincronizados com o WebDAV nos intervalos definidos.",
       "interval": "Intervalo de sincronização (segundos)",
       "intervalDesc": "Defina a frequência da sincronização automática",
       "intervalHint": "Tempo aproximado: {{minutes}} min",
       "lastSync": "Última sincronização",
+      "providerSwitchPending": "Salve a configuração do serviço acima para mudar a sincronização automática de {{from}} para {{to}}.",
+      "providerSwitchPendingTitle": "Salve primeiro a mudança do serviço",
       "saveSettings": "Salvar configurações",
       "strategy": "Estratégia de sincronização",
       "strategyDesc": "Escolha como os dados devem ser sincronizados",
@@ -129,9 +132,13 @@
       "strategyMerge": "Mesclagem inteligente: mescla os dados locais e remotos com base nas datas",
       "strategyRemoteFirst": "Remoto primeiro: os dados remotos substituem os locais",
       "syncNow": "Sincronizar agora",
-      "title": "Sincronização automática com WebDAV"
+      "title": "Sincronização automática"
     },
-    "configDesc": "Configure o WebDAV para sincronizar dados compartilhados. Algumas configurações locais do dispositivo permanecem nele e não são enviadas nem substituídas.",
+    "configDesc": "Escolha um serviço na nuvem para sincronizar dados compartilhados. As credenciais e configurações locais permanecem neste dispositivo.",
+    "connection": {
+      "title": "Configuração da conexão",
+      "webdavDescription": "Informe o endereço WebDAV e as credenciais usadas por este dispositivo."
+    },
     "downloadImport": "Importar do WebDAV",
     "downloadImportWithSave": "Salvar e importar do WebDAV",
     "encryption": {
@@ -153,9 +160,7 @@
       "actionStateUnsaved": "Há alterações não salvas na configuração. As ações do Gist salvarão essas alterações primeiro.",
       "autoSyncActionStateSaved": "Sincronizar agora usa as configurações salvas do Secret Gist e da sincronização automática.",
       "autoSyncActionStateUnsaved": "Há alterações não salvas na sincronização automática. Salve-as antes de sincronizar agora.",
-      "autoSyncDescription": "Configure a sincronização automática de dados compartilhados pelo provedor de nuvem ativo. Configurações locais permanecem neste dispositivo.",
       "autoSyncEnableDesc": "Quando ativada, os dados compartilhados serão sincronizados com o Secret Gist no intervalo escolhido.",
-      "autoSyncTitle": "Sincronização automática na nuvem",
       "configDesc": "Sincronize dados compartilhados por um GitHub Secret Gist criptografado. Um Secret Gist é um link não listado, não um limite de controle de acesso.",
       "create": "Criar e enviar Secret Gist",
       "downloadImport": "Importar do Secret Gist",
@@ -185,9 +190,14 @@
       "uploadWithSave": "Salvar e enviar ao Secret Gist"
     },
     "hidePassword": "Ocultar senha",
+    "manual": {
+      "description": "Salve a configuração do serviço, teste a conexão ou envie e baixe dados de sincronização manualmente.",
+      "title": "Salvar e sincronizar manualmente"
+    },
     "notSynced": "Não sincronizado",
     "password": "Senha",
     "provider": {
+      "description": "Esta seleção controla a sincronização manual e automática. Apenas um serviço fica ativo por vez.",
       "githubGist": "GitHub Secret Gist",
       "label": "Serviço de sincronização",
       "webdav": "WebDAV"
@@ -224,7 +234,7 @@
     "testConnectionWithSave": "Salvar e testar conexão",
     "testFailed": "Falha no teste de conexão",
     "testSuccess": "Teste de conexão concluído",
-    "title": "Sincronização com WebDAV",
+    "title": "Sincronização na nuvem",
     "uploadBackup": "Enviar ao WebDAV",
     "uploadBackupWithSave": "Salvar e enviar ao WebDAV",
     "uploadFailed": "Falha ao enviar ao WebDAV",

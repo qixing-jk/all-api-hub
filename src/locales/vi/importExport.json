@@ -115,13 +115,16 @@
         "saved": "Đồng bộ hóa ngay sẽ sử dụng cài đặt WebDAV và tự động đồng bộ hóa đã lưu.",
         "unsaved": "Cài đặt tự động đồng bộ hóa có những thay đổi chưa được lưu. Đồng bộ hóa ngay sẽ không sử dụng các thay đổi này, vui lòng lưu cài đặt tự động đồng bộ hóa trước."
       },
-      "description": "Định cấu hình tự động đồng bộ hóa dữ liệu được chia sẻ; cài đặt cục bộ của thiết bị vẫn được giữ lại trên thiết bị hiện tại.",
+      "currentProvider": "Dịch vụ đồng bộ: {{provider}}",
+      "description": "Tự động đồng bộ dữ liệu được chia sẻ qua dịch vụ đã chọn; cài đặt cục bộ vẫn được giữ trên thiết bị này.",
       "enable": "Bật tự động đồng bộ hóa",
       "enableDesc": "Sau khi bật, dữ liệu được chia sẻ sẽ tự động đồng bộ hóa với WebDAV theo khoảng thời gian đã đặt.",
       "interval": "Khoảng thời gian đồng bộ hóa (giây)",
       "intervalDesc": "Thiết lập khoảng thời gian để tự động đồng bộ hóa",
       "intervalHint": "Khoảng {{minutes}} phút",
       "lastSync": "Đồng bộ hóa lần cuối",
+      "providerSwitchPending": "Hãy lưu cấu hình dịch vụ ở trên để chuyển tự động đồng bộ từ {{from}} sang {{to}}.",
+      "providerSwitchPendingTitle": "Hãy lưu thay đổi dịch vụ đồng bộ trước",
       "saveSettings": "Lưu cài đặt",
       "strategy": "Chiến lược đồng bộ hóa",
       "strategyDesc": "Chọn phương thức đồng bộ hóa dữ liệu",
@@ -129,9 +132,13 @@
       "strategyMerge": "Hợp nhất thông minh - Hợp nhất dữ liệu cục bộ và từ xa dựa trên dấu thời gian",
       "strategyRemoteFirst": "Ưu tiên từ xa - Dữ liệu từ xa ghi đè dữ liệu cục bộ",
       "syncNow": "Đồng bộ hóa ngay",
-      "title": "Tự động đồng bộ hóa WebDAV"
+      "title": "Tự động đồng bộ hóa"
     },
-    "configDesc": "Định cấu hình WebDAV để đồng bộ hóa dữ liệu được chia sẻ. Một số cài đặt cục bộ của thiết bị sẽ không được tải lên và cũng không bị ghi đè bởi máy chủ từ xa.",
+    "configDesc": "Chọn một dịch vụ đám mây để đồng bộ dữ liệu được chia sẻ. Thông tin kết nối và cài đặt cục bộ chỉ được giữ trên thiết bị này.",
+    "connection": {
+      "title": "Cấu hình kết nối",
+      "webdavDescription": "Nhập địa chỉ WebDAV và thông tin xác thực mà thiết bị này sử dụng."
+    },
     "downloadImport": "Nhập từ WebDAV",
     "downloadImportWithSave": "Lưu và nhập từ WebDAV",
     "encryption": {
@@ -153,9 +160,7 @@
       "actionStateUnsaved": "Cấu hình có thay đổi chưa lưu. Các thao tác Gist sẽ lưu thay đổi trước.",
       "autoSyncActionStateSaved": "Đồng bộ hóa ngay sẽ dùng cài đặt Secret Gist và tự động đồng bộ đã lưu.",
       "autoSyncActionStateUnsaved": "Cài đặt tự động đồng bộ có thay đổi chưa lưu. Hãy lưu trước khi đồng bộ ngay.",
-      "autoSyncDescription": "Định cấu hình tự động đồng bộ dữ liệu được chia sẻ qua nhà cung cấp đám mây hiện tại. Cài đặt cục bộ vẫn ở thiết bị này.",
       "autoSyncEnableDesc": "Khi bật, dữ liệu được chia sẻ sẽ được đồng bộ với Secret Gist theo khoảng thời gian đã chọn.",
-      "autoSyncTitle": "Tự động đồng bộ hóa đám mây",
       "configDesc": "Đồng bộ dữ liệu dùng chung qua GitHub Secret Gist đã mã hóa. Secret Gist là liên kết không được liệt kê, không phải ranh giới kiểm soát truy cập.",
       "create": "Tạo và tải lên Secret Gist",
       "downloadImport": "Nhập từ Secret Gist",
@@ -185,9 +190,14 @@
       "uploadWithSave": "Lưu và tải lên Secret Gist"
     },
     "hidePassword": "Ẩn mật khẩu",
+    "manual": {
+      "description": "Lưu cấu hình dịch vụ, kiểm tra kết nối hoặc tải lên và tải xuống dữ liệu đồng bộ theo cách thủ công.",
+      "title": "Lưu và đồng bộ thủ công"
+    },
     "notSynced": "Chưa đồng bộ hóa",
     "password": "Mật khẩu",
     "provider": {
+      "description": "Lựa chọn này áp dụng cho cả đồng bộ thủ công và tự động. Mỗi lần chỉ có một dịch vụ hoạt động.",
       "githubGist": "GitHub Secret Gist",
       "label": "Dịch vụ đồng bộ",
       "webdav": "WebDAV"
@@ -224,7 +234,7 @@
     "testConnectionWithSave": "Lưu và kiểm tra kết nối",
     "testFailed": "Kiểm tra kết nối thất bại",
     "testSuccess": "Kiểm tra kết nối thành công",
-    "title": "Đồng bộ hóa WebDAV",
+    "title": "Đồng bộ hóa đám mây",
     "uploadBackup": "Tải lên WebDAV",
     "uploadBackupWithSave": "Lưu và tải lên WebDAV",
     "uploadFailed": "Tải lên WebDAV thất bại",

@@ -115,13 +115,16 @@
         "saved": "立即同步会使用已保存的 WebDAV 和自动同步设置。",
         "unsaved": "自动同步设置有未保存更改。立即同步不会使用这些更改，请先保存自动同步设置。"
       },
-      "description": "配置自动同步共享数据；设备本地设置仍保留在当前设备。",
+      "currentProvider": "同步服务：{{provider}}",
+      "description": "通过当前选择的同步服务定时同步共享数据；设备本地设置仍保留在当前设备。",
       "enable": "启用自动同步",
       "enableDesc": "开启后将按设定间隔自动与 WebDAV 同步共享数据。",
       "interval": "同步间隔（秒）",
       "intervalDesc": "设置自动同步的时间间隔",
       "intervalHint": "约 {{minutes}} 分钟",
       "lastSync": "上次同步",
+      "providerSwitchPending": "请先保存上方服务配置，自动同步才会从 {{from}} 切换为 {{to}}。",
+      "providerSwitchPendingTitle": "请先保存同步服务变更",
       "saveSettings": "保存设置",
       "strategy": "同步策略",
       "strategyDesc": "选择数据同步方式",
@@ -129,9 +132,13 @@
       "strategyMerge": "智能合并 - 根据时间戳合并本地和远程数据",
       "strategyRemoteFirst": "远程优先 - 远程数据覆盖本地数据",
       "syncNow": "立即同步",
-      "title": "WebDAV 自动同步"
+      "title": "自动同步"
     },
-    "configDesc": "配置 WebDAV 以同步共享数据。部分设备本地设置不会上传，也不会被远端覆盖。",
+    "configDesc": "选择一个云端服务同步共享数据。连接凭据和设备本地设置只保留在当前设备。",
+    "connection": {
+      "title": "连接配置",
+      "webdavDescription": "填写当前设备用于连接 WebDAV 的地址和凭据。"
+    },
     "downloadImport": "从 WebDAV 导入",
     "downloadImportWithSave": "保存并从 WebDAV 导入",
     "encryption": {
@@ -153,9 +160,7 @@
       "actionStateUnsaved": "配置有未保存更改。Gist 操作会先保存这些更改。",
       "autoSyncActionStateSaved": "立即同步会使用已保存的 Secret Gist 和自动同步设置。",
       "autoSyncActionStateUnsaved": "自动同步设置有未保存更改，请先保存再立即同步。",
-      "autoSyncDescription": "通过当前云端服务自动同步共享数据；设备本地设置仍保留在当前设备。",
       "autoSyncEnableDesc": "开启后将按设定间隔自动与 Secret Gist 同步共享数据。",
-      "autoSyncTitle": "云端自动同步",
       "configDesc": "使用 GitHub Secret Gist 同步加密后的共享数据。Secret Gist 是不公开列出的链接，不能替代访问控制。",
       "create": "创建并上传 Secret Gist",
       "downloadImport": "从 Secret Gist 导入",
@@ -185,9 +190,14 @@
       "uploadWithSave": "保存并上传到 Secret Gist"
     },
     "hidePassword": "隐藏密码",
+    "manual": {
+      "description": "保存当前服务配置、测试连接，或手动上传和下载同步数据。",
+      "title": "保存与手动同步"
+    },
     "notSynced": "未同步",
     "password": "密码",
     "provider": {
+      "description": "此选择同时用于手动同步和自动同步，同一时间只会启用一个服务。",
       "githubGist": "GitHub Secret Gist",
       "label": "同步服务",
       "webdav": "WebDAV"
@@ -224,7 +234,7 @@
     "testConnectionWithSave": "保存并测试连接",
     "testFailed": "测试连接失败",
     "testSuccess": "测试连接成功",
-    "title": "WebDAV 同步",
+    "title": "云端同步",
     "uploadBackup": "上传到 WebDAV",
     "uploadBackupWithSave": "保存并上传到 WebDAV",
     "uploadFailed": "上传到 WebDAV 失败",

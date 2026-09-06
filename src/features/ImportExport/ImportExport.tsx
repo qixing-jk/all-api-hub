@@ -12,14 +12,13 @@ import {
 } from "~/entrypoints/options/search/navigation"
 import { navigateToAnchor } from "~/utils/core/url"
 
+import CloudSyncSettings from "./components/CloudSyncSettings"
 import ExportSection from "./components/ExportSection"
 import ImportSection from "./components/ImportSection"
-import WebDAVAutoSyncSettings from "./components/WebDAVAutoSyncSettings"
-import WebDAVSettings from "./components/WebDAVSettings"
 import { useImportExport } from "./hooks/useImportExport"
 
 /**
- * Import/Export page combining manual export/import sections plus WebDAV backup and notices.
+ * Import/Export page combining manual transfer, cloud sync, and safety notices.
  */
 export default function ImportExport() {
   const { t } = useTranslation("importExport")
@@ -95,11 +94,7 @@ export default function ImportExport() {
         />
       </div>
 
-      {/* WebDAV 备份/同步 */}
-      <WebDAVSettings />
-
-      {/* WebDAV 自动同步 */}
-      <WebDAVAutoSyncSettings />
+      <CloudSyncSettings />
 
       {/* 重要提示 */}
       <Alert variant="warning">

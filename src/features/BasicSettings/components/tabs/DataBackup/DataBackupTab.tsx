@@ -9,12 +9,11 @@ import {
   WorkflowTransitionButton,
 } from "~/components/ui"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
-import WebDAVAutoSyncSettings from "~/features/ImportExport/components/WebDAVAutoSyncSettings"
-import WebDAVSettings from "~/features/ImportExport/components/WebDAVSettings"
+import CloudSyncSettings from "~/features/ImportExport/components/CloudSyncSettings"
 import { pushWithinOptionsPage } from "~/utils/navigation"
 
 /**
- * Basic Settings tab for data backup/import/export and WebDAV sync settings.
+ * Basic Settings tab for data backup/import/export and cloud sync settings.
  */
 export default function DataBackupTab() {
   const { t } = useTranslation("settings")
@@ -52,15 +51,7 @@ export default function DataBackupTab() {
         </Card>
       </section>
 
-      {/* WebDAV Section */}
-      <section>
-        <WebDAVSettings />
-      </section>
-
-      {/* WebDAV Auto-Sync Section */}
-      <section>
-        <WebDAVAutoSyncSettings />
-      </section>
+      <CloudSyncSettings />
     </div>
   )
 }

@@ -181,6 +181,28 @@ describe("WebDAVAutoSyncSettings", () => {
     ).not.toHaveAttribute("data-analytics-action")
   })
 
+  it("previews a provider switch and blocks auto-sync actions until it is saved", async () => {
+    render(<WebDAVAutoSyncSettings providerPreview="github_gist" />)
+
+    expect(
+      await screen.findByText(
+        "importExport:webdav.autoSync.providerSwitchPendingTitle",
+      ),
+    ).toBeInTheDocument()
+    expect(screen.getByRole("switch")).toBeDisabled()
+    expect(screen.getByDisplayValue("1800")).toHaveAttribute("min", "300")
+    expect(
+      screen.getByRole("button", {
+        name: "importExport:webdav.autoSync.saveSettings",
+      }),
+    ).toBeDisabled()
+    expect(
+      screen.getByRole("button", {
+        name: "importExport:webdav.autoSync.syncNow",
+      }),
+    ).toBeDisabled()
+  })
+
   it("completes WebDAV auto-sync settings save analytics as success", async () => {
     render(<WebDAVAutoSyncSettings />)
 

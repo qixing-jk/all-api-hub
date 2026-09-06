@@ -1584,12 +1584,31 @@ test("runs WebDAV auto-sync from settings and uploads the local snapshot", async
   await expect(
     page.locator(`#${WEBDAV_AUTO_SYNC_TARGET_IDS.root}`),
   ).toBeVisible()
+
+  const providerSelector = page.locator("#webdav-provider")
+  await providerSelector
+    .getByRole("button", { name: "GitHub Secret Gist", exact: true })
+    .click()
+  await expect(page.locator("#github-gist-token")).toBeVisible()
+  await expect(
+    page.getByText("Save the sync service change first", { exact: true }),
+  ).toBeVisible()
+  await expect(
+    page.locator(`#${WEBDAV_AUTO_SYNC_TARGET_IDS.syncNow}`),
+  ).toBeDisabled()
+
+  await providerSelector
+    .getByRole("button", { name: "WebDAV", exact: true })
+    .click()
+  await expect(page.locator("#webdav-url")).toBeVisible()
+  await expect(
+    page.getByText("Save the sync service change first", { exact: true }),
+  ).toHaveCount(0)
+
   await page.locator(`#${WEBDAV_AUTO_SYNC_TARGET_IDS.enable} button`).click()
   await page.locator(`#${WEBDAV_AUTO_SYNC_TARGET_IDS.interval}`).fill("120")
   await page.locator(`#${WEBDAV_AUTO_SYNC_TARGET_IDS.saveSettings}`).click()
-  await expect(
-    page.getByText("WebDAV Auto Sync Update successful"),
-  ).toBeVisible()
+  await expect(page.getByText("Automatic sync Update successful")).toBeVisible()
 
   await page.locator(`#${WEBDAV_AUTO_SYNC_TARGET_IDS.syncNow}`).click()
   await expect(

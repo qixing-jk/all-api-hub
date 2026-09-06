@@ -22,7 +22,7 @@ export const dataBackupSearchSections: OptionsSearchItemDefinition[] = [
     "importExport:webdav.title",
     421,
     {
-      keywords: ["webdav"],
+      keywords: ["cloud", "webdav", "gist", "github", "backup", "sync"],
     },
   ),
   buildSectionDefinition(
@@ -32,7 +32,7 @@ export const dataBackupSearchSections: OptionsSearchItemDefinition[] = [
     "importExport:webdav.autoSync.title",
     422,
     {
-      keywords: ["webdav", "sync"],
+      keywords: ["cloud", "webdav", "gist", "github", "auto sync"],
     },
   ),
 ]

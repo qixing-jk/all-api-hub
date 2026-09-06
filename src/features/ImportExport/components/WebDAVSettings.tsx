@@ -1,9 +1,10 @@
 import type { TFunction } from "i18next"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { OPTIONS_CAPABILITY_ICONS } from "~/components/icons/optionsPageIcons"
+import { ResponsiveToggleGroup } from "~/components/ResponsiveButtonGroup"
 import {
   Alert,
   BodySmall,
@@ -19,11 +20,6 @@ import {
   Input,
   Label,
   Modal,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
   Switch,
 } from "~/components/ui"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
@@ -79,6 +75,7 @@ import {
   isWebdavSyncDataSelectionEmpty,
   resolveWebdavSyncDataSelection,
   WEBDAV_SYNC_DATA_KEYS,
+  type CloudSyncProvider,
   type WebDAVSettings,
   type WebDAVSyncDataKey,
   type WebDAVSyncDataSelection,
@@ -177,9 +174,17 @@ function getWebdavSyncDataLabel(t: TFunction, key: WebDAVSyncDataKey) {
 }
 
 /**
- * WebDAV backup configuration card handling save/test/upload/download actions.
+ * Cloud backup configuration card handling save/test/upload/download actions.
  */
-export default function WebDAVSettings() {
+/** Reports the currently selected provider draft to the composed sync page. */
+interface WebDAVSettingsProps {
+  onProviderDraftChange?: (provider: CloudSyncProvider) => void
+}
+
+/** Renders cloud-provider settings and manual backup actions. */
+export default function WebDAVSettings({
+  onProviderDraftChange,
+}: WebDAVSettingsProps = {}) {
   const { t } = useTranslation("importExport")
   const { preferences, updateWebdavSettings, loadPreferences } =
     useUserPreferencesContext()
@@ -238,6 +243,10 @@ export default function WebDAVSettings() {
   const syncDataSelection = localConfig.syncData
   const backupEncryptionEnabled = localConfig.backupEncryptionEnabled
   const backupEncryptionPassword = localConfig.backupEncryptionPassword
+
+  useEffect(() => {
+    onProviderDraftChange?.(provider)
+  }, [onProviderDraftChange, provider])
 
   const [decryptDialogOpen, setDecryptDialogOpen] = useState(false)
   const [decrypting, setDecrypting] = useState(false)
@@ -335,10 +344,10 @@ export default function WebDAVSettings() {
           syncData: syncDataSelection,
         }
 
-  const handleProviderChange = (nextProvider: string) => {
+  const handleProviderChange = (nextProvider: CloudSyncProvider) => {
     setLocalConfig((previousConfig) => ({
       ...previousConfig,
-      provider: nextProvider as NonNullable<WebDAVSettings["provider"]>,
+      provider: nextProvider,
       ...(nextProvider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST
         ? { backupEncryptionEnabled: true }
         : {}),
@@ -1073,52 +1082,51 @@ export default function WebDAVSettings() {
         <CardHeader>
           <div className="mb-1 flex items-center space-x-2">
             <WebdavSyncIcon className="h-5 w-5 text-sky-600 dark:text-sky-400" />
-            <CardTitle className="mb-0">
-              {t(
-                provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST
-                  ? "webdav.gist.title"
-                  : "webdav.title",
-              )}
-            </CardTitle>
+            <CardTitle className="mb-0">{t("webdav.title")}</CardTitle>
           </div>
-          <CardDescription>
-            {t(
-              provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST
-                ? "webdav.gist.configDesc"
-                : "webdav.configDesc",
-            )}
-          </CardDescription>
+          <CardDescription>{t("webdav.configDesc")}</CardDescription>
         </CardHeader>
 
         <CardContent padding="md" className="space-y-4">
-          <Alert
-            id={WEBDAV_TARGET_IDS.restorePolicy}
-            variant="info"
-            title={t("webdav.restorePolicy.title")}
-            description={t(
-              provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST
-                ? "webdav.gist.restorePolicyDescription"
-                : "webdav.restorePolicy.description",
-            )}
-          />
+          <div className="space-y-3 rounded-lg border border-sky-200 bg-sky-50/50 p-4 dark:border-sky-900 dark:bg-sky-950/20">
+            <div className="space-y-1">
+              <Heading4 className="m-0">{t("webdav.provider.label")}</Heading4>
+              <BodySmall className="m-0">
+                {t("webdav.provider.description")}
+              </BodySmall>
+            </div>
+            <ResponsiveToggleGroup
+              id={WEBDAV_TARGET_IDS.provider}
+              aria-label={t("webdav.provider.label")}
+              value={provider}
+              onValueChange={handleProviderChange}
+              showActiveIndicator
+              options={[
+                {
+                  value: CLOUD_SYNC_PROVIDERS.WEBDAV,
+                  label: t("webdav.provider.webdav"),
+                },
+                {
+                  value: CLOUD_SYNC_PROVIDERS.GITHUB_GIST,
+                  label: t("webdav.provider.githubGist"),
+                },
+              ]}
+            />
+          </div>
 
-          {/* 配置表单 */}
-          <div className="space-y-4">
-            <FormField label={t("webdav.provider.label")}>
-              <Select value={provider} onValueChange={handleProviderChange}>
-                <SelectTrigger id={WEBDAV_TARGET_IDS.provider}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={CLOUD_SYNC_PROVIDERS.WEBDAV}>
-                    {t("webdav.provider.webdav")}
-                  </SelectItem>
-                  <SelectItem value={CLOUD_SYNC_PROVIDERS.GITHUB_GIST}>
-                    {t("webdav.provider.githubGist")}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </FormField>
+          <div className="space-y-4 rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+            <div className="space-y-1">
+              <Heading4 className="m-0">
+                {t("webdav.connection.title")}
+              </Heading4>
+              <BodySmall className="m-0">
+                {t(
+                  provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST
+                    ? "webdav.gist.configDesc"
+                    : "webdav.connection.webdavDescription",
+                )}
+              </BodySmall>
+            </div>
 
             {provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST ? (
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -1281,7 +1289,7 @@ export default function WebDAVSettings() {
 
           <div
             id={WEBDAV_TARGET_IDS.syncData}
-            className="rounded-md bg-gray-50 p-3 dark:bg-gray-800"
+            className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800"
           >
             <div className="space-y-1">
               <Heading4 className="m-0">{t("webdav.syncData.title")}</Heading4>
@@ -1316,6 +1324,17 @@ export default function WebDAVSettings() {
             )}
           </div>
 
+          <Alert
+            id={WEBDAV_TARGET_IDS.restorePolicy}
+            variant="info"
+            title={t("webdav.restorePolicy.title")}
+            description={t(
+              provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST
+                ? "webdav.gist.restorePolicyDescription"
+                : "webdav.restorePolicy.description",
+            )}
+          />
+
           {provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST ? (
             <Alert
               id={WEBDAV_TARGET_IDS.encryption}
@@ -1326,7 +1345,7 @@ export default function WebDAVSettings() {
           ) : (
             <div
               id={WEBDAV_TARGET_IDS.encryption}
-              className="rounded-md bg-gray-50 p-3 dark:bg-gray-800"
+              className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800"
             >
               <div className="flex items-start justify-between gap-3">
                 <div
@@ -1379,124 +1398,134 @@ export default function WebDAVSettings() {
             </div>
           )}
 
-          <ProductAnalyticsScope
-            entrypoint={PRODUCT_ANALYTICS_ENTRYPOINTS.Options}
-            featureId={PRODUCT_ANALYTICS_FEATURE_IDS.WebDavSync}
-            surfaceId={webDavSettingsSurface}
-          >
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
-              <Alert
-                compact
-                variant={webdavConfigDirty ? "warning" : "info"}
-                description={t(
-                  webdavConfigDirty
-                    ? provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST
-                      ? "webdav.gist.actionStateUnsaved"
-                      : "webdav.actionState.unsaved"
-                    : provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST
-                      ? "webdav.gist.actionStateSaved"
-                      : "webdav.actionState.saved",
-                )}
-                className="sm:col-span-2 lg:col-span-4"
-              />
-
-              {/* 保存配置 */}
-              <Button
-                id={WEBDAV_TARGET_IDS.saveConfig}
-                onClick={handleSaveConfig}
-                loading={saving}
-                variant="default"
-                size="sm"
-                bleed
-              >
-                {saving ? t("common:status.saving") : t("webdav.saveConfig")}
-              </Button>
-
-              {/* 测试连接 */}
-              <Button
-                id={WEBDAV_TARGET_IDS.testConnection}
-                onClick={handleTestConnection}
-                disabled={!webdavConfigFilled}
-                loading={testing}
-                variant="secondary"
-                size="sm"
-                bleed
-              >
-                {testing
-                  ? t("common:status.testing")
-                  : t(
-                      webdavConfigDirty
-                        ? "webdav.testConnectionWithSave"
-                        : "webdav.testConnection",
-                    )}
-              </Button>
-
-              {provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST &&
-                !githubGistId && (
-                  <Button
-                    id={WEBDAV_TARGET_IDS.createGist}
-                    onClick={handleCreateGist}
-                    disabled={!gistCreateReady}
-                    loading={uploading}
-                    variant="success"
-                    size="sm"
-                    bleed
-                  >
-                    {uploading
-                      ? t("common:status.uploading")
-                      : t("webdav.gist.create")}
-                  </Button>
-                )}
-
-              {/* 上传备份 */}
-              <Button
-                id={WEBDAV_TARGET_IDS.uploadBackup}
-                data-testid={IMPORT_EXPORT_TEST_IDS.webdavUploadBackupButton}
-                onClick={handleUploadBackup}
-                disabled={!webdavConfigFilled}
-                loading={uploading}
-                variant="success"
-                size="sm"
-                bleed
-              >
-                {uploading
-                  ? t("common:status.uploading")
-                  : t(
-                      webdavConfigDirty
-                        ? provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST
-                          ? "webdav.gist.uploadWithSave"
-                          : "webdav.uploadBackupWithSave"
-                        : provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST
-                          ? "webdav.gist.upload"
-                          : "webdav.uploadBackup",
-                    )}
-              </Button>
-
-              {/* 下载并导入 */}
-              <Button
-                id={WEBDAV_TARGET_IDS.downloadImport}
-                data-testid={IMPORT_EXPORT_TEST_IDS.webdavDownloadImportButton}
-                onClick={handleDownloadAndImport}
-                disabled={!webdavConfigFilled}
-                loading={downloading}
-                variant="default"
-                size="sm"
-                bleed
-              >
-                {downloading
-                  ? t("common:status.processing")
-                  : t(
-                      webdavConfigDirty
-                        ? provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST
-                          ? "webdav.gist.downloadImportWithSave"
-                          : "webdav.downloadImportWithSave"
-                        : provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST
-                          ? "webdav.gist.downloadImport"
-                          : "webdav.downloadImport",
-                    )}
-              </Button>
+          <div className="space-y-3 rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+            <div className="space-y-1">
+              <Heading4 className="m-0">{t("webdav.manual.title")}</Heading4>
+              <BodySmall className="m-0">
+                {t("webdav.manual.description")}
+              </BodySmall>
             </div>
-          </ProductAnalyticsScope>
+            <ProductAnalyticsScope
+              entrypoint={PRODUCT_ANALYTICS_ENTRYPOINTS.Options}
+              featureId={PRODUCT_ANALYTICS_FEATURE_IDS.WebDavSync}
+              surfaceId={webDavSettingsSurface}
+            >
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                <Alert
+                  compact
+                  variant={webdavConfigDirty ? "warning" : "info"}
+                  description={t(
+                    webdavConfigDirty
+                      ? provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST
+                        ? "webdav.gist.actionStateUnsaved"
+                        : "webdav.actionState.unsaved"
+                      : provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST
+                        ? "webdav.gist.actionStateSaved"
+                        : "webdav.actionState.saved",
+                  )}
+                  className="sm:col-span-2 lg:col-span-4"
+                />
+
+                {/* 保存配置 */}
+                <Button
+                  id={WEBDAV_TARGET_IDS.saveConfig}
+                  onClick={handleSaveConfig}
+                  loading={saving}
+                  variant="default"
+                  size="sm"
+                  bleed
+                >
+                  {saving ? t("common:status.saving") : t("webdav.saveConfig")}
+                </Button>
+
+                {/* 测试连接 */}
+                <Button
+                  id={WEBDAV_TARGET_IDS.testConnection}
+                  onClick={handleTestConnection}
+                  disabled={!webdavConfigFilled}
+                  loading={testing}
+                  variant="secondary"
+                  size="sm"
+                  bleed
+                >
+                  {testing
+                    ? t("common:status.testing")
+                    : t(
+                        webdavConfigDirty
+                          ? "webdav.testConnectionWithSave"
+                          : "webdav.testConnection",
+                      )}
+                </Button>
+
+                {provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST &&
+                  !githubGistId && (
+                    <Button
+                      id={WEBDAV_TARGET_IDS.createGist}
+                      onClick={handleCreateGist}
+                      disabled={!gistCreateReady}
+                      loading={uploading}
+                      variant="success"
+                      size="sm"
+                      bleed
+                    >
+                      {uploading
+                        ? t("common:status.uploading")
+                        : t("webdav.gist.create")}
+                    </Button>
+                  )}
+
+                {/* 上传备份 */}
+                <Button
+                  id={WEBDAV_TARGET_IDS.uploadBackup}
+                  data-testid={IMPORT_EXPORT_TEST_IDS.webdavUploadBackupButton}
+                  onClick={handleUploadBackup}
+                  disabled={!webdavConfigFilled}
+                  loading={uploading}
+                  variant="success"
+                  size="sm"
+                  bleed
+                >
+                  {uploading
+                    ? t("common:status.uploading")
+                    : t(
+                        webdavConfigDirty
+                          ? provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST
+                            ? "webdav.gist.uploadWithSave"
+                            : "webdav.uploadBackupWithSave"
+                          : provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST
+                            ? "webdav.gist.upload"
+                            : "webdav.uploadBackup",
+                      )}
+                </Button>
+
+                {/* 下载并导入 */}
+                <Button
+                  id={WEBDAV_TARGET_IDS.downloadImport}
+                  data-testid={
+                    IMPORT_EXPORT_TEST_IDS.webdavDownloadImportButton
+                  }
+                  onClick={handleDownloadAndImport}
+                  disabled={!webdavConfigFilled}
+                  loading={downloading}
+                  variant="default"
+                  size="sm"
+                  bleed
+                >
+                  {downloading
+                    ? t("common:status.processing")
+                    : t(
+                        webdavConfigDirty
+                          ? provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST
+                            ? "webdav.gist.downloadImportWithSave"
+                            : "webdav.downloadImportWithSave"
+                          : provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST
+                            ? "webdav.gist.downloadImport"
+                            : "webdav.downloadImport",
+                      )}
+                </Button>
+              </div>
+            </ProductAnalyticsScope>
+          </div>
         </CardContent>
       </Card>
 

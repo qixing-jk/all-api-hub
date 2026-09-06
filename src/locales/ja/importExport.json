@@ -115,13 +115,16 @@
         "saved": "今すぐ同期は、保存済みの WebDAV 設定と自動同期設定を使用します。",
         "unsaved": "自動同期設定に未保存の変更があります。今すぐ同期ではこれらの変更は使用されません。先に自動同期設定を保存してください。"
       },
-      "description": "共有データの自動同期を設定します。端末ローカル設定は現在の端末に残ります。",
+      "currentProvider": "同期サービス：{{provider}}",
+      "description": "選択した同期サービスを通じて共有データを自動同期します。端末ローカル設定はこの端末に残ります。",
       "enable": "自動同期を有効化",
       "enableDesc": "有効にすると、共有データが設定した間隔で WebDAV に同期されます。",
       "interval": "同期間隔（秒）",
       "intervalDesc": "自動同期の実行間隔を設定します",
       "intervalHint": "約 {{minutes}} 分",
       "lastSync": "前回同期",
+      "providerSwitchPending": "自動同期を {{from}} から {{to}} に切り替えるには、上のサービス設定を保存してください。",
+      "providerSwitchPendingTitle": "先に同期サービスの変更を保存してください",
       "saveSettings": "設定を保存",
       "strategy": "同期戦略",
       "strategyDesc": "データの同期方法を選択します",
@@ -129,9 +132,13 @@
       "strategyMerge": "スマートマージ - タイムスタンプに基づいてローカルとリモートを統合",
       "strategyRemoteFirst": "リモート優先 - リモートデータでローカルを上書き",
       "syncNow": "今すぐ同期",
-      "title": "WebDAV 自動同期"
+      "title": "自動同期"
     },
-    "configDesc": "共有データを同期するための WebDAV を設定します。一部の端末ローカル設定はこの端末に残り、アップロードも上書きもされません。",
+    "configDesc": "共有データを同期するクラウドサービスを1つ選択します。接続認証情報と端末ローカル設定はこの端末に残ります。",
+    "connection": {
+      "title": "接続設定",
+      "webdavDescription": "この端末で使用する WebDAV アドレスと認証情報を入力します。"
+    },
     "downloadImport": "WebDAV からインポート",
     "downloadImportWithSave": "保存して WebDAV からインポート",
     "encryption": {
@@ -153,9 +160,7 @@
       "actionStateUnsaved": "設定に未保存の変更があります。Gist 操作の前に変更を保存します。",
       "autoSyncActionStateSaved": "今すぐ同期は保存済みの Secret Gist と自動同期設定を使用します。",
       "autoSyncActionStateUnsaved": "自動同期設定に未保存の変更があります。今すぐ同期する前に保存してください。",
-      "autoSyncDescription": "現在のクラウドサービスで共有データを自動同期する設定です。端末ローカル設定はこの端末に残ります。",
       "autoSyncEnableDesc": "有効にすると、選択した間隔で共有データを Secret Gist と同期します。",
-      "autoSyncTitle": "クラウド自動同期",
       "configDesc": "暗号化した共有データを GitHub Secret Gist で同期します。Secret Gist は非公開一覧のリンクであり、アクセス制御そのものではありません。",
       "create": "Secret Gist を作成してアップロード",
       "downloadImport": "Secret Gist からインポート",
@@ -185,9 +190,14 @@
       "uploadWithSave": "保存して Secret Gist にアップロード"
     },
     "hidePassword": "パスワードを隠す",
+    "manual": {
+      "description": "選択したサービス設定の保存、接続テスト、同期データの手動アップロードまたはダウンロードを行います。",
+      "title": "保存と手動同期"
+    },
     "notSynced": "未同期",
     "password": "パスワード",
     "provider": {
+      "description": "この選択は手動同期と自動同期の両方に適用されます。同時に有効になるサービスは1つだけです。",
       "githubGist": "GitHub Secret Gist",
       "label": "同期サービス",
       "webdav": "WebDAV"
@@ -224,7 +234,7 @@
     "testConnectionWithSave": "保存して接続テスト",
     "testFailed": "接続テストに失敗しました",
     "testSuccess": "接続テストに成功しました",
-    "title": "WebDAV 同期",
+    "title": "クラウド同期",
     "uploadBackup": "WebDAV にアップロード",
     "uploadBackupWithSave": "保存して WebDAV にアップロード",
     "uploadFailed": "WebDAV へのアップロードに失敗しました",

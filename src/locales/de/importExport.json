@@ -115,13 +115,16 @@
         "saved": "„Jetzt synchronisieren“ verwendet die gespeicherten WebDAV- und Auto-Sync-Einstellungen.",
         "unsaved": "Die Einstellungen für die automatische Synchronisierung weisen nicht gespeicherte Änderungen auf. „Jetzt synchronisieren“ wird sie nicht verwenden; Speichern Sie zunächst die Einstellungen für die automatische Synchronisierung."
       },
-      "description": "Konfigurieren Sie die automatische Synchronisierung für freigegebene Daten. Gerätelokale Einstellungen bleiben auf dem aktuellen Gerät.",
+      "currentProvider": "Synchronisierungsdienst: {{provider}}",
+      "description": "Synchronisieren Sie freigegebene Daten automatisch über den ausgewählten Synchronisierungsdienst. Gerätelokale Einstellungen bleiben auf diesem Gerät.",
       "enable": "Automatische Synchronisierung aktivieren",
       "enableDesc": "Wenn aktiviert, werden freigegebene Daten in festgelegten Intervallen mit WebDAV synchronisiert.",
       "interval": "Synchronisierungsintervall (Sekunden)",
       "intervalDesc": "Legen Sie fest, wie oft die automatische Synchronisierung ausgeführt wird",
       "intervalHint": "Ungefähre Dauer: {{minutes}} Min.",
       "lastSync": "Letzte Synchronisierung",
+      "providerSwitchPending": "Speichern Sie die Dienstkonfiguration oben, um die automatische Synchronisierung von {{from}} zu {{to}} zu wechseln.",
+      "providerSwitchPendingTitle": "Änderung des Synchronisierungsdienstes zuerst speichern",
       "saveSettings": "Einstellungen speichern",
       "strategy": "Synchronisierungsstrategie",
       "strategyDesc": "Wählen Sie, wie Daten synchronisiert werden sollen",
@@ -129,9 +132,13 @@
       "strategyMerge": "Smart Merge – lokale und Remote-Daten basierend auf Zeitstempeln zusammenführen",
       "strategyRemoteFirst": "Remote zuerst – Remote-Daten überschreiben lokale Daten",
       "syncNow": "Jetzt synchronisieren",
-      "title": "Automatische WebDAV-Synchronisierung"
+      "title": "Automatische Synchronisierung"
     },
-    "configDesc": "Konfigurieren Sie WebDAV, um freigegebene Daten zu synchronisieren. Einige gerätelokale Einstellungen bleiben auf diesem Gerät und werden nicht hochgeladen oder überschrieben.",
+    "configDesc": "Wählen Sie einen Cloud-Dienst zur Synchronisierung freigegebener Daten. Zugangsdaten und gerätelokale Einstellungen bleiben auf diesem Gerät.",
+    "connection": {
+      "title": "Verbindungseinstellungen",
+      "webdavDescription": "Geben Sie die WebDAV-Adresse und die Zugangsdaten für dieses Gerät ein."
+    },
     "downloadImport": "Import aus WebDAV",
     "downloadImportWithSave": "Speichern und aus WebDAV importieren",
     "encryption": {
@@ -153,9 +160,7 @@
       "actionStateUnsaved": "Die Konfiguration enthält nicht gespeicherte Änderungen. Gist-Aktionen speichern diese zuerst.",
       "autoSyncActionStateSaved": "„Jetzt synchronisieren“ verwendet die gespeicherten Secret-Gist- und Auto-Sync-Einstellungen.",
       "autoSyncActionStateUnsaved": "Die Auto-Sync-Einstellungen enthalten nicht gespeicherte Änderungen. Speichere sie vor „Jetzt synchronisieren“.",
-      "autoSyncDescription": "Konfiguriere die automatische Synchronisierung gemeinsamer Daten über den aktiven Cloud-Dienst. Gerätelokale Einstellungen bleiben auf diesem Gerät.",
       "autoSyncEnableDesc": "Wenn aktiviert, werden gemeinsame Daten im gewählten Intervall mit dem Secret Gist synchronisiert.",
-      "autoSyncTitle": "Automatische Cloud-Synchronisierung",
       "configDesc": "Synchronisiere gemeinsame Daten über ein verschlüsseltes GitHub Secret Gist. Ein Secret Gist ist ein nicht gelisteter Link und keine Zugriffskontrolle.",
       "create": "Secret Gist erstellen und hochladen",
       "downloadImport": "Aus Secret Gist importieren",
@@ -185,9 +190,14 @@
       "uploadWithSave": "Speichern und auf Secret Gist hochladen"
     },
     "hidePassword": "Passwort verbergen",
+    "manual": {
+      "description": "Speichern Sie die ausgewählte Dienstkonfiguration, testen Sie die Verbindung oder laden Sie Synchronisierungsdaten manuell hoch und herunter.",
+      "title": "Speichern und manuell synchronisieren"
+    },
     "notSynced": "Nicht synchronisiert",
     "password": "Passwort",
     "provider": {
+      "description": "Diese Auswahl gilt für die manuelle und automatische Synchronisierung. Es ist jeweils nur ein Dienst aktiv.",
       "githubGist": "GitHub Secret Gist",
       "label": "Synchronisierungsdienst",
       "webdav": "WebDAV"
@@ -224,7 +234,7 @@
     "testConnectionWithSave": "Verbindung speichern und testen",
     "testFailed": "Verbindungstest fehlgeschlagen",
     "testSuccess": "Verbindungstest erfolgreich",
-    "title": "WebDAV-Synchronisierung",
+    "title": "Cloud-Synchronisierung",
     "uploadBackup": "Auf WebDAV hochladen",
     "uploadBackupWithSave": "Speichern und auf WebDAV hochladen",
     "uploadFailed": "Hochladen auf WebDAV fehlgeschlagen",

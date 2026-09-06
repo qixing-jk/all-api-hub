@@ -42,7 +42,7 @@ export const importExportPageSearchSections: OptionsSearchItemDefinition[] = [
     432,
     {
       descriptionKey: "importExport:webdav.configDesc",
-      keywords: ["webdav", "backup", "sync"],
+      keywords: ["cloud", "webdav", "gist", "github", "backup", "sync"],
     },
   ),
   buildPageSectionDefinition(
@@ -53,7 +53,7 @@ export const importExportPageSearchSections: OptionsSearchItemDefinition[] = [
     433,
     {
       descriptionKey: "importExport:webdav.autoSync.description",
-      keywords: ["webdav", "auto sync", "schedule"],
+      keywords: ["cloud", "webdav", "gist", "github", "auto sync", "schedule"],
     },
   ),
 ]

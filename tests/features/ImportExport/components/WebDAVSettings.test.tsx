@@ -587,16 +587,17 @@ describe("WebDAVSettings", () => {
   })
 
   it("uses the latest preference version when saving a newly created Gist id", async () => {
-    render(<WebDAVSettings />)
+    const onProviderDraftChange = vi.fn()
+    render(<WebDAVSettings onProviderDraftChange={onProviderDraftChange} />)
 
-    fireEvent.click(await screen.findByRole("combobox"))
     fireEvent.click(
-      await screen.findByRole("option", {
+      await screen.findByRole("button", {
         name: "importExport:webdav.provider.githubGist",
       }),
     )
 
     await waitFor(() => {
+      expect(onProviderDraftChange).toHaveBeenLastCalledWith("github_gist")
       expect(document.getElementById(WEBDAV_TARGET_IDS.gistToken)).toBeTruthy()
     })
     fireEvent.change(
@@ -759,7 +760,7 @@ describe("WebDAVSettings", () => {
     render(<WebDAVAutoSyncSettings />)
 
     expect(
-      await screen.findByText("importExport:webdav.gist.autoSyncTitle"),
+      await screen.findByText("importExport:webdav.autoSync.title"),
     ).toBeInTheDocument()
     expect(
       screen.getByText("importExport:webdav.gist.autoSyncActionStateSaved"),
