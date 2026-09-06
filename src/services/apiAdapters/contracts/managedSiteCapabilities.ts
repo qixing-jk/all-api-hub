@@ -87,29 +87,6 @@ export type ManagedSiteChannelsCapability<
     candidates: ManagedSiteChannel[],
     options?: ManagedSiteChannelSecretReadOptions,
   ): Promise<ManagedSiteChannel[]>
-  fetchModels?(
-    config: TConfig,
-    channelId: number,
-    options?: ManagedSiteChannelRequestOptions,
-  ): Promise<string[]>
-  fetchDraftModels?(
-    config: TConfig,
-    probe: ManagedSiteChannelModelProbe,
-    options?: ManagedSiteChannelRequestOptions,
-  ): Promise<string[]>
-  updateModels?(
-    config: TConfig,
-    channelId: number,
-    models: string[],
-    options?: ManagedSiteChannelRequestOptions,
-  ): Promise<ManagedSiteVoidMutationResult>
-  updateModelMapping?(
-    config: TConfig,
-    channelId: number,
-    models: string[],
-    modelMapping: Record<string, string>,
-    options?: ManagedSiteChannelRequestOptions,
-  ): Promise<ManagedSiteVoidMutationResult>
 }
 
 export type ManagedSiteConfigCapability<

@@ -8,6 +8,7 @@ import type { AccountKeyResourceCapability } from "./accountKeyResource"
 import type { AccountRefreshCapability } from "./accountRefresh"
 import type { InviteLinkCapability } from "./inviteLink"
 import type { KeyManagementCapability } from "./keyManagement"
+import type { ManagedResourceModelsCapability } from "./managedResourceModels"
 import type {
   ManagedSiteChannelDraftsCapability,
   ManagedSiteChannelsCapability,
@@ -60,6 +61,7 @@ export type SiteTypeCapabilities = {
     redemption?: RedemptionCapability
   }
   managedSites?: {
+    models?: ManagedResourceModelsCapability
     channels?: ManagedSiteChannelsCapability
     resources?: ManagedUpstreamResourcesCapability
     config?: ManagedSiteConfigCapability

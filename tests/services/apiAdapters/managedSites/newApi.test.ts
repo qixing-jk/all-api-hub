@@ -1,14 +1,15 @@
 import { describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { newApiManagedResourceModels } from "~/services/apiAdapters/managedSites/newApi"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
-import { CHANNEL_STATUS } from "~/types/managedSite"
 import type {
   ChannelFormData,
   CreateChannelPayload,
   ManagedSiteChannel,
 } from "~/types/managedSite"
+import { CHANNEL_STATUS } from "~/types/managedSite"
 import {
   CHANNEL_MUTATION_SCENARIOS,
   testManagedSiteChannelMutationContract,
@@ -239,10 +240,11 @@ describe("newApi managed-site channel capability", () => {
       successData: undefined,
       arrange: arrangeRestMutation(channelManagement.updateChannelFields, null),
       invoke: async () => {
-        const { newApiManagedSiteChannels } = await import(
-          "~/services/apiAdapters/managedSites/newApi"
+        return await newApiManagedResourceModels.updateModels!(
+          config,
+          7,
+          models,
         )
-        return await newApiManagedSiteChannels.updateModels!(config, 7, models)
       },
       assertRequestPayload: () =>
         expect(
@@ -259,10 +261,7 @@ describe("newApi managed-site channel capability", () => {
       successData: undefined,
       arrange: arrangeRestMutation(channelManagement.updateChannelFields, null),
       invoke: async () => {
-        const { newApiManagedSiteChannels } = await import(
-          "~/services/apiAdapters/managedSites/newApi"
-        )
-        return await newApiManagedSiteChannels.updateModelMapping!(
+        return await newApiManagedResourceModels.updateModelMapping!(
           config,
           7,
           models,
@@ -717,14 +716,14 @@ describe("newApi managed-site channel capability", () => {
       name: "updated",
     })
     await newApiManagedSiteChannels.delete(config, 1)
-    await newApiManagedSiteChannels.fetchModels?.(config, 1)
-    await newApiManagedSiteChannels.fetchDraftModels?.(config, {
+    await newApiManagedResourceModels.fetchModels?.(config, 1)
+    await newApiManagedResourceModels.fetchDraftModels?.(config, {
       channelType: 1,
       baseUrl: "https://upstream.example.invalid",
       credential: "credential-placeholder",
     })
-    await newApiManagedSiteChannels.updateModels?.(config, 1, ["gpt-4o"])
-    await newApiManagedSiteChannels.updateModelMapping?.(
+    await newApiManagedResourceModels.updateModels?.(config, 1, ["gpt-4o"])
+    await newApiManagedResourceModels.updateModelMapping?.(
       config,
       1,
       ["gpt-4o"],
@@ -817,9 +816,6 @@ describe("newApi managed-site channel capability", () => {
   })
 
   it("propagates model-sync request options to direct New API helpers", async () => {
-    const { newApiManagedSiteChannels } = await import(
-      "~/services/apiAdapters/managedSites/newApi"
-    )
     const signal = new AbortController().signal
     const request = {
       baseUrl: config.baseUrl,
@@ -831,7 +827,7 @@ describe("newApi managed-site channel capability", () => {
       bypassSiteRequestLimit: true,
     }
 
-    await newApiManagedSiteChannels.fetchModels?.(config, 1, {
+    await newApiManagedResourceModels.fetchModels?.(config, 1, {
       signal,
       bypassSiteRequestLimit: true,
     })

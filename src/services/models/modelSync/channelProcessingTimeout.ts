@@ -1,4 +1,4 @@
-import type { ManagedSiteChannel } from "~/types/managedSite"
+import type { ManagedModelChannel } from "~/types/managedResourceModels"
 import type { ExecutionItemResult } from "~/types/managedSiteModelSync"
 import { t } from "~/utils/i18n/core"
 
@@ -31,7 +31,7 @@ function getChannelProcessingTimeoutMessage(timeoutSeconds: number) {
 /**
  * Read the channel's current model list for timeout failure metadata.
  */
-function getExistingChannelModels(channel: ManagedSiteChannel) {
+function getExistingChannelModels(channel: ManagedModelChannel) {
   return channel.models
     ? channel.models
         .split(",")
@@ -44,7 +44,7 @@ function getExistingChannelModels(channel: ManagedSiteChannel) {
  * Create a channel-level failure result when processing exceeds the configured timeout.
  */
 function createChannelProcessingTimeoutResult(
-  channel: ManagedSiteChannel,
+  channel: ManagedModelChannel,
   maxRetries: number,
   timeoutSeconds: number,
 ): ExecutionItemResult {
@@ -64,7 +64,7 @@ function createChannelProcessingTimeoutResult(
  */
 export async function runWithChannelProcessingTimeout(
   work: (abortSignal?: AbortSignal) => Promise<ExecutionItemResult>,
-  channel: ManagedSiteChannel,
+  channel: ManagedModelChannel,
   maxRetries: number,
   timeoutSeconds: number | null | undefined,
 ): Promise<ExecutionItemResult> {

@@ -291,20 +291,24 @@ export async function openVeloeraNativeResourceOperations(): Promise<VeloeraNati
     delete: (locator, options) =>
       channels.delete(nativeConfig.config, locator, options),
     fetchModels: async (locator, options) => {
-      if (!channels.fetchModels) {
+      if (!veloeraManagedSiteCapabilities.models.fetchModels) {
         throw new ManagedResourceError({
           code: MANAGED_RESOURCE_FAILURE_CODES.Unavailable,
         })
       }
-      return await channels.fetchModels(nativeConfig.config, locator, options)
+      return await veloeraManagedSiteCapabilities.models.fetchModels(
+        nativeConfig.config,
+        locator,
+        options,
+      )
     },
     fetchDraftModels: async (probe, options) => {
-      if (!channels.fetchDraftModels) {
+      if (!veloeraManagedSiteCapabilities.models.fetchDraftModels) {
         throw new ManagedResourceError({
           code: MANAGED_RESOURCE_FAILURE_CODES.Unavailable,
         })
       }
-      return await channels.fetchDraftModels(
+      return await veloeraManagedSiteCapabilities.models.fetchDraftModels(
         nativeConfig.config,
         probe,
         options,

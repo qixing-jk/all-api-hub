@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { doneHubManagedResourceModels } from "~/services/apiAdapters/managedSites/doneHub"
 import {
   buildChannelName,
   buildChannelPayload,
@@ -8,8 +9,8 @@ import {
   prepareChannelFormData,
 } from "~/services/managedSites/providers/doneHubService"
 import { AuthTypeEnum } from "~/types"
-import { CHANNEL_STATUS, type ChannelFormData } from "~/types/managedSite"
 import type { ManagedSiteChannel } from "~/types/managedSite"
+import { CHANNEL_STATUS, type ChannelFormData } from "~/types/managedSite"
 import {
   CHANNEL_MUTATION_SCENARIOS,
   testManagedSiteChannelMutationContract,
@@ -228,10 +229,11 @@ describe("DoneHub managed-site channel capability", () => {
       successData: undefined,
       arrange: arrangeRestMutation(doneHubApi.updateDoneHubChannelFields, null),
       invoke: async () => {
-        const { doneHubManagedSiteChannels } = await import(
-          "~/services/apiAdapters/managedSites/doneHub"
+        return await doneHubManagedResourceModels.updateModels!(
+          config,
+          7,
+          models,
         )
-        return await doneHubManagedSiteChannels.updateModels!(config, 7, models)
       },
       assertRequestPayload: () =>
         expect(
@@ -256,10 +258,7 @@ describe("DoneHub managed-site channel capability", () => {
       successData: undefined,
       arrange: arrangeRestMutation(doneHubApi.updateDoneHubChannelFields, null),
       invoke: async () => {
-        const { doneHubManagedSiteChannels } = await import(
-          "~/services/apiAdapters/managedSites/doneHub"
-        )
-        return await doneHubManagedSiteChannels.updateModelMapping!(
+        return await doneHubManagedResourceModels.updateModelMapping!(
           config,
           7,
           models,
@@ -431,12 +430,9 @@ describe("DoneHub managed-site channel capability", () => {
     "keeps DoneHub model-update preflight failure %s undispatched",
     async (raw) => {
       doneHubApi.fetchChannelRaw.mockRejectedValue(raw)
-      const { doneHubManagedSiteChannels } = await import(
-        "~/services/apiAdapters/managedSites/doneHub"
-      )
 
       await expect(
-        doneHubManagedSiteChannels.updateModels!(config, 7, models),
+        doneHubManagedResourceModels.updateModels!(config, 7, models),
       ).resolves.toMatchObject({
         outcome: "rejected",
         diagnostic: { raw },
@@ -467,19 +463,16 @@ describe("DoneHub managed-site channel capability", () => {
           return { success: true, data: null, message: "success" }
         },
       )
-      const { doneHubManagedSiteChannels } = await import(
-        "~/services/apiAdapters/managedSites/doneHub"
-      )
 
       if (operation === "models") {
-        await doneHubManagedSiteChannels.updateModels!(
+        await doneHubManagedResourceModels.updateModels!(
           config,
           7,
           models,
           options,
         )
       } else {
-        await doneHubManagedSiteChannels.updateModelMapping!(
+        await doneHubManagedResourceModels.updateModelMapping!(
           config,
           7,
           models,
@@ -557,8 +550,8 @@ describe("DoneHub managed-site channel capability", () => {
     })
     await doneHubManagedSiteChannels.update(config, { id: 1 })
     await doneHubManagedSiteChannels.delete(config, 1)
-    await doneHubManagedSiteChannels.fetchModels?.(config, 1)
-    await doneHubManagedSiteChannels.fetchDraftModels?.(
+    await doneHubManagedResourceModels.fetchModels?.(config, 1)
+    await doneHubManagedResourceModels.fetchDraftModels?.(
       config,
       {
         channelType: "1",
@@ -567,8 +560,8 @@ describe("DoneHub managed-site channel capability", () => {
       },
       { bypassSiteRequestLimit: true },
     )
-    await doneHubManagedSiteChannels.updateModels?.(config, 1, ["model-a"])
-    await doneHubManagedSiteChannels.updateModelMapping?.(
+    await doneHubManagedResourceModels.updateModels?.(config, 1, ["model-a"])
+    await doneHubManagedResourceModels.updateModelMapping?.(
       config,
       1,
       ["model-a"],

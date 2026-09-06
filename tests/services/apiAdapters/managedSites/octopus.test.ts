@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { octopusManagedResourceModels } from "~/services/apiAdapters/managedSites/octopus"
 import {
   buildChannelName,
   buildChannelPayload,
@@ -647,13 +648,11 @@ describe("Octopus managed-site channel capability", () => {
       data: { id: 7 },
       message: "",
     })
-    const { octopusManagedSiteChannels } = await import(
-      "~/services/apiAdapters/managedSites/octopus"
-    )
+
     const controller = new AbortController()
 
     await expect(
-      octopusManagedSiteChannels.updateModels?.(
+      octopusManagedResourceModels.updateModels?.(
         config,
         7,
         ["model-a", "model-b"],
@@ -687,12 +686,9 @@ describe("Octopus managed-site channel capability", () => {
       data: { id: 7 },
       message: "",
     })
-    const { octopusManagedSiteChannels } = await import(
-      "~/services/apiAdapters/managedSites/octopus"
-    )
 
     await expect(
-      octopusManagedSiteChannels.updateModels?.(config, 7, ["model-a"]),
+      octopusManagedResourceModels.updateModels?.(config, 7, ["model-a"]),
     ).resolves.toMatchObject({ outcome: "succeeded", data: undefined })
 
     expect(octopusApi.updateChannel).toHaveBeenCalledWith(config, {

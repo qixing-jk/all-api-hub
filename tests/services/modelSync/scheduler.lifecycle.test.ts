@@ -177,10 +177,6 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
       updated: false,
       prunedCount: 0,
     })
-    mocks.octopusChannelToManagedSite.mockImplementation((channel) => ({
-      id: channel.id,
-      name: `mapped-${channel.name}`,
-    }))
     mocks.sendRuntimeMessage.mockResolvedValue(undefined)
     mocks.notifyTaskResult.mockResolvedValue(true)
     mocks.startProductAnalyticsAction.mockReturnValue({
@@ -373,14 +369,35 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
       },
     })
     mocks.octopusListChannels.mockResolvedValue([
-      { id: 1, name: "Alpha" },
-      { id: 2, name: "Beta" },
+      {
+        id: 1,
+        name: "Alpha",
+        type: 1,
+        enabled: true,
+        model: "gpt-4o",
+        base_urls: [{ url: "https://upstream.example.com" }],
+        keys: [{ channel_key: "test-key" }],
+      },
+      {
+        id: 2,
+        name: "Beta",
+        type: 1,
+        enabled: true,
+        model: "gpt-4o",
+        base_urls: [{ url: "https://upstream.example.com" }],
+        keys: [{ channel_key: "test-key" }],
+      },
     ])
 
     await expect(modelSyncScheduler.listChannels()).resolves.toEqual({
       items: [
-        { id: 1, name: "mapped-Alpha" },
-        { id: 2, name: "mapped-Beta" },
+        expect.objectContaining({
+          id: 1,
+          name: "Alpha",
+          models: "gpt-4o",
+          native: expect.objectContaining({ kind: "octopus" }),
+        }),
+        expect.objectContaining({ id: 2, name: "Beta", models: "gpt-4o" }),
       ],
       total: 2,
       type_counts: {},
@@ -639,7 +656,17 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
 
   it("rejects selected sync requests when no channels match the requested ids", async () => {
     mocks.listChannels.mockResolvedValue({
-      items: [{ id: 1, name: "Alpha" }],
+      items: [
+        {
+          id: 1,
+          name: "Alpha",
+          type: 1,
+          enabled: true,
+          model: "gpt-4o",
+          base_urls: [{ url: "https://upstream.example.com" }],
+          keys: [{ channel_key: "test-key" }],
+        },
+      ],
       total: 1,
       type_counts: {},
     })
@@ -663,8 +690,24 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
       },
     })
     mocks.octopusListChannels.mockResolvedValue([
-      { id: 1, name: "Alpha" },
-      { id: 2, name: "Beta" },
+      {
+        id: 1,
+        name: "Alpha",
+        type: 1,
+        enabled: true,
+        model: "gpt-4o",
+        base_urls: [{ url: "https://upstream.example.com" }],
+        keys: [{ channel_key: "test-key" }],
+      },
+      {
+        id: 2,
+        name: "Beta",
+        type: 1,
+        enabled: true,
+        model: "gpt-4o",
+        base_urls: [{ url: "https://upstream.example.com" }],
+        keys: [{ channel_key: "test-key" }],
+      },
     ])
     mocks.runOctopusBatch.mockImplementation(
       async (channels: any[], options: any) => {
@@ -751,7 +794,15 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
       },
     })
     mocks.octopusListChannels.mockResolvedValueOnce([
-      { id: 4, name: "Example channel" },
+      {
+        id: 4,
+        name: "Example channel",
+        type: 1,
+        enabled: true,
+        model: "gpt-4o",
+        base_urls: [{ url: "https://upstream.example.com" }],
+        keys: [{ channel_key: "test-key" }],
+      },
     ])
     mocks.runOctopusBatch.mockResolvedValueOnce({
       items: [{ channelId: 4, channelName: "Example channel", ok: true }],
@@ -798,7 +849,17 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
         maxRetries: 3,
       },
     })
-    mocks.octopusListChannels.mockResolvedValueOnce([{ id: 3, name: "Gamma" }])
+    mocks.octopusListChannels.mockResolvedValueOnce([
+      {
+        id: 3,
+        name: "Gamma",
+        type: 1,
+        enabled: true,
+        model: "gpt-4o",
+        base_urls: [{ url: "https://upstream.example.com" }],
+        keys: [{ channel_key: "test-key" }],
+      },
+    ])
     mocks.collectModelsFromExecution.mockReturnValueOnce(["gpt-4o", "claude-3"])
     mocks.runOctopusBatch.mockResolvedValueOnce({
       items: [{ channelId: 3, channelName: "mapped-Gamma", ok: true }],

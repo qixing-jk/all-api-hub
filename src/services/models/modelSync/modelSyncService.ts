@@ -1,12 +1,7 @@
 import { union } from "lodash-es"
 
-import type { ManagedSiteChannelsCapability } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
+import type { ManagedResourceModelsCapability } from "~/services/apiAdapters/contracts/managedResourceModels"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
-import { MANAGED_UPSTREAM_RESOURCE_FEATURES } from "~/services/managedSites/managedUpstreamResourceMigration"
-import {
-  resolveManagedUpstreamResourceFeatureCapabilities,
-  type ManagedSiteUpstreamResourcesCapability,
-} from "~/services/managedSites/managedUpstreamResourceService"
 import {
   consumeManagedSiteMutationResult,
   MANAGED_SITE_MUTATION_RETRY_DECISIONS,
@@ -14,28 +9,20 @@ import {
   type ManagedSiteMutationRetryDecision,
 } from "~/services/managedSites/mutations"
 import { type ManagedSiteRuntimeConfig } from "~/services/managedSites/runtimeConfig"
-import {
-  collectManagedConfigSecrets,
-  collectManagedResourceSecrets,
-} from "~/services/managedSites/utils/managedSite"
+import { collectManagedConfigSecrets } from "~/services/managedSites/utils/managedSite"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import type { ChannelResourceConfigMap } from "~/types/channelConfig"
 import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
 import {
-  type ChannelFormData,
-  type ManagedSiteChannel,
-  type ManagedSiteChannelListData,
-} from "~/types/managedSite"
+  type ManagedModelChannel,
+  type ManagedModelChannelListData,
+} from "~/types/managedResourceModels"
 import {
   type BatchExecutionOptions,
   type ExecutionItemResult,
   type ExecutionResult,
   type ExecutionStatistics,
 } from "~/types/managedSiteModelSync"
-import type {
-  ManagedUpstreamResourceDetail,
-  ManagedUpstreamResourceSummary,
-} from "~/types/managedUpstreamResource"
 import { createLogger } from "~/utils/core/logger"
 
 import {
@@ -53,33 +40,16 @@ import {
 
 const PROBE_FILTER_TIMEOUT_MS = 30_000
 
-type ModelSyncChannelListCapability = ManagedSiteChannelsCapability & {
-  list: NonNullable<ManagedSiteChannelsCapability["list"]>
+type ModelSyncChannelListCapability = ManagedResourceModelsCapability & {
+  list: NonNullable<ManagedResourceModelsCapability["list"]>
 }
 
-type ModelSyncChannelCapabilities = ManagedSiteChannelsCapability & {
-  fetchModels: NonNullable<ManagedSiteChannelsCapability["fetchModels"]>
-  updateModels: NonNullable<ManagedSiteChannelsCapability["updateModels"]>
+type ModelSyncChannelCapabilities = ManagedResourceModelsCapability & {
+  fetchModels: NonNullable<ManagedResourceModelsCapability["fetchModels"]>
+  updateModels: NonNullable<ManagedResourceModelsCapability["updateModels"]>
   updateModelMapping: NonNullable<
-    ManagedSiteChannelsCapability["updateModelMapping"]
+    ManagedResourceModelsCapability["updateModelMapping"]
   >
-}
-
-type ModelSyncResourceCapabilities = ManagedSiteUpstreamResourcesCapability<
-  ManagedSiteRuntimeConfig["config"],
-  unknown,
-  ChannelFormData
->
-
-type ModelSyncResourceCacheEntry = {
-  capabilities: ModelSyncResourceCapabilities
-  summary: ManagedUpstreamResourceSummary
-  detail?: ManagedUpstreamResourceDetail<unknown>
-  draft?: ChannelFormData
-}
-
-type ModelSyncListChannelsOptions = {
-  preferResourceBacked?: boolean
 }
 
 /**
@@ -150,10 +120,6 @@ export class ModelSyncService {
   private allowedModelSet: Set<string> | null = null
   private channelConfigs: ChannelResourceConfigMap | null = null
   private globalChannelModelFilters: ChannelModelFilterRule[] | null = null
-  private resourceCacheByChannelId = new Map<
-    number,
-    ModelSyncResourceCacheEntry
-  >()
   private readonly protectionBypassExecution?: ProtectionBypassExecution
 
   /**
@@ -238,7 +204,7 @@ export class ModelSyncService {
 
   private getChannelListCapability(): ModelSyncChannelListCapability {
     const channels = getSiteTypeCapabilities(this.managedSiteConfig.siteType)
-      .managedSites?.channels
+      .managedSites?.models
 
     if (!channels?.list) {
       throw new Error(
@@ -251,7 +217,7 @@ export class ModelSyncService {
 
   private getModelSyncChannelCapabilities(): ModelSyncChannelCapabilities {
     const channels = getSiteTypeCapabilities(this.managedSiteConfig.siteType)
-      .managedSites?.channels
+      .managedSites?.models
 
     if (
       !channels?.fetchModels ||
@@ -266,31 +232,7 @@ export class ModelSyncService {
     return channels as ModelSyncChannelCapabilities
   }
 
-  private getModelSyncResourceCapabilities(): ModelSyncResourceCapabilities | null {
-    const resolution = resolveManagedUpstreamResourceFeatureCapabilities(
-      this.managedSiteConfig.siteType,
-      MANAGED_UPSTREAM_RESOURCE_FEATURES.ModelSync,
-    )
-
-    if (!resolution.supported) {
-      return null
-    }
-
-    return resolution.capabilities as ModelSyncResourceCapabilities
-  }
-
   private createChannelRequestOptions(abortSignal?: AbortSignal) {
-    if (!abortSignal && !this.rateLimiter) {
-      return undefined
-    }
-
-    return {
-      ...(abortSignal ? { signal: abortSignal } : {}),
-      ...(this.rateLimiter ? { bypassSiteRequestLimit: true } : {}),
-    }
-  }
-
-  private createResourceRequestOptions(abortSignal?: AbortSignal) {
     if (!abortSignal && !this.rateLimiter) {
       return undefined
     }
@@ -309,195 +251,9 @@ export class ModelSyncService {
     })
   }
 
-  private toModelSyncChannelFromResource(
-    summary: ManagedUpstreamResourceSummary,
-  ): ManagedSiteChannel | null {
-    const id = Number(summary.ref.resourceId)
-    if (!Number.isSafeInteger(id)) {
-      return null
-    }
-
-    if (summary.modelCount == null) {
-      return null
-    }
-
-    const modelPreview = summary.modelPreview ?? []
-    if (summary.modelCount > modelPreview.length) {
-      return null
-    }
-
-    const numericType = summary.typeLabel ? Number(summary.typeLabel) : NaN
-    const type = (
-      Number.isFinite(numericType) ? numericType : 0
-    ) as ManagedSiteChannel["type"]
-
-    return {
-      id,
-      type,
-      key: "",
-      name: summary.displayName || `Channel ${id}`,
-      base_url: summary.endpointLabel ?? "",
-      models: modelPreview.join(","),
-      status: 1,
-      weight: 0,
-      priority: 0,
-      openai_organization: null,
-      test_model: null,
-      created_time: 0,
-      test_time: 0,
-      response_time: 0,
-      other: "",
-      balance: 0,
-      balance_updated_time: 0,
-      group: "",
-      used_quota: 0,
-      model_mapping: "",
-      status_code_mapping: "",
-      auto_ban: 0,
-      other_info: "",
-      tag: null,
-      param_override: null,
-      header_override: null,
-      remark: null,
-      channel_info: {
-        is_multi_key: false,
-        multi_key_size: 0,
-        multi_key_status_list: null,
-        multi_key_polling_index: 0,
-        multi_key_mode: "",
-      },
-      setting: "",
-      settings: "",
-    }
-  }
-
-  private getTypeCounts(channels: ManagedSiteChannel[]) {
-    return channels.reduce<Record<string, number>>((counts, channel) => {
-      const key = String(channel.type)
-      counts[key] = (counts[key] ?? 0) + 1
-      return counts
-    }, {})
-  }
-
-  private async listResourceBackedChannels(
-    capabilities: ModelSyncResourceCapabilities,
-  ): Promise<ManagedSiteChannelListData | null> {
-    this.resourceCacheByChannelId.clear()
-    await this.throttle()
-
-    const list = await capabilities.items.list(
-      this.managedSiteConfig.config,
-      this.createResourceRequestOptions(),
-    )
-    const channels: ManagedSiteChannel[] = []
-
-    for (const summary of list.items) {
-      const channel = this.toModelSyncChannelFromResource(summary)
-
-      if (!channel) {
-        logger.debug("Falling back to legacy model sync channel listing", {
-          siteType: this.managedSiteConfig.siteType,
-          resourceId: summary.ref.resourceId,
-          modelCount: summary.modelCount,
-          modelPreviewCount: summary.modelPreview?.length ?? 0,
-        })
-        this.resourceCacheByChannelId.clear()
-        return null
-      }
-
-      channels.push(channel)
-      this.resourceCacheByChannelId.set(channel.id, {
-        capabilities,
-        summary,
-      })
-    }
-
-    return {
-      items: channels,
-      total: channels.length,
-      type_counts: this.getTypeCounts(channels),
-    }
-  }
-
-  private async updateResourceBackedChannelModels(
-    entry: ModelSyncResourceCacheEntry,
-    models: string[],
-    abortSignal?: AbortSignal,
-  ): Promise<void> {
-    await this.throttle()
-    throwIfAborted(abortSignal)
-
-    if (!entry.detail || !entry.draft) {
-      entry.detail = await entry.capabilities.items.getDetail(
-        this.managedSiteConfig.config,
-        entry.summary.ref,
-      )
-      throwIfAborted(abortSignal)
-      entry.draft = entry.capabilities.drafts.prepareEditDraft(entry.detail)
-    }
-
-    throwIfAborted(abortSignal)
-    const draft: ChannelFormData = {
-      ...entry.draft,
-      models,
-    }
-    const resourceSecretCollection = collectManagedResourceSecrets(
-      entry.detail.native,
-      draft,
-    )
-    const knownSecrets = Object.freeze([
-      ...collectManagedConfigSecrets(this.managedSiteConfig.config),
-      ...resourceSecretCollection.knownSecrets,
-    ])
-    const result = await entry.capabilities.items.update(
-      this.managedSiteConfig.config,
-      entry.detail,
-      draft,
-    )
-
-    await consumeModelSyncMutationResult(result, {
-      knownSecrets,
-      knownSecretsComplete: resourceSecretCollection.complete,
-      reconcile: async () => {
-        entry.detail = await entry.capabilities.items.getDetail(
-          this.managedSiteConfig.config,
-          entry.summary.ref,
-        )
-        entry.draft = entry.capabilities.drafts.prepareEditDraft(entry.detail)
-      },
-    })
-
-    entry.draft = draft
-  }
-
-  /**
-   * List all channels from New API
-   *
-   * Aggregates totals/type_counts across paginated results.
-   */
-  /**
-   * Fetch all channels from New API with pagination aggregation.
-   * @returns Channel list data including totals and type counts.
-   */
-  async listChannels(
-    options?: ModelSyncListChannelsOptions,
-  ): Promise<ManagedSiteChannelListData> {
+  /** Lists complete provider-native model inputs without a channel-form projection. */
+  async listChannels(): Promise<ManagedModelChannelListData> {
     try {
-      if (options?.preferResourceBacked) {
-        const resources = this.getModelSyncResourceCapabilities()
-        if (!resources) {
-          this.resourceCacheByChannelId.clear()
-        } else {
-          const resourceBackedChannels =
-            await this.listResourceBackedChannels(resources)
-          if (resourceBackedChannels) {
-            return resourceBackedChannels
-          }
-        }
-      } else {
-        this.resourceCacheByChannelId.clear()
-      }
-
       return await this.getChannelListCapability().list(
         this.managedSiteConfig.config,
         {
@@ -541,21 +297,11 @@ export class ModelSyncService {
    * @param models Canonical model list to write.
    */
   async updateChannelModels(
-    channel: ManagedSiteChannel,
+    channel: ManagedModelChannel,
     models: string[],
     abortSignal?: AbortSignal,
   ): Promise<void> {
     try {
-      const resourceEntry = this.resourceCacheByChannelId.get(channel.id)
-      if (resourceEntry) {
-        await this.updateResourceBackedChannelModels(
-          resourceEntry,
-          models,
-          abortSignal,
-        )
-        return
-      }
-
       await this.throttle()
       throwIfAborted(abortSignal)
       const knownSecrets = Object.freeze(
@@ -588,7 +334,7 @@ export class ModelSyncService {
    * @param modelMapping Standard→actual mapping to write.
    */
   async updateChannelModelMapping(
-    channel: ManagedSiteChannel,
+    channel: ManagedModelChannel,
     modelMapping: Record<string, string>,
     abortSignal?: AbortSignal,
   ): Promise<ManagedSiteMutationResult<unknown>> {
@@ -636,7 +382,7 @@ export class ModelSyncService {
    * @returns Outcome including old/new models and status.
    */
   async runForChannel(
-    channel: ManagedSiteChannel,
+    channel: ManagedModelChannel,
     maxRetries: number = 2,
     abortSignal?: AbortSignal,
     writeFailureBoundary: ModelSyncWriteFailureBoundary = createModelSyncWriteFailureBoundary(),
@@ -777,7 +523,7 @@ export class ModelSyncService {
    * @returns Aggregate execution result and statistics.
    */
   async runBatch(
-    channels: ManagedSiteChannel[],
+    channels: ManagedModelChannel[],
     options: BatchExecutionOptions,
   ): Promise<ExecutionResult> {
     const { concurrency, maxRetries, channelProcessingTimeout, onProgress } =
@@ -913,12 +659,11 @@ export class ModelSyncService {
    * @param models Models after global filtering.
    */
   private applyChannelFilters(
-    channel: ManagedSiteChannel,
+    channel: ManagedModelChannel,
     models: string[],
     probeContext: ProbeFilterContext,
   ): Promise<string[]> {
-    const resourceIdentity = this.resourceCacheByChannelId.get(channel.id)
-      ?.summary.ref ?? {
+    const resourceIdentity = {
       managedSiteType: this.managedSiteConfig.siteType,
       scopeKey: this.managedSiteConfig.config.baseUrl,
       resourceId: channel.id,

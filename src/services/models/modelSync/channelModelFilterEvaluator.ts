@@ -21,7 +21,7 @@ import {
   isProbeChannelModelFilterRule,
   type ChannelModelFilterRule,
 } from "~/types/channelModelFilters"
-import type { ManagedSiteChannel } from "~/types/managedSite"
+import type { ManagedModelChannel } from "~/types/managedResourceModels"
 import {
   createManagedUpstreamResourceRef,
   getManagedUpstreamResourceRefKey,
@@ -53,7 +53,7 @@ export class ProbeFilterUnavailableError extends Error {
  * Per-channel context required to run probe-backed model filters.
  */
 export interface ProbeFilterContext {
-  channel: ManagedSiteChannel
+  channel: ManagedModelChannel
   managedConfig: ManagedSiteRuntimeConfig
   cache: Map<string, boolean>
   resolvedKey?: string

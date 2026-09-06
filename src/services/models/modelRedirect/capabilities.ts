@@ -1,17 +1,17 @@
 import type { ManagedSiteType } from "~/constants/siteType"
-import type { ManagedSiteChannelsCapability } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
+import type { ManagedResourceModelsCapability } from "~/services/apiAdapters/contracts/managedResourceModels"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import type { ManagedSiteRuntimeConfigValue } from "~/services/managedSites/runtimeConfig"
 
 type ManagedSiteModelRedirectCapabilities = Pick<
-  ManagedSiteChannelsCapability<ManagedSiteRuntimeConfigValue>,
+  ManagedResourceModelsCapability<ManagedSiteRuntimeConfigValue>,
   "list" | "updateModelMapping"
 > & {
   list: NonNullable<
-    ManagedSiteChannelsCapability<ManagedSiteRuntimeConfigValue>["list"]
+    ManagedResourceModelsCapability<ManagedSiteRuntimeConfigValue>["list"]
   >
   updateModelMapping: NonNullable<
-    ManagedSiteChannelsCapability<ManagedSiteRuntimeConfigValue>["updateModelMapping"]
+    ManagedResourceModelsCapability<ManagedSiteRuntimeConfigValue>["updateModelMapping"]
   >
 }
 
@@ -26,7 +26,7 @@ type ManagedSiteModelRedirectCapabilityResolution =
 export function resolveManagedSiteModelRedirectCapabilities(
   siteType: ManagedSiteType,
 ): ManagedSiteModelRedirectCapabilityResolution {
-  const channels = getSiteTypeCapabilities(siteType).managedSites?.channels
+  const channels = getSiteTypeCapabilities(siteType).managedSites?.models
 
   if (!channels?.list || !channels.updateModelMapping) {
     return { supported: false }

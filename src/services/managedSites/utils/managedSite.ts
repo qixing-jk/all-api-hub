@@ -374,7 +374,7 @@ export function supportsManagedSiteModelSync(
   siteType: ManagedSiteType,
 ): boolean {
   return Boolean(
-    getSiteTypeCapabilities(siteType).managedSites?.channels?.updateModels,
+    getSiteTypeCapabilities(siteType).managedSites?.models?.updateModels,
   )
 }
 

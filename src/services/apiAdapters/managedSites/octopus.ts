@@ -1,5 +1,6 @@
 import { OctopusOutboundTypeNames } from "~/constants/octopus"
 import { SITE_TYPES } from "~/constants/siteType"
+import type { ManagedResourceModelsCapability } from "~/services/apiAdapters/contracts/managedResourceModels"
 import type {
   ManagedSiteChannelDraftsCapability,
   ManagedSiteChannelsCapability,
@@ -7,6 +8,7 @@ import type {
   ManagedSiteQueriesCapability,
 } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import type { ManagedUpstreamResourcesCapability } from "~/services/apiAdapters/contracts/managedUpstreamResources"
+import { toOctopusModelChannel } from "~/services/apiAdapters/managedResources/modelInputs"
 import {
   createChannel as createOctopusChannel,
   deleteChannel as deleteOctopusChannel,
@@ -155,6 +157,31 @@ export const octopusManagedSiteChannels: ManagedSiteChannelsCapability<OctopusCo
           await updateOctopusChannel(config, toOctopusUpdateInput(channelData)),
       })
     },
+    delete: async (config, channelId) => {
+      return await runOctopusMutation<null, void>({
+        effect: octopusChannelEffect("resource-deleted", channelId),
+        execute: async () => await deleteOctopusChannel(config, channelId),
+        successData: () => undefined,
+      })
+    },
+  }
+
+export const octopusManagedResourceModels: ManagedResourceModelsCapability<OctopusConfig> =
+  {
+    list: async (config, options) => {
+      const items = (await listChannels(config, options)).map(
+        toOctopusModelChannel,
+      )
+      return {
+        items,
+        total: items.length,
+        type_counts: items.reduce<Record<string, number>>((counts, channel) => {
+          const type = String(channel.type)
+          counts[type] = (counts[type] ?? 0) + 1
+          return counts
+        }, {}),
+      }
+    },
     updateModels: async (config, channelId, models, options) => {
       return await runOctopusMutation<unknown, void>({
         effect: octopusChannelEffect("models-updated", channelId),
@@ -175,13 +202,6 @@ export const octopusManagedSiteChannels: ManagedSiteChannelsCapability<OctopusCo
               })
             : await updateOctopusChannel(config, payload)
         },
-        successData: () => undefined,
-      })
-    },
-    delete: async (config, channelId) => {
-      return await runOctopusMutation<null, void>({
-        effect: octopusChannelEffect("resource-deleted", channelId),
-        execute: async () => await deleteOctopusChannel(config, channelId),
         successData: () => undefined,
       })
     },
@@ -458,6 +478,7 @@ const octopusManagedUpstreamResources: ManagedUpstreamResourcesCapability<
 
 export const octopusManagedSiteCapabilities = {
   channels: octopusManagedSiteChannels,
+  models: octopusManagedResourceModels,
   resources: octopusManagedUpstreamResources,
   config: octopusManagedSiteConfig,
   queries: octopusManagedSiteQueries,

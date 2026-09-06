@@ -378,10 +378,10 @@ describe("apiAdapters registry", () => {
     ] satisfies SiteType[]) {
       const capabilities = getSiteTypeCapabilities(siteType)
 
-      expect(capabilities.managedSites?.channels?.fetchModels).toBeUndefined()
-      expect(capabilities.managedSites?.channels?.updateModels).toBeUndefined()
+      expect(capabilities.managedSites?.models?.fetchModels).toBeUndefined()
+      expect(capabilities.managedSites?.models?.updateModels).toBeUndefined()
       expect(
-        capabilities.managedSites?.channels?.updateModelMapping,
+        capabilities.managedSites?.models?.updateModelMapping,
       ).toBeUndefined()
     }
   })

@@ -873,9 +873,9 @@ describe("AxonHub managed-site channel capability", () => {
       listResponse,
     )
     expect(axonHubProvider.listChannels).toHaveBeenCalledWith(config)
-    expect(axonHubManagedSiteChannels.fetchModels).toBeUndefined()
-    expect(axonHubManagedSiteChannels.updateModels).toBeUndefined()
-    expect(axonHubManagedSiteChannels.updateModelMapping).toBeUndefined()
+    expect(axonHubManagedSiteChannels).not.toHaveProperty("fetchModels")
+    expect(axonHubManagedSiteChannels).not.toHaveProperty("updateModels")
+    expect(axonHubManagedSiteChannels).not.toHaveProperty("updateModelMapping")
   })
 
   it("does not expose model-sync methods", async () => {
@@ -883,9 +883,9 @@ describe("AxonHub managed-site channel capability", () => {
       "~/services/apiAdapters/managedSites/axonHub"
     )
 
-    expect(axonHubManagedSiteChannels.fetchModels).toBeUndefined()
-    expect(axonHubManagedSiteChannels.updateModels).toBeUndefined()
-    expect(axonHubManagedSiteChannels.updateModelMapping).toBeUndefined()
+    expect(axonHubManagedSiteChannels).not.toHaveProperty("fetchModels")
+    expect(axonHubManagedSiteChannels).not.toHaveProperty("updateModels")
+    expect(axonHubManagedSiteChannels).not.toHaveProperty("updateModelMapping")
   })
 
   it("exposes provider config and draft functions", async () => {

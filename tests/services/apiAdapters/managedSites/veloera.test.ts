@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { veloeraManagedResourceModels } from "~/services/apiAdapters/managedSites/veloera"
 import { ApiError } from "~/services/apiTransport/errors"
 import {
   buildChannelName,
@@ -9,8 +10,8 @@ import {
   prepareChannelFormData,
 } from "~/services/managedSites/providers/veloera"
 import { AuthTypeEnum } from "~/types"
-import { CHANNEL_STATUS, type ChannelFormData } from "~/types/managedSite"
 import type { ManagedSiteChannel } from "~/types/managedSite"
+import { CHANNEL_STATUS, type ChannelFormData } from "~/types/managedSite"
 import {
   CHANNEL_MUTATION_SCENARIOS,
   testManagedSiteChannelMutationContract,
@@ -238,10 +239,11 @@ describe("Veloera managed-site channel capability", () => {
       successData: undefined,
       arrange: arrangeRestMutation(veloeraApi.updateChannelModels, null, true),
       invoke: async () => {
-        const { veloeraManagedSiteChannels } = await import(
-          "~/services/apiAdapters/managedSites/veloera"
+        return await veloeraManagedResourceModels.updateModels!(
+          config,
+          7,
+          models,
         )
-        return await veloeraManagedSiteChannels.updateModels!(config, 7, models)
       },
       assertRequestPayload: () =>
         expect(
@@ -262,10 +264,7 @@ describe("Veloera managed-site channel capability", () => {
         true,
       ),
       invoke: async () => {
-        const { veloeraManagedSiteChannels } = await import(
-          "~/services/apiAdapters/managedSites/veloera"
-        )
-        return await veloeraManagedSiteChannels.updateModelMapping!(
+        return await veloeraManagedResourceModels.updateModelMapping!(
           config,
           7,
           models,
@@ -291,12 +290,9 @@ describe("Veloera managed-site channel capability", () => {
       request.observer?.onResponse()
       throw responseError
     })
-    const { veloeraManagedSiteChannels } = await import(
-      "~/services/apiAdapters/managedSites/veloera"
-    )
 
     await expect(
-      veloeraManagedSiteChannels.updateModels!(config, 7, models),
+      veloeraManagedResourceModels.updateModels!(config, 7, models),
     ).rejects.toBe(responseError)
   })
 
@@ -307,12 +303,9 @@ describe("Veloera managed-site channel capability", () => {
       request.observer?.onResponse()
       throw responseError
     })
-    const { veloeraManagedSiteChannels } = await import(
-      "~/services/apiAdapters/managedSites/veloera"
-    )
 
     await expect(
-      veloeraManagedSiteChannels.updateModels!(config, 7, models),
+      veloeraManagedResourceModels.updateModels!(config, 7, models),
     ).resolves.toEqual({
       outcome: "rejected",
       diagnostic: {
@@ -499,16 +492,16 @@ describe("Veloera managed-site channel capability", () => {
     await veloeraManagedSiteChannels.update(config, { id: 1 })
     await veloeraManagedSiteChannels.delete(config, 1)
     const fetchModelsSignal = new AbortController().signal
-    await veloeraManagedSiteChannels.fetchModels?.(config, 1, {
+    await veloeraManagedResourceModels.fetchModels?.(config, 1, {
       signal: fetchModelsSignal,
     })
-    await veloeraManagedSiteChannels.updateModels?.(
+    await veloeraManagedResourceModels.updateModels?.(
       config,
       1,
       ["gpt-4o", "claude-3"],
       { signal: new AbortController().signal },
     )
-    await veloeraManagedSiteChannels.updateModelMapping?.(
+    await veloeraManagedResourceModels.updateModelMapping?.(
       config,
       1,
       ["gpt-4o", "claude-3"],
@@ -584,7 +577,7 @@ describe("Veloera managed-site channel capability", () => {
       }),
     ).resolves.toBe(detail.key)
     await expect(
-      veloeraManagedSiteChannels.fetchDraftModels?.(
+      veloeraManagedResourceModels.fetchDraftModels?.(
         config,
         {
           channelType: 49,

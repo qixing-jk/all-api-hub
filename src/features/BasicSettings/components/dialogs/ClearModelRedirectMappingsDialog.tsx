@@ -14,7 +14,7 @@ import {
 import { BASIC_SETTINGS_TEST_IDS } from "~/features/BasicSettings/testIds"
 import { ModelRedirectService } from "~/services/models/modelRedirect"
 import { isEmptyModelMapping } from "~/services/models/modelRedirect/utils"
-import type { ManagedSiteChannel } from "~/types/managedSite"
+import type { ManagedModelChannel } from "~/types/managedResourceModels"
 import { getErrorMessage } from "~/utils/core/error"
 import { showWarningToast } from "~/utils/core/toastHelpers"
 
@@ -35,7 +35,7 @@ interface ModelMappingMeta {
  * @param channel Managed site channel to extract metadata from.
  * @returns Metadata about the model mapping, including count, emptiness, validity, and preview
  */
-function getModelMappingMeta(channel: ManagedSiteChannel): ModelMappingMeta {
+function getModelMappingMeta(channel: ManagedModelChannel): ModelMappingMeta {
   const raw = channel.model_mapping ?? ""
 
   if (isEmptyModelMapping(raw)) {
@@ -76,7 +76,7 @@ export function ClearModelRedirectMappingsDialog({
 }: ClearModelRedirectMappingsDialogProps) {
   const { t } = useTranslation("modelRedirect")
 
-  const [channels, setChannels] = useState<ManagedSiteChannel[]>([])
+  const [channels, setChannels] = useState<ManagedModelChannel[]>([])
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
   const [isLoading, setIsLoading] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)

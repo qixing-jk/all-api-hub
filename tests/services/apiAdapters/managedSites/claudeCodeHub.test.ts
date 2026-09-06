@@ -593,9 +593,11 @@ describe("Claude Code Hub managed-site channel capability", () => {
       "~/services/apiAdapters/managedSites/claudeCodeHub"
     )
 
-    expect(claudeCodeHubManagedSiteChannels.fetchModels).toBeUndefined()
-    expect(claudeCodeHubManagedSiteChannels.updateModels).toBeUndefined()
-    expect(claudeCodeHubManagedSiteChannels.updateModelMapping).toBeUndefined()
+    expect(claudeCodeHubManagedSiteChannels).not.toHaveProperty("fetchModels")
+    expect(claudeCodeHubManagedSiteChannels).not.toHaveProperty("updateModels")
+    expect(claudeCodeHubManagedSiteChannels).not.toHaveProperty(
+      "updateModelMapping",
+    )
   })
 
   it("exposes provider config and draft functions", async () => {

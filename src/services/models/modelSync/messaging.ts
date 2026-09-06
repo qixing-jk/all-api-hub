@@ -4,7 +4,7 @@ import { createRuntimeMessagingLogger } from "~/services/runtimeMessaging/logger
 import { ModelSyncMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import type { RuntimeMessageResponse } from "~/services/runtimeMessaging/result"
 import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
-import type { ManagedSiteChannelListData } from "~/types/managedSite"
+import type { ManagedModelChannelListData } from "~/types/managedResourceModels"
 import type {
   ExecutionProgress,
   ExecutionResult,
@@ -71,7 +71,7 @@ interface ModelSyncProtocolMap {
   ): ModelSyncMutationResponse
   [ModelSyncMessageTypes.GetPreferences](): RuntimeMessageResponse<ModelSyncPreferences>
   [ModelSyncMessageTypes.GetChannelUpstreamModelOptions](): RuntimeMessageResponse<ModelSyncUpstreamModelOptions>
-  [ModelSyncMessageTypes.ListChannels](): RuntimeMessageResponse<ManagedSiteChannelListData>
+  [ModelSyncMessageTypes.ListChannels](): RuntimeMessageResponse<ManagedModelChannelListData>
 }
 
 export const {

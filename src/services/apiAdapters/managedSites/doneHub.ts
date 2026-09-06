@@ -1,4 +1,5 @@
 import { SITE_TYPES } from "~/constants/siteType"
+import type { ManagedResourceModelsCapability } from "~/services/apiAdapters/contracts/managedResourceModels"
 import type {
   ManagedSiteChannelDraftsCapability,
   ManagedSiteChannelsCapability,
@@ -6,6 +7,7 @@ import type {
   ManagedSiteQueriesCapability,
 } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import type { ManagedUpstreamResourcesCapability } from "~/services/apiAdapters/contracts/managedUpstreamResources"
+import { toManagedModelChannelList } from "~/services/apiAdapters/managedResources/modelInputs"
 import { createNewApiKeyManagement } from "~/services/apiAdapters/newApi/keyManagement"
 import {
   createChannel,
@@ -204,6 +206,17 @@ export const doneHubManagedSiteChannels: ManagedSiteChannelsCapability<DoneHubCo
     },
     fetchSecretKey,
     hydrateComparableKeys,
+  }
+
+export const doneHubManagedResourceModels: ManagedResourceModelsCapability<DoneHubConfig> =
+  {
+    list: async (config, options) =>
+      toManagedModelChannelList(
+        await listAllChannels(
+          toManagedSiteApiServiceRequest(config, options),
+          options,
+        ),
+      ),
     fetchModels: async (config, channelId, options) =>
       await fetchChannelModels(
         toManagedSiteApiServiceRequest(config, options),
@@ -621,6 +634,7 @@ const doneHubManagedUpstreamResources: ManagedUpstreamResourcesCapability<
 
 export const doneHubManagedSiteCapabilities = {
   channels: doneHubManagedSiteChannels,
+  models: doneHubManagedResourceModels,
   resources: doneHubManagedUpstreamResources,
   config: doneHubManagedSiteConfig,
   queries: doneHubManagedSiteQueries,

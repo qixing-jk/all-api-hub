@@ -50,6 +50,10 @@ vi.mock("~/services/apiAdapters/managedSites/doneHub", () => ({
       fetchModels: mocks.fetchModels,
       fetchDraftModels: mocks.fetchDraftModels,
     },
+    models: {
+      fetchModels: mocks.fetchModels,
+      fetchDraftModels: mocks.fetchDraftModels,
+    },
     channelDrafts: { buildPayload: mocks.buildPayload },
     queries: { siteUserGroups: { fetch: mocks.fetchSiteUserGroups } },
   },

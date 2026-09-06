@@ -3,7 +3,7 @@
  * 实现 Octopus 站点的模型同步功能
  */
 import { SITE_TYPES } from "~/constants/siteType"
-import { octopusManagedSiteChannels } from "~/services/apiAdapters/managedSites/octopus"
+import { octopusManagedResourceModels } from "~/services/apiAdapters/managedSites/octopus"
 import * as octopusApi from "~/services/apiService/octopus"
 import { ApiError } from "~/services/apiTransport/errors"
 import {
@@ -14,10 +14,7 @@ import {
 import { collectManagedConfigSecrets } from "~/services/managedSites/utils/managedSite"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import type { ChannelResourceConfigMap } from "~/types/channelConfig"
-import type {
-  ManagedSiteChannel,
-  OctopusChannelWithData,
-} from "~/types/managedSite"
+import type { ManagedModelChannel } from "~/types/managedResourceModels"
 import {
   type BatchExecutionOptions,
   type ExecutionItemResult,
@@ -72,14 +69,14 @@ const createOctopusModelSyncClient = (
       models: string[],
       signal?: AbortSignal,
     ) =>
-      await octopusManagedSiteChannels.updateModels!(
+      await octopusManagedResourceModels.updateModels!(
         config,
         channelId,
         models,
         requestOptions(signal),
       ),
     reconcileChannels: async (signal?: AbortSignal) =>
-      await octopusManagedSiteChannels.list?.(config, requestOptions(signal)),
+      await octopusManagedResourceModels.list?.(config, requestOptions(signal)),
   }
 }
 
@@ -104,33 +101,17 @@ function throwIfAborted(abortSignal?: AbortSignal) {
   }
 }
 
-/**
- * 类型守卫：检查 channel 是否为 OctopusChannelWithData
- */
-function isOctopusChannelWithData(
-  channel: ManagedSiteChannel,
-): channel is OctopusChannelWithData {
-  return "_octopusData" in channel && channel._octopusData != null
-}
-
-/**
- * 从 ManagedSiteChannel 中提取 Octopus 原始数据
- */
-function getOctopusChannelData(
-  channel: ManagedSiteChannel,
-): OctopusChannel | null {
-  if (isOctopusChannelWithData(channel)) {
-    return channel._octopusData
-  }
-  return null
-}
+const getOctopusChannelData = (
+  channel: ManagedModelChannel,
+): OctopusChannel | null =>
+  channel.native?.kind === "octopus" ? channel.native.data : null
 
 /**
  * 获取渠道的上游模型列表
  */
 async function fetchChannelModels(
   client: OctopusModelSyncClient,
-  channel: ManagedSiteChannel,
+  channel: ManagedModelChannel,
   abortSignal?: AbortSignal,
 ): Promise<string[]> {
   const octopusData = getOctopusChannelData(channel)
@@ -158,7 +139,7 @@ async function fetchChannelModels(
 async function updateChannelModels(
   config: OctopusConfig,
   client: OctopusModelSyncClient,
-  channel: ManagedSiteChannel,
+  channel: ManagedModelChannel,
   models: string[],
   abortSignal?: AbortSignal,
 ): Promise<void> {
@@ -205,7 +186,7 @@ function haveModelsChanged(previous: string[], next: string[]): boolean {
 async function runForChannel(
   config: OctopusConfig,
   client: OctopusModelSyncClient,
-  channel: ManagedSiteChannel,
+  channel: ManagedModelChannel,
   maxRetries: number = 2,
   abortSignal?: AbortSignal,
   writeFailureBoundary: ModelSyncWriteFailureBoundary = createModelSyncWriteFailureBoundary(),
@@ -337,7 +318,7 @@ async function runForChannel(
 async function runOctopusBatchWithClient(
   config: OctopusConfig,
   client: OctopusModelSyncClient,
-  channels: ManagedSiteChannel[],
+  channels: ManagedModelChannel[],
   options: OctopusModelSyncBatchOptions,
 ): Promise<ExecutionResult> {
   const {
@@ -444,7 +425,7 @@ export function createOctopusModelSyncCapability(
   return {
     listChannels: client.listChannels,
     runBatch: async (
-      channels: ManagedSiteChannel[],
+      channels: ManagedModelChannel[],
       options: OctopusModelSyncBatchOptions,
     ) => await runOctopusBatchWithClient(config, client, channels, options),
   }

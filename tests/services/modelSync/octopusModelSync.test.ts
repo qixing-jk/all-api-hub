@@ -6,7 +6,7 @@ import {
   PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
   PROTECTION_BYPASS_FEATURES,
 } from "~/services/protectionBypass/contracts"
-import type { OctopusChannelWithData } from "~/types/managedSite"
+import type { ManagedModelChannel } from "~/types/managedResourceModels"
 import {
   createManagedUpstreamResourceRef,
   getManagedUpstreamResourceRefKey,
@@ -37,14 +37,14 @@ vi.mock("~/services/apiService/octopus", () => ({
 }))
 
 vi.mock("~/services/apiAdapters/managedSites/octopus", () => {
-  const octopusManagedSiteChannels = {
+  const octopusManagedResourceModels = {
     updateModels: (...args: unknown[]) => updateModelsMock(...args),
     list: (...args: unknown[]) => listChannelsMock(...args),
   }
   return {
-    octopusManagedSiteChannels,
+    octopusManagedResourceModels,
     octopusManagedSiteCapabilities: {
-      channels: octopusManagedSiteChannels,
+      channels: octopusManagedResourceModels,
     },
   }
 })
@@ -92,25 +92,28 @@ const runOctopusBatch = (
 
 const createChannel = (
   overrides: Record<string, unknown> = {},
-): OctopusChannelWithData =>
+): ManagedModelChannel =>
   ({
     id: 1,
     name: "Alpha",
     models: "model-a",
-    _octopusData: {
-      id: 1,
-      name: "Alpha",
-      type: OctopusOutboundType.OpenAIChat,
-      enabled: true,
-      base_urls: [{ url: "https://upstream.example.invalid" }],
-      keys: [{ enabled: true, channel_key: "key-1" }],
-      model: "model-a",
-      proxy: false,
-      auto_sync: true,
-      auto_group: OctopusAutoGroupType.None,
+    native: {
+      kind: "octopus",
+      data: {
+        id: 1,
+        name: "Alpha",
+        type: OctopusOutboundType.OpenAIChat,
+        enabled: true,
+        base_urls: [{ url: "https://upstream.example.invalid" }],
+        keys: [{ enabled: true, channel_key: "key-1" }],
+        model: "model-a",
+        proxy: false,
+        auto_sync: true,
+        auto_group: OctopusAutoGroupType.None,
+      },
     },
     ...overrides,
-  }) as unknown as OctopusChannelWithData
+  }) as unknown as ManagedModelChannel
 
 describe("runOctopusBatch", () => {
   beforeEach(() => {
@@ -181,7 +184,7 @@ describe("runOctopusBatch", () => {
         baseUrl: "https://upstream.example.invalid",
         key: "key-1",
         proxy: false,
-        source: createChannel()._octopusData,
+        source: createChannel().native?.data,
       },
       expect.objectContaining({
         protectionBypassExecution: expect.objectContaining({
@@ -409,7 +412,7 @@ describe("runOctopusBatch", () => {
 
     const result = await runOctopusBatch(
       config as any,
-      [createChannel({ models: "gpt-4o", _octopusData: undefined })],
+      [createChannel({ models: "gpt-4o", native: undefined })],
       {
         concurrency: 1,
         maxRetries: 0,
@@ -482,11 +485,14 @@ describe("runOctopusBatch", () => {
       get models() {
         throw new Error("models getter exploded")
       },
-      _octopusData: {
-        type: 10,
-        base_urls: ["https://upstream.example.com"],
-        keys: ["key-1"],
-        proxy: "http://proxy.example.com",
+      native: {
+        kind: "octopus",
+        data: {
+          type: 10,
+          base_urls: ["https://upstream.example.com"],
+          keys: ["key-1"],
+          proxy: "http://proxy.example.com",
+        },
       },
     }
 

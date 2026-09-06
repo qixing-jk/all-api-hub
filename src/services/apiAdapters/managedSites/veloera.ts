@@ -1,4 +1,5 @@
 import { SITE_TYPES } from "~/constants/siteType"
+import type { ManagedResourceModelsCapability } from "~/services/apiAdapters/contracts/managedResourceModels"
 import type {
   ManagedSiteChannelDraftsCapability,
   ManagedSiteChannelsCapability,
@@ -6,6 +7,7 @@ import type {
   ManagedSiteQueriesCapability,
 } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import type { ManagedUpstreamResourcesCapability } from "~/services/apiAdapters/contracts/managedUpstreamResources"
+import { toManagedModelChannelList } from "~/services/apiAdapters/managedResources/modelInputs"
 import {
   fetchAccountAvailableModels,
   fetchSiteUserGroups,
@@ -212,6 +214,17 @@ export const veloeraManagedSiteChannels: ManagedSiteChannelsCapability<VeloeraCo
     },
     fetchSecretKey,
     hydrateComparableKeys,
+  }
+
+export const veloeraManagedResourceModels: ManagedResourceModelsCapability<VeloeraConfig> =
+  {
+    list: async (config, options) =>
+      toManagedModelChannelList(
+        await listAllChannels(
+          toManagedSiteApiServiceRequest(config, options),
+          options,
+        ),
+      ),
     fetchModels: async (config, channelId, options) =>
       await fetchChannelModels(
         toManagedSiteApiServiceRequest(config, options),
@@ -595,6 +608,7 @@ const veloeraManagedUpstreamResources: ManagedUpstreamResourcesCapability<
 
 export const veloeraManagedSiteCapabilities = {
   channels: veloeraManagedSiteChannels,
+  models: veloeraManagedResourceModels,
   // Compatibility for duplicate matching and legacy import callers. The
   // managed-site UI and canonical migration flow use the native registration.
   resources: veloeraManagedUpstreamResources,

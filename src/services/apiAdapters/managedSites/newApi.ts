@@ -1,4 +1,5 @@
 import { SITE_TYPES } from "~/constants/siteType"
+import type { ManagedResourceModelsCapability } from "~/services/apiAdapters/contracts/managedResourceModels"
 import type {
   ManagedSiteChannelDraftsCapability,
   ManagedSiteChannelRequestOptions,
@@ -7,6 +8,7 @@ import type {
   ManagedSiteQueriesCapability,
 } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import type { ManagedUpstreamResourcesCapability } from "~/services/apiAdapters/contracts/managedUpstreamResources"
+import { toManagedModelChannelList } from "~/services/apiAdapters/managedResources/modelInputs"
 import {
   createChannel,
   deleteChannel,
@@ -253,6 +255,17 @@ export const newApiManagedSiteChannels: ManagedSiteChannelsCapability<NewApiConf
         config,
         candidates,
         requireProtectionBypassExecution(options),
+      ),
+  }
+
+export const newApiManagedResourceModels: ManagedResourceModelsCapability<NewApiConfig> =
+  {
+    list: async (config, options) =>
+      toManagedModelChannelList(
+        await listAllChannels(
+          toManagedSiteApiServiceRequest(config, options),
+          options,
+        ),
       ),
     fetchModels: async (config, channelId, options) =>
       await fetchChannelModels(
@@ -599,6 +612,7 @@ const newApiManagedUpstreamResources: ManagedUpstreamResourcesCapability<
 
 export const newApiManagedSiteCapabilities = {
   channels: newApiManagedSiteChannels,
+  models: newApiManagedResourceModels,
   resources: newApiManagedUpstreamResources,
   config: newApiManagedSiteConfig,
   queries: newApiManagedSiteQueries,
