@@ -349,6 +349,7 @@ function buildAutomaticFeatureBypassSnapshot(
   ) as Record<SettingsSnapshotAutomaticFeatureBypassProperty, boolean>
 }
 
+/** Projects normalized account preferences into controlled analytics flags and modes. */
 function buildAccountBehaviorSnapshot(
   preferences: UserPreferences,
   entrypoint: ProductAnalyticsEntrypoint,
@@ -688,6 +689,10 @@ function buildSnapshotByKey(
   }
 }
 
+/**
+ * Selects every settings area affected by a patch. Omitting the patch requests
+ * all areas so callers can build a complete settings snapshot.
+ */
 function resolveSnapshotKeysForPatch(patch?: PreferencePatch) {
   if (!patch) return ALL_SETTINGS_SNAPSHOT_KEYS
 
