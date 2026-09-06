@@ -1,5 +1,5 @@
 {
-  "description": "Backup and restore plugin data",
+  "description": "Back up, migrate, or sync All API Hub data.",
   "export": {
     "accountData": "Account Data",
     "accountDataDescription": "Manual account and full JSON exports include saved credentials in plaintext. Store exported files securely.",
@@ -9,6 +9,7 @@
     "exportFailed": "Export failed, please try again",
     "fullBackup": "Full Export",
     "fullBackupDescription": "Manual full JSON exports include saved account credentials in plaintext together with user settings. Store the file securely.",
+    "sensitiveDataNotice": "JSON exports can contain account credentials and API keys. Store them securely.",
     "settingsExported": "User settings exported successfully",
     "title": "Export Data",
     "userSettings": "User Settings",
@@ -97,26 +98,20 @@
     "title": "Import Data",
     "versionNotSupported": "This backup was created by a newer version. Update the app before importing it."
   },
-  "notice": {
-    "importantNotice": "Important Notice",
-    "importWarning1": "Before importing, choose per data type whether to add, replace, or skip it. Accounts/API credentials are added by default, while current settings are kept",
-    "importWarning2": "It is recommended to export current data for backup before importing",
-    "importWarning3": "Only supports JSON format files exported by this extension",
-    "importWarning4": "Imported data may contain sensitive information (account tokens and API keys). Keep backups secure and only import from trusted sources"
+  "localBackup": {
+    "description": "Use local JSON files to back up, move, or restore All API Hub data.",
+    "title": "Local backup and migration"
   },
   "title": "Import/Export",
   "webdav": {
     "actionState": {
-      "saved": "Configuration is saved. Test connection, upload to WebDAV, and import from WebDAV use the currently saved configuration.",
       "unsaved": "Configuration has unsaved changes. Test connection, upload to WebDAV, and import from WebDAV will save these changes first."
     },
     "autoSync": {
       "actionState": {
-        "saved": "Sync Now uses the saved WebDAV and auto-sync settings.",
         "unsaved": "Auto-sync settings have unsaved changes. Sync Now will not use them; save the auto-sync settings first."
       },
       "currentProvider": "Sync service: {{provider}}",
-      "description": "Automatically sync shared data through the selected sync service. Device-local settings stay on this device.",
       "enable": "Enable auto sync",
       "enableDesc": "When enabled, shared data will be synchronized to WebDAV at set intervals.",
       "interval": "Sync interval (seconds)",
@@ -156,28 +151,21 @@
       "title": "WebDAV Data Encryption"
     },
     "gist": {
-      "actionStateSaved": "Configuration is saved. Test connection, upload to the Gist, and import from the Gist use the saved configuration.",
       "actionStateUnsaved": "Configuration has unsaved changes. These Gist actions will save the changes first.",
-      "autoSyncActionStateSaved": "Sync Now uses the saved Secret Gist and auto-sync settings.",
-      "autoSyncActionStateUnsaved": "Auto-sync settings have unsaved changes. Save them before using Sync Now.",
       "autoSyncEnableDesc": "When enabled, shared data will be synchronized to the Secret Gist at the selected interval.",
       "configDesc": "Sync shared data through an encrypted GitHub Secret Gist. A Secret Gist is an unlisted link, not an access-control boundary.",
       "create": "Create and upload Secret Gist",
       "downloadImport": "Import from Secret Gist",
       "downloadImportWithSave": "Save and Import from Secret Gist",
-      "encryptionDescription": "GitHub Gist sync requires an encryption password. The password is never uploaded to GitHub or included in backup files.",
+      "encryptionDescription": "GitHub Gist sync requires an encryption password. The password is never uploaded to GitHub or included in backup files. If you lose it, the encrypted backup cannot be decrypted.",
       "encryptionPassword": "Gist encryption password",
-      "encryptionPasswordDesc": "This password encrypts every Gist upload and is required to decrypt encrypted Gist backups. It stays on this device.",
       "encryptionPasswordPlaceholder": "Enter an encryption password",
-      "encryptionTitle": "Gist backups are always encrypted",
+      "encryptionPasswordRequired": "Enter an encryption password before saving or syncing this Gist.",
       "id": "Gist ID or URL",
       "idDesc": "Enter an existing Secret Gist, or leave it empty to create one on first upload.",
       "idPlaceholder": "For example: a1b2c3d4 or https://gist.github.com/...",
       "openLink": "Open this Gist on GitHub",
       "restorePolicyDescription": "The active cloud provider syncs shared data, not a full device backup. Cloud credentials, encryption passwords, sync selection, and account auto-refresh settings stay on this device. Use manual export/import to migrate device-local settings.",
-      "secretDescription": "All API Hub creates only unlisted Gists and always encrypts backups before upload. Keep your token and encryption password safe.",
-      "secretTitle": "Secret Gist and encryption",
-      "syncDataDescription": "Choose which shared data domains participate in cloud sync. Cloud credentials, sync selection, and account auto-refresh remain local to this device.",
       "testFailed": "Secret Gist connection failed",
       "testSuccess": "Secret Gist connection succeeded",
       "title": "GitHub Gist Sync",
@@ -191,7 +179,14 @@
     },
     "hidePassword": "Hide password",
     "manual": {
+      "confirmCancel": "Cancel",
+      "confirmContinue": "Continue",
+      "confirmDownloadDescription": "Selected cloud data will be written to this device. Existing local data in those sections may be replaced; this action does not use Smart Merge.",
+      "confirmDownloadTitle": "Restore selected data?",
+      "confirmUploadDescription": "Selected local data will be written to the active cloud backup. Existing cloud data in those sections may be replaced; this action does not use Smart Merge.",
+      "confirmUploadTitle": "Upload selected data?",
       "description": "Save the selected service configuration, test the connection, or manually upload and download sync data.",
+      "directionWarning": "These actions are directional: upload writes selected local data to the cloud; restore writes selected cloud data to this device. They do not use Smart Merge.",
       "title": "Save and sync manually"
     },
     "notSynced": "Not synced",
@@ -221,7 +216,6 @@
       "accounts": "Accounts",
       "apiCredentialProfiles": "API credential library",
       "bookmarks": "Bookmarks",
-      "description": "Choose which shared data domains participate in WebDAV sync. Device-local preference items such as WebDAV settings, sync selection, and account auto-refresh stay on the current device, while channel configurations remain synced for compatibility.",
       "preferences": "Preferences",
       "selectionRequired": "Select at least one data domain to sync",
       "title": "Sync data"
@@ -229,6 +223,10 @@
     "syncError": "Sync failed",
     "syncFailed": "Sync failed",
     "syncing": "Syncing",
+    "syncSettings": {
+      "description": "Choose the shared data, strategy, and automatic schedule for the active service.",
+      "title": "Sync settings"
+    },
     "syncSuccess": "Sync successful",
     "testConnection": "Test Connection",
     "testConnectionWithSave": "Save and Test Connection",

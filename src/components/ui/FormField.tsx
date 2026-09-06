@@ -5,7 +5,7 @@ import { cn } from "~/lib/utils"
 import { Label } from "./label"
 
 export interface FormFieldProps {
-  label?: string
+  label?: React.ReactNode
   required?: boolean
   error?: string
   success?: string

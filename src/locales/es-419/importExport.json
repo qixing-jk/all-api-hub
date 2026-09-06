@@ -1,5 +1,5 @@
 {
-  "description": "Respalda y restaura los datos del plugin",
+  "description": "Respalda, migra o sincroniza los datos de All API Hub.",
   "export": {
     "accountData": "Datos de cuenta",
     "accountDataDescription": "Las exportaciones manuales de cuentas y JSON completo incluyen las credenciales guardadas en texto sin formato. Guarda los archivos de forma segura.",
@@ -9,6 +9,7 @@
     "exportFailed": "La exportación falló, inténtalo de nuevo",
     "fullBackup": "Exportación completa",
     "fullBackupDescription": "Las exportaciones manuales de JSON completo incluyen las credenciales guardadas de las cuentas en texto sin formato junto con la configuración del usuario. Guarda el archivo de forma segura.",
+    "sensitiveDataNotice": "Las exportaciones JSON pueden contener credenciales de cuenta y claves API. Guárdalas de forma segura.",
     "settingsExported": "La configuración del usuario se exportó correctamente",
     "title": "Exportar datos",
     "userSettings": "Configuración del usuario",
@@ -97,26 +98,20 @@
     "title": "Importar datos",
     "versionNotSupported": "Este respaldo fue creado con una versión más reciente. Actualiza la aplicación antes de importarlo."
   },
-  "notice": {
-    "importantNotice": "Aviso importante",
-    "importWarning1": "Antes de importar, elige por tipo de datos si quieres agregarlos, reemplazarlos u omitirlos. Las cuentas/credenciales API se agregan de forma predeterminada, mientras que la configuración actual se conserva",
-    "importWarning2": "Se recomienda exportar los datos actuales como respaldo antes de importar",
-    "importWarning3": "Solo admite archivos en formato JSON exportados por esta extensión",
-    "importWarning4": "Los datos importados pueden contener información sensible (tokens de cuenta y claves API). Mantén los respaldos seguros e importa solo desde fuentes confiables"
+  "localBackup": {
+    "description": "Usa archivos JSON locales para respaldar, trasladar o restaurar los datos de All API Hub.",
+    "title": "Respaldo y migración local"
   },
   "title": "Importar/Exportar",
   "webdav": {
     "actionState": {
-      "saved": "La configuración está guardada. Probar conexión, subir a WebDAV e importar desde WebDAV usan la configuración guardada actualmente.",
       "unsaved": "La configuración tiene cambios sin guardar. Probar conexión, subir a WebDAV e importar desde WebDAV guardarán estos cambios primero."
     },
     "autoSync": {
       "actionState": {
-        "saved": "Sincronizar ahora usa la configuración guardada de WebDAV y de sincronización automática.",
         "unsaved": "La configuración de sincronización automática tiene cambios sin guardar. Sincronizar ahora no los usará; guarda primero la configuración de sincronización automática."
       },
       "currentProvider": "Servicio de sincronización: {{provider}}",
-      "description": "Sincroniza automáticamente los datos compartidos mediante el servicio seleccionado. La configuración local permanece en este dispositivo.",
       "enable": "Habilitar sincronización automática",
       "enableDesc": "Cuando está habilitada, los datos compartidos se sincronizarán con WebDAV en intervalos definidos.",
       "interval": "Intervalo de sincronización (segundos)",
@@ -156,28 +151,21 @@
       "title": "Cifrado de datos WebDAV"
     },
     "gist": {
-      "actionStateSaved": "La configuración está guardada. Probar conexión, subir al Gist e importar desde el Gist usan la configuración guardada.",
       "actionStateUnsaved": "La configuración tiene cambios sin guardar. Las acciones del Gist guardarán primero esos cambios.",
-      "autoSyncActionStateSaved": "Sincronizar ahora usa la configuración guardada del Secret Gist y de la sincronización automática.",
-      "autoSyncActionStateUnsaved": "Hay cambios sin guardar en la sincronización automática. Guárdalos antes de sincronizar ahora.",
       "autoSyncEnableDesc": "Al activarla, los datos compartidos se sincronizarán con el Secret Gist en el intervalo elegido.",
       "configDesc": "Sincroniza datos compartidos mediante un GitHub Secret Gist cifrado. Un Secret Gist es un enlace no listado, no un límite de control de acceso.",
       "create": "Crear y subir Secret Gist",
       "downloadImport": "Importar desde Secret Gist",
       "downloadImportWithSave": "Guardar e importar desde Secret Gist",
-      "encryptionDescription": "La sincronización con GitHub Gist requiere una contraseña de cifrado. Nunca se sube a GitHub ni se incluye en las copias.",
+      "encryptionDescription": "La sincronización con GitHub Gist requiere una contraseña de cifrado. Nunca se sube a GitHub ni se incluye en las copias. Si la pierdes, no podrás descifrar la copia cifrada.",
       "encryptionPassword": "Contraseña de cifrado del Gist",
-      "encryptionPasswordDesc": "Esta contraseña cifra cada carga al Gist y descifra las copias cifradas. Se conserva solo en este dispositivo.",
       "encryptionPasswordPlaceholder": "Introduce una contraseña de cifrado",
-      "encryptionTitle": "Las copias del Gist siempre están cifradas",
+      "encryptionPasswordRequired": "Introduce una contraseña de cifrado antes de guardar o sincronizar este Gist.",
       "id": "ID o URL del Gist",
       "idDesc": "Introduce un Secret Gist existente o déjalo vacío para crear uno.",
       "idPlaceholder": "Por ejemplo: a1b2c3d4 o https://gist.github.com/...",
       "openLink": "Abrir este Gist en GitHub",
       "restorePolicyDescription": "El proveedor de nube activo sincroniza datos compartidos, no una copia completa del dispositivo. Las credenciales de nube, contraseñas de cifrado, selección de sincronización y actualización automática de cuentas permanecen en este dispositivo. Usa la exportación/importación manual para migrar la configuración local.",
-      "secretDescription": "All API Hub solo crea Gists no listados y cifra las copias antes de subirlas.",
-      "secretTitle": "Secret Gist y cifrado",
-      "syncDataDescription": "Elige los dominios de datos compartidos que participan en la sincronización en la nube. Las credenciales, la selección y la actualización automática de cuentas permanecen locales.",
       "testFailed": "No se pudo conectar al Secret Gist",
       "testSuccess": "Conexión al Secret Gist correcta",
       "title": "Sincronización con GitHub Gist",
@@ -191,7 +179,14 @@
     },
     "hidePassword": "Ocultar contraseña",
     "manual": {
+      "confirmCancel": "Cancelar",
+      "confirmContinue": "Continuar",
+      "confirmDownloadDescription": "Los datos seleccionados de la nube se escribirán en este dispositivo. Los datos locales existentes de esas secciones pueden reemplazarse; esta acción no usa la combinación inteligente.",
+      "confirmDownloadTitle": "¿Restaurar los datos seleccionados?",
+      "confirmUploadDescription": "Los datos locales seleccionados se escribirán en el respaldo activo de la nube. Los datos existentes de esas secciones pueden reemplazarse; esta acción no usa la combinación inteligente.",
+      "confirmUploadTitle": "¿Subir los datos seleccionados?",
       "description": "Guarda la configuración del servicio, prueba la conexión o sube y descarga datos de forma manual.",
+      "directionWarning": "Estas acciones son direccionales: subir escribe los datos locales seleccionados en la nube; restaurar escribe los datos seleccionados de la nube en este dispositivo. No usan la combinación inteligente.",
       "title": "Guardar y sincronizar manualmente"
     },
     "notSynced": "Sin sincronizar",
@@ -221,7 +216,6 @@
       "accounts": "Cuentas",
       "apiCredentialProfiles": "Biblioteca de credenciales API",
       "bookmarks": "Marcadores",
-      "description": "Elige qué dominios de datos compartidos participan en la sincronización WebDAV. Los elementos de preferencia locales del dispositivo, como configuración WebDAV, selección de sincronización y actualización automática de cuentas, permanecen en el dispositivo actual, mientras que las configuraciones de canales siguen sincronizadas por compatibilidad.",
       "preferences": "Preferencias",
       "selectionRequired": "Selecciona al menos un dominio de datos para sincronizar",
       "title": "Datos de sincronización"
@@ -229,6 +223,10 @@
     "syncError": "Falló la sincronización",
     "syncFailed": "Falló la sincronización",
     "syncing": "Sincronizando",
+    "syncSettings": {
+      "description": "Elige los datos compartidos, la estrategia y el intervalo del servicio activo.",
+      "title": "Configuración de sincronización"
+    },
     "syncSuccess": "Sincronización correcta",
     "testConnection": "Probar conexión",
     "testConnectionWithSave": "Guardar y probar conexión",

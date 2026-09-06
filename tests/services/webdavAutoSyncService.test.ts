@@ -1091,6 +1091,67 @@ describe("WebdavAutoSyncService.syncWithWebdav (selective sync)", () => {
     expect(mockUploadBackup).not.toHaveBeenCalled()
   })
 
+  it("keeps independent local and remote additions during Smart Merge", async () => {
+    const service = createService()
+
+    mockGetPreferences.mockResolvedValue({
+      webdav: {
+        syncStrategy: "merge",
+        syncData: {
+          accounts: true,
+          bookmarks: false,
+          apiCredentialProfiles: false,
+          preferences: false,
+        },
+      },
+    } as any)
+
+    mockAccountStorageExportData.mockResolvedValue({
+      accounts: [
+        { id: "base", created_at: 1, updated_at: 100 },
+        { id: "local-only", created_at: 2, updated_at: 200 },
+      ],
+      bookmarks: [],
+      pinnedAccountIds: [],
+      orderedAccountIds: ["base", "local-only"],
+      last_updated: 200,
+    })
+    mockDownloadBackup.mockResolvedValue(
+      JSON.stringify({
+        version: BACKUP_VERSION,
+        timestamp: 300,
+        accounts: {
+          accounts: [
+            { id: "base", created_at: 1, updated_at: 100 },
+            { id: "remote-only", created_at: 3, updated_at: 300 },
+          ],
+          pinnedAccountIds: [],
+          orderedAccountIds: ["base", "remote-only"],
+          last_updated: 300,
+        },
+        tagStore: { version: 1, tagsById: {} },
+        channelConfigs: { schemaVersion: 1, configs: {} },
+      }),
+    )
+
+    await service.syncWithWebdav()
+
+    const importedAccounts = mockAccountStorageImportData.mock.calls[0][0]
+      .accounts as Array<{ id: string }>
+    expect(importedAccounts.map((account) => account.id).sort()).toEqual([
+      "base",
+      "local-only",
+      "remote-only",
+    ])
+
+    const uploaded = JSON.parse(mockUploadBackup.mock.calls[0][0])
+    expect(
+      uploaded.accounts.accounts
+        .map((account: { id: string }) => account.id)
+        .sort(),
+    ).toEqual(["base", "local-only", "remote-only"])
+  })
+
   it("download_only preserves local accounts when remote omits the accounts section", async () => {
     const service = createService()
 
@@ -2060,7 +2121,7 @@ describe("WebdavAutoSyncService best-effort upload helpers", () => {
     ).resolves.toBe(true)
   })
 
-  it("schedules and flushes best-effort uploads through the dedicated alarm", async () => {
+  it("schedules and executes best-effort uploads through the dedicated alarm", async () => {
     const service = createService() as any
     const uploadSpy = vi
       .spyOn(service, "uploadLocalSnapshotToWebdav")
@@ -2076,19 +2137,7 @@ describe("WebdavAutoSyncService best-effort upload helpers", () => {
       { delayInMinutes: 1 },
     )
 
-    mockClearAlarm.mockClear()
-    mockGetAlarm.mockResolvedValueOnce(undefined)
-    await service.flushPendingBestEffortUpload()
-    expect(mockClearAlarm).not.toHaveBeenCalled()
-    expect(uploadSpy).not.toHaveBeenCalled()
-
-    mockGetAlarm.mockResolvedValueOnce({
-      name: "webdavAutoSyncBestEffortUpload",
-    })
-    await service.flushPendingBestEffortUpload()
-    expect(mockClearAlarm).toHaveBeenCalledWith(
-      "webdavAutoSyncBestEffortUpload",
-    )
+    await service.performBestEffortUpload()
     expect(uploadSpy).toHaveBeenCalledTimes(1)
   })
 

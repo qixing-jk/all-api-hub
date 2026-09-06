@@ -11,6 +11,7 @@ on:
         options:
           - all
           - account
+          - cloud-sync
           - managed-site
           - webdav
       target:
@@ -129,6 +130,7 @@ jobs:
           WEBDAV_URL: ${{ secrets[format('AAH_E2E_{0}_URL', matrix.env_prefix)] }}
           WEBDAV_USERNAME: ${{ secrets[format('AAH_E2E_{0}_USERNAME', matrix.env_prefix)] }}
           WEBDAV_PASSWORD: ${{ secrets[format('AAH_E2E_{0}_PASSWORD', matrix.env_prefix)] }}
+          GITHUB_GIST_TOKEN: ${{ secrets[format('AAH_E2E_{0}_TOKEN', matrix.env_prefix)] }}
         run: |
           write_env() {
             local key="$1"
@@ -154,6 +156,9 @@ jobs:
             [ -z "$WEBDAV_URL" ] && missing+=("AAH_E2E_${prefix}_URL")
             [ -z "$WEBDAV_USERNAME" ] && missing+=("AAH_E2E_${prefix}_USERNAME")
             [ -z "$WEBDAV_PASSWORD" ] && missing+=("AAH_E2E_${prefix}_PASSWORD")
+          elif [ "$REAL_SITE_KIND" = "gist" ]; then
+            write_env "AAH_E2E_GITHUB_GIST_TOKEN" "$GITHUB_GIST_TOKEN"
+            [ -z "$GITHUB_GIST_TOKEN" ] && missing+=("AAH_E2E_${prefix}_TOKEN")
           elif [ "$REAL_SITE_KIND" = "managed-site" ]; then
             write_env "AAH_E2E_MANAGED_SITE_TARGET" "$MANAGED_SITE_TARGET"
             write_env "AAH_E2E_${prefix}_BASE_URL" "$REAL_SITE_BASE_URL"

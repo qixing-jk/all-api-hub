@@ -49,10 +49,10 @@ export const importExportPageSearchSections: OptionsSearchItemDefinition[] = [
     "section:import-export-webdav-auto-sync",
     MENU_ITEM_IDS.IMPORT_EXPORT,
     "webdav-auto-sync",
-    "importExport:webdav.autoSync.title",
+    "importExport:webdav.syncSettings.title",
     433,
     {
-      descriptionKey: "importExport:webdav.autoSync.description",
+      descriptionKey: "importExport:webdav.syncSettings.description",
       keywords: ["cloud", "webdav", "gist", "github", "auto sync", "schedule"],
     },
   ),
@@ -99,7 +99,7 @@ export const importExportPageSearchControls: OptionsSearchItemDefinition[] = [
     "importExport:webdav.gist.create",
     739.3,
     {
-      descriptionKey: "importExport:webdav.gist.secretDescription",
+      descriptionKey: "importExport:webdav.gist.configDesc",
       keywords: ["github", "gist", "create", "upload", "backup"],
     },
   ),
@@ -239,24 +239,13 @@ export const importExportPageSearchControls: OptionsSearchItemDefinition[] = [
     },
   ),
   buildPageControlDefinition(
-    "control:webdav-restore-policy",
-    MENU_ITEM_IDS.IMPORT_EXPORT,
-    WEBDAV_TARGET_IDS.restorePolicy,
-    "importExport:webdav.restorePolicy.title",
-    745,
-    {
-      descriptionKey: "importExport:webdav.restorePolicy.description",
-      keywords: ["webdav", "restore policy"],
-    },
-  ),
-  buildPageControlDefinition(
     "control:webdav-sync-data",
     MENU_ITEM_IDS.IMPORT_EXPORT,
     WEBDAV_TARGET_IDS.syncData,
     "importExport:webdav.syncData.title",
     746,
     {
-      descriptionKey: "importExport:webdav.syncData.description",
+      descriptionKey: "importExport:webdav.configDesc",
       keywords: ["webdav", "sync data"],
     },
   ),
@@ -267,7 +256,7 @@ export const importExportPageSearchControls: OptionsSearchItemDefinition[] = [
     "importExport:webdav.syncData.accounts",
     746.1,
     {
-      descriptionKey: "importExport:webdav.syncData.description",
+      descriptionKey: "importExport:webdav.configDesc",
       keywords: ["webdav", "sync data", "accounts"],
     },
   ),
@@ -278,7 +267,7 @@ export const importExportPageSearchControls: OptionsSearchItemDefinition[] = [
     "importExport:webdav.syncData.bookmarks",
     746.2,
     {
-      descriptionKey: "importExport:webdav.syncData.description",
+      descriptionKey: "importExport:webdav.configDesc",
       keywords: ["webdav", "sync data", "bookmarks"],
     },
   ),
@@ -289,7 +278,7 @@ export const importExportPageSearchControls: OptionsSearchItemDefinition[] = [
     "importExport:webdav.syncData.apiCredentialProfiles",
     746.3,
     {
-      descriptionKey: "importExport:webdav.syncData.description",
+      descriptionKey: "importExport:webdav.configDesc",
       keywords: [
         "webdav",
         "sync data",
@@ -305,7 +294,7 @@ export const importExportPageSearchControls: OptionsSearchItemDefinition[] = [
     "importExport:webdav.syncData.preferences",
     746.4,
     {
-      descriptionKey: "importExport:webdav.syncData.description",
+      descriptionKey: "importExport:webdav.configDesc",
       keywords: ["webdav", "sync data", "preferences", "settings"],
     },
   ),
@@ -396,7 +385,6 @@ export const importExportPageSearchControls: OptionsSearchItemDefinition[] = [
     {
       descriptionKey: "importExport:webdav.autoSync.strategyDesc",
       keywords: ["webdav", "auto sync", "strategy"],
-      isVisible: (context) => context.webdavAutoSyncEnabled,
     },
   ),
   buildPageControlDefinition(
@@ -406,7 +394,7 @@ export const importExportPageSearchControls: OptionsSearchItemDefinition[] = [
     "importExport:webdav.autoSync.saveSettings",
     754,
     {
-      descriptionKey: "importExport:webdav.autoSync.description",
+      descriptionKey: "importExport:webdav.syncSettings.description",
       keywords: ["webdav", "auto sync", "save"],
     },
   ),
@@ -417,7 +405,7 @@ export const importExportPageSearchControls: OptionsSearchItemDefinition[] = [
     "importExport:webdav.autoSync.syncNow",
     755,
     {
-      descriptionKey: "importExport:webdav.autoSync.description",
+      descriptionKey: "importExport:webdav.syncSettings.description",
       keywords: ["webdav", "auto sync", "sync now"],
     },
   ),

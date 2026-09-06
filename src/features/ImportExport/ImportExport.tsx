@@ -18,7 +18,7 @@ import ImportSection from "./components/ImportSection"
 import { useImportExport } from "./hooks/useImportExport"
 
 /**
- * Import/Export page combining manual transfer, cloud sync, and safety notices.
+ * Import/Export page combining local migration and cloud sync.
  */
 export default function ImportExport() {
   const { t } = useTranslation("importExport")
@@ -77,37 +77,44 @@ export default function ImportExport() {
         description={t("description")}
       />
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-stretch">
-        <ExportSection
-          isExporting={isExporting}
-          setIsExporting={setIsExporting}
+      <section
+        id="local-backup-migration"
+        className="space-y-4 rounded-xl border border-gray-200 bg-gray-50/60 p-4 sm:p-5 dark:border-gray-700 dark:bg-gray-900/20"
+      >
+        <div className="space-y-1">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+            {t("localBackup.title")}
+          </h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            {t("localBackup.description")}
+          </p>
+        </div>
+
+        <Alert
+          compact
+          variant="warning"
+          description={t("export.sensitiveDataNotice")}
         />
-        <ImportSection
-          importData={importData}
-          setImportData={setImportData}
-          importPlan={importPlan}
-          setImportPlan={setImportPlan}
-          handleFileImport={handleFileImport}
-          handleImport={handleImport}
-          isImporting={isImporting}
-          validation={validation}
-        />
-      </div>
+
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-stretch">
+          <ExportSection
+            isExporting={isExporting}
+            setIsExporting={setIsExporting}
+          />
+          <ImportSection
+            importData={importData}
+            setImportData={setImportData}
+            importPlan={importPlan}
+            setImportPlan={setImportPlan}
+            handleFileImport={handleFileImport}
+            handleImport={handleImport}
+            isImporting={isImporting}
+            validation={validation}
+          />
+        </div>
+      </section>
 
       <CloudSyncSettings />
-
-      {/* 重要提示 */}
-      <Alert variant="warning">
-        <div>
-          <p className="mb-2 font-medium">{t("notice.importantNotice")}</p>
-          <ul className="space-y-1 text-sm">
-            <li>• {t("notice.importWarning1")}</li>
-            <li>• {t("notice.importWarning2")}</li>
-            <li>• {t("notice.importWarning3")}</li>
-            <li>• {t("notice.importWarning4")}</li>
-          </ul>
-        </div>
-      </Alert>
     </div>
   )
 }

@@ -1380,6 +1380,9 @@ test("uploads a WebDAV backup and restores it through the WebDAV download flow",
   await page
     .getByTestId(IMPORT_EXPORT_TEST_IDS.webdavUploadBackupButton)
     .click()
+  await page
+    .getByTestId(IMPORT_EXPORT_TEST_IDS.webdavManualConfirmButton)
+    .click()
 
   await expect.poll(() => uploadedPayloads.length).toBe(1)
   expect(tempDeleteUrls).toEqual([])
@@ -1458,6 +1461,9 @@ test("uploads a WebDAV backup and restores it through the WebDAV download flow",
   await restorePage.locator("#webdav-password").fill("webdav-password")
   await restorePage
     .getByTestId(IMPORT_EXPORT_TEST_IDS.webdavDownloadImportButton)
+    .click()
+  await restorePage
+    .getByTestId(IMPORT_EXPORT_TEST_IDS.webdavManualConfirmButton)
     .click()
 
   await expect

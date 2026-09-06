@@ -114,6 +114,20 @@ describe("GitHub real-site E2E matrix selection", () => {
     ])
   })
 
+  it("registers GitHub Secret Gist as a cloud-sync target", () => {
+    const matrix = runMatrix("cloud-sync", "github-gist-sync")
+
+    expect(matrix.include).toEqual([
+      expect.objectContaining({
+        id: "github-gist-sync",
+        label: "Cloud Sync / GitHub Secret Gist",
+        category: "cloud-sync",
+        env_prefix: "GITHUB_GIST",
+        kind: "gist",
+      }),
+    ])
+  })
+
   it("serializes account and managed-site targets within each provider", () => {
     const matrix = runMatrix()
     const idsForResourceGroup = (resourceGroup: string) =>
@@ -205,9 +219,12 @@ describe("GitHub real-site E2E matrix selection", () => {
 
   it("keeps the default all-category matrix unchanged", () => {
     const matrix = runMatrix()
-    const expectedIds = ["account", "managed-site", "webdav"].flatMap(
-      (category) => selectedIds(runMatrix(category, "all")),
-    )
+    const expectedIds = [
+      "account",
+      "managed-site",
+      "webdav",
+      "cloud-sync",
+    ].flatMap((category) => selectedIds(runMatrix(category, "all")))
 
     expect(selectedIds(matrix)).toEqual(expectedIds)
   })

@@ -45,6 +45,7 @@ Run one real-site category locally:
 
 ```bash
 pnpm e2e:real-site:account
+pnpm e2e:real-site:cloud-sync
 pnpm e2e:real-site:managed-site
 pnpm e2e:real-site:webdav
 ```
@@ -65,14 +66,37 @@ Category scripts run each matching matrix entry separately and reuse the first
 extension build for the remaining entries.
 
 The GitHub Actions workflow has a `category` input with `all`, `account`,
-`managed-site`, and `webdav`. Scheduled runs still use `all`; manual runs can
-select a single category so the CI job list and artifacts are visibly grouped as
-`Account / ...`, `Managed Site / ...`, or `WebDAV / ...`.
+`cloud-sync`, `managed-site`, and `webdav`. Scheduled runs still use `all`; manual
+runs can select a single category so the CI job list and artifacts are visibly
+grouped as `Account / ...`, `Cloud Sync / ...`, `Managed Site / ...`, or
+`WebDAV / ...`.
 
 Playwright loads `.env` and `.env.local` from the repo root. Shell or CI
 environment variables take precedence. Each block is optional; specs skip when
 that site's required variables are missing. Use dedicated low-privilege test
 accounts.
+
+## GitHub Secret Gist Cloud Sync
+
+The cloud-sync spec uses a dedicated GitHub token to create one encrypted,
+unlisted (Secret) Gist, verify the file through the GitHub API, restore the data
+through the extension, and delete only the Gist it created. It skips when the
+token is not configured. The token is supplied only through the process/CI
+environment and is never written to the backup, logs, or repository.
+
+```env
+AAH_E2E_GITHUB_GIST_TOKEN=replace-with-a-dedicated-gists-token
+```
+
+For local runs:
+
+```bash
+pnpm e2e:real-site:cloud-sync
+```
+
+Use a dedicated low-privilege token with Gists read/write access. The test
+password is local-only and is defined inside the spec; it is not a GitHub
+credential.
 
 ## New API
 

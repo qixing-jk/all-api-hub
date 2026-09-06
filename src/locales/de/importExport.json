@@ -1,5 +1,5 @@
 {
-  "description": "Plugin-Daten sichern und wiederherstellen",
+  "description": "All API Hub-Daten sichern, migrieren oder synchronisieren.",
   "export": {
     "accountData": "Kontodaten",
     "accountDataDescription": "Manuelle Konto- und vollständige JSON-Exporte enthalten gespeicherte Anmeldeinformationen im Klartext. Speichern Sie exportierte Dateien sicher.",
@@ -9,6 +9,7 @@
     "exportFailed": "Export fehlgeschlagen, bitte versuchen Sie es erneut",
     "fullBackup": "Vollständiger Export",
     "fullBackupDescription": "Manuelle vollständige JSON-Exporte umfassen gespeicherte Kontoanmeldeinformationen im Klartext zusammen mit Benutzereinstellungen. Bewahren Sie die Datei sicher auf.",
+    "sensitiveDataNotice": "JSON-Exporte können Kontozugangsdaten und API-Schlüssel enthalten. Bewahren Sie sie sicher auf.",
     "settingsExported": "Benutzereinstellungen erfolgreich exportiert",
     "title": "Daten exportieren",
     "userSettings": "Benutzereinstellungen",
@@ -97,26 +98,20 @@
     "title": "Daten importieren",
     "versionNotSupported": "Dieses Backup wurde mit einer neueren Version erstellt. Aktualisieren Sie die App, bevor Sie es importieren."
   },
-  "notice": {
-    "importantNotice": "Wichtiger Hinweis",
-    "importWarning1": "Wählen Sie vor dem Importieren pro Datentyp aus, ob Sie ihn hinzufügen, ersetzen oder überspringen möchten. Konten/API-Anmeldeinformationen werden standardmäßig hinzugefügt, während die aktuellen Einstellungen beibehalten werden",
-    "importWarning2": "Es wird empfohlen, aktuelle Daten zur Sicherung vor dem Import zu exportieren",
-    "importWarning3": "Unterstützt nur Dateien im Format JSON, die von dieser Erweiterung exportiert wurden",
-    "importWarning4": "Importierte Daten können vertrauliche Informationen enthalten (Konto-Tokens und API-Schlüssel). Bewahren Sie Backups sicher auf und importieren Sie sie nur aus vertrauenswürdigen Quellen"
+  "localBackup": {
+    "description": "Verwenden Sie lokale JSON-Dateien, um All API Hub-Daten zu sichern, zu übertragen oder wiederherzustellen.",
+    "title": "Lokale Sicherung und Migration"
   },
   "title": "Import/Export",
   "webdav": {
     "actionState": {
-      "saved": "Die Konfiguration ist gespeichert. Für Verbindungstest, Upload zu WebDAV und Import aus WebDAV wird die aktuell gespeicherte Konfiguration verwendet.",
       "unsaved": "Die Konfiguration enthält nicht gespeicherte Änderungen. Vor dem Verbindungstest, dem Upload zu WebDAV oder dem Import aus WebDAV werden diese Änderungen gespeichert."
     },
     "autoSync": {
       "actionState": {
-        "saved": "„Jetzt synchronisieren“ verwendet die gespeicherten WebDAV- und Auto-Sync-Einstellungen.",
         "unsaved": "Die Einstellungen für die automatische Synchronisierung weisen nicht gespeicherte Änderungen auf. „Jetzt synchronisieren“ wird sie nicht verwenden; Speichern Sie zunächst die Einstellungen für die automatische Synchronisierung."
       },
       "currentProvider": "Synchronisierungsdienst: {{provider}}",
-      "description": "Synchronisieren Sie freigegebene Daten automatisch über den ausgewählten Synchronisierungsdienst. Gerätelokale Einstellungen bleiben auf diesem Gerät.",
       "enable": "Automatische Synchronisierung aktivieren",
       "enableDesc": "Wenn aktiviert, werden freigegebene Daten in festgelegten Intervallen mit WebDAV synchronisiert.",
       "interval": "Synchronisierungsintervall (Sekunden)",
@@ -156,28 +151,21 @@
       "title": "WebDAV Datenverschlüsselung"
     },
     "gist": {
-      "actionStateSaved": "Die Konfiguration ist gespeichert. Verbindungstest, Upload zum Gist und Import aus dem Gist verwenden die gespeicherte Konfiguration.",
       "actionStateUnsaved": "Die Konfiguration enthält nicht gespeicherte Änderungen. Gist-Aktionen speichern diese zuerst.",
-      "autoSyncActionStateSaved": "„Jetzt synchronisieren“ verwendet die gespeicherten Secret-Gist- und Auto-Sync-Einstellungen.",
-      "autoSyncActionStateUnsaved": "Die Auto-Sync-Einstellungen enthalten nicht gespeicherte Änderungen. Speichere sie vor „Jetzt synchronisieren“.",
       "autoSyncEnableDesc": "Wenn aktiviert, werden gemeinsame Daten im gewählten Intervall mit dem Secret Gist synchronisiert.",
       "configDesc": "Synchronisiere gemeinsame Daten über ein verschlüsseltes GitHub Secret Gist. Ein Secret Gist ist ein nicht gelisteter Link und keine Zugriffskontrolle.",
       "create": "Secret Gist erstellen und hochladen",
       "downloadImport": "Aus Secret Gist importieren",
       "downloadImportWithSave": "Speichern und aus Secret Gist importieren",
-      "encryptionDescription": "GitHub-Gist-Synchronisierung benötigt ein Verschlüsselungspasswort. Es wird weder zu GitHub hochgeladen noch in Backups aufgenommen.",
+      "encryptionDescription": "GitHub-Gist-Synchronisierung benötigt ein Verschlüsselungspasswort. Es wird weder zu GitHub hochgeladen noch in Backups aufgenommen. Wenn Sie es verlieren, kann das verschlüsselte Backup nicht entschlüsselt werden.",
       "encryptionPassword": "Gist-Verschlüsselungspasswort",
-      "encryptionPasswordDesc": "Dieses Passwort verschlüsselt jeden Gist-Upload und entschlüsselt verschlüsselte Gist-Backups. Es bleibt auf diesem Gerät.",
       "encryptionPasswordPlaceholder": "Verschlüsselungspasswort eingeben",
-      "encryptionTitle": "Gist-Backups sind immer verschlüsselt",
+      "encryptionPasswordRequired": "Geben Sie ein Verschlüsselungspasswort ein, bevor Sie dieses Gist speichern oder synchronisieren.",
       "id": "Gist-ID oder URL",
       "idDesc": "Vorhandenes Secret Gist eingeben oder leer lassen, um eines zu erstellen.",
       "idPlaceholder": "Zum Beispiel: a1b2c3d4 oder https://gist.github.com/...",
       "openLink": "Dieses Gist auf GitHub öffnen",
       "restorePolicyDescription": "Der aktive Cloud-Dienst synchronisiert gemeinsame Daten, ist aber keine vollständige Gerätesicherung. Cloud-Zugangsdaten, Verschlüsselungspasswörter, Synchronisierungsauswahl und automatische Kontoaktualisierung bleiben auf diesem Gerät. Für lokale Einstellungen bitte den manuellen Export/Import verwenden.",
-      "secretDescription": "All API Hub erstellt nur nicht gelistete Gists und verschlüsselt Backups vor dem Upload.",
-      "secretTitle": "Secret Gist und Verschlüsselung",
-      "syncDataDescription": "Wähle die gemeinsamen Datenbereiche für die Cloud-Synchronisierung. Cloud-Zugangsdaten, Auswahl und automatische Kontoaktualisierung bleiben lokal auf diesem Gerät.",
       "testFailed": "Verbindung zum Secret Gist fehlgeschlagen",
       "testSuccess": "Verbindung zum Secret Gist erfolgreich",
       "title": "GitHub Gist-Synchronisierung",
@@ -191,7 +179,14 @@
     },
     "hidePassword": "Passwort verbergen",
     "manual": {
+      "confirmCancel": "Abbrechen",
+      "confirmContinue": "Fortfahren",
+      "confirmDownloadDescription": "Ausgewählte Cloud-Daten werden auf dieses Gerät geschrieben. Vorhandene lokale Daten in diesen Bereichen können ersetzt werden; diese Aktion verwendet keine intelligente Zusammenführung.",
+      "confirmDownloadTitle": "Ausgewählte Daten wiederherstellen?",
+      "confirmUploadDescription": "Ausgewählte lokale Daten werden in die aktive Cloud-Sicherung geschrieben. Vorhandene Cloud-Daten in diesen Bereichen können ersetzt werden; diese Aktion verwendet keine intelligente Zusammenführung.",
+      "confirmUploadTitle": "Ausgewählte Daten hochladen?",
       "description": "Speichern Sie die ausgewählte Dienstkonfiguration, testen Sie die Verbindung oder laden Sie Synchronisierungsdaten manuell hoch und herunter.",
+      "directionWarning": "Diese Aktionen sind gerichtet: Der Upload schreibt ausgewählte lokale Daten in die Cloud; die Wiederherstellung schreibt ausgewählte Cloud-Daten auf dieses Gerät. Die intelligente Zusammenführung wird nicht verwendet.",
       "title": "Speichern und manuell synchronisieren"
     },
     "notSynced": "Nicht synchronisiert",
@@ -221,7 +216,6 @@
       "accounts": "Konten",
       "apiCredentialProfiles": "API-Anmeldeinformationsbibliothek",
       "bookmarks": "Lesezeichen",
-      "description": "Wählen Sie aus, welche freigegebenen Datendomänen an der WebDAV-Synchronisierung teilnehmen. Gerätelokale Einstellungselemente wie WebDAV-Einstellungen, Synchronisierungsauswahl und automatische Kontoaktualisierung bleiben auf dem aktuellen Gerät, während Kanalkonfigurationen aus Kompatibilitätsgründen synchronisiert bleiben.",
       "preferences": "Einstellungen",
       "selectionRequired": "Wählen Sie mindestens eine Datendomäne zur Synchronisierung aus",
       "title": "Daten synchronisieren"
@@ -229,6 +223,10 @@
     "syncError": "Synchronisierung fehlgeschlagen",
     "syncFailed": "Synchronisierung fehlgeschlagen",
     "syncing": "Synchronisierung",
+    "syncSettings": {
+      "description": "Wählen Sie gemeinsame Daten, Strategie und Zeitplan für den aktiven Dienst.",
+      "title": "Synchronisierungseinstellungen"
+    },
     "syncSuccess": "Synchronisierung erfolgreich",
     "testConnection": "Verbindung testen",
     "testConnectionWithSave": "Verbindung speichern und testen",

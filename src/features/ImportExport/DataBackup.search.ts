@@ -29,7 +29,7 @@ export const dataBackupSearchSections: OptionsSearchItemDefinition[] = [
     "section:webdav-auto-sync",
     "dataBackup",
     "webdav-auto-sync",
-    "importExport:webdav.autoSync.title",
+    "importExport:webdav.syncSettings.title",
     422,
     {
       keywords: ["cloud", "webdav", "gist", "github", "auto sync"],
@@ -93,7 +93,7 @@ export const dataBackupSearchControls: OptionsSearchItemDefinition[] = [
     "importExport:webdav.gist.create",
     719.3,
     {
-      descriptionKey: "importExport:webdav.gist.secretDescription",
+      descriptionKey: "importExport:webdav.gist.configDesc",
       breadcrumbsKeys: [
         ...DEFAULT_BREADCRUMBS,
         "settings:tabs.dataBackup",
@@ -167,29 +167,13 @@ export const dataBackupSearchControls: OptionsSearchItemDefinition[] = [
     },
   ),
   buildControlDefinition(
-    "control:webdav-restore-policy-data-backup",
-    "dataBackup",
-    WEBDAV_TARGET_IDS.restorePolicy,
-    "importExport:webdav.restorePolicy.title",
-    724,
-    {
-      descriptionKey: "importExport:webdav.restorePolicy.description",
-      breadcrumbsKeys: [
-        ...DEFAULT_BREADCRUMBS,
-        "settings:tabs.dataBackup",
-        "importExport:webdav.title",
-      ],
-      keywords: ["webdav", "restore policy"],
-    },
-  ),
-  buildControlDefinition(
     "control:webdav-sync-data-data-backup",
     "dataBackup",
     WEBDAV_TARGET_IDS.syncData,
     "importExport:webdav.syncData.title",
     725,
     {
-      descriptionKey: "importExport:webdav.syncData.description",
+      descriptionKey: "importExport:webdav.configDesc",
       breadcrumbsKeys: [
         ...DEFAULT_BREADCRUMBS,
         "settings:tabs.dataBackup",
@@ -205,7 +189,7 @@ export const dataBackupSearchControls: OptionsSearchItemDefinition[] = [
     "importExport:webdav.syncData.accounts",
     725.1,
     {
-      descriptionKey: "importExport:webdav.syncData.description",
+      descriptionKey: "importExport:webdav.configDesc",
       breadcrumbsKeys: [
         ...DEFAULT_BREADCRUMBS,
         "settings:tabs.dataBackup",
@@ -222,7 +206,7 @@ export const dataBackupSearchControls: OptionsSearchItemDefinition[] = [
     "importExport:webdav.syncData.bookmarks",
     725.2,
     {
-      descriptionKey: "importExport:webdav.syncData.description",
+      descriptionKey: "importExport:webdav.configDesc",
       breadcrumbsKeys: [
         ...DEFAULT_BREADCRUMBS,
         "settings:tabs.dataBackup",
@@ -239,7 +223,7 @@ export const dataBackupSearchControls: OptionsSearchItemDefinition[] = [
     "importExport:webdav.syncData.apiCredentialProfiles",
     725.3,
     {
-      descriptionKey: "importExport:webdav.syncData.description",
+      descriptionKey: "importExport:webdav.configDesc",
       breadcrumbsKeys: [
         ...DEFAULT_BREADCRUMBS,
         "settings:tabs.dataBackup",
@@ -261,7 +245,7 @@ export const dataBackupSearchControls: OptionsSearchItemDefinition[] = [
     "importExport:webdav.syncData.preferences",
     725.4,
     {
-      descriptionKey: "importExport:webdav.syncData.description",
+      descriptionKey: "importExport:webdav.configDesc",
       breadcrumbsKeys: [
         ...DEFAULT_BREADCRUMBS,
         "settings:tabs.dataBackup",
@@ -398,7 +382,6 @@ export const dataBackupSearchControls: OptionsSearchItemDefinition[] = [
         "importExport:webdav.autoSync.title",
       ],
       keywords: ["webdav", "auto sync", "strategy"],
-      isVisible: (context) => context.webdavAutoSyncEnabled,
     },
   ),
   buildControlDefinition(
@@ -408,7 +391,7 @@ export const dataBackupSearchControls: OptionsSearchItemDefinition[] = [
     "importExport:webdav.autoSync.saveSettings",
     734,
     {
-      descriptionKey: "importExport:webdav.autoSync.description",
+      descriptionKey: "importExport:webdav.syncSettings.description",
       breadcrumbsKeys: [
         ...DEFAULT_BREADCRUMBS,
         "settings:tabs.dataBackup",
@@ -424,7 +407,7 @@ export const dataBackupSearchControls: OptionsSearchItemDefinition[] = [
     "importExport:webdav.autoSync.syncNow",
     735,
     {
-      descriptionKey: "importExport:webdav.autoSync.description",
+      descriptionKey: "importExport:webdav.syncSettings.description",
       breadcrumbsKeys: [
         ...DEFAULT_BREADCRUMBS,
         "settings:tabs.dataBackup",

@@ -1,5 +1,5 @@
 {
-  "description": "备份和恢复插件数据",
+  "description": "备份、迁移或同步 All API Hub 数据。",
   "export": {
     "accountData": "账号数据",
     "accountDataDescription": "手动账号导出和完整 JSON 导出会以明文包含已保存的凭据。请妥善保管导出文件。",
@@ -9,6 +9,7 @@
     "exportFailed": "导出失败，请重试",
     "fullBackup": "完整导出",
     "fullBackupDescription": "手动完整 JSON 导出会以明文包含已保存的账号凭据和用户设置。请妥善保管文件。",
+    "sensitiveDataNotice": "JSON 导出文件可能包含账号凭据和 API 密钥，请妥善保管。",
     "settingsExported": "用户设置导出成功",
     "title": "导出数据",
     "userSettings": "用户设置",
@@ -97,26 +98,20 @@
     "title": "导入数据",
     "versionNotSupported": "此备份由较新版本创建。请先更新应用后再导入。"
   },
-  "notice": {
-    "importantNotice": "重要提示",
-    "importWarning1": "导入前可以逐项选择添加、替换或不导入；默认会添加账号/API 凭据，并保留当前设置",
-    "importWarning2": "建议在导入前先导出当前数据进行备份",
-    "importWarning3": "仅支持本插件导出的JSON格式文件",
-    "importWarning4": "导入的数据可能包含敏感信息（账号令牌与 API Key），请妥善保管备份文件并确保来源可信"
+  "localBackup": {
+    "description": "使用本地 JSON 文件备份、迁移或恢复 All API Hub 数据。",
+    "title": "本地备份与迁移"
   },
   "title": "导入/导出",
   "webdav": {
     "actionState": {
-      "saved": "配置已保存。测试连接、上传到 WebDAV 和从 WebDAV 导入会使用当前已保存配置。",
       "unsaved": "配置有未保存更改。测试连接、上传到 WebDAV 和从 WebDAV 导入会先保存这些更改。"
     },
     "autoSync": {
       "actionState": {
-        "saved": "立即同步会使用已保存的 WebDAV 和自动同步设置。",
         "unsaved": "自动同步设置有未保存更改。立即同步不会使用这些更改，请先保存自动同步设置。"
       },
       "currentProvider": "同步服务：{{provider}}",
-      "description": "通过当前选择的同步服务定时同步共享数据；设备本地设置仍保留在当前设备。",
       "enable": "启用自动同步",
       "enableDesc": "开启后将按设定间隔自动与 WebDAV 同步共享数据。",
       "interval": "同步间隔（秒）",
@@ -156,28 +151,21 @@
       "title": "WebDAV 数据加密"
     },
     "gist": {
-      "actionStateSaved": "配置已保存。测试连接、上传到 Gist 和从 Gist 导入会使用已保存配置。",
       "actionStateUnsaved": "配置有未保存更改。Gist 操作会先保存这些更改。",
-      "autoSyncActionStateSaved": "立即同步会使用已保存的 Secret Gist 和自动同步设置。",
-      "autoSyncActionStateUnsaved": "自动同步设置有未保存更改，请先保存再立即同步。",
       "autoSyncEnableDesc": "开启后将按设定间隔自动与 Secret Gist 同步共享数据。",
       "configDesc": "使用 GitHub Secret Gist 同步加密后的共享数据。Secret Gist 是不公开列出的链接，不能替代访问控制。",
       "create": "创建并上传 Secret Gist",
       "downloadImport": "从 Secret Gist 导入",
       "downloadImportWithSave": "保存并从 Secret Gist 导入",
-      "encryptionDescription": "GitHub Gist 同步必须设置加密密码；密码不会上传到 GitHub，也不会进入备份文件。",
+      "encryptionDescription": "GitHub Gist 同步必须设置加密密码；密码不会上传到 GitHub，也不会进入备份文件。密码丢失后，无法解密加密备份。",
       "encryptionPassword": "Gist 加密密码",
-      "encryptionPasswordDesc": "该密码用于加密每次 Gist 上传，并在导入加密备份时解密。密码只保存在本机。",
       "encryptionPasswordPlaceholder": "请输入 Gist 加密密码",
-      "encryptionTitle": "Gist 备份已强制加密",
+      "encryptionPasswordRequired": "保存或同步此 Gist 前，请先填写加密密码。",
       "id": "Gist ID 或链接",
       "idDesc": "可填写已有 Secret Gist；首次使用可留空并创建新的 Gist。",
       "idPlaceholder": "例如：a1b2c3d4 或 https://gist.github.com/...",
       "openLink": "在 GitHub 打开此 Gist",
       "restorePolicyDescription": "当前云端服务用于同步共享数据，不等同于完整设备备份。云端凭据、加密密码、同步数据选择和账号自动刷新等设置会保留在本机。如需迁移本机设置，请使用手动导出/导入。",
-      "secretDescription": "只会创建不公开列出的 Gist，并且上传前始终加密备份。请妥善保管 Token 和加密密码。",
-      "secretTitle": "Secret Gist 与加密说明",
-      "syncDataDescription": "选择要通过当前云端服务同步的共享数据类型。云端凭据、同步选择和账号自动刷新等设置会保留在本机。",
       "testFailed": "Secret Gist 连接失败",
       "testSuccess": "Secret Gist 连接成功",
       "title": "GitHub Gist 同步",
@@ -191,7 +179,14 @@
     },
     "hidePassword": "隐藏密码",
     "manual": {
+      "confirmCancel": "取消",
+      "confirmContinue": "继续",
+      "confirmDownloadDescription": "选中的云端数据将写入本机，对应范围内的现有本地数据可能被替换；此操作不会使用智能合并。",
+      "confirmDownloadTitle": "恢复选中的数据？",
+      "confirmUploadDescription": "选中的本地数据将写入当前云端备份，对应范围内的现有云端数据可能被替换；此操作不会使用智能合并。",
+      "confirmUploadTitle": "上传选中的数据？",
       "description": "保存当前服务配置、测试连接，或手动上传和下载同步数据。",
+      "directionWarning": "这是有明确方向的操作：上传会将选中的本地数据写入云端，恢复会将选中的云端数据写回本机；两者都不会使用智能合并。",
       "title": "保存与手动同步"
     },
     "notSynced": "未同步",
@@ -221,7 +216,6 @@
       "accounts": "账号",
       "apiCredentialProfiles": "API 凭据库",
       "bookmarks": "书签",
-      "description": "选择需要通过 WebDAV 同步的共享数据类型；例如 WebDAV 配置、同步选择和账号自动刷新等设备本地项会保留在当前设备。",
       "preferences": "偏好设置",
       "selectionRequired": "请至少选择一个要同步的数据类型",
       "title": "同步数据"
@@ -229,6 +223,10 @@
     "syncError": "同步失败",
     "syncFailed": "同步失败",
     "syncing": "同步中",
+    "syncSettings": {
+      "description": "为当前服务选择共享数据、同步策略和自动同步计划。",
+      "title": "同步设置"
+    },
     "syncSuccess": "同步成功",
     "testConnection": "测试连接",
     "testConnectionWithSave": "保存并测试连接",

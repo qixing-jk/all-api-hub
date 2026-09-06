@@ -125,6 +125,7 @@ function printUsage() {
   console.log(`Usage:
   pnpm e2e:real-site
   pnpm e2e:real-site:account
+  pnpm e2e:real-site:cloud-sync
   pnpm e2e:real-site:managed-site
   pnpm e2e:real-site:webdav
   pnpm e2e:real-site:category account -- --headed
@@ -132,6 +133,7 @@ function printUsage() {
 Categories:
   all
   account
+  cloud-sync
   managed-site
   webdav`)
 }

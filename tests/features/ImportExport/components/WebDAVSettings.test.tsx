@@ -19,6 +19,7 @@ import {
   WEBDAV_AUTO_SYNC_TARGET_IDS,
   WEBDAV_TARGET_IDS,
 } from "~/features/ImportExport/searchTargets"
+import { IMPORT_EXPORT_TEST_IDS } from "~/features/ImportExport/testIds"
 import enImportExport from "~/locales/en/importExport.json"
 import es419ImportExport from "~/locales/es-419/importExport.json"
 import jaImportExport from "~/locales/ja/importExport.json"
@@ -301,8 +302,26 @@ const ENCRYPTED_BACKUP_ENVELOPE = {
   ciphertext: "cipher",
 } as const
 
-function clickWebdavAction(actionId: string) {
-  fireEvent.click(document.getElementById(actionId) as HTMLButtonElement)
+async function clickWebdavAction(actionId: string) {
+  const action = await waitFor(() => {
+    const element = document.getElementById(actionId)
+    if (!element) {
+      throw new Error(`Unable to find WebDAV action: ${actionId}`)
+    }
+    return element
+  })
+  fireEvent.click(action)
+
+  if (
+    actionId === WEBDAV_TARGET_IDS.uploadBackup ||
+    actionId === WEBDAV_TARGET_IDS.downloadImport
+  ) {
+    fireEvent.click(
+      await screen.findByTestId(
+        IMPORT_EXPORT_TEST_IDS.webdavManualConfirmButton,
+      ),
+    )
+  }
 }
 
 function clearWebdavSyncDataSelection() {
@@ -327,7 +346,7 @@ async function openManualDecryptDialog() {
   fireEvent.change(screen.getAllByDisplayValue("stored-secret")[0], {
     target: { value: "" },
   })
-  clickWebdavAction("webdav-download-import")
+  await clickWebdavAction("webdav-download-import")
 
   await screen.findByText("importExport:webdav.encryption.decryptDialogTitle")
   mockCompleteProductAnalyticsAction.mockClear()
@@ -605,7 +624,7 @@ describe("WebDAVSettings", () => {
       { target: { value: "github-token" } },
     )
 
-    clickWebdavAction(WEBDAV_TARGET_IDS.createGist)
+    await clickWebdavAction(WEBDAV_TARGET_IDS.createGist)
 
     await waitFor(() => {
       expect(mockCreateCloudSyncBackup).toHaveBeenCalledTimes(1)
@@ -666,7 +685,7 @@ describe("WebDAVSettings", () => {
       target: { value: "new-secret" },
     })
 
-    clickWebdavAction("webdav-save-config")
+    await clickWebdavAction("webdav-save-config")
     await waitFor(() => {
       expect(toast.success).toHaveBeenCalledWith(
         "settings:messages.updateSuccess",
@@ -674,7 +693,7 @@ describe("WebDAVSettings", () => {
     })
 
     mockSendWebdavAutoSyncMessage.mockResolvedValueOnce({ success: false })
-    clickWebdavAction("webdav-save-config")
+    await clickWebdavAction("webdav-save-config")
     await waitFor(() => {
       expect(loggerMocks.warn).toHaveBeenCalledWith(
         "Failed to refresh cloud sync schedule after settings save",
@@ -684,7 +703,7 @@ describe("WebDAVSettings", () => {
     mockSendWebdavAutoSyncMessage.mockRejectedValueOnce(
       new Error("setup failed"),
     )
-    clickWebdavAction("webdav-save-config")
+    await clickWebdavAction("webdav-save-config")
     await waitFor(() => {
       expect(loggerMocks.warn).toHaveBeenCalledWith(
         "Failed to refresh cloud sync schedule after settings save",
@@ -692,7 +711,7 @@ describe("WebDAVSettings", () => {
       )
     })
 
-    clickWebdavAction("webdav-test-connection")
+    await clickWebdavAction("webdav-test-connection")
     await waitFor(() => {
       expect(mockTestCloudSyncConnection).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -709,7 +728,7 @@ describe("WebDAVSettings", () => {
       "https://gist.github.com/existing-gist",
     )
 
-    clickWebdavAction("webdav-upload-backup")
+    await clickWebdavAction("webdav-upload-backup")
     await waitFor(() => {
       expect(mockDownloadCloudSyncBackup).toHaveBeenCalled()
       expect(mockUploadCloudSyncBackup).toHaveBeenCalled()
@@ -721,13 +740,13 @@ describe("WebDAVSettings", () => {
     mockUploadCloudSyncBackup.mockRejectedValueOnce(
       new Error("gist upload failed"),
     )
-    clickWebdavAction("webdav-upload-backup")
+    await clickWebdavAction("webdav-upload-backup")
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith("gist upload failed")
     })
 
     mockTestCloudSyncConnection.mockRejectedValueOnce({})
-    clickWebdavAction("webdav-test-connection")
+    await clickWebdavAction("webdav-test-connection")
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
         "importExport:webdav.gist.testFailed",
@@ -737,7 +756,7 @@ describe("WebDAVSettings", () => {
     mockUserPreferences.savePreferencesWithResult.mockRejectedValueOnce(
       new Error(""),
     )
-    clickWebdavAction("webdav-save-config")
+    await clickWebdavAction("webdav-save-config")
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
         "settings:messages.saveSettingsFailed",
@@ -752,6 +771,7 @@ describe("WebDAVSettings", () => {
         autoSync: true,
         syncInterval: 3600,
         syncStrategy: "merge",
+        backupEncryptionPassword: "stored-secret",
         githubGist: { token: "saved-token", gistId: "gist-1" },
       },
     })
@@ -763,8 +783,8 @@ describe("WebDAVSettings", () => {
       await screen.findByText("importExport:webdav.autoSync.title"),
     ).toBeInTheDocument()
     expect(
-      screen.getByText("importExport:webdav.gist.autoSyncActionStateSaved"),
-    ).toBeInTheDocument()
+      screen.queryByText("importExport:webdav.gist.autoSyncActionStateSaved"),
+    ).not.toBeInTheDocument()
 
     const intervalInput = document.getElementById(
       WEBDAV_AUTO_SYNC_TARGET_IDS.interval,
@@ -773,7 +793,7 @@ describe("WebDAVSettings", () => {
     fireEvent.change(intervalInput, { target: { value: "60" } })
     expect(
       await screen.findByText(
-        "importExport:webdav.gist.autoSyncActionStateUnsaved",
+        "importExport:webdav.autoSync.actionState.unsaved",
       ),
     ).toBeInTheDocument()
 
@@ -984,11 +1004,7 @@ describe("WebDAVSettings", () => {
   it("completes WebDAV upload analytics as success after the backup is uploaded", async () => {
     render(<WebDAVSettings />)
 
-    fireEvent.click(
-      await screen.findByRole("button", {
-        name: "importExport:webdav.uploadBackup",
-      }),
-    )
+    await clickWebdavAction(WEBDAV_TARGET_IDS.uploadBackup)
 
     await waitFor(() => {
       expect(mockUploadBackup).toHaveBeenCalled()
@@ -1025,7 +1041,7 @@ describe("WebDAVSettings", () => {
 
     clearWebdavSyncDataSelection()
 
-    clickWebdavAction("webdav-upload-backup")
+    await clickWebdavAction("webdav-upload-backup")
 
     await waitFor(() => {
       expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
@@ -1063,11 +1079,7 @@ describe("WebDAVSettings", () => {
 
     render(<WebDAVSettings />)
 
-    fireEvent.click(
-      await screen.findByRole("button", {
-        name: "importExport:webdav.uploadBackup",
-      }),
-    )
+    await clickWebdavAction(WEBDAV_TARGET_IDS.uploadBackup)
 
     await waitFor(() => {
       expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
@@ -1106,11 +1118,7 @@ describe("WebDAVSettings", () => {
 
     render(<WebDAVSettings />)
 
-    fireEvent.click(
-      await screen.findByRole("button", {
-        name: "importExport:webdav.uploadBackup",
-      }),
-    )
+    await clickWebdavAction(WEBDAV_TARGET_IDS.uploadBackup)
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
@@ -1124,11 +1132,7 @@ describe("WebDAVSettings", () => {
 
     render(<WebDAVSettings />)
 
-    fireEvent.click(
-      await screen.findByRole("button", {
-        name: "importExport:webdav.uploadBackup",
-      }),
-    )
+    await clickWebdavAction(WEBDAV_TARGET_IDS.uploadBackup)
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
@@ -1147,7 +1151,7 @@ describe("WebDAVSettings", () => {
     fireEvent.change(await screen.findByDisplayValue("alice"), {
       target: { value: "bob" },
     })
-    clickWebdavAction("webdav-upload-backup")
+    await clickWebdavAction("webdav-upload-backup")
 
     await waitFor(() => {
       expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
@@ -1183,11 +1187,7 @@ describe("WebDAVSettings", () => {
   it("completes WebDAV download/import analytics as success after import finishes", async () => {
     render(<WebDAVSettings />)
 
-    fireEvent.click(
-      await screen.findByRole("button", {
-        name: "importExport:webdav.downloadImport",
-      }),
-    )
+    await clickWebdavAction(WEBDAV_TARGET_IDS.downloadImport)
 
     await waitFor(() => {
       expect(mockImportFromBackupObject).toHaveBeenCalled()
@@ -1230,7 +1230,7 @@ describe("WebDAVSettings", () => {
     fireEvent.change(screen.getAllByDisplayValue("stored-secret")[0], {
       target: { value: "" },
     })
-    clickWebdavAction("webdav-download-import")
+    await clickWebdavAction("webdav-download-import")
 
     await waitFor(() => {
       expect(
@@ -1267,7 +1267,7 @@ describe("WebDAVSettings", () => {
 
     clearWebdavSyncDataSelection()
 
-    clickWebdavAction("webdav-download-import")
+    await clickWebdavAction("webdav-download-import")
 
     await waitFor(() => {
       expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
@@ -1288,11 +1288,7 @@ describe("WebDAVSettings", () => {
 
     render(<WebDAVSettings />)
 
-    fireEvent.click(
-      await screen.findByRole("button", {
-        name: "importExport:webdav.downloadImport",
-      }),
-    )
+    await clickWebdavAction(WEBDAV_TARGET_IDS.downloadImport)
 
     await waitFor(() => {
       expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
@@ -1317,7 +1313,7 @@ describe("WebDAVSettings", () => {
     fireEvent.change(await screen.findByDisplayValue("alice"), {
       target: { value: "bob" },
     })
-    clickWebdavAction("webdav-download-import")
+    await clickWebdavAction("webdav-download-import")
 
     await waitFor(() => {
       expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
@@ -1346,7 +1342,7 @@ describe("WebDAVSettings", () => {
     fireEvent.change(screen.getAllByDisplayValue("stored-secret")[0], {
       target: { value: "" },
     })
-    clickWebdavAction("webdav-download-import")
+    await clickWebdavAction("webdav-download-import")
 
     expect(
       await screen.findByText(
@@ -1543,7 +1539,7 @@ describe("WebDAVSettings", () => {
       "importExport:webdav.testSuccess",
     )
 
-    clickWebdavAction("webdav-upload-backup")
+    await clickWebdavAction("webdav-upload-backup")
     await waitFor(() => {
       expect(mockMergeWebdavBackupPayloadBySelection).toHaveBeenCalled()
       expect(mockUploadBackup).toHaveBeenCalled()
@@ -1625,7 +1621,7 @@ describe("WebDAVSettings", () => {
       )
     })
 
-    clickWebdavAction("webdav-test-connection")
+    await clickWebdavAction("webdav-test-connection")
 
     await waitFor(() => {
       expect(
@@ -1658,17 +1654,10 @@ describe("WebDAVSettings", () => {
   it("explains when manual WebDAV actions will save draft changes first", async () => {
     render(<WebDAVSettings />)
 
+    expect(await screen.findByDisplayValue("alice")).toBeInTheDocument()
     expect(
-      (
-        await screen.findByText("importExport:webdav.actionState.saved")
-      ).closest('[role="alert"]'),
-    ).toBeInTheDocument()
-    expect(
-      screen
-        .getByText("importExport:webdav.actionState.saved")
-        .closest('[role="alert"]')
-        ?.querySelector("svg"),
-    ).toBeInTheDocument()
+      screen.queryByText("importExport:webdav.actionState.saved"),
+    ).not.toBeInTheDocument()
     expect(
       screen.getByRole("button", {
         name: "importExport:webdav.testConnection",
@@ -1714,7 +1703,7 @@ describe("WebDAVSettings", () => {
 
     clearWebdavSyncDataSelection()
 
-    clickWebdavAction("webdav-upload-backup")
+    await clickWebdavAction("webdav-upload-backup")
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
@@ -1738,7 +1727,7 @@ describe("WebDAVSettings", () => {
       target: { value: "" },
     })
     mockCompleteProductAnalyticsAction.mockClear()
-    clickWebdavAction("webdav-download-import")
+    await clickWebdavAction("webdav-download-import")
 
     expect(
       await screen.findByText(
@@ -1862,7 +1851,7 @@ describe("WebDAVSettings", () => {
       target: { value: "bob" },
     })
 
-    clickWebdavAction("webdav-test-connection")
+    await clickWebdavAction("webdav-test-connection")
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
@@ -1884,7 +1873,7 @@ describe("WebDAVSettings", () => {
       target: { value: "bob" },
     })
 
-    clickWebdavAction("webdav-upload-backup")
+    await clickWebdavAction("webdav-upload-backup")
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
@@ -1901,7 +1890,7 @@ describe("WebDAVSettings", () => {
 
     clearWebdavSyncDataSelection()
 
-    clickWebdavAction("webdav-download-import")
+    await clickWebdavAction("webdav-download-import")
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
@@ -1922,7 +1911,7 @@ describe("WebDAVSettings", () => {
 
     expect(await screen.findByDisplayValue("alice")).toBeInTheDocument()
 
-    clickWebdavAction("webdav-upload-backup")
+    await clickWebdavAction("webdav-upload-backup")
 
     await waitFor(() => {
       expect(mockMergeWebdavBackupPayloadBySelection).toHaveBeenCalledWith(
@@ -1947,7 +1936,7 @@ describe("WebDAVSettings", () => {
 
     expect(await screen.findByDisplayValue("alice")).toBeInTheDocument()
 
-    clickWebdavAction("webdav-upload-backup")
+    await clickWebdavAction("webdav-upload-backup")
 
     expect(
       await screen.findByText("importExport:webdav.rebuildDialog.title"),
@@ -1984,7 +1973,7 @@ describe("WebDAVSettings", () => {
     render(<WebDAVSettings />)
 
     expect(await screen.findByDisplayValue("alice")).toBeInTheDocument()
-    clickWebdavAction("webdav-upload-backup")
+    await clickWebdavAction("webdav-upload-backup")
 
     expect(
       await screen.findByText("importExport:webdav.rebuildDialog.title"),
@@ -2034,7 +2023,7 @@ describe("WebDAVSettings", () => {
     render(<WebDAVSettings />)
 
     expect(await screen.findByDisplayValue("alice")).toBeInTheDocument()
-    clickWebdavAction("webdav-upload-backup")
+    await clickWebdavAction("webdav-upload-backup")
 
     expect(
       await screen.findByText("importExport:webdav.rebuildDialog.title"),
@@ -2064,7 +2053,7 @@ describe("WebDAVSettings", () => {
       ) as HTMLInputElement,
     )
 
-    clickWebdavAction("webdav-upload-backup")
+    await clickWebdavAction("webdav-upload-backup")
 
     expect(
       await screen.findByText("importExport:webdav.rebuildDialog.title"),
@@ -2109,7 +2098,7 @@ describe("WebDAVSettings", () => {
 
     expect(await screen.findByDisplayValue("alice")).toBeInTheDocument()
 
-    clickWebdavAction("webdav-upload-backup")
+    await clickWebdavAction("webdav-upload-backup")
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith("download failed")
@@ -2128,7 +2117,7 @@ describe("WebDAVSettings", () => {
 
     expect(await screen.findByDisplayValue("alice")).toBeInTheDocument()
 
-    clickWebdavAction("webdav-upload-backup")
+    await clickWebdavAction("webdav-upload-backup")
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith("unexpected parse failure")
@@ -2148,7 +2137,7 @@ describe("WebDAVSettings", () => {
 
     expect(await screen.findByDisplayValue("alice")).toBeInTheDocument()
 
-    clickWebdavAction("webdav-upload-backup")
+    await clickWebdavAction("webdav-upload-backup")
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
@@ -2164,7 +2153,7 @@ describe("WebDAVSettings", () => {
 
     expect(await screen.findByDisplayValue("alice")).toBeInTheDocument()
 
-    clickWebdavAction("webdav-download-import")
+    await clickWebdavAction("webdav-download-import")
 
     await waitFor(() => {
       expect(mockBuildWebdavImportPayloadBySelection).toHaveBeenCalledWith(
@@ -2204,7 +2193,7 @@ describe("WebDAVSettings", () => {
 
     expect(await screen.findByDisplayValue("alice")).toBeInTheDocument()
 
-    clickWebdavAction("webdav-download-import")
+    await clickWebdavAction("webdav-download-import")
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
@@ -2222,7 +2211,7 @@ describe("WebDAVSettings", () => {
 
     expect(await screen.findByDisplayValue("alice")).toBeInTheDocument()
 
-    clickWebdavAction("webdav-download-import")
+    await clickWebdavAction("webdav-download-import")
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith("import failed")
@@ -2235,7 +2224,7 @@ describe("WebDAVSettings", () => {
     render(<WebDAVSettings />)
 
     expect(await screen.findByDisplayValue("alice")).toBeInTheDocument()
-    clickWebdavAction("webdav-download-import")
+    await clickWebdavAction("webdav-download-import")
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
@@ -2257,7 +2246,7 @@ describe("WebDAVSettings", () => {
 
     expect(await screen.findByDisplayValue("stored-secret")).toBeInTheDocument()
 
-    clickWebdavAction("webdav-download-import")
+    await clickWebdavAction("webdav-download-import")
 
     await waitFor(() => {
       expect(document.getElementById("decryptPassword")).toBeTruthy()
@@ -2297,7 +2286,7 @@ describe("WebDAVSettings", () => {
       target: { value: "" },
     })
     mockCompleteProductAnalyticsAction.mockClear()
-    clickWebdavAction("webdav-download-import")
+    await clickWebdavAction("webdav-download-import")
 
     await waitFor(() => {
       expect(document.getElementById("decryptPassword")).toBeTruthy()
@@ -2390,7 +2379,7 @@ describe("WebDAVSettings", () => {
       target: { value: "" },
     })
     mockCompleteProductAnalyticsAction.mockClear()
-    clickWebdavAction("webdav-download-import")
+    await clickWebdavAction("webdav-download-import")
 
     await waitFor(() => {
       expect(document.getElementById("decryptPassword")).toBeTruthy()
@@ -2447,7 +2436,7 @@ describe("WebDAVSettings", () => {
       target: { value: "" },
     })
     mockCompleteProductAnalyticsAction.mockClear()
-    clickWebdavAction("webdav-download-import")
+    await clickWebdavAction("webdav-download-import")
 
     await waitFor(() => {
       expect(document.getElementById("decryptPassword")).toBeTruthy()
@@ -2517,7 +2506,7 @@ describe("WebDAVSettings", () => {
       target: { value: "" },
     })
     mockCompleteProductAnalyticsAction.mockClear()
-    clickWebdavAction("webdav-download-import")
+    await clickWebdavAction("webdav-download-import")
 
     await waitFor(() => {
       expect(document.getElementById("decryptPassword")).toBeTruthy()
@@ -2575,7 +2564,7 @@ describe("WebDAVSettings", () => {
     fireEvent.change(screen.getAllByDisplayValue("stored-secret")[0], {
       target: { value: "" },
     })
-    clickWebdavAction("webdav-download-import")
+    await clickWebdavAction("webdav-download-import")
 
     await waitFor(() => {
       expect(document.getElementById("decryptPassword")).toBeTruthy()
@@ -2649,9 +2638,7 @@ describe("WebDAVSettings", () => {
       target: { value: "" },
     })
     await user.click(screen.getByRole("switch"))
-    await user.click(
-      document.getElementById("webdav-download-import") as HTMLButtonElement,
-    )
+    await clickWebdavAction(WEBDAV_TARGET_IDS.downloadImport)
 
     expect(
       await screen.findByText(

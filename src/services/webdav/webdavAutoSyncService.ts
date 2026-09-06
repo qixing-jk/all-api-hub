@@ -341,8 +341,11 @@ class WebdavAutoSyncService {
     try {
       logger.info("开始执行后台同步")
 
-      await this.flushPendingBestEffortUpload()
       await this.syncWithWebdav()
+      // A successful strategy-aware sync supersedes any queued snapshot upload.
+      // Running the section-level best-effort upload first can overwrite a
+      // newer remote addition before Smart Merge sees it.
+      await clearAlarm(WebdavAutoSyncService.BEST_EFFORT_UPLOAD_ALARM_NAME)
 
       this.lastSyncTime = Date.now()
       this.lastSyncStatus = "success"
@@ -490,21 +493,6 @@ class WebdavAutoSyncService {
       reason,
       delayInMinutes: WebdavAutoSyncService.BEST_EFFORT_UPLOAD_DELAY_MINUTES,
     })
-  }
-
-  private async flushPendingBestEffortUpload() {
-    const pending = await getAlarm(
-      WebdavAutoSyncService.BEST_EFFORT_UPLOAD_ALARM_NAME,
-    )
-    if (!pending) {
-      return
-    }
-
-    // Clear the one-shot alarm before uploading: this path is intentionally
-    // best-effort, so a failed upload may be lost here and later regular sync
-    // runs are responsible for propagating the latest local changes.
-    await clearAlarm(WebdavAutoSyncService.BEST_EFFORT_UPLOAD_ALARM_NAME)
-    await this.uploadLocalSnapshotToWebdav()
   }
 
   private async performBestEffortUpload() {
@@ -1592,8 +1580,9 @@ class WebdavAutoSyncService {
     this.isSyncing = true
     try {
       logger.info("执行立即同步")
-      await this.flushPendingBestEffortUpload()
       await this.syncWithWebdav()
+      // The regular sync already reconciles the pending local change safely.
+      await clearAlarm(WebdavAutoSyncService.BEST_EFFORT_UPLOAD_ALARM_NAME)
       this.lastSyncTime = Date.now()
       this.lastSyncStatus = "success"
       this.lastSyncError = null

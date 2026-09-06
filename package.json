@@ -47,6 +47,7 @@
     "e2e:bookmarks-required": "playwright test e2e/accountBookmarkImportBrowserFlow --project=chromium",
     "e2e:real-site": "node scripts/real-site-e2e-cli.mjs all",
     "e2e:real-site:account": "node scripts/real-site-e2e-cli.mjs account",
+    "e2e:real-site:cloud-sync": "node scripts/real-site-e2e-cli.mjs cloud-sync",
     "e2e:real-site:category": "node scripts/real-site-e2e-cli.mjs",
     "e2e:real-site:managed-site": "node scripts/real-site-e2e-cli.mjs managed-site",
     "e2e:real-site:ctfile": "node scripts/e2e-webdav-provider.mjs ctfile",
