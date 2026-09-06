@@ -183,7 +183,14 @@ const preview: ManagedSiteMigrationCanonicalPreview = {
 }
 
 describe("managedResourceMigrationPresentation", () => {
-  it.each(["0", "2"])("shows the Octopus target vocabulary for %s", (type) => {
+  it.each([
+    ["0", "OpenAI Chat"],
+    ["2", "Anthropic"],
+    [" ", "Unsupported type"],
+    ["999", "Unsupported type"],
+    ["invalid", "Unsupported type"],
+    ["2.5", "Unsupported type"],
+  ])("shows the Octopus target vocabulary for %s", (type, expected) => {
     const item = preview.items[0]!
     if (item.status !== "ready") throw new Error("expected ready item")
     const mapped = mapManagedResourceMigrationPreview(
@@ -204,7 +211,7 @@ describe("managedResourceMigrationPresentation", () => {
     )
     expect(
       mapped.rows[0].comparisons.find(({ id }) => id === "type")?.target,
-    ).toBe(Number(type) === 0 ? "OpenAI Chat" : "Anthropic")
+    ).toBe(expected)
   })
   it("uses DoneHub's provider-owned vocabulary for numeric string targets", () => {
     const readyItem = preview.items[0]!

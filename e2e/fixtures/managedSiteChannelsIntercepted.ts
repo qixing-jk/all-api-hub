@@ -18,7 +18,7 @@ const INTERCEPTED_NEW_API_ORIGIN = "https://managed.example.invalid"
 const INTERCEPTED_DONE_HUB_TARGET_ORIGIN =
   "https://managed-target.example.invalid"
 const INTERCEPTED_AXON_HUB_ORIGIN = "https://axonhub.example.invalid"
-const INTERCEPTED_OCTOPUS_ORIGIN = "https://octopus.example.invalid"
+export const INTERCEPTED_OCTOPUS_ORIGIN = "https://octopus.example.invalid"
 const INTERCEPTED_OCTOPUS_COOKIE = "auth=octopus-cookie-session"
 
 export const NEW_API_CREATED_ID = 303
@@ -814,7 +814,10 @@ async function installOctopusCookieAuthIntercepts(context: BrowserContext) {
       return
     }
 
-    if (path === "/api/v1/channel/list") {
+    if (
+      path === "/api/v1/channel/list" ||
+      (path === "/api/v1/channel/update" && request.method() === "POST")
+    ) {
       interceptedOctopusCookieHeader = request.headers().cookie ?? null
       if (
         !interceptedOctopusCookieHeader?.includes(INTERCEPTED_OCTOPUS_COOKIE)
@@ -826,7 +829,9 @@ async function installOctopusCookieAuthIntercepts(context: BrowserContext) {
         })
         return
       }
+    }
 
+    if (path === "/api/v1/channel/list") {
       await fulfill(route, { code: 200, data: [channel] })
       return
     }
@@ -840,6 +845,8 @@ async function installOctopusCookieAuthIntercepts(context: BrowserContext) {
 
     await route.fulfill({ status: 404, body: "fixture route not configured" })
   })
+
+  return { getChannelKey: () => channel.key }
 }
 
 async function openManagedSiteChannelsPage(params: {
@@ -931,7 +938,7 @@ export async function openInterceptedOctopusManagedSiteChannels(params: {
   extensionId: string
 }) {
   await forceExtensionLanguage(params.page, "en")
-  await installOctopusCookieAuthIntercepts(params.context)
+  const fixture = await installOctopusCookieAuthIntercepts(params.context)
   await seedUserPreferences(await getServiceWorker(params.context), {
     managedSiteType: SITE_TYPES.OCTOPUS,
     octopus: {
@@ -941,4 +948,5 @@ export async function openInterceptedOctopusManagedSiteChannels(params: {
     },
   })
   await openManagedSiteChannelsPage(params)
+  return fixture
 }
