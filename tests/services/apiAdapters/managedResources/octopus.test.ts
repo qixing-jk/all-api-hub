@@ -341,6 +341,21 @@ describe("Octopus native resource", () => {
       model: "model-b,model-c",
     })
   })
+  it.each([null, "model-b"])(
+    "normalizes a non-list model draft %s to an empty model selection",
+    async (models) => {
+      const workspace = await octopusManagedResourceRegistration.open()
+      const editor = await workspace.openEditEditor(
+        (await workspace.list()).items[0].ref,
+      )
+      const result = await editor.submit({
+        ...editor.initialValues,
+        [fields.Models]: models,
+      })
+      expect(result.outcome).toBe("succeeded")
+      expect(mocks.updateChannel.mock.calls[0][1]).toMatchObject({ model: "" })
+    },
+  )
   it("shows a missing primary credential as unavailable rather than masked", async () => {
     mocks.getChannel.mockResolvedValue({
       ...channel,

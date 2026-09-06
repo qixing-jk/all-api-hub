@@ -753,6 +753,7 @@ async function installAxonHubIntercepts(context: BrowserContext) {
   })
 }
 
+/** Models cookie-authenticated channel persistence and exposes its stored key for assertions. */
 async function installOctopusCookieAuthIntercepts(context: BrowserContext) {
   let channel = {
     id: 17,
@@ -932,6 +933,7 @@ export async function openInterceptedAxonHubManagedSiteChannels(params: {
   await openManagedSiteChannelsPage(params)
 }
 
+/** Opens the native Octopus workspace with a seeded cookie session and isolated channel state. */
 export async function openInterceptedOctopusManagedSiteChannels(params: {
   context: BrowserContext
   page: Page
