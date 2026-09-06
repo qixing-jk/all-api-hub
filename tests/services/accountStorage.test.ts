@@ -1446,9 +1446,14 @@ describe("accountStorage core behaviors", () => {
     )
   })
 
-  it.each([100, 300])(
-    "persists only newer unsupported evidence while retaining manual intent (latest %s)",
-    async (observedAt) => {
+  it.each([
+    [100, "matched", "unsupported"],
+    [300, "matched", "matched"],
+    [100, "unknown", "unsupported"],
+    [300, "unknown", "unknown"],
+  ] as const)(
+    "persists only newer unsupported evidence while retaining manual intent (latest %s, %s)",
+    async (observedAt, latestOutcome, expectedOutcome) => {
       const methodId = "new-api:daily-checkin" as const
       const account = createAccount({
         id: "unsupported-execution",
@@ -1459,10 +1464,17 @@ describe("accountStorage core behaviors", () => {
           methodKnowledge: {
             methods: {
               [methodId]: {
-                detection: {
-                  outcome: "matched",
-                  evidence: { source: "probe", observedAt },
-                },
+                detection:
+                  latestOutcome === "unknown"
+                    ? {
+                        outcome: "unknown",
+                        reason: "network",
+                        attemptedAt: observedAt,
+                      }
+                    : {
+                        outcome: "matched",
+                        evidence: { source: "probe", observedAt },
+                      },
               },
             },
           },
@@ -1494,7 +1506,7 @@ describe("accountStorage core behaviors", () => {
           methods: {
             [methodId]: {
               detection: {
-                outcome: observedAt < 200 ? "unsupported" : "matched",
+                outcome: expectedOutcome,
               },
             },
           },

@@ -990,13 +990,22 @@ describe("check-in methods compatibility activation", () => {
   })
 
   it.each([
-    "authentication_required",
-    "permission_denied",
-    "identity_mismatch",
-    "credential_persistence_failed",
+    [
+      "authentication_required",
+      { kind: "skipped", reason: "authentication_required" },
+    ],
+    ["permission_denied", { kind: "skipped", reason: "permission_denied" }],
+    [
+      "identity_mismatch",
+      { kind: "skipped", reason: "authentication_required" },
+    ],
+    [
+      "credential_persistence_failed",
+      { kind: "blocked", reason: "account_unavailable", retryable: false },
+    ],
   ] as const)(
     "does not retry a status observation requiring repair: %s",
-    async (reason) => {
+    async (reason, expected) => {
       const registration = getNewApiExecutionRegistration()
       vi.spyOn(registration.provider, "getStatus").mockResolvedValue({
         outcome: "unknown",
@@ -1006,13 +1015,47 @@ describe("check-in methods compatibility activation", () => {
       const mutate = vi
         .spyOn(registration.provider, "checkIn")
         .mockResolvedValue({ status: "success" })
-      const result = await executeSelectedCheckIn({
-        account: createNewApiExecutionAccount(),
-        globalAutomaticExecutionEnabled: true,
-        context: createExecutionContext(),
-        requireStatusConfirmationBeforeMutation: true,
+      for (const requireStatusConfirmationBeforeMutation of [false, true]) {
+        const result = await executeSelectedCheckIn({
+          account: createNewApiExecutionAccount(),
+          globalAutomaticExecutionEnabled: true,
+          context: createExecutionContext(),
+          requireStatusConfirmationBeforeMutation,
+        })
+        expect(result).toEqual(expected)
+      }
+      expect(mutate).not.toHaveBeenCalled()
+    },
+  )
+
+  it.each([
+    ["network", "network_error"],
+    ["timeout", "timeout"],
+    ["source_unavailable", "source_unavailable"],
+  ] as const)(
+    "allows status-only recovery for a transient %s observation",
+    async (reason, expectedReason) => {
+      const registration = getNewApiExecutionRegistration()
+      vi.spyOn(registration.provider, "getStatus").mockResolvedValue({
+        outcome: "unknown",
+        reason,
+        attemptedAt: 200,
       })
-      expect(result).not.toHaveProperty("retryable", true)
+      const mutate = vi
+        .spyOn(registration.provider, "checkIn")
+        .mockResolvedValue({ status: "success" })
+      await expect(
+        executeSelectedCheckIn({
+          account: createNewApiExecutionAccount(),
+          globalAutomaticExecutionEnabled: true,
+          context: createExecutionContext(),
+          requireStatusConfirmationBeforeMutation: true,
+        }),
+      ).resolves.toEqual({
+        kind: "blocked",
+        reason: expectedReason,
+        retryable: true,
+      })
       expect(mutate).not.toHaveBeenCalled()
     },
   )

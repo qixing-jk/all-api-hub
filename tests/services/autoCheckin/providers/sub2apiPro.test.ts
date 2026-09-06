@@ -459,9 +459,14 @@ describe("Sub2API Pro daily check-in method Adapter", () => {
     },
   )
 
-  it.each(["status", "mutation"])(
-    "reports a local failure when %s capability loss cannot be saved",
-    async (phase) => {
+  it.each([
+    ["status", "returns null"],
+    ["mutation", "returns null"],
+    ["status", "throws"],
+    ["mutation", "throws"],
+  ])(
+    "reports a local failure when %s capability persistence %s",
+    async (phase, failure) => {
       const account = createAccount()
       if (phase === "status")
         vi.mocked(fetchSub2ApiProDailyCheckInStatus).mockRejectedValue(
@@ -480,8 +485,10 @@ describe("Sub2API Pro daily check-in method Adapter", () => {
             if (
               config?.methodKnowledge.methods[METHOD_ID]?.detection.outcome ===
               "unsupported"
-            )
+            ) {
+              if (failure === "throws") throw new Error("storage write failed")
               return null
+            }
             return account
           },
         }),
