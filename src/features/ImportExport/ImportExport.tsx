@@ -3,7 +3,6 @@ import { useEffect } from "react"
 import { useTranslation } from "react-i18next"
 
 import { PageHeader } from "~/components/PageHeader"
-import { Alert } from "~/components/ui"
 import {
   clearHighlightSearchParam,
   highlightSearchTarget,
@@ -89,12 +88,6 @@ export default function ImportExport() {
             {t("localBackup.description")}
           </p>
         </div>
-
-        <Alert
-          compact
-          variant="warning"
-          description={t("export.sensitiveDataNotice")}
-        />
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-stretch">
           <ExportSection

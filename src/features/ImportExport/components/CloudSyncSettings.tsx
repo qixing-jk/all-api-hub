@@ -28,10 +28,14 @@ export default function CloudSyncSettings() {
           onProviderDraftChange={setProviderPreview}
           gistEncryptionPasswordError={gistEncryptionPasswordError}
           onGistEncryptionPasswordErrorChange={setGistEncryptionPasswordError}
-        />
-        <WebDAVAutoSyncSettings
-          providerPreview={providerPreview}
-          onGistEncryptionPasswordErrorChange={setGistEncryptionPasswordError}
+          autoSyncContent={
+            <WebDAVAutoSyncSettings
+              providerPreview={providerPreview}
+              onGistEncryptionPasswordErrorChange={
+                setGistEncryptionPasswordError
+              }
+            />
+          }
         />
       </div>
     </section>

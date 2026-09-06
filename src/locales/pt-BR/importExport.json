@@ -185,9 +185,9 @@
       "confirmDownloadTitle": "Restaurar os dados selecionados?",
       "confirmUploadDescription": "Os dados locais selecionados serão gravados no backup ativo da nuvem. Os dados existentes nessas seções podem ser substituídos; esta ação não usa a mesclagem inteligente.",
       "confirmUploadTitle": "Enviar os dados selecionados?",
-      "description": "Salve a configuração do serviço, teste a conexão ou envie e baixe dados de sincronização manualmente.",
+      "description": "Envie ou restaure os dados de sincronização selecionados em uma direção explícita.",
       "directionWarning": "Estas ações têm direção definida: enviar grava os dados locais selecionados na nuvem; restaurar grava os dados selecionados da nuvem neste dispositivo. Elas não usam a mesclagem inteligente.",
-      "title": "Salvar e sincronizar manualmente"
+      "title": "Ações manuais de dados"
     },
     "notSynced": "Não sincronizado",
     "password": "Senha",

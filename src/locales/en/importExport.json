@@ -185,9 +185,9 @@
       "confirmDownloadTitle": "Restore selected data?",
       "confirmUploadDescription": "Selected local data will be written to the active cloud backup. Existing cloud data in those sections may be replaced; this action does not use Smart Merge.",
       "confirmUploadTitle": "Upload selected data?",
-      "description": "Save the selected service configuration, test the connection, or manually upload and download sync data.",
+      "description": "Upload or restore selected sync data with an explicit direction.",
       "directionWarning": "These actions are directional: upload writes selected local data to the cloud; restore writes selected cloud data to this device. They do not use Smart Merge.",
-      "title": "Save and sync manually"
+      "title": "Manual data actions"
     },
     "notSynced": "Not synced",
     "password": "Password",

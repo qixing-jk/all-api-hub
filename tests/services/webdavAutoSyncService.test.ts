@@ -1226,6 +1226,54 @@ describe("WebdavAutoSyncService.syncWithWebdav (selective sync)", () => {
     expect(uploaded.accounts.bookmarks).toBeUndefined()
   })
 
+  it("download_only preserves local channel configs when the remote section is missing", async () => {
+    const service = createService()
+    const localChannelConfigs = {
+      schemaVersion: 1,
+      configs: {
+        local: { enabled: true },
+      },
+    }
+
+    mockGetPreferences.mockResolvedValue({
+      webdav: {
+        syncStrategy: "download_only",
+        syncData: {
+          accounts: true,
+          bookmarks: false,
+          apiCredentialProfiles: false,
+          preferences: false,
+        },
+      },
+    } as any)
+    mockAccountStorageExportData.mockResolvedValue({
+      accounts: [{ id: "a1", created_at: 1, updated_at: 1 }],
+      bookmarks: [],
+      pinnedAccountIds: ["a1"],
+      orderedAccountIds: ["a1"],
+      last_updated: 100,
+    })
+    mockChannelConfigExport.mockResolvedValue(localChannelConfigs)
+    mockDownloadBackup.mockResolvedValue(
+      JSON.stringify({
+        version: "2.0",
+        timestamp: 200,
+        accounts: {
+          accounts: [{ id: "remote", created_at: 2, updated_at: 2 }],
+          pinnedAccountIds: ["remote"],
+          orderedAccountIds: ["remote"],
+          last_updated: 200,
+        },
+      }),
+    )
+
+    await service.syncWithWebdav()
+
+    expect(mockChannelConfigMerge).toHaveBeenCalledWith(localChannelConfigs)
+    const uploaded = JSON.parse(mockUploadBackup.mock.calls[0][0])
+    expect(uploaded.channelConfigs).toEqual(localChannelConfigs)
+  })
+
   it("bookmarks-only import preserves local accounts", async () => {
     const service = createService()
 

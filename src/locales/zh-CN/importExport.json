@@ -185,9 +185,9 @@
       "confirmDownloadTitle": "恢复选中的数据？",
       "confirmUploadDescription": "选中的本地数据将写入当前云端备份，对应范围内的现有云端数据可能被替换；此操作不会使用智能合并。",
       "confirmUploadTitle": "上传选中的数据？",
-      "description": "保存当前服务配置、测试连接，或手动上传和下载同步数据。",
+      "description": "按明确方向上传或恢复选中的同步数据。",
       "directionWarning": "这是有明确方向的操作：上传会将选中的本地数据写入云端，恢复会将选中的云端数据写回本机；两者都不会使用智能合并。",
-      "title": "保存与手动同步"
+      "title": "手动数据操作"
     },
     "notSynced": "未同步",
     "password": "密码",

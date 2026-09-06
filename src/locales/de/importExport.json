@@ -185,9 +185,9 @@
       "confirmDownloadTitle": "Ausgewählte Daten wiederherstellen?",
       "confirmUploadDescription": "Ausgewählte lokale Daten werden in die aktive Cloud-Sicherung geschrieben. Vorhandene Cloud-Daten in diesen Bereichen können ersetzt werden; diese Aktion verwendet keine intelligente Zusammenführung.",
       "confirmUploadTitle": "Ausgewählte Daten hochladen?",
-      "description": "Speichern Sie die ausgewählte Dienstkonfiguration, testen Sie die Verbindung oder laden Sie Synchronisierungsdaten manuell hoch und herunter.",
+      "description": "Laden Sie ausgewählte Synchronisierungsdaten in einer klaren Richtung hoch oder stellen Sie sie wieder her.",
       "directionWarning": "Diese Aktionen sind gerichtet: Der Upload schreibt ausgewählte lokale Daten in die Cloud; die Wiederherstellung schreibt ausgewählte Cloud-Daten auf dieses Gerät. Die intelligente Zusammenführung wird nicht verwendet.",
-      "title": "Speichern und manuell synchronisieren"
+      "title": "Manuelle Datenaktionen"
     },
     "notSynced": "Nicht synchronisiert",
     "password": "Passwort",

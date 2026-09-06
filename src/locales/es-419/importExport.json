@@ -185,9 +185,9 @@
       "confirmDownloadTitle": "¿Restaurar los datos seleccionados?",
       "confirmUploadDescription": "Los datos locales seleccionados se escribirán en el respaldo activo de la nube. Los datos existentes de esas secciones pueden reemplazarse; esta acción no usa la combinación inteligente.",
       "confirmUploadTitle": "¿Subir los datos seleccionados?",
-      "description": "Guarda la configuración del servicio, prueba la conexión o sube y descarga datos de forma manual.",
+      "description": "Sube o restaura los datos de sincronización seleccionados con una dirección explícita.",
       "directionWarning": "Estas acciones son direccionales: subir escribe los datos locales seleccionados en la nube; restaurar escribe los datos seleccionados de la nube en este dispositivo. No usan la combinación inteligente.",
-      "title": "Guardar y sincronizar manualmente"
+      "title": "Acciones manuales de datos"
     },
     "notSynced": "Sin sincronizar",
     "password": "Contraseña",

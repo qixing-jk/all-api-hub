@@ -1,4 +1,4 @@
-import { Upload } from "lucide-react"
+import { Info, Upload } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import {
@@ -73,10 +73,14 @@ const ExportSection = ({ isExporting, setIsExporting }: ExportSectionProps) => {
       <Card padding="none" className="flex flex-1 flex-col">
         <CardHeader>
           <div className="flex items-center gap-2">
-            <Upload className="h-5 w-5 text-green-600 dark:text-green-400" />
+            <Upload className="h-5 w-5 text-sky-600 dark:text-sky-400" />
             <CardTitle className="mb-0">{t("export.title")}</CardTitle>
           </div>
           <CardDescription>{t("export.description")}</CardDescription>
+          <div className="mt-3 flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50/70 px-3 py-2 text-xs text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-amber-200">
+            <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+            <span>{t("export.sensitiveDataNotice")}</span>
+          </div>
         </CardHeader>
 
         <CardList className="flex flex-1 flex-col">
@@ -95,7 +99,7 @@ const ExportSection = ({ isExporting, setIsExporting }: ExportSectionProps) => {
                   )
                 }
                 disabled={isExporting}
-                variant="success"
+                variant="default"
                 size="sm"
                 loading={isExporting}
                 data-testid={IMPORT_EXPORT_TEST_IDS.exportFullBackupButton}
@@ -122,7 +126,7 @@ const ExportSection = ({ isExporting, setIsExporting }: ExportSectionProps) => {
                   )
                 }
                 disabled={isExporting}
-                variant="default"
+                variant="secondary"
                 size="sm"
                 loading={isExporting}
                 data-testid={IMPORT_EXPORT_TEST_IDS.exportAccountDataButton}

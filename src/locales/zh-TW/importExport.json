@@ -185,9 +185,9 @@
       "confirmDownloadTitle": "要恢復選取的資料嗎？",
       "confirmUploadDescription": "選取的本機資料將寫入目前的雲端備份，對應範圍內的現有雲端資料可能會被取代；此操作不會使用智慧合併。",
       "confirmUploadTitle": "要上傳選取的資料嗎？",
-      "description": "儲存目前服務設定、測試連線，或手動上傳和下載同步資料。",
+      "description": "依照明確方向上傳或恢復選取的同步資料。",
       "directionWarning": "這是有明確方向的操作：上傳會將選取的本機資料寫入雲端，恢復會將選取的雲端資料寫回此裝置；兩者都不會使用智慧合併。",
-      "title": "儲存與手動同步"
+      "title": "手動資料操作"
     },
     "notSynced": "未同步",
     "password": "密碼",

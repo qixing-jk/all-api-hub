@@ -37,10 +37,7 @@ import {
   API_CREDENTIAL_PROFILES_CONFIG_VERSION,
   type ApiCredentialProfilesConfig,
 } from "~/types/apiCredentialProfiles"
-import {
-  CHANNEL_CONFIG_SNAPSHOT_VERSION,
-  type ChannelConfigSnapshot,
-} from "~/types/channelConfig"
+import { type ChannelConfigSnapshot } from "~/types/channelConfig"
 import {
   TASK_NOTIFICATION_STATUSES,
   TASK_NOTIFICATION_TASKS,
@@ -753,7 +750,7 @@ class WebdavAutoSyncService {
         : localFeatureGuidance
     const mergeChannelConfigsOnApply =
       strategy === WEBDAV_SYNC_STRATEGIES.MERGE ||
-      normalizedRemote.channelConfigs === null
+      !remotePresence.hasChannelConfigs
 
     const emptyProfiles: ApiCredentialProfilesConfig = {
       version: API_CREDENTIAL_PROFILES_CONFIG_VERSION,
@@ -816,10 +813,13 @@ class WebdavAutoSyncService {
       preferencesToSave = mergeResult.preferences
       // Atomic merge must receive only remote incoming data. Including the
       // startup-time local snapshot could resurrect entries deleted meanwhile.
-      channelConfigsToSave = normalizedRemote.channelConfigs ?? {
-        schemaVersion: CHANNEL_CONFIG_SNAPSHOT_VERSION,
-        configs: {},
-      }
+      // A legacy/partial remote backup may omit channel configs. Keep the
+      // local snapshot in that case instead of treating the omission as an
+      // empty replacement.
+      channelConfigsToSave =
+        remotePresence.hasChannelConfigs && normalizedRemote.channelConfigs
+          ? normalizedRemote.channelConfigs
+          : localChannelConfigs
       apiCredentialProfilesToSave = mergeResult.apiCredentialProfiles
       deletedEntryRecordsToSave = mergeResult.deletedEntryRecords
 
@@ -941,10 +941,13 @@ class WebdavAutoSyncService {
           ? remotePreferences
           : localPreferences
 
-      channelConfigsToSave = normalizedRemote.channelConfigs ?? {
-        schemaVersion: CHANNEL_CONFIG_SNAPSHOT_VERSION,
-        configs: {},
-      }
+      // A legacy/partial remote backup may omit channel configs. Keep the
+      // local snapshot in that case instead of treating the omission as an
+      // empty replacement.
+      channelConfigsToSave =
+        remotePresence.hasChannelConfigs && normalizedRemote.channelConfigs
+          ? normalizedRemote.channelConfigs
+          : localChannelConfigs
 
       apiCredentialProfilesToSave =
         syncDataSelection.apiCredentialProfiles &&

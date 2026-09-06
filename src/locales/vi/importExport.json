@@ -185,9 +185,9 @@
       "confirmDownloadTitle": "Khôi phục dữ liệu đã chọn?",
       "confirmUploadDescription": "Dữ liệu cục bộ đã chọn sẽ được ghi vào bản sao lưu đám mây đang dùng. Dữ liệu đám mây hiện có trong các phần đó có thể bị thay thế; thao tác này không dùng Hợp nhất thông minh.",
       "confirmUploadTitle": "Tải lên dữ liệu đã chọn?",
-      "description": "Lưu cấu hình dịch vụ, kiểm tra kết nối hoặc tải lên và tải xuống dữ liệu đồng bộ theo cách thủ công.",
+      "description": "Tải lên hoặc khôi phục dữ liệu đồng bộ đã chọn theo một hướng rõ ràng.",
       "directionWarning": "Đây là các thao tác một chiều: tải lên ghi dữ liệu cục bộ đã chọn lên đám mây; khôi phục ghi dữ liệu đám mây đã chọn vào thiết bị này. Không dùng Hợp nhất thông minh.",
-      "title": "Lưu và đồng bộ thủ công"
+      "title": "Thao tác dữ liệu thủ công"
     },
     "notSynced": "Chưa đồng bộ hóa",
     "password": "Mật khẩu",
