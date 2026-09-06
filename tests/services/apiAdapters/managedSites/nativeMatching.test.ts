@@ -423,8 +423,8 @@ describe("native managed-resource matching", () => {
 
   it("defaults incomplete Claude Code Hub metadata and retains an available unmasked key", async () => {
     vi.mocked(searchProviders).mockResolvedValue([
-      { id: 8, name: "", key: "available-key" },
-      { id: 9, name: "Unconfigured" },
+      { id: 8, name: "", url: "", key: "available-key" },
+      { id: 9, name: "Unconfigured", url: "" },
     ])
 
     await expect(
