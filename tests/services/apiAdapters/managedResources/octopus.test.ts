@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { OCTOPUS_MANAGED_RESOURCE_FIELD_IDS as fields } from "~/constants/octopus"
+import type {
+  EditableResourceProjection,
+  ResourceFieldValue,
+} from "~/services/apiAdapters/contracts/managedResourceNative"
 import {
   octopusManagedResourceRegistration,
   openOctopusNativeResourceOperations,
@@ -251,14 +255,15 @@ describe("Octopus native resource", () => {
     const editor = await (
       await octopusManagedResourceRegistration.open()
     ).openCreateEditor()
-    for (const values of [
+    const drafts: EditableResourceProjection[] = [
       editor.initialValues,
       {
         ...editor.initialValues,
         [fields.BaseUrl]: "https://upstream.example.invalid",
         [fields.Key]: { kind: "unchanged" },
       },
-    ]) {
+    ]
+    for (const values of drafts) {
       await expect(
         editor.loadOptions!(fields.Models, values),
       ).rejects.toMatchObject({ failure: { code: "validation_failed" } })
@@ -291,7 +296,7 @@ describe("Octopus native resource", () => {
       },
     })
   })
-  it.each([
+  it.each<[string, ResourceFieldValue, string]>([
     [fields.Name, "", "required"],
     [fields.Type, "90", "unsupported_option"],
     [fields.Status, "unknown", "unsupported_option"],
@@ -305,7 +310,7 @@ describe("Octopus native resource", () => {
       const editor = await (
         await octopusManagedResourceRegistration.open()
       ).openCreateEditor()
-      const values = {
+      const values: EditableResourceProjection = {
         ...editor.initialValues,
         [fields.Name]: "New",
         [fields.BaseUrl]: "https://upstream.example.invalid",
