@@ -109,7 +109,13 @@ export function TagPicker({
   const [deleteTarget, setDeleteTarget] = useState<Tag | null>(null)
   const [activeTagAction, setActiveTagAction] = useState<ActiveTagAction>(null)
   const [activeIndex, setActiveIndex] = useState(-1)
-  const [tagActionError, setTagActionError] = useState<string | null>(null)
+  const [tagActionDiagnostic, setTagActionDiagnostic] = useState<string | null>(
+    null,
+  )
+  const tagActionError =
+    tagActionDiagnostic === null
+      ? null
+      : t("messages.operationFailed", { error: tagActionDiagnostic })
   const isWorking = activeTagAction !== null
 
   const tagById = useMemo(() => {
@@ -177,7 +183,7 @@ export function TagPicker({
 
   useEffect(() => {
     if (isOpen) {
-      setTagActionError(null)
+      setTagActionDiagnostic(null)
     }
   }, [isOpen])
 
@@ -199,7 +205,7 @@ export function TagPicker({
     const normalized = normalizeTagNameForUniqueness(query)
     if (!normalized || disabled || isWorking) return
     setActiveTagAction({ kind: "create" })
-    setTagActionError(null)
+    setTagActionDiagnostic(null)
     try {
       const created = await onCreateTag(normalized.displayName)
       onSelectedTagIdsChange(
@@ -216,7 +222,7 @@ export function TagPicker({
         error,
         displayName: normalized.displayName,
       })
-      setTagActionError(message)
+      setTagActionDiagnostic(getErrorMessage(error))
       toast.error(message)
     } finally {
       setActiveTagAction(null)
@@ -289,7 +295,7 @@ export function TagPicker({
     if (!normalized) return
     const tagId = editingTagId
     setActiveTagAction({ kind: "rename", tagId })
-    setTagActionError(null)
+    setTagActionDiagnostic(null)
     try {
       await onRenameTag(tagId, normalized.displayName)
       cancelRename()
@@ -302,7 +308,7 @@ export function TagPicker({
         tagId,
         displayName: normalized.displayName,
       })
-      setTagActionError(message)
+      setTagActionDiagnostic(getErrorMessage(error))
       toast.error(message)
     } finally {
       setActiveTagAction(null)
@@ -313,7 +319,7 @@ export function TagPicker({
     if (!deleteTarget || !onDeleteTag || disabled || isWorking) return
     const target = deleteTarget
     setActiveTagAction({ kind: "delete", tagId: target.id })
-    setTagActionError(null)
+    setTagActionDiagnostic(null)
     try {
       await onDeleteTag(target.id)
       // Ensure current selection is updated immediately in the form.
@@ -323,7 +329,7 @@ export function TagPicker({
         error: getErrorMessage(error),
       })
       logger.error("Failed to delete tag", { error, tagId: target.id })
-      setTagActionError(message)
+      setTagActionDiagnostic(getErrorMessage(error))
       toast.error(message)
     } finally {
       setActiveTagAction(null)

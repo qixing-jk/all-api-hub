@@ -76,7 +76,7 @@ export function useOptionsOverviewData(): OptionsOverviewDataState {
     null,
   )
   const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [hasLoadFailure, setHasLoadFailure] = useState(false)
   const [reloadVersion, setReloadVersion] = useState(0)
 
   const reload = useCallback(() => {
@@ -126,9 +126,6 @@ export function useOptionsOverviewData(): OptionsOverviewDataState {
             : [],
         )
         const firstFailure = failures[0]
-        const loadErrorMessage = firstFailure
-          ? t("optionsOverview:states.loadDetailUnavailable")
-          : null
         if (firstFailure) {
           logger.error("Some options overview data failed to load", {
             failures,
@@ -136,7 +133,7 @@ export function useOptionsOverviewData(): OptionsOverviewDataState {
         }
 
         if (!results.some((result) => result.status === "fulfilled")) {
-          setError(loadErrorMessage)
+          setHasLoadFailure(Boolean(firstFailure))
           return
         }
 
@@ -194,13 +191,13 @@ export function useOptionsOverviewData(): OptionsOverviewDataState {
               apiCredentialProfilesResult.status === "fulfilled",
           }),
         )
-        setError(loadErrorMessage)
+        setHasLoadFailure(Boolean(firstFailure))
       } catch {
         if (!isCurrent) return
         logger.error("Failed to load options overview data", {
           status: "rejected",
         })
-        setError(t("optionsOverview:states.loadDetailUnavailable"))
+        setHasLoadFailure(true)
       } finally {
         if (isCurrent) {
           setIsLoading(false)
@@ -213,11 +210,13 @@ export function useOptionsOverviewData(): OptionsOverviewDataState {
     return () => {
       isCurrent = false
     }
-  }, [reloadVersion, t])
+  }, [reloadVersion])
 
   return {
     isLoading,
-    error,
+    error: hasLoadFailure
+      ? t("optionsOverview:states.loadDetailUnavailable")
+      : null,
     viewModel,
     reload,
   }

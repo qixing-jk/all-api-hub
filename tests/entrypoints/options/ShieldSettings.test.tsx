@@ -1153,7 +1153,7 @@ describe("ShieldSettings", () => {
     expect(focusObservationController.finish).toHaveBeenCalledTimes(1)
   })
 
-  it("uses localized fallback copy for a blank thrown error", async () => {
+  it("retranslates a blank trigger failure without executing or observing focus again", async () => {
     isDevelopmentModeMock.mockReturnValue(true)
     executeProtectionBypassTaskMock.mockRejectedValueOnce(new Error("   "))
     render(<ShieldSettings />, {
@@ -1187,6 +1187,33 @@ describe("ShieldSettings", () => {
       await screen.findByRole("group", { name: "This run" }),
     ).toBeInTheDocument()
     expect(focusObservationController.finish).toHaveBeenCalledTimes(1)
+    testI18n.addResourceBundle(
+      "zh-CN",
+      "settings",
+      (await import("~/locales/zh-CN/settings.json")).default,
+    )
+    try {
+      await act(async () => {
+        await testI18n.changeLanguage("zh-CN")
+      })
+      expect(
+        screen.getByText(
+          testI18n.t("settings:refresh.shieldDevTriggerFailureFallback"),
+        ),
+      ).toHaveAttribute("role", "alert")
+      expect(executeProtectionBypassTaskMock).toHaveBeenCalledTimes(1)
+      expect(focusObservationController.finish).toHaveBeenCalledTimes(1)
+      expect(
+        screen.getByRole("spinbutton", {
+          name: testI18n.t("settings:refresh.shieldDevTriggerDelayLabel"),
+        }),
+      ).toHaveValue(0)
+    } finally {
+      await act(async () => {
+        await testI18n.changeLanguage("en")
+      })
+      testI18n.removeResourceBundle("zh-CN", "settings")
+    }
   })
 
   it("keeps the request result when focus observation is unavailable", async () => {

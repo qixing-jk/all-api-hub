@@ -195,7 +195,14 @@ export function VerifyApiCredentialProfileDialog({
   const [modelId, setModelId] = useState("")
   const [modelOptions, setModelOptions] = useState<string[]>([])
   const [isFetchingModels, setIsFetchingModels] = useState(false)
-  const [fetchModelsError, setFetchModelsError] = useState<string | null>(null)
+  const [fetchModelsDiagnostic, setFetchModelsDiagnostic] = useState<
+    string | null
+  >(null)
+  const fetchModelsError =
+    fetchModelsDiagnostic === null
+      ? null
+      : fetchModelsDiagnostic ||
+        t("apiCredentialProfiles:verify.modelsFetchFailed")
   const [isPersisting, setIsPersisting] = useState(false)
   const [activeProbeId, setActiveProbeId] =
     useState<ApiVerificationProbeId | null>(null)
@@ -297,7 +304,7 @@ export function VerifyApiCredentialProfileDialog({
       fetchModelsAbortControllerRef.current?.abort()
       const abortController = new AbortController()
       fetchModelsAbortControllerRef.current = abortController
-      setFetchModelsError(null)
+      setFetchModelsDiagnostic(null)
       setIsFetchingModels(true)
 
       try {
@@ -336,15 +343,16 @@ export function VerifyApiCredentialProfileDialog({
           return
         }
 
-        const message =
-          toSanitizedErrorSummary(error, [profile.apiKey, profile.baseUrl]) ||
-          t("apiCredentialProfiles:verify.modelsFetchFailed")
+        const message = toSanitizedErrorSummary(error, [
+          profile.apiKey,
+          profile.baseUrl,
+        ])
 
         logger.error("Failed to fetch models", { message })
 
         if (fetchModelsRequestIdRef.current !== requestId) return
 
-        setFetchModelsError(message)
+        setFetchModelsDiagnostic(message)
       } finally {
         if (fetchModelsAbortControllerRef.current === abortController) {
           fetchModelsAbortControllerRef.current = null
@@ -354,7 +362,7 @@ export function VerifyApiCredentialProfileDialog({
         }
       }
     },
-    [preserveCurrentProbeStateForModel, profile, probesRef, t],
+    [preserveCurrentProbeStateForModel, profile, probesRef],
   )
 
   useEffect(() => {
@@ -378,7 +386,7 @@ export function VerifyApiCredentialProfileDialog({
     setApiType(nextApiType)
     setModelId(nextModelId)
     setModelOptions([])
-    setFetchModelsError(null)
+    setFetchModelsDiagnostic(null)
     setPersistedSummary(null)
     replaceProbes(buildProbeState(nextApiType))
     void fetchModels(nextApiType)
@@ -807,7 +815,7 @@ export function VerifyApiCredentialProfileDialog({
                   const nextApiType = value as ApiVerificationApiType
                   setApiType(nextApiType)
                   setModelOptions([])
-                  setFetchModelsError(null)
+                  setFetchModelsDiagnostic(null)
                   setPersistedSummary(null)
                   replaceProbes(buildProbeState(nextApiType))
                   void fetchModels(nextApiType)

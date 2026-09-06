@@ -41,6 +41,7 @@ import {
   buildApiToken,
   buildDisplaySiteData,
 } from "~~/tests/test-utils/factories"
+import { testI18n } from "~~/tests/test-utils/i18n"
 import { render, screen, waitFor, within } from "~~/tests/test-utils/render"
 
 const manualPreviewTarget = {
@@ -3505,7 +3506,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
     ).toBeEnabled()
   })
 
-  it("offers shared target recovery when the prepared target changed", async () => {
+  it("retranslates target recovery feedback without preparing or executing the import again", async () => {
     const user = userEvent.setup()
     const targetChanged = Object.assign(new Error("stale target"), {
       code: "managed-site-token-import-target-changed",
@@ -3538,6 +3539,37 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
         "key-management-managed-site-batch-export-target-switcher",
       ),
     ).toBeEnabled()
+    const prepareCount = mockPreparePreview.mock.calls.length
+    const executeCount = mockExecuteBatchExport.mock.calls.length
+    testI18n.addResourceBundle(
+      "zh-CN",
+      "keyManagement",
+      (await import("~/locales/zh-CN/keyManagement.json")).default,
+    )
+    try {
+      await act(async () => {
+        await testI18n.changeLanguage("zh-CN")
+      })
+      expect(
+        screen.getByText(
+          testI18n.t(
+            "keyManagement:batchManagedSiteExport.messages.targetChanged",
+          ),
+        ),
+      ).toBeVisible()
+      expect(mockPreparePreview).toHaveBeenCalledTimes(prepareCount)
+      expect(mockExecuteBatchExport).toHaveBeenCalledTimes(executeCount)
+      expect(
+        screen.getByTestId(
+          "key-management-managed-site-batch-export-target-switcher",
+        ),
+      ).toBeEnabled()
+    } finally {
+      await act(async () => {
+        await testI18n.changeLanguage("en")
+      })
+      testI18n.removeResourceBundle("zh-CN", "keyManagement")
+    }
   })
 
   it("maps known execution error codes to user-facing text", async () => {

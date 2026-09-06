@@ -5155,7 +5155,7 @@ describe("useModelData all-accounts loading", () => {
     expect(receivedSignal?.aborted).toBe(true)
   })
 
-  it("shows the fallback key-load error when token payload normalization fails", async () => {
+  it("retranslates fallback key-load errors without reloading or repeating notifications", async () => {
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
 
@@ -5202,9 +5202,30 @@ describe("useModelData all-accounts loading", () => {
       { timeout: 3000 },
     )
     expect(result.current.accountFallback?.runtimeKeys).toEqual([])
+    const notifications = toastErrorMock.mock.calls.length
+    testI18n.addResourceBundle(
+      "zh-CN",
+      "modelList",
+      (await import("~/locales/zh-CN/modelList.json")).default,
+    )
+    try {
+      await act(async () => {
+        await testI18n.changeLanguage("zh-CN")
+      })
+      expect(result.current.accountFallback?.runtimeKeyLoadErrorMessage).toBe(
+        testI18n.t("modelList:status.fallback.loadKeysFailedFallback"),
+      )
+      expect(mockFetchDisplayAccountTokens).toHaveBeenCalledTimes(1)
+      expect(toastErrorMock).toHaveBeenCalledTimes(notifications)
+    } finally {
+      await act(async () => {
+        await testI18n.changeLanguage("en")
+      })
+      testI18n.removeResourceBundle("zh-CN", "modelList")
+    }
   })
 
-  it("shows a generic fallback-model error when the fallback catalog load fails without details", async () => {
+  it("retranslates fallback-model errors without retrying the catalog or dropping the selected key", async () => {
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
 
@@ -5277,6 +5298,34 @@ describe("useModelData all-accounts loading", () => {
     expect(toastErrorMock).toHaveBeenCalledWith(
       "modelList:status.fallback.loadModelsFailedFallback",
     )
+    const notifications = toastErrorMock.mock.calls.length
+    const catalogRequests =
+      mockLoadAccountRuntimeKeyFallbackPricingResponse.mock.calls.length
+    testI18n.addResourceBundle(
+      "zh-CN",
+      "modelList",
+      (await import("~/locales/zh-CN/modelList.json")).default,
+    )
+    try {
+      await act(async () => {
+        await testI18n.changeLanguage("zh-CN")
+      })
+      expect(result.current.accountFallback?.catalogLoadErrorMessage).toBe(
+        testI18n.t("modelList:status.fallback.loadModelsFailedFallback"),
+      )
+      expect(result.current.accountFallback?.selectedRuntimeKeyId).toBe(
+        "account_token:catalog-error-account:5",
+      )
+      expect(
+        mockLoadAccountRuntimeKeyFallbackPricingResponse,
+      ).toHaveBeenCalledTimes(catalogRequests)
+      expect(toastErrorMock).toHaveBeenCalledTimes(notifications)
+    } finally {
+      await act(async () => {
+        await testI18n.changeLanguage("en")
+      })
+      testI18n.removeResourceBundle("zh-CN", "modelList")
+    }
   })
 
   it("classifies fallback catalog structured failures without leaking details", async () => {
@@ -5476,7 +5525,7 @@ describe("useModelData all-accounts loading", () => {
     expect(mockFetchDisplayAccountTokens).not.toHaveBeenCalled()
   })
 
-  it("sanitizes profile load failures into a user-visible profile error", async () => {
+  it("retranslates profile load failures without repeating notifications or requests", async () => {
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
     mockFetchApiCredentialModelIds.mockRejectedValue(new Error(""))
@@ -5513,5 +5562,27 @@ describe("useModelData all-accounts loading", () => {
     expect(toastErrorMock).toHaveBeenCalledWith(
       "modelList:status.profileLoadFailed",
     )
+    const fetchCount = mockFetchApiCredentialModelIds.mock.calls.length
+    const toastCount = toastErrorMock.mock.calls.length
+    testI18n.addResourceBundle(
+      "zh-CN",
+      "modelList",
+      (await import("~/locales/zh-CN/modelList.json")).default,
+    )
+    try {
+      await act(async () => {
+        await testI18n.changeLanguage("zh-CN")
+      })
+      expect(result.current.loadErrorMessage).toBe(
+        testI18n.t("modelList:status.loadFailed"),
+      )
+      expect(mockFetchApiCredentialModelIds).toHaveBeenCalledTimes(fetchCount)
+      expect(toastErrorMock).toHaveBeenCalledTimes(toastCount)
+    } finally {
+      await act(async () => {
+        await testI18n.changeLanguage("en")
+      })
+      testI18n.removeResourceBundle("zh-CN", "modelList")
+    }
   })
 })

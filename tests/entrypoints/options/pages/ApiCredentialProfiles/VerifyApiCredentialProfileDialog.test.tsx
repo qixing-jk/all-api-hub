@@ -1,5 +1,6 @@
 import userEvent from "@testing-library/user-event"
 import { useState } from "react"
+import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { VerifyApiCredentialProfileDialog } from "~/features/ApiCredentialProfiles/components/VerifyApiCredentialProfileDialog"
@@ -26,7 +27,14 @@ import {
   verificationResultHistoryStorage,
 } from "~/services/verification/verificationResultHistory"
 import { requireHistoryTarget } from "~~/tests/test-utils/history"
-import { render, screen, waitFor, within } from "~~/tests/test-utils/render"
+import { createResourceTestI18n } from "~~/tests/test-utils/i18n"
+import {
+  act,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "~~/tests/test-utils/render"
 
 const {
   loggerErrorMock,
@@ -600,6 +608,59 @@ describe("VerifyApiCredentialProfileDialog", () => {
     expect(
       screen.queryByText("apiCredentialProfiles:verify.modelsFetchFailed"),
     ).not.toBeInTheDocument()
+  })
+
+  it("retranslates model-discovery fallback without fetching or resetting again", async () => {
+    const i18n = await createResourceTestI18n({
+      en: {
+        apiCredentialProfiles: (
+          await import("~/locales/en/apiCredentialProfiles.json")
+        ).default,
+      },
+      "zh-CN": {
+        apiCredentialProfiles: (
+          await import("~/locales/zh-CN/apiCredentialProfiles.json")
+        ).default,
+      },
+    })
+    mockFetchOpenAICompatibleModelIds.mockRejectedValueOnce(new Error())
+    const profile = {
+      id: "language-profile",
+      name: "Profile",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      baseUrl: "https://example.invalid",
+      apiKey: "sk-test",
+      tagIds: [],
+      notes: "",
+      createdAt: 1,
+      updatedAt: 1,
+    }
+    render(
+      <I18nextProvider i18n={i18n}>
+        <VerifyApiCredentialProfileDialog
+          isOpen
+          onClose={() => {}}
+          profile={profile}
+          initialModelId="draft-model"
+        />
+      </I18nextProvider>,
+    )
+    expect(
+      await screen.findByText(
+        i18n.t("apiCredentialProfiles:verify.modelsFetchFailed"),
+      ),
+    ).toBeVisible()
+    const calls = mockFetchOpenAICompatibleModelIds.mock.calls.length
+    await act(async () => {
+      await i18n.changeLanguage("zh-CN")
+    })
+    expect(
+      screen.getByText(
+        i18n.t("apiCredentialProfiles:verify.modelsFetchFailed"),
+      ),
+    ).toBeVisible()
+    expect(mockFetchOpenAICompatibleModelIds).toHaveBeenCalledTimes(calls)
+    expect(mockRunApiVerificationProbe).not.toHaveBeenCalled()
   })
 
   it("redacts secrets when the initial model fetch fails", async () => {

@@ -1,3 +1,4 @@
+import type { TFunction } from "i18next"
 import {
   forwardRef,
   useCallback,
@@ -100,7 +101,15 @@ type BatchVerifyRow = {
   item: BatchVerifyModelItem
   status: BatchVerifyRowStatus
   latencyMs: number
-  summary: string
+  summary:
+    | "pending"
+    | "running"
+    | "no-key"
+    | "no-probes"
+    | "results"
+    | "failed"
+    | "stopped"
+    | "not-selected"
   results: ApiVerificationProbeResult[]
   runtimeKeyName?: string
   errorCategory?: ProductAnalyticsErrorCategory
@@ -132,7 +141,7 @@ function buildRows(items: BatchVerifyModelItem[]): BatchVerifyRow[] {
     item,
     status: BATCH_VERIFY_ROW_STATUSES.PENDING,
     latencyMs: 0,
-    summary: "",
+    summary: "pending",
     results: [],
   }))
 }
@@ -216,7 +225,7 @@ function getRowLatency(results: ApiVerificationProbeResult[]) {
 
 /** Resolve a failed probe row to localized, stable user-facing feedback. */
 function resolveFailureSummaryText(
-  t: ReturnType<typeof useTranslation>["t"],
+  t: TFunction,
   result: ApiVerificationProbeResult,
 ) {
   const fallback =
@@ -230,6 +239,42 @@ function resolveFailureSummaryText(
     ...(result.summaryParams ?? {}),
     defaultValue: fallback,
   })
+}
+
+/** Translate the current row outcome without changing or replaying its probes. */
+function getRowSummary(t: TFunction, row: BatchVerifyRow): string {
+  switch (row.summary) {
+    case "pending":
+      return t("modelList:batchVerify.messages.pending")
+    case "running":
+      return t("modelList:batchVerify.status.running")
+    case "no-key":
+      return t("modelList:batchVerify.messages.noCompatibleRuntimeKey")
+    case "no-probes":
+      return t("modelList:batchVerify.messages.noApplicableProbes")
+    case "stopped":
+      return t("modelList:batchVerify.messages.stopped")
+    case "not-selected":
+      return t("modelList:batchVerify.messages.notSelected")
+    case "failed":
+      return row.results[0]
+        ? resolveFailureSummaryText(t, row.results[0])
+        : t("modelList:batchVerify.messages.unexpected")
+    case "results":
+      return t("modelList:batchVerify.messages.probeSummary", {
+        count: row.results.length,
+        pass: row.results.filter(
+          (result) => result.status === API_VERIFICATION_PROBE_STATUSES.Pass,
+        ).length,
+        fail: row.results.filter(
+          (result) => result.status === API_VERIFICATION_PROBE_STATUSES.Fail,
+        ).length,
+        unsupported: row.results.filter(
+          (result) =>
+            result.status === API_VERIFICATION_PROBE_STATUSES.Unsupported,
+        ).length,
+      })
+  }
 }
 
 /** Pick a valid probe id for synthetic failure records. */
@@ -560,7 +605,7 @@ export function BatchVerifyModelsDialog({
       updateRow(item.key, {
         status: BATCH_VERIFY_ROW_STATUSES.RUNNING,
         latencyMs: 0,
-        summary: t("modelList:batchVerify.status.running"),
+        summary: "running",
         results: [],
         runtimeKeyName: undefined,
         errorCategory: undefined,
@@ -590,13 +635,10 @@ export function BatchVerifyModelsDialog({
                   item,
                 )
                 if (!runtimeKey) {
-                  const summary = t(
-                    "modelList:batchVerify.messages.noCompatibleRuntimeKey",
-                  )
                   updateRow(item.key, {
                     status: BATCH_VERIFY_ROW_STATUSES.SKIPPED,
                     latencyMs: 0,
-                    summary,
+                    summary: "no-key",
                     results: [],
                   })
                   return null
@@ -644,7 +686,7 @@ export function BatchVerifyModelsDialog({
           updateRow(item.key, {
             status: BATCH_VERIFY_ROW_STATUSES.SKIPPED,
             latencyMs: 0,
-            summary: t("modelList:batchVerify.messages.noApplicableProbes"),
+            summary: "no-probes",
             results: [],
             runtimeKeyName: credentials.runtimeKeyName,
           })
@@ -707,9 +749,10 @@ export function BatchVerifyModelsDialog({
               id: probe.id,
               status: API_VERIFICATION_PROBE_STATUSES.Fail,
               latencyMs: 0,
-              summary:
-                sanitizedMessage ||
-                t("modelList:batchVerify.messages.unexpected"),
+              summary: sanitizedMessage || "Unexpected error",
+              ...(sanitizedMessage
+                ? {}
+                : { summaryKey: "verifyDialog.errors.unexpected" }),
               ...buildSafeProbeFailureDiagnostics(error, sanitizedMessage),
             })
           }
@@ -723,17 +766,6 @@ export function BatchVerifyModelsDialog({
             message: toSanitizedErrorSummary(persistError, [apiKey]),
           })
         })
-
-        const pass = results.filter(
-          (result) => result.status === API_VERIFICATION_PROBE_STATUSES.Pass,
-        ).length
-        const fail = results.filter(
-          (result) => result.status === API_VERIFICATION_PROBE_STATUSES.Fail,
-        ).length
-        const unsupported = results.filter(
-          (result) =>
-            result.status === API_VERIFICATION_PROBE_STATUSES.Unsupported,
-        ).length
 
         const status = deriveBatchVerifyRowStatus(results)
         const errorCategory =
@@ -760,12 +792,7 @@ export function BatchVerifyModelsDialog({
         updateRow(item.key, {
           status,
           latencyMs: getRowLatency(results),
-          summary: t("modelList:batchVerify.messages.probeSummary", {
-            count: results.length,
-            pass,
-            fail,
-            unsupported,
-          }),
+          summary: "results",
           results,
           runtimeKeyName: credentials.runtimeKeyName,
           errorCategory,
@@ -786,9 +813,7 @@ export function BatchVerifyModelsDialog({
                 apiKey,
                 ...accountRuntimeKeySecretsToRedact,
               ])
-        const message =
-          toSanitizedErrorSummary(error, redactions) ||
-          t("modelList:batchVerify.messages.unexpected")
+        const message = toSanitizedErrorSummary(error, redactions)
 
         logger.error("Batch model verification failed", {
           ...getBatchVerifyFailureLogIds(item),
@@ -800,7 +825,9 @@ export function BatchVerifyModelsDialog({
           id: getFirstApplicableProbeId(apiType, selectedProbeIds),
           status: BATCH_VERIFY_ROW_STATUSES.FAIL,
           latencyMs: Date.now() - startedAt,
-          summary: message,
+          summary: message || "Unexpected error",
+          ...(message ? {} : { summaryKey: "verifyDialog.errors.unexpected" }),
+          ...buildSafeProbeFailureDiagnostics(error, message),
         }
         const errorCategory =
           resolveProductAnalyticsErrorCategoryFromError(error)
@@ -816,7 +843,7 @@ export function BatchVerifyModelsDialog({
         updateRow(item.key, {
           status: BATCH_VERIFY_ROW_STATUSES.FAIL,
           latencyMs: result.latencyMs,
-          summary: message,
+          summary: "failed",
           results: [result],
           errorCategory,
         })
@@ -829,7 +856,6 @@ export function BatchVerifyModelsDialog({
       getResolvedRuntimeKey,
       persistResult,
       selectedProbeIds,
-      t,
       updateRow,
     ],
   )
@@ -842,13 +868,13 @@ export function BatchVerifyModelsDialog({
           ? {
               ...row,
               status: BATCH_VERIFY_ROW_STATUSES.SKIPPED,
-              summary: t("modelList:batchVerify.messages.stopped"),
+              summary: "stopped" as const,
               results: [],
             }
           : row,
       ),
     )
-  }, [t])
+  }, [])
 
   const runBatch = async () => {
     if (isRunning || !canStart) return
@@ -877,7 +903,7 @@ export function BatchVerifyModelsDialog({
           : {
               ...row,
               status: BATCH_VERIFY_ROW_STATUSES.SKIPPED,
-              summary: t("modelList:batchVerify.messages.notSelected"),
+              summary: "not-selected",
             },
       ),
     )
@@ -1028,7 +1054,7 @@ export function BatchVerifyModelsDialog({
               </span>
             </div>
             <div className="dark:text-dark-text-secondary mt-1 text-xs text-gray-600">
-              {row.summary || t("modelList:batchVerify.messages.pending")}
+              {getRowSummary(t, row)}
             </div>
             {row.runtimeKeyName ? (
               <div className="dark:text-dark-text-tertiary mt-1 text-xs text-gray-500">

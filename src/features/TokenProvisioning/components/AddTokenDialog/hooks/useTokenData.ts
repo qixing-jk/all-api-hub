@@ -1,3 +1,4 @@
+import type { TFunction } from "i18next"
 import { useCallback, useEffect, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
@@ -29,6 +30,17 @@ const EMPTY_USER_GROUPS: Record<string, UserGroupInfo> = {}
 
 export const TOKEN_MODEL_DISCOVERY_TIMEOUT_MS = 10_000
 
+type ModelLoadFailure = { kind: "empty" } | { kind: "failed"; message: string }
+
+/** Formats the optional discovery outcome without caching localized fallback copy. */
+function presentModelLoadFailure(failure: ModelLoadFailure, t: TFunction) {
+  const reason =
+    failure.kind === "empty"
+      ? t("keyManagement:dialog.noAvailableModels")
+      : failure.message || t("keyManagement:dialog.loadDataFailed")
+  return t("keyManagement:dialog.modelLoadFailed", { reason })
+}
+
 /**
  * Loads required user groups when the dialog opens and optional models on demand.
  * @param isOpen Whether dialog is visible.
@@ -45,15 +57,14 @@ export function useTokenData(
   allowedGroups?: string[],
   preserveExistingModelLimitsOnFailure = false,
 ) {
-  const { t } = useTranslation("keyManagement")
+  const { t, i18n } = useTranslation("keyManagement")
   const [isLoading, setIsLoading] = useState(false)
   const [availableModels, setAvailableModels] = useState<string[]>([])
   const [groups, setGroups] = useState<Record<string, UserGroupInfo>>({})
   const [isModelsLoading, setIsModelsLoading] = useState(false)
   const [modelsLoaded, setModelsLoaded] = useState(false)
-  const [modelLoadErrorMessage, setModelLoadErrorMessage] = useState<
-    string | null
-  >(null)
+  const [modelLoadFailure, setModelLoadFailure] =
+    useState<ModelLoadFailure | null>(null)
   const modelLoadGenerationRef = useRef(0)
   const activeModelLoadRef = useRef<{
     accountId: string
@@ -163,11 +174,13 @@ export function useTokenData(
       })
     } catch (error) {
       logger.error("Failed to load initial data", error)
-      toast.error(getErrorMessage(error) || t("dialog.loadDataFailed"))
+      toast.error(
+        getErrorMessage(error) || i18n.t("keyManagement:dialog.loadDataFailed"),
+      )
     } finally {
       setIsLoading(false)
     }
-  }, [allowedGroups, currentAccount, setFormData, t])
+  }, [allowedGroups, currentAccount, setFormData, i18n])
 
   const loadAvailableModels = useCallback(async (): Promise<boolean> => {
     if (!currentAccount || !canFetchModels) return false
@@ -182,7 +195,22 @@ export function useTokenData(
     const generation = ++modelLoadGenerationRef.current
     const controller = new AbortController()
     setIsModelsLoading(true)
-    setModelLoadErrorMessage(null)
+    setModelLoadFailure(null)
+
+    const failLoad = (failure: ModelLoadFailure) => {
+      if (generation !== modelLoadGenerationRef.current) return false
+      setAvailableModels([])
+      setModelLoadFailure(failure)
+      if (!preserveExistingModelLimitsOnFailure) {
+        setFormData((prev) =>
+          prev.modelLimitsEnabled || prev.modelLimits.length > 0
+            ? { ...prev, modelLimitsEnabled: false, modelLimits: [] }
+            : prev,
+        )
+      }
+      toast.error(presentModelLoadFailure(failure, t))
+      return false
+    }
 
     const promise = (async () => {
       try {
@@ -198,10 +226,10 @@ export function useTokenData(
           !Array.isArray(models) ||
           !models.every((model) => typeof model === "string")
         ) {
-          throw new TypeError(t("dialog.loadDataFailed"))
+          return failLoad({ kind: "failed", message: "" })
         }
         if (models.length === 0) {
-          throw new Error(t("dialog.noAvailableModels"))
+          return failLoad({ kind: "empty" })
         }
 
         if (generation !== modelLoadGenerationRef.current) return false
@@ -212,24 +240,10 @@ export function useTokenData(
         if (generation !== modelLoadGenerationRef.current) return false
 
         logger.warn("Failed to load optional model restrictions", error)
-        const upstreamReason = getErrorMessage(error).trim()
-        const reason = upstreamReason || t("dialog.loadDataFailed")
-        const message = t("dialog.modelLoadFailed", { reason })
-        setAvailableModels([])
-        setModelLoadErrorMessage(message)
-        if (!preserveExistingModelLimitsOnFailure) {
-          setFormData((prev) =>
-            prev.modelLimitsEnabled || prev.modelLimits.length > 0
-              ? {
-                  ...prev,
-                  modelLimitsEnabled: false,
-                  modelLimits: [],
-                }
-              : prev,
-          )
-        }
-        toast.error(message)
-        return false
+        return failLoad({
+          kind: "failed",
+          message: getErrorMessage(error).trim(),
+        })
       } finally {
         if (generation === modelLoadGenerationRef.current) {
           setIsModelsLoading(false)
@@ -265,7 +279,7 @@ export function useTokenData(
     setAvailableModels([])
     setIsModelsLoading(false)
     setModelsLoaded(false)
-    setModelLoadErrorMessage(null)
+    setModelLoadFailure(null)
 
     return cancelActiveModelLoad
   }, [cancelActiveModelLoad, currentAccount?.id])
@@ -282,7 +296,7 @@ export function useTokenData(
     setGroups({})
     setIsModelsLoading(false)
     setModelsLoaded(false)
-    setModelLoadErrorMessage(null)
+    setModelLoadFailure(null)
   }
 
   return {
@@ -292,7 +306,9 @@ export function useTokenData(
     canFetchModels,
     isModelsLoading,
     modelsLoaded,
-    modelLoadErrorMessage,
+    modelLoadErrorMessage: modelLoadFailure
+      ? presentModelLoadFailure(modelLoadFailure, t)
+      : null,
     loadAvailableModels,
     resetData,
   }

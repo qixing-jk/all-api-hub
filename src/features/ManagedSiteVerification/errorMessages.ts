@@ -1,3 +1,5 @@
+import type { TFunction } from "i18next"
+
 import {
   ApiError,
   isTempWindowUnsupportedErrorCode,
@@ -7,6 +9,10 @@ import { t } from "~/utils/i18n/core"
 
 const DEFAULT_MANAGED_VERIFICATION_ERROR_KEY =
   "newApiManagedVerification:dialog.body.failure"
+
+export type NewApiManagedVerificationFailure =
+  | { kind: "window-unavailable" | "unknown" }
+  | { kind: "message"; message: string }
 
 /**
  * Collapses obviously unusable error payloads so the dialog can fall back to
@@ -46,11 +52,31 @@ export function isNewApiManagedVerificationWindowError(
 /**
  * Normalizes managed verification errors into user-facing copy.
  */
-export function getNewApiManagedVerificationErrorMessage(error: unknown) {
+export function getNewApiManagedVerificationFailure(
+  error: unknown,
+): NewApiManagedVerificationFailure {
   if (isNewApiManagedVerificationWindowError(error)) {
-    return t("messages:background.windowCreationUnavailable")
+    return { kind: "window-unavailable" }
   }
+  const message = getSafeManagedVerificationErrorMessage(error)
+  return message ? { kind: "message", message } : { kind: "unknown" }
+}
 
-  const fallbackMessage = t(DEFAULT_MANAGED_VERIFICATION_ERROR_KEY)
-  return getSafeManagedVerificationErrorMessage(error) ?? fallbackMessage
+/** Renders controlled failures using the active UI translator. */
+export function presentNewApiManagedVerificationFailure(
+  failure: NewApiManagedVerificationFailure,
+  t: TFunction,
+) {
+  if (failure.kind === "window-unavailable")
+    return t("messages:background.windowCreationUnavailable")
+  if (failure.kind === "message") return failure.message
+  return t(DEFAULT_MANAGED_VERIFICATION_ERROR_KEY)
+}
+
+/** Resolves an immediate notification without retaining localized fallback copy. */
+export function getNewApiManagedVerificationErrorMessage(error: unknown) {
+  return presentNewApiManagedVerificationFailure(
+    getNewApiManagedVerificationFailure(error),
+    t,
+  )
 }

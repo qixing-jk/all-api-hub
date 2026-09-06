@@ -48,7 +48,10 @@ import {
   getApiCheckActionSourceKind,
   getApiCheckSourceKind,
 } from "./apiCheckModalAnalytics"
-import type { ProbeItemState } from "./apiCheckModalTypes"
+import type {
+  ApiCheckValidationError,
+  ProbeItemState,
+} from "./apiCheckModalTypes"
 import { useApiCheckBaseUrlHistory } from "./useApiCheckBaseUrlHistory"
 import { useApiCheckModalShell } from "./useApiCheckModalShell"
 import { useApiCheckModelDiscovery } from "./useApiCheckModelDiscovery"
@@ -165,7 +168,14 @@ export function useApiCheckModalViewModel() {
   const skipNextSourceTextExtractionRef = useRef<string | null>(null)
 
   const [isSavingProfile, setIsSavingProfile] = useState(false)
-  const [validationError, setValidationError] = useState<string | null>(null)
+  const [validationFailure, setValidationError] =
+    useState<ApiCheckValidationError | null>(null)
+  const validationError =
+    validationFailure === "missing-credentials"
+      ? t("webAiApiCheck:modal.errors.missingBaseUrlOrKey")
+      : validationFailure === "missing-model"
+        ? t("aiApiVerification:verifyDialog.requiresModelId")
+        : null
   const hasInitializedApiTypeRef = useRef(false)
 
   const { popoverPortalContainer, refs: modalShellRefs } =
@@ -507,7 +517,7 @@ export function useApiCheckModalViewModel() {
     const trimmedApiKey = apiKey.trim()
 
     if (!trimmedBaseUrl || !trimmedApiKey) {
-      setValidationError(t("webAiApiCheck:modal.errors.missingBaseUrlOrKey"))
+      setValidationError("missing-credentials")
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
         insights: buildApiCheckAnalyticsInsights(apiType, trigger),

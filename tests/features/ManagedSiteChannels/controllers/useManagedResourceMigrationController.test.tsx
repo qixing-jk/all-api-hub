@@ -185,7 +185,7 @@ const buildOptions = (overrides: Record<string, unknown> = {}) => {
     refresh: vi.fn(async () => true),
     onClose: vi.fn(),
     t,
-    getSiteLabel: (siteType: ManagedSiteType) => siteType,
+    getSiteLabel: (siteType: ManagedSiteType): string => siteType,
     ...overrides,
   }
 }

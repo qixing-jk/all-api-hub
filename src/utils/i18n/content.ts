@@ -9,7 +9,6 @@ import { resolveInitialAppLanguage } from "./language"
 import { loadAppLanguageResources } from "./resources"
 
 let contentI18nReadyPromise: Promise<void> | null = null
-let contentI18nInitialized = false
 
 /**
  * Initializes i18n for content scripts without reading host-page storage.
@@ -33,14 +32,13 @@ async function initContentI18n() {
   })
 
   await i18n.changeLanguage(initialLanguage)
-  contentI18nInitialized = true
 }
 
 /**
  * Waits for content i18n initialization and refreshes the current preference.
  */
 export async function ensureContentI18nReady() {
-  const shouldRefreshLanguage = contentI18nInitialized
+  const shouldRefreshLanguage = contentI18nReadyPromise !== null
 
   if (!contentI18nReadyPromise) {
     contentI18nReadyPromise = initContentI18n().catch((error) => {

@@ -1,3 +1,4 @@
+import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { VerifyCliSupportDialog } from "~/components/dialogs/VerifyCliSupportDialog"
@@ -15,6 +16,7 @@ import {
 } from "~/services/productAnalytics/contracts"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
+import { createResourceTestI18n } from "~~/tests/test-utils/i18n"
 import {
   act,
   fireEvent,
@@ -597,6 +599,58 @@ describe("VerifyCliSupportDialog", () => {
         "cliSupportVerification:verifyDialog.modelsFetchFailed",
       ),
     ).not.toBeInTheDocument()
+  })
+
+  it("retranslates model-discovery fallback without fetching models again", async () => {
+    const i18n = await createResourceTestI18n({
+      en: {
+        cliSupportVerification: (
+          await import("~/locales/en/cliSupportVerification.json")
+        ).default,
+      },
+      "zh-CN": {
+        cliSupportVerification: (
+          await import("~/locales/zh-CN/cliSupportVerification.json")
+        ).default,
+      },
+    })
+    mockFetchApiCredentialModelIds.mockRejectedValueOnce(new Error())
+    const profile = {
+      id: "language-profile",
+      name: "Profile",
+      apiType: "openai-compatible" as const,
+      baseUrl: "https://example.invalid",
+      apiKey: "sk-test",
+      tagIds: [],
+      notes: "",
+      createdAt: 1,
+      updatedAt: 1,
+    }
+    render(
+      <I18nextProvider i18n={i18n}>
+        <VerifyCliSupportDialog
+          isOpen
+          onClose={() => {}}
+          profile={profile}
+          initialModelId="draft-model"
+        />
+      </I18nextProvider>,
+    )
+    expect(
+      await screen.findByText(
+        i18n.t("cliSupportVerification:verifyDialog.modelsFetchFailed"),
+      ),
+    ).toBeVisible()
+    const calls = mockFetchApiCredentialModelIds.mock.calls.length
+    await act(async () => {
+      await i18n.changeLanguage("zh-CN")
+    })
+    expect(
+      screen.getByText(
+        i18n.t("cliSupportVerification:verifyDialog.modelsFetchFailed"),
+      ),
+    ).toBeVisible()
+    expect(mockFetchApiCredentialModelIds).toHaveBeenCalledTimes(calls)
   })
 
   it("renders tool items and a single model input before running", async () => {

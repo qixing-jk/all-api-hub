@@ -22,6 +22,7 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
+import { testI18n } from "~~/tests/test-utils/i18n"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const {
@@ -761,6 +762,26 @@ describe("BatchVerifyModelsDialog", () => {
     ).toBeInTheDocument()
     expect(mockRunApiVerificationProbe).toHaveBeenCalledTimes(1)
     expect(mockUpsertLatestSummary).not.toHaveBeenCalled()
+    testI18n.addResourceBundle(
+      "zh-CN",
+      "modelList",
+      (await import("~/locales/zh-CN/modelList.json")).default,
+    )
+    try {
+      await act(async () => {
+        await testI18n.changeLanguage("zh-CN")
+      })
+      expect(
+        screen.getByText(testI18n.t("modelList:batchVerify.messages.stopped")),
+      ).toBeVisible()
+      expect(mockRunApiVerificationProbe).toHaveBeenCalledTimes(1)
+      expect(mockUpsertLatestSummary).not.toHaveBeenCalled()
+    } finally {
+      await act(async () => {
+        await testI18n.changeLanguage("en")
+      })
+      testI18n.removeResourceBundle("zh-CN", "modelList")
+    }
   })
 
   it("aborts the running probe request when the batch is stopped", async () => {
@@ -1488,6 +1509,38 @@ describe("BatchVerifyModelsDialog", () => {
     expect(
       await screen.findByText("modelList:batchVerify.messages.notSelected"),
     ).toBeInTheDocument()
+    testI18n.addResourceBundle(
+      "zh-CN",
+      "modelList",
+      (await import("~/locales/zh-CN/modelList.json")).default,
+    )
+    try {
+      await act(async () => {
+        await testI18n.changeLanguage("zh-CN")
+      })
+      expect(
+        screen.getByText(
+          testI18n.t("modelList:batchVerify.messages.notSelected"),
+        ),
+      ).toBeVisible()
+      expect(
+        screen.getByText(
+          testI18n.t("modelList:batchVerify.messages.probeSummary", {
+            count: 1,
+            pass: 1,
+            fail: 0,
+            unsupported: 0,
+          }),
+        ),
+      ).toBeVisible()
+      expect(mockRunApiVerificationProbe).toHaveBeenCalledTimes(1)
+      expect(mockUpsertLatestSummary).toHaveBeenCalledTimes(1)
+    } finally {
+      await act(async () => {
+        await testI18n.changeLanguage("en")
+      })
+      testI18n.removeResourceBundle("zh-CN", "modelList")
+    }
   })
 
   it("requires at least one selected model before starting", async () => {

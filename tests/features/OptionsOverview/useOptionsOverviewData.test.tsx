@@ -1,3 +1,6 @@
+import { renderHook as rtlRenderHook } from "@testing-library/react"
+import type { ReactNode } from "react"
+import { I18nextProvider } from "react-i18next"
 import { describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
@@ -15,6 +18,7 @@ import { SiteHealthStatus } from "~/types"
 import { accountStorageTestSurface as accountStorage } from "~~/tests/test-utils/accountStorageTestSurface"
 import { buildAccountStats } from "~~/tests/test-utils/accountTodayStats"
 import { buildCheckInConfig } from "~~/tests/test-utils/factories"
+import { createResourceTestI18n } from "~~/tests/test-utils/i18n"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 
 const { loggerErrorMock } = vi.hoisted(() => ({
@@ -139,6 +143,38 @@ const usageStore = {
 }
 
 describe("useOptionsOverviewData", () => {
+  it("retranslates partial-load feedback without reloading local stores or replacing the view model", async () => {
+    mockSuccessfulLoad()
+    vi.mocked(accountStorage.getAllAccounts).mockRejectedValueOnce(
+      new Error("offline"),
+    )
+    const i18n = await createResourceTestI18n({
+      en: {
+        optionsOverview: (await import("~/locales/en/optionsOverview.json"))
+          .default,
+      },
+      "zh-CN": {
+        optionsOverview: (await import("~/locales/zh-CN/optionsOverview.json"))
+          .default,
+      },
+    })
+    const { result } = rtlRenderHook(() => useOptionsOverviewData(), {
+      wrapper: ({ children }: { children: ReactNode }) => (
+        <I18nextProvider i18n={i18n}>{children}</I18nextProvider>
+      ),
+    })
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    const viewModel = result.current.viewModel
+    const calls = vi.mocked(accountStorage.getAllAccounts).mock.calls.length
+    await act(async () => {
+      await i18n.changeLanguage("zh-CN")
+    })
+    expect(result.current.error).toBe(
+      i18n.t("optionsOverview:states.loadDetailUnavailable"),
+    )
+    expect(result.current.viewModel).toBe(viewModel)
+    expect(accountStorage.getAllAccounts).toHaveBeenCalledTimes(calls)
+  })
   it("loads the overview view model from local stores and reloads on demand", async () => {
     mockSuccessfulLoad()
 

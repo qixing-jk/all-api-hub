@@ -142,7 +142,13 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
   const [selectedRuntimeKeyId, setSelectedRuntimeKeyId] = useState<string>("")
   const [profileModelOptions, setProfileModelOptions] = useState<string[]>([])
   const [isLoadingModels, setIsLoadingModels] = useState(false)
-  const [fetchModelsError, setFetchModelsError] = useState<string | null>(null)
+  const [fetchModelsDiagnostic, setFetchModelsDiagnostic] = useState<
+    string | null
+  >(null)
+  const fetchModelsError =
+    fetchModelsDiagnostic === null
+      ? null
+      : fetchModelsDiagnostic || t("verifyDialog.modelsFetchFailed")
   const [tools, setTools] = useState<ToolItemState[]>([])
   const shouldStopRef = useRef(false)
   const activeAbortControllerRef = useRef<AbortController | null>(null)
@@ -251,7 +257,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
   const loadProfileModels = useCallback(async () => {
     if (!profile) {
       setProfileModelOptions([])
-      setFetchModelsError(null)
+      setFetchModelsDiagnostic(null)
       setIsLoadingModels(false)
       return
     }
@@ -260,7 +266,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
     fetchModelsAbortControllerRef.current?.abort()
     const abortController = new AbortController()
     fetchModelsAbortControllerRef.current = abortController
-    setFetchModelsError(null)
+    setFetchModelsDiagnostic(null)
     setIsLoadingModels(true)
 
     try {
@@ -283,15 +289,16 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
         return
       }
 
-      const message =
-        toSanitizedErrorSummary(error, [profile.apiKey, profile.baseUrl]) ||
-        t("verifyDialog.modelsFetchFailed")
+      const message = toSanitizedErrorSummary(error, [
+        profile.apiKey,
+        profile.baseUrl,
+      ])
 
       logger.error("Failed to fetch profile models", { message })
 
       if (fetchModelsRequestIdRef.current !== requestId) return
       setProfileModelOptions([])
-      setFetchModelsError(message)
+      setFetchModelsDiagnostic(message)
     } finally {
       if (fetchModelsAbortControllerRef.current === abortController) {
         fetchModelsAbortControllerRef.current = null
@@ -300,7 +307,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
         setIsLoadingModels(false)
       }
     }
-  }, [profile, t])
+  }, [profile])
 
   const runTool = async (
     toolId: (typeof CLI_TOOL_IDS)[number],
@@ -635,7 +642,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
     if (!isOpen) return
     setTools(buildInitialToolState())
     setProfileModelOptions([])
-    setFetchModelsError(null)
+    setFetchModelsDiagnostic(null)
     if (isProfileSource) {
       setAccountRuntimeKeys([])
       setSelectedRuntimeKeyId("")

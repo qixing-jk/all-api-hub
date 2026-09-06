@@ -11,6 +11,7 @@ import {
   isAccountSiteType,
   SITE_TYPES,
   type AccountSiteType,
+  type ManagedSiteType,
 } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { startAccountDialogAnalyticsAction } from "~/features/AccountManagement/components/AccountDialog/analytics"
@@ -94,6 +95,7 @@ import { getManagedSiteServiceForType } from "~/services/managedSites/managedSit
 import {
   getManagedSiteConfigMissingMessage,
   getManagedSiteLabel,
+  type ManagedSiteMessagesKey,
 } from "~/services/managedSites/utils/managedSite"
 import {
   ensurePermissionsDetailed,
@@ -342,8 +344,8 @@ interface UseAccountDialogProps {
 
 interface ManagedSiteConfigPromptState {
   isOpen: boolean
-  managedSiteLabel: string
-  missingMessage: string
+  siteType: ManagedSiteType
+  messagesKey: ManagedSiteMessagesKey
 }
 
 interface AihubmixPostSaveKeyPromptState {
@@ -374,7 +376,7 @@ export function useAccountDialog({
   onPostSaveAccountRefresh,
   onSuccess,
 }: UseAccountDialogProps) {
-  const { t } = useTranslation(["accountDialog", "settings", "messages"])
+  const { t, i18n } = useTranslation(["accountDialog", "settings", "messages"])
   const {
     warnOnDuplicateAccountAdd,
     managedSiteType,
@@ -451,12 +453,20 @@ export function useAccountDialog({
     existingUsername: null,
     existingUserId: null,
   })
-  const [managedSiteConfigPrompt, setManagedSiteConfigPrompt] =
-    useState<ManagedSiteConfigPromptState>({
-      isOpen: false,
-      managedSiteLabel: "",
-      missingMessage: "",
-    })
+  const [managedSiteConfigPromptState, setManagedSiteConfigPrompt] =
+    useState<ManagedSiteConfigPromptState | null>(null)
+  const managedSiteConfigPrompt = {
+    isOpen: managedSiteConfigPromptState?.isOpen ?? false,
+    managedSiteLabel: managedSiteConfigPromptState
+      ? getManagedSiteLabel(t, managedSiteConfigPromptState.siteType)
+      : "",
+    missingMessage: managedSiteConfigPromptState
+      ? getManagedSiteConfigMissingMessage(
+          t,
+          managedSiteConfigPromptState.messagesKey,
+        )
+      : "",
+  }
   const [aihubmixPostSaveKeyPrompt, setAihubmixPostSaveKeyPrompt] =
     useState<AihubmixPostSaveKeyPromptState>({
       isOpen: false,
@@ -1316,10 +1326,10 @@ export function useAccountDialog({
         }
       } catch (error) {
         logger.error("Failed to load account data", { error, accountId })
-        toast.error(t("messages.loadFailed"))
+        toast.error(i18n.t("accountDialog:messages.loadFailed"))
       }
     },
-    [enterForm, t],
+    [enterForm, i18n],
   )
 
   const checkCurrentTab = useCallback(async () => {
@@ -1539,7 +1549,7 @@ export function useAccountDialog({
     completePendingAihubmixPostSaveSuccess()
     clearPostSaveWorkflowState()
     setManagedSiteConfigPrompt((prev) =>
-      prev.isOpen ? { ...prev, isOpen: false } : prev,
+      prev?.isOpen ? { ...prev, isOpen: false } : prev,
     )
     targetAccountRef.current = null
     onClose()
@@ -1764,7 +1774,7 @@ export function useAccountDialog({
 
   const handleManagedSiteConfigPromptClose = useCallback(() => {
     setManagedSiteConfigPrompt((prev) =>
-      prev.isOpen ? { ...prev, isOpen: false } : prev,
+      prev?.isOpen ? { ...prev, isOpen: false } : prev,
     )
   }, [])
 
@@ -1796,15 +1806,12 @@ export function useAccountDialog({
 
     setManagedSiteConfigPrompt({
       isOpen: true,
-      managedSiteLabel: getManagedSiteLabel(t, managedSiteType),
-      missingMessage: getManagedSiteConfigMissingMessage(
-        t,
-        service.messagesKey,
-      ),
+      siteType: managedSiteType,
+      messagesKey: service.messagesKey,
     })
 
     return false
-  }, [managedSiteType, t])
+  }, [managedSiteType])
 
   /**
    * Import Sub2API dashboard session credentials (including refresh_token) into the form.

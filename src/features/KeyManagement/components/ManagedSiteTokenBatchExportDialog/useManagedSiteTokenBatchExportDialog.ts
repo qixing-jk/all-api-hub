@@ -155,7 +155,11 @@ export function useManagedSiteTokenBatchExportDialog({
   const [previewLoadOrigin, setPreviewLoadOrigin] =
     useState<PreviewLoadOrigin>(null)
   const [previewError, setPreviewError] = useState<string | null>(null)
-  const [executionError, setExecutionError] = useState<string | null>(null)
+  const [executionFailure, setExecutionError] = useState<
+    | { kind: "target-changed" }
+    | { kind: "verification" | "upstream"; message: string }
+    | null
+  >(null)
   const [isTargetChanged, setIsTargetChanged] = useState(false)
   const [isConfirmOpen, setIsConfirmOpen] = useState(false)
   const [isRunning, setIsRunning] = useState(false)
@@ -630,14 +634,10 @@ export function useManagedSiteTokenBatchExportDialog({
       if (!isActive()) return
       setVerifyingItemId(null)
       if (failureMessages.length > 0) {
-        setExecutionError(
-          t(
-            "keyManagement:batchManagedSiteExport.messages.verificationFailed",
-            {
-              error: failureMessages.join("; "),
-            },
-          ),
-        )
+        setExecutionError({
+          kind: "verification",
+          message: failureMessages.join("; "),
+        })
       }
     }
 
@@ -646,11 +646,10 @@ export function useManagedSiteTokenBatchExportDialog({
     } catch (error) {
       if (!isActive()) return
       setVerifyingItemId(null)
-      setExecutionError(
-        t("keyManagement:batchManagedSiteExport.messages.verificationFailed", {
-          error: getErrorMessage(error),
-        }),
-      )
+      setExecutionError({
+        kind: "verification",
+        message: getErrorMessage(error),
+      })
     }
   }
 
@@ -805,8 +804,8 @@ export function useManagedSiteTokenBatchExportDialog({
       setIsTargetChanged(targetChanged)
       setExecutionError(
         targetChanged
-          ? t("keyManagement:batchManagedSiteExport.messages.targetChanged")
-          : getErrorMessage(error),
+          ? { kind: "target-changed" }
+          : { kind: "upstream", message: getErrorMessage(error) },
       )
       if (retryBaselineRef.current) {
         setExecutionResult(retryBaselineRef.current)
@@ -843,7 +842,15 @@ export function useManagedSiteTokenBatchExportDialog({
     selectedIds,
     modelOptions,
     previewError,
-    executionError,
+    executionError:
+      executionFailure?.kind === "target-changed"
+        ? t("keyManagement:batchManagedSiteExport.messages.targetChanged")
+        : executionFailure?.kind === "verification"
+          ? t(
+              "keyManagement:batchManagedSiteExport.messages.verificationFailed",
+              { error: executionFailure.message },
+            )
+          : executionFailure?.message ?? null,
     isTargetChanged,
     isLoadingPreview,
     isManualPreviewRefresh: previewLoadOrigin === PREVIEW_LOAD_ORIGINS.MANUAL,

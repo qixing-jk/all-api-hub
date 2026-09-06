@@ -196,7 +196,7 @@ describe("loadNewApiChannelKeyWithVerification", () => {
       label: "Channel A",
       config: BASE_PARAMS.config,
       initialSessionResult: undefined,
-      initialFailureMessage: "messages:background.windowCreationUnavailable",
+      initialFailure: { kind: "window-unavailable" },
       onVerified: expect.any(Function),
     })
     expect(setKey).not.toHaveBeenCalled()

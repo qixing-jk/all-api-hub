@@ -124,7 +124,9 @@ export function useRepairMissingKeysJob({
   const [progress, setProgress] = useState<AccountKeyRepairProgress | null>(
     null,
   )
-  const [error, setError] = useState<string>("")
+  const [failure, setFailure] = useState<"start" | "cancel" | "load" | null>(
+    null,
+  )
   const [isStarting, setIsStarting] = useState(false)
   const [isCancelling, setIsCancelling] = useState(false)
   const startedAnalyticsJobIdRef = useRef<string | null>(null)
@@ -157,7 +159,7 @@ export function useRepairMissingKeysJob({
     startRequestIdRef.current = requestId
 
     setIsStarting(true)
-    setError("")
+    setFailure(null)
     try {
       const response = await sendAccountKeyRepairMessage(
         AccountKeyRepairMessageTypes.Start,
@@ -189,7 +191,7 @@ export function useRepairMissingKeysJob({
         ),
       })
       if (isDialogOpenRef.current && startRequestIdRef.current === requestId) {
-        setError(t("keyManagement:repairMissingKeys.messages.startFailed"))
+        setFailure("start")
       }
     } catch {
       void trackProductAnalyticsActionCompleted({
@@ -202,7 +204,7 @@ export function useRepairMissingKeysJob({
         ),
       })
       if (isDialogOpenRef.current && startRequestIdRef.current === requestId) {
-        setError(t("keyManagement:repairMissingKeys.messages.startFailed"))
+        setFailure("start")
       }
     } finally {
       if (startRequestIdRef.current === requestId) {
@@ -212,7 +214,7 @@ export function useRepairMissingKeysJob({
         }
       }
     }
-  }, [renameAutoTemplateTokens, t])
+  }, [renameAutoTemplateTokens])
 
   const handleCancelAudit = useCallback(async () => {
     if (cancelInFlightRef.current) {
@@ -222,7 +224,7 @@ export function useRepairMissingKeysJob({
     cancelInFlightRef.current = true
     invalidatePendingStart()
     setIsCancelling(true)
-    setError("")
+    setFailure(null)
     try {
       const response = await sendAccountKeyRepairMessage(
         AccountKeyRepairMessageTypes.Cancel,
@@ -244,11 +246,11 @@ export function useRepairMissingKeysJob({
       }
 
       if (isDialogOpenRef.current) {
-        setError(t("keyManagement:repairMissingKeys.messages.cancelFailed"))
+        setFailure("cancel")
       }
     } catch {
       if (isDialogOpenRef.current) {
-        setError(t("keyManagement:repairMissingKeys.messages.cancelFailed"))
+        setFailure("cancel")
       }
     } finally {
       cancelInFlightRef.current = false
@@ -256,7 +258,7 @@ export function useRepairMissingKeysJob({
         setIsCancelling(false)
       }
     }
-  }, [invalidatePendingStart, t])
+  }, [invalidatePendingStart])
 
   useEffect(() => {
     isDialogOpenRef.current = isOpen
@@ -305,7 +307,7 @@ export function useRepairMissingKeysJob({
     if (!isOpen) return
 
     let cancelled = false
-    setError("")
+    setFailure(null)
 
     void (async () => {
       try {
@@ -318,10 +320,10 @@ export function useRepairMissingKeysJob({
           return
         }
 
-        setError(t("keyManagement:repairMissingKeys.messages.loadFailed"))
+        setFailure("load")
       } catch {
         if (!cancelled) {
-          setError(t("keyManagement:repairMissingKeys.messages.loadFailed"))
+          setFailure("load")
         }
       }
     })()
@@ -329,7 +331,7 @@ export function useRepairMissingKeysJob({
     return () => {
       cancelled = true
     }
-  }, [isOpen, t])
+  }, [isOpen])
 
   useEffect(() => {
     if (!isOpen) {
@@ -371,7 +373,14 @@ export function useRepairMissingKeysJob({
   }, [progress])
 
   return {
-    error,
+    error:
+      failure === "start"
+        ? t("keyManagement:repairMissingKeys.messages.startFailed")
+        : failure === "cancel"
+          ? t("keyManagement:repairMissingKeys.messages.cancelFailed")
+          : failure === "load"
+            ? t("keyManagement:repairMissingKeys.messages.loadFailed")
+            : "",
     handleCancelAudit,
     handleStartAudit,
     isCancelling,

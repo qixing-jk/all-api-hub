@@ -83,7 +83,7 @@ export default function SiteAnnouncementsPage({
   routeParams,
   refreshKey,
 }: SiteAnnouncementsPageProps) {
-  const { t } = useTranslation(["siteAnnouncements", "common"])
+  const { t, i18n } = useTranslation(["siteAnnouncements", "common"])
   const { siteAnnouncementNotifications } = useUserPreferencesContext()
   const [records, setRecords] = useState<SiteAnnouncementRecord[]>([])
   const [status, setStatus] = useState<SiteAnnouncementSiteState[]>([])
@@ -95,14 +95,17 @@ export default function SiteAnnouncementsPage({
   const [expandedIds, setExpandedIds] = useState<Set<string>>(
     () => new Set(routeParams?.recordId ? [routeParams.recordId] : []),
   )
-  const [loadError, setLoadError] = useState<string | null>(null)
+  const [hasLoadError, setHasLoadError] = useState(false)
+  const loadError = hasLoadError
+    ? t("siteAnnouncements:messages.loadFailed")
+    : null
   const [enabledAccountCount, setEnabledAccountCount] = useState<number | null>(
     null,
   )
 
   const loadData = useCallback(async () => {
     setIsLoading(true)
-    setLoadError(null)
+    setHasLoadError(false)
     try {
       const [recordsResponse, statusResponse, nextEnabledAccountCount] =
         await Promise.all([
@@ -119,11 +122,11 @@ export default function SiteAnnouncementsPage({
           success: false,
           message: getRuntimeMessageFailureMessage(
             recordsResponse,
-            t("messages.loadFailed"),
+            i18n.t("siteAnnouncements:messages.loadFailed"),
           ),
-          errorFallback: t("messages.loadFailed"),
+          errorFallback: i18n.t("siteAnnouncements:messages.loadFailed"),
         })
-        setLoadError(t("messages.loadFailed"))
+        setHasLoadError(true)
         return
       }
 
@@ -132,27 +135,27 @@ export default function SiteAnnouncementsPage({
           success: false,
           message: getRuntimeMessageFailureMessage(
             statusResponse,
-            t("messages.loadFailed"),
+            i18n.t("siteAnnouncements:messages.loadFailed"),
           ),
-          errorFallback: t("messages.loadFailed"),
+          errorFallback: i18n.t("siteAnnouncements:messages.loadFailed"),
         })
-        setLoadError(t("messages.loadFailed"))
+        setHasLoadError(true)
         return
       }
 
       setRecords(recordsResponse.data)
       setStatus(statusResponse.data)
     } catch (error) {
-      setLoadError(t("messages.loadFailed"))
+      setHasLoadError(true)
       showResultToast({
         success: false,
         message: getErrorMessage(error),
-        errorFallback: t("messages.loadFailed"),
+        errorFallback: i18n.t("siteAnnouncements:messages.loadFailed"),
       })
     } finally {
       setIsLoading(false)
     }
-  }, [t])
+  }, [i18n])
 
   useEffect(() => {
     void loadData()

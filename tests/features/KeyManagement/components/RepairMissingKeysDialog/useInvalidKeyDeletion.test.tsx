@@ -1,9 +1,12 @@
 import { act, renderHook, waitFor } from "@testing-library/react"
+import type { TFunction } from "i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { getInvalidResourceKey } from "~/features/KeyManagement/components/RepairMissingKeysDialog/repairMissingKeysDialogHelpers"
 import { useInvalidKeyDeletion } from "~/features/KeyManagement/components/RepairMissingKeysDialog/useInvalidKeyDeletion"
+import enKeyManagement from "~/locales/en/keyManagement.json"
+import zhKeyManagement from "~/locales/zh-CN/keyManagement.json"
 import {
   AccountKeyRepairMessageTypes,
   sendAccountKeyRepairMessage,
@@ -18,7 +21,7 @@ import {
   ACCOUNT_KEY_REPAIR_OUTCOMES,
   ACCOUNT_KEY_REPAIR_PROGRESS_SCHEMA_VERSION,
 } from "~/types/accountKeyAutoProvisioning"
-import { testI18n } from "~~/tests/test-utils/i18n"
+import { createResourceTestI18n, testI18n } from "~~/tests/test-utils/i18n"
 
 vi.mock("~/services/accounts/accountKeyAutoProvisioning/messaging", () => ({
   AccountKeyRepairMessageTypes: {
@@ -106,6 +109,11 @@ function createProgress(
   }
 }
 
+const languageI18n = await createResourceTestI18n({
+  en: { keyManagement: enKeyManagement },
+  "zh-CN": { keyManagement: zhKeyManagement },
+})
+
 describe("useInvalidKeyDeletion", () => {
   const appliedResource = createInvalidResource("applied")
   const rejectedResource = createInvalidResource("rejected")
@@ -113,6 +121,45 @@ describe("useInvalidKeyDeletion", () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+  })
+
+  it("retranslates uncertain deletion counts without replaying deletion or dropping selection", async () => {
+    sendAccountKeyRepairMessageMock.mockResolvedValue({
+      success: true,
+      data: {
+        results: [
+          {
+            resource: uncertainResource,
+            outcome: ACCOUNT_KEY_REPAIR_MUTATION_OUTCOMES.Uncertain,
+            failure: { code: "mutation_state_uncertain" },
+            finishedAt: 1,
+          },
+        ],
+      },
+    })
+    const options = {
+      invalidResources: [uncertainResource],
+      setProgress: vi.fn(),
+    }
+    const { result, rerender } = renderHook(
+      ({ t }: { t: TFunction }) => useInvalidKeyDeletion({ ...options, t }),
+      { initialProps: { t: languageI18n.getFixedT("en") } },
+    )
+    act(() =>
+      result.current.setSelectedInvalidResourceKeys(
+        new Set([getInvalidResourceKey(uncertainResource)]),
+      ),
+    )
+    await act(async () => result.current.handleDeleteInvalidResources())
+    rerender({ t: languageI18n.getFixedT("zh-CN") })
+    expect(result.current.deleteResultMessage).toBe(
+      languageI18n.getFixedT("zh-CN")(
+        "keyManagement:repairMissingKeys.invalidKeys.deleteNeedsAttention",
+        { applied: 0, rejected: 0, uncertain: 1 },
+      ),
+    )
+    expect(result.current.selectedInvalidResources).toEqual([uncertainResource])
+    expect(sendAccountKeyRepairMessageMock).toHaveBeenCalledTimes(1)
   })
 
   it("removes only applied rows without replaying authoritative counters", async () => {

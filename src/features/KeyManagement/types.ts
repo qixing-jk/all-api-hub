@@ -19,6 +19,7 @@ export type ServiceCredentialState = {
   status: KeyManagementLoadStatus
   credential?: AccountServiceCredential
   errorMessage?: string
+  errorKind?: "rotation"
   isRotating?: boolean
 }
 

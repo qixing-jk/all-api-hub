@@ -1,3 +1,4 @@
+import type { TFunction } from "i18next"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
@@ -44,6 +45,30 @@ const logger = createLogger("ModelKeyDialogHook")
 const POST_CREATE_TOKEN_REFRESH_ATTEMPTS = 5
 const POST_CREATE_TOKEN_REFRESH_INTERVAL_MS = 1_000
 
+type CreateFailure =
+  | { kind: "unsupported" | "group-required" }
+  | { kind: "no-compatible-key"; modelId: string }
+  | { kind: "failed"; message: string }
+
+/** Translates create outcomes while preserving the attempted model context. */
+function presentCreateFailure(failure: CreateFailure | null, t: TFunction) {
+  if (!failure) return null
+  switch (failure.kind) {
+    case "unsupported":
+      return t("modelList:keyDialog.createNotSupported")
+    case "group-required":
+      return t("modelList:keyDialog.createGroupRequired")
+    case "no-compatible-key":
+      return t("modelList:keyDialog.noCompatibleFoundAfterCreate", {
+        modelId: failure.modelId,
+      })
+    case "failed":
+      return t("modelList:keyDialog.createFailed", {
+        error: failure.message || t("messages:errors.unknown"),
+      })
+  }
+}
+
 export type ModelKeyDialogCreateResult = "success" | "failure" | "skipped"
 
 /**
@@ -83,14 +108,14 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
 
   const [runtimeKeys, setRuntimeKeys] = useState<AccountRuntimeKey[]>([])
   const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [loadError, setError] = useState<string | null>(null)
 
   const [selectedRuntimeKeyId, setSelectedRuntimeKeyId] = useState<
     string | null
   >(null)
 
   const [isCreating, setIsCreating] = useState(false)
-  const [createError, setCreateError] = useState<string | null>(null)
+  const [createFailure, setCreateError] = useState<CreateFailure | null>(null)
   const [oneTimeToken, setOneTimeToken] = useState<ApiToken | null>(null)
   const [oneTimeSecret, setOneTimeSecret] =
     useState<CreatedRuntimeSecret | null>(null)
@@ -145,10 +170,7 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
       return true
     } catch (error) {
       if (fetchRequestIdRef.current !== requestId) return false
-      const errorMessage = getRuntimeKeyInventoryErrorMessage(
-        error,
-        t("messages:errors.unknown"),
-      )
+      const errorMessage = getRuntimeKeyInventoryErrorMessage(error, "")
       logger.error("Failed to load runtime-key list for model key dialog", {
         message: errorMessage,
         accountId: account.id,
@@ -156,14 +178,14 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
         siteType: account.siteType,
         ...getInvalidTokenPayloadLogContext(error),
       })
-      setError(t("modelList:keyDialog.loadFailed", { error: errorMessage }))
+      setError(errorMessage)
       return false
     } finally {
       if (fetchRequestIdRef.current === requestId) {
         setIsLoading(false)
       }
     }
-  }, [account, canLoadRuntimeKeys, t])
+  }, [account, canLoadRuntimeKeys])
 
   const modelContext = useMemo(
     () => ({ id: modelId, enableGroups: modelEnableGroups }),
@@ -280,7 +302,7 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
       if (!account) return "skipped" as const
 
       if (!canCreateToken) {
-        setCreateError(t("modelList:keyDialog.createNotSupported"))
+        setCreateError({ kind: "unsupported" })
         return "skipped" as const
       }
 
@@ -319,11 +341,7 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
             toast.success(t("modelList:keyDialog.createSuccess"))
             return "success" as const
           } else {
-            setCreateError(
-              t("modelList:keyDialog.noCompatibleFoundAfterCreate", {
-                modelId,
-              }),
-            )
+            setCreateError({ kind: "no-compatible-key", modelId })
             return "failure" as const
           }
         }
@@ -333,19 +351,14 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
         setRuntimeKeys(refreshedRuntimeKeys)
 
         if (refreshedCompatible.length === 0) {
-          setCreateError(
-            t("modelList:keyDialog.noCompatibleFoundAfterCreate", { modelId }),
-          )
+          setCreateError({ kind: "no-compatible-key", modelId })
           return "failure" as const
         }
 
         toast.success(t("modelList:keyDialog.createSuccess"))
         return "success" as const
       } catch (error) {
-        const errorMessage = getRuntimeKeyInventoryErrorMessage(
-          error,
-          t("messages:errors.unknown"),
-        )
+        const errorMessage = getRuntimeKeyInventoryErrorMessage(error, "")
         logger.error(
           "Failed to refresh runtime-key list after create (model key dialog)",
           {
@@ -356,9 +369,7 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
             ...getInvalidTokenPayloadLogContext(error),
           },
         )
-        setCreateError(
-          t("modelList:keyDialog.createFailed", { error: errorMessage }),
-        )
+        setCreateError({ kind: "failed", message: errorMessage })
         return "failure" as const
       } finally {
         setIsLoading(false)
@@ -379,7 +390,7 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
       if (!account) return "skipped" as const
 
       if (!canCreateToken) {
-        setCreateError(t("modelList:keyDialog.createNotSupported"))
+        setCreateError({ kind: "unsupported" })
         return "skipped" as const
       }
 
@@ -387,7 +398,7 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
 
       const normalizedGroup = typeof group === "string" ? group.trim() : ""
       if (!normalizedGroup) {
-        setCreateError(t("modelList:keyDialog.createGroupRequired"))
+        setCreateError({ kind: "group-required" })
         return "skipped" as const
       }
 
@@ -417,29 +428,32 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
           baseUrl: account.baseUrl,
           siteType: account.siteType,
         })
-        setCreateError(
-          t("modelList:keyDialog.createFailed", { error: errorMessage }),
-        )
+        setCreateError({ kind: "failed", message: errorMessage })
         return "failure" as const
       } finally {
         setIsCreating(false)
       }
     },
-    [account, canCreateToken, isCreating, refreshRuntimeKeysAfterCreate, t],
+    [account, canCreateToken, isCreating, refreshRuntimeKeysAfterCreate],
   )
 
   return {
     runtimeKeys,
     compatibleRuntimeKeys,
     isLoading,
-    error,
+    error:
+      loadError !== null
+        ? t("modelList:keyDialog.loadFailed", {
+            error: loadError || t("messages:errors.unknown"),
+          })
+        : null,
     selectedRuntimeKeyId,
     setSelectedRuntimeKeyId,
     selectedRuntimeKey,
     canCreateToken,
     ineligibleDescription,
     isCreating,
-    createError,
+    createError: presentCreateFailure(createFailure, t),
     oneTimeToken,
     oneTimeSecret,
     fetchRuntimeKeys,

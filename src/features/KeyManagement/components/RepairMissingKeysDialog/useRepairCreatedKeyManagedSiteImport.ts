@@ -52,8 +52,43 @@ interface UseRepairCreatedKeyManagedSiteImportParams {
 
 interface RepairCreatedImportFeedback {
   action?: "configure-managed-site" | "use-regular-import"
-  description: string
+  reason:
+    | "config-missing"
+    | "nothing-pending"
+    | "unavailable"
+    | "failed"
+    | "configuration-open-failed"
+    | "receipt-failed"
   variant: "destructive" | "info" | "warning"
+}
+
+/** Translates only feature-owned import feedback; receipts remain language independent. */
+function presentImportFeedback(
+  reason: RepairCreatedImportFeedback["reason"],
+  t: TFunction,
+) {
+  switch (reason) {
+    case "config-missing":
+      return t(
+        "keyManagement:repairMissingKeys.managedSiteImport.configMissing",
+      )
+    case "nothing-pending":
+      return t(
+        "keyManagement:repairMissingKeys.managedSiteImport.nothingPending",
+      )
+    case "unavailable":
+      return t("keyManagement:repairMissingKeys.managedSiteImport.unavailable")
+    case "failed":
+      return t("keyManagement:repairMissingKeys.managedSiteImport.failed")
+    case "configuration-open-failed":
+      return t(
+        "keyManagement:repairMissingKeys.managedSiteImport.configurationOpenFailed",
+      )
+    case "receipt-failed":
+      return t(
+        "keyManagement:repairMissingKeys.managedSiteImport.receiptFailed",
+      )
+  }
 }
 
 const countCreatedReferences = (
@@ -221,9 +256,7 @@ export function useRepairCreatedKeyManagedSiteImport({
         if (!runtimeConfig) {
           setImportFeedback({
             action: "configure-managed-site",
-            description: t(
-              "keyManagement:repairMissingKeys.managedSiteImport.configMissing",
-            ),
+            reason: "config-missing",
             variant: "warning",
           })
           return
@@ -255,11 +288,7 @@ export function useRepairCreatedKeyManagedSiteImport({
               nothingPending && !includeCompletedReferences
                 ? "use-regular-import"
                 : undefined,
-            description: t(
-              nothingPending
-                ? "keyManagement:repairMissingKeys.managedSiteImport.nothingPending"
-                : "keyManagement:repairMissingKeys.managedSiteImport.unavailable",
-            ),
+            reason: nothingPending ? "nothing-pending" : "unavailable",
             variant: nothingPending ? "warning" : "destructive",
           })
           return
@@ -273,9 +302,7 @@ export function useRepairCreatedKeyManagedSiteImport({
         setIsBatchImportOpen(true)
       } catch {
         setImportFeedback({
-          description: t(
-            "keyManagement:repairMissingKeys.managedSiteImport.failed",
-          ),
+          reason: "failed",
           variant: "destructive",
         })
       } finally {
@@ -288,7 +315,6 @@ export function useRepairCreatedKeyManagedSiteImport({
       isCurrentSessionResult,
       isResolving,
       progress,
-      t,
     ],
   )
 
@@ -312,13 +338,11 @@ export function useRepairCreatedKeyManagedSiteImport({
       )
     } catch {
       setImportFeedback({
-        description: t(
-          "keyManagement:repairMissingKeys.managedSiteImport.configurationOpenFailed",
-        ),
+        reason: "configuration-open-failed",
         variant: "destructive",
       })
     }
-  }, [t])
+  }, [])
 
   const handleBatchImportCompleted = useCallback(
     (
@@ -346,14 +370,12 @@ export function useRepairCreatedKeyManagedSiteImport({
         })
         .catch(() => {
           setImportFeedback({
-            description: t(
-              "keyManagement:repairMissingKeys.managedSiteImport.receiptFailed",
-            ),
+            reason: "receipt-failed",
             variant: "destructive",
           })
         })
     },
-    [setProgress, t],
+    [setProgress],
   )
 
   useEffect(() => {
@@ -374,7 +396,13 @@ export function useRepairCreatedKeyManagedSiteImport({
   return {
     batchImportIntent,
     batchImportItems,
-    importFeedback,
+    importFeedback: importFeedback
+      ? {
+          action: importFeedback.action,
+          description: presentImportFeedback(importFeedback.reason, t),
+          variant: importFeedback.variant,
+        }
+      : null,
     isBatchImportOpen,
     isResolving,
     openBatchImport,

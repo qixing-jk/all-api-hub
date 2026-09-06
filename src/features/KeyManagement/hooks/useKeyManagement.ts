@@ -360,6 +360,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
     useState(false)
 
   const loadFailedMessage = t("keyManagement:messages.loadFailed")
+  // Used only for a notification at request completion, never for stored UI state.
   const loadFailedMessageRef = useRef(loadFailedMessage)
   loadFailedMessageRef.current = loadFailedMessage
 
@@ -914,7 +915,6 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
         if (!isLatestAccountRequest(accountId, requestEpoch)) return null
 
         if (!Array.isArray(tokens)) {
-          const errorMessage = loadFailedMessageRef.current
           const errorCategory = PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation
           tokenLoadErrorCategoriesRef.current[accountId] = errorCategory
           setTokenInventories((prev) => ({
@@ -922,13 +922,13 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
             [accountId]: {
               status: KEY_MANAGEMENT_LOAD_STATUSES.Error,
               tokens: prev[accountId]?.tokens ?? [],
-              errorMessage,
+              errorMessage: undefined,
               errorCategory,
               errorKind: undefined,
             },
           }))
           if (toastOnError) {
-            toast.error(errorMessage)
+            toast.error(loadFailedMessageRef.current)
           }
           return KEY_MANAGEMENT_LOAD_STATUSES.Error
         }
@@ -955,8 +955,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
         if (!isEpochActive(loadEpoch)) return null
         if (!isLatestAccountRequest(accountId, requestEpoch)) return null
 
-        const errorMessage =
-          getErrorMessage(error) || loadFailedMessageRef.current
+        const errorMessage = getErrorMessage(error) || undefined
         const errorCategory =
           resolveProductAnalyticsErrorCategoryFromError(error)
         tokenLoadErrorCategoriesRef.current[accountId] = errorCategory
@@ -976,6 +975,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
               ...credentialState,
               status: KEY_MANAGEMENT_LOAD_STATUSES.Error,
               errorMessage,
+              errorKind: undefined,
               isRotating: false,
             },
           }
@@ -991,7 +991,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
           },
         }))
         if (toastOnError) {
-          toast.error(errorMessage)
+          toast.error(errorMessage || loadFailedMessageRef.current)
         }
         return KEY_MANAGEMENT_LOAD_STATUSES.Error
       }
@@ -1606,11 +1606,22 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
 
     const serviceCredential = serviceCredentials[selectedAccount]
     if (serviceCredential?.status === KEY_MANAGEMENT_LOAD_STATUSES.Error) {
-      return serviceCredential.errorMessage ?? loadFailedMessage
+      return (
+        serviceCredential.errorMessage ??
+        (serviceCredential.errorKind === "rotation"
+          ? t("keyManagement:messages.serviceCredentialRotateFailed")
+          : loadFailedMessage)
+      )
     }
 
     return null
-  }, [loadFailedMessage, selectedAccount, serviceCredentials, tokenInventories])
+  }, [
+    loadFailedMessage,
+    selectedAccount,
+    serviceCredentials,
+    tokenInventories,
+    t,
+  ])
 
   const currentAccountUnsupportedKeyManagement = useMemo(() => {
     if (
@@ -1996,9 +2007,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
     } catch (error) {
       if (!isRotateRequestCurrent()) return
 
-      const errorMessage =
-        getErrorMessage(error) ||
-        t("keyManagement:messages.serviceCredentialRotateFailed")
+      const errorMessage = getErrorMessage(error) || undefined
       setServiceCredentials((prev) => ({
         ...prev,
         [account.id]: {
@@ -2007,10 +2016,14 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
           }),
           status: KEY_MANAGEMENT_LOAD_STATUSES.Error,
           errorMessage,
+          errorKind: "rotation",
           isRotating: false,
         },
       }))
-      toast.error(errorMessage)
+      toast.error(
+        errorMessage ||
+          t("keyManagement:messages.serviceCredentialRotateFailed"),
+      )
       logger.warn("Failed to rotate service credential", error)
     }
   }

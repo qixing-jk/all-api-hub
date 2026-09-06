@@ -130,10 +130,13 @@ export function getCheckInRedetectionFeedbackPresentation(
     return {
       tone: "destructive" as const,
       title:
-        feedback.message.trim() ||
-        t("messages.operationFailed", {
-          error: t("messages.checkInRedetectUnknown"),
-        }),
+        feedback.reason === "url-required"
+          ? t("messages.urlRequired")
+          : t("messages.operationFailed", {
+              error:
+                feedback.diagnostic.trim() ||
+                t("messages.checkInRedetectUnknown"),
+            }),
     }
   }
 

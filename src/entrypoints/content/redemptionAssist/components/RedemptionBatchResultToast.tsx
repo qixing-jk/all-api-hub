@@ -55,7 +55,9 @@ export const RedemptionBatchResultToast: React.FC<
   RedemptionBatchResultToastProps
 > = ({ results, onRetry, onClose }) => {
   const { t } = useTranslation("redemptionAssist")
-  const [items, setItems] = useState<RedemptionBatchResultItem[]>(() => results)
+  const [items, setItems] = useState<
+    Array<RedemptionBatchResultItem & { genericRetryFailure?: boolean }>
+  >(() => results)
   const [retryingCode, setRetryingCode] = useState<string | null>(null)
 
   const summary = useMemo(() => {
@@ -104,7 +106,7 @@ export const RedemptionBatchResultToast: React.FC<
           ? error.message
           : typeof error === "string"
             ? error
-            : t("common:status.error")
+            : ""
       setItems((prev) =>
         prev.map((item) =>
           item.code === code
@@ -113,6 +115,8 @@ export const RedemptionBatchResultToast: React.FC<
                 success: false,
                 errorMessage,
                 message: errorMessage,
+                genericRetryFailure:
+                  !(error instanceof Error) && typeof error !== "string",
               }
             : item,
         ),
@@ -191,7 +195,9 @@ export const RedemptionBatchResultToast: React.FC<
                   )}
                 </div>
                 <div className="text-muted-foreground whitespace-pre-line">
-                  {item.message}
+                  {item.genericRetryFailure
+                    ? t("common:status.error")
+                    : item.message}
                 </div>
               </div>
             ))}

@@ -945,9 +945,10 @@ function useSingleAccountModelData(params: {
 }): UseModelDataReturn {
   const { selectedSource, accounts } = params
   const queryClient = useQueryClient()
-  const { t } = useTranslation("modelList")
+  const { t, i18n } = useTranslation("modelList")
   const [dataFormatError, setDataFormatError] = useState(false)
-  const [loadErrorMessage, setLoadErrorMessage] = useState<string | null>(null)
+  const [loadFailed, setLoadFailed] = useState(false)
+  const loadErrorMessage = loadFailed ? t("status.loadFailed") : null
   const [fallbackPricingData, setFallbackPricingData] =
     useState<PricingResponse | null>(null)
   const [fallbackRuntimeKeys, setFallbackRuntimeKeys] = useState<
@@ -958,15 +959,28 @@ function useSingleAccountModelData(params: {
   const [isLoadingFallbackRuntimeKeys, setIsLoadingFallbackRuntimeKeys] =
     useState(false)
   const [
-    fallbackRuntimeKeyLoadErrorMessage,
-    setFallbackRuntimeKeyLoadErrorMessage,
+    fallbackRuntimeKeyLoadDiagnostic,
+    setFallbackRuntimeKeyLoadDiagnostic,
   ] = useState<string | null>(null)
+  const fallbackRuntimeKeyLoadErrorMessage =
+    fallbackRuntimeKeyLoadDiagnostic === null
+      ? null
+      : fallbackRuntimeKeyLoadDiagnostic
+        ? t("status.fallback.loadKeysFailed", {
+            errorMessage: fallbackRuntimeKeyLoadDiagnostic,
+          })
+        : t("status.fallback.loadKeysFailedFallback")
   const [selectedFallbackRuntimeKeyId, setSelectedFallbackRuntimeKeyId] =
     useState<string | null>(null)
   const [isLoadingFallbackCatalog, setIsLoadingFallbackCatalog] =
     useState(false)
-  const [fallbackCatalogLoadErrorMessage, setFallbackCatalogLoadErrorMessage] =
+  const [fallbackCatalogLoadDiagnostic, setFallbackCatalogLoadDiagnostic] =
     useState<string | null>(null)
+  const fallbackCatalogLoadErrorMessage =
+    fallbackCatalogLoadDiagnostic === null
+      ? null
+      : fallbackCatalogLoadDiagnostic ||
+        t("status.fallback.loadModelsFailedFallback")
   const [fallbackStateScopeKey, setFallbackStateScopeKey] = useState<string>(
     MODEL_LIST_QUERY_SCOPE_VALUES.NONE,
   )
@@ -999,10 +1013,10 @@ function useSingleAccountModelData(params: {
     setFallbackRuntimeKeys([])
     setHasLoadedFallbackRuntimeKeys(false)
     setIsLoadingFallbackRuntimeKeys(false)
-    setFallbackRuntimeKeyLoadErrorMessage(null)
+    setFallbackRuntimeKeyLoadDiagnostic(null)
     setSelectedFallbackRuntimeKeyId(null)
     setIsLoadingFallbackCatalog(false)
-    setFallbackCatalogLoadErrorMessage(null)
+    setFallbackCatalogLoadDiagnostic(null)
   }, [])
 
   const currentAccountScopeKey = useMemo(
@@ -1210,8 +1224,8 @@ function useSingleAccountModelData(params: {
 
     setFallbackStateScopeKey(requestScopeKey)
     setIsLoadingFallbackRuntimeKeys(true)
-    setFallbackRuntimeKeyLoadErrorMessage(null)
-    setFallbackCatalogLoadErrorMessage(null)
+    setFallbackRuntimeKeyLoadDiagnostic(null)
+    setFallbackCatalogLoadDiagnostic(null)
 
     try {
       const runtimeKeys = (
@@ -1247,17 +1261,10 @@ function useSingleAccountModelData(params: {
       }
 
       const errorMessage =
-        error instanceof InvalidTokenPayloadError
-          ? t("status.fallback.loadKeysFailedFallback")
-          : getErrorMessage(error)
+        error instanceof InvalidTokenPayloadError ? "" : getErrorMessage(error)
 
       setFallbackStateScopeKey(requestScopeKey)
-      setFallbackRuntimeKeyLoadErrorMessage(
-        errorMessage &&
-          errorMessage !== t("status.fallback.loadKeysFailedFallback")
-          ? t("status.fallback.loadKeysFailed", { errorMessage })
-          : t("status.fallback.loadKeysFailedFallback"),
-      )
+      setFallbackRuntimeKeyLoadDiagnostic(errorMessage)
     } finally {
       if (isActiveFallbackRuntimeKeysRequest(requestScopeKey, requestId)) {
         setIsLoadingFallbackRuntimeKeys(false)
@@ -1268,7 +1275,6 @@ function useSingleAccountModelData(params: {
     currentAccountScopeKey,
     fallbackAvailable,
     isActiveFallbackRuntimeKeysRequest,
-    t,
   ])
 
   const loadFallbackCatalog = useCallback(async () => {
@@ -1281,7 +1287,7 @@ function useSingleAccountModelData(params: {
 
     setFallbackStateScopeKey(requestScopeKey)
     setIsLoadingFallbackCatalog(true)
-    setFallbackCatalogLoadErrorMessage(null)
+    setFallbackCatalogLoadDiagnostic(null)
 
     try {
       const pricing = await loadAccountRuntimeKeyFallbackPricingResponse({
@@ -1296,9 +1302,9 @@ function useSingleAccountModelData(params: {
 
       setFallbackStateScopeKey(requestScopeKey)
       setFallbackPricingData(pricing)
-      setLoadErrorMessage(null)
+      setLoadFailed(false)
       setDataFormatError(false)
-      toast.success(t("status.dataLoaded"))
+      toast.success(i18n.t("modelList:status.dataLoaded"))
       trackModelDataLoadCompletion({
         result: PRODUCT_ANALYTICS_RESULTS.Success,
         sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.ModelFallbackCatalog,
@@ -1319,11 +1325,14 @@ function useSingleAccountModelData(params: {
         errorMessage &&
         errorMessage !== ACCOUNT_RUNTIME_KEY_FALLBACK_LOAD_FAILED
           ? errorMessage
-          : t("status.fallback.loadModelsFailedFallback")
+          : ""
 
       setFallbackStateScopeKey(requestScopeKey)
-      setFallbackCatalogLoadErrorMessage(sanitizedMessage)
-      toast.error(sanitizedMessage)
+      setFallbackCatalogLoadDiagnostic(sanitizedMessage)
+      toast.error(
+        sanitizedMessage ||
+          i18n.t("modelList:status.fallback.loadModelsFailedFallback"),
+      )
       trackModelDataLoadCompletion({
         result: PRODUCT_ANALYTICS_RESULTS.Failure,
         sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.ModelFallbackCatalog,
@@ -1346,7 +1355,7 @@ function useSingleAccountModelData(params: {
     currentAccountScopeKey,
     isActiveFallbackCatalogRequest,
     selectedFallbackRuntimeKey,
-    t,
+    i18n,
   ])
 
   useEffect(() => {
@@ -1437,23 +1446,23 @@ function useSingleAccountModelData(params: {
       !currentAccount
     ) {
       setDataFormatError(false)
-      setLoadErrorMessage(null)
+      setLoadFailed(false)
       return
     }
 
     if (query.isFetching) {
-      setLoadErrorMessage(null)
+      setLoadFailed(false)
       return
     }
 
     if (query.isSuccess) {
       setDataFormatError(false)
-      setLoadErrorMessage(null)
+      setLoadFailed(false)
       resetFallbackState()
-      toast.success(t("status.dataLoaded"))
       const trackingKey = `${currentAccountScopeKey}:success:${query.dataUpdatedAt}`
       if (trackedDirectLoadKeyRef.current !== trackingKey) {
         trackedDirectLoadKeyRef.current = trackingKey
+        toast.success(i18n.t("modelList:status.dataLoaded"))
         trackModelDataLoadCompletion({
           result: PRODUCT_ANALYTICS_RESULTS.Success,
           sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.ModelAccount,
@@ -1476,11 +1485,11 @@ function useSingleAccountModelData(params: {
 
       if (typedError?.code === MODEL_LIST_DATA_ERROR_CODES.INVALID_FORMAT) {
         setDataFormatError(true)
-        setLoadErrorMessage(null)
-        toast.error(t("status.formatNotStandard"))
+        setLoadFailed(false)
         const trackingKey = `${currentAccountScopeKey}:invalid-format:${query.errorUpdatedAt}`
         if (trackedDirectLoadKeyRef.current !== trackingKey) {
           trackedDirectLoadKeyRef.current = trackingKey
+          toast.error(i18n.t("modelList:status.formatNotStandard"))
           trackModelDataLoadCompletion({
             result: PRODUCT_ANALYTICS_RESULTS.Failure,
             sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.ModelAccount,
@@ -1500,7 +1509,7 @@ function useSingleAccountModelData(params: {
           MODEL_LIST_ACCOUNT_SOURCE_ROUTES.Unsupported &&
         isUnsupportedModelPricingError(query.error)
       ) {
-        setLoadErrorMessage(null)
+        setLoadFailed(false)
         return
       }
 
@@ -1510,16 +1519,15 @@ function useSingleAccountModelData(params: {
         isUnsupportedModelPricingError(query.error) &&
         fallbackAvailable
       ) {
-        setLoadErrorMessage(null)
+        setLoadFailed(false)
         return
       }
 
-      const message = t("status.loadFailed")
-      setLoadErrorMessage(message)
-      toast.error(message)
+      setLoadFailed(true)
       const trackingKey = `${currentAccountScopeKey}:failure:${query.errorUpdatedAt}`
       if (trackedDirectLoadKeyRef.current !== trackingKey) {
         trackedDirectLoadKeyRef.current = trackingKey
+        toast.error(i18n.t("modelList:status.loadFailed"))
         trackModelDataLoadCompletion({
           result: PRODUCT_ANALYTICS_RESULTS.Failure,
           sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.ModelAccount,
@@ -1544,7 +1552,7 @@ function useSingleAccountModelData(params: {
     currentAccountScopeKey,
     fallbackAvailable,
     selectedSource?.kind,
-    t,
+    i18n,
     resetFallbackState,
   ])
 
@@ -2199,10 +2207,10 @@ function useProfileModelData(
     }
 
     if (query.isSuccess) {
-      toast.success(t("status.dataLoaded"))
       const trackingKey = `${currentProfile.id}:success:${query.dataUpdatedAt}`
       if (trackedProfileLoadKeyRef.current !== trackingKey) {
         trackedProfileLoadKeyRef.current = trackingKey
+        toast.success(t("status.dataLoaded"))
         trackModelDataLoadCompletion({
           result: PRODUCT_ANALYTICS_RESULTS.Success,
           sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.ModelProfile,
@@ -2214,14 +2222,14 @@ function useProfileModelData(
     }
 
     if (loadErrorMessage) {
-      toast.error(
-        t("status.profileLoadFailed", {
-          errorMessage: loadErrorMessage,
-        }),
-      )
       const trackingKey = `${currentProfile.id}:failure:${query.errorUpdatedAt}`
       if (trackedProfileLoadKeyRef.current !== trackingKey) {
         trackedProfileLoadKeyRef.current = trackingKey
+        toast.error(
+          t("status.profileLoadFailed", {
+            errorMessage: loadErrorMessage,
+          }),
+        )
         trackModelDataLoadCompletion({
           result: PRODUCT_ANALYTICS_RESULTS.Failure,
           sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.ModelProfile,

@@ -157,6 +157,10 @@ function setupContentFeatureControllers() {
       return
     }
 
+    // Refresh mounted UI copy without reinstalling feature controllers.
+    void ensureContentI18nReady().catch((error) => {
+      logger.warn("Content language refresh failed", error)
+    })
     void applyPreferences()
   }
 

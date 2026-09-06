@@ -63,7 +63,12 @@ export type AccountCheckInRedetectionFeedback =
     }
   | {
       kind: "failed"
-      message: string
+      reason: "url-required"
+    }
+  | {
+      kind: "failed"
+      reason: "operation"
+      diagnostic: string
     }
 
 /**

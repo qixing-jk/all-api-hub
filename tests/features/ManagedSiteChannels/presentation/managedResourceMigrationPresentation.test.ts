@@ -723,7 +723,6 @@ describe("managedResourceMigrationPresentation", () => {
     const summary = mapManagedResourceMigrationExecutionResult(
       {
         totalSelected: 6,
-        attemptedCount: 6,
         createdCount: 1,
         failedCount: 2,
         skippedCount: 1,

@@ -1,5 +1,4 @@
 import { useCallback, useRef, useState } from "react"
-import { useTranslation } from "react-i18next"
 
 import {
   CHECK_IN_DISCOVERY_DECISION_OUTCOMES,
@@ -73,7 +72,6 @@ export function useAccountCheckInRedetection({
   discoveryBaseSelectionRef,
   updateDraft,
 }: UseAccountCheckInRedetectionParams) {
-  const { t } = useTranslation("accountDialog")
   const [isRedetectingCheckInMethods, setIsRedetectingCheckInMethods] =
     useState(false)
   const [checkInRedetectionFeedback, setCheckInRedetectionFeedback] =
@@ -97,7 +95,7 @@ export function useAccountCheckInRedetection({
     if (!requestedUrl) {
       setCheckInRedetectionFeedback({
         kind: "failed",
-        message: t("messages.urlRequired"),
+        reason: "url-required",
       })
       return
     }
@@ -214,9 +212,8 @@ export function useAccountCheckInRedetection({
       })
       setCheckInRedetectionFeedback({
         kind: "failed",
-        message: t("messages.operationFailed", {
-          error: getErrorMessage(error),
-        }),
+        reason: "operation",
+        diagnostic: getErrorMessage(error),
       })
     } finally {
       if (invocationLeaseRef.current === lease) {
@@ -231,7 +228,6 @@ export function useAccountCheckInRedetection({
     mode,
     selectedSiteTypeRef,
     selectedSiteUrlRef,
-    t,
     updateDraft,
     url,
   ])

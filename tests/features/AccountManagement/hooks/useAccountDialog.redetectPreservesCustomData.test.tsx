@@ -6,6 +6,7 @@ import { COOKIE_IMPORT_FAILURE_REASONS } from "~/constants/cookieImport"
 import { DIALOG_MODES } from "~/constants/dialogModes"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SITE_TYPES } from "~/constants/siteType"
+import { getCheckInRedetectionFeedbackPresentation } from "~/features/AccountManagement/components/AccountDialog/checkInPresentation"
 import { useAccountDialog } from "~/features/AccountManagement/components/AccountDialog/hooks/useAccountDialog"
 import { BOOKMARK_IMPORT_ADD_ACCOUNT_PREFILL_SOURCE } from "~/features/AccountManagement/sponsors/types"
 import { AutoDetectErrorType } from "~/services/accounts/utils/autoDetectUtils"
@@ -19,6 +20,7 @@ import { accountStorageTestSurface as accountStorage } from "~~/tests/test-utils
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { createDeferred } from "~~/tests/test-utils/deferred"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
+import { testI18n } from "~~/tests/test-utils/i18n"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 
 type CheckInDiscoveryResult = Awaited<ReturnType<typeof discoverCheckInMethods>>
@@ -156,7 +158,7 @@ describe("useAccountDialog re-detect preservation", () => {
 
     expect(result.current.state.checkInRedetectionFeedback).toEqual({
       kind: "failed",
-      message: "accountDialog:messages.urlRequired",
+      reason: "url-required",
     })
     expect(mockDiscoverCheckInMethods).not.toHaveBeenCalled()
   })
@@ -601,15 +603,45 @@ describe("useAccountDialog re-detect preservation", () => {
     })
   })
 
-  it("keeps redetection failures visible in dialog state", async () => {
+  it("retranslates redetection failures without changing the draft or detecting again", async () => {
     mockDiscoverCheckInMethods.mockRejectedValueOnce(new Error("network down"))
 
     const result = await runBasicAddModeRedetection()
 
-    expect(result.current.state.checkInRedetectionFeedback).toEqual({
-      kind: "failed",
-      message: "accountDialog:messages.operationFailed",
-    })
+    const checkIn = result.current.state.checkIn
+    expect(
+      getCheckInRedetectionFeedbackPresentation(
+        testI18n.getFixedT("en", "accountDialog"),
+        result.current.state.checkInRedetectionFeedback,
+      )?.title,
+    ).toBe("accountDialog:messages.operationFailed")
+    testI18n.addResourceBundle(
+      "zh-CN",
+      "accountDialog",
+      (await import("~/locales/zh-CN/accountDialog.json")).default,
+    )
+    try {
+      await act(async () => {
+        await testI18n.changeLanguage("zh-CN")
+      })
+      expect(
+        getCheckInRedetectionFeedbackPresentation(
+          testI18n.getFixedT("zh-CN", "accountDialog"),
+          result.current.state.checkInRedetectionFeedback,
+        )?.title,
+      ).toBe(
+        testI18n.t("accountDialog:messages.operationFailed", {
+          error: "network down",
+        }),
+      )
+      expect(result.current.state.checkIn).toEqual(checkIn)
+      expect(mockDiscoverCheckInMethods).toHaveBeenCalledTimes(1)
+    } finally {
+      await act(async () => {
+        await testI18n.changeLanguage("en")
+      })
+      testI18n.removeResourceBundle("zh-CN", "accountDialog")
+    }
   })
 
   it("reports a redetection failure when no method is selected", async () => {

@@ -1,8 +1,11 @@
 import { act, waitFor } from "@testing-library/react"
+import type { TFunction } from "i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { useRepairMissingKeysJob } from "~/features/KeyManagement/components/RepairMissingKeysDialog/useRepairMissingKeysJob"
+import enKeyManagement from "~/locales/en/keyManagement.json"
+import zhKeyManagement from "~/locales/zh-CN/keyManagement.json"
 import {
   AccountKeyRepairMessageTypes,
   sendAccountKeyRepairMessage,
@@ -24,7 +27,7 @@ import {
 } from "~/types/accountKeyAutoProvisioning"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
-import { testI18n } from "~~/tests/test-utils/i18n"
+import { createResourceTestI18n, testI18n } from "~~/tests/test-utils/i18n"
 import { renderHook } from "~~/tests/test-utils/render"
 
 vi.mock("~/services/accounts/accountKeyAutoProvisioning/messaging", () => ({
@@ -116,9 +119,42 @@ function buildProgress(
   }
 }
 
+const languageI18n = await createResourceTestI18n({
+  en: { keyManagement: enKeyManagement },
+  "zh-CN": { keyManagement: zhKeyManagement },
+})
+
 describe("useRepairMissingKeysJob", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+  })
+
+  it("retranslates cancellation failure while preserving progress without reading it again", async () => {
+    const progress = buildProgress()
+    sendAccountKeyRepairMessageMock.mockImplementation(async (type) =>
+      type === AccountKeyRepairMessageTypes.GetProgress
+        ? { success: true, data: progress }
+        : { success: false, error: "cancel failed" },
+    )
+    const options = {
+      accounts: [buildAccount()],
+      isOpen: true,
+      startOnOpen: false,
+    }
+    const { result, rerender } = renderHook(
+      ({ t }: { t: TFunction }) => useRepairMissingKeysJob({ ...options, t }),
+      { initialProps: { t: languageI18n.getFixedT("en") } },
+    )
+    await waitFor(() => expect(result.current.progress).toEqual(progress))
+    await act(async () => result.current.handleCancelAudit())
+    rerender({ t: languageI18n.getFixedT("zh-CN") })
+    expect(result.current.error).toBe(
+      languageI18n.getFixedT("zh-CN")(
+        "keyManagement:repairMissingKeys.messages.cancelFailed",
+      ),
+    )
+    expect(result.current.progress).toEqual(progress)
+    expect(sendAccountKeyRepairMessageMock).toHaveBeenCalledTimes(2)
   })
 
   it("shows the load failure message when progress loading returns an unsuccessful response", async () => {

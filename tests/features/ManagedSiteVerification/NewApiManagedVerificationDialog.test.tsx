@@ -1,4 +1,9 @@
-import { fireEvent, render as rtlRender, screen } from "@testing-library/react"
+import {
+  act,
+  fireEvent,
+  render as rtlRender,
+  screen,
+} from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import {
   useState,
@@ -11,7 +16,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { NewApiManagedVerificationDialog } from "~/features/ManagedSiteVerification/NewApiManagedVerificationDialog"
 import { NEW_API_MANAGED_VERIFICATION_STEPS } from "~/features/ManagedSiteVerification/useNewApiManagedVerification"
-import { testI18n } from "~~/tests/test-utils/i18n"
+import { createResourceTestI18n, testI18n } from "~~/tests/test-utils/i18n"
 
 const updateNewApiBaseUrlMock = vi.fn()
 const updateNewApiUsernameMock = vi.fn()
@@ -172,6 +177,61 @@ describe("NewApiManagedVerificationDialog", () => {
     updateNewApiUsernameMock.mockResolvedValue(preferenceWriteSuccess())
     updateNewApiPasswordMock.mockResolvedValue(preferenceWriteSuccess())
   })
+
+  it.each(["required", "save"])(
+    "retranslates %s feedback while preserving quick-config input",
+    async (failure) => {
+      const i18n = await createResourceTestI18n({
+        en: {
+          newApiManagedVerification: (
+            await import("~/locales/en/newApiManagedVerification.json")
+          ).default,
+        },
+        "zh-CN": {
+          newApiManagedVerification: (
+            await import("~/locales/zh-CN/newApiManagedVerification.json")
+          ).default,
+        },
+      })
+      updateNewApiUsernameMock.mockResolvedValue(preferenceWriteFailure())
+      const user = userEvent.setup()
+      const props = createProps()
+      rtlRender(
+        <I18nextProvider i18n={i18n}>
+          <NewApiManagedVerificationDialog {...props} />
+        </I18nextProvider>,
+      )
+      await user.type(
+        screen.getByLabelText(i18n.t("settings:newApi.fields.usernameLabel")),
+        "admin",
+      )
+      if (failure === "save")
+        await user.type(
+          screen.getByLabelText(i18n.t("settings:newApi.fields.passwordLabel")),
+          "secret",
+        )
+      await user.click(
+        screen.getByRole("button", {
+          name: i18n.t("newApiManagedVerification:dialog.actions.saveAndRetry"),
+        }),
+      )
+      const key =
+        failure === "required"
+          ? "newApiManagedVerification:dialog.messages.completeRequiredConfig"
+          : "newApiManagedVerification:dialog.messages.quickConfigSaveFailed"
+      expect(await screen.findByText(i18n.t(key))).toBeVisible()
+      const writes = updateNewApiUsernameMock.mock.calls.length
+      await act(async () => {
+        await i18n.changeLanguage("zh-CN")
+      })
+      expect(screen.getByText(i18n.t(key))).toBeVisible()
+      expect(
+        screen.getByLabelText(i18n.t("settings:newApi.fields.usernameLabel")),
+      ).toHaveValue("admin")
+      expect(updateNewApiUsernameMock).toHaveBeenCalledTimes(writes)
+      expect(props.onRetry).not.toHaveBeenCalled()
+    },
+  )
 
   it("offers exact extension-session cleanup for a recoverable active limit", () => {
     const props = createProps({

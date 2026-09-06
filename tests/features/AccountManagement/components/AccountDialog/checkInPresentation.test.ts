@@ -136,7 +136,8 @@ describe("check-in presentation", () => {
     expect(
       getCheckInRedetectionFeedbackPresentation(t, {
         kind: "failed",
-        message: "  ",
+        reason: "operation",
+        diagnostic: "  ",
       }),
     ).toEqual({
       tone: "destructive",

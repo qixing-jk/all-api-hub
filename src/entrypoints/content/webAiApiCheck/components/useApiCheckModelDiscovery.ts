@@ -23,6 +23,7 @@ import {
 import { isTestMode } from "~/utils/core/environment"
 
 import { contentApiCheckAnalyticsScope } from "./apiCheckModalAnalytics"
+import type { ApiCheckValidationError } from "./apiCheckModalTypes"
 
 // Preserve the real debounce in dev/prod to avoid bursty background requests
 // while typing, but skip the wall-clock delay in Vitest.
@@ -43,7 +44,7 @@ type UseApiCheckModelDiscoveryOptions = {
   baseUrl: string
   apiKey: string
   historyConfirmationCount: number
-  setValidationError: (message: string | null) => void
+  setValidationError: (error: ApiCheckValidationError | null) => void
   recordBaseUrlHistory: (baseUrl: string) => void
 }
 
@@ -63,7 +64,14 @@ export function useApiCheckModelDiscovery({
   const [modelId, setModelId] = useState("")
   const [modelIds, setModelIds] = useState<string[]>([])
   const [isFetchingModels, setIsFetchingModels] = useState(false)
-  const [fetchModelsError, setFetchModelsError] = useState<string | null>(null)
+  const [fetchModelsDiagnostic, setFetchModelsDiagnostic] = useState<
+    string | null
+  >(null)
+  const fetchModelsError =
+    fetchModelsDiagnostic === null
+      ? null
+      : fetchModelsDiagnostic ||
+        t("webAiApiCheck:modal.errors.fetchModelsFailed")
 
   /**
    * Auto model-fetch bookkeeping.
@@ -98,7 +106,7 @@ export function useApiCheckModelDiscovery({
       historyPrefilledFetchKeyRef.current = null
       setIsFetchingModels(false)
       setModelIds([])
-      setFetchModelsError(null)
+      setFetchModelsDiagnostic(null)
       if (options?.clearSelection) setModelId("")
     },
     [],
@@ -118,7 +126,7 @@ export function useApiCheckModelDiscovery({
 
   const fetchModels = useCallback(
     async (origin: ModelFetchOrigin) => {
-      setFetchModelsError(null)
+      setFetchModelsDiagnostic(null)
       if (origin === MODEL_FETCH_ORIGINS.Manual) setValidationError(null)
 
       if (!modelListSupported) return
@@ -139,9 +147,7 @@ export function useApiCheckModelDiscovery({
       const trimmedApiKey = apiKey.trim()
       if (!trimmedBaseUrl || !trimmedApiKey) {
         if (origin === MODEL_FETCH_ORIGINS.Manual) {
-          setValidationError(
-            t("webAiApiCheck:modal.errors.missingBaseUrlOrKey"),
-          )
+          setValidationError("missing-credentials")
         }
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
@@ -207,9 +213,7 @@ export function useApiCheckModelDiscovery({
           })
         } else {
           const responseError = response?.error
-          setFetchModelsError(
-            responseError || t("webAiApiCheck:modal.errors.fetchModelsFailed"),
-          )
+          setFetchModelsDiagnostic(responseError || "")
           const diagnosticsError =
             typeof responseError === "string"
               ? { message: responseError }
@@ -237,7 +241,7 @@ export function useApiCheckModelDiscovery({
         }
       } catch (error) {
         if (fetchModelsRequestIdRef.current === requestId) {
-          setFetchModelsError(t("webAiApiCheck:modal.errors.fetchModelsFailed"))
+          setFetchModelsDiagnostic("")
         }
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: resolveProductAnalyticsErrorCategoryFromError(error),
@@ -262,7 +266,6 @@ export function useApiCheckModelDiscovery({
       modelListSupported,
       recordBaseUrlHistory,
       setValidationError,
-      t,
     ],
   )
 
@@ -289,7 +292,7 @@ export function useApiCheckModelDiscovery({
     }
     setIsFetchingModels(false)
     setModelIds([])
-    setFetchModelsError(null)
+    setFetchModelsDiagnostic(null)
   }, [apiType, baseUrl, apiKey, isOpen])
 
   // Auto-fetch model list for supported APIs once we have credentials.

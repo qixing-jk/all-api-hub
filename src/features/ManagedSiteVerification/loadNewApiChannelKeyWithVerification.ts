@@ -10,7 +10,7 @@ import {
 import type { NewApiConfig } from "~/types/newApiConfig"
 
 import {
-  getNewApiManagedVerificationErrorMessage,
+  getNewApiManagedVerificationFailure,
   isNewApiManagedVerificationWindowError,
 } from "./errorMessages"
 import type { OpenNewApiManagedVerificationParams } from "./useNewApiManagedVerification"
@@ -62,7 +62,7 @@ export async function loadNewApiChannelKeyWithVerification(
 
   const openVerification = async (
     request?: OpenNewApiManagedVerificationParams["initialSessionResult"],
-    initialFailureMessage?: string,
+    initialFailure?: OpenNewApiManagedVerificationParams["initialFailure"],
   ) => {
     await Promise.resolve(
       params.openVerification({
@@ -70,7 +70,7 @@ export async function loadNewApiChannelKeyWithVerification(
         label: params.label,
         config: params.config,
         initialSessionResult: request ?? undefined,
-        initialFailureMessage,
+        initialFailure,
         onVerified: async () => {
           await loadKey()
         },
@@ -90,7 +90,7 @@ export async function loadNewApiChannelKeyWithVerification(
     if (isNewApiManagedVerificationWindowError(error)) {
       await openVerification(
         undefined,
-        getNewApiManagedVerificationErrorMessage(error),
+        getNewApiManagedVerificationFailure(error),
       )
       return false
     }

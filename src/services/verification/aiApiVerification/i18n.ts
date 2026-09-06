@@ -68,6 +68,13 @@ export function translateApiVerificationSummary(
   summaryParams?: Record<string, unknown>,
 ): string | undefined {
   switch (summaryKey) {
+    case "verifyDialog.errors.unexpected":
+      return t(
+        "aiApiVerification:verifyDialog.errors.unexpected",
+        summaryParams,
+      )
+    case "webAiApiCheck:modal.errors.runProbeFailed":
+      return t("webAiApiCheck:modal.errors.runProbeFailed", summaryParams)
     case "verifyDialog.requiresModelId":
       return t("aiApiVerification:verifyDialog.requiresModelId", summaryParams)
     case "verifyDialog.summaries.modelsFetched":

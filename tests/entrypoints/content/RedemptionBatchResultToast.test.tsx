@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react"
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import React from "react"
 import { I18nextProvider } from "react-i18next"
 import {
@@ -347,7 +347,7 @@ describe("RedemptionBatchResultToast", () => {
     ).toBeInTheDocument()
   })
 
-  it("falls back to the generic error label when a retry rejects with a non-error value", async () => {
+  it("retranslates a generic retry error without retrying redemption again", async () => {
     const onRetry = vi.fn().mockRejectedValue({ transient: true })
 
     renderToast(
@@ -377,5 +377,24 @@ describe("RedemptionBatchResultToast", () => {
       transient: true,
     })
     expect(screen.getByText("common:status.failed")).toBeInTheDocument()
+    testI18n.addResourceBundle(
+      "zh-CN",
+      "common",
+      (await import("~/locales/zh-CN/common.json")).default,
+    )
+    try {
+      await act(async () => {
+        await testI18n.changeLanguage("zh-CN")
+      })
+      expect(screen.getByText(testI18n.t("common:status.error"))).toBeVisible()
+      expect(screen.getByText("ERR***4")).toBeVisible()
+      expect(onRetry).toHaveBeenCalledTimes(1)
+      expect(completeProductAnalyticsActionMock).toHaveBeenCalledTimes(1)
+    } finally {
+      await act(async () => {
+        await testI18n.changeLanguage("en")
+      })
+      testI18n.removeResourceBundle("zh-CN", "common")
+    }
   })
 })

@@ -47,6 +47,7 @@ import { userCommandExecution } from "~~/tests/services/protectionBypass/fixture
 import { accountStorageTestSurface as accountStorage } from "~~/tests/test-utils/accountStorageTestSurface"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
+import { testI18n } from "~~/tests/test-utils/i18n"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 
 const {
@@ -533,7 +534,7 @@ describe("useAccountDialog save and auto-config flows", () => {
     expect(mockGetCurrentTempWindowRequestSource).toHaveBeenCalledTimes(2)
   })
 
-  it("shows managed-site setup guidance before saving when auto-config prerequisites are missing", async () => {
+  it("retranslates managed-site setup guidance without checking configuration or saving again", async () => {
     mockGetManagedSiteConfig.mockResolvedValue(null)
 
     const { result } = renderAddHook()
@@ -553,6 +554,38 @@ describe("useAccountDialog save and auto-config flows", () => {
       managedSiteLabel: "settings:managedSite.newApi",
       missingMessage: "messages:newapi.configMissing",
     })
+    const configurationReads = mockGetManagedSiteConfig.mock.calls.length
+    const draftUrl = result.current.state.url
+    testI18n.addResourceBundle(
+      "zh-CN",
+      "messages",
+      (await import("~/locales/zh-CN/messages.json")).default,
+    )
+    testI18n.addResourceBundle(
+      "zh-CN",
+      "settings",
+      (await import("~/locales/zh-CN/settings.json")).default,
+    )
+    try {
+      await act(async () => {
+        await testI18n.changeLanguage("zh-CN")
+      })
+      expect(result.current.state.managedSiteConfigPrompt).toMatchObject({
+        isOpen: true,
+        managedSiteLabel: testI18n.t("settings:managedSite.newApi"),
+        missingMessage: testI18n.t("messages:newapi.configMissing"),
+      })
+      expect(result.current.state.url).toBe(draftUrl)
+      expect(mockGetManagedSiteConfig).toHaveBeenCalledTimes(configurationReads)
+      expect(mockValidateAndSaveAccount).not.toHaveBeenCalled()
+      expect(mockOpenWithAccount).not.toHaveBeenCalled()
+    } finally {
+      await act(async () => {
+        await testI18n.changeLanguage("en")
+      })
+      testI18n.removeResourceBundle("zh-CN", "messages")
+      testI18n.removeResourceBundle("zh-CN", "settings")
+    }
   })
 
   it("opens managed-site settings from the setup guidance dialog", async () => {

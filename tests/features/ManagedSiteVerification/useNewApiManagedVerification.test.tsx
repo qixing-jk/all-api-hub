@@ -1,5 +1,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react"
+import type { ReactNode } from "react"
 import toast from "react-hot-toast"
+import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
@@ -9,6 +11,8 @@ import {
 } from "~/features/ManagedSiteVerification/useNewApiManagedVerification"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { NEW_API_MANAGED_SESSION_STATUSES } from "~/services/managedSites/providers/newApiSession"
+import { createDeferred } from "~~/tests/test-utils/deferred"
+import { createResourceTestI18n, testI18n } from "~~/tests/test-utils/i18n"
 
 const {
   ensureNewApiManagedSessionMock,
@@ -81,6 +85,49 @@ const BASE_REQUEST = {
 }
 
 describe("useNewApiManagedVerification", () => {
+  it("retranslates busy and validation states without restarting login or losing the code", async () => {
+    const i18n = await createResourceTestI18n({
+      en: {
+        newApiManagedVerification: (
+          await import("~/locales/en/newApiManagedVerification.json")
+        ).default,
+      },
+      "zh-CN": {
+        newApiManagedVerification: (
+          await import("~/locales/zh-CN/newApiManagedVerification.json")
+        ).default,
+      },
+    })
+    const pending = createDeferred<{ status: "login-2fa-required" }>()
+    ensureNewApiManagedSessionMock.mockReturnValue(pending.promise)
+    const { result } = renderHook(() => useNewApiManagedVerification(), {
+      wrapper: ({ children }: { children: ReactNode }) => (
+        <I18nextProvider i18n={i18n}>{children}</I18nextProvider>
+      ),
+    })
+    act(() => result.current.openNewApiManagedVerification(BASE_REQUEST))
+    expect(result.current.dialogState.isBusy).toBe(true)
+    await act(async () => {
+      await i18n.changeLanguage("zh-CN")
+    })
+    expect(result.current.dialogState.busyMessage).toBe(
+      i18n.t("newApiManagedVerification:dialog.messages.starting"),
+    )
+    expect(ensureNewApiManagedSessionMock).toHaveBeenCalledTimes(1)
+    await act(async () => {
+      pending.resolve({ status: "login-2fa-required" })
+    })
+    await act(async () => result.current.submitCode())
+    act(() => result.current.setCode("123"))
+    await act(async () => {
+      await i18n.changeLanguage("en")
+    })
+    expect(result.current.dialogState.errorMessage).toBe(
+      i18n.t("newApiManagedVerification:dialog.messages.missingCode"),
+    )
+    expect(result.current.dialogState.code).toBe("123")
+    expect(submitNewApiLoginTwoFactorCodeMock).not.toHaveBeenCalled()
+  })
   beforeEach(() => {
     ensureNewApiManagedSessionMock.mockReset()
     submitNewApiLoginTwoFactorCodeMock.mockReset()
@@ -598,13 +645,13 @@ describe("useNewApiManagedVerification", () => {
     })
   })
 
-  it("opens the failure step immediately when a localized failure message is prefetched", async () => {
+  it("retranslates a prefetched failure without starting verification", async () => {
     const { result } = renderHook(() => useNewApiManagedVerification())
 
     act(() => {
       result.current.openNewApiManagedVerification({
         ...BASE_REQUEST,
-        initialFailureMessage: "messages:background.windowCreationUnavailable",
+        initialFailure: { kind: "window-unavailable" },
       })
     })
 
@@ -618,6 +665,25 @@ describe("useNewApiManagedVerification", () => {
     })
 
     expect(ensureNewApiManagedSessionMock).not.toHaveBeenCalled()
+    testI18n.addResourceBundle(
+      "zh-CN",
+      "messages",
+      (await import("~/locales/zh-CN/messages.json")).default,
+    )
+    try {
+      await act(async () => {
+        await testI18n.changeLanguage("zh-CN")
+      })
+      expect(result.current.dialogState.errorMessage).toBe(
+        testI18n.t("messages:background.windowCreationUnavailable"),
+      )
+      expect(ensureNewApiManagedSessionMock).not.toHaveBeenCalled()
+    } finally {
+      await act(async () => {
+        await testI18n.changeLanguage("en")
+      })
+      testI18n.removeResourceBundle("zh-CN", "messages")
+    }
   })
 
   it("fails immediately when the managed base URL is missing and does not attempt to open it", async () => {
@@ -669,7 +735,7 @@ describe("useNewApiManagedVerification", () => {
     act(() => {
       result.current.openNewApiManagedVerification({
         ...BASE_REQUEST,
-        initialFailureMessage: "messages:background.windowCreationUnavailable",
+        initialFailure: { kind: "window-unavailable" },
       })
     })
 
