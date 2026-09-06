@@ -6,6 +6,7 @@ import {
   SORT_FIELDS,
   SORT_ORDERS,
 } from "~/types"
+import { ACCOUNT_KEY_AUTO_PROVISION_MODES } from "~/types/accountKeyAutoProvisioning"
 import { LOG_LEVELS } from "~/types/logging"
 import { THEME_MODES } from "~/types/theme"
 
@@ -245,6 +246,7 @@ const EVENT_ALLOWED_KEYS = {
     "console_logging_enabled",
     "log_level",
     "auto_provision_key_on_account_add_enabled",
+    "auto_provision_key_on_account_add_mode",
     "auto_fill_current_site_url_on_account_add_enabled",
     "warn_on_duplicate_account_add_enabled",
     "show_today_cashflow_enabled",
@@ -339,6 +341,7 @@ const EVENT_ALLOWED_KEYS = {
     "console_logging_enabled",
     "log_level",
     "auto_provision_key_on_account_add_enabled",
+    "auto_provision_key_on_account_add_mode",
     "auto_fill_current_site_url_on_account_add_enabled",
     "warn_on_duplicate_account_add_enabled",
     "show_today_cashflow_enabled",
@@ -534,6 +537,9 @@ const FIELD_ALLOWED_VALUES: Record<string, readonly string[]> = {
     PRODUCT_ANALYTICS_UNIFIED_API_GUIDANCE_ACTION_KINDS,
   ),
   currency_type: CURRENCY_TYPES,
+  auto_provision_key_on_account_add_mode: Object.values(
+    ACCOUNT_KEY_AUTO_PROVISION_MODES,
+  ),
   log_level: LOG_LEVELS,
   kilo_code_export_target: Object.values(
     PRODUCT_ANALYTICS_KILO_CODE_EXPORT_TARGETS,
@@ -642,6 +648,7 @@ const PRIVACY_REVIEWED_ALLOWED_KEYS = new Set([
   "requested_auth_mode",
   "auto_fill_current_site_url_on_account_add_enabled",
   "auto_provision_key_on_account_add_enabled",
+  "auto_provision_key_on_account_add_mode",
   "balance_history_enabled",
   "balance_history_end_of_day_capture_enabled",
   "balance_history_retention_days",

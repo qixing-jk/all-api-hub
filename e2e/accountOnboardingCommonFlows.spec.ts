@@ -17,6 +17,7 @@ import {
   getAccountManagementListItemTestId,
   getCopyKeyDialogRuntimeKeyItemTestId,
 } from "~/features/AccountManagement/testIds"
+import { BASIC_SETTINGS_TEST_IDS } from "~/features/BasicSettings/testIds"
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
 import enMessages from "~/locales/en/messages.json" with { type: "json" }
 import { buildAccountTokenRuntimeKeyId } from "~/services/accounts/accountRuntimeKeys"
@@ -819,12 +820,22 @@ test("OpenRouter auto-detect bootstrap shows manual fallback while logged out", 
   await expect.poll(openRouterFixture.getCreateCount).toBe(0)
 })
 
-test("enables default-key provisioning, adds an account, saves the created key as a reusable API profile, and verifies it from the popup", async ({
+test("enables all-group key provisioning, adds an account, saves a created key as a reusable API profile, and verifies it from the popup", async ({
   context,
   extensionId,
   page,
 }) => {
   const serviceWorker = await getServiceWorker(context)
+  const createdGroups: string[] = []
+  context.on("request", (request) => {
+    if (
+      request.method() === "POST" &&
+      new URL(request.url()).pathname === "/api/token/"
+    ) {
+      const payload = request.postDataJSON() as { group: string }
+      createdGroups.push(payload.group)
+    }
+  })
   await seedUserPreferences(serviceWorker, {
     tempWindowFallback: {
       enabled: false,
@@ -837,12 +848,20 @@ test("enables default-key provisioning, adds an account, saves the created key a
   await waitForExtensionRoot(page)
   await expectPermissionOnboardingHidden(page)
 
-  const autoProvisionSwitch = page
-    .locator("#auto-provision-key-on-account-add")
-    .getByRole("switch")
+  const autoProvisionSwitch = page.getByTestId(
+    BASIC_SETTINGS_TEST_IDS.autoProvisionKeyEnabledSwitch,
+  )
   await expect(autoProvisionSwitch).toHaveAttribute("aria-checked", "false")
   await autoProvisionSwitch.click()
   await expect(autoProvisionSwitch).toHaveAttribute("aria-checked", "true")
+  const allGroups = page.getByTestId(
+    BASIC_SETTINGS_TEST_IDS.autoProvisionKeyAllGroupsButton,
+  )
+  await allGroups.click()
+  await expect(allGroups).toHaveAttribute("aria-pressed", "true")
+  await page.reload()
+  await waitForExtensionRoot(page)
+  await expect(allGroups).toHaveAttribute("aria-pressed", "true")
 
   const accountFixture = await runAccountAutoDetectScenario({
     extensionId,
@@ -872,7 +891,9 @@ test("enables default-key provisioning, adds an account, saves the created key a
   await expect(
     page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accountListView),
   ).toContainText("e2e-user")
-  await expect(page.getByText("Created a default API key for")).toBeVisible()
+  await expect(page.getByText("Created 2 group API keys for")).toBeVisible()
+  expect(createdGroups).toHaveLength(2)
+  expect(createdGroups).toEqual(expect.arrayContaining(["default", "vip"]))
 
   await page.goto(
     `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.KEYS}?accountId=${accountFixture.accountId}`,
@@ -883,7 +904,9 @@ test("enables default-key provisioning, adds an account, saves the created key a
   await expect(
     page.getByRole("heading", { name: DEFAULT_AUTO_PROVISION_TOKEN_NAME }),
   ).toBeVisible()
-  await expect(page.getByText("Group:")).toBeVisible()
+  await expect(
+    page.getByRole("heading", { name: "vip group (auto)" }),
+  ).toBeVisible()
   await expect(page.getByText("default", { exact: true })).toBeVisible()
 
   const savedProfile = await saveExistingAccountTokenToApiProfileScenario({

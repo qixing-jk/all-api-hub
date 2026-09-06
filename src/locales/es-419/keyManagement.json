@@ -610,7 +610,7 @@
       "title_many": "¿Eliminar {{count}} claves inválidas?",
       "title_other": "¿Eliminar {{count}} claves inválidas?"
     },
-    "description": "Comprueba si las cuentas guardadas tienen claves utilizables. Cuando sea posible, se crearán las faltantes automáticamente; los demás problemas aparecerán abajo.",
+    "description": "Revisa todos los grupos disponibles de las cuentas guardadas y crea las claves utilizables faltantes donde se admita la creación automática. Otros problemas aparecen abajo.",
     "failureGuidance": {
       "aborted": "La operación se canceló antes de finalizar. Vuelve a ejecutar la comprobación cuando estés listo.",
       "authenticationFailed": "Vuelve a iniciar sesión o actualiza las credenciales de esta cuenta y vuelve a intentarlo.",
@@ -625,7 +625,7 @@
       "validationFailed": "Revisa la configuración requerida de la clave, corrígela y vuelve a intentarlo."
     },
     "historyNote": "Esto muestra el resultado de la comprobación anterior. No hay ningún trabajo en ejecución y puedes volver a ejecutar la comprobación.",
-    "initialNotice": "Se comprobará si las cuentas guardadas tienen claves utilizables. Si falta una en una cuenta compatible, la extensión puede crearla.",
+    "initialNotice": "Revisa las cuentas guardadas grupo por grupo y crea las claves faltantes donde se admita. Se omiten los grupos que ya tienen claves utilizables.",
     "invalidKeys": {
       "badge": "Inválida",
       "deleteFailed": "No se pudieron eliminar las claves inválidas",

@@ -71,10 +71,17 @@
     "toggleLabel": "Completar URL del sitio actual al agregar cuentas"
   },
   "autoProvisionKeyOnAccountAdd": {
-    "description": "Controla si All API Hub aprovisiona automáticamente una API key predeterminada después de agregar una cuenta compatible.",
+    "description": "Prepara claves API al agregar una cuenta: una clave predeterminada o claves para todos los grupos disponibles.",
+    "manualHint": "Para cuentas guardadas, usa Administración de claves → {{actionLabel}} para completar las claves faltantes de todos los grupos disponibles.",
+    "modeDescription": "El modo predeterminado crea una clave solo si la cuenta no tiene ninguna. Todos los grupos crea una clave para cada grupo sin una clave utilizable. Se indican los grupos que requieren configuración manual.",
+    "modeLabel": "Alcance de la creación automática",
+    "modes": {
+      "allGroups": "Todos los grupos disponibles",
+      "default": "Solo clave predeterminada"
+    },
     "title": "API keys",
-    "toggleDesc": "Cuando está habilitado, All API Hub revisa tu inventario de tokens después de guardar una cuenta y crea un token predeterminado si no existe ninguno.",
-    "toggleLabel": "Crear automáticamente una clave predeterminada al agregar cuenta"
+    "toggleDesc": "Después de guardar la cuenta, se revisan y crean las claves faltantes según el alcance seleccionado.",
+    "toggleLabel": "Crear claves automáticamente al agregar una cuenta"
   },
   "axonHub": {
     "cors": {

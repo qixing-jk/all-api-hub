@@ -71,10 +71,17 @@
     "toggleLabel": "新增帳號時自動填入目前站點網址"
   },
   "autoProvisionKeyOnAccountAdd": {
-    "description": "控制新增支援的帳號後是否自動建立預設 API 金鑰。",
+    "description": "新增帳號後自動準備 API 金鑰，可選擇預設金鑰或所有可用群組。",
+    "manualHint": "已儲存的帳號可在「金鑰管理 → {{actionLabel}}」中手動補齊所有可用群組的金鑰。",
+    "modeDescription": "預設模式僅在帳號沒有金鑰時建立一個；所有群組模式會為每個缺少可用金鑰的群組建立一個。需要手動處理的群組會顯示提示。",
+    "modeLabel": "自動建立範圍",
+    "modes": {
+      "allGroups": "所有可用群組",
+      "default": "僅預設金鑰"
+    },
     "title": "API 金鑰",
-    "toggleDesc": "開啟後，帳號儲存完成會檢查遠端金鑰列表；若沒有金鑰則自動建立一個預設金鑰。",
-    "toggleLabel": "新增帳號後自動建立預設金鑰"
+    "toggleDesc": "啟用後，帳號儲存完成會依下方建立範圍檢查並補齊缺少的金鑰。",
+    "toggleLabel": "新增帳號後自動建立金鑰"
   },
   "axonHub": {
     "cors": {

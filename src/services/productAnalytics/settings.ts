@@ -349,6 +349,7 @@ function buildAutomaticFeatureBypassSnapshot(
   ) as Record<SettingsSnapshotAutomaticFeatureBypassProperty, boolean>
 }
 
+/** Projects normalized account preferences into controlled analytics flags and modes. */
 function buildAccountBehaviorSnapshot(
   preferences: UserPreferences,
   entrypoint: ProductAnalyticsEntrypoint,
@@ -358,6 +359,8 @@ function buildAccountBehaviorSnapshot(
     entrypoint,
     auto_provision_key_on_account_add_enabled:
       preferences.autoProvisionKeyOnAccountAdd === true,
+    auto_provision_key_on_account_add_mode:
+      preferences.autoProvisionKeyOnAccountAddMode,
     auto_fill_current_site_url_on_account_add_enabled:
       preferences.autoFillCurrentSiteUrlOnAccountAdd === true,
     warn_on_duplicate_account_add_enabled:
@@ -686,6 +689,10 @@ function buildSnapshotByKey(
   }
 }
 
+/**
+ * Selects every settings area affected by a patch. Omitting the patch requests
+ * all areas so callers can build a complete settings snapshot.
+ */
 function resolveSnapshotKeysForPatch(patch?: PreferencePatch) {
   if (!patch) return ALL_SETTINGS_SNAPSHOT_KEYS
 
@@ -708,6 +715,7 @@ function resolveSnapshotKeysForPatch(patch?: PreferencePatch) {
   if (displayKeys.some((key) => key in patch)) keys.add("display")
   const accountKeys: Array<keyof UserPreferences> = [
     "autoProvisionKeyOnAccountAdd",
+    "autoProvisionKeyOnAccountAddMode",
     "autoFillCurrentSiteUrlOnAccountAdd",
     "warnOnDuplicateAccountAdd",
     "showTodayCashflow",
@@ -814,6 +822,8 @@ export function buildAggregateSettingsSnapshotEvent(
     log_level: logging.log_level,
     auto_provision_key_on_account_add_enabled:
       account.auto_provision_key_on_account_add_enabled,
+    auto_provision_key_on_account_add_mode:
+      account.auto_provision_key_on_account_add_mode,
     auto_fill_current_site_url_on_account_add_enabled:
       account.auto_fill_current_site_url_on_account_add_enabled,
     warn_on_duplicate_account_add_enabled:

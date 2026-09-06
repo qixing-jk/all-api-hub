@@ -71,10 +71,17 @@
     "toggleLabel": "Tự động điền URL trang hiện tại khi thêm tài khoản"
   },
   "autoProvisionKeyOnAccountAdd": {
-    "description": "Kiểm soát việc có tự động tạo API Key mặc định sau khi thêm tài khoản được hỗ trợ hay không.",
+    "description": "Tự động chuẩn bị khóa API sau khi thêm tài khoản: khóa mặc định hoặc khóa cho tất cả nhóm khả dụng.",
+    "manualHint": "Với tài khoản đã lưu, dùng Quản lý khóa → {{actionLabel}} để bổ sung khóa còn thiếu cho tất cả nhóm khả dụng.",
+    "modeDescription": "Chế độ mặc định chỉ tạo một khóa khi tài khoản chưa có khóa. Tất cả nhóm tạo một khóa cho mỗi nhóm chưa có khóa dùng được. Các nhóm cần thiết lập thủ công sẽ được thông báo.",
+    "modeLabel": "Phạm vi tạo tự động",
+    "modes": {
+      "allGroups": "Tất cả nhóm khả dụng",
+      "default": "Chỉ khóa mặc định"
+    },
     "title": "API Key",
-    "toggleDesc": "Sau khi bật, khi lưu tài khoản xong, hệ thống sẽ kiểm tra danh sách key từ xa; nếu chưa có key thì tự động tạo một key mặc định.",
-    "toggleLabel": "Tự động tạo API Key mặc định sau khi thêm tài khoản"
+    "toggleDesc": "Sau khi lưu tài khoản, kiểm tra và tạo khóa còn thiếu trong phạm vi đã chọn.",
+    "toggleLabel": "Tự động tạo khóa sau khi thêm tài khoản"
   },
   "axonHub": {
     "cors": {

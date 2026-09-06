@@ -71,10 +71,17 @@
     "toggleLabel": "Füllen Sie beim Hinzufügen von Konten die URL der aktuellen Website vorab aus"
   },
   "autoProvisionKeyOnAccountAdd": {
-    "description": "Steuern Sie, ob All API Hub nach dem Hinzufügen eines unterstützten Kontos automatisch einen Standard-API-Schlüssel bereitstellt.",
+    "description": "Nach dem Hinzufügen eines Kontos API-Schlüssel vorbereiten: einen Standardschlüssel oder Schlüssel für alle verfügbaren Gruppen.",
+    "manualHint": "Für gespeicherte Konten können fehlende Schlüssel aller verfügbaren Gruppen unter Schlüsselverwaltung → {{actionLabel}} ergänzt werden.",
+    "modeDescription": "Standard erstellt nur dann einen Schlüssel, wenn das Konto noch keinen hat. Alle Gruppen erstellt einen Schlüssel für jede Gruppe ohne nutzbaren Schlüssel. Gruppen mit manuellem Handlungsbedarf werden gemeldet.",
+    "modeLabel": "Umfang der automatischen Erstellung",
+    "modes": {
+      "allGroups": "Alle verfügbaren Gruppen",
+      "default": "Nur Standardschlüssel"
+    },
     "title": "API-Schlüssel",
-    "toggleDesc": "Wenn aktiviert, überprüft All API Hub Ihren Token-Bestand nach dem Speichern eines Kontos und erstellt einen Standard-Token, falls keiner vorhanden ist.",
-    "toggleLabel": "Beim Hinzufügen eines Kontos automatisch einen Standardschlüssel erstellen"
+    "toggleDesc": "Nach dem Speichern des Kontos werden fehlende Schlüssel im ausgewählten Umfang geprüft und erstellt.",
+    "toggleLabel": "Nach dem Hinzufügen eines Kontos automatisch Schlüssel erstellen"
   },
   "axonHub": {
     "cors": {

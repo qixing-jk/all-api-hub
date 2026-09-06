@@ -599,7 +599,7 @@
       "title_one": "Delete {{count}} invalid key?",
       "title_other": "Delete {{count}} invalid keys?"
     },
-    "description": "Check whether saved accounts have usable keys. Missing keys are created automatically when possible; other issues appear below.",
+    "description": "Check all available groups of saved accounts and create missing usable keys where automatic creation is supported. Other issues are listed below.",
     "failureGuidance": {
       "aborted": "The operation was cancelled before it completed. Run the check again when ready.",
       "authenticationFailed": "Sign in again or update this account's credentials, then retry.",
@@ -614,7 +614,7 @@
       "validationFailed": "Review the required key settings, correct them, and retry."
     },
     "historyNote": "This shows the previous check result. No job is currently running, and you can rerun the check.",
-    "initialNotice": "Saved accounts will be checked for usable keys. When a supported account is missing one, the extension may create a new key.",
+    "initialNotice": "Check saved accounts group by group and create missing keys where supported. Groups that already have usable keys are skipped.",
     "invalidKeys": {
       "badge": "Invalid",
       "deleteFailed": "Failed to delete invalid keys",
