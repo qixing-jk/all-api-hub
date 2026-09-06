@@ -77,6 +77,7 @@ import {
   MANAGED_RESOURCE_EDITOR_MODES,
   type ManagedResourceEditorMode,
 } from "./presentation/managedResourceFieldPolicy"
+import { presentManagedResourceRow } from "./presentation/managedResourcePresentation"
 import {
   createManagedResourceColumns,
   getDefaultManagedResourceSorting,
@@ -270,15 +271,9 @@ function NativeManagedSiteChannels({
       newApiConfig: preferences.newApi,
     })
   const latestRouteParams = useRef(routeParams)
-  const latestTranslate = useRef(t)
   useEffect(() => {
     latestRouteParams.current = routeParams
-    latestTranslate.current = t
-  }, [routeParams, t])
-  const resolveLabel = useCallback(
-    ((key: string) => latestTranslate.current(key)) as TFunction,
-    [],
-  )
+  }, [routeParams])
   const onUnsupportedSearch = useCallback(() => {
     onReplaceRouteQuery({
       ...latestRouteParams.current,
@@ -330,6 +325,8 @@ function NativeManagedSiteChannels({
     () => setSorting(getDefaultManagedResourceSorting(siteType)),
     [siteType],
   )
+  const presentationSemantics =
+    getManagedResourcePresentationSemantics(siteType)
   const list = useManagedResourceListController({
     registration,
     scopeKey: config?.baseUrl ?? `${siteType}:configuration-missing`,
@@ -337,9 +334,8 @@ function NativeManagedSiteChannels({
     refreshKey,
     pageSize,
     onUnsupportedSearch,
-    resolveLabel,
     fieldIds: policy.tableFieldIds,
-    semantics: getManagedResourcePresentationSemantics(siteType),
+    semantics: presentationSemantics,
     analytics,
   })
   const previousChannelId = useRef(channelIdFilterValue)
@@ -496,7 +492,7 @@ function NativeManagedSiteChannels({
         .map((row) => {
           const channelActions = row.channelActions
           return {
-            ...row,
+            ...presentManagedResourceRow(row, t, presentationSemantics),
             capabilities: {
               ...row.capabilities,
               canMigrate: canMigrate && row.capabilities.canView,
@@ -513,8 +509,10 @@ function NativeManagedSiteChannels({
       canMigrate,
       channelIdFilterValue,
       list.allRows,
+      presentationSemantics,
       resolveRef,
       syncingChannelIds,
+      t,
     ],
   )
   const rowsByKey = useMemo(
@@ -789,9 +787,12 @@ function NativeManagedSiteChannels({
   const detailLabels = new Map(
     detailPolicy?.fields.map((field) => [field.fieldId, field.resolveLabel]),
   )
-  const detailFields = mutation.detail
+  const detailRow = mutation.detail
+    ? presentManagedResourceRow(mutation.detail, t, presentationSemantics)
+    : null
+  const detailFields = detailRow
     ? policy.detailFieldIds.flatMap((fieldId) => {
-        const value = mutation.detail?.cells[fieldId]
+        const value = detailRow.cells[fieldId]
         const resolveLabel = detailLabels.get(fieldId)
         return value && resolveLabel ? [{ label: resolveLabel(t), value }] : []
       })

@@ -11,12 +11,12 @@ import {
 } from "~/constants/axonHub"
 import { ChannelType } from "~/constants/managedSite"
 import { SITE_TYPES } from "~/constants/siteType"
+import { createManagedResourceRowMapper } from "~/features/ManagedSiteChannels/controllers/managedResourceRowMapper"
 import {
   getManagedResourceFieldPolicy,
   resolveManagedResourceFieldPolicy,
   type ManagedResourceEditorMode,
 } from "~/features/ManagedSiteChannels/presentation/managedResourceFieldPolicy"
-import { createManagedResourcePresentationMapper } from "~/features/ManagedSiteChannels/presentation/managedResourcePresentation"
 import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
 import * as accountSiteDefinitionRegistry from "~/services/accountSiteDefinitions/registry"
 import {
@@ -669,7 +669,7 @@ describe("AxonHub native managed-resource Adapter", () => {
       value: 2,
     })
 
-    const row = createManagedResourcePresentationMapper({
+    const row = createManagedResourceRowMapper({
       fieldIds: AXON_HUB_TABLE_FIELD_IDS,
     }).map(page.items[0]!)
     expect(row.searchText).toContain("manual-model")

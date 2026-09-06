@@ -9,6 +9,8 @@ import { VeloeraChannelType } from "~/constants/veloera"
 import {
   mapManagedResourceMigrationExecutionResult,
   mapManagedResourceMigrationPreview,
+  projectManagedResourceMigrationExecutionResult,
+  projectManagedResourceMigrationPreview,
 } from "~/features/ManagedSiteChannels/presentation/managedResourceMigrationPresentation"
 import enManagedSiteChannels from "~/locales/en/managedSiteChannels.json"
 import es419ManagedSiteChannels from "~/locales/es-419/managedSiteChannels.json"
@@ -183,6 +185,69 @@ const preview: ManagedSiteMigrationCanonicalPreview = {
 }
 
 describe("managedResourceMigrationPresentation", () => {
+  it("retains safe comparison and outcome data without native refs or extra execution fields", () => {
+    const unsafePreview = {
+      ...preview,
+      command: { credential: "private-command" },
+      items: preview.items.map((item) => ({
+        ...item,
+        backendMessage: "private-backend-message",
+        ...(item.source
+          ? {
+              source: {
+                ...item.source,
+                credential: "private-source-credential",
+              },
+            }
+          : {}),
+      })),
+    }
+    const data = projectManagedResourceMigrationPreview(unsafePreview)
+    expect(data.items.map((item) => item.selection.selectionId)).toEqual(
+      preview.items.map((item) => item.selection.selectionId),
+    )
+    expect(data.items.map((item) => item.status)).toEqual(["ready", "blocked"])
+    expect(data.readyCount).toBe(1)
+    expect(data.blockedCount).toBe(1)
+    expect(JSON.stringify(data)).not.toMatch(
+      /private|scopeKey|resourceId|credential|command|backendMessage/,
+    )
+
+    const unsafeResult = {
+      totalSelected: 1,
+      attemptedCount: 1,
+      createdCount: 0,
+      failedCount: 0,
+      skippedCount: 0,
+      uncertainCount: 1,
+      credential: "private-result-credential",
+      items: [
+        {
+          selectionId: "opaque:row/outcome",
+          displayName: "Uncertain example",
+          status: "uncertain" as const,
+          failureCode:
+            MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES.MutationStateUncertain,
+          rawError: "private-upstream-error",
+        },
+      ],
+    }
+    const outcome = projectManagedResourceMigrationExecutionResult(unsafeResult)
+    expect(outcome.items).toEqual([
+      {
+        selectionId: "opaque:row/outcome",
+        displayName: "Uncertain example",
+        status: "uncertain",
+      },
+    ])
+    expect(outcome.uncertainCount).toBe(1)
+    expect(JSON.stringify(outcome)).not.toMatch(/private|credential|rawError/)
+    expect(
+      mapManagedResourceMigrationExecutionResult(outcome, { t })
+        .refreshRequired,
+    ).toBe(true)
+  })
+
   it.each([
     ["0", "OpenAI Chat"],
     ["2", "Anthropic"],

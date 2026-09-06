@@ -3,7 +3,6 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import {
   MANAGED_CHANNELS_DELETE_RESULT_STATUSES,
   type ManagedChannelsDeleteResultStatus,
-  type ManagedChannelsRowViewModel,
 } from "~/features/ManagedSiteChannels/presentation/contracts"
 import {
   MANAGED_RESOURCE_FAILURE_CODES,
@@ -32,6 +31,7 @@ import {
   MANAGED_RESOURCE_EDITOR_MODES,
   type ManagedResourceEditorMode,
 } from "../presentation/managedResourceFieldPolicy"
+import type { ManagedResourceRowData } from "../presentation/managedResourcePresentation"
 import {
   EMPTY_MANAGED_RESOURCE_CAPABILITIES,
   getManagedResourceRefKey,
@@ -112,7 +112,7 @@ export function useManagedResourceMutationController({
   workspace: ManagedResourceWorkspace | null
   refresh?: () => Promise<boolean>
   resolveRef?: (rowKey: string) => ManagedResourceRef | undefined
-  mapFacts?: (facts: ResourceDisplayFacts) => ManagedChannelsRowViewModel
+  mapFacts?: (facts: ResourceDisplayFacts) => ManagedResourceRowData
   acceptMutationResult?: (
     mode: ManagedResourceEditorMode,
     facts: ResourceDisplayFacts,
@@ -124,7 +124,7 @@ export function useManagedResourceMutationController({
   onMutationSuccess?: (mode: ManagedResourceEditorMode) => void
   analytics?: ManagedResourceControllerAnalytics
 }) {
-  const [detail, setDetail] = useState<ManagedChannelsRowViewModel | null>(null)
+  const [detail, setDetail] = useState<ManagedResourceRowData | null>(null)
   const [detailFailure, setDetailFailure] = useState<ResourceFailure | null>(
     null,
   )

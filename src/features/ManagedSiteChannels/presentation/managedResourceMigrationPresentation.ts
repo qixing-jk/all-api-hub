@@ -22,6 +22,7 @@ import type {
   ManagedSiteMigrationCanonicalExecutionResult,
   ManagedSiteMigrationCanonicalPreview,
   ManagedSiteMigrationCanonicalPreviewItem,
+  ManagedSiteMigrationPreviewProjection,
   ManagedSiteMigrationSource,
 } from "~/types/managedSiteMigrationCapability"
 
@@ -35,6 +36,158 @@ type ManagedResourceMigrationPresentationOptions = {
   t: TFunction
   getSiteLabel: (siteType: ManagedSiteType) => string
 }
+
+type MigrationSourceDisplayData = Pick<
+  ManagedSiteMigrationSource,
+  | "resourceType"
+  | "baseUrl"
+  | "models"
+  | "groups"
+  | "priority"
+  | "weight"
+  | "status"
+>
+
+type MigrationTargetDisplayData = Omit<
+  ManagedSiteMigrationPreviewProjection,
+  "name"
+>
+
+type MigrationPreviewItemDisplayData = {
+  selection: Pick<
+    ManagedSiteMigrationCanonicalPreviewItem["selection"],
+    "selectionId" | "displayName"
+  >
+  warningCodes: ManagedSiteMigrationCanonicalPreviewItem["warningCodes"]
+} & (
+  | {
+      status: "ready"
+      source: MigrationSourceDisplayData
+      target: { projection: MigrationTargetDisplayData }
+      blockingReasonCode?: never
+    }
+  | {
+      status: "blocked"
+      source?: MigrationSourceDisplayData
+      target?: never
+      blockingReasonCode: ManagedSiteChannelMigrationBlockedReasonCode
+    }
+)
+
+/** Safe comparison facts; resource refs remain in the controller's execution preview. */
+export type ManagedResourceMigrationPreviewData = Omit<
+  ManagedSiteMigrationCanonicalPreview,
+  "items"
+> & {
+  items: readonly MigrationPreviewItemDisplayData[]
+}
+
+type MigrationExecutionItemDisplayData = Pick<
+  ManagedSiteMigrationCanonicalExecutionResult["items"][number],
+  "selectionId" | "displayName"
+> &
+  (
+    | { status: "created" | "failed" | "uncertain"; blockingReasonCode?: never }
+    | {
+        status: "skipped"
+        blockingReasonCode: ManagedSiteChannelMigrationBlockedReasonCode
+      }
+  )
+
+export type ManagedResourceMigrationExecutionData = Pick<
+  ManagedSiteMigrationCanonicalExecutionResult,
+  | "totalSelected"
+  | "createdCount"
+  | "failedCount"
+  | "skippedCount"
+  | "uncertainCount"
+> & { items: readonly MigrationExecutionItemDisplayData[] }
+
+const projectSource = (
+  source: ManagedSiteMigrationSource,
+): MigrationSourceDisplayData => ({
+  resourceType: source.resourceType,
+  baseUrl: source.baseUrl,
+  models: [...source.models],
+  groups: [...source.groups],
+  priority: source.priority,
+  weight: source.weight,
+  status: source.status,
+})
+
+/** Retains only language-independent values that the migration view can display. */
+export function projectManagedResourceMigrationPreview(
+  preview: ManagedSiteMigrationCanonicalPreview,
+): ManagedResourceMigrationPreviewData {
+  return {
+    sourceSiteType: preview.sourceSiteType,
+    targetSiteType: preview.targetSiteType,
+    generalWarningCodes: [...preview.generalWarningCodes],
+    totalCount: preview.totalCount,
+    readyCount: preview.readyCount,
+    blockedCount: preview.blockedCount,
+    items: preview.items.map((item) => {
+      const shared = {
+        selection: {
+          selectionId: item.selection.selectionId,
+          displayName: item.selection.displayName,
+        },
+        warningCodes: [...item.warningCodes],
+      }
+      if (item.status === "blocked") {
+        return {
+          ...shared,
+          status: item.status,
+          blockingReasonCode: item.blockingReasonCode,
+          source: item.source ? projectSource(item.source) : undefined,
+        }
+      }
+      const target = item.target.projection
+      return {
+        ...shared,
+        status: item.status,
+        source: projectSource(item.source),
+        target: {
+          projection: {
+            type: target.type,
+            baseUrl: target.baseUrl,
+            models: [...target.models],
+            groups: [...target.groups],
+            priority: target.priority,
+            weight: target.weight,
+            status: target.status,
+          },
+        },
+      }
+    }),
+  }
+}
+
+/** Drops execution-only details while preserving outcome and recovery semantics. */
+export function projectManagedResourceMigrationExecutionResult(
+  result: ManagedSiteMigrationCanonicalExecutionResult,
+): ManagedResourceMigrationExecutionData {
+  return {
+    totalSelected: result.totalSelected,
+    createdCount: result.createdCount,
+    failedCount: result.failedCount,
+    skippedCount: result.skippedCount,
+    uncertainCount: result.uncertainCount,
+    items: result.items.map((item) => ({
+      selectionId: item.selectionId,
+      displayName: item.displayName,
+      ...(item.status === "skipped"
+        ? { status: item.status, blockingReasonCode: item.blockingReasonCode }
+        : { status: item.status }),
+    })),
+  }
+}
+
+/** Translate controlled migration failures without exposing service errors. */
+export const getMigrationPreviewErrorMessage = (t: TFunction) =>
+  t("managedSiteChannels:migration.preview.loadFailed", {
+    error: t("common:labels.unknown"),
+  })
 
 const resolveUnsupportedChannelTypeLabel = (t: TFunction) =>
   t("managedSiteChannels:editor.options.channelType.unsupported")
@@ -293,8 +446,8 @@ const getExecutionStatusPresentation = (
 const formatList = (values: readonly string[]): string => values.join(", ")
 
 const getComparisonValues = (
-  item: ManagedSiteMigrationCanonicalPreviewItem,
-  preview: ManagedSiteMigrationCanonicalPreview,
+  item: MigrationPreviewItemDisplayData,
+  preview: ManagedResourceMigrationPreviewData,
   t: TFunction,
 ) => {
   const source = item.source
@@ -333,7 +486,7 @@ const getComparisonValues = (
 
 /** Maps a secret-free canonical preview into the shared migration view. */
 export function mapManagedResourceMigrationPreview(
-  preview: ManagedSiteMigrationCanonicalPreview,
+  preview: ManagedResourceMigrationPreviewData,
   options: ManagedResourceMigrationPresentationOptions,
 ): ManagedSiteMigrationPreviewState {
   return {
@@ -389,7 +542,7 @@ export function mapManagedResourceMigrationPreview(
 
 /** Maps canonical outcomes to controlled result copy and recovery controls. */
 export function mapManagedResourceMigrationExecutionResult(
-  result: ManagedSiteMigrationCanonicalExecutionResult,
+  result: ManagedResourceMigrationExecutionData,
   options: Pick<ManagedResourceMigrationPresentationOptions, "t">,
 ): ManagedSiteMigrationResult {
   return {

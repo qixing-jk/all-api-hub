@@ -2,9 +2,9 @@ import { act, renderHook, waitFor } from "@testing-library/react"
 import { describe, expect, expectTypeOf, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { createManagedResourceRowMapper } from "~/features/ManagedSiteChannels/controllers/managedResourceRowMapper"
 import { useManagedResourceListController as useManagedResourceListControllerBase } from "~/features/ManagedSiteChannels/controllers/useManagedResourceListController"
 import { useManagedResourceMutationController } from "~/features/ManagedSiteChannels/controllers/useManagedResourceMutationController"
-import { createManagedResourcePresentationMapper } from "~/features/ManagedSiteChannels/presentation/managedResourcePresentation"
 import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
 import {
   MANAGED_RESOURCE_FAILURE_CODES,
@@ -1775,7 +1775,7 @@ describe("useManagedResourceMutationController", () => {
       get: vi.fn(() => late.promise),
     })
     const newWorkspace = createManagedResourceWorkspace()
-    const mapper = createManagedResourcePresentationMapper()
+    const mapper = createManagedResourceRowMapper()
     const rowKey = mapper.map(createManagedResourceFacts()).rowKey
     const { result, rerender } = renderHook(
       ({ workspace }) =>
@@ -1803,7 +1803,7 @@ describe("useManagedResourceMutationController", () => {
     const workspace = createManagedResourceWorkspace({
       get: vi.fn(() => late.promise),
     })
-    const mapper = createManagedResourcePresentationMapper()
+    const mapper = createManagedResourceRowMapper()
     const rowKey = mapper.map(createManagedResourceFacts()).rowKey
     const { result } = renderHook(() =>
       useManagedResourceMutationController({
@@ -1877,7 +1877,7 @@ describe("useManagedResourceMutationController", () => {
       }),
     })
     const refresh = vi.fn(async () => true)
-    const mapper = createManagedResourcePresentationMapper()
+    const mapper = createManagedResourceRowMapper()
     const rowKey = mapper.map(createManagedResourceFacts()).rowKey
     const { result } = renderHook(() =>
       useManagedResourceMutationController({
@@ -1899,7 +1899,7 @@ describe("useManagedResourceMutationController", () => {
 
   it("rejects stale row keys before detail or editor adapter access", async () => {
     const workspace = createManagedResourceWorkspace()
-    const mapper = createManagedResourcePresentationMapper()
+    const mapper = createManagedResourceRowMapper()
     const { result } = renderHook(() =>
       useManagedResourceMutationController({
         workspace,
@@ -1929,7 +1929,7 @@ describe("useManagedResourceMutationController", () => {
     const workspace = createManagedResourceWorkspace({
       openEditEditor: vi.fn(async () => editor),
     })
-    const mapper = createManagedResourcePresentationMapper()
+    const mapper = createManagedResourceRowMapper()
     const rowKey = mapper.map(createManagedResourceFacts()).rowKey
     const { result } = renderHook(() =>
       useManagedResourceMutationController({
@@ -1974,7 +1974,7 @@ describe("useManagedResourceMutationController", () => {
     const workspace = createManagedResourceWorkspace({
       openEditEditor: vi.fn(async () => editor),
     })
-    const mapper = createManagedResourcePresentationMapper()
+    const mapper = createManagedResourceRowMapper()
     const rowKey = mapper.map(createManagedResourceFacts()).rowKey
     const { result } = renderHook(() =>
       useManagedResourceMutationController({
@@ -2007,7 +2007,7 @@ describe("useManagedResourceMutationController", () => {
       get: vi.fn(() => detail.promise),
       openEditEditor: vi.fn(() => edit.promise),
     })
-    const mapper = createManagedResourcePresentationMapper()
+    const mapper = createManagedResourceRowMapper()
     const rowKey = mapper.map(createManagedResourceFacts()).rowKey
     const { result } = renderHook(() =>
       useManagedResourceMutationController({
@@ -2050,7 +2050,7 @@ describe("useManagedResourceMutationController", () => {
 
   it("never coexists delete confirmation with detail or editor state", async () => {
     const workspace = createManagedResourceWorkspace()
-    const mapper = createManagedResourcePresentationMapper()
+    const mapper = createManagedResourceRowMapper()
     const rowKey = mapper.map(createManagedResourceFacts()).rowKey
     const { result } = renderHook(() =>
       useManagedResourceMutationController({
@@ -2086,7 +2086,7 @@ describe("useManagedResourceMutationController", () => {
       .fn<() => Promise<boolean>>()
       .mockResolvedValueOnce(false)
       .mockResolvedValueOnce(true)
-    const mapper = createManagedResourcePresentationMapper()
+    const mapper = createManagedResourceRowMapper()
     const rowKey = mapper.map(createManagedResourceFacts()).rowKey
     const { result } = renderHook(() =>
       useManagedResourceMutationController({
@@ -2115,7 +2115,7 @@ describe("useManagedResourceMutationController", () => {
     const workspace = createManagedResourceWorkspace({
       openEditEditor: vi.fn(async () => editor),
     })
-    const mapper = createManagedResourcePresentationMapper()
+    const mapper = createManagedResourceRowMapper()
     const rowKey = mapper.map(createManagedResourceFacts()).rowKey
     const { result } = renderHook(() =>
       useManagedResourceMutationController({
@@ -2163,7 +2163,7 @@ describe("useManagedResourceMutationController", () => {
       const workspace = createManagedResourceWorkspace({
         openEditEditor: vi.fn(async () => editor),
       })
-      const mapper = createManagedResourcePresentationMapper()
+      const mapper = createManagedResourceRowMapper()
       const rowKey = mapper.map(createManagedResourceFacts()).rowKey
       const { result } = renderHook(() =>
         useManagedResourceMutationController({
@@ -2204,7 +2204,7 @@ describe("useManagedResourceMutationController", () => {
     const workspace = createManagedResourceWorkspace({
       openEditEditor: vi.fn(async () => editor),
     })
-    const mapper = createManagedResourcePresentationMapper()
+    const mapper = createManagedResourceRowMapper()
     const rowKey = mapper.map(createManagedResourceFacts()).rowKey
     const refresh = vi.fn(async () => false)
     const { result } = renderHook(() =>
@@ -2243,7 +2243,7 @@ describe("useManagedResourceMutationController", () => {
       openEditEditor: vi.fn(async () => editor),
     })
     const refresh = vi.fn(async () => true)
-    const mapper = createManagedResourcePresentationMapper()
+    const mapper = createManagedResourceRowMapper()
     const rowKey = mapper.map(createManagedResourceFacts()).rowKey
     const { result } = renderHook(() =>
       useManagedResourceMutationController({
@@ -2273,7 +2273,7 @@ describe("useManagedResourceMutationController", () => {
     })
     const refresh = vi.fn(async () => true)
     const analytics = createAnalytics()
-    const mapper = createManagedResourcePresentationMapper()
+    const mapper = createManagedResourceRowMapper()
     const rowKey = mapper.map(createManagedResourceFacts()).rowKey
     const onMutationStart = vi.fn()
     const { result } = renderHook(() =>
@@ -2399,7 +2399,7 @@ describe("useManagedResourceMutationController", () => {
     const newWorkspace = createManagedResourceWorkspace()
     const refresh = vi.fn(async () => true)
     const analytics = createAnalytics()
-    const mapper = createManagedResourcePresentationMapper()
+    const mapper = createManagedResourceRowMapper()
     const rowKey = mapper.map(createManagedResourceFacts()).rowKey
     const { result, rerender } = renderHook(
       ({ workspace }) =>
