@@ -334,6 +334,19 @@ test("uses the current Octopus cookie session in a real extension browser", asyn
   await expect(channelRowByName(page, "Example outbound")).toContainText(
     "Anthropic",
   )
+  const focusedUrl = new URL(page.url())
+  focusedUrl.searchParams.set("channelId", "17")
+  focusedUrl.searchParams.set("search", "stale-search")
+  await page.goto(focusedUrl.toString())
+  await expect(channelRowByName(page, "Example outbound")).toBeVisible()
+  const searchInput = page.getByTestId(
+    MANAGED_SITE_CHANNELS_TEST_IDS.searchInput,
+  )
+  await searchInput.fill("no-matching-channel")
+  await expect(channelRowByName(page, "Example outbound")).toHaveCount(0)
+  await searchInput.fill("  EXAMPLE OUTBOUND  ")
+  await expect(channelRowByName(page, "Example outbound")).toBeVisible()
+  await searchInput.fill("")
   const { rowTestToken } = await openManagedSiteChannelRowActions(
     page,
     "Example outbound",

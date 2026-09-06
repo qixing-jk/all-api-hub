@@ -128,15 +128,21 @@ describe("Octopus native resource", () => {
   })
   it("searches native protocol names and secondary endpoints without exposing secrets", async () => {
     mocks.listChannels.mockResolvedValue([
-      channel,
+      { ...channel, name: "Primary outbound" },
       { ...channel, id: 8, name: "Unknown", type: 90 },
     ])
     const workspace = await octopusManagedResourceRegistration.open()
+    for (const search of ["Primary outbound", "  PRIMARY  "]) {
+      const page = await workspace.list({ search })
+      expect(page.total).toBe(1)
+      expect(page.items[0].ref.resourceId).toBe("7")
+    }
+    expect((await workspace.list({ search: "   " })).total).toBe(2)
     expect(
       (await workspace.list({ search: " ANTHROPIC " })).items.map(
         (item) => item.displayName,
       ),
-    ).toEqual(["Example"])
+    ).toEqual(["Primary outbound"])
     expect(
       (await workspace.list({ search: "backup.example.invalid" })).total,
     ).toBe(2)
