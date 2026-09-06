@@ -1,5 +1,4 @@
 import type { ClaudeCodeHubProviderType } from "~/constants/claudeCodeHub"
-import type { NewApiChannel } from "~/types/newApi"
 
 export interface ClaudeCodeHubAllowedModelRule {
   matchType?: string
@@ -49,8 +48,3 @@ export type ClaudeCodeHubProviderUpdatePayload =
   ClaudeCodeHubProviderWritePayload & {
     providerId: number
   }
-
-export type ClaudeCodeHubChannelWithData = NewApiChannel & {
-  /** Raw Claude Code Hub provider display data. */
-  _claudeCodeHubData: ClaudeCodeHubProviderDisplay
-}

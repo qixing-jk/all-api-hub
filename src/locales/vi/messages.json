@@ -27,7 +27,6 @@
   },
   "axonhub": {
     "configMissing": "Vui lòng cấu hình địa chỉ AxonHub, email quản trị viên và mật khẩu trong phần Cài đặt trước",
-    "modelsMissing": "Vui lòng điền ít nhất một mô hình",
     "noChannelsToSync": "Không có kênh nào để đồng bộ"
   },
   "background": {
@@ -54,9 +53,7 @@
   },
   "claudecodehub": {
     "configMissing": "Vui lòng cấu hình địa chỉ Claude Code Hub và token quản trị viên trong phần Cài đặt trước",
-    "modelsMissing": "Vui lòng điền ít nhất một mô hình",
-    "noChannelsToSync": "Không có nhà cung cấp nào để đồng bộ",
-    "realProviderKeyRequired": "Tạo nhà cung cấp trong Claude Code Hub yêu cầu khóa gốc thực, không thể sử dụng khóa trống hoặc khóa đã bị che để tạo."
+    "noChannelsToSync": "Không có nhà cung cấp nào để đồng bộ"
   },
   "claudeCodeRouter": {
     "configMissing": "Vui lòng cấu hình URL cơ sở của Claude Code Router trong phần cài đặt trước",

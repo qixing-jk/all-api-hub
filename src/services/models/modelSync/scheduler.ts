@@ -405,6 +405,10 @@ class ModelSyncScheduler {
     const userPrefs = await userPreferences.getPreferences()
     const { siteType, messagesKey } = getManagedSiteContext(userPrefs)
 
+    if (!supportsManagedSiteModelSync(siteType)) {
+      throw new Error(getManagedSiteUnsupportedModelSyncMessage(t, siteType))
+    }
+
     // Octopus 使用独立的 API 服务
     if (siteType === SITE_TYPES.OCTOPUS) {
       const octopusRuntimeConfig =

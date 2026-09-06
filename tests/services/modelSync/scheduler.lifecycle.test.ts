@@ -46,7 +46,6 @@ const mocks = vi.hoisted(() => ({
   collectModelsFromExecution: vi.fn(),
   generateModelMappingForChannel: vi.fn(),
   applyModelMappingToChannel: vi.fn(),
-  octopusChannelToManagedSite: vi.fn(),
   notifyTaskResult: vi.fn(),
   startProductAnalyticsAction: vi.fn(),
   completeProductAnalyticsAction: vi.fn(),
@@ -151,7 +150,6 @@ vi.mock("~/services/managedSites/providers/octopus", () => ({
   buildChannelName: vi.fn(),
   prepareChannelFormData: vi.fn(),
   buildChannelPayload: vi.fn(),
-  octopusChannelToManagedSite: mocks.octopusChannelToManagedSite,
 }))
 
 describe("modelSyncScheduler lifecycle and edge flows", () => {

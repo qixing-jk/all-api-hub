@@ -28,20 +28,22 @@ import {
   DEFAULT_CHANNEL_MODEL_FILTER_PROBE_IDS,
   isProbeChannelModelFilterRule,
 } from "~/types/channelModelFilters"
+import type { ManagedUpstreamResourceRef } from "~/types/managedUpstreamResource"
 import { getErrorMessage } from "~/utils/core/error"
 import { safeRandomUUID } from "~/utils/core/identifier"
 
-import type { ChannelRow } from "../types"
 import {
   fetchChannelFilters,
   saveChannelFilters,
   type ChannelFilterStorageIdentity,
 } from "../utils/channelFilters"
 
-export type ChannelFilterTarget = Pick<
-  ChannelRow,
-  "id" | "name" | "type" | "resourceRef"
->
+export interface ChannelFilterTarget {
+  id: number
+  name: string
+  type: number | string
+  resourceRef?: ManagedUpstreamResourceRef
+}
 
 interface ChannelFilterDialogProps {
   channel: ChannelFilterTarget | null

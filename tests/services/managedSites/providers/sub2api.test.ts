@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { ChannelType } from "~/constants/managedSite"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   isSub2ApiManagedResourcePlatform,
@@ -17,7 +16,6 @@ import {
 } from "~/constants/sub2api"
 import { getManagedSiteServiceForType } from "~/services/managedSites/managedSiteService"
 import {
-  buildChannelPayload,
   createSub2ApiApiKeyAccount,
   deleteSub2ApiApiKeyAccount,
   fetchAvailableModels,
@@ -28,8 +26,6 @@ import {
   prepareChannelFormData,
   revealSub2ApiApiKey,
   searchSub2ApiApiKeyAccounts,
-  sub2ApiAccountToManagedSiteChannel,
-  toSub2ApiManagedSiteChannelList,
   updateSub2ApiApiKeyAccount,
   validateSub2ApiManagedSiteConfig,
 } from "~/services/managedSites/providers/sub2api"
@@ -539,19 +535,6 @@ describe("Sub2API API-key account managed-site provider", () => {
     expect(mockFetch).toHaveBeenCalledTimes(1)
   })
 
-  it("maps redacted credentials to a hidden managed-channel key", () => {
-    expect(sub2ApiAccountToManagedSiteChannel(account)).toMatchObject({
-      id: 17,
-      name: "Example upstream",
-      type: ChannelType.OpenAI,
-      base_url: "https://api.example.invalid/v1",
-      key: "********",
-      priority: 8,
-      weight: 3,
-      status: 1,
-    })
-  })
-
   it("prepares a provider-native import draft without model discovery", async () => {
     const draft = await prepareChannelFormData(
       {
@@ -602,34 +585,6 @@ describe("Sub2API API-key account managed-site provider", () => {
       }),
       token,
     )
-  })
-
-  it("forwards all provider-native import fields into account creation", () => {
-    expect(
-      buildChannelPayload({
-        name: "Imported account",
-        type: ChannelType.OpenAI,
-        key: "sk-imported",
-        base_url: "https://api.example.invalid/v1",
-        models: [],
-        groups: [],
-        priority: 7,
-        weight: 4,
-        status: 1,
-        notes: "Imported from an external credential",
-      } as any),
-    ).toMatchObject({
-      channel: {
-        name: "Imported account",
-        type: ChannelType.OpenAI,
-        key: "sk-imported",
-        base_url: "https://api.example.invalid/v1",
-        priority: 7,
-        weight: 4,
-        status: 1,
-        remark: "Imported from an external credential",
-      },
-    })
   })
 
   it("reveals a selected account key through raw export under default settings", async () => {
@@ -848,20 +803,6 @@ describe("Sub2API API-key account managed-site provider", () => {
       getSub2ApiApiKeyAccount(config, Number.NaN),
     ).rejects.toBeInstanceOf(InvalidSub2ApiResourceIdError)
     expect(mockFetch).not.toHaveBeenCalled()
-  })
-
-  it("filters non-API-key wire records and fails closed on unknown statuses", () => {
-    expect(
-      toSub2ApiManagedSiteChannelList({
-        items: [
-          { ...account, status: "future-status" },
-          { ...account, id: 18, type: "oauth" },
-        ],
-        total: 2,
-      }),
-    ).toMatchObject({
-      items: [{ id: account.id, status: 2 }],
-    })
   })
 
   it("omits model_mapping when no whitelist is configured", async () => {

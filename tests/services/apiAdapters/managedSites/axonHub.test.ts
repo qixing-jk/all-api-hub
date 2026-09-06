@@ -57,13 +57,11 @@ const axonHubApi = vi.hoisted(() => {
 
   return {
     AxonHubRequestError,
-    axonHubChannelToManagedSite: vi.fn((channel) => ({ id: channel.id })),
     getAxonHubChannel: vi.fn(),
     createAxonHubChannel: vi.fn(),
     updateAxonHubChannel: vi.fn(),
     updateAxonHubChannelStatus: vi.fn(),
     deleteAxonHubChannel: vi.fn(),
-    resolveAxonHubGraphqlIdForMutation: vi.fn(),
   }
 })
 
@@ -105,12 +103,6 @@ describe("AxonHub managed-site channel capability", () => {
 
   beforeEach(() => {
     vi.resetAllMocks()
-    axonHubApi.axonHubChannelToManagedSite.mockImplementation((channel) => ({
-      id: channel.id,
-    }))
-    axonHubApi.resolveAxonHubGraphqlIdForMutation.mockResolvedValue(
-      "gid://axonhub/Channel/1",
-    )
     axonHubApi.getAxonHubChannel.mockResolvedValue(currentChannel)
   })
 

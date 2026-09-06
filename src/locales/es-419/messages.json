@@ -27,7 +27,6 @@
   },
   "axonhub": {
     "configMissing": "Primero configura la dirección de AxonHub, el correo de administrador y la contraseña en la configuración básica",
-    "modelsMissing": "Proporciona al menos un modelo",
     "noChannelsToSync": "No hay canales para sincronizar"
   },
   "background": {
@@ -54,9 +53,7 @@
   },
   "claudecodehub": {
     "configMissing": "Primero configura la dirección de Claude Code Hub y el token de administrador en la configuración básica",
-    "modelsMissing": "Proporciona al menos un modelo",
-    "noChannelsToSync": "No hay proveedores para sincronizar",
-    "realProviderKeyRequired": "Claude Code Hub requiere una clave real del proveedor upstream. Las claves vacías o enmascaradas no se pueden usar para crear proveedores."
+    "noChannelsToSync": "No hay proveedores para sincronizar"
   },
   "claudeCodeRouter": {
     "configMissing": "Primero configura la URL base de Claude Code Router en la configuración",

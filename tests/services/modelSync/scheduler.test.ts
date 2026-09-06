@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import { getManagedSiteServiceForType } from "~/services/managedSites/managedSiteService"
 import { ModelSyncService } from "~/services/models/modelSync/modelSyncService"
 import {
   getModelSyncNextRun,
@@ -103,9 +102,6 @@ const mockedBrowserApi = {
   getAlarm: getAlarm as unknown as ReturnType<typeof vi.fn>,
   hasAlarmsAPI: hasAlarmsAPI as unknown as ReturnType<typeof vi.fn>,
 }
-
-const mockedGetManagedSiteServiceForType =
-  getManagedSiteServiceForType as unknown as ReturnType<typeof vi.fn>
 
 const mockedModelSyncService = ModelSyncService as unknown as ReturnType<
   typeof vi.fn
@@ -258,89 +254,22 @@ describe("model sync operation helpers", () => {
     expect(mockedModelSyncService).not.toHaveBeenCalled()
   })
 
-  it("throws the config-missing message when Claude Code Hub admin config is unavailable", async () => {
-    mockedUserPreferences.getPreferences.mockResolvedValueOnce({
-      managedSiteType: SITE_TYPES.CLAUDE_CODE_HUB,
-      managedSiteModelSync: {
-        ...(DEFAULT_PREFERENCES as any).managedSiteModelSync,
-      },
-    })
-
-    await expect(modelSyncScheduler.listChannels()).rejects.toThrow(
-      "messages:claudecodehub.configMissing",
-    )
-
-    expect(mockedGetManagedSiteServiceForType).not.toHaveBeenCalled()
-  })
-
-  it("delegates Claude Code Hub channel listing through the managed-site service", async () => {
-    const managedConfig = {
-      baseUrl: "https://cch.example.com",
-      adminToken: "admin-token",
-    }
-    const searchChannel = vi.fn().mockResolvedValue({
-      items: [{ id: 42, name: "Claude Provider" }],
-      total: 1,
-      type_counts: { codex: 1 },
-    })
-
-    mockedUserPreferences.getPreferences.mockResolvedValueOnce({
-      managedSiteType: SITE_TYPES.CLAUDE_CODE_HUB,
-      claudeCodeHub: {
-        baseUrl: managedConfig.baseUrl,
-        adminToken: managedConfig.adminToken,
-      },
-      managedSiteModelSync: {
-        ...(DEFAULT_PREFERENCES as any).managedSiteModelSync,
-      },
-    })
-
-    mockedGetManagedSiteServiceForType.mockReturnValue({
-      searchChannel,
-    })
-
-    await expect(modelSyncScheduler.listChannels()).resolves.toEqual({
-      items: [{ id: 42, name: "Claude Provider" }],
-      total: 1,
-      type_counts: { codex: 1 },
-    })
-
-    expect(mockedGetManagedSiteServiceForType).toHaveBeenCalledWith(
-      SITE_TYPES.CLAUDE_CODE_HUB,
-    )
-    expect(searchChannel).toHaveBeenCalledWith(managedConfig, "")
-  })
-
-  it("returns the Claude Code Hub empty fallback when the managed-site service has no channel list", async () => {
-    const managedConfig = {
-      baseUrl: "https://cch.example.com",
-      adminToken: "admin-token",
-    }
-    const searchChannel = vi.fn().mockResolvedValue(null)
-
-    mockedUserPreferences.getPreferences.mockResolvedValueOnce({
-      managedSiteType: SITE_TYPES.CLAUDE_CODE_HUB,
-      claudeCodeHub: {
-        baseUrl: managedConfig.baseUrl,
-        adminToken: managedConfig.adminToken,
-      },
-      managedSiteModelSync: {
-        ...(DEFAULT_PREFERENCES as any).managedSiteModelSync,
-      },
-    })
-
-    mockedGetManagedSiteServiceForType.mockReturnValue({
-      searchChannel,
-    })
-
-    await expect(modelSyncScheduler.listChannels()).resolves.toEqual({
-      items: [],
-      total: 0,
-      type_counts: {},
-    })
-
-    expect(searchChannel).toHaveBeenCalledWith(managedConfig, "")
-  })
+  it.each([
+    SITE_TYPES.CLAUDE_CODE_HUB,
+    SITE_TYPES.AXON_HUB,
+    SITE_TYPES.SUB2API,
+  ])(
+    "rejects model-sync inventory for unsupported provider %s",
+    async (siteType) => {
+      mockedUserPreferences.getPreferences.mockResolvedValue({
+        managedSiteType: siteType,
+      })
+      await expect(modelSyncScheduler.listChannels()).rejects.toThrow(
+        "messages:managedSite.unsupportedModelSync",
+      )
+      expect(mockedModelSyncService).not.toHaveBeenCalled()
+    },
+  )
 
   it("constructs model sync with the current runtime config object", async () => {
     const managedConfig = {
