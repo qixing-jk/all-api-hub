@@ -30,9 +30,7 @@ export const readOctopusString = (
   values: EditableResourceProjection,
   fieldId: string,
 ): string => (typeof values[fieldId] === "string" ? values[fieldId] : "")
-export const readOctopusModels = (
-  values: EditableResourceProjection,
-): string[] => {
+const readOctopusModels = (values: EditableResourceProjection): string[] => {
   const value = values[fields.Models]
   return Array.isArray(value)
     ? normalizeList(
