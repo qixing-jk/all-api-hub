@@ -814,9 +814,8 @@ export async function searchChannels(
   keyword: string,
 ): Promise<OctopusChannel[]> {
   const channels = await listChannels(config)
-  if (!keyword) return channels
-
-  const lowerKeyword = keyword.toLowerCase()
+  const lowerKeyword = keyword.trim().toLowerCase()
+  if (!lowerKeyword) return channels
   return channels.filter(
     (ch) =>
       ch.name.toLowerCase().includes(lowerKeyword) ||

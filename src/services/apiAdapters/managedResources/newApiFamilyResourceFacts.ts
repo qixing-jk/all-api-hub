@@ -65,6 +65,7 @@ export function createNewApiFamilyResourceFacts(policy: {
       groups,
       typeLabel,
       searchValues: [
+        channel.name,
         String(channel.id),
         rawType,
         typeLabel,

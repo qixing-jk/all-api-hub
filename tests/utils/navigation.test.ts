@@ -912,6 +912,23 @@ describe("navigation utilities", () => {
     )
   })
 
+  it("preserves an opaque channel identity and clears stale filters in an existing options tab", async () => {
+    window.history.replaceState(
+      null,
+      "",
+      `${OPTIONS_PAGE_URL}?search=old&channelId=8#managedSiteChannels`,
+    )
+
+    await openManagedSiteChannelsForChannel("native/42+=&中")
+
+    expect(new URL(window.location.href).searchParams.get("channelId")).toBe(
+      "native/42+=&中",
+    )
+    expect(new URL(window.location.href).searchParams.has("search")).toBe(false)
+    expect(window.location.hash).toBe("#managedSiteChannels")
+    expect(mockedCreateTab).not.toHaveBeenCalled()
+  })
+
   it("preserves options-page history for account and managed-site drill-down navigation", async () => {
     window.history.replaceState(null, "", `${OPTIONS_PAGE_URL}#autoCheckin`)
     const pushStateSpy = vi.spyOn(window.history, "pushState")

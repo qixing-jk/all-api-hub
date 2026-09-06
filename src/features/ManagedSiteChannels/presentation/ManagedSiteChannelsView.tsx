@@ -278,7 +278,7 @@ export function ManagedSiteChannelsView({
                 data-testid={MANAGED_SITE_CHANNELS_TEST_IDS.searchInput}
               />
               <ListFilter className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-              {state.searchValue ? (
+              {state.searchValue || state.channelIdFilterValue ? (
                 <button
                   type="button"
                   aria-label={labels.clearSearch}

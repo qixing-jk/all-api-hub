@@ -383,6 +383,37 @@ describe("New API native managed resource", () => {
     expect(mocks.search).not.toHaveBeenCalled()
   })
 
+  it("finds exact and partial channel names without matching credentials", async () => {
+    mocks.list.mockResolvedValue({
+      items: [
+        {
+          ...channel,
+          name: "Example channel alpha",
+          key: "private-credential",
+        },
+        { ...channel, id: 18, name: "Unrelated channel" },
+      ],
+      total: 2,
+    })
+    const workspace = await newApiManagedResourceRegistration.open()
+
+    for (const search of ["Example channel alpha", "  CHANNEL ALPHA  ", "17"]) {
+      const page = await workspace.list({ search })
+      expect(page.total).toBe(1)
+      expect(page.items).toHaveLength(1)
+      expect(page.items[0].ref.resourceId).toBe("17")
+    }
+    await expect(
+      workspace.list({ search: "private-credential" }),
+    ).resolves.toMatchObject({
+      items: [],
+      total: 0,
+    })
+    await expect(workspace.list({ search: "  " })).resolves.toMatchObject({
+      total: 2,
+    })
+  })
+
   it("opens the edit editor through the direct channel detail capability", async () => {
     const workspace = await newApiManagedResourceRegistration.open()
     const ref = (await workspace.list()).items[0]!.ref

@@ -1859,7 +1859,7 @@ describe("Octopus API service", () => {
     expect(mockClearCache).toHaveBeenCalledTimes(1)
   })
 
-  it("filters searched channels by name and upstream URL", async () => {
+  it("filters searched channels by trimmed name and upstream URL without matching secrets", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockImplementation(() =>
@@ -1870,13 +1870,14 @@ describe("Octopus API service", () => {
               data: [
                 {
                   id: 1,
-                  name: "OpenAI Main",
-                  base_urls: [{ url: "https://api.openai.com/v1" }],
+                  name: "Primary channel",
+                  base_urls: [{ url: "https://primary.example.invalid/v1" }],
+                  keys: [{ channel_key: "private-search-secret" }],
                 },
                 {
                   id: 2,
-                  name: "Claude",
-                  base_urls: [{ url: "https://claude.example.com/v1" }],
+                  name: "Secondary channel",
+                  base_urls: [{ url: "https://secondary.example.invalid/v1" }],
                 },
               ],
             }),
@@ -1889,16 +1890,22 @@ describe("Octopus API service", () => {
       ),
     )
 
-    await expect(searchChannels(config, "openai")).resolves.toHaveLength(1)
-    await expect(searchChannels(config, "claude.example.com")).resolves.toEqual(
-      [
-        {
-          id: 2,
-          name: "Claude",
-          base_urls: [{ url: "https://claude.example.com/v1" }],
-        },
-      ],
-    )
+    await expect(
+      searchChannels(config, "  PRIMARY CHANNEL  "),
+    ).resolves.toMatchObject([{ id: 1 }])
+    await expect(
+      searchChannels(config, "SECONDARY.EXAMPLE.INVALID"),
+    ).resolves.toEqual([
+      {
+        id: 2,
+        name: "Secondary channel",
+        base_urls: [{ url: "https://secondary.example.invalid/v1" }],
+      },
+    ])
+    await expect(
+      searchChannels(config, "private-search-secret"),
+    ).resolves.toEqual([])
+    await expect(searchChannels(config, "   ")).resolves.toHaveLength(2)
   })
 
   it("returns all channels when the search keyword is blank", async () => {

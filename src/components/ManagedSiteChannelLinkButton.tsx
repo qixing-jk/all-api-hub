@@ -9,7 +9,7 @@ import {
 
 interface ManagedSiteChannelLinkButtonProps {
   channelName: string
-  channelId?: number
+  channelId?: number | string
   search?: string
   className?: string
   testId?: string

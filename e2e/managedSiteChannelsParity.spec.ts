@@ -7,6 +7,7 @@ import {
 } from "~/features/ManagedSiteChannels/testIds"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {
+  AXON_HUB_PRIMARY_ID,
   DONE_HUB_PRIMARY_ID,
   getInterceptedAxonHubDeleteRequestCount,
   getInterceptedAxonHubListRequestCount,
@@ -221,6 +222,9 @@ test("keeps DoneHub channel deep links editable in the native table", async ({
   const primaryRow = channelRowByName(page, "DoneHub primary")
   await expect(primaryRow).toBeVisible()
   await expect(channelRowByName(page, "DoneHub secondary")).toHaveCount(0)
+  await expect(
+    page.getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.paginationSummary),
+  ).toHaveAttribute("data-total", "1")
 
   const { rowTestToken } = await openManagedSiteChannelRowActions(
     page,
@@ -236,6 +240,19 @@ test("keeps DoneHub channel deep links editable in the native table", async ({
 
   await expect(channelRowByName(page, "DoneHub primary edited")).toBeVisible()
   await expect(channelRowByName(page, "DoneHub secondary")).toHaveCount(0)
+
+  const searchInput = page.getByTestId(
+    MANAGED_SITE_CHANNELS_TEST_IDS.searchInput,
+  )
+  await searchInput.fill("DoneHub primary edited")
+  await expect(channelRowByName(page, "DoneHub primary edited")).toBeVisible()
+  await searchInput.fill("no-matching-channel")
+  await expect(channelRowByName(page, "DoneHub primary edited")).toHaveCount(0)
+  await searchInput.fill("  PRIMARY EDITED  ")
+  await expect(channelRowByName(page, "DoneHub primary edited")).toBeVisible()
+  await searchInput.fill("")
+  await expect(channelRowByName(page, "DoneHub primary edited")).toBeVisible()
+  await expect(channelRowByName(page, "DoneHub secondary")).toBeVisible()
 })
 
 test("reconciles confirmed New API edits and deletes without reloading the collection", async ({
@@ -389,6 +406,17 @@ test("runs the AxonHub native edit and migration preview through the shared UI",
   await expect(page.getByText("Example primary")).toBeHidden()
   await page.getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.searchInput).fill("")
   await expect(page.getByText("Example primary")).toBeVisible()
+
+  const channelUrl = new URL(page.url())
+  channelUrl.searchParams.set("channelId", AXON_HUB_PRIMARY_ID)
+  channelUrl.searchParams.set("search", "stale-search")
+  await page.goto(channelUrl.toString())
+  await waitForExtensionRoot(page)
+  await expect(channelRowByName(page, "Example primary")).toBeVisible()
+  await expect(channelRowByName(page, "Example secondary")).toHaveCount(0)
+  await expect(
+    page.getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.paginationSummary),
+  ).toHaveAttribute("data-total", "1")
 
   await openManagedSiteChannelRowActions(page, "Example primary")
   const editAction = page.getByRole("menuitem", { name: "Edit" })

@@ -1,9 +1,11 @@
+import type { ManagedSiteType } from "~/constants/siteType"
 import {
   MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS,
   type ManagedSiteChannelKeyMatchReasonValue,
   type ManagedSiteChannelMatchInspection,
   type ManagedSiteChannelModelsMatchReasonValue,
 } from "~/services/managedSites/channelMatch"
+import { getManagedSiteChannelNavigationId } from "~/services/managedSites/managedSiteChannelResourceIdentity"
 import {
   getManagedSiteChannelKeyComparisonMode,
   inspectManagedSiteChannelKeyValueMatch,
@@ -13,6 +15,7 @@ import type { ManagedSiteChannel } from "~/types/managedSite"
 export interface ManagedSiteAssessmentChannel {
   id: number
   name: string
+  resourceId?: string | number
 }
 
 export interface ManagedSiteVerifiedKeyAssessment<
@@ -42,36 +45,51 @@ export interface ManagedSiteVerifiedKeyAssessment<
 
 export const toManagedSiteAssessmentChannel = (
   channel: ManagedSiteChannel,
+  siteType?: ManagedSiteType,
 ): ManagedSiteAssessmentChannel => ({
   id: channel.id,
   name: channel.name,
+  ...(siteType
+    ? { resourceId: getManagedSiteChannelNavigationId(siteType, channel) }
+    : {}),
 })
 
 const toOptionalManagedSiteAssessmentChannel = (
   channel: ManagedSiteChannel | null,
-) => (channel ? toManagedSiteAssessmentChannel(channel) : undefined)
+  siteType?: ManagedSiteType,
+) => (channel ? toManagedSiteAssessmentChannel(channel, siteType) : undefined)
 
 export const toManagedSiteVerifiedKeyAssessment = (
   inspection: ManagedSiteChannelMatchInspection,
+  siteType?: ManagedSiteType,
 ): ManagedSiteVerifiedKeyAssessment<ManagedSiteAssessmentChannel> => ({
   searchBaseUrl: inspection.searchBaseUrl,
   searchCompleted: inspection.searchCompleted,
   url: {
     matched: inspection.url.matched,
     candidateCount: inspection.url.candidateCount,
-    channel: toOptionalManagedSiteAssessmentChannel(inspection.url.channel),
+    channel: toOptionalManagedSiteAssessmentChannel(
+      inspection.url.channel,
+      siteType,
+    ),
   },
   key: {
     comparable: inspection.key.comparable,
     matched: inspection.key.matched,
     reason: inspection.key.reason,
-    channel: toOptionalManagedSiteAssessmentChannel(inspection.key.channel),
+    channel: toOptionalManagedSiteAssessmentChannel(
+      inspection.key.channel,
+      siteType,
+    ),
   },
   models: {
     comparable: inspection.models.comparable,
     matched: inspection.models.matched,
     reason: inspection.models.reason,
-    channel: toOptionalManagedSiteAssessmentChannel(inspection.models.channel),
+    channel: toOptionalManagedSiteAssessmentChannel(
+      inspection.models.channel,
+      siteType,
+    ),
     similarityScore: inspection.models.similarityScore,
   },
 })

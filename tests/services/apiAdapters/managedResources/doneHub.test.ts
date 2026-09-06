@@ -467,6 +467,63 @@ describe("DoneHub native managed resource", () => {
     })
   })
 
+  it.each(["Example channel alpha", "  CHANNEL ALPHA  ", "Example channel"])(
+    "finds channels by name or cleanup prefix: %s",
+    async (search) => {
+      mocks.list.mockResolvedValue({
+        items: [
+          { ...channel, name: "Example channel alpha" },
+          { ...channel, id: 18, name: "Unrelated channel" },
+        ],
+        total: 2,
+      })
+      const workspace = await doneHubManagedResourceRegistration.open()
+
+      const page = await workspace.list({ search })
+
+      expect(page.total).toBe(1)
+      expect(page.items).toHaveLength(1)
+      expect(page.items[0].ref.resourceId).toBe("17")
+    },
+  )
+
+  it("searches safe channel facts and restores the inventory when cleared", async () => {
+    mocks.list.mockResolvedValue({
+      items: [
+        {
+          ...channel,
+          key: "private-credential",
+          base_url: "https://gateway.example.invalid",
+        },
+        {
+          ...channel,
+          id: 18,
+          name: "Unrelated channel",
+          models: "model-b",
+          group: "other",
+          type: DoneHubChannelType.OpenAI,
+        },
+      ],
+      total: 2,
+    })
+    const workspace = await doneHubManagedResourceRegistration.open()
+    for (const search of ["17", "GATEWAY.EXAMPLE.INVALID", "model-a", "vip"]) {
+      const page = await workspace.list({ search })
+      expect(page.total).toBe(1)
+      expect(page.items).toHaveLength(1)
+      expect(page.items[0].ref.resourceId).toBe("17")
+    }
+    await expect(
+      workspace.list({ search: "private-credential" }),
+    ).resolves.toMatchObject({
+      items: [],
+      total: 0,
+    })
+    await expect(workspace.list({ search: "  " })).resolves.toMatchObject({
+      total: 2,
+    })
+  })
+
   it("filters native channels and tolerates unavailable editor groups", async () => {
     mocks.list.mockResolvedValueOnce({
       items: [channel, { ...channel, id: 18, name: "Secondary channel" }],

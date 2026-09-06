@@ -536,7 +536,7 @@ describe("Claude Code Hub action API adapter", () => {
     )
   })
 
-  it("searches providers through the provider v1 list API", async () => {
+  it("preserves literal search text and trims whitespace in the provider v1 query", async () => {
     let capturedAuthorization: string | null = null
     let capturedQuery: string | null = null
 
@@ -557,7 +557,9 @@ describe("Claude Code Hub action API adapter", () => {
       }),
     )
 
-    await expect(searchProviders(config, "search match")).resolves.toEqual([
+    await expect(
+      searchProviders(config, "  Search & 渠道 + #1  "),
+    ).resolves.toEqual([
       {
         id: 9,
         name: "Search Match",
@@ -565,7 +567,9 @@ describe("Claude Code Hub action API adapter", () => {
       },
     ])
     expect(capturedAuthorization).toBe("Bearer admin-secret")
-    expect(capturedQuery).toBe("search match")
+    expect(capturedQuery).toBe("Search & 渠道 + #1")
+    await searchProviders(config, "   ")
+    expect(capturedQuery).toBeNull()
   })
 
   it("lists providers through the provider v1 list API without search query", async () => {

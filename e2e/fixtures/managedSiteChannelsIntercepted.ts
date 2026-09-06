@@ -24,7 +24,7 @@ const INTERCEPTED_OCTOPUS_COOKIE = "auth=octopus-cookie-session"
 export const NEW_API_CREATED_ID = 303
 export const DONE_HUB_PRIMARY_ID = 701
 
-const AXON_HUB_PRIMARY_ID = "gid://axonhub/Channel/opaque-primary"
+export const AXON_HUB_PRIMARY_ID = "gid://axonhub/Channel/opaque-primary"
 const AXON_HUB_SECONDARY_ID = "gid://axonhub/Channel/opaque-secondary"
 const AXON_HUB_CREATED_ID = "gid://axonhub/Channel/opaque-created"
 const AXON_HUB_NEXT_CURSOR = "axonhub-cursor-page-2"

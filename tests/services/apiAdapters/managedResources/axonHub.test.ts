@@ -998,6 +998,8 @@ describe("AxonHub native managed-resource Adapter", () => {
           name: "Plain name",
           supportedModels: ["model-searchable"],
           tags: ["tag-searchable"],
+          credentials: { apiKey: "private-search-secret" },
+          settings: pinnedSettings,
         }),
       ],
     })
@@ -1005,7 +1007,7 @@ describe("AxonHub native managed-resource Adapter", () => {
 
     for (const term of [
       "opaque-search",
-      "plain name",
+      "  PLAIN NAME  ",
       "model-searchable",
       "tag-searchable",
       "gateway.example.invalid",
@@ -1017,6 +1019,12 @@ describe("AxonHub native managed-resource Adapter", () => {
     await expect(
       workspace.list({ search: "proxy-password" }),
     ).resolves.toMatchObject({ items: [] })
+    await expect(
+      workspace.list({ search: "private-search-secret" }),
+    ).resolves.toMatchObject({ items: [] })
+    await expect(workspace.list({ search: "   " })).resolves.toMatchObject({
+      items: [{ ref: { resourceId: "opaque-search-id" } }],
+    })
     expect(mocks.getChannel).not.toHaveBeenCalled()
   })
 

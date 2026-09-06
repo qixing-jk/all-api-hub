@@ -238,6 +238,9 @@ describe("Veloera native managed resource", () => {
     const workspace = await veloeraManagedResourceRegistration.open()
 
     for (const search of [
+      "Secondary",
+      "  SECOND  ",
+      "18",
       "openai",
       "GATEWAY.EXAMPLE.INVALID",
       "model-searchable",
@@ -248,6 +251,15 @@ describe("Veloera native managed resource", () => {
         items: [{ ref: { resourceId: "18" } }],
       })
     }
+    await expect(
+      workspace.list({ search: "no-matching-channel" }),
+    ).resolves.toMatchObject({
+      items: [],
+      total: 0,
+    })
+    await expect(workspace.list({ search: "  " })).resolves.toMatchObject({
+      total: 2,
+    })
   })
 
   it.each([

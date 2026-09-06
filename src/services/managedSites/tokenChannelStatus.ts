@@ -389,7 +389,10 @@ export async function getManagedSiteTokenChannelStatus(
       requestCache: params.operationContext?.channelMatch,
       protectionBypassExecution: params.protectionBypassExecution,
     })
-    const assessment = toManagedSiteVerifiedKeyAssessment(resolution)
+    const assessment = toManagedSiteVerifiedKeyAssessment(
+      resolution,
+      service.siteType,
+    )
     const exactMatch = getManagedSiteChannelExactMatch(
       resolution,
       service.siteType,
@@ -405,7 +408,10 @@ export async function getManagedSiteTokenChannelStatus(
     if (exactMatch) {
       return {
         status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.ADDED,
-        matchedChannel: toManagedSiteAssessmentChannel(exactMatch),
+        matchedChannel: toManagedSiteAssessmentChannel(
+          exactMatch,
+          service.siteType,
+        ),
         assessment,
         ...resolvedChannelKeys,
       }

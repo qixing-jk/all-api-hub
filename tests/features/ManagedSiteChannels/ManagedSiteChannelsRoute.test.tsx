@@ -7,6 +7,7 @@ import {
 } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import type { TFunction } from "i18next"
+import { useState } from "react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { ChannelEditorShell } from "~/components/dialogs/ChannelDialog/components/ChannelEditorShell"
@@ -676,6 +677,64 @@ describe("ManagedSiteChannelsRoute", () => {
       }),
     ).toHaveAttribute("href", "https://console.example.invalid/keys")
   })
+
+  it.each([
+    SITE_TYPES.NEW_API,
+    SITE_TYPES.VELOERA,
+    SITE_TYPES.DONE_HUB,
+    SITE_TYPES.AXON_HUB,
+    SITE_TYPES.CLAUDE_CODE_HUB,
+    SITE_TYPES.SUB2API,
+  ])(
+    "focuses the stable resource identity for %s despite an unrelated search",
+    (siteType) => {
+      const rows = [42, 142].map((id) => ({
+        ...nativeRow,
+        rowKey: `row-${id}`,
+        testToken: `resource-${id}`,
+        name: `Example ${id}`,
+        searchText: `Example ${id}`,
+        cells: {
+          ...nativeRow.cells,
+          "newApi.id": { kind: "number" as const, value: id, sortValue: id },
+          "veloera.id": { kind: "number" as const, value: id, sortValue: id },
+          "doneHub.id": { kind: "number" as const, value: id, sortValue: id },
+        },
+      }))
+      const resourceId = siteType === SITE_TYPES.AXON_HUB ? "native/42+=" : "42"
+      installNativeControllers({
+        list: {
+          allRows: rows,
+          rows,
+          totalRows: rows.length,
+          resolveRef: (rowKey: string) => ({
+            resourceId: rowKey === "row-42" ? resourceId : "142",
+            siteType,
+            kind: "channel",
+            scopeKey: "example",
+          }),
+        },
+      })
+      configureNativePreferences(siteType)
+
+      render(
+        <ManagedSiteChannelsRoute
+          siteType={siteType}
+          routeParams={{ channelId: resourceId, search: "unrelated old query" }}
+          onReplaceRouteQuery={vi.fn()}
+        />,
+      )
+
+      expect(screen.getByText("Example 42")).toBeVisible()
+      expect(screen.queryByText("Example 142")).not.toBeInTheDocument()
+      expect(
+        screen.getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.paginationSummary),
+      ).toHaveAttribute("data-total", "1")
+      expect(useListController).toHaveBeenLastCalledWith(
+        expect.objectContaining({ search: "" }),
+      )
+    },
+  )
 
   it("routes the production Veloera definition through native controllers", () => {
     installNativeControllers()
@@ -1597,34 +1656,42 @@ describe("ManagedSiteChannelsRoute", () => {
     expect(screen.getByText(nativeRow.name)).toBeVisible()
   })
 
-  it("opens native bulk-delete confirmation for selected opaque row keys", async () => {
-    const user = userEvent.setup()
-    const openBulkDelete = vi.fn()
-    installNativeDefinition(SITE_TYPES.AXON_HUB)
-    installNativeControllers({
-      list: {
-        selectedRowKeys: {
-          [nativeRow.rowKey]: true,
-          "opaque:not-selected": false,
+  it.each([undefined, "native-target"])(
+    "opens native bulk-delete confirmation for selected opaque row keys with identity %s",
+    async (channelId) => {
+      const user = userEvent.setup()
+      const openBulkDelete = vi.fn()
+      installNativeDefinition(SITE_TYPES.AXON_HUB)
+      installNativeControllers({
+        list: {
+          selectedRowKeys: {
+            [nativeRow.rowKey]: true,
+            "opaque:not-selected": false,
+            ...(channelId ? { "opaque:outside-route": true } : {}),
+          },
+          resolveRef: (rowKey: string) => ({
+            resourceId: rowKey === nativeRow.rowKey ? "native-target" : "other",
+          }),
         },
-      },
-      mutation: { openBulkDelete },
-    })
-    configureNativePreferences(SITE_TYPES.AXON_HUB)
+        mutation: { openBulkDelete },
+      })
+      configureNativePreferences(SITE_TYPES.AXON_HUB)
 
-    render(
-      <ManagedSiteChannelsRoute
-        siteType={SITE_TYPES.AXON_HUB}
-        onReplaceRouteQuery={vi.fn()}
-      />,
-    )
+      render(
+        <ManagedSiteChannelsRoute
+          siteType={SITE_TYPES.AXON_HUB}
+          routeParams={channelId ? { channelId } : {}}
+          onReplaceRouteQuery={vi.fn()}
+        />,
+      )
 
-    await user.click(
-      screen.getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.deleteSelectedButton),
-    )
+      await user.click(
+        screen.getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.deleteSelectedButton),
+      )
 
-    expect(openBulkDelete).toHaveBeenCalledWith([nativeRow.rowKey])
-  })
+      expect(openBulkDelete).toHaveBeenCalledWith([nativeRow.rowKey])
+    },
+  )
 
   it("does not expose an opaque identifier for an unlabeled delete result", () => {
     const unknownRowKey = "opaque:missing"
@@ -2054,6 +2121,62 @@ describe("ManagedSiteChannelsRoute", () => {
       nativeView: "expanded",
       search: undefined,
     })
+  })
+
+  it("resets pagination, status filters, and selection when a new identity deep link replaces the current list", () => {
+    const rows = Array.from({ length: 12 }, (_, index) => ({
+      ...nativeRow,
+      rowKey: `row-${index + 1}`,
+      testToken: `resource-${index + 1}`,
+      name: `Example ${index + 1}`,
+      searchText: `Example ${index + 1}`,
+    }))
+    installNativeControllers({
+      list: {
+        allRows: rows,
+        rows,
+        totalRows: rows.length,
+        resolveRef: (rowKey: string) => ({ resourceId: rowKey.slice(4) }),
+      },
+    })
+    const baseController = useListController()
+    useListController.mockImplementation(function useTestListController() {
+      const [pageIndex, setPageIndex] = useState(1)
+      const [statusFilter, setStatusFilter] = useState(["disabled"])
+      const [selectedRowKeys, setSelectedRowKeys] = useState({
+        "row-1": true,
+        "row-12": true,
+      })
+      return {
+        ...baseController,
+        pageIndex,
+        setPageIndex,
+        selectedRowKeys,
+        setSelectedRowKeys,
+        statusFilter,
+        setStatusFilter,
+      }
+    })
+    configureNativePreferences(SITE_TYPES.CLAUDE_CODE_HUB)
+    const { rerender } = render(
+      <ManagedSiteChannelsRoute
+        siteType={SITE_TYPES.CLAUDE_CODE_HUB}
+        onReplaceRouteQuery={vi.fn()}
+      />,
+    )
+
+    rerender(
+      <ManagedSiteChannelsRoute
+        siteType={SITE_TYPES.CLAUDE_CODE_HUB}
+        routeParams={{ channelId: "12" }}
+        onReplaceRouteQuery={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText("Example 12")).toBeVisible()
+    expect(
+      screen.getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.deleteSelectedButton),
+    ).toBeDisabled()
   })
 
   it("paginates the complete native collection exactly once", () => {
@@ -2778,7 +2901,7 @@ describe("ManagedSiteChannelsRoute", () => {
     expect(refresh).toHaveBeenCalledTimes(1)
   })
 
-  it("does not guess exact resource identity for a native provider without a route filter", async () => {
+  it("does not show unrelated resources for a missing native identity and lets the user clear it", async () => {
     const user = userEvent.setup()
     installNativeDefinition(SITE_TYPES.CLAUDE_CODE_HUB)
     installNativeControllers()
@@ -2807,7 +2930,10 @@ describe("ManagedSiteChannelsRoute", () => {
     )
 
     expect(onReplaceRouteQuery).not.toHaveBeenCalled()
-    expect(screen.getByText("Native example")).toBeVisible()
+    expect(screen.queryByText("Native example")).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.paginationSummary),
+    ).not.toBeInTheDocument()
     await user.click(
       screen.getByRole("button", {
         name: "managedSiteChannels:toolbar.clearSearch",

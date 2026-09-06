@@ -297,7 +297,9 @@ function NativeManagedSiteChannels({
       ),
     [t],
   )
-  const [searchValue, setSearchValue] = useState(routeParams.search ?? "")
+  const channelIdFilterValue = routeParams.channelId?.trim() ?? ""
+  const routeSearch = channelIdFilterValue ? "" : routeParams.search ?? ""
+  const [searchValue, setSearchValue] = useState(routeSearch)
   const [sorting, setSorting] = useState(() =>
     getDefaultManagedResourceSorting(siteType),
   )
@@ -322,8 +324,8 @@ function NativeManagedSiteChannels({
   }, [siteType])
 
   useEffect(
-    () => setSearchValue(routeParams.search ?? ""),
-    [routeParams.search],
+    () => setSearchValue(routeSearch),
+    [routeSearch, channelIdFilterValue],
   )
   useEffect(
     () => setSorting(getDefaultManagedResourceSorting(siteType)),
@@ -341,6 +343,15 @@ function NativeManagedSiteChannels({
     semantics: getManagedResourcePresentationSemantics(siteType),
     analytics,
   })
+  const previousChannelId = useRef(channelIdFilterValue)
+  const { setPageIndex, setSelectedRowKeys, setStatusFilter } = list
+  useEffect(() => {
+    if (previousChannelId.current === channelIdFilterValue) return
+    previousChannelId.current = channelIdFilterValue
+    setPageIndex(0)
+    setSelectedRowKeys({})
+    setStatusFilter([])
+  }, [channelIdFilterValue, setPageIndex, setSelectedRowKeys, setStatusFilter])
   const { syncingChannelIds, syncChannels } = useManagedSiteChannelModelSync({
     siteType,
     onModelsChanged: list.reconcile,
@@ -474,25 +485,38 @@ function NativeManagedSiteChannels({
   const canMigrate =
     resolveManagedSiteMigrationCapability(siteType)?.source !== undefined &&
     targets.length > 0
+  const { resolveRef } = list
   const nativeRows = useMemo(
     () =>
-      list.allRows.map((row) => {
-        const channelActions = row.channelActions
-        return {
-          ...row,
-          capabilities: {
-            ...row.capabilities,
-            canMigrate: canMigrate && row.capabilities.canView,
-            canSync: channelActions?.canSyncModels === true,
-            canOpenSync: channelActions?.canOpenModelSync === true,
-            canFilter: channelActions?.canConfigureModelFilters === true,
-          },
-          isSyncing:
-            channelActions !== undefined &&
-            syncingChannelIds.has(channelActions.channelId),
-        }
-      }),
-    [canMigrate, list.allRows, syncingChannelIds],
+      list.allRows
+        .filter(
+          (row) =>
+            !channelIdFilterValue ||
+            resolveRef(row.rowKey)?.resourceId === channelIdFilterValue,
+        )
+        .map((row) => {
+          const channelActions = row.channelActions
+          return {
+            ...row,
+            capabilities: {
+              ...row.capabilities,
+              canMigrate: canMigrate && row.capabilities.canView,
+              canSync: channelActions?.canSyncModels === true,
+              canOpenSync: channelActions?.canOpenModelSync === true,
+              canFilter: channelActions?.canConfigureModelFilters === true,
+            },
+            isSyncing:
+              channelActions !== undefined &&
+              syncingChannelIds.has(channelActions.channelId),
+          }
+        }),
+    [
+      canMigrate,
+      channelIdFilterValue,
+      list.allRows,
+      resolveRef,
+      syncingChannelIds,
+    ],
   )
   const rowsByKey = useMemo(
     () => new Map(nativeRows.map((row) => [row.rowKey, row])),
@@ -561,7 +585,7 @@ function NativeManagedSiteChannels({
     channelIdFilterValue: routeParams.channelId ?? "",
     statusFilterValues: [...list.statusFilter],
     pagination,
-    total: list.totalRows,
+    total: channelIdFilterValue ? nativeRows.length : list.totalRows,
     isLoading: list.isLoading,
     isRefreshing: list.isLoading,
     isResourceInteractionBlocked: mutation.deleteState.requiresFreshRead,
@@ -725,7 +749,9 @@ function NativeManagedSiteChannels({
     onDeleteSelected: () => {
       void mutation.openBulkDelete(
         Object.keys(list.selectedRowKeys).filter(
-          (rowKey) => list.selectedRowKeys[rowKey],
+          (rowKey) =>
+            list.selectedRowKeys[rowKey] &&
+            (!channelIdFilterValue || rowsByKey.has(rowKey)),
         ),
       )
     },

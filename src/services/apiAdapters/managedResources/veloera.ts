@@ -168,10 +168,9 @@ const listChannels = async (
   const search = query?.search?.trim().toLocaleLowerCase()
   if (!search) return result
   const items = result.items.filter((channel) =>
-    [
-      channel.name,
-      ...veloeraResourceFacts.getSearchData(channel).searchValues,
-    ].some((value) => value.toLocaleLowerCase().includes(search)),
+    veloeraResourceFacts
+      .getSearchData(channel)
+      .searchValues.some((value) => value.toLocaleLowerCase().includes(search)),
   )
   return { items, total: items.length }
 }
