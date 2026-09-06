@@ -73,7 +73,7 @@ describe("OptionsSearchDialog", () => {
       screen.getAllByText("importExport:webdav.title").length,
     ).toBeGreaterThan(0)
     expect(
-      screen.getAllByText("importExport:webdav.autoSync.title").length,
+      screen.getAllByText("importExport:webdav.syncSettings.title").length,
     ).toBeGreaterThan(0)
   })
 
