@@ -1416,6 +1416,7 @@ describe("AccountDialog AccountForm", () => {
   )
 
   it("announces redetection failures assertively", async () => {
+    testI18n.addResourceBundle("en", "accountDialog", enAccountDialog)
     const props = createProps()
     props.draft.siteType = SITE_TYPES.NEW_API
     props.draft.checkIn = createCheckIn({
@@ -1424,16 +1425,21 @@ describe("AccountDialog AccountForm", () => {
     })
     props.checkInRedetectionFeedback = {
       kind: "failed",
-      message: "Example redetection failure",
+      reason: "operation",
+      diagnostic: "Example redetection failure",
     }
 
-    render(<AccountForm {...withSitePolicy(props)} />)
+    try {
+      render(<AccountForm {...withSitePolicy(props)} />)
 
-    expect(
-      await screen.findByRole("alert", {
-        name: "Example redetection failure",
-      }),
-    ).toHaveAttribute("aria-live", "assertive")
+      expect(
+        await screen.findByRole("alert", {
+          name: "Operation failed: Example redetection failure",
+        }),
+      ).toHaveAttribute("aria-live", "assertive")
+    } finally {
+      testI18n.removeResourceBundle("en", "accountDialog")
+    }
   })
 
   it("does not show built-in auto check-in controls for AIHubMix accounts", async () => {
