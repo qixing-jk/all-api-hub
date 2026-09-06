@@ -56,7 +56,6 @@ export type ManagedResourceKind =
 
 export interface ManagedResourceProductPolicy {
   primaryKind: ManagedResourceKind
-  titleKey: "managedSiteChannels:title"
   itemLabelKey: "managedSiteChannels:table.columns.name"
   tableFieldIds: readonly string[]
   detailFieldIds: readonly string[]

@@ -554,7 +554,9 @@ describe("ModelRedirectService.applyModelRedirect", () => {
         success: false,
         updatedChannels: 0,
       })
-      expect(result.errors.join(" ")).toContain(`${outcome} mapping write`)
+      expect(result.errors.join(" ")).toContain(
+        "Model mapping update requires reconciliation",
+      )
     },
   )
 
@@ -605,11 +607,70 @@ describe("ModelRedirectService.applyModelRedirect", () => {
       success: false,
       updatedChannels: 0,
     })
-    expect(result.errors.join(" ")).toContain("mapping rejected")
+    expect(result.errors.join(" ")).toContain(
+      "Model mapping update was rejected",
+    )
     expect(result.errors.join(" ")).not.toContain(originalSecret)
     expect(mutableConfig.adminToken).toBe("")
     expect(updateChannelModelMappingMock).toHaveBeenCalledOnce()
   })
+
+  it.each([
+    { outcome: "rejected", key: "channel-secret" },
+    { outcome: "rejected", key: "********" },
+    { outcome: "uncertain", key: undefined },
+    { outcome: "uncertain", key: "channel-secret" },
+  ] as const)(
+    "does not expose provider diagnostics for a $outcome projected channel with key $key",
+    async ({ outcome, key }) => {
+      mockedHasValidConfig.mockReturnValue(true)
+      mockedUserPreferences.getPreferences.mockResolvedValue({
+        newApi: {
+          baseUrl: "https://example.com",
+          adminToken: "admin-secret",
+          userId: "1",
+        },
+        modelRedirect: {
+          ...DEFAULT_MODEL_REDIRECT_PREFERENCES,
+          enabled: true,
+          standardModels: ["gpt-4o"],
+        },
+      } as any)
+      listChannelsMock.mockResolvedValue({
+        items: [
+          {
+            id: 1,
+            name: "channel",
+            key,
+            models: "vendor/gpt-4o",
+            model_mapping: "{}",
+          },
+        ],
+      })
+      vi.spyOn(
+        ModelRedirectService,
+        "generateModelMappingForChannel",
+      ).mockReturnValue({ "gpt-4o": "vendor/gpt-4o" })
+      updateChannelModelMappingMock.mockResolvedValue({
+        outcome,
+        diagnostic: {
+          message:
+            "provider failure admin-secret channel-secret hidden-header-secret",
+        },
+      })
+      const result = await ModelRedirectService.applyModelRedirect()
+      expect(result.success).toBe(false)
+      expect(result.errors.join(" ")).toContain(
+        outcome === "rejected"
+          ? "Model mapping update was rejected"
+          : "Model mapping update requires reconciliation",
+      )
+      expect(JSON.stringify(result)).not.toMatch(
+        /admin-secret|channel-secret|hidden-header-secret|provider failure/,
+      )
+      expect(updateChannelModelMappingMock).toHaveBeenCalledOnce()
+    },
+  )
 
   it("deduplicates normalized existing and appended models before direct writes", async () => {
     mockedUserPreferences.getPreferences.mockResolvedValue({

@@ -8,6 +8,7 @@ import {
   createAxonHubChannel,
   deleteAxonHubChannel,
   getAxonHubChannel,
+  getAxonHubChannelSecretKey,
   graphqlRequest,
   hasCompleteAxonHubAdvancedDetail,
   listAxonHubChannelPage,
@@ -289,6 +290,59 @@ describe("AxonHub API service", () => {
       input: { first: 25, after: "upstream-current-cursor" },
     })
   })
+
+  it("resolves matching keys using only the core detail query", async () => {
+    let capturedQuery = ""
+    useAxonHubGraphqlRoutes({
+      token: "matching-token",
+      routes: [
+        {
+          matches: matchesGraphqlOperation("query GetAxonHubChannelCore"),
+          respond: ({ query, variables }) => {
+            capturedQuery = query
+            expect(variables?.id).toBe("opaque-matching-id")
+            return HttpResponse.json({
+              data: {
+                node: buildNativeChannelDetail("opaque-matching-id", {
+                  credentials: {
+                    apiKeys: ["first-key", "second-key"],
+                    apiKey: "first-key",
+                  },
+                  settings: undefined,
+                  policies: undefined,
+                  endpoints: undefined,
+                }),
+              },
+            })
+          },
+        },
+      ],
+    })
+    await expect(
+      getAxonHubChannelSecretKey(config, "opaque-matching-id"),
+    ).resolves.toBe("first-key\nsecond-key")
+    expect(capturedQuery).toContain("credentials")
+    expect(capturedQuery).not.toContain("settings {")
+    expect(capturedQuery).not.toContain("policies {")
+  })
+
+  it.each([{}, buildNativeChannelDetail("another-channel")])(
+    "rejects malformed or retargeted matching key detail",
+    async (node) => {
+      useAxonHubGraphqlRoutes({
+        token: "matching-token",
+        routes: [
+          {
+            matches: matchesGraphqlOperation("query GetAxonHubChannelCore"),
+            respond: () => HttpResponse.json({ data: { node } }),
+          },
+        ],
+      })
+      await expect(
+        getAxonHubChannelSecretKey(config, "requested-channel"),
+      ).rejects.toBeInstanceOf(AxonHubRequestError)
+    },
+  )
 
   it("loads native AxonHub detail by opaque GraphQL id", async () => {
     const opaqueId = "gid://axonhub/Channel/native-detail"

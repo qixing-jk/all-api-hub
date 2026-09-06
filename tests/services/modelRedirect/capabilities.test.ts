@@ -27,9 +27,9 @@ describe("resolveManagedSiteModelRedirectCapabilities", () => {
 
   it.each([{ list: vi.fn() }, { updateModelMapping: vi.fn() }, {}])(
     "is unsupported when a required operation is absent",
-    (channels) => {
+    (models) => {
       vi.mocked(getSiteTypeCapabilities).mockReturnValue({
-        managedSites: { channels },
+        managedSites: { models },
       } as any)
 
       expect(

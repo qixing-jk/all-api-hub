@@ -272,7 +272,9 @@ describe("ModelRedirectService managed channel operations", () => {
         clearedChannels: 0,
         failedChannels: 1,
       })
-      expect(result.errors.join(" ")).toContain(`${outcome} clear write`)
+      expect(result.errors.join(" ")).toContain(
+        "Model mapping update requires reconciliation",
+      )
     },
   )
 
@@ -350,7 +352,9 @@ describe("ModelRedirectService managed channel operations", () => {
       clearedChannels: 0,
       failedChannels: 1,
     })
-    expect(result.errors.join(" ")).toContain("clear rejected")
+    expect(result.errors.join(" ")).toContain(
+      "Model mapping update was rejected",
+    )
     expect(result.errors.join(" ")).not.toContain(originalSecret)
     expect(mutableConfig.adminToken).toBe("")
     expect(updateChannelModelMappingMock).toHaveBeenCalledOnce()

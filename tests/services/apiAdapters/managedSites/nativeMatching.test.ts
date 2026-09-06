@@ -5,7 +5,10 @@ import { axonHubManagedSiteCapabilities } from "~/services/apiAdapters/managedSi
 import { claudeCodeHubManagedSiteCapabilities } from "~/services/apiAdapters/managedSites/claudeCodeHub"
 import { sub2ApiManagedSiteCapabilities } from "~/services/apiAdapters/managedSites/sub2api"
 import { veloeraManagedSiteCapabilities } from "~/services/apiAdapters/managedSites/veloera"
-import { listAxonHubChannelPage } from "~/services/apiService/axonHub"
+import {
+  getAxonHubChannelSecretKey,
+  listAxonHubChannelPage,
+} from "~/services/apiService/axonHub"
 import { searchProviders } from "~/services/apiService/claudeCodeHub"
 import { listAllChannels, searchChannel } from "~/services/apiService/veloera"
 import { resolveManagedSiteChannelMatch } from "~/services/managedSites/channelMatchResolver"
@@ -14,10 +17,13 @@ import {
   revealSub2ApiApiKey,
   searchSub2ApiApiKeyAccounts,
 } from "~/services/managedSites/providers/sub2api"
+import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
+import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 
 vi.mock("~/services/apiService/axonHub", async (original) => ({
   ...(await original<typeof import("~/services/apiService/axonHub")>()),
   listAxonHubChannelPage: vi.fn(),
+  getAxonHubChannelSecretKey: vi.fn(),
 }))
 vi.mock("~/services/apiService/veloera", async (original) => ({
   ...(await original<typeof import("~/services/apiService/veloera")>()),
@@ -63,20 +69,25 @@ describe("native managed-resource matching", () => {
             status: "enabled",
             baseURL: "https://upstream.example/v1",
             supportedModels: ["gpt-4o"],
-            credentials: { apiKeys: ["test-key"] },
           },
         ],
       })
     const matching = axonHubManagedSiteCapabilities.matching
+    vi.mocked(getAxonHubChannelSecretKey).mockResolvedValue("test-key")
     const result = await resolveManagedSiteChannelMatch({
       service: {
         siteType: SITE_TYPES.AXON_HUB,
         searchChannel: matching.search,
+        hydrateComparableChannelKeys: matching.hydrateComparableKeys,
       },
       managedConfig: axonConfig,
       accountBaseUrl: "https://upstream.example",
       models: ["gpt-4o"],
       key: "test-key",
+      resolveHiddenKeys: true,
+      protectionBypassExecution: userCommandExecution(
+        PROTECTION_BYPASS_USER_COMMANDS.ManageSiteChannels,
+      ),
     })
     expect(listAxonHubChannelPage).toHaveBeenLastCalledWith(axonConfig, {
       cursor: "page-2",
@@ -91,6 +102,56 @@ describe("native managed-resource matching", () => {
       key: "test-key",
     })
     expect(result.models.matched).toBe(true)
+    expect(getAxonHubChannelSecretKey).toHaveBeenCalledWith(
+      axonConfig,
+      "Channel:opaque-id",
+      expect.anything(),
+    )
+  })
+
+  it("does not expose AxonHub list credentials and hydrates masked keys with cancellation", async () => {
+    vi.mocked(listAxonHubChannelPage).mockResolvedValue({
+      items: [
+        {
+          id: "opaque",
+          name: "Channel",
+          type: "openai",
+          credentials: { apiKey: "private-list-key" },
+        } as never,
+      ],
+    })
+    const matching = axonHubManagedSiteCapabilities.matching
+    const list = await matching.search(axonConfig, "")
+    expect(JSON.stringify(list)).not.toContain("private-list-key")
+    const signal = new AbortController().signal
+    const options = {
+      signal,
+      protectionBypassExecution: userCommandExecution(
+        PROTECTION_BYPASS_USER_COMMANDS.ManageSiteChannels,
+      ),
+    }
+    vi.mocked(getAxonHubChannelSecretKey).mockResolvedValue("first\nsecond")
+    const candidates = [
+      { ...list!.items[0], key: "********" },
+      { ...list!.items[0], id: "usable", key: "existing-key" },
+    ]
+    await expect(
+      matching.hydrateComparableKeys!(axonConfig, candidates, options),
+    ).resolves.toEqual([
+      { ...candidates[0], key: "first\nsecond" },
+      candidates[1],
+    ])
+    expect(getAxonHubChannelSecretKey).toHaveBeenCalledOnce()
+    expect(getAxonHubChannelSecretKey).toHaveBeenCalledWith(
+      axonConfig,
+      "opaque",
+      options,
+    )
+    const aborted = new DOMException("Aborted", "AbortError")
+    vi.mocked(getAxonHubChannelSecretKey).mockRejectedValue(aborted)
+    await expect(
+      matching.fetchSecretKey!(axonConfig, "opaque", options),
+    ).rejects.toBe(aborted)
   })
 
   it("rejects repeated AxonHub cursors instead of declaring an incomplete inventory complete", async () => {

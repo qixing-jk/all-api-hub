@@ -28,6 +28,7 @@ import { octopusChannelEffect, runOctopusMutation } from "./octopusMutation"
 export const octopusManagedResourceModels: ManagedResourceModelsCapability<OctopusConfig> =
   {
     list: async (config, options) => {
+      await options?.beforeRequest?.()
       const items = (await listChannels(config, options)).map(
         toOctopusModelChannel,
       )

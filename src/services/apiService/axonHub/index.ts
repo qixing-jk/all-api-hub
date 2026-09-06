@@ -6,6 +6,7 @@ import type {
   AxonHubUpdateChannelInput,
 } from "~/types/axonHub"
 import type { AxonHubConfig } from "~/types/axonHubConfig"
+import { normalizeList } from "~/utils/core/string"
 
 // Keep channel-list reads limited to non-secret summary fields and sanitize
 // over-returned nodes before exposing native resource summaries.
@@ -1081,6 +1082,27 @@ export async function getAxonHubChannel(
 
   incompleteAdvancedDetails.add(node)
   return node
+}
+
+/** Resolve matching credentials without requesting optional advanced editor fields. */
+export async function getAxonHubChannelSecretKey(
+  config: AxonHubConfig,
+  id: string,
+  options?: Pick<RequestInit, "signal">,
+): Promise<string> {
+  const node = await requestAxonHubChannelNode(
+    config,
+    id,
+    GET_AXON_HUB_CHANNEL_CORE,
+    options,
+  )
+  if (!isAxonHubChannelCoreDetail(node) || node.id !== id) {
+    throw new AxonHubRequestError("protocol", "not-dispatched")
+  }
+  return normalizeList([
+    ...(node.credentials?.apiKeys ?? []),
+    node.credentials?.apiKey ?? "",
+  ]).join("\n")
 }
 
 /**

@@ -410,6 +410,7 @@
     "selectAll": "Seleccionar todas las filas",
     "selectRow": "Seleccionar fila"
   },
+  "title": "Administración de canales",
   "toasts": {
     "channelSaved": "Canal guardado",
     "channelUpdated": "Canal actualizado",

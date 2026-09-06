@@ -405,6 +405,7 @@
     "selectAll": "Select all rows",
     "selectRow": "Select Row"
   },
+  "title": "Channels management",
   "toasts": {
     "channelSaved": "Channel saved",
     "channelUpdated": "Channel updated",

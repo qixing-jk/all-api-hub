@@ -405,6 +405,7 @@
     "selectAll": "Chọn tất cả",
     "selectRow": "Chọn hàng"
   },
+  "title": "Quản lý kênh",
   "toasts": {
     "channelSaved": "Đã lưu kênh",
     "channelUpdated": "Đã cập nhật kênh",

@@ -4,13 +4,17 @@ import type {
   ManagedSiteChannelDraftsCapability,
   ManagedSiteConfigCapability,
 } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
-import { listAxonHubChannelPage } from "~/services/apiService/axonHub"
+import {
+  getAxonHubChannelSecretKey,
+  listAxonHubChannelPage,
+} from "~/services/apiService/axonHub"
 import {
   buildChannelName,
   checkValidAxonHubConfig,
   fetchAvailableModels,
   prepareChannelFormData,
 } from "~/services/managedSites/providers/axonHub"
+import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/managedSite"
 import type { AxonHubConfig } from "~/types/axonHubConfig"
 import type { ManagedResourceMatchCandidate } from "~/types/managedResourceMatching"
 import { normalizeList } from "~/utils/core/string"
@@ -46,12 +50,7 @@ const matching: ManagedResourceMatchingCapability<AxonHubConfig> = {
             ...(channel.supportedModels ?? []),
             ...(channel.manualModels ?? []),
           ]).join(","),
-          key: [
-            ...(channel.credentials?.apiKeys ?? []),
-            channel.credentials?.apiKey ?? "",
-          ]
-            .filter(Boolean)
-            .join("\n"),
+          key: "",
         })),
       )
       cursor = page.nextCursor
@@ -61,6 +60,30 @@ const matching: ManagedResourceMatchingCapability<AxonHubConfig> = {
     } while (cursor)
     return { items, total: items.length, type_counts: {} }
   },
+  fetchSecretKey,
+  hydrateComparableKeys: async (config, candidates, options) => {
+    const hydrated = []
+    for (const candidate of candidates) {
+      if (hasUsableManagedSiteChannelKey(candidate.key)) {
+        hydrated.push(candidate)
+        continue
+      }
+      hydrated.push({
+        ...candidate,
+        key: await fetchSecretKey(config, candidate.id, options),
+      })
+    }
+    return hydrated
+  },
+}
+
+/** Matching lists are secret-free; resolve credentials only for selected candidates. */
+async function fetchSecretKey(
+  config: AxonHubConfig,
+  id: number | string,
+  options?: Pick<RequestInit, "signal">,
+): Promise<string> {
+  return getAxonHubChannelSecretKey(config, String(id), options)
 }
 export const axonHubManagedSiteCapabilities = {
   matching,

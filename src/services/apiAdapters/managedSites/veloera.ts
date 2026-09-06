@@ -131,6 +131,7 @@ const fetchSecretKey = async (
 const hydrateComparableKeys = async <T extends ManagedResourceMatchCandidate>(
   config: VeloeraConfig,
   candidates: T[],
+  options?: Pick<RequestInit, "signal">,
 ) => {
   const hydratedCandidates: T[] = []
 
@@ -143,6 +144,7 @@ const hydrateComparableKeys = async <T extends ManagedResourceMatchCandidate>(
     const key = await fetchSecretKey(
       config,
       requireNumericManagedResourceId(candidate.id),
+      options,
     )
     hydratedCandidates.push({ ...candidate, key })
   }
@@ -302,8 +304,8 @@ const veloeraManagedSiteChannelDrafts: ManagedSiteChannelDraftsCapability = {
 }
 
 const matching: ManagedResourceMatchingCapability<VeloeraConfig> = {
-  fetchSecretKey: async (config, id) =>
-    fetchSecretKey(config, requireNumericManagedResourceId(id)),
+  fetchSecretKey: async (config, id, options) =>
+    fetchSecretKey(config, requireNumericManagedResourceId(id), options),
   hydrateComparableKeys,
   search: async (config) =>
     toManagedResourceMatchList(

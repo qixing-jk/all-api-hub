@@ -410,6 +410,7 @@
     "selectAll": "Selecionar todas as linhas",
     "selectRow": "Selecionar linha"
   },
+  "title": "Gerenciamento de canais",
   "toasts": {
     "channelSaved": "Canal salvo",
     "channelUpdated": "Canal atualizado",

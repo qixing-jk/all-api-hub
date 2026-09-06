@@ -241,6 +241,9 @@ class LegacyChannelConfigMigration {
 
       const inventoryResults = await Promise.allSettled(
         targets.map(async (target) => {
+          // AxonHub uses opaque ids, never legacy numeric channel-config identities.
+          // Its availability must not block migration for numeric-id providers.
+          if (target.siteType === SITE_TYPES.AXON_HUB) return []
           const refs = await runAbortableTask(
             async (signal) => {
               const registration = getManagedResourceRegistration(
@@ -293,8 +296,6 @@ class LegacyChannelConfigMigration {
             { timeoutMs: LEGACY_CHANNEL_INVENTORY_TIMEOUT_MS },
           )
 
-          // AxonHub's old numeric ids were process-local projections, never migration evidence.
-          if (target.siteType === SITE_TYPES.AXON_HUB) return []
           return refs.flatMap((ref) => {
             const channelId = Number(ref.resourceId)
             if (

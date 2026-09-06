@@ -93,7 +93,6 @@ const ACCOUNT_AND_MANAGED_SCOPES = [
 
 const LEGACY_MANAGED_CHANNEL_POLICY = {
   primaryKind: MANAGED_RESOURCE_KINDS.Channel,
-  titleKey: "managedSiteChannels:title",
   itemLabelKey: "managedSiteChannels:table.columns.name",
   tableFieldIds: [],
   detailFieldIds: [],

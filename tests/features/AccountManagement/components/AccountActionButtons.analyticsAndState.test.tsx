@@ -7,6 +7,7 @@ import { describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import AccountActionButtons from "~/features/AccountManagement/components/AccountActionButtons"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
+import * as managedSiteSupport from "~/services/managedSites/utils/managedSite"
 import type { UserPreferences } from "~/services/preferences/userPreferences"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -269,6 +270,10 @@ describe("AccountActionButtons", () => {
   )
 
   it("does not track analytics for disabled account action menu entries", async () => {
+    vi.spyOn(
+      managedSiteSupport,
+      "supportsManagedSiteBaseUrlChannelLookup",
+    ).mockReturnValue(false)
     userPreferencesContextValue.preferences = {
       managedSiteType: SITE_TYPES.VELOERA,
       veloera: {

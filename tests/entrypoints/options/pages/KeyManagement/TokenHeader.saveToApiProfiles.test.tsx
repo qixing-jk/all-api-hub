@@ -18,6 +18,7 @@ import {
   MANAGED_SITE_TOKEN_CHANNEL_STATUSES,
   type ManagedSiteTokenChannelAssessment,
 } from "~/services/managedSites/tokenChannelStatus"
+import * as managedSiteSupport from "~/services/managedSites/utils/managedSite"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
@@ -212,6 +213,7 @@ async function clickSaveAndAssociateAction(
 
 describe("TokenHeader save to API profiles", () => {
   beforeEach(() => {
+    vi.restoreAllMocks()
     mockCreateProfile.mockReset()
     mockOpenApiCredentialProfilesPage.mockReset()
     mockOpenManagedSiteChannelsForChannel.mockReset()
@@ -527,7 +529,11 @@ describe("TokenHeader save to API profiles", () => {
     })
   })
 
-  it("suppresses managed-site status badges and review links when Veloera is selected", () => {
+  it("suppresses status badges and review links without a matching registration", () => {
+    vi.spyOn(
+      managedSiteSupport,
+      "supportsManagedSiteBaseUrlChannelLookup",
+    ).mockReturnValue(false)
     mockedUseUserPreferencesContext.mockReturnValue({
       managedSiteType: "Veloera",
       claudeCodeRouterBaseUrl: "",

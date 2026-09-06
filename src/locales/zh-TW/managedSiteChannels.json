@@ -405,6 +405,7 @@
     "selectAll": "選擇所有行",
     "selectRow": "選擇行"
   },
+  "title": "渠道管理",
   "toasts": {
     "channelSaved": "渠道已儲存",
     "channelUpdated": "渠道已更新",

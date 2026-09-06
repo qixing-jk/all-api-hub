@@ -405,6 +405,7 @@
     "selectAll": "すべての行を選択",
     "selectRow": "行を選択"
   },
+  "title": "チャネル管理",
   "toasts": {
     "channelSaved": "チャネルを保存しました",
     "channelUpdated": "チャネルを更新しました",

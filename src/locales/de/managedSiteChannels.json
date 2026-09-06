@@ -405,6 +405,7 @@
     "selectAll": "Alle Zeilen auswählen",
     "selectRow": "Zeile auswählen"
   },
+  "title": "Kanalverwaltung",
   "toasts": {
     "channelSaved": "Kanal gespeichert",
     "channelUpdated": "Kanal aktualisiert",

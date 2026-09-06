@@ -84,6 +84,7 @@ describe("legacyChannelConfigMigration", () => {
     vi.setSystemTime(new Date("2026-03-28T05:30:00.000Z"))
     getPreferencesStrictMock.mockResolvedValue({})
     hasRuntimeConfigInputMock.mockReturnValue(false)
+    resolveRuntimeConfigMock.mockReset()
     migrateLegacyNumericConfigsMock.mockResolvedValue({
       migrated: 0,
       ambiguous: 0,
@@ -100,6 +101,33 @@ describe("legacyChannelConfigMigration", () => {
     })
     expect(getPreferencesStrictMock).not.toHaveBeenCalled()
     expect(getManagedResourceRegistrationMock).not.toHaveBeenCalled()
+  })
+
+  it("does not let an unavailable opaque-id AxonHub block numeric-id migration", async () => {
+    hasLegacyNumericConfigsMock.mockResolvedValue(true)
+    resolveRuntimeConfigMock.mockImplementation((_preferences, siteType) =>
+      ["new-api", "axonhub"].includes(siteType)
+        ? {
+            siteType,
+            config: { baseUrl: `https://${siteType}.example.invalid` },
+          }
+        : null,
+    )
+    getManagedResourceRegistrationMock.mockImplementation((siteType) => {
+      if (siteType === "axonhub") throw new Error("AxonHub offline")
+      return registration(
+        vi.fn().mockResolvedValue({ items: [nativeFact(9)], total: 1 }),
+      )
+    })
+    const { legacyChannelConfigMigration } = await loadMigration()
+    await expect(
+      legacyChannelConfigMigration.initialize(),
+    ).resolves.toMatchObject({ status: "completed" })
+    expect(getManagedResourceRegistrationMock).not.toHaveBeenCalledWith(
+      "axonhub",
+      expect.anything(),
+    )
+    expect(migrateLegacyNumericConfigsMock).toHaveBeenCalledOnce()
   })
 
   it("ignores malformed retry state instead of treating it as active backoff", async () => {

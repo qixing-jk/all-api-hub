@@ -821,7 +821,7 @@ function NativeManagedSiteChannels({
         capabilities={capabilities}
         callbacks={callbacks}
         labels={labels}
-        title={t(policy.titleKey)}
+        title={t("managedSiteChannels:title")}
         titleActions={pageExperience.titleActions}
         description={pageExperience.description}
         configurationMissingDescription={getManagedSiteConfigMissingMessage(

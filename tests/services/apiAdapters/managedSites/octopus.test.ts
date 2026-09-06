@@ -79,6 +79,33 @@ describe("Octopus managed-site channel capability", () => {
     })
   })
 
+  it("awaits the request gate before loading model inventory", async () => {
+    let release!: () => void
+    const beforeRequest = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          release = resolve
+        }),
+    )
+    octopusApi.listChannels.mockResolvedValue([])
+    const pending = octopusManagedResourceModels.list(config, { beforeRequest })
+    expect(beforeRequest).toHaveBeenCalledOnce()
+    expect(octopusApi.listChannels).not.toHaveBeenCalled()
+    release()
+    await expect(pending).resolves.toMatchObject({ items: [], total: 0 })
+    expect(octopusApi.listChannels).toHaveBeenCalledOnce()
+  })
+
+  it("does not dispatch model inventory when the request gate rejects", async () => {
+    const error = new Error("cancelled gate")
+    await expect(
+      octopusManagedResourceModels.list(config, {
+        beforeRequest: vi.fn().mockRejectedValue(error),
+      }),
+    ).rejects.toBe(error)
+    expect(octopusApi.listChannels).not.toHaveBeenCalled()
+  })
+
   it("updates scheduled model lists through the common mutation boundary without changing the payload", async () => {
     octopusApi.updateChannel.mockResolvedValueOnce({
       success: true,

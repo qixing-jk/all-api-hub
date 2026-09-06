@@ -16,6 +16,7 @@ import {
 } from "~/services/apiAdapters/contracts/keyManagement"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import * as managedSiteSupport from "~/services/managedSites/utils/managedSite"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -162,6 +163,7 @@ const createAdapterWithKeyManagement = (
   } = {},
 ) => ({
   siteType: SITE_TYPES.NEW_API,
+  managedSites: { matching: { search: vi.fn() } },
   account: {
     keyManagement: {
       fetchTokens: overrides.fetchTokens ?? vi.fn().mockResolvedValue([]),
@@ -187,6 +189,7 @@ const createAdapterWithServiceCredential = (
   } = {},
 ) => ({
   siteType: SITE_TYPES.SHAREDCHAT,
+  managedSites: { matching: { search: vi.fn() } },
   account: {
     serviceCredential: {
       fetch:
@@ -235,6 +238,7 @@ type ManagedSiteContextValue = {
 
 describe("useKeyManagement enabled account filtering", () => {
   beforeEach(() => {
+    vi.restoreAllMocks()
     apiCredentialProfilesChangeListeners.length = 0
     vi.mocked(toast.success).mockReset()
     vi.mocked(toast.error).mockReset()
@@ -2737,7 +2741,11 @@ describe("useKeyManagement enabled account filtering", () => {
     )
   })
 
-  it("skips automatic and manual managed-site status checks when Veloera is selected", async () => {
+  it("skips automatic and manual status checks without a matching registration", async () => {
+    vi.spyOn(
+      managedSiteSupport,
+      "supportsManagedSiteBaseUrlChannelLookup",
+    ).mockReturnValue(false)
     const mockedUseAccountData = vi.mocked(useAccountData)
     const account = createDisplayAccount({
       id: "veloera-acc",
@@ -4144,7 +4152,7 @@ describe("useKeyManagement enabled account filtering", () => {
     )
   })
 
-  it("clears cached managed-site status when preferences switch to Veloera", async () => {
+  it("clears cached status when switching to a site without matching registration", async () => {
     const mockedUseAccountData = vi.mocked(useAccountData)
     const account = createDisplayAccount({
       id: "veloera-switch-acc",
@@ -4208,6 +4216,10 @@ describe("useKeyManagement enabled account filtering", () => {
       status: managedSiteTokenChannelStatuses.NOT_ADDED,
     })
 
+    vi.spyOn(
+      managedSiteSupport,
+      "supportsManagedSiteBaseUrlChannelLookup",
+    ).mockReturnValue(false)
     managedSiteContextValue.managedSiteType = "Veloera"
     managedSiteContextValue.newApiBaseUrl = ""
     managedSiteContextValue.newApiAdminToken = ""

@@ -15,7 +15,11 @@ import type {
   ManagedSiteRuntimeConfigValue,
 } from "~/services/managedSites/runtimeConfig"
 import { resolveCurrentManagedSiteRuntimeConfig } from "~/services/managedSites/runtimeConfig"
-import { collectManagedConfigSecrets } from "~/services/managedSites/utils/managedSite"
+import {
+  collectManagedConfigSecrets,
+  collectManagedResourceSecrets,
+  mergeManagedResourceSecretCollections,
+} from "~/services/managedSites/utils/managedSite"
 import { modelMetadataService } from "~/services/models/modelMetadata"
 import { extractCoreModelIdentity } from "~/services/models/modelMetadata/modelIdentityIndex"
 import {
@@ -133,10 +137,19 @@ class DirectModelRedirectMappingWriter implements ModelRedirectMappingWriter {
     channel: ManagedModelChannel,
     modelMapping: Record<string, string>,
   ): Promise<ManagedSiteMutationResult<unknown>> {
-    this.mutationKnownSecrets = Object.freeze(
-      collectManagedConfigSecrets(this.runtimeConfig.config),
+    const configSecrets = {
+      knownSecrets: collectManagedConfigSecrets(this.runtimeConfig.config),
+      complete: true,
+    }
+    const channelSecrets = collectManagedResourceSecrets(channel)
+    const secrets = mergeManagedResourceSecretCollections(
+      configSecrets,
+      channelSecrets,
     )
-    this.mutationKnownSecretsComplete = true
+    this.mutationKnownSecrets = Object.freeze(secrets.knownSecrets)
+    // Model inventory projections do not establish a complete provider-secret set.
+    // Updates may load additional hidden credentials; do not display their raw diagnostics.
+    this.mutationKnownSecretsComplete = false
     return await this.channels.updateModelMapping(
       this.runtimeConfig.config,
       channel.id,

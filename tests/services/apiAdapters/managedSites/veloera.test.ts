@@ -1,7 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { veloeraManagedResourceModels } from "~/services/apiAdapters/managedSites/veloera"
+import {
+  veloeraManagedResourceModels,
+  veloeraManagedSiteCapabilities,
+} from "~/services/apiAdapters/managedSites/veloera"
 import { ApiError } from "~/services/apiTransport/errors"
+import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
 import type { ManagedSiteChannel } from "~/types/managedSite"
 import {
@@ -9,6 +13,7 @@ import {
   testManagedSiteChannelMutationContract,
   type ChannelMutationScenario,
 } from "~~/tests/services/apiAdapters/managedSites/channelMutationContract"
+import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 import {
   buildApiToken,
   buildDisplaySiteData,
@@ -72,6 +77,41 @@ describe("Veloera managed-site channel capability", () => {
     adminToken: "admin-token",
     userId: "42",
   }
+
+  it("forwards cancellation for direct and masked matching key reads", async () => {
+    const signal = new AbortController().signal
+    const options = {
+      signal,
+      protectionBypassExecution: userCommandExecution(
+        PROTECTION_BYPASS_USER_COMMANDS.ManageSiteChannels,
+      ),
+    }
+    veloeraApi.fetchChannel.mockResolvedValue({ key: "resolved-key" })
+    await expect(
+      veloeraManagedSiteCapabilities.matching.fetchSecretKey!(
+        config,
+        7,
+        options,
+      ),
+    ).resolves.toBe("resolved-key")
+    await expect(
+      veloeraManagedSiteCapabilities.matching.hydrateComparableKeys!(
+        config,
+        [{ id: 8, key: "********" } as never],
+        options,
+      ),
+    ).resolves.toEqual([{ id: 8, key: "resolved-key" }])
+    expect(veloeraApi.fetchChannel).toHaveBeenCalledWith(
+      expect.objectContaining({ abortSignal: signal }),
+      7,
+      options,
+    )
+    expect(veloeraApi.fetchChannel).toHaveBeenCalledWith(
+      expect.objectContaining({ abortSignal: signal }),
+      8,
+      options,
+    )
+  })
   const buildManagedSiteChannel = (
     overrides: Partial<ManagedSiteChannel> = {},
   ): ManagedSiteChannel =>
