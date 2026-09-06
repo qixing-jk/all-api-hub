@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next"
 import { Virtuoso } from "react-virtuoso"
 
 import { formatLatency } from "~/components/dialogs/VerifyApiDialog/utils"
+import { VerificationModeSelect } from "~/components/dialogs/VerifyApiDialog/VerificationMode"
 import {
   Alert,
   Badge,
@@ -62,16 +63,19 @@ import {
 import { resolveProductAnalyticsErrorCategoryFromProbeResult } from "~/services/productAnalytics/verification"
 import {
   API_TYPES,
+  API_VERIFICATION_MODES,
   API_VERIFICATION_PROBE_IDS,
   API_VERIFICATION_PROBE_STATUSES,
   getApiVerificationProbeDefinitions,
   runApiVerificationProbe,
   type ApiVerificationApiType,
+  type ApiVerificationMode,
   type ApiVerificationProbeId,
   type ApiVerificationProbeResult,
 } from "~/services/verification/aiApiVerification"
 import {
   getApiVerificationApiTypeLabel,
+  getApiVerificationModeLabel,
   getApiVerificationProbeLabel,
 } from "~/services/verification/aiApiVerification/i18n"
 import {
@@ -337,6 +341,9 @@ export function BatchVerifyModelsDialog({
 }: BatchVerifyModelsDialogProps) {
   const { t } = useTranslation(["modelList", "aiApiVerification"])
   const [rows, setRows] = useState<BatchVerifyRow[]>(() => buildRows(items))
+  const [verificationMode, setVerificationMode] = useState<ApiVerificationMode>(
+    API_VERIFICATION_MODES.Streaming,
+  )
   const [apiTypeMode, setApiTypeMode] = useState<BatchVerifyApiTypeMode>(() =>
     getDefaultApiTypeMode(items),
   )
@@ -388,6 +395,7 @@ export function BatchVerifyModelsDialog({
     setRows(buildRows(items))
     setListHeight(0)
     setApiTypeMode(getDefaultApiTypeMode(items))
+    setVerificationMode(API_VERIFICATION_MODES.Streaming)
     setSelectedProbeIds(DEFAULT_SELECTED_PROBE_IDS)
     setSelectedModelKeys(items.map((item) => item.key))
     setIsRunning(false)
@@ -716,6 +724,7 @@ export function BatchVerifyModelsDialog({
               baseUrl: credentials.baseUrl,
               apiKey: credentials.apiKey,
               apiType,
+              mode: verificationMode,
               modelId: item.modelId,
               tokenMeta,
               probeId: probe.id,
@@ -861,6 +870,7 @@ export function BatchVerifyModelsDialog({
     },
     [
       apiTypeMode,
+      verificationMode,
       getAccountRuntimeKeys,
       getResolvedRuntimeKey,
       persistResult,
@@ -1087,6 +1097,12 @@ export function BatchVerifyModelsDialog({
                       size="sm"
                     >
                       {getApiVerificationProbeLabel(t, result.id)}
+                      {result.mode ? (
+                        <>
+                          {" · "}
+                          {getApiVerificationModeLabel(t, result.mode)}
+                        </>
+                      ) : null}
                       {" · "}
                       {result.status === API_VERIFICATION_PROBE_STATUSES.Pass
                         ? t("modelList:batchVerify.status.pass")
@@ -1204,6 +1220,7 @@ export function BatchVerifyModelsDialog({
                 {t("modelList:batchVerify.apiType.label")}
               </div>
               <SearchableSelect
+                aria-label={t("modelList:batchVerify.apiType.label")}
                 options={apiTypeOptions}
                 value={apiTypeMode}
                 onChange={(value) =>
@@ -1213,7 +1230,13 @@ export function BatchVerifyModelsDialog({
               />
             </div>
 
-            <div className="flex flex-wrap items-end gap-2 sm:justify-end">
+            <VerificationModeSelect
+              value={verificationMode}
+              onChange={setVerificationMode}
+              disabled={isRunning}
+            />
+
+            <div className="flex flex-wrap items-end gap-2 sm:col-span-2 sm:justify-end">
               <Badge variant="info">
                 {t("modelList:batchVerify.counts.total", {
                   value: summary.total,

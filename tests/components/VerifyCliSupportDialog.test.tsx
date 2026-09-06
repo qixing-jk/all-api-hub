@@ -1,3 +1,4 @@
+import userEvent from "@testing-library/user-event"
 import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -187,6 +188,87 @@ describe("VerifyCliSupportDialog", () => {
     mockStartProductAnalyticsAction.mockReturnValue({
       complete: mockCompleteProductAnalyticsAction,
     })
+  })
+
+  it("locks the selected mode during CLI verification and labels each recorded result", async () => {
+    const user = userEvent.setup()
+    const probeGate = createDeferred<void>()
+    mockRunCliSupportTool.mockImplementation(async ({ toolId, mode }) => {
+      await probeGate.promise
+      return {
+        id: toolId,
+        probeId: "tool-calling",
+        mode,
+        status: "pass",
+        latencyMs: 1,
+        summary: "Mode fixture passed",
+      }
+    })
+
+    render(
+      <VerifyCliSupportDialog
+        isOpen={true}
+        onClose={() => {}}
+        profile={{
+          id: "p-mode",
+          name: "Mode profile",
+          apiType: "openai",
+          baseUrl: "https://example.com",
+          apiKey: "sk-mode-fixture",
+          tagIds: [],
+          notes: "",
+          createdAt: 1,
+          updatedAt: 1,
+        }}
+        initialModelId="mode-test"
+      />,
+    )
+
+    const modeSelect = await screen.findByRole("combobox", {
+      name: "aiApiVerification:verifyDialog.meta.mode",
+    })
+    expect(modeSelect).toHaveTextContent(
+      "aiApiVerification:verifyDialog.modes.streaming",
+    )
+    await user.click(modeSelect)
+    await user.click(
+      screen.getByRole("option", {
+        name: "aiApiVerification:verifyDialog.modes.nonStreaming",
+      }),
+    )
+
+    const runButton = screen.getByRole("button", {
+      name: "cliSupportVerification:verifyDialog.actions.run",
+    })
+    await waitFor(() => expect(runButton).toBeEnabled())
+    await user.click(runButton)
+    await waitFor(() => expect(mockRunCliSupportTool).toHaveBeenCalledTimes(1))
+    expect(modeSelect).toBeDisabled()
+
+    await act(async () => {
+      probeGate.resolve()
+    })
+    await waitFor(() => {
+      expect(mockRunCliSupportTool).toHaveBeenCalledTimes(3)
+      expect(modeSelect).toBeEnabled()
+    })
+    for (const [request] of mockRunCliSupportTool.mock.calls) {
+      expect(request).toMatchObject({ mode: "non-streaming" })
+    }
+
+    await user.click(modeSelect)
+    await user.click(
+      screen.getByRole("option", {
+        name: "aiApiVerification:verifyDialog.modes.streaming",
+      }),
+    )
+    for (const toolId of ["claude", "codex", "gemini"]) {
+      expect(
+        within(screen.getByTestId(getCliToolCardTestId(toolId))).getByText(
+          "aiApiVerification:verifyDialog.modes.nonStreaming",
+        ),
+      ).toBeVisible()
+    }
   })
 
   it("runs CLI support directly from a stored profile without loading account tokens", async () => {
@@ -1404,8 +1486,11 @@ describe("VerifyCliSupportDialog", () => {
       />,
     )
 
-    await waitFor(() => expect(screen.getByRole("combobox")).toBeEnabled())
-    fireEvent.click(screen.getByRole("combobox"))
+    const runtimeKeySelect = await screen.findByTestId(
+      VERIFY_CLI_RUNTIME_KEY_TEST_ID,
+    )
+    await waitFor(() => expect(runtimeKeySelect).toBeEnabled())
+    fireEvent.click(runtimeKeySelect)
     expect(
       await screen.findByRole("option", { name: "Codex" }),
     ).toHaveAttribute("aria-disabled", "true")

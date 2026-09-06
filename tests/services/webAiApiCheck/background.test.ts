@@ -483,45 +483,14 @@ describe("webAiApiCheck background handlers", () => {
     })
   })
 
-  it("runProbe forwards undefined model ids when the input only contains whitespace", async () => {
-    vi.resetModules()
-    const { runApiVerificationProbe } = await import(
-      "~/services/verification/aiApiVerification"
-    )
-    vi.mocked(runApiVerificationProbe).mockResolvedValue({
-      id: "text-generation",
-      status: "pass",
-      latencyMs: 42,
-      summary: "ok",
-      input: {
-        apiType: "openai-compatible",
-        baseUrl: "https://proxy.example.com/api",
-      },
-    } as any)
-
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
-
-    const response = await background.resolveWebAiApiCheckRunProbeMessage({
-      apiType: "openai-compatible",
-      baseUrl: "https://proxy.example.com/api/v1",
-      apiKey: "sk-test-secret-fixture",
-      modelId: "   ",
-      probeId: "text-generation",
-    })
-
-    expect(runApiVerificationProbe).toHaveBeenCalledWith({
-      apiType: "openai-compatible",
-      apiKey: "sk-test-secret-fixture",
-      baseUrl: "https://proxy.example.com/api",
-      modelId: undefined,
-      probeId: "text-generation",
-      abortSignal: undefined,
-    })
-    expect(response).toEqual({
-      success: true,
-      result: {
+  it.each([undefined, "streaming", "non-streaming"] as const)(
+    "runProbe forwards mode %s and trims blank model ids",
+    async (mode) => {
+      vi.resetModules()
+      const { runApiVerificationProbe } = await import(
+        "~/services/verification/aiApiVerification"
+      )
+      vi.mocked(runApiVerificationProbe).mockResolvedValue({
         id: "text-generation",
         status: "pass",
         latencyMs: 42,
@@ -530,8 +499,70 @@ describe("webAiApiCheck background handlers", () => {
           apiType: "openai-compatible",
           baseUrl: "https://proxy.example.com/api",
         },
-      },
+      } as any)
+
+      const background = await import(
+        "~/services/verification/webAiApiCheck/background"
+      )
+
+      const response = await background.resolveWebAiApiCheckRunProbeMessage({
+        apiType: "openai-compatible",
+        baseUrl: "https://proxy.example.com/api/v1",
+        apiKey: "sk-test-secret-fixture",
+        modelId: "   ",
+        probeId: "text-generation",
+        mode,
+      })
+
+      expect(runApiVerificationProbe).toHaveBeenCalledWith({
+        apiType: "openai-compatible",
+        apiKey: "sk-test-secret-fixture",
+        baseUrl: "https://proxy.example.com/api",
+        modelId: undefined,
+        probeId: "text-generation",
+        mode: mode ?? "streaming",
+        abortSignal: undefined,
+      })
+      expect(response).toEqual({
+        success: true,
+        result: {
+          id: "text-generation",
+          status: "pass",
+          latencyMs: 42,
+          summary: "ok",
+          input: {
+            apiType: "openai-compatible",
+            baseUrl: "https://proxy.example.com/api",
+          },
+        },
+      })
+    },
+  )
+
+  it("runProbe rejects invalid verification modes without dispatching a probe", async () => {
+    vi.resetModules()
+    const { runApiVerificationProbe } = await import(
+      "~/services/verification/aiApiVerification"
+    )
+    vi.mocked(runApiVerificationProbe).mockClear()
+    const background = await import(
+      "~/services/verification/webAiApiCheck/background"
+    )
+
+    const response = await background.resolveWebAiApiCheckRunProbeMessage({
+      apiType: "openai-compatible",
+      baseUrl: "https://proxy.example.com",
+      apiKey: "sk-test-mode-fixture",
+      modelId: "mode-test",
+      probeId: "text-generation",
+      mode: "automatic" as never,
     })
+
+    expect(response).toMatchObject({
+      success: false,
+      errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+    })
+    expect(runApiVerificationProbe).not.toHaveBeenCalled()
   })
 
   it("runProbe can be cancelled by run id while the probe is in flight", async () => {

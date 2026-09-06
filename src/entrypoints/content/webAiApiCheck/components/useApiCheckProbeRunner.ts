@@ -18,6 +18,7 @@ import {
   API_VERIFICATION_PROBE_STATUSES,
   getApiVerificationProbeDefinitions,
   type ApiVerificationApiType,
+  type ApiVerificationMode,
   type ApiVerificationProbeId,
   type ApiVerificationProbeResult,
 } from "~/services/verification/aiApiVerification"
@@ -45,6 +46,7 @@ type ApiCheckProbeResultWithAnalyticsCategory = ApiVerificationProbeResult & {
 type UseApiCheckProbeRunnerOptions = {
   t: TFunction<["webAiApiCheck", "common", "aiApiVerification"]>
   apiType: ApiVerificationApiType
+  verificationMode: ApiVerificationMode
   trigger: ApiCheckOpenModalDetail["trigger"]
   baseUrl: string
   apiKey: string
@@ -154,6 +156,7 @@ function buildMissingModelResult(
 export function useApiCheckProbeRunner({
   t,
   apiType,
+  verificationMode,
   trigger,
   baseUrl,
   apiKey,
@@ -339,6 +342,7 @@ export function useApiCheckProbeRunner({
           {
             runId,
             apiType,
+            mode: verificationMode,
             baseUrl: trimmedBaseUrl,
             apiKey: trimmedApiKey,
             modelId: modelId.trim() || undefined,
@@ -470,6 +474,7 @@ export function useApiCheckProbeRunner({
       setValidationError,
       trigger,
       updateProbeResult,
+      verificationMode,
     ],
   )
 

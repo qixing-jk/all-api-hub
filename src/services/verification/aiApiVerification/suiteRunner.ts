@@ -7,6 +7,7 @@ import {
 } from "./types"
 import type {
   ApiVerificationApiType,
+  ApiVerificationMode,
   ApiVerificationProbeResult,
 } from "./types"
 
@@ -14,6 +15,7 @@ type RunApiVerificationSuiteParams = {
   baseUrl: string
   apiKey: string
   apiType: ApiVerificationApiType
+  mode?: ApiVerificationMode
   requestedModelId?: string
   abortSignal?: AbortSignal
 }
@@ -76,6 +78,7 @@ export async function runApiVerificationSuite(
         apiKey: params.apiKey,
         apiType: params.apiType,
         modelId: resolvedModelId,
+        mode: params.mode,
         abortSignal: params.abortSignal,
       }),
     )

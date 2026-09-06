@@ -85,6 +85,7 @@ describe("apiVerificationService", () => {
       .mockResolvedValueOnce({ output: { ok: true } })
 
     const report = await runApiVerification({
+      mode: "non-streaming",
       baseUrl: "https://example.com",
       apiKey: "secret",
       apiType: API_TYPES.OPENAI_COMPATIBLE,
@@ -121,6 +122,7 @@ describe("apiVerificationService", () => {
       .mockResolvedValueOnce({ output: { ok: true } })
 
     const report = await runApiVerification({
+      mode: "non-streaming",
       baseUrl: "https://example.com",
       apiKey: "secret",
       apiType: API_TYPES.OPENAI_COMPATIBLE,
@@ -145,6 +147,7 @@ describe("apiVerificationService", () => {
       .mockResolvedValueOnce({ output: { ok: true } })
 
     const report = await runApiVerification({
+      mode: "non-streaming",
       baseUrl: "https://example.com",
       apiKey: "secret",
       apiType: API_TYPES.OPENAI_COMPATIBLE,
@@ -166,6 +169,7 @@ describe("apiVerificationService", () => {
       .mockResolvedValueOnce({ output: { ok: true } })
 
     const report = await runApiVerification({
+      mode: "non-streaming",
       baseUrl: "https://example.com",
       apiKey: "secret",
       apiType: API_TYPES.OPENAI_COMPATIBLE,
@@ -181,6 +185,7 @@ describe("apiVerificationService", () => {
     mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce([])
 
     const report = await runApiVerification({
+      mode: "non-streaming",
       baseUrl: "https://example.com",
       apiKey: "secret",
       apiType: API_TYPES.OPENAI_COMPATIBLE,
@@ -202,6 +207,7 @@ describe("apiVerificationService", () => {
       .mockResolvedValueOnce({ toolResults: [], sources: [] })
 
     const report = await runApiVerification({
+      mode: "non-streaming",
       baseUrl: "https://example.com",
       apiKey: "secret",
       apiType: API_TYPES.GOOGLE,
@@ -235,6 +241,7 @@ describe("apiVerificationService", () => {
       .mockResolvedValueOnce({ toolResults: [], sources: [] })
 
     const report = await runApiVerification({
+      mode: "non-streaming",
       baseUrl: "https://example.com",
       apiKey: "secret",
       apiType: API_TYPES.GOOGLE,
@@ -250,6 +257,7 @@ describe("apiVerificationService", () => {
     mockGenerateText.mockResolvedValueOnce({ text: "OK" })
 
     const result = await runApiVerificationProbe({
+      mode: "non-streaming",
       baseUrl: "https://example.com",
       apiKey: "secret",
       apiType: API_TYPES.OPENAI,
@@ -271,6 +279,7 @@ describe("apiVerificationService", () => {
     mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce(["gpt-test"])
 
     const result = await runApiVerificationProbe({
+      mode: "non-streaming",
       baseUrl: "https://example.com/v1",
       apiKey: "secret",
       apiType: API_TYPES.OPENAI,
@@ -298,6 +307,7 @@ describe("apiVerificationService", () => {
     ])
 
     const result = await runApiVerificationProbe({
+      mode: "non-streaming",
       baseUrl: "https://api.anthropic.com/v1/messages",
       apiKey: "secret",
       apiType: API_TYPES.ANTHROPIC,
@@ -326,6 +336,7 @@ describe("apiVerificationService", () => {
     ])
 
     const result = await runApiVerificationProbe({
+      mode: "non-streaming",
       baseUrl: "https://proxy.example.com/api/v1beta/models",
       apiKey: "secret",
       apiType: API_TYPES.GOOGLE,
@@ -349,6 +360,7 @@ describe("apiVerificationService", () => {
 
   it("fails a probe when modelId is missing", async () => {
     const result = await runApiVerificationProbe({
+      mode: "non-streaming",
       baseUrl: "https://example.com",
       apiKey: "secret",
       apiType: API_TYPES.OPENAI,
@@ -365,6 +377,7 @@ describe("apiVerificationService", () => {
     )
 
     const result = await runApiVerificationProbe({
+      mode: "non-streaming",
       baseUrl: "https://example.com",
       apiKey: "secret",
       apiType: API_TYPES.OPENAI,
@@ -378,6 +391,7 @@ describe("apiVerificationService", () => {
 
   it("returns unsupported for web-search probe on anthropic apiType", async () => {
     const result = await runApiVerificationProbe({
+      mode: "non-streaming",
       baseUrl: "https://example.com",
       apiKey: "secret",
       apiType: API_TYPES.ANTHROPIC,

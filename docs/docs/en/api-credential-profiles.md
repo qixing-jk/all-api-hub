@@ -135,6 +135,8 @@ Click **`Verify Interface`** on the card to confirm:
 
 This is useful when changing keys, switching networks, or troubleshooting "client cannot connect, but the site seems alive."
 
+Under **`Test mode`**, choose **`Streaming`** (the default) or **`Non-streaming`**. Generation tests use the selected mode, and their results and newly saved history show that mode. Fetching the model list is unaffected. If the endpoint rejects a request, you can switch modes and test again; tests do not switch automatically.
+
 A verification result describes only that probe. It does not mean the key is permanently valid or invalid; verify again after changing networks or keys, or whenever you notice a problem.
 
 ### 2. Verify CLI Compatibility
@@ -146,6 +148,8 @@ Click **`Verify CLI Compatibility`** to separately test:
 - If there are compatibility differences such as "web can call, but CLI cannot."
 
 This check does not launch Claude Code, Codex, Gemini CLI, or another program. It simulates the protocols and tool-calling patterns commonly used by those CLIs to help you assess compatibility in advance.
+
+Under **`Test mode`**, choose **`Streaming`** (the default) or **`Non-streaming`**. Each CLI keeps its corresponding API type for the tool-calling probe. Results show the selected mode, and failures do not trigger an automatic mode switch.
 
 ### 3. Open in Model List
 

@@ -6,6 +6,7 @@ import { runApiVerificationSuite } from "./suiteRunner"
 import { API_VERIFICATION_PROBE_STATUSES } from "./types"
 import type {
   ApiVerificationApiType,
+  ApiVerificationMode,
   ApiVerificationProbeId,
   ApiVerificationProbeResult,
   ApiVerificationReport,
@@ -18,6 +19,7 @@ type RunApiVerificationParams = {
   baseUrl: string
   apiKey: string
   apiType: ApiVerificationApiType
+  mode?: ApiVerificationMode
   modelId?: string
   tokenMeta?: Pick<ApiToken, "models" | "model_limits" | "name" | "id">
   abortSignal?: AbortSignal
@@ -60,6 +62,7 @@ export async function runApiVerificationProbe(
     apiKey: params.apiKey,
     apiType: params.apiType,
     modelId: resolvedModelId,
+    mode: params.mode,
     abortSignal: params.abortSignal,
   })
 }
@@ -78,6 +81,7 @@ export async function runApiVerification(
     apiKey: params.apiKey,
     apiType: params.apiType,
     requestedModelId,
+    mode: params.mode,
     abortSignal: params.abortSignal,
   })
 

@@ -3,11 +3,13 @@ import { jsonSchema, tool } from "ai"
 import { nowMs, okLatency } from "../probeTiming"
 import { createModel } from "../providers"
 import {
+  API_VERIFICATION_MODES,
   API_VERIFICATION_PROBE_IDS,
   API_VERIFICATION_PROBE_STATUSES,
 } from "../types"
 import type {
   ApiVerificationApiType,
+  ApiVerificationMode,
   ApiVerificationProbeResult,
 } from "../types"
 import {
@@ -22,6 +24,7 @@ type RunToolCallingProbeParams = {
   apiKey: string
   apiType: ApiVerificationApiType
   modelId: string
+  mode?: ApiVerificationMode
   abortSignal?: AbortSignal
 }
 
@@ -59,6 +62,7 @@ export async function runToolCallingProbe(
   params: RunToolCallingProbeParams,
 ): Promise<ApiVerificationProbeResult> {
   const startedAt = nowMs()
+  const mode = params.mode ?? API_VERIFICATION_MODES.Streaming
   const secretsToRedact = [params.apiKey]
   const prompt = TOOL_CALLING_PROMPT
 
@@ -76,17 +80,21 @@ export async function runToolCallingProbe(
       execute: async () => ({ now: new Date().toISOString() }),
     })
 
-    const result = await runProbeGeneration(params.apiType, {
-      model,
-      prompt,
-      tools: { [VERIFY_TOOL_NAME]: verifyTool },
-      toolChoice: "required",
-      abortSignal: params.abortSignal,
-    })
+    const result = await runProbeGeneration(
+      {
+        model,
+        prompt,
+        tools: { [VERIFY_TOOL_NAME]: verifyTool },
+        toolChoice: "required",
+        abortSignal: params.abortSignal,
+      },
+      mode,
+    )
 
     if (!toolCalled(result)) {
       return {
         id: API_VERIFICATION_PROBE_IDS.ToolCalling,
+        mode,
         status: API_VERIFICATION_PROBE_STATUSES.Fail,
         latencyMs: okLatency(startedAt),
         summary: "No tool call detected (model may not support tools)",
@@ -113,6 +121,7 @@ export async function runToolCallingProbe(
 
     return {
       id: API_VERIFICATION_PROBE_IDS.ToolCalling,
+      mode,
       status: API_VERIFICATION_PROBE_STATUSES.Pass,
       latencyMs: okLatency(startedAt),
       summary: "Tool call succeeded",
@@ -144,6 +153,7 @@ export async function runToolCallingProbe(
     const diagnostics = buildSafeProbeFailureDiagnostics(error, summary)
     return {
       id: API_VERIFICATION_PROBE_IDS.ToolCalling,
+      mode,
       status: API_VERIFICATION_PROBE_STATUSES.Fail,
       latencyMs: okLatency(startedAt),
       summary: summary || "Request failed",

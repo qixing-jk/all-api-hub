@@ -43,6 +43,7 @@ import {
 import { resolveProductAnalyticsErrorCategoryFromProbeResult } from "~/services/productAnalytics/verification"
 import {
   API_TYPES,
+  API_VERIFICATION_MODES,
   API_VERIFICATION_PROBE_STATUSES,
   getApiVerificationProbeDefinitions,
   guessModelIdFromToken,
@@ -50,6 +51,7 @@ import {
 } from "~/services/verification/aiApiVerification"
 import type {
   ApiVerificationApiType,
+  ApiVerificationMode,
   ApiVerificationProbeId,
   ApiVerificationProbeResult,
 } from "~/services/verification/aiApiVerification"
@@ -76,6 +78,7 @@ import { buildProbeState } from "./probeState"
 import type { VerifyApiDialogProps } from "./types"
 import { useVerificationDialogState } from "./useVerificationDialogState"
 import { formatLatency, safeJsonStringify } from "./utils"
+import { VerificationModeSelect } from "./VerificationMode"
 
 /**
  * Unified logger scoped to the API verification dialog.
@@ -141,6 +144,9 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
     API_TYPES.OPENAI_COMPATIBLE,
   )
   const [modelId, setModelId] = useState<string>(initialModelId?.trim() ?? "")
+  const [verificationMode, setVerificationMode] = useState<ApiVerificationMode>(
+    API_VERIFICATION_MODES.Streaming,
+  )
   const shouldStopRef = useRef(false)
   const suiteAbortControllerRef = useRef<AbortController | null>(null)
   const probeAbortControllersRef = useRef(
@@ -310,6 +316,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
         baseUrl: resolvedRuntimeKey.baseUrl,
         apiKey: resolvedRuntimeKey.secret,
         apiType,
+        mode: verificationMode,
         modelId: modelId.trim() || undefined,
         tokenMeta: isAccountTokenRuntimeKey(resolvedRuntimeKey)
           ? {
@@ -532,6 +539,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
     setAccountRuntimeKeys([])
     setSelectedRuntimeKeyId("")
     setModelId(trimmedModelId)
+    setVerificationMode(API_VERIFICATION_MODES.Streaming)
     applyPersistedSummary(null)
 
     const providerType = trimmedModelId
@@ -623,7 +631,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
           </div>
         ) : null}
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="space-y-1.5">
             <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
               {t("verifyDialog.meta.runtimeKey")}
@@ -708,6 +716,12 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
               placeholder={t("verifyDialog.meta.apiTypePlaceholder")}
             />
           </div>
+
+          <VerificationModeSelect
+            value={verificationMode}
+            onChange={setVerificationMode}
+            disabled={!canClose}
+          />
 
           <div className="space-y-1.5">
             <div className="dark:text-dark-text-tertiary text-xs text-gray-500">

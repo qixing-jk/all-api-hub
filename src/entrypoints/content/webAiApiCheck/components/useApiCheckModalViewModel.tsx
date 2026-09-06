@@ -15,7 +15,9 @@ import {
 } from "~/services/productAnalytics/contracts"
 import {
   API_TYPES,
+  API_VERIFICATION_MODES,
   type ApiVerificationApiType,
+  type ApiVerificationMode,
   type ApiVerificationProbeId,
 } from "~/services/verification/aiApiVerification"
 import {
@@ -76,6 +78,7 @@ export interface ApiCheckModalViewModel {
   extractionMetadata: ApiCheckOpenModalDetail["extraction"]
   apiKeyVisible: boolean
   apiType: ApiVerificationApiType
+  verificationMode: ApiVerificationMode
   modelId: string
   modelIdsOptions: Array<{ value: string; label: string }>
   tags: Tag[]
@@ -114,6 +117,7 @@ export interface ApiCheckModalActions {
   setApiKey: (value: string) => void
   setApiKeyVisible: (isVisible: boolean) => void
   setApiType: (apiType: ApiVerificationApiType) => void
+  setVerificationMode: (mode: ApiVerificationMode) => void
   setModelId: (modelId: string) => void
   setSelectedTagIds: (tagIds: string[]) => void
   setNotes: (notes: string) => void
@@ -155,6 +159,9 @@ export function useApiCheckModalViewModel() {
   const [apiKeyVisible, setApiKeyVisible] = useState(true)
   const [apiType, setApiType] = useState<ApiVerificationApiType>(
     API_TYPES.OPENAI_COMPATIBLE,
+  )
+  const [verificationMode, setVerificationMode] = useState<ApiVerificationMode>(
+    API_VERIFICATION_MODES.Streaming,
   )
   const [tags, setTags] = useState<Tag[]>([])
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
@@ -237,6 +244,7 @@ export function useApiCheckModalViewModel() {
   const probeRunner = useApiCheckProbeRunner({
     t,
     apiType,
+    verificationMode,
     trigger,
     baseUrl,
     apiKey,
@@ -353,6 +361,7 @@ export function useApiCheckModalViewModel() {
       clearHistoryPrefilledFetchKey()
       updateBaseUrl(nextBaseUrl)
       setApiKey(nextApiKey)
+      setVerificationMode(API_VERIFICATION_MODES.Streaming)
       setSelectedTagIds([])
       setNotes("")
       setExpiresAtInput("")
@@ -619,6 +628,7 @@ export function useApiCheckModalViewModel() {
       extractionMetadata,
       apiKeyVisible,
       apiType,
+      verificationMode,
       modelId,
       modelIdsOptions,
       tags,
@@ -656,6 +666,7 @@ export function useApiCheckModalViewModel() {
       setApiKey,
       setApiKeyVisible,
       setApiType,
+      setVerificationMode,
       setModelId,
       setSelectedTagIds,
       setNotes,

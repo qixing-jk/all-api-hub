@@ -10,6 +10,14 @@ export const API_TYPES = {
 
 export type ApiVerificationApiType = (typeof API_TYPES)[keyof typeof API_TYPES]
 
+export const API_VERIFICATION_MODES = {
+  Streaming: "streaming",
+  NonStreaming: "non-streaming",
+} as const
+
+export type ApiVerificationMode =
+  (typeof API_VERIFICATION_MODES)[keyof typeof API_VERIFICATION_MODES]
+
 export const API_VERIFICATION_PROBE_IDS = {
   Models: "models",
   TextGeneration: "text-generation",
@@ -34,6 +42,11 @@ export type ApiVerificationProbeResult = {
   id: ApiVerificationProbeId
   status: ApiVerificationProbeStatus
   latencyMs: number
+  /**
+   * Generation mode selected for this probe. Absent for non-generation probes
+   * and historical results that did not record their mode.
+   */
+  mode?: ApiVerificationMode
   /**
    * Human-readable summary of the probe result.
    *

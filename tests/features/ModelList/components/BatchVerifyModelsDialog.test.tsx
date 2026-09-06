@@ -1,4 +1,5 @@
 import { act } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import type React from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -239,6 +240,68 @@ describe("BatchVerifyModelsDialog", () => {
     mockUpsertLatestSummary.mockImplementation(async (summary) => summary)
   })
 
+  it("applies the selected mode to every model and labels the batch results", async () => {
+    const user = userEvent.setup()
+    const profile = {
+      id: "profile-mode",
+      name: "Profile",
+      baseUrl: "https://example.invalid",
+      apiKey: "sk-synthetic",
+      apiType: API_TYPES.OPENAI,
+      tagIds: [],
+      notes: "",
+      createdAt: 1,
+      updatedAt: 1,
+    }
+    mockRunApiVerificationProbe.mockResolvedValue({
+      id: "text-generation",
+      status: "pass",
+      latencyMs: 1,
+      summary: "Text generation succeeded",
+      mode: "non-streaming",
+    })
+    renderDialog(
+      ["gpt-a", "gpt-b"].map((modelId) => ({
+        key: "profile:profile-mode:model:" + modelId,
+        modelId,
+        enableGroups: [],
+        source: { kind: "profile", profile },
+      })),
+    )
+
+    const modeSelect = await screen.findByRole("combobox", {
+      name: "aiApiVerification:verifyDialog.meta.mode",
+    })
+    expect(modeSelect).toHaveTextContent(
+      "aiApiVerification:verifyDialog.modes.streaming",
+    )
+    await user.click(modeSelect)
+    await user.click(
+      await screen.findByRole("option", {
+        name: "aiApiVerification:verifyDialog.modes.nonStreaming",
+      }),
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: "modelList:batchVerify.actions.start",
+      }),
+    )
+
+    await waitFor(() =>
+      expect(mockRunApiVerificationProbe).toHaveBeenCalledTimes(2),
+    )
+    for (const modelId of ["gpt-a", "gpt-b"]) {
+      expect(mockRunApiVerificationProbe).toHaveBeenCalledWith(
+        expect.objectContaining({ modelId, mode: "non-streaming" }),
+      )
+      expect(
+        await screen.findByTestId(
+          getBatchVerifyRowTestId("profile:profile-mode:model:" + modelId),
+        ),
+      ).toHaveTextContent("aiApiVerification:verifyDialog.modes.nonStreaming")
+    }
+  })
+
   it("derives skipped status for empty probe results", () => {
     expect(deriveBatchVerifyRowStatus([])).toBe("skipped")
   })
@@ -372,7 +435,11 @@ describe("BatchVerifyModelsDialog", () => {
       },
     ])
 
-    fireEvent.click(await screen.findByRole("combobox"))
+    fireEvent.click(
+      await screen.findByRole("combobox", {
+        name: "modelList:batchVerify.apiType.label",
+      }),
+    )
     fireEvent.click(
       await screen.findByRole("option", {
         name: "aiApiVerification:verifyDialog.apiTypes.openai",
@@ -1861,7 +1928,11 @@ describe("BatchVerifyModelsDialog", () => {
       },
     ])
 
-    fireEvent.click(await screen.findByRole("combobox"))
+    fireEvent.click(
+      await screen.findByRole("combobox", {
+        name: "modelList:batchVerify.apiType.label",
+      }),
+    )
     fireEvent.click(
       await screen.findByRole("option", {
         name: "aiApiVerification:verifyDialog.apiTypes.openai",

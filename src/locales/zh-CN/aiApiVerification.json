@@ -32,11 +32,16 @@
     "meta": {
       "apiType": "接口类型",
       "apiTypePlaceholder": "选择接口类型",
+      "mode": "测试方式",
       "model": "模型",
       "modelPlaceholder": "输入模型 ID",
       "runtimeKey": "密钥",
       "runtimeKeyIncompatible": "不适用于该模型",
       "runtimeKeyPlaceholder": "选择密钥"
+    },
+    "modes": {
+      "nonStreaming": "非流式",
+      "streaming": "流式"
     },
     "noCompatibleRuntimeKeyHint": "当前没有适用于该模型分组的密钥。请在密钥管理中创建或选择可用分组的密钥。",
     "notRunYet": "尚未运行",

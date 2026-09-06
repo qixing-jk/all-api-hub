@@ -1,6 +1,7 @@
 import type { ProductAnalyticsErrorCategory } from "~/services/productAnalytics/contracts"
 import type {
   ApiVerificationApiType,
+  ApiVerificationMode,
   ApiVerificationProbeId,
   ApiVerificationProbeResult,
 } from "~/services/verification/aiApiVerification"
@@ -143,6 +144,7 @@ export type ApiCheckFetchModelsResponse =
 export type ApiCheckRunProbeRequest = {
   runId?: string
   apiType: ApiVerificationApiType
+  mode?: ApiVerificationMode
   baseUrl: string
   apiKey: string
   modelId?: string

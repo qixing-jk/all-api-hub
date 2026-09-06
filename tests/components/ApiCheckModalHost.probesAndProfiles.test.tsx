@@ -1224,6 +1224,7 @@ describe("ApiCheckModalHost", () => {
             success: true,
             result: {
               id: message.probeId,
+              mode: message.mode,
               status: "pass",
               latencyMs: 12,
               summary: "Text generation OK",
@@ -1264,6 +1265,16 @@ describe("ApiCheckModalHost", () => {
       getWebAiApiCheckProbeTestId("text-generation"),
     )
     await user.click(
+      screen.getByRole("combobox", {
+        name: "aiApiVerification:verifyDialog.meta.mode",
+      }),
+    )
+    await user.click(
+      screen.getByRole("option", {
+        name: "aiApiVerification:verifyDialog.modes.nonStreaming",
+      }),
+    )
+    await user.click(
       within(probeCard).getByRole("button", {
         name: "webAiApiCheck:modal.actions.runOne",
       }),
@@ -1295,6 +1306,7 @@ describe("ApiCheckModalHost", () => {
           probes: [
             expect.objectContaining({
               id: "text-generation",
+              mode: "non-streaming",
               status: "pass",
               latencyMs: 12,
               summary: "Text generation OK",

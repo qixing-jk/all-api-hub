@@ -1,3 +1,5 @@
+import { act } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { VerifyApiDialog } from "~/components/dialogs/VerifyApiDialog"
@@ -190,6 +192,109 @@ describe("VerifyApiDialog", () => {
       complete: mockCompleteProductAnalyticsAction,
     })
     await verificationResultHistoryStorage.clearAllData()
+  })
+
+  it("uses the selected mode and keeps completed results labeled when the selection changes", async () => {
+    const user = userEvent.setup()
+    mockFetchAccountTokens.mockResolvedValueOnce([
+      {
+        id: 1,
+        user_id: 1,
+        key: "secret",
+        status: 1,
+        name: "token-1",
+        created_time: 0,
+        accessed_time: 0,
+        expired_time: 0,
+        remain_quota: 0,
+        unlimited_quota: true,
+        used_quota: 0,
+      },
+    ])
+    let finishProbe!: () => void
+    mockRunApiVerificationProbe.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finishProbe = () =>
+            resolve({
+              id: "text-generation",
+              status: "pass",
+              latencyMs: 12,
+              summary: "Text generation succeeded",
+              mode: "non-streaming",
+            })
+        }),
+    )
+
+    render(
+      <VerifyApiDialog
+        isOpen
+        onClose={() => {}}
+        initialModelId="gpt-test"
+        account={{
+          id: "a1",
+          name: "Account",
+          username: "u",
+          balance: { USD: 0, CNY: 0 },
+          todayConsumption: { USD: 0, CNY: 0 },
+          todayIncome: { USD: 0, CNY: 0 },
+          todayTokens: { upload: 0, download: 0 },
+          todayStatsAvailability: buildCompleteTodayStatsAvailability(),
+          health: { status: "healthy" as any },
+          siteType: SITE_TYPES.NEW_API,
+          baseUrl: "https://example.invalid",
+          token: "t",
+          userId: "1",
+          authType: "access_token" as any,
+          checkIn: buildCheckInConfig(),
+        }}
+      />,
+    )
+
+    const modeSelect = await screen.findByRole("combobox", {
+      name: "aiApiVerification:verifyDialog.meta.mode",
+    })
+    expect(modeSelect).toHaveTextContent(
+      "aiApiVerification:verifyDialog.modes.streaming",
+    )
+    await user.click(modeSelect)
+    await user.click(
+      await screen.findByRole("option", {
+        name: "aiApiVerification:verifyDialog.modes.nonStreaming",
+      }),
+    )
+    const probeCard = screen.getByTestId("verify-probe-text-generation")
+    const runButton = within(probeCard).getByRole("button", {
+      name: "aiApiVerification:verifyDialog.actions.runOne",
+    })
+    await waitFor(() => expect(runButton).toBeEnabled())
+    await user.click(runButton)
+    expect(mockRunApiVerificationProbe).toHaveBeenCalledWith(
+      expect.objectContaining({
+        mode: "non-streaming",
+        probeId: "text-generation",
+      }),
+    )
+    expect(modeSelect).toBeDisabled()
+
+    await act(async () => finishProbe())
+    expect(
+      await within(probeCard).findByText(
+        "aiApiVerification:verifyDialog.modes.nonStreaming",
+      ),
+    ).toBeVisible()
+    await waitFor(() => expect(modeSelect).toBeEnabled())
+    await user.click(modeSelect)
+    await user.click(
+      await screen.findByRole("option", {
+        name: "aiApiVerification:verifyDialog.modes.streaming",
+      }),
+    )
+    expect(
+      within(probeCard).getByText(
+        "aiApiVerification:verifyDialog.modes.nonStreaming",
+      ),
+    ).toBeVisible()
   })
 
   it.each([
@@ -961,6 +1066,9 @@ describe("VerifyApiDialog", () => {
   })
 
   it("restores persisted history and clears it", async () => {
+    mockGetApiVerificationProbeDefinitions.mockReturnValue([
+      { id: "text-generation", requiresModelId: true },
+    ])
     mockFetchAccountTokens.mockResolvedValueOnce([
       {
         id: 1,
@@ -986,7 +1094,8 @@ describe("VerifyApiDialog", () => {
       apiType: API_TYPES.OPENAI_COMPATIBLE,
       results: [
         {
-          id: "models",
+          id: "text-generation",
+          mode: "non-streaming",
           status: "pass",
           latencyMs: 5,
           summary: "Stored history",
@@ -1031,6 +1140,14 @@ describe("VerifyApiDialog", () => {
       ),
     ).toBeInTheDocument()
     expect(await screen.findByText("Stored history")).toBeInTheDocument()
+    expect(
+      screen.getByText("aiApiVerification:verifyDialog.modes.nonStreaming"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("combobox", {
+        name: "aiApiVerification:verifyDialog.meta.mode",
+      }),
+    ).toHaveTextContent("aiApiVerification:verifyDialog.modes.streaming")
 
     fireEvent.click(
       screen.getByRole("button", {

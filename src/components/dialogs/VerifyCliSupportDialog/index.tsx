@@ -2,6 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
+  VerificationModeBadge,
+  VerificationModeSelect,
+} from "~/components/dialogs/VerifyApiDialog/VerificationMode"
+import {
   Alert,
   Badge,
   Button,
@@ -43,8 +47,10 @@ import {
 } from "~/services/productAnalytics/contracts"
 import { resolveProductAnalyticsErrorCategoryFromProbeResult } from "~/services/productAnalytics/verification"
 import {
+  API_VERIFICATION_MODES,
   API_VERIFICATION_PROBE_STATUSES,
   guessModelIdFromToken,
+  type ApiVerificationMode,
 } from "~/services/verification/aiApiVerification"
 import {
   inferHttpStatus,
@@ -134,6 +140,9 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
   const sourceName = profile?.name ?? account?.name ?? ""
 
   const [modelId, setModelId] = useState<string>(initialModelId?.trim() ?? "")
+  const [verificationMode, setVerificationMode] = useState<ApiVerificationMode>(
+    API_VERIFICATION_MODES.Streaming,
+  )
   const [isRunning, setIsRunning] = useState(false)
   const [isLoadingRuntimeKeys, setIsLoadingRuntimeKeys] = useState(false)
   const [accountRuntimeKeys, setAccountRuntimeKeys] = useState<
@@ -416,6 +425,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
 
       const result = await runCliSupportTool({
         toolId,
+        mode: verificationMode,
         baseUrl: resolvedBaseUrl,
         apiKey: resolvedApiKey,
         modelId: resolvedModelId,
@@ -653,6 +663,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
       void loadRuntimeKeys()
     }
     setModelId(initialModelId?.trim() ?? "")
+    setVerificationMode(API_VERIFICATION_MODES.Streaming)
   }, [
     initialModelId,
     isOpen,
@@ -693,11 +704,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
       closeOnBackdropClick={canClose}
     >
       <div className="space-y-3">
-        <div
-          className={`grid grid-cols-1 gap-3 ${
-            isProfileSource ? "" : "sm:grid-cols-2"
-          }`}
-        >
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {!isProfileSource && (
             <div className="space-y-1.5">
               <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
@@ -724,7 +731,17 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
             </div>
           )}
 
-          <div className="space-y-1.5">
+          <VerificationModeSelect
+            value={verificationMode}
+            onChange={setVerificationMode}
+            disabled={!canClose}
+          />
+
+          <div
+            className={
+              isProfileSource ? "space-y-1.5" : "space-y-1.5 sm:col-span-2"
+            }
+          >
             <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
               {t("verifyDialog.meta.model")}
             </div>
@@ -832,9 +849,12 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
                         {getCliSupportToolLabel(t, tool.toolId)}
                       </div>
 
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         {result ? (
-                          <ToolStatusBadge result={result} />
+                          <>
+                            <ToolStatusBadge result={result} />
+                            <VerificationModeBadge mode={result.mode} />
+                          </>
                         ) : (
                           <Badge variant="outline" size="sm">
                             {t("verifyDialog.status.pending")}

@@ -36,7 +36,7 @@ describe("cliSupportVerificationService", () => {
     })
   })
 
-  it("runs all tools with the same modelId in the simulation suite", async () => {
+  it("runs all tools with the same modelId and selected mode in the simulation suite", async () => {
     mockRunCliSupportToolFromRegistry.mockResolvedValue({
       id: "codex",
       status: "pass",
@@ -48,6 +48,7 @@ describe("cliSupportVerificationService", () => {
       baseUrl: "https://example.com",
       apiKey: "k",
       modelId: "m1",
+      mode: "non-streaming",
     })
 
     expect(mockRunCliSupportToolFromRegistry).toHaveBeenCalledTimes(3)
@@ -58,6 +59,7 @@ describe("cliSupportVerificationService", () => {
         baseUrl: "https://example.com",
         apiKey: "k",
         modelId: "m1",
+        mode: "non-streaming",
       },
     )
     expect(mockRunCliSupportToolFromRegistry).toHaveBeenNthCalledWith(
@@ -67,6 +69,7 @@ describe("cliSupportVerificationService", () => {
         baseUrl: "https://example.com",
         apiKey: "k",
         modelId: "m1",
+        mode: "non-streaming",
       },
     )
     expect(mockRunCliSupportToolFromRegistry).toHaveBeenNthCalledWith(
@@ -76,6 +79,7 @@ describe("cliSupportVerificationService", () => {
         baseUrl: "https://example.com",
         apiKey: "k",
         modelId: "m1",
+        mode: "non-streaming",
       },
     )
   })

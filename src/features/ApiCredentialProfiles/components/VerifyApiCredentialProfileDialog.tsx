@@ -10,6 +10,7 @@ import {
   safeJsonStringify,
 } from "~/components/dialogs/VerifyApiDialog/utils"
 import { VerificationHistorySummary } from "~/components/dialogs/VerifyApiDialog/VerificationHistorySummary"
+import { VerificationModeSelect } from "~/components/dialogs/VerifyApiDialog/VerificationMode"
 import {
   Alert,
   Badge,
@@ -38,11 +39,13 @@ import {
 import { resolveProductAnalyticsErrorCategoryFromProbeResult } from "~/services/productAnalytics/verification"
 import {
   API_TYPES,
+  API_VERIFICATION_MODES,
   API_VERIFICATION_PROBE_IDS,
   API_VERIFICATION_PROBE_STATUSES,
   getApiVerificationProbeDefinitions,
   runApiVerificationProbe,
   type ApiVerificationApiType,
+  type ApiVerificationMode,
   type ApiVerificationProbeId,
   type ApiVerificationProbeResult,
 } from "~/services/verification/aiApiVerification"
@@ -193,6 +196,9 @@ export function VerifyApiCredentialProfileDialog({
     profile?.apiType ?? API_TYPES.OPENAI_COMPATIBLE,
   )
   const [modelId, setModelId] = useState("")
+  const [verificationMode, setVerificationMode] = useState<ApiVerificationMode>(
+    API_VERIFICATION_MODES.Streaming,
+  )
   const [modelOptions, setModelOptions] = useState<string[]>([])
   const [isFetchingModels, setIsFetchingModels] = useState(false)
   const [fetchModelsDiagnostic, setFetchModelsDiagnostic] = useState<
@@ -385,6 +391,7 @@ export function VerifyApiCredentialProfileDialog({
 
     setApiType(nextApiType)
     setModelId(nextModelId)
+    setVerificationMode(API_VERIFICATION_MODES.Streaming)
     setModelOptions([])
     setFetchModelsDiagnostic(null)
     setPersistedSummary(null)
@@ -516,6 +523,7 @@ export function VerifyApiCredentialProfileDialog({
         baseUrl: profile.baseUrl,
         apiKey: profile.apiKey,
         apiType,
+        mode: verificationMode,
         modelId: modelForProbe || undefined,
         probeId,
       })
@@ -772,7 +780,7 @@ export function VerifyApiCredentialProfileDialog({
             </div>
           ) : null}
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
               <div className="flex min-h-7 items-center gap-2">
                 <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
@@ -823,6 +831,12 @@ export function VerifyApiCredentialProfileDialog({
                 disabled={!canClose}
               />
             </div>
+
+            <VerificationModeSelect
+              value={verificationMode}
+              onChange={setVerificationMode}
+              disabled={!canClose}
+            />
 
             <div className="space-y-1.5 sm:col-span-2">
               <div className="flex min-h-7 items-center">
