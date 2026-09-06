@@ -6,6 +6,7 @@ import {
 import type { OctopusApiResponse } from "~/types/octopus"
 import { getErrorMessage } from "~/utils/core/error"
 
+/** Distinguishes provider rejection from application while retaining diagnostics for boundary sanitization. */
 const toOctopusMutationResponse = <TData>(
   response: OctopusApiResponse<TData>,
 ) =>
@@ -22,6 +23,7 @@ const toOctopusMutationResponse = <TData>(
         },
       }
 
+/** Retains valid provider codes and raw local diagnostics without inventing an HTTP status. */
 const toOctopusMutationDiagnostic = (error: OctopusMutationApiError) => {
   const diagnosticRaw = error.raw
   const code =
@@ -44,6 +46,7 @@ const toOctopusMutationDiagnostic = (error: OctopusMutationApiError) => {
   }
 }
 
+/** Executes a non-idempotent mutation once and preserves uncertainty when application cannot be confirmed. */
 export const runOctopusMutation = async <TData, TResult = TData>(input: {
   effect: ManagedSiteMutationConfirmedEffect
   execute(): Promise<OctopusApiResponse<TData>>
@@ -94,6 +97,7 @@ export const runOctopusMutation = async <TData, TResult = TData>(input: {
   }
 }
 
+/** Describes a confirmed channel effect, omitting identity when the provider has not supplied one. */
 export const octopusChannelEffect = (
   kind: ManagedSiteMutationConfirmedEffect["kind"],
   resourceId?: number,

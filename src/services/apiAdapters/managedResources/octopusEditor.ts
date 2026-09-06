@@ -38,6 +38,7 @@ const readOctopusModels = (values: EditableResourceProjection): string[] => {
       )
     : []
 }
+/** Parses explicit secret edits; malformed or absent intent leaves the existing credential unchanged. */
 export const octopusSecretIntent = (
   values: EditableResourceProjection,
 ): SecretEditIntent => {
@@ -124,6 +125,7 @@ export const octopusFieldDescriptors = (
     },
   ]
 }
+/** Validates editable fields while allowing an existing unknown type and forbidding credential clearing. */
 export const validateOctopusValues = (
   values: EditableResourceProjection,
   detail?: OctopusChannel,
@@ -155,6 +157,7 @@ export const validateOctopusValues = (
     errors.push({ fieldId: fields.Key, code: issues.InvalidValue })
   return errors.length ? { valid: false, issues: errors } : { valid: true }
 }
+/** Converts an editor projection into normalized transport fields; callers validate before dispatch. */
 export const buildOctopusCreateCommand = (
   values: EditableResourceProjection,
 ): OctopusCreateChannelInput => {
@@ -169,6 +172,7 @@ export const buildOctopusCreateCommand = (
     autoSync: true,
   }
 }
+/** Emits only changed editable fields and includes a credential only for explicit replacement. */
 export const buildOctopusUpdateCommand = (
   detail: OctopusChannel,
   values: EditableResourceProjection,
