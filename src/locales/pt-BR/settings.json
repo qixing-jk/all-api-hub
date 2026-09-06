@@ -73,7 +73,7 @@
   "autoProvisionKeyOnAccountAdd": {
     "description": "Prepare chaves de API ao adicionar uma conta: uma chave padrão ou chaves para todos os grupos disponíveis.",
     "manualHint": "Para contas salvas, use Gerenciamento de chaves → {{actionLabel}} para completar as chaves ausentes de todos os grupos disponíveis.",
-    "modeDescription": "O modo padrão cria uma chave apenas se a conta não tiver nenhuma. Todos os grupos cria uma chave para cada grupo sem uma chave utilizável. Grupos que precisam de configuração manual são informados.",
+    "modeDescription": "O modo padrão cria uma chave apenas se a conta não tiver nenhuma. O modo Todos os grupos cria uma chave para cada grupo sem uma chave utilizável. Grupos que precisam de configuração manual são informados.",
     "modeLabel": "Escopo da criação automática",
     "modes": {
       "allGroups": "Todos os grupos disponíveis",

@@ -45,16 +45,6 @@ function showAllGroupProvisioningResult(
     return
   }
 
-  if (result.requirementResults.length === 0) {
-    showWarningToast(
-      t("messages:accountOperations.autoProvisionGroupsUnavailable", {
-        accountName,
-        actionLabel,
-      }),
-    )
-    return
-  }
-
   const createdCount = result.requirementResults.filter(
     ({ outcome }) => outcome === ACCOUNT_KEY_RECONCILIATION_OUTCOMES.Created,
   ).length
@@ -75,6 +65,16 @@ function showAllGroupProvisioningResult(
       t("messages:accountOperations.autoProvisionGroupsIncomplete", {
         accountName,
         count: createdCount,
+        actionLabel,
+      }),
+    )
+    return
+  }
+
+  if (result.requirementResults.length === 0) {
+    showWarningToast(
+      t("messages:accountOperations.autoProvisionGroupsUnavailable", {
+        accountName,
         actionLabel,
       }),
     )

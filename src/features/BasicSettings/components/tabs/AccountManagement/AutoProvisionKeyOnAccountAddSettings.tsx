@@ -41,6 +41,7 @@ export default function AutoProvisionKeyOnAccountAddSettings() {
     }
   }
 
+  /** Persists the creation scope without changing whether provisioning is enabled. */
   const handleModeChange = async (mode: AccountKeyAutoProvisionMode) => {
     if (mode === autoProvisionKeyOnAccountAddMode) return
     setIsSaving(true)

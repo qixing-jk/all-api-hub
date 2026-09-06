@@ -177,6 +177,25 @@ describe("automatic provisioning for all groups", () => {
     expect(toast.success).not.toHaveBeenCalled()
   })
 
+  it("reports incomplete group discovery instead of claiming no groups are available", async () => {
+    const remote = installNativeInventory()
+    vi.mocked(remote.session.provisioning!.inspect).mockResolvedValue({
+      requirements: [],
+      items: [],
+      partialFailure: {
+        code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.UpstreamRejected,
+      },
+    })
+
+    await run()
+
+    expect(remote.writes).toEqual([])
+    expect(showWarningToast).toHaveBeenCalledWith(
+      "messages:accountOperations.autoProvisionGroupsIncomplete",
+    )
+    expect(toast.success).not.toHaveBeenCalled()
+  })
+
   it("continues after a rejected group and reports incomplete coverage", async () => {
     const remote = installNativeInventory()
     remote.rejected.add("opaque:beta")
