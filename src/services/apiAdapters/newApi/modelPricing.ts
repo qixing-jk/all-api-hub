@@ -5,6 +5,7 @@ import {
   normalizeVApiModelPricingResponse,
 } from "~/services/apiAdapters/newApi/modelPricingDto"
 import * as modelPricing from "~/services/apiService/newApiFamily/default/modelPricing"
+import * as apiyi from "~/services/apiService/newApiFamily/variants/apiyi"
 import * as oneHub from "~/services/apiService/newApiFamily/variants/oneHub"
 
 /**
@@ -23,13 +24,13 @@ export function createNewApiModelPricing(
     siteType === SITE_TYPES.V_API
       ? normalizeVApiModelPricingResponse
       : normalizeNewApiModelPricingResponse
+  const fetchModelPricing =
+    siteType === SITE_TYPES.APIYI
+      ? apiyi.fetchModelPricing
+      : modelPricing.defaultModelPricingImplementation.fetchModelPricing
 
   return {
     fetchPricing: async (request) =>
-      normalizePricingResponse(
-        await modelPricing.defaultModelPricingImplementation.fetchModelPricing(
-          request,
-        ),
-      ),
+      normalizePricingResponse(await fetchModelPricing(request)),
   }
 }

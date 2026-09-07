@@ -1,5 +1,10 @@
 {
   "accessTokenVerification": {
+    "apiyi": {
+      "generateStep": "有効な Access Token の全文をお持ちの場合は、そのまま使用できます。ない場合は、APIyi のプロフィールで「System token」を開き、サイト上でパスワードを入力して生成してください。",
+      "openProfile": "APIyi のプロフィールを開く",
+      "openProfileFailed": "ページを開けませんでした。APIyi のプロフィールで「System token」を手動で開いて認証を完了し、ここに戻って Access Token を貼り付けてください。"
+    },
     "continueFailed": "サイドパネルも通常のページも開けませんでした。フォームは保持されています。もう一度お試しください。",
     "continueInFullPage": "通常のページで続行",
     "continueInSidePanel": "サイドパネルで続行",

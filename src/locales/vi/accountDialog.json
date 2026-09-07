@@ -1,5 +1,10 @@
 {
   "accessTokenVerification": {
+    "apiyi": {
+      "generateStep": "Nếu đã có Access Token hợp lệ và đầy đủ, bạn có thể dùng ngay. Nếu chưa có, hãy mở “System token” trong hồ sơ APIyi và nhập mật khẩu trên trang web để tạo token.",
+      "openProfile": "Mở hồ sơ APIyi",
+      "openProfileFailed": "Không thể mở trang. Hãy tự mở “System token” trong hồ sơ APIyi, hoàn tất xác minh rồi quay lại đây để dán Access Token."
+    },
     "continueFailed": "Không mở được thanh bên hoặc trang đầy đủ. Biểu mẫu của bạn đã được giữ lại. Vui lòng thử lại.",
     "continueInFullPage": "Tiếp tục trong trang đầy đủ",
     "continueInSidePanel": "Tiếp tục trong thanh bên",

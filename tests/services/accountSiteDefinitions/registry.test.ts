@@ -63,6 +63,7 @@ type ExpectExact<T, Expected> = [T] extends [Expected]
 type ExpectedAccountSiteType =
   | typeof SITE_TYPES.ONE_API
   | typeof SITE_TYPES.NEW_API
+  | typeof SITE_TYPES.APIYI
   | typeof SITE_TYPES.MODELFLARE
   | typeof SITE_TYPES.ANYROUTER
   | typeof SITE_TYPES.VELOERA
@@ -221,6 +222,7 @@ describe("account site definition registry", () => {
     expect(getAccountSiteTypeValues()).toEqual([
       SITE_TYPES.ONE_API,
       SITE_TYPES.NEW_API,
+      SITE_TYPES.APIYI,
       SITE_TYPES.MODELFLARE,
       SITE_TYPES.ANYROUTER,
       SITE_TYPES.VELOERA,

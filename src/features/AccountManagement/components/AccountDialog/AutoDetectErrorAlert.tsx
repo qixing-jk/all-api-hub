@@ -137,6 +137,7 @@ export default function AutoDetectErrorAlert({
       <AccessTokenVerificationGuide
         message={error.message}
         siteUrl={siteUrl}
+        siteType={siteType}
         manualAddGuideAnchor={manualAddGuideAnchor}
         continuation={accessTokenContinuation}
         onPrepareAccessTokenInput={onPrepareAccessTokenInput}

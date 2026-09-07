@@ -251,7 +251,11 @@ export const createNewApiAccountCompletion = (
 
     if (effectiveAuthType === AuthTypeEnum.AccessToken && !accessToken) {
       throw helpers.createCompletionError(
-        AUTO_DETECT_FAILURE_REASONS.AccessTokenMissing,
+        // APIyi's bootstrap only reads existing tokens; generating one requires
+        // password verification at https://api.apiyi.com/account/profile.
+        siteType === SITE_TYPES.APIYI
+          ? AUTO_DETECT_FAILURE_REASONS.AccessTokenVerificationRequired
+          : AUTO_DETECT_FAILURE_REASONS.AccessTokenMissing,
         new Error("Access token is missing"),
       )
     }

@@ -162,6 +162,7 @@ describe("account site onboarding registry", () => {
       "sharedchat",
       "voapi-v2",
       "v-api",
+      "apiyi",
       "new-api-auth-bundle",
       "compatible-user",
     ])

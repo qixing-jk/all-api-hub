@@ -4,6 +4,7 @@ import {
   getAccountSiteTitleRuleMetadata,
 } from "~/services/accountSiteOnboarding/metadata"
 
+import { apiyiContentSessionExtractor } from "./contentSession/apiyi"
 import { compatibleUserContentSessionExtractor } from "./contentSession/compatibleUser"
 import { newApiAuthBundleContentSessionExtractor } from "./contentSession/newApiAuthBundle"
 import { sharedChatContentSessionExtractor } from "./contentSession/sharedchat"
@@ -42,6 +43,7 @@ export function getContentSessionExtractors(): readonly ContentSessionExtractor[
     sharedChatContentSessionExtractor,
     voApiV2ContentSessionExtractor,
     vApiContentSessionExtractor,
+    apiyiContentSessionExtractor,
     newApiAuthBundleContentSessionExtractor,
     compatibleUserContentSessionExtractor,
   ]

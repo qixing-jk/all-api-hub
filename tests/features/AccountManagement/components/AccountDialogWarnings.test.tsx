@@ -172,6 +172,69 @@ describe("AccountDialog warnings", () => {
     ).not.toBeInTheDocument()
   })
 
+  it("guides APIyi verification to System token in the profile and prepares manual entry", async () => {
+    const user = userEvent.setup()
+    const onPrepareAccessTokenInput = vi.fn()
+    render(
+      <AutoDetectErrorAlert
+        error={{
+          type: AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED,
+          message: "Verify on the site",
+        }}
+        siteUrl="https://api.apiyi.com"
+        siteType={SITE_TYPES.APIYI}
+        onPrepareAccessTokenInput={onPrepareAccessTokenInput}
+      />,
+    )
+
+    expect(
+      screen.getByText("accessTokenVerification.apiyi.generateStep"),
+    ).toBeVisible()
+    expect(
+      screen.queryByText("accessTokenVerification.rotationWarning"),
+    ).not.toBeInTheDocument()
+    await user.click(
+      screen.getByRole("button", {
+        name: "accessTokenVerification.apiyi.openProfile",
+      }),
+    )
+
+    expect(onPrepareAccessTokenInput).toHaveBeenCalledTimes(1)
+    expect(browser.tabs.create).toHaveBeenCalledWith({
+      url: "https://api.apiyi.com/account/profile",
+      active: true,
+    })
+  })
+
+  it("gives the APIyi profile location when opening the page fails", async () => {
+    const user = userEvent.setup()
+    vi.mocked(browser.tabs.create).mockRejectedValueOnce(
+      new Error("Tab unavailable"),
+    )
+    render(
+      <AutoDetectErrorAlert
+        error={{
+          type: AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED,
+          message: "Verify on the site",
+        }}
+        siteUrl="https://api.apiyi.com"
+        siteType={SITE_TYPES.APIYI}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "accessTokenVerification.apiyi.openProfile",
+      }),
+    )
+
+    expect(
+      await screen.findByText(
+        "accessTokenVerification.apiyi.openProfileFailed",
+      ),
+    ).toHaveAttribute("role", "alert")
+  })
+
   it("prepares the token input even when opening the security page fails and allows retry", async () => {
     const user = userEvent.setup()
     const onPrepareAccessTokenInput = vi.fn()

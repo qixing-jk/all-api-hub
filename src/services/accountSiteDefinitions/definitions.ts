@@ -56,6 +56,7 @@ import {
   AIHUBMIX_HOSTNAMES,
   AIHUBMIX_LOGIN_PATH,
   AIHUBMIX_WEB_ORIGIN,
+  APIYI_HOSTNAME,
   MODELFLARE_HOSTNAME,
   MODELFLARE_USER_ID_HEADER_NAME,
   OPENROUTER_HOSTNAMES,
@@ -102,6 +103,7 @@ const LEGACY_MANAGED_CHANNEL_POLICY = {
 export const ACCOUNT_SITE_TYPE_ORDER = [
   SITE_TYPES.ONE_API,
   SITE_TYPES.NEW_API,
+  SITE_TYPES.APIYI,
   SITE_TYPES.MODELFLARE,
   SITE_TYPES.ANYROUTER,
   SITE_TYPES.VELOERA,
@@ -164,6 +166,20 @@ const ACCOUNT_SITE_DEFINITIONS = [
         usagePath: DEFAULT_USAGE_PATH,
         checkInPath: DEFAULT_CHECKIN_PATH,
         adminCredentialsPath: DEFAULT_CHECKIN_PATH,
+      },
+    },
+  },
+  {
+    siteType: SITE_TYPES.APIYI,
+    scopes: ACCOUNT_SCOPE,
+    adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
+    onboarding: {
+      detection: { hostnames: [APIYI_HOSTNAME] },
+      routes: {
+        // https://api.apiyi.com/ (v29.8.9) dashboard routes.
+        usagePath: "/log",
+        adminCredentialsPath: "/account/profile",
+        accessTokenPath: "/account/profile",
       },
     },
   },

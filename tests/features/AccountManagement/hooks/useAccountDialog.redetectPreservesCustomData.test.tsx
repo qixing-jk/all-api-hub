@@ -1057,9 +1057,16 @@ describe("useAccountDialog re-detect preservation", () => {
     expect(result.current.state.showManualForm).toBe(false)
   })
 
-  it.each(["url", "site type", "auth type"])(
-    "switches Cookie detection to manual token entry and clears verification guidance when the %s changes",
-    async (changedField) => {
+  it.each([
+    [SITE_TYPES.NEW_API, "url"],
+    [SITE_TYPES.NEW_API, "site type"],
+    [SITE_TYPES.NEW_API, "auth type"],
+    [SITE_TYPES.APIYI, "url"],
+    [SITE_TYPES.APIYI, "site type"],
+    [SITE_TYPES.APIYI, "auth type"],
+  ] as const)(
+    "keeps %s manual token recovery until the %s changes",
+    async (siteType, changedField) => {
       const detailedError = {
         type: AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED,
         message: "Security verification required",
@@ -1067,9 +1074,9 @@ describe("useAccountDialog re-detect preservation", () => {
       mockAutoDetectAccount.mockResolvedValueOnce({
         success: false,
         detailedError,
-        autoDetectContext: { siteType: SITE_TYPES.NEW_API },
+        autoDetectContext: { siteType },
         recoveryData: {
-          siteType: SITE_TYPES.NEW_API,
+          siteType,
           userId: "42",
           username: "detected-user",
           authType: AuthTypeEnum.AccessToken,
@@ -1097,7 +1104,7 @@ describe("useAccountDialog re-detect preservation", () => {
       expect(result.current.state.showManualForm).toBe(true)
       expect(result.current.state.detectionError).toEqual(detailedError)
       expect(result.current.state.tokenRecoveryState?.draft).toMatchObject({
-        siteType: SITE_TYPES.NEW_API,
+        siteType,
         authType: AuthTypeEnum.AccessToken,
         userId: "42",
         username: "detected-user",
@@ -1105,12 +1112,21 @@ describe("useAccountDialog re-detect preservation", () => {
       })
 
       await act(async () => {
+        result.current.setters.setSiteType(siteType)
+      })
+      expect(result.current.state.detectionError).toEqual(detailedError)
+
+      await act(async () => {
         if (changedField === "url") {
           result.current.handlers.handleUrlChange(
             "https://other.example.invalid",
           )
         } else if (changedField === "site type") {
-          result.current.setters.setSiteType(SITE_TYPES.VELOERA)
+          result.current.setters.setSiteType(
+            siteType === SITE_TYPES.NEW_API
+              ? SITE_TYPES.APIYI
+              : SITE_TYPES.NEW_API,
+          )
         } else {
           result.current.setters.setAuthType(AuthTypeEnum.Cookie)
         }
