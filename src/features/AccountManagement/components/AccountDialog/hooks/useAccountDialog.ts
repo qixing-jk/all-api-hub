@@ -2334,7 +2334,11 @@ export function useAccountDialog({
             authType,
             protectionBypassExecution,
             cookieAuthSessionCookie.trim() || undefined,
-            ...(userId.trim()
+            ...(userId.trim() &&
+            (mode === DIALOG_MODES.EDIT ||
+              accessToken.trim() ||
+              cookieAuthSessionCookie.trim() ||
+              sub2apiRefreshToken.trim())
               ? [
                   {
                     existingAccount: {

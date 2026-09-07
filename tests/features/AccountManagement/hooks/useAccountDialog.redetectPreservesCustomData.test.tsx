@@ -1,6 +1,7 @@
+import { http, HttpResponse } from "msw"
 import type { ReactNode } from "react"
 import toast from "react-hot-toast"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, onTestFinished, vi } from "vitest"
 
 import { COOKIE_IMPORT_FAILURE_REASONS } from "~/constants/cookieImport"
 import { DIALOG_MODES } from "~/constants/dialogModes"
@@ -16,10 +17,14 @@ import { PROTECTION_BYPASS_EXECUTION_VERSION } from "~/services/protectionBypass
 import { AuthTypeEnum, SiteHealthStatus, type CheckInConfig } from "~/types"
 import type { AccountAutoDetectResponse } from "~/types/serviceResponse"
 import type { TurnstilePreTrigger } from "~/types/turnstile"
+import { server } from "~~/tests/msw/server"
 import { accountStorageTestSurface as accountStorage } from "~~/tests/test-utils/accountStorageTestSurface"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { createDeferred } from "~~/tests/test-utils/deferred"
-import { buildSiteAccount } from "~~/tests/test-utils/factories"
+import {
+  buildDisplaySiteData,
+  buildSiteAccount,
+} from "~~/tests/test-utils/factories"
 import { testI18n } from "~~/tests/test-utils/i18n"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 
@@ -1101,28 +1106,95 @@ describe("useAccountDialog re-detect preservation", () => {
     expect(result.current.state.isDetected).toBe(true)
   })
 
-  it("re-detects the current login before checking an obsolete draft identity for duplicates", async () => {
+  it.each([
+    {
+      name: "re-detects the current login before checking an obsolete draft identity for duplicates",
+      mode: DIALOG_MODES.ADD,
+      expected: {
+        userId: "8",
+        accessToken: "different-token",
+        isDetected: true,
+        detectionError: null,
+      },
+    },
+    {
+      name: "keeps a saved account identity during redetection even when its PAT is missing",
+      mode: DIALOG_MODES.EDIT,
+      expected: {
+        userId: "1",
+        accessToken: "",
+        isDetected: false,
+        detectionError: expect.objectContaining({
+          type: AutoDetectErrorType.INVALID_RESPONSE,
+        }),
+      },
+    },
+  ])("$name", async ({ mode, expected }) => {
     const existingAccount = buildSiteAccount({
       site_name: "Existing",
       site_url: "https://api.example.com",
-    })
-    await accountStorage.addAccount(existingAccount)
-    mockAutoDetectAccount.mockResolvedValueOnce({
-      success: true,
-      data: {
-        username: "different-user",
-        accessToken: "different-token",
-        userId: "new-login",
-        exchangeRate: 7,
-        siteName: "Detected Site",
-        siteType: SITE_TYPES.NEW_API,
-        checkIn: buildCheckInConfig(),
+      site_type: SITE_TYPES.NEW_API,
+      account_info: {
+        ...buildSiteAccount().account_info,
+        access_token: "",
       },
+    })
+    const accountId = await accountStorage.addAccount(existingAccount)
+    const { autoDetectAccount } = await vi.importActual<
+      typeof import("~/services/accounts/accountAutoDetection")
+    >("~/services/accounts/accountAutoDetection")
+    mockAutoDetectAccount.mockImplementationOnce(autoDetectAccount)
+    const { discoverCheckInMethods } = await vi.importActual<
+      typeof import("~/services/checkin/autoCheckin/discovery")
+    >("~/services/checkin/autoCheckin/discovery")
+    mockDiscoverCheckInMethods.mockImplementation(discoverCheckInMethods)
+    onTestFinished(() => {
+      mockDiscoverCheckInMethods.mockReset()
+    })
+    server.use(
+      http.get("https://api.example.com/", () =>
+        HttpResponse.html("<title>New API</title>"),
+      ),
+      http.get(
+        "https://api.example.com/api/user/info",
+        () => new HttpResponse(null, { status: 404 }),
+      ),
+      http.get(
+        "https://api.example.com/api/v1/auth/me",
+        () => new HttpResponse(null, { status: 404 }),
+      ),
+      http.get("https://api.example.com/api/user/self", () =>
+        HttpResponse.json({
+          success: true,
+          data: {
+            id: 8,
+            username: "different-user",
+            access_token: "different-token",
+          },
+        }),
+      ),
+      http.get("https://api.example.com/api/status", () =>
+        HttpResponse.json({
+          success: true,
+          data: { system_name: "Detected Site", checkin_enabled: false },
+        }),
+      ),
+      http.get("https://api.example.com/api/user/checkin", () =>
+        HttpResponse.json({ success: true, data: { enabled: false } }),
+      ),
+    )
+    const account = buildDisplaySiteData({
+      id: accountId,
+      baseUrl: existingAccount.site_url,
+      siteType: SITE_TYPES.NEW_API,
+      userId: "1",
+      token: "",
     })
 
     const { result } = renderHook(() =>
       useAccountDialog({
-        mode: DIALOG_MODES.ADD,
+        mode,
+        ...(mode === DIALOG_MODES.EDIT ? { account } : {}),
         isOpen: true,
         onClose: vi.fn(),
         onSuccess: vi.fn(),
@@ -1133,10 +1205,14 @@ describe("useAccountDialog re-detect preservation", () => {
       expect(result.current.state).toBeTruthy()
     })
 
-    await act(async () => {
-      result.current.handlers.handleUrlChange("https://api.example.com/users")
-      result.current.setters.setUserId(existingAccount.account_info.id)
-    })
+    if (mode === DIALOG_MODES.EDIT) {
+      await waitFor(() => expect(result.current.state.userId).toBe("1"))
+    } else {
+      await act(async () => {
+        result.current.handlers.handleUrlChange("https://api.example.com/users")
+        result.current.setters.setUserId(existingAccount.account_info.id)
+      })
+    }
 
     let detectPromise!: Promise<void>
     act(() => {
@@ -1153,8 +1229,7 @@ describe("useAccountDialog re-detect preservation", () => {
 
     expect(result.current.state.duplicateAccountWarning.isOpen).toBe(false)
     expect(result.current.state.isDetecting).toBe(false)
-    expect(result.current.state.isDetected).toBe(true)
-    expect(result.current.state.userId).toBe("new-login")
+    expect(result.current.state).toMatchObject(expected)
   })
 
   it.each(["url", "site type", "auth type"])(
