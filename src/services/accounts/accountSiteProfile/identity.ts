@@ -3,10 +3,6 @@ import type { AccountIdentity } from "~/types"
 
 import { getAccountSiteProductProfile } from "./registry"
 
-type AccountSiteIdentityRecord = {
-  id?: unknown
-}
-
 /**
  * Normalizes account-site identity field values into persisted string form.
  */
@@ -44,30 +40,4 @@ export function resolveAccountSiteUserIdentity({
   }
 
   return null
-}
-
-/**
- * Compares persisted saved-account identity with a current user payload.
- */
-export function doAccountSiteIdentitiesMatch({
-  siteType,
-  savedUser,
-  currentUser,
-}: {
-  siteType: AccountSiteType
-  savedUser: unknown
-  currentUser: unknown
-}): boolean {
-  const savedIdentity =
-    savedUser && typeof savedUser === "object" && !Array.isArray(savedUser)
-      ? normalizeIdentityValue((savedUser as AccountSiteIdentityRecord).id)
-      : null
-  const currentIdentity = resolveAccountSiteUserIdentity({
-    siteType,
-    user: currentUser,
-  })
-
-  return Boolean(
-    savedIdentity && currentIdentity && savedIdentity === currentIdentity,
-  )
 }

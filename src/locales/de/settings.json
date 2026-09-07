@@ -222,9 +222,9 @@
     "userIdDesc": "Administrator-Benutzer-ID (nur numerisch). Der Root-Administrator ist normalerweise 1."
   },
   "duplicateAccountWarningOnAdd": {
-    "description": "Steuern Sie, ob All API Hub um Bestätigung bittet, wenn Sie ein Konto für eine bereits vorhandene Website hinzufügen.",
+    "description": "Gespeicherte Konten vor dem Hinzufügen prüfen, um Duplikate zu vermeiden.",
     "title": "Konten",
-    "toggleDesc": "Wenn aktiviert, zeigt All API Hub einen Bestätigungsdialog an, wenn Sie versuchen, ein weiteres Konto für dieselbe Website-URL hinzuzufügen.",
+    "toggleDesc": "Bestätigung anfordern, wenn dieselbe Benutzer-ID für diese Website bereits gespeichert ist. Bei OpenRouter wird nach einem identischen Management Key gesucht.",
     "toggleLabel": "Warnung vor dem Hinzufügen von Duplikaten"
   },
   "logging": {

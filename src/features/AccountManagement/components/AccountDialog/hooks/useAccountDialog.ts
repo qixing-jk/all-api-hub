@@ -50,6 +50,7 @@ import {
   parseManualQuotaFromUsd,
 } from "~/services/accounts/accountFormValidation"
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
+import { findAccountsBySiteIdentity } from "~/services/accounts/accountMatching"
 import { ACCOUNT_SAVE_FEEDBACK_LEVELS } from "~/services/accounts/accountPersistence/constants"
 import {
   ACCOUNT_POST_SAVE_WORKFLOW_STEPS,
@@ -61,7 +62,6 @@ import {
   type AccountPostSaveWorkflowStep,
 } from "~/services/accounts/accountPostSaveWorkflow"
 import { buildDisplayAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
-import { doAccountSiteIdentitiesMatch } from "~/services/accounts/accountSiteProfile"
 import { accountPresentation } from "~/services/accounts/accountStorage/accountPresentation"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { accountReadModels } from "~/services/accounts/accountStorage/accountReadModels"
@@ -79,10 +79,7 @@ import {
   AutoDetectErrorType,
   type AutoDetectError,
 } from "~/services/accounts/utils/autoDetectUtils"
-import {
-  isSameAccountSiteOrigin,
-  normalizeAccountSiteUrlForDuplicateCheck,
-} from "~/services/accounts/utils/siteUrlNormalization"
+import { normalizeAccountSiteUrlForDuplicateCheck } from "~/services/accounts/utils/siteUrlNormalization"
 import { isCanonicalOpenRouterUrl } from "~/services/accountSiteDefinitions/identifiers"
 import { createAIHubMixCreatedRuntimeSecret } from "~/services/apiAdapters/aihubmix/createdSecret"
 import { getManagedSiteCapabilities } from "~/services/apiAdapters/registry"
@@ -483,9 +480,10 @@ export function useAccountDialog({
   const duplicateAccountWarningResolverRef = useRef<
     ((shouldContinue: boolean) => void) | null
   >(null)
-  const duplicateAccountWarningAcknowledgedSiteUrlRef = useRef<string | null>(
-    null,
-  )
+  const duplicateAccountWarningAcknowledgedIdentityRef = useRef<{
+    siteUrl: string
+    userId: string
+  } | null>(null)
   const selectedSiteUrlRef = useRef("")
   const selectedSiteTypeRef = useRef<AccountSiteType>(SITE_TYPES.UNKNOWN)
   const isCloseTransitionStartedRef = useRef(false)
@@ -825,7 +823,7 @@ export function useAccountDialog({
   const cancelPendingDuplicateAccountWarning = useCallback(() => {
     duplicateAccountWarningResolverRef.current?.(false)
     duplicateAccountWarningResolverRef.current = null
-    duplicateAccountWarningAcknowledgedSiteUrlRef.current = null
+    duplicateAccountWarningAcknowledgedIdentityRef.current = null
   }, [])
 
   useEffect(() => {
@@ -950,17 +948,16 @@ export function useAccountDialog({
       siteType,
     })
     const currentUserId = normalizeAccountIdentity(userId)
-    const currentUserRecord = currentUserId
-      ? { id: currentUserId, username: currentUserId }
-      : null
 
-    if (!baseUrl) {
+    if (!baseUrl || !currentUserId) {
       return true
     }
 
     if (
-      duplicateAccountWarningAcknowledgedSiteUrlRef.current ===
-      normalizedBaseUrl
+      duplicateAccountWarningAcknowledgedIdentityRef.current?.siteUrl ===
+        normalizedBaseUrl &&
+      duplicateAccountWarningAcknowledgedIdentityRef.current?.userId ===
+        currentUserId
     ) {
       return true
     }
@@ -978,53 +975,36 @@ export function useAccountDialog({
       )
       return true
     }
-    const existingSiteAccounts = accounts.filter((acc) => {
-      return isSameAccountSiteOrigin(
-        {
-          url: acc.site_url,
-          siteType: acc.site_type,
-        },
-        {
-          url: baseUrl,
-        },
-      )
+    const matchingAccounts = findAccountsBySiteIdentity({
+      accounts,
+      siteUrl: baseUrl,
+      userId: currentUserId,
     })
-
-    if (existingSiteAccounts.length === 0) {
+    const exactMatch = matchingAccounts[0]
+    if (!exactMatch) {
       return true
     }
 
     const warningSiteUrl = normalizeSiteUrlForDuplicateCheck({
-      value: existingSiteAccounts[0].site_url,
-      siteType: existingSiteAccounts[0].site_type,
+      value: exactMatch.site_url,
+      siteType: exactMatch.site_type,
     })
-
-    const exactMatch = currentUserId
-      ? existingSiteAccounts.find((acc) =>
-          doAccountSiteIdentitiesMatch({
-            siteType: acc.site_type,
-            savedUser: acc.account_info,
-            currentUser: currentUserRecord,
-          }),
-        )
-      : undefined
 
     const shouldContinue = await requestDuplicateAccountAddConfirmation({
       siteUrl: warningSiteUrl,
-      existingAccountsCount: existingSiteAccounts.length,
-      ...(exactMatch
-        ? {
-            existingUserId: exactMatch.account_info.id,
-            existingUsername: exactMatch.account_info.username,
-          }
-        : {}),
+      existingAccountsCount: matchingAccounts.length,
+      existingUserId: exactMatch.account_info.id,
+      existingUsername: exactMatch.account_info.username,
     })
 
     if (!shouldContinue) {
       return false
     }
 
-    duplicateAccountWarningAcknowledgedSiteUrlRef.current = normalizedBaseUrl
+    duplicateAccountWarningAcknowledgedIdentityRef.current = {
+      siteUrl: normalizedBaseUrl,
+      userId: currentUserId,
+    }
     return true
   }, [
     mode,
@@ -1232,7 +1212,7 @@ export function useAccountDialog({
       detectedCookieStoreIdRef.current = null
       currentTabCookieImportContextRef.current = null
       currentTabSiteNameRef.current = ""
-      duplicateAccountWarningAcknowledgedSiteUrlRef.current = null
+      duplicateAccountWarningAcknowledgedIdentityRef.current = null
       hasConsumedAutoFillCurrentSiteUrlRef.current = Boolean(nextPrefill)
       const nextSiteType = nextPrefill?.siteType ?? SITE_TYPES.UNKNOWN
       selectedSiteTypeRef.current = nextSiteType
@@ -1562,7 +1542,7 @@ export function useAccountDialog({
     options: { applyAuthDefault?: boolean } = {},
   ) => {
     const shouldApplyAuthDefault = options.applyAuthDefault !== false
-    duplicateAccountWarningAcknowledgedSiteUrlRef.current = null
+    duplicateAccountWarningAcknowledgedIdentityRef.current = null
     detectedCookieStoreIdRef.current = null
     hasConsumedAutoFillCurrentSiteUrlRef.current = true
     if (newUrl.trim()) {
@@ -2215,42 +2195,6 @@ export function useAccountDialog({
       setAccessToken("")
     }
 
-    try {
-      const shouldContinue = await ensureDuplicateAccountAddConfirmation()
-      if (!shouldContinue) {
-        if (openRouterAdmission) {
-          releaseOpenRouterOnboardingPreparation(
-            openRouterAdmission.preparation,
-          )
-        }
-        analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled, {
-          insights: createAutoDetectAnalyticsInsights(),
-        })
-        return
-      }
-    } catch (error) {
-      if (openRouterAdmission) {
-        releaseOpenRouterOnboardingPreparation(openRouterAdmission.preparation)
-      }
-      toast.error(
-        t("messages.operationFailed", {
-          error: getErrorMessage(error),
-        }),
-      )
-      analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-        diagnostics: {
-          failure: buildActionFailureDiagnostics({
-            error,
-            stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Persist,
-          }),
-        },
-        insights: {
-          ...createAutoDetectAnalyticsInsights(),
-        },
-      })
-      return
-    }
-
     if (!isRequestedOpenRouterBootstrap) {
       const { clearCreatedCredential } =
         abandonOpenRouterOnboardingForOtherAutoDetect()
@@ -2530,11 +2474,13 @@ export function useAccountDialog({
       const policy = getAccountDialogSitePolicy(siteType)
       const saveAnalyticsAction = startSaveAnalyticsAction()
       const duplicateConfirmed =
-        await ensureExactCredentialDuplicateConfirmation()
+        (await ensureDuplicateAccountAddConfirmation()) &&
+        (await ensureExactCredentialDuplicateConfirmation())
       if (!duplicateConfirmed) {
         saveAnalyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled)
         isAnalyticsActionCompleted = true
-        return
+        // Let callers distinguish cancellation from a failed save.
+        return null
       }
       const shouldDeferSuccessForSitePolicy =
         shouldDeferAccountSaveSuccessForAccountDialogSite({
@@ -3172,10 +3118,14 @@ export function useAccountDialog({
           skipSub2ApiKeyPrompt: true,
           skipAutoProvisionKeyOnAccountAdd: true,
         })
-        targetAccount = saveResult?.accountId
         if (!isCurrentRun()) {
           return
         }
+        if (saveResult === null) {
+          setAccountPostSaveWorkflowStep(ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle)
+          return
+        }
+        targetAccount = saveResult?.accountId
         if (!targetAccount) {
           toast.error(t("messages.saveAccountFailed"))
           setAccountPostSaveWorkflowStep(

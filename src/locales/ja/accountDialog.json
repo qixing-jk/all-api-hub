@@ -283,10 +283,10 @@
         "continue": "続行",
         "disableAndContinue": "今後表示せずに続行"
       },
-      "description_other": "{{siteUrl}} にはすでに {{count}} 件のアカウントがあります。さらに追加すると重複する可能性があります。続行しますか？",
-      "descriptionExact": "{{siteUrl}} に user ID {{userId}}（{{username}}）のアカウントがすでに存在します。さらに追加すると重複する可能性があります。続行しますか？",
+      "description_other": "{{siteUrl}} のこの Management Key は {{count}} 件のアカウントに保存されています。もう一度追加しますか？",
+      "descriptionExact": "{{siteUrl}} のユーザー ID {{userId}} のアカウントは保存済みです（{{username}}）。もう一度追加しますか？",
       "title": "重複アカウント",
-      "warningTitle": "このサイトにはすでにアカウントがあります"
+      "warningTitle": "一致する保存済みアカウントがあります"
     },
     "managedSiteConfig": {
       "actions": {

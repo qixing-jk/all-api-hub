@@ -19,7 +19,7 @@ export interface DuplicateAccountWarningDialogProps {
 
 /**
  * DuplicateAccountWarningDialog prompts users when they are about to add an
- * account for a site that already exists in storage (possible duplicate).
+ * account with a saved site identity or an identical OpenRouter Management Key.
  */
 export function DuplicateAccountWarningDialog({
   isOpen,

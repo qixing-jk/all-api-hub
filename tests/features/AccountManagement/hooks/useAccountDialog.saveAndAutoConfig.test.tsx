@@ -2216,6 +2216,79 @@ describe("useAccountDialog save and auto-config flows", () => {
     expect(onSuccess).toHaveBeenCalledWith("saved-account-id")
   })
 
+  it.each([
+    {
+      duplicate: "the same site and user ID",
+      siteType: SITE_TYPES.NEW_API,
+      siteUrl: "https://api.example.com",
+      savedUserId: "12345",
+      savedToken: "existing-token",
+    },
+    {
+      duplicate: "an exact OpenRouter management key",
+      siteType: SITE_TYPES.OPENROUTER,
+      siteUrl: "https://openrouter.ai",
+      savedUserId: "different-user-id",
+      savedToken: "sk-private-token",
+    },
+  ])(
+    "stops auto-config quietly when the user cancels adding $duplicate",
+    async ({ siteType, siteUrl, savedUserId, savedToken }) => {
+      await accountStorage.addAccount(
+        buildSiteAccount({
+          site_type: siteType,
+          site_url: siteUrl,
+          account_info: {
+            ...buildSiteAccount().account_info,
+            id: savedUserId,
+            access_token: savedToken,
+          },
+        }),
+      )
+      const onSuccess = vi.fn()
+      const { result } = renderAddHook({ onSuccess })
+      await waitFor(() => {
+        expect(result.current.state).toBeTruthy()
+      })
+      await fillStandardAddAccountDraft(result)
+      await act(async () => {
+        result.current.setters.setUrl(siteUrl)
+        result.current.setters.setSiteType(siteType)
+      })
+
+      let autoConfigPromise: ReturnType<
+        typeof result.current.handlers.handleAutoConfig
+      >
+      act(() => {
+        autoConfigPromise = result.current.handlers.handleAutoConfig()
+      })
+      await waitFor(() => {
+        expect(result.current.state.duplicateAccountWarning.isOpen).toBe(true)
+      })
+
+      await act(async () => {
+        result.current.handlers.handleDuplicateAccountWarningCancel()
+        await autoConfigPromise
+      })
+
+      expect(mockValidateAndSaveAccount).not.toHaveBeenCalled()
+      expect(mockEnsureAccountTokenForPostSaveWorkflow).not.toHaveBeenCalled()
+      expect(mockOpenWithAccount).not.toHaveBeenCalled()
+      expect(onSuccess).not.toHaveBeenCalled()
+      expect(toast.error).not.toHaveBeenCalled()
+      expect(result.current.state).toMatchObject({
+        url: siteUrl,
+        isSaving: false,
+        isAutoConfiguring: false,
+        accountPostSaveWorkflowStep: ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle,
+        duplicateAccountWarning: { isOpen: false },
+      })
+      expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Cancelled,
+      )
+    },
+  )
+
   it("stops auto-config after save when the saved account id is missing", async () => {
     mockValidateAndSaveAccount.mockResolvedValueOnce({
       success: true,

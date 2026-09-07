@@ -222,9 +222,9 @@
     "userIdDesc": "ID de usuario administrador (solo numérico). El administrador root suele ser 1."
   },
   "duplicateAccountWarningOnAdd": {
-    "description": "Controla si All API Hub pide confirmación cuando agregas una cuenta para un sitio que ya existe.",
+    "description": "Revisa las cuentas guardadas antes de agregar para evitar duplicados.",
     "title": "Cuentas",
-    "toggleDesc": "Cuando está habilitado, All API Hub muestra un diálogo de confirmación si intentas agregar otra cuenta para la misma URL de sitio.",
+    "toggleDesc": "Pide confirmación cuando el mismo ID de usuario ya está guardado para este sitio. En OpenRouter, comprueba si la Management Key es idéntica.",
     "toggleLabel": "Advertir antes de agregar duplicados"
   },
   "logging": {

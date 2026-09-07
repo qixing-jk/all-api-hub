@@ -285,12 +285,12 @@
         "continue": "Continuar",
         "disableAndContinue": "No volver a recordarme y continuar"
       },
-      "description_one": "Ya tienes {{count}} cuenta para {{siteUrl}}. Agregar otra puede crear duplicados. ¿Quieres continuar?",
-      "description_many": "Ya tienes {{count}} cuentas para {{siteUrl}}. Agregar otra puede crear duplicados. ¿Quieres continuar?",
-      "description_other": "Ya tienes {{count}} cuentas para {{siteUrl}}. Agregar otra puede crear duplicados. ¿Quieres continuar?",
-      "descriptionExact": "Ya existe una cuenta para {{siteUrl}} con ID de usuario {{userId}} ({{username}}). Agregar otra puede crear duplicados. ¿Quieres continuar?",
+      "description_one": "Esta Management Key de {{siteUrl}} ya está guardada en {{count}} cuenta. ¿Quieres agregarla de nuevo?",
+      "description_many": "Esta Management Key de {{siteUrl}} ya está guardada en {{count}} cuentas. ¿Quieres agregarla de nuevo?",
+      "description_other": "Esta Management Key de {{siteUrl}} ya está guardada en {{count}} cuentas. ¿Quieres agregarla de nuevo?",
+      "descriptionExact": "Ya está guardada una cuenta de {{siteUrl}} con el ID de usuario {{userId}} ({{username}}). ¿Quieres agregarla de nuevo?",
       "title": "Cuenta duplicada",
-      "warningTitle": "Este sitio ya tiene cuentas"
+      "warningTitle": "Se encontró una cuenta guardada coincidente"
     },
     "managedSiteConfig": {
       "actions": {

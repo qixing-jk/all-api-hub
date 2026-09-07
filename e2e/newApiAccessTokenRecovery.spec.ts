@@ -76,6 +76,8 @@ for (const scenario of [
     const { baseUrl, tokenPagePath, openTokenSettingsLabel, siteType } =
       scenario
     const manualToken = "e2e-manually-copied-management-pat"
+    const initialQuota = 1000
+    const refreshedQuota = 2500
     let tokenRequests = 0
 
     installExtensionPageGuards(page, {
@@ -92,6 +94,7 @@ for (const scenario of [
       dashboardAuthMode:
         siteType === SITE_TYPES.NEW_API ? "auth-bundle" : "legacy",
       accessToken: manualToken,
+      initialQuota,
     })
     if (siteType === SITE_TYPES.APIYI) {
       await context.addInitScript((origin) => {
@@ -115,7 +118,7 @@ for (const scenario of [
               id: 1,
               username: "e2e-user",
               access_token: "",
-              quota: 1000,
+              quota: initialQuota,
             },
           }),
         })
@@ -336,7 +339,32 @@ for (const scenario of [
     expect(tokenRequests).toBe(scenario.tokenRequests)
 
     await openAccountManagementPage({ page: bridge, extensionId })
+    await bridge.bringToFront()
     const row = await expectAccountListItemVisible(bridge, saved.id)
+    // The deferred save refresh may still be pending; neither its initial quota
+    // nor the stored placeholder can satisfy the manual refresh assertion.
+    expect(
+      (await waitForSavedAccount({ serviceWorker, siteType, baseUrl }))
+        .account_info.quota,
+    ).not.toBe(refreshedQuota)
+    await context.route(`${baseUrl}/api/user/self`, async (route) => {
+      if (
+        route.request().headers()["authorization"] !== `Bearer ${manualToken}`
+      ) {
+        await route.fallback()
+        return
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          success: true,
+          data: { id: 1, username: "e2e-user", quota: refreshedQuota },
+        }),
+      })
+    })
+    // Desktop row actions only accept pointer events after hover or focus.
+    await row.hover()
     await row
       .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowMoreActionsButton)
       .click()
@@ -349,7 +377,7 @@ for (const scenario of [
           (await waitForSavedAccount({ serviceWorker, siteType, baseUrl }))
             .account_info.quota,
       )
-      .toBe(1000)
+      .toBe(refreshedQuota)
 
     await verifyAccountModelCatalog({
       page: bridge,

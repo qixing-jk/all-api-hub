@@ -415,6 +415,54 @@ describe("APIyi account capabilities", () => {
     expect(pages).toEqual([0, 1])
   })
 
+  it.each([
+    { label: "non-array inventory", data: { items: [] } },
+    { label: "missing group", data: [null] },
+    { label: "blank group name", data: [{ name: " ", convert_ratio: 1 }] },
+    { label: "negative ratio", data: [{ name: "vip", convert_ratio: -1 }] },
+  ])(
+    "rejects a $label instead of returning selectable groups",
+    async ({ data }) => {
+      server.use(
+        http.get(`${baseUrl}/api/groupPro/selectable`, () =>
+          HttpResponse.json({ success: true, data }),
+        ),
+      )
+
+      await expect(
+        getSiteTypeCapabilities(
+          SITE_TYPES.APIYI,
+        ).account!.keyManagement!.userGroups!.fetch({
+          baseUrl,
+          auth: { authType: AuthTypeEnum.Cookie, userId: "42" },
+        }),
+      ).rejects.toThrow(TypeError)
+    },
+  )
+
+  it.each([undefined, " ", null])(
+    "uses the group name when its display label is unavailable: %s",
+    async (display_name) => {
+      server.use(
+        http.get(`${baseUrl}/api/groupPro/selectable`, () =>
+          HttpResponse.json({
+            success: true,
+            data: [{ name: "free", display_name, convert_ratio: 0 }],
+          }),
+        ),
+      )
+
+      await expect(
+        getSiteTypeCapabilities(
+          SITE_TYPES.APIYI,
+        ).account!.keyManagement!.userGroups!.fetch({
+          baseUrl,
+          auth: { authType: AuthTypeEnum.Cookie, userId: "42" },
+        }),
+      ).resolves.toEqual({ free: { desc: "free", ratio: 0 } })
+    },
+  )
+
   it("rejects an unsuccessful pricing envelope without exposing its contents", async () => {
     server.use(
       http.get(`${baseUrl}/api/pricing`, () =>

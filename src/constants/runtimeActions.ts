@@ -8,6 +8,7 @@
  * Values are part of the on-the-wire contract between extension contexts and MUST remain stable.
  */
 export const RuntimeActionPrefixes = {
+  AccountBrowserIdentity: "accountBrowserIdentity:",
   AccountDialog: "accountDialog:",
   AccountRefresh: "accountRefresh:",
   ApiCheck: "apiCheck:",
@@ -41,6 +42,15 @@ export const RuntimeMessageTypes = {
  * Values are part of the on-the-wire contract between extension contexts and MUST remain stable.
  */
 export const RuntimeActionIds = {
+  AccountBrowserIdentityGetCooldown: composeRuntimeAction(
+    RuntimeActionPrefixes.AccountBrowserIdentity,
+    "getCooldown",
+  ),
+  AccountBrowserIdentityRecordRateLimit: composeRuntimeAction(
+    RuntimeActionPrefixes.AccountBrowserIdentity,
+    "recordRateLimit",
+  ),
+
   AccountDialogImportCookieAuthSessionCookie: composeRuntimeAction(
     RuntimeActionPrefixes.AccountDialog,
     "importCookieAuthSessionCookie",

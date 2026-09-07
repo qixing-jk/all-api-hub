@@ -99,6 +99,27 @@ describe("APIyi onboarding", () => {
     })
   })
 
+  it.each([undefined, null, 7])(
+    "preserves the user ID when the stored username is unavailable: %s",
+    async (username) => {
+      localStorage.setItem(
+        "USER_STATE",
+        JSON.stringify({
+          user: { id: 42, username, access_token: "private-token" },
+        }),
+      )
+
+      await expect(readSession()).resolves.toEqual({
+        success: true,
+        data: {
+          userId: "42",
+          user: { id: 42 },
+          siteTypeHint: SITE_TYPES.APIYI,
+        },
+      })
+    },
+  )
+
   it("does not interpret USER_STATE as another site's login", async () => {
     localStorage.setItem(
       "USER_STATE",
@@ -111,6 +132,8 @@ describe("APIyi onboarding", () => {
   })
 
   it.each([
+    "",
+    " ",
     "not-json",
     "null",
     "[]",

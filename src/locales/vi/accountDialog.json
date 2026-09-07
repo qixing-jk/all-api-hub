@@ -283,10 +283,10 @@
         "continue": "Tiếp tục",
         "disableAndContinue": "Không nhắc lại và tiếp tục"
       },
-      "description_other": "Bạn đã thêm {{count}} tài khoản vào {{siteUrl}}. Tiếp tục thêm có thể gây trùng lặp. Bạn có muốn tiếp tục không?",
-      "descriptionExact": "Trên {{siteUrl}}, tài khoản có User ID {{userId}} đã tồn tại ({{username}}). Việc tiếp tục thêm có thể gây ra trùng lặp, bạn có muốn tiếp tục không?",
+      "description_other": "Management Key này của {{siteUrl}} đã được lưu trong {{count}} tài khoản. Bạn có muốn thêm lại không?",
+      "descriptionExact": "Tài khoản của {{siteUrl}} với ID người dùng {{userId}} đã được lưu ({{username}}). Bạn có muốn thêm lại không?",
       "title": "Tài khoản trùng lặp",
-      "warningTitle": "Tài khoản đã tồn tại cho trang web này"
+      "warningTitle": "Tìm thấy tài khoản đã lưu trùng khớp"
     },
     "managedSiteConfig": {
       "actions": {

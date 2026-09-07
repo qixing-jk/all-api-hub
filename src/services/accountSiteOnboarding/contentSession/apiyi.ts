@@ -1,4 +1,5 @@
 import { SITE_TYPES } from "~/constants/siteType"
+import { readIdentityStorageRecord } from "~/services/accountBrowserSession/localIdentityState"
 import { resolveStoredAccountUserIdentity } from "~/services/accounts/accountIdentity"
 import { isRecord } from "~/utils/core/object"
 
@@ -8,24 +9,20 @@ import type { ContentSessionExtractor } from "../contracts"
 // Forward identity only; its X-S-Token is unnecessary for the cookie API reads.
 const APIYI_USER_STATE_KEY = "USER_STATE"
 
+/** Shares APIyi's dashboard identity hint with passive browser verification. */
+export function readApiyiStoredUser() {
+  const user = readIdentityStorageRecord(APIYI_USER_STATE_KEY)?.user
+  return isRecord(user) ? user : null
+}
+
 export const apiyiContentSessionExtractor: ContentSessionExtractor = {
   id: "apiyi",
   canExtract: (context) =>
     context.siteTypeHint === SITE_TYPES.APIYI &&
     localStorage.getItem(APIYI_USER_STATE_KEY) !== null,
   async extract() {
-    const rawState = localStorage.getItem(APIYI_USER_STATE_KEY)
-    if (!rawState) return null
-
-    let state: unknown
-    try {
-      state = JSON.parse(rawState)
-    } catch {
-      return null
-    }
-
-    const user = isRecord(state) ? state.user : null
-    if (!isRecord(user)) return null
+    const user = readApiyiStoredUser()
+    if (!user) return null
 
     const identity = resolveStoredAccountUserIdentity(
       {

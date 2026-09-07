@@ -222,9 +222,9 @@
     "userIdDesc": "ID người dùng quản trị viên (chỉ số), quản trị viên root thường là 1"
   },
   "duplicateAccountWarningOnAdd": {
-    "description": "Kiểm soát việc có cần hộp thoại xác nhận khi thêm tài khoản nếu trang đó đã có tài khoản hay không.",
+    "description": "Kiểm tra tài khoản đã lưu trước khi thêm để tránh trùng lặp.",
     "title": "Tài khoản",
-    "toggleDesc": "Sau khi bật, khi bạn cố thêm một tài khoản nữa cho cùng URL trang, hộp thoại xác nhận sẽ bật lên.",
+    "toggleDesc": "Yêu cầu xác nhận khi cùng ID người dùng đã được lưu cho trang web này. Với OpenRouter, kiểm tra Management Key giống hệt nhau.",
     "toggleLabel": "Nhắc trước khi thêm tài khoản trùng lặp"
   },
   "logging": {
