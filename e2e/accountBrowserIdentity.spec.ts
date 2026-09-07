@@ -8,7 +8,7 @@ import { getServiceWorker } from "~~/e2e/utils/extensionState"
 const SITE_URL = "https://browser-identity.example.test/dashboard"
 
 /** Uses the popup's public message contract in the actual content-script world. */
-async function readBrowserIdentity(worker: Worker) {
+async function readBrowserIdentity(worker: Worker, pageUrl = SITE_URL) {
   return worker.evaluate(
     async ({ pageUrl, action, siteType }) => {
       const chromeApi = (globalThis as any).chrome
@@ -35,7 +35,7 @@ async function readBrowserIdentity(worker: Worker) {
       }
     },
     {
-      pageUrl: SITE_URL,
+      pageUrl,
       action: RuntimeActionIds.ContentGetUserFromLocalStorage,
       siteType: SITE_TYPES.SUB2API,
     },
@@ -143,4 +143,75 @@ test("passive identity checks reuse local observations and follow browser login 
   expect(context.pages()).toHaveLength(openedPages)
   await expect(page).toHaveURL(SITE_URL)
   await expect(page.getByRole("dialog")).toHaveCount(0)
+})
+
+test("passive identity cooldown survives reloads and another tab until Retry-After expires", async ({
+  context,
+  page,
+}) => {
+  const origin = "https://limited-identity.example.test"
+  const firstUrl = `${origin}/dashboard`
+  const secondUrl = `${origin}/dashboard?tab=2`
+  const apiRequests: string[] = []
+  let rateLimited = true
+  await context.route(`${origin}/**`, async (route) => {
+    const path = new URL(route.request().url()).pathname
+    if (path === "/dashboard") {
+      await route.fulfill({
+        contentType: "text/html",
+        body: "<!doctype html><title>Sub2API Dashboard</title><h1>Dashboard</h1>",
+      })
+      return
+    }
+    if (path === "/api/v1/auth/me") {
+      apiRequests.push(route.request().method())
+      await route.fulfill({
+        status: rateLimited ? 429 : 200,
+        headers: rateLimited ? { "Retry-After": "10" } : {},
+        contentType: "application/json",
+        body: JSON.stringify(rateLimited ? {} : { code: 0, data: { id: 2 } }),
+      })
+      return
+    }
+    await route.fulfill({ status: 404, body: "" })
+  })
+  const worker = await getServiceWorker(context)
+  await page.goto(firstUrl)
+  await page.evaluate(() => localStorage.setItem("auth_token", "session-one"))
+  await expect
+    .poll(() => readBrowserIdentity(worker, firstUrl))
+    .toEqual({
+      success: false,
+    })
+  expect(apiRequests).toEqual(["GET"])
+
+  await page.evaluate(() => {
+    localStorage.setItem("auth_token", "session-two")
+    document.cookie = "analytics=changed; path=/"
+  })
+  await page.reload()
+  await expect
+    .poll(() => readBrowserIdentity(worker, firstUrl))
+    .toEqual({
+      success: false,
+    })
+  const secondPage = await context.newPage()
+  await secondPage.goto(secondUrl)
+  await expect
+    .poll(() => readBrowserIdentity(worker, secondUrl))
+    .toEqual({
+      success: false,
+    })
+  expect(apiRequests).toEqual(["GET"])
+
+  rateLimited = false
+  await expect
+    .poll(() => readBrowserIdentity(worker, secondUrl), { timeout: 20_000 })
+    .toEqual({ success: true, data: { userId: "2", identityVerified: true } })
+  expect(apiRequests).toEqual(["GET", "GET"])
+  expect(
+    await secondPage.evaluate(() => localStorage.getItem("auth_token")),
+  ).toBe("session-two")
+  await expect(secondPage.getByRole("dialog")).toHaveCount(0)
+  await expect(secondPage).toHaveURL(secondUrl)
 })

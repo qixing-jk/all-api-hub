@@ -1,3 +1,4 @@
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import type { AccountSiteType } from "~/constants/siteType"
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
 import { getAccountBrowserIdentityCapability } from "~/services/accountSiteOnboarding/registry"
@@ -7,6 +8,7 @@ import type {
   BrowserIdentityObservation,
   BrowserIdentityRead,
 } from "~/services/apiAdapters/contracts/accountBrowserIdentity"
+import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { isRecord } from "~/utils/core/object"
 import { tryParseOrigin } from "~/utils/core/urlParsing"
 
@@ -29,10 +31,39 @@ const documentCaches = new WeakMap<
   Map<AccountSiteType, IdentityCacheEntry>
 >()
 
+/** Consults the extension's shared cooldown without sending session evidence. */
+async function accessIdentityCooldown(
+  origin: string,
+  retryAfter?: string | null,
+) {
+  try {
+    const response: unknown = await sendRuntimeMessage(
+      {
+        action:
+          retryAfter === undefined
+            ? RuntimeActionIds.AccountBrowserIdentityGetCooldown
+            : RuntimeActionIds.AccountBrowserIdentityRecordRateLimit,
+        origin,
+        ...(retryAfter === undefined ? {} : { retryAfter }),
+      },
+      { maxAttempts: 1 },
+    )
+    return isRecord(response) &&
+      response.success === true &&
+      typeof response.retryAt === "number" &&
+      Number.isFinite(response.retryAt)
+      ? response.retryAt
+      : null
+  } catch {
+    return null
+  }
+}
+
 /** Reads one identity endpoint, without retries, auth recovery, redirects, or UI. */
 function createIdentityRead(
   signal: AbortSignal,
   origin: string,
+  isCurrentObservation: () => boolean,
 ): BrowserIdentityRead {
   let requested = false
   return async ({ url, headers }) => {
@@ -40,6 +71,17 @@ function createIdentityRead(
       return null
     requested = true
     try {
+      const requestOrigin = tryParseOrigin(url)
+      if (!requestOrigin) return null
+      const retryAt = await accessIdentityCooldown(requestOrigin)
+      if (
+        retryAt === null ||
+        retryAt > Date.now() ||
+        signal.aborted ||
+        tryParseOrigin(location.href) !== origin ||
+        !isCurrentObservation()
+      )
+        return null
       const response = await fetch(url, {
         method: "GET",
         credentials: "include",
@@ -48,6 +90,13 @@ function createIdentityRead(
         signal,
         headers,
       })
+      if (response.status === 429) {
+        await accessIdentityCooldown(
+          requestOrigin,
+          response.headers.get("Retry-After"),
+        )
+        return null
+      }
       if (!response.ok) return null
       const body: unknown = await response.json()
       return isRecord(body) ? body : null
@@ -73,9 +122,22 @@ async function checkObservation(
     () => controller.abort(),
     IDENTITY_VERIFICATION_TIMEOUT_MS,
   )
+  const isCurrentObservation = () => {
+    const current = capability.observe(context)
+    return (
+      current?.sessionKey === observation.sessionKey &&
+      (current.expiresAt === undefined || current.expiresAt > Date.now())
+    )
+  }
   try {
     const value = await Promise.race([
-      observation.verify(createIdentityRead(controller.signal, context.origin)),
+      observation.verify(
+        createIdentityRead(
+          controller.signal,
+          context.origin,
+          isCurrentObservation,
+        ),
+      ),
       cancelled,
     ])
     if (
@@ -83,11 +145,7 @@ async function checkObservation(
       tryParseOrigin(location.href) !== context.origin
     )
       return null
-    const current = capability.observe(context)
-    return current?.sessionKey === observation.sessionKey &&
-      (current.expiresAt === undefined || current.expiresAt > Date.now())
-      ? normalizeAccountIdentity(value)
-      : null
+    return isCurrentObservation() ? normalizeAccountIdentity(value) : null
   } catch {
     return null
   } finally {

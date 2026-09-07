@@ -4,6 +4,7 @@ import {
   handleGetLocalStorage,
   handleGetUserFromLocalStorage,
 } from "~/entrypoints/content/messageHandlers/handlers/storage"
+import { setupAccountBrowserIdentityRateLimitMessaging } from "~/services/accountBrowserSession/identityRateLimit"
 import { compatibleUserContentSessionExtractor } from "~/services/accountSiteOnboarding/contentSession/compatibleUser"
 import { newApiAuthBundleContentSessionExtractor } from "~/services/accountSiteOnboarding/contentSession/newApiAuthBundle"
 import { sharedChatContentSessionExtractor } from "~/services/accountSiteOnboarding/contentSession/sharedchat"
@@ -88,6 +89,7 @@ describe("content storage handler", () => {
   })
 
   it("verifies the current browser login against the server instead of trusting stored user data", async () => {
+    setupAccountBrowserIdentityRateLimitMessaging()
     vi.stubGlobal("location", new URL("https://site.example.com/dashboard"))
     localStorage.setItem(
       "user",

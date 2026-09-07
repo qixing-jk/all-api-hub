@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import { handleGetUserFromLocalStorage } from "~/entrypoints/content/messageHandlers/handlers/storage"
+import { setupAccountBrowserIdentityRateLimitMessaging } from "~/services/accountBrowserSession/identityRateLimit"
 
 /** Verifies identity through the same message-handler boundary as the popup. */
 function verifyIdentity(
@@ -18,13 +19,17 @@ function verifyIdentity(
 }
 
 describe("current browser account identity verification", () => {
+  let stopRateLimitMessaging: () => void
+
   beforeEach(() => {
+    stopRateLimitMessaging = setupAccountBrowserIdentityRateLimitMessaging()
     localStorage.clear()
     vi.stubGlobal("location", new URL("https://site.example.com/dashboard"))
     vi.stubGlobal("document", document.implementation.createHTMLDocument())
   })
 
   afterEach(() => {
+    stopRateLimitMessaging()
     vi.useRealTimers()
     vi.unstubAllGlobals()
     vi.restoreAllMocks()
@@ -177,6 +182,7 @@ describe("current browser account identity verification", () => {
     )
     vi.stubGlobal("fetch", fetchMock)
     const oldIdentity = verifyIdentity(SITE_TYPES.SUB2API)
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
     localStorage.setItem("auth_token", "new-token")
 
     expect(await verifyIdentity(SITE_TYPES.SUB2API)).toEqual({
@@ -319,6 +325,7 @@ describe("current browser account identity verification", () => {
       ),
     )
     const pending = verifyIdentity(SITE_TYPES.ONE_API)
+    await vi.waitFor(() => expect(resolveResponse).toBeTypeOf("function"))
     vi.stubGlobal("location", new URL("https://other.example.com/dashboard"))
     resolveResponse(
       new Response(JSON.stringify({ success: true, data: { id: 1 } })),
@@ -429,6 +436,7 @@ describe("current browser account identity verification", () => {
       )
 
       const pending = verifyIdentity(scenario.siteType)
+      await vi.waitFor(() => expect(resolveResponse).toBeTypeOf("function"))
       localStorage.setItem(scenario.key, scenario.next)
       resolveResponse(
         new Response(JSON.stringify({ code: 0, data: { id: "old-user" } })),
@@ -483,7 +491,323 @@ describe("current browser account identity verification", () => {
     })
   })
 
-  it.each([401, 403, 429, 500])(
+  it("honors Retry-After despite changed Cookie evidence and saved account candidates", async () => {
+    let now = Date.now()
+    vi.spyOn(Date, "now").mockImplementation(() => now)
+    const cookie = vi
+      .spyOn(document, "cookie", "get")
+      .mockReturnValue("session=unchanged; analytics=1")
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response("{}", {
+          status: 429,
+          headers: { "Retry-After": "120" },
+        }),
+      )
+      .mockImplementation(
+        async () =>
+          new Response(JSON.stringify({ success: true, data: { id: "2" } })),
+      )
+    vi.stubGlobal("fetch", fetchMock)
+
+    expect(await verifyIdentity(SITE_TYPES.NEW_API)).toEqual({ success: false })
+    now += 5001
+    cookie.mockReturnValue("session=unchanged; analytics=2")
+    expect(
+      await verifyIdentity(SITE_TYPES.NEW_API, location.origin, ["1", "2"]),
+    ).toEqual({ success: false })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+
+    now += 115_000
+    expect(
+      await verifyIdentity(SITE_TYPES.NEW_API, location.origin, ["1", "2"]),
+    ).toEqual({
+      success: true,
+      data: { userId: "2", identityVerified: true },
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it.each([
+    { retryAfter: "Tue, 08 Sep 2026 00:02:00 GMT", delay: 120_000 },
+    { retryAfter: null, delay: 60_000 },
+    { retryAfter: "not-a-date", delay: 60_000 },
+    { retryAfter: "-1", delay: 60_000 },
+    { retryAfter: "1.5", delay: 60_000 },
+  ])(
+    "uses HTTP dates or a conservative fallback for Retry-After: $retryAfter",
+    async ({ retryAfter, delay }) => {
+      let now = Date.UTC(2026, 8, 8)
+      vi.spyOn(Date, "now").mockImplementation(() => now)
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValueOnce(
+          new Response("{}", {
+            status: 429,
+            headers: retryAfter === null ? {} : { "Retry-After": retryAfter },
+          }),
+        )
+        .mockImplementation(
+          async () =>
+            new Response(JSON.stringify({ success: true, data: { id: "2" } })),
+        )
+      vi.stubGlobal("fetch", fetchMock)
+
+      expect(await verifyIdentity(SITE_TYPES.ONE_API)).toEqual({
+        success: false,
+      })
+      now += 5001
+      expect(await verifyIdentity(SITE_TYPES.ONE_API)).toEqual({
+        success: false,
+      })
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+
+      now += delay - 5000
+      expect(await verifyIdentity(SITE_TYPES.ONE_API)).toEqual({
+        success: true,
+        data: { userId: "2", identityVerified: true },
+      })
+      expect(fetchMock).toHaveBeenCalledTimes(2)
+    },
+  )
+
+  it("preserves site cooldowns after page and background restarts without blocking other sites", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response("{}", {
+          status: 429,
+          headers: { "Retry-After": "120" },
+        }),
+      )
+      .mockImplementation(
+        async () =>
+          new Response(JSON.stringify({ success: true, data: { id: "2" } })),
+      )
+    vi.stubGlobal("fetch", fetchMock)
+    expect(await verifyIdentity(SITE_TYPES.NEW_API)).toEqual({ success: false })
+
+    stopRateLimitMessaging()
+    vi.resetModules()
+    const restartedBackground = await import(
+      "~/services/accountBrowserSession/identityRateLimit"
+    )
+    stopRateLimitMessaging =
+      restartedBackground.setupAccountBrowserIdentityRateLimitMessaging()
+    vi.stubGlobal("document", document.implementation.createHTMLDocument())
+    expect(await verifyIdentity(SITE_TYPES.ONE_API)).toEqual({ success: false })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+
+    vi.stubGlobal("location", new URL("https://other.example.com/dashboard"))
+    vi.stubGlobal("document", document.implementation.createHTMLDocument())
+    expect(await verifyIdentity(SITE_TYPES.ONE_API)).toEqual({
+      success: true,
+      data: { userId: "2", identityVerified: true },
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it("shares AIHubMix cooldowns between the main site and console", async () => {
+    vi.stubGlobal("location", new URL("https://aihubmix.com/"))
+    const fetchMock = vi.fn(
+      async () =>
+        new Response("{}", { status: 429, headers: { "Retry-After": "120" } }),
+    )
+    vi.stubGlobal("fetch", fetchMock)
+    expect(await verifyIdentity(SITE_TYPES.AIHUBMIX)).toEqual({
+      success: false,
+    })
+
+    vi.stubGlobal("location", new URL("https://console.aihubmix.com/"))
+    vi.stubGlobal("document", document.implementation.createHTMLDocument())
+    expect(await verifyIdentity(SITE_TYPES.AIHUBMIX)).toEqual({
+      success: false,
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("retains a cooldown across background restarts when session storage writes fail", async () => {
+    let now = Date.now()
+    vi.spyOn(Date, "now").mockImplementation(() => now)
+    vi.spyOn(browser.storage.session, "set").mockRejectedValue(
+      new Error("Session storage unavailable"),
+    )
+    const fetchMock = vi.fn(
+      async () =>
+        new Response("{}", { status: 429, headers: { "Retry-After": "120" } }),
+    )
+    vi.stubGlobal("fetch", fetchMock)
+    expect(await verifyIdentity(SITE_TYPES.ONE_API)).toEqual({ success: false })
+
+    stopRateLimitMessaging()
+    vi.resetModules()
+    const restartedBackground = await import(
+      "~/services/accountBrowserSession/identityRateLimit"
+    )
+    stopRateLimitMessaging =
+      restartedBackground.setupAccountBrowserIdentityRateLimitMessaging()
+    now += 5001
+    vi.stubGlobal("document", document.implementation.createHTMLDocument())
+    expect(await verifyIdentity(SITE_TYPES.ONE_API)).toEqual({ success: false })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("does not let a second page's shorter Retry-After reduce an active cooldown", async () => {
+    let now = Date.now()
+    vi.spyOn(Date, "now").mockImplementation(() => now)
+    const responses: ((response: Response) => void)[] = []
+    const fetchMock = vi.fn(
+      () => new Promise<Response>((resolve) => responses.push(resolve)),
+    )
+    vi.stubGlobal("fetch", fetchMock)
+    const first = verifyIdentity(SITE_TYPES.ONE_API)
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+    vi.stubGlobal("document", document.implementation.createHTMLDocument())
+    const second = verifyIdentity(SITE_TYPES.ONE_API)
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2))
+    responses[0](
+      new Response("{}", { status: 429, headers: { "Retry-After": "120" } }),
+    )
+    responses[1](
+      new Response("{}", { status: 429, headers: { "Retry-After": "10" } }),
+    )
+    expect(await Promise.all([first, second])).toEqual([
+      { success: false },
+      { success: false },
+    ])
+
+    now += 15_000
+    vi.stubGlobal("document", document.implementation.createHTMLDocument())
+    expect(await verifyIdentity(SITE_TYPES.ONE_API)).toEqual({ success: false })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    fetchMock.mockImplementation(
+      async () =>
+        new Response(JSON.stringify({ success: true, data: { id: "2" } })),
+    )
+    now += 105_001
+    expect(await verifyIdentity(SITE_TYPES.ONE_API)).toEqual({
+      success: true,
+      data: { userId: "2", identityVerified: true },
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+  })
+
+  it("keeps a known cooldown shared while both storage writes fail", async () => {
+    let now = Date.now()
+    vi.spyOn(Date, "now").mockImplementation(() => now)
+    vi.spyOn(browser.storage.session, "set").mockRejectedValue(
+      new Error("Session write failed"),
+    )
+    vi.spyOn(browser.storage.local, "set").mockRejectedValue(
+      new Error("Local write failed"),
+    )
+    const fetchMock = vi.fn(
+      async () =>
+        new Response("{}", { status: 429, headers: { "Retry-After": "120" } }),
+    )
+    vi.stubGlobal("fetch", fetchMock)
+    expect(await verifyIdentity(SITE_TYPES.ONE_API)).toEqual({ success: false })
+    now += 5001
+    vi.stubGlobal("document", document.implementation.createHTMLDocument())
+    expect(await verifyIdentity(SITE_TYPES.ONE_API)).toEqual({ success: false })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it.each(["session", "local"] as const)(
+    "retains Retry-After when %s storage temporarily cannot be read while recording it",
+    async (area) => {
+      let now = Date.now()
+      vi.spyOn(Date, "now").mockImplementation(() => now)
+      vi.spyOn(browser.storage[area], "get")
+        .mockResolvedValueOnce({})
+        .mockRejectedValueOnce(new Error("Temporary read failure"))
+      const fetchMock = vi.fn(
+        async () =>
+          new Response("{}", {
+            status: 429,
+            headers: { "Retry-After": "120" },
+          }),
+      )
+      vi.stubGlobal("fetch", fetchMock)
+      expect(await verifyIdentity(SITE_TYPES.ONE_API)).toEqual({
+        success: false,
+      })
+      now += 5001
+      vi.stubGlobal("document", document.implementation.createHTMLDocument())
+      expect(await verifyIdentity(SITE_TYPES.ONE_API)).toEqual({
+        success: false,
+      })
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+    },
+  )
+
+  it("uses the same cooldown on browsers without session storage", async () => {
+    vi.spyOn(browser.storage, "session", "get").mockReturnValue(
+      undefined as never,
+    )
+    const fetchMock = vi.fn(
+      async () =>
+        new Response("{}", { status: 429, headers: { "Retry-After": "120" } }),
+    )
+    vi.stubGlobal("fetch", fetchMock)
+    expect(await verifyIdentity(SITE_TYPES.ONE_API)).toEqual({ success: false })
+    vi.stubGlobal("document", document.implementation.createHTMLDocument())
+    expect(await verifyIdentity(SITE_TYPES.ONE_API)).toEqual({ success: false })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it.each(["login change", "logout", "navigation"])(
+    "does not send a stale request after %s while waiting for the cooldown check",
+    async (change) => {
+      localStorage.setItem("auth_token", "old-token")
+      let releaseGate!: (response: unknown) => void
+      vi.spyOn(browser.runtime, "sendMessage").mockReturnValue(
+        new Promise((resolve) => (releaseGate = resolve)),
+      )
+      const fetchMock = vi.fn()
+      vi.stubGlobal("fetch", fetchMock)
+      const pending = verifyIdentity(SITE_TYPES.SUB2API)
+      if (change === "login change")
+        localStorage.setItem("auth_token", "new-token")
+      else if (change === "logout") localStorage.removeItem("auth_token")
+      else vi.stubGlobal("location", new URL("https://other.example.com/"))
+      releaseGate({ success: true, retryAt: 0 })
+
+      expect(await pending).toEqual({ success: false })
+      expect(fetchMock).not.toHaveBeenCalled()
+    },
+  )
+
+  it("does not send a request when a cooldown reply arrives after the deadline", async () => {
+    vi.useFakeTimers()
+    let releaseGate!: (response: unknown) => void
+    vi.spyOn(browser.runtime, "sendMessage").mockReturnValue(
+      new Promise((resolve) => (releaseGate = resolve)),
+    )
+    const fetchMock = vi.fn()
+    vi.stubGlobal("fetch", fetchMock)
+    const pending = verifyIdentity(SITE_TYPES.ONE_API)
+    await vi.advanceTimersByTimeAsync(5001)
+    expect(await pending).toEqual({ success: false })
+    releaseGate({ success: true, retryAt: 0 })
+    await vi.advanceTimersByTimeAsync(0)
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it("skips a passive request when the shared cooldown cannot be checked", async () => {
+    const sendMessage = vi
+      .spyOn(browser.runtime, "sendMessage")
+      .mockRejectedValue(new Error("Background unavailable"))
+    const fetchMock = vi.fn()
+    vi.stubGlobal("fetch", fetchMock)
+    expect(await verifyIdentity(SITE_TYPES.ONE_API)).toEqual({ success: false })
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(sendMessage).toHaveBeenCalledTimes(1)
+  })
+
+  it.each([401, 403, 500])(
     "cools down passive checks after an inconclusive response: %s",
     async (status) => {
       let now = Date.now()
@@ -527,7 +851,7 @@ describe("current browser account identity verification", () => {
     vi.stubGlobal("fetch", fetchMock)
     const first = verifyIdentity(SITE_TYPES.ONE_API)
     const second = verifyIdentity(SITE_TYPES.ONE_API)
-    expect(fetchMock).toHaveBeenCalledTimes(1)
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
     resolveResponse(
       new Response(JSON.stringify({ success: true, data: { id: 2 } })),
     )

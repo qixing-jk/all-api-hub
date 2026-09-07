@@ -11,6 +11,9 @@
 export const I18NEXT_LANGUAGE_STORAGE_KEY = "all-api-hub-i18nextLng"
 
 export const STORAGE_LOCKS = {
+  /** Serializes the shared cooldown for passive browser identity requests. */
+  ACCOUNT_BROWSER_IDENTITY_RATE_LIMIT:
+    "all-api-hub:account-browser-identity-rate-limit",
   /**
    * Exclusive lock used for any read-modify-write sequences touching account
    * storage and related derived blobs (e.g. global tag store).
@@ -100,6 +103,10 @@ export const STORAGE_LOCKS = {
 
 export const ACCOUNT_STORAGE_KEYS = {
   ACCOUNTS: "site_accounts",
+} as const
+
+export const ACCOUNT_BROWSER_IDENTITY_STORAGE_KEYS = {
+  RATE_LIMITS: "accountBrowserIdentity_rateLimits_v1",
 } as const
 
 export const TAG_STORAGE_KEYS = {
