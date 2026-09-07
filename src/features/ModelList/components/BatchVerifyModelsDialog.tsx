@@ -760,6 +760,10 @@ export function BatchVerifyModelsDialog({
             )
             results.push({
               id: probe.id,
+              mode:
+                probe.id === API_VERIFICATION_PROBE_IDS.Models
+                  ? undefined
+                  : verificationMode,
               status: API_VERIFICATION_PROBE_STATUSES.Fail,
               latencyMs: 0,
               summary: sanitizedMessage || "Unexpected error",
@@ -837,8 +841,13 @@ export function BatchVerifyModelsDialog({
         })
 
         const diagnostics = buildSafeProbeFailureDiagnostics(error, message)
+        const probeId = getFirstApplicableProbeId(apiType, selectedProbeIds)
         const result: ApiVerificationProbeResult = {
-          id: getFirstApplicableProbeId(apiType, selectedProbeIds),
+          id: probeId,
+          mode:
+            probeId === API_VERIFICATION_PROBE_IDS.Models
+              ? undefined
+              : verificationMode,
           status: BATCH_VERIFY_ROW_STATUSES.FAIL,
           latencyMs: Date.now() - startedAt,
           summary: message || "Unexpected error",

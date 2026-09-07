@@ -1451,6 +1451,7 @@ describe("VerifyApiDialog", () => {
   })
 
   it("marks a single probe stopped when its request rejects after cancellation", async () => {
+    const user = userEvent.setup()
     let receivedSignal: AbortSignal | undefined
     mockFetchAccountTokens.mockResolvedValueOnce([
       {
@@ -1505,6 +1506,16 @@ describe("VerifyApiDialog", () => {
       />,
     )
 
+    const modeSelect = await screen.findByRole("combobox", {
+      name: "aiApiVerification:verifyDialog.meta.mode",
+    })
+    await user.click(modeSelect)
+    await user.click(
+      await screen.findByRole("option", {
+        name: "aiApiVerification:verifyDialog.modes.nonStreaming",
+      }),
+    )
+
     const probeCard = await screen.findByTestId("verify-probe-text-generation")
     const runButton = within(probeCard).getByRole("button", {
       name: "aiApiVerification:verifyDialog.actions.runOne",
@@ -1530,6 +1541,11 @@ describe("VerifyApiDialog", () => {
         name: "aiApiVerification:verifyDialog.actions.retry",
       }),
     ).toBeInTheDocument()
+    expect(
+      within(probeCard).getByText(
+        "aiApiVerification:verifyDialog.modes.nonStreaming",
+      ),
+    ).toBeVisible()
   })
 
   it("completes run-all analytics as failure when any probe fails", async () => {
@@ -1613,6 +1629,7 @@ describe("VerifyApiDialog", () => {
   })
 
   it("maps structured thrown probe status to an auth analytics failure", async () => {
+    const user = userEvent.setup()
     mockGetApiVerificationProbeDefinitions.mockReturnValue([
       { id: "models", requiresModelId: false },
       { id: "text-generation", requiresModelId: true },
@@ -1669,6 +1686,16 @@ describe("VerifyApiDialog", () => {
       />,
     )
 
+    const modeSelect = await screen.findByRole("combobox", {
+      name: "aiApiVerification:verifyDialog.meta.mode",
+    })
+    await user.click(modeSelect)
+    await user.click(
+      await screen.findByRole("option", {
+        name: "aiApiVerification:verifyDialog.modes.nonStreaming",
+      }),
+    )
+
     const runAllButton = await screen.findByRole("button", {
       name: "aiApiVerification:verifyDialog.actions.run",
     })
@@ -1688,6 +1715,19 @@ describe("VerifyApiDialog", () => {
         },
       )
     })
+    expect(
+      within(screen.getByTestId("verify-probe-text-generation")).getByText(
+        "aiApiVerification:verifyDialog.modes.nonStreaming",
+      ),
+    ).toBeVisible()
+    const historyTarget = requireHistoryTarget(
+      createAccountModelVerificationHistoryTarget("a1", "gpt-test"),
+    )
+    const summary =
+      await verificationResultHistoryStorage.getLatestSummary(historyTarget)
+    expect(
+      summary?.probes.find((probe) => probe.id === "text-generation"),
+    ).toMatchObject({ status: "fail", mode: "non-streaming" })
   })
 
   it("completes run-all analytics as skipped when no probes execute", async () => {

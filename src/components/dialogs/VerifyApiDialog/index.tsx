@@ -44,6 +44,7 @@ import { resolveProductAnalyticsErrorCategoryFromProbeResult } from "~/services/
 import {
   API_TYPES,
   API_VERIFICATION_MODES,
+  API_VERIFICATION_PROBE_IDS,
   API_VERIFICATION_PROBE_STATUSES,
   getApiVerificationProbeDefinitions,
   guessModelIdFromToken,
@@ -90,9 +91,11 @@ const logger = createLogger("VerifyApiDialog")
  */
 function buildStoppedProbeResult(
   probeId: ApiVerificationProbeId,
+  mode?: ApiVerificationMode,
 ): ApiVerificationProbeResult {
   return {
     id: probeId,
+    mode: probeId === API_VERIFICATION_PROBE_IDS.Models ? undefined : mode,
     status: API_VERIFICATION_PROBE_STATUSES.Unsupported,
     latencyMs: 0,
     summary: "Stopped",
@@ -284,6 +287,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
     if (abortSignal?.aborted || shouldStopRef.current) return null
     if (!selectedRuntimeKey || !selectedRuntimeKeyIsCompatible) return null
     let resolvedRuntimeKey = selectedRuntimeKey
+    let executedMode: ApiVerificationMode | undefined
 
     const pendingProbes = probesRef.current.map((probe) =>
       probe.definition.id === probeId
@@ -312,11 +316,12 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
         )
         return null
       }
+      executedMode = verificationMode
       const result = await runApiVerificationProbe({
         baseUrl: resolvedRuntimeKey.baseUrl,
         apiKey: resolvedRuntimeKey.secret,
         apiType,
-        mode: verificationMode,
+        mode: executedMode,
         modelId: modelId.trim() || undefined,
         tokenMeta: isAccountTokenRuntimeKey(resolvedRuntimeKey)
           ? {
@@ -337,7 +342,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
               ? {
                   ...probe,
                   isRunning: false,
-                  result: buildStoppedProbeResult(probeId),
+                  result: buildStoppedProbeResult(probeId, executedMode),
                 }
               : probe,
           ),
@@ -365,7 +370,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
               ? {
                   ...probe,
                   isRunning: false,
-                  result: buildStoppedProbeResult(probeId),
+                  result: buildStoppedProbeResult(probeId, executedMode),
                 }
               : probe,
           ),
@@ -391,6 +396,10 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
 
       const fallback: ApiVerificationProbeResult = {
         id: probeId,
+        mode:
+          probeId === API_VERIFICATION_PROBE_IDS.Models
+            ? undefined
+            : verificationMode,
         status: API_VERIFICATION_PROBE_STATUSES.Fail,
         latencyMs: 0,
         summary: t("verifyDialog.errors.unexpected"),

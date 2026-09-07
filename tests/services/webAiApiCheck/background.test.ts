@@ -704,32 +704,45 @@ describe("webAiApiCheck background handlers", () => {
     await probePromise
   })
 
-  it("runProbe sanitizes apiKey when probe execution throws", async () => {
-    vi.resetModules()
-    const { runApiVerificationProbe } = await import(
-      "~/services/verification/aiApiVerification"
-    )
-    vi.mocked(runApiVerificationProbe).mockRejectedValue(
-      new Error("Forbidden: sk-test-secret-fixture"),
-    )
-
-    const background = await import(
-      "~/services/verification/webAiApiCheck/background"
-    )
-
-    const response = await background.resolveWebAiApiCheckRunProbeMessage({
-      apiType: "openai-compatible",
-      baseUrl: "https://proxy.example.com/api/v1",
-      apiKey: "sk-test-secret-fixture",
-      modelId: "gpt-4o-mini",
+  it.each([
+    { probeId: "text-generation", mode: undefined, expectedMode: "streaming" },
+    {
       probeId: "text-generation",
-    })
+      mode: "non-streaming",
+      expectedMode: "non-streaming",
+    },
+    { probeId: "models", mode: "non-streaming", expectedMode: undefined },
+  ] as const)(
+    "runProbe preserves $probeId mode $mode and redacts thrown errors",
+    async ({ probeId, mode, expectedMode }) => {
+      vi.resetModules()
+      const { runApiVerificationProbe } = await import(
+        "~/services/verification/aiApiVerification"
+      )
+      vi.mocked(runApiVerificationProbe).mockRejectedValue(
+        new Error("Forbidden: sk-test-secret-fixture"),
+      )
 
-    const responsePayload = response as any
-    expect(responsePayload?.success).toBe(true)
-    expect(responsePayload?.result?.status).toBe("fail")
-    expect(responsePayload?.result?.summary).toBe("Forbidden: [REDACTED]")
-  })
+      const background = await import(
+        "~/services/verification/webAiApiCheck/background"
+      )
+
+      const response = await background.resolveWebAiApiCheckRunProbeMessage({
+        apiType: "openai-compatible",
+        baseUrl: "https://proxy.example.com/api/v1",
+        apiKey: "sk-test-secret-fixture",
+        modelId: "gpt-4o-mini",
+        probeId,
+        mode,
+      })
+
+      const responsePayload = response as any
+      expect(responsePayload?.success).toBe(true)
+      expect(responsePayload?.result?.status).toBe("fail")
+      expect(responsePayload?.result?.summary).toBe("Forbidden: [REDACTED]")
+      expect(responsePayload?.result?.mode).toBe(expectedMode)
+    },
+  )
 
   it("runProbe omits analytics HTTP status when status is message-derived", async () => {
     vi.resetModules()
@@ -815,6 +828,7 @@ describe("webAiApiCheck background handlers", () => {
         status: "fail",
         latencyMs: 0,
         summary: "Socket hang up: [REDACTED]",
+        mode: "streaming",
         summaryKey: undefined,
         summaryParams: undefined,
         input: {

@@ -581,6 +581,10 @@ export function VerifyApiCredentialProfileDialog({
 
       const fallback: ApiVerificationProbeResult = {
         id: probeId,
+        mode:
+          probeId === API_VERIFICATION_PROBE_IDS.Models
+            ? undefined
+            : verificationMode,
         status: API_VERIFICATION_PROBE_STATUSES.Fail,
         latencyMs: 0,
         summary: t("aiApiVerification:verifyDialog.errors.unexpected"),

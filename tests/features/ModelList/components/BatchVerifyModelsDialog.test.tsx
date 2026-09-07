@@ -1303,6 +1303,7 @@ describe("BatchVerifyModelsDialog", () => {
   })
 
   it("records probe errors and continues when history persistence fails", async () => {
+    const user = userEvent.setup()
     mockFetchDisplayAccountTokens.mockResolvedValueOnce([
       {
         id: 1,
@@ -1325,7 +1326,7 @@ describe("BatchVerifyModelsDialog", () => {
       model_limits: "",
       models: "",
     })
-    mockRunApiVerificationProbe.mockRejectedValueOnce(new Error("probe failed"))
+    mockRunApiVerificationProbe.mockRejectedValue(new Error("probe failed"))
     mockUpsertLatestSummary.mockRejectedValueOnce(new Error("storage failed"))
 
     renderDialog([
@@ -1337,6 +1338,19 @@ describe("BatchVerifyModelsDialog", () => {
       },
     ])
 
+    const modeSelect = await screen.findByRole("combobox", {
+      name: "aiApiVerification:verifyDialog.meta.mode",
+    })
+    await user.click(modeSelect)
+    await user.click(
+      await screen.findByRole("option", {
+        name: "aiApiVerification:verifyDialog.modes.nonStreaming",
+      }),
+    )
+
+    await user.click(
+      screen.getByLabelText("aiApiVerification:verifyDialog.probes.models"),
+    )
     fireEvent.click(
       await screen.findByRole("button", {
         name: "modelList:batchVerify.actions.start",
@@ -1347,14 +1361,24 @@ describe("BatchVerifyModelsDialog", () => {
       expect(mockUpsertLatestSummary).toHaveBeenCalledWith(
         expect.objectContaining({
           probes: [
+            expect.objectContaining({ id: "models", status: "fail" }),
             expect.objectContaining({
               id: "text-generation",
               status: "fail",
+              mode: "non-streaming",
             }),
           ],
         }),
       )
     })
+    expect(
+      mockUpsertLatestSummary.mock.calls[0][0].probes[0].mode,
+    ).toBeUndefined()
+    expect(
+      await screen.findByTestId(
+        getBatchVerifyRowTestId("account:acc-1:model:gpt-4o"),
+      ),
+    ).toHaveTextContent("aiApiVerification:verifyDialog.modes.nonStreaming")
     expect(
       await screen.findByText("modelList:batchVerify.messages.probeSummary"),
     ).toBeInTheDocument()
@@ -1951,6 +1975,9 @@ describe("BatchVerifyModelsDialog", () => {
         }),
       )
     })
+    expect(
+      mockUpsertLatestSummary.mock.calls[0][0].probes[0].mode,
+    ).toBeUndefined()
   })
 
   it("uses text generation for setup failures when no probe definition is available", async () => {
@@ -1981,6 +2008,7 @@ describe("BatchVerifyModelsDialog", () => {
             expect.objectContaining({
               id: "text-generation",
               status: "fail",
+              mode: "streaming",
             }),
           ],
         }),

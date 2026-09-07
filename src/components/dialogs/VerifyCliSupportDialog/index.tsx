@@ -97,10 +97,14 @@ function buildInitialToolState(): ToolItemState[] {
 /**
  * Builds a synthetic result so interrupted tool checks render as stopped, not failed.
  */
-function buildStoppedToolResult(toolId: (typeof CLI_TOOL_IDS)[number]) {
+function buildStoppedToolResult(
+  toolId: (typeof CLI_TOOL_IDS)[number],
+  mode?: ApiVerificationMode,
+) {
   return {
     id: toolId,
     probeId: "tool-calling" as const,
+    mode,
     status: API_VERIFICATION_PROBE_STATUSES.Unsupported,
     latencyMs: 0,
     summary: "Stopped",
@@ -340,6 +344,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
 
     let resolvedApiKey = activeApiKey
     let resolvedBaseUrl = sourceBaseUrl
+    let executedMode: ApiVerificationMode | undefined
     const secretsToRedact = new Set<string>(
       filterRedactions([
         activeApiKey ?? undefined,
@@ -403,6 +408,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
                   result: {
                     id: toolId,
                     probeId: "tool-calling",
+                    mode: verificationMode,
                     status: API_VERIFICATION_PROBE_STATUSES.Fail,
                     latencyMs: Math.max(0, finishedAt - startedAt),
                     summary: "No API key is available for this runtime key.",
@@ -423,9 +429,10 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
         return null
       }
 
+      executedMode = verificationMode
       const result = await runCliSupportTool({
         toolId,
-        mode: verificationMode,
+        mode: executedMode,
         baseUrl: resolvedBaseUrl,
         apiKey: resolvedApiKey,
         modelId: resolvedModelId,
@@ -439,7 +446,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
               ? {
                   ...t,
                   isRunning: false,
-                  result: buildStoppedToolResult(toolId),
+                  result: buildStoppedToolResult(toolId, executedMode),
                 }
               : t,
           ),
@@ -461,7 +468,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
               ? {
                   ...t,
                   isRunning: false,
-                  result: buildStoppedToolResult(toolId),
+                  result: buildStoppedToolResult(toolId, executedMode),
                 }
               : t,
           ),
@@ -496,6 +503,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
       const failureResult: CliSupportResult = {
         id: toolId,
         probeId: "tool-calling",
+        mode: verificationMode,
         status: API_VERIFICATION_PROBE_STATUSES.Fail,
         latencyMs: Math.max(0, finishedAt - startedAt),
         summary: sanitizedMessage || "Unknown error",

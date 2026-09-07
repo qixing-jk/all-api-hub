@@ -1439,6 +1439,11 @@ describe("VerifyCliSupportDialog", () => {
         name: "cliSupportVerification:verifyDialog.actions.retry",
       }),
     ).toBeEnabled()
+    expect(
+      within(toolCard).getByText(
+        "aiApiVerification:verifyDialog.modes.streaming",
+      ),
+    ).toBeVisible()
     expect(mockRunCliSupportTool).not.toHaveBeenCalled()
   })
 
@@ -1611,9 +1616,15 @@ describe("VerifyCliSupportDialog", () => {
       ).toBeInTheDocument()
     })
     expect(mockRunCliSupportTool).not.toHaveBeenCalled()
+    expect(
+      within(toolCard).queryByText(
+        "aiApiVerification:verifyDialog.modes.streaming",
+      ),
+    ).not.toBeInTheDocument()
   })
 
   it("marks a single CLI tool stopped when its request rejects after cancellation", async () => {
+    const user = userEvent.setup()
     let receivedSignal: AbortSignal | undefined
     mockRunCliSupportTool.mockImplementationOnce(
       ({ abortSignal }: { abortSignal?: AbortSignal }) => {
@@ -1647,6 +1658,16 @@ describe("VerifyCliSupportDialog", () => {
       />,
     )
 
+    const modeSelect = await screen.findByRole("combobox", {
+      name: "aiApiVerification:verifyDialog.meta.mode",
+    })
+    await user.click(modeSelect)
+    await user.click(
+      await screen.findByRole("option", {
+        name: "aiApiVerification:verifyDialog.modes.nonStreaming",
+      }),
+    )
+
     const toolCard = await screen.findByTestId(getCliToolCardTestId("claude"))
     const runButton = within(toolCard).getByRole("button", {
       name: "cliSupportVerification:verifyDialog.actions.runOne",
@@ -1672,6 +1693,11 @@ describe("VerifyCliSupportDialog", () => {
         name: "cliSupportVerification:verifyDialog.actions.retry",
       }),
     ).toBeInTheDocument()
+    expect(
+      within(toolCard).getByText(
+        "aiApiVerification:verifyDialog.modes.nonStreaming",
+      ),
+    ).toBeVisible()
   })
 
   it("shows the profile model fetch error when loading stored profile models fails", async () => {
@@ -1954,6 +1980,7 @@ describe("VerifyCliSupportDialog", () => {
   })
 
   it("surfaces generic unexpected failures when no HTTP status can be inferred", async () => {
+    const user = userEvent.setup()
     mockFetchAccountTokens.mockResolvedValueOnce([
       {
         id: 1,
@@ -1998,6 +2025,16 @@ describe("VerifyCliSupportDialog", () => {
       />,
     )
 
+    const modeSelect = await screen.findByRole("combobox", {
+      name: "aiApiVerification:verifyDialog.meta.mode",
+    })
+    await user.click(modeSelect)
+    await user.click(
+      await screen.findByRole("option", {
+        name: "aiApiVerification:verifyDialog.modes.nonStreaming",
+      }),
+    )
+
     const toolCard = await screen.findByTestId(getCliToolCardTestId("codex"))
     const runButton = within(toolCard).getByRole("button", {
       name: "cliSupportVerification:verifyDialog.actions.runOne",
@@ -2010,6 +2047,11 @@ describe("VerifyCliSupportDialog", () => {
         "cliSupportVerification:verifyDialog.summaries.unexpectedError",
       ),
     ).toBeInTheDocument()
+    expect(
+      within(toolCard).getByText(
+        "aiApiVerification:verifyDialog.modes.nonStreaming",
+      ),
+    ).toBeVisible()
   })
 
   it("runs all CLI tools sequentially from a stored profile", async () => {
@@ -2134,6 +2176,18 @@ describe("VerifyCliSupportDialog", () => {
         "cliSupportVerification:verifyDialog.summaries.stopped",
       ),
     ).toHaveLength(3)
+    expect(
+      within(screen.getByTestId(getCliToolCardTestId("claude"))).getByText(
+        "aiApiVerification:verifyDialog.modes.streaming",
+      ),
+    ).toBeVisible()
+    for (const toolId of ["codex", "gemini"]) {
+      expect(
+        within(screen.getByTestId(getCliToolCardTestId(toolId))).queryByText(
+          "aiApiVerification:verifyDialog.modes.streaming",
+        ),
+      ).not.toBeInTheDocument()
+    }
   })
 
   it("completes run-all analytics as success when all CLI tools pass", async () => {

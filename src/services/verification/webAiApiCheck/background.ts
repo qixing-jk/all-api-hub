@@ -13,6 +13,7 @@ import { tagStorage } from "~/services/tags/tagStorage"
 import {
   API_TYPES,
   API_VERIFICATION_MODES,
+  API_VERIFICATION_PROBE_IDS,
   API_VERIFICATION_PROBE_STATUSES,
   runApiVerificationProbe,
   type ApiVerificationApiType,
@@ -478,6 +479,7 @@ export async function resolveWebAiApiCheckRunProbeMessage(
 
       const result: ApiVerificationProbeResult = {
         id: probeId as ApiVerificationProbeId,
+        mode: probeId === API_VERIFICATION_PROBE_IDS.Models ? undefined : mode,
         status: API_VERIFICATION_PROBE_STATUSES.Fail,
         latencyMs: 0,
         summary: message,

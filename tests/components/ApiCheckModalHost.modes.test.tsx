@@ -23,6 +23,79 @@ import {
 describe("web API verification modes", () => {
   setupApiCheckModalHostTest()
 
+  it.each(["failed response", "rejected message"])(
+    "retains generation modes after a %s without labeling model-list results",
+    async (failure) => {
+      const user = userEvent.setup()
+      vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+        async (type: any) => {
+          if (type === WebAiApiCheckMessageTypes.FetchModels) {
+            return { success: true, modelIds: ["mode-test"] }
+          }
+          if (
+            type === WebAiApiCheckMessageTypes.RunProbe &&
+            failure === "rejected message"
+          ) {
+            throw new Error("Message unavailable")
+          }
+          return { success: false }
+        },
+      )
+
+      await openModal()
+      await pasteIntoField(
+        user,
+        screen.getByPlaceholderText("https://example.com/api"),
+        "https://proxy.example.com/api",
+      )
+      await pasteIntoField(
+        user,
+        screen.getByPlaceholderText("sk-..."),
+        "sk-test-mode-fixture",
+      )
+      await waitForSelectedModelId("mode-test")
+      const modeSelect = screen.getByRole("combobox", {
+        name: "aiApiVerification:verifyDialog.meta.mode",
+      })
+      await user.click(modeSelect)
+      await user.click(
+        screen.getByRole("option", {
+          name: "aiApiVerification:verifyDialog.modes.nonStreaming",
+        }),
+      )
+      await user.click(
+        screen.getByRole("button", {
+          name: "webAiApiCheck:modal.actions.test",
+        }),
+      )
+
+      await waitFor(() => {
+        expect(
+          getApiCheckMessageCalls(WebAiApiCheckMessageTypes.RunProbe),
+        ).toHaveLength(5)
+        expect(modeSelect).toBeEnabled()
+      })
+      const textProbe = screen.getByTestId(
+        getWebAiApiCheckProbeTestId("text-generation"),
+      )
+      expect(
+        within(textProbe).getByText(
+          "webAiApiCheck:modal.errors.runProbeFailed",
+        ),
+      ).toBeVisible()
+      expect(
+        within(textProbe).getByText(
+          "aiApiVerification:verifyDialog.modes.nonStreaming",
+        ),
+      ).toBeVisible()
+      expect(
+        within(
+          screen.getByTestId(getWebAiApiCheckProbeTestId("models")),
+        ).queryByText("aiApiVerification:verifyDialog.modes.nonStreaming"),
+      ).not.toBeInTheDocument()
+    },
+  )
+
   it("selects API types from the project control inside the page modal portal", async () => {
     const user = userEvent.setup()
     await openModal()

@@ -15,6 +15,7 @@ import {
 } from "~/services/productAnalytics/contracts"
 import { resolveProductAnalyticsErrorCategoryFromProbeResult } from "~/services/productAnalytics/verification"
 import {
+  API_VERIFICATION_PROBE_IDS,
   API_VERIFICATION_PROBE_STATUSES,
   getApiVerificationProbeDefinitions,
   type ApiVerificationApiType,
@@ -385,6 +386,10 @@ export function useApiCheckProbeRunner({
 
         const fallback: ApiCheckProbeResultWithAnalyticsCategory = {
           id: probeId,
+          mode:
+            probeId === API_VERIFICATION_PROBE_IDS.Models
+              ? undefined
+              : verificationMode,
           status: API_VERIFICATION_PROBE_STATUSES.Fail,
           latencyMs: 0,
           summary: message || "Probe failed.",
@@ -425,6 +430,10 @@ export function useApiCheckProbeRunner({
           resolveProductAnalyticsErrorCategoryFromError(error)
         const fallback: ApiCheckProbeResultWithAnalyticsCategory = {
           id: probeId,
+          mode:
+            probeId === API_VERIFICATION_PROBE_IDS.Models
+              ? undefined
+              : verificationMode,
           status: API_VERIFICATION_PROBE_STATUSES.Fail,
           latencyMs: 0,
           summary: "Probe failed.",

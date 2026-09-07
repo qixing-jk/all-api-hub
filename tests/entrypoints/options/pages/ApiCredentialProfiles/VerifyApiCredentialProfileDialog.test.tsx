@@ -248,69 +248,92 @@ describe("VerifyApiCredentialProfileDialog", () => {
     await verificationResultHistoryStorage.clearAllData()
   })
 
-  it("runs credential verification using the selected mode", async () => {
-    const user = userEvent.setup()
-    mockRunApiVerificationProbe.mockResolvedValueOnce({
-      id: "text-generation",
-      status: "pass",
-      latencyMs: 1,
-      summary: "Text generation succeeded",
-      mode: "non-streaming",
-    })
-    render(
-      <VerifyApiCredentialProfileDialog
-        isOpen
-        onClose={() => {}}
-        initialModelId="gpt-test"
-        profile={{
-          id: "p-1",
-          name: "Profile",
-          apiType: API_TYPES.OPENAI_COMPATIBLE,
-          baseUrl: "https://example.invalid",
-          apiKey: "sk-synthetic",
-          tagIds: [],
-          notes: "",
-          createdAt: 1,
-          updatedAt: 1,
-        }}
-      />,
-    )
-
-    const modeSelect = await screen.findByRole("combobox", {
-      name: "aiApiVerification:verifyDialog.meta.mode",
-    })
-    expect(modeSelect).toHaveTextContent(
-      "aiApiVerification:verifyDialog.modes.streaming",
-    )
-    await user.click(modeSelect)
-    await user.click(
-      await screen.findByRole("option", {
-        name: "aiApiVerification:verifyDialog.modes.nonStreaming",
-      }),
-    )
-    const probeCard = screen.getByTestId(
-      getApiCredentialProfileVerifyProbeTestId("text-generation"),
-    )
-    await user.click(
-      within(probeCard).getByRole("button", {
-        name: "aiApiVerification:verifyDialog.actions.runOne",
-      }),
-    )
-
-    await waitFor(() =>
-      expect(mockRunApiVerificationProbe).toHaveBeenCalledWith(
-        expect.objectContaining({
+  it.each(["pass", "fail"] as const)(
+    "keeps the credential verification mode for %s results",
+    async (status) => {
+      const user = userEvent.setup()
+      if (status === "fail") {
+        mockRunApiVerificationProbe.mockRejectedValueOnce(
+          new Error("Probe failed"),
+        )
+      } else {
+        mockRunApiVerificationProbe.mockResolvedValueOnce({
+          id: "text-generation",
+          status: "pass",
+          latencyMs: 1,
+          summary: "Text generation succeeded",
           mode: "non-streaming",
-          probeId: "text-generation",
+        })
+      }
+      render(
+        <VerifyApiCredentialProfileDialog
+          isOpen
+          onClose={() => {}}
+          initialModelId="gpt-test"
+          profile={{
+            id: "p-1",
+            name: "Profile",
+            apiType: API_TYPES.OPENAI_COMPATIBLE,
+            baseUrl: "https://example.invalid",
+            apiKey: "sk-synthetic",
+            tagIds: [],
+            notes: "",
+            createdAt: 1,
+            updatedAt: 1,
+          }}
+        />,
+      )
+
+      const modeSelect = await screen.findByRole("combobox", {
+        name: "aiApiVerification:verifyDialog.meta.mode",
+      })
+      expect(modeSelect).toHaveTextContent(
+        "aiApiVerification:verifyDialog.modes.streaming",
+      )
+      await user.click(modeSelect)
+      await user.click(
+        await screen.findByRole("option", {
+          name: "aiApiVerification:verifyDialog.modes.nonStreaming",
         }),
-      ),
-    )
-    expect(
-      await within(probeCard).findByText(
-        "aiApiVerification:verifyDialog.modes.nonStreaming",
-      ),
-    ).toBeVisible()
-  })
+      )
+      const probeCard = screen.getByTestId(
+        getApiCredentialProfileVerifyProbeTestId("text-generation"),
+      )
+      await user.click(
+        within(probeCard).getByRole("button", {
+          name: "aiApiVerification:verifyDialog.actions.runOne",
+        }),
+      )
+
+      await waitFor(() =>
+        expect(mockRunApiVerificationProbe).toHaveBeenCalledWith(
+          expect.objectContaining({
+            mode: "non-streaming",
+            probeId: "text-generation",
+          }),
+        ),
+      )
+      expect(
+        await within(probeCard).findByText(
+          "aiApiVerification:verifyDialog.modes.nonStreaming",
+        ),
+      ).toBeVisible()
+      const target = requireHistoryTarget(
+        createProfileModelVerificationHistoryTarget("p-1", "gpt-test"),
+      )
+      await waitFor(async () => {
+        const summary =
+          await verificationResultHistoryStorage.getLatestSummary(target)
+        expect(summary?.probes).toEqual([
+          expect.objectContaining({
+            id: "text-generation",
+            status,
+            mode: "non-streaming",
+          }),
+        ])
+      })
+    },
+  )
 
   it("renders probe items before running", async () => {
     render(
@@ -921,6 +944,11 @@ describe("VerifyApiCredentialProfileDialog", () => {
         message: "[REDACTED] [REDACTED] probe failed",
       }),
     )
+    expect(
+      within(probeCard).queryByText(
+        "aiApiVerification:verifyDialog.modes.streaming",
+      ),
+    ).not.toBeInTheDocument()
     expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Failure,
       {
