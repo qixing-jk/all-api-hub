@@ -136,9 +136,11 @@ function buildMissingModelResult(
   apiType: ApiVerificationApiType,
   baseUrl: string,
   probeId: ApiVerificationProbeId,
+  mode: ApiVerificationMode,
 ): ApiCheckProbeResultWithAnalyticsCategory {
   return {
     id: probeId,
+    mode,
     status: API_VERIFICATION_PROBE_STATUSES.Fail,
     latencyMs: 0,
     summary: "No model id provided",
@@ -297,6 +299,7 @@ export function useApiCheckProbeRunner({
           apiType,
           trimmedBaseUrl,
           probeId,
+          verificationMode,
         )
         setValidationError("missing-model")
         setProbes((prev) =>
@@ -566,6 +569,7 @@ export function useApiCheckProbeRunner({
             apiType,
             trimmedBaseUrl,
             def.id,
+            verificationMode,
           )
           setValidationError("missing-model")
           setProbes((prev) =>
@@ -683,6 +687,7 @@ export function useApiCheckProbeRunner({
     runProbe,
     setValidationError,
     trigger,
+    verificationMode,
   ])
 
   return {

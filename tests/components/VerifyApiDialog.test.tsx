@@ -1650,11 +1650,9 @@ describe("VerifyApiDialog", () => {
       },
     ])
     mockRunApiVerificationProbe
-      .mockResolvedValueOnce({
-        id: "models",
-        status: "pass",
-        latencyMs: 8,
-        summary: "Models listed",
+      .mockRejectedValueOnce({
+        statusCode: 401,
+        message: "Model catalog unavailable",
       })
       .mockRejectedValueOnce({
         statusCode: 401,
@@ -1709,8 +1707,8 @@ describe("VerifyApiDialog", () => {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth,
           insights: {
             failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
-            successCount: 1,
-            failureCount: 1,
+            successCount: 0,
+            failureCount: 2,
           },
         },
       )
@@ -1720,6 +1718,11 @@ describe("VerifyApiDialog", () => {
         "aiApiVerification:verifyDialog.modes.nonStreaming",
       ),
     ).toBeVisible()
+    expect(
+      within(screen.getByTestId("verify-probe-models")).queryByText(
+        "aiApiVerification:verifyDialog.modes.nonStreaming",
+      ),
+    ).not.toBeInTheDocument()
     const historyTarget = requireHistoryTarget(
       createAccountModelVerificationHistoryTarget("a1", "gpt-test"),
     )
@@ -1728,6 +1731,9 @@ describe("VerifyApiDialog", () => {
     expect(
       summary?.probes.find((probe) => probe.id === "text-generation"),
     ).toMatchObject({ status: "fail", mode: "non-streaming" })
+    const modelsResult = summary?.probes.find((probe) => probe.id === "models")
+    expect(modelsResult?.status).toBe("fail")
+    expect(modelsResult?.mode).toBeUndefined()
   })
 
   it("completes run-all analytics as skipped when no probes execute", async () => {

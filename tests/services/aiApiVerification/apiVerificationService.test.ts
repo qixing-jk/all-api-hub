@@ -181,19 +181,28 @@ describe("apiVerificationService", () => {
     expect(tools?.summary).toContain("[REDACTED]")
   })
 
-  it("fails tool-calling probe when no model is available", async () => {
-    mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce([])
+  it.each([undefined, "streaming", "non-streaming"] as const)(
+    "retains %s mode when the suite has no model available",
+    async (mode) => {
+      mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce([])
 
-    const report = await runApiVerification({
-      mode: "non-streaming",
-      baseUrl: "https://example.com",
-      apiKey: "secret",
-      apiType: API_TYPES.OPENAI_COMPATIBLE,
-    })
+      const report = await runApiVerification({
+        mode,
+        baseUrl: "https://example.com",
+        apiKey: "secret",
+        apiType: API_TYPES.OPENAI_COMPATIBLE,
+      })
 
-    const tools = report.results.find((r) => r.id === "tool-calling")
-    expect(tools?.status).toBe("fail")
-  })
+      const tools = report.results.find((r) => r.id === "tool-calling")
+      expect(tools?.status).toBe("fail")
+      for (const result of report.results) {
+        expect(result.mode).toBe(
+          result.id === "models" ? undefined : mode ?? "streaming",
+        )
+      }
+      expect(mockGenerateText).not.toHaveBeenCalled()
+    },
+  )
 
   it("runs google suite and reports probe outcomes", async () => {
     mockFetchGoogleModelIds.mockResolvedValueOnce(["gemini-test"])
@@ -358,18 +367,24 @@ describe("apiVerificationService", () => {
     })
   })
 
-  it("fails a probe when modelId is missing", async () => {
-    const result = await runApiVerificationProbe({
-      mode: "non-streaming",
-      baseUrl: "https://example.com",
-      apiKey: "secret",
-      apiType: API_TYPES.OPENAI,
-      probeId: "tool-calling",
-    })
+  it.each([undefined, "streaming", "non-streaming"] as const)(
+    "retains mode %s when a probe modelId is blank",
+    async (mode) => {
+      const result = await runApiVerificationProbe({
+        mode,
+        baseUrl: "https://example.com",
+        apiKey: "secret",
+        apiType: API_TYPES.OPENAI,
+        modelId: "   ",
+        probeId: "tool-calling",
+      })
 
-    expect(result.status).toBe("fail")
-    expect(result.summaryKey).toBe("verifyDialog.summaries.noModelIdProvided")
-  })
+      expect(result.status).toBe("fail")
+      expect(result.summaryKey).toBe("verifyDialog.summaries.noModelIdProvided")
+      expect(result.mode).toBe(mode ?? "streaming")
+      expect(mockGenerateText).not.toHaveBeenCalled()
+    },
+  )
 
   it("redacts secrets from models probe failure summaries", async () => {
     mockFetchOpenAICompatibleModelIds.mockRejectedValueOnce(

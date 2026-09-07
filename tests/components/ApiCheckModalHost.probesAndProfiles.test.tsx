@@ -2460,6 +2460,15 @@ describe("ApiCheckModalHost", () => {
     )
     await pasteIntoField(user, baseUrlInput, "https://proxy.example.com/api")
     await pasteIntoField(user, apiKeyInput, "sk-test-missing-model-fixture")
+    const modeSelect = screen.getByRole("combobox", {
+      name: "aiApiVerification:verifyDialog.meta.mode",
+    })
+    await user.click(modeSelect)
+    await user.click(
+      screen.getByRole("option", {
+        name: "aiApiVerification:verifyDialog.modes.nonStreaming",
+      }),
+    )
 
     const probeCard = await screen.findByTestId(
       getWebAiApiCheckProbeTestId("text-generation"),
@@ -2479,6 +2488,11 @@ describe("ApiCheckModalHost", () => {
     expect(
       getApiCheckMessageCalls(WebAiApiCheckMessageTypes.RunProbe),
     ).toHaveLength(0)
+    expect(
+      within(probeCard).getByText(
+        "aiApiVerification:verifyDialog.modes.nonStreaming",
+      ),
+    ).toBeVisible()
   })
 
   it("skips model-required probes during run-all until a model is selected", async () => {
@@ -2519,6 +2533,15 @@ describe("ApiCheckModalHost", () => {
       apiKeyInput,
       "sk-test-run-all-missing-model-fixture",
     )
+    const modeSelect = screen.getByRole("combobox", {
+      name: "aiApiVerification:verifyDialog.meta.mode",
+    })
+    await user.click(modeSelect)
+    await user.click(
+      screen.getByRole("option", {
+        name: "aiApiVerification:verifyDialog.modes.nonStreaming",
+      }),
+    )
     await user.click(
       await screen.findByText("webAiApiCheck:modal.actions.test"),
     )
@@ -2534,6 +2557,16 @@ describe("ApiCheckModalHost", () => {
           .length,
       ).toBeGreaterThanOrEqual(4)
     })
+    expect(
+      within(
+        screen.getByTestId(getWebAiApiCheckProbeTestId("text-generation")),
+      ).getByText("aiApiVerification:verifyDialog.modes.nonStreaming"),
+    ).toBeVisible()
+    expect(
+      within(
+        screen.getByTestId(getWebAiApiCheckProbeTestId("models")),
+      ).queryByText("aiApiVerification:verifyDialog.modes.nonStreaming"),
+    ).not.toBeInTheDocument()
   }, 30_000)
 
   it("retranslates local model discovery errors without fetching or clearing credentials", async () => {
