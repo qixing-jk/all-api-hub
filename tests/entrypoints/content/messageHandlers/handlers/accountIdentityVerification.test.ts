@@ -17,26 +17,11 @@ function verifyIdentity(
   })
 }
 
-/** A modern dashboard session fixture; the token remains inside the content handler. */
-function createDashboardSessionResponse() {
-  return new Response(
-    JSON.stringify({
-      success: true,
-      data: {
-        access_token: "transient-dashboard-token",
-        token_type: "Bearer",
-        access_expires_at: Math.floor(Date.now() / 1000) + 900,
-        session: { sid: "test-session", current: true },
-        user: { id: 2 },
-      },
-    }),
-  )
-}
-
 describe("current browser account identity verification", () => {
   beforeEach(() => {
     localStorage.clear()
     vi.stubGlobal("location", new URL("https://site.example.com/dashboard"))
+    vi.stubGlobal("document", document.implementation.createHTMLDocument())
   })
 
   afterEach(() => {
@@ -44,6 +29,199 @@ describe("current browser account identity verification", () => {
     vi.unstubAllGlobals()
     vi.restoreAllMocks()
   })
+
+  it("leaves the login unconfirmed without refreshing the website session", async () => {
+    localStorage.setItem("user", JSON.stringify({ id: 2 }))
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response("{}", { status: 401 }))
+    vi.stubGlobal("fetch", fetchMock)
+
+    expect(await verifyIdentity(SITE_TYPES.NEW_API)).toEqual({ success: false })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(fetchMock.mock.calls[0][1].method).toBe("GET")
+  })
+
+  it("reuses a verified browser token without repeating the identity request", async () => {
+    localStorage.setItem("auth_token", "current-session-token")
+    const fetchMock = vi
+      .fn()
+      .mockImplementation(
+        async () => new Response(JSON.stringify({ code: 0, data: { id: 2 } })),
+      )
+    vi.stubGlobal("fetch", fetchMock)
+
+    expect(await verifyIdentity(SITE_TYPES.SUB2API)).toEqual({
+      success: true,
+      data: { userId: "2", identityVerified: true },
+    })
+    expect(await verifyIdentity(SITE_TYPES.SUB2API)).toEqual({
+      success: true,
+      data: { userId: "2", identityVerified: true },
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it.each([
+    {
+      siteType: SITE_TYPES.SUB2API,
+      key: "auth_token",
+      initial: "old-token",
+      next: "new-token",
+    },
+    {
+      siteType: SITE_TYPES.VO_API_V2,
+      key: "userStore",
+      initial: JSON.stringify({ auth: { token: "old-token" } }),
+      next: JSON.stringify({ auth: { token: "new-token" } }),
+    },
+  ])(
+    "invalidates a verified $siteType identity on login change and logout",
+    async (scenario) => {
+      localStorage.setItem(scenario.key, scenario.initial)
+      const fetchMock = vi.fn(async (_url: string, options: RequestInit) => {
+        const isNewLogin = new Headers(options.headers)
+          .get("Authorization")
+          ?.includes("new-token")
+        return new Response(
+          JSON.stringify({
+            code: 0,
+            data: { id: isNewLogin ? "new-user" : "old-user" },
+          }),
+        )
+      })
+      vi.stubGlobal("fetch", fetchMock)
+
+      expect(await verifyIdentity(scenario.siteType)).toEqual({
+        success: true,
+        data: { userId: "old-user", identityVerified: true },
+      })
+      localStorage.setItem(scenario.key, scenario.next)
+      expect(await verifyIdentity(scenario.siteType)).toEqual({
+        success: true,
+        data: { userId: "new-user", identityVerified: true },
+      })
+      localStorage.removeItem(scenario.key)
+      expect(await verifyIdentity(scenario.siteType)).toEqual({
+        success: false,
+      })
+      expect(fetchMock).toHaveBeenCalledTimes(2)
+    },
+  )
+
+  it("rechecks a cached Cookie identity when visible session cookies change", async () => {
+    const cookie = vi
+      .spyOn(document, "cookie", "get")
+      .mockReturnValue("session=old")
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ success: true, data: { id: "old-user" } }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ success: true, data: { id: "new-user" } }),
+        ),
+      )
+    vi.stubGlobal("fetch", fetchMock)
+
+    expect(await verifyIdentity(SITE_TYPES.ONE_API)).toEqual({
+      success: true,
+      data: { userId: "old-user", identityVerified: true },
+    })
+    cookie.mockReturnValue("session=new")
+    expect(await verifyIdentity(SITE_TYPES.ONE_API)).toEqual({
+      success: true,
+      data: { userId: "new-user", identityVerified: true },
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it("does not reuse the previous document's verified identity after a same-URL reload", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ success: true, data: { id: "old-user" } }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ success: true, data: { id: "new-user" } }),
+        ),
+      )
+    vi.stubGlobal("fetch", fetchMock)
+
+    expect(await verifyIdentity(SITE_TYPES.ONE_API)).toEqual({
+      success: true,
+      data: { userId: "old-user", identityVerified: true },
+    })
+    vi.stubGlobal("document", document.implementation.createHTMLDocument())
+    expect(await verifyIdentity(SITE_TYPES.ONE_API)).toEqual({
+      success: true,
+      data: { userId: "new-user", identityVerified: true },
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it("cancels an unfinished verification when a new browser session is observed", async () => {
+    localStorage.setItem("auth_token", "old-token")
+    const fetchMock = vi.fn((_url: string, options: RequestInit) =>
+      new Headers(options.headers).get("Authorization") === "Bearer old-token"
+        ? new Promise<Response>(() => {})
+        : Promise.resolve(
+            new Response(JSON.stringify({ code: 0, data: { id: "new-user" } })),
+          ),
+    )
+    vi.stubGlobal("fetch", fetchMock)
+    const oldIdentity = verifyIdentity(SITE_TYPES.SUB2API)
+    localStorage.setItem("auth_token", "new-token")
+
+    expect(await verifyIdentity(SITE_TYPES.SUB2API)).toEqual({
+      success: true,
+      data: { userId: "new-user", identityVerified: true },
+    })
+    expect(await oldIdentity).toEqual({ success: false })
+    expect(fetchMock.mock.calls[0][1].signal?.aborted).toBe(true)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it.each([
+    SITE_TYPES.SUB2API,
+    SITE_TYPES.VO_API_V2,
+    SITE_TYPES.AIHUBMIX,
+    SITE_TYPES.OPENROUTER,
+  ])(
+    "skips the network when the current %s JWT has expired",
+    async (siteType) => {
+      const token = `header.${btoa(JSON.stringify({ exp: 1 }))}.signature`
+      if (siteType === SITE_TYPES.SUB2API) {
+        localStorage.setItem("auth_token", token)
+        // A stale timestamp must not extend the JWT's own expiry.
+        localStorage.setItem("token_expires_at", String(Date.now() + 60_000))
+      } else if (siteType === SITE_TYPES.VO_API_V2) {
+        localStorage.setItem("userStore", JSON.stringify({ auth: { token } }))
+      } else {
+        vi.stubGlobal(
+          "location",
+          new URL(
+            siteType === SITE_TYPES.AIHUBMIX
+              ? "https://console.aihubmix.com/statistics"
+              : "https://openrouter.ai/settings",
+          ),
+        )
+        vi.spyOn(document, "cookie", "get").mockReturnValue(
+          `__session=${token}`,
+        )
+      }
+      const fetchMock = vi.fn().mockResolvedValue(new Response("{}"))
+      vi.stubGlobal("fetch", fetchMock)
+      expect(await verifyIdentity(siteType)).toEqual({ success: false })
+      expect(fetchMock).not.toHaveBeenCalled()
+    },
+  )
 
   it.each([
     SITE_TYPES.ONE_API,
@@ -186,7 +364,7 @@ describe("current browser account identity verification", () => {
   })
 
   it.each([null, "1"])(
-    "recovers a legacy New API login when the local user hint is %s",
+    "does not enumerate saved logins when the local user hint is %s",
     async (storedId) => {
       if (storedId)
         localStorage.setItem("user", JSON.stringify({ id: storedId }))
@@ -208,9 +386,9 @@ describe("current browser account identity verification", () => {
       expect(
         await verifyIdentity(SITE_TYPES.NEW_API, location.origin, ["1", "2"]),
       ).toEqual({
-        success: true,
-        data: { userId: "2", identityVerified: true },
+        success: false,
       })
+      expect(fetchMock).toHaveBeenCalledTimes(1)
       expect(
         fetchMock.mock.calls.every(
           ([, options]) =>
@@ -276,7 +454,7 @@ describe("current browser account identity verification", () => {
     const pending = verifyIdentity(SITE_TYPES.ONE_API)
 
     await vi.advanceTimersByTimeAsync(5001)
-    expect(fetchMock.mock.calls[0][1].signal.aborted).toBe(true)
+    expect(fetchMock.mock.calls[0][1].signal?.aborted).toBe(true)
     resolveBody({ success: true, data: { id: "old-user" } })
 
     expect(await pending).toEqual({ success: false })
@@ -305,46 +483,22 @@ describe("current browser account identity verification", () => {
     })
   })
 
-  it("rechecks modern New API using a transient dashboard session without persisting its token", async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(new Response("{}", { status: 401 }))
-      .mockResolvedValueOnce(createDashboardSessionResponse())
-      .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({
-            success: true,
-            data: { id: 2 },
-          }),
-          { status: 200 },
-        ),
-      )
-    vi.stubGlobal("fetch", fetchMock)
-
-    expect(await verifyIdentity(SITE_TYPES.NEW_API)).toEqual({
-      success: true,
-      data: { userId: "2", identityVerified: true },
-    })
-    expect(fetchMock).toHaveBeenNthCalledWith(
-      2,
-      "https://site.example.com/api/user/auth/refresh",
-      expect.objectContaining({ method: "POST", credentials: "include" }),
-    )
-    expect(
-      new Headers(fetchMock.mock.calls[2][1].headers).get("Authorization"),
-    ).toBe("Bearer transient-dashboard-token")
-    expect(localStorage.length).toBe(0)
-  })
-
-  it.each([401, 409, 429, 500])(
-    "leaves New API unverified after refresh status %s without replaying it",
+  it.each([401, 403, 429, 500])(
+    "cools down passive checks after an inconclusive response: %s",
     async (status) => {
-      localStorage.setItem("user", JSON.stringify({ id: 1 }))
-      const fetchMock = vi
-        .fn()
-        .mockResolvedValueOnce(new Response("{}", { status: 401 }))
-        .mockResolvedValueOnce(new Response("{}", { status }))
+      let now = Date.now()
+      vi.spyOn(Date, "now").mockImplementation(() => now)
+      const fetchMock = vi.fn(async () => new Response("{}", { status }))
       vi.stubGlobal("fetch", fetchMock)
+
+      expect(await verifyIdentity(SITE_TYPES.NEW_API)).toEqual({
+        success: false,
+      })
+      expect(await verifyIdentity(SITE_TYPES.NEW_API)).toEqual({
+        success: false,
+      })
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      now += 5001
       expect(await verifyIdentity(SITE_TYPES.NEW_API)).toEqual({
         success: false,
       })
@@ -352,76 +506,67 @@ describe("current browser account identity verification", () => {
     },
   )
 
-  it("does not replay a New API refresh whose response was lost", async () => {
+  it("returns an unconfirmed login on network failure without trying auth recovery", async () => {
     const fetchMock = vi
       .fn()
-      .mockResolvedValueOnce(new Response("{}", { status: 401 }))
-      .mockRejectedValueOnce(new Error("Response lost"))
+      .mockRejectedValue(new Error("Network unavailable"))
     vi.stubGlobal("fetch", fetchMock)
     expect(await verifyIdentity(SITE_TYPES.NEW_API)).toEqual({ success: false })
-    expect(fetchMock).toHaveBeenCalledTimes(2)
-  })
-
-  it("does not accept an incomplete New API session bundle", async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(new Response("{}", { status: 401 }))
-      .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({
-            success: true,
-            data: { access_token: "private-token", user: { id: 2 } },
-          }),
-        ),
-      )
-    vi.stubGlobal("fetch", fetchMock)
-    expect(await verifyIdentity(SITE_TYPES.NEW_API)).toEqual({ success: false })
-    expect(fetchMock).toHaveBeenCalledTimes(2)
-  })
-
-  it("rejects a New API session when /self identifies a different user", async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(new Response("{}", { status: 401 }))
-      .mockResolvedValueOnce(createDashboardSessionResponse())
-      .mockResolvedValueOnce(
-        new Response(JSON.stringify({ success: true, data: { id: 3 } })),
-      )
-    vi.stubGlobal("fetch", fetchMock)
-    expect(await verifyIdentity(SITE_TYPES.NEW_API)).toEqual({ success: false })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(localStorage.length).toBe(0)
   })
 
-  it("waits for the dashboard refresh lock and cancels if the page has navigated", async () => {
-    let releaseLock!: () => void
-    const lock = new Promise<void>((resolve) => {
-      releaseLock = resolve
-    })
-    const requestLock = vi.fn(
-      async (
-        _name: string,
-        _options: LockOptions,
-        verify: () => Promise<string | null>,
-      ) => {
-        await lock
-        return verify()
-      },
+  it("shares an in-flight check between extension views inspecting the same document", async () => {
+    let resolveResponse!: (response: Response) => void
+    const fetchMock = vi.fn(
+      () =>
+        new Promise<Response>((resolve) => {
+          resolveResponse = resolve
+        }),
     )
-    vi.stubGlobal("navigator", { locks: { request: requestLock } })
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValue(new Response("{}", { status: 401 }))
     vi.stubGlobal("fetch", fetchMock)
-    const pending = verifyIdentity(SITE_TYPES.NEW_API)
-
-    await vi.waitFor(() => {
-      expect(requestLock).toHaveBeenCalled()
-    })
-    expect(requestLock.mock.calls[0][0]).toBe("new-api:auth-refresh")
+    const first = verifyIdentity(SITE_TYPES.ONE_API)
+    const second = verifyIdentity(SITE_TYPES.ONE_API)
     expect(fetchMock).toHaveBeenCalledTimes(1)
-    vi.stubGlobal("location", new URL("https://other.example.com"))
-    releaseLock()
+    resolveResponse(
+      new Response(JSON.stringify({ success: true, data: { id: 2 } })),
+    )
+    expect(await Promise.all([first, second])).toEqual([
+      { success: true, data: { userId: "2", identityVerified: true } },
+      { success: true, data: { userId: "2", identityVerified: true } },
+    ])
+  })
+
+  it("returns after the deadline even when the identity endpoint never responds", async () => {
+    vi.useFakeTimers()
+    const fetchMock = vi.fn(
+      (_url: string, _options: RequestInit) => new Promise<Response>(() => {}),
+    )
+    vi.stubGlobal("fetch", fetchMock)
+    const pending = verifyIdentity(SITE_TYPES.ONE_API)
+    await vi.advanceTimersByTimeAsync(5001)
     expect(await pending).toEqual({ success: false })
+    expect(fetchMock.mock.calls[0][1].signal?.aborted).toBe(true)
+  })
+
+  it("uses a unique saved identity as a legacy header hint without enumerating accounts", async () => {
+    const fetchMock = vi.fn(
+      async (_url: string, options: RequestInit) =>
+        new Response(
+          JSON.stringify(
+            new Headers(options.headers).get("New-Api-User") === "2"
+              ? { success: true, data: { id: 2 } }
+              : { success: false },
+          ),
+        ),
+    )
+    vi.stubGlobal("fetch", fetchMock)
+    expect(
+      await verifyIdentity(SITE_TYPES.NEW_API, location.origin, ["2", "2"]),
+    ).toEqual({
+      success: true,
+      data: { userId: "2", identityVerified: true },
+    })
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
@@ -547,6 +692,7 @@ describe("current browser account identity verification", () => {
       const headers = new Headers(fetchMock.mock.calls[0][1].headers)
       expect(headers.get("Authorization")).toBe(scenario.authorization ?? null)
 
+      vi.spyOn(Date, "now").mockReturnValue(Date.now() + 31_000)
       fetchMock.mockResolvedValue(
         new Response(JSON.stringify(scenario.body), { status: 401 }),
       )

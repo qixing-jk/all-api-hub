@@ -132,16 +132,6 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
         )
       }
     }),
-    sendTabMessageWithRetry: vi.fn(
-      (
-        tabId: number,
-        message: unknown,
-        options?: browser.tabs._SendMessageOptions,
-      ) =>
-        typeof options === "undefined"
-          ? globalThis.browser.tabs.sendMessage(tabId, message)
-          : globalThis.browser.tabs.sendMessage(tabId, message, options),
-    ),
   }
 })
 
@@ -671,6 +661,186 @@ describe("AccountDataContext current tab detection", () => {
         "acc-2",
       ])
     })
+  })
+
+  it("shows saved accounts while passive browser identity verification is pending", async () => {
+    activeTabs = [{ id: 303, url: "https://foo.example.com" }]
+    prepareAccountSnapshot([
+      createAccount({
+        id: "acc-1",
+        baseUrl: "https://foo.example.com",
+        userId: "1",
+      }),
+    ])
+    const pendingVerification = createDeferred<unknown>()
+    vi.spyOn(browser.tabs, "sendMessage").mockReturnValue(
+      pendingVerification.promise,
+    )
+    let latestCtx: ReturnType<typeof useAccountDataContext> | null = null
+    render(
+      <I18nextProvider i18n={testI18n}>
+        <AccountDataProvider>
+          <ContextProbe onChange={(ctx) => (latestCtx = ctx)} />
+        </AccountDataProvider>
+      </I18nextProvider>,
+    )
+    await waitFor(() => {
+      expect(latestCtx?.sortedData.map(({ id }) => id)).toEqual(["acc-1"])
+      expect(latestCtx?.isInitialLoad).toBe(false)
+      expect(latestCtx?.detectedAccount).toBeNull()
+    })
+    await act(async () => {
+      pendingVerification.resolve({ success: false })
+      await pendingVerification.promise
+    })
+  })
+
+  it("keeps the account order stable while rechecking the same page", async () => {
+    activeTabs = [{ id: 303, url: "https://foo.example.com" }]
+    prepareAccountSnapshot([
+      createAccount({
+        id: "acc-1",
+        baseUrl: "https://foo.example.com",
+        userId: "1",
+      }),
+      createAccount({
+        id: "acc-2",
+        baseUrl: "https://foo.example.com",
+        userId: "2",
+      }),
+    ])
+    const sendMessage = vi
+      .spyOn(browser.tabs, "sendMessage")
+      .mockResolvedValue({
+        success: true,
+        data: { userId: "2", identityVerified: true },
+      })
+    let latestCtx: ReturnType<typeof useAccountDataContext> | null = null
+    render(
+      <I18nextProvider i18n={testI18n}>
+        <AccountDataProvider>
+          <ContextProbe onChange={(ctx) => (latestCtx = ctx)} />
+        </AccountDataProvider>
+      </I18nextProvider>,
+    )
+    await waitFor(() => expect(latestCtx?.detectedAccount?.id).toBe("acc-2"))
+    const pending = createDeferred<unknown>()
+    sendMessage.mockReturnValue(pending.promise)
+    await act(async () => {
+      for (const listener of tabUpdatedListeners)
+        await listener(303, { status: "complete" }, activeTabs[0])
+    })
+    await waitFor(() => {
+      expect(latestCtx?.isDetecting).toBe(true)
+      expect(latestCtx?.sortedData.map(({ id }) => id)).toEqual([
+        "acc-2",
+        "acc-1",
+      ])
+    })
+    await act(async () => {
+      pending.resolve({
+        success: true,
+        data: { userId: "1", identityVerified: true },
+      })
+      await pending.promise
+    })
+    await waitFor(() => expect(latestCtx?.detectedAccount?.id).toBe("acc-1"))
+  })
+
+  it("waits for a loading page to complete before checking its browser identity", async () => {
+    activeTabs = [
+      { id: 303, url: "https://foo.example.com", status: "loading" },
+    ]
+    prepareAccountSnapshot([
+      createAccount({
+        id: "acc-1",
+        baseUrl: "https://foo.example.com",
+        userId: "1",
+      }),
+    ])
+    const sendMessage = vi
+      .spyOn(browser.tabs, "sendMessage")
+      .mockResolvedValue({
+        success: true,
+        data: { userId: "1", identityVerified: true },
+      })
+    let latestCtx: ReturnType<typeof useAccountDataContext> | null = null
+    render(
+      <I18nextProvider i18n={testI18n}>
+        <AccountDataProvider>
+          <ContextProbe onChange={(ctx) => (latestCtx = ctx)} />
+        </AccountDataProvider>
+      </I18nextProvider>,
+    )
+    await waitFor(() => {
+      expect(latestCtx?.isInitialLoad).toBe(false)
+      expect(latestCtx?.isDetecting).toBe(false)
+      expect(latestCtx?.detectedSiteAccounts).toHaveLength(1)
+      expect(latestCtx?.detectedAccount).toBeNull()
+    })
+    expect(sendMessage).not.toHaveBeenCalled()
+
+    activeTabs = [{ ...activeTabs[0], status: "complete" }]
+    await act(async () => {
+      for (const listener of tabUpdatedListeners)
+        await listener(303, { status: "complete" }, activeTabs[0])
+    })
+    await waitFor(() => expect(latestCtx?.detectedAccount?.id).toBe("acc-1"))
+    expect(sendMessage).toHaveBeenCalledTimes(1)
+  })
+
+  it("invalidates an unfinished identity check when the active page starts loading", async () => {
+    activeTabs = [{ id: 303, url: "https://foo.example.com" }]
+    prepareAccountSnapshot([
+      createAccount({
+        id: "acc-1",
+        baseUrl: "https://foo.example.com",
+        userId: "1",
+      }),
+      createAccount({
+        id: "acc-2",
+        baseUrl: "https://foo.example.com",
+        userId: "2",
+      }),
+    ])
+    const pending = createDeferred<unknown>()
+    const sendMessage = vi
+      .spyOn(browser.tabs, "sendMessage")
+      .mockReturnValueOnce(pending.promise)
+      .mockResolvedValue({
+        success: true,
+        data: { userId: "2", identityVerified: true },
+      })
+    let latestCtx: ReturnType<typeof useAccountDataContext> | null = null
+    render(
+      <I18nextProvider i18n={testI18n}>
+        <AccountDataProvider>
+          <ContextProbe onChange={(ctx) => (latestCtx = ctx)} />
+        </AccountDataProvider>
+      </I18nextProvider>,
+    )
+    await waitFor(() => expect(sendMessage).toHaveBeenCalledTimes(1))
+    await act(async () => {
+      for (const listener of tabUpdatedListeners)
+        await listener(303, { status: "loading" }, activeTabs[0])
+      pending.resolve({
+        success: true,
+        data: { userId: "1", identityVerified: true },
+      })
+      await pending.promise
+    })
+    await waitFor(() => {
+      expect(latestCtx?.isDetecting).toBe(false)
+      expect(latestCtx?.detectedAccount).toBeNull()
+    })
+    expect(sendMessage).toHaveBeenCalledTimes(1)
+
+    await act(async () => {
+      for (const listener of tabUpdatedListeners)
+        await listener(303, { status: "complete" }, activeTabs[0])
+    })
+    await waitFor(() => expect(latestCtx?.detectedAccount?.id).toBe("acc-2"))
+    expect(sendMessage).toHaveBeenCalledTimes(2)
   })
 
   it("shares a pending identity verification without losing its result to overlapping tab events", async () => {

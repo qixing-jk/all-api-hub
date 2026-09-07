@@ -977,7 +977,7 @@ describe("AccountDataContext initial load orchestration", () => {
     })
   })
 
-  it("keeps initial load active until current-tab and open-tab checks complete", async () => {
+  it("keeps initial load active until open-tab matching completes", async () => {
     let resolveActiveTabs: ((tabs: browser.tabs.Tab[]) => void) | undefined
     let resolveAllTabs: ((tabs: browser.tabs.Tab[]) => void) | undefined
 
@@ -1042,7 +1042,7 @@ describe("AccountDataContext initial load orchestration", () => {
     })
   })
 
-  it("keeps initial load active when open-tab matching resolves before current-tab detection", async () => {
+  it("finishes initial load when open-tab matching resolves before current-tab detection", async () => {
     let resolveActiveTabs: ((tabs: browser.tabs.Tab[]) => void) | undefined
     let resolveAllTabs: ((tabs: browser.tabs.Tab[]) => void) | undefined
 
@@ -1095,7 +1095,7 @@ describe("AccountDataContext initial load orchestration", () => {
       await flushReactMicrotasks()
     })
 
-    expect(getLatestCtx().isInitialLoad).toBe(true)
+    expect(getLatestCtx().isInitialLoad).toBe(false)
 
     await act(async () => {
       resolveActiveTabs?.([])

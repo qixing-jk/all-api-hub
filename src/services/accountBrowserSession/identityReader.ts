@@ -20,7 +20,9 @@ export async function readAccountBrowserIdentityFromTab(input: {
         verifyIdentity: true,
         candidateUserIds: input.candidateUserIds,
       },
-      { frameId: 0 },
+      // A loading or missing content script is an inconclusive passive check.
+      // The next page event can try again; do not keep retrying in the popup.
+      { frameId: 0, maxAttempts: 1 },
     )
     if (!response?.success || response.data?.identityVerified !== true)
       return null

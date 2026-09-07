@@ -97,6 +97,11 @@ type CurrentTabIdentityCache = {
   identity: Promise<string | null>
 }
 
+type TabCheckOptions = {
+  force?: boolean
+  pageIsLoading?: boolean
+}
+
 // 1. 定义 Context 的值类型
 interface AccountDataContextType {
   accounts: SiteAccount[]
@@ -198,8 +203,6 @@ export const AccountDataProvider = ({
   const [stats, setStats] = useState<AccountStats>(createEmptyAccountStats)
   const [lastUpdateTime, setLastUpdateTime] = useState<Date>()
   const [hasLoadedAccountData, setHasLoadedAccountData] = useState(false)
-  const [hasResolvedInitialCurrentTab, setHasResolvedInitialCurrentTab] =
-    useState(false)
   const [hasResolvedInitialOpenTabs, setHasResolvedInitialOpenTabs] =
     useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
@@ -327,21 +330,18 @@ export const AccountDataProvider = ({
   )
   const hasLoadedAccountDataRef = useRef(false)
   hasLoadedAccountDataRef.current = hasLoadedAccountData
-  const hasResolvedInitialCurrentTabRef = useRef(false)
-  hasResolvedInitialCurrentTabRef.current = hasResolvedInitialCurrentTab
   const hasResolvedInitialOpenTabsRef = useRef(false)
   hasResolvedInitialOpenTabsRef.current = hasResolvedInitialOpenTabs
 
-  const isInitialLoad =
-    !hasLoadedAccountData ||
-    !hasResolvedInitialCurrentTab ||
-    !hasResolvedInitialOpenTabs
+  // Passive browser identity checks must not hold the saved-account list behind
+  // a network request. Its optional current-account ordering can settle later.
+  const isInitialLoad = !hasLoadedAccountData || !hasResolvedInitialOpenTabs
 
   const currentTabUserCacheRef = useRef<CurrentTabIdentityCache | null>(null)
 
   const currentTabCheckSeqRef = useRef(0)
 
-  const checkCurrentTab = useCallback(async (force = false) => {
+  const checkCurrentTab = useCallback(async (options?: TabCheckOptions) => {
     // Guard against stale async updates: if a newer check starts while this one is awaiting,
     // this `seq` lets us no-op any state updates from older runs.
     const seq = (currentTabCheckSeqRef.current += 1)
@@ -406,8 +406,13 @@ export const AccountDataProvider = ({
       if (seq !== currentTabCheckSeqRef.current) return
       setDetectedSiteAccounts(originAccounts)
 
-      if (originAccounts.length === 0) {
-        // No accounts for this origin: nothing further to verify.
+      if (
+        originAccounts.length === 0 ||
+        options?.pageIsLoading ||
+        tab.status === "loading"
+      ) {
+        // A loading page may still host the previous document. Invalidate its
+        // identity now and wait for completion before contacting a content script.
         currentTabUserCacheRef.current = null
         setDetectedAccount(null)
         return
@@ -422,17 +427,22 @@ export const AccountDataProvider = ({
       ].sort()
       const candidateUserIdsKey = JSON.stringify(candidateUserIds)
       let currentRead = currentTabUserCacheRef.current
-      const canReuseRead =
-        !force &&
+      const isSameReadContext =
         currentRead?.tabId === tabId &&
         currentRead.url === tabUrl &&
         currentRead.siteType === siteTypeForUserRead &&
-        currentRead.candidateUserIdsKey === candidateUserIdsKey &&
+        currentRead.candidateUserIdsKey === candidateUserIdsKey
+      const canReuseRead =
+        !options?.force &&
+        isSameReadContext &&
+        currentRead &&
         (currentRead.completedAt === null ||
           Date.now() - currentRead.completedAt < CURRENT_TAB_IDENTITY_CACHE_MS)
 
       if (!currentRead || !canReuseRead) {
-        setDetectedAccount(null)
+        // Preserve the last ordering during a same-page passive check. Apply a
+        // changed or unconfirmed identity when that check settles, without flicker.
+        if (!isSameReadContext) setDetectedAccount(null)
         // Cache the promise so a newer tab event waits for the same verification.
         // Completion only updates this entry, never a later tab's cache.
         const entry: CurrentTabIdentityCache = {
@@ -481,9 +491,6 @@ export const AccountDataProvider = ({
       setDetectedSiteAccounts([])
       setDetectedAccount(null)
     } finally {
-      if (!hasResolvedInitialCurrentTabRef.current) {
-        setHasResolvedInitialCurrentTab(true)
-      }
       if (seq === currentTabCheckSeqRef.current) {
         setIsDetecting(false)
       }
@@ -803,18 +810,19 @@ export const AccountDataProvider = ({
 
     // Tab 激活变化时检测
     const cleanupActivated = onTabActivated(() => {
-      void checkCurrentTab(true)
+      void checkCurrentTab({ force: true })
     })
 
     // Tab URL 或状态更新时检测（只对当前 tab）
     const cleanupUpdated = onTabUpdated(async (tabId, changeInfo) => {
       const tabs = await getActiveTabs()
       if (tabs[0]?.id === tabId) {
-        void checkCurrentTab(
-          changeInfo.status === "loading" ||
+        void checkCurrentTab({
+          force:
             changeInfo.status === "complete" ||
             typeof changeInfo.url === "string",
-        )
+          pageIsLoading: changeInfo.status === "loading",
+        })
       }
     })
 

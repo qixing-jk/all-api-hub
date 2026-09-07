@@ -17,9 +17,15 @@ const { mockGetContentSessionExtractors } = vi.hoisted(() => ({
   mockGetContentSessionExtractors: vi.fn(),
 }))
 
-vi.mock("~/services/accountSiteOnboarding/registry", () => ({
-  getContentSessionExtractors: mockGetContentSessionExtractors,
-}))
+vi.mock(
+  "~/services/accountSiteOnboarding/registry",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/accountSiteOnboarding/registry")
+    >()),
+    getContentSessionExtractors: mockGetContentSessionExtractors,
+  }),
+)
 
 vi.mock("~/utils/i18n/core", () => ({
   t: vi.fn((key: string) => key),
