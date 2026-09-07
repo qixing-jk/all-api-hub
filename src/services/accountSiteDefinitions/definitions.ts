@@ -242,6 +242,9 @@ const ACCOUNT_SITE_DEFINITIONS = [
       routes: {
         usagePath: "/usage",
         redeemPath: "/redeem",
+        // Admin API Key lives in Settings > Security; the tab has no URL route.
+        // github.com/Wei-Shaw/sub2api/blob/b7dba62678a834080564966c002fd0ca2b328b7a/frontend/src/views/admin/SettingsView.vue
+        adminCredentialsPath: "/admin/settings",
         siteAnnouncementsPath: "/dashboard",
       },
     },

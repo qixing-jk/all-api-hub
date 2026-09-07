@@ -50,6 +50,7 @@ export const SETTINGS_ANCHORS = {
   AXON_HUB: "axonhub",
   SUB2API: "sub2api-managed-site",
   SUB2API_BASE_URL: "sub2api-managed-site-base-url",
+  SUB2API_ADMIN_CREDENTIALS_LINK: "sub2api-managed-site-admin-credentials-link",
   SUB2API_ADMIN_API_KEY: "sub2api-managed-site-admin-api-key",
   SUB2API_VALIDATE: "sub2api-managed-site-validate",
   SUB2API_DEFAULT_SCOPE: "sub2api-managed-site-default-scope",

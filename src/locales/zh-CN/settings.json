@@ -592,30 +592,36 @@
     "userCustomSort": "用户自定义排序"
   },
   "sub2apiManagedSite": {
-    "defaultScope": {
-      "description": "首版仅支持 step_up_enabled 为 false 时的 URL + 管理员 API Key。暂不支持管理员登录、JWT、TOTP 或 step-up 解锁。",
-      "title": "仅支持默认安全设置"
+    "adminCredentialsLink": {
+      "description": "以管理员身份登录后台，在「系统设置 → 安全与认证」中创建并复制 Key。完整 Key 只显示一次；重新生成会使旧 Key 失效。",
+      "missingBaseUrl": "先填写有效的站点地址，即可打开后台获取管理员 API Key。",
+      "open": "打开系统设置",
+      "title": "获取管理员 API Key"
     },
-    "description": "通过管理 API 管理 Sub2API 的 API Key 账号。",
+    "defaultScope": {
+      "description": "若站点启用了敏感操作二次验证，插件暂时无法查看或导出渠道密钥。请在 Sub2API 后台完成这些操作；迁移需要读取源密钥时也会受限。",
+      "title": "密钥查看与导出的限制"
+    },
+    "description": "连接后，可将已有 API Key 导入 Sub2API，并在 All API Hub 中查看、编辑和迁移渠道。",
     "fields": {
-      "adminApiKeyDesc": "通过 x-api-key 请求头发送的管理员 API Key",
+      "adminApiKeyDesc": "请填写后台生成的管理员 API Key，用于管理渠道。调用模型用的普通 API Key 不能用于此处。",
       "adminApiKeyLabel": "管理员 API Key",
-      "adminApiKeyPlaceholder": "请输入管理员 API Key",
-      "baseUrlDesc": "设置 Sub2API 站点的基础 URL",
-      "baseUrlLabel": "基础 URL",
+      "adminApiKeyPlaceholder": "粘贴从后台获取的管理员 API Key",
+      "baseUrlDesc": "填写 Sub2API 后台的访问地址，包含 http:// 或 https://。",
+      "baseUrlLabel": "站点地址",
       "baseUrlPlaceholder": "https://sub2api.example.com",
       "hideAdminApiKey": "隐藏管理员 API Key",
       "showAdminApiKey": "显示管理员 API Key"
     },
-    "title": "Sub2API 集成设置",
+    "title": "Sub2API 连接设置",
     "validation": {
-      "description": "测试管理员 API Key 是否可以读取 API Key 账号列表",
-      "failed": "Sub2API 验证失败：{{error}}",
-      "missingFields": "请填写基础 URL 和管理员 API Key",
-      "success": "Sub2API 配置验证成功",
-      "title": "验证配置",
-      "validate": "验证",
-      "validating": "正在验证..."
+      "description": "检查站点地址和管理员 Key 是否可用，成功后即可进入渠道管理。",
+      "failed": "Sub2API 连接验证失败：{{error}}",
+      "missingFields": "请先填写站点地址和管理员 API Key",
+      "success": "连接成功，可以管理 Sub2API 渠道了",
+      "title": "检查连接",
+      "validate": "验证连接",
+      "validating": "正在验证…"
     }
   },
   "tabs": {

@@ -594,30 +594,36 @@
     "userCustomSort": "Orden personalizado del usuario"
   },
   "sub2apiManagedSite": {
-    "defaultScope": {
-      "description": "La versión inicial solo admite URL + Admin API Key cuando step_up_enabled es false. El inicio de sesión de administrador, JWT, TOTP y el desbloqueo step-up aún no son compatibles.",
-      "title": "Solo configuración de seguridad predeterminada"
+    "adminCredentialsLink": {
+      "description": "Inicia sesión como administrador y crea y copia una clave en Configuración del sistema → Seguridad y autenticación. La clave completa se muestra una sola vez; regenerarla invalida la anterior.",
+      "missingBaseUrl": "Primero ingresa una URL válida del sitio para abrir el panel y obtener una Admin API Key.",
+      "open": "Abrir configuración del sistema",
+      "title": "Obtener una Admin API Key"
     },
-    "description": "Administra cuentas de API Key de Sub2API mediante la API de administración.",
+    "defaultScope": {
+      "description": "Si tu sitio requiere verificación adicional para operaciones sensibles, la extensión no puede ver ni exportar claves de canales. Realiza esas acciones en el panel de Sub2API. La migración también se ve afectada cuando necesita leer una clave de origen.",
+      "title": "Límites para ver y exportar claves"
+    },
+    "description": "Conecta tu sitio para importar claves API existentes a Sub2API y ver, editar y migrar canales desde All API Hub.",
     "fields": {
-      "adminApiKeyDesc": "Admin API Key enviada en el encabezado x-api-key",
+      "adminApiKeyDesc": "Usa una Admin API Key generada en el panel para administrar canales. Una clave API común para llamar modelos no funciona aquí.",
       "adminApiKeyLabel": "Admin API Key",
-      "adminApiKeyPlaceholder": "Ingresa la Admin API Key",
-      "baseUrlDesc": "Establece la URL base del sitio Sub2API",
-      "baseUrlLabel": "URL base",
+      "adminApiKeyPlaceholder": "Pega la Admin API Key de tu panel",
+      "baseUrlDesc": "Ingresa la URL de tu panel de Sub2API, incluido http:// o https://.",
+      "baseUrlLabel": "URL del sitio",
       "baseUrlPlaceholder": "https://sub2api.example.com",
       "hideAdminApiKey": "Ocultar Admin API Key",
       "showAdminApiKey": "Mostrar Admin API Key"
     },
-    "title": "Integración con Sub2API",
+    "title": "Conectar con Sub2API",
     "validation": {
-      "description": "Comprueba si la Admin API Key puede listar cuentas de API Key",
-      "failed": "Falló la validación de Sub2API: {{error}}",
-      "missingFields": "Ingresa la URL base y la Admin API Key",
-      "success": "La configuración de Sub2API se validó correctamente",
-      "title": "Validar configuración",
-      "validate": "Validar",
-      "validating": "Validando..."
+      "description": "Comprueba que la URL del sitio y la Admin API Key funcionen antes de abrir la administración de canales.",
+      "failed": "Falló la verificación de conexión con Sub2API: {{error}}",
+      "missingFields": "Primero ingresa la URL del sitio y la Admin API Key",
+      "success": "Conexión establecida. Ya puedes administrar canales de Sub2API.",
+      "title": "Comprobar conexión",
+      "validate": "Verificar conexión",
+      "validating": "Verificando…"
     }
   },
   "tabs": {

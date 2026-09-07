@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -6,6 +7,7 @@ import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import Sub2ApiSettings from "~/features/BasicSettings/components/tabs/ManagedSite/Sub2ApiSettings"
 import { validateSub2ApiManagedSiteConfig } from "~/services/managedSites/providers/sub2api"
+import { createTab } from "~/utils/browser/browserApi"
 import { testI18n } from "~~/tests/test-utils/i18n"
 
 vi.mock("~/contexts/UserPreferencesContext", () => ({
@@ -13,6 +15,10 @@ vi.mock("~/contexts/UserPreferencesContext", () => ({
 }))
 vi.mock("~/services/managedSites/providers/sub2api", () => ({
   validateSub2ApiManagedSiteConfig: vi.fn(),
+}))
+vi.mock("~/utils/browser/browserApi", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/utils/browser/browserApi")>()),
+  createTab: vi.fn(),
 }))
 vi.mock("react-hot-toast", () => ({
   default: { error: vi.fn(), success: vi.fn() },
@@ -51,7 +57,7 @@ describe("Sub2ApiSettings", () => {
     return context
   }
 
-  it("uses stable settings targets and discloses the default-only scope", () => {
+  it("uses stable settings targets and explains key access limitations", () => {
     arrange()
 
     expect(document.getElementById(SETTINGS_ANCHORS.SUB2API)).not.toBeNull()
@@ -59,8 +65,48 @@ describe("Sub2ApiSettings", () => {
       document.getElementById(SETTINGS_ANCHORS.SUB2API_ADMIN_API_KEY),
     ).not.toBeNull()
     expect(
+      document.getElementById(SETTINGS_ANCHORS.SUB2API_ADMIN_CREDENTIALS_LINK),
+    ).not.toBeNull()
+    expect(
       screen.getByText("settings:sub2apiManagedSite.defaultScope.title"),
     ).toBeInTheDocument()
+  })
+
+  it("guides users to acquire an admin key using the site address they just entered", async () => {
+    const user = userEvent.setup()
+    arrange({
+      sub2ApiManagedSiteBaseUrl: "",
+      sub2ApiManagedSiteAdminToken: "",
+    })
+    const openSettings = screen.getByRole("button", {
+      name: "settings:sub2apiManagedSite.adminCredentialsLink.open",
+    })
+    expect(openSettings).toBeDisabled()
+    expect(
+      screen.getByText(
+        "settings:sub2apiManagedSite.adminCredentialsLink.missingBaseUrl",
+      ),
+    ).toBeVisible()
+
+    await user.type(
+      screen.getByPlaceholderText(
+        "settings:sub2apiManagedSite.fields.baseUrlPlaceholder",
+      ),
+      "http://192.168.1.10:8080/sub2api/",
+    )
+    expect(openSettings).toBeEnabled()
+    expect(
+      screen.getByText(
+        "settings:sub2apiManagedSite.adminCredentialsLink.description",
+      ),
+    ).toBeVisible()
+    await user.click(openSettings)
+
+    expect(createTab).toHaveBeenCalledWith(
+      "http://192.168.1.10:8080/sub2api/admin/settings",
+      true,
+    )
+    expect(validateSub2ApiManagedSiteConfig).not.toHaveBeenCalled()
   })
 
   it("validates the trimmed URL and Admin API Key before saving them", async () => {

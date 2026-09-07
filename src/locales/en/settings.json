@@ -593,30 +593,36 @@
     "userCustomSort": "User Custom Sort"
   },
   "sub2apiManagedSite": {
-    "defaultScope": {
-      "description": "This initial integration supports URL + Admin API Key only when step_up_enabled is false. Admin login, JWT, TOTP, and step-up unlocking are not supported yet.",
-      "title": "Default security settings only"
+    "adminCredentialsLink": {
+      "description": "Sign in as an administrator, then create and copy a key under System Settings → Security. The full key is shown only once; regenerating it invalidates the old key.",
+      "missingBaseUrl": "Enter a valid site URL first to open the dashboard and get an Admin API Key.",
+      "open": "Open system settings",
+      "title": "Get an Admin API Key"
     },
-    "description": "Manage Sub2API API-key accounts through the admin API.",
+    "defaultScope": {
+      "description": "If your site requires additional verification for sensitive operations, the extension cannot view or export channel keys. Complete these actions in the Sub2API dashboard. Migration is also affected when it needs to read a source key.",
+      "title": "Key viewing and export limits"
+    },
+    "description": "Connect your site to import existing API keys into Sub2API and view, edit, and migrate channels in All API Hub.",
     "fields": {
-      "adminApiKeyDesc": "Admin API Key sent with the x-api-key header",
+      "adminApiKeyDesc": "Use an Admin API Key generated in the dashboard to manage channels. A regular API key used to call models will not work here.",
       "adminApiKeyLabel": "Admin API Key",
-      "adminApiKeyPlaceholder": "Enter Admin API Key",
-      "baseUrlDesc": "Set the Sub2API site base URL",
-      "baseUrlLabel": "Base URL",
+      "adminApiKeyPlaceholder": "Paste the Admin API Key from your dashboard",
+      "baseUrlDesc": "Enter your Sub2API dashboard URL, including http:// or https://.",
+      "baseUrlLabel": "Site URL",
       "baseUrlPlaceholder": "https://sub2api.example.com",
       "hideAdminApiKey": "Hide Admin API Key",
       "showAdminApiKey": "Show Admin API Key"
     },
-    "title": "Sub2API integration settings",
+    "title": "Connect to Sub2API",
     "validation": {
-      "description": "Test whether the Admin API Key can list API-key accounts",
-      "failed": "Sub2API validation failed: {{error}}",
-      "missingFields": "Please fill in the Base URL and Admin API Key",
-      "success": "Sub2API configuration validated successfully",
-      "title": "Validate configuration",
-      "validate": "Validate",
-      "validating": "Validating..."
+      "description": "Check that the site URL and Admin API Key work before opening channel management.",
+      "failed": "Sub2API connection check failed: {{error}}",
+      "missingFields": "Enter the site URL and Admin API Key first",
+      "success": "Connected. You can now manage Sub2API channels.",
+      "title": "Check connection",
+      "validate": "Verify connection",
+      "validating": "Verifying…"
     }
   },
   "tabs": {
