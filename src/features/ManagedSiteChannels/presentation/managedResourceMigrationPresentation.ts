@@ -5,7 +5,7 @@ import {
   isAxonHubChannelType,
 } from "~/constants/axonHub"
 import { DoneHubChannelTypeNames } from "~/constants/doneHub"
-import { ChannelTypeNames } from "~/constants/managedSite"
+import { ChannelTypeNames } from "~/constants/newApi"
 import { OctopusOutboundTypeNames } from "~/constants/octopus"
 import type { ManagedSiteType } from "~/constants/siteType"
 import { SITE_TYPES } from "~/constants/siteType"

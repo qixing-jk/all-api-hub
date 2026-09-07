@@ -2,6 +2,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import type { ManagedResourceMatchingCapability } from "~/services/apiAdapters/contracts/managedResourceMatching"
 import type { ManagedResourceModelsCapability } from "~/services/apiAdapters/contracts/managedResourceModels"
 import type {
+  ManagedSiteCapabilities,
   ManagedSiteChannelDraftsCapability,
   ManagedSiteConfigCapability,
   ManagedSiteQueriesCapability,
@@ -15,9 +16,7 @@ import {
   updateChannel as updateOctopusChannel,
 } from "~/services/apiService/octopus"
 import {
-  buildChannelName,
   checkValidOctopusConfig,
-  fetchAvailableModels,
   prepareChannelFormData,
 } from "~/services/managedSites/providers/octopus"
 import type { OctopusConfig } from "~/types/octopusConfig"
@@ -76,8 +75,6 @@ const octopusManagedSiteQueries: ManagedSiteQueriesCapability<OctopusConfig> = {
 }
 
 const octopusManagedSiteChannelDrafts: ManagedSiteChannelDraftsCapability = {
-  fetchAvailableModels,
-  buildName: buildChannelName,
   prepareFormData: prepareChannelFormData,
 }
 
@@ -98,9 +95,10 @@ const matching: ManagedResourceMatchingCapability<OctopusConfig> = {
   },
 }
 export const octopusManagedSiteCapabilities = {
+  siteType: SITE_TYPES.OCTOPUS,
   matching,
   models: octopusManagedResourceModels,
   config: octopusManagedSiteConfig,
   queries: octopusManagedSiteQueries,
   channelDrafts: octopusManagedSiteChannelDrafts,
-}
+} satisfies ManagedSiteCapabilities<OctopusConfig, typeof SITE_TYPES.OCTOPUS>

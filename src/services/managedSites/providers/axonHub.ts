@@ -1,15 +1,15 @@
 import { AXON_HUB_CHANNEL_TYPE } from "~/constants/axonHub"
 import { normalizeAccountForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
 import * as axonHubApi from "~/services/apiService/axonHub"
-import type { ManagedSiteConfig } from "~/services/managedSites/managedSiteService"
-import { fetchManagedSiteAvailableModels } from "~/services/managedSites/utils/fetchManagedSiteAvailableModels"
+import { buildManagedSiteChannelName } from "~/services/managedSites/utils/channelDraft"
 import { fetchTokenScopedModels } from "~/services/managedSites/utils/fetchTokenScopedModels"
 import {
   userPreferences,
   type UserPreferences,
 } from "~/services/preferences/userPreferences"
 import type { AccountToken, ApiToken, DisplaySiteData } from "~/types"
-import { CHANNEL_STATUS, type ChannelFormData } from "~/types/managedSite"
+import { type ManagedSiteChannelDraft } from "~/types/managedSiteChannelDraft"
+import { CHANNEL_STATUS } from "~/types/newApi"
 import { createLogger } from "~/utils/core/logger"
 import { normalizeList } from "~/utils/core/string"
 
@@ -42,54 +42,12 @@ export async function checkValidAxonHubConfig(): Promise<boolean> {
 }
 
 /**
- * Return the AxonHub config in the shared managed-site service shape.
- */
-export async function getAxonHubConfig(): Promise<ManagedSiteConfig | null> {
-  try {
-    const prefs = await userPreferences.getPreferences()
-    if (hasValidAxonHubConfig(prefs) && prefs.axonHub) {
-      return prefs.axonHub
-    }
-    return null
-  } catch (error) {
-    logger.error("Error getting AxonHub config", error)
-    return null
-  }
-}
-
-/**
- * Fetch models available to the source account token for AxonHub imports.
- */
-export async function fetchAvailableModels(
-  account: DisplaySiteData,
-  token: ApiToken,
-): Promise<string[]> {
-  return await fetchManagedSiteAvailableModels(account, token, {
-    includeAccountFallback: false,
-  })
-}
-
-/**
- * Build the default AxonHub imported-channel name.
- */
-export function buildChannelName(
-  account: DisplaySiteData,
-  token: ApiToken,
-): string {
-  let channelName = `${account.name} | ${token.name}`.trim()
-  if (!channelName.endsWith("(auto)")) {
-    channelName += " (auto)"
-  }
-  return channelName
-}
-
-/**
  * Prepare AxonHub channel form data from an account/token pair.
  */
 export async function prepareChannelFormData(
   account: DisplaySiteData,
   token: ApiToken | AccountToken,
-): Promise<ChannelFormData> {
+): Promise<ManagedSiteChannelDraft> {
   const upstreamAccount = normalizeAccountForManagedChannel(account)
   const { models: availableModels, fetchFailed } = await fetchTokenScopedModels(
     upstreamAccount,
@@ -97,7 +55,7 @@ export async function prepareChannelFormData(
   )
 
   return {
-    name: buildChannelName(account, token),
+    name: buildManagedSiteChannelName(account, token),
     type: AXON_HUB_CHANNEL_TYPE.OPENAI,
     key: token.key,
     base_url: upstreamAccount.baseUrl,

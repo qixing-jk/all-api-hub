@@ -53,7 +53,6 @@ const manualPreviewTarget = {
   targetSummary: {
     siteType: SITE_TYPES.NEW_API,
     baseUrl: "https://target.example.invalid",
-    compatibleUserId: "1",
   },
 }
 

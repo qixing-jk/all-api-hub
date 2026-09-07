@@ -63,6 +63,7 @@ import {
   InvalidTokenPayloadError,
   resolveDisplayAccountRuntimeKeySecret,
 } from "~/services/accounts/utils/apiServiceRequest"
+import { getManagedSiteCapabilities } from "~/services/apiAdapters/registry"
 import { isAutomaticCheckInConfiguredForAccount } from "~/services/checkin/autoCheckin/inspection"
 import { sendAutoCheckinMessage } from "~/services/checkin/autoCheckin/messaging"
 import {
@@ -76,9 +77,9 @@ import {
 } from "~/services/managedSites/channelMatchResolver"
 import { getManagedSiteChannelNavigationId } from "~/services/managedSites/managedSiteChannelResourceIdentity"
 import {
-  getManagedSiteService,
+  getCurrentManagedSiteType,
   hasValidManagedSiteConfig,
-} from "~/services/managedSites/managedSiteService"
+} from "~/services/managedSites/runtimeConfig"
 import { normalizeManagedSiteChannelBaseUrl } from "~/services/managedSites/utils/channelMatching"
 import {
   collectManagedConfigSecrets,
@@ -512,8 +513,10 @@ export default function AccountActionButtons({
     ])
 
     try {
-      const service = await getManagedSiteService()
-      const managedConfig = await service.getConfig()
+      const managedSite = getManagedSiteCapabilities(
+        await getCurrentManagedSiteType(),
+      )
+      const managedConfig = await managedSite.config.get()
 
       if (!managedConfig) {
         return handleChannelLocateFallback(
@@ -554,9 +557,11 @@ export default function AccountActionButtons({
       addRuntimeKeyRedactionSecrets(secretsToRedact, [resolvedRuntimeKey])
       const resolvedToken =
         accountRuntimeKeyToLegacyAccountToken(resolvedRuntimeKey)
-      let formData: Awaited<ReturnType<typeof service.prepareChannelFormData>>
+      let formData: Awaited<
+        ReturnType<typeof managedSite.channelDrafts.prepareFormData>
+      >
       try {
-        formData = await service.prepareChannelFormData(
+        formData = await managedSite.channelDrafts.prepareFormData(
           { ...site, baseUrl: normalizedAccountBaseUrl },
           resolvedToken,
         )
@@ -590,7 +595,7 @@ export default function AccountActionButtons({
 
       const requestCache = createManagedSiteChannelMatchRequestCache()
       const matchParams = {
-        service,
+        managedSite,
         managedConfig,
         accountBaseUrl: searchBaseUrl,
         models: formData.models,
@@ -605,7 +610,7 @@ export default function AccountActionButtons({
 
       if (
         recoverableCandidate &&
-        service.siteType === SITE_TYPES.NEW_API &&
+        managedSite.siteType === SITE_TYPES.NEW_API &&
         "userId" in managedConfig
       ) {
         resolution = await withProtectionBypassUserCommand(
@@ -629,7 +634,7 @@ export default function AccountActionButtons({
           MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.EXACT
       ) {
         const navigationId = getManagedSiteChannelNavigationId(
-          service.siteType,
+          managedSite.siteType,
           exactMatch,
         )
         if (navigationId !== undefined) {

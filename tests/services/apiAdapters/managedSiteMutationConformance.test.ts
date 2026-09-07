@@ -9,9 +9,11 @@ import type {
   ResourceDisplayFacts,
   ResourceEditor,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
-import type { ManagedSiteChannelsCapability } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import { getManagedResourceRegistration } from "~/services/apiAdapters/managedResources/registry"
-import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
+import {
+  getManagedSiteCapabilities,
+  getSiteTypeCapabilities,
+} from "~/services/apiAdapters/registry"
 import {
   type consumeManagedSiteMutationResult,
   type MANAGED_SITE_MUTATION_DISPATCH_STATES,
@@ -22,7 +24,6 @@ import {
   type ManagedSiteMutationRequestObserver,
   type ManagedSiteMutationResult,
   type ManagedSiteResourceMutationResult,
-  type ManagedSiteVoidMutationResult,
 } from "~/services/managedSites/mutations"
 import * as axonHubLegacyProvider from "~/services/managedSites/providers/axonHub"
 import * as claudeCodeHubLegacyProvider from "~/services/managedSites/providers/claudeCodeHub"
@@ -69,40 +70,15 @@ describe("managed-site mutation conformance", () => {
     >().toEqualTypeOf<ManagedResourceSecretCollection>()
   })
 
-  it("keeps every registered managed-site channel write on the common result", () => {
-    type CreateResult = Awaited<
-      ReturnType<ManagedSiteChannelsCapability["create"]>
-    >
-    type UpdateResult = Awaited<
-      ReturnType<ManagedSiteChannelsCapability["update"]>
-    >
-    type DeleteResult = Awaited<
-      ReturnType<ManagedSiteChannelsCapability["delete"]>
-    >
-
-    expectTypeOf<CreateResult>().toEqualTypeOf<
-      ManagedSiteMutationResult<unknown>
-    >()
-    expectTypeOf<UpdateResult>().toEqualTypeOf<
-      ManagedSiteMutationResult<unknown>
-    >()
-    expectTypeOf<DeleteResult>().toEqualTypeOf<ManagedSiteVoidMutationResult>()
-
+  it("exposes managed channel writes through native workspaces only", () => {
     expect(new Set(MANAGED_SITE_TYPES)).toEqual(
       new Set(expectedManagedSiteTypes),
     )
-    for (const siteType of [
-      SITE_TYPES.NEW_API,
-      SITE_TYPES.VELOERA,
-      SITE_TYPES.DONE_HUB,
-    ]) {
-      const channels = getSiteTypeCapabilities(siteType).managedSites?.channels
-
-      expect(channels, `${siteType} channels`).toMatchObject({
-        create: expect.any(Function),
-        update: expect.any(Function),
-        delete: expect.any(Function),
-      })
+    for (const siteType of MANAGED_SITE_TYPES) {
+      expect(getManagedSiteCapabilities(siteType).siteType).toBe(siteType)
+      expect(getSiteTypeCapabilities(siteType).managedSites).not.toHaveProperty(
+        "channels",
+      )
     }
   })
 

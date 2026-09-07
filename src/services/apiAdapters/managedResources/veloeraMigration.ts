@@ -1,4 +1,4 @@
-import { DEFAULT_CHANNEL_FIELDS } from "~/constants/newApi"
+import { DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSiteChannelDraft"
 import { SITE_TYPES } from "~/constants/siteType"
 import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
 import {
@@ -15,7 +15,7 @@ import {
   mapVeloeraChannelTypeToChannelTypeStrict,
 } from "~/services/apiAdapters/managedResources/veloeraChannelType"
 import { MANAGED_SITE_MUTATION_OUTCOMES } from "~/services/managedSites/mutations"
-import type { ChannelFormData } from "~/types/managedSite"
+import type { ManagedSiteChannelDraft } from "~/types/managedSiteChannelDraft"
 import { MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES } from "~/types/managedSiteMigration"
 import {
   MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES,
@@ -24,7 +24,8 @@ import {
   type ManagedSiteMigrationSource,
 } from "~/types/managedSiteMigrationCapability"
 import { CHANNEL_STATUS } from "~/types/newApi"
-import type { VeloeraManagedSiteChannel } from "~/types/veloera"
+import type { VeloeraChannel } from "~/types/veloera"
+import { isRecord } from "~/utils/core/object"
 
 const blockers = MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES
 const failures = MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES
@@ -85,7 +86,7 @@ const createSelectionValidationContext = async (
 }
 
 const toSource = (
-  channel: VeloeraManagedSiteChannel,
+  channel: VeloeraChannel,
   resourceType: ManagedSiteMigrationSource["resourceType"],
 ): ManagedSiteMigrationSource => ({
   sourceSiteType: SITE_TYPES.VELOERA,
@@ -120,7 +121,9 @@ const toSource = (
       channel.model_prefix,
       channel.system_prompt,
     ].some(hasMeaningfulAdvancedValue),
-    hasMultiKeyState: channel.channel_info?.is_multi_key === true,
+    hasMultiKeyState:
+      isRecord(channel.channel_info) &&
+      channel.channel_info.is_multi_key === true,
   },
 })
 
@@ -221,7 +224,7 @@ export const veloeraManagedSiteMigrationCapability: ManagedSiteMigrationCapabili
       },
       create: async (command, options) => {
         const operations = await openVeloeraNativeResourceOperations()
-        const draft: ChannelFormData = {
+        const draft: ManagedSiteChannelDraft = {
           name: command.projection.name,
           type: command.projection.type,
           key: command.credential,

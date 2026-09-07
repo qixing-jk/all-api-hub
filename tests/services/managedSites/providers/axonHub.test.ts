@@ -2,24 +2,20 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { AXON_HUB_CHANNEL_TYPE } from "~/constants/axonHub"
 import { SITE_TYPES } from "~/constants/siteType"
-import { CHANNEL_STATUS } from "~/types/managedSite"
+import { getManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
+import { CHANNEL_STATUS } from "~/types/newApi"
 import {
   buildApiToken,
   buildDisplaySiteData,
   buildUserPreferences,
 } from "~~/tests/test-utils/factories"
 
-const {
-  mockFetchManagedSiteAvailableModels,
-  mockFetchTokenScopedModels,
-  mockGetPreferences,
-  mockSignIn,
-} = vi.hoisted(() => ({
-  mockFetchManagedSiteAvailableModels: vi.fn(),
-  mockFetchTokenScopedModels: vi.fn(),
-  mockGetPreferences: vi.fn(),
-  mockSignIn: vi.fn(),
-}))
+const { mockFetchTokenScopedModels, mockGetPreferences, mockSignIn } =
+  vi.hoisted(() => ({
+    mockFetchTokenScopedModels: vi.fn(),
+    mockGetPreferences: vi.fn(),
+    mockSignIn: vi.fn(),
+  }))
 
 vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
   const actual =
@@ -39,13 +35,6 @@ vi.mock("~/services/apiService/axonHub", () => ({ signIn: mockSignIn }))
 vi.mock("~/services/managedSites/utils/fetchTokenScopedModels", () => ({
   fetchTokenScopedModels: mockFetchTokenScopedModels,
 }))
-
-vi.mock(
-  "~/services/managedSites/utils/fetchManagedSiteAvailableModels",
-  () => ({
-    fetchManagedSiteAvailableModels: mockFetchManagedSiteAvailableModels,
-  }),
-)
 
 vi.mock("~/utils/i18n/core", () => ({
   t: (key: string, options?: Record<string, unknown>) =>
@@ -74,7 +63,10 @@ describe("AxonHub managed-site provider", () => {
     const provider = await import("~/services/managedSites/providers/axonHub")
 
     await expect(provider.checkValidAxonHubConfig()).resolves.toBe(true)
-    await expect(provider.getAxonHubConfig()).resolves.toEqual(axonHubConfig)
+    expect(
+      (await getManagedSiteRuntimeConfigForType(SITE_TYPES.AXON_HUB))?.config ??
+        null,
+    ).toEqual(axonHubConfig)
 
     expect(mockSignIn).toHaveBeenCalledWith(axonHubConfig)
   })
@@ -93,7 +85,10 @@ describe("AxonHub managed-site provider", () => {
     const provider = await import("~/services/managedSites/providers/axonHub")
 
     await expect(provider.checkValidAxonHubConfig()).resolves.toBe(false)
-    await expect(provider.getAxonHubConfig()).resolves.toBeNull()
+    expect(
+      (await getManagedSiteRuntimeConfigForType(SITE_TYPES.AXON_HUB))?.config ??
+        null,
+    ).toBeNull()
 
     expect(mockSignIn).not.toHaveBeenCalled()
   })
@@ -180,30 +175,6 @@ describe("AxonHub managed-site provider", () => {
         models: [],
         modelPrefillFetchFailed: true,
       }),
-    )
-  })
-
-  it("fetches available models through the shared managed-site model resolver", async () => {
-    const provider = await import("~/services/managedSites/providers/axonHub")
-    const account = buildDisplaySiteData({
-      name: "Converted",
-      baseUrl: "https://converted.example/v1",
-    })
-    const token = buildApiToken({
-      name: "Auto",
-      key: "test-auto-token-key",
-    })
-
-    mockFetchManagedSiteAvailableModels.mockResolvedValue(["gpt-4o"])
-    await expect(
-      provider.fetchAvailableModels(account, token),
-    ).resolves.toEqual(["gpt-4o"])
-    expect(mockFetchManagedSiteAvailableModels).toHaveBeenCalledWith(
-      account,
-      token,
-      {
-        includeAccountFallback: false,
-      },
     )
   })
 })

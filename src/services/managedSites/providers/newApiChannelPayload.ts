@@ -1,9 +1,6 @@
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/managedSite"
-import type {
-  ChannelFormData,
-  ManagedSiteChannel,
-  UpdateChannelPayload,
-} from "~/types/managedSite"
+import type { ManagedSiteChannelDraft } from "~/types/managedSiteChannelDraft"
+import type { NewApiChannel, UpdateChannelPayload } from "~/types/newApi"
 
 /**
  * Builds a full New API update from the latest native detail.
@@ -12,8 +9,8 @@ import type {
  * https://github.com/QuantumNous/new-api/blob/f116414284162ad15d8925f7bca494c109b83e93/controller/channel.go
  */
 export function buildNewApiUpdatePayload(
-  native: ManagedSiteChannel,
-  draft: ChannelFormData,
+  native: NewApiChannel,
+  draft: ManagedSiteChannelDraft,
 ): UpdateChannelPayload {
   const payload: UpdateChannelPayload = {
     ...native,

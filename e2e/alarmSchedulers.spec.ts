@@ -1,7 +1,7 @@
 import type { BrowserContext, Page, Route, Worker } from "@playwright/test"
 
-import { ChannelType } from "~/constants"
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
+import { ChannelType } from "~/constants/newApi"
 import { SITE_TYPES } from "~/constants/siteType"
 import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
@@ -23,11 +23,11 @@ import {
   WebdavAutoSyncMessageTypes,
 } from "~/services/runtimeMessaging/messageTypes"
 import { SITE_ANNOUNCEMENTS_ALARM_NAME } from "~/services/siteAnnouncements/constants"
-import { AUTO_CHECKIN_SCHEDULE_MODE } from "~/types/autoCheckin"
 import type { AutoCheckinStatus } from "~/types/autoCheckin"
+import { AUTO_CHECKIN_SCHEDULE_MODE } from "~/types/autoCheckin"
 import type { DailyBalanceHistoryStore } from "~/types/dailyBalanceHistory"
-import { CHANNEL_STATUS, type ManagedSiteChannel } from "~/types/managedSite"
 import type { ExecutionResult } from "~/types/managedSiteModelSync"
+import { CHANNEL_STATUS, type NewApiChannel } from "~/types/newApi"
 import type { UsageHistoryStore } from "~/types/usageHistory"
 import { USAGE_HISTORY_SCHEDULE_MODE } from "~/types/usageHistory"
 import { WEBDAV_SYNC_STRATEGIES } from "~/types/webdav"
@@ -93,8 +93,8 @@ type AlarmSnapshot = {
 } | null
 
 function createManagedSiteChannel(
-  overrides: Partial<ManagedSiteChannel>,
-): ManagedSiteChannel {
+  overrides: Partial<NewApiChannel>,
+): NewApiChannel {
   return {
     id: 101,
     type: ChannelType.OpenAI,
@@ -260,7 +260,7 @@ function getLocalDay(date = new Date()) {
 async function stubManagedSiteAdminRoutes(
   context: BrowserContext,
   options: {
-    channels?: ManagedSiteChannel[]
+    channels?: NewApiChannel[]
     fetchedModelsByChannelId?: Record<number, string[]>
   } = {},
 ) {
@@ -353,7 +353,7 @@ async function stubManagedSiteAdminRoutes(
         (item) => item.id === Number((payload as { id?: number }).id),
       )
       if (channel) {
-        const updates = payload as Partial<ManagedSiteChannel>
+        const updates = payload as Partial<NewApiChannel>
         if (typeof updates.models === "string") channel.models = updates.models
       }
 

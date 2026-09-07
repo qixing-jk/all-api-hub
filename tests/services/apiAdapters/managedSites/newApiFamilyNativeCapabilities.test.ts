@@ -12,8 +12,8 @@ const apis = vi.hoisted(() => ({
   newApi: { listAllChannels: vi.fn(), searchChannel: vi.fn() },
   doneHub: {
     listAllChannels: vi.fn(),
+    fetchChannelRaw: vi.fn(),
     searchChannel: vi.fn(),
-    fetchChannel: vi.fn(),
   },
   veloera: { listAllChannels: vi.fn() },
   newApiSecrets: {
@@ -39,12 +39,15 @@ vi.mock("~/services/apiService/veloera", async (original) => ({
   ...(await original<typeof import("~/services/apiService/veloera")>()),
   ...apis.veloera,
 }))
-vi.mock("~/services/managedSites/providers/newApi", async (original) => ({
-  ...(await original<
-    typeof import("~/services/managedSites/providers/newApi")
-  >()),
-  ...apis.newApiSecrets,
-}))
+vi.mock(
+  "~/services/managedSites/providers/newApiChannelSecrets",
+  async (original) => ({
+    ...(await original<
+      typeof import("~/services/managedSites/providers/newApiChannelSecrets")
+    >()),
+    ...apis.newApiSecrets,
+  }),
+)
 
 const config = {
   baseUrl: "https://managed.example",
@@ -222,18 +225,18 @@ describe("New API family native capability consumers", () => {
         capabilities.matching.fetchSecretKey!(config, "opaque-id"),
       ).rejects.toThrow("Invalid numeric resource id")
       expect(apis.newApiSecrets.fetchChannelSecretKey).not.toHaveBeenCalled()
-      expect(apis.doneHub.fetchChannel).not.toHaveBeenCalled()
+      expect(apis.doneHub.fetchChannelRaw).not.toHaveBeenCalled()
     },
   )
 
   it("resolves a DoneHub matching key through the selected native channel", async () => {
-    apis.doneHub.fetchChannel.mockResolvedValue(
+    apis.doneHub.fetchChannelRaw.mockResolvedValue(
       buildManagedSiteChannel({ id: 7, key: "resolved-key" }),
     )
 
     await expect(
       doneHubManagedSiteCapabilities.matching.fetchSecretKey!(config, 7),
     ).resolves.toBe("resolved-key")
-    expect(apis.doneHub.fetchChannel).toHaveBeenCalledWith(request, 7)
+    expect(apis.doneHub.fetchChannelRaw).toHaveBeenCalledWith(request, 7)
   })
 })

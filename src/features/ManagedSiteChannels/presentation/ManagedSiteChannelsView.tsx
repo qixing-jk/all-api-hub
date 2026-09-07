@@ -81,7 +81,7 @@ type ManagedSiteChannelsViewProps = {
   filterDialog?: ReactNode
 }
 
-/** Renders the shared managed-channel page for legacy and native controllers. */
+/** Renders the shared managed-channel page from native resource controllers. */
 export function ManagedSiteChannelsView({
   state,
   capabilities,

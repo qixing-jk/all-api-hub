@@ -1,30 +1,13 @@
-import { DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
+import { DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSiteChannelDraft"
 import { normalizeAccountForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
 import type { ManagedSiteChannelDraftRequestOptions } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
-import {
-  fetchAccountAvailableModels,
-  fetchSiteUserGroups,
-} from "~/services/apiService/newApiFamily/default/keyManagement"
-import { fetchChannel as fetchVeloeraChannel } from "~/services/apiService/veloera"
-import {
-  MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
-  MatchResolutionUnresolvedError,
-} from "~/services/managedSites/channelMatch"
-import {
-  fetchManagedSiteAvailableModels,
-  type FetchManagedSiteAvailableModelsOptions,
-} from "~/services/managedSites/utils/fetchManagedSiteAvailableModels"
+import { fetchSiteUserGroups } from "~/services/apiService/newApiFamily/default/keyManagement"
+import { buildManagedSiteChannelName } from "~/services/managedSites/utils/channelDraft"
 import { fetchTokenScopedModels } from "~/services/managedSites/utils/fetchTokenScopedModels"
-import { AuthTypeEnum, type ApiToken, type DisplaySiteData } from "~/types"
 import type { AccountToken } from "~/types"
-import type {
-  ChannelFormData,
-  ChannelMode,
-  CreateChannelPayload,
-  ManagedSiteChannel,
-} from "~/types/managedSite"
-import type { VeloeraConfig } from "~/types/veloeraConfig"
-import { getErrorMessage } from "~/utils/core/error"
+import { AuthTypeEnum, type ApiToken, type DisplaySiteData } from "~/types"
+import type { ManagedSiteChannelDraft } from "~/types/managedSiteChannelDraft"
+import type { VeloeraCreateChannelPayload } from "~/types/veloera"
 import { createLogger } from "~/utils/core/logger"
 import { normalizeList, parseDelimitedList } from "~/utils/core/string"
 
@@ -39,72 +22,6 @@ import { resolveDefaultChannelGroups } from "./defaultChannelGroups"
  * Unified logger scoped to the Veloera integration and auto-config flows.
  */
 const logger = createLogger("VeloeraService")
-
-const toVeloeraRequestConfig = (config: VeloeraConfig) => ({
-  baseUrl: config.baseUrl,
-  auth: {
-    authType: AuthTypeEnum.AccessToken,
-    accessToken: config.adminToken,
-    userId: config.userId,
-  },
-})
-
-/**
- * Fetches the full secret key for a Veloera channel from its detail payload.
- */
-export async function fetchChannelSecretKey(
-  config: VeloeraConfig,
-  channelId: number,
-): Promise<string> {
-  const channel = await fetchVeloeraChannel(
-    toVeloeraRequestConfig(config),
-    channelId,
-  )
-
-  const key = channel.key?.trim()
-  if (!key) {
-    throw new Error("veloera_channel_key_missing")
-  }
-
-  return key
-}
-
-/**
- * Hydrates Veloera channel keys from detail payloads for shared comparison.
- */
-export async function hydrateComparableChannelKeys(
-  config: VeloeraConfig,
-  candidates: ManagedSiteChannel[],
-): Promise<ManagedSiteChannel[]> {
-  const hydratedCandidates: ManagedSiteChannel[] = []
-
-  for (const candidate of candidates) {
-    if (candidate.key?.trim()) {
-      hydratedCandidates.push(candidate)
-      continue
-    }
-
-    try {
-      const key = await fetchChannelSecretKey(config, candidate.id)
-
-      hydratedCandidates.push({
-        ...candidate,
-        key,
-      })
-    } catch (error) {
-      logger.warn("Failed to hydrate Veloera channel key", {
-        channelId: candidate.id,
-        error: getErrorMessage(error),
-      })
-
-      throw new MatchResolutionUnresolvedError(
-        MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.KEY_RESOLUTION_FAILED,
-      )
-    }
-  }
-
-  return hydratedCandidates
-}
 
 /**
  * Checks whether the given user preferences contain a complete Veloera config.
@@ -166,42 +83,13 @@ export async function getVeloeraConfig(): Promise<{
 }
 
 /**
- * Gets the models available for the given account.
- */
-export async function fetchAvailableModels(
-  account: DisplaySiteData,
-  token: ApiToken,
-  options?: FetchManagedSiteAvailableModelsOptions,
-): Promise<string[]> {
-  return await fetchManagedSiteAvailableModels(account, token, {
-    fetchAccountAvailableModels:
-      options?.fetchAccountAvailableModels ?? fetchAccountAvailableModels,
-    ...options,
-  })
-}
-
-/**
- * Builds a default channel name.
- */
-export function buildChannelName(
-  account: DisplaySiteData,
-  token: ApiToken,
-): string {
-  let channelName = `${account.name} | ${token.name}`.trim()
-  if (!channelName.endsWith("(auto)")) {
-    channelName += " (auto)"
-  }
-  return channelName
-}
-
-/**
  * Builds default channel form values.
  */
 export async function prepareChannelFormData(
   account: DisplaySiteData,
   token: ApiToken | AccountToken,
   options?: ManagedSiteChannelDraftRequestOptions,
-): Promise<ChannelFormData> {
+): Promise<ManagedSiteChannelDraft> {
   const upstreamAccount = normalizeAccountForManagedChannel(account)
   const tokenModelList = parseDelimitedList(token.models)
   const { models: availableModels, fetchFailed } = await fetchTokenScopedModels(
@@ -229,7 +117,7 @@ export async function prepareChannelFormData(
   })
 
   return {
-    name: buildChannelName(account, token),
+    name: buildManagedSiteChannelName(account, token),
     type: DEFAULT_CHANNEL_FIELDS.type,
     key: token.key,
     base_url: upstreamAccount.baseUrl,
@@ -246,9 +134,8 @@ export async function prepareChannelFormData(
  * Builds the create-channel payload from form state.
  */
 export function buildChannelPayload(
-  formData: ChannelFormData,
-  mode: ChannelMode = DEFAULT_CHANNEL_FIELDS.mode,
-): CreateChannelPayload {
+  formData: ManagedSiteChannelDraft,
+): VeloeraCreateChannelPayload {
   const trimmedBaseUrl = formData.base_url.trim()
   const groups = normalizeList(
     formData.groups && formData.groups.length > 0
@@ -258,17 +145,14 @@ export function buildChannelPayload(
   const models = normalizeList(formData.models ?? [])
 
   return {
-    mode,
-    channel: {
-      name: formData.name.trim(),
-      type: formData.type,
-      key: formData.key.trim(),
-      base_url: trimmedBaseUrl,
-      models: models.join(","),
-      groups,
-      priority: formData.priority,
-      weight: formData.weight,
-      status: formData.status,
-    },
+    name: formData.name.trim(),
+    type: formData.type,
+    key: formData.key.trim(),
+    base_url: trimmedBaseUrl,
+    models: models.join(","),
+    group: groups.join(","),
+    priority: formData.priority,
+    weight: formData.weight,
+    status: formData.status,
   }
 }

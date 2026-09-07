@@ -11,12 +11,11 @@ import {
 } from "~/services/managedSites/channelMatch"
 import {
   checkValidClaudeCodeHubConfig,
-  fetchAvailableModels,
   fetchChannelSecretKey,
-  getClaudeCodeHubConfig,
   hydrateComparableChannelKeys,
   prepareChannelFormData,
 } from "~/services/managedSites/providers/claudeCodeHub"
+import { getManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
 
 const mockFetchTokenScopedModels = vi.fn()
 const mockFetchManagedSiteAvailableModels = vi.fn()
@@ -36,14 +35,6 @@ vi.mock("~/services/managedSites/utils/fetchTokenScopedModels", () => ({
   fetchTokenScopedModels: (...args: unknown[]) =>
     mockFetchTokenScopedModels(...args),
 }))
-
-vi.mock(
-  "~/services/managedSites/utils/fetchManagedSiteAvailableModels",
-  () => ({
-    fetchManagedSiteAvailableModels: (...args: unknown[]) =>
-      mockFetchManagedSiteAvailableModels(...args),
-  }),
-)
 
 vi.mock("~/services/apiService/claudeCodeHub", () => ({
   listProviders: (...args: unknown[]) => mockListProviders(...args),
@@ -199,9 +190,10 @@ describe("Claude Code Hub managed-site provider", () => {
       claudeCodeHub: storedClaudeCodeHubConfig,
     })
 
-    await expect(getClaudeCodeHubConfig()).resolves.toEqual(
-      storedClaudeCodeHubConfig,
-    )
+    expect(
+      (await getManagedSiteRuntimeConfigForType(SITE_TYPES.CLAUDE_CODE_HUB))
+        ?.config ?? null,
+    ).toEqual(storedClaudeCodeHubConfig)
   })
 
   it("validates saved Claude Code Hub config only when required fields exist", async () => {
@@ -261,19 +253,15 @@ describe("Claude Code Hub managed-site provider", () => {
     )
   })
 
-  it("logs only a normalized summary when reading preferences fails", async () => {
+  it("returns unavailable configuration without logging the storage error", async () => {
     const preferencesError = new Error("preferences unavailable")
     mockGetPreferences.mockRejectedValueOnce(preferencesError)
 
-    await expect(getClaudeCodeHubConfig()).resolves.toBeNull()
-    expect(mockLogger.error).toHaveBeenCalledWith(
-      "Error getting Claude Code Hub config",
-      "preferences unavailable",
-    )
-    expect(mockLogger.error).not.toHaveBeenCalledWith(
-      expect.anything(),
-      preferencesError,
-    )
+    expect(
+      (await getManagedSiteRuntimeConfigForType(SITE_TYPES.CLAUDE_CODE_HUB))
+        ?.config ?? null,
+    ).toBeNull()
+    expect(mockLogger.error).not.toHaveBeenCalled()
   })
 
   it("fetches real provider keys through the Claude Code Hub provider API", async () => {
@@ -398,15 +386,7 @@ describe("Claude Code Hub managed-site provider", () => {
         MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.KEY_RESOLUTION_FAILED,
     })
   })
-  it("fetches models and matches only comparable providers", async () => {
-    mockFetchManagedSiteAvailableModels.mockResolvedValueOnce(["gpt-4o"])
-    await expect(
-      fetchAvailableModels(
-        { id: "account-1", baseUrl: "https://api.example.com" } as any,
-        { id: 1, key: "sk-real-key" } as any,
-      ),
-    ).resolves.toEqual(["gpt-4o"])
-
+  it("matches only comparable providers", async () => {
     mockGetPreferences.mockResolvedValue({
       claudeCodeHub: storedClaudeCodeHubConfig,
     })

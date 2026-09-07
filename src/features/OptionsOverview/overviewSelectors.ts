@@ -4,7 +4,7 @@ import {
   getGatewayGuidanceImportableAccounts,
 } from "~/features/UnifiedApiGuidance"
 import type { FeatureGuidanceState } from "~/services/featureGuidance/featureGuidanceState"
-import { hasValidManagedSiteConfig } from "~/services/managedSites/managedSiteService"
+import { hasValidManagedSiteConfig } from "~/services/managedSites/runtimeConfig"
 import type { UserPreferences } from "~/services/preferences/userPreferences"
 import {
   SiteHealthStatus,

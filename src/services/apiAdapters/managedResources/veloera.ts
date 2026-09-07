@@ -31,14 +31,19 @@ import { buildChannelPayload } from "~/services/managedSites/providers/veloera"
 import { resolveManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/managedSite"
 import { userPreferences } from "~/services/preferences/userPreferences"
-import type { ChannelFormData } from "~/types/managedSite"
+import type { ManagedSiteChannelDraft } from "~/types/managedSiteChannelDraft"
 import { normalizeManagedUpstreamResourceScopeKey } from "~/types/managedUpstreamResource"
 import type {
-  VeloeraManagedSiteChannel,
+  VeloeraChannel,
   VeloeraUpdateChannelPayload,
 } from "~/types/veloera"
 import type { VeloeraConfig } from "~/types/veloeraConfig"
 import { normalizeList } from "~/utils/core/string"
+
+import {
+  veloeraChannelOperations,
+  veloeraManagedResourceModels,
+} from "./veloeraOperations"
 
 type VeloeraNativeConfig = {
   config: VeloeraConfig
@@ -51,24 +56,24 @@ type VeloeraNativeResourceOperations = {
   list(
     query?: ResourceListQuery,
     options?: ResourceOperationOptions,
-  ): Promise<{ items: VeloeraManagedSiteChannel[]; total: number }>
+  ): Promise<{ items: VeloeraChannel[]; total: number }>
   get(
     locator: number,
     options?: ResourceOperationOptions,
-  ): Promise<VeloeraManagedSiteChannel>
+  ): Promise<VeloeraChannel>
   loadSecret(
     locator: number,
     options?: ResourceOperationOptions,
   ): Promise<string>
   create(
-    draft: ChannelFormData,
+    draft: ManagedSiteChannelDraft,
     options?: ResourceOperationOptions,
-  ): Promise<ManagedSiteMutationResult<VeloeraManagedSiteChannel>>
+  ): Promise<ManagedSiteMutationResult<VeloeraChannel>>
   update(
-    detail: VeloeraManagedSiteChannel,
-    command: ChannelFormData,
+    detail: VeloeraChannel,
+    command: ManagedSiteChannelDraft,
     options?: ResourceOperationOptions,
-  ): Promise<ManagedSiteMutationResult<VeloeraManagedSiteChannel>>
+  ): Promise<ManagedSiteMutationResult<VeloeraChannel>>
   delete(
     locator: number,
     options?: ResourceOperationOptions,
@@ -86,7 +91,7 @@ type VeloeraNativeResourceOperations = {
   ): Promise<readonly string[]>
 }
 
-const channels = veloeraManagedSiteCapabilities.channels
+const channels = veloeraChannelOperations
 const queries = veloeraManagedSiteCapabilities.queries
 const veloeraEditor = createNewApiFamilyEditorBindings({
   fields: VELOERA_MANAGED_RESOURCE_FIELD_IDS,
@@ -159,11 +164,6 @@ const listChannels = async (
   options?: ResourceOperationOptions,
 ) => {
   throwIfNewApiResourceOperationAborted(options)
-  if (!channels.list) {
-    throw new ManagedResourceError({
-      code: MANAGED_RESOURCE_FAILURE_CODES.Unavailable,
-    })
-  }
   const result = await channels.list(nativeConfig.config, options)
   throwIfNewApiResourceOperationAborted(options)
   const search = query?.search?.trim().toLocaleLowerCase()
@@ -180,11 +180,6 @@ const listCompleteChannelInventory = async (
   nativeConfig: VeloeraNativeConfig,
   options?: ResourceOperationOptions,
 ) => {
-  if (!channels.list) {
-    throw new ManagedResourceError({
-      code: MANAGED_RESOURCE_FAILURE_CODES.Unavailable,
-    })
-  }
   return await channels.list(nativeConfig.config, {
     ...options,
     requireCompleteInventory: true,
@@ -193,9 +188,9 @@ const listCompleteChannelInventory = async (
 
 const createChannel = async (
   nativeConfig: VeloeraNativeConfig,
-  draft: ChannelFormData,
+  draft: ManagedSiteChannelDraft,
   options?: ResourceOperationOptions,
-): Promise<ManagedSiteMutationResult<VeloeraManagedSiteChannel>> =>
+): Promise<ManagedSiteMutationResult<VeloeraChannel>> =>
   await attributeCreatedNativeResource({
     attributionKey: `${SITE_TYPES.VELOERA}:${nativeConfig.scopeKey}`,
     listInventory: async () =>
@@ -210,8 +205,8 @@ const createChannel = async (
   })
 
 const toUpdatePayload = (
-  detail: VeloeraManagedSiteChannel,
-  draft: ChannelFormData,
+  detail: VeloeraChannel,
+  draft: ManagedSiteChannelDraft,
 ): VeloeraUpdateChannelPayload => {
   const payload: VeloeraUpdateChannelPayload = {
     ...detail,
@@ -220,7 +215,6 @@ const toUpdatePayload = (
     type: draft.type,
     base_url: draft.base_url.trim(),
     models: normalizeList(draft.models).join(","),
-    groups: normalizeList(draft.groups),
     group: normalizeList(draft.groups).join(","),
     priority: draft.priority,
     weight: draft.weight,
@@ -235,21 +229,21 @@ const toUpdatePayload = (
 }
 
 const applyUpdate = (
-  detail: VeloeraManagedSiteChannel,
+  detail: VeloeraChannel,
   payload: VeloeraUpdateChannelPayload,
 ) =>
   ({
     ...detail,
     ...payload,
     key: payload.key ?? detail.key,
-  }) as VeloeraManagedSiteChannel
+  }) as VeloeraChannel
 
 const updateChannel = async (
   nativeConfig: VeloeraNativeConfig,
-  detail: VeloeraManagedSiteChannel,
-  draft: ChannelFormData,
+  detail: VeloeraChannel,
+  draft: ManagedSiteChannelDraft,
   options?: ResourceOperationOptions,
-): Promise<ManagedSiteMutationResult<VeloeraManagedSiteChannel>> => {
+): Promise<ManagedSiteMutationResult<VeloeraChannel>> => {
   const payload = toUpdatePayload(detail, draft)
   const result = await channels.update(nativeConfig.config, payload, options)
   if (result.outcome === MANAGED_SITE_MUTATION_OUTCOMES.Succeeded) {
@@ -266,24 +260,14 @@ export async function openVeloeraNativeResourceOperations(): Promise<VeloeraNati
   const nativeConfig = await openConfig()
   return {
     scopeKey: nativeConfig.scopeKey,
-    canLoadSecret: Boolean(channels.get),
+    canLoadSecret: true,
     list: (query, options) => listChannels(nativeConfig, query, options),
     get: async (locator, options) => {
       throwIfNewApiResourceOperationAborted(options)
-      if (!channels.get) {
-        throw new ManagedResourceError({
-          code: MANAGED_RESOURCE_FAILURE_CODES.Unavailable,
-        })
-      }
       return await channels.get(nativeConfig.config, locator, options)
     },
     loadSecret: async (locator, options) => {
       throwIfNewApiResourceOperationAborted(options)
-      if (!channels.get) {
-        throw new ManagedResourceError({
-          code: MANAGED_RESOURCE_FAILURE_CODES.PermissionDenied,
-        })
-      }
       return (await channels.get(nativeConfig.config, locator, options)).key
     },
     create: (draft, options) => createChannel(nativeConfig, draft, options),
@@ -292,24 +276,14 @@ export async function openVeloeraNativeResourceOperations(): Promise<VeloeraNati
     delete: (locator, options) =>
       channels.delete(nativeConfig.config, locator, options),
     fetchModels: async (locator, options) => {
-      if (!veloeraManagedSiteCapabilities.models.fetchModels) {
-        throw new ManagedResourceError({
-          code: MANAGED_RESOURCE_FAILURE_CODES.Unavailable,
-        })
-      }
-      return await veloeraManagedSiteCapabilities.models.fetchModels(
+      return await veloeraManagedResourceModels.fetchModels(
         nativeConfig.config,
         locator,
         options,
       )
     },
     fetchDraftModels: async (probe, options) => {
-      if (!veloeraManagedSiteCapabilities.models.fetchDraftModels) {
-        throw new ManagedResourceError({
-          code: MANAGED_RESOURCE_FAILURE_CODES.Unavailable,
-        })
-      }
-      return await veloeraManagedSiteCapabilities.models.fetchDraftModels(
+      return await veloeraManagedResourceModels.fetchDraftModels(
         nativeConfig.config,
         probe,
         options,
@@ -359,8 +333,8 @@ const veloeraNativeDefinition = {
     }
     return locator
   },
-  locatorFromListItem: (item: VeloeraManagedSiteChannel) => item.id,
-  locatorFromDetail: (detail: VeloeraManagedSiteChannel) => detail.id,
+  locatorFromListItem: (item: VeloeraChannel) => item.id,
+  locatorFromDetail: (detail: VeloeraChannel) => detail.id,
   list: (
     operations: VeloeraNativeResourceOperations,
     query?: ResourceListQuery,
@@ -371,24 +345,22 @@ const veloeraNativeDefinition = {
     locator: number,
     options?: ResourceOperationOptions,
   ) => operations.get(locator, options),
-  toListFacts: (channel: VeloeraManagedSiteChannel, ref: ManagedResourceRef) =>
+  toListFacts: (channel: VeloeraChannel, ref: ManagedResourceRef) =>
     veloeraResourceFacts.toFacts(channel, ref, { inventory: true }),
-  toDetailFacts: (
-    channel: VeloeraManagedSiteChannel,
-    ref: ManagedResourceRef,
-  ) => veloeraResourceFacts.toFacts(channel, ref, { inventory: false }),
+  toDetailFacts: (channel: VeloeraChannel, ref: ManagedResourceRef) =>
+    veloeraResourceFacts.toFacts(channel, ref, { inventory: false }),
   createEditor: veloeraEditor.createEditor,
   editEditor: veloeraEditor.editEditor,
   sanitizeEditDetail: veloeraEditor.sanitizeEditDetail,
   create: (
     operations: VeloeraNativeResourceOperations,
-    draft: ChannelFormData,
+    draft: ManagedSiteChannelDraft,
     options?: ResourceOperationOptions,
   ) => operations.create(draft, options),
   update: (
     operations: VeloeraNativeResourceOperations,
-    detail: VeloeraManagedSiteChannel,
-    draft: ChannelFormData,
+    detail: VeloeraChannel,
+    draft: ManagedSiteChannelDraft,
     options?: ResourceOperationOptions,
   ) => operations.update(detail, draft, options),
   delete: (

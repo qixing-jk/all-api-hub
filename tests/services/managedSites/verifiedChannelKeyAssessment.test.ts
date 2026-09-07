@@ -97,17 +97,15 @@ describe("applyVerifiedManagedSiteChannelKey", () => {
 describe("toManagedSiteVerifiedKeyAssessment", () => {
   it("retains the native route identity without exposing the provider payload or key", () => {
     const channel = {
-      ...buildManagedSiteChannel({ id: 42, name: "Example channel" }),
-      _axonHubData: {
-        id: "native/42+=",
-        credentials: { apiKey: "example-secret" },
-      },
+      ...buildManagedSiteChannel({ name: "Example channel" }),
+      id: "native/42+=",
+      key: "example-secret",
     }
 
     expect(
       toManagedSiteAssessmentChannel(channel, SITE_TYPES.AXON_HUB),
     ).toEqual({
-      id: 42,
+      id: "native/42+=",
       name: "Example channel",
       resourceId: "native/42+=",
     })

@@ -30,7 +30,7 @@ import {
   MANAGED_SITE_MUTATION_OUTCOMES,
 } from "~/services/managedSites/mutations"
 import { NewApiChannelKeyRequirementError } from "~/services/managedSites/providers/newApiSession"
-import { CHANNEL_STATUS } from "~/types/managedSite"
+import { CHANNEL_STATUS } from "~/types/newApi"
 import { buildManagedSiteChannel } from "~~/tests/test-utils/factories"
 
 const mocks = vi.hoisted(() => ({
@@ -44,34 +44,34 @@ const mocks = vi.hoisted(() => ({
   fetchSecretKey: vi.fn(),
   fetchModels: vi.fn(),
   fetchDraftModels: vi.fn(),
+  withProtectionBypass: vi.fn(),
   fetchSiteUserGroups: vi.fn(),
   fetchAccountAvailableModels: vi.fn(),
-  buildPayload: vi.fn(),
-  withProtectionBypass: vi.fn(),
 }))
 
 vi.mock("~/services/preferences/userPreferences", () => ({
   userPreferences: { getPreferences: mocks.getPreferences },
 }))
 
+vi.mock("~/services/apiAdapters/managedResources/newApiOperations", () => ({
+  newApiChannelOperations: {
+    list: mocks.list,
+    get: mocks.get,
+    search: mocks.search,
+    create: mocks.create,
+    update: mocks.update,
+    delete: mocks.remove,
+    fetchSecretKey: mocks.fetchSecretKey,
+    fetchModels: mocks.fetchModels,
+    fetchDraftModels: mocks.fetchDraftModels,
+  },
+  newApiManagedResourceModels: {
+    fetchModels: mocks.fetchModels,
+    fetchDraftModels: mocks.fetchDraftModels,
+  },
+}))
 vi.mock("~/services/apiAdapters/managedSites/newApi", () => ({
   newApiManagedSiteCapabilities: {
-    channels: {
-      list: mocks.list,
-      get: mocks.get,
-      search: mocks.search,
-      create: mocks.create,
-      update: mocks.update,
-      delete: mocks.remove,
-      fetchSecretKey: mocks.fetchSecretKey,
-      fetchModels: mocks.fetchModels,
-      fetchDraftModels: mocks.fetchDraftModels,
-    },
-    models: {
-      fetchModels: mocks.fetchModels,
-      fetchDraftModels: mocks.fetchDraftModels,
-    },
-    channelDrafts: { buildPayload: mocks.buildPayload },
     queries: {
       siteUserGroups: { fetch: mocks.fetchSiteUserGroups },
       accountAvailableModels: { fetch: mocks.fetchAccountAvailableModels },
@@ -177,10 +177,6 @@ describe("New API native managed resource", () => {
     mocks.fetchDraftModels.mockResolvedValue(["draft-model-a", "draft-model-b"])
     mocks.fetchSiteUserGroups.mockResolvedValue(["default", "vip"])
     mocks.fetchAccountAvailableModels.mockResolvedValue(["model-a", "model-b"])
-    mocks.buildPayload.mockImplementation((draft) => ({
-      mode: "single",
-      channel: draft,
-    }))
     mocks.withProtectionBypass.mockImplementation(
       async (_command, _surface, operation) =>
         await operation({ commandId: "command-1" }),

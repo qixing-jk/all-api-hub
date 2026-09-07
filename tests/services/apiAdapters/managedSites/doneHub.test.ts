@@ -1,31 +1,24 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { doneHubManagedResourceModels } from "~/services/apiAdapters/managedSites/doneHub"
+import { doneHubManagedResourceModels } from "~/services/apiAdapters/managedResources/doneHubOperations"
 import { AuthTypeEnum } from "~/types"
 import {
   CHANNEL_MUTATION_SCENARIOS,
   testManagedSiteChannelMutationContract,
   type ChannelMutationScenario,
 } from "~~/tests/services/apiAdapters/managedSites/channelMutationContract"
-import {
-  buildApiToken,
-  buildDisplaySiteData,
-} from "~~/tests/test-utils/factories"
 
 const doneHubApi = vi.hoisted(() => ({
-  searchChannel: vi.fn(),
   listAllChannels: vi.fn(),
   createChannel: vi.fn(),
   updateChannel: vi.fn(),
   deleteChannel: vi.fn(),
-  fetchChannel: vi.fn(),
   fetchChannelRaw: vi.fn(),
   normalizeDoneHubChannel: vi.fn((channel) => channel),
   fetchChannelModels: vi.fn(),
   fetchDraftChannelModels: vi.fn(),
-  updateChannelModels: vi.fn(),
-  updateChannelModelMapping: vi.fn(),
   updateDoneHubChannelFields: vi.fn(),
+  searchChannel: vi.fn(),
   fetchSiteUserGroups: vi.fn(),
 }))
 
@@ -40,10 +33,6 @@ const newApiKeyManagement = vi.hoisted(() => {
   }
 })
 
-const managedSiteModels = vi.hoisted(() => ({
-  fetchManagedSiteAvailableModels: vi.fn(),
-}))
-
 vi.mock("~/services/apiService/doneHub", () => ({
   ...doneHubApi,
 }))
@@ -51,13 +40,6 @@ vi.mock("~/services/apiService/doneHub", () => ({
 vi.mock("~/services/apiAdapters/newApi/keyManagement", () => ({
   ...newApiKeyManagement,
 }))
-
-vi.mock(
-  "~/services/managedSites/utils/fetchManagedSiteAvailableModels",
-  () => ({
-    ...managedSiteModels,
-  }),
-)
 
 describe("DoneHub managed-site channel capability", () => {
   const config = {
@@ -70,10 +52,7 @@ describe("DoneHub managed-site channel capability", () => {
     vi.clearAllMocks()
   })
 
-  const createPayload = {
-    mode: "single",
-    channel: { name: "channel", status: 1 },
-  } as const
+  const createPayload = { name: "channel", status: 1 } as const
   const updatePayload = { id: 7, name: "updated" }
   const models = ["model-a", "model-b"]
   const modelMapping = { "model-a": "upstream-model-a" }
@@ -119,10 +98,10 @@ describe("DoneHub managed-site channel capability", () => {
       successData: { id: 17 },
       arrange: arrangeRestMutation(doneHubApi.createChannel, { id: 17 }),
       invoke: async () => {
-        const { doneHubManagedSiteChannels } = await import(
-          "~/services/apiAdapters/managedSites/doneHub"
+        const { doneHubChannelOperations } = await import(
+          "~/services/apiAdapters/managedResources/doneHubOperations"
         )
-        return await doneHubManagedSiteChannels.create(config, createPayload)
+        return await doneHubChannelOperations.create(config, createPayload)
       },
       assertRequestPayload: () =>
         expect(doneHubApi.createChannel.mock.calls.at(-1)?.[1]).toBe(
@@ -139,10 +118,10 @@ describe("DoneHub managed-site channel capability", () => {
       successData: { id: 7 },
       arrange: arrangeRestMutation(doneHubApi.updateChannel, { id: 7 }),
       invoke: async () => {
-        const { doneHubManagedSiteChannels } = await import(
-          "~/services/apiAdapters/managedSites/doneHub"
+        const { doneHubChannelOperations } = await import(
+          "~/services/apiAdapters/managedResources/doneHubOperations"
         )
-        return await doneHubManagedSiteChannels.update(config, updatePayload)
+        return await doneHubChannelOperations.update(config, updatePayload)
       },
       assertRequestPayload: () =>
         expect(doneHubApi.updateChannel.mock.calls.at(-1)?.[1]).toBe(
@@ -159,10 +138,10 @@ describe("DoneHub managed-site channel capability", () => {
       successData: undefined,
       arrange: arrangeRestMutation(doneHubApi.deleteChannel, null),
       invoke: async () => {
-        const { doneHubManagedSiteChannels } = await import(
-          "~/services/apiAdapters/managedSites/doneHub"
+        const { doneHubChannelOperations } = await import(
+          "~/services/apiAdapters/managedResources/doneHubOperations"
         )
-        return await doneHubManagedSiteChannels.delete(config, 7)
+        return await doneHubChannelOperations.delete(config, 7)
       },
       assertRequestPayload: () =>
         expect(doneHubApi.deleteChannel.mock.calls.at(-1)?.[1]).toBe(7),
@@ -236,12 +215,12 @@ describe("DoneHub managed-site channel capability", () => {
       request.observer?.onResponse()
       throw responseError
     })
-    const { doneHubManagedSiteChannels } = await import(
-      "~/services/apiAdapters/managedSites/doneHub"
+    const { doneHubChannelOperations } = await import(
+      "~/services/apiAdapters/managedResources/doneHubOperations"
     )
 
     await expect(
-      doneHubManagedSiteChannels.create(config, createPayload),
+      doneHubChannelOperations.create(config, createPayload),
     ).rejects.toBe(responseError)
   })
 
@@ -252,12 +231,12 @@ describe("DoneHub managed-site channel capability", () => {
       request.observer?.onResponse()
       return rejectionResponse
     })
-    const { doneHubManagedSiteChannels } = await import(
-      "~/services/apiAdapters/managedSites/doneHub"
+    const { doneHubChannelOperations } = await import(
+      "~/services/apiAdapters/managedResources/doneHubOperations"
     )
 
     await expect(
-      doneHubManagedSiteChannels.create(config, createPayload),
+      doneHubChannelOperations.create(config, createPayload),
     ).resolves.toEqual({
       outcome: "rejected",
       diagnostic: {
@@ -372,8 +351,8 @@ describe("DoneHub managed-site channel capability", () => {
         return { success: true, data: null, message: "success" }
       },
     )
-    const { doneHubManagedSiteChannels } = await import(
-      "~/services/apiAdapters/managedSites/doneHub"
+    const { doneHubChannelOperations } = await import(
+      "~/services/apiAdapters/managedResources/doneHubOperations"
     )
     const request = {
       baseUrl: config.baseUrl,
@@ -384,16 +363,15 @@ describe("DoneHub managed-site channel capability", () => {
       },
     }
 
-    await doneHubManagedSiteChannels.search(config, "keyword")
-    await doneHubManagedSiteChannels.list?.(config, {
+    await doneHubChannelOperations.list?.(config, {
       bypassSiteRequestLimit: true,
     })
-    await doneHubManagedSiteChannels.create(config, {
-      mode: "single",
-      channel: { name: "channel", status: 1 },
+    await doneHubChannelOperations.create(config, {
+      name: "channel",
+      status: 1,
     })
-    await doneHubManagedSiteChannels.update(config, { id: 1 })
-    await doneHubManagedSiteChannels.delete(config, 1)
+    await doneHubChannelOperations.update(config, { id: 1 })
+    await doneHubChannelOperations.delete(config, 1)
     await doneHubManagedResourceModels.fetchModels?.(config, 1)
     await doneHubManagedResourceModels.fetchDraftModels?.(
       config,
@@ -412,17 +390,13 @@ describe("DoneHub managed-site channel capability", () => {
       { "model-a": "upstream-model-a" },
     )
 
-    expect(doneHubApi.searchChannel).toHaveBeenCalledWith(request, "keyword")
     expect(doneHubApi.listAllChannels).toHaveBeenCalledWith(
       { ...request, bypassSiteRequestLimit: true },
       { bypassSiteRequestLimit: true },
     )
     expect(doneHubApi.createChannel).toHaveBeenCalledWith(
       expect.objectContaining(request),
-      {
-        mode: "single",
-        channel: { name: "channel", status: 1 },
-      },
+      { name: "channel", status: 1 },
     )
     expect(doneHubApi.updateChannel).toHaveBeenCalledWith(
       expect.objectContaining(request),
@@ -490,8 +464,8 @@ describe("DoneHub managed-site channel capability", () => {
   })
 
   it("fetches and hydrates DoneHub secret keys for masked comparable channels", async () => {
-    const { doneHubManagedSiteChannels } = await import(
-      "~/services/apiAdapters/managedSites/doneHub"
+    const { doneHubChannelOperations } = await import(
+      "~/services/apiAdapters/managedResources/doneHubOperations"
     )
     const request = {
       baseUrl: config.baseUrl,
@@ -502,21 +476,21 @@ describe("DoneHub managed-site channel capability", () => {
       },
     }
 
-    doneHubApi.fetchChannel.mockResolvedValueOnce({
+    doneHubApi.fetchChannelRaw.mockResolvedValueOnce({
       id: 42,
       key: "sk-real",
     })
     await expect(
-      doneHubManagedSiteChannels.fetchSecretKey?.(config, 42),
+      doneHubChannelOperations.fetchSecretKey?.(config, 42),
     ).resolves.toBe("sk-real")
-    expect(doneHubApi.fetchChannel).toHaveBeenCalledWith(request, 42)
+    expect(doneHubApi.fetchChannelRaw).toHaveBeenCalledWith(request, 42)
 
-    doneHubApi.fetchChannel.mockResolvedValueOnce({
+    doneHubApi.fetchChannelRaw.mockResolvedValueOnce({
       id: 7,
       key: "sk-hydrated",
     })
     await expect(
-      doneHubManagedSiteChannels.hydrateComparableKeys?.(config, [
+      doneHubChannelOperations.hydrateComparableKeys?.(config, [
         { id: 1, key: "sk-live" },
         { id: 7, key: "sk-********" },
       ] as never),
@@ -524,34 +498,6 @@ describe("DoneHub managed-site channel capability", () => {
       { id: 1, key: "sk-live" },
       { id: 7, key: "sk-hydrated" },
     ])
-    expect(doneHubApi.fetchChannel).toHaveBeenCalledWith(request, 7)
-  })
-
-  it("injects DoneHub account model fallback into the provider draft capability", async () => {
-    const { doneHubManagedSiteCapabilities } = await import(
-      "~/services/apiAdapters/managedSites/doneHub"
-    )
-    const account = buildDisplaySiteData({
-      id: "1",
-      siteType: "done-hub",
-      baseUrl: config.baseUrl,
-    })
-    const token = buildApiToken({
-      id: 10,
-      name: "token",
-      key: "token-key",
-    })
-
-    await doneHubManagedSiteCapabilities.channelDrafts.fetchAvailableModels(
-      account,
-      token,
-    )
-
-    expect(
-      managedSiteModels.fetchManagedSiteAvailableModels,
-    ).toHaveBeenCalledWith(account, token, {
-      fetchAccountAvailableModels:
-        newApiKeyManagement.doneHubKeyManagement.fetchAvailableModels,
-    })
+    expect(doneHubApi.fetchChannelRaw).toHaveBeenCalledWith(request, 7)
   })
 })

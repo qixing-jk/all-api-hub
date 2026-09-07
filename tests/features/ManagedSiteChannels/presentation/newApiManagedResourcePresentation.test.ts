@@ -25,14 +25,13 @@ vi.mock("~/services/preferences/userPreferences", () => ({
   userPreferences: { getPreferences: mocks.getPreferences },
 }))
 
-vi.mock("~/services/apiAdapters/managedSites/newApi", () => ({
-  newApiManagedSiteCapabilities: {
-    channels: {
-      list: mocks.list,
-    },
-    channelDrafts: {},
-    queries: {},
+vi.mock("~/services/apiAdapters/managedResources/newApiOperations", () => ({
+  newApiChannelOperations: {
+    list: mocks.list,
   },
+}))
+vi.mock("~/services/apiAdapters/managedSites/newApi", () => ({
+  newApiManagedSiteCapabilities: { channelDrafts: {}, queries: {} },
 }))
 
 describe("New API managed-resource presentation", () => {

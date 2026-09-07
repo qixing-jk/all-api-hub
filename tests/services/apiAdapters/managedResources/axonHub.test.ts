@@ -9,7 +9,7 @@ import {
   AXON_HUB_EDITABLE_FIELD_IDS,
   AXON_HUB_TABLE_FIELD_IDS,
 } from "~/constants/axonHub"
-import { ChannelType } from "~/constants/managedSite"
+import { ChannelType } from "~/constants/newApi"
 import { SITE_TYPES } from "~/constants/siteType"
 import { createManagedResourceRowMapper } from "~/features/ManagedSiteChannels/controllers/managedResourceRowMapper"
 import {
@@ -30,6 +30,7 @@ import {
   type SecretEditIntent,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { RESOURCE_FIELD_TYPES } from "~/services/apiAdapters/contracts/resourceNative"
+import * as axonHubNativeResources from "~/services/apiAdapters/managedResources/axonHub"
 import {
   axonHubManagedResourceRegistration,
   AxonHubNativeError,
@@ -37,7 +38,6 @@ import {
   type AxonHubNativeFailure,
   type AxonHubNativeResourceOperations,
 } from "~/services/apiAdapters/managedResources/axonHub"
-import * as axonHubNativeResources from "~/services/apiAdapters/managedResources/axonHub"
 import { axonHubManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/axonHubMigration"
 import { getManagedResourceRegistration } from "~/services/apiAdapters/managedResources/registry"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"

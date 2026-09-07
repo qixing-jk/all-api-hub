@@ -28,8 +28,8 @@ export async function validateNewApiSessionReadResource(
   try {
     // Keep the full managed-site registry lazy in the background bundle; only
     // resource-bound New API tasks need this provider lookup.
-    const { getManagedSiteServiceForType } = await import(
-      "../managedSiteService"
+    const { getManagedSiteCapabilities } = await import(
+      "~/services/apiAdapters/registry"
     )
     const preferences = await userPreferences.getPreferencesStrict()
     const runtimeConfig = resolveManagedSiteRuntimeConfigForType(
@@ -45,7 +45,7 @@ export async function validateNewApiSessionReadResource(
     }
 
     const channels = await withResourceValidationTimeout(
-      getManagedSiteServiceForType(SITE_TYPES.NEW_API).searchChannel(
+      getManagedSiteCapabilities(SITE_TYPES.NEW_API).matching.search(
         runtimeConfig.config,
         String(resource.channelId),
       ),

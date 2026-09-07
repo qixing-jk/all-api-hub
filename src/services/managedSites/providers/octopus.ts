@@ -1,18 +1,16 @@
 /**
- * Octopus Service
- * 实现 ManagedSiteService 接口，提供 Octopus 站点的渠道管理功能
+ * Octopus configuration validation and managed-channel draft preparation.
  */
 import { DEFAULT_OCTOPUS_CHANNEL_FIELDS } from "~/constants/octopus"
 import { normalizeAccountForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
-import type { ManagedSiteConfig } from "~/services/managedSites/managedSiteService"
-import { fetchManagedSiteAvailableModels } from "~/services/managedSites/utils/fetchManagedSiteAvailableModels"
+import { buildManagedSiteChannelName } from "~/services/managedSites/utils/channelDraft"
 import { fetchTokenScopedModels } from "~/services/managedSites/utils/fetchTokenScopedModels"
 import {
   userPreferences,
   type UserPreferences,
 } from "~/services/preferences/userPreferences"
 import type { AccountToken, ApiToken, DisplaySiteData } from "~/types"
-import type { ChannelFormData } from "~/types/managedSite"
+import type { ManagedSiteChannelDraft } from "~/types/managedSiteChannelDraft"
 import { createLogger } from "~/utils/core/logger"
 import { normalizeList } from "~/utils/core/string"
 
@@ -59,54 +57,12 @@ export async function checkValidOctopusConfig(): Promise<boolean> {
 }
 
 /**
- * 获取 Octopus 配置
- */
-export async function getOctopusConfig(): Promise<ManagedSiteConfig | null> {
-  try {
-    const prefs = await userPreferences.getPreferences()
-    if (hasValidOctopusConfig(prefs) && prefs.octopus) {
-      return prefs.octopus
-    }
-    return null
-  } catch (error) {
-    logger.error("Error getting config", error)
-    return null
-  }
-}
-
-/**
- * 获取可用模型列表
- */
-export async function fetchAvailableModels(
-  account: DisplaySiteData,
-  token: ApiToken,
-): Promise<string[]> {
-  return await fetchManagedSiteAvailableModels(account, token, {
-    includeAccountFallback: false,
-  })
-}
-
-/**
- * 构建渠道名称
- */
-export function buildChannelName(
-  account: DisplaySiteData,
-  token: ApiToken,
-): string {
-  let channelName = `${account.name} | ${token.name}`.trim()
-  if (!channelName.endsWith("(auto)")) {
-    channelName += " (auto)"
-  }
-  return channelName
-}
-
-/**
  * 准备渠道表单数据
  */
 export async function prepareChannelFormData(
   account: DisplaySiteData,
   token: ApiToken | AccountToken,
-): Promise<ChannelFormData> {
+): Promise<ManagedSiteChannelDraft> {
   const upstreamAccount = normalizeAccountForManagedChannel(account)
   const { models: availableModels, fetchFailed } = await fetchTokenScopedModels(
     upstreamAccount,
@@ -114,7 +70,7 @@ export async function prepareChannelFormData(
   )
 
   return {
-    name: buildChannelName(account, token),
+    name: buildManagedSiteChannelName(account, token),
     type: DEFAULT_OCTOPUS_CHANNEL_FIELDS.type,
     key: token.key,
     base_url: buildOctopusBaseUrl(upstreamAccount.baseUrl), // Octopus 需要 /v1 后缀

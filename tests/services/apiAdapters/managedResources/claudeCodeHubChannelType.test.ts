@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import { CLAUDE_CODE_HUB_PROVIDER_TYPE } from "~/constants/claudeCodeHub"
-import { ChannelType } from "~/constants/managedSite"
+import { ChannelType } from "~/constants/newApi"
 import {
   mapChannelTypeToClaudeCodeHubProviderType,
   mapClaudeCodeHubProviderTypeToChannelTypeStrict,

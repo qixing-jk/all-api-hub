@@ -15,7 +15,7 @@ const {
   fetchAccountTokensMock,
   fetchDisplayAccountInviteLinkMock,
   canFetchDisplayAccountInviteLinkMock,
-  getManagedSiteServiceMock,
+  getManagedSiteCapabilitiesMock,
   openKeysPageMock,
   openManagedSiteChannelsForChannelMock,
   openManagedSiteChannelsPageMock,
@@ -48,7 +48,7 @@ const {
   fetchAccountTokensMock: vi.fn(),
   fetchDisplayAccountInviteLinkMock: vi.fn(),
   canFetchDisplayAccountInviteLinkMock: vi.fn(),
-  getManagedSiteServiceMock: vi.fn(),
+  getManagedSiteCapabilitiesMock: vi.fn(),
   openKeysPageMock: vi.fn(),
   openManagedSiteChannelsForChannelMock: vi.fn(),
   openManagedSiteChannelsPageMock: vi.fn(),
@@ -120,8 +120,14 @@ vi.mock("react-hot-toast", () => ({
   },
 }))
 
-vi.mock("~/services/managedSites/managedSiteService", () => ({
-  getManagedSiteService: getManagedSiteServiceMock,
+vi.mock("~/services/apiAdapters/registry", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/services/apiAdapters/registry")>()),
+  getManagedSiteCapabilities: getManagedSiteCapabilitiesMock,
+}))
+vi.mock("~/services/managedSites/runtimeConfig", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("~/services/managedSites/runtimeConfig")
+  >()),
   hasValidManagedSiteConfig: hasValidManagedSiteConfigMock,
 }))
 
@@ -280,7 +286,7 @@ export {
   fetchAccountTokensMock,
   fetchDisplayAccountInviteLinkMock,
   getCurrentTempWindowRequestSourceMock,
-  getManagedSiteServiceMock,
+  getManagedSiteCapabilitiesMock,
   hasValidManagedSiteConfigMock,
   loadAccountDataMock,
   mockHandleRefreshAccount,

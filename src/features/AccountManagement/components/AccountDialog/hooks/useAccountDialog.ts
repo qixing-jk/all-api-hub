@@ -84,6 +84,7 @@ import {
 } from "~/services/accounts/utils/siteUrlNormalization"
 import { isCanonicalOpenRouterUrl } from "~/services/accountSiteDefinitions/identifiers"
 import { createAIHubMixCreatedRuntimeSecret } from "~/services/apiAdapters/aihubmix/createdSecret"
+import { getManagedSiteCapabilities } from "~/services/apiAdapters/registry"
 import {
   createCompatibilityCheckInConfig,
   hasNewAccountCompatibilityRegistration,
@@ -91,10 +92,10 @@ import {
 } from "~/services/checkin/autoCheckin/compatibilityConfig"
 import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/inspection"
 import { getAutoCheckinCandidateMethodIds } from "~/services/checkin/autoCheckin/providers/registry"
-import { getManagedSiteServiceForType } from "~/services/managedSites/managedSiteService"
 import {
   getManagedSiteConfigMissingMessage,
   getManagedSiteLabel,
+  getManagedSiteMessagesKeyFromSiteType,
   type ManagedSiteMessagesKey,
 } from "~/services/managedSites/utils/managedSite"
 import {
@@ -1866,8 +1867,8 @@ export function useAccountDialog({
   }, [handleManagedSiteConfigPromptClose, managedSiteType, t])
 
   const ensureManagedSiteAutoConfigReady = useCallback(async () => {
-    const service = getManagedSiteServiceForType(managedSiteType)
-    const managedConfig = await service.getConfig()
+    const managedSite = getManagedSiteCapabilities(managedSiteType)
+    const managedConfig = await managedSite.config.get()
 
     if (managedConfig) {
       return true
@@ -1876,7 +1877,7 @@ export function useAccountDialog({
     setManagedSiteConfigPrompt({
       isOpen: true,
       siteType: managedSiteType,
-      messagesKey: service.messagesKey,
+      messagesKey: getManagedSiteMessagesKeyFromSiteType(managedSite.siteType),
     })
 
     return false

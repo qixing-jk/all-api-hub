@@ -8,14 +8,14 @@ import {
 const axonHubProvider = vi.hoisted(() => ({
   checkValidAxonHubConfig: vi.fn(),
   listChannels: vi.fn(),
-  searchChannel: vi.fn(),
   createChannel: vi.fn(),
   updateChannel: vi.fn(),
   deleteChannel: vi.fn(),
+  buildChannelPayload: vi.fn(),
+  searchChannel: vi.fn(),
   fetchAvailableModels: vi.fn(),
   buildChannelName: vi.fn(),
   prepareChannelFormData: vi.fn(),
-  buildChannelPayload: vi.fn(),
 }))
 
 const axonHubApi = vi.hoisted(() => {
@@ -121,8 +121,6 @@ describe("AxonHub managed-site channel capability", () => {
       axonHubProvider.checkValidAxonHubConfig,
     )
     expect(axonHubManagedSiteCapabilities.channelDrafts).toEqual({
-      fetchAvailableModels: axonHubProvider.fetchAvailableModels,
-      buildName: axonHubProvider.buildChannelName,
       prepareFormData: axonHubProvider.prepareChannelFormData,
     })
     expect(axonHubManagedSiteCapabilities).not.toHaveProperty("imports")

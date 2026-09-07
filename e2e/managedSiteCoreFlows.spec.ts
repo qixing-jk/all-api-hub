@@ -1,8 +1,8 @@
 import type { BrowserContext, Route } from "@playwright/test"
 
 import { CHANNEL_DIALOG_TEST_IDS } from "~/components/dialogs/ChannelDialog/testIds"
-import { ChannelType } from "~/constants"
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
+import { ChannelType } from "~/constants/newApi"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SITE_TYPES } from "~/constants/siteType"
 import { BASIC_SETTINGS_TEST_IDS } from "~/features/BasicSettings/testIds"
@@ -11,7 +11,7 @@ import {
   getManagedSiteChannelRowSyncActionTestId,
   MANAGED_SITE_CHANNELS_TEST_IDS,
 } from "~/features/ManagedSiteChannels/testIds"
-import { CHANNEL_STATUS, type ManagedSiteChannel } from "~/types/managedSite"
+import { CHANNEL_STATUS, type NewApiChannel } from "~/types/newApi"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import { openManagedSiteChannelRowActions } from "~~/e2e/scenarios/managedSiteChannels"
 import {
@@ -70,8 +70,8 @@ const modelSyncUrl = (extensionId: string, params?: Record<string, string>) => {
 }
 
 function createManagedSiteChannel(
-  overrides: Partial<ManagedSiteChannel>,
-): ManagedSiteChannel {
+  overrides: Partial<NewApiChannel>,
+): NewApiChannel {
   return {
     id: 101,
     type: ChannelType.OpenAI,
@@ -228,7 +228,7 @@ async function fulfillJson(route: Route, body: unknown, status = 200) {
 async function stubManagedSiteAdminRoutes(
   context: BrowserContext,
   options: {
-    channels?: ManagedSiteChannel[]
+    channels?: NewApiChannel[]
     fetchedModelsByChannelId?: Record<number, string[]>
   } = {},
 ) {
@@ -408,7 +408,7 @@ async function stubManagedSiteAdminRoutes(
         (item) => item.id === Number((payload as { id?: number }).id),
       )
       if (channel) {
-        const updates = payload as Partial<ManagedSiteChannel>
+        const updates = payload as Partial<NewApiChannel>
 
         if (typeof updates.name === "string") channel.name = updates.name
         if (typeof updates.key === "string") channel.key = updates.key

@@ -13,11 +13,11 @@ import {
 import { Switch } from "~/components/ui/Switch"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { BASIC_SETTINGS_TEST_IDS } from "~/features/BasicSettings/testIds"
+import { getManagedSiteCapabilities } from "~/services/apiAdapters/registry"
 import {
-  getManagedSiteServiceForType,
   hasValidManagedSiteConfig,
-} from "~/services/managedSites/managedSiteService"
-import { getManagedSiteAdminConfig } from "~/services/managedSites/utils/managedSite"
+  resolveCurrentManagedSiteRuntimeConfig,
+} from "~/services/managedSites/runtimeConfig"
 import { ModelRedirectService } from "~/services/models/modelRedirect"
 import { supportsManagedSiteModelRedirect } from "~/services/models/modelRedirect/capabilities"
 import { ALL_PRESET_STANDARD_MODELS } from "~/types/managedSiteModelRedirect"
@@ -77,15 +77,16 @@ export default function ModelRedirectSettings() {
 
       setModelDiscoveryStatus("loading")
 
-      const managedConfig = getManagedSiteAdminConfig(preferences)
+      const managedConfig =
+        resolveCurrentManagedSiteRuntimeConfig(preferences)?.config ?? null
       if (!managedConfig) {
         setModelDiscoveryStatus("not-ready")
         return
       }
 
-      const fetchAccountAvailableModels = getManagedSiteServiceForType(
+      const fetchAccountAvailableModels = getManagedSiteCapabilities(
         preferences.managedSiteType,
-      ).fetchAccountAvailableModels
+      ).queries?.accountAvailableModels?.fetch
       if (!fetchAccountAvailableModels) {
         setModelDiscoveryStatus("unsupported")
         return

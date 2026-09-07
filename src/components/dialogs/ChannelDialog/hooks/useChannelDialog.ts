@@ -23,7 +23,9 @@ import {
   requireDisplayAccountKeyManagement,
   resolveDisplayAccountTokenForSecret,
 } from "~/services/accounts/utils/apiServiceRequest"
+import { type ManagedSiteCapabilities } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import { openNativeManagedChannelImportEditor } from "~/services/apiAdapters/managedResources/channelImport"
+import { getManagedSiteCapabilities } from "~/services/apiAdapters/registry"
 import {
   API_CREDENTIAL_PROFILE_SYNTHETIC_ACCOUNT_ID_PREFIX,
   buildApiCredentialProfileSyntheticAccountId,
@@ -36,10 +38,9 @@ import {
 } from "~/services/managedSites/channelMatch"
 import { resolveManagedSiteChannelMatch } from "~/services/managedSites/channelMatchResolver"
 import {
-  getManagedSiteService,
-  type ManagedSiteConfig,
-  type ManagedSiteService,
-} from "~/services/managedSites/managedSiteService"
+  getCurrentManagedSiteType,
+  type ManagedSiteRuntimeConfigValue,
+} from "~/services/managedSites/runtimeConfig"
 import {
   MANAGED_SITE_TOKEN_CHANNEL_STATUSES,
   type ManagedSiteTokenChannelStatus,
@@ -47,6 +48,7 @@ import {
 import {
   collectManagedConfigSecrets,
   getManagedSiteConfigMissingMessage,
+  getManagedSiteMessagesKeyFromSiteType,
   supportsManagedSiteBaseUrlChannelLookup,
 } from "~/services/managedSites/utils/managedSite"
 import { createAutomaticProtectionBypassExecution } from "~/services/protectionBypass/client"
@@ -118,14 +120,16 @@ export function useChannelDialog() {
   } = useChannelDialogContext()
 
   const openPreparedChannelCreateDialog = async (params: {
-    service: ManagedSiteService
-    formData: Awaited<ReturnType<ManagedSiteService["prepareChannelFormData"]>>
+    managedSite: ManagedSiteCapabilities
+    formData: Awaited<
+      ReturnType<ManagedSiteCapabilities["channelDrafts"]["prepareFormData"]>
+    >
     advisoryWarning: ChannelDialogAdvisoryWarning | null
     onSuccess?: (result: any) => void
     shouldContinue?: () => boolean
   }): Promise<boolean> => {
     const nativeCreate = await openNativeManagedChannelImportEditor(
-      params.service.siteType,
+      params.managedSite.siteType,
       params.formData,
     )
     if (params.shouldContinue && !params.shouldContinue()) return false
@@ -250,8 +254,8 @@ export function useChannelDialog() {
     buildChannelDialogAdvisoryWarning(t, kind, options)
 
   const resolvePrefilledDialogDuplicateState = async (params: {
-    service: ManagedSiteService
-    managedConfig: ManagedSiteConfig
+    managedSite: ManagedSiteCapabilities
+    managedConfig: ManagedSiteRuntimeConfigValue
     accountBaseUrl: string
     models: string[]
     key?: string
@@ -267,7 +271,7 @@ export function useChannelDialog() {
       }
     }
 
-    if (!supportsManagedSiteBaseUrlChannelLookup(params.service.siteType)) {
+    if (!supportsManagedSiteBaseUrlChannelLookup(params.managedSite.siteType)) {
       return {
         existingChannelName: null,
         advisoryWarning: null,
@@ -275,7 +279,7 @@ export function useChannelDialog() {
     }
 
     const resolution = await resolveManagedSiteChannelMatch({
-      service: params.service,
+      managedSite: params.managedSite,
       managedConfig: params.managedConfig,
       accountBaseUrl: params.accountBaseUrl,
       models: params.models,
@@ -288,7 +292,7 @@ export function useChannelDialog() {
     })
     const exactMatch = getManagedSiteChannelExactMatch(
       resolution,
-      params.service.siteType,
+      params.managedSite.siteType,
     )
 
     if (exactMatch) {
@@ -377,11 +381,16 @@ export function useChannelDialog() {
         siteAccount = fetchedAccount
       }
 
-      const service = await getManagedSiteService()
-      const managedConfig = await service.getConfig()
+      const managedSite = getManagedSiteCapabilities(
+        await getCurrentManagedSiteType(),
+      )
+      const managedConfig = await managedSite.config.get()
       if (!managedConfig) {
         toast.error(
-          getManagedSiteConfigMissingMessage(t, service.messagesKey),
+          getManagedSiteConfigMissingMessage(
+            t,
+            getManagedSiteMessagesKeyFromSiteType(managedSite.siteType),
+          ),
           {
             id: toastId,
           },
@@ -511,7 +520,7 @@ export function useChannelDialog() {
         displaySiteData.token,
         displaySiteData.cookieAuthSessionCookie,
       ].filter(Boolean) as string[]
-      const formData = await service.prepareChannelFormData(
+      const formData = await managedSite.channelDrafts.prepareFormData(
         displaySiteData,
         resolvedToken,
       )
@@ -520,7 +529,7 @@ export function useChannelDialog() {
       }
 
       const duplicateState = await resolvePrefilledDialogDuplicateState({
-        service,
+        managedSite,
         managedConfig,
         accountBaseUrl: formData.base_url,
         models: formData.models,
@@ -547,7 +556,7 @@ export function useChannelDialog() {
       }
 
       const opened = await openPreparedChannelCreateDialog({
-        service,
+        managedSite,
         formData,
         advisoryWarning: duplicateState.advisoryWarning,
         onSuccess,
@@ -586,11 +595,16 @@ export function useChannelDialog() {
     let secretsToRedact: string[] = []
 
     try {
-      const service = await getManagedSiteService()
-      const managedConfig = await service.getConfig()
+      const managedSite = getManagedSiteCapabilities(
+        await getCurrentManagedSiteType(),
+      )
+      const managedConfig = await managedSite.config.get()
       if (!managedConfig) {
         toast.error(
-          getManagedSiteConfigMissingMessage(t, service.messagesKey),
+          getManagedSiteConfigMissingMessage(
+            t,
+            getManagedSiteMessagesKeyFromSiteType(managedSite.siteType),
+          ),
           {
             id: toastId,
           },
@@ -611,13 +625,13 @@ export function useChannelDialog() {
         ...collectManagedConfigSecrets(managedConfig),
       ].filter(Boolean) as string[]
 
-      const formData = await service.prepareChannelFormData(
+      const formData = await managedSite.channelDrafts.prepareFormData(
         displaySiteData,
         apiToken,
       )
 
       const duplicateState = await resolvePrefilledDialogDuplicateState({
-        service,
+        managedSite,
         managedConfig,
         accountBaseUrl: formData.base_url,
         models: formData.models,
@@ -638,7 +652,7 @@ export function useChannelDialog() {
       }
 
       const opened = await openPreparedChannelCreateDialog({
-        service,
+        managedSite,
         formData,
         advisoryWarning: duplicateState.advisoryWarning,
         onSuccess,

@@ -2,8 +2,8 @@ import { AXON_HUB_CHANNEL_TYPE } from "~/constants/axonHub"
 import { CLAUDE_CODE_HUB_PROVIDER_TYPE } from "~/constants/claudeCodeHub"
 import { ChannelType } from "~/constants/newApi"
 import { SITE_TYPES } from "~/constants/siteType"
+import { getManagedSiteCapabilities } from "~/services/apiAdapters/registry"
 import { isSafeChannelModelFilterRegex } from "~/services/managedSites/channelModelFilterRules"
-import { getManagedSiteServiceForType } from "~/services/managedSites/managedSiteService"
 import type { ManagedSiteRuntimeConfig } from "~/services/managedSites/runtimeConfig"
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/managedSite"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
@@ -222,8 +222,8 @@ async function resolveChannelKey(context: ProbeFilterContext): Promise<string> {
     return directKey
   }
 
-  const service = getManagedSiteServiceForType(context.managedConfig.siteType)
-  if (!service.fetchChannelSecretKey) {
+  const managedSite = getManagedSiteCapabilities(context.managedConfig.siteType)
+  if (!managedSite.matching.fetchSecretKey) {
     throw new ProbeFilterUnavailableError(
       "provider-unsupported",
       "Probe filtering is unsupported because this managed-site provider cannot resolve hidden channel keys.",
@@ -232,12 +232,12 @@ async function resolveChannelKey(context: ProbeFilterContext): Promise<string> {
 
   try {
     const key = context.protectionBypassExecution
-      ? await service.fetchChannelSecretKey(
+      ? await managedSite.matching.fetchSecretKey(
           context.managedConfig.config,
           context.channel.id,
           { protectionBypassExecution: context.protectionBypassExecution },
         )
-      : await service.fetchChannelSecretKey(
+      : await managedSite.matching.fetchSecretKey(
           context.managedConfig.config,
           context.channel.id,
         )

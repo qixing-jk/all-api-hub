@@ -14,11 +14,10 @@ import {
   sub2ApiChannelTypeToPlatform,
   sub2ApiPlatformToChannelType,
 } from "~/constants/sub2api"
-import { getManagedSiteServiceForType } from "~/services/managedSites/managedSiteService"
+import { getManagedSiteCapabilities } from "~/services/apiAdapters/registry"
 import {
   createSub2ApiApiKeyAccount,
   deleteSub2ApiApiKeyAccount,
-  fetchAvailableModels,
   getSub2ApiApiKeyAccount,
   InvalidSub2ApiResourceIdError,
   listSub2ApiApiKeyAccounts,
@@ -496,7 +495,7 @@ describe("Sub2API API-key account managed-site provider", () => {
         baseUrl: "https://api.example.invalid/v1",
       }),
       token: buildApiToken({ key: "sk-test-token-key" }),
-      service: getManagedSiteServiceForType(SITE_TYPES.SUB2API),
+      managedSite: getManagedSiteCapabilities(SITE_TYPES.SUB2API),
       managedConfig: config,
       protectionBypassExecution: {
         version: 2,
@@ -562,29 +561,6 @@ describe("Sub2API API-key account managed-site provider", () => {
       status: 1,
       notes: "",
     })
-  })
-
-  it("fetches and normalizes token-scoped models at the provider boundary", async () => {
-    const sourceAccount = buildDisplaySiteData({
-      siteType: SITE_TYPES.NEW_API,
-      baseUrl: "https://api.example.invalid/v1/",
-    })
-    const token = buildApiToken({ key: "sk-models" })
-    vi.mocked(fetchTokenScopedModels).mockResolvedValueOnce({
-      models: [" model-a ", "model-a", "", "model-b"],
-      fetchFailed: false,
-    })
-
-    await expect(fetchAvailableModels(sourceAccount, token)).resolves.toEqual([
-      "model-a",
-      "model-b",
-    ])
-    expect(fetchTokenScopedModels).toHaveBeenCalledWith(
-      expect.objectContaining({
-        baseUrl: "https://api.example.invalid/v1",
-      }),
-      token,
-    )
   })
 
   it("reveals a selected account key through raw export under default settings", async () => {

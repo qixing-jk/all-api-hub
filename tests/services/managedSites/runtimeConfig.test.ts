@@ -3,9 +3,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   getCurrentManagedSiteRuntimeConfig,
-  getManagedSiteLegacyAdminConfig,
+  getCurrentManagedSiteType,
   getManagedSiteRuntimeConfigForType,
   hasManagedSiteRuntimeConfigInputForType,
+  hasValidManagedSiteConfig,
   resolveCurrentManagedSiteRuntimeConfig,
   resolveManagedSiteRuntimeConfigForType,
 } from "~/services/managedSites/runtimeConfig"
@@ -31,6 +32,28 @@ vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
 describe("managed-site runtime config resolver", () => {
   beforeEach(() => {
     mockGetPreferences.mockReset()
+  })
+
+  it("preserves the selected type when its runtime config is incomplete", async () => {
+    const preferences = buildUserPreferences({
+      managedSiteType: SITE_TYPES.OCTOPUS,
+      octopus: {
+        baseUrl: "https://octopus.example.invalid",
+        username: "",
+        password: "",
+      },
+    })
+    mockGetPreferences.mockResolvedValue(preferences)
+
+    await expect(getCurrentManagedSiteType()).resolves.toBe(SITE_TYPES.OCTOPUS)
+    expect(hasValidManagedSiteConfig(preferences)).toBe(false)
+    expect(hasValidManagedSiteConfig(null)).toBe(false)
+  })
+
+  it("uses New API as the selection when preferences cannot be loaded", async () => {
+    mockGetPreferences.mockRejectedValue(new Error("storage unavailable"))
+
+    await expect(getCurrentManagedSiteType()).resolves.toBe(SITE_TYPES.NEW_API)
   })
 
   it("resolves full runtime configs for every managed-site type", () => {
@@ -390,82 +413,5 @@ describe("managed-site runtime config resolver", () => {
       getManagedSiteRuntimeConfigForType(SITE_TYPES.DONE_HUB),
     ).resolves.toBeNull()
     expect(mockGetPreferences).toHaveBeenCalledTimes(1)
-  })
-
-  it("converts full runtime configs to the legacy admin shape for compatibility consumers", () => {
-    const prefs = buildUserPreferences({
-      newApi: {
-        baseUrl: "https://new-api.example.com",
-        adminToken: "new-token",
-        userId: "1",
-      },
-      octopus: {
-        baseUrl: "https://octopus.example.com",
-        username: "octo-admin",
-        password: "octo-password",
-      },
-      axonHub: {
-        baseUrl: "https://axonhub.example.com",
-        email: "admin@example.com",
-        password: "axon-password",
-      },
-      claudeCodeHub: {
-        baseUrl: "https://cch.example.com",
-        adminToken: "cch-token",
-      },
-      sub2apiManagedSite: {
-        baseUrl: "https://sub2api.example.com",
-        adminToken: "sub2api-admin-key",
-      },
-    })
-
-    expect(
-      getManagedSiteLegacyAdminConfig(
-        resolveManagedSiteRuntimeConfigForType(prefs, SITE_TYPES.NEW_API)!,
-      ),
-    ).toEqual({
-      baseUrl: "https://new-api.example.com",
-      adminToken: "new-token",
-      userId: "1",
-    })
-    expect(
-      getManagedSiteLegacyAdminConfig(
-        resolveManagedSiteRuntimeConfigForType(prefs, SITE_TYPES.OCTOPUS)!,
-      ),
-    ).toEqual({
-      baseUrl: "https://octopus.example.com",
-      adminToken: "",
-      userId: "octo-admin",
-    })
-    expect(
-      getManagedSiteLegacyAdminConfig(
-        resolveManagedSiteRuntimeConfigForType(prefs, SITE_TYPES.AXON_HUB)!,
-      ),
-    ).toEqual({
-      baseUrl: "https://axonhub.example.com",
-      adminToken: "axon-password",
-      userId: "admin@example.com",
-    })
-    expect(
-      getManagedSiteLegacyAdminConfig(
-        resolveManagedSiteRuntimeConfigForType(
-          prefs,
-          SITE_TYPES.CLAUDE_CODE_HUB,
-        )!,
-      ),
-    ).toEqual({
-      baseUrl: "https://cch.example.com",
-      adminToken: "cch-token",
-      userId: "admin",
-    })
-    expect(
-      getManagedSiteLegacyAdminConfig(
-        resolveManagedSiteRuntimeConfigForType(prefs, SITE_TYPES.SUB2API)!,
-      ),
-    ).toEqual({
-      baseUrl: "https://sub2api.example.com",
-      adminToken: "sub2api-admin-key",
-      userId: "admin",
-    })
   })
 })

@@ -4,39 +4,21 @@ import { SITE_TYPES } from "~/constants/siteType"
 import {
   buildApiToken,
   buildDisplaySiteData,
-  buildManagedSiteChannel,
 } from "~~/tests/test-utils/factories"
 
 const {
-  mockSearchChannel,
-  mockCreateChannel,
-  mockUpdateChannel,
-  mockDeleteChannel,
-  mockFetchDoneHubChannel,
   mockFetchSiteUserGroups,
   mockGetPreferences,
   mockFetchTokenScopedModels,
   mockResolveDefaultChannelGroups,
-  mockFetchManagedSiteAvailableModels,
 } = vi.hoisted(() => ({
-  mockSearchChannel: vi.fn(),
-  mockCreateChannel: vi.fn(),
-  mockUpdateChannel: vi.fn(),
-  mockDeleteChannel: vi.fn(),
-  mockFetchDoneHubChannel: vi.fn(),
   mockFetchSiteUserGroups: vi.fn(),
   mockGetPreferences: vi.fn(),
   mockFetchTokenScopedModels: vi.fn(),
   mockResolveDefaultChannelGroups: vi.fn(),
-  mockFetchManagedSiteAvailableModels: vi.fn(),
 }))
 
 vi.mock("~/services/apiService/doneHub", () => ({
-  searchChannel: (...args: unknown[]) => mockSearchChannel(...args),
-  createChannel: (...args: unknown[]) => mockCreateChannel(...args),
-  updateChannel: (...args: unknown[]) => mockUpdateChannel(...args),
-  deleteChannel: (...args: unknown[]) => mockDeleteChannel(...args),
-  fetchChannel: (...args: unknown[]) => mockFetchDoneHubChannel(...args),
   fetchSiteUserGroups: (...args: unknown[]) => mockFetchSiteUserGroups(...args),
 }))
 
@@ -49,13 +31,6 @@ vi.mock("~/services/preferences/userPreferences", () => ({
 vi.mock("~/services/managedSites/utils/fetchTokenScopedModels", () => ({
   fetchTokenScopedModels: mockFetchTokenScopedModels,
 }))
-
-vi.mock(
-  "~/services/managedSites/utils/fetchManagedSiteAvailableModels",
-  () => ({
-    fetchManagedSiteAvailableModels: mockFetchManagedSiteAvailableModels,
-  }),
-)
 
 vi.mock("~/services/managedSites/providers/defaultChannelGroups", () => ({
   resolveDefaultChannelGroups: mockResolveDefaultChannelGroups,
@@ -78,17 +53,7 @@ describe("doneHubService additional flows", () => {
       fetchFailed: false,
     })
     mockResolveDefaultChannelGroups.mockResolvedValue(["ops", "default"])
-    mockFetchManagedSiteAvailableModels.mockResolvedValue(["gpt-4o-mini"])
     mockFetchSiteUserGroups.mockResolvedValue(["default"])
-    mockSearchChannel.mockResolvedValue({
-      items: [],
-      total: 0,
-      type_counts: {},
-    })
-    mockCreateChannel.mockResolvedValue({
-      success: true,
-      message: "created",
-    })
   })
 
   afterEach(() => {
@@ -213,16 +178,15 @@ describe("doneHubService additional flows", () => {
     })
 
     expect(formData.modelPrefillFetchFailed).toBe(true)
-    expect(payload).toEqual({
-      mode: "single",
-      channel: expect.objectContaining({
+    expect(payload).toEqual(
+      expect.objectContaining({
         name: "Imported Channel",
         key: "secret-key",
         base_url: "https://proxy.example.com",
         models: "gpt-4o,claude-3",
-        groups: ["default"],
+        group: "default",
       }),
-    })
+    )
   })
 
   it("returns config helper fallbacks when preferences are missing or reading fails", async () => {
@@ -269,95 +233,5 @@ describe("doneHubService additional flows", () => {
       new Error("preferences unavailable"),
     )
     await expect(getDoneHubConfig()).resolves.toBeNull()
-  })
-
-  it("throws when the Done Hub channel detail payload does not contain a key", async () => {
-    const { fetchChannelSecretKey } = await import(
-      "~/services/managedSites/providers/doneHubService"
-    )
-
-    mockFetchDoneHubChannel.mockResolvedValueOnce({
-      id: 42,
-      key: "   ",
-    })
-
-    await expect(
-      fetchChannelSecretKey(
-        {
-          baseUrl: "https://done-hub.example.com",
-          adminToken: "done-hub-token",
-          userId: "100",
-        },
-        42,
-      ),
-    ).rejects.toThrow("done_hub_channel_key_missing")
-  })
-
-  it("preserves channels without ids and maps detail fetch failures to unresolved hydration", async () => {
-    const { hydrateComparableChannelKeys } = await import(
-      "~/services/managedSites/providers/doneHubService"
-    )
-    const { MatchResolutionUnresolvedError } = await import(
-      "~/services/managedSites/channelMatch"
-    )
-
-    const result = await hydrateComparableChannelKeys(
-      {
-        baseUrl: "https://done-hub.example.com",
-        adminToken: "done-hub-token",
-        userId: "100",
-      },
-      [
-        buildManagedSiteChannel({
-          id: undefined as any,
-          name: "No Id Channel",
-          base_url: "https://proxy.example.com",
-          models: "gpt-4o",
-          key: "",
-        }),
-      ],
-    )
-
-    expect(result).toEqual([
-      expect.objectContaining({
-        name: "No Id Channel",
-      }),
-    ])
-    expect(mockFetchDoneHubChannel).not.toHaveBeenCalled()
-
-    mockFetchDoneHubChannel.mockRejectedValueOnce(
-      Object.assign(new Error("detail request failed"), { code: "ECONNRESET" }),
-    )
-
-    await expect(
-      hydrateComparableChannelKeys(
-        {
-          baseUrl: "https://done-hub.example.com",
-          adminToken: "done-hub-token",
-          userId: "100",
-        },
-        [
-          buildManagedSiteChannel({
-            id: 22,
-            name: "Broken Detail Channel",
-            base_url: "https://proxy.example.com",
-            models: "gpt-4o",
-            key: "",
-          }),
-        ],
-      ),
-    ).rejects.toBeInstanceOf(MatchResolutionUnresolvedError)
-    expect(mockFetchDoneHubChannel).toHaveBeenCalledTimes(1)
-    expect(mockFetchDoneHubChannel).toHaveBeenCalledWith(
-      {
-        baseUrl: "https://done-hub.example.com",
-        auth: {
-          authType: "access_token",
-          accessToken: "done-hub-token",
-          userId: "100",
-        },
-      },
-      22,
-    )
   })
 })

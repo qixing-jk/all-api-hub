@@ -1,4 +1,5 @@
-import { ChannelType, DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
+import { DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSiteChannelDraft"
+import { ChannelType } from "~/constants/newApi"
 import { SITE_TYPES } from "~/constants/siteType"
 import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
 import {
@@ -97,7 +98,7 @@ const openSelection = async (
   return { operations, id, detail }
 }
 
-/** Canonical migration for native Octopus channels without the legacy channel facade. */
+/** Canonical migration mapping for native Octopus channels. */
 export const octopusManagedSiteMigrationCapability: ManagedSiteMigrationCapability =
   {
     source: {

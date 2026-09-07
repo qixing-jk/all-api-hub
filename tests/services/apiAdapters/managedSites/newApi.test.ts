@@ -1,34 +1,27 @@
 import { describe, expect, it, vi } from "vitest"
 
-import { newApiManagedResourceModels } from "~/services/apiAdapters/managedSites/newApi"
+import { newApiManagedResourceModels } from "~/services/apiAdapters/managedResources/newApiOperations"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
-import type { CreateChannelPayload } from "~/types/managedSite"
-import { CHANNEL_STATUS } from "~/types/managedSite"
+import type { CreateChannelPayload } from "~/types/newApi"
+import { CHANNEL_STATUS } from "~/types/newApi"
 import {
   CHANNEL_MUTATION_SCENARIOS,
   testManagedSiteChannelMutationContract,
   type ChannelMutationScenario,
 } from "~~/tests/services/apiAdapters/managedSites/channelMutationContract"
-import {
-  buildApiToken,
-  buildDisplaySiteData,
-} from "~~/tests/test-utils/factories"
 
 const channelManagement = vi.hoisted(() => ({
-  searchChannel: vi.fn(),
   listAllChannels: vi.fn(),
   fetchChannel: vi.fn(),
   createChannel: vi.fn(),
-  updateChannel: vi.fn(),
   updateChannelFields: vi.fn(),
   updateChannelStatus: vi.fn(),
   isNewApiManualStatus: vi.fn((status) => status === 1 || status === 2),
   deleteChannel: vi.fn(),
   fetchChannelModels: vi.fn(),
   fetchDraftChannelModels: vi.fn(),
-  updateChannelModels: vi.fn(),
-  updateChannelModelMapping: vi.fn(),
+  searchChannel: vi.fn(),
 }))
 
 const keyManagement = vi.hoisted(() => ({
@@ -53,10 +46,7 @@ const keyManagement = vi.hoisted(() => ({
 
 const newApiProvider = vi.hoisted(() => ({
   checkValidNewApiConfig: vi.fn(),
-  fetchAvailableModels: vi.fn(),
-  buildChannelName: vi.fn(),
   prepareChannelFormData: vi.fn(),
-  buildChannelPayload: vi.fn(),
 }))
 
 const userPreferences = vi.hoisted(() => ({
@@ -132,10 +122,10 @@ describe("newApi managed-site channel capability", () => {
       successData: { id: 17 },
       arrange: arrangeRestMutation(channelManagement.createChannel, { id: 17 }),
       invoke: async () => {
-        const { newApiManagedSiteChannels } = await import(
-          "~/services/apiAdapters/managedSites/newApi"
+        const { newApiChannelOperations } = await import(
+          "~/services/apiAdapters/managedResources/newApiOperations"
         )
-        return await newApiManagedSiteChannels.create(config, createPayload)
+        return await newApiChannelOperations.create(config, createPayload)
       },
       assertRequestPayload: () =>
         expect(channelManagement.createChannel.mock.calls.at(-1)?.[1]).toBe(
@@ -154,10 +144,10 @@ describe("newApi managed-site channel capability", () => {
         id: 7,
       }),
       invoke: async () => {
-        const { newApiManagedSiteChannels } = await import(
-          "~/services/apiAdapters/managedSites/newApi"
+        const { newApiChannelOperations } = await import(
+          "~/services/apiAdapters/managedResources/newApiOperations"
         )
-        return await newApiManagedSiteChannels.update(config, updatePayload)
+        return await newApiChannelOperations.update(config, updatePayload)
       },
       assertRequestPayload: () =>
         expect(
@@ -174,10 +164,10 @@ describe("newApi managed-site channel capability", () => {
       successData: undefined,
       arrange: arrangeRestMutation(channelManagement.deleteChannel, null),
       invoke: async () => {
-        const { newApiManagedSiteChannels } = await import(
-          "~/services/apiAdapters/managedSites/newApi"
+        const { newApiChannelOperations } = await import(
+          "~/services/apiAdapters/managedResources/newApiOperations"
         )
-        return await newApiManagedSiteChannels.delete(config, 7)
+        return await newApiChannelOperations.delete(config, 7)
       },
       assertRequestPayload: () =>
         expect(channelManagement.deleteChannel.mock.calls.at(-1)?.[1]).toBe(7),
@@ -238,12 +228,12 @@ describe("newApi managed-site channel capability", () => {
       request.observer?.onResponse()
       throw responseError
     })
-    const { newApiManagedSiteChannels } = await import(
-      "~/services/apiAdapters/managedSites/newApi"
+    const { newApiChannelOperations } = await import(
+      "~/services/apiAdapters/managedResources/newApiOperations"
     )
 
     await expect(
-      newApiManagedSiteChannels.create(config, createPayload),
+      newApiChannelOperations.create(config, createPayload),
     ).rejects.toBe(responseError)
   })
 
@@ -254,12 +244,12 @@ describe("newApi managed-site channel capability", () => {
       request.observer?.onResponse()
       return rejectionResponse
     })
-    const { newApiManagedSiteChannels } = await import(
-      "~/services/apiAdapters/managedSites/newApi"
+    const { newApiChannelOperations } = await import(
+      "~/services/apiAdapters/managedResources/newApiOperations"
     )
 
     await expect(
-      newApiManagedSiteChannels.create(config, createPayload),
+      newApiChannelOperations.create(config, createPayload),
     ).resolves.toEqual({
       outcome: "rejected",
       diagnostic: {
@@ -275,8 +265,8 @@ describe("newApi managed-site channel capability", () => {
       request.observer?.onResponse()
       return { success: true, data: { id: 17 }, message: "created" }
     })
-    const { newApiManagedSiteChannels } = await import(
-      "~/services/apiAdapters/managedSites/newApi"
+    const { newApiChannelOperations } = await import(
+      "~/services/apiAdapters/managedResources/newApiOperations"
     )
     const payload = {
       mode: "single",
@@ -284,7 +274,7 @@ describe("newApi managed-site channel capability", () => {
     } as CreateChannelPayload
 
     await expect(
-      newApiManagedSiteChannels.create(config, payload),
+      newApiChannelOperations.create(config, payload),
     ).resolves.toEqual({
       outcome: "succeeded",
       data: { id: 17 },
@@ -318,12 +308,12 @@ describe("newApi managed-site channel capability", () => {
         return statusResponse
       },
     )
-    const { newApiManagedSiteChannels } = await import(
-      "~/services/apiAdapters/managedSites/newApi"
+    const { newApiChannelOperations } = await import(
+      "~/services/apiAdapters/managedResources/newApiOperations"
     )
 
     await expect(
-      newApiManagedSiteChannels.update(config, {
+      newApiChannelOperations.update(config, {
         id: 7,
         name: "updated",
         status: CHANNEL_STATUS.Enable,
@@ -357,12 +347,12 @@ describe("newApi managed-site channel capability", () => {
         throw raw
       },
     )
-    const { newApiManagedSiteChannels } = await import(
-      "~/services/apiAdapters/managedSites/newApi"
+    const { newApiChannelOperations } = await import(
+      "~/services/apiAdapters/managedResources/newApiOperations"
     )
 
     await expect(
-      newApiManagedSiteChannels.update(config, {
+      newApiChannelOperations.update(config, {
         id: 7,
         status: CHANNEL_STATUS.Enable,
       }),
@@ -393,12 +383,12 @@ describe("newApi managed-site channel capability", () => {
         return fieldResponse
       },
     )
-    const { newApiManagedSiteChannels } = await import(
-      "~/services/apiAdapters/managedSites/newApi"
+    const { newApiChannelOperations } = await import(
+      "~/services/apiAdapters/managedResources/newApiOperations"
     )
 
     await expect(
-      newApiManagedSiteChannels.update(config, {
+      newApiChannelOperations.update(config, {
         id: 7,
         status: CHANNEL_STATUS.Enable,
       }),
@@ -424,12 +414,12 @@ describe("newApi managed-site channel capability", () => {
         return { success: true, data: true, message: "success" }
       },
     )
-    const { newApiManagedSiteChannels } = await import(
-      "~/services/apiAdapters/managedSites/newApi"
+    const { newApiChannelOperations } = await import(
+      "~/services/apiAdapters/managedResources/newApiOperations"
     )
 
     await expect(
-      newApiManagedSiteChannels.update(config, {
+      newApiChannelOperations.update(config, {
         id: 7,
         status: CHANNEL_STATUS.Enable,
       }),
@@ -452,8 +442,8 @@ describe("newApi managed-site channel capability", () => {
   })
 
   it("delegates channel operations to direct New API family helpers", async () => {
-    const { newApiManagedSiteChannels } = await import(
-      "~/services/apiAdapters/managedSites/newApi"
+    const { newApiChannelOperations } = await import(
+      "~/services/apiAdapters/managedResources/newApiOperations"
     )
     const request = {
       baseUrl: config.baseUrl,
@@ -471,17 +461,17 @@ describe("newApi managed-site channel capability", () => {
       },
     } as CreateChannelPayload
 
-    await newApiManagedSiteChannels.search(config, "keyword")
-    await newApiManagedSiteChannels.list?.(config, {
+    await newApiChannelOperations.search(config, "keyword")
+    await newApiChannelOperations.list?.(config, {
       bypassSiteRequestLimit: true,
     })
-    await newApiManagedSiteChannels.get?.(config, 1)
-    await newApiManagedSiteChannels.create(config, createPayload)
-    await newApiManagedSiteChannels.update(config, {
+    await newApiChannelOperations.get?.(config, 1)
+    await newApiChannelOperations.create(config, createPayload)
+    await newApiChannelOperations.update(config, {
       id: 1,
       name: "updated",
     })
-    await newApiManagedSiteChannels.delete(config, 1)
+    await newApiChannelOperations.delete(config, 1)
     await newApiManagedResourceModels.fetchModels?.(config, 1)
     await newApiManagedResourceModels.fetchDraftModels?.(config, {
       channelType: 1,
@@ -606,8 +596,8 @@ describe("newApi managed-site channel capability", () => {
   })
 
   it("propagates channel operation signals to the API transport request", async () => {
-    const { newApiManagedSiteChannels } = await import(
-      "~/services/apiAdapters/managedSites/newApi"
+    const { newApiChannelOperations } = await import(
+      "~/services/apiAdapters/managedResources/newApiOperations"
     )
     const signal = new AbortController().signal
 
@@ -628,11 +618,11 @@ describe("newApi managed-site channel capability", () => {
       succeedMutation("deleted"),
     )
 
-    await newApiManagedSiteChannels.search(config, "keyword", { signal })
-    await newApiManagedSiteChannels.get?.(config, 7, { signal })
-    await newApiManagedSiteChannels.create(config, createPayload, { signal })
-    await newApiManagedSiteChannels.update(config, updatePayload, { signal })
-    await newApiManagedSiteChannels.delete(config, 7, { signal })
+    await newApiChannelOperations.search(config, "keyword", { signal })
+    await newApiChannelOperations.get?.(config, 7, { signal })
+    await newApiChannelOperations.create(config, createPayload, { signal })
+    await newApiChannelOperations.update(config, updatePayload, { signal })
+    await newApiChannelOperations.delete(config, 7, { signal })
 
     for (const mock of [
       channelManagement.searchChannel,
@@ -670,39 +660,8 @@ describe("newApi managed-site channel capability", () => {
       newApiProvider.checkValidNewApiConfig,
     )
     expect(newApiManagedSiteCapabilities.channelDrafts).toEqual({
-      fetchAvailableModels: expect.any(Function),
-      buildName: newApiProvider.buildChannelName,
       prepareFormData: newApiProvider.prepareChannelFormData,
     })
     expect(newApiManagedSiteCapabilities).not.toHaveProperty("imports")
-  })
-
-  it("injects account model fallback into the provider draft capability", async () => {
-    const { newApiManagedSiteCapabilities } = await import(
-      "~/services/apiAdapters/managedSites/newApi"
-    )
-    const account = buildDisplaySiteData({
-      id: "1",
-      siteType: "new-api",
-      baseUrl: config.baseUrl,
-    })
-    const token = buildApiToken({
-      id: 10,
-      name: "token",
-      key: "token-key",
-    })
-
-    await newApiManagedSiteCapabilities.channelDrafts.fetchAvailableModels(
-      account,
-      token,
-    )
-
-    expect(newApiProvider.fetchAvailableModels).toHaveBeenCalledWith(
-      account,
-      token,
-      {
-        fetchAccountAvailableModels: keyManagement.fetchAccountAvailableModels,
-      },
-    )
   })
 })

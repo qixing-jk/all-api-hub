@@ -4,23 +4,23 @@ import {
   MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS,
   MatchResolutionUnresolvedError,
 } from "~/services/managedSites/channelMatch"
+import type { ManagedSiteChannelMatchContext } from "~/services/managedSites/channelMatchResolver"
 import { resolveManagedSiteChannelMatch } from "~/services/managedSites/channelMatchResolver"
-import type { ManagedSiteChannelMatchService } from "~/services/managedSites/channelMatchResolver"
-import type { ManagedSiteConfig } from "~/services/managedSites/managedSiteService"
+import type { ManagedSiteRuntimeConfigValue } from "~/services/managedSites/runtimeConfig"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
-import type { ChannelFormData } from "~/types/managedSite"
+import type { ManagedSiteChannelDraft } from "~/types/managedSiteChannelDraft"
 
 /**
  * Resolves whether a direct managed-site import has an exact duplicate.
  */
 export async function resolveManagedSiteImportDuplicate(params: {
-  service: ManagedSiteChannelMatchService
-  managedConfig: ManagedSiteConfig
-  formData: ChannelFormData
+  managedSite: ManagedSiteChannelMatchContext
+  managedConfig: ManagedSiteRuntimeConfigValue
+  formData: ManagedSiteChannelDraft
   protectionBypassExecution?: ProtectionBypassExecution
 }) {
   const resolution = await resolveManagedSiteChannelMatch({
-    service: params.service,
+    managedSite: params.managedSite,
     managedConfig: params.managedConfig,
     accountBaseUrl: params.formData.base_url,
     models: params.formData.models,
@@ -30,7 +30,7 @@ export async function resolveManagedSiteImportDuplicate(params: {
 
   const exactMatch = getManagedSiteChannelExactMatch(
     resolution,
-    params.service.siteType,
+    params.managedSite.siteType,
   )
   if (exactMatch) {
     return exactMatch

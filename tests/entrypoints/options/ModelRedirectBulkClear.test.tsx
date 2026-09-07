@@ -3,11 +3,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import ModelRedirectSettings from "~/features/BasicSettings/components/tabs/ManagedSite/ModelRedirectSettings"
+import { getManagedSiteCapabilities } from "~/services/apiAdapters/registry"
 import {
-  getManagedSiteServiceForType,
   hasValidManagedSiteConfig,
-} from "~/services/managedSites/managedSiteService"
-import { getManagedSiteAdminConfig } from "~/services/managedSites/utils/managedSite"
+  resolveCurrentManagedSiteRuntimeConfig,
+} from "~/services/managedSites/runtimeConfig"
 import { ModelRedirectService } from "~/services/models/modelRedirect"
 import { supportsManagedSiteModelRedirect } from "~/services/models/modelRedirect/capabilities"
 import { buildManagedSiteChannel } from "~~/tests/test-utils/factories"
@@ -25,18 +25,26 @@ vi.mock("~/contexts/UserPreferencesContext", async () => {
   }
 })
 
-vi.mock("~/services/managedSites/managedSiteService", () => ({
-  getManagedSiteServiceForType: vi.fn(() => ({
-    fetchAccountAvailableModels: vi.fn().mockResolvedValue([]),
+vi.mock("~/services/apiAdapters/registry", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/services/apiAdapters/registry")>()),
+  getManagedSiteCapabilities: vi.fn(() => ({
+    queries: {
+      accountAvailableModels: { fetch: vi.fn().mockResolvedValue([]) },
+    },
   })),
-  hasValidManagedSiteConfig: vi.fn(),
 }))
-
-vi.mock("~/services/managedSites/utils/managedSite", () => ({
-  getManagedSiteAdminConfig: vi.fn(() => ({
-    baseUrl: "https://example.com",
-    adminToken: "token",
-    userId: "1",
+vi.mock("~/services/managedSites/runtimeConfig", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("~/services/managedSites/runtimeConfig")
+  >()),
+  hasValidManagedSiteConfig: vi.fn(),
+  resolveCurrentManagedSiteRuntimeConfig: vi.fn(() => ({
+    siteType: "new-api",
+    config: {
+      baseUrl: "https://example.com",
+      adminToken: "token",
+      userId: "1",
+    },
   })),
 }))
 
@@ -63,8 +71,8 @@ const mockedUseUserPreferencesContext =
   useUserPreferencesContext as unknown as ReturnType<typeof vi.fn>
 const mockedHasValidManagedSiteConfig =
   hasValidManagedSiteConfig as unknown as ReturnType<typeof vi.fn>
-const mockedGetManagedSiteServiceForType =
-  getManagedSiteServiceForType as unknown as ReturnType<typeof vi.fn>
+const mockedGetManagedSiteCapabilitiesForType =
+  getManagedSiteCapabilities as unknown as ReturnType<typeof vi.fn>
 const mockedModelRedirectService = ModelRedirectService as unknown as {
   listManagedSiteChannels: ReturnType<typeof vi.fn>
   clearChannelModelMappings: ReturnType<typeof vi.fn>
@@ -78,8 +86,10 @@ describe("Model redirect bulk clear flow", () => {
 
     mockedHasValidManagedSiteConfig.mockReturnValue(true)
     vi.mocked(supportsManagedSiteModelRedirect).mockReturnValue(true)
-    mockedGetManagedSiteServiceForType.mockReturnValue({
-      fetchAccountAvailableModels: vi.fn().mockResolvedValue([]),
+    mockedGetManagedSiteCapabilitiesForType.mockReturnValue({
+      queries: {
+        accountAvailableModels: { fetch: vi.fn().mockResolvedValue([]) },
+      },
     })
     mockedUseUserPreferencesContext.mockReturnValue({
       preferences: {
@@ -172,7 +182,7 @@ describe("Model redirect bulk clear flow", () => {
   })
 
   it("explains when model discovery is unsupported but keeps preset configuration available", async () => {
-    mockedGetManagedSiteServiceForType.mockReturnValue({})
+    mockedGetManagedSiteCapabilitiesForType.mockReturnValue({})
 
     renderSubject()
 
@@ -202,7 +212,7 @@ describe("Model redirect bulk clear flow", () => {
 
   it("explains that model discovery is not ready when managed-site setup is invalid", async () => {
     mockedHasValidManagedSiteConfig.mockReturnValue(false)
-    vi.mocked(getManagedSiteAdminConfig).mockReturnValueOnce(null)
+    vi.mocked(resolveCurrentManagedSiteRuntimeConfig).mockReturnValueOnce(null)
 
     renderSubject()
 
@@ -216,10 +226,12 @@ describe("Model redirect bulk clear flow", () => {
   })
 
   it("reports model discovery failures instead of silently using presets", async () => {
-    mockedGetManagedSiteServiceForType.mockReturnValue({
-      fetchAccountAvailableModels: vi
-        .fn()
-        .mockRejectedValue(new Error("request failed")),
+    mockedGetManagedSiteCapabilitiesForType.mockReturnValue({
+      queries: {
+        accountAvailableModels: {
+          fetch: vi.fn().mockRejectedValue(new Error("request failed")),
+        },
+      },
     })
 
     renderSubject()

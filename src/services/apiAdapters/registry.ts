@@ -4,8 +4,10 @@ import {
   getAccountSiteDefinition,
   type AccountSiteType,
 } from "~/services/accountSiteDefinitions"
+import type { ManagedSiteRuntimeConfigValueForType } from "~/services/managedSites/runtimeConfig"
 
 import { aihubmixCapabilities } from "./aihubmix"
+import type { ManagedSiteCapabilities } from "./contracts/managedSiteCapabilities"
 import type {
   SiteType,
   SiteTypeCapabilities,
@@ -22,8 +24,6 @@ import { openRouterCapabilities } from "./openrouter"
 import { sharedChatCapabilities } from "./sharedchat"
 import { sub2ApiCapabilities } from "./sub2api"
 import { voApiV2Capabilities } from "./voapiV2"
-
-type ManagedSiteCapabilities = NonNullable<SiteTypeCapabilities["managedSites"]>
 
 const managedSitesBySiteType = {
   [SITE_TYPES.NEW_API]: newApiManagedSiteCapabilities,
@@ -48,10 +48,7 @@ const withManagedSites = (
 
   return {
     ...capabilities,
-    managedSites: {
-      ...capabilities.managedSites,
-      ...managedSites,
-    },
+    managedSites,
   }
 }
 
@@ -92,4 +89,23 @@ export function getSiteTypeCapabilities(
   }
 
   return { siteType }
+}
+
+/** Returns the registered managed-site capabilities without remapping their interfaces. */
+export function getManagedSiteCapabilities<TSiteType extends ManagedSiteType>(
+  siteType: TSiteType,
+): ManagedSiteCapabilities<
+  ManagedSiteRuntimeConfigValueForType<TSiteType>,
+  TSiteType
+> {
+  const capabilities = managedSitesBySiteType[siteType]
+  if (!capabilities) {
+    throw new Error(
+      `managedSites capabilities are not implemented for ${siteType}`,
+    )
+  }
+  return capabilities as ManagedSiteCapabilities<
+    ManagedSiteRuntimeConfigValueForType<TSiteType>,
+    TSiteType
+  >
 }

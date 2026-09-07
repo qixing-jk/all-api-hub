@@ -3,12 +3,16 @@ import { describe, expect, it } from "vitest"
 import {
   ACCOUNT_SITE_ADAPTER_FAMILIES,
   ACCOUNT_SITE_TYPES,
+  MANAGED_SITE_TYPES,
   SITE_TYPES,
   type SiteType,
 } from "~/constants/siteType"
 import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions"
 import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/keyManagement"
-import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
+import {
+  getManagedSiteCapabilities,
+  getSiteTypeCapabilities,
+} from "~/services/apiAdapters/registry"
 
 const expectTokenProvisioningCapability = (
   capabilities: ReturnType<typeof getSiteTypeCapabilities>,
@@ -105,10 +109,9 @@ const expectManagedSiteCapabilities = (
     get: expect.any(Function),
   })
   expect(capabilities.managedSites?.channelDrafts).toEqual({
-    fetchAvailableModels: expect.any(Function),
-    buildName: expect.any(Function),
     prepareFormData: expect.any(Function),
   })
+  expect(capabilities.managedSites).not.toHaveProperty("channels")
   expect(capabilities.managedSites).not.toHaveProperty("imports")
 }
 
@@ -122,6 +125,15 @@ const expectManagedSiteQueries = (
 }
 
 describe("apiAdapters registry", () => {
+  it("shares the managed-site registration across capability lookup paths", () => {
+    for (const siteType of MANAGED_SITE_TYPES) {
+      const managedSite = getManagedSiteCapabilities(siteType)
+
+      expect(managedSite.siteType).toBe(siteType)
+      expect(getSiteTypeCapabilities(siteType).managedSites).toBe(managedSite)
+    }
+  })
+
   it("registers both AccountData producer paths for every account site type", () => {
     for (const siteType of ACCOUNT_SITE_TYPES) {
       const capabilities = getSiteTypeCapabilities(siteType)

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import { hasValidManagedSiteConfig } from "~/services/managedSites/managedSiteService"
+import { hasValidManagedSiteConfig } from "~/services/managedSites/runtimeConfig"
 import { modelMetadataService } from "~/services/models/modelMetadata"
 import { ModelRedirectService } from "~/services/models/modelRedirect/ModelRedirectService"
 import { userPreferences } from "~/services/preferences/userPreferences"
@@ -47,7 +47,10 @@ vi.mock("~/services/apiAdapters/registry", () => ({
     getSiteTypeCapabilitiesMock(...args),
 }))
 
-vi.mock("~/services/managedSites/managedSiteService", () => ({
+vi.mock("~/services/managedSites/runtimeConfig", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("~/services/managedSites/runtimeConfig")
+  >()),
   hasValidManagedSiteConfig: vi.fn(),
 }))
 

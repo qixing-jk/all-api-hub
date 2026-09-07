@@ -1,3 +1,4 @@
+import type { ManagedSiteCapabilities } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import {
   getRecoverableManagedSiteChannelCandidate,
   MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
@@ -6,7 +7,6 @@ import {
   type ManagedSiteChannelMatchInspection,
   type ManagedSiteChannelMatchUnresolvedReason,
 } from "~/services/managedSites/channelMatch"
-import type { ManagedSiteService } from "~/services/managedSites/managedSiteService"
 import type { ManagedSiteRuntimeConfigValue } from "~/services/managedSites/runtimeConfig"
 import {
   findManagedSiteChannelsByBaseUrl,
@@ -20,12 +20,9 @@ import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/ma
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import type { ManagedResourceMatchList } from "~/types/managedResourceMatching"
 
-export type ManagedSiteChannelMatchService = Pick<
-  ManagedSiteService,
-  | "siteType"
-  | "searchChannel"
-  | "hydrateComparableChannelKeys"
-  | "fetchChannelSecretKey"
+export type ManagedSiteChannelMatchContext = Pick<
+  ManagedSiteCapabilities,
+  "siteType" | "matching"
 >
 
 export interface ManagedSiteChannelMatchRequestCache {
@@ -42,7 +39,7 @@ export const createManagedSiteChannelMatchRequestCache =
   })
 
 interface ResolveManagedSiteChannelMatchParams {
-  service: ManagedSiteChannelMatchService
+  managedSite: ManagedSiteChannelMatchContext
   managedConfig: ManagedSiteRuntimeConfigValue
   accountBaseUrl: string
   models: string[]
@@ -88,7 +85,7 @@ const applyResolvedChannelKeys = <
 }
 
 const fetchRecoverableCandidateSecretKey = async (params: {
-  service: ManagedSiteChannelMatchService
+  managedSite: ManagedSiteChannelMatchContext
   managedConfig: ManagedSiteRuntimeConfigValue
   channelId: number | string
   requestCache?: ManagedSiteChannelMatchRequestCache
@@ -102,7 +99,7 @@ const fetchRecoverableCandidateSecretKey = async (params: {
       return await cachedSecretKeyPromise
     }
 
-    const secretKeyPromise = params.service.fetchChannelSecretKey!(
+    const secretKeyPromise = params.managedSite.matching.fetchSecretKey!(
       params.managedConfig,
       params.channelId,
       {
@@ -142,7 +139,7 @@ export async function resolveManagedSiteChannelMatch(
   params: ResolveManagedSiteChannelMatchParams,
 ): Promise<ManagedSiteChannelMatchResolution> {
   const {
-    service,
+    managedSite,
     managedConfig,
     models,
     key,
@@ -155,7 +152,7 @@ export async function resolveManagedSiteChannelMatch(
   )
   let unresolvedReason: ManagedSiteChannelMatchUnresolvedReason | undefined
   const keyComparisonMode = getManagedSiteChannelKeyComparisonMode(
-    service.siteType,
+    managedSite.siteType,
   )
 
   let searchResultsPromise =
@@ -163,7 +160,10 @@ export async function resolveManagedSiteChannelMatch(
 
   if (!searchResultsPromise) {
     const cache = requestCache
-    searchResultsPromise = service.searchChannel(managedConfig, searchBaseUrl)
+    searchResultsPromise = managedSite.matching.search(
+      managedConfig,
+      searchBaseUrl,
+    )
     cache?.searchResultsByBaseUrl.set(searchBaseUrl, searchResultsPromise)
     searchResultsPromise.catch(() => {
       if (
@@ -307,7 +307,7 @@ export async function resolveManagedSiteChannelMatch(
   if (
     resolveHiddenKeys &&
     params.protectionBypassExecution &&
-    typeof service.fetchChannelSecretKey === "function" &&
+    typeof managedSite.matching.fetchSecretKey === "function" &&
     key?.trim()
   ) {
     const recoverableUrlCandidates = urlBucket.filter(
@@ -356,7 +356,7 @@ export async function resolveManagedSiteChannelMatch(
       try {
         mergedResolvedChannelKeysById[recoverableCandidate.id] =
           await fetchRecoverableCandidateSecretKey({
-            service,
+            managedSite,
             managedConfig,
             channelId: recoverableCandidate.id,
             requestCache,
@@ -381,7 +381,7 @@ export async function resolveManagedSiteChannelMatch(
 
   if (
     params.protectionBypassExecution &&
-    typeof service.hydrateComparableChannelKeys === "function" &&
+    typeof managedSite.matching.hydrateComparableKeys === "function" &&
     key?.trim() &&
     !hasExactKeyAndModelMatch()
   ) {
@@ -430,11 +430,12 @@ export async function resolveManagedSiteChannelMatch(
 
     if (recoverableCandidates.length > 0) {
       try {
-        const hydratedCandidates = await service.hydrateComparableChannelKeys(
-          managedConfig,
-          recoverableCandidates,
-          { protectionBypassExecution: params.protectionBypassExecution },
-        )
+        const hydratedCandidates =
+          await managedSite.matching.hydrateComparableKeys(
+            managedConfig,
+            recoverableCandidates,
+            { protectionBypassExecution: params.protectionBypassExecution },
+          )
 
         for (const channel of hydratedCandidates) {
           if (hasUsableManagedSiteChannelKey(channel.key)) {

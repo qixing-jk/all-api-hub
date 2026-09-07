@@ -1,11 +1,9 @@
-import { describe, expect, expectTypeOf, it } from "vitest"
+import { describe, expect, it } from "vitest"
 
 import { AXON_HUB_CHANNEL_TYPE } from "~/constants/axonHub"
-import { ChannelType } from "~/constants/managedSite"
+import { ChannelType } from "~/constants/newApi"
 import {
-  mapAxonHubChannelTypeToChannelType,
   mapAxonHubChannelTypeToChannelTypeStrict,
-  mapChannelTypeToAxonHubChannelType,
   mapChannelTypeToAxonHubChannelTypeStrict,
 } from "~/services/apiAdapters/managedResources/axonHubChannelType"
 
@@ -30,7 +28,6 @@ describe("axonHubChannelType", () => {
     [AXON_HUB_CHANNEL_TYPE.GITHUB_COPILOT, ChannelType.OpenAI],
     [AXON_HUB_CHANNEL_TYPE.NANOGPT, ChannelType.OpenAI],
   ] as const)("maps AxonHub %s to shared type %s", (source, expected) => {
-    expect(mapAxonHubChannelTypeToChannelType(source)).toBe(expected)
     expect(mapAxonHubChannelTypeToChannelTypeStrict(source)).toEqual({
       status: "mapped",
       value: expected,
@@ -49,29 +46,13 @@ describe("axonHubChannelType", () => {
     [ChannelType.Xai, AXON_HUB_CHANNEL_TYPE.XAI],
     [ChannelType.Ollama, AXON_HUB_CHANNEL_TYPE.OLLAMA],
   ] as const)("maps shared type %s to AxonHub %s", (source, expected) => {
-    expect(mapChannelTypeToAxonHubChannelType(source)).toBe(expected)
     expect(mapChannelTypeToAxonHubChannelTypeStrict(source)).toEqual({
       status: "mapped",
       value: expected,
     })
   })
 
-  it("preserves concrete legacy signatures while strict mappers reject unsupported types", () => {
-    expectTypeOf(
-      mapAxonHubChannelTypeToChannelType("future-provider"),
-    ).toEqualTypeOf<ChannelType>()
-    expectTypeOf(
-      mapChannelTypeToAxonHubChannelType(ChannelType.Midjourney),
-    ).toEqualTypeOf<
-      (typeof AXON_HUB_CHANNEL_TYPE)[keyof typeof AXON_HUB_CHANNEL_TYPE]
-    >()
-
-    expect(mapAxonHubChannelTypeToChannelType("future-provider")).toBe(
-      ChannelType.OpenAI,
-    )
-    expect(mapChannelTypeToAxonHubChannelType(ChannelType.Midjourney)).toBe(
-      AXON_HUB_CHANNEL_TYPE.OPENAI,
-    )
+  it("rejects unsupported native and shared channel types", () => {
     expect(mapAxonHubChannelTypeToChannelTypeStrict("future-provider")).toEqual(
       {
         status: "unsupported",

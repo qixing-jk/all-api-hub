@@ -1,6 +1,6 @@
 import { ChannelTypeNames } from "~/constants/newApi"
 import type { ResourceOperationOptions } from "~/services/apiAdapters/contracts/managedResourceNative"
-import type { ManagedSiteChannel } from "~/types/managedSite"
+import type { NewApiChannel } from "~/types/newApi"
 import { normalizeList, parseDelimitedList } from "~/utils/core/string"
 
 /** Preserves the caller's cancellation reason at provider-owned async boundaries. */
@@ -17,7 +17,7 @@ export const parseNewApiResourceList = (value?: string | null) =>
   normalizeList(parseDelimitedList(value))
 
 /** Collects the safe provider facts shared by display projection and local search. */
-export const getNewApiResourceSearchData = (channel: ManagedSiteChannel) => {
+export const getNewApiResourceSearchData = (channel: NewApiChannel) => {
   const models = parseNewApiResourceList(channel.models)
   const groups = parseNewApiResourceList(channel.group)
   const channelType = String(channel.type)

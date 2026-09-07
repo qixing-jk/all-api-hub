@@ -1,13 +1,13 @@
 import type { BrowserContext, Page, Route } from "@playwright/test"
 
-import { ChannelType } from "~/constants"
 import { AXON_HUB_CHANNEL_STATUS } from "~/constants/axonHub"
 import { DoneHubChannelType } from "~/constants/doneHub"
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
+import { ChannelType } from "~/constants/newApi"
 import { OCTOPUS_COOKIE_SESSION_STATUS_PATH } from "~/constants/octopus"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SITE_TYPES } from "~/constants/siteType"
-import type { ManagedSiteChannel } from "~/types/managedSite"
+import type { NewApiChannel } from "~/types/newApi"
 import {
   forceExtensionLanguage,
   seedUserPreferences,
@@ -30,9 +30,7 @@ const AXON_HUB_CREATED_ID = "gid://axonhub/Channel/opaque-created"
 const AXON_HUB_NEXT_CURSOR = "axonhub-cursor-page-2"
 const AXON_HUB_CREATED_CURSOR = "axonhub-cursor-page-3"
 
-const newApiChannel = (
-  overrides: Partial<ManagedSiteChannel>,
-): ManagedSiteChannel =>
+const newApiChannel = (overrides: Partial<NewApiChannel>): NewApiChannel =>
   ({
     id: 101,
     name: "Example primary",
@@ -45,7 +43,7 @@ const newApiChannel = (
     priority: 3,
     weight: 2,
     ...overrides,
-  }) as ManagedSiteChannel
+  }) as NewApiChannel
 
 const interceptedNewApiChannelTemplates = [
   newApiChannel({}),
@@ -83,14 +81,14 @@ const interceptedDoneHubChannelTemplates = [
   }),
 ]
 
-let interceptedNewApiChannels: ManagedSiteChannel[] = []
-let interceptedNewApiCreatedChannel: ManagedSiteChannel | null = null
+let interceptedNewApiChannels: NewApiChannel[] = []
+let interceptedNewApiCreatedChannel: NewApiChannel | null = null
 let interceptedNewApiUpdatePayload: Record<string, unknown> | null = null
 let interceptedNewApiListRequestCount = 0
 let interceptedNewApiFetchModelsRequestCount = 0
 let interceptedNewApiSecretRequestCount = 0
 let interceptedNewApiDeleteRequestCount = 0
-let interceptedDoneHubChannels: ManagedSiteChannel[] = []
+let interceptedDoneHubChannels: NewApiChannel[] = []
 let interceptedAxonHubPrimaryName = "Example primary"
 let interceptedAxonHubPrimaryTags = ["fixture-tag"]
 let interceptedAxonHubUpdateVariables: Record<string, unknown> | null = null
@@ -106,7 +104,7 @@ let interceptedAxonHubCreatedChannel: {
   tags: string[]
 } | null = null
 
-function replaceInterceptedNewApiChannel(updated: ManagedSiteChannel) {
+function replaceInterceptedNewApiChannel(updated: NewApiChannel) {
   if (updated.id === NEW_API_CREATED_ID) {
     interceptedNewApiCreatedChannel = updated
     return
@@ -344,7 +342,7 @@ async function installNewApiManagedSiteChannelsIntercepts(
 
     if (path === "/api/channel/" && method === "POST") {
       const body = JSON.parse(request.postData() ?? "{}") as {
-        channel?: Partial<ManagedSiteChannel>
+        channel?: Partial<NewApiChannel>
       }
       const draft = body.channel ?? {}
       interceptedNewApiCreatedChannel = newApiChannel({
@@ -373,7 +371,7 @@ async function installNewApiManagedSiteChannelsIntercepts(
       }
       const updated = newApiChannel({
         ...existing,
-        ...(payload as Partial<ManagedSiteChannel>),
+        ...(payload as Partial<NewApiChannel>),
         id: existing.id,
         key: existing.key,
       })
@@ -442,7 +440,7 @@ async function installNewApiManagedSiteChannelsIntercepts(
     if (statusMatch && method === "POST") {
       const id = Number(statusMatch[1])
       const body = JSON.parse(request.postData() ?? "{}") as {
-        status?: ManagedSiteChannel["status"]
+        status?: NewApiChannel["status"]
       }
       const existing = channels.find((candidate) => candidate.id === id)
       if (existing) {
@@ -531,7 +529,7 @@ async function installDoneHubManagedSiteChannelsIntercepts(
         }
         interceptedDoneHubChannels[index] = {
           ...interceptedDoneHubChannels[index],
-          ...(payload as Partial<ManagedSiteChannel>),
+          ...(payload as Partial<NewApiChannel>),
         }
         await fulfill(route, { success: true, message: "ok" })
         return

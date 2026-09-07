@@ -2,15 +2,14 @@ import { CLAUDE_CODE_HUB_PROVIDER_TYPE } from "~/constants/claudeCodeHub"
 import { SITE_TYPES } from "~/constants/siteType"
 import type { ManagedResourceMatchingCapability } from "~/services/apiAdapters/contracts/managedResourceMatching"
 import type {
+  ManagedSiteCapabilities,
   ManagedSiteChannelDraftsCapability,
   ManagedSiteConfigCapability,
 } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import { requireNumericManagedResourceId } from "~/services/apiAdapters/managedResources/matchingInputs"
 import { searchProviders } from "~/services/apiService/claudeCodeHub"
 import {
-  buildChannelName,
   checkValidClaudeCodeHubConfig,
-  fetchAvailableModels,
   fetchChannelSecretKey,
   hydrateComparableChannelKeys,
   prepareChannelFormData,
@@ -39,11 +38,7 @@ const claudeCodeHubManagedSiteConfig: ManagedSiteConfigCapability<ClaudeCodeHubC
   )
 
 const claudeCodeHubManagedSiteChannelDrafts: ManagedSiteChannelDraftsCapability =
-  {
-    fetchAvailableModels,
-    buildName: buildChannelName,
-    prepareFormData: prepareChannelFormData,
-  }
+  { prepareFormData: prepareChannelFormData }
 
 const matching: ManagedResourceMatchingCapability<ClaudeCodeHubConfig> = {
   search: async (config, keyword) =>
@@ -84,7 +79,11 @@ const matching: ManagedResourceMatchingCapability<ClaudeCodeHubConfig> = {
   },
 }
 export const claudeCodeHubManagedSiteCapabilities = {
+  siteType: SITE_TYPES.CLAUDE_CODE_HUB,
   matching,
   config: claudeCodeHubManagedSiteConfig,
   channelDrafts: claudeCodeHubManagedSiteChannelDrafts,
-}
+} satisfies ManagedSiteCapabilities<
+  ClaudeCodeHubConfig,
+  typeof SITE_TYPES.CLAUDE_CODE_HUB
+>

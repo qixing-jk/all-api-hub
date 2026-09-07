@@ -1,4 +1,4 @@
-import { DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
+import { DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSiteChannelDraft"
 import type { ManagedSiteOperationContext } from "~/services/managedSites/operationContext"
 import { normalizeList } from "~/utils/core/string"
 

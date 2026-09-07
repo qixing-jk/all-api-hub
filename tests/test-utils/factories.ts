@@ -6,7 +6,7 @@
  * - Keep values deterministic to avoid brittle snapshots/expectations.
  */
 
-import { ChannelType } from "~/constants"
+import { ChannelType } from "~/constants/newApi"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   createDefaultPreferences,
@@ -29,7 +29,7 @@ import {
   type Tag,
 } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
-import { CHANNEL_STATUS, type ManagedSiteChannel } from "~/types/managedSite"
+import { CHANNEL_STATUS, type NewApiChannel } from "~/types/newApi"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
@@ -288,9 +288,9 @@ export function buildApiCredentialProfile(
  * Build a managed-site channel fixture with deterministic, UI-friendly defaults.
  */
 export function buildManagedSiteChannel(
-  overrides: Partial<ManagedSiteChannel> = {},
-): ManagedSiteChannel {
-  const base: ManagedSiteChannel = {
+  overrides: Partial<NewApiChannel> = {},
+): NewApiChannel {
+  const base: NewApiChannel = {
     id: 1,
     type: ChannelType.OpenAI,
     key: "",

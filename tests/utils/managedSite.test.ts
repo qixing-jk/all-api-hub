@@ -3,8 +3,6 @@ import { describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import {
-  getManagedSiteAdminConfig,
-  getManagedSiteAdminConfigForType,
   getManagedSiteContext,
   getManagedSiteContextForType,
   getManagedSiteLabelKey,
@@ -35,24 +33,6 @@ describe("managedSite", () => {
     )
   })
 
-  it("resolves Done Hub admin config when selected", () => {
-    const prefs = {
-      ...DEFAULT_PREFERENCES,
-      managedSiteType: SITE_TYPES.DONE_HUB,
-      doneHub: {
-        baseUrl: "https://donehub.example.com",
-        adminToken: "token",
-        userId: "1",
-      },
-    } satisfies UserPreferences
-
-    expect(getManagedSiteAdminConfig(prefs)).toEqual({
-      baseUrl: prefs.doneHub.baseUrl,
-      adminToken: prefs.doneHub.adminToken,
-      userId: prefs.doneHub.userId,
-    })
-  })
-
   it("returns Done Hub messages key + label key", () => {
     expect(getManagedSiteMessagesKeyFromSiteType(SITE_TYPES.DONE_HUB)).toBe(
       "donehub",
@@ -70,58 +50,6 @@ describe("managedSite", () => {
     expect(getManagedSiteContext(prefs)).toEqual({
       siteType: SITE_TYPES.DONE_HUB,
       messagesKey: "donehub",
-    })
-  })
-
-  it("returns null admin config when Done Hub credentials are incomplete", () => {
-    const prefs = {
-      ...DEFAULT_PREFERENCES,
-      managedSiteType: SITE_TYPES.DONE_HUB,
-      doneHub: {
-        baseUrl: "",
-        adminToken: "token",
-        userId: "1",
-      },
-    } satisfies UserPreferences
-
-    expect(getManagedSiteAdminConfig(prefs)).toBeNull()
-  })
-
-  it("returns admin config when Done Hub credentials are present", () => {
-    const prefs = {
-      ...DEFAULT_PREFERENCES,
-      managedSiteType: SITE_TYPES.DONE_HUB,
-      doneHub: {
-        baseUrl: "https://donehub.example.com",
-        adminToken: "token",
-        userId: "1",
-      },
-    } satisfies UserPreferences
-
-    expect(getManagedSiteAdminConfig(prefs)).toEqual({
-      baseUrl: prefs.doneHub.baseUrl,
-      adminToken: prefs.doneHub.adminToken,
-      userId: prefs.doneHub.userId,
-    })
-  })
-
-  it("can resolve admin config for an explicit target site type", () => {
-    const prefs = {
-      ...DEFAULT_PREFERENCES,
-      managedSiteType: SITE_TYPES.NEW_API,
-      doneHub: {
-        baseUrl: "https://donehub.example.com",
-        adminToken: "donehub-token",
-        userId: "7",
-      },
-    } satisfies UserPreferences
-
-    expect(
-      getManagedSiteAdminConfigForType(prefs, SITE_TYPES.DONE_HUB),
-    ).toEqual({
-      baseUrl: prefs.doneHub.baseUrl,
-      adminToken: prefs.doneHub.adminToken,
-      userId: prefs.doneHub.userId,
     })
   })
 
@@ -174,8 +102,8 @@ describe("managedSite", () => {
         messagesKey: "octopus",
         config: {
           baseUrl: "https://octopus.example.com",
-          adminToken: "",
-          userId: "admin",
+          username: "admin",
+          password: "secret",
         },
       },
     ])

@@ -4,7 +4,6 @@ import { SITE_TYPES } from "~/constants/siteType"
 import {
   collectManagedConfigSecrets,
   collectManagedResourceSecrets,
-  getManagedSiteAdminConfigForType,
   getManagedSiteConfigMissingMessage,
   getManagedSiteContext,
   getManagedSiteLabelKey,
@@ -378,104 +377,6 @@ describe("managedSite utils", () => {
     )
   })
 
-  it("validates octopus admin config separately from legacy token-based configs", () => {
-    const prefs = {
-      octopus: {
-        baseUrl: "https://octopus.example.com",
-        username: "admin",
-        password: "secret",
-      },
-      veloera: {
-        baseUrl: "https://veloera.example.com",
-        adminToken: "admin-token",
-        userId: "42",
-      },
-      doneHub: {
-        baseUrl: "",
-        adminToken: "",
-        userId: "",
-      },
-      axonHub: {
-        baseUrl: "https://axonhub.example.com",
-        email: "admin@example.com",
-        password: "secret",
-      },
-      claudeCodeHub: {
-        baseUrl: "https://cch.example.com",
-        adminToken: "admin-token",
-      },
-    }
-
-    expect(
-      getManagedSiteAdminConfigForType(prefs as any, SITE_TYPES.OCTOPUS),
-    ).toEqual({
-      baseUrl: "https://octopus.example.com",
-      adminToken: "",
-      userId: "admin",
-    })
-    expect(
-      getManagedSiteAdminConfigForType(prefs as any, SITE_TYPES.VELOERA),
-    ).toEqual({
-      baseUrl: "https://veloera.example.com",
-      adminToken: "admin-token",
-      userId: "42",
-    })
-    expect(
-      getManagedSiteAdminConfigForType(prefs as any, SITE_TYPES.AXON_HUB),
-    ).toEqual({
-      baseUrl: "https://axonhub.example.com",
-      adminToken: "secret",
-      userId: "admin@example.com",
-    })
-    expect(
-      getManagedSiteAdminConfigForType(
-        prefs as any,
-        SITE_TYPES.CLAUDE_CODE_HUB,
-      ),
-    ).toEqual({
-      baseUrl: "https://cch.example.com",
-      adminToken: "admin-token",
-      userId: "admin",
-    })
-    expect(
-      getManagedSiteAdminConfigForType(prefs as any, SITE_TYPES.DONE_HUB),
-    ).toBeNull()
-    expect(
-      getManagedSiteAdminConfigForType(
-        {
-          octopus: {
-            baseUrl: "https://octopus.example.com",
-            username: "",
-            password: "",
-          },
-        } as any,
-        SITE_TYPES.OCTOPUS,
-      ),
-    ).toBeNull()
-    expect(
-      getManagedSiteAdminConfigForType(
-        {
-          claudeCodeHub: {
-            baseUrl: "",
-            adminToken: "admin-token",
-          },
-        } as any,
-        SITE_TYPES.CLAUDE_CODE_HUB,
-      ),
-    ).toBeNull()
-    expect(
-      getManagedSiteAdminConfigForType(
-        {
-          claudeCodeHub: {
-            baseUrl: "https://cch.example.com",
-            adminToken: "",
-          },
-        } as any,
-        SITE_TYPES.CLAUDE_CODE_HUB,
-      ),
-    ).toBeNull()
-  })
-
   it("builds managed-site target options and respects exclusions", () => {
     const prefs = {
       newApi: {
@@ -537,8 +438,8 @@ describe("managedSite utils", () => {
         messagesKey: "axonhub",
         config: {
           baseUrl: "https://axonhub.example.com",
-          adminToken: "secret",
-          userId: "admin@example.com",
+          email: "admin@example.com",
+          password: "secret",
         },
       }),
     ])
@@ -577,7 +478,6 @@ describe("managedSite utils", () => {
         config: {
           baseUrl: "https://cch.example.com",
           adminToken: "admin-token",
-          userId: "admin",
         },
       }),
     ])

@@ -1,4 +1,4 @@
-import type { ChannelType } from "~/constants/managedSite"
+import type { ChannelType } from "~/constants/newApi"
 import type { ManagedSiteType } from "~/constants/siteType"
 import type {
   ManagedResourceRef,

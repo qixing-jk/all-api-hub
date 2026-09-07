@@ -1,8 +1,8 @@
+import { DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSiteChannelDraft"
 import {
   ChannelType,
   ChannelTypeNames,
   ChannelTypeOptions,
-  DEFAULT_CHANNEL_FIELDS,
   NEW_API_MANAGED_RESOURCE_FIELD_IDS,
 } from "~/constants/newApi"
 import {
@@ -32,9 +32,11 @@ import {
   throwIfNewApiResourceOperationAborted,
 } from "~/services/apiAdapters/managedResources/newApiResourceUtils"
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/managedSite"
-import type { ChannelFormData, ManagedSiteChannel } from "~/types/managedSite"
+import type { ManagedSiteChannelDraft } from "~/types/managedSiteChannelDraft"
 import { CHANNEL_STATUS } from "~/types/newApi"
 import { normalizeList } from "~/utils/core/string"
+
+import type { NewApiFamilyChannelFields } from "./newApiFamilyChannelFields"
 
 type NewApiEditorOperations = {
   canLoadSecret: boolean
@@ -94,7 +96,7 @@ const newApiEditorPolicy: NewApiFamilyEditorPolicy = {
   ]),
 }
 const editorSecretStates = new WeakMap<
-  ManagedSiteChannel,
+  NewApiFamilyChannelFields,
   ResourceSecretState
 >()
 
@@ -135,7 +137,7 @@ const readSecretIntent = (
 }
 
 const getInventorySecretState = (
-  key: ManagedSiteChannel["key"],
+  key: NewApiFamilyChannelFields["key"],
 ): ResourceSecretState => {
   if (hasUsableManagedSiteChannelKey(key))
     return MANAGED_RESOURCE_SECRET_STATES.Available
@@ -144,9 +146,11 @@ const getInventorySecretState = (
     : MANAGED_RESOURCE_SECRET_STATES.Unavailable
 }
 
-export const sanitizeNewApiEditorDetail = (
-  detail: ManagedSiteChannel,
-): ManagedSiteChannel => {
+export const sanitizeNewApiEditorDetail = <
+  TChannel extends NewApiFamilyChannelFields,
+>(
+  detail: TChannel,
+): TChannel => {
   const sanitized = { ...detail, key: "" }
   editorSecretStates.set(sanitized, getInventorySecretState(detail.key))
   return sanitized
@@ -159,12 +163,12 @@ const newApiResourceFacts = createNewApiFamilyResourceFacts({
 })
 
 export const toNewApiResourceFacts = (
-  channel: ManagedSiteChannel,
+  channel: NewApiFamilyChannelFields,
   ref: ManagedResourceRef,
 ): ResourceDisplayFacts =>
   newApiResourceFacts.toFacts(channel, ref, { inventory: true })
 
-const statusOptions = (detail?: ManagedSiteChannel) => [
+const statusOptions = (detail?: NewApiFamilyChannelFields) => [
   { value: String(CHANNEL_STATUS.Enable) },
   { value: String(CHANNEL_STATUS.ManuallyDisabled) },
   ...(detail?.status === CHANNEL_STATUS.AutoDisabled
@@ -190,7 +194,7 @@ const supportsCommonEditorCreate = (
 // https://github.com/QuantumNous/new-api/blob/f116414284162ad15d8925f7bca494c109b83e93/controller/channel.go#L1082-L1116
 const typeOptions = (
   policy: NewApiFamilyEditorPolicy,
-  detail?: ManagedSiteChannel,
+  detail?: NewApiFamilyChannelFields,
 ) => {
   const options = policy.typeOptions
     .filter(({ value }) => supportsCommonEditorCreate(value, policy))
@@ -213,7 +217,7 @@ const typeOptions = (
 
 const fieldDescriptors = (
   policy: NewApiFamilyEditorPolicy,
-  detail?: ManagedSiteChannel,
+  detail?: NewApiFamilyChannelFields,
   groupSuggestions: readonly string[] = [],
   canLoadSecret = false,
 ): readonly ResourceFieldDescriptor[] => {
@@ -285,7 +289,7 @@ const fieldDescriptors = (
 
 const validateValues = (
   values: EditableResourceProjection,
-  existing?: ManagedSiteChannel,
+  existing?: NewApiFamilyChannelFields,
   policy: NewApiFamilyEditorPolicy = newApiEditorPolicy,
 ): ResourceValidationResult => {
   const editorFields = policy.fields
@@ -309,7 +313,7 @@ const validateValues = (
     })
   }
   // New API requires an explicit upstream address for New API channels; the
-  // legacy editor also requires it for VolcEngine and SunoAPI integrations:
+  // shared editor also requires it for VolcEngine and SunoAPI integrations:
   // https://github.com/QuantumNous/new-api/blob/f116414284162ad15d8925f7bca494c109b83e93/controller/channel.go
   if (
     policy.baseUrlRequiredTypes.has(type) &&
@@ -382,7 +386,7 @@ const createInitialValues = (
 })
 
 const editInitialValues = (
-  detail: ManagedSiteChannel,
+  detail: NewApiFamilyChannelFields,
   editorFields: NewApiFamilyEditorFieldIds = fields,
 ): EditableResourceProjection => ({
   [editorFields.Name]: detail.name,
@@ -401,7 +405,7 @@ const editInitialValues = (
 const toDraft = (
   values: EditableResourceProjection,
   editorFields: NewApiFamilyEditorFieldIds = fields,
-): ChannelFormData => ({
+): ManagedSiteChannelDraft => ({
   name: readString(values, editorFields.Name),
   type: Number(readString(values, editorFields.Type)),
   key: (() => {
@@ -417,7 +421,7 @@ const toDraft = (
   weight: readNumber(values, editorFields.Weight),
   status: Number(
     readString(values, editorFields.Status),
-  ) as ChannelFormData["status"],
+  ) as ManagedSiteChannelDraft["status"],
 })
 
 export const projectNewApiImportSeed = (
@@ -459,7 +463,7 @@ const invalidOptionField = () =>
 const loadModelOptions = async (
   operations: NewApiEditorOperations,
   values: EditableResourceProjection,
-  existing?: ManagedSiteChannel,
+  existing?: NewApiFamilyChannelFields,
   options?: ResourceOperationOptions,
   editorFields: NewApiFamilyEditorFieldIds = fields,
 ) => {
@@ -499,10 +503,10 @@ const loadModelOptions = async (
 const createModelOptionLoader =
   (
     operations: NewApiEditorOperations,
-    existing?: ManagedSiteChannel,
+    existing?: NewApiFamilyChannelFields,
     editorFields: NewApiFamilyEditorFieldIds = fields,
   ): NonNullable<
-    NativeResourceEditorDefinition<ChannelFormData>["loadOptions"]
+    NativeResourceEditorDefinition<ManagedSiteChannelDraft>["loadOptions"]
   > =>
   async (fieldId, values, options) => {
     if (fieldId !== editorFields.Models) throw invalidOptionField()
@@ -519,7 +523,7 @@ export const createNewApiCreateEditor = async (
   operations: NewApiEditorOperations,
   options?: ResourceOperationOptions,
   policy: NewApiFamilyEditorPolicy = newApiEditorPolicy,
-): Promise<NativeResourceEditorDefinition<ChannelFormData>> => ({
+): Promise<NativeResourceEditorDefinition<ManagedSiteChannelDraft>> => ({
   fields: fieldDescriptors(
     policy,
     undefined,
@@ -533,10 +537,10 @@ export const createNewApiCreateEditor = async (
 
 export const createNewApiEditEditor = async (
   operations: NewApiEditorOperations,
-  detail: ManagedSiteChannel,
+  detail: NewApiFamilyChannelFields,
   options?: ResourceOperationOptions,
   policy: NewApiFamilyEditorPolicy = newApiEditorPolicy,
-): Promise<NativeResourceEditorDefinition<ChannelFormData>> => ({
+): Promise<NativeResourceEditorDefinition<ManagedSiteChannelDraft>> => ({
   fields: fieldDescriptors(
     policy,
     detail,
@@ -570,7 +574,7 @@ export const createNewApiFamilyEditorBindings = (
   ) => createNewApiCreateEditor(operations, options, policy),
   editEditor: (
     operations: NewApiEditorOperations,
-    detail: ManagedSiteChannel,
+    detail: NewApiFamilyChannelFields,
     options?: ResourceOperationOptions,
   ) => createNewApiEditEditor(operations, detail, options, policy),
   sanitizeEditDetail: sanitizeNewApiEditorDetail,

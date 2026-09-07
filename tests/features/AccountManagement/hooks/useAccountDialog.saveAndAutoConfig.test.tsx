@@ -130,24 +130,18 @@ vi.mock(
   },
 )
 
-vi.mock(
-  "~/services/managedSites/managedSiteService",
-  async (importOriginal) => {
-    const actual =
-      await importOriginal<
-        typeof import("~/services/managedSites/managedSiteService")
-      >()
+vi.mock("~/services/apiAdapters/registry", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/services/apiAdapters/registry")>()
 
-    return {
-      ...actual,
-      getManagedSiteServiceForType: vi.fn(() => ({
-        siteType: SITE_TYPES.NEW_API,
-        messagesKey: "newapi",
-        getConfig: mockGetManagedSiteConfig,
-      })),
-    }
-  },
-)
+  return {
+    ...actual,
+    getManagedSiteCapabilities: vi.fn(() => ({
+      siteType: SITE_TYPES.NEW_API,
+      config: { get: mockGetManagedSiteConfig },
+    })),
+  }
+})
 
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   const actual =

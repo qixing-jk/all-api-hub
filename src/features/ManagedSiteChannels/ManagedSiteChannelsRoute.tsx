@@ -30,8 +30,8 @@ import {
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { getManagedResourceRegistration } from "~/services/apiAdapters/managedResources/registry"
 import { resolveManagedSiteMigrationCapability } from "~/services/managedSites/channelMigrationCapabilityRegistry"
+import { resolveManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
 import {
-  getManagedSiteAdminConfigForType,
   getManagedSiteConfigMissingMessage,
   getManagedSiteLabel,
   getManagedSiteMessagesKeyFromSiteType,
@@ -264,7 +264,9 @@ function NativeManagedSiteChannels({
     "settings",
   ])
   const { preferences, updateManagedSiteType } = useUserPreferencesContext()
-  const config = getManagedSiteAdminConfigForType(preferences, siteType)
+  const config =
+    resolveManagedSiteRuntimeConfigForType(preferences, siteType)?.config ??
+    null
   const { runRead, executeMigration, verificationDialog } =
     useManagedResourceInteraction({
       siteType,

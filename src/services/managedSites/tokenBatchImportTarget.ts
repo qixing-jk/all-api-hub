@@ -1,12 +1,9 @@
-import type { ManagedSiteType } from "~/constants/siteType"
+import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
+import { type ManagedSiteCapabilities } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
+import { getManagedSiteCapabilities } from "~/services/apiAdapters/registry"
 import {
-  getManagedSiteServiceForType,
-  type ManagedSiteConfig,
-  type ManagedSiteService,
-} from "~/services/managedSites/managedSiteService"
-import {
-  getManagedSiteLegacyAdminConfig,
   type ManagedSiteRuntimeConfig,
+  type ManagedSiteRuntimeConfigValue,
 } from "~/services/managedSites/runtimeConfig"
 import { normalizeManagedSiteChannelBaseUrl } from "~/services/managedSites/utils/channelMatching"
 
@@ -15,12 +12,11 @@ const TARGET_FINGERPRINT_VERSION = "managed-site-token-import-target:v1"
 export interface ManagedSiteTokenBatchImportTargetSummary {
   siteType: ManagedSiteType
   baseUrl: string
-  compatibleUserId: string
 }
 
 export interface ManagedSiteTokenBatchImportTarget {
-  service: ManagedSiteService
-  config: ManagedSiteConfig
+  managedSite: ManagedSiteCapabilities
+  config: ManagedSiteRuntimeConfigValue
   targetSummary: ManagedSiteTokenBatchImportTargetSummary
   targetFingerprint: string
 }
@@ -43,6 +39,23 @@ async function digestTargetIdentity(serializedIdentity: string) {
   ).join("")
 }
 
+/** Returns the configured principal used by the persisted v1 repair receipt. */
+function getImportTargetPrincipal(
+  runtimeConfig: ManagedSiteRuntimeConfig,
+): string {
+  switch (runtimeConfig.siteType) {
+    case SITE_TYPES.OCTOPUS:
+      return runtimeConfig.config.username.trim()
+    case SITE_TYPES.AXON_HUB:
+      return runtimeConfig.config.email.trim()
+    case SITE_TYPES.CLAUDE_CODE_HUB:
+    case SITE_TYPES.SUB2API:
+      return "admin"
+    default:
+      return runtimeConfig.config.userId.trim()
+  }
+}
+
 /**
  * Builds an import target from one captured runtime-config snapshot.
  *
@@ -52,27 +65,25 @@ async function digestTargetIdentity(serializedIdentity: string) {
 export async function createManagedSiteTokenBatchImportTarget(
   runtimeConfig: ManagedSiteRuntimeConfig,
 ): Promise<ManagedSiteTokenBatchImportTarget> {
-  const legacyConfig = getManagedSiteLegacyAdminConfig(runtimeConfig)
   const normalizedBaseUrl = normalizeManagedSiteChannelBaseUrl(
-    legacyConfig.baseUrl,
+    runtimeConfig.config.baseUrl,
   )
-  const compatibleUserId = legacyConfig.userId.trim()
   const targetSummary = {
     siteType: runtimeConfig.siteType,
     baseUrl: normalizedBaseUrl,
-    compatibleUserId,
   }
   const serializedIdentity = serializeTargetIdentity([
     "siteType",
     targetSummary.siteType,
     "normalizedBaseUrl",
     targetSummary.baseUrl,
+    // This field label is persisted in v1 receipt hashes; keep its wire spelling.
     "compatibleUserId",
-    targetSummary.compatibleUserId,
+    getImportTargetPrincipal(runtimeConfig),
   ])
 
   return {
-    service: getManagedSiteServiceForType(runtimeConfig.siteType),
+    managedSite: getManagedSiteCapabilities(runtimeConfig.siteType),
     config: runtimeConfig.config,
     targetSummary,
     targetFingerprint: await digestTargetIdentity(serializedIdentity),

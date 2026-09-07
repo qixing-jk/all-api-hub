@@ -16,7 +16,8 @@ import {
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { getManagedResourceRegistration } from "~/services/apiAdapters/managedResources/registry"
 import type { ManagedSiteMutationResult } from "~/services/managedSites/mutations"
-import { CHANNEL_STATUS, type ChannelFormData } from "~/types/managedSite"
+import { type ManagedSiteChannelDraft } from "~/types/managedSiteChannelDraft"
+import { CHANNEL_STATUS } from "~/types/newApi"
 
 interface NativeManagedChannelImportEditor {
   siteType: ManagedSiteType
@@ -29,17 +30,17 @@ interface NativeManagedChannelImportSession {
   kind: ManagedResourceKind
   reconcile(options?: ResourceOperationOptions): Promise<void>
   openEditor(
-    draft: ChannelFormData,
+    draft: ManagedSiteChannelDraft,
     options?: ResourceOperationOptions,
   ): Promise<NativeManagedChannelImportEditor>
   submit(
-    draft: ChannelFormData,
+    draft: ManagedSiteChannelDraft,
     options?: ResourceOperationOptions,
   ): Promise<ManagedSiteMutationResult<ResourceDisplayFacts>>
 }
 
 const createManagedChannelImportSeed = (
-  draft: ChannelFormData,
+  draft: ManagedSiteChannelDraft,
 ): ManagedChannelImportCreateSeed => ({
   kind: MANAGED_RESOURCE_CREATE_SEED_KINDS.ManagedChannelImport,
   name: draft.name,
@@ -56,7 +57,7 @@ const createManagedChannelImportSeed = (
 /** Opens a provider-native create editor when that provider owns import binding. */
 export async function openNativeManagedChannelImportEditor(
   siteType: ManagedSiteType,
-  draft: ChannelFormData,
+  draft: ManagedSiteChannelDraft,
   options?: ResourceOperationOptions,
 ): Promise<NativeManagedChannelImportEditor> {
   const session = await openNativeManagedChannelImportSession(siteType, options)
@@ -82,7 +83,7 @@ export async function openNativeManagedChannelImportSession(
 
   const workspace = await registration.open(options)
   const openEditor = async (
-    draft: ChannelFormData,
+    draft: ManagedSiteChannelDraft,
     editorOptions?: ResourceOperationOptions,
   ) => {
     const editor = await workspace.openCreateEditor({

@@ -9,8 +9,9 @@ import {
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { parseNewApiResourceList } from "~/services/apiAdapters/managedResources/newApiResourceUtils"
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/managedSite"
-import type { ManagedSiteChannel } from "~/types/managedSite"
 import { CHANNEL_STATUS } from "~/types/newApi"
+
+import type { NewApiFamilyChannelFields } from "./newApiFamilyChannelFields"
 
 type NewApiFamilyResourceFieldIds = {
   readonly Id: string
@@ -27,7 +28,7 @@ type NewApiFamilyResourceFieldIds = {
 }
 
 const statusToDisplay = (
-  status: ManagedSiteChannel["status"],
+  status: NewApiFamilyChannelFields["status"],
 ): ResourceDisplayFacts["status"] => {
   if (status === CHANNEL_STATUS.Enable) return MANAGED_RESOURCE_STATUSES.Enabled
   if (status === CHANNEL_STATUS.ManuallyDisabled) {
@@ -40,7 +41,7 @@ const statusToDisplay = (
 }
 
 const secretState = (
-  key: ManagedSiteChannel["key"],
+  key: NewApiFamilyChannelFields["key"],
   emptyState: ResourceSecretState,
 ) => {
   if (hasUsableManagedSiteChannelKey(key)) {
@@ -55,7 +56,7 @@ export function createNewApiFamilyResourceFacts(policy: {
   typeNames: Readonly<Record<number, string>>
   emptyInventorySecretState: ResourceSecretState
 }) {
-  const getSearchData = (channel: ManagedSiteChannel) => {
+  const getSearchData = (channel: NewApiFamilyChannelFields) => {
     const models = parseNewApiResourceList(channel.models)
     const groups = parseNewApiResourceList(channel.group)
     const rawType = String(channel.type)
@@ -77,7 +78,7 @@ export function createNewApiFamilyResourceFacts(policy: {
   }
 
   const toFacts = (
-    channel: ManagedSiteChannel,
+    channel: NewApiFamilyChannelFields,
     ref: ManagedResourceRef,
     options: { inventory: boolean },
   ): ResourceDisplayFacts => {

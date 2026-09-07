@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { AXON_HUB_CHANNEL_TYPE } from "~/constants/axonHub"
-import { ChannelType } from "~/constants/managedSite"
+import { ChannelType } from "~/constants/newApi"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   MANAGED_RESOURCE_FAILURE_CODES,
@@ -27,7 +27,7 @@ import {
   type ManagedSiteMigrationTargetPreparation,
 } from "~/types/managedSiteMigrationCapability"
 
-const mockGetManagedSiteServiceForType = vi.fn()
+const mockGetManagedSiteCapabilitiesForType = vi.fn()
 const mockDoneHubBuildChannelPayload = vi.fn()
 const mockDoneHubCreateChannel = vi.fn()
 const mockDoneHubFetchChannelSecretKey = vi.fn()
@@ -44,8 +44,9 @@ const mockClaudeCodeHubGetConfig = vi.fn()
 const mockResolveManagedUpstreamResourceFeatureCapabilities = vi.fn()
 const mockResolveManagedSiteMigrationCapability = vi.fn()
 
-vi.mock("~/services/managedSites/managedSiteService", () => ({
-  getManagedSiteServiceForType: mockGetManagedSiteServiceForType,
+vi.mock("~/services/apiAdapters/registry", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/services/apiAdapters/registry")>()),
+  getManagedSiteCapabilities: mockGetManagedSiteCapabilitiesForType,
 }))
 
 vi.mock("~/services/managedSites/channelMigrationCapabilityRegistry", () => ({
@@ -296,20 +297,76 @@ describe("channelMigration", () => {
         reason: "feature-slice-disabled",
       }),
     )
-    mockGetManagedSiteServiceForType.mockImplementation((siteType: string) => {
-      if (siteType === SITE_TYPES.DONE_HUB) {
-        return {
-          getConfig: mockDoneHubGetConfig,
-          buildChannelPayload: mockDoneHubBuildChannelPayload,
-          createChannel: mockDoneHubCreateChannel,
-          listChannels: mockDoneHubListChannels,
-          fetchChannelSecretKey: mockDoneHubFetchChannelSecretKey,
+    mockGetManagedSiteCapabilitiesForType.mockImplementation(
+      (siteType: string) => {
+        if (siteType === SITE_TYPES.DONE_HUB) {
+          return {
+            buildChannelPayload: mockDoneHubBuildChannelPayload,
+            createChannel: mockDoneHubCreateChannel,
+            listChannels: mockDoneHubListChannels,
+            config: { get: mockDoneHubGetConfig },
+            matching: { fetchSecretKey: mockDoneHubFetchChannelSecretKey },
+          }
         }
-      }
 
-      if (siteType === SITE_TYPES.VELOERA) {
+        if (siteType === SITE_TYPES.VELOERA) {
+          return {
+            buildChannelPayload: vi.fn((draft: any) => ({
+              mode: "single",
+              channel: {
+                name: draft.name,
+                key: draft.key,
+              },
+            })),
+            createChannel: vi.fn().mockResolvedValue({
+              outcome: "succeeded",
+              data: null,
+              confirmedEffects: [
+                {
+                  kind: "resource-created",
+                  resourceKind: "channel",
+                  resourceId: 1,
+                },
+              ],
+              message: "ok",
+            }),
+            listChannels: vi.fn().mockResolvedValue({
+              items: [],
+              total: 0,
+              type_counts: {},
+            }),
+            config: { get: mockVeloeraGetConfig },
+            matching: { fetchSecretKey: mockVeloeraFetchChannelSecretKey },
+          }
+        }
+
+        if (siteType === SITE_TYPES.AXON_HUB) {
+          return {
+            buildChannelPayload: mockAxonHubBuildChannelPayload,
+            createChannel: mockAxonHubCreateChannel,
+            listChannels: vi.fn().mockResolvedValue({
+              items: [],
+              total: 0,
+              type_counts: {},
+            }),
+            config: { get: mockAxonHubGetConfig },
+          }
+        }
+
+        if (siteType === SITE_TYPES.CLAUDE_CODE_HUB) {
+          return {
+            buildChannelPayload: mockClaudeCodeHubBuildChannelPayload,
+            createChannel: mockClaudeCodeHubCreateChannel,
+            listChannels: vi.fn().mockResolvedValue({
+              items: [],
+              total: 0,
+              type_counts: {},
+            }),
+            config: { get: mockClaudeCodeHubGetConfig },
+          }
+        }
+
         return {
-          getConfig: mockVeloeraGetConfig,
           buildChannelPayload: vi.fn((draft: any) => ({
             mode: "single",
             channel: {
@@ -334,68 +391,16 @@ describe("channelMigration", () => {
             total: 0,
             type_counts: {},
           }),
-          fetchChannelSecretKey: mockVeloeraFetchChannelSecretKey,
-        }
-      }
-
-      if (siteType === SITE_TYPES.AXON_HUB) {
-        return {
-          getConfig: mockAxonHubGetConfig,
-          buildChannelPayload: mockAxonHubBuildChannelPayload,
-          createChannel: mockAxonHubCreateChannel,
-          listChannels: vi.fn().mockResolvedValue({
-            items: [],
-            total: 0,
-            type_counts: {},
-          }),
-        }
-      }
-
-      if (siteType === SITE_TYPES.CLAUDE_CODE_HUB) {
-        return {
-          getConfig: mockClaudeCodeHubGetConfig,
-          buildChannelPayload: mockClaudeCodeHubBuildChannelPayload,
-          createChannel: mockClaudeCodeHubCreateChannel,
-          listChannels: vi.fn().mockResolvedValue({
-            items: [],
-            total: 0,
-            type_counts: {},
-          }),
-        }
-      }
-
-      return {
-        getConfig: vi.fn().mockResolvedValue({
-          baseUrl: "https://target.example.com",
-          adminToken: "target-token",
-          userId: "1",
-        }),
-        buildChannelPayload: vi.fn((draft: any) => ({
-          mode: "single",
-          channel: {
-            name: draft.name,
-            key: draft.key,
+          config: {
+            get: vi.fn().mockResolvedValue({
+              baseUrl: "https://target.example.com",
+              adminToken: "target-token",
+              userId: "1",
+            }),
           },
-        })),
-        createChannel: vi.fn().mockResolvedValue({
-          outcome: "succeeded",
-          data: null,
-          confirmedEffects: [
-            {
-              kind: "resource-created",
-              resourceKind: "channel",
-              resourceId: 1,
-            },
-          ],
-          message: "ok",
-        }),
-        listChannels: vi.fn().mockResolvedValue({
-          items: [],
-          total: 0,
-          type_counts: {},
-        }),
-      }
-    })
+        }
+      },
+    )
   })
 
   it("exposes canonical migration entry points using native resource selections", async () => {

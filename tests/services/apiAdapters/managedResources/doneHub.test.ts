@@ -33,28 +33,28 @@ const mocks = vi.hoisted(() => ({
   fetchModels: vi.fn(),
   fetchDraftModels: vi.fn(),
   fetchSiteUserGroups: vi.fn(),
-  buildPayload: vi.fn(),
 }))
 
 vi.mock("~/services/preferences/userPreferences", () => ({
   userPreferences: { getPreferences: mocks.getPreferences },
 }))
 
+vi.mock("~/services/apiAdapters/managedResources/doneHubOperations", () => ({
+  doneHubChannelOperations: {
+    list: mocks.list,
+    create: mocks.create,
+    update: mocks.update,
+    delete: mocks.remove,
+    fetchModels: mocks.fetchModels,
+    fetchDraftModels: mocks.fetchDraftModels,
+  },
+  doneHubManagedResourceModels: {
+    fetchModels: mocks.fetchModels,
+    fetchDraftModels: mocks.fetchDraftModels,
+  },
+}))
 vi.mock("~/services/apiAdapters/managedSites/doneHub", () => ({
   doneHubManagedSiteCapabilities: {
-    channels: {
-      list: mocks.list,
-      create: mocks.create,
-      update: mocks.update,
-      delete: mocks.remove,
-      fetchModels: mocks.fetchModels,
-      fetchDraftModels: mocks.fetchDraftModels,
-    },
-    models: {
-      fetchModels: mocks.fetchModels,
-      fetchDraftModels: mocks.fetchDraftModels,
-    },
-    channelDrafts: { buildPayload: mocks.buildPayload },
     queries: { siteUserGroups: { fetch: mocks.fetchSiteUserGroups } },
   },
 }))
@@ -137,10 +137,6 @@ describe("DoneHub native managed resource", () => {
       ],
     })
     mocks.fetchSiteUserGroups.mockResolvedValue(["default", "vip"])
-    mocks.buildPayload.mockImplementation((draft) => ({
-      mode: "single",
-      channel: draft,
-    }))
   })
 
   it("projects DoneHub identity and provider-owned type facts without exposing secrets", async () => {

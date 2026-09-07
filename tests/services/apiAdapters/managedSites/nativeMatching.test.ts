@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { ChannelType } from "~/constants"
+import { ChannelType } from "~/constants/newApi"
 import { SITE_TYPES } from "~/constants/siteType"
 import { axonHubManagedSiteCapabilities } from "~/services/apiAdapters/managedSites/axonHub"
 import { claudeCodeHubManagedSiteCapabilities } from "~/services/apiAdapters/managedSites/claudeCodeHub"
@@ -14,7 +14,7 @@ import {
   getUnmaskedProviderKey,
   searchProviders,
 } from "~/services/apiService/claudeCodeHub"
-import { listAllChannels, searchChannel } from "~/services/apiService/veloera"
+import { listAllChannels } from "~/services/apiService/veloera"
 import { resolveManagedSiteChannelMatch } from "~/services/managedSites/channelMatchResolver"
 import {
   listSub2ApiApiKeyAccounts,
@@ -34,7 +34,6 @@ vi.mock("~/services/apiService/axonHub", async (original) => ({
 vi.mock("~/services/apiService/veloera", async (original) => ({
   ...(await original<typeof import("~/services/apiService/veloera")>()),
   listAllChannels: vi.fn(),
-  searchChannel: vi.fn(),
 }))
 vi.mock("~/services/managedSites/providers/sub2api", async (original) => ({
   ...(await original<
@@ -82,10 +81,12 @@ describe("native managed-resource matching", () => {
     const matching = axonHubManagedSiteCapabilities.matching
     vi.mocked(getAxonHubChannelSecretKey).mockResolvedValue("test-key")
     const result = await resolveManagedSiteChannelMatch({
-      service: {
+      managedSite: {
         siteType: SITE_TYPES.AXON_HUB,
-        searchChannel: matching.search,
-        hydrateComparableChannelKeys: matching.hydrateComparableKeys,
+        matching: {
+          search: matching.search,
+          hydrateComparableKeys: matching.hydrateComparableKeys,
+        },
       },
       managedConfig: axonConfig,
       accountBaseUrl: "https://upstream.example",
@@ -202,7 +203,6 @@ describe("native managed-resource matching", () => {
     expect(listAllChannels).toHaveBeenCalledWith(expect.anything(), {
       requireCompleteInventory: true,
     })
-    expect(searchChannel).not.toHaveBeenCalled()
     expect(result?.items[0]).not.toHaveProperty("balance")
     expect(result?.items[0].id).toBe(5)
   })

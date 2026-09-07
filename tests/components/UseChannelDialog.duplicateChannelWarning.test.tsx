@@ -4,7 +4,7 @@ import {
   useChannelDialog,
   useChannelDialogContext,
 } from "~/components/dialogs/ChannelDialog"
-import { ChannelType } from "~/constants"
+import { ChannelType } from "~/constants/newApi"
 import { SITE_TYPES } from "~/constants/siteType"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import * as accountTokenOperations from "~/services/accounts/ensureAccountApiToken"
@@ -15,14 +15,14 @@ import {
 } from "~/services/accounts/tokenQuickCreateResolution"
 import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
 import { MANAGED_RESOURCE_CREATE_SEED_KINDS } from "~/services/apiAdapters/contracts/managedResourceNative"
+import type { ManagedSiteCapabilities } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import { TOKEN_PROVISIONING_BLOCK_REASONS } from "~/services/apiAdapters/contracts/tokenProvisioning"
 import * as nativeResourceRegistry from "~/services/apiAdapters/managedResources/registry"
+import * as managedSiteRegistry from "~/services/apiAdapters/registry"
 import {
   MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
   MatchResolutionUnresolvedError,
 } from "~/services/managedSites/channelMatch"
-import type { ManagedSiteService } from "~/services/managedSites/managedSiteService"
-import * as managedSiteService from "~/services/managedSites/managedSiteService"
 import {
   MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS,
   MANAGED_SITE_TOKEN_CHANNEL_STATUSES,
@@ -40,10 +40,12 @@ import {
   ACCOUNT_TODAY_METRIC_REASONS,
   ACCOUNT_TODAY_METRIC_STATUSES,
 } from "~/types/accountTodayStats"
-import type { ChannelFormData, ManagedSiteChannel } from "~/types/managedSite"
+import type { ManagedSiteChannelDraft } from "~/types/managedSiteChannelDraft"
+import type { NewApiChannel } from "~/types/newApi"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { createDeferred } from "~~/tests/test-utils/deferred"
+import { createManagedSiteCapabilitiesStub } from "~~/tests/test-utils/managedSiteCapabilitiesFactory"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 
 const { mockToastLoading, mockToastDismiss, mockToastError } = vi.hoisted(
@@ -58,9 +60,9 @@ const { mockFetchAccountTokens, mockResolveApiTokenKey } = vi.hoisted(() => ({
   mockResolveApiTokenKey: vi.fn(),
 }))
 
-const getManagedSiteServiceSpy = vi.spyOn(
-  managedSiteService,
-  "getManagedSiteService",
+const getManagedSiteCapabilitiesSpy = vi.spyOn(
+  managedSiteRegistry,
+  "getManagedSiteCapabilities",
 )
 const getAccountByIdSpy = vi.spyOn(accountQueries, "getAccountById")
 const ensureAccountApiTokenSpy = vi.spyOn(
@@ -153,8 +155,8 @@ const buildApiToken = (overrides: Partial<ApiToken> = {}): ApiToken => ({
 })
 
 const buildManagedSiteChannel = (
-  overrides: Partial<ManagedSiteChannel> = {},
-): ManagedSiteChannel =>
+  overrides: Partial<NewApiChannel> = {},
+): NewApiChannel =>
   ({
     id: 11,
     name: "Existing channel",
@@ -167,11 +169,11 @@ const buildManagedSiteChannel = (
     weight: 0,
     group: "default",
     ...overrides,
-  }) as ManagedSiteChannel
+  }) as NewApiChannel
 
 const buildPreparedFormData = (
   overrides: Partial<
-    ChannelFormData & { modelPrefillFetchFailed?: boolean }
+    ManagedSiteChannelDraft & { modelPrefillFetchFailed?: boolean }
   > = {},
 ) =>
   ({
@@ -185,7 +187,7 @@ const buildPreparedFormData = (
     weight: 0,
     status: 1,
     ...overrides,
-  }) satisfies ChannelFormData & { modelPrefillFetchFailed?: boolean }
+  }) satisfies ManagedSiteChannelDraft & { modelPrefillFetchFailed?: boolean }
 
 const buildManagedSiteAssessment = (
   overrides: Partial<ManagedSiteTokenChannelAssessment> = {},
@@ -222,27 +224,26 @@ const buildManagedSiteAssessment = (
   }
 }
 
-const buildManagedSiteServiceMock = (
-  overrides: Partial<ManagedSiteService> = {},
-): Partial<ManagedSiteService> => ({
-  siteType: "new-api",
-  messagesKey: "newapi",
-  getConfig: vi.fn(async () => ({
-    baseUrl: "https://managed.example.com",
-    adminToken: "admin-token",
-    userId: "1",
-  })),
-  prepareChannelFormData: vi.fn(async () => buildPreparedFormData()),
-  searchChannel: vi.fn(async () => ({
-    items: [],
-    total: 0,
-    type_counts: {},
-  })),
-  hydrateComparableChannelKeys: vi.fn(
-    async (_config, candidates) => candidates,
-  ),
-  ...overrides,
-})
+const buildManagedSiteCapabilitiesMock = (
+  overrides: NonNullable<
+    Parameters<typeof createManagedSiteCapabilitiesStub>[0]
+  > = {},
+): ManagedSiteCapabilities =>
+  createManagedSiteCapabilitiesStub({
+    ...overrides,
+    config: {
+      get: vi.fn(async () => ({
+        baseUrl: "https://managed.example.com",
+        adminToken: "admin-token",
+        userId: "1",
+      })),
+      ...overrides.config,
+    },
+    channelDrafts: {
+      prepareFormData: vi.fn(async () => buildPreparedFormData()),
+      ...overrides.channelDrafts,
+    },
+  })
 
 const nativeOpenCreateEditorMock = vi.fn()
 
@@ -268,6 +269,7 @@ vi.mock("react-hot-toast", () => ({
 }))
 
 vi.mock("~/services/apiAdapters/registry", () => ({
+  getManagedSiteCapabilities: vi.fn(),
   getSiteTypeCapabilities: () => ({
     managedSites: { matching: { search: vi.fn() } },
     account: {
@@ -349,36 +351,41 @@ describe("useChannelDialog", () => {
 
   it("shows warning and cancels when user does not continue", async () => {
     const existingChannel = buildManagedSiteChannel()
-    const mockService: Partial<ManagedSiteService> = {
+    const mockService = createManagedSiteCapabilitiesStub({
       siteType: SITE_TYPES.NEW_API,
-      messagesKey: "newapi",
-      getConfig: vi.fn(async () => ({
-        baseUrl: "https://managed.example.com",
-        adminToken: "admin-token",
-        userId: "1",
-      })),
-      prepareChannelFormData: vi.fn(
-        async () =>
-          ({
-            name: "Auto channel",
-            type: ChannelType.OpenAI,
-            key: "sk-test",
-            base_url: "https://upstream.example.com",
-            models: ["gpt-4"],
-            groups: ["default"],
-            priority: 0,
-            weight: 0,
-            status: 1,
-          }) satisfies ChannelFormData,
-      ),
-      searchChannel: vi.fn(async () => ({
-        items: [existingChannel],
-        total: 1,
-        type_counts: {},
-      })),
-    }
-    getManagedSiteServiceSpy.mockResolvedValue(
-      mockService as ManagedSiteService,
+      config: {
+        get: vi.fn(async () => ({
+          baseUrl: "https://managed.example.com",
+          adminToken: "admin-token",
+          userId: "1",
+        })),
+      },
+      channelDrafts: {
+        prepareFormData: vi.fn(
+          async () =>
+            ({
+              name: "Auto channel",
+              type: ChannelType.OpenAI,
+              key: "sk-test",
+              base_url: "https://upstream.example.com",
+              models: ["gpt-4"],
+              groups: ["default"],
+              priority: 0,
+              weight: 0,
+              status: 1,
+            }) satisfies ManagedSiteChannelDraft,
+        ),
+      },
+      matching: {
+        search: vi.fn(async () => ({
+          items: [existingChannel],
+          total: 1,
+          type_counts: {},
+        })),
+      },
+    })
+    getManagedSiteCapabilitiesSpy.mockReturnValue(
+      mockService as ManagedSiteCapabilities,
     )
 
     const { result } = renderHook(() => ({
@@ -455,18 +462,19 @@ describe("useChannelDialog", () => {
         ],
         open: openRegistration,
       })
-    getManagedSiteServiceSpy.mockResolvedValue(
-      buildManagedSiteServiceMock({
+    getManagedSiteCapabilitiesSpy.mockReturnValue(
+      buildManagedSiteCapabilitiesMock({
         siteType: SITE_TYPES.AXON_HUB,
-        messagesKey: "axonhub",
-        prepareChannelFormData: vi.fn(async () =>
-          buildPreparedFormData({
-            type: "openai",
-            weight: 7,
-            status: 1,
-          }),
-        ),
-      }) as ManagedSiteService,
+        channelDrafts: {
+          prepareFormData: vi.fn(async () =>
+            buildPreparedFormData({
+              type: "openai",
+              weight: 7,
+              status: 1,
+            }),
+          ),
+        },
+      }) as ManagedSiteCapabilities,
     )
 
     const { result } = await renderChannelDialogHook()
@@ -535,11 +543,10 @@ describe("useChannelDialog", () => {
           delete: vi.fn(),
         })),
       })
-    getManagedSiteServiceSpy.mockResolvedValue(
-      buildManagedSiteServiceMock({
+    getManagedSiteCapabilitiesSpy.mockReturnValue(
+      buildManagedSiteCapabilitiesMock({
         siteType: SITE_TYPES.AXON_HUB,
-        messagesKey: "axonhub",
-      }) as ManagedSiteService,
+      }) as ManagedSiteCapabilities,
     )
     let shouldContinue = true
     const { result } = await renderChannelDialogHook()
@@ -569,11 +576,10 @@ describe("useChannelDialog", () => {
     registrationSpy = vi
       .spyOn(nativeResourceRegistry, "getManagedResourceRegistration")
       .mockReturnValue(null)
-    getManagedSiteServiceSpy.mockResolvedValue(
-      buildManagedSiteServiceMock({
+    getManagedSiteCapabilitiesSpy.mockReturnValue(
+      buildManagedSiteCapabilitiesMock({
         siteType: SITE_TYPES.AXON_HUB,
-        messagesKey: "axonhub",
-      }) as ManagedSiteService,
+      }) as ManagedSiteCapabilities,
     )
     const { result } = await renderChannelDialogHook()
 
@@ -594,20 +600,22 @@ describe("useChannelDialog", () => {
   })
 
   it("shows duplicate channel warning from migrated resource candidates", async () => {
-    const mockService = buildManagedSiteServiceMock({
-      searchChannel: vi.fn(async () => ({
-        items: [
-          buildManagedSiteChannel({
-            id: 81,
-            name: "Resource duplicate channel",
-          }),
-        ],
-        total: 1,
-        type_counts: {},
-      })),
+    const mockService = buildManagedSiteCapabilitiesMock({
+      matching: {
+        search: vi.fn(async () => ({
+          items: [
+            buildManagedSiteChannel({
+              id: 81,
+              name: "Resource duplicate channel",
+            }),
+          ],
+          total: 1,
+          type_counts: {},
+        })),
+      },
     })
-    getManagedSiteServiceSpy.mockResolvedValue(
-      mockService as ManagedSiteService,
+    getManagedSiteCapabilitiesSpy.mockReturnValue(
+      mockService as ManagedSiteCapabilities,
     )
 
     const { result } = await renderChannelDialogHook()
@@ -629,42 +637,47 @@ describe("useChannelDialog", () => {
       await openPromise
     })
 
-    expect(mockService.searchChannel).toHaveBeenCalled()
+    expect(mockService.matching.search).toHaveBeenCalled()
     expect(result.current.context.state.isOpen).toBe(false)
   })
 
   it("opens ChannelDialog when user continues despite duplicate", async () => {
     const existingChannel = buildManagedSiteChannel()
-    const mockService: Partial<ManagedSiteService> = {
+    const mockService = createManagedSiteCapabilitiesStub({
       siteType: SITE_TYPES.NEW_API,
-      messagesKey: "newapi",
-      getConfig: vi.fn(async () => ({
-        baseUrl: "https://managed.example.com",
-        adminToken: "admin-token",
-        userId: "1",
-      })),
-      prepareChannelFormData: vi.fn(
-        async () =>
-          ({
-            name: "Auto channel",
-            type: ChannelType.OpenAI,
-            key: "sk-test",
-            base_url: "https://upstream.example.com",
-            models: ["gpt-4"],
-            groups: ["default"],
-            priority: 0,
-            weight: 0,
-            status: 1,
-          }) satisfies ChannelFormData,
-      ),
-      searchChannel: vi.fn(async () => ({
-        items: [existingChannel],
-        total: 1,
-        type_counts: {},
-      })),
-    }
-    getManagedSiteServiceSpy.mockResolvedValue(
-      mockService as ManagedSiteService,
+      config: {
+        get: vi.fn(async () => ({
+          baseUrl: "https://managed.example.com",
+          adminToken: "admin-token",
+          userId: "1",
+        })),
+      },
+      channelDrafts: {
+        prepareFormData: vi.fn(
+          async () =>
+            ({
+              name: "Auto channel",
+              type: ChannelType.OpenAI,
+              key: "sk-test",
+              base_url: "https://upstream.example.com",
+              models: ["gpt-4"],
+              groups: ["default"],
+              priority: 0,
+              weight: 0,
+              status: 1,
+            }) satisfies ManagedSiteChannelDraft,
+        ),
+      },
+      matching: {
+        search: vi.fn(async () => ({
+          items: [existingChannel],
+          total: 1,
+          type_counts: {},
+        })),
+      },
+    })
+    getManagedSiteCapabilitiesSpy.mockReturnValue(
+      mockService as ManagedSiteCapabilities,
     )
 
     const { result } = renderHook(() => ({
@@ -718,11 +731,11 @@ describe("useChannelDialog", () => {
           key: token.key,
         }),
     )
-    const mockService = buildManagedSiteServiceMock({
-      prepareChannelFormData: prepareChannelFormDataMock,
+    const mockService = buildManagedSiteCapabilitiesMock({
+      channelDrafts: { prepareFormData: prepareChannelFormDataMock },
     })
-    getManagedSiteServiceSpy.mockResolvedValue(
-      mockService as ManagedSiteService,
+    getManagedSiteCapabilitiesSpy.mockReturnValue(
+      mockService as ManagedSiteCapabilities,
     )
     getAccountByIdSpy.mockResolvedValue(buildSiteAccount())
 
@@ -751,41 +764,46 @@ describe("useChannelDialog", () => {
       id: 22,
       key: "",
     })
-    const mockService: Partial<ManagedSiteService> = {
+    const mockService = createManagedSiteCapabilitiesStub({
       siteType: SITE_TYPES.NEW_API,
-      messagesKey: "newapi",
-      getConfig: vi.fn(async () => ({
-        baseUrl: "https://managed.example.com",
-        adminToken: "admin-token",
-        userId: "1",
-      })),
-      prepareChannelFormData: vi.fn(
-        async () =>
-          ({
-            name: "Auto channel",
-            type: ChannelType.OpenAI,
-            key: "sk-test",
-            base_url: "https://upstream.example.com",
-            models: ["gpt-4"],
-            groups: ["default"],
-            priority: 0,
-            weight: 0,
-            status: 1,
-          }) satisfies ChannelFormData,
-      ),
-      searchChannel: vi.fn(async () => ({
-        items: [hiddenKeyChannel],
-        total: 1,
-        type_counts: {},
-      })),
-      hydrateComparableChannelKeys: vi.fn(async () => {
-        throw new MatchResolutionUnresolvedError(
-          MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.VERIFICATION_REQUIRED,
-        )
-      }),
-    }
-    getManagedSiteServiceSpy.mockResolvedValue(
-      mockService as ManagedSiteService,
+      config: {
+        get: vi.fn(async () => ({
+          baseUrl: "https://managed.example.com",
+          adminToken: "admin-token",
+          userId: "1",
+        })),
+      },
+      channelDrafts: {
+        prepareFormData: vi.fn(
+          async () =>
+            ({
+              name: "Auto channel",
+              type: ChannelType.OpenAI,
+              key: "sk-test",
+              base_url: "https://upstream.example.com",
+              models: ["gpt-4"],
+              groups: ["default"],
+              priority: 0,
+              weight: 0,
+              status: 1,
+            }) satisfies ManagedSiteChannelDraft,
+        ),
+      },
+      matching: {
+        search: vi.fn(async () => ({
+          items: [hiddenKeyChannel],
+          total: 1,
+          type_counts: {},
+        })),
+        hydrateComparableKeys: vi.fn(async () => {
+          throw new MatchResolutionUnresolvedError(
+            MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.VERIFICATION_REQUIRED,
+          )
+        }),
+      },
+    })
+    getManagedSiteCapabilitiesSpy.mockReturnValue(
+      mockService as ManagedSiteCapabilities,
     )
 
     const { result } = renderHook(() => ({
@@ -856,21 +874,22 @@ describe("useChannelDialog", () => {
           delete: vi.fn(),
         })),
       })
-    getManagedSiteServiceSpy.mockResolvedValue(
-      buildManagedSiteServiceMock({
+    getManagedSiteCapabilitiesSpy.mockReturnValue(
+      buildManagedSiteCapabilitiesMock({
         siteType: SITE_TYPES.SUB2API,
-        messagesKey: "sub2api",
-        searchChannel: vi.fn(async () => ({
-          items: [hiddenKeyChannel],
-          total: 1,
-          type_counts: {},
-        })),
-        hydrateComparableChannelKeys: vi.fn(async () => {
-          throw new MatchResolutionUnresolvedError(
-            MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.VERIFICATION_REQUIRED,
-          )
-        }),
-      }) as ManagedSiteService,
+        matching: {
+          search: vi.fn(async () => ({
+            items: [hiddenKeyChannel],
+            total: 1,
+            type_counts: {},
+          })),
+          hydrateComparableKeys: vi.fn(async () => {
+            throw new MatchResolutionUnresolvedError(
+              MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.VERIFICATION_REQUIRED,
+            )
+          }),
+        },
+      }) as ManagedSiteCapabilities,
     )
     getAccountByIdSpy.mockResolvedValue(
       buildSiteAccount({ site_type: SITE_TYPES.SUB2API }),
@@ -898,37 +917,42 @@ describe("useChannelDialog", () => {
   })
 
   it("opens ChannelDialog with a prefill warning when the provider marks model preload as failed", async () => {
-    const mockService: Partial<ManagedSiteService> = {
+    const mockService = createManagedSiteCapabilitiesStub({
       siteType: SITE_TYPES.NEW_API,
-      messagesKey: "newapi",
-      getConfig: vi.fn(async () => ({
-        baseUrl: "https://managed.example.com",
-        adminToken: "admin-token",
-        userId: "1",
-      })),
-      prepareChannelFormData: vi.fn(
-        async () =>
-          ({
-            name: "Auto channel",
-            type: ChannelType.OpenAI,
-            key: "sk-test",
-            base_url: "https://upstream.example.com",
-            models: [],
-            modelPrefillFetchFailed: true,
-            groups: ["default"],
-            priority: 0,
-            weight: 0,
-            status: 1,
-          }) satisfies ChannelFormData,
-      ),
-      searchChannel: vi.fn(async () => ({
-        items: [],
-        total: 0,
-        type_counts: {},
-      })),
-    }
-    getManagedSiteServiceSpy.mockResolvedValue(
-      mockService as ManagedSiteService,
+      config: {
+        get: vi.fn(async () => ({
+          baseUrl: "https://managed.example.com",
+          adminToken: "admin-token",
+          userId: "1",
+        })),
+      },
+      channelDrafts: {
+        prepareFormData: vi.fn(
+          async () =>
+            ({
+              name: "Auto channel",
+              type: ChannelType.OpenAI,
+              key: "sk-test",
+              base_url: "https://upstream.example.com",
+              models: [],
+              modelPrefillFetchFailed: true,
+              groups: ["default"],
+              priority: 0,
+              weight: 0,
+              status: 1,
+            }) satisfies ManagedSiteChannelDraft,
+        ),
+      },
+      matching: {
+        search: vi.fn(async () => ({
+          items: [],
+          total: 0,
+          type_counts: {},
+        })),
+      },
+    })
+    getManagedSiteCapabilitiesSpy.mockReturnValue(
+      mockService as ManagedSiteCapabilities,
     )
 
     const { result } = renderHook(() => ({
@@ -956,36 +980,41 @@ describe("useChannelDialog", () => {
   })
 
   it("does not show a prefill warning for an intentionally empty model list", async () => {
-    const mockService: Partial<ManagedSiteService> = {
+    const mockService = createManagedSiteCapabilitiesStub({
       siteType: SITE_TYPES.NEW_API,
-      messagesKey: "newapi",
-      getConfig: vi.fn(async () => ({
-        baseUrl: "https://managed.example.com",
-        adminToken: "admin-token",
-        userId: "1",
-      })),
-      prepareChannelFormData: vi.fn(
-        async () =>
-          ({
-            name: "Auto channel",
-            type: ChannelType.OpenAI,
-            key: "sk-test",
-            base_url: "https://upstream.example.com",
-            models: [],
-            groups: ["default"],
-            priority: 0,
-            weight: 0,
-            status: 1,
-          }) satisfies ChannelFormData,
-      ),
-      searchChannel: vi.fn(async () => ({
-        items: [],
-        total: 0,
-        type_counts: {},
-      })),
-    }
-    getManagedSiteServiceSpy.mockResolvedValue(
-      mockService as ManagedSiteService,
+      config: {
+        get: vi.fn(async () => ({
+          baseUrl: "https://managed.example.com",
+          adminToken: "admin-token",
+          userId: "1",
+        })),
+      },
+      channelDrafts: {
+        prepareFormData: vi.fn(
+          async () =>
+            ({
+              name: "Auto channel",
+              type: ChannelType.OpenAI,
+              key: "sk-test",
+              base_url: "https://upstream.example.com",
+              models: [],
+              groups: ["default"],
+              priority: 0,
+              weight: 0,
+              status: 1,
+            }) satisfies ManagedSiteChannelDraft,
+        ),
+      },
+      matching: {
+        search: vi.fn(async () => ({
+          items: [],
+          total: 0,
+          type_counts: {},
+        })),
+      },
+    })
+    getManagedSiteCapabilitiesSpy.mockReturnValue(
+      mockService as ManagedSiteCapabilities,
     )
 
     const { result } = renderHook(() => ({
@@ -1013,19 +1042,20 @@ describe("useChannelDialog", () => {
   })
 
   it("opens the global Sub2API token dialog when multiple groups are available", async () => {
-    const mockService: Partial<ManagedSiteService> = {
+    const mockService = createManagedSiteCapabilitiesStub({
       siteType: SITE_TYPES.NEW_API,
-      messagesKey: "newapi",
-      getConfig: vi.fn(async () => ({
-        baseUrl: "https://managed.example.com",
-        adminToken: "admin-token",
-        userId: "1",
-      })),
-      prepareChannelFormData: vi.fn(),
-      searchChannel: vi.fn(),
-    }
-    getManagedSiteServiceSpy.mockResolvedValue(
-      mockService as ManagedSiteService,
+      config: {
+        get: vi.fn(async () => ({
+          baseUrl: "https://managed.example.com",
+          adminToken: "admin-token",
+          userId: "1",
+        })),
+      },
+      channelDrafts: { prepareFormData: vi.fn() },
+      matching: { search: vi.fn() },
+    })
+    getManagedSiteCapabilitiesSpy.mockReturnValue(
+      mockService as ManagedSiteCapabilities,
     )
     getAccountByIdSpy.mockResolvedValue(
       buildSiteAccount({ site_type: "sub2api" }),
@@ -1060,36 +1090,41 @@ describe("useChannelDialog", () => {
   })
 
   it("resumes the Sub2API token ensure flow after the token dialog succeeds", async () => {
-    const mockService: Partial<ManagedSiteService> = {
+    const mockService = createManagedSiteCapabilitiesStub({
       siteType: SITE_TYPES.NEW_API,
-      messagesKey: "newapi",
-      getConfig: vi.fn(async () => ({
-        baseUrl: "https://managed.example.com",
-        adminToken: "admin-token",
-        userId: "1",
-      })),
-      prepareChannelFormData: vi.fn(
-        async () =>
-          ({
-            name: "Auto channel",
-            type: ChannelType.OpenAI,
-            key: "sk-test",
-            base_url: "https://upstream.example.com",
-            models: ["gpt-4"],
-            groups: ["default"],
-            priority: 0,
-            weight: 0,
-            status: 1,
-          }) satisfies ChannelFormData,
-      ),
-      searchChannel: vi.fn(async () => ({
-        items: [],
-        total: 0,
-        type_counts: {},
-      })),
-    }
-    getManagedSiteServiceSpy.mockResolvedValue(
-      mockService as ManagedSiteService,
+      config: {
+        get: vi.fn(async () => ({
+          baseUrl: "https://managed.example.com",
+          adminToken: "admin-token",
+          userId: "1",
+        })),
+      },
+      channelDrafts: {
+        prepareFormData: vi.fn(
+          async () =>
+            ({
+              name: "Auto channel",
+              type: ChannelType.OpenAI,
+              key: "sk-test",
+              base_url: "https://upstream.example.com",
+              models: ["gpt-4"],
+              groups: ["default"],
+              priority: 0,
+              weight: 0,
+              status: 1,
+            }) satisfies ManagedSiteChannelDraft,
+        ),
+      },
+      matching: {
+        search: vi.fn(async () => ({
+          items: [],
+          total: 0,
+          type_counts: {},
+        })),
+      },
+    })
+    getManagedSiteCapabilitiesSpy.mockReturnValue(
+      mockService as ManagedSiteCapabilities,
     )
     getAccountByIdSpy.mockResolvedValue(
       buildSiteAccount({ site_type: "sub2api" }),
@@ -1146,27 +1181,32 @@ describe("useChannelDialog", () => {
     }
     const createdToken = buildApiToken({ id: 30, key: "sk-created" })
 
-    const mockService: Partial<ManagedSiteService> = {
+    const mockService = createManagedSiteCapabilitiesStub({
       siteType: SITE_TYPES.NEW_API,
-      messagesKey: "newapi",
-      getConfig: vi.fn(async () => ({
-        baseUrl: "https://managed.example.com",
-        adminToken: "admin-token",
-        userId: "1",
-      })),
-      prepareChannelFormData: vi.fn(async () =>
-        buildPreparedFormData({
-          key: createdToken.key,
-        }),
-      ),
-      searchChannel: vi.fn(async () => ({
-        items: [],
-        total: 0,
-        type_counts: {},
-      })),
-    }
-    getManagedSiteServiceSpy.mockResolvedValue(
-      mockService as ManagedSiteService,
+      config: {
+        get: vi.fn(async () => ({
+          baseUrl: "https://managed.example.com",
+          adminToken: "admin-token",
+          userId: "1",
+        })),
+      },
+      channelDrafts: {
+        prepareFormData: vi.fn(async () =>
+          buildPreparedFormData({
+            key: createdToken.key,
+          }),
+        ),
+      },
+      matching: {
+        search: vi.fn(async () => ({
+          items: [],
+          total: 0,
+          type_counts: {},
+        })),
+      },
+    })
+    getManagedSiteCapabilitiesSpy.mockReturnValue(
+      mockService as ManagedSiteCapabilities,
     )
     getAccountByIdSpy.mockResolvedValue(
       buildSiteAccount({ site_type: "new-api" }),
@@ -1208,13 +1248,12 @@ describe("useChannelDialog", () => {
           key: token.key,
         }),
     )
-    const mockService = buildManagedSiteServiceMock({
+    const mockService = buildManagedSiteCapabilitiesMock({
       siteType: SITE_TYPES.SUB2API,
-      messagesKey: "sub2api",
-      prepareChannelFormData: prepareChannelFormDataMock,
+      channelDrafts: { prepareFormData: prepareChannelFormDataMock },
     })
-    getManagedSiteServiceSpy.mockResolvedValue(
-      mockService as ManagedSiteService,
+    getManagedSiteCapabilitiesSpy.mockReturnValue(
+      mockService as ManagedSiteCapabilities,
     )
     getAccountByIdSpy.mockResolvedValue(
       buildSiteAccount({ site_type: SITE_TYPES.SUB2API }),
@@ -1255,11 +1294,11 @@ describe("useChannelDialog", () => {
           key: token.key,
         }),
     )
-    const mockService = buildManagedSiteServiceMock({
-      prepareChannelFormData: prepareChannelFormDataMock,
+    const mockService = buildManagedSiteCapabilitiesMock({
+      channelDrafts: { prepareFormData: prepareChannelFormDataMock },
     })
-    getManagedSiteServiceSpy.mockResolvedValue(
-      mockService as ManagedSiteService,
+    getManagedSiteCapabilitiesSpy.mockReturnValue(
+      mockService as ManagedSiteCapabilities,
     )
     getAccountByIdSpy.mockResolvedValue(
       buildSiteAccount({ site_type: SITE_TYPES.SUB2API }),
@@ -1315,13 +1354,12 @@ describe("useChannelDialog", () => {
           key: token.key,
         }),
     )
-    const mockService = buildManagedSiteServiceMock({
+    const mockService = buildManagedSiteCapabilitiesMock({
       siteType: SITE_TYPES.SUB2API,
-      messagesKey: "sub2api",
-      prepareChannelFormData: prepareChannelFormDataMock,
+      channelDrafts: { prepareFormData: prepareChannelFormDataMock },
     })
-    getManagedSiteServiceSpy.mockResolvedValue(
-      mockService as ManagedSiteService,
+    getManagedSiteCapabilitiesSpy.mockReturnValue(
+      mockService as ManagedSiteCapabilities,
     )
     getAccountByIdSpy.mockResolvedValue(
       buildSiteAccount({ site_type: "sub2api" }),
@@ -1383,13 +1421,12 @@ describe("useChannelDialog", () => {
           key: token.key,
         }),
     )
-    const mockService = buildManagedSiteServiceMock({
+    const mockService = buildManagedSiteCapabilitiesMock({
       siteType: SITE_TYPES.SUB2API,
-      messagesKey: "sub2api",
-      prepareChannelFormData: prepareChannelFormDataMock,
+      channelDrafts: { prepareFormData: prepareChannelFormDataMock },
     })
-    getManagedSiteServiceSpy.mockResolvedValue(
-      mockService as ManagedSiteService,
+    getManagedSiteCapabilitiesSpy.mockReturnValue(
+      mockService as ManagedSiteCapabilities,
     )
     getAccountByIdSpy.mockResolvedValue(
       buildSiteAccount({ site_type: SITE_TYPES.SUB2API }),
@@ -1448,11 +1485,11 @@ describe("useChannelDialog", () => {
           key: token.key,
         }),
     )
-    const mockService = buildManagedSiteServiceMock({
-      prepareChannelFormData: prepareChannelFormDataMock,
+    const mockService = buildManagedSiteCapabilitiesMock({
+      channelDrafts: { prepareFormData: prepareChannelFormDataMock },
     })
-    getManagedSiteServiceSpy.mockResolvedValue(
-      mockService as ManagedSiteService,
+    getManagedSiteCapabilitiesSpy.mockReturnValue(
+      mockService as ManagedSiteCapabilities,
     )
     getAccountByIdSpy.mockResolvedValue(
       buildSiteAccount({ site_type: "sub2api" }),
@@ -1578,11 +1615,11 @@ describe("useChannelDialog", () => {
           key: token.key,
         }),
     )
-    const mockService = buildManagedSiteServiceMock({
-      prepareChannelFormData: prepareChannelFormDataMock,
+    const mockService = buildManagedSiteCapabilitiesMock({
+      channelDrafts: { prepareFormData: prepareChannelFormDataMock },
     })
-    getManagedSiteServiceSpy.mockResolvedValue(
-      mockService as ManagedSiteService,
+    getManagedSiteCapabilitiesSpy.mockReturnValue(
+      mockService as ManagedSiteCapabilities,
     )
     getAccountByIdSpy.mockResolvedValue(
       buildSiteAccount({ site_type: "sub2api" }),
@@ -1625,11 +1662,11 @@ describe("useChannelDialog", () => {
           key: token.key,
         }),
     )
-    const mockService = buildManagedSiteServiceMock({
-      prepareChannelFormData: prepareChannelFormDataMock,
+    const mockService = buildManagedSiteCapabilitiesMock({
+      channelDrafts: { prepareFormData: prepareChannelFormDataMock },
     })
-    getManagedSiteServiceSpy.mockResolvedValue(
-      mockService as ManagedSiteService,
+    getManagedSiteCapabilitiesSpy.mockReturnValue(
+      mockService as ManagedSiteCapabilities,
     )
     getAccountByIdSpy.mockResolvedValue(
       buildSiteAccount({ site_type: SITE_TYPES.SUB2API }),
@@ -1675,11 +1712,11 @@ describe("useChannelDialog", () => {
           key: token.key,
         }),
     )
-    const mockService = buildManagedSiteServiceMock({
-      prepareChannelFormData: prepareChannelFormDataMock,
+    const mockService = buildManagedSiteCapabilitiesMock({
+      channelDrafts: { prepareFormData: prepareChannelFormDataMock },
     })
-    getManagedSiteServiceSpy.mockResolvedValue(
-      mockService as ManagedSiteService,
+    getManagedSiteCapabilitiesSpy.mockReturnValue(
+      mockService as ManagedSiteCapabilities,
     )
     getAccountByIdSpy.mockResolvedValue(
       buildSiteAccount({ site_type: SITE_TYPES.SUB2API }),
@@ -1722,11 +1759,11 @@ describe("useChannelDialog", () => {
           key: token.key,
         }),
     )
-    const mockService = buildManagedSiteServiceMock({
-      prepareChannelFormData: prepareChannelFormDataMock,
+    const mockService = buildManagedSiteCapabilitiesMock({
+      channelDrafts: { prepareFormData: prepareChannelFormDataMock },
     })
-    getManagedSiteServiceSpy.mockResolvedValue(
-      mockService as ManagedSiteService,
+    getManagedSiteCapabilitiesSpy.mockReturnValue(
+      mockService as ManagedSiteCapabilities,
     )
     getAccountByIdSpy.mockResolvedValue(
       buildSiteAccount({ site_type: SITE_TYPES.SUB2API }),
@@ -1780,11 +1817,11 @@ describe("useChannelDialog", () => {
           key: token.key,
         }),
     )
-    const mockService = buildManagedSiteServiceMock({
-      prepareChannelFormData: prepareChannelFormDataMock,
+    const mockService = buildManagedSiteCapabilitiesMock({
+      channelDrafts: { prepareFormData: prepareChannelFormDataMock },
     })
-    getManagedSiteServiceSpy.mockResolvedValue(
-      mockService as ManagedSiteService,
+    getManagedSiteCapabilitiesSpy.mockReturnValue(
+      mockService as ManagedSiteCapabilities,
     )
     getAccountByIdSpy.mockResolvedValue(
       buildSiteAccount({ site_type: SITE_TYPES.SUB2API }),
@@ -1982,7 +2019,7 @@ describe("useChannelDialog", () => {
       )
     })
 
-    expect(getManagedSiteServiceSpy).not.toHaveBeenCalled()
+    expect(getManagedSiteCapabilitiesSpy).not.toHaveBeenCalled()
     expect(mockToastError).toHaveBeenCalledWith(expect.any(String), {
       id: "toast-id",
     })
@@ -1990,11 +2027,11 @@ describe("useChannelDialog", () => {
   })
 
   it("shows the managed-site configuration error and aborts opening from an account", async () => {
-    const mockService = buildManagedSiteServiceMock({
-      getConfig: vi.fn(async () => null),
+    const mockService = buildManagedSiteCapabilitiesMock({
+      config: { get: vi.fn(async () => null) },
     })
-    getManagedSiteServiceSpy.mockResolvedValue(
-      mockService as ManagedSiteService,
+    getManagedSiteCapabilitiesSpy.mockReturnValue(
+      mockService as ManagedSiteCapabilities,
     )
 
     const { result } = await renderChannelDialogHook()
@@ -2018,11 +2055,11 @@ describe("useChannelDialog", () => {
       total: 1,
       type_counts: {},
     }))
-    const mockService = buildManagedSiteServiceMock({
-      searchChannel: searchChannelMock,
+    const mockService = buildManagedSiteCapabilitiesMock({
+      matching: { search: searchChannelMock },
     })
-    getManagedSiteServiceSpy.mockResolvedValue(
-      mockService as ManagedSiteService,
+    getManagedSiteCapabilitiesSpy.mockReturnValue(
+      mockService as ManagedSiteCapabilities,
     )
 
     const managedSiteStatus: ManagedSiteTokenChannelStatus = {
@@ -2070,16 +2107,17 @@ describe("useChannelDialog", () => {
       total: 1,
       type_counts: {},
     }))
-    const mockService = buildManagedSiteServiceMock({
+    const mockService = buildManagedSiteCapabilitiesMock({
       siteType: SITE_TYPES.SUB2API,
-      messagesKey: "sub2api",
-      prepareChannelFormData: vi.fn(async () =>
-        buildPreparedFormData({ models: [], groups: [] }),
-      ),
-      searchChannel: searchChannelMock,
+      channelDrafts: {
+        prepareFormData: vi.fn(async () =>
+          buildPreparedFormData({ models: [], groups: [] }),
+        ),
+      },
+      matching: { search: searchChannelMock },
     })
-    getManagedSiteServiceSpy.mockResolvedValue(
-      mockService as ManagedSiteService,
+    getManagedSiteCapabilitiesSpy.mockReturnValue(
+      mockService as ManagedSiteCapabilities,
     )
 
     const managedSiteStatus: ManagedSiteTokenChannelStatus = {
@@ -2119,11 +2157,11 @@ describe("useChannelDialog", () => {
       total: 1,
       type_counts: {},
     }))
-    const mockService = buildManagedSiteServiceMock({
-      searchChannel: searchChannelMock,
+    const mockService = buildManagedSiteCapabilitiesMock({
+      matching: { search: searchChannelMock },
     })
-    getManagedSiteServiceSpy.mockResolvedValue(
-      mockService as ManagedSiteService,
+    getManagedSiteCapabilitiesSpy.mockReturnValue(
+      mockService as ManagedSiteCapabilities,
     )
 
     const managedSiteStatus: ManagedSiteTokenChannelStatus = {
@@ -2163,16 +2201,18 @@ describe("useChannelDialog", () => {
       total: 1,
       type_counts: {},
     }))
-    const mockService = buildManagedSiteServiceMock({
-      searchChannel: searchChannelMock,
-      hydrateComparableChannelKeys: vi.fn(async () => {
-        throw new MatchResolutionUnresolvedError(
-          MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.VERIFICATION_REQUIRED,
-        )
-      }),
+    const mockService = buildManagedSiteCapabilitiesMock({
+      matching: {
+        search: searchChannelMock,
+        hydrateComparableKeys: vi.fn(async () => {
+          throw new MatchResolutionUnresolvedError(
+            MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.VERIFICATION_REQUIRED,
+          )
+        }),
+      },
     })
-    getManagedSiteServiceSpy.mockResolvedValue(
-      mockService as ManagedSiteService,
+    getManagedSiteCapabilitiesSpy.mockReturnValue(
+      mockService as ManagedSiteCapabilities,
     )
 
     const managedSiteStatus: ManagedSiteTokenChannelStatus = {
@@ -2217,11 +2257,11 @@ describe("useChannelDialog", () => {
           key: token.key,
         }),
     )
-    const mockService = buildManagedSiteServiceMock({
-      prepareChannelFormData: prepareChannelFormDataMock,
+    const mockService = buildManagedSiteCapabilitiesMock({
+      channelDrafts: { prepareFormData: prepareChannelFormDataMock },
     })
-    getManagedSiteServiceSpy.mockResolvedValue(
-      mockService as ManagedSiteService,
+    getManagedSiteCapabilitiesSpy.mockReturnValue(
+      mockService as ManagedSiteCapabilities,
     )
     mockFetchAccountTokens.mockResolvedValueOnce({ items: [] })
     resolveDefaultTokenQuickCreateResolutionSpy.mockResolvedValueOnce({
@@ -2310,11 +2350,11 @@ describe("useChannelDialog", () => {
         })
       },
     )
-    const mockService = buildManagedSiteServiceMock({
-      prepareChannelFormData: prepareChannelFormDataMock,
+    const mockService = buildManagedSiteCapabilitiesMock({
+      channelDrafts: { prepareFormData: prepareChannelFormDataMock },
     })
-    getManagedSiteServiceSpy.mockResolvedValue(
-      mockService as ManagedSiteService,
+    getManagedSiteCapabilitiesSpy.mockReturnValue(
+      mockService as ManagedSiteCapabilities,
     )
 
     let shouldContinue = true
@@ -2351,20 +2391,24 @@ describe("useChannelDialog", () => {
     const existingChannel = buildManagedSiteChannel({
       key: "sk-credential",
     })
-    const mockService = buildManagedSiteServiceMock({
-      searchChannel: vi.fn(async () => ({
-        items: [existingChannel],
-        total: 1,
-        type_counts: {},
-      })),
-      prepareChannelFormData: vi.fn(async () =>
-        buildPreparedFormData({
-          key: "sk-credential",
-        }),
-      ),
+    const mockService = buildManagedSiteCapabilitiesMock({
+      matching: {
+        search: vi.fn(async () => ({
+          items: [existingChannel],
+          total: 1,
+          type_counts: {},
+        })),
+      },
+      channelDrafts: {
+        prepareFormData: vi.fn(async () =>
+          buildPreparedFormData({
+            key: "sk-credential",
+          }),
+        ),
+      },
     })
-    getManagedSiteServiceSpy.mockResolvedValue(
-      mockService as ManagedSiteService,
+    getManagedSiteCapabilitiesSpy.mockReturnValue(
+      mockService as ManagedSiteCapabilities,
     )
 
     const { result } = await renderChannelDialogHook()
@@ -2391,11 +2435,11 @@ describe("useChannelDialog", () => {
   })
 
   it("shows the managed-site configuration error and aborts opening from raw credentials", async () => {
-    const mockService = buildManagedSiteServiceMock({
-      getConfig: vi.fn(async () => null),
+    const mockService = buildManagedSiteCapabilitiesMock({
+      config: { get: vi.fn(async () => null) },
     })
-    getManagedSiteServiceSpy.mockResolvedValue(
-      mockService as ManagedSiteService,
+    getManagedSiteCapabilitiesSpy.mockReturnValue(
+      mockService as ManagedSiteCapabilities,
     )
 
     const { result } = await renderChannelDialogHook()
@@ -2439,11 +2483,11 @@ describe("useChannelDialog", () => {
         })
       },
     )
-    const mockService = buildManagedSiteServiceMock({
-      prepareChannelFormData: prepareChannelFormDataMock,
+    const mockService = buildManagedSiteCapabilitiesMock({
+      channelDrafts: { prepareFormData: prepareChannelFormDataMock },
     })
-    getManagedSiteServiceSpy.mockResolvedValue(
-      mockService as ManagedSiteService,
+    getManagedSiteCapabilitiesSpy.mockReturnValue(
+      mockService as ManagedSiteCapabilities,
     )
 
     const onSuccess = vi.fn()

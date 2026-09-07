@@ -14,7 +14,10 @@ import type {
   ManagedSiteRuntimeConfig,
   ManagedSiteRuntimeConfigValue,
 } from "~/services/managedSites/runtimeConfig"
-import { resolveCurrentManagedSiteRuntimeConfig } from "~/services/managedSites/runtimeConfig"
+import {
+  hasValidManagedSiteConfig,
+  resolveCurrentManagedSiteRuntimeConfig,
+} from "~/services/managedSites/runtimeConfig"
 import {
   collectManagedConfigSecrets,
   collectManagedResourceSecrets,
@@ -27,15 +30,14 @@ import {
   toModelTokenKey,
 } from "~/services/models/utils/modelName"
 import type { ManagedModelChannel } from "~/types/managedResourceModels"
-import { CHANNEL_STATUS } from "~/types/managedSite"
 import {
   ALL_PRESET_STANDARD_MODELS,
   DEFAULT_MODEL_REDIRECT_PREFERENCES,
 } from "~/types/managedSiteModelRedirect"
+import { CHANNEL_STATUS } from "~/types/newApi"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
-import { hasValidManagedSiteConfig } from "../../managedSites/managedSiteService"
 import {
   userPreferences,
   type UserPreferences,

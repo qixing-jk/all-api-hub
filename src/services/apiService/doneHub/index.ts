@@ -7,23 +7,24 @@ import type {
   ApiServiceRequest,
 } from "~/services/apiTransport/type"
 import type {
-  CreateChannelPayload,
-  ManagedSiteChannel,
-  ManagedSiteChannelListData,
-  UpdateChannelPayload,
-} from "~/types/managedSite"
+  DoneHubChannel,
+  DoneHubChannelListData,
+  DoneHubChannelRaw,
+  DoneHubCreateChannelPayload,
+  DoneHubUpdateChannelPayload,
+} from "~/types/doneHub"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
 import { doneHubRequests } from "./request"
 
+export { fetchCheckInStatus } from "~/services/apiService/newApiFamily/default/accountData"
 export {
   fetchAccountData,
   fetchTodayIncome,
   fetchTodayUsage,
   refreshAccountData,
 } from "~/services/apiService/newApiFamily/variants/doneHub"
-export { fetchCheckInStatus } from "~/services/apiService/newApiFamily/default/accountData"
 
 /**
  * Unified logger scoped to DoneHub API helpers.
@@ -51,30 +52,7 @@ type DoneHubDataResult<T> = {
   total_count?: number
 }
 
-type DoneHubChannelInfo = Partial<ManagedSiteChannel["channel_info"]>
-
-export type DoneHubChannelRaw = Partial<
-  Omit<ManagedSiteChannel, "channel_info" | "type"> & {
-    type: number | string
-    channel_info?: DoneHubChannelInfo
-  }
-> &
-  Record<string, unknown>
-
-type DoneHubUserGroupRaw = {
-  symbol?: string
-}
-
-/**
- * Create an empty channel_info object when upstream omits it.
- */
-const createDefaultChannelInfo = (): ManagedSiteChannel["channel_info"] => ({
-  is_multi_key: false,
-  multi_key_size: 0,
-  multi_key_status_list: null,
-  multi_key_polling_index: 0,
-  multi_key_mode: "",
-})
+type DoneHubUserGroupRaw = { symbol?: string }
 
 /**
  * Best-effort conversion for numeric fields.
@@ -90,58 +68,23 @@ const toNumberOrZero = (value: unknown): number => {
   return 0
 }
 
-/**
- * Normalize DoneHub channel payloads to match New API's `ManagedSiteChannel`.
- */
+/** Normalizes the fields consumed by the product while preserving native provider data. */
 export const normalizeDoneHubChannel = (
   raw: DoneHubChannelRaw,
-): ManagedSiteChannel => {
-  const rawInfo = raw.channel_info
-  const channelInfo = rawInfo
-    ? {
-        is_multi_key: Boolean(rawInfo.is_multi_key),
-        multi_key_size: toNumberOrZero(rawInfo.multi_key_size),
-        multi_key_status_list: rawInfo.multi_key_status_list ?? null,
-        multi_key_polling_index: toNumberOrZero(
-          rawInfo.multi_key_polling_index,
-        ),
-        multi_key_mode: rawInfo.multi_key_mode ?? "",
-      }
-    : createDefaultChannelInfo()
-
-  return {
-    id: toNumberOrZero(raw.id),
-    type: toNumberOrZero(raw.type) as ManagedSiteChannel["type"],
-    key: raw.key ?? "",
-    name: raw.name ?? "",
-    base_url: raw.base_url ?? "",
-    models: raw.models ?? "",
-    status: toNumberOrZero(raw.status) as ManagedSiteChannel["status"],
-    weight: toNumberOrZero(raw.weight),
-    priority: toNumberOrZero(raw.priority),
-    openai_organization: raw.openai_organization ?? null,
-    test_model: raw.test_model ?? null,
-    created_time: toNumberOrZero(raw.created_time),
-    test_time: toNumberOrZero(raw.test_time),
-    response_time: toNumberOrZero(raw.response_time),
-    other: raw.other ?? "",
-    balance: toNumberOrZero(raw.balance),
-    balance_updated_time: toNumberOrZero(raw.balance_updated_time),
-    group: raw.group ?? "default",
-    used_quota: toNumberOrZero(raw.used_quota),
-    model_mapping: raw.model_mapping ?? "",
-    status_code_mapping: raw.status_code_mapping ?? "",
-    auto_ban: toNumberOrZero(raw.auto_ban),
-    other_info: raw.other_info ?? "",
-    tag: raw.tag ?? null,
-    param_override: raw.param_override ?? null,
-    header_override: raw.header_override ?? null,
-    remark: raw.remark ?? null,
-    channel_info: channelInfo,
-    setting: raw.setting ?? "",
-    settings: raw.settings ?? raw.setting ?? "",
-  }
-}
+): DoneHubChannel => ({
+  ...raw,
+  id: toNumberOrZero(raw.id),
+  type: toNumberOrZero(raw.type),
+  name: raw.name ?? "",
+  key: raw.key ?? "",
+  base_url: raw.base_url ?? "",
+  models: raw.models ?? "",
+  group: raw.group ?? "default",
+  status: toNumberOrZero(raw.status),
+  priority: toNumberOrZero(raw.priority),
+  weight: toNumberOrZero(raw.weight),
+  model_mapping: raw.model_mapping ?? "",
+})
 
 type ChannelListAllOptions = ManagedSitePaginatedChannelRequestOptions
 
@@ -157,7 +100,7 @@ type ChannelListAllOptions = ManagedSitePaginatedChannelRequestOptions
 export async function searchChannel(
   request: ApiServiceRequest,
   keyword: string,
-): Promise<ManagedSiteChannelListData | null> {
+): Promise<DoneHubChannelListData | null> {
   try {
     const params = new URLSearchParams({
       base_url: keyword,
@@ -193,7 +136,7 @@ export async function searchChannel(
           ? result.total_count
           : items.length,
       type_counts: typeCounts,
-    } as ManagedSiteChannelListData
+    } as DoneHubChannelListData
   } catch (error) {
     logger.error("Failed to search channels", error)
     return null
@@ -204,19 +147,18 @@ export async function searchChannel(
  * Create a channel for DoneHub-managed sites.
  *
  * DoneHub expects a flat channel payload (not wrapped by `{ mode, channel }`).
- * We convert `CreateChannelPayload` into a DoneHub-compatible request body.
+ * The caller supplies a flat provider-owned payload.
  */
 export async function createChannel(
   request: ApiServiceRequest,
-  channelData: CreateChannelPayload,
+  channelData: DoneHubCreateChannelPayload,
 ) {
   try {
-    const { groups, ...channel } = channelData.channel
     const payload = {
-      ...channel,
-      group: channel.group ?? (groups ?? []).join(","),
+      ...channelData,
+      group: channelData.group ?? "",
       // Must set default {} for model_mapping to prevent DoneHub from treating it as null, which causes multiple unrelated fields in the edit view to appear empty in the UI.
-      model_mapping: channel.model_mapping ?? "{}",
+      model_mapping: channelData.model_mapping ?? "{}",
     }
 
     return await doneHubRequests.envelope<void>(request, {
@@ -239,27 +181,17 @@ export async function createChannel(
  * Update a channel for DoneHub-managed sites.
  *
  * DoneHub expects the update payload to be flat and uses `group` instead of
- * `groups`. Preserve exact minimal patches and only derive `group` when the
- * caller actually supplied `groups`.
+ * `groups`. Preserve the native full or selective update exactly as planned.
  */
-export async function updateChannel<TChannel extends UpdateChannelPayload>(
-  request: ApiServiceRequest,
-  channelData: TChannel,
-) {
+export async function updateChannel<
+  TChannel extends DoneHubUpdateChannelPayload,
+>(request: ApiServiceRequest, channelData: TChannel) {
   try {
-    const { groups, ...rest } = channelData
-    const payload = {
-      ...rest,
-      ...(rest.group === undefined && groups !== undefined
-        ? { group: groups.join(",") }
-        : {}),
-    }
-
     return await doneHubRequests.envelope<void>(request, {
       endpoint: DONE_HUB_CHANNEL_ENDPOINT,
       options: {
         method: "PUT",
-        body: JSON.stringify(payload),
+        body: JSON.stringify(channelData),
       },
     })
   } catch (error) {
@@ -303,7 +235,7 @@ export async function deleteChannel(
 export async function listAllChannels(
   request: ApiServiceRequest,
   options?: ChannelListAllOptions,
-): Promise<ManagedSiteChannelListData> {
+): Promise<DoneHubChannelListData> {
   const pageSize = options?.pageSize ?? REQUEST_CONFIG.DEFAULT_PAGE_SIZE
   const beforeRequest = options?.beforeRequest
   const endpointBase = options?.endpoint ?? DONE_HUB_CHANNEL_ENDPOINT
@@ -311,7 +243,7 @@ export async function listAllChannels(
 
   let totalCount = 0
 
-  const allItems = await fetchAllItems<ManagedSiteChannel>(
+  const allItems = await fetchAllItems<DoneHubChannel>(
     async (page) => {
       const params = new URLSearchParams({
         page: page.toString(),
@@ -365,21 +297,7 @@ export async function listAllChannels(
     items: allItems,
     total: totalCount || allItems.length,
     type_counts: typeCounts,
-  } as ManagedSiteChannelListData
-}
-
-/**
- * Fetch a single DoneHub channel detail payload and normalize it to
- * `ManagedSiteChannel`.
- */
-export async function fetchChannel(
-  request: ApiServiceRequest,
-  channelId: number,
-  options?: Pick<RequestInit, "signal">,
-): Promise<ManagedSiteChannel> {
-  return normalizeDoneHubChannel(
-    await fetchChannelRaw(request, channelId, options),
-  )
+  } as DoneHubChannelListData
 }
 
 /**
@@ -412,14 +330,16 @@ export async function fetchChannelModels(
   channelId: number,
   options?: Pick<RequestInit, "signal">,
 ): Promise<string[]> {
-  const channel = await fetchChannel(request, channelId, options)
+  const channel = normalizeDoneHubChannel(
+    await fetchChannelRaw(request, channelId, options),
+  )
 
   return await fetchDoneHubProviderModels(request, channel, options)
 }
 
 const fetchDoneHubProviderModels = async (
   request: ApiServiceRequest,
-  channel: DoneHubChannelRaw | ManagedSiteChannel,
+  channel: DoneHubChannelRaw,
   options?: Pick<RequestInit, "signal">,
 ): Promise<string[]> => {
   const requestData = {
@@ -471,81 +391,6 @@ export async function fetchDraftChannelModels(
     },
     options,
   )
-}
-
-/**
- * Update the `models` field for a DoneHub channel.
- *
- * DoneHub's `PUT /api/channel/` uses `Select(\"*\")` when `models != \"\"`, which
- * turns the update into a full overwrite. Sending only `{ id, models }` would
- * wipe other channel fields (key/base_url/proxy/etc). We must fetch the full
- * channel payload first and then submit the complete object with updated models.
- */
-export async function updateChannelModels(
-  request: ApiServiceRequest,
-  channelId: number,
-  models: string,
-  options?: Pick<RequestInit, "signal">,
-): Promise<void> {
-  const channelEndpoint = `${DONE_HUB_CHANNEL_ENDPOINT}${channelId}`
-  const channel = await doneHubRequests.data<Record<string, unknown>>(request, {
-    endpoint: channelEndpoint,
-    options,
-  })
-
-  const payload = {
-    ...channel,
-    models,
-  }
-
-  const response = await updateDoneHubChannelFields(request, payload, options)
-
-  if (!response.success) {
-    throw new ApiError(
-      getErrorMessage(response.message, "Failed to update channel models"),
-      undefined,
-      DONE_HUB_CHANNEL_ENDPOINT,
-    )
-  }
-}
-
-/**
- * Update the `models` and `model_mapping` fields for a DoneHub channel.
- *
- * Same overwrite caveat as `updateChannelModels`: we must submit a full channel
- * payload to avoid clearing unrelated fields.
- */
-export async function updateChannelModelMapping(
-  request: ApiServiceRequest,
-  channelId: number,
-  models: string,
-  modelMappingJson: string,
-  options?: Pick<RequestInit, "signal">,
-): Promise<void> {
-  const channelEndpoint = `${DONE_HUB_CHANNEL_ENDPOINT}${channelId}`
-  const channel = await doneHubRequests.data<Record<string, unknown>>(request, {
-    endpoint: channelEndpoint,
-    options,
-  })
-
-  const payload = {
-    ...channel,
-    models,
-    model_mapping: modelMappingJson,
-  }
-
-  const response = await updateDoneHubChannelFields(request, payload, options)
-
-  if (!response.success) {
-    throw new ApiError(
-      getErrorMessage(
-        response.message,
-        "Failed to update channel model mapping",
-      ),
-      undefined,
-      DONE_HUB_CHANNEL_ENDPOINT,
-    )
-  }
 }
 
 /** Submit one full-object DoneHub channel update without performing a read. */

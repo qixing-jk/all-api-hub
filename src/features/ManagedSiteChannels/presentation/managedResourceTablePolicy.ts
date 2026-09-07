@@ -510,7 +510,7 @@ export const createManagedResourceColumns = (
     case NATIVE_TABLE_COLUMN_LAYOUTS.Sub2Api:
       return createSub2ApiColumns(options)
     default:
-      // Canonical compatibility registrations get neutral columns only.
+      // Providers using canonical fields share the neutral column layout.
       return createCanonicalColumns(options)
   }
 }

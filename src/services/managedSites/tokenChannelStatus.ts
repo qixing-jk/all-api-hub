@@ -1,22 +1,21 @@
 import { SITE_TYPES } from "~/constants/siteType"
 import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
+import type { ManagedSiteCapabilities } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
+import { getManagedSiteCapabilities } from "~/services/apiAdapters/registry"
 import {
   getManagedSiteChannelExactMatch,
   type ManagedSiteChannelMatchInspection,
 } from "~/services/managedSites/channelMatch"
 import { resolveManagedSiteChannelMatch } from "~/services/managedSites/channelMatchResolver"
-import type {
-  ManagedSiteConfig,
-  ManagedSiteService,
-} from "~/services/managedSites/managedSiteService"
-import { getManagedSiteService } from "~/services/managedSites/managedSiteService"
 import type { ManagedSiteOperationContext } from "~/services/managedSites/operationContext"
-import { getNewApiLoginAssistConfig } from "~/services/managedSites/providers/newApi"
+import { getNewApiLoginAssistConfig } from "~/services/managedSites/providers/newApiChannelSecrets"
 import {
   hasNewApiAuthenticatedBrowserSession,
   hasNewApiLoginAssistCredentials,
 } from "~/services/managedSites/providers/newApiSession"
 import { hasNewApiTotpSecret } from "~/services/managedSites/providers/newApiTotp"
+import type { ManagedSiteRuntimeConfigValue } from "~/services/managedSites/runtimeConfig"
+import { getCurrentManagedSiteType } from "~/services/managedSites/runtimeConfig"
 import { normalizeManagedSiteChannelBaseUrl } from "~/services/managedSites/utils/channelMatching"
 import {
   collectManagedConfigSecrets,
@@ -112,8 +111,8 @@ export type ManagedSiteTokenChannelStatus =
 interface GetManagedSiteTokenChannelStatusParams {
   account: DisplaySiteData
   token: ApiToken | AccountToken
-  service?: ManagedSiteService
-  managedConfig?: ManagedSiteConfig | null
+  managedSite?: ManagedSiteCapabilities
+  managedConfig?: ManagedSiteRuntimeConfigValue | null
   resolvedChannelKeysById?: Record<number, string>
   operationContext?: ManagedSiteOperationContext
   protectionBypassExecution?: ProtectionBypassExecution
@@ -124,7 +123,7 @@ interface ResolveManagedSiteTokenChannelStatusWithVerifiedKeyParams {
   tokenKey: string
   channelId: number
   channelKey: string
-  siteType?: ManagedSiteService["siteType"] | string
+  siteType?: ManagedSiteCapabilities["siteType"] | string
 }
 
 const findAssessmentChannelSummary = (
@@ -140,7 +139,7 @@ const findAssessmentChannelSummary = (
 
 const collectSecrets = (
   token: ApiToken | AccountToken,
-  managedConfig: ManagedSiteConfig | null,
+  managedConfig: ManagedSiteRuntimeConfigValue | null,
 ) => {
   return [
     token.key,
@@ -148,8 +147,9 @@ const collectSecrets = (
   ].filter(Boolean) as string[]
 }
 
-const isNewApiConfig = (config: ManagedSiteConfig): config is NewApiConfig =>
-  "adminToken" in config && "userId" in config
+const isNewApiConfig = (
+  config: ManagedSiteRuntimeConfigValue,
+): config is NewApiConfig => "adminToken" in config && "userId" in config
 
 const isExactVerificationUnavailable = (
   resolution: ManagedSiteChannelMatchInspection,
@@ -249,8 +249,10 @@ export async function getManagedSiteTokenChannelStatus(
   params: GetManagedSiteTokenChannelStatusParams,
 ): Promise<ManagedSiteTokenChannelStatus> {
   const { account, token } = params
-  const service = params.service ?? (await getManagedSiteService())
-  const managedConfig = params.managedConfig ?? (await service.getConfig())
+  const managedSite =
+    params.managedSite ??
+    getManagedSiteCapabilities(await getCurrentManagedSiteType())
+  const managedConfig = params.managedConfig ?? (await managedSite.config.get())
 
   if (!managedConfig) {
     return {
@@ -264,7 +266,7 @@ export async function getManagedSiteTokenChannelStatus(
 
   // This feature is not supported on managed-site backends whose channel
   // search cannot provide a trustworthy base-URL lookup result.
-  if (!supportsManagedSiteBaseUrlChannelLookup(service.siteType)) {
+  if (!supportsManagedSiteBaseUrlChannelLookup(managedSite.siteType)) {
     return {
       status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
       reason:
@@ -286,7 +288,7 @@ export async function getManagedSiteTokenChannelStatus(
     logger.warn("Managed-site token secret resolution failed", {
       accountId: account.id,
       tokenId: token.id,
-      siteType: service.siteType,
+      siteType: managedSite.siteType,
       diagnostic,
     })
 
@@ -302,7 +304,7 @@ export async function getManagedSiteTokenChannelStatus(
     const normalizedAccountBaseUrl = normalizeManagedSiteChannelBaseUrl(
       account.baseUrl,
     )
-    const formData = await service.prepareChannelFormData(
+    const formData = await managedSite.channelDrafts.prepareFormData(
       {
         ...account,
         baseUrl: normalizedAccountBaseUrl,
@@ -326,7 +328,7 @@ export async function getManagedSiteTokenChannelStatus(
     // The match module owns which evidence is required for an exact match.
     // Empty optional dimensions must reach it instead of being rejected here.
     const resolution = await resolveManagedSiteChannelMatch({
-      service,
+      managedSite,
       managedConfig,
       accountBaseUrl: searchBaseUrl,
       models: formData.models,
@@ -338,11 +340,11 @@ export async function getManagedSiteTokenChannelStatus(
     })
     const assessment = toManagedSiteVerifiedKeyAssessment(
       resolution,
-      service.siteType,
+      managedSite.siteType,
     )
     const exactMatch = getManagedSiteChannelExactMatch(
       resolution,
-      service.siteType,
+      managedSite.siteType,
     )
     const exactVerificationUnavailable =
       isExactVerificationUnavailable(resolution)
@@ -357,7 +359,7 @@ export async function getManagedSiteTokenChannelStatus(
         status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.ADDED,
         matchedChannel: toManagedSiteAssessmentChannel(
           exactMatch,
-          service.siteType,
+          managedSite.siteType,
         ),
         assessment,
         ...resolvedChannelKeys,
@@ -376,7 +378,7 @@ export async function getManagedSiteTokenChannelStatus(
       let recovery: ManagedSiteTokenChannelRecovery | undefined
 
       if (
-        service.siteType === SITE_TYPES.NEW_API &&
+        managedSite.siteType === SITE_TYPES.NEW_API &&
         isNewApiConfig(managedConfig) &&
         exactVerificationUnavailable
       ) {
@@ -433,7 +435,7 @@ export async function getManagedSiteTokenChannelStatus(
     logger.warn("Managed-site token status check failed", {
       accountId: account.id,
       tokenId: token.id,
-      siteType: service.siteType,
+      siteType: managedSite.siteType,
       diagnostic,
     })
 

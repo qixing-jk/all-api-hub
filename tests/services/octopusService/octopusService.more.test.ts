@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { getManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
 import {
   OctopusAutoGroupType,
   OctopusOutboundType,
@@ -68,13 +69,6 @@ vi.mock("~/services/apiService/octopus", () => ({
 vi.mock("~/services/managedSites/utils/fetchTokenScopedModels", () => ({
   fetchTokenScopedModels: mockFetchTokenScopedModels,
 }))
-
-vi.mock(
-  "~/services/managedSites/utils/fetchManagedSiteAvailableModels",
-  () => ({
-    fetchManagedSiteAvailableModels: mockFetchManagedSiteAvailableModels,
-  }),
-)
 
 describe("octopus additional flows", () => {
   beforeEach(() => {
@@ -200,11 +194,14 @@ describe("octopus additional flows", () => {
   })
 
   it("returns config helper fallbacks when Octopus preferences are missing or unreadable", async () => {
-    const { checkValidOctopusConfig, getOctopusConfig } = await import(
+    const { checkValidOctopusConfig } = await import(
       "~/services/managedSites/providers/octopus"
     )
 
-    await expect(getOctopusConfig()).resolves.toEqual({
+    expect(
+      (await getManagedSiteRuntimeConfigForType(SITE_TYPES.OCTOPUS))?.config ??
+        null,
+    ).toEqual({
       baseUrl: "https://octopus.example.com",
       username: "octo-user",
       password: "octo-pass",
@@ -220,7 +217,10 @@ describe("octopus additional flows", () => {
         password: "",
       },
     })
-    await expect(getOctopusConfig()).resolves.toBeNull()
+    expect(
+      (await getManagedSiteRuntimeConfigForType(SITE_TYPES.OCTOPUS))?.config ??
+        null,
+    ).toBeNull()
 
     mockGetPreferences.mockRejectedValueOnce(
       new Error("preferences unavailable"),
@@ -230,7 +230,10 @@ describe("octopus additional flows", () => {
     mockGetPreferences.mockRejectedValueOnce(
       new Error("preferences unavailable"),
     )
-    await expect(getOctopusConfig()).resolves.toBeNull()
+    expect(
+      (await getManagedSiteRuntimeConfigForType(SITE_TYPES.OCTOPUS))?.config ??
+        null,
+    ).toBeNull()
 
     mockGetPreferences.mockResolvedValueOnce({
       octopus: {
@@ -239,27 +242,5 @@ describe("octopus additional flows", () => {
         password: "",
       },
     })
-  })
-
-  it("fetches models through the shared model resolver", async () => {
-    const { fetchAvailableModels } = await import(
-      "~/services/managedSites/providers/octopus"
-    )
-    const account = buildDisplaySiteData({
-      baseUrl: "https://proxy.example.com",
-    })
-    const token = buildApiToken({
-      key: "octo-key",
-      name: "Primary Token",
-    })
-    const models = await fetchAvailableModels(account, token)
-    expect(models).toEqual(["gpt-4o-mini"])
-    expect(mockFetchManagedSiteAvailableModels).toHaveBeenCalledWith(
-      account,
-      token,
-      {
-        includeAccountFallback: false,
-      },
-    )
   })
 })

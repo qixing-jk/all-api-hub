@@ -3,7 +3,7 @@ import {
   isClaudeCodeHubProviderType,
   type ClaudeCodeHubProviderType,
 } from "~/constants/claudeCodeHub"
-import { ChannelType } from "~/constants/managedSite"
+import { ChannelType } from "~/constants/newApi"
 
 const PROVIDER_TO_CHANNEL_TYPE: Readonly<
   Record<ClaudeCodeHubProviderType, ChannelType>

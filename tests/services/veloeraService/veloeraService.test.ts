@@ -19,25 +19,7 @@ vi.mock("react-hot-toast", () => ({
   default: mockToast,
 }))
 
-const mockFetchAccountAvailableModels = vi.fn()
 const mockFetchOpenAICompatibleModelIds = vi.fn()
-const mockSearchChannel = vi.fn()
-const mockCreateChannel = vi.fn()
-const mockUpdateChannel = vi.fn()
-const mockDeleteChannel = vi.fn()
-const mockFetchVeloeraChannel = vi.fn()
-
-vi.mock("~/services/apiService/veloera", () => ({
-  fetchAccountAvailableModels: (...args: unknown[]) =>
-    mockFetchAccountAvailableModels(...args),
-  searchChannel: (...args: unknown[]) => mockSearchChannel(...args),
-  createChannel: (...args: unknown[]) => mockCreateChannel(...args),
-  updateChannel: (...args: unknown[]) => mockUpdateChannel(...args),
-  deleteChannel: (...args: unknown[]) => mockDeleteChannel(...args),
-  fetchAccountData: vi.fn(),
-  fetchChannel: (...args: unknown[]) => mockFetchVeloeraChannel(...args),
-  refreshAccountData: vi.fn(),
-}))
 
 vi.mock("~/services/aiApi/openaiCompatible", () => ({
   fetchOpenAICompatibleModelIds: mockFetchOpenAICompatibleModelIds,
@@ -120,55 +102,12 @@ function createMockApiToken(overrides: Partial<ApiToken> = {}): ApiToken {
   }
 }
 
-function createMockManagedSiteChannel(overrides: Record<string, unknown> = {}) {
-  return {
-    id: 1,
-    type: 1,
-    key: "",
-    name: "Test Channel",
-    base_url: "https://example.com",
-    models: "",
-    status: 1,
-    weight: 0,
-    priority: 0,
-    openai_organization: null,
-    test_model: null,
-    created_time: 1700000000,
-    test_time: 0,
-    response_time: 0,
-    other: "",
-    balance: 0,
-    balance_updated_time: 0,
-    group: "default",
-    used_quota: 0,
-    model_mapping: "{}",
-    status_code_mapping: "{}",
-    auto_ban: 0,
-    other_info: "{}",
-    tag: null,
-    param_override: null,
-    header_override: null,
-    remark: null,
-    channel_info: {
-      is_multi_key: false,
-      multi_key_size: 0,
-      multi_key_status_list: null,
-      multi_key_polling_index: 0,
-      multi_key_mode: "",
-    },
-    setting: "{}",
-    settings: "{}",
-    ...overrides,
-  }
-}
-
 // ============================================================================
 // TESTS
 // ============================================================================
 
 describe("veloeraService", () => {
   beforeEach(() => {
-    mockFetchVeloeraChannel.mockReset()
     mockFetchOpenAICompatibleModelIds.mockReset()
     mockGetPreferences.mockReset()
   })
@@ -250,96 +189,6 @@ describe("veloeraService", () => {
 
       const result = await getVeloeraConfig()
       expect(result).toBeNull()
-    })
-  })
-
-  describe("fetchChannelSecretKey", () => {
-    it("fetches the full channel key from channel detail", async () => {
-      const { fetchChannelSecretKey } = await import(
-        "~/services/managedSites/providers/veloera"
-      )
-      const config = {
-        baseUrl: "https://veloera.example.com",
-        adminToken: "token",
-        userId: "1",
-      }
-
-      mockFetchVeloeraChannel.mockResolvedValueOnce({
-        id: 88,
-        key: "sk-veloera-channel-key",
-      })
-
-      const result = await fetchChannelSecretKey(config, 88)
-
-      expect(mockFetchVeloeraChannel).toHaveBeenCalledWith(
-        {
-          baseUrl: "https://veloera.example.com",
-          auth: {
-            authType: "access_token",
-            accessToken: "token",
-            userId: "1",
-          },
-        },
-        88,
-      )
-      expect(result).toBe("sk-veloera-channel-key")
-    })
-  })
-
-  describe("hydrateComparableChannelKeys", () => {
-    it("preserves visible keys and hydrates hidden Veloera candidate ids", async () => {
-      const { hydrateComparableChannelKeys } = await import(
-        "~/services/managedSites/providers/veloera"
-      )
-      const config = {
-        baseUrl: "https://veloera.example.com",
-        adminToken: "admin-token",
-        userId: "1",
-      }
-
-      mockFetchVeloeraChannel.mockResolvedValueOnce({
-        id: 40,
-        key: "sk-veloera-detail",
-      })
-
-      const result = await hydrateComparableChannelKeys(config, [
-        createMockManagedSiteChannel({ id: 40, key: "" }) as any,
-        createMockManagedSiteChannel({ id: 41, key: "sk-visible" }) as any,
-      ])
-
-      expect(mockFetchVeloeraChannel).toHaveBeenCalledTimes(1)
-      expect(mockFetchVeloeraChannel).toHaveBeenCalledWith(
-        expect.any(Object),
-        40,
-      )
-      expect(result).toEqual([
-        expect.objectContaining({ id: 40, key: "sk-veloera-detail" }),
-        expect.objectContaining({ id: 41, key: "sk-visible" }),
-      ])
-    })
-
-    it("maps Veloera hidden-key hydration failures to unresolved key resolution", async () => {
-      const { hydrateComparableChannelKeys } = await import(
-        "~/services/managedSites/providers/veloera"
-      )
-      const { MatchResolutionUnresolvedError } = await import(
-        "~/services/managedSites/channelMatch"
-      )
-      const config = {
-        baseUrl: "https://veloera.example.com",
-        adminToken: "admin-token",
-        userId: "1",
-      }
-
-      mockFetchVeloeraChannel.mockRejectedValueOnce(
-        new Error("detail unavailable"),
-      )
-
-      await expect(
-        hydrateComparableChannelKeys(config, [
-          createMockManagedSiteChannel({ id: 42, key: "" }) as any,
-        ]),
-      ).rejects.toBeInstanceOf(MatchResolutionUnresolvedError)
     })
   })
 

@@ -34,30 +34,30 @@ const mocks = vi.hoisted(() => ({
   fetchModels: vi.fn(),
   fetchDraftModels: vi.fn(),
   fetchSiteUserGroups: vi.fn(),
-  buildPayload: vi.fn(),
 }))
 
 vi.mock("~/services/preferences/userPreferences", () => ({
   userPreferences: { getPreferences: mocks.getPreferences },
 }))
 
+vi.mock("~/services/apiAdapters/managedResources/veloeraOperations", () => ({
+  veloeraChannelOperations: {
+    list: mocks.list,
+    get: mocks.get,
+    create: mocks.create,
+    update: mocks.update,
+    delete: mocks.remove,
+    fetchSecretKey: mocks.fetchSecretKey,
+    fetchModels: mocks.fetchModels,
+    fetchDraftModels: mocks.fetchDraftModels,
+  },
+  veloeraManagedResourceModels: {
+    fetchModels: mocks.fetchModels,
+    fetchDraftModels: mocks.fetchDraftModels,
+  },
+}))
 vi.mock("~/services/apiAdapters/managedSites/veloera", () => ({
   veloeraManagedSiteCapabilities: {
-    channels: {
-      list: mocks.list,
-      get: mocks.get,
-      create: mocks.create,
-      update: mocks.update,
-      delete: mocks.remove,
-      fetchSecretKey: mocks.fetchSecretKey,
-      fetchModels: mocks.fetchModels,
-      fetchDraftModels: mocks.fetchDraftModels,
-    },
-    models: {
-      fetchModels: mocks.fetchModels,
-      fetchDraftModels: mocks.fetchDraftModels,
-    },
-    channelDrafts: { buildPayload: mocks.buildPayload },
     queries: { siteUserGroups: { fetch: mocks.fetchSiteUserGroups } },
   },
 }))
@@ -68,14 +68,16 @@ const config = {
   userId: "42",
 }
 
-const channel = buildManagedSiteChannel({
-  id: 17,
-  name: "Primary channel",
-  type: VeloeraChannelType.GitHubModels,
-  key: "sk-********",
-  models: "model-a,model-b",
-  group: "default,vip",
-})
+const channel = {
+  ...buildManagedSiteChannel({
+    id: 17,
+    name: "Primary channel",
+    type: VeloeraChannelType.GitHubModels,
+    key: "sk-********",
+    models: "model-a,model-b",
+    group: "default,vip",
+  }),
+}
 
 const createDraft = (name: string) => ({
   name,
@@ -134,10 +136,6 @@ describe("Veloera native managed resource", () => {
       ],
     })
     mocks.fetchSiteUserGroups.mockResolvedValue(["default", "vip"])
-    mocks.buildPayload.mockImplementation((draft) => ({
-      mode: "single",
-      channel: draft,
-    }))
   })
 
   it("projects Veloera channel identity with provider-owned type vocabulary", async () => {

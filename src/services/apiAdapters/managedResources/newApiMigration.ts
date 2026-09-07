@@ -1,4 +1,5 @@
-import { ChannelTypeNames, DEFAULT_CHANNEL_FIELDS } from "~/constants/newApi"
+import { DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSiteChannelDraft"
+import { ChannelTypeNames } from "~/constants/newApi"
 import { SITE_TYPES } from "~/constants/siteType"
 import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
 import {
@@ -11,7 +12,7 @@ import {
   throwIfNewApiResourceOperationAborted,
 } from "~/services/apiAdapters/managedResources/newApiResourceUtils"
 import { MANAGED_SITE_MUTATION_OUTCOMES } from "~/services/managedSites/mutations"
-import type { ChannelFormData, ManagedSiteChannel } from "~/types/managedSite"
+import type { ManagedSiteChannelDraft } from "~/types/managedSiteChannelDraft"
 import { MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES } from "~/types/managedSiteMigration"
 import {
   MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES,
@@ -19,6 +20,7 @@ import {
   type ManagedSiteMigrationSelection,
   type ManagedSiteMigrationSource,
 } from "~/types/managedSiteMigrationCapability"
+import type { NewApiChannel } from "~/types/newApi"
 import { CHANNEL_STATUS } from "~/types/newApi"
 
 const blockers = MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES
@@ -40,7 +42,7 @@ const hasMeaningfulAdvancedValue = (value: unknown): boolean => {
   return Boolean(value)
 }
 
-const resolveChannelType = (value: ManagedSiteChannel["type"]) => {
+const resolveChannelType = (value: NewApiChannel["type"]) => {
   const numeric = Number(value)
   return Number.isInteger(numeric) && numeric in ChannelTypeNames
     ? {
@@ -54,7 +56,7 @@ const resolveChannelType = (value: ManagedSiteChannel["type"]) => {
 }
 
 const toSource = (
-  channel: ManagedSiteChannel,
+  channel: NewApiChannel,
   resourceType: ManagedSiteMigrationSource["resourceType"],
 ): ManagedSiteMigrationSource => ({
   sourceSiteType: SITE_TYPES.NEW_API,
@@ -219,7 +221,7 @@ export const newApiManagedSiteMigrationCapability: ManagedSiteMigrationCapabilit
       }),
       create: async (command, options) => {
         const operations = await openNewApiNativeResourceOperations()
-        const draft: ChannelFormData = {
+        const draft: ManagedSiteChannelDraft = {
           name: command.projection.name,
           type: command.projection.type,
           key: command.credential,

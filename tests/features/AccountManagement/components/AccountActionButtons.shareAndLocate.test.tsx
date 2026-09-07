@@ -27,7 +27,7 @@ import {
   completeProductAnalyticsActionMock,
   exportShareSnapshotWithToastMock,
   fetchAccountTokensMock,
-  getManagedSiteServiceMock,
+  getManagedSiteCapabilitiesMock,
   hasValidManagedSiteConfigMock,
   mockTogglePinAccount,
   openManagedSiteChannelsForChannelMock,
@@ -299,45 +299,59 @@ describe("AccountActionButtons", () => {
   })
 
   it.each([
-    { siteType: SITE_TYPES.NEW_API, resourceId: 123 },
-    { siteType: SITE_TYPES.AXON_HUB, resourceId: "native/123+=" },
+    {
+      siteType: SITE_TYPES.NEW_API,
+      resourceId: 123,
+      config: {
+        baseUrl: "https://admin.example",
+        adminToken: "t",
+        userId: "1",
+      },
+    },
+    {
+      siteType: SITE_TYPES.AXON_HUB,
+      resourceId: "native/123+=",
+      config: {
+        baseUrl: "https://admin.example",
+        email: "admin@example.com",
+        password: "fixture-password",
+      },
+    },
   ])(
     "navigates to the stable $siteType channel identity for an exact match",
-    async ({ siteType, resourceId }) => {
+    async ({ siteType, resourceId, config }) => {
       fetchAccountTokensMock.mockResolvedValueOnce([{ key: "sk-1" }])
 
       const managedService = {
         siteType,
-        messagesKey: "newapi",
-        getConfig: vi.fn().mockResolvedValue({
-          baseUrl: "https://admin.example",
-          token: "t",
-          userId: "1",
-        }),
-        prepareChannelFormData: vi.fn().mockResolvedValue({
-          base_url: "https://api.example.com",
-          models: ["gpt-4"],
-          key: "sk-1",
-        }),
-        searchChannel: vi.fn().mockResolvedValue({
-          items: [
-            {
-              id: 123,
-              ...(siteType === SITE_TYPES.AXON_HUB
-                ? { _axonHubData: { id: resourceId } }
-                : {}),
-              name: "Managed Channel 123",
-              base_url: "https://api.example.com",
-              models: "gpt-4",
-              key: "sk-1",
-            },
-          ],
-          total: 1,
-          type_counts: {},
-        }),
+        config: {
+          get: vi.fn().mockResolvedValue(config),
+        },
+        channelDrafts: {
+          prepareFormData: vi.fn().mockResolvedValue({
+            base_url: "https://api.example.com",
+            models: ["gpt-4"],
+            key: "sk-1",
+          }),
+        },
+        matching: {
+          search: vi.fn().mockResolvedValue({
+            items: [
+              {
+                id: resourceId,
+                name: "Managed Channel 123",
+                base_url: "https://api.example.com",
+                models: "gpt-4",
+                key: "sk-1",
+              },
+            ],
+            total: 1,
+            type_counts: {},
+          }),
+        },
       }
 
-      getManagedSiteServiceMock.mockResolvedValueOnce(managedService as any)
+      getManagedSiteCapabilitiesMock.mockReturnValueOnce(managedService as any)
 
       const user = userEvent.setup()
 
@@ -376,49 +390,49 @@ describe("AccountActionButtons", () => {
     },
   )
 
-  it("uses legacy channel search for account shortcut locate when token status resources are not feature-gated", async () => {
-    fetchAccountTokensMock.mockResolvedValueOnce([{ key: "sk-legacy" }])
-
-    const staleResourceSearch = vi
-      .fn()
-      .mockRejectedValue(new Error("stale duplicate-matching resource path"))
+  it("locates an account channel through the registered matching capability", async () => {
+    fetchAccountTokensMock.mockResolvedValueOnce([{ key: "sk-matching" }])
     const managedService = {
       siteType: SITE_TYPES.NEW_API,
-      messagesKey: "newapi",
-      getConfig: vi.fn().mockResolvedValue({
-        baseUrl: "https://admin.example",
-        token: "t",
-        userId: "1",
-      }),
-      prepareChannelFormData: vi.fn().mockResolvedValue({
-        base_url: "https://api.example.com",
-        models: ["gpt-4"],
-        key: "sk-legacy",
-      }),
-      searchChannel: vi.fn().mockResolvedValue({
-        items: [
-          {
-            id: 321,
-            name: "Legacy Managed Channel",
-            base_url: "https://api.example.com",
-            models: "gpt-4",
-            key: "sk-legacy",
-          },
-        ],
-        total: 1,
-        type_counts: {},
-      }),
-      searchResourceDuplicateChannels: staleResourceSearch,
+      config: {
+        get: vi.fn().mockResolvedValue({
+          baseUrl: "https://admin.example",
+          adminToken: "t",
+          userId: "1",
+        }),
+      },
+      channelDrafts: {
+        prepareFormData: vi.fn().mockResolvedValue({
+          base_url: "https://api.example.com",
+          models: ["gpt-4"],
+          key: "sk-matching",
+        }),
+      },
+      matching: {
+        search: vi.fn().mockResolvedValue({
+          items: [
+            {
+              id: 321,
+              name: "Matched Managed Channel",
+              base_url: "https://api.example.com",
+              models: "gpt-4",
+              key: "sk-matching",
+            },
+          ],
+          total: 1,
+          type_counts: {},
+        }),
+      },
     }
 
-    getManagedSiteServiceMock.mockResolvedValueOnce(managedService as any)
+    getManagedSiteCapabilitiesMock.mockReturnValueOnce(managedService as any)
 
     const user = userEvent.setup()
 
     render(
       <AccountActionButtons
         site={buildDisplaySiteData({
-          id: "acc-6-legacy",
+          id: "acc-6-matching",
           disabled: false,
           name: "Site",
           baseUrl: "https://api.example.com",
@@ -444,8 +458,7 @@ describe("AccountActionButtons", () => {
     await waitFor(() => {
       expect(openManagedSiteChannelsForChannelMock).toHaveBeenCalledWith(321)
     })
-    expect(staleResourceSearch).not.toHaveBeenCalled()
-    expect(managedService.searchChannel).toHaveBeenCalledWith(
+    expect(managedService.matching.search).toHaveBeenCalledWith(
       expect.any(Object),
       "https://api.example.com",
     )
@@ -457,33 +470,38 @@ describe("AccountActionButtons", () => {
     const fetchChannelSecretKey = vi.fn().mockResolvedValue("sk-hidden")
     const managedService = {
       siteType: SITE_TYPES.NEW_API,
-      messagesKey: "newapi",
-      getConfig: vi.fn().mockResolvedValue({
-        baseUrl: "https://admin.example",
-        token: "t",
-        userId: "1",
-      }),
-      prepareChannelFormData: vi.fn().mockResolvedValue({
-        base_url: "https://api.example.com",
-        models: ["gpt-4"],
-        key: "sk-hidden",
-      }),
-      searchChannel: vi.fn().mockResolvedValue({
-        items: [
-          {
-            id: 322,
-            name: "Hidden Managed Channel",
-            base_url: "https://api.example.com",
-            models: "gpt-4",
-            key: "sk-***",
-          },
-        ],
-        total: 1,
-        type_counts: {},
-      }),
-      fetchChannelSecretKey,
+      config: {
+        get: vi.fn().mockResolvedValue({
+          baseUrl: "https://admin.example",
+          adminToken: "t",
+          userId: "1",
+        }),
+      },
+      channelDrafts: {
+        prepareFormData: vi.fn().mockResolvedValue({
+          base_url: "https://api.example.com",
+          models: ["gpt-4"],
+          key: "sk-hidden",
+        }),
+      },
+      matching: {
+        search: vi.fn().mockResolvedValue({
+          items: [
+            {
+              id: 322,
+              name: "Hidden Managed Channel",
+              base_url: "https://api.example.com",
+              models: "gpt-4",
+              key: "sk-***",
+            },
+          ],
+          total: 1,
+          type_counts: {},
+        }),
+        fetchSecretKey: fetchChannelSecretKey,
+      },
     }
-    getManagedSiteServiceMock.mockResolvedValueOnce(managedService as any)
+    getManagedSiteCapabilitiesMock.mockReturnValueOnce(managedService as any)
     const user = userEvent.setup()
 
     render(
@@ -534,20 +552,22 @@ describe("AccountActionButtons", () => {
 
     const managedService = {
       siteType: SITE_TYPES.NEW_API,
-      messagesKey: "newapi",
-      getConfig: vi.fn().mockResolvedValue({
-        baseUrl: "https://admin.example",
-        token: "t",
-        userId: "1",
-      }),
-      prepareChannelFormData: vi.fn().mockResolvedValue({
-        base_url: "https://api.example.com",
-        models: ["gpt-4"],
-        key: "sk-resource",
-      }),
-      searchChannel: vi
-        .fn()
-        .mockResolvedValue({
+      config: {
+        get: vi.fn().mockResolvedValue({
+          baseUrl: "https://admin.example",
+          adminToken: "t",
+          userId: "1",
+        }),
+      },
+      channelDrafts: {
+        prepareFormData: vi.fn().mockResolvedValue({
+          base_url: "https://api.example.com",
+          models: ["gpt-4"],
+          key: "sk-resource",
+        }),
+      },
+      matching: {
+        search: vi.fn().mockResolvedValue({
           items: [
             {
               id: 654,
@@ -561,9 +581,10 @@ describe("AccountActionButtons", () => {
           total: 1,
           type_counts: {},
         }),
+      },
     }
 
-    getManagedSiteServiceMock.mockResolvedValueOnce(managedService as any)
+    getManagedSiteCapabilitiesMock.mockReturnValueOnce(managedService as any)
 
     const user = userEvent.setup()
 
@@ -596,7 +617,7 @@ describe("AccountActionButtons", () => {
     await waitFor(() => {
       expect(openManagedSiteChannelsForChannelMock).toHaveBeenCalledWith(654)
     })
-    expect(managedService.searchChannel).toHaveBeenCalledWith(
+    expect(managedService.matching.search).toHaveBeenCalledWith(
       expect.any(Object),
       "https://api.example.com",
     )
@@ -607,31 +628,36 @@ describe("AccountActionButtons", () => {
     fetchAccountTokensMock.mockResolvedValueOnce([{ key: "" }])
 
     const managedService = {
-      messagesKey: "newapi",
-      getConfig: vi.fn().mockResolvedValue({
-        baseUrl: "https://admin.example",
-        token: "t",
-        userId: "1",
-      }),
-      prepareChannelFormData: vi.fn().mockResolvedValue({
-        base_url: "https://api.example.com",
-        models: ["gpt-4"],
-        key: "",
-      }),
-      searchChannel: vi.fn().mockResolvedValue({
-        items: [
-          {
-            id: 456,
-            name: "Managed Channel 456",
-            base_url: "https://api.example.com",
-            models: "gpt-4",
-            key: "",
-          },
-        ],
-      }),
+      config: {
+        get: vi.fn().mockResolvedValue({
+          baseUrl: "https://admin.example",
+          adminToken: "t",
+          userId: "1",
+        }),
+      },
+      channelDrafts: {
+        prepareFormData: vi.fn().mockResolvedValue({
+          base_url: "https://api.example.com",
+          models: ["gpt-4"],
+          key: "",
+        }),
+      },
+      matching: {
+        search: vi.fn().mockResolvedValue({
+          items: [
+            {
+              id: 456,
+              name: "Managed Channel 456",
+              base_url: "https://api.example.com",
+              models: "gpt-4",
+              key: "",
+            },
+          ],
+        }),
+      },
     }
 
-    getManagedSiteServiceMock.mockResolvedValueOnce(managedService as any)
+    getManagedSiteCapabilitiesMock.mockReturnValueOnce(managedService as any)
 
     const user = userEvent.setup()
 
@@ -691,31 +717,36 @@ describe("AccountActionButtons", () => {
     fetchAccountTokensMock.mockResolvedValueOnce([{ key: "sk-1" }])
 
     const managedService = {
-      messagesKey: "newapi",
-      getConfig: vi.fn().mockResolvedValue({
-        baseUrl: "https://admin.example",
-        token: "t",
-        userId: "1",
-      }),
-      prepareChannelFormData: vi.fn().mockResolvedValue({
-        base_url: "https://api.example.com",
-        models: ["gpt-4"],
-        key: "sk-1",
-      }),
-      searchChannel: vi.fn().mockResolvedValue({
-        items: [
-          {
-            id: 456,
-            name: "Managed Channel 456",
-            base_url: "https://api.example.com",
-            models: "claude-3",
-            key: "",
-          },
-        ],
-      }),
+      config: {
+        get: vi.fn().mockResolvedValue({
+          baseUrl: "https://admin.example",
+          adminToken: "t",
+          userId: "1",
+        }),
+      },
+      channelDrafts: {
+        prepareFormData: vi.fn().mockResolvedValue({
+          base_url: "https://api.example.com",
+          models: ["gpt-4"],
+          key: "sk-1",
+        }),
+      },
+      matching: {
+        search: vi.fn().mockResolvedValue({
+          items: [
+            {
+              id: 456,
+              name: "Managed Channel 456",
+              base_url: "https://api.example.com",
+              models: "claude-3",
+              key: "",
+            },
+          ],
+        }),
+      },
     }
 
-    getManagedSiteServiceMock.mockResolvedValueOnce(managedService as any)
+    getManagedSiteCapabilitiesMock.mockReturnValueOnce(managedService as any)
 
     const user = userEvent.setup()
 
@@ -760,17 +791,18 @@ describe("AccountActionButtons", () => {
     fetchAccountTokensMock.mockResolvedValueOnce([])
 
     const managedService = {
-      messagesKey: "newapi",
-      getConfig: vi.fn().mockResolvedValue({
-        baseUrl: "https://admin.example",
-        token: "t",
-        userId: "1",
-      }),
-      prepareChannelFormData: vi.fn(),
-      searchChannel: vi.fn(),
+      config: {
+        get: vi.fn().mockResolvedValue({
+          baseUrl: "https://admin.example",
+          adminToken: "t",
+          userId: "1",
+        }),
+      },
+      channelDrafts: { prepareFormData: vi.fn() },
+      matching: { search: vi.fn() },
     }
 
-    getManagedSiteServiceMock.mockResolvedValueOnce(managedService as any)
+    getManagedSiteCapabilitiesMock.mockReturnValueOnce(managedService as any)
 
     const user = userEvent.setup()
 
@@ -812,7 +844,7 @@ describe("AccountActionButtons", () => {
       )
     })
     expect(toastSuccessMock).not.toHaveBeenCalled()
-    expect(managedService.prepareChannelFormData).not.toHaveBeenCalled()
+    expect(managedService.channelDrafts.prepareFormData).not.toHaveBeenCalled()
   })
 
   it("falls back to base URL search when multiple keys are present", async () => {
@@ -822,16 +854,17 @@ describe("AccountActionButtons", () => {
     ])
 
     const managedService = {
-      messagesKey: "newapi",
-      getConfig: vi.fn().mockResolvedValue({
-        baseUrl: "https://admin.example",
-        token: "t",
-        userId: "1",
-      }),
-      prepareChannelFormData: vi.fn(),
+      config: {
+        get: vi.fn().mockResolvedValue({
+          baseUrl: "https://admin.example",
+          adminToken: "t",
+          userId: "1",
+        }),
+      },
+      channelDrafts: { prepareFormData: vi.fn() },
     }
 
-    getManagedSiteServiceMock.mockResolvedValueOnce(managedService as any)
+    getManagedSiteCapabilitiesMock.mockReturnValueOnce(managedService as any)
 
     const user = userEvent.setup()
 
@@ -873,7 +906,7 @@ describe("AccountActionButtons", () => {
       )
     })
     expect(toastSuccessMock).not.toHaveBeenCalled()
-    expect(managedService.prepareChannelFormData).not.toHaveBeenCalled()
+    expect(managedService.channelDrafts.prepareFormData).not.toHaveBeenCalled()
   })
 
   it("shows an actionable locate action for providers with reliable base-url lookup", async () => {
@@ -1034,18 +1067,17 @@ describe("AccountActionButtons", () => {
     expect(hasValidManagedSiteConfigMock).toHaveBeenCalledWith(
       userPreferencesContextValue.preferences,
     )
-    expect(getManagedSiteServiceMock).not.toHaveBeenCalled()
+    expect(getManagedSiteCapabilitiesMock).not.toHaveBeenCalled()
   })
 
   it("shows the account-specific config-missing fallback when admin config disappears at click-time", async () => {
     const managedService = {
-      messagesKey: "newapi",
-      getConfig: vi.fn().mockResolvedValue(null),
-      prepareChannelFormData: vi.fn(),
-      searchChannel: vi.fn(),
+      config: { get: vi.fn().mockResolvedValue(null) },
+      channelDrafts: { prepareFormData: vi.fn() },
+      matching: { search: vi.fn() },
     }
 
-    getManagedSiteServiceMock.mockResolvedValueOnce(managedService as any)
+    getManagedSiteCapabilitiesMock.mockReturnValueOnce(managedService as any)
 
     const user = userEvent.setup()
 
@@ -1088,23 +1120,24 @@ describe("AccountActionButtons", () => {
     })
     expect(toastSuccessMock).not.toHaveBeenCalled()
     expect(fetchAccountTokensMock).not.toHaveBeenCalled()
-    expect(managedService.prepareChannelFormData).not.toHaveBeenCalled()
+    expect(managedService.channelDrafts.prepareFormData).not.toHaveBeenCalled()
   })
 
   it("falls back to base URL search when token response is not an array", async () => {
     fetchAccountTokensMock.mockResolvedValueOnce({} as any)
 
     const managedService = {
-      messagesKey: "newapi",
-      getConfig: vi.fn().mockResolvedValue({
-        baseUrl: "https://admin.example",
-        token: "t",
-        userId: "1",
-      }),
-      prepareChannelFormData: vi.fn(),
+      config: {
+        get: vi.fn().mockResolvedValue({
+          baseUrl: "https://admin.example",
+          adminToken: "t",
+          userId: "1",
+        }),
+      },
+      channelDrafts: { prepareFormData: vi.fn() },
     }
 
-    getManagedSiteServiceMock.mockResolvedValueOnce(managedService as any)
+    getManagedSiteCapabilitiesMock.mockReturnValueOnce(managedService as any)
 
     const user = userEvent.setup()
 
@@ -1142,6 +1175,6 @@ describe("AccountActionButtons", () => {
         search: "https://api.example.com",
       })
     })
-    expect(managedService.prepareChannelFormData).not.toHaveBeenCalled()
+    expect(managedService.channelDrafts.prepareFormData).not.toHaveBeenCalled()
   })
 })

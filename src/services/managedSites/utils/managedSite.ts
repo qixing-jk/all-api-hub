@@ -4,7 +4,6 @@ import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import { hasUsableApiTokenKey } from "~/services/accountTokens/apiTokenKey"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import {
-  getManagedSiteLegacyAdminConfig,
   resolveManagedSiteRuntimeConfigForType,
   type ManagedSiteRuntimeConfigValue,
 } from "~/services/managedSites/runtimeConfig"
@@ -31,17 +30,11 @@ export type ManagedSiteMessagesKey =
   | "claudecodehub"
   | "sub2api"
 
-export interface ManagedSiteAdminConfig {
-  baseUrl: string
-  adminToken: string
-  userId: string
-}
-
 export interface ManagedSiteTargetOption {
   siteType: ManagedSiteType
   labelKey: ManagedSiteLabelKey
   messagesKey: ManagedSiteMessagesKey
-  config: ManagedSiteAdminConfig
+  config: ManagedSiteRuntimeConfigValue
 }
 
 export const collectManagedConfigSecrets = (
@@ -326,33 +319,6 @@ export function getManagedSiteMessagesKeyFromSiteType(
 }
 
 /**
- * Extracts the current managed site admin config from user preferences.
- *
- * Note: this intentionally reads `preferences.managedSiteType` to ensure the
- * returned config always matches the real selected managed site type.
- */
-export function getManagedSiteAdminConfig(
-  preferences: UserPreferences,
-): ManagedSiteAdminConfig | null {
-  const siteType = getManagedSiteType(preferences)
-  return getManagedSiteAdminConfigForType(preferences, siteType)
-}
-
-/**
- * Extracts a managed-site admin config for an explicit target site type.
- */
-export function getManagedSiteAdminConfigForType(
-  preferences: UserPreferences,
-  siteType: ManagedSiteType,
-): ManagedSiteAdminConfig | null {
-  const runtimeConfig = resolveManagedSiteRuntimeConfigForType(
-    preferences,
-    siteType,
-  )
-  return runtimeConfig ? getManagedSiteLegacyAdminConfig(runtimeConfig) : null
-}
-
-/**
  * Gets the current managed site type from user preferences.
  */
 export function getManagedSiteType(prefs: UserPreferences): ManagedSiteType {
@@ -425,7 +391,9 @@ export function getManagedSiteTargetOptions(
   return siteTypes
     .filter((siteType) => !excluded.has(siteType))
     .map((siteType) => {
-      const config = getManagedSiteAdminConfigForType(preferences, siteType)
+      const config =
+        resolveManagedSiteRuntimeConfigForType(preferences, siteType)?.config ??
+        null
       if (!config) return null
 
       return {

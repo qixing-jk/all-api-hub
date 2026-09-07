@@ -1,13 +1,10 @@
 import { describe, expect, it } from "vitest"
 
 import {
-  groupsToOptions,
   mergeUniqueOptions,
-  modelsToOptions,
   toSelectOptions,
 } from "~/components/dialogs/ChannelDialog/utils/selectOptions"
 import type { CompactMultiSelectOption } from "~/components/ui"
-import type { ChannelGroup, ChannelModel } from "~/types/newApi"
 
 describe("selectOptions", () => {
   describe("toSelectOptions", () => {
@@ -22,42 +19,6 @@ describe("selectOptions", () => {
 
     it("handles empty array", () => {
       expect(toSelectOptions([])).toEqual([])
-    })
-  })
-
-  describe("groupsToOptions", () => {
-    it("converts channel groups to options", () => {
-      const groups: ChannelGroup[] = [
-        { id: "1", name: "Group A" },
-        { id: "2", name: "Group B" },
-      ]
-      const result = groupsToOptions(groups)
-      expect(result).toEqual([
-        { label: "Group A", value: "1" },
-        { label: "Group B", value: "2" },
-      ])
-    })
-
-    it("handles empty groups", () => {
-      expect(groupsToOptions([])).toEqual([])
-    })
-  })
-
-  describe("modelsToOptions", () => {
-    it("converts channel models to options", () => {
-      const models: ChannelModel[] = [
-        { id: "m1", name: "Model 1" },
-        { id: "m2", name: "Model 2" },
-      ]
-      const result = modelsToOptions(models)
-      expect(result).toEqual([
-        { label: "Model 1", value: "m1" },
-        { label: "Model 2", value: "m2" },
-      ])
-    })
-
-    it("handles empty models", () => {
-      expect(modelsToOptions([])).toEqual([])
     })
   })
 

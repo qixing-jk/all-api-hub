@@ -12,9 +12,9 @@ import {
   createManagedSiteChannelMatchRequestCache,
   resolveManagedSiteChannelMatch as resolveManagedSiteChannelMatchImpl,
 } from "~/services/managedSites/channelMatchResolver"
-import type { ManagedSiteChannel } from "~/types/managedSite"
+import type { NewApiChannel } from "~/types/newApi"
 import { buildManagedSiteChannel } from "~~/tests/test-utils/factories"
-import { createManagedSiteServiceStub } from "~~/tests/test-utils/managedSiteServiceFactory"
+import { createManagedSiteCapabilitiesStub } from "~~/tests/test-utils/managedSiteCapabilitiesFactory"
 
 const managedConfig = {
   baseUrl: "https://managed.example",
@@ -112,29 +112,29 @@ describe("resolveManagedSiteChannelMatch", () => {
     ).toBeNull()
   })
 
-  it("keeps the legacy channel search fallback when the resource duplicate path is unavailable", async () => {
-    const legacyChannel = buildManagedSiteChannel({
+  it("resolves exact duplicates through registered channel matching", async () => {
+    const channel = buildManagedSiteChannel({
       id: 65,
-      key: "sk-legacy",
+      key: "sk-matching",
       base_url: "https://api.example.com/v1",
       models: "gpt-4o",
-      name: "Legacy duplicate",
+      name: "Matching duplicate",
     })
     const searchChannel = vi.fn().mockResolvedValue({
-      items: [legacyChannel],
+      items: [channel],
       total: 1,
       type_counts: {},
     })
-    const service = createManagedSiteServiceStub({
-      searchChannel,
+    const managedSite = createManagedSiteCapabilitiesStub({
+      matching: { search: searchChannel },
     })
 
     const result = await resolveManagedSiteChannelMatch({
-      service,
+      managedSite,
       managedConfig,
       accountBaseUrl: "https://api.example.com/v1",
       models: ["gpt-4o"],
-      key: "sk-legacy",
+      key: "sk-matching",
     })
 
     expect(searchChannel).toHaveBeenCalledWith(
@@ -146,28 +146,30 @@ describe("resolveManagedSiteChannelMatch", () => {
 
   it("skips candidate key hydration when a local exact match is already available", async () => {
     const hydrateComparableChannelKeys = vi.fn().mockResolvedValue([])
-    const service = createManagedSiteServiceStub({
-      searchChannel: vi.fn().mockResolvedValue({
-        items: [
-          buildManagedSiteChannel({
-            id: 6,
-            key: "sk-match",
-            base_url: "https://api.example.com/v1",
-            models: "gpt-4o",
-          }),
-          buildManagedSiteChannel({
-            id: 7,
-            key: "",
-            base_url: "https://api.example.com/v1",
-            models: "gpt-4o-mini",
-          }),
-        ],
-      }),
-      hydrateComparableChannelKeys,
+    const managedSite = createManagedSiteCapabilitiesStub({
+      matching: {
+        search: vi.fn().mockResolvedValue({
+          items: [
+            buildManagedSiteChannel({
+              id: 6,
+              key: "sk-match",
+              base_url: "https://api.example.com/v1",
+              models: "gpt-4o",
+            }),
+            buildManagedSiteChannel({
+              id: 7,
+              key: "",
+              base_url: "https://api.example.com/v1",
+              models: "gpt-4o-mini",
+            }),
+          ],
+        }),
+        hydrateComparableKeys: hydrateComparableChannelKeys,
+      },
     })
 
     const result = await resolveManagedSiteChannelMatch({
-      service,
+      managedSite,
       managedConfig,
       accountBaseUrl: "https://api.example.com/v1",
       models: ["gpt-4o"],
@@ -188,15 +190,17 @@ describe("resolveManagedSiteChannelMatch", () => {
       base_url: "https://api.example.com/v1",
       models: "gpt-4o",
     })
-    const service = createManagedSiteServiceStub({
+    const managedSite = createManagedSiteCapabilitiesStub({
       siteType: SITE_TYPES.NEW_API,
-      searchChannel: vi.fn().mockResolvedValue({
-        items: [channel],
-      }),
+      matching: {
+        search: vi.fn().mockResolvedValue({
+          items: [channel],
+        }),
+      },
     })
 
     const result = await resolveManagedSiteChannelMatch({
-      service,
+      managedSite,
       managedConfig,
       accountBaseUrl: "https://api.example.com/v1",
       models: ["gpt-4o"],
@@ -218,15 +222,17 @@ describe("resolveManagedSiteChannelMatch", () => {
       base_url: "https://api.example.com/v1",
       models: "gpt-4o",
     })
-    const service = createManagedSiteServiceStub({
+    const managedSite = createManagedSiteCapabilitiesStub({
       siteType: SITE_TYPES.DONE_HUB,
-      searchChannel: vi.fn().mockResolvedValue({
-        items: [channel],
-      }),
+      matching: {
+        search: vi.fn().mockResolvedValue({
+          items: [channel],
+        }),
+      },
     })
 
     const result = await resolveManagedSiteChannelMatch({
-      service,
+      managedSite,
       managedConfig,
       accountBaseUrl: "https://api.example.com/v1",
       models: ["gpt-4o"],
@@ -242,22 +248,24 @@ describe("resolveManagedSiteChannelMatch", () => {
   })
 
   it("keeps non-compatible managed-site key matching exact", async () => {
-    const service = createManagedSiteServiceStub({
+    const managedSite = createManagedSiteCapabilitiesStub({
       siteType: SITE_TYPES.OCTOPUS,
-      searchChannel: vi.fn().mockResolvedValue({
-        items: [
-          buildManagedSiteChannel({
-            id: 62,
-            key: "stored-key",
-            base_url: "https://api.example.com/v1",
-            models: "gpt-4o",
-          }),
-        ],
-      }),
+      matching: {
+        search: vi.fn().mockResolvedValue({
+          items: [
+            buildManagedSiteChannel({
+              id: 62,
+              key: "stored-key",
+              base_url: "https://api.example.com/v1",
+              models: "gpt-4o",
+            }),
+          ],
+        }),
+      },
     })
 
     const result = await resolveManagedSiteChannelMatch({
-      service,
+      managedSite,
       managedConfig,
       accountBaseUrl: "https://api.example.com/v1",
       models: ["gpt-4o"],
@@ -286,18 +294,20 @@ describe("resolveManagedSiteChannelMatch", () => {
       ],
     })
     const hydrateComparableChannelKeys = vi.fn(async (_config, candidates) =>
-      candidates.map((channel: ManagedSiteChannel) => ({
+      candidates.map((channel: NewApiChannel) => ({
         ...channel,
         key: "sk-match",
       })),
     )
-    const service = createManagedSiteServiceStub({
-      searchChannel,
-      hydrateComparableChannelKeys,
+    const managedSite = createManagedSiteCapabilitiesStub({
+      matching: {
+        search: searchChannel,
+        hydrateComparableKeys: hydrateComparableChannelKeys,
+      },
     })
 
     const result = await resolveManagedSiteChannelMatch({
-      service,
+      managedSite,
       managedConfig,
       accountBaseUrl: "https://api.example.com/v1",
       models: ["gpt-4o"],
@@ -320,33 +330,35 @@ describe("resolveManagedSiteChannelMatch", () => {
 
   it("applies the hidden-key allow-list before hydrating multiple exact-model candidates", async () => {
     const hydrateComparableChannelKeys = vi.fn(async (_config, candidates) =>
-      candidates.map((channel: ManagedSiteChannel) => ({
+      candidates.map((channel: NewApiChannel) => ({
         ...channel,
         key: channel.id === 72 ? "sk-scoped-match" : "sk-unscoped",
       })),
     )
-    const service = createManagedSiteServiceStub({
-      searchChannel: vi.fn().mockResolvedValue({
-        items: [
-          buildManagedSiteChannel({
-            id: 71,
-            key: "",
-            base_url: "https://api.example.com/v1",
-            models: "gpt-4o",
-          }),
-          buildManagedSiteChannel({
-            id: 72,
-            key: "",
-            base_url: "https://api.example.com/v1",
-            models: "gpt-4o",
-          }),
-        ],
-      }),
-      hydrateComparableChannelKeys,
+    const managedSite = createManagedSiteCapabilitiesStub({
+      matching: {
+        search: vi.fn().mockResolvedValue({
+          items: [
+            buildManagedSiteChannel({
+              id: 71,
+              key: "",
+              base_url: "https://api.example.com/v1",
+              models: "gpt-4o",
+            }),
+            buildManagedSiteChannel({
+              id: 72,
+              key: "",
+              base_url: "https://api.example.com/v1",
+              models: "gpt-4o",
+            }),
+          ],
+        }),
+        hydrateComparableKeys: hydrateComparableChannelKeys,
+      },
     })
 
     const result = await resolveManagedSiteChannelMatch({
-      service,
+      managedSite,
       managedConfig,
       accountBaseUrl: "https://api.example.com/v1",
       models: ["gpt-4o"],
@@ -373,22 +385,24 @@ describe("resolveManagedSiteChannelMatch", () => {
         MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.VERIFICATION_REQUIRED,
       )
     })
-    const service = createManagedSiteServiceStub({
-      searchChannel: vi.fn().mockResolvedValue({
-        items: [
-          buildManagedSiteChannel({
-            id: 8,
-            key: "",
-            base_url: "https://api.example.com/v1",
-            models: "gpt-4o",
-          }),
-        ],
-      }),
-      hydrateComparableChannelKeys,
+    const managedSite = createManagedSiteCapabilitiesStub({
+      matching: {
+        search: vi.fn().mockResolvedValue({
+          items: [
+            buildManagedSiteChannel({
+              id: 8,
+              key: "",
+              base_url: "https://api.example.com/v1",
+              models: "gpt-4o",
+            }),
+          ],
+        }),
+        hydrateComparableKeys: hydrateComparableChannelKeys,
+      },
     })
 
     const result = await resolveManagedSiteChannelMatch({
-      service,
+      managedSite,
       managedConfig,
       accountBaseUrl: "https://api.example.com/v1",
       models: ["gpt-4o"],
@@ -408,23 +422,25 @@ describe("resolveManagedSiteChannelMatch", () => {
     const hydrateComparableChannelKeys = vi.fn(async () => {
       throw hydrationError
     })
-    const service = createManagedSiteServiceStub({
-      searchChannel: vi.fn().mockResolvedValue({
-        items: [
-          buildManagedSiteChannel({
-            id: 9,
-            key: "",
-            base_url: "https://api.example.com/v1",
-            models: "gpt-4o",
-          }),
-        ],
-      }),
-      hydrateComparableChannelKeys,
+    const managedSite = createManagedSiteCapabilitiesStub({
+      matching: {
+        search: vi.fn().mockResolvedValue({
+          items: [
+            buildManagedSiteChannel({
+              id: 9,
+              key: "",
+              base_url: "https://api.example.com/v1",
+              models: "gpt-4o",
+            }),
+          ],
+        }),
+        hydrateComparableKeys: hydrateComparableChannelKeys,
+      },
     })
 
     await expect(
       resolveManagedSiteChannelMatch({
-        service,
+        managedSite,
         managedConfig,
         accountBaseUrl: "https://api.example.com/v1",
         models: ["gpt-4o"],
@@ -439,22 +455,24 @@ describe("resolveManagedSiteChannelMatch", () => {
         MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.KEY_RESOLUTION_FAILED,
       )
     })
-    const service = createManagedSiteServiceStub({
-      searchChannel: vi.fn().mockResolvedValue({
-        items: [
-          buildManagedSiteChannel({
-            id: 40,
-            key: "",
-            base_url: "https://api.example.com/v1",
-            models: "claude-3",
-          }),
-        ],
-      }),
-      hydrateComparableChannelKeys,
+    const managedSite = createManagedSiteCapabilitiesStub({
+      matching: {
+        search: vi.fn().mockResolvedValue({
+          items: [
+            buildManagedSiteChannel({
+              id: 40,
+              key: "",
+              base_url: "https://api.example.com/v1",
+              models: "claude-3",
+            }),
+          ],
+        }),
+        hydrateComparableKeys: hydrateComparableChannelKeys,
+      },
     })
 
     const result = await resolveManagedSiteChannelMatch({
-      service,
+      managedSite,
       managedConfig,
       accountBaseUrl: "https://api.example.com/v1",
       models: ["gpt-4o"],
@@ -483,20 +501,22 @@ describe("resolveManagedSiteChannelMatch", () => {
       models: "gpt-4o,gpt-4o-mini",
     })
     const hydrateComparableChannelKeys = vi.fn(async (_config, candidates) =>
-      candidates.map((channel: ManagedSiteChannel) => ({
+      candidates.map((channel: NewApiChannel) => ({
         ...channel,
         key: "sk-match",
       })),
     )
-    const service = createManagedSiteServiceStub({
-      searchChannel: vi.fn().mockResolvedValue({
-        items: [containedModelCandidate],
-      }),
-      hydrateComparableChannelKeys,
+    const managedSite = createManagedSiteCapabilitiesStub({
+      matching: {
+        search: vi.fn().mockResolvedValue({
+          items: [containedModelCandidate],
+        }),
+        hydrateComparableKeys: hydrateComparableChannelKeys,
+      },
     })
 
     const result = await resolveManagedSiteChannelMatch({
-      service,
+      managedSite,
       managedConfig,
       accountBaseUrl: "https://api.example.com/v1",
       models: ["gpt-4o"],
@@ -520,23 +540,25 @@ describe("resolveManagedSiteChannelMatch", () => {
   })
 
   it("returns a secondary exact-model match when key comparison is unavailable", async () => {
-    const service = createManagedSiteServiceStub({
-      searchChannel: vi.fn().mockResolvedValue({
-        items: [
-          buildManagedSiteChannel({
-            id: 12,
-            name: "Secondary Match",
-            base_url: "https://api.example.com",
-            models: "gpt-4,gpt-4o-mini",
-          }),
-        ],
-        total: 1,
-        type_counts: {},
-      }),
+    const managedSite = createManagedSiteCapabilitiesStub({
+      matching: {
+        search: vi.fn().mockResolvedValue({
+          items: [
+            buildManagedSiteChannel({
+              id: 12,
+              name: "Secondary Match",
+              base_url: "https://api.example.com",
+              models: "gpt-4,gpt-4o-mini",
+            }),
+          ],
+          total: 1,
+          type_counts: {},
+        }),
+      },
     })
 
     const result = await resolveManagedSiteChannelMatch({
-      service,
+      managedSite,
       managedConfig,
       accountBaseUrl: "https://api.example.com",
       models: ["gpt-4", "gpt-4o-mini"],
@@ -557,24 +579,26 @@ describe("resolveManagedSiteChannelMatch", () => {
   })
 
   it("returns separate key and model assessments when only the key matches", async () => {
-    const service = createManagedSiteServiceStub({
-      searchChannel: vi.fn().mockResolvedValue({
-        items: [
-          buildManagedSiteChannel({
-            id: 13,
-            name: "Key Match",
-            base_url: "https://api.example.com",
-            models: "claude-3",
-            key: "sk-other",
-          }),
-        ],
-        total: 1,
-        type_counts: {},
-      }),
+    const managedSite = createManagedSiteCapabilitiesStub({
+      matching: {
+        search: vi.fn().mockResolvedValue({
+          items: [
+            buildManagedSiteChannel({
+              id: 13,
+              name: "Key Match",
+              base_url: "https://api.example.com",
+              models: "claude-3",
+              key: "sk-other",
+            }),
+          ],
+          total: 1,
+          type_counts: {},
+        }),
+      },
     })
 
     const result = await resolveManagedSiteChannelMatch({
-      service,
+      managedSite,
       managedConfig,
       accountBaseUrl: "https://api.example.com",
       models: ["gpt-4"],
@@ -593,12 +617,12 @@ describe("resolveManagedSiteChannelMatch", () => {
   })
 
   it("returns unresolved when the backend search fails", async () => {
-    const service = createManagedSiteServiceStub({
-      searchChannel: vi.fn().mockResolvedValue(null),
+    const managedSite = createManagedSiteCapabilitiesStub({
+      matching: { search: vi.fn().mockResolvedValue(null) },
     })
 
     const result = await resolveManagedSiteChannelMatch({
-      service,
+      managedSite,
       managedConfig,
       accountBaseUrl: "https://api.example.com",
       models: ["gpt-4"],
@@ -638,26 +662,28 @@ describe("resolveManagedSiteChannelMatch", () => {
       key: "",
     })
     const fetchChannelSecretKey = vi.fn().mockResolvedValue("sk-match")
-    const service = createManagedSiteServiceStub({
-      searchChannel: vi.fn().mockResolvedValue({
-        items: [
-          hiddenUrlOnlyCandidate,
-          buildManagedSiteChannel({
-            id: 22,
-            name: "Competing Candidate",
-            base_url: "https://other.example.com",
-            models: "gpt-4",
-            key: "sk-other",
-          }),
-        ],
-        total: 2,
-        type_counts: {},
-      }),
-      fetchChannelSecretKey,
+    const managedSite = createManagedSiteCapabilitiesStub({
+      matching: {
+        search: vi.fn().mockResolvedValue({
+          items: [
+            hiddenUrlOnlyCandidate,
+            buildManagedSiteChannel({
+              id: 22,
+              name: "Competing Candidate",
+              base_url: "https://other.example.com",
+              models: "gpt-4",
+              key: "sk-other",
+            }),
+          ],
+          total: 2,
+          type_counts: {},
+        }),
+        fetchSecretKey: fetchChannelSecretKey,
+      },
     })
 
     const result = await resolveManagedSiteChannelMatch({
-      service,
+      managedSite,
       managedConfig,
       accountBaseUrl: "https://api.example.com",
       models: ["gpt-4"],
@@ -695,17 +721,19 @@ describe("resolveManagedSiteChannelMatch", () => {
       key: "sk-***",
     })
     const fetchChannelSecretKey = vi.fn().mockResolvedValue("sk-match")
-    const service = createManagedSiteServiceStub({
-      searchChannel: vi.fn().mockResolvedValue({
-        items: [maskedUrlCandidate],
-        total: 1,
-        type_counts: {},
-      }),
-      fetchChannelSecretKey,
+    const managedSite = createManagedSiteCapabilitiesStub({
+      matching: {
+        search: vi.fn().mockResolvedValue({
+          items: [maskedUrlCandidate],
+          total: 1,
+          type_counts: {},
+        }),
+        fetchSecretKey: fetchChannelSecretKey,
+      },
     })
 
     const result = await resolveManagedSiteChannelMatch({
-      service,
+      managedSite,
       managedConfig,
       accountBaseUrl: "https://api.example.com",
       models: ["gpt-4"],
@@ -748,17 +776,19 @@ describe("resolveManagedSiteChannelMatch", () => {
       .fn()
       .mockResolvedValueOnce("sk-other")
       .mockResolvedValueOnce("sk-match")
-    const service = createManagedSiteServiceStub({
-      searchChannel: vi.fn().mockResolvedValue({
-        items: [firstMaskedCandidate, secondMaskedCandidate],
-        total: 2,
-        type_counts: {},
-      }),
-      fetchChannelSecretKey,
+    const managedSite = createManagedSiteCapabilitiesStub({
+      matching: {
+        search: vi.fn().mockResolvedValue({
+          items: [firstMaskedCandidate, secondMaskedCandidate],
+          total: 2,
+          type_counts: {},
+        }),
+        fetchSecretKey: fetchChannelSecretKey,
+      },
     })
 
     const result = await resolveManagedSiteChannelMatch({
-      service,
+      managedSite,
       managedConfig,
       accountBaseUrl: "https://api.example.com",
       models: ["gpt-4"],
@@ -817,17 +847,19 @@ describe("resolveManagedSiteChannelMatch", () => {
           MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.VERIFICATION_REQUIRED,
         ),
       )
-    const service = createManagedSiteServiceStub({
-      searchChannel: vi.fn().mockResolvedValue({
-        items: [exactVisibleCandidate, maskedSiblingCandidate],
-        total: 2,
-        type_counts: {},
-      }),
-      fetchChannelSecretKey,
+    const managedSite = createManagedSiteCapabilitiesStub({
+      matching: {
+        search: vi.fn().mockResolvedValue({
+          items: [exactVisibleCandidate, maskedSiblingCandidate],
+          total: 2,
+          type_counts: {},
+        }),
+        fetchSecretKey: fetchChannelSecretKey,
+      },
     })
 
     const result = await resolveManagedSiteChannelMatch({
-      service,
+      managedSite,
       managedConfig,
       accountBaseUrl: "https://api.example.com",
       models: ["gpt-4"],
@@ -862,17 +894,19 @@ describe("resolveManagedSiteChannelMatch", () => {
       key: "sk-other",
     })
     const fetchChannelSecretKey = vi.fn().mockResolvedValue("sk-match")
-    const service = createManagedSiteServiceStub({
-      searchChannel: vi.fn().mockResolvedValue({
-        items: [hiddenUrlCandidate, usableOutOfBucketCandidate],
-        total: 2,
-        type_counts: {},
-      }),
-      fetchChannelSecretKey,
+    const managedSite = createManagedSiteCapabilitiesStub({
+      matching: {
+        search: vi.fn().mockResolvedValue({
+          items: [hiddenUrlCandidate, usableOutOfBucketCandidate],
+          total: 2,
+          type_counts: {},
+        }),
+        fetchSecretKey: fetchChannelSecretKey,
+      },
     })
 
     const result = await resolveManagedSiteChannelMatch({
-      service,
+      managedSite,
       managedConfig,
       accountBaseUrl: "https://api.example.com",
       models: ["gpt-4"],
@@ -907,17 +941,19 @@ describe("resolveManagedSiteChannelMatch", () => {
       key: "sk-***",
     })
     const fetchChannelSecretKey = vi.fn()
-    const service = createManagedSiteServiceStub({
-      searchChannel: vi.fn().mockResolvedValue({
-        items: [firstMaskedCandidate, secondMaskedCandidate],
-        total: 2,
-        type_counts: {},
-      }),
-      fetchChannelSecretKey,
+    const managedSite = createManagedSiteCapabilitiesStub({
+      matching: {
+        search: vi.fn().mockResolvedValue({
+          items: [firstMaskedCandidate, secondMaskedCandidate],
+          total: 2,
+          type_counts: {},
+        }),
+        fetchSecretKey: fetchChannelSecretKey,
+      },
     })
 
     const result = await resolveManagedSiteChannelMatch({
-      service,
+      managedSite,
       managedConfig,
       accountBaseUrl: "https://api.example.com",
       models: ["gpt-4"],
@@ -944,14 +980,14 @@ describe("resolveManagedSiteChannelMatch", () => {
       key: "sk-***",
     })
     let resolveSearch: (value: {
-      items: ManagedSiteChannel[]
+      items: NewApiChannel[]
       total: number
       type_counts: Record<string, number>
     }) => void = () => {}
     let resolveSecret: (value: string) => void = () => {}
     const searchChannel = vi.fn(
       () =>
-        new Promise((resolve) => {
+        new Promise<Parameters<typeof resolveSearch>[0]>((resolve) => {
           resolveSearch = resolve
         }),
     )
@@ -961,9 +997,11 @@ describe("resolveManagedSiteChannelMatch", () => {
           resolveSecret = resolve
         }),
     )
-    const service = createManagedSiteServiceStub({
-      searchChannel,
-      fetchChannelSecretKey,
+    const managedSite = createManagedSiteCapabilitiesStub({
+      matching: {
+        search: searchChannel,
+        fetchSecretKey: fetchChannelSecretKey,
+      },
     })
     const requestCache = {
       searchResultsByBaseUrl: new Map(),
@@ -972,7 +1010,7 @@ describe("resolveManagedSiteChannelMatch", () => {
     }
 
     const firstResultPromise = resolveManagedSiteChannelMatch({
-      service,
+      managedSite,
       managedConfig,
       accountBaseUrl: "https://api.example.com/v1",
       models: ["gpt-4"],
@@ -981,7 +1019,7 @@ describe("resolveManagedSiteChannelMatch", () => {
       requestCache,
     })
     const secondResultPromise = resolveManagedSiteChannelMatch({
-      service,
+      managedSite,
       managedConfig,
       accountBaseUrl: "https://api.example.com",
       models: ["gpt-4"],
@@ -1027,17 +1065,19 @@ describe("resolveManagedSiteChannelMatch", () => {
           MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.VERIFICATION_REQUIRED,
         ),
       )
-    const service = createManagedSiteServiceStub({
-      searchChannel: vi.fn().mockResolvedValue({
-        items: [hiddenUrlOnlyCandidate],
-        total: 1,
-        type_counts: {},
-      }),
-      fetchChannelSecretKey,
+    const managedSite = createManagedSiteCapabilitiesStub({
+      matching: {
+        search: vi.fn().mockResolvedValue({
+          items: [hiddenUrlOnlyCandidate],
+          total: 1,
+          type_counts: {},
+        }),
+        fetchSecretKey: fetchChannelSecretKey,
+      },
     })
 
     const result = await resolveManagedSiteChannelMatch({
-      service,
+      managedSite,
       managedConfig,
       accountBaseUrl: "https://api.example.com",
       models: ["gpt-4"],
@@ -1086,11 +1126,11 @@ describe("resolveManagedSiteChannelMatch", () => {
         total: 1,
         type_counts: {},
       })
-    const service = createManagedSiteServiceStub({
-      searchChannel,
+    const managedSite = createManagedSiteCapabilitiesStub({
+      matching: { search: searchChannel },
     })
     const request = {
-      service,
+      managedSite,
       managedConfig,
       accountBaseUrl: "https://api.example.com",
       models: ["gpt-4o"],
@@ -1123,16 +1163,18 @@ describe("resolveManagedSiteChannelMatch", () => {
       .fn()
       .mockRejectedValueOnce(new Error("temporary key failure"))
       .mockResolvedValueOnce("sk-match")
-    const service = createManagedSiteServiceStub({
-      searchChannel: vi.fn().mockResolvedValue({
-        items: [hiddenCandidate],
-        total: 1,
-        type_counts: {},
-      }),
-      fetchChannelSecretKey,
+    const managedSite = createManagedSiteCapabilitiesStub({
+      matching: {
+        search: vi.fn().mockResolvedValue({
+          items: [hiddenCandidate],
+          total: 1,
+          type_counts: {},
+        }),
+        fetchSecretKey: fetchChannelSecretKey,
+      },
     })
     const request = {
-      service,
+      managedSite,
       managedConfig,
       accountBaseUrl: "https://api.example.com",
       models: ["gpt-4o"],

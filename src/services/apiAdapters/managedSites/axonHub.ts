@@ -1,6 +1,7 @@
 import { SITE_TYPES } from "~/constants/siteType"
 import type { ManagedResourceMatchingCapability } from "~/services/apiAdapters/contracts/managedResourceMatching"
 import type {
+  ManagedSiteCapabilities,
   ManagedSiteChannelDraftsCapability,
   ManagedSiteConfigCapability,
 } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
@@ -9,9 +10,7 @@ import {
   listAxonHubChannelPage,
 } from "~/services/apiService/axonHub"
 import {
-  buildChannelName,
   checkValidAxonHubConfig,
-  fetchAvailableModels,
   prepareChannelFormData,
 } from "~/services/managedSites/providers/axonHub"
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/managedSite"
@@ -28,8 +27,6 @@ const axonHubManagedSiteConfig: ManagedSiteConfigCapability<AxonHubConfig> =
   )
 
 const axonHubManagedSiteChannelDrafts: ManagedSiteChannelDraftsCapability = {
-  fetchAvailableModels,
-  buildName: buildChannelName,
   prepareFormData: prepareChannelFormData,
 }
 
@@ -86,7 +83,8 @@ async function fetchSecretKey(
   return getAxonHubChannelSecretKey(config, String(id), options)
 }
 export const axonHubManagedSiteCapabilities = {
+  siteType: SITE_TYPES.AXON_HUB,
   matching,
   config: axonHubManagedSiteConfig,
   channelDrafts: axonHubManagedSiteChannelDrafts,
-}
+} satisfies ManagedSiteCapabilities<AxonHubConfig, typeof SITE_TYPES.AXON_HUB>

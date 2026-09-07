@@ -2,6 +2,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { SUB2API_MANAGED_RESOURCE_STATUS } from "~/constants/sub2api"
 import type { ManagedResourceMatchingCapability } from "~/services/apiAdapters/contracts/managedResourceMatching"
 import type {
+  ManagedSiteCapabilities,
   ManagedSiteChannelDraftsCapability,
   ManagedSiteConfigCapability,
 } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
@@ -18,10 +19,8 @@ import {
   type ManagedSiteMutationSequence,
 } from "~/services/managedSites/mutations"
 import {
-  buildChannelName,
   createSub2ApiApiKeyAccount,
   deleteSub2ApiApiKeyAccount,
-  fetchAvailableModels,
   listSub2ApiApiKeyAccounts,
   prepareChannelFormData,
   revealSub2ApiApiKey,
@@ -196,8 +195,6 @@ const configCapability: ManagedSiteConfigCapability<Sub2ApiManagedSiteConfig> =
   createManagedSiteConfigCapability(SITE_TYPES.SUB2API, checkValid)
 
 const channelDrafts: ManagedSiteChannelDraftsCapability = {
-  fetchAvailableModels,
-  buildName: buildChannelName,
   prepareFormData: prepareChannelFormData,
 }
 
@@ -251,7 +248,11 @@ const matching: ManagedResourceMatchingCapability<Sub2ApiManagedSiteConfig> = {
   },
 }
 export const sub2ApiManagedSiteCapabilities = {
+  siteType: SITE_TYPES.SUB2API,
   matching,
   config: configCapability,
   channelDrafts,
-}
+} satisfies ManagedSiteCapabilities<
+  Sub2ApiManagedSiteConfig,
+  typeof SITE_TYPES.SUB2API
+>

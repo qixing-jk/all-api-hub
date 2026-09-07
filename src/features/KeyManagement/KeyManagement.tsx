@@ -37,7 +37,7 @@ import {
 import { OPENROUTER_KEY_FIELD_IDS } from "~/services/apiAdapters/openrouter/keyResourceFields"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { getRecoverableManagedSiteChannelCandidate } from "~/services/managedSites/channelMatch"
-import { hasValidManagedSiteConfig } from "~/services/managedSites/managedSiteService"
+import { hasValidManagedSiteConfig } from "~/services/managedSites/runtimeConfig"
 import {
   MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS,
   MANAGED_SITE_TOKEN_CHANNEL_STATUSES,

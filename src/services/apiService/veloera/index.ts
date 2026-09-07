@@ -4,12 +4,10 @@ import { ApiError } from "~/services/apiTransport/errors"
 import { fetchAllItems } from "~/services/apiTransport/pagination"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import type {
-  CreateChannelPayload,
-  ManagedSiteChannel,
-  ManagedSiteChannelListData,
-} from "~/types/managedSite"
-import type {
-  VeloeraManagedSiteChannel,
+  VeloeraChannel,
+  VeloeraChannelListData,
+  VeloeraChannelRaw,
+  VeloeraCreateChannelPayload,
   VeloeraUpdateChannelPayload,
 } from "~/types/veloera"
 import { getErrorMessage } from "~/utils/core/error"
@@ -41,31 +39,6 @@ const wrapChannelMutationError = (error: unknown, fallback: string) =>
     error,
   )
 
-type VeloeraChannelInfo = {
-  is_multi_key?: boolean
-  multi_key_size?: number
-  multi_key_status_list?: unknown[] | null
-  multi_key_polling_index?: number
-  multi_key_mode?: string
-}
-
-type VeloeraChannelRaw = Partial<
-  Omit<VeloeraManagedSiteChannel, "channel_info"> & {
-    channel_info?: VeloeraChannelInfo
-  }
->
-
-/**
- * Create an empty channel_info object when upstream omits it.
- */
-const createDefaultChannelInfo = (): ManagedSiteChannel["channel_info"] => ({
-  is_multi_key: false,
-  multi_key_size: 0,
-  multi_key_status_list: null,
-  multi_key_polling_index: 0,
-  multi_key_mode: "",
-})
-
 /**
  * Best-effort conversion for numeric fields.
  */
@@ -81,76 +54,35 @@ const toNumberOrZero = (value: unknown): number => {
 }
 
 /**
- * Normalize Veloera channel payloads to match New API's `ManagedSiteChannel`.
+ * Normalize Veloera channel fields while preserving native provider data.
  */
-const normalizeChannel = (
-  raw: VeloeraChannelRaw,
-): VeloeraManagedSiteChannel => {
-  const rawInfo = raw.channel_info
-  const channelInfo = rawInfo
-    ? {
-        is_multi_key: Boolean(rawInfo.is_multi_key),
-        multi_key_size: toNumberOrZero(rawInfo.multi_key_size),
-        multi_key_status_list: rawInfo.multi_key_status_list ?? null,
-        multi_key_polling_index: toNumberOrZero(
-          rawInfo.multi_key_polling_index,
-        ),
-        multi_key_mode: rawInfo.multi_key_mode ?? "",
-      }
-    : createDefaultChannelInfo()
-
-  return {
-    id: toNumberOrZero(raw.id),
-    type: raw.type as ManagedSiteChannel["type"],
-    key: raw.key ?? "",
-    name: raw.name ?? "",
-    base_url: raw.base_url ?? "",
-    models: raw.models ?? "",
-    status: toNumberOrZero(raw.status) as ManagedSiteChannel["status"],
-    weight: toNumberOrZero(raw.weight),
-    priority: toNumberOrZero(raw.priority),
-    openai_organization: raw.openai_organization ?? null,
-    test_model: raw.test_model ?? null,
-    created_time: toNumberOrZero(raw.created_time),
-    test_time: toNumberOrZero(raw.test_time),
-    response_time: toNumberOrZero(raw.response_time),
-    other: raw.other ?? "",
-    balance: toNumberOrZero(raw.balance),
-    balance_updated_time: toNumberOrZero(raw.balance_updated_time),
-    group: raw.group ?? "default",
-    used_quota: toNumberOrZero(raw.used_quota),
-    model_mapping: raw.model_mapping ?? "",
-    status_code_mapping: raw.status_code_mapping ?? "",
-    auto_ban: toNumberOrZero(raw.auto_ban),
-    other_info: raw.other_info ?? "",
-    tag: raw.tag ?? null,
-    param_override: raw.param_override ?? null,
-    header_override: raw.header_override ?? null,
-    remark: raw.remark ?? null,
-    channel_info: channelInfo,
-    setting: raw.setting ?? "",
-    settings: raw.settings ?? raw.setting ?? "",
-    model_prefix: raw.model_prefix ?? null,
-    system_prompt: raw.system_prompt ?? null,
-  }
-}
+const normalizeChannel = (raw: VeloeraChannelRaw): VeloeraChannel => ({
+  ...raw,
+  id: toNumberOrZero(raw.id),
+  type: raw.type ?? 0,
+  key: raw.key ?? "",
+  name: raw.name ?? "",
+  base_url: raw.base_url ?? "",
+  models: raw.models ?? "",
+  status: toNumberOrZero(raw.status),
+  weight: toNumberOrZero(raw.weight),
+  priority: toNumberOrZero(raw.priority),
+  group: raw.group ?? "default",
+  model_mapping: raw.model_mapping ?? "",
+})
 
 /**
  * Create a channel for a Veloera-managed site.
  *
  * Veloera expects a flat channel payload (not wrapped by `{ mode, channel }`).
- * We convert `CreateChannelPayload` into a Veloera-compatible request body.
+ * The caller supplies a flat provider-owned payload.
  */
 export async function createChannel(
   request: ApiServiceRequest,
-  channelData: CreateChannelPayload,
+  channelData: VeloeraCreateChannelPayload,
 ): Promise<any> {
   try {
-    const { groups, ...channel } = channelData.channel
-    const payload = {
-      ...channel,
-      group: (groups ?? []).join(","),
-    }
+    const payload = { ...channelData, group: channelData.group ?? "" }
 
     return await veloeraRequests.envelope<void>(request, {
       endpoint: VELOERA_CHANNEL_ENDPOINT,
@@ -172,24 +104,18 @@ export async function createChannel(
  * Update a channel for a Veloera-managed site.
  *
  * Veloera expects the update payload to be flat and typically uses `group` instead
- * of `groups`. We ensure `group` is populated and omit the `groups` array.
+ * of `groups`. Native update planning supplies the complete provider payload.
  */
 export async function updateChannel(
   request: ApiServiceRequest,
   channelData: VeloeraUpdateChannelPayload,
 ): Promise<any> {
   try {
-    const { groups, ...rest } = channelData
-    const payload = {
-      ...rest,
-      group: rest.group ?? (groups ?? []).join(","),
-    }
-
     return await veloeraRequests.envelope<void>(request, {
       endpoint: VELOERA_CHANNEL_ENDPOINT,
       options: {
         method: "PUT",
-        body: JSON.stringify(payload),
+        body: JSON.stringify(channelData),
       },
     })
   } catch (error) {
@@ -229,16 +155,16 @@ export async function deleteChannel(
  *
  * Veloera returns a bare channel array inside `data` for `/api/channel/`.
  * This implementation paginates from `p=0` and adapts the response into the
- * same `ManagedSiteChannelListData` structure used by the New API implementation.
+ * provider-owned channel inventory.
  */
 export async function listAllChannels(
   request: ApiServiceRequest,
   options?: ManagedSitePaginatedChannelRequestOptions,
-): Promise<ManagedSiteChannelListData> {
+): Promise<VeloeraChannelListData> {
   const pageSize = options?.pageSize ?? REQUEST_CONFIG.DEFAULT_PAGE_SIZE
   const beforeRequest = options?.beforeRequest
 
-  const allItems = await fetchAllItems<ManagedSiteChannel>(
+  const allItems = await fetchAllItems<VeloeraChannel>(
     async (page) => {
       await beforeRequest?.()
 
@@ -278,64 +204,17 @@ export async function listAllChannels(
     // requireComplete page-cap guard above rather than this derived count.
     total: allItems.length,
     type_counts: typeCounts,
-  } as ManagedSiteChannelListData
+  } as VeloeraChannelListData
 }
 
 /**
- * Search channels by keyword for a Veloera-managed site.
- *
- * Veloera implementations often return a bare array (no `total`/`type_counts`).
- * This adapter normalizes that payload to New API compatible `ManagedSiteChannelListData`.
- *
- * Important: Veloera does not reliably support base URL search semantics for
- * this endpoint. Callers that pass a base URL as the keyword must not treat an
- * empty result as proof that no matching channel exists.
- */
-export async function searchChannel(
-  request: ApiServiceRequest,
-  keyword: string,
-): Promise<ManagedSiteChannelListData | null> {
-  try {
-    const endpoint = `/api/channel/search?keyword=${encodeURIComponent(keyword)}`
-    const data = await veloeraRequests.data<unknown>(request, { endpoint })
-
-    const rawItems: VeloeraChannelRaw[] | null = Array.isArray(data)
-      ? (data as VeloeraChannelRaw[])
-      : Array.isArray((data as { items?: unknown } | null)?.items)
-        ? (((data as { items: unknown[] }).items ?? []) as VeloeraChannelRaw[])
-        : null
-
-    if (!rawItems) {
-      throw new ApiError("Failed to search channels", undefined, endpoint)
-    }
-
-    const items = rawItems.map(normalizeChannel)
-    const typeCounts: Record<string, number> = {}
-    for (const channel of items) {
-      const key = String(channel.type)
-      typeCounts[key] = (typeCounts[key] || 0) + 1
-    }
-
-    return {
-      items,
-      total: items.length,
-      type_counts: typeCounts,
-    } as ManagedSiteChannelListData
-  } catch (error) {
-    logger.error("Failed to search channels", error)
-    return null
-  }
-}
-
-/**
- * Fetch a single Veloera channel detail payload and normalize it to
- * `ManagedSiteChannel`.
+ * Fetch Veloera channel detail, normalizing core fields and retaining native data.
  */
 export async function fetchChannel(
   request: ApiServiceRequest,
   channelId: number,
   options?: Pick<RequestInit, "signal">,
-): Promise<VeloeraManagedSiteChannel> {
+): Promise<VeloeraChannel> {
   const endpoint = `${VELOERA_CHANNEL_ENDPOINT}/${channelId}`
   const result = await veloeraRequests.data<unknown>(request, {
     endpoint,

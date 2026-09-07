@@ -13,7 +13,7 @@ import type {
   FeatureGuidanceState,
   GatewayGuidanceSurface,
 } from "~/services/featureGuidance/featureGuidanceState"
-import { hasValidManagedSiteConfig } from "~/services/managedSites/managedSiteService"
+import { hasValidManagedSiteConfig } from "~/services/managedSites/runtimeConfig"
 import { supportsManagedSiteModelSync } from "~/services/managedSites/utils/managedSite"
 import type { UserPreferences } from "~/services/preferences/userPreferences"
 import {

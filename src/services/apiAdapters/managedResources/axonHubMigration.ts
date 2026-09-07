@@ -2,7 +2,7 @@ import {
   AXON_HUB_CHANNEL_STATUS,
   type AxonHubChannelType,
 } from "~/constants/axonHub"
-import { DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
+import { DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSiteChannelDraft"
 import { SITE_TYPES } from "~/constants/siteType"
 import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
 import { hasUsableApiTokenKey } from "~/services/accountTokens/apiTokenKey"

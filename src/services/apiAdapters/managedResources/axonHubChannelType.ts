@@ -3,7 +3,7 @@ import {
   isAxonHubChannelType,
   type AxonHubChannelType,
 } from "~/constants/axonHub"
-import { ChannelType } from "~/constants/managedSite"
+import { ChannelType } from "~/constants/newApi"
 
 const AXON_HUB_TO_CHANNEL_TYPE = {
   [AXON_HUB_CHANNEL_TYPE.OPENAI]: ChannelType.OpenAI,
@@ -62,20 +62,4 @@ export function mapChannelTypeToAxonHubChannelTypeStrict(
   return mappedType === undefined
     ? { status: "unsupported" }
     : { status: "mapped", value: mappedType }
-}
-
-/** Maps an AxonHub-native channel type using the legacy OpenAI fallback. */
-export function mapAxonHubChannelTypeToChannelType(type: string): ChannelType {
-  const mappedType = mapAxonHubChannelTypeToChannelTypeStrict(type)
-  return mappedType.status === "mapped" ? mappedType.value : ChannelType.OpenAI
-}
-
-/** Maps a shared channel type using the legacy AxonHub OpenAI fallback. */
-export function mapChannelTypeToAxonHubChannelType(
-  type: ChannelType,
-): AxonHubChannelType {
-  const mappedType = mapChannelTypeToAxonHubChannelTypeStrict(type)
-  return mappedType.status === "mapped"
-    ? mappedType.value
-    : AXON_HUB_CHANNEL_TYPE.OPENAI
 }

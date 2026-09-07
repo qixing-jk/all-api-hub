@@ -14,12 +14,12 @@ import type {
   ChannelModelPatternFilterRule,
   ChannelModelProbeFilterRule,
 } from "~/types/channelModelFilters"
-import type { ManagedSiteChannel } from "~/types/managedSite"
 import type { ExecutionItemResult } from "~/types/managedSiteModelSync"
 import {
   createManagedUpstreamResourceRef,
   getManagedUpstreamResourceRefKey,
 } from "~/types/managedUpstreamResource"
+import type { NewApiChannel } from "~/types/newApi"
 
 const loggerMocks = vi.hoisted(() => ({
   debug: vi.fn(),
@@ -39,7 +39,7 @@ const {
   updateChannelModelsMock,
   updateChannelModelMappingMock,
   fetchChannelSecretKeyMock,
-  getManagedSiteServiceForTypeMock,
+  getManagedSiteCapabilitiesForTypeMock,
   runApiVerificationProbeMock,
 } = vi.hoisted(() => ({
   getSiteTypeCapabilitiesMock: vi.fn(),
@@ -48,16 +48,13 @@ const {
   updateChannelModelsMock: vi.fn(),
   updateChannelModelMappingMock: vi.fn(),
   fetchChannelSecretKeyMock: vi.fn(),
-  getManagedSiteServiceForTypeMock: vi.fn(),
+  getManagedSiteCapabilitiesForTypeMock: vi.fn(),
   runApiVerificationProbeMock: vi.fn(),
 }))
 
 vi.mock("~/services/apiAdapters/registry", () => ({
   getSiteTypeCapabilities: getSiteTypeCapabilitiesMock,
-}))
-
-vi.mock("~/services/managedSites/managedSiteService", () => ({
-  getManagedSiteServiceForType: getManagedSiteServiceForTypeMock,
+  getManagedSiteCapabilities: getManagedSiteCapabilitiesForTypeMock,
 }))
 
 vi.mock("~/services/verification/aiApiVerification", async (importOriginal) => {
@@ -241,8 +238,8 @@ const makeExampleRuntimeConfig = (): ManagedSiteRuntimeConfig =>
   })
 
 const makeChannel = (
-  partial: Partial<ManagedSiteChannel> & Pick<ManagedSiteChannel, "id">,
-): ManagedSiteChannel => ({
+  partial: Partial<NewApiChannel> & Pick<NewApiChannel, "id">,
+): NewApiChannel => ({
   id: partial.id,
   type: partial.type ?? ChannelType.OpenAI,
   key: partial.key ?? "",
@@ -322,8 +319,8 @@ beforeEach(() => {
       },
     },
   }))
-  getManagedSiteServiceForTypeMock.mockReturnValue({
-    fetchChannelSecretKey: fetchChannelSecretKeyMock,
+  getManagedSiteCapabilitiesForTypeMock.mockReturnValue({
+    matching: { fetchSecretKey: fetchChannelSecretKeyMock },
   })
   fetchChannelSecretKeyMock.mockResolvedValue("sk-resolved-channel-key")
   updateChannelModelsMock.mockResolvedValue({
@@ -1306,7 +1303,7 @@ describe("ModelSyncService - probe-backed filters", () => {
 
   it("does not update models when probe filtering cannot resolve a hidden key", async () => {
     fetchChannelModelsMock.mockResolvedValueOnce(["model-a"])
-    getManagedSiteServiceForTypeMock.mockReturnValue({})
+    getManagedSiteCapabilitiesForTypeMock.mockReturnValue({})
 
     const service = new ModelSyncService(
       makeRuntimeConfig({ siteType: SITE_TYPES.NEW_API }),

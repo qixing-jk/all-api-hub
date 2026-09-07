@@ -6,8 +6,7 @@ import {
   MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
   MatchResolutionUnresolvedError,
 } from "~/services/managedSites/channelMatch"
-import type { ManagedSiteConfig } from "~/services/managedSites/managedSiteService"
-import { fetchManagedSiteAvailableModels } from "~/services/managedSites/utils/fetchManagedSiteAvailableModels"
+import { buildManagedSiteChannelName } from "~/services/managedSites/utils/channelDraft"
 import { fetchTokenScopedModels } from "~/services/managedSites/utils/fetchTokenScopedModels"
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/managedSite"
 import {
@@ -18,7 +17,8 @@ import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerificati
 import type { AccountToken, ApiToken, DisplaySiteData } from "~/types"
 import type { ClaudeCodeHubConfig } from "~/types/claudeCodeHubConfig"
 import type { ManagedResourceMatchCandidate } from "~/types/managedResourceMatching"
-import { CHANNEL_STATUS, type ChannelFormData } from "~/types/managedSite"
+import { type ManagedSiteChannelDraft } from "~/types/managedSiteChannelDraft"
+import { CHANNEL_STATUS } from "~/types/newApi"
 import { createLogger } from "~/utils/core/logger"
 import { normalizeList } from "~/utils/core/string"
 
@@ -78,25 +78,6 @@ export async function checkValidClaudeCodeHubConfig(): Promise<boolean> {
         : toSanitizedErrorSummary(error, []),
     )
     return false
-  }
-}
-
-/**
- * Adapts Claude Code Hub preferences into the managed-site config contract.
- */
-export async function getClaudeCodeHubConfig(): Promise<ManagedSiteConfig | null> {
-  try {
-    const prefs = await userPreferences.getPreferences()
-    if (hasValidClaudeCodeHubConfig(prefs) && prefs.claudeCodeHub) {
-      return prefs.claudeCodeHub
-    }
-    return null
-  } catch (error) {
-    logger.error(
-      "Error getting Claude Code Hub config",
-      toSanitizedErrorSummary(error, []),
-    )
-    return null
   }
 }
 
@@ -175,38 +156,12 @@ export async function fetchChannelSecretKey(
 }
 
 /**
- * Fetches available models for a managed-site account token pair.
- */
-export async function fetchAvailableModels(
-  account: DisplaySiteData,
-  token: ApiToken,
-): Promise<string[]> {
-  return await fetchManagedSiteAvailableModels(account, token, {
-    includeAccountFallback: false,
-  })
-}
-
-/**
- * Builds the default Claude Code Hub channel name for imported tokens.
- */
-export function buildChannelName(
-  account: DisplaySiteData,
-  token: ApiToken,
-): string {
-  let channelName = `${account.name} | ${token.name}`.trim()
-  if (!channelName.endsWith("(auto)")) {
-    channelName += " (auto)"
-  }
-  return channelName
-}
-
-/**
  * Prefills channel form data from an account and its scoped token models.
  */
 export async function prepareChannelFormData(
   account: DisplaySiteData,
   token: ApiToken | AccountToken,
-): Promise<ChannelFormData> {
+): Promise<ManagedSiteChannelDraft> {
   const upstreamAccount = normalizeAccountForManagedChannel(account)
   const { models: availableModels, fetchFailed } = await fetchTokenScopedModels(
     upstreamAccount,
@@ -214,7 +169,7 @@ export async function prepareChannelFormData(
   )
 
   return {
-    name: buildChannelName(account, token),
+    name: buildManagedSiteChannelName(account, token),
     type: CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE,
     key: token.key,
     base_url: upstreamAccount.baseUrl,

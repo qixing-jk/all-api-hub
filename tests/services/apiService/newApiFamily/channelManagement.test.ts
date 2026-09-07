@@ -9,9 +9,8 @@ import {
   fetchDraftChannelModels,
   listAllChannels,
   searchChannel,
-  updateChannel,
-  updateChannelModelMapping,
-  updateChannelModels,
+  updateChannelFields,
+  updateChannelStatus,
 } from "~/services/apiService/newApiFamily/channelManagement"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { AuthTypeEnum } from "~/types"
@@ -152,11 +151,6 @@ describe("newApiFamily channel management APIs", () => {
         message: "创建渠道失败，请检查网络或 New API 配置。",
       },
       {
-        invoke: () =>
-          updateChannel(baseRequest, { id: 1, name: "Updated" } as any),
-        message: "更新渠道失败，请检查网络或 New API 配置。",
-      },
-      {
         invoke: () => deleteChannel(baseRequest, 1),
         message: "删除渠道失败，请检查网络或 New API 配置。",
       },
@@ -187,19 +181,10 @@ describe("newApiFamily channel management APIs", () => {
     }
   })
 
-  it("updateChannel and deleteChannel wrap transport failures with user-facing messages", async () => {
+  it("deleteChannel wraps transport failures with user-facing messages", async () => {
     mockFetchApi
       .mockResolvedValueOnce({ success: true })
-      .mockRejectedValueOnce(new Error("update failed"))
-      .mockResolvedValueOnce({ success: true })
       .mockRejectedValueOnce(new Error("delete failed"))
-
-    await expect(
-      updateChannel(baseRequest, { id: 1, name: "Updated" } as any),
-    ).resolves.toEqual({ success: true })
-    await expect(
-      updateChannel(baseRequest, { id: 1, name: "Updated" } as any),
-    ).rejects.toThrow("更新渠道失败，请检查网络或 New API 配置。")
 
     await expect(deleteChannel(baseRequest, 1)).resolves.toEqual({
       success: true,
@@ -209,10 +194,10 @@ describe("newApiFamily channel management APIs", () => {
     )
   })
 
-  it("updateChannel serializes groups into the New API group field", async () => {
+  it("updateChannelFields serializes groups into the New API group field", async () => {
     mockFetchApi.mockResolvedValueOnce({ success: true })
 
-    await updateChannel(baseRequest, {
+    await updateChannelFields(baseRequest, {
       id: 1,
       name: "Updated",
       groups: ["default", "vip"],
@@ -227,10 +212,10 @@ describe("newApiFamily channel management APIs", () => {
     expect(body.groups).toBeUndefined()
   })
 
-  it("updateChannel omits an empty key so New API preserves the existing secret", async () => {
+  it("updateChannelFields omits an empty key so New API preserves the existing secret", async () => {
     mockFetchApi.mockResolvedValueOnce({ success: true })
 
-    await updateChannel(baseRequest, {
+    await updateChannelFields(baseRequest, {
       id: 1,
       name: "Updated",
       key: "",
@@ -249,138 +234,44 @@ describe("newApiFamily channel management APIs", () => {
     expect(body.groups).toBeUndefined()
   })
 
-  it("updateChannel sends status through the New API status endpoint", async () => {
-    mockFetchApi
-      .mockResolvedValueOnce({ success: true })
-      .mockResolvedValueOnce({ success: true, data: true })
+  it.each([1, 2])(
+    "updateChannelStatus sends manual status %i to the status endpoint",
+    async (status) => {
+      mockFetchApi.mockResolvedValueOnce({ success: true, data: true })
 
-    await updateChannel(baseRequest, {
-      id: 1,
-      name: "Updated",
-      status: 1,
-      groups: ["default"],
-    } as any)
-
-    const updateBody = JSON.parse(mockFetchApi.mock.calls[0][1].options.body)
-    expect(updateBody).toMatchObject({
-      id: 1,
-      name: "Updated",
-      group: "default",
-    })
-    expect(updateBody.status).toBeUndefined()
-    expect(mockFetchApi).toHaveBeenNthCalledWith(
-      2,
-      baseRequest,
-      expect.objectContaining({
+      await expect(
+        updateChannelStatus(baseRequest, 1, status),
+      ).resolves.toEqual({
+        success: true,
+        data: true,
+      })
+      expect(mockFetchApi).toHaveBeenCalledExactlyOnceWith(baseRequest, {
         endpoint: "/api/channel/1/status",
         options: {
           method: "POST",
-          body: JSON.stringify({ status: 1 }),
+          body: JSON.stringify({ status }),
         },
-      }),
-    )
-  })
-
-  it("updateChannel sends manually disabled status through the New API status endpoint", async () => {
-    mockFetchApi
-      .mockResolvedValueOnce({ success: true })
-      .mockResolvedValueOnce({ success: true, data: true })
-
-    await updateChannel(baseRequest, {
-      id: 1,
-      name: "Updated",
-      status: 2,
-    } as any)
-
-    const updateBody = JSON.parse(mockFetchApi.mock.calls[0][1].options.body)
-    expect(updateBody).toMatchObject({
-      id: 1,
-      name: "Updated",
-    })
-    expect(updateBody.status).toBeUndefined()
-    expect(mockFetchApi).toHaveBeenNthCalledWith(
-      2,
-      baseRequest,
-      expect.objectContaining({
-        endpoint: "/api/channel/1/status",
-        options: {
-          method: "POST",
-          body: JSON.stringify({ status: 2 }),
-        },
-      }),
-    )
-  })
-
-  it("updateChannel reports partial success when the status endpoint fails after the update", async () => {
-    mockFetchApi
-      .mockResolvedValueOnce({
-        success: true,
-        message: "updated",
-        data: { id: 1 },
       })
-      .mockResolvedValueOnce({
-        success: false,
-        message: "status rejected",
-        data: false,
-      })
+    },
+  )
 
-    await expect(
-      updateChannel(baseRequest, {
+  it.each([1, 2, 3] as const)(
+    "updateChannelFields omits status %i from the field update",
+    async (status) => {
+      mockFetchApi.mockResolvedValueOnce({ success: true })
+
+      await updateChannelFields(baseRequest, {
         id: 1,
         name: "Updated",
-        status: 1,
-      } as any),
-    ).resolves.toEqual({
-      success: false,
-      message:
-        "Channel fields were updated, but status update failed: status rejected",
-      data: { id: 1 },
-    })
-  })
-
-  it("updateChannel reports partial success with a fallback when status failure has no message", async () => {
-    mockFetchApi
-      .mockResolvedValueOnce({
-        success: true,
-        message: "updated",
-        data: { id: 1 },
-      })
-      .mockResolvedValueOnce({
-        success: false,
-        message: "",
-        data: false,
+        status,
       })
 
-    await expect(
-      updateChannel(baseRequest, {
-        id: 1,
-        name: "Updated",
-        status: 1,
-      } as any),
-    ).resolves.toEqual({
-      success: false,
-      message: "Channel fields were updated, but status update failed.",
-      data: { id: 1 },
-    })
-  })
-
-  it("updateChannel omits auto-disabled status without calling the manual status endpoint", async () => {
-    mockFetchApi.mockResolvedValueOnce({ success: true })
-
-    await updateChannel(baseRequest, {
-      id: 1,
-      name: "Updated",
-      status: 3,
-    } as any)
-
-    const updateBody = JSON.parse(mockFetchApi.mock.calls[0][1].options.body)
-    expect(updateBody).toMatchObject({
-      id: 1,
-      name: "Updated",
-    })
-    expect(updateBody.status).toBeUndefined()
-    expect(mockFetchApi).toHaveBeenCalledTimes(1)
-  })
+      const updateBody = JSON.parse(mockFetchApi.mock.calls[0][1].options.body)
+      expect(updateBody).toMatchObject({ id: 1, name: "Updated" })
+      expect(updateBody.status).toBeUndefined()
+      expect(mockFetchApi).toHaveBeenCalledTimes(1)
+    },
+  )
 
   it("listAllChannels should paginate and aggregate type_counts", async () => {
     const baseUrl = "https://example.com"
@@ -573,27 +464,5 @@ describe("newApiFamily channel management APIs", () => {
         message: "malformed payload",
       },
     )
-  })
-
-  it("updateChannelModels and updateChannelModelMapping validate response envelopes", async () => {
-    mockFetchApi
-      .mockResolvedValueOnce({ success: true })
-      .mockResolvedValueOnce({ success: false, message: "bad models" })
-      .mockResolvedValueOnce({ success: true })
-      .mockResolvedValueOnce({ success: false, message: "bad mapping" })
-
-    await expect(
-      updateChannelModels(baseRequest, 1, "gpt-4,gpt-4o"),
-    ).resolves.toBeUndefined()
-    await expect(
-      updateChannelModels(baseRequest, 1, "gpt-4,gpt-4o"),
-    ).rejects.toMatchObject({ message: "bad models" })
-
-    await expect(
-      updateChannelModelMapping(baseRequest, 1, "gpt-4", '{"gpt-4":"gpt-4o"}'),
-    ).resolves.toBeUndefined()
-    await expect(
-      updateChannelModelMapping(baseRequest, 1, "gpt-4", '{"gpt-4":"gpt-4o"}'),
-    ).rejects.toMatchObject({ message: "bad mapping" })
   })
 })

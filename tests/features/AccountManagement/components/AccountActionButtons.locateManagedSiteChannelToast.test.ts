@@ -7,16 +7,16 @@ import {
   MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS,
   type ManagedSiteChannelMatchInspection,
 } from "~/services/managedSites/channelMatch"
-import type { ManagedSiteChannel } from "~/types/managedSite"
+import type { NewApiChannel } from "~/types/newApi"
 
-const channel = (id: number): ManagedSiteChannel =>
+const channel = (id: number): NewApiChannel =>
   ({
     id,
     name: `Channel ${id}`,
     base_url: "https://api.example.com",
     models: "gpt-4",
     key: "",
-  }) as ManagedSiteChannel
+  }) as NewApiChannel
 
 const buildInspection = (
   overrides: Partial<ManagedSiteChannelMatchInspection>,
