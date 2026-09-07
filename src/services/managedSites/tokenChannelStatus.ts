@@ -1,7 +1,13 @@
 import { SITE_TYPES } from "~/constants/siteType"
-import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
+import {
+  collectAccountRuntimeKeySecrets,
+  isAccountTokenRuntimeKey,
+  type AccountRuntimeKey,
+} from "~/services/accounts/accountRuntimeKeys"
+import { resolveDisplayAccountRuntimeKeySecret } from "~/services/accounts/utils/apiServiceRequest"
 import type { ManagedSiteCapabilities } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import { getManagedSiteCapabilities } from "~/services/apiAdapters/registry"
+import { buildManagedSiteChannelDraftSource } from "~/services/managedSites/channelDraftSource"
 import {
   getManagedSiteChannelExactMatch,
   type ManagedSiteChannelMatchInspection,
@@ -30,7 +36,6 @@ import {
 } from "~/services/managedSites/verifiedChannelKeyAssessment"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
-import type { AccountToken, ApiToken, DisplaySiteData } from "~/types"
 import type { NewApiConfig } from "~/types/newApiConfig"
 import { createLogger } from "~/utils/core/logger"
 
@@ -109,8 +114,7 @@ export type ManagedSiteTokenChannelStatus =
     )
 
 interface GetManagedSiteTokenChannelStatusParams {
-  account: DisplaySiteData
-  token: ApiToken | AccountToken
+  runtimeKey: AccountRuntimeKey
   managedSite?: ManagedSiteCapabilities
   managedConfig?: ManagedSiteRuntimeConfigValue | null
   resolvedChannelKeysById?: Record<number, string>
@@ -138,11 +142,11 @@ const findAssessmentChannelSummary = (
 }
 
 const collectSecrets = (
-  token: ApiToken | AccountToken,
+  runtimeKey: AccountRuntimeKey,
   managedConfig: ManagedSiteRuntimeConfigValue | null,
 ) => {
   return [
-    token.key,
+    ...collectAccountRuntimeKeySecrets([runtimeKey]),
     ...(managedConfig ? collectManagedConfigSecrets(managedConfig) : []),
   ].filter(Boolean) as string[]
 }
@@ -248,7 +252,7 @@ const buildNewApiRecoveryMetadata = async (params: {
 export async function getManagedSiteTokenChannelStatus(
   params: GetManagedSiteTokenChannelStatusParams,
 ): Promise<ManagedSiteTokenChannelStatus> {
-  const { account, token } = params
+  const { runtimeKey } = params
   const managedSite =
     params.managedSite ??
     getManagedSiteCapabilities(await getCurrentManagedSiteType())
@@ -261,8 +265,8 @@ export async function getManagedSiteTokenChannelStatus(
     }
   }
 
-  let resolvedToken = token
-  let secretsToRedact = collectSecrets(token, managedConfig)
+  let resolvedRuntimeKey = runtimeKey
+  let secretsToRedact = collectSecrets(runtimeKey, managedConfig)
 
   // This feature is not supported on managed-site backends whose channel
   // search cannot provide a trustworthy base-URL lookup result.
@@ -275,19 +279,25 @@ export async function getManagedSiteTokenChannelStatus(
   }
 
   try {
-    resolvedToken = await resolveDisplayAccountTokenForSecret(account, token)
+    if (isAccountTokenRuntimeKey(runtimeKey)) {
+      resolvedRuntimeKey = await resolveDisplayAccountRuntimeKeySecret(
+        runtimeKey.account,
+        runtimeKey,
+        { protectionBypassExecution: params.protectionBypassExecution },
+      )
+    }
     secretsToRedact = Array.from(
       new Set([
         ...secretsToRedact,
-        ...collectSecrets(resolvedToken, managedConfig),
+        ...collectSecrets(resolvedRuntimeKey, managedConfig),
       ]),
     )
   } catch (error) {
     const diagnostic = toSanitizedErrorSummary(error, secretsToRedact)
 
     logger.warn("Managed-site token secret resolution failed", {
-      accountId: account.id,
-      tokenId: token.id,
+      accountId: runtimeKey.accountId,
+      runtimeKeyId: runtimeKey.id,
       siteType: managedSite.siteType,
       diagnostic,
     })
@@ -301,19 +311,15 @@ export async function getManagedSiteTokenChannelStatus(
   }
 
   try {
-    const normalizedAccountBaseUrl = normalizeManagedSiteChannelBaseUrl(
-      account.baseUrl,
-    )
-    const formData = await managedSite.channelDrafts.prepareFormData(
-      {
-        ...account,
-        baseUrl: normalizedAccountBaseUrl,
-      },
-      resolvedToken,
-      {
-        operationContext: params.operationContext,
-      },
-    )
+    const source = buildManagedSiteChannelDraftSource({
+      ...resolvedRuntimeKey,
+      baseUrl: isAccountTokenRuntimeKey(resolvedRuntimeKey)
+        ? normalizeManagedSiteChannelBaseUrl(resolvedRuntimeKey.baseUrl)
+        : resolvedRuntimeKey.baseUrl,
+    })
+    const formData = await managedSite.channelDrafts.prepareFormData(source, {
+      operationContext: params.operationContext,
+    })
     const searchBaseUrl = normalizeManagedSiteChannelBaseUrl(formData.base_url)
 
     if (!searchBaseUrl) {
@@ -433,8 +439,8 @@ export async function getManagedSiteTokenChannelStatus(
     const diagnostic = toSanitizedErrorSummary(error, secretsToRedact)
 
     logger.warn("Managed-site token status check failed", {
-      accountId: account.id,
-      tokenId: token.id,
+      accountId: runtimeKey.accountId,
+      runtimeKeyId: runtimeKey.id,
       siteType: managedSite.siteType,
       diagnostic,
     })

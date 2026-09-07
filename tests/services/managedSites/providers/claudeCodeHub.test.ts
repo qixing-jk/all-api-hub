@@ -5,6 +5,8 @@ import {
   ClaudeCodeHubProviderTypeOptions,
 } from "~/constants/claudeCodeHub"
 import { SITE_TYPES } from "~/constants/siteType"
+import { buildDisplayAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import { buildManagedSiteChannelDraftSource } from "~/services/managedSites/channelDraftSource"
 import {
   MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
   MatchResolutionUnresolvedError,
@@ -17,7 +19,7 @@ import {
 } from "~/services/managedSites/providers/claudeCodeHub"
 import { getManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
 
-const mockFetchTokenScopedModels = vi.fn()
+const mockFetchManagedSiteImportModels = vi.fn()
 const mockFetchManagedSiteAvailableModels = vi.fn()
 const mockListProviders = vi.fn()
 const mockSearchProviders = vi.fn()
@@ -31,9 +33,9 @@ const mockLogger = vi.hoisted(() => ({
   error: vi.fn(),
 }))
 
-vi.mock("~/services/managedSites/utils/fetchTokenScopedModels", () => ({
-  fetchTokenScopedModels: (...args: unknown[]) =>
-    mockFetchTokenScopedModels(...args),
+vi.mock("~/services/managedSites/utils/fetchManagedSiteImportModels", () => ({
+  fetchManagedSiteImportModels: (...args: unknown[]) =>
+    mockFetchManagedSiteImportModels(...args),
 }))
 
 vi.mock("~/services/apiService/claudeCodeHub", () => ({
@@ -74,7 +76,7 @@ describe("Claude Code Hub managed-site provider", () => {
   }
 
   beforeEach(() => {
-    mockFetchTokenScopedModels.mockReset()
+    mockFetchManagedSiteImportModels.mockReset()
     mockFetchManagedSiteAvailableModels.mockReset()
     mockListProviders.mockReset()
     mockSearchProviders.mockReset()
@@ -109,19 +111,23 @@ describe("Claude Code Hub managed-site provider", () => {
   })
 
   it("prepares account-token import form data with default provider type and model fallback", async () => {
-    mockFetchTokenScopedModels.mockResolvedValueOnce({
+    mockFetchManagedSiteImportModels.mockResolvedValueOnce({
       models: ["gpt-4o"],
       fetchFailed: false,
     })
 
     await expect(
       prepareChannelFormData(
-        {
-          id: "account-1",
-          name: "Account",
-          baseUrl: "https://api.example.com",
-        } as any,
-        { id: 1, name: "Token", key: "sk-real-key" } as any,
+        buildManagedSiteChannelDraftSource(
+          buildDisplayAccountTokenRuntimeKey(
+            {
+              id: "account-1",
+              name: "Account",
+              baseUrl: "https://api.example.com",
+            } as any,
+            { id: 1, name: "Token", key: "sk-real-key" } as any,
+          ),
+        ),
       ),
     ).resolves.toMatchObject({
       name: "Account | Token (auto)",
@@ -134,19 +140,23 @@ describe("Claude Code Hub managed-site provider", () => {
       weight: 1,
     })
 
-    mockFetchTokenScopedModels.mockResolvedValueOnce({
+    mockFetchManagedSiteImportModels.mockResolvedValueOnce({
       models: [],
       fetchFailed: true,
     })
 
     await expect(
       prepareChannelFormData(
-        {
-          id: "account-1",
-          name: "Account",
-          baseUrl: "https://api.example.com",
-        } as any,
-        { id: 1, name: "Token", key: "sk-real-key" } as any,
+        buildManagedSiteChannelDraftSource(
+          buildDisplayAccountTokenRuntimeKey(
+            {
+              id: "account-1",
+              name: "Account",
+              baseUrl: "https://api.example.com",
+            } as any,
+            { id: 1, name: "Token", key: "sk-real-key" } as any,
+          ),
+        ),
       ),
     ).resolves.toMatchObject({
       models: [],
@@ -155,7 +165,7 @@ describe("Claude Code Hub managed-site provider", () => {
   })
 
   it("uses the AIHubMix API origin for managed-site channel imports", async () => {
-    mockFetchTokenScopedModels.mockResolvedValueOnce({
+    mockFetchManagedSiteImportModels.mockResolvedValueOnce({
       models: ["gpt-aihubmix-mini"],
       fetchFailed: false,
     })
@@ -164,13 +174,17 @@ describe("Claude Code Hub managed-site provider", () => {
 
     await expect(
       prepareChannelFormData(
-        {
-          id: "account-1",
-          name: "AIHubMix",
-          siteType: SITE_TYPES.AIHUBMIX,
-          baseUrl: "https://console.aihubmix.com",
-        } as any,
-        token,
+        buildManagedSiteChannelDraftSource(
+          buildDisplayAccountTokenRuntimeKey(
+            {
+              id: "account-1",
+              name: "AIHubMix",
+              siteType: SITE_TYPES.AIHUBMIX,
+              baseUrl: "https://console.aihubmix.com",
+            } as any,
+            token,
+          ),
+        ),
       ),
     ).resolves.toMatchObject({
       key: "sk-aihubmix-key",
@@ -178,11 +192,11 @@ describe("Claude Code Hub managed-site provider", () => {
       models: ["gpt-aihubmix-mini"],
     })
 
-    expect(mockFetchTokenScopedModels).toHaveBeenCalledWith(
+    expect(mockFetchManagedSiteImportModels).toHaveBeenCalledWith(
       expect.objectContaining({
         baseUrl: "https://aihubmix.com",
+        apiKey: token.key,
       }),
-      token,
     )
   })
 

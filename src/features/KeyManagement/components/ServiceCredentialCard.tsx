@@ -128,7 +128,7 @@ export function ServiceCredentialCard({
     cliProxyManagementKey,
   } = useUserPreferencesContext()
   const { markGatewayGuidanceOnboardingCompleted } = useFeatureGuidanceContext()
-  const { openWithCredentials } = useChannelDialog()
+  const { openWithAccount } = useChannelDialog()
   const identityKey = `${account.id}:${credential.service}`
   const visibleKeys = new Set<string>()
   const apiType: ApiVerificationApiType = API_TYPES.OPENAI_COMPATIBLE
@@ -293,12 +293,9 @@ export function ServiceCredentialCard({
     })
 
     try {
-      const result = await openWithCredentials(
-        {
-          name: transientProfile.name,
-          baseUrl: transientProfile.baseUrl,
-          apiKey: transientProfile.apiKey,
-        },
+      const result = await openWithAccount(
+        account,
+        runtimeKey,
         (channelResult) => {
           showResultToast(channelResult)
           if (channelResult?.success) {

@@ -586,8 +586,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       const uniqueTargets = new Map<
         string,
         {
-          token: AccountToken
-          account: (typeof enabledDisplayData)[number]
+          runtimeKey: AccountRuntimeKey
           identityKey: string
           cacheKey: string
           resolvedChannelKeysById?: Record<number, string>
@@ -609,8 +608,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
         }
 
         uniqueTargets.set(identityKey, {
-          token,
-          account,
+          runtimeKey: buildDisplayAccountTokenRuntimeKey(account, token),
           identityKey,
           cacheKey,
           resolvedChannelKeysById:
@@ -632,8 +630,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
         }
 
         uniqueTargets.set(targetInput.identityKey, {
-          token: targetInput.token,
-          account: targetInput.account,
+          runtimeKey: targetInput.runtimeKey,
           identityKey: targetInput.identityKey,
           cacheKey,
           resolvedChannelKeysById:
@@ -689,8 +686,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
             }
 
             const result = await getManagedSiteTokenChannelStatus({
-              account: target.account,
-              token: target.token,
+              runtimeKey: target.runtimeKey,
               resolvedChannelKeysById: target.resolvedChannelKeysById,
               operationContext,
               protectionBypassExecution:
@@ -897,10 +893,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
           void runManagedSiteStatusChecks({
             tokens: [],
             targets: [
-              buildServiceCredentialManagedSiteStatusTarget(
-                account,
-                runtimeKey,
-              ),
+              buildServiceCredentialManagedSiteStatusTarget(runtimeKey),
             ],
           })
           return KEY_MANAGEMENT_LOAD_STATUSES.Loaded
@@ -1998,9 +1991,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       )
       void runManagedSiteStatusChecks({
         tokens: [],
-        targets: [
-          buildServiceCredentialManagedSiteStatusTarget(account, runtimeKey),
-        ],
+        targets: [buildServiceCredentialManagedSiteStatusTarget(runtimeKey)],
         force: true,
       })
       toast.success(t("keyManagement:messages.serviceCredentialRotated"))

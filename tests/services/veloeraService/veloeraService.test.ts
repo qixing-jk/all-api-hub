@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { buildDisplayAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import { buildManagedSiteChannelDraftSource } from "~/services/managedSites/channelDraftSource"
 import type { ApiToken, DisplaySiteData } from "~/types"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
@@ -218,7 +220,11 @@ describe("veloeraService", () => {
         new Error("Upstream failed"),
       )
 
-      const result = await prepareChannelFormData(account, token)
+      const result = await prepareChannelFormData(
+        buildManagedSiteChannelDraftSource(
+          buildDisplayAccountTokenRuntimeKey(account, token),
+        ),
+      )
 
       expect(result.models).toEqual(["gpt-4", "gpt-3.5"])
       expect(result).toMatchObject({ type: 1, enabled: true })
@@ -237,7 +243,11 @@ describe("veloeraService", () => {
       )
       mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce([])
 
-      const result = await prepareChannelFormData(account, token)
+      const result = await prepareChannelFormData(
+        buildManagedSiteChannelDraftSource(
+          buildDisplayAccountTokenRuntimeKey(account, token),
+        ),
+      )
 
       expect(result.models).toEqual(["gpt-4o-mini", "gpt-4o"])
       expect(result.modelPrefillFetchFailed).toBeUndefined()
@@ -260,7 +270,11 @@ describe("veloeraService", () => {
         "gpt-aihubmix-mini",
       ])
 
-      const result = await prepareChannelFormData(account, token)
+      const result = await prepareChannelFormData(
+        buildManagedSiteChannelDraftSource(
+          buildDisplayAccountTokenRuntimeKey(account, token),
+        ),
+      )
 
       expect(mockFetchOpenAICompatibleModelIds).toHaveBeenCalledWith({
         baseUrl: "https://aihubmix.com",

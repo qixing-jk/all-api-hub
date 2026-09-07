@@ -2331,7 +2331,11 @@ describe("useAccountDialog save and auto-config flows", () => {
     })
     expect(mockOpenWithAccount).toHaveBeenCalledWith(
       savedDisplayData,
-      ensuredToken,
+      expect.objectContaining({
+        source: "account_token",
+        secret: ensuredToken.key,
+        token: expect.objectContaining(ensuredToken),
+      }),
       expect.any(Function),
       expect.objectContaining({
         shouldContinue: expect.any(Function),
@@ -2416,7 +2420,11 @@ describe("useAccountDialog save and auto-config flows", () => {
     expect(result.current.state.postSaveOneTimeToken).toBeNull()
     expect(mockOpenWithAccount).toHaveBeenCalledWith(
       savedDisplayData,
-      oneTimeToken,
+      expect.objectContaining({
+        source: "account_token",
+        secret: oneTimeToken.key,
+        token: expect.objectContaining(oneTimeToken),
+      }),
       expect.any(Function),
       expect.objectContaining({
         shouldContinue: expect.any(Function),
@@ -2787,7 +2795,11 @@ describe("useAccountDialog save and auto-config flows", () => {
     expect(result.current.state.postSaveSub2ApiAllowedGroups).toBeNull()
     expect(mockOpenWithAccount).toHaveBeenCalledWith(
       savedDisplayData,
-      createdToken,
+      expect.objectContaining({
+        source: "account_token",
+        secret: createdToken.key,
+        token: expect.objectContaining(createdToken),
+      }),
       expect.any(Function),
       expect.objectContaining({
         shouldContinue: expect.any(Function),
@@ -2905,7 +2917,11 @@ describe("useAccountDialog save and auto-config flows", () => {
     })
     expect(mockOpenWithAccount).toHaveBeenCalledWith(
       savedDisplayData,
-      createdToken,
+      expect.objectContaining({
+        source: "account_token",
+        secret: createdToken.key,
+        token: expect.objectContaining(createdToken),
+      }),
       expect.any(Function),
       expect.objectContaining({
         shouldContinue: expect.any(Function),
@@ -3598,7 +3614,11 @@ describe("useAccountDialog save and auto-config flows", () => {
     expect(mockOpenWithAccount).toHaveBeenCalledTimes(1)
     expect(mockOpenWithAccount).toHaveBeenCalledWith(
       secondDisplayData,
-      currentToken,
+      expect.objectContaining({
+        source: "account_token",
+        secret: currentToken.key,
+        token: expect.objectContaining(currentToken),
+      }),
       expect.any(Function),
       expect.objectContaining({
         shouldContinue: expect.any(Function),
@@ -3776,7 +3796,11 @@ describe("useAccountDialog save and auto-config flows", () => {
 
     expect(mockOpenWithAccount).toHaveBeenCalledWith(
       fallbackDisplayData,
-      ensuredToken,
+      expect.objectContaining({
+        source: "account_token",
+        secret: ensuredToken.key,
+        token: expect.objectContaining(ensuredToken),
+      }),
       expect.any(Function),
       expect.objectContaining({
         shouldContinue: expect.any(Function),
@@ -3964,7 +3988,11 @@ describe("useAccountDialog save and auto-config flows", () => {
 
     expect(mockOpenWithAccount).toHaveBeenCalledWith(
       savedDisplayData,
-      ensuredToken,
+      expect.objectContaining({
+        source: "account_token",
+        secret: ensuredToken.key,
+        token: expect.objectContaining(ensuredToken),
+      }),
       expect.any(Function),
       expect.objectContaining({
         shouldContinue: expect.any(Function),
@@ -4271,7 +4299,11 @@ describe("useAccountDialog save and auto-config flows", () => {
     expect(getDisplayDataByIdSpy).toHaveBeenCalledWith("second-account-id")
     expect(mockOpenWithAccount).toHaveBeenLastCalledWith(
       accountStorage.convertToDisplayData(secondSavedSiteAccount),
-      secondEnsuredToken,
+      expect.objectContaining({
+        source: "account_token",
+        secret: secondEnsuredToken.key,
+        token: expect.objectContaining(secondEnsuredToken),
+      }),
       expect.any(Function),
       expect.objectContaining({
         shouldContinue: expect.any(Function),
@@ -4457,7 +4489,11 @@ describe("useAccountDialog save and auto-config flows", () => {
     expect(mockOpenWithAccount).toHaveBeenNthCalledWith(
       2,
       accountStorage.convertToDisplayData(secondSavedSiteAccount),
-      secondEnsuredToken,
+      expect.objectContaining({
+        source: "account_token",
+        secret: secondEnsuredToken.key,
+        token: expect.objectContaining(secondEnsuredToken),
+      }),
       expect.any(Function),
       expect.objectContaining({
         shouldContinue: expect.any(Function),

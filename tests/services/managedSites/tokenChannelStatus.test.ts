@@ -2,6 +2,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import {
+  buildAccountKeyResourceRuntimeKey,
+  buildDisplayAccountTokenRuntimeKey,
+  buildServiceCredentialRuntimeKey,
+  formatAccountRuntimeKeySecretForSite,
+} from "~/services/accounts/accountRuntimeKeys"
+import {
   MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS,
   MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
   MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS,
@@ -14,6 +20,7 @@ import {
   resolveManagedSiteTokenChannelStatusWithVerifiedKey,
 } from "~/services/managedSites/tokenChannelStatus"
 import { supportsManagedSiteBaseUrlChannelLookup } from "~/services/managedSites/utils/managedSite"
+import type { ManagedSiteChannelDraftSource } from "~/types/managedSiteChannelDraft"
 import {
   buildApiToken,
   buildDisplaySiteData,
@@ -72,8 +79,8 @@ const sessionResyncOptions = {
   protectionBypassExecution: sessionResyncExecution,
 }
 
-const { resolveDisplayAccountTokenForSecretMock } = vi.hoisted(() => ({
-  resolveDisplayAccountTokenForSecretMock: vi.fn(),
+const { resolveDisplayAccountRuntimeKeySecretMock } = vi.hoisted(() => ({
+  resolveDisplayAccountRuntimeKeySecretMock: vi.fn(),
 }))
 
 const { getNewApiLoginAssistConfigMock } = vi.hoisted(() => ({
@@ -91,8 +98,8 @@ const { resolveManagedUpstreamResourceFeatureCapabilitiesMock } = vi.hoisted(
 )
 
 vi.mock("~/services/accounts/utils/apiServiceRequest", () => ({
-  resolveDisplayAccountTokenForSecret: (...args: unknown[]) =>
-    resolveDisplayAccountTokenForSecretMock(...args),
+  resolveDisplayAccountRuntimeKeySecret: (...args: unknown[]) =>
+    resolveDisplayAccountRuntimeKeySecretMock(...args),
 }))
 
 vi.mock(
@@ -306,8 +313,8 @@ describe("resolveManagedSiteTokenChannelStatusWithVerifiedKey", () => {
 
 describe("getManagedSiteTokenChannelStatus", () => {
   beforeEach(() => {
-    resolveDisplayAccountTokenForSecretMock.mockReset()
-    resolveDisplayAccountTokenForSecretMock.mockImplementation(
+    resolveDisplayAccountRuntimeKeySecretMock.mockReset()
+    resolveDisplayAccountRuntimeKeySecretMock.mockImplementation(
       async (_account, token) => token,
     )
     getNewApiLoginAssistConfigMock.mockReset()
@@ -362,8 +369,7 @@ describe("getManagedSiteTokenChannelStatus", () => {
       })
 
       const result = await getManagedSiteTokenChannelStatus({
-        account,
-        token,
+        runtimeKey: buildDisplayAccountTokenRuntimeKey(account, token),
         managedSite,
       })
 
@@ -411,8 +417,7 @@ describe("getManagedSiteTokenChannelStatus", () => {
     })
 
     const result = await getManagedSiteTokenChannelStatus({
-      account,
-      token,
+      runtimeKey: buildDisplayAccountTokenRuntimeKey(account, token),
       managedSite,
     })
 
@@ -425,6 +430,91 @@ describe("getManagedSiteTokenChannelStatus", () => {
       },
     })
   })
+
+  it.each(["service credential", "native key"])(
+    "matches a %s using its API endpoint and supplied secret",
+    async (sourceKind) => {
+      const account = buildDisplaySiteData({
+        baseUrl: "https://dashboard.example.invalid",
+        siteType:
+          sourceKind === "service credential"
+            ? SITE_TYPES.SHAREDCHAT
+            : SITE_TYPES.OPENROUTER,
+      })
+      const baseUrl = "https://runtime.example.invalid/api/v1"
+      const secret = "test-native-create-secret"
+      const runtimeKey =
+        sourceKind === "service credential"
+          ? buildServiceCredentialRuntimeKey(account, {
+              kind: "singleton_service_key",
+              service: "codex",
+              label: "Selected key",
+              key: secret,
+              baseUrl,
+              isAuthenticated: true,
+            })
+          : {
+              ...buildAccountKeyResourceRuntimeKey(account, {
+                ref: {
+                  accountId: account.id,
+                  siteType: account.siteType,
+                  scopeKey: "workspace-a",
+                  resourceId: "opaque-key/7",
+                },
+                label: "Selected key",
+                secret,
+              }),
+              baseUrl,
+            }
+      const managedSite = createManagedSiteCapabilitiesStub({
+        channelDrafts: {
+          prepareFormData: vi.fn(
+            async (source: ManagedSiteChannelDraftSource) => ({
+              name: source.name,
+              type: 1,
+              key: source.apiKey,
+              base_url: source.baseUrl,
+              models: ["gpt-4o"],
+              groups: [],
+              priority: 0,
+              weight: 0,
+              enabled: true,
+            }),
+          ),
+        },
+        matching: {
+          search: vi.fn().mockResolvedValue({
+            items: [
+              buildManagedSiteChannel({
+                id: 17,
+                name: "Imported key",
+                base_url: baseUrl,
+                key: secret,
+                models: "gpt-4o",
+              }),
+            ],
+            total: 1,
+            type_counts: {},
+          }),
+        },
+      })
+
+      const status = await getManagedSiteTokenChannelStatus({
+        runtimeKey,
+        managedSite,
+      })
+
+      expect(status).toMatchObject({
+        status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.ADDED,
+        matchedChannel: { id: 17, name: "Imported key" },
+      })
+      expect(managedSite.channelDrafts.prepareFormData).toHaveBeenCalledWith(
+        expect.objectContaining({ baseUrl, apiKey: secret }),
+        expect.anything(),
+      )
+      expect(resolveDisplayAccountRuntimeKeySecretMock).not.toHaveBeenCalled()
+    },
+  )
 
   it("maps incomplete match evidence instead of rejecting it before matching", async () => {
     const account = buildDisplaySiteData({ baseUrl: "https://api.example.com" })
@@ -460,8 +550,7 @@ describe("getManagedSiteTokenChannelStatus", () => {
     })
 
     const result = await getManagedSiteTokenChannelStatus({
-      account,
-      token,
+      runtimeKey: buildDisplayAccountTokenRuntimeKey(account, token),
       managedSite,
     })
 
@@ -496,8 +585,7 @@ describe("getManagedSiteTokenChannelStatus", () => {
     })
 
     const result = await getManagedSiteTokenChannelStatus({
-      account,
-      token,
+      runtimeKey: buildDisplayAccountTokenRuntimeKey(account, token),
       managedSite,
     })
 
@@ -550,8 +638,7 @@ describe("getManagedSiteTokenChannelStatus", () => {
     })
 
     const result = await getManagedSiteTokenChannelStatus({
-      account,
-      token,
+      runtimeKey: buildDisplayAccountTokenRuntimeKey(account, token),
       managedSite,
     })
 
@@ -614,8 +701,7 @@ describe("getManagedSiteTokenChannelStatus", () => {
     })
 
     const result = await getManagedSiteTokenChannelStatus({
-      account,
-      token,
+      runtimeKey: buildDisplayAccountTokenRuntimeKey(account, token),
       managedSite,
     })
 
@@ -690,8 +776,7 @@ describe("getManagedSiteTokenChannelStatus", () => {
     })
 
     const result = await getManagedSiteTokenChannelStatus({
-      account,
-      token,
+      runtimeKey: buildDisplayAccountTokenRuntimeKey(account, token),
       managedSite,
     })
 
@@ -724,8 +809,7 @@ describe("getManagedSiteTokenChannelStatus", () => {
     })
 
     const result = await getManagedSiteTokenChannelStatus({
-      account,
-      token,
+      runtimeKey: buildDisplayAccountTokenRuntimeKey(account, token),
       managedSite,
       resolvedChannelKeysById: {
         23_1: "test-token-key",
@@ -801,8 +885,7 @@ describe("getManagedSiteTokenChannelStatus", () => {
     })
 
     const result = await getManagedSiteTokenChannelStatus({
-      account,
-      token,
+      runtimeKey: buildDisplayAccountTokenRuntimeKey(account, token),
       managedSite,
     })
 
@@ -869,8 +952,7 @@ describe("getManagedSiteTokenChannelStatus", () => {
     })
 
     const result = await getManagedSiteTokenChannelStatus({
-      account,
-      token,
+      runtimeKey: buildDisplayAccountTokenRuntimeKey(account, token),
       managedSite,
     })
 
@@ -930,8 +1012,7 @@ describe("getManagedSiteTokenChannelStatus", () => {
     )
 
     const result = await getManagedSiteTokenChannelStatus({
-      account,
-      token,
+      runtimeKey: buildDisplayAccountTokenRuntimeKey(account, token),
       managedSite,
     })
 
@@ -981,8 +1062,7 @@ describe("getManagedSiteTokenChannelStatus", () => {
     })
 
     const result = await getManagedSiteTokenChannelStatus({
-      account,
-      token,
+      runtimeKey: buildDisplayAccountTokenRuntimeKey(account, token),
       managedSite,
     })
 
@@ -1001,8 +1081,10 @@ describe("getManagedSiteTokenChannelStatus", () => {
       matching: { search: searchChannel },
     })
     const result = await getManagedSiteTokenChannelStatus({
-      account: buildDisplaySiteData(),
-      token: buildApiToken(),
+      runtimeKey: buildDisplayAccountTokenRuntimeKey(
+        buildDisplaySiteData(),
+        buildApiToken(),
+      ),
       managedSite,
     })
     expect(supportsManagedSiteBaseUrlChannelLookup(managedSite.siteType)).toBe(
@@ -1034,8 +1116,7 @@ describe("getManagedSiteTokenChannelStatus", () => {
     })
 
     const result = await getManagedSiteTokenChannelStatus({
-      account,
-      token,
+      runtimeKey: buildDisplayAccountTokenRuntimeKey(account, token),
       managedSite,
     })
 
@@ -1078,8 +1159,7 @@ describe("getManagedSiteTokenChannelStatus", () => {
     })
 
     const result = await getManagedSiteTokenChannelStatus({
-      account,
-      token,
+      runtimeKey: buildDisplayAccountTokenRuntimeKey(account, token),
       managedSite,
       protectionBypassExecution: sessionResyncExecution,
     })
@@ -1110,8 +1190,7 @@ describe("getManagedSiteTokenChannelStatus", () => {
     })
 
     const result = await getManagedSiteTokenChannelStatus({
-      account,
-      token,
+      runtimeKey: buildDisplayAccountTokenRuntimeKey(account, token),
       managedSite,
     })
 
@@ -1123,9 +1202,15 @@ describe("getManagedSiteTokenChannelStatus", () => {
     expect(result).not.toHaveProperty("assessment")
   })
 
-  it("redacts token and admin secrets from failure diagnostics", async () => {
-    const account = buildDisplaySiteData({ baseUrl: "https://api.example.com" })
+  it("redacts raw and formatted key values and admin secrets from failure diagnostics", async () => {
+    const account = buildDisplaySiteData({
+      siteType: SITE_TYPES.NEW_API,
+      baseUrl: "https://api.example.com",
+    })
     const token = buildApiToken({ key: "secret-token-value" })
+    const runtimeKey = formatAccountRuntimeKeySecretForSite(
+      buildDisplayAccountTokenRuntimeKey(account, token),
+    )
     const managedSite = createManagedSiteCapabilitiesStub({
       config: {
         get: vi.fn().mockResolvedValue({
@@ -1138,14 +1223,15 @@ describe("getManagedSiteTokenChannelStatus", () => {
         prepareFormData: vi
           .fn()
           .mockRejectedValue(
-            new Error("secret-token-value secret-admin-value exploded"),
+            new Error(
+              "secret-token-value sk-secret-token-value secret-admin-value exploded",
+            ),
           ),
       },
     })
 
     const result = await getManagedSiteTokenChannelStatus({
-      account,
-      token,
+      runtimeKey,
       managedSite,
     })
 
@@ -1179,13 +1265,12 @@ describe("getManagedSiteTokenChannelStatus", () => {
       },
     })
 
-    resolveDisplayAccountTokenForSecretMock.mockRejectedValueOnce(
+    resolveDisplayAccountRuntimeKeySecretMock.mockRejectedValueOnce(
       new Error("sk-abcd************wxyz secret-admin-value blocked"),
     )
 
     const result = await getManagedSiteTokenChannelStatus({
-      account,
-      token,
+      runtimeKey: buildDisplayAccountTokenRuntimeKey(account, token),
       managedSite,
     })
 

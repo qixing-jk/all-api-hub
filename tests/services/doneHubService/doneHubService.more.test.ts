@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { buildDisplayAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import { buildManagedSiteChannelDraftSource } from "~/services/managedSites/channelDraftSource"
 import {
   buildApiToken,
   buildDisplaySiteData,
@@ -9,12 +11,12 @@ import {
 const {
   mockFetchSiteUserGroups,
   mockGetPreferences,
-  mockFetchTokenScopedModels,
+  mockFetchManagedSiteImportModels,
   mockResolveDefaultChannelGroups,
 } = vi.hoisted(() => ({
   mockFetchSiteUserGroups: vi.fn(),
   mockGetPreferences: vi.fn(),
-  mockFetchTokenScopedModels: vi.fn(),
+  mockFetchManagedSiteImportModels: vi.fn(),
   mockResolveDefaultChannelGroups: vi.fn(),
 }))
 
@@ -28,8 +30,8 @@ vi.mock("~/services/preferences/userPreferences", () => ({
   },
 }))
 
-vi.mock("~/services/managedSites/utils/fetchTokenScopedModels", () => ({
-  fetchTokenScopedModels: mockFetchTokenScopedModels,
+vi.mock("~/services/managedSites/utils/fetchManagedSiteImportModels", () => ({
+  fetchManagedSiteImportModels: mockFetchManagedSiteImportModels,
 }))
 
 vi.mock("~/services/managedSites/providers/defaultChannelGroups", () => ({
@@ -48,7 +50,7 @@ describe("doneHubService additional flows", () => {
         userId: "100",
       },
     })
-    mockFetchTokenScopedModels.mockResolvedValue({
+    mockFetchManagedSiteImportModels.mockResolvedValue({
       models: ["gpt-4o", "gpt-4.1"],
       fetchFailed: false,
     })
@@ -73,9 +75,18 @@ describe("doneHubService additional flows", () => {
       name: "Primary Token",
     })
 
-    const result = await prepareChannelFormData(account, token)
+    const result = await prepareChannelFormData(
+      buildManagedSiteChannelDraftSource(
+        buildDisplayAccountTokenRuntimeKey(account, token),
+      ),
+    )
 
-    expect(mockFetchTokenScopedModels).toHaveBeenCalledWith(account, token)
+    expect(mockFetchManagedSiteImportModels).toHaveBeenCalledWith(
+      expect.objectContaining({
+        baseUrl: "https://proxy.example.com",
+        apiKey: "done-hub-key",
+      }),
+    )
     expect(mockResolveDefaultChannelGroups).toHaveBeenCalled()
     expect(result).toMatchObject({
       name: "Done Hub Account | Primary Token (auto)",
@@ -112,7 +123,11 @@ describe("doneHubService additional flows", () => {
       name: "Primary Token",
     })
 
-    const result = await prepareChannelFormData(account, token)
+    const result = await prepareChannelFormData(
+      buildManagedSiteChannelDraftSource(
+        buildDisplayAccountTokenRuntimeKey(account, token),
+      ),
+    )
 
     expect(mockResolveDefaultChannelGroups).toHaveBeenCalled()
     expect(mockResolveDefaultChannelGroups.mock.calls[0][0]).toEqual({
@@ -144,13 +159,17 @@ describe("doneHubService additional flows", () => {
       name: "AIHubMix Token",
     })
 
-    const result = await prepareChannelFormData(account, token)
+    const result = await prepareChannelFormData(
+      buildManagedSiteChannelDraftSource(
+        buildDisplayAccountTokenRuntimeKey(account, token),
+      ),
+    )
 
-    expect(mockFetchTokenScopedModels).toHaveBeenCalledWith(
+    expect(mockFetchManagedSiteImportModels).toHaveBeenCalledWith(
       expect.objectContaining({
         baseUrl: "https://aihubmix.com",
+        apiKey: token.key,
       }),
-      token,
     )
     expect(result.base_url).toBe("https://aihubmix.com")
   })
@@ -160,15 +179,19 @@ describe("doneHubService additional flows", () => {
       "~/services/managedSites/providers/doneHubService"
     )
 
-    mockFetchTokenScopedModels.mockResolvedValueOnce({
+    mockFetchManagedSiteImportModels.mockResolvedValueOnce({
       models: ["gpt-4o"],
       fetchFailed: true,
     })
     mockResolveDefaultChannelGroups.mockResolvedValueOnce([])
 
     const formData = await prepareChannelFormData(
-      buildDisplaySiteData(),
-      buildApiToken(),
+      buildManagedSiteChannelDraftSource(
+        buildDisplayAccountTokenRuntimeKey(
+          buildDisplaySiteData(),
+          buildApiToken(),
+        ),
+      ),
     )
     const payload = buildChannelPayload({
       ...formData,

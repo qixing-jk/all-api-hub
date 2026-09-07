@@ -157,7 +157,7 @@ export function useTokenIntegrationActions({
     try {
       const result = await openWithAccount(
         account,
-        token,
+        buildDisplayAccountTokenRuntimeKey(account, token),
         (result) => {
           showResultToast(result)
 

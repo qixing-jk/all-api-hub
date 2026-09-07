@@ -1,19 +1,19 @@
 import { DoneHubChannelType } from "~/constants/doneHub"
 import { DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSiteChannelDraft"
-import { normalizeAccountForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
 import type { ManagedSiteChannelDraftRequestOptions } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import { fetchSiteUserGroups } from "~/services/apiService/doneHub"
-import { buildManagedSiteChannelName } from "~/services/managedSites/utils/channelDraft"
-import { fetchTokenScopedModels } from "~/services/managedSites/utils/fetchTokenScopedModels"
+import { fetchManagedSiteImportModels } from "~/services/managedSites/utils/fetchManagedSiteImportModels"
 import {
   userPreferences,
   type UserPreferences,
 } from "~/services/preferences/userPreferences"
-import type { AccountToken } from "~/types"
-import { AuthTypeEnum, type ApiToken, type DisplaySiteData } from "~/types"
+import { AuthTypeEnum } from "~/types"
 import type { DoneHubCreateChannelPayload } from "~/types/doneHub"
 import type { DoneHubConfig } from "~/types/doneHubConfig"
-import type { ManagedSiteChannelDraft } from "~/types/managedSiteChannelDraft"
+import type {
+  ManagedSiteChannelDraft,
+  ManagedSiteChannelDraftSource,
+} from "~/types/managedSiteChannelDraft"
 import type { NewApiFamilyChannelCommand } from "~/types/newApiFamilyChannelEditor"
 import { createLogger } from "~/utils/core/logger"
 import { normalizeList } from "~/utils/core/string"
@@ -91,15 +91,11 @@ export async function getDoneHubConfig(): Promise<{
  * Builds channel form defaults.
  */
 export async function prepareChannelFormData(
-  account: DisplaySiteData,
-  token: ApiToken | AccountToken,
+  source: ManagedSiteChannelDraftSource,
   options?: ManagedSiteChannelDraftRequestOptions,
 ): Promise<ManagedSiteChannelDraft> {
-  const upstreamAccount = normalizeAccountForManagedChannel(account)
-  const { models: availableModels, fetchFailed } = await fetchTokenScopedModels(
-    upstreamAccount,
-    token,
-  )
+  const { models: availableModels, fetchFailed } =
+    await fetchManagedSiteImportModels(source)
 
   const resolvedGroups = await resolveDefaultChannelGroups({
     getConfig: getDoneHubConfig,
@@ -119,10 +115,10 @@ export async function prepareChannelFormData(
   })
 
   return {
-    name: buildManagedSiteChannelName(account, token),
+    name: source.name,
     type: DoneHubChannelType.OpenAI,
-    key: token.key,
-    base_url: upstreamAccount.baseUrl,
+    key: source.apiKey,
+    base_url: source.baseUrl,
     models: normalizeList(availableModels),
     ...(fetchFailed ? { modelPrefillFetchFailed: true } : {}),
     groups: normalizeList(resolvedGroups),

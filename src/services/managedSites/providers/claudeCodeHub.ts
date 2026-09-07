@@ -1,23 +1,23 @@
 import { CLAUDE_CODE_HUB_PROVIDER_TYPE } from "~/constants/claudeCodeHub"
-import { normalizeAccountForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
 import { requireNumericManagedResourceId } from "~/services/apiAdapters/managedResources/matchingInputs"
 import * as claudeCodeHubApi from "~/services/apiService/claudeCodeHub"
 import {
   MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
   MatchResolutionUnresolvedError,
 } from "~/services/managedSites/channelMatch"
-import { buildManagedSiteChannelName } from "~/services/managedSites/utils/channelDraft"
-import { fetchTokenScopedModels } from "~/services/managedSites/utils/fetchTokenScopedModels"
+import { fetchManagedSiteImportModels } from "~/services/managedSites/utils/fetchManagedSiteImportModels"
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/managedSite"
 import {
   userPreferences,
   type UserPreferences,
 } from "~/services/preferences/userPreferences"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
-import type { AccountToken, ApiToken, DisplaySiteData } from "~/types"
 import type { ClaudeCodeHubConfig } from "~/types/claudeCodeHubConfig"
 import type { ManagedResourceMatchCandidate } from "~/types/managedResourceMatching"
-import { type ManagedSiteChannelDraft } from "~/types/managedSiteChannelDraft"
+import type {
+  ManagedSiteChannelDraft,
+  ManagedSiteChannelDraftSource,
+} from "~/types/managedSiteChannelDraft"
 import { createLogger } from "~/utils/core/logger"
 import { normalizeList } from "~/utils/core/string"
 
@@ -155,23 +155,19 @@ export async function fetchChannelSecretKey(
 }
 
 /**
- * Prefills channel form data from an account and its scoped token models.
+ * Prefills channel form data from resolved credentials and their live models.
  */
 export async function prepareChannelFormData(
-  account: DisplaySiteData,
-  token: ApiToken | AccountToken,
+  source: ManagedSiteChannelDraftSource,
 ): Promise<ManagedSiteChannelDraft> {
-  const upstreamAccount = normalizeAccountForManagedChannel(account)
-  const { models: availableModels, fetchFailed } = await fetchTokenScopedModels(
-    upstreamAccount,
-    token,
-  )
+  const { models: availableModels, fetchFailed } =
+    await fetchManagedSiteImportModels(source)
 
   return {
-    name: buildManagedSiteChannelName(account, token),
+    name: source.name,
     type: CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE,
-    key: token.key,
-    base_url: upstreamAccount.baseUrl,
+    key: source.apiKey,
+    base_url: source.baseUrl,
     models: normalizeList(availableModels),
     ...(fetchFailed ? { modelPrefillFetchFailed: true } : {}),
     groups: [DEFAULT_GROUP_TAG],

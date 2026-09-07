@@ -1,14 +1,14 @@
 import { AXON_HUB_CHANNEL_TYPE } from "~/constants/axonHub"
-import { normalizeAccountForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
 import * as axonHubApi from "~/services/apiService/axonHub"
-import { buildManagedSiteChannelName } from "~/services/managedSites/utils/channelDraft"
-import { fetchTokenScopedModels } from "~/services/managedSites/utils/fetchTokenScopedModels"
+import { fetchManagedSiteImportModels } from "~/services/managedSites/utils/fetchManagedSiteImportModels"
 import {
   userPreferences,
   type UserPreferences,
 } from "~/services/preferences/userPreferences"
-import type { AccountToken, ApiToken, DisplaySiteData } from "~/types"
-import { type ManagedSiteChannelDraft } from "~/types/managedSiteChannelDraft"
+import type {
+  ManagedSiteChannelDraft,
+  ManagedSiteChannelDraftSource,
+} from "~/types/managedSiteChannelDraft"
 import { createLogger } from "~/utils/core/logger"
 import { normalizeList } from "~/utils/core/string"
 
@@ -41,23 +41,19 @@ export async function checkValidAxonHubConfig(): Promise<boolean> {
 }
 
 /**
- * Prepare AxonHub channel form data from an account/token pair.
+ * Prepare AxonHub channel form data from resolved import credentials.
  */
 export async function prepareChannelFormData(
-  account: DisplaySiteData,
-  token: ApiToken | AccountToken,
+  source: ManagedSiteChannelDraftSource,
 ): Promise<ManagedSiteChannelDraft> {
-  const upstreamAccount = normalizeAccountForManagedChannel(account)
-  const { models: availableModels, fetchFailed } = await fetchTokenScopedModels(
-    upstreamAccount,
-    token,
-  )
+  const { models: availableModels, fetchFailed } =
+    await fetchManagedSiteImportModels(source)
 
   return {
-    name: buildManagedSiteChannelName(account, token),
+    name: source.name,
     type: AXON_HUB_CHANNEL_TYPE.OPENAI,
-    key: token.key,
-    base_url: upstreamAccount.baseUrl,
+    key: source.apiKey,
+    base_url: source.baseUrl,
     models: normalizeList(availableModels),
     ...(fetchFailed ? { modelPrefillFetchFailed: true } : {}),
     groups: [],

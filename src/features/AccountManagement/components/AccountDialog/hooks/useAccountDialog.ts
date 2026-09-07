@@ -61,6 +61,7 @@ import {
   selectSingleNewApiTokenByIdDiff,
   type AccountPostSaveWorkflowStep,
 } from "~/services/accounts/accountPostSaveWorkflow"
+import { buildDisplayAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import { accountPresentation } from "~/services/accounts/accountStorage/accountPresentation"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { accountReadModels } from "~/services/accounts/accountStorage/accountReadModels"
@@ -2869,7 +2870,7 @@ export function useAccountDialog({
       try {
         const openResult = await openChannelDialog(
           displaySiteData,
-          token,
+          buildDisplayAccountTokenRuntimeKey(displaySiteData, token),
           () => {
             if (onSuccess && targetAccount && isCurrentRun()) {
               onSuccess(targetAccount)

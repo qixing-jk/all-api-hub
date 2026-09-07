@@ -1,11 +1,11 @@
 import { fetchOpenAICompatibleModelIds } from "~/services/aiApi/openaiCompatible"
-import type { AccountToken, ApiToken, DisplaySiteData } from "~/types"
+import type { ManagedSiteChannelDraftSource } from "~/types/managedSiteChannelDraft"
 import { createLogger } from "~/utils/core/logger"
 import { normalizeList } from "~/utils/core/string"
 
-const logger = createLogger("ManagedSites.fetchTokenScopedModels")
+const logger = createLogger("ManagedSites.fetchManagedSiteImportModels")
 
-type TokenScopedModelsResult = {
+type ManagedSiteImportModelsResult = {
   models: string[]
   fetchFailed: boolean
 }
@@ -13,18 +13,16 @@ type TokenScopedModelsResult = {
 /**
  * Fetches live upstream models for the selected API key only.
  *
- * This intentionally excludes token metadata such as `token.models` /
- * `model_limits`, because those fields describe backend-configured restriction
- * metadata rather than the key's current upstream `/models` result.
+ * Existing model hints are not live API results. Each destination decides
+ * whether to use them as a fallback when preparing its import draft.
  */
-export async function fetchTokenScopedModels(
-  account: Pick<DisplaySiteData, "baseUrl">,
-  token: Pick<ApiToken | AccountToken, "key">,
-): Promise<TokenScopedModelsResult> {
+export async function fetchManagedSiteImportModels(
+  source: Pick<ManagedSiteChannelDraftSource, "baseUrl" | "apiKey">,
+): Promise<ManagedSiteImportModelsResult> {
   try {
     const upstreamModels = await fetchOpenAICompatibleModelIds({
-      baseUrl: account.baseUrl,
-      apiKey: token.key,
+      baseUrl: source.baseUrl,
+      apiKey: source.apiKey,
     })
     return {
       models: normalizeList(upstreamModels ?? []),

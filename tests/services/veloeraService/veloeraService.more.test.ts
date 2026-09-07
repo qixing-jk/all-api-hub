@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { buildDisplayAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import { buildManagedSiteChannelDraftSource } from "~/services/managedSites/channelDraftSource"
 import {
   buildApiToken,
   buildDisplaySiteData,
@@ -7,11 +9,11 @@ import {
 
 const {
   mockGetPreferences,
-  mockFetchTokenScopedModels,
+  mockFetchManagedSiteImportModels,
   mockResolveDefaultChannelGroups,
 } = vi.hoisted(() => ({
   mockGetPreferences: vi.fn(),
-  mockFetchTokenScopedModels: vi.fn(),
+  mockFetchManagedSiteImportModels: vi.fn(),
   mockResolveDefaultChannelGroups: vi.fn(),
 }))
 
@@ -21,8 +23,8 @@ vi.mock("~/services/preferences/userPreferences", () => ({
   },
 }))
 
-vi.mock("~/services/managedSites/utils/fetchTokenScopedModels", () => ({
-  fetchTokenScopedModels: mockFetchTokenScopedModels,
+vi.mock("~/services/managedSites/utils/fetchManagedSiteImportModels", () => ({
+  fetchManagedSiteImportModels: mockFetchManagedSiteImportModels,
 }))
 
 vi.mock("~/services/managedSites/providers/defaultChannelGroups", () => ({
@@ -41,7 +43,7 @@ describe("veloeraService additional flows", () => {
         userId: "200",
       },
     })
-    mockFetchTokenScopedModels.mockResolvedValue({
+    mockFetchManagedSiteImportModels.mockResolvedValue({
       models: ["gpt-4o"],
       fetchFailed: false,
     })
@@ -90,7 +92,7 @@ describe("veloeraService additional flows", () => {
     const { prepareChannelFormData } = await import(
       "~/services/managedSites/providers/veloera"
     )
-    mockFetchTokenScopedModels.mockResolvedValueOnce({
+    mockFetchManagedSiteImportModels.mockResolvedValueOnce({
       models: [],
       fetchFailed: true,
     })
@@ -102,11 +104,15 @@ describe("veloeraService additional flows", () => {
     })
 
     const result = await prepareChannelFormData(
-      buildDisplaySiteData({
-        name: "Veloera Site",
-        baseUrl: "https://proxy.example.com",
-      }),
-      token,
+      buildManagedSiteChannelDraftSource(
+        buildDisplayAccountTokenRuntimeKey(
+          buildDisplaySiteData({
+            name: "Veloera Site",
+            baseUrl: "https://proxy.example.com",
+          }),
+          token,
+        ),
+      ),
     )
 
     expect(result).toMatchObject({

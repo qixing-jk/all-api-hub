@@ -32,7 +32,7 @@ const {
   mockOpenInCherryStudio,
   mockKelivoExportDialog,
   mockOpenSettingsTab,
-  mockOpenWithCredentials,
+  mockOpenWithAccount,
   mockSaveApiCredentialProfiles,
   mockShowResultToast,
   mockUserPreferences,
@@ -47,7 +47,7 @@ const {
   mockOpenInCherryStudio: vi.fn(),
   mockKelivoExportDialog: vi.fn(),
   mockOpenSettingsTab: vi.fn(),
-  mockOpenWithCredentials: vi.fn(),
+  mockOpenWithAccount: vi.fn(),
   mockSaveApiCredentialProfiles: vi.fn(),
   mockShowResultToast: vi.fn(),
   mockUserPreferences: {
@@ -132,8 +132,7 @@ vi.mock("~/components/dialogs/ChannelDialog", async (importOriginal) => {
   return {
     ...actual,
     useChannelDialog: () => ({
-      openWithCredentials: (...args: unknown[]) =>
-        mockOpenWithCredentials(...args),
+      openWithAccount: (...args: unknown[]) => mockOpenWithAccount(...args),
     }),
   }
 })
@@ -211,7 +210,7 @@ describe("ServiceCredentialCard", () => {
     mockUserPreferences.cliProxyBaseUrl = "https://cliproxy.example.invalid"
     mockUserPreferences.cliProxyManagementKey = "cliproxy-management-key"
     mockUserPreferences.managedSiteType = "new-api"
-    mockOpenWithCredentials.mockResolvedValue({ opened: true })
+    mockOpenWithAccount.mockResolvedValue({ opened: true })
     mockSaveApiCredentialProfiles.mockResolvedValue({ savedCount: 1 })
   })
 
@@ -756,12 +755,14 @@ describe("ServiceCredentialCard", () => {
     )
 
     await selectExportAction(user, "keyManagement:actions.importToManagedSite")
-    expect(mockOpenWithCredentials).toHaveBeenCalledWith(
-      {
-        name: "SharedChat - Codex API Key",
+    expect(mockOpenWithAccount).toHaveBeenCalledWith(
+      account,
+      expect.objectContaining({
+        source: "service_credential",
+        label: "Codex API Key",
         baseUrl: "https://sharedchat.example.invalid/v1",
-        apiKey: "sk-service-credential",
-      },
+        secret: "sk-service-credential",
+      }),
       expect.any(Function),
       {
         managedSiteStatus: undefined,
@@ -858,12 +859,14 @@ describe("ServiceCredentialCard", () => {
     )
 
     await selectExportAction(user, "keyManagement:actions.importToManagedSite")
-    expect(mockOpenWithCredentials).toHaveBeenLastCalledWith(
-      {
-        name: "SharedChat - Codex API Key",
+    expect(mockOpenWithAccount).toHaveBeenLastCalledWith(
+      account,
+      expect.objectContaining({
+        source: "service_credential",
+        label: "Codex API Key",
         baseUrl: "https://sharedchat.example.invalid/v1",
-        apiKey: "sk-service-credential",
-      },
+        secret: "sk-service-credential",
+      }),
       expect.any(Function),
       {
         managedSiteStatus,
@@ -873,7 +876,7 @@ describe("ServiceCredentialCard", () => {
     mockUserPreferences.markGatewayGuidanceOnboardingCompleted.mockRejectedValueOnce(
       new Error("preference storage unavailable"),
     )
-    const onImportCompleted = mockOpenWithCredentials.mock.calls.at(-1)?.[1] as
+    const onImportCompleted = mockOpenWithAccount.mock.calls.at(-1)?.[2] as
       | ((result: { success: boolean }) => void)
       | undefined
     expect(onImportCompleted).toEqual(expect.any(Function))
