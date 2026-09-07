@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { ChannelType } from "~/constants/newApi"
 import { SITE_TYPES } from "~/constants/siteType"
 import { axonHubManagedSiteCapabilities } from "~/services/apiAdapters/managedSites/axonHub"
 import { claudeCodeHubManagedSiteCapabilities } from "~/services/apiAdapters/managedSites/claudeCodeHub"
@@ -231,6 +230,7 @@ describe("native managed-resource matching", () => {
     expect(searchSub2ApiApiKeyAccounts).not.toHaveBeenCalled()
     expect(result?.items[0]).toMatchObject({
       id: 8,
+      type: "openai",
       base_url: "https://upstream.example",
       models: "",
       key: "********",
@@ -293,7 +293,7 @@ describe("native managed-resource matching", () => {
         {
           id: 9,
           name: "Sub2API Account 9",
-          type: ChannelType.Anthropic,
+          type: "anthropic",
           base_url: "",
           key: "",
           models: "",
@@ -301,7 +301,7 @@ describe("native managed-resource matching", () => {
         {
           id: 10,
           name: "Unconfigured",
-          type: ChannelType.OpenAI,
+          type: "openai",
           base_url: "",
           key: "",
           models: "",
@@ -317,7 +317,7 @@ describe("native managed-resource matching", () => {
     const masked = {
       id: 8,
       name: "Masked account",
-      type: ChannelType.OpenAI,
+      type: "openai",
       base_url: "https://upstream.example",
       models: "gpt-4o",
       key: "********",
@@ -382,7 +382,7 @@ describe("native managed-resource matching", () => {
             {
               id: 8,
               name: "Masked account",
-              type: ChannelType.OpenAI,
+              type: "openai",
               base_url: "https://upstream.example",
               models: "",
               key: "********",
@@ -410,7 +410,7 @@ describe("native managed-resource matching", () => {
             {
               id: 8,
               name: "Masked account",
-              type: ChannelType.OpenAI,
+              type: "openai",
               base_url: "https://upstream.example",
               models: "",
               key: "********",
