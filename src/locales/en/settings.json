@@ -71,10 +71,17 @@
     "toggleLabel": "Prefill URL from current site when adding accounts"
   },
   "autoProvisionKeyOnAccountAdd": {
-    "description": "Control whether All API Hub automatically provisions a default API key after you add a supported account.",
+    "description": "Prepare API keys after adding an account: a default key or keys for all available groups.",
+    "manualHint": "For saved accounts, use Key Management → {{actionLabel}} to fill missing keys across all available groups.",
+    "modeDescription": "Default creates one key only when the account has none. All groups creates a key for each group without a usable key. Groups that need manual setup are reported.",
+    "modeLabel": "Automatic creation scope",
+    "modes": {
+      "allGroups": "All available groups",
+      "default": "Default key only"
+    },
     "title": "API keys",
-    "toggleDesc": "When enabled, All API Hub checks your token inventory after saving an account and creates a default token if none exist.",
-    "toggleLabel": "Auto-create a default key on account add"
+    "toggleDesc": "Once the account is saved, check for missing keys and create them within the selected scope.",
+    "toggleLabel": "Automatically create keys after adding an account"
   },
   "axonHub": {
     "cors": {

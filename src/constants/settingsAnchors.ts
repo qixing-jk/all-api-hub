@@ -1,4 +1,7 @@
 export const SETTINGS_ANCHORS = {
+  AUTO_PROVISION_KEY: "auto-provision-key-on-account-add",
+  AUTO_PROVISION_KEY_ENABLED: "auto-provision-key-toggle",
+  AUTO_PROVISION_KEY_MODE: "auto-provision-key-mode",
   SHIELD_SETTINGS: "shield-settings",
   TASK_NOTIFICATIONS: "task-notifications",
   TASK_NOTIFICATIONS_ENABLED: "task-notifications-enabled",

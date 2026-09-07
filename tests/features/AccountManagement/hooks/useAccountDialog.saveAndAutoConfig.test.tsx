@@ -38,6 +38,10 @@ import {
   type DisplaySiteData,
   type SiteAccount,
 } from "~/types"
+import {
+  ACCOUNT_KEY_AUTO_PROVISION_MODES,
+  type AccountKeyAutoProvisionMode,
+} from "~/types/accountKeyAutoProvisioning"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 import { accountStorageTestSurface as accountStorage } from "~~/tests/test-utils/accountStorageTestSurface"
@@ -263,10 +267,14 @@ describe("useAccountDialog save and auto-config flows", () => {
     })
   }
 
-  const mockAutoProvisionKeyOnAccountAdd = (enabled: boolean) =>
+  const mockAutoProvisionKeyOnAccountAdd = (
+    enabled: boolean,
+    mode: AccountKeyAutoProvisionMode = ACCOUNT_KEY_AUTO_PROVISION_MODES.Default,
+  ) =>
     vi.spyOn(userPreferences, "getPreferences").mockResolvedValue({
       ...structuredClone(DEFAULT_PREFERENCES),
       autoProvisionKeyOnAccountAdd: enabled,
+      autoProvisionKeyOnAccountAddMode: mode,
     })
 
   const renderEditHook = (options?: {
@@ -634,6 +642,109 @@ describe("useAccountDialog save and auto-config flows", () => {
     ).toHaveBeenCalledWith(savedDisplayData)
     expect(toast.success).toHaveBeenCalledWith("Saved successfully")
   })
+
+  it.each([
+    {
+      scenario: "all-group automatic creation owns a new account",
+      enabled: true,
+      provisioningMode: ACCOUNT_KEY_AUTO_PROVISION_MODES.AllGroups,
+      dialogMode: DIALOG_MODES.ADD,
+      skipAutoProvision: false,
+      expectPrompt: false,
+    },
+    {
+      scenario: "all-group automatic creation is disabled",
+      enabled: false,
+      provisioningMode: ACCOUNT_KEY_AUTO_PROVISION_MODES.AllGroups,
+      dialogMode: DIALOG_MODES.ADD,
+      skipAutoProvision: false,
+      expectPrompt: true,
+    },
+    {
+      scenario: "default-key mode still needs a group selection",
+      enabled: true,
+      provisioningMode: ACCOUNT_KEY_AUTO_PROVISION_MODES.Default,
+      dialogMode: DIALOG_MODES.ADD,
+      skipAutoProvision: false,
+      expectPrompt: true,
+    },
+    {
+      scenario: "automatic creation is skipped for this save",
+      enabled: true,
+      provisioningMode: ACCOUNT_KEY_AUTO_PROVISION_MODES.AllGroups,
+      dialogMode: DIALOG_MODES.ADD,
+      skipAutoProvision: true,
+      expectPrompt: true,
+    },
+    {
+      scenario: "an existing account is edited",
+      enabled: true,
+      provisioningMode: ACCOUNT_KEY_AUTO_PROVISION_MODES.AllGroups,
+      dialogMode: DIALOG_MODES.EDIT,
+      skipAutoProvision: false,
+      expectPrompt: true,
+    },
+  ])(
+    "coordinates the Sub2API post-save key prompt when $scenario",
+    async ({
+      enabled,
+      provisioningMode,
+      dialogMode,
+      skipAutoProvision,
+      expectPrompt,
+    }) => {
+      mockAutoProvisionKeyOnAccountAdd(enabled, provisioningMode)
+      const savedAccount = buildSiteAccount({
+        id: "saved-account-id",
+        site_type: SITE_TYPES.SUB2API,
+      })
+      const savedDisplayData = accountStorage.convertToDisplayData(savedAccount)
+      vi.spyOn(accountStorage, "getAccountById").mockResolvedValue(savedAccount)
+      vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(
+        savedDisplayData,
+      )
+      mockValidateAndUpdateAccount.mockResolvedValue({
+        success: true,
+        accountId: savedAccount.id,
+      })
+
+      const { result } =
+        dialogMode === DIALOG_MODES.ADD
+          ? renderAddHook()
+          : renderEditHook({ account: savedDisplayData })
+
+      await waitFor(() => {
+        expect(result.current).toBeTruthy()
+      })
+      if (dialogMode === DIALOG_MODES.ADD) {
+        await fillStandardAddAccountDraft(result)
+        await act(async () => {
+          result.current.setters.setSiteType(SITE_TYPES.SUB2API)
+        })
+      }
+      await waitFor(() => {
+        expect(result.current.state.siteType).toBe(SITE_TYPES.SUB2API)
+      })
+
+      await act(async () => {
+        const saved = await result.current.handlers.handleSaveAccount({
+          skipAutoProvisionKeyOnAccountAdd: skipAutoProvision,
+        })
+        expect(saved?.success).toBe(true)
+      })
+
+      expect(result.current.state.isSaving).toBe(false)
+      if (expectPrompt) {
+        expect(
+          mockOpenDefaultTokenQuickCreateDialogForAccount,
+        ).toHaveBeenCalledWith(savedDisplayData)
+      } else {
+        expect(
+          mockOpenDefaultTokenQuickCreateDialogForAccount,
+        ).not.toHaveBeenCalled()
+      }
+    },
+  )
 
   it("defers account data refresh after a successful manual save", async () => {
     const refreshSpy = vi

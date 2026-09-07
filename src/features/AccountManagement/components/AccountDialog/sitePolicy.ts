@@ -8,6 +8,10 @@ import {
 import { OPENROUTER_DISPLAY_NAME } from "~/services/accountSiteDefinitions/identifiers"
 import { OPENROUTER_WEB_ORIGIN } from "~/services/accountSiteDefinitions/siteTypes"
 import { AuthTypeEnum, type Sub2ApiAuthConfig } from "~/types"
+import {
+  ACCOUNT_KEY_AUTO_PROVISION_MODES,
+  type AccountKeyAutoProvisionMode,
+} from "~/types/accountKeyAutoProvisioning"
 
 /**
  * Describes site-specific account-dialog behavior that must stay pure and UI-free.
@@ -198,12 +202,14 @@ export function shouldDeferAccountSaveSuccessForAccountDialogSite(params: {
   policy: AccountDialogSitePolicy
   isAddMode: boolean
   autoProvisionKeyOnAccountAdd: boolean
+  autoProvisionKeyOnAccountAddMode: AccountKeyAutoProvisionMode
   skipAutoProvisionKeyOnAccountAdd: boolean
 }): boolean {
   const {
     policy,
     isAddMode,
     autoProvisionKeyOnAccountAdd,
+    autoProvisionKeyOnAccountAddMode,
     skipAutoProvisionKeyOnAccountAdd,
   } = params
 
@@ -211,6 +217,8 @@ export function shouldDeferAccountSaveSuccessForAccountDialogSite(params: {
     policy.deferSuccessForOneTimeKeyPostSaveFlow &&
     isAddMode &&
     autoProvisionKeyOnAccountAdd &&
+    autoProvisionKeyOnAccountAddMode ===
+      ACCOUNT_KEY_AUTO_PROVISION_MODES.Default &&
     !skipAutoProvisionKeyOnAccountAdd
   )
 }

@@ -805,6 +805,33 @@ describe("product analytics privacy filtering", () => {
     })
   })
 
+  it("allows only controlled automatic-key creation modes in analytics", () => {
+    const properties = {
+      setting_id: PRODUCT_ANALYTICS_SETTING_IDS.AccountBehaviorSnapshot,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      auto_provision_key_on_account_add_mode: "all-groups",
+    }
+
+    expect(
+      sanitizeProductAnalyticsEvent(
+        PRODUCT_ANALYTICS_EVENTS.SettingChanged,
+        properties,
+      ),
+    ).toHaveProperty("auto_provision_key_on_account_add_mode", "all-groups")
+    expect(
+      sanitizeProductAnalyticsEvent(
+        PRODUCT_ANALYTICS_EVENTS.SettingsSnapshotCaptured,
+        properties,
+      ),
+    ).toHaveProperty("auto_provision_key_on_account_add_mode", "all-groups")
+    expect(
+      sanitizeProductAnalyticsEvent(PRODUCT_ANALYTICS_EVENTS.SettingChanged, {
+        ...properties,
+        auto_provision_key_on_account_add_mode: "private-group-name",
+      }),
+    ).not.toHaveProperty("auto_provision_key_on_account_add_mode")
+  })
+
   it("keeps privacy-reviewed boolean settings with sensitive-looking field names", () => {
     const sanitized = sanitizeProductAnalyticsEvent(
       PRODUCT_ANALYTICS_EVENTS.SettingChanged,

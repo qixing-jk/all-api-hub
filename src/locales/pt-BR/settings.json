@@ -71,10 +71,17 @@
     "toggleLabel": "Preencher a URL com o site atual ao adicionar contas"
   },
   "autoProvisionKeyOnAccountAdd": {
-    "description": "Controle se o All API Hub provisiona automaticamente uma chave de API padrão após você adicionar uma conta compatível.",
+    "description": "Prepare chaves de API ao adicionar uma conta: uma chave padrão ou chaves para todos os grupos disponíveis.",
+    "manualHint": "Para contas salvas, use Gerenciamento de chaves → {{actionLabel}} para completar as chaves ausentes de todos os grupos disponíveis.",
+    "modeDescription": "O modo padrão cria uma chave apenas se a conta não tiver nenhuma. O modo Todos os grupos cria uma chave para cada grupo sem uma chave utilizável. Grupos que precisam de configuração manual são informados.",
+    "modeLabel": "Escopo da criação automática",
+    "modes": {
+      "allGroups": "Todos os grupos disponíveis",
+      "default": "Apenas chave padrão"
+    },
     "title": "Chaves API",
-    "toggleDesc": "Quando ativado, All API Hub verifica seu inventário de tokens após salvar uma conta e cria um token padrão se não existir nenhum.",
-    "toggleLabel": "Criar automaticamente uma chave padrão ao adicionar conta"
+    "toggleDesc": "Após salvar a conta, as chaves ausentes são verificadas e criadas dentro do escopo selecionado.",
+    "toggleLabel": "Criar chaves automaticamente ao adicionar uma conta"
   },
   "axonHub": {
     "cors": {

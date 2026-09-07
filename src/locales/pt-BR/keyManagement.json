@@ -610,7 +610,7 @@
       "title_many": "Excluir {{count}} chaves inválidas?",
       "title_other": "Excluir {{count}} chaves inválidas?"
     },
-    "description": "Verifique se as contas salvas têm chaves utilizáveis. Quando possível, as chaves ausentes serão criadas automaticamente; outros problemas aparecerão abaixo.",
+    "description": "Verifique todos os grupos disponíveis das contas salvas e crie as chaves utilizáveis ausentes onde a criação automática for suportada. Outros problemas são listados abaixo.",
     "failureGuidance": {
       "aborted": "A operação foi cancelada antes de terminar. Execute a verificação novamente quando estiver pronto.",
       "authenticationFailed": "Entre novamente ou atualize as credenciais desta conta e tente outra vez.",
@@ -625,7 +625,7 @@
       "validationFailed": "Revise as configurações de chave obrigatórias, corrija-as e tente novamente."
     },
     "historyNote": "Este é o resultado da verificação anterior. Nenhuma tarefa está em execução no momento, e você pode iniciar a verificação novamente.",
-    "initialNotice": "As contas salvas serão verificadas em busca de chaves utilizáveis. Se faltar uma em uma conta compatível, a extensão poderá criá-la.",
+    "initialNotice": "Verifique as contas salvas grupo por grupo e crie as chaves ausentes onde houver suporte. Grupos que já têm chaves utilizáveis são ignorados.",
     "invalidKeys": {
       "badge": "Inválida",
       "deleteFailed": "Falha ao excluir as chaves inválidas",

@@ -73,6 +73,8 @@ function createV0Preferences(
   return {
     themeMode: "system" as const,
     logging: DEFAULT_PREFERENCES.logging,
+    autoProvisionKeyOnAccountAddMode:
+      DEFAULT_PREFERENCES.autoProvisionKeyOnAccountAddMode,
     // Legacy stored value before the v7->v8 cashflow tab rename migration.
     activeTab: DATA_TYPE_CONSUMPTION as any,
     currencyType: "USD" as const,
@@ -727,6 +729,8 @@ describe("preferencesMigration", () => {
       const prefs: UserPreferences = {
         themeMode: "system",
         logging: DEFAULT_PREFERENCES.logging,
+        autoProvisionKeyOnAccountAddMode:
+          DEFAULT_PREFERENCES.autoProvisionKeyOnAccountAddMode,
         // Legacy stored value before the v7->v8 cashflow tab rename migration.
         activeTab: DATA_TYPE_CONSUMPTION as any,
         currencyType: "USD",

@@ -1,6 +1,12 @@
 import toast from "react-hot-toast"
 
+import { ensureAllGroupKeysForAccount } from "~/services/accounts/accountKeyAutoProvisioning/ensureAllGroupKeys"
 import { ensureDefaultApiTokenForAccount } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
+import {
+  ACCOUNT_KEY_RECONCILIATION_INVENTORY_STATUSES,
+  ACCOUNT_KEY_RECONCILIATION_OUTCOMES,
+  type AccountKeyInventoryReconciliationResult,
+} from "~/services/accounts/accountKeyInventoryReconciliation"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { DefaultTokenLifecyclePolicyBlockedError } from "~/services/accounts/defaultTokenLifecycle"
 import {
@@ -13,6 +19,10 @@ import {
 } from "~/services/apiAdapters/accountCapabilitySupport"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { AuthTypeEnum } from "~/types"
+import {
+  ACCOUNT_KEY_AUTO_PROVISION_MODES,
+  type AccountKeyAutoProvisionMode,
+} from "~/types/accountKeyAutoProvisioning"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { showWarningToast } from "~/utils/core/toastHelpers"
@@ -20,10 +30,74 @@ import { t } from "~/utils/i18n/core"
 
 const logger = createLogger("AccountOperations")
 
-/** Best-effort default API key provisioning after an account is added. */
+/** Reports group coverage without disclosing resource identifiers or secrets. */
+function showAllGroupProvisioningResult(
+  accountName: string,
+  result: AccountKeyInventoryReconciliationResult | null,
+) {
+  const actionLabel = t("keyManagement:repairMissingKeys.action")
+  if (!result) {
+    showWarningToast(
+      t("messages:accountOperations.autoProvisionGroupsUnsupported", {
+        accountName,
+      }),
+    )
+    return
+  }
+
+  const createdCount = result.requirementResults.filter(
+    ({ outcome }) => outcome === ACCOUNT_KEY_RECONCILIATION_OUTCOMES.Created,
+  ).length
+  const coveredCount = result.requirementResults.filter(
+    ({ outcome }) =>
+      outcome === ACCOUNT_KEY_RECONCILIATION_OUTCOMES.Covered ||
+      outcome === ACCOUNT_KEY_RECONCILIATION_OUTCOMES.CoveredAfterUncertain,
+  ).length
+  const pendingCount =
+    result.requirementResults.length - createdCount - coveredCount
+
+  if (
+    result.inventoryStatus ===
+      ACCOUNT_KEY_RECONCILIATION_INVENTORY_STATUSES.Incomplete ||
+    pendingCount > 0
+  ) {
+    showWarningToast(
+      t("messages:accountOperations.autoProvisionGroupsIncomplete", {
+        accountName,
+        count: createdCount,
+        actionLabel,
+      }),
+    )
+    return
+  }
+
+  if (result.requirementResults.length === 0) {
+    showWarningToast(
+      t("messages:accountOperations.autoProvisionGroupsUnavailable", {
+        accountName,
+        actionLabel,
+      }),
+    )
+    return
+  }
+
+  toast.success(
+    createdCount > 0
+      ? t("messages:accountOperations.autoProvisionGroupsCreated", {
+          accountName,
+          count: createdCount,
+        })
+      : t("messages:accountOperations.autoProvisionGroupsCovered", {
+          accountName,
+        }),
+  )
+}
+
+/** Best-effort API key provisioning after an account is added. */
 export async function autoProvisionKeyOnAccountAdd(
   accountId: string,
   enabled: boolean,
+  mode: AccountKeyAutoProvisionMode = ACCOUNT_KEY_AUTO_PROVISION_MODES.Default,
 ): Promise<void> {
   if (!enabled) return
 
@@ -38,6 +112,14 @@ export async function autoProvisionKeyOnAccountAdd(
     accountName = account.site_name
 
     if (account.disabled === true || account.authType === AuthTypeEnum.None) {
+      return
+    }
+
+    if (mode === ACCOUNT_KEY_AUTO_PROVISION_MODES.AllGroups) {
+      showAllGroupProvisioningResult(
+        accountName,
+        await ensureAllGroupKeysForAccount(account),
+      )
       return
     }
 

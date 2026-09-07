@@ -138,11 +138,14 @@ export async function validateAndSaveAccount(
       : normalizeAccountIdentity(userId)!
   let shouldAutoProvisionKeyOnAccountAdd =
     DEFAULT_PREFERENCES.autoProvisionKeyOnAccountAdd ?? false
+  let autoProvisionKeyOnAccountAddMode =
+    DEFAULT_PREFERENCES.autoProvisionKeyOnAccountAddMode
   let includeTodayCashflow = DEFAULT_PREFERENCES.showTodayCashflow ?? true
   try {
     const prefs = await userPreferences.getPreferences()
     shouldAutoProvisionKeyOnAccountAdd =
       prefs.autoProvisionKeyOnAccountAdd ?? shouldAutoProvisionKeyOnAccountAdd
+    autoProvisionKeyOnAccountAddMode = prefs.autoProvisionKeyOnAccountAddMode
     includeTodayCashflow = prefs.showTodayCashflow ?? includeTodayCashflow
   } catch (error) {
     logger.warn(
@@ -216,6 +219,7 @@ export async function validateAndSaveAccount(
         void autoProvisionKeyOnAccountAdd(
           accountId,
           shouldAutoProvisionKeyOnAccountAdd,
+          autoProvisionKeyOnAccountAddMode,
         )
       }
 
@@ -326,6 +330,7 @@ export async function validateAndSaveAccount(
       void autoProvisionKeyOnAccountAdd(
         accountId,
         shouldAutoProvisionKeyOnAccountAdd,
+        autoProvisionKeyOnAccountAddMode,
       )
     }
 
@@ -389,6 +394,7 @@ export async function validateAndSaveAccount(
         void autoProvisionKeyOnAccountAdd(
           accountId,
           shouldAutoProvisionKeyOnAccountAdd,
+          autoProvisionKeyOnAccountAddMode,
         )
       }
 
