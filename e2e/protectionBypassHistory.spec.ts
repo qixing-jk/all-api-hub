@@ -245,6 +245,8 @@ test("opens diagnostic history on demand, links to settings and preserves backgr
   await search.fill("TEMP_WINDOW_DISABLED")
   await expect(summary).toBeVisible()
   await search.fill("absent.example")
+  await expect(history.getByText("No records match your filters")).toBeVisible()
+  await expect(summary).toHaveCount(0)
   await history.getByRole("button", { name: "Clear filters" }).click()
   await expect(search).toHaveValue("")
   await expect(summary).toBeVisible()

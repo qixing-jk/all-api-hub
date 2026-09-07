@@ -1,11 +1,16 @@
 import { act, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
+import toast from "react-hot-toast"
+import { I18nextProvider } from "react-i18next"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import ProtectionBypassHistory from "~/features/BasicSettings/components/tabs/Refresh/ProtectionBypassHistory"
 import { SHIELD_SETTINGS_TARGET_IDS } from "~/features/BasicSettings/components/tabs/Refresh/searchTargets"
+import enShieldBypass from "~/locales/en/shieldBypass.json"
+import zhCnShieldBypass from "~/locales/zh-CN/shieldBypass.json"
 import { createAutomaticProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import { protectionBypassHistoryStorage } from "~/services/protectionBypass/historyStorage"
+import { createResourceTestI18n } from "~~/tests/test-utils/i18n"
 import { render } from "~~/tests/test-utils/render"
 
 afterEach(() => window.history.replaceState(null, "", "/"))
@@ -108,7 +113,10 @@ describe("protection bypass history settings", () => {
         params: {
           originUrl: "https://example.com",
           fetchUrl: "https://example.com/api/user/self",
-          fallbackDiagnostic: { statusCode: 403, code: "HTTP_403" },
+          fallbackDiagnostic: {
+            statusCode: 403,
+            code: "CONTENT_TYPE_MISMATCH",
+          },
         },
       },
     })
@@ -121,7 +129,10 @@ describe("protection bypass history settings", () => {
       screen.getByRole("button", { name: "shieldBypass:history.open" }),
     )
     await user.click(await screen.findByText("https://example.com"))
-    expect(screen.getByText("HTTP 403 · HTTP_403")).toBeVisible()
+    expect(screen.getByText("HTTP 403 · CONTENT_TYPE_MISMATCH")).toBeVisible()
+    expect(
+      screen.getByText("shieldBypass:history.unexpectedContent"),
+    ).toBeVisible()
     expect(
       screen.getByText("shieldBypass:history.triggers.scheduled"),
     ).toBeVisible()
@@ -143,6 +154,57 @@ describe("protection bypass history settings", () => {
     )
     expect(screen.getByText("shieldBypass:history.noMatches")).toBeVisible()
     expect(screen.queryByText("https://example.com")).not.toBeInTheDocument()
+  })
+
+  it("filters failed records by status and restores all records", async () => {
+    const user = userEvent.setup()
+    await recordHistoryEntries(1)
+    const failedId = await protectionBypassHistoryStorage.start({
+      execution: createAutomaticProtectionBypassExecution(
+        "account_refresh",
+        "scheduled",
+        "background",
+      ),
+      task: {
+        kind: "api_fallback_fetch",
+        params: {
+          originUrl: "https://failed.example",
+          fetchUrl: "https://failed.example/api/user/self",
+        },
+      },
+    })
+    await protectionBypassHistoryStorage.finish(failedId, { hasError: true })
+    render(<ProtectionBypassHistory />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+    await user.click(
+      screen.getByRole("button", { name: "shieldBypass:history.open" }),
+    )
+    const dialog = within(
+      await screen.findByRole("dialog", { name: "shieldBypass:history.title" }),
+    )
+    await dialog.findByText("https://site-0.example")
+    const statusFilter = dialog.getByRole("combobox", {
+      name: "shieldBypass:history.filterStatus",
+    })
+    await user.click(statusFilter)
+    await user.click(
+      screen.getByRole("option", {
+        name: "shieldBypass:history.statuses.failed",
+      }),
+    )
+    expect(dialog.queryByText("https://site-0.example")).not.toBeInTheDocument()
+    expect(
+      dialog.getByRole("button", { name: /https:\/\/failed\.example/ }),
+    ).toHaveTextContent("shieldBypass:history.statuses.failed")
+
+    await user.click(statusFilter)
+    await user.click(
+      screen.getByRole("option", { name: "shieldBypass:history.allStatuses" }),
+    )
+    expect(dialog.getByText("https://site-0.example")).toBeVisible()
+    expect(dialog.getByText("https://failed.example")).toBeVisible()
   })
 
   it("copies only diagnostic data and clears history after confirmation", async () => {
@@ -195,6 +257,112 @@ describe("protection bypass history settings", () => {
     )
     expect(await screen.findByText("shieldBypass:history.empty")).toBeVisible()
     expect(await protectionBypassHistoryStorage.list()).toEqual([])
+  })
+
+  it("keeps records when clearing is cancelled or fails and allows retry", async () => {
+    const user = userEvent.setup()
+    await recordHistoryEntries(1)
+    const clear = vi
+      .spyOn(protectionBypassHistoryStorage, "clear")
+      .mockRejectedValueOnce(new Error("storage unavailable"))
+    const showError = vi.spyOn(toast, "error").mockReturnValue("clear-error")
+    try {
+      render(<ProtectionBypassHistory />, {
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+      })
+      await user.click(
+        screen.getByRole("button", { name: "shieldBypass:history.open" }),
+      )
+      await screen.findByText("https://site-0.example")
+      const openConfirmation = async () => {
+        await user.click(
+          screen.getByRole("button", { name: "shieldBypass:history.actions" }),
+        )
+        await user.click(
+          screen.getByRole("menuitem", { name: "shieldBypass:history.clear" }),
+        )
+        return screen.findByRole("dialog", {
+          name: "shieldBypass:history.clear",
+        })
+      }
+      const cancelledDialog = await openConfirmation()
+      await user.click(
+        within(cancelledDialog).getByRole("button", {
+          name: "common:actions.cancel",
+        }),
+      )
+      await waitFor(() => expect(cancelledDialog).not.toBeInTheDocument())
+      expect(clear).not.toHaveBeenCalled()
+      expect(screen.getByText("https://site-0.example")).toBeVisible()
+
+      const retryDialog = await openConfirmation()
+      const confirm = within(retryDialog).getByRole("button", {
+        name: "common:actions.clear",
+      })
+      await user.click(confirm)
+      await waitFor(() =>
+        expect(showError).toHaveBeenCalledWith(
+          "shieldBypass:history.clearFailed",
+        ),
+      )
+      expect(retryDialog).toBeVisible()
+      expect(confirm).toBeEnabled()
+      expect(await protectionBypassHistoryStorage.list()).toHaveLength(1)
+
+      await user.click(confirm)
+      expect(
+        await screen.findByText("shieldBypass:history.empty"),
+      ).toBeVisible()
+      expect(await protectionBypassHistoryStorage.list()).toEqual([])
+    } finally {
+      clear.mockRestore()
+      showError.mockRestore()
+    }
+  })
+
+  it("keeps details available when copying fails and allows retry", async () => {
+    const user = userEvent.setup()
+    await recordHistoryEntries(1)
+    const write = vi
+      .spyOn(navigator.clipboard, "writeText")
+      .mockRejectedValueOnce(new Error("clipboard unavailable"))
+    const showError = vi.spyOn(toast, "error").mockReturnValue("copy-error")
+    try {
+      render(<ProtectionBypassHistory />, {
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+      })
+      await user.click(
+        screen.getByRole("button", { name: "shieldBypass:history.open" }),
+      )
+      const summary = await screen.findByRole("button", {
+        name: /https:\/\/site-0\.example/,
+      })
+      await user.click(summary)
+      const copy = screen.getByRole("button", {
+        name: "shieldBypass:history.copy",
+      })
+      await user.click(copy)
+      await waitFor(() =>
+        expect(showError).toHaveBeenCalledWith(
+          "shieldBypass:history.copyFailed",
+        ),
+      )
+      expect(summary).toHaveAttribute("aria-expanded", "true")
+      expect(
+        screen.getByText("shieldBypass:history.fields.method"),
+      ).toBeVisible()
+      expect(await protectionBypassHistoryStorage.list()).toHaveLength(1)
+
+      await user.click(copy)
+      expect(JSON.parse(await navigator.clipboard.readText())).toMatchObject({
+        origin: "https://site-0.example",
+      })
+    } finally {
+      write.mockRestore()
+      showError.mockRestore()
+    }
   })
 
   it("offers retry when history cannot be read instead of showing an empty history", async () => {
@@ -331,7 +499,7 @@ describe("protection bypass history settings", () => {
       window.history.replaceState(
         null,
         "",
-        "/?tab=refresh&anchor=shield-history#basic",
+        "/?tab=refresh&anchor=shield-history&highlight=shield-history#basic",
       )
       render(
         <>
@@ -381,6 +549,9 @@ describe("protection bypass history settings", () => {
       expect(new URLSearchParams(window.location.search).get("anchor")).toBe(
         targetId,
       )
+      expect(new URLSearchParams(window.location.search).get("highlight")).toBe(
+        targetId,
+      )
       expect(enableSetting).not.toHaveBeenCalled()
 
       await user.click(
@@ -401,38 +572,11 @@ describe("protection bypass history settings", () => {
     },
   )
 
-  it("keeps an expanded record in place while offering new records and updating its result", async () => {
-    const user = userEvent.setup()
-    const id = await protectionBypassHistoryStorage.start({
-      execution: createAutomaticProtectionBypassExecution(
-        "account_refresh",
-        "scheduled",
-        "background",
-      ),
-      task: {
-        kind: "api_fallback_fetch",
-        params: {
-          originUrl: "https://reading.example",
-          fetchUrl: "https://reading.example/api",
-        },
-      },
-    })
-    render(<ProtectionBypassHistory />, {
-      withUserPreferencesProvider: false,
-      withThemeProvider: false,
-    })
-    await user.click(
-      screen.getByRole("button", { name: "shieldBypass:history.open" }),
-    )
-    const dialog = within(
-      await screen.findByRole("dialog", { name: "shieldBypass:history.title" }),
-    )
-    const summary = await dialog.findByRole("button", {
-      name: /https:\/\/reading\.example/,
-    })
-    await user.click(summary)
-    await act(async () => {
-      await protectionBypassHistoryStorage.start({
+  it.each(["notification", "menu"] as const)(
+    "keeps expanded details stable while offering new records via %s and updating the result",
+    async (refreshSource) => {
+      const user = userEvent.setup()
+      const id = await protectionBypassHistoryStorage.start({
         execution: createAutomaticProtectionBypassExecution(
           "account_refresh",
           "scheduled",
@@ -441,36 +585,121 @@ describe("protection bypass history settings", () => {
         task: {
           kind: "api_fallback_fetch",
           params: {
-            originUrl: "https://new.example",
-            fetchUrl: "https://new.example/api",
+            originUrl: "https://reading.example",
+            fetchUrl: "https://reading.example/api",
           },
         },
       })
-    })
-    const showNewRecords = await dialog.findByRole("button", {
-      name: /^shieldBypass:history.newRecords/,
-    })
-    expect(dialog.queryByText("https://new.example")).not.toBeInTheDocument()
-    expect(summary).toHaveAttribute("aria-expanded", "true")
-
-    await act(async () => {
-      await protectionBypassHistoryStorage.finish(id, {
-        context: { kind: "allowed", adapter: "tab", reused: true },
-        response: { success: true, status: 200 },
+      render(<ProtectionBypassHistory />, {
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
       })
-    })
-    expect(
-      await dialog.findByText("shieldBypass:history.statuses.completed"),
-    ).toBeVisible()
-    expect(dialog.getByText("shieldBypass:history.reused")).toBeVisible()
-    expect(summary).toHaveAttribute("aria-expanded", "true")
-    await user.click(showNewRecords)
-    expect(dialog.getByText("https://new.example")).toBeVisible()
-    expect(summary).toHaveAttribute("aria-expanded", "true")
-    expect(
-      dialog.queryByRole("button", {
+      await user.click(
+        screen.getByRole("button", { name: "shieldBypass:history.open" }),
+      )
+      const dialog = within(
+        await screen.findByRole("dialog", {
+          name: "shieldBypass:history.title",
+        }),
+      )
+      const summary = await dialog.findByRole("button", {
+        name: /https:\/\/reading\.example/,
+      })
+      await user.click(summary)
+      await act(async () => {
+        await protectionBypassHistoryStorage.start({
+          execution: createAutomaticProtectionBypassExecution(
+            "account_refresh",
+            "scheduled",
+            "background",
+          ),
+          task: {
+            kind: "api_fallback_fetch",
+            params: {
+              originUrl: "https://new.example",
+              fetchUrl: "https://new.example/api",
+            },
+          },
+        })
+      })
+      const showNewRecords = await dialog.findByRole("button", {
         name: /^shieldBypass:history.newRecords/,
-      }),
-    ).not.toBeInTheDocument()
-  })
+      })
+      expect(dialog.queryByText("https://new.example")).not.toBeInTheDocument()
+      expect(summary).toHaveAttribute("aria-expanded", "true")
+
+      await act(async () => {
+        await protectionBypassHistoryStorage.finish(id, {
+          context: { kind: "allowed", adapter: "tab", reused: true },
+          response: { success: true, status: 200 },
+        })
+      })
+      expect(
+        await dialog.findByText("shieldBypass:history.statuses.completed"),
+      ).toBeVisible()
+      expect(dialog.getByText("shieldBypass:history.reused")).toBeVisible()
+      expect(summary).toHaveAttribute("aria-expanded", "true")
+      if (refreshSource === "notification") {
+        await user.click(showNewRecords)
+      } else {
+        await user.click(
+          dialog.getByRole("button", { name: "shieldBypass:history.actions" }),
+        )
+        await user.click(
+          screen.getByRole("menuitem", { name: "common:actions.refresh" }),
+        )
+      }
+      expect(dialog.getByText("https://new.example")).toBeVisible()
+      expect(summary).toHaveAttribute("aria-expanded", "true")
+      expect(
+        dialog.queryByRole("button", {
+          name: /^shieldBypass:history.newRecords/,
+        }),
+      ).not.toBeInTheDocument()
+    },
+  )
+
+  it.each([
+    {
+      language: "en",
+      messages: enShieldBypass,
+      labels: ["Show 1 new record", "Show 2 new records"],
+    },
+    {
+      language: "zh-CN",
+      messages: zhCnShieldBypass,
+      labels: ["查看 1 条新记录", "查看 2 条新记录"],
+    },
+  ])(
+    "localizes pending-record counts in $language",
+    async ({ language, messages, labels }) => {
+      const user = userEvent.setup()
+      const i18n = await createResourceTestI18n(
+        { [language]: { shieldBypass: messages } },
+        language,
+      )
+      await recordHistoryEntries(1)
+      render(
+        <I18nextProvider i18n={i18n}>
+          <ProtectionBypassHistory />
+        </I18nextProvider>,
+        {
+          withUserPreferencesProvider: false,
+          withThemeProvider: false,
+        },
+      )
+      await user.click(
+        screen.getByRole("button", { name: messages.history.open }),
+      )
+      const dialog = within(
+        await screen.findByRole("dialog", { name: messages.history.title }),
+      )
+      await user.click(await dialog.findByText("https://site-0.example"))
+
+      for (const label of labels) {
+        await act(async () => recordHistoryEntries(1))
+        expect(await dialog.findByRole("button", { name: label })).toBeVisible()
+      }
+    },
+  )
 })

@@ -89,7 +89,7 @@
       "dispatched_unconfirmed": "已发送请求，结果尚未确认；请先核对站点状态",
       "not_dispatched": "未发送创建请求"
     },
-    "newRecords": "shieldBypass:history.newRecords",
+    "newRecords": "查看 {{count}} 条新记录",
     "noMatches": "没有符合筛选条件的记录",
     "noOriginalError": "已请求临时页面，调用方未提供前序错误信息。",
     "open": "查看过盾历史",

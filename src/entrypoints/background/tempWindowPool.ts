@@ -1387,6 +1387,10 @@ async function executeAutoDetectSite(
     if (useIncognito) {
       const allowed = await isAllowedIncognitoAccess()
       if (allowed === false) {
+        reportAuthorizedTempContextOutcome(authorizeAtAcquire, {
+          kind: "unavailable",
+          reason: "incognito_access_required",
+        })
         sendResponse({
           success: false,
           error: t("messages:background.incognitoAccessRequired"),

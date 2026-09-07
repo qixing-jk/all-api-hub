@@ -8,6 +8,66 @@ import { createAutomaticProtectionBypassExecution } from "~/services/protectionB
 import { protectionBypassHistoryStorage } from "~/services/protectionBypass/historyStorage"
 
 describe("protection bypass history", () => {
+  it("omits invalid origins and unrecognized fallback evidence", async () => {
+    await protectionBypassHistoryStorage.start({
+      execution: createAutomaticProtectionBypassExecution(
+        "account_refresh",
+        "scheduled",
+        "background",
+      ),
+      task: {
+        kind: "api_fallback_fetch",
+        params: {
+          originUrl: "invalid origin?token=secret",
+          fetchUrl: "https://example.com/api",
+          fallbackDiagnostic: { statusCode: 999, code: "secret" as never },
+        },
+      },
+    })
+
+    const [entry] = await protectionBypassHistoryStorage.list()
+    expect(entry.origin).toBeUndefined()
+    expect(entry.fallbackDiagnostic).toBeUndefined()
+    expect(JSON.stringify(entry)).not.toContain("secret")
+  })
+
+  it("retains the safe origin and permission outcome of an incognito session read", async () => {
+    const id = await protectionBypassHistoryStorage.start({
+      execution: {
+        version: 2,
+        kind: "user_command",
+        command: "add_account",
+        surface: "options",
+      },
+      task: {
+        kind: "session_read",
+        params: {
+          url: "https://user:secret@example.com/account?token=secret",
+          siteType: "new-api",
+          requestId: "session-read-request",
+          useIncognito: true,
+        },
+      },
+    })
+    await protectionBypassHistoryStorage.finish(id, {
+      context: { kind: "unavailable", reason: "incognito_access_required" },
+      response: { success: false },
+    })
+
+    const history = await protectionBypassHistoryStorage.list()
+    expect(history).toEqual([
+      expect.objectContaining({
+        id,
+        origin: "https://example.com",
+        incognito: true,
+        status: "unavailable",
+        failureReason: "incognito_access_required",
+      }),
+    ])
+    expect(JSON.stringify(history)).not.toContain("secret")
+    expect(JSON.stringify(history)).not.toContain("session-read-request")
+  })
+
   it("retains the trigger and result without saving request or response secrets", async () => {
     const id = await protectionBypassHistoryStorage.start({
       execution: createAutomaticProtectionBypassExecution(

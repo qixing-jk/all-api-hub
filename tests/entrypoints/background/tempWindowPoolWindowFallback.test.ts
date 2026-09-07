@@ -2656,27 +2656,42 @@ describe("tempWindowPool window fallback", () => {
   it("rejects incognito auto-detect requests when incognito access is unavailable", async () => {
     isAllowedIncognitoAccessMock.mockResolvedValueOnce(false)
 
-    const { handleAutoDetectSite } = await import(
+    const { executeAuthorizedTempContextTask } = await import(
       "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
+    const authorizeAtAcquire = vi.fn()
+    const reportOutcome = vi.fn()
     const sendResponse = vi.fn()
-    await handleAutoDetectSite(
+    await executeAuthorizedTempContextTask(
       {
-        url: "https://example.com/account",
-        requestId: "req-auto-detect-incognito-denied",
-        siteType: "new-api",
-        useIncognito: true,
+        kind: "session_read",
+        params: {
+          url: "https://example.com/account",
+          requestId: "req-auto-detect-incognito-denied",
+          siteType: "new-api",
+          useIncognito: true,
+        },
       },
+      authorizeAtAcquire,
       sendResponse,
+      reportOutcome,
     )
 
     expect(createWindowMock).not.toHaveBeenCalled()
     expect(createTabMock).not.toHaveBeenCalled()
+    expect(authorizeAtAcquire).not.toHaveBeenCalled()
+    expect(reportOutcome).toHaveBeenCalledWith({
+      kind: "unavailable",
+      reason: "incognito_access_required",
+    })
     expect(sendResponse).toHaveBeenCalledWith({
       success: false,
       error: "messages:background.incognitoAccessRequired",
     })
+    expect(reportOutcome.mock.invocationCallOrder[0]).toBeLessThan(
+      sendResponse.mock.invocationCallOrder[0],
+    )
   })
 
   it("returns a safe null result when site detection succeeds but no user data can be read", async () => {
