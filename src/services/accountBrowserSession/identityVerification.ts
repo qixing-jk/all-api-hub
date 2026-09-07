@@ -82,6 +82,8 @@ function createIdentityRead(
         !isCurrentObservation()
       )
         return null
+      // Preserve self-hosted HTTP/LAN support. Adapters select the current page
+      // origin or a canonical hosted origin; requests never follow redirects.
       const response = await fetch(url, {
         method: "GET",
         credentials: "include",

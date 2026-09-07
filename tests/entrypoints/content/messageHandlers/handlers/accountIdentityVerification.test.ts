@@ -1,8 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import { handleGetUserFromLocalStorage } from "~/entrypoints/content/messageHandlers/handlers/storage"
 import { setupAccountBrowserIdentityRateLimitMessaging } from "~/services/accountBrowserSession/identityRateLimit"
+import { sub2ApiBrowserIdentity } from "~/services/apiAdapters/sub2api/browserIdentity"
+import { ACCOUNT_BROWSER_IDENTITY_STORAGE_KEYS } from "~/services/core/storageKeys"
 
 /** Verifies identity through the same message-handler boundary as the popup. */
 function verifyIdentity(
@@ -34,6 +37,166 @@ describe("current browser account identity verification", () => {
     vi.unstubAllGlobals()
     vi.restoreAllMocks()
   })
+
+  it("skips token verification when page storage access is denied", async () => {
+    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new DOMException("Storage access denied", "SecurityError")
+    })
+    const fetchMock = vi.fn()
+    vi.stubGlobal("fetch", fetchMock)
+
+    expect(await verifyIdentity(SITE_TYPES.SUB2API)).toEqual({ success: false })
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it("leaves a Cookie login unconfirmed when visible cookies are inaccessible and the server rejects it", async () => {
+    localStorage.setItem("user", JSON.stringify({ id: 2 }))
+    vi.spyOn(document, "cookie", "get").mockImplementation(() => {
+      throw new DOMException("Cookie access denied", "SecurityError")
+    })
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(new Response("{}", { status: 401 }))
+    vi.stubGlobal("fetch", fetchMock)
+
+    expect(await verifyIdentity(SITE_TYPES.NEW_API)).toEqual({ success: false })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(localStorage.getItem("user")).toBe(JSON.stringify({ id: 2 }))
+  })
+
+  it("does not copy a malformed session Cookie into an Authorization header", async () => {
+    vi.stubGlobal("location", new URL("https://console.aihubmix.com/"))
+    vi.spyOn(document, "cookie", "get").mockReturnValue("__session=%E0%A4%A")
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(new Response("{}", { status: 401 }))
+    vi.stubGlobal("fetch", fetchMock)
+
+    expect(await verifyIdentity(SITE_TYPES.AIHUBMIX)).toEqual({
+      success: false,
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(
+      new Headers(fetchMock.mock.calls[0][1].headers).has("Authorization"),
+    ).toBe(false)
+  })
+
+  it.each([
+    { reason: "missing expiry", token: `e30.${btoa("{}")}.signature` },
+    { reason: "malformed payload", token: "e30.invalid%.signature" },
+  ])(
+    "checks a token with $reason remotely without changing it",
+    async ({ token }) => {
+      localStorage.setItem("auth_token", token)
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValue(new Response("{}", { status: 401 }))
+      vi.stubGlobal("fetch", fetchMock)
+
+      expect(await verifyIdentity(SITE_TYPES.SUB2API)).toEqual({
+        success: false,
+      })
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      expect(
+        new Headers(fetchMock.mock.calls[0][1].headers).get("Authorization"),
+      ).toBe(`Bearer ${token}`)
+      expect(localStorage.getItem("auth_token")).toBe(token)
+    },
+  )
+
+  it("rejects an invalid provider endpoint without sending browser credentials", async () => {
+    vi.spyOn(sub2ApiBrowserIdentity, "observe").mockReturnValue({
+      sessionKey: "observed-session",
+      verify: (read) => read({ url: "invalid endpoint" }),
+    })
+    const fetchMock = vi.fn()
+    vi.stubGlobal("fetch", fetchMock)
+
+    expect(await verifyIdentity(SITE_TYPES.SUB2API)).toEqual({ success: false })
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it("allows only one identity request when a provider attempts another read", async () => {
+    vi.spyOn(sub2ApiBrowserIdentity, "observe").mockReturnValue({
+      sessionKey: "observed-session",
+      verify: async (read) => {
+        const request = { url: `${location.origin}/api/v1/auth/me` }
+        const body = await read(request)
+        await read(request)
+        return body?.id
+      },
+    })
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(new Response(JSON.stringify({ id: 2 })))
+    vi.stubGlobal("fetch", fetchMock)
+
+    expect(await verifyIdentity(SITE_TYPES.SUB2API)).toEqual({
+      success: true,
+      data: { userId: "2", identityVerified: true },
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it.each(["observation", "verification"])(
+    "isolates an unexpected provider %s failure from the browser session",
+    async (phase) => {
+      localStorage.setItem("auth_token", "unchanged-session")
+      vi.spyOn(sub2ApiBrowserIdentity, "observe").mockImplementation(() => {
+        if (phase === "observation")
+          throw new Error("Provider observation failed")
+        return {
+          sessionKey: "observed-session",
+          verify: async () => {
+            throw new Error("Provider verification failed")
+          },
+        }
+      })
+      const fetchMock = vi.fn()
+      vi.stubGlobal("fetch", fetchMock)
+
+      expect(await verifyIdentity(SITE_TYPES.SUB2API)).toEqual({
+        success: false,
+      })
+      expect(fetchMock).not.toHaveBeenCalled()
+      expect(localStorage.getItem("auth_token")).toBe("unchanged-session")
+    },
+  )
+
+  it.each([null, "invalid origin", "ftp://site.example.com"])(
+    "rejects a cooldown report for an invalid API origin: %s",
+    async (origin) => {
+      expect(
+        await browser.runtime.sendMessage({
+          action: RuntimeActionIds.AccountBrowserIdentityRecordRateLimit,
+          origin,
+          retryAfter: "120",
+        }),
+      ).toEqual({ success: false })
+      expect(await browser.storage.session.get(null)).toEqual({})
+      expect(await browser.storage.local.get(null)).toEqual({})
+    },
+  )
+
+  it.each([null, { action: "another-feature:read" }])(
+    "leaves unrelated runtime messages for their own listener: %j",
+    async (message) => {
+      const otherListener: Parameters<
+        typeof browser.runtime.onMessage.addListener
+      >[0] = (_request, _sender, sendResponse) => {
+        sendResponse({ owner: "another-feature" })
+        return true
+      }
+      browser.runtime.onMessage.addListener(otherListener)
+      try {
+        expect(await browser.runtime.sendMessage(message)).toEqual({
+          owner: "another-feature",
+        })
+      } finally {
+        browser.runtime.onMessage.removeListener(otherListener)
+      }
+    },
+  )
 
   it("leaves the login unconfirmed without refreshing the website session", async () => {
     localStorage.setItem("user", JSON.stringify({ id: 2 }))
@@ -653,6 +816,43 @@ describe("current browser account identity verification", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
+  it("preserves both sites' cooldowns when session storage recovers and the local fallback is removed", async () => {
+    const firstOrigin = location.origin
+    const secondOrigin = "https://other.example.com"
+    const cooldownKey = ACCOUNT_BROWSER_IDENTITY_STORAGE_KEYS.RATE_LIMITS
+    vi.spyOn(browser.storage.session, "set").mockRejectedValueOnce(
+      new Error("Session storage unavailable"),
+    )
+    const fetchMock = vi.fn(
+      async () =>
+        new Response("{}", {
+          status: 429,
+          headers: { "Retry-After": "120" },
+        }),
+    )
+    vi.stubGlobal("fetch", fetchMock)
+
+    expect(await verifyIdentity(SITE_TYPES.ONE_API)).toEqual({ success: false })
+    expect((await browser.storage.local.get(cooldownKey))[cooldownKey]).toEqual(
+      { [firstOrigin]: expect.any(Number) },
+    )
+    vi.stubGlobal("location", new URL(`${secondOrigin}/dashboard`))
+    vi.stubGlobal("document", document.implementation.createHTMLDocument())
+    expect(await verifyIdentity(SITE_TYPES.ONE_API)).toEqual({ success: false })
+    expect(await browser.storage.local.get(cooldownKey)).toEqual({})
+
+    stopRateLimitMessaging()
+    stopRateLimitMessaging = setupAccountBrowserIdentityRateLimitMessaging()
+    for (const origin of [firstOrigin, secondOrigin]) {
+      vi.stubGlobal("location", new URL(`${origin}/dashboard`))
+      vi.stubGlobal("document", document.implementation.createHTMLDocument())
+      expect(await verifyIdentity(SITE_TYPES.ONE_API)).toEqual({
+        success: false,
+      })
+    }
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
   it("does not let a second page's shorter Retry-After reduce an active cooldown", async () => {
     let now = Date.now()
     vi.spyOn(Date, "now").mockImplementation(() => now)
@@ -930,6 +1130,24 @@ describe("current browser account identity verification", () => {
 
   it.each([
     {
+      siteType: SITE_TYPES.NEW_API,
+      pageUrl: "http://192.168.1.50:3000/dashboard",
+      endpoint: "http://192.168.1.50:3000/api/user/self",
+      stored: { user: JSON.stringify({ id: 1 }) },
+      body: { success: true, data: { id: 2 } },
+      userId: "2",
+      authorization: undefined,
+    },
+    {
+      siteType: SITE_TYPES.SUB2API,
+      pageUrl: "http://localhost:3000/dashboard",
+      endpoint: "http://localhost:3000/api/v1/auth/me",
+      stored: { auth_token: "browser-session-token" },
+      body: { code: 0, data: { id: 2 } },
+      userId: "2",
+      authorization: "Bearer browser-session-token",
+    },
+    {
       siteType: SITE_TYPES.SUB2API,
       pageUrl: "https://site.example.com/dashboard",
       endpoint: "https://site.example.com/api/v1/auth/me",
@@ -988,7 +1206,7 @@ describe("current browser account identity verification", () => {
       authorization: undefined,
     },
   ])(
-    "verifies $siteType using its own browser-session protocol",
+    "verifies $siteType using its own browser-session protocol at $pageUrl",
     async (scenario) => {
       vi.stubGlobal("location", new URL(scenario.pageUrl))
       for (const [key, value] of Object.entries(scenario.stored)) {
@@ -1011,6 +1229,7 @@ describe("current browser account identity verification", () => {
           method: "GET",
           credentials: "include",
           cache: "no-store",
+          redirect: "error",
         }),
       )
       const headers = new Headers(fetchMock.mock.calls[0][1].headers)

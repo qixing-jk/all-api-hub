@@ -747,6 +747,44 @@ describe("AccountDataContext current tab detection", () => {
     await waitFor(() => expect(latestCtx?.detectedAccount?.id).toBe("acc-1"))
   })
 
+  it("keeps saved accounts available when the tab cannot receive the identity message", async () => {
+    activeTabs = [{ id: 303, url: "https://foo.example.com" }]
+    prepareAccountSnapshot([
+      createAccount({
+        id: "acc-1",
+        baseUrl: "https://foo.example.com",
+        userId: "1",
+      }),
+    ])
+    const sendMessage = vi
+      .spyOn(browser.tabs, "sendMessage")
+      .mockRejectedValue(
+        new Error(
+          "Could not establish connection. Receiving end does not exist.",
+        ),
+      )
+    let latestCtx: ReturnType<typeof useAccountDataContext> | null = null
+    render(
+      <I18nextProvider i18n={testI18n}>
+        <AccountDataProvider>
+          <ContextProbe onChange={(ctx) => (latestCtx = ctx)} />
+        </AccountDataProvider>
+      </I18nextProvider>,
+    )
+
+    await waitFor(() => expect(sendMessage).toHaveBeenCalledTimes(1))
+    await waitFor(() =>
+      expect(latestCtx).toMatchObject({
+        isInitialLoad: false,
+        isDetecting: false,
+        detectedAccount: null,
+      }),
+    )
+    expect(latestCtx?.sortedData.map(({ id }) => id)).toEqual(["acc-1"])
+    expect(latestCtx?.detectedSiteAccounts).toHaveLength(1)
+    expect(sendMessage).toHaveBeenCalledTimes(1)
+  })
+
   it("waits for a loading page to complete before checking its browser identity", async () => {
     activeTabs = [
       { id: 303, url: "https://foo.example.com", status: "loading" },
