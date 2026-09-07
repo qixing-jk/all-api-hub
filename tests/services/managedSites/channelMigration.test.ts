@@ -96,7 +96,7 @@ const buildMigrationTarget = (): ManagedSiteMigrationTargetPreparation => ({
     groups: ["default"],
     priority: 0,
     weight: 0,
-    status: 1,
+    enabled: true,
   },
   adjustments: {
     remappedType: false,
@@ -186,7 +186,7 @@ const buildAxonTargetPreparation = (
     groups: ["default"],
     priority: 0,
     weight: source.weight,
-    status: source.status === "enabled" ? 1 : 2,
+    enabled: source.status === "enabled",
   },
   adjustments: {
     remappedType: true,

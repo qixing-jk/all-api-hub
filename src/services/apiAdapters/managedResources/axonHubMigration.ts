@@ -1,6 +1,6 @@
 import {
   AXON_HUB_CHANNEL_STATUS,
-  type AxonHubChannelType,
+  isAxonHubChannelType,
 } from "~/constants/axonHub"
 import { DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSiteChannelDraft"
 import { SITE_TYPES } from "~/constants/siteType"
@@ -19,9 +19,9 @@ import {
   openAxonHubNativeResourceOperations,
 } from "~/services/apiAdapters/managedResources/axonHub"
 import {
-  mapAxonHubChannelTypeToChannelTypeStrict,
-  mapChannelTypeToAxonHubChannelTypeStrict,
-} from "~/services/apiAdapters/managedResources/axonHubChannelType"
+  isManagedSiteMigrationSourceType,
+  resolveManagedSiteMigrationType,
+} from "~/services/apiAdapters/managedResources/migrationTypeRoutes"
 import { hasCompleteAxonHubAdvancedDetail } from "~/services/apiService/axonHub"
 import {
   MANAGED_SITE_MUTATION_EFFECT_KINDS,
@@ -78,11 +78,8 @@ const credentialBlocker = (
     : blockers.SOURCE_KEY_MISSING
 
 const inspectMigrationSourceType = (channel: AxonHubChannel) => {
-  const resourceType = mapAxonHubChannelTypeToChannelTypeStrict(
-    String(channel.type),
-  )
-  return resourceType.status === "mapped"
-    ? resourceType
+  return isManagedSiteMigrationSourceType(SITE_TYPES.AXON_HUB, channel.type)
+    ? { status: "mapped" as const, value: channel.type }
     : {
         status: "blocked" as const,
         reasonCode: blockers.SOURCE_TYPE_UNSUPPORTED,
@@ -288,8 +285,9 @@ export const axonHubManagedSiteMigrationCapability: ManagedSiteMigrationCapabili
         if (models.length === 0) {
           throw new Error("AxonHub migration requires at least one model.")
         }
-        const type = mapChannelTypeToAxonHubChannelTypeStrict(
-          source.resourceType,
+        const type = resolveManagedSiteMigrationType(
+          source,
+          SITE_TYPES.AXON_HUB,
         )
         if (type.status === "unsupported") {
           throw new AxonHubUnsupportedMigrationTypeError()
@@ -305,10 +303,10 @@ export const axonHubManagedSiteMigrationCapability: ManagedSiteMigrationCapabili
             groups,
             priority,
             weight: source.weight,
-            status: source.status === "enabled" ? 1 : 2,
+            enabled: source.status === "enabled",
           },
           adjustments: {
-            remappedType: String(type.value) !== String(source.resourceType),
+            remappedType: type.remappedType,
             normalizedBaseUrl: false,
             forcedDefaultGroup:
               groups.length !== source.groups.length ||
@@ -321,29 +319,13 @@ export const axonHubManagedSiteMigrationCapability: ManagedSiteMigrationCapabili
       },
       create: async (command, options) => {
         const baseURL = command.projection.baseUrl.trim()
-        const projectionType = command.projection.type
-        let nativeType: AxonHubChannelType
-        if (typeof projectionType === "string") {
-          if (
-            mapAxonHubChannelTypeToChannelTypeStrict(projectionType).status ===
-            "unsupported"
-          ) {
-            return {
-              status: "failed",
-              failureCode: failures.TargetRejected,
-            }
-          }
-          nativeType = projectionType as AxonHubChannelType
-        } else {
-          const mappedType =
-            mapChannelTypeToAxonHubChannelTypeStrict(projectionType)
-          if (mappedType.status === "unsupported") {
-            return {
-              status: "failed",
-              failureCode: failures.TargetRejected,
-            }
-          }
-          nativeType = mappedType.value
+        const nativeType = command.projection.type
+        if (
+          command.targetSiteType !== SITE_TYPES.AXON_HUB ||
+          typeof nativeType !== "string" ||
+          !isAxonHubChannelType(nativeType)
+        ) {
+          return { status: "failed", failureCode: failures.TargetRejected }
         }
         const input = {
           type: nativeType,
@@ -378,7 +360,7 @@ export const axonHubManagedSiteMigrationCapability: ManagedSiteMigrationCapabili
 
         const result = await operations.create(
           input,
-          command.projection.status === 1
+          command.projection.enabled
             ? AXON_HUB_CHANNEL_STATUS.ENABLED
             : AXON_HUB_CHANNEL_STATUS.DISABLED,
           options,

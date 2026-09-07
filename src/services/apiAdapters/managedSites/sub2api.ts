@@ -26,7 +26,6 @@ import {
   revealSub2ApiApiKey,
   SUB2API_STEP_UP_ADMIN_KEY_FORBIDDEN_CODE,
   Sub2ApiAdminApiError,
-  sub2ApiPlatformToChannelType,
   updateSub2ApiApiKeyAccount,
   type Sub2ApiApiKeyAccountCreateInput,
   type Sub2ApiApiKeyAccountUpdateInput,
@@ -207,7 +206,7 @@ const matching: ManagedResourceMatchingCapability<Sub2ApiManagedSiteConfig> = {
       .map((account) => ({
         id: account.id,
         name: account.name || `Sub2API Account ${account.id}`,
-        type: sub2ApiPlatformToChannelType(account.platform),
+        type: account.platform,
         base_url:
           typeof account.credentials?.base_url === "string"
             ? account.credentials.base_url

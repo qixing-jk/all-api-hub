@@ -79,6 +79,8 @@ describe("doneHubService additional flows", () => {
     expect(mockResolveDefaultChannelGroups).toHaveBeenCalled()
     expect(result).toMatchObject({
       name: "Done Hub Account | Primary Token (auto)",
+      type: 1,
+      enabled: true,
       key: "done-hub-key",
       base_url: "https://proxy.example.com",
       models: ["gpt-4o", "gpt-4.1"],
@@ -170,6 +172,7 @@ describe("doneHubService additional flows", () => {
     )
     const payload = buildChannelPayload({
       ...formData,
+      status: 1,
       name: "  Imported Channel  ",
       key: "  secret-key  ",
       base_url: " https://proxy.example.com  ",

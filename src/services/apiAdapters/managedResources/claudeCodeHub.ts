@@ -857,6 +857,17 @@ const definition = {
     {
       kind: MANAGED_RESOURCE_CREATE_SEED_KINDS.ManagedChannelImport,
       project: createImportProjection,
+      validate: validateValues,
+      sourceFieldIds: {
+        [fields.Name]: "name",
+        [fields.Type]: "channelType",
+        [fields.Status]: "enabled",
+        [fields.BaseUrl]: "baseUrl",
+        [fields.Key]: "credential",
+        [fields.Models]: "models",
+        [fields.Priority]: "priority",
+        [fields.Weight]: "orderingWeight",
+      } as const,
     },
   ],
   capabilities: {

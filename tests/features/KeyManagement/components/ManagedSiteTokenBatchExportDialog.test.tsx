@@ -454,7 +454,7 @@ const preview: ManagedSiteTokenBatchExportPreview = {
         groups: ["default"],
         priority: 0,
         weight: 0,
-        status: 1,
+        enabled: true,
       },
     }),
     buildDialogPreviewItem(2, "Token 2", {
@@ -469,7 +469,7 @@ const preview: ManagedSiteTokenBatchExportPreview = {
         groups: ["default"],
         priority: 0,
         weight: 0,
-        status: 1,
+        enabled: true,
       },
     }),
   ],
@@ -524,7 +524,7 @@ const richPreview: ManagedSiteTokenBatchExportPreview = {
         groups: ["default"],
         priority: 0,
         weight: 0,
-        status: 1,
+        enabled: true,
       },
       matchedChannel: {
         id: 8,
@@ -565,7 +565,7 @@ const modelsRequiredPreview: ManagedSiteTokenBatchExportPreview = {
         groups: ["default"],
         priority: 0,
         weight: 0,
-        status: 1,
+        enabled: true,
       },
     }),
     buildDialogPreviewItem(3, "Token 3", {
@@ -580,7 +580,7 @@ const modelsRequiredPreview: ManagedSiteTokenBatchExportPreview = {
         groups: ["default"],
         priority: 0,
         weight: 0,
-        status: 1,
+        enabled: true,
       },
       matchedChannel: {
         id: 8,
@@ -616,7 +616,7 @@ const sub2ApiPreview: ManagedSiteTokenBatchExportPreview = {
         groups: [],
         priority: 1,
         weight: 1,
-        status: 1,
+        enabled: true,
         notes: "",
       } as any,
     }),

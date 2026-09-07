@@ -469,6 +469,15 @@ export const octopusManagedResourceRegistration = defineNativeResourceKind({
   createSeedBindings: [
     {
       kind: MANAGED_RESOURCE_CREATE_SEED_KINDS.ManagedChannelImport,
+      validate: validateOctopusValues,
+      sourceFieldIds: {
+        [fields.Name]: "name",
+        [fields.Type]: "channelType",
+        [fields.Status]: "enabled",
+        [fields.BaseUrl]: "baseUrl",
+        [fields.Key]: "credential",
+        [fields.Models]: "models",
+      },
       project: (seed) => ({
         ...octopusInitialValues(),
         [fields.Type]: OctopusOutboundTypeOptions.some(

@@ -2780,7 +2780,7 @@ describe("AxonHub native managed-resource Adapter", () => {
       status: "ready",
       source: {
         sourceSiteType: SITE_TYPES.AXON_HUB,
-        resourceType: ChannelType.Anthropic,
+        resourceType: AXON_HUB_CHANNEL_TYPE.ANTHROPIC,
         baseUrl: "https://native.example.invalid/v1",
         models: ["supported-model", "shared-model", "manual-model"],
         groups: [],
@@ -2938,10 +2938,10 @@ describe("AxonHub native managed-resource Adapter", () => {
         groups: ["default"],
         priority: 0,
         weight: 13,
-        status: 1,
+        enabled: true,
       },
       adjustments: {
-        remappedType: true,
+        remappedType: false,
         normalizedBaseUrl: false,
         forcedDefaultGroup: true,
         ignoredPriority: true,
@@ -3238,7 +3238,7 @@ describe("AxonHub native managed-resource Adapter", () => {
     await expect(
       axonHubManagedSiteMigrationCapability.target!.create({
         ...command,
-        projection: { ...command.projection, status: 1 },
+        projection: { ...command.projection, enabled: true },
       }),
     ).resolves.toEqual({ status: "uncertain" })
     expect(mocks.createChannel).toHaveBeenCalledTimes(3)

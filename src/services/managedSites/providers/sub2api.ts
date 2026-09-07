@@ -1,7 +1,6 @@
-import { DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSiteChannelDraft"
 import {
   SUB2API_ADMIN_REQUEST_TIMEOUT_MS,
-  sub2ApiPlatformToChannelType,
+  SUB2API_DEFAULT_ACCOUNT_PLATFORM,
 } from "~/constants/sub2api"
 import { normalizeAccountForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
 import { runAbortableTask } from "~/services/apiTransport/abortableTask"
@@ -513,8 +512,6 @@ export async function deleteSub2ApiApiKeyAccount(
   )
 }
 
-export { sub2ApiPlatformToChannelType }
-
 /** Normalizes an imported account at the Sub2API adapter boundary. */
 function normalizeSub2ApiManagedChannelAccount<
   TAccount extends DisplaySiteData,
@@ -534,14 +531,14 @@ export async function prepareChannelFormData(
   const upstream = normalizeSub2ApiManagedChannelAccount(account)
   return {
     name: buildManagedSiteChannelName(account, token),
-    type: DEFAULT_CHANNEL_FIELDS.type,
+    type: SUB2API_DEFAULT_ACCOUNT_PLATFORM,
     key: token.key,
     base_url: upstream.baseUrl,
     models: [],
     groups: [],
     priority: 1,
     weight: 1,
-    status: DEFAULT_CHANNEL_FIELDS.status,
+    enabled: true,
     notes: "",
   }
 }

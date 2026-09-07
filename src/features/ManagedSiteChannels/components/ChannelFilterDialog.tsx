@@ -150,7 +150,11 @@ export default function ChannelFilterDialog({
     return null
   }
   const probeRulesSupported = Boolean(
-    resolveApiVerificationTypeForChannelType(channel.type),
+    channel.resourceRef &&
+      resolveApiVerificationTypeForChannelType(
+        channel.resourceRef.managedSiteType,
+        channel.type,
+      ),
   )
 
   const handleFieldChange = (

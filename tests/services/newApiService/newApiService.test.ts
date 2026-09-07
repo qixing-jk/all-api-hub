@@ -5,8 +5,8 @@ import { decodeNewApiResponseError } from "~/services/apiService/newApiFamily/re
 import { MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS } from "~/services/managedSites/channelMatch"
 import type { ApiToken, DisplaySiteData } from "~/types"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
-import type { ManagedSiteChannelDraft } from "~/types/managedSiteChannelDraft"
 import type { CreateChannelPayload } from "~/types/newApi"
+import type { NewApiFamilyChannelCommand } from "~/types/newApiFamilyChannelEditor"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
@@ -1018,6 +1018,7 @@ describe("newApiService", () => {
       const result = await prepareChannelFormData(account, token)
 
       expect(result.name).toContain("(auto)")
+      expect(result).toMatchObject({ type: 1, enabled: true })
       expect(result.models).toContain("gpt-4")
       expect(result.groups).toEqual(["default"])
       expect(result.key).toBe(token.key)
@@ -1177,7 +1178,7 @@ describe("newApiService", () => {
       expect(result.groups).toEqual(["default"])
       expect(result.priority).toBe(0)
       expect(result.weight).toBe(0)
-      expect(result.status).toBe(1) // Enable
+      expect(result.enabled).toBe(true)
     })
   })
 
@@ -1186,7 +1187,7 @@ describe("newApiService", () => {
       const { buildChannelPayload } = await import(
         "~/services/managedSites/providers/newApi"
       )
-      const formData: ManagedSiteChannelDraft = {
+      const formData: NewApiFamilyChannelCommand = {
         name: "  Test Channel  ",
         type: 1,
         key: "  sk-test  ",
@@ -1209,7 +1210,7 @@ describe("newApiService", () => {
       const { buildChannelPayload } = await import(
         "~/services/managedSites/providers/newApi"
       )
-      const formData: ManagedSiteChannelDraft = {
+      const formData: NewApiFamilyChannelCommand = {
         name: "Test",
         type: 1,
         key: "sk-test",
@@ -1233,7 +1234,7 @@ describe("newApiService", () => {
       const { buildChannelPayload } = await import(
         "~/services/managedSites/providers/newApi"
       )
-      const formData: ManagedSiteChannelDraft = {
+      const formData: NewApiFamilyChannelCommand = {
         name: "Test",
         type: 1,
         key: "sk-test",
@@ -1256,7 +1257,7 @@ describe("newApiService", () => {
       const { buildChannelPayload } = await import(
         "~/services/managedSites/providers/newApi"
       )
-      const formData: ManagedSiteChannelDraft = {
+      const formData: NewApiFamilyChannelCommand = {
         name: "Test",
         type: 1,
         key: "sk-test",
@@ -1281,7 +1282,7 @@ describe("newApiService", () => {
       const { buildChannelPayload } = await import(
         "~/services/managedSites/providers/newApi"
       )
-      const formData: ManagedSiteChannelDraft = {
+      const formData: NewApiFamilyChannelCommand = {
         name: "Test",
         type: 1,
         key: "sk-test",

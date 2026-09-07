@@ -1,4 +1,5 @@
 import { DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSiteChannelDraft"
+import { VeloeraChannelType } from "~/constants/veloera"
 import { normalizeAccountForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
 import type { ManagedSiteChannelDraftRequestOptions } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import { fetchSiteUserGroups } from "~/services/apiService/newApiFamily/default/keyManagement"
@@ -7,6 +8,7 @@ import { fetchTokenScopedModels } from "~/services/managedSites/utils/fetchToken
 import type { AccountToken } from "~/types"
 import { AuthTypeEnum, type ApiToken, type DisplaySiteData } from "~/types"
 import type { ManagedSiteChannelDraft } from "~/types/managedSiteChannelDraft"
+import type { NewApiFamilyChannelCommand } from "~/types/newApiFamilyChannelEditor"
 import type { VeloeraCreateChannelPayload } from "~/types/veloera"
 import { createLogger } from "~/utils/core/logger"
 import { normalizeList, parseDelimitedList } from "~/utils/core/string"
@@ -118,7 +120,7 @@ export async function prepareChannelFormData(
 
   return {
     name: buildManagedSiteChannelName(account, token),
-    type: DEFAULT_CHANNEL_FIELDS.type,
+    type: VeloeraChannelType.OpenAI,
     key: token.key,
     base_url: upstreamAccount.baseUrl,
     models: normalizeList(resolvedModels),
@@ -126,7 +128,7 @@ export async function prepareChannelFormData(
     groups: normalizeList(resolvedGroups),
     priority: DEFAULT_CHANNEL_FIELDS.priority,
     weight: DEFAULT_CHANNEL_FIELDS.weight,
-    status: DEFAULT_CHANNEL_FIELDS.status,
+    enabled: DEFAULT_CHANNEL_FIELDS.enabled,
   }
 }
 
@@ -134,7 +136,7 @@ export async function prepareChannelFormData(
  * Builds the create-channel payload from form state.
  */
 export function buildChannelPayload(
-  formData: ManagedSiteChannelDraft,
+  formData: NewApiFamilyChannelCommand,
 ): VeloeraCreateChannelPayload {
   const trimmedBaseUrl = formData.base_url.trim()
   const groups = normalizeList(

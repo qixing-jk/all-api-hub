@@ -1700,6 +1700,17 @@ const axonHubNativeDefinition = {
     {
       kind: MANAGED_RESOURCE_CREATE_SEED_KINDS.ManagedChannelImport,
       project: createAxonHubChannelImportProjection,
+      validate: (values: EditableResourceProjection) =>
+        validateValues(values, { create: true }),
+      sourceFieldIds: {
+        [AXON_HUB_CHANNEL_FIELD_IDS.NAME]: "name",
+        [AXON_HUB_CHANNEL_FIELD_IDS.TYPE]: "channelType",
+        [AXON_HUB_CHANNEL_FIELD_IDS.STATUS]: "enabled",
+        [AXON_HUB_CHANNEL_FIELD_IDS.BASE_URL]: "baseUrl",
+        [AXON_HUB_CHANNEL_FIELD_IDS.KEY]: "credential",
+        [AXON_HUB_CHANNEL_FIELD_IDS.SUPPORTED_MODELS]: "models",
+        [AXON_HUB_CHANNEL_FIELD_IDS.ORDERING_WEIGHT]: "orderingWeight",
+      } as const,
     },
   ],
   capabilities: {

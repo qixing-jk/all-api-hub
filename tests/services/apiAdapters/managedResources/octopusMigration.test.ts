@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { AXON_HUB_CHANNEL_TYPE } from "~/constants/axonHub"
 import { ChannelType } from "~/constants/newApi"
 import { SITE_TYPES } from "~/constants/siteType"
 import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
@@ -11,7 +12,10 @@ import { octopusManagedSiteMigrationCapability as capability } from "~/services/
 import { resolveManagedSiteMigrationCapability } from "~/services/managedSites/channelMigrationCapabilityRegistry"
 import { MANAGED_SITE_MUTATION_OUTCOMES } from "~/services/managedSites/mutations"
 import { MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES as blockers } from "~/types/managedSiteMigration"
-import type { ManagedSiteMigrationSource } from "~/types/managedSiteMigrationCapability"
+import type {
+  ManagedSiteMigrationPreviewProjection,
+  ManagedSiteMigrationSource,
+} from "~/types/managedSiteMigrationCapability"
 import {
   OctopusAutoGroupType,
   OctopusOutboundType,
@@ -101,13 +105,64 @@ describe("Octopus native migration", () => {
     expect(prepared).toMatchObject({
       status: "ready",
       source: {
-        resourceType: ChannelType.Anthropic,
+        resourceType: OctopusOutboundType.Anthropic,
         models: ["model-a", "model-b"],
         baseUrl: "https://upstream.example.invalid/v1",
       },
     })
     expect(JSON.stringify(prepared)).not.toContain("credential-placeholder")
     expect(mocks.loadSecret).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    OctopusOutboundType.OpenAIChat,
+    OctopusOutboundType.OpenAIResponse,
+    OctopusOutboundType.OpenAIEmbedding,
+  ])(
+    "retains native protocol %s in source facts without claiming a mode loss",
+    async (type) => {
+      mocks.get.mockResolvedValue({ ...channel, type })
+      await expect(
+        capability.source!.prepare(selection),
+      ).resolves.toMatchObject({
+        status: "ready",
+        source: {
+          sourceSiteType: SITE_TYPES.OCTOPUS,
+          resourceType: type,
+          lossSignals: { hasAdvancedSettings: false },
+        },
+      })
+    },
+  )
+
+  it("retains the Responses protocol when migrating from AxonHub", async () => {
+    const nativeSource = {
+      ...source,
+      sourceSiteType: SITE_TYPES.AXON_HUB,
+      resourceType: AXON_HUB_CHANNEL_TYPE.OPENAI_RESPONSES,
+    }
+    const prepared = await capability.target!.prepare(nativeSource)
+    mocks.create.mockResolvedValue({
+      outcome: MANAGED_SITE_MUTATION_OUTCOMES.Succeeded,
+    })
+
+    await expect(
+      capability.target!.create({
+        source: nativeSource,
+        targetSiteType: SITE_TYPES.OCTOPUS,
+        projection: { ...prepared.projection, name: "Responses channel" },
+        credential: "credential-placeholder",
+      }),
+    ).resolves.toEqual({ status: "created" })
+
+    expect(prepared.adjustments.remappedType).toBe(false)
+    expect(mocks.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: OctopusOutboundType.OpenAIResponse,
+        enabled: false,
+      }),
+      undefined,
+    )
   })
 
   it.each([
@@ -156,8 +211,6 @@ describe("Octopus native migration", () => {
     { proxy: true },
     { auto_sync: true },
     { auto_group: OctopusAutoGroupType.Exact },
-    { type: OctopusOutboundType.OpenAIResponse },
-    { type: OctopusOutboundType.OpenAIEmbedding },
     { hasUnrepresentedProtocolSettings: true },
   ])(
     "discloses native settings that the canonical draft cannot preserve %j",
@@ -229,12 +282,12 @@ describe("Octopus native migration", () => {
   it("normalizes target defaults and retains HTTP upstream compatibility", async () => {
     await expect(capability.target!.prepare(source)).resolves.toMatchObject({
       projection: {
-        type: String(OctopusOutboundType.OpenAIChat),
+        type: OctopusOutboundType.OpenAIChat,
         baseUrl: "http://upstream.example.invalid/v1",
         groups: ["default"],
         priority: 0,
         weight: 0,
-        status: 2,
+        enabled: false,
       },
       adjustments: {
         normalizedBaseUrl: true,
@@ -286,7 +339,7 @@ describe("Octopus native migration", () => {
           baseUrl,
         }),
       ).resolves.toMatchObject({
-        projection: { type: String(OctopusOutboundType.Volcengine), baseUrl },
+        projection: { type: OctopusOutboundType.Volcengine, baseUrl },
         adjustments: { normalizedBaseUrl: false },
       })
       expect(mocks.prepareMigrationBaseUrl).toHaveBeenCalledWith(
@@ -331,6 +384,8 @@ describe("Octopus native migration", () => {
 
   it.each([
     { type: "999" },
+    { type: "0" },
+    { enabled: undefined },
     { name: " " },
     { baseUrl: "javascript:invalid" },
     { baseUrl: "https://user:password@example.invalid" },
@@ -341,7 +396,11 @@ describe("Octopus native migration", () => {
       capability.target!.create({
         source,
         targetSiteType: SITE_TYPES.OCTOPUS,
-        projection: { ...projection, name: "Migrated channel", ...overrides },
+        projection: {
+          ...projection,
+          name: "Migrated channel",
+          ...overrides,
+        } as ManagedSiteMigrationPreviewProjection,
         credential: "credential-placeholder",
       }),
     ).resolves.toMatchObject({ status: "failed" })

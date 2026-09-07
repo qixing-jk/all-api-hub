@@ -146,7 +146,7 @@ describe("octopus additional flows", () => {
       base_url: "https://proxy.example.com/v1",
       models: ["gpt-4o", "claude-3"],
       groups: ["default"],
-      status: 1,
+      enabled: true,
     })
   })
 

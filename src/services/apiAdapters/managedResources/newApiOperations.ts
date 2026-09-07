@@ -35,7 +35,11 @@ import {
   hydrateComparableChannelKeys,
 } from "~/services/managedSites/providers/newApiChannelSecrets"
 import type { ManagedResourceMatchCandidate } from "~/types/managedResourceMatching"
-import type { CreateChannelPayload, UpdateChannelPayload } from "~/types/newApi"
+import {
+  CHANNEL_STATUS,
+  type CreateChannelPayload,
+  type UpdateChannelPayload,
+} from "~/types/newApi"
 import type { NewApiConfig } from "~/types/newApiConfig"
 import { getErrorMessage } from "~/utils/core/error"
 
@@ -247,6 +251,7 @@ export const newApiManagedResourceModels = {
         toManagedSiteApiServiceRequest(config, options),
         options,
       ),
+      [CHANNEL_STATUS.ManuallyDisabled, CHANNEL_STATUS.AutoDisabled],
     ),
   fetchModels: async (
     config,

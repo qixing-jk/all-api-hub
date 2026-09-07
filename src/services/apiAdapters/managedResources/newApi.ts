@@ -1,7 +1,6 @@
 import { SITE_TYPES } from "~/constants/siteType"
 import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
 import {
-  MANAGED_RESOURCE_CREATE_SEED_KINDS,
   MANAGED_RESOURCE_FAILURE_CODES,
   MANAGED_RESOURCE_FAILURE_RECOVERY_HINTS,
   ManagedResourceError,
@@ -15,7 +14,7 @@ import { defineNativeResourceKind } from "~/services/apiAdapters/managedResource
 import {
   createNewApiCreateEditor,
   createNewApiEditEditor,
-  projectNewApiImportSeed,
+  newApiImportSeedBinding,
   sanitizeNewApiEditorDetail,
   toNewApiResourceFacts,
 } from "~/services/apiAdapters/managedResources/newApiEditor"
@@ -44,10 +43,10 @@ import {
   PROTECTION_BYPASS_SURFACES,
   PROTECTION_BYPASS_USER_COMMANDS,
 } from "~/services/protectionBypass/contracts"
-import type { ManagedSiteChannelDraft } from "~/types/managedSiteChannelDraft"
 import { normalizeManagedUpstreamResourceScopeKey } from "~/types/managedUpstreamResource"
 import type { NewApiChannel, UpdateChannelPayload } from "~/types/newApi"
 import type { NewApiConfig } from "~/types/newApiConfig"
+import type { NewApiFamilyChannelCommand } from "~/types/newApiFamilyChannelEditor"
 import { normalizeList } from "~/utils/core/string"
 
 import {
@@ -76,12 +75,12 @@ type NewApiNativeResourceOperations = {
     options?: ResourceOperationOptions,
   ): Promise<string>
   create(
-    draft: NewApiCreateCommand,
+    draft: NewApiFamilyChannelCommand,
     options?: ResourceOperationOptions,
   ): Promise<ManagedSiteMutationResult<NewApiChannel>>
   update(
     detail: NewApiChannel,
-    command: NewApiUpdateCommand,
+    command: NewApiFamilyChannelCommand,
     options?: ResourceOperationOptions,
   ): Promise<ManagedSiteMutationResult<NewApiChannel>>
   delete(
@@ -101,8 +100,6 @@ type NewApiNativeResourceOperations = {
   ): Promise<readonly string[]>
 }
 
-type NewApiCreateCommand = ManagedSiteChannelDraft
-type NewApiUpdateCommand = ManagedSiteChannelDraft
 const channels = newApiChannelOperations
 const queries = newApiManagedSiteCapabilities.queries
 const mapApiErrorFailureCode = (error: ApiError): ResourceFailure["code"] => {
@@ -218,7 +215,7 @@ const getChannel = async (
 
 const createChannel = async (
   nativeConfig: NewApiNativeConfig,
-  draft: NewApiCreateCommand,
+  draft: NewApiFamilyChannelCommand,
   options?: ResourceOperationOptions,
 ): Promise<ManagedSiteMutationResult<NewApiChannel>> =>
   await attributeCreatedNativeResource({
@@ -257,7 +254,7 @@ const applyUpdate = (
 const updateChannel = async (
   nativeConfig: NewApiNativeConfig,
   detail: NewApiChannel,
-  command: NewApiUpdateCommand,
+  command: NewApiFamilyChannelCommand,
   options?: ResourceOperationOptions,
 ): Promise<ManagedSiteMutationResult<NewApiChannel>> => {
   const payload = buildNewApiUpdatePayload(detail, command)
@@ -341,12 +338,7 @@ export async function openNewApiNativeResourceOperations(): Promise<NewApiNative
 const newApiNativeDefinition = {
   siteType: SITE_TYPES.NEW_API,
   kind: MANAGED_RESOURCE_KINDS.Channel,
-  createSeedBindings: [
-    {
-      kind: MANAGED_RESOURCE_CREATE_SEED_KINDS.ManagedChannelImport,
-      project: projectNewApiImportSeed,
-    },
-  ],
+  createSeedBindings: [newApiImportSeedBinding],
   capabilities: {
     canSearch: true,
     canCreate: true,
@@ -390,13 +382,13 @@ const newApiNativeDefinition = {
   sanitizeEditDetail: sanitizeNewApiEditorDetail,
   create: (
     operations: NewApiNativeResourceOperations,
-    draft: NewApiCreateCommand,
+    draft: NewApiFamilyChannelCommand,
     options?: ResourceOperationOptions,
   ) => operations.create(draft, options),
   update: (
     operations: NewApiNativeResourceOperations,
     detail: NewApiChannel,
-    command: NewApiUpdateCommand,
+    command: NewApiFamilyChannelCommand,
     options?: ResourceOperationOptions,
   ) => operations.update(detail, command, options),
   delete: (

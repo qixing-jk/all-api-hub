@@ -1,6 +1,10 @@
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/managedSite"
-import type { ManagedSiteChannelDraft } from "~/types/managedSiteChannelDraft"
-import type { NewApiChannel, UpdateChannelPayload } from "~/types/newApi"
+import type {
+  ChannelStatus,
+  NewApiChannel,
+  UpdateChannelPayload,
+} from "~/types/newApi"
+import type { NewApiFamilyChannelCommand } from "~/types/newApiFamilyChannelEditor"
 
 /**
  * Builds a full New API update from the latest native detail.
@@ -10,7 +14,7 @@ import type { NewApiChannel, UpdateChannelPayload } from "~/types/newApi"
  */
 export function buildNewApiUpdatePayload(
   native: NewApiChannel,
-  draft: ManagedSiteChannelDraft,
+  draft: NewApiFamilyChannelCommand,
 ): UpdateChannelPayload {
   const payload: UpdateChannelPayload = {
     ...native,
@@ -26,7 +30,7 @@ export function buildNewApiUpdatePayload(
   }
 
   if (draft.status !== native.status) {
-    payload.status = draft.status
+    payload.status = draft.status as ChannelStatus
   } else {
     delete payload.status
   }

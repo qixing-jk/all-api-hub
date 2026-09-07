@@ -5,7 +5,6 @@ import {
   runWithChannelProcessingTimeout,
 } from "~/services/models/modelSync/channelProcessingTimeout"
 import type { ExecutionItemResult } from "~/types/managedSiteModelSync"
-import type { NewApiChannel } from "~/types/newApi"
 
 vi.mock("~/utils/i18n/core", () => ({
   t: vi.fn((key: string, options?: { count?: number }) =>
@@ -14,10 +13,10 @@ vi.mock("~/utils/i18n/core", () => ({
 }))
 
 const channel = {
-  id: 42,
-  name: "Slow Channel",
-  models: " gpt-4o, , claude-3 ",
-} as NewApiChannel
+  channelId: 42,
+  channelName: "Slow Channel",
+  oldModels: ["gpt-4o", "claude-3"],
+}
 
 describe("normalizeChannelProcessingTimeout", () => {
   it("normalizes invalid and non-positive values to unlimited", () => {
@@ -39,8 +38,8 @@ describe("normalizeChannelProcessingTimeout", () => {
 describe("runWithChannelProcessingTimeout", () => {
   it("runs without an abort signal when timeout is unlimited", async () => {
     const result: ExecutionItemResult = {
-      channelId: channel.id,
-      channelName: channel.name,
+      channelId: channel.channelId,
+      channelName: channel.channelName,
       ok: true,
       attempts: 0,
       finishedAt: 1,
@@ -91,7 +90,7 @@ describe("runWithChannelProcessingTimeout", () => {
     try {
       const resultPromise = runWithChannelProcessingTimeout(
         () => new Promise<ExecutionItemResult>(() => undefined),
-        { ...channel, models: "" },
+        { ...channel, oldModels: [] },
         0,
         1,
       )

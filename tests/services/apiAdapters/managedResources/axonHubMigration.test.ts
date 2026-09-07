@@ -84,7 +84,7 @@ const buildSource = (
 })
 
 const buildCommand = (
-  projectionType: ChannelType | string,
+  projectionType: string | number,
   sourceType: ChannelType = ChannelType.OpenAI,
 ): ManagedSiteMigrationExecutionCommand => ({
   source: buildSource(sourceType),
@@ -97,7 +97,7 @@ const buildCommand = (
     groups: ["default"],
     priority: 0,
     weight: 0,
-    status: 1,
+    enabled: true,
   },
   credential: "credential-placeholder",
 })
@@ -271,6 +271,7 @@ describe("AxonHub migration type boundary", () => {
 
   it.each([
     ["future-provider", ChannelType.OpenAI],
+    [ChannelType.OpenAI, ChannelType.OpenAI],
     [ChannelType.Midjourney, ChannelType.Midjourney],
   ] as const)(
     "rejects unsupported target type %s before opening or creating",
@@ -431,7 +432,7 @@ describe("AxonHub migration type boundary", () => {
 
       await expect(
         axonHubManagedSiteMigrationCapability.target!.create(
-          buildCommand(ChannelType.OpenAI),
+          buildCommand(AXON_HUB_CHANNEL_TYPE.OPENAI),
           options,
         ),
       ).resolves.toEqual(expected)
@@ -476,7 +477,7 @@ describe("AxonHub migration type boundary", () => {
 
     await expect(
       axonHubManagedSiteMigrationCapability.target!.create(
-        buildCommand(ChannelType.OpenAI),
+        buildCommand(AXON_HUB_CHANNEL_TYPE.OPENAI),
       ),
     ).rejects.toThrow(
       "AxonHub migration succeeded without a confirmed create effect.",
@@ -509,7 +510,7 @@ describe("AxonHub migration type boundary", () => {
       ).mockResolvedValue({ create, list } as never)
 
       const error = await axonHubManagedSiteMigrationCapability
-        .target!.create(buildCommand(ChannelType.OpenAI), { signal })
+        .target!.create(buildCommand(AXON_HUB_CHANNEL_TYPE.OPENAI), { signal })
         .catch((caught) => caught)
 
       if (reason) {
@@ -543,7 +544,7 @@ describe("AxonHub migration type boundary", () => {
     ).mockResolvedValue({ create, list } as never)
 
     const error = await axonHubManagedSiteMigrationCapability
-      .target!.create(buildCommand(ChannelType.OpenAI))
+      .target!.create(buildCommand(AXON_HUB_CHANNEL_TYPE.OPENAI))
       .catch((failure) => failure)
 
     expect(error).toMatchObject({ name: "AbortError" })
@@ -580,7 +581,7 @@ describe("AxonHub migration type boundary", () => {
       axonHubNativeResources,
       "openAxonHubNativeResourceOperations",
     ).mockResolvedValue({ create, list: vi.fn() } as never)
-    const command = buildCommand(ChannelType.OpenAI)
+    const command = buildCommand(AXON_HUB_CHANNEL_TYPE.OPENAI)
     command.projection.baseUrl = "   "
 
     await expect(

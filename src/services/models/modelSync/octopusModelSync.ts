@@ -14,7 +14,6 @@ import {
 import { collectManagedConfigSecrets } from "~/services/managedSites/utils/managedSite"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import type { ChannelResourceConfigMap } from "~/types/channelConfig"
-import type { ManagedModelChannel } from "~/types/managedResourceModels"
 import {
   type BatchExecutionOptions,
   type ExecutionItemResult,
@@ -53,8 +52,8 @@ const createOctopusModelSyncClient = (
       : { protectionBypassExecution }
 
   return {
-    listChannels: async () =>
-      await octopusApi.listChannels(config, requestOptions()),
+    listChannels: async (signal?: AbortSignal) =>
+      await octopusApi.listChannels(config, requestOptions(signal)),
     fetchRemoteModels: async (
       request: OctopusFetchModelInput,
       signal?: AbortSignal,
@@ -69,14 +68,12 @@ const createOctopusModelSyncClient = (
       models: string[],
       signal?: AbortSignal,
     ) =>
-      await octopusManagedResourceModels.updateModels!(
+      await octopusManagedResourceModels.updateModels(
         config,
         channelId,
         models,
         requestOptions(signal),
       ),
-    reconcileChannels: async (signal?: AbortSignal) =>
-      await octopusManagedResourceModels.list?.(config, requestOptions(signal)),
   }
 }
 
@@ -101,32 +98,28 @@ function throwIfAborted(abortSignal?: AbortSignal) {
   }
 }
 
-const getOctopusChannelData = (
-  channel: ManagedModelChannel,
-): OctopusChannel | null =>
-  channel.native?.kind === "octopus" ? channel.native.data : null
+const getOctopusChannelModels = (channel: OctopusChannel): string[] =>
+  channel.model
+    .split(",")
+    .map((model) => model.trim())
+    .filter(Boolean)
 
 /**
  * 获取渠道的上游模型列表
  */
 async function fetchChannelModels(
   client: OctopusModelSyncClient,
-  channel: ManagedModelChannel,
+  channel: OctopusChannel,
   abortSignal?: AbortSignal,
 ): Promise<string[]> {
-  const octopusData = getOctopusChannelData(channel)
-  if (!octopusData) {
-    throw new Error("Missing Octopus channel data")
-  }
-
-  const baseUrl = octopusData.base_urls[0]?.url ?? ""
-  const key = octopusData.keys[0]?.channel_key ?? ""
+  const baseUrl = channel.base_urls[0]?.url ?? ""
+  const key = channel.keys[0]?.channel_key ?? ""
   const request: OctopusFetchModelInput = {
-    type: octopusData.type,
+    type: channel.type,
     baseUrl,
     key,
-    proxy: octopusData.proxy,
-    source: octopusData,
+    proxy: channel.proxy,
+    source: channel,
   }
 
   throwIfAborted(abortSignal)
@@ -139,7 +132,7 @@ async function fetchChannelModels(
 async function updateChannelModels(
   config: OctopusConfig,
   client: OctopusModelSyncClient,
-  channel: ManagedModelChannel,
+  channel: OctopusChannel,
   models: string[],
   abortSignal?: AbortSignal,
 ): Promise<void> {
@@ -151,7 +144,7 @@ async function updateChannelModels(
     knownSecrets: collectManagedConfigSecrets(config),
     knownSecretsComplete: true,
     reconcile: async () => {
-      await client.reconcileChannels(abortSignal)
+      await client.listChannels(abortSignal)
     },
     rejectedFallbackMessage: "Model update was rejected",
     ambiguousFallbackMessage: "Model update requires reconciliation",
@@ -186,7 +179,7 @@ function haveModelsChanged(previous: string[], next: string[]): boolean {
 async function runForChannel(
   config: OctopusConfig,
   client: OctopusModelSyncClient,
-  channel: ManagedModelChannel,
+  channel: OctopusChannel,
   maxRetries: number = 2,
   abortSignal?: AbortSignal,
   writeFailureBoundary: ModelSyncWriteFailureBoundary = createModelSyncWriteFailureBoundary(),
@@ -195,12 +188,7 @@ async function runForChannel(
   let attempts = 0
   let lastError: unknown = null
 
-  const oldModels = channel.models
-    ? channel.models
-        .split(",")
-        .map((model) => model.trim())
-        .filter(Boolean)
-    : []
+  const oldModels = getOctopusChannelModels(channel)
 
   while (attempts <= maxRetries) {
     try {
@@ -223,7 +211,12 @@ async function runForChannel(
         rules,
         normalizedModels,
         {
-          channel,
+          channel: {
+            id: channel.id,
+            type: channel.type,
+            baseUrl: channel.base_urls[0]?.url ?? "",
+            credential: channel.keys[0]?.channel_key,
+          },
           managedConfig: { siteType: SITE_TYPES.OCTOPUS, config },
           cache: new Map(),
           abortSignal,
@@ -318,7 +311,7 @@ async function runForChannel(
 async function runOctopusBatchWithClient(
   config: OctopusConfig,
   client: OctopusModelSyncClient,
-  channels: ManagedModelChannel[],
+  channels: OctopusChannel[],
   options: OctopusModelSyncBatchOptions,
 ): Promise<ExecutionResult> {
   const {
@@ -359,7 +352,11 @@ async function runOctopusBatchWithClient(
               writeFailureBoundary,
               channelConfigs,
             ),
-          channel,
+          {
+            channelId: channel.id,
+            channelName: channel.name,
+            oldModels: getOctopusChannelModels(channel),
+          },
           maxRetries,
           channelProcessingTimeout,
         )
@@ -425,7 +422,7 @@ export function createOctopusModelSyncCapability(
   return {
     listChannels: client.listChannels,
     runBatch: async (
-      channels: ManagedModelChannel[],
+      channels: OctopusChannel[],
       options: OctopusModelSyncBatchOptions,
     ) => await runOctopusBatchWithClient(config, client, channels, options),
   }

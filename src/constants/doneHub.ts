@@ -148,3 +148,10 @@ export const DONE_HUB_MANAGED_RESOURCE_DETAIL_FIELD_IDS = [
   DONE_HUB_MANAGED_RESOURCE_FIELD_IDS.Priority,
   DONE_HUB_MANAGED_RESOURCE_FIELD_IDS.Weight,
 ] as const
+/** Native DoneHub status codes: https://github.com/deanxv/done-hub/blob/1c09e7d75dc170a53d47af1e88c498816a5b85fb/common/constants.go */
+export const DoneHubChannelStatus = {
+  Unknown: 0,
+  Enable: 1,
+  ManuallyDisabled: 2,
+  AutoDisabled: 3,
+} as const

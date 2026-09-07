@@ -1,4 +1,7 @@
-import { CLAUDE_CODE_HUB_PROVIDER_TYPE } from "~/constants/claudeCodeHub"
+import {
+  CLAUDE_CODE_HUB_PROVIDER_TYPE,
+  isClaudeCodeHubProviderType,
+} from "~/constants/claudeCodeHub"
 import { DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSiteChannelDraft"
 import { SITE_TYPES } from "~/constants/siteType"
 import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
@@ -15,9 +18,9 @@ import {
   openClaudeCodeHubNativeResourceOperations,
 } from "~/services/apiAdapters/managedResources/claudeCodeHub"
 import {
-  mapChannelTypeToClaudeCodeHubProviderType,
-  mapClaudeCodeHubProviderTypeToChannelTypeStrict,
-} from "~/services/apiAdapters/managedResources/claudeCodeHubChannelType"
+  isManagedSiteMigrationSourceType,
+  resolveManagedSiteMigrationType,
+} from "~/services/apiAdapters/managedResources/migrationTypeRoutes"
 import { MANAGED_SITE_MUTATION_OUTCOMES } from "~/services/managedSites/mutations"
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/managedSite"
 import type {
@@ -235,11 +238,15 @@ export const claudeCodeHubManagedSiteMigrationCapability: ManagedSiteMigrationCa
             reasonCode: blockers.SOURCE_KEY_RESOLUTION_FAILED,
           }
         }
-        const mappedType = mapClaudeCodeHubProviderTypeToChannelTypeStrict(
+        const resourceType =
           resolved.detail.providerType ??
-            CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE,
-        )
-        if (mappedType.status === "unsupported") {
+          CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE
+        if (
+          !isManagedSiteMigrationSourceType(
+            SITE_TYPES.CLAUDE_CODE_HUB,
+            resourceType,
+          )
+        ) {
           return {
             status: "blocked",
             reasonCode: blockers.SOURCE_TYPE_UNSUPPORTED,
@@ -247,7 +254,7 @@ export const claudeCodeHubManagedSiteMigrationCapability: ManagedSiteMigrationCa
         }
         return {
           status: "ready",
-          source: toSource(resolved.detail, mappedType.value),
+          source: toSource(resolved.detail, resourceType),
         }
       },
       resolveCredential: async (selection, options) => {
@@ -285,11 +292,15 @@ export const claudeCodeHubManagedSiteMigrationCapability: ManagedSiteMigrationCa
     },
     target: {
       prepare: async (source) => {
-        const type = mapChannelTypeToClaudeCodeHubProviderType(
-          source.resourceType,
+        const type = resolveManagedSiteMigrationType(
+          source,
+          SITE_TYPES.CLAUDE_CODE_HUB,
         )
-        const roundTripType =
-          mapClaudeCodeHubProviderTypeToChannelTypeStrict(type)
+        if (type.status === "unsupported") {
+          throw new Error(
+            "Claude Code Hub does not support this migration channel type",
+          )
+        }
         const groups = [
           source.groups[0]?.trim() || DEFAULT_CHANNEL_FIELDS.groups[0],
         ]
@@ -298,18 +309,16 @@ export const claudeCodeHubManagedSiteMigrationCapability: ManagedSiteMigrationCa
         return {
           projection: {
             name: "",
-            type,
+            type: type.value,
             baseUrl: source.baseUrl,
             models: [...source.models],
             groups,
             priority,
             weight,
-            status: source.status === "enabled" ? 1 : 2,
+            enabled: source.status === "enabled",
           },
           adjustments: {
-            remappedType:
-              roundTripType.status === "unsupported" ||
-              roundTripType.value !== source.resourceType,
+            remappedType: type.remappedType,
             normalizedBaseUrl: false,
             forcedDefaultGroup:
               source.groups.length !== 1 || source.groups[0] !== groups[0],
@@ -320,10 +329,10 @@ export const claudeCodeHubManagedSiteMigrationCapability: ManagedSiteMigrationCa
         }
       },
       create: async (command, options) => {
-        const type = String(command.projection.type)
+        const type = command.projection.type
         if (
-          mapClaudeCodeHubProviderTypeToChannelTypeStrict(type).status ===
-          "unsupported"
+          command.targetSiteType !== SITE_TYPES.CLAUDE_CODE_HUB ||
+          !isClaudeCodeHubProviderType(type)
         ) {
           return {
             status: "failed",
@@ -344,7 +353,7 @@ export const claudeCodeHubManagedSiteMigrationCapability: ManagedSiteMigrationCa
             DEFAULT_CHANNEL_FIELDS.groups[0],
           priority: normalizedPriority(command.projection.priority),
           weight: normalizedWeight(command.projection.weight),
-          is_enabled: command.projection.status === 1,
+          is_enabled: command.projection.enabled,
         }
         try {
           const operations =

@@ -1,9 +1,7 @@
 import type { TFunction } from "i18next"
 
-import {
-  AxonHubChannelTypeNames,
-  isAxonHubChannelType,
-} from "~/constants/axonHub"
+import { AxonHubChannelTypeNames } from "~/constants/axonHub"
+import { ClaudeCodeHubProviderTypeNames } from "~/constants/claudeCodeHub"
 import { DoneHubChannelTypeNames } from "~/constants/doneHub"
 import { ChannelTypeNames } from "~/constants/newApi"
 import { OctopusOutboundTypeNames } from "~/constants/octopus"
@@ -39,6 +37,7 @@ type ManagedResourceMigrationPresentationOptions = {
 
 type MigrationSourceDisplayData = Pick<
   ManagedSiteMigrationSource,
+  | "sourceSiteType"
   | "resourceType"
   | "baseUrl"
   | "models"
@@ -106,6 +105,7 @@ export type ManagedResourceMigrationExecutionData = Pick<
 const projectSource = (
   source: ManagedSiteMigrationSource,
 ): MigrationSourceDisplayData => ({
+  sourceSiteType: source.sourceSiteType,
   resourceType: source.resourceType,
   baseUrl: source.baseUrl,
   models: [...source.models],
@@ -155,7 +155,7 @@ export function projectManagedResourceMigrationPreview(
             groups: [...target.groups],
             priority: target.priority,
             weight: target.weight,
-            status: target.status,
+            enabled: target.enabled,
           },
         },
       }
@@ -345,64 +345,34 @@ const getBlockedReasonText = (
 const getTypeText = (
   t: TFunction,
   siteType: ManagedSiteType,
-  type: ManagedSiteMigrationSource["resourceType"] | string,
+  type: ManagedSiteMigrationSource["resourceType"],
 ): string => {
-  if (siteType === SITE_TYPES.OCTOPUS) {
-    const numericType =
-      typeof type === "string" && !type.trim() ? NaN : Number(type)
-    return Number.isInteger(numericType) &&
-      hasOwn(OctopusOutboundTypeNames, numericType)
-      ? OctopusOutboundTypeNames[numericType]
-      : resolveUnsupportedChannelTypeLabel(t)
+  const catalogs: Partial<
+    Record<ManagedSiteType, Readonly<Record<string, string>>>
+  > = {
+    [SITE_TYPES.NEW_API]: ChannelTypeNames,
+    [SITE_TYPES.VELOERA]: VeloeraChannelTypeNames,
+    [SITE_TYPES.DONE_HUB]: DoneHubChannelTypeNames,
+    [SITE_TYPES.OCTOPUS]: OctopusOutboundTypeNames,
+    [SITE_TYPES.AXON_HUB]: AxonHubChannelTypeNames,
+    [SITE_TYPES.CLAUDE_CODE_HUB]: ClaudeCodeHubProviderTypeNames,
   }
-  if (siteType === SITE_TYPES.DONE_HUB && typeof type === "string") {
-    const numericType = Number(type)
-    if (
-      Number.isInteger(numericType) &&
-      hasOwn(DoneHubChannelTypeNames, numericType)
-    ) {
-      return DoneHubChannelTypeNames[
-        numericType as keyof typeof DoneHubChannelTypeNames
-      ]
-    }
-  }
-  if (
-    siteType === SITE_TYPES.DONE_HUB &&
-    typeof type === "number" &&
-    hasOwn(DoneHubChannelTypeNames, type)
-  ) {
-    return DoneHubChannelTypeNames[type as keyof typeof DoneHubChannelTypeNames]
-  }
-  if (
-    siteType === SITE_TYPES.VELOERA &&
-    typeof type === "number" &&
-    hasOwn(VeloeraChannelTypeNames, type)
-  ) {
-    return VeloeraChannelTypeNames[type as keyof typeof VeloeraChannelTypeNames]
-  }
-  if (typeof type === "number" && hasOwn(ChannelTypeNames, type)) {
-    return ChannelTypeNames[type as keyof typeof ChannelTypeNames]
-  }
-  if (
-    siteType === SITE_TYPES.AXON_HUB &&
-    typeof type === "string" &&
-    isAxonHubChannelType(type)
-  ) {
-    return AxonHubChannelTypeNames[type]
-  }
-  return resolveUnsupportedChannelTypeLabel(t)
+  const catalog = catalogs[siteType]
+  return catalog && hasOwn(catalog, type)
+    ? catalog[type]
+    : resolveUnsupportedChannelTypeLabel(t)
 }
 
 const getStatusText = (
   t: TFunction,
-  status: ManagedSiteMigrationSource["status"] | 1 | 2,
+  status: ManagedSiteMigrationSource["status"] | boolean,
 ): string => {
   switch (status) {
     case "enabled":
-    case 1:
+    case true:
       return t("managedSiteChannels:statusLabels.enabled")
     case "disabled":
-    case 2:
+    case false:
       return t("managedSiteChannels:statusLabels.manualPause")
     case "other":
     default:
@@ -455,7 +425,7 @@ const getComparisonValues = (
   return {
     baseUrl: [source?.baseUrl ?? "", target?.baseUrl ?? ""],
     type: [
-      source ? getTypeText(t, SITE_TYPES.NEW_API, source.resourceType) : "",
+      source ? getTypeText(t, source.sourceSiteType, source.resourceType) : "",
       target ? getTypeText(t, preview.targetSiteType, target.type) : "",
     ],
     models: [
@@ -476,7 +446,7 @@ const getComparisonValues = (
     ],
     status: [
       source ? getStatusText(t, source.status) : "",
-      target ? getStatusText(t, target.status) : "",
+      target ? getStatusText(t, target.enabled) : "",
     ],
   } satisfies Record<
     ManagedSiteMigrationComparison["id"],

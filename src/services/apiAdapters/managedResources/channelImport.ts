@@ -8,6 +8,7 @@ import type {
   ResourceDisplayFacts,
   ResourceEditor,
   ResourceOperationOptions,
+  ResourceValidationResult,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 import {
   MANAGED_RESOURCE_CREATE_SEED_KINDS,
@@ -17,7 +18,6 @@ import {
 import { getManagedResourceRegistration } from "~/services/apiAdapters/managedResources/registry"
 import type { ManagedSiteMutationResult } from "~/services/managedSites/mutations"
 import { type ManagedSiteChannelDraft } from "~/types/managedSiteChannelDraft"
-import { CHANNEL_STATUS } from "~/types/newApi"
 
 interface NativeManagedChannelImportEditor {
   siteType: ManagedSiteType
@@ -47,12 +47,29 @@ const createManagedChannelImportSeed = (
   channelType: String(draft.type),
   credential: draft.key,
   baseUrl: draft.base_url,
-  enabled: draft.status === CHANNEL_STATUS.Enable,
+  enabled: draft.enabled,
   models: [...draft.models],
   orderingWeight: draft.weight,
   priority: draft.priority,
   notes: draft.notes ?? "",
 })
+
+/** Uses native create rules to validate an import without opening a workspace. */
+export function validateNativeManagedChannelImportDraft(
+  siteType: ManagedSiteType,
+  draft: ManagedSiteChannelDraft,
+): ResourceValidationResult {
+  const registration = getManagedResourceRegistration(
+    siteType,
+    MANAGED_RESOURCE_KINDS.Channel,
+  )
+  if (!registration?.validateCreateSeed) {
+    throw new ManagedResourceError({
+      code: MANAGED_RESOURCE_FAILURE_CODES.Unavailable,
+    })
+  }
+  return registration.validateCreateSeed(createManagedChannelImportSeed(draft))
+}
 
 /** Opens a provider-native create editor when that provider owns import binding. */
 export async function openNativeManagedChannelImportEditor(

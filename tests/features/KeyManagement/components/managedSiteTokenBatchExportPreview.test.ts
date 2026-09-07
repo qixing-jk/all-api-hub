@@ -55,7 +55,7 @@ const buildPreviewItem = (
     groups: ["default"],
     priority: 0,
     weight: 0,
-    status: 1,
+    enabled: true,
   },
   ...fields,
 })

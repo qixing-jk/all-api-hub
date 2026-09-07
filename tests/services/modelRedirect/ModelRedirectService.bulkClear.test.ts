@@ -96,9 +96,15 @@ describe("ModelRedirectService managed channel operations", () => {
     expect(result.errors[0]).toContain("Managed site configuration is missing")
   })
 
-  it("lists the complete managed-site channel inventory", async () => {
+  it("lists mapping preview facts without disclosing execution credentials", async () => {
     const channels = [
-      { id: 1, name: "Example channel", models: "model-a,model-b" },
+      {
+        id: 1,
+        name: "Example channel",
+        models: ["model-a", "model-b"],
+        credential: "private-key",
+        modelMapping: '{"model-a":"remote-a"}',
+      },
     ]
     listChannelsMock.mockResolvedValue({ items: channels })
 
@@ -106,7 +112,13 @@ describe("ModelRedirectService managed channel operations", () => {
       ModelRedirectService.listManagedSiteChannels(),
     ).resolves.toEqual({
       success: true,
-      channels,
+      channels: [
+        {
+          id: 1,
+          name: "Example channel",
+          modelMapping: '{"model-a":"remote-a"}',
+        },
+      ],
       errors: [],
     })
     expect(listChannelsMock).toHaveBeenCalledWith(
@@ -144,10 +156,10 @@ describe("ModelRedirectService managed channel operations", () => {
         {
           id: 1,
           name: "c1",
-          models: "a,b",
-          model_mapping: '{"gpt-4o":"openai/gpt-4o"}',
+          models: ["a", "b"],
+          modelMapping: '{"gpt-4o":"openai/gpt-4o"}',
         },
-        { id: 2, name: "c2", models: "a,b", model_mapping: '{"x":"y"}' },
+        { id: 2, name: "c2", models: ["a", "b"], modelMapping: '{"x":"y"}' },
       ],
     })
     updateChannelModelMappingMock.mockResolvedValue(succeededMappingResult)
@@ -176,8 +188,13 @@ describe("ModelRedirectService managed channel operations", () => {
   it("counts empty model_mapping channels as skipped and does not update them", async () => {
     listChannelsMock.mockResolvedValue({
       items: [
-        { id: 1, name: "empty", models: "a,b", model_mapping: "{}" },
-        { id: 2, name: "non-empty", models: "a,b", model_mapping: '{"x":"y"}' },
+        { id: 1, name: "empty", models: ["a", "b"], modelMapping: "{}" },
+        {
+          id: 2,
+          name: "non-empty",
+          models: ["a", "b"],
+          modelMapping: '{"x":"y"}',
+        },
       ],
     })
     updateChannelModelMappingMock.mockResolvedValue(succeededMappingResult)
@@ -210,10 +227,10 @@ describe("ModelRedirectService managed channel operations", () => {
         {
           id: 1,
           name: "c1",
-          models: "a,b",
-          model_mapping: '{"gpt-4o":"openai/gpt-4o"}',
+          models: ["a", "b"],
+          modelMapping: '{"gpt-4o":"openai/gpt-4o"}',
         },
-        { id: 2, name: "c2", models: "a,b", model_mapping: '{"x":"y"}' },
+        { id: 2, name: "c2", models: ["a", "b"], modelMapping: '{"x":"y"}' },
       ],
     })
 
@@ -238,8 +255,8 @@ describe("ModelRedirectService managed channel operations", () => {
           {
             id: 1,
             name: "c1",
-            models: "a,b",
-            model_mapping: '{"x":"y"}',
+            models: ["a", "b"],
+            modelMapping: '{"x":"y"}',
           },
         ],
       })
@@ -282,8 +299,8 @@ describe("ModelRedirectService managed channel operations", () => {
     const channel = {
       id: 1,
       name: "optional-reconcile",
-      models: "a,b",
-      model_mapping: '{"x":"y"}',
+      models: ["a", "b"],
+      modelMapping: '{"x":"y"}',
     }
     const updateChannelModelMapping = vi.fn().mockResolvedValue({
       outcome: "uncertain",
@@ -329,8 +346,8 @@ describe("ModelRedirectService managed channel operations", () => {
         {
           id: 1,
           name: "c1",
-          models: "a,b",
-          model_mapping: '{"x":"y"}',
+          models: ["a", "b"],
+          modelMapping: '{"x":"y"}',
         },
       ],
     })
@@ -366,8 +383,8 @@ describe("ModelRedirectService managed channel operations", () => {
         {
           id: 1,
           name: "c1",
-          models: "a,b",
-          model_mapping: '{"x":"y"}',
+          models: ["a", "b"],
+          modelMapping: '{"x":"y"}',
         },
       ],
     })
@@ -387,7 +404,7 @@ describe("ModelRedirectService managed channel operations", () => {
 
   it("reports missing channels as failures", async () => {
     listChannelsMock.mockResolvedValue({
-      items: [{ id: 1, name: "c1", models: "a,b" }],
+      items: [{ id: 1, name: "c1", models: ["a", "b"] }],
     })
 
     const result = await ModelRedirectService.clearChannelModelMappings([

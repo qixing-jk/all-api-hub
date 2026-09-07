@@ -20,10 +20,21 @@ vi.mock("react-hot-toast", () => ({
 }))
 
 const mockFetchOpenAICompatibleModelIds = vi.fn()
+const mockFetchSiteUserGroups = vi.fn().mockResolvedValue(["default"])
 
 vi.mock("~/services/aiApi/openaiCompatible", () => ({
   fetchOpenAICompatibleModelIds: mockFetchOpenAICompatibleModelIds,
 }))
+
+vi.mock(
+  "~/services/apiService/newApiFamily/default/keyManagement",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/apiService/newApiFamily/default/keyManagement")
+    >()),
+    fetchSiteUserGroups: mockFetchSiteUserGroups,
+  }),
+)
 
 const mockGetPreferences = vi.fn()
 vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
@@ -210,6 +221,7 @@ describe("veloeraService", () => {
       const result = await prepareChannelFormData(account, token)
 
       expect(result.models).toEqual(["gpt-4", "gpt-3.5"])
+      expect(result).toMatchObject({ type: 1, enabled: true })
       expect(result.modelPrefillFetchFailed).toBe(true)
     })
 

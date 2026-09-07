@@ -76,10 +76,16 @@ vi.mock("~/services/managedSites/channelMatchResolver", () => ({
   resolveManagedSiteChannelMatch: mockResolveManagedSiteChannelMatch,
 }))
 
-vi.mock("~/services/apiAdapters/managedResources/channelImport", () => ({
-  openNativeManagedChannelImportSession:
-    mockOpenNativeManagedChannelImportSession,
-}))
+vi.mock(
+  "~/services/apiAdapters/managedResources/channelImport",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/apiAdapters/managedResources/channelImport")
+    >()),
+    openNativeManagedChannelImportSession:
+      mockOpenNativeManagedChannelImportSession,
+  }),
+)
 
 const buildAccountToken = (
   overrides: Partial<AccountToken> = {},
@@ -181,7 +187,7 @@ const buildService = (
         groups: ["default"],
         priority: 0,
         weight: 0,
-        status: 1 as const,
+        enabled: true,
       })),
       ...overrides.channelDrafts,
     },
@@ -247,7 +253,7 @@ const buildAxonHubImportService = () =>
         groups: [],
         priority: 0,
         weight: 3,
-        status: 1 as const,
+        enabled: true,
       })),
     },
   })
@@ -904,7 +910,7 @@ describe("managed-site token batch export", () => {
                 groups: ["default"],
                 priority: 0,
                 weight: 0,
-                status: 1 as const,
+                enabled: true,
               },
               {
                 ownKeys() {
@@ -1135,7 +1141,7 @@ describe("managed-site token batch export", () => {
           {
             id: 64,
             name: "Existing API-key account",
-            type: 1,
+            type: "openai",
             base_url: "https://upstream.example.com/v1",
             models: "",
             key: "********",
@@ -1153,14 +1159,14 @@ describe("managed-site token batch export", () => {
         channelDrafts: {
           prepareFormData: vi.fn(async (account, token) => ({
             name: `${account.name} - ${token.name}`,
-            type: 1,
+            type: "openai",
             key: token.key,
             base_url: account.baseUrl,
             models: [],
             groups: [],
             priority: 1,
             weight: 1,
-            status: 1 as const,
+            enabled: true,
             notes: "",
           })),
         },
@@ -1262,7 +1268,7 @@ describe("managed-site token batch export", () => {
           groups: ["default"],
           priority: 0,
           weight: 0,
-          status: 1 as const,
+          enabled: true,
           modelPrefillFetchFailed: true,
         })),
       },
@@ -1310,6 +1316,61 @@ describe("managed-site token batch export", () => {
 
   it.each([
     {
+      siteType: SITE_TYPES.DONE_HUB,
+      type: 36,
+      baseUrl: "",
+      status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.READY,
+    },
+    {
+      siteType: SITE_TYPES.NEW_API,
+      type: 41,
+      baseUrl: "https://api.example.invalid",
+      status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.BLOCKED,
+    },
+    {
+      siteType: SITE_TYPES.SUB2API,
+      type: 1,
+      baseUrl: "https://api.example.invalid",
+      status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.BLOCKED,
+    },
+  ])(
+    "previews $siteType type $type using its native create rules",
+    async ({ siteType, type, baseUrl, status }) => {
+      const managedSite = buildService({
+        siteType,
+        channelDrafts: {
+          prepareFormData: vi.fn(async () => ({
+            name: "Imported channel",
+            type,
+            key: "credential-placeholder",
+            base_url: baseUrl,
+            models: ["gpt-4o"],
+            groups: [],
+            priority: 1,
+            weight: 1,
+            enabled: true,
+          })),
+        },
+      })
+      mockGetManagedSiteCapabilities.mockReturnValue(managedSite)
+
+      const { prepareManagedSiteTokenBatchExportPreview } = await import(
+        "~/services/managedSites/tokenBatchExport"
+      )
+      const preview = await prepareManagedSiteTokenBatchExportPreview({
+        items: [buildAccountTokenInput()],
+        intent: repairTrustedNewIntent,
+      })
+
+      expect(preview.items[0].status).toBe(status)
+      expect(managedSite.submit).not.toHaveBeenCalled()
+      expect(mockOpenNativeManagedChannelImportSession).not.toHaveBeenCalled()
+      expect(mockResolveManagedSiteChannelMatch).not.toHaveBeenCalled()
+    },
+  )
+
+  it.each([
+    {
       label: "empty name",
       serviceOverrides: {
         channelDrafts: {
@@ -1322,7 +1383,7 @@ describe("managed-site token batch export", () => {
             groups: ["default"],
             priority: 0,
             weight: 0,
-            status: 1 as const,
+            enabled: true,
           })),
         },
       },
@@ -1336,14 +1397,14 @@ describe("managed-site token batch export", () => {
         channelDrafts: {
           prepareFormData: vi.fn(async () => ({
             name: "Masked key",
-            type: 1,
+            type: "openai-compatible",
             key: "sk-****",
             base_url: "https://example.com",
             models: ["gpt-4o"],
             groups: ["default"],
             priority: 0,
             weight: 0,
-            status: 1 as const,
+            enabled: true,
           })),
         },
       },
@@ -1363,7 +1424,7 @@ describe("managed-site token batch export", () => {
             groups: ["default"],
             priority: 0,
             weight: 0,
-            status: 1 as const,
+            enabled: true,
           })),
         },
       },
@@ -1373,18 +1434,18 @@ describe("managed-site token batch export", () => {
     {
       label: "missing base URL",
       serviceOverrides: {
-        siteType: SITE_TYPES.AXON_HUB,
+        siteType: SITE_TYPES.CLAUDE_CODE_HUB,
         channelDrafts: {
           prepareFormData: vi.fn(async () => ({
             name: "Missing base URL",
-            type: 1,
+            type: "openai-compatible",
             key: "sk-live-token",
             base_url: " ",
             models: ["gpt-4o"],
             groups: ["default"],
             priority: 0,
-            weight: 0,
-            status: 1 as const,
+            weight: 1,
+            enabled: true,
           })),
         },
       },
@@ -1404,7 +1465,7 @@ describe("managed-site token batch export", () => {
             groups: ["default"],
             priority: 0,
             weight: 0,
-            status: 1 as const,
+            enabled: true,
           })),
         },
       },
@@ -1457,7 +1518,7 @@ describe("managed-site token batch export", () => {
             groups: ["default"],
             priority: 0,
             weight: 0,
-            status: 1 as const,
+            enabled: true,
             modelPrefillFetchFailed: true,
           })),
         },
@@ -1927,7 +1988,7 @@ describe("managed-site token batch export", () => {
           groups: ["default"],
           priority: 0,
           weight: 0,
-          status: 1 as const,
+          enabled: true,
           providerSecret: draftSecret,
         }),
       },
@@ -1962,7 +2023,7 @@ describe("managed-site token batch export", () => {
         groups: ["default"],
         priority: 0,
         weight: 0,
-        status: 1 as const,
+        enabled: true,
         providerSecret: hiddenSecret,
       },
       {
@@ -2036,7 +2097,7 @@ describe("managed-site token batch export", () => {
           groups: ["default"],
           priority: 0,
           weight: 0,
-          status: 1 as const,
+          enabled: true,
         })),
       },
     })

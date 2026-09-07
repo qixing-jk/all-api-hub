@@ -1006,44 +1006,59 @@ describe("New API native managed resource", () => {
     )
   })
 
-  it("binds account import drafts and confirms the created identity by inventory diff", async () => {
-    mocks.list
-      .mockResolvedValueOnce({ items: [channel], total: 1 })
-      .mockResolvedValueOnce({ items: [channel, createdChannel], total: 2 })
-    const opened = await openNativeManagedChannelImportEditor(
-      SITE_TYPES.NEW_API,
-      {
-        name: "Imported channel",
-        type: 1,
-        key: "sk-example",
-        base_url: "https://upstream.example.invalid",
-        models: ["model-a"],
-        groups: ["default"],
-        priority: 2,
-        weight: 4,
-        status: 1,
-      },
-    )
-
-    expect(opened?.editor.initialValues).toEqual(
-      expect.objectContaining({
-        [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Name]: "Imported channel",
-        [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Key]: {
-          kind: "replace",
-          value: "sk-example",
+  it.each([
+    { enabled: true, nativeStatus: "1" },
+    { enabled: false, nativeStatus: "2" },
+  ])(
+    "imports enabled=$enabled with native status $nativeStatus and confirms the created identity",
+    async ({ enabled, nativeStatus }) => {
+      mocks.list
+        .mockResolvedValueOnce({ items: [channel], total: 1 })
+        .mockResolvedValueOnce({ items: [channel, createdChannel], total: 2 })
+      const opened = await openNativeManagedChannelImportEditor(
+        SITE_TYPES.NEW_API,
+        {
+          name: "Imported channel",
+          type: 1,
+          key: "sk-example",
+          base_url: "https://upstream.example.invalid",
+          models: ["model-a"],
+          groups: ["default"],
+          priority: 2,
+          weight: 4,
+          enabled,
         },
-      }),
-    )
-    const result = await opened!.editor.submit(opened!.editor.initialValues)
-    expect(result).toEqual(
-      expect.objectContaining({
-        outcome: MANAGED_SITE_MUTATION_OUTCOMES.Succeeded,
-        data: expect.objectContaining({
-          ref: expect.objectContaining({ resourceId: "18" }),
+      )
+
+      expect(opened?.editor.initialValues).toEqual(
+        expect.objectContaining({
+          [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Name]: "Imported channel",
+          [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Type]: "1",
+          [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Status]: nativeStatus,
+          [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Key]: {
+            kind: "replace",
+            value: "sk-example",
+          },
         }),
-      }),
-    )
-  })
+      )
+      const result = await opened!.editor.submit(opened!.editor.initialValues)
+      expect(mocks.create).toHaveBeenCalledWith(
+        config,
+        expect.objectContaining({
+          channel: expect.objectContaining({ status: Number(nativeStatus) }),
+        }),
+        undefined,
+      )
+      expect(result).toEqual(
+        expect.objectContaining({
+          outcome: MANAGED_SITE_MUTATION_OUTCOMES.Succeeded,
+          data: expect.objectContaining({
+            ref: expect.objectContaining({ resourceId: "18" }),
+          }),
+        }),
+      )
+    },
+  )
 
   it("attributes two concurrent creates to their own provider identities", async () => {
     const firstCreatedChannel = buildManagedSiteChannel({

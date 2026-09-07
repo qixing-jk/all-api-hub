@@ -1,4 +1,3 @@
-import { ChannelType } from "~/constants/newApi"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   accountRuntimeKeyToLegacyAccountToken,
@@ -12,7 +11,10 @@ import {
   type ResourceFailure,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { type ManagedSiteCapabilities } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
-import { openNativeManagedChannelImportSession } from "~/services/apiAdapters/managedResources/channelImport"
+import {
+  openNativeManagedChannelImportSession,
+  validateNativeManagedChannelImportDraft,
+} from "~/services/apiAdapters/managedResources/channelImport"
 import { getManagedSiteCapabilities } from "~/services/apiAdapters/registry"
 import {
   getManagedSiteChannelExactMatch,
@@ -43,7 +45,6 @@ import {
 import { normalizeManagedSiteChannelBaseUrl } from "~/services/managedSites/utils/channelMatching"
 import {
   collectManagedResourceSecrets,
-  hasUsableManagedSiteChannelKey,
   mergeManagedResourceSecretCollections,
   supportsManagedSiteBaseUrlChannelLookup,
 } from "~/services/managedSites/utils/managedSite"
@@ -247,39 +248,31 @@ const getDraftBlockedReason = (
   managedSite: ManagedSiteCapabilities,
   draft: ManagedSiteChannelDraft,
 ): ManagedSiteTokenBatchExportBlockedReasonCode | null => {
-  if (!draft.name.trim()) {
-    return MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.NAME_REQUIRED
-  }
-
-  if (
-    managedSite.siteType === SITE_TYPES.CLAUDE_CODE_HUB &&
-    !hasUsableManagedSiteChannelKey(draft.key)
-  ) {
-    return MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.REAL_KEY_REQUIRED
-  }
-
-  if (!draft.key.trim()) {
-    return MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.KEY_REQUIRED
-  }
-
-  const requiresBaseUrl =
-    managedSite.siteType === SITE_TYPES.AXON_HUB ||
-    managedSite.siteType === SITE_TYPES.CLAUDE_CODE_HUB ||
-    draft.type === ChannelType.VolcEngine ||
-    draft.type === ChannelType.SunoAPI
-
-  if (requiresBaseUrl && !draft.base_url.trim()) {
-    return MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.BASE_URL_REQUIRED
-  }
-
-  if (
-    managedSite.siteType !== SITE_TYPES.SUB2API &&
-    draft.models.length === 0
-  ) {
+  if (draft.modelPrefillFetchFailed && draft.models.length === 0) {
     return MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.MODELS_REQUIRED
   }
+  const validation = validateNativeManagedChannelImportDraft(
+    managedSite.siteType,
+    draft,
+  )
+  if (validation.valid) return null
 
-  return null
+  const invalidFields = new Set(validation.issues.map((issue) => issue.fieldId))
+  if (invalidFields.has("name") && !draft.name.trim()) {
+    return MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.NAME_REQUIRED
+  }
+  if (invalidFields.has("credential")) {
+    return draft.key.trim()
+      ? MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.REAL_KEY_REQUIRED
+      : MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.KEY_REQUIRED
+  }
+  if (invalidFields.has("baseUrl") && !draft.base_url.trim()) {
+    return MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.BASE_URL_REQUIRED
+  }
+  if (invalidFields.has("models") && draft.models.length === 0) {
+    return MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.MODELS_REQUIRED
+  }
+  return MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.INPUT_PREPARATION_FAILED
 }
 
 type ManagedResourceSecretCollection = ReturnType<

@@ -9,7 +9,6 @@ import {
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { parseNewApiResourceList } from "~/services/apiAdapters/managedResources/newApiResourceUtils"
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/managedSite"
-import { CHANNEL_STATUS } from "~/types/newApi"
 
 import type { NewApiFamilyChannelFields } from "./newApiFamilyChannelFields"
 
@@ -27,14 +26,21 @@ type NewApiFamilyResourceFieldIds = {
   readonly Weight: string
 }
 
+type NativeChannelStatusCodes = {
+  readonly Enable: number
+  readonly ManuallyDisabled: number
+  readonly AutoDisabled: number
+}
+
 const statusToDisplay = (
   status: NewApiFamilyChannelFields["status"],
+  codes: NativeChannelStatusCodes,
 ): ResourceDisplayFacts["status"] => {
-  if (status === CHANNEL_STATUS.Enable) return MANAGED_RESOURCE_STATUSES.Enabled
-  if (status === CHANNEL_STATUS.ManuallyDisabled) {
+  if (status === codes.Enable) return MANAGED_RESOURCE_STATUSES.Enabled
+  if (status === codes.ManuallyDisabled) {
     return MANAGED_RESOURCE_STATUSES.ManuallyDisabled
   }
-  if (status === CHANNEL_STATUS.AutoDisabled) {
+  if (status === codes.AutoDisabled) {
     return MANAGED_RESOURCE_STATUSES.AutoDisabled
   }
   return MANAGED_RESOURCE_STATUSES.Unknown
@@ -50,10 +56,11 @@ const secretState = (
   return key?.trim() ? MANAGED_RESOURCE_SECRET_STATES.Masked : emptyState
 }
 
-/** Builds provider-owned facts and search values for New API-shaped channels. */
+/** Builds display facts from the native fields shared by these provider editors. */
 export function createNewApiFamilyResourceFacts(policy: {
   fields: NewApiFamilyResourceFieldIds
   typeNames: Readonly<Record<number, string>>
+  statusCodes: NativeChannelStatusCodes
   emptyInventorySecretState: ResourceSecretState
 }) {
   const getSearchData = (channel: NewApiFamilyChannelFields) => {
@@ -84,7 +91,7 @@ export function createNewApiFamilyResourceFacts(policy: {
   ): ResourceDisplayFacts => {
     const { models, groups, searchValues } = getSearchData(channel)
     const rawType = String(channel.type)
-    const status = statusToDisplay(channel.status)
+    const status = statusToDisplay(channel.status, policy.statusCodes)
     const emptySecretState = options.inventory
       ? policy.emptyInventorySecretState
       : MANAGED_RESOURCE_SECRET_STATES.Unavailable

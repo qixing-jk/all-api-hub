@@ -17,6 +17,7 @@ import {
   PROTECTION_BYPASS_FEATURES,
   PROTECTION_BYPASS_SURFACES,
 } from "~/services/protectionBypass/contracts"
+import type { OctopusChannel } from "~/types/octopus"
 import { automaticExecution } from "~~/tests/services/protectionBypass/fixtures"
 
 vi.mock("~/services/managedSites/legacyChannelConfigMigration", () => ({
@@ -354,7 +355,7 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
     )
   })
 
-  it("lists Octopus channels through the Octopus adapter and validates config", async () => {
+  it("lists only Octopus channel selection facts and validates config", async () => {
     mocks.getPreferences.mockResolvedValueOnce({
       managedSiteType: SITE_TYPES.OCTOPUS,
       octopus: {
@@ -389,16 +390,10 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
 
     await expect(modelSyncScheduler.listChannels()).resolves.toEqual({
       items: [
-        expect.objectContaining({
-          id: 1,
-          name: "Alpha",
-          models: "gpt-4o",
-          native: expect.objectContaining({ kind: "octopus" }),
-        }),
-        expect.objectContaining({ id: 2, name: "Beta", models: "gpt-4o" }),
+        { id: 1, name: "Alpha" },
+        { id: 2, name: "Beta" },
       ],
       total: 2,
-      type_counts: {},
     })
     expect(mocks.createOctopusModelSyncCapability).toHaveBeenCalledWith(
       expect.objectContaining({ baseUrl: "https://octopus.example.com" }),
@@ -424,9 +419,17 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
     await expect(modelSyncScheduler.listChannels()).rejects.toThrow()
   })
 
-  it("lists channels through the shared model sync service for non-Octopus sites", async () => {
+  it("keeps execution credentials out of the shared model sync channel selection", async () => {
     mocks.listChannels.mockResolvedValueOnce({
-      items: [{ id: 9, name: "Shared channel" }],
+      items: [
+        {
+          id: 9,
+          name: "Shared channel",
+          credential: "private-key",
+          modelMapping: '{"a":"b"}',
+          models: ["model-a"],
+        },
+      ],
       total: 1,
       type_counts: { shared: 1 },
     })
@@ -434,7 +437,6 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
     await expect(modelSyncScheduler.listChannels()).resolves.toEqual({
       items: [{ id: 9, name: "Shared channel" }],
       total: 1,
-      type_counts: { shared: 1 },
     })
 
     expect(mocks.getConfigsForScope).toHaveBeenCalledWith({
@@ -687,7 +689,7 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
         channelProcessingTimeout: 600,
       },
     })
-    mocks.octopusListChannels.mockResolvedValue([
+    const nativeChannels: OctopusChannel[] = [
       {
         id: 1,
         name: "Alpha",
@@ -695,7 +697,11 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
         enabled: true,
         model: "gpt-4o",
         base_urls: [{ url: "https://upstream.example.com" }],
-        keys: [{ channel_key: "test-key" }],
+        keys: [{ channel_key: "test-key", enabled: true }],
+        proxy: true,
+        auto_sync: false,
+        auto_group: 0,
+        custom_header: [{ header_key: "x-provider", header_value: "native" }],
       },
       {
         id: 2,
@@ -704,16 +710,21 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
         enabled: true,
         model: "gpt-4o",
         base_urls: [{ url: "https://upstream.example.com" }],
-        keys: [{ channel_key: "test-key" }],
+        keys: [{ channel_key: "test-key", enabled: true }],
+        proxy: true,
+        auto_sync: false,
+        auto_group: 0,
+        custom_header: [{ header_key: "x-provider", header_value: "native" }],
       },
-    ])
+    ]
+    mocks.octopusListChannels.mockResolvedValue(nativeChannels)
     mocks.runOctopusBatch.mockImplementation(
       async (channels: any[], options: any) => {
-        expect(channels.map((channel) => channel.id)).toEqual([2])
+        expect(channels).toEqual([nativeChannels[1]])
 
         const lastResult = {
           channelId: 2,
-          channelName: "mapped-Beta",
+          channelName: "Beta",
           ok: false,
         }
 
@@ -772,7 +783,7 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
           isRunning: true,
           completed: 1,
           failed: 1,
-          currentChannel: "mapped-Beta",
+          currentChannel: "Beta",
         }),
       },
       { maxAttempts: 1 },

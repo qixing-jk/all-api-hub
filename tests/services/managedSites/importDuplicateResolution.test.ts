@@ -7,7 +7,6 @@ import {
 } from "~/services/managedSites/channelMatch"
 import type { ManagedSiteChannelMatchContext } from "~/services/managedSites/channelMatchResolver"
 import { resolveManagedSiteImportDuplicate } from "~/services/managedSites/importDuplicateResolution"
-import { CHANNEL_STATUS } from "~/types/newApi"
 
 const managedConfig = {
   baseUrl: "https://managed.example",
@@ -32,7 +31,7 @@ const formData = {
   groups: ["default"],
   priority: 0,
   weight: 1,
-  status: CHANNEL_STATUS.Enable,
+  enabled: true,
 }
 
 const createService = (

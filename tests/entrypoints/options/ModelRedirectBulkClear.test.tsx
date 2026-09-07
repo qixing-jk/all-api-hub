@@ -10,7 +10,6 @@ import {
 } from "~/services/managedSites/runtimeConfig"
 import { ModelRedirectService } from "~/services/models/modelRedirect"
 import { supportsManagedSiteModelRedirect } from "~/services/models/modelRedirect/capabilities"
-import { buildManagedSiteChannel } from "~~/tests/test-utils/factories"
 import { testI18n } from "~~/tests/test-utils/i18n"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
@@ -106,16 +105,16 @@ describe("Model redirect bulk clear flow", () => {
     mockedModelRedirectService.listManagedSiteChannels.mockResolvedValue({
       success: true,
       channels: [
-        buildManagedSiteChannel({
+        {
           id: 1,
           name: "Channel One",
-          model_mapping: '{"gpt-4o":"openai/gpt-4o"}',
-        }),
-        buildManagedSiteChannel({
+          modelMapping: '{"gpt-4o":"openai/gpt-4o"}',
+        },
+        {
           id: 2,
           name: "Channel Two",
-          model_mapping: "{}",
-        }),
+          modelMapping: "{}",
+        },
       ],
       errors: [],
     })
@@ -332,17 +331,17 @@ describe("Model redirect bulk clear flow", () => {
     mockedModelRedirectService.listManagedSiteChannels.mockResolvedValue({
       success: true,
       channels: [
-        buildManagedSiteChannel({
+        {
           id: 1,
           name: "Few",
-          model_mapping: '{"a":"b"}',
-        }),
-        buildManagedSiteChannel({
+          modelMapping: '{"a":"b"}',
+        },
+        {
           id: 2,
           name: "Many",
-          model_mapping: '{"a":"b","c":"d"}',
-        }),
-        buildManagedSiteChannel({ id: 3, name: "Empty", model_mapping: "{}" }),
+          modelMapping: '{"a":"b","c":"d"}',
+        },
+        { id: 3, name: "Empty", modelMapping: "{}" },
       ],
       errors: [],
     })

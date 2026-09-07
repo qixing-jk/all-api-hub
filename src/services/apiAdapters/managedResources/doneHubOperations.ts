@@ -1,3 +1,4 @@
+import { DoneHubChannelStatus } from "~/constants/doneHub"
 import { hasUsableApiTokenKey as hasUsableManagedSiteChannelKey } from "~/services/accountTokens/apiTokenKey"
 import type { ManagedResourceModelsCapability } from "~/services/apiAdapters/contracts/managedResourceModels"
 import type {
@@ -206,6 +207,10 @@ export const doneHubManagedResourceModels = {
         toManagedSiteApiServiceRequest(config, options),
         options,
       ),
+      [
+        DoneHubChannelStatus.ManuallyDisabled,
+        DoneHubChannelStatus.AutoDisabled,
+      ],
     ),
   fetchModels: async (
     config,

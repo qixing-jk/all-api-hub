@@ -126,6 +126,7 @@ describe("Claude Code Hub managed-site provider", () => {
     ).resolves.toMatchObject({
       name: "Account | Token (auto)",
       type: "openai-compatible",
+      enabled: true,
       key: "sk-real-key",
       base_url: "https://api.example.com",
       models: ["gpt-4o"],

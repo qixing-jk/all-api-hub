@@ -1,13 +1,13 @@
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   VELOERA_MANAGED_RESOURCE_FIELD_IDS,
+  VeloeraChannelStatus,
   VeloeraChannelType,
   VeloeraChannelTypeNames,
   VeloeraChannelTypeOptions,
 } from "~/constants/veloera"
 import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
 import {
-  MANAGED_RESOURCE_CREATE_SEED_KINDS,
   MANAGED_RESOURCE_FAILURE_CODES,
   ManagedResourceError,
   type ManagedResourceRef,
@@ -31,8 +31,8 @@ import { buildChannelPayload } from "~/services/managedSites/providers/veloera"
 import { resolveManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/managedSite"
 import { userPreferences } from "~/services/preferences/userPreferences"
-import type { ManagedSiteChannelDraft } from "~/types/managedSiteChannelDraft"
 import { normalizeManagedUpstreamResourceScopeKey } from "~/types/managedUpstreamResource"
+import type { NewApiFamilyChannelCommand } from "~/types/newApiFamilyChannelEditor"
 import type {
   VeloeraChannel,
   VeloeraUpdateChannelPayload,
@@ -66,12 +66,12 @@ type VeloeraNativeResourceOperations = {
     options?: ResourceOperationOptions,
   ): Promise<string>
   create(
-    draft: ManagedSiteChannelDraft,
+    draft: NewApiFamilyChannelCommand,
     options?: ResourceOperationOptions,
   ): Promise<ManagedSiteMutationResult<VeloeraChannel>>
   update(
     detail: VeloeraChannel,
-    command: ManagedSiteChannelDraft,
+    command: NewApiFamilyChannelCommand,
     options?: ResourceOperationOptions,
   ): Promise<ManagedSiteMutationResult<VeloeraChannel>>
   delete(
@@ -95,6 +95,8 @@ const channels = veloeraChannelOperations
 const queries = veloeraManagedSiteCapabilities.queries
 const veloeraEditor = createNewApiFamilyEditorBindings({
   fields: VELOERA_MANAGED_RESOURCE_FIELD_IDS,
+  defaultType: VeloeraChannelType.OpenAI,
+  status: VeloeraChannelStatus,
   typeNames: VeloeraChannelTypeNames,
   typeOptions: VeloeraChannelTypeOptions,
   unsupportedCreateTypes: new Set([VeloeraChannelType.VertexAi]),
@@ -155,6 +157,7 @@ const openConfig = async (): Promise<VeloeraNativeConfig> => {
 const veloeraResourceFacts = createNewApiFamilyResourceFacts({
   fields: VELOERA_MANAGED_RESOURCE_FIELD_IDS,
   typeNames: VeloeraChannelTypeNames,
+  statusCodes: VeloeraChannelStatus,
   emptyInventorySecretState: "masked",
 })
 
@@ -188,7 +191,7 @@ const listCompleteChannelInventory = async (
 
 const createChannel = async (
   nativeConfig: VeloeraNativeConfig,
-  draft: ManagedSiteChannelDraft,
+  draft: NewApiFamilyChannelCommand,
   options?: ResourceOperationOptions,
 ): Promise<ManagedSiteMutationResult<VeloeraChannel>> =>
   await attributeCreatedNativeResource({
@@ -206,7 +209,7 @@ const createChannel = async (
 
 const toUpdatePayload = (
   detail: VeloeraChannel,
-  draft: ManagedSiteChannelDraft,
+  draft: NewApiFamilyChannelCommand,
 ): VeloeraUpdateChannelPayload => {
   const payload: VeloeraUpdateChannelPayload = {
     ...detail,
@@ -241,7 +244,7 @@ const applyUpdate = (
 const updateChannel = async (
   nativeConfig: VeloeraNativeConfig,
   detail: VeloeraChannel,
-  draft: ManagedSiteChannelDraft,
+  draft: NewApiFamilyChannelCommand,
   options?: ResourceOperationOptions,
 ): Promise<ManagedSiteMutationResult<VeloeraChannel>> => {
   const payload = toUpdatePayload(detail, draft)
@@ -308,12 +311,7 @@ export async function openVeloeraNativeResourceOperations(): Promise<VeloeraNati
 const veloeraNativeDefinition = {
   siteType: SITE_TYPES.VELOERA,
   kind: MANAGED_RESOURCE_KINDS.Channel,
-  createSeedBindings: [
-    {
-      kind: MANAGED_RESOURCE_CREATE_SEED_KINDS.ManagedChannelImport,
-      project: veloeraEditor.projectImportSeed,
-    },
-  ],
+  createSeedBindings: [veloeraEditor.importSeedBinding],
   capabilities: {
     canSearch: true,
     canCreate: true,
@@ -354,13 +352,13 @@ const veloeraNativeDefinition = {
   sanitizeEditDetail: veloeraEditor.sanitizeEditDetail,
   create: (
     operations: VeloeraNativeResourceOperations,
-    draft: ManagedSiteChannelDraft,
+    draft: NewApiFamilyChannelCommand,
     options?: ResourceOperationOptions,
   ) => operations.create(draft, options),
   update: (
     operations: VeloeraNativeResourceOperations,
     detail: VeloeraChannel,
-    draft: ManagedSiteChannelDraft,
+    draft: NewApiFamilyChannelCommand,
     options?: ResourceOperationOptions,
   ) => operations.update(detail, draft, options),
   delete: (

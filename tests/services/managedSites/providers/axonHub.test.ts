@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { AXON_HUB_CHANNEL_TYPE } from "~/constants/axonHub"
 import { SITE_TYPES } from "~/constants/siteType"
 import { getManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
-import { CHANNEL_STATUS } from "~/types/newApi"
 import {
   buildApiToken,
   buildDisplaySiteData,
@@ -117,7 +116,7 @@ describe("AxonHub managed-site provider", () => {
         groups: [],
         priority: 0,
         weight: 0,
-        status: CHANNEL_STATUS.Enable,
+        enabled: true,
       }),
     )
 

@@ -4,8 +4,8 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { ModelRedirectService } from "~/services/models/modelRedirect"
 import { modelSyncScheduler } from "~/services/models/modelSync/scheduler"
 import { userPreferences } from "~/services/preferences/userPreferences"
+import type { ManagedModelChannel } from "~/types/managedResourceModels"
 import { DEFAULT_MODEL_REDIRECT_PREFERENCES } from "~/types/managedSiteModelRedirect"
-import { buildManagedSiteChannel } from "~~/tests/test-utils/factories"
 
 vi.mock("~/services/managedSites/legacyChannelConfigMigration", () => ({
   ensureLegacyChannelConfigMigrationReady: vi.fn().mockResolvedValue(undefined),
@@ -130,11 +130,15 @@ describe("modelSyncScheduler.executeSync - model redirect pruning", () => {
     oldModels?: string[]
     newModels?: string[]
   }) => {
-    const channel = buildManagedSiteChannel({
+    const channel: ManagedModelChannel = {
       id: 1,
       name: "channel-1",
-      model_mapping: "{}",
-    })
+      type: 1,
+      baseUrl: "https://channel.example.com",
+      models: ["a"],
+      disabled: false,
+      modelMapping: "{}",
+    }
     mockListChannels.mockResolvedValue({ items: [channel] })
 
     mockRunBatch.mockImplementation(async (_channels: any, options: any) => {

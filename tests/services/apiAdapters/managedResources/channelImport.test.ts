@@ -12,7 +12,6 @@ import {
 } from "~/services/apiAdapters/managedResources/channelImport"
 import * as managedResourceRegistry from "~/services/apiAdapters/managedResources/registry"
 import { type ManagedSiteChannelDraft } from "~/types/managedSiteChannelDraft"
-import { CHANNEL_STATUS } from "~/types/newApi"
 
 const draft: ManagedSiteChannelDraft = {
   name: "Imported channel",
@@ -23,7 +22,7 @@ const draft: ManagedSiteChannelDraft = {
   groups: [],
   priority: 0,
   weight: 7,
-  status: 1,
+  enabled: true,
 }
 
 afterEach(() => {
@@ -165,7 +164,7 @@ describe("native managed-channel import", () => {
 
     await openNativeManagedChannelImportEditor(SITE_TYPES.NEW_API, {
       ...draft,
-      status: CHANNEL_STATUS.ManuallyDisabled,
+      enabled: false,
     })
 
     expect(openCreateEditor).toHaveBeenCalledWith({

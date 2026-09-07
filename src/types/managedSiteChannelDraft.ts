@@ -1,5 +1,3 @@
-import type { ChannelStatus } from "~/types/newApi"
-
 /** Product-owned input for importing a credential into a native resource editor. */
 export interface ManagedSiteChannelDraft {
   name: string
@@ -11,7 +9,7 @@ export interface ManagedSiteChannelDraft {
   groups: string[]
   priority: number
   weight: number
-  status: ChannelStatus
+  enabled: boolean
   /** Provider-native notes carried by import drafts when supported. */
   notes?: string
 }
@@ -19,5 +17,5 @@ export interface ManagedSiteChannelDraft {
 /** Shared import defaults; each provider owns its native payload conversion. */
 export type ManagedSiteChannelDraftDefaults = Pick<
   ManagedSiteChannelDraft,
-  "type" | "status" | "priority" | "weight" | "groups" | "models"
+  "enabled" | "priority" | "weight" | "groups" | "models"
 >

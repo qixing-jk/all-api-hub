@@ -29,12 +29,14 @@ import {
   removeDateSuffix,
   toModelTokenKey,
 } from "~/services/models/utils/modelName"
-import type { ManagedModelChannel } from "~/types/managedResourceModels"
+import type {
+  ManagedModelChannel,
+  ManagedModelMappingPreview,
+} from "~/types/managedResourceModels"
 import {
   ALL_PRESET_STANDARD_MODELS,
   DEFAULT_MODEL_REDIRECT_PREFERENCES,
 } from "~/types/managedSiteModelRedirect"
-import { CHANNEL_STATUS } from "~/types/newApi"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
@@ -90,12 +92,6 @@ const appendMissingValues = (
 
   return result
 }
-
-const splitChannelModels = (models?: string | null): string[] =>
-  models
-    ?.split(",")
-    .map((model) => model.trim())
-    .filter(Boolean) ?? []
 
 const consumeModelRedirectMutationResult = async (
   result: unknown,
@@ -155,10 +151,7 @@ class DirectModelRedirectMappingWriter implements ModelRedirectMappingWriter {
     return await this.channels.updateModelMapping(
       this.runtimeConfig.config,
       channel.id,
-      appendMissingValues(
-        splitChannelModels(channel.models),
-        Object.keys(modelMapping),
-      ),
+      appendMissingValues(channel.models, Object.keys(modelMapping)),
       modelMapping,
     )
   }
@@ -346,7 +339,7 @@ export class ModelRedirectService {
   /**
    * Apply model mapping to a channel with incremental merge
    * Merges new mapping with existing mapping (new keys override old keys)
-   * @param channel Target New API channel.
+   * @param channel Target channel's model-task input.
    * @param newMapping Mapping of standard model -> upstream model.
    * @param service Model mapping writer used to update channel.
    */
@@ -369,11 +362,11 @@ export class ModelRedirectService {
       return { updated: false, prunedCount: 0 }
     }
 
-    // Parse existing model_mapping from channel
+    // Parse the provider's existing redirect mapping.
     let existingMapping: Record<string, unknown> = {}
     let canPruneExisting = true
 
-    const rawExisting = channel.model_mapping
+    const rawExisting = channel.modelMapping
     if (rawExisting) {
       try {
         const parsed = JSON.parse(rawExisting) as unknown
@@ -512,25 +505,15 @@ export class ModelRedirectService {
 
       for (const channel of channelList.items) {
         // Skip disabled channels
-        if (
-          channel.status === CHANNEL_STATUS.ManuallyDisabled ||
-          channel.status === CHANNEL_STATUS.AutoDisabled
-        ) {
+        if (channel.disabled) {
           continue
         }
 
         try {
-          const actualModels = channel.models
-            ? channel.models
-                .split(",")
-                .map((m) => m.trim())
-                .filter(Boolean)
-            : []
-
           const newMapping =
             ModelRedirectService.generateModelMappingForChannel(
               standardModels,
-              actualModels,
+              channel.models,
             )
 
           // Use unified method for incremental merge and apply
@@ -570,7 +553,7 @@ export class ModelRedirectService {
    */
   static async listManagedSiteChannels(): Promise<{
     success: boolean
-    channels: ManagedModelChannel[]
+    channels: ManagedModelMappingPreview[]
     errors: string[]
     message?: string
   }> {
@@ -593,7 +576,11 @@ export class ModelRedirectService {
 
       return {
         success: true,
-        channels: channelList.items ?? [],
+        channels: channelList.items.map(({ id, name, modelMapping }) => ({
+          id,
+          name,
+          modelMapping,
+        })),
         errors: [],
       }
     } catch (error) {
@@ -676,7 +663,7 @@ export class ModelRedirectService {
           continue
         }
 
-        if (isEmptyModelMapping(channel.model_mapping)) {
+        if (isEmptyModelMapping(channel.modelMapping)) {
           results.push({
             channelId,
             channelName: channel.name,

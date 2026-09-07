@@ -1,3 +1,4 @@
+import { DoneHubChannelType } from "~/constants/doneHub"
 import { DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSiteChannelDraft"
 import { normalizeAccountForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
 import type { ManagedSiteChannelDraftRequestOptions } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
@@ -13,6 +14,7 @@ import { AuthTypeEnum, type ApiToken, type DisplaySiteData } from "~/types"
 import type { DoneHubCreateChannelPayload } from "~/types/doneHub"
 import type { DoneHubConfig } from "~/types/doneHubConfig"
 import type { ManagedSiteChannelDraft } from "~/types/managedSiteChannelDraft"
+import type { NewApiFamilyChannelCommand } from "~/types/newApiFamilyChannelEditor"
 import { createLogger } from "~/utils/core/logger"
 import { normalizeList } from "~/utils/core/string"
 
@@ -118,7 +120,7 @@ export async function prepareChannelFormData(
 
   return {
     name: buildManagedSiteChannelName(account, token),
-    type: DEFAULT_CHANNEL_FIELDS.type,
+    type: DoneHubChannelType.OpenAI,
     key: token.key,
     base_url: upstreamAccount.baseUrl,
     models: normalizeList(availableModels),
@@ -126,7 +128,7 @@ export async function prepareChannelFormData(
     groups: normalizeList(resolvedGroups),
     priority: DEFAULT_CHANNEL_FIELDS.priority,
     weight: DEFAULT_CHANNEL_FIELDS.weight,
-    status: DEFAULT_CHANNEL_FIELDS.status,
+    enabled: DEFAULT_CHANNEL_FIELDS.enabled,
   }
 }
 
@@ -134,7 +136,7 @@ export async function prepareChannelFormData(
  * Builds channel create payload.
  */
 export function buildChannelPayload(
-  formData: ManagedSiteChannelDraft,
+  formData: NewApiFamilyChannelCommand,
 ): DoneHubCreateChannelPayload {
   const trimmedBaseUrl = formData.base_url.trim()
   const groups = normalizeList(

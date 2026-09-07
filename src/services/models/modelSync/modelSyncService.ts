@@ -97,8 +97,7 @@ function throwIfAborted(abortSignal?: AbortSignal) {
 }
 
 /**
- * New API Model Sync Service
- * Handles channel operations for model synchronization
+ * Runs shared model-list and redirect workflows through the selected provider.
  */
 export class ModelSyncService {
   get knownSecrets(): readonly string[] {
@@ -251,7 +250,7 @@ export class ModelSyncService {
     })
   }
 
-  /** Lists complete provider-native model inputs without a channel-form projection. */
+  /** Lists complete model-task inputs through the selected provider. */
   async listChannels(): Promise<ManagedModelChannelListData> {
     try {
       return await this.getChannelListCapability().list(
@@ -339,13 +338,7 @@ export class ModelSyncService {
     abortSignal?: AbortSignal,
   ): Promise<ManagedSiteMutationResult<unknown>> {
     try {
-      const updateModels = union(
-        channel.models
-          .split(",")
-          .map((model) => model.trim())
-          .filter(Boolean),
-        Object.keys(modelMapping),
-      )
+      const updateModels = union(channel.models, Object.keys(modelMapping))
       await this.throttle()
       throwIfAborted(abortSignal)
       const knownSecrets = Object.freeze(
@@ -390,12 +383,7 @@ export class ModelSyncService {
     let attempts = 0
     let lastError: any = null
 
-    const oldModels = channel.models
-      ? channel.models
-          .split(",")
-          .map((model) => model.trim())
-          .filter(Boolean)
-      : []
+    const oldModels = [...channel.models]
 
     while (attempts <= maxRetries) {
       try {
@@ -442,7 +430,7 @@ export class ModelSyncService {
               }
               throw error
             }
-            channel.models = channelScopedModels.join(",")
+            channel.models = channelScopedModels
           }
 
           return {
@@ -556,7 +544,11 @@ export class ModelSyncService {
                 abortSignal,
                 writeFailureBoundary,
               ),
-            channel,
+            {
+              channelId: channel.id,
+              channelName: channel.name,
+              oldModels: [...channel.models],
+            },
             maxRetries,
             channelProcessingTimeout,
           )

@@ -81,6 +81,22 @@ describe("DoneHub native channel migration", () => {
     ).toBe(false)
   })
 
+  it("keeps DoneHub's DeepSeek type in the migration source", async () => {
+    mocks.get.mockResolvedValue(
+      buildManagedSiteChannel({
+        id: 17,
+        type: DoneHubChannelType.DeepSeek,
+      }),
+    )
+
+    await expect(
+      doneHubManagedSiteMigrationCapability.source!.prepare(selection),
+    ).resolves.toMatchObject({
+      status: "ready",
+      source: { sourceSiteType: SITE_TYPES.DONE_HUB, resourceType: 28 },
+    })
+  })
+
   it("prepares, resolves, and creates through DoneHub native operations", async () => {
     mocks.get.mockResolvedValue({
       ...buildManagedSiteChannel({
@@ -112,7 +128,7 @@ describe("DoneHub native channel migration", () => {
       status: "ready",
       source: {
         sourceSiteType: SITE_TYPES.DONE_HUB,
-        resourceType: ChannelType.OpenAI,
+        resourceType: DoneHubChannelType.OpenAI,
         baseUrl: "https://upstream.example.invalid",
         models: ["model-a", "model-b"],
         groups: ["default", "vip"],
@@ -301,7 +317,7 @@ describe("DoneHub native channel migration", () => {
         },
       }),
     ).resolves.toMatchObject({
-      projection: { groups: ["default"], status: 2 },
+      projection: { groups: ["default"], enabled: false },
       adjustments: { forcedDefaultGroup: true, simplifiedStatus: true },
     })
   })
@@ -337,13 +353,13 @@ describe("DoneHub native channel migration", () => {
         targetSiteType: SITE_TYPES.DONE_HUB,
         projection: {
           name: "Migrated channel",
-          type: String(DoneHubChannelType.OpenAI),
+          type: DoneHubChannelType.OpenAI,
           baseUrl: "https://upstream.example.invalid",
           models: [],
           groups: ["default"],
           priority: 0,
           weight: 0,
-          status: 1,
+          enabled: true,
         },
         credential: "credential-placeholder",
       }),

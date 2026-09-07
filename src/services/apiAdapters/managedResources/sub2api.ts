@@ -7,7 +7,6 @@ import {
   SUB2API_DEFAULT_ACCOUNT_PLATFORM,
   SUB2API_MANAGED_RESOURCE_FIELD_IDS,
   SUB2API_MANAGED_RESOURCE_STATUS,
-  sub2ApiChannelTypeToPlatform,
 } from "~/constants/sub2api"
 import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
 import {
@@ -586,9 +585,7 @@ const createSub2ApiChannelImportProjection = (
 ): EditableResourceProjection => ({
   ...createInitialValues(),
   [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Name]: seed.name,
-  [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Platform]: sub2ApiChannelTypeToPlatform(
-    seed.channelType,
-  ),
+  [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Platform]: seed.channelType,
   [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Status]: seed.enabled
     ? SUB2API_MANAGED_RESOURCE_STATUS.Active
     : SUB2API_MANAGED_RESOURCE_STATUS.Inactive,
@@ -695,6 +692,18 @@ const sub2ApiNativeDefinition = {
     {
       kind: MANAGED_RESOURCE_CREATE_SEED_KINDS.ManagedChannelImport,
       project: createSub2ApiChannelImportProjection,
+      validate: (values: EditableResourceProjection) =>
+        validateValues(values, { create: true }),
+      sourceFieldIds: {
+        [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Name]: "name",
+        [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Platform]: "channelType",
+        [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Status]: "enabled",
+        [SUB2API_MANAGED_RESOURCE_FIELD_IDS.BaseUrl]: "baseUrl",
+        [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Key]: "credential",
+        [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Models]: "models",
+        [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Priority]: "priority",
+        [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Notes]: "notes",
+      } as const,
     },
   ],
   capabilities: {

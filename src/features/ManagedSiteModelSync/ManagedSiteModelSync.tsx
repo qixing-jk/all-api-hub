@@ -55,7 +55,7 @@ import {
   type ProtectionBypassExecution,
 } from "~/services/protectionBypass/contracts"
 import { ModelSyncMessageTypes } from "~/services/runtimeMessaging/messageTypes"
-import type { ManagedModelChannel } from "~/types/managedResourceModels"
+import type { ManagedModelChannelSummary } from "~/types/managedResourceModels"
 import type {
   ExecutionItemResult,
   ExecutionProgress,
@@ -255,7 +255,7 @@ export default function ManagedSiteModelSync({
     useState<ManagedSiteModelSyncAction | null>(null)
   const [runningChannelId, setRunningChannelId] = useState<number | null>(null)
   const [selectedTab, setSelectedTab] = useState<number>(TAB_INDEX.history)
-  const [channels, setChannels] = useState<ManagedModelChannel[]>([])
+  const [channels, setChannels] = useState<ManagedModelChannelSummary[]>([])
   const [isChannelsLoading, setIsChannelsLoading] = useState(false)
   const [isManualChannelRefresh, setIsManualChannelRefresh] = useState(false)
   const [channelsError, setChannelsError] = useState<string | null>(null)

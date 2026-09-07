@@ -130,3 +130,10 @@ export const VELOERA_MANAGED_RESOURCE_DETAIL_FIELD_IDS = [
   VELOERA_MANAGED_RESOURCE_FIELD_IDS.Priority,
   VELOERA_MANAGED_RESOURCE_FIELD_IDS.Weight,
 ] as const
+/** Native Veloera status codes: https://github.com/Veloera/Veloera/blob/6525dfce816beaa270e78f0d8b762e19e54d13b8/common/constants.go */
+export const VeloeraChannelStatus = {
+  Unknown: 0,
+  Enable: 1,
+  ManuallyDisabled: 2,
+  AutoDisabled: 3,
+} as const

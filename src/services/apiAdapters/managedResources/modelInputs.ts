@@ -1,43 +1,36 @@
-import type {
-  ManagedModelChannel,
-  ManagedModelChannelListData,
-} from "~/types/managedResourceModels"
-import type { OctopusChannel } from "~/types/octopus"
+import type { ManagedModelChannelListData } from "~/types/managedResourceModels"
+
+/** Fields shared by the native New API, Veloera and DoneHub model workflows. */
+interface ChannelModelRecord {
+  id: number
+  name: string
+  type: number | string
+  base_url: string
+  key?: string
+  models: string
+  status: number
+  model_mapping: string
+}
 
 /** Limits model task inventories to their own inputs instead of leaking provider CRUD records. */
 export function toManagedModelChannelList(
-  list: ManagedModelChannelListData,
+  list: { items: ChannelModelRecord[]; total: number },
+  disabledStatuses: readonly number[],
 ): ManagedModelChannelListData {
   return {
     total: list.total,
-    type_counts: list.type_counts,
     items: list.items.map((channel) => ({
       id: channel.id,
       name: channel.name,
       type: channel.type,
-      base_url: channel.base_url,
-      key: channel.key,
-      models: channel.models,
-      status: channel.status,
-      model_mapping: channel.model_mapping,
-      ...(channel.native ? { native: channel.native } : {}),
+      baseUrl: channel.base_url,
+      credential: channel.key,
+      models: channel.models
+        .split(",")
+        .map((model) => model.trim())
+        .filter(Boolean),
+      disabled: disabledStatuses.includes(channel.status),
+      modelMapping: channel.model_mapping,
     })),
-  }
-}
-
-/** Keeps native Octopus settings available to its model-probe implementation. */
-export function toOctopusModelChannel(
-  channel: OctopusChannel,
-): ManagedModelChannel {
-  return {
-    id: channel.id,
-    name: channel.name,
-    type: channel.type,
-    base_url: channel.base_urls[0]?.url ?? "",
-    key: channel.keys[0]?.channel_key ?? "",
-    models: channel.model ?? "",
-    status: channel.enabled ? 1 : 2,
-    model_mapping: "",
-    native: { kind: "octopus", data: channel },
   }
 }

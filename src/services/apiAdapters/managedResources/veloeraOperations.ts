@@ -1,3 +1,4 @@
+import { VeloeraChannelStatus } from "~/constants/veloera"
 import { hasUsableApiTokenKey as hasUsableManagedSiteChannelKey } from "~/services/accountTokens/apiTokenKey"
 import type { ManagedResourceModelsCapability } from "~/services/apiAdapters/contracts/managedResourceModels"
 import type {
@@ -218,6 +219,10 @@ export const veloeraManagedResourceModels = {
         toManagedSiteApiServiceRequest(config, options),
         options,
       ),
+      [
+        VeloeraChannelStatus.ManuallyDisabled,
+        VeloeraChannelStatus.AutoDisabled,
+      ],
     ),
   fetchModels: async (
     config,

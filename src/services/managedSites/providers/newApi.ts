@@ -1,4 +1,5 @@
 import { DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSiteChannelDraft"
+import { ChannelType } from "~/constants/newApi"
 import { normalizeAccountForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
 import type { ManagedSiteChannelDraftRequestOptions } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import { fetchSiteUserGroups } from "~/services/apiService/newApiFamily/default/keyManagement"
@@ -7,9 +8,14 @@ import { fetchTokenScopedModels } from "~/services/managedSites/utils/fetchToken
 import type { AccountToken } from "~/types"
 import { AuthTypeEnum, type ApiToken, type DisplaySiteData } from "~/types"
 import type { ManagedSiteChannelDraft } from "~/types/managedSiteChannelDraft"
-import type { ChannelMode, CreateChannelPayload } from "~/types/newApi"
+import type {
+  ChannelMode,
+  ChannelStatus,
+  CreateChannelPayload,
+} from "~/types/newApi"
 import { CHANNEL_MODE } from "~/types/newApi"
 import type { NewApiConfig } from "~/types/newApiConfig"
+import type { NewApiFamilyChannelCommand } from "~/types/newApiFamilyChannelEditor"
 import { createLogger } from "~/utils/core/logger"
 import { normalizeList } from "~/utils/core/string"
 
@@ -124,7 +130,7 @@ export async function prepareChannelFormData(
 
   return {
     name: buildManagedSiteChannelName(account, token),
-    type: DEFAULT_CHANNEL_FIELDS.type,
+    type: ChannelType.OpenAI,
     key: token.key,
     base_url: upstreamAccount.baseUrl,
     models: normalizeList(availableModels),
@@ -132,7 +138,7 @@ export async function prepareChannelFormData(
     groups: normalizeList(resolvedGroups),
     priority: DEFAULT_CHANNEL_FIELDS.priority,
     weight: DEFAULT_CHANNEL_FIELDS.weight,
-    status: DEFAULT_CHANNEL_FIELDS.status,
+    enabled: DEFAULT_CHANNEL_FIELDS.enabled,
   }
 }
 
@@ -140,7 +146,7 @@ export async function prepareChannelFormData(
  * 构建渠道创建 payload
  */
 export function buildChannelPayload(
-  formData: ManagedSiteChannelDraft,
+  formData: NewApiFamilyChannelCommand,
   mode: ChannelMode = CHANNEL_MODE.SINGLE,
 ): CreateChannelPayload {
   const trimmedBaseUrl = formData.base_url.trim()
@@ -162,7 +168,7 @@ export function buildChannelPayload(
       groups,
       priority: formData.priority,
       weight: formData.weight,
-      status: formData.status,
+      status: formData.status as ChannelStatus,
     },
   }
 }

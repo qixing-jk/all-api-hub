@@ -11,7 +11,7 @@ import type {
 export interface ManagedResourceModelsCapability<
   TConfig = ManagedSiteRuntimeConfigValue,
 > {
-  list(
+  list?(
     config: TConfig,
     options?: ManagedSiteChannelRequestOptions & {
       beforeRequest?: () => Promise<void>

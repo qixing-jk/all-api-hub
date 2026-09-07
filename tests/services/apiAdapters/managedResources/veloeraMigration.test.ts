@@ -330,7 +330,7 @@ describe("Veloera native channel migration", () => {
     })
 
     expect(result).toMatchObject({
-      projection: { groups: ["default"], status: 2 },
+      projection: { groups: ["default"], enabled: false },
       adjustments: { forcedDefaultGroup: true, simplifiedStatus: true },
     })
   })
@@ -378,7 +378,7 @@ describe("Veloera native channel migration", () => {
             groups: source.groups,
             priority: 0,
             weight: 0,
-            status: 1,
+            enabled: true,
           },
           credential: "credential-placeholder",
         }),

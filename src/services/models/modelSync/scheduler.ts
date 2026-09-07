@@ -1,5 +1,4 @@
 import { SITE_TYPES } from "~/constants/siteType"
-import { toOctopusModelChannel } from "~/services/apiAdapters/managedResources/modelInputs"
 import { ensureLegacyChannelConfigMigrationReady } from "~/services/managedSites/legacyChannelConfigMigration"
 import { resolveCurrentManagedSiteRuntimeConfig } from "~/services/managedSites/runtimeConfig"
 import {
@@ -39,7 +38,7 @@ import { ModelSyncMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
 import type {
   ManagedModelChannel,
-  ManagedModelChannelListData,
+  ManagedModelChannelSummaryListData,
 } from "~/types/managedResourceModels"
 import {
   ALL_PRESET_STANDARD_MODELS,
@@ -401,7 +400,7 @@ class ModelSyncScheduler {
     }
   }
 
-  async listChannels(): Promise<ManagedModelChannelListData> {
+  async listChannels(): Promise<ManagedModelChannelSummaryListData> {
     const userPrefs = await userPreferences.getPreferences()
     const { siteType, messagesKey } = getManagedSiteContext(userPrefs)
 
@@ -432,14 +431,17 @@ class ModelSyncScheduler {
         ),
       ).listChannels()
       return {
-        items: channels.map(toOctopusModelChannel),
+        items: channels.map(({ id, name }) => ({ id, name })),
         total: channels.length,
-        type_counts: {},
       }
     }
 
     const service = await this.createService()
-    return service.listChannels()
+    const list = await service.listChannels()
+    return {
+      items: list.items.map(({ id, name }) => ({ id, name })),
+      total: list.total,
+    }
   }
 
   /**
@@ -665,14 +667,8 @@ class ModelSyncScheduler {
    * Execute model sync for Octopus site.
    * Octopus uses a different API structure for fetching and updating models.
    *
-   * NOTE: This Octopus-specific sync path intentionally omits ModelRedirectService
-   * mappings (unlike executeSync for New API/Veloera). This is because:
-   * 1. The Octopus sync capability only updates the model list directly
-   * 2. Octopus channels initialize model_mapping as an empty string
-   * 3. Redirect logic is not applicable to Octopus's channel architecture
-   *
-   * If redirect behavior is ever required for Octopus, refer to ModelRedirectService
-   * and the executeSync method for the pattern used by New API/Veloera channels.
+   * Octopus has no registered redirect-mapping workflow; its native model sync
+   * only probes and updates the channel model list.
    */
   private async executeSyncForOctopus(
     channelIds: number[] | undefined,
@@ -701,16 +697,12 @@ class ModelSyncScheduler {
       protectionBypassExecution,
     )
     // List channels through the same intent-bound capability used by the batch.
-    const octopusChannels = await octopusModelSync.listChannels()
-    const allChannels = octopusChannels.map(toOctopusModelChannel)
+    const allChannels = await octopusModelSync.listChannels()
 
     // Filter channels if specific IDs provided
-    let channels: ManagedModelChannel[]
-    if (channelIds && channelIds.length > 0) {
-      channels = allChannels.filter((c) => channelIds.includes(c.id))
-    } else {
-      channels = allChannels
-    }
+    const channels = channelIds?.length
+      ? allChannels.filter((channel) => channelIds.includes(channel.id))
+      : allChannels
 
     if (channels.length === 0) {
       throw new Error(getManagedSiteNoChannelsToSyncMessage(t, messagesKey))

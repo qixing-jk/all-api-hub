@@ -18,7 +18,6 @@ import type { AccountToken, ApiToken, DisplaySiteData } from "~/types"
 import type { ClaudeCodeHubConfig } from "~/types/claudeCodeHubConfig"
 import type { ManagedResourceMatchCandidate } from "~/types/managedResourceMatching"
 import { type ManagedSiteChannelDraft } from "~/types/managedSiteChannelDraft"
-import { CHANNEL_STATUS } from "~/types/newApi"
 import { createLogger } from "~/utils/core/logger"
 import { normalizeList } from "~/utils/core/string"
 
@@ -178,6 +177,6 @@ export async function prepareChannelFormData(
     groups: [DEFAULT_GROUP_TAG],
     priority: 0,
     weight: 1,
-    status: CHANNEL_STATUS.Enable,
+    enabled: true,
   }
 }

@@ -9,7 +9,6 @@ import {
 } from "~/services/preferences/userPreferences"
 import type { AccountToken, ApiToken, DisplaySiteData } from "~/types"
 import { type ManagedSiteChannelDraft } from "~/types/managedSiteChannelDraft"
-import { CHANNEL_STATUS } from "~/types/newApi"
 import { createLogger } from "~/utils/core/logger"
 import { normalizeList } from "~/utils/core/string"
 
@@ -64,6 +63,6 @@ export async function prepareChannelFormData(
     groups: [],
     priority: 0,
     weight: 0,
-    status: CHANNEL_STATUS.Enable,
+    enabled: true,
   }
 }

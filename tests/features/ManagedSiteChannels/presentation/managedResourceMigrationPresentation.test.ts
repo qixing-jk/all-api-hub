@@ -2,8 +2,9 @@ import { createInstance, type TFunction } from "i18next"
 import { describe, expect, it } from "vitest"
 
 import { AXON_HUB_CHANNEL_TYPE } from "~/constants/axonHub"
+import { CLAUDE_CODE_HUB_PROVIDER_TYPE } from "~/constants/claudeCodeHub"
 import { DoneHubChannelType } from "~/constants/doneHub"
-import { ChannelType } from "~/constants/newApi"
+import { type ChannelType } from "~/constants/newApi"
 import { SITE_TYPES } from "~/constants/siteType"
 import { VeloeraChannelType } from "~/constants/veloera"
 import {
@@ -29,6 +30,7 @@ import {
   type ManagedSiteMigrationCanonicalPreview,
   type ManagedSiteMigrationSource,
 } from "~/types/managedSiteMigrationCapability"
+import { OctopusOutboundType } from "~/types/octopus"
 
 const translations: Record<string, string> = {
   "channelDialog:fields.baseUrl.label": "Base URL",
@@ -99,7 +101,7 @@ const buildSource = (
   overrides: Partial<ManagedSiteMigrationSource> = {},
 ): ManagedSiteMigrationSource => ({
   sourceSiteType: SITE_TYPES.AXON_HUB,
-  resourceType: ChannelType.Anthropic,
+  resourceType: AXON_HUB_CHANNEL_TYPE.ANTHROPIC,
   baseUrl: "https://source.example.invalid/v1",
   models: ["model-b", "model-a"],
   groups: ["source-group"],
@@ -145,7 +147,7 @@ const preview: ManagedSiteMigrationCanonicalPreview = {
           groups: ["default", "fallback"],
           priority: 2,
           weight: 8,
-          status: 2,
+          enabled: false,
         },
         adjustments: {
           remappedType: true,
@@ -344,7 +346,7 @@ describe("managedResourceMigrationPresentation", () => {
     )
   })
 
-  it("keeps canonical source types distinct from Veloera target types", () => {
+  it("shows Veloera's native source and target vocabulary for colliding numeric types", () => {
     const readyItem = preview.items[0]!
     if (readyItem.status !== "ready") throw new Error("expected ready item")
     const veloeraPreview: ManagedSiteMigrationCanonicalPreview = {
@@ -379,11 +381,51 @@ describe("managedResourceMigrationPresentation", () => {
 
     expect(mapped.rows[0].comparisons.find(({ id }) => id === "type")).toEqual(
       expect.objectContaining({
-        source: "Coze",
+        source: "GitHub Models",
         target: "GitHub Models",
       }),
     )
   })
+
+  it.each([
+    [SITE_TYPES.DONE_HUB, DoneHubChannelType.DeepSeek, "DeepSeek"],
+    [SITE_TYPES.OCTOPUS, OctopusOutboundType.Anthropic, "Anthropic"],
+    [
+      SITE_TYPES.AXON_HUB,
+      AXON_HUB_CHANNEL_TYPE.OPENAI_RESPONSES,
+      "OpenAI Responses",
+    ],
+    [
+      SITE_TYPES.CLAUDE_CODE_HUB,
+      CLAUDE_CODE_HUB_PROVIDER_TYPE.CODEX,
+      "Codex (Responses API)",
+    ],
+    [SITE_TYPES.AXON_HUB, 14, "Unsupported type"],
+    [SITE_TYPES.CLAUDE_CODE_HUB, 14, "Unsupported type"],
+  ] as const)(
+    "shows the native %s source type %s without New API label fallback",
+    (sourceSiteType, resourceType, expected) => {
+      const readyItem = preview.items[0]!
+      if (readyItem.status !== "ready") throw new Error("expected ready item")
+      const mapped = mapManagedResourceMigrationPreview(
+        {
+          ...preview,
+          sourceSiteType,
+          items: [
+            {
+              ...readyItem,
+              source: buildSource({ sourceSiteType, resourceType }),
+            },
+          ],
+        },
+        { t, getSiteLabel: String },
+      )
+
+      expect(
+        mapped.rows[0].comparisons.find(({ id }) => id === "type")?.source,
+      ).toBe(expected)
+    },
+  )
 
   it("preserves opaque row order and all seven canonical comparison values", () => {
     const mapped = mapManagedResourceMigrationPreview(preview, {
