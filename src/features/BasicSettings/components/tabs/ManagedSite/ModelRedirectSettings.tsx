@@ -11,6 +11,7 @@ import {
   Notice,
 } from "~/components/ui"
 import { Switch } from "~/components/ui/Switch"
+import { SITE_TYPES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { BASIC_SETTINGS_TEST_IDS } from "~/features/BasicSettings/testIds"
 import { getManagedSiteCapabilities } from "~/services/apiAdapters/registry"
@@ -54,7 +55,9 @@ export default function ModelRedirectSettings() {
 
   const modelRedirect = preferences?.modelRedirect
   const isSupported = preferences
-    ? supportsManagedSiteModelRedirect(preferences.managedSiteType)
+    ? supportsManagedSiteModelRedirect(
+        preferences.managedSiteType || SITE_TYPES.NEW_API,
+      )
     : null
 
   const [modelList, setModelList] = useState(ALL_PRESET_STANDARD_MODELS)
@@ -77,15 +80,15 @@ export default function ModelRedirectSettings() {
 
       setModelDiscoveryStatus("loading")
 
-      const managedConfig =
-        resolveCurrentManagedSiteRuntimeConfig(preferences)?.config ?? null
-      if (!managedConfig) {
+      const managedSiteRuntimeConfig =
+        resolveCurrentManagedSiteRuntimeConfig(preferences)
+      if (!managedSiteRuntimeConfig) {
         setModelDiscoveryStatus("not-ready")
         return
       }
 
       const fetchAccountAvailableModels = getManagedSiteCapabilities(
-        preferences.managedSiteType,
+        managedSiteRuntimeConfig.siteType,
       ).queries?.accountAvailableModels?.fetch
       if (!fetchAccountAvailableModels) {
         setModelDiscoveryStatus("unsupported")
@@ -93,7 +96,9 @@ export default function ModelRedirectSettings() {
       }
 
       try {
-        const models = await fetchAccountAvailableModels(managedConfig)
+        const models = await fetchAccountAvailableModels(
+          managedSiteRuntimeConfig.config,
+        )
         if (!cancelled) {
           setModelDiscoveryStatus("available")
         }

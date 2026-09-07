@@ -9,6 +9,7 @@ import {
 import {
   openNativeManagedChannelImportEditor,
   openNativeManagedChannelImportSession,
+  validateNativeManagedChannelImportDraft,
 } from "~/services/apiAdapters/managedResources/channelImport"
 import * as managedResourceRegistry from "~/services/apiAdapters/managedResources/registry"
 import { type ManagedSiteChannelDraft } from "~/types/managedSiteChannelDraft"
@@ -30,6 +31,26 @@ afterEach(() => {
 })
 
 describe("native managed-channel import", () => {
+  it.each([
+    { case: "duplicate", models: ["model-a", "model-a"] },
+    { case: "empty", models: [] },
+  ])(
+    "binds AxonHub $case model issues to the import model field",
+    ({ models }) => {
+      const validation = validateNativeManagedChannelImportDraft(
+        SITE_TYPES.AXON_HUB,
+        { ...draft, models },
+      )
+
+      expect(validation).toMatchObject({ valid: false })
+      if (validation.valid) throw new Error("Expected model validation issues")
+      expect(validation.issues.map((issue) => issue.fieldId)).toEqual([
+        "models",
+        "models",
+      ])
+    },
+  )
+
   it("discovers import support from the exact registration without provider branching", async () => {
     const editor = {
       fields: [],

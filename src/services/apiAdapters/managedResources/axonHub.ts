@@ -1709,6 +1709,8 @@ const axonHubNativeDefinition = {
         [AXON_HUB_CHANNEL_FIELD_IDS.BASE_URL]: "baseUrl",
         [AXON_HUB_CHANNEL_FIELD_IDS.KEY]: "credential",
         [AXON_HUB_CHANNEL_FIELD_IDS.SUPPORTED_MODELS]: "models",
+        [AXON_HUB_CHANNEL_FIELD_IDS.MANUAL_MODELS]: "models",
+        [AXON_HUB_CHANNEL_FIELD_IDS.DEFAULT_TEST_MODEL]: "models",
         [AXON_HUB_CHANNEL_FIELD_IDS.ORDERING_WEIGHT]: "orderingWeight",
       } as const,
     },

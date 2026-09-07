@@ -7,6 +7,10 @@ import { ChannelType } from "~/constants/newApi"
 import { OCTOPUS_COOKIE_SESSION_STATUS_PATH } from "~/constants/octopus"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SITE_TYPES } from "~/constants/siteType"
+import type {
+  DoneHubChannelRaw,
+  DoneHubUpdateChannelPayload,
+} from "~/types/doneHub"
 import type { NewApiChannel } from "~/types/newApi"
 import {
   forceExtensionLanguage,
@@ -60,25 +64,33 @@ const interceptedNewApiChannelTemplates = [
   }),
 ]
 
-const interceptedDoneHubChannelTemplates = [
-  newApiChannel({
+const interceptedDoneHubChannelTemplates: DoneHubChannelRaw[] = [
+  {
     id: DONE_HUB_PRIMARY_ID,
     name: "DoneHub primary",
     type: DoneHubChannelType.Anthropic,
+    key: "sk-example",
     base_url: "https://donehub-primary.example.invalid/v1",
     models: "model-donehub-a",
     group: "default",
+    status: 1,
+    priority: 3,
+    weight: 2,
     tag: "linked-channels",
-  }),
-  newApiChannel({
+  },
+  {
     id: 702,
     name: "DoneHub secondary",
     type: DoneHubChannelType.OpenAI,
+    key: "sk-example",
     base_url: "https://donehub-secondary.example.invalid/v1",
     models: "model-donehub-b",
     group: "example",
+    status: 1,
+    priority: 3,
+    weight: 2,
     tag: "linked-channels",
-  }),
+  },
 ]
 
 let interceptedNewApiChannels: NewApiChannel[] = []
@@ -88,7 +100,7 @@ let interceptedNewApiListRequestCount = 0
 let interceptedNewApiFetchModelsRequestCount = 0
 let interceptedNewApiSecretRequestCount = 0
 let interceptedNewApiDeleteRequestCount = 0
-let interceptedDoneHubChannels: NewApiChannel[] = []
+let interceptedDoneHubChannels: DoneHubChannelRaw[] = []
 let interceptedAxonHubPrimaryName = "Example primary"
 let interceptedAxonHubPrimaryTags = ["fixture-tag"]
 let interceptedAxonHubUpdateVariables: Record<string, unknown> | null = null
@@ -516,10 +528,9 @@ async function installDoneHubManagedSiteChannelsIntercepts(
       }
 
       if (path === "/api/channel/" && method === "PUT") {
-        const payload = JSON.parse(request.postData() ?? "{}") as Record<
-          string,
-          unknown
-        > & { id?: number }
+        const payload = JSON.parse(
+          request.postData() ?? "{}",
+        ) as Partial<DoneHubUpdateChannelPayload>
         const index = interceptedDoneHubChannels.findIndex(
           (candidate) => candidate.id === payload.id,
         )
@@ -529,7 +540,7 @@ async function installDoneHubManagedSiteChannelsIntercepts(
         }
         interceptedDoneHubChannels[index] = {
           ...interceptedDoneHubChannels[index],
-          ...(payload as Partial<NewApiChannel>),
+          ...payload,
         }
         await fulfill(route, { success: true, message: "ok" })
         return

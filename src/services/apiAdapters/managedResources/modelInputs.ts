@@ -7,7 +7,7 @@ interface ChannelModelRecord {
   type: number | string
   base_url: string
   key?: string
-  models: string
+  models?: string | null
   status: number
   model_mapping: string
 }
@@ -25,7 +25,7 @@ export function toManagedModelChannelList(
       type: channel.type,
       baseUrl: channel.base_url,
       credential: channel.key,
-      models: channel.models
+      models: (channel.models ?? "")
         .split(",")
         .map((model) => model.trim())
         .filter(Boolean),

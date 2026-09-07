@@ -84,6 +84,42 @@ describe("newApi managed-site channel capability", () => {
   const models = ["model-a", "model-b"]
   const modelMapping = { "model-a": "upstream-model-a" }
 
+  it.each([
+    { case: "missing", modelFields: {} },
+    { case: "null", modelFields: { models: null } },
+  ])(
+    "keeps the model inventory usable with $case channel models",
+    async ({ modelFields }) => {
+      const channel = {
+        id: 7,
+        name: "Unconfigured models",
+        type: 1,
+        status: 1,
+        base_url: "https://upstream.example.invalid",
+        key: "",
+        model_mapping: "{}",
+      }
+      channelManagement.listAllChannels.mockResolvedValueOnce({
+        items: [
+          { ...channel, ...modelFields },
+          { ...channel, id: 8, models: " model-a, , model-b " },
+        ],
+        total: 2,
+        type_counts: { "1": 2 },
+      })
+
+      await expect(
+        newApiManagedResourceModels.list(config, undefined),
+      ).resolves.toMatchObject({
+        total: 2,
+        items: [
+          { id: 7, models: [] },
+          { id: 8, models: ["model-a", "model-b"] },
+        ],
+      })
+    },
+  )
+
   const arrangeRestMutation =
     (mock: typeof channelManagement.createChannel, successData: unknown) =>
     (scenario: ChannelMutationScenario) => {

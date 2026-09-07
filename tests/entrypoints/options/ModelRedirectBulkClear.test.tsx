@@ -1,3 +1,4 @@
+import userEvent from "@testing-library/user-event"
 import toast from "react-hot-toast"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -121,6 +122,55 @@ describe("Model redirect bulk clear flow", () => {
   })
 
   const renderSubject = () => render(<ModelRedirectSettings />)
+
+  it("discovers models from the default New API configuration in legacy preferences", async () => {
+    const user = userEvent.setup()
+    const runtimeConfig = await vi.importActual<
+      typeof import("~/services/managedSites/runtimeConfig")
+    >("~/services/managedSites/runtimeConfig")
+    const redirectCapabilities = await vi.importActual<
+      typeof import("~/services/models/modelRedirect/capabilities")
+    >("~/services/models/modelRedirect/capabilities")
+    const registry = await vi.importActual<
+      typeof import("~/services/apiAdapters/registry")
+    >("~/services/apiAdapters/registry")
+    const config = {
+      baseUrl: "https://legacy.example.invalid",
+      adminToken: "legacy-admin-token",
+      userId: "7",
+    }
+    const fetch = vi.fn().mockResolvedValue(["legacy-discovered-model"])
+    vi.mocked(resolveCurrentManagedSiteRuntimeConfig).mockImplementationOnce(
+      runtimeConfig.resolveCurrentManagedSiteRuntimeConfig,
+    )
+    vi.mocked(supportsManagedSiteModelRedirect).mockImplementation(
+      redirectCapabilities.supportsManagedSiteModelRedirect,
+    )
+    mockedGetManagedSiteCapabilitiesForType.mockImplementation((siteType) => ({
+      ...registry.getManagedSiteCapabilities(siteType),
+      queries: { accountAvailableModels: { fetch } },
+    }))
+    mockedUseUserPreferencesContext.mockReturnValue({
+      preferences: {
+        newApi: config,
+        modelRedirect: { enabled: true, standardModels: [] },
+      },
+      updateModelRedirect: vi.fn(),
+      resetModelRedirectConfig: vi.fn(),
+    })
+
+    renderSubject()
+
+    await user.click(
+      await screen.findByRole("combobox", {
+        name: "modelRedirect:standardModels",
+      }),
+    )
+    expect(
+      await screen.findByRole("option", { name: "legacy-discovered-model" }),
+    ).toBeVisible()
+    expect(fetch).toHaveBeenCalledWith(config)
+  })
 
   it("shows the preference write failure message when enabling redirects fails", async () => {
     const updateModelRedirect = vi.fn().mockResolvedValue({
