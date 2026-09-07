@@ -11,6 +11,7 @@ import {
 } from "~/features/AccountManagement/components/AccountDialog/models"
 import { BOOKMARK_IMPORT_ADD_ACCOUNT_PREFILL_SOURCE } from "~/features/AccountManagement/sponsors/types"
 import { AuthTypeEnum } from "~/types"
+import { testI18n } from "~~/tests/test-utils/i18n"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 
 const originalBrowser = globalThis.browser
@@ -152,6 +153,53 @@ describe("useAccountDialog sponsor prefill", () => {
       )
     })
     expect(result.current.state.showAccessToken).toBe(false)
+  })
+
+  it("keeps edits made after token recovery when the language changes", async () => {
+    const originalLanguage = testI18n.language
+    testI18n.addResourceBundle(
+      "zh-CN",
+      "accountDialog",
+      (await import("~/locales/zh-CN/accountDialog.json")).default,
+    )
+    const recoveryState = {
+      url: "https://original-site.example.com",
+      draft: createEmptyAccountDialogDraft(SITE_TYPES.NEW_API),
+      checkInSelectionChanged: false,
+      checkInDiscoveryBaseSelection: null,
+    }
+    const { result } = renderAccountDialogHook({
+      mode: DIALOG_MODES.ADD,
+      isOpen: true,
+      onClose: vi.fn(),
+      recoveryState,
+    })
+
+    act(() => {
+      result.current.setters.setAccessToken("copied-access-token")
+      result.current.setters.setNotes("Updated after recovery")
+    })
+
+    try {
+      await act(async () => {
+        await testI18n.changeLanguage("zh-CN")
+      })
+
+      expect(result.current.state.draft).toEqual({
+        ...recoveryState.draft,
+        accessToken: "copied-access-token",
+        notes: "Updated after recovery",
+      })
+      expect(result.current.state.url).toBe(recoveryState.url)
+      expect(result.current.state.detectionError?.message).toBe(
+        testI18n.t("accountDialog:accessTokenVerification.description"),
+      )
+    } finally {
+      await act(async () => {
+        await testI18n.changeLanguage(originalLanguage)
+      })
+      testI18n.removeResourceBundle("zh-CN", "accountDialog")
+    }
   })
 
   it("keeps the current-site prompt live while binding title updates to the selected URL", async () => {

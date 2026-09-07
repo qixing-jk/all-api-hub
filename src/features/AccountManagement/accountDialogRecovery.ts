@@ -156,24 +156,50 @@ export async function prepareAccountDialogRecovery(
   return prepared
 }
 
+/** Sidebar broadcasts require a lock shared by every extension view. */
+export function canUseAccountDialogRecoverySidePanel(): boolean {
+  return (
+    getSidePanelSupport().supported &&
+    typeof globalThis.navigator?.locks?.request === "function"
+  )
+}
+
 /** Opens the native sidebar in the click turn, with a draft-preserving tab fallback. */
 export async function openAccountDialogRecovery(
   prepared: PreparedAccountDialogRecovery,
 ): Promise<"sidepanel" | "tab"> {
   const windowId = prepared.windowId
   const key = pendingKey(windowId)
-  if (getSidePanelSupport().supported) {
-    const signal = setSessionStorageValues({ [key]: prepared.id })
+  if (canUseAccountDialogRecoverySidePanel()) {
+    const signal = withExtensionStorageWriteLock(
+      STORAGE_LOCKS.ACCOUNT_DIALOG_RECOVERY,
+      async () => {
+        const pendingId = await getPendingAccountDialogRecovery(windowId)
+        // Preserve an unclaimed form; the new form can continue in its own tab.
+        if (pendingId && pendingId !== prepared.id) return false
+        if (!(await setSessionStorageValues({ [key]: prepared.id }))) {
+          throw new Error("Account recovery handoff unavailable")
+        }
+        return true
+      },
+    )
     // Do not await storage before this call: Chromium requires user activation.
     const opened = openSidePanel(prepared.tab).then(
       () => true,
       () => false,
     )
-    if (!(await signal)) throw new Error("Account recovery handoff unavailable")
-    if (await opened) return "sidepanel"
-    await removeSessionStorageValues(key)
-    const values = await getSessionStorageValues(draftKey(prepared.id))
-    if (!values[draftKey(prepared.id)]) return "sidepanel"
+    if (await signal) {
+      if (await opened) return "sidepanel"
+      const draftAvailable = await withExtensionStorageWriteLock(
+        STORAGE_LOCKS.ACCOUNT_DIALOG_RECOVERY,
+        async () => {
+          await clearPendingRecovery(prepared.id, windowId)
+          const values = await getSessionStorageValues(draftKey(prepared.id))
+          return Boolean(values[draftKey(prepared.id)])
+        },
+      )
+      if (!draftAvailable) return "sidepanel"
+    }
   }
 
   const destination = new URL(getExtensionURL(OPTIONS_PAGE_PATH))
@@ -209,7 +235,7 @@ export function watchPendingAccountDialogRecovery(
   })
 }
 
-/** Clears a consumed or expired request without discarding a different handoff. */
+/** Clears only this request while the caller holds the shared recovery lock. */
 async function clearPendingRecovery(
   id: string,
   windowId: number,
@@ -240,7 +266,8 @@ export async function receiveAccountDialogRecovery(
       }
       if (
         expectedWindowId !== undefined &&
-        envelope.windowId !== expectedWindowId
+        (envelope.windowId !== expectedWindowId ||
+          (await getPendingAccountDialogRecovery(expectedWindowId)) !== id)
       )
         return false
       if (!accept(envelope.state)) return false

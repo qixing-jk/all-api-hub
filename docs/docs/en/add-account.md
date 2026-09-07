@@ -35,7 +35,7 @@ Quick links:
 ::: tip Security verification during auto-detection
 Newer New API versions require verification on the site before generating an Access Token. When **"Enter an Access Token manually"** appears, the extension keeps detected account details and switches to Access Token authentication.
 
-In the extension popup, click **"Continue in side panel"** to carry your current form into the side panel. If it cannot open, the form opens in a full page. Then select **"Open site security settings"**, complete verification on the site, copy the token, and return to the preserved form to paste it and save.
+In the extension popup, click **"Continue in side panel"** to carry your current form into the side panel. If side panels are not supported, click **"Continue in full page"**. The form also opens in a full page if the side panel fails to open. Then select **"Open site security settings"**, complete verification on the site, copy the token, and return to the preserved form to paste it and save.
 :::
 
 1. Sign in to your New API site.

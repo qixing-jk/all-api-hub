@@ -1449,7 +1449,7 @@ export function useAccountDialog({
         )
         setDetectionError({
           type: AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED,
-          message: t("accessTokenVerification.description"),
+          message: i18n.t("accountDialog:accessTokenVerification.description"),
         })
       } else if (mode === DIALOG_MODES.EDIT && account) {
         loadAccountData(account.id)
@@ -1467,8 +1467,19 @@ export function useAccountDialog({
     resetForm,
     loadAccountData,
     checkCurrentTab,
-    t,
+    i18n,
   ])
+
+  useEffect(() => {
+    const message = t("accessTokenVerification.description")
+    setDetectionError((current) =>
+      current?.type ===
+        AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED &&
+      current.message !== message
+        ? { ...current, message }
+        : current,
+    )
+  }, [t])
 
   useEffect(() => {
     if (!isOpen || mode !== DIALOG_MODES.ADD) {

@@ -31,10 +31,16 @@ export function useAccountDialogRecoveryReceiver({
     if (!enabled || (!initialRecoveryId && !isExtensionSidePanel())) return
     let cancelled = false
     let processing = false
+    let queuedRecovery: { id: string; windowId: number | undefined } | null =
+      null
     let stopWatching = () => {}
 
     const receive = async (id: string | null, windowId?: number) => {
-      if (!id || cancelled || processing || received.current.has(id)) return
+      if (!id || cancelled || received.current.has(id)) return
+      if (processing) {
+        queuedRecovery = { id, windowId }
+        return
+      }
       processing = true
       try {
         let inspected = false
@@ -73,6 +79,9 @@ export function useAccountDialogRecoveryReceiver({
         if (!cancelled) toast.error(t("accessTokenVerification.restoreFailed"))
       } finally {
         processing = false
+        const next = queuedRecovery
+        queuedRecovery = null
+        if (next) void receive(next.id, next.windowId)
       }
     }
 

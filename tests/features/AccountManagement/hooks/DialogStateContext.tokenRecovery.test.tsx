@@ -1,5 +1,5 @@
 import userEvent from "@testing-library/user-event"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import {
@@ -111,7 +111,18 @@ describe("account dialog token recovery destinations", () => {
     values.clear()
     listeners.clear()
     isSidePanel.mockReturnValue(true)
+    vi.stubGlobal("navigator", {
+      locks: {
+        request: (
+          _name: string,
+          _options: LockOptions,
+          callback: (lock: Lock | null) => Promise<unknown>,
+        ) => callback(null),
+      },
+    })
   })
+
+  afterEach(() => vi.unstubAllGlobals())
 
   it("restores a handoff that arrives after the side panel has mounted", async () => {
     const prepared = await prepareAccountDialogRecovery(snapshot())

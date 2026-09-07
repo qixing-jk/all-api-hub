@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
+  canUseAccountDialogRecoverySidePanel,
   discardAccountDialogRecovery,
   openAccountDialogRecovery,
   prepareAccountDialogRecovery,
@@ -9,7 +10,6 @@ import {
 } from "~/features/AccountManagement/accountDialogRecovery"
 import type { AccessTokenContinuationAction } from "~/features/AccountManagement/components/AccountDialog/AccessTokenVerificationGuide"
 import type { AccountDialogRecoveryState } from "~/features/AccountManagement/components/AccountDialog/models"
-import { getSidePanelSupport } from "~/utils/browser/browserApi"
 import { closeIfPopup } from "~/utils/navigation"
 
 /** Keeps a popup form ready before the user invokes the native sidebar API. */
@@ -75,7 +75,7 @@ export function useAccountDialogRecoveryHandoff({
   const currentFailure = failure?.state === state ? failure : null
 
   return {
-    sidePanelSupported: getSidePanelSupport().supported,
+    sidePanelSupported: canUseAccountDialogRecoverySidePanel(),
     isPending: opening || (!ready && !currentFailure),
     disabled: !ready,
     errorMessage: currentFailure
