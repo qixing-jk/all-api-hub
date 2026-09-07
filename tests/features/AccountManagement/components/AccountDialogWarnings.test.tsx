@@ -172,6 +172,43 @@ describe("AccountDialog warnings", () => {
     ).not.toBeInTheDocument()
   })
 
+  it("prepares the token input even when opening the security page fails and allows retry", async () => {
+    const user = userEvent.setup()
+    const onPrepareAccessTokenInput = vi.fn()
+    vi.mocked(browser.tabs.create).mockRejectedValueOnce(
+      new Error("Tab unavailable"),
+    )
+    render(
+      <AutoDetectErrorAlert
+        error={{
+          type: AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED,
+          message: "Verify on the site",
+        }}
+        siteUrl="https://site.example.com"
+        siteType={SITE_TYPES.NEW_API}
+        onPrepareAccessTokenInput={onPrepareAccessTokenInput}
+      />,
+    )
+    const openSecurity = screen.getByRole("button", {
+      name: "accessTokenVerification.openSecurity",
+    })
+
+    await user.click(openSecurity)
+
+    expect(
+      await screen.findByText("accessTokenVerification.openSecurityFailed"),
+    ).toHaveAttribute("role", "alert")
+    expect(onPrepareAccessTokenInput).toHaveBeenCalledTimes(1)
+    expect(onPrepareAccessTokenInput.mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(browser.tabs.create).mock.invocationCallOrder[0],
+    )
+    await user.click(openSecurity)
+    expect(onPrepareAccessTokenInput).toHaveBeenCalledTimes(2)
+    expect(
+      screen.queryByText("accessTokenVerification.openSecurityFailed"),
+    ).not.toBeInTheDocument()
+  })
+
   it("shows only the message when no action or help recovery is available", () => {
     render(
       <AutoDetectErrorAlert

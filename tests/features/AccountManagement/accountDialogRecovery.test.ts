@@ -2,14 +2,21 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import {
+  discardAccountDialogRecovery,
   getPendingAccountDialogRecovery,
   openAccountDialogRecovery,
   prepareAccountDialogRecovery,
   receiveAccountDialogRecovery,
 } from "~/features/AccountManagement/accountDialogRecovery"
-import { createEmptyAccountDialogDraft } from "~/features/AccountManagement/components/AccountDialog/models"
+import {
+  createEmptyAccountDialogDraft,
+  type AccountDialogRecoveryState,
+} from "~/features/AccountManagement/components/AccountDialog/models"
 import { ACCOUNT_DIALOG_RECOVERY_STORAGE_KEYS } from "~/services/core/storageKeys"
-import { setSessionStorageValues } from "~/utils/browser/browserApi"
+import {
+  getActiveTab,
+  setSessionStorageValues,
+} from "~/utils/browser/browserApi"
 import { createDeferred } from "~~/tests/test-utils/deferred"
 
 const {
@@ -317,5 +324,130 @@ describe("account dialog recovery handoff", () => {
     )
     expect(openSidePanel).not.toHaveBeenCalled()
     expect(createTab).not.toHaveBeenCalled()
+  })
+
+  it("does not stage a draft without a browser window to receive it", async () => {
+    vi.mocked(getActiveTab).mockResolvedValueOnce(null)
+
+    await expect(prepareAccountDialogRecovery(recoveryState())).rejects.toThrow(
+      "Recovery window unavailable",
+    )
+
+    expect(sessionValues.size).toBe(0)
+    expect(openSidePanel).not.toHaveBeenCalled()
+    expect(createTab).not.toHaveBeenCalled()
+  })
+
+  it("keeps a staged draft retryable when the pending handoff cannot be written", async () => {
+    const original = recoveryState()
+    const prepared = await prepareAccountDialogRecovery(original)
+    vi.mocked(setSessionStorageValues).mockResolvedValueOnce(false)
+
+    await expect(openAccountDialogRecovery(prepared)).rejects.toThrow(
+      "Account recovery handoff unavailable",
+    )
+
+    await expect(openAccountDialogRecovery(prepared)).resolves.toBe("sidepanel")
+    const accept = vi.fn(() => true)
+    await expect(
+      receiveAccountDialogRecovery(prepared.id, accept, activeTab.windowId),
+    ).resolves.toBe(true)
+    expect(accept).toHaveBeenCalledWith(original)
+  })
+
+  it("retains the draft if the fallback page cannot be created", async () => {
+    supportsSidePanel.mockReturnValue(false)
+    createTab.mockResolvedValueOnce(undefined)
+    const original = recoveryState()
+    const prepared = await prepareAccountDialogRecovery(original)
+
+    await expect(openAccountDialogRecovery(prepared)).rejects.toThrow(
+      "Account recovery tab unavailable",
+    )
+
+    await expect(openAccountDialogRecovery(prepared)).resolves.toBe("tab")
+    const accept = vi.fn(() => true)
+    await expect(
+      receiveAccountDialogRecovery(prepared.id, accept),
+    ).resolves.toBe(true)
+    expect(accept).toHaveBeenCalledWith(original)
+  })
+
+  it("restores the edited account identity and the user's check-in selection", async () => {
+    const original: AccountDialogRecoveryState = {
+      ...recoveryState(),
+      accountId: "existing-account",
+      checkInSelectionChanged: true,
+      checkInDiscoveryBaseSelection: { mode: "automatic" },
+    }
+    const prepared = await prepareAccountDialogRecovery(original)
+    const accept = vi.fn(() => true)
+
+    await expect(
+      receiveAccountDialogRecovery(prepared.id, accept),
+    ).resolves.toBe(true)
+
+    expect(accept).toHaveBeenCalledWith(original)
+  })
+
+  it.each<{
+    name: string
+    state?: Record<string, unknown>
+    draft?: Record<string, unknown>
+  }>([
+    { name: "invalid site URL", state: { url: "javascript:alert(1)" } },
+    { name: "empty account reference", state: { accountId: " " } },
+    {
+      name: "invalid discovery selection",
+      state: { checkInDiscoveryBaseSelection: "invalid" },
+    },
+    { name: "invalid check-in settings", draft: { checkIn: null } },
+    { name: "non-string tag IDs", draft: { tagIds: [42] } },
+    {
+      name: "non-finite token expiration",
+      draft: { sub2apiTokenExpiresAt: Infinity },
+    },
+    { name: "incorrect text field type", draft: { notes: null } },
+  ])(
+    "rejects and removes a stored draft with $name",
+    async ({ state, draft }) => {
+      const original = recoveryState()
+      const prepared = await prepareAccountDialogRecovery(original)
+      const key = `${ACCOUNT_DIALOG_RECOVERY_STORAGE_KEYS.DRAFT_PREFIX}${prepared.id}`
+      const envelope = sessionValues.get(key) as Record<string, unknown>
+      sessionValues.set(key, {
+        ...envelope,
+        state: {
+          ...original,
+          ...state,
+          draft: { ...original.draft, ...draft },
+        },
+      })
+      const accept = vi.fn(() => true)
+
+      await expect(
+        receiveAccountDialogRecovery(prepared.id, accept),
+      ).resolves.toBe(false)
+
+      expect(accept).not.toHaveBeenCalled()
+      expect(sessionValues.has(key)).toBe(false)
+    },
+  )
+
+  it("discards only the abandoned form while leaving another recovery available", async () => {
+    const abandoned = await prepareAccountDialogRecovery(recoveryState())
+    const retained = await prepareAccountDialogRecovery(recoveryState())
+
+    await discardAccountDialogRecovery(abandoned.id)
+
+    const accept = vi.fn(() => true)
+    await expect(
+      receiveAccountDialogRecovery(abandoned.id, accept),
+    ).resolves.toBe(false)
+    expect(accept).not.toHaveBeenCalled()
+    await expect(
+      receiveAccountDialogRecovery(retained.id, accept),
+    ).resolves.toBe(true)
+    expect(accept).toHaveBeenCalledTimes(1)
   })
 })

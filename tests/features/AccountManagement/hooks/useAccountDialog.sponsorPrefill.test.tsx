@@ -11,6 +11,7 @@ import {
 } from "~/features/AccountManagement/components/AccountDialog/models"
 import { BOOKMARK_IMPORT_ADD_ACCOUNT_PREFILL_SOURCE } from "~/features/AccountManagement/sponsors/types"
 import { AuthTypeEnum } from "~/types"
+import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 import { testI18n } from "~~/tests/test-utils/i18n"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 
@@ -118,42 +119,60 @@ describe("useAccountDialog sponsor prefill", () => {
     onTabUpdatedMock.mockImplementation(() => () => {})
   })
 
-  it("resumes manual token recovery without replacing the carried form with the active tab", async () => {
-    const recoveryState = {
-      url: "https://original-site.example.com",
-      draft: {
-        ...createEmptyAccountDialogDraft(SITE_TYPES.NEW_API),
-        username: "retained-user",
-        userId: "42",
-        siteName: "My original site",
-        notes: "Notes entered in the popup",
-        tagIds: ["personal"],
-        accessToken: "manually-entered-token",
-        exchangeRate: "7.2",
-      },
-      checkInSelectionChanged: false,
-      checkInDiscoveryBaseSelection: null,
-    }
-    const { result } = renderAccountDialogHook({
-      mode: DIALOG_MODES.ADD,
-      isOpen: true,
-      onClose: vi.fn(),
-      onSuccess: vi.fn(),
-      recoveryState,
-    })
+  it.each([DIALOG_MODES.ADD, DIALOG_MODES.EDIT])(
+    "resumes %s token recovery without replacing the carried form with the active tab",
+    async (mode) => {
+      const account =
+        mode === DIALOG_MODES.EDIT
+          ? buildDisplaySiteData({
+              id: "recovered-account",
+              siteType: SITE_TYPES.NEW_API,
+            })
+          : undefined
+      const recoveryState = {
+        url: "https://original-site.example.com",
+        ...(account ? { accountId: account.id } : {}),
+        draft: {
+          ...createEmptyAccountDialogDraft(SITE_TYPES.NEW_API),
+          username: "retained-user",
+          userId: "42",
+          siteName: "My original site",
+          notes: "Notes entered in the popup",
+          tagIds: ["personal"],
+          accessToken: "manually-entered-token",
+          exchangeRate: "7.2",
+        },
+        checkInSelectionChanged: false,
+        checkInDiscoveryBaseSelection: null,
+      }
+      const { result } = renderAccountDialogHook({
+        mode,
+        account,
+        isOpen: true,
+        onClose: vi.fn(),
+        onSuccess: vi.fn(),
+        recoveryState,
+      })
 
-    await waitFor(() => {
-      expect(result.current.state.phase).toBe(
-        ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM,
+      await waitFor(() => {
+        expect(result.current.state.phase).toBe(
+          ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM,
+        )
+        expect(result.current.state.url).toBe(recoveryState.url)
+        expect(result.current.state.draft).toEqual(recoveryState.draft)
+        expect(result.current.state.detectionError?.type).toBe(
+          "access_token_verification_required",
+        )
+      })
+      expect(result.current.state.showAccessToken).toBe(false)
+      expect(result.current.state.formSource).toBe(
+        account
+          ? ACCOUNT_DIALOG_FORM_SOURCES.EXISTING_ACCOUNT
+          : ACCOUNT_DIALOG_FORM_SOURCES.MANUAL,
       )
-      expect(result.current.state.url).toBe(recoveryState.url)
-      expect(result.current.state.draft).toEqual(recoveryState.draft)
-      expect(result.current.state.detectionError?.type).toBe(
-        "access_token_verification_required",
-      )
-    })
-    expect(result.current.state.showAccessToken).toBe(false)
-  })
+      expect(result.current.state.tokenRecoveryState).toEqual(recoveryState)
+    },
+  )
 
   it("keeps edits made after token recovery when the language changes", async () => {
     const originalLanguage = testI18n.language

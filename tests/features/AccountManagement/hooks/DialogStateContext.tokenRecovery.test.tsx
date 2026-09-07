@@ -1,24 +1,30 @@
 import userEvent from "@testing-library/user-event"
+import toast from "react-hot-toast"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   openAccountDialogRecovery,
   prepareAccountDialogRecovery,
+  receiveAccountDialogRecovery,
 } from "~/features/AccountManagement/accountDialogRecovery"
 import { createEmptyAccountDialogDraft } from "~/features/AccountManagement/components/AccountDialog/models"
 import {
   DialogStateProvider,
   useDialogStateContext,
 } from "~/features/AccountManagement/hooks/DialogStateContext"
-import { act, render, screen } from "~~/tests/test-utils/render"
+import type { DisplaySiteData } from "~/types"
+import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
+import { testI18n } from "~~/tests/test-utils/i18n"
+import { act, render, screen, waitFor } from "~~/tests/test-utils/render"
 
-const { values, listeners, isSidePanel } = vi.hoisted(() => ({
+const { values, listeners, isSidePanel, accountData } = vi.hoisted(() => ({
   values: new Map<string, unknown>(),
   listeners: new Set<
     (changes: Record<string, { newValue: unknown }>, area: string) => void
   >(),
   isSidePanel: vi.fn(() => true),
+  accountData: { displayData: [] as DisplaySiteData[] },
 }))
 
 vi.mock("~/utils/browser", async (importOriginal) => ({
@@ -54,7 +60,7 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => ({
 vi.mock("~/features/AccountManagement/hooks/AccountDataContext", () => ({
   useAccountDataContext: () => ({
     loadAccountData: vi.fn(),
-    displayData: [],
+    displayData: accountData.displayData,
     isInitialLoad: false,
   }),
 }))
@@ -102,8 +108,13 @@ const snapshot = () => ({
 })
 
 function OpenForm() {
-  const { openAddAccount } = useDialogStateContext()
-  return <button onClick={() => openAddAccount()}>Start another form</button>
+  const { openAddAccount, editingAccount } = useDialogStateContext()
+  return (
+    <>
+      <button onClick={() => openAddAccount()}>Start another form</button>
+      <output aria-label="Editing account">{editingAccount?.id}</output>
+    </>
+  )
 }
 
 describe("account dialog token recovery destinations", () => {
@@ -111,6 +122,8 @@ describe("account dialog token recovery destinations", () => {
     values.clear()
     listeners.clear()
     isSidePanel.mockReturnValue(true)
+    accountData.displayData = []
+    vi.spyOn(toast, "error").mockReturnValue("")
     vi.stubGlobal("navigator", {
       locks: {
         request: (
@@ -122,7 +135,10 @@ describe("account dialog token recovery destinations", () => {
     })
   })
 
-  afterEach(() => vi.unstubAllGlobals())
+  afterEach(() => {
+    vi.restoreAllMocks()
+    vi.unstubAllGlobals()
+  })
 
   it("restores a handoff that arrives after the side panel has mounted", async () => {
     const prepared = await prepareAccountDialogRecovery(snapshot())
@@ -179,5 +195,56 @@ describe("account dialog token recovery destinations", () => {
     expect(screen.getByRole("textbox", { name: "Notes" })).toHaveValue(
       "Carried notes",
     )
+  })
+
+  it("restores an edited draft to its original account", async () => {
+    const account = buildDisplaySiteData({
+      id: "edited-account",
+      siteType: SITE_TYPES.NEW_API,
+    })
+    accountData.displayData = [
+      buildDisplaySiteData({ id: "other-account" }),
+      account,
+    ]
+    const prepared = await prepareAccountDialogRecovery({
+      ...snapshot(),
+      accountId: account.id,
+    })
+    render(
+      <DialogStateProvider initialRecoveryId={prepared.id}>
+        <OpenForm />
+      </DialogStateProvider>,
+    )
+
+    expect(
+      await screen.findByRole("textbox", { name: "Site name" }),
+    ).toHaveValue("Carried site name")
+    expect(screen.getByLabelText("Editing account")).toHaveTextContent(
+      account.id,
+    )
+  })
+
+  it("keeps a deleted account's edit draft unclaimed instead of opening an add form", async () => {
+    const original = { ...snapshot(), accountId: "deleted-account" }
+    const prepared = await prepareAccountDialogRecovery(original)
+    render(
+      <DialogStateProvider initialRecoveryId={prepared.id}>
+        <OpenForm />
+      </DialogStateProvider>,
+    )
+
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(
+        testI18n.t("accountDialog:accessTokenVerification.restoreFailed"),
+      ),
+    )
+    expect(
+      screen.queryByRole("dialog", { name: "Account form" }),
+    ).not.toBeInTheDocument()
+    const accept = vi.fn(() => true)
+    await expect(
+      receiveAccountDialogRecovery(prepared.id, accept),
+    ).resolves.toBe(true)
+    expect(accept).toHaveBeenCalledWith(original)
   })
 })
