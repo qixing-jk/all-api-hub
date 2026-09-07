@@ -2479,7 +2479,8 @@ export function useAccountDialog({
       if (!duplicateConfirmed) {
         saveAnalyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled)
         isAnalyticsActionCompleted = true
-        return
+        // Let callers distinguish cancellation from a failed save.
+        return null
       }
       const shouldDeferSuccessForSitePolicy =
         shouldDeferAccountSaveSuccessForAccountDialogSite({
@@ -3117,10 +3118,14 @@ export function useAccountDialog({
           skipSub2ApiKeyPrompt: true,
           skipAutoProvisionKeyOnAccountAdd: true,
         })
-        targetAccount = saveResult?.accountId
         if (!isCurrentRun()) {
           return
         }
+        if (saveResult === null) {
+          setAccountPostSaveWorkflowStep(ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle)
+          return
+        }
+        targetAccount = saveResult?.accountId
         if (!targetAccount) {
           toast.error(t("messages.saveAccountFailed"))
           setAccountPostSaveWorkflowStep(
