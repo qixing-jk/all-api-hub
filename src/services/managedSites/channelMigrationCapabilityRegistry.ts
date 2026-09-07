@@ -4,6 +4,7 @@ import { claudeCodeHubManagedSiteMigrationCapability } from "~/services/apiAdapt
 import { doneHubManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/doneHubMigration"
 import { newApiManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/newApiMigration"
 import { octopusManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/octopusMigration"
+import { sub2ApiManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/sub2apiMigration"
 import { veloeraManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/veloeraMigration"
 import type { ManagedSiteMigrationCapability } from "~/types/managedSiteMigrationCapability"
 
@@ -11,6 +12,10 @@ const registrations: readonly {
   siteType: ManagedSiteType
   capability: ManagedSiteMigrationCapability
 }[] = [
+  {
+    siteType: SITE_TYPES.SUB2API,
+    capability: sub2ApiManagedSiteMigrationCapability,
+  },
   {
     siteType: SITE_TYPES.OCTOPUS,
     capability: octopusManagedSiteMigrationCapability,

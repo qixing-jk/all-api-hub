@@ -16,6 +16,14 @@ export interface Sub2ApiAdminApiKeyAccount {
   concurrency?: number
   priority?: number
   status?: string
+  schedulable?: boolean
+  group_ids?: number[]
+  groups?: { id: number; name: string }[]
+  extra?: Record<string, unknown>
+  proxy_id?: number | null
+  rate_multiplier?: number
+  load_factor?: number | null
+  expires_at?: number | null
 }
 
 export interface Sub2ApiAdminAccountListData {

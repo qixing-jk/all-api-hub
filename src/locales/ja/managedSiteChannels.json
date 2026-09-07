@@ -288,6 +288,7 @@
     },
     "betaBadge": "Beta",
     "blockedReasons": {
+      "sourceKeyExportRestricted": "移行元からのキーのエクスポートには、設定済みの Admin API Key では完了できないウェブ認証が必要です。移行元の管理画面でキーを取得し、このチャネルを手動で移行してください。",
       "sourceKeyMissing": "元チャネルのキーが取得できないため、このチャネルはまだ移行できません。",
       "sourceKeyResolutionFailed": "元チャネルのキーを読み込めませんでした。確認が完了した直後であれば、プレビューを更新して再試行してください。",
       "sourceTypeUnsupported": "この移行では元チャネルの種類がサポートされていません。対応するチャネルを選ぶか、手動で移行してください。",
@@ -312,6 +313,7 @@
       "dropsModelMapping": "モデルマッピング設定はコピーされません。",
       "dropsMultiKeyState": "マルチキーの実行状態はコピーされません。",
       "dropsStatusCodeMapping": "ステータスコードマッピング設定はコピーされません。",
+      "sub2apiDefaultGroup": "移行元のグループはコピーされません。移行先ではプラットフォームのデフォルトグループが存在する場合に使用されます。移行後にグループの割り当てを確認してください。",
       "targetForcesDefaultGroup": "移行先サイトではデフォルトグループに置き換えられます。",
       "targetIgnoresPriority": "移行先サイトでは元チャネルの優先度を保持しません。",
       "targetIgnoresWeight": "移行先サイトでは元チャネルの重みを保持しません。",
@@ -358,6 +360,7 @@
       },
       "title": "移行結果"
     },
+    "sub2apiDefaultGroup": "プラットフォームのデフォルトグループ（存在する場合）",
     "target": {
       "destinationLabel": "移行先サイト",
       "label": "移行先",

@@ -61,14 +61,21 @@ When performing sensitive operations (e.g., viewing a channel's real key), if th
 - For details, see: [New API Security Verification](./new-api-security-verification.md)
 
 ### 4. Channel Migration (Beta)
-This is an advanced feature that allows you to quickly convert existing accounts from **"Account Management"** into channels for your self-hosted site.
 
-1. Click **"Channel Migration"** on the channel list page.
-2. Select the source (existing account/bookmark) and target (current self-hosted site).
-3. The extension will automatically:
-   - Extract the Base URL and API Key.
-   - Attempt to automatically identify available upstream model lists.
-   - Generate channel names according to preset rules.
+Copy channels from the current self-hosted site to another configured site without recreating each one manually. Configure connections for both sites before starting.
+
+1. Enable **"Channel Migration"** on the source site's channel list, then select channels or use the current filtered results.
+2. Choose the target site. Review the preview for changes to types, URLs, models, groups, and statuses, along with settings that cannot be preserved.
+3. Click **"Start migration"** and confirm. The extension reads each source channel's key and creates a channel on the target site.
+4. Check each result. If a result is **"Uncertain"**, refresh the list and inspect the target site before deciding whether to retry, to avoid duplicates.
+
+Migration only creates new channels. It does not modify the source, detect duplicates, overwrite existing channels, or roll back changes automatically.
+
+**Sub2API migration support:**
+
+- Supports migration to and from API Key accounts on OpenAI, Anthropic, Gemini, and Grok. OAuth, `upstream`, and Antigravity accounts are not supported.
+- When migrating to Sub2API, source groups are not copied. The target platform's default group is used if it exists; check group assignments and enabled status afterward. The preview warns about settings that cannot be preserved, such as model redirects, concurrency, and proxies.
+- If exporting keys from the source site requires web verification, the configured Admin API Key cannot complete it. Retrieve the key from the source dashboard and migrate the channel manually.
 
 ## FAQ
 

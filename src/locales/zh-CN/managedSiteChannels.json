@@ -288,6 +288,7 @@
     },
     "betaBadge": "Beta",
     "blockedReasons": {
+      "sourceKeyExportRestricted": "源站点导出密钥需要网页二次验证，当前 Admin API Key 无法完成。请从源站点后台获取密钥后手动迁移该渠道。",
       "sourceKeyMissing": "缺少源渠道密钥，当前无法迁移。",
       "sourceKeyResolutionFailed": "无法获取源渠道密钥。若刚完成验证，请刷新预览后重试。",
       "sourceTypeUnsupported": "该源渠道类型暂不支持迁移。请选择受支持的渠道，或手动迁移。",
@@ -312,6 +313,7 @@
       "dropsModelMapping": "模型映射配置不会一并迁移。",
       "dropsMultiKeyState": "多密钥轮询或状态信息不会一并迁移。",
       "dropsStatusCodeMapping": "状态码映射配置不会一并迁移。",
+      "sub2apiDefaultGroup": "不会迁移源分组。目标站点会绑定该平台的默认分组（如有），请在迁移后检查分组。",
       "targetForcesDefaultGroup": "目标站点会改用默认分组。",
       "targetIgnoresPriority": "目标站点不保留源渠道的优先级。",
       "targetIgnoresWeight": "目标站点不保留源渠道的权重。",
@@ -353,6 +355,7 @@
       },
       "title": "迁移结果"
     },
+    "sub2apiDefaultGroup": "平台默认分组（如有）",
     "target": {
       "destinationLabel": "目标站点",
       "label": "迁移目标",

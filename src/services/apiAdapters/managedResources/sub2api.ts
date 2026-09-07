@@ -685,6 +685,40 @@ const openConfig = async (): Promise<Sub2ApiNativeConfig> => {
   }
 }
 
+/** Opens native account reads shared with channel migration. */
+export async function openSub2ApiNativeResourceOperations(
+  options?: ResourceOperationOptions,
+) {
+  options?.signal?.throwIfAborted()
+  const nativeConfig = await openConfig()
+  options?.signal?.throwIfAborted()
+  return {
+    scopeKey: nativeConfig.scopeKey,
+    get: async (
+      accountId: number,
+      operationOptions?: ResourceOperationOptions,
+    ) => {
+      const id = parseSub2ApiResourceId(accountId)
+      const detail = await getSub2ApiApiKeyAccount(nativeConfig.config, id, {
+        signal: operationOptions?.signal,
+      })
+      if (!detail || detail.id !== id) {
+        throw new ManagedResourceError({
+          code: MANAGED_RESOURCE_FAILURE_CODES.NotFound,
+        })
+      }
+      return detail
+    },
+    loadSecret: (
+      accountId: number,
+      operationOptions?: ResourceOperationOptions,
+    ) =>
+      revealSub2ApiApiKey(nativeConfig.config, accountId, {
+        signal: operationOptions?.signal,
+      }),
+  }
+}
+
 const sub2ApiNativeDefinition = {
   siteType: SITE_TYPES.SUB2API,
   kind: MANAGED_RESOURCE_KINDS.Channel,

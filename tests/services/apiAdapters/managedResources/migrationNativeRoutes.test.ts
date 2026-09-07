@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { AXON_HUB_CHANNEL_TYPE } from "~/constants/axonHub"
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import { axonHubManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/axonHubMigration"
 import { claudeCodeHubManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/claudeCodeHubMigration"
@@ -7,6 +8,7 @@ import { doneHubManagedSiteMigrationCapability } from "~/services/apiAdapters/ma
 import { newApiManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/newApiMigration"
 import * as octopusNative from "~/services/apiAdapters/managedResources/octopus"
 import { octopusManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/octopusMigration"
+import { sub2ApiManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/sub2apiMigration"
 import { veloeraManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/veloeraMigration"
 import type {
   ManagedSiteMigrationCapability,
@@ -22,6 +24,7 @@ const targets: Partial<
   [SITE_TYPES.OCTOPUS]: octopusManagedSiteMigrationCapability,
   [SITE_TYPES.AXON_HUB]: axonHubManagedSiteMigrationCapability,
   [SITE_TYPES.CLAUDE_CODE_HUB]: claudeCodeHubManagedSiteMigrationCapability,
+  [SITE_TYPES.SUB2API]: sub2ApiManagedSiteMigrationCapability,
 }
 
 const buildSource = (
@@ -56,6 +59,27 @@ describe("native migration target preparation", () => {
   })
 
   it.each([
+    [SITE_TYPES.SUB2API, "openai", SITE_TYPES.NEW_API, 1, false],
+    [
+      SITE_TYPES.SUB2API,
+      "anthropic",
+      SITE_TYPES.CLAUDE_CODE_HUB,
+      "claude",
+      false,
+    ],
+    [SITE_TYPES.SUB2API, "gemini", SITE_TYPES.VELOERA, 24, false],
+    [SITE_TYPES.SUB2API, "grok", SITE_TYPES.AXON_HUB, "xai", false],
+    [SITE_TYPES.NEW_API, 1, SITE_TYPES.SUB2API, "openai", false],
+    [SITE_TYPES.VELOERA, 14, SITE_TYPES.SUB2API, "anthropic", false],
+    [SITE_TYPES.CLAUDE_CODE_HUB, "gemini", SITE_TYPES.SUB2API, "gemini", false],
+    [SITE_TYPES.AXON_HUB, "xai", SITE_TYPES.SUB2API, "grok", false],
+    [
+      SITE_TYPES.AXON_HUB,
+      AXON_HUB_CHANNEL_TYPE.OPENAI_RESPONSES,
+      SITE_TYPES.SUB2API,
+      "openai",
+      true,
+    ],
     [SITE_TYPES.DONE_HUB, 28, SITE_TYPES.VELOERA, 43, false],
     [SITE_TYPES.VELOERA, 24, SITE_TYPES.DONE_HUB, 25, false],
     [SITE_TYPES.CLAUDE_CODE_HUB, "codex", SITE_TYPES.DONE_HUB, 59, false],
@@ -112,8 +136,16 @@ describe("native migration target preparation", () => {
     [SITE_TYPES.CLAUDE_CODE_HUB, "constructor", SITE_TYPES.NEW_API],
     [SITE_TYPES.CLAUDE_CODE_HUB, "__proto__", SITE_TYPES.NEW_API],
     [SITE_TYPES.CLAUDE_CODE_HUB, "toString", SITE_TYPES.NEW_API],
-    [SITE_TYPES.SUB2API, "openai", SITE_TYPES.NEW_API],
-    [SITE_TYPES.SUB2API, "anthropic", SITE_TYPES.CLAUDE_CODE_HUB],
+    [SITE_TYPES.SUB2API, "antigravity", SITE_TYPES.NEW_API],
+    [SITE_TYPES.SUB2API, "future-platform", SITE_TYPES.CLAUDE_CODE_HUB],
+    [SITE_TYPES.SUB2API, "constructor", SITE_TYPES.CLAUDE_CODE_HUB],
+    [SITE_TYPES.NEW_API, 3, SITE_TYPES.SUB2API],
+    [SITE_TYPES.NEW_API, 67, SITE_TYPES.SUB2API],
+    [
+      SITE_TYPES.AXON_HUB,
+      AXON_HUB_CHANNEL_TYPE.ANTHROPIC_AWS,
+      SITE_TYPES.SUB2API,
+    ],
   ] as const)(
     "blocks unregistered native conversion %s/%s to %s",
     async (sourceSiteType, resourceType, targetSiteType) => {

@@ -288,6 +288,7 @@
     },
     "betaBadge": "Beta",
     "blockedReasons": {
+      "sourceKeyExportRestricted": "來源站點匯出金鑰需要網頁二次驗證，目前的 Admin API Key 無法完成。請從來源站點後台取得金鑰後手動遷移該渠道。",
       "sourceKeyMissing": "缺少來源渠道金鑰，目前無法遷移此渠道。",
       "sourceKeyResolutionFailed": "無法取得來源渠道金鑰。若剛完成驗證，請重新整理預覽後再試。",
       "sourceTypeUnsupported": "此來源渠道類型暫不支援遷移。請選擇受支援的渠道，或手動遷移。",
@@ -312,6 +313,7 @@
       "dropsModelMapping": "模型映射設定不會一併遷移。",
       "dropsMultiKeyState": "多金鑰輪詢或狀態資訊不會一併遷移。",
       "dropsStatusCodeMapping": "狀態碼映射設定不會一併遷移。",
+      "sub2apiDefaultGroup": "不會遷移來源分組。目標站點會綁定該平台的預設分組（如有），請在遷移後檢查分組。",
       "targetForcesDefaultGroup": "目標站點會改用預設分組。",
       "targetIgnoresPriority": "目標站點不保留來源渠道的優先順序。",
       "targetIgnoresWeight": "目標站點不保留來源渠道的權重。",
@@ -358,6 +360,7 @@
       },
       "title": "遷移結果"
     },
+    "sub2apiDefaultGroup": "平台預設分組（如有）",
     "target": {
       "destinationLabel": "目標站點",
       "label": "遷移目標",

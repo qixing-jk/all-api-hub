@@ -1895,7 +1895,8 @@ describe("ManagedSiteChannelsRoute", () => {
     ).toBeVisible()
   })
 
-  it("does not expose migration without a registered source capability", () => {
+  it("exposes Sub2API migration when another managed site is configured", async () => {
+    const user = userEvent.setup()
     installNativeControllers()
     configureNativePreferences(SITE_TYPES.SUB2API)
     getTargetOptions.mockReturnValue([
@@ -1919,8 +1920,16 @@ describe("ManagedSiteChannelsRoute", () => {
     )
 
     expect(
-      screen.queryByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.migrationModeButton),
-    ).toBeNull()
+      screen.getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.migrationModeButton),
+    ).toBeVisible()
+    await user.click(
+      screen.getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.migrationModeButton),
+    )
+    expect(
+      screen.getByRole("button", {
+        name: "managedSiteChannels:toolbar.migrateFiltered",
+      }),
+    ).toBeVisible()
   })
 
   it("enables native migration when a source capability and target exist", async () => {

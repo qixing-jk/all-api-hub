@@ -288,6 +288,7 @@
     },
     "betaBadge": "Beta",
     "blockedReasons": {
+      "sourceKeyExportRestricted": "Xuất khóa từ trang nguồn yêu cầu xác minh trên web mà Admin API Key đã cấu hình không thể thực hiện. Hãy lấy khóa từ trang quản trị nguồn rồi di chuyển kênh này theo cách thủ công.",
       "sourceKeyMissing": "Thiếu khóa kênh nguồn, hiện không thể di chuyển.",
       "sourceKeyResolutionFailed": "Không thể lấy khóa kênh nguồn. Nếu bạn vừa hoàn tất xác thực, hãy làm mới bản xem trước và thử lại.",
       "sourceTypeUnsupported": "Loại kênh nguồn này không được hỗ trợ để di chuyển. Hãy chọn kênh được hỗ trợ hoặc di chuyển thủ công.",
@@ -312,6 +313,7 @@
       "dropsModelMapping": "Cấu hình ánh xạ mô hình sẽ không được di chuyển cùng.",
       "dropsMultiKeyState": "Thông tin vòng lặp hoặc trạng thái nhiều khóa sẽ không được di chuyển cùng.",
       "dropsStatusCodeMapping": "Cấu hình ánh xạ mã trạng thái sẽ không được di chuyển cùng.",
+      "sub2apiDefaultGroup": "Các nhóm nguồn không được sao chép. Đích sẽ sử dụng nhóm mặc định của nền tảng nếu có. Hãy kiểm tra việc gán nhóm sau khi di chuyển.",
       "targetForcesDefaultGroup": "Trang web mục tiêu sẽ chuyển sang sử dụng nhóm mặc định.",
       "targetIgnoresPriority": "Trang web mục tiêu không giữ lại mức độ ưu tiên của kênh nguồn.",
       "targetIgnoresWeight": "Trang web mục tiêu không giữ lại trọng số của kênh nguồn.",
@@ -358,6 +360,7 @@
       },
       "title": "Kết quả di chuyển"
     },
+    "sub2apiDefaultGroup": "Nhóm mặc định của nền tảng (nếu có)",
     "target": {
       "destinationLabel": "Trang web mục tiêu",
       "label": "Mục tiêu di chuyển",

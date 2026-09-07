@@ -9,12 +9,20 @@ import {
 import { DoneHubChannelType as DoneHubType } from "~/constants/doneHub"
 import { ChannelType as NewApiType } from "~/constants/newApi"
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
+import type { Sub2ApiApiKeyAccountPlatform } from "~/constants/sub2api"
 import { VeloeraChannelType as VeloeraType } from "~/constants/veloera"
 import type { ManagedSiteMigrationSource } from "~/types/managedSiteMigrationCapability"
 import { OctopusOutboundType as OctopusType } from "~/types/octopus"
 
-const { NEW_API, VELOERA, DONE_HUB, OCTOPUS, AXON_HUB, CLAUDE_CODE_HUB } =
-  SITE_TYPES
+const {
+  NEW_API,
+  VELOERA,
+  DONE_HUB,
+  OCTOPUS,
+  AXON_HUB,
+  CLAUDE_CODE_HUB,
+  SUB2API,
+} = SITE_TYPES
 
 type NativeChannelTypeBySite = {
   [NEW_API]: NewApiType
@@ -23,6 +31,7 @@ type NativeChannelTypeBySite = {
   [OCTOPUS]: OctopusType
   [AXON_HUB]: AxonHubChannelType
   [CLAUDE_CODE_HUB]: ClaudeCodeHubProviderType
+  [SUB2API]: Sub2ApiApiKeyAccountPlatform
 }
 
 /**
@@ -58,6 +67,7 @@ const routes: readonly TypeRoute[] = [
     [OCTOPUS]: OctopusType.OpenAIChat,
     [AXON_HUB]: AXON_HUB_CHANNEL_TYPE.OPENAI,
     [CLAUDE_CODE_HUB]: CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE,
+    [SUB2API]: "openai",
   },
   {
     [NEW_API]: { targetType: NewApiType.OpenAI, remappedType: true },
@@ -65,6 +75,10 @@ const routes: readonly TypeRoute[] = [
     [DONE_HUB]: { targetType: DoneHubType.OpenAI, remappedType: true },
     [OCTOPUS]: OctopusType.OpenAIResponse,
     [AXON_HUB]: AXON_HUB_CHANNEL_TYPE.OPENAI_RESPONSES,
+    // Sub2API's OpenAI API-key platform supports Responses and Chat
+    // Completions, but does not retain an endpoint-specific channel type.
+    // github.com/Wei-Shaw/sub2api/blob/b7dba62678a834080564966c002fd0ca2b328b7a/backend/internal/service/openai_gateway_chat_completions_raw.go
+    [SUB2API]: { targetType: "openai", remappedType: true },
     [CLAUDE_CODE_HUB]: {
       targetType: CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE,
       remappedType: true,
@@ -105,6 +119,7 @@ const routes: readonly TypeRoute[] = [
     [OCTOPUS]: OctopusType.Anthropic,
     [AXON_HUB]: AXON_HUB_CHANNEL_TYPE.ANTHROPIC,
     [CLAUDE_CODE_HUB]: CLAUDE_CODE_HUB_PROVIDER_TYPE.CLAUDE,
+    [SUB2API]: "anthropic",
   },
   {
     [NEW_API]: { targetType: NewApiType.Anthropic, remappedType: true },
@@ -132,6 +147,7 @@ const routes: readonly TypeRoute[] = [
     [OCTOPUS]: OctopusType.Gemini,
     [AXON_HUB]: AXON_HUB_CHANNEL_TYPE.GEMINI,
     [CLAUDE_CODE_HUB]: CLAUDE_CODE_HUB_PROVIDER_TYPE.GEMINI,
+    [SUB2API]: "gemini",
   },
   {
     [NEW_API]: { targetType: NewApiType.Gemini, remappedType: true },
@@ -355,6 +371,7 @@ const routes: readonly TypeRoute[] = [
     [VELOERA]: VeloeraType.Xai,
     [DONE_HUB]: DoneHubType.XAI,
     [AXON_HUB]: AXON_HUB_CHANNEL_TYPE.XAI,
+    [SUB2API]: "grok",
   },
   {
     [NEW_API]: NewApiType.Coze,
@@ -403,14 +420,12 @@ const findSourceRoute = (
   siteType: ManagedSiteType,
   resourceType: string | number,
 ) =>
-  siteType === SITE_TYPES.SUB2API
-    ? undefined
-    : routes.find((route) => {
-        const entry = route[siteType]
-        return typeof entry === "object"
-          ? entry.sourceTypes?.some((type) => type === resourceType) === true
-          : entry !== undefined && entry === resourceType
-      })
+  routes.find((route) => {
+    const entry = route[siteType]
+    return typeof entry === "object"
+      ? entry.sourceTypes?.some((type) => type === resourceType) === true
+      : entry !== undefined && entry === resourceType
+  })
 
 /** A known native source needs an explicit migration route, not just a catalog label. */
 export const isManagedSiteMigrationSourceType = (

@@ -63,6 +63,10 @@ const translations: Record<string, string> = {
     "Target normalizes Base URL",
   "managedSiteChannels:migration.itemWarnings.targetForcesDefaultGroup":
     "Target forces default group",
+  "managedSiteChannels:migration.sub2apiDefaultGroup":
+    "Platform default group (if available)",
+  "managedSiteChannels:migration.itemWarnings.sub2apiDefaultGroup":
+    "Source groups are not copied. Check the target platform's default group after migration.",
   "managedSiteChannels:migration.itemWarnings.targetIgnoresPriority":
     "Target ignores priority",
   "managedSiteChannels:migration.itemWarnings.targetIgnoresWeight":
@@ -73,6 +77,8 @@ const translations: Record<string, string> = {
     "Source credential unavailable",
   "managedSiteChannels:migration.blockedReasons.sourceKeyResolutionFailed":
     "Source access could not be verified",
+  "managedSiteChannels:migration.blockedReasons.sourceKeyExportRestricted":
+    "Retrieve the key from the source dashboard and migrate this channel manually.",
   "managedSiteChannels:migration.blockedReasons.sourceTypeUnsupported":
     "Source type unsupported",
   "managedSiteChannels:migration.blockedReasons.targetDraftPreparationFailed":
@@ -388,6 +394,10 @@ describe("managedResourceMigrationPresentation", () => {
   })
 
   it.each([
+    [SITE_TYPES.SUB2API, "openai", "OpenAI"],
+    [SITE_TYPES.SUB2API, "anthropic", "Anthropic"],
+    [SITE_TYPES.SUB2API, "gemini", "Gemini"],
+    [SITE_TYPES.SUB2API, "grok", "Grok"],
     [SITE_TYPES.DONE_HUB, DoneHubChannelType.DeepSeek, "DeepSeek"],
     [SITE_TYPES.OCTOPUS, OctopusOutboundType.Anthropic, "Anthropic"],
     [
@@ -426,6 +436,68 @@ describe("managedResourceMigrationPresentation", () => {
       ).toBe(expected)
     },
   )
+
+  it("shows the Sub2API destination platform and its default-group policy", () => {
+    const readyItem = preview.items[0]!
+    if (readyItem.status !== "ready") throw new Error("expected ready item")
+    const mapped = mapManagedResourceMigrationPreview(
+      {
+        ...preview,
+        targetSiteType: SITE_TYPES.SUB2API,
+        items: [
+          {
+            ...readyItem,
+            target: {
+              ...readyItem.target,
+              projection: {
+                ...readyItem.target.projection,
+                type: "anthropic",
+                groups: [],
+              },
+            },
+            warningCodes: [
+              MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_FORCES_DEFAULT_GROUP,
+            ],
+          },
+        ],
+      },
+      { t, getSiteLabel: String },
+    )
+    expect(
+      mapped.rows[0].comparisons.find(({ id }) => id === "type")?.target,
+    ).toBe("Anthropic")
+    expect(
+      mapped.rows[0].comparisons.find(({ id }) => id === "groups")?.target,
+    ).toBe("Platform default group (if available)")
+    expect(mapped.rows[0].warningText).toEqual([
+      "Source groups are not copied. Check the target platform's default group after migration.",
+    ])
+  })
+
+  it("explains how to recover when source key export requires web verification", () => {
+    const mapped = mapManagedResourceMigrationExecutionResult(
+      {
+        totalSelected: 1,
+        createdCount: 0,
+        failedCount: 0,
+        skippedCount: 1,
+        uncertainCount: 0,
+        items: [
+          {
+            selectionId: "restricted",
+            displayName: "Restricted upstream",
+            status: "skipped",
+            blockingReasonCode:
+              MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_EXPORT_RESTRICTED,
+          },
+        ],
+      },
+      { t },
+    )
+    expect(mapped.items[0].message).toBe(
+      "Retrieve the key from the source dashboard and migrate this channel manually.",
+    )
+  })
 
   it("preserves opaque row order and all seven canonical comparison values", () => {
     const mapped = mapManagedResourceMigrationPreview(preview, {

@@ -288,6 +288,7 @@
     },
     "betaBadge": "Beta",
     "blockedReasons": {
+      "sourceKeyExportRestricted": "Der Schlüsselexport erfordert eine Bestätigung im Web, die mit dem konfigurierten Admin API Key nicht möglich ist. Rufe den Schlüssel im Dashboard der Quellsite ab und migriere diesen Kanal manuell.",
       "sourceKeyMissing": "Der Quellkanalschlüssel ist nicht verfügbar, daher kann dieser Kanal noch nicht migriert werden.",
       "sourceKeyResolutionFailed": "Der Quellkanalschlüssel konnte nicht geladen werden. Wenn Sie die Überprüfung gerade abgeschlossen haben, aktualisieren Sie die Vorschau und versuchen Sie es erneut.",
       "sourceTypeUnsupported": "Dieser Quellkanaltyp wird für die Migration nicht unterstützt. Wählen Sie einen unterstützten Kanal oder migrieren Sie ihn manuell.",
@@ -312,6 +313,7 @@
       "dropsModelMapping": "Modellumleitungszuordnungen werden nicht kopiert.",
       "dropsMultiKeyState": "Der Multi-Key-Laufzeitstatus wird nicht kopiert.",
       "dropsStatusCodeMapping": "Statuscode-Zuordnungseinstellungen werden nicht kopiert.",
+      "sub2apiDefaultGroup": "Quellgruppen werden nicht kopiert. Das Ziel verwendet die Standardgruppe der Plattform, falls vorhanden. Prüfe die Gruppenzuordnung nach der Migration.",
       "targetForcesDefaultGroup": "Die Zielsite ersetzt die Quellgruppen durch ihre Standardgruppe.",
       "targetIgnoresPriority": "Die Zielsite behält den Quellprioritätswert nicht bei.",
       "targetIgnoresWeight": "Die Zielseite behält den Quellgewichtungswert nicht bei.",
@@ -358,6 +360,7 @@
       },
       "title": "Migrationsergebnisse"
     },
+    "sub2apiDefaultGroup": "Standardgruppe der Plattform (falls vorhanden)",
     "target": {
       "destinationLabel": "Zielseite",
       "label": "Migrationsziel",

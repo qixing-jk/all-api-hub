@@ -7,6 +7,7 @@ import { ChannelTypeNames } from "~/constants/newApi"
 import { OctopusOutboundTypeNames } from "~/constants/octopus"
 import type { ManagedSiteType } from "~/constants/siteType"
 import { SITE_TYPES } from "~/constants/siteType"
+import { SUB2API_API_KEY_ACCOUNT_PLATFORM_LABELS } from "~/constants/sub2api"
 import { VeloeraChannelTypeNames } from "~/constants/veloera"
 import {
   MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES,
@@ -326,6 +327,10 @@ const getBlockedReasonText = (
   switch (code) {
     case MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_MISSING:
       return t("managedSiteChannels:migration.blockedReasons.sourceKeyMissing")
+    case MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_EXPORT_RESTRICTED:
+      return t(
+        "managedSiteChannels:migration.blockedReasons.sourceKeyExportRestricted",
+      )
     case MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_TYPE_UNSUPPORTED:
       return t(
         "managedSiteChannels:migration.blockedReasons.sourceTypeUnsupported",
@@ -356,6 +361,7 @@ const getTypeText = (
     [SITE_TYPES.OCTOPUS]: OctopusOutboundTypeNames,
     [SITE_TYPES.AXON_HUB]: AxonHubChannelTypeNames,
     [SITE_TYPES.CLAUDE_CODE_HUB]: ClaudeCodeHubProviderTypeNames,
+    [SITE_TYPES.SUB2API]: SUB2API_API_KEY_ACCOUNT_PLATFORM_LABELS,
   }
   const catalog = catalogs[siteType]
   return catalog && hasOwn(catalog, type)
@@ -434,7 +440,11 @@ const getComparisonValues = (
     ],
     groups: [
       source ? formatList(source.groups) : "",
-      target ? formatList(target.groups) : "",
+      target
+        ? preview.targetSiteType === SITE_TYPES.SUB2API
+          ? t("managedSiteChannels:migration.sub2apiDefaultGroup")
+          : formatList(target.groups)
+        : "",
     ],
     priority: [
       source ? String(source.priority) : "",
@@ -487,7 +497,14 @@ export function mapManagedResourceMigrationPreview(
         status: item.status,
         comparisons,
         warningText: item.warningCodes.flatMap((code) => {
-          const text = getItemWarningText(options.t, code)
+          const text =
+            preview.targetSiteType === SITE_TYPES.SUB2API &&
+            code ===
+              MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_FORCES_DEFAULT_GROUP
+              ? options.t(
+                  "managedSiteChannels:migration.itemWarnings.sub2apiDefaultGroup",
+                )
+              : getItemWarningText(options.t, code)
           return text ? [text] : []
         }),
         blockedReason:

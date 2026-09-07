@@ -288,6 +288,7 @@
     },
     "betaBadge": "Beta",
     "blockedReasons": {
+      "sourceKeyExportRestricted": "Exportar claves del sitio de origen requiere una verificación web que la Admin API Key configurada no puede completar. Obtén la clave desde el panel de origen y migra este canal manualmente.",
       "sourceKeyMissing": "La clave del canal de origen no está disponible, por lo que este canal aún no se puede migrar.",
       "sourceKeyResolutionFailed": "No se pudo cargar la clave del canal de origen. Si acabas de completar la verificación, actualiza la vista previa e inténtalo de nuevo.",
       "sourceTypeUnsupported": "Este tipo de canal de origen no es compatible con la migración. Elige un canal compatible o migra el canal manualmente.",
@@ -312,6 +313,7 @@
       "dropsModelMapping": "Las asignaciones de redirección de modelos no se copiarán.",
       "dropsMultiKeyState": "El estado de ejecución con múltiples claves no se copiará.",
       "dropsStatusCodeMapping": "Las configuraciones de asignación de códigos de estado no se copiarán.",
+      "sub2apiDefaultGroup": "Los grupos de origen no se copian. El destino usa el grupo predeterminado de la plataforma si existe. Revisa la asignación de grupos después de la migración.",
       "targetForcesDefaultGroup": "El sitio de destino reemplazará los grupos de origen con su grupo predeterminado.",
       "targetIgnoresPriority": "El sitio de destino no conservará el valor de prioridad de origen.",
       "targetIgnoresWeight": "El sitio de destino no conservará el valor de peso de origen.",
@@ -363,6 +365,7 @@
       },
       "title": "Resultados de migración"
     },
+    "sub2apiDefaultGroup": "Grupo predeterminado de la plataforma (si existe)",
     "target": {
       "destinationLabel": "Sitio de destino",
       "label": "Destino de migración",
