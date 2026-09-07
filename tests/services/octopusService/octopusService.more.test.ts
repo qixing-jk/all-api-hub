@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { buildDisplayAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import { buildManagedSiteChannelDraftSource } from "~/services/managedSites/channelDraftSource"
 import { getManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
 import {
   OctopusAutoGroupType,
@@ -21,7 +23,7 @@ const {
   mockDeleteChannelApi,
   mockFetchGroups,
   mockFetchOctopusAvailableModels,
-  mockFetchTokenScopedModels,
+  mockFetchManagedSiteImportModels,
   mockFetchManagedSiteAvailableModels,
 } = vi.hoisted(() => ({
   mockGetPreferences: vi.fn(),
@@ -32,7 +34,7 @@ const {
   mockDeleteChannelApi: vi.fn(),
   mockFetchGroups: vi.fn(),
   mockFetchOctopusAvailableModels: vi.fn(),
-  mockFetchTokenScopedModels: vi.fn(),
+  mockFetchManagedSiteImportModels: vi.fn(),
   mockFetchManagedSiteAvailableModels: vi.fn(),
 }))
 
@@ -66,8 +68,8 @@ vi.mock("~/services/apiService/octopus", () => ({
   fetchRemoteModels: vi.fn(),
 }))
 
-vi.mock("~/services/managedSites/utils/fetchTokenScopedModels", () => ({
-  fetchTokenScopedModels: mockFetchTokenScopedModels,
+vi.mock("~/services/managedSites/utils/fetchManagedSiteImportModels", () => ({
+  fetchManagedSiteImportModels: mockFetchManagedSiteImportModels,
 }))
 
 describe("octopus additional flows", () => {
@@ -101,7 +103,7 @@ describe("octopus additional flows", () => {
       data: null,
       message: "deleted",
     })
-    mockFetchTokenScopedModels.mockResolvedValue({
+    mockFetchManagedSiteImportModels.mockResolvedValue({
       models: ["gpt-4o", "claude-3"],
       fetchFailed: false,
     })
@@ -138,7 +140,11 @@ describe("octopus additional flows", () => {
       name: "Primary Token",
     })
 
-    const result = await prepareChannelFormData(account, token)
+    const result = await prepareChannelFormData(
+      buildManagedSiteChannelDraftSource(
+        buildDisplayAccountTokenRuntimeKey(account, token),
+      ),
+    )
 
     expect(result).toMatchObject({
       name: "Octopus Site | Primary Token (auto)",
@@ -164,13 +170,17 @@ describe("octopus additional flows", () => {
       name: "AIHubMix Token",
     })
 
-    const result = await prepareChannelFormData(account, token)
+    const result = await prepareChannelFormData(
+      buildManagedSiteChannelDraftSource(
+        buildDisplayAccountTokenRuntimeKey(account, token),
+      ),
+    )
 
-    expect(mockFetchTokenScopedModels).toHaveBeenCalledWith(
+    expect(mockFetchManagedSiteImportModels).toHaveBeenCalledWith(
       expect.objectContaining({
         baseUrl: "https://aihubmix.com",
+        apiKey: token.key,
       }),
-      token,
     )
     expect(result.base_url).toBe("https://aihubmix.com/v1")
   })
@@ -179,14 +189,18 @@ describe("octopus additional flows", () => {
     const { prepareChannelFormData } = await import(
       "~/services/managedSites/providers/octopus"
     )
-    mockFetchTokenScopedModels.mockResolvedValueOnce({
+    mockFetchManagedSiteImportModels.mockResolvedValueOnce({
       models: ["gpt-4o"],
       fetchFailed: true,
     })
 
     const result = await prepareChannelFormData(
-      buildDisplaySiteData({ baseUrl: "https://proxy.example.com/" }),
-      buildApiToken({ key: "octo-key" }),
+      buildManagedSiteChannelDraftSource(
+        buildDisplayAccountTokenRuntimeKey(
+          buildDisplaySiteData({ baseUrl: "https://proxy.example.com/" }),
+          buildApiToken({ key: "octo-key" }),
+        ),
+      ),
     )
 
     expect(result.base_url).toBe("https://proxy.example.com/v1")

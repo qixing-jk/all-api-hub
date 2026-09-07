@@ -49,8 +49,8 @@ import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testId
 import { translateAutoCheckinMessageKey } from "~/features/AutoCheckin/utils/autoCheckin"
 import { exportShareSnapshotWithToast } from "~/features/ShareSnapshots/utils/exportShareSnapshotWithToast"
 import {
-  accountRuntimeKeyToLegacyAccountToken,
   collectAccountRuntimeKeySecrets,
+  isAccountTokenRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
 import { isAccountTodayMetricComplete } from "~/services/accounts/accountTodayStats"
 import {
@@ -66,6 +66,7 @@ import {
 import { getManagedSiteCapabilities } from "~/services/apiAdapters/registry"
 import { isAutomaticCheckInConfiguredForAccount } from "~/services/checkin/autoCheckin/inspection"
 import { sendAutoCheckinMessage } from "~/services/checkin/autoCheckin/messaging"
+import { buildManagedSiteChannelDraftSource } from "~/services/managedSites/channelDraftSource"
 import {
   getManagedSiteChannelExactMatch,
   getRecoverableManagedSiteChannelCandidate,
@@ -555,15 +556,17 @@ export default function AccountActionButtons({
         runtimeKey,
       )
       addRuntimeKeyRedactionSecrets(secretsToRedact, [resolvedRuntimeKey])
-      const resolvedToken =
-        accountRuntimeKeyToLegacyAccountToken(resolvedRuntimeKey)
       let formData: Awaited<
         ReturnType<typeof managedSite.channelDrafts.prepareFormData>
       >
       try {
         formData = await managedSite.channelDrafts.prepareFormData(
-          { ...site, baseUrl: normalizedAccountBaseUrl },
-          resolvedToken,
+          buildManagedSiteChannelDraftSource({
+            ...resolvedRuntimeKey,
+            baseUrl: isAccountTokenRuntimeKey(resolvedRuntimeKey)
+              ? normalizedAccountBaseUrl
+              : resolvedRuntimeKey.baseUrl,
+          }),
         )
       } catch (error) {
         logger.warn(

@@ -468,6 +468,7 @@ export const collectAccountRuntimeKeySecrets = (
     runtimeKeys
       .flatMap((runtimeKey) => [
         runtimeKey.secret,
+        isAccountTokenRuntimeKey(runtimeKey) ? runtimeKey.token.key : undefined,
         isServiceCredentialRuntimeKey(runtimeKey)
           ? runtimeKey.credential.key
           : undefined,

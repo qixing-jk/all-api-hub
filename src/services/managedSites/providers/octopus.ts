@@ -2,15 +2,15 @@
  * Octopus configuration validation and managed-channel draft preparation.
  */
 import { DEFAULT_OCTOPUS_CHANNEL_FIELDS } from "~/constants/octopus"
-import { normalizeAccountForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
-import { buildManagedSiteChannelName } from "~/services/managedSites/utils/channelDraft"
-import { fetchTokenScopedModels } from "~/services/managedSites/utils/fetchTokenScopedModels"
+import { fetchManagedSiteImportModels } from "~/services/managedSites/utils/fetchManagedSiteImportModels"
 import {
   userPreferences,
   type UserPreferences,
 } from "~/services/preferences/userPreferences"
-import type { AccountToken, ApiToken, DisplaySiteData } from "~/types"
-import type { ManagedSiteChannelDraft } from "~/types/managedSiteChannelDraft"
+import type {
+  ManagedSiteChannelDraft,
+  ManagedSiteChannelDraftSource,
+} from "~/types/managedSiteChannelDraft"
 import { createLogger } from "~/utils/core/logger"
 import { normalizeList } from "~/utils/core/string"
 
@@ -60,20 +60,16 @@ export async function checkValidOctopusConfig(): Promise<boolean> {
  * 准备渠道表单数据
  */
 export async function prepareChannelFormData(
-  account: DisplaySiteData,
-  token: ApiToken | AccountToken,
+  source: ManagedSiteChannelDraftSource,
 ): Promise<ManagedSiteChannelDraft> {
-  const upstreamAccount = normalizeAccountForManagedChannel(account)
-  const { models: availableModels, fetchFailed } = await fetchTokenScopedModels(
-    upstreamAccount,
-    token,
-  )
+  const { models: availableModels, fetchFailed } =
+    await fetchManagedSiteImportModels(source)
 
   return {
-    name: buildManagedSiteChannelName(account, token),
+    name: source.name,
     type: DEFAULT_OCTOPUS_CHANNEL_FIELDS.type,
-    key: token.key,
-    base_url: buildOctopusBaseUrl(upstreamAccount.baseUrl), // Octopus 需要 /v1 后缀
+    key: source.apiKey,
+    base_url: buildOctopusBaseUrl(source.baseUrl), // Octopus 需要 /v1 后缀
     models: normalizeList(availableModels),
     ...(fetchFailed ? { modelPrefillFetchFailed: true } : {}),
     groups: ["default"],

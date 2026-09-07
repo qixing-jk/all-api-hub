@@ -35,7 +35,6 @@ import {
   loggerErrorMock,
   openInCherryStudioMock,
   openWithAccountMock,
-  openWithCredentialsMock,
   resolveApiTokenKeyMock,
   startProductAnalyticsActionMock,
   toastErrorMock,
@@ -200,7 +199,7 @@ describe("CopyKeyDialog exports and service credentials", () => {
       })
       expect(openWithAccountMock).toHaveBeenCalledWith(
         expect.objectContaining({ id: "acc-1" }),
-        expect.objectContaining({ id: 1 }),
+        expect.objectContaining({ source: "account_token", tokenId: 1 }),
         expect.any(Function),
       )
       expect(toastErrorMock).toHaveBeenCalledWith("managed import failed")
@@ -376,8 +375,8 @@ describe("CopyKeyDialog exports and service credentials", () => {
   })
 
   it("exports service credentials with the credential API base URL", async () => {
-    openWithCredentialsMock.mockImplementationOnce(
-      async (_credential, onResult) => {
+    openWithAccountMock.mockImplementationOnce(
+      async (_account, _runtimeKey, onResult) => {
         onResult({ success: true, message: "credential import queued" })
         return { deferred: true }
       },
@@ -455,18 +454,16 @@ describe("CopyKeyDialog exports and service credentials", () => {
 
     await selectExportAction(user, "keyManagement:actions.importToManagedSite")
     await waitFor(() => {
-      expect(openWithCredentialsMock).toHaveBeenCalledWith(
-        {
-          name: "SharedChat - Codex service key",
+      expect(openWithAccountMock).toHaveBeenCalledWith(
+        expect.objectContaining({ name: "SharedChat" }),
+        expect.objectContaining({
+          source: "service_credential",
+          label: "Codex service key",
           baseUrl: "https://api.example.invalid/v1",
-          apiKey: "sk-service-credential-secret",
-        },
+          secret: "sk-service-credential-secret",
+        }),
         expect.any(Function),
-        {
-          managedSiteStatus: undefined,
-        },
       )
-      expect(openWithAccountMock).not.toHaveBeenCalled()
       expect(toastSuccessMock).toHaveBeenCalledWith("credential import queued")
     })
   }, 30_000)

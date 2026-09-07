@@ -1,6 +1,5 @@
 import { SITE_TYPES } from "~/constants/siteType"
 import {
-  accountRuntimeKeyToLegacyAccountToken,
   isAccountTokenRuntimeKey,
   type AccountRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
@@ -16,6 +15,7 @@ import {
   validateNativeManagedChannelImportDraft,
 } from "~/services/apiAdapters/managedResources/channelImport"
 import { getManagedSiteCapabilities } from "~/services/apiAdapters/registry"
+import { buildManagedSiteChannelDraftSource } from "~/services/managedSites/channelDraftSource"
 import {
   getManagedSiteChannelExactMatch,
   getRecoverableManagedSiteChannelCandidate,
@@ -54,7 +54,6 @@ import {
 } from "~/services/managedSites/verifiedChannelKeyAssessment"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
-import type { AccountToken } from "~/types"
 import type { ManagedSiteChannelDraft } from "~/types/managedSiteChannelDraft"
 import {
   isExecutableManagedSiteTokenBatchExportPreviewItem,
@@ -304,19 +303,9 @@ const resolveInputRuntimeKeyForManagedSiteExport = async (
   )
 }
 
-const resolveInputTokenForManagedSiteExport = async (
+const buildInputDraftSource = (
   input: ResolvedManagedSiteTokenBatchExportItemInput,
-  protectionBypassExecution?: ProtectionBypassExecution,
-): Promise<AccountToken> =>
-  accountRuntimeKeyToLegacyAccountToken(
-    await resolveInputRuntimeKeyForManagedSiteExport(
-      input,
-      protectionBypassExecution,
-    ),
-  )
-
-const resolveInputAccountForManagedSiteExport = (
-  input: ResolvedManagedSiteTokenBatchExportItemInput,
+  runtimeKey: AccountRuntimeKey,
 ) => {
   const runtimeKeyBaseUrl = input.runtimeKey.baseUrl.trim()
   const baseUrl = isAccountTokenRuntimeKey(input.runtimeKey)
@@ -326,10 +315,10 @@ const resolveInputAccountForManagedSiteExport = (
     : runtimeKeyBaseUrl ||
       normalizeManagedSiteChannelBaseUrl(input.account.baseUrl)
 
-  return {
-    ...input.account,
+  return buildManagedSiteChannelDraftSource({
+    ...runtimeKey,
     baseUrl,
-  }
+  })
 }
 
 const preparePreviewItem = async (params: {
@@ -344,16 +333,16 @@ const preparePreviewItem = async (params: {
   const { input, managedSite, managedConfig } = params
   let secretCollection = collectManagedResourceSecrets(input, managedConfig)
 
-  let resolvedToken: AccountToken
+  let resolvedRuntimeKey: AccountRuntimeKey
 
   try {
-    resolvedToken = await resolveInputTokenForManagedSiteExport(
+    resolvedRuntimeKey = await resolveInputRuntimeKeyForManagedSiteExport(
       input,
       params.protectionBypassExecution,
     )
     secretCollection = mergeManagedResourceSecretCollections(
       secretCollection,
-      collectManagedResourceSecrets(resolvedToken),
+      collectManagedResourceSecrets(resolvedRuntimeKey),
     )
   } catch (error) {
     const diagnostic = toSafePreviewDiagnostic(error, secretCollection)
@@ -373,10 +362,8 @@ const preparePreviewItem = async (params: {
   }
 
   try {
-    const channelDraftAccount = resolveInputAccountForManagedSiteExport(input)
     const draft = await managedSite.channelDrafts.prepareFormData(
-      channelDraftAccount,
-      resolvedToken,
+      buildInputDraftSource(input, resolvedRuntimeKey),
       {
         operationContext: params.operationContext,
       },

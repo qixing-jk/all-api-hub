@@ -1,3 +1,12 @@
+/** Resolved credential values needed to prepare a managed-resource import. */
+export interface ManagedSiteChannelDraftSource {
+  name: string
+  baseUrl: string
+  apiKey: string
+  /** Existing source model hints; each destination decides whether to use them. */
+  modelHints: readonly string[]
+}
+
 /** Product-owned input for importing a credential into a native resource editor. */
 export interface ManagedSiteChannelDraft {
   name: string

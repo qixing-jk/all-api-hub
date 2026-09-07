@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { AXON_HUB_CHANNEL_TYPE } from "~/constants/axonHub"
 import { SITE_TYPES } from "~/constants/siteType"
+import { buildDisplayAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import { buildManagedSiteChannelDraftSource } from "~/services/managedSites/channelDraftSource"
 import { getManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
 import {
   buildApiToken,
@@ -9,9 +11,9 @@ import {
   buildUserPreferences,
 } from "~~/tests/test-utils/factories"
 
-const { mockFetchTokenScopedModels, mockGetPreferences, mockSignIn } =
+const { mockFetchManagedSiteImportModels, mockGetPreferences, mockSignIn } =
   vi.hoisted(() => ({
-    mockFetchTokenScopedModels: vi.fn(),
+    mockFetchManagedSiteImportModels: vi.fn(),
     mockGetPreferences: vi.fn(),
     mockSignIn: vi.fn(),
   }))
@@ -31,8 +33,8 @@ vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
 
 vi.mock("~/services/apiService/axonHub", () => ({ signIn: mockSignIn }))
 
-vi.mock("~/services/managedSites/utils/fetchTokenScopedModels", () => ({
-  fetchTokenScopedModels: mockFetchTokenScopedModels,
+vi.mock("~/services/managedSites/utils/fetchManagedSiteImportModels", () => ({
+  fetchManagedSiteImportModels: mockFetchManagedSiteImportModels,
 }))
 
 vi.mock("~/utils/i18n/core", () => ({
@@ -52,7 +54,7 @@ describe("AxonHub managed-site provider", () => {
     mockGetPreferences.mockResolvedValue(
       buildUserPreferences({ axonHub: axonHubConfig }),
     )
-    mockFetchTokenScopedModels.mockResolvedValue({
+    mockFetchManagedSiteImportModels.mockResolvedValue({
       models: ["gpt-4o", "gpt-4.1"],
       fetchFailed: false,
     })
@@ -92,21 +94,16 @@ describe("AxonHub managed-site provider", () => {
     expect(mockSignIn).not.toHaveBeenCalled()
   })
 
-  it("prefills imports from selected token credentials", async () => {
+  it("prefills imports directly from resolved credential values", async () => {
     const provider = await import("~/services/managedSites/providers/axonHub")
-    const account = buildDisplaySiteData({
-      name: "Source Site",
+    const source = {
+      name: "Source Site | Primary (auto)",
       baseUrl: "https://source.example/v1",
-    })
-    const token = buildApiToken({
-      name: "Primary",
-      key: "test-selected-token-key",
-      models: "metadata-model",
-    })
+      apiKey: "test-selected-token-key",
+      modelHints: ["metadata-model"],
+    }
 
-    await expect(
-      provider.prepareChannelFormData(account, token),
-    ).resolves.toEqual(
+    await expect(provider.prepareChannelFormData(source)).resolves.toEqual(
       expect.objectContaining({
         name: "Source Site | Primary (auto)",
         type: AXON_HUB_CHANNEL_TYPE.OPENAI,
@@ -120,7 +117,7 @@ describe("AxonHub managed-site provider", () => {
       }),
     )
 
-    expect(mockFetchTokenScopedModels).toHaveBeenCalledWith(account, token)
+    expect(mockFetchManagedSiteImportModels).toHaveBeenCalledWith(source)
   })
 
   it("uses the AIHubMix API origin for managed-site channel imports", async () => {
@@ -135,7 +132,11 @@ describe("AxonHub managed-site provider", () => {
     })
 
     await expect(
-      provider.prepareChannelFormData(account, token),
+      provider.prepareChannelFormData(
+        buildManagedSiteChannelDraftSource(
+          buildDisplayAccountTokenRuntimeKey(account, token),
+        ),
+      ),
     ).resolves.toEqual(
       expect.objectContaining({
         key: "test-aihubmix-token-key",
@@ -143,11 +144,11 @@ describe("AxonHub managed-site provider", () => {
       }),
     )
 
-    expect(mockFetchTokenScopedModels).toHaveBeenCalledWith(
+    expect(mockFetchManagedSiteImportModels).toHaveBeenCalledWith(
       expect.objectContaining({
         baseUrl: "https://aihubmix.com",
+        apiKey: token.key,
       }),
-      token,
     )
   })
 
@@ -161,13 +162,17 @@ describe("AxonHub managed-site provider", () => {
       model_limits: "metadata-model",
     })
 
-    mockFetchTokenScopedModels.mockResolvedValueOnce({
+    mockFetchManagedSiteImportModels.mockResolvedValueOnce({
       models: [],
       fetchFailed: true,
     })
 
     await expect(
-      provider.prepareChannelFormData(account, token),
+      provider.prepareChannelFormData(
+        buildManagedSiteChannelDraftSource(
+          buildDisplayAccountTokenRuntimeKey(account, token),
+        ),
+      ),
     ).resolves.toEqual(
       expect.objectContaining({
         key: "test-token-without-live-models",

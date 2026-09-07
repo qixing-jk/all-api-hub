@@ -2,8 +2,10 @@ import type { ManagedSiteType } from "~/constants/siteType"
 import type { ManagedSiteOperationContext } from "~/services/managedSites/operationContext"
 import type { ManagedSiteRuntimeConfigValue } from "~/services/managedSites/runtimeConfig"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
-import type { AccountToken, ApiToken, DisplaySiteData } from "~/types"
-import type { ManagedSiteChannelDraft } from "~/types/managedSiteChannelDraft"
+import type {
+  ManagedSiteChannelDraft,
+  ManagedSiteChannelDraftSource,
+} from "~/types/managedSiteChannelDraft"
 
 import type { ManagedResourceMatchingCapability } from "./managedResourceMatching"
 import type { ManagedResourceModelsCapability } from "./managedResourceModels"
@@ -63,8 +65,7 @@ export type ManagedSiteChannelDraftRequestOptions = {
 
 export type ManagedSiteChannelDraftsCapability = {
   prepareFormData(
-    account: DisplaySiteData,
-    token: ApiToken | AccountToken,
+    source: ManagedSiteChannelDraftSource,
     options?: ManagedSiteChannelDraftRequestOptions,
   ): Promise<ManagedSiteChannelDraft>
 }

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import {
+  buildAccountKeyResourceRuntimeKey,
   buildAccountTokenRuntimeKey,
   buildServiceCredentialRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
@@ -16,6 +17,7 @@ import {
   PROTECTION_BYPASS_USER_COMMANDS,
 } from "~/services/protectionBypass/contracts"
 import type { AccountToken } from "~/types"
+import type { ManagedSiteChannelDraftSource } from "~/types/managedSiteChannelDraft"
 import {
   MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_DETAIL_CODES,
   MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES,
@@ -178,11 +180,11 @@ const buildService = (
       ...overrides.config,
     },
     channelDrafts: {
-      prepareFormData: vi.fn(async (account, token) => ({
-        name: `${account.name} - ${token.name}`,
+      prepareFormData: vi.fn(async (source: ManagedSiteChannelDraftSource) => ({
+        name: source.name,
         type: 1,
-        key: token.key,
-        base_url: account.baseUrl,
+        key: source.apiKey,
+        base_url: source.baseUrl,
         models: ["gpt-4o"],
         groups: ["default"],
         priority: 0,
@@ -244,11 +246,11 @@ const buildAxonHubImportService = () =>
   buildService({
     siteType: SITE_TYPES.AXON_HUB,
     channelDrafts: {
-      prepareFormData: vi.fn(async (account, token) => ({
-        name: `${account.name} - ${token.name}`,
+      prepareFormData: vi.fn(async (source: ManagedSiteChannelDraftSource) => ({
+        name: source.name,
         type: "openai",
-        key: token.key,
-        base_url: account.baseUrl,
+        key: source.apiKey,
+        base_url: source.baseUrl,
         models: ["model-example"],
         groups: [],
         priority: 0,
@@ -420,7 +422,7 @@ describe("managed-site token batch export", () => {
     )
     expect(submit).toHaveBeenCalledWith(
       expect.objectContaining({
-        name: "Test Account - Token 11",
+        name: "Test Account | Token 11 (auto)",
         type: "openai",
         key: "token-secret",
         models: ["model-example"],
@@ -564,16 +566,12 @@ describe("managed-site token batch export", () => {
 
     expect(mockResolveDisplayAccountRuntimeKeySecret).not.toHaveBeenCalled()
     expect(managedSite.channelDrafts.prepareFormData).toHaveBeenCalledWith(
-      expect.objectContaining({
-        id: "sharedchat-account",
+      {
+        name: "SharedChat | Codex API Key (auto)",
         baseUrl: "https://sharedchat.example.invalid/v1",
-      }),
-      expect.objectContaining({
-        id: -1,
-        name: "Codex API Key",
-        key: "sk-service-credential",
-        accountId: "sharedchat-account",
-      }),
+        apiKey: "sk-service-credential",
+        modelHints: [],
+      },
       expectBatchDraftOptions(),
     )
     expect(preview.items[0]).toMatchObject({
@@ -587,6 +585,52 @@ describe("managed-site token batch export", () => {
         key: "sk-service-credential",
       }),
     })
+  })
+
+  it("keeps native key identities and one-time secrets distinct across scopes", async () => {
+    const managedSite = buildService()
+    configureManagedSiteCapabilities(managedSite)
+    const { prepareManagedSiteTokenBatchExportPreview } = await import(
+      "~/services/managedSites/tokenBatchExport"
+    )
+    const account = buildDisplaySiteData({
+      siteType: SITE_TYPES.OPENROUTER,
+      baseUrl: "https://dashboard.example.invalid",
+    })
+    const baseUrl = "https://runtime.example.invalid/api/v1"
+    const runtimeKeys = ["workspace-a", "workspace-b"].map((scopeKey) => ({
+      ...buildAccountKeyResourceRuntimeKey(account, {
+        ref: {
+          accountId: account.id,
+          siteType: account.siteType,
+          scopeKey,
+          resourceId: "opaque-key/7",
+        },
+        label: scopeKey,
+        secret: `test-create-secret-${scopeKey}`,
+      }),
+      baseUrl,
+    }))
+
+    const preview = await prepareManagedSiteTokenBatchExportPreview({
+      items: runtimeKeys.map((runtimeKey) => ({ account, runtimeKey })),
+    })
+
+    expect(preview.items).toHaveLength(2)
+    for (const [index, runtimeKey] of runtimeKeys.entries()) {
+      expect(preview.items[index]).toMatchObject({
+        id: runtimeKey.id,
+        runtimeKeyId: runtimeKey.id,
+        runtimeKeyName: runtimeKey.label,
+        status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.READY,
+        draft: {
+          base_url: baseUrl,
+          key: runtimeKey.secret,
+        },
+      })
+    }
+    expect(preview.items[0].id).not.toBe(preview.items[1].id)
+    expect(mockResolveDisplayAccountRuntimeKeySecret).not.toHaveBeenCalled()
   })
 
   it("normalizes account-token runtime key base URLs before preparing channel drafts", async () => {
@@ -609,14 +653,12 @@ describe("managed-site token batch export", () => {
     })
 
     expect(managedSite.channelDrafts.prepareFormData).toHaveBeenCalledWith(
-      expect.objectContaining({
-        id: "account-1",
+      {
+        name: "Alpha | Token 11 (auto)",
         baseUrl: "https://upstream.example.com",
-      }),
-      expect.objectContaining({
-        id: token.id,
-        key: "token-secret",
-      }),
+        apiKey: "token-secret",
+        modelHints: [],
+      },
       expectBatchDraftOptions(),
     )
   })
@@ -650,14 +692,12 @@ describe("managed-site token batch export", () => {
     })
 
     expect(managedSite.channelDrafts.prepareFormData).toHaveBeenCalledWith(
-      expect.objectContaining({
-        id: "account-1",
+      {
+        name: "Alpha | Token 11 (auto)",
         baseUrl: "https://upstream.example.com",
-      }),
-      expect.objectContaining({
-        id: token.id,
-        key: "token-secret",
-      }),
+        apiKey: "token-secret",
+        modelHints: [],
+      },
       expectBatchDraftOptions(),
     )
   })
@@ -697,15 +737,12 @@ describe("managed-site token batch export", () => {
     })
 
     expect(managedSite.channelDrafts.prepareFormData).toHaveBeenCalledWith(
-      expect.objectContaining({
-        id: "sharedchat-account",
+      {
+        name: "SharedChat | Codex API Key (auto)",
         baseUrl: "https://sharedchat.example.invalid",
-      }),
-      expect.objectContaining({
-        id: -1,
-        name: "Codex API Key",
-        key: "sk-service-credential",
-      }),
+        apiKey: "sk-service-credential",
+        modelHints: [],
+      },
       expectBatchDraftOptions(),
     )
   })
@@ -899,13 +936,13 @@ describe("managed-site token batch export", () => {
       submit,
       channelDrafts: {
         prepareFormData: vi.fn(
-          async (account, token) =>
+          async (source: ManagedSiteChannelDraftSource) =>
             new Proxy(
               {
-                name: `${account.name} - ${token.name}`,
+                name: source.name,
                 type: 1,
                 key: hiddenSecret,
-                base_url: account.baseUrl,
+                base_url: source.baseUrl,
                 models: ["model-example"],
                 groups: ["default"],
                 priority: 0,
@@ -1157,18 +1194,20 @@ describe("managed-site token batch export", () => {
           fetchSecretKey: vi.fn().mockResolvedValue("token-secret"),
         },
         channelDrafts: {
-          prepareFormData: vi.fn(async (account, token) => ({
-            name: `${account.name} - ${token.name}`,
-            type: "openai",
-            key: token.key,
-            base_url: account.baseUrl,
-            models: [],
-            groups: [],
-            priority: 1,
-            weight: 1,
-            enabled: true,
-            notes: "",
-          })),
+          prepareFormData: vi.fn(
+            async (source: ManagedSiteChannelDraftSource) => ({
+              name: source.name,
+              type: "openai",
+              key: source.apiKey,
+              base_url: source.baseUrl,
+              models: [],
+              groups: [],
+              priority: 1,
+              weight: 1,
+              enabled: true,
+              notes: "",
+            }),
+          ),
         },
       })
       mockGetManagedSiteCapabilities.mockReturnValue(managedSite)
@@ -1259,18 +1298,20 @@ describe("managed-site token batch export", () => {
   it("keeps trusted-new model prefill failures executable with a warning", async () => {
     const managedSite = buildService({
       channelDrafts: {
-        prepareFormData: vi.fn(async (account, token) => ({
-          name: `${account.name} - ${token.name}`,
-          type: 1,
-          key: token.key,
-          base_url: account.baseUrl,
-          models: ["model-example"],
-          groups: ["default"],
-          priority: 0,
-          weight: 0,
-          enabled: true,
-          modelPrefillFetchFailed: true,
-        })),
+        prepareFormData: vi.fn(
+          async (source: ManagedSiteChannelDraftSource) => ({
+            name: source.name,
+            type: 1,
+            key: source.apiKey,
+            base_url: source.baseUrl,
+            models: ["model-example"],
+            groups: ["default"],
+            priority: 0,
+            weight: 0,
+            enabled: true,
+            modelPrefillFetchFailed: true,
+          }),
+        ),
       },
     })
     mockGetManagedSiteCapabilities.mockReturnValue(managedSite)
@@ -1531,18 +1572,20 @@ describe("managed-site token batch export", () => {
       resolution: buildMatchInspection(),
       serviceOverrides: {
         channelDrafts: {
-          prepareFormData: vi.fn(async (account, token) => ({
-            name: `${account.name} - ${token.name}`,
-            type: 1,
-            key: token.key,
-            base_url: account.baseUrl,
-            models: ["gpt-4o"],
-            groups: ["default"],
-            priority: 0,
-            weight: 0,
-            enabled: true,
-            modelPrefillFetchFailed: true,
-          })),
+          prepareFormData: vi.fn(
+            async (source: ManagedSiteChannelDraftSource) => ({
+              name: source.name,
+              type: 1,
+              key: source.apiKey,
+              base_url: source.baseUrl,
+              models: ["gpt-4o"],
+              groups: ["default"],
+              priority: 0,
+              weight: 0,
+              enabled: true,
+              modelPrefillFetchFailed: true,
+            }),
+          ),
         },
       },
       expectedWarning:
@@ -1848,8 +1891,8 @@ describe("managed-site token batch export", () => {
       const prepareChannelFormDataMock = vi.mocked(
         managedSite.channelDrafts.prepareFormData,
       )
-      const firstDraftOptions = prepareChannelFormDataMock.mock.calls[0]?.[2]
-      const secondDraftOptions = prepareChannelFormDataMock.mock.calls[1]?.[2]
+      const firstDraftOptions = prepareChannelFormDataMock.mock.calls[0]?.[1]
+      const secondDraftOptions = prepareChannelFormDataMock.mock.calls[1]?.[1]
       expect(firstDraftOptions).toEqual(expectBatchDraftOptions())
       expect(firstDraftOptions?.operationContext).toBe(
         secondDraftOptions?.operationContext,
@@ -2110,17 +2153,19 @@ describe("managed-site token batch export", () => {
   it("keeps trusted-new repair preparation mandatory while bypassing only duplicate verification", async () => {
     const managedSite = buildService({
       channelDrafts: {
-        prepareFormData: vi.fn(async (account, token) => ({
-          name: `${account.name} - ${token.name}`,
-          type: 1,
-          key: token.key,
-          base_url: account.baseUrl,
-          models: token.id === 12 ? [] : ["gpt-4o"],
-          groups: ["default"],
-          priority: 0,
-          weight: 0,
-          enabled: true,
-        })),
+        prepareFormData: vi.fn(
+          async (source: ManagedSiteChannelDraftSource) => ({
+            name: source.name,
+            type: 1,
+            key: source.apiKey,
+            base_url: source.baseUrl,
+            models: source.apiKey === "key-with-no-models" ? [] : ["gpt-4o"],
+            groups: ["default"],
+            priority: 0,
+            weight: 0,
+            enabled: true,
+          }),
+        ),
       },
     })
     configureManagedSiteCapabilities(managedSite)
@@ -2133,7 +2178,10 @@ describe("managed-site token batch export", () => {
       intent: repairTrustedNewIntent,
       items: [
         buildAccountTokenInput(account, buildAccountToken({ id: 11 })),
-        buildAccountTokenInput(account, buildAccountToken({ id: 12 })),
+        buildAccountTokenInput(
+          account,
+          buildAccountToken({ id: 12, key: "key-with-no-models" }),
+        ),
       ],
     })
 

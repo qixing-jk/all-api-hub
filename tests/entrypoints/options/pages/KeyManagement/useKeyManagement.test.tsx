@@ -1095,15 +1095,16 @@ describe("useKeyManagement enabled account filtering", () => {
 
     expect(getManagedSiteTokenChannelStatusMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        account: expect.objectContaining({
-          id: "sharedchat-status-acc",
+        runtimeKey: expect.objectContaining({
+          id: "service_credential:sharedchat-status-acc:codex",
+          source: "service_credential",
           baseUrl: "https://codex.example.invalid",
-        }),
-        token: expect.objectContaining({
-          id: -1,
-          key: "test-codex-key",
-          name: "Codex",
+          secret: "test-codex-key",
+          label: "Codex",
           accountId: "sharedchat-status-acc",
+          account: expect.objectContaining({
+            baseUrl: "https://new.sharedchat.cc",
+          }),
         }),
         protectionBypassExecution: automaticExecution(
           PROTECTION_BYPASS_FEATURES.KeyManagement,
@@ -2159,8 +2160,10 @@ describe("useKeyManagement enabled account filtering", () => {
     )
     expect(getManagedSiteTokenChannelStatusMock.mock.calls[0]?.[0]).toEqual(
       expect.objectContaining({
-        account: expect.objectContaining({ id: recoverableAccount.id }),
-        token: expect.objectContaining({ id: 701 }),
+        runtimeKey: expect.objectContaining({
+          accountId: recoverableAccount.id,
+          tokenId: 701,
+        }),
       }),
     )
 
@@ -2175,8 +2178,10 @@ describe("useKeyManagement enabled account filtering", () => {
     expect(getManagedSiteTokenChannelStatusMock).toHaveBeenCalledTimes(1)
     expect(getManagedSiteTokenChannelStatusMock.mock.calls[0]?.[0]).toEqual(
       expect.objectContaining({
-        account: expect.objectContaining({ id: recoverableAccount.id }),
-        token: expect.objectContaining({ id: 701 }),
+        runtimeKey: expect.objectContaining({
+          accountId: recoverableAccount.id,
+          tokenId: 701,
+        }),
       }),
     )
     expect(trackerCompleteMock).toHaveBeenCalledWith(
@@ -2253,8 +2258,10 @@ describe("useKeyManagement enabled account filtering", () => {
     expect(getManagedSiteTokenChannelStatusMock).toHaveBeenCalledTimes(1)
     expect(getManagedSiteTokenChannelStatusMock.mock.calls[0]?.[0]).toEqual(
       expect.objectContaining({
-        account: expect.objectContaining({ id: recoverableAccount.id }),
-        token: expect.objectContaining({ id: 711 }),
+        runtimeKey: expect.objectContaining({
+          accountId: recoverableAccount.id,
+          tokenId: 711,
+        }),
       }),
     )
   })
@@ -2855,15 +2862,17 @@ describe("useKeyManagement enabled account filtering", () => {
       },
     )
 
-    getManagedSiteTokenChannelStatusMock.mockImplementation(({ token }) => {
-      if (token.id === 505) {
-        return pendingStatus
-      }
+    getManagedSiteTokenChannelStatusMock.mockImplementation(
+      ({ runtimeKey }) => {
+        if (runtimeKey.tokenId === 505) {
+          return pendingStatus
+        }
 
-      return Promise.resolve({
-        status: managedSiteTokenChannelStatuses.NOT_ADDED,
-      })
-    })
+        return Promise.resolve({
+          status: managedSiteTokenChannelStatuses.NOT_ADDED,
+        })
+      },
+    )
 
     const fetchAccountTokens = vi.fn().mockImplementation((request) => {
       if (request.baseUrl === firstAccount.baseUrl) {
@@ -2918,7 +2927,7 @@ describe("useKeyManagement enabled account filtering", () => {
     )
     expect(
       getManagedSiteTokenChannelStatusMock.mock.calls.filter(
-        ([params]) => params.token.id === 505,
+        ([params]) => params.runtimeKey.tokenId === 505,
       ),
     ).toHaveLength(1)
 
@@ -2972,27 +2981,29 @@ describe("useKeyManagement enabled account filtering", () => {
     })
 
     let secondTokenCheckCount = 0
-    getManagedSiteTokenChannelStatusMock.mockImplementation(({ token }) => {
-      if (token.id === 601) {
-        return firstTokenStatus
-      }
+    getManagedSiteTokenChannelStatusMock.mockImplementation(
+      ({ runtimeKey }) => {
+        if (runtimeKey.tokenId === 601) {
+          return firstTokenStatus
+        }
 
-      secondTokenCheckCount += 1
+        secondTokenCheckCount += 1
 
-      return Promise.resolve(
-        secondTokenCheckCount === 1
-          ? {
-              status: managedSiteTokenChannelStatuses.NOT_ADDED,
-            }
-          : {
-              status: managedSiteTokenChannelStatuses.ADDED,
-              matchedChannel: {
-                id: 88,
-                name: "Managed Channel 88",
+        return Promise.resolve(
+          secondTokenCheckCount === 1
+            ? {
+                status: managedSiteTokenChannelStatuses.NOT_ADDED,
+              }
+            : {
+                status: managedSiteTokenChannelStatuses.ADDED,
+                matchedChannel: {
+                  id: 88,
+                  name: "Managed Channel 88",
+                },
               },
-            },
-      )
-    })
+        )
+      },
+    )
 
     const fetchAccountTokens = vi.fn().mockResolvedValue([
       createToken({

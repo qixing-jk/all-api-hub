@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { buildDisplayAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import { decodeNewApiResponseError } from "~/services/apiService/newApiFamily/responseError"
+import { buildManagedSiteChannelDraftSource } from "~/services/managedSites/channelDraftSource"
 import { MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS } from "~/services/managedSites/channelMatch"
 import type { ApiToken, DisplaySiteData } from "~/types"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
@@ -1025,40 +1027,37 @@ describe("newApiService", () => {
   // buildChannelName
   // ========================================================================
 
-  describe("buildChannelName", () => {
+  describe("channel import source names", () => {
     it("should build channel name with auto suffix", async () => {
-      const { buildManagedSiteChannelName: buildChannelName } = await import(
-        "~/services/managedSites/utils/channelDraft"
-      )
       const account = createMockDisplaySiteData({ name: "My Site" })
       const token = createMockApiToken({ name: "My Token" })
 
-      const result = buildChannelName(account, token)
+      const result = buildManagedSiteChannelDraftSource(
+        buildDisplayAccountTokenRuntimeKey(account, token),
+      ).name
 
       expect(result).toBe("My Site | My Token (auto)")
     })
 
     it("should not add duplicate auto suffix", async () => {
-      const { buildManagedSiteChannelName: buildChannelName } = await import(
-        "~/services/managedSites/utils/channelDraft"
-      )
       const account = createMockDisplaySiteData({ name: "My Site" })
       const token = createMockApiToken({ name: "My Token (auto)" })
 
-      const result = buildChannelName(account, token)
+      const result = buildManagedSiteChannelDraftSource(
+        buildDisplayAccountTokenRuntimeKey(account, token),
+      ).name
 
       expect(result).toBe("My Site | My Token (auto)")
       expect(result.match(/\(auto\)/g)).toHaveLength(1)
     })
 
     it("should trim whitespace", async () => {
-      const { buildManagedSiteChannelName: buildChannelName } = await import(
-        "~/services/managedSites/utils/channelDraft"
-      )
       const account = createMockDisplaySiteData()
       const token = createMockApiToken()
 
-      const result = buildChannelName(account, token)
+      const result = buildManagedSiteChannelDraftSource(
+        buildDisplayAccountTokenRuntimeKey(account, token),
+      ).name
 
       expect(result).not.toMatch(/^\s/)
       expect(result).not.toMatch(/\s$/)
@@ -1086,7 +1085,11 @@ describe("newApiService", () => {
       ])
       mockFetchSiteUserGroups.mockResolvedValueOnce(["default", "vip"])
 
-      const result = await prepareChannelFormData(account, token)
+      const result = await prepareChannelFormData(
+        buildManagedSiteChannelDraftSource(
+          buildDisplayAccountTokenRuntimeKey(account, token),
+        ),
+      )
 
       expect(result.name).toContain("(auto)")
       expect(result).toMatchObject({ type: 1, enabled: true })
@@ -1108,7 +1111,11 @@ describe("newApiService", () => {
       mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce(["gpt-4"])
       mockFetchSiteUserGroups.mockResolvedValueOnce(["default"])
 
-      await prepareChannelFormData(account, token)
+      await prepareChannelFormData(
+        buildManagedSiteChannelDraftSource(
+          buildDisplayAccountTokenRuntimeKey(account, token),
+        ),
+      )
 
       expect(mockFetchSiteUserGroups).toHaveBeenCalledWith({
         baseUrl: prefs.newApi.baseUrl,
@@ -1135,7 +1142,11 @@ describe("newApiService", () => {
       )
       mockFetchSiteUserGroups.mockResolvedValueOnce(["default"])
 
-      const result = await prepareChannelFormData(account, token)
+      const result = await prepareChannelFormData(
+        buildManagedSiteChannelDraftSource(
+          buildDisplayAccountTokenRuntimeKey(account, token),
+        ),
+      )
 
       expect(result.models).toEqual([])
       expect(result.modelPrefillFetchFailed).toBe(true)
@@ -1159,7 +1170,11 @@ describe("newApiService", () => {
       ])
       mockFetchSiteUserGroups.mockResolvedValueOnce(["default"])
 
-      const result = await prepareChannelFormData(account, token)
+      const result = await prepareChannelFormData(
+        buildManagedSiteChannelDraftSource(
+          buildDisplayAccountTokenRuntimeKey(account, token),
+        ),
+      )
 
       expect(mockFetchOpenAICompatibleModelIds).toHaveBeenCalledWith({
         baseUrl: "https://aihubmix.com",
@@ -1183,7 +1198,11 @@ describe("newApiService", () => {
       )
       mockFetchSiteUserGroups.mockResolvedValueOnce(["default"])
 
-      const result = await prepareChannelFormData(account, token)
+      const result = await prepareChannelFormData(
+        buildManagedSiteChannelDraftSource(
+          buildDisplayAccountTokenRuntimeKey(account, token),
+        ),
+      )
 
       expect(result.models).toEqual([])
       expect(result.modelPrefillFetchFailed).toBe(true)
@@ -1202,7 +1221,11 @@ describe("newApiService", () => {
       mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce(["gpt-4"])
       mockFetchSiteUserGroups.mockResolvedValueOnce(["vip", "beta"])
 
-      const result = await prepareChannelFormData(account, token)
+      const result = await prepareChannelFormData(
+        buildManagedSiteChannelDraftSource(
+          buildDisplayAccountTokenRuntimeKey(account, token),
+        ),
+      )
 
       expect(result.groups).toEqual(["vip"])
     })
@@ -1221,7 +1244,11 @@ describe("newApiService", () => {
       )
       mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce(["gpt-4"])
 
-      const result = await prepareChannelFormData(account, token)
+      const result = await prepareChannelFormData(
+        buildManagedSiteChannelDraftSource(
+          buildDisplayAccountTokenRuntimeKey(account, token),
+        ),
+      )
 
       expect(result.groups).toEqual(["default"])
     })
@@ -1243,7 +1270,11 @@ describe("newApiService", () => {
       mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce(["gpt-4"])
       mockFetchSiteUserGroups.mockResolvedValueOnce([])
 
-      const result = await prepareChannelFormData(account, token)
+      const result = await prepareChannelFormData(
+        buildManagedSiteChannelDraftSource(
+          buildDisplayAccountTokenRuntimeKey(account, token),
+        ),
+      )
 
       expect(result.type).toBe(1) // OpenAI
       expect(result.groups).toEqual(["default"])

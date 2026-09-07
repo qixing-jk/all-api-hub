@@ -1,17 +1,17 @@
 import { DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSiteChannelDraft"
 import { VeloeraChannelType } from "~/constants/veloera"
-import { normalizeAccountForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
 import type { ManagedSiteChannelDraftRequestOptions } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import { fetchSiteUserGroups } from "~/services/apiService/newApiFamily/default/keyManagement"
-import { buildManagedSiteChannelName } from "~/services/managedSites/utils/channelDraft"
-import { fetchTokenScopedModels } from "~/services/managedSites/utils/fetchTokenScopedModels"
-import type { AccountToken } from "~/types"
-import { AuthTypeEnum, type ApiToken, type DisplaySiteData } from "~/types"
-import type { ManagedSiteChannelDraft } from "~/types/managedSiteChannelDraft"
+import { fetchManagedSiteImportModels } from "~/services/managedSites/utils/fetchManagedSiteImportModels"
+import { AuthTypeEnum } from "~/types"
+import type {
+  ManagedSiteChannelDraft,
+  ManagedSiteChannelDraftSource,
+} from "~/types/managedSiteChannelDraft"
 import type { NewApiFamilyChannelCommand } from "~/types/newApiFamilyChannelEditor"
 import type { VeloeraCreateChannelPayload } from "~/types/veloera"
 import { createLogger } from "~/utils/core/logger"
-import { normalizeList, parseDelimitedList } from "~/utils/core/string"
+import { normalizeList } from "~/utils/core/string"
 
 import {
   userPreferences,
@@ -88,18 +88,13 @@ export async function getVeloeraConfig(): Promise<{
  * Builds default channel form values.
  */
 export async function prepareChannelFormData(
-  account: DisplaySiteData,
-  token: ApiToken | AccountToken,
+  source: ManagedSiteChannelDraftSource,
   options?: ManagedSiteChannelDraftRequestOptions,
 ): Promise<ManagedSiteChannelDraft> {
-  const upstreamAccount = normalizeAccountForManagedChannel(account)
-  const tokenModelList = parseDelimitedList(token.models)
-  const { models: availableModels, fetchFailed } = await fetchTokenScopedModels(
-    upstreamAccount,
-    token,
-  )
+  const { models: availableModels, fetchFailed } =
+    await fetchManagedSiteImportModels(source)
   const resolvedModels =
-    availableModels.length > 0 ? availableModels : tokenModelList
+    availableModels.length > 0 ? availableModels : source.modelHints
 
   const resolvedGroups = await resolveDefaultChannelGroups({
     getConfig: getVeloeraConfig,
@@ -119,10 +114,10 @@ export async function prepareChannelFormData(
   })
 
   return {
-    name: buildManagedSiteChannelName(account, token),
+    name: source.name,
     type: VeloeraChannelType.OpenAI,
-    key: token.key,
-    base_url: upstreamAccount.baseUrl,
+    key: source.apiKey,
+    base_url: source.baseUrl,
     models: normalizeList(resolvedModels),
     ...(fetchFailed ? { modelPrefillFetchFailed: true } : {}),
     groups: normalizeList(resolvedGroups),

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { fetchTokenScopedModels } from "~/services/managedSites/utils/fetchTokenScopedModels"
+import { fetchManagedSiteImportModels } from "~/services/managedSites/utils/fetchManagedSiteImportModels"
 
 const { fetchOpenAICompatibleModelIdsMock } = vi.hoisted(() => ({
   fetchOpenAICompatibleModelIdsMock: vi.fn(),
@@ -11,7 +11,7 @@ vi.mock("~/services/aiApi/openaiCompatible", () => ({
     fetchOpenAICompatibleModelIdsMock(...args),
 }))
 
-describe("fetchTokenScopedModels", () => {
+describe("fetchManagedSiteImportModels", () => {
   beforeEach(() => {
     fetchOpenAICompatibleModelIdsMock.mockReset()
   })
@@ -25,10 +25,10 @@ describe("fetchTokenScopedModels", () => {
     ])
 
     await expect(
-      fetchTokenScopedModels(
-        { baseUrl: "https://example.com" } as any,
-        { key: "sk-token" } as any,
-      ),
+      fetchManagedSiteImportModels({
+        baseUrl: "https://example.com",
+        apiKey: "sk-token",
+      }),
     ).resolves.toEqual({
       models: ["gpt-4o", "gpt-4.1"],
       fetchFailed: false,
@@ -44,10 +44,10 @@ describe("fetchTokenScopedModels", () => {
     fetchOpenAICompatibleModelIdsMock.mockRejectedValueOnce(new Error("boom"))
 
     await expect(
-      fetchTokenScopedModels(
-        { baseUrl: "https://example.com" } as any,
-        { key: "sk-token" } as any,
-      ),
+      fetchManagedSiteImportModels({
+        baseUrl: "https://example.com",
+        apiKey: "sk-token",
+      }),
     ).resolves.toEqual({
       models: [],
       fetchFailed: true,
@@ -58,10 +58,10 @@ describe("fetchTokenScopedModels", () => {
     fetchOpenAICompatibleModelIdsMock.mockResolvedValueOnce(undefined)
 
     await expect(
-      fetchTokenScopedModels(
-        { baseUrl: "https://example.com" } as any,
-        { key: "sk-token" } as any,
-      ),
+      fetchManagedSiteImportModels({
+        baseUrl: "https://example.com",
+        apiKey: "sk-token",
+      }),
     ).resolves.toEqual({
       models: [],
       fetchFailed: false,

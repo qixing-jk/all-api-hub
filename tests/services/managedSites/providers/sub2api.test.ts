@@ -6,7 +6,9 @@ import {
   SUB2API_ADMIN_REQUEST_TIMEOUT_MS,
   SUB2API_MANAGED_RESOURCE_STATUS,
 } from "~/constants/sub2api"
+import { buildDisplayAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import { getManagedSiteCapabilities } from "~/services/apiAdapters/registry"
+import { buildManagedSiteChannelDraftSource } from "~/services/managedSites/channelDraftSource"
 import {
   createSub2ApiApiKeyAccount,
   deleteSub2ApiApiKeyAccount,
@@ -24,14 +26,14 @@ import {
   getManagedSiteTokenChannelStatus,
   MANAGED_SITE_TOKEN_CHANNEL_STATUSES,
 } from "~/services/managedSites/tokenChannelStatus"
-import { fetchTokenScopedModels } from "~/services/managedSites/utils/fetchTokenScopedModels"
+import { fetchManagedSiteImportModels } from "~/services/managedSites/utils/fetchManagedSiteImportModels"
 import {
   buildApiToken,
   buildDisplaySiteData,
 } from "~~/tests/test-utils/factories"
 
-vi.mock("~/services/managedSites/utils/fetchTokenScopedModels", () => ({
-  fetchTokenScopedModels: vi.fn(),
+vi.mock("~/services/managedSites/utils/fetchManagedSiteImportModels", () => ({
+  fetchManagedSiteImportModels: vi.fn(),
 }))
 
 const config = {
@@ -64,7 +66,7 @@ describe("Sub2API API-key account managed-site provider", () => {
 
   beforeEach(() => {
     mockFetch.mockReset()
-    vi.mocked(fetchTokenScopedModels).mockReset()
+    vi.mocked(fetchManagedSiteImportModels).mockReset()
     vi.stubGlobal("fetch", mockFetch)
   })
 
@@ -482,11 +484,13 @@ describe("Sub2API API-key account managed-site provider", () => {
     })
 
     const result = await getManagedSiteTokenChannelStatus({
-      account: buildDisplaySiteData({
-        siteType: SITE_TYPES.NEW_API,
-        baseUrl: "https://api.example.invalid/v1",
-      }),
-      token: buildApiToken({ key: "sk-test-token-key" }),
+      runtimeKey: buildDisplayAccountTokenRuntimeKey(
+        buildDisplaySiteData({
+          siteType: SITE_TYPES.NEW_API,
+          baseUrl: "https://api.example.invalid/v1",
+        }),
+        buildApiToken({ key: "sk-test-token-key" }),
+      ),
       managedSite: getManagedSiteCapabilities(SITE_TYPES.SUB2API),
       managedConfig: config,
       protectionBypassExecution: {
@@ -528,17 +532,21 @@ describe("Sub2API API-key account managed-site provider", () => {
 
   it("prepares a provider-native import draft without model discovery", async () => {
     const draft = await prepareChannelFormData(
-      {
-        id: "source-account",
-        name: "Source account",
-        siteType: "new-api",
-        baseUrl: "https://api.example.invalid/v1/",
-      } as any,
-      {
-        id: 9,
-        name: "Imported key",
-        key: "sk-imported",
-      } as any,
+      buildManagedSiteChannelDraftSource(
+        buildDisplayAccountTokenRuntimeKey(
+          {
+            id: "source-account",
+            name: "Source account",
+            siteType: "new-api",
+            baseUrl: "https://api.example.invalid/v1/",
+          } as any,
+          {
+            id: 9,
+            name: "Imported key",
+            key: "sk-imported",
+          } as any,
+        ),
+      ),
     )
 
     expect(mockFetch).not.toHaveBeenCalled()

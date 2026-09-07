@@ -43,22 +43,6 @@ export function normalizeAccountSiteUrlForManagedChannel(params: {
 }
 
 /**
- * Returns an account copy with the upstream URL normalized for managed-channel
- * import flows.
- */
-export function normalizeAccountForManagedChannel<
-  TAccount extends { siteType?: AccountSiteType | string; baseUrl: string },
->(account: TAccount): TAccount {
-  return {
-    ...account,
-    baseUrl: normalizeAccountSiteUrlForManagedChannel({
-      siteType: account.siteType,
-      url: account.baseUrl,
-    }),
-  }
-}
-
-/**
  * Produces a stable origin key for duplicate-account scans and warnings.
  */
 export function normalizeAccountSiteUrlForOriginKey(params: {

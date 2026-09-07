@@ -278,22 +278,12 @@ describe("KeyManagement utils", () => {
         { canRotate: true },
       )
 
-      expect(
-        buildServiceCredentialManagedSiteStatusTarget(account, runtimeKey),
-      ).toMatchObject({
-        identityKey: "runtime_key:service_credential:account-1:codex",
-        account: {
-          id: "account-1",
-          baseUrl: "https://codex.example.invalid",
+      expect(buildServiceCredentialManagedSiteStatusTarget(runtimeKey)).toEqual(
+        {
+          identityKey: "runtime_key:service_credential:account-1:codex",
+          runtimeKey,
         },
-        token: {
-          id: ACCOUNT_RUNTIME_KEY_LEGACY_TOKEN_ID,
-          accountId: "account-1",
-          accountName: "Example Account",
-          key: "service-secret",
-          name: "Codex",
-        },
-      })
+      )
     })
   })
 
