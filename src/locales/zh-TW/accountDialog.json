@@ -278,10 +278,10 @@
         "continue": "繼續",
         "disableAndContinue": "以後不再提醒，並繼續"
       },
-      "description_other": "你已在 {{siteUrl}} 新增了 {{count}} 個帳號。繼續新增可能會造成重複，是否繼續？",
-      "descriptionExact": "在 {{siteUrl}} 上，使用者 ID {{userId}} 的帳號已存在（{{username}}）。繼續新增可能會造成重複，是否繼續？",
+      "description_other": "{{siteUrl}} 的這個 Management Key 已儲存在 {{count}} 個帳號中，是否再次新增？",
+      "descriptionExact": "{{siteUrl}} 上使用者 ID 為 {{userId}} 的帳號已儲存（{{username}}），是否再次新增？",
       "title": "重複帳號",
-      "warningTitle": "該站點已存在帳號"
+      "warningTitle": "偵測到已儲存的帳號"
     },
     "managedSiteConfig": {
       "actions": {

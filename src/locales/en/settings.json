@@ -222,9 +222,9 @@
     "userIdDesc": "Administrator user ID (numeric only). Root admin is usually 1."
   },
   "duplicateAccountWarningOnAdd": {
-    "description": "Control whether All API Hub asks for confirmation when you add an account for a site that already exists.",
+    "description": "Check saved accounts before adding to help avoid duplicates.",
     "title": "Accounts",
-    "toggleDesc": "When enabled, All API Hub shows a confirmation dialog if you try to add another account for the same site URL.",
+    "toggleDesc": "Ask for confirmation when the same user ID is already saved for this site. OpenRouter checks for an identical Management Key.",
     "toggleLabel": "Warn before adding duplicates"
   },
   "logging": {

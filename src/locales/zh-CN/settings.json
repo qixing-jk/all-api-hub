@@ -222,9 +222,9 @@
     "userIdDesc": "管理员用户 ID (纯数字)，root 管理员通常为 1"
   },
   "duplicateAccountWarningOnAdd": {
-    "description": "控制添加账号时，如果该站点已存在账号，是否需要弹窗确认。",
+    "description": "添加前识别已保存账号，减少重复添加。",
     "title": "账号",
-    "toggleDesc": "开启后，当你尝试为同一站点 URL 再次添加账号时，会弹出确认对话框。",
+    "toggleDesc": "同一站点的用户 ID 已保存时才提示确认。OpenRouter 按相同的 Management Key 判断重复。",
     "toggleLabel": "添加重复账号前提醒"
   },
   "logging": {

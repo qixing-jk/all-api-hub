@@ -8,7 +8,6 @@ import {
   ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES,
   ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS,
   ACCOUNT_SITE_TOKEN_FORM_NETWORK_LIMIT_POLICIES,
-  doAccountSiteIdentitiesMatch,
   getAccountSiteModelListProfile,
   getAccountSiteProductProfile,
   isAccountAuthTypeAllowed,
@@ -313,43 +312,6 @@ describe("accountSiteProfile", () => {
         user: { id: 42 },
       }),
     ).toBeNull()
-  })
-
-  it("matches saved and current identities through the same profile rule", () => {
-    expect(
-      doAccountSiteIdentitiesMatch({
-        siteType: SITE_TYPES.NEW_API,
-        savedUser: null,
-        currentUser: { id: 42 },
-      }),
-    ).toBe(false)
-    expect(
-      doAccountSiteIdentitiesMatch({
-        siteType: SITE_TYPES.AIHUBMIX,
-        savedUser: {
-          id: "aihubmix-stable-id",
-          username: "Display Name",
-        },
-        currentUser: { username: "aihubmix-stable-id" },
-      }),
-    ).toBe(true)
-    expect(
-      doAccountSiteIdentitiesMatch({
-        siteType: SITE_TYPES.AIHUBMIX,
-        savedUser: {
-          id: "aihubmix-stable-id",
-          username: "Display Name",
-        },
-        currentUser: { username: "Display Name" },
-      }),
-    ).toBe(false)
-    expect(
-      doAccountSiteIdentitiesMatch({
-        siteType: SITE_TYPES.NEW_API,
-        savedUser: { id: "42" },
-        currentUser: { id: 42 },
-      }),
-    ).toBe(true)
   })
 
   it("keeps AnyRouter cookie auth default as profile data", () => {

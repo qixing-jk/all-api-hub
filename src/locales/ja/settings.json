@@ -222,9 +222,9 @@
     "userIdDesc": "管理者ユーザー ID（数値のみ）。通常 root admin は 1 です。"
   },
   "duplicateAccountWarningOnAdd": {
-    "description": "既に登録済みのサイトにアカウントを追加するとき、確認を求めるかどうかを制御します。",
+    "description": "追加前に保存済みアカウントを確認し、重複追加を防ぎます。",
     "title": "アカウント",
-    "toggleDesc": "有効にすると、同じサイト URL に別のアカウントを追加しようとしたときに確認ダイアログを表示します。",
+    "toggleDesc": "同じサイトの同じユーザー ID が保存済みの場合に確認します。OpenRouter では同一の Management Key を確認します。",
     "toggleLabel": "重複追加前に警告する"
   },
   "logging": {

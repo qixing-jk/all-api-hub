@@ -280,12 +280,12 @@
         "continue": "Continuar",
         "disableAndContinue": "Não me lembre novamente e continue"
       },
-      "description_one": "Você já tem {{count}} conta de {{siteUrl}}. Adicionar outra pode criar uma duplicata. Deseja continuar?",
-      "description_many": "Você já tem {{count}} contas de {{siteUrl}}. Adicionar outra pode criar uma duplicata. Deseja continuar?",
-      "description_other": "Você já tem {{count}} contas de {{siteUrl}}. Adicionar outra pode criar uma duplicata. Deseja continuar?",
-      "descriptionExact": "Já existe uma conta de {{siteUrl}} com o ID de usuário {{userId}} ({{username}}). Adicionar outra pode criar uma duplicata. Deseja continuar?",
+      "description_one": "Esta Management Key de {{siteUrl}} já está salva em {{count}} conta. Deseja adicioná-la novamente?",
+      "description_many": "Esta Management Key de {{siteUrl}} já está salva em {{count}} contas. Deseja adicioná-la novamente?",
+      "description_other": "Esta Management Key de {{siteUrl}} já está salva em {{count}} contas. Deseja adicioná-la novamente?",
+      "descriptionExact": "Uma conta de {{siteUrl}} com o ID de usuário {{userId}} já está salva ({{username}}). Deseja adicioná-la novamente?",
       "title": "Conta duplicada",
-      "warningTitle": "Este site já possui contas"
+      "warningTitle": "Conta salva correspondente encontrada"
     },
     "managedSiteConfig": {
       "actions": {

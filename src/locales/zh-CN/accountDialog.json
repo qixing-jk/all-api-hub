@@ -278,10 +278,10 @@
         "continue": "继续",
         "disableAndContinue": "以后不再提醒，并继续"
       },
-      "description": "你已在 {{siteUrl}} 添加了 {{count}} 个账号。继续添加可能会造成重复，是否继续？",
-      "descriptionExact": "在 {{siteUrl}} 上，用户 ID {{userId}} 的账号已存在（{{username}}）。继续添加可能会造成重复，是否继续？",
+      "description": "{{siteUrl}} 的这个 Management Key 已保存在 {{count}} 个账号中，是否再次添加？",
+      "descriptionExact": "{{siteUrl}} 上用户 ID 为 {{userId}} 的账号已保存（{{username}}），是否再次添加？",
       "title": "重复账号",
-      "warningTitle": "该站点已存在账号"
+      "warningTitle": "检测到已保存的账号"
     },
     "managedSiteConfig": {
       "actions": {

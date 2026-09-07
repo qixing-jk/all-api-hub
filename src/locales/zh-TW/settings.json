@@ -222,9 +222,9 @@
     "userIdDesc": "管理員使用者 ID (純數字)，root 管理員通常為 1"
   },
   "duplicateAccountWarningOnAdd": {
-    "description": "控制新增帳號時，如果該站點已存在帳號，是否需要彈窗確認。",
+    "description": "新增前辨識已儲存的帳號，減少重複新增。",
     "title": "帳號",
-    "toggleDesc": "開啟後，當你嘗試為同一站點 URL 再次新增帳號時，會彈出確認對話方塊。",
+    "toggleDesc": "同一站台的使用者 ID 已儲存時才提示確認。OpenRouter 依相同的 Management Key 判斷重複。",
     "toggleLabel": "新增重複帳號前提醒"
   },
   "logging": {

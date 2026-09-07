@@ -279,11 +279,11 @@
         "continue": "Weiter",
         "disableAndContinue": "Nicht mehr erinnern und fortfahren"
       },
-      "description_one": "Sie haben bereits {{count}} Konto für {{siteUrl}}. Durch das Hinzufügen eines weiteren können Duplikate entstehen. Möchten Sie fortfahren?",
-      "description_other": "Sie haben bereits {{count}} Konten für {{siteUrl}}. Durch das Hinzufügen eines weiteren können Duplikate entstehen. Möchten Sie fortfahren?",
-      "descriptionExact": "Ein Konto für {{siteUrl}} mit der Benutzer-ID {{userId}} existiert bereits ({{username}}). Durch das Hinzufügen eines weiteren können Duplikate entstehen. Möchten Sie fortfahren?",
+      "description_one": "Dieser Management Key für {{siteUrl}} ist bereits in {{count}} Konto gespeichert. Möchten Sie ihn erneut hinzufügen?",
+      "description_other": "Dieser Management Key für {{siteUrl}} ist bereits in {{count}} Konten gespeichert. Möchten Sie ihn erneut hinzufügen?",
+      "descriptionExact": "Ein Konto für {{siteUrl}} mit der Benutzer-ID {{userId}} ist bereits gespeichert ({{username}}). Möchten Sie es erneut hinzufügen?",
       "title": "Doppeltes Konto",
-      "warningTitle": "Diese Website hat bereits Konten"
+      "warningTitle": "Passendes gespeichertes Konto gefunden"
     },
     "managedSiteConfig": {
       "actions": {

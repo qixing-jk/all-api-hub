@@ -81,6 +81,52 @@ describe("content storage handler", () => {
     })
   })
 
+  it("verifies the current browser login against the server instead of trusting stored user data", async () => {
+    vi.stubGlobal("location", new URL("https://site.example.com/dashboard"))
+    localStorage.setItem(
+      "user",
+      JSON.stringify({ id: 1, username: "old-user" }),
+    )
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          success: true,
+          data: {
+            id: 2,
+            username: "current-user",
+            access_token: "private-test-token",
+          },
+        }),
+        { status: 200 },
+      ),
+    )
+    vi.stubGlobal("fetch", fetchMock)
+
+    const response = await new Promise<unknown>((resolve) => {
+      handleGetUserFromLocalStorage(
+        {
+          url: "https://site.example.com",
+          siteType: "new-api",
+          verifyIdentity: true,
+        },
+        resolve,
+      )
+    })
+
+    expect(response).toEqual({
+      success: true,
+      data: { userId: "2", identityVerified: true },
+    })
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://site.example.com/api/user/self",
+      expect.objectContaining({
+        method: "GET",
+        credentials: "include",
+        cache: "no-store",
+      }),
+    )
+  })
+
   it("prefers the current V-API user store over legacy storage", async () => {
     localStorage.setItem(
       "user-storage",

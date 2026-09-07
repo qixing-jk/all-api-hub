@@ -1008,13 +1008,24 @@ describe("useAccountDialog re-detect preservation", () => {
     expect(result.current.state.isDetected).toBe(true)
   })
 
-  it("stops auto-detect when the duplicate-account warning is canceled", async () => {
-    await accountStorage.addAccount(
-      buildSiteAccount({
-        site_name: "Existing",
-        site_url: "https://api.example.com",
-      }),
-    )
+  it("re-detects the current login before checking an obsolete draft identity for duplicates", async () => {
+    const existingAccount = buildSiteAccount({
+      site_name: "Existing",
+      site_url: "https://api.example.com",
+    })
+    await accountStorage.addAccount(existingAccount)
+    mockAutoDetectAccount.mockResolvedValueOnce({
+      success: true,
+      data: {
+        username: "different-user",
+        accessToken: "different-token",
+        userId: "new-login",
+        exchangeRate: 7,
+        siteName: "Detected Site",
+        siteType: SITE_TYPES.NEW_API,
+        checkIn: buildCheckInConfig(),
+      },
+    })
 
     const { result } = renderHook(() =>
       useAccountDialog({
@@ -1031,6 +1042,7 @@ describe("useAccountDialog re-detect preservation", () => {
 
     await act(async () => {
       result.current.handlers.handleUrlChange("https://api.example.com/users")
+      result.current.setters.setUserId(existingAccount.account_info.id)
     })
 
     let detectPromise!: Promise<void>
@@ -1039,22 +1051,17 @@ describe("useAccountDialog re-detect preservation", () => {
     })
 
     await waitFor(() => {
-      expect(result.current.state.duplicateAccountWarning).toMatchObject({
-        isOpen: true,
-        siteUrl: "https://api.example.com",
-      })
+      expect(mockAutoDetectAccount).toHaveBeenCalled()
     })
 
     await act(async () => {
-      result.current.handlers.handleDuplicateAccountWarningCancel()
       await detectPromise
     })
 
-    expect(mockAutoDetectAccount).not.toHaveBeenCalled()
     expect(result.current.state.duplicateAccountWarning.isOpen).toBe(false)
     expect(result.current.state.isDetecting).toBe(false)
-    expect(result.current.state.isDetected).toBe(false)
-    expect(result.current.state.showManualForm).toBe(false)
+    expect(result.current.state.isDetected).toBe(true)
+    expect(result.current.state.userId).toBe("new-login")
   })
 
   it.each(["url", "site type", "auth type"])(

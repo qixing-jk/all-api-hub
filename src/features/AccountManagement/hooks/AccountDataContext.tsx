@@ -19,15 +19,11 @@ import {
 } from "~/constants"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import {
-  ACCOUNT_BROWSER_SESSION_SOURCES,
-  readAccountBrowserSessionFromTab,
-} from "~/services/accountBrowserSession"
+import { readAccountBrowserIdentityFromTab } from "~/services/accountBrowserSession/identityReader"
 import { replaceIdListSubset } from "~/services/accounts/accountEntryLayoutPolicy"
-import {
-  doAccountSiteIdentitiesMatch,
-  resolveAccountSiteContentSessionHintForOrigin,
-} from "~/services/accounts/accountSiteProfile"
+import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
+import { findAccountsBySiteIdentity } from "~/services/accounts/accountMatching"
+import { resolveAccountSiteContentSessionHintForOrigin } from "~/services/accounts/accountSiteProfile"
 import { accountCheckInState } from "~/services/accounts/accountStorage/accountCheckInState"
 import { accountEntryLayout } from "~/services/accounts/accountStorage/accountEntryLayout"
 import { accountPresentation } from "~/services/accounts/accountStorage/accountPresentation"
@@ -36,7 +32,6 @@ import { accountReadModels } from "~/services/accounts/accountStorage/accountRea
 import { accountRefresh } from "~/services/accounts/accountStorage/accountRefresh"
 import { createEmptyAccountStats } from "~/services/accounts/accountTodayStats"
 import { isSameAccountSiteOrigin } from "~/services/accounts/utils/siteUrlNormalization"
-import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import { getDayKeyFromUnixSeconds } from "~/services/history/dailyBalanceHistory/dayKeys"
 import { dailyBalanceHistoryStorage } from "~/services/history/dailyBalanceHistory/storage"
 import {
@@ -90,6 +85,17 @@ import { createLogger } from "~/utils/core/logger"
  * Unified logger scoped to account data context and refresh orchestration.
  */
 const logger = createLogger("AccountDataContext")
+
+const CURRENT_TAB_IDENTITY_CACHE_MS = 1500
+
+type CurrentTabIdentityCache = {
+  tabId: number
+  url: string
+  siteType: SiteAccount["site_type"]
+  candidateUserIdsKey: string
+  completedAt: number | null
+  identity: Promise<string | null>
+}
 
 // 1. 定义 Context 的值类型
 interface AccountDataContextType {
@@ -331,17 +337,11 @@ export const AccountDataProvider = ({
     !hasResolvedInitialCurrentTab ||
     !hasResolvedInitialOpenTabs
 
-  const currentTabUserCacheRef = useRef<{
-    tabId: number
-    url: string
-    userId: string | null
-    user: Record<string, unknown> | null
-    attemptedAt: number
-  } | null>(null)
+  const currentTabUserCacheRef = useRef<CurrentTabIdentityCache | null>(null)
 
   const currentTabCheckSeqRef = useRef(0)
 
-  const checkCurrentTab = useCallback(async () => {
+  const checkCurrentTab = useCallback(async (force = false) => {
     // Guard against stale async updates: if a newer check starts while this one is awaiting,
     // this `seq` lets us no-op any state updates from older runs.
     const seq = (currentTabCheckSeqRef.current += 1)
@@ -406,16 +406,6 @@ export const AccountDataProvider = ({
       if (seq !== currentTabCheckSeqRef.current) return
       setDetectedSiteAccounts(originAccounts)
 
-      // Dedupe based on tabId + full tabUrl to avoid duplicate checks when multiple tab events
-      // fire in quick succession (e.g. onUpdated, onActivated).
-      const cached = currentTabUserCacheRef.current
-      const cacheMatches =
-        cached && cached.tabId === tabId && cached.url === tabUrl
-      if (!cacheMatches) {
-        // Switching tabs/sites: clear the previous user-level match early to avoid stale UI highlights.
-        setDetectedAccount(null)
-      }
-
       if (originAccounts.length === 0) {
         // No accounts for this origin: nothing further to verify.
         currentTabUserCacheRef.current = null
@@ -423,85 +413,49 @@ export const AccountDataProvider = ({
         return
       }
 
-      const now = Date.now()
-      const DEDUPE_MS = 1500
+      const candidateUserIds = [
+        ...new Set(
+          originAccounts
+            .map((account) => normalizeAccountIdentity(account.account_info.id))
+            .filter((id): id is string => id !== null),
+        ),
+      ].sort()
+      const candidateUserIdsKey = JSON.stringify(candidateUserIds)
+      let currentRead = currentTabUserCacheRef.current
+      const canReuseRead =
+        !force &&
+        currentRead?.tabId === tabId &&
+        currentRead.url === tabUrl &&
+        currentRead.siteType === siteTypeForUserRead &&
+        currentRead.candidateUserIdsKey === candidateUserIdsKey &&
+        (currentRead.completedAt === null ||
+          Date.now() - currentRead.completedAt < CURRENT_TAB_IDENTITY_CACHE_MS)
 
-      // User-level detection: re-verify the website's current user ID (via content script) so we
-      // can pick the *correct* stored account for multi-account scenarios on the same origin.
-      const cachedUserId: string | null =
-        cacheMatches && cached ? cached.userId : null
-
-      let verifiedUserId: string | null = cachedUserId
-      let verifiedUser: Record<string, unknown> | null =
-        cacheMatches && cached?.user
-          ? cached.user
-          : cachedUserId
-            ? { id: cachedUserId, username: cachedUserId }
-            : null
-
-      const shouldAttemptReadUserId =
-        verifiedUserId === null &&
-        (!cached || cached.tabId !== tabId || cached.url !== tabUrl) // new tab/url
-
-      const shouldRetryReadUserId =
-        verifiedUserId === null &&
-        cached &&
-        cached.tabId === tabId &&
-        cached.url === tabUrl &&
-        now - cached.attemptedAt > DEDUPE_MS
-
-      if (shouldAttemptReadUserId || shouldRetryReadUserId) {
-        // Record this attempt up-front so parallel tab events don't trigger another sendMessage.
-        currentTabUserCacheRef.current = {
+      if (!currentRead || !canReuseRead) {
+        setDetectedAccount(null)
+        // Cache the promise so a newer tab event waits for the same verification.
+        // Completion only updates this entry, never a later tab's cache.
+        const entry: CurrentTabIdentityCache = {
           tabId,
           url: tabUrl,
-          userId: null,
-          user: null,
-          attemptedAt: now,
-        }
-
-        try {
-          const session = await readAccountBrowserSessionFromTab({
+          siteType: siteTypeForUserRead,
+          candidateUserIdsKey,
+          completedAt: null,
+          identity: readAccountBrowserIdentityFromTab({
             tabId,
             baseUrl: parsedUrl.origin,
             siteType: siteTypeForUserRead,
-            source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
-            fetchContext: {
-              kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
-              tabId,
-              origin: parsedUrl.origin,
-            },
-          })
-
-          verifiedUserId = session?.userId ?? null
-          verifiedUser = session?.user ?? null
-
-          // Cache verified user identity data by tab+url to prevent duplicate reads.
-          currentTabUserCacheRef.current = {
-            tabId,
-            url: tabUrl,
-            userId: verifiedUserId,
-            user: verifiedUser,
-            attemptedAt: now,
-          }
-        } catch (error) {
-          logger.debug("Failed to re-verify website user ID from active tab", {
-            tabId,
-            origin: parsedUrl.origin,
-            error,
-          })
-          verifiedUserId = null
-          verifiedUser = null
-          currentTabUserCacheRef.current = {
-            tabId,
-            url: tabUrl,
-            userId: null,
-            user: null,
-            attemptedAt: now,
-          }
+            candidateUserIds,
+          }).then((userId) => {
+            entry.completedAt = Date.now()
+            return userId
+          }),
         }
+        currentRead = entry
+        currentTabUserCacheRef.current = entry
       }
 
+      const verifiedUserId = await currentRead.identity
       if (seq !== currentTabCheckSeqRef.current) return
 
       if (!verifiedUserId) {
@@ -512,13 +466,11 @@ export const AccountDataProvider = ({
 
       // If we can verify userId, match it to a specific stored account for this origin.
       const matchedAccount =
-        originAccounts.find((account) =>
-          doAccountSiteIdentitiesMatch({
-            siteType: account.site_type,
-            savedUser: account.account_info,
-            currentUser: verifiedUser,
-          }),
-        ) ?? null
+        findAccountsBySiteIdentity({
+          accounts: originAccounts,
+          siteUrl: tabUrl,
+          userId: verifiedUserId,
+        })[0] ?? null
 
       setDetectedAccount(matchedAccount)
     } catch (error) {
@@ -851,14 +803,18 @@ export const AccountDataProvider = ({
 
     // Tab 激活变化时检测
     const cleanupActivated = onTabActivated(() => {
-      void checkCurrentTab()
+      void checkCurrentTab(true)
     })
 
     // Tab URL 或状态更新时检测（只对当前 tab）
-    const cleanupUpdated = onTabUpdated(async (tabId) => {
+    const cleanupUpdated = onTabUpdated(async (tabId, changeInfo) => {
       const tabs = await getActiveTabs()
       if (tabs[0]?.id === tabId) {
-        void checkCurrentTab()
+        void checkCurrentTab(
+          changeInfo.status === "loading" ||
+            changeInfo.status === "complete" ||
+            typeof changeInfo.url === "string",
+        )
       }
     })
 
