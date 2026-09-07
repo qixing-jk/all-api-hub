@@ -5,21 +5,13 @@ import type {
   UserInfo,
 } from "~/services/apiAdapters/contracts/accountBootstrap"
 import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
-import { ApiError } from "~/services/apiTransport/errors"
-import type {
-  ApiServiceRequest,
-  FetchApiOptions,
-} from "~/services/apiTransport/type"
+import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
 
 const logger = createLogger("NewApiFamilyAccountBootstrap")
-
-type AccessTokenCreationPolicy = Pick<
-  FetchApiOptions,
-  "currentTabTransport" | "tempWindowFallback"
->
 
 interface AccountBootstrapImplementation {
   fetchUserInfo: typeof fetchUserInfo
@@ -85,7 +77,10 @@ export const extractDefaultExchangeRate = (
 /**
  * Fetch default New API-family user info for account detection.
  */
-export async function fetchUserInfo(request: ApiServiceRequest): Promise<{
+export async function fetchUserInfo(
+  request: ApiServiceRequest,
+  expectedIdentity?: string,
+): Promise<{
   id: string
   username: string
   access_token: string
@@ -104,6 +99,18 @@ export async function fetchUserInfo(request: ApiServiceRequest): Promise<{
     )
   }
 
+  const expectedUserId = normalizeAccountIdentity(
+    expectedIdentity ?? request.auth.userId,
+  )
+  if (expectedUserId && userId !== expectedUserId) {
+    throw new ApiError(
+      "The authenticated account does not match the expected account",
+      undefined,
+      "/api/user/self",
+      API_ERROR_CODES.ACCOUNT_IDENTITY_MISMATCH,
+    )
+  }
+
   return {
     id: userId,
     username: userData.username,
@@ -117,11 +124,14 @@ export async function fetchUserInfo(request: ApiServiceRequest): Promise<{
  */
 export async function createAccessToken(
   request: ApiServiceRequest,
-  creationPolicy?: AccessTokenCreationPolicy,
 ): Promise<string> {
+  // This GET generates and overwrites the account PAT. Never replay it through
+  // another transport after a dispatched request may have succeeded.
+  // https://github.com/QuantumNous/new-api/blob/v1.0.0-rc.22/controller/user.go
   const accessToken = await newApiFamilyRequests.data<string>(request, {
     endpoint: "/api/user/token",
-    ...creationPolicy,
+    currentTabTransport: "disabled",
+    tempWindowFallback: { statusCodes: [], codes: [] },
   })
 
   const normalizedAccessToken =
@@ -143,15 +153,29 @@ export async function createAccessToken(
  */
 export async function getOrCreateAccessToken(
   request: ApiServiceRequest,
-  creationPolicy?: AccessTokenCreationPolicy,
+  options?: {
+    expectedUserId?: string
+  },
 ): Promise<AccessTokenInfo> {
-  const userInfo = await fetchUserInfo(request)
+  const userInfo = await fetchUserInfo(request, options?.expectedUserId)
 
   let accessToken = userInfo.access_token
 
   if (!accessToken) {
     logger.info("访问令牌为空，尝试自动创建")
-    accessToken = await createAccessToken(request, creationPolicy)
+    accessToken = await createAccessToken(request)
+    await fetchUserInfo(
+      {
+        ...request,
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          accessToken,
+          userId: userInfo.id,
+        },
+        cookieAuthSessionCookie: undefined,
+      },
+      userInfo.id,
+    )
     logger.info("自动创建访问令牌成功")
   }
 

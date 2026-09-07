@@ -211,6 +211,9 @@ export async function completeAutoDetectedAccount(
     {
       url,
       requestedAuthType,
+      ...(request.existingAccessTokens
+        ? { existingAccessTokens: request.existingAccessTokens }
+        : {}),
       detected,
       autoDetectContext,
       context: completionContext,

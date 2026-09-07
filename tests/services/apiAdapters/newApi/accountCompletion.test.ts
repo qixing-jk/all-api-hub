@@ -195,10 +195,7 @@ describe("newApiAccountCompletion", () => {
     expect(mockCreateNewApiAccountBootstrap).toHaveBeenCalledWith(
       SITE_TYPES.NEW_API,
       {
-        accessTokenCreationPolicy: {
-          currentTabTransport: "disabled",
-          tempWindowFallback: { statusCodes: [], codes: [] },
-        },
+        expectedUserId: "42",
       },
     )
     expect(mockGetOrCreateAccessToken).toHaveBeenCalledWith({

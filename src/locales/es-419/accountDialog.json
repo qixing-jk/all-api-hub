@@ -183,6 +183,7 @@
     "addSuccess": "La cuenta {{name}} se agregó correctamente.",
     "autoDetectCookiePermissionReloadHint": "Si la primera detección sigue esperando justo después de conceder permisos de Cookie multi-cuenta, recarga la extensión e inténtalo de nuevo.",
     "autoDetectFailed": "Falló la detección automática: {{error}}",
+    "autoDetectIdentityMismatch": "La cuenta detectada no coincide con la cuenta actual. Se conservaron tus datos existentes. Revisa la URL del sitio, inicia sesión en la cuenta correspondiente y vuelve a intentarlo.",
     "autoDetectSuccess": "Detección automática correcta.",
     "autoDetectTakingTooLong": "La detección automática está tardando más de lo esperado. Abre la guía de solución de problemas.",
     "checkInRedetectAmbiguous": "Se detectaron varios métodos de check-in. Selecciona uno abajo.",

@@ -26,6 +26,8 @@ export interface DetectedAccountIdentity {
 export interface AutoDetectCompletionRequest {
   url: string
   requestedAuthType: AuthTypeEnum
+  /** Known management tokens scoped to the detected site and account identity. */
+  existingAccessTokens?: readonly string[]
   cookieAuthSessionCookie?: string
   detected: DetectedAccountIdentity
   autoDetectContext?: AutoDetectAnalyticsContext

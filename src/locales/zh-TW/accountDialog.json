@@ -181,6 +181,7 @@
     "addSuccess": "帳號 {{name}} 新增成功!",
     "autoDetectCookiePermissionReloadHint": "如果剛授予 Cookie 多帳號權限後首次識別一直沒有結果，可重新載入擴充套件後再試。",
     "autoDetectFailed": "自動識別失敗: {{error}}",
+    "autoDetectIdentityMismatch": "識別到的帳號與目前帳號不一致，已保留原有資料。請檢查站點網址，並登入對應帳號後重試。",
     "autoDetectSuccess": "自動識別成功！",
     "autoDetectTakingTooLong": "自動識別耗時較長？點擊開啟排查文件",
     "checkInRedetectAmbiguous": "偵測到多種簽到方式，請在下方選擇。",

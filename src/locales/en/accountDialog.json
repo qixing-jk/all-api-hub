@@ -182,6 +182,7 @@
     "addSuccess": "Account {{name}} added successfully!",
     "autoDetectCookiePermissionReloadHint": "If the first detection keeps waiting right after granting Cookie multi-account permissions, reload the extension and try again.",
     "autoDetectFailed": "Auto-detect failed: {{error}}",
+    "autoDetectIdentityMismatch": "The detected account does not match the current account. Your existing data has been kept. Check the site URL and sign in to the intended account, then try again.",
     "autoDetectSuccess": "Auto-detect successful!",
     "autoDetectTakingTooLong": "Auto-detect is taking longer than expected. Open troubleshooting guide.",
     "checkInRedetectAmbiguous": "Multiple check-in methods were detected. Select one below.",

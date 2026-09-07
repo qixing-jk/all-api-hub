@@ -485,6 +485,7 @@ export function useAccountDialog({
     userId: string
   } | null>(null)
   const selectedSiteUrlRef = useRef("")
+  const accountCredentialScopeUrlRef = useRef("")
   const selectedSiteTypeRef = useRef<AccountSiteType>(SITE_TYPES.UNKNOWN)
   const isCloseTransitionStartedRef = useRef(false)
   const currentTabSiteNameRef = useRef("")
@@ -590,6 +591,9 @@ export function useAccountDialog({
   )
   const setAccessToken = useCallback(
     (value: string) => {
+      if (value.trim()) {
+        accountCredentialScopeUrlRef.current = selectedSiteUrlRef.current
+      }
       notifyOpenRouterCredentialChange(value)
       updateDraft((prev) => ({ ...prev, accessToken: value }))
     },
@@ -1220,6 +1224,7 @@ export function useAccountDialog({
       hasExplicitAuthTypeRef.current = Boolean(nextPrefill?.authType)
       const nextUrl = nextPrefill?.siteUrl ?? ""
       selectedSiteUrlRef.current = nextUrl
+      accountCredentialScopeUrlRef.current = nextUrl
       resetOpenRouterOnboardingSession({
         url: nextUrl,
         siteType: nextSiteType,
@@ -1269,6 +1274,7 @@ export function useAccountDialog({
         const siteAccount = await accountQueries.getAccountById(accountId)
         if (siteAccount) {
           setUrl(siteAccount.site_url)
+          accountCredentialScopeUrlRef.current = siteAccount.site_url
           const refreshToken = siteAccount.sub2apiAuth?.refreshToken ?? ""
           const normalizedSiteType = resolveStoredSiteType(
             siteAccount.site_type,
@@ -1417,6 +1423,7 @@ export function useAccountDialog({
         checkInDiscoveryBaseSelectionRef.current =
           recoveryState.checkInDiscoveryBaseSelection
         setUrl(recoveryState.url)
+        accountCredentialScopeUrlRef.current = recoveryState.url
         setDraft(
           normalizeAccountDialogDraftForSitePolicy({
             draft: recoveredDraft,
@@ -1974,6 +1981,7 @@ export function useAccountDialog({
       Awaited<ReturnType<typeof autoDetectAccount>>["data"]
     >,
   ) => {
+    accountCredentialScopeUrlRef.current = url.trim()
     detectedCookieStoreIdRef.current =
       resultData.fetchContext &&
       typeof resultData.fetchContext.cookieStoreId === "string" &&
@@ -2073,6 +2081,9 @@ export function useAccountDialog({
     }
 
     if (!recoveryData) return
+    if (!accessToken.trim() && recoveryData.accessToken?.trim()) {
+      accountCredentialScopeUrlRef.current = url.trim()
+    }
 
     if (
       recoveryData.fetchContext?.cookieStoreId &&
@@ -2323,6 +2334,18 @@ export function useAccountDialog({
             authType,
             protectionBypassExecution,
             cookieAuthSessionCookie.trim() || undefined,
+            ...(userId.trim()
+              ? [
+                  {
+                    existingAccount: {
+                      url: accountCredentialScopeUrlRef.current || requestedUrl,
+                      siteType,
+                      userId: userId.trim(),
+                      accessToken,
+                    },
+                  },
+                ]
+              : []),
           ),
       )
       if (!isCurrentAutoDetectRun()) {

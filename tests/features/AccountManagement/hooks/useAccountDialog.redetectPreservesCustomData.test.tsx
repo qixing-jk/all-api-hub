@@ -120,6 +120,99 @@ describe("useAccountDialog re-detect preservation", () => {
     await accountStorage.clearAllData()
   })
 
+  it("keeps a draft credential bound to its source URL when redetecting", async () => {
+    mockAutoDetectAccount.mockResolvedValueOnce({
+      kind: "detected",
+      success: false,
+      message: "Account identity changed",
+    })
+    const { result } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.ADD,
+        isOpen: true,
+        onClose: vi.fn(),
+      }),
+    )
+    await waitFor(() => expect(result.current.state).toBeTruthy())
+    act(() => {
+      result.current.setters.setUrl("https://original.example.invalid")
+      result.current.setters.setSiteType(SITE_TYPES.NEW_API)
+      result.current.setters.setUserId("7")
+      result.current.setters.setAccessToken("draft-pat")
+    })
+    act(() => result.current.setters.setUrl("https://changed.example.invalid"))
+
+    await act(async () => {
+      await result.current.handlers.handleAutoDetect()
+    })
+
+    expect(mockAutoDetectAccount).toHaveBeenCalledWith(
+      "https://changed.example.invalid",
+      AuthTypeEnum.AccessToken,
+      expect.anything(),
+      undefined,
+      {
+        existingAccount: {
+          url: "https://original.example.invalid",
+          siteType: SITE_TYPES.NEW_API,
+          userId: "7",
+          accessToken: "draft-pat",
+        },
+      },
+    )
+    expect(result.current.state.accessToken).toBe("draft-pat")
+  })
+
+  it("keeps a recovered credential bound to the site that returned it", async () => {
+    mockAutoDetectAccount
+      .mockResolvedValueOnce({
+        kind: "detected",
+        success: false,
+        message: "Detection incomplete",
+        recoveryData: {
+          siteType: SITE_TYPES.NEW_API,
+          userId: "7",
+          accessToken: "recovered-pat",
+        },
+      })
+      .mockResolvedValueOnce({
+        kind: "detected",
+        success: false,
+        message: "Account changed",
+      })
+    const { result } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.ADD,
+        isOpen: true,
+        onClose: vi.fn(),
+      }),
+    )
+    await waitFor(() => expect(result.current.state).toBeTruthy())
+    act(() => result.current.setters.setUrl("https://original.example.invalid"))
+    await act(async () => {
+      await result.current.handlers.handleAutoDetect()
+    })
+    act(() => result.current.setters.setUrl("https://changed.example.invalid"))
+    await act(async () => {
+      await result.current.handlers.handleAutoDetect()
+    })
+
+    expect(mockAutoDetectAccount).toHaveBeenLastCalledWith(
+      "https://changed.example.invalid",
+      AuthTypeEnum.AccessToken,
+      expect.anything(),
+      undefined,
+      {
+        existingAccount: {
+          url: "https://original.example.invalid",
+          siteType: SITE_TYPES.NEW_API,
+          userId: "7",
+          accessToken: "recovered-pat",
+        },
+      },
+    )
+  })
+
   const runBasicAddModeRedetection = async () => {
     const { result } = renderHook(() =>
       useAccountDialog({

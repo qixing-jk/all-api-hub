@@ -7,6 +7,10 @@ import {
   type AccountSiteType,
 } from "~/constants/siteType"
 import {
+  findExistingAccountAccessTokens,
+  type AccountAutoDetectExistingAccount,
+} from "~/services/accounts/autoDetect/existingCredentials"
+import {
   createDetectedAccountRecoveryData,
   mergeAccountAutoDetectRecoveryData,
   type AccountAutoDetectRecoveryData,
@@ -68,6 +72,8 @@ function getAutoDetectCompletionFailureMessage(
   switch (reason) {
     case AUTO_DETECT_FAILURE_REASONS.AccessTokenVerificationRequired:
       return t("accountDialog:accessTokenVerification.description")
+    case AUTO_DETECT_FAILURE_REASONS.AccountIdentityMismatch:
+      return t("accountDialog:messages.autoDetectIdentityMismatch")
     case AUTO_DETECT_FAILURE_REASONS.TokenFetchFailed:
     case AUTO_DETECT_FAILURE_REASONS.AccessTokenMissing:
       return t("messages:operations.detection.getAccessTokenFailedDetailed")
@@ -96,6 +102,7 @@ function getAutoDetectCompletionDetailedError(
       }
     case AUTO_DETECT_FAILURE_REASONS.UsernameMissing:
     case AUTO_DETECT_FAILURE_REASONS.AccessTokenMissing:
+    case AUTO_DETECT_FAILURE_REASONS.AccountIdentityMismatch:
       return {
         type: AutoDetectErrorType.INVALID_RESPONSE,
         message,
@@ -135,6 +142,7 @@ export async function autoDetectAccount(
   authType: AuthTypeEnum,
   protectionBypassExecution?: ProtectionBypassExecution,
   cookieAuthSessionCookie?: string,
+  options?: { existingAccount?: AccountAutoDetectExistingAccount },
 ): Promise<AccountAutoDetectResponse> {
   if (!url.trim()) {
     return {
@@ -221,6 +229,13 @@ export async function autoDetectAccount(
     }
 
     const { userId, siteType } = detectResult.data
+    const existingAccessTokens = userId
+      ? await findExistingAccountAccessTokens(
+          normalizedUrl,
+          detectResult.data,
+          options?.existingAccount,
+        )
+      : []
     recoveryData = mergeAccountAutoDetectRecoveryData(
       recoveryData,
       createDetectedAccountRecoveryData({
@@ -252,6 +267,7 @@ export async function autoDetectAccount(
     const completed = await completeAutoDetectedAccount({
       url: normalizedUrl,
       requestedAuthType: authType,
+      existingAccessTokens,
       cookieAuthSessionCookie,
       detected: detectResult.data,
       autoDetectContext,
