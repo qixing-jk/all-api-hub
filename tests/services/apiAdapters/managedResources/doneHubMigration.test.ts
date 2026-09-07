@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { DoneHubChannelType } from "~/constants/doneHub"
+import { DoneHubChannelStatus, DoneHubChannelType } from "~/constants/doneHub"
 import { ChannelType } from "~/constants/newApi"
 import { SITE_TYPES } from "~/constants/siteType"
 import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
@@ -97,77 +97,83 @@ describe("DoneHub native channel migration", () => {
     })
   })
 
-  it("prepares, resolves, and creates through DoneHub native operations", async () => {
-    mocks.get.mockResolvedValue({
-      ...buildManagedSiteChannel({
-        id: 17,
-        type: DoneHubChannelType.OpenAI,
-        base_url: " https://upstream.example.invalid ",
-        models: "model-a, model-b",
-        group: "default, vip",
-        model_mapping: '{"model-a":"provider-model"}',
-      }),
-      proxy: "https://proxy.example.invalid",
-    })
-    mocks.loadSecret.mockResolvedValue(" credential-placeholder ")
-    mocks.create.mockResolvedValue({
-      outcome: MANAGED_SITE_MUTATION_OUTCOMES.Succeeded,
-      data: buildManagedSiteChannel({ id: 23 }),
-      confirmedEffects: [
-        {
-          kind: MANAGED_SITE_MUTATION_EFFECT_KINDS.ResourceCreated,
-          resourceKind: "channel",
-          resourceId: 23,
-        },
-      ],
-    })
+  it.each([DoneHubChannelStatus.Enable, DoneHubChannelStatus.ManuallyDisabled])(
+    "preserves DoneHub status %s through source preparation and target creation",
+    async (status) => {
+      mocks.get.mockResolvedValue({
+        ...buildManagedSiteChannel({
+          id: 17,
+          type: DoneHubChannelType.OpenAI,
+          status,
+          base_url: " https://upstream.example.invalid ",
+          models: "model-a, model-b",
+          group: "default, vip",
+          model_mapping: '{"model-a":"provider-model"}',
+        }),
+        proxy: "https://proxy.example.invalid",
+      })
+      mocks.loadSecret.mockResolvedValue(" credential-placeholder ")
+      mocks.create.mockResolvedValue({
+        outcome: MANAGED_SITE_MUTATION_OUTCOMES.Succeeded,
+        data: buildManagedSiteChannel({ id: 23 }),
+        confirmedEffects: [
+          {
+            kind: MANAGED_SITE_MUTATION_EFFECT_KINDS.ResourceCreated,
+            resourceKind: "channel",
+            resourceId: 23,
+          },
+        ],
+      })
 
-    const prepared =
-      await doneHubManagedSiteMigrationCapability.source!.prepare(selection)
-    expect(prepared).toMatchObject({
-      status: "ready",
-      source: {
-        sourceSiteType: SITE_TYPES.DONE_HUB,
-        resourceType: DoneHubChannelType.OpenAI,
-        baseUrl: "https://upstream.example.invalid",
-        models: ["model-a", "model-b"],
-        groups: ["default", "vip"],
-        lossSignals: {
-          hasModelMapping: true,
-          hasAdvancedSettings: true,
+      const prepared =
+        await doneHubManagedSiteMigrationCapability.source!.prepare(selection)
+      expect(prepared).toMatchObject({
+        status: "ready",
+        source: {
+          sourceSiteType: SITE_TYPES.DONE_HUB,
+          resourceType: DoneHubChannelType.OpenAI,
+          baseUrl: "https://upstream.example.invalid",
+          models: ["model-a", "model-b"],
+          groups: ["default", "vip"],
+          lossSignals: {
+            hasModelMapping: true,
+            hasAdvancedSettings: true,
+          },
         },
-      },
-    })
-    await expect(
-      doneHubManagedSiteMigrationCapability.source!.resolveCredential(
-        selection,
-      ),
-    ).resolves.toEqual({
-      status: "ready",
-      credential: "credential-placeholder",
-    })
-
-    if (prepared.status !== "ready") throw new Error("expected ready source")
-    const target = await doneHubManagedSiteMigrationCapability.target!.prepare(
-      prepared.source,
-    )
-    await expect(
-      doneHubManagedSiteMigrationCapability.target!.create({
-        source: prepared.source,
-        targetSiteType: SITE_TYPES.DONE_HUB,
-        projection: { ...target.projection, name: "Migrated channel" },
+      })
+      await expect(
+        doneHubManagedSiteMigrationCapability.source!.resolveCredential(
+          selection,
+        ),
+      ).resolves.toEqual({
+        status: "ready",
         credential: "credential-placeholder",
-      }),
-    ).resolves.toEqual({ status: "created" })
-    expect(mocks.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        name: "Migrated channel",
-        type: DoneHubChannelType.OpenAI,
-        key: "credential-placeholder",
-      }),
-      undefined,
-    )
-  })
+      })
+
+      if (prepared.status !== "ready") throw new Error("expected ready source")
+      const target =
+        await doneHubManagedSiteMigrationCapability.target!.prepare(
+          prepared.source,
+        )
+      await expect(
+        doneHubManagedSiteMigrationCapability.target!.create({
+          source: prepared.source,
+          targetSiteType: SITE_TYPES.DONE_HUB,
+          projection: { ...target.projection, name: "Migrated channel" },
+          credential: "credential-placeholder",
+        }),
+      ).resolves.toEqual({ status: "created" })
+      expect(mocks.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: "Migrated channel",
+          type: DoneHubChannelType.OpenAI,
+          status,
+          key: "credential-placeholder",
+        }),
+        undefined,
+      )
+    },
+  )
 
   it("rejects canonical target types DoneHub cannot represent", async () => {
     await expect(

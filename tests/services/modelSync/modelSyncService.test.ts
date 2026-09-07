@@ -9,6 +9,7 @@ import {
   matchesProbeFilterRule,
 } from "~/services/models/modelSync/channelModelFilterEvaluator"
 import { ModelSyncService } from "~/services/models/modelSync/modelSyncService"
+import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import type { ChannelResourceConfigMap } from "~/types/channelConfig"
 import type {
   ChannelModelFilterRule,
@@ -21,6 +22,7 @@ import {
   createManagedUpstreamResourceRef,
   getManagedUpstreamResourceRefKey,
 } from "~/types/managedUpstreamResource"
+import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 
 const loggerMocks = vi.hoisted(() => ({
   debug: vi.fn(),
@@ -1288,6 +1290,22 @@ describe("ModelSyncService - probe-backed filters", () => {
     ).toBe("google")
   })
 
+  it.each([undefined, null, {}])(
+    "rejects malformed native channel type %j during protocol selection",
+    async (channelType) => {
+      const { resolveApiVerificationTypeForChannelType } = await import(
+        "~/services/models/modelSync/channelModelFilterEvaluator"
+      )
+
+      expect(
+        resolveApiVerificationTypeForChannelType(
+          SITE_TYPES.NEW_API,
+          channelType,
+        ),
+      ).toBeNull()
+    },
+  )
+
   it.each([
     { channelType: DoneHubChannelType.Gemini, expectedApiType: "google" },
     {
@@ -1531,6 +1549,38 @@ describe("ModelSyncService - probe-backed filters", () => {
     )
 
     expect(fetchChannelSecretKeyMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("passes explicit model-sync intent through hidden-key resolution before probing", async () => {
+    const protectionBypassExecution = userCommandExecution(
+      PROTECTION_BYPASS_USER_COMMANDS.SyncManagedSiteModels,
+    )
+    const context = {
+      channel: makeChannel({
+        id: 90,
+        type: ChannelType.OpenAI,
+        baseUrl: "https://channel.example.com",
+        credential: "",
+      }),
+      managedConfig: makeRuntimeConfig({ siteType: SITE_TYPES.NEW_API }),
+      protectionBypassExecution,
+      cache: new Map<string, boolean>(),
+    }
+
+    await expect(
+      matchesProbeFilterRule(makeProbeRule(), "model-a", context),
+    ).resolves.toBe(true)
+    expect(fetchChannelSecretKeyMock).toHaveBeenCalledWith(
+      context.managedConfig.config,
+      90,
+      { protectionBypassExecution },
+    )
+    expect(runApiVerificationProbeMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        apiKey: "sk-resolved-channel-key",
+        modelId: "model-a",
+      }),
+    )
   })
 
   it("treats empty probe rules as non-matches", async () => {

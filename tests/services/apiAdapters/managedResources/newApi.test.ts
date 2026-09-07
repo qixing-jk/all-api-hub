@@ -504,26 +504,50 @@ describe("New API native managed resource", () => {
     expect(mocks.update.mock.calls.at(-1)?.[1]).not.toHaveProperty("key")
   })
 
-  it("omits an unchanged status from the provider update command", async () => {
-    const workspace = await newApiManagedResourceRegistration.open()
-    const ref = (await workspace.list()).items[0]!.ref
-    const editor = await workspace.openEditEditor(ref)
+  it.each([
+    CHANNEL_STATUS.Enable,
+    CHANNEL_STATUS.AutoDisabled,
+    CHANNEL_STATUS.Unknown,
+  ])(
+    "retains native status %s when only the channel name changes",
+    async (status) => {
+      const currentChannel = { ...channel, status }
+      mocks.list.mockResolvedValue({ items: [currentChannel], total: 1 })
+      mocks.get.mockResolvedValue(currentChannel)
+      const workspace = await newApiManagedResourceRegistration.open()
+      const ref = (await workspace.list()).items[0]!.ref
+      const editor = await workspace.openEditEditor(ref)
 
-    await editor.submit({
-      ...editor.initialValues,
-      [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Name]: "Renamed channel",
-    })
+      expect(
+        editor.initialValues[NEW_API_MANAGED_RESOURCE_FIELD_IDS.Status],
+      ).toBe(String(status))
+      expect(
+        editor.fields.find(
+          (field) =>
+            field.fieldId === NEW_API_MANAGED_RESOURCE_FIELD_IDS.Status,
+        ),
+      ).toMatchObject({
+        type: "select",
+        options: expect.arrayContaining([{ value: String(status) }]),
+      })
+      await expect(
+        editor.submit({
+          ...editor.initialValues,
+          [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Name]: "Renamed channel",
+        }),
+      ).resolves.toMatchObject({ outcome: "succeeded" })
 
-    expect(mocks.update).toHaveBeenCalledWith(
-      config,
-      expect.objectContaining({
-        id: channel.id,
-        name: "Renamed channel",
-      }),
-      undefined,
-    )
-    expect(mocks.update.mock.calls.at(-1)?.[1]).not.toHaveProperty("status")
-  })
+      expect(mocks.update).toHaveBeenCalledWith(
+        config,
+        expect.objectContaining({
+          id: channel.id,
+          name: "Renamed channel",
+        }),
+        undefined,
+      )
+      expect(mocks.update.mock.calls.at(-1)?.[1]).not.toHaveProperty("status")
+    },
+  )
 
   it("keeps a changed status in the provider update command", async () => {
     const workspace = await newApiManagedResourceRegistration.open()

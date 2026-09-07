@@ -1453,6 +1453,28 @@ describe("managed-site token batch export", () => {
         MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.BASE_URL_REQUIRED,
     },
     {
+      label: "failed model prefill for a provider with optional models",
+      serviceOverrides: {
+        siteType: SITE_TYPES.CLAUDE_CODE_HUB,
+        channelDrafts: {
+          prepareFormData: vi.fn(async () => ({
+            name: "Failed model discovery",
+            type: "openai-compatible",
+            key: "sk-live-token",
+            base_url: "https://example.com",
+            models: [],
+            groups: [],
+            priority: 0,
+            weight: 1,
+            enabled: true,
+            modelPrefillFetchFailed: true,
+          })),
+        },
+      },
+      expectedReason:
+        MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.MODELS_REQUIRED,
+    },
+    {
       label: "missing models",
       serviceOverrides: {
         channelDrafts: {

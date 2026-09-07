@@ -134,6 +134,11 @@ describe("native managed-channel import", () => {
       "getManagedResourceRegistration",
     ).mockReturnValue(null)
 
+    expect(() =>
+      validateNativeManagedChannelImportDraft(SITE_TYPES.AXON_HUB, draft),
+    ).toThrowError(
+      expect.objectContaining({ failure: { code: "unavailable" } }),
+    )
     await expect(
       openNativeManagedChannelImportSession(SITE_TYPES.AXON_HUB),
     ).rejects.toMatchObject({ failure: { code: "unavailable" } })

@@ -800,6 +800,43 @@ describe("newApiService", () => {
         protectionBypassExecution: SESSION_READ_EXECUTION,
       })
     })
+
+    it("does not reuse login-assist credentials when both configured URLs are blank", async () => {
+      const { fetchChannelSecretKey } = await import(
+        "~/services/managedSites/providers/newApiChannelSecrets"
+      )
+      mockGetPreferences.mockResolvedValueOnce(
+        createMockUserPreferencesWithNewApi({
+          newApi: {
+            baseUrl: " ",
+            adminToken: "admin-token",
+            userId: "1",
+            username: "alice",
+            password: "saved-password",
+            totpSecret: "saved-totp-secret",
+          },
+        }),
+      )
+      const failure = new Error("Missing managed-site URL")
+      fetchNewApiChannelKeyMock.mockRejectedValueOnce(failure)
+
+      await expect(
+        fetchChannelSecretKey(
+          { baseUrl: "\t", adminToken: "admin-token", userId: "1" },
+          100,
+          { protectionBypassExecution: SESSION_READ_EXECUTION },
+        ),
+      ).rejects.toBe(failure)
+      expect(fetchNewApiChannelKeyMock).toHaveBeenCalledWith({
+        baseUrl: "\t",
+        userId: "1",
+        username: "",
+        password: "",
+        totpSecret: "",
+        channelId: 100,
+        protectionBypassExecution: SESSION_READ_EXECUTION,
+      })
+    })
   })
 
   describe("hydrateComparableChannelKeys", () => {
@@ -947,6 +984,40 @@ describe("newApiService", () => {
         reason:
           MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.KEY_RESOLUTION_FAILED,
       })
+    })
+
+    it("preserves cancellation and stops reading the remaining hidden keys", async () => {
+      const { hydrateComparableChannelKeys } = await import(
+        "~/services/managedSites/providers/newApiChannelSecrets"
+      )
+      const controller = new AbortController()
+      const failure = new DOMException("Cancelled", "AbortError")
+      mockGetPreferences.mockResolvedValueOnce(
+        createMockUserPreferencesWithNewApi(),
+      )
+      fetchNewApiChannelKeyMock.mockImplementationOnce(async () => {
+        controller.abort()
+        throw failure
+      })
+
+      await expect(
+        hydrateComparableChannelKeys(
+          {
+            baseUrl: "https://new-api.example.com",
+            adminToken: "admin-token",
+            userId: "1",
+          },
+          [
+            createMockNewApiChannel({ id: 15, key: "" }),
+            createMockNewApiChannel({ id: 16, key: "" }),
+          ],
+          {
+            protectionBypassExecution: SESSION_READ_EXECUTION,
+            signal: controller.signal,
+          },
+        ),
+      ).rejects.toBe(failure)
+      expect(fetchNewApiChannelKeyMock).toHaveBeenCalledOnce()
     })
   })
 

@@ -112,6 +112,8 @@ describe("native migration target preparation", () => {
     [SITE_TYPES.CLAUDE_CODE_HUB, "constructor", SITE_TYPES.NEW_API],
     [SITE_TYPES.CLAUDE_CODE_HUB, "__proto__", SITE_TYPES.NEW_API],
     [SITE_TYPES.CLAUDE_CODE_HUB, "toString", SITE_TYPES.NEW_API],
+    [SITE_TYPES.SUB2API, "openai", SITE_TYPES.NEW_API],
+    [SITE_TYPES.SUB2API, "anthropic", SITE_TYPES.CLAUDE_CODE_HUB],
   ] as const)(
     "blocks unregistered native conversion %s/%s to %s",
     async (sourceSiteType, resourceType, targetSiteType) => {

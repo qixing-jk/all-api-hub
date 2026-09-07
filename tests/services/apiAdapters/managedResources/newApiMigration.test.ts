@@ -192,6 +192,38 @@ describe("New API managed-site migration capability", () => {
   })
 
   it.each([
+    { status: "enabled", nativeStatus: CHANNEL_STATUS.Enable },
+    { status: "disabled", nativeStatus: CHANNEL_STATUS.ManuallyDisabled },
+  ] as const)(
+    "preserves an $status source when creating a New API channel",
+    async ({ status, nativeStatus }) => {
+      const currentSource = { ...source, status }
+      const prepared =
+        await newApiManagedSiteMigrationCapability.target!.prepare(
+          currentSource,
+        )
+      mocks.create.mockResolvedValueOnce({
+        outcome: MANAGED_SITE_MUTATION_OUTCOMES.Succeeded,
+        data: channel,
+        confirmedEffects: [],
+      })
+
+      await expect(
+        newApiManagedSiteMigrationCapability.target!.create({
+          source: currentSource,
+          targetSiteType: SITE_TYPES.NEW_API,
+          projection: prepared.projection,
+          credential: "credential-placeholder",
+        }),
+      ).resolves.toEqual({ status: "created" })
+      expect(mocks.create).toHaveBeenCalledWith(
+        expect.objectContaining({ status: nativeStatus }),
+        undefined,
+      )
+    },
+  )
+
+  it.each([
     {
       outcome: MANAGED_SITE_MUTATION_OUTCOMES.Succeeded,
       result: {

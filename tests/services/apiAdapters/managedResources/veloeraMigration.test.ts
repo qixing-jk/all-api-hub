@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ChannelType } from "~/constants/newApi"
 import { SITE_TYPES } from "~/constants/siteType"
-import { VeloeraChannelType } from "~/constants/veloera"
+import { VeloeraChannelStatus, VeloeraChannelType } from "~/constants/veloera"
 import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
 import { veloeraManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/veloeraMigration"
 import {
@@ -130,78 +130,84 @@ describe("Veloera native channel migration", () => {
     ).rejects.toThrow("Veloera does not support this migration channel type")
   })
 
-  it("prepares, resolves, and creates through the Veloera native operations", async () => {
-    mocks.get.mockResolvedValue({
-      ...buildManagedSiteChannel({
-        id: 17,
-        type: VeloeraChannelType.OpenAI,
-        base_url: " https://upstream.example.invalid ",
-        models: "model-a, model-b",
-        group: "default, vip",
-        model_mapping: '{"model-a":"provider-model"}',
-      }),
-      model_prefix: "tenant-",
-      system_prompt: null,
-    })
-    mocks.loadSecret.mockResolvedValue(" credential-placeholder ")
-    mocks.create.mockResolvedValue({
-      outcome: MANAGED_SITE_MUTATION_OUTCOMES.Succeeded,
-      data: buildManagedSiteChannel({ id: 23 }),
-      confirmedEffects: [
-        {
-          kind: MANAGED_SITE_MUTATION_EFFECT_KINDS.ResourceCreated,
-          resourceKind: "channel",
-          resourceId: 23,
-        },
-      ],
-    })
+  it.each([VeloeraChannelStatus.Enable, VeloeraChannelStatus.ManuallyDisabled])(
+    "preserves Veloera status %s through source preparation and target creation",
+    async (status) => {
+      mocks.get.mockResolvedValue({
+        ...buildManagedSiteChannel({
+          id: 17,
+          type: VeloeraChannelType.OpenAI,
+          status,
+          base_url: " https://upstream.example.invalid ",
+          models: "model-a, model-b",
+          group: "default, vip",
+          model_mapping: '{"model-a":"provider-model"}',
+        }),
+        model_prefix: "tenant-",
+        system_prompt: null,
+      })
+      mocks.loadSecret.mockResolvedValue(" credential-placeholder ")
+      mocks.create.mockResolvedValue({
+        outcome: MANAGED_SITE_MUTATION_OUTCOMES.Succeeded,
+        data: buildManagedSiteChannel({ id: 23 }),
+        confirmedEffects: [
+          {
+            kind: MANAGED_SITE_MUTATION_EFFECT_KINDS.ResourceCreated,
+            resourceKind: "channel",
+            resourceId: 23,
+          },
+        ],
+      })
 
-    const prepared =
-      await veloeraManagedSiteMigrationCapability.source!.prepare(selection)
-    expect(prepared).toMatchObject({
-      status: "ready",
-      source: {
-        sourceSiteType: SITE_TYPES.VELOERA,
-        resourceType: ChannelType.OpenAI,
-        baseUrl: "https://upstream.example.invalid",
-        models: ["model-a", "model-b"],
-        groups: ["default", "vip"],
-        lossSignals: {
-          hasModelMapping: true,
-          hasAdvancedSettings: true,
+      const prepared =
+        await veloeraManagedSiteMigrationCapability.source!.prepare(selection)
+      expect(prepared).toMatchObject({
+        status: "ready",
+        source: {
+          sourceSiteType: SITE_TYPES.VELOERA,
+          resourceType: VeloeraChannelType.OpenAI,
+          baseUrl: "https://upstream.example.invalid",
+          models: ["model-a", "model-b"],
+          groups: ["default", "vip"],
+          lossSignals: {
+            hasModelMapping: true,
+            hasAdvancedSettings: true,
+          },
         },
-      },
-    })
-    await expect(
-      veloeraManagedSiteMigrationCapability.source!.resolveCredential(
-        selection,
-      ),
-    ).resolves.toEqual({
-      status: "ready",
-      credential: "credential-placeholder",
-    })
-
-    if (prepared.status !== "ready") throw new Error("expected ready source")
-    const target = await veloeraManagedSiteMigrationCapability.target!.prepare(
-      prepared.source,
-    )
-    await expect(
-      veloeraManagedSiteMigrationCapability.target!.create({
-        source: prepared.source,
-        targetSiteType: SITE_TYPES.VELOERA,
-        projection: { ...target.projection, name: "Migrated channel" },
+      })
+      await expect(
+        veloeraManagedSiteMigrationCapability.source!.resolveCredential(
+          selection,
+        ),
+      ).resolves.toEqual({
+        status: "ready",
         credential: "credential-placeholder",
-      }),
-    ).resolves.toEqual({ status: "created" })
-    expect(mocks.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        name: "Migrated channel",
-        type: VeloeraChannelType.OpenAI,
-        key: "credential-placeholder",
-      }),
-      undefined,
-    )
-  })
+      })
+
+      if (prepared.status !== "ready") throw new Error("expected ready source")
+      const target =
+        await veloeraManagedSiteMigrationCapability.target!.prepare(
+          prepared.source,
+        )
+      await expect(
+        veloeraManagedSiteMigrationCapability.target!.create({
+          source: prepared.source,
+          targetSiteType: SITE_TYPES.VELOERA,
+          projection: { ...target.projection, name: "Migrated channel" },
+          credential: "credential-placeholder",
+        }),
+      ).resolves.toEqual({ status: "created" })
+      expect(mocks.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: "Migrated channel",
+          type: VeloeraChannelType.OpenAI,
+          status,
+          key: "credential-placeholder",
+        }),
+        undefined,
+      )
+    },
+  )
 
   it.each([
     {

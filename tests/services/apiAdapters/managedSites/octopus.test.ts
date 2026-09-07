@@ -4,7 +4,9 @@ import {
   octopusManagedResourceModels,
   octopusManagedSiteCapabilities,
 } from "~/services/apiAdapters/managedSites/octopus"
+import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import type { OctopusChannel } from "~/types/octopus"
+import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 
 const octopusApi = vi.hoisted(() => {
   class OctopusMutationApiError extends Error {
@@ -188,5 +190,29 @@ describe("Octopus managed-site channel capability", () => {
       id: 7,
       model: "model-a",
     })
+  })
+
+  it("retains explicit user intent when updating an Octopus model list", async () => {
+    const protectionBypassExecution = userCommandExecution(
+      PROTECTION_BYPASS_USER_COMMANDS.SyncManagedSiteModels,
+    )
+    const signal = new AbortController().signal
+    octopusApi.updateChannel.mockResolvedValueOnce({
+      success: true,
+      data: { id: 7 },
+      message: "",
+    })
+
+    await expect(
+      octopusManagedResourceModels.updateModels(config, 7, ["model-a"], {
+        signal,
+        protectionBypassExecution,
+      }),
+    ).resolves.toMatchObject({ outcome: "succeeded" })
+    expect(octopusApi.updateChannel).toHaveBeenCalledWith(
+      config,
+      { id: 7, model: "model-a" },
+      { signal, protectionBypassExecution },
+    )
   })
 })
