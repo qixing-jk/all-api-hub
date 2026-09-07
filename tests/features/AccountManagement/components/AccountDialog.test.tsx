@@ -714,6 +714,72 @@ describe("AccountDialog", () => {
     expect(handleOpenBookmarkImport).toHaveBeenCalledTimes(1)
   })
 
+  it.each([false, true])(
+    "prepares the access-token input when opening site security settings (collapsed: %s)",
+    async (collapsed) => {
+      const user = userEvent.setup()
+      const media = window.matchMedia("(max-width: 639px)")
+      vi.mocked(window.matchMedia).mockImplementation((query) => ({
+        ...media,
+        media: query,
+        matches: collapsed && query === "(max-width: 639px)",
+      }))
+      mockState.phase = ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM
+      mockState.siteType = SITE_TYPES.NEW_API
+      mockState.draft.siteType = SITE_TYPES.NEW_API
+      mockState.draft.accessToken = ""
+      mockState.detectionError = {
+        type: AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED,
+        message: "Complete security verification on the site",
+      }
+
+      render(
+        <AccountDialog
+          isOpen={true}
+          onClose={vi.fn()}
+          mode={DIALOG_MODES.ADD}
+          onSuccess={vi.fn()}
+          onError={vi.fn()}
+        />,
+      )
+
+      if (collapsed) {
+        await user.click(
+          await screen.findByRole("button", {
+            name: "accountDialog:sections.accountAuth.title",
+          }),
+        )
+        expect(
+          screen.queryByPlaceholderText("accountDialog:form.accessToken"),
+        ).not.toBeInTheDocument()
+      }
+
+      const openSecurityButton = screen.getByRole("button", {
+        name: "accountDialog:accessTokenVerification.openSecurity",
+      })
+      await user.click(openSecurityButton)
+
+      const accessTokenInput = await screen.findByPlaceholderText(
+        "accountDialog:form.accessToken",
+      )
+      await waitFor(() => expect(accessTokenInput).toHaveFocus())
+      expect(accessTokenInput).toHaveAttribute("type", "password")
+      await user.paste("manually-copied-access-token")
+      expect(mockSetters.setAccessToken).toHaveBeenLastCalledWith(
+        "manually-copied-access-token",
+      )
+      expect(
+        screen.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.siteNameInput),
+      ).toHaveValue("Example Site")
+
+      await user.click(
+        screen.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.siteNameInput),
+      )
+      await user.click(openSecurityButton)
+      await waitFor(() => expect(accessTokenInput).toHaveFocus())
+    },
+  )
+
   it("exposes manual recovery guidance for a documented site type", () => {
     mockState.phase = ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM
     mockState.formSource = ACCOUNT_DIALOG_FORM_SOURCES.MANUAL

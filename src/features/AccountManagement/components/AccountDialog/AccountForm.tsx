@@ -7,6 +7,13 @@ import {
   KeyRound,
   User,
 } from "lucide-react"
+import {
+  useImperativeHandle,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type Ref,
+} from "react"
 import { useTranslation } from "react-i18next"
 
 import {
@@ -57,7 +64,12 @@ type AccountFormPresentationSitePolicy = Pick<
   | "requireUserId"
 >
 
+export interface AccountFormHandle {
+  focusAccessToken: () => void
+}
+
 interface AccountFormProps {
+  ref?: Ref<AccountFormHandle>
   draft: AccountDialogDraft
   sitePolicy: AccountFormPresentationSitePolicy
   isDetected: boolean
@@ -104,6 +116,7 @@ interface AccountFormProps {
  * Account form body used inside the account dialog for creating/editing accounts.
  */
 export default function AccountForm({
+  ref,
   draft,
   sitePolicy,
   isDetected,
@@ -169,6 +182,32 @@ export default function AccountForm({
   const canUseCookieAuth = sitePolicy.allowCookieAuthSession
   const canUseSub2ApiRefreshToken = sitePolicy.allowSub2ApiRefreshTokenState
   const isOpenRouterManagementKey = siteType === SITE_TYPES.OPENROUTER
+  const accessTokenInputRef = useRef<HTMLInputElement>(null)
+  const [isAuthSectionOpen, setIsAuthSectionOpen] = useState(
+    ACCOUNT_FORM_MOBILE_DEFAULT_OPEN["account-auth"],
+  )
+  const [accessTokenFocusRequested, setAccessTokenFocusRequested] =
+    useState(false)
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      focusAccessToken: () => {
+        setIsAuthSectionOpen(true)
+        setAccessTokenFocusRequested(true)
+      },
+    }),
+    [],
+  )
+
+  useLayoutEffect(() => {
+    if (!accessTokenFocusRequested) return
+
+    const input = accessTokenInputRef.current
+    input?.focus({ preventScroll: true })
+    input?.scrollIntoView({ block: "center" })
+    setAccessTokenFocusRequested(false)
+  }, [accessTokenFocusRequested, isAuthSectionOpen])
 
   return (
     <div className="space-y-3">
@@ -226,6 +265,8 @@ export default function AccountForm({
       <AccountFormSection
         title={t("sections.accountAuth.title")}
         defaultOpen={ACCOUNT_FORM_MOBILE_DEFAULT_OPEN["account-auth"]}
+        open={isAuthSectionOpen}
+        onOpenChange={setIsAuthSectionOpen}
         testId={ACCOUNT_MANAGEMENT_TEST_IDS.accountFormSectionAuth}
       >
         <FormField
@@ -310,6 +351,7 @@ export default function AccountForm({
               required
             >
               <Input
+                ref={accessTokenInputRef}
                 type="password"
                 revealable
                 revealed={showAccessToken}

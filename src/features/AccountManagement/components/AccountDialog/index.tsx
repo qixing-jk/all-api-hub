@@ -1,5 +1,5 @@
 import { Info } from "lucide-react"
-import { useEffect, useState, type ComponentProps } from "react"
+import { useEffect, useRef, useState, type ComponentProps } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Alert } from "~/components/ui"
@@ -29,7 +29,7 @@ import {
   openFullBookmarkManagerPage,
 } from "~/utils/navigation"
 
-import AccountForm from "./AccountForm"
+import AccountForm, { type AccountFormHandle } from "./AccountForm"
 import ActionButtons from "./ActionButtons"
 import { AihubmixDefaultKeyPromptDialog } from "./AihubmixDefaultKeyPromptDialog"
 import AutoDetectErrorAlert from "./AutoDetectErrorAlert"
@@ -113,6 +113,7 @@ export default function AccountDialog({
     onSuccess,
   })
 
+  const accountFormRef = useRef<AccountFormHandle>(null)
   const accessTokenContinuation = useAccountDialogRecoveryHandoff({
     enabled: isOpen && isExtensionPopup(),
     state: state.tokenRecoveryState ?? null,
@@ -306,6 +307,9 @@ export default function AccountDialog({
                 siteUrl={state.url}
                 siteType={state.siteType}
                 accessTokenContinuation={accessTokenContinuation}
+                onPrepareAccessTokenInput={() =>
+                  accountFormRef.current?.focusAccessToken()
+                }
                 manualAddGuideAnchor={
                   mode === DIALOG_MODES.ADD ? manualAddGuideAnchor : undefined
                 }
@@ -415,6 +419,7 @@ export default function AccountDialog({
 
             {state.phase === ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM && (
               <AccountForm
+                ref={accountFormRef}
                 draft={state.draft}
                 sitePolicy={currentSitePolicy}
                 isDetected={state.isDetected}

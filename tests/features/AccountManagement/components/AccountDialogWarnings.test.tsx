@@ -135,7 +135,7 @@ describe("AccountDialog warnings", () => {
     expect(browser.tabs.create).not.toHaveBeenCalled()
   })
 
-  it("opens New API security settings from a persistent view and explains token rotation", async () => {
+  it("opens the New API access-token location from a persistent view and explains token rotation", async () => {
     const user = userEvent.setup()
     render(
       <AutoDetectErrorAlert
@@ -161,7 +161,7 @@ describe("AccountDialog warnings", () => {
       }),
     )
     expect(browser.tabs.create).toHaveBeenCalledWith({
-      url: "http://local.example.test/new-api/security",
+      url: "http://local.example.test/new-api/security#security-access",
       active: true,
     })
     expect(

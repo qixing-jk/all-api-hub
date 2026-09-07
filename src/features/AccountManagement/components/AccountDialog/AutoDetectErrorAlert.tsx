@@ -38,6 +38,7 @@ import { ManualAddGuideButton } from "./ManualAddGuideButton"
 interface AutoDetectErrorAlertProps extends AutoDetectErrorProps {
   manualAddGuideAnchor?: AccountSiteManualAddGuideAnchor
   accessTokenContinuation?: AccessTokenContinuationAction
+  onPrepareAccessTokenInput?: () => void
 }
 
 const apiCredentialRecoveryErrorTypes = new Set<AutoDetectErrorType>([
@@ -58,6 +59,7 @@ const apiCredentialRecoveryErrorTypes = new Set<AutoDetectErrorType>([
  * @param props.onApiCredentialProfilesClick Optional handler invoked when API credential fallback is selected.
  * @param props.manualAddGuideAnchor Optional site-specific manual completion guide.
  * @param props.accessTokenContinuation Optional popup-to-persistent-view action.
+ * @param props.onPrepareAccessTokenInput Reveals and focuses the token field before site navigation.
  */
 export default function AutoDetectErrorAlert({
   error,
@@ -68,6 +70,7 @@ export default function AutoDetectErrorAlert({
   onApiCredentialProfilesClick,
   manualAddGuideAnchor,
   accessTokenContinuation,
+  onPrepareAccessTokenInput,
 }: AutoDetectErrorAlertProps) {
   const { t } = useTranslation("accountDialog")
 
@@ -136,6 +139,7 @@ export default function AutoDetectErrorAlert({
         siteUrl={siteUrl}
         manualAddGuideAnchor={manualAddGuideAnchor}
         continuation={accessTokenContinuation}
+        onPrepareAccessTokenInput={onPrepareAccessTokenInput}
       />
     )
   }

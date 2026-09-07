@@ -26,11 +26,13 @@ export function AccessTokenVerificationGuide({
   siteUrl,
   manualAddGuideAnchor,
   continuation,
+  onPrepareAccessTokenInput,
 }: {
   message: string
   siteUrl?: string
   manualAddGuideAnchor?: AccountSiteManualAddGuideAnchor
   continuation?: AccessTokenContinuationAction
+  onPrepareAccessTokenInput?: () => void
 }) {
   const { t } = useTranslation("accountDialog")
   const [navigationFailed, setNavigationFailed] = useState(false)
@@ -38,10 +40,11 @@ export function AccessTokenVerificationGuide({
   const openSecurityPage = async () => {
     if (!siteUrl || !isHttpUrl(siteUrl)) return
     setNavigationFailed(false)
+    onPrepareAccessTokenInput?.()
     try {
-      // The verified upstream token-management screen lives at /security.
-      // https://github.com/QuantumNous/new-api/blob/a8729b5c3709cc01d88fc3f2db5b91347fc9129e/web/src/routes/_authenticated/security/index.tsx
-      await createTab(joinUrl(siteUrl, "/security"), true)
+      // The access-token card belongs to this upstream security section.
+      // https://github.com/QuantumNous/new-api/blob/387a40914853310d69adc2f52474134ced5f4811/web/src/features/security/index.tsx
+      await createTab(joinUrl(siteUrl, "/security#security-access"), true)
     } catch {
       setNavigationFailed(true)
     }

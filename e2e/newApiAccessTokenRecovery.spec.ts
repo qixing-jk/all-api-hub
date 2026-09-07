@@ -83,7 +83,7 @@ test("continues New API security verification in the native side panel after clo
     await route.fulfill({
       status: 200,
       contentType: "text/html",
-      body: `<h1>Security settings</h1><label>Access Token<input readonly value="${manualToken}"></label>`,
+      body: `<h1>Security settings</h1><h2 id="security-access">Sessions &amp; Access</h2><label>Access Token<input readonly value="${manualToken}"></label>`,
     })
   })
   const serviceWorker = await getServiceWorker(context)
@@ -157,6 +157,16 @@ test("continues New API security verification in the native side panel after clo
       userId: "1",
     })
 
+  await sidePanel.evaluate((view, ids) => {
+    const section = view.document.querySelector(
+      `[data-testid="${ids.accountFormSectionAuth}"]`,
+    )
+    const toggle = section?.querySelector<HTMLButtonElement>(
+      '[data-slot="collapsible-trigger"]',
+    )
+    if (toggle?.getAttribute("aria-expanded") === "true") toggle.click()
+  }, ACCOUNT_MANAGEMENT_TEST_IDS)
+
   const securityPagePromise = context.waitForEvent("page")
   await sidePanel.evaluate((view) => {
     const button = Array.from(view.document.querySelectorAll("button")).find(
@@ -168,24 +178,48 @@ test("continues New API security verification in the native side panel after clo
     button.click()
   })
   const securityPage = await securityPagePromise
+  let securityUrl = ""
   await expect
-    .poll(() =>
-      serviceWorker.evaluate(async () => {
+    .poll(async () => {
+      securityUrl = await serviceWorker.evaluate(async () => {
         const [tab] = await chrome.tabs.query({
           active: true,
           currentWindow: true,
         })
-        return tab?.url
-      }),
-    )
-    .toBe(`${baseUrl}/security`)
+        return tab?.url ?? ""
+      })
+      return securityUrl
+    })
+    .toBe(`${baseUrl}/security#security-access`)
   // tabs.create can navigate before Playwright attaches route interception.
-  // Load the mock screen after verifying the URL of the actual browser tab.
-  await securityPage.goto(`${baseUrl}/security`)
+  // Preserve the actual destination, including its section anchor.
+  await securityPage.goto(securityUrl)
   await expect(
     securityPage.getByRole("heading", { name: "Security settings" }),
   ).toBeVisible()
   await securityPage.bringToFront()
+  await expect
+    .poll(() =>
+      sidePanel.evaluate((view, ids) => {
+        const input = view.document.querySelector<HTMLInputElement>(
+          `[data-testid="${ids.accessTokenInput}"]`,
+        )
+        const body = input?.closest('[data-slot="modal-body"]')
+        if (!input || !body) return null
+
+        const inputBounds = input.getBoundingClientRect()
+        const bodyBounds = body.getBoundingClientRect()
+        return {
+          focused: view.document.activeElement === input,
+          visible:
+            inputBounds.height > 0 &&
+            inputBounds.top >= Math.max(0, bodyBounds.top) &&
+            inputBounds.bottom <= Math.min(view.innerHeight, bodyBounds.bottom),
+          protected: input.type === "password",
+        }
+      }, ACCOUNT_MANAGEMENT_TEST_IDS),
+    )
+    .toEqual({ focused: true, visible: true, protected: true })
   const copiedToken = await securityPage.getByLabel("Access Token").inputValue()
   await sidePanel.evaluate(
     (view, { id, token }) => {
