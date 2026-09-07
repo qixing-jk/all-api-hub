@@ -1,4 +1,9 @@
-import type { BrowserContext, Page, Worker } from "@playwright/test"
+import type {
+  BrowserContext,
+  ConsoleMessage,
+  Page,
+  Worker,
+} from "@playwright/test"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import {
@@ -101,6 +106,7 @@ export const E2E_NEW_API_RC22_AUTH = {
 /** Scenario-specific console-error patterns that should not fail the test. */
 export type ExtensionPageGuardOptions = {
   ignoreConsoleErrorPatterns?: RegExp[]
+  ignoreConsoleError?: (message: ConsoleMessage) => boolean
 }
 
 const E2E_SPONSOR_CATALOG_PAYLOAD = {
@@ -138,6 +144,7 @@ function installExtensionPageGuardsWithOptions(
 
     const text = message.text()
     if (
+      options.ignoreConsoleError?.(message) ||
       options.ignoreConsoleErrorPatterns?.some((pattern) => pattern.test(text))
     ) {
       return

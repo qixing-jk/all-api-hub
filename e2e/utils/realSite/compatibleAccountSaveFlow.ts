@@ -5,6 +5,7 @@ import { expect } from "~~/e2e/fixtures/extensionTest"
 import type { AccountFixture } from "~~/e2e/scenarios/accountFixtures"
 import type { ExtensionPageGuardOptions } from "~~/e2e/utils/commonUserFlows"
 import type { getServiceWorker } from "~~/e2e/utils/extensionState"
+import type { AccountAddDialog } from "~~/e2e/utils/realSite/accountAdd"
 import { runRealSiteAccountSaveFlow } from "~~/e2e/utils/realSite/accountSaveFlow"
 import type { CompatibleApiRealSiteConfig } from "~~/e2e/utils/realSite/compatibleApi"
 
@@ -24,6 +25,7 @@ export async function runCompatibleRealSiteAccountSaveFlow(params: {
   siteType: AccountSiteType
   expectedDetectedSiteType?: AccountSiteType
   extensionPageGuardOptions?: ExtensionPageGuardOptions
+  prepareDetectedDialog?: (dialog: AccountAddDialog) => Promise<void>
   login: (
     page: Page,
     config: CompatibleApiRealSiteConfig,
@@ -42,6 +44,7 @@ export async function runCompatibleRealSiteAccountSaveFlow(params: {
       const loginResult = await params.login(sitePage, params.config)
       expect(loginResult.user).toBeTruthy()
       return {
+        prepareDetectedDialog: params.prepareDetectedDialog,
         cleanupDetectableSite: loginResult.cleanupOwnedSession,
       }
     },
@@ -57,6 +60,7 @@ export function createCompatibleRealSiteAccountFixturePreparer(params: {
   siteType: AccountSiteType
   expectedDetectedSiteType?: AccountSiteType
   extensionPageGuardOptions?: ExtensionPageGuardOptions
+  prepareDetectedDialog?: (dialog: AccountAddDialog) => Promise<void>
   login: (
     page: Page,
     config: CompatibleApiRealSiteConfig,
@@ -74,6 +78,7 @@ export function createCompatibleRealSiteAccountFixturePreparer(params: {
         siteType: params.siteType,
         expectedDetectedSiteType: params.expectedDetectedSiteType,
         extensionPageGuardOptions: params.extensionPageGuardOptions,
+        prepareDetectedDialog: params.prepareDetectedDialog,
         login: params.login,
       })
     } finally {
