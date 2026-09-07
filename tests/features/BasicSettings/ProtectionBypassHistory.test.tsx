@@ -10,27 +10,32 @@ import { render } from "~~/tests/test-utils/render"
 
 afterEach(() => window.history.replaceState(null, "", "/"))
 
-describe("protection bypass history settings", () => {
-  it("keeps history closed until requested and shows all summaries with details on demand", async () => {
-    const user = userEvent.setup()
-    await Promise.all(
-      Array.from({ length: 100 }, (_, index) =>
-        protectionBypassHistoryStorage.start({
-          execution: createAutomaticProtectionBypassExecution(
-            "account_refresh",
-            "scheduled",
-            "background",
-          ),
-          task: {
-            kind: "api_fallback_fetch",
-            params: {
-              originUrl: `https://site-${index}.example`,
-              fetchUrl: `https://site-${index}.example/api/user/self`,
-            },
+/** Seed retained records through the public storage API before opening history. */
+async function recordHistoryEntries(count: number) {
+  await Promise.all(
+    Array.from({ length: count }, (_, index) =>
+      protectionBypassHistoryStorage.start({
+        execution: createAutomaticProtectionBypassExecution(
+          "account_refresh",
+          "scheduled",
+          "background",
+        ),
+        task: {
+          kind: "api_fallback_fetch",
+          params: {
+            originUrl: `https://site-${index}.example`,
+            fetchUrl: `https://site-${index}.example/api/user/self`,
           },
-        }),
-      ),
-    )
+        },
+      }),
+    ),
+  )
+}
+
+describe("protection bypass history settings", () => {
+  it("keeps history closed until requested, expands details on demand and restores focus on Escape", async () => {
+    const user = userEvent.setup()
+    await recordHistoryEntries(1)
     render(<ProtectionBypassHistory />, {
       withUserPreferencesProvider: false,
       withThemeProvider: false,
@@ -44,23 +49,14 @@ describe("protection bypass history settings", () => {
     const dialog = within(
       await screen.findByRole("dialog", { name: "shieldBypass:history.title" }),
     )
-    await dialog.findByText("https://site-99.example")
-    expect(
-      dialog.getAllByRole("button", {
-        name: /https:\/\/site-\d+\.example/,
-        expanded: false,
-      }),
-    ).toHaveLength(100)
+    const summary = await dialog.findByRole("button", {
+      name: /https:\/\/site-0\.example/,
+      expanded: false,
+    })
     expect(
       dialog.queryByText("shieldBypass:history.fields.method"),
     ).not.toBeInTheDocument()
-    expect(
-      dialog.queryByRole("button", { name: "common:actions.more" }),
-    ).not.toBeInTheDocument()
-
-    await user.click(
-      dialog.getByRole("button", { name: /https:\/\/site-99\.example/ }),
-    )
+    await user.click(summary)
     expect(dialog.getByText("shieldBypass:history.fields.method")).toBeVisible()
     expect(
       dialog.getByRole("button", { name: "shieldBypass:history.copy" }),
@@ -70,6 +66,33 @@ describe("protection bypass history settings", () => {
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
     )
     expect(trigger).toHaveFocus()
+  })
+
+  it("shows all 100 retained summaries without expanding details or loading another page", async () => {
+    const user = userEvent.setup()
+    await recordHistoryEntries(100)
+    render(<ProtectionBypassHistory />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+    await user.click(
+      screen.getByRole("button", { name: "shieldBypass:history.open" }),
+    )
+    const dialog = within(
+      await screen.findByRole("dialog", { name: "shieldBypass:history.title" }),
+    )
+    const history = within(
+      dialog.getByRole("region", { name: "shieldBypass:history.title" }),
+    )
+    await history.findByText("https://site-99.example")
+    const summaries = history.getAllByRole("button", { expanded: false })
+    expect(summaries).toHaveLength(100)
+    expect(summaries[0]).toHaveAccessibleName(/https:\/\/site-99\.example/)
+    expect(summaries[99]).toHaveAccessibleName(/https:\/\/site-0\.example/)
+    expect(
+      history.queryByText("shieldBypass:history.fields.method"),
+    ).not.toBeInTheDocument()
+    expect(dialog.queryByText("common:actions.more")).not.toBeInTheDocument()
   })
 
   it("shows the trigger evidence, receives completion updates and filters by site", async () => {
