@@ -18,16 +18,25 @@ const scenarios = [
     name: "saves an automatically detected token without opening security settings",
     method: null,
     existingToken: false,
+    clipboardWriteDelayMs: 0,
   },
   {
     name: "recovers a blocked token exchange through password verification and token regeneration",
     method: "password",
     existingToken: true,
+    clipboardWriteDelayMs: 0,
   },
   {
     name: "recovers a blocked token exchange by generating a token with authenticator verification",
     method: "2fa",
     existingToken: false,
+    clipboardWriteDelayMs: 0,
+  },
+  {
+    name: "waits for a delayed clipboard copy to replace an old token before saving",
+    method: "password",
+    existingToken: true,
+    clipboardWriteDelayMs: 500,
   },
 ] as const
 
@@ -234,11 +243,20 @@ function securityPageHtml(scenario: (typeof scenarios)[number]) {
         method: "POST", headers: { "X-Security-Proof": "verified" },
       }).then((response) => response.json());
       if (!token.success) return;
+      if (${scenario.clipboardWriteDelayMs} > 0) {
+        await navigator.clipboard.writeText("e2e-previous-clipboard-token");
+      }
       byId("generated-access-token").value = token.data;
       byId("verification").hidden = true;
       byId("token-dialog").hidden = false;
     };
-    byId("copy").onclick = () => navigator.clipboard.writeText(byId("generated-access-token").value);
+    byId("copy").onclick = async () => {
+      // Model a clipboard write that completes after Playwright's click returns.
+      if (${scenario.clipboardWriteDelayMs} > 0) {
+        await new Promise((resolve) => setTimeout(resolve, ${scenario.clipboardWriteDelayMs}));
+      }
+      await navigator.clipboard.writeText(byId("generated-access-token").value);
+    };
     byId("close").onclick = () => { byId("token-dialog").hidden = true; };
     byId("close-icon").onclick = byId("close").onclick;
   </script>

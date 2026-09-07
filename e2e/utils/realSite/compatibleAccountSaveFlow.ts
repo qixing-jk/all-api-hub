@@ -16,6 +16,10 @@ type CompatibleRealSiteLoginResult = {
   cleanupOwnedSession?: () => Promise<void>
 }
 
+/**
+ * Log in and save a compatible site's detected account, passing optional dialog
+ * recovery and owned-session cleanup to the shared account flow.
+ */
 export async function runCompatibleRealSiteAccountSaveFlow(params: {
   page: Page
   extensionId: string
@@ -51,6 +55,7 @@ export async function runCompatibleRealSiteAccountSaveFlow(params: {
   })
 }
 
+/** Prepare an account fixture in a site tab that is closed on every exit. */
 export function createCompatibleRealSiteAccountFixturePreparer(params: {
   context: BrowserContext
   page: Page

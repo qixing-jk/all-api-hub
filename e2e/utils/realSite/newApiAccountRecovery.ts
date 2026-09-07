@@ -151,12 +151,17 @@ async function copyNewApiAccessToken(
   await tokenDialog
     .getByRole("button", { name: /^(Copy token|复制令牌)$/u })
     .click()
-  const token = await page.evaluate(() => navigator.clipboard.readText())
   const displayedToken = await tokenDialog
     .getByLabel(/^(Token|令牌)$/u, { exact: true })
     .inputValue()
+  let token = ""
   // Boolean assertions keep plaintext credentials out of failure reports.
-  expect(token.length > 0 && token === displayedToken).toBe(true)
+  await expect
+    .poll(async () => {
+      token = await page.evaluate(() => navigator.clipboard.readText())
+      return token.length > 0 && token === displayedToken
+    })
+    .toBe(true)
   await tokenDialog
     .getByRole("button", { name: /^(Close|关闭)$/u })
     // The footer and dialog's close icon perform the same action upstream.
@@ -165,6 +170,10 @@ async function copyNewApiAccessToken(
   return token
 }
 
+/**
+ * Prefer configured authenticator verification when offered by the site,
+ * otherwise use its password challenge. Fail if neither method is available.
+ */
 async function completeNewApiSecurityVerification(
   dialog: Locator,
   config: CompatibleApiRealSiteConfig,
@@ -204,6 +213,7 @@ async function completeNewApiSecurityVerification(
   await dialog.getByRole("button", { name: /^(Verify|验证)$/u }).click()
 }
 
+/** Fill a credential without exposing it through Playwright action error logs. */
 async function fillSecret(input: Locator, value: string, label: string) {
   await expect(input, `New API ${label} input must be editable`).toBeEditable()
   try {
