@@ -2925,9 +2925,7 @@ export function useAccountDialog({
       try {
         const openResult = await openChannelDialog(
           displaySiteData,
-          token
-            ? buildDisplayAccountTokenRuntimeKey(displaySiteData, token)
-            : null,
+          buildDisplayAccountTokenRuntimeKey(displaySiteData, token),
           () => {
             if (onSuccess && targetAccount && isCurrentRun()) {
               onSuccess(targetAccount)

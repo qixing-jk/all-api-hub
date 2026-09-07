@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import AccountActionButtons from "~/features/AccountManagement/components/AccountActionButtons"
+import { buildServiceCredentialRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import type { UserPreferences } from "~/services/preferences/userPreferences"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -19,6 +20,7 @@ import {
   ACCOUNT_TODAY_METRIC_REASONS,
   ACCOUNT_TODAY_METRIC_STATUSES,
 } from "~/types/accountTodayStats"
+import type { ManagedSiteChannelDraftSource } from "~/types/managedSiteChannelDraft"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { render } from "~~/tests/test-utils/render"
 
@@ -461,6 +463,101 @@ describe("AccountActionButtons", () => {
     expect(managedService.matching.search).toHaveBeenCalledWith(
       expect.any(Object),
       "https://api.example.com",
+    )
+    expect(openManagedSiteChannelsPageMock).not.toHaveBeenCalled()
+  })
+
+  it("locates a service credential channel with its refreshed API endpoint and secret", async () => {
+    const account = buildDisplaySiteData({
+      id: "acc-service-locate",
+      disabled: false,
+      name: "SharedChat",
+      siteType: SITE_TYPES.SHAREDCHAT,
+      baseUrl: "https://dashboard.example.invalid",
+    })
+    const runtimeKey = buildServiceCredentialRuntimeKey(account, {
+      kind: "singleton_service_key",
+      service: "codex",
+      label: "Codex API Key",
+      key: "sk-stale-service-key",
+      baseUrl: "https://old-runtime.example.invalid",
+      isAuthenticated: true,
+    })
+    const resolvedRuntimeKey = buildServiceCredentialRuntimeKey(account, {
+      ...runtimeKey.credential,
+      key: "sk-current-service-key",
+      baseUrl: "https://runtime.example.invalid",
+    })
+    fetchAccountTokensMock.mockResolvedValueOnce([runtimeKey])
+    resolveDisplayAccountRuntimeKeySecretMock.mockResolvedValueOnce(
+      resolvedRuntimeKey,
+    )
+    const managedService = {
+      siteType: SITE_TYPES.NEW_API,
+      config: {
+        get: vi.fn().mockResolvedValue({
+          baseUrl: "https://admin.example",
+          adminToken: "t",
+          userId: "1",
+        }),
+      },
+      channelDrafts: {
+        prepareFormData: vi.fn(
+          async (source: ManagedSiteChannelDraftSource) => ({
+            base_url: source.baseUrl,
+            models: ["gpt-4"],
+            key: source.apiKey,
+          }),
+        ),
+      },
+      matching: {
+        search: vi.fn().mockResolvedValue({
+          items: [
+            {
+              id: 789,
+              name: "Service Credential Channel",
+              base_url: "https://runtime.example.invalid",
+              models: "gpt-4",
+              key: "sk-current-service-key",
+            },
+          ],
+          total: 1,
+          type_counts: {},
+        }),
+      },
+    }
+    getManagedSiteCapabilitiesMock.mockReturnValueOnce(managedService)
+    const user = userEvent.setup()
+
+    render(
+      <AccountActionButtons
+        site={account}
+        onCopyKey={vi.fn()}
+        onDeleteAccount={vi.fn()}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.more" }),
+    )
+    await user.click(
+      await screen.findByRole("menuitem", {
+        name: "account:actions.locateManagedSiteChannel",
+      }),
+    )
+
+    await waitFor(() =>
+      expect(openManagedSiteChannelsForChannelMock).toHaveBeenCalledWith(789),
+    )
+    expect(managedService.channelDrafts.prepareFormData).toHaveBeenCalledWith(
+      expect.objectContaining({
+        baseUrl: "https://runtime.example.invalid",
+        apiKey: "sk-current-service-key",
+      }),
+    )
+    expect(managedService.matching.search).toHaveBeenCalledWith(
+      expect.any(Object),
+      "https://runtime.example.invalid",
     )
     expect(openManagedSiteChannelsPageMock).not.toHaveBeenCalled()
   })
