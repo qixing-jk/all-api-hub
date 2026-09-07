@@ -4,6 +4,7 @@ import {
   POPUP_PAGE_PATH,
   SIDEPANEL_PAGE_PATH,
 } from "~/constants/extensionPages"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SITE_TYPES } from "~/constants/siteType"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
@@ -318,6 +319,19 @@ for (const scenario of [
         }, ACCOUNT_MANAGEMENT_TEST_IDS.confirmAddButton),
       )
       .toBe(false)
+    const postSaveRefresh = await bridge.evaluateHandle((action) => {
+      const observed = { accountIds: [] as string[] }
+      const listener = (message: {
+        action?: string
+        updatedAccountIds?: string[]
+      }) => {
+        if (message.action !== action) return
+        observed.accountIds = message.updatedAccountIds ?? []
+        chrome.runtime.onMessage.removeListener(listener)
+      }
+      chrome.runtime.onMessage.addListener(listener)
+      return observed
+    }, RuntimeActionIds.AccountRefreshCompleted)
     await sidePanel.evaluate((view, id) => {
       view.document
         .querySelector<HTMLButtonElement>(`[data-testid="${id}"]`)
@@ -338,11 +352,16 @@ for (const scenario of [
     expect(JSON.stringify(saved)).not.toContain("e2e-private-session-token")
     expect(tokenRequests).toBe(scenario.tokenRequests)
 
+    // Saving starts an independent refresh. Await its completion before any
+    // request can receive the quota reserved for the explicit row refresh.
+    await expect
+      .poll(() => postSaveRefresh.evaluate((observed) => observed.accountIds))
+      .toEqual([saved.id])
+    await postSaveRefresh.dispose()
+
     await openAccountManagementPage({ page: bridge, extensionId })
     await bridge.bringToFront()
     const row = await expectAccountListItemVisible(bridge, saved.id)
-    // The deferred save refresh may still be pending; neither its initial quota
-    // nor the stored placeholder can satisfy the manual refresh assertion.
     expect(
       (await waitForSavedAccount({ serviceWorker, siteType, baseUrl }))
         .account_info.quota,
