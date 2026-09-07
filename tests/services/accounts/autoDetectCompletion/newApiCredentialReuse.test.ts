@@ -1,5 +1,5 @@
 import { http, HttpResponse } from "msw"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
 import { AUTO_DETECT_FAILURE_REASONS } from "~/constants/autoDetect"
 import { SITE_TYPES } from "~/constants/siteType"
@@ -78,7 +78,7 @@ describe("New API account credential reuse", () => {
       url: baseUrl,
       requestedAuthType: AuthTypeEnum.AccessToken,
       detected: { siteType: SITE_TYPES.NEW_API, userId: "7" },
-      existingAccessTokens: ["existing-pat"],
+      existingAccessToken: "existing-pat",
     }
     const result = await completeAutoDetectedAccount(request)
 
@@ -100,7 +100,7 @@ describe("New API account credential reuse", () => {
     const result = await completeAutoDetectedAccount({
       url: baseUrl,
       requestedAuthType: AuthTypeEnum.AccessToken,
-      existingAccessTokens: ["existing-pat"],
+      existingAccessToken: "existing-pat",
       detected: {
         siteType: SITE_TYPES.NEW_API,
         userId: "7",
@@ -130,7 +130,7 @@ describe("New API account credential reuse", () => {
       completeAutoDetectedAccount({
         url: baseUrl,
         requestedAuthType: AuthTypeEnum.AccessToken,
-        existingAccessTokens: ["another-users-pat"],
+        existingAccessToken: "another-users-pat",
         detected: { siteType: SITE_TYPES.NEW_API, userId: "7" },
       }),
     ).rejects.toMatchObject({
@@ -139,7 +139,7 @@ describe("New API account credential reuse", () => {
     expect(requests.tokenCreations).toBe(0)
   })
 
-  it("tries another known PAT after a revoked one before considering generation", async () => {
+  it("loads saved PATs only after the current PAT is rejected as unauthorized", async () => {
     const requests = mockNewApi((request) =>
       request.headers.get("Authorization") === "Bearer revoked-pat"
         ? HttpResponse.json(
@@ -159,12 +159,20 @@ describe("New API account credential reuse", () => {
     const result = await completeAutoDetectedAccount({
       url: baseUrl,
       requestedAuthType: AuthTypeEnum.AccessToken,
-      existingAccessTokens: ["revoked-pat", "existing-pat"],
+      existingAccessToken: "revoked-pat",
+      loadSavedAccessTokens: async () => {
+        expect(requests.authentications).toEqual(["Bearer revoked-pat"])
+        return ["revoked-pat", "existing-pat"]
+      },
       detected: { siteType: SITE_TYPES.NEW_API, userId: "7" },
     })
 
     expect(result.accessToken).toBe("existing-pat")
     expect(requests.tokenCreations).toBe(0)
+    expect(requests.authentications).toEqual([
+      "Bearer revoked-pat",
+      "Bearer existing-pat",
+    ])
   })
 
   it.each([
@@ -195,18 +203,21 @@ describe("New API account credential reuse", () => {
     ],
   ])("does not replace credentials after %s", async (_label, response) => {
     const requests = mockNewApi(response)
+    const loadSavedAccessTokens = vi.fn().mockResolvedValue(["saved-pat"])
 
     await expect(
       completeAutoDetectedAccount({
         url: baseUrl,
         requestedAuthType: AuthTypeEnum.AccessToken,
-        existingAccessTokens: ["existing-pat"],
+        existingAccessToken: "existing-pat",
+        loadSavedAccessTokens,
         detected: { siteType: SITE_TYPES.NEW_API, userId: "7" },
       }),
     ).rejects.toMatchObject({
       reason: AUTO_DETECT_FAILURE_REASONS.TokenFetchFailed,
     })
     expect(requests.tokenCreations).toBe(0)
+    expect(loadSavedAccessTokens).not.toHaveBeenCalled()
   })
 
   it("reuses a persistent token already read from the browser session", async () => {
@@ -286,7 +297,7 @@ describe("New API account credential reuse", () => {
       completeAutoDetectedAccount({
         url: baseUrl,
         requestedAuthType: AuthTypeEnum.AccessToken,
-        existingAccessTokens: ["secret-existing-pat"],
+        existingAccessToken: "secret-existing-pat",
         detected: { siteType: SITE_TYPES.NEW_API, userId: "7" },
       }),
     ).rejects.toMatchObject({
@@ -296,7 +307,7 @@ describe("New API account credential reuse", () => {
     expect(requests.tokenCreations).toBe(0)
   })
 
-  it("can use another known credential after an inconclusive verification", async () => {
+  it("stops credential recovery after an inconclusive current-token verification", async () => {
     const requests = mockNewApi((request) =>
       request.headers.get("Authorization") === "Bearer temporarily-unverifiable"
         ? HttpResponse.json({ success: false }, { status: 500 })
@@ -305,13 +316,26 @@ describe("New API account credential reuse", () => {
             data: { id: 7, username: "alice" },
           }),
     )
-    const result = await completeAutoDetectedAccount({
-      url: baseUrl,
-      requestedAuthType: AuthTypeEnum.AccessToken,
-      existingAccessTokens: ["temporarily-unverifiable", "working-pat"],
-      detected: { siteType: SITE_TYPES.NEW_API, userId: "7" },
+    const loadSavedAccessTokens = vi.fn().mockResolvedValue(["working-pat"])
+    await expect(
+      completeAutoDetectedAccount({
+        url: baseUrl,
+        requestedAuthType: AuthTypeEnum.AccessToken,
+        existingAccessToken: "temporarily-unverifiable",
+        loadSavedAccessTokens,
+        detected: {
+          siteType: SITE_TYPES.NEW_API,
+          userId: "7",
+          accessToken: "detected-pat",
+        },
+      }),
+    ).rejects.toMatchObject({
+      reason: AUTO_DETECT_FAILURE_REASONS.TokenFetchFailed,
     })
-    expect(result.accessToken).toBe("working-pat")
+    expect(requests.authentications).toEqual([
+      "Bearer temporarily-unverifiable",
+    ])
+    expect(loadSavedAccessTokens).not.toHaveBeenCalled()
     expect(requests.tokenCreations).toBe(0)
   })
 

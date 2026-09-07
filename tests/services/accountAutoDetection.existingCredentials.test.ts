@@ -1,11 +1,13 @@
 import { http, HttpResponse } from "msw"
 import { beforeEach, describe, expect, it, vi } from "vitest"
+import { browser } from "wxt/browser"
 
 import { AUTO_DETECT_FAILURE_REASONS } from "~/constants/autoDetect"
 import { SITE_TYPES } from "~/constants/siteType"
 import { autoDetectAccount } from "~/services/accounts/accountAutoDetection"
 import { accountMutations } from "~/services/accounts/accountStorage/accountMutations"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
+import { ACCOUNT_STORAGE_KEYS } from "~/services/core/storageKeys"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
@@ -91,7 +93,22 @@ describe("account detection with existing credentials", () => {
     },
   )
 
-  it("reuses an unsaved form credential during redetection", async () => {
+  it("reuses a valid form credential without reading account storage", async () => {
+    const storageArea: {
+      get(keys: string[]): Promise<Record<string, unknown>>
+    } = browser.storage.local
+    const readStorage = storageArea.get.bind(storageArea)
+    const storageReadSpy = vi
+      .spyOn(storageArea, "get")
+      .mockImplementation(async (keys) => {
+        if (
+          Array.isArray(keys) &&
+          keys.includes(ACCOUNT_STORAGE_KEYS.ACCOUNTS)
+        ) {
+          throw new Error("Account storage unavailable")
+        }
+        return readStorage(keys)
+      })
     const options = {
       existingAccount: {
         url: baseUrl,
@@ -100,19 +117,26 @@ describe("account detection with existing credentials", () => {
         accessToken: "draft-pat",
       },
     }
-    const result = await autoDetectAccount(
-      baseUrl,
-      AuthTypeEnum.AccessToken,
-      undefined,
-      undefined,
-      options,
-    )
+    try {
+      const result = await autoDetectAccount(
+        baseUrl,
+        AuthTypeEnum.AccessToken,
+        undefined,
+        undefined,
+        options,
+      )
 
-    expect(result).toMatchObject({
-      success: true,
-      data: { accessToken: "draft-pat", userId: "7" },
-    })
-    expect(tokenCreations).toBe(0)
+      expect(result).toMatchObject({
+        success: true,
+        data: { accessToken: "draft-pat", userId: "7" },
+      })
+      expect(storageReadSpy).not.toHaveBeenCalledWith([
+        ACCOUNT_STORAGE_KEYS.ACCOUNTS,
+      ])
+      expect(tokenCreations).toBe(0)
+    } finally {
+      storageReadSpy.mockRestore()
+    }
   })
 
   it.each([SITE_TYPES.NEW_API, SITE_TYPES.ONE_API])(

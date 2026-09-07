@@ -28,7 +28,8 @@ export type AccountCompletionAdapterRequest = Pick<
   AutoDetectCompletionRequest,
   | "url"
   | "requestedAuthType"
-  | "existingAccessTokens"
+  | "existingAccessToken"
+  | "loadSavedAccessTokens"
   | "detected"
   | "autoDetectContext"
 > & { context: AccountCompletionRuntimeContext }

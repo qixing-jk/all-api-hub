@@ -7,7 +7,8 @@ import {
   type AccountSiteType,
 } from "~/constants/siteType"
 import {
-  findExistingAccountAccessTokens,
+  findSavedAccountAccessTokens,
+  getExistingAccountAccessToken,
   type AccountAutoDetectExistingAccount,
 } from "~/services/accounts/autoDetect/existingCredentials"
 import {
@@ -229,13 +230,13 @@ export async function autoDetectAccount(
     }
 
     const { userId, siteType } = detectResult.data
-    const existingAccessTokens = userId
-      ? await findExistingAccountAccessTokens(
+    const existingAccessToken = userId
+      ? getExistingAccountAccessToken(
           normalizedUrl,
           detectResult.data,
           options?.existingAccount,
         )
-      : []
+      : undefined
     recoveryData = mergeAccountAutoDetectRecoveryData(
       recoveryData,
       createDetectedAccountRecoveryData({
@@ -267,7 +268,9 @@ export async function autoDetectAccount(
     const completed = await completeAutoDetectedAccount({
       url: normalizedUrl,
       requestedAuthType: authType,
-      existingAccessTokens,
+      existingAccessToken,
+      loadSavedAccessTokens: () =>
+        findSavedAccountAccessTokens(normalizedUrl, { userId, siteType }),
       cookieAuthSessionCookie,
       detected: detectResult.data,
       autoDetectContext,

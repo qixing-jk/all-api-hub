@@ -26,8 +26,10 @@ export interface DetectedAccountIdentity {
 export interface AutoDetectCompletionRequest {
   url: string
   requestedAuthType: AuthTypeEnum
-  /** Known management tokens scoped to the detected site and account identity. */
-  existingAccessTokens?: readonly string[]
+  /** The current account or draft token, scoped to the detected site and identity. */
+  existingAccessToken?: string
+  /** Reads matching saved tokens only after known credentials are missing or invalid. */
+  loadSavedAccessTokens?: () => Promise<readonly string[]>
   cookieAuthSessionCookie?: string
   detected: DetectedAccountIdentity
   autoDetectContext?: AutoDetectAnalyticsContext

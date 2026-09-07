@@ -29,12 +29,12 @@ function getCredentialScope(url: string): string | null {
   }
 }
 
-/** Finds saved management credentials before account detection can rotate one. */
-export async function findExistingAccountAccessTokens(
+/** Checks the current account binding without reading other saved accounts. */
+export function getExistingAccountAccessToken(
   url: string,
   detected: DetectedAccountIdentity,
   existingAccount?: AccountAutoDetectExistingAccount,
-): Promise<string[]> {
+): string | undefined {
   const scope = getCredentialScope(url)
   if (
     existingAccount &&
@@ -48,16 +48,25 @@ export async function findExistingAccountAccessTokens(
       new Error("The detected account does not match the existing account"),
     )
   }
+  return existingAccount?.accessToken.trim() || undefined
+}
+
+/** Reads matching saved credentials only when the current credential needs recovery. */
+export async function findSavedAccountAccessTokens(
+  url: string,
+  detected: DetectedAccountIdentity,
+): Promise<string[]> {
   if (
     getSiteTypeCapabilities(detected.siteType).family !==
     ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily
   ) {
     return []
   }
+  const scope = getCredentialScope(url)
   if (!scope) return []
   // A failed read is not proof that there are no saved credentials to preserve.
   const accounts = await accountQueries.getAllAccountsOrThrow()
-  const savedTokens = accounts
+  return accounts
     .filter(
       (account) =>
         getSiteTypeCapabilities(account.site_type).family ===
@@ -68,8 +77,4 @@ export async function findExistingAccountAccessTokens(
     )
     .map((account) => account.account_info.access_token.trim())
     .filter(Boolean)
-  if (existingAccount) {
-    return [existingAccount.accessToken.trim(), ...savedTokens].filter(Boolean)
-  }
-  return savedTokens
 }

@@ -67,20 +67,22 @@ export const createNewApiAccountCompletion = (
   siteType: AccountSiteType,
 ): AccountCompletionCapability => ({
   async complete(request, helpers) {
-    const { url, requestedAuthType, existingAccessTokens, detected, context } =
-      request
+    const {
+      url,
+      requestedAuthType,
+      existingAccessToken,
+      loadSavedAccessTokens,
+      detected,
+      context,
+    } = request
     const modernDashboardAuth =
       siteType === SITE_TYPES.NEW_API &&
       detected.transientAuth?.kind === NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND
         ? detected.transientAuth
         : undefined
-    const accessTokenCandidates = [
-      ...new Set(
-        [...(existingAccessTokens ?? []), detected.accessToken]
-          .map(helpers.trimString)
-          .filter((token) => token && token !== modernDashboardAuth?.token),
-      ),
-    ]
+    const knownAccessTokens = [existingAccessToken, detected.accessToken]
+      .map(helpers.trimString)
+      .filter((token) => token && token !== modernDashboardAuth?.token)
 
     const validateModernDashboardAuth = () => {
       if (!modernDashboardAuth) return
@@ -108,7 +110,7 @@ export const createNewApiAccountCompletion = (
       }
     }
 
-    if (!accessTokenCandidates.length) {
+    if (!knownAccessTokens.length && !loadSavedAccessTokens) {
       validateModernDashboardAuth()
     }
 
@@ -132,43 +134,59 @@ export const createNewApiAccountCompletion = (
       })
 
     const fetchTokenInfo = async () => {
-      let verificationError: Error | undefined
-      for (const existingAccessToken of accessTokenCandidates) {
-        if (effectiveAuthType !== AuthTypeEnum.AccessToken) {
-          continue
-        }
-        try {
-          const userInfo = await accountBootstrap.fetchUserInfo(
-            createRequest({
-              authType: AuthTypeEnum.AccessToken,
-              accessToken: existingAccessToken,
-              userId: detected.userId,
-            }),
-          )
-          return { ...userInfo, access_token: existingAccessToken }
-        } catch (error) {
-          // rc.22 distinguishes invalid PATs from disabled users and service failures.
-          // https://github.com/QuantumNous/new-api/blob/v1.0.0-rc.22/middleware/auth.go
+      if (effectiveAuthType === AuthTypeEnum.AccessToken) {
+        const checkedTokens = new Set<string>()
+        const tryReuseAccessToken = async (candidate: string) => {
+          const accessToken = helpers.trimString(candidate)
           if (
-            error instanceof ApiError &&
-            error.statusCode === 401 &&
-            (!error.upstreamCode || error.upstreamCode === "AUTH_UNAUTHORIZED")
-          ) {
-            continue
-          }
-          verificationError ??= helpers.createCompletionError(
-            error instanceof ApiError &&
-              error.code === API_ERROR_CODES.ACCOUNT_IDENTITY_MISMATCH
-              ? AUTO_DETECT_FAILURE_REASONS.AccountIdentityMismatch
-              : AUTO_DETECT_FAILURE_REASONS.TokenFetchFailed,
-            createSafeCredentialError(
-              error,
-              EXISTING_TOKEN_VERIFICATION_FAILED_MESSAGE,
-            ),
+            !accessToken ||
+            accessToken === modernDashboardAuth?.token ||
+            checkedTokens.has(accessToken)
           )
+            return
+          checkedTokens.add(accessToken)
+          try {
+            const userInfo = await accountBootstrap.fetchUserInfo(
+              createRequest({
+                authType: AuthTypeEnum.AccessToken,
+                accessToken,
+                userId: detected.userId,
+              }),
+            )
+            return { ...userInfo, access_token: accessToken }
+          } catch (error) {
+            // rc.22 distinguishes invalid PATs from disabled users and service failures.
+            // https://github.com/QuantumNous/new-api/blob/v1.0.0-rc.22/middleware/auth.go
+            if (
+              error instanceof ApiError &&
+              error.statusCode === 401 &&
+              (!error.upstreamCode ||
+                error.upstreamCode === "AUTH_UNAUTHORIZED")
+            ) {
+              return
+            }
+            throw helpers.createCompletionError(
+              error instanceof ApiError &&
+                error.code === API_ERROR_CODES.ACCOUNT_IDENTITY_MISMATCH
+                ? AUTO_DETECT_FAILURE_REASONS.AccountIdentityMismatch
+                : AUTO_DETECT_FAILURE_REASONS.TokenFetchFailed,
+              createSafeCredentialError(
+                error,
+                EXISTING_TOKEN_VERIFICATION_FAILED_MESSAGE,
+              ),
+            )
+          }
+        }
+
+        for (const accessToken of knownAccessTokens) {
+          const tokenInfo = await tryReuseAccessToken(accessToken)
+          if (tokenInfo) return tokenInfo
+        }
+        for (const accessToken of (await loadSavedAccessTokens?.()) ?? []) {
+          const tokenInfo = await tryReuseAccessToken(accessToken)
+          if (tokenInfo) return tokenInfo
         }
       }
-      if (verificationError) throw verificationError
 
       if (modernDashboardAuth) {
         validateModernDashboardAuth()
