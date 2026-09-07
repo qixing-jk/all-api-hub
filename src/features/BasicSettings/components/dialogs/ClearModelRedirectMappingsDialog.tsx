@@ -7,7 +7,7 @@ import {
   Button,
   Checkbox,
   CollapsibleSection,
-  DestructiveConfirmDialog,
+  ConfirmDialog,
   Input,
   Modal,
 } from "~/components/ui"
@@ -488,7 +488,8 @@ export function ClearModelRedirectMappingsDialog({
         </div>
       </Modal>
 
-      <DestructiveConfirmDialog
+      <ConfirmDialog
+        intent="destructive"
         isOpen={isConfirmOpen}
         onClose={() => {
           if (!isClearing) setIsConfirmOpen(false)

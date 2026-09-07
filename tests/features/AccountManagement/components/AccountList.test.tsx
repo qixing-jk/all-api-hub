@@ -288,7 +288,7 @@ vi.mock("~/components/ui", () => {
         {...props}
       />
     ),
-    DestructiveConfirmDialog: ({
+    ConfirmDialog: ({
       isOpen,
       title,
       description,

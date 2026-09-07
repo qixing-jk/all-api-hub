@@ -5,7 +5,7 @@ import {
   Badge,
   Button,
   CollapsibleSection,
-  DestructiveConfirmDialog,
+  ConfirmDialog,
   Modal,
   Select,
   SelectContent,
@@ -469,7 +469,9 @@ export function ManagedSiteMigrationDialogView({
         </div>
       </Modal>
 
-      <DestructiveConfirmDialog
+      <ConfirmDialog
+        intent="confirm"
+        icon={ArrowRightLeft}
         isOpen={isConfirmationOpen}
         onClose={callbacks.onCloseConfirmation}
         title={labels.confirmationTitle}

@@ -15,12 +15,7 @@ import { useRef, type ReactNode } from "react"
 import ManagedSiteConfigRequiredState from "~/components/ManagedSiteConfigRequiredState"
 import { PageHeader } from "~/components/PageHeader"
 import Tooltip from "~/components/Tooltip"
-import {
-  Badge,
-  DestructiveConfirmDialog,
-  IconButton,
-  Input,
-} from "~/components/ui"
+import { Badge, ConfirmDialog, IconButton, Input } from "~/components/ui"
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/Alert"
 import { Button, BUTTON_LOADING_BEHAVIORS } from "~/components/ui/button"
 import { Checkbox } from "~/components/ui/checkbox"
@@ -493,7 +488,8 @@ export function ManagedSiteChannelsView({
         </>
       )}
 
-      <DestructiveConfirmDialog
+      <ConfirmDialog
+        intent="destructive"
         isOpen={state.deleteState.isOpen && !isDeleteReplayBlocked}
         onClose={callbacks.onDeleteCancel}
         title={

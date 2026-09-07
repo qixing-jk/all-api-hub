@@ -21,7 +21,7 @@ import {
   Card,
   CardContent,
   CardList,
-  DestructiveConfirmDialog,
+  ConfirmDialog,
   EmptyState,
   TagFilter,
 } from "~/components/ui"
@@ -464,7 +464,8 @@ export default function BookmarksList({
         </CardContent>
       </Card>
 
-      <DestructiveConfirmDialog
+      <ConfirmDialog
+        intent="destructive"
         isOpen={Boolean(deleteTarget)}
         onClose={() => setDeleteTarget(null)}
         title={t("bookmark:delete.title")}

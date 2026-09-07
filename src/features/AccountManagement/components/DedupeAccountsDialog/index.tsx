@@ -3,7 +3,7 @@ import { useMemo, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
-import { Button, DestructiveConfirmDialog, Modal } from "~/components/ui"
+import { Button, ConfirmDialog, Modal } from "~/components/ui"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import {
   scanDuplicateAccounts,
@@ -297,7 +297,8 @@ export default function DedupeAccountsDialog({
         />
       </Modal>
 
-      <DestructiveConfirmDialog
+      <ConfirmDialog
+        intent="destructive"
         isOpen={isConfirmOpen}
         onClose={() => {
           if (!isWorking) setIsConfirmOpen(false)

@@ -1,10 +1,14 @@
-import { Trash2 } from "lucide-react"
-import type { ComponentProps, ReactNode } from "react"
+import { CircleHelp, TriangleAlert, type LucideIcon } from "lucide-react"
+import type { ReactNode } from "react"
 
 import { Button } from "~/components/ui/button"
 import { Modal } from "~/components/ui/Dialog/Modal"
 
-interface DestructiveConfirmDialogProps {
+interface ConfirmDialogProps {
+  /**
+   * Keeps the header and confirm button consistent; defaults to a general confirmation.
+   */
+  intent?: "confirm" | "warning" | "destructive"
   /**
    * Controls whether the modal is visible.
    */
@@ -14,11 +18,11 @@ interface DestructiveConfirmDialogProps {
    */
   onClose: () => void
   /**
-   * Primary title shown in the header next to the trash icon.
+   * Primary title shown in the header next to the action icon.
    */
   title: string
   /**
-   * Supporting text shown in the body warning section.
+   * Supporting text shown in the body.
    */
   description: string
   /**
@@ -27,11 +31,11 @@ interface DestructiveConfirmDialogProps {
    */
   warningTitle?: string
   /**
-   * Label for the confirm (destructive) button.
+   * Label for the confirm button.
    */
   confirmLabel: string
   /**
-   * Optional label shown while the destructive action is in progress.
+   * Optional label shown while the action is in progress.
    */
   workingLabel?: string
   /**
@@ -39,7 +43,7 @@ interface DestructiveConfirmDialogProps {
    */
   cancelLabel: string
   /**
-   * Called when the user confirms the destructive action.
+   * Called when the user confirms the action.
    */
   onConfirm: () => void
   /**
@@ -47,7 +51,7 @@ interface DestructiveConfirmDialogProps {
    */
   details?: ReactNode
   /**
-   * Disables interactions and prevents closing while a destructive action is in progress.
+   * Disables interactions and prevents closing while an action is in progress.
    */
   isWorking?: boolean
   /**
@@ -55,7 +59,7 @@ interface DestructiveConfirmDialogProps {
    */
   size?: "sm" | "md" | "lg"
   /**
-   * Optional stable selector for the destructive confirmation action.
+   * Optional stable selector for the confirmation action.
    */
   confirmButtonTestId?: string
   /**
@@ -63,22 +67,35 @@ interface DestructiveConfirmDialogProps {
    */
   cancelButtonTestId?: string
   /**
-   * Optional semantic icon override for non-delete confirmations.
+   * Optional action-specific header icon; its color follows the action intent.
    */
-  icon?: ReactNode
-  /**
-   * Optional confirm-button style override; destructive remains the default.
-   */
-  confirmVariant?: ComponentProps<typeof Button>["variant"]
+  icon?: LucideIcon
 }
 
+const intentPresentation = {
+  confirm: {
+    icon: CircleHelp,
+    iconClassName: "text-primary",
+    confirmVariant: "default",
+  },
+  warning: {
+    icon: TriangleAlert,
+    iconClassName: "text-amber-600 dark:text-amber-400",
+    confirmVariant: "warning",
+  },
+  destructive: {
+    icon: TriangleAlert,
+    iconClassName: "text-red-600 dark:text-red-400",
+    confirmVariant: "destructive",
+  },
+} as const
+
 /**
- * DestructiveConfirmDialog is a standardized destructive confirmation dialog.
- *
- * It matches the app's existing delete dialogs by using the shared `Modal` layout,
- * a warning section, and a destructive confirm button.
+ * Shared confirmation layout with a general default, action-specific intent,
+ * and consistent header and button presentation.
  */
-export function DestructiveConfirmDialog({
+export function ConfirmDialog({
+  intent = "confirm",
   isOpen,
   onClose,
   title,
@@ -93,9 +110,11 @@ export function DestructiveConfirmDialog({
   size = "sm",
   confirmButtonTestId,
   cancelButtonTestId,
-  icon = <Trash2 className="h-5 w-5 text-red-600 dark:text-red-400" />,
-  confirmVariant = "destructive",
-}: DestructiveConfirmDialogProps) {
+  icon,
+}: ConfirmDialogProps) {
+  const presentation = intentPresentation[intent]
+  const Icon = icon ?? presentation.icon
+
   return (
     <Modal
       isOpen={isOpen}
@@ -108,7 +127,10 @@ export function DestructiveConfirmDialog({
       header={
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            {icon}
+            <Icon
+              className={`h-5 w-5 ${presentation.iconClassName}`}
+              aria-hidden="true"
+            />
             <h2 className="dark:text-dark-text-primary text-lg font-semibold text-gray-900">
               {title}
             </h2>
@@ -130,11 +152,11 @@ export function DestructiveConfirmDialog({
           <Button
             type="button"
             onClick={onConfirm}
-            variant={confirmVariant}
+            variant={presentation.confirmVariant}
             className="flex-1"
             loading={isWorking}
             data-testid={confirmButtonTestId}
-            data-variant={confirmVariant}
+            data-variant={presentation.confirmVariant}
           >
             {isWorking ? workingLabel ?? confirmLabel : confirmLabel}
           </Button>

@@ -2,7 +2,7 @@ import { useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
-import { DestructiveConfirmDialog } from "~/components/ui"
+import { ConfirmDialog } from "~/components/ui"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { accountMutations } from "~/services/accounts/accountStorage/accountMutations"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
@@ -91,7 +91,8 @@ export default function DelAccountDialog({
   }
 
   return (
-    <DestructiveConfirmDialog
+    <ConfirmDialog
+      intent="destructive"
       isOpen={isOpen}
       onClose={handleClose}
       title={t("ui:dialog.delete.title")}

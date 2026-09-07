@@ -12,7 +12,7 @@ import { useTranslation } from "react-i18next"
 
 import {
   Button,
-  DestructiveConfirmDialog,
+  ConfirmDialog,
   EmptyState,
   IconButton,
   Input,
@@ -330,7 +330,8 @@ export default function ProtectionBypassHistoryDialog({
           )}
         </div>
       </div>
-      <DestructiveConfirmDialog
+      <ConfirmDialog
+        intent="destructive"
         isOpen={isClearOpen}
         onClose={() => setIsClearOpen(false)}
         title={t("shieldBypass:history.clear")}

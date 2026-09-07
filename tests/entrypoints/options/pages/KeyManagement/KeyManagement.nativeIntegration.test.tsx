@@ -2298,6 +2298,9 @@ describe("KeyManagement native page integration", () => {
     expect(
       screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.nativeDeleteConfirmButton),
     ).toHaveTextContent("keyManagement:openRouter.delete.refresh")
+    expect(
+      screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.nativeDeleteConfirmButton),
+    ).toHaveAttribute("data-variant", "warning")
 
     const openCountAfterRecovery = open.mock.calls.length
     await user.click(

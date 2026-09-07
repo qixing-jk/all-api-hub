@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react"
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { act, useState } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
@@ -47,15 +53,18 @@ describe("OneTimeSecretDialog", () => {
     )
 
     expect(onClose).not.toHaveBeenCalled()
-    expect(
-      screen.getByText("keyManagement:oneTimeKey.closeConfirm.title"),
-    ).toBeInTheDocument()
+    const confirmation = screen.getByRole("dialog", {
+      name: "keyManagement:oneTimeKey.closeConfirm.title",
+    })
+    const confirmButton = within(confirmation).getByRole("button", {
+      name: "keyManagement:oneTimeKey.closeConfirm.confirm",
+    })
+    expect.soft(confirmButton).toHaveAttribute("data-variant", "warning")
+    expect
+      .soft(confirmation.querySelector(".lucide-trash2, .lucide-trash-2"))
+      .not.toBeInTheDocument()
 
-    await user.click(
-      screen.getByTestId(
-        TOKEN_PROVISIONING_TEST_IDS.oneTimeKeyConfirmCloseButton,
-      ),
-    )
+    await user.click(confirmButton)
 
     expect(onClose).toHaveBeenCalledExactlyOnceWith()
   })

@@ -12,7 +12,7 @@ import {
   CardContent,
   CardList,
   Checkbox,
-  DestructiveConfirmDialog,
+  ConfirmDialog,
   EmptyState,
   TagFilter,
 } from "~/components/ui"
@@ -1673,7 +1673,8 @@ export default function AccountList({
         onClose={() => setManualInviteLinkPayload(null)}
       />
 
-      <DestructiveConfirmDialog
+      <ConfirmDialog
+        intent="destructive"
         isOpen={isBulkDeleteConfirmOpen}
         onClose={() => {
           if (!isBulkDeleting) {

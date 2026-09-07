@@ -1,10 +1,11 @@
 import type { TFunction } from "i18next"
+import { RefreshCw } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
   Alert,
-  DestructiveConfirmDialog,
+  ConfirmDialog,
   Notice,
   NoticeActionButton,
   SearchableSelect,
@@ -1349,7 +1350,8 @@ export default function KeyManagement(props: {
         startOnOpen={repairStartOnOpen}
       />
 
-      <DestructiveConfirmDialog
+      <ConfirmDialog
+        intent="destructive"
         isOpen={Boolean(deleteTokenTarget)}
         onClose={() => setDeleteTokenTarget(null)}
         title={t("keyManagement:actions.deleteKey")}
@@ -1376,7 +1378,9 @@ export default function KeyManagement(props: {
         focusWorkflowId={nativeKeys.focusWorkflowId ?? undefined}
       />
 
-      <DestructiveConfirmDialog
+      <ConfirmDialog
+        intent={nativeDeleteIsUncertain ? "warning" : "destructive"}
+        icon={nativeDeleteIsUncertain ? RefreshCw : undefined}
         isOpen={nativeKeys.deleteState.isOpen}
         onClose={nativeKeys.cancelDelete}
         title={t("keyManagement:openRouter.delete.title")}

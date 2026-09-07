@@ -1,7 +1,7 @@
 import type { TFunction } from "i18next"
 import { useMemo } from "react"
 
-import { DestructiveConfirmDialog } from "~/components/ui"
+import { ConfirmDialog } from "~/components/ui"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import type { AccountKeyRepairInvalidResource } from "~/types/accountKeyAutoProvisioning"
 
@@ -62,7 +62,8 @@ export function RepairInvalidKeysDeleteConfirm({
   }, [selectedInvalidResources, t])
 
   return (
-    <DestructiveConfirmDialog
+    <ConfirmDialog
+      intent="destructive"
       isOpen={isOpen}
       onClose={onClose}
       onConfirm={onConfirm}

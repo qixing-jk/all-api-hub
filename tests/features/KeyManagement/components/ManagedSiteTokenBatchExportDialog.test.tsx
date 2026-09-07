@@ -8,6 +8,7 @@ import {
 } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import type { ConfirmDialog } from "~/components/ui"
 import { SITE_TYPES } from "~/constants/siteType"
 import { ManagedSiteTokenBatchExportDialog } from "~/features/KeyManagement/components/ManagedSiteTokenBatchExportDialog"
 import { ManagedSiteTokenBatchExportFooter } from "~/features/KeyManagement/components/ManagedSiteTokenBatchExportDialog/ManagedSiteTokenBatchExportFooter"
@@ -75,7 +76,7 @@ const createDeferred = <T,>() => {
 const {
   mockAllowDisabledBatchActionClicks,
   mockAllowDisabledVerificationButtonClicks,
-  mockDestructiveConfirmDialogRender,
+  mockConfirmDialogRender,
   mockExecuteBatchExport,
   mockCloseNewApiManagedVerification,
   mockGetPreviewVerificationTargets,
@@ -96,7 +97,7 @@ const {
   mockAllowDisabledVerificationButtonClicks: {
     current: false,
   },
-  mockDestructiveConfirmDialogRender: vi.fn(),
+  mockConfirmDialogRender: vi.fn(),
   mockExecuteBatchExport: vi.fn(),
   mockCloseNewApiManagedVerification: vi.fn(),
   mockGetPreviewVerificationTargets: vi.fn(),
@@ -307,7 +308,7 @@ vi.mock("~/components/ui", async (importOriginal) => {
         </button>
       </div>
     ),
-    DestructiveConfirmDialog: ({
+    ConfirmDialog: ({
       isOpen,
       onClose,
       onConfirm,
@@ -316,23 +317,13 @@ vi.mock("~/components/ui", async (importOriginal) => {
       cancelLabel,
       isWorking,
       icon,
-      confirmVariant,
-    }: {
-      isOpen: boolean
-      onClose: () => void
-      onConfirm: () => void
-      title: string
-      confirmLabel: string
-      cancelLabel: string
-      isWorking?: boolean
-      icon?: ReactNode
-      confirmVariant?: string
-    }) => {
-      mockDestructiveConfirmDialogRender({
+      intent,
+    }: ComponentProps<typeof ConfirmDialog>) => {
+      mockConfirmDialogRender({
         isOpen,
         onConfirm,
         icon,
-        confirmVariant,
+        intent,
       })
       return isOpen ? (
         <div role="dialog" aria-label={title}>
@@ -1368,9 +1359,9 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
         name: "keyManagement:batchManagedSiteExport.confirm.title",
       }),
     ).toBeInTheDocument()
-    expect(mockDestructiveConfirmDialogRender.mock.calls.at(-1)?.[0]).toEqual(
+    expect(mockConfirmDialogRender.mock.calls.at(-1)?.[0]).toEqual(
       expect.objectContaining({
-        confirmVariant: "default",
+        intent: "confirm",
         icon: expect.anything(),
       }),
     )
@@ -1410,12 +1401,10 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
         name: "keyManagement:batchManagedSiteExport.confirm.title",
       }),
     ).toBeInTheDocument()
-    const capturedConfirm = mockDestructiveConfirmDialogRender.mock.calls.at(
-      -1,
-    )?.[0].onConfirm as () => Promise<void>
+    const capturedConfirm = mockConfirmDialogRender.mock.calls.at(-1)?.[0]
+      .onConfirm as () => Promise<void>
 
-    const renderCountBeforeClose =
-      mockDestructiveConfirmDialogRender.mock.calls.length
+    const renderCountBeforeClose = mockConfirmDialogRender.mock.calls.length
     rerender(
       <ManagedSiteTokenBatchExportDialog
         isOpen={false}
@@ -1424,7 +1413,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       />,
     )
 
-    const closedRenderStates = mockDestructiveConfirmDialogRender.mock.calls
+    const closedRenderStates = mockConfirmDialogRender.mock.calls
       .slice(renderCountBeforeClose)
       .map(([props]) => props.isOpen)
     expect(closedRenderStates).not.toContain(true)

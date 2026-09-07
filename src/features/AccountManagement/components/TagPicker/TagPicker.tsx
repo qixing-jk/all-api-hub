@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next"
 import {
   Badge,
   Button,
-  DestructiveConfirmDialog,
+  ConfirmDialog,
   IconButton,
   Input,
 } from "~/components/ui"
@@ -563,7 +563,8 @@ export function TagPicker({
         </div>
       )}
 
-      <DestructiveConfirmDialog
+      <ConfirmDialog
+        intent="destructive"
         isOpen={Boolean(deleteTarget)}
         onClose={() => setDeleteTarget(null)}
         title={t("form.tagsDeleteTitle")}
