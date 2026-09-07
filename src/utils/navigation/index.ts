@@ -3,6 +3,7 @@ import {
   MENU_ITEM_IDS,
   type OptionsMenuItemId,
 } from "~/constants/optionsMenuIds"
+import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import {
   resolveAccountSiteRouteUrl,
   SITE_ROUTE_KINDS,
@@ -881,6 +882,14 @@ export const openPermissionsOnboardingPage = withPopupClose(
  */
 export const openSettingsTab = withPopupClose(_openSettingsTab)
 export const openSettingsTabInNewTab = withPopupClose(_openSettingsTabInNewTab)
+
+/** Opens local shield diagnostics, preserving the originating options workflow. */
+export const openProtectionBypassHistory = () =>
+  openSettingsTab("refresh", {
+    anchor: SETTINGS_ANCHORS.SHIELD_HISTORY,
+    preserveHistory: true,
+  })
+
 export const openAutoCheckinPage = withPopupClose(
   (searchParams?: Record<string, string | undefined>) =>
     openOrFocusOptionsMenuItem(MENU_ITEM_IDS.AUTO_CHECKIN, searchParams),

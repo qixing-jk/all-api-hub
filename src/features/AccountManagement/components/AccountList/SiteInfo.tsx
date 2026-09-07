@@ -50,6 +50,7 @@ import {
   getTempWindowFallbackSettingsTab,
 } from "~/features/AccountManagement/utils/tempWindowFallbackReminder"
 import { useLdohSiteLookupContext } from "~/features/LdohSiteLookup/hooks/LdohSiteLookupContext"
+import { ProtectionBypassHistoryLink } from "~/features/ProtectionBypass/components/ProtectionBypassHistoryLink"
 import { cn } from "~/lib/utils"
 import {
   getSelectedCheckInStatus,
@@ -69,6 +70,7 @@ import {
   openCheckInAndRedeem,
   openCheckInPage,
   openCustomCheckInPage,
+  openProtectionBypassHistory,
   openSettingsTab,
 } from "~/utils/navigation"
 
@@ -202,6 +204,11 @@ export default function SiteInfo({
   )
 
   const healthCode = site.health?.code
+  const canOpenProtectionBypassHistory =
+    site.health?.status === SiteHealthStatus.Warning &&
+    Object.values(TEMP_WINDOW_HEALTH_STATUS_CODES).some(
+      (code) => code === healthCode,
+    )
   const canOpenHealthSettings =
     site.health?.status === SiteHealthStatus.Warning &&
     (healthCode === TEMP_WINDOW_HEALTH_STATUS_CODES.DISABLED ||
@@ -502,6 +509,12 @@ export default function SiteInfo({
                   t("list.site.notAvailable"),
                 )}
               </p>
+              {canOpenProtectionBypassHistory && (
+                <ProtectionBypassHistoryLink
+                  className="text-xs"
+                  onOpen={openProtectionBypassHistory}
+                />
+              )}
             </div>
           }
           position="right"

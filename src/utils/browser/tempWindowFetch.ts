@@ -445,7 +445,13 @@ export async function executeWithTempWindowFallback<TResult>(
     }
 
     try {
-      return await fetchViaTempWindow<TResult>(context, mapTempWindowResponse)
+      return await fetchViaTempWindow<TResult>(
+        context,
+        mapTempWindowResponse,
+        primaryError instanceof ApiError
+          ? { statusCode: primaryError.statusCode, code: primaryError.code }
+          : undefined,
+      )
     } catch (fallbackError) {
       if (
         primaryError instanceof ApiError &&
@@ -556,6 +562,7 @@ async function shouldUseTempWindowFallback(
 async function fetchViaTempWindow<TResult>(
   context: TempWindowFallbackContext,
   mapResponse?: (response: TempWindowFetch) => TResult | Promise<TResult>,
+  fallbackDiagnostic?: TempWindowFetchParams["fallbackDiagnostic"],
 ): Promise<TResult> {
   const { fetchOptions, responseType } = context
 
@@ -579,6 +586,7 @@ async function fetchViaTempWindow<TResult>(
     tempContextTaskKind: context.forceTempWindow
       ? TEMP_CONTEXT_TASK_KINDS.ProfileIsolatedFetch
       : TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch,
+    ...(fallbackDiagnostic ? { fallbackDiagnostic } : {}),
     accountId: context.accountId,
     authType: context.authType,
     cookieAuthSessionCookie: context.cookieAuthSessionCookie,

@@ -78,6 +78,7 @@ const {
   mockOpenCheckInPage,
   mockOpenCustomCheckInPage,
   mockOpenSettingsTab,
+  mockOpenProtectionBypassHistory,
   createTabMock,
   getLdohSearchUrlForAccountUrlMock,
 } = vi.hoisted(() => ({
@@ -99,6 +100,7 @@ const {
   mockOpenCheckInPage: vi.fn(),
   mockOpenCustomCheckInPage: vi.fn(),
   mockOpenSettingsTab: vi.fn().mockResolvedValue(undefined),
+  mockOpenProtectionBypassHistory: vi.fn().mockResolvedValue(undefined),
   createTabMock: vi.fn(),
   getLdohSearchUrlForAccountUrlMock: vi.fn<
     (accountBaseUrl: string) => string | null
@@ -175,6 +177,7 @@ vi.mock("~/utils/navigation", () => ({
   openCheckInPage: mockOpenCheckInPage,
   openCustomCheckInPage: mockOpenCustomCheckInPage,
   openSettingsTab: mockOpenSettingsTab,
+  openProtectionBypassHistory: mockOpenProtectionBypassHistory,
 }))
 
 const buildSite = (overrides: Partial<DisplaySiteData> = {}) =>
@@ -541,6 +544,46 @@ describe("SiteInfo", () => {
       anchor: "shield-settings",
       preserveHistory: true,
     })
+  })
+
+  it.each(Object.values(TEMP_WINDOW_HEALTH_STATUS_CODES))(
+    "opens history from the %s health warning without refreshing the account",
+    async (code) => {
+      const user = userEvent.setup()
+      render(
+        <SiteInfo
+          site={buildSite({
+            health: {
+              status: SiteHealthStatus.Warning,
+              code,
+              reason: "Temporary browser context could not be used",
+            },
+          })}
+        />,
+      )
+
+      await user.click(
+        screen.getByRole("button", { name: "shieldBypass:history.open" }),
+      )
+
+      expect(mockOpenProtectionBypassHistory).toHaveBeenCalledTimes(1)
+      expect(mockHandleRefreshAccount).not.toHaveBeenCalled()
+      expect(mockOpenSettingsTab).not.toHaveBeenCalled()
+    },
+  )
+
+  it("does not suggest shield history for an unrelated health warning", () => {
+    render(
+      <SiteInfo
+        site={buildSite({
+          health: { status: SiteHealthStatus.Warning, reason: "HTTP 500" },
+        })}
+      />,
+    )
+
+    expect(
+      screen.queryByRole("button", { name: "shieldBypass:history.open" }),
+    ).not.toBeInTheDocument()
   })
 
   it("shows a toast when opening the related settings tab fails", async () => {

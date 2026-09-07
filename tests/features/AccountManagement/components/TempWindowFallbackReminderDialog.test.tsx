@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import React from "react"
 import { beforeEach, describe, expect, expectTypeOf, it, vi } from "vitest"
 
@@ -9,10 +10,12 @@ import { TEMP_WINDOW_HEALTH_STATUS_CODES } from "~/types"
 const {
   getProtectionBypassUiVariantMock,
   openSettingsTabMock,
+  openProtectionBypassHistoryMock,
   protectionBypassVariants,
 } = vi.hoisted(() => ({
   getProtectionBypassUiVariantMock: vi.fn(),
   openSettingsTabMock: vi.fn().mockResolvedValue(undefined),
+  openProtectionBypassHistoryMock: vi.fn().mockResolvedValue(undefined),
   protectionBypassVariants: {
     TempWindowOnly: "temp-window-only",
     TempWindowWithCookieInterceptor: "temp-window-cookie-interceptor",
@@ -95,6 +98,7 @@ vi.mock("~/utils/browser/protectionBypass", () => ({
 
 vi.mock("~/utils/navigation", () => ({
   openSettingsTab: (...args: unknown[]) => openSettingsTabMock(...args),
+  openProtectionBypassHistory: openProtectionBypassHistoryMock,
 }))
 
 describe("TempWindowFallbackReminderDialog", () => {
@@ -261,6 +265,37 @@ describe("TempWindowFallbackReminderDialog", () => {
       })
     })
     expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it("opens diagnostic history from the reminder without changing preferences", async () => {
+    const user = userEvent.setup()
+    const onClose = vi.fn()
+    const onNeverRemind = vi.fn()
+    render(
+      <TempWindowFallbackReminderDialog
+        isOpen
+        issue={{
+          code: TEMP_WINDOW_HEALTH_STATUS_CODES.DISABLED,
+          accountId: "acc-1",
+          accountName: "Relay",
+          settingsTab: "refresh",
+          settingsAnchor: "shield-settings",
+        }}
+        onClose={onClose}
+        onNeverRemind={onNeverRemind}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", {
+        name: JSON.stringify({ key: "shieldBypass:history.open" }),
+      }),
+    )
+
+    expect(openProtectionBypassHistoryMock).toHaveBeenCalledTimes(1)
+    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(onNeverRemind).not.toHaveBeenCalled()
+    expect(openSettingsTabMock).not.toHaveBeenCalled()
   })
 
   it.each([

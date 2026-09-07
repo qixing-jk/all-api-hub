@@ -40,7 +40,7 @@ import {
 import {
   PROTECTION_BYPASS_DECISION_RESULTS,
   TEMP_CONTEXT_TASK_KINDS,
-  type ProtectionBypassDecisionResult,
+  type AuthorizedTempContextOutcome,
   type ProtectionBypassSurface,
   type TempContextTask,
 } from "~/services/protectionBypass/contracts"
@@ -475,17 +475,6 @@ function getOctopusCookieContextPageUrl(originUrl: string): string {
   return new URL(OCTOPUS_COOKIE_SESSION_STATUS_PATH, originUrl).toString()
 }
 
-export type AuthorizedTempContextOutcome =
-  | {
-      kind: Extract<
-        ProtectionBypassDecisionResult,
-        typeof PROTECTION_BYPASS_DECISION_RESULTS.Allowed
-      >
-      adapter: TempContextMode
-    }
-  | { kind: typeof PROTECTION_BYPASS_DECISION_RESULTS.Denied }
-  | { kind: typeof PROTECTION_BYPASS_DECISION_RESULTS.Unavailable }
-
 export type ReportAuthorizedTempContextOutcome = (
   outcome: AuthorizedTempContextOutcome,
 ) => void
@@ -495,7 +484,7 @@ export type AuthorizeTempContextAtAcquire =
     reportOutcome?: ReportAuthorizedTempContextOutcome
   }
 
-/** Notifies policy analytics after releasing the acquisition lock. */
+/** Reports acquisition facts without letting observers change task outcomes. */
 function reportAuthorizedTempContextOutcome(
   authorizeAtAcquire: AuthorizeTempContextAtAcquire | undefined,
   outcome: AuthorizedTempContextOutcome,
@@ -503,7 +492,7 @@ function reportAuthorizedTempContextOutcome(
   try {
     authorizeAtAcquire?.reportOutcome?.(outcome)
   } catch {
-    // Analytics observers are best effort and cannot change pool outcomes.
+    // Diagnostic observers are best effort and cannot change pool outcomes.
   }
 }
 
@@ -655,6 +644,10 @@ export async function executeAuthorizedTempContextTask(
     presentationSource,
   )
   if (presentation.kind === "blocked") {
+    reportAuthorizedTempContextOutcome(authorizeAtAcquire, {
+      kind: "unavailable",
+      reason: presentation.reason,
+    })
     sendResponse(
       buildPresentationFailure(
         task,
@@ -1505,6 +1498,10 @@ async function executeTempWindowFetch(
       const allowed = await isAllowedIncognitoAccess()
       if (allowed === false) {
         const error = t("messages:background.incognitoAccessRequired")
+        reportAuthorizedTempContextOutcome(authorizeAtAcquire, {
+          kind: "unavailable",
+          reason: "incognito_access_required",
+        })
         sendResponse({
           success: false,
           error,
@@ -1880,6 +1877,10 @@ async function executeTempWindowTurnstileFetch(
       const allowed = await isAllowedIncognitoAccess()
       if (allowed === false) {
         const error = t("messages:background.incognitoAccessRequired")
+        reportAuthorizedTempContextOutcome(authorizeAtAcquire, {
+          kind: "unavailable",
+          reason: "incognito_access_required",
+        })
         sendResponse({
           success: false,
           error,
@@ -2186,6 +2187,7 @@ async function acquireTempContext(
 ) {
   const origin = buildTempContextOriginKey(normalizeOrigin(url), options)
   let finalDecision: ProtectionBypassPolicyDecision | undefined
+  let reused = false
 
   logTempWindow("acquireTempContextStart", {
     requestId,
@@ -2230,6 +2232,7 @@ async function acquireTempContext(
 
       try {
         acquiredContext = await getReusableContext(origin)
+        reused = acquiredContext !== null
         if (!acquiredContext) {
           logTempWindow("acquireTempContextCreate", {
             requestId,
@@ -2308,6 +2311,7 @@ async function acquireTempContext(
       reportAuthorizedTempContextOutcome(authorizeAtAcquire, {
         kind: PROTECTION_BYPASS_DECISION_RESULTS.Allowed,
         adapter: context.mode,
+        reused,
       })
     }
     return context

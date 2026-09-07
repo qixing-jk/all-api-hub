@@ -3,6 +3,7 @@ import type { ProtectionBypassAutomaticFeature } from "~/services/protectionBypa
 
 export const SHIELD_SETTINGS_TARGET_IDS = {
   root: SETTINGS_ANCHORS.SHIELD_SETTINGS,
+  history: SETTINGS_ANCHORS.SHIELD_HISTORY,
   enabled: "shield-enabled",
   method: "shield-method",
   automaticFeatures: "shield-automatic-features",
@@ -18,6 +19,7 @@ export const SHIELD_SETTINGS_TARGET_IDS = {
   },
 } as const satisfies {
   root: string
+  history: string
   enabled: string
   method: string
   automaticFeatures: string

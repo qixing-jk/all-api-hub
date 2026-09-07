@@ -39,6 +39,8 @@ export const STORAGE_LOCKS = {
    * verification result history.
    */
   API_VERIFICATION_HISTORY: "all-api-hub:api-verification-history",
+  /** Exclusive lock for local protection-bypass diagnostic history. */
+  PROTECTION_BYPASS_HISTORY: "all-api-hub:protection-bypass-history",
   /**
    * Exclusive lock used for read-modify-write sequences touching Web AI API
    * Check input-assist history.
@@ -187,6 +189,7 @@ const POPUP_INTERRUPTION_STORAGE_KEYS = {
  * specific storage module so discovery and auditing remain straightforward.
  */
 export const STORAGE_KEYS = {
+  PROTECTION_BYPASS_HISTORY: "protectionBypass_history_v1",
   ...ACCOUNT_STORAGE_KEYS,
   ...TAG_STORAGE_KEYS,
   ...API_CREDENTIAL_PROFILES_STORAGE_KEYS,

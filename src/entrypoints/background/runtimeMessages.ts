@@ -46,6 +46,7 @@ import { t } from "~/utils/i18n/core"
 import {
   openBugReportPage,
   openOrFocusOptionsMenuItem,
+  openProtectionBypassHistory,
 } from "~/utils/navigation"
 
 import { trackCookieInterceptorUrl } from "./cookieInterceptor"
@@ -296,6 +297,15 @@ export function setupRuntimeMessageListeners() {
           anchor: "shield-settings",
         })
         sendResponse({ success: true })
+        return true
+      }
+
+      if (request.action === RuntimeActionIds.OpenSettingsShieldHistory) {
+        void openProtectionBypassHistory()
+          .then(() => sendResponse({ success: true }))
+          .catch((error) => {
+            sendResponse({ success: false, error: getErrorMessage(error) })
+          })
         return true
       }
 

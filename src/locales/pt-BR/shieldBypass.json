@@ -1,4 +1,134 @@
 {
+  "history": {
+    "accountOnboarding": "Configuração e detecção de contas",
+    "actions": "Ações do histórico",
+    "allStatuses": "Todos os resultados",
+    "causes": {
+      "api_error_fallback": "Uma página temporária foi solicitada após um erro da API.",
+      "browser_profile_isolation": "Esta operação exige um ambiente temporário do navegador, por exemplo, para isolar a sessão de uma conta.",
+      "explicit_context": "Esta operação solicitou explicitamente um ambiente de página do site.",
+      "rendered_page_required": "Esta operação precisa de informações da página renderizada.",
+      "session_required": "Esta operação precisa ler ou usar a sessão de login do site no navegador.",
+      "verification_required": "Esta operação precisa de verificação ou de uma ação nativa na página do site."
+    },
+    "clear": "Limpar histórico",
+    "clearDescription": "Limpar o histórico de contorno da proteção deste dispositivo? Novas tentativas continuarão sendo registradas.",
+    "clearFailed": "Não foi possível limpar o histórico. Tente novamente.",
+    "clearFilters": "Limpar filtros",
+    "commands": {
+      "add_account": "Adicionar conta",
+      "detect_account": "Detectar conta",
+      "manage_api_keys": "Gerenciar chaves API",
+      "manage_site_channels": "Gerenciar canais do site",
+      "manual_checkin": "Check-in manual",
+      "reauthenticate_account": "Autenticar conta novamente",
+      "refresh_account": "Atualizar conta",
+      "refresh_all_accounts": "Atualizar todas as contas",
+      "refresh_disabled_accounts": "Atualizar contas desativadas",
+      "retry_checkin_account": "Tentar check-in novamente",
+      "sync_managed_site_models": "Sincronizar modelos do site gerenciado"
+    },
+    "copied": "Detalhes do diagnóstico copiados",
+    "copy": "Copiar detalhes do diagnóstico",
+    "copyFailed": "Não foi possível copiar os detalhes. Tente novamente.",
+    "created": "Página temporária criada",
+    "denials": {
+      "automatic_disabled": "O contorno automático da proteção está desativado. Ative-o nas configurações relacionadas e tente novamente no recurso original.",
+      "feature_disabled": "O contorno automático da proteção está desativado para este recurso. Ative a configuração correspondente e tente novamente no recurso original.",
+      "invalid_execution": "As informações sobre a operação de origem são inválidas. Inicie novamente pelo recurso original.",
+      "missing_execution": "Faltam informações sobre a operação de origem. Inicie novamente pelo recurso original.",
+      "permission_required": "Faltam permissões do navegador. Conceda-as nas configurações de permissões e tente novamente.",
+      "policy_unavailable": "Não foi possível ler as configurações de contorno da proteção. Tente novamente mais tarde.",
+      "resource_stale": "A configuração da conta ou do site mudou. Atualize a página original e tente novamente.",
+      "task_not_permitted": "Este recurso não oferece suporte a este tipo de operação em página temporária.",
+      "unsupported_environment": "Este ambiente do navegador não oferece a capacidade de página temporária necessária."
+    },
+    "description": "Os últimos {{limit}} registros ficam neste dispositivo, sem dados sensíveis.",
+    "empty": "Ainda não há histórico de contorno da proteção",
+    "emptyDescription": "Novas solicitações de páginas temporárias são registradas aqui após a atualização para esta versão. Atualize uma conta em um site protegido e confira novamente.",
+    "entryDescription": "Veja por que uma página temporária foi solicitada e qual foi o resultado.",
+    "failures": {
+      "execution_error": "A execução parou inesperadamente. Confira a mensagem do recurso original antes de tentar novamente.",
+      "firefox_popup_unsupported": "O Firefox não pode executar esta operação pelo popup da extensão. Tente pelas configurações ou pelo painel lateral.",
+      "identity_mismatch": "A conta conectada na página do site é diferente da conta desta operação.",
+      "identity_missing": "A página do site não forneceu uma identidade de conta verificável.",
+      "incognito_access_required": "A extensão não tem permissão para funcionar em janelas anônimas ou privadas. Autorize nas configurações de extensões do navegador.",
+      "invalid_request": "A solicitação da ação de página está incompleta ou é inválida.",
+      "no_response": "O processamento não retornou um resultado. Confira o estado atual no recurso original.",
+      "target_not_found": "O botão ou alvo necessário não foi encontrado na página.",
+      "throttled": "A frequência da ação de página foi limitada. Tente novamente mais tarde.",
+      "trigger_failed": "Não foi possível executar a ação de página. Confira a página do site."
+    },
+    "fields": {
+      "context": "Obtenção da página",
+      "contextMode": "Modo de abertura real",
+      "duration": "Duração",
+      "evidence": "Evidência do erro original",
+      "finishedAt": "Hora de conclusão",
+      "method": "Método da solicitação",
+      "mutation": "Estado da gravação",
+      "operation": "Operação de origem",
+      "preferredMode": "Modo de abertura configurado",
+      "profile": "Ambiente do navegador",
+      "result": "Resposta e códigos de erro",
+      "surface": "Origem",
+      "trigger": "Gatilho",
+      "verification": "Verificação da página"
+    },
+    "filterStatus": "Filtrar por resultado",
+    "groups": {
+      "context": "Navegador e solicitação",
+      "outcome": "Resultado",
+      "trigger": "Origem da solicitação"
+    },
+    "incognito": "Ambiente anônimo / privado",
+    "loadFailed": "Não foi possível ler o histórico. Tente novamente.",
+    "manual": "Ação manual do usuário",
+    "mutations": {
+      "created": "Criação confirmada",
+      "dispatched_unconfirmed": "Solicitação enviada, resultado não confirmado; confira primeiro o estado do site",
+      "not_dispatched": "Solicitação de criação não enviada"
+    },
+    "newRecords_one": "Mostrar {{count}} novo registro",
+    "newRecords_many": "Mostrar {{count}} novos registros",
+    "newRecords_other": "Mostrar {{count}} novos registros",
+    "noMatches": "Nenhum registro corresponde aos filtros",
+    "noOriginalError": "Uma página temporária foi solicitada; não foram fornecidos detalhes do erro anterior.",
+    "open": "Ver histórico de contorno da proteção",
+    "openSettings": "Ver configurações relacionadas",
+    "pendingDescription": "O início foi registrado, mas ainda não há resultado final. A tarefa pode estar em andamento ou ter sido interrompida pelo fechamento do navegador ou reinício da extensão.",
+    "reused": "Página existente reutilizada",
+    "search": "Buscar sites, operações ou diagnósticos",
+    "shown": "Exibindo {{visible}} / {{total}} registros",
+    "statuses": {
+      "completed": "Concluído",
+      "denied": "Página temporária não aberta",
+      "failed": "Falhou",
+      "started": "Iniciado, aguardando resultado",
+      "unavailable": "Ambiente indisponível"
+    },
+    "surfaces": {
+      "background": "Segundo plano da extensão",
+      "content_script": "Página do site",
+      "options": "Página de configurações",
+      "popup": "Popup da extensão",
+      "sidepanel": "Painel lateral"
+    },
+    "title": "Histórico de contorno da proteção",
+    "triggers": {
+      "background_recovery": "Recuperação em segundo plano",
+      "retry": "Nova tentativa automática",
+      "scheduled": "Tarefa agendada",
+      "ui_lifecycle": "Automático ao abrir página ou componente"
+    },
+    "turnstile": {
+      "error": "Falha na verificação Turnstile",
+      "not_present": "Nenhum widget Turnstile detectado",
+      "timeout": "Tempo de espera do Turnstile esgotado",
+      "token_obtained": "Credencial de verificação Turnstile obtida"
+    },
+    "unexpectedContent": "A resposta tinha um formato inesperado e pode ter sido uma página de verificação do site."
+  },
   "titlePrefix": "All API Hub · Bypass de proteção",
   "toast": {
     "actions": {

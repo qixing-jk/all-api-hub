@@ -632,6 +632,7 @@ describe("tempWindowPool window fallback", () => {
     )
     const authorizeAtAcquire = vi.fn()
     const sendResponse = vi.fn()
+    const reportOutcome = vi.fn()
 
     await executeAuthorizedTempContextTask(
       {
@@ -653,8 +654,13 @@ describe("tempWindowPool window fallback", () => {
       },
       authorizeAtAcquire,
       sendResponse,
+      reportOutcome,
     )
 
+    expect(reportOutcome).toHaveBeenCalledWith({
+      kind: "unavailable",
+      reason: "firefox_popup_unsupported",
+    })
     expect(sendResponse).toHaveBeenCalledWith({
       requestId: "request-openrouter-firefox-popup",
       operation: "create",
@@ -1234,6 +1240,7 @@ describe("tempWindowPool window fallback", () => {
     expect(reportOutcome).toHaveBeenCalledWith({
       kind: "allowed",
       adapter: "tab",
+      reused: false,
     })
     expect(recordShieldBypassFocusObservationMock).toHaveBeenCalledWith(
       expect.objectContaining({ adapter: TEMP_CONTEXT_MODES.Tab }),
@@ -1278,6 +1285,7 @@ describe("tempWindowPool window fallback", () => {
     expect(reportOutcome).toHaveBeenCalledWith({
       kind: "allowed",
       adapter: "tab",
+      reused: false,
     })
   })
 
@@ -1334,10 +1342,12 @@ describe("tempWindowPool window fallback", () => {
     expect(firstOutcome).toHaveBeenCalledWith({
       kind: "allowed",
       adapter: "tab",
+      reused: false,
     })
     expect(secondOutcome).toHaveBeenCalledWith({
       kind: "allowed",
       adapter: "tab",
+      reused: true,
     })
     expect(recordShieldBypassFocusObservationMock).toHaveBeenCalledTimes(2)
     expect(recordShieldBypassFocusObservationMock).toHaveBeenLastCalledWith(
