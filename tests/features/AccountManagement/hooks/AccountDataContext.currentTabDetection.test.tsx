@@ -778,10 +778,10 @@ describe("AccountDataContext current tab detection", () => {
         isInitialLoad: false,
         isDetecting: false,
         detectedAccount: null,
+        sortedData: [{ id: "acc-1" }],
+        detectedSiteAccounts: [{ id: "acc-1" }],
       }),
     )
-    expect(latestCtx?.sortedData.map(({ id }) => id)).toEqual(["acc-1"])
-    expect(latestCtx?.detectedSiteAccounts).toHaveLength(1)
     expect(sendMessage).toHaveBeenCalledTimes(1)
   })
 
