@@ -1,4 +1,132 @@
 {
+  "history": {
+    "accountOnboarding": "添加与识别账号",
+    "actions": "历史记录操作",
+    "allStatuses": "全部结果",
+    "causes": {
+      "api_error_fallback": "接口请求失败，申请使用临时页面处理。",
+      "browser_profile_isolation": "此操作要求直接使用临时浏览器环境，例如隔离账号会话。",
+      "explicit_context": "此操作主动请求打开站点页面环境。",
+      "rendered_page_required": "此操作需要读取页面渲染后的信息。",
+      "session_required": "此操作需要读取或使用站点的浏览器登录会话。",
+      "verification_required": "此操作需要在站点页面完成验证或执行页面动作。"
+    },
+    "clear": "清空历史",
+    "clearDescription": "清空本机已记录的过盾历史？清空后仍会继续记录新的尝试。",
+    "clearFailed": "清空失败，请重试。",
+    "clearFilters": "清除筛选",
+    "commands": {
+      "add_account": "添加账号",
+      "detect_account": "识别账号",
+      "manage_api_keys": "管理 API 密钥",
+      "manage_site_channels": "管理站点渠道",
+      "manual_checkin": "手动签到",
+      "reauthenticate_account": "重新认证账号",
+      "refresh_account": "刷新账号",
+      "refresh_all_accounts": "刷新全部账号",
+      "refresh_disabled_accounts": "刷新已禁用账号",
+      "retry_checkin_account": "重试签到",
+      "sync_managed_site_models": "同步托管站点模型"
+    },
+    "copied": "诊断详情已复制",
+    "copy": "复制诊断详情",
+    "copyFailed": "复制失败，请重试。",
+    "created": "新建临时页面",
+    "denials": {
+      "automatic_disabled": "自动过盾总开关已关闭。可在相关设置中开启，再回到原功能重试。",
+      "feature_disabled": "该功能的自动过盾已关闭。可开启对应设置，再回到原功能重试。",
+      "invalid_execution": "触发操作信息无效，请从原功能重新发起。",
+      "missing_execution": "缺少触发操作信息，请从原功能重新发起。",
+      "permission_required": "缺少所需浏览器权限。请在权限设置中授权后重试。",
+      "policy_unavailable": "无法读取过盾设置，请稍后重试。",
+      "resource_stale": "账号或站点配置已变化。请刷新原页面后重试。",
+      "task_not_permitted": "该功能不支持此类临时页面操作。",
+      "unsupported_environment": "当前浏览器环境无法提供所需的临时页面能力。"
+    },
+    "description": "仅在本机保留最近 {{limit}} 条记录，敏感信息已过滤。",
+    "empty": "暂无过盾历史",
+    "emptyDescription": "升级到此版本后，新发生的临时页面请求会自动记录在这里。可尝试刷新受防护站点的账号后再查看。",
+    "entryDescription": "排查临时页面的触发原因与处理结果。",
+    "failures": {
+      "execution_error": "执行过程异常中止，请从原功能查看提示后重试。",
+      "firefox_popup_unsupported": "Firefox 不支持从扩展弹窗执行此操作，请在设置页或侧边栏重试。",
+      "identity_mismatch": "站点页面登录的账号与本次操作的账号不一致。",
+      "identity_missing": "站点页面未提供可验证的账号身份。",
+      "incognito_access_required": "扩展尚未获准在无痕 / 隐私窗口运行，请在浏览器扩展设置中授权。",
+      "invalid_request": "页面操作的请求信息不完整或无效。",
+      "no_response": "处理程序未返回结果，请从原功能查看当前状态。",
+      "target_not_found": "页面中未找到需要操作的按钮或目标。",
+      "throttled": "页面操作受到频率限制，请稍后重试。",
+      "trigger_failed": "未能执行页面操作，请查看站点页面。"
+    },
+    "fields": {
+      "context": "页面获取方式",
+      "contextMode": "实际打开方式",
+      "duration": "处理耗时",
+      "evidence": "原始触发证据",
+      "finishedAt": "结束时间",
+      "method": "请求方法",
+      "mutation": "写入状态",
+      "operation": "触发操作",
+      "preferredMode": "设置的打开方式",
+      "profile": "浏览器环境",
+      "result": "响应与错误码",
+      "surface": "发起位置",
+      "trigger": "触发方式",
+      "verification": "页面验证情况"
+    },
+    "filterStatus": "按处理结果筛选",
+    "groups": {
+      "context": "浏览器与请求",
+      "outcome": "处理结果",
+      "trigger": "触发信息"
+    },
+    "incognito": "无痕 / 隐私环境",
+    "loadFailed": "无法读取过盾历史，请重试。",
+    "manual": "用户手动操作",
+    "mutations": {
+      "created": "已确认创建成功",
+      "dispatched_unconfirmed": "已发送请求，结果尚未确认；请先核对站点状态",
+      "not_dispatched": "未发送创建请求"
+    },
+    "newRecords": "查看 {{count}} 条新记录",
+    "noMatches": "没有符合筛选条件的记录",
+    "noOriginalError": "已请求临时页面，调用方未提供前序错误信息。",
+    "open": "查看过盾历史",
+    "openSettings": "查看相关设置",
+    "pendingDescription": "已记录触发，尚未收到最终结果。任务可能仍在进行，也可能因浏览器关闭或扩展重启而中断。",
+    "reused": "复用已有页面",
+    "search": "搜索站点、操作或诊断信息",
+    "shown": "已显示 {{visible}} / {{total}} 条记录",
+    "statuses": {
+      "completed": "处理完成",
+      "denied": "未打开临时页面",
+      "failed": "处理失败",
+      "started": "已触发，暂无结果",
+      "unavailable": "临时环境不可用"
+    },
+    "surfaces": {
+      "background": "扩展后台",
+      "content_script": "站点页面",
+      "options": "设置页面",
+      "popup": "扩展弹窗",
+      "sidepanel": "侧边栏"
+    },
+    "title": "过盾历史",
+    "triggers": {
+      "background_recovery": "后台恢复任务",
+      "retry": "自动重试",
+      "scheduled": "定时任务",
+      "ui_lifecycle": "打开页面或组件时自动触发"
+    },
+    "turnstile": {
+      "error": "Turnstile 验证失败",
+      "not_present": "未检测到 Turnstile 验证组件",
+      "timeout": "等待 Turnstile 验证超时",
+      "token_obtained": "已取得 Turnstile 验证凭据"
+    },
+    "unexpectedContent": "接口响应不是预期格式，可能返回了站点验证页面。"
+  },
   "titlePrefix": "All API Hub · 过盾助手",
   "toast": {
     "actions": {

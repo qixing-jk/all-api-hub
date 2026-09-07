@@ -53,6 +53,8 @@ export interface TempWindowFetchParams {
   tempWindowRequestSource?: TempWindowRequestSource
   protectionBypassExecution: ProtectionBypassExecution
   tempContextTaskKind?: TempWindowFetchTaskKind
+  /** Controlled evidence from the failed primary request, for local history only. */
+  fallbackDiagnostic?: { statusCode?: number; code?: ApiErrorCode }
   suppressMinimize?: boolean
   /** Account ID for per-request cookie isolation */
   accountId?: string

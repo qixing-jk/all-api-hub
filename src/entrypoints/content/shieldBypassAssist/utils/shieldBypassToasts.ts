@@ -28,6 +28,14 @@ export async function showShieldBypassPromptToast() {
     () =>
       React.createElement(ShieldBypassPromptToast, {
         onDismiss: () => toast.dismiss(SHIELD_BYPASS_TOAST_ID),
+        onOpenHistory: async () => {
+          const response = await sendRuntimeMessage({
+            action: RuntimeActionIds.OpenSettingsShieldHistory,
+          })
+          if (!response?.success) {
+            throw new Error(response?.error || "Failed to open shield history")
+          }
+        },
         onOpenSettings: async () => {
           try {
             await sendRuntimeMessage({

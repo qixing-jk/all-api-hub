@@ -58,6 +58,7 @@ const mocks = vi.hoisted(() => ({
   setupContextMenus: vi.fn(),
   trackCookieInterceptorUrl: vi.fn(),
   openOrFocusOptionsMenuItem: vi.fn(),
+  openProtectionBypassHistory: vi.fn().mockResolvedValue(undefined),
   handleCloseTempWindow: vi.fn(),
   handleTempWindowOpenRouterManagementKeyAction: vi.fn(),
   cancelTempWindowOpenRouterManagementKeyAction: vi.fn(),
@@ -103,6 +104,7 @@ vi.mock("~/entrypoints/background/cookieInterceptor", () => ({
 
 vi.mock("~/utils/navigation", () => ({
   openOrFocusOptionsMenuItem: mocks.openOrFocusOptionsMenuItem,
+  openProtectionBypassHistory: mocks.openProtectionBypassHistory,
   openBugReportPage: mocks.openBugReportPage,
 }))
 
@@ -470,6 +472,53 @@ describe("setupRuntimeMessageListeners additional routing", () => {
         ...item.expectedArgs,
       )
     }
+  })
+
+  it("acknowledges history navigation only after the options page opens", async () => {
+    const listener = await loadListener()
+    const sendResponse = vi.fn()
+    let finishNavigation!: () => void
+    mocks.openProtectionBypassHistory.mockReturnValueOnce(
+      new Promise<void>((resolve) => {
+        finishNavigation = resolve
+      }),
+    )
+
+    expect(
+      listener(
+        { action: RuntimeActionIds.OpenSettingsShieldHistory },
+        {},
+        sendResponse,
+      ),
+    ).toBe(true)
+    expect(mocks.openProtectionBypassHistory).toHaveBeenCalledTimes(1)
+    expect(sendResponse).not.toHaveBeenCalled()
+
+    finishNavigation()
+    await waitForAsyncResponse()
+    expect(sendResponse).toHaveBeenCalledWith({ success: true })
+  })
+
+  it("returns history navigation failures to the content prompt", async () => {
+    const listener = await loadListener()
+    const sendResponse = vi.fn()
+    mocks.openProtectionBypassHistory.mockRejectedValueOnce(
+      new Error("navigation blocked"),
+    )
+
+    expect(
+      listener(
+        { action: RuntimeActionIds.OpenSettingsShieldHistory },
+        {},
+        sendResponse,
+      ),
+    ).toBe(true)
+
+    await waitForAsyncResponse()
+    expect(sendResponse).toHaveBeenCalledWith({
+      success: false,
+      error: "navigation blocked",
+    })
   })
 
   it("opens the bug report feedback destination for background-triggered navigation", async () => {

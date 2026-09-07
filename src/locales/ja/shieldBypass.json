@@ -1,4 +1,132 @@
 {
+  "history": {
+    "accountOnboarding": "アカウントの追加・検出",
+    "actions": "履歴の操作",
+    "allStatuses": "すべての結果",
+    "causes": {
+      "api_error_fallback": "API エラーの後、一時ページが要求されました。",
+      "browser_profile_isolation": "この操作には、アカウントのセッション分離などのために一時ブラウザー環境が必要です。",
+      "explicit_context": "この操作がサイトのページ環境を明示的に要求しました。",
+      "rendered_page_required": "この操作には、描画後のページ情報が必要です。",
+      "session_required": "この操作には、サイトのブラウザーログインセッションの読み取りまたは利用が必要です。",
+      "verification_required": "この操作には、サイトのページでの認証またはページ操作が必要です。"
+    },
+    "clear": "履歴を消去",
+    "clearDescription": "この端末のシールド回避履歴を消去しますか？新しい試行は引き続き記録されます。",
+    "clearFailed": "履歴を消去できませんでした。再試行してください。",
+    "clearFilters": "絞り込みを解除",
+    "commands": {
+      "add_account": "アカウントを追加",
+      "detect_account": "アカウントを検出",
+      "manage_api_keys": "API キーを管理",
+      "manage_site_channels": "サイトのチャネルを管理",
+      "manual_checkin": "手動チェックイン",
+      "reauthenticate_account": "アカウントを再認証",
+      "refresh_account": "アカウントを更新",
+      "refresh_all_accounts": "すべてのアカウントを更新",
+      "refresh_disabled_accounts": "無効なアカウントを更新",
+      "retry_checkin_account": "チェックインを再試行",
+      "sync_managed_site_models": "管理対象サイトのモデルを同期"
+    },
+    "copied": "診断の詳細をコピーしました",
+    "copy": "診断の詳細をコピー",
+    "copyFailed": "コピーできませんでした。再試行してください。",
+    "created": "一時ページを新規作成",
+    "denials": {
+      "automatic_disabled": "自動シールド回避が無効です。関連設定で有効にしてから、元の機能で再試行してください。",
+      "feature_disabled": "この機能の自動シールド回避が無効です。対応する設定を有効にしてから、元の機能で再試行してください。",
+      "invalid_execution": "呼び出し元の操作情報が無効です。元の機能からやり直してください。",
+      "missing_execution": "呼び出し元の操作情報がありません。元の機能からやり直してください。",
+      "permission_required": "必要なブラウザー権限がありません。権限設定で許可してから再試行してください。",
+      "policy_unavailable": "シールド回避の設定を読み取れませんでした。しばらくしてから再試行してください。",
+      "resource_stale": "アカウントまたはサイトの設定が変更されました。元のページを更新して再試行してください。",
+      "task_not_permitted": "この機能は、この種類の一時ページ操作に対応していません。",
+      "unsupported_environment": "現在のブラウザー環境では、必要な一時ページ機能を利用できません。"
+    },
+    "description": "最新 {{limit}} 件をこの端末にのみ保存します。機密情報は保存しません。",
+    "empty": "シールド回避履歴はまだありません",
+    "emptyDescription": "このバージョンへの更新後に発生した一時ページの要求が記録されます。保護されたサイトのアカウントを更新してから、もう一度確認してください。",
+    "entryDescription": "一時ページが要求された理由と処理結果を確認できます。",
+    "failures": {
+      "execution_error": "処理が予期せず中断されました。元の機能のメッセージを確認してから再試行してください。",
+      "firefox_popup_unsupported": "Firefox の拡張機能ポップアップからはこの操作を実行できません。設定ページまたはサイドパネルで再試行してください。",
+      "identity_mismatch": "サイトのページにログインしているアカウントが、この操作の対象と異なります。",
+      "identity_missing": "サイトのページから検証可能なアカウント情報を取得できませんでした。",
+      "incognito_access_required": "拡張機能のプライベートウィンドウでの実行が許可されていません。ブラウザーの拡張機能設定で許可してください。",
+      "invalid_request": "ページ操作の要求情報が不足しているか無効です。",
+      "no_response": "処理結果が返されませんでした。元の機能で現在の状態を確認してください。",
+      "target_not_found": "必要なボタンまたは操作対象がページに見つかりませんでした。",
+      "throttled": "ページ操作の頻度が制限されました。しばらくしてから再試行してください。",
+      "trigger_failed": "ページ操作を実行できませんでした。サイトのページを確認してください。"
+    },
+    "fields": {
+      "context": "ページの取得方法",
+      "contextMode": "実際の開き方",
+      "duration": "処理時間",
+      "evidence": "元のエラー情報",
+      "finishedAt": "終了時刻",
+      "method": "リクエストメソッド",
+      "mutation": "書き込み状態",
+      "operation": "要求元の操作",
+      "preferredMode": "設定された開き方",
+      "profile": "ブラウザー環境",
+      "result": "応答とエラーコード",
+      "surface": "実行元",
+      "trigger": "実行のきっかけ",
+      "verification": "ページ認証の状態"
+    },
+    "filterStatus": "処理結果で絞り込む",
+    "groups": {
+      "context": "ブラウザーとリクエスト",
+      "outcome": "処理結果",
+      "trigger": "要求のきっかけ"
+    },
+    "incognito": "シークレット / プライベート環境",
+    "loadFailed": "シールド回避履歴を読み込めませんでした。再試行してください。",
+    "manual": "ユーザーによる手動操作",
+    "mutations": {
+      "created": "作成成功を確認済み",
+      "dispatched_unconfirmed": "送信済み・結果未確認。まずサイトの状態を確認してください",
+      "not_dispatched": "作成リクエストは未送信"
+    },
+    "newRecords_other": "新しい {{count}} 件を表示",
+    "noMatches": "条件に一致する記録はありません",
+    "noOriginalError": "一時ページが要求されましたが、直前のエラー情報は提供されていません。",
+    "open": "シールド回避履歴を表示",
+    "openSettings": "関連設定を表示",
+    "pendingDescription": "開始は記録されましたが、最終結果はまだ届いていません。処理中、またはブラウザーの終了や拡張機能の再起動によって中断された可能性があります。",
+    "reused": "既存のページを再利用",
+    "search": "サイト・操作・診断情報を検索",
+    "shown": "{{total}} 件中 {{visible}} 件を表示",
+    "statuses": {
+      "completed": "処理完了",
+      "denied": "一時ページは未作成",
+      "failed": "処理失敗",
+      "started": "開始済み・結果未受信",
+      "unavailable": "一時環境を利用不可"
+    },
+    "surfaces": {
+      "background": "拡張機能のバックグラウンド",
+      "content_script": "サイトのページ",
+      "options": "設定ページ",
+      "popup": "拡張機能のポップアップ",
+      "sidepanel": "サイドパネル"
+    },
+    "title": "シールド回避履歴",
+    "triggers": {
+      "background_recovery": "バックグラウンド復旧",
+      "retry": "自動再試行",
+      "scheduled": "定期タスク",
+      "ui_lifecycle": "ページやコンポーネントを開いた際の自動実行"
+    },
+    "turnstile": {
+      "error": "Turnstile 認証に失敗",
+      "not_present": "Turnstile ウィジェット未検出",
+      "timeout": "Turnstile の待機がタイムアウト",
+      "token_obtained": "Turnstile 認証情報を取得済み"
+    },
+    "unexpectedContent": "API の応答が想定した形式ではありません。サイトの認証ページが返された可能性があります。"
+  },
   "titlePrefix": "All API Hub · 保護回避",
   "toast": {
     "actions": {

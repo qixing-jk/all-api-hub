@@ -632,6 +632,7 @@ describe("tempWindowPool window fallback", () => {
     )
     const authorizeAtAcquire = vi.fn()
     const sendResponse = vi.fn()
+    const reportOutcome = vi.fn()
 
     await executeAuthorizedTempContextTask(
       {
@@ -653,8 +654,13 @@ describe("tempWindowPool window fallback", () => {
       },
       authorizeAtAcquire,
       sendResponse,
+      reportOutcome,
     )
 
+    expect(reportOutcome).toHaveBeenCalledWith({
+      kind: "unavailable",
+      reason: "firefox_popup_unsupported",
+    })
     expect(sendResponse).toHaveBeenCalledWith({
       requestId: "request-openrouter-firefox-popup",
       operation: "create",
@@ -1234,6 +1240,7 @@ describe("tempWindowPool window fallback", () => {
     expect(reportOutcome).toHaveBeenCalledWith({
       kind: "allowed",
       adapter: "tab",
+      reused: false,
     })
     expect(recordShieldBypassFocusObservationMock).toHaveBeenCalledWith(
       expect.objectContaining({ adapter: TEMP_CONTEXT_MODES.Tab }),
@@ -1278,6 +1285,7 @@ describe("tempWindowPool window fallback", () => {
     expect(reportOutcome).toHaveBeenCalledWith({
       kind: "allowed",
       adapter: "tab",
+      reused: false,
     })
   })
 
@@ -1334,10 +1342,12 @@ describe("tempWindowPool window fallback", () => {
     expect(firstOutcome).toHaveBeenCalledWith({
       kind: "allowed",
       adapter: "tab",
+      reused: false,
     })
     expect(secondOutcome).toHaveBeenCalledWith({
       kind: "allowed",
       adapter: "tab",
+      reused: true,
     })
     expect(recordShieldBypassFocusObservationMock).toHaveBeenCalledTimes(2)
     expect(recordShieldBypassFocusObservationMock).toHaveBeenLastCalledWith(
@@ -2646,27 +2656,42 @@ describe("tempWindowPool window fallback", () => {
   it("rejects incognito auto-detect requests when incognito access is unavailable", async () => {
     isAllowedIncognitoAccessMock.mockResolvedValueOnce(false)
 
-    const { handleAutoDetectSite } = await import(
+    const { executeAuthorizedTempContextTask } = await import(
       "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
+    const authorizeAtAcquire = vi.fn()
+    const reportOutcome = vi.fn()
     const sendResponse = vi.fn()
-    await handleAutoDetectSite(
+    await executeAuthorizedTempContextTask(
       {
-        url: "https://example.com/account",
-        requestId: "req-auto-detect-incognito-denied",
-        siteType: "new-api",
-        useIncognito: true,
+        kind: "session_read",
+        params: {
+          url: "https://example.com/account",
+          requestId: "req-auto-detect-incognito-denied",
+          siteType: "new-api",
+          useIncognito: true,
+        },
       },
+      authorizeAtAcquire,
       sendResponse,
+      reportOutcome,
     )
 
     expect(createWindowMock).not.toHaveBeenCalled()
     expect(createTabMock).not.toHaveBeenCalled()
+    expect(authorizeAtAcquire).not.toHaveBeenCalled()
+    expect(reportOutcome).toHaveBeenCalledWith({
+      kind: "unavailable",
+      reason: "incognito_access_required",
+    })
     expect(sendResponse).toHaveBeenCalledWith({
       success: false,
       error: "messages:background.incognitoAccessRequired",
     })
+    expect(reportOutcome.mock.invocationCallOrder[0]).toBeLessThan(
+      sendResponse.mock.invocationCallOrder[0],
+    )
   })
 
   it("returns a safe null result when site detection succeeds but no user data can be read", async () => {

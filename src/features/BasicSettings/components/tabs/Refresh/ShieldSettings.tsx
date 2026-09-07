@@ -40,6 +40,7 @@ import { canUseTempWindowFetch } from "~/utils/browser/tempWindowFetch"
 import { openSettingsTab } from "~/utils/navigation"
 
 import { ProtectionBypassDevTrigger } from "./ProtectionBypassDevTrigger"
+import ProtectionBypassHistory from "./ProtectionBypassHistory"
 
 /** Compares complete automatic-feature preference maps. */
 function hasSameAutomaticFeatureBypass(
@@ -171,6 +172,7 @@ export default function ShieldSettings() {
       id={SHIELD_SETTINGS_TARGET_IDS.root}
       title={t("refresh.shieldTitle")}
       description={shieldDescription}
+      actions={<ProtectionBypassHistory />}
     >
       {!canUseTempWindowFallback && (
         <Alert

@@ -39,6 +39,7 @@ import {
   openOptionsPage,
   openOrFocusOptionsPage,
   openPermissionsOnboardingPage,
+  openProtectionBypassHistory,
   openRedeemPage,
   openSettingsPage,
   openSettingsTab,
@@ -1040,6 +1041,54 @@ describe("navigation utilities", () => {
       true,
     )
     expect(window.location.href).toBe(`${OPTIONS_PAGE_URL}#keyManagement`)
+  })
+
+  it("opens shield history in the current options page and keeps a return path", async () => {
+    mockedIsExtensionPopup.mockReturnValue(false)
+    window.history.replaceState(null, "", `${OPTIONS_PAGE_URL}#autoCheckin`)
+    const pushStateSpy = vi.spyOn(window.history, "pushState")
+    const locationChanged = vi.fn()
+    window.addEventListener("hashchange", locationChanged)
+
+    try {
+      await openProtectionBypassHistory()
+
+      expect(window.location.href).toBe(
+        `${OPTIONS_PAGE_URL}?tab=refresh&anchor=shield-history#basic`,
+      )
+      expect(pushStateSpy).toHaveBeenCalledTimes(1)
+      expect(mockedCreateTab).not.toHaveBeenCalled()
+
+      await openProtectionBypassHistory()
+
+      expect(locationChanged).toHaveBeenCalledTimes(2)
+      expect(pushStateSpy).toHaveBeenCalledTimes(1)
+    } finally {
+      window.removeEventListener("hashchange", locationChanged)
+      pushStateSpy.mockRestore()
+    }
+  })
+
+  it.each([
+    { surface: "popup", closesPopup: true },
+    { surface: "sidepanel", closesPopup: false },
+  ])("opens shield history from $surface", async ({ surface, closesPopup }) => {
+    window.history.replaceState(null, "", `/${surface}.html`)
+    mockedIsExtensionPopup.mockReturnValue(closesPopup)
+    const closeSpy = vi.spyOn(window, "close").mockImplementation(() => {})
+
+    try {
+      await openProtectionBypassHistory()
+
+      expect(mockedCreateTab).toHaveBeenCalledWith(
+        `${OPTIONS_PAGE_URL}?tab=refresh&anchor=shield-history#basic`,
+        true,
+      )
+      expect(closeSpy).toHaveBeenCalledTimes(closesPopup ? 1 : 0)
+    } finally {
+      closeSpy.mockRestore()
+      mockedIsExtensionPopup.mockReturnValue(false)
+    }
   })
 
   it("opens permissions onboarding in-place when already on the options page", async () => {

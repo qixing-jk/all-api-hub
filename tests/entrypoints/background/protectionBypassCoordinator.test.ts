@@ -19,6 +19,7 @@ import {
   type ProtectionBypassExecution,
   type TempContextTask,
 } from "~/services/protectionBypass/contracts"
+import { protectionBypassHistoryStorage } from "~/services/protectionBypass/historyStorage"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 import { createDeferred } from "~~/tests/test-utils/deferred"
 
@@ -216,6 +217,103 @@ describe("resolveProtectionBypassExecution", () => {
 })
 
 describe("ProtectionBypassCoordinator", () => {
+  it.each(["start", "finish"] as const)(
+    "preserves the task result when history %s fails",
+    async (method) => {
+      const write = vi
+        .spyOn(protectionBypassHistoryStorage, method)
+        .mockRejectedValueOnce(new Error("storage unavailable"))
+      try {
+        await expect(
+          createDecisionCoordinator({
+            recordDecision: vi.fn().mockResolvedValue(undefined),
+          }).execute({
+            task: fetchTask(automaticExecution),
+            execution: automaticExecution,
+          }),
+        ).resolves.toEqual({ success: true })
+      } finally {
+        write.mockRestore()
+      }
+    },
+  )
+
+  it("records the attempted operation and its final result through the public history", async () => {
+    const dispatched = createDeferred<void>()
+    const finishTask = createDeferred<void>()
+    const responsePromise = createDecisionCoordinator({
+      recordDecision: vi.fn().mockResolvedValue(undefined),
+      executeAuthorizedTask: async (
+        _task: unknown,
+        _source: unknown,
+        authorizeAtAcquire: () => Promise<unknown>,
+        sendResponse: (response: unknown) => void,
+        reportOutcome: (outcome: unknown) => void,
+      ) => {
+        await authorizeAtAcquire()
+        reportOutcome({ kind: "allowed", adapter: "tab", reused: false })
+        dispatched.resolve()
+        await finishTask.promise
+        sendResponse({
+          success: false,
+          status: 503,
+          code: API_ERROR_CODES.HTTP_OTHER,
+          error: "secret upstream message",
+        })
+      },
+    }).execute({
+      task: fetchTask(automaticExecution),
+      execution: automaticExecution,
+    })
+
+    await dispatched.promise
+    expect(await protectionBypassHistoryStorage.list()).toEqual([
+      expect.objectContaining({
+        status: "started",
+        execution: automaticExecution,
+      }),
+    ])
+    finishTask.resolve()
+    await expect(responsePromise).resolves.toMatchObject({
+      success: false,
+      status: 503,
+    })
+    const history = await protectionBypassHistoryStorage.list()
+    expect(history).toEqual([
+      expect.objectContaining({
+        status: "failed",
+        contextMode: "tab",
+        contextReused: false,
+        httpStatus: 503,
+        errorCode: "HTTP_OTHER",
+      }),
+    ])
+    expect(JSON.stringify(history)).not.toContain("secret upstream message")
+  })
+
+  it("records why automatic protection was denied without claiming a page was opened", async () => {
+    await createDecisionCoordinator({
+      recordDecision: vi.fn().mockResolvedValue(undefined),
+      readPolicy: async () => ({
+        ...allowedPolicy,
+        automaticMasterEnabled: false,
+      }),
+    }).execute({
+      task: fetchTask(automaticExecution),
+      execution: automaticExecution,
+    })
+
+    expect(await protectionBypassHistoryStorage.list()).toEqual([
+      expect.objectContaining({
+        status: "denied",
+        denialReason: "automatic_disabled",
+      }),
+    ])
+    expect(
+      (await protectionBypassHistoryStorage.list())[0].contextMode,
+    ).toBeUndefined()
+  })
+
   it("submits permitted tasks and preflights prohibited task kinds", async () => {
     const executeAuthorizedTask = vi.fn(
       async (
@@ -1109,7 +1207,7 @@ describe("ProtectionBypassCoordinator", () => {
   it("maps a real preference storage read failure to unavailable policy", async () => {
     const getSpy = vi
       .spyOn(browser.storage.local, "get")
-      .mockRejectedValueOnce(new Error("storage unavailable"))
+      .mockRejectedValue(new Error("storage unavailable"))
     try {
       const response = await createProtectionBypassCoordinator({
         resolveCapability: vi.fn().mockResolvedValue({

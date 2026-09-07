@@ -8,12 +8,16 @@ import {
   WorkflowTransitionButton,
 } from "~/components/ui"
 import type { TempWindowFallbackIssue } from "~/features/AccountManagement/utils/tempWindowFallbackReminder"
+import { ProtectionBypassHistoryLink } from "~/features/ProtectionBypass/components/ProtectionBypassHistoryLink"
 import { TEMP_WINDOW_HEALTH_STATUS_CODES } from "~/types"
 import {
   getProtectionBypassUiVariant,
   ProtectionBypassUiVariants,
 } from "~/utils/browser/protectionBypass"
-import { openSettingsTab } from "~/utils/navigation"
+import {
+  openProtectionBypassHistory,
+  openSettingsTab,
+} from "~/utils/navigation"
 
 export interface TempWindowFallbackReminderDialogProps {
   isOpen: boolean
@@ -33,7 +37,7 @@ export function TempWindowFallbackReminderDialog({
   onClose,
   onNeverRemind,
 }: TempWindowFallbackReminderDialogProps) {
-  const { t } = useTranslation(["ui", "common"])
+  const { t } = useTranslation(["ui", "common", "shieldBypass"])
 
   const protectionBypassUiVariant = getProtectionBypassUiVariant()
   const isCookieInterceptorVariant =
@@ -93,10 +97,16 @@ export function TempWindowFallbackReminderDialog({
     onClose()
   }, [onClose, onNeverRemind])
 
+  const handleOpenHistory = async () => {
+    await openProtectionBypassHistory()
+    onClose()
+  }
+
   return (
     <Modal
       isOpen={isOpen}
       onClose={handleNotNow}
+      title={title}
       header={<Heading4>{title}</Heading4>}
       footer={
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
@@ -114,6 +124,12 @@ export function TempWindowFallbackReminderDialog({
     >
       <div className="space-y-3">
         <p className="text-sm leading-relaxed">{description}</p>
+        <div className="space-y-1">
+          <p className="text-muted-foreground text-xs">
+            {t("shieldBypass:history.entryDescription")}
+          </p>
+          <ProtectionBypassHistoryLink onOpen={handleOpenHistory} />
+        </div>
       </div>
     </Modal>
   )

@@ -1,4 +1,132 @@
 {
+  "history": {
+    "accountOnboarding": "Thiết lập và nhận diện tài khoản",
+    "actions": "Thao tác với lịch sử",
+    "allStatuses": "Tất cả kết quả",
+    "causes": {
+      "api_error_fallback": "Trang tạm được yêu cầu sau khi xảy ra lỗi API.",
+      "browser_profile_isolation": "Thao tác này cần môi trường trình duyệt tạm, chẳng hạn để tách biệt phiên tài khoản.",
+      "explicit_context": "Thao tác này đã chủ động yêu cầu môi trường trang web.",
+      "rendered_page_required": "Thao tác này cần thông tin từ trang đã hiển thị.",
+      "session_required": "Thao tác này cần đọc hoặc sử dụng phiên đăng nhập của trang web trong trình duyệt.",
+      "verification_required": "Thao tác này cần xác minh hoặc thao tác trực tiếp trên trang web."
+    },
+    "clear": "Xóa lịch sử",
+    "clearDescription": "Xóa lịch sử vượt lớp bảo vệ trên thiết bị này? Các lần thử mới vẫn sẽ được ghi lại.",
+    "clearFailed": "Không thể xóa lịch sử. Vui lòng thử lại.",
+    "clearFilters": "Xóa bộ lọc",
+    "commands": {
+      "add_account": "Thêm tài khoản",
+      "detect_account": "Nhận diện tài khoản",
+      "manage_api_keys": "Quản lý khóa API",
+      "manage_site_channels": "Quản lý kênh trang web",
+      "manual_checkin": "Điểm danh thủ công",
+      "reauthenticate_account": "Xác thực lại tài khoản",
+      "refresh_account": "Làm mới tài khoản",
+      "refresh_all_accounts": "Làm mới tất cả tài khoản",
+      "refresh_disabled_accounts": "Làm mới tài khoản đã tắt",
+      "retry_checkin_account": "Thử lại điểm danh",
+      "sync_managed_site_models": "Đồng bộ mô hình trang web được quản lý"
+    },
+    "copied": "Đã sao chép chi tiết chẩn đoán",
+    "copy": "Sao chép chi tiết chẩn đoán",
+    "copyFailed": "Không thể sao chép. Vui lòng thử lại.",
+    "created": "Đã tạo trang tạm",
+    "denials": {
+      "automatic_disabled": "Tự động vượt lớp bảo vệ đang tắt. Bật trong cài đặt liên quan rồi thử lại từ tính năng ban đầu.",
+      "feature_disabled": "Tự động vượt lớp bảo vệ đang tắt cho tính năng này. Bật cài đặt tương ứng rồi thử lại từ tính năng ban đầu.",
+      "invalid_execution": "Thông tin thao tác kích hoạt không hợp lệ. Hãy bắt đầu lại từ tính năng ban đầu.",
+      "missing_execution": "Thiếu thông tin thao tác kích hoạt. Hãy bắt đầu lại từ tính năng ban đầu.",
+      "permission_required": "Thiếu quyền trình duyệt cần thiết. Cấp quyền trong phần cài đặt quyền rồi thử lại.",
+      "policy_unavailable": "Không thể đọc cài đặt vượt lớp bảo vệ. Vui lòng thử lại sau.",
+      "resource_stale": "Cấu hình tài khoản hoặc trang web đã thay đổi. Làm mới trang ban đầu rồi thử lại.",
+      "task_not_permitted": "Tính năng này không hỗ trợ loại thao tác trang tạm này.",
+      "unsupported_environment": "Môi trường trình duyệt này không cung cấp khả năng trang tạm cần thiết."
+    },
+    "description": "{{limit}} bản ghi gần nhất chỉ được lưu trên thiết bị này, không bao gồm dữ liệu nhạy cảm.",
+    "empty": "Chưa có lịch sử vượt lớp bảo vệ",
+    "emptyDescription": "Các yêu cầu trang tạm mới sẽ được ghi tại đây sau khi cập nhật lên phiên bản này. Hãy làm mới tài khoản trên trang web được bảo vệ rồi kiểm tra lại.",
+    "entryDescription": "Xem lý do yêu cầu trang tạm và kết quả xử lý.",
+    "failures": {
+      "execution_error": "Quá trình thực hiện dừng bất ngờ. Kiểm tra thông báo ở tính năng ban đầu trước khi thử lại.",
+      "firefox_popup_unsupported": "Firefox không thể thực hiện thao tác này từ cửa sổ bật lên của tiện ích. Thử lại từ trang cài đặt hoặc bảng bên.",
+      "identity_mismatch": "Tài khoản đăng nhập trên trang web khác với tài khoản của thao tác này.",
+      "identity_missing": "Trang web không cung cấp danh tính tài khoản có thể xác minh.",
+      "incognito_access_required": "Tiện ích chưa được phép chạy trong cửa sổ ẩn danh hoặc riêng tư. Hãy cấp quyền trong phần cài đặt tiện ích của trình duyệt.",
+      "invalid_request": "Thông tin yêu cầu thao tác trang bị thiếu hoặc không hợp lệ.",
+      "no_response": "Trình xử lý không trả về kết quả. Kiểm tra trạng thái hiện tại ở tính năng ban đầu.",
+      "target_not_found": "Không tìm thấy nút hoặc đối tượng cần thao tác trên trang.",
+      "throttled": "Thao tác trang bị giới hạn tần suất. Vui lòng thử lại sau.",
+      "trigger_failed": "Không thể thực hiện thao tác trang. Hãy kiểm tra trang web."
+    },
+    "fields": {
+      "context": "Cách lấy trang",
+      "contextMode": "Cách mở thực tế",
+      "duration": "Thời gian xử lý",
+      "evidence": "Bằng chứng lỗi ban đầu",
+      "finishedAt": "Thời điểm kết thúc",
+      "method": "Phương thức yêu cầu",
+      "mutation": "Trạng thái ghi",
+      "operation": "Thao tác kích hoạt",
+      "preferredMode": "Cách mở đã cài đặt",
+      "profile": "Môi trường trình duyệt",
+      "result": "Phản hồi và mã lỗi",
+      "surface": "Nơi bắt đầu",
+      "trigger": "Cách kích hoạt",
+      "verification": "Xác minh trang"
+    },
+    "filterStatus": "Lọc theo kết quả",
+    "groups": {
+      "context": "Trình duyệt và yêu cầu",
+      "outcome": "Kết quả",
+      "trigger": "Thông tin kích hoạt"
+    },
+    "incognito": "Môi trường ẩn danh / riêng tư",
+    "loadFailed": "Không thể đọc lịch sử. Vui lòng thử lại.",
+    "manual": "Thao tác thủ công của người dùng",
+    "mutations": {
+      "created": "Đã xác nhận tạo thành công",
+      "dispatched_unconfirmed": "Đã gửi yêu cầu, chưa xác nhận kết quả; hãy kiểm tra trạng thái trang web trước",
+      "not_dispatched": "Chưa gửi yêu cầu tạo"
+    },
+    "newRecords_other": "Xem {{count}} bản ghi mới",
+    "noMatches": "Không có bản ghi phù hợp với bộ lọc",
+    "noOriginalError": "Trang tạm đã được yêu cầu; bên gọi không cung cấp chi tiết lỗi trước đó.",
+    "open": "Xem lịch sử vượt lớp bảo vệ",
+    "openSettings": "Xem cài đặt liên quan",
+    "pendingDescription": "Đã ghi nhận kích hoạt nhưng chưa có kết quả cuối cùng. Tác vụ có thể vẫn đang chạy hoặc đã bị gián đoạn do đóng trình duyệt hay khởi động lại tiện ích.",
+    "reused": "Dùng lại trang hiện có",
+    "search": "Tìm trang web, thao tác hoặc thông tin chẩn đoán",
+    "shown": "Hiển thị {{visible}} / {{total}} bản ghi",
+    "statuses": {
+      "completed": "Đã hoàn tất",
+      "denied": "Chưa mở trang tạm",
+      "failed": "Thất bại",
+      "started": "Đã kích hoạt, chờ kết quả",
+      "unavailable": "Môi trường không khả dụng"
+    },
+    "surfaces": {
+      "background": "Tiến trình nền của tiện ích",
+      "content_script": "Trang web",
+      "options": "Trang cài đặt",
+      "popup": "Cửa sổ bật lên của tiện ích",
+      "sidepanel": "Bảng bên"
+    },
+    "title": "Lịch sử vượt lớp bảo vệ",
+    "triggers": {
+      "background_recovery": "Khôi phục nền",
+      "retry": "Tự động thử lại",
+      "scheduled": "Tác vụ theo lịch",
+      "ui_lifecycle": "Tự động khi mở trang hoặc thành phần"
+    },
+    "turnstile": {
+      "error": "Xác minh Turnstile thất bại",
+      "not_present": "Không phát hiện tiện ích xác minh Turnstile",
+      "timeout": "Hết thời gian chờ Turnstile",
+      "token_obtained": "Đã lấy được thông tin xác minh Turnstile"
+    },
+    "unexpectedContent": "Phản hồi có định dạng không mong đợi và có thể là trang xác minh của trang web."
+  },
   "titlePrefix": "All API Hub · Trợ lý Vượt Rào",
   "toast": {
     "actions": {

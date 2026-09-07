@@ -6,6 +6,7 @@ import { RuntimeActionIds } from "~/constants/runtimeActions"
 type ShieldBypassPromptToastProps = {
   onDismiss: () => void
   onOpenSettings: () => Promise<void> | void
+  onOpenHistory: () => Promise<void> | void
 }
 
 const {
@@ -71,7 +72,7 @@ describe("shieldBypassToasts", () => {
     document.title = originalTitle
   })
 
-  it("renders the shield-bypass prompt toast with a fixed id and wires dismiss/settings actions", async () => {
+  it("renders the shield-bypass prompt toast with a fixed id and wires dismiss/settings/history actions", async () => {
     toastCustomMock.mockReturnValue("shield-toast-id")
     sendRuntimeMessageMock.mockResolvedValue({ success: true })
 
@@ -103,6 +104,11 @@ describe("shieldBypassToasts", () => {
     expect(sendRuntimeMessageMock).toHaveBeenCalledWith({
       action: RuntimeActionIds.OpenSettingsShieldBypass,
     })
+    await props.onOpenHistory()
+
+    expect(sendRuntimeMessageMock).toHaveBeenLastCalledWith({
+      action: RuntimeActionIds.OpenSettingsShieldHistory,
+    })
     expect(loggerErrorMock).not.toHaveBeenCalled()
   })
 
@@ -123,6 +129,24 @@ describe("shieldBypassToasts", () => {
     expect(analyticsPayloads).not.toContain("private-shield")
     expect(analyticsPayloads).not.toContain("secret")
     expect(analyticsPayloads).not.toContain("Private Challenge Title")
+  })
+
+  it("propagates unsuccessful history navigation so the prompt can show feedback", async () => {
+    sendRuntimeMessageMock.mockResolvedValue({
+      success: false,
+      error: "navigation failed",
+    })
+    const { showShieldBypassPromptToast } = await import(
+      "~/entrypoints/content/shieldBypassAssist/utils/shieldBypassToasts"
+    )
+
+    await showShieldBypassPromptToast()
+
+    const renderer = toastCustomMock.mock
+      .calls[0]?.[0] as () => React.ReactElement<ShieldBypassPromptToastProps>
+    await expect(renderer().props.onOpenHistory()).rejects.toThrow(
+      "navigation failed",
+    )
   })
 
   it("logs a settings-open failure without throwing from the toast action", async () => {

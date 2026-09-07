@@ -1,4 +1,133 @@
 {
+  "history": {
+    "accountOnboarding": "Account setup and detection",
+    "actions": "History actions",
+    "allStatuses": "All outcomes",
+    "causes": {
+      "api_error_fallback": "A temporary page was requested after an API error.",
+      "browser_profile_isolation": "This operation requires a temporary browser context, for example to isolate an account session.",
+      "explicit_context": "This operation explicitly requested a site page context.",
+      "rendered_page_required": "This operation needs information from the rendered page.",
+      "session_required": "This operation needs to read or use the site's browser login session.",
+      "verification_required": "This operation needs verification or a native action on the site page."
+    },
+    "clear": "Clear history",
+    "clearDescription": "Clear the shield bypass history on this device? New attempts will still be recorded.",
+    "clearFailed": "Could not clear history. Please retry.",
+    "clearFilters": "Clear filters",
+    "commands": {
+      "add_account": "Add account",
+      "detect_account": "Detect account",
+      "manage_api_keys": "Manage API keys",
+      "manage_site_channels": "Manage site channels",
+      "manual_checkin": "Manual check-in",
+      "reauthenticate_account": "Reauthenticate account",
+      "refresh_account": "Refresh account",
+      "refresh_all_accounts": "Refresh all accounts",
+      "refresh_disabled_accounts": "Refresh disabled accounts",
+      "retry_checkin_account": "Retry check-in",
+      "sync_managed_site_models": "Sync managed-site models"
+    },
+    "copied": "Diagnostic details copied",
+    "copy": "Copy diagnostic details",
+    "copyFailed": "Could not copy details. Please retry.",
+    "created": "Created a temporary page",
+    "denials": {
+      "automatic_disabled": "Automatic shield bypass is off. Enable it in the related settings, then retry from the original feature.",
+      "feature_disabled": "Automatic shield bypass is off for this feature. Enable its setting, then retry from the original feature.",
+      "invalid_execution": "The triggering operation is invalid. Start again from the original feature.",
+      "missing_execution": "The triggering operation is missing. Start again from the original feature.",
+      "permission_required": "Required browser permissions are missing. Grant them in permission settings and retry.",
+      "policy_unavailable": "Shield bypass settings could not be read. Please retry later.",
+      "resource_stale": "The account or site configuration changed. Refresh the original page and retry.",
+      "task_not_permitted": "This feature does not support this kind of temporary-page operation.",
+      "unsupported_environment": "This browser environment cannot provide the required temporary-page capability."
+    },
+    "description": "The latest {{limit}} records stay on this device, with sensitive data excluded.",
+    "empty": "No shield bypass history yet",
+    "emptyDescription": "New temporary-page requests are recorded here after updating to this version. Try refreshing an account on a protected site, then check again.",
+    "entryDescription": "Find out why a temporary page was requested and what happened.",
+    "failures": {
+      "execution_error": "Execution stopped unexpectedly. Check the original feature's message before retrying.",
+      "firefox_popup_unsupported": "Firefox cannot run this operation from the extension popup. Retry from settings or the side panel.",
+      "identity_mismatch": "The account logged in on the site page differs from the account for this operation.",
+      "identity_missing": "The site page did not provide a verifiable account identity.",
+      "incognito_access_required": "The extension is not allowed in incognito / private windows. Grant access in the browser's extension settings.",
+      "invalid_request": "The page action request is incomplete or invalid.",
+      "no_response": "The handler returned no result. Check the current state in the original feature.",
+      "target_not_found": "The required button or target was not found on the page.",
+      "throttled": "The page action was rate limited. Retry later.",
+      "trigger_failed": "The page action could not be performed. Check the site page."
+    },
+    "fields": {
+      "context": "Page acquisition",
+      "contextMode": "Actual opening mode",
+      "duration": "Duration",
+      "evidence": "Original trigger evidence",
+      "finishedAt": "Finished at",
+      "method": "Request method",
+      "mutation": "Write state",
+      "operation": "Triggering operation",
+      "preferredMode": "Configured opening mode",
+      "profile": "Browser context",
+      "result": "Response and error codes",
+      "surface": "Source",
+      "trigger": "Trigger",
+      "verification": "Page verification"
+    },
+    "filterStatus": "Filter by outcome",
+    "groups": {
+      "context": "Browser and request",
+      "outcome": "Outcome",
+      "trigger": "Trigger"
+    },
+    "incognito": "Incognito / private context",
+    "loadFailed": "Could not read shield bypass history. Please retry.",
+    "manual": "Manual user action",
+    "mutations": {
+      "created": "Creation confirmed",
+      "dispatched_unconfirmed": "Request sent, result unconfirmed; check the site state first",
+      "not_dispatched": "Creation request not sent"
+    },
+    "newRecords_one": "Show {{count}} new record",
+    "newRecords_other": "Show {{count}} new records",
+    "noMatches": "No records match your filters",
+    "noOriginalError": "A temporary page was requested; no preceding error details were provided.",
+    "open": "View shield bypass history",
+    "openSettings": "View related settings",
+    "pendingDescription": "The trigger was recorded, but no final result has arrived. The task may still be running or may have been interrupted by a browser close or extension restart.",
+    "reused": "Reused an existing page",
+    "search": "Search sites, operations or diagnostics",
+    "shown": "Showing {{visible}} / {{total}} records",
+    "statuses": {
+      "completed": "Completed",
+      "denied": "Temporary page not opened",
+      "failed": "Failed",
+      "started": "Triggered, awaiting result",
+      "unavailable": "Context unavailable"
+    },
+    "surfaces": {
+      "background": "Extension background",
+      "content_script": "Site page",
+      "options": "Settings page",
+      "popup": "Extension popup",
+      "sidepanel": "Side panel"
+    },
+    "title": "Shield bypass history",
+    "triggers": {
+      "background_recovery": "Background recovery",
+      "retry": "Automatic retry",
+      "scheduled": "Scheduled task",
+      "ui_lifecycle": "Automatic on page or component open"
+    },
+    "turnstile": {
+      "error": "Turnstile verification failed",
+      "not_present": "No Turnstile widget detected",
+      "timeout": "Timed out waiting for Turnstile",
+      "token_obtained": "Turnstile verification credential obtained"
+    },
+    "unexpectedContent": "The response had an unexpected format and may have been a site verification page."
+  },
   "titlePrefix": "All API Hub · Shield Bypass",
   "toast": {
     "actions": {
