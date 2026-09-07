@@ -1,5 +1,5 @@
 import type { AccountSiteType } from "~/constants/siteType"
-import { formatOptionalSkPrefixSiteToken } from "~/services/accountTokens/apiTokenKey"
+import { formatOptionalSkPrefixSiteTokenAuthKey } from "~/services/accountTokens/apiTokenKey"
 import type { AccountKeyResourceRef } from "~/services/apiAdapters/contracts/accountKeyResource"
 import type { AccountServiceCredential } from "~/services/apiAdapters/contracts/serviceCredential"
 import type { AccountToken, ApiToken, DisplaySiteData } from "~/types"
@@ -445,16 +445,17 @@ export const accountRuntimeKeyToLegacyAccountToken = (
         accountName: runtimeKey.accountName,
       }
 
+/** Formats the runtime secret without changing the provider's original credential. */
 export const formatAccountRuntimeKeySecretForSite = <
   TRuntimeKey extends AccountRuntimeKey,
 >(
   runtimeKey: TRuntimeKey,
 ): TRuntimeKey => ({
   ...runtimeKey,
-  secret: formatOptionalSkPrefixSiteToken(
-    accountRuntimeKeyToLegacyApiToken(runtimeKey),
+  secret: formatOptionalSkPrefixSiteTokenAuthKey(
+    runtimeKey.secret,
     runtimeKey.siteType,
-  ).key,
+  ),
 })
 
 const isCollectedRuntimeKeySecret = (
