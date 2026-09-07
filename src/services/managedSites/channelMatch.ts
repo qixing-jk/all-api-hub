@@ -1,4 +1,5 @@
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
+import { areManagedResourceRefsEqual } from "~/services/managedSites/managedResourceIdentity"
 import type { ManagedResourceMatchCandidate } from "~/types/managedResourceMatching"
 
 export const MANAGED_SITE_CHANNEL_MATCH_LEVELS = {
@@ -117,9 +118,10 @@ export const getManagedSiteChannelExactMatch = (
     if (
       !inspection.url.matched ||
       !inspection.key.matched ||
-      inspection.url.channel?.id == null ||
-      inspection.key.channel?.id == null ||
-      inspection.url.channel.id !== inspection.key.channel.id
+      !areManagedResourceRefsEqual(
+        inspection.url.channel?.ref,
+        inspection.key.channel?.ref,
+      )
     ) {
       return null
     }
@@ -136,9 +138,10 @@ export const getManagedSiteChannelExactMatch = (
   }
 
   if (
-    inspection.key.channel?.id == null ||
-    inspection.models.channel?.id == null ||
-    inspection.key.channel.id !== inspection.models.channel.id
+    !areManagedResourceRefsEqual(
+      inspection.key.channel?.ref,
+      inspection.models.channel?.ref,
+    )
   ) {
     return null
   }

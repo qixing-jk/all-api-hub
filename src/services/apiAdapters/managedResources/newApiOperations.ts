@@ -1,3 +1,4 @@
+import { SITE_TYPES } from "~/constants/siteType"
 import type { ManagedResourceModelsCapability } from "~/services/apiAdapters/contracts/managedResourceModels"
 import type {
   ManagedSiteChannelRequestOptions,
@@ -5,6 +6,7 @@ import type {
   ManagedSitePaginatedChannelRequestOptions,
 } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import { toManagedModelChannelList } from "~/services/apiAdapters/managedResources/modelInputs"
+import { requireManagedResourceChannelId } from "~/services/apiAdapters/managedResources/resourceIds"
 import {
   createChannel,
   deleteChannel,
@@ -34,7 +36,6 @@ import {
   fetchChannelSecretKey,
   hydrateComparableChannelKeys,
 } from "~/services/managedSites/providers/newApiChannelSecrets"
-import type { ManagedResourceMatchCandidate } from "~/types/managedResourceMatching"
 import {
   CHANNEL_STATUS,
   type CreateChannelPayload,
@@ -232,9 +233,9 @@ export const newApiChannelOperations = {
       channelId,
       requireProtectionBypassExecution(options),
     ),
-  hydrateComparableKeys: async (
+  hydrateComparableKeys: async <T extends { id: number; key?: string }>(
     config: NewApiConfig,
-    candidates: ManagedResourceMatchCandidate[],
+    candidates: T[],
     options?: ManagedSiteChannelSecretReadOptions,
   ) =>
     await hydrateComparableChannelKeys(
@@ -252,17 +253,24 @@ export const newApiManagedResourceModels = {
         options,
       ),
       [CHANNEL_STATUS.ManuallyDisabled, CHANNEL_STATUS.AutoDisabled],
+      { siteType: SITE_TYPES.NEW_API, config },
     ),
   fetchModels: async (
     config,
-    channelId,
+    ref,
     options?: ManagedSiteChannelRequestOptions,
-  ) =>
-    await fetchChannelModels(
+  ) => {
+    const channelId = requireManagedResourceChannelId(
+      SITE_TYPES.NEW_API,
+      config,
+      ref,
+    )
+    return await fetchChannelModels(
       toManagedSiteApiServiceRequest(config, options),
       channelId,
       options,
-    ),
+    )
+  },
   fetchDraftModels: async (
     config,
     probe,
@@ -279,10 +287,15 @@ export const newApiManagedResourceModels = {
     ),
   updateModels: async (
     config,
-    channelId,
+    ref,
     models,
     options?: ManagedSiteChannelRequestOptions,
   ) => {
+    const channelId = requireManagedResourceChannelId(
+      SITE_TYPES.NEW_API,
+      config,
+      ref,
+    )
     const sequence = createManagedSiteMutationSequence({ idempotent: false })
     const step = await runNewApiMutationStep({
       config,
@@ -311,11 +324,16 @@ export const newApiManagedResourceModels = {
   },
   updateModelMapping: async (
     config,
-    channelId,
+    ref,
     models,
     modelMapping,
     options?: ManagedSiteChannelRequestOptions,
   ) => {
+    const channelId = requireManagedResourceChannelId(
+      SITE_TYPES.NEW_API,
+      config,
+      ref,
+    )
     const sequence = createManagedSiteMutationSequence({ idempotent: false })
     const step = await runNewApiMutationStep({
       config,

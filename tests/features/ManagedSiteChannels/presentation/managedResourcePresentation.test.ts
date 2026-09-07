@@ -166,7 +166,6 @@ describe("managedResourcePresentation", () => {
       actions: {
         ...facts.actions,
         channel: {
-          channelId: 42,
           channelType: "openai",
           canSyncModels: true,
           canOpenModelSync: true,
@@ -176,7 +175,6 @@ describe("managedResourcePresentation", () => {
     })
 
     expect(row.channelActions).toEqual({
-      channelId: 42,
       channelType: "openai",
       canSyncModels: true,
       canOpenModelSync: true,
@@ -194,8 +192,7 @@ describe("managedResourcePresentation", () => {
       actions: {
         ...facts.actions,
         channel: {
-          channelId: 0,
-          channelType: "openai",
+          channelType: null as unknown as string,
           canSyncModels: true,
           canOpenModelSync: true,
           canConfigureModelFilters: true,

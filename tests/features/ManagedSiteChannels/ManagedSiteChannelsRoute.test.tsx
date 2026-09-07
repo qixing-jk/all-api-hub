@@ -76,7 +76,7 @@ vi.mock(
   "~/features/ManagedSiteChannels/hooks/useManagedSiteChannelModelSync",
   () => ({
     useManagedSiteChannelModelSync: () => ({
-      syncingChannelIds: new Set<number>(),
+      syncingResourceKeys: new Set<string>(),
       syncChannels,
     }),
   }),
@@ -89,12 +89,12 @@ vi.mock(
       channel,
       open,
     }: {
-      channel: { id: number; name: string } | null
+      channel: { resourceRef: { resourceId: string }; name: string } | null
       open: boolean
     }) =>
       open && channel ? (
         <div data-testid="native-channel-filter-target">
-          {channel.id}:{channel.name}
+          {channel.resourceRef.resourceId}:{channel.name}
         </div>
       ) : null,
   }),
@@ -484,6 +484,57 @@ describe("ManagedSiteChannelsRoute", () => {
     },
   )
 
+  it("matches a resource deep link by its full reference and resets selection on a scope change", () => {
+    const ref = {
+      siteType: SITE_TYPES.AXON_HUB,
+      kind: "channel" as const,
+      scopeKey: "https://console.example.invalid",
+      resourceId: "opaque:42",
+    }
+    const foreignRef = { ...ref, scopeKey: "https://other.example.invalid" }
+    const rows = ["Current", "Other"].map((name) => ({
+      ...nativeRow,
+      rowKey: name,
+      testToken: name,
+      name,
+      searchText: name,
+    }))
+    const setSelectedRowKeys = vi.fn()
+    installNativeControllers({
+      list: {
+        rows,
+        allRows: rows,
+        totalRows: 2,
+        setSelectedRowKeys,
+        resolveRef: (rowKey: string) =>
+          rowKey === "Current" ? ref : foreignRef,
+      },
+    })
+    configureNativePreferences(SITE_TYPES.AXON_HUB)
+    const onReplaceRouteQuery = vi.fn()
+    const { rerender } = render(
+      <ManagedSiteChannelsRoute
+        siteType={SITE_TYPES.AXON_HUB}
+        routeParams={{ resourceRef: JSON.stringify(ref) }}
+        onReplaceRouteQuery={onReplaceRouteQuery}
+      />,
+    )
+
+    expect(screen.getByText("Current")).toBeVisible()
+    expect(screen.queryByText("Other")).not.toBeInTheDocument()
+
+    rerender(
+      <ManagedSiteChannelsRoute
+        siteType={SITE_TYPES.AXON_HUB}
+        routeParams={{ resourceRef: JSON.stringify(foreignRef) }}
+        onReplaceRouteQuery={onReplaceRouteQuery}
+      />,
+    )
+    expect(screen.queryByText("Current")).not.toBeInTheDocument()
+    expect(screen.queryByText("Other")).not.toBeInTheDocument()
+    expect(setSelectedRowKeys).toHaveBeenCalledWith({})
+  })
+
   it("routes the production Veloera definition through native controllers", () => {
     installNativeControllers()
     configureNativePreferences(SITE_TYPES.VELOERA)
@@ -618,10 +669,15 @@ describe("ManagedSiteChannelsRoute", () => {
 
   it("wires capable native model and filter actions to real channel targets", async () => {
     const user = userEvent.setup()
+    const targetRef = {
+      siteType: SITE_TYPES.AXON_HUB,
+      kind: "channel" as const,
+      scopeKey: "https://console.example.invalid",
+      resourceId: "native-channel-42",
+    }
     const actionRow: ManagedChannelsRowViewModel = {
       ...nativeRow,
       channelActions: {
-        channelId: 42,
         channelType: "openai",
         canSyncModels: true,
         canOpenModelSync: true,
@@ -666,7 +722,7 @@ describe("ManagedSiteChannelsRoute", () => {
       }),
     )
     expect(syncChannels).toHaveBeenLastCalledWith(
-      [42],
+      [targetRef],
       expect.objectContaining({
         actionId: PRODUCT_ANALYTICS_ACTION_IDS.SyncManagedSiteChannel,
       }),
@@ -678,7 +734,7 @@ describe("ManagedSiteChannelsRoute", () => {
         name: "managedSiteChannels:table.rowActions.openSync",
       }),
     )
-    expect(openManagedSiteModelSyncForChannel).toHaveBeenCalledWith(42)
+    expect(openManagedSiteModelSyncForChannel).toHaveBeenCalledWith(targetRef)
 
     await openActions()
     await user.click(
@@ -688,7 +744,7 @@ describe("ManagedSiteChannelsRoute", () => {
     )
     expect(
       screen.getByTestId("native-channel-filter-target"),
-    ).toHaveTextContent("42:Native example")
+    ).toHaveTextContent("native-channel-42:Native example")
 
     await user.click(
       screen.getByRole("button", {
@@ -696,7 +752,7 @@ describe("ManagedSiteChannelsRoute", () => {
       }),
     )
     expect(syncChannels).toHaveBeenLastCalledWith(
-      [42],
+      [targetRef],
       expect.objectContaining({
         actionId: PRODUCT_ANALYTICS_ACTION_IDS.SyncSelectedManagedSiteChannels,
       }),
@@ -708,7 +764,6 @@ describe("ManagedSiteChannelsRoute", () => {
     const actionRow: ManagedChannelsRowViewModel = {
       ...nativeRow,
       channelActions: {
-        channelId: 42,
         channelType: "openai",
         canSyncModels: true,
         canOpenModelSync: true,

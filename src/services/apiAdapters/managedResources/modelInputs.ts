@@ -1,3 +1,5 @@
+import type { ManagedSiteType } from "~/constants/siteType"
+import { createManagedChannelResourceRef } from "~/services/managedSites/managedResourceIdentity"
 import type { ManagedModelChannelListData } from "~/types/managedResourceModels"
 
 /** Fields shared by the native New API, Veloera and DoneHub model workflows. */
@@ -16,11 +18,16 @@ interface ChannelModelRecord {
 export function toManagedModelChannelList(
   list: { items: ChannelModelRecord[]; total: number },
   disabledStatuses: readonly number[],
+  target: { siteType: ManagedSiteType; config: { baseUrl: string } },
 ): ManagedModelChannelListData {
   return {
     total: list.total,
     items: list.items.map((channel) => ({
-      id: channel.id,
+      ref: createManagedChannelResourceRef(
+        target.siteType,
+        target.config.baseUrl,
+        channel.id,
+      ),
       name: channel.name,
       type: channel.type,
       baseUrl: channel.base_url,

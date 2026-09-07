@@ -14,6 +14,7 @@ import {
   PROTECTION_BYPASS_USER_COMMANDS,
   TEMP_CONTEXT_TASK_KINDS,
 } from "~/services/protectionBypass/contracts"
+import { matchingResourceRef } from "~~/tests/test-utils/managedResourceMatching"
 
 const mocks = vi.hoisted(() => ({
   getPreferencesStrict: vi.fn(),
@@ -83,7 +84,13 @@ describe("protection-bypass managed-site resource validators", () => {
       },
     })
     mocks.matching.search.mockResolvedValue({
-      items: [{ id: 12 }],
+      items: [
+        {
+          ref: matchingResourceRef(12, {
+            scopeKey: "https://new-api.example.invalid",
+          }),
+        },
+      ],
       total: 1,
     })
 

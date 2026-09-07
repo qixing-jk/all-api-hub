@@ -12,8 +12,12 @@ import {
   createManagedSiteChannelMatchRequestCache,
   resolveManagedSiteChannelMatch as resolveManagedSiteChannelMatchImpl,
 } from "~/services/managedSites/channelMatchResolver"
-import type { NewApiChannel } from "~/types/newApi"
-import { buildManagedSiteChannel } from "~~/tests/test-utils/factories"
+import { getManagedResourceRefKey } from "~/services/managedSites/managedResourceIdentity"
+import type { ManagedResourceMatchCandidate } from "~/types/managedResourceMatching"
+import {
+  buildManagedResourceMatchCandidate,
+  matchingResourceRef,
+} from "~~/tests/test-utils/managedResourceMatching"
 import { createManagedSiteCapabilitiesStub } from "~~/tests/test-utils/managedSiteCapabilitiesFactory"
 
 const managedConfig = {
@@ -44,8 +48,8 @@ const resolveManagedSiteChannelMatch = (
 
 describe("resolveManagedSiteChannelMatch", () => {
   it("treats URL and key as the exact Sub2API identity without requiring models", () => {
-    const channel = buildManagedSiteChannel({
-      id: 91,
+    const channel = buildManagedResourceMatchCandidate({
+      ref: matchingResourceRef(91),
       key: "sub2api-key",
       base_url: "https://api.example.invalid",
       models: "",
@@ -69,22 +73,22 @@ describe("resolveManagedSiteChannelMatch", () => {
     }
 
     expect(
-      getManagedSiteChannelExactMatch(inspection, SITE_TYPES.SUB2API)?.id,
-    ).toBe(91)
+      getManagedSiteChannelExactMatch(inspection, SITE_TYPES.SUB2API)?.ref,
+    ).toEqual(matchingResourceRef(91))
     expect(
       getManagedSiteChannelExactMatch(inspection, SITE_TYPES.NEW_API),
     ).toBeNull()
   })
 
   it("does not report an exact Sub2API duplicate when URL and key match different accounts", () => {
-    const urlChannel = buildManagedSiteChannel({
-      id: 91,
+    const urlChannel = buildManagedResourceMatchCandidate({
+      ref: matchingResourceRef(91),
       key: "url-channel-key",
       base_url: "https://api.example.invalid",
       models: "",
     })
-    const keyChannel = buildManagedSiteChannel({
-      id: 92,
+    const keyChannel = buildManagedResourceMatchCandidate({
+      ref: matchingResourceRef(92),
       key: "sub2api-key",
       base_url: "https://other.example.invalid",
       models: "",
@@ -113,8 +117,8 @@ describe("resolveManagedSiteChannelMatch", () => {
   })
 
   it("resolves exact duplicates through registered channel matching", async () => {
-    const channel = buildManagedSiteChannel({
-      id: 65,
+    const channel = buildManagedResourceMatchCandidate({
+      ref: matchingResourceRef(65),
       key: "sk-matching",
       base_url: "https://api.example.com/v1",
       models: "gpt-4o",
@@ -141,7 +145,9 @@ describe("resolveManagedSiteChannelMatch", () => {
       managedConfig,
       "https://api.example.com",
     )
-    expect(getManagedSiteChannelExactMatch(result)?.id).toBe(65)
+    expect(getManagedSiteChannelExactMatch(result)?.ref).toEqual(
+      matchingResourceRef(65),
+    )
   })
 
   it("skips candidate key hydration when a local exact match is already available", async () => {
@@ -150,14 +156,14 @@ describe("resolveManagedSiteChannelMatch", () => {
       matching: {
         search: vi.fn().mockResolvedValue({
           items: [
-            buildManagedSiteChannel({
-              id: 6,
+            buildManagedResourceMatchCandidate({
+              ref: matchingResourceRef(6),
               key: "sk-match",
               base_url: "https://api.example.com/v1",
               models: "gpt-4o",
             }),
-            buildManagedSiteChannel({
-              id: 7,
+            buildManagedResourceMatchCandidate({
+              ref: matchingResourceRef(7),
               key: "",
               base_url: "https://api.example.com/v1",
               models: "gpt-4o-mini",
@@ -184,8 +190,8 @@ describe("resolveManagedSiteChannelMatch", () => {
   })
 
   it("matches optional sk- prefixes for New API compatible managed sites", async () => {
-    const channel = buildManagedSiteChannel({
-      id: 61,
+    const channel = buildManagedResourceMatchCandidate({
+      ref: matchingResourceRef(61),
       key: "stored-key",
       base_url: "https://api.example.com/v1",
       models: "gpt-4o",
@@ -216,8 +222,8 @@ describe("resolveManagedSiteChannelMatch", () => {
   })
 
   it("matches optional sk- prefixes for DoneHub managed sites", async () => {
-    const channel = buildManagedSiteChannel({
-      id: 63,
+    const channel = buildManagedResourceMatchCandidate({
+      ref: matchingResourceRef(63, { siteType: SITE_TYPES.DONE_HUB }),
       key: "stored-key",
       base_url: "https://api.example.com/v1",
       models: "gpt-4o",
@@ -253,8 +259,8 @@ describe("resolveManagedSiteChannelMatch", () => {
       matching: {
         search: vi.fn().mockResolvedValue({
           items: [
-            buildManagedSiteChannel({
-              id: 62,
+            buildManagedResourceMatchCandidate({
+              ref: matchingResourceRef(62, { siteType: SITE_TYPES.OCTOPUS }),
               key: "stored-key",
               base_url: "https://api.example.com/v1",
               models: "gpt-4o",
@@ -285,8 +291,8 @@ describe("resolveManagedSiteChannelMatch", () => {
     const requestCache = createManagedSiteChannelMatchRequestCache()
     const searchChannel = vi.fn().mockResolvedValue({
       items: [
-        buildManagedSiteChannel({
-          id: 7,
+        buildManagedResourceMatchCandidate({
+          ref: matchingResourceRef(7),
           key: "",
           base_url: "https://api.example.com/v1",
           models: "gpt-4o",
@@ -294,7 +300,7 @@ describe("resolveManagedSiteChannelMatch", () => {
       ],
     })
     const hydrateComparableChannelKeys = vi.fn(async (_config, candidates) =>
-      candidates.map((channel: NewApiChannel) => ({
+      candidates.map((channel: ManagedResourceMatchCandidate) => ({
         ...channel,
         key: "sk-match",
       })),
@@ -318,35 +324,36 @@ describe("resolveManagedSiteChannelMatch", () => {
     expect(searchChannel).toHaveBeenCalledTimes(1)
     expect(hydrateComparableChannelKeys).toHaveBeenCalledWith(
       managedConfig,
-      [expect.objectContaining({ id: 7 })],
+      [expect.objectContaining({ ref: matchingResourceRef(7) })],
       sessionResyncOptions,
     )
     expect(result.key.matched).toBe(true)
     expect(result.models.matched).toBe(true)
-    expect(requestCache.resolvedChannelKeysById).toEqual({
-      7: "sk-match",
+    expect(requestCache.resolvedChannelKeysByResourceKey).toEqual({
+      [getManagedResourceRefKey(matchingResourceRef(7))]: "sk-match",
     })
   })
 
   it("applies the hidden-key allow-list before hydrating multiple exact-model candidates", async () => {
     const hydrateComparableChannelKeys = vi.fn(async (_config, candidates) =>
-      candidates.map((channel: NewApiChannel) => ({
+      candidates.map((channel: ManagedResourceMatchCandidate) => ({
         ...channel,
-        key: channel.id === 72 ? "sk-scoped-match" : "sk-unscoped",
+        key:
+          channel.ref.resourceId === "72" ? "sk-scoped-match" : "sk-unscoped",
       })),
     )
     const managedSite = createManagedSiteCapabilitiesStub({
       matching: {
         search: vi.fn().mockResolvedValue({
           items: [
-            buildManagedSiteChannel({
-              id: 71,
+            buildManagedResourceMatchCandidate({
+              ref: matchingResourceRef(71),
               key: "",
               base_url: "https://api.example.com/v1",
               models: "gpt-4o",
             }),
-            buildManagedSiteChannel({
-              id: 72,
+            buildManagedResourceMatchCandidate({
+              ref: matchingResourceRef(72),
               key: "",
               base_url: "https://api.example.com/v1",
               models: "gpt-4o",
@@ -363,19 +370,19 @@ describe("resolveManagedSiteChannelMatch", () => {
       accountBaseUrl: "https://api.example.com/v1",
       models: ["gpt-4o"],
       key: "sk-scoped-match",
-      hiddenKeyChannelIds: [72],
+      hiddenKeyResourceRefs: [matchingResourceRef(72)],
       protectionBypassExecution: sessionResyncOptions.protectionBypassExecution,
     })
 
     expect(hydrateComparableChannelKeys).toHaveBeenCalledWith(
       managedConfig,
-      [expect.objectContaining({ id: 72 })],
+      [expect.objectContaining({ ref: matchingResourceRef(72) })],
       sessionResyncOptions,
     )
     expect(result.key).toMatchObject({
       comparable: true,
       matched: true,
-      channel: { id: 72 },
+      channel: { ref: matchingResourceRef(72) },
     })
   })
 
@@ -389,8 +396,8 @@ describe("resolveManagedSiteChannelMatch", () => {
       matching: {
         search: vi.fn().mockResolvedValue({
           items: [
-            buildManagedSiteChannel({
-              id: 8,
+            buildManagedResourceMatchCandidate({
+              ref: matchingResourceRef(8),
               key: "",
               base_url: "https://api.example.com/v1",
               models: "gpt-4o",
@@ -426,8 +433,8 @@ describe("resolveManagedSiteChannelMatch", () => {
       matching: {
         search: vi.fn().mockResolvedValue({
           items: [
-            buildManagedSiteChannel({
-              id: 9,
+            buildManagedResourceMatchCandidate({
+              ref: matchingResourceRef(9),
               key: "",
               base_url: "https://api.example.com/v1",
               models: "gpt-4o",
@@ -459,8 +466,8 @@ describe("resolveManagedSiteChannelMatch", () => {
       matching: {
         search: vi.fn().mockResolvedValue({
           items: [
-            buildManagedSiteChannel({
-              id: 40,
+            buildManagedResourceMatchCandidate({
+              ref: matchingResourceRef(40),
               key: "",
               base_url: "https://api.example.com/v1",
               models: "claude-3",
@@ -494,14 +501,14 @@ describe("resolveManagedSiteChannelMatch", () => {
   })
 
   it("hydrates a ranked contained-model candidate when no exact model candidate exists", async () => {
-    const containedModelCandidate = buildManagedSiteChannel({
-      id: 41,
+    const containedModelCandidate = buildManagedResourceMatchCandidate({
+      ref: matchingResourceRef(41),
       key: "",
       base_url: "https://api.example.com/v1",
       models: "gpt-4o,gpt-4o-mini",
     })
     const hydrateComparableChannelKeys = vi.fn(async (_config, candidates) =>
-      candidates.map((channel: NewApiChannel) => ({
+      candidates.map((channel: ManagedResourceMatchCandidate) => ({
         ...channel,
         key: "sk-match",
       })),
@@ -525,14 +532,14 @@ describe("resolveManagedSiteChannelMatch", () => {
 
     expect(hydrateComparableChannelKeys).toHaveBeenCalledWith(
       managedConfig,
-      [expect.objectContaining({ id: 41 })],
+      [expect.objectContaining({ ref: matchingResourceRef(41) })],
       sessionResyncOptions,
     )
     expect(result.key).toEqual({
       comparable: true,
       matched: true,
       reason: MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.MATCHED,
-      channel: expect.objectContaining({ id: 41 }),
+      channel: expect.objectContaining({ ref: matchingResourceRef(41) }),
     })
     expect(result.models.reason).toBe(
       MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.CONTAINED,
@@ -544,8 +551,8 @@ describe("resolveManagedSiteChannelMatch", () => {
       matching: {
         search: vi.fn().mockResolvedValue({
           items: [
-            buildManagedSiteChannel({
-              id: 12,
+            buildManagedResourceMatchCandidate({
+              ref: matchingResourceRef(12),
               name: "Secondary Match",
               base_url: "https://api.example.com",
               models: "gpt-4,gpt-4o-mini",
@@ -575,7 +582,7 @@ describe("resolveManagedSiteChannelMatch", () => {
     expect(result.models.reason).toBe(
       MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.EXACT,
     )
-    expect(result.models.channel?.id).toBe(12)
+    expect(result.models.channel?.ref).toEqual(matchingResourceRef(12))
   })
 
   it("returns separate key and model assessments when only the key matches", async () => {
@@ -583,8 +590,8 @@ describe("resolveManagedSiteChannelMatch", () => {
       matching: {
         search: vi.fn().mockResolvedValue({
           items: [
-            buildManagedSiteChannel({
-              id: 13,
+            buildManagedResourceMatchCandidate({
+              ref: matchingResourceRef(13),
               name: "Key Match",
               base_url: "https://api.example.com",
               models: "claude-3",
@@ -610,7 +617,7 @@ describe("resolveManagedSiteChannelMatch", () => {
     expect(result.key.reason).toBe(
       MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.MATCHED,
     )
-    expect(result.key.channel?.id).toBe(13)
+    expect(result.key.channel?.ref).toEqual(matchingResourceRef(13))
     expect(result.models.reason).toBe(
       MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.NO_MATCH,
     )
@@ -654,8 +661,8 @@ describe("resolveManagedSiteChannelMatch", () => {
   })
 
   it("reuses the recoverable unique-URL candidate when hidden-key resolution is requested", async () => {
-    const hiddenUrlOnlyCandidate = buildManagedSiteChannel({
-      id: 21,
+    const hiddenUrlOnlyCandidate = buildManagedResourceMatchCandidate({
+      ref: matchingResourceRef(21),
       name: "Hidden URL Candidate",
       base_url: "https://api.example.com",
       models: "claude-3",
@@ -667,8 +674,8 @@ describe("resolveManagedSiteChannelMatch", () => {
         search: vi.fn().mockResolvedValue({
           items: [
             hiddenUrlOnlyCandidate,
-            buildManagedSiteChannel({
-              id: 22,
+            buildManagedResourceMatchCandidate({
+              ref: matchingResourceRef(22),
               name: "Competing Candidate",
               base_url: "https://other.example.com",
               models: "gpt-4",
@@ -693,19 +700,19 @@ describe("resolveManagedSiteChannelMatch", () => {
 
     expect(fetchChannelSecretKey).toHaveBeenCalledWith(
       expect.objectContaining(managedConfig),
-      21,
+      matchingResourceRef(21),
       sessionResyncOptions,
     )
     expect(result.url).toEqual({
       matched: true,
-      channel: expect.objectContaining({ id: 21 }),
+      channel: expect.objectContaining({ ref: matchingResourceRef(21) }),
       candidateCount: 1,
     })
     expect(result.key).toEqual({
       comparable: true,
       matched: true,
       reason: MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.MATCHED,
-      channel: expect.objectContaining({ id: 21 }),
+      channel: expect.objectContaining({ ref: matchingResourceRef(21) }),
     })
     expect(result.models.reason).toBe(
       MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.NO_MATCH,
@@ -713,8 +720,8 @@ describe("resolveManagedSiteChannelMatch", () => {
   })
 
   it("resolves masked key candidates before exact key matching", async () => {
-    const maskedUrlCandidate = buildManagedSiteChannel({
-      id: 24,
+    const maskedUrlCandidate = buildManagedResourceMatchCandidate({
+      ref: matchingResourceRef(24),
       name: "Masked URL Candidate",
       base_url: "https://api.example.com",
       models: "gpt-4",
@@ -743,14 +750,14 @@ describe("resolveManagedSiteChannelMatch", () => {
 
     expect(fetchChannelSecretKey).toHaveBeenCalledWith(
       expect.objectContaining(managedConfig),
-      24,
+      matchingResourceRef(24),
       sessionResyncOptions,
     )
     expect(result.key).toEqual({
       comparable: true,
       matched: true,
       reason: MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.MATCHED,
-      channel: expect.objectContaining({ id: 24 }),
+      channel: expect.objectContaining({ ref: matchingResourceRef(24) }),
     })
     expect(result.models.reason).toBe(
       MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.EXACT,
@@ -758,15 +765,15 @@ describe("resolveManagedSiteChannelMatch", () => {
   })
 
   it("resolves every recoverable URL candidate before exact key matching", async () => {
-    const firstMaskedCandidate = buildManagedSiteChannel({
-      id: 25,
+    const firstMaskedCandidate = buildManagedResourceMatchCandidate({
+      ref: matchingResourceRef(25),
       name: "First Masked URL Candidate",
       base_url: "https://api.example.com",
       models: "gpt-4",
       key: "sk-***",
     })
-    const secondMaskedCandidate = buildManagedSiteChannel({
-      id: 26,
+    const secondMaskedCandidate = buildManagedResourceMatchCandidate({
+      ref: matchingResourceRef(26),
       name: "Second Masked URL Candidate",
       base_url: "https://api.example.com",
       models: "gpt-4",
@@ -800,41 +807,43 @@ describe("resolveManagedSiteChannelMatch", () => {
     expect(fetchChannelSecretKey).toHaveBeenNthCalledWith(
       1,
       expect.objectContaining(managedConfig),
-      25,
+      matchingResourceRef(25),
       sessionResyncOptions,
     )
     expect(fetchChannelSecretKey).toHaveBeenNthCalledWith(
       2,
       expect.objectContaining(managedConfig),
-      26,
+      matchingResourceRef(26),
       sessionResyncOptions,
     )
     expect(result.key).toEqual({
       comparable: true,
       matched: true,
       reason: MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.MATCHED,
-      channel: expect.objectContaining({ id: 26 }),
+      channel: expect.objectContaining({ ref: matchingResourceRef(26) }),
     })
     expect(result.models).toEqual({
       comparable: true,
       matched: true,
       reason: MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.EXACT,
-      channel: expect.objectContaining({ id: 26 }),
+      channel: expect.objectContaining({ ref: matchingResourceRef(26) }),
       similarityScore: 1,
     })
-    expect(getManagedSiteChannelExactMatch(result)?.id).toBe(26)
+    expect(getManagedSiteChannelExactMatch(result)?.ref).toEqual(
+      matchingResourceRef(26),
+    )
   })
 
   it("omits unresolved reason when a visible exact match remains after hidden-key recovery fails", async () => {
-    const exactVisibleCandidate = buildManagedSiteChannel({
-      id: 32,
+    const exactVisibleCandidate = buildManagedResourceMatchCandidate({
+      ref: matchingResourceRef(32),
       name: "Exact Visible Candidate",
       base_url: "https://api.example.com",
       models: "gpt-4",
       key: "sk-match",
     })
-    const maskedSiblingCandidate = buildManagedSiteChannel({
-      id: 33,
+    const maskedSiblingCandidate = buildManagedResourceMatchCandidate({
+      ref: matchingResourceRef(33),
       name: "Masked Sibling Candidate",
       base_url: "https://api.example.com",
       models: "gpt-4",
@@ -869,25 +878,27 @@ describe("resolveManagedSiteChannelMatch", () => {
 
     expect(fetchChannelSecretKey).toHaveBeenCalledWith(
       expect.objectContaining(managedConfig),
-      33,
+      matchingResourceRef(33),
       sessionResyncOptions,
     )
-    expect(result.key.channel?.id).toBe(32)
-    expect(result.models.channel?.id).toBe(32)
+    expect(result.key.channel?.ref).toEqual(matchingResourceRef(32))
+    expect(result.models.channel?.ref).toEqual(matchingResourceRef(32))
     expect(result.unresolvedReason).toBeUndefined()
-    expect(getManagedSiteChannelExactMatch(result)?.id).toBe(32)
+    expect(getManagedSiteChannelExactMatch(result)?.ref).toEqual(
+      matchingResourceRef(32),
+    )
   })
 
   it("does not fetch usable out-of-bucket candidates when resolving hidden URL candidates", async () => {
-    const hiddenUrlCandidate = buildManagedSiteChannel({
-      id: 29,
+    const hiddenUrlCandidate = buildManagedResourceMatchCandidate({
+      ref: matchingResourceRef(29),
       name: "Hidden URL Candidate",
       base_url: "https://api.example.com",
       models: "claude-3",
       key: "sk-***",
     })
-    const usableOutOfBucketCandidate = buildManagedSiteChannel({
-      id: 30,
+    const usableOutOfBucketCandidate = buildManagedResourceMatchCandidate({
+      ref: matchingResourceRef(30),
       name: "Usable Out-of-Bucket Candidate",
       base_url: "https://other.example.com",
       models: "gpt-4",
@@ -917,24 +928,24 @@ describe("resolveManagedSiteChannelMatch", () => {
     expect(fetchChannelSecretKey).toHaveBeenCalledTimes(1)
     expect(fetchChannelSecretKey).toHaveBeenCalledWith(
       expect.objectContaining(managedConfig),
-      29,
+      matchingResourceRef(29),
       sessionResyncOptions,
     )
-    expect(result.key.channel?.id).toBe(29)
+    expect(result.key.channel?.ref).toEqual(matchingResourceRef(29))
     expect(result.models.channel).toBeNull()
     expect(getManagedSiteChannelExactMatch(result)).toBeNull()
   })
 
   it("keeps cached resolved keys aligned with model matching", async () => {
-    const firstMaskedCandidate = buildManagedSiteChannel({
-      id: 27,
+    const firstMaskedCandidate = buildManagedResourceMatchCandidate({
+      ref: matchingResourceRef(27),
       name: "First Cached URL Candidate",
       base_url: "https://api.example.com",
       models: "gpt-4",
       key: "sk-***",
     })
-    const secondMaskedCandidate = buildManagedSiteChannel({
-      id: 28,
+    const secondMaskedCandidate = buildManagedResourceMatchCandidate({
+      ref: matchingResourceRef(28),
       name: "Second Cached URL Candidate",
       base_url: "https://api.example.com",
       models: "gpt-4",
@@ -958,29 +969,31 @@ describe("resolveManagedSiteChannelMatch", () => {
       accountBaseUrl: "https://api.example.com",
       models: ["gpt-4"],
       key: "sk-match",
-      resolvedChannelKeysById: {
-        27: "sk-other",
-        28: "sk-match",
+      resolvedChannelKeysByResourceKey: {
+        [getManagedResourceRefKey(matchingResourceRef(27))]: "sk-other",
+        [getManagedResourceRefKey(matchingResourceRef(28))]: "sk-match",
       },
       resolveHiddenKeys: true,
     })
 
     expect(fetchChannelSecretKey).not.toHaveBeenCalled()
-    expect(result.key.channel?.id).toBe(28)
-    expect(result.models.channel?.id).toBe(28)
-    expect(getManagedSiteChannelExactMatch(result)?.id).toBe(28)
+    expect(result.key.channel?.ref).toEqual(matchingResourceRef(28))
+    expect(result.models.channel?.ref).toEqual(matchingResourceRef(28))
+    expect(getManagedSiteChannelExactMatch(result)?.ref).toEqual(
+      matchingResourceRef(28),
+    )
   })
 
   it("reuses cached channel searches and hidden-key resolutions across concurrent match checks", async () => {
-    const maskedCandidate = buildManagedSiteChannel({
-      id: 72,
+    const maskedCandidate = buildManagedResourceMatchCandidate({
+      ref: matchingResourceRef(72),
       name: "Shared Hidden Candidate",
       base_url: "https://api.example.com/v1",
       models: "gpt-4",
       key: "sk-***",
     })
     let resolveSearch: (value: {
-      items: NewApiChannel[]
+      items: ManagedResourceMatchCandidate[]
       total: number
       type_counts: Record<string, number>
     }) => void = () => {}
@@ -1004,9 +1017,9 @@ describe("resolveManagedSiteChannelMatch", () => {
       },
     })
     const requestCache = {
-      searchResultsByBaseUrl: new Map(),
-      resolvedChannelKeysById: {},
-      channelSecretKeysById: new Map(),
+      searchResultsByTargetKey: new Map(),
+      resolvedChannelKeysByResourceKey: {},
+      channelSecretKeysByResourceKey: new Map(),
     }
 
     const firstResultPromise = resolveManagedSiteChannelMatch({
@@ -1042,17 +1055,17 @@ describe("resolveManagedSiteChannelMatch", () => {
     const results = await Promise.all([firstResultPromise, secondResultPromise])
 
     expect(fetchChannelSecretKey).toHaveBeenCalledTimes(1)
-    expect(requestCache.resolvedChannelKeysById).toEqual({
-      72: "sk-match",
+    expect(requestCache.resolvedChannelKeysByResourceKey).toEqual({
+      [getManagedResourceRefKey(matchingResourceRef(72))]: "sk-match",
     })
     expect(
-      results.map((result) => getManagedSiteChannelExactMatch(result)?.id),
-    ).toEqual([72, 72])
+      results.map((result) => getManagedSiteChannelExactMatch(result)?.ref),
+    ).toEqual([matchingResourceRef(72), matchingResourceRef(72)])
   })
 
   it("keeps the advisory-match state when hidden-key recovery still needs verification", async () => {
-    const hiddenUrlOnlyCandidate = buildManagedSiteChannel({
-      id: 31,
+    const hiddenUrlOnlyCandidate = buildManagedResourceMatchCandidate({
+      ref: matchingResourceRef(31),
       name: "Verification Pending Candidate",
       base_url: "https://api.example.com",
       models: "claude-3",
@@ -1087,12 +1100,12 @@ describe("resolveManagedSiteChannelMatch", () => {
 
     expect(fetchChannelSecretKey).toHaveBeenCalledWith(
       expect.objectContaining(managedConfig),
-      31,
+      matchingResourceRef(31),
       sessionResyncOptions,
     )
     expect(result.url).toEqual({
       matched: true,
-      channel: expect.objectContaining({ id: 31 }),
+      channel: expect.objectContaining({ ref: matchingResourceRef(31) }),
       candidateCount: 1,
     })
     expect(result.key).toEqual({
@@ -1116,8 +1129,8 @@ describe("resolveManagedSiteChannelMatch", () => {
       .mockRejectedValueOnce(new Error("temporary search failure"))
       .mockResolvedValueOnce({
         items: [
-          buildManagedSiteChannel({
-            id: 82,
+          buildManagedResourceMatchCandidate({
+            ref: matchingResourceRef(82),
             key: "sk-match",
             base_url: "https://api.example.com",
             models: "gpt-4o",
@@ -1153,8 +1166,8 @@ describe("resolveManagedSiteChannelMatch", () => {
 
   it("evicts failed cached channel-key fetches so later hidden-key recovery can retry", async () => {
     const requestCache = createManagedSiteChannelMatchRequestCache()
-    const hiddenCandidate = buildManagedSiteChannel({
-      id: 83,
+    const hiddenCandidate = buildManagedResourceMatchCandidate({
+      ref: matchingResourceRef(83),
       key: "",
       base_url: "https://api.example.com",
       models: "gpt-4o",
@@ -1189,7 +1202,9 @@ describe("resolveManagedSiteChannelMatch", () => {
     expect(firstResult.unresolvedReason).toBe(
       MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.VERIFICATION_REQUIRED,
     )
-    expect(getManagedSiteChannelExactMatch(secondResult)?.id).toBe(83)
+    expect(getManagedSiteChannelExactMatch(secondResult)?.ref).toEqual(
+      matchingResourceRef(83),
+    )
     expect(fetchChannelSecretKey).toHaveBeenCalledTimes(2)
   })
 })

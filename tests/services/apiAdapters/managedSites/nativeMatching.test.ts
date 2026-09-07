@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { axonHubManagedSiteCapabilities } from "~/services/apiAdapters/managedSites/axonHub"
 import { claudeCodeHubManagedSiteCapabilities } from "~/services/apiAdapters/managedSites/claudeCodeHub"
 import { sub2ApiManagedSiteCapabilities } from "~/services/apiAdapters/managedSites/sub2api"
@@ -24,6 +25,10 @@ import {
 } from "~/services/managedSites/providers/sub2api"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
+import {
+  buildManagedResourceMatchCandidate,
+  matchingResourceRef,
+} from "~~/tests/test-utils/managedResourceMatching"
 
 vi.mock("~/services/apiService/axonHub", async (original) => ({
   ...(await original<typeof import("~/services/apiService/axonHub")>()),
@@ -59,8 +64,82 @@ const subConfig = {
   adminToken: "test-admin-key",
 }
 
+const secretProviders = [
+  {
+    capabilities: axonHubManagedSiteCapabilities,
+    reveal: getAxonHubChannelSecretKey,
+  },
+  {
+    capabilities: claudeCodeHubManagedSiteCapabilities,
+    reveal: getUnmaskedProviderKey,
+  },
+  { capabilities: sub2ApiManagedSiteCapabilities, reveal: revealSub2ApiApiKey },
+]
+
 describe("native managed-resource matching", () => {
   beforeEach(() => vi.clearAllMocks())
+
+  it.each(secretProviders)(
+    "validates the entire $capabilities.siteType hydration selection before revealing its first key",
+    async ({ capabilities, reveal }) => {
+      const candidates = [
+        buildManagedResourceMatchCandidate({
+          ref: matchingResourceRef(7, { siteType: capabilities.siteType }),
+          key: "********",
+        }),
+        buildManagedResourceMatchCandidate({
+          ref: matchingResourceRef(8, {
+            siteType: capabilities.siteType,
+            scopeKey: "https://other.example",
+          }),
+          key: "********",
+        }),
+      ]
+
+      await expect(
+        capabilities.matching.hydrateComparableKeys!(
+          { ...axonConfig, ...subConfig },
+          candidates,
+        ),
+      ).rejects.toMatchObject({ failure: { code: "validation_failed" } })
+      expect(reveal).not.toHaveBeenCalled()
+      expect(candidates.map((candidate) => candidate.key)).toEqual([
+        "********",
+        "********",
+      ])
+    },
+  )
+
+  it.each(secretProviders)(
+    "rejects a foreign site type or resource kind before a $capabilities.siteType secret read",
+    async ({ capabilities, reveal }) => {
+      const ref = matchingResourceRef(7, { siteType: capabilities.siteType })
+      for (const foreignRef of [
+        { ...ref, siteType: SITE_TYPES.NEW_API },
+        { ...ref, kind: "token" as ManagedResourceRef["kind"] },
+      ]) {
+        await expect(
+          capabilities.matching.fetchSecretKey!(
+            { ...axonConfig, ...subConfig },
+            foreignRef,
+          ),
+        ).rejects.toMatchObject({ failure: { code: "validation_failed" } })
+      }
+      expect(reveal).not.toHaveBeenCalled()
+    },
+  )
+
+  it("rejects a foreign deployment before revealing a matching resource key", async () => {
+    await expect(
+      axonHubManagedSiteCapabilities.matching.fetchSecretKey!(axonConfig, {
+        siteType: SITE_TYPES.AXON_HUB,
+        kind: "channel",
+        scopeKey: "https://other.example",
+        resourceId: "Channel:opaque-id",
+      }),
+    ).rejects.toMatchObject({ failure: { code: "validation_failed" } })
+    expect(getAxonHubChannelSecretKey).not.toHaveBeenCalled()
+  })
 
   it("retains opaque AxonHub identity through pagination and exact matching", async () => {
     vi.mocked(listAxonHubChannelPage)
@@ -101,7 +180,9 @@ describe("native managed-resource matching", () => {
       limit: 100,
     })
     expect(result.key.channel).toEqual({
-      id: "Channel:opaque-id",
+      ref: matchingResourceRef("Channel:opaque-id", {
+        siteType: SITE_TYPES.AXON_HUB,
+      }),
       name: "Native channel",
       type: "openai",
       base_url: "https://upstream.example/v1",
@@ -140,7 +221,11 @@ describe("native managed-resource matching", () => {
     vi.mocked(getAxonHubChannelSecretKey).mockResolvedValue("first\nsecond")
     const candidates = [
       { ...list!.items[0], key: "********" },
-      { ...list!.items[0], id: "usable", key: "existing-key" },
+      {
+        ...list!.items[0],
+        ref: matchingResourceRef("usable", { siteType: SITE_TYPES.AXON_HUB }),
+        key: "existing-key",
+      },
     ]
     await expect(
       matching.hydrateComparableKeys!(axonConfig, candidates, options),
@@ -157,7 +242,7 @@ describe("native managed-resource matching", () => {
     const aborted = new DOMException("Aborted", "AbortError")
     vi.mocked(getAxonHubChannelSecretKey).mockRejectedValue(aborted)
     await expect(
-      matching.fetchSecretKey!(axonConfig, "opaque", options),
+      matching.fetchSecretKey!(axonConfig, list!.items[0].ref, options),
     ).rejects.toBe(aborted)
   })
 
@@ -203,7 +288,9 @@ describe("native managed-resource matching", () => {
       requireCompleteInventory: true,
     })
     expect(result?.items[0]).not.toHaveProperty("balance")
-    expect(result?.items[0].id).toBe(5)
+    expect(result?.items[0].ref).toEqual(
+      matchingResourceRef(5, { siteType: SITE_TYPES.VELOERA }),
+    )
   })
 
   it("inventories Sub2API API-key accounts without name search or exposing credentials", async () => {
@@ -229,7 +316,7 @@ describe("native managed-resource matching", () => {
     )
     expect(searchSub2ApiApiKeyAccounts).not.toHaveBeenCalled()
     expect(result?.items[0]).toMatchObject({
-      id: 8,
+      ref: matchingResourceRef(8, { siteType: SITE_TYPES.SUB2API }),
       type: "openai",
       base_url: "https://upstream.example",
       models: "",
@@ -260,7 +347,7 @@ describe("native managed-resource matching", () => {
       "https://upstream.example",
     )
     expect(result?.items[0]).toEqual({
-      id: 7,
+      ref: matchingResourceRef(7, { siteType: SITE_TYPES.CLAUDE_CODE_HUB }),
       name: "Provider",
       type: "claude",
       base_url: "https://upstream.example",
@@ -291,7 +378,7 @@ describe("native managed-resource matching", () => {
     ).resolves.toEqual({
       items: [
         {
-          id: 9,
+          ref: matchingResourceRef(9, { siteType: SITE_TYPES.SUB2API }),
           name: "Sub2API Account 9",
           type: "anthropic",
           base_url: "",
@@ -299,7 +386,7 @@ describe("native managed-resource matching", () => {
           models: "",
         },
         {
-          id: 10,
+          ref: matchingResourceRef(10, { siteType: SITE_TYPES.SUB2API }),
           name: "Unconfigured",
           type: "openai",
           base_url: "",
@@ -315,17 +402,21 @@ describe("native managed-resource matching", () => {
   it("resolves Sub2API masked keys while preserving usable keys and candidate metadata", async () => {
     const matching = sub2ApiManagedSiteCapabilities.matching
     const masked = {
-      id: 8,
+      ref: matchingResourceRef(8, { siteType: SITE_TYPES.SUB2API }),
       name: "Masked account",
       type: "openai",
       base_url: "https://upstream.example",
       models: "gpt-4o",
       key: "********",
     }
-    const usable = { ...masked, id: 9, key: "existing-key" }
+    const usable = {
+      ...masked,
+      ref: matchingResourceRef(9, { siteType: SITE_TYPES.SUB2API }),
+      key: "existing-key",
+    }
     vi.mocked(revealSub2ApiApiKey).mockResolvedValue("resolved-key")
 
-    await expect(matching.fetchSecretKey!(subConfig, 8)).resolves.toBe(
+    await expect(matching.fetchSecretKey!(subConfig, masked.ref)).resolves.toBe(
       "resolved-key",
     )
     await expect(
@@ -333,7 +424,11 @@ describe("native managed-resource matching", () => {
     ).resolves.toEqual([{ ...masked, key: "resolved-key" }, usable])
     expect(masked.key).toBe("********")
     expect(revealSub2ApiApiKey).toHaveBeenCalledTimes(2)
-    expect(revealSub2ApiApiKey).toHaveBeenLastCalledWith(subConfig, 8)
+    expect(revealSub2ApiApiKey).toHaveBeenLastCalledWith(
+      subConfig,
+      8,
+      undefined,
+    )
   })
 
   it.each([
@@ -380,7 +475,7 @@ describe("native managed-resource matching", () => {
           subConfig,
           [
             {
-              id: 8,
+              ref: matchingResourceRef(8, { siteType: SITE_TYPES.SUB2API }),
               name: "Masked account",
               type: "openai",
               base_url: "https://upstream.example",
@@ -408,7 +503,7 @@ describe("native managed-resource matching", () => {
           subConfig,
           [
             {
-              id: 8,
+              ref: matchingResourceRef(8, { siteType: SITE_TYPES.SUB2API }),
               name: "Masked account",
               type: "openai",
               base_url: "https://upstream.example",
@@ -435,7 +530,7 @@ describe("native managed-resource matching", () => {
     ).resolves.toEqual({
       items: [
         {
-          id: 8,
+          ref: matchingResourceRef(8, { siteType: SITE_TYPES.CLAUDE_CODE_HUB }),
           name: "Provider 8",
           type: "openai-compatible",
           base_url: "",
@@ -443,7 +538,7 @@ describe("native managed-resource matching", () => {
           models: "",
         },
         {
-          id: 9,
+          ref: matchingResourceRef(9, { siteType: SITE_TYPES.CLAUDE_CODE_HUB }),
           name: "Unconfigured",
           type: "openai-compatible",
           base_url: "",
@@ -459,21 +554,28 @@ describe("native managed-resource matching", () => {
   it("resolves Claude Code Hub keys through native provider identities without mutating candidates", async () => {
     const matching = claudeCodeHubManagedSiteCapabilities.matching
     const masked = {
-      id: 8,
+      ref: matchingResourceRef(8, { siteType: SITE_TYPES.CLAUDE_CODE_HUB }),
       name: "Masked provider",
       type: "claude",
       base_url: "https://upstream.example",
       models: "claude-sonnet",
       key: "********",
     }
-    const usable = { ...masked, id: 9, key: "existing-key" }
+    const usable = {
+      ...masked,
+      ref: matchingResourceRef(9, { siteType: SITE_TYPES.CLAUDE_CODE_HUB }),
+      key: "existing-key",
+    }
     vi.mocked(getUnmaskedProviderKey)
       .mockResolvedValueOnce("direct-key")
       .mockResolvedValueOnce(" hydrated-key ")
 
-    await expect(matching.fetchSecretKey!(subConfig, 7)).resolves.toBe(
-      "direct-key",
-    )
+    await expect(
+      matching.fetchSecretKey!(
+        subConfig,
+        matchingResourceRef(7, { siteType: SITE_TYPES.CLAUDE_CODE_HUB }),
+      ),
+    ).resolves.toBe("direct-key")
     await expect(
       matching.hydrateComparableKeys!(subConfig, [masked, usable]),
     ).resolves.toEqual([{ ...masked, key: "hydrated-key" }, usable])
@@ -499,7 +601,7 @@ describe("native managed-resource matching", () => {
     await expect(
       sub2ApiManagedSiteCapabilities.matching.fetchSecretKey!(
         subConfig,
-        "opaque-id",
+        matchingResourceRef("opaque-id", { siteType: SITE_TYPES.SUB2API }),
       ),
     ).rejects.toThrow("Invalid numeric resource id")
     expect(revealSub2ApiApiKey).not.toHaveBeenCalled()

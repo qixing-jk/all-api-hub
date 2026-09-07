@@ -22,6 +22,7 @@ import {
 } from "~/types/accountTodayStats"
 import type { ManagedSiteChannelDraftSource } from "~/types/managedSiteChannelDraft"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
+import { matchingResourceRef } from "~~/tests/test-utils/managedResourceMatching"
 import { render } from "~~/tests/test-utils/render"
 
 import {
@@ -32,7 +33,6 @@ import {
   getManagedSiteCapabilitiesMock,
   hasValidManagedSiteConfigMock,
   mockTogglePinAccount,
-  openManagedSiteChannelsForChannelMock,
   openManagedSiteChannelsPageMock,
   resolveDisplayAccountRuntimeKeySecretMock,
   startProductAnalyticsActionMock,
@@ -340,7 +340,10 @@ describe("AccountActionButtons", () => {
           search: vi.fn().mockResolvedValue({
             items: [
               {
-                id: resourceId,
+                ref: matchingResourceRef(resourceId, {
+                  siteType,
+                  scopeKey: config.baseUrl,
+                }),
                 name: "Managed Channel 123",
                 base_url: "https://api.example.com",
                 models: "gpt-4",
@@ -384,11 +387,14 @@ describe("AccountActionButtons", () => {
       await user.click(button!)
 
       await waitFor(() => {
-        expect(openManagedSiteChannelsForChannelMock).toHaveBeenCalledWith(
-          resourceId,
-        )
+        expect(openManagedSiteChannelsPageMock).toHaveBeenCalledWith({
+          resourceRef: matchingResourceRef(resourceId, {
+            siteType,
+            scopeKey: config.baseUrl,
+          }),
+        })
       })
-      expect(openManagedSiteChannelsPageMock).not.toHaveBeenCalled()
+      expect(openManagedSiteChannelsPageMock).toHaveBeenCalledTimes(1)
     },
   )
 
@@ -414,7 +420,9 @@ describe("AccountActionButtons", () => {
         search: vi.fn().mockResolvedValue({
           items: [
             {
-              id: 321,
+              ref: matchingResourceRef(321, {
+                scopeKey: "https://admin.example",
+              }),
               name: "Matched Managed Channel",
               base_url: "https://api.example.com",
               models: "gpt-4",
@@ -458,13 +466,17 @@ describe("AccountActionButtons", () => {
     await user.click(button!)
 
     await waitFor(() => {
-      expect(openManagedSiteChannelsForChannelMock).toHaveBeenCalledWith(321)
+      expect(openManagedSiteChannelsPageMock).toHaveBeenCalledWith({
+        resourceRef: matchingResourceRef(321, {
+          scopeKey: "https://admin.example",
+        }),
+      })
     })
     expect(managedService.matching.search).toHaveBeenCalledWith(
       expect.any(Object),
       "https://api.example.com",
     )
-    expect(openManagedSiteChannelsPageMock).not.toHaveBeenCalled()
+    expect(openManagedSiteChannelsPageMock).toHaveBeenCalledTimes(1)
   })
 
   it("locates a service credential channel with its refreshed API endpoint and secret", async () => {
@@ -514,7 +526,9 @@ describe("AccountActionButtons", () => {
         search: vi.fn().mockResolvedValue({
           items: [
             {
-              id: 789,
+              ref: matchingResourceRef(789, {
+                scopeKey: "https://admin.example",
+              }),
               name: "Service Credential Channel",
               base_url: "https://runtime.example.invalid",
               models: "gpt-4",
@@ -547,7 +561,11 @@ describe("AccountActionButtons", () => {
     )
 
     await waitFor(() =>
-      expect(openManagedSiteChannelsForChannelMock).toHaveBeenCalledWith(789),
+      expect(openManagedSiteChannelsPageMock).toHaveBeenCalledWith({
+        resourceRef: matchingResourceRef(789, {
+          scopeKey: "https://admin.example",
+        }),
+      }),
     )
     expect(managedService.channelDrafts.prepareFormData).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -559,7 +577,7 @@ describe("AccountActionButtons", () => {
       expect.any(Object),
       "https://runtime.example.invalid",
     )
-    expect(openManagedSiteChannelsPageMock).not.toHaveBeenCalled()
+    expect(openManagedSiteChannelsPageMock).toHaveBeenCalledTimes(1)
   })
 
   it("uses a scoped verification grant when account locate must recover a hidden New API key", async () => {
@@ -585,7 +603,9 @@ describe("AccountActionButtons", () => {
         search: vi.fn().mockResolvedValue({
           items: [
             {
-              id: 322,
+              ref: matchingResourceRef(322, {
+                scopeKey: "https://admin.example",
+              }),
               name: "Hidden Managed Channel",
               base_url: "https://api.example.com",
               models: "gpt-4",
@@ -626,7 +646,11 @@ describe("AccountActionButtons", () => {
     )
 
     await waitFor(() => {
-      expect(openManagedSiteChannelsForChannelMock).toHaveBeenCalledWith(322)
+      expect(openManagedSiteChannelsPageMock).toHaveBeenCalledWith({
+        resourceRef: matchingResourceRef(322, {
+          scopeKey: "https://admin.example",
+        }),
+      })
     })
     expect(withProtectionBypassUserCommandMock).toHaveBeenCalledWith(
       "manage_site_channels",
@@ -635,7 +659,7 @@ describe("AccountActionButtons", () => {
     )
     expect(fetchChannelSecretKey).toHaveBeenCalledWith(
       expect.any(Object),
-      322,
+      matchingResourceRef(322, { scopeKey: "https://admin.example" }),
       expect.objectContaining({
         protectionBypassExecution: expect.objectContaining({
           kind: "user_command",
@@ -667,7 +691,9 @@ describe("AccountActionButtons", () => {
         search: vi.fn().mockResolvedValue({
           items: [
             {
-              id: 654,
+              ref: matchingResourceRef(654, {
+                scopeKey: "https://admin.example",
+              }),
               name: "Resource Managed Channel",
               type: 1,
               base_url: "https://api.example.com",
@@ -712,19 +738,24 @@ describe("AccountActionButtons", () => {
     await user.click(button!)
 
     await waitFor(() => {
-      expect(openManagedSiteChannelsForChannelMock).toHaveBeenCalledWith(654)
+      expect(openManagedSiteChannelsPageMock).toHaveBeenCalledWith({
+        resourceRef: matchingResourceRef(654, {
+          scopeKey: "https://admin.example",
+        }),
+      })
     })
     expect(managedService.matching.search).toHaveBeenCalledWith(
       expect.any(Object),
       "https://api.example.com",
     )
-    expect(openManagedSiteChannelsPageMock).not.toHaveBeenCalled()
+    expect(openManagedSiteChannelsPageMock).toHaveBeenCalledTimes(1)
   })
 
   it("uses a secondary exact-model explanation when the account key is blank", async () => {
     fetchAccountTokensMock.mockResolvedValueOnce([{ key: "" }])
 
     const managedService = {
+      siteType: SITE_TYPES.NEW_API,
       config: {
         get: vi.fn().mockResolvedValue({
           baseUrl: "https://admin.example",
@@ -743,7 +774,9 @@ describe("AccountActionButtons", () => {
         search: vi.fn().mockResolvedValue({
           items: [
             {
-              id: 456,
+              ref: matchingResourceRef(456, {
+                scopeKey: "https://admin.example",
+              }),
               name: "Managed Channel 456",
               base_url: "https://api.example.com",
               models: "gpt-4",
@@ -807,13 +840,16 @@ describe("AccountActionButtons", () => {
         token: expect.objectContaining({ key: "" }),
       }),
     )
-    expect(openManagedSiteChannelsForChannelMock).not.toHaveBeenCalled()
+    expect(openManagedSiteChannelsPageMock).not.toHaveBeenCalledWith(
+      expect.objectContaining({ resourceRef: expect.anything() }),
+    )
   })
 
   it("falls back to a fuzzy URL-only explanation when no secondary match exists", async () => {
     fetchAccountTokensMock.mockResolvedValueOnce([{ key: "sk-1" }])
 
     const managedService = {
+      siteType: SITE_TYPES.NEW_API,
       config: {
         get: vi.fn().mockResolvedValue({
           baseUrl: "https://admin.example",
@@ -832,7 +868,9 @@ describe("AccountActionButtons", () => {
         search: vi.fn().mockResolvedValue({
           items: [
             {
-              id: 456,
+              ref: matchingResourceRef(456, {
+                scopeKey: "https://admin.example",
+              }),
               name: "Managed Channel 456",
               base_url: "https://api.example.com",
               models: "claude-3",
@@ -881,7 +919,9 @@ describe("AccountActionButtons", () => {
         "account:actions.channelLocateFuzzyUrlOnly",
       )
     })
-    expect(openManagedSiteChannelsForChannelMock).not.toHaveBeenCalled()
+    expect(openManagedSiteChannelsPageMock).not.toHaveBeenCalledWith(
+      expect.objectContaining({ resourceRef: expect.anything() }),
+    )
   })
 
   it("shows a no-key fallback when the account has no API tokens", async () => {

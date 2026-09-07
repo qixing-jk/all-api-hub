@@ -1,12 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import {
-  octopusManagedResourceModels,
-  octopusManagedSiteCapabilities,
-} from "~/services/apiAdapters/managedSites/octopus"
+import { octopusManagedResourceModels } from "~/services/apiAdapters/managedResources/octopusOperations"
+import { octopusManagedSiteCapabilities } from "~/services/apiAdapters/managedSites/octopus"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import type { OctopusChannel } from "~/types/octopus"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
+import { modelResourceRef } from "~~/tests/test-utils/managedModelResource"
 
 const octopusApi = vi.hoisted(() => {
   class OctopusMutationApiError extends Error {
@@ -115,7 +114,10 @@ describe("Octopus managed-site channel capability", () => {
     ).resolves.toEqual({
       items: [
         {
-          id: 7,
+          ref: modelResourceRef(7, {
+            siteType: "octopus",
+            scopeKey: config.baseUrl,
+          }),
           name: "Native channel",
           type: 0,
           base_url: "https://upstream.example",
@@ -123,7 +125,10 @@ describe("Octopus managed-site channel capability", () => {
           key: "first-key\nsecond-key",
         },
         {
-          id: 8,
+          ref: modelResourceRef(8, {
+            siteType: "octopus",
+            scopeKey: config.baseUrl,
+          }),
           name: "Native channel",
           type: 0,
           base_url: "",
@@ -149,7 +154,7 @@ describe("Octopus managed-site channel capability", () => {
     await expect(
       octopusManagedResourceModels.updateModels?.(
         config,
-        7,
+        modelResourceRef(7, { siteType: "octopus", scopeKey: config.baseUrl }),
         ["model-a", "model-b"],
         {
           signal: controller.signal,
@@ -183,7 +188,11 @@ describe("Octopus managed-site channel capability", () => {
     })
 
     await expect(
-      octopusManagedResourceModels.updateModels?.(config, 7, ["model-a"]),
+      octopusManagedResourceModels.updateModels?.(
+        config,
+        modelResourceRef(7, { siteType: "octopus", scopeKey: config.baseUrl }),
+        ["model-a"],
+      ),
     ).resolves.toMatchObject({ outcome: "succeeded", data: undefined })
 
     expect(octopusApi.updateChannel).toHaveBeenCalledWith(config, {
@@ -204,10 +213,15 @@ describe("Octopus managed-site channel capability", () => {
     })
 
     await expect(
-      octopusManagedResourceModels.updateModels(config, 7, ["model-a"], {
-        signal,
-        protectionBypassExecution,
-      }),
+      octopusManagedResourceModels.updateModels(
+        config,
+        modelResourceRef(7, { siteType: "octopus", scopeKey: config.baseUrl }),
+        ["model-a"],
+        {
+          signal,
+          protectionBypassExecution,
+        },
+      ),
     ).resolves.toMatchObject({ outcome: "succeeded" })
     expect(octopusApi.updateChannel).toHaveBeenCalledWith(
       config,

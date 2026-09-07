@@ -12,6 +12,8 @@ import {
   type ChannelMutationScenario,
 } from "~~/tests/services/apiAdapters/managedSites/channelMutationContract"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
+import { modelResourceRef } from "~~/tests/test-utils/managedModelResource"
+import { buildManagedResourceMatchCandidate } from "~~/tests/test-utils/managedResourceMatching"
 
 const veloeraApi = vi.hoisted(() => ({
   listAllChannels: vi.fn(),
@@ -72,17 +74,33 @@ describe("Veloera managed-site channel capability", () => {
     await expect(
       veloeraManagedSiteCapabilities.matching.fetchSecretKey!(
         config,
-        7,
+        modelResourceRef(7, { siteType: "Veloera", scopeKey: config.baseUrl }),
         options,
       ),
     ).resolves.toBe("resolved-key")
     await expect(
       veloeraManagedSiteCapabilities.matching.hydrateComparableKeys!(
         config,
-        [{ id: 8, key: "********" } as never],
+        [
+          buildManagedResourceMatchCandidate({
+            ref: modelResourceRef(8, {
+              siteType: "Veloera",
+              scopeKey: config.baseUrl,
+            }),
+            key: "********",
+          }),
+        ],
         options,
       ),
-    ).resolves.toEqual([{ id: 8, key: "resolved-key" }])
+    ).resolves.toEqual([
+      buildManagedResourceMatchCandidate({
+        ref: modelResourceRef(8, {
+          siteType: "Veloera",
+          scopeKey: config.baseUrl,
+        }),
+        key: "resolved-key",
+      }),
+    ])
     expect(veloeraApi.fetchChannel).toHaveBeenCalledWith(
       expect.objectContaining({ abortSignal: signal }),
       7,
@@ -251,7 +269,10 @@ describe("Veloera managed-site channel capability", () => {
       invoke: async () => {
         return await veloeraManagedResourceModels.updateModels!(
           config,
-          7,
+          modelResourceRef(7, {
+            siteType: "Veloera",
+            scopeKey: config.baseUrl,
+          }),
           models,
         )
       },
@@ -276,7 +297,10 @@ describe("Veloera managed-site channel capability", () => {
       invoke: async () => {
         return await veloeraManagedResourceModels.updateModelMapping!(
           config,
-          7,
+          modelResourceRef(7, {
+            siteType: "Veloera",
+            scopeKey: config.baseUrl,
+          }),
           models,
           modelMapping,
         )
@@ -302,7 +326,11 @@ describe("Veloera managed-site channel capability", () => {
     })
 
     await expect(
-      veloeraManagedResourceModels.updateModels!(config, 7, models),
+      veloeraManagedResourceModels.updateModels!(
+        config,
+        modelResourceRef(7, { siteType: "Veloera", scopeKey: config.baseUrl }),
+        models,
+      ),
     ).rejects.toBe(responseError)
   })
 
@@ -315,7 +343,11 @@ describe("Veloera managed-site channel capability", () => {
     })
 
     await expect(
-      veloeraManagedResourceModels.updateModels!(config, 7, models),
+      veloeraManagedResourceModels.updateModels!(
+        config,
+        modelResourceRef(7, { siteType: "Veloera", scopeKey: config.baseUrl }),
+        models,
+      ),
     ).resolves.toEqual({
       outcome: "rejected",
       diagnostic: {
@@ -400,18 +432,22 @@ describe("Veloera managed-site channel capability", () => {
     await veloeraChannelOperations.update(config, { id: 1 })
     await veloeraChannelOperations.delete(config, 1)
     const fetchModelsSignal = new AbortController().signal
-    await veloeraManagedResourceModels.fetchModels?.(config, 1, {
-      signal: fetchModelsSignal,
-    })
+    await veloeraManagedResourceModels.fetchModels?.(
+      config,
+      modelResourceRef(1, { siteType: "Veloera", scopeKey: config.baseUrl }),
+      {
+        signal: fetchModelsSignal,
+      },
+    )
     await veloeraManagedResourceModels.updateModels?.(
       config,
-      1,
+      modelResourceRef(1, { siteType: "Veloera", scopeKey: config.baseUrl }),
       ["gpt-4o", "claude-3"],
       { signal: new AbortController().signal },
     )
     await veloeraManagedResourceModels.updateModelMapping?.(
       config,
-      1,
+      modelResourceRef(1, { siteType: "Veloera", scopeKey: config.baseUrl }),
       ["gpt-4o", "claude-3"],
       { "gpt-4o": "gpt-4o" },
       { signal: new AbortController().signal },
@@ -535,7 +571,10 @@ describe("Veloera managed-site channel capability", () => {
       key: "veloera-secret",
     })
     await expect(
-      veloeraManagedSiteCapabilities.matching.fetchSecretKey?.(config, 42),
+      veloeraManagedSiteCapabilities.matching.fetchSecretKey?.(
+        config,
+        modelResourceRef(42, { siteType: "Veloera", scopeKey: config.baseUrl }),
+      ),
     ).resolves.toBe("veloera-secret")
     expect(veloeraApi.fetchChannel).toHaveBeenCalledWith(request, 42)
 
@@ -545,12 +584,36 @@ describe("Veloera managed-site channel capability", () => {
     })
     await expect(
       veloeraManagedSiteCapabilities.matching.hydrateComparableKeys?.(config, [
-        { id: 1, key: "sk-live" },
-        { id: 7, key: "sk-********" },
-      ] as never),
+        buildManagedResourceMatchCandidate({
+          ref: modelResourceRef(1, {
+            siteType: "Veloera",
+            scopeKey: config.baseUrl,
+          }),
+          key: "sk-live",
+        }),
+        buildManagedResourceMatchCandidate({
+          ref: modelResourceRef(7, {
+            siteType: "Veloera",
+            scopeKey: config.baseUrl,
+          }),
+          key: "sk-********",
+        }),
+      ]),
     ).resolves.toEqual([
-      { id: 1, key: "sk-live" },
-      { id: 7, key: "veloera-hydrated" },
+      buildManagedResourceMatchCandidate({
+        ref: modelResourceRef(1, {
+          siteType: "Veloera",
+          scopeKey: config.baseUrl,
+        }),
+        key: "sk-live",
+      }),
+      buildManagedResourceMatchCandidate({
+        ref: modelResourceRef(7, {
+          siteType: "Veloera",
+          scopeKey: config.baseUrl,
+        }),
+        key: "veloera-hydrated",
+      }),
     ])
     expect(veloeraApi.fetchChannel).toHaveBeenCalledWith(request, 7)
   })

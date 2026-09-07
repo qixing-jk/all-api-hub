@@ -7,6 +7,7 @@ import {
 } from "~/services/managedSites/channelMatch"
 import type { ManagedSiteChannelMatchContext } from "~/services/managedSites/channelMatchResolver"
 import { resolveManagedSiteImportDuplicate } from "~/services/managedSites/importDuplicateResolution"
+import { matchingResourceRef } from "~~/tests/test-utils/managedResourceMatching"
 
 const managedConfig = {
   baseUrl: "https://managed.example",
@@ -49,7 +50,7 @@ describe("resolveManagedSiteImportDuplicate", () => {
         search: vi.fn().mockResolvedValue({
           items: [
             {
-              id: 42,
+              ref: matchingResourceRef(42),
               name: "Masked Duplicate",
               key: "",
               base_url: "https://api.example.com",
@@ -79,7 +80,7 @@ describe("resolveManagedSiteImportDuplicate", () => {
         search: vi.fn().mockResolvedValue({
           items: [
             {
-              id: 43,
+              ref: matchingResourceRef(43),
               name: "Masked Duplicate",
               key: "",
               base_url: "https://api.example.com",
@@ -115,7 +116,7 @@ describe("resolveManagedSiteImportDuplicate", () => {
         search: vi.fn().mockResolvedValue({
           items: [
             {
-              id: 44,
+              ref: matchingResourceRef(44),
               name: "Masked Different Models",
               key: "",
               base_url: "https://api.example.com",
@@ -174,14 +175,14 @@ describe("resolveManagedSiteImportDuplicate", () => {
         search: vi.fn().mockResolvedValue({
           items: [
             {
-              id: 47,
+              ref: matchingResourceRef(47),
               name: "Same Models Different Key",
               key: "test-other-key",
               base_url: "https://api.example.com",
               models: "gpt-4o",
             },
             {
-              id: 48,
+              ref: matchingResourceRef(48),
               name: "Exact Duplicate",
               key: "test-key",
               base_url: "https://api.example.com",
@@ -199,24 +200,25 @@ describe("resolveManagedSiteImportDuplicate", () => {
         formData,
       }),
     ).resolves.toMatchObject({
-      id: 48,
+      ref: matchingResourceRef(48),
       name: "Exact Duplicate",
     })
   })
 
-  it("ignores malformed candidates that cannot match comparable import inputs", async () => {
+  it("ignores candidates with valid identities but no comparable import inputs", async () => {
     const managedSite = createService({
       matching: {
         search: vi.fn().mockResolvedValue({
           items: [
             {
-              name: "Missing Identifier",
+              ref: matchingResourceRef(48),
+              name: "Unrelated Channel",
               key: "test-key",
               base_url: "https://other.example.com",
               models: "gpt-4o",
             },
             {
-              id: 49,
+              ref: matchingResourceRef(49),
               key: "test-key",
               base_url: "",
               models: "",
@@ -235,13 +237,38 @@ describe("resolveManagedSiteImportDuplicate", () => {
     ).resolves.toBeNull()
   })
 
+  it("rejects an inventory without a complete resource identity before concluding there is no duplicate", async () => {
+    const managedSite = createService({
+      matching: {
+        search: vi.fn().mockResolvedValue({
+          items: [
+            {
+              name: "Missing Identifier",
+              key: "test-key",
+              base_url: "https://other.example.com",
+              models: "gpt-4o",
+            },
+          ],
+        }),
+      },
+    })
+
+    await expect(
+      resolveManagedSiteImportDuplicate({
+        managedSite,
+        managedConfig,
+        formData,
+      }),
+    ).rejects.toMatchObject({ failure: { code: "validation_failed" } })
+  })
+
   it("matches duplicate candidates with the same multiple-model set", async () => {
     const managedSite = createService({
       matching: {
         search: vi.fn().mockResolvedValue({
           items: [
             {
-              id: 50,
+              ref: matchingResourceRef(50),
               name: "Multiple Model Duplicate",
               key: "test-key",
               base_url: "https://api.example.com",
@@ -262,7 +289,7 @@ describe("resolveManagedSiteImportDuplicate", () => {
         },
       }),
     ).resolves.toMatchObject({
-      id: 50,
+      ref: matchingResourceRef(50),
       name: "Multiple Model Duplicate",
     })
   })
@@ -273,7 +300,7 @@ describe("resolveManagedSiteImportDuplicate", () => {
         search: vi.fn().mockResolvedValue({
           items: [
             {
-              id: 51,
+              ref: matchingResourceRef(51),
               name: "No Model Candidate",
               key: "test-key",
               base_url: "https://api.example.com",
@@ -303,7 +330,7 @@ describe("resolveManagedSiteImportDuplicate", () => {
         search: vi.fn().mockResolvedValue({
           items: [
             {
-              id: 52,
+              ref: matchingResourceRef(52, { siteType: SITE_TYPES.SUB2API }),
               name: "Sub2API Duplicate",
               key: "test-key",
               base_url: "https://api.example.com",
@@ -320,7 +347,10 @@ describe("resolveManagedSiteImportDuplicate", () => {
         managedConfig,
         formData: { ...formData, models: [] },
       }),
-    ).resolves.toMatchObject({ id: 52, name: "Sub2API Duplicate" })
+    ).resolves.toMatchObject({
+      ref: matchingResourceRef(52, { siteType: SITE_TYPES.SUB2API }),
+      name: "Sub2API Duplicate",
+    })
   })
 
   it("does not merge separate Sub2API URL and key matches into one duplicate", async () => {
@@ -330,14 +360,14 @@ describe("resolveManagedSiteImportDuplicate", () => {
         search: vi.fn().mockResolvedValue({
           items: [
             {
-              id: 53,
+              ref: matchingResourceRef(53, { siteType: SITE_TYPES.SUB2API }),
               name: "URL Match",
               key: "different-key",
               base_url: "https://api.example.com",
               models: "",
             },
             {
-              id: 54,
+              ref: matchingResourceRef(54, { siteType: SITE_TYPES.SUB2API }),
               name: "Key Match",
               key: "test-key",
               base_url: "https://other.example.com",
@@ -363,7 +393,7 @@ describe("resolveManagedSiteImportDuplicate", () => {
         search: vi.fn().mockResolvedValue({
           items: [
             {
-              id: 45,
+              ref: matchingResourceRef(45),
               name: "Exact Duplicate",
               key: "test-key",
               base_url: "https://api.example.com",
@@ -381,7 +411,7 @@ describe("resolveManagedSiteImportDuplicate", () => {
         formData,
       }),
     ).resolves.toMatchObject({
-      id: 45,
+      ref: matchingResourceRef(45),
       name: "Exact Duplicate",
     })
   })
@@ -392,7 +422,7 @@ describe("resolveManagedSiteImportDuplicate", () => {
         search: vi.fn().mockResolvedValue({
           items: [
             {
-              id: 46,
+              ref: matchingResourceRef(46),
               name: "Different Key",
               key: "test-other-key",
               base_url: "https://api.example.com",

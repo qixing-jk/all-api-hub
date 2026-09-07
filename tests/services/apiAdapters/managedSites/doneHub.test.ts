@@ -7,6 +7,7 @@ import {
   testManagedSiteChannelMutationContract,
   type ChannelMutationScenario,
 } from "~~/tests/services/apiAdapters/managedSites/channelMutationContract"
+import { modelResourceRef } from "~~/tests/test-utils/managedModelResource"
 
 const doneHubApi = vi.hoisted(() => ({
   listAllChannels: vi.fn(),
@@ -158,7 +159,10 @@ describe("DoneHub managed-site channel capability", () => {
       invoke: async () => {
         return await doneHubManagedResourceModels.updateModels!(
           config,
-          7,
+          modelResourceRef(7, {
+            siteType: "done-hub",
+            scopeKey: config.baseUrl,
+          }),
           models,
         )
       },
@@ -187,7 +191,10 @@ describe("DoneHub managed-site channel capability", () => {
       invoke: async () => {
         return await doneHubManagedResourceModels.updateModelMapping!(
           config,
-          7,
+          modelResourceRef(7, {
+            siteType: "done-hub",
+            scopeKey: config.baseUrl,
+          }),
           models,
           modelMapping,
         )
@@ -255,7 +262,14 @@ describe("DoneHub managed-site channel capability", () => {
       doneHubApi.fetchChannelRaw.mockRejectedValue(raw)
 
       await expect(
-        doneHubManagedResourceModels.updateModels!(config, 7, models),
+        doneHubManagedResourceModels.updateModels!(
+          config,
+          modelResourceRef(7, {
+            siteType: "done-hub",
+            scopeKey: config.baseUrl,
+          }),
+          models,
+        ),
       ).resolves.toMatchObject({
         outcome: "rejected",
         diagnostic: { raw },
@@ -290,14 +304,20 @@ describe("DoneHub managed-site channel capability", () => {
       if (operation === "models") {
         await doneHubManagedResourceModels.updateModels!(
           config,
-          7,
+          modelResourceRef(7, {
+            siteType: "done-hub",
+            scopeKey: config.baseUrl,
+          }),
           models,
           options,
         )
       } else {
         await doneHubManagedResourceModels.updateModelMapping!(
           config,
-          7,
+          modelResourceRef(7, {
+            siteType: "done-hub",
+            scopeKey: config.baseUrl,
+          }),
           models,
           modelMapping,
           options,
@@ -372,7 +392,10 @@ describe("DoneHub managed-site channel capability", () => {
     })
     await doneHubChannelOperations.update(config, { id: 1 })
     await doneHubChannelOperations.delete(config, 1)
-    await doneHubManagedResourceModels.fetchModels?.(config, 1)
+    await doneHubManagedResourceModels.fetchModels?.(
+      config,
+      modelResourceRef(1, { siteType: "done-hub", scopeKey: config.baseUrl }),
+    )
     await doneHubManagedResourceModels.fetchDraftModels?.(
       config,
       {
@@ -382,10 +405,14 @@ describe("DoneHub managed-site channel capability", () => {
       },
       { bypassSiteRequestLimit: true },
     )
-    await doneHubManagedResourceModels.updateModels?.(config, 1, ["model-a"])
+    await doneHubManagedResourceModels.updateModels?.(
+      config,
+      modelResourceRef(1, { siteType: "done-hub", scopeKey: config.baseUrl }),
+      ["model-a"],
+    )
     await doneHubManagedResourceModels.updateModelMapping?.(
       config,
-      1,
+      modelResourceRef(1, { siteType: "done-hub", scopeKey: config.baseUrl }),
       ["model-a"],
       { "model-a": "upstream-model-a" },
     )

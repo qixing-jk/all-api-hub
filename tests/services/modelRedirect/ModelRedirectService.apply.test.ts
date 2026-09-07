@@ -6,6 +6,7 @@ import { modelMetadataService } from "~/services/models/modelMetadata"
 import { ModelRedirectService } from "~/services/models/modelRedirect/ModelRedirectService"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { DEFAULT_MODEL_REDIRECT_PREFERENCES } from "~/types/managedSiteModelRedirect"
+import { modelResourceRef } from "~~/tests/test-utils/managedModelResource"
 
 const {
   getSiteTypeCapabilitiesMock,
@@ -75,7 +76,7 @@ describe("ModelRedirectService.applyModelMappingToChannel", () => {
   })
 
   it("should do nothing when newMapping is empty", async () => {
-    const channel = { id: 1, modelMapping: "{}" } as any
+    const channel = { ref: modelResourceRef(1), modelMapping: "{}" } as any
     const service = {
       updateChannelModelMapping: vi.fn(),
     } as any
@@ -87,7 +88,7 @@ describe("ModelRedirectService.applyModelMappingToChannel", () => {
 
   it("should merge existing mapping JSON with new mapping", async () => {
     const channel = {
-      id: 1,
+      ref: modelResourceRef(1),
       modelMapping: '{"gpt-4o":"old","custom":"keep"}',
     } as any
     const service = {
@@ -116,7 +117,7 @@ describe("ModelRedirectService.applyModelMappingToChannel", () => {
 
   it("should ignore invalid existing JSON and apply only new mapping", async () => {
     const channel = {
-      id: 1,
+      ref: modelResourceRef(1),
       modelMapping: "invalid-json",
     } as any
     const service = {
@@ -143,7 +144,7 @@ describe("ModelRedirectService.applyModelMappingToChannel", () => {
 
   it("should prune entries whose targets are missing from available models", async () => {
     const channel = {
-      id: 1,
+      ref: modelResourceRef(1),
       modelMapping: '{"missing":"nope","keep":"ok"}',
     } as any
     const service = {
@@ -170,7 +171,7 @@ describe("ModelRedirectService.applyModelMappingToChannel", () => {
 
   it("should preserve entries whose targets exist in available models", async () => {
     const channel = {
-      id: 1,
+      ref: modelResourceRef(1),
       modelMapping: '{"keep":"ok"}',
     } as any
     const service = {
@@ -195,7 +196,7 @@ describe("ModelRedirectService.applyModelMappingToChannel", () => {
 
   it("should preserve chained mapping targets on New API sites", async () => {
     const channel = {
-      id: 1,
+      ref: modelResourceRef(1),
       modelMapping:
         '{"gpt-4":"gpt-4o","gpt-4o":"gpt-4o-2024-05-13","keep":"gpt-4o-2024-05-13"}',
     } as any
@@ -222,7 +223,7 @@ describe("ModelRedirectService.applyModelMappingToChannel", () => {
 
   it("should prune New API cyclic targets when they cannot resolve to an available model", async () => {
     const channel = {
-      id: 1,
+      ref: modelResourceRef(1),
       modelMapping: '{"a":"b","b":"a"}',
     } as any
     const service = {
@@ -248,7 +249,7 @@ describe("ModelRedirectService.applyModelMappingToChannel", () => {
 
   it("should treat '+target' as available on DoneHub sites", async () => {
     const channel = {
-      id: 1,
+      ref: modelResourceRef(1),
       modelMapping: '{"gpt-4":"+gpt-4o"}',
     } as any
     const service = {
@@ -274,7 +275,7 @@ describe("ModelRedirectService.applyModelMappingToChannel", () => {
 
   it("should apply new mappings even when existing model_mapping is invalid JSON (no pruning)", async () => {
     const channel = {
-      id: 1,
+      ref: modelResourceRef(1),
       modelMapping: "invalid-json",
     } as any
     const service = {
@@ -306,7 +307,7 @@ describe("ModelRedirectService.applyModelMappingToChannel", () => {
 
   it("should persist pruning updates even when newMapping is empty", async () => {
     const channel = {
-      id: 1,
+      ref: modelResourceRef(1),
       modelMapping: '{"missing":"nope"}',
     } as any
     const service = {
@@ -332,7 +333,7 @@ describe("ModelRedirectService.applyModelMappingToChannel", () => {
   it.each(["partial", "uncertain"] as const)(
     "refreshes the channel and rejects a non-replayable %s mapping write",
     async (outcome) => {
-      const channel = { id: 1, modelMapping: "{}" } as any
+      const channel = { ref: modelResourceRef(1), modelMapping: "{}" } as any
       const service = {
         knownSecrets: [],
         knownSecretsComplete: true,
@@ -372,7 +373,7 @@ describe("ModelRedirectService.applyModelMappingToChannel", () => {
   )
 
   it("rejects an undefined mapping-writer result as an invalid mutation contract", async () => {
-    const channel = { id: 1, modelMapping: "{}" } as any
+    const channel = { ref: modelResourceRef(1), modelMapping: "{}" } as any
     const service = {
       updateChannelModelMapping: vi.fn().mockResolvedValue(undefined),
     } as any
@@ -459,19 +460,19 @@ describe("ModelRedirectService.applyModelRedirect", () => {
 
     const channels = [
       {
-        id: 1,
+        ref: modelResourceRef(1),
         name: "active-channel",
         disabled: false,
         models: ["openai/gpt-4o"],
       },
       {
-        id: 2,
+        ref: modelResourceRef(2),
         name: "disabled-manual",
         disabled: true,
         models: ["openai/gpt-4o"],
       },
       {
-        id: 3,
+        ref: modelResourceRef(3),
         name: "disabled-auto",
         disabled: true,
         models: ["openai/gpt-4o"],
@@ -495,7 +496,7 @@ describe("ModelRedirectService.applyModelRedirect", () => {
     })
     expect(updateChannelModelMappingMock).toHaveBeenCalledWith(
       expect.objectContaining({ baseUrl: "https://example.com" }),
-      1,
+      modelResourceRef(1),
       ["openai/gpt-4o", "gpt-4o"],
       { "gpt-4o": "openai/gpt-4o" },
     )
@@ -518,7 +519,7 @@ describe("ModelRedirectService.applyModelRedirect", () => {
         },
       } as any)
       const channel = {
-        id: 1,
+        ref: modelResourceRef(1),
         name: "uncertain-channel",
         disabled: false,
         models: ["vendor/gpt-4o"],
@@ -582,7 +583,7 @@ describe("ModelRedirectService.applyModelRedirect", () => {
     listChannelsMock.mockResolvedValue({
       items: [
         {
-          id: 1,
+          ref: modelResourceRef(1),
           name: "rejected-channel",
           disabled: false,
           models: ["vendor/gpt-4o"],
@@ -643,7 +644,7 @@ describe("ModelRedirectService.applyModelRedirect", () => {
       listChannelsMock.mockResolvedValue({
         items: [
           {
-            id: 1,
+            ref: modelResourceRef(1),
             name: "channel",
             disabled: false,
             credential,
@@ -693,7 +694,7 @@ describe("ModelRedirectService.applyModelRedirect", () => {
     listChannelsMock.mockResolvedValue({
       items: [
         {
-          id: 1,
+          ref: modelResourceRef(1),
           name: "active-channel",
           disabled: false,
           models: ["alpha", "alpha", "beta", "alpha"],
@@ -709,7 +710,7 @@ describe("ModelRedirectService.applyModelRedirect", () => {
 
     expect(updateChannelModelMappingMock).toHaveBeenCalledWith(
       expect.objectContaining({ baseUrl: "https://example.com" }),
-      1,
+      modelResourceRef(1),
       ["alpha", "beta", "gamma"],
       { " alpha ": "vendor/alpha", gamma: "vendor/gamma" },
     )
@@ -774,7 +775,7 @@ describe("ModelRedirectService.applyModelRedirect", () => {
 
     const channels = [
       {
-        id: 1,
+        ref: modelResourceRef(1),
         name: "active-channel",
         disabled: false,
         models: ["openai/gpt-4o"],

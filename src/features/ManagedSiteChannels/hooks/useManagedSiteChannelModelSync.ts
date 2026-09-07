@@ -3,7 +3,12 @@ import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import type { ManagedSiteType } from "~/constants/siteType"
-import { MANAGED_RESOURCE_FAILURE_CODES } from "~/services/apiAdapters/contracts/managedResourceNative"
+import {
+  isManagedResourceRefFor,
+  MANAGED_RESOURCE_FAILURE_CODES,
+  type ManagedResourceRef,
+} from "~/services/apiAdapters/contracts/managedResourceNative"
+import { getManagedResourceRefKey } from "~/services/managedSites/managedResourceIdentity"
 import { sendModelSyncMessage } from "~/services/models/modelSync/messaging"
 import {
   startProductAnalyticsAction,
@@ -27,8 +32,9 @@ import type { ManagedResourceReconcileResult } from "../controllers/useManagedRe
 
 type UseManagedSiteChannelModelSyncOptions = {
   siteType: ManagedSiteType
+  scopeKey: string
   onModelsChanged?: (
-    modelsByChannelId: ReadonlyMap<number, string>,
+    modelsByResourceKey: ReadonlyMap<string, string>,
   ) =>
     | void
     | ManagedResourceReconcileResult
@@ -38,14 +44,15 @@ type UseManagedSiteChannelModelSyncOptions = {
 /** Owns model-sync execution, feedback, analytics, and per-channel busy state. */
 export function useManagedSiteChannelModelSync({
   siteType,
+  scopeKey,
   onModelsChanged,
 }: UseManagedSiteChannelModelSyncOptions) {
   const { t } = useTranslation("managedSiteChannels")
-  const [syncingChannelIds, setSyncingChannelIds] = useState<Set<number>>(
+  const [syncingResourceKeys, setSyncingResourceKeys] = useState<Set<string>>(
     new Set(),
   )
   const syncGenerationRef = useRef(0)
-  const inFlightChannelCountsRef = useRef(new Map<number, number>())
+  const inFlightChannelCountsRef = useRef(new Map<string, number>())
   const managedSiteAnalyticsType =
     resolveProductAnalyticsManagedSiteType(siteType)
 
@@ -53,41 +60,46 @@ export function useManagedSiteChannelModelSync({
     const inFlightChannelCounts = inFlightChannelCountsRef.current
     syncGenerationRef.current += 1
     inFlightChannelCounts.clear()
-    setSyncingChannelIds(new Set())
+    setSyncingResourceKeys(new Set())
     return () => {
       syncGenerationRef.current += 1
       inFlightChannelCounts.clear()
     }
-  }, [siteType])
+  }, [siteType, scopeKey])
 
   const syncChannels = useCallback(
     async (
-      channelIds: readonly number[],
+      resourceRefs: readonly ManagedResourceRef[],
       analyticsContext: ProductAnalyticsActionContext,
     ) => {
       const tracker = startProductAnalyticsAction(analyticsContext)
-      const eligibleChannelIds = channelIds.filter((id) => id > 0)
+      const eligibleResourceRefs = resourceRefs.filter((ref) =>
+        isManagedResourceRefFor(ref, { siteType, kind: "channel", scopeKey }),
+      )
+      const eligibleResourceKeys = eligibleResourceRefs.map(
+        getManagedResourceRefKey,
+      )
       const requestGeneration = syncGenerationRef.current
 
-      if (!eligibleChannelIds.length) {
+      if (!eligibleResourceKeys.length) {
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
           insights: {
             itemCount: 0,
-            selectedCount: channelIds.length,
+            selectedCount: resourceRefs.length,
             managedSiteType: managedSiteAnalyticsType,
           },
         })
         return
       }
 
-      eligibleChannelIds.forEach((id) => {
+      eligibleResourceKeys.forEach((id) => {
         inFlightChannelCountsRef.current.set(
           id,
           (inFlightChannelCountsRef.current.get(id) ?? 0) + 1,
         )
       })
-      setSyncingChannelIds(
-        (current) => new Set([...current, ...eligibleChannelIds]),
+      setSyncingResourceKeys(
+        (current) => new Set([...current, ...eligibleResourceKeys]),
       )
 
       try {
@@ -96,15 +108,15 @@ export function useManagedSiteChannelModelSync({
           PROTECTION_BYPASS_SURFACES.Options,
           async (protectionBypassExecution) =>
             await sendModelSyncMessage(ModelSyncMessageTypes.TriggerSelected, {
-              channelIds: eligibleChannelIds,
+              resourceRefs: eligibleResourceRefs,
               protectionBypassExecution,
             }),
         )
         if (requestGeneration !== syncGenerationRef.current) {
           tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
             insights: {
-              itemCount: eligibleChannelIds.length,
-              selectedCount: channelIds.length,
+              itemCount: eligibleResourceKeys.length,
+              selectedCount: resourceRefs.length,
               managedSiteType: managedSiteAnalyticsType,
             },
           })
@@ -115,24 +127,29 @@ export function useManagedSiteChannelModelSync({
         }
 
         const successCount =
-          response.data?.statistics?.successCount ?? eligibleChannelIds.length
+          response.data?.statistics?.successCount ?? eligibleResourceKeys.length
         const failureCount =
           response.data?.statistics?.failureCount ??
-          Math.max(eligibleChannelIds.length - successCount, 0)
-        const modelsByChannelId = new Map<number, string>(
+          Math.max(eligibleResourceKeys.length - successCount, 0)
+        const modelsByResourceKey = new Map<string, string>(
           (response.data?.items ?? [])
             .filter(
-              (item: ExecutionItemResult) => item.ok && Boolean(item.newModels),
+              (item: ExecutionItemResult) =>
+                item.ok &&
+                Boolean(item.newModels) &&
+                eligibleResourceKeys.includes(
+                  getManagedResourceRefKey(item.resourceRef),
+                ),
             )
             .map((item: ExecutionItemResult) => [
-              item.channelId,
+              getManagedResourceRefKey(item.resourceRef),
               item.newModels!.join(","),
             ]),
         )
 
         let reconciliation: void | ManagedResourceReconcileResult
         try {
-          reconciliation = await onModelsChanged?.(modelsByChannelId)
+          reconciliation = await onModelsChanged?.(modelsByResourceKey)
         } catch {
           reconciliation = {
             outcome: "failed",
@@ -142,8 +159,8 @@ export function useManagedSiteChannelModelSync({
         if (requestGeneration !== syncGenerationRef.current) {
           tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
             insights: {
-              itemCount: eligibleChannelIds.length,
-              selectedCount: channelIds.length,
+              itemCount: eligibleResourceKeys.length,
+              selectedCount: resourceRefs.length,
               managedSiteType: managedSiteAnalyticsType,
             },
           })
@@ -151,7 +168,7 @@ export function useManagedSiteChannelModelSync({
         }
         const completionValues = {
           success: successCount,
-          total: eligibleChannelIds.length,
+          total: eligibleResourceKeys.length,
         }
         if (reconciliation?.outcome === "failed") {
           toast.error(t("toasts.syncCompletedRefreshFailed", completionValues))
@@ -160,8 +177,8 @@ export function useManagedSiteChannelModelSync({
         }
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
           insights: {
-            itemCount: eligibleChannelIds.length,
-            selectedCount: channelIds.length,
+            itemCount: eligibleResourceKeys.length,
+            selectedCount: resourceRefs.length,
             successCount,
             failureCount,
             warningCount: reconciliation?.outcome === "failed" ? 1 : 0,
@@ -172,8 +189,8 @@ export function useManagedSiteChannelModelSync({
         if (requestGeneration !== syncGenerationRef.current) {
           tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
             insights: {
-              itemCount: eligibleChannelIds.length,
-              selectedCount: channelIds.length,
+              itemCount: eligibleResourceKeys.length,
+              selectedCount: resourceRefs.length,
               managedSiteType: managedSiteAnalyticsType,
             },
           })
@@ -183,14 +200,14 @@ export function useManagedSiteChannelModelSync({
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
           insights: {
-            itemCount: eligibleChannelIds.length,
-            selectedCount: channelIds.length,
+            itemCount: eligibleResourceKeys.length,
+            selectedCount: resourceRefs.length,
             managedSiteType: managedSiteAnalyticsType,
           },
         })
       } finally {
         if (requestGeneration === syncGenerationRef.current) {
-          eligibleChannelIds.forEach((id) => {
+          eligibleResourceKeys.forEach((id) => {
             const count = inFlightChannelCountsRef.current.get(id) ?? 0
             if (count <= 1) {
               inFlightChannelCountsRef.current.delete(id)
@@ -198,9 +215,9 @@ export function useManagedSiteChannelModelSync({
               inFlightChannelCountsRef.current.set(id, count - 1)
             }
           })
-          setSyncingChannelIds((current) => {
+          setSyncingResourceKeys((current) => {
             const next = new Set(current)
-            eligibleChannelIds.forEach((id) => {
+            eligibleResourceKeys.forEach((id) => {
               if (!inFlightChannelCountsRef.current.has(id)) {
                 next.delete(id)
               }
@@ -210,8 +227,8 @@ export function useManagedSiteChannelModelSync({
         }
       }
     },
-    [managedSiteAnalyticsType, onModelsChanged, t],
+    [managedSiteAnalyticsType, onModelsChanged, scopeKey, siteType, t],
   )
 
-  return { syncingChannelIds, syncChannels }
+  return { syncingResourceKeys, syncChannels }
 }

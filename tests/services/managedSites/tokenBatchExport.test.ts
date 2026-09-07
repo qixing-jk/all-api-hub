@@ -12,6 +12,7 @@ import {
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 import type { ManagedSiteCapabilities } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import { API_ERROR_CODES } from "~/services/apiTransport/errors"
+import { getManagedResourceRefKey } from "~/services/managedSites/managedResourceIdentity"
 import {
   PROTECTION_BYPASS_SURFACES,
   PROTECTION_BYPASS_USER_COMMANDS,
@@ -30,8 +31,11 @@ import { userCommandExecution } from "~~/tests/services/protectionBypass/fixture
 import {
   buildApiToken,
   buildDisplaySiteData,
-  buildManagedSiteChannel,
 } from "~~/tests/test-utils/factories"
+import {
+  buildManagedResourceMatchCandidate,
+  matchingResourceRef,
+} from "~~/tests/test-utils/managedResourceMatching"
 import { createManagedSiteCapabilitiesStub } from "~~/tests/test-utils/managedSiteCapabilitiesFactory"
 
 const {
@@ -52,9 +56,9 @@ const {
   mockResolveManagedUpstreamResourceFeatureCapabilities: vi.fn(),
   mockOpenNativeManagedChannelImportSession: vi.fn(),
   buildChannelMatchRequestCache: () => ({
-    searchResultsByBaseUrl: new Map(),
-    channelSecretKeysById: new Map(),
-    resolvedChannelKeysById: {},
+    searchResultsByTargetKey: new Map(),
+    channelSecretKeysByResourceKey: new Map(),
+    resolvedChannelKeysByResourceKey: {},
   }),
 }))
 
@@ -517,15 +521,19 @@ describe("managed-site token batch export", () => {
       items: [input],
       resolvedChannelKeysByItemId: {
         [input.runtimeKey.id]: {
-          77: "resolved-channel-key",
+          [getManagedResourceRefKey(
+            matchingResourceRef(77, { scopeKey: "https://target.example.com" }),
+          )]: "resolved-channel-key",
         },
       },
     })
 
     expect(mockResolveManagedSiteChannelMatch).toHaveBeenCalledWith(
       expect.objectContaining({
-        resolvedChannelKeysById: {
-          77: "resolved-channel-key",
+        resolvedChannelKeysByResourceKey: {
+          [getManagedResourceRefKey(
+            matchingResourceRef(77, { scopeKey: "https://target.example.com" }),
+          )]: "resolved-channel-key",
         },
       }),
     )
@@ -1128,7 +1136,7 @@ describe("managed-site token batch export", () => {
 
   it("skips tokens that exactly match an existing managed-site channel", async () => {
     const existingChannel = {
-      id: 99,
+      ref: matchingResourceRef(99, { scopeKey: "https://target.example.com" }),
       name: "Existing",
     }
     const managedSite = buildService()
@@ -1162,7 +1170,9 @@ describe("managed-site token batch export", () => {
     expect(preview.items[0]).toMatchObject({
       status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.SKIPPED,
       matchedChannel: {
-        id: 99,
+        ref: matchingResourceRef(99, {
+          scopeKey: "https://target.example.com",
+        }),
         name: "Existing",
       },
     })
@@ -1176,7 +1186,10 @@ describe("managed-site token batch export", () => {
       const searchChannel = vi.fn().mockResolvedValue({
         items: [
           {
-            id: 64,
+            ref: matchingResourceRef(64, {
+              siteType: SITE_TYPES.SUB2API,
+              scopeKey: "https://target.example.com",
+            }),
             name: "Existing API-key account",
             type: "openai",
             base_url: "https://upstream.example.com/v1",
@@ -1232,13 +1245,19 @@ describe("managed-site token batch export", () => {
       expect(searchChannel).toHaveBeenCalledTimes(1)
       expect(managedSite.matching.fetchSecretKey).toHaveBeenCalledWith(
         expect.anything(),
-        64,
+        matchingResourceRef(64, {
+          siteType: SITE_TYPES.SUB2API,
+          scopeKey: "https://target.example.com",
+        }),
         expect.anything(),
       )
       expect(preview.items[0]).toMatchObject({
         status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.SKIPPED,
         matchedChannel: {
-          id: 64,
+          ref: matchingResourceRef(64, {
+            siteType: SITE_TYPES.SUB2API,
+            scopeKey: "https://target.example.com",
+          }),
           name: "Existing API-key account",
         },
       })
@@ -1596,7 +1615,12 @@ describe("managed-site token batch export", () => {
       resolution: buildMatchInspection({
         url: {
           matched: true,
-          channel: { id: 7, name: "Similar" },
+          channel: {
+            ref: matchingResourceRef(7, {
+              scopeKey: "https://target.example.com",
+            }),
+            name: "Similar",
+          },
           candidateCount: 1,
         },
         key: {
@@ -1616,7 +1640,12 @@ describe("managed-site token batch export", () => {
           comparable: true,
           matched: true,
           reason: "partial",
-          channel: { id: 12, name: "Candidate" },
+          channel: {
+            ref: matchingResourceRef(12, {
+              scopeKey: "https://target.example.com",
+            }),
+            name: "Candidate",
+          },
         },
       }),
       expectedWarning:
@@ -1665,8 +1694,10 @@ describe("managed-site token batch export", () => {
         matching: {
           search: vi.fn().mockResolvedValue({
             items: [
-              buildManagedSiteChannel({
-                id: 77,
+              buildManagedResourceMatchCandidate({
+                ref: matchingResourceRef(77, {
+                  scopeKey: "https://target.example.com",
+                }),
                 key: "",
                 base_url: "https://upstream.example.com/v1",
                 models: "gpt-4o",
@@ -1705,9 +1736,9 @@ describe("managed-site token batch export", () => {
     } finally {
       vi.doMock("~/services/managedSites/channelMatchResolver", () => ({
         createManagedSiteChannelMatchRequestCache: () => ({
-          searchResultsByBaseUrl: new Map(),
-          channelSecretKeysById: new Map(),
-          resolvedChannelKeysById: {},
+          searchResultsByTargetKey: new Map(),
+          channelSecretKeysByResourceKey: new Map(),
+          resolvedChannelKeysByResourceKey: {},
         }),
         resolveManagedSiteChannelMatch: mockResolveManagedSiteChannelMatch,
       }))
@@ -1723,8 +1754,10 @@ describe("managed-site token batch export", () => {
         searchCompleted: true,
         url: {
           matched: true,
-          channel: buildManagedSiteChannel({
-            id: 78,
+          channel: buildManagedResourceMatchCandidate({
+            ref: matchingResourceRef(78, {
+              scopeKey: "https://target.example.com",
+            }),
             name: "DoneHub Channel",
           }),
           candidateCount: 1,
@@ -1739,8 +1772,10 @@ describe("managed-site token batch export", () => {
           comparable: true,
           matched: true,
           reason: "exact",
-          channel: buildManagedSiteChannel({
-            id: 78,
+          channel: buildManagedResourceMatchCandidate({
+            ref: matchingResourceRef(78, {
+              scopeKey: "https://target.example.com",
+            }),
             name: "DoneHub Channel",
           }),
         },
@@ -1774,8 +1809,10 @@ describe("managed-site token batch export", () => {
         matching: {
           search: vi.fn().mockResolvedValue({
             items: [
-              buildManagedSiteChannel({
-                id: 77,
+              buildManagedResourceMatchCandidate({
+                ref: matchingResourceRef(77, {
+                  scopeKey: "https://target.example.com",
+                }),
                 key: "",
                 base_url: "https://upstream.example.com/v1",
                 models: "gpt-4o",
@@ -1810,21 +1847,23 @@ describe("managed-site token batch export", () => {
           adminToken: "admin-token",
           userId: "1",
         }),
-        77,
+        matchingResourceRef(77, { scopeKey: "https://target.example.com" }),
         sessionResyncOptions,
       )
       expect(preview.items[0]).toMatchObject({
         status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.SKIPPED,
         matchedChannel: {
-          id: 77,
+          ref: matchingResourceRef(77, {
+            scopeKey: "https://target.example.com",
+          }),
         },
       })
     } finally {
       vi.doMock("~/services/managedSites/channelMatchResolver", () => ({
         createManagedSiteChannelMatchRequestCache: () => ({
-          searchResultsByBaseUrl: new Map(),
-          channelSecretKeysById: new Map(),
-          resolvedChannelKeysById: {},
+          searchResultsByTargetKey: new Map(),
+          channelSecretKeysByResourceKey: new Map(),
+          resolvedChannelKeysByResourceKey: {},
         }),
         resolveManagedSiteChannelMatch: mockResolveManagedSiteChannelMatch,
       }))
@@ -1839,8 +1878,10 @@ describe("managed-site token batch export", () => {
     try {
       const searchChannel = vi.fn().mockResolvedValue({
         items: [
-          buildManagedSiteChannel({
-            id: 77,
+          buildManagedResourceMatchCandidate({
+            ref: matchingResourceRef(77, {
+              scopeKey: "https://target.example.com",
+            }),
             key: "sk-***",
             base_url: "https://upstream.example.com/v1",
             models: "gpt-4o",
@@ -1898,15 +1939,16 @@ describe("managed-site token batch export", () => {
         secondDraftOptions?.operationContext,
       )
       expect(preview.skippedCount).toBe(2)
-      expect(preview.items.map((item) => item.matchedChannel?.id)).toEqual([
-        77, 77,
+      expect(preview.items.map((item) => item.matchedChannel?.ref)).toEqual([
+        matchingResourceRef(77, { scopeKey: "https://target.example.com" }),
+        matchingResourceRef(77, { scopeKey: "https://target.example.com" }),
       ])
     } finally {
       vi.doMock("~/services/managedSites/channelMatchResolver", () => ({
         createManagedSiteChannelMatchRequestCache: () => ({
-          searchResultsByBaseUrl: new Map(),
-          channelSecretKeysById: new Map(),
-          resolvedChannelKeysById: {},
+          searchResultsByTargetKey: new Map(),
+          channelSecretKeysByResourceKey: new Map(),
+          resolvedChannelKeysByResourceKey: {},
         }),
         resolveManagedSiteChannelMatch: mockResolveManagedSiteChannelMatch,
       }))

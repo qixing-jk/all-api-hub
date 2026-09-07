@@ -1,12 +1,16 @@
 import { DoneHubChannelStatus } from "~/constants/doneHub"
+import { SITE_TYPES } from "~/constants/siteType"
 import { hasUsableApiTokenKey as hasUsableManagedSiteChannelKey } from "~/services/accountTokens/apiTokenKey"
 import type { ManagedResourceModelsCapability } from "~/services/apiAdapters/contracts/managedResourceModels"
 import type {
   ManagedSiteChannelRequestOptions,
   ManagedSitePaginatedChannelRequestOptions,
 } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
-import { requireNumericManagedResourceId } from "~/services/apiAdapters/managedResources/matchingInputs"
 import { toManagedModelChannelList } from "~/services/apiAdapters/managedResources/modelInputs"
+import {
+  requireManagedResourceChannelId,
+  requireNumericManagedResourceId,
+} from "~/services/apiAdapters/managedResources/resourceIds"
 import {
   createChannel,
   deleteChannel,
@@ -32,7 +36,6 @@ import type {
   DoneHubUpdateChannelPayload,
 } from "~/types/doneHub"
 import type { DoneHubConfig } from "~/types/doneHubConfig"
-import type { ManagedResourceMatchCandidate } from "~/types/managedResourceMatching"
 import { getErrorMessage } from "~/utils/core/error"
 
 import {
@@ -115,7 +118,7 @@ const fetchSecretKey = async (config: DoneHubConfig, channelId: number) => {
   return channel.key ?? ""
 }
 
-const hydrateComparableKeys = async <T extends ManagedResourceMatchCandidate>(
+const hydrateComparableKeys = async <T extends { id: number; key?: string }>(
   config: DoneHubConfig,
   candidates: T[],
 ) => {
@@ -211,17 +214,24 @@ export const doneHubManagedResourceModels = {
         DoneHubChannelStatus.ManuallyDisabled,
         DoneHubChannelStatus.AutoDisabled,
       ],
+      { siteType: SITE_TYPES.DONE_HUB, config },
     ),
   fetchModels: async (
     config,
-    channelId,
+    ref,
     options?: ManagedSiteChannelRequestOptions,
-  ) =>
-    await fetchChannelModels(
+  ) => {
+    const channelId = requireManagedResourceChannelId(
+      SITE_TYPES.DONE_HUB,
+      config,
+      ref,
+    )
+    return await fetchChannelModels(
       toManagedSiteApiServiceRequest(config, options),
       channelId,
       options,
-    ),
+    )
+  },
   fetchDraftModels: async (
     config,
     probe,
@@ -238,10 +248,15 @@ export const doneHubManagedResourceModels = {
     ),
   updateModels: async (
     config,
-    channelId,
+    ref,
     models,
     options?: ManagedSiteChannelRequestOptions,
   ) => {
+    const channelId = requireManagedResourceChannelId(
+      SITE_TYPES.DONE_HUB,
+      config,
+      ref,
+    )
     const sequence = createManagedSiteMutationSequence({ idempotent: false })
     const preflight = await fetchDoneHubMutationPayload(
       config,
@@ -268,11 +283,16 @@ export const doneHubManagedResourceModels = {
   },
   updateModelMapping: async (
     config,
-    channelId,
+    ref,
     models,
     modelMapping,
     options?: ManagedSiteChannelRequestOptions,
   ) => {
+    const channelId = requireManagedResourceChannelId(
+      SITE_TYPES.DONE_HUB,
+      config,
+      ref,
+    )
     const sequence = createManagedSiteMutationSequence({ idempotent: false })
     const preflight = await fetchDoneHubMutationPayload(
       config,

@@ -17,7 +17,6 @@ const {
   canFetchDisplayAccountInviteLinkMock,
   getManagedSiteCapabilitiesMock,
   openKeysPageMock,
-  openManagedSiteChannelsForChannelMock,
   openManagedSiteChannelsPageMock,
   openModelsPageMock,
   sendRuntimeMessageMock,
@@ -50,7 +49,6 @@ const {
   canFetchDisplayAccountInviteLinkMock: vi.fn(),
   getManagedSiteCapabilitiesMock: vi.fn(),
   openKeysPageMock: vi.fn(),
-  openManagedSiteChannelsForChannelMock: vi.fn(),
   openManagedSiteChannelsPageMock: vi.fn(),
   openModelsPageMock: vi.fn(),
   sendRuntimeMessageMock: vi.fn(),
@@ -187,7 +185,6 @@ vi.mock("~/contexts/UserPreferencesContext", () => ({
 
 vi.mock("~/utils/navigation", () => ({
   openKeysPage: openKeysPageMock,
-  openManagedSiteChannelsForChannel: openManagedSiteChannelsForChannelMock,
   openManagedSiteChannelsPage: openManagedSiteChannelsPageMock,
   openModelsPage: openModelsPageMock,
   openRedeemPage: vi.fn(),
@@ -293,7 +290,6 @@ export {
   mockHandleSetAccountDisabled,
   mockTogglePinAccount,
   openKeysPageMock,
-  openManagedSiteChannelsForChannelMock,
   openManagedSiteChannelsPageMock,
   openModelsPageMock,
   resolveDisplayAccountRuntimeKeySecretMock,

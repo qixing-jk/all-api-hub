@@ -73,6 +73,7 @@
       "finishedAt": "完了時刻",
       "manageChannel": "チャネルを管理",
       "message": "メッセージ",
+      "resourceUnavailable": "この記録は現在のサイトに関連付けられません。手動同期の一覧からチャンネルを選び直してください。",
       "selectAllChannels": "すべてのチャネルを選択",
       "selectChannel": "チャネル {{name}} を選択",
       "status": "状態",

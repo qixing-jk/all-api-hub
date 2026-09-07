@@ -213,7 +213,6 @@ describe("New API native managed resource", () => {
           canUpdate: true,
           canDelete: true,
           channel: {
-            channelId: 17,
             channelType: channel.type,
             canSyncModels: true,
             canOpenModelSync: true,
@@ -977,11 +976,7 @@ describe("New API native managed resource", () => {
       editor.initialValues,
     )
 
-    expect(mocks.fetchModels).toHaveBeenCalledWith(
-      config,
-      channel.id,
-      undefined,
-    )
+    expect(mocks.fetchModels).toHaveBeenCalledWith(config, ref, undefined)
     expect(mocks.fetchDraftModels).not.toHaveBeenCalled()
   })
 

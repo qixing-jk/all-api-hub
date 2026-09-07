@@ -5,6 +5,7 @@ import {
   type AccountRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
 import { resolveDisplayAccountRuntimeKeySecret } from "~/services/accounts/utils/apiServiceRequest"
+import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
 import type { ManagedSiteCapabilities } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import { getManagedSiteCapabilities } from "~/services/apiAdapters/registry"
 import { buildManagedSiteChannelDraftSource } from "~/services/managedSites/channelDraftSource"
@@ -13,6 +14,10 @@ import {
   type ManagedSiteChannelMatchInspection,
 } from "~/services/managedSites/channelMatch"
 import { resolveManagedSiteChannelMatch } from "~/services/managedSites/channelMatchResolver"
+import {
+  areManagedResourceRefsEqual,
+  getManagedResourceRefKey,
+} from "~/services/managedSites/managedResourceIdentity"
 import type { ManagedSiteOperationContext } from "~/services/managedSites/operationContext"
 import { getNewApiLoginAssistConfig } from "~/services/managedSites/providers/newApiChannelSecrets"
 import {
@@ -75,7 +80,7 @@ export interface ManagedSiteTokenChannelRecovery {
 }
 
 interface ManagedSiteTokenChannelResolvedKeys {
-  resolvedChannelKeysById?: Record<number, string>
+  resolvedChannelKeysByResourceKey?: Record<string, string>
 }
 
 export type ManagedSiteTokenChannelStatus =
@@ -117,7 +122,7 @@ interface GetManagedSiteTokenChannelStatusParams {
   runtimeKey: AccountRuntimeKey
   managedSite?: ManagedSiteCapabilities
   managedConfig?: ManagedSiteRuntimeConfigValue | null
-  resolvedChannelKeysById?: Record<number, string>
+  resolvedChannelKeysByResourceKey?: Record<string, string>
   operationContext?: ManagedSiteOperationContext
   protectionBypassExecution?: ProtectionBypassExecution
 }
@@ -125,20 +130,20 @@ interface GetManagedSiteTokenChannelStatusParams {
 interface ResolveManagedSiteTokenChannelStatusWithVerifiedKeyParams {
   status: ManagedSiteTokenChannelStatus
   tokenKey: string
-  channelId: number
+  resourceRef: ManagedResourceRef
   channelKey: string
   siteType?: ManagedSiteCapabilities["siteType"] | string
 }
 
 const findAssessmentChannelSummary = (
   assessment: ManagedSiteTokenChannelAssessment,
-  channelId: number,
+  resourceRef: ManagedResourceRef,
 ) => {
   return [
     assessment.key.channel,
     assessment.models.channel,
     assessment.url.channel,
-  ].find((channel) => channel?.id === channelId)
+  ].find((channel) => areManagedResourceRefsEqual(channel?.ref, resourceRef))
 }
 
 const collectSecrets = (
@@ -175,18 +180,13 @@ export function resolveManagedSiteTokenChannelStatusWithVerifiedKey(
 
   const channelSummary = findAssessmentChannelSummary(
     assessment,
-    params.channelId,
+    params.resourceRef,
   )
-  const resolvedChannelKeysById = {
-    ...(params.status.resolvedChannelKeysById ?? {}),
-    [params.channelId]: params.channelKey,
-  }
+  if (!channelSummary) return params.status
 
-  if (!channelSummary) {
-    return {
-      ...params.status,
-      resolvedChannelKeysById,
-    } as ManagedSiteTokenChannelStatus
+  const resolvedChannelKeysByResourceKey = {
+    ...(params.status.resolvedChannelKeysByResourceKey ?? {}),
+    [getManagedResourceRefKey(params.resourceRef)]: params.channelKey,
   }
 
   const applied = applyVerifiedManagedSiteChannelKey({
@@ -202,7 +202,7 @@ export function resolveManagedSiteTokenChannelStatusWithVerifiedKey(
       status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.ADDED,
       matchedChannel: channelSummary,
       assessment: applied.assessment,
-      resolvedChannelKeysById,
+      resolvedChannelKeysByResourceKey,
     }
   }
 
@@ -212,14 +212,14 @@ export function resolveManagedSiteTokenChannelStatusWithVerifiedKey(
       reason:
         MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.MATCH_REQUIRES_CONFIRMATION,
       assessment: applied.assessment,
-      resolvedChannelKeysById,
+      resolvedChannelKeysByResourceKey,
     }
   }
 
   return {
     status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.NOT_ADDED,
     assessment: applied.assessment,
-    resolvedChannelKeysById,
+    resolvedChannelKeysByResourceKey,
   }
 }
 
@@ -339,15 +339,12 @@ export async function getManagedSiteTokenChannelStatus(
       accountBaseUrl: searchBaseUrl,
       models: formData.models,
       key: formData.key,
-      resolvedChannelKeysById: params.resolvedChannelKeysById,
+      resolvedChannelKeysByResourceKey: params.resolvedChannelKeysByResourceKey,
       resolveHiddenKeys: true,
       requestCache: params.operationContext?.channelMatch,
       protectionBypassExecution: params.protectionBypassExecution,
     })
-    const assessment = toManagedSiteVerifiedKeyAssessment(
-      resolution,
-      managedSite.siteType,
-    )
+    const assessment = toManagedSiteVerifiedKeyAssessment(resolution)
     const exactMatch = getManagedSiteChannelExactMatch(
       resolution,
       managedSite.siteType,
@@ -355,18 +352,18 @@ export async function getManagedSiteTokenChannelStatus(
     const exactVerificationUnavailable =
       isExactVerificationUnavailable(resolution)
     const resolvedChannelKeys =
-      resolution.resolvedChannelKeysById &&
-      Object.keys(resolution.resolvedChannelKeysById).length > 0
-        ? { resolvedChannelKeysById: resolution.resolvedChannelKeysById }
+      resolution.resolvedChannelKeysByResourceKey &&
+      Object.keys(resolution.resolvedChannelKeysByResourceKey).length > 0
+        ? {
+            resolvedChannelKeysByResourceKey:
+              resolution.resolvedChannelKeysByResourceKey,
+          }
         : {}
 
     if (exactMatch) {
       return {
         status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.ADDED,
-        matchedChannel: toManagedSiteAssessmentChannel(
-          exactMatch,
-          managedSite.siteType,
-        ),
+        matchedChannel: toManagedSiteAssessmentChannel(exactMatch),
         assessment,
         ...resolvedChannelKeys,
       }

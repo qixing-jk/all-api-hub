@@ -6,8 +6,13 @@ import type {
   ManagedSiteChannelDraftsCapability,
   ManagedSiteConfigCapability,
 } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
-import { requireNumericManagedResourceId } from "~/services/apiAdapters/managedResources/matchingInputs"
+import {
+  toManagedResourceMatchCandidate,
+  toNativeNumericMatchCandidates,
+} from "~/services/apiAdapters/managedResources/matchingInputs"
+import { requireManagedResourceChannelId } from "~/services/apiAdapters/managedResources/resourceIds"
 import { searchProviders } from "~/services/apiService/claudeCodeHub"
+import { createManagedChannelResourceRef } from "~/services/managedSites/managedResourceIdentity"
 import {
   checkValidClaudeCodeHubConfig,
   fetchChannelSecretKey,
@@ -45,7 +50,11 @@ const matching: ManagedResourceMatchingCapability<ClaudeCodeHubConfig> = {
     runClaudeCodeHubResourceRead(config, async () => {
       const items = (await searchProviders(config, keyword)).map(
         (provider) => ({
-          id: provider.id,
+          ref: createManagedChannelResourceRef(
+            SITE_TYPES.CLAUDE_CODE_HUB,
+            config.baseUrl,
+            provider.id,
+          ),
           name: provider.name || `Provider ${provider.id}`,
           type:
             provider.providerType ||
@@ -65,17 +74,20 @@ const matching: ManagedResourceMatchingCapability<ClaudeCodeHubConfig> = {
       )
       return { items, total: items.length, type_counts: {} }
     }),
-  fetchSecretKey: async (config, id) =>
-    fetchChannelSecretKey(config, requireNumericManagedResourceId(id)),
+  fetchSecretKey: async (config, ref) =>
+    fetchChannelSecretKey(
+      config,
+      requireManagedResourceChannelId(SITE_TYPES.CLAUDE_CODE_HUB, config, ref),
+    ),
   hydrateComparableKeys: async (config, candidates) => {
-    const hydrated = []
-    for (const candidate of candidates) {
-      const [result] = await hydrateComparableChannelKeys(config, [
-        { ...candidate, id: requireNumericManagedResourceId(candidate.id) },
-      ])
-      hydrated.push(result)
-    }
-    return hydrated
+    const target = { siteType: SITE_TYPES.CLAUDE_CODE_HUB, config }
+    const hydrated = await hydrateComparableChannelKeys(
+      config,
+      toNativeNumericMatchCandidates(candidates, target),
+    )
+    return hydrated.map((candidate) =>
+      toManagedResourceMatchCandidate(candidate, target),
+    )
   },
 }
 export const claudeCodeHubManagedSiteCapabilities = {

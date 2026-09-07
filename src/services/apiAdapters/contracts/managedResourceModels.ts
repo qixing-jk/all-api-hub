@@ -1,7 +1,10 @@
 import type { ManagedSiteVoidMutationResult } from "~/services/managedSites/mutations"
 import type { ManagedSiteRuntimeConfigValue } from "~/services/managedSites/runtimeConfig"
+import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import type { ManagedModelChannelListData } from "~/types/managedResourceModels"
 
+import type { ManagedResourceModelSyncWorkflow } from "./managedResourceModelSync"
+import type { ManagedResourceRef } from "./managedResourceNative"
 import type {
   ManagedSiteChannelModelProbe,
   ManagedSiteChannelRequestOptions,
@@ -11,6 +14,11 @@ import type {
 export interface ManagedResourceModelsCapability<
   TConfig = ManagedSiteRuntimeConfigValue,
 > {
+  /** Native sync execution for providers whose payload cannot use the shared channel runner. */
+  createSync?(
+    config: TConfig,
+    protectionBypassExecution: ProtectionBypassExecution,
+  ): ManagedResourceModelSyncWorkflow
   list?(
     config: TConfig,
     options?: ManagedSiteChannelRequestOptions & {
@@ -19,7 +27,7 @@ export interface ManagedResourceModelsCapability<
   ): Promise<ManagedModelChannelListData>
   fetchModels?(
     config: TConfig,
-    channelId: number,
+    ref: ManagedResourceRef,
     options?: ManagedSiteChannelRequestOptions,
   ): Promise<string[]>
   fetchDraftModels?(
@@ -29,13 +37,13 @@ export interface ManagedResourceModelsCapability<
   ): Promise<string[]>
   updateModels?(
     config: TConfig,
-    channelId: number,
+    ref: ManagedResourceRef,
     models: string[],
     options?: ManagedSiteChannelRequestOptions,
   ): Promise<ManagedSiteVoidMutationResult>
   updateModelMapping?(
     config: TConfig,
-    channelId: number,
+    ref: ManagedResourceRef,
     models: string[],
     modelMapping: Record<string, string>,
     options?: ManagedSiteChannelRequestOptions,

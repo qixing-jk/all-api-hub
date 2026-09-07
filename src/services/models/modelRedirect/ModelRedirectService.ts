@@ -6,6 +6,11 @@
 
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import type { ManagedResourceModelsCapability } from "~/services/apiAdapters/contracts/managedResourceModels"
+import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
+import {
+  assertManagedResourceRefForSite,
+  getManagedResourceRefKey,
+} from "~/services/managedSites/managedResourceIdentity"
 import {
   consumeManagedSiteMutationResult,
   type ManagedSiteMutationResult,
@@ -135,6 +140,7 @@ class DirectModelRedirectMappingWriter implements ModelRedirectMappingWriter {
     channel: ManagedModelChannel,
     modelMapping: Record<string, string>,
   ): Promise<ManagedSiteMutationResult<unknown>> {
+    assertManagedResourceRefForSite(channel.ref, this.runtimeConfig)
     const configSecrets = {
       knownSecrets: collectManagedConfigSecrets(this.runtimeConfig.config),
       complete: true,
@@ -150,7 +156,7 @@ class DirectModelRedirectMappingWriter implements ModelRedirectMappingWriter {
     this.mutationKnownSecretsComplete = false
     return await this.channels.updateModelMapping(
       this.runtimeConfig.config,
-      channel.id,
+      channel.ref,
       appendMissingValues(channel.models, Object.keys(modelMapping)),
       modelMapping,
     )
@@ -167,7 +173,7 @@ const hasDateSuffix = (rawModelId: string): boolean => {
 }
 
 interface ModelRedirectChannelResult {
-  channelId: number
+  resourceRef: ManagedResourceRef
   channelName: string
   success: boolean
   skipped?: boolean
@@ -326,7 +332,11 @@ export class ModelRedirectService {
     runtimeConfig: ManagedSiteRuntimeConfig,
     channels: ModelRedirectChannelCapabilities,
   ) {
-    return channels.list(runtimeConfig.config)
+    const result = await channels.list(runtimeConfig.config)
+    for (const channel of result.items) {
+      assertManagedResourceRefForSite(channel.ref, runtimeConfig)
+    }
+    return result
   }
 
   private static createModelMappingWriter(
@@ -377,7 +387,7 @@ export class ModelRedirectService {
       } catch (parseError) {
         canPruneExisting = false
         logger.warn("Failed to parse existing model_mapping for channel", {
-          channelId: channel.id,
+          resourceRef: channel.ref,
           error: parseError,
         })
       }
@@ -525,7 +535,7 @@ export class ModelRedirectService {
           successCount += 1
         } catch (error) {
           errors.push(
-            `Channel ${channel.name} (${channel.id}): ${getErrorMessage(error)}`,
+            `Channel ${channel.name} (${channel.ref.resourceId}): ${getErrorMessage(error)}`,
           )
         }
       }
@@ -576,8 +586,8 @@ export class ModelRedirectService {
 
       return {
         success: true,
-        channels: channelList.items.map(({ id, name, modelMapping }) => ({
-          id,
+        channels: channelList.items.map(({ ref, name, modelMapping }) => ({
+          ref,
           name,
           modelMapping,
         })),
@@ -597,14 +607,14 @@ export class ModelRedirectService {
 
   /**
    * Clear channel model redirect mappings by writing an empty object to `model_mapping`.
-   * @param channelIds Channel IDs selected in the current managed-site context.
+   * @param resourceRefs Complete identities selected in the current managed-site context.
    * @returns Bulk operation summary with per-channel results.
    */
   static async clearChannelModelMappings(
-    channelIds: number[],
+    resourceRefs: ManagedResourceRef[],
   ): Promise<ModelRedirectBulkClearResult> {
     try {
-      if (!channelIds.length) {
+      if (!resourceRefs.length) {
         return {
           success: false,
           totalSelected: 0,
@@ -622,13 +632,13 @@ export class ModelRedirectService {
       if (!serviceResult.ok) {
         return {
           success: false,
-          totalSelected: channelIds.length,
+          totalSelected: resourceRefs.length,
           clearedChannels: 0,
           skippedChannels: 0,
-          failedChannels: channelIds.length,
-          results: channelIds.map((channelId) => ({
-            channelId,
-            channelName: `#${channelId}`,
+          failedChannels: resourceRefs.length,
+          results: resourceRefs.map((resourceRef) => ({
+            resourceRef,
+            channelName: `#${resourceRef.resourceId}`,
             success: false,
             error: serviceResult.message,
           })),
@@ -636,6 +646,9 @@ export class ModelRedirectService {
           message: serviceResult.message,
         }
       }
+
+      for (const ref of resourceRefs)
+        assertManagedResourceRefForSite(ref, serviceResult.runtimeConfig)
 
       const channelList = await ModelRedirectService.listChannels(
         serviceResult.runtimeConfig,
@@ -645,18 +658,21 @@ export class ModelRedirectService {
         serviceResult.runtimeConfig,
         serviceResult.channels,
       )
-      const channelsById = new Map<number, ManagedModelChannel>(
-        (channelList.items ?? []).map((channel) => [channel.id, channel]),
+      const channelsByKey = new Map<string, ManagedModelChannel>(
+        (channelList.items ?? []).map((channel) => [
+          getManagedResourceRefKey(channel.ref),
+          channel,
+        ]),
       )
 
       const results: ModelRedirectChannelResult[] = []
 
-      for (const channelId of channelIds) {
-        const channel = channelsById.get(channelId)
+      for (const resourceRef of resourceRefs) {
+        const channel = channelsByKey.get(getManagedResourceRefKey(resourceRef))
         if (!channel) {
           results.push({
-            channelId,
-            channelName: `#${channelId}`,
+            resourceRef,
+            channelName: `#${resourceRef.resourceId}`,
             success: false,
             error: "Channel not found",
           })
@@ -665,7 +681,7 @@ export class ModelRedirectService {
 
         if (isEmptyModelMapping(channel.modelMapping)) {
           results.push({
-            channelId,
+            resourceRef,
             channelName: channel.name,
             success: true,
             skipped: true,
@@ -685,13 +701,13 @@ export class ModelRedirectService {
             modelMappingWriter.knownSecretsComplete,
           )
           results.push({
-            channelId,
+            resourceRef,
             channelName: channel.name,
             success: true,
           })
         } catch (error) {
           results.push({
-            channelId,
+            resourceRef,
             channelName: channel.name,
             success: false,
             error: getErrorMessage(error),
@@ -710,12 +726,12 @@ export class ModelRedirectService {
         .filter((r) => !r.success)
         .map(
           (r) =>
-            `Channel ${r.channelName} (${r.channelId}): ${r.error || "Unknown error"}`,
+            `Channel ${r.channelName} (${r.resourceRef.resourceId}): ${r.error || "Unknown error"}`,
         )
 
       return {
         success: failedChannels === 0,
-        totalSelected: channelIds.length,
+        totalSelected: resourceRefs.length,
         clearedChannels,
         skippedChannels,
         failedChannels,
@@ -727,13 +743,13 @@ export class ModelRedirectService {
       const message = getErrorMessage(error)
       return {
         success: false,
-        totalSelected: channelIds.length,
+        totalSelected: resourceRefs.length,
         clearedChannels: 0,
         skippedChannels: 0,
-        failedChannels: channelIds.length,
-        results: channelIds.map((channelId) => ({
-          channelId,
-          channelName: `#${channelId}`,
+        failedChannels: resourceRefs.length,
+        results: resourceRefs.map((resourceRef) => ({
+          resourceRef,
+          channelName: `#${resourceRef.resourceId}`,
           success: false,
           error: message,
         })),

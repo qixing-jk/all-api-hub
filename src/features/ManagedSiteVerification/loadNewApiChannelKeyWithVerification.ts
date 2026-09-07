@@ -1,7 +1,6 @@
-import {
-  fetchNewApiChannelKey,
-  NewApiChannelKeyRequirementError,
-} from "~/services/managedSites/providers/newApiSession"
+import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
+import { fetchNewApiResourceKeyWithSession } from "~/services/managedSites/providers/newApiChannelSecrets"
+import { NewApiChannelKeyRequirementError } from "~/services/managedSites/providers/newApiSession"
 import { withProtectionBypassUserCommand } from "~/services/protectionBypass/client"
 import {
   PROTECTION_BYPASS_SURFACES,
@@ -16,7 +15,7 @@ import {
 import type { OpenNewApiManagedVerificationParams } from "./useNewApiManagedVerification"
 
 interface LoadNewApiChannelKeyWithVerificationParams {
-  channelId: number
+  resourceRef: ManagedResourceRef
   command:
     | typeof PROTECTION_BYPASS_USER_COMMANDS.ManageApiKeys
     | typeof PROTECTION_BYPASS_USER_COMMANDS.ManageSiteChannels
@@ -45,15 +44,11 @@ export async function loadNewApiChannelKeyWithVerification(
       params.command,
       PROTECTION_BYPASS_SURFACES.Options,
       async (protectionBypassExecution) =>
-        await fetchNewApiChannelKey({
-          baseUrl: params.config.baseUrl,
-          userId: params.config.userId,
-          channelId: params.channelId,
-          username: params.config.username,
-          password: params.config.password,
-          totpSecret: params.config.totpSecret,
-          protectionBypassExecution,
-        }),
+        await fetchNewApiResourceKeyWithSession(
+          params.config,
+          params.resourceRef,
+          { protectionBypassExecution },
+        ),
     )
 
     await Promise.resolve(params.setKey(key))

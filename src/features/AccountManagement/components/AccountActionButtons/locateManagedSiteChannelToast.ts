@@ -4,6 +4,7 @@ import {
   MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS,
   type ManagedSiteChannelMatchInspection,
 } from "~/services/managedSites/channelMatch"
+import { areManagedResourceRefsEqual } from "~/services/managedSites/managedResourceIdentity"
 
 /**
  * Resolves the user-facing toast message for the best managed-site channel locate hint.
@@ -14,8 +15,10 @@ export function resolveLocateManagedSiteChannelToastMessage(
 ) {
   if (inspection.key.matched && inspection.models.matched) {
     if (
-      inspection.key.channel?.id != null &&
-      inspection.key.channel.id === inspection.models.channel?.id
+      areManagedResourceRefsEqual(
+        inspection.key.channel?.ref,
+        inspection.models.channel?.ref,
+      )
     ) {
       return t("account:actions.channelLocateKeyMatchedModelsDrifted")
     }

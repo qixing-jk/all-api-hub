@@ -7,9 +7,11 @@ import type {
   ManagedSiteQueriesCapability,
 } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import {
-  requireNumericManagedResourceId,
+  toManagedResourceMatchCandidate,
   toManagedResourceMatchList,
+  toNativeNumericMatchCandidates,
 } from "~/services/apiAdapters/managedResources/matchingInputs"
+import { requireManagedResourceChannelId } from "~/services/apiAdapters/managedResources/resourceIds"
 import {
   fetchAccountAvailableModels,
   fetchSiteUserGroups,
@@ -47,18 +49,29 @@ const veloeraManagedSiteChannelDrafts: ManagedSiteChannelDraftsCapability = {
 }
 
 const matching: ManagedResourceMatchingCapability<VeloeraConfig> = {
-  fetchSecretKey: async (config, id, options) =>
+  fetchSecretKey: async (config, ref, options) =>
     veloeraChannelOperations.fetchSecretKey(
       config,
-      requireNumericManagedResourceId(id),
+      requireManagedResourceChannelId(SITE_TYPES.VELOERA, config, ref),
       options,
     ),
-  hydrateComparableKeys: veloeraChannelOperations.hydrateComparableKeys,
+  hydrateComparableKeys: async (config, candidates, options) => {
+    const target = { siteType: SITE_TYPES.VELOERA, config }
+    const hydrated = await veloeraChannelOperations.hydrateComparableKeys(
+      config,
+      toNativeNumericMatchCandidates(candidates, target),
+      options,
+    )
+    return hydrated.map((candidate) =>
+      toManagedResourceMatchCandidate(candidate, target),
+    )
+  },
   search: async (config) =>
     toManagedResourceMatchList(
       await listAllChannels(toManagedSiteApiServiceRequest(config), {
         requireCompleteInventory: true,
       }),
+      { siteType: SITE_TYPES.VELOERA, config },
     ),
 }
 

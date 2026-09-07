@@ -1,7 +1,12 @@
 import { union } from "lodash-es"
 
 import type { ManagedResourceModelsCapability } from "~/services/apiAdapters/contracts/managedResourceModels"
+import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
+import {
+  assertManagedResourceRefForSite,
+  toManagedUpstreamResourceRef,
+} from "~/services/managedSites/managedResourceIdentity"
 import {
   consumeManagedSiteMutationResult,
   MANAGED_SITE_MUTATION_RETRY_DECISIONS,
@@ -253,13 +258,17 @@ export class ModelSyncService {
   /** Lists complete model-task inputs through the selected provider. */
   async listChannels(): Promise<ManagedModelChannelListData> {
     try {
-      return await this.getChannelListCapability().list(
+      const result = await this.getChannelListCapability().list(
         this.managedSiteConfig.config,
         {
           beforeRequest: async () => this.throttle(),
           ...(this.rateLimiter ? { bypassSiteRequestLimit: true } : {}),
         },
       )
+      for (const channel of result.items) {
+        assertManagedResourceRefForSite(channel.ref, this.managedSiteConfig)
+      }
+      return result
     } catch (error) {
       logger.error("Failed to list channels", error)
       throw error
@@ -268,24 +277,25 @@ export class ModelSyncService {
 
   /**
    * Fetch raw model list for a given channel.
-   * @param channelId Target channel id.
+   * @param resourceRef Complete identity of the target channel.
    * @returns Model identifiers returned by upstream.
    */
   async fetchChannelModels(
-    channelId: number,
+    resourceRef: ManagedResourceRef,
     abortSignal?: AbortSignal,
   ): Promise<string[]> {
+    assertManagedResourceRefForSite(resourceRef, this.managedSiteConfig)
     try {
       await this.throttle()
       throwIfAborted(abortSignal)
 
       return await this.getModelSyncChannelCapabilities().fetchModels(
         this.managedSiteConfig.config,
-        channelId,
+        resourceRef,
         this.createChannelRequestOptions(abortSignal),
       )
     } catch (error: any) {
-      logger.error("Failed to fetch models", { channelId, error })
+      logger.error("Failed to fetch models", { resourceRef, error })
       throw error
     }
   }
@@ -300,6 +310,7 @@ export class ModelSyncService {
     models: string[],
     abortSignal?: AbortSignal,
   ): Promise<void> {
+    assertManagedResourceRefForSite(channel.ref, this.managedSiteConfig)
     try {
       await this.throttle()
       throwIfAborted(abortSignal)
@@ -309,7 +320,7 @@ export class ModelSyncService {
 
       const result = await this.getModelSyncChannelCapabilities().updateModels(
         this.managedSiteConfig.config,
-        channel.id,
+        channel.ref,
         models,
         this.createChannelRequestOptions(abortSignal),
       )
@@ -320,7 +331,7 @@ export class ModelSyncService {
       })
     } catch (error: any) {
       logger.error("Failed to update channel", {
-        channelId: channel.id,
+        resourceRef: channel.ref,
         ...(error instanceof ModelSyncMutationError ? { error } : {}),
       })
       throw error
@@ -337,6 +348,7 @@ export class ModelSyncService {
     modelMapping: Record<string, string>,
     abortSignal?: AbortSignal,
   ): Promise<ManagedSiteMutationResult<unknown>> {
+    assertManagedResourceRefForSite(channel.ref, this.managedSiteConfig)
     try {
       const updateModels = union(channel.models, Object.keys(modelMapping))
       await this.throttle()
@@ -348,7 +360,7 @@ export class ModelSyncService {
       const result =
         await this.getModelSyncChannelCapabilities().updateModelMapping(
           this.managedSiteConfig.config,
-          channel.id,
+          channel.ref,
           updateModels,
           modelMapping,
           this.createChannelRequestOptions(abortSignal),
@@ -361,7 +373,7 @@ export class ModelSyncService {
       return result
     } catch (error) {
       logger.error("Failed to update channel mapping", {
-        channelId: channel.id,
+        resourceRef: channel.ref,
         ...(error instanceof ModelSyncMutationError ? { error } : {}),
       })
       throw error
@@ -380,6 +392,7 @@ export class ModelSyncService {
     abortSignal?: AbortSignal,
     writeFailureBoundary: ModelSyncWriteFailureBoundary = createModelSyncWriteFailureBoundary(),
   ): Promise<ExecutionItemResult> {
+    assertManagedResourceRefForSite(channel.ref, this.managedSiteConfig)
     let attempts = 0
     let lastError: any = null
 
@@ -389,7 +402,7 @@ export class ModelSyncService {
       try {
         throwIfAborted(abortSignal)
         const fetchedModels = await this.fetchChannelModels(
-          channel.id,
+          channel.ref,
           abortSignal,
         )
         throwIfAborted(abortSignal)
@@ -434,7 +447,7 @@ export class ModelSyncService {
           }
 
           return {
-            channelId: channel.id,
+            resourceRef: channel.ref,
             channelName: channel.name,
             ok: true,
             attempts,
@@ -454,11 +467,11 @@ export class ModelSyncService {
 
         if (error instanceof ProbeFilterUnavailableError) {
           logger.warn("Probe-backed channel filter skipped model update", {
-            channelId: channel.id,
+            resourceRef: channel.ref,
             reason: error.reason,
           })
           return {
-            channelId: channel.id,
+            resourceRef: channel.ref,
             channelName: channel.name,
             ok: false,
             attempts: attempts + 1,
@@ -470,7 +483,7 @@ export class ModelSyncService {
 
         lastError = error
         logger.error("Unexpected error for channel", {
-          channelId: channel.id,
+          resourceRef: channel.ref,
           error,
         })
 
@@ -493,7 +506,7 @@ export class ModelSyncService {
     }
 
     return {
-      channelId: channel.id,
+      resourceRef: channel.ref,
       channelName: channel.name,
       ok: false,
       httpStatus: lastError?.httpStatus,
@@ -514,6 +527,9 @@ export class ModelSyncService {
     channels: ManagedModelChannel[],
     options: BatchExecutionOptions,
   ): Promise<ExecutionResult> {
+    for (const channel of channels) {
+      assertManagedResourceRefForSite(channel.ref, this.managedSiteConfig)
+    }
     const { concurrency, maxRetries, channelProcessingTimeout, onProgress } =
       options
     const startedAt = Date.now()
@@ -545,7 +561,7 @@ export class ModelSyncService {
                 writeFailureBoundary,
               ),
             {
-              channelId: channel.id,
+              resourceRef: channel.ref,
               channelName: channel.name,
               oldModels: [...channel.models],
             },
@@ -555,11 +571,11 @@ export class ModelSyncService {
         } catch (error: any) {
           if (writeFailureBoundary.matches(error)) throw error
           logger.error("Unexpected error for channel", {
-            channelId: channel.id,
+            resourceRef: channel.ref,
             error,
           })
           result = {
-            channelId: channel.id,
+            resourceRef: channel.ref,
             channelName: channel.name,
             ok: false,
             message: error?.message || "Unexpected error",
@@ -655,11 +671,7 @@ export class ModelSyncService {
     models: string[],
     probeContext: ProbeFilterContext,
   ): Promise<string[]> {
-    const resourceIdentity = {
-      managedSiteType: this.managedSiteConfig.siteType,
-      scopeKey: this.managedSiteConfig.config.baseUrl,
-      resourceId: channel.id,
-    }
+    const resourceIdentity = toManagedUpstreamResourceRef(channel.ref)
     const rules = getChannelModelFilterRulesForResource(
       this.channelConfigs,
       resourceIdentity,

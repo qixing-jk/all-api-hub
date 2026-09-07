@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
+import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { doneHubManagedSiteCapabilities } from "~/services/apiAdapters/managedSites/doneHub"
 import { newApiManagedSiteCapabilities } from "~/services/apiAdapters/managedSites/newApi"
 import { veloeraManagedSiteCapabilities } from "~/services/apiAdapters/managedSites/veloera"
@@ -7,6 +9,8 @@ import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/con
 import { AuthTypeEnum } from "~/types"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 import { buildManagedSiteChannel } from "~~/tests/test-utils/factories"
+import { modelResourceRef } from "~~/tests/test-utils/managedModelResource"
+import { matchingResourceRef } from "~~/tests/test-utils/managedResourceMatching"
 
 const apis = vi.hoisted(() => ({
   newApi: { listAllChannels: vi.fn(), searchChannel: vi.fn() },
@@ -15,7 +19,7 @@ const apis = vi.hoisted(() => ({
     fetchChannelRaw: vi.fn(),
     searchChannel: vi.fn(),
   },
-  veloera: { listAllChannels: vi.fn() },
+  veloera: { listAllChannels: vi.fn(), fetchChannel: vi.fn() },
   newApiSecrets: {
     fetchChannelSecretKey: vi.fn(),
     hydrateComparableChannelKeys: vi.fn(),
@@ -77,7 +81,7 @@ const channel = buildManagedSiteChannel({
 })
 
 const inventory = { items: [channel], total: 1, type_counts: { "1": 1 } }
-const candidate = {
+const nativeCandidate = {
   id: 7,
   name: "Native channel",
   type: 1,
@@ -85,6 +89,9 @@ const candidate = {
   key: "********",
   models: "model-a,model-b",
 }
+
+const { id: resourceId, ...candidateFacts } = nativeCandidate
+const candidate = { ...candidateFacts, ref: matchingResourceRef(resourceId) }
 
 const matchingProviders = [
   {
@@ -112,6 +119,54 @@ describe("New API family native capability consumers", () => {
   beforeEach(() => vi.resetAllMocks())
 
   it.each(modelProviders)(
+    "rejects a mixed-deployment $name hydration batch before revealing any key",
+    async ({ capabilities }) => {
+      const candidates = [
+        {
+          ...candidate,
+          ref: matchingResourceRef(7, { siteType: capabilities.siteType }),
+        },
+        {
+          ...candidate,
+          ref: matchingResourceRef(8, {
+            siteType: capabilities.siteType,
+            scopeKey: "https://other.example",
+          }),
+        },
+      ]
+
+      await expect(
+        capabilities.matching.hydrateComparableKeys!(config, candidates),
+      ).rejects.toMatchObject({ failure: { code: "validation_failed" } })
+      expect(
+        apis.newApiSecrets.hydrateComparableChannelKeys,
+      ).not.toHaveBeenCalled()
+      expect(apis.newApiSecrets.fetchChannelSecretKey).not.toHaveBeenCalled()
+      expect(apis.doneHub.fetchChannelRaw).not.toHaveBeenCalled()
+      expect(apis.veloera.fetchChannel).not.toHaveBeenCalled()
+    },
+  )
+
+  it.each(modelProviders)(
+    "validates the full resource identity before a $name secret read",
+    async ({ capabilities }) => {
+      const ref = matchingResourceRef(7, { siteType: capabilities.siteType })
+      for (const foreignRef of [
+        { ...ref, siteType: SITE_TYPES.AXON_HUB },
+        { ...ref, scopeKey: "https://other.example" },
+        { ...ref, kind: "token" as ManagedResourceRef["kind"] },
+      ]) {
+        await expect(
+          capabilities.matching.fetchSecretKey!(config, foreignRef),
+        ).rejects.toMatchObject({ failure: { code: "validation_failed" } })
+      }
+      expect(apis.newApiSecrets.fetchChannelSecretKey).not.toHaveBeenCalled()
+      expect(apis.doneHub.fetchChannelRaw).not.toHaveBeenCalled()
+      expect(apis.veloera.fetchChannel).not.toHaveBeenCalled()
+    },
+  )
+
+  it.each(modelProviders)(
     "retains $name model-task inputs and request controls without CRUD metadata",
     async ({ capabilities, api }) => {
       api.listAllChannels.mockResolvedValue(inventory)
@@ -125,7 +180,10 @@ describe("New API family native capability consumers", () => {
       await expect(capabilities.models.list(config, options)).resolves.toEqual({
         items: [
           {
-            id: 7,
+            ref: modelResourceRef(7, {
+              siteType: capabilities.siteType,
+              scopeKey: config.baseUrl,
+            }),
             name: "Native channel",
             type: 1,
             baseUrl: "https://upstream.example",
@@ -164,11 +222,41 @@ describe("New API family native capability consumers", () => {
         capabilities.models.list(config, undefined),
       ).resolves.toMatchObject({
         items: [
-          { id: 10, disabled: false },
-          { id: 11, disabled: false },
-          { id: 12, disabled: true },
-          { id: 13, disabled: true },
-          { id: 14, disabled: false },
+          {
+            ref: modelResourceRef(10, {
+              siteType: capabilities.siteType,
+              scopeKey: config.baseUrl,
+            }),
+            disabled: false,
+          },
+          {
+            ref: modelResourceRef(11, {
+              siteType: capabilities.siteType,
+              scopeKey: config.baseUrl,
+            }),
+            disabled: false,
+          },
+          {
+            ref: modelResourceRef(12, {
+              siteType: capabilities.siteType,
+              scopeKey: config.baseUrl,
+            }),
+            disabled: true,
+          },
+          {
+            ref: modelResourceRef(13, {
+              siteType: capabilities.siteType,
+              scopeKey: config.baseUrl,
+            }),
+            disabled: true,
+          },
+          {
+            ref: modelResourceRef(14, {
+              siteType: capabilities.siteType,
+              scopeKey: config.baseUrl,
+            }),
+            disabled: false,
+          },
         ],
       })
     },
@@ -182,7 +270,12 @@ describe("New API family native capability consumers", () => {
       await expect(
         capabilities.matching.search(config, "https://upstream.example"),
       ).resolves.toEqual({
-        items: [candidate],
+        items: [
+          {
+            ...candidate,
+            ref: matchingResourceRef(7, { siteType: capabilities.siteType }),
+          },
+        ],
         total: 1,
         type_counts: { "1": 1 },
       })
@@ -207,9 +300,9 @@ describe("New API family native capability consumers", () => {
   it("requires explicit intent for both New API hidden-key matching entrypoints", async () => {
     const matching = newApiManagedSiteCapabilities.matching
 
-    await expect(matching.fetchSecretKey!(config, 7)).rejects.toThrow(
-      "explicit intent",
-    )
+    await expect(
+      matching.fetchSecretKey!(config, candidate.ref),
+    ).rejects.toThrow("explicit intent")
     await expect(
       matching.hydrateComparableKeys!(config, [candidate]),
     ).rejects.toThrow("explicit intent")
@@ -219,54 +312,86 @@ describe("New API family native capability consumers", () => {
     ).not.toHaveBeenCalled()
   })
 
-  it("preserves explicit intent and cancellation for New API matching key reads", async () => {
-    const matching = newApiManagedSiteCapabilities.matching
-    const options = {
-      signal: new AbortController().signal,
-      protectionBypassExecution: userCommandExecution(
-        PROTECTION_BYPASS_USER_COMMANDS.ManageSiteChannels,
-      ),
-    }
-    apis.newApiSecrets.fetchChannelSecretKey.mockResolvedValue("resolved-key")
-    apis.newApiSecrets.hydrateComparableChannelKeys.mockResolvedValue([
-      { ...candidate, key: "resolved-key" },
-    ])
+  it.each([7, "7"])(
+    "preserves explicit intent and cancellation for New API matching key read %s",
+    async (resourceId) => {
+      const matching = newApiManagedSiteCapabilities.matching
+      const options = {
+        signal: new AbortController().signal,
+        protectionBypassExecution: userCommandExecution(
+          PROTECTION_BYPASS_USER_COMMANDS.ManageSiteChannels,
+        ),
+      }
+      apis.newApiSecrets.fetchChannelSecretKey.mockResolvedValue("resolved-key")
+      apis.newApiSecrets.hydrateComparableChannelKeys.mockResolvedValue([
+        { ...nativeCandidate, key: "resolved-key" },
+      ])
 
-    await expect(matching.fetchSecretKey!(config, 7, options)).resolves.toBe(
-      "resolved-key",
-    )
-    await expect(
-      matching.hydrateComparableKeys!(config, [candidate], options),
-    ).resolves.toEqual([{ ...candidate, key: "resolved-key" }])
-    expect(apis.newApiSecrets.fetchChannelSecretKey).toHaveBeenCalledWith(
-      config,
-      7,
-      options,
-    )
-    expect(
-      apis.newApiSecrets.hydrateComparableChannelKeys,
-    ).toHaveBeenCalledWith(config, [candidate], options)
-  })
+      await expect(
+        matching.fetchSecretKey!(
+          config,
+          matchingResourceRef(resourceId),
+          options,
+        ),
+      ).resolves.toBe("resolved-key")
+      await expect(
+        matching.hydrateComparableKeys!(config, [candidate], options),
+      ).resolves.toEqual([{ ...candidate, key: "resolved-key" }])
+      expect(apis.newApiSecrets.fetchChannelSecretKey).toHaveBeenCalledWith(
+        config,
+        7,
+        options,
+      )
+      expect(
+        apis.newApiSecrets.hydrateComparableChannelKeys,
+      ).toHaveBeenCalledWith(config, [nativeCandidate], options)
+    },
+  )
 
   it.each(matchingProviders)(
     "rejects opaque $name identities before secret access",
     async ({ capabilities }) => {
-      await expect(
-        capabilities.matching.fetchSecretKey!(config, "opaque-id"),
-      ).rejects.toThrow("Invalid numeric resource id")
+      for (const resourceId of [
+        "opaque-id",
+        "7x",
+        "1e2",
+        "0x7",
+        "07",
+        " 7 ",
+        "0",
+        "-1",
+        "9007199254740992",
+      ]) {
+        await expect(
+          capabilities.matching.fetchSecretKey!(
+            config,
+            matchingResourceRef(resourceId, {
+              siteType: capabilities.siteType,
+            }),
+          ),
+        ).rejects.toThrow("Invalid numeric resource id")
+      }
       expect(apis.newApiSecrets.fetchChannelSecretKey).not.toHaveBeenCalled()
       expect(apis.doneHub.fetchChannelRaw).not.toHaveBeenCalled()
     },
   )
 
-  it("resolves a DoneHub matching key through the selected native channel", async () => {
-    apis.doneHub.fetchChannelRaw.mockResolvedValue(
-      buildManagedSiteChannel({ id: 7, key: "resolved-key" }),
-    )
+  it.each([7, "7"])(
+    "resolves a DoneHub matching key through native channel %s",
+    async (resourceId) => {
+      apis.doneHub.fetchChannelRaw.mockResolvedValue(
+        buildManagedSiteChannel({ id: 7, key: "resolved-key" }),
+      )
 
-    await expect(
-      doneHubManagedSiteCapabilities.matching.fetchSecretKey!(config, 7),
-    ).resolves.toBe("resolved-key")
-    expect(apis.doneHub.fetchChannelRaw).toHaveBeenCalledWith(request, 7)
-  })
+      await expect(
+        doneHubManagedSiteCapabilities.matching.fetchSecretKey!(
+          config,
+          matchingResourceRef(resourceId, {
+            siteType: doneHubManagedSiteCapabilities.siteType,
+          }),
+        ),
+      ).resolves.toBe("resolved-key")
+      expect(apis.doneHub.fetchChannelRaw).toHaveBeenCalledWith(request, 7)
+    },
+  )
 })

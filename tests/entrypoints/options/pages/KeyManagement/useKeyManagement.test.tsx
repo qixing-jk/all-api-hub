@@ -18,6 +18,7 @@ import {
 } from "~/services/apiAdapters/contracts/keyManagement"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import { getManagedResourceRefKey } from "~/services/managedSites/managedResourceIdentity"
 import * as managedSiteSupport from "~/services/managedSites/utils/managedSite"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -42,7 +43,9 @@ import {
 } from "~~/tests/services/protectionBypass/fixtures"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
+import { buildUserPreferences } from "~~/tests/test-utils/factories"
 import { createResourceTestI18n, testI18n } from "~~/tests/test-utils/i18n"
+import { matchingResourceRef } from "~~/tests/test-utils/managedResourceMatching"
 import { createToken } from "~~/tests/utils/keyManagementFactories"
 
 const {
@@ -219,25 +222,6 @@ const createAdapterWithServiceCredential = (
   },
 })
 
-type ManagedSiteContextValue = {
-  managedSiteType: string
-  newApiBaseUrl: string
-  newApiAdminToken: string
-  newApiUserId: string
-  newApiUsername: string
-  newApiPassword: string
-  newApiTotpSecret: string
-  doneHubBaseUrl: string | undefined
-  doneHubAdminToken: string | undefined
-  doneHubUserId: string | undefined
-  veloeraBaseUrl: string
-  veloeraAdminToken: string
-  veloeraUserId: string
-  octopusBaseUrl: string | undefined
-  octopusUsername: string | undefined
-  octopusPassword: string | undefined
-}
-
 describe("useKeyManagement enabled account filtering", () => {
   beforeEach(() => {
     vi.restoreAllMocks()
@@ -260,21 +244,13 @@ describe("useKeyManagement enabled account filtering", () => {
     mockedUseUserPreferencesContext.mockReset()
     mockedUseUserPreferencesContext.mockReturnValue({
       managedSiteType: "new-api",
-      newApiBaseUrl: "https://managed.example",
-      newApiAdminToken: "managed-admin-token",
-      newApiUserId: "1",
-      newApiUsername: "",
-      newApiPassword: "",
-      newApiTotpSecret: "",
-      doneHubBaseUrl: "",
-      doneHubAdminToken: "",
-      doneHubUserId: "",
-      veloeraBaseUrl: "",
-      veloeraAdminToken: "",
-      veloeraUserId: "",
-      octopusBaseUrl: "",
-      octopusUsername: "",
-      octopusPassword: "",
+      preferences: buildUserPreferences({
+        newApi: {
+          baseUrl: "https://managed.example",
+          adminToken: "managed-admin-token",
+          userId: "1",
+        },
+      }),
     })
     vi.mocked(getSiteTypeCapabilities).mockReset()
     vi.mocked(getSiteTypeCapabilities).mockReturnValue(
@@ -2330,21 +2306,14 @@ describe("useKeyManagement enabled account filtering", () => {
 
     mockedUseUserPreferencesContext.mockReturnValue({
       managedSiteType: "Veloera",
-      newApiBaseUrl: "",
-      newApiAdminToken: "",
-      newApiUserId: "",
-      newApiUsername: "",
-      newApiPassword: "",
-      newApiTotpSecret: "",
-      doneHubBaseUrl: "",
-      doneHubAdminToken: "",
-      doneHubUserId: "",
-      veloeraBaseUrl: "https://veloera.example",
-      veloeraAdminToken: "veloera-admin-token",
-      veloeraUserId: "1",
-      octopusBaseUrl: "",
-      octopusUsername: "",
-      octopusPassword: "",
+      preferences: buildUserPreferences({
+        managedSiteType: SITE_TYPES.VELOERA,
+        veloera: {
+          baseUrl: "https://veloera.example",
+          adminToken: "veloera-admin-token",
+          userId: "1",
+        },
+      }),
     })
     mockedUseAccountData.mockReturnValue({
       enabledDisplayData: [account],
@@ -2497,7 +2466,7 @@ describe("useKeyManagement enabled account filtering", () => {
       .mockResolvedValueOnce({
         status: managedSiteTokenChannelStatuses.ADDED,
         matchedChannel: {
-          id: 55,
+          ref: matchingResourceRef(55),
           name: "Managed Channel 55",
         },
       })
@@ -2541,7 +2510,7 @@ describe("useKeyManagement enabled account filtering", () => {
     ).toEqual({
       status: managedSiteTokenChannelStatuses.ADDED,
       matchedChannel: {
-        id: 55,
+        ref: matchingResourceRef(55),
         name: "Managed Channel 55",
       },
     })
@@ -2565,7 +2534,7 @@ describe("useKeyManagement enabled account filtering", () => {
       .mockResolvedValueOnce({
         status: managedSiteTokenChannelStatuses.ADDED,
         matchedChannel: {
-          id: 77,
+          ref: matchingResourceRef(77),
           name: "Private Managed Channel",
         },
       })
@@ -2771,21 +2740,14 @@ describe("useKeyManagement enabled account filtering", () => {
 
     mockedUseUserPreferencesContext.mockReturnValue({
       managedSiteType: "Veloera",
-      newApiBaseUrl: "",
-      newApiAdminToken: "",
-      newApiUserId: "",
-      newApiUsername: "",
-      newApiPassword: "",
-      newApiTotpSecret: "",
-      doneHubBaseUrl: "",
-      doneHubAdminToken: "",
-      doneHubUserId: "",
-      veloeraBaseUrl: "https://veloera.example",
-      veloeraAdminToken: "veloera-admin-token",
-      veloeraUserId: "1",
-      octopusBaseUrl: "",
-      octopusUsername: "",
-      octopusPassword: "",
+      preferences: buildUserPreferences({
+        managedSiteType: SITE_TYPES.VELOERA,
+        veloera: {
+          baseUrl: "https://veloera.example",
+          adminToken: "veloera-admin-token",
+          userId: "1",
+        },
+      }),
     })
 
     const fetchAccountTokens = vi.fn().mockResolvedValue([
@@ -2935,7 +2897,7 @@ describe("useKeyManagement enabled account filtering", () => {
       resolveStatus({
         status: managedSiteTokenChannelStatuses.ADDED,
         matchedChannel: {
-          id: 77,
+          ref: matchingResourceRef(77),
           name: "Managed Channel 77",
         },
       })
@@ -2948,7 +2910,7 @@ describe("useKeyManagement enabled account filtering", () => {
       ).toEqual({
         status: managedSiteTokenChannelStatuses.ADDED,
         matchedChannel: {
-          id: 77,
+          ref: matchingResourceRef(77),
           name: "Managed Channel 77",
         },
       }),
@@ -2997,7 +2959,7 @@ describe("useKeyManagement enabled account filtering", () => {
             : {
                 status: managedSiteTokenChannelStatuses.ADDED,
                 matchedChannel: {
-                  id: 88,
+                  ref: matchingResourceRef(88),
                   name: "Managed Channel 88",
                 },
               },
@@ -3056,7 +3018,7 @@ describe("useKeyManagement enabled account filtering", () => {
       ).toEqual({
         status: managedSiteTokenChannelStatuses.ADDED,
         matchedChannel: {
-          id: 88,
+          ref: matchingResourceRef(88),
           name: "Managed Channel 88",
         },
       }),
@@ -3066,7 +3028,7 @@ describe("useKeyManagement enabled account filtering", () => {
       resolveFirstTokenStatus({
         status: managedSiteTokenChannelStatuses.ADDED,
         matchedChannel: {
-          id: 77,
+          ref: matchingResourceRef(77),
           name: "Managed Channel 77",
         },
       })
@@ -3079,7 +3041,7 @@ describe("useKeyManagement enabled account filtering", () => {
       ).toEqual({
         status: managedSiteTokenChannelStatuses.ADDED,
         matchedChannel: {
-          id: 77,
+          ref: matchingResourceRef(77),
           name: "Managed Channel 77",
         },
       }),
@@ -3130,8 +3092,9 @@ describe("useKeyManagement enabled account filtering", () => {
       await result.current.refreshManagedSiteTokenStatusForToken(
         result.current.tokens[0]!,
         {
-          resolvedChannelKeysById: {
-            55: "resolved-channel-key",
+          resolvedChannelKeysByResourceKey: {
+            [getManagedResourceRefKey(matchingResourceRef(55))]:
+              "resolved-channel-key",
           },
         },
       )
@@ -3142,8 +3105,9 @@ describe("useKeyManagement enabled account filtering", () => {
     )
     expect(getManagedSiteTokenChannelStatusMock).toHaveBeenLastCalledWith(
       expect.objectContaining({
-        resolvedChannelKeysById: {
-          55: "resolved-channel-key",
+        resolvedChannelKeysByResourceKey: {
+          [getManagedResourceRefKey(matchingResourceRef(55))]:
+            "resolved-channel-key",
         },
       }),
     )
@@ -3165,7 +3129,7 @@ describe("useKeyManagement enabled account filtering", () => {
           matched: true,
           candidateCount: 1,
           channel: {
-            id: 77,
+            ref: matchingResourceRef(77),
             name: "Managed Channel 77",
           },
         },
@@ -3179,7 +3143,7 @@ describe("useKeyManagement enabled account filtering", () => {
           matched: true,
           reason: "exact",
           channel: {
-            id: 77,
+            ref: matchingResourceRef(77),
             name: "Managed Channel 77",
           },
         },
@@ -3209,13 +3173,20 @@ describe("useKeyManagement enabled account filtering", () => {
       .mockResolvedValueOnce(initialStatus)
       .mockResolvedValueOnce({
         status: managedSiteTokenChannelStatuses.ADDED,
-        matchedChannel: { id: 77, name: "Managed Channel 77" },
+        matchedChannel: {
+          ref: matchingResourceRef(77),
+          name: "Managed Channel 77",
+        },
       })
     resolveManagedSiteTokenChannelStatusWithVerifiedKeyMock.mockReturnValue({
       status: managedSiteTokenChannelStatuses.ADDED,
-      matchedChannel: { id: 77, name: "Managed Channel 77" },
-      resolvedChannelKeysById: {
-        77: "verified-channel-key",
+      matchedChannel: {
+        ref: matchingResourceRef(77),
+        name: "Managed Channel 77",
+      },
+      resolvedChannelKeysByResourceKey: {
+        [getManagedResourceRefKey(matchingResourceRef(77))]:
+          "verified-channel-key",
       },
     })
 
@@ -3236,7 +3207,7 @@ describe("useKeyManagement enabled account filtering", () => {
         result.current.tokens[0]!,
         initialStatus as any,
         {
-          channelId: 77,
+          resourceRef: matchingResourceRef(77),
           channelKey: "verified-channel-key",
         },
       )
@@ -3248,7 +3219,7 @@ describe("useKeyManagement enabled account filtering", () => {
     ).toHaveBeenCalledWith({
       status: initialStatus,
       tokenKey: "token-607-secret",
-      channelId: 77,
+      resourceRef: matchingResourceRef(77),
       channelKey: "verified-channel-key",
       siteType: "new-api",
     })
@@ -3256,7 +3227,10 @@ describe("useKeyManagement enabled account filtering", () => {
       result.current.managedSiteTokenStatuses["verified-key-acc:607"]?.result,
     ).toEqual({
       status: managedSiteTokenChannelStatuses.ADDED,
-      matchedChannel: { id: 77, name: "Managed Channel 77" },
+      matchedChannel: {
+        ref: matchingResourceRef(77),
+        name: "Managed Channel 77",
+      },
     })
 
     await act(async () => {
@@ -3273,8 +3247,9 @@ describe("useKeyManagement enabled account filtering", () => {
     expect(getManagedSiteTokenChannelStatusMock).toHaveBeenCalledTimes(2)
     expect(getManagedSiteTokenChannelStatusMock).toHaveBeenLastCalledWith(
       expect.objectContaining({
-        resolvedChannelKeysById: {
-          77: "verified-channel-key",
+        resolvedChannelKeysByResourceKey: {
+          [getManagedResourceRefKey(matchingResourceRef(77))]:
+            "verified-channel-key",
         },
         protectionBypassExecution: userCommandExecution(
           PROTECTION_BYPASS_USER_COMMANDS.ManageApiKeys,
@@ -3290,21 +3265,14 @@ describe("useKeyManagement enabled account filtering", () => {
     })
     mockedUseUserPreferencesContext.mockReturnValue({
       managedSiteType: "Veloera",
-      newApiBaseUrl: "",
-      newApiAdminToken: "",
-      newApiUserId: "",
-      newApiUsername: "",
-      newApiPassword: "",
-      newApiTotpSecret: "",
-      doneHubBaseUrl: "",
-      doneHubAdminToken: "",
-      doneHubUserId: "",
-      veloeraBaseUrl: "https://veloera.example",
-      veloeraAdminToken: "veloera-admin-token",
-      veloeraUserId: "1",
-      octopusBaseUrl: "",
-      octopusUsername: "",
-      octopusPassword: "",
+      preferences: buildUserPreferences({
+        managedSiteType: SITE_TYPES.VELOERA,
+        veloera: {
+          baseUrl: "https://veloera.example",
+          adminToken: "veloera-admin-token",
+          userId: "1",
+        },
+      }),
     })
     mockedUseAccountData.mockReturnValue({
       enabledDisplayData: [account],
@@ -3330,7 +3298,7 @@ describe("useKeyManagement enabled account filtering", () => {
           status: managedSiteTokenChannelStatuses.UNKNOWN,
         } as any,
         {
-          channelId: 90,
+          resourceRef: matchingResourceRef(90),
           channelKey: "verified-channel-key",
         },
       )
@@ -3371,7 +3339,7 @@ describe("useKeyManagement enabled account filtering", () => {
           status: managedSiteTokenChannelStatuses.UNKNOWN,
         } as any,
         {
-          channelId: 91,
+          resourceRef: matchingResourceRef(91),
           channelKey: "verified-channel-key",
         },
       )
@@ -3429,7 +3397,7 @@ describe("useKeyManagement enabled account filtering", () => {
           status: managedSiteTokenChannelStatuses.UNKNOWN,
         } as any,
         {
-          channelId: 92,
+          resourceRef: matchingResourceRef(92),
           channelKey: "verified-channel-key",
         },
       )
@@ -3456,7 +3424,7 @@ describe("useKeyManagement enabled account filtering", () => {
         url: {
           matched: true,
           candidateCount: 1,
-          channel: { id: 88, name: "Managed Channel 88" },
+          channel: { ref: matchingResourceRef(88), name: "Managed Channel 88" },
         },
         key: {
           comparable: false,
@@ -3467,7 +3435,7 @@ describe("useKeyManagement enabled account filtering", () => {
           comparable: true,
           matched: true,
           reason: "exact",
-          channel: { id: 88, name: "Managed Channel 88" },
+          channel: { ref: matchingResourceRef(88), name: "Managed Channel 88" },
         },
       },
     }
@@ -3509,7 +3477,7 @@ describe("useKeyManagement enabled account filtering", () => {
         result.current.tokens[0]!,
         initialStatus as any,
         {
-          channelId: 88,
+          resourceRef: matchingResourceRef(88),
           channelKey: "verified-channel-key",
         },
       ),
@@ -3534,7 +3502,7 @@ describe("useKeyManagement enabled account filtering", () => {
         url: {
           matched: true,
           candidateCount: 1,
-          channel: { id: 89, name: "Managed Channel 89" },
+          channel: { ref: matchingResourceRef(89), name: "Managed Channel 89" },
         },
         key: {
           comparable: false,
@@ -3545,7 +3513,7 @@ describe("useKeyManagement enabled account filtering", () => {
           comparable: true,
           matched: true,
           reason: "exact",
-          channel: { id: 89, name: "Managed Channel 89" },
+          channel: { ref: matchingResourceRef(89), name: "Managed Channel 89" },
         },
       },
     }
@@ -3581,7 +3549,10 @@ describe("useKeyManagement enabled account filtering", () => {
       .mockResolvedValueOnce(refreshedStatus)
     resolveManagedSiteTokenChannelStatusWithVerifiedKeyMock.mockReturnValue({
       status: managedSiteTokenChannelStatuses.ADDED,
-      matchedChannel: { id: 89, name: "Managed Channel 89" },
+      matchedChannel: {
+        ref: matchingResourceRef(89),
+        name: "Managed Channel 89",
+      },
     })
 
     const { result } = renderHook(() => useKeyManagement(), {
@@ -3601,7 +3572,7 @@ describe("useKeyManagement enabled account filtering", () => {
         result.current.tokens[0]!,
         initialStatus as any,
         {
-          channelId: 89,
+          resourceRef: matchingResourceRef(89),
           channelKey: "verified-channel-key",
         },
       )
@@ -3721,7 +3692,7 @@ describe("useKeyManagement enabled account filtering", () => {
       resolveFirstRefreshStatus({
         status: managedSiteTokenChannelStatuses.ADDED,
         matchedChannel: {
-          id: 91,
+          ref: matchingResourceRef(91),
           name: "Stale Managed Channel 91",
         },
       })
@@ -3758,14 +3729,21 @@ describe("useKeyManagement enabled account filtering", () => {
     getManagedSiteTokenChannelStatusMock
       .mockResolvedValueOnce({
         status: managedSiteTokenChannelStatuses.ADDED,
-        matchedChannel: { id: 56, name: "Managed Channel 56" },
-        resolvedChannelKeysById: {
-          56: "resolved-channel-key",
+        matchedChannel: {
+          ref: matchingResourceRef(56),
+          name: "Managed Channel 56",
+        },
+        resolvedChannelKeysByResourceKey: {
+          [getManagedResourceRefKey(matchingResourceRef(56))]:
+            "resolved-channel-key",
         },
       })
       .mockResolvedValueOnce({
         status: managedSiteTokenChannelStatuses.ADDED,
-        matchedChannel: { id: 56, name: "Managed Channel 56" },
+        matchedChannel: {
+          ref: matchingResourceRef(56),
+          name: "Managed Channel 56",
+        },
       })
 
     const { result } = renderHook(() => useKeyManagement(), {
@@ -3791,8 +3769,9 @@ describe("useKeyManagement enabled account filtering", () => {
     )
     expect(getManagedSiteTokenChannelStatusMock).toHaveBeenLastCalledWith(
       expect.objectContaining({
-        resolvedChannelKeysById: {
-          56: "resolved-channel-key",
+        resolvedChannelKeysByResourceKey: {
+          [getManagedResourceRefKey(matchingResourceRef(56))]:
+            "resolved-channel-key",
         },
       }),
     )
@@ -3861,9 +3840,13 @@ describe("useKeyManagement enabled account filtering", () => {
     await act(async () => {
       resolveInitialStatus({
         status: managedSiteTokenChannelStatuses.ADDED,
-        matchedChannel: { id: 57, name: "Managed Channel 57" },
-        resolvedChannelKeysById: {
-          57: "stale-resolved-channel-key",
+        matchedChannel: {
+          ref: matchingResourceRef(57),
+          name: "Managed Channel 57",
+        },
+        resolvedChannelKeysByResourceKey: {
+          [getManagedResourceRefKey(matchingResourceRef(57))]:
+            "stale-resolved-channel-key",
         },
       })
       await initialStatus
@@ -3880,7 +3863,7 @@ describe("useKeyManagement enabled account filtering", () => {
     )
     expect(getManagedSiteTokenChannelStatusMock).toHaveBeenLastCalledWith(
       expect.objectContaining({
-        resolvedChannelKeysById: undefined,
+        resolvedChannelKeysByResourceKey: undefined,
       }),
     )
   })
@@ -3964,6 +3947,409 @@ describe("useKeyManagement enabled account filtering", () => {
     confirmSpy.mockRestore()
   })
 
+  it.each(
+    [
+      {
+        siteType: SITE_TYPES.NEW_API,
+        preferenceKey: "newApi" as const,
+        config: {
+          baseUrl: "https://managed-a.example.invalid",
+          adminToken: "original-admin-token",
+          userId: "1",
+          username: "original-admin",
+          password: "original-password",
+          totpSecret: "original-totp-secret",
+        },
+      },
+      {
+        siteType: SITE_TYPES.DONE_HUB,
+        preferenceKey: "doneHub" as const,
+        config: {
+          baseUrl: "https://managed-a.example.invalid",
+          adminToken: "original-admin-token",
+          userId: "1",
+        },
+      },
+      {
+        siteType: SITE_TYPES.VELOERA,
+        preferenceKey: "veloera" as const,
+        config: {
+          baseUrl: "https://managed-a.example.invalid",
+          adminToken: "original-admin-token",
+          userId: "1",
+        },
+      },
+      {
+        siteType: SITE_TYPES.OCTOPUS,
+        preferenceKey: "octopus" as const,
+        config: {
+          baseUrl: "https://managed-a.example.invalid",
+          username: "original-admin",
+          password: "original-password",
+        },
+      },
+      {
+        siteType: SITE_TYPES.AXON_HUB,
+        preferenceKey: "axonHub" as const,
+        config: {
+          baseUrl: "https://managed-a.example.invalid",
+          email: "admin@example.invalid",
+          password: "original-password",
+        },
+      },
+      {
+        siteType: SITE_TYPES.CLAUDE_CODE_HUB,
+        preferenceKey: "claudeCodeHub" as const,
+        config: {
+          baseUrl: "https://managed-a.example.invalid",
+          adminToken: "original-admin-token",
+        },
+      },
+      {
+        siteType: SITE_TYPES.SUB2API,
+        preferenceKey: "sub2apiManagedSite" as const,
+        config: {
+          baseUrl: "https://managed-a.example.invalid",
+          adminToken: "original-admin-token",
+        },
+      },
+    ].flatMap((target) =>
+      Object.keys(target.config).map((field) => ({ ...target, field })),
+    ),
+  )(
+    "refreshes $siteType status and discards resolved keys when $field changes",
+    async ({ siteType, preferenceKey, config, field }) => {
+      const account = createDisplayAccount({
+        id: "target-config-account",
+        siteType: SITE_TYPES.NEW_API,
+      })
+      vi.mocked(useAccountData).mockReturnValue({
+        enabledDisplayData: [account],
+      } as any)
+      vi.mocked(getSiteTypeCapabilities).mockReturnValue(
+        createAdapterWithKeyManagement({
+          fetchTokens: vi
+            .fn()
+            .mockResolvedValue([
+              createToken({ id: 801, key: "token-801", expired_time: 0 }),
+            ]),
+        }) as any,
+      )
+      let preferences = buildUserPreferences({
+        managedSiteType: siteType,
+        [preferenceKey]: config,
+      })
+      mockedUseUserPreferencesContext.mockImplementation(() => ({
+        managedSiteType: siteType,
+        preferences,
+      }))
+      const ref = matchingResourceRef(77, {
+        siteType,
+        scopeKey: config.baseUrl,
+      })
+      const originalStatus = {
+        status: managedSiteTokenChannelStatuses.ADDED,
+        matchedChannel: { ref, name: "Original target channel" },
+      }
+      const updatedStatus = {
+        status: managedSiteTokenChannelStatuses.NOT_ADDED,
+      }
+      getManagedSiteTokenChannelStatusMock
+        .mockResolvedValueOnce({
+          ...originalStatus,
+          resolvedChannelKeysByResourceKey: {
+            [getManagedResourceRefKey(ref)]: "original-channel-secret",
+          },
+        })
+        .mockResolvedValue(updatedStatus)
+
+      const { result, rerender } = renderHook(() => useKeyManagement(), {
+        wrapper: createWrapper(),
+      })
+      act(() => result.current.setSelectedAccount(account.id))
+      await waitFor(() =>
+        expect(
+          result.current.managedSiteTokenStatuses["target-config-account:801"]
+            ?.result,
+        ).toEqual(originalStatus),
+      )
+      for (const secret of [
+        "original-admin-token",
+        "original-password",
+        "original-totp-secret",
+        "original-channel-secret",
+      ]) {
+        expect(
+          JSON.stringify(result.current.managedSiteTokenStatuses),
+        ).not.toContain(secret)
+      }
+
+      preferences = {
+        ...preferences,
+        [preferenceKey]: {
+          ...config,
+          [field]:
+            field === "baseUrl"
+              ? "https://managed-b.example.invalid"
+              : field === "userId"
+                ? "2"
+                : "updated-credential",
+        },
+      }
+      rerender()
+
+      await waitFor(() =>
+        expect(
+          result.current.managedSiteTokenStatuses["target-config-account:801"]
+            ?.result,
+        ).toEqual(updatedStatus),
+      )
+      expect(getManagedSiteTokenChannelStatusMock).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          resolvedChannelKeysByResourceKey: undefined,
+        }),
+      )
+    },
+  )
+
+  it("ignores an old target lookup that completes after the target configuration changes", async () => {
+    const account = createDisplayAccount({
+      id: "pending-target-account",
+      siteType: SITE_TYPES.NEW_API,
+    })
+    vi.mocked(useAccountData).mockReturnValue({
+      enabledDisplayData: [account],
+    } as any)
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: vi
+          .fn()
+          .mockResolvedValue([
+            createToken({ id: 802, key: "token-802", expired_time: 0 }),
+          ]),
+      }) as any,
+    )
+    let preferences = buildUserPreferences({
+      managedSiteType: SITE_TYPES.CLAUDE_CODE_HUB,
+      claudeCodeHub: {
+        baseUrl: "https://managed-a.example.invalid",
+        adminToken: "original-admin-token",
+      },
+    })
+    mockedUseUserPreferencesContext.mockImplementation(() => ({
+      managedSiteType: SITE_TYPES.CLAUDE_CODE_HUB,
+      preferences,
+    }))
+    const oldRef = matchingResourceRef(77, {
+      siteType: SITE_TYPES.CLAUDE_CODE_HUB,
+      scopeKey: "https://managed-a.example.invalid",
+    })
+    const oldStatus = {
+      status: managedSiteTokenChannelStatuses.ADDED,
+      matchedChannel: { ref: oldRef, name: "Old target channel" },
+      resolvedChannelKeysByResourceKey: {
+        [getManagedResourceRefKey(oldRef)]: "old-channel-secret",
+      },
+    }
+    let finishOldLookup!: (status: typeof oldStatus) => void
+    const oldLookup = new Promise<typeof oldStatus>((resolve) => {
+      finishOldLookup = resolve
+    })
+    const currentStatus = {
+      status: managedSiteTokenChannelStatuses.NOT_ADDED,
+    }
+    getManagedSiteTokenChannelStatusMock
+      .mockReturnValueOnce(oldLookup)
+      .mockResolvedValue(currentStatus)
+
+    const { result, rerender } = renderHook(() => useKeyManagement(), {
+      wrapper: createWrapper(),
+    })
+    act(() => result.current.setSelectedAccount(account.id))
+    await waitFor(() =>
+      expect(
+        result.current.managedSiteTokenStatuses["pending-target-account:802"]
+          ?.isChecking,
+      ).toBe(true),
+    )
+
+    preferences = {
+      ...preferences,
+      claudeCodeHub: {
+        baseUrl: "https://managed-b.example.invalid",
+        adminToken: "updated-admin-token",
+      },
+    }
+    rerender()
+    await waitFor(() =>
+      expect(
+        result.current.managedSiteTokenStatuses["pending-target-account:802"]
+          ?.result,
+      ).toEqual(currentStatus),
+    )
+
+    await act(async () => {
+      finishOldLookup(oldStatus)
+      await oldLookup
+    })
+    expect(
+      result.current.managedSiteTokenStatuses["pending-target-account:802"]
+        ?.result,
+    ).toEqual(currentStatus)
+
+    await act(async () => {
+      await result.current.refreshManagedSiteTokenStatuses()
+    })
+    expect(getManagedSiteTokenChannelStatusMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ resolvedChannelKeysByResourceKey: undefined }),
+    )
+  })
+
+  it("rechecks status when the active target configuration is cleared and restored", async () => {
+    const account = createDisplayAccount({
+      id: "restored-target-account",
+      siteType: SITE_TYPES.NEW_API,
+    })
+    vi.mocked(useAccountData).mockReturnValue({
+      enabledDisplayData: [account],
+    } as any)
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: vi
+          .fn()
+          .mockResolvedValue([
+            createToken({ id: 804, key: "token-804", expired_time: 0 }),
+          ]),
+      }) as any,
+    )
+    const configuredPreferences = buildUserPreferences({
+      managedSiteType: SITE_TYPES.CLAUDE_CODE_HUB,
+      claudeCodeHub: {
+        baseUrl: "https://managed.example.invalid",
+        adminToken: "admin-token",
+      },
+    })
+    let preferences = configuredPreferences
+    mockedUseUserPreferencesContext.mockImplementation(() => ({
+      managedSiteType: SITE_TYPES.CLAUDE_CODE_HUB,
+      preferences,
+    }))
+    const configuredStatus = {
+      status: managedSiteTokenChannelStatuses.ADDED,
+      matchedChannel: {
+        ref: matchingResourceRef(77, {
+          siteType: SITE_TYPES.CLAUDE_CODE_HUB,
+          scopeKey: "https://managed.example.invalid",
+        }),
+        name: "Configured target channel",
+      },
+    }
+    const missingConfigStatus = {
+      status: managedSiteTokenChannelStatuses.UNKNOWN,
+      reason: "config-missing",
+    }
+    getManagedSiteTokenChannelStatusMock
+      .mockResolvedValueOnce(configuredStatus)
+      .mockResolvedValueOnce(missingConfigStatus)
+      .mockResolvedValue(configuredStatus)
+    const { result, rerender } = renderHook(() => useKeyManagement(), {
+      wrapper: createWrapper(),
+    })
+    act(() => result.current.setSelectedAccount(account.id))
+    await waitFor(() =>
+      expect(
+        result.current.managedSiteTokenStatuses["restored-target-account:804"]
+          ?.result,
+      ).toEqual(configuredStatus),
+    )
+
+    preferences = { ...configuredPreferences, claudeCodeHub: undefined }
+    rerender()
+    await waitFor(() =>
+      expect(
+        result.current.managedSiteTokenStatuses["restored-target-account:804"]
+          ?.result,
+      ).toEqual(missingConfigStatus),
+    )
+
+    preferences = configuredPreferences
+    rerender()
+    await waitFor(() =>
+      expect(
+        result.current.managedSiteTokenStatuses["restored-target-account:804"]
+          ?.result,
+      ).toEqual(configuredStatus),
+    )
+    expect(getManagedSiteTokenChannelStatusMock).toHaveBeenCalledTimes(3)
+  })
+
+  it("keeps cached status when a new preference snapshot preserves the active target configuration", async () => {
+    const account = createDisplayAccount({
+      id: "stable-target-account",
+      siteType: SITE_TYPES.NEW_API,
+    })
+    vi.mocked(useAccountData).mockReturnValue({
+      enabledDisplayData: [account],
+    } as any)
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: vi
+          .fn()
+          .mockResolvedValue([
+            createToken({ id: 803, key: "token-803", expired_time: 0 }),
+          ]),
+      }) as any,
+    )
+    let preferences = buildUserPreferences({
+      managedSiteType: SITE_TYPES.AXON_HUB,
+      axonHub: {
+        baseUrl: "https://managed.example.invalid",
+        email: "admin@example.invalid",
+        password: "admin-password",
+      },
+    })
+    mockedUseUserPreferencesContext.mockImplementation(() => ({
+      managedSiteType: SITE_TYPES.AXON_HUB,
+      preferences,
+    }))
+    const originalStatus = {
+      status: managedSiteTokenChannelStatuses.NOT_ADDED,
+    }
+    getManagedSiteTokenChannelStatusMock.mockResolvedValue(originalStatus)
+    const { result, rerender } = renderHook(() => useKeyManagement(), {
+      wrapper: createWrapper(),
+    })
+    act(() => result.current.setSelectedAccount(account.id))
+    await waitFor(() =>
+      expect(
+        result.current.managedSiteTokenStatuses["stable-target-account:803"]
+          ?.result,
+      ).toEqual(originalStatus),
+    )
+
+    preferences = {
+      ...preferences,
+      themeMode: "dark",
+      newApi: {
+        baseUrl: "https://unselected.example.invalid",
+        adminToken: "unselected-admin-token",
+        userId: "2",
+      },
+      axonHub: {
+        password: "admin-password",
+        email: "admin@example.invalid",
+        baseUrl: "https://managed.example.invalid",
+      },
+    }
+    await act(async () => rerender())
+
+    expect(
+      result.current.managedSiteTokenStatuses["stable-target-account:803"]
+        ?.result,
+    ).toEqual(originalStatus)
+    expect(getManagedSiteTokenChannelStatusMock).toHaveBeenCalledTimes(1)
+  })
+
   it("invalidates cached managed-site status when managed-site preferences change", async () => {
     const mockedUseAccountData = vi.mocked(useAccountData)
     const account = createDisplayAccount({
@@ -3977,21 +4363,13 @@ describe("useKeyManagement enabled account filtering", () => {
 
     const managedSiteContextValue = {
       managedSiteType: "new-api",
-      newApiBaseUrl: "https://managed.example",
-      newApiAdminToken: "managed-admin-token",
-      newApiUserId: "1",
-      newApiUsername: "",
-      newApiPassword: "",
-      newApiTotpSecret: "",
-      doneHubBaseUrl: "",
-      doneHubAdminToken: "",
-      doneHubUserId: "",
-      veloeraBaseUrl: "",
-      veloeraAdminToken: "",
-      veloeraUserId: "",
-      octopusBaseUrl: "",
-      octopusUsername: "",
-      octopusPassword: "",
+      preferences: buildUserPreferences({
+        newApi: {
+          baseUrl: "https://managed.example",
+          adminToken: "managed-admin-token",
+          userId: "1",
+        },
+      }),
     }
     mockedUseUserPreferencesContext.mockImplementation(
       () => managedSiteContextValue,
@@ -4023,7 +4401,13 @@ describe("useKeyManagement enabled account filtering", () => {
       expect(getManagedSiteTokenChannelStatusMock).toHaveBeenCalledTimes(1),
     )
 
-    managedSiteContextValue.newApiBaseUrl = "https://managed-2.example"
+    managedSiteContextValue.preferences = {
+      ...managedSiteContextValue.preferences,
+      newApi: {
+        ...managedSiteContextValue.preferences.newApi,
+        baseUrl: "https://managed-2.example",
+      },
+    }
     rerender()
 
     await waitFor(() =>
@@ -4042,23 +4426,12 @@ describe("useKeyManagement enabled account filtering", () => {
       enabledDisplayData: [account],
     } as any)
 
-    const managedSiteContextValue: ManagedSiteContextValue = {
+    const managedSiteContextValue = {
       managedSiteType: "done-hub",
-      newApiBaseUrl: "",
-      newApiAdminToken: "",
-      newApiUserId: "",
-      newApiUsername: "",
-      newApiPassword: "",
-      newApiTotpSecret: "",
-      doneHubBaseUrl: undefined,
-      doneHubAdminToken: undefined,
-      doneHubUserId: undefined,
-      veloeraBaseUrl: "",
-      veloeraAdminToken: "",
-      veloeraUserId: "",
-      octopusBaseUrl: "",
-      octopusUsername: "",
-      octopusPassword: "",
+      preferences: buildUserPreferences({
+        managedSiteType: SITE_TYPES.DONE_HUB,
+        doneHub: undefined,
+      }),
     }
     mockedUseUserPreferencesContext.mockImplementation(
       () => managedSiteContextValue,
@@ -4090,9 +4463,14 @@ describe("useKeyManagement enabled account filtering", () => {
       expect(getManagedSiteTokenChannelStatusMock).toHaveBeenCalledTimes(1),
     )
 
-    managedSiteContextValue.doneHubBaseUrl = "https://done-hub.example"
-    managedSiteContextValue.doneHubAdminToken = "done-hub-admin-token"
-    managedSiteContextValue.doneHubUserId = "7"
+    managedSiteContextValue.preferences = {
+      ...managedSiteContextValue.preferences,
+      doneHub: {
+        baseUrl: "https://done-hub.example",
+        adminToken: "done-hub-admin-token",
+        userId: "7",
+      },
+    }
     rerender()
 
     await waitFor(() =>
@@ -4111,23 +4489,12 @@ describe("useKeyManagement enabled account filtering", () => {
       enabledDisplayData: [account],
     } as any)
 
-    const managedSiteContextValue: ManagedSiteContextValue = {
+    const managedSiteContextValue = {
       managedSiteType: "octopus",
-      newApiBaseUrl: "",
-      newApiAdminToken: "",
-      newApiUserId: "",
-      newApiUsername: "",
-      newApiPassword: "",
-      newApiTotpSecret: "",
-      doneHubBaseUrl: "",
-      doneHubAdminToken: "",
-      doneHubUserId: "",
-      veloeraBaseUrl: "",
-      veloeraAdminToken: "",
-      veloeraUserId: "",
-      octopusBaseUrl: undefined,
-      octopusUsername: undefined,
-      octopusPassword: undefined,
+      preferences: buildUserPreferences({
+        managedSiteType: SITE_TYPES.OCTOPUS,
+        octopus: undefined,
+      }),
     }
     mockedUseUserPreferencesContext.mockImplementation(
       () => managedSiteContextValue,
@@ -4159,9 +4526,14 @@ describe("useKeyManagement enabled account filtering", () => {
       expect(getManagedSiteTokenChannelStatusMock).toHaveBeenCalledTimes(1),
     )
 
-    managedSiteContextValue.octopusBaseUrl = "https://octopus.example"
-    managedSiteContextValue.octopusUsername = "octopus-user"
-    managedSiteContextValue.octopusPassword = "octopus-password"
+    managedSiteContextValue.preferences = {
+      ...managedSiteContextValue.preferences,
+      octopus: {
+        baseUrl: "https://octopus.example",
+        username: "octopus-user",
+        password: "octopus-password",
+      },
+    }
     rerender()
 
     await waitFor(() =>
@@ -4182,21 +4554,13 @@ describe("useKeyManagement enabled account filtering", () => {
 
     const managedSiteContextValue = {
       managedSiteType: "new-api",
-      newApiBaseUrl: "https://managed.example",
-      newApiAdminToken: "managed-admin-token",
-      newApiUserId: "1",
-      newApiUsername: "",
-      newApiPassword: "",
-      newApiTotpSecret: "",
-      doneHubBaseUrl: "",
-      doneHubAdminToken: "",
-      doneHubUserId: "",
-      veloeraBaseUrl: "",
-      veloeraAdminToken: "",
-      veloeraUserId: "",
-      octopusBaseUrl: "",
-      octopusUsername: "",
-      octopusPassword: "",
+      preferences: buildUserPreferences({
+        newApi: {
+          baseUrl: "https://managed.example",
+          adminToken: "managed-admin-token",
+          userId: "1",
+        },
+      }),
     }
     mockedUseUserPreferencesContext.mockImplementation(
       () => managedSiteContextValue,
@@ -4238,15 +4602,14 @@ describe("useKeyManagement enabled account filtering", () => {
       "supportsManagedSiteBaseUrlChannelLookup",
     ).mockReturnValue(false)
     managedSiteContextValue.managedSiteType = "Veloera"
-    managedSiteContextValue.newApiBaseUrl = ""
-    managedSiteContextValue.newApiAdminToken = ""
-    managedSiteContextValue.newApiUserId = ""
-    managedSiteContextValue.newApiUsername = ""
-    managedSiteContextValue.newApiPassword = ""
-    managedSiteContextValue.newApiTotpSecret = ""
-    managedSiteContextValue.veloeraBaseUrl = "https://veloera.example"
-    managedSiteContextValue.veloeraAdminToken = "veloera-admin-token"
-    managedSiteContextValue.veloeraUserId = "1"
+    managedSiteContextValue.preferences = buildUserPreferences({
+      managedSiteType: SITE_TYPES.VELOERA,
+      veloera: {
+        baseUrl: "https://veloera.example",
+        adminToken: "veloera-admin-token",
+        userId: "1",
+      },
+    })
     rerender()
 
     await waitFor(() =>

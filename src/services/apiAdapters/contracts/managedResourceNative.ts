@@ -103,7 +103,6 @@ export type ResourceDisplayFacts = {
 }
 
 export type ManagedResourceChannelActionFacts = {
-  channelId: number
   channelType: string | number
   canSyncModels: boolean
   canOpenModelSync: boolean

@@ -658,9 +658,16 @@ describe("Veloera native managed resource", () => {
     await operations.delete(channel.id, { signal })
     await expect(operations.loadEditorGroups({ signal })).resolves.toEqual([])
 
-    expect(mocks.fetchModels).toHaveBeenCalledWith(config, channel.id, {
-      signal,
-    })
+    expect(mocks.fetchModels).toHaveBeenCalledWith(
+      config,
+      {
+        siteType: SITE_TYPES.VELOERA,
+        kind: "channel",
+        scopeKey: "https://veloera.example.invalid",
+        resourceId: String(channel.id),
+      },
+      { signal },
+    )
     expect(mocks.fetchDraftModels).toHaveBeenCalledWith(
       config,
       expect.objectContaining({ channelType: VeloeraChannelType.OpenAI }),
@@ -686,7 +693,16 @@ describe("Veloera native managed resource", () => {
         credential: "test-key",
       }),
     ).resolves.toEqual(["draft-model"])
-    expect(mocks.fetchModels).toHaveBeenCalledWith(httpConfig, 17, undefined)
+    expect(mocks.fetchModels).toHaveBeenCalledWith(
+      httpConfig,
+      {
+        siteType: SITE_TYPES.VELOERA,
+        kind: "channel",
+        scopeKey: "http://192.168.1.10:3000",
+        resourceId: "17",
+      },
+      undefined,
+    )
   })
 
   it("rejects invalid resource locators before provider reads", async () => {

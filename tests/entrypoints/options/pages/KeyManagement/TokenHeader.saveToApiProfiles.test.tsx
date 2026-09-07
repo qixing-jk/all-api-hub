@@ -28,11 +28,11 @@ import {
   RECOVERABLE_ACTION_POLICY,
   TokenHeaderHarness as TokenHeader,
 } from "~~/tests/test-utils/keyManagement/TokenHeaderHarness"
+import { matchingResourceRef } from "~~/tests/test-utils/managedResourceMatching"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const mockCreateProfile = vi.fn()
 const mockOpenApiCredentialProfilesPage = vi.fn()
-const mockOpenManagedSiteChannelsForChannel = vi.fn()
 const mockOpenManagedSiteChannelsPage = vi.fn()
 const mockOpenSettingsTab = vi.fn()
 const mockOpenWithAccount = vi.fn()
@@ -58,8 +58,6 @@ vi.mock("react-hot-toast", () => ({
 vi.mock("~/utils/navigation", () => ({
   openApiCredentialProfilesPage: (...args: unknown[]) =>
     mockOpenApiCredentialProfilesPage(...args),
-  openManagedSiteChannelsForChannel: (...args: unknown[]) =>
-    mockOpenManagedSiteChannelsForChannel(...args),
   openManagedSiteChannelsPage: (...args: unknown[]) =>
     mockOpenManagedSiteChannelsPage(...args),
   openSettingsTab: (...args: unknown[]) => mockOpenSettingsTab(...args),
@@ -146,7 +144,7 @@ function createManagedSiteAssessment(
       matched: true,
       candidateCount: 1,
       channel: {
-        id: 88,
+        ref: matchingResourceRef(88),
         name: "Managed Channel 88",
       },
     },
@@ -160,7 +158,7 @@ function createManagedSiteAssessment(
       matched: true,
       reason: MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.EXACT,
       channel: {
-        id: 88,
+        ref: matchingResourceRef(88),
         name: "Managed Channel 88",
       },
       similarityScore: 1,
@@ -216,7 +214,6 @@ describe("TokenHeader save to API profiles", () => {
     vi.restoreAllMocks()
     mockCreateProfile.mockReset()
     mockOpenApiCredentialProfilesPage.mockReset()
-    mockOpenManagedSiteChannelsForChannel.mockReset()
     mockOpenManagedSiteChannelsPage.mockReset()
     mockOpenSettingsTab.mockReset()
     mockOpenWithAccount.mockReset()
@@ -636,20 +633,28 @@ describe("TokenHeader save to API profiles", () => {
   })
 
   it.each([
-    { siteType: SITE_TYPES.NEW_API, resourceId: undefined, expectedId: 99 },
+    {
+      siteType: SITE_TYPES.NEW_API,
+      resourceId: "99",
+      scopeKey: "https://managed.example",
+    },
     {
       siteType: SITE_TYPES.AXON_HUB,
       resourceId: "native/99+=",
-      expectedId: "native/99+=",
+      scopeKey: "https://managed.example",
     },
     {
-      siteType: SITE_TYPES.AXON_HUB,
-      resourceId: undefined,
-      expectedId: undefined,
+      siteType: SITE_TYPES.NEW_API,
+      resourceId: "99",
+      scopeKey: "https://other.example",
     },
   ])(
     "links an added token to the stable $siteType channel identity",
-    async ({ siteType, resourceId, expectedId }) => {
+    async ({ siteType, resourceId, scopeKey }) => {
+      const resourceRef = matchingResourceRef(resourceId, {
+        siteType,
+        scopeKey,
+      })
       mockedUseUserPreferencesContext.mockReturnValue({
         managedSiteType: siteType,
       })
@@ -681,16 +686,15 @@ describe("TokenHeader save to API profiles", () => {
           managedSiteStatus={{
             status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.ADDED,
             matchedChannel: {
-              id: 99,
+              ref: resourceRef,
               name: "Managed Channel 99",
-              resourceId,
             },
             assessment: createManagedSiteAssessment({
               url: {
                 matched: true,
                 candidateCount: 1,
                 channel: {
-                  id: 99,
+                  ref: resourceRef,
                   name: "Managed Channel 99",
                 },
               },
@@ -699,7 +703,7 @@ describe("TokenHeader save to API profiles", () => {
                 matched: true,
                 reason: MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.MATCHED,
                 channel: {
-                  id: 99,
+                  ref: resourceRef,
                   name: "Managed Channel 99",
                 },
               },
@@ -708,7 +712,7 @@ describe("TokenHeader save to API profiles", () => {
                 matched: true,
                 reason: MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.EXACT,
                 channel: {
-                  id: 99,
+                  ref: resourceRef,
                   name: "Managed Channel 99",
                 },
                 similarityScore: 1,
@@ -737,16 +741,9 @@ describe("TokenHeader save to API profiles", () => {
         }),
       )
 
-      if (expectedId === undefined) {
-        expect(mockOpenManagedSiteChannelsForChannel).not.toHaveBeenCalled()
-        expect(mockOpenManagedSiteChannelsPage).toHaveBeenCalledWith({
-          search: "https://example.com",
-        })
-      } else {
-        expect(mockOpenManagedSiteChannelsForChannel).toHaveBeenCalledWith(
-          expectedId,
-        )
-      }
+      expect(mockOpenManagedSiteChannelsPage).toHaveBeenCalledWith({
+        resourceRef,
+      })
     },
   )
 
@@ -1295,7 +1292,7 @@ describe("TokenHeader save to API profiles", () => {
               matched: true,
               candidateCount: 1,
               channel: {
-                id: 77,
+                ref: matchingResourceRef(77),
                 name: "Managed Channel 77",
               },
             },
@@ -1337,7 +1334,7 @@ describe("TokenHeader save to API profiles", () => {
               matched: true,
               candidateCount: 1,
               channel: {
-                id: 78,
+                ref: matchingResourceRef(78),
                 name: "Managed Channel 78",
               },
             },
@@ -1352,7 +1349,7 @@ describe("TokenHeader save to API profiles", () => {
               matched: true,
               reason: MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.SIMILAR,
               channel: {
-                id: 78,
+                ref: matchingResourceRef(78),
                 name: "Managed Channel 78",
               },
               similarityScore: 0.5,
@@ -1405,7 +1402,7 @@ describe("TokenHeader save to API profiles", () => {
               matched: true,
               reason: MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.MATCHED,
               channel: {
-                id: 91,
+                ref: matchingResourceRef(91),
                 name: "Managed Channel 91",
               },
             },

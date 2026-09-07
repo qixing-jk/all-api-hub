@@ -23,6 +23,7 @@ import { createNewApiFamilyResourceFacts } from "~/services/apiAdapters/managedR
 import { throwIfNewApiResourceOperationAborted } from "~/services/apiAdapters/managedResources/newApiResourceUtils"
 import { veloeraManagedSiteCapabilities } from "~/services/apiAdapters/managedSites/veloera"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import { createManagedChannelResourceRef } from "~/services/managedSites/managedResourceIdentity"
 import {
   MANAGED_SITE_MUTATION_OUTCOMES,
   type ManagedSiteMutationResult,
@@ -281,7 +282,11 @@ export async function openVeloeraNativeResourceOperations(): Promise<VeloeraNati
     fetchModels: async (locator, options) => {
       return await veloeraManagedResourceModels.fetchModels(
         nativeConfig.config,
-        locator,
+        createManagedChannelResourceRef(
+          SITE_TYPES.VELOERA,
+          nativeConfig.config.baseUrl,
+          locator,
+        ),
         options,
       )
     },

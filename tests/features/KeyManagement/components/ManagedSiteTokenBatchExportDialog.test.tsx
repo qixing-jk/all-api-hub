@@ -14,6 +14,8 @@ import { ManagedSiteTokenBatchExportDialog } from "~/features/KeyManagement/comp
 import { ManagedSiteTokenBatchExportFooter } from "~/features/KeyManagement/components/ManagedSiteTokenBatchExportDialog/ManagedSiteTokenBatchExportFooter"
 import { NEW_API_MANAGED_VERIFICATION_CLOSE_MODES } from "~/features/ManagedSiteVerification/useNewApiManagedVerification"
 import { buildAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
+import { getManagedResourceRefKey } from "~/services/managedSites/managedResourceIdentity"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -43,6 +45,7 @@ import {
   buildDisplaySiteData,
 } from "~~/tests/test-utils/factories"
 import { testI18n } from "~~/tests/test-utils/i18n"
+import { matchingResourceRef } from "~~/tests/test-utils/managedResourceMatching"
 import { render, screen, waitFor, within } from "~~/tests/test-utils/render"
 
 const manualPreviewTarget = {
@@ -392,7 +395,7 @@ const buildDialogPreviewItem = (
 
 const buildRecoverablePreviewItem = (
   item: ManagedSiteTokenBatchExportPreviewItem,
-  channel: { id: number; name: string },
+  channel: { ref: ManagedResourceRef; name: string },
 ): ManagedSiteTokenBatchExportPreviewItem => ({
   ...item,
   status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.WARNING,
@@ -476,7 +479,7 @@ const buildSingleRecoverablePreview =
     blockedCount: 0,
     items: [
       buildRecoverablePreviewItem(preview.items[0], {
-        id: 7,
+        ref: matchingResourceRef(7),
         name: "Potential channel",
       }),
     ],
@@ -518,7 +521,7 @@ const richPreview: ManagedSiteTokenBatchExportPreview = {
         enabled: true,
       },
       matchedChannel: {
-        id: 8,
+        ref: matchingResourceRef(8),
         name: "Existing channel",
       },
     }),
@@ -574,7 +577,7 @@ const modelsRequiredPreview: ManagedSiteTokenBatchExportPreview = {
         enabled: true,
       },
       matchedChannel: {
-        id: 8,
+        ref: matchingResourceRef(8),
         name: "Existing channel",
       },
     }),
@@ -1795,11 +1798,15 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
     const user = userEvent.setup()
     mockLoadNewApiChannelKeyWithVerification.mockImplementation(
       async (params) => {
-        const keyByChannelId: Record<number, string> = {
-          7: "test-key",
-          8: "test-key-2",
+        const keysByResourceKey: Record<string, string> = {
+          [getManagedResourceRefKey(matchingResourceRef(7))]: "test-key",
+          [getManagedResourceRefKey(matchingResourceRef(8))]: "test-key-2",
         }
-        await Promise.resolve(params.setKey(keyByChannelId[params.channelId]))
+        await Promise.resolve(
+          params.setKey(
+            keysByResourceKey[getManagedResourceRefKey(params.resourceRef)],
+          ),
+        )
         await Promise.resolve(params.onLoaded?.())
         return true
       },
@@ -1813,11 +1820,11 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       blockedCount: 0,
       items: [
         buildRecoverablePreviewItem(preview.items[0], {
-          id: 7,
+          ref: matchingResourceRef(7),
           name: "Potential channel",
         }),
         buildRecoverablePreviewItem(preview.items[1], {
-          id: 8,
+          ref: matchingResourceRef(8),
           name: "Second potential channel",
         }),
       ],
@@ -1836,7 +1843,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
     await waitFor(() => {
       expect(mockLoadNewApiChannelKeyWithVerification).toHaveBeenCalledWith(
         expect.objectContaining({
-          channelId: 7,
+          resourceRef: matchingResourceRef(7),
           label: "Potential channel",
           requestKind: "channel",
           config: {
@@ -1859,7 +1866,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
     })
     expect(mockLoadNewApiChannelKeyWithVerification).toHaveBeenCalledWith(
       expect.objectContaining({
-        channelId: 8,
+        resourceRef: matchingResourceRef(8),
         label: "Second potential channel",
       }),
     )
@@ -1879,11 +1886,11 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       blockedCount: 0,
       items: [
         buildRecoverablePreviewItem(preview.items[0], {
-          id: 7,
+          ref: matchingResourceRef(7),
           name: "Potential channel",
         }),
         buildRecoverablePreviewItem(preview.items[1], {
-          id: 8,
+          ref: matchingResourceRef(8),
           name: "Second potential channel",
         }),
       ],
@@ -2160,7 +2167,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       },
     )
     const recoverableItem = buildRecoverablePreviewItem(preview.items[0], {
-      id: 7,
+      ref: matchingResourceRef(7),
       name: "Potential channel",
     })
     const staleVerificationTarget = {
@@ -2280,11 +2287,11 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       blockedCount: 0,
       items: [
         buildRecoverablePreviewItem(preview.items[0], {
-          id: 7,
+          ref: matchingResourceRef(7),
           name: "Potential channel",
         }),
         buildRecoverablePreviewItem(preview.items[1], {
-          id: 8,
+          ref: matchingResourceRef(8),
           name: "Second potential channel",
         }),
       ],
@@ -2305,7 +2312,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
     })
     expect(mockLoadNewApiChannelKeyWithVerification).toHaveBeenCalledWith(
       expect.objectContaining({
-        channelId: 7,
+        resourceRef: matchingResourceRef(7),
       }),
     )
 
@@ -2321,7 +2328,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
     await waitFor(() => {
       expect(mockLoadNewApiChannelKeyWithVerification).toHaveBeenCalledWith(
         expect.objectContaining({
-          channelId: 8,
+          resourceRef: matchingResourceRef(8),
           label: "Second potential channel",
         }),
       )
@@ -2367,7 +2374,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       blockedCount: 0,
       items: [
         buildRecoverablePreviewItem(preview.items[0], {
-          id: 7,
+          ref: matchingResourceRef(7),
           name: "Potential channel",
         }),
       ],
@@ -2404,7 +2411,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       blockedCount: 0,
       items: [
         buildRecoverablePreviewItem(preview.items[0], {
-          id: 7,
+          ref: matchingResourceRef(7),
           name: "Potential channel",
         }),
       ],
@@ -2450,7 +2457,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       blockedCount: 0,
       items: [
         buildRecoverablePreviewItem(preview.items[0], {
-          id: 7,
+          ref: matchingResourceRef(7),
           name: "Potential channel",
         }),
       ],
@@ -2469,7 +2476,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
 
     expect(mockLoadNewApiChannelKeyWithVerification).toHaveBeenCalledWith(
       expect.objectContaining({
-        channelId: 7,
+        resourceRef: matchingResourceRef(7),
         label: "Potential channel",
       }),
     )
@@ -2486,7 +2493,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       blockedCount: 0,
       items: [
         buildRecoverablePreviewItem(preview.items[0], {
-          id: 7,
+          ref: matchingResourceRef(7),
           name: "Potential channel",
         }),
       ],

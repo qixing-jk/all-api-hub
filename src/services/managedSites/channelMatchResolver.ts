@@ -1,3 +1,8 @@
+import {
+  MANAGED_RESOURCE_FAILURE_CODES,
+  ManagedResourceError,
+  type ManagedResourceRef,
+} from "~/services/apiAdapters/contracts/managedResourceNative"
 import type { ManagedSiteCapabilities } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import {
   getRecoverableManagedSiteChannelCandidate,
@@ -7,6 +12,11 @@ import {
   type ManagedSiteChannelMatchInspection,
   type ManagedSiteChannelMatchUnresolvedReason,
 } from "~/services/managedSites/channelMatch"
+import {
+  areManagedResourceRefsEqual,
+  assertManagedResourceRefForSite,
+  getManagedResourceRefKey,
+} from "~/services/managedSites/managedResourceIdentity"
 import type { ManagedSiteRuntimeConfigValue } from "~/services/managedSites/runtimeConfig"
 import {
   findManagedSiteChannelsByBaseUrl,
@@ -19,6 +29,7 @@ import {
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/managedSite"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import type { ManagedResourceMatchList } from "~/types/managedResourceMatching"
+import { normalizeManagedUpstreamResourceScopeKey } from "~/types/managedUpstreamResource"
 
 export type ManagedSiteChannelMatchContext = Pick<
   ManagedSiteCapabilities,
@@ -26,16 +37,19 @@ export type ManagedSiteChannelMatchContext = Pick<
 >
 
 export interface ManagedSiteChannelMatchRequestCache {
-  searchResultsByBaseUrl: Map<string, Promise<ManagedResourceMatchList | null>>
-  channelSecretKeysById: Map<number | string, Promise<string>>
-  resolvedChannelKeysById: Record<number | string, string>
+  searchResultsByTargetKey: Map<
+    string,
+    Promise<ManagedResourceMatchList | null>
+  >
+  channelSecretKeysByResourceKey: Map<string, Promise<string>>
+  resolvedChannelKeysByResourceKey: Record<string, string>
 }
 
 export const createManagedSiteChannelMatchRequestCache =
   (): ManagedSiteChannelMatchRequestCache => ({
-    searchResultsByBaseUrl: new Map(),
-    channelSecretKeysById: new Map(),
-    resolvedChannelKeysById: {},
+    searchResultsByTargetKey: new Map(),
+    channelSecretKeysByResourceKey: new Map(),
+    resolvedChannelKeysByResourceKey: {},
   })
 
 interface ResolveManagedSiteChannelMatchParams {
@@ -44,34 +58,35 @@ interface ResolveManagedSiteChannelMatchParams {
   accountBaseUrl: string
   models: string[]
   key?: string
-  resolvedChannelKeysById?: Record<number | string, string>
+  resolvedChannelKeysByResourceKey?: Record<string, string>
   resolveHiddenKeys?: boolean
-  hiddenKeyChannelIds?: readonly (number | string)[]
+  hiddenKeyResourceRefs?: readonly ManagedResourceRef[]
   requestCache?: ManagedSiteChannelMatchRequestCache
   protectionBypassExecution?: ProtectionBypassExecution
 }
 
 interface ManagedSiteChannelMatchResolution
   extends ManagedSiteChannelMatchInspection {
-  resolvedChannelKeysById?: Record<number | string, string>
+  resolvedChannelKeysByResourceKey?: Record<string, string>
   unresolvedReason?: ManagedSiteChannelMatchUnresolvedReason
 }
 
 const applyResolvedChannelKeys = <
-  T extends { id: number | string; key?: string },
+  T extends { ref: ManagedResourceRef; key?: string },
 >(
   channels: T[],
-  resolvedChannelKeysById?: Record<number | string, string>,
+  resolvedChannelKeysByResourceKey?: Record<string, string>,
 ) => {
   if (
-    !resolvedChannelKeysById ||
-    Object.keys(resolvedChannelKeysById).length === 0
+    !resolvedChannelKeysByResourceKey ||
+    Object.keys(resolvedChannelKeysByResourceKey).length === 0
   ) {
     return channels
   }
 
   return channels.map((channel) => {
-    const resolvedKey = resolvedChannelKeysById[channel.id]
+    const resolvedKey =
+      resolvedChannelKeysByResourceKey[getManagedResourceRefKey(channel.ref)]
 
     if (typeof resolvedKey !== "string") {
       return channel
@@ -87,13 +102,18 @@ const applyResolvedChannelKeys = <
 const fetchRecoverableCandidateSecretKey = async (params: {
   managedSite: ManagedSiteChannelMatchContext
   managedConfig: ManagedSiteRuntimeConfigValue
-  channelId: number | string
+  resourceRef: ManagedResourceRef
   requestCache?: ManagedSiteChannelMatchRequestCache
   protectionBypassExecution: ProtectionBypassExecution
 }) => {
+  assertManagedResourceRefForSite(params.resourceRef, {
+    siteType: params.managedSite.siteType,
+    config: params.managedConfig,
+  })
+  const resourceKey = getManagedResourceRefKey(params.resourceRef)
   try {
     const cachedSecretKeyPromise =
-      params.requestCache?.channelSecretKeysById.get(params.channelId)
+      params.requestCache?.channelSecretKeysByResourceKey.get(resourceKey)
 
     if (cachedSecretKeyPromise) {
       return await cachedSecretKeyPromise
@@ -101,21 +121,21 @@ const fetchRecoverableCandidateSecretKey = async (params: {
 
     const secretKeyPromise = params.managedSite.matching.fetchSecretKey!(
       params.managedConfig,
-      params.channelId,
+      params.resourceRef,
       {
         protectionBypassExecution: params.protectionBypassExecution,
       },
     )
-    params.requestCache?.channelSecretKeysById.set(
-      params.channelId,
+    params.requestCache?.channelSecretKeysByResourceKey.set(
+      resourceKey,
       secretKeyPromise,
     )
     secretKeyPromise.catch(() => {
       if (
-        params.requestCache?.channelSecretKeysById.get(params.channelId) ===
+        params.requestCache?.channelSecretKeysByResourceKey.get(resourceKey) ===
         secretKeyPromise
       ) {
-        params.requestCache.channelSecretKeysById.delete(params.channelId)
+        params.requestCache.channelSecretKeysByResourceKey.delete(resourceKey)
       }
     })
 
@@ -143,7 +163,7 @@ export async function resolveManagedSiteChannelMatch(
     managedConfig,
     models,
     key,
-    resolvedChannelKeysById,
+    resolvedChannelKeysByResourceKey,
     resolveHiddenKeys = false,
     requestCache,
   } = params
@@ -154,9 +174,18 @@ export async function resolveManagedSiteChannelMatch(
   const keyComparisonMode = getManagedSiteChannelKeyComparisonMode(
     managedSite.siteType,
   )
+  const target = { siteType: managedSite.siteType, config: managedConfig }
+  for (const ref of params.hiddenKeyResourceRefs ?? []) {
+    assertManagedResourceRefForSite(ref, target)
+  }
+  const searchCacheKey = JSON.stringify([
+    managedSite.siteType,
+    normalizeManagedUpstreamResourceScopeKey(managedConfig.baseUrl),
+    searchBaseUrl,
+  ])
 
   let searchResultsPromise =
-    requestCache?.searchResultsByBaseUrl.get(searchBaseUrl)
+    requestCache?.searchResultsByTargetKey.get(searchCacheKey)
 
   if (!searchResultsPromise) {
     const cache = requestCache
@@ -164,13 +193,14 @@ export async function resolveManagedSiteChannelMatch(
       managedConfig,
       searchBaseUrl,
     )
-    cache?.searchResultsByBaseUrl.set(searchBaseUrl, searchResultsPromise)
+    cache?.searchResultsByTargetKey.set(searchCacheKey, searchResultsPromise)
     searchResultsPromise.catch(() => {
       if (
         cache &&
-        cache.searchResultsByBaseUrl.get(searchBaseUrl) === searchResultsPromise
+        cache.searchResultsByTargetKey.get(searchCacheKey) ===
+          searchResultsPromise
       ) {
-        cache.searchResultsByBaseUrl.delete(searchBaseUrl)
+        cache.searchResultsByTargetKey.delete(searchCacheKey)
       }
     })
   }
@@ -203,14 +233,30 @@ export async function resolveManagedSiteChannelMatch(
   const searchResultItems = Array.isArray(searchResults.items)
     ? searchResults.items
     : []
-  const mergedResolvedChannelKeysById: Record<number | string, string> = {
-    ...(requestCache?.resolvedChannelKeysById ?? {}),
-    ...(resolvedChannelKeysById ?? {}),
+  try {
+    for (const candidate of searchResultItems) {
+      assertManagedResourceRefForSite(candidate.ref, target)
+    }
+  } catch (error) {
+    requestCache?.searchResultsByTargetKey.delete(searchCacheKey)
+    throw error
+  }
+  const availableKeys: Record<string, string> = {
+    ...(requestCache?.resolvedChannelKeysByResourceKey ?? {}),
+    ...(resolvedChannelKeysByResourceKey ?? {}),
+  }
+  const mergedResolvedChannelKeysByResourceKey: Record<string, string> = {}
+  for (const candidate of searchResultItems) {
+    const resourceKey = getManagedResourceRefKey(candidate.ref)
+    if (typeof availableKeys[resourceKey] === "string") {
+      mergedResolvedChannelKeysByResourceKey[resourceKey] =
+        availableKeys[resourceKey]
+    }
   }
 
   const channels = applyResolvedChannelKeys(
     searchResultItems,
-    mergedResolvedChannelKeysById,
+    mergedResolvedChannelKeysByResourceKey,
   )
   let urlBucket = findManagedSiteChannelsByBaseUrl({
     channels,
@@ -231,7 +277,7 @@ export async function resolveManagedSiteChannelMatch(
   const alignExactModelAssessmentWithMatchedKey = (
     assessmentChannels: typeof channels,
   ) => {
-    if (!keyAssessment.matched || keyAssessment.channel?.id == null) {
+    if (!keyAssessment.matched || !keyAssessment.channel) {
       return
     }
 
@@ -242,8 +288,8 @@ export async function resolveManagedSiteChannelMatch(
     })
 
     if (
-      !exactModelChannels.some(
-        (channel) => channel.id === keyAssessment.channel?.id,
+      !exactModelChannels.some((channel) =>
+        areManagedResourceRefsEqual(channel.ref, keyAssessment.channel?.ref),
       )
     ) {
       return
@@ -268,7 +314,7 @@ export async function resolveManagedSiteChannelMatch(
   const refreshAssessmentsWithResolvedKeys = () => {
     const channelsWithResolvedKeys = applyResolvedChannelKeys(
       searchResultItems,
-      mergedResolvedChannelKeysById,
+      mergedResolvedChannelKeysByResourceKey,
     )
 
     urlBucket = findManagedSiteChannelsByBaseUrl({
@@ -296,11 +342,14 @@ export async function resolveManagedSiteChannelMatch(
     modelsAssessment.matched &&
     modelsAssessment.reason ===
       MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.EXACT &&
-    keyAssessment.channel?.id === modelsAssessment.channel?.id
+    areManagedResourceRefsEqual(
+      keyAssessment.channel?.ref,
+      modelsAssessment.channel?.ref,
+    )
 
   alignExactModelAssessmentWithMatchedKey(channels)
 
-  if (Object.keys(mergedResolvedChannelKeysById).length > 0) {
+  if (Object.keys(mergedResolvedChannelKeysByResourceKey).length > 0) {
     refreshAssessmentsWithResolvedKeys()
   }
 
@@ -313,7 +362,9 @@ export async function resolveManagedSiteChannelMatch(
     const recoverableUrlCandidates = urlBucket.filter(
       (channel) =>
         !hasUsableManagedSiteChannelKey(channel.key) &&
-        typeof mergedResolvedChannelKeysById[channel.id] !== "string",
+        typeof mergedResolvedChannelKeysByResourceKey[
+          getManagedResourceRefKey(channel.ref)
+        ] !== "string",
     )
     const resolvedUrlChannel =
       urlBucket.length === 1
@@ -338,33 +389,44 @@ export async function resolveManagedSiteChannelMatch(
     const recoverableCandidates = [
       ...recoverableUrlCandidates,
       ...(rankedRecoverableCandidate &&
-      !recoverableUrlCandidates.some(
-        (channel) => channel.id === rankedRecoverableCandidate.id,
+      !recoverableUrlCandidates.some((channel) =>
+        areManagedResourceRefsEqual(
+          channel.ref,
+          rankedRecoverableCandidate.ref,
+        ),
       ) &&
       !hasUsableManagedSiteChannelKey(rankedRecoverableCandidate.key) &&
-      typeof mergedResolvedChannelKeysById[rankedRecoverableCandidate.id] !==
-        "string"
+      typeof mergedResolvedChannelKeysByResourceKey[
+        getManagedResourceRefKey(rankedRecoverableCandidate.ref)
+      ] !== "string"
         ? [rankedRecoverableCandidate]
         : []),
     ].filter(
       (channel) =>
-        !params.hiddenKeyChannelIds ||
-        params.hiddenKeyChannelIds.includes(channel.id),
+        !params.hiddenKeyResourceRefs ||
+        params.hiddenKeyResourceRefs.some((ref) =>
+          areManagedResourceRefsEqual(ref, channel.ref),
+        ),
     )
 
     for (const recoverableCandidate of recoverableCandidates) {
       try {
-        mergedResolvedChannelKeysById[recoverableCandidate.id] =
-          await fetchRecoverableCandidateSecretKey({
-            managedSite,
-            managedConfig,
-            channelId: recoverableCandidate.id,
-            requestCache,
-            protectionBypassExecution: params.protectionBypassExecution,
-          })
+        mergedResolvedChannelKeysByResourceKey[
+          getManagedResourceRefKey(recoverableCandidate.ref)
+        ] = await fetchRecoverableCandidateSecretKey({
+          managedSite,
+          managedConfig,
+          resourceRef: recoverableCandidate.ref,
+          requestCache,
+          protectionBypassExecution: params.protectionBypassExecution,
+        })
         if (requestCache) {
-          requestCache.resolvedChannelKeysById[recoverableCandidate.id] =
-            mergedResolvedChannelKeysById[recoverableCandidate.id]
+          requestCache.resolvedChannelKeysByResourceKey[
+            getManagedResourceRefKey(recoverableCandidate.ref)
+          ] =
+            mergedResolvedChannelKeysByResourceKey[
+              getManagedResourceRefKey(recoverableCandidate.ref)
+            ]
         }
       } catch (error) {
         if (!(error instanceof MatchResolutionUnresolvedError)) {
@@ -388,7 +450,7 @@ export async function resolveManagedSiteChannelMatch(
     const exactModelChannels = findManagedSiteChannelsByBaseUrlAndModels({
       channels: applyResolvedChannelKeys(
         searchResultItems,
-        mergedResolvedChannelKeysById,
+        mergedResolvedChannelKeysByResourceKey,
       ),
       accountBaseUrl: searchBaseUrl,
       models,
@@ -396,7 +458,9 @@ export async function resolveManagedSiteChannelMatch(
     const recoverableExactModelCandidates = exactModelChannels.filter(
       (channel) =>
         !hasUsableManagedSiteChannelKey(channel.key) &&
-        typeof mergedResolvedChannelKeysById[channel.id] !== "string",
+        typeof mergedResolvedChannelKeysByResourceKey[
+          getManagedResourceRefKey(channel.ref)
+        ] !== "string",
     )
     const rankedRecoverableCandidate =
       getRecoverableManagedSiteChannelCandidate({
@@ -415,17 +479,25 @@ export async function resolveManagedSiteChannelMatch(
     const recoverableCandidates = [
       ...recoverableExactModelCandidates,
       ...(rankedRecoverableCandidate &&
-      modelsAssessment.channel?.id === rankedRecoverableCandidate.id &&
-      !recoverableExactModelCandidates.some(
-        (channel) => channel.id === rankedRecoverableCandidate.id,
+      areManagedResourceRefsEqual(
+        modelsAssessment.channel?.ref,
+        rankedRecoverableCandidate.ref,
+      ) &&
+      !recoverableExactModelCandidates.some((channel) =>
+        areManagedResourceRefsEqual(
+          channel.ref,
+          rankedRecoverableCandidate.ref,
+        ),
       ) &&
       !hasUsableManagedSiteChannelKey(rankedRecoverableCandidate.key)
         ? [rankedRecoverableCandidate]
         : []),
     ].filter(
       (channel) =>
-        !params.hiddenKeyChannelIds ||
-        params.hiddenKeyChannelIds.includes(channel.id),
+        !params.hiddenKeyResourceRefs ||
+        params.hiddenKeyResourceRefs.some((ref) =>
+          areManagedResourceRefsEqual(ref, channel.ref),
+        ),
     )
 
     if (recoverableCandidates.length > 0) {
@@ -437,12 +509,32 @@ export async function resolveManagedSiteChannelMatch(
             { protectionBypassExecution: params.protectionBypassExecution },
           )
 
+        const requestedKeys = new Set(
+          recoverableCandidates.map((candidate) =>
+            getManagedResourceRefKey(candidate.ref),
+          ),
+        )
+        for (const channel of hydratedCandidates) {
+          assertManagedResourceRefForSite(channel.ref, target)
+          if (!requestedKeys.has(getManagedResourceRefKey(channel.ref))) {
+            throw new ManagedResourceError({
+              code: MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed,
+            })
+          }
+        }
+
         for (const channel of hydratedCandidates) {
           if (hasUsableManagedSiteChannelKey(channel.key)) {
-            mergedResolvedChannelKeysById[channel.id] = channel.key!.trim()
+            mergedResolvedChannelKeysByResourceKey[
+              getManagedResourceRefKey(channel.ref)
+            ] = channel.key!.trim()
             if (requestCache) {
-              requestCache.resolvedChannelKeysById[channel.id] =
-                mergedResolvedChannelKeysById[channel.id]
+              requestCache.resolvedChannelKeysByResourceKey[
+                getManagedResourceRefKey(channel.ref)
+              ] =
+                mergedResolvedChannelKeysByResourceKey[
+                  getManagedResourceRefKey(channel.ref)
+                ]
             }
           }
         }
@@ -471,8 +563,11 @@ export async function resolveManagedSiteChannelMatch(
     },
     key: keyAssessment,
     models: modelsAssessment,
-    ...(Object.keys(mergedResolvedChannelKeysById).length > 0
-      ? { resolvedChannelKeysById: mergedResolvedChannelKeysById }
+    ...(Object.keys(mergedResolvedChannelKeysByResourceKey).length > 0
+      ? {
+          resolvedChannelKeysByResourceKey:
+            mergedResolvedChannelKeysByResourceKey,
+        }
       : {}),
     ...(unresolvedReason && !hasExactKeyAndModelMatch()
       ? { unresolvedReason }

@@ -4,6 +4,7 @@ import type {
   ManagedResourceMatchList,
 } from "~/types/managedResourceMatching"
 
+import type { ManagedResourceRef } from "./managedResourceNative"
 import type { ManagedSiteChannelSecretReadOptions } from "./managedSiteCapabilities"
 
 export interface ManagedResourceMatchingCapability<
@@ -15,7 +16,7 @@ export interface ManagedResourceMatchingCapability<
   ): Promise<ManagedResourceMatchList | null>
   fetchSecretKey?(
     config: TConfig,
-    id: number | string,
+    ref: ManagedResourceRef,
     options?: ManagedSiteChannelSecretReadOptions,
   ): Promise<string>
   hydrateComparableKeys?(

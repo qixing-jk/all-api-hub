@@ -8,9 +8,11 @@ import type {
   ManagedSiteQueriesCapability,
 } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import {
-  requireNumericManagedResourceId,
+  toManagedResourceMatchCandidate,
   toManagedResourceMatchList,
+  toNativeNumericMatchCandidates,
 } from "~/services/apiAdapters/managedResources/matchingInputs"
+import { requireManagedResourceChannelId } from "~/services/apiAdapters/managedResources/resourceIds"
 import {
   fetchAccountAvailableModels,
   fetchSiteUserGroups,
@@ -52,15 +54,26 @@ const newApiManagedSiteChannelDrafts: ManagedSiteChannelDraftsCapability = {
 }
 
 const matching: ManagedResourceMatchingCapability<NewApiConfig> = {
-  hydrateComparableKeys: newApiChannelOperations.hydrateComparableKeys,
+  hydrateComparableKeys: async (config, candidates, options) => {
+    const target = { siteType: SITE_TYPES.NEW_API, config }
+    const hydrated = await newApiChannelOperations.hydrateComparableKeys(
+      config,
+      toNativeNumericMatchCandidates(candidates, target),
+      options,
+    )
+    return hydrated.map((candidate) =>
+      toManagedResourceMatchCandidate(candidate, target),
+    )
+  },
   search: async (config, keyword) =>
     toManagedResourceMatchList(
       await newApiChannelOperations.search(config, keyword),
+      { siteType: SITE_TYPES.NEW_API, config },
     ),
-  fetchSecretKey: async (config, id, options) =>
+  fetchSecretKey: async (config, ref, options) =>
     newApiChannelOperations.fetchSecretKey(
       config,
-      requireNumericManagedResourceId(id),
+      requireManagedResourceChannelId(SITE_TYPES.NEW_API, config, ref),
       options,
     ),
 }

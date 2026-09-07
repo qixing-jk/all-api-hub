@@ -265,6 +265,7 @@ export function ManagedSiteChannelsView({
                   callbacks.onReplaceRouteQuery({
                     ...state.routeQuery,
                     channelId: undefined,
+                    resourceRef: undefined,
                     search: value || undefined,
                   })
                 }}
@@ -283,6 +284,7 @@ export function ManagedSiteChannelsView({
                     callbacks.onReplaceRouteQuery({
                       ...state.routeQuery,
                       channelId: undefined,
+                      resourceRef: undefined,
                       search: undefined,
                     })
                     searchInputRef.current?.focus()

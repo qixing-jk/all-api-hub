@@ -1,19 +1,19 @@
 import { SITE_TYPES } from "~/constants/siteType"
 import type { ManagedResourceMatchingCapability } from "~/services/apiAdapters/contracts/managedResourceMatching"
-import type { ManagedResourceModelsCapability } from "~/services/apiAdapters/contracts/managedResourceModels"
 import type {
   ManagedSiteCapabilities,
   ManagedSiteChannelDraftsCapability,
-  ManagedSiteChannelRequestOptions,
   ManagedSiteConfigCapability,
   ManagedSiteQueriesCapability,
 } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
+import { createOctopusModelSyncCapability } from "~/services/apiAdapters/managedResources/octopusModelSync"
+import { octopusManagedResourceModels } from "~/services/apiAdapters/managedResources/octopusOperations"
 import {
   fetchGroups,
   fetchAvailableModels as fetchOctopusAvailableModels,
   searchChannels,
-  updateChannel as updateOctopusChannel,
 } from "~/services/apiService/octopus"
+import { createManagedChannelResourceRef } from "~/services/managedSites/managedResourceIdentity"
 import {
   checkValidOctopusConfig,
   prepareChannelFormData,
@@ -21,38 +21,6 @@ import {
 import type { OctopusConfig } from "~/types/octopusConfig"
 
 import { createManagedSiteConfigCapability } from "./config"
-import { octopusChannelEffect, runOctopusMutation } from "./octopusMutation"
-
-export const octopusManagedResourceModels = {
-  updateModels: async (
-    config,
-    channelId,
-    models,
-    options?: ManagedSiteChannelRequestOptions,
-  ) => {
-    return await runOctopusMutation<unknown, void>({
-      effect: octopusChannelEffect("models-updated", channelId),
-      execute: async () => {
-        const payload = {
-          id: channelId,
-          model: models.join(","),
-        }
-        return options
-          ? await updateOctopusChannel(config, payload, {
-              signal: options.signal,
-              ...(options.protectionBypassExecution
-                ? {
-                    protectionBypassExecution:
-                      options.protectionBypassExecution,
-                  }
-                : {}),
-            })
-          : await updateOctopusChannel(config, payload)
-      },
-      successData: () => undefined,
-    })
-  },
-} satisfies ManagedResourceModelsCapability<OctopusConfig>
 
 const octopusManagedSiteConfig: ManagedSiteConfigCapability<OctopusConfig> =
   createManagedSiteConfigCapability(SITE_TYPES.OCTOPUS, checkValidOctopusConfig)
@@ -69,7 +37,11 @@ const octopusManagedSiteChannelDrafts: ManagedSiteChannelDraftsCapability = {
 const matching: ManagedResourceMatchingCapability<OctopusConfig> = {
   search: async (config, keyword) => {
     const items = (await searchChannels(config, keyword)).map((channel) => ({
-      id: channel.id,
+      ref: createManagedChannelResourceRef(
+        SITE_TYPES.OCTOPUS,
+        config.baseUrl,
+        channel.id,
+      ),
       name: channel.name,
       type: channel.type,
       base_url: channel.base_urls[0]?.url ?? "",
@@ -85,7 +57,10 @@ const matching: ManagedResourceMatchingCapability<OctopusConfig> = {
 export const octopusManagedSiteCapabilities = {
   siteType: SITE_TYPES.OCTOPUS,
   matching,
-  models: octopusManagedResourceModels,
+  models: {
+    ...octopusManagedResourceModels,
+    createSync: createOctopusModelSyncCapability,
+  },
   config: octopusManagedSiteConfig,
   queries: octopusManagedSiteQueries,
   channelDrafts: octopusManagedSiteChannelDrafts,

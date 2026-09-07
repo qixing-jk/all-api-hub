@@ -6,11 +6,16 @@ import type {
   ManagedSiteChannelDraftsCapability,
   ManagedSiteConfigCapability,
 } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
-import { requireNumericManagedResourceId } from "~/services/apiAdapters/managedResources/matchingInputs"
+import {
+  toManagedResourceMatchCandidate,
+  toNativeNumericMatchCandidates,
+} from "~/services/apiAdapters/managedResources/matchingInputs"
+import { requireManagedResourceChannelId } from "~/services/apiAdapters/managedResources/resourceIds"
 import {
   MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
   MatchResolutionUnresolvedError,
 } from "~/services/managedSites/channelMatch"
+import { createManagedChannelResourceRef } from "~/services/managedSites/managedResourceIdentity"
 import {
   createManagedSiteMutationSequence,
   runManagedSiteMutationStep,
@@ -204,7 +209,11 @@ const matching: ManagedResourceMatchingCapability<Sub2ApiManagedSiteConfig> = {
     const items = data.items
       .filter((account) => account.type === "apikey")
       .map((account) => ({
-        id: account.id,
+        ref: createManagedChannelResourceRef(
+          SITE_TYPES.SUB2API,
+          config.baseUrl,
+          account.id,
+        ),
         name: account.name || `Sub2API Account ${account.id}`,
         type: account.platform,
         base_url:
@@ -216,11 +225,17 @@ const matching: ManagedResourceMatchingCapability<Sub2ApiManagedSiteConfig> = {
       }))
     return { items, total: data.total, type_counts: {} }
   },
-  fetchSecretKey: async (config, id) =>
-    revealSub2ApiApiKey(config, requireNumericManagedResourceId(id)),
-  hydrateComparableKeys: async (config, candidates) => {
+  fetchSecretKey: async (config, ref, options) =>
+    revealSub2ApiApiKey(
+      config,
+      requireManagedResourceChannelId(SITE_TYPES.SUB2API, config, ref),
+      options,
+    ),
+  hydrateComparableKeys: async (config, candidates, options) => {
+    const target = { siteType: SITE_TYPES.SUB2API, config }
+    const nativeCandidates = toNativeNumericMatchCandidates(candidates, target)
     const hydrated = []
-    for (const candidate of candidates) {
+    for (const candidate of nativeCandidates) {
       if (hasUsableManagedSiteChannelKey(candidate.key)) {
         hydrated.push(candidate)
         continue
@@ -228,10 +243,7 @@ const matching: ManagedResourceMatchingCapability<Sub2ApiManagedSiteConfig> = {
       try {
         hydrated.push({
           ...candidate,
-          key: await revealSub2ApiApiKey(
-            config,
-            requireNumericManagedResourceId(candidate.id),
-          ),
+          key: await revealSub2ApiApiKey(config, candidate.id, options),
         })
       } catch (error) {
         if (isAbortLikeError(error)) throw error
@@ -243,7 +255,9 @@ const matching: ManagedResourceMatchingCapability<Sub2ApiManagedSiteConfig> = {
         )
       }
     }
-    return hydrated
+    return hydrated.map((candidate) =>
+      toManagedResourceMatchCandidate(candidate, target),
+    )
   },
 }
 export const sub2ApiManagedSiteCapabilities = {

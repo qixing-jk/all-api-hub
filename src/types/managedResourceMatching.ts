@@ -1,6 +1,8 @@
+import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
+
 /** Native resource facts needed for duplicate and token-status matching. */
 export interface ManagedResourceMatchCandidate {
-  id: number | string
+  ref: ManagedResourceRef
   name: string
   type: number | string
   base_url: string

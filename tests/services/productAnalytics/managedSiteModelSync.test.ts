@@ -9,13 +9,14 @@ import {
 } from "~/services/productAnalytics/contracts"
 import { buildManagedSiteModelSyncDiagnostics } from "~/services/productAnalytics/managedSiteModelSync"
 import type { ExecutionResult } from "~/types/managedSiteModelSync"
+import { modelResourceRef } from "~~/tests/test-utils/managedModelResource"
 
 describe("managed site model sync product analytics diagnostics", () => {
   it("builds safe context, execution, outcome, and failure diagnostics from execution statistics", () => {
     const execution: ExecutionResult = {
       items: [
         {
-          channelId: 101,
+          resourceRef: modelResourceRef(101),
           channelName: "Private channel",
           ok: true,
           attempts: 1,
@@ -24,7 +25,7 @@ describe("managed site model sync product analytics diagnostics", () => {
           newModels: ["new-private-model", "another-private-model"],
         },
         {
-          channelId: 102,
+          resourceRef: modelResourceRef(102),
           channelName: "Failed private channel",
           ok: false,
           attempts: 3,
@@ -127,7 +128,7 @@ describe("managed site model sync product analytics diagnostics", () => {
         execution: {
           items: [
             {
-              channelId: 102,
+              resourceRef: modelResourceRef(102),
               channelName: "Failed private channel",
               ok: false,
               attempts: 1,

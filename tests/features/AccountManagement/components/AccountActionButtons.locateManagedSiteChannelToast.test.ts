@@ -7,16 +7,19 @@ import {
   MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS,
   type ManagedSiteChannelMatchInspection,
 } from "~/services/managedSites/channelMatch"
-import type { NewApiChannel } from "~/types/newApi"
+import {
+  buildManagedResourceMatchCandidate,
+  matchingResourceRef,
+} from "~~/tests/test-utils/managedResourceMatching"
 
-const channel = (id: number): NewApiChannel =>
-  ({
-    id,
+const channel = (id: number) =>
+  buildManagedResourceMatchCandidate({
+    ref: matchingResourceRef(id),
     name: `Channel ${id}`,
     base_url: "https://api.example.com",
     models: "gpt-4",
     key: "",
-  }) as NewApiChannel
+  })
 
 const buildInspection = (
   overrides: Partial<ManagedSiteChannelMatchInspection>,

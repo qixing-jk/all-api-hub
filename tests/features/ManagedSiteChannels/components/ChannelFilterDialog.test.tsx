@@ -211,14 +211,12 @@ const sampleResourceRef = createManagedUpstreamResourceRef({
 })
 
 const sampleChannel = {
-  id: 42,
   name: "Alpha",
   type: "midjourney",
   resourceRef: sampleResourceRef,
 } as any
 
 const sampleStorageIdentity = {
-  channelId: 42,
   resourceRef: sampleResourceRef,
 }
 
@@ -306,7 +304,6 @@ describe("ChannelFilterDialog", () => {
 
     await waitFor(() => {
       expect(mockedFetchChannelFilters).toHaveBeenCalledWith({
-        channelId: 42,
         resourceRef: sampleResourceRef,
       })
     })
@@ -331,7 +328,6 @@ describe("ChannelFilterDialog", () => {
     await waitFor(() => {
       expect(mockedSaveChannelFilters).toHaveBeenCalledWith(
         {
-          channelId: 42,
           resourceRef: sampleResourceRef,
         },
         [

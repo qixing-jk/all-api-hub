@@ -1,5 +1,5 @@
 import { CLAUDE_CODE_HUB_PROVIDER_TYPE } from "~/constants/claudeCodeHub"
-import { requireNumericManagedResourceId } from "~/services/apiAdapters/managedResources/matchingInputs"
+import { requireNumericManagedResourceId } from "~/services/apiAdapters/managedResources/resourceIds"
 import * as claudeCodeHubApi from "~/services/apiService/claudeCodeHub"
 import {
   MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
@@ -13,7 +13,6 @@ import {
 } from "~/services/preferences/userPreferences"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import type { ClaudeCodeHubConfig } from "~/types/claudeCodeHubConfig"
-import type { ManagedResourceMatchCandidate } from "~/types/managedResourceMatching"
 import type {
   ManagedSiteChannelDraft,
   ManagedSiteChannelDraftSource,
@@ -84,7 +83,7 @@ export async function checkValidClaudeCodeHubConfig(): Promise<boolean> {
  * Resolves a real provider key when list data only contains a masked key.
  */
 async function hydrateComparableChannelKey<
-  T extends ManagedResourceMatchCandidate,
+  T extends { id: number; key?: string },
 >(config: ClaudeCodeHubConfig, channel: T): Promise<T | null> {
   if (hasUsableManagedSiteChannelKey(channel.key)) {
     return channel
@@ -116,7 +115,7 @@ async function hydrateComparableChannelKey<
  * Hydrates Claude Code Hub provider keys for shared channel comparison.
  */
 export async function hydrateComparableChannelKeys<
-  T extends ManagedResourceMatchCandidate,
+  T extends { id: number; key?: string },
 >(config: ClaudeCodeHubConfig, candidates: T[]): Promise<T[]> {
   const hydratedCandidates: T[] = []
 

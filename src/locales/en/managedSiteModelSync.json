@@ -76,6 +76,7 @@
       "finishedAt": "Finished At",
       "manageChannel": "Manage channel",
       "message": "Message",
+      "resourceUnavailable": "This record cannot be linked to the current site. Select the channel again from the manual sync list.",
       "selectAllChannels": "Select all channels",
       "selectChannel": "Select channel {{name}}",
       "status": "Status",

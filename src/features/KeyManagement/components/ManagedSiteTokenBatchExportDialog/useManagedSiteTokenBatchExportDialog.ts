@@ -19,6 +19,8 @@ import {
   NEW_API_MANAGED_VERIFICATION_CLOSE_MODES,
   useNewApiManagedVerification,
 } from "~/features/ManagedSiteVerification/useNewApiManagedVerification"
+import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
+import { getManagedResourceRefKey } from "~/services/managedSites/managedResourceIdentity"
 import {
   DEFAULT_MANAGED_SITE_TOKEN_BATCH_IMPORT_INTENT,
   executeManagedSiteTokenBatchExport,
@@ -171,7 +173,7 @@ export function useManagedSiteTokenBatchExportDialog({
   const workflowEpochCounterRef = useRef(0)
   const activeWorkflowEpochRef = useRef<number | null>(null)
   const resolvedChannelKeysByItemIdRef = useRef<
-    Record<string, Record<number, string>>
+    Record<string, Record<string, string>>
   >({})
   const previewRef = useRef<ManagedSiteTokenBatchExportPreview | null>(null)
   const selectedIdsRef = useRef<Set<string>>(new Set())
@@ -471,14 +473,14 @@ export function useManagedSiteTokenBatchExportDialog({
 
   const mergeResolvedChannelKeyForItem = (
     itemId: string,
-    channelId: number,
+    resourceRef: ManagedResourceRef,
     key: string,
   ) => {
     resolvedChannelKeysByItemIdRef.current = {
       ...resolvedChannelKeysByItemIdRef.current,
       [itemId]: {
         ...(resolvedChannelKeysByItemIdRef.current[itemId] ?? {}),
-        [channelId]: key,
+        [getManagedResourceRefKey(resourceRef)]: key,
       },
     }
   }
@@ -563,8 +565,7 @@ export function useManagedSiteTokenBatchExportDialog({
         if (!isActive()) return
 
         const { item, candidate } = targets[index]
-        if (typeof candidate.id !== "number") continue
-        const channelId = candidate.id
+        const resourceRef = candidate.ref
         let resolvedChannelKey = ""
         let shouldContinueAfterDeferredLoad = false
         let loadCompleted = false
@@ -578,7 +579,7 @@ export function useManagedSiteTokenBatchExportDialog({
           if (resolvedChannelKey) {
             mergeResolvedChannelKeyForItem(
               item.id,
-              channelId,
+              resourceRef,
               resolvedChannelKey,
             )
             applyResolvedChannelKeyForItem(item, candidate, resolvedChannelKey)
@@ -591,7 +592,7 @@ export function useManagedSiteTokenBatchExportDialog({
 
         try {
           const loadedImmediately = await loadNewApiChannelKeyWithVerification({
-            channelId,
+            resourceRef,
             command: PROTECTION_BYPASS_USER_COMMANDS.ManageApiKeys,
             label: candidate.name,
             requestKind: "channel",

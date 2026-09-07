@@ -1,5 +1,6 @@
 import { SITE_TYPES } from "~/constants/siteType"
 import type { ManagedResourceMatchingCapability } from "~/services/apiAdapters/contracts/managedResourceMatching"
+import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
 import type {
   ManagedSiteCapabilities,
   ManagedSiteChannelDraftsCapability,
@@ -9,6 +10,10 @@ import {
   getAxonHubChannelSecretKey,
   listAxonHubChannelPage,
 } from "~/services/apiService/axonHub"
+import {
+  assertManagedResourceRefForSite,
+  createManagedChannelResourceRef,
+} from "~/services/managedSites/managedResourceIdentity"
 import {
   checkValidAxonHubConfig,
   prepareChannelFormData,
@@ -39,7 +44,11 @@ const matching: ManagedResourceMatchingCapability<AxonHubConfig> = {
       const page = await listAxonHubChannelPage(config, { cursor, limit: 100 })
       items.push(
         ...page.items.map((channel) => ({
-          id: channel.id,
+          ref: createManagedChannelResourceRef(
+            SITE_TYPES.AXON_HUB,
+            config.baseUrl,
+            channel.id,
+          ),
           name: channel.name,
           type: channel.type,
           base_url: channel.baseURL ?? "",
@@ -59,6 +68,12 @@ const matching: ManagedResourceMatchingCapability<AxonHubConfig> = {
   },
   fetchSecretKey,
   hydrateComparableKeys: async (config, candidates, options) => {
+    for (const candidate of candidates) {
+      assertManagedResourceRefForSite(candidate.ref, {
+        siteType: SITE_TYPES.AXON_HUB,
+        config,
+      })
+    }
     const hydrated = []
     for (const candidate of candidates) {
       if (hasUsableManagedSiteChannelKey(candidate.key)) {
@@ -67,7 +82,7 @@ const matching: ManagedResourceMatchingCapability<AxonHubConfig> = {
       }
       hydrated.push({
         ...candidate,
-        key: await fetchSecretKey(config, candidate.id, options),
+        key: await fetchSecretKey(config, candidate.ref, options),
       })
     }
     return hydrated
@@ -77,10 +92,14 @@ const matching: ManagedResourceMatchingCapability<AxonHubConfig> = {
 /** Matching lists are secret-free; resolve credentials only for selected candidates. */
 async function fetchSecretKey(
   config: AxonHubConfig,
-  id: number | string,
+  ref: ManagedResourceRef,
   options?: Pick<RequestInit, "signal">,
 ): Promise<string> {
-  return getAxonHubChannelSecretKey(config, String(id), options)
+  assertManagedResourceRefForSite(ref, {
+    siteType: SITE_TYPES.AXON_HUB,
+    config,
+  })
+  return getAxonHubChannelSecretKey(config, ref.resourceId, options)
 }
 export const axonHubManagedSiteCapabilities = {
   siteType: SITE_TYPES.AXON_HUB,

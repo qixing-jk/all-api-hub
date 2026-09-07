@@ -6,6 +6,7 @@ import { modelSyncScheduler } from "~/services/models/modelSync/scheduler"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import type { ManagedModelChannel } from "~/types/managedResourceModels"
 import { DEFAULT_MODEL_REDIRECT_PREFERENCES } from "~/types/managedSiteModelRedirect"
+import { modelResourceRef } from "~~/tests/test-utils/managedModelResource"
 
 vi.mock("~/services/managedSites/legacyChannelConfigMigration", () => ({
   ensureLegacyChannelConfigMigrationReady: vi.fn().mockResolvedValue(undefined),
@@ -131,7 +132,7 @@ describe("modelSyncScheduler.executeSync - model redirect pruning", () => {
     newModels?: string[]
   }) => {
     const channel: ManagedModelChannel = {
-      id: 1,
+      ref: modelResourceRef(1),
       name: "channel-1",
       type: 1,
       baseUrl: "https://channel.example.com",
@@ -143,7 +144,7 @@ describe("modelSyncScheduler.executeSync - model redirect pruning", () => {
 
     mockRunBatch.mockImplementation(async (_channels: any, options: any) => {
       const lastResult = {
-        channelId: 1,
+        resourceRef: modelResourceRef(1),
         channelName: "channel-1",
         ok: true,
         attempts: 1,
@@ -182,7 +183,7 @@ describe("modelSyncScheduler.executeSync - model redirect pruning", () => {
       newModels,
     })
 
-    await modelSyncScheduler.executeSync([1])
+    await modelSyncScheduler.executeSync([modelResourceRef(1)])
 
     expect(mockListChannels).toHaveBeenCalledWith()
     expect(
@@ -205,7 +206,7 @@ describe("modelSyncScheduler.executeSync - model redirect pruning", () => {
       newModels,
     })
 
-    await modelSyncScheduler.executeSync([1])
+    await modelSyncScheduler.executeSync([modelResourceRef(1)])
 
     expect(
       mockedModelRedirectService.applyModelMappingToChannel,
@@ -224,7 +225,7 @@ describe("modelSyncScheduler.executeSync - model redirect pruning", () => {
       newModels,
     })
 
-    await modelSyncScheduler.executeSync([1])
+    await modelSyncScheduler.executeSync([modelResourceRef(1)])
 
     expect(
       mockedModelRedirectService.applyModelMappingToChannel,
@@ -238,7 +239,7 @@ describe("modelSyncScheduler.executeSync - model redirect pruning", () => {
       newModels: [],
     })
 
-    await modelSyncScheduler.executeSync([1])
+    await modelSyncScheduler.executeSync([modelResourceRef(1)])
 
     expect(
       mockedModelRedirectService.applyModelMappingToChannel,
@@ -252,7 +253,7 @@ describe("modelSyncScheduler.executeSync - model redirect pruning", () => {
       newModels: ["a", "b"],
     })
 
-    await modelSyncScheduler.executeSync([1])
+    await modelSyncScheduler.executeSync([modelResourceRef(1)])
 
     expect(
       mockedModelRedirectService.applyModelMappingToChannel,

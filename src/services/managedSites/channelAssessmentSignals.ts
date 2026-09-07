@@ -5,7 +5,6 @@ import type {
 } from "~/services/managedSites/channelMatch"
 
 export interface ManagedSiteChannelAssessmentSignalChannel {
-  id?: number | string
   name: string
 }
 
@@ -35,7 +34,6 @@ const toOptionalSignalChannel = (
 ): ManagedSiteChannelAssessmentSignalChannel | undefined =>
   channel
     ? {
-        id: channel.id,
         name: channel.name,
       }
     : undefined

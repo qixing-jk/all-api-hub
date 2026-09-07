@@ -14,6 +14,7 @@ import {
   type ResourceEditor,
   type ResourceFailure,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
+import { getManagedResourceRefKey } from "~/services/managedSites/managedResourceIdentity"
 import {
   assertManagedSiteMutationResult,
   MANAGED_SITE_MUTATION_OUTCOMES,
@@ -34,7 +35,6 @@ import {
 import type { ManagedResourceRowData } from "../presentation/managedResourcePresentation"
 import {
   EMPTY_MANAGED_RESOURCE_CAPABILITIES,
-  getManagedResourceRefKey,
   toSafeManagedResourceFailure,
 } from "../utils/managedResource"
 import { mapSettledWithConcurrency } from "./managedResourceConcurrency"

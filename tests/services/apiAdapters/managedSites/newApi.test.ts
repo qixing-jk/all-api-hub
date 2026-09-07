@@ -10,6 +10,7 @@ import {
   testManagedSiteChannelMutationContract,
   type ChannelMutationScenario,
 } from "~~/tests/services/apiAdapters/managedSites/channelMutationContract"
+import { modelResourceRef } from "~~/tests/test-utils/managedModelResource"
 
 const channelManagement = vi.hoisted(() => ({
   listAllChannels: vi.fn(),
@@ -113,8 +114,14 @@ describe("newApi managed-site channel capability", () => {
       ).resolves.toMatchObject({
         total: 2,
         items: [
-          { id: 7, models: [] },
-          { id: 8, models: ["model-a", "model-b"] },
+          {
+            ref: modelResourceRef(7, { scopeKey: config.baseUrl }),
+            models: [],
+          },
+          {
+            ref: modelResourceRef(8, { scopeKey: config.baseUrl }),
+            models: ["model-a", "model-b"],
+          },
         ],
       })
     },
@@ -220,7 +227,10 @@ describe("newApi managed-site channel capability", () => {
       invoke: async () => {
         return await newApiManagedResourceModels.updateModels!(
           config,
-          7,
+          modelResourceRef(7, {
+            siteType: "new-api",
+            scopeKey: config.baseUrl,
+          }),
           models,
         )
       },
@@ -241,7 +251,10 @@ describe("newApi managed-site channel capability", () => {
       invoke: async () => {
         return await newApiManagedResourceModels.updateModelMapping!(
           config,
-          7,
+          modelResourceRef(7, {
+            siteType: "new-api",
+            scopeKey: config.baseUrl,
+          }),
           models,
           modelMapping,
         )
@@ -508,16 +521,23 @@ describe("newApi managed-site channel capability", () => {
       name: "updated",
     })
     await newApiChannelOperations.delete(config, 1)
-    await newApiManagedResourceModels.fetchModels?.(config, 1)
+    await newApiManagedResourceModels.fetchModels?.(
+      config,
+      modelResourceRef(1, { siteType: "new-api", scopeKey: config.baseUrl }),
+    )
     await newApiManagedResourceModels.fetchDraftModels?.(config, {
       channelType: 1,
       baseUrl: "https://upstream.example.invalid",
       credential: "credential-placeholder",
     })
-    await newApiManagedResourceModels.updateModels?.(config, 1, ["gpt-4o"])
+    await newApiManagedResourceModels.updateModels?.(
+      config,
+      modelResourceRef(1, { siteType: "new-api", scopeKey: config.baseUrl }),
+      ["gpt-4o"],
+    )
     await newApiManagedResourceModels.updateModelMapping?.(
       config,
-      1,
+      modelResourceRef(1, { siteType: "new-api", scopeKey: config.baseUrl }),
       ["gpt-4o"],
       { "gpt-4o": "upstream-gpt-4o" },
     )
@@ -619,10 +639,14 @@ describe("newApi managed-site channel capability", () => {
       bypassSiteRequestLimit: true,
     }
 
-    await newApiManagedResourceModels.fetchModels?.(config, 1, {
-      signal,
-      bypassSiteRequestLimit: true,
-    })
+    await newApiManagedResourceModels.fetchModels?.(
+      config,
+      modelResourceRef(1, { siteType: "new-api", scopeKey: config.baseUrl }),
+      {
+        signal,
+        bypassSiteRequestLimit: true,
+      },
+    )
 
     expect(channelManagement.fetchChannelModels).toHaveBeenCalledWith(
       expect.objectContaining(request),

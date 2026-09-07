@@ -15,6 +15,7 @@ import {
 import { PRODUCT_ANALYTICS_ACTION_IDS } from "~/services/productAnalytics/contracts"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
+import { matchingResourceRef } from "~~/tests/test-utils/managedResourceMatching"
 import {
   act,
   render,
@@ -313,7 +314,7 @@ describe("ServiceCredentialCard", () => {
     const managedSiteStatus: ManagedSiteTokenChannelStatus = {
       status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.ADDED,
       matchedChannel: {
-        id: 101,
+        ref: matchingResourceRef(101),
         name: "Existing SharedChat Codex",
       },
       assessment: {
@@ -323,7 +324,7 @@ describe("ServiceCredentialCard", () => {
           matched: true,
           candidateCount: 1,
           channel: {
-            id: 101,
+            ref: matchingResourceRef(101),
             name: "Existing SharedChat Codex",
           },
         },
@@ -332,7 +333,7 @@ describe("ServiceCredentialCard", () => {
           matched: true,
           reason: MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.MATCHED,
           channel: {
-            id: 101,
+            ref: matchingResourceRef(101),
             name: "Existing SharedChat Codex",
           },
         },
@@ -341,7 +342,7 @@ describe("ServiceCredentialCard", () => {
           matched: true,
           reason: MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.EXACT,
           channel: {
-            id: 101,
+            ref: matchingResourceRef(101),
             name: "Existing SharedChat Codex",
           },
         },

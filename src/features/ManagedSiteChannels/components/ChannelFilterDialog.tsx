@@ -39,7 +39,6 @@ import {
 } from "../utils/channelFilters"
 
 export interface ChannelFilterTarget {
-  id: number
   name: string
   type: number | string
   resourceRef?: ManagedUpstreamResourceRef
@@ -87,7 +86,6 @@ function getChannelFilterStorageIdentity(
   }
 
   return {
-    channelId: channel.id,
     resourceRef: channel.resourceRef,
   }
 }

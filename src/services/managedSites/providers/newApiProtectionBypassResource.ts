@@ -1,4 +1,8 @@
 import { SITE_TYPES } from "~/constants/siteType"
+import {
+  areManagedResourceRefsEqual,
+  createManagedChannelResourceRef,
+} from "~/services/managedSites/managedResourceIdentity"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import type { NewApiChannelKeyResource } from "~/services/protectionBypass/contracts"
 
@@ -51,7 +55,16 @@ export async function validateNewApiSessionReadResource(
       ),
     )
     return Boolean(
-      channels?.items?.some((channel) => channel.id === resource.channelId),
+      channels?.items?.some((channel) =>
+        areManagedResourceRefsEqual(
+          channel.ref,
+          createManagedChannelResourceRef(
+            SITE_TYPES.NEW_API,
+            runtimeConfig.config.baseUrl,
+            resource.channelId,
+          ),
+        ),
+      ),
     )
   } catch {
     return false

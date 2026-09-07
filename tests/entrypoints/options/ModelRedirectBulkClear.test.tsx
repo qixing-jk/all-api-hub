@@ -12,6 +12,7 @@ import {
 import { ModelRedirectService } from "~/services/models/modelRedirect"
 import { supportsManagedSiteModelRedirect } from "~/services/models/modelRedirect/capabilities"
 import { testI18n } from "~~/tests/test-utils/i18n"
+import { modelResourceRef } from "~~/tests/test-utils/managedModelResource"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 vi.mock("~/contexts/UserPreferencesContext", async () => {
@@ -107,12 +108,12 @@ describe("Model redirect bulk clear flow", () => {
       success: true,
       channels: [
         {
-          id: 1,
+          ref: modelResourceRef(1),
           name: "Channel One",
           modelMapping: '{"gpt-4o":"openai/gpt-4o"}',
         },
         {
-          id: 2,
+          ref: modelResourceRef(2),
           name: "Channel Two",
           modelMapping: "{}",
         },
@@ -314,7 +315,7 @@ describe("Model redirect bulk clear flow", () => {
     ).not.toHaveBeenCalled()
   })
 
-  it("calls the service with selected IDs", async () => {
+  it("calls the service with complete selected resource references", async () => {
     mockedModelRedirectService.clearChannelModelMappings.mockResolvedValue({
       success: true,
       totalSelected: 2,
@@ -345,7 +346,7 @@ describe("Model redirect bulk clear flow", () => {
     await waitFor(() => {
       expect(
         mockedModelRedirectService.clearChannelModelMappings,
-      ).toHaveBeenCalledWith([1, 2])
+      ).toHaveBeenCalledWith([modelResourceRef(1), modelResourceRef(2)])
     })
 
     expect(toast.success).toHaveBeenCalled()
@@ -382,16 +383,16 @@ describe("Model redirect bulk clear flow", () => {
       success: true,
       channels: [
         {
-          id: 1,
+          ref: modelResourceRef(1),
           name: "Few",
           modelMapping: '{"a":"b"}',
         },
         {
-          id: 2,
+          ref: modelResourceRef(2),
           name: "Many",
           modelMapping: '{"a":"b","c":"d"}',
         },
-        { id: 3, name: "Empty", modelMapping: "{}" },
+        { ref: modelResourceRef(3), name: "Empty", modelMapping: "{}" },
       ],
       errors: [],
     })

@@ -5,16 +5,23 @@ import { useTranslation } from "react-i18next"
 
 import ManagedSiteChannelLinkButton from "~/components/ManagedSiteChannelLinkButton"
 import { Badge, Button, Card } from "~/components/ui"
-import type { ExecutionItemResult } from "~/types/managedSiteModelSync"
+import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
+import type { ExecutionHistoryItemResult } from "~/types/managedSiteModelSync"
+
+import {
+  getModelSyncHistoryItemKey,
+  getModelSyncHistoryResourceId,
+} from "../executionIdentity"
 
 interface ResultsTableProps {
-  items: ExecutionItemResult[]
-  selectedIds: Set<number>
+  items: ExecutionHistoryItemResult[]
+  selectedKeys: Set<string>
   onSelectAll: (checked: boolean) => void
-  onSelectItem: (id: number, checked: boolean) => void
-  onRunSingle: (channelId: number) => void
+  onSelectItem: (resourceKey: string, checked: boolean) => void
+  onRunSingle: (ref: ManagedResourceRef) => void
   isRunning: boolean
-  runningChannelId?: number | null
+  runningResourceKey?: string | null
+  canUseResource?: (ref: ManagedResourceRef) => boolean
   visibleColumns?: Partial<{
     status: boolean
     message: boolean
@@ -27,29 +34,38 @@ interface ResultsTableProps {
  * Table displaying execution results with selection and per-channel actions.
  * @param props Component props bundle.
  * @param props.items Execution results to render.
- * @param props.selectedIds Selected channel ids.
+ * @param props.selectedKeys Selected resource identity keys.
  * @param props.onSelectAll Handler to toggle all selections.
  * @param props.onSelectItem Handler to toggle a single selection.
  * @param props.onRunSingle Trigger to run sync for a single channel.
  * @param props.isRunning Whether any sync is currently running.
- * @param props.runningChannelId Channel id currently executing, if any.
+ * @param props.runningResourceKey Resource identity key currently executing, if any.
+ * @param props.canUseResource Whether the reference belongs to the active managed site.
  * @param props.visibleColumns Optional column visibility overrides.
  * @returns Card containing results table.
  */
 export default function ResultsTable({
   items,
-  selectedIds,
+  selectedKeys,
   onSelectAll,
   onSelectItem,
   onRunSingle,
   isRunning,
-  runningChannelId,
+  runningResourceKey,
   visibleColumns,
+  canUseResource = () => true,
 }: ResultsTableProps) {
   const { t } = useTranslation("managedSiteModelSync")
 
-  const allSelected = items.length > 0 && selectedIds.size === items.length
-  const someSelected = selectedIds.size > 0 && !allSelected
+  const selectableItems = items.filter(
+    (item) => item.resourceRef && canUseResource(item.resourceRef),
+  )
+  const allSelected =
+    selectableItems.length > 0 &&
+    selectableItems.every((item) =>
+      selectedKeys.has(getModelSyncHistoryItemKey(item)),
+    )
+  const someSelected = selectedKeys.size > 0 && !allSelected
   const selectAllRef = useRef<HTMLInputElement | null>(null)
   const columns = {
     status: visibleColumns?.status ?? true,
@@ -77,6 +93,7 @@ export default function ResultsTable({
                   type="checkbox"
                   aria-label={t("execution.table.selectAllChannels")}
                   checked={allSelected}
+                  disabled={selectableItems.length === 0}
                   onChange={(e) => onSelectAll(e.target.checked)}
                   className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 />
@@ -114,11 +131,15 @@ export default function ResultsTable({
           </thead>
           <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
             {items.map((item) => {
-              const isRunningThis = runningChannelId === item.channelId
+              const resourceKey = getModelSyncHistoryItemKey(item)
+              const available = Boolean(
+                item.resourceRef && canUseResource(item.resourceRef),
+              )
+              const isRunningThis = runningResourceKey === resourceKey
 
               return (
                 <tr
-                  key={item.channelId}
+                  key={resourceKey}
                   className="group hover:bg-gray-50 dark:hover:bg-gray-800"
                 >
                   <td className="px-4 py-3">
@@ -127,9 +148,10 @@ export default function ResultsTable({
                       aria-label={t("execution.table.selectChannel", {
                         name: item.channelName,
                       })}
-                      checked={selectedIds.has(item.channelId)}
+                      checked={selectedKeys.has(resourceKey)}
+                      disabled={!available}
                       onChange={(e) =>
-                        onSelectItem(item.channelId, e.target.checked)
+                        onSelectItem(resourceKey, e.target.checked)
                       }
                       className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                     />
@@ -144,14 +166,21 @@ export default function ResultsTable({
                     </td>
                   )}
                   <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
-                    {item.channelId}
+                    {getModelSyncHistoryResourceId(item)}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
                     <ManagedSiteChannelLinkButton
-                      channelId={item.channelId}
+                      resourceRef={
+                        available ? item.resourceRef ?? undefined : undefined
+                      }
                       channelName={item.channelName}
                       className="h-auto justify-start p-0 text-sm"
                     />
+                    {!available && (
+                      <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
+                        {t("execution.table.resourceUnavailable")}
+                      </p>
+                    )}
                   </td>
                   {columns.message && (
                     <td className="px-4 py-3">
@@ -194,11 +223,17 @@ export default function ResultsTable({
                     <Button
                       size="sm"
                       variant="ghost"
-                      onClick={() => onRunSingle(item.channelId)}
-                      disabled={isRunning}
+                      onClick={() =>
+                        item.resourceRef && onRunSingle(item.resourceRef)
+                      }
+                      disabled={isRunning || !available}
                       loading={isRunningThis}
                       aria-label={t("execution.table.syncChannel")}
-                      title={t("execution.table.syncChannel")}
+                      title={t(
+                        available
+                          ? "execution.table.syncChannel"
+                          : "execution.table.resourceUnavailable",
+                      )}
                       leftIcon={<RefreshCw className="h-4 w-4" />}
                     />
                   </td>

@@ -76,7 +76,6 @@ import {
   createManagedSiteChannelMatchRequestCache,
   resolveManagedSiteChannelMatch,
 } from "~/services/managedSites/channelMatchResolver"
-import { getManagedSiteChannelNavigationId } from "~/services/managedSites/managedSiteChannelResourceIdentity"
 import {
   getCurrentManagedSiteType,
   hasValidManagedSiteConfig,
@@ -118,7 +117,6 @@ import { showWarningToast } from "~/utils/core/toastHelpers"
 import { sanitizeOriginUrl } from "~/utils/core/url"
 import {
   openKeysPage,
-  openManagedSiteChannelsForChannel,
   openManagedSiteChannelsPage,
   openModelsPage,
   openRedeemPage,
@@ -623,7 +621,7 @@ export default function AccountActionButtons({
             await resolveManagedSiteChannelMatch({
               ...matchParams,
               resolveHiddenKeys: true,
-              hiddenKeyChannelIds: [recoverableCandidate.id],
+              hiddenKeyResourceRefs: [recoverableCandidate.ref],
               protectionBypassExecution,
             }),
         )
@@ -632,18 +630,11 @@ export default function AccountActionButtons({
 
       if (
         exactMatch &&
-        exactMatch.id != null &&
         resolution.models.reason ===
           MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.EXACT
       ) {
-        const navigationId = getManagedSiteChannelNavigationId(
-          managedSite.siteType,
-          exactMatch,
-        )
-        if (navigationId !== undefined) {
-          openManagedSiteChannelsForChannel(navigationId)
-          return
-        }
+        openManagedSiteChannelsPage({ resourceRef: exactMatch.ref })
+        return
       }
 
       openManagedSiteChannelsPage({ search: resolution.searchBaseUrl })

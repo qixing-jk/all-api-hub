@@ -1,6 +1,8 @@
+import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
+
 /** Product-owned task input for providers with channel model lists and redirect mappings. */
 export interface ManagedModelChannel {
-  id: number
+  ref: ManagedResourceRef
   name: string
   type: number | string
   baseUrl: string
@@ -19,7 +21,7 @@ export interface ManagedModelChannelListData {
 /** Facts needed to select a channel for model sync, without execution credentials. */
 export type ManagedModelChannelSummary = Pick<
   ManagedModelChannel,
-  "id" | "name"
+  "ref" | "name"
 >
 
 export interface ManagedModelChannelSummaryListData {
@@ -30,5 +32,5 @@ export interface ManagedModelChannelSummaryListData {
 /** Safe input for the redirect-mapping preview and selection UI. */
 export type ManagedModelMappingPreview = Pick<
   ManagedModelChannel,
-  "id" | "name" | "modelMapping"
+  "ref" | "name" | "modelMapping"
 >

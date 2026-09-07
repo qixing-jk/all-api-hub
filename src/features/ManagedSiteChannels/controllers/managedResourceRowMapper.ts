@@ -5,6 +5,7 @@ import {
   type ResourceDisplayFact,
   type ResourceDisplayFacts,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
+import { getManagedResourceRefKey } from "~/services/managedSites/managedResourceIdentity"
 
 import {
   MANAGED_CHANNELS_CELL_KINDS,
@@ -16,15 +17,12 @@ import {
   type ManagedResourcePresentationSemantics,
   type ManagedResourceRowData,
 } from "../presentation/managedResourcePresentation"
-import { getManagedResourceRefKey } from "../utils/managedResource"
 
 const normalizeChannelActions = (
   value: ManagedResourceChannelActionFacts | undefined,
 ): ManagedResourceChannelActionFacts | undefined => {
   if (
     !value ||
-    !Number.isSafeInteger(value.channelId) ||
-    value.channelId <= 0 ||
     (typeof value.channelType !== "string" &&
       typeof value.channelType !== "number")
   ) {
@@ -32,7 +30,6 @@ const normalizeChannelActions = (
   }
 
   return {
-    channelId: value.channelId,
     channelType: value.channelType,
     canSyncModels: value.canSyncModels === true,
     canOpenModelSync: value.canOpenModelSync === true,

@@ -1,5 +1,10 @@
+import { SITE_TYPES } from "~/constants/siteType"
+import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
 import type { ManagedSiteChannelSecretReadOptions } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
-import { requireNumericManagedResourceId } from "~/services/apiAdapters/managedResources/matchingInputs"
+import {
+  requireManagedResourceChannelId,
+  requireNumericManagedResourceId,
+} from "~/services/apiAdapters/managedResources/resourceIds"
 import {
   MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
   MatchResolutionUnresolvedError,
@@ -8,7 +13,6 @@ import {
   fetchNewApiChannelKey,
   NewApiChannelKeyRequirementError,
 } from "~/services/managedSites/providers/newApiSession"
-import type { ManagedResourceMatchCandidate } from "~/types/managedResourceMatching"
 import type { NewApiConfig } from "~/types/newApiConfig"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
@@ -17,6 +21,23 @@ import { normalizeUrlForOriginKey } from "~/utils/core/urlParsing"
 import { userPreferences } from "../../preferences/userPreferences"
 
 const logger = createLogger("NewApiChannelSecrets")
+
+/** Resolves a scoped resource through an explicitly supplied browser session. */
+export async function fetchNewApiResourceKeyWithSession(
+  config: Pick<
+    NewApiConfig,
+    "baseUrl" | "userId" | "username" | "password" | "totpSecret"
+  >,
+  ref: ManagedResourceRef,
+  options: ManagedSiteChannelSecretReadOptions,
+): Promise<string> {
+  const channelId = requireManagedResourceChannelId(
+    SITE_TYPES.NEW_API,
+    config,
+    ref,
+  )
+  return fetchNewApiChannelKey({ ...config, channelId, ...options })
+}
 
 /**
  * Reads a single managed-site channel key using the New API verification flow.
@@ -40,7 +61,7 @@ export async function fetchChannelSecretKey(
  * Hydrates hidden New API channel keys so the shared resolver can compare them.
  */
 export async function hydrateComparableChannelKeys<
-  T extends ManagedResourceMatchCandidate,
+  T extends { id: number; key?: string },
 >(
   config: NewApiConfig,
   candidates: T[],

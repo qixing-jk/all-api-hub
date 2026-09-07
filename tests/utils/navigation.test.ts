@@ -30,7 +30,6 @@ import {
   openFullBookmarkManagerPage,
   openKeysPage,
   openLanguageRequestPage,
-  openManagedSiteChannelsForChannel,
   openManagedSiteChannelsPage,
   openManagedSiteModelSyncForChannel,
   openManagedSiteModelSyncPage,
@@ -52,6 +51,7 @@ import {
   replaceWithinOptionsPage,
 } from "~/utils/navigation"
 import { getSiteSupportRequestUrl } from "~/utils/navigation/feedbackLinks"
+import { modelResourceRef } from "~~/tests/test-utils/managedModelResource"
 
 const OPTIONS_PAGE_URL = "http://localhost:3000/options.html"
 
@@ -791,15 +791,17 @@ describe("navigation utilities", () => {
     await openPermissionsOnboardingPage({ reason: "debug" })
     await openApiCredentialProfilesPage()
     await openManagedSiteChannelsPage({
-      channelId: 42,
+      resourceRef: modelResourceRef(42),
       search: "relay",
     })
-    await openManagedSiteChannelsForChannel(77)
+    await openManagedSiteChannelsPage({ resourceRef: modelResourceRef(77) })
     await openManagedSiteModelSyncPage({
-      channelId: 99,
+      resourceRef: modelResourceRef(99),
       tab: "history",
     })
-    await openManagedSiteModelSyncForChannel(100)
+    await openManagedSiteModelSyncForChannel(
+      modelResourceRef("provider/key:100"),
+    )
 
     expect(mockedCreateTab).toHaveBeenCalledWith(
       `${OPTIONS_PAGE_URL}#account`,
@@ -841,19 +843,19 @@ describe("navigation utilities", () => {
       true,
     )
     expect(mockedCreateTab).toHaveBeenCalledWith(
-      `${OPTIONS_PAGE_URL}?channelId=42&search=relay#managedSiteChannels`,
+      `${OPTIONS_PAGE_URL}?${new URLSearchParams({ search: "relay", resourceRef: JSON.stringify(modelResourceRef(42)) })}#managedSiteChannels`,
       true,
     )
     expect(mockedCreateTab).toHaveBeenCalledWith(
-      `${OPTIONS_PAGE_URL}?channelId=77#managedSiteChannels`,
+      `${OPTIONS_PAGE_URL}?${new URLSearchParams({ resourceRef: JSON.stringify(modelResourceRef(77)) })}#managedSiteChannels`,
       true,
     )
     expect(mockedCreateTab).toHaveBeenCalledWith(
-      `${OPTIONS_PAGE_URL}?channelId=99&tab=history#managedSiteModelSync`,
+      `${OPTIONS_PAGE_URL}?${new URLSearchParams({ resourceRef: JSON.stringify(modelResourceRef(99)), tab: "history" })}#managedSiteModelSync`,
       true,
     )
     expect(mockedCreateTab).toHaveBeenCalledWith(
-      `${OPTIONS_PAGE_URL}?channelId=100&tab=manual#managedSiteModelSync`,
+      `${OPTIONS_PAGE_URL}?${new URLSearchParams({ resourceRef: JSON.stringify(modelResourceRef("provider/key:100")), tab: "manual" })}#managedSiteModelSync`,
       true,
     )
   })
@@ -920,14 +922,41 @@ describe("navigation utilities", () => {
       `${OPTIONS_PAGE_URL}?search=old&channelId=8#managedSiteChannels`,
     )
 
-    await openManagedSiteChannelsForChannel("native/42+=&中")
+    const resourceRef = modelResourceRef("native/42+=&中")
+    await openManagedSiteChannelsPage({ resourceRef })
 
-    expect(new URL(window.location.href).searchParams.get("channelId")).toBe(
-      "native/42+=&中",
-    )
-    expect(new URL(window.location.href).searchParams.has("search")).toBe(false)
+    const params = new URL(window.location.href).searchParams
+    expect(JSON.parse(params.get("resourceRef")!)).toEqual(resourceRef)
+    expect(params.has("channelId")).toBe(false)
+    expect(params.has("search")).toBe(false)
     expect(window.location.hash).toBe("#managedSiteChannels")
     expect(mockedCreateTab).not.toHaveBeenCalled()
+  })
+
+  it("keeps channels with the same id in different deployments as distinct deep links", async () => {
+    window.history.replaceState(
+      null,
+      "",
+      `${OPTIONS_PAGE_URL}#managedSiteChannels`,
+    )
+    const firstRef = modelResourceRef(42, { scopeKey: "https://first.example" })
+    const secondRef = modelResourceRef(42, {
+      scopeKey: "https://second.example",
+    })
+
+    await openManagedSiteChannelsPage({ resourceRef: firstRef })
+    const firstUrl = new URL(window.location.href)
+    await openManagedSiteChannelsPage({ resourceRef: secondRef })
+    const secondUrl = new URL(window.location.href)
+
+    expect(JSON.parse(firstUrl.searchParams.get("resourceRef")!)).toEqual(
+      firstRef,
+    )
+    expect(JSON.parse(secondUrl.searchParams.get("resourceRef")!)).toEqual(
+      secondRef,
+    )
+    expect(firstUrl.href).not.toBe(secondUrl.href)
+    expect(secondUrl.searchParams.has("channelId")).toBe(false)
   })
 
   it("preserves options-page history for account and managed-site drill-down navigation", async () => {
@@ -936,7 +965,7 @@ describe("navigation utilities", () => {
     const replaceStateSpy = vi.spyOn(window.history, "replaceState")
 
     await openAccountManagerWithSearch("alpha")
-    await openManagedSiteChannelsForChannel(77)
+    await openManagedSiteChannelsPage({ resourceRef: modelResourceRef(77) })
 
     expect(mockedCreateTab).not.toHaveBeenCalled()
     expect(pushStateSpy).toHaveBeenNthCalledWith(
@@ -949,7 +978,7 @@ describe("navigation utilities", () => {
       2,
       null,
       "",
-      `${OPTIONS_PAGE_URL}?channelId=77#managedSiteChannels`,
+      `${OPTIONS_PAGE_URL}?${new URLSearchParams({ resourceRef: JSON.stringify(modelResourceRef(77)) })}#managedSiteChannels`,
     )
     expect(replaceStateSpy).not.toHaveBeenCalled()
 

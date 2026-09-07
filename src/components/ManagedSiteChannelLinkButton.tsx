@@ -2,25 +2,23 @@ import { useCallback } from "react"
 import { useTranslation } from "react-i18next"
 
 import { WorkflowTransitionButton } from "~/components/ui"
-import {
-  openManagedSiteChannelsForChannel,
-  openManagedSiteChannelsPage,
-} from "~/utils/navigation"
+import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
+import { openManagedSiteChannelsPage } from "~/utils/navigation"
 
 interface ManagedSiteChannelLinkButtonProps {
   channelName: string
-  channelId?: number | string
+  resourceRef?: ManagedResourceRef
   search?: string
   className?: string
   testId?: string
 }
 
 /**
- * A link-style button that opens channel management filtered to a channel ID.
+ * Opens channel management with a scoped resource reference or search filter.
  */
 export default function ManagedSiteChannelLinkButton({
   channelName,
-  channelId,
+  resourceRef,
   search,
   className,
   testId,
@@ -28,22 +26,21 @@ export default function ManagedSiteChannelLinkButton({
   const { t } = useTranslation(["managedSiteModelSync"])
 
   const handleClick = useCallback(async () => {
-    if (channelId != null) {
-      await openManagedSiteChannelsForChannel(channelId)
+    if (resourceRef) {
+      await openManagedSiteChannelsPage({ resourceRef })
       return
     }
-
     if (search) {
       await openManagedSiteChannelsPage({ search })
     }
-  }, [channelId, search])
+  }, [resourceRef, search])
 
   return (
     <WorkflowTransitionButton
       variant="link"
       className={className}
       onClick={handleClick}
-      disabled={channelId == null && !search}
+      disabled={!resourceRef && !search}
       aria-label={`${t("managedSiteModelSync:execution.table.manageChannel")}: ${channelName}`}
       data-testid={testId}
     >

@@ -1,6 +1,9 @@
 import { Storage } from "@plasmohq/storage"
 
+import { isManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
 import type {
+  ExecutionHistoryItemResult,
+  ExecutionHistoryResult,
   ExecutionResult,
   ManagedSiteModelSyncPreferences,
 } from "~/types/managedSiteModelSync"
@@ -182,13 +185,31 @@ class ManagedSiteModelSyncStorage {
   /**
    * Get last execution result
    */
-  async getLastExecution(): Promise<ExecutionResult | null> {
+  async getLastExecution(): Promise<ExecutionHistoryResult | null> {
     try {
-      const stored = await this.getWithMigration<ExecutionResult>(
-        STORAGE_KEY_MIGRATIONS.LAST_EXECUTION,
-      )
+      const stored = await this.getWithMigration<
+        ExecutionResult<
+          ExecutionHistoryItemResult & { channelId?: number | string }
+        >
+      >(STORAGE_KEY_MIGRATIONS.LAST_EXECUTION)
 
-      return stored || null
+      if (!stored || !Array.isArray(stored.items)) return null
+
+      return {
+        ...stored,
+        items: stored.items.map(({ channelId, ...item }) => {
+          const resourceRef = isManagedResourceRef(item.resourceRef)
+            ? item.resourceRef
+            : null
+          return {
+            ...item,
+            resourceRef,
+            ...(!resourceRef && channelId !== undefined
+              ? { legacyResourceId: String(channelId) }
+              : {}),
+          }
+        }),
+      }
     } catch (error) {
       logger.error("Failed to get last execution", error)
       return null

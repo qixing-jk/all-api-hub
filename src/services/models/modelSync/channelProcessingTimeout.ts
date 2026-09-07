@@ -29,7 +29,7 @@ function getChannelProcessingTimeoutMessage(timeoutSeconds: number) {
 
 type ChannelProcessingSnapshot = Pick<
   ExecutionItemResult,
-  "channelId" | "channelName"
+  "resourceRef" | "channelName"
 > & { oldModels: string[] }
 
 /**
@@ -41,7 +41,7 @@ function createChannelProcessingTimeoutResult(
   timeoutSeconds: number,
 ): ExecutionItemResult {
   return {
-    channelId: snapshot.channelId,
+    resourceRef: snapshot.resourceRef,
     channelName: snapshot.channelName,
     ok: false,
     message: getChannelProcessingTimeoutMessage(timeoutSeconds),

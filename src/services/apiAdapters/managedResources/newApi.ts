@@ -28,6 +28,7 @@ import {
   ApiError,
   isTempWindowUnsupportedErrorCode,
 } from "~/services/apiTransport/errors"
+import { createManagedChannelResourceRef } from "~/services/managedSites/managedResourceIdentity"
 import {
   MANAGED_SITE_MUTATION_EFFECT_KINDS,
   MANAGED_SITE_MUTATION_OUTCOMES,
@@ -307,7 +308,11 @@ export async function openNewApiNativeResourceOperations(): Promise<NewApiNative
       throwIfNewApiResourceOperationAborted(options)
       return await newApiManagedResourceModels.fetchModels(
         nativeConfig.config,
-        locator,
+        createManagedChannelResourceRef(
+          SITE_TYPES.NEW_API,
+          nativeConfig.config.baseUrl,
+          locator,
+        ),
         options,
       )
     },

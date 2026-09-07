@@ -13,6 +13,7 @@ import {
   MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS,
   MatchResolutionUnresolvedError,
 } from "~/services/managedSites/channelMatch"
+import { getManagedResourceRefKey } from "~/services/managedSites/managedResourceIdentity"
 import {
   getManagedSiteTokenChannelStatus,
   MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS,
@@ -24,13 +25,16 @@ import type { ManagedSiteChannelDraftSource } from "~/types/managedSiteChannelDr
 import {
   buildApiToken,
   buildDisplaySiteData,
-  buildManagedSiteChannel,
 } from "~~/tests/test-utils/factories"
+import {
+  buildManagedResourceMatchCandidate,
+  matchingResourceRef,
+} from "~~/tests/test-utils/managedResourceMatching"
 import { createManagedSiteCapabilitiesStub } from "~~/tests/test-utils/managedSiteCapabilitiesFactory"
 
 const buildExpectedAssessment = (
   overrides: Record<string, unknown> = {},
-  resourceId?: string | number,
+  resourceRef = matchingResourceRef(12),
 ) => ({
   searchBaseUrl: "https://api.example.com",
   searchCompleted: true,
@@ -38,8 +42,7 @@ const buildExpectedAssessment = (
     matched: true,
     candidateCount: 1,
     channel: {
-      id: resourceId ?? 12,
-      ...(resourceId !== undefined ? { resourceId } : {}),
+      ref: resourceRef,
       name: "Managed Channel 12",
     },
   },
@@ -48,8 +51,7 @@ const buildExpectedAssessment = (
     matched: true,
     reason: MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.MATCHED,
     channel: {
-      id: resourceId ?? 12,
-      ...(resourceId !== undefined ? { resourceId } : {}),
+      ref: resourceRef,
       name: "Managed Channel 12",
     },
   },
@@ -58,8 +60,7 @@ const buildExpectedAssessment = (
     matched: true,
     reason: MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.EXACT,
     channel: {
-      id: resourceId ?? 12,
-      ...(resourceId !== undefined ? { resourceId } : {}),
+      ref: resourceRef,
       name: "Managed Channel 12",
     },
     similarityScore: 1,
@@ -147,7 +148,7 @@ const buildRecoverableVerificationUnavailableStatus = (
       matched: true,
       candidateCount: 1,
       channel: {
-        id: 12,
+        ref: matchingResourceRef(12),
         name: "Managed Channel 12",
       },
     },
@@ -162,7 +163,7 @@ const buildRecoverableVerificationUnavailableStatus = (
       matched: true,
       reason: MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.EXACT,
       channel: {
-        id: 12,
+        ref: matchingResourceRef(12),
         name: "Managed Channel 12",
       },
       similarityScore: 1,
@@ -183,42 +184,39 @@ describe("resolveManagedSiteTokenChannelStatusWithVerifiedKey", () => {
       resolveManagedSiteTokenChannelStatusWithVerifiedKey({
         status,
         tokenKey: "sk-token-secret",
-        channelId: 12,
+        resourceRef: matchingResourceRef(12),
         channelKey: "sk-token-secret",
         siteType: SITE_TYPES.NEW_API,
       }),
     ).toBe(status)
   })
 
-  it("records a resolved channel key when the assessment no longer has that channel", () => {
-    const result = resolveManagedSiteTokenChannelStatusWithVerifiedKey({
-      status: buildRecoverableVerificationUnavailableStatus({
-        models: {
-          comparable: true,
-          matched: false,
-          reason: MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.NO_MATCH,
-          channel: undefined,
-        },
-      }) as any,
-      tokenKey: "sk-token-secret",
-      channelId: 999,
-      channelKey: "sk-token-secret",
-      siteType: SITE_TYPES.NEW_API,
-    })
+  it.each([
+    matchingResourceRef(999),
+    matchingResourceRef(12, { scopeKey: "https://other.example" }),
+    matchingResourceRef(12, { siteType: SITE_TYPES.DONE_HUB }),
+  ])(
+    "ignores a verified key for a resource absent from the current assessment: %o",
+    (resourceRef) => {
+      const status = buildRecoverableVerificationUnavailableStatus()
+      const result = resolveManagedSiteTokenChannelStatusWithVerifiedKey({
+        status,
+        tokenKey: "sk-token-secret",
+        resourceRef,
+        channelKey: "sk-token-secret",
+        siteType: SITE_TYPES.NEW_API,
+      })
 
-    expect(result).toMatchObject({
-      status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
-      resolvedChannelKeysById: {
-        999: "sk-token-secret",
-      },
-    })
-  })
+      expect(result).toBe(status)
+      expect(result).not.toHaveProperty("resolvedChannelKeysByResourceKey")
+    },
+  )
 
   it("marks the token as added when the verified channel key matches the token key", () => {
     const result = resolveManagedSiteTokenChannelStatusWithVerifiedKey({
       status: buildRecoverableVerificationUnavailableStatus() as any,
       tokenKey: "sk-token-secret",
-      channelId: 12,
+      resourceRef: matchingResourceRef(12),
       channelKey: "sk-token-secret",
       siteType: SITE_TYPES.NEW_API,
     })
@@ -226,11 +224,11 @@ describe("resolveManagedSiteTokenChannelStatusWithVerifiedKey", () => {
     expect(result).toEqual({
       status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.ADDED,
       matchedChannel: {
-        id: 12,
+        ref: matchingResourceRef(12),
         name: "Managed Channel 12",
       },
-      resolvedChannelKeysById: {
-        12: "sk-token-secret",
+      resolvedChannelKeysByResourceKey: {
+        [getManagedResourceRefKey(matchingResourceRef(12))]: "sk-token-secret",
       },
       assessment: buildExpectedAssessment(),
     })
@@ -240,7 +238,7 @@ describe("resolveManagedSiteTokenChannelStatusWithVerifiedKey", () => {
     const result = resolveManagedSiteTokenChannelStatusWithVerifiedKey({
       status: buildRecoverableVerificationUnavailableStatus() as any,
       tokenKey: "sk-token-secret",
-      channelId: 12,
+      resourceRef: matchingResourceRef(12),
       channelKey: "sk-other-secret",
       siteType: SITE_TYPES.NEW_API,
     })
@@ -249,8 +247,8 @@ describe("resolveManagedSiteTokenChannelStatusWithVerifiedKey", () => {
       status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
       reason:
         MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.MATCH_REQUIRES_CONFIRMATION,
-      resolvedChannelKeysById: {
-        12: "sk-other-secret",
+      resolvedChannelKeysByResourceKey: {
+        [getManagedResourceRefKey(matchingResourceRef(12))]: "sk-other-secret",
       },
       assessment: buildExpectedAssessment({
         key: {
@@ -271,7 +269,7 @@ describe("resolveManagedSiteTokenChannelStatusWithVerifiedKey", () => {
         matched: false,
         candidateCount: 0,
         channel: {
-          id: 12,
+          ref: matchingResourceRef(12),
           name: "Managed Channel 12",
         },
       },
@@ -286,15 +284,15 @@ describe("resolveManagedSiteTokenChannelStatusWithVerifiedKey", () => {
     const result = resolveManagedSiteTokenChannelStatusWithVerifiedKey({
       status,
       tokenKey: "sk-token-secret",
-      channelId: 12,
+      resourceRef: matchingResourceRef(12),
       channelKey: "sk-other-secret",
       siteType: SITE_TYPES.NEW_API,
     })
 
     expect(result).toMatchObject({
       status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.NOT_ADDED,
-      resolvedChannelKeysById: {
-        12: "sk-other-secret",
+      resolvedChannelKeysByResourceKey: {
+        [getManagedResourceRefKey(matchingResourceRef(12))]: "sk-other-secret",
       },
       assessment: {
         url: {
@@ -348,14 +346,14 @@ describe("getManagedSiteTokenChannelStatus", () => {
       })
       const token = buildApiToken({ key: "test-token-key" })
       const exactMatch = {
-        ...buildManagedSiteChannel({
-          id: 12,
+        ...buildManagedResourceMatchCandidate({
+          ref: matchingResourceRef(12),
           name: "Managed Channel 12",
           base_url: "https://api.example.com",
           models: "gpt-4o",
           key: "test-token-key",
         }),
-        id: resourceId,
+        ref: matchingResourceRef(resourceId, { siteType }),
       }
       const managedSite = createManagedSiteCapabilitiesStub({
         siteType,
@@ -376,11 +374,13 @@ describe("getManagedSiteTokenChannelStatus", () => {
       expect(result).toEqual({
         status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.ADDED,
         matchedChannel: {
-          id: resourceId,
-          resourceId,
+          ref: matchingResourceRef(resourceId, { siteType }),
           name: "Managed Channel 12",
         },
-        assessment: buildExpectedAssessment({}, resourceId),
+        assessment: buildExpectedAssessment(
+          {},
+          matchingResourceRef(resourceId, { siteType }),
+        ),
       })
     },
   )
@@ -388,8 +388,8 @@ describe("getManagedSiteTokenChannelStatus", () => {
   it("lets the provider match policy evaluate an empty model list", async () => {
     const account = buildDisplaySiteData({ baseUrl: "https://api.example.com" })
     const token = buildApiToken({ key: "test-token-key" })
-    const exactMatch = buildManagedSiteChannel({
-      id: 13,
+    const exactMatch = buildManagedResourceMatchCandidate({
+      ref: matchingResourceRef(13, { siteType: SITE_TYPES.SUB2API }),
       name: "URL and key duplicate",
       base_url: "https://api.example.com",
       models: "",
@@ -425,7 +425,7 @@ describe("getManagedSiteTokenChannelStatus", () => {
     expect(result).toMatchObject({
       status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.ADDED,
       matchedChannel: {
-        id: 13,
+        ref: matchingResourceRef(13, { siteType: SITE_TYPES.SUB2API }),
         name: "URL and key duplicate",
       },
     })
@@ -485,8 +485,8 @@ describe("getManagedSiteTokenChannelStatus", () => {
         matching: {
           search: vi.fn().mockResolvedValue({
             items: [
-              buildManagedSiteChannel({
-                id: 17,
+              buildManagedResourceMatchCandidate({
+                ref: matchingResourceRef(17),
                 name: "Imported key",
                 base_url: baseUrl,
                 key: secret,
@@ -506,7 +506,7 @@ describe("getManagedSiteTokenChannelStatus", () => {
 
       expect(status).toMatchObject({
         status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.ADDED,
-        matchedChannel: { id: 17, name: "Imported key" },
+        matchedChannel: { ref: matchingResourceRef(17), name: "Imported key" },
       })
       expect(managedSite.channelDrafts.prepareFormData).toHaveBeenCalledWith(
         expect.objectContaining({ baseUrl, apiKey: secret }),
@@ -521,8 +521,8 @@ describe("getManagedSiteTokenChannelStatus", () => {
     const token = buildApiToken({ key: "test-token-key" })
     const searchChannel = vi.fn().mockResolvedValue({
       items: [
-        buildManagedSiteChannel({
-          id: 14,
+        buildManagedResourceMatchCandidate({
+          ref: matchingResourceRef(14),
           name: "Candidate requiring model comparison",
           base_url: "https://api.example.com",
           models: "gpt-4o",
@@ -623,8 +623,8 @@ describe("getManagedSiteTokenChannelStatus", () => {
       matching: {
         search: vi.fn().mockResolvedValue({
           items: [
-            buildManagedSiteChannel({
-              id: 23,
+            buildManagedResourceMatchCandidate({
+              ref: matchingResourceRef(23),
               name: "Managed Channel 23",
               base_url: "https://api.example.com",
               models: "gpt-4o",
@@ -653,8 +653,7 @@ describe("getManagedSiteTokenChannelStatus", () => {
           matched: true,
           candidateCount: 1,
           channel: {
-            id: 23,
-            resourceId: 23,
+            ref: matchingResourceRef(23),
             name: "Managed Channel 23",
           },
         },
@@ -669,8 +668,7 @@ describe("getManagedSiteTokenChannelStatus", () => {
           matched: true,
           reason: MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.EXACT,
           channel: {
-            id: 23,
-            resourceId: 23,
+            ref: matchingResourceRef(23),
             name: "Managed Channel 23",
           },
           similarityScore: 1,
@@ -686,8 +684,8 @@ describe("getManagedSiteTokenChannelStatus", () => {
       matching: {
         search: vi.fn().mockResolvedValue({
           items: [
-            buildManagedSiteChannel({
-              id: 23_1,
+            buildManagedResourceMatchCandidate({
+              ref: matchingResourceRef(23_1),
               name: "Managed Channel 23 Hidden Key",
               base_url: "https://api.example.com",
               models: "gpt-4o",
@@ -716,8 +714,7 @@ describe("getManagedSiteTokenChannelStatus", () => {
           matched: true,
           candidateCount: 1,
           channel: {
-            id: 23_1,
-            resourceId: 23_1,
+            ref: matchingResourceRef(23_1),
             name: "Managed Channel 23 Hidden Key",
           },
         },
@@ -732,8 +729,7 @@ describe("getManagedSiteTokenChannelStatus", () => {
           matched: true,
           reason: MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.EXACT,
           channel: {
-            id: 23_1,
-            resourceId: 23_1,
+            ref: matchingResourceRef(23_1),
             name: "Managed Channel 23 Hidden Key",
           },
           similarityScore: 1,
@@ -757,8 +753,8 @@ describe("getManagedSiteTokenChannelStatus", () => {
       matching: {
         search: vi.fn().mockResolvedValue({
           items: [
-            buildManagedSiteChannel({
-              id: 77,
+            buildManagedResourceMatchCandidate({
+              ref: matchingResourceRef(77),
               key: "",
               base_url: "https://api.example.com/v1",
               models: "gpt-4o",
@@ -794,8 +790,8 @@ describe("getManagedSiteTokenChannelStatus", () => {
       matching: {
         search: vi.fn().mockResolvedValue({
           items: [
-            buildManagedSiteChannel({
-              id: 23_1,
+            buildManagedResourceMatchCandidate({
+              ref: matchingResourceRef(23_1),
               name: "Managed Channel 23 Hidden Key",
               base_url: "https://api.example.com",
               models: "gpt-4o",
@@ -811,20 +807,19 @@ describe("getManagedSiteTokenChannelStatus", () => {
     const result = await getManagedSiteTokenChannelStatus({
       runtimeKey: buildDisplayAccountTokenRuntimeKey(account, token),
       managedSite,
-      resolvedChannelKeysById: {
-        23_1: "test-token-key",
+      resolvedChannelKeysByResourceKey: {
+        [getManagedResourceRefKey(matchingResourceRef(23_1))]: "test-token-key",
       },
     })
 
     expect(result).toEqual({
       status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.ADDED,
       matchedChannel: {
-        id: 23_1,
-        resourceId: 23_1,
+        ref: matchingResourceRef(23_1),
         name: "Managed Channel 23 Hidden Key",
       },
-      resolvedChannelKeysById: {
-        23_1: "test-token-key",
+      resolvedChannelKeysByResourceKey: {
+        [getManagedResourceRefKey(matchingResourceRef(23_1))]: "test-token-key",
       },
       assessment: {
         searchBaseUrl: "https://api.example.com",
@@ -833,8 +828,7 @@ describe("getManagedSiteTokenChannelStatus", () => {
           matched: true,
           candidateCount: 1,
           channel: {
-            id: 23_1,
-            resourceId: 23_1,
+            ref: matchingResourceRef(23_1),
             name: "Managed Channel 23 Hidden Key",
           },
         },
@@ -843,8 +837,7 @@ describe("getManagedSiteTokenChannelStatus", () => {
           matched: true,
           reason: MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.MATCHED,
           channel: {
-            id: 23_1,
-            resourceId: 23_1,
+            ref: matchingResourceRef(23_1),
             name: "Managed Channel 23 Hidden Key",
           },
         },
@@ -853,8 +846,7 @@ describe("getManagedSiteTokenChannelStatus", () => {
           matched: true,
           reason: MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.EXACT,
           channel: {
-            id: 23_1,
-            resourceId: 23_1,
+            ref: matchingResourceRef(23_1),
             name: "Managed Channel 23 Hidden Key",
           },
           similarityScore: 1,
@@ -870,8 +862,8 @@ describe("getManagedSiteTokenChannelStatus", () => {
       matching: {
         search: vi.fn().mockResolvedValue({
           items: [
-            buildManagedSiteChannel({
-              id: 24,
+            buildManagedResourceMatchCandidate({
+              ref: matchingResourceRef(24),
               name: "Managed Channel 24",
               base_url: "https://api.example.com",
               models: "gpt-4.1",
@@ -900,8 +892,7 @@ describe("getManagedSiteTokenChannelStatus", () => {
           matched: true,
           candidateCount: 1,
           channel: {
-            id: 24,
-            resourceId: 24,
+            ref: matchingResourceRef(24),
             name: "Managed Channel 24",
           },
         },
@@ -910,8 +901,7 @@ describe("getManagedSiteTokenChannelStatus", () => {
           matched: true,
           reason: MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.MATCHED,
           channel: {
-            id: 24,
-            resourceId: 24,
+            ref: matchingResourceRef(24),
             name: "Managed Channel 24",
           },
         },
@@ -993,8 +983,8 @@ describe("getManagedSiteTokenChannelStatus", () => {
       matching: {
         search: vi.fn().mockResolvedValue({
           items: [
-            buildManagedSiteChannel({
-              id: 23_1,
+            buildManagedResourceMatchCandidate({
+              ref: matchingResourceRef(23_1),
               name: "Managed Channel 23 Hidden Key",
               base_url: "https://api.example.com",
               models: "gpt-4o",
@@ -1027,8 +1017,7 @@ describe("getManagedSiteTokenChannelStatus", () => {
           matched: true,
           candidateCount: 1,
           channel: {
-            id: 23_1,
-            resourceId: 23_1,
+            ref: matchingResourceRef(23_1),
             name: "Managed Channel 23 Hidden Key",
           },
         },
@@ -1043,8 +1032,7 @@ describe("getManagedSiteTokenChannelStatus", () => {
           matched: true,
           reason: MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.EXACT,
           channel: {
-            id: 23_1,
-            resourceId: 23_1,
+            ref: matchingResourceRef(23_1),
             name: "Managed Channel 23 Hidden Key",
           },
           similarityScore: 1,
@@ -1099,8 +1087,10 @@ describe("getManagedSiteTokenChannelStatus", () => {
     const token = buildApiToken({ key: "test-token-key" })
     const searchChannel = vi.fn().mockResolvedValue({
       items: [
-        buildManagedSiteChannel({
-          id: 42,
+        buildManagedResourceMatchCandidate({
+          ref: matchingResourceRef(42, {
+            siteType: SITE_TYPES.CLAUDE_CODE_HUB,
+          }),
           name: "Claude Code Hub Provider",
           base_url: "https://api.example.com",
           key: "test-token-key",
@@ -1126,7 +1116,7 @@ describe("getManagedSiteTokenChannelStatus", () => {
     expect(result).toMatchObject({
       status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.ADDED,
       matchedChannel: {
-        id: 42,
+        ref: matchingResourceRef(42, { siteType: SITE_TYPES.CLAUDE_CODE_HUB }),
         name: "Claude Code Hub Provider",
       },
     })
@@ -1139,8 +1129,10 @@ describe("getManagedSiteTokenChannelStatus", () => {
     const fetchChannelSecretKey = vi.fn().mockResolvedValue("test-token-key")
     const searchChannel = vi.fn().mockResolvedValue({
       items: [
-        buildManagedSiteChannel({
-          id: 43,
+        buildManagedResourceMatchCandidate({
+          ref: matchingResourceRef(43, {
+            siteType: SITE_TYPES.CLAUDE_CODE_HUB,
+          }),
           name: "Masked Claude Code Hub Provider",
           base_url: "https://api.example.com",
           key: "sk-***",
@@ -1170,13 +1162,13 @@ describe("getManagedSiteTokenChannelStatus", () => {
         adminToken: "managed-admin-token",
         userId: "1",
       },
-      43,
+      matchingResourceRef(43, { siteType: SITE_TYPES.CLAUDE_CODE_HUB }),
       sessionResyncOptions,
     )
     expect(result).toMatchObject({
       status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.ADDED,
       matchedChannel: {
-        id: 43,
+        ref: matchingResourceRef(43, { siteType: SITE_TYPES.CLAUDE_CODE_HUB }),
         name: "Masked Claude Code Hub Provider",
       },
     })

@@ -41,14 +41,15 @@ import {
   type DisplaySiteData,
   type SiteAccount,
 } from "~/types"
+import type { ManagedResourceMatchCandidate } from "~/types/managedResourceMatching"
 import type {
   ManagedSiteChannelDraft,
   ManagedSiteChannelDraftSource,
 } from "~/types/managedSiteChannelDraft"
-import type { NewApiChannel } from "~/types/newApi"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { createDeferred } from "~~/tests/test-utils/deferred"
+import { matchingResourceRef } from "~~/tests/test-utils/managedResourceMatching"
 import { createManagedSiteCapabilitiesStub } from "~~/tests/test-utils/managedSiteCapabilitiesFactory"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 
@@ -158,22 +159,17 @@ const buildApiToken = (overrides: Partial<ApiToken> = {}): ApiToken => ({
   ...overrides,
 })
 
-const buildManagedSiteChannel = (
-  overrides: Partial<NewApiChannel> = {},
-): NewApiChannel =>
-  ({
-    id: 11,
-    name: "Existing channel",
-    base_url: "https://upstream.example.com",
-    models: "gpt-4",
-    key: "sk-test",
-    type: ChannelType.OpenAI,
-    status: 1,
-    priority: 0,
-    weight: 0,
-    group: "default",
-    ...overrides,
-  }) as NewApiChannel
+const buildManagedResourceMatchCandidate = (
+  overrides: Partial<ManagedResourceMatchCandidate> = {},
+): ManagedResourceMatchCandidate => ({
+  ref: matchingResourceRef(11, { scopeKey: "https://managed.example.com" }),
+  name: "Existing channel",
+  base_url: "https://upstream.example.com",
+  models: "gpt-4",
+  key: "sk-test",
+  type: ChannelType.OpenAI,
+  ...overrides,
+})
 
 const buildPreparedFormData = (
   overrides: Partial<
@@ -197,7 +193,7 @@ const buildManagedSiteAssessment = (
   overrides: Partial<ManagedSiteTokenChannelAssessment> = {},
 ): ManagedSiteTokenChannelAssessment => {
   const matchedChannel = {
-    id: 11,
+    ref: matchingResourceRef(11, { scopeKey: "https://managed.example.com" }),
     name: "Existing channel",
   }
 
@@ -354,7 +350,7 @@ describe("useChannelDialog", () => {
   })
 
   it("shows warning and cancels when user does not continue", async () => {
-    const existingChannel = buildManagedSiteChannel()
+    const existingChannel = buildManagedResourceMatchCandidate()
     const mockService = createManagedSiteCapabilitiesStub({
       siteType: SITE_TYPES.NEW_API,
       config: {
@@ -620,8 +616,10 @@ describe("useChannelDialog", () => {
       matching: {
         search: vi.fn(async () => ({
           items: [
-            buildManagedSiteChannel({
-              id: 81,
+            buildManagedResourceMatchCandidate({
+              ref: matchingResourceRef(81, {
+                scopeKey: "https://managed.example.com",
+              }),
               name: "Resource duplicate channel",
             }),
           ],
@@ -661,7 +659,7 @@ describe("useChannelDialog", () => {
   })
 
   it("opens ChannelDialog when user continues despite duplicate", async () => {
-    const existingChannel = buildManagedSiteChannel()
+    const existingChannel = buildManagedResourceMatchCandidate()
     const mockService = createManagedSiteCapabilitiesStub({
       siteType: SITE_TYPES.NEW_API,
       config: {
@@ -856,8 +854,8 @@ describe("useChannelDialog", () => {
   )
 
   it("opens ChannelDialog when New API exact duplicate verification is unavailable", async () => {
-    const hiddenKeyChannel = buildManagedSiteChannel({
-      id: 22,
+    const hiddenKeyChannel = buildManagedResourceMatchCandidate({
+      ref: matchingResourceRef(22, { scopeKey: "https://managed.example.com" }),
       key: "",
     })
     const mockService = createManagedSiteCapabilitiesStub({
@@ -941,8 +939,11 @@ describe("useChannelDialog", () => {
   })
 
   it("opens a Sub2API native editor with a verification advisory when key comparison requires verification", async () => {
-    const hiddenKeyChannel = buildManagedSiteChannel({
-      id: 23,
+    const hiddenKeyChannel = buildManagedResourceMatchCandidate({
+      ref: matchingResourceRef(23, {
+        siteType: SITE_TYPES.SUB2API,
+        scopeKey: "https://managed.example.com",
+      }),
       key: "",
     })
     const editor = {
@@ -2159,7 +2160,7 @@ describe("useChannelDialog", () => {
 
   it("uses an explicit managed-site duplicate status without re-running channel search", async () => {
     const searchChannelMock = vi.fn(async () => ({
-      items: [buildManagedSiteChannel()],
+      items: [buildManagedResourceMatchCandidate()],
       total: 1,
       type_counts: {},
     }))
@@ -2173,7 +2174,9 @@ describe("useChannelDialog", () => {
     const managedSiteStatus: ManagedSiteTokenChannelStatus = {
       status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.ADDED,
       matchedChannel: {
-        id: 11,
+        ref: matchingResourceRef(11, {
+          scopeKey: "https://managed.example.com",
+        }),
         name: "Existing channel",
       },
       assessment: buildManagedSiteAssessment(),
@@ -2210,7 +2213,11 @@ describe("useChannelDialog", () => {
   it("rechecks a non-terminal cached status before opening an import", async () => {
     const searchChannelMock = vi.fn(async () => ({
       items: [
-        buildManagedSiteChannel({
+        buildManagedResourceMatchCandidate({
+          ref: matchingResourceRef(11, {
+            siteType: SITE_TYPES.SUB2API,
+            scopeKey: "https://managed.example.com",
+          }),
           name: "Existing API-key account",
           models: "",
         }),
@@ -2267,7 +2274,7 @@ describe("useChannelDialog", () => {
 
   it("refreshes a cached review advisory before opening", async () => {
     const searchChannelMock = vi.fn(async () => ({
-      items: [buildManagedSiteChannel({ key: "different-key" })],
+      items: [buildManagedResourceMatchCandidate({ key: "different-key" })],
       total: 1,
       type_counts: {},
     }))
@@ -2314,7 +2321,7 @@ describe("useChannelDialog", () => {
 
   it("refreshes a cached verification advisory before opening", async () => {
     const searchChannelMock = vi.fn(async () => ({
-      items: [buildManagedSiteChannel({ key: "" })],
+      items: [buildManagedResourceMatchCandidate({ key: "" })],
       total: 1,
       type_counts: {},
     }))
@@ -2509,7 +2516,7 @@ describe("useChannelDialog", () => {
   })
 
   it("shows a duplicate warning when opening from raw credentials and aborts on cancel", async () => {
-    const existingChannel = buildManagedSiteChannel({
+    const existingChannel = buildManagedResourceMatchCandidate({
       key: "sk-credential",
     })
     const mockService = buildManagedSiteCapabilitiesMock({

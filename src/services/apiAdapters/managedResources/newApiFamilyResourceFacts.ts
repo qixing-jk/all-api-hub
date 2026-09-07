@@ -162,7 +162,6 @@ export function createNewApiFamilyResourceFacts(policy: {
         canUpdate: true,
         canDelete: true,
         channel: {
-          channelId: channel.id,
           channelType: channel.type,
           canSyncModels: true,
           canOpenModelSync: true,

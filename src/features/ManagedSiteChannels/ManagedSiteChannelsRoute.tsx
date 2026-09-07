@@ -30,6 +30,12 @@ import {
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { getManagedResourceRegistration } from "~/services/apiAdapters/managedResources/registry"
 import { resolveManagedSiteMigrationCapability } from "~/services/managedSites/channelMigrationCapabilityRegistry"
+import {
+  getManagedResourceRefKey,
+  isManagedResourceRefForSite,
+  parseManagedResourceRef,
+  toManagedUpstreamResourceRef,
+} from "~/services/managedSites/managedResourceIdentity"
 import { resolveManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
 import {
   getManagedSiteConfigMissingMessage,
@@ -50,7 +56,7 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import { resolveProductAnalyticsManagedSiteType } from "~/services/productAnalytics/managedSite"
-import { createManagedUpstreamResourceRef } from "~/types/managedUpstreamResource"
+import { normalizeManagedUpstreamResourceScopeKey } from "~/types/managedUpstreamResource"
 import { showUpdateToast } from "~/utils/core/toastHelpers"
 import {
   openManagedSiteModelSyncForChannel,
@@ -293,7 +299,21 @@ function NativeManagedSiteChannels({
       ),
     [t],
   )
-  const channelIdFilterValue = routeParams.channelId?.trim() ?? ""
+  const routedResourceRef = parseManagedResourceRef(routeParams.resourceRef)
+  const routeResourceMatches =
+    !routeParams.resourceRef ||
+    Boolean(
+      routedResourceRef &&
+        config &&
+        isManagedResourceRefForSite(routedResourceRef, { siteType, config }),
+    )
+  const routedResourceKey = routedResourceRef
+    ? getManagedResourceRefKey(routedResourceRef)
+    : null
+  const channelIdFilterValue = routeParams.resourceRef
+    ? routedResourceRef?.resourceId ?? "—"
+    : routeParams.channelId?.trim() ?? ""
+  const routeIdentityKey = routeParams.resourceRef ?? channelIdFilterValue
   const routeSearch = channelIdFilterValue ? "" : routeParams.search ?? ""
   const [searchValue, setSearchValue] = useState(routeSearch)
   const [sorting, setSorting] = useState(() =>
@@ -340,17 +360,18 @@ function NativeManagedSiteChannels({
     semantics: presentationSemantics,
     analytics,
   })
-  const previousChannelId = useRef(channelIdFilterValue)
+  const previousRouteIdentity = useRef(routeIdentityKey)
   const { setPageIndex, setSelectedRowKeys, setStatusFilter } = list
   useEffect(() => {
-    if (previousChannelId.current === channelIdFilterValue) return
-    previousChannelId.current = channelIdFilterValue
+    if (previousRouteIdentity.current === routeIdentityKey) return
+    previousRouteIdentity.current = routeIdentityKey
     setPageIndex(0)
     setSelectedRowKeys({})
     setStatusFilter([])
-  }, [channelIdFilterValue, setPageIndex, setSelectedRowKeys, setStatusFilter])
-  const { syncingChannelIds, syncChannels } = useManagedSiteChannelModelSync({
+  }, [routeIdentityKey, setPageIndex, setSelectedRowKeys, setStatusFilter])
+  const { syncingResourceKeys, syncChannels } = useManagedSiteChannelModelSync({
     siteType,
+    scopeKey: normalizeManagedUpstreamResourceScopeKey(config?.baseUrl ?? ""),
     onModelsChanged: list.reconcile,
   })
   const mutation = useManagedResourceMutationController({
@@ -486,11 +507,15 @@ function NativeManagedSiteChannels({
   const nativeRows = useMemo(
     () =>
       list.allRows
-        .filter(
-          (row) =>
-            !channelIdFilterValue ||
-            resolveRef(row.rowKey)?.resourceId === channelIdFilterValue,
-        )
+        .filter((row) => {
+          if (!routeResourceMatches) return false
+          const ref = resolveRef(row.rowKey)
+          return routedResourceKey
+            ? Boolean(
+                ref && getManagedResourceRefKey(ref) === routedResourceKey,
+              )
+            : !channelIdFilterValue || ref?.resourceId === channelIdFilterValue
+        })
         .map((row) => {
           const channelActions = row.channelActions
           return {
@@ -504,16 +529,23 @@ function NativeManagedSiteChannels({
             },
             isSyncing:
               channelActions !== undefined &&
-              syncingChannelIds.has(channelActions.channelId),
+              Boolean(
+                resolveRef(row.rowKey) &&
+                  syncingResourceKeys.has(
+                    getManagedResourceRefKey(resolveRef(row.rowKey)!),
+                  ),
+              ),
           }
         }),
     [
       canMigrate,
       channelIdFilterValue,
+      routeResourceMatches,
+      routedResourceKey,
       list.allRows,
       presentationSemantics,
       resolveRef,
-      syncingChannelIds,
+      syncingResourceKeys,
       t,
     ],
   )
@@ -581,7 +613,7 @@ function NativeManagedSiteChannels({
     selectedRowKeys: list.selectedRowKeys,
     sorting,
     searchValue,
-    channelIdFilterValue: routeParams.channelId ?? "",
+    channelIdFilterValue,
     statusFilterValues: [...list.statusFilter],
     pagination,
     total: channelIdFilterValue ? nativeRows.length : list.totalRows,
@@ -704,8 +736,10 @@ function NativeManagedSiteChannels({
     onSync: async (rowKey) => {
       const row = rowsByKey.get(rowKey)
       if (!row?.capabilities.canSync || !row.channelActions) return
+      const ref = list.resolveRef(rowKey)
+      if (!ref) return
       await syncChannels(
-        [row.channelActions.channelId],
+        [ref],
         nativeChannelActionAnalyticsContext(
           PRODUCT_ANALYTICS_ACTION_IDS.SyncManagedSiteChannel,
           PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsRowActions,
@@ -721,7 +755,8 @@ function NativeManagedSiteChannels({
           PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsRowActions,
         ),
       )
-      await openManagedSiteModelSyncForChannel(row.channelActions.channelId)
+      const ref = list.resolveRef(rowKey)
+      if (ref) await openManagedSiteModelSyncForChannel(ref)
     },
     onFilters: (rowKey) => {
       const row = rowsByKey.get(rowKey)
@@ -729,14 +764,9 @@ function NativeManagedSiteChannels({
       const ref = list.resolveRef(rowKey)
       if (!ref) return
       setFilterTarget({
-        id: row.channelActions.channelId,
         name: row.name,
         type: String(row.channelActions.channelType),
-        resourceRef: createManagedUpstreamResourceRef({
-          managedSiteType: ref.siteType,
-          scopeKey: ref.scopeKey,
-          resourceId: ref.resourceId,
-        }),
+        resourceRef: toManagedUpstreamResourceRef(ref),
       })
       void trackProductAnalyticsActionStarted(
         nativeChannelActionAnalyticsContext(
@@ -755,14 +785,15 @@ function NativeManagedSiteChannels({
       )
     },
     onSyncSelected: async (rowKeys) => {
-      const channelIds = rowKeys.flatMap((rowKey) => {
+      const resourceRefs = rowKeys.flatMap((rowKey) => {
         const row = rowsByKey.get(rowKey)
-        return row?.capabilities.canSync && row.channelActions
-          ? [row.channelActions.channelId]
+        const ref = list.resolveRef(rowKey)
+        return row?.capabilities.canSync && row.channelActions && ref
+          ? [ref]
           : []
       })
       await syncChannels(
-        channelIds,
+        resourceRefs,
         nativeChannelActionAnalyticsContext(
           PRODUCT_ANALYTICS_ACTION_IDS.SyncSelectedManagedSiteChannels,
           PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsToolbar,
@@ -807,7 +838,7 @@ function NativeManagedSiteChannels({
       !list.isLoading &&
       !list.failure &&
       !searchValue.trim() &&
-      !routeParams.channelId?.trim() &&
+      !channelIdFilterValue &&
       list.statusFilter.length === 0 &&
       list.totalRows === 0,
     canImportChannel:

@@ -18,9 +18,10 @@ import {
   type ManagedSiteTokenBatchExportPreview,
   type ManagedSiteTokenBatchExportPreviewItem,
 } from "~/types/managedSiteTokenBatchExport"
+import { matchingResourceRef } from "~~/tests/test-utils/managedResourceMatching"
 
 const candidate = {
-  id: 12,
+  ref: matchingResourceRef(12),
   name: "Managed Channel 12",
 }
 

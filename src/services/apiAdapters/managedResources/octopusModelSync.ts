@@ -3,19 +3,38 @@
  * 实现 Octopus 站点的模型同步功能
  */
 import { SITE_TYPES } from "~/constants/siteType"
-import { octopusManagedResourceModels } from "~/services/apiAdapters/managedSites/octopus"
+import type {
+  ManagedResourceModelSyncBatchOptions,
+  ManagedResourceModelSyncWorkflow,
+} from "~/services/apiAdapters/contracts/managedResourceModelSync"
+import {
+  MANAGED_RESOURCE_FAILURE_CODES,
+  ManagedResourceError,
+} from "~/services/apiAdapters/contracts/managedResourceNative"
+import { octopusManagedResourceModels } from "~/services/apiAdapters/managedResources/octopusOperations"
+import { requireManagedResourceChannelId } from "~/services/apiAdapters/managedResources/resourceIds"
 import * as octopusApi from "~/services/apiService/octopus"
 import { ApiError } from "~/services/apiTransport/errors"
+import { createManagedChannelResourceRef } from "~/services/managedSites/managedResourceIdentity"
 import {
   consumeManagedSiteMutationResult,
   MANAGED_SITE_MUTATION_RETRY_DECISIONS,
   type ManagedSiteMutationRetryDecision,
 } from "~/services/managedSites/mutations"
 import { collectManagedConfigSecrets } from "~/services/managedSites/utils/managedSite"
+import {
+  applyChannelModelFilters,
+  getChannelModelFilterRulesForResource,
+  ProbeFilterUnavailableError,
+} from "~/services/models/modelSync/channelModelFilterEvaluator"
+import { runWithChannelProcessingTimeout } from "~/services/models/modelSync/channelProcessingTimeout"
+import {
+  createModelSyncWriteFailureBoundary,
+  type ModelSyncWriteFailureBoundary,
+} from "~/services/models/modelSync/writeFailureBoundary"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import type { ChannelResourceConfigMap } from "~/types/channelConfig"
 import {
-  type BatchExecutionOptions,
   type ExecutionItemResult,
   type ExecutionResult,
   type ExecutionStatistics,
@@ -25,22 +44,7 @@ import type { OctopusConfig } from "~/types/octopusConfig"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
-import {
-  applyChannelModelFilters,
-  getChannelModelFilterRulesForResource,
-  ProbeFilterUnavailableError,
-} from "./channelModelFilterEvaluator"
-import { runWithChannelProcessingTimeout } from "./channelProcessingTimeout"
-import {
-  createModelSyncWriteFailureBoundary,
-  type ModelSyncWriteFailureBoundary,
-} from "./writeFailureBoundary"
-
 const logger = createLogger("OctopusModelSync")
-
-type OctopusModelSyncBatchOptions = BatchExecutionOptions & {
-  channelConfigs?: ChannelResourceConfigMap
-}
 
 const createOctopusModelSyncClient = (
   config: OctopusConfig,
@@ -70,7 +74,11 @@ const createOctopusModelSyncClient = (
     ) =>
       await octopusManagedResourceModels.updateModels(
         config,
-        channelId,
+        createManagedChannelResourceRef(
+          SITE_TYPES.OCTOPUS,
+          config.baseUrl,
+          channelId,
+        ),
         models,
         requestOptions(signal),
       ),
@@ -212,7 +220,11 @@ async function runForChannel(
         normalizedModels,
         {
           channel: {
-            id: channel.id,
+            ref: createManagedChannelResourceRef(
+              SITE_TYPES.OCTOPUS,
+              config.baseUrl,
+              channel.id,
+            ),
             type: channel.type,
             baseUrl: channel.base_urls[0]?.url ?? "",
             credential: channel.keys[0]?.channel_key,
@@ -241,7 +253,11 @@ async function runForChannel(
       }
 
       return {
-        channelId: channel.id,
+        resourceRef: createManagedChannelResourceRef(
+          SITE_TYPES.OCTOPUS,
+          config.baseUrl,
+          channel.id,
+        ),
         channelName: channel.name,
         ok: true,
         attempts,
@@ -258,7 +274,11 @@ async function runForChannel(
 
       if (error instanceof ProbeFilterUnavailableError) {
         return {
-          channelId: channel.id,
+          resourceRef: createManagedChannelResourceRef(
+            SITE_TYPES.OCTOPUS,
+            config.baseUrl,
+            channel.id,
+          ),
           channelName: channel.name,
           ok: false,
           attempts: attempts + 1,
@@ -270,7 +290,11 @@ async function runForChannel(
 
       lastError = error
       logger.error("Unexpected error for channel", {
-        channelId: channel.id,
+        resourceRef: createManagedChannelResourceRef(
+          SITE_TYPES.OCTOPUS,
+          config.baseUrl,
+          channel.id,
+        ),
         error,
       })
 
@@ -293,7 +317,11 @@ async function runForChannel(
   }
 
   return {
-    channelId: channel.id,
+    resourceRef: createManagedChannelResourceRef(
+      SITE_TYPES.OCTOPUS,
+      config.baseUrl,
+      channel.id,
+    ),
     channelName: channel.name,
     ok: false,
     httpStatus:
@@ -312,7 +340,7 @@ async function runOctopusBatchWithClient(
   config: OctopusConfig,
   client: OctopusModelSyncClient,
   channels: OctopusChannel[],
-  options: OctopusModelSyncBatchOptions,
+  options: ManagedResourceModelSyncBatchOptions,
 ): Promise<ExecutionResult> {
   const {
     concurrency,
@@ -353,7 +381,11 @@ async function runOctopusBatchWithClient(
               channelConfigs,
             ),
           {
-            channelId: channel.id,
+            resourceRef: createManagedChannelResourceRef(
+              SITE_TYPES.OCTOPUS,
+              config.baseUrl,
+              channel.id,
+            ),
             channelName: channel.name,
             oldModels: getOctopusChannelModels(channel),
           },
@@ -363,11 +395,19 @@ async function runOctopusBatchWithClient(
       } catch (error: any) {
         if (writeFailureBoundary.matches(error)) throw error
         logger.error("Unexpected error for channel", {
-          channelId: channel.id,
+          resourceRef: createManagedChannelResourceRef(
+            SITE_TYPES.OCTOPUS,
+            config.baseUrl,
+            channel.id,
+          ),
           error,
         })
         result = {
-          channelId: channel.id,
+          resourceRef: createManagedChannelResourceRef(
+            SITE_TYPES.OCTOPUS,
+            config.baseUrl,
+            channel.id,
+          ),
           channelName: channel.name,
           ok: false,
           message: error?.message || "Unexpected error",
@@ -417,13 +457,46 @@ async function runOctopusBatchWithClient(
 export function createOctopusModelSyncCapability(
   config: OctopusConfig,
   protectionBypassExecution: ProtectionBypassExecution,
-) {
+): ManagedResourceModelSyncWorkflow {
   const client = createOctopusModelSyncClient(config, protectionBypassExecution)
+  const summarize = (channel: OctopusChannel) => ({
+    ref: createManagedChannelResourceRef(
+      SITE_TYPES.OCTOPUS,
+      config.baseUrl,
+      channel.id,
+    ),
+    name: channel.name,
+  })
   return {
-    listChannels: client.listChannels,
-    runBatch: async (
-      channels: OctopusChannel[],
-      options: OctopusModelSyncBatchOptions,
-    ) => await runOctopusBatchWithClient(config, client, channels, options),
+    listChannels: async () => {
+      const channels = await client.listChannels()
+      return { items: channels.map(summarize), total: channels.length }
+    },
+    prepareBatch: async (resourceRefs) => {
+      if (
+        resourceRefs !== undefined &&
+        (!Array.isArray(resourceRefs) || resourceRefs.length === 0)
+      ) {
+        throw new ManagedResourceError({
+          code: MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed,
+        })
+      }
+      const selectedIds = resourceRefs
+        ? new Set(
+            resourceRefs.map((ref) =>
+              requireManagedResourceChannelId(SITE_TYPES.OCTOPUS, config, ref),
+            ),
+          )
+        : undefined
+      const inventory = await client.listChannels()
+      const channels = selectedIds
+        ? inventory.filter((channel) => selectedIds.has(channel.id))
+        : inventory
+      return {
+        resources: channels.map(summarize),
+        run: async (options) =>
+          await runOctopusBatchWithClient(config, client, channels, options),
+      }
+    },
   }
 }

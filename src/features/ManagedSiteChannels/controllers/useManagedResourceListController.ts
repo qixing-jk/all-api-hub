@@ -11,6 +11,7 @@ import {
   type ResourceFailure,
   type ResourceListQuery,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
+import { getManagedResourceRefKey } from "~/services/managedSites/managedResourceIdentity"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
@@ -28,7 +29,6 @@ import type {
 } from "../presentation/managedResourcePresentation"
 import {
   EMPTY_MANAGED_RESOURCE_CAPABILITIES,
-  getManagedResourceRefKey,
   toSafeManagedResourceFailure,
 } from "../utils/managedResource"
 import {

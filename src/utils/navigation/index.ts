@@ -8,6 +8,7 @@ import {
   resolveAccountSiteRouteUrl,
   SITE_ROUTE_KINDS,
 } from "~/services/accounts/utils/siteRouteResolver"
+import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
 import type { DisplaySiteData } from "~/types"
 import { isExtensionPopup } from "~/utils/browser"
 import {
@@ -411,22 +412,21 @@ const navigateToBasicSettings = (
 }
 
 /**
- * Opens Managed Site channel management, optionally focusing a channel id or applying a search filter.
+ * Opens Managed Site channel management with a resource reference or search filter.
  */
 const _openManagedSiteChannelsPage = (params?: {
-  channelId?: number | string
+  resourceRef?: ManagedResourceRef
   search?: string
 }) => {
   const targetHash = getManagedSiteChannelsHash()
   const searchParams: Record<string, string | undefined> = {}
 
-  if (params?.channelId != null) {
-    searchParams.channelId = String(params.channelId)
-  }
-
   if (params?.search) {
     searchParams.search = params.search
   }
+
+  if (params?.resourceRef)
+    searchParams.resourceRef = JSON.stringify(params.resourceRef)
 
   const resolvedParams = Object.keys(searchParams).length ? searchParams : {}
 
@@ -444,14 +444,14 @@ type ManagedSiteModelSyncTab = "history" | "manual"
  * Opens Managed Site model sync dashboard, optionally focusing a channel and tab.
  */
 const _openManagedSiteModelSyncPage = (params?: {
-  channelId?: number | string
+  resourceRef?: ManagedResourceRef
   tab?: ManagedSiteModelSyncTab
 }) => {
   const targetHash = getManagedSiteModelSyncHash()
   const searchParams: Record<string, string | undefined> = {}
 
-  if (params?.channelId != null) {
-    searchParams.channelId = String(params.channelId)
+  if (params?.resourceRef) {
+    searchParams.resourceRef = JSON.stringify(params.resourceRef)
   }
 
   if (params?.tab) {
@@ -993,13 +993,6 @@ export const openManagedSiteChannelsPage = withPopupClose(
 )
 
 /**
- * Open Managed Site channel management focused on a single channel id.
- */
-export const openManagedSiteChannelsForChannel = withPopupClose(
-  (channelId: number | string) => _openManagedSiteChannelsPage({ channelId }),
-)
-
-/**
  * Open Managed Site model sync dashboard focused on a single channel.
  */
 export const openManagedSiteModelSyncPage = withPopupClose(
@@ -1010,8 +1003,8 @@ export const openManagedSiteModelSyncPage = withPopupClose(
  * Open Managed Site model sync dashboard focused on a single channel.
  */
 export const openManagedSiteModelSyncForChannel = withPopupClose(
-  (channelId: number) =>
-    _openManagedSiteModelSyncPage({ channelId, tab: "manual" }),
+  (resourceRef: ManagedResourceRef) =>
+    _openManagedSiteModelSyncPage({ resourceRef, tab: "manual" }),
 )
 
 /**

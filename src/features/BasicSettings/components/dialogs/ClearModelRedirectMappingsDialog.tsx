@@ -12,6 +12,7 @@ import {
   Modal,
 } from "~/components/ui"
 import { BASIC_SETTINGS_TEST_IDS } from "~/features/BasicSettings/testIds"
+import { getManagedResourceRefKey } from "~/services/managedSites/managedResourceIdentity"
 import { ModelRedirectService } from "~/services/models/modelRedirect"
 import { isEmptyModelMapping } from "~/services/models/modelRedirect/utils"
 import type { ManagedModelMappingPreview } from "~/types/managedResourceModels"
@@ -79,7 +80,7 @@ export function ClearModelRedirectMappingsDialog({
   const { t } = useTranslation("modelRedirect")
 
   const [channels, setChannels] = useState<ManagedModelMappingPreview[]>([])
-  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
+  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set())
   const [isLoading, setIsLoading] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [searchText, setSearchText] = useState("")
@@ -103,7 +104,11 @@ export function ClearModelRedirectMappingsDialog({
         const nameDiff = aName.localeCompare(bName)
         if (nameDiff !== 0) return nameDiff
 
-        return a.channel.id - b.channel.id
+        return a.channel.ref.resourceId.localeCompare(
+          b.channel.ref.resourceId,
+          undefined,
+          { numeric: true },
+        )
       })
   }, [channels])
 
@@ -113,12 +118,12 @@ export function ClearModelRedirectMappingsDialog({
 
     return sortedChannelItems.filter(({ channel }) => {
       const nameMatch = (channel.name ?? "").toLowerCase().includes(trimmed)
-      const idMatch = String(channel.id).includes(trimmed)
+      const idMatch = channel.ref.resourceId.toLowerCase().includes(trimmed)
       return nameMatch || idMatch
     })
   }, [sortedChannelItems, searchText])
 
-  const selectedCount = selectedIds.size
+  const selectedCount = selectedKeys.size
   const totalCount = channels.length
   const filteredCount = filteredChannelItems.length
 
@@ -129,7 +134,7 @@ export function ClearModelRedirectMappingsDialog({
   useEffect(() => {
     if (!isOpen) {
       setChannels([])
-      setSelectedIds(new Set())
+      setSelectedKeys(new Set())
       setIsLoading(false)
       setLoadError(null)
       setSearchText("")
@@ -142,7 +147,7 @@ export function ClearModelRedirectMappingsDialog({
     let cancelled = false
 
     setChannels([])
-    setSelectedIds(new Set())
+    setSelectedKeys(new Set())
     setIsLoading(true)
     setLoadError(null)
     setResultErrors([])
@@ -159,7 +164,9 @@ export function ClearModelRedirectMappingsDialog({
         }
 
         setChannels(result.channels)
-        setSelectedIds(new Set(result.channels.map((c) => c.id)))
+        setSelectedKeys(
+          new Set(result.channels.map((c) => getManagedResourceRefKey(c.ref))),
+        )
       } catch (error) {
         if (cancelled) return
         setLoadError(getErrorMessage(error))
@@ -178,46 +185,50 @@ export function ClearModelRedirectMappingsDialog({
     onClose()
   }
 
-  const handleToggleSelected = (channelId: number) => {
-    setSelectedIds((prev) => {
+  const handleToggleSelected = (resourceKey: string) => {
+    setSelectedKeys((prev) => {
       const next = new Set(prev)
-      if (next.has(channelId)) {
-        next.delete(channelId)
+      if (next.has(resourceKey)) {
+        next.delete(resourceKey)
       } else {
-        next.add(channelId)
+        next.add(resourceKey)
       }
       return next
     })
   }
 
   const handleSelectAll = () => {
-    setSelectedIds((prev) => {
+    setSelectedKeys((prev) => {
       const next = new Set(prev)
       for (const { channel } of filteredChannelItems) {
-        next.add(channel.id)
+        next.add(getManagedResourceRefKey(channel.ref))
       }
       return next
     })
   }
 
   const handleSelectNone = () => {
-    setSelectedIds((prev) => {
+    setSelectedKeys((prev) => {
       const next = new Set(prev)
       for (const { channel } of filteredChannelItems) {
-        next.delete(channel.id)
+        next.delete(getManagedResourceRefKey(channel.ref))
       }
       return next
     })
   }
 
   const handleConfirm = async () => {
-    if (!selectedIds.size) return
+    if (!selectedKeys.size) return
 
     setIsClearing(true)
     setResultErrors([])
     try {
-      const ids = Array.from(selectedIds)
-      const result = await ModelRedirectService.clearChannelModelMappings(ids)
+      const refs = channels
+        .filter((channel) =>
+          selectedKeys.has(getManagedResourceRefKey(channel.ref)),
+        )
+        .map((channel) => channel.ref)
+      const result = await ModelRedirectService.clearChannelModelMappings(refs)
 
       if (result.success) {
         if (result.clearedChannels > 0 && result.skippedChannels > 0) {
@@ -392,22 +403,26 @@ export function ClearModelRedirectMappingsDialog({
                 </div>
               ) : (
                 filteredChannelItems.map(({ channel, meta }) => {
-                  const checked = selectedIds.has(channel.id)
+                  const checked = selectedKeys.has(
+                    getManagedResourceRefKey(channel.ref),
+                  )
                   const mappingIsEmpty = meta.isEmpty
                   const checkboxDisabled = isClearing
 
                   return (
                     <div
-                      key={channel.id}
+                      key={getManagedResourceRefKey(channel.ref)}
                       className="space-y-2 rounded-md px-2 py-2 hover:bg-gray-50 dark:hover:bg-gray-800/50"
                     >
                       <div className="flex items-start gap-3">
                         <Checkbox
-                          aria-label={`${channel.name} (#${channel.id})`}
-                          data-testid={`${BASIC_SETTINGS_TEST_IDS.managedSiteModelRedirectBulkClearChannelCheckboxPrefix}-${channel.id}`}
+                          aria-label={`${channel.name} (#${channel.ref.resourceId})`}
+                          data-testid={`${BASIC_SETTINGS_TEST_IDS.managedSiteModelRedirectBulkClearChannelCheckboxPrefix}-${channel.ref.resourceId}`}
                           checked={checked}
                           onCheckedChange={() =>
-                            handleToggleSelected(channel.id)
+                            handleToggleSelected(
+                              getManagedResourceRefKey(channel.ref),
+                            )
                           }
                           disabled={checkboxDisabled}
                         />
@@ -432,7 +447,7 @@ export function ClearModelRedirectMappingsDialog({
                             )}
                           </div>
                           <div className="dark:text-dark-text-secondary text-xs text-gray-500">
-                            #{channel.id}
+                            #{channel.ref.resourceId}
                           </div>
                         </div>
                       </div>

@@ -339,9 +339,8 @@ export function supportsManagedSiteBaseUrlChannelLookup(
 export function supportsManagedSiteModelSync(
   siteType: ManagedSiteType,
 ): boolean {
-  return Boolean(
-    getSiteTypeCapabilities(siteType).managedSites?.models?.updateModels,
-  )
+  const models = getSiteTypeCapabilities(siteType).managedSites?.models
+  return Boolean(models?.createSync || models?.updateModels)
 }
 
 /**

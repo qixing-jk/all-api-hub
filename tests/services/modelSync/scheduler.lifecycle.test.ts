@@ -17,8 +17,8 @@ import {
   PROTECTION_BYPASS_FEATURES,
   PROTECTION_BYPASS_SURFACES,
 } from "~/services/protectionBypass/contracts"
-import type { OctopusChannel } from "~/types/octopus"
 import { automaticExecution } from "~~/tests/services/protectionBypass/fixtures"
+import { modelResourceRef } from "~~/tests/test-utils/managedModelResource"
 
 vi.mock("~/services/managedSites/legacyChannelConfigMigration", () => ({
   ensureLegacyChannelConfigMigrationReady: vi.fn().mockResolvedValue(undefined),
@@ -38,6 +38,7 @@ const mocks = vi.hoisted(() => ({
   runBatch: vi.fn(),
   octopusListChannels: vi.fn(),
   runOctopusBatch: vi.fn(),
+  prepareOctopusBatch: vi.fn(),
   createOctopusModelSyncCapability: vi.fn(),
   saveLastExecution: vi.fn(),
   getLastExecution: vi.fn(),
@@ -141,7 +142,7 @@ vi.mock("~/services/apiService/octopus", () => ({
   fetchAvailableModels: vi.fn(),
 }))
 
-vi.mock("~/services/models/modelSync/octopusModelSync", () => ({
+vi.mock("~/services/apiAdapters/managedResources/octopusModelSync", () => ({
   createOctopusModelSyncCapability: mocks.createOctopusModelSyncCapability,
 }))
 
@@ -165,7 +166,7 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
     mocks.getConfigsForScope.mockResolvedValue({})
     mocks.createOctopusModelSyncCapability.mockReturnValue({
       listChannels: mocks.octopusListChannels,
-      runBatch: mocks.runOctopusBatch,
+      prepareBatch: mocks.prepareOctopusBatch,
     })
     mocks.saveLastExecution.mockResolvedValue(undefined)
     mocks.saveChannelUpstreamModelOptions.mockResolvedValue(undefined)
@@ -287,7 +288,7 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
     vi.spyOn(modelSyncScheduler, "executeSync").mockResolvedValue({
       items: [
         {
-          channelId: 3,
+          resourceRef: modelResourceRef(3),
           channelName: "Gamma",
           ok: false,
           httpStatus: 429,
@@ -367,31 +368,42 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
         ...(DEFAULT_PREFERENCES as any).managedSiteModelSync,
       },
     })
-    mocks.octopusListChannels.mockResolvedValue([
-      {
-        id: 1,
-        name: "Alpha",
-        type: 1,
-        enabled: true,
-        model: "gpt-4o",
-        base_urls: [{ url: "https://upstream.example.com" }],
-        keys: [{ channel_key: "test-key" }],
-      },
-      {
-        id: 2,
-        name: "Beta",
-        type: 1,
-        enabled: true,
-        model: "gpt-4o",
-        base_urls: [{ url: "https://upstream.example.com" }],
-        keys: [{ channel_key: "test-key" }],
-      },
-    ])
+    mocks.octopusListChannels.mockResolvedValue({
+      items: [
+        {
+          ref: modelResourceRef(1, {
+            siteType: SITE_TYPES.OCTOPUS,
+            scopeKey: "https://octopus.example.com",
+          }),
+          name: "Alpha",
+        },
+        {
+          ref: modelResourceRef(2, {
+            siteType: SITE_TYPES.OCTOPUS,
+            scopeKey: "https://octopus.example.com",
+          }),
+          name: "Beta",
+        },
+      ],
+      total: 2,
+    })
 
     await expect(modelSyncScheduler.listChannels()).resolves.toEqual({
       items: [
-        { id: 1, name: "Alpha" },
-        { id: 2, name: "Beta" },
+        {
+          ref: modelResourceRef(1, {
+            siteType: SITE_TYPES.OCTOPUS,
+            scopeKey: "https://octopus.example.com",
+          }),
+          name: "Alpha",
+        },
+        {
+          ref: modelResourceRef(2, {
+            siteType: SITE_TYPES.OCTOPUS,
+            scopeKey: "https://octopus.example.com",
+          }),
+          name: "Beta",
+        },
       ],
       total: 2,
     })
@@ -423,7 +435,7 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
     mocks.listChannels.mockResolvedValueOnce({
       items: [
         {
-          id: 9,
+          ref: modelResourceRef(9),
           name: "Shared channel",
           credential: "private-key",
           modelMapping: '{"a":"b"}',
@@ -435,7 +447,7 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
     })
 
     await expect(modelSyncScheduler.listChannels()).resolves.toEqual({
-      items: [{ id: 9, name: "Shared channel" }],
+      items: [{ ref: modelResourceRef(9), name: "Shared channel" }],
       total: 1,
     })
 
@@ -458,7 +470,7 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
   })
 
   it("continues new-api sync when redirect mapping fails and caches upstream models on full sync", async () => {
-    const knownChannel = { id: 1, name: "Known channel" }
+    const knownChannel = { ref: modelResourceRef(1), name: "Known channel" }
 
     mocks.listChannels.mockResolvedValue({
       items: [knownChannel],
@@ -471,7 +483,7 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
     )
     mocks.runBatch.mockImplementation(async (_channels: any, options: any) => {
       const lastResult = {
-        channelId: 1,
+        resourceRef: modelResourceRef(1),
         channelName: "Known channel",
         ok: true,
         oldModels: ["gpt-4o"],
@@ -539,7 +551,7 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
     })
 
     mocks.listChannels.mockResolvedValue({
-      items: [{ id: 1, name: "Known channel" }],
+      items: [{ ref: modelResourceRef(1), name: "Known channel" }],
       total: 1,
       type_counts: {},
     })
@@ -563,14 +575,14 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
 
   it("tracks failed progress updates and skips redirect mapping when a channel sync fails", async () => {
     const failedResult = {
-      channelId: 1,
+      resourceRef: modelResourceRef(1),
       channelName: "Known channel",
       ok: false,
       error: "upstream rejected models",
     }
 
     mocks.listChannels.mockResolvedValue({
-      items: [{ id: 1, name: "Known channel" }],
+      items: [{ ref: modelResourceRef(1), name: "Known channel" }],
       total: 1,
       type_counts: {},
     })
@@ -615,7 +627,7 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
 
   it("skips redirect application when a successful result cannot be matched back to a known channel", async () => {
     const missingChannelResult = {
-      channelId: 404,
+      resourceRef: modelResourceRef(404),
       channelName: "Unknown channel",
       ok: true,
       oldModels: ["gpt-4o"],
@@ -623,7 +635,7 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
     }
 
     mocks.listChannels.mockResolvedValue({
-      items: [{ id: 1, name: "Known channel" }],
+      items: [{ ref: modelResourceRef(1), name: "Known channel" }],
       total: 1,
       type_counts: {},
     })
@@ -671,10 +683,12 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
       type_counts: {},
     })
 
-    await expect(modelSyncScheduler.executeSync([999])).rejects.toThrow()
+    await expect(
+      modelSyncScheduler.executeSync([modelResourceRef(999)]),
+    ).rejects.toThrow()
   })
 
-  it("delegates Octopus sync batches, tracks failures, and skips full-sync caching for selected ids", async () => {
+  it("delegates Octopus sync batches, tracks failures, and skips full-sync caching for selected references", async () => {
     mocks.getPreferences.mockResolvedValueOnce({
       managedSiteType: SITE_TYPES.OCTOPUS,
       octopus: {
@@ -689,61 +703,36 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
         channelProcessingTimeout: 600,
       },
     })
-    const nativeChannels: OctopusChannel[] = [
-      {
-        id: 1,
-        name: "Alpha",
-        type: 1,
-        enabled: true,
-        model: "gpt-4o",
-        base_urls: [{ url: "https://upstream.example.com" }],
-        keys: [{ channel_key: "test-key", enabled: true }],
-        proxy: true,
-        auto_sync: false,
-        auto_group: 0,
-        custom_header: [{ header_key: "x-provider", header_value: "native" }],
-      },
-      {
-        id: 2,
-        name: "Beta",
-        type: 1,
-        enabled: true,
-        model: "gpt-4o",
-        base_urls: [{ url: "https://upstream.example.com" }],
-        keys: [{ channel_key: "test-key", enabled: true }],
-        proxy: true,
-        auto_sync: false,
-        auto_group: 0,
-        custom_header: [{ header_key: "x-provider", header_value: "native" }],
-      },
-    ]
-    mocks.octopusListChannels.mockResolvedValue(nativeChannels)
-    mocks.runOctopusBatch.mockImplementation(
-      async (channels: any[], options: any) => {
-        expect(channels).toEqual([nativeChannels[1]])
+    const selectedRef = modelResourceRef(2, {
+      siteType: SITE_TYPES.OCTOPUS,
+      scopeKey: "https://octopus.example.com",
+    })
+    mocks.prepareOctopusBatch.mockResolvedValue({
+      resources: [{ ref: selectedRef, name: "Beta" }],
+      run: mocks.runOctopusBatch,
+    })
+    mocks.runOctopusBatch.mockImplementation(async (options: any) => {
+      const lastResult = {
+        resourceRef: selectedRef,
+        channelName: "Beta",
+        ok: false,
+      }
 
-        const lastResult = {
-          channelId: 2,
-          channelName: "Beta",
-          ok: false,
-        }
+      await options.onProgress?.({
+        completed: 1,
+        total: 1,
+        lastResult,
+      })
 
-        await options.onProgress?.({
-          completed: 1,
+      return {
+        items: [lastResult],
+        statistics: {
           total: 1,
-          lastResult,
-        })
-
-        return {
-          items: [lastResult],
-          statistics: {
-            total: 1,
-            successCount: 0,
-            failureCount: 1,
-          },
-        }
-      },
-    )
+          successCount: 0,
+          failureCount: 1,
+        },
+      }
+    })
 
     const execution = automaticExecution(
       PROTECTION_BYPASS_FEATURES.ManagedSiteModelSync,
@@ -752,7 +741,12 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
 
     await expect(
       modelSyncScheduler.executeSync(
-        [2],
+        [
+          modelResourceRef(2, {
+            siteType: SITE_TYPES.OCTOPUS,
+            scopeKey: "https://octopus.example.com",
+          }),
+        ],
         PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.BackgroundRecovery,
         execution,
       ),
@@ -765,8 +759,8 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
       expect.objectContaining({ baseUrl: "https://octopus.example.com" }),
       execution,
     )
+    expect(mocks.prepareOctopusBatch).toHaveBeenCalledWith([selectedRef])
     expect(mocks.runOctopusBatch).toHaveBeenCalledWith(
-      expect.anything(),
       expect.objectContaining({
         concurrency: 2,
         maxRetries: 3,
@@ -802,19 +796,26 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
         ...(DEFAULT_PREFERENCES as any).managedSiteModelSync,
       },
     })
-    mocks.octopusListChannels.mockResolvedValueOnce([
-      {
-        id: 4,
-        name: "Example channel",
-        type: 1,
-        enabled: true,
-        model: "gpt-4o",
-        base_urls: [{ url: "https://upstream.example.com" }],
-        keys: [{ channel_key: "test-key" }],
-      },
-    ])
+    mocks.prepareOctopusBatch.mockResolvedValueOnce({
+      resources: [
+        {
+          ref: modelResourceRef(4, {
+            siteType: SITE_TYPES.OCTOPUS,
+            scopeKey: "https://managed.example.invalid",
+          }),
+          name: "Example channel",
+        },
+      ],
+      run: mocks.runOctopusBatch,
+    })
     mocks.runOctopusBatch.mockResolvedValueOnce({
-      items: [{ channelId: 4, channelName: "Example channel", ok: true }],
+      items: [
+        {
+          resourceRef: modelResourceRef(4),
+          channelName: "Example channel",
+          ok: true,
+        },
+      ],
       statistics: {
         total: 1,
         successCount: 1,
@@ -836,8 +837,8 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
         surface: PROTECTION_BYPASS_SURFACES.Background,
       }),
     )
+    expect(mocks.prepareOctopusBatch).toHaveBeenCalledWith(undefined)
     expect(mocks.runOctopusBatch).toHaveBeenCalledWith(
-      expect.any(Array),
       expect.not.objectContaining({
         protectionBypassExecution: expect.anything(),
       }),
@@ -858,20 +859,27 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
         maxRetries: 3,
       },
     })
-    mocks.octopusListChannels.mockResolvedValueOnce([
-      {
-        id: 3,
-        name: "Gamma",
-        type: 1,
-        enabled: true,
-        model: "gpt-4o",
-        base_urls: [{ url: "https://upstream.example.com" }],
-        keys: [{ channel_key: "test-key" }],
-      },
-    ])
+    mocks.prepareOctopusBatch.mockResolvedValueOnce({
+      resources: [
+        {
+          ref: modelResourceRef(3, {
+            siteType: SITE_TYPES.OCTOPUS,
+            scopeKey: "https://octopus.example.com",
+          }),
+          name: "Gamma",
+        },
+      ],
+      run: mocks.runOctopusBatch,
+    })
     mocks.collectModelsFromExecution.mockReturnValueOnce(["gpt-4o", "claude-3"])
     mocks.runOctopusBatch.mockResolvedValueOnce({
-      items: [{ channelId: 3, channelName: "mapped-Gamma", ok: true }],
+      items: [
+        {
+          resourceRef: modelResourceRef(3),
+          channelName: "mapped-Gamma",
+          ok: true,
+        },
+      ],
       statistics: {
         total: 1,
         successCount: 1,
@@ -912,7 +920,10 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
         ...(DEFAULT_PREFERENCES as any).managedSiteModelSync,
       },
     })
-    mocks.octopusListChannels.mockResolvedValueOnce([])
+    mocks.prepareOctopusBatch.mockResolvedValueOnce({
+      resources: [],
+      run: mocks.runOctopusBatch,
+    })
 
     await expect(modelSyncScheduler.executeSync()).rejects.toThrow()
   })
@@ -920,9 +931,9 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
   it("retries only the failed channels from the previous execution", async () => {
     mocks.getLastExecution.mockResolvedValueOnce({
       items: [
-        { channelId: 1, ok: false },
-        { channelId: 2, ok: true },
-        { channelId: 3, ok: false },
+        { resourceRef: modelResourceRef(1), ok: false },
+        { resourceRef: modelResourceRef(2), ok: true },
+        { resourceRef: modelResourceRef(3), ok: false },
       ],
       statistics: {
         total: 3,
@@ -939,6 +950,9 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
       items: [],
       statistics: { total: 2 },
     })
-    expect(executeSpy).toHaveBeenCalledWith([1, 3])
+    expect(executeSpy).toHaveBeenCalledWith([
+      modelResourceRef(1),
+      modelResourceRef(3),
+    ])
   })
 })

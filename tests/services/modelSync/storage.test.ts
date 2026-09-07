@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { Storage } from "@plasmohq/storage"
 
 import { managedSiteModelSyncStorage } from "~/services/models/modelSync/storage"
+import type { ExecutionResult } from "~/types/managedSiteModelSync"
+import { modelResourceRef } from "~~/tests/test-utils/managedModelResource"
 
 vi.mock("@plasmohq/storage", () => {
   const set = vi.fn()
@@ -39,8 +41,82 @@ describe("managedSiteModelSyncStorage - storage key migration", () => {
     vi.clearAllMocks()
   })
 
+  it("round-trips complete references without merging identical IDs from different deployments", async () => {
+    const firstRef = modelResourceRef("provider/key:alpha")
+    const otherRef = modelResourceRef("provider/key:alpha", {
+      scopeKey: "https://other.example",
+    })
+    const execution: ExecutionResult = {
+      items: [firstRef, otherRef].map((resourceRef) => ({
+        resourceRef,
+        channelName: "Channel",
+        ok: true,
+        attempts: 1,
+        finishedAt: 100,
+      })),
+      statistics: {
+        total: 2,
+        successCount: 2,
+        failureCount: 0,
+        startedAt: 90,
+        endedAt: 100,
+        durationMs: 10,
+      },
+    }
+    const { set, get } = (Storage as any).__mocks
+    set.mockImplementationOnce(async (_key: string, value: unknown) =>
+      get.mockResolvedValueOnce(value),
+    )
+
+    expect(await managedSiteModelSyncStorage.saveLastExecution(execution)).toBe(
+      true,
+    )
+    expect(await managedSiteModelSyncStorage.getLastExecution()).toEqual(
+      execution,
+    )
+  })
+
+  it("keeps unscoped numeric history readable without assigning it to the current site", async () => {
+    const { get } = (Storage as any).__mocks
+    get.mockResolvedValueOnce({
+      items: [
+        {
+          channelId: 7,
+          channelName: "Old provider",
+          ok: false,
+          attempts: 1,
+          finishedAt: 100,
+        },
+      ],
+      statistics: {
+        total: 1,
+        successCount: 0,
+        failureCount: 1,
+        startedAt: 90,
+        endedAt: 100,
+        durationMs: 10,
+      },
+    })
+
+    const history = await managedSiteModelSyncStorage.getLastExecution()
+
+    expect(history?.items).toEqual([
+      {
+        resourceRef: null,
+        legacyResourceId: "7",
+        channelName: "Old provider",
+        ok: false,
+        attempts: 1,
+        finishedAt: 100,
+      },
+    ])
+  })
+
   it("getLastExecution reads canonical key when present", async () => {
-    const execution = { statistics: { total: 0, successCount: 0 } } as any
+    const execution = {
+      items: [],
+      statistics: { total: 0, successCount: 0 },
+    } as any
     const { get, set } = (Storage as any).__mocks as {
       set: ReturnType<typeof vi.fn>
       get: ReturnType<typeof vi.fn>
@@ -58,7 +134,10 @@ describe("managedSiteModelSyncStorage - storage key migration", () => {
   })
 
   it("getLastExecution falls back to legacy key and writes through to canonical", async () => {
-    const legacyExecution = { statistics: { total: 1, successCount: 1 } } as any
+    const legacyExecution = {
+      items: [],
+      statistics: { total: 1, successCount: 1 },
+    } as any
     const { get, set, remove } = (Storage as any).__mocks as any
 
     get.mockResolvedValueOnce(undefined)
@@ -122,7 +201,10 @@ describe("managedSiteModelSyncStorage - storage key migration", () => {
   it("saveLastExecution always writes canonical key", async () => {
     const { set } = (Storage as any).__mocks as any
 
-    const execution = { statistics: { total: 0, successCount: 0 } } as any
+    const execution = {
+      items: [],
+      statistics: { total: 0, successCount: 0 },
+    } as any
     await managedSiteModelSyncStorage.saveLastExecution(execution)
 
     expect(set).toHaveBeenCalledWith(CANONICAL_KEYS.LAST_EXECUTION, execution)

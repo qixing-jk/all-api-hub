@@ -1,3 +1,4 @@
+import { SITE_TYPES } from "~/constants/siteType"
 import { VeloeraChannelStatus } from "~/constants/veloera"
 import { hasUsableApiTokenKey as hasUsableManagedSiteChannelKey } from "~/services/accountTokens/apiTokenKey"
 import type { ManagedResourceModelsCapability } from "~/services/apiAdapters/contracts/managedResourceModels"
@@ -5,8 +6,11 @@ import type {
   ManagedSiteChannelRequestOptions,
   ManagedSitePaginatedChannelRequestOptions,
 } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
-import { requireNumericManagedResourceId } from "~/services/apiAdapters/managedResources/matchingInputs"
 import { toManagedModelChannelList } from "~/services/apiAdapters/managedResources/modelInputs"
+import {
+  requireManagedResourceChannelId,
+  requireNumericManagedResourceId,
+} from "~/services/apiAdapters/managedResources/resourceIds"
 import {
   createChannel,
   deleteChannel,
@@ -28,7 +32,6 @@ import {
   type ManagedSiteMutationConfirmedEffect,
   type ManagedSiteMutationSequence,
 } from "~/services/managedSites/mutations"
-import type { ManagedResourceMatchCandidate } from "~/types/managedResourceMatching"
 import type {
   VeloeraCreateChannelPayload,
   VeloeraUpdateChannelPayload,
@@ -115,7 +118,7 @@ const fetchSecretKey = async (
   return channel.key
 }
 
-const hydrateComparableKeys = async <T extends ManagedResourceMatchCandidate>(
+const hydrateComparableKeys = async <T extends { id: number; key?: string }>(
   config: VeloeraConfig,
   candidates: T[],
   options?: ManagedSiteChannelRequestOptions,
@@ -223,17 +226,24 @@ export const veloeraManagedResourceModels = {
         VeloeraChannelStatus.ManuallyDisabled,
         VeloeraChannelStatus.AutoDisabled,
       ],
+      { siteType: SITE_TYPES.VELOERA, config },
     ),
   fetchModels: async (
     config,
-    channelId,
+    ref,
     options?: ManagedSiteChannelRequestOptions,
-  ) =>
-    await fetchChannelModels(
+  ) => {
+    const channelId = requireManagedResourceChannelId(
+      SITE_TYPES.VELOERA,
+      config,
+      ref,
+    )
+    return await fetchChannelModels(
       toManagedSiteApiServiceRequest(config, options),
       channelId,
       options,
-    ),
+    )
+  },
   fetchDraftModels: async (
     config,
     probe,
@@ -250,10 +260,15 @@ export const veloeraManagedResourceModels = {
     ),
   updateModels: async (
     config,
-    channelId,
+    ref,
     models,
     options?: ManagedSiteChannelRequestOptions,
   ) => {
+    const channelId = requireManagedResourceChannelId(
+      SITE_TYPES.VELOERA,
+      config,
+      ref,
+    )
     const sequence = createManagedSiteMutationSequence({ idempotent: false })
     const step = await runVeloeraVoidStep({
       config,
@@ -272,11 +287,16 @@ export const veloeraManagedResourceModels = {
   },
   updateModelMapping: async (
     config,
-    channelId,
+    ref,
     models,
     modelMapping,
     options?: ManagedSiteChannelRequestOptions,
   ) => {
+    const channelId = requireManagedResourceChannelId(
+      SITE_TYPES.VELOERA,
+      config,
+      ref,
+    )
     const sequence = createManagedSiteMutationSequence({ idempotent: false })
     const step = await runVeloeraVoidStep({
       config,

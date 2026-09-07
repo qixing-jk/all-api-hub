@@ -6,6 +6,10 @@ import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import { VeloeraChannelType } from "~/constants/veloera"
 import { getManagedSiteCapabilities } from "~/services/apiAdapters/registry"
 import { isSafeChannelModelFilterRegex } from "~/services/managedSites/channelModelFilterRules"
+import {
+  assertManagedResourceRefForSite,
+  getManagedResourceRefKey,
+} from "~/services/managedSites/managedResourceIdentity"
 import type { ManagedSiteRuntimeConfig } from "~/services/managedSites/runtimeConfig"
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/managedSite"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
@@ -56,7 +60,7 @@ export class ProbeFilterUnavailableError extends Error {
  * Per-channel context required to run probe-backed model filters.
  */
 export interface ProbeFilterContext {
-  channel: Pick<ManagedModelChannel, "id" | "type" | "baseUrl" | "credential">
+  channel: Pick<ManagedModelChannel, "ref" | "type" | "baseUrl" | "credential">
   managedConfig: ManagedSiteRuntimeConfig
   cache: Map<string, boolean>
   resolvedKey?: string
@@ -186,14 +190,14 @@ export function resolveApiVerificationTypeForChannelType(
  * Build an in-memory cache key without embedding raw channel keys.
  */
 function createCacheKey(params: {
-  channelId: number
+  resourceKey: string
   keyHash: string
   apiType: ApiVerificationApiType
   modelId: string
   probeId: ApiVerificationProbeId
 }) {
   return [
-    params.channelId,
+    params.resourceKey,
     params.keyHash,
     params.apiType,
     params.modelId,
@@ -231,6 +235,7 @@ function getRuntimeConfigSecrets(config: ManagedSiteRuntimeConfig): string[] {
  * Resolve the usable channel key from the channel row or provider capability.
  */
 async function resolveChannelKey(context: ProbeFilterContext): Promise<string> {
+  assertManagedResourceRefForSite(context.channel.ref, context.managedConfig)
   if (context.resolvedKey !== undefined) {
     return context.resolvedKey
   }
@@ -253,12 +258,12 @@ async function resolveChannelKey(context: ProbeFilterContext): Promise<string> {
     const key = context.protectionBypassExecution
       ? await managedSite.matching.fetchSecretKey(
           context.managedConfig.config,
-          context.channel.id,
+          context.channel.ref,
           { protectionBypassExecution: context.protectionBypassExecution },
         )
       : await managedSite.matching.fetchSecretKey(
           context.managedConfig.config,
-          context.channel.id,
+          context.channel.ref,
         )
     if (!hasUsableManagedSiteChannelKey(key)) {
       throw new Error("channel_key_unavailable")
@@ -271,7 +276,7 @@ async function resolveChannelKey(context: ProbeFilterContext): Promise<string> {
       directKey,
     ])
     logger.warn("Probe filter channel key resolution failed", {
-      channelId: context.channel.id,
+      resourceKey: getManagedResourceRefKey(context.channel.ref),
       reason: diagnostic,
     })
     throw new ProbeFilterUnavailableError(
@@ -332,7 +337,7 @@ export async function matchesProbeFilterRule(
   const probeMatches = await Promise.all(
     rule.probeIds.map(async (probeId) => {
       const cacheKey = createCacheKey({
-        channelId: context.channel.id,
+        resourceKey: getManagedResourceRefKey(context.channel.ref),
         keyHash,
         apiType: executionInput.apiType,
         modelId,
@@ -358,7 +363,7 @@ export async function matchesProbeFilterRule(
           executionInput.apiKey,
         ])
         logger.warn("Probe filter execution failed", {
-          channelId: context.channel.id,
+          resourceKey: getManagedResourceRefKey(context.channel.ref),
           modelId,
           probeId,
           diagnostic,

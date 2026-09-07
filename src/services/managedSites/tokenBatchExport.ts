@@ -326,7 +326,7 @@ const preparePreviewItem = async (params: {
   managedSite: ManagedSiteCapabilities
   managedConfig: ManagedSiteRuntimeConfigValue
   verification: ManagedSiteBatchImportIntent["verification"]
-  resolvedChannelKeysById?: Record<number, string>
+  resolvedChannelKeysByResourceKey?: Record<string, string>
   operationContext?: ManagedSiteOperationContext
   protectionBypassExecution?: ProtectionBypassExecution
 }): Promise<ManagedSiteTokenBatchExportPreviewItem> => {
@@ -429,7 +429,7 @@ const preparePreviewItem = async (params: {
       accountBaseUrl: searchBaseUrl,
       models: draft.models,
       key: draft.key,
-      resolvedChannelKeysById: params.resolvedChannelKeysById,
+      resolvedChannelKeysByResourceKey: params.resolvedChannelKeysByResourceKey,
       resolveHiddenKeys: true,
       requestCache: params.operationContext?.channelMatch,
       protectionBypassExecution: params.protectionBypassExecution,
@@ -557,7 +557,7 @@ const buildPreview = (
 export async function prepareManagedSiteTokenBatchExportPreview(params: {
   items: ManagedSiteTokenBatchExportItemInput[]
   intent?: ManagedSiteBatchImportIntent
-  resolvedChannelKeysByItemId?: Record<string, Record<number, string>>
+  resolvedChannelKeysByItemId?: Record<string, Record<string, string>>
   protectionBypassExecution?: ProtectionBypassExecution
 }): Promise<ManagedSiteTokenBatchExportPreview> {
   const intent = params.intent ?? DEFAULT_MANAGED_SITE_TOKEN_BATCH_IMPORT_INTENT
@@ -595,7 +595,7 @@ export async function prepareManagedSiteTokenBatchExportPreview(params: {
         managedSite: target.managedSite,
         managedConfig: target.config,
         verification: intent.verification,
-        resolvedChannelKeysById:
+        resolvedChannelKeysByResourceKey:
           params.resolvedChannelKeysByItemId?.[getInputRuntimeKeyId(input)],
         operationContext,
         protectionBypassExecution: params.protectionBypassExecution,

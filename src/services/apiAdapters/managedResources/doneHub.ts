@@ -31,6 +31,7 @@ import {
   normalizeDoneHubChannel,
 } from "~/services/apiService/doneHub"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import { createManagedChannelResourceRef } from "~/services/managedSites/managedResourceIdentity"
 import {
   MANAGED_SITE_MUTATION_OUTCOMES,
   type ManagedSiteMutationResult,
@@ -411,7 +412,11 @@ export async function openDoneHubNativeResourceOperations(): Promise<DoneHubNati
     fetchModels: async (locator, options) => {
       return await doneHubManagedResourceModels.fetchModels(
         nativeConfig.config,
-        locator,
+        createManagedChannelResourceRef(
+          SITE_TYPES.DONE_HUB,
+          nativeConfig.config.baseUrl,
+          locator,
+        ),
         options,
       )
     },
