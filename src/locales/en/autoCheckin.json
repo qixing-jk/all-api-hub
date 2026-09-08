@@ -34,16 +34,18 @@
     },
     "filters": {
       "all": "All",
+      "alreadyChecked": "Already checked in",
       "clearAll": "Clear filters",
       "countFiltered": "Showing {{filtered}} of {{total}}",
       "countTotal": "{{total}} total",
       "failed": "Failed",
-      "failedOrSkipped": "Failed or skipped",
+      "needsAttention": "Needs attention",
       "searchLabel": "Search execution results",
       "searchPlaceholder": "Search by account name, ID, or message...",
-      "skipped": "Skipped",
+      "skipped": "Not executed",
       "statusLabel": "Filter by execution status",
-      "success": "Success"
+      "success": "Checked in this run",
+      "uncertain": "Pending confirmation"
     },
     "hints": {
       "invalidAccessToken": "Solution: The Access Token may have expired. Please log in to the site again, then in 'Account Management → Edit Account', automatically re-identify/refresh the Access Token. If this issue still occurs after automatic identification, please manually obtain and modify the Access Token.",
@@ -67,8 +69,8 @@
     "status": {
       "alreadyChecked": "Already checked in",
       "failed": "Failed",
-      "skipped": "Skipped",
-      "success": "Success",
+      "skipped": "Not executed",
+      "success": "Checked in this run",
       "uncertain": "Pending confirmation"
     },
     "table": {
@@ -249,12 +251,14 @@
     },
     "retryDisabled": "Retry disabled",
     "summary": {
+      "alreadyChecked": "Already checked in",
       "eligible": "Eligible",
       "executed": "Executed",
       "failed": "Failed",
-      "skipped": "Skipped",
-      "success": "Success",
-      "title": "Execution summary"
+      "skipped": "Not executed",
+      "success": "Checked in this run",
+      "title": "Execution summary",
+      "uncertain": "Pending confirmation"
     }
   },
   "uiOpenPretrigger": {

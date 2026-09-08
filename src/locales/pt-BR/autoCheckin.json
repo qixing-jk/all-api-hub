@@ -34,16 +34,18 @@
     },
     "filters": {
       "all": "Todos",
+      "alreadyChecked": "Check-in já realizado",
       "clearAll": "Limpar filtros",
       "countFiltered": "Mostrando {{filtered}} de {{total}}",
       "countTotal": "{{total}} no total",
       "failed": "Falha",
-      "failedOrSkipped": "Falha ou ignorado",
+      "needsAttention": "Requer atenção",
       "searchLabel": "Pesquisar resultados da execução",
       "searchPlaceholder": "Pesquise por nome da conta, ID ou mensagem...",
-      "skipped": "Ignorado",
+      "skipped": "Não executado",
       "statusLabel": "Filtrar por status da execução",
-      "success": "Sucesso"
+      "success": "Check-in nesta execução",
+      "uncertain": "Confirmação pendente"
     },
     "hints": {
       "invalidAccessToken": "Solução: o token de acesso pode ter expirado. Entre no site novamente e, em “Gerenciamento de contas → Editar conta”, execute outra detecção para atualizar o token automaticamente. Se o problema continuar, obtenha e altere o token de acesso manualmente.",
@@ -67,7 +69,7 @@
     "status": {
       "alreadyChecked": "Já fez check-in",
       "failed": "Falha",
-      "skipped": "Ignorado",
+      "skipped": "Não executado",
       "success": "Sucesso",
       "uncertain": "Confirmação pendente"
     },
@@ -251,12 +253,14 @@
     },
     "retryDisabled": "Nova tentativa desativada",
     "summary": {
+      "alreadyChecked": "Check-in já realizado",
       "eligible": "Elegível",
       "executed": "Executado",
       "failed": "Falha",
-      "skipped": "Ignorado",
-      "success": "Sucesso",
-      "title": "Resumo de execução"
+      "skipped": "Não executado",
+      "success": "Check-in nesta execução",
+      "title": "Resumo de execução",
+      "uncertain": "Confirmação pendente"
     }
   },
   "uiOpenPretrigger": {

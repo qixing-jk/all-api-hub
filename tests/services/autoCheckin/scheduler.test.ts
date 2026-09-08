@@ -29,6 +29,7 @@ import {
   updateAutoCheckinSettings,
 } from "~/services/checkin/autoCheckin/scheduler"
 import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
+import { notifyTaskResult } from "~/services/notifications/taskNotificationService"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
@@ -193,6 +194,10 @@ vi.mock("~/services/preferences/userPreferences", () => ({
   },
 }))
 
+vi.mock("~/services/notifications/taskNotificationService", () => ({
+  notifyTaskResult: vi.fn(),
+}))
+
 vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
   accountQueries: {
     getAllAccounts: vi.fn(),
@@ -337,6 +342,8 @@ const mockedBrowserApi = {
   onAlarm: onAlarm as unknown as ReturnType<typeof vi.fn>,
   sendRuntimeMessage: sendRuntimeMessage as unknown as ReturnType<typeof vi.fn>,
 }
+
+const mockedNotifyTaskResult = vi.mocked(notifyTaskResult)
 
 const mockedProductAnalytics = {
   trackProductAnalyticsActionCompleted:
@@ -6163,6 +6170,30 @@ describe("autoCheckinScheduler debug helpers", () => {
 })
 
 describe("autoCheckinScheduler private helpers", () => {
+  it("sends already-checked results as a distinct notification count", async () => {
+    await (autoCheckinScheduler as any).notifyScheduledRunResult({
+      successCount: 2,
+      alreadyCheckedCount: 1,
+      failedCount: 1,
+      uncertainCount: 1,
+      skippedCount: 0,
+      total: 4,
+    })
+
+    expect(mockedNotifyTaskResult).toHaveBeenCalledWith({
+      task: "autoCheckin",
+      status: "partial_success",
+      counts: {
+        total: 4,
+        success: 1,
+        alreadyChecked: 1,
+        failed: 1,
+        uncertain: 1,
+        skipped: 0,
+      },
+    })
+  })
+
   beforeEach(() => {
     vi.clearAllMocks()
   })
@@ -7060,8 +7091,9 @@ describe("autoCheckinScheduler private helpers", () => {
       (autoCheckinScheduler as any).recalculateSummaryFromResults(
         {
           a: { status: "success" },
-          b: { status: "failed" },
-          c: { status: "skipped" },
+          b: { status: "already_checked" },
+          c: { status: "failed" },
+          d: { status: "skipped" },
         },
         {
           totalEligible: 7,
@@ -7069,8 +7101,9 @@ describe("autoCheckinScheduler private helpers", () => {
       ),
     ).toEqual({
       totalEligible: 7,
-      executed: 2,
-      successCount: 1,
+      executed: 3,
+      successCount: 2,
+      alreadyCheckedCount: 1,
       failedCount: 1,
       skippedCount: 1,
       needsRetry: true,

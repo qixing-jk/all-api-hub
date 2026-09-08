@@ -722,6 +722,7 @@
         "success": "{{task}} completed successfully."
       },
       "counts": "Total {{total}}, success {{success}}, failed {{failed}}, skipped {{skipped}}.",
+      "countsWithAutoCheckinCategories": "Total {{total}}, checked in this run {{success}}, already checked {{alreadyChecked}}, failed {{failed}}, pending confirmation {{uncertain}}, not executed {{skipped}}.",
       "title": {
         "failure": "{{task}} failed",
         "partialSuccess": "{{task}} partially succeeded",

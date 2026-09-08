@@ -721,6 +721,7 @@
         "success": "{{task}}已成功完成。"
       },
       "counts": "总计 {{total}}，成功 {{success}}，失败 {{failed}}，跳过 {{skipped}}。",
+      "countsWithAutoCheckinCategories": "总计 {{total}}，本次签到成功 {{success}}，已签到 {{alreadyChecked}}，失败 {{failed}}，待确认 {{uncertain}}，未执行 {{skipped}}。",
       "title": {
         "failure": "{{task}}失败",
         "partialSuccess": "{{task}}部分成功",

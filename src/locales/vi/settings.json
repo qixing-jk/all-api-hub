@@ -721,6 +721,7 @@
         "success": "{{task}} đã hoàn tất thành công."
       },
       "counts": "Tổng {{total}}, thành công {{success}}, thất bại {{failed}}, bỏ qua {{skipped}}.",
+      "countsWithAutoCheckinCategories": "Tổng {{total}}, điểm danh trong lần này {{success}}, đã điểm danh {{alreadyChecked}}, thất bại {{failed}}, đang chờ xác nhận {{uncertain}}, chưa thực hiện {{skipped}}.",
       "title": {
         "failure": "{{task}} thất bại",
         "partialSuccess": "{{task}} thành công một phần",

@@ -78,6 +78,46 @@ const failedResult: CheckinAccountResult = {
 }
 
 describe("AutoCheckin ResultsTable", () => {
+  it("offers an independent already-checked result filter", async () => {
+    const user = userEvent.setup()
+    render(
+      <ResultsTable
+        results={[
+          {
+            accountId: "checked-now",
+            accountName: "Checked Now",
+            status: CHECKIN_RESULT_STATUS.SUCCESS,
+            timestamp: 2,
+          },
+          {
+            accountId: "already-checked",
+            accountName: "Already Checked",
+            status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
+            timestamp: 1,
+          },
+        ]}
+      />,
+      {
+        withReleaseUpdateStatusProvider: false,
+        withThemeProvider: false,
+        withUserPreferencesProvider: false,
+      },
+    )
+
+    await user.click(
+      screen.getByRole("button", {
+        name: /autoCheckin:execution\.filters\.alreadyChecked \(1\)/,
+      }),
+    )
+
+    expect(
+      screen.getByRole("button", { name: "Already Checked" }),
+    ).toBeVisible()
+    expect(
+      screen.queryByRole("button", { name: "Checked Now" }),
+    ).not.toBeInTheDocument()
+  })
+
   it("sorts results from the account column header", async () => {
     const user = userEvent.setup()
     render(

@@ -723,6 +723,7 @@
         "success": "A tarefa {{task}} foi concluída com sucesso."
       },
       "counts": "Total: {{total}}; sucessos: {{success}}; falhas: {{failed}}; ignorados: {{skipped}}.",
+      "countsWithAutoCheckinCategories": "Total: {{total}}; check-ins nesta execução: {{success}}; check-ins já realizados: {{alreadyChecked}}; falhas: {{failed}}; confirmação pendente: {{uncertain}}; não executados: {{skipped}}.",
       "title": {
         "failure": "Falha na tarefa: {{task}}",
         "partialSuccess": "Tarefa parcialmente concluída: {{task}}",

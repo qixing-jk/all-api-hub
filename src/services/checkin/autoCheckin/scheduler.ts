@@ -434,7 +434,9 @@ class AutoCheckinScheduler {
 
   private async notifyScheduledRunResult(params: {
     successCount: number
+    alreadyCheckedCount: number
     failedCount: number
+    uncertainCount: number
     skippedCount: number
     total: number
   }) {
@@ -442,11 +444,13 @@ class AutoCheckinScheduler {
       task: TASK_NOTIFICATION_TASKS.AutoCheckin,
       status: this.getTaskNotificationStatus(
         params.successCount,
-        params.failedCount,
+        params.failedCount + params.uncertainCount,
       ),
       counts: {
-        success: params.successCount,
+        success: Math.max(params.successCount - params.alreadyCheckedCount, 0),
+        alreadyChecked: params.alreadyCheckedCount,
         failed: params.failedCount,
+        uncertain: params.uncertainCount,
         skipped: params.skippedCount,
         total: params.total,
       },
@@ -943,6 +947,9 @@ class AutoCheckinScheduler {
     const successCount = values.filter((value) =>
       isSuccessfulCheckinStatus(value.status),
     ).length
+    const alreadyCheckedCount = values.filter(
+      (value) => value.status === CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
+    ).length
     const failedCount = values.filter((value) =>
       isFailedCheckinStatus(value.status),
     ).length
@@ -961,6 +968,7 @@ class AutoCheckinScheduler {
       totalEligible,
       executed,
       successCount,
+      ...(alreadyCheckedCount > 0 ? { alreadyCheckedCount } : {}),
       failedCount,
       skippedCount,
       ...(uncertainCount > 0 ? { uncertainCount } : {}),
@@ -2305,6 +2313,7 @@ class AutoCheckinScheduler {
 
       // API/page resources are limited by their owning lower layers.
       let successCount = 0
+      let alreadyCheckedCount = 0
       let failedCount = 0
       let uncertainCount = 0
 
@@ -2319,6 +2328,9 @@ class AutoCheckinScheduler {
         results[outcome.result.accountId] = outcome.result
         if (isSuccessfulCheckinStatus(outcome.result.status)) {
           successCount++
+          if (outcome.result.status === CHECKIN_RESULT_STATUS.ALREADY_CHECKED) {
+            alreadyCheckedCount++
+          }
         } else if (isFailedCheckinStatus(outcome.result.status)) {
           failedCount++
         } else if (outcome.result.status === CHECKIN_RESULT_STATUS.UNCERTAIN) {
@@ -2339,6 +2351,7 @@ class AutoCheckinScheduler {
         totalEligible: accountSnapshots.length,
         executed: successCount + failedCount + uncertainCount,
         successCount,
+        ...(alreadyCheckedCount > 0 ? { alreadyCheckedCount } : {}),
         failedCount,
         skippedCount,
         ...(uncertainCount > 0 ? { uncertainCount } : {}),
@@ -2445,7 +2458,9 @@ class AutoCheckinScheduler {
       if (isDailyRun) {
         await this.notifyScheduledRunResult({
           successCount,
+          alreadyCheckedCount,
           failedCount,
+          uncertainCount,
           skippedCount,
           total: runnableAccounts.length + skippedCount,
         })
@@ -2707,13 +2722,17 @@ class AutoCheckinScheduler {
     }
 
     const retryResults = Object.values(updates)
-    const retrySuccessCount = retryResults.filter(
-      (result) =>
-        result.status === CHECKIN_RESULT_STATUS.SUCCESS ||
-        result.status === CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
+    const retrySuccessCount = retryResults.filter((result) =>
+      isSuccessfulCheckinStatus(result.status),
+    ).length
+    const retryAlreadyCheckedCount = retryResults.filter(
+      (result) => result.status === CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
     ).length
     const retryFailedCount = retryResults.filter(
       (result) => result.status === CHECKIN_RESULT_STATUS.FAILED,
+    ).length
+    const retryUncertainCount = retryResults.filter(
+      (result) => result.status === CHECKIN_RESULT_STATUS.UNCERTAIN,
     ).length
     const retrySkippedCount = retryResults.filter(
       (result) => result.status === CHECKIN_RESULT_STATUS.SKIPPED,
@@ -2722,16 +2741,24 @@ class AutoCheckinScheduler {
     if (retryResults.length > 0) {
       await this.notifyScheduledRunResult({
         successCount: retrySuccessCount,
+        alreadyCheckedCount: retryAlreadyCheckedCount,
         failedCount: retryFailedCount,
+        uncertainCount: retryUncertainCount,
         skippedCount: retrySkippedCount,
         total: retryResults.length,
       })
       this.trackBackgroundAutoCheckinCompleted({
         summary: {
           totalEligible: retryResults.length,
-          executed: retrySuccessCount + retryFailedCount,
+          executed: retrySuccessCount + retryFailedCount + retryUncertainCount,
           successCount: retrySuccessCount,
+          ...(retryAlreadyCheckedCount > 0
+            ? { alreadyCheckedCount: retryAlreadyCheckedCount }
+            : {}),
           failedCount: retryFailedCount,
+          ...(retryUncertainCount > 0
+            ? { uncertainCount: retryUncertainCount }
+            : {}),
           skippedCount: retrySkippedCount,
           needsRetry: Boolean(nextRetryState?.pendingAccountIds.length),
         },

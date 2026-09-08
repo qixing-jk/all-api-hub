@@ -16,7 +16,7 @@ import {
 } from "~/types/autoCheckin"
 
 describe("autoCheckin utils", () => {
-  it("counts already-checked outcomes as successful", () => {
+  it("counts already-checked outcomes separately from successful check-ins", () => {
     expect(
       countAutoCheckinResults([
         {
@@ -51,7 +51,35 @@ describe("autoCheckin utils", () => {
           timestamp: 5,
         },
       ]),
-    ).toEqual({ total: 5, success: 2, failed: 2, skipped: 1 })
+    ).toEqual({
+      total: 5,
+      success: 1,
+      alreadyChecked: 1,
+      failed: 1,
+      uncertain: 1,
+      skipped: 1,
+    })
+  })
+
+  it("filters already-checked outcomes independently", () => {
+    const result = {
+      accountId: "already-checked",
+      accountName: "Already checked",
+      status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
+      timestamp: 1,
+    } satisfies CheckinAccountResult
+
+    expect(
+      filterAutoCheckinResults([result], "already_checked", "", vi.fn() as any),
+    ).toEqual([result])
+    expect(
+      filterAutoCheckinResults(
+        [result],
+        FILTER_STATUS.SUCCESS,
+        "",
+        vi.fn() as any,
+      ),
+    ).toEqual([])
   })
 
   describe("translateAutoCheckinMessageKey", () => {
@@ -214,7 +242,7 @@ describe("autoCheckin utils", () => {
       ).toHaveLength(1)
     })
 
-    it("keeps uncertain results in the existing failure attention filters", () => {
+    it("filters uncertain results independently while keeping them in attention", () => {
       const results: CheckinAccountResult[] = [
         {
           accountId: "failed",
@@ -246,7 +274,7 @@ describe("autoCheckin utils", () => {
       expect(
         filterAutoCheckinResults(
           results,
-          FILTER_STATUS.FAILED_OR_SKIPPED,
+          FILTER_STATUS.NEEDS_ATTENTION,
           "",
           vi.fn((key: string) => key) as any,
         ).map((result) => result.accountId),
@@ -259,7 +287,16 @@ describe("autoCheckin utils", () => {
           "",
           vi.fn((key: string) => key) as any,
         ).map((result) => result.accountId),
-      ).toEqual(["failed", "uncertain"])
+      ).toEqual(["failed"])
+
+      expect(
+        filterAutoCheckinResults(
+          results,
+          "uncertain",
+          "",
+          vi.fn((key: string) => key) as any,
+        ).map((result) => result.accountId),
+      ).toEqual(["uncertain"])
     })
   })
 

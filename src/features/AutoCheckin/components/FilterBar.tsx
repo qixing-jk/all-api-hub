@@ -1,6 +1,7 @@
 import {
   CircleAlert,
   CircleCheck,
+  CircleHelp,
   CircleX,
   List,
   Search,
@@ -57,7 +58,8 @@ export default function FilterBar({
   const { t } = useTranslation("autoCheckin")
 
   const resultCounts = countAutoCheckinResults(accountResults)
-  const failedOrSkippedCount = resultCounts.failed + resultCounts.skipped
+  const needsAttentionCount =
+    resultCounts.failed + resultCounts.uncertain + resultCounts.skipped
   const getFilteredResultCount = (
     nextStatus: FilterStatus,
     nextKeyword: string,
@@ -173,10 +175,10 @@ export default function FilterBar({
           resultCounts.total,
         )}
         {renderFilterButton(
-          FILTER_STATUS.FAILED_OR_SKIPPED,
-          t("execution.filters.failedOrSkipped"),
+          FILTER_STATUS.NEEDS_ATTENTION,
+          t("execution.filters.needsAttention"),
           <CircleAlert className="h-4 w-4" />,
-          failedOrSkippedCount,
+          needsAttentionCount,
         )}
         {renderFilterButton(
           FILTER_STATUS.SUCCESS,
@@ -185,10 +187,22 @@ export default function FilterBar({
           resultCounts.success,
         )}
         {renderFilterButton(
+          FILTER_STATUS.ALREADY_CHECKED,
+          t("execution.filters.alreadyChecked"),
+          <CircleCheck className="h-4 w-4" />,
+          resultCounts.alreadyChecked,
+        )}
+        {renderFilterButton(
           FILTER_STATUS.FAILED,
           t("execution.filters.failed"),
           <CircleX className="h-4 w-4" />,
           resultCounts.failed,
+        )}
+        {renderFilterButton(
+          FILTER_STATUS.UNCERTAIN,
+          t("execution.filters.uncertain"),
+          <CircleHelp className="h-4 w-4" />,
+          resultCounts.uncertain,
         )}
         {renderFilterButton(
           FILTER_STATUS.SKIPPED,

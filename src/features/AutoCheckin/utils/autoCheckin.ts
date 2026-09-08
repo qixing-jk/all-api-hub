@@ -8,9 +8,11 @@ import {
 
 export const FILTER_STATUS = {
   ALL: "all",
-  FAILED_OR_SKIPPED: "failed_or_skipped",
+  NEEDS_ATTENTION: "needs_attention",
   SUCCESS: "success",
+  ALREADY_CHECKED: "already_checked",
   FAILED: "failed",
+  UNCERTAIN: "uncertain",
   SKIPPED: "skipped",
 } as const
 
@@ -19,11 +21,13 @@ export type FilterStatus = (typeof FILTER_STATUS)[keyof typeof FILTER_STATUS]
 interface AutoCheckinResultCounts {
   total: number
   success: number
+  alreadyChecked: number
   failed: number
+  uncertain: number
   skipped: number
 }
 
-/** Counts execution outcomes while treating already-checked as successful. */
+/** Counts execution outcomes by their user-visible result category. */
 export function countAutoCheckinResults(
   results: readonly CheckinAccountResult[],
 ): AutoCheckinResultCounts {
@@ -32,12 +36,16 @@ export function countAutoCheckinResults(
       counts.total += 1
       switch (result.status) {
         case CHECKIN_RESULT_STATUS.SUCCESS:
-        case CHECKIN_RESULT_STATUS.ALREADY_CHECKED:
           counts.success += 1
           break
+        case CHECKIN_RESULT_STATUS.ALREADY_CHECKED:
+          counts.alreadyChecked += 1
+          break
         case CHECKIN_RESULT_STATUS.FAILED:
-        case CHECKIN_RESULT_STATUS.UNCERTAIN:
           counts.failed += 1
+          break
+        case CHECKIN_RESULT_STATUS.UNCERTAIN:
+          counts.uncertain += 1
           break
         case CHECKIN_RESULT_STATUS.SKIPPED:
           counts.skipped += 1
@@ -45,7 +53,14 @@ export function countAutoCheckinResults(
       }
       return counts
     },
-    { total: 0, success: 0, failed: 0, skipped: 0 },
+    {
+      total: 0,
+      success: 0,
+      alreadyChecked: 0,
+      failed: 0,
+      uncertain: 0,
+      skipped: 0,
+    },
   )
 }
 
@@ -57,22 +72,20 @@ function matchesAutoCheckinResultStatus(
   status: FilterStatus,
 ): boolean {
   switch (status) {
-    case FILTER_STATUS.FAILED_OR_SKIPPED:
+    case FILTER_STATUS.NEEDS_ATTENTION:
       return (
         result.status === CHECKIN_RESULT_STATUS.FAILED ||
         result.status === CHECKIN_RESULT_STATUS.UNCERTAIN ||
         result.status === CHECKIN_RESULT_STATUS.SKIPPED
       )
     case FILTER_STATUS.SUCCESS:
-      return (
-        result.status === CHECKIN_RESULT_STATUS.SUCCESS ||
-        result.status === CHECKIN_RESULT_STATUS.ALREADY_CHECKED
-      )
+      return result.status === CHECKIN_RESULT_STATUS.SUCCESS
+    case FILTER_STATUS.ALREADY_CHECKED:
+      return result.status === CHECKIN_RESULT_STATUS.ALREADY_CHECKED
     case FILTER_STATUS.FAILED:
-      return (
-        result.status === CHECKIN_RESULT_STATUS.FAILED ||
-        result.status === CHECKIN_RESULT_STATUS.UNCERTAIN
-      )
+      return result.status === CHECKIN_RESULT_STATUS.FAILED
+    case FILTER_STATUS.UNCERTAIN:
+      return result.status === CHECKIN_RESULT_STATUS.UNCERTAIN
     case FILTER_STATUS.SKIPPED:
       return result.status === CHECKIN_RESULT_STATUS.SKIPPED
     case FILTER_STATUS.ALL:

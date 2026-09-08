@@ -87,7 +87,9 @@ export default function AutoCheckinDataWorkspace({
       ? AUTO_CHECKIN_DATA_VIEW.Results
       : AUTO_CHECKIN_DATA_VIEW.Readiness,
   )
-  const { failed: failedCount } = countAutoCheckinResults(results)
+  const { failed: failedCount, uncertain: uncertainCount } =
+    countAutoCheckinResults(results)
+  const attentionCount = failedCount + uncertainCount
   const setupRequiredCount = snapshots.filter(
     (snapshot) =>
       getAutoCheckinSnapshotReadinessCategory(snapshot) ===
@@ -129,9 +131,9 @@ export default function AutoCheckinDataWorkspace({
               {t("workspace.resultsTab")}
             </span>
             <WorkspaceTabCount
-              attentionCount={failedCount}
+              attentionCount={attentionCount}
               totalCount={results.length}
-              attentionLabel={`${t("execution.status.failed")}: ${failedCount}`}
+              attentionLabel={`${t("execution.filters.needsAttention")}: ${attentionCount}`}
               totalLabel={t("execution.filters.countTotal", {
                 total: results.length,
               })}

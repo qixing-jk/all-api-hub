@@ -73,6 +73,10 @@ const translationCalls: Array<{
 vi.mock("~/utils/i18n/core", () => ({
   t: vi.fn((key: string, options?: Record<string, unknown>) => {
     translationCalls.push({ key, options })
+    if (key.endsWith(".countsWithAutoCheckinCategories")) {
+      return `total ${options?.total} success ${options?.success} already checked ${options?.alreadyChecked} failed ${options?.failed} pending ${options?.uncertain} skipped ${options?.skipped}`
+    }
+
     if (key.endsWith(".counts")) {
       return `total ${options?.total} success ${options?.success} failed ${options?.failed} skipped ${options?.skipped}`
     }
@@ -264,9 +268,11 @@ describe("taskNotificationService", () => {
         task: TASK_NOTIFICATION_TASKS.AutoCheckin,
         status: TASK_NOTIFICATION_STATUSES.PartialSuccess,
         counts: {
-          total: 3,
-          success: 2,
+          total: 4,
+          success: 1,
+          alreadyChecked: 1,
           failed: 1,
+          uncertain: 1,
         },
       }),
     ).resolves.toBe(true)
@@ -280,7 +286,7 @@ describe("taskNotificationService", () => {
         title:
           "settings:taskNotifications.notification.title.partialSuccess:settings:taskNotifications.tasks.autoCheckin",
         message:
-          "settings:taskNotifications.notification.body.partialSuccess:settings:taskNotifications.tasks.autoCheckin total 3 success 2 failed 1 skipped 0",
+          "settings:taskNotifications.notification.body.partialSuccess:settings:taskNotifications.tasks.autoCheckin total 4 success 1 already checked 1 failed 1 pending 1 skipped 0",
       }),
     )
   })

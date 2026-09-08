@@ -274,13 +274,20 @@ describe("AutoCheckin FilterBar", () => {
     expect(onKeywordChange).toHaveBeenCalledWith("")
   })
 
-  it("filters failed and skipped outcomes together", () => {
+  it("keeps failed, pending-confirmation, and skipped outcomes in needs attention", () => {
     const onStatusChange = vi.fn()
 
     rtlRender(
       <I18nextProvider i18n={testI18n}>
         <FilterBar
           accountResults={[
+            {
+              accountId: "uncertain",
+              accountName: "Uncertain",
+              status: CHECKIN_RESULT_STATUS.UNCERTAIN,
+              reconciliation: "unknown",
+              timestamp: 4,
+            },
             {
               accountId: "failed",
               accountName: "Failed",
@@ -310,16 +317,22 @@ describe("AutoCheckin FilterBar", () => {
 
     fireEvent.click(
       screen.getByRole("button", {
-        name: /autoCheckin:execution\.filters\.failedOrSkipped/i,
+        name: /autoCheckin:execution\.filters\.needsAttention \(3\)/i,
       }),
     )
 
-    expect(onStatusChange).toHaveBeenCalledWith(FILTER_STATUS.FAILED_OR_SKIPPED)
+    expect(
+      screen.getByRole("button", {
+        name: /autoCheckin:execution\.filters\.uncertain \(1\)/i,
+      }),
+    ).toBeVisible()
+
+    expect(onStatusChange).toHaveBeenCalledWith(FILTER_STATUS.NEEDS_ATTENTION)
     expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith(
       expect.objectContaining({
         insights: expect.objectContaining({
           filterCount: 1,
-          resultCount: 2,
+          resultCount: 3,
         }),
       }),
     )

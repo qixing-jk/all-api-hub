@@ -723,6 +723,7 @@
         "success": "{{task}} se completó correctamente."
       },
       "counts": "Total: {{total}}, correctas: {{success}}, fallidas: {{failed}}, omitidas: {{skipped}}.",
+      "countsWithAutoCheckinCategories": "Total: {{total}}, registradas en esta ejecución: {{success}}, ya registradas: {{alreadyChecked}}, fallidas: {{failed}}, confirmación pendiente: {{uncertain}}, no ejecutadas: {{skipped}}.",
       "title": {
         "failure": "{{task}} falló",
         "partialSuccess": "{{task}} tuvo éxito parcial",

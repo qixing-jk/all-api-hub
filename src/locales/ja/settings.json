@@ -721,6 +721,7 @@
         "success": "{{task}} が正常に完了しました。"
       },
       "counts": "合計 {{total}}、成功 {{success}}、失敗 {{failed}}、スキップ {{skipped}}。",
+      "countsWithAutoCheckinCategories": "合計 {{total}}、今回チェックイン成功 {{success}}、チェックイン済み {{alreadyChecked}}、失敗 {{failed}}、確認待ち {{uncertain}}、未実行 {{skipped}}。",
       "title": {
         "failure": "{{task}} が失敗しました",
         "partialSuccess": "{{task}} が一部成功しました",

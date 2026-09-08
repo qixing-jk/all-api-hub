@@ -307,6 +307,8 @@ export interface AutoCheckinRunSummary {
   totalEligible: number
   executed: number
   successCount: number
+  /** Successful outcomes that were already checked in before this run. */
+  alreadyCheckedCount?: number
   failedCount: number
   skippedCount: number
   uncertainCount?: number

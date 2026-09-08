@@ -34,16 +34,18 @@
     },
     "filters": {
       "all": "全部",
+      "alreadyChecked": "已签到",
       "clearAll": "清除筛选",
       "countFiltered": "显示 {{filtered}} / {{total}} 条",
       "countTotal": "共 {{total}} 条",
       "failed": "失败",
-      "failedOrSkipped": "失败或未执行",
+      "needsAttention": "需要处理",
       "searchLabel": "搜索执行结果",
       "searchPlaceholder": "搜索账号名称、ID 或结果信息...",
-      "skipped": "已跳过",
+      "skipped": "未执行",
       "statusLabel": "按执行状态筛选",
-      "success": "成功"
+      "success": "本次签到成功",
+      "uncertain": "待确认"
     },
     "hints": {
       "invalidAccessToken": "解决方案：Access Token 可能已失效。请重新登录该站点，然后在「账号管理 → 编辑账号」中重新自动识别/刷新 Access Token；如自动识别后仍出现此问题，请手动获取并修改 Access Token。",
@@ -67,8 +69,8 @@
     "status": {
       "alreadyChecked": "已签到",
       "failed": "失败",
-      "skipped": "已跳过",
-      "success": "成功",
+      "skipped": "未执行",
+      "success": "本次签到成功",
       "uncertain": "待确认"
     },
     "table": {
@@ -247,12 +249,14 @@
     },
     "retryDisabled": "重试未启用",
     "summary": {
+      "alreadyChecked": "已签到",
       "eligible": "可参与",
       "executed": "已执行",
       "failed": "失败",
-      "skipped": "跳过",
-      "success": "成功",
-      "title": "执行统计"
+      "skipped": "未执行",
+      "success": "本次签到成功",
+      "title": "执行统计",
+      "uncertain": "待确认"
     }
   },
   "uiOpenPretrigger": {

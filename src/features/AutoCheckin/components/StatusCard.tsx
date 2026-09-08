@@ -77,20 +77,31 @@ export default function StatusCard({
     ? Object.values(status.perAccount)
     : []
   const derivedSuccess = accountResults.filter(
-    (r) =>
-      r.status === CHECKIN_RESULT_STATUS.SUCCESS ||
-      r.status === CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
+    (r) => r.status === CHECKIN_RESULT_STATUS.SUCCESS,
+  ).length
+  const derivedAlreadyChecked = accountResults.filter(
+    (r) => r.status === CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
   ).length
   const derivedFailed = accountResults.filter(
     (r) => r.status === CHECKIN_RESULT_STATUS.FAILED,
   ).length
-  const derivedSkipped = accountResults.length - derivedSuccess - derivedFailed
+  const derivedUncertain = accountResults.filter(
+    (r) => r.status === CHECKIN_RESULT_STATUS.UNCERTAIN,
+  ).length
+  const derivedSkipped =
+    accountResults.length -
+    derivedSuccess -
+    derivedAlreadyChecked -
+    derivedFailed -
+    derivedUncertain
 
   const summary = status.summary ?? {
     totalEligible: accountResults.length,
     executed: accountResults.length,
     successCount: derivedSuccess,
+    alreadyCheckedCount: derivedAlreadyChecked,
     failedCount: derivedFailed,
+    uncertainCount: derivedUncertain,
     skippedCount: Math.max(derivedSkipped, 0),
     needsRetry: false,
   }
@@ -106,11 +117,26 @@ export default function StatusCard({
     },
     {
       label: t("status.summary.success"),
-      value: summary.successCount ?? derivedSuccess,
+      value:
+        summary.successCount == null
+          ? derivedSuccess
+          : Math.max(
+              summary.successCount -
+                (summary.alreadyCheckedCount ?? derivedAlreadyChecked),
+              0,
+            ),
+    },
+    {
+      label: t("status.summary.alreadyChecked"),
+      value: summary.alreadyCheckedCount ?? derivedAlreadyChecked,
     },
     {
       label: t("status.summary.failed"),
       value: summary.failedCount ?? derivedFailed,
+    },
+    {
+      label: t("status.summary.uncertain"),
+      value: summary.uncertainCount ?? derivedUncertain,
     },
     {
       label: t("status.summary.skipped"),
@@ -176,7 +202,7 @@ export default function StatusCard({
           <div className="text-sm font-medium text-gray-500 dark:text-gray-400">
             {t("status.summary.title")}
           </div>
-          <div className="mt-2 grid grid-cols-2 gap-x-6 gap-y-3 text-sm text-gray-600 sm:grid-cols-3 lg:grid-cols-5 dark:text-gray-300">
+          <div className="mt-2 grid grid-cols-2 gap-x-6 gap-y-3 text-sm text-gray-600 sm:grid-cols-3 lg:grid-cols-7 dark:text-gray-300">
             {summaryItems.map((item) => (
               <div key={item.label} className="flex flex-col">
                 <span className="text-xs text-gray-500 dark:text-gray-400">

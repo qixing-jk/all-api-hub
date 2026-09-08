@@ -34,16 +34,18 @@
     },
     "filters": {
       "all": "すべて",
+      "alreadyChecked": "チェックイン済み",
       "clearAll": "フィルターを解除",
       "countFiltered": "{{total}} 件中 {{filtered}} 件を表示",
       "countTotal": "全 {{total}} 件",
       "failed": "失敗",
-      "failedOrSkipped": "失敗または未実行",
+      "needsAttention": "確認が必要",
       "searchLabel": "実行結果を検索",
       "searchPlaceholder": "アカウント名、ID、メッセージで検索...",
-      "skipped": "スキップ",
+      "skipped": "未実行",
       "statusLabel": "実行状態で絞り込む",
-      "success": "成功"
+      "success": "今回チェックイン成功",
+      "uncertain": "確認待ち"
     },
     "hints": {
       "invalidAccessToken": "対処方法: Access Token の有効期限が切れている可能性があります。サイトに再ログインしてから、「アカウント管理 → アカウント編集」で Access Token を自動再認識 / 更新してください。自動認識後も問題が続く場合は、Access Token を手動で取得して更新してください。",
@@ -67,7 +69,7 @@
     "status": {
       "alreadyChecked": "チェックイン済み",
       "failed": "失敗",
-      "skipped": "スキップ",
+      "skipped": "未実行",
       "success": "成功",
       "uncertain": "確認待ち"
     },
@@ -247,12 +249,14 @@
     },
     "retryDisabled": "再試行は無効です",
     "summary": {
+      "alreadyChecked": "チェックイン済み",
       "eligible": "対象",
       "executed": "実行",
       "failed": "失敗",
-      "skipped": "スキップ",
-      "success": "成功",
-      "title": "実行概要"
+      "skipped": "未実行",
+      "success": "今回チェックイン成功",
+      "title": "実行概要",
+      "uncertain": "確認待ち"
     }
   },
   "uiOpenPretrigger": {
