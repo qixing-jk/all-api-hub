@@ -631,28 +631,53 @@ describe("current browser account identity verification", () => {
     expect(await pending).toEqual({ success: false })
   })
 
-  it("uses the current V-API identity hint instead of an obsolete legacy user object", async () => {
-    localStorage.setItem("user", JSON.stringify({ id: 1 }))
-    localStorage.setItem(
-      "user-storage",
-      JSON.stringify({ state: { user: { id: 2 } } }),
-    )
-    const fetchMock = vi.fn(async (_url: string, options: RequestInit) => {
-      const currentHint = new Headers(options.headers).get("X-Api-User") === "2"
-      return new Response(
-        JSON.stringify(
-          currentHint ? { success: true, data: { id: 2 } } : { success: false },
-        ),
-        { status: currentHint ? 200 : 403 },
-      )
-    })
-    vi.stubGlobal("fetch", fetchMock)
+  it.each([
+    {
+      siteType: SITE_TYPES.V_API,
+      storageKey: "user-storage",
+      userHeader: "X-Api-User",
+      stateFor: (id: number) => ({ state: { user: { id } } }),
+    },
+    {
+      siteType: SITE_TYPES.APIYI,
+      storageKey: "USER_STATE",
+      userHeader: "New-Api-User",
+      stateFor: (id: number) => ({ user: { id } }),
+    },
+  ])(
+    "verifies the current $siteType dashboard hint and rechecks it after an account switch",
+    async ({ siteType, storageKey, userHeader, stateFor }) => {
+      localStorage.setItem("user", JSON.stringify({ id: 1 }))
+      localStorage.setItem(storageKey, JSON.stringify(stateFor(2)))
+      let serverUserId = 2
+      const fetchMock = vi.fn(async (_url: string, options: RequestInit) => {
+        const currentHint =
+          new Headers(options.headers).get(userHeader) === String(serverUserId)
+        return new Response(
+          JSON.stringify(
+            currentHint
+              ? { success: true, data: { id: serverUserId } }
+              : { success: false },
+          ),
+          { status: currentHint ? 200 : 403 },
+        )
+      })
+      vi.stubGlobal("fetch", fetchMock)
 
-    expect(await verifyIdentity(SITE_TYPES.V_API)).toEqual({
-      success: true,
-      data: { userId: "2", identityVerified: true },
-    })
-  })
+      expect(await verifyIdentity(siteType)).toEqual({
+        success: true,
+        data: { userId: "2", identityVerified: true },
+      })
+
+      serverUserId = 3
+      localStorage.setItem(storageKey, JSON.stringify(stateFor(3)))
+      expect(await verifyIdentity(siteType)).toEqual({
+        success: true,
+        data: { userId: "3", identityVerified: true },
+      })
+      expect(fetchMock).toHaveBeenCalledTimes(2)
+    },
+  )
 
   it("honors Retry-After despite changed Cookie evidence and saved account candidates", async () => {
     let now = Date.now()

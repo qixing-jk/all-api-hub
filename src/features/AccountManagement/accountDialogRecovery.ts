@@ -1,6 +1,6 @@
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
-import { SITE_TYPES } from "~/constants/siteType"
+import { isAccountSiteType } from "~/constants/siteType"
 import {
   createEmptyAccountDialogDraft,
   type AccountDialogDraft,
@@ -69,7 +69,7 @@ function readEnvelope(value: unknown): RecoveryEnvelope | null {
     typeof state.url !== "string" ||
     !isHttpUrl(state.url) ||
     !isRecord(state.draft) ||
-    state.draft.siteType !== SITE_TYPES.NEW_API ||
+    !isAccountSiteType(state.draft.siteType) ||
     state.draft.authType !== AuthTypeEnum.AccessToken ||
     typeof state.checkInSelectionChanged !== "boolean" ||
     (state.accountId !== undefined &&
@@ -79,7 +79,7 @@ function readEnvelope(value: unknown): RecoveryEnvelope | null {
   )
     return null
 
-  const defaults = createEmptyAccountDialogDraft(SITE_TYPES.NEW_API)
+  const defaults = createEmptyAccountDialogDraft(state.draft.siteType)
   const rawDraft = state.draft
   for (const [key, defaultValue] of Object.entries(defaults)) {
     const field = rawDraft[key]

@@ -681,7 +681,7 @@ export function useAccountDialog({
     (value: string) => {
       resetCheckInRedetection()
       const nextSiteType = isAccountSiteType(value) ? value : SITE_TYPES.UNKNOWN
-      if (nextSiteType !== SITE_TYPES.NEW_API) {
+      if (nextSiteType !== selectedSiteTypeRef.current) {
         setDetectionError((current) =>
           current?.type ===
           AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED

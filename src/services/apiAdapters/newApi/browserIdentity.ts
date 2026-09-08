@@ -5,6 +5,7 @@ import {
   ACCOUNT_SITE_ADAPTER_FAMILIES,
   getAccountSiteDefinition,
 } from "~/services/accountSiteDefinitions"
+import { readApiyiStoredUser } from "~/services/accountSiteOnboarding/contentSession/apiyi"
 import { readCompatibleStoredUser } from "~/services/accountSiteOnboarding/contentSession/compatibleUser"
 import { readVApiStoredUser } from "~/services/accountSiteOnboarding/contentSession/vApi"
 import { buildCompatUserIdHeaders } from "~/services/apiTransport/compatHeaders"
@@ -18,8 +19,11 @@ export const newApiBrowserIdentity: AccountBrowserIdentityCapability = {
     ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
   observe({ origin, siteType, candidateUserIds }) {
     const user =
-      (siteType === SITE_TYPES.V_API ? readVApiStoredUser() : null) ??
-      readCompatibleStoredUser()
+      (siteType === SITE_TYPES.APIYI
+        ? readApiyiStoredUser()
+        : siteType === SITE_TYPES.V_API
+          ? readVApiStoredUser()
+          : null) ?? readCompatibleStoredUser()
     // Legacy New API checks the user header against its Cookie session:
     // https://github.com/QuantumNous/new-api/blob/v0.9.0/middleware/auth.go#L72-L99
     // A unique saved candidate can supply a missing hint, but passive detection

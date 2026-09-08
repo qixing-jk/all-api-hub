@@ -50,6 +50,8 @@ export const DEFAULT_SITE_ROUTE_CONFIG = {
   usagePath: DEFAULT_USAGE_PATH,
   checkInPath: DEFAULT_CHECKIN_PATH,
   adminCredentialsPath: DEFAULT_ADMIN_CREDENTIALS_PATH,
+  // https://github.com/QuantumNous/new-api/blob/387a40914853310d69adc2f52474134ced5f4811/web/src/features/security/index.tsx
+  accessTokenPath: "/security#security-access",
   redeemPath: DEFAULT_REDEEM_PATH,
   siteAnnouncementsPath: DEFAULT_SITE_ANNOUNCEMENTS_PATH,
 } as const satisfies Required<AccountSiteRouteConfig>

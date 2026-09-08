@@ -1,5 +1,10 @@
 {
   "accessTokenVerification": {
+    "apiyi": {
+      "generateStep": "Wenn du bereits ein gültiges, vollständiges Access Token hast, kannst du es verwenden. Öffne andernfalls „System token“ in deinem APIyi-Profil und gib auf der Website dein Passwort ein, um ein Token zu erstellen.",
+      "openProfile": "APIyi-Profil öffnen",
+      "openProfileFailed": "Die Seite konnte nicht geöffnet werden. Öffne „System token“ in deinem APIyi-Profil manuell, schließe die Verifizierung ab und kehre hierher zurück, um das Access Token einzufügen."
+    },
     "continueFailed": "Weder Seitenleiste noch vollständige Seite konnten geöffnet werden. Dein Formular bleibt erhalten. Bitte versuche es erneut.",
     "continueInFullPage": "Auf vollständiger Seite fortfahren",
     "continueInSidePanel": "In der Seitenleiste fortfahren",

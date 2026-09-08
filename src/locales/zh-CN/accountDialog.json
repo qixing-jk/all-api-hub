@@ -1,5 +1,10 @@
 {
   "accessTokenVerification": {
+    "apiyi": {
+      "generateStep": "如已有有效且完整的 Access Token，可直接使用。否则打开 APIyi「个人资料」中的「System token」，在官网输入密码并生成令牌。",
+      "openProfile": "打开 APIyi 个人资料",
+      "openProfileFailed": "无法打开页面。请手动打开 APIyi「个人资料」中的「System token」，完成验证后回到这里粘贴 Access Token。"
+    },
     "continueFailed": "暂时无法打开侧边栏或完整页面，当前表单已保留，请重试。",
     "continueInFullPage": "在完整页面继续",
     "continueInSidePanel": "转到侧边栏继续",

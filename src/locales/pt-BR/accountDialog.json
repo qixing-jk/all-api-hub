@@ -1,5 +1,10 @@
 {
   "accessTokenVerification": {
+    "apiyi": {
+      "generateStep": "Se já tiver um Access Token válido e completo, você pode usá-lo. Caso contrário, abra “System token” no seu perfil da APIyi e digite sua senha no site para gerar um.",
+      "openProfile": "Abrir perfil da APIyi",
+      "openProfileFailed": "Não foi possível abrir a página. Abra “System token” no seu perfil da APIyi manualmente, conclua a verificação e volte aqui para colar o Access Token."
+    },
     "continueFailed": "Não foi possível abrir o painel lateral nem a página completa. Seu formulário foi mantido. Tente novamente.",
     "continueInFullPage": "Continuar em uma página completa",
     "continueInSidePanel": "Continuar no painel lateral",

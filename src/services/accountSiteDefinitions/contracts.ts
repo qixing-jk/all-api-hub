@@ -7,6 +7,7 @@ export interface AccountSiteRouteConfig {
   usagePath?: string
   checkInPath?: string
   adminCredentialsPath?: string
+  accessTokenPath?: string
   redeemPath?: string
   siteAnnouncementsPath?: string
 }

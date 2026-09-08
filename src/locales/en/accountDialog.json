@@ -1,5 +1,10 @@
 {
   "accessTokenVerification": {
+    "apiyi": {
+      "generateStep": "Use an existing valid, complete Access Token if you have one. Otherwise, open System token in your APIyi profile and enter your password on the site to generate one.",
+      "openProfile": "Open APIyi profile",
+      "openProfileFailed": "Could not open the page. Open System token in your APIyi profile manually, complete verification, then return here to paste the Access Token."
+    },
     "continueFailed": "Could not open the side panel or full page. Your form has been kept. Please try again.",
     "continueInFullPage": "Continue in full page",
     "continueInSidePanel": "Continue in side panel",

@@ -14,6 +14,7 @@ import { sharedChatBrowserIdentity } from "~/services/apiAdapters/sharedchat/bro
 import { sub2ApiBrowserIdentity } from "~/services/apiAdapters/sub2api/browserIdentity"
 import { voApiV2BrowserIdentity } from "~/services/apiAdapters/voapiV2/browserIdentity"
 
+import { apiyiContentSessionExtractor } from "./contentSession/apiyi"
 import { compatibleUserContentSessionExtractor } from "./contentSession/compatibleUser"
 import { newApiAuthBundleContentSessionExtractor } from "./contentSession/newApiAuthBundle"
 import { sharedChatContentSessionExtractor } from "./contentSession/sharedchat"
@@ -41,6 +42,7 @@ const siteBrowserAdapters: readonly {
     identity: voApiV2BrowserIdentity,
   },
   { sessionExtractor: vApiContentSessionExtractor },
+  { sessionExtractor: apiyiContentSessionExtractor },
   { sessionExtractor: newApiAuthBundleContentSessionExtractor },
   { identity: aihubmixBrowserIdentity },
   { identity: openRouterBrowserIdentity },

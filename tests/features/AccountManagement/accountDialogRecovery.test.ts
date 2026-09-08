@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { SITE_TYPES } from "~/constants/siteType"
+import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import {
   discardAccountDialogRecovery,
   getPendingAccountDialogRecovery,
@@ -55,10 +55,10 @@ vi.mock("~/utils/browser/browserApi", () => ({
   onStorageChanged: vi.fn(() => () => {}),
 }))
 
-const recoveryState = () => ({
+const recoveryState = (siteType: AccountSiteType = SITE_TYPES.NEW_API) => ({
   url: "http://local.example.test/new-api",
   draft: {
-    ...createEmptyAccountDialogDraft(SITE_TYPES.NEW_API),
+    ...createEmptyAccountDialogDraft(siteType),
     siteName: "My New API",
     username: "retained-user",
     userId: "42",
@@ -107,26 +107,29 @@ describe("account dialog recovery handoff", () => {
     vi.unstubAllGlobals()
   })
 
-  it("preserves the complete draft across popup loss and opens the side panel in the click turn", async () => {
-    const original = recoveryState()
-    const prepared = await prepareAccountDialogRecovery(original)
+  it.each([SITE_TYPES.NEW_API, SITE_TYPES.APIYI])(
+    "preserves the complete %s draft across popup loss and opens the side panel in the click turn",
+    async (siteType) => {
+      const original = recoveryState(siteType)
+      const prepared = await prepareAccountDialogRecovery(original)
 
-    const opening = openAccountDialogRecovery(prepared)
-    // Native open must run before yielding user activation to async storage.
-    expect(openSidePanel).toHaveBeenCalledWith(activeTab)
-    await expect(opening).resolves.toBe("sidepanel")
-    expect(createTab).not.toHaveBeenCalled()
+      const opening = openAccountDialogRecovery(prepared)
+      // Native open must run before yielding user activation to async storage.
+      expect(openSidePanel).toHaveBeenCalledWith(activeTab)
+      await expect(opening).resolves.toBe("sidepanel")
+      expect(createTab).not.toHaveBeenCalled()
 
-    const accept = vi.fn(() => true)
-    await expect(
-      receiveAccountDialogRecovery(prepared.id, accept),
-    ).resolves.toBe(true)
-    expect(accept).toHaveBeenCalledWith(original)
-    await expect(
-      receiveAccountDialogRecovery(prepared.id, accept),
-    ).resolves.toBe(false)
-    expect(accept).toHaveBeenCalledTimes(1)
-  })
+      const accept = vi.fn(() => true)
+      await expect(
+        receiveAccountDialogRecovery(prepared.id, accept),
+      ).resolves.toBe(true)
+      expect(accept).toHaveBeenCalledWith(original)
+      await expect(
+        receiveAccountDialogRecovery(prepared.id, accept),
+      ).resolves.toBe(false)
+      expect(accept).toHaveBeenCalledTimes(1)
+    },
+  )
 
   it("falls back to an account page carrying only an opaque draft reference", async () => {
     const original = recoveryState()
@@ -396,6 +399,8 @@ describe("account dialog recovery handoff", () => {
     draft?: Record<string, unknown>
   }>([
     { name: "invalid site URL", state: { url: "javascript:alert(1)" } },
+    { name: "unregistered site type", draft: { siteType: "unregistered" } },
+    { name: "managed-only site type", draft: { siteType: SITE_TYPES.OCTOPUS } },
     { name: "empty account reference", state: { accountId: " " } },
     {
       name: "invalid discovery selection",
