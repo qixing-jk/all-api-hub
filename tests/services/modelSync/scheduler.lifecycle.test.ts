@@ -23,6 +23,7 @@ import type {
   ExecutionResult,
 } from "~/types/managedSiteModelSync"
 import { automaticExecution } from "~~/tests/services/protectionBypass/fixtures"
+import { createDeferred } from "~~/tests/test-utils/deferred"
 import { modelResourceRef } from "~~/tests/test-utils/managedModelResource"
 
 vi.mock("~/services/managedSites/legacyChannelConfigMigration", () => ({
@@ -158,14 +159,6 @@ vi.mock("~/services/managedSites/providers/octopus", () => ({
   prepareChannelFormData: vi.fn(),
   buildChannelPayload: vi.fn(),
 }))
-
-const createDeferred = <T>() => {
-  let resolve!: (value: T) => void
-  const promise = new Promise<T>((resolvePromise) => {
-    resolve = resolvePromise
-  })
-  return { promise, resolve }
-}
 
 describe("modelSyncScheduler lifecycle and edge flows", () => {
   beforeEach(() => {

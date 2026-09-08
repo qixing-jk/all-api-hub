@@ -34,6 +34,7 @@ import {
 import { ModelSyncMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import { formatFullTime } from "~/utils/core/formatters"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
+import { createDeferred } from "~~/tests/test-utils/deferred"
 import { testI18n } from "~~/tests/test-utils/i18n"
 import { modelResourceRef } from "~~/tests/test-utils/managedModelResource"
 
@@ -216,17 +217,6 @@ vi.mock("~/components/ui", async (importOriginal) => {
 
 function render(ui: ReactNode) {
   return rtlRender(<I18nextProvider i18n={testI18n}>{ui}</I18nextProvider>)
-}
-
-function createDeferred<T>() {
-  let resolve!: (value: T) => void
-  let reject!: (reason?: unknown) => void
-  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
-    resolve = resolvePromise
-    reject = rejectPromise
-  })
-
-  return { promise, reject, resolve }
 }
 
 function createExecution(

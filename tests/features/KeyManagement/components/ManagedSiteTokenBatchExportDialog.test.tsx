@@ -41,6 +41,7 @@ import {
   type ManagedSiteTokenBatchExportPreview,
   type ManagedSiteTokenBatchExportPreviewItem,
 } from "~/types/managedSiteTokenBatchExport"
+import { createDeferred } from "~~/tests/test-utils/deferred"
 import {
   buildApiToken,
   buildDisplaySiteData,
@@ -65,17 +66,6 @@ const trustedRepairIntent = {
   source: "repair-created",
   verification: "trusted-new",
 } as const
-
-const createDeferred = <T,>() => {
-  let resolve!: (value: T) => void
-  let reject!: (reason?: unknown) => void
-  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
-    resolve = resolvePromise
-    reject = rejectPromise
-  })
-
-  return { promise, reject, resolve }
-}
 
 const {
   mockAllowDisabledBatchActionClicks,
