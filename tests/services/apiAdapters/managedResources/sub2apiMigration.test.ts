@@ -8,6 +8,7 @@ import {
   prepareManagedSiteMigrationPreview,
 } from "~/services/managedSites/channelMigration"
 import { resolveManagedSiteMigrationCapability } from "~/services/managedSites/channelMigrationCapabilityRegistry"
+import { toMigrationWarningCodes } from "~/services/managedSites/channelMigrationWarnings"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import {
   MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES as blockers,
@@ -148,6 +149,22 @@ describe("Sub2API channel migration", () => {
     expect(JSON.stringify(preview)).not.toContain(config.adminToken)
   })
 
+  it("warns about target default groups even when the source has no groups", async () => {
+    const source = { ...migrationSource, groups: [] }
+    const target = resolveManagedSiteMigrationCapability(
+      SITE_TYPES.SUB2API,
+    )!.target!
+    const prepared = await target.prepare(source)
+
+    expect(prepared.projection.groups).toEqual([])
+    expect(
+      toMigrationWarningCodes({
+        lossSignals: source.lossSignals,
+        adjustments: prepared.adjustments,
+      }),
+    ).toContain(warnings.TARGET_FORCES_DEFAULT_GROUP)
+  })
+
   it("creates an imported API-key account with its model allowlist and paused status", async () => {
     const requests: { method: string; body: unknown }[] = []
     server.use(
@@ -222,6 +239,31 @@ describe("Sub2API channel migration", () => {
       { method: "PUT", body: { status: "inactive" } },
     ])
     expect(JSON.stringify(result)).not.toContain("source-key")
+  })
+
+  it("rejects admin redirects without forwarding credentials or retrying creation", async () => {
+    const endpoint = `${config.baseUrl}/api/v1/admin/accounts`
+    const redirectedEndpoint = "https://redirect.example.invalid/accounts"
+    const requests: { url: string; redirect: RequestRedirect }[] = []
+    server.use(
+      http.post(endpoint, ({ request }) => {
+        requests.push({ url: request.url, redirect: request.redirect })
+        return HttpResponse.redirect(redirectedEndpoint, 307)
+      }),
+      http.post(redirectedEndpoint, ({ request }) => {
+        requests.push({ url: request.url, redirect: request.redirect })
+        return HttpResponse.json({ code: 0, data: { ...account, id: 41 } })
+      }),
+    )
+    const target = resolveManagedSiteMigrationCapability(
+      SITE_TYPES.SUB2API,
+    )!.target!
+    const result = await target.create(createCommand())
+
+    expect({ result, requests }).toEqual({
+      result: { status: "uncertain" },
+      requests: [{ url: endpoint, redirect: "error" }],
+    })
   })
 
   it("shows native groups and warns about aliases and settings that cannot be transferred", async () => {

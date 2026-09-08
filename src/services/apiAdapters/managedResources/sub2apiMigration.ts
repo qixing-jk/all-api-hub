@@ -317,7 +317,7 @@ export const sub2ApiManagedSiteMigrationCapability: ManagedSiteMigrationCapabili
           adjustments: {
             remappedType: type.remappedType,
             normalizedBaseUrl: baseUrl !== source.baseUrl,
-            forcedDefaultGroup: source.groups.length > 0,
+            forcedDefaultGroup: true,
             ignoredPriority: priority !== source.priority,
             ignoredWeight: source.weight !== SUB2API_MIGRATION_WEIGHT,
             simplifiedStatus: source.status === "other",

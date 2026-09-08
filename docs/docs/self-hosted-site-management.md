@@ -35,7 +35,7 @@ All API Hub 深度适配了以下开源/自建 AI 分发系统：
 | 配置项 | 说明 |
 |------|------|
 | **Base URL** | 你的自建系统后台地址（通常是网页访问地址）。 |
-| **认证凭证** | **New API 系列**：需要管理员令牌 `Admin Token` 与用户 ID。<br>**Sub2API**：管理员 API Key（仅支持未开启 `step-up` 的部署）。<br>**AxonHub**：管理员邮箱与密码。<br>**Claude Code Hub**：管理员邮箱与密码。<br>**Octopus**：用户名与密码。 |
+| **认证凭证** | **New API 系列**：需要管理员令牌 `Admin Token` 与用户 ID。<br>**Sub2API**：管理员 API Key（读取密钥需要额外网页验证时，插件暂无法查看、导出密钥或将渠道迁出）。<br>**AxonHub**：管理员邮箱与密码。<br>**Claude Code Hub**：管理员邮箱与密码。<br>**Octopus**：用户名与密码。 |
 
 ### 3. 验证连接
 点击 **“验证配置”**。验证成功后，对应系统的管理入口将自动解锁。

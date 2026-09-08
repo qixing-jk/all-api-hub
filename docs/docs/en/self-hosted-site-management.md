@@ -35,7 +35,7 @@ Open the extension settings page, go to **"Basic Settings"** in the left menu, a
 | Option | Description |
 |------|------|
 | **Base URL** | Your self-hosted system's backend address (usually the web access address). |
-| **Authentication Credentials** | **New API Series**: Requires `Admin Token` and User ID.<br>**Sub2API**: Admin API Key (only for deployments without `step-up` enabled).<br>**AxonHub**: Admin email and password.<br>**Claude Code Hub**: Admin email and password.<br>**Octopus**: Username and password. |
+| **Authentication Credentials** | **New API Series**: Requires `Admin Token` and User ID.<br>**Sub2API**: Admin API Key (if key access requires additional web verification, the extension cannot view or export keys or migrate channels out).<br>**AxonHub**: Admin email and password.<br>**Claude Code Hub**: Admin email and password.<br>**Octopus**: Username and password. |
 
 ### 3. Verify Connection
 Click **"Verify Configuration"**. After successful verification, the management entrance for the corresponding system will be automatically unlocked.

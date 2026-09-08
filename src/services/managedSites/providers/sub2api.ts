@@ -167,6 +167,8 @@ async function sub2ApiAdminRequest<T>(
       const request: RequestInit = {
         method,
         headers,
+        // Keep admin and account keys on the configured API endpoint.
+        redirect: "error",
         ...(hasBody ? { body: JSON.stringify(options.body) } : {}),
         ...(signal ? { signal } : {}),
       }
