@@ -316,42 +316,60 @@ describe("Model redirect bulk clear flow", () => {
     ).not.toHaveBeenCalled()
   })
 
-  it("calls the service with complete selected resource references", async () => {
-    mockedModelRedirectService.clearChannelModelMappings.mockResolvedValue({
-      success: true,
-      totalSelected: 2,
-      clearedChannels: 1,
-      skippedChannels: 1,
-      failedChannels: 0,
-      results: [],
-      errors: [],
-    })
+  it.each([
+    { clearedChannels: 1, skippedChannels: 1, messageKey: "successWithSkips" },
+    { clearedChannels: 0, skippedChannels: 2, messageKey: "nothingToClear" },
+  ])(
+    "warns with $messageKey after clearing selected resource references",
+    async ({ clearedChannels, skippedChannels, messageKey }) => {
+      mockedModelRedirectService.clearChannelModelMappings.mockResolvedValue({
+        success: true,
+        totalSelected: 2,
+        clearedChannels,
+        skippedChannels,
+        failedChannels: 0,
+        results: [],
+        errors: [],
+      })
 
-    renderSubject()
+      renderSubject()
 
-    fireEvent.click(
-      await screen.findByRole("button", { name: t("bulkClear.action") }),
-    )
+      fireEvent.click(
+        await screen.findByRole("button", { name: t("bulkClear.action") }),
+      )
 
-    await screen.findByText("Channel One")
+      await screen.findByText("Channel One")
 
-    fireEvent.click(
-      screen.getByRole("button", { name: t("bulkClear.actions.continue") }),
-    )
-    await screen.findByText(t("bulkClear.confirm.title"))
+      fireEvent.click(
+        screen.getByRole("button", { name: t("bulkClear.actions.continue") }),
+      )
+      await screen.findByText(t("bulkClear.confirm.title"))
 
-    fireEvent.click(
-      screen.getByRole("button", { name: t("bulkClear.actions.confirm") }),
-    )
+      fireEvent.click(
+        screen.getByRole("button", { name: t("bulkClear.actions.confirm") }),
+      )
 
-    await waitFor(() => {
+      await waitFor(() => {
+        expect(
+          mockedModelRedirectService.clearChannelModelMappings,
+        ).toHaveBeenCalledWith([modelResourceRef(1), modelResourceRef(2)])
+      })
+
+      await waitFor(() => {
+        expect(toast.warning).toHaveBeenCalledWith(
+          testI18n.t(`modelRedirect:bulkClear.messages.${messageKey}`, {
+            cleared: clearedChannels,
+            skipped: skippedChannels,
+          }),
+        )
+      })
+      expect(toast.success).not.toHaveBeenCalled()
+      expect(toast.error).not.toHaveBeenCalled()
       expect(
-        mockedModelRedirectService.clearChannelModelMappings,
-      ).toHaveBeenCalledWith([modelResourceRef(1), modelResourceRef(2)])
-    })
-
-    expect(toast.warning).toHaveBeenCalled()
-  })
+        screen.queryByText(t("bulkClear.confirm.title")),
+      ).not.toBeInTheDocument()
+    },
+  )
 
   it("preserves hidden selections while toggling and bulk-selecting filtered resource references", async () => {
     const user = userEvent.setup()
