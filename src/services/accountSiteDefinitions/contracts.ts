@@ -83,6 +83,10 @@ export interface ManagedResourceProductPolicy {
   itemLabelKey: "managedSiteChannels:table.columns.name"
   tableFieldIds: readonly string[]
   detailFieldIds: readonly string[]
+  consoleRoutes: {
+    channels: AccountSitePagePath
+    tokens: AccountSitePagePath
+  }
   settingsTarget: {
     tabId: "managedSite"
     anchor?: string

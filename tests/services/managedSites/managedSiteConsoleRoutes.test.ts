@@ -9,6 +9,7 @@ import {
 describe("managed site console routes", () => {
   it.each([
     [SITE_TYPES.NEW_API, "/channels"],
+    [SITE_TYPES.SUB2API, "/admin/accounts"],
     [SITE_TYPES.VELOERA, "/admin/channels"],
     [SITE_TYPES.DONE_HUB, "/panel/channel"],
     [SITE_TYPES.OCTOPUS, "/model"],
@@ -25,6 +26,7 @@ describe("managed site console routes", () => {
 
   it.each([
     [SITE_TYPES.NEW_API, "/keys"],
+    [SITE_TYPES.SUB2API, "/keys"],
     [SITE_TYPES.VELOERA, "/app/tokens"],
     [SITE_TYPES.DONE_HUB, "/panel/token"],
     [SITE_TYPES.OCTOPUS, "/keys"],
@@ -37,6 +39,15 @@ describe("managed site console routes", () => {
         siteType,
       ),
     ).toBe(`https://gateway.example.invalid${path}`)
+  })
+
+  it("preserves HTTP LAN deployments and their configured base paths", () => {
+    expect(
+      buildManagedSiteChannelConsoleUrl(
+        "http://192.168.1.2:3000/root/",
+        SITE_TYPES.SUB2API,
+      ),
+    ).toBe("http://192.168.1.2:3000/root/admin/accounts")
   })
 
   it("normalizes a configured host that omits the URL scheme", () => {

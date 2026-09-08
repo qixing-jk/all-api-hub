@@ -425,6 +425,11 @@ describe("account site definition registry", () => {
     const mutableDetailFields = first.managedResource!
       .detailFieldIds as string[]
     first.managedResource!.settingsTarget.anchor = "changed"
+    first.managedResource!.consoleRoutes.channels = "/changed"
+    expect(
+      getAccountSiteDefinition(SITE_TYPES.AXON_HUB)?.managedResource
+        ?.consoleRoutes.channels,
+    ).toBe("/channels")
     mutableDetailFields[0] = "changed"
 
     expect(

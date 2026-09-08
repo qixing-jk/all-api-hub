@@ -64,6 +64,8 @@ export type AccountSiteUrlProfile = {
   inferFromHostname?: boolean
   loginOrigin?: string
   storageOrigin?: string
+  /** Canonical browser/API origin used by automatic account detection. */
+  autoDetectOrigin?: string
   managedChannelOrigin?: string
   duplicateOrigin?: string
 }

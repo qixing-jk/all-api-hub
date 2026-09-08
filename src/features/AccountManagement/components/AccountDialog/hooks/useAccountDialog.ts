@@ -442,8 +442,6 @@ export function useAccountDialog({
     useState(false)
   const [accountPostSaveWorkflowStep, setAccountPostSaveWorkflowStep] =
     useState<AccountPostSaveWorkflowStep>(ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle)
-  const [postSaveOneTimeToken, setPostSaveOneTimeToken] =
-    useState<ApiToken | null>(null)
   const [postSaveOneTimeSecret, setPostSaveOneTimeSecret] =
     useState<CreatedRuntimeSecret | null>(null)
   const [postSaveSub2ApiAllowedGroups, setPostSaveSub2ApiAllowedGroups] =
@@ -1153,7 +1151,6 @@ export function useAccountDialog({
     invalidatePostSaveSub2ApiDialogSession()
     aihubmixPostSaveKeyRunRef.current += 1
     setAccountPostSaveWorkflowStep(ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle)
-    setPostSaveOneTimeToken(null)
     setPostSaveOneTimeSecret(null)
     setPostSaveSub2ApiAllowedGroups(null)
     setPostSaveSub2ApiAccount(null)
@@ -2893,7 +2890,6 @@ export function useAccountDialog({
           accountName: "",
           isCreating: false,
         })
-        setPostSaveOneTimeToken(ensureResult.token)
         setPostSaveOneTimeSecret(
           createDisplayAccountTokenRuntimeSecret({
             account: displaySiteData,
@@ -2994,9 +2990,8 @@ export function useAccountDialog({
     [onSuccess, openChannelDialog, t],
   )
 
-  const handlePostSaveOneTimeTokenClose = useCallback(async () => {
+  const handlePostSaveOneTimeSecretClose = useCallback(async () => {
     const runId = postSaveAutoConfigRunRef.current
-    setPostSaveOneTimeToken(null)
     setPostSaveOneTimeSecret(null)
     const pending = pendingPostSaveChannelRef.current
     pendingPostSaveChannelRef.current = null
@@ -3309,7 +3304,6 @@ export function useAccountDialog({
               displaySiteData,
               token: ensureResult.token,
             }
-            setPostSaveOneTimeToken(ensureResult.token)
             setPostSaveOneTimeSecret(
               createDisplayAccountTokenRuntimeSecret({
                 account: displaySiteData,
@@ -3467,7 +3461,6 @@ export function useAccountDialog({
       isRequestingCookieAuthPermissions: cookieAuthPermissionState.pending,
       isImportingSub2apiSession,
       accountPostSaveWorkflowStep,
-      postSaveOneTimeToken,
       postSaveOneTimeSecret,
       postSaveSub2ApiAllowedGroups,
       postSaveSub2ApiAccount,
@@ -3534,7 +3527,7 @@ export function useAccountDialog({
       handleAihubmixPostSaveKeyPromptCancel,
       handleAihubmixPostSaveKeyPromptConfirm,
       shouldDeferAccountSaveSuccess,
-      handlePostSaveOneTimeTokenClose,
+      handlePostSaveOneTimeSecretClose,
       handlePostSaveSub2ApiTokenDialogClose,
       handlePostSaveSub2ApiTokenCreated,
       getPostSaveSub2ApiDialogHandlers,

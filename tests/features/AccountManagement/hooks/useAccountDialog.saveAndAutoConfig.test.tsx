@@ -1617,7 +1617,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       displaySiteData: savedDisplayData,
     })
     expect(result.current.state.aihubmixPostSaveKeyPrompt.isOpen).toBe(false)
-    expect(result.current.state.postSaveOneTimeToken).toBeNull()
+    expect(result.current.state.postSaveOneTimeSecret).toBeNull()
     expect(onSuccess).toHaveBeenCalledWith("saved-account-id")
   })
 
@@ -1862,7 +1862,10 @@ describe("useAccountDialog save and auto-config flows", () => {
       account: savedSiteAccount,
       displaySiteData: savedDisplayData,
     })
-    expect(result.current.state.postSaveOneTimeToken).toBe(oneTimeToken)
+    expect(result.current.state.postSaveOneTimeSecret).toMatchObject({
+      secret: oneTimeToken.key,
+      displayName: oneTimeToken.name,
+    })
     expect(result.current.state.aihubmixPostSaveKeyPrompt.isOpen).toBe(false)
     expect(mockOpenWithAccount).not.toHaveBeenCalled()
   })
@@ -1924,7 +1927,10 @@ describe("useAccountDialog save and auto-config flows", () => {
         siteType: SITE_TYPES.AIHUBMIX,
       }),
     })
-    expect(result.current.state.postSaveOneTimeToken).toBe(oneTimeToken)
+    expect(result.current.state.postSaveOneTimeSecret).toMatchObject({
+      secret: oneTimeToken.key,
+      displayName: oneTimeToken.name,
+    })
   })
 
   it("shows a fallback error instead of a fake AIHubMix key when creation cannot return a full secret", async () => {
@@ -1973,7 +1979,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       await result.current.handlers.handleAihubmixPostSaveKeyPromptConfirm()
     })
 
-    expect(result.current.state.postSaveOneTimeToken).toBeNull()
+    expect(result.current.state.postSaveOneTimeSecret).toBeNull()
     expect(toast.error).toHaveBeenCalledWith(
       "messages:aihubmix.oneTimeKeyUnavailableAfterCreate",
     )
@@ -2028,7 +2034,7 @@ describe("useAccountDialog save and auto-config flows", () => {
     })
 
     expect(mockEnsureAccountTokenForPostSaveWorkflow).not.toHaveBeenCalled()
-    expect(result.current.state.postSaveOneTimeToken).toBeNull()
+    expect(result.current.state.postSaveOneTimeSecret).toBeNull()
     expect(result.current.state.aihubmixPostSaveKeyPrompt.isOpen).toBe(false)
     expect(toast.success).toHaveBeenCalledWith("Saved successfully")
     expect(toast).toHaveBeenCalledWith(
@@ -2159,7 +2165,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       })
     })
 
-    expect(result.current.state.postSaveOneTimeToken).toBeNull()
+    expect(result.current.state.postSaveOneTimeSecret).toBeNull()
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
@@ -2209,7 +2215,7 @@ describe("useAccountDialog save and auto-config flows", () => {
     })
 
     expect(result.current.state.aihubmixPostSaveKeyPrompt.isOpen).toBe(false)
-    expect(result.current.state.postSaveOneTimeToken).toBeNull()
+    expect(result.current.state.postSaveOneTimeSecret).toBeNull()
     expect(toast.error).toHaveBeenCalledWith(
       "messages:aihubmix.oneTimeKeyUnavailableAfterCreate",
     )
@@ -2480,17 +2486,20 @@ describe("useAccountDialog save and auto-config flows", () => {
       await result.current.handlers.handleAutoConfig()
     })
 
-    expect(result.current.state.postSaveOneTimeToken).toBe(oneTimeToken)
+    expect(result.current.state.postSaveOneTimeSecret).toMatchObject({
+      secret: oneTimeToken.key,
+      displayName: oneTimeToken.name,
+    })
     expect(result.current.state.accountPostSaveWorkflowStep).toBe(
       ACCOUNT_POST_SAVE_WORKFLOW_STEPS.WaitingForOneTimeKeyAcknowledgement,
     )
     expect(mockOpenWithAccount).not.toHaveBeenCalled()
 
     await act(async () => {
-      await result.current.handlers.handlePostSaveOneTimeTokenClose()
+      await result.current.handlers.handlePostSaveOneTimeSecretClose()
     })
 
-    expect(result.current.state.postSaveOneTimeToken).toBeNull()
+    expect(result.current.state.postSaveOneTimeSecret).toBeNull()
     expect(mockOpenWithAccount).toHaveBeenCalledWith(
       savedDisplayData,
       expect.objectContaining({
@@ -2569,7 +2578,10 @@ describe("useAccountDialog save and auto-config flows", () => {
       await result.current.handlers.handleAutoConfig()
     })
 
-    expect(result.current.state.postSaveOneTimeToken).toBe(oneTimeToken)
+    expect(result.current.state.postSaveOneTimeSecret).toMatchObject({
+      secret: oneTimeToken.key,
+      displayName: oneTimeToken.name,
+    })
     expect(result.current.state.accountPostSaveWorkflowStep).toBe(
       ACCOUNT_POST_SAVE_WORKFLOW_STEPS.WaitingForOneTimeKeyAcknowledgement,
     )
@@ -2578,7 +2590,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       result.current.handlers.handleClose()
     })
 
-    expect(result.current.state.postSaveOneTimeToken).toBeNull()
+    expect(result.current.state.postSaveOneTimeSecret).toBeNull()
     expect(result.current.state.accountPostSaveWorkflowStep).toBe(
       ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle,
     )
@@ -2684,7 +2696,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       expect(result.current.state.accountPostSaveWorkflowStep).toBe(
         ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle,
       )
-      expect(result.current.state.postSaveOneTimeToken).toBeNull()
+      expect(result.current.state.postSaveOneTimeSecret).toBeNull()
     })
 
     await act(async () => {
@@ -2701,7 +2713,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       expect(result.current.state.accountPostSaveWorkflowStep).toBe(
         ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle,
       )
-      expect(result.current.state.postSaveOneTimeToken).toBeNull()
+      expect(result.current.state.postSaveOneTimeSecret).toBeNull()
     })
   })
 
@@ -2775,12 +2787,12 @@ describe("useAccountDialog save and auto-config flows", () => {
 
     await expect(
       act(async () => {
-        await result.current.handlers.handlePostSaveOneTimeTokenClose()
+        await result.current.handlers.handlePostSaveOneTimeSecretClose()
       }),
     ).resolves.toBeUndefined()
 
     await waitFor(() => {
-      expect(result.current.state.postSaveOneTimeToken).toBeNull()
+      expect(result.current.state.postSaveOneTimeSecret).toBeNull()
       expect(result.current.state.accountPostSaveWorkflowStep).toBe(
         ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Failed,
       )

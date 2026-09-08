@@ -96,6 +96,11 @@ const ACCOUNT_AND_MANAGED_SCOPES = [
   ACCOUNT_SITE_DEFINITION_SCOPES.Managed,
 ] as const
 
+// Console routes below preserve the verified provider navigation contracts:
+// New API/Veloera/DoneHub upstream route definitions;
+// Wheel: github.com/kunish/wheel/blob/HEAD/apps/web/src/routes.tsx
+// AxonHub: github.com/looplj/axonhub/blob/HEAD/frontend/src/routeTree.gen.ts
+// Claude Code Hub: github.com/ding113/claude-code-hub/tree/HEAD/src/app
 const LEGACY_MANAGED_CHANNEL_POLICY = {
   labelKey: "settings:managedSite.newApi",
   messagesKey: "newapi",
@@ -104,7 +109,7 @@ const LEGACY_MANAGED_CHANNEL_POLICY = {
   tableFieldIds: [],
   detailFieldIds: [],
   settingsTarget: { tabId: "managedSite" },
-} as const satisfies ManagedResourceProductPolicy
+} as const satisfies Omit<ManagedResourceProductPolicy, "consoleRoutes">
 
 export const ACCOUNT_SITE_TYPE_ORDER = [
   SITE_TYPES.ONE_API,
@@ -171,6 +176,7 @@ const ACCOUNT_SITE_DEFINITIONS = [
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
     managedResource: {
       ...LEGACY_MANAGED_CHANNEL_POLICY,
+      consoleRoutes: { channels: "/channels", tokens: "/keys" },
       tableFieldIds: NEW_API_MANAGED_RESOURCE_TABLE_FIELD_IDS,
       detailFieldIds: NEW_API_MANAGED_RESOURCE_DETAIL_FIELD_IDS,
     },
@@ -270,6 +276,7 @@ const ACCOUNT_SITE_DEFINITIONS = [
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Sub2Api,
     managedResource: {
       ...LEGACY_MANAGED_CHANNEL_POLICY,
+      consoleRoutes: { channels: "/admin/accounts", tokens: "/keys" },
       labelKey: "settings:managedSite.sub2api",
       messagesKey: "sub2api",
       tableFieldIds: SUB2API_MANAGED_RESOURCE_TABLE_FIELD_IDS,
@@ -388,6 +395,7 @@ const ACCOUNT_SITE_DEFINITIONS = [
         loginOrigin: AIHUBMIX_WEB_ORIGIN,
         storageOrigin: AIHUBMIX_WEB_ORIGIN,
         duplicateOrigin: AIHUBMIX_WEB_ORIGIN,
+        autoDetectOrigin: AIHUBMIX_API_ORIGIN,
         managedChannelOrigin: AIHUBMIX_API_ORIGIN,
       },
     },
@@ -536,6 +544,7 @@ const MANAGED_ONLY_SITE_DEFINITIONS = [
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Unsupported,
     managedResource: {
       ...LEGACY_MANAGED_CHANNEL_POLICY,
+      consoleRoutes: { channels: "/model", tokens: "/keys" },
       labelKey: "settings:managedSite.octopus",
       messagesKey: "octopus",
       tableFieldIds: OCTOPUS_MANAGED_RESOURCE_TABLE_FIELD_IDS,
@@ -548,6 +557,7 @@ const MANAGED_ONLY_SITE_DEFINITIONS = [
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Unsupported,
     managedResource: {
       ...LEGACY_MANAGED_CHANNEL_POLICY,
+      consoleRoutes: { channels: "/channels", tokens: "/api-keys" },
       labelKey: "settings:managedSite.axonHub",
       messagesKey: "axonhub",
       tableFieldIds: AXON_HUB_TABLE_FIELD_IDS,
@@ -564,6 +574,10 @@ const MANAGED_ONLY_SITE_DEFINITIONS = [
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Unsupported,
     managedResource: {
       ...LEGACY_MANAGED_CHANNEL_POLICY,
+      consoleRoutes: {
+        channels: "/settings/providers",
+        tokens: "/dashboard/users",
+      },
       labelKey: "settings:managedSite.claudeCodeHub",
       messagesKey: "claudecodehub",
       tableFieldIds: CLAUDE_CODE_HUB_MANAGED_RESOURCE_TABLE_FIELD_IDS,
@@ -580,6 +594,7 @@ const ACCOUNT_SITE_DEFINITION_OVERRIDES = [
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
     managedResource: {
       ...LEGACY_MANAGED_CHANNEL_POLICY,
+      consoleRoutes: { channels: "/admin/channels", tokens: "/app/tokens" },
       labelKey: "settings:managedSite.veloera",
       messagesKey: "veloera",
       tableFieldIds: VELOERA_MANAGED_RESOURCE_TABLE_FIELD_IDS,
@@ -608,6 +623,7 @@ const ACCOUNT_SITE_DEFINITION_OVERRIDES = [
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
     managedResource: {
       ...LEGACY_MANAGED_CHANNEL_POLICY,
+      consoleRoutes: { channels: "/panel/channel", tokens: "/panel/token" },
       labelKey: "settings:managedSite.doneHub",
       messagesKey: "donehub",
       tableFieldIds: DONE_HUB_MANAGED_RESOURCE_TABLE_FIELD_IDS,

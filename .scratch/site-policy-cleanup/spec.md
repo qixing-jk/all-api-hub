@@ -2,7 +2,7 @@
 
 先清理职责与重复策略，暂不引入 lint、白名单或引用额度。此文件是审计记录，不参与运行时或检查。
 
-最新状态：已整合 origin/main 6953346f6 的 scoped resource identity 重构。第二、三轮的本地指纹/导航接口已被上游统一配置指纹与 ManagedResourceRef 契约替代；下文保留实施历史，基线替代关系以第五轮记录为准，后续清理见第六至十一轮。原扫描候选已逐项清理或确认保留用途；暂不引入 lint。
+最新状态：已整合 origin/main 6953346f6 的 scoped resource identity 重构。第二、三轮的本地指纹/导航接口已被上游统一配置指纹与 ManagedResourceRef 契约替代；下文保留实施历史，基线替代关系以第五轮记录为准，后续清理见第六至十二轮。第十二轮扩大为全仓库生产代码复扫，并补齐原清单之外的 URL 策略和一次性密钥双状态遗漏；暂不引入 lint。
 
 ## 本轮实现
 
@@ -220,3 +220,37 @@
 - KeyManagement 的 OPENROUTER_KEY_FIELD_IDS.Workspace 是提供方字段解码；现有工作区与原生密钥文案属于展示用途，保留。
 - 验证：账户检测、onboarding、浏览器会话和专属 React hook 共 16 个文件，首次 266 项通过、1 项新增测试枚举名称错误；修正后该文件 22 项全部通过。KeyManagement 页面、原生控制器和修正后的检测测试共 5 个文件 144 项通过。compile、knip 通过。未运行浏览器 E2E。
 - 最终复扫：原扫描候选没有未分类的迁移项；共享只读检测与 KeyManagement 主页面不再根据具体站点名称推断策略或支持。保留提供方实现、注册表、身份赋值/比较、展示字段和历史迁移用途。未新增 lint，后续约束规则仍待单独考虑。
+
+
+## 第十二轮：全仓库复扫与清单外遗漏
+
+审计边界：全仓库生产代码中的站点策略归属。检索覆盖 src、scripts 中 1731 个 TS/TSX/JS/MJS/CJS 文件及根配置；测试、文档和 E2E 的站点字面量作为契约/示例核对，不视为运行时支持名单。本记录是人工审计结论，不是自动 lint 或允许名单。
+
+检索维度：SITE_TYPES 常量、siteType/site_type 的比较与 switch、站点名称字面量、域名集合、按站点索引的表、includes/Set、isCanonical/isProvider 等辅助判断；沿新增候选追踪注册元数据、直接消费者、状态所有者及测试。仅检查注册存在不足以证明消费者迁移，必须读到页面最后的展示和保存路径。
+
+### 清单外候选及处理结果
+
+| 位置 | 发现与最终处理 |
+| --- | --- |
+| services/managedSites/managedSiteConsoleRoutes.ts | 独立七站路由表迁入各 managedResource.consoleRoutes 注册；URL 构造只消费元数据。每站显式声明路径，保留 HTTP/LAN、配置根路径和无效 URL 行为。注册读取防御复制嵌套路由。 |
+| services/siteDetection/autoDetectService.ts | 独立 AIHUBMIX_HOSTNAME_SET 和固定 API origin 分支迁为 urls.autoDetectOrigin 元数据；使用已有 inferFromHostname 显式准入，不复用含义不同的存储/导出地址。原输入解析和跨域标签页行为保留。 |
+| features/AccountManagement/components/AccountDialog | 保存已有 CreatedRuntimeSecret，展示仍依赖旧 ApiToken，且存在 AIHubMix 名称/地址回退。显示、复制与保存统一消费 CreatedRuntimeSecret，删除重复状态与专属回退。继续创建渠道所需的 token 由已有 pending workflow ref 拥有。 |
+| features/AccountManagement/components/CopyKeyDialog、features/ModelList/components/ModelKeyDialog | 同样的展示/保存双状态一并删除，提供方生成的 CreatedRuntimeSecret 成为一次性密钥展示结果。关闭、账户切换和会话重置均清空该状态。 |
+| features/TokenProvisioning/hooks/useLegacyApiTokenSecretResult.ts | 最后三个生产消费者迁移后删除该转接 hook 和专门验证此转接实现的测试。可恢复 token 的认证格式化仍有导出/请求调用，保留。 |
+
+### 复扫后保留的具体用途
+
+- accountSiteDefinitions、apiAdapters/registry、managedSites/runtimeConfig、channelMigrationCapabilityRegistry、checkin/providers/registry：元数据或可执行适配器注册、配置解码及协议变体选择；它们本身是策略所有者。
+- siteDetection/detectSiteType、accountSiteOnboarding/contentSession、apiService 与 apiAdapters 的提供方实现：根据协议响应识别身份、解析载荷或执行提供方协议。识别出站点的返回值不等同于在业务层猜测支持能力。
+- AccountDialog/AccountForm、AccessTokenVerificationGuide、useOpenRouterAccountOnboarding、ManagedSiteVerification、BasicSettings 专属页面：提供方认证引导、明确授权的生命周期与 UI 选择；保留来源/会话信任边界。
+- ManagedSiteChannels/presentation 的字段/表格/迁移展示、ManagedSiteIcon、aihubmixModelList、SiteAnnouncements/utils：协议字段、人类可读名称和提供方文案。Sub2API 迁移的默认分组文案是已经生成的迁移结果展示，不决定迁移资格。
+- accountRuntimeKeys/ref、nativeResources/factory、accountDedupe、刷新/写入/迁移回执校验、浏览器身份校验：比较记录是否属于同一站点/账户，不是能力名单。
+- UNKNOWN 默认值、UserPreferences 默认站点、productAnalytics 投影、历史迁移、赞助入口预填和开发预览：数据身份、兼容格式或示例。messagesKey 的显式翻译分支保留静态 i18n 提取。
+- scripts 和根配置未发现新增的运行时站点能力分支。
+
+### 验证与结论
+
+- 路由覆盖七类托管站点，补充 Sub2API 路径、HTTP LAN 根路径和注册嵌套对象防御复制。
+- 账户弹窗先用仅有 CreatedRuntimeSecret 的场景复现旧展示分支失败，迁移后创建/保存/保存失败/关闭及后续渠道流程通过。模型密钥测试暴露遗漏 createRuntimeSecret 的旧能力替身，补齐真实提供方转换后 30 项通过。
+- 账户弹窗、复制密钥、模型密钥、URL/profile、注册及会话/认证格式化相关测试分组共 18 个不同文件、404 项测试最终全部通过；compile、knip 通过。浏览器 E2E 未运行。
+- 当前全仓库站点策略复扫未发现其他有明确收益、可保持行为且验证成本合理的待执行项。三个新发现组已完成；上述保留用途已分类。此结论限于站点策略清理，不表示仓库不存在其他架构改进空间。没有新增 lint，也没有推送。

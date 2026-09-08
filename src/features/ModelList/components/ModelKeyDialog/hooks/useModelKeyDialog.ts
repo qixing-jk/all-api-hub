@@ -29,7 +29,6 @@ import {
   requireDisplayAccountKeyManagement,
   resolveDisplayAccountRuntimeKeySecret,
 } from "~/services/accounts/utils/apiServiceRequest"
-import { formatOptionalSkPrefixSiteToken } from "~/services/accountTokens/apiTokenKey"
 import {
   isCreatedApiToken,
   TOKEN_PROVISIONING_ERRORS,
@@ -118,7 +117,6 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
 
   const [isCreating, setIsCreating] = useState(false)
   const [createFailure, setCreateError] = useState<CreateFailure | null>(null)
-  const [oneTimeToken, setOneTimeToken] = useState<ApiToken | null>(null)
   const [oneTimeSecret, setOneTimeSecret] =
     useState<CreatedRuntimeSecret | null>(null)
   // Incremented to invalidate slower runtime-key inventory requests after account eligibility changes.
@@ -154,7 +152,6 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
       setSelectedRuntimeKeyId(null)
       setError(null)
       setCreateError(null)
-      setOneTimeToken(null)
       setOneTimeSecret(null)
       setIsLoading(false)
       return false
@@ -210,7 +207,6 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
       setSelectedRuntimeKeyId(null)
       setIsCreating(false)
       setCreateError(null)
-      setOneTimeToken(null)
       setOneTimeSecret(null)
       return
     }
@@ -331,9 +327,6 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
             isRuntimeKeyCompatibleWithModel(createdRuntimeKey, modelContext)
           ) {
             setSelectedRuntimeKeyId(createdRuntimeKey.id)
-            setOneTimeToken(
-              formatOptionalSkPrefixSiteToken(createdToken, account.siteType),
-            )
             setOneTimeSecret(
               createDisplayAccountTokenRuntimeSecret({
                 account,
@@ -456,14 +449,12 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
     ineligibleDescription,
     isCreating,
     createError: presentCreateFailure(createFailure, t),
-    oneTimeToken,
     oneTimeSecret,
     fetchRuntimeKeys,
     copySelectedKey,
     createDefaultKey,
     refreshRuntimeKeysAfterCreate,
-    clearOneTimeToken: () => {
-      setOneTimeToken(null)
+    clearOneTimeSecret: () => {
       setOneTimeSecret(null)
     },
   }

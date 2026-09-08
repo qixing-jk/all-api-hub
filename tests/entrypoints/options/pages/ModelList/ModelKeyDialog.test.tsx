@@ -5,6 +5,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import ModelKeyDialog from "~/features/ModelList/components/ModelKeyDialog"
 import { useModelKeyDialog } from "~/features/ModelList/components/ModelKeyDialog/hooks/useModelKeyDialog"
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
+import { createAIHubMixCreatedRuntimeSecret } from "~/services/apiAdapters/aihubmix/createdSecret"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -95,6 +96,10 @@ vi.mock("~/services/apiAdapters/registry", () => ({
         keyManagement: {
           fetchTokens: (...args: any[]) => fetchAccountTokensMock(...args),
           createToken: (...args: any[]) => adapterCreateTokenMock(...args),
+          createRuntimeSecret:
+            siteType === SITE_TYPES.AIHUBMIX
+              ? createAIHubMixCreatedRuntimeSecret
+              : undefined,
           resolveTokenKey: async ({ token }: { token: { key: string } }) =>
             token.key,
         },

@@ -138,7 +138,6 @@ const {
       accountName: "",
       isCreating: false,
     },
-    postSaveOneTimeToken: null,
     postSaveOneTimeSecret: null,
     postSaveSub2ApiAllowedGroups: null,
     postSaveSub2ApiAccount: null,
@@ -181,7 +180,7 @@ const {
     handleAihubmixPostSaveKeyPromptCancel: vi.fn(),
     handleAihubmixPostSaveKeyPromptConfirm: vi.fn(),
     shouldDeferAccountSaveSuccess: vi.fn(),
-    handlePostSaveOneTimeTokenClose: vi.fn(),
+    handlePostSaveOneTimeSecretClose: vi.fn(),
     handlePostSaveSub2ApiTokenDialogClose: vi.fn(),
     handlePostSaveSub2ApiTokenCreated: vi.fn(),
     getPostSaveSub2ApiDialogHandlers: vi.fn(),
@@ -250,7 +249,6 @@ function resetMockState() {
       isCreating: false,
     },
     accountPostSaveWorkflowStep: ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle,
-    postSaveOneTimeToken: null,
     postSaveOneTimeSecret: null,
     postSaveSub2ApiAllowedGroups: null,
     postSaveSub2ApiAccount: null,
@@ -1164,10 +1162,22 @@ describe("AccountDialog", () => {
     )
   })
 
-  it("renders the post-save one-time key dialog only when a token is pending", async () => {
-    mockState.postSaveOneTimeToken = {
-      key: "sk-one-time",
-      name: "Default API Key",
+  it("renders the post-save one-time key dialog only when a created secret is pending", async () => {
+    mockState.postSaveOneTimeSecret = {
+      correlation: {
+        kind: "legacy-create",
+        accountId: "created-secret-fixture",
+      },
+      displayName: "Default API Key",
+      secret: "sk-one-time",
+      secretAvailability: "create-response-only",
+      credential: {
+        accountName: "AIHubMix",
+        apiType: "openai-compatible",
+        baseUrl: "https://aihubmix.com",
+        siteType: SITE_TYPES.AIHUBMIX,
+        tagIds: [],
+      },
     }
 
     render(
@@ -1195,19 +1205,6 @@ describe("AccountDialog", () => {
     const user = userEvent.setup()
     mockState.draft.siteName = "AIHubMix"
     mockState.draft.tagIds = ["tag-a"]
-    mockState.postSaveOneTimeToken = {
-      id: 10,
-      user_id: 13,
-      key: "sk-one-time-full",
-      name: "Default API Key",
-      status: 1,
-      created_time: 1,
-      accessed_time: 1,
-      expired_time: -1,
-      remain_quota: -1,
-      unlimited_quota: true,
-      used_quota: 0,
-    }
     mockState.postSaveOneTimeSecret = {
       correlation: {
         kind: "account-runtime-key",
@@ -1280,16 +1277,28 @@ describe("AccountDialog", () => {
     expect(toast.success).toHaveBeenCalledWith(
       "keyManagement:messages.savedToApiProfiles",
     )
-    expect(mockHandlers.handlePostSaveOneTimeTokenClose).not.toHaveBeenCalled()
+    expect(mockHandlers.handlePostSaveOneTimeSecretClose).not.toHaveBeenCalled()
     expect(mockOpenApiCredentialProfilesPage).not.toHaveBeenCalled()
   })
 
   it("keeps the AIHubMix one-time key dialog open when API profile save fails", async () => {
     const user = userEvent.setup()
     mockState.draft.siteName = "AIHubMix"
-    mockState.postSaveOneTimeToken = {
-      key: "sk-one-time-full",
-      name: "Default API Key",
+    mockState.postSaveOneTimeSecret = {
+      correlation: {
+        kind: "legacy-create",
+        accountId: "created-secret-fixture",
+      },
+      displayName: "Default API Key",
+      secret: "sk-one-time-full",
+      secretAvailability: "create-response-only",
+      credential: {
+        accountName: "AIHubMix",
+        apiType: "openai-compatible",
+        baseUrl: "https://aihubmix.com",
+        siteType: SITE_TYPES.AIHUBMIX,
+        tagIds: [],
+      },
     }
     mockCreateApiCredentialProfile.mockRejectedValueOnce(
       new Error("storage failed for sk-one-time-full"),
@@ -1322,7 +1331,7 @@ describe("AccountDialog", () => {
         message: "storage failed for [REDACTED]",
       },
     )
-    expect(mockHandlers.handlePostSaveOneTimeTokenClose).not.toHaveBeenCalled()
+    expect(mockHandlers.handlePostSaveOneTimeSecretClose).not.toHaveBeenCalled()
   })
 
   it("renders the AIHubMix post-save key confirmation dialog", async () => {

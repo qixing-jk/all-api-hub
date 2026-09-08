@@ -143,6 +143,7 @@ function cloneDefinition(
           ...definition.managedResource,
           tableFieldIds: [...definition.managedResource.tableFieldIds],
           detailFieldIds: [...definition.managedResource.detailFieldIds],
+          consoleRoutes: { ...definition.managedResource.consoleRoutes },
           settingsTarget: { ...definition.managedResource.settingsTarget },
         }
       : undefined,
