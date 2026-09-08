@@ -192,7 +192,7 @@ describe("account bootstrap adapters", () => {
         target,
         ACCOUNT_BOOTSTRAP_ROUTE_KINDS.AdminCredentials,
       ),
-    ).toBe("/console/personal")
+    ).toBe("/admin/settings")
     expect(
       resolveStaticAccountRoutePath(
         target,
