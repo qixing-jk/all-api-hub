@@ -18,6 +18,7 @@ import {
   OPENROUTER_KEY_LIMIT_MODES,
   OPENROUTER_KEY_LIMIT_RESETS,
 } from "~/services/apiAdapters/openrouter/keyResourceFields"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -669,13 +670,26 @@ describe("KeyManagement native page integration", () => {
     legacyRetryFailedAccountsSpy.mockReset()
 
     useKeyManagementMock.mockImplementation(useLegacyKeyManagementHarness)
+    const newApi = {
+      ...DEFAULT_PREFERENCES.newApi,
+      baseUrl: "https://managed.example.invalid",
+      userId: "1",
+      username: "operator",
+      password: "placeholder",
+      totpSecret: "placeholder",
+    }
     useUserPreferencesContextMock.mockReturnValue({
+      preferences: {
+        ...DEFAULT_PREFERENCES,
+        managedSiteType: SITE_TYPES.NEW_API,
+        newApi,
+      },
       managedSiteType: SITE_TYPES.NEW_API,
-      newApiBaseUrl: "https://managed.example.invalid",
-      newApiUserId: "1",
-      newApiUsername: "operator",
-      newApiPassword: "placeholder",
-      newApiTotpSecret: "placeholder",
+      newApiBaseUrl: newApi.baseUrl,
+      newApiUserId: newApi.userId,
+      newApiUsername: newApi.username,
+      newApiPassword: newApi.password,
+      newApiTotpSecret: newApi.totpSecret,
     })
     sendRuntimeActionMessageMock.mockResolvedValue({ success: false })
     startProductAnalyticsActionMock.mockReturnValue({
