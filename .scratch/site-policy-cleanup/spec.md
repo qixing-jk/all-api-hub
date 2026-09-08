@@ -2,7 +2,7 @@
 
 先清理职责与重复策略，暂不引入 lint、白名单或引用额度。此文件是审计记录，不参与运行时或检查。
 
-最新状态：已整合 origin/main 6953346f6 的 scoped resource identity 重构。第二、三轮的本地指纹/导航接口已被上游统一配置指纹与 ManagedResourceRef 契约替代；下文保留实施历史，基线替代关系以第五轮记录为准，后续清理见第六、七轮。
+最新状态：已整合 origin/main 6953346f6 的 scoped resource identity 重构。第二、三轮的本地指纹/导航接口已被上游统一配置指纹与 ManagedResourceRef 契约替代；下文保留实施历史，基线替代关系以第五轮记录为准，后续清理见第六至八轮。
 
 ## 本轮实现
 
@@ -48,7 +48,7 @@
 | src/features/KeyManagement/components/managedSiteTokenBatchExportPreview.ts | 已清理 | 通过注册验证能力判断可恢复候选。 |
 | src/features/KeyManagement/hooks/useKeyManagement.ts | 已清理 | 配置指纹归回运行时配置解析，移除遗漏站点的字段分支。 |
 | src/features/ManagedSiteChannels/providers/useManagedResourceInteraction.tsx | 已清理 | 按注册工作流类型选择已实现的 New API React 会话验证。 |
-| src/features/ManagedSiteModelSync/ManagedSiteModelSync.tsx | 后续 | New API channel reload after model synchronization. |
+| src/features/ManagedSiteModelSync/ManagedSiteModelSync.tsx | 已清理 | 删除 New API 全部同步前的重复列表预检，由后台统一读取并校验完整同步批次。 |
 | src/features/ModelList/aihubmixModelList.ts | 保留 | AIHubMix-specific pricing metadata presentation. |
 | src/features/SiteAnnouncements/utils.ts | 保留 | Sub2API announcement identity presentation. |
 | src/features/TokenProvisioning/components/AddTokenDialog/index.tsx | 后续 | Existing feature-specific verification or one-time-key workflow; migrate through its capability seam. |
@@ -168,3 +168,15 @@
 - 复扫：本轮状态、预览、提示及入口不再根据 NEW_API 站点身份推导支持。会话工作流标识是实际 React 实现的分发契约，专属模块内的配置检查继续保留。
 - 独立后续：账户浏览器认证、OpenRouter 浏览器引导、AIHubMix 一次性密钥生命周期及既有模型同步页面刷新分支；未新增 lint。
 - 验证：350 个相关测试文件、4778 项测试全部通过；账户操作与恢复分发补充定向回归 8 个文件、107 项测试通过（含与前者重叠的状态和交互测试）。类型检查和未使用代码检查通过；未运行浏览器 E2E，提交钩子以最终执行结果为准。
+
+
+## 第八轮全部模型同步的列表归属
+
+范围：模型同步页面 handleRunAll 的站点分支、列表请求及后台批次准备职责。
+
+- 证据：页面的 latestChannels 仅用于判断列表加载是否成功，没有传给 TriggerAll。后台通用调度器会 listChannels，原生工作流会 prepareBatch；二者均检查空批次。
+- 已执行：删除仅针对 New API 的前置 ListChannels 请求和 SITE_TYPES 导入，全部同步直接交给后台准备真实批次。保留手动列表刷新、主动操作授权、进行中保护与异步目标隔离。
+- 行为调整：New API 全部同步不再刷新页面手动选择列表，也不再被该列表请求失败阻止；后台列表/同步失败仍按现有同步错误反馈并保留历史结果。没有为重复请求新增站点策略元数据。
+- 已验证：新增成功/失败两种回归先复现旧分支阻止同步，再验证直接分发、返回结果与无额外列表请求；15 个模型同步组件/服务测试文件、281 项测试全部通过。
+- 复扫：模型同步主页面已没有具体站点常量或站点名称分支；此调用链无其他待处理的重复预检。账户浏览器认证、OpenRouter 浏览器引导与 AIHubMix 一次性密钥生命周期仍独立待处理。
+- 类型检查通过；未运行浏览器 E2E。提交钩子结果以最终提交为准，未新增 lint。

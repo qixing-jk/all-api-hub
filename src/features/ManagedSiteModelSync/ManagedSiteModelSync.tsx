@@ -18,7 +18,6 @@ import {
   TabsTrigger,
 } from "~/components/ui"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
-import { SITE_TYPES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
 import {
@@ -929,19 +928,7 @@ export default function ManagedSiteModelSync({
 
     setActiveAction(MANAGED_SITE_MODEL_SYNC_ACTIONS.RUN_ALL)
     try {
-      const latestChannels =
-        managedSiteType === SITE_TYPES.NEW_API ? await loadChannels() : channels
-      if (!isCurrentSyncRequest(requestToken)) return
-      if (!latestChannels) {
-        completeModelSyncActionAnalytics(
-          tracker,
-          PRODUCT_ANALYTICS_RESULTS.Failure,
-          {
-            errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-          },
-        )
-        return
-      }
+      // The background runner owns fresh inventory and validates the full sync batch.
       const response = await runManualModelSync(
         async (protectionBypassExecution) =>
           await sendModelSyncMessage(ModelSyncMessageTypes.TriggerAll, {

@@ -3452,6 +3452,59 @@ describe("ManagedSiteModelSync page", () => {
     )
   })
 
+  it.each([true, false])(
+    "delegates all-channel inventory validation to the background even when page listing fails (success: %s)",
+    async (success) => {
+      const user = userEvent.setup()
+      const defaultResponse = mockSendRuntimeMessage.getMockImplementation()!
+      mockSendRuntimeMessage.mockImplementation(
+        async (type: string, data?: any) => {
+          if (type === ModelSyncMessageTypes.ListChannels) {
+            return { success: false, error: "Page inventory unavailable" }
+          }
+          if (type === ModelSyncMessageTypes.TriggerAll) {
+            return success
+              ? defaultResponse(ModelSyncMessageTypes.TriggerSelected, data)
+              : { success: false, error: "Background inventory unavailable" }
+          }
+          return defaultResponse(type, data)
+        },
+      )
+      render(<ManagedSiteModelSync />)
+      await screen.findByText("Alpha#101")
+      const listCallsBefore = mockSendRuntimeMessage.mock.calls.filter(
+        ([type]) => type === ModelSyncMessageTypes.ListChannels,
+      ).length
+      await user.click(
+        screen.getByRole("button", {
+          name: "managedSiteModelSync:execution.actions.runAll",
+        }),
+      )
+      await waitFor(() =>
+        expect(mockSendRuntimeMessage).toHaveBeenCalledWith(
+          ModelSyncMessageTypes.TriggerAll,
+          { protectionBypassExecution: modelSyncExecution },
+        ),
+      )
+      if (success) {
+        await waitFor(() => expect(toast.success).toHaveBeenCalled())
+        expect(screen.queryByText("failed")).not.toBeInTheDocument()
+      } else {
+        await waitFor(() =>
+          expect(toast.error).toHaveBeenCalledWith(
+            "managedSiteModelSync:messages.error.syncFailed",
+          ),
+        )
+        expect(screen.getByText("failed")).toBeInTheDocument()
+      }
+      expect(
+        mockSendRuntimeMessage.mock.calls.filter(
+          ([type]) => type === ModelSyncMessageTypes.ListChannels,
+        ),
+      ).toHaveLength(listCallsBefore)
+    },
+  )
+
   it("replaces the last execution snapshot when running all channels succeeds", async () => {
     mockSendRuntimeMessage.mockImplementation(
       async (type: string, _data?: any) => {
