@@ -215,7 +215,7 @@ for (const scenario of cases) {
   })
 }
 
-test("New API preserves required full-update fields and omits unchanged status and credentials", async ({
+test("New API retains native fields during full updates and omits unchanged status and credentials", async ({
   context,
   page,
   extensionId,

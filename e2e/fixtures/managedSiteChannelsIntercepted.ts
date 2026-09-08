@@ -320,9 +320,13 @@ async function fulfillGraphQLError(route: Route, message: string) {
 
 async function installNewApiManagedSiteChannelsIntercepts(
   context: BrowserContext,
+  nativeFields?: Record<string, unknown>,
 ) {
   interceptedNewApiChannels = interceptedNewApiChannelTemplates.map(
-    (template) => ({ ...template }),
+    (template) => ({
+      ...template,
+      ...(template.id === 101 ? nativeFields : {}),
+    }),
   )
   interceptedNewApiCreatedChannel = null
   interceptedNewApiUpdatePayload = null
@@ -501,9 +505,13 @@ async function installNewApiManagedSiteChannelsIntercepts(
 
 async function installDoneHubManagedSiteChannelsIntercepts(
   context: BrowserContext,
+  nativeFields?: Record<string, unknown>,
 ) {
   interceptedDoneHubChannels = interceptedDoneHubChannelTemplates.map(
-    (template) => ({ ...template }),
+    (template) => ({
+      ...template,
+      ...(template.id === DONE_HUB_PRIMARY_ID ? nativeFields : {}),
+    }),
   )
 
   await context.route(
@@ -763,7 +771,10 @@ async function installAxonHubIntercepts(context: BrowserContext) {
 }
 
 /** Models cookie-authenticated channel persistence and exposes its stored key for assertions. */
-async function installOctopusCookieAuthIntercepts(context: BrowserContext) {
+async function installOctopusCookieAuthIntercepts(
+  context: BrowserContext,
+  nativeDetail?: Record<string, unknown>,
+) {
   let channel = {
     id: 17,
     name: "Example outbound",
@@ -842,12 +853,48 @@ async function installOctopusCookieAuthIntercepts(context: BrowserContext) {
     }
 
     if (path === "/api/v1/channel/list") {
+      if (nativeDetail) {
+        await route.fulfill({ status: 404, body: "Use v0.13 stats" })
+        return
+      }
       await fulfill(route, { code: 200, data: [channel] })
+      return
+    }
+
+    if (nativeDetail && path === "/api/v1/channel/stats") {
+      await fulfill(route, {
+        code: 200,
+        data: [
+          {
+            channel_id: nativeDetail.id,
+            channel_name: nativeDetail.name,
+            enabled: nativeDetail.enabled,
+            input_token: 0,
+            output_token: 0,
+            input_cost: 0,
+            output_cost: 0,
+            wait_time: 0,
+            request_success: 0,
+            request_failed: 0,
+            models: [{ model_id: 1, model_name: "model-a" }],
+          },
+        ],
+      })
+      return
+    }
+    if (nativeDetail && path === `/api/v1/channel/detail/${nativeDetail.id}`) {
+      await fulfill(route, { code: 200, data: nativeDetail })
       return
     }
 
     if (path === "/api/v1/channel/update" && request.method() === "POST") {
       const payload = request.postDataJSON()
+      if (nativeDetail) {
+        // Whole-body replacement makes missing upstream members observable.
+        nativeDetail = payload
+        await fulfill(route, { code: 200, data: nativeDetail })
+        return
+      }
       channel = { ...channel, ...payload }
       await fulfill(route, { code: 200, data: channel })
       return
@@ -856,7 +903,10 @@ async function installOctopusCookieAuthIntercepts(context: BrowserContext) {
     await route.fulfill({ status: 404, body: "fixture route not configured" })
   })
 
-  return { getChannelKey: () => channel.key }
+  return {
+    getChannelKey: () => channel.key,
+    getNativeDetail: () => nativeDetail,
+  }
 }
 
 async function openManagedSiteChannelsPage(params: {
@@ -878,9 +928,13 @@ export async function openInterceptedNewApiManagedSiteChannels(params: {
   context: BrowserContext
   page: Page
   extensionId: string
+  nativeFields?: Record<string, unknown>
 }) {
   await forceExtensionLanguage(params.page, "en")
-  await installNewApiManagedSiteChannelsIntercepts(params.context)
+  await installNewApiManagedSiteChannelsIntercepts(
+    params.context,
+    params.nativeFields,
+  )
   await seedUserPreferences(await getServiceWorker(params.context), {
     managedSiteType: SITE_TYPES.NEW_API,
     newApi: {
@@ -905,9 +959,13 @@ export async function openInterceptedDoneHubManagedSiteChannels(params: {
   page: Page
   extensionId: string
   channelId?: number
+  nativeFields?: Record<string, unknown>
 }) {
   await forceExtensionLanguage(params.page, "en")
-  await installDoneHubManagedSiteChannelsIntercepts(params.context)
+  await installDoneHubManagedSiteChannelsIntercepts(
+    params.context,
+    params.nativeFields,
+  )
   await seedUserPreferences(await getServiceWorker(params.context), {
     managedSiteType: SITE_TYPES.DONE_HUB,
     doneHub: {
@@ -947,9 +1005,13 @@ export async function openInterceptedOctopusManagedSiteChannels(params: {
   context: BrowserContext
   page: Page
   extensionId: string
+  nativeDetail?: Record<string, unknown>
 }) {
   await forceExtensionLanguage(params.page, "en")
-  const fixture = await installOctopusCookieAuthIntercepts(params.context)
+  const fixture = await installOctopusCookieAuthIntercepts(
+    params.context,
+    params.nativeDetail,
+  )
   await seedUserPreferences(await getServiceWorker(params.context), {
     managedSiteType: SITE_TYPES.OCTOPUS,
     octopus: {
