@@ -1648,7 +1648,12 @@ test("runs managed-site model sync when its MV3 alarm fires", async ({
         }),
         items: [
           expect.objectContaining({
-            channelId: 101,
+            resourceRef: {
+              siteType: SITE_TYPES.NEW_API,
+              kind: "channel",
+              scopeKey: MANAGED_SITE_ALARM_BASE_URL,
+              resourceId: "101",
+            },
             channelName: "Alarm Synced Channel",
             ok: true,
             oldModels: ["gpt-4o-mini"],

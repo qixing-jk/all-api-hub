@@ -31,6 +31,7 @@ import {
   type ProtectionBypassUserCommand,
 } from "~/services/protectionBypass/contracts"
 import { ModelSyncMessageTypes } from "~/services/runtimeMessaging/messageTypes"
+import { formatFullTime } from "~/utils/core/formatters"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 import { testI18n } from "~~/tests/test-utils/i18n"
 import { modelResourceRef } from "~~/tests/test-utils/managedModelResource"
@@ -2015,6 +2016,94 @@ describe("ManagedSiteModelSync page", () => {
       }),
     ).toBeDisabled()
   })
+
+  it.each([
+    ["baseUrl", "https://other.example"],
+    ["userId", "2"],
+  ])(
+    "ignores late progress, schedule, and settings responses after %s changes",
+    async (field, value) => {
+      let context = mockUseUserPreferencesContext.getMockImplementation()!()
+      mockUseUserPreferencesContext.mockImplementation(() => context)
+      const originalImplementation =
+        mockSendRuntimeMessage.getMockImplementation()!
+      const staleResponses = new Map<
+        string,
+        ReturnType<typeof createDeferred<{ success: true; data: unknown }>>
+      >(
+        [
+          ModelSyncMessageTypes.GetProgress,
+          ModelSyncMessageTypes.GetNextRun,
+          ModelSyncMessageTypes.GetPreferences,
+        ].map((type) => [
+          type,
+          createDeferred<{ success: true; data: unknown }>(),
+        ]),
+      )
+      const attempts = new Map<string, number>()
+      mockSendRuntimeMessage.mockImplementation(
+        async (type: string, data?: unknown) => {
+          const staleResponse = staleResponses.get(type)
+          if (staleResponse) {
+            const attempt = (attempts.get(type) ?? 0) + 1
+            attempts.set(type, attempt)
+            if (attempt === 1) return staleResponse.promise
+          }
+          return originalImplementation(type, data)
+        },
+      )
+      const view = render(<ManagedSiteModelSync />)
+      await waitFor(() => expect(attempts.size).toBe(3))
+
+      context = {
+        ...context,
+        preferences: {
+          ...context.preferences,
+          newApi: { ...context.preferences.newApi, [field]: value },
+        },
+      }
+      view.rerender(
+        <I18nextProvider i18n={testI18n}>
+          <ManagedSiteModelSync />
+        </I18nextProvider>,
+      )
+      const currentSchedule = formatFullTime(
+        new Date("2026-03-28T10:00:00.000Z"),
+      )
+      expect(await screen.findByText(currentSchedule)).toBeVisible()
+
+      await act(async () => {
+        staleResponses.get(ModelSyncMessageTypes.GetProgress)!.resolve({
+          success: true,
+          data: { isRunning: true, completed: 1, total: 10, failed: 0 },
+        })
+        staleResponses.get(ModelSyncMessageTypes.GetNextRun)!.resolve({
+          success: true,
+          data: { nextScheduledAt: "2025-01-01T00:00:00.000Z" },
+        })
+        staleResponses.get(ModelSyncMessageTypes.GetPreferences)!.resolve({
+          success: true,
+          data: { enableSync: false, intervalMs: 60_000 },
+        })
+        await Promise.all(
+          [...staleResponses.values()].map(({ promise }) => promise),
+        )
+      })
+
+      expect(screen.getByText(currentSchedule)).toBeVisible()
+      expect(
+        screen.getByText("managedSiteModelSync:execution.overview.enabled"),
+      ).toBeVisible()
+      expect(
+        screen.getByText("managedSiteModelSync:execution.overview.everyHours"),
+      ).toBeVisible()
+      expect(
+        screen.getByRole("button", {
+          name: "managedSiteModelSync:execution.actions.runAll",
+        }),
+      ).toBeEnabled()
+    },
+  )
 
   it("uses route search params to prefilter both history and manual tabs", async () => {
     const user = userEvent.setup()

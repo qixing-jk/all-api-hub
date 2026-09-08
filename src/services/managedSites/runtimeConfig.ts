@@ -174,6 +174,33 @@ export function resolveManagedSiteRuntimeConfigForType<
   return exhaustiveSiteType
 }
 
+const hashStringForCache = (value: string) => {
+  let hash = 2166136261
+
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index)
+    hash = Math.imul(hash, 16777619)
+  }
+
+  return (hash >>> 0).toString(16)
+}
+
+/** Identifies active configuration changes without retaining credentials in cache keys. */
+export function getManagedSiteRuntimeConfigFingerprint(
+  preferences: UserPreferences,
+  siteType: ManagedSiteType,
+): string {
+  const config = resolveManagedSiteRuntimeConfigForType(
+    preferences,
+    siteType,
+  )?.config
+  const configEntries = Object.entries(config ?? {}).sort(([left], [right]) =>
+    left.localeCompare(right),
+  )
+
+  return [siteType, hashStringForCache(JSON.stringify(configEntries))].join("|")
+}
+
 /**
  * Resolves the runtime config for the currently selected managed-site type.
  */

@@ -31,6 +31,7 @@ import {
   buildApiToken,
   buildDisplaySiteData,
 } from "~~/tests/test-utils/factories"
+import { matchingResourceRef } from "~~/tests/test-utils/managedResourceMatching"
 
 vi.mock("~/services/managedSites/utils/fetchManagedSiteImportModels", () => ({
   fetchManagedSiteImportModels: vi.fn(),
@@ -506,7 +507,13 @@ describe("Sub2API API-key account managed-site provider", () => {
     expect(inventoryUrl.searchParams.get("search")).toBeNull()
     expect(result).toMatchObject({
       status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.ADDED,
-      matchedChannel: { id: account.id, name: account.name },
+      matchedChannel: {
+        ref: matchingResourceRef(account.id, {
+          siteType: SITE_TYPES.SUB2API,
+          scopeKey: "https://sub2api.example.invalid",
+        }),
+        name: account.name,
+      },
     })
   })
 

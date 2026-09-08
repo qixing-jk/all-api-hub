@@ -29,7 +29,7 @@ import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { subscribeToApiCredentialProfilesChanges } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { createManagedSiteOperationContext } from "~/services/managedSites/operationContext"
-import { resolveManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
+import { getManagedSiteRuntimeConfigFingerprint } from "~/services/managedSites/runtimeConfig"
 import {
   getManagedSiteTokenChannelStatus,
   resolveManagedSiteTokenChannelStatusWithVerifiedKey,
@@ -275,17 +275,6 @@ const normalizeOrigin = (baseUrl: string) => {
   return normalizeUrlForOriginKey(baseUrl, { stripTrailingSlashes: false })
 }
 
-const hashStringForCache = (value: string) => {
-  let hash = 2166136261
-
-  for (let index = 0; index < value.length; index += 1) {
-    hash ^= value.charCodeAt(index)
-    hash = Math.imul(hash, 16777619)
-  }
-
-  return (hash >>> 0).toString(16)
-}
-
 /**
  * Manages key management page state: selection, loading, filtering, and CRUD handlers.
  * @param routeParams Optional route params containing preselected accountId.
@@ -385,22 +374,10 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
     [accountById],
   )
 
-  const managedSiteConfigFingerprint = useMemo(() => {
-    // Follow the same configuration resolver as managed-site capabilities so
-    // every target's address, principal, and credentials invalidate cached work.
-    const config = resolveManagedSiteRuntimeConfigForType(
-      preferences,
-      managedSiteType,
-    )?.config
-    const configEntries = Object.entries(config ?? {}).sort(([left], [right]) =>
-      left.localeCompare(right),
-    )
-
-    return [
-      managedSiteType,
-      hashStringForCache(JSON.stringify(configEntries)),
-    ].join("|")
-  }, [managedSiteType, preferences])
+  const managedSiteConfigFingerprint = useMemo(
+    () => getManagedSiteRuntimeConfigFingerprint(preferences, managedSiteType),
+    [managedSiteType, preferences],
+  )
 
   const normalizedSearchTerm = searchTerm.trim().toLowerCase()
 

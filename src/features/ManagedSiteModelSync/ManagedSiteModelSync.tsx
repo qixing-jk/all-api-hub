@@ -27,6 +27,7 @@ import {
   parseManagedResourceRef,
 } from "~/services/managedSites/managedResourceIdentity"
 import {
+  getManagedSiteRuntimeConfigFingerprint,
   hasValidManagedSiteConfig,
   resolveManagedSiteRuntimeConfigForType,
 } from "~/services/managedSites/runtimeConfig"
@@ -250,6 +251,10 @@ export default function ManagedSiteModelSync({
   const selectedScopeKey = normalizeManagedUpstreamResourceScopeKey(
     selectedTarget?.config.baseUrl ?? "",
   )
+  const managedSiteConfigFingerprint = useMemo(
+    () => getManagedSiteRuntimeConfigFingerprint(preferences, managedSiteType),
+    [managedSiteType, preferences],
+  )
   const canUseResource = useCallback(
     (ref: ManagedResourceRef) =>
       Boolean(
@@ -433,12 +438,13 @@ export default function ManagedSiteModelSync({
   }, [])
 
   const loadProgress = useCallback(async () => {
+    const generation = contextGenerationRef.current
     try {
       const response = await sendModelSyncMessage(
         ModelSyncMessageTypes.GetProgress,
       )
 
-      if (response.success) {
+      if (response.success && generation === contextGenerationRef.current) {
         setProgress(response.data)
       }
     } catch (error) {
@@ -447,12 +453,13 @@ export default function ManagedSiteModelSync({
   }, [])
 
   const loadNextRun = useCallback(async () => {
+    const generation = contextGenerationRef.current
     try {
       const response = await sendModelSyncMessage(
         ModelSyncMessageTypes.GetNextRun,
       )
 
-      if (response.success) {
+      if (response.success && generation === contextGenerationRef.current) {
         setNextScheduledAt(response.data?.nextScheduledAt ?? null)
       }
     } catch (error) {
@@ -461,12 +468,13 @@ export default function ManagedSiteModelSync({
   }, [])
 
   const loadPreferences = useCallback(async () => {
+    const generation = contextGenerationRef.current
     try {
       const response = await sendModelSyncMessage(
         ModelSyncMessageTypes.GetPreferences,
       )
 
-      if (response.success) {
+      if (response.success && generation === contextGenerationRef.current) {
         setIsAutoSyncEnabled(!!response.data?.enableSync)
         setIntervalMs(response.data?.intervalMs)
       }
@@ -617,12 +625,7 @@ export default function ManagedSiteModelSync({
     setChannelsError(null)
     setHasAttemptedChannelsLoad(false)
     setIsLoading(!isConfigMissing && !isModelSyncUnsupported)
-  }, [
-    isConfigMissing,
-    isModelSyncUnsupported,
-    managedSiteType,
-    selectedScopeKey,
-  ])
+  }, [isConfigMissing, isModelSyncUnsupported, managedSiteConfigFingerprint])
 
   useEffect(() => {
     if (isModelSyncUnsupported) {
@@ -676,8 +679,8 @@ export default function ManagedSiteModelSync({
     loadNextRun,
     loadPreferences,
     loadProgress,
+    managedSiteConfigFingerprint,
     managedSiteType,
-    selectedScopeKey,
   ])
 
   useEffect(() => {

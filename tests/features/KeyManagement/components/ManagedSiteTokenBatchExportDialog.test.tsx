@@ -16,6 +16,7 @@ import { NEW_API_MANAGED_VERIFICATION_CLOSE_MODES } from "~/features/ManagedSite
 import { buildAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { getManagedResourceRefKey } from "~/services/managedSites/managedResourceIdentity"
+import type { UserPreferences } from "~/services/preferences/userPreferences"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -1104,6 +1105,245 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       ),
     ).toHaveTextContent("settings:managedSite.doneHub")
   })
+
+  it.each([
+    ["adminToken", "newApiAdminToken", "replacement-admin-token"],
+    ["userId", "newApiUserId", "2"],
+    ["username", "newApiUsername", "replacement-user"],
+    ["password", "newApiPassword", "replacement-password"],
+    ["totpSecret", "newApiTotpSecret", "replacement-totp"],
+  ] as const)(
+    "discards cached verification keys when the active %s changes",
+    async (field, contextField, value) => {
+      const user = userEvent.setup()
+      const recoverablePreview = buildSingleRecoverablePreview()
+      mockPreparePreview.mockResolvedValue(recoverablePreview)
+      mockLoadNewApiChannelKeyWithVerification.mockImplementationOnce(
+        async (params) => {
+          params.setKey("test-key")
+          await params.onLoaded?.()
+          return true
+        },
+      )
+      const items = [{ account, runtimeKey }]
+      const view = renderDialog({ items })
+      await user.click(
+        await screen.findByRole("button", {
+          name: "keyManagement:batchManagedSiteExport.actions.verifyAndRefresh",
+        }),
+      )
+      expect(
+        await screen.findByText(
+          "keyManagement:batchManagedSiteExport.status.skipped",
+        ),
+      ).toBeVisible()
+
+      const context = mockUserPreferencesContextValue.current
+      const preferences = context.preferences as UserPreferences
+      mockUserPreferencesContextValue.current = {
+        ...context,
+        [contextField]: value,
+        preferences: {
+          ...preferences,
+          newApi: { ...preferences.newApi, [field]: value },
+        },
+      }
+      view.rerender(
+        <ManagedSiteTokenBatchExportDialog
+          isOpen
+          onClose={vi.fn()}
+          items={items}
+        />,
+      )
+
+      await waitFor(() => expect(mockPreparePreview).toHaveBeenCalledTimes(2))
+      expect(mockPreparePreview).toHaveBeenLastCalledWith(
+        expect.objectContaining({ resolvedChannelKeysByItemId: {} }),
+      )
+      expect(
+        await screen.findByRole("button", {
+          name: "keyManagement:batchManagedSiteExport.actions.verifyAndRefresh",
+        }),
+      ).toBeEnabled()
+      expect(
+        screen.queryByText(
+          "keyManagement:batchManagedSiteExport.status.skipped",
+        ),
+      ).not.toBeInTheDocument()
+    },
+  )
+
+  it("preserves verified keys when unrelated preferences change", async () => {
+    const user = userEvent.setup()
+    const recoverablePreview = buildSingleRecoverablePreview()
+    mockPreparePreview.mockResolvedValue(recoverablePreview)
+    mockLoadNewApiChannelKeyWithVerification.mockImplementationOnce(
+      async (params) => {
+        params.setKey("test-key")
+        await params.onLoaded?.()
+        return true
+      },
+    )
+    const items = [{ account, runtimeKey }]
+    const view = renderDialog({ items })
+    await user.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.verifyAndRefresh",
+      }),
+    )
+    expect(
+      await screen.findByText(
+        "keyManagement:batchManagedSiteExport.status.skipped",
+      ),
+    ).toBeVisible()
+
+    const context = mockUserPreferencesContextValue.current
+    const preferences = context.preferences as UserPreferences
+    mockUserPreferencesContextValue.current = {
+      ...context,
+      preferences: { ...preferences, language: "zh-CN" },
+    }
+    view.rerender(
+      <ManagedSiteTokenBatchExportDialog
+        isOpen
+        onClose={vi.fn()}
+        items={items}
+      />,
+    )
+
+    expect(mockPreparePreview).toHaveBeenCalledOnce()
+    expect(
+      screen.getByText("keyManagement:batchManagedSiteExport.status.skipped"),
+    ).toBeVisible()
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.refreshPreview",
+      }),
+    )
+    expect(mockPreparePreview).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        resolvedChannelKeysByItemId: {
+          [recoverablePreview.items[0].id]: {
+            [getManagedResourceRefKey(
+              recoverablePreview.items[0].verificationCandidate!.ref,
+            )]: "test-key",
+          },
+        },
+      }),
+    )
+  })
+
+  it("replaces an in-flight preview when the active runtime configuration changes", async () => {
+    const stalePreview = createDeferred<ManagedSiteTokenBatchExportPreview>()
+    mockPreparePreview
+      .mockReturnValueOnce(stalePreview.promise)
+      .mockResolvedValue(preview)
+    const items = [{ account, runtimeKey }]
+    const view = renderDialog({ items })
+    await waitFor(() => expect(mockPreparePreview).toHaveBeenCalledOnce())
+
+    const context = mockUserPreferencesContextValue.current
+    const preferences = context.preferences as UserPreferences
+    mockUserPreferencesContextValue.current = {
+      ...context,
+      newApiUserId: "2",
+      preferences: {
+        ...preferences,
+        newApi: { ...preferences.newApi, userId: "2" },
+      },
+    }
+    view.rerender(
+      <ManagedSiteTokenBatchExportDialog
+        isOpen
+        onClose={vi.fn()}
+        items={items}
+      />,
+    )
+    expect(await screen.findByText("Account 1 / Token 1")).toBeVisible()
+
+    await act(async () => {
+      stalePreview.resolve(buildSingleRecoverablePreview())
+      await stalePreview.promise
+    })
+
+    expect(
+      screen.queryByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.verifyAndRefresh",
+      }),
+    ).not.toBeInTheDocument()
+    expect(mockPreparePreview).toHaveBeenCalledTimes(2)
+  })
+
+  it.each(["success", "failure"] as const)(
+    "discards deferred verification %s after the active account changes",
+    async (outcome) => {
+      const user = userEvent.setup()
+      const staleVerification = createDeferred<void>()
+      const recoverablePreview = buildSingleRecoverablePreview()
+      mockPreparePreview.mockResolvedValue(recoverablePreview)
+      mockLoadNewApiChannelKeyWithVerification.mockImplementationOnce(
+        async (params) => {
+          await staleVerification.promise
+          if (outcome === "failure")
+            throw new Error("stale verification failed")
+          params.setKey("test-key")
+          params.openVerification({})
+          await params.onLoaded?.()
+          return false
+        },
+      )
+      const items = [{ account, runtimeKey }]
+      const view = renderDialog({ items })
+      await user.click(
+        await screen.findByRole("button", {
+          name: "keyManagement:batchManagedSiteExport.actions.verifyAndRefresh",
+        }),
+      )
+      expect(mockLoadNewApiChannelKeyWithVerification).toHaveBeenCalledOnce()
+
+      const context = mockUserPreferencesContextValue.current
+      const preferences = context.preferences as UserPreferences
+      mockUserPreferencesContextValue.current = {
+        ...context,
+        newApiUserId: "2",
+        preferences: {
+          ...preferences,
+          newApi: { ...preferences.newApi, userId: "2" },
+        },
+      }
+      view.rerender(
+        <ManagedSiteTokenBatchExportDialog
+          isOpen
+          onClose={vi.fn()}
+          items={items}
+        />,
+      )
+      await act(async () => {
+        staleVerification.resolve()
+        await staleVerification.promise
+      })
+
+      expect(mockOpenNewApiManagedVerification).not.toHaveBeenCalled()
+      expect(
+        screen.queryByText(
+          "keyManagement:batchManagedSiteExport.status.skipped",
+        ),
+      ).not.toBeInTheDocument()
+      expect(
+        screen.queryByText(
+          "keyManagement:batchManagedSiteExport.messages.executionFailed",
+        ),
+      ).not.toBeInTheDocument()
+      expect(
+        await screen.findByRole("button", {
+          name: "keyManagement:batchManagedSiteExport.actions.verifyAndRefresh",
+        }),
+      ).toBeEnabled()
+      expect(mockPreparePreview).toHaveBeenLastCalledWith(
+        expect.objectContaining({ resolvedChannelKeysByItemId: {} }),
+      )
+    },
+  )
 
   it("assigns manual preview loading only to the visible refresh control", async () => {
     const user = userEvent.setup()

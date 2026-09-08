@@ -11,9 +11,12 @@ import {
   PROTECTION_BYPASS_FEATURES,
   PROTECTION_BYPASS_USER_COMMANDS,
 } from "~/services/protectionBypass/contracts"
+import type { ManagedModelChannelSummaryListData } from "~/types/managedResourceModels"
+import type { ExecutionResult } from "~/types/managedSiteModelSync"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 import { buildCheckInConfig } from "~~/tests/test-utils/factories"
+import { modelResourceRef } from "~~/tests/test-utils/managedModelResource"
 
 const MANUAL_CHECKIN_EXECUTION = userCommandExecution(
   PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
@@ -141,25 +144,46 @@ describe("typed runtime messaging setup", () => {
       scheduledTime: new Date("2026-01-01T00:00:00.000Z").getTime(),
       periodInMinutes: 30,
     })
-    const executeSync = vi.fn().mockResolvedValue({
+    const emptyExecution: ExecutionResult = {
       items: [],
-      statistics: { total: 0 },
-    })
-    const executeFailedOnly = vi.fn().mockResolvedValue({
-      items: [],
-      statistics: { total: 0 },
-    })
+      statistics: {
+        total: 0,
+        successCount: 0,
+        failureCount: 0,
+        durationMs: 0,
+        startedAt: 0,
+        endedAt: 0,
+      },
+    }
+    const executeSync = vi.fn().mockResolvedValue(emptyExecution)
+    const executeFailedOnly = vi.fn().mockResolvedValue(emptyExecution)
     const getProgress = vi.fn().mockReturnValue({ isRunning: true })
     const updateSettings = vi.fn().mockResolvedValue(undefined)
-    const listChannels = vi.fn().mockResolvedValue({
-      items: [{ id: 1, name: "Channel" }],
+    const channelList: ManagedModelChannelSummaryListData = {
+      items: [{ ref: modelResourceRef(1), name: "Channel" }],
       total: 1,
-      type_counts: {},
-    })
-    const getLastExecution = vi.fn().mockResolvedValue({
-      items: [{ channelId: 1 }],
-      statistics: { total: 1 },
-    })
+    }
+    const listChannels = vi.fn().mockResolvedValue(channelList)
+    const lastExecution: ExecutionResult = {
+      items: [
+        {
+          resourceRef: modelResourceRef(1),
+          channelName: "Channel",
+          ok: true,
+          attempts: 1,
+          finishedAt: 1,
+        },
+      ],
+      statistics: {
+        total: 1,
+        successCount: 1,
+        failureCount: 0,
+        durationMs: 1,
+        startedAt: 0,
+        endedAt: 1,
+      },
+    }
+    const getLastExecution = vi.fn().mockResolvedValue(lastExecution)
     const getPreferences = vi.fn().mockResolvedValue({ enabled: true })
     const getChannelUpstreamModelOptions = vi.fn().mockResolvedValue(["gpt-4o"])
 
@@ -238,7 +262,7 @@ describe("typed runtime messaging setup", () => {
       }),
     ).resolves.toEqual({
       success: true,
-      data: { items: [], statistics: { total: 0 } },
+      data: emptyExecution,
     })
     await expect(
       getRegisteredHandler(
@@ -246,14 +270,14 @@ describe("typed runtime messaging setup", () => {
         "modelSync:triggerSelected",
       )({
         data: {
-          channelIds: [1, 2],
+          resourceRefs: [modelResourceRef(1), modelResourceRef(2)],
           protectionBypassExecution: MODEL_SYNC_EXECUTION,
         },
         sender: OPTIONS_SENDER,
       }),
     ).resolves.toEqual({
       success: true,
-      data: { items: [], statistics: { total: 0 } },
+      data: emptyExecution,
     })
     await expect(
       getRegisteredHandler(
@@ -261,14 +285,14 @@ describe("typed runtime messaging setup", () => {
         "modelSync:triggerSelected",
       )({
         data: {
-          channelIds: [],
+          resourceRefs: [],
           protectionBypassExecution: MODEL_SYNC_EXECUTION,
         },
         sender: OPTIONS_SENDER,
       }),
     ).resolves.toEqual({
       success: false,
-      error: "channelIds must be a non-empty array for selected sync",
+      error: "resourceRefs must be a non-empty array for selected sync",
     })
     await expect(
       getRegisteredHandler(
@@ -280,13 +304,13 @@ describe("typed runtime messaging setup", () => {
       }),
     ).resolves.toEqual({
       success: true,
-      data: { items: [], statistics: { total: 0 } },
+      data: emptyExecution,
     })
     await expect(
       getRegisteredHandler(onModelSyncMessage, "modelSync:getLastExecution")(),
     ).resolves.toEqual({
       success: true,
-      data: { items: [{ channelId: 1 }], statistics: { total: 1 } },
+      data: lastExecution,
     })
     await expect(
       getRegisteredHandler(onModelSyncMessage, "modelSync:getProgress")(),
@@ -321,11 +345,7 @@ describe("typed runtime messaging setup", () => {
       getRegisteredHandler(onModelSyncMessage, "modelSync:listChannels")(),
     ).resolves.toEqual({
       success: true,
-      data: {
-        items: [{ id: 1, name: "Channel" }],
-        total: 1,
-        type_counts: {},
-      },
+      data: channelList,
     })
 
     expect(executeSync).toHaveBeenNthCalledWith(
@@ -336,7 +356,7 @@ describe("typed runtime messaging setup", () => {
     )
     expect(executeSync).toHaveBeenNthCalledWith(
       2,
-      [1, 2],
+      [modelResourceRef(1), modelResourceRef(2)],
       PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.BackgroundRecovery,
       MODEL_SYNC_EXECUTION,
     )
@@ -452,7 +472,7 @@ describe("typed runtime messaging setup", () => {
         "modelSync:triggerSelected",
         {
           data: {
-            channelIds: [1],
+            resourceRefs: [modelResourceRef(1)],
             protectionBypassExecution: MODEL_SYNC_EXECUTION,
           },
           sender: OPTIONS_SENDER,

@@ -11,6 +11,7 @@ import {
   getManagedSiteChannelRowSyncActionTestId,
   MANAGED_SITE_CHANNELS_TEST_IDS,
 } from "~/features/ManagedSiteChannels/testIds"
+import type { ExecutionResult } from "~/types/managedSiteModelSync"
 import { CHANNEL_STATUS, type NewApiChannel } from "~/types/newApi"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import { openManagedSiteChannelRowActions } from "~~/e2e/scenarios/managedSiteChannels"
@@ -195,9 +196,9 @@ async function readStoredNewApiPreferences(
   return newApi as Record<string, unknown>
 }
 
-async function readStoredModelSyncExecution(context: BrowserContext): Promise<{
-  items?: Array<{ channelId: number; ok: boolean; newModels?: string[] }>
-}> {
+async function readStoredModelSyncExecution(
+  context: BrowserContext,
+): Promise<Partial<ExecutionResult>> {
   const serviceWorker = await getServiceWorker(context)
   const raw = await getPlasmoStorageRawValue<unknown>(
     serviceWorker,
@@ -209,9 +210,7 @@ async function readStoredModelSyncExecution(context: BrowserContext): Promise<{
   }
 
   try {
-    return JSON.parse(raw) as {
-      items?: Array<{ channelId: number; ok: boolean; newModels?: string[] }>
-    }
+    return JSON.parse(raw) as Partial<ExecutionResult>
   } catch {
     return {}
   }
@@ -970,6 +969,12 @@ test("loads managed-site channels, deep-links into manual model sync, and runs a
   extensionId,
   page,
 }) => {
+  const resourceRef = {
+    siteType: SITE_TYPES.NEW_API,
+    kind: "channel",
+    scopeKey: MANAGED_SITE_BASE_URL,
+    resourceId: "101",
+  }
   await seedManagedSitePreferences(context)
   const { updatePayloads } = await stubManagedSiteAdminRoutes(context)
 
@@ -993,7 +998,10 @@ test("loads managed-site channels, deep-links into manual model sync, and runs a
     .click()
 
   await expect(page).toHaveURL(
-    /options\.html\?channelId=101&tab=manual#managedSiteModelSync$/,
+    modelSyncUrl(extensionId, {
+      resourceRef: JSON.stringify(resourceRef),
+      tab: "manual",
+    }),
   )
   await expect(
     page.getByRole("heading", { name: "Model List Synchronization" }),
@@ -1040,7 +1048,7 @@ test("loads managed-site channels, deep-links into manual model sync, and runs a
 
   expect(storedExecution.items).toEqual([
     expect.objectContaining({
-      channelId: 101,
+      resourceRef,
       ok: true,
       newModels: ["gpt-4o-mini", "gpt-4.1-mini"],
     }),
@@ -1086,6 +1094,15 @@ test("applies model redirect mapping during selected managed-site model sync thr
     page.getByRole("heading", { name: "Model List Synchronization" }),
   ).toBeVisible()
   await expect(page.getByRole("cell", { name: "101" })).toBeVisible()
+  const channelCheckbox = page
+    .getByRole("row")
+    .filter({ has: page.getByRole("cell", { name: "101", exact: true }) })
+    .getByRole("checkbox")
+  await expect(channelCheckbox).not.toBeChecked()
+  await expect(
+    page.getByRole("button", { name: "Run Selected (0)" }),
+  ).toBeDisabled()
+  await channelCheckbox.check()
   await expect(
     page.getByRole("button", { name: "Run Selected (1)" }),
   ).toBeEnabled()
@@ -1117,7 +1134,12 @@ test("applies model redirect mapping during selected managed-site model sync thr
 
   expect(storedExecution.items).toEqual([
     expect.objectContaining({
-      channelId: 101,
+      resourceRef: {
+        siteType: SITE_TYPES.NEW_API,
+        kind: "channel",
+        scopeKey: MANAGED_SITE_BASE_URL,
+        resourceId: "101",
+      },
       ok: true,
       newModels: ["openai/gpt-4o-mini:free", "gpt-4.1-mini"],
     }),
