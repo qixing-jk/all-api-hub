@@ -51,7 +51,10 @@ import {
 } from "~/services/accountBrowserSession"
 import { autoDetectAccount } from "~/services/accounts/accountAutoDetection"
 import { validateAndSaveAccount } from "~/services/accounts/accountCreation"
-import { findExactCredentialDuplicateAccountId } from "~/services/accounts/accountDedupe"
+import {
+  findExactCredentialDuplicateAccountId,
+  usesAccountCredentialIdentity,
+} from "~/services/accounts/accountDedupe"
 import {
   isValidAccount,
   parseManualQuotaFromUsd,
@@ -743,15 +746,15 @@ export function useAccountDialog({
         const shouldApplyDefaultName =
           !prev.siteName.trim() ||
           prev.siteName.trim() === (previousPolicy.defaultSiteName ?? "")
-        const shouldClearOpenRouterIdentity =
+        const shouldClearCredentialIdentity =
           prev.siteType !== nextSiteType &&
-          prev.siteType === SITE_TYPES.OPENROUTER
+          usesAccountCredentialIdentity(prev.siteType)
         return normalizeAccountDialogDraftForSitePolicy({
           draft: {
             ...prev,
             siteType: nextSiteType,
             checkIn,
-            ...(shouldClearOpenRouterIdentity ? { userId: "" } : {}),
+            ...(shouldClearCredentialIdentity ? { userId: "" } : {}),
             ...(shouldApplyDefaultName
               ? { siteName: nextPolicy.defaultSiteName ?? "" }
               : {}),
@@ -916,7 +919,7 @@ export function useAccountDialog({
   const ensureExactCredentialDuplicateConfirmation = useCallback(async () => {
     if (
       !warnOnDuplicateAccountAdd ||
-      siteType !== SITE_TYPES.OPENROUTER ||
+      !usesAccountCredentialIdentity(siteType) ||
       !accessToken.trim()
     ) {
       return true
@@ -935,7 +938,7 @@ export function useAccountDialog({
       logger.warn(
         "Exact-credential duplicate lookup failed; continuing without warning",
         {
-          siteType: SITE_TYPES.OPENROUTER,
+          siteType,
           status: "storage_lookup_failed",
           category: "duplicate_check",
         },
@@ -944,7 +947,7 @@ export function useAccountDialog({
     }
     const duplicateId = findExactCredentialDuplicateAccountId({
       accounts,
-      siteType: SITE_TYPES.OPENROUTER,
+      siteType,
       accessToken,
       excludeAccountId: mode === DIALOG_MODES.EDIT ? account?.id : undefined,
     })
@@ -970,7 +973,7 @@ export function useAccountDialog({
       return true
     }
 
-    if (siteType === SITE_TYPES.OPENROUTER) {
+    if (usesAccountCredentialIdentity(siteType)) {
       return true
     }
 

@@ -3,6 +3,7 @@ import { ACCOUNT_SITE_ADAPTER_FAMILIES, SITE_TYPES } from "~/constants/siteType"
 import type { SiteTypeCapabilities } from "../contracts/siteTypeCapabilities"
 import { openRouterAccountData } from "./accountData"
 import { openRouterAccountKeyResources } from "./accountKeyResource"
+import { openRouterAccountPersistence } from "./accountPersistence"
 import { openRouterAccountRefresh } from "./accountRefresh"
 import { openRouterProviderModelCatalog } from "./providerModelCatalog"
 
@@ -11,6 +12,7 @@ export const openRouterCapabilities: SiteTypeCapabilities = {
   family: ACCOUNT_SITE_ADAPTER_FAMILIES.OpenRouter,
   account: {
     data: openRouterAccountData,
+    persistence: openRouterAccountPersistence,
     keyResourceManagement: openRouterAccountKeyResources,
     keyResources: openRouterAccountKeyResources,
     providerModelCatalog: openRouterProviderModelCatalog,

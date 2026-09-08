@@ -18,7 +18,7 @@
 
 ## 后续独立迁移
 
-1. OpenRouter 的凭证验证、身份生成、去重和敏感错误处理（accountCreation/accountUpdate/accountDedupe/accountPersistence、accountAutoDetection、useAccountDialog）。需要一起定义持久化身份/凭证验证接口，不能将信任与诊断策略简化成站点布尔量。
+1. OpenRouter 的只读自动检测与浏览器引导（accountAutoDetection、useAccountDialog）。凭证验证、持久化身份、去重和敏感错误处理已在第六轮迁入注册能力；只读检测仍有独立的来源信任边界。
 2. New API 的交互验证（ManagedSiteChannelAssessmentSignalHelpers、AccountActionButtons、KeyManagement、managedSiteTokenBatchExportPreview、useManagedResourceInteraction、tokenBatchExport/tokenChannelStatus、accountBrowserSession）。当前执行与 UI 挑战过程具有提供方专属契约，需要完成整个验证流程的能力迁移。
 3. **已完成第三轮清理**：匹配适配器的 resolveNavigationId 决定可用导航身份，AxonHub 自行拒绝历史数字投影。服务摘要显式携带 resourceId，TokenHeader 不再猜测站点规则；状态查询、批量导出与账户定位一起迁移。
 4. **已完成第二轮清理**：KeyManagement/useKeyManagement 的配置指纹读取已有 runtimeConfig 解析结果，删除提供方字段名单；所有配置字段参与失效判断，字段顺序规范化，凭证仍只保留内存哈希。七类站点均覆盖凭证变更、旧结果晚返回、无关目标变更和配置清空。
@@ -55,15 +55,15 @@
 | src/services/accountBrowserSession/sessionReader.ts | 后续 | New API browser-session identity recovery. |
 | src/services/accountBrowserSession/transientAuth.ts | 后续 | New API transient browser credential policy. |
 | src/services/accounts/accountAutoDetection.ts | 后续 | Canonical OpenRouter onboarding and browser identity resolution. |
-| src/services/accounts/accountCreation.ts | 后续 | OpenRouter credential-derived identity creation. |
-| src/services/accounts/accountDedupe.ts | 后续 | OpenRouter credential ownership and duplicate identity semantics. |
+| src/services/accounts/accountCreation.ts | 已清理 | 注册持久化能力负责凭证验证和存储身份准备。 |
+| src/services/accounts/accountDedupe.ts | 已清理 | 使用注册能力提供的私有凭证比较键，结果不暴露密钥。 |
 | src/services/accounts/accountFormValidation.ts | 已清理 | OpenRouter user-id requirement; migrate into identity profile. |
 | src/services/accounts/accountKeyAutoProvisioning/repair.ts | 后续 | AIHubMix one-time-secret repair workflow. |
-| src/services/accounts/accountPersistence/shared.ts | 后续 | OpenRouter credential verification and persisted identity fields. |
+| src/services/accounts/accountPersistence/shared.ts | 已清理 | 通用持久化编排消费能力，提供方拥有诊断脱敏与身份规则。 |
 | src/services/accounts/accountSiteProfile/urls.ts | 已清理 | Canonical AIHubMix URL profile selection. |
 | src/services/accounts/accountStorage/accountRefresh.ts | 已清理 | Sub2API refresh-token expiry handling. |
 | src/services/accounts/accountStorage/sub2ApiAuthPersistence.ts | 保留 | Provider-specific persisted Sub2API authentication updates. |
-| src/services/accounts/accountUpdate.ts | 后续 | OpenRouter credential-derived identity updates. |
+| src/services/accounts/accountUpdate.ts | 已清理 | 注册持久化能力负责身份更新及验证时机，保留严格读取现有账户。 |
 | src/services/accounts/migrations/sub2apiAuthMigration.ts | 保留 | Historical Sub2API authentication storage migration. |
 | src/services/accounts/utils/siteRouteResolver.ts | 已清理 | AIHubMix canonical routes and New API credential-link policy. |
 | src/services/accounts/utils/siteUrlNormalization.ts | 已清理 | Canonical AIHubMix URL compatibility helper. |
@@ -143,3 +143,15 @@
 - 已验证：提供方策略注册、链式映射保留、不可用循环裁剪、DoneHub 前缀保留、调度器策略透传、密钥失败脱敏与显式执行意图；复扫调度器与重定向服务没有具体站点常量分支。
 - 后续仍独立保留：OpenRouter 凭证/身份持久化、New API 交互验证、AIHubMix 一次性密钥恢复流程。
 - 验证：259 个相关测试文件、4484 项测试通过，类型检查和未使用代码检查通过；冲突文件 ESLint/格式检查通过。七种导入顺序完整性回归通过；未运行浏览器 E2E。提交钩子结果以提交完成为准。
+
+
+## 第六轮账户持久化与凭证身份
+
+范围：OpenRouter 凭证准入、存储身份、重复账户判断及敏感诊断披露。
+
+- 已执行：OpenRouter 注册 account.persistence，直接负责验证时机、存储身份准备、错误文案和日志披露；创建、更新与 shared 不再判断 OpenRouter 身份。
+- 已执行：账户扫描和弹窗通过能力提供的私有凭证比较键执行去重；切换站点时清理凭证身份，保持原有确认行为与密钥不进入结果的边界。
+- 保持：仅修改元数据时不重复验证；更新读取失败或找不到原账户时拒绝保存；本地生成的存储身份不替换请求身份。
+- 已验证场景：验证失败阻止保存、已有本地身份保留、敏感错误不写入日志/健康状态、能力按注册分发而非站点名称分发，以及七种提供方优先导入的注册完整性。
+- 后续仍独立保留：OpenRouter 只读检测和浏览器引导、New API 交互验证、AIHubMix 一次性密钥恢复；未新增 lint。
+- 验证：204 个相关测试文件、3359 项测试全部通过；类型检查和未使用代码检查通过。未运行浏览器 E2E；提交钩子结果以提交完成为准。

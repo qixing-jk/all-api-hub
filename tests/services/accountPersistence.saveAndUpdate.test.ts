@@ -4,6 +4,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { validateAndSaveAccount } from "~/services/accounts/accountCreation"
 import { MANUAL_ADD_ACCOUNT_DATA_FETCH_TIMEOUT_MS } from "~/services/accounts/accountCreationTimeout"
 import { validateAndUpdateAccount } from "~/services/accounts/accountUpdate"
+import { openRouterAccountPersistence } from "~/services/apiAdapters/openrouter/accountPersistence"
 import { OpenRouterManagementKeyRequiredError } from "~/services/apiService/openrouter/errors"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import {
@@ -284,15 +285,62 @@ describe("accountPersistence save and update", () => {
       showTodayCashflow: false,
     })
     validateManagementKeyMock.mockResolvedValue({})
-    getSiteTypeCapabilitiesMock.mockReturnValue({
+    getSiteTypeCapabilitiesMock.mockImplementation((siteType) => ({
       account: {
+        persistence:
+          siteType === SITE_TYPES.OPENROUTER
+            ? openRouterAccountPersistence
+            : undefined,
         data: {
           fetchData: fetchAccountDataMock,
         },
         keyManagement: {},
         tokenProvisioning: {},
       },
+    }))
+  })
+
+  it("persists identity prepared by a registered capability independently of the site name", async () => {
+    const prepareIdentity = vi.fn().mockResolvedValue("provider-owned-id")
+    getSiteTypeCapabilitiesMock.mockReturnValue({
+      account: {
+        persistence: { ...openRouterAccountPersistence, prepareIdentity },
+        data: { fetchData: fetchAccountDataMock },
+      },
     })
+    fetchAccountDataMock.mockResolvedValue(LOG_TEST_ACCOUNT_DATA)
+    const result = await saveAccountForLogTest(SITE_TYPES.NEW_API, false)
+    expect(result.success).toBe(true)
+    expect(prepareIdentity).toHaveBeenCalledTimes(1)
+    expect(fetchAccountDataMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        auth: expect.objectContaining({ userId: "ordinary-id" }),
+      }),
+    )
+    const saved = await accountStorage.getAccountById(result.accountId!)
+    expect(saved?.account_info.id).toBe("provider-owned-id")
+  })
+
+  it("uses registered admission rejection copy before fetching data or saving", async () => {
+    getSiteTypeCapabilitiesMock.mockReturnValue({
+      account: {
+        persistence: {
+          ...openRouterAccountPersistence,
+          prepareIdentity: vi
+            .fn()
+            .mockRejectedValue(new Error("private admission detail")),
+          getValidationFailureMessage: () => "Controlled admission failure",
+        },
+        data: { fetchData: fetchAccountDataMock },
+      },
+    })
+    const result = await saveAccountForLogTest(SITE_TYPES.NEW_API, false)
+    expect(result).toEqual({
+      success: false,
+      message: "Controlled admission failure",
+    })
+    expect(fetchAccountDataMock).not.toHaveBeenCalled()
+    expect(await accountStorage.getAllAccounts()).toEqual([])
   })
 
   it("defaults legacy preferences to including today's cashflow on update", async () => {
@@ -917,7 +965,10 @@ describe("accountPersistence save and update", () => {
     vi.clearAllMocks()
     validateManagementKeyMock.mockResolvedValue({})
     getSiteTypeCapabilitiesMock.mockReturnValue({
-      account: { data: { fetchData: fetchAccountDataMock } },
+      account: {
+        data: { fetchData: fetchAccountDataMock },
+        persistence: openRouterAccountPersistence,
+      },
     })
     fetchAccountDataMock.mockResolvedValue(LOG_TEST_ACCOUNT_DATA)
     await updateAccountForLogTest(accountId, SITE_TYPES.OPENROUTER, false)
@@ -946,7 +997,10 @@ describe("accountPersistence save and update", () => {
     vi.clearAllMocks()
     validateManagementKeyMock.mockResolvedValue({})
     getSiteTypeCapabilitiesMock.mockReturnValue({
-      account: { data: { fetchData: fetchAccountDataMock } },
+      account: {
+        data: { fetchData: fetchAccountDataMock },
+        persistence: openRouterAccountPersistence,
+      },
     })
     fetchAccountDataMock.mockRejectedValue(
       new Error("private backend message with stack"),
@@ -1656,6 +1710,7 @@ describe("accountPersistence save and update", () => {
   it("skips OpenRouter credential validation for metadata-only edits", async () => {
     getSiteTypeCapabilitiesMock.mockReturnValue({
       account: {
+        persistence: openRouterAccountPersistence,
         data: { fetchData: fetchAccountDataMock },
       },
     })
@@ -1996,7 +2051,7 @@ describe("accountPersistence save and update", () => {
   })
 
   it("saves warning-only account data when accountData capability is missing", async () => {
-    getSiteTypeCapabilitiesMock.mockReturnValueOnce({})
+    getSiteTypeCapabilitiesMock.mockReturnValue({})
 
     const result = await validateAndSaveAccount(
       "https://unsupported.example.invalid",
@@ -2610,7 +2665,6 @@ describe("accountPersistence save and update", () => {
     }
 
     expect(fetchAccountDataMock).toHaveBeenCalledTimes(5)
-    expect(getSiteTypeCapabilitiesMock).toHaveBeenCalledTimes(5)
     expect(getSiteTypeCapabilitiesMock).toHaveBeenCalledWith(SITE_TYPES.NEW_API)
   })
 

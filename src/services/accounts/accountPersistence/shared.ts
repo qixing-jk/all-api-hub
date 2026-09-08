@@ -1,4 +1,4 @@
-import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
+import type { AccountSiteType } from "~/constants/siteType"
 import {
   parseManualQuotaFromUsd,
   resolveExchangeRate,
@@ -7,16 +7,8 @@ import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
 import { normalizeAccountSiteSupplementalAuth } from "~/services/accounts/accountSiteProfile"
 import { normalizeAccountSiteProfileUrlForStorage } from "~/services/accounts/accountSiteProfile/urls"
 import type { AccountDataCapability } from "~/services/apiAdapters/contracts/accountData"
-import {
-  validateManagementKey,
-  type OpenRouterManagementKeyValidation,
-} from "~/services/apiService/openrouter"
-import {
-  OPENROUTER_CREDITS_ENDPOINT,
-  OPENROUTER_KEY_ENDPOINT,
-} from "~/services/apiService/openrouter/constants"
-import { OpenRouterManagementKeyRequiredError } from "~/services/apiService/openrouter/errors"
-import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import type { AccountPersistenceIdentityInput } from "~/services/apiAdapters/contracts/accountPersistence"
+import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import {
   AuthTypeEnum,
   type CheckInConfig,
@@ -25,7 +17,6 @@ import {
 } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
-import { t } from "~/utils/i18n/core"
 
 export const accountPersistenceLogger = createLogger("AccountOperations")
 
@@ -61,83 +52,55 @@ export const requireAccountDataCapability = (
   return accountData
 }
 
-/** Validates OpenRouter Management Keys before persistence. */
-export async function validateOpenRouterManagementKeyIfRequired(params: {
-  siteType: AccountSiteType
-  accessToken: string
-  shouldValidate: boolean
-}): Promise<OpenRouterManagementKeyValidation> {
-  if (params.siteType !== SITE_TYPES.OPENROUTER || !params.shouldValidate) {
-    return {}
-  }
-
-  return validateManagementKey({ accessToken: params.accessToken.trim() })
+/** Prepares provider-owned identity or uses the ordinary entered account identity. */
+export async function prepareAccountPersistenceIdentity(
+  params: AccountPersistenceIdentityInput & {
+    siteType: AccountSiteType
+  },
+) {
+  const persistence = getSiteTypeCapabilities(params.siteType).account
+    ?.persistence
+  return persistence
+    ? persistence.prepareIdentity(params)
+    : normalizeAccountIdentity(params.userId)!
 }
 
-/** Maps OpenRouter failures to controlled local copy without losing typed classification. */
-function getOpenRouterSafeErrorMessage(
+/** Returns provider-controlled validation feedback when configured. */
+export function getCredentialValidationMessage(
+  siteType: AccountSiteType,
   error: unknown,
-  unknownFallback: string,
 ): string {
-  if (error instanceof OpenRouterManagementKeyRequiredError) {
-    return t("messages:openrouter.managementKeyRequired")
-  }
-  if (error instanceof ApiError) {
-    if (error.code === API_ERROR_CODES.HTTP_401) {
-      return t("messages:openrouter.credentialInvalid")
-    }
-    if (error.code === API_ERROR_CODES.HTTP_403) {
-      return t("messages:openrouter.permissionDenied")
-    }
-    if (error.code === API_ERROR_CODES.NETWORK_ERROR) {
-      return t("messages:openrouter.networkFallback")
-    }
-    const hasOpenRouterResponseEndpoint =
-      error.endpoint === OPENROUTER_KEY_ENDPOINT ||
-      error.endpoint === OPENROUTER_CREDITS_ENDPOINT
-    const hasExplicitMalformedResponseCode =
-      error.code === API_ERROR_CODES.CONTENT_TYPE_MISMATCH ||
-      error.code === API_ERROR_CODES.JSON_PARSE_ERROR
-    const isLocalStructureValidationError =
-      hasOpenRouterResponseEndpoint &&
-      error.code == null &&
-      error.statusCode == null
-    if (hasExplicitMalformedResponseCode || isLocalStructureValidationError) {
-      return t("messages:openrouter.malformedResponse")
-    }
-  }
-  return unknownFallback
-}
-
-/** Maps credential validation failures to stable user-facing copy. */
-export function getCredentialValidationMessage(error: unknown): string {
-  return getOpenRouterSafeErrorMessage(
-    error,
-    t("messages:openrouter.networkFallback"),
+  return (
+    getSiteTypeCapabilities(
+      siteType,
+    ).account?.persistence?.getValidationFailureMessage(error) ??
+    getErrorMessage(error)
   )
 }
 
-/** Keeps ordinary health diagnostics while protecting OpenRouter persisted state. */
+/** Returns the provider's safe health diagnostic or the ordinary error message. */
 export function getAccountHealthFailureReason(
   siteType: AccountSiteType,
   error: unknown,
 ): string {
-  if (siteType !== SITE_TYPES.OPENROUTER) {
-    return getErrorMessage(error)
-  }
-  return getOpenRouterSafeErrorMessage(
-    error,
-    t("account:healthStatus.unknownError"),
+  return (
+    getSiteTypeCapabilities(
+      siteType,
+    ).account?.persistence?.getHealthFailureReason(error) ??
+    getErrorMessage(error)
   )
 }
 
-/** Keeps ordinary diagnostics while protecting sensitive OpenRouter details. */
+/** Delegates diagnostic disclosure to the provider's persistence boundary. */
 export function getAccountOperationLogDetails(
   siteType: AccountSiteType,
   ordinaryDetails: unknown,
   safeDetails: Record<string, unknown>,
 ): unknown {
-  return siteType === SITE_TYPES.OPENROUTER ? safeDetails : ordinaryDetails
+  const persistence = getSiteTypeCapabilities(siteType).account?.persistence
+  return persistence
+    ? persistence.getOperationLogDetails(ordinaryDetails, safeDetails)
+    : ordinaryDetails
 }
 
 /** Normalizes tag ids from the account form into a trimmed, de-duplicated list. */

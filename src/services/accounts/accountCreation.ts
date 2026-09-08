@@ -3,7 +3,6 @@
 import { isAccountSiteType, SITE_TYPES } from "~/constants/siteType"
 import { withManualAccountDataFetchTimeout } from "~/services/accounts/accountCreationTimeout"
 import { isValidAccount } from "~/services/accounts/accountFormValidation"
-import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
 import { autoProvisionKeyOnAccountAdd } from "~/services/accounts/accountKeyAutoProvisioning/autoProvisionOnAccountAdd"
 import {
   ACCOUNT_PERSISTENCE_LOG_STATUSES,
@@ -16,15 +15,13 @@ import {
   getAccountOperationLogDetails,
   getCredentialValidationMessage,
   accountPersistenceLogger as logger,
+  prepareAccountPersistenceIdentity,
   requireAccountDataCapability,
-  validateOpenRouterManagementKeyIfRequired,
   type TagIdsInput,
 } from "~/services/accounts/accountPersistence/shared"
 import { getAccountSiteProductProfile } from "~/services/accounts/accountSiteProfile"
 import { accountMutations } from "~/services/accounts/accountStorage/accountMutations"
-import { resolveOpenRouterAccountUserId } from "~/services/apiAdapters/openrouter/accountIdentity"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
-import type { OpenRouterManagementKeyValidation } from "~/services/apiService/openrouter"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
@@ -111,12 +108,12 @@ export async function validateAndSaveAccount(
     }
   }
 
-  let credentialValidation: OpenRouterManagementKeyValidation
+  let accountIdentity: string
   try {
-    credentialValidation = await validateOpenRouterManagementKeyIfRequired({
+    accountIdentity = await prepareAccountPersistenceIdentity({
       siteType: normalizedSiteType,
       accessToken,
-      shouldValidate: true,
+      userId,
     })
   } catch (error) {
     logger.warn("Account credential validation failed", {
@@ -125,17 +122,10 @@ export async function validateAndSaveAccount(
     })
     return {
       success: false,
-      message: getCredentialValidationMessage(error),
+      message: getCredentialValidationMessage(normalizedSiteType, error),
     }
   }
   const productProfile = getAccountSiteProductProfile(normalizedSiteType)
-  const accountIdentity =
-    normalizedSiteType === SITE_TYPES.OPENROUTER
-      ? resolveOpenRouterAccountUserId({
-          enteredUserId: userId,
-          creatorUserId: credentialValidation.userId,
-        })
-      : normalizeAccountIdentity(userId)!
   let shouldAutoProvisionKeyOnAccountAdd =
     DEFAULT_PREFERENCES.autoProvisionKeyOnAccountAdd ?? false
   let autoProvisionKeyOnAccountAddMode =

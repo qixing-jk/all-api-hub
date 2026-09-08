@@ -285,9 +285,17 @@ describe("apiAdapters registry", () => {
       "data",
       "keyResourceManagement",
       "keyResources",
+      "persistence",
       "providerModelCatalog",
       "refresh",
     ])
+    expect(capabilities.account?.persistence).toMatchObject({
+      prepareIdentity: expect.any(Function),
+      getCredentialKey: expect.any(Function),
+      getValidationFailureMessage: expect.any(Function),
+      getHealthFailureReason: expect.any(Function),
+      getOperationLogDetails: expect.any(Function),
+    })
     expect(capabilities.account?.bootstrap).toBeUndefined()
     expect(capabilities.account?.completion).toBeUndefined()
     expect(capabilities.account).not.toHaveProperty("credential")

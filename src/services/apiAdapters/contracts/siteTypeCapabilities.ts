@@ -5,6 +5,7 @@ import type { AccountBootstrapCapability } from "./accountBootstrap"
 import type { AccountCompletionCapability } from "./accountCompletion"
 import type { AccountDataCapability } from "./accountData"
 import type { AccountKeyResourceCapability } from "./accountKeyResource"
+import type { AccountPersistenceCapability } from "./accountPersistence"
 import type { AccountRefreshCapability } from "./accountRefresh"
 import type { InviteLinkCapability } from "./inviteLink"
 import type { KeyManagementCapability } from "./keyManagement"
@@ -36,6 +37,7 @@ export type SiteTypeCapabilities = {
     providerModelCatalog?: ProviderModelCatalogCapability
     modelPricing?: ModelPricingCapability
     data?: AccountDataCapability
+    persistence?: AccountPersistenceCapability
     bootstrap?: AccountBootstrapCapability
     completion?: AccountCompletionCapability
     inviteLink?: InviteLinkCapability
