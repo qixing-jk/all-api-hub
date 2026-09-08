@@ -70,4 +70,13 @@ describe("managed site console routes", () => {
       ).toBeNull()
     },
   )
+
+  it("fails loudly when a managed site has no registered console routes", () => {
+    expect(() =>
+      buildManagedSiteChannelConsoleUrl(
+        "https://gateway.example.invalid",
+        SITE_TYPES.AIHUBMIX as never,
+      ),
+    ).toThrow("Managed site AIHubMix is missing console routes")
+  })
 })

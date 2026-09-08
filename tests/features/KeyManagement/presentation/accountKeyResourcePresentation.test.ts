@@ -1,6 +1,7 @@
 import type { TFunction } from "i18next"
 import { describe, expect, it } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import { getAccountKeyResourceCardAdapter } from "~/features/KeyManagement/presentation/accountKeyResourcePresentation"
 import { openRouterKeyResourceCardAdapter } from "~/features/KeyManagement/presentation/openRouterKeyResourceCard"
 import type { NativeKeyManagementRow } from "~/features/KeyManagement/types"
@@ -69,4 +70,45 @@ describe("native resource card presentation", () => {
       openRouterKeyResourceCardAdapter,
     )
   })
+
+  it.each([
+    ["disabled", "inactive", "keyManagement:native.status.disabled"],
+    ["expired", "inactive", "keyManagement:native.status.expired"],
+    ["unknown", "unknown", "keyManagement:native.status.unknown"],
+  ] as const)(
+    "maps the %s provider status without inventing provider-specific labels",
+    (status, expectedStatus, expectedStatusLabel) => {
+      const row: NativeKeyManagementRow = {
+        kind: "account-key-resource",
+        rowKey: `aihubmix-${status}`,
+        accountId: "account-aihubmix",
+        accountName: "AIHubMix account",
+        scopeName: "Default scope",
+        facts: {
+          ref: {
+            accountId: "account-aihubmix",
+            siteType: SITE_TYPES.AIHUBMIX,
+            scopeKey: "default",
+            resourceId: `key-${status}`,
+          },
+          displayName: `${status} key`,
+          maskedLabel: "sk-••••example",
+          status,
+          fields: [],
+          actions: { canUpdate: true, canDelete: false },
+        },
+      }
+      const adapter = getAccountKeyResourceCardAdapter(row.facts.ref.siteType)
+
+      expect(
+        adapter.buildPresentation(row, t, { hasAssociatedSecret: false }),
+      ).toMatchObject({
+        status: expectedStatus,
+        statusLabel: expectedStatusLabel,
+      })
+      expect(adapter.getDetailsLoadFailedMessage(t)).toBe(
+        "keyManagement:native.detailsLoadFailed",
+      )
+    },
+  )
 })
