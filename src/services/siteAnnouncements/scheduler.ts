@@ -1,4 +1,3 @@
-import { SITE_TYPES } from "~/constants/siteType"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { createAccountApiRequestFromStoredAccount } from "~/services/accounts/utils/apiServiceRequest"
 import { userPreferences } from "~/services/preferences/userPreferences"
@@ -19,7 +18,6 @@ import type {
 import {
   DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES,
   normalizeSiteAnnouncementPreferences,
-  SITE_ANNOUNCEMENT_PROVIDER_IDS,
   SITE_ANNOUNCEMENT_STATUS,
 } from "~/types/siteAnnouncements"
 import {
@@ -193,7 +191,7 @@ function getAnnouncementAlarmDelayMinutes(params: {
 }): number {
   const now = Date.now()
   let nextDelayMinutes = Number.POSITIVE_INFINITY
-  const accounts = dedupeCommonAccounts(params.accounts)
+  const accounts = dedupeAnnouncementSources(params.accounts)
   const enabledSiteKeys = new Set(
     accounts.map((account) => {
       const provider = getSiteAnnouncementProvider(account.site_type)
@@ -245,18 +243,13 @@ function getAnnouncementAlarmDelayMinutes(params: {
 }
 
 /**
- * Removes duplicate common-provider accounts that share one announcement source.
+ * Removes duplicate checks using the source identity supplied by each provider.
  */
-function dedupeCommonAccounts(accounts: SiteAccount[]): SiteAccount[] {
+function dedupeAnnouncementSources(accounts: SiteAccount[]): SiteAccount[] {
   const seen = new Set<string>()
   const result: SiteAccount[] = []
 
   for (const account of accounts) {
-    if (account.site_type === SITE_TYPES.SUB2API) {
-      result.push(account)
-      continue
-    }
-
     const provider = getSiteAnnouncementProvider(account.site_type)
     const key = provider.createSiteKey({
       accountId: account.id,
@@ -423,7 +416,7 @@ class SiteAnnouncementScheduler {
         : await accountQueries.getEnabledAccounts()
       let nextCooldownExpiresAt: number | undefined
 
-      for (const account of dedupeCommonAccounts(accounts)) {
+      for (const account of dedupeAnnouncementSources(accounts)) {
         const provider = getSiteAnnouncementProvider(account.site_type)
         const request = createProviderRequest(account, provider)
         const siteKey = provider.createSiteKey({
@@ -600,35 +593,29 @@ export function setupSiteAnnouncementsMessagingListeners() {
 }
 
 /**
- * Mirrors local Sub2API read actions back to the upstream announcement API.
+ * Mirrors read actions through the matching provider when it supports upstream acknowledgement.
  */
-async function syncSub2ApiAnnouncementRead(recordId: string): Promise<void> {
+async function syncSiteAnnouncementRead(recordId: string): Promise<void> {
   const record = (await siteAnnouncementStorage.listRecords()).find(
     (item) => item.id === recordId,
   )
-  if (
-    !record ||
-    record.siteType !== SITE_TYPES.SUB2API ||
-    record.providerId !== SITE_ANNOUNCEMENT_PROVIDER_IDS.Sub2Api ||
-    !record.upstreamId
-  ) {
+  if (!record?.upstreamId) {
     return
   }
+
+  const service = getSiteAnnouncementProvider(record.siteType)
+  if (service.id !== record.providerId || !service.markRead) return
 
   const account = await accountQueries.getAccountById(record.accountId)
   if (!account) {
-    logger.warn(
-      "Cannot sync Sub2API announcement read state; account missing",
-      {
-        recordId,
-        accountId: record.accountId,
-      },
-    )
+    logger.warn("Cannot sync announcement read state; account missing", {
+      recordId,
+      accountId: record.accountId,
+    })
     return
   }
 
-  const service = getSiteAnnouncementProvider(SITE_TYPES.SUB2API)
-  await service.markRead?.(createProviderRequest(account, service), [
+  await service.markRead(createProviderRequest(account, service), [
     { id: record.upstreamId },
   ])
 }
@@ -699,7 +686,7 @@ export async function resolveSiteAnnouncementsMarkReadMessage(
   request: SiteAnnouncementsMarkReadRequest,
 ): Promise<RuntimeMessageResponse<undefined>> {
   try {
-    await syncSub2ApiAnnouncementRead(request.recordId)
+    await syncSiteAnnouncementRead(request.recordId)
     return (await siteAnnouncementStorage.markRead(request.recordId))
       ? ({ success: true, data: undefined } as const)
       : createRuntimeMessageFailure("Failed to mark announcement as read")

@@ -24,6 +24,7 @@ import { replaceIdListSubset } from "~/services/accounts/accountEntryLayoutPolic
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
 import { findAccountsBySiteIdentity } from "~/services/accounts/accountMatching"
 import { resolveAccountSiteContentSessionHintForOrigin } from "~/services/accounts/accountSiteProfile"
+import { isSameAccountSiteOrigin } from "~/services/accounts/accountSiteProfile/urls"
 import { accountCheckInState } from "~/services/accounts/accountStorage/accountCheckInState"
 import { accountEntryLayout } from "~/services/accounts/accountStorage/accountEntryLayout"
 import { accountPresentation } from "~/services/accounts/accountStorage/accountPresentation"
@@ -31,7 +32,6 @@ import { accountQueries } from "~/services/accounts/accountStorage/accountQuerie
 import { accountReadModels } from "~/services/accounts/accountStorage/accountReadModels"
 import { accountRefresh } from "~/services/accounts/accountStorage/accountRefresh"
 import { createEmptyAccountStats } from "~/services/accounts/accountTodayStats"
-import { isSameAccountSiteOrigin } from "~/services/accounts/utils/siteUrlNormalization"
 import { getDayKeyFromUnixSeconds } from "~/services/history/dailyBalanceHistory/dayKeys"
 import { dailyBalanceHistoryStorage } from "~/services/history/dailyBalanceHistory/storage"
 import {

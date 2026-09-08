@@ -60,6 +60,7 @@ import {
   APIYI_HOSTNAME,
   MODELFLARE_HOSTNAME,
   MODELFLARE_USER_ID_HEADER_NAME,
+  OPENROUTER_DISPLAY_NAME,
   OPENROUTER_HOSTNAMES,
   OPENROUTER_WEB_ORIGIN,
   SHAREDCHAT_HOSTNAMES,
@@ -96,6 +97,8 @@ const ACCOUNT_AND_MANAGED_SCOPES = [
 ] as const
 
 const LEGACY_MANAGED_CHANNEL_POLICY = {
+  labelKey: "settings:managedSite.newApi",
+  messagesKey: "newapi",
   primaryKind: MANAGED_RESOURCE_KINDS.Channel,
   itemLabelKey: "managedSiteChannels:table.columns.name",
   tableFieldIds: [],
@@ -143,6 +146,7 @@ export type ManagedSiteDefinitionType = (typeof MANAGED_SITE_TYPE_ORDER)[number]
 const ACCOUNT_SITE_DEFINITIONS = [
   {
     siteType: SITE_TYPES.ONE_API,
+    tokenKey: { optionalSkPrefix: true },
     scopes: ACCOUNT_SCOPE,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
     onboarding: {
@@ -162,6 +166,7 @@ const ACCOUNT_SITE_DEFINITIONS = [
   },
   {
     siteType: SITE_TYPES.NEW_API,
+    tokenKey: { optionalSkPrefix: true },
     scopes: ACCOUNT_AND_MANAGED_SCOPES,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
     managedResource: {
@@ -188,6 +193,7 @@ const ACCOUNT_SITE_DEFINITIONS = [
   },
   {
     siteType: SITE_TYPES.APIYI,
+    tokenKey: { optionalSkPrefix: true },
     scopes: ACCOUNT_SCOPE,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
     onboarding: {
@@ -206,6 +212,7 @@ const ACCOUNT_SITE_DEFINITIONS = [
   },
   {
     siteType: SITE_TYPES.MODELFLARE,
+    tokenKey: { optionalSkPrefix: true },
     scopes: ACCOUNT_SCOPE,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
     onboarding: {
@@ -235,6 +242,7 @@ const ACCOUNT_SITE_DEFINITIONS = [
   },
   {
     siteType: SITE_TYPES.ANYROUTER,
+    tokenKey: { optionalSkPrefix: true },
     scopes: ACCOUNT_SCOPE,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
     onboarding: {
@@ -262,6 +270,8 @@ const ACCOUNT_SITE_DEFINITIONS = [
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Sub2Api,
     managedResource: {
       ...LEGACY_MANAGED_CHANNEL_POLICY,
+      labelKey: "settings:managedSite.sub2api",
+      messagesKey: "sub2api",
       tableFieldIds: SUB2API_MANAGED_RESOURCE_TABLE_FIELD_IDS,
       detailFieldIds: SUB2API_MANAGED_RESOURCE_DETAIL_FIELD_IDS,
       settingsTarget: {
@@ -270,6 +280,7 @@ const ACCOUNT_SITE_DEFINITIONS = [
       },
     },
     onboarding: {
+      displayName: "Sub2API",
       manualAddGuideAnchor: ACCOUNT_SITE_MANUAL_ADD_GUIDE_ANCHORS.Sub2Api,
       detection: { titlePatterns: [makeTitleRegex(SITE_TYPES.SUB2API)] },
       routes: {
@@ -373,6 +384,8 @@ const ACCOUNT_SITE_DEFINITIONS = [
       },
       urls: {
         recognizedHostnames: AIHUBMIX_HOSTNAMES,
+        inferFromHostname: true,
+        loginOrigin: AIHUBMIX_WEB_ORIGIN,
         storageOrigin: AIHUBMIX_WEB_ORIGIN,
         duplicateOrigin: AIHUBMIX_WEB_ORIGIN,
         managedChannelOrigin: AIHUBMIX_API_ORIGIN,
@@ -464,6 +477,11 @@ const ACCOUNT_SITE_DEFINITIONS = [
     scopes: ACCOUNT_SCOPE,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.OpenRouter,
     onboarding: {
+      displayName: OPENROUTER_DISPLAY_NAME,
+      accountForm: {
+        fixedSiteUrl: OPENROUTER_WEB_ORIGIN,
+        defaultSiteName: OPENROUTER_DISPLAY_NAME,
+      },
       manualAddGuideAnchor: ACCOUNT_SITE_MANUAL_ADD_GUIDE_ANCHORS.OpenRouter,
       detection: { hostnames: OPENROUTER_HOSTNAMES },
       routes: {
@@ -491,6 +509,7 @@ const ACCOUNT_SITE_DEFINITIONS = [
       },
       identity: {
         usernameRequired: false,
+        userIdRequired: false,
         storedUserIdentityFields: [],
       },
       modelList: {
@@ -517,6 +536,8 @@ const MANAGED_ONLY_SITE_DEFINITIONS = [
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Unsupported,
     managedResource: {
       ...LEGACY_MANAGED_CHANNEL_POLICY,
+      labelKey: "settings:managedSite.octopus",
+      messagesKey: "octopus",
       tableFieldIds: OCTOPUS_MANAGED_RESOURCE_TABLE_FIELD_IDS,
       detailFieldIds: OCTOPUS_MANAGED_RESOURCE_DETAIL_FIELD_IDS,
     },
@@ -527,6 +548,8 @@ const MANAGED_ONLY_SITE_DEFINITIONS = [
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Unsupported,
     managedResource: {
       ...LEGACY_MANAGED_CHANNEL_POLICY,
+      labelKey: "settings:managedSite.axonHub",
+      messagesKey: "axonhub",
       tableFieldIds: AXON_HUB_TABLE_FIELD_IDS,
       detailFieldIds: AXON_HUB_DETAIL_FIELD_IDS,
       settingsTarget: {
@@ -541,6 +564,8 @@ const MANAGED_ONLY_SITE_DEFINITIONS = [
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Unsupported,
     managedResource: {
       ...LEGACY_MANAGED_CHANNEL_POLICY,
+      labelKey: "settings:managedSite.claudeCodeHub",
+      messagesKey: "claudecodehub",
       tableFieldIds: CLAUDE_CODE_HUB_MANAGED_RESOURCE_TABLE_FIELD_IDS,
       detailFieldIds: CLAUDE_CODE_HUB_MANAGED_RESOURCE_DETAIL_FIELD_IDS,
     },
@@ -550,10 +575,13 @@ const MANAGED_ONLY_SITE_DEFINITIONS = [
 const ACCOUNT_SITE_DEFINITION_OVERRIDES = [
   {
     siteType: SITE_TYPES.VELOERA,
+    tokenKey: { optionalSkPrefix: true },
     scopes: ACCOUNT_AND_MANAGED_SCOPES,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
     managedResource: {
       ...LEGACY_MANAGED_CHANNEL_POLICY,
+      labelKey: "settings:managedSite.veloera",
+      messagesKey: "veloera",
       tableFieldIds: VELOERA_MANAGED_RESOURCE_TABLE_FIELD_IDS,
       detailFieldIds: VELOERA_MANAGED_RESOURCE_DETAIL_FIELD_IDS,
     },
@@ -575,10 +603,13 @@ const ACCOUNT_SITE_DEFINITION_OVERRIDES = [
   },
   {
     siteType: SITE_TYPES.DONE_HUB,
+    tokenKey: { optionalSkPrefix: true },
     scopes: ACCOUNT_AND_MANAGED_SCOPES,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
     managedResource: {
       ...LEGACY_MANAGED_CHANNEL_POLICY,
+      labelKey: "settings:managedSite.doneHub",
+      messagesKey: "donehub",
       tableFieldIds: DONE_HUB_MANAGED_RESOURCE_TABLE_FIELD_IDS,
       detailFieldIds: DONE_HUB_MANAGED_RESOURCE_DETAIL_FIELD_IDS,
     },
@@ -600,6 +631,7 @@ const ACCOUNT_SITE_DEFINITION_OVERRIDES = [
 const COMPATIBLE_ACCOUNT_SITE_DEFINITIONS = [
   {
     siteType: SITE_TYPES.ONE_HUB,
+    tokenKey: { optionalSkPrefix: true },
     scopes: ACCOUNT_SCOPE,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
     onboarding: {
@@ -617,6 +649,7 @@ const COMPATIBLE_ACCOUNT_SITE_DEFINITIONS = [
   },
   {
     siteType: SITE_TYPES.V_API,
+    tokenKey: { optionalSkPrefix: true },
     scopes: ACCOUNT_SCOPE,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
     onboarding: {
@@ -637,6 +670,7 @@ const COMPATIBLE_ACCOUNT_SITE_DEFINITIONS = [
   },
   {
     siteType: SITE_TYPES.VO_API,
+    tokenKey: { optionalSkPrefix: true },
     scopes: ACCOUNT_SCOPE,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
     onboarding: {
@@ -657,6 +691,7 @@ const COMPATIBLE_ACCOUNT_SITE_DEFINITIONS = [
   },
   {
     siteType: SITE_TYPES.SUPER_API,
+    tokenKey: { optionalSkPrefix: true },
     scopes: ACCOUNT_SCOPE,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
     onboarding: {
@@ -674,6 +709,7 @@ const COMPATIBLE_ACCOUNT_SITE_DEFINITIONS = [
   },
   {
     siteType: SITE_TYPES.RIX_API,
+    tokenKey: { optionalSkPrefix: true },
     scopes: ACCOUNT_SCOPE,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
     onboarding: {
@@ -694,6 +730,7 @@ const COMPATIBLE_ACCOUNT_SITE_DEFINITIONS = [
   },
   {
     siteType: SITE_TYPES.NEO_API,
+    tokenKey: { optionalSkPrefix: true },
     scopes: ACCOUNT_SCOPE,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
     onboarding: {
@@ -714,6 +751,7 @@ const COMPATIBLE_ACCOUNT_SITE_DEFINITIONS = [
   },
   {
     siteType: SITE_TYPES.WONG_GONGYI,
+    tokenKey: { optionalSkPrefix: true },
     scopes: ACCOUNT_SCOPE,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
     onboarding: {

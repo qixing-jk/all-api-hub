@@ -2,12 +2,12 @@ import { CHECK_IN_SELECTION_MODES } from "~/constants/checkIn"
 import { isAccountSiteType, SITE_TYPES } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { coerceAccountIdentity } from "~/services/accounts/accountIdentity"
+import { normalizeAccountSiteProfileUrlForStorage } from "~/services/accounts/accountSiteProfile/urls"
 import { normalizeAccountTodayStatsAvailability } from "~/services/accounts/accountTodayStats"
 import {
   CURRENT_CONFIG_VERSION,
   migrateAccountsConfig,
 } from "~/services/accounts/migrations/accountDataMigration"
-import { normalizeAccountSiteUrlForStorage } from "~/services/accounts/utils/siteUrlNormalization"
 import { normalizeCheckInConfigV7 } from "~/services/checkin/autoCheckin/configCodec"
 import {
   ACCOUNT_USAGE_SUMMARY_SCOPES,
@@ -398,7 +398,7 @@ export function normalizeSiteAccount(raw: SiteAccount): SiteAccount {
     site_type: isAccountSiteType(merged.site_type)
       ? merged.site_type
       : SITE_TYPES.UNKNOWN,
-    site_url: normalizeAccountSiteUrlForStorage({
+    site_url: normalizeAccountSiteProfileUrlForStorage({
       siteType: isAccountSiteType(merged.site_type)
         ? merged.site_type
         : SITE_TYPES.UNKNOWN,

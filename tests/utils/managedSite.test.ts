@@ -2,12 +2,13 @@ import type { TFunction } from "i18next"
 import { describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { getManagedSiteTargetOptions } from "~/services/managedSites/channelMigrationTargets"
 import {
   getManagedSiteContext,
   getManagedSiteContextForType,
+  getManagedSiteLabel,
   getManagedSiteLabelKey,
   getManagedSiteMessagesKeyFromSiteType,
-  getManagedSiteTargetOptions,
   getManagedSiteUnsupportedModelSyncMessage,
   hasUsableManagedSiteChannelKey,
   needsManagedSiteChannelKeyResolution,
@@ -18,6 +19,52 @@ import {
 } from "~/services/preferences/userPreferences"
 
 describe("managedSite", () => {
+  it.each([
+    [SITE_TYPES.NEW_API, "settings:managedSite.newApi", "newapi"],
+    [SITE_TYPES.VELOERA, "settings:managedSite.veloera", "veloera"],
+    [SITE_TYPES.DONE_HUB, "settings:managedSite.doneHub", "donehub"],
+    [SITE_TYPES.OCTOPUS, "settings:managedSite.octopus", "octopus"],
+    [SITE_TYPES.AXON_HUB, "settings:managedSite.axonHub", "axonhub"],
+    [
+      SITE_TYPES.CLAUDE_CODE_HUB,
+      "settings:managedSite.claudeCodeHub",
+      "claudecodehub",
+    ],
+    [SITE_TYPES.SUB2API, "settings:managedSite.sub2api", "sub2api"],
+  ] as const)(
+    "preserves registered label and messages for %s",
+    (siteType, labelKey, messagesKey) => {
+      const t = vi.fn(
+        (key: string) => `translated:${key}`,
+      ) as unknown as TFunction
+      expect(getManagedSiteLabelKey(siteType)).toBe(labelKey)
+      expect(getManagedSiteLabel(t, siteType)).toBe(`translated:${labelKey}`)
+      expect(getManagedSiteMessagesKeyFromSiteType(siteType)).toBe(messagesKey)
+    },
+  )
+
+  it("includes configured Sub2API targets now that their native migration capability is registered", () => {
+    const config = {
+      baseUrl: "http://sub2api.local",
+      adminToken: "admin-token",
+    }
+    const preferences = { ...DEFAULT_PREFERENCES, sub2apiManagedSite: config }
+    expect(getManagedSiteTargetOptions(preferences)).toContainEqual({
+      siteType: SITE_TYPES.SUB2API,
+      labelKey: "settings:managedSite.sub2api",
+      messagesKey: "sub2api",
+      config,
+    })
+    expect(
+      getManagedSiteTargetOptions(preferences, {
+        excludeSiteTypes: [SITE_TYPES.SUB2API],
+      }),
+    ).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ siteType: SITE_TYPES.SUB2API }),
+      ]),
+    )
+  })
   it("renders unsupported model-sync copy from the managed-site label", () => {
     const t = vi.fn((key: string, options?: { siteName?: string }) =>
       key === "settings:managedSite.sub2api"

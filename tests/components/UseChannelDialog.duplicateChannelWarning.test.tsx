@@ -2232,7 +2232,7 @@ describe("useChannelDialog", () => {
           buildPreparedFormData({ models: [], groups: [] }),
         ),
       },
-      matching: { search: searchChannelMock },
+      matching: { exactMatchBasis: "url-key", search: searchChannelMock },
     })
     getManagedSiteCapabilitiesSpy.mockReturnValue(
       mockService as ManagedSiteCapabilities,

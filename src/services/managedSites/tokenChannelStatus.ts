@@ -347,7 +347,7 @@ export async function getManagedSiteTokenChannelStatus(
     const assessment = toManagedSiteVerifiedKeyAssessment(resolution)
     const exactMatch = getManagedSiteChannelExactMatch(
       resolution,
-      managedSite.siteType,
+      managedSite.matching,
     )
     const exactVerificationUnavailable =
       isExactVerificationUnavailable(resolution)

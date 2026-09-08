@@ -62,6 +62,9 @@ function cloneOnboarding(
         }
       : undefined,
     routes: { ...onboarding.routes },
+    accountForm: onboarding.accountForm
+      ? { ...onboarding.accountForm }
+      : undefined,
   }
 }
 
@@ -134,6 +137,7 @@ function cloneDefinition(
   return {
     ...definition,
     scopes: [...definition.scopes],
+    tokenKey: definition.tokenKey ? { ...definition.tokenKey } : undefined,
     managedResource: definition.managedResource
       ? {
           ...definition.managedResource,

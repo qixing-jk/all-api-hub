@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { getManagedSiteCapabilities } from "~/services/apiAdapters/registry"
 import {
   getManagedSiteChannelExactMatch,
   MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS,
@@ -73,10 +74,16 @@ describe("resolveManagedSiteChannelMatch", () => {
     }
 
     expect(
-      getManagedSiteChannelExactMatch(inspection, SITE_TYPES.SUB2API)?.ref,
+      getManagedSiteChannelExactMatch(
+        inspection,
+        getManagedSiteCapabilities(SITE_TYPES.SUB2API).matching,
+      )?.ref,
     ).toEqual(matchingResourceRef(91))
     expect(
-      getManagedSiteChannelExactMatch(inspection, SITE_TYPES.NEW_API),
+      getManagedSiteChannelExactMatch(
+        inspection,
+        getManagedSiteCapabilities(SITE_TYPES.NEW_API).matching,
+      ),
     ).toBeNull()
   })
 
@@ -112,7 +119,10 @@ describe("resolveManagedSiteChannelMatch", () => {
     }
 
     expect(
-      getManagedSiteChannelExactMatch(inspection, SITE_TYPES.SUB2API),
+      getManagedSiteChannelExactMatch(
+        inspection,
+        getManagedSiteCapabilities(SITE_TYPES.SUB2API).matching,
+      ),
     ).toBeNull()
   })
 

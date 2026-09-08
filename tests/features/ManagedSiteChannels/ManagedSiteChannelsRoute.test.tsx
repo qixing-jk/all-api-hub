@@ -33,7 +33,7 @@ import type {
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { MANAGED_RESOURCE_FAILURE_CODES } from "~/services/apiAdapters/contracts/managedResourceNative"
 import * as nativeRegistry from "~/services/apiAdapters/managedResources/registry"
-import type { ManagedSiteTargetOption } from "~/services/managedSites/utils/managedSite"
+import type { ManagedSiteTargetOption } from "~/services/managedSites/channelMigrationTargets"
 import { PRODUCT_ANALYTICS_ACTION_IDS } from "~/services/productAnalytics/contracts"
 import { buildUserPreferences } from "~~/tests/test-utils/factories"
 import { createResourceTestI18n } from "~~/tests/test-utils/i18n"
@@ -134,8 +134,7 @@ vi.mock(
   "~/features/ManagedSiteChannels/controllers/useManagedResourceMigrationController",
   () => ({ useManagedResourceMigrationController: useMigrationController }),
 )
-vi.mock("~/services/managedSites/utils/managedSite", async (importActual) => ({
-  ...(await importActual()),
+vi.mock("~/services/managedSites/channelMigrationTargets", () => ({
   getManagedSiteTargetOptions: getTargetOptions,
 }))
 

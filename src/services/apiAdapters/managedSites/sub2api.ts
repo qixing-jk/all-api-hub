@@ -203,6 +203,8 @@ const channelDrafts: ManagedSiteChannelDraftsCapability = {
 }
 
 const matching: ManagedResourceMatchingCapability<Sub2ApiManagedSiteConfig> = {
+  // Native API-key accounts have URL/key identity; no channel model inventory.
+  exactMatchBasis: "url-key",
   // The upstream search is name-only; inspect the URL bucket from a full API-key inventory.
   search: async (config) => {
     const data = await listSub2ApiApiKeyAccounts(config)

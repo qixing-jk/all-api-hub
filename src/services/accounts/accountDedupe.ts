@@ -1,6 +1,6 @@
 import { SITE_TYPES } from "~/constants/siteType"
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
-import { normalizeAccountSiteUrlForDuplicateCheck } from "~/services/accounts/utils/siteUrlNormalization"
+import { normalizeAccountSiteProfileUrlForDuplicateCheck } from "~/services/accounts/accountSiteProfile/urls"
 import type { SiteAccount } from "~/types"
 
 export type AccountDedupeKeepStrategy =
@@ -186,7 +186,7 @@ export function scanDuplicateAccounts(input: {
   >()
 
   for (const account of input.accounts) {
-    const origin = normalizeAccountSiteUrlForDuplicateCheck({
+    const origin = normalizeAccountSiteProfileUrlForDuplicateCheck({
       url: account.site_url,
       siteType: account.site_type,
     })

@@ -5,7 +5,7 @@ import {
 } from "~/services/accounts/accountFormValidation"
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
 import { normalizeAccountSiteSupplementalAuth } from "~/services/accounts/accountSiteProfile"
-import { normalizeAccountSiteUrlForStorage } from "~/services/accounts/utils/siteUrlNormalization"
+import { normalizeAccountSiteProfileUrlForStorage } from "~/services/accounts/accountSiteProfile/urls"
 import type { AccountDataCapability } from "~/services/apiAdapters/contracts/accountData"
 import {
   validateManagementKey,
@@ -180,7 +180,7 @@ export function buildAccountPersistenceContext(
     requestAccountIdentity: normalizeAccountIdentity(input.userId) ?? "",
     fields: {
       site_name: input.siteName.trim(),
-      site_url: normalizeAccountSiteUrlForStorage({
+      site_url: normalizeAccountSiteProfileUrlForStorage({
         siteType: input.siteType,
         url: input.url,
       }),

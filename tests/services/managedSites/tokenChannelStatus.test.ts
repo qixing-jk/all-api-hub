@@ -413,7 +413,7 @@ describe("getManagedSiteTokenChannelStatus", () => {
           enabled: true,
         }),
       },
-      matching: { search: searchChannel },
+      matching: { exactMatchBasis: "url-key", search: searchChannel },
     })
 
     const result = await getManagedSiteTokenChannelStatus({

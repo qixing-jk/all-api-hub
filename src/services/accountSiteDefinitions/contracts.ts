@@ -58,7 +58,27 @@ export const MANAGED_RESOURCE_KINDS = {
 export type ManagedResourceKind =
   (typeof MANAGED_RESOURCE_KINDS)[keyof typeof MANAGED_RESOURCE_KINDS]
 
+export type ManagedSiteLabelKey =
+  | "settings:managedSite.newApi"
+  | "settings:managedSite.doneHub"
+  | "settings:managedSite.veloera"
+  | "settings:managedSite.octopus"
+  | "settings:managedSite.axonHub"
+  | "settings:managedSite.claudeCodeHub"
+  | "settings:managedSite.sub2api"
+
+export type ManagedSiteMessagesKey =
+  | "newapi"
+  | "donehub"
+  | "veloera"
+  | "octopus"
+  | "axonhub"
+  | "claudecodehub"
+  | "sub2api"
+
 export interface ManagedResourceProductPolicy {
+  labelKey: ManagedSiteLabelKey
+  messagesKey: ManagedSiteMessagesKey
   primaryKind: ManagedResourceKind
   itemLabelKey: "managedSiteChannels:table.columns.name"
   tableFieldIds: readonly string[]
@@ -70,6 +90,8 @@ export interface ManagedResourceProductPolicy {
 }
 
 export interface AccountSiteDefinitionOnboardingMetadata {
+  displayName?: string
+  accountForm?: { fixedSiteUrl?: string; defaultSiteName?: string }
   detection?: AccountSiteDetectionMetadata
   routes: AccountSiteRouteConfig
   manualAddGuideAnchor?: AccountSiteManualAddGuideAnchor
@@ -79,6 +101,8 @@ export interface AccountSiteDefinition {
   siteType: SiteType
   scopes: readonly AccountSiteDefinitionScope[]
   adapterFamily: AccountSiteBackendFamily
+  /** Token identity/auth formatting; absent means opaque keys with no prefix rewriting. */
+  tokenKey?: { optionalSkPrefix: boolean }
   managedResource?: ManagedResourceProductPolicy
   onboarding?: AccountSiteDefinitionOnboardingMetadata
   productProfile?: AccountSiteProductProfileOverride

@@ -1,8 +1,5 @@
-import {
-  isAccountSiteType,
-  SITE_TYPES,
-  type AccountSiteType,
-} from "~/constants/siteType"
+import { isAccountSiteType, type AccountSiteType } from "~/constants/siteType"
+import { getAccountSiteDefinitions } from "~/services/accountSiteDefinitions/registry"
 import { sanitizeOriginUrl } from "~/utils/core/url"
 import { normalizeUrlForOriginKey } from "~/utils/core/urlParsing"
 
@@ -43,6 +40,23 @@ export function isAccountSiteProfileUrl(
   )
 }
 
+/** Resolves only profiles that explicitly allow hostname-only URL normalization. */
+export function findAccountSiteProfileForHostname(
+  hostname: string,
+): AccountSiteProductProfile | null {
+  const normalizedHostname = hostname.toLowerCase()
+  const definition = getAccountSiteDefinitions().find(
+    (definition) =>
+      definition.productProfile?.urls?.inferFromHostname &&
+      definition.productProfile.urls.recognizedHostnames?.includes(
+        normalizedHostname,
+      ),
+  )
+  return definition && isAccountSiteType(definition.siteType)
+    ? getAccountSiteProductProfile(definition.siteType)
+    : null
+}
+
 const resolveProfileForUrl = ({
   siteType,
   url,
@@ -54,11 +68,8 @@ const resolveProfileForUrl = ({
     return getAccountSiteProductProfile(siteType)
   }
 
-  if (isAccountSiteProfileUrl(SITE_TYPES.AIHUBMIX, url)) {
-    return getAccountSiteProductProfile(SITE_TYPES.AIHUBMIX)
-  }
-
-  return null
+  const parsed = parseHttpUrl(url)
+  return parsed ? findAccountSiteProfileForHostname(parsed.hostname) : null
 }
 
 /**
@@ -117,4 +128,24 @@ export function normalizeAccountSiteProfileUrlForDuplicateCheck(params: {
   }
 
   return sanitizeOriginUrl(params.url)?.toLowerCase()
+}
+
+/**
+ * Compares account site URLs using the same canonical origin key used by
+ * duplicate-account scans and add-flow warnings.
+ */
+export function isSameAccountSiteOrigin(
+  left: {
+    siteType?: AccountSiteType | string
+    url: string
+  },
+  right: {
+    siteType?: AccountSiteType | string
+    url: string
+  },
+): boolean {
+  const leftKey = normalizeAccountSiteProfileUrlForDuplicateCheck(left)
+  const rightKey = normalizeAccountSiteProfileUrlForDuplicateCheck(right)
+
+  return Boolean(leftKey && rightKey && leftKey === rightKey)
 }

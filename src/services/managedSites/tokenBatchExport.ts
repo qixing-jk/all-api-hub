@@ -436,7 +436,7 @@ const preparePreviewItem = async (params: {
     })
     const exactMatch = getManagedSiteChannelExactMatch(
       resolution,
-      managedSite.siteType,
+      managedSite.matching,
     )
     const assessment = toManagedSiteVerifiedKeyAssessment(resolution)
     const verificationCandidate = getVerificationCandidate(

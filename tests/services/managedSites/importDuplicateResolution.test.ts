@@ -327,6 +327,7 @@ describe("resolveManagedSiteImportDuplicate", () => {
     const managedSite = createService({
       siteType: SITE_TYPES.SUB2API,
       matching: {
+        exactMatchBasis: "url-key",
         search: vi.fn().mockResolvedValue({
           items: [
             {
@@ -357,6 +358,7 @@ describe("resolveManagedSiteImportDuplicate", () => {
     const managedSite = createService({
       siteType: SITE_TYPES.SUB2API,
       matching: {
+        exactMatchBasis: "url-key",
         search: vi.fn().mockResolvedValue({
           items: [
             {

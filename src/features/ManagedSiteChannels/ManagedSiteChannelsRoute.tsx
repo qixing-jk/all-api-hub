@@ -36,12 +36,12 @@ import {
   parseManagedResourceRef,
   toManagedUpstreamResourceRef,
 } from "~/services/managedSites/managedResourceIdentity"
+import { getManagedSiteTargetOptions } from "~/services/managedSites/channelMigrationTargets"
 import { resolveManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
 import {
   getManagedSiteConfigMissingMessage,
   getManagedSiteLabel,
   getManagedSiteMessagesKeyFromSiteType,
-  getManagedSiteTargetOptions,
   getManagedSiteUnsupportedModelSyncMessage,
   supportsManagedSiteModelSync,
 } from "~/services/managedSites/utils/managedSite"

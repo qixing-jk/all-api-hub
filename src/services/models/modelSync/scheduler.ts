@@ -7,6 +7,7 @@ import {
   type ManagedResourceRef,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
+import type { ManagedSiteMessagesKey } from "~/services/accountSiteDefinitions/contracts"
 import { ensureLegacyChannelConfigMigrationReady } from "~/services/managedSites/legacyChannelConfigMigration"
 import {
   assertManagedResourceRefForSite,
@@ -23,7 +24,6 @@ import {
   getManagedSiteNoChannelsToSyncMessage,
   getManagedSiteUnsupportedModelSyncMessage,
   supportsManagedSiteModelSync,
-  type ManagedSiteMessagesKey,
 } from "~/services/managedSites/utils/managedSite"
 import { ModelRedirectService } from "~/services/models/modelRedirect"
 import { notifyTaskResult } from "~/services/notifications/taskNotificationService"

@@ -1,5 +1,5 @@
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
-import { isSameAccountSiteOrigin } from "~/services/accounts/utils/siteUrlNormalization"
+import { isSameAccountSiteOrigin } from "~/services/accounts/accountSiteProfile/urls"
 import type { SiteAccount } from "~/types"
 
 /**

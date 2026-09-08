@@ -1,41 +1,15 @@
 import type { TFunction } from "i18next"
 
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
+import type {
+  ManagedSiteLabelKey,
+  ManagedSiteMessagesKey,
+} from "~/services/accountSiteDefinitions/contracts"
+import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions/registry"
 import { hasUsableApiTokenKey } from "~/services/accountTokens/apiTokenKey"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
-import {
-  resolveManagedSiteRuntimeConfigForType,
-  type ManagedSiteRuntimeConfigValue,
-} from "~/services/managedSites/runtimeConfig"
+import type { ManagedSiteRuntimeConfigValue } from "~/services/managedSites/runtimeConfig"
 import type { UserPreferences } from "~/services/preferences/userPreferences"
-
-export type ManagedSiteLabelKey =
-  | "settings:managedSite.newApi"
-  | "settings:managedSite.doneHub"
-  | "settings:managedSite.veloera"
-  | "settings:managedSite.octopus"
-  | "settings:managedSite.axonHub"
-  | "settings:managedSite.claudeCodeHub"
-  | "settings:managedSite.sub2api"
-
-/**
- * Managed site namespace key used under the `messages` i18n namespace.
- */
-export type ManagedSiteMessagesKey =
-  | "newapi"
-  | "donehub"
-  | "veloera"
-  | "octopus"
-  | "axonhub"
-  | "claudecodehub"
-  | "sub2api"
-
-export interface ManagedSiteTargetOption {
-  siteType: ManagedSiteType
-  labelKey: ManagedSiteLabelKey
-  messagesKey: ManagedSiteMessagesKey
-  config: ManagedSiteRuntimeConfigValue
-}
 
 export const collectManagedConfigSecrets = (
   managedConfig: ManagedSiteRuntimeConfigValue,
@@ -251,47 +225,17 @@ export const collectManagedResourceSecrets = (
 export function getManagedSiteLabelKey(
   siteType: ManagedSiteType,
 ): ManagedSiteLabelKey {
-  if (siteType === SITE_TYPES.OCTOPUS) {
-    return "settings:managedSite.octopus"
-  }
-  if (siteType === SITE_TYPES.AXON_HUB) {
-    return "settings:managedSite.axonHub"
-  }
-  if (siteType === SITE_TYPES.CLAUDE_CODE_HUB) {
-    return "settings:managedSite.claudeCodeHub"
-  }
-  if (siteType === SITE_TYPES.SUB2API) {
-    return "settings:managedSite.sub2api"
-  }
-  if (siteType === SITE_TYPES.DONE_HUB) {
-    return "settings:managedSite.doneHub"
-  }
-  return siteType === SITE_TYPES.VELOERA
-    ? "settings:managedSite.veloera"
-    : "settings:managedSite.newApi"
+  return (
+    getAccountSiteDefinition(siteType)?.managedResource?.labelKey ??
+    "settings:managedSite.newApi"
+  )
 }
 
 /**
  * Returns the translated managed-site label for the given site type.
  */
 export function getManagedSiteLabel(t: TFunction, siteType: ManagedSiteType) {
-  switch (siteType) {
-    case SITE_TYPES.OCTOPUS:
-      return t("settings:managedSite.octopus")
-    case SITE_TYPES.AXON_HUB:
-      return t("settings:managedSite.axonHub")
-    case SITE_TYPES.CLAUDE_CODE_HUB:
-      return t("settings:managedSite.claudeCodeHub")
-    case SITE_TYPES.SUB2API:
-      return t("settings:managedSite.sub2api")
-    case SITE_TYPES.DONE_HUB:
-      return t("settings:managedSite.doneHub")
-    case SITE_TYPES.VELOERA:
-      return t("settings:managedSite.veloera")
-    case SITE_TYPES.NEW_API:
-    default:
-      return t("settings:managedSite.newApi")
-  }
+  return t(getManagedSiteLabelKey(siteType))
 }
 
 /**
@@ -300,22 +244,9 @@ export function getManagedSiteLabel(t: TFunction, siteType: ManagedSiteType) {
 export function getManagedSiteMessagesKeyFromSiteType(
   siteType: ManagedSiteType,
 ): ManagedSiteMessagesKey {
-  if (siteType === SITE_TYPES.OCTOPUS) {
-    return "octopus"
-  }
-  if (siteType === SITE_TYPES.AXON_HUB) {
-    return "axonhub"
-  }
-  if (siteType === SITE_TYPES.CLAUDE_CODE_HUB) {
-    return "claudecodehub"
-  }
-  if (siteType === SITE_TYPES.SUB2API) {
-    return "sub2api"
-  }
-  if (siteType === SITE_TYPES.DONE_HUB) {
-    return "donehub"
-  }
-  return siteType === SITE_TYPES.VELOERA ? "veloera" : "newapi"
+  return (
+    getAccountSiteDefinition(siteType)?.managedResource?.messagesKey ?? "newapi"
+  )
 }
 
 /**
@@ -365,44 +296,6 @@ export function getManagedSiteContextForType(siteType: ManagedSiteType): {
     siteType,
     messagesKey: getManagedSiteMessagesKeyFromSiteType(siteType),
   }
-}
-
-/**
- * Enumerates fully configured managed-site targets that can be used for
- * cross-site operations such as channel migration.
- */
-export function getManagedSiteTargetOptions(
-  preferences: UserPreferences,
-  options?: {
-    excludeSiteTypes?: ManagedSiteType[]
-  },
-): ManagedSiteTargetOption[] {
-  const excluded = new Set(options?.excludeSiteTypes ?? [])
-  const siteTypes: ManagedSiteType[] = [
-    SITE_TYPES.NEW_API,
-    SITE_TYPES.VELOERA,
-    SITE_TYPES.DONE_HUB,
-    SITE_TYPES.OCTOPUS,
-    SITE_TYPES.AXON_HUB,
-    SITE_TYPES.CLAUDE_CODE_HUB,
-  ]
-
-  return siteTypes
-    .filter((siteType) => !excluded.has(siteType))
-    .map((siteType) => {
-      const config =
-        resolveManagedSiteRuntimeConfigForType(preferences, siteType)?.config ??
-        null
-      if (!config) return null
-
-      return {
-        siteType,
-        labelKey: getManagedSiteLabelKey(siteType),
-        messagesKey: getManagedSiteMessagesKeyFromSiteType(siteType),
-        config,
-      } satisfies ManagedSiteTargetOption
-    })
-    .filter((item): item is ManagedSiteTargetOption => item !== null)
 }
 
 /**

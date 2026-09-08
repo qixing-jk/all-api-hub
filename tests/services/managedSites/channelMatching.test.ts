@@ -14,12 +14,10 @@ import {
   findManagedSiteChannelsByBaseUrl,
   findManagedSiteChannelsByBaseUrlAndModels,
   getManagedSiteChannelKeyComparisonMode,
-  getManagedSiteDuplicateCandidateSource,
   inspectManagedSiteChannelKeyMatch,
   inspectManagedSiteChannelKeyValueMatch,
   inspectManagedSiteChannelModelsMatch,
   MANAGED_SITE_CHANNEL_KEY_COMPARISON_MODES,
-  MANAGED_SITE_DUPLICATE_CANDIDATE_SOURCES,
 } from "~/services/managedSites/utils/channelMatching"
 import {
   buildManagedResourceMatchCandidate,
@@ -27,15 +25,6 @@ import {
 } from "~~/tests/test-utils/managedResourceMatching"
 
 describe("channelMatching", () => {
-  it("inventories Sub2API candidates because its native search is name-only", () => {
-    expect(getManagedSiteDuplicateCandidateSource(SITE_TYPES.SUB2API)).toBe(
-      MANAGED_SITE_DUPLICATE_CANDIDATE_SOURCES.List,
-    )
-    expect(getManagedSiteDuplicateCandidateSource(SITE_TYPES.NEW_API)).toBe(
-      MANAGED_SITE_DUPLICATE_CANDIDATE_SOURCES.Search,
-    )
-  })
-
   it("uses optional sk- prefix comparison for One/New API compatible gateways", () => {
     expect(getManagedSiteChannelKeyComparisonMode(SITE_TYPES.ONE_API)).toBe(
       MANAGED_SITE_CHANNEL_KEY_COMPARISON_MODES.OPTIONAL_SK_PREFIX,

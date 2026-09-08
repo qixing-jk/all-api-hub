@@ -10,6 +10,8 @@ import type { ManagedSiteChannelSecretReadOptions } from "./managedSiteCapabilit
 export interface ManagedResourceMatchingCapability<
   TConfig = ManagedSiteRuntimeConfigValue,
 > {
+  /** Signals that identify one exact duplicate; absent uses key plus exact models. */
+  exactMatchBasis?: "url-key" | "key-models"
   search(
     config: TConfig,
     baseUrl: string,

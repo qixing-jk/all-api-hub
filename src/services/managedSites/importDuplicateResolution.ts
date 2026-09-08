@@ -30,7 +30,7 @@ export async function resolveManagedSiteImportDuplicate(params: {
 
   const exactMatch = getManagedSiteChannelExactMatch(
     resolution,
-    params.managedSite.siteType,
+    params.managedSite.matching,
   )
   if (exactMatch) {
     return exactMatch

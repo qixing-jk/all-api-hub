@@ -2,13 +2,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import {
-  clearSiteRouteThemeCacheForTests,
   getBestEffortLoginUrl,
   resolveAccountSiteLoginUrl,
   resolveAccountSiteRouteUrl,
   SITE_ROUTE_KINDS,
 } from "~/services/accounts/utils/siteRouteResolver"
-import { resolveStaticAccountRoutePath } from "~/services/apiAdapters/accountRoutes"
+import {
+  clearSiteRouteThemeCacheForTests,
+  resolveNewApiAccountRoutePath,
+} from "~/services/apiAdapters/newApi/accountRoutes"
 import { AuthTypeEnum } from "~/types"
 
 const {
@@ -33,7 +35,9 @@ describe("siteRouteResolver", () => {
     mockgetSiteTypeCapabilities.mockReset()
     mockResolveRoutePath.mockReset()
     mockResolveRoutePath.mockImplementation((target, route) =>
-      Promise.resolve(resolveStaticAccountRoutePath(target, route)),
+      resolveNewApiAccountRoutePath(target, route, {
+        fetchSiteStatus: mockFetchSiteStatus,
+      }),
     )
     mockgetSiteTypeCapabilities.mockReturnValue({
       account: {
@@ -65,6 +69,12 @@ describe("siteRouteResolver", () => {
       expect(mockFetchSiteStatus).not.toHaveBeenCalled()
     },
   )
+
+  it("keeps best-effort canonical-host routing independent of the supplied protocol", () => {
+    expect(getBestEffortLoginUrl("ftp://aihubmix.com/path")).toBe(
+      "https://console.aihubmix.com/sign-in",
+    )
+  })
 
   const mockDefaultNewApiThemeStatus = () =>
     mockFetchSiteStatus.mockResolvedValue({

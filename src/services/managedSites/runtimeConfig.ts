@@ -31,6 +31,23 @@ export type ManagedSiteRuntimeConfigValueForType<
   TSiteType extends ManagedSiteType,
 > = ManagedSiteRuntimeConfigForType<TSiteType>["config"]
 
+/** Returns the configured principal used by the persisted v1 repair receipt. */
+export function getManagedSiteRuntimePrincipal(
+  runtimeConfig: ManagedSiteRuntimeConfig,
+): string {
+  switch (runtimeConfig.siteType) {
+    case SITE_TYPES.OCTOPUS:
+      return runtimeConfig.config.username.trim()
+    case SITE_TYPES.AXON_HUB:
+      return runtimeConfig.config.email.trim()
+    case SITE_TYPES.CLAUDE_CODE_HUB:
+    case SITE_TYPES.SUB2API:
+      return "admin"
+    default:
+      return runtimeConfig.config.userId.trim()
+  }
+}
+
 const hasText = (value: unknown): value is string =>
   typeof value === "string" && value.trim().length > 0
 

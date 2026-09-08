@@ -1,7 +1,8 @@
-import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
+import type { ManagedSiteType } from "~/constants/siteType"
 import { type ManagedSiteCapabilities } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import { getManagedSiteCapabilities } from "~/services/apiAdapters/registry"
 import {
+  getManagedSiteRuntimePrincipal,
   type ManagedSiteRuntimeConfig,
   type ManagedSiteRuntimeConfigValue,
 } from "~/services/managedSites/runtimeConfig"
@@ -39,23 +40,6 @@ async function digestTargetIdentity(serializedIdentity: string) {
   ).join("")
 }
 
-/** Returns the configured principal used by the persisted v1 repair receipt. */
-function getImportTargetPrincipal(
-  runtimeConfig: ManagedSiteRuntimeConfig,
-): string {
-  switch (runtimeConfig.siteType) {
-    case SITE_TYPES.OCTOPUS:
-      return runtimeConfig.config.username.trim()
-    case SITE_TYPES.AXON_HUB:
-      return runtimeConfig.config.email.trim()
-    case SITE_TYPES.CLAUDE_CODE_HUB:
-    case SITE_TYPES.SUB2API:
-      return "admin"
-    default:
-      return runtimeConfig.config.userId.trim()
-  }
-}
-
 /**
  * Builds an import target from one captured runtime-config snapshot.
  *
@@ -79,7 +63,7 @@ export async function createManagedSiteTokenBatchImportTarget(
     targetSummary.baseUrl,
     // This field label is persisted in v1 receipt hashes; keep its wire spelling.
     "compatibleUserId",
-    getImportTargetPrincipal(runtimeConfig),
+    getManagedSiteRuntimePrincipal(runtimeConfig),
   ])
 
   return {

@@ -8,6 +8,7 @@ import {
   ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES,
   ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS,
   ACCOUNT_SITE_TOKEN_FORM_NETWORK_LIMIT_POLICIES,
+  findAccountSiteProfileForHostname,
   getAccountSiteModelListProfile,
   getAccountSiteProductProfile,
   isAccountAuthTypeAllowed,
@@ -38,6 +39,17 @@ import {
 } from "~/types/accountTodayStats"
 
 describe("accountSiteProfile", () => {
+  it("only infers URL policy for registrations that explicitly opt in", () => {
+    expect(
+      findAccountSiteProfileForHostname("WWW.AIHUBMIX.COM")?.siteType,
+    ).toBe(SITE_TYPES.AIHUBMIX)
+    expect(findAccountSiteProfileForHostname("openrouter.ai")).toBeNull()
+    expect(
+      findAccountSiteProfileForHostname("aihubmix.com.example.invalid"),
+    ).toBeNull()
+    expect(findAccountSiteProfileForHostname("https://[invalid-url")).toBeNull()
+    expect(findAccountSiteProfileForHostname("ftp://aihubmix.com")).toBeNull()
+  })
   it("derives auth support from the allowed authentication types", () => {
     expect(
       isAccountAuthTypeAllowed(SITE_TYPES.AIHUBMIX, AuthTypeEnum.AccessToken),
@@ -110,6 +122,7 @@ describe("accountSiteProfile", () => {
       getAccountSiteProductProfile(SITE_TYPES.OPENROUTER).identity,
     ).toEqual({
       usernameRequired: false,
+      userIdRequired: false,
       storedUserIdentityFields: [],
     })
   })

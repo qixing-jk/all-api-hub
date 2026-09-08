@@ -1203,6 +1203,7 @@ describe("managed-site token batch export", () => {
       const managedSite = buildService({
         siteType: SITE_TYPES.SUB2API,
         matching: {
+          exactMatchBasis: "url-key",
           search: searchChannel,
           fetchSecretKey: vi.fn().mockResolvedValue("token-secret"),
         },

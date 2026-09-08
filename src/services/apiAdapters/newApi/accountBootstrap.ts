@@ -6,7 +6,7 @@ import * as apiyi from "~/services/apiService/newApiFamily/variants/apiyi"
 import * as veloera from "~/services/apiService/newApiFamily/variants/veloera"
 import * as wong from "~/services/apiService/newApiFamily/variants/wong"
 
-import { resolveStaticAccountRoutePath } from "../accountRoutes"
+import { resolveNewApiAccountRoutePath } from "./accountRoutes"
 
 type AccountBootstrapImplementation =
   typeof accountBootstrap.defaultAccountBootstrapImplementation
@@ -59,6 +59,6 @@ export function createNewApiAccountBootstrap(
     extractDefaultExchangeRate: (siteStatus) =>
       implementation.extractDefaultExchangeRate(siteStatus),
     resolveRoutePath: async (target, route) =>
-      resolveStaticAccountRoutePath(target, route),
+      resolveNewApiAccountRoutePath(target, route, implementation),
   }
 }

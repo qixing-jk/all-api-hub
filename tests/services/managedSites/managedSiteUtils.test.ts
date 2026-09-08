@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { getManagedSiteTargetOptions } from "~/services/managedSites/channelMigrationTargets"
 import {
   collectManagedConfigSecrets,
   collectManagedResourceSecrets,
@@ -9,7 +10,6 @@ import {
   getManagedSiteLabelKey,
   getManagedSiteMessagesKeyFromSiteType,
   getManagedSiteNoChannelsToSyncMessage,
-  getManagedSiteTargetOptions,
   hasUsableManagedSiteChannelKey,
   mergeManagedResourceSecretCollections,
   needsManagedSiteChannelKeyResolution,

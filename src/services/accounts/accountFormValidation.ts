@@ -54,7 +54,7 @@ export function isValidAccount({
     (authType === AuthTypeEnum.None ||
       isAccountAuthTypeAllowed(normalizedSiteType, authType)) &&
     (!profile.identity.usernameRequired || !!username.trim()) &&
-    (normalizedSiteType === SITE_TYPES.OPENROUTER || !!userId.trim()) &&
+    (!profile.identity.userIdRequired || !!userId.trim()) &&
     isValidExchangeRate(exchangeRate) &&
     (authType !== AuthTypeEnum.AccessToken || !!accessToken.trim()) &&
     (authType !== AuthTypeEnum.Cookie || !!cookieAuthSessionCookie?.trim())

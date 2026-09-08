@@ -2,7 +2,7 @@ import {
   isAccountTokenRuntimeKey,
   type AccountRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
-import { normalizeAccountSiteUrlForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
+import { normalizeAccountSiteProfileUrlForManagedChannel } from "~/services/accounts/accountSiteProfile/urls"
 import type { ManagedSiteChannelDraftSource } from "~/types/managedSiteChannelDraft"
 import { parseDelimitedList } from "~/utils/core/string"
 
@@ -18,7 +18,7 @@ export function buildManagedSiteChannelDraftSource(
 ): ManagedSiteChannelDraftSource {
   return {
     name: buildDraftName(runtimeKey.accountName, runtimeKey.label),
-    baseUrl: normalizeAccountSiteUrlForManagedChannel({
+    baseUrl: normalizeAccountSiteProfileUrlForManagedChannel({
       siteType: runtimeKey.siteType,
       url: runtimeKey.baseUrl.trim() || runtimeKey.account.baseUrl,
     }),

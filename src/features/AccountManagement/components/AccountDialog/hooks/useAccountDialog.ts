@@ -69,6 +69,7 @@ import {
   type AccountPostSaveWorkflowStep,
 } from "~/services/accounts/accountPostSaveWorkflow"
 import { buildDisplayAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import { normalizeAccountSiteProfileUrlForDuplicateCheck } from "~/services/accounts/accountSiteProfile/urls"
 import { accountPresentation } from "~/services/accounts/accountStorage/accountPresentation"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { accountReadModels } from "~/services/accounts/accountStorage/accountReadModels"
@@ -86,7 +87,7 @@ import {
   AutoDetectErrorType,
   type AutoDetectError,
 } from "~/services/accounts/utils/autoDetectUtils"
-import { normalizeAccountSiteUrlForDuplicateCheck } from "~/services/accounts/utils/siteUrlNormalization"
+import type { ManagedSiteMessagesKey } from "~/services/accountSiteDefinitions/contracts"
 import { isCanonicalOpenRouterUrl } from "~/services/accountSiteDefinitions/identifiers"
 import { createAIHubMixCreatedRuntimeSecret } from "~/services/apiAdapters/aihubmix/createdSecret"
 import { getManagedSiteCapabilities } from "~/services/apiAdapters/registry"
@@ -101,7 +102,6 @@ import {
   getManagedSiteConfigMissingMessage,
   getManagedSiteLabel,
   getManagedSiteMessagesKeyFromSiteType,
-  type ManagedSiteMessagesKey,
 } from "~/services/managedSites/utils/managedSite"
 import {
   ensurePermissionsDetailed,
@@ -3547,7 +3547,7 @@ function normalizeSiteUrlForDuplicateCheck(params: {
   siteType?: AccountSiteType | string
 }): string {
   return (
-    normalizeAccountSiteUrlForDuplicateCheck({
+    normalizeAccountSiteProfileUrlForDuplicateCheck({
       url: params.value,
       siteType: params.siteType,
     }) ?? params.value.trim().toLowerCase()

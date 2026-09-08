@@ -1,5 +1,4 @@
 import {
-  SITE_TYPES,
   type AccountSiteType,
   type ManagedSiteType,
 } from "~/constants/siteType"
@@ -21,14 +20,6 @@ import { normalizeOpenAiFamilyBaseUrl } from "~/services/verification/webAiApiCh
 import type { ManagedResourceMatchCandidate } from "~/types/managedResourceMatching"
 import { isArraysEqual } from "~/utils"
 import { normalizeList, parseDelimitedList } from "~/utils/core/string"
-
-export const MANAGED_SITE_DUPLICATE_CANDIDATE_SOURCES = {
-  Search: "search",
-  List: "list",
-} as const
-
-type ManagedSiteDuplicateCandidateSource =
-  (typeof MANAGED_SITE_DUPLICATE_CANDIDATE_SOURCES)[keyof typeof MANAGED_SITE_DUPLICATE_CANDIDATE_SOURCES]
 
 interface FindManagedSiteChannelByComparableInputsParams {
   channels: ManagedResourceMatchCandidate[]
@@ -75,18 +66,6 @@ interface InspectManagedSiteChannelModelsMatchParams {
   models: string[]
   exactChannel?: ManagedResourceMatchCandidate | null
 }
-
-/**
- * Sub2API's native account search is name-only, so URL-based duplicate checks
- * must inventory accounts before filtering the normalized URL bucket locally.
- * Source: Wei-Shaw/sub2api@48eb376 account_query.go.
- */
-export const getManagedSiteDuplicateCandidateSource = (
-  siteType: ManagedSiteType,
-): ManagedSiteDuplicateCandidateSource =>
-  siteType === SITE_TYPES.SUB2API
-    ? MANAGED_SITE_DUPLICATE_CANDIDATE_SOURCES.List
-    : MANAGED_SITE_DUPLICATE_CANDIDATE_SOURCES.Search
 
 interface RankedManagedSiteChannelCandidate {
   channel: ManagedResourceMatchCandidate
