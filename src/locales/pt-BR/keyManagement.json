@@ -311,6 +311,7 @@
       "inputPreparationFailed": "A verificação não conseguiu preparar dados de canal comparáveis.",
       "newApiRetrieveKeyHint": "No New API, a comparação completa depende da chave do canal. Como visualizar essa chave exige verificação em duas etapas (2FA), a comparação completa não está disponível no momento."
     },
+    "nativeResourceUnsupported": "A correspondência com sites gerenciados ainda não oferece suporte a chaves de recursos nativos nesta página. A atualização se aplica apenas às chaves compatíveis.",
     "pageUnsupported": "As verificações dos canais do site gerenciado não estão disponíveis nesta página porque o site atual não permite buscar canais por URL.",
     "recovery": {
       "configureLogin": "Primeiro, adicione nas Configurações os campos de login e auxílio de 2FA do New API. Até lá, a chave do canal não poderá ser lida e a comparação completa não poderá ser concluída.",
@@ -371,6 +372,28 @@
     "serviceCredentialRotateFailed": "Falha ao redefinir a chave de serviço",
     "verifyApiFailed": "Falha ao abrir a verificação da API",
     "verifyCliSupportFailed": "Falha ao abrir a verificação de compatibilidade com CLI"
+  },
+  "native": {
+    "detailsLoadFailed": "Não foi possível carregar os detalhes da chave.",
+    "heading": "Chaves de API",
+    "missing": "Indisponível",
+    "scope": {
+      "empty": "Nenhum escopo disponível",
+      "error": "Não foi possível carregar os escopos",
+      "errorHelp": "Verifique o acesso à conta e tente novamente.",
+      "heading": "Escopo",
+      "label": "Selecionar um escopo",
+      "loading": "Carregando escopos…",
+      "partial": "Alguns escopos não puderam ser carregados. Os escopos disponíveis ainda podem ser usados.",
+      "placeholder": "Escolha um escopo",
+      "retry": "Recarregar escopos"
+    },
+    "status": {
+      "disabled": "Desativada",
+      "enabled": "Ativada",
+      "expired": "Expirada",
+      "unknown": "Desconhecida"
+    }
   },
   "noAccountsSupportKeyCreation": "Nenhuma conta nesta visualização permite criar chaves de API. Selecione outra conta ou adicione uma conta compatível.",
   "noKeys": "Ainda não há dados de chaves",
@@ -559,7 +582,6 @@
         "usageWeekly": "Uso semanal",
         "workspace": "Espaço de trabalho"
       },
-      "heading": "Chaves do OpenRouter",
       "status": {
         "all": "Todas",
         "disabled": "Desativada",

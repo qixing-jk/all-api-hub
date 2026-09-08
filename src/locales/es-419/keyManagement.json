@@ -311,6 +311,7 @@
       "inputPreparationFailed": "La verificación no pudo preparar entradas de canal comparables.",
       "newApiRetrieveKeyHint": "En New API, la comparación completa de claves depende de la clave del canal, y ver esa clave del canal requiere verificación 2FA, por lo que la comparación completa de claves no está disponible actualmente."
     },
+    "nativeResourceUnsupported": "La coincidencia con sitios administrados aún no admite claves de recursos nativos en esta página. La actualización solo se aplica a las claves compatibles.",
     "pageUnsupported": "Las comprobaciones de canales del sitio administrado no están disponibles en esta página porque el sitio administrado actual no admite buscar canales por URL.",
     "recovery": {
       "configureLogin": "Primero agrega en Configuración los campos de inicio de sesión de New API y asistencia 2FA. Hasta entonces, la clave del canal no se puede leer y la comparación completa de claves no se puede completar.",
@@ -371,6 +372,28 @@
     "serviceCredentialRotateFailed": "No se pudo restablecer la clave de servicio",
     "verifyApiFailed": "No se pudo abrir la verificación de API",
     "verifyCliSupportFailed": "No se pudo abrir la verificación de compatibilidad con CLI"
+  },
+  "native": {
+    "detailsLoadFailed": "No se pudieron cargar los detalles de la clave.",
+    "heading": "Claves API",
+    "missing": "No disponible",
+    "scope": {
+      "empty": "No hay ámbitos disponibles",
+      "error": "No se pudieron cargar los ámbitos",
+      "errorHelp": "Verifica el acceso a la cuenta y vuelve a intentarlo.",
+      "heading": "Ámbito",
+      "label": "Seleccionar un ámbito",
+      "loading": "Cargando ámbitos…",
+      "partial": "No se pudieron cargar algunos ámbitos. Los ámbitos disponibles se pueden seguir usando.",
+      "placeholder": "Elige un ámbito",
+      "retry": "Volver a cargar los ámbitos"
+    },
+    "status": {
+      "disabled": "Desactivada",
+      "enabled": "Activa",
+      "expired": "Caducada",
+      "unknown": "Desconocida"
+    }
   },
   "noAccountsSupportKeyCreation": "Ninguna cuenta de esta vista permite crear claves de API. Selecciona otra cuenta o agrega una compatible.",
   "noKeys": "Aún no hay datos de claves",
@@ -559,7 +582,6 @@
         "usageWeekly": "Uso semanal",
         "workspace": "Espacio de trabajo"
       },
-      "heading": "Claves de OpenRouter",
       "status": {
         "all": "Todas",
         "disabled": "Desactivada",

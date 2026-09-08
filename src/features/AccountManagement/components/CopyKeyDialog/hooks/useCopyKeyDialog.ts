@@ -166,7 +166,7 @@ export function useCopyKeyDialog(
             rowKey: `copy-key-native-${requestId}-${index}`,
             accountId: account.id,
             accountName: account.name,
-            workspaceName: inventory.scope.displayName,
+            scopeName: inventory.scope.displayName,
             facts,
           })),
         )

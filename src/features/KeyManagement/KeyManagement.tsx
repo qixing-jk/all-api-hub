@@ -35,7 +35,6 @@ import {
   type AccountKeyResourceFacts,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { MANAGED_RESOURCE_SECRET_VERIFICATION_KINDS } from "~/services/apiAdapters/contracts/managedResourceMatching"
-import { OPENROUTER_KEY_FIELD_IDS } from "~/services/apiAdapters/openrouter/keyResourceFields"
 import {
   getManagedSiteCapabilities,
   getSiteTypeCapabilities,
@@ -47,6 +46,10 @@ import {
   MANAGED_SITE_TOKEN_CHANNEL_STATUSES,
   type ManagedSiteTokenChannelStatus,
 } from "~/services/managedSites/tokenChannelStatus"
+import {
+  MODEL_LIST_ACCOUNT_SOURCE_ROUTES,
+  resolveModelListAccountSourceReadiness,
+} from "~/services/modelList/accountSources/readiness"
 import { withProtectionBypassUserCommand } from "~/services/protectionBypass/client"
 import {
   PROTECTION_BYPASS_SURFACES,
@@ -65,7 +68,7 @@ import {
 } from "~/utils/navigation"
 
 import { AccountKeyResourceEditorDialog } from "./components/AccountKeyResource/AccountKeyResourceEditorDialog"
-import { OpenRouterWorkspaceSelector } from "./components/AccountKeyResource/OpenRouterWorkspaceSelector"
+import { AccountKeyScopeSelector } from "./components/AccountKeyResource/AccountKeyScopeSelector"
 import { AccountSelectorPanel } from "./components/AccountSelectorPanel"
 import { AccountSummaryBar } from "./components/AccountSummaryBar"
 import { AssociateApiCredentialProfileDialog } from "./components/AssociateApiCredentialProfileDialog"
@@ -743,6 +746,15 @@ export default function KeyManagement(props: {
         getSiteTypeCapabilities(selectedAddTokenScopeAccount.siteType).account
           ?.keyResourceManagement,
     )
+  const canOpenSelectedAccountModels = Boolean(
+    selectedAddTokenScopeAccount &&
+      resolveModelListAccountSourceReadiness(selectedAddTokenScopeAccount)
+        .route !== MODEL_LIST_ACCOUNT_SOURCE_ROUTES.Unsupported,
+  )
+  // Status matching currently accepts AccountToken rows only. Native refs need
+  // their own operation path before they can participate in this refresh.
+  const hasNativeStatusLimitation =
+    isSelectedNativeKeyAccount || nativeKeys.allRows.length > 0
   const canCreateNativeKey =
     isSelectedNativeKeyAccount &&
     nativeKeys.selectedScope !== null &&
@@ -808,6 +820,7 @@ export default function KeyManagement(props: {
       ].join(":"),
     }
   }, [routeGuidedImport, routeGuidedImportAccountId, routeGuidedImportTokenId])
+  const { getResourceScope } = nativeKeys
   const toNativeRows = useCallback(
     (factsList: readonly AccountKeyResourceFacts[]): NativeKeyManagementRow[] =>
       factsList.map((facts) => {
@@ -819,23 +832,17 @@ export default function KeyManagement(props: {
         const account = displayData.find(
           (candidate) => candidate.id === facts.ref.accountId,
         )
-        const workspace = facts.fields.find(
-          (fact) => fact.fieldId === OPENROUTER_KEY_FIELD_IDS.Workspace,
-        )
+        const scope = getResourceScope(facts.ref)
         return {
           kind: KEY_MANAGEMENT_DISPLAY_ROW_KINDS.AccountKeyResource,
           rowKey,
           accountId: facts.ref.accountId,
-          accountName:
-            account?.name ?? t("keyManagement:openRouter.list.values.missing"),
-          workspaceName:
-            workspace?.kind === "text"
-              ? workspace.value
-              : t("keyManagement:openRouter.list.values.missing"),
+          accountName: account?.name ?? t("keyManagement:native.missing"),
+          scopeName: scope?.displayName ?? t("keyManagement:native.missing"),
           facts,
         }
       }),
-    [displayData, t],
+    [displayData, getResourceScope, t],
   )
   const allNativeRows = useMemo(
     () => toNativeRows(nativeKeys.allRows),
@@ -1079,13 +1086,11 @@ export default function KeyManagement(props: {
     <div className="p-6">
       <Header
         onAddToken={handleRequestAddToken}
-        onRepairMissingKeys={
-          isSelectedNativeKeyAccount ? undefined : handleRepairMissingKeys
-        }
+        onRepairMissingKeys={handleRepairMissingKeys}
         onRefresh={handleRefreshTokens}
         onOpenSelectedAccountModels={
           selectedAccount &&
-          !isSelectedNativeKeyAccount &&
+          canOpenSelectedAccountModels &&
           selectedAccount !== KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE
             ? handleOpenSelectedAccountModels
             : undefined
@@ -1096,9 +1101,11 @@ export default function KeyManagement(props: {
             : undefined
         }
         managedSiteStatusHint={
-          isSelectedNativeKeyAccount || isManagedSiteChannelStatusSupported
-            ? undefined
-            : t("managedSiteStatus.pageUnsupported")
+          !isManagedSiteChannelStatusSupported
+            ? t("managedSiteStatus.pageUnsupported")
+            : hasNativeStatusLimitation
+              ? t("managedSiteStatus.nativeResourceUnsupported")
+              : undefined
         }
         selectedAccount={selectedAccount}
         isLoading={isLoading || nativeKeys.isLoading || !selectedAccount}
@@ -1166,7 +1173,8 @@ export default function KeyManagement(props: {
 
       {isSelectedNativeKeyAccount ? (
         <div className="mb-4 space-y-3">
-          <OpenRouterWorkspaceSelector
+          <AccountKeyScopeSelector
+            siteType={selectedAddTokenScopeAccount?.siteType}
             scopes={nativeKeys.scopes}
             selectedScope={nativeKeys.selectedScope}
             isLoading={nativeKeys.isLoading}
@@ -1358,7 +1366,7 @@ export default function KeyManagement(props: {
       />
 
       <RepairMissingKeysDialog
-        isOpen={isRepairOpen && !isSelectedNativeKeyAccount}
+        isOpen={isRepairOpen}
         onClose={handleCloseRepairMissingKeys}
         accounts={displayData}
         startOnOpen={repairStartOnOpen}

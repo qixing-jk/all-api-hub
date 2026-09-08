@@ -1203,6 +1203,7 @@ describe("KeyManagement native page integration", () => {
     })
 
     act(() => emptyList.resolve({ items: [] }))
+    expect(screen.getByText(scope.displayName)).toBeVisible()
     await waitFor(() =>
       expect(accountSummaryBarPropsSpy.mock.lastCall?.[0]).toMatchObject({
         items: expect.arrayContaining([
@@ -1299,15 +1300,20 @@ describe("KeyManagement native page integration", () => {
         screen.queryByText("keyManagement:managedSiteStatus.pageUnsupported"),
       ).toBeNull()
       expect(
-        screen.queryByTestId(
+        screen.getByTestId(
           KEY_MANAGEMENT_TEST_IDS.openSelectedAccountModelsButton,
         ),
-      ).toBeNull()
+      ).toBeVisible()
       expect(
-        screen.queryByRole("button", {
+        screen.getByRole("button", {
           name: "keyManagement:repairMissingKeys.action",
         }),
-      ).toBeNull()
+      ).toBeVisible()
+      expect(
+        screen.getByText(
+          "keyManagement:managedSiteStatus.nativeResourceUnsupported",
+        ),
+      ).toBeVisible()
       expect(
         screen.queryByRole("button", {
           name: "keyManagement:managedSiteStatus.actions.refresh",
@@ -1851,6 +1857,11 @@ describe("KeyManagement native page integration", () => {
       />,
     )
 
+    expect(
+      await screen.findByRole("button", {
+        name: "keyManagement:managedSiteStatus.actions.refresh",
+      }),
+    ).toBeEnabled()
     await waitFor(() => expect(failedOpen).toHaveBeenCalledTimes(1))
     await waitFor(() =>
       expect(accountSummaryBarPropsSpy.mock.lastCall?.[0]).toMatchObject({

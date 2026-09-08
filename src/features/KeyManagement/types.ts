@@ -47,7 +47,7 @@ export type NativeKeyManagementRow = {
   rowKey: string
   accountId: string
   accountName: string
-  workspaceName: string
+  scopeName: string
   facts: AccountKeyResourceFacts
 }
 

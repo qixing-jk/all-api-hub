@@ -1,11 +1,14 @@
+import { useId } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Alert, Button, SearchableSelect } from "~/components/ui"
 import type { AccountKeyScope } from "~/services/apiAdapters/contracts/accountKeyResource"
 
+import { getAccountKeyScopeMessages } from "../../presentation/accountKeyResourcePresentation"
 import { KEY_MANAGEMENT_TEST_IDS } from "../../testIds"
 
-export type OpenRouterWorkspaceSelectorProps = {
+export type AccountKeyScopeSelectorProps = {
+  siteType?: string
   scopes: readonly AccountKeyScope[]
   selectedScope: AccountKeyScope | null
   isLoading?: boolean
@@ -16,8 +19,9 @@ export type OpenRouterWorkspaceSelectorProps = {
   onRetry?: () => void
 }
 
-/** Selects the validated workspace route scope; workspace IDs are never user-entered. */
-export function OpenRouterWorkspaceSelector({
+/** Selects the validated resource scope; scope IDs are never user-entered. */
+export function AccountKeyScopeSelector({
+  siteType,
   scopes,
   selectedScope,
   isLoading = false,
@@ -26,8 +30,10 @@ export function OpenRouterWorkspaceSelector({
   error,
   onSelectScope,
   onRetry,
-}: OpenRouterWorkspaceSelectorProps) {
+}: AccountKeyScopeSelectorProps) {
   const { t } = useTranslation()
+  const headingId = useId()
+  const messages = getAccountKeyScopeMessages(siteType, t)
   const options = scopes.map((scope) => ({
     value: scope.scopeKey,
     label: `${scope.displayName} (${scope.routeKey})`,
@@ -43,13 +49,10 @@ export function OpenRouterWorkspaceSelector({
   }))
 
   return (
-    <section
-      aria-labelledby="openrouter-workspace-heading"
-      className="space-y-2"
-    >
+    <section aria-labelledby={headingId} className="space-y-2">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 id="openrouter-workspace-heading" className="text-sm font-medium">
-          {t("keyManagement:openRouter.workspace.heading")}
+        <h2 id={headingId} className="text-sm font-medium">
+          {messages.heading}
         </h2>
       </div>
       {isPartial ? (
@@ -57,7 +60,7 @@ export function OpenRouterWorkspaceSelector({
           <Alert
             variant="warning"
             compact
-            title={t("keyManagement:openRouter.workspace.partial")}
+            title={messages.partial}
             className="flex-1"
           />
           {onRetry ? (
@@ -67,39 +70,37 @@ export function OpenRouterWorkspaceSelector({
               variant="outline"
               onClick={onRetry}
               disabled={isRetrying}
-              aria-label={t("keyManagement:openRouter.workspace.retry")}
+              aria-label={messages.retry}
             >
-              {t("keyManagement:openRouter.workspace.retry")}
+              {messages.retry}
             </Button>
           ) : null}
         </div>
       ) : null}
       <SearchableSelect
         data-testid={KEY_MANAGEMENT_TEST_IDS.openRouterWorkspaceSelect}
-        aria-label={t("keyManagement:openRouter.workspace.label")}
+        aria-label={messages.label}
         options={options}
         value={selectedScope?.scopeKey ?? ""}
-        placeholder={t("keyManagement:openRouter.workspace.placeholder")}
-        emptyMessage={t("keyManagement:openRouter.workspace.empty")}
+        placeholder={messages.placeholder}
+        emptyMessage={messages.empty}
         disabled={isLoading || Boolean(error)}
         onChange={onSelectScope}
       />
       {isLoading ? (
         <p role="status" className="text-muted-foreground text-xs">
-          {t("keyManagement:openRouter.workspace.loading")}
+          {messages.loading}
         </p>
       ) : null}
       {!isLoading && !error && scopes.length === 0 ? (
-        <p className="text-muted-foreground text-xs">
-          {t("keyManagement:openRouter.workspace.empty")}
-        </p>
+        <p className="text-muted-foreground text-xs">{messages.empty}</p>
       ) : null}
       {error ? (
         <Alert
           variant="destructive"
           compact
-          title={t("keyManagement:openRouter.workspace.error")}
-          description={t("keyManagement:openRouter.workspace.errorHelp")}
+          title={messages.error}
+          description={messages.errorHelp}
         >
           {onRetry ? (
             <Button
@@ -108,9 +109,9 @@ export function OpenRouterWorkspaceSelector({
               variant="outline"
               onClick={onRetry}
               disabled={isRetrying}
-              aria-label={t("keyManagement:openRouter.workspace.retry")}
+              aria-label={messages.retry}
             >
-              {t("keyManagement:openRouter.workspace.retry")}
+              {messages.retry}
             </Button>
           ) : null}
         </Alert>

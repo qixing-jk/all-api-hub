@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 
-import { OpenRouterWorkspaceSelector } from "~/features/KeyManagement/components/AccountKeyResource/OpenRouterWorkspaceSelector"
+import { AccountKeyScopeSelector } from "~/features/KeyManagement/components/AccountKeyResource/AccountKeyScopeSelector"
 import type { AccountKeyScope } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { fireEvent, render, screen } from "~~/tests/test-utils/render"
 
@@ -12,11 +12,38 @@ const workspace: AccountKeyScope = {
   isDefault: true,
 }
 
-describe("OpenRouterWorkspaceSelector", () => {
+describe("AccountKeyScopeSelector", () => {
+  it("uses neutral scope terminology for another provider", () => {
+    render(
+      <AccountKeyScopeSelector
+        siteType="new-api"
+        scopes={[workspace]}
+        selectedScope={workspace}
+        onSelectScope={vi.fn()}
+      />,
+      { withUserPreferencesProvider: false, withThemeProvider: false },
+    )
+    expect(
+      screen.getByRole("combobox", {
+        name: "keyManagement:native.scope.label",
+      }),
+    ).toHaveTextContent(workspace.displayName)
+    expect(
+      screen.getByRole("heading", {
+        name: "keyManagement:native.scope.heading",
+      }),
+    ).toBeVisible()
+    expect(screen.queryByText(workspace.scopeKey)).toBeNull()
+    expect(
+      screen.queryByText("keyManagement:openRouter.workspace.heading"),
+    ).toBeNull()
+  })
+
   it("uses a searchable name and slug selector and reports only the selected scope key", async () => {
     const onSelectScope = vi.fn()
     render(
-      <OpenRouterWorkspaceSelector
+      <AccountKeyScopeSelector
+        siteType="openrouter"
         scopes={[workspace]}
         selectedScope={workspace}
         onSelectScope={onSelectScope}
@@ -39,7 +66,8 @@ describe("OpenRouterWorkspaceSelector", () => {
   it("shows distinguishable loading, empty, and retryable error states without a raw-ID fallback", () => {
     const onRetry = vi.fn()
     const { rerender } = render(
-      <OpenRouterWorkspaceSelector
+      <AccountKeyScopeSelector
+        siteType="openrouter"
         scopes={[]}
         selectedScope={null}
         isLoading
@@ -52,7 +80,8 @@ describe("OpenRouterWorkspaceSelector", () => {
       "keyManagement:openRouter.workspace.loading",
     )
     rerender(
-      <OpenRouterWorkspaceSelector
+      <AccountKeyScopeSelector
+        siteType="openrouter"
         scopes={[workspace]}
         selectedScope={workspace}
         isPartial
@@ -75,7 +104,8 @@ describe("OpenRouterWorkspaceSelector", () => {
       }),
     ).toHaveTextContent("Example team")
     rerender(
-      <OpenRouterWorkspaceSelector
+      <AccountKeyScopeSelector
+        siteType="openrouter"
         scopes={[]}
         selectedScope={null}
         onSelectScope={() => undefined}
@@ -85,7 +115,8 @@ describe("OpenRouterWorkspaceSelector", () => {
       screen.getByText("keyManagement:openRouter.workspace.empty"),
     ).toBeVisible()
     rerender(
-      <OpenRouterWorkspaceSelector
+      <AccountKeyScopeSelector
+        siteType="openrouter"
         scopes={[]}
         selectedScope={null}
         error="unavailable"

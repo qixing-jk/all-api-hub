@@ -295,6 +295,7 @@
       "inputPreparationFailed": "無法準備可比對的渠道輸入，暫時無法完成校驗。",
       "newApiRetrieveKeyHint": "對於 New API，完整的 key 比對依賴渠道 key，而檢視渠道 key 本身需要先完成 2FA 驗證，因此當前暫無法完成完整 key 比對。"
     },
+    "nativeResourceUnsupported": "本頁的託管站點比對暫不支援原生資源金鑰，重新整理僅適用於已支援的金鑰。",
     "pageUnsupported": "由於目前的託管站點暫不支援使用 URL 搜尋渠道，暫不提供管理站點渠道檢查功能。",
     "recovery": {
       "configureLogin": "請先在設定中填寫 New API 登入與兩步驗證輔助資訊，否則當前無法讀取渠道 key，也無法完成完整的 key 比對。",
@@ -353,6 +354,28 @@
     "serviceCredentialRotateFailed": "重置服務金鑰失敗",
     "verifyApiFailed": "開啟介面驗證失敗",
     "verifyCliSupportFailed": "開啟 CLI 相容性驗證失敗"
+  },
+  "native": {
+    "detailsLoadFailed": "無法載入金鑰詳細資料。",
+    "heading": "API 金鑰",
+    "missing": "無可用資料",
+    "scope": {
+      "empty": "暫無可用作用域",
+      "error": "無法載入作用域",
+      "errorHelp": "請檢查帳戶存取權限後重試。",
+      "heading": "作用域",
+      "label": "選擇作用域",
+      "loading": "正在載入作用域…",
+      "partial": "部分作用域未能載入，已載入的作用域仍可使用。",
+      "placeholder": "請選擇作用域",
+      "retry": "重新載入作用域"
+    },
+    "status": {
+      "disabled": "已停用",
+      "enabled": "已啟用",
+      "expired": "已到期",
+      "unknown": "未知"
+    }
   },
   "noAccountsSupportKeyCreation": "目前檢視中的帳號都不支援建立 API 金鑰。請選擇其他帳號或新增受支援的帳號。",
   "noKeys": "暫無金鑰資料",
@@ -541,7 +564,6 @@
         "usageWeekly": "每週用量",
         "workspace": "工作區"
       },
-      "heading": "OpenRouter 金鑰",
       "status": {
         "all": "全部",
         "disabled": "已停用",

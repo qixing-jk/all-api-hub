@@ -303,6 +303,7 @@
       "inputPreparationFailed": "Verification could not prepare comparable channel inputs.",
       "newApiRetrieveKeyHint": "For New API, full key comparison depends on the channel key, and viewing that channel key itself requires 2FA verification, so full key comparison is currently unavailable."
     },
+    "nativeResourceUnsupported": "Managed-site matching does not yet support native resource keys on this page. Refresh applies only to supported keys.",
     "pageUnsupported": "Managed-site channel checks are unavailable on this page because the current managed site does not currently support searching channels by URL.",
     "recovery": {
       "configureLogin": "Add the New API login and 2FA-assist fields in Settings first. Until then, the channel key cannot be read and full key comparison cannot be completed.",
@@ -362,6 +363,28 @@
     "serviceCredentialRotateFailed": "Failed to reset service key",
     "verifyApiFailed": "Failed to open API verification",
     "verifyCliSupportFailed": "Failed to open CLI compatibility verification"
+  },
+  "native": {
+    "detailsLoadFailed": "Could not load key details.",
+    "heading": "API keys",
+    "missing": "Not available",
+    "scope": {
+      "empty": "No scopes available",
+      "error": "Could not load scopes",
+      "errorHelp": "Check account access and try again.",
+      "heading": "Scope",
+      "label": "Select a scope",
+      "loading": "Loading scopes…",
+      "partial": "Some scopes could not be loaded. Available scopes can still be used.",
+      "placeholder": "Choose a scope",
+      "retry": "Retry loading scopes"
+    },
+    "status": {
+      "disabled": "Disabled",
+      "enabled": "Enabled",
+      "expired": "Expired",
+      "unknown": "Unknown"
+    }
   },
   "noAccountsSupportKeyCreation": "None of the accounts in this view support creating API keys. Select another account or add a supported account.",
   "noKeys": "No key data yet",
@@ -550,7 +573,6 @@
         "usageWeekly": "Weekly usage",
         "workspace": "Workspace"
       },
-      "heading": "OpenRouter keys",
       "status": {
         "all": "All",
         "disabled": "Disabled",
