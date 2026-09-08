@@ -186,6 +186,7 @@
     "addSuccess": "アカウント {{name}} を正常に追加しました",
     "autoDetectCookiePermissionReloadHint": "Cookie 複数アカウント権限を許可した直後の初回検出が進まない場合は、拡張機能を再読み込みしてから再試行できます。",
     "autoDetectFailed": "自動検出に失敗しました: {{error}}",
+    "autoDetectIdentityMismatch": "検出されたアカウントが現在のアカウントと一致しません。既存のデータは保持されています。サイトの URL を確認し、対象のアカウントにログインしてから再試行してください。",
     "autoDetectSuccess": "自動検出に成功しました",
     "autoDetectTakingTooLong": "自動検出に想定より時間がかかっています。トラブルシューティングガイドを開いてください。",
     "checkInRedetectAmbiguous": "複数のチェックイン方法が検出されました。下から選択してください。",

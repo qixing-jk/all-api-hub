@@ -963,9 +963,10 @@ describe("AccountList", () => {
     await user.click(
       screen.getByRole("button", { name: "account:list.reorder" }),
     )
+    await screen.findByTestId(TEST_IDS.dndContext)
 
     expect(
-      (await screen.findByText("Enabled Alpha")).closest(".border-l-blue-500"),
+      screen.getByText("Enabled Alpha").closest(".border-l-blue-500"),
     ).toBeInTheDocument()
   })
 

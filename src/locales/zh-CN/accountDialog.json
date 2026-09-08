@@ -186,6 +186,7 @@
     "addSuccess": "账号 {{name}} 添加成功!",
     "autoDetectCookiePermissionReloadHint": "如果刚授予 Cookie 多账号权限后首次识别一直无结果，可重新加载扩展后再试。",
     "autoDetectFailed": "自动识别失败: {{error}}",
+    "autoDetectIdentityMismatch": "识别到的账号与当前账号不一致，已保留原有数据。请检查站点地址，并登录对应账号后重试。",
     "autoDetectSuccess": "自动识别成功！",
     "autoDetectTakingTooLong": "自动识别耗时较长？点击打开排查文档",
     "checkInRedetectAmbiguous": "检测到多种签到方式，请在下方选择。",

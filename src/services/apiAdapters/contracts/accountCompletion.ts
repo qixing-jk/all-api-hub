@@ -26,7 +26,12 @@ export type AccountCompletionServiceRequestInput = {
 
 export type AccountCompletionAdapterRequest = Pick<
   AutoDetectCompletionRequest,
-  "url" | "requestedAuthType" | "detected" | "autoDetectContext"
+  | "url"
+  | "requestedAuthType"
+  | "existingAccessToken"
+  | "loadSavedAccessTokens"
+  | "detected"
+  | "autoDetectContext"
 > & { context: AccountCompletionRuntimeContext }
 
 export type AccountCompletionAdapterResult = Omit<

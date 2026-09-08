@@ -187,6 +187,7 @@
     "addSuccess": "Konto {{name}} erfolgreich hinzugefügt!",
     "autoDetectCookiePermissionReloadHint": "Wenn die erste Erkennung direkt nach der Gewährung von Cookie-Mehrfachkontoberechtigungen weiterhin wartet, laden Sie die Erweiterung neu und versuchen Sie es erneut.",
     "autoDetectFailed": "Automatische Erkennung fehlgeschlagen: {{error}}",
+    "autoDetectIdentityMismatch": "Das erkannte Konto stimmt nicht mit dem aktuellen Konto überein. Deine vorhandenen Daten wurden beibehalten. Prüfe die Website-URL, melde dich beim gewünschten Konto an und versuche es erneut.",
     "autoDetectSuccess": "Automatische Erkennung erfolgreich!",
     "autoDetectTakingTooLong": "Die automatische Erkennung dauert länger als erwartet. Anleitung zur Fehlerbehebung öffnen.",
     "checkInRedetectAmbiguous": "Mehrere Check-in-Methoden wurden erkannt. Wählen Sie unten eine aus.",
