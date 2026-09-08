@@ -118,7 +118,7 @@ export default function StatusCard({
     {
       label: t("status.summary.success"),
       value:
-        summary.successCount == null
+        status.summary?.successCount == null
           ? derivedSuccess
           : Math.max(
               summary.successCount -

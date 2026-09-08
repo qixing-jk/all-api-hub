@@ -2,7 +2,10 @@ import { screen } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 
 import StatusCard from "~/features/AutoCheckin/components/StatusCard"
-import type { AutoCheckinPreferences } from "~/types/autoCheckin"
+import {
+  CHECKIN_RESULT_STATUS,
+  type AutoCheckinPreferences,
+} from "~/types/autoCheckin"
 import { render } from "~~/tests/test-utils/render"
 
 const preferences: AutoCheckinPreferences = {
@@ -21,6 +24,42 @@ const preferences: AutoCheckinPreferences = {
 }
 
 describe("AutoCheckin StatusCard", () => {
+  it("derives distinct success counts when persisted account results have no summary", () => {
+    render(
+      <StatusCard
+        preferences={preferences}
+        status={{
+          perAccount: {
+            success: {
+              accountId: "success",
+              accountName: "Success",
+              status: CHECKIN_RESULT_STATUS.SUCCESS,
+              timestamp: 1,
+            },
+            already: {
+              accountId: "already",
+              accountName: "Already",
+              status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
+              timestamp: 1,
+            },
+          },
+        }}
+      />,
+      {
+        withReleaseUpdateStatusProvider: false,
+        withThemeProvider: false,
+        withUserPreferencesProvider: false,
+      },
+    )
+    expect(
+      screen.getByText("autoCheckin:status.summary.success").parentElement,
+    ).toHaveTextContent("1")
+    expect(
+      screen.getByText("autoCheckin:status.summary.alreadyChecked")
+        .parentElement,
+    ).toHaveTextContent("1")
+  })
+
   it("shows successful, already-checked, and pending-confirmation counts separately", () => {
     render(
       <StatusCard

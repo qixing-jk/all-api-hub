@@ -82,6 +82,39 @@ function StatefulFilterBar() {
 }
 
 describe("AutoCheckin FilterBar", () => {
+  it("updates the attention preset label when deselecting a status and resets to all", async () => {
+    const user = userEvent.setup()
+    const i18n = await createResourceTestI18n({
+      en: { autoCheckin: enAutoCheckin },
+    })
+    rtlRender(
+      <I18nextProvider i18n={i18n}>
+        <StatefulFilterBar />
+      </I18nextProvider>,
+    )
+    const trigger = screen.getByRole("button", {
+      name: /Filter by execution status/,
+    })
+    await user.click(trigger)
+    await user.click(screen.getByRole("menuitem", { name: /Needs attention/ }))
+    expect(trigger).toHaveAccessibleName(
+      "Filter by execution status: Needs attention",
+    )
+    await user.click(trigger)
+    await user.click(screen.getByRole("menuitemcheckbox", { name: /Failed/ }))
+    expect(
+      screen.getByRole("menuitemcheckbox", { name: /Failed/ }),
+    ).toHaveAttribute("aria-checked", "false")
+    await user.keyboard("{Escape}")
+    expect(trigger).not.toHaveAccessibleName(
+      "Filter by execution status: Needs attention",
+    )
+    await user.click(trigger)
+    await user.click(screen.getByRole("menuitem", { name: /All/ }))
+    expect(trigger).toHaveAccessibleName("Filter by execution status: All")
+    expect(screen.getByText("5 total")).toBeVisible()
+  })
+
   afterEach(() => {
     trackProductAnalyticsActionCompletedMock.mockReset()
   })

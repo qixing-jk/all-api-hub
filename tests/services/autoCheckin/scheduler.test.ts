@@ -2537,6 +2537,72 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
     vi.useRealTimers()
   })
 
+  it("keeps already-checked and uncertain retry outcomes distinct in notifications", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2024, 0, 1, 9, 30, 0))
+    mockedUserPreferences.getPreferences.mockResolvedValue({
+      autoCheckin: {
+        ...DEFAULT_PREFERENCES.autoCheckin!,
+        globalEnabled: true,
+        notifyUiOnCompletion: false,
+        retryStrategy: {
+          enabled: true,
+          intervalMinutes: 30,
+          maxAttemptsPerDay: 3,
+        },
+      },
+    })
+    const accounts = ["already", "uncertain"].map((id) => ({
+      id,
+      site_name: id,
+      site_type: SITE_TYPES.VELOERA,
+      account_info: { username: id },
+      checkIn: runnableCheckIn(),
+    }))
+    storedStatus = {
+      lastDailyRunDay: "2024-01-01",
+      retryState: {
+        day: "2024-01-01",
+        pendingAccountIds: ["already", "uncertain"],
+        attemptsByAccount: { already: 1, uncertain: 1 },
+      },
+      perAccount: {},
+    } as any
+    mockedAccountStorage.getAllAccounts.mockResolvedValue(accounts)
+    mockedAccountStorage.getAccountById.mockImplementation(async (id: string) =>
+      accounts.find((account) => account.id === id),
+    )
+    resolveProviderForTest.mockReturnValue({
+      getReadiness: vi.fn(() => ({ ready: true })),
+      checkIn: vi.fn(async (account: any) =>
+        account.id === "already"
+          ? { status: "already_checked" }
+          : {
+              status: "uncertain",
+              reconciliation: "unknown",
+              retryable: false,
+            },
+      ),
+    })
+    await (autoCheckinScheduler as any).runRetryCheckins()
+    expect(mockedNotifyTaskResult).toHaveBeenCalledWith({
+      task: "autoCheckin",
+      status: "partial_success",
+      counts: {
+        total: 2,
+        success: 0,
+        alreadyChecked: 1,
+        failed: 0,
+        uncertain: 1,
+        skipped: 0,
+      },
+    })
+    expect(storedStatus.perAccount.already.status).toBe("already_checked")
+    expect(storedStatus.perAccount.uncertain.status).toBe("uncertain")
+    expect(storedStatus.retryState).toBeUndefined()
+    vi.useRealTimers()
+  })
+
   it("tracks retry completion with retry mode and updated result counts", async () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date(2024, 0, 1, 9, 30, 0))
