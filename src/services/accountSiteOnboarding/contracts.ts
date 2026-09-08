@@ -62,3 +62,14 @@ export type AccountSiteOnboardingMetadata = {
   detection?: AccountSiteDetectionMetadata
   routes: AccountSiteRouteConfig
 }
+
+/**
+ * A provider's trusted-URL policy for read-only account detection. Failure
+ * messages use local copy and logs contain only structured status diagnostics;
+ * this registration does not grant permission to create credentials.
+ */
+export type AccountDetectionPrivacyPolicy = {
+  siteType: AccountSiteType
+  matchesUrl(url: string): boolean
+  getFailureMessage(): string
+}

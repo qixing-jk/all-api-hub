@@ -1,11 +1,7 @@
 import type { AutoDetectErrorCode } from "~/constants/autoDetect"
 import { AUTO_DETECT_ERROR_CODES } from "~/constants/autoDetect"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import {
-  isAccountSiteType,
-  SITE_TYPES,
-  type AccountSiteType,
-} from "~/constants/siteType"
+import { isAccountSiteType, type AccountSiteType } from "~/constants/siteType"
 import {
   findSavedAccountAccessTokens,
   getExistingAccountAccessToken,
@@ -28,7 +24,8 @@ import {
   type AutoDetectAnalyticsContext,
   type AutoDetectFailureReason,
 } from "~/services/accounts/utils/autoDetectUtils"
-import { isCanonicalOpenRouterUrl } from "~/services/accountSiteDefinitions/identifiers"
+import type { AccountDetectionPrivacyPolicy } from "~/services/accountSiteOnboarding/contracts"
+import { getAccountDetectionPrivacyPolicy } from "~/services/accountSiteOnboarding/registry"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import { autoDetectSmart } from "~/services/siteDetection/autoDetectService"
 import { type AuthTypeEnum } from "~/types"
@@ -113,11 +110,12 @@ function getAutoDetectCompletionDetailedError(
   }
 }
 
-/** Builds an OpenRouter failure response from controlled local copy only. */
-function getControlledOpenRouterFailure(
-  message: string,
+/** Builds a failure from provider-owned local copy, excluding upstream details. */
+function getPrivateDetectionFailure(
+  policy: AccountDetectionPrivacyPolicy,
   reason: AutoDetectFailureReason,
 ) {
+  const message = policy.getFailureMessage()
   return {
     message,
     detailedError: {
@@ -125,16 +123,6 @@ function getControlledOpenRouterFailure(
       message,
     },
   }
-}
-
-/** Returns local manual-entry guidance without exposing OpenRouter detection details. */
-function getOpenRouterReadOnlyDetectionFailure(
-  reason: AutoDetectFailureReason,
-) {
-  return getControlledOpenRouterFailure(
-    t("messages:openrouter.managementKeyRequired"),
-    reason,
-  )
 }
 
 /** Detects account information using the available browser and API strategies. */
@@ -154,10 +142,10 @@ export async function autoDetectAccount(
   }
 
   const normalizedUrl = url.trim()
-  const isCanonicalOpenRouter = isCanonicalOpenRouterUrl(normalizedUrl)
+  const detectionPrivacy = getAccountDetectionPrivacyPolicy(normalizedUrl)
   let autoDetectContext: AutoDetectAnalyticsContext | undefined
   let recoveryData: AccountAutoDetectRecoveryData | undefined = {
-    ...(isCanonicalOpenRouter ? { siteType: SITE_TYPES.OPENROUTER } : {}),
+    ...(detectionPrivacy ? { siteType: detectionPrivacy.siteType } : {}),
     authType,
     ...(cookieAuthSessionCookie?.trim()
       ? { cookieAuthSessionCookie: cookieAuthSessionCookie.trim() }
@@ -173,9 +161,9 @@ export async function autoDetectAccount(
     } catch (error) {
       logger.warn(
         "Failed to track cookie interceptor url",
-        isCanonicalOpenRouter
+        detectionPrivacy
           ? {
-              siteType: SITE_TYPES.OPENROUTER,
+              siteType: detectionPrivacy.siteType,
               status: "tracking_failed",
             }
           : {
@@ -202,11 +190,14 @@ export async function autoDetectAccount(
         getAutoDetectFailureReasonByErrorCode(detectResult.errorCode) ??
         AUTO_DETECT_FAILURE_REASONS.UserDataMissing
 
-      if (isCanonicalOpenRouter) {
+      if (detectionPrivacy) {
         return {
           kind: "detected",
           success: false,
-          ...getOpenRouterReadOnlyDetectionFailure(autoDetectFailureReason),
+          ...getPrivateDetectionFailure(
+            detectionPrivacy,
+            autoDetectFailureReason,
+          ),
           autoDetectContext,
           autoDetectFailureReason,
           recoveryData,
@@ -292,12 +283,13 @@ export async function autoDetectAccount(
   } catch (error) {
     const autoDetectFailureReason = getAutoDetectCompletionFailureReason(error)
 
-    if (isCanonicalOpenRouter) {
-      const failure = getOpenRouterReadOnlyDetectionFailure(
+    if (detectionPrivacy) {
+      const failure = getPrivateDetectionFailure(
+        detectionPrivacy,
         autoDetectFailureReason,
       )
-      logger.error("OpenRouter account detection failed", {
-        siteType: SITE_TYPES.OPENROUTER,
+      logger.error("Account detection failed", {
+        siteType: detectionPrivacy.siteType,
         status: "failed",
         reason: autoDetectFailureReason,
       })

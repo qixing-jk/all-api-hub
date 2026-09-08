@@ -189,14 +189,11 @@ describe("accountAutoDetection", () => {
       },
       autoDetectFailureReason: AUTO_DETECT_FAILURE_REASONS.UnexpectedException,
     })
-    expect(loggerMock.error).toHaveBeenCalledWith(
-      "OpenRouter account detection failed",
-      {
-        siteType: SITE_TYPES.OPENROUTER,
-        status: "failed",
-        reason: AUTO_DETECT_FAILURE_REASONS.UnexpectedException,
-      },
-    )
+    expect(loggerMock.error).toHaveBeenCalledWith("Account detection failed", {
+      siteType: SITE_TYPES.OPENROUTER,
+      status: "failed",
+      reason: AUTO_DETECT_FAILURE_REASONS.UnexpectedException,
+    })
     expect(serializeLoggerCalls()).not.toContain(privateError)
     expect(JSON.stringify(result)).not.toContain(privateError)
   })
@@ -275,6 +272,49 @@ describe("accountAutoDetection", () => {
     } finally {
       mockAutoDetectSmart.mockReset()
     }
+  })
+
+  it.each([
+    "https://openrouter.ai:8443/settings/management-keys",
+    "blob:https://openrouter.ai/object",
+    "http://openrouter.ai",
+    "https://openrouter.ai.example.invalid",
+    "https://ordinary.example.invalid",
+    "not-a-url",
+  ])(
+    "preserves ordinary diagnostics outside the canonical origin: %s",
+    async (url) => {
+      const error = "ordinary-detection-diagnostic"
+      mockAutoDetectSmart.mockRejectedValueOnce(new Error(error))
+
+      const result = await autoDetectAccount(url, AuthTypeEnum.AccessToken)
+
+      expect(result.recoveryData?.siteType).toBeUndefined()
+      expect(result.message).not.toBe(
+        "messages:openrouter.managementKeyRequired",
+      )
+      expect(serializeLoggerCalls()).toContain(error)
+      expect(mockOpenRouterPageAction).not.toHaveBeenCalled()
+    },
+  )
+
+  it("does not select private guidance from a detected OpenRouter hint", async () => {
+    mockAutoDetectSmart.mockResolvedValueOnce({
+      success: false,
+      errorCode: AUTO_DETECT_ERROR_CODES.CURRENT_TAB_CONTENT_SCRIPT_UNAVAILABLE,
+      autoDetectContext: { siteType: SITE_TYPES.OPENROUTER },
+    })
+
+    const result = await autoDetectAccount(
+      "https://ordinary.example.invalid",
+      AuthTypeEnum.AccessToken,
+    )
+
+    expect(result.detailedError?.type).toBe(
+      AutoDetectErrorType.CURRENT_TAB_RELOAD_REQUIRED,
+    )
+    expect(result.message).not.toBe("messages:openrouter.managementKeyRequired")
+    expect(mockOpenRouterPageAction).not.toHaveBeenCalled()
   })
 
   it("returns a validation error when the URL is blank", async () => {

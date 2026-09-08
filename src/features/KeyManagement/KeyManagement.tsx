@@ -11,7 +11,6 @@ import {
   SearchableSelect,
 } from "~/components/ui"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
-import { SITE_TYPES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useApiCredentialProfiles } from "~/features/ApiCredentialProfiles/hooks/useApiCredentialProfiles"
 import { loadNewApiChannelKeyWithVerification } from "~/features/ManagedSiteVerification/loadNewApiChannelKeyWithVerification"
@@ -566,7 +565,11 @@ export default function KeyManagement(props: {
         const account = displayData.find(
           (candidate) => candidate.id === targetAccountId,
         )
-        if (account?.siteType === SITE_TYPES.OPENROUTER) {
+        if (
+          account &&
+          getSiteTypeCapabilities(account.siteType).account
+            ?.keyResourceManagement
+        ) {
           await nativeKeys.refresh()
           return
         }
@@ -733,15 +736,19 @@ export default function KeyManagement(props: {
       ? addTokenAvailableAccounts.length > 0
       : false
 
-  const isSelectedOpenRouterAccount =
+  const isSelectedNativeKeyAccount =
     selectedAccount !== KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE &&
-    selectedAddTokenScopeAccount?.siteType === SITE_TYPES.OPENROUTER
+    Boolean(
+      selectedAddTokenScopeAccount &&
+        getSiteTypeCapabilities(selectedAddTokenScopeAccount.siteType).account
+          ?.keyResourceManagement,
+    )
   const canCreateNativeKey =
-    isSelectedOpenRouterAccount &&
+    isSelectedNativeKeyAccount &&
     nativeKeys.selectedScope !== null &&
     !nativeKeys.isLoading &&
     !nativeKeys.freshReadRequired
-  const canCreateKeyInCurrentScope = isSelectedOpenRouterAccount
+  const canCreateKeyInCurrentScope = isSelectedNativeKeyAccount
     ? canCreateNativeKey
     : canCreateTokensInCurrentScope
   const addTokenDisabledReason = !selectedAccount
@@ -750,13 +757,13 @@ export default function KeyManagement(props: {
         addTokenAvailableAccounts.length === 0
       ? t("keyManagement:noAccountsSupportKeyCreation")
       : selectedAddTokenScopeAccount &&
-          !isSelectedOpenRouterAccount &&
+          !isSelectedNativeKeyAccount &&
           !canCreateTokensInCurrentScope
         ? t("keyManagement:dialog.createNotSupported")
         : undefined
 
   const handleRequestAddToken = useCallback(() => {
-    if (isSelectedOpenRouterAccount) {
+    if (isSelectedNativeKeyAccount) {
       if (canCreateNativeKey) void nativeKeys.openCreate()
       return
     }
@@ -769,7 +776,7 @@ export default function KeyManagement(props: {
     canCreateNativeKey,
     canCreateTokensInCurrentScope,
     handleAddToken,
-    isSelectedOpenRouterAccount,
+    isSelectedNativeKeyAccount,
     nativeKeys,
   ])
 
@@ -1073,23 +1080,23 @@ export default function KeyManagement(props: {
       <Header
         onAddToken={handleRequestAddToken}
         onRepairMissingKeys={
-          isSelectedOpenRouterAccount ? undefined : handleRepairMissingKeys
+          isSelectedNativeKeyAccount ? undefined : handleRepairMissingKeys
         }
         onRefresh={handleRefreshTokens}
         onOpenSelectedAccountModels={
           selectedAccount &&
-          !isSelectedOpenRouterAccount &&
+          !isSelectedNativeKeyAccount &&
           selectedAccount !== KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE
             ? handleOpenSelectedAccountModels
             : undefined
         }
         onRefreshManagedSiteStatus={
-          isManagedSiteChannelStatusSupported && !isSelectedOpenRouterAccount
+          isManagedSiteChannelStatusSupported && !isSelectedNativeKeyAccount
             ? () => void handleRefreshManagedSiteStatuses()
             : undefined
         }
         managedSiteStatusHint={
-          isSelectedOpenRouterAccount || isManagedSiteChannelStatusSupported
+          isSelectedNativeKeyAccount || isManagedSiteChannelStatusSupported
             ? undefined
             : t("managedSiteStatus.pageUnsupported")
         }
@@ -1097,7 +1104,7 @@ export default function KeyManagement(props: {
         isLoading={isLoading || nativeKeys.isLoading || !selectedAccount}
         isManagedSiteStatusRefreshing={isManagedSiteStatusRefreshing}
         isAddTokenDisabled={
-          isSelectedOpenRouterAccount
+          isSelectedNativeKeyAccount
             ? !canCreateNativeKey
             : !canCreateTokensInCurrentScope
         }
@@ -1157,7 +1164,7 @@ export default function KeyManagement(props: {
         aggregateCounts={aggregateCounts}
       />
 
-      {isSelectedOpenRouterAccount ? (
+      {isSelectedNativeKeyAccount ? (
         <div className="mb-4 space-y-3">
           <OpenRouterWorkspaceSelector
             scopes={nativeKeys.scopes}
@@ -1343,7 +1350,7 @@ export default function KeyManagement(props: {
       />
 
       <AddTokenDialog
-        isOpen={isAddTokenOpen && !isSelectedOpenRouterAccount}
+        isOpen={isAddTokenOpen && !isSelectedNativeKeyAccount}
         onClose={handleCloseAddToken}
         availableAccounts={addTokenAvailableAccounts}
         preSelectedAccountId={addTokenPreSelectedAccountId}
@@ -1351,7 +1358,7 @@ export default function KeyManagement(props: {
       />
 
       <RepairMissingKeysDialog
-        isOpen={isRepairOpen && !isSelectedOpenRouterAccount}
+        isOpen={isRepairOpen && !isSelectedNativeKeyAccount}
         onClose={handleCloseRepairMissingKeys}
         accounts={displayData}
         startOnOpen={repairStartOnOpen}

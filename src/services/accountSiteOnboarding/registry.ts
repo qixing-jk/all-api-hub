@@ -9,6 +9,7 @@ import type {
   AccountBrowserIdentityContext,
 } from "~/services/apiAdapters/contracts/accountBrowserIdentity"
 import { newApiBrowserIdentity } from "~/services/apiAdapters/newApi/browserIdentity"
+import { openRouterAccountDetectionPrivacy } from "~/services/apiAdapters/openrouter/accountDetection"
 import { openRouterBrowserIdentity } from "~/services/apiAdapters/openrouter/browserIdentity"
 import { sharedChatBrowserIdentity } from "~/services/apiAdapters/sharedchat/browserIdentity"
 import { sub2ApiBrowserIdentity } from "~/services/apiAdapters/sub2api/browserIdentity"
@@ -21,13 +22,17 @@ import { sharedChatContentSessionExtractor } from "./contentSession/sharedchat"
 import { sub2ApiContentSessionExtractor } from "./contentSession/sub2api"
 import { vApiContentSessionExtractor } from "./contentSession/vApi"
 import { voApiV2ContentSessionExtractor } from "./contentSession/voapiV2"
-import type { ContentSessionExtractor } from "./contracts"
+import type {
+  AccountDetectionPrivacyPolicy,
+  ContentSessionExtractor,
+} from "./contracts"
 
 // Browser-context capabilities share one registration with session extraction.
 // Passive identity checks never invoke extractors, which may refresh credentials.
 const siteBrowserAdapters: readonly {
   sessionExtractor?: ContentSessionExtractor
   identity?: AccountBrowserIdentityCapability
+  detectionPrivacy?: AccountDetectionPrivacyPolicy
 }[] = [
   {
     sessionExtractor: sub2ApiContentSessionExtractor,
@@ -45,7 +50,10 @@ const siteBrowserAdapters: readonly {
   { sessionExtractor: apiyiContentSessionExtractor },
   { sessionExtractor: newApiAuthBundleContentSessionExtractor },
   { identity: aihubmixBrowserIdentity },
-  { identity: openRouterBrowserIdentity },
+  {
+    identity: openRouterBrowserIdentity,
+    detectionPrivacy: openRouterAccountDetectionPrivacy,
+  },
   {
     sessionExtractor: compatibleUserContentSessionExtractor,
     identity: newApiBrowserIdentity,
@@ -89,4 +97,11 @@ export function getAccountBrowserIdentityCapability(
   return siteBrowserAdapters.find(({ identity }) =>
     identity?.canObserve(context),
   )?.identity
+}
+
+/** Resolves disclosure policy from the requested URL, never a detected site hint. */
+export function getAccountDetectionPrivacyPolicy(url: string) {
+  return siteBrowserAdapters.find(({ detectionPrivacy }) =>
+    detectionPrivacy?.matchesUrl(url),
+  )?.detectionPrivacy
 }

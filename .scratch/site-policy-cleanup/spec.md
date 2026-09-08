@@ -2,7 +2,7 @@
 
 先清理职责与重复策略，暂不引入 lint、白名单或引用额度。此文件是审计记录，不参与运行时或检查。
 
-最新状态：已整合 origin/main 6953346f6 的 scoped resource identity 重构。第二、三轮的本地指纹/导航接口已被上游统一配置指纹与 ManagedResourceRef 契约替代；下文保留实施历史，基线替代关系以第五轮记录为准，后续清理见第六至十轮。
+最新状态：已整合 origin/main 6953346f6 的 scoped resource identity 重构。第二、三轮的本地指纹/导航接口已被上游统一配置指纹与 ManagedResourceRef 契约替代；下文保留实施历史，基线替代关系以第五轮记录为准，后续清理见第六至十一轮。原扫描候选已逐项清理或确认保留用途；暂不引入 lint。
 
 ## 本轮实现
 
@@ -18,7 +18,7 @@
 
 ## 后续独立迁移
 
-1. OpenRouter 的只读自动检测与浏览器引导（accountAutoDetection、useAccountDialog）。凭证验证、持久化身份、去重和敏感错误处理已在第六轮迁入注册能力；只读检测仍有独立的来源信任边界。
+1. **已完成第十一轮清理**：OpenRouter 只读自动检测的 URL 准入与本地失败文案归注册策略；共享检测不再识别 OpenRouter。浏览器引导已核对：专属 hook 拥有创建、取消、过期结果隔离和凭证回收；useAccountDialog 保留显式选择此工作流的来源校验、回调写入身份与关闭失败诊断。KeyManagement 的原生创建/刷新与控制器共用 keyResourceManagement 注册。
 2. **已完成第十轮清理**：New API 临时 dashboard 认证的来源准入和载荷校验由提供方纯校验器拥有；浏览器会话读取与自动检测共用 onboarding/transientAuth 注册入口。显式探测授权与已知站点信任边界保持不变。第七轮的托管会话挑战继续由专属 React 模块直接拥有。
 3. **已完成第三轮清理**：匹配适配器的 resolveNavigationId 决定可用导航身份，AxonHub 自行拒绝历史数字投影。服务摘要显式携带 resourceId，TokenHeader 不再猜测站点规则；状态查询、批量导出与账户定位一起迁移。
 4. **已完成第二轮清理**：KeyManagement/useKeyManagement 的配置指纹读取已有 runtimeConfig 解析结果，删除提供方字段名单；所有配置字段参与失效判断，字段顺序规范化，凭证仍只保留内存哈希。七类站点均覆盖凭证变更、旧结果晚返回、无关目标变更和配置清空。
@@ -40,10 +40,10 @@
 | src/features/AccountManagement/components/AccountActionButtons/index.tsx | 已清理 | 定位渠道消费注册验证工作流，保留限定操作授权与会话配置校验。 |
 | src/features/AccountManagement/components/AccountDialog/AccessTokenVerificationGuide.tsx | 保留 | Provider-specific credential instructions and default selection. |
 | src/features/AccountManagement/components/AccountDialog/AccountForm.tsx | 保留 | OpenRouter management-key form presentation. |
-| src/features/AccountManagement/components/AccountDialog/hooks/useAccountDialog.ts | 后续 | OpenRouter 浏览器引导仍待处理；一次性密钥转换已迁入注册能力，专属确认状态与 Sub2API 认证流程保留。 |
+| src/features/AccountManagement/components/AccountDialog/hooks/useAccountDialog.ts | 已清理／保留 | 一次性密钥转换已迁入注册能力；OpenRouter 显式工作流选择及身份回调、专属确认状态与 Sub2API 认证流程保留。 |
 | src/features/AccountManagement/components/AccountDialog/hooks/useOpenRouterAccountOnboarding.ts | 保留 | OpenRouter-specific account onboarding workflow. |
 | src/features/AccountManagement/components/AccountDialog/sitePolicy.ts | 已清理 | Existing provider-specific account-dialog policy overrides. |
-| src/features/KeyManagement/KeyManagement.tsx | 后续 | New API 验证已按能力选择；OpenRouter scoped key creation 仍属于其独立工作流。 |
+| src/features/KeyManagement/KeyManagement.tsx | 已清理 | New API 验证按能力选择；原生密钥创建、刷新与页面选择共用 keyResourceManagement 注册，Workspace 字段解码和专属展示保留。 |
 | src/features/KeyManagement/components/TokenListItem/TokenHeader.tsx | 已清理 | 仅使用服务摘要提供的导航身份，无身份时打开列表。 |
 | src/features/KeyManagement/components/managedSiteTokenBatchExportPreview.ts | 已清理 | 通过注册验证能力判断可恢复候选。 |
 | src/features/KeyManagement/hooks/useKeyManagement.ts | 已清理 | 配置指纹归回运行时配置解析，移除遗漏站点的字段分支。 |
@@ -54,7 +54,7 @@
 | src/features/TokenProvisioning/components/AddTokenDialog/index.tsx | 已清理 | 使用已注册的创建响应转换能力进入一次性密钥确认流程。 |
 | src/services/accountBrowserSession/sessionReader.ts | 已清理 | 传递原始站点、提示与探测意图，由提供方校验临时认证准入。 |
 | src/services/accountBrowserSession/transientAuth.ts | 已删除 | 提供方纯校验迁入 onboarding/contentSession/newApiTransientAuth，通用分发归 onboarding/transientAuth。 |
-| src/services/accounts/accountAutoDetection.ts | 后续 | Canonical OpenRouter onboarding and browser identity resolution. |
+| src/services/accounts/accountAutoDetection.ts | 已清理 | 从 onboarding 注册解析来源准入和受控失败文案，不依据具体站点名称选择诊断策略。 |
 | src/services/accounts/accountCreation.ts | 已清理 | 注册持久化能力负责凭证验证和存储身份准备。 |
 | src/services/accounts/accountDedupe.ts | 已清理 | 使用注册能力提供的私有凭证比较键，结果不暴露密钥。 |
 | src/services/accounts/accountFormValidation.ts | 已清理 | OpenRouter user-id requirement; migrate into identity profile. |
@@ -207,3 +207,16 @@
 - 已验证：17 个浏览器会话、自动检测、提供方引导及注册初始化测试文件、243 项测试全部通过；补充已知其他站点带探测许可和 New API 提示仍拒绝临时认证的回归。
 - 复扫：sessionReader 已没有具体站点常量分支；旧校验模块无调用。OpenRouter 的只读检测与浏览器引导仍作为独立信任流程待处理。未新增 lint，未运行浏览器 E2E。
 - 类型检查和未使用代码检查通过；提交钩子以最终执行结果为准。
+
+
+## 第十一轮：只读检测披露与原生密钥入口
+
+范围：原扫描剩余的 OpenRouter 只读检测、浏览器引导接入和 KeyManagement 原生密钥分发。
+
+- OpenRouter 注册 AccountDetectionPrivacyPolicy，拥有 canonical URL 准入与本地失败提示。现有 onboarding 注册同时关联被动身份观察与检测披露策略；共享账户检测只消费策略，保留失败分类、恢复数据、只读语义和受控日志。
+- 以请求 URL 选择策略，检测结果中的 siteType 提示不能授予来源信任。补充非 HTTPS、附加端口、blob、伪装域名、无效 URL 与伪造站点提示的行为测试；普通站点诊断仍保留。
+- KeyManagement 的原生创建、刷新、页面工具及工作区展示改用已存在的 account.keyResourceManagement 注册，与原生控制器和加载路径一致；就绪判断继续检查 scope、加载状态与 freshReadRequired。以非 OpenRouter 的测试注册验证分发跟随能力，并保留原生/旧版互斥、加载失败与不确定删除恢复覆盖。
+- 浏览器引导接入核对后保留：useAccountDialog 的 canonical 检查用于显式进入已有的 OpenRouter 变更工作流，onStarted/凭证回调写入该工作流确定的身份，关闭失败日志仅含本地状态。生命周期由 useOpenRouterAccountOnboarding 直接拥有；不另建一套通用工作流协议，也不以只读检测策略隐式授权创建凭证。
+- KeyManagement 的 OPENROUTER_KEY_FIELD_IDS.Workspace 是提供方字段解码；现有工作区与原生密钥文案属于展示用途，保留。
+- 验证：账户检测、onboarding、浏览器会话和专属 React hook 共 16 个文件，首次 266 项通过、1 项新增测试枚举名称错误；修正后该文件 22 项全部通过。KeyManagement 页面、原生控制器和修正后的检测测试共 5 个文件 144 项通过。compile、knip 通过。未运行浏览器 E2E。
+- 最终复扫：原扫描候选没有未分类的迁移项；共享只读检测与 KeyManagement 主页面不再根据具体站点名称推断策略或支持。保留提供方实现、注册表、身份赋值/比较、展示字段和历史迁移用途。未新增 lint，后续约束规则仍待单独考虑。
