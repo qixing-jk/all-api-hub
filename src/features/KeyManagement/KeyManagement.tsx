@@ -1101,10 +1101,10 @@ export default function KeyManagement(props: {
             : undefined
         }
         managedSiteStatusHint={
-          !isManagedSiteChannelStatusSupported
-            ? t("managedSiteStatus.pageUnsupported")
-            : hasNativeStatusLimitation
-              ? t("managedSiteStatus.nativeResourceUnsupported")
+          hasNativeStatusLimitation
+            ? t("managedSiteStatus.nativeResourceUnsupported")
+            : !isManagedSiteChannelStatusSupported
+              ? t("managedSiteStatus.pageUnsupported")
               : undefined
         }
         selectedAccount={selectedAccount}

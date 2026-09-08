@@ -748,6 +748,7 @@ describe("getManagedSiteTokenChannelStatus", () => {
 
   it.each([
     { siteType: SITE_TYPES.NEW_API, registered: false },
+    { siteType: SITE_TYPES.DONE_HUB, registered: false },
     { siteType: SITE_TYPES.DONE_HUB, registered: true },
   ])(
     "derives recovery from the registered workflow ($siteType, $registered)",

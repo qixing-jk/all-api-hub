@@ -322,6 +322,7 @@ type LegacyHarnessConfig = {
   } | null
   failedAccounts?: any[]
   allAccountsFilterAccountIds?: string[]
+  isManagedSiteChannelStatusSupported?: boolean
 }
 
 let legacyHarnessConfig: LegacyHarnessConfig
@@ -355,7 +356,8 @@ function useLegacyKeyManagementHarness() {
     failedAccounts: legacyHarnessConfig.failedAccounts ?? [],
     accountSummaryItems: legacyHarnessConfig.accountSummaryItems ?? [],
     managedSiteTokenStatuses: {},
-    isManagedSiteChannelStatusSupported: true,
+    isManagedSiteChannelStatusSupported:
+      legacyHarnessConfig.isManagedSiteChannelStatusSupported ?? true,
     isManagedSiteStatusRefreshing: false,
     allAccountsFilterAccountIds,
     setAllAccountsFilterAccountIds,
@@ -1284,6 +1286,7 @@ describe("KeyManagement native page integration", () => {
       legacyHarnessConfig = {
         accounts: [account],
         initialSelectedAccount: account.id,
+        isManagedSiteChannelStatusSupported: false,
       }
 
       render(

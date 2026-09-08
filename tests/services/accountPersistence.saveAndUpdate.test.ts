@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import { validateAndSaveAccount } from "~/services/accounts/accountCreation"
 import { MANUAL_ADD_ACCOUNT_DATA_FETCH_TIMEOUT_MS } from "~/services/accounts/accountCreationTimeout"
+import { prepareAccountPersistenceIdentity } from "~/services/accounts/accountPersistence/shared"
 import { validateAndUpdateAccount } from "~/services/accounts/accountUpdate"
 import { openRouterAccountPersistence } from "~/services/apiAdapters/openrouter/accountPersistence"
 import { OpenRouterManagementKeyRequiredError } from "~/services/apiService/openrouter/errors"
@@ -319,6 +320,18 @@ describe("accountPersistence save and update", () => {
     )
     const saved = await accountStorage.getAccountById(result.accountId!)
     expect(saved?.account_info.id).toBe("provider-owned-id")
+  })
+
+  it("normalizes an empty ordinary identity when no provider policy is registered", async () => {
+    getSiteTypeCapabilitiesMock.mockReturnValue({ account: {} })
+
+    await expect(
+      prepareAccountPersistenceIdentity({
+        siteType: SITE_TYPES.NEW_API,
+        accessToken: "ordinary-token",
+        userId: "   ",
+      }),
+    ).resolves.toBe("")
   })
 
   it("uses registered admission rejection copy before fetching data or saving", async () => {

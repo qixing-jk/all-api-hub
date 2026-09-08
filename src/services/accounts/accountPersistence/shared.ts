@@ -62,7 +62,7 @@ export async function prepareAccountPersistenceIdentity(
     ?.persistence
   return persistence
     ? persistence.prepareIdentity(params)
-    : normalizeAccountIdentity(params.userId)!
+    : normalizeAccountIdentity(params.userId) ?? ""
 }
 
 /** Returns provider-controlled validation feedback when configured. */
