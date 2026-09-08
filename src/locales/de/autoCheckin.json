@@ -72,7 +72,7 @@
       "alreadyChecked": "Bereits eingecheckt",
       "failed": "Fehlgeschlagen",
       "skipped": "Nicht ausgeführt",
-      "success": "Erfolg",
+      "success": "In diesem Lauf eingecheckt",
       "uncertain": "Bestätigung ausstehend"
     },
     "table": {

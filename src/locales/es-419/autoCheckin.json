@@ -73,7 +73,7 @@
       "alreadyChecked": "Ya hizo check-in",
       "failed": "Fallido",
       "skipped": "No ejecutado",
-      "success": "Correcto",
+      "success": "Registro en esta ejecución",
       "uncertain": "Confirmación pendiente"
     },
     "table": {

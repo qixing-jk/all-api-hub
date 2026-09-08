@@ -5,6 +5,7 @@ import { I18nextProvider } from "react-i18next"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import FilterBar from "~/features/AutoCheckin/components/FilterBar"
+import enAutoCheckin from "~/locales/en/autoCheckin.json"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -19,7 +20,7 @@ import {
   type CheckinAccountResult,
   type CheckinResultStatus,
 } from "~/types/autoCheckin"
-import { testI18n } from "~~/tests/test-utils/i18n"
+import { createResourceTestI18n, testI18n } from "~~/tests/test-utils/i18n"
 
 const { trackProductAnalyticsActionCompletedMock } = vi.hoisted(() => ({
   trackProductAnalyticsActionCompletedMock: vi.fn(),
@@ -195,9 +196,12 @@ describe("AutoCheckin FilterBar", () => {
     })
   })
 
-  it("counts results after both multi-status and keyword filters", () => {
+  it("counts results after both multi-status and keyword filters", async () => {
+    const i18n = await createResourceTestI18n({
+      en: { autoCheckin: enAutoCheckin },
+    })
     rtlRender(
-      <I18nextProvider i18n={testI18n}>
+      <I18nextProvider i18n={i18n}>
         <FilterBar
           accountResults={results}
           selectedStatuses={[
@@ -211,9 +215,7 @@ describe("AutoCheckin FilterBar", () => {
       </I18nextProvider>,
     )
 
-    expect(
-      screen.getByText("autoCheckin:execution.filters.countFiltered"),
-    ).toBeVisible()
+    expect(screen.getByText("Showing 2 of 5")).toBeVisible()
   })
 
   it("clears status and keyword filters together", async () => {

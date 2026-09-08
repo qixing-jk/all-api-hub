@@ -71,7 +71,7 @@
       "alreadyChecked": "チェックイン済み",
       "failed": "失敗",
       "skipped": "未実行",
-      "success": "成功",
+      "success": "今回チェックイン成功",
       "uncertain": "確認待ち"
     },
     "table": {
