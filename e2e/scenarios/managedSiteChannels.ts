@@ -28,6 +28,10 @@ import {
 } from "~~/e2e/utils/accountLifecycle"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 import {
+  assertManagedChannelPreserved,
+  captureManagedChannelSnapshot,
+} from "~~/e2e/utils/realSite/managedChannelPreservation"
+import {
   collectCleanupError,
   runScenarioWithCleanup,
   throwScenarioError,
@@ -45,6 +49,7 @@ type ManagedSiteChannelScenarioContext<TSiteType extends ManagedSiteType> = {
   tokenName?: string
   tokenCleanupPrefix?: string
   beforeDeleteConfirm?: () => void | Promise<void>
+  verifyRenamePreservation?: { baseUrl: string }
 }
 
 const CRUD_MODEL = "gpt-4o-mini"
@@ -173,14 +178,37 @@ export async function runManagedSiteChannelsCrudScenario<
       })
       await expectPaginationSummary(context.page, "1", "1", "1")
 
-      await openSingleVisibleChannelEditDialog(context.page, channelName)
+      const captureSnapshot = (name: string) =>
+        captureManagedChannelSnapshot({
+          page: context.page,
+          siteType: context.siteType,
+          baseUrl: context.verifyRenamePreservation!.baseUrl,
+          name,
+          read: () => openSingleVisibleChannelEditDialog(context.page, name),
+        })
+      const before = context.verifyRenamePreservation
+        ? await captureSnapshot(channelName)
+        : undefined
+      if (!before)
+        await openSingleVisibleChannelEditDialog(context.page, channelName)
       await context.page
         .getByTestId(CHANNEL_DIALOG_TEST_IDS.nameInput)
         .fill(editedChannelName)
-      if (shouldEditModelsInManagedSiteCrudScenario(context.siteType)) {
+      if (
+        !context.verifyRenamePreservation &&
+        shouldEditModelsInManagedSiteCrudScenario(context.siteType)
+      ) {
         await fillModelInput(context.page, CRUD_UPDATED_MODEL)
       }
       await submitChannelDialogAndWaitForClose(context.page)
+
+      if (before) {
+        const after = await captureSnapshot(editedChannelName)
+        await context.page
+          .getByRole("button", { name: "Cancel", exact: true })
+          .click()
+        assertManagedChannelPreserved(context.siteType, before, after)
+      }
 
       await expect(
         channelRowByName(context.page, editedChannelName),

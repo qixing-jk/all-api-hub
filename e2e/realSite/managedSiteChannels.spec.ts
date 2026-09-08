@@ -140,6 +140,11 @@ test.describe("real-site E2E: managed-site channel management", () => {
         { annotation: { type: "skip", description: skipReason } },
         async () => {},
       )
+      test.skip(
+        `${target.label} preserves unrelated fields after renaming`,
+        { annotation: { type: "skip", description: skipReason } },
+        async () => {},
+      )
       continue
     }
 
@@ -149,7 +154,7 @@ test.describe("real-site E2E: managed-site channel management", () => {
       page,
     }) => {
       const serviceWorker = await getServiceWorker(context)
-      const config = managedSite.config
+      const config = managedSite.config!
       const runId = buildRealSiteRunId()
       const runPrefix = buildManagedSiteE2ePrefix({
         label: target.label.replace(/\s+/g, ""),
@@ -174,6 +179,34 @@ test.describe("real-site E2E: managed-site channel management", () => {
         label: target.label,
         runPrefix,
         cleanupPrefix,
+      })
+    })
+
+    test(`${target.label} preserves unrelated fields after renaming`, async ({
+      context,
+      extensionId,
+      page,
+    }) => {
+      const config = managedSite.config!
+      const runPrefix = buildManagedSiteE2ePrefix({
+        label: `${target.label.replace(/\s+/g, "")} Preserve`,
+        runId: buildRealSiteRunId(),
+      })
+      await seedUserPreferences(await getServiceWorker(context), {
+        managedSiteType: target.siteType,
+        [target.preferenceKey]: config,
+        autoFillCurrentSiteUrlOnAccountAdd: false,
+        autoProvisionKeyOnAccountAdd: false,
+        openChangelogOnUpdate: false,
+      })
+      await runManagedSiteChannelsCrudScenario({
+        page,
+        extensionId,
+        siteType: target.siteType,
+        label: target.label,
+        runPrefix,
+        cleanupPrefix: runPrefix,
+        verifyRenamePreservation: { baseUrl: config.baseUrl },
       })
     })
 
