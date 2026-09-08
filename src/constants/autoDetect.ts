@@ -16,6 +16,7 @@ export const AUTO_DETECT_FAILURE_REASONS = {
   UsernameMissing: "username_missing",
   AccessTokenMissing: "access_token_missing",
   AccessTokenVerificationRequired: "access_token_verification_required",
+  AccountIdentityMismatch: "account_identity_mismatch",
   TokenFetchFailed: "token_fetch_failed",
   SiteStatusFetchFailed: "site_status_fetch_failed",
   CheckInSupportFetchFailed: "check_in_support_fetch_failed",

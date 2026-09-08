@@ -40,7 +40,7 @@ describe("newApiFamily accountBootstrap", () => {
     accountId: "account-1",
     auth: {
       authType: AuthTypeEnum.AccessToken,
-      userId: "user-1",
+      userId: "1",
       accessToken: "access-token",
     },
   }
@@ -57,7 +57,9 @@ describe("newApiFamily accountBootstrap", () => {
       quota: 123,
     })
 
-    await expect(fetchUserInfo(request)).resolves.toEqual({
+    await expect(
+      fetchUserInfo({ ...request, auth: { ...request.auth, userId: "9" } }),
+    ).resolves.toEqual({
       id: "9",
       username: "alice",
       access_token: "",
@@ -83,24 +85,10 @@ describe("newApiFamily accountBootstrap", () => {
     })
   })
 
-  it("createAccessToken delegates to the token endpoint", async () => {
+  it("createAccessToken prevents transport replay for every token generation", async () => {
     mockFetchApiData.mockResolvedValueOnce("new-token")
 
     await expect(createAccessToken(request)).resolves.toBe("new-token")
-    expect(mockFetchApiData).toHaveBeenCalledWith(request, {
-      endpoint: "/api/user/token",
-    })
-  })
-
-  it("createAccessToken applies an explicit no-replay transport policy", async () => {
-    mockFetchApiData.mockResolvedValueOnce("new-token")
-
-    await expect(
-      createAccessToken(request, {
-        currentTabTransport: "disabled",
-        tempWindowFallback: { statusCodes: [], codes: [] },
-      }),
-    ).resolves.toBe("new-token")
     expect(mockFetchApiData).toHaveBeenCalledWith(request, {
       endpoint: "/api/user/token",
       currentTabTransport: "disabled",
@@ -130,31 +118,9 @@ describe("newApiFamily accountBootstrap", () => {
         access_token: "",
       })
       .mockResolvedValueOnce("generated-token")
+      .mockResolvedValueOnce({ id: 1, username: "alice" })
 
     await expect(getOrCreateAccessToken(request)).resolves.toEqual({
-      username: "alice",
-      access_token: "generated-token",
-    })
-    expect(mockFetchApiData).toHaveBeenNthCalledWith(2, request, {
-      endpoint: "/api/user/token",
-    })
-  })
-
-  it("getOrCreateAccessToken forwards an explicit no-replay policy when creating a token", async () => {
-    mockFetchApiData
-      .mockResolvedValueOnce({
-        id: 1,
-        username: "alice",
-        access_token: "",
-      })
-      .mockResolvedValueOnce("generated-token")
-
-    await expect(
-      getOrCreateAccessToken(request, {
-        currentTabTransport: "disabled",
-        tempWindowFallback: { statusCodes: [], codes: [] },
-      }),
-    ).resolves.toEqual({
       username: "alice",
       access_token: "generated-token",
     })
@@ -163,6 +129,28 @@ describe("newApiFamily accountBootstrap", () => {
       currentTabTransport: "disabled",
       tempWindowFallback: { statusCodes: [], codes: [] },
     })
+  })
+
+  it("getOrCreateAccessToken checks the expected identity without adding a user header", async () => {
+    mockFetchApiData.mockResolvedValueOnce({
+      id: 2,
+      username: "alice",
+      access_token: "",
+    })
+
+    await expect(
+      getOrCreateAccessToken(
+        {
+          ...request,
+          auth: {
+            authType: AuthTypeEnum.AccessToken,
+            accessToken: "dashboard-jwt",
+          },
+        },
+        { expectedUserId: "1" },
+      ),
+    ).rejects.toMatchObject({ code: "ACCOUNT_IDENTITY_MISMATCH" })
+    expect(mockFetchApiData).toHaveBeenCalledTimes(1)
   })
 
   it("getOrCreateAccessToken rejects blank generated tokens at the bootstrap boundary", async () => {
@@ -236,11 +224,11 @@ describe("newApiFamily accountBootstrap", () => {
   it("uses New API-family bootstrap helpers by default for New API", async () => {
     const implementation = defaultAccountBootstrapImplementation
     const userInfo = {
-      id: "user-1",
+      id: "1",
       username: "Example User",
       access_token: "access-token",
       user: {
-        id: "user-1",
+        id: "1",
         username: "Example User",
         access_token: "access-token",
       },

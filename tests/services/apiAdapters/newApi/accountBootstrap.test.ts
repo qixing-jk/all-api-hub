@@ -124,28 +124,24 @@ describe("createNewApiAccountBootstrap", () => {
     ).resolves.toBe("/login")
   })
 
-  it("forwards an explicit token creation policy through the factory closure", async () => {
+  it("forwards the expected account identity through the factory closure", async () => {
     const accessToken = {
       username: "Example User",
       access_token: "created-token",
     }
-    const accessTokenCreationPolicy = {
-      currentTabTransport: "disabled" as const,
-      tempWindowFallback: { statusCodes: [], codes: [] },
-    }
+    const expectedUserId = "user-1"
     mockGetOrCreateAccessToken.mockResolvedValueOnce(accessToken)
 
     const accountBootstrap = createNewApiAccountBootstrap(SITE_TYPES.NEW_API, {
-      accessTokenCreationPolicy,
+      expectedUserId,
     })
 
     await expect(
       accountBootstrap.getOrCreateAccessToken(request),
     ).resolves.toBe(accessToken)
-    expect(mockGetOrCreateAccessToken).toHaveBeenCalledWith(
-      request,
-      accessTokenCreationPolicy,
-    )
+    expect(mockGetOrCreateAccessToken).toHaveBeenCalledWith(request, {
+      expectedUserId,
+    })
   })
 
   it.each([

@@ -186,6 +186,7 @@
     "addSuccess": "Thêm tài khoản {{name}} thành công!",
     "autoDetectCookiePermissionReloadHint": "Nếu lần nhận dạng đầu tiên cứ chờ mãi ngay sau khi cấp quyền Cookie nhiều tài khoản, hãy tải lại tiện ích rồi thử lại.",
     "autoDetectFailed": "Tự động nhận dạng thất bại: {{error}}",
+    "autoDetectIdentityMismatch": "Tài khoản được phát hiện không khớp với tài khoản hiện tại. Dữ liệu hiện có của bạn đã được giữ lại. Hãy kiểm tra URL trang web, đăng nhập vào đúng tài khoản rồi thử lại.",
     "autoDetectSuccess": "Tự động nhận dạng thành công!",
     "autoDetectTakingTooLong": "Tự động nhận dạng mất quá nhiều thời gian? Nhấp để mở tài liệu khắc phục sự cố",
     "checkInRedetectAmbiguous": "Đã phát hiện nhiều phương thức điểm danh. Hãy chọn một phương thức bên dưới.",
