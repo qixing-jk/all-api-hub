@@ -1,6 +1,5 @@
 import { DoneHubChannelStatus } from "~/constants/doneHub"
 import { SITE_TYPES } from "~/constants/siteType"
-import { hasUsableApiTokenKey as hasUsableManagedSiteChannelKey } from "~/services/accountTokens/apiTokenKey"
 import type { ManagedResourceModelsCapability } from "~/services/apiAdapters/contracts/managedResourceModels"
 import type {
   ManagedSiteChannelRequestOptions,
@@ -31,6 +30,7 @@ import {
   type ManagedSiteMutationConfirmedEffect,
   type ManagedSiteMutationSequence,
 } from "~/services/managedSites/mutations"
+import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/channelKeys"
 import type {
   DoneHubCreateChannelPayload,
   DoneHubUpdateChannelPayload,
@@ -125,7 +125,7 @@ const hydrateComparableKeys = async <T extends { id: number; key?: string }>(
   const hydratedCandidates: T[] = []
 
   for (const candidate of candidates) {
-    if (hasUsableManagedSiteChannelKey(candidate.key ?? "")) {
+    if (hasUsableManagedSiteChannelKey(candidate.key)) {
       hydratedCandidates.push(candidate)
       continue
     }

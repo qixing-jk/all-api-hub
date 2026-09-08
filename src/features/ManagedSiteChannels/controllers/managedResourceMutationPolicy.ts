@@ -9,7 +9,7 @@ import {
   type ManagedSiteMutationConfirmedEffect,
   type ManagedSiteMutationResult,
 } from "~/services/managedSites/mutations"
-import type { collectManagedResourceSecrets } from "~/services/managedSites/utils/managedSite"
+import type { collectManagedResourceSecrets } from "~/services/managedSites/utils/resourceSecrets"
 
 import {
   MANAGED_RESOURCE_EDITOR_MODES,

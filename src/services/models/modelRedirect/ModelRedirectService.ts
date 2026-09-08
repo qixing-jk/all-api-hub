@@ -27,7 +27,7 @@ import {
   collectManagedConfigSecrets,
   collectManagedResourceSecrets,
   mergeManagedResourceSecretCollections,
-} from "~/services/managedSites/utils/managedSite"
+} from "~/services/managedSites/utils/resourceSecrets"
 import { modelMetadataService } from "~/services/models/modelMetadata"
 import { extractCoreModelIdentity } from "~/services/models/modelMetadata/modelIdentityIndex"
 import {

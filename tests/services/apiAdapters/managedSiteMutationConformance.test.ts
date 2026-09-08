@@ -34,7 +34,7 @@ import * as veloeraLegacyProvider from "~/services/managedSites/providers/veloer
 import {
   type collectManagedResourceSecrets,
   type ManagedResourceSecretCollection,
-} from "~/services/managedSites/utils/managedSite"
+} from "~/services/managedSites/utils/resourceSecrets"
 
 const expectedManagedSiteTypes = [
   SITE_TYPES.NEW_API,

@@ -18,8 +18,8 @@
 
 1. OpenRouter 的凭证验证、身份生成、去重和敏感错误处理（accountCreation/accountUpdate/accountDedupe/accountPersistence、accountAutoDetection、useAccountDialog）。需要一起定义持久化身份/凭证验证接口，不能将信任与诊断策略简化成站点布尔量。
 2. New API 的交互验证（ManagedSiteChannelAssessmentSignalHelpers、AccountActionButtons、KeyManagement、managedSiteTokenBatchExportPreview、useManagedResourceInteraction、tokenBatchExport/tokenChannelStatus、accountBrowserSession）。当前执行与 UI 挑战过程具有提供方专属契约，需要完成整个验证流程的能力迁移。
-3. 资源导航身份（managedSiteChannelResourceIdentity、TokenHeader）仍区分 AxonHub 原生字符串 ID 与本地数字投影，需要连同候选资源身份契约迁移。
-4. KeyManagement/useKeyManagement 的配置指纹仍手动选择提供方字段；AxonHub 等类型目前落入 New API 分支。需要针对完整配置快照重做缓存失效和异步结果归属测试，这是缓存行为修复，未混入本轮静态策略迁移。
+3. **已完成第三轮清理**：匹配适配器的 resolveNavigationId 决定可用导航身份，AxonHub 自行拒绝历史数字投影。服务摘要显式携带 resourceId，TokenHeader 不再猜测站点规则；状态查询、批量导出与账户定位一起迁移。
+4. **已完成第二轮清理**：KeyManagement/useKeyManagement 的配置指纹读取已有 runtimeConfig 解析结果，删除提供方字段名单；所有配置字段参与失效判断，字段顺序规范化，凭证仍只保留内存哈希。七类站点均覆盖凭证变更、旧结果晚返回、无关目标变更和配置清空。
 5. 模型同步/重定向的提供方执行流程（ModelRedirectService、modelSync/scheduler）需要 provider-owned 执行接口；保留 Octopus 流程及各提供方字段解码。
 6. AIHubMix 一次性密钥恢复和保存后流程（accountKeyAutoProvisioning/repair、AddTokenDialog、useAccountDialog）仍涉及专门 UI 生命周期，应与创建密钥工作流一起迁移。
 
@@ -42,9 +42,9 @@
 | src/features/AccountManagement/components/AccountDialog/hooks/useOpenRouterAccountOnboarding.ts | 保留 | OpenRouter-specific account onboarding workflow. |
 | src/features/AccountManagement/components/AccountDialog/sitePolicy.ts | 已清理 | Existing provider-specific account-dialog policy overrides. |
 | src/features/KeyManagement/KeyManagement.tsx | 后续 | OpenRouter scoped key creation and New API verification workflows. |
-| src/features/KeyManagement/components/TokenListItem/TokenHeader.tsx | 后续 | AxonHub managed-resource link presentation. |
+| src/features/KeyManagement/components/TokenListItem/TokenHeader.tsx | 已清理 | 仅使用服务摘要提供的导航身份，无身份时打开列表。 |
 | src/features/KeyManagement/components/managedSiteTokenBatchExportPreview.ts | 后续 | New API verification preview gating. |
-| src/features/KeyManagement/hooks/useKeyManagement.ts | 后续 | Existing managed-provider console navigation. |
+| src/features/KeyManagement/hooks/useKeyManagement.ts | 已清理 | 配置指纹归回运行时配置解析，移除遗漏站点的字段分支。 |
 | src/features/ManagedSiteChannels/providers/useManagedResourceInteraction.tsx | 后续 | New API verification interaction; migrate with the verification capability. |
 | src/features/ManagedSiteModelSync/ManagedSiteModelSync.tsx | 后续 | New API channel reload after model synchronization. |
 | src/features/ModelList/aihubmixModelList.ts | 保留 | AIHubMix-specific pricing metadata presentation. |
@@ -67,7 +67,7 @@
 | src/services/accounts/utils/siteUrlNormalization.ts | 已清理 | Canonical AIHubMix URL compatibility helper. |
 | src/services/managedSites/channelMatch.ts | 已清理 | Sub2API-specific managed resource matching. |
 | src/services/managedSites/legacyChannelConfigMigration.ts | 保留 | Historical AxonHub channel identity migration. |
-| src/services/managedSites/managedSiteChannelResourceIdentity.ts | 后续 | AxonHub channel identity decoding. |
+| src/services/managedSites/managedSiteChannelResourceIdentity.ts | 已清理 | 委托匹配适配器解析稳定 ID，不再内置 AxonHub 分支。 |
 | src/services/managedSites/tokenBatchExport.ts | 后续 | New API verification export gating. |
 | src/services/managedSites/tokenBatchImportTarget.ts | 已清理 | Existing provider-specific batch import target policy. |
 | src/services/managedSites/tokenChannelStatus.ts | 后续 | New API verification status integration. |
@@ -91,3 +91,39 @@
 - 未运行浏览器 E2E；本轮以服务、适配器和组件集成测试验证相关行为。
 
 本轮完成上述职责清理。后续独立迁移仍待处理，不代表所有站点身份判断均已消除。
+
+
+## 第二轮复扫与验证
+
+范围：KeyManagement 状态缓存的配置归属、失效与异步结果，以及直接页面消费者。
+
+- 已执行：以完整 runtimeConfig 替代 UI 内提供方字段清单，修复 AxonHub/Claude Code Hub/Sub2API 凭证变更遗漏。
+- 已验证：配置变更重查、旧请求晚返回不覆盖新结果、无关站点变更不重查、配置清空失效；保留现有请求 runId 和已解析密钥隔离机制。
+- 已清理：测试直接构造 preferences 快照，删除旧的扁平配置替身和重复空配置。
+- 复扫：Hook 不再含站点常量或按提供方读取配置的分支；当前缓存归属范围无其他待执行清理。上面的其他整体流程迁移仍独立保留。
+- 验证：12 个相关测试文件、255 项测试通过，类型检查通过；测试 fixture 整理由提交钩子再验证。
+
+
+## 第三轮复扫与验证
+
+范围：匹配候选的导航身份、轻量结果摘要、状态查询/批量导出与账户定位/TokenHeader 消费者。
+
+- 已执行：matching.resolveNavigationId 承接提供方身份语义；未声明覆盖时沿用稳定候选 ID，明确返回 undefined 时不得回退。AxonHub 的原生字符串 ID 与历史数字投影规则留在适配器内。
+- 已执行：所有生产摘要调用方透传 matching；resourceId 表示可导航身份，缺失时 UI 只能打开列表。没有新增站点名单、lint 或兼容性转发导出。
+- 已验证场景：字符串原生 ID、数字稳定 ID、提供方重映射、拒绝数字投影、不回退到行 ID、批量导出摘要与账户定位透传。
+- 复扫：本轮导航路径没有剩余站点身份判断。New API 交互验证等独立流程继续保留在后续清单中。
+- **第四轮已解决依赖治理**：直接导入 AxonHub/Sub2API/Claude Code Hub 时，通用工具反向依赖 registry 会令注册表捕获未初始化能力。已拆分基础工具并迁移所有调用方，增加七种提供方优先导入的注册完整性回归。
+- 基线同步：从 1c0c6be31 重放到 origin/main cc524857d，刷新后头为 712903d20。range-diff 确认六个本地提交改动等价；备份为 backup/site-policy-cleanup-before-refresh-1c0c6be31。上游签到更新未改变本轮接口。
+- 验证：93 个相关测试文件、1485 项测试全部通过；类型检查和未使用代码检查通过。未运行浏览器 E2E，导航边界通过组件与服务测试验证；提交钩子结果以提交完成为准。
+
+
+## 第四轮复扫与验证
+
+范围：托管适配器的注册初始化、通用工具依赖与全部直接消费者。
+
+- 已执行：channelKeys 拥有可用密钥判断；resourceSecrets 拥有配置/资源敏感信息收集及合并。两个模块均不依赖能力注册表，旧 managedSite 工具不保留转发导出。
+- 已执行：原生资源、迁移、渠道匹配、模型同步与 UI 调用方直接导入所属模块。DoneHub/Veloera 不再用别名绕开循环依赖。
+- 已执行：原有密钥和敏感信息测试迁到所属模块；删除没有生产调用的 needsManagedSiteChannelKeyResolution 及镜像断言。
+- 已验证：新增导入顺序测试原先复现三个提供方能力丢失，拆分后七种入口均保留全部托管注册。敏感信息收集实现原样迁移，没有调整脱敏语义或遍历预算。
+- 复扫：TypeScript 静态运行时 import 图中，七个托管适配器都已没有返回 apiAdapters/registry 的路径。这个依赖边界没有其他待执行清理；其余整体流程迁移仍保留在前文清单。
+- 验证：143 个测试文件、2583 项测试通过；类型检查、未使用代码检查通过。首轮并行模型同步测试加载超时，单文件重跑及 maxWorkers=4 的整批重跑均通过。提交钩子结果以提交完成为准。

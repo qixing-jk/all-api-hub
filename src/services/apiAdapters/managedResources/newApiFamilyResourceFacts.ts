@@ -8,7 +8,7 @@ import {
   type ResourceSecretState,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { parseNewApiResourceList } from "~/services/apiAdapters/managedResources/newApiResourceUtils"
-import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/managedSite"
+import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/channelKeys"
 
 import type { NewApiFamilyChannelFields } from "./newApiFamilyChannelFields"
 

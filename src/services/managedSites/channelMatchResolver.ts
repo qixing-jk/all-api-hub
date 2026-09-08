@@ -18,6 +18,7 @@ import {
   getManagedResourceRefKey,
 } from "~/services/managedSites/managedResourceIdentity"
 import type { ManagedSiteRuntimeConfigValue } from "~/services/managedSites/runtimeConfig"
+import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/channelKeys"
 import {
   findManagedSiteChannelsByBaseUrl,
   findManagedSiteChannelsByBaseUrlAndModels,
@@ -26,7 +27,6 @@ import {
   inspectManagedSiteChannelModelsMatch,
   normalizeManagedSiteChannelBaseUrl,
 } from "~/services/managedSites/utils/channelMatching"
-import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/managedSite"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import type { ManagedResourceMatchList } from "~/types/managedResourceMatching"
 import { normalizeManagedUpstreamResourceScopeKey } from "~/types/managedUpstreamResource"

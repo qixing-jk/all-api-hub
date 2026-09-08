@@ -55,7 +55,7 @@ import {
   type Sub2ApiApiKeyAccountUpdateInput,
 } from "~/services/managedSites/providers/sub2api"
 import { resolveManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
-import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/managedSite"
+import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/channelKeys"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { normalizeManagedUpstreamResourceScopeKey } from "~/types/managedUpstreamResource"
 import type {

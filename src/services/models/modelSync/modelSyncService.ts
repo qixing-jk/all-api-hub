@@ -14,7 +14,7 @@ import {
   type ManagedSiteMutationRetryDecision,
 } from "~/services/managedSites/mutations"
 import { type ManagedSiteRuntimeConfig } from "~/services/managedSites/runtimeConfig"
-import { collectManagedConfigSecrets } from "~/services/managedSites/utils/managedSite"
+import { collectManagedConfigSecrets } from "~/services/managedSites/utils/resourceSecrets"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import type { ChannelResourceConfigMap } from "~/types/channelConfig"
 import type { ChannelModelFilterRule } from "~/types/channelModelFilters"

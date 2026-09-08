@@ -26,7 +26,7 @@ import {
   SUB2API_STEP_UP_ADMIN_KEY_FORBIDDEN_CODE,
   Sub2ApiAdminApiError,
 } from "~/services/managedSites/providers/sub2api"
-import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/managedSite"
+import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/channelKeys"
 import { MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES as blockers } from "~/types/managedSiteMigration"
 import {
   MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES as failures,

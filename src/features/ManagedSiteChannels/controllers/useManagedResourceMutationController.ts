@@ -20,7 +20,7 @@ import {
   MANAGED_SITE_MUTATION_OUTCOMES,
   type ManagedSiteMutationConfirmedEffect,
 } from "~/services/managedSites/mutations"
-import { collectManagedResourceSecrets } from "~/services/managedSites/utils/managedSite"
+import { collectManagedResourceSecrets } from "~/services/managedSites/utils/resourceSecrets"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,

@@ -82,10 +82,10 @@ import {
 } from "~/services/managedSites/runtimeConfig"
 import { normalizeManagedSiteChannelBaseUrl } from "~/services/managedSites/utils/channelMatching"
 import {
-  collectManagedConfigSecrets,
   getManagedSiteType,
   supportsManagedSiteBaseUrlChannelLookup,
 } from "~/services/managedSites/utils/managedSite"
+import { collectManagedConfigSecrets } from "~/services/managedSites/utils/resourceSecrets"
 import {
   resolveProductAnalyticsErrorCategoryFromError,
   startProductAnalyticsAction,

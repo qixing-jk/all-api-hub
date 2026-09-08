@@ -5,8 +5,8 @@ import {
   MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
   MatchResolutionUnresolvedError,
 } from "~/services/managedSites/channelMatch"
+import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/channelKeys"
 import { fetchManagedSiteImportModels } from "~/services/managedSites/utils/fetchManagedSiteImportModels"
-import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/managedSite"
 import {
   userPreferences,
   type UserPreferences,

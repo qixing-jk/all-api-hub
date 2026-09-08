@@ -4,7 +4,7 @@ import {
 } from "~/constants/sub2api"
 import { runAbortableTask } from "~/services/apiTransport/abortableTask"
 import type { ApiTransportRequestObserver } from "~/services/apiTransport/type"
-import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/managedSite"
+import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/channelKeys"
 import type {
   ManagedSiteChannelDraft,
   ManagedSiteChannelDraftSource,

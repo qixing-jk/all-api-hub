@@ -21,7 +21,7 @@ import {
   MANAGED_SITE_MUTATION_RETRY_DECISIONS,
   type ManagedSiteMutationRetryDecision,
 } from "~/services/managedSites/mutations"
-import { collectManagedConfigSecrets } from "~/services/managedSites/utils/managedSite"
+import { collectManagedConfigSecrets } from "~/services/managedSites/utils/resourceSecrets"
 import {
   applyChannelModelFilters,
   getChannelModelFilterRulesForResource,

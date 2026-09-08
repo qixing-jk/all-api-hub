@@ -54,7 +54,7 @@ import {
 } from "~/services/managedSites/mutations"
 import { toClaudeCodeHubDisclosureError } from "~/services/managedSites/providers/claudeCodeHub"
 import { resolveManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
-import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/managedSite"
+import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/channelKeys"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import type {
   ClaudeCodeHubAllowedModel,

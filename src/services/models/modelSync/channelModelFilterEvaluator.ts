@@ -11,7 +11,7 @@ import {
   getManagedResourceRefKey,
 } from "~/services/managedSites/managedResourceIdentity"
 import type { ManagedSiteRuntimeConfig } from "~/services/managedSites/runtimeConfig"
-import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/managedSite"
+import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/channelKeys"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import {
   API_TYPES,

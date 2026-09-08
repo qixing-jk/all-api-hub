@@ -43,11 +43,11 @@ import {
   type ManagedSiteTokenBatchImportTarget,
 } from "~/services/managedSites/tokenBatchImportTarget"
 import { normalizeManagedSiteChannelBaseUrl } from "~/services/managedSites/utils/channelMatching"
+import { supportsManagedSiteBaseUrlChannelLookup } from "~/services/managedSites/utils/managedSite"
 import {
   collectManagedResourceSecrets,
   mergeManagedResourceSecretCollections,
-  supportsManagedSiteBaseUrlChannelLookup,
-} from "~/services/managedSites/utils/managedSite"
+} from "~/services/managedSites/utils/resourceSecrets"
 import {
   toManagedSiteAssessmentChannel,
   toManagedSiteVerifiedKeyAssessment,

@@ -28,10 +28,8 @@ import { hasNewApiTotpSecret } from "~/services/managedSites/providers/newApiTot
 import type { ManagedSiteRuntimeConfigValue } from "~/services/managedSites/runtimeConfig"
 import { getCurrentManagedSiteType } from "~/services/managedSites/runtimeConfig"
 import { normalizeManagedSiteChannelBaseUrl } from "~/services/managedSites/utils/channelMatching"
-import {
-  collectManagedConfigSecrets,
-  supportsManagedSiteBaseUrlChannelLookup,
-} from "~/services/managedSites/utils/managedSite"
+import { supportsManagedSiteBaseUrlChannelLookup } from "~/services/managedSites/utils/managedSite"
+import { collectManagedConfigSecrets } from "~/services/managedSites/utils/resourceSecrets"
 import {
   applyVerifiedManagedSiteChannelKey,
   toManagedSiteAssessmentChannel,

@@ -38,7 +38,7 @@ import {
 } from "~/services/managedSites/mutations"
 import { buildChannelPayload } from "~/services/managedSites/providers/doneHubService"
 import { resolveManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
-import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/managedSite"
+import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/channelKeys"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import type {
   DoneHubChannel,

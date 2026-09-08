@@ -22,7 +22,7 @@ import {
   resolveManagedSiteMigrationType,
 } from "~/services/apiAdapters/managedResources/migrationTypeRoutes"
 import { MANAGED_SITE_MUTATION_OUTCOMES } from "~/services/managedSites/mutations"
-import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/managedSite"
+import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/channelKeys"
 import type {
   ClaudeCodeHubAllowedModel,
   ClaudeCodeHubProviderCreatePayload,

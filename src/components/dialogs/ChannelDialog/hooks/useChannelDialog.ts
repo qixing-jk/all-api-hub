@@ -49,11 +49,11 @@ import {
   type ManagedSiteTokenChannelStatus,
 } from "~/services/managedSites/tokenChannelStatus"
 import {
-  collectManagedConfigSecrets,
   getManagedSiteConfigMissingMessage,
   getManagedSiteMessagesKeyFromSiteType,
   supportsManagedSiteBaseUrlChannelLookup,
 } from "~/services/managedSites/utils/managedSite"
+import { collectManagedConfigSecrets } from "~/services/managedSites/utils/resourceSecrets"
 import { createAutomaticProtectionBypassExecution } from "~/services/protectionBypass/client"
 import {
   PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,

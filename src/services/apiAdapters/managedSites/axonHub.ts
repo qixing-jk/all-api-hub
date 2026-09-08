@@ -18,7 +18,7 @@ import {
   checkValidAxonHubConfig,
   prepareChannelFormData,
 } from "~/services/managedSites/providers/axonHub"
-import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/managedSite"
+import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/channelKeys"
 import type { AxonHubConfig } from "~/types/axonHubConfig"
 import type { ManagedResourceMatchCandidate } from "~/types/managedResourceMatching"
 import { normalizeList } from "~/utils/core/string"
