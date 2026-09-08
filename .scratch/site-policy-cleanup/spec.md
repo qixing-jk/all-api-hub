@@ -2,7 +2,7 @@
 
 先清理职责与重复策略，暂不引入 lint、白名单或引用额度。此文件是审计记录，不参与运行时或检查。
 
-最新状态：已整合 origin/main 6953346f6 的 scoped resource identity 重构。第二、三轮的本地指纹/导航接口已被上游统一配置指纹与 ManagedResourceRef 契约替代；下文保留实施历史，当前实现以第五轮记录为准。
+最新状态：已整合 origin/main 6953346f6 的 scoped resource identity 重构。第二、三轮的本地指纹/导航接口已被上游统一配置指纹与 ManagedResourceRef 契约替代；下文保留实施历史，基线替代关系以第五轮记录为准，后续清理见第六、七轮。
 
 ## 本轮实现
 
@@ -19,7 +19,7 @@
 ## 后续独立迁移
 
 1. OpenRouter 的只读自动检测与浏览器引导（accountAutoDetection、useAccountDialog）。凭证验证、持久化身份、去重和敏感错误处理已在第六轮迁入注册能力；只读检测仍有独立的来源信任边界。
-2. New API 的交互验证（ManagedSiteChannelAssessmentSignalHelpers、AccountActionButtons、KeyManagement、managedSiteTokenBatchExportPreview、useManagedResourceInteraction、tokenBatchExport/tokenChannelStatus、accountBrowserSession）。当前执行与 UI 挑战过程具有提供方专属契约，需要完成整个验证流程的能力迁移。
+2. New API 的浏览器账户身份恢复与临时认证（accountBrowserSession）。托管密钥验证的恢复状态、提示和工作流选择已在第七轮迁入 matching.secretVerification；会话挑战实现继续由专属 React 模块直接拥有。账户浏览器认证属于独立信任流程。
 3. **已完成第三轮清理**：匹配适配器的 resolveNavigationId 决定可用导航身份，AxonHub 自行拒绝历史数字投影。服务摘要显式携带 resourceId，TokenHeader 不再猜测站点规则；状态查询、批量导出与账户定位一起迁移。
 4. **已完成第二轮清理**：KeyManagement/useKeyManagement 的配置指纹读取已有 runtimeConfig 解析结果，删除提供方字段名单；所有配置字段参与失效判断，字段顺序规范化，凭证仍只保留内存哈希。七类站点均覆盖凭证变更、旧结果晚返回、无关目标变更和配置清空。
 5. **已完成第五轮清理**：上游 createSync 能力已承接 Octopus 执行流程；本地将链式映射与 DoneHub 计费前缀语义注册为 modelMappingPolicy。共享调度器/重定向服务不再依赖站点分支。提供方类型字段解码保留。
@@ -35,19 +35,19 @@
 
 | 文件 | 分类 | 原用途 |
 | --- | --- | --- |
-| src/components/ManagedSiteChannelAssessmentSignalHelpers.tsx | 后续 | New API verification presentation; migrate with the verification capability. |
+| src/components/ManagedSiteChannelAssessmentSignalHelpers.tsx | 已清理 | 匹配能力提供不可比较密钥的恢复提示。 |
 | src/contexts/UserPreferencesContext.tsx | 保留 | Managed-site default selection; consolidate with runtime configuration. |
-| src/features/AccountManagement/components/AccountActionButtons/index.tsx | 后续 | Existing feature-specific verification or one-time-key workflow; migrate through its capability seam. |
+| src/features/AccountManagement/components/AccountActionButtons/index.tsx | 已清理 | 定位渠道消费注册验证工作流，保留限定操作授权与会话配置校验。 |
 | src/features/AccountManagement/components/AccountDialog/AccessTokenVerificationGuide.tsx | 保留 | Provider-specific credential instructions and default selection. |
 | src/features/AccountManagement/components/AccountDialog/AccountForm.tsx | 保留 | OpenRouter management-key form presentation. |
 | src/features/AccountManagement/components/AccountDialog/hooks/useAccountDialog.ts | 后续 | Existing OpenRouter onboarding, Sub2API refresh-token and AIHubMix post-save orchestration. |
 | src/features/AccountManagement/components/AccountDialog/hooks/useOpenRouterAccountOnboarding.ts | 保留 | OpenRouter-specific account onboarding workflow. |
 | src/features/AccountManagement/components/AccountDialog/sitePolicy.ts | 已清理 | Existing provider-specific account-dialog policy overrides. |
-| src/features/KeyManagement/KeyManagement.tsx | 后续 | OpenRouter scoped key creation and New API verification workflows. |
+| src/features/KeyManagement/KeyManagement.tsx | 后续 | New API 验证已按能力选择；OpenRouter scoped key creation 仍属于其独立工作流。 |
 | src/features/KeyManagement/components/TokenListItem/TokenHeader.tsx | 已清理 | 仅使用服务摘要提供的导航身份，无身份时打开列表。 |
-| src/features/KeyManagement/components/managedSiteTokenBatchExportPreview.ts | 后续 | New API verification preview gating. |
+| src/features/KeyManagement/components/managedSiteTokenBatchExportPreview.ts | 已清理 | 通过注册验证能力判断可恢复候选。 |
 | src/features/KeyManagement/hooks/useKeyManagement.ts | 已清理 | 配置指纹归回运行时配置解析，移除遗漏站点的字段分支。 |
-| src/features/ManagedSiteChannels/providers/useManagedResourceInteraction.tsx | 后续 | New API verification interaction; migrate with the verification capability. |
+| src/features/ManagedSiteChannels/providers/useManagedResourceInteraction.tsx | 已清理 | 按注册工作流类型选择已实现的 New API React 会话验证。 |
 | src/features/ManagedSiteModelSync/ManagedSiteModelSync.tsx | 后续 | New API channel reload after model synchronization. |
 | src/features/ModelList/aihubmixModelList.ts | 保留 | AIHubMix-specific pricing metadata presentation. |
 | src/features/SiteAnnouncements/utils.ts | 保留 | Sub2API announcement identity presentation. |
@@ -70,9 +70,9 @@
 | src/services/managedSites/channelMatch.ts | 已清理 | Sub2API-specific managed resource matching. |
 | src/services/managedSites/legacyChannelConfigMigration.ts | 保留 | Historical AxonHub channel identity migration. |
 | src/services/managedSites/managedSiteChannelResourceIdentity.ts | 已清理 | 委托匹配适配器解析稳定 ID，不再内置 AxonHub 分支。 |
-| src/services/managedSites/tokenBatchExport.ts | 后续 | New API verification export gating. |
+| src/services/managedSites/tokenBatchExport.ts | 已清理 | 批量预览依据匹配能力生成验证候选。 |
 | src/services/managedSites/tokenBatchImportTarget.ts | 已清理 | Existing provider-specific batch import target policy. |
-| src/services/managedSites/tokenChannelStatus.ts | 后续 | New API verification status integration. |
+| src/services/managedSites/tokenChannelStatus.ts | 已清理 | 匹配能力拥有会话就绪状态查询；通用状态计算保留失败降级与脱敏。 |
 | src/services/managedSites/utils/channelMatching.ts | 已清理 | Sub2API-specific matching identity. |
 | src/services/managedSites/utils/managedSite.ts | 已清理 | Legacy provider settings, default config and token routing; migrate by consumer. |
 | src/services/modelList/accountSources/sub2apiEstimates.ts | 保留 | Provider-specific Sub2API model dashboard estimates. |
@@ -155,3 +155,16 @@
 - 已验证场景：验证失败阻止保存、已有本地身份保留、敏感错误不写入日志/健康状态、能力按注册分发而非站点名称分发，以及七种提供方优先导入的注册完整性。
 - 后续仍独立保留：OpenRouter 只读检测和浏览器引导、New API 交互验证、AIHubMix 一次性密钥恢复；未新增 lint。
 - 验证：204 个相关测试文件、3359 项测试全部通过；类型检查和未使用代码检查通过。未运行浏览器 E2E；提交钩子结果以提交完成为准。
+
+
+## 第七轮托管密钥验证恢复
+
+范围：托管匹配的密钥恢复状态、提示、批量导出候选、账户定位与 React 验证入口。
+
+- 已执行：New API 在 matching.secretVerification 注册会话就绪查询、不可比较密钥提示和已实现的会话工作流类型；服务层不再导入 New API 登录、会话或 TOTP 实现。
+- 已执行：状态查询、批量导出和预览提示以实际能力为依据；账户定位、KeyManagement 和原生资源交互按已注册工作流选择专属验证实现。
+- 保持：运行时会话/登录凭证/TOTP 状态与结构支持分离，查询失败仍降级为无法精确验证；验证码弹窗、取消行为、限定授权、隐藏密钥读取和迁移凭证解析维持原实现。
+- 已验证：同名 New API 未声明能力时不探测会话，其他站点注册工作流时消费其恢复结果；资源引用保持与目标站点一致。提供方优先导入的七种注册完整性回归通过。
+- 复扫：本轮状态、预览、提示及入口不再根据 NEW_API 站点身份推导支持。会话工作流标识是实际 React 实现的分发契约，专属模块内的配置检查继续保留。
+- 独立后续：账户浏览器认证、OpenRouter 浏览器引导、AIHubMix 一次性密钥生命周期及既有模型同步页面刷新分支；未新增 lint。
+- 验证：350 个相关测试文件、4778 项测试全部通过；账户操作与恢复分发补充定向回归 8 个文件、107 项测试通过（含与前者重叠的状态和交互测试）。类型检查和未使用代码检查通过；未运行浏览器 E2E，提交钩子以最终执行结果为准。

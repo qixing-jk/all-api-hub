@@ -28,6 +28,7 @@ import {
   newApiManagedResourceModels,
 } from "../managedResources/newApiOperations"
 import { createManagedSiteConfigCapability } from "./config"
+import { newApiSecretVerification } from "./newApiSecretVerification"
 import { toManagedSiteApiServiceRequest } from "./request"
 
 const newApiManagedSiteConfig: ManagedSiteConfigCapability<NewApiConfig> =
@@ -54,6 +55,7 @@ const newApiManagedSiteChannelDrafts: ManagedSiteChannelDraftsCapability = {
 }
 
 const matching: ManagedResourceMatchingCapability<NewApiConfig> = {
+  secretVerification: newApiSecretVerification,
   hydrateComparableKeys: async (config, candidates, options) => {
     const target = { siteType: SITE_TYPES.NEW_API, config }
     const hydrated = await newApiChannelOperations.hydrateComparableKeys(

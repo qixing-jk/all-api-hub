@@ -35,8 +35,12 @@ import {
   ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
   type AccountKeyResourceFacts,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
+import { MANAGED_RESOURCE_SECRET_VERIFICATION_KINDS } from "~/services/apiAdapters/contracts/managedResourceMatching"
 import { OPENROUTER_KEY_FIELD_IDS } from "~/services/apiAdapters/openrouter/keyResourceFields"
-import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
+import {
+  getManagedSiteCapabilities,
+  getSiteTypeCapabilities,
+} from "~/services/apiAdapters/registry"
 import { getRecoverableManagedSiteChannelCandidate } from "~/services/managedSites/channelMatch"
 import { hasValidManagedSiteConfig } from "~/services/managedSites/runtimeConfig"
 import {
@@ -613,7 +617,10 @@ export default function KeyManagement(props: {
     token: AccountToken,
     managedSiteStatus: ManagedSiteTokenChannelStatus,
   ) => {
-    if (managedSiteType !== SITE_TYPES.NEW_API) {
+    if (
+      getManagedSiteCapabilities(managedSiteType).matching.secretVerification
+        ?.kind !== MANAGED_RESOURCE_SECRET_VERIFICATION_KINDS.NEW_API_SESSION
+    ) {
       return
     }
 

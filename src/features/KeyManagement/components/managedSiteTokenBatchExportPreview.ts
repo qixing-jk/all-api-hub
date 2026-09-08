@@ -1,4 +1,5 @@
-import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
+import type { ManagedSiteType } from "~/constants/siteType"
+import { getManagedSiteCapabilities } from "~/services/apiAdapters/registry"
 import { applyVerifiedManagedSiteChannelKey } from "~/services/managedSites/verifiedChannelKeyAssessment"
 import type {
   ManagedSiteTokenBatchExportMatchedChannel,
@@ -105,7 +106,7 @@ export const getPreviewItemVerificationCandidate = (
   siteType: ManagedSiteType,
 ): ManagedSiteTokenBatchExportMatchedChannel | undefined => {
   if (
-    siteType !== SITE_TYPES.NEW_API ||
+    !getManagedSiteCapabilities(siteType).matching.secretVerification ||
     !hasExactVerificationUnavailableWarning(item)
   ) {
     return undefined

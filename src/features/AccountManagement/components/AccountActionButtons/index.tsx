@@ -30,7 +30,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
-import { getAccountSiteApiRouter, SITE_TYPES } from "~/constants/siteType"
+import { getAccountSiteApiRouter } from "~/constants/siteType"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useAccountActionsContext } from "~/features/AccountManagement/hooks/AccountActionsContext"
@@ -63,6 +63,7 @@ import {
   InvalidTokenPayloadError,
   resolveDisplayAccountRuntimeKeySecret,
 } from "~/services/accounts/utils/apiServiceRequest"
+import { MANAGED_RESOURCE_SECRET_VERIFICATION_KINDS } from "~/services/apiAdapters/contracts/managedResourceMatching"
 import { getManagedSiteCapabilities } from "~/services/apiAdapters/registry"
 import { isAutomaticCheckInConfiguredForAccount } from "~/services/checkin/autoCheckin/inspection"
 import { sendAutoCheckinMessage } from "~/services/checkin/autoCheckin/messaging"
@@ -616,7 +617,8 @@ export default function AccountActionButtons({
 
       if (
         recoverableCandidate &&
-        managedSite.siteType === SITE_TYPES.NEW_API &&
+        managedSite.matching.secretVerification?.kind ===
+          MANAGED_RESOURCE_SECRET_VERIFICATION_KINDS.NEW_API_SESSION &&
         "userId" in managedConfig
       ) {
         resolution = await withProtectionBypassUserCommand(

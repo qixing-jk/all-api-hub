@@ -2,6 +2,7 @@ import { vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import type { ManagedSiteCapabilities } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
+import { newApiSecretVerification } from "~/services/apiAdapters/managedSites/newApiSecretVerification"
 
 type CapabilityOverrides = Partial<
   Pick<ManagedSiteCapabilities, "siteType">
@@ -18,6 +19,10 @@ export const createManagedSiteCapabilitiesStub = (
 ): ManagedSiteCapabilities => ({
   siteType: overrides.siteType ?? SITE_TYPES.NEW_API,
   matching: {
+    secretVerification:
+      (overrides.siteType ?? SITE_TYPES.NEW_API) === SITE_TYPES.NEW_API
+        ? newApiSecretVerification
+        : undefined,
     search: vi.fn().mockResolvedValue({ items: [], total: 0, type_counts: {} }),
     hydrateComparableKeys: vi.fn(async (_config, candidates) => candidates),
     ...overrides.matching,

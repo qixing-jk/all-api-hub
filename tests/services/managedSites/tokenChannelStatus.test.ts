@@ -746,6 +746,71 @@ describe("getManagedSiteTokenChannelStatus", () => {
     })
   })
 
+  it.each([
+    { siteType: SITE_TYPES.NEW_API, registered: false },
+    { siteType: SITE_TYPES.DONE_HUB, registered: true },
+  ])(
+    "derives recovery from the registered workflow ($siteType, $registered)",
+    async ({ siteType, registered }) => {
+      const account = buildDisplaySiteData({
+        baseUrl: "https://api.example.com",
+      })
+      const token = buildApiToken({ key: "test-token-key" })
+      const recovery = {
+        siteType,
+        managedBaseUrl: "https://managed.example",
+        searchBaseUrl: "https://api.example.com",
+        loginCredentialsConfigured: false,
+        authenticatedBrowserSessionExists: false,
+        automaticCodeConfigured: false,
+      }
+      const getRecovery = vi.fn().mockResolvedValue(recovery)
+      const managedSite = createManagedSiteCapabilitiesStub({
+        siteType,
+        matching: {
+          secretVerification: registered
+            ? {
+                kind: "new-api-session",
+                getRecovery,
+                getUnavailableHint: () => "Verification required",
+              }
+            : undefined,
+          search: vi.fn().mockResolvedValue({
+            items: [
+              buildManagedResourceMatchCandidate({
+                ref: matchingResourceRef(231, { siteType }),
+                base_url: "https://api.example.com",
+                models: "gpt-4o",
+                key: "",
+              }),
+            ],
+            total: 1,
+            type_counts: {},
+          }),
+        },
+      })
+      const result = await getManagedSiteTokenChannelStatus({
+        runtimeKey: buildDisplayAccountTokenRuntimeKey(account, token),
+        managedSite,
+      })
+      expect(result).toMatchObject({
+        status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
+        reason:
+          MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE,
+      })
+      if (registered) {
+        expect(result).toHaveProperty("recovery", recovery)
+        expect(getRecovery).toHaveBeenCalledWith(
+          expect.objectContaining({ baseUrl: "https://managed.example" }),
+          "https://api.example.com",
+        )
+      } else {
+        expect(result).not.toHaveProperty("recovery")
+        expect(hasNewApiAuthenticatedBrowserSessionMock).not.toHaveBeenCalled()
+      }
+    },
+  )
+
   it("returns exact verification unavailable when candidate key hydration cannot resolve comparable keys", async () => {
     const account = buildDisplaySiteData({ baseUrl: "https://api.example.com" })
     const token = buildApiToken({ key: "test-token-key" })

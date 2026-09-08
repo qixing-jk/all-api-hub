@@ -7,6 +7,7 @@ import { describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import AccountActionButtons from "~/features/AccountManagement/components/AccountActionButtons"
 import { buildServiceCredentialRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import { newApiSecretVerification } from "~/services/apiAdapters/managedSites/newApiSecretVerification"
 import type { UserPreferences } from "~/services/preferences/userPreferences"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -615,6 +616,7 @@ describe("AccountActionButtons", () => {
           total: 1,
           type_counts: {},
         }),
+        secretVerification: newApiSecretVerification,
         fetchSecretKey: fetchChannelSecretKey,
       },
     }
