@@ -522,7 +522,7 @@ describe("DoneHub managed-site channel capability", () => {
     })
 
     await expect(
-      doneHubManagedSiteCapabilities.matching.hydrateComparableKeys(
+      doneHubManagedSiteCapabilities.matching.hydrateComparableKeys!(
         config,
         candidates,
       ),
