@@ -25,9 +25,9 @@ import {
   ACCOUNT_BROWSER_SESSION_SOURCES,
   readAccountBrowserSessionFromTab,
 } from "~/services/accountBrowserSession"
-import { normalizeContentSessionTransientAuth } from "~/services/accountBrowserSession/transientAuth"
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
 import type { ContentSessionTransientAuth } from "~/services/accountSiteOnboarding/contracts"
+import { normalizeContentSessionTransientAuth } from "~/services/accountSiteOnboarding/transientAuth"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import {
   API_SERVICE_FETCH_CONTEXT_KINDS,

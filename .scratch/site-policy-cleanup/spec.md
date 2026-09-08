@@ -2,7 +2,7 @@
 
 先清理职责与重复策略，暂不引入 lint、白名单或引用额度。此文件是审计记录，不参与运行时或检查。
 
-最新状态：已整合 origin/main 6953346f6 的 scoped resource identity 重构。第二、三轮的本地指纹/导航接口已被上游统一配置指纹与 ManagedResourceRef 契约替代；下文保留实施历史，基线替代关系以第五轮记录为准，后续清理见第六至九轮。
+最新状态：已整合 origin/main 6953346f6 的 scoped resource identity 重构。第二、三轮的本地指纹/导航接口已被上游统一配置指纹与 ManagedResourceRef 契约替代；下文保留实施历史，基线替代关系以第五轮记录为准，后续清理见第六至十轮。
 
 ## 本轮实现
 
@@ -19,7 +19,7 @@
 ## 后续独立迁移
 
 1. OpenRouter 的只读自动检测与浏览器引导（accountAutoDetection、useAccountDialog）。凭证验证、持久化身份、去重和敏感错误处理已在第六轮迁入注册能力；只读检测仍有独立的来源信任边界。
-2. New API 的浏览器账户身份恢复与临时认证（accountBrowserSession）。托管密钥验证的恢复状态、提示和工作流选择已在第七轮迁入 matching.secretVerification；会话挑战实现继续由专属 React 模块直接拥有。账户浏览器认证属于独立信任流程。
+2. **已完成第十轮清理**：New API 临时 dashboard 认证的来源准入和载荷校验由提供方纯校验器拥有；浏览器会话读取与自动检测共用 onboarding/transientAuth 注册入口。显式探测授权与已知站点信任边界保持不变。第七轮的托管会话挑战继续由专属 React 模块直接拥有。
 3. **已完成第三轮清理**：匹配适配器的 resolveNavigationId 决定可用导航身份，AxonHub 自行拒绝历史数字投影。服务摘要显式携带 resourceId，TokenHeader 不再猜测站点规则；状态查询、批量导出与账户定位一起迁移。
 4. **已完成第二轮清理**：KeyManagement/useKeyManagement 的配置指纹读取已有 runtimeConfig 解析结果，删除提供方字段名单；所有配置字段参与失效判断，字段顺序规范化，凭证仍只保留内存哈希。七类站点均覆盖凭证变更、旧结果晚返回、无关目标变更和配置清空。
 5. **已完成第五轮清理**：上游 createSync 能力已承接 Octopus 执行流程；本地将链式映射与 DoneHub 计费前缀语义注册为 modelMappingPolicy。共享调度器/重定向服务不再依赖站点分支。提供方类型字段解码保留。
@@ -52,8 +52,8 @@
 | src/features/ModelList/aihubmixModelList.ts | 保留 | AIHubMix-specific pricing metadata presentation. |
 | src/features/SiteAnnouncements/utils.ts | 保留 | Sub2API announcement identity presentation. |
 | src/features/TokenProvisioning/components/AddTokenDialog/index.tsx | 已清理 | 使用已注册的创建响应转换能力进入一次性密钥确认流程。 |
-| src/services/accountBrowserSession/sessionReader.ts | 后续 | New API browser-session identity recovery. |
-| src/services/accountBrowserSession/transientAuth.ts | 后续 | New API transient browser credential policy. |
+| src/services/accountBrowserSession/sessionReader.ts | 已清理 | 传递原始站点、提示与探测意图，由提供方校验临时认证准入。 |
+| src/services/accountBrowserSession/transientAuth.ts | 已删除 | 提供方纯校验迁入 onboarding/contentSession/newApiTransientAuth，通用分发归 onboarding/transientAuth。 |
 | src/services/accounts/accountAutoDetection.ts | 后续 | Canonical OpenRouter onboarding and browser identity resolution. |
 | src/services/accounts/accountCreation.ts | 已清理 | 注册持久化能力负责凭证验证和存储身份准备。 |
 | src/services/accounts/accountDedupe.ts | 已清理 | 使用注册能力提供的私有凭证比较键，结果不暴露密钥。 |
@@ -194,3 +194,16 @@
 - 复扫：创建/保存后/复制/模型密钥通用流程及后台修复不再直接依赖 AIHUBMIX 身份判断或其转换函数。AIHubMix 定价模型展示仍属于提供方元数据展示，不属于密钥生命周期。
 - 独立后续：账户浏览器认证与 OpenRouter 浏览器引导。未新增 lint；未运行浏览器 E2E。
 - 验证：大范围回归 238 个文件、3678 项测试，首轮仅复制密钥自定义创建用例失败（测试替身未注册转换能力）。补齐能力并修正日志 mock 提前初始化后，10 个相关文件、126 项测试全部通过；移动转换入口后的保存/模型流程另有 4 个文件、98 项测试通过。类型检查和未使用代码检查通过；提交钩子以最终执行结果为准。
+
+
+## 第十轮浏览器会话临时认证准入
+
+范围：浏览器会话与自动检测收到临时 dashboard 认证时的站点信任、来源和载荷校验。
+
+- 已执行：New API 纯校验器拥有已知站点匹配、UNKNOWN 加显式探测加 New API 提示的准入条件，以及对象自身字段、类型、非空值和同源校验。
+- 已执行：onboarding/transientAuth 注册纯校验器；sessionReader 与 autoDetectService 直接消费该入口。删除旧 accountBrowserSession/transientAuth，不保留转发导出。
+- 依赖边界：完整会话提取器注册表会通过 Sub2API 回到浏览器会话解析，测试确实复现初始化循环。因此纯认证校验单独注册，不加载或执行可能刷新凭证的提取器。
+- 保持：只有当前标签页显式请求可启用探测；其他已知站点不会被提示覆盖；临时 dashboard bearer 仍只用于完成认证，不写入账户 PAT。
+- 已验证：17 个浏览器会话、自动检测、提供方引导及注册初始化测试文件、243 项测试全部通过；补充已知其他站点带探测许可和 New API 提示仍拒绝临时认证的回归。
+- 复扫：sessionReader 已没有具体站点常量分支；旧校验模块无调用。OpenRouter 的只读检测与浏览器引导仍作为独立信任流程待处理。未新增 lint，未运行浏览器 E2E。
+- 类型检查和未使用代码检查通过；提交钩子以最终执行结果为准。

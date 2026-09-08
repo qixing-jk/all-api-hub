@@ -1,7 +1,8 @@
-import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import {
   NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND,
   type ContentSessionTransientAuth,
+  type ContentSessionTransientAuthContext,
 } from "~/services/accountSiteOnboarding/contracts"
 
 const REQUIRED_TRANSIENT_AUTH_FIELDS = [
@@ -12,20 +13,20 @@ const REQUIRED_TRANSIENT_AUTH_FIELDS = [
   "origin",
 ] as const
 
-type NormalizeTransientAuthOptions = {
-  baseUrl: string
-  siteType: AccountSiteType
-}
-
 /**
  * Validates completion-only dashboard auth against the requested New API site.
  */
-export function normalizeContentSessionTransientAuth(
+export function normalizeNewApiDashboardTransientAuth(
   value: unknown,
-  options: NormalizeTransientAuthOptions,
+  options: ContentSessionTransientAuthContext,
 ): ContentSessionTransientAuth | undefined {
+  const acceptsSite =
+    options.siteType === SITE_TYPES.NEW_API ||
+    (options.siteType === SITE_TYPES.UNKNOWN &&
+      options.allowNewApiAuthProbe === true &&
+      options.siteTypeHint === SITE_TYPES.NEW_API)
   if (
-    options.siteType !== SITE_TYPES.NEW_API ||
+    !acceptsSite ||
     !value ||
     typeof value !== "object" ||
     Array.isArray(value) ||

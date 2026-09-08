@@ -40,6 +40,14 @@ export type ContentSessionExtractionResult = {
   }
 }
 
+/** Untrusted session payload context; probe permission never implies permission to persist auth. */
+export type ContentSessionTransientAuthContext = {
+  baseUrl: string
+  siteType: AccountSiteType
+  siteTypeHint?: AccountSiteType
+  allowNewApiAuthProbe?: boolean
+}
+
 export type ContentSessionExtractor = {
   id: string
   canExtract(context: ContentSessionExtractionContext): boolean
