@@ -90,6 +90,7 @@ type NewApiFamilyEditorPolicy = {
   typeOptions: readonly { value: number; label: string }[]
   unsupportedCreateTypes: ReadonlySet<number>
   baseUrlRequiredTypes: ReadonlySet<number>
+  groupsRequired?: boolean
 }
 
 const newApiEditorPolicy: NewApiFamilyEditorPolicy = {
@@ -232,6 +233,13 @@ const typeOptions = (
   return options
 }
 
+const requiresNonEmptyGroups = (
+  policy: NewApiFamilyEditorPolicy,
+  existing?: NewApiFamilyChannelFields,
+) =>
+  policy.groupsRequired === true &&
+  (existing === undefined || parseNewApiResourceList(existing.group).length > 0)
+
 const fieldDescriptors = (
   policy: NewApiFamilyEditorPolicy,
   detail?: NewApiFamilyChannelFields,
@@ -286,6 +294,7 @@ const fieldDescriptors = (
     {
       fieldId: editorFields.Groups,
       type: MANAGED_RESOURCE_FIELD_TYPES.MultiSelect,
+      ...(requiresNonEmptyGroups(policy, detail) ? { required: true } : {}),
       options: normalizeList([
         ...parseNewApiResourceList(detail?.group),
         ...groupSuggestions,
@@ -365,6 +374,15 @@ const validateValues = (
   if (readList(values, editorFields.Models).length === 0) {
     issues.push({
       fieldId: editorFields.Models,
+      code: MANAGED_RESOURCE_FIELD_ISSUE_CODES.Required,
+    })
+  }
+  if (
+    requiresNonEmptyGroups(policy, existing) &&
+    readList(values, editorFields.Groups).length === 0
+  ) {
+    issues.push({
+      fieldId: editorFields.Groups,
       code: MANAGED_RESOURCE_FIELD_ISSUE_CODES.Required,
     })
   }

@@ -102,6 +102,11 @@ const veloeraEditor = createNewApiFamilyEditorBindings({
   typeOptions: VeloeraChannelTypeOptions,
   unsupportedCreateTypes: new Set([VeloeraChannelType.VertexAi]),
   baseUrlRequiredTypes: new Set(),
+  // Veloera's update model stores group as a non-pointer string, so GORM
+  // silently ignores an attempted empty value. Reject clearing an existing
+  // group while keeping legacy channels that are already empty editable.
+  // https://github.com/Veloera/Veloera/blob/6525dfce816beaa270e78f0d8b762e19e54d13b8/model/channel.go
+  groupsRequired: true,
 })
 const mapFailure = (error: unknown): ResourceFailure => {
   if (error instanceof ManagedResourceError) return error.failure
@@ -212,9 +217,7 @@ const toUpdatePayload = (
   detail: VeloeraChannel,
   draft: NewApiFamilyChannelCommand,
 ): VeloeraUpdateChannelPayload => {
-  const payload: VeloeraUpdateChannelPayload = {
-    ...detail,
-    id: detail.id,
+  const editable = {
     name: draft.name.trim(),
     type: draft.type,
     base_url: draft.base_url.trim(),
@@ -224,10 +227,24 @@ const toUpdatePayload = (
     weight: draft.weight,
     status: draft.status,
   }
+  const payload: VeloeraUpdateChannelPayload = { id: detail.id }
+  // Veloera uses GORM's selective Updates, then reloads the saved channel
+  // before updating abilities. Its base URL, priority, and weight fields are
+  // pointers, so explicit empty and zero values remain present during updates.
+  // Unedited provider fields need not be replayed.
+  // https://github.com/Veloera/Veloera/blob/6525dfce816beaa270e78f0d8b762e19e54d13b8/model/channel.go
+  for (const field of Object.keys(editable) as (keyof typeof editable)[]) {
+    if (editable[field] !== detail[field]) {
+      Object.assign(payload, { [field]: editable[field] })
+    }
+  }
+  // The controller validates Vertex's region when the type is submitted.
+  // https://github.com/Veloera/Veloera/blob/6525dfce816beaa270e78f0d8b762e19e54d13b8/controller/channel.go
+  if (payload.type === VeloeraChannelType.VertexAi) {
+    payload.other = detail.other
+  }
   if (hasUsableManagedSiteChannelKey(draft.key)) {
     payload.key = draft.key.trim()
-  } else {
-    delete payload.key
   }
   return payload
 }

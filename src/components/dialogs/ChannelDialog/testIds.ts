@@ -8,5 +8,6 @@ export const CHANNEL_DIALOG_TEST_IDS = {
   baseUrlInput: "channel-dialog-base-url-input",
   modelsInput: "channel-dialog-models-input",
   statusSelect: "channel-dialog-status-select",
+  cancelButton: "channel-dialog-cancel-button",
   submitButton: "channel-dialog-submit-button",
 } as const

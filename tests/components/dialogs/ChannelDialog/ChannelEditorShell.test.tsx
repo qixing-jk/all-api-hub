@@ -42,7 +42,7 @@ describe("ChannelEditorShell", () => {
     )
     await user.click(submit)
     expect(onSubmit).toHaveBeenCalledTimes(1)
-    await user.click(screen.getByRole("button", { name: "Cancel" }))
+    await user.click(screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.cancelButton))
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
