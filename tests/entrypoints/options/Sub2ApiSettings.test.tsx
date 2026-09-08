@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { I18nextProvider } from "react-i18next"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
@@ -29,6 +29,10 @@ const successfulWrite = { ok: true, preferences: {} }
 describe("Sub2ApiSettings", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
   })
 
   const arrange = (overrides: Record<string, unknown> = {}) => {
@@ -107,6 +111,27 @@ describe("Sub2ApiSettings", () => {
       true,
     )
     expect(validateSub2ApiManagedSiteConfig).not.toHaveBeenCalled()
+  })
+
+  it("falls back to the browser window when the extension cannot open admin settings", async () => {
+    const user = userEvent.setup()
+    vi.mocked(createTab).mockRejectedValueOnce(new Error("tabs unavailable"))
+    const openWindow = vi.spyOn(window, "open").mockReturnValue(null)
+    arrange()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "settings:sub2apiManagedSite.adminCredentialsLink.open",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(openWindow).toHaveBeenCalledWith(
+        "https://sub2api.example.com/admin/settings",
+        "_blank",
+        "noopener,noreferrer",
+      )
+    })
   })
 
   it("validates the trimmed URL and Admin API Key before saving them", async () => {

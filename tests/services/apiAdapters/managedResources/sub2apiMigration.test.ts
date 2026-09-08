@@ -310,6 +310,109 @@ describe("Sub2API channel migration", () => {
     expect(JSON.stringify(preview)).not.toContain("private-extra")
   })
 
+  it.each([
+    ["saved notes", { notes: "private-setting" }, true],
+    ["blank notes", { notes: "  " }, false],
+    ["a configured proxy", { proxy_id: 4 }, true],
+    ["no proxy", { proxy_id: 0 }, false],
+    ["extra settings", { extra: { custom: "private-setting" } }, true],
+    ["empty extra settings", { extra: {} }, false],
+    [
+      "credential lists",
+      { credentials: { ...account.credentials, custom: ["private-setting"] } },
+      true,
+    ],
+    [
+      "empty credential lists",
+      { credentials: { ...account.credentials, custom: [] } },
+      false,
+    ],
+    [
+      "enabled credential options",
+      { credentials: { ...account.credentials, custom: true } },
+      true,
+    ],
+    [
+      "disabled credential options",
+      { credentials: { ...account.credentials, custom: false } },
+      false,
+    ],
+  ] as const)(
+    "reports whether migration drops %s without exposing their values",
+    async (_label, overrides, hasLostSettings) => {
+      server.use(
+        http.get(`${config.baseUrl}/api/v1/admin/accounts/17`, () =>
+          HttpResponse.json({ code: 0, data: { ...account, ...overrides } }),
+        ),
+      )
+
+      const preview = await prepareManagedSiteMigrationPreview({
+        sourceSiteType: SITE_TYPES.SUB2API,
+        targetSiteType: SITE_TYPES.NEW_API,
+        selections: [selection],
+      })
+
+      expect(preview.items[0].status).toBe("ready")
+      expect(
+        preview.items[0].warningCodes.includes(
+          warnings.DROPS_ADVANCED_SETTINGS,
+        ),
+      ).toBe(hasLostSettings)
+      expect(JSON.stringify(preview)).not.toContain("private-setting")
+    },
+  )
+
+  it.each([undefined, {}])(
+    "preserves disabled status and named groups when credential metadata is absent (%j)",
+    async (credentials) => {
+      server.use(
+        http.get(`${config.baseUrl}/api/v1/admin/accounts/17`, () =>
+          HttpResponse.json({
+            code: 0,
+            data: {
+              ...account,
+              credentials,
+              priority: undefined,
+              status: "inactive",
+              groups: [
+                { id: 1, name: "  " },
+                { id: 2, name: " VIP " },
+                { id: 3, name: "VIP" },
+              ],
+            },
+          }),
+        ),
+      )
+      const source = resolveManagedSiteMigrationCapability(
+        SITE_TYPES.SUB2API,
+      )!.source!
+
+      await expect(source.prepare(selection)).resolves.toMatchObject({
+        status: "ready",
+        source: {
+          baseUrl: "",
+          models: [],
+          groups: ["VIP"],
+          priority: 1,
+          status: "disabled",
+        },
+      })
+    },
+  )
+
+  it("uses a valid target priority when the source priority is not finite", async () => {
+    const target = resolveManagedSiteMigrationCapability(
+      SITE_TYPES.SUB2API,
+    )!.target!
+
+    await expect(
+      target.prepare({ ...migrationSource, priority: Number.NaN }),
+    ).resolves.toMatchObject({
+      projection: { priority: 1 },
+      adjustments: { ignoredPriority: true },
+    })
+  })
+
   it("blocks accounts whose API key is explicitly missing before execution", async () => {
     server.use(
       http.get(`${config.baseUrl}/api/v1/admin/accounts/17`, () =>
