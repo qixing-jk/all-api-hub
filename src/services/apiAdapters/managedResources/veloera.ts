@@ -102,6 +102,11 @@ const veloeraEditor = createNewApiFamilyEditorBindings({
   typeOptions: VeloeraChannelTypeOptions,
   unsupportedCreateTypes: new Set([VeloeraChannelType.VertexAi]),
   baseUrlRequiredTypes: new Set(),
+  // Veloera's update model stores group as a non-pointer string, so GORM
+  // silently ignores an attempted empty value. Reject clearing an existing
+  // group while keeping legacy channels that are already empty editable.
+  // https://github.com/Veloera/Veloera/blob/6525dfce816beaa270e78f0d8b762e19e54d13b8/model/channel.go
+  groupsRequired: true,
 })
 const mapFailure = (error: unknown): ResourceFailure => {
   if (error instanceof ManagedResourceError) return error.failure
@@ -224,7 +229,9 @@ const toUpdatePayload = (
   }
   const payload: VeloeraUpdateChannelPayload = { id: detail.id }
   // Veloera uses GORM's selective Updates, then reloads the saved channel
-  // before updating abilities. Unedited provider fields need not be replayed.
+  // before updating abilities. Its base URL, priority, and weight fields are
+  // pointers, so explicit empty and zero values remain present during updates.
+  // Unedited provider fields need not be replayed.
   // https://github.com/Veloera/Veloera/blob/6525dfce816beaa270e78f0d8b762e19e54d13b8/model/channel.go
   for (const field of Object.keys(editable) as (keyof typeof editable)[]) {
     if (editable[field] !== detail[field]) {

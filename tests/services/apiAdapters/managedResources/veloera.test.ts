@@ -9,6 +9,7 @@ import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contra
 import {
   MANAGED_RESOURCE_CREATE_SEED_KINDS,
   MANAGED_RESOURCE_FAILURE_CODES,
+  MANAGED_RESOURCE_FIELD_ISSUE_CODES,
   ManagedResourceError,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 import {
@@ -430,6 +431,50 @@ describe("Veloera native managed resource", () => {
       other: "us-central1",
     })
     expect(mocks.update.mock.calls[0][1]).not.toHaveProperty("model_prefix")
+  })
+
+  it("preserves explicit empty and zero-valued edits while rejecting a cleared group", async () => {
+    const operations = await openVeloeraNativeResourceOperations()
+    await operations.update(
+      { ...channel, priority: 12, weight: 8 },
+      {
+        ...createDraft("Primary channel"),
+        base_url: " ",
+        groups: ["default", "vip"],
+        priority: 0,
+        weight: 0,
+      },
+    )
+    expect(mocks.update.mock.calls[0][1]).toMatchObject({
+      id: channel.id,
+      base_url: "",
+      priority: 0,
+      weight: 0,
+    })
+
+    const workspace = await veloeraManagedResourceRegistration.open()
+    const ref = (await workspace.list()).items[0]!.ref
+    const editor = await workspace.openEditEditor(ref)
+    expect(
+      editor.validate({
+        ...editor.initialValues,
+        [VELOERA_MANAGED_RESOURCE_FIELD_IDS.Groups]: [],
+      }),
+    ).toEqual({
+      valid: false,
+      issues: [
+        {
+          fieldId: VELOERA_MANAGED_RESOURCE_FIELD_IDS.Groups,
+          code: MANAGED_RESOURCE_FIELD_ISSUE_CODES.Required,
+        },
+      ],
+    })
+
+    mocks.get.mockResolvedValueOnce({ ...channel, group: "" })
+    const legacyEditor = await workspace.openEditEditor(ref)
+    expect(legacyEditor.validate(legacyEditor.initialValues)).toEqual({
+      valid: true,
+    })
   })
 
   it("projects partial updates and preserves the saved key while returning rejections unchanged", async () => {

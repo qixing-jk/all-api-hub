@@ -205,7 +205,7 @@ export async function runManagedSiteChannelsCrudScenario<
       if (before) {
         const after = await captureSnapshot(editedChannelName)
         await context.page
-          .getByRole("button", { name: "Cancel", exact: true })
+          .getByTestId(CHANNEL_DIALOG_TEST_IDS.cancelButton)
           .click()
         assertManagedChannelPreserved(context.siteType, before, after)
       }

@@ -36,7 +36,7 @@ export type VeloeraCreateChannelPayload = Omit<
   "id"
 > & { status: number } & Record<string, unknown>
 
-/** Full channel updates retain fields the common editor does not expose. */
+/** Minimal channel update containing only fields intentionally changed by the editor. */
 export type VeloeraUpdateChannelPayload = Partial<VeloeraChannelFields> & {
   id: number
 } & Record<string, unknown>

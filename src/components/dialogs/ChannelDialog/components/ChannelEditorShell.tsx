@@ -58,6 +58,7 @@ export function ChannelEditorShell({
         onClick={handleClose}
         disabled={isSubmitting}
         type="button"
+        data-testid={CHANNEL_DIALOG_TEST_IDS.cancelButton}
       >
         {closeLabel}
       </Button>
