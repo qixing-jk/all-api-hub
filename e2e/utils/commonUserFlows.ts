@@ -1,8 +1,9 @@
-import type {
-  BrowserContext,
-  ConsoleMessage,
-  Page,
-  Worker,
+import {
+  expect,
+  type BrowserContext,
+  type ConsoleMessage,
+  type Page,
+  type Worker,
 } from "@playwright/test"
 
 import { SITE_TYPES } from "~/constants/siteType"
@@ -533,22 +534,29 @@ export async function waitForExtensionPage(
   context: BrowserContext,
   params: WaitForExtensionPageParams,
 ) {
-  if (params.reuseExistingPage !== false) {
-    const existingPage = context
+  const excludedPages = new Set(
+    params.reuseExistingPage === false ? context.pages() : [],
+  )
+  const findMatchingPage = () =>
+    context
       .pages()
-      .find((page) => isMatchingExtensionPage(page, params))
+      .find(
+        (page) =>
+          !excludedPages.has(page) && isMatchingExtensionPage(page, params),
+      )
 
-    if (existingPage) {
-      await existingPage.waitForLoadState("domcontentloaded")
-      return existingPage
-    }
-  }
+  // Chrome can emit the page event before its first navigation commits. Observe
+  // the destination as well as new pages, including navigation of reused tabs.
+  await expect
+    .poll(() => Boolean(findMatchingPage()), {
+      timeout: params.timeoutMs ?? 15_000,
+      message: `Waiting for extension page ${params.path}${params.hash ?? ""}`,
+    })
+    .toBe(true)
 
-  const page = await context.waitForEvent("page", {
-    timeout: params.timeoutMs ?? 15_000,
-    predicate: (candidate) => isMatchingExtensionPage(candidate, params),
-  })
-
+  const page = findMatchingPage()
+  if (!page)
+    throw new Error("Matching extension page closed before it was ready")
   await page.waitForLoadState("domcontentloaded")
   return page
 }

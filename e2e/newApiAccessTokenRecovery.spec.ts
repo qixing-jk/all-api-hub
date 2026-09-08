@@ -1,11 +1,14 @@
-import type { Page } from "@playwright/test"
+import type { JSHandle, Page } from "@playwright/test"
 
 import {
+  OPTIONS_PAGE_PATH,
   POPUP_PAGE_PATH,
   SIDEPANEL_PAGE_PATH,
 } from "~/constants/extensionPages"
+import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SITE_TYPES } from "~/constants/siteType"
+import { ACCOUNT_MANAGEMENT_ROUTE_PARAMS } from "~/features/AccountManagement/routeParams"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import { verifyAccountModelCatalog } from "~~/e2e/scenarios/modelListCatalog"
@@ -69,7 +72,7 @@ for (const scenario of [
     tokenRequests: 0,
   },
 ] as const) {
-  test(`continues ${scenario.name} security verification in the native side panel after closing the popup`, async ({
+  test(`continues ${scenario.name} security verification after closing the popup`, async ({
     context,
     extensionId,
     page,
@@ -193,17 +196,52 @@ for (const scenario of [
       popupDialog.getByRole("button", { name: openTokenSettingsLabel }),
     ).toHaveCount(0)
 
-    await popupDialog
-      .getByRole("button", { name: "Continue in side panel", exact: true })
-      .click()
-    const bridge = await context.newPage()
-    await bridge.goto(`chrome-extension://${extensionId}/options.html#about`)
-    const sidePanel = await getNativeSidePanel(bridge)
+    const supportsNativeSidePanel = await page.evaluate(
+      () =>
+        typeof chrome.sidePanel?.open === "function" &&
+        typeof navigator.locks?.request === "function",
+    )
+    let bridge: Page
+    let recoveryView: JSHandle<Window & typeof globalThis>
+    if (supportsNativeSidePanel) {
+      await popupDialog
+        .getByRole("button", { name: "Continue in side panel", exact: true })
+        .click()
+      bridge = await context.newPage()
+      await bridge.goto(
+        `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#about`,
+      )
+      recoveryView = await getNativeSidePanel(bridge)
+    } else {
+      const [fullPage] = await Promise.all([
+        context.waitForEvent("page"),
+        popupDialog
+          .getByRole("button", { name: "Continue in full page", exact: true })
+          .click(),
+      ])
+      await expect(fullPage).toHaveURL(
+        (url) =>
+          url.protocol === "chrome-extension:" &&
+          url.hostname === extensionId &&
+          url.pathname === `/${OPTIONS_PAGE_PATH}` &&
+          url.searchParams.has(
+            ACCOUNT_MANAGEMENT_ROUTE_PARAMS.AccountDialogRecovery,
+          ) &&
+          url.hash === `#${MENU_ITEM_IDS.ACCOUNT}`,
+      )
+      await waitForExtensionRoot(fullPage)
+      recoveryView = await fullPage.evaluateHandle(() => window)
+      // Runtime messages do not echo back to the view that sends them.
+      bridge = await context.newPage()
+      await bridge.goto(
+        `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#about`,
+      )
+    }
     await expect.poll(() => page.isClosed()).toBe(true)
 
     await expect
       .poll(() =>
-        sidePanel.evaluate((view, ids) => {
+        recoveryView.evaluate((view, ids) => {
           const dialog = view.document.querySelector(
             `[data-testid="${ids.accountDialog}"]`,
           )
@@ -226,7 +264,7 @@ for (const scenario of [
         userId: "1",
       })
 
-    await sidePanel.evaluate((view, ids) => {
+    await recoveryView.evaluate((view, ids) => {
       const section = view.document.querySelector(
         `[data-testid="${ids.accountFormSectionAuth}"]`,
       )
@@ -237,7 +275,7 @@ for (const scenario of [
     }, ACCOUNT_MANAGEMENT_TEST_IDS)
 
     const securityPagePromise = context.waitForEvent("page")
-    await sidePanel.evaluate((view, label) => {
+    await recoveryView.evaluate((view, label) => {
       const button = Array.from(view.document.querySelectorAll("button")).find(
         (candidate) => candidate.textContent?.trim() === label,
       )
@@ -268,7 +306,7 @@ for (const scenario of [
     await securityPage.bringToFront()
     await expect
       .poll(() =>
-        sidePanel.evaluate((view, ids) => {
+        recoveryView.evaluate((view, ids) => {
           const input = view.document.querySelector<HTMLInputElement>(
             `[data-testid="${ids.accessTokenInput}"]`,
           )
@@ -292,7 +330,7 @@ for (const scenario of [
     const copiedToken = await securityPage
       .getByLabel("Access Token")
       .inputValue()
-    await sidePanel.evaluate(
+    await recoveryView.evaluate(
       (view, { id, token }) => {
         const input = view.document.querySelector<HTMLInputElement>(
           `[data-testid="${id}"]`,
@@ -311,7 +349,7 @@ for (const scenario of [
     )
     await expect
       .poll(() =>
-        sidePanel.evaluate((view, id) => {
+        recoveryView.evaluate((view, id) => {
           const button = view.document.querySelector<HTMLButtonElement>(
             `[data-testid="${id}"]`,
           )
@@ -332,7 +370,7 @@ for (const scenario of [
       chrome.runtime.onMessage.addListener(listener)
       return observed
     }, RuntimeActionIds.AccountRefreshCompleted)
-    await sidePanel.evaluate((view, id) => {
+    await recoveryView.evaluate((view, id) => {
       view.document
         .querySelector<HTMLButtonElement>(`[data-testid="${id}"]`)
         ?.click()

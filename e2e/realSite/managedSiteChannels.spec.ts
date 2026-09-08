@@ -34,6 +34,7 @@ import {
   loginToRealNewApiSite,
   resolveNewApiRealSiteConfig,
 } from "~~/e2e/utils/realSite/newApi"
+import { createNewApiAccountRecovery } from "~~/e2e/utils/realSite/newApiAccountRecovery"
 import { readEnv } from "~~/e2e/utils/realSite/shared"
 import {
   getSub2ApiRealSiteSkipReason,
@@ -326,6 +327,11 @@ async function prepareNewApiStatusSourceAccount(
     }
   }
 
+  const recovery = createNewApiAccountRecovery({
+    page: params.page,
+    config: realSite.config,
+  })
+
   return {
     sourceAccount: await runCompatibleRealSiteAccountSaveFlow({
       page: params.page,
@@ -334,7 +340,9 @@ async function prepareNewApiStatusSourceAccount(
       sitePage: params.sitePage,
       config: realSite.config,
       siteType: SITE_TYPES.NEW_API,
+      prepareDetectedDialog: recovery.prepareDetectedDialog,
       extensionPageGuardOptions: {
+        ...recovery.extensionPageGuardOptions,
         ignoreConsoleErrorPatterns: [
           /Failed to load resource: .*status of (401|429|500)/u,
         ],
