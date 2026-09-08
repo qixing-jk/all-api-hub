@@ -384,7 +384,7 @@ describe("Veloera native managed resource", () => {
     expect(mocks.get).toHaveBeenLastCalledWith(config, channel.id, { signal })
   })
 
-  it("preserves latest Veloera-only fields and omits an unchanged masked key", async () => {
+  it("sends only a renamed field without replaying Veloera-only fields or a masked key", async () => {
     const openedDetail = {
       ...channel,
       model_prefix: "opened-",
@@ -410,15 +410,26 @@ describe("Veloera native managed resource", () => {
 
     expect(mocks.update).toHaveBeenCalledWith(
       config,
-      expect.objectContaining({
+      {
         id: channel.id,
         name: "Renamed channel",
-        model_prefix: "latest-",
-        system_prompt: "Latest policy",
-      }),
+      },
       undefined,
     )
     expect(mocks.update.mock.calls.at(-1)?.[1]).not.toHaveProperty("key")
+  })
+
+  it("includes the required region only when changing to Vertex", async () => {
+    const operations = await openVeloeraNativeResourceOperations()
+    await operations.update(
+      { ...channel, other: "us-central1", model_prefix: "keep-prefix" },
+      { ...createDraft("Vertex channel"), type: VeloeraChannelType.VertexAi },
+    )
+    expect(mocks.update.mock.calls[0][1]).toMatchObject({
+      type: VeloeraChannelType.VertexAi,
+      other: "us-central1",
+    })
+    expect(mocks.update.mock.calls[0][1]).not.toHaveProperty("model_prefix")
   })
 
   it("projects partial updates and preserves the saved key while returning rejections unchanged", async () => {

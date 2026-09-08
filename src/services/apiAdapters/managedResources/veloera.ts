@@ -212,9 +212,7 @@ const toUpdatePayload = (
   detail: VeloeraChannel,
   draft: NewApiFamilyChannelCommand,
 ): VeloeraUpdateChannelPayload => {
-  const payload: VeloeraUpdateChannelPayload = {
-    ...detail,
-    id: detail.id,
+  const editable = {
     name: draft.name.trim(),
     type: draft.type,
     base_url: draft.base_url.trim(),
@@ -224,10 +222,22 @@ const toUpdatePayload = (
     weight: draft.weight,
     status: draft.status,
   }
+  const payload: VeloeraUpdateChannelPayload = { id: detail.id }
+  // Veloera uses GORM's selective Updates, then reloads the saved channel
+  // before updating abilities. Unedited provider fields need not be replayed.
+  // https://github.com/Veloera/Veloera/blob/6525dfce816beaa270e78f0d8b762e19e54d13b8/model/channel.go
+  for (const field of Object.keys(editable) as (keyof typeof editable)[]) {
+    if (editable[field] !== detail[field]) {
+      Object.assign(payload, { [field]: editable[field] })
+    }
+  }
+  // The controller validates Vertex's region when the type is submitted.
+  // https://github.com/Veloera/Veloera/blob/6525dfce816beaa270e78f0d8b762e19e54d13b8/controller/channel.go
+  if (payload.type === VeloeraChannelType.VertexAi) {
+    payload.other = detail.other
+  }
   if (hasUsableManagedSiteChannelKey(draft.key)) {
     payload.key = draft.key.trim()
-  } else {
-    delete payload.key
   }
   return payload
 }

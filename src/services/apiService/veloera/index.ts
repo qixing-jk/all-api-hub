@@ -104,7 +104,7 @@ export async function createChannel(
  * Update a channel for a Veloera-managed site.
  *
  * Veloera expects the update payload to be flat and typically uses `group` instead
- * of `groups`. Native update planning supplies the complete provider payload.
+ * of `groups`. Native update planning supplies only changed editable fields.
  */
 export async function updateChannel(
   request: ApiServiceRequest,
