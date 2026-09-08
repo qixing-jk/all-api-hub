@@ -111,3 +111,8 @@ export interface ExecutionProgress {
   lastResult?: ExecutionItemResult
   currentChannel?: string
 }
+
+/** Live progress is owned by the configuration captured when its run started. */
+export interface ScopedExecutionProgress extends ExecutionProgress {
+  configFingerprint: string
+}

@@ -8,6 +8,10 @@ import {
   type ChannelMutationScenario,
 } from "~~/tests/services/apiAdapters/managedSites/channelMutationContract"
 import { modelResourceRef } from "~~/tests/test-utils/managedModelResource"
+import {
+  buildManagedResourceMatchCandidate,
+  matchingResourceRef,
+} from "~~/tests/test-utils/managedResourceMatching"
 
 const doneHubApi = vi.hoisted(() => ({
   listAllChannels: vi.fn(),
@@ -488,6 +492,57 @@ describe("DoneHub managed-site channel capability", () => {
     expect(
       newApiKeyManagement.doneHubKeyManagement.fetchAvailableModels,
     ).toHaveBeenCalledWith(request)
+  })
+
+  it("preserves complete DoneHub matching references when hydrating native channel secrets", async () => {
+    const { doneHubManagedSiteCapabilities } = await import(
+      "~/services/apiAdapters/managedSites/doneHub"
+    )
+    const candidates = [
+      buildManagedResourceMatchCandidate({
+        ref: matchingResourceRef(1, {
+          siteType: "done-hub",
+          scopeKey: config.baseUrl,
+        }),
+        name: "Visible key",
+        key: "sk-visible",
+      }),
+      buildManagedResourceMatchCandidate({
+        ref: matchingResourceRef(7, {
+          siteType: "done-hub",
+          scopeKey: config.baseUrl,
+        }),
+        name: "Hidden key",
+        key: "sk-***",
+      }),
+    ]
+    doneHubApi.fetchChannelRaw.mockResolvedValueOnce({
+      id: 7,
+      key: "sk-hydrated",
+    })
+
+    await expect(
+      doneHubManagedSiteCapabilities.matching.hydrateComparableKeys(
+        config,
+        candidates,
+      ),
+    ).resolves.toEqual([
+      candidates[0],
+      { ...candidates[1], key: "sk-hydrated" },
+    ])
+    expect(doneHubApi.fetchChannelRaw).toHaveBeenCalledOnce()
+    expect(doneHubApi.fetchChannelRaw).toHaveBeenCalledWith(
+      {
+        baseUrl: config.baseUrl,
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          accessToken: config.adminToken,
+          userId: config.userId,
+        },
+      },
+      7,
+    )
+    expect(candidates[1].key).toBe("sk-***")
   })
 
   it("fetches and hydrates DoneHub secret keys for masked comparable channels", async () => {

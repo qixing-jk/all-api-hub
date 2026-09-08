@@ -12,7 +12,10 @@ import {
   PROTECTION_BYPASS_USER_COMMANDS,
 } from "~/services/protectionBypass/contracts"
 import type { ManagedModelChannelSummaryListData } from "~/types/managedResourceModels"
-import type { ExecutionResult } from "~/types/managedSiteModelSync"
+import type {
+  ExecutionResult,
+  ScopedExecutionProgress,
+} from "~/types/managedSiteModelSync"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 import { buildCheckInConfig } from "~~/tests/test-utils/factories"
@@ -157,7 +160,14 @@ describe("typed runtime messaging setup", () => {
     }
     const executeSync = vi.fn().mockResolvedValue(emptyExecution)
     const executeFailedOnly = vi.fn().mockResolvedValue(emptyExecution)
-    const getProgress = vi.fn().mockReturnValue({ isRunning: true })
+    const progress: ScopedExecutionProgress = {
+      configFingerprint: "fixture-runtime-config",
+      isRunning: true,
+      total: 1,
+      completed: 0,
+      failed: 0,
+    }
+    const getProgress = vi.fn().mockReturnValue(progress)
     const updateSettings = vi.fn().mockResolvedValue(undefined)
     const channelList: ManagedModelChannelSummaryListData = {
       items: [{ ref: modelResourceRef(1), name: "Channel" }],
@@ -316,7 +326,7 @@ describe("typed runtime messaging setup", () => {
       getRegisteredHandler(onModelSyncMessage, "modelSync:getProgress")(),
     ).resolves.toEqual({
       success: true,
-      data: { isRunning: true },
+      data: progress,
     })
     await expect(
       getRegisteredHandler(

@@ -181,7 +181,7 @@ describe("runOctopusBatch", () => {
     )
   })
 
-  it("rejects foreign selections before fetching native inventory", async () => {
+  it("rejects empty and foreign selections before fetching native inventory", async () => {
     const workflow = createOctopusModelSyncCapability(
       config,
       automaticExecution(
@@ -189,6 +189,9 @@ describe("runOctopusBatch", () => {
         PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.BackgroundRecovery,
       ),
     )
+    await expect(workflow.prepareBatch([])).rejects.toMatchObject({
+      failure: { code: "validation_failed" },
+    })
     await expect(
       workflow.prepareBatch([
         modelResourceRef(1, { siteType: "octopus", scopeKey: config.baseUrl }),

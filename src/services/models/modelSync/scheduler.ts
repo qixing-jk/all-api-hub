@@ -13,7 +13,10 @@ import {
   getManagedResourceRefKey,
 } from "~/services/managedSites/managedResourceIdentity"
 import type { ManagedSiteRuntimeConfig } from "~/services/managedSites/runtimeConfig"
-import { resolveCurrentManagedSiteRuntimeConfig } from "~/services/managedSites/runtimeConfig"
+import {
+  getManagedSiteRuntimeConfigFingerprint,
+  resolveCurrentManagedSiteRuntimeConfig,
+} from "~/services/managedSites/runtimeConfig"
 import {
   getManagedSiteConfigMissingMessage,
   getManagedSiteContext,
@@ -57,8 +60,9 @@ import {
   DEFAULT_MODEL_REDIRECT_PREFERENCES,
 } from "~/types/managedSiteModelRedirect"
 import {
-  type ExecutionProgress,
+  type ExecutionItemResult,
   type ExecutionResult,
+  type ScopedExecutionProgress,
 } from "~/types/managedSiteModelSync"
 import {
   getTaskNotificationStatusFromCounts,
@@ -195,8 +199,13 @@ function classifyModelSyncResultError(
   return classifyModelSyncError(failedItem.message ?? "unknown")
 }
 
+interface ProgressOwner {
+  sequence: number
+  configFingerprint: string
+}
+
 /**
- * Scheduler for New API Model Sync.
+ * Scheduler for managed-site model sync.
  * Responsibilities:
  * - Sets up alarms to run sync on a fixed cadence (when alarms API is available).
  * - Orchestrates execution with user preferences (interval, concurrency, retries).
@@ -205,7 +214,9 @@ function classifyModelSyncResultError(
 class ModelSyncScheduler {
   static readonly ALARM_NAME = "managedSiteModelSync"
   private isInitialized = false
-  private currentProgress: ExecutionProgress | null = null
+  private currentProgress: ScopedExecutionProgress | null = null
+  private executionSequence = 0
+  private latestProgressSequence = 0
 
   /**
    * Build a ModelSyncService instance using persisted preferences and channel configs.
@@ -458,11 +469,19 @@ class ModelSyncScheduler {
     trigger: ProtectionBypassAutomaticTrigger = PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.BackgroundRecovery,
     protectionBypassExecution?: ProtectionBypassExecution,
   ): Promise<ExecutionResult> {
+    const executionSequence = ++this.executionSequence
     logger.info("Starting execution")
 
     // Get preferences from userPreferences
     const prefs = await userPreferences.getPreferences()
     const { siteType, messagesKey } = getManagedSiteContext(prefs)
+    const progressOwner: ProgressOwner = {
+      sequence: executionSequence,
+      configFingerprint: getManagedSiteRuntimeConfigFingerprint(
+        prefs,
+        siteType,
+      ),
+    }
     const selectedTarget = resolveCurrentManagedSiteRuntimeConfig(prefs)
     if (resourceRefs !== undefined) {
       if (
@@ -504,6 +523,7 @@ class ModelSyncScheduler {
         resourceRefs,
         messagesKey,
         { concurrency, maxRetries, channelProcessingTimeout },
+        progressOwner,
       )
     }
 
@@ -547,14 +567,7 @@ class ModelSyncScheduler {
         ? modelRedirectConfig.standardModels
         : ALL_PRESET_STANDARD_MODELS
 
-    // Update progress
-    this.currentProgress = {
-      isRunning: true,
-      total: channels.length,
-      completed: 0,
-      failed: 0,
-    }
-    this.notifyProgress()
+    const progress = this.startProgress(progressOwner, channels.length)
 
     let failureCount = 0
     let mappingSuccessCount = 0
@@ -651,13 +664,7 @@ class ModelSyncScheduler {
             }
           }
 
-          if (this.currentProgress) {
-            this.currentProgress.completed = payload.completed
-            this.currentProgress.lastResult = payload.lastResult
-            this.currentProgress.currentChannel = payload.lastResult.channelName
-            this.currentProgress.failed = failureCount
-          }
-          this.notifyProgress()
+          progress.update(payload.completed, payload.lastResult, failureCount)
         },
       })
 
@@ -689,9 +696,7 @@ class ModelSyncScheduler {
 
       return result
     } finally {
-      // Clear progress
-      this.currentProgress = null
-      this.notifyProgress()
+      progress.finish()
     }
   }
 
@@ -702,20 +707,14 @@ class ModelSyncScheduler {
     resourceRefs: ManagedResourceRef[] | undefined,
     messagesKey: ManagedSiteMessagesKey,
     options: ManagedResourceModelSyncBatchOptions,
+    progressOwner: ProgressOwner,
   ): Promise<ExecutionResult> {
     const batch = await workflow.prepareBatch(resourceRefs)
     if (batch.resources.length === 0) {
       throw new Error(getManagedSiteNoChannelsToSyncMessage(t, messagesKey))
     }
 
-    // Update progress
-    this.currentProgress = {
-      isRunning: true,
-      total: batch.resources.length,
-      completed: 0,
-      failed: 0,
-    }
-    this.notifyProgress()
+    const progress = this.startProgress(progressOwner, batch.resources.length)
 
     let failureCount = 0
 
@@ -734,13 +733,7 @@ class ModelSyncScheduler {
             failureCount += 1
           }
 
-          if (this.currentProgress) {
-            this.currentProgress.completed = payload.completed
-            this.currentProgress.lastResult = payload.lastResult
-            this.currentProgress.currentChannel = payload.lastResult.channelName
-            this.currentProgress.failed = failureCount
-          }
-          this.notifyProgress()
+          progress.update(payload.completed, payload.lastResult, failureCount)
         },
       })
 
@@ -764,9 +757,7 @@ class ModelSyncScheduler {
 
       return result
     } finally {
-      // Clear progress
-      this.currentProgress = null
-      this.notifyProgress()
+      progress.finish()
     }
   }
 
@@ -804,7 +795,7 @@ class ModelSyncScheduler {
    * Get current execution progress
    * @returns Latest progress snapshot or null when idle.
    */
-  getProgress(): ExecutionProgress | null {
+  getProgress(): ScopedExecutionProgress | null {
     return this.currentProgress
   }
 
@@ -890,16 +881,59 @@ class ModelSyncScheduler {
     logger.info("Settings updated", updated)
   }
 
+  /** Captures run ownership so older callbacks cannot overwrite or clear newer progress. */
+  private startProgress(owner: ProgressOwner, total: number) {
+    let progress: ScopedExecutionProgress = {
+      configFingerprint: owner.configFingerprint,
+      isRunning: true,
+      total,
+      completed: 0,
+      failed: 0,
+    }
+    // Preserve invocation order even when an earlier inventory request finishes later.
+    if (owner.sequence > this.latestProgressSequence) {
+      this.latestProgressSequence = owner.sequence
+      this.currentProgress = progress
+      this.notifyProgress(progress)
+    }
+
+    return {
+      update: (
+        completed: number,
+        lastResult: ExecutionItemResult,
+        failed: number,
+      ) => {
+        if (this.currentProgress !== progress) return
+
+        progress = {
+          ...progress,
+          completed,
+          lastResult,
+          currentChannel: lastResult.channelName,
+          failed,
+        }
+        this.currentProgress = progress
+        this.notifyProgress(progress)
+      },
+      finish: () => {
+        if (this.currentProgress !== progress) return
+
+        this.currentProgress = null
+        this.notifyProgress({ ...progress, isRunning: false })
+      },
+    }
+  }
+
   /**
    * Notify frontend about progress.
    * Swallows missing-receiver errors because UI may not be open.
    */
-  private notifyProgress() {
+  private notifyProgress(progress: ScopedExecutionProgress) {
     try {
       void sendRuntimeMessage(
         {
           type: "MANAGED_SITE_MODEL_SYNC_PROGRESS",
-          payload: this.currentProgress,
+          payload: progress,
         },
         { maxAttempts: 1 },
       ).catch(() => {

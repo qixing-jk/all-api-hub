@@ -444,13 +444,18 @@ export default function ManagedSiteModelSync({
         ModelSyncMessageTypes.GetProgress,
       )
 
-      if (response.success && generation === contextGenerationRef.current) {
+      if (
+        response.success &&
+        generation === contextGenerationRef.current &&
+        (!response.data ||
+          response.data.configFingerprint === managedSiteConfigFingerprint)
+      ) {
         setProgress(response.data)
       }
     } catch (error) {
       logger.error("Failed to load progress", error)
     }
-  }, [])
+  }, [managedSiteConfigFingerprint])
 
   const loadNextRun = useCallback(async () => {
     const generation = contextGenerationRef.current
@@ -561,17 +566,21 @@ export default function ManagedSiteModelSync({
   const handleManualChannelRefresh = useCallback(async () => {
     if (isChannelsLoading) return
 
+    const generation = contextGenerationRef.current
     setIsManualChannelRefresh(true)
     try {
       await loadChannels()
     } finally {
-      setIsManualChannelRefresh(false)
+      if (generation === contextGenerationRef.current) {
+        setIsManualChannelRefresh(false)
+      }
     }
   }, [isChannelsLoading, loadChannels])
 
   const handleRefresh = async () => {
     if (isManualRefreshPending) return
 
+    const generation = contextGenerationRef.current
     setIsManualRefreshPending(true)
     try {
       const tracker = startModelSyncAnalytics({
@@ -581,7 +590,9 @@ export default function ManagedSiteModelSync({
       })
 
       const itemCount = await loadLastExecution()
-      await Promise.all([loadProgress(), loadNextRun(), loadPreferences()])
+      if (generation === contextGenerationRef.current) {
+        await Promise.all([loadProgress(), loadNextRun(), loadPreferences()])
+      }
 
       completeModelSyncActionAnalytics(
         tracker,
@@ -598,7 +609,9 @@ export default function ManagedSiteModelSync({
         },
       )
     } finally {
-      setIsManualRefreshPending(false)
+      if (generation === contextGenerationRef.current) {
+        setIsManualRefreshPending(false)
+      }
     }
   }
 
@@ -658,8 +671,13 @@ export default function ManagedSiteModelSync({
     void loadPreferences()
 
     // Listen for progress updates
+    const generation = contextGenerationRef.current
     const handleMessage = (message: any) => {
-      if (message.type === "MANAGED_SITE_MODEL_SYNC_PROGRESS") {
+      if (
+        generation === contextGenerationRef.current &&
+        message.type === "MANAGED_SITE_MODEL_SYNC_PROGRESS" &&
+        message.payload?.configFingerprint === managedSiteConfigFingerprint
+      ) {
         setProgress(message.payload)
 
         // If sync completed, reload execution results

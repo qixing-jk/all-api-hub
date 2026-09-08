@@ -14,6 +14,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import ManagedSiteModelSync from "~/features/ManagedSiteModelSync/ManagedSiteModelSync"
 import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
+import { getManagedSiteRuntimeConfigFingerprint } from "~/services/managedSites/runtimeConfig"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -69,6 +70,14 @@ const pageRef = (
   id: string | number,
   overrides: Partial<Omit<ManagedResourceRef, "resourceId">> = {},
 ) => modelResourceRef(id, { scopeKey: "https://admin.example", ...overrides })
+
+const currentConfigFingerprint = () => {
+  const context = mockUseUserPreferencesContext()
+  return getManagedSiteRuntimeConfigFingerprint(
+    context.preferences,
+    context.managedSiteType,
+  )
+}
 
 const modelSyncExecution = userCommandExecution(
   PROTECTION_BYPASS_USER_COMMANDS.SyncManagedSiteModels,
@@ -331,7 +340,13 @@ describe("ManagedSiteModelSync page", () => {
           case ModelSyncMessageTypes.GetProgress:
             return {
               success: true,
-              data: { isRunning: false, completed: 0, total: 0, failed: 0 },
+              data: {
+                configFingerprint: currentConfigFingerprint(),
+                isRunning: false,
+                completed: 0,
+                total: 0,
+                failed: 0,
+              },
             }
           case ModelSyncMessageTypes.GetNextRun:
             return {
@@ -736,13 +751,25 @@ describe("ManagedSiteModelSync page", () => {
     act(() => {
       listener({
         type: "MANAGED_SITE_MODEL_SYNC_PROGRESS",
-        payload: { isRunning: true, completed: 0, total: 1, failed: 0 },
+        payload: {
+          configFingerprint: currentConfigFingerprint(),
+          isRunning: true,
+          completed: 0,
+          total: 1,
+          failed: 0,
+        },
       })
     })
     act(() => {
       listener({
         type: "MANAGED_SITE_MODEL_SYNC_PROGRESS",
-        payload: { isRunning: false, completed: 1, total: 1, failed: 0 },
+        payload: {
+          configFingerprint: currentConfigFingerprint(),
+          isRunning: false,
+          completed: 1,
+          total: 1,
+          failed: 0,
+        },
       })
     })
 
@@ -815,7 +842,13 @@ describe("ManagedSiteModelSync page", () => {
           case ModelSyncMessageTypes.GetProgress:
             return {
               success: true,
-              data: { isRunning: false, completed: 0, total: 0, failed: 0 },
+              data: {
+                configFingerprint: currentConfigFingerprint(),
+                isRunning: false,
+                completed: 0,
+                total: 0,
+                failed: 0,
+              },
             }
           case ModelSyncMessageTypes.GetNextRun:
             return { success: true, data: { nextScheduledAt: null } }
@@ -988,7 +1021,13 @@ describe("ManagedSiteModelSync page", () => {
     act(() => {
       listener({
         type: "MANAGED_SITE_MODEL_SYNC_PROGRESS",
-        payload: { isRunning: false, completed: 2, total: 2, failed: 0 },
+        payload: {
+          configFingerprint: currentConfigFingerprint(),
+          isRunning: false,
+          completed: 2,
+          total: 2,
+          failed: 0,
+        },
       })
     })
     await waitFor(() => expect(lastExecutionCalls).toBe(2))
@@ -1058,7 +1097,13 @@ describe("ManagedSiteModelSync page", () => {
           case ModelSyncMessageTypes.GetProgress:
             return {
               success: true,
-              data: { isRunning: false, completed: 0, total: 0, failed: 0 },
+              data: {
+                configFingerprint: currentConfigFingerprint(),
+                isRunning: false,
+                completed: 0,
+                total: 0,
+                failed: 0,
+              },
             }
           case ModelSyncMessageTypes.GetNextRun:
             return {
@@ -1213,7 +1258,13 @@ describe("ManagedSiteModelSync page", () => {
 
     progressRefresh.resolve({
       success: true,
-      data: { isRunning: false, completed: 0, total: 0, failed: 0 },
+      data: {
+        configFingerprint: currentConfigFingerprint(),
+        isRunning: false,
+        completed: 0,
+        total: 0,
+        failed: 0,
+      },
     })
     nextRunRefresh.resolve({
       success: true,
@@ -1281,7 +1332,13 @@ describe("ManagedSiteModelSync page", () => {
     act(() => {
       listener({
         type: "MANAGED_SITE_MODEL_SYNC_PROGRESS",
-        payload: { isRunning: false, completed: 2, total: 2, failed: 0 },
+        payload: {
+          configFingerprint: currentConfigFingerprint(),
+          isRunning: false,
+          completed: 2,
+          total: 2,
+          failed: 0,
+        },
       })
     })
     await waitFor(() => expect(lastExecutionCalls).toBe(3))
@@ -1335,7 +1392,13 @@ describe("ManagedSiteModelSync page", () => {
     act(() => {
       listener({
         type: "MANAGED_SITE_MODEL_SYNC_PROGRESS",
-        payload: { isRunning: false, completed: 1, total: 1, failed: 0 },
+        payload: {
+          configFingerprint: currentConfigFingerprint(),
+          isRunning: false,
+          completed: 1,
+          total: 1,
+          failed: 0,
+        },
       })
     })
     await waitFor(() => expect(lastExecutionCalls).toBe(3))
@@ -1774,7 +1837,13 @@ describe("ManagedSiteModelSync page", () => {
           case ModelSyncMessageTypes.GetProgress:
             return {
               success: true,
-              data: { isRunning: false, completed: 0, total: 0, failed: 0 },
+              data: {
+                configFingerprint: currentConfigFingerprint(),
+                isRunning: false,
+                completed: 0,
+                total: 0,
+                failed: 0,
+              },
             }
           case ModelSyncMessageTypes.GetNextRun:
             return { success: true, data: { nextScheduledAt: null } }
@@ -1913,41 +1982,48 @@ describe("ManagedSiteModelSync page", () => {
     )
   })
 
-  it("clears a current selection when a same-ID deep link belongs to another deployment", async () => {
-    const view = render(
-      <ManagedSiteModelSync
-        routeParams={{ resourceRef: JSON.stringify(pageRef(201)) }}
-      />,
-    )
-    const row = (await screen.findByText("Manual Alpha#201")).closest("tr")!
-    expect(within(row).getByRole("checkbox")).toBeChecked()
-
-    view.rerender(
-      <I18nextProvider i18n={testI18n}>
+  it.each([
+    [
+      "a different deployment",
+      JSON.stringify(pageRef(201, { scopeKey: "https://other.example" })),
+    ],
+    ["malformed JSON", "{not-json"],
+  ])(
+    "clears a current selection when the deep link contains %s",
+    async (_case, resourceRef) => {
+      const view = render(
         <ManagedSiteModelSync
-          routeParams={{
-            resourceRef: JSON.stringify(
-              pageRef(201, { scopeKey: "https://other.example" }),
-            ),
-          }}
-        />
-      </I18nextProvider>,
-    )
+          routeParams={{ resourceRef: JSON.stringify(pageRef(201)) }}
+        />,
+      )
+      const row = (await screen.findByText("Manual Alpha#201")).closest("tr")!
+      expect(within(row).getByRole("checkbox")).toBeChecked()
 
-    expect(await screen.findByRole("status")).toHaveTextContent(
-      "managedSiteModelSync:execution.table.resourceUnavailable",
-    )
-    expect(within(row).getByRole("checkbox")).not.toBeChecked()
-    expect(
-      screen.getByRole("button", {
-        name: "managedSiteModelSync:execution.actions.runSelected (0)",
-      }),
-    ).toBeDisabled()
-    expect(mockSendRuntimeMessage).not.toHaveBeenCalledWith(
-      ModelSyncMessageTypes.TriggerSelected,
-      expect.anything(),
-    )
-  })
+      view.rerender(
+        <I18nextProvider i18n={testI18n}>
+          <ManagedSiteModelSync
+            routeParams={{
+              resourceRef,
+            }}
+          />
+        </I18nextProvider>,
+      )
+
+      expect(await screen.findByRole("status")).toHaveTextContent(
+        "managedSiteModelSync:execution.table.resourceUnavailable",
+      )
+      expect(within(row).getByRole("checkbox")).not.toBeChecked()
+      expect(
+        screen.getByRole("button", {
+          name: "managedSiteModelSync:execution.actions.runSelected (0)",
+        }),
+      ).toBeDisabled()
+      expect(mockSendRuntimeMessage).not.toHaveBeenCalledWith(
+        ModelSyncMessageTypes.TriggerSelected,
+        expect.anything(),
+      )
+    },
+  )
 
   it("reloads and clears selection when the deployment URL changes within one site type", async () => {
     let context = mockUseUserPreferencesContext.getMockImplementation()!()
@@ -2025,6 +2101,7 @@ describe("ManagedSiteModelSync page", () => {
     async (field, value) => {
       let context = mockUseUserPreferencesContext.getMockImplementation()!()
       mockUseUserPreferencesContext.mockImplementation(() => context)
+      const oldFingerprint = currentConfigFingerprint()
       const originalImplementation =
         mockSendRuntimeMessage.getMockImplementation()!
       const staleResponses = new Map<
@@ -2075,7 +2152,13 @@ describe("ManagedSiteModelSync page", () => {
       await act(async () => {
         staleResponses.get(ModelSyncMessageTypes.GetProgress)!.resolve({
           success: true,
-          data: { isRunning: true, completed: 1, total: 10, failed: 0 },
+          data: {
+            configFingerprint: oldFingerprint,
+            isRunning: true,
+            completed: 1,
+            total: 10,
+            failed: 0,
+          },
         })
         staleResponses.get(ModelSyncMessageTypes.GetNextRun)!.resolve({
           success: true,
@@ -2104,6 +2187,249 @@ describe("ManagedSiteModelSync page", () => {
       ).toBeEnabled()
     },
   )
+
+  it.each([
+    {
+      tab: "history",
+      messageType: ModelSyncMessageTypes.GetLastExecution,
+      rowLabel: "Alpha#101",
+      rejectOld: false,
+    },
+    {
+      tab: "manual",
+      messageType: ModelSyncMessageTypes.ListChannels,
+      rowLabel: "Manual Alpha#201",
+      rejectOld: false,
+    },
+    {
+      tab: "manual",
+      messageType: ModelSyncMessageTypes.ListChannels,
+      rowLabel: "Manual Alpha#201",
+      rejectOld: true,
+    },
+  ])(
+    "keeps a new $tab refresh busy when the previous configuration's request settles (rejected: $rejectOld)",
+    async ({ tab, messageType, rowLabel, rejectOld }) => {
+      const user = userEvent.setup()
+      let context = mockUseUserPreferencesContext.getMockImplementation()!()
+      mockUseUserPreferencesContext.mockImplementation(() => context)
+      const originalImplementation =
+        mockSendRuntimeMessage.getMockImplementation()!
+      const oldRefresh = createDeferred<unknown>()
+      const newRefresh = createDeferred<unknown>()
+      let requests = 0
+      mockSendRuntimeMessage.mockImplementation(
+        async (type: string, data?: unknown) => {
+          if (type === messageType) {
+            requests += 1
+            if (requests === 2) return oldRefresh.promise
+            if (requests === 4) return newRefresh.promise
+          }
+          return originalImplementation(type, data)
+        },
+      )
+      const view = render(<ManagedSiteModelSync routeParams={{ tab }} />)
+      expect(await screen.findByText(rowLabel)).toBeVisible()
+      const refreshButton = () =>
+        screen
+          .getAllByRole("button", {
+            name: "managedSiteModelSync:execution.actions.refresh",
+          })
+          .at(-1)!
+      await user.click(refreshButton())
+      await waitFor(() => expect(requests).toBe(2))
+
+      context = {
+        ...context,
+        preferences: {
+          ...context.preferences,
+          newApi: { ...context.preferences.newApi, userId: "2" },
+        },
+      }
+      view.rerender(
+        <I18nextProvider i18n={testI18n}>
+          <ManagedSiteModelSync routeParams={{ tab }} />
+        </I18nextProvider>,
+      )
+      if (tab === "manual") {
+        await user.click(
+          await screen.findByRole("tab", {
+            name: "managedSiteModelSync:execution.tabs.manual",
+          }),
+        )
+      }
+      expect(await screen.findByText(rowLabel)).toBeVisible()
+      await waitFor(() => expect(requests).toBe(3))
+      await user.click(refreshButton())
+      await waitFor(() => expect(requests).toBe(4))
+
+      await act(async () => {
+        if (rejectOld) {
+          oldRefresh.reject(new Error("Old channel request failed"))
+          await expect(oldRefresh.promise).rejects.toThrow(
+            "Old channel request failed",
+          )
+        } else {
+          oldRefresh.resolve(await originalImplementation(messageType))
+          await oldRefresh.promise
+        }
+      })
+
+      const refreshingButton = screen.getByRole("button", {
+        name: "common:status.refreshing",
+      })
+      expect(refreshingButton).toHaveAttribute("aria-busy", "true")
+      expect(refreshingButton).toBeDisabled()
+      expect(toast.error).not.toHaveBeenCalled()
+      expect(
+        screen.queryByText("Old channel request failed"),
+      ).not.toBeInTheDocument()
+      await user.click(refreshingButton)
+      expect(requests).toBe(4)
+
+      await act(async () => {
+        newRefresh.resolve(await originalImplementation(messageType))
+        await newRefresh.promise
+      })
+      expect(refreshButton()).toBeEnabled()
+      expect(refreshButton()).not.toHaveAttribute("aria-busy")
+    },
+  )
+
+  it("ignores progress queried from a run owned by the previous configuration", async () => {
+    let context = mockUseUserPreferencesContext.getMockImplementation()!()
+    mockUseUserPreferencesContext.mockImplementation(() => context)
+    const oldFingerprint = currentConfigFingerprint()
+    const originalImplementation =
+      mockSendRuntimeMessage.getMockImplementation()!
+    mockSendRuntimeMessage.mockImplementation(
+      async (type: string, data?: unknown) => {
+        if (
+          type === ModelSyncMessageTypes.GetProgress &&
+          context.preferences.newApi.userId === "2"
+        ) {
+          return {
+            success: true,
+            data: {
+              configFingerprint: oldFingerprint,
+              isRunning: true,
+              completed: 1,
+              total: 2,
+              failed: 0,
+            },
+          }
+        }
+        return originalImplementation(type, data)
+      },
+    )
+    const view = render(<ManagedSiteModelSync />)
+    expect(await screen.findByText("Alpha#101")).toBeVisible()
+
+    context = {
+      ...context,
+      preferences: {
+        ...context.preferences,
+        newApi: { ...context.preferences.newApi, userId: "2" },
+      },
+    }
+    view.rerender(
+      <I18nextProvider i18n={testI18n}>
+        <ManagedSiteModelSync />
+      </I18nextProvider>,
+    )
+    expect(await screen.findByText("Alpha#101")).toBeVisible()
+    expect(
+      screen.queryByText("managedSiteModelSync:execution.status.running"),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("button", {
+        name: "managedSiteModelSync:execution.actions.runAll",
+      }),
+    ).toBeEnabled()
+  })
+
+  it("ignores delayed progress broadcasts and completion from the previous configuration", async () => {
+    const addListener = vi.spyOn(browser.runtime.onMessage, "addListener")
+    let context = mockUseUserPreferencesContext.getMockImplementation()!()
+    mockUseUserPreferencesContext.mockImplementation(() => context)
+    const oldFingerprint = currentConfigFingerprint()
+    const view = render(<ManagedSiteModelSync />)
+    expect(await screen.findByText("Alpha#101")).toBeVisible()
+    const oldListener = addListener.mock.calls.at(-1)![0] as (
+      message: unknown,
+    ) => void
+
+    context = {
+      ...context,
+      preferences: {
+        ...context.preferences,
+        newApi: { ...context.preferences.newApi, userId: "2" },
+      },
+    }
+    view.rerender(
+      <I18nextProvider i18n={testI18n}>
+        <ManagedSiteModelSync />
+      </I18nextProvider>,
+    )
+    expect(await screen.findByText("Alpha#101")).toBeVisible()
+    const listener = addListener.mock.calls.at(-1)![0] as (
+      message: unknown,
+    ) => void
+    const currentProgress = {
+      configFingerprint: currentConfigFingerprint(),
+      isRunning: true,
+      completed: 1,
+      total: 2,
+      failed: 0,
+      currentChannel: "Current task",
+    }
+    await act(async () => {
+      listener({
+        type: "MANAGED_SITE_MODEL_SYNC_PROGRESS",
+        payload: currentProgress,
+      })
+    })
+    expect(await screen.findByText(/Current task/)).toBeVisible()
+    const requestsBeforeStaleEvents = mockSendRuntimeMessage.mock.calls.length
+
+    await act(async () => {
+      for (const receive of [oldListener, listener]) {
+        receive({
+          type: "MANAGED_SITE_MODEL_SYNC_PROGRESS",
+          payload: {
+            ...currentProgress,
+            configFingerprint: oldFingerprint,
+            currentChannel: "Stale task",
+          },
+        })
+        receive({
+          type: "MANAGED_SITE_MODEL_SYNC_PROGRESS",
+          payload: {
+            ...currentProgress,
+            configFingerprint: oldFingerprint,
+            isRunning: false,
+          },
+        })
+      }
+    })
+
+    expect(screen.getByText(/Current task/)).toBeVisible()
+    expect(screen.queryByText(/Stale task/)).not.toBeInTheDocument()
+    expect(mockSendRuntimeMessage).toHaveBeenCalledTimes(
+      requestsBeforeStaleEvents,
+    )
+
+    await act(async () => {
+      listener({
+        type: "MANAGED_SITE_MODEL_SYNC_PROGRESS",
+        payload: { ...currentProgress, isRunning: false },
+      })
+    })
+    expect(screen.queryByText(/Current task/)).not.toBeInTheDocument()
+    expect(mockSendRuntimeMessage.mock.calls.length).toBeGreaterThan(
+      requestsBeforeStaleEvents,
+    )
+  })
 
   it("uses route search params to prefilter both history and manual tabs", async () => {
     const user = userEvent.setup()
@@ -2181,7 +2507,13 @@ describe("ManagedSiteModelSync page", () => {
           case ModelSyncMessageTypes.GetProgress:
             return {
               success: true,
-              data: { isRunning: false, completed: 0, total: 0, failed: 0 },
+              data: {
+                configFingerprint: currentConfigFingerprint(),
+                isRunning: false,
+                completed: 0,
+                total: 0,
+                failed: 0,
+              },
             }
           case ModelSyncMessageTypes.GetNextRun:
             return { success: true, data: { nextScheduledAt: null } }
@@ -2418,7 +2750,13 @@ describe("ManagedSiteModelSync page", () => {
           case ModelSyncMessageTypes.GetProgress:
             return {
               success: true,
-              data: { isRunning: false, completed: 0, total: 0, failed: 0 },
+              data: {
+                configFingerprint: currentConfigFingerprint(),
+                isRunning: false,
+                completed: 0,
+                total: 0,
+                failed: 0,
+              },
             }
           case ModelSyncMessageTypes.GetNextRun:
             return {
@@ -2634,7 +2972,13 @@ describe("ManagedSiteModelSync page", () => {
           case ModelSyncMessageTypes.GetProgress:
             return {
               success: true,
-              data: { isRunning: true, completed: 1, total: 2, failed: 0 },
+              data: {
+                configFingerprint: currentConfigFingerprint(),
+                isRunning: true,
+                completed: 1,
+                total: 2,
+                failed: 0,
+              },
             }
           case ModelSyncMessageTypes.GetNextRun:
             return { success: true, data: { nextScheduledAt: null } }
@@ -2942,7 +3286,13 @@ describe("ManagedSiteModelSync page", () => {
           case ModelSyncMessageTypes.GetProgress:
             return {
               success: true,
-              data: { isRunning: false, completed: 0, total: 0, failed: 0 },
+              data: {
+                configFingerprint: currentConfigFingerprint(),
+                isRunning: false,
+                completed: 0,
+                total: 0,
+                failed: 0,
+              },
             }
           case ModelSyncMessageTypes.GetNextRun:
             return { success: true, data: { nextScheduledAt: null } }
@@ -2990,7 +3340,13 @@ describe("ManagedSiteModelSync page", () => {
           case ModelSyncMessageTypes.GetProgress:
             return {
               success: true,
-              data: { isRunning: false, completed: 0, total: 0, failed: 0 },
+              data: {
+                configFingerprint: currentConfigFingerprint(),
+                isRunning: false,
+                completed: 0,
+                total: 0,
+                failed: 0,
+              },
             }
           case ModelSyncMessageTypes.GetNextRun:
             return { success: true, data: { nextScheduledAt: null } }
@@ -3663,7 +4019,13 @@ describe("ManagedSiteModelSync page", () => {
           case ModelSyncMessageTypes.GetProgress:
             return {
               success: true,
-              data: { isRunning: false, completed: 0, total: 0, failed: 0 },
+              data: {
+                configFingerprint: currentConfigFingerprint(),
+                isRunning: false,
+                completed: 0,
+                total: 0,
+                failed: 0,
+              },
             }
           case ModelSyncMessageTypes.GetNextRun:
             return { success: true, data: { nextScheduledAt: null } }
@@ -3799,6 +4161,7 @@ describe("ManagedSiteModelSync page", () => {
       listener({
         type: "MANAGED_SITE_MODEL_SYNC_PROGRESS",
         payload: {
+          configFingerprint: currentConfigFingerprint(),
           isRunning: true,
           completed: 1,
           total: 2,
@@ -3817,6 +4180,7 @@ describe("ManagedSiteModelSync page", () => {
       listener({
         type: "MANAGED_SITE_MODEL_SYNC_PROGRESS",
         payload: {
+          configFingerprint: currentConfigFingerprint(),
           isRunning: false,
           completed: 2,
           total: 2,
@@ -3853,6 +4217,7 @@ describe("ManagedSiteModelSync page", () => {
     try {
       const addListener = vi.spyOn(browser.runtime.onMessage, "addListener")
       let progressSnapshot = {
+        configFingerprint: currentConfigFingerprint(),
         isRunning: false,
         completed: 0,
         total: 0,
@@ -3912,6 +4277,7 @@ describe("ManagedSiteModelSync page", () => {
         listener({
           type: "MANAGED_SITE_MODEL_SYNC_PROGRESS",
           payload: {
+            configFingerprint: currentConfigFingerprint(),
             isRunning: true,
             completed: 0,
             total: 361,
@@ -3925,6 +4291,7 @@ describe("ManagedSiteModelSync page", () => {
       ).length
 
       progressSnapshot = {
+        configFingerprint: currentConfigFingerprint(),
         isRunning: true,
         completed: 5,
         total: 361,

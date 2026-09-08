@@ -352,6 +352,87 @@ describe("Model redirect bulk clear flow", () => {
     expect(toast.success).toHaveBeenCalled()
   })
 
+  it("preserves hidden selections while toggling and bulk-selecting filtered resource references", async () => {
+    const user = userEvent.setup()
+    mockedModelRedirectService.listManagedSiteChannels.mockResolvedValue({
+      success: true,
+      channels: [
+        {
+          ref: modelResourceRef(10),
+          name: "Shared",
+          modelMapping: '{"a":"b"}',
+        },
+        { ref: modelResourceRef(2), name: "Shared", modelMapping: '{"a":"b"}' },
+        {
+          ref: modelResourceRef(3),
+          name: "Unfiltered",
+          modelMapping: '{"a":"b"}',
+        },
+      ],
+      errors: [],
+    })
+    mockedModelRedirectService.clearChannelModelMappings.mockResolvedValue({
+      success: true,
+      totalSelected: 2,
+      clearedChannels: 2,
+      skippedChannels: 0,
+      failedChannels: 0,
+      results: [],
+      errors: [],
+    })
+    renderSubject()
+    await user.click(
+      await screen.findByRole("button", { name: t("bulkClear.action") }),
+    )
+
+    const second = await screen.findByRole("checkbox", { name: "Shared (#2)" })
+    const tenth = screen.getByRole("checkbox", { name: "Shared (#10)" })
+    const hidden = screen.getByRole("checkbox", { name: "Unfiltered (#3)" })
+    expect(
+      screen.getAllByRole("checkbox", { name: /^(Shared|Unfiltered) \(#/ }),
+    ).toEqual([second, tenth, hidden])
+    await user.click(second)
+    expect(second).not.toBeChecked()
+    await user.click(second)
+    expect(second).toBeChecked()
+
+    const search = screen.getByPlaceholderText(
+      t("bulkClear.search.placeholder"),
+    )
+    await user.type(search, "Shared")
+    await user.click(
+      screen.getByRole("button", { name: t("bulkClear.actions.selectNone") }),
+    )
+    expect(second).not.toBeChecked()
+    expect(tenth).not.toBeChecked()
+    await user.clear(search)
+    expect(
+      screen.getByRole("checkbox", { name: "Unfiltered (#3)" }),
+    ).toBeChecked()
+
+    await user.type(search, "Shared")
+    await user.click(
+      screen.getByRole("button", { name: t("bulkClear.actions.selectAll") }),
+    )
+    expect(second).toBeChecked()
+    expect(tenth).toBeChecked()
+    await user.click(tenth)
+    await user.click(
+      screen.getByRole("button", { name: t("bulkClear.actions.continue") }),
+    )
+    await user.click(
+      await screen.findByRole("button", {
+        name: t("bulkClear.actions.confirm"),
+      }),
+    )
+
+    await waitFor(() => {
+      expect(
+        mockedModelRedirectService.clearChannelModelMappings,
+      ).toHaveBeenCalledWith([modelResourceRef(2), modelResourceRef(3)])
+    })
+  })
+
   it("filters channels by search and previews mapping", async () => {
     renderSubject()
 

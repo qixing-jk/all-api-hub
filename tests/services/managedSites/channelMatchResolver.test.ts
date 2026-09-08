@@ -984,6 +984,52 @@ describe("resolveManagedSiteChannelMatch", () => {
     )
   })
 
+  it.each(["", "sk-***"])(
+    "reuses an unavailable secret response (%j) without claiming an exact match",
+    async (unavailableKey) => {
+      const candidate = buildManagedResourceMatchCandidate({
+        ref: matchingResourceRef(72),
+        base_url: "https://api.example.com",
+        models: "gpt-4",
+        key: "sk-***",
+      })
+      const fetchSecretKey = vi.fn().mockResolvedValue(unavailableKey)
+      const managedSite = createManagedSiteCapabilitiesStub({
+        matching: {
+          search: vi.fn().mockResolvedValue({
+            items: [candidate],
+            total: 1,
+            type_counts: {},
+          }),
+          fetchSecretKey,
+        },
+      })
+      const requestCache = createManagedSiteChannelMatchRequestCache()
+      const params = {
+        managedSite,
+        managedConfig,
+        accountBaseUrl: candidate.base_url,
+        models: ["gpt-4"],
+        key: "sk-match",
+        resolveHiddenKeys: true,
+        requestCache,
+      }
+
+      const first = await resolveManagedSiteChannelMatch(params)
+      const second = await resolveManagedSiteChannelMatch(params)
+
+      expect(fetchSecretKey).toHaveBeenCalledOnce()
+      expect(requestCache.resolvedChannelKeysByResourceKey).toEqual({
+        [getManagedResourceRefKey(candidate.ref)]: unavailableKey,
+      })
+      for (const result of [first, second]) {
+        expect(result.key.matched).toBe(false)
+        expect(result.models.channel?.ref).toEqual(candidate.ref)
+        expect(getManagedSiteChannelExactMatch(result)).toBeNull()
+      }
+    },
+  )
+
   it("reuses cached channel searches and hidden-key resolutions across concurrent match checks", async () => {
     const maskedCandidate = buildManagedResourceMatchCandidate({
       ref: matchingResourceRef(72),

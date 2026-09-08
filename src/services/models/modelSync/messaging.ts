@@ -8,8 +8,8 @@ import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
 import type { ManagedModelChannelSummaryListData } from "~/types/managedResourceModels"
 import type {
   ExecutionHistoryResult,
-  ExecutionProgress,
   ExecutionResult,
+  ScopedExecutionProgress,
 } from "~/types/managedSiteModelSync"
 
 import type { managedSiteModelSyncStorage } from "./storage"
@@ -67,7 +67,7 @@ interface ModelSyncProtocolMap {
     data: ModelSyncTriggerRequest,
   ): RuntimeMessageResponse<ExecutionResult>
   [ModelSyncMessageTypes.GetLastExecution](): RuntimeMessageResponse<ExecutionHistoryResult | null>
-  [ModelSyncMessageTypes.GetProgress](): RuntimeMessageResponse<ExecutionProgress | null>
+  [ModelSyncMessageTypes.GetProgress](): RuntimeMessageResponse<ScopedExecutionProgress | null>
   [ModelSyncMessageTypes.UpdateSettings](
     data: ModelSyncUpdateSettingsRequest,
   ): ModelSyncMutationResponse

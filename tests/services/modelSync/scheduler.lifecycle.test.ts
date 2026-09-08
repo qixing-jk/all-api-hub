@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { getManagedSiteRuntimeConfigFingerprint } from "~/services/managedSites/runtimeConfig"
 import { modelSyncScheduler } from "~/services/models/modelSync/scheduler"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import {
@@ -17,6 +18,10 @@ import {
   PROTECTION_BYPASS_FEATURES,
   PROTECTION_BYPASS_SURFACES,
 } from "~/services/protectionBypass/contracts"
+import type {
+  BatchExecutionOptions,
+  ExecutionResult,
+} from "~/types/managedSiteModelSync"
 import { automaticExecution } from "~~/tests/services/protectionBypass/fixtures"
 import { modelResourceRef } from "~~/tests/test-utils/managedModelResource"
 
@@ -154,6 +159,14 @@ vi.mock("~/services/managedSites/providers/octopus", () => ({
   buildChannelPayload: vi.fn(),
 }))
 
+const createDeferred = <T>() => {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((resolvePromise) => {
+    resolve = resolvePromise
+  })
+  return { promise, resolve }
+}
+
 describe("modelSyncScheduler lifecycle and edge flows", () => {
   beforeEach(() => {
     vi.restoreAllMocks()
@@ -200,6 +213,235 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
       },
     })
   })
+
+  it.each([SITE_TYPES.NEW_API, SITE_TYPES.OCTOPUS])(
+    "scopes %s progress to its captured configuration and preserves a newer run",
+    async (siteType) => {
+      const initialPreferences = await mocks.getPreferences()
+      let preferences = {
+        ...initialPreferences,
+        managedSiteType: siteType,
+        octopus: {
+          baseUrl: "https://example.com",
+          username: "admin",
+          password: "first-password",
+        },
+      }
+      mocks.getPreferences.mockImplementation(async () => preferences)
+      const ref = modelResourceRef(1, { siteType })
+      const resource = { ref, name: "Known channel" }
+      const batches: Array<{
+        options: BatchExecutionOptions
+        completion: ReturnType<typeof createDeferred<ExecutionResult>>
+      }> = []
+      const runBatch = async (options: BatchExecutionOptions) => {
+        const completion = createDeferred<ExecutionResult>()
+        batches.push({ options, completion })
+        return completion.promise
+      }
+      if (siteType === SITE_TYPES.OCTOPUS) {
+        mocks.prepareOctopusBatch
+          .mockResolvedValueOnce({ resources: [resource], run: runBatch })
+          .mockResolvedValueOnce({ resources: [resource], run: runBatch })
+      } else {
+        mocks.listChannels.mockResolvedValue({ items: [resource], total: 1 })
+        mocks.runBatch
+          .mockImplementationOnce((_channels, options) => runBatch(options))
+          .mockImplementationOnce((_channels, options) => runBatch(options))
+      }
+      const lastResult = {
+        resourceRef: ref,
+        channelName: "Known channel",
+        ok: true,
+        attempts: 1,
+        finishedAt: 1,
+      }
+      const result: ExecutionResult = {
+        items: [lastResult],
+        statistics: {
+          total: 1,
+          successCount: 1,
+          failureCount: 0,
+          durationMs: 1,
+          startedAt: 0,
+          endedAt: 1,
+        },
+      }
+      const firstFingerprint = getManagedSiteRuntimeConfigFingerprint(
+        preferences,
+        siteType,
+      )
+      const firstRun = modelSyncScheduler.executeSync()
+      await vi.waitFor(() => expect(batches).toHaveLength(1))
+
+      preferences = {
+        ...preferences,
+        newApi: { ...preferences.newApi, userId: "2" },
+        octopus: { ...preferences.octopus, password: "second-password" },
+      }
+      await batches[0].options.onProgress?.({
+        completed: 1,
+        total: 1,
+        lastResult,
+      })
+      expect(modelSyncScheduler.getProgress()).toMatchObject({
+        configFingerprint: firstFingerprint,
+        completed: 1,
+      })
+
+      const secondFingerprint = getManagedSiteRuntimeConfigFingerprint(
+        preferences,
+        siteType,
+      )
+      expect(secondFingerprint).not.toBe(firstFingerprint)
+      const secondRun = modelSyncScheduler.executeSync()
+      await vi.waitFor(() => expect(batches).toHaveLength(2))
+      const messagesBeforeStaleProgress =
+        mocks.sendRuntimeMessage.mock.calls.length
+      await batches[0].options.onProgress?.({
+        completed: 1,
+        total: 1,
+        lastResult,
+      })
+      batches[0].completion.resolve(result)
+      await firstRun
+
+      expect(modelSyncScheduler.getProgress()).toMatchObject({
+        configFingerprint: secondFingerprint,
+        isRunning: true,
+        completed: 0,
+      })
+      expect(mocks.sendRuntimeMessage).toHaveBeenCalledTimes(
+        messagesBeforeStaleProgress,
+      )
+      await batches[1].options.onProgress?.({
+        completed: 1,
+        total: 1,
+        lastResult,
+      })
+      batches[1].completion.resolve(result)
+      await secondRun
+
+      expect(modelSyncScheduler.getProgress()).toBeNull()
+      expect(mocks.sendRuntimeMessage).toHaveBeenLastCalledWith(
+        {
+          type: "MANAGED_SITE_MODEL_SYNC_PROGRESS",
+          payload: expect.objectContaining({
+            configFingerprint: secondFingerprint,
+            isRunning: false,
+            completed: 1,
+          }),
+        },
+        { maxAttempts: 1 },
+      )
+    },
+  )
+
+  it.each([SITE_TYPES.NEW_API, SITE_TYPES.OCTOPUS])(
+    "keeps newer %s progress when an earlier inventory request finishes last",
+    async (siteType) => {
+      const initialPreferences = await mocks.getPreferences()
+      let preferences = {
+        ...initialPreferences,
+        managedSiteType: siteType,
+        octopus: {
+          baseUrl: "https://example.com",
+          username: "admin",
+          password: "first-password",
+        },
+      }
+      mocks.getPreferences.mockImplementation(async () => preferences)
+      const resource = {
+        ref: modelResourceRef(1, { siteType }),
+        name: "Known channel",
+      }
+      const oldInventory = createDeferred<unknown>()
+      const oldCompletion = createDeferred<ExecutionResult>()
+      const newCompletion = createDeferred<ExecutionResult>()
+      const oldNativeRun = vi.fn(() => oldCompletion.promise)
+      const inventory =
+        siteType === SITE_TYPES.OCTOPUS
+          ? mocks.prepareOctopusBatch
+          : mocks.listChannels
+      inventory.mockReturnValueOnce(oldInventory.promise)
+      if (siteType === SITE_TYPES.OCTOPUS) {
+        mocks.prepareOctopusBatch.mockResolvedValueOnce({
+          resources: [resource],
+          run: () => newCompletion.promise,
+        })
+      } else {
+        mocks.listChannels.mockResolvedValueOnce({
+          items: [resource],
+          total: 1,
+        })
+        mocks.runBatch
+          .mockReturnValueOnce(newCompletion.promise)
+          .mockReturnValueOnce(oldCompletion.promise)
+      }
+      const firstRun = modelSyncScheduler.executeSync()
+      await vi.waitFor(() => expect(inventory).toHaveBeenCalledOnce())
+      preferences = {
+        ...preferences,
+        newApi: { ...preferences.newApi, userId: "2" },
+        octopus: { ...preferences.octopus, password: "second-password" },
+      }
+      const newFingerprint = getManagedSiteRuntimeConfigFingerprint(
+        preferences,
+        siteType,
+      )
+      const secondRun = modelSyncScheduler.executeSync()
+      await vi.waitFor(() =>
+        expect(modelSyncScheduler.getProgress()).toMatchObject({
+          configFingerprint: newFingerprint,
+          isRunning: true,
+        }),
+      )
+
+      oldInventory.resolve(
+        siteType === SITE_TYPES.OCTOPUS
+          ? { resources: [resource], run: oldNativeRun }
+          : { items: [resource], total: 1 },
+      )
+      await vi.waitFor(() =>
+        siteType === SITE_TYPES.OCTOPUS
+          ? expect(oldNativeRun).toHaveBeenCalledOnce()
+          : expect(mocks.runBatch).toHaveBeenCalledTimes(2),
+      )
+      const progressAfterOldInventory = modelSyncScheduler.getProgress()
+      const result: ExecutionResult = {
+        items: [],
+        statistics: {
+          total: 0,
+          successCount: 0,
+          failureCount: 0,
+          durationMs: 0,
+          startedAt: 0,
+          endedAt: 0,
+        },
+      }
+      oldCompletion.resolve(result)
+      await firstRun
+      const progressAfterOldCompletion = modelSyncScheduler.getProgress()
+      newCompletion.resolve(result)
+      await secondRun
+
+      for (const progress of [
+        progressAfterOldInventory,
+        progressAfterOldCompletion,
+      ]) {
+        expect(progress).toMatchObject({
+          configFingerprint: newFingerprint,
+          isRunning: true,
+        })
+      }
+      expect(
+        mocks.sendRuntimeMessage.mock.calls.map(
+          ([message]) => message.payload.configFingerprint,
+        ),
+      ).toEqual([newFingerprint, newFingerprint])
+      expect(modelSyncScheduler.getProgress()).toBeNull()
+    },
+  )
 
   it("initializes once, ignores unrelated alarms, and swallows scheduled sync failures", async () => {
     let alarmHandler: ((alarm: { name: string }) => Promise<void>) | undefined
@@ -520,7 +762,7 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
     ])
     expect(mocks.applyModelMappingToChannel).toHaveBeenCalledTimes(1)
     expect(mocks.sendRuntimeMessage).toHaveBeenNthCalledWith(
-      1,
+      2,
       {
         type: "MANAGED_SITE_MODEL_SYNC_PROGRESS",
         payload: expect.objectContaining({
@@ -535,7 +777,11 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
     expect(mocks.sendRuntimeMessage).toHaveBeenLastCalledWith(
       {
         type: "MANAGED_SITE_MODEL_SYNC_PROGRESS",
-        payload: null,
+        payload: expect.objectContaining({
+          configFingerprint: expect.any(String),
+          isRunning: false,
+          completed: 1,
+        }),
       },
       { maxAttempts: 1 },
     )
@@ -563,6 +809,7 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
       {
         type: "MANAGED_SITE_MODEL_SYNC_PROGRESS",
         payload: {
+          configFingerprint: expect.any(String),
           isRunning: true,
           total: 1,
           completed: 0,
@@ -611,7 +858,7 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
 
     expect(mocks.applyModelMappingToChannel).not.toHaveBeenCalled()
     expect(mocks.sendRuntimeMessage).toHaveBeenNthCalledWith(
-      1,
+      2,
       {
         type: "MANAGED_SITE_MODEL_SYNC_PROGRESS",
         payload: expect.objectContaining({
@@ -665,6 +912,31 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
     expect(mocks.generateModelMappingForChannel).not.toHaveBeenCalled()
     expect(mocks.applyModelMappingToChannel).not.toHaveBeenCalled()
   })
+
+  it.each(["empty selection", "cleared configuration"])(
+    "rejects %s before contacting any provider",
+    async (scenario) => {
+      if (scenario === "cleared configuration") {
+        const preferences = await mocks.getPreferences()
+        mocks.getPreferences.mockResolvedValueOnce({
+          ...preferences,
+          newApi: undefined,
+        })
+      }
+
+      await expect(
+        modelSyncScheduler.executeSync(
+          scenario === "empty selection" ? [] : [modelResourceRef(1)],
+        ),
+      ).rejects.toThrow(
+        "A configured managed site and non-empty resource selection are required",
+      )
+      expect(mocks.listChannels).not.toHaveBeenCalled()
+      expect(mocks.createOctopusModelSyncCapability).not.toHaveBeenCalled()
+      expect(mocks.runBatch).not.toHaveBeenCalled()
+      expect(mocks.sendRuntimeMessage).not.toHaveBeenCalled()
+    },
+  )
 
   it("rejects selected sync requests when no channels match the requested ids", async () => {
     mocks.listChannels.mockResolvedValue({
@@ -770,7 +1042,7 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
     expect(mocks.saveLastExecution).toHaveBeenCalledTimes(1)
     expect(mocks.saveChannelUpstreamModelOptions).not.toHaveBeenCalled()
     expect(mocks.sendRuntimeMessage).toHaveBeenNthCalledWith(
-      1,
+      2,
       {
         type: "MANAGED_SITE_MODEL_SYNC_PROGRESS",
         payload: expect.objectContaining({
