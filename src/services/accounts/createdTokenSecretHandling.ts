@@ -3,7 +3,8 @@ import {
   resolveAccountSiteCreatedTokenSecretHandling,
 } from "~/services/accounts/accountSiteProfile"
 import { hasUsableApiTokenKey } from "~/services/accountTokens/apiTokenKey"
-import type { DisplaySiteData } from "~/types"
+import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
+import type { ApiToken, DisplaySiteData } from "~/types"
 
 /**
  * AIHubMix may only expose the full API key secret in create responses; later
@@ -29,3 +30,16 @@ export const shouldShowOneTimeKeyDialogForCreatedToken = (
 ) =>
   shouldShowOneTimeKeyDialogForAccount(account) &&
   hasUsableApiTokenKey(token.key)
+
+/** Requires a registered response-only secret projection before foreground handoff. */
+export function createDisplayAccountTokenRuntimeSecret(params: {
+  account: DisplaySiteData
+  token: ApiToken
+}) {
+  const project = getSiteTypeCapabilities(params.account.siteType).account
+    ?.keyManagement?.createRuntimeSecret
+  if (!project) {
+    throw new Error("Created token secret projection is unavailable")
+  }
+  return project(params)
+}

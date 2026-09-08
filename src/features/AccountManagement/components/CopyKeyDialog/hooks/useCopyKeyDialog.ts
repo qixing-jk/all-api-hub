@@ -14,7 +14,10 @@ import {
   type AccountRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
 import type { CreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
-import { shouldShowOneTimeKeyDialogForCreatedToken } from "~/services/accounts/createdTokenSecretHandling"
+import {
+  createDisplayAccountTokenRuntimeSecret,
+  shouldShowOneTimeKeyDialogForCreatedToken,
+} from "~/services/accounts/createdTokenSecretHandling"
 import {
   canCreateAccountApiTokens,
   canListAccountKeyResources,
@@ -28,7 +31,6 @@ import {
   resolveDisplayAccountRuntimeKeySecret,
 } from "~/services/accounts/utils/apiServiceRequest"
 import { formatOptionalSkPrefixSiteToken } from "~/services/accountTokens/apiTokenKey"
-import { createAIHubMixCreatedRuntimeSecret } from "~/services/apiAdapters/aihubmix/createdSecret"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -302,7 +304,7 @@ export function useCopyKeyDialog(
             formatOptionalSkPrefixSiteToken(createdToken, account.siteType),
           )
           setOneTimeSecret(
-            createAIHubMixCreatedRuntimeSecret({
+            createDisplayAccountTokenRuntimeSecret({
               account,
               token: createdToken,
             }),

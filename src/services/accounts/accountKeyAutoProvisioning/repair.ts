@@ -1,7 +1,7 @@
 import { Storage } from "@plasmohq/storage"
 
 import { RuntimeMessageTypes } from "~/constants/runtimeActions"
-import { isAccountSiteType, SITE_TYPES } from "~/constants/siteType"
+import { isAccountSiteType } from "~/constants/siteType"
 import {
   ACCOUNT_KEY_RECONCILIATION_INVENTORY_STATUSES,
   ACCOUNT_KEY_RECONCILIATION_OUTCOMES,
@@ -21,6 +21,10 @@ import {
   type AccountKeyResourceSession,
   type ResourceFailure,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
+import {
+  getInventorySecretAvailability,
+  INVENTORY_SECRET_AVAILABILITIES,
+} from "~/services/apiAdapters/contracts/keyManagement"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { runAbortableTask } from "~/services/apiTransport/abortableTask"
 import { ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS } from "~/services/core/storageKeys"
@@ -350,13 +354,17 @@ function getSkipReason(
     return ACCOUNT_KEY_REPAIR_SKIP_REASONS.NoneAuth
   }
 
-  if (account.site_type === SITE_TYPES.AIHUBMIX) {
-    // AIHubMix create responses expose one-time secrets that background
-    // coverage cannot recover; remove this skip when native recovery exists.
+  const capabilities = getSiteTypeCapabilities(account.site_type).account
+  if (
+    capabilities?.keyManagement &&
+    getInventorySecretAvailability(capabilities.keyManagement) ===
+      INVENTORY_SECRET_AVAILABILITIES.CreateResponseOnly
+  ) {
+    // Keep the persisted skip code while deriving eligibility from secret availability.
     return ACCOUNT_KEY_REPAIR_SKIP_REASONS.AihubmixOneTimeKey
   }
 
-  if (!getSiteTypeCapabilities(account.site_type).account?.keyResources) {
+  if (!capabilities?.keyResources) {
     return ACCOUNT_KEY_REPAIR_SKIP_REASONS.ProvisioningUnavailable
   }
 

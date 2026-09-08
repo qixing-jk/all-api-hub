@@ -12,7 +12,10 @@ import {
   type AccountRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
 import type { CreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
-import { shouldShowOneTimeKeyDialogForCreatedToken } from "~/services/accounts/createdTokenSecretHandling"
+import {
+  createDisplayAccountTokenRuntimeSecret,
+  shouldShowOneTimeKeyDialogForCreatedToken,
+} from "~/services/accounts/createdTokenSecretHandling"
 import {
   canCreateAccountApiTokens,
   canListAccountRuntimeKeys,
@@ -27,7 +30,6 @@ import {
   resolveDisplayAccountRuntimeKeySecret,
 } from "~/services/accounts/utils/apiServiceRequest"
 import { formatOptionalSkPrefixSiteToken } from "~/services/accountTokens/apiTokenKey"
-import { createAIHubMixCreatedRuntimeSecret } from "~/services/apiAdapters/aihubmix/createdSecret"
 import {
   isCreatedApiToken,
   TOKEN_PROVISIONING_ERRORS,
@@ -333,7 +335,7 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
               formatOptionalSkPrefixSiteToken(createdToken, account.siteType),
             )
             setOneTimeSecret(
-              createAIHubMixCreatedRuntimeSecret({
+              createDisplayAccountTokenRuntimeSecret({
                 account,
                 token: createdToken,
               }),

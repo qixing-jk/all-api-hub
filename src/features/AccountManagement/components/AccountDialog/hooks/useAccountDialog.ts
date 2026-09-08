@@ -80,6 +80,7 @@ import { accountRefresh } from "~/services/accounts/accountStorage/accountRefres
 import { validateAndUpdateAccount } from "~/services/accounts/accountUpdate"
 import type { AccountAutoDetectRecoveryData } from "~/services/accounts/autoDetect/recovery"
 import type { CreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
+import { createDisplayAccountTokenRuntimeSecret } from "~/services/accounts/createdTokenSecretHandling"
 import { getSiteName } from "~/services/accounts/siteName"
 import {
   createDisplayAccountApiContext,
@@ -92,7 +93,6 @@ import {
 } from "~/services/accounts/utils/autoDetectUtils"
 import type { ManagedSiteMessagesKey } from "~/services/accountSiteDefinitions/contracts"
 import { isCanonicalOpenRouterUrl } from "~/services/accountSiteDefinitions/identifiers"
-import { createAIHubMixCreatedRuntimeSecret } from "~/services/apiAdapters/aihubmix/createdSecret"
 import { getManagedSiteCapabilities } from "~/services/apiAdapters/registry"
 import {
   createCompatibilityCheckInConfig,
@@ -2769,7 +2769,7 @@ export function useAccountDialog({
       if (shouldDeferSuccessForSitePolicy && savedAccountId) {
         await handleAihubmixNormalSaveForegroundKeyFlow({
           accountId: savedAccountId,
-          accountName: siteName.trim() || SITE_TYPES.AIHUBMIX,
+          accountName: siteName.trim() || policy.defaultSiteName || siteType,
         })
       }
 
@@ -2895,7 +2895,7 @@ export function useAccountDialog({
         })
         setPostSaveOneTimeToken(ensureResult.token)
         setPostSaveOneTimeSecret(
-          createAIHubMixCreatedRuntimeSecret({
+          createDisplayAccountTokenRuntimeSecret({
             account: displaySiteData,
             token: ensureResult.token,
           }),
@@ -3311,7 +3311,7 @@ export function useAccountDialog({
             }
             setPostSaveOneTimeToken(ensureResult.token)
             setPostSaveOneTimeSecret(
-              createAIHubMixCreatedRuntimeSecret({
+              createDisplayAccountTokenRuntimeSecret({
                 account: displaySiteData,
                 token: ensureResult.token,
               }),

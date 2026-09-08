@@ -2,7 +2,7 @@
 
 先清理职责与重复策略，暂不引入 lint、白名单或引用额度。此文件是审计记录，不参与运行时或检查。
 
-最新状态：已整合 origin/main 6953346f6 的 scoped resource identity 重构。第二、三轮的本地指纹/导航接口已被上游统一配置指纹与 ManagedResourceRef 契约替代；下文保留实施历史，基线替代关系以第五轮记录为准，后续清理见第六至八轮。
+最新状态：已整合 origin/main 6953346f6 的 scoped resource identity 重构。第二、三轮的本地指纹/导航接口已被上游统一配置指纹与 ManagedResourceRef 契约替代；下文保留实施历史，基线替代关系以第五轮记录为准，后续清理见第六至九轮。
 
 ## 本轮实现
 
@@ -23,7 +23,7 @@
 3. **已完成第三轮清理**：匹配适配器的 resolveNavigationId 决定可用导航身份，AxonHub 自行拒绝历史数字投影。服务摘要显式携带 resourceId，TokenHeader 不再猜测站点规则；状态查询、批量导出与账户定位一起迁移。
 4. **已完成第二轮清理**：KeyManagement/useKeyManagement 的配置指纹读取已有 runtimeConfig 解析结果，删除提供方字段名单；所有配置字段参与失效判断，字段顺序规范化，凭证仍只保留内存哈希。七类站点均覆盖凭证变更、旧结果晚返回、无关目标变更和配置清空。
 5. **已完成第五轮清理**：上游 createSync 能力已承接 Octopus 执行流程；本地将链式映射与 DoneHub 计费前缀语义注册为 modelMappingPolicy。共享调度器/重定向服务不再依赖站点分支。提供方类型字段解码保留。
-6. AIHubMix 一次性密钥恢复和保存后流程（accountKeyAutoProvisioning/repair、AddTokenDialog、useAccountDialog）仍涉及专门 UI 生命周期，应与创建密钥工作流一起迁移。
+6. **已完成第九轮清理**：一次性密钥的创建响应转换由 keyManagement.createRuntimeSecret 注册；创建、保存后、复制和模型密钥弹窗通过该能力获取展示数据。后台修复由 inventorySecretAvailability 判断资格，确认与取消的 UI 状态继续由现有流程拥有。
 
 ## 保留的合法身份用途
 
@@ -40,7 +40,7 @@
 | src/features/AccountManagement/components/AccountActionButtons/index.tsx | 已清理 | 定位渠道消费注册验证工作流，保留限定操作授权与会话配置校验。 |
 | src/features/AccountManagement/components/AccountDialog/AccessTokenVerificationGuide.tsx | 保留 | Provider-specific credential instructions and default selection. |
 | src/features/AccountManagement/components/AccountDialog/AccountForm.tsx | 保留 | OpenRouter management-key form presentation. |
-| src/features/AccountManagement/components/AccountDialog/hooks/useAccountDialog.ts | 后续 | Existing OpenRouter onboarding, Sub2API refresh-token and AIHubMix post-save orchestration. |
+| src/features/AccountManagement/components/AccountDialog/hooks/useAccountDialog.ts | 后续 | OpenRouter 浏览器引导仍待处理；一次性密钥转换已迁入注册能力，专属确认状态与 Sub2API 认证流程保留。 |
 | src/features/AccountManagement/components/AccountDialog/hooks/useOpenRouterAccountOnboarding.ts | 保留 | OpenRouter-specific account onboarding workflow. |
 | src/features/AccountManagement/components/AccountDialog/sitePolicy.ts | 已清理 | Existing provider-specific account-dialog policy overrides. |
 | src/features/KeyManagement/KeyManagement.tsx | 后续 | New API 验证已按能力选择；OpenRouter scoped key creation 仍属于其独立工作流。 |
@@ -51,14 +51,14 @@
 | src/features/ManagedSiteModelSync/ManagedSiteModelSync.tsx | 已清理 | 删除 New API 全部同步前的重复列表预检，由后台统一读取并校验完整同步批次。 |
 | src/features/ModelList/aihubmixModelList.ts | 保留 | AIHubMix-specific pricing metadata presentation. |
 | src/features/SiteAnnouncements/utils.ts | 保留 | Sub2API announcement identity presentation. |
-| src/features/TokenProvisioning/components/AddTokenDialog/index.tsx | 后续 | Existing feature-specific verification or one-time-key workflow; migrate through its capability seam. |
+| src/features/TokenProvisioning/components/AddTokenDialog/index.tsx | 已清理 | 使用已注册的创建响应转换能力进入一次性密钥确认流程。 |
 | src/services/accountBrowserSession/sessionReader.ts | 后续 | New API browser-session identity recovery. |
 | src/services/accountBrowserSession/transientAuth.ts | 后续 | New API transient browser credential policy. |
 | src/services/accounts/accountAutoDetection.ts | 后续 | Canonical OpenRouter onboarding and browser identity resolution. |
 | src/services/accounts/accountCreation.ts | 已清理 | 注册持久化能力负责凭证验证和存储身份准备。 |
 | src/services/accounts/accountDedupe.ts | 已清理 | 使用注册能力提供的私有凭证比较键，结果不暴露密钥。 |
 | src/services/accounts/accountFormValidation.ts | 已清理 | OpenRouter user-id requirement; migrate into identity profile. |
-| src/services/accounts/accountKeyAutoProvisioning/repair.ts | 后续 | AIHubMix one-time-secret repair workflow. |
+| src/services/accounts/accountKeyAutoProvisioning/repair.ts | 已清理 | 使用密钥库存可恢复性判断修复资格，保留旧跳过原因值。 |
 | src/services/accounts/accountPersistence/shared.ts | 已清理 | 通用持久化编排消费能力，提供方拥有诊断脱敏与身份规则。 |
 | src/services/accounts/accountSiteProfile/urls.ts | 已清理 | Canonical AIHubMix URL profile selection. |
 | src/services/accounts/accountStorage/accountRefresh.ts | 已清理 | Sub2API refresh-token expiry handling. |
@@ -180,3 +180,17 @@
 - 已验证：新增成功/失败两种回归先复现旧分支阻止同步，再验证直接分发、返回结果与无额外列表请求；15 个模型同步组件/服务测试文件、281 项测试全部通过。
 - 复扫：模型同步主页面已没有具体站点常量或站点名称分支；此调用链无其他待处理的重复预检。账户浏览器认证、OpenRouter 浏览器引导与 AIHubMix 一次性密钥生命周期仍独立待处理。
 - 类型检查通过；未运行浏览器 E2E。提交钩子结果以最终提交为准，未新增 lint。
+
+
+## 第九轮一次性密钥创建与后台修复边界
+
+范围：创建响应的一次性密钥转换、创建/保存后/复制/模型密钥 UI 直接消费者，以及后台修复资格。
+
+- 已执行：AIHubMix keyManagement 注册 createRuntimeSecret；规范 API 地址、掩码拒绝、完整响应读取和关联身份仍由提供方 createdSecret 实现拥有。通用契约不包含其 full_key 协议字段。
+- 已执行：createdTokenSecretHandling 负责注册能力分发与缺失能力错误，四个界面不再直接导入 AIHubMix 转换函数；创建弹窗复用当前请求上下文的能力。
+- 已执行：后台修复读取 inventorySecretAvailability，跳过 CreateResponseOnly 提供方；保留 aihubmixOneTimeKey 序列化原因值和现有文案，未改变存储结构。
+- 保持：后台不尝试恢复只在创建时可见的明文密钥；前台确认、取消、失效请求隔离、复制和 API 凭证保存流程原样保留。保存后的名称兜底使用当前站点信息。
+- 已验证：不同站点注册转换能力时正常分发，缺失时明确失败；其他站点声明一次性密钥库存时不会打开修复会话。原有掩码与关联身份测试保留。
+- 复扫：创建/保存后/复制/模型密钥通用流程及后台修复不再直接依赖 AIHUBMIX 身份判断或其转换函数。AIHubMix 定价模型展示仍属于提供方元数据展示，不属于密钥生命周期。
+- 独立后续：账户浏览器认证与 OpenRouter 浏览器引导。未新增 lint；未运行浏览器 E2E。
+- 验证：大范围回归 238 个文件、3678 项测试，首轮仅复制密钥自定义创建用例失败（测试替身未注册转换能力）。补齐能力并修正日志 mock 提前初始化后，10 个相关文件、126 项测试全部通过；移动转换入口后的保存/模型流程另有 4 个文件、98 项测试通过。类型检查和未使用代码检查通过；提交钩子以最终执行结果为准。
