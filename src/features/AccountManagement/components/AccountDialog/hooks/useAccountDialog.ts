@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
@@ -523,13 +530,16 @@ export function useAccountDialog({
   const currentSitePolicy = getAccountDialogSitePolicy(siteType)
   selectedSiteUrlRef.current = url
   selectedSiteTypeRef.current = siteType
-  hasAccountAccessTokenRef.current = Boolean(accessToken.trim())
   const isDetected =
     phase === ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM &&
     formSource === ACCOUNT_DIALOG_FORM_SOURCES.DETECTED
   const showManualForm =
     phase === ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM &&
     formSource !== ACCOUNT_DIALOG_FORM_SOURCES.DETECTED
+
+  useLayoutEffect(() => {
+    hasAccountAccessTokenRef.current = Boolean(accessToken.trim())
+  }, [accessToken])
 
   useEffect(() => {
     notifyOpenRouterUrlChange(url)
@@ -594,19 +604,27 @@ export function useAccountDialog({
     },
     [updateDraft],
   )
-  const setAccessToken = useCallback(
-    (value: string) => {
-      hasAccountAccessTokenRef.current = Boolean(value.trim())
-      if (value.trim()) {
-        accountCredentialScopeRef.current = {
-          url: selectedSiteUrlRef.current,
-          siteType: selectedSiteTypeRef.current,
-        }
-      }
-      notifyOpenRouterCredentialChange(value)
+  const updateAccessToken = useCallback(
+    (
+      value: string,
+      scope = {
+        url: selectedSiteUrlRef.current,
+        siteType: selectedSiteTypeRef.current,
+      },
+    ) => {
+      const hasAccessToken = Boolean(value.trim())
+      hasAccountAccessTokenRef.current = hasAccessToken
+      accountCredentialScopeRef.current = hasAccessToken ? scope : null
       updateDraft((prev) => ({ ...prev, accessToken: value }))
     },
-    [notifyOpenRouterCredentialChange, updateDraft],
+    [updateDraft],
+  )
+  const setAccessToken = useCallback(
+    (value: string) => {
+      updateAccessToken(value)
+      notifyOpenRouterCredentialChange(value)
+    },
+    [notifyOpenRouterCredentialChange, updateAccessToken],
   )
   const setUserId = useCallback(
     (value: string) => {
@@ -702,6 +720,7 @@ export function useAccountDialog({
       selectedSiteTypeRef.current = nextSiteType
       const { clearCreatedCredential } =
         notifyOpenRouterSiteChange(nextSiteType)
+      if (clearCreatedCredential) updateAccessToken("")
       updateDraft((prev) => {
         const previousPolicy = getAccountDialogSitePolicy(prev.siteType)
         const shouldRebuildCompatibilityConfig =
@@ -733,7 +752,6 @@ export function useAccountDialog({
             siteType: nextSiteType,
             checkIn,
             ...(shouldClearOpenRouterIdentity ? { userId: "" } : {}),
-            ...(clearCreatedCredential ? { accessToken: "" } : {}),
             ...(shouldApplyDefaultName
               ? { siteName: nextPolicy.defaultSiteName ?? "" }
               : {}),
@@ -750,6 +768,7 @@ export function useAccountDialog({
       setDialogUrl,
       notifyOpenRouterSiteChange,
       resetCheckInRedetection,
+      updateAccessToken,
       updateDraft,
     ],
   )
@@ -1963,10 +1982,10 @@ export function useAccountDialog({
           ? imported.user.username.trim()
           : ""
       if (importedAccessToken) {
-        accountCredentialScopeRef.current = {
+        updateAccessToken(importedAccessToken, {
           url: baseUrl,
           siteType: SITE_TYPES.SUB2API,
-        }
+        })
       }
       updateDraft((prev) => ({
         ...prev,
@@ -1976,7 +1995,6 @@ export function useAccountDialog({
           Number.isFinite(tokenExpiresAtRaw)
             ? tokenExpiresAtRaw
             : null,
-        ...(importedAccessToken ? { accessToken: importedAccessToken } : {}),
         ...(importedUserId ? { userId: importedUserId } : {}),
         ...(importedUsername ? { username: importedUsername } : {}),
       }))
@@ -2287,11 +2305,10 @@ export function useAccountDialog({
               protectionBypassExecution,
               onStarted: () => setSiteType(SITE_TYPES.OPENROUTER),
               onCredentialCreated: (credential) => {
-                accountCredentialScopeRef.current = {
+                updateAccessToken(credential, {
                   url: requestedUrl,
                   siteType: SITE_TYPES.OPENROUTER,
-                }
-                setDraft((prev) => ({ ...prev, accessToken: credential }))
+                })
               },
               onManualFallback: (failure) => {
                 onboardingError = failure.error
