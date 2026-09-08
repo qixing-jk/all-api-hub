@@ -14,7 +14,7 @@ jobs:
     name: Chrome ${{ matrix.chrome_version }} compatibility
     runs-on: ubuntu-latest
     # Leave time for setup and failure artifacts after Playwright stops.
-    timeout-minutes: 35
+    timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix:
