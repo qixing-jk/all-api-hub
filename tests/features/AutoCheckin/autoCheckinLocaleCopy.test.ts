@@ -11,6 +11,9 @@ describe("auto-checkin result category copy", () => {
     expect(zhCnAutoCheckin.execution.status.skipped).toBe("未执行")
     expect(zhCnAutoCheckin.status.result.skipped).toBe("未执行")
     expect(zhCnAutoCheckin.status.summary.skipped).toBe("未执行")
+    expect(zhCnAutoCheckin.execution.filters.selectedStatuses).toBe(
+      "已选 {{count}} 类",
+    )
     expect(
       zhCnSettings.taskNotifications.notification
         .countsWithAutoCheckinCategories,
@@ -22,6 +25,12 @@ describe("auto-checkin result category copy", () => {
     expect(enAutoCheckin.execution.status.skipped).toBe("Not executed")
     expect(enAutoCheckin.status.result.skipped).toBe("Not executed")
     expect(enAutoCheckin.status.summary.skipped).toBe("Not executed")
+    expect(enAutoCheckin.execution.filters.selectedStatuses_one).toBe(
+      "{{count}} status selected",
+    )
+    expect(enAutoCheckin.execution.filters.selectedStatuses_other).toBe(
+      "{{count}} statuses selected",
+    )
     expect(
       enSettings.taskNotifications.notification.countsWithAutoCheckinCategories,
     ).toContain("not executed {{skipped}}")

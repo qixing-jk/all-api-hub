@@ -42,6 +42,8 @@
       "needsAttention": "Needs attention",
       "searchLabel": "Search execution results",
       "searchPlaceholder": "Search by account name, ID, or message...",
+      "selectedStatuses_one": "{{count}} status selected",
+      "selectedStatuses_other": "{{count}} statuses selected",
       "skipped": "Not executed",
       "statusLabel": "Filter by execution status",
       "success": "Checked in this run",

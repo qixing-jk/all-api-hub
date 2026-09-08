@@ -42,6 +42,7 @@
       "needsAttention": "需要處理",
       "searchLabel": "搜尋執行結果",
       "searchPlaceholder": "搜尋帳號名稱、ID 或結果訊息...",
+      "selectedStatuses_other": "已選 {{count}} 類",
       "skipped": "未執行",
       "statusLabel": "依執行狀態篩選",
       "success": "本次簽到成功",

@@ -42,6 +42,7 @@
       "needsAttention": "Cần xử lý",
       "searchLabel": "Tìm kiếm kết quả thực hiện",
       "searchPlaceholder": "Tìm theo tên tài khoản, ID hoặc tin nhắn...",
+      "selectedStatuses_other": "Đã chọn {{count}} trạng thái",
       "skipped": "Chưa thực hiện",
       "statusLabel": "Lọc theo trạng thái thực hiện",
       "success": "Điểm danh trong lần này",

@@ -87,9 +87,12 @@ export default function AutoCheckinDataWorkspace({
       ? AUTO_CHECKIN_DATA_VIEW.Results
       : AUTO_CHECKIN_DATA_VIEW.Readiness,
   )
-  const { failed: failedCount, uncertain: uncertainCount } =
-    countAutoCheckinResults(results)
-  const attentionCount = failedCount + uncertainCount
+  const {
+    failed: failedCount,
+    uncertain: uncertainCount,
+    skipped: skippedCount,
+  } = countAutoCheckinResults(results)
+  const attentionCount = failedCount + uncertainCount + skippedCount
   const setupRequiredCount = snapshots.filter(
     (snapshot) =>
       getAutoCheckinSnapshotReadinessCategory(snapshot) ===

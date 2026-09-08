@@ -1,4 +1,5 @@
 import {
+  ChevronDown,
   CircleAlert,
   CircleCheck,
   CircleHelp,
@@ -10,12 +11,20 @@ import {
 import type { ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 
-import { Input } from "~/components/ui"
+import { Badge, Button, Input } from "~/components/ui"
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "~/components/ui/dropdown-menu"
 import {
   countAutoCheckinResults,
-  FILTER_STATUS,
   filterAutoCheckinResults,
-  type FilterStatus,
+  NEEDS_ATTENTION_RESULT_STATUSES,
 } from "~/features/AutoCheckin/utils/autoCheckin"
 import { trackProductAnalyticsActionCompleted } from "~/services/productAnalytics/actions"
 import {
@@ -27,32 +36,38 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
   PRODUCT_ANALYTICS_TARGET_KINDS,
 } from "~/services/productAnalytics/contracts"
-import type { CheckinAccountResult } from "~/types/autoCheckin"
+import {
+  CHECKIN_RESULT_STATUS,
+  type CheckinAccountResult,
+  type CheckinResultStatus,
+} from "~/types/autoCheckin"
 
 import TableFilterToolbar from "./TableFilterToolbar"
 
 interface FilterBarProps {
   accountResults: CheckinAccountResult[]
-  status: FilterStatus
+  selectedStatuses: CheckinResultStatus[]
   keyword: string
-  onStatusChange: (status: FilterStatus) => void
+  onSelectedStatusesChange: (statuses: CheckinResultStatus[]) => void
   onKeywordChange: (keyword: string) => void
 }
 
+interface StatusFilterOption {
+  value: CheckinResultStatus
+  label: string
+  count: number
+  icon: ReactNode
+}
+
 /**
- * Filter controls for auto-checkin execution list: status buttons + keyword search.
- * @param props Component props bundle.
- * @param props.accountResults Account execution results used to derive counts.
- * @param props.status Current filter status value.
- * @param props.keyword Current keyword filter value.
- * @param props.onStatusChange Callback fired when status filter changes.
- * @param props.onKeywordChange Callback fired when keyword input changes.
+ * Filter controls for the auto-checkin execution list: a status multi-select
+ * and keyword search.
  */
 export default function FilterBar({
   accountResults,
-  status,
+  selectedStatuses,
   keyword,
-  onStatusChange,
+  onSelectedStatusesChange,
   onKeywordChange,
 }: FilterBarProps) {
   const { t } = useTranslation("autoCheckin")
@@ -60,28 +75,82 @@ export default function FilterBar({
   const resultCounts = countAutoCheckinResults(accountResults)
   const needsAttentionCount =
     resultCounts.failed + resultCounts.uncertain + resultCounts.skipped
+  const statusOptions: StatusFilterOption[] = [
+    {
+      value: CHECKIN_RESULT_STATUS.SUCCESS,
+      label: t("execution.filters.success"),
+      count: resultCounts.success,
+      icon: <CircleCheck className="h-4 w-4" />,
+    },
+    {
+      value: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
+      label: t("execution.filters.alreadyChecked"),
+      count: resultCounts.alreadyChecked,
+      icon: <CircleCheck className="h-4 w-4" />,
+    },
+    {
+      value: CHECKIN_RESULT_STATUS.FAILED,
+      label: t("execution.filters.failed"),
+      count: resultCounts.failed,
+      icon: <CircleX className="h-4 w-4" />,
+    },
+    {
+      value: CHECKIN_RESULT_STATUS.UNCERTAIN,
+      label: t("execution.filters.uncertain"),
+      count: resultCounts.uncertain,
+      icon: <CircleHelp className="h-4 w-4" />,
+    },
+    {
+      value: CHECKIN_RESULT_STATUS.SKIPPED,
+      label: t("execution.filters.skipped"),
+      count: resultCounts.skipped,
+      icon: <TriangleAlert className="h-4 w-4" />,
+    },
+  ]
+
   const getFilteredResultCount = (
-    nextStatus: FilterStatus,
+    nextStatuses: readonly CheckinResultStatus[],
     nextKeyword: string,
   ) =>
-    filterAutoCheckinResults(accountResults, nextStatus, nextKeyword, t).length
-  const filteredCount = getFilteredResultCount(status, keyword)
-  const isFiltered = status !== FILTER_STATUS.ALL || Boolean(keyword.trim())
+    filterAutoCheckinResults(accountResults, nextStatuses, nextKeyword, t)
+      .length
+  const filteredCount = getFilteredResultCount(selectedStatuses, keyword)
+  const isFiltered = selectedStatuses.length > 0 || Boolean(keyword.trim())
   const countLabel = isFiltered
     ? t("execution.filters.countFiltered", {
         filtered: filteredCount,
         total: resultCounts.total,
       })
     : t("execution.filters.countTotal", { total: resultCounts.total })
+
+  const isNeedsAttentionPreset =
+    selectedStatuses.length === NEEDS_ATTENTION_RESULT_STATUSES.length &&
+    NEEDS_ATTENTION_RESULT_STATUSES.every((status) =>
+      selectedStatuses.includes(status),
+    )
+  const selectedStatusLabels = statusOptions
+    .filter((option) => selectedStatuses.includes(option.value))
+    .map((option) => option.label)
+  const selectedStatusSummary =
+    selectedStatuses.length === 0
+      ? t("execution.filters.all")
+      : isNeedsAttentionPreset
+        ? t("execution.filters.needsAttention")
+        : selectedStatuses.length === 1
+          ? selectedStatusLabels[0]
+          : t("execution.filters.selectedStatuses", {
+              count: selectedStatuses.length,
+            })
+
   const trackFilterSelection = (
     mode:
       | typeof PRODUCT_ANALYTICS_MODE_IDS.SearchFilter
       | typeof PRODUCT_ANALYTICS_MODE_IDS.StatusFilter,
-    nextStatus: FilterStatus = status,
+    nextStatuses: readonly CheckinResultStatus[] = selectedStatuses,
     nextKeyword: string = keyword,
   ) => {
     const filterCount =
-      (nextStatus === FILTER_STATUS.ALL ? 0 : 1) + (nextKeyword.trim() ? 1 : 0)
+      (nextStatuses.length > 0 ? 1 : 0) + (nextKeyword.trim() ? 1 : 0)
 
     void trackProductAnalyticsActionCompleted({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
@@ -93,37 +162,32 @@ export default function FilterBar({
         targetKind: PRODUCT_ANALYTICS_TARGET_KINDS.ResultFilter,
         mode,
         filterCount,
-        resultCount: getFilteredResultCount(nextStatus, nextKeyword),
+        resultCount: getFilteredResultCount(nextStatuses, nextKeyword),
       },
     })
   }
 
-  const renderFilterButton = (
-    value: FilterStatus,
-    label: string,
-    icon: ReactNode,
-    count: number,
-  ) => (
-    <button
-      type="button"
-      aria-label={`${label} (${count})`}
-      aria-pressed={status === value}
-      onClick={() => {
-        onStatusChange(value)
-        trackFilterSelection(PRODUCT_ANALYTICS_MODE_IDS.StatusFilter, value)
-      }}
-      className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors ${
-        status === value
-          ? "border-blue-500 bg-blue-50 text-blue-700 shadow-xs dark:border-blue-500 dark:bg-blue-950/40 dark:text-blue-200"
-          : "border-transparent bg-gray-100/80 text-gray-600 hover:bg-gray-200 hover:text-gray-900 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-gray-100"
-      }`}
-    >
-      {icon}
-      <span>{label}</span>
-      <span className="ml-0.5 rounded-full bg-black/5 px-1.5 py-0.5 text-[10px] font-semibold dark:bg-white/10">
-        {count}
-      </span>
-    </button>
+  const applyStatuses = (nextStatuses: readonly CheckinResultStatus[]) => {
+    const normalizedStatuses = [...nextStatuses]
+    onSelectedStatusesChange(normalizedStatuses)
+    trackFilterSelection(
+      PRODUCT_ANALYTICS_MODE_IDS.StatusFilter,
+      normalizedStatuses,
+    )
+  }
+
+  const toggleStatus = (status: CheckinResultStatus) => {
+    applyStatuses(
+      selectedStatuses.includes(status)
+        ? selectedStatuses.filter((value) => value !== status)
+        : [...selectedStatuses, status],
+    )
+  }
+
+  const renderMenuCount = (count: number) => (
+    <Badge variant="secondary" size="sm" className="ml-auto tabular-nums">
+      {count}
+    </Badge>
   )
 
   return (
@@ -132,17 +196,17 @@ export default function FilterBar({
       clearLabel={t("execution.filters.clearAll")}
       showClear={isFiltered && filteredCount > 0}
       onClearFilters={() => {
-        onStatusChange(FILTER_STATUS.ALL)
+        onSelectedStatusesChange([])
         onKeywordChange("")
         trackFilterSelection(
           keyword.trim()
             ? PRODUCT_ANALYTICS_MODE_IDS.SearchFilter
             : PRODUCT_ANALYTICS_MODE_IDS.StatusFilter,
-          FILTER_STATUS.ALL,
+          [],
           "",
         )
       }}
-      controlsClassName="grid gap-2 md:grid-cols-[minmax(14rem,1fr)_auto] md:items-center"
+      controlsClassName="grid gap-2 md:grid-cols-[minmax(14rem,1fr)_minmax(12rem,auto)] md:items-center"
     >
       <div className="relative w-full lg:max-w-xs">
         <Input
@@ -156,61 +220,69 @@ export default function FilterBar({
             onKeywordChange("")
             trackFilterSelection(
               PRODUCT_ANALYTICS_MODE_IDS.SearchFilter,
-              status,
+              selectedStatuses,
               "",
             )
           }}
           clearButtonLabel={t("common:actions.clear")}
         />
       </div>
-      <div
-        className="flex flex-wrap gap-1.5"
-        role="group"
-        aria-label={t("execution.filters.statusLabel")}
-      >
-        {renderFilterButton(
-          FILTER_STATUS.ALL,
-          t("execution.filters.all"),
-          <List className="h-4 w-4" />,
-          resultCounts.total,
-        )}
-        {renderFilterButton(
-          FILTER_STATUS.NEEDS_ATTENTION,
-          t("execution.filters.needsAttention"),
-          <CircleAlert className="h-4 w-4" />,
-          needsAttentionCount,
-        )}
-        {renderFilterButton(
-          FILTER_STATUS.SUCCESS,
-          t("execution.filters.success"),
-          <CircleCheck className="h-4 w-4" />,
-          resultCounts.success,
-        )}
-        {renderFilterButton(
-          FILTER_STATUS.ALREADY_CHECKED,
-          t("execution.filters.alreadyChecked"),
-          <CircleCheck className="h-4 w-4" />,
-          resultCounts.alreadyChecked,
-        )}
-        {renderFilterButton(
-          FILTER_STATUS.FAILED,
-          t("execution.filters.failed"),
-          <CircleX className="h-4 w-4" />,
-          resultCounts.failed,
-        )}
-        {renderFilterButton(
-          FILTER_STATUS.UNCERTAIN,
-          t("execution.filters.uncertain"),
-          <CircleHelp className="h-4 w-4" />,
-          resultCounts.uncertain,
-        )}
-        {renderFilterButton(
-          FILTER_STATUS.SKIPPED,
-          t("execution.filters.skipped"),
-          <TriangleAlert className="h-4 w-4" />,
-          resultCounts.skipped,
-        )}
-      </div>
+
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="w-full justify-between md:w-56"
+            aria-label={`${t("execution.filters.statusLabel")}: ${selectedStatusSummary}`}
+          >
+            <span className="flex min-w-0 items-center gap-2">
+              <List className="h-4 w-4 shrink-0" />
+              <span className="truncate">{selectedStatusSummary}</span>
+            </span>
+            <span className="flex shrink-0 items-center gap-1.5">
+              {selectedStatuses.length > 0 ? (
+                <Badge variant="secondary" size="sm">
+                  {selectedStatuses.length}
+                </Badge>
+              ) : null}
+              <ChevronDown className="h-4 w-4" />
+            </span>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-64">
+          <DropdownMenuLabel>
+            {t("execution.filters.statusLabel")}
+          </DropdownMenuLabel>
+          <DropdownMenuItem onSelect={() => applyStatuses([])}>
+            <List className="h-4 w-4" />
+            <span>{t("execution.filters.all")}</span>
+            {renderMenuCount(resultCounts.total)}
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onSelect={() => applyStatuses(NEEDS_ATTENTION_RESULT_STATUSES)}
+          >
+            <CircleAlert className="h-4 w-4 text-red-500" />
+            <span>{t("execution.filters.needsAttention")}</span>
+            {renderMenuCount(needsAttentionCount)}
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          {statusOptions.map((option) => (
+            <DropdownMenuCheckboxItem
+              key={option.value}
+              checked={selectedStatuses.includes(option.value)}
+              onCheckedChange={() => toggleStatus(option.value)}
+              onSelect={(event) => event.preventDefault()}
+              aria-label={`${option.label} ${option.count}`}
+            >
+              {option.icon}
+              <span>{option.label}</span>
+              {renderMenuCount(option.count)}
+            </DropdownMenuCheckboxItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
     </TableFilterToolbar>
   )
 }

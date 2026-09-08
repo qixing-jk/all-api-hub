@@ -23,10 +23,8 @@ import {
 } from "~/components/ui"
 import { Z_INDEX } from "~/constants/designTokens"
 import {
-  FILTER_STATUS,
   filterAutoCheckinResults,
   getAutoCheckinResultMessage,
-  type FilterStatus,
 } from "~/features/AutoCheckin/utils/autoCheckin"
 import { cn } from "~/lib/utils"
 import { trackProductAnalyticsActionCompleted } from "~/services/productAnalytics/actions"
@@ -42,6 +40,7 @@ import {
 import {
   CHECKIN_RESULT_STATUS,
   type CheckinAccountResult,
+  type CheckinResultStatus,
 } from "~/types/autoCheckin"
 
 import { useClampedTablePagination } from "../hooks/useClampedTablePagination"
@@ -59,6 +58,14 @@ interface ResultsTableProps extends ResultsTableActionsProps {
   results: CheckinAccountResult[]
 }
 
+const RESULT_STATUS_SORT_RANK: Record<CheckinResultStatus, number> = {
+  [CHECKIN_RESULT_STATUS.FAILED]: 0,
+  [CHECKIN_RESULT_STATUS.UNCERTAIN]: 1,
+  [CHECKIN_RESULT_STATUS.SKIPPED]: 2,
+  [CHECKIN_RESULT_STATUS.SUCCESS]: 3,
+  [CHECKIN_RESULT_STATUS.ALREADY_CHECKED]: 4,
+}
+
 /**
  * Renders auto-checkin execution results with status badges, timestamps, and action buttons.
  */
@@ -69,7 +76,9 @@ export default function ResultsTable({
   const { t } = useTranslation(["autoCheckin", "account"])
   const forceShowActions = Boolean(actionProps.showDevActions)
   const [keyword, setKeyword] = useState("")
-  const [status, setStatus] = useState<FilterStatus>(FILTER_STATUS.ALL)
+  const [selectedStatuses, setSelectedStatuses] = useState<
+    CheckinResultStatus[]
+  >([])
   const [sorting, setSorting] = useState<SortingState>([
     { id: "status", desc: false },
   ])
@@ -92,17 +101,13 @@ export default function ResultsTable({
         header: t("execution.table.status"),
         enableGlobalFilter: false,
         sortingFn: (left, right) => {
-          const getRank = (value: string) => {
-            if (value === CHECKIN_RESULT_STATUS.FAILED) return 0
-            if (value === CHECKIN_RESULT_STATUS.SKIPPED) return 1
-            return 2
-          }
           return (
-            getRank(left.original.status) - getRank(right.original.status) ||
+            RESULT_STATUS_SORT_RANK[left.original.status] -
+              RESULT_STATUS_SORT_RANK[right.original.status] ||
             right.original.timestamp - left.original.timestamp
           )
         },
-        filterFn: ((row, _columnId, value: FilterStatus) =>
+        filterFn: ((row, _columnId, value: CheckinResultStatus[]) =>
           filterAutoCheckinResults([row.original], value, "", t).length >
           0) as FilterFn<CheckinAccountResult>,
       },
@@ -131,19 +136,16 @@ export default function ResultsTable({
 
   const globalFilterFn = useMemo<FilterFn<CheckinAccountResult>>(
     () => (row, _columnId, value) =>
-      filterAutoCheckinResults(
-        [row.original],
-        FILTER_STATUS.ALL,
-        String(value),
-        t,
-      ).length > 0,
+      filterAutoCheckinResults([row.original], [], String(value), t).length > 0,
     [t],
   )
 
   const columnFilters = useMemo<ColumnFiltersState>(
     () =>
-      status === FILTER_STATUS.ALL ? [] : [{ id: "status", value: status }],
-    [status],
+      selectedStatuses.length === 0
+        ? []
+        : [{ id: "status", value: selectedStatuses }],
+    [selectedStatuses],
   )
 
   const table = useReactTable({
@@ -166,8 +168,8 @@ export default function ResultsTable({
   const filteredCount = table.getFilteredRowModel().rows.length
   useClampedTablePagination(table)
 
-  const setFilterStatus = (nextStatus: FilterStatus) => {
-    setStatus(nextStatus)
+  const setStatusFilters = (nextStatuses: CheckinResultStatus[]) => {
+    setSelectedStatuses(nextStatuses)
     table.setPageIndex(0)
   }
 
@@ -187,7 +189,9 @@ export default function ResultsTable({
         targetKind: PRODUCT_ANALYTICS_TARGET_KINDS.ResultFilter,
         mode: PRODUCT_ANALYTICS_MODE_IDS.SortFilter,
         filterCount:
-          (status === FILTER_STATUS.ALL ? 0 : 1) + (keyword.trim() ? 1 : 0) + 1,
+          (selectedStatuses.length === 0 ? 0 : 1) +
+          (keyword.trim() ? 1 : 0) +
+          1,
         resultCount: filteredCount,
       },
     })
@@ -216,9 +220,9 @@ export default function ResultsTable({
     <Card padding="none">
       <FilterBar
         accountResults={results}
-        status={status}
+        selectedStatuses={selectedStatuses}
         keyword={keyword}
-        onStatusChange={setFilterStatus}
+        onSelectedStatusesChange={setStatusFilters}
         onKeywordChange={setSearchKeyword}
       />
       {forceShowActions && (
@@ -232,7 +236,7 @@ export default function ResultsTable({
           description={t("execution.empty.noResultsDesc")}
           clearLabel={t("execution.filters.clearAll")}
           onClearFilters={() => {
-            setFilterStatus(FILTER_STATUS.ALL)
+            setStatusFilters([])
             setSearchKeyword("")
           }}
         />

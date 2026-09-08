@@ -42,6 +42,7 @@
       "needsAttention": "確認が必要",
       "searchLabel": "実行結果を検索",
       "searchPlaceholder": "アカウント名、ID、メッセージで検索...",
+      "selectedStatuses_other": "{{count}} 件の状態を選択",
       "skipped": "未実行",
       "statusLabel": "実行状態で絞り込む",
       "success": "今回チェックイン成功",

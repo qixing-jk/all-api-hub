@@ -2,11 +2,11 @@ import { describe, expect, it, vi } from "vitest"
 
 import {
   countAutoCheckinResults,
-  FILTER_STATUS,
   filterAutoCheckinResults,
   getAutoCheckinResultMessage,
   isInvalidAccessTokenMessage,
   isNoTabWithIdMessage,
+  NEEDS_ATTENTION_RESULT_STATUSES,
   resolveAutoCheckinTroubleshootingHintKey,
   translateAutoCheckinMessageKey,
 } from "~/features/AutoCheckin/utils/autoCheckin"
@@ -70,12 +70,17 @@ describe("autoCheckin utils", () => {
     } satisfies CheckinAccountResult
 
     expect(
-      filterAutoCheckinResults([result], "already_checked", "", vi.fn() as any),
+      filterAutoCheckinResults(
+        [result],
+        [CHECKIN_RESULT_STATUS.ALREADY_CHECKED],
+        "",
+        vi.fn() as any,
+      ),
     ).toEqual([result])
     expect(
       filterAutoCheckinResults(
         [result],
-        FILTER_STATUS.SUCCESS,
+        [CHECKIN_RESULT_STATUS.SUCCESS],
         "",
         vi.fn() as any,
       ),
@@ -235,7 +240,7 @@ describe("autoCheckin utils", () => {
               timestamp: 1,
             },
           ],
-          FILTER_STATUS.SKIPPED,
+          [CHECKIN_RESULT_STATUS.SKIPPED],
           "  无法确认  ",
           t as any,
         ),
@@ -274,7 +279,7 @@ describe("autoCheckin utils", () => {
       expect(
         filterAutoCheckinResults(
           results,
-          FILTER_STATUS.NEEDS_ATTENTION,
+          NEEDS_ATTENTION_RESULT_STATUSES,
           "",
           vi.fn((key: string) => key) as any,
         ).map((result) => result.accountId),
@@ -283,7 +288,7 @@ describe("autoCheckin utils", () => {
       expect(
         filterAutoCheckinResults(
           results,
-          FILTER_STATUS.FAILED,
+          [CHECKIN_RESULT_STATUS.FAILED],
           "",
           vi.fn((key: string) => key) as any,
         ).map((result) => result.accountId),
@@ -292,11 +297,49 @@ describe("autoCheckin utils", () => {
       expect(
         filterAutoCheckinResults(
           results,
-          "uncertain",
+          [CHECKIN_RESULT_STATUS.UNCERTAIN],
           "",
           vi.fn((key: string) => key) as any,
         ).map((result) => result.accountId),
       ).toEqual(["uncertain"])
+    })
+
+    it("combines selected result statuses while an empty selection shows all", () => {
+      const results: CheckinAccountResult[] = [
+        {
+          accountId: "success",
+          accountName: "Success",
+          status: CHECKIN_RESULT_STATUS.SUCCESS,
+          timestamp: 1,
+        },
+        {
+          accountId: "already-checked",
+          accountName: "Already checked",
+          status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
+          timestamp: 2,
+        },
+        {
+          accountId: "failed",
+          accountName: "Failed",
+          status: CHECKIN_RESULT_STATUS.FAILED,
+          timestamp: 3,
+        },
+      ]
+
+      expect(
+        filterAutoCheckinResults(
+          results,
+          [
+            CHECKIN_RESULT_STATUS.SUCCESS,
+            CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
+          ],
+          "",
+          vi.fn() as any,
+        ).map((result) => result.accountId),
+      ).toEqual(["success", "already-checked"])
+      expect(filterAutoCheckinResults(results, [], "", vi.fn() as any)).toEqual(
+        results,
+      )
     })
   })
 

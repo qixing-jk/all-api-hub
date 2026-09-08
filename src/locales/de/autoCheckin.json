@@ -42,6 +42,8 @@
       "needsAttention": "Handlungsbedarf",
       "searchLabel": "Ausführungsergebnisse durchsuchen",
       "searchPlaceholder": "Nach Kontoname, ID oder Nachricht suchen...",
+      "selectedStatuses_one": "{{count}} Status ausgewählt",
+      "selectedStatuses_other": "{{count}} Status ausgewählt",
       "skipped": "Nicht ausgeführt",
       "statusLabel": "Nach Ausführungsstatus filtern",
       "success": "In diesem Lauf eingecheckt",

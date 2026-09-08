@@ -4,19 +4,15 @@ import {
   CHECKIN_RESULT_STATUS,
   translateAutoCheckinSkipReason,
   type CheckinAccountResult,
+  type CheckinResultStatus,
 } from "~/types/autoCheckin"
 
-export const FILTER_STATUS = {
-  ALL: "all",
-  NEEDS_ATTENTION: "needs_attention",
-  SUCCESS: "success",
-  ALREADY_CHECKED: "already_checked",
-  FAILED: "failed",
-  UNCERTAIN: "uncertain",
-  SKIPPED: "skipped",
-} as const
-
-export type FilterStatus = (typeof FILTER_STATUS)[keyof typeof FILTER_STATUS]
+/** Atomic outcomes selected by the needs-attention filter preset. */
+export const NEEDS_ATTENTION_RESULT_STATUSES = [
+  CHECKIN_RESULT_STATUS.FAILED,
+  CHECKIN_RESULT_STATUS.UNCERTAIN,
+  CHECKIN_RESULT_STATUS.SKIPPED,
+] as const satisfies readonly CheckinResultStatus[]
 
 interface AutoCheckinResultCounts {
   total: number
@@ -69,28 +65,9 @@ export function countAutoCheckinResults(
  */
 function matchesAutoCheckinResultStatus(
   result: CheckinAccountResult,
-  status: FilterStatus,
+  selectedStatuses: ReadonlySet<CheckinResultStatus>,
 ): boolean {
-  switch (status) {
-    case FILTER_STATUS.NEEDS_ATTENTION:
-      return (
-        result.status === CHECKIN_RESULT_STATUS.FAILED ||
-        result.status === CHECKIN_RESULT_STATUS.UNCERTAIN ||
-        result.status === CHECKIN_RESULT_STATUS.SKIPPED
-      )
-    case FILTER_STATUS.SUCCESS:
-      return result.status === CHECKIN_RESULT_STATUS.SUCCESS
-    case FILTER_STATUS.ALREADY_CHECKED:
-      return result.status === CHECKIN_RESULT_STATUS.ALREADY_CHECKED
-    case FILTER_STATUS.FAILED:
-      return result.status === CHECKIN_RESULT_STATUS.FAILED
-    case FILTER_STATUS.UNCERTAIN:
-      return result.status === CHECKIN_RESULT_STATUS.UNCERTAIN
-    case FILTER_STATUS.SKIPPED:
-      return result.status === CHECKIN_RESULT_STATUS.SKIPPED
-    case FILTER_STATUS.ALL:
-      return true
-  }
+  return selectedStatuses.size === 0 || selectedStatuses.has(result.status)
 }
 
 /**
@@ -228,15 +205,16 @@ export function getAutoCheckinResultMessage(
  * Applies the result-table status and localized keyword filters.
  */
 export function filterAutoCheckinResults(
-  results: CheckinAccountResult[],
-  status: FilterStatus,
+  results: readonly CheckinAccountResult[],
+  selectedStatuses: readonly CheckinResultStatus[],
   keyword: string,
   t: TFunction,
 ): CheckinAccountResult[] {
   const normalizedKeyword = keyword.trim().toLowerCase()
+  const selectedStatusSet = new Set(selectedStatuses)
 
   return results.filter((result) => {
-    if (!matchesAutoCheckinResultStatus(result, status)) return false
+    if (!matchesAutoCheckinResultStatus(result, selectedStatusSet)) return false
     if (!normalizedKeyword) return true
 
     return (

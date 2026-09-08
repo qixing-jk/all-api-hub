@@ -42,6 +42,7 @@
       "needsAttention": "需要处理",
       "searchLabel": "搜索执行结果",
       "searchPlaceholder": "搜索账号名称、ID 或结果信息...",
+      "selectedStatuses": "已选 {{count}} 类",
       "skipped": "未执行",
       "statusLabel": "按执行状态筛选",
       "success": "本次签到成功",
