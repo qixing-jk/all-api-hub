@@ -64,6 +64,8 @@ describe("account detection with existing credentials", () => {
     { url: baseUrl, userId: "8" },
     { url: "https://another.example.invalid", userId: "7" },
     { url: `${baseUrl}/another-deployment`, userId: "7" },
+    { url: "not a valid URL", userId: "7" },
+    { url: baseUrl, userId: "7", siteType: SITE_TYPES.SUB2API },
   ])(
     "stops redetection before accessing credentials for a different target: %j",
     async (target) => {
@@ -74,8 +76,8 @@ describe("account detection with existing credentials", () => {
         undefined,
         {
           existingAccount: {
-            ...target,
             siteType: SITE_TYPES.NEW_API,
+            ...target,
             accessToken: "old-pat",
           },
         },
@@ -93,51 +95,54 @@ describe("account detection with existing credentials", () => {
     },
   )
 
-  it("reuses a valid form credential without reading account storage", async () => {
-    const storageArea: {
-      get(keys: string[]): Promise<Record<string, unknown>>
-    } = browser.storage.local
-    const readStorage = storageArea.get.bind(storageArea)
-    const storageReadSpy = vi
-      .spyOn(storageArea, "get")
-      .mockImplementation(async (keys) => {
-        if (
-          Array.isArray(keys) &&
-          keys.includes(ACCOUNT_STORAGE_KEYS.ACCOUNTS)
-        ) {
-          throw new Error("Account storage unavailable")
-        }
-        return readStorage(keys)
-      })
-    const options = {
-      existingAccount: {
-        url: baseUrl,
-        siteType: SITE_TYPES.NEW_API,
-        userId: "7",
-        accessToken: "draft-pat",
-      },
-    }
-    try {
-      const result = await autoDetectAccount(
-        baseUrl,
-        AuthTypeEnum.AccessToken,
-        undefined,
-        undefined,
-        options,
-      )
+  it.each([SITE_TYPES.NEW_API, SITE_TYPES.ONE_API, SITE_TYPES.APIYI])(
+    "reuses a valid %s form credential without reading account storage",
+    async (siteType) => {
+      const storageArea: {
+        get(keys: string[]): Promise<Record<string, unknown>>
+      } = browser.storage.local
+      const readStorage = storageArea.get.bind(storageArea)
+      const storageReadSpy = vi
+        .spyOn(storageArea, "get")
+        .mockImplementation(async (keys) => {
+          if (
+            Array.isArray(keys) &&
+            keys.includes(ACCOUNT_STORAGE_KEYS.ACCOUNTS)
+          ) {
+            throw new Error("Account storage unavailable")
+          }
+          return readStorage(keys)
+        })
+      const options = {
+        existingAccount: {
+          url: baseUrl,
+          siteType,
+          userId: "7",
+          accessToken: "draft-pat",
+        },
+      }
+      try {
+        const result = await autoDetectAccount(
+          baseUrl,
+          AuthTypeEnum.AccessToken,
+          undefined,
+          undefined,
+          options,
+        )
 
-      expect(result).toMatchObject({
-        success: true,
-        data: { accessToken: "draft-pat", userId: "7" },
-      })
-      expect(storageReadSpy).not.toHaveBeenCalledWith([
-        ACCOUNT_STORAGE_KEYS.ACCOUNTS,
-      ])
-      expect(tokenCreations).toBe(0)
-    } finally {
-      storageReadSpy.mockRestore()
-    }
-  })
+        expect(result).toMatchObject({
+          success: true,
+          data: { accessToken: "draft-pat", userId: "7" },
+        })
+        expect(storageReadSpy).not.toHaveBeenCalledWith([
+          ACCOUNT_STORAGE_KEYS.ACCOUNTS,
+        ])
+        expect(tokenCreations).toBe(0)
+      } finally {
+        storageReadSpy.mockRestore()
+      }
+    },
+  )
 
   it.each([SITE_TYPES.NEW_API, SITE_TYPES.ONE_API])(
     "reuses a saved %s account PAT during another add or import attempt",

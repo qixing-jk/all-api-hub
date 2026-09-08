@@ -29,7 +29,7 @@ function getCredentialScope(url: string): string | null {
   }
 }
 
-/** Checks the current account binding without reading other saved accounts. */
+/** Checks deployment, identity, and adapter-family bindings without reading storage. */
 export function getExistingAccountAccessToken(
   url: string,
   detected: DetectedAccountIdentity,
@@ -41,7 +41,9 @@ export function getExistingAccountAccessToken(
     (!scope ||
       getCredentialScope(existingAccount.url) !== scope ||
       normalizeAccountIdentity(existingAccount.userId) !==
-        normalizeAccountIdentity(detected.userId))
+        normalizeAccountIdentity(detected.userId) ||
+      getSiteTypeCapabilities(existingAccount.siteType).family !==
+        getSiteTypeCapabilities(detected.siteType).family)
   ) {
     throw new AutoDetectCompletionError(
       AUTO_DETECT_FAILURE_REASONS.AccountIdentityMismatch,
