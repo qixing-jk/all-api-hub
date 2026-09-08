@@ -809,6 +809,7 @@ export default function ManagedSiteModelSync({
   }, [
     isConfigMissing,
     isModelSyncUnsupported,
+    managedSiteConfigFingerprint,
     managedSiteType,
     routeParams?.channelId,
     routeParams?.resourceRef,

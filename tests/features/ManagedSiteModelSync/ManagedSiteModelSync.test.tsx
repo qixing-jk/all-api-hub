@@ -2025,6 +2025,87 @@ describe("ManagedSiteModelSync page", () => {
     },
   )
 
+  it.each<{
+    label: string
+    routeParams: Record<string, string>
+    selected: boolean
+  }>([
+    {
+      label: "scoped resource link",
+      routeParams: { resourceRef: JSON.stringify(pageRef(201)) },
+      selected: true,
+    },
+    {
+      label: "legacy channel link",
+      routeParams: { channelId: "201" },
+      selected: false,
+    },
+    {
+      label: "manual tab route",
+      routeParams: { tab: "manual" },
+      selected: false,
+    },
+  ])(
+    "restores the $label after the account changes within the deployment",
+    async ({ routeParams, selected }) => {
+      let context = mockUseUserPreferencesContext.getMockImplementation()!()
+      mockUseUserPreferencesContext.mockImplementation(() => context)
+      const view = render(<ManagedSiteModelSync routeParams={routeParams} />)
+      const initialRow = (await screen.findByText("Manual Alpha#201")).closest(
+        "tr",
+      )!
+      if (selected) {
+        expect(within(initialRow).getByRole("checkbox")).toBeChecked()
+      } else {
+        expect(within(initialRow).getByRole("checkbox")).not.toBeChecked()
+      }
+
+      context = {
+        ...context,
+        preferences: {
+          ...context.preferences,
+          newApi: { ...context.preferences.newApi, userId: "2" },
+        },
+      }
+      view.rerender(
+        <I18nextProvider i18n={testI18n}>
+          <ManagedSiteModelSync routeParams={routeParams} />
+        </I18nextProvider>,
+      )
+      await waitFor(() =>
+        expect(
+          mockSendRuntimeMessage.mock.calls.filter(
+            ([type]) => type === ModelSyncMessageTypes.ListChannels,
+          ),
+        ).toHaveLength(2),
+      )
+
+      const currentRow = (await screen.findByText("Manual Alpha#201")).closest(
+        "tr",
+      )!
+      expect(
+        screen.getByRole("tab", {
+          name: "managedSiteModelSync:execution.tabs.manual",
+          selected: true,
+        }),
+      ).toBeVisible()
+      const runSelectedButton = screen.getByRole("button", {
+        name: `managedSiteModelSync:execution.actions.runSelected (${selected ? 1 : 0})`,
+      })
+      if (selected) {
+        expect(within(currentRow).getByRole("checkbox")).toBeChecked()
+        expect(runSelectedButton).toBeEnabled()
+      } else {
+        expect(within(currentRow).getByRole("checkbox")).not.toBeChecked()
+        expect(runSelectedButton).toBeDisabled()
+      }
+      expect(mockSendRuntimeMessage).not.toHaveBeenCalledWith(
+        ModelSyncMessageTypes.TriggerSelected,
+        expect.anything(),
+      )
+    },
+  )
+
   it("reloads and clears selection when the deployment URL changes within one site type", async () => {
     let context = mockUseUserPreferencesContext.getMockImplementation()!()
     mockUseUserPreferencesContext.mockImplementation(() => context)
@@ -2251,13 +2332,6 @@ describe("ManagedSiteModelSync page", () => {
           <ManagedSiteModelSync routeParams={{ tab }} />
         </I18nextProvider>,
       )
-      if (tab === "manual") {
-        await user.click(
-          await screen.findByRole("tab", {
-            name: "managedSiteModelSync:execution.tabs.manual",
-          }),
-        )
-      }
       expect(await screen.findByText(rowLabel)).toBeVisible()
       await waitFor(() => expect(requests).toBe(3))
       await user.click(refreshButton())
