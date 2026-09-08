@@ -8,6 +8,7 @@ import {
   type OpenRouterBootstrapAttemptOutcome,
 } from "~/constants/openRouterBootstrap"
 import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
+import notify from "~/lib/notify"
 import type { AutoDetectCompletionData } from "~/services/accounts/autoDetectCompletion/types"
 import {
   isCanonicalOpenRouterUrl,
@@ -25,7 +26,6 @@ import type {
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import { getCurrentTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 import { safeRandomUUID } from "~/utils/core/identifier"
-import { showWarningToast } from "~/utils/core/toastHelpers"
 
 type DeadlineSettlement<T> =
   | { status: "fulfilled"; value: T }
@@ -293,7 +293,7 @@ export function useOpenRouterAccountOnboarding() {
         )
       }
       parts.push(t("openrouterBootstrapRecovery.manualRevocation"))
-      showWarningToast(parts.join(" "))
+      notify.warning(parts.join(" "))
     },
     [t],
   )

@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import toast from "~/lib/notify"
 import { sendAutoCheckinMessage } from "~/services/checkin/autoCheckin/messaging"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import {

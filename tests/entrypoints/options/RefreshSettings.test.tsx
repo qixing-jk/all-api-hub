@@ -9,14 +9,14 @@ import {
   ACCOUNT_AUTO_REFRESH_INTERVAL_MIN_SECONDS,
   ACCOUNT_AUTO_REFRESH_MIN_INTERVAL_MIN_SECONDS,
 } from "~/types/accountAutoRefresh"
-import { showUpdateToast } from "~/utils/core/toastHelpers"
+import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
 import { testI18n } from "~~/tests/test-utils/i18n"
 
 vi.mock("~/contexts/UserPreferencesContext", () => ({
   useUserPreferencesContext: vi.fn(),
 }))
 
-vi.mock("~/utils/core/toastHelpers", () => ({
+vi.mock("~/utils/feedback/preferenceFeedback", () => ({
   showUpdateToast: vi.fn(),
 }))
 

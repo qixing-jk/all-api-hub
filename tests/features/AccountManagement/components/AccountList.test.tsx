@@ -368,9 +368,10 @@ vi.mock("~/services/productAnalytics/actions", async (importOriginal) => {
   }
 })
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: Object.assign(toastDefaultMock, {
     success: toastSuccessMock,
+    warning: toastDefaultMock,
     error: toastErrorMock,
   }),
 }))
@@ -1169,8 +1170,6 @@ describe("AccountList", () => {
     expect(toastDefaultMock).toHaveBeenCalledWith(
       "account:list.reorderPinnedBoundary",
       {
-        duration: 5000,
-        icon: expect.any(Object),
         id: "account-reorder-boundary",
       },
     )

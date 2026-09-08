@@ -41,7 +41,7 @@ import {
 } from "~/services/productAnalytics/contracts"
 import type { ApiToken, DisplaySiteData } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
-import { showResultToast } from "~/utils/core/toastHelpers"
+import { showResultToast } from "~/utils/feedback/operationFeedback"
 
 interface BatchCliProxyExportDialogProps {
   isOpen: boolean

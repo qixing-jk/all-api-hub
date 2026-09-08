@@ -67,7 +67,7 @@ vi.mock("~/utils/core/logger", () => ({
   createLogger: () => ({ warn: loggerWarnMock }),
 }))
 
-vi.mock("~/utils/core/toastHelpers", () => ({
+vi.mock("~/utils/feedback/operationFeedback", () => ({
   showResultToast: showResultToastMock,
 }))
 

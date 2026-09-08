@@ -1,7 +1,6 @@
 import { KeyRound, Pencil, Plus } from "lucide-react"
 import type { ChangeEvent } from "react"
 import { useEffect, useMemo, useState } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
@@ -20,6 +19,7 @@ import {
 import { Modal } from "~/components/ui/Dialog/Modal"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { TagPicker } from "~/features/AccountManagement/components/TagPicker"
+import toast from "~/lib/notify"
 import {
   API_CREDENTIAL_TELEMETRY_JSON_PATH_FIELDS,
   coerceApiCredentialTelemetryJsonPathMap,

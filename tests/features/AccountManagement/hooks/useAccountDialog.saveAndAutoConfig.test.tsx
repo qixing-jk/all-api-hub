@@ -1,11 +1,11 @@
 import type { FormEvent, ReactNode } from "react"
-import toast from "react-hot-toast"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { DIALOG_MODES } from "~/constants/dialogModes"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SITE_TYPES } from "~/constants/siteType"
 import { useAccountDialog } from "~/features/AccountManagement/components/AccountDialog/hooks/useAccountDialog"
+import toast from "~/lib/notify"
 import {
   ACCOUNT_POST_SAVE_WORKFLOW_ERROR_CODES,
   ACCOUNT_POST_SAVE_WORKFLOW_STEPS,
@@ -82,12 +82,13 @@ const {
   mockWithProtectionBypassUserCommand: vi.fn(),
 }))
 
-vi.mock("react-hot-toast", () => {
+vi.mock("~/lib/notify", () => {
   const toastMock = Object.assign(mockToast, {
     success: vi.fn(),
     error: vi.fn(),
     loading: vi.fn(),
-    custom: vi.fn(),
+    warning: vi.fn(),
+    info: vi.fn(),
     dismiss: vi.fn(),
   })
 
@@ -486,24 +487,10 @@ describe("useAccountDialog save and auto-config flows", () => {
       await result.current.handlers.handleSaveAccount()
     })
 
-    const warningRenderer = vi.mocked(toast.custom).mock.calls[0]?.[0] as
-      | ((toastInstance: any) => any)
-      | undefined
-    const warningElement = warningRenderer?.({
-      id: "warning-toast-id",
-      type: "custom",
-      visible: true,
-      dismissed: false,
-      height: 0,
-      ariaProps: { role: "status", "aria-live": "polite" },
-      message: "",
-      createdAt: Date.now(),
-      pauseDuration: 0,
-      position: "bottom-center",
-    } as any)
+    const warningAction = vi.mocked(toast.warning).mock.calls[0]?.[1]?.action
 
     await act(async () => {
-      await warningElement?.props.action.onClick()
+      await warningAction?.onClick()
     })
 
     expect(accountStorage.refreshAccount).toHaveBeenNthCalledWith(
@@ -1139,31 +1126,15 @@ describe("useAccountDialog save and auto-config flows", () => {
       await result.current.handlers.handleSaveAccount()
     })
 
-    expect(toast.custom).toHaveBeenCalledWith(
-      expect.any(Function),
+    expect(toast.warning).toHaveBeenCalledWith(
+      expect.any(String),
       expect.objectContaining({
-        duration: 5000,
+        action: expect.any(Object),
       }),
     )
-    const saveWarningRenderer = vi.mocked(toast.custom).mock.calls[0]?.[0] as
-      | ((toastInstance: any) => any)
-      | undefined
-    const saveWarningElement = saveWarningRenderer?.({
-      id: "warning-toast-id",
-      type: "custom",
-      visible: true,
-      dismissed: false,
-      height: 0,
-      ariaProps: {
-        role: "status",
-        "aria-live": "polite",
-      },
-      message: "",
-      createdAt: Date.now(),
-      pauseDuration: 0,
-      position: "bottom-center",
-    } as any)
-    expect(saveWarningElement?.props.action).toEqual(
+    const saveWarningAction = vi.mocked(toast.warning).mock.calls[0]?.[1]
+      ?.action
+    expect(saveWarningAction).toEqual(
       expect.objectContaining({
         label: "common:actions.refresh",
       }),
@@ -1203,31 +1174,15 @@ describe("useAccountDialog save and auto-config flows", () => {
       await result.current.handlers.handleSaveAccount()
     })
 
-    expect(toast.custom).toHaveBeenCalledWith(
-      expect.any(Function),
+    expect(toast.warning).toHaveBeenCalledWith(
+      expect.any(String),
       expect.objectContaining({
-        duration: 5000,
+        action: expect.any(Object),
       }),
     )
-    const updateWarningRenderer = vi.mocked(toast.custom).mock.calls[0]?.[0] as
-      | ((toastInstance: any) => any)
-      | undefined
-    const updateWarningElement = updateWarningRenderer?.({
-      id: "warning-toast-id",
-      type: "custom",
-      visible: true,
-      dismissed: false,
-      height: 0,
-      ariaProps: {
-        role: "status",
-        "aria-live": "polite",
-      },
-      message: "",
-      createdAt: Date.now(),
-      pauseDuration: 0,
-      position: "bottom-center",
-    } as any)
-    expect(updateWarningElement?.props.action).toEqual(
+    const updateWarningAction = vi.mocked(toast.warning).mock.calls[0]?.[1]
+      ?.action
+    expect(updateWarningAction).toEqual(
       expect.objectContaining({
         label: "common:actions.refresh",
       }),
@@ -1263,34 +1218,17 @@ describe("useAccountDialog save and auto-config flows", () => {
       await result.current.handlers.handleSaveAccount()
     })
 
-    expect(toast.custom).toHaveBeenCalledWith(
-      expect.any(Function),
+    expect(toast.warning).toHaveBeenCalledWith(
+      expect.any(String),
       expect.objectContaining({
-        duration: 5000,
+        action: expect.any(Object),
       }),
     )
-    const saveWarningRenderer = vi.mocked(toast.custom).mock.calls[0]?.[0] as
-      | ((toastInstance: any) => any)
-      | undefined
-    const saveWarningElement = saveWarningRenderer?.({
-      id: "warning-toast-id",
-      type: "custom",
-      visible: true,
-      dismissed: false,
-      height: 0,
-      ariaProps: {
-        role: "status",
-        "aria-live": "polite",
-      },
-      message: "",
-      createdAt: Date.now(),
-      pauseDuration: 0,
-      position: "bottom-center",
-    } as any)
-    expect(saveWarningElement?.props.message).toBe(
-      "accountDialog:messages.addSuccess",
-    )
-    expect(saveWarningElement?.props.action).toEqual(
+    const saveWarningMessage = vi.mocked(toast.warning).mock.calls[0]?.[0]
+    const saveWarningAction = vi.mocked(toast.warning).mock.calls[0]?.[1]
+      ?.action
+    expect(saveWarningMessage).toBe("accountDialog:messages.addSuccess")
+    expect(saveWarningAction).toEqual(
       expect.objectContaining({
         label: "common:actions.refresh",
       }),
@@ -2037,7 +1975,7 @@ describe("useAccountDialog save and auto-config flows", () => {
     expect(result.current.state.postSaveOneTimeSecret).toBeNull()
     expect(result.current.state.aihubmixPostSaveKeyPrompt.isOpen).toBe(false)
     expect(toast.success).toHaveBeenCalledWith("Saved successfully")
-    expect(toast).toHaveBeenCalledWith(
+    expect(toast.info).toHaveBeenCalledWith(
       "messages:aihubmix.oneTimeKeyPromptCancelled",
     )
   })

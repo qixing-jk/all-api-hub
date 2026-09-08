@@ -29,7 +29,7 @@ const {
   toastLoadingMock,
   toastSuccessMock,
   toastErrorMock,
-  toastCustomMock,
+  toastWarningMock,
   hasValidManagedSiteConfigMock,
   clipboardWriteTextMock,
   trackStartedMock,
@@ -79,7 +79,7 @@ const {
   toastLoadingMock: vi.fn(),
   toastSuccessMock: vi.fn(),
   toastErrorMock: vi.fn(),
-  toastCustomMock: vi.fn(),
+  toastWarningMock: vi.fn(),
   hasValidManagedSiteConfigMock: vi.fn(() => true),
   clipboardWriteTextMock: vi.fn(),
   trackStartedMock: vi.fn(),
@@ -108,13 +108,13 @@ vi.mock("~/utils/browser/tempWindowRequestSource", () => ({
   getCurrentTempWindowRequestSource: getCurrentTempWindowRequestSourceMock,
 }))
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     dismiss: toastDismissMock,
     loading: toastLoadingMock,
     success: toastSuccessMock,
     error: toastErrorMock,
-    custom: toastCustomMock,
+    warning: toastWarningMock,
   },
 }))
 
@@ -297,7 +297,7 @@ export {
   resolveProductAnalyticsErrorCategoryFromErrorMock,
   sendRuntimeMessageMock,
   startProductAnalyticsActionMock,
-  toastCustomMock,
+  toastWarningMock,
   toastDismissMock,
   toastErrorMock,
   toastLoadingMock,

@@ -14,7 +14,6 @@ import {
 } from "@dnd-kit/sortable"
 import { Inbox, Plus } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import {
@@ -29,6 +28,7 @@ import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 import { useBookmarkDialogContext } from "~/features/SiteBookmarks/hooks/BookmarkDialogStateContext"
 import { useIsDesktop, useIsSmallScreen } from "~/hooks/useMediaQuery"
+import toast from "~/lib/notify"
 import { bookmarkRepository } from "~/services/accounts/accountStorage/bookmarkRepository"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {

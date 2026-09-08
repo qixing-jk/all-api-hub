@@ -64,7 +64,7 @@ vi.mock("~/services/permissions/permissionManager", () => ({
   requestPermissionDetailed: (id: string) => requestPermissionDetailedMock(id),
 }))
 
-vi.mock("~/utils/core/toastHelpers", () => ({
+vi.mock("~/utils/feedback/operationFeedback", () => ({
   showResultToast: (...args: unknown[]) => showResultToastMock(...args),
 }))
 
@@ -151,16 +151,16 @@ describe("PermissionSettings", () => {
     })
     expect(requestPermissionDetailedMock).toHaveBeenCalledWith("clipboardRead")
     expect(removePermissionDetailedMock).toHaveBeenCalledWith("notifications")
-    expect(showResultToastMock).toHaveBeenCalledWith(
-      true,
-      "settings:permissions.messages.granted",
-      "settings:permissions.messages.grantFailed",
-    )
-    expect(showResultToastMock).toHaveBeenCalledWith(
-      false,
-      "settings:permissions.messages.revoked",
-      "settings:permissions.messages.revokeFailed",
-    )
+    expect(showResultToastMock).toHaveBeenCalledWith({
+      success: true,
+      successFallback: "settings:permissions.messages.granted",
+      errorFallback: "settings:permissions.messages.grantFailed",
+    })
+    expect(showResultToastMock).toHaveBeenCalledWith({
+      success: false,
+      successFallback: "settings:permissions.messages.revoked",
+      errorFallback: "settings:permissions.messages.revokeFailed",
+    })
     expect(hasPermissionMock).toHaveBeenCalledWith("cookies")
     expect(hasPermissionMock).toHaveBeenCalledWith("clipboardRead")
     expect(hasPermissionMock).toHaveBeenCalledWith("notifications")
@@ -333,11 +333,11 @@ describe("PermissionSettings", () => {
     )
 
     await waitFor(() => {
-      expect(showResultToastMock).toHaveBeenCalledWith(
-        false,
-        "settings:permissions.messages.granted",
-        "settings:permissions.messages.grantFailed",
-      )
+      expect(showResultToastMock).toHaveBeenCalledWith({
+        success: false,
+        successFallback: "settings:permissions.messages.granted",
+        errorFallback: "settings:permissions.messages.grantFailed",
+      })
     })
     expect(trackProductAnalyticsEventMock).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_EVENTS.PermissionResult,
@@ -379,11 +379,11 @@ describe("PermissionSettings", () => {
     )
 
     await waitFor(() => {
-      expect(showResultToastMock).toHaveBeenCalledWith(
-        false,
-        "settings:permissions.messages.granted",
-        "settings:permissions.messages.grantFailed",
-      )
+      expect(showResultToastMock).toHaveBeenCalledWith({
+        success: false,
+        successFallback: "settings:permissions.messages.granted",
+        errorFallback: "settings:permissions.messages.grantFailed",
+      })
     })
     expect(trackProductAnalyticsEventMock).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_EVENTS.PermissionResult,
@@ -425,11 +425,11 @@ describe("PermissionSettings", () => {
     )
 
     await waitFor(() => {
-      expect(showResultToastMock).toHaveBeenCalledWith(
-        false,
-        "settings:permissions.messages.revoked",
-        "settings:permissions.messages.revokeFailed",
-      )
+      expect(showResultToastMock).toHaveBeenCalledWith({
+        success: false,
+        successFallback: "settings:permissions.messages.revoked",
+        errorFallback: "settings:permissions.messages.revokeFailed",
+      })
     })
     expect(trackProductAnalyticsEventMock).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_EVENTS.PermissionResult,
@@ -470,11 +470,11 @@ describe("PermissionSettings", () => {
     )
 
     await waitFor(() => {
-      expect(showResultToastMock).toHaveBeenCalledWith(
-        false,
-        "settings:permissions.messages.revoked",
-        "settings:permissions.messages.revokeFailed",
-      )
+      expect(showResultToastMock).toHaveBeenCalledWith({
+        success: false,
+        successFallback: "settings:permissions.messages.revoked",
+        errorFallback: "settings:permissions.messages.revokeFailed",
+      })
     })
     expect(trackProductAnalyticsEventMock).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_EVENTS.PermissionResult,

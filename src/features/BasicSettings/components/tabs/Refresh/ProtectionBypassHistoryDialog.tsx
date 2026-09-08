@@ -7,7 +7,6 @@ import {
   Trash2,
 } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import {
@@ -28,6 +27,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
+import toast from "~/lib/notify"
 import {
   protectionBypassHistoryStorage,
   subscribeToProtectionBypassHistory,

@@ -1,5 +1,4 @@
-import toast from "react-hot-toast"
-
+import toast from "~/lib/notify"
 import {
   DEFAULT_TOKEN_LIFECYCLE_BLOCK_REASONS,
   DEFAULT_TOKEN_LIFECYCLE_RESULT_KINDS,

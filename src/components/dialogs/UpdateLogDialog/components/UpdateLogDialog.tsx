@@ -6,7 +6,7 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { createTab } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
-import { showUpdateToast } from "~/utils/core/toastHelpers"
+import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
 import { getDocsChangelogUrl } from "~/utils/navigation/docsLinks"
 
 import { UPDATE_LOG_DIALOG_TEST_IDS } from "../testIds"

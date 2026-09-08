@@ -412,6 +412,44 @@ export default defineConfig([
       ],
     },
   },
+  {
+    files: [srcJsFamilyFilePattern],
+    ignores: [
+      "src/lib/notify/**",
+      "src/components/ThemeAwareToaster.tsx",
+      "src/entrypoints/content/redemptionAssist/components/RedemptionToaster.tsx",
+    ],
+    plugins: {
+      notifications: {
+        rules: {
+          "use-facade": {
+            meta: {
+              type: "problem",
+              schema: [],
+              messages: {
+                direct:
+                  "Use ~/lib/notify (or ~/lib/notify/content in content scripts) instead of react-hot-toast.",
+              },
+            },
+            create(context) {
+              const check = (node) => {
+                if (/^react-hot-toast(?:\/|$)/.test(node.source?.value ?? "")) {
+                  context.report({ node, messageId: "direct" })
+                }
+              }
+              return {
+                ImportDeclaration: check,
+                ImportExpression: check,
+                ExportNamedDeclaration: check,
+                ExportAllDeclaration: check,
+              }
+            },
+          },
+        },
+      },
+    },
+    rules: { "notifications/use-facade": "error" },
+  },
   { rules },
   eslintConfigPrettier,
 ])

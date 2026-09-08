@@ -153,7 +153,7 @@ vi.mock("~/services/integrations/cherryStudio", () => ({
   OpenInCherryStudio: (...args: unknown[]) => mockOpenInCherryStudio(...args),
 }))
 
-vi.mock("~/utils/core/toastHelpers", () => ({
+vi.mock("~/utils/feedback/operationFeedback", () => ({
   showResultToast: (...args: unknown[]) => mockShowResultToast(...args),
 }))
 

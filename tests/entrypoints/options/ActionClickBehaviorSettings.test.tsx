@@ -6,7 +6,8 @@ import {
   getSidePanelSupport,
   type SidePanelSupport,
 } from "~/utils/browser/browserApi"
-import { showResultToast, showUpdateToast } from "~/utils/core/toastHelpers"
+import { showResultToast } from "~/utils/feedback/operationFeedback"
+import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
@@ -27,8 +28,10 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   }
 })
 
-vi.mock("~/utils/core/toastHelpers", () => ({
+vi.mock("~/utils/feedback/operationFeedback", () => ({
   showResultToast: vi.fn(),
+}))
+vi.mock("~/utils/feedback/preferenceFeedback", () => ({
   showUpdateToast: vi.fn(),
 }))
 
@@ -107,10 +110,10 @@ describe("ActionClickBehaviorSettings (side panel fallback)", () => {
       expect(updateActionClickBehavior).toHaveBeenCalledWith("sidepanel")
     })
 
-    expect(vi.mocked(showResultToast)).toHaveBeenCalledWith(
-      true,
-      "settings:actionClick.sidepanelFallbackToast",
-    )
+    expect(vi.mocked(showResultToast)).toHaveBeenCalledWith({
+      success: true,
+      message: "settings:actionClick.sidepanelFallbackToast",
+    })
     expect(vi.mocked(showUpdateToast)).not.toHaveBeenCalled()
   })
 

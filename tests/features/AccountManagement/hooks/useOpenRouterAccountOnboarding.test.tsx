@@ -43,13 +43,13 @@ function useOpenRouterAccountOnboarding() {
 const {
   mockOnboardOpenRouterAccount,
   mockCancelOpenRouterAccountProvisioning,
-  mockShowWarningToast,
+  mockWarningToast,
   mockSafeRandomUUID,
   mockGetCurrentTempWindowRequestSource,
 } = vi.hoisted(() => ({
   mockOnboardOpenRouterAccount: vi.fn(),
   mockCancelOpenRouterAccountProvisioning: vi.fn(),
-  mockShowWarningToast: vi.fn(),
+  mockWarningToast: vi.fn(),
   mockSafeRandomUUID: vi.fn(),
   mockGetCurrentTempWindowRequestSource: vi.fn(),
 }))
@@ -58,12 +58,6 @@ vi.mock("~/services/apiAdapters/openrouter/accountProvisioning", () => ({
   onboardOpenRouterAccount: mockOnboardOpenRouterAccount,
   cancelOpenRouterAccountProvisioning: mockCancelOpenRouterAccountProvisioning,
 }))
-
-vi.mock("~/utils/core/toastHelpers", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("~/utils/core/toastHelpers")>()
-  return { ...actual, showWarningToast: mockShowWarningToast }
-})
 
 vi.mock("~/utils/core/identifier", async (importOriginal) => {
   const actual =
@@ -79,7 +73,7 @@ describe("useOpenRouterAccountOnboarding", () => {
   beforeEach(() => {
     mockOnboardOpenRouterAccount.mockReset()
     mockCancelOpenRouterAccountProvisioning.mockReset()
-    mockShowWarningToast.mockReset()
+    mockWarningToast.mockReset()
     mockSafeRandomUUID.mockReset()
     mockGetCurrentTempWindowRequestSource.mockReset()
     mockGetCurrentTempWindowRequestSource.mockReturnValue("background")
@@ -273,7 +267,7 @@ describe("useOpenRouterAccountOnboarding", () => {
     )
     expect(onCredentialCreated).not.toHaveBeenCalled()
     expect(result.current.recovery).toBeNull()
-    expect(mockShowWarningToast).not.toHaveBeenCalled()
+    expect(mockWarningToast).not.toHaveBeenCalled()
   })
 
   it("cancels a prepared start silently when its URL context changes", async () => {
@@ -311,7 +305,7 @@ describe("useOpenRouterAccountOnboarding", () => {
     expect(onDetected).not.toHaveBeenCalled()
     expect(onManualFallback).not.toHaveBeenCalled()
     expect(onCredentialCreated).not.toHaveBeenCalled()
-    expect(mockShowWarningToast).not.toHaveBeenCalled()
+    expect(mockWarningToast).not.toHaveBeenCalled()
   })
 
   it.each([
@@ -785,8 +779,8 @@ describe("useOpenRouterAccountOnboarding", () => {
         showDetectionError: true,
       }),
     )
-    expect(mockShowWarningToast).toHaveBeenCalledTimes(1)
-    expect(mockShowWarningToast).toHaveBeenCalledWith(
+    expect(mockWarningToast).toHaveBeenCalledTimes(1)
+    expect(mockWarningToast).toHaveBeenCalledWith(
       expect.stringContaining(
         createOpenRouterBootstrapLabel("transport-request-placeholder"),
       ),
@@ -812,7 +806,7 @@ describe("useOpenRouterAccountOnboarding", () => {
     })
 
     expect(onManualFallback).not.toHaveBeenCalled()
-    expect(mockShowWarningToast).toHaveBeenCalledTimes(1)
+    expect(mockWarningToast).toHaveBeenCalledTimes(1)
   })
 
   it("isolates a completed result after the URL context changes", async () => {
@@ -836,7 +830,7 @@ describe("useOpenRouterAccountOnboarding", () => {
     expect(onDetected).not.toHaveBeenCalled()
     expect(onCredentialCreated).not.toHaveBeenCalled()
     expect(result.current.recovery).toBeNull()
-    expect(mockShowWarningToast).toHaveBeenCalledTimes(1)
+    expect(mockWarningToast).toHaveBeenCalledTimes(1)
   })
 
   it("isolates uncertain evidence after the site context changes", async () => {
@@ -864,7 +858,7 @@ describe("useOpenRouterAccountOnboarding", () => {
 
     expect(onManualFallback).not.toHaveBeenCalled()
     expect(result.current.recovery).toBeNull()
-    expect(mockShowWarningToast).toHaveBeenCalledTimes(1)
+    expect(mockWarningToast).toHaveBeenCalledTimes(1)
   })
 
   it("isolates created recovery evidence after the site context changes", async () => {
@@ -891,7 +885,7 @@ describe("useOpenRouterAccountOnboarding", () => {
     expect(onManualFallback).not.toHaveBeenCalled()
     expect(onCredentialCreated).not.toHaveBeenCalled()
     expect(result.current.recovery).toBeNull()
-    expect(mockShowWarningToast).toHaveBeenCalledTimes(1)
+    expect(mockWarningToast).toHaveBeenCalledTimes(1)
   })
 
   it("stays silent for stale known pre-dispatch evidence", async () => {
@@ -913,7 +907,7 @@ describe("useOpenRouterAccountOnboarding", () => {
     })
 
     expect(onManualFallback).not.toHaveBeenCalled()
-    expect(mockShowWarningToast).not.toHaveBeenCalled()
+    expect(mockWarningToast).not.toHaveBeenCalled()
   })
 
   it("uses a created provisioning result when cancellation hangs during close", async () => {
@@ -943,8 +937,8 @@ describe("useOpenRouterAccountOnboarding", () => {
       expect(mockCancelOpenRouterAccountProvisioning).toHaveBeenCalledWith(
         "close-created-request-placeholder",
       )
-      expect(mockShowWarningToast).toHaveBeenCalledTimes(1)
-      expect(mockShowWarningToast).toHaveBeenCalledWith(
+      expect(mockWarningToast).toHaveBeenCalledTimes(1)
+      expect(mockWarningToast).toHaveBeenCalledWith(
         expect.stringContaining(
           "OpenRouter extension close-created-request-placeholder",
         ),
@@ -978,7 +972,7 @@ describe("useOpenRouterAccountOnboarding", () => {
         await closePromise
       })
 
-      expect(mockShowWarningToast).not.toHaveBeenCalled()
+      expect(mockWarningToast).not.toHaveBeenCalled()
     } finally {
       vi.useRealTimers()
     }
@@ -1008,8 +1002,8 @@ describe("useOpenRouterAccountOnboarding", () => {
         await closePromise
       })
 
-      expect(mockShowWarningToast).toHaveBeenCalledTimes(1)
-      expect(mockShowWarningToast).toHaveBeenCalledWith(
+      expect(mockWarningToast).toHaveBeenCalledTimes(1)
+      expect(mockWarningToast).toHaveBeenCalledWith(
         expect.stringContaining(
           "OpenRouter extension close-uncertain-request-placeholder",
         ),
@@ -1044,8 +1038,8 @@ describe("useOpenRouterAccountOnboarding", () => {
         await closePromise
       })
 
-      expect(mockShowWarningToast).toHaveBeenCalledTimes(1)
-      expect(mockShowWarningToast).toHaveBeenCalledWith(
+      expect(mockWarningToast).toHaveBeenCalledTimes(1)
+      expect(mockWarningToast).toHaveBeenCalledWith(
         expect.stringContaining("Recognizable dispatched placeholder"),
       )
     } finally {
@@ -1073,8 +1067,8 @@ describe("useOpenRouterAccountOnboarding", () => {
         await closePromise
       })
 
-      expect(mockShowWarningToast).toHaveBeenCalledTimes(1)
-      expect(mockShowWarningToast).toHaveBeenCalledWith(
+      expect(mockWarningToast).toHaveBeenCalledTimes(1)
+      expect(mockWarningToast).toHaveBeenCalledWith(
         expect.stringContaining(
           createOpenRouterBootstrapLabel("close-cancel-rejected-placeholder"),
         ),
@@ -1119,20 +1113,20 @@ describe("useOpenRouterAccountOnboarding", () => {
         await closePromise
       })
 
-      expect(mockShowWarningToast).toHaveBeenCalledTimes(1)
-      expect(mockShowWarningToast).toHaveBeenCalledWith(
+      expect(mockWarningToast).toHaveBeenCalledTimes(1)
+      expect(mockWarningToast).toHaveBeenCalledWith(
         expect.stringContaining(
           createOpenRouterBootstrapLabel("close-late-cancel-placeholder"),
         ),
       )
-      expect(mockShowWarningToast).not.toHaveBeenCalledWith(
+      expect(mockWarningToast).not.toHaveBeenCalledWith(
         expect.stringContaining("Late cancellation label"),
       )
 
       await act(async () => {
         await vi.advanceTimersByTimeAsync(1_000)
       })
-      expect(mockShowWarningToast).toHaveBeenCalledTimes(1)
+      expect(mockWarningToast).toHaveBeenCalledTimes(1)
     } finally {
       vi.useRealTimers()
     }
@@ -1194,7 +1188,7 @@ describe("useOpenRouterAccountOnboarding", () => {
       await closePromise
     })
 
-    expect(mockShowWarningToast).toHaveBeenCalledTimes(1)
+    expect(mockWarningToast).toHaveBeenCalledTimes(1)
   })
 
   it("keeps a late closed result isolated after a new dialog session starts", async () => {
@@ -1242,7 +1236,7 @@ describe("useOpenRouterAccountOnboarding", () => {
       result.current.notifyCredentialChange("another-replacement-placeholder")
     })
 
-    expect(mockShowWarningToast).toHaveBeenCalledTimes(1)
+    expect(mockWarningToast).toHaveBeenCalledTimes(1)
     expect(result.current.recovery).toBeNull()
   })
 
@@ -1259,7 +1253,7 @@ describe("useOpenRouterAccountOnboarding", () => {
     })
 
     expect(transition).toEqual({ clearCreatedCredential: true })
-    expect(mockShowWarningToast).toHaveBeenCalledTimes(1)
+    expect(mockWarningToast).toHaveBeenCalledTimes(1)
   })
 
   it("asks the dialog to clear the created credential before re-detecting", async () => {
@@ -1277,7 +1271,7 @@ describe("useOpenRouterAccountOnboarding", () => {
     })
 
     expect(admission).toMatchObject({ clearCreatedCredential: true })
-    expect(mockShowWarningToast).toHaveBeenCalledTimes(1)
+    expect(mockWarningToast).toHaveBeenCalledTimes(1)
   })
 
   it("clears a saved identical credential without recovery guidance", async () => {
@@ -1291,7 +1285,7 @@ describe("useOpenRouterAccountOnboarding", () => {
       result.current.confirmSavedCredential("  management-key-placeholder  ")
     })
 
-    expect(mockShowWarningToast).not.toHaveBeenCalled()
+    expect(mockWarningToast).not.toHaveBeenCalled()
     expect(result.current.recovery).toBeNull()
   })
 
@@ -1306,7 +1300,7 @@ describe("useOpenRouterAccountOnboarding", () => {
       result.current.confirmSavedCredential("different-key-placeholder")
     })
 
-    expect(mockShowWarningToast).toHaveBeenCalledTimes(1)
+    expect(mockWarningToast).toHaveBeenCalledTimes(1)
     expect(result.current.recovery).toBeNull()
   })
 
@@ -1327,6 +1321,11 @@ describe("useOpenRouterAccountOnboarding", () => {
     })
 
     expect(result.current.recovery).toBeNull()
-    expect(mockShowWarningToast).not.toHaveBeenCalled()
+    expect(mockWarningToast).not.toHaveBeenCalled()
   })
+})
+
+vi.mock("~/lib/notify", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/lib/notify")>()
+  return { default: { ...actual.default, warning: mockWarningToast } }
 })

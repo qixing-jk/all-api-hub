@@ -6,7 +6,6 @@ import {
   useRef,
   useState,
 } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { useChannelDialog } from "~/components/dialogs/ChannelDialog"
@@ -43,6 +42,7 @@ import {
   isAccountAuthType,
   resolveDefaultAccountAuthType,
 } from "~/features/AccountManagement/utils/accountAuthType"
+import toast from "~/lib/notify"
 import {
   ACCOUNT_BROWSER_SESSION_SOURCES,
   resolveAccountBrowserSession,
@@ -162,8 +162,8 @@ import {
 import { getCurrentTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
-import { showUpdateToast, showWarningToast } from "~/utils/core/toastHelpers"
 import { tryParseOrigin } from "~/utils/core/urlParsing"
+import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
 import { openSettingsTab } from "~/utils/navigation"
 
 import {
@@ -2697,7 +2697,7 @@ export function useAccountDialog({
             ? result.accountId.trim()
             : null
 
-        showWarningToast(feedbackMessage, {
+        toast.warning(feedbackMessage, {
           action: warningAccountId
             ? {
                 label: t("common:actions.refresh"),
@@ -2838,7 +2838,7 @@ export function useAccountDialog({
       isCreating: false,
     })
     completePendingAihubmixPostSaveSuccess()
-    toast(t("messages:aihubmix.oneTimeKeyPromptCancelled"))
+    toast.info(t("messages:aihubmix.oneTimeKeyPromptCancelled"))
   }, [completePendingAihubmixPostSaveSuccess, t])
 
   const handleAihubmixPostSaveKeyPromptConfirm = useCallback(async () => {

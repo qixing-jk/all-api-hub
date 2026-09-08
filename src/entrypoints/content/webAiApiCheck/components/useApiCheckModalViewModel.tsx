@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import toast from "react-hot-toast/headless"
 import { useTranslation } from "react-i18next"
 
 import { parseDatePickerTimestamp } from "~/components/ui/datePickerValue"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import toast from "~/lib/notify/content"
 import {
   resolveProductAnalyticsErrorCategoryFromError,
   startProductAnalyticsAction,

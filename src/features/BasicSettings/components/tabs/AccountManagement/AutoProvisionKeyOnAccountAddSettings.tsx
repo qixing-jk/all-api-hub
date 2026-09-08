@@ -12,7 +12,7 @@ import {
   ACCOUNT_KEY_AUTO_PROVISION_MODES,
   type AccountKeyAutoProvisionMode,
 } from "~/types/accountKeyAutoProvisioning"
-import { showUpdateToast } from "~/utils/core/toastHelpers"
+import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
 
 /**
  * Controls automatic key creation and its group scope after adding an account.

@@ -20,7 +20,6 @@ import {
   Trash2,
 } from "lucide-react"
 import React, { useEffect, useRef, useState } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { IconButton } from "~/components/ui"
@@ -48,6 +47,7 @@ import {
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { translateAutoCheckinMessageKey } from "~/features/AutoCheckin/utils/autoCheckin"
 import { exportShareSnapshotWithToast } from "~/features/ShareSnapshots/utils/exportShareSnapshotWithToast"
+import toast from "~/lib/notify"
 import {
   collectAccountRuntimeKeySecrets,
   isAccountTokenRuntimeKey,
@@ -114,7 +114,6 @@ import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 import { getCurrentTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
-import { showWarningToast } from "~/utils/core/toastHelpers"
 import { sanitizeOriginUrl } from "~/utils/core/url"
 import {
   openKeysPage,
@@ -508,7 +507,7 @@ export default function AccountActionButtons({
     }
     const handleChannelLocateFallback = (message: string) => {
       openManagedSiteChannelsPage({ search: normalizedAccountBaseUrl })
-      showWarningToast(message)
+      toast.warning(message)
     }
 
     const secretsToRedact = new Set<string>()

@@ -1,6 +1,5 @@
 import { Bug, FileText, Languages, Sparkles, TriangleAlert } from "lucide-react"
 import { useCallback, useState } from "react"
-import toast from "react-hot-toast"
 
 import { useUpdateLogDialogContext } from "~/components/dialogs/UpdateLogDialog"
 import Tooltip from "~/components/Tooltip"
@@ -11,6 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
+import toast from "~/lib/notify"
 import { debugQueuePopupInterruptionHint } from "~/services/popupInterruptionHint"
 import { changelogOnUpdateState } from "~/services/updates/changelogOnUpdateState"
 import { getExtensionVersion } from "~/utils/browser/browserApi"

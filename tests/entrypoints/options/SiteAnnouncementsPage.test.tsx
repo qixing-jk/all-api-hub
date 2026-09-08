@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import SiteAnnouncementsPage from "~/entrypoints/options/pages/SiteAnnouncements"
+import notify from "~/lib/notify"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import {
   DEFAULT_PREFERENCES,
@@ -26,7 +27,7 @@ import type {
   SiteAnnouncementSiteState,
 } from "~/types/siteAnnouncements"
 import { deepOverride } from "~/utils"
-import { showResultToast, showWarningToast } from "~/utils/core/toastHelpers"
+import { showResultToast } from "~/utils/feedback/operationFeedback"
 import { openSettingsTab } from "~/utils/navigation"
 import { createResourceTestI18n } from "~~/tests/test-utils/i18n"
 import { act, render, screen, waitFor } from "~~/tests/test-utils/render"
@@ -63,9 +64,8 @@ vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
   },
 }))
 
-vi.mock("~/utils/core/toastHelpers", () => ({
+vi.mock("~/utils/feedback/operationFeedback", () => ({
   showResultToast: vi.fn(),
-  showWarningToast: vi.fn(),
 }))
 
 vi.mock("~/utils/navigation", () => ({
@@ -689,7 +689,7 @@ describe("SiteAnnouncementsPage", () => {
           },
         },
       )
-      expect(showWarningToast).toHaveBeenCalledWith(
+      expect(notify.warning).toHaveBeenCalledWith(
         "siteAnnouncements:messages.checkCompletedWithIssues",
       )
       expect(showResultToast).not.toHaveBeenCalled()
@@ -730,7 +730,7 @@ describe("SiteAnnouncementsPage", () => {
         errorFallback: "siteAnnouncements:messages.checkFailed",
       })
     })
-    expect(showWarningToast).not.toHaveBeenCalled()
+    expect(notify.warning).not.toHaveBeenCalled()
     expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Success,
       {
@@ -765,7 +765,7 @@ describe("SiteAnnouncementsPage", () => {
     )
 
     await waitFor(() => {
-      expect(showWarningToast).toHaveBeenCalledWith(
+      expect(notify.warning).toHaveBeenCalledWith(
         "siteAnnouncements:messages.checkCompletedWithIssues",
       )
     })
@@ -1288,4 +1288,9 @@ describe("SiteAnnouncementsPage", () => {
       )
     })
   })
+})
+
+vi.mock("~/lib/notify", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/lib/notify")>()
+  return { default: { ...actual.default, warning: vi.fn() } }
 })

@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { SettingSection } from "~/components/SettingSection"
@@ -13,13 +12,14 @@ import {
 } from "~/components/ui"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import toast from "~/lib/notify"
 import { clampBalanceHistoryRetentionDays } from "~/services/history/dailyBalanceHistory/utils"
 import { DEFAULT_BALANCE_HISTORY_PREFERENCES } from "~/types/dailyBalanceHistory"
 import { hasAlarmsAPI, sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { isDevelopmentMode } from "~/utils/core/environment"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
-import { getPreferenceWriteFailureMessage } from "~/utils/core/toastHelpers"
+import { getPreferenceWriteFailureMessage } from "~/utils/feedback/preferenceFeedback"
 
 const logger = createLogger("BalanceHistorySettings")
 

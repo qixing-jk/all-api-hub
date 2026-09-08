@@ -1,9 +1,9 @@
 import { useState } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { ConfirmDialog } from "~/components/ui"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
+import toast from "~/lib/notify"
 import { accountMutations } from "~/services/accounts/accountStorage/accountMutations"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {

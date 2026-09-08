@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import toast from "~/lib/notify"
 import {
   IMPORT_SECTION_KEYS,
   IMPORT_SECTION_STRATEGIES,

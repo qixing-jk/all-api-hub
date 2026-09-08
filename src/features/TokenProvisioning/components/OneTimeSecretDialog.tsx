@@ -1,10 +1,10 @@
 import { Check, Clipboard } from "lucide-react"
 import { useCallback, useId, useLayoutEffect, useRef, useState } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { Alert, Button, ConfirmDialog, Input, Modal } from "~/components/ui"
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
+import toast from "~/lib/notify"
 
 export interface OneTimeSecretPresentation {
   displayName: string

@@ -1,9 +1,9 @@
 import userEvent from "@testing-library/user-event"
-import toast from "react-hot-toast"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import ModelRedirectSettings from "~/features/BasicSettings/components/tabs/ManagedSite/ModelRedirectSettings"
+import toast from "~/lib/notify"
 import { getManagedSiteCapabilities } from "~/services/apiAdapters/registry"
 import {
   hasValidManagedSiteConfig,
@@ -61,10 +61,11 @@ vi.mock("~/services/models/modelRedirect/capabilities", () => ({
   supportsManagedSiteModelRedirect: vi.fn(),
 }))
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     success: vi.fn(),
     error: vi.fn(),
+    warning: vi.fn(),
   },
 }))
 
@@ -349,7 +350,7 @@ describe("Model redirect bulk clear flow", () => {
       ).toHaveBeenCalledWith([modelResourceRef(1), modelResourceRef(2)])
     })
 
-    expect(toast.success).toHaveBeenCalled()
+    expect(toast.warning).toHaveBeenCalled()
   })
 
   it("preserves hidden selections while toggling and bulk-selecting filtered resource references", async () => {

@@ -12,7 +12,6 @@ import {
   useState,
   type MouseEvent,
 } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { OptionsPageSettingsTitleAction } from "~/components/OptionsPageSettingsTitleAction"
@@ -45,6 +44,7 @@ import {
   withGuidedAccountKeyImportTarget,
   type UnifiedApiGuidanceAction,
 } from "~/features/UnifiedApiGuidance"
+import toast from "~/lib/notify"
 import { GATEWAY_GUIDANCE_SURFACES } from "~/services/featureGuidance/featureGuidanceState"
 import { buildAccountRefreshDiagnostics } from "~/services/productAnalytics/accountRefresh"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"

@@ -5,14 +5,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { DATA_TYPE_BALANCE, DATA_TYPE_CASHFLOW } from "~/constants"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import DisplaySettings from "~/features/BasicSettings/components/tabs/General/DisplaySettings"
-import { showUpdateToast } from "~/utils/core/toastHelpers"
+import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
 import { testI18n } from "~~/tests/test-utils/i18n"
 
 vi.mock("~/contexts/UserPreferencesContext", () => ({
   useUserPreferencesContext: vi.fn(),
 }))
 
-vi.mock("~/utils/core/toastHelpers", () => ({
+vi.mock("~/utils/feedback/preferenceFeedback", () => ({
   showUpdateToast: vi.fn(),
 }))
 

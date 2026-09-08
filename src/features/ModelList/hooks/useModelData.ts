@@ -6,7 +6,6 @@ import {
 } from "@tanstack/react-query"
 import type { TFunction } from "i18next"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import {
@@ -19,6 +18,7 @@ import {
   type ModelListSourceIdentity,
   type ModelManagementSource,
 } from "~/features/ModelList/modelManagementSources"
+import toast from "~/lib/notify"
 import {
   hasUsableAccountRuntimeKeySecret,
   type AccountRuntimeKey,

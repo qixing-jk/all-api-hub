@@ -21,7 +21,7 @@ import {
   trackOptionalPermissionResult,
 } from "~/services/productAnalytics/permissions"
 import { createLogger } from "~/utils/core/logger"
-import { showResultToast } from "~/utils/core/toastHelpers"
+import { showResultToast } from "~/utils/feedback/operationFeedback"
 
 interface PermissionState {
   statuses: Record<ManifestOptionalPermissions, boolean | null>
@@ -190,11 +190,13 @@ export function useOptionalPermissionControls({
             wasGrantedAfter,
           })
           logger.debug("Permission request completed", { id, success })
-          showResultToast(
+          showResultToast({
             success,
-            t("permissions.messages.granted", { name: label }),
-            t("permissions.messages.grantFailed", { name: label }),
-          )
+            successFallback: t("permissions.messages.granted", { name: label }),
+            errorFallback: t("permissions.messages.grantFailed", {
+              name: label,
+            }),
+          })
         } else {
           const result = await removePermissionDetailed(id)
           success = result.success
@@ -213,11 +215,13 @@ export function useOptionalPermissionControls({
             wasGrantedAfter,
           })
           logger.debug("Permission revoke completed", { id, success })
-          showResultToast(
+          showResultToast({
             success,
-            t("permissions.messages.revoked", { name: label }),
-            t("permissions.messages.revokeFailed", { name: label }),
-          )
+            successFallback: t("permissions.messages.revoked", { name: label }),
+            errorFallback: t("permissions.messages.revokeFailed", {
+              name: label,
+            }),
+          })
         }
 
         if (success) {
@@ -249,15 +253,15 @@ export function useOptionalPermissionControls({
           })
         }
         logger.error("Failed to toggle optional permission", { id, error })
-        showResultToast(
-          false,
-          shouldEnable
+        showResultToast({
+          success: false,
+          successFallback: shouldEnable
             ? t("permissions.messages.granted", { name: label })
             : t("permissions.messages.revoked", { name: label }),
-          shouldEnable
+          errorFallback: shouldEnable
             ? t("permissions.messages.grantFailed", { name: label })
             : t("permissions.messages.revokeFailed", { name: label }),
-        )
+        })
       } finally {
         setState((prev) => ({
           ...prev,

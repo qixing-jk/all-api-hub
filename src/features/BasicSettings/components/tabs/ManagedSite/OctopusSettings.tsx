@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { SettingSection } from "~/components/SettingSection"
@@ -7,13 +6,13 @@ import { Button, Card, CardItem, CardList, Input } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { blurInputOnEnter } from "~/hooks/useDeferredPreferenceField"
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
+import toast from "~/lib/notify"
 import { validateOctopusConfig } from "~/services/apiService/octopus"
 import { PROTECTION_BYPASS_SURFACES } from "~/services/protectionBypass/contracts"
 import {
-  createVersionedPreferenceSaveOptions,
   getPreferenceWriteFailureMessage,
   runPreferenceUpdateWithToast,
-} from "~/utils/core/toastHelpers"
+} from "~/utils/feedback/preferenceFeedback"
 
 /**
  * Settings panel for configuring Octopus connection credentials (base URL, username, password).
@@ -119,7 +118,7 @@ export default function OctopusSettings() {
             username: trimmedUsername,
             password: trimmedPassword,
           },
-          createVersionedPreferenceSaveOptions(expectedLastUpdated),
+          { expectedLastUpdated },
         )
 
         if (saveResult.ok) {

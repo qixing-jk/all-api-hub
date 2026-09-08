@@ -2,6 +2,7 @@ import toast from "react-hot-toast"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import notify from "~/lib/notify"
 import { autoProvisionKeyOnAccountAdd } from "~/services/accounts/accountKeyAutoProvisioning/autoProvisionOnAccountAdd"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import {
@@ -12,13 +13,12 @@ import {
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { AuthTypeEnum, SiteHealthStatus, type SiteAccount } from "~/types"
 import { ACCOUNT_KEY_AUTO_PROVISION_MODES } from "~/types/accountKeyAutoProvisioning"
-import { showWarningToast } from "~/utils/core/toastHelpers"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
 vi.mock("react-hot-toast", () => ({
   default: { success: vi.fn(), error: vi.fn() },
 }))
-vi.mock("~/utils/core/toastHelpers", () => ({ showWarningToast: vi.fn() }))
+
 vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
   accountQueries: { getAccountById: vi.fn() },
 }))
@@ -171,7 +171,7 @@ describe("automatic provisioning for all groups", () => {
     await run()
 
     expect(remote.writes).toEqual([])
-    expect(showWarningToast).toHaveBeenCalledWith(
+    expect(notify.warning).toHaveBeenCalledWith(
       "messages:accountOperations.autoProvisionGroupsIncomplete",
     )
     expect(toast.success).not.toHaveBeenCalled()
@@ -190,7 +190,7 @@ describe("automatic provisioning for all groups", () => {
     await run()
 
     expect(remote.writes).toEqual([])
-    expect(showWarningToast).toHaveBeenCalledWith(
+    expect(notify.warning).toHaveBeenCalledWith(
       "messages:accountOperations.autoProvisionGroupsIncomplete",
     )
     expect(toast.success).not.toHaveBeenCalled()
@@ -208,7 +208,7 @@ describe("automatic provisioning for all groups", () => {
     expect(
       remote.items.some((item) => item.ref.resourceId === "opaque:beta"),
     ).toBe(false)
-    expect(showWarningToast).toHaveBeenCalledWith(
+    expect(notify.warning).toHaveBeenCalledWith(
       "messages:accountOperations.autoProvisionGroupsIncomplete",
     )
     expect(toast.success).not.toHaveBeenCalled()
@@ -237,7 +237,7 @@ describe("automatic provisioning for all groups", () => {
     await run()
 
     expect(remote.writes).toEqual([])
-    expect(showWarningToast).toHaveBeenCalledWith(
+    expect(notify.warning).toHaveBeenCalledWith(
       "messages:accountOperations.autoProvisionGroupsUnavailable",
     )
     expect(toast.success).not.toHaveBeenCalled()
@@ -261,7 +261,7 @@ describe("automatic provisioning for all groups", () => {
       await run()
 
       expect(remote.writes).toEqual([])
-      expect(showWarningToast).toHaveBeenCalledWith(
+      expect(notify.warning).toHaveBeenCalledWith(
         "messages:accountOperations.autoProvisionGroupsUnsupported",
       )
     },
@@ -279,7 +279,7 @@ describe("automatic provisioning for all groups", () => {
       await run()
 
       expect(remote.open).not.toHaveBeenCalled()
-      expect(showWarningToast).not.toHaveBeenCalled()
+      expect(notify.warning).not.toHaveBeenCalled()
     },
   )
 
@@ -294,4 +294,9 @@ describe("automatic provisioning for all groups", () => {
       "messages:accountOperations.autoProvisionFailed",
     )
   })
+})
+
+vi.mock("~/lib/notify", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/lib/notify")>()
+  return { default: { ...actual.default, warning: vi.fn() } }
 })

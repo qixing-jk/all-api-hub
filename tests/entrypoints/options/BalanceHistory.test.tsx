@@ -1,6 +1,5 @@
 import userEvent from "@testing-library/user-event"
 import type { ReactNode } from "react"
-import toast from "react-hot-toast"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { echarts } from "~/components/charts/echarts"
@@ -9,6 +8,7 @@ import { UI_CONSTANTS } from "~/constants/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import BalanceHistory from "~/entrypoints/options/pages/BalanceHistory"
 import { BALANCE_HISTORY_TEST_IDS } from "~/features/BalanceHistory/testIds"
+import toast from "~/lib/notify"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import {
   getDayKeyFromUnixSeconds,
@@ -58,7 +58,7 @@ const {
   trackProductAnalyticsActionStartedMock: vi.fn(),
 }))
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     loading: vi.fn(() => "toast-id"),
     success: vi.fn(),

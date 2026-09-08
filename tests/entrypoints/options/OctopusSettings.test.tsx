@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import OctopusSettings from "~/features/BasicSettings/components/tabs/ManagedSite/OctopusSettings"
 import { validateOctopusConfig } from "~/services/apiService/octopus"
 import type { PreferenceWriteResult } from "~/services/preferences/userPreferences"
-import { showUpdateToast } from "~/utils/core/toastHelpers"
+import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const {
@@ -43,10 +43,7 @@ vi.mock("~/services/apiService/octopus", async (importOriginal) => ({
   validateOctopusConfig: vi.fn(),
 }))
 
-vi.mock("~/utils/core/toastHelpers", () => ({
-  createVersionedPreferenceSaveOptions: (expectedLastUpdated: number) => ({
-    expectedLastUpdated,
-  }),
+vi.mock("~/utils/feedback/preferenceFeedback", () => ({
   runPreferenceUpdateWithToast: async ({
     expectedLastUpdated,
     setting,

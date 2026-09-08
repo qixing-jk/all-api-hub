@@ -8,7 +8,6 @@ import {
   useState,
   type ReactNode,
 } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next" // 1. 定义 Context 的值类型
 
 import {
@@ -19,6 +18,7 @@ import {
 } from "~/constants"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import toast from "~/lib/notify"
 import { readAccountBrowserIdentityFromTab } from "~/services/accountBrowserSession/identityReader"
 import { replaceIdListSubset } from "~/services/accounts/accountEntryLayoutPolicy"
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"

@@ -37,9 +37,9 @@ import {
   openManagedSiteChannelsPageMock,
   resolveDisplayAccountRuntimeKeySecretMock,
   startProductAnalyticsActionMock,
-  toastCustomMock,
   toastErrorMock,
   toastSuccessMock,
+  toastWarningMock,
   trackStartedMock,
   userPreferencesContextValue,
   withProtectionBypassUserCommandMock,
@@ -975,11 +975,8 @@ describe("AccountActionButtons", () => {
       expect(openManagedSiteChannelsPageMock).toHaveBeenCalledWith({
         search: "https://api.example.com",
       })
-      expect(toastCustomMock).toHaveBeenCalledWith(
-        expect.any(Function),
-        expect.objectContaining({
-          duration: 5000,
-        }),
+      expect(toastWarningMock).toHaveBeenCalledWith(
+        "account:actions.channelLocateNoKeyFallback",
       )
     })
     expect(toastSuccessMock).not.toHaveBeenCalled()
@@ -1037,11 +1034,8 @@ describe("AccountActionButtons", () => {
       expect(openManagedSiteChannelsPageMock).toHaveBeenCalledWith({
         search: "https://api.example.com",
       })
-      expect(toastCustomMock).toHaveBeenCalledWith(
-        expect.any(Function),
-        expect.objectContaining({
-          duration: 5000,
-        }),
+      expect(toastWarningMock).toHaveBeenCalledWith(
+        "account:actions.channelLocateMultipleKeysFallback",
       )
     })
     expect(toastSuccessMock).not.toHaveBeenCalled()
@@ -1250,11 +1244,8 @@ describe("AccountActionButtons", () => {
       expect(openManagedSiteChannelsPageMock).toHaveBeenCalledWith({
         search: "https://api.example.com",
       })
-      expect(toastCustomMock).toHaveBeenCalledWith(
-        expect.any(Function),
-        expect.objectContaining({
-          duration: 5000,
-        }),
+      expect(toastWarningMock).toHaveBeenCalledWith(
+        "account:actions.channelLocateConfigMissing",
       )
     })
     expect(toastSuccessMock).not.toHaveBeenCalled()

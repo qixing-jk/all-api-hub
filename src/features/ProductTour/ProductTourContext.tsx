@@ -9,12 +9,12 @@ import {
   useState,
   type ReactNode,
 } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 import { EVENTS, Joyride, STATUS, type EventData } from "react-joyride"
 
 import { useFeatureGuidanceContext } from "~/contexts/FeatureGuidanceContext"
 import { useIsMobile, useMediaQuery } from "~/hooks/useMediaQuery"
+import toast from "~/lib/notify"
 import {
   PRODUCT_TOUR_VARIANTS,
   type ProductTourVariant,

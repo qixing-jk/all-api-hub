@@ -1,6 +1,5 @@
 import { QRCodeSVG } from "qrcode.react"
 import { useEffect, useId, useMemo, useState, type FormEvent } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import {
@@ -16,6 +15,7 @@ import {
   SelectValue,
 } from "~/components/ui"
 import { useSafeExportAction } from "~/hooks/useSafeExportAction"
+import toast from "~/lib/notify"
 import {
   buildKelivoProviderShareCode,
   copyKelivoProviderShareCode,

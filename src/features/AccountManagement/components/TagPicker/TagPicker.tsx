@@ -1,6 +1,5 @@
 import { Check, ChevronDown, Plus, SquarePen, Trash2, X } from "lucide-react"
 import { useCallback, useEffect, useId, useMemo, useState } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import {
@@ -15,6 +14,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "~/components/ui/popover"
+import toast from "~/lib/notify"
 import { normalizeTagNameForUniqueness } from "~/services/tags/tagStoreUtils"
 import type { Tag } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"

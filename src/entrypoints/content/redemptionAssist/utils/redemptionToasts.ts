@@ -1,5 +1,4 @@
-import toast from "react-hot-toast/headless"
-
+import toast from "~/lib/notify/content"
 import { trackProductAnalyticsActionCompleted } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,

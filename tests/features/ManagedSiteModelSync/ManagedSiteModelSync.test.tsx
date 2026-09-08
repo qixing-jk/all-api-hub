@@ -41,7 +41,7 @@ import { modelResourceRef } from "~~/tests/test-utils/managedModelResource"
 const {
   mockSendRuntimeMessage,
   mockUseUserPreferencesContext,
-  mockShowWarningToast,
+  mockWarningToast,
   mockOpenSettingsTab,
   mockStartProductAnalyticsAction,
   mockTrackProductAnalyticsActionCompleted,
@@ -52,7 +52,7 @@ const {
   return {
     mockSendRuntimeMessage: vi.fn(),
     mockUseUserPreferencesContext: vi.fn(),
-    mockShowWarningToast: vi.fn(),
+    mockWarningToast: vi.fn(),
     mockOpenSettingsTab: vi.fn(),
     mockStartProductAnalyticsAction: vi.fn(),
     mockTrackProductAnalyticsActionCompleted: vi.fn(),
@@ -89,10 +89,6 @@ vi.mock("react-hot-toast", () => ({
     success: vi.fn(),
     error: vi.fn(),
   },
-}))
-
-vi.mock("~/utils/core/toastHelpers", () => ({
-  showWarningToast: mockShowWarningToast,
 }))
 
 vi.mock("~/utils/core/logger", () => ({
@@ -1623,8 +1619,8 @@ describe("ManagedSiteModelSync page", () => {
         name: "managedSiteModelSync:execution.actions.runAll",
       }),
     )
-    await waitFor(() => expect(mockShowWarningToast).toHaveBeenCalledOnce())
-    const retry = mockShowWarningToast.mock.calls[0][1].action.onClick
+    await waitFor(() => expect(mockWarningToast).toHaveBeenCalledOnce())
+    const retry = mockWarningToast.mock.calls[0][1].action.onClick
 
     history = createExecution("Gamma", 103)
     await user.click(
@@ -1752,7 +1748,7 @@ describe("ManagedSiteModelSync page", () => {
     )
 
     await waitFor(() => {
-      expect(mockShowWarningToast).toHaveBeenCalledWith(
+      expect(mockWarningToast).toHaveBeenCalledWith(
         "managedSiteModelSync:messages.warning.syncCompletedWithFailures",
         expect.objectContaining({
           action: expect.objectContaining({
@@ -4429,4 +4425,9 @@ describe("ManagedSiteModelSync page", () => {
       vi.useRealTimers()
     }
   })
+})
+
+vi.mock("~/lib/notify", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/lib/notify")>()
+  return { default: { ...actual.default, warning: mockWarningToast } }
 })

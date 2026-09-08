@@ -1,8 +1,8 @@
 import { useCallback, useLayoutEffect, useRef, useState } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import type { ManagedSiteType } from "~/constants/siteType"
+import toast from "~/lib/notify"
 import {
   isManagedResourceRefFor,
   MANAGED_RESOURCE_FAILURE_CODES,

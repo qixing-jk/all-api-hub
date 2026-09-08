@@ -1,4 +1,3 @@
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import type { ChannelDialogAdvisoryWarning } from "~/components/dialogs/ChannelDialog/context/ChannelDialogContext"
@@ -7,6 +6,7 @@ import {
   buildChannelDialogAdvisoryWarning,
   CHANNEL_DIALOG_ADVISORY_WARNING_KINDS,
 } from "~/components/dialogs/ChannelDialog/utils/advisoryWarning"
+import toast from "~/lib/notify"
 import { selectSingleNewApiTokenByIdDiff } from "~/services/accounts/accountPostSaveWorkflow"
 import {
   buildDisplayAccountTokenRuntimeKey,

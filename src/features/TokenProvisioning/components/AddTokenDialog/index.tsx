@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { Alert } from "~/components/ui"
@@ -7,6 +6,7 @@ import { Modal } from "~/components/ui/Dialog/Modal"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
 import { buildOneTimeApiKeyProfileSaveAction } from "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction"
+import toast from "~/lib/notify"
 import type { CreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
 import { normalizeDefaultTokenRequestName } from "~/services/accounts/defaultTokenLifecycle"
 import {

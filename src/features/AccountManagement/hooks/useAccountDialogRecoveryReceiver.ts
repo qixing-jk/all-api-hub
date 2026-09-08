@@ -1,5 +1,4 @@
 import { useEffect, useRef } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import {
@@ -8,6 +7,7 @@ import {
   watchPendingAccountDialogRecovery,
 } from "~/features/AccountManagement/accountDialogRecovery"
 import type { AccountDialogRecoveryState } from "~/features/AccountManagement/components/AccountDialog/models"
+import toast from "~/lib/notify"
 import { isExtensionSidePanel } from "~/utils/browser"
 import { getActiveTab } from "~/utils/browser/browserApi"
 

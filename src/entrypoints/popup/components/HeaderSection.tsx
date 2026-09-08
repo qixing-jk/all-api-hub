@@ -1,6 +1,5 @@
 import { Maximize2, PanelRightClose, RefreshCw, Settings } from "lucide-react"
 import { useCallback, useState } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import iconImage from "~/assets/icon.png"
@@ -13,6 +12,7 @@ import { COLORS } from "~/constants/designTokens"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 import { ProductAnnouncementButton } from "~/features/ProductAnnouncements/ProductAnnouncementButton"
+import toast from "~/lib/notify"
 import { buildAccountRefreshDiagnostics } from "~/services/productAnalytics/accountRefresh"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {

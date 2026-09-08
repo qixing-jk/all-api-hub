@@ -7,7 +7,6 @@ import {
   TrendingDown,
 } from "lucide-react"
 import { useMemo } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import Tooltip from "~/components/Tooltip"
@@ -51,6 +50,7 @@ import {
   DEFAULT_MODEL_LIST_VERIFICATION_RESULT_FILTERS,
   type ModelListVerificationResultFilter,
 } from "~/features/ModelList/verificationResultFilters"
+import toast from "~/lib/notify"
 import { trackProductAnalyticsActionCompleted } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,

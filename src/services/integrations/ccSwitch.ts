@@ -1,5 +1,4 @@
-import toast from "react-hot-toast"
-
+import toast from "~/lib/notify"
 import type { ApiToken, DisplaySiteData } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 import { normalizeHttpUrl } from "~/utils/core/url"

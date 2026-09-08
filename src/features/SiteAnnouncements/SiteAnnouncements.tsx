@@ -10,6 +10,7 @@ import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import notify from "~/lib/notify"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
@@ -35,7 +36,7 @@ import type {
 import { SITE_ANNOUNCEMENT_STATUS } from "~/types/siteAnnouncements"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
-import { showResultToast, showWarningToast } from "~/utils/core/toastHelpers"
+import { showResultToast } from "~/utils/feedback/operationFeedback"
 import { openSettingsTab, pushWithinOptionsPage } from "~/utils/navigation"
 
 import { SiteAnnouncementsFiltersCard } from "./components/SiteAnnouncementsFiltersCard"
@@ -306,7 +307,7 @@ export default function SiteAnnouncementsPage({
         )
       }
       if (hasPartialIssues) {
-        showWarningToast(
+        notify.warning(
           t("messages.checkCompletedWithIssues", {
             failed: failedCount,
             unsupported: unsupportedCount,

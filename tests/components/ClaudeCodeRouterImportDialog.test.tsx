@@ -78,7 +78,7 @@ vi.mock("~/services/integrations/claudeCodeRouterService", () => ({
     mockImportToClaudeCodeRouter(...args),
 }))
 
-vi.mock("~/utils/core/toastHelpers", () => ({
+vi.mock("~/utils/feedback/operationFeedback", () => ({
   showResultToast: (...args: any[]) => mockShowResultToast(...args),
 }))
 

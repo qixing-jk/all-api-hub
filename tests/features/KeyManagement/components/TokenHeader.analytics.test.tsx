@@ -204,7 +204,7 @@ vi.mock("~/services/productAnalytics/actions", () => ({
     startProductAnalyticsActionMock(...args),
 }))
 
-vi.mock("~/utils/core/toastHelpers", () => ({
+vi.mock("~/utils/feedback/operationFeedback", () => ({
   showResultToast: (...args: unknown[]) => showResultToastMock(...args),
 }))
 

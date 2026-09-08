@@ -1,6 +1,5 @@
 import type { TFunction } from "i18next"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { ApiCredentialLibraryIcon } from "~/components/icons/productIcons"
@@ -32,6 +31,7 @@ import {
 } from "~/features/UnifiedApiGuidance/components/GuidanceCardLayout"
 import { useAccountData } from "~/hooks/useAccountData"
 import { useApiCredentialProfileLinks } from "~/hooks/useApiCredentialProfileLinks"
+import toast from "~/lib/notify"
 import { apiCredentialProfileLinks } from "~/services/apiCredentialProfiles/apiCredentialProfileLinks"
 import {
   GATEWAY_GUIDANCE_SURFACES,

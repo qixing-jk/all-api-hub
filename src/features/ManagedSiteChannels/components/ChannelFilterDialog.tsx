@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import ChannelFiltersEditor from "~/components/ChannelFiltersEditor"
@@ -7,6 +6,7 @@ import type { EditableFilterField } from "~/components/ChannelFiltersEditor"
 import { Modal } from "~/components/ui"
 import { Button } from "~/components/ui/button"
 import { MANAGED_SITE_CHANNELS_TEST_IDS } from "~/features/ManagedSiteChannels/testIds"
+import toast from "~/lib/notify"
 import {
   normalizeChannelFilters,
   type IncomingChannelFilter,

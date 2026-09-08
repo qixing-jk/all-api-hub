@@ -1,8 +1,8 @@
 import type { TFunction } from "i18next"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
+import toast from "~/lib/notify"
 import { buildGroupDefaultTokenRequest } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
 import {
   appendOrReplaceAccountRuntimeKey,

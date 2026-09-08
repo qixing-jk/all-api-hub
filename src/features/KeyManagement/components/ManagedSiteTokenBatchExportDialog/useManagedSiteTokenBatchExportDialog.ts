@@ -7,7 +7,6 @@ import {
   useRef,
   useState,
 } from "react"
-import toast from "react-hot-toast"
 
 import {
   PREVIEW_LOAD_ORIGINS,
@@ -19,6 +18,7 @@ import {
   NEW_API_MANAGED_VERIFICATION_CLOSE_MODES,
   useNewApiManagedVerification,
 } from "~/features/ManagedSiteVerification/useNewApiManagedVerification"
+import toast from "~/lib/notify"
 import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { getManagedResourceRefKey } from "~/services/managedSites/managedResourceIdentity"
 import { getManagedSiteRuntimeConfigFingerprint } from "~/services/managedSites/runtimeConfig"

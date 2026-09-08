@@ -30,7 +30,7 @@ vi.mock("~/contexts/UserPreferencesContext", () => ({
   }),
 }))
 
-vi.mock("~/utils/core/toastHelpers", () => ({
+vi.mock("~/utils/feedback/preferenceFeedback", () => ({
   showUpdateToast: (...args: unknown[]) => showUpdateToastMock(...args),
 }))
 

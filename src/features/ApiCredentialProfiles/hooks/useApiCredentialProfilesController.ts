@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { useChannelDialog } from "~/components/dialogs/ChannelDialog"
@@ -11,6 +10,7 @@ import {
   API_CREDENTIAL_PROFILE_EXPORT_ACTIONS,
   type ApiCredentialProfileExportAction,
 } from "~/features/ApiCredentialProfiles/contracts"
+import toast from "~/lib/notify"
 import { refreshApiCredentialProfileTelemetry } from "~/services/apiCredentialProfiles/telemetry"
 import { OpenInCherryStudio } from "~/services/integrations/cherryStudio"
 import { getManagedSiteLabel } from "~/services/managedSites/utils/managedSite"
@@ -63,7 +63,7 @@ import { onRuntimeMessage } from "~/utils/browser/browserApi"
 import { assertNever } from "~/utils/core/assert"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
-import { showResultToast } from "~/utils/core/toastHelpers"
+import { showResultToast } from "~/utils/feedback/operationFeedback"
 import { openModelsPage } from "~/utils/navigation"
 
 import { createExportAccount, createExportToken } from "../utils/exportShims"

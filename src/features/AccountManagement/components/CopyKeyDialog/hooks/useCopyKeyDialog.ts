@@ -1,12 +1,12 @@
 import type { TFunction } from "i18next"
 import { useCallback, useEffect, useRef, useState } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import {
   KEY_MANAGEMENT_DISPLAY_ROW_KINDS,
   type NativeKeyManagementRow,
 } from "~/features/KeyManagement/types"
+import toast from "~/lib/notify"
 import { fetchDisplayAccountKeyResourceInventory } from "~/services/accounts/accountKeyResourceInventory"
 import {
   appendOrReplaceAccountRuntimeKey,

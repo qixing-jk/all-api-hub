@@ -1,9 +1,9 @@
 import { History } from "lucide-react"
 import { useState, type MouseEvent } from "react"
-import toast from "react-hot-toast/headless"
 import { useTranslation } from "react-i18next"
 
 import { WorkflowTransitionButton } from "~/components/ui"
+import toast from "~/lib/notify/content"
 import { cn } from "~/lib/utils"
 import { createLogger } from "~/utils/core/logger"
 

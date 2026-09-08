@@ -1,5 +1,4 @@
 import { useMemo } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { SettingSection } from "~/components/SettingSection"
@@ -15,10 +14,11 @@ import {
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
 import { useSingleFlightActions } from "~/hooks/useSingleFlightActions"
+import toast from "~/lib/notify"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import { createLogger } from "~/utils/core/logger"
 import { isSafeRegexPattern } from "~/utils/core/regex"
-import { getPreferenceWriteFailureMessage } from "~/utils/core/toastHelpers"
+import { getPreferenceWriteFailureMessage } from "~/utils/feedback/preferenceFeedback"
 
 import { WEB_AI_API_CHECK_TARGET_IDS } from "./searchTargets"
 

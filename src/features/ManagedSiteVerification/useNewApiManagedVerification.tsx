@@ -1,8 +1,8 @@
 import type { TFunction } from "i18next"
 import { useCallback, useRef, useState } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
+import toast from "~/lib/notify"
 import { cleanupNewApiOwnedSession } from "~/services/managedSites/newApiOwnedSession/client"
 import {
   ensureNewApiManagedSession,

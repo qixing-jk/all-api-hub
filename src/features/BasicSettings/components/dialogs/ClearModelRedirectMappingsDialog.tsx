@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import {
@@ -12,12 +11,12 @@ import {
   Modal,
 } from "~/components/ui"
 import { BASIC_SETTINGS_TEST_IDS } from "~/features/BasicSettings/testIds"
+import toast from "~/lib/notify"
 import { getManagedResourceRefKey } from "~/services/managedSites/managedResourceIdentity"
 import { ModelRedirectService } from "~/services/models/modelRedirect"
 import { isEmptyModelMapping } from "~/services/models/modelRedirect/utils"
 import type { ManagedModelMappingPreview } from "~/types/managedResourceModels"
 import { getErrorMessage } from "~/utils/core/error"
-import { showWarningToast } from "~/utils/core/toastHelpers"
 
 interface ClearModelRedirectMappingsDialogProps {
   isOpen: boolean
@@ -232,7 +231,7 @@ export function ClearModelRedirectMappingsDialog({
 
       if (result.success) {
         if (result.clearedChannels > 0 && result.skippedChannels > 0) {
-          showWarningToast(
+          toast.warning(
             t("bulkClear.messages.successWithSkips", {
               cleared: result.clearedChannels,
               skipped: result.skippedChannels,
@@ -245,7 +244,7 @@ export function ClearModelRedirectMappingsDialog({
             }),
           )
         } else {
-          showWarningToast(t("bulkClear.messages.nothingToClear"))
+          toast.warning(t("bulkClear.messages.nothingToClear"))
         }
         setIsConfirmOpen(false)
         onClose()

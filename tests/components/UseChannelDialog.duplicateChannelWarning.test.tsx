@@ -260,7 +260,7 @@ const renderChannelDialogHook = async () => {
   return rendered
 }
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     loading: mockToastLoading,
     dismiss: mockToastDismiss,

@@ -1,6 +1,5 @@
 import { RefreshCcw, Search } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import ManagedSiteConfigRequiredState from "~/components/ManagedSiteConfigRequiredState"
@@ -19,6 +18,7 @@ import {
 } from "~/components/ui"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import toast from "~/lib/notify"
 import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
 import {
   getManagedResourceRefKey,
@@ -76,7 +76,6 @@ import type {
 import { normalizeManagedUpstreamResourceScopeKey } from "~/types/managedUpstreamResource"
 import { onRuntimeMessage } from "~/utils/browser/browserApi"
 import { createLogger } from "~/utils/core/logger"
-import { showWarningToast } from "~/utils/core/toastHelpers"
 import { openSettingsTab } from "~/utils/navigation"
 
 import {
@@ -823,7 +822,7 @@ export default function ManagedSiteModelSync({
    */
   function notifySyncCompletion(execution: ExecutionResult) {
     if (hasModelSyncFailures(execution)) {
-      showWarningToast(
+      toast.warning(
         t("messages.warning.syncCompletedWithFailures", {
           success: execution.statistics.successCount,
           total: execution.statistics.total,

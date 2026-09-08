@@ -1,6 +1,5 @@
 import { Copy } from "lucide-react"
 import { useEffect, useState } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
@@ -24,6 +23,7 @@ import {
   MODEL_MANAGEMENT_SOURCE_KINDS,
 } from "~/features/ModelList/modelManagementSources"
 import { formatModelListSourceLabel } from "~/features/ModelList/sourceLabels"
+import toast from "~/lib/notify"
 import { cn } from "~/lib/utils"
 import {
   isModelPriceUnavailable,

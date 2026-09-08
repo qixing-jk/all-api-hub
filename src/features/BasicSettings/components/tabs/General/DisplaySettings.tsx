@@ -7,7 +7,7 @@ import { Card, CardItem, CardList, Switch } from "~/components/ui"
 import { DATA_TYPE_BALANCE, DATA_TYPE_CASHFLOW } from "~/constants"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import type { CurrencyType, DashboardTabType } from "~/types"
-import { showUpdateToast } from "~/utils/core/toastHelpers"
+import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
 
 /**
  * Settings section for display preferences (currency, default dashboard tab).

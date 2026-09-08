@@ -7,7 +7,6 @@ import {
   useState,
   type MouseEvent,
 } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { AutoCheckinPretriggerCompletionDialog } from "~/components/AutoCheckinPretriggerCompletionDialog"
@@ -20,6 +19,7 @@ import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import DelAccountDialog from "~/features/AccountManagement/components/DelAccountDialog"
 import { openExternalCheckIns } from "~/features/AccountManagement/utils/openExternalCheckIns"
+import toast from "~/lib/notify"
 import { accountMutations } from "~/services/accounts/accountStorage/accountMutations"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { isAutomaticCheckInConfiguredForAccount } from "~/services/checkin/autoCheckin/inspection"

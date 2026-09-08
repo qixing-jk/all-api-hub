@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { SettingSection } from "~/components/SettingSection"
@@ -16,16 +15,16 @@ import { getSiteRouteConfigForKey, SITE_TYPES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { blurInputOnEnter } from "~/hooks/useDeferredPreferenceField"
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
+import toast from "~/lib/notify"
 import { validateSub2ApiManagedSiteConfig } from "~/services/managedSites/providers/sub2api"
 import { createTab } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
-import {
-  createVersionedPreferenceSaveOptions,
-  getPreferenceWriteFailureMessage,
-  runPreferenceUpdateWithToast,
-} from "~/utils/core/toastHelpers"
 import { joinUrl } from "~/utils/core/url"
 import { tryParseHttpUrl } from "~/utils/core/urlParsing"
+import {
+  getPreferenceWriteFailureMessage,
+  runPreferenceUpdateWithToast,
+} from "~/utils/feedback/preferenceFeedback"
 
 /** Configures Sub2API management and guides administrators to key setup. */
 export default function Sub2ApiSettings() {
@@ -111,7 +110,7 @@ export default function Sub2ApiSettings() {
       await validateSub2ApiManagedSiteConfig({ baseUrl, adminToken })
       const saveResult = await updateSub2ApiManagedSiteConfig(
         { baseUrl, adminToken },
-        createVersionedPreferenceSaveOptions(expectedLastUpdated),
+        { expectedLastUpdated },
       )
       if (saveResult.ok) {
         toast.success(t("sub2apiManagedSite.validation.success"))

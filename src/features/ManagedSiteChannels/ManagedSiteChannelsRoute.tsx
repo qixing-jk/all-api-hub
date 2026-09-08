@@ -1,6 +1,5 @@
 import type { TFunction } from "i18next"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { ChannelEditorShell } from "~/components/dialogs/ChannelDialog/components/ChannelEditorShell"
@@ -14,6 +13,7 @@ import {
 } from "~/components/ui"
 import type { ManagedSiteType } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import toast from "~/lib/notify"
 import type { ManagedResourceProductPolicy } from "~/services/accountSiteDefinitions/contracts"
 import {
   getAccountSiteDefinition,
@@ -57,7 +57,7 @@ import {
 } from "~/services/productAnalytics/contracts"
 import { resolveProductAnalyticsManagedSiteType } from "~/services/productAnalytics/managedSite"
 import { normalizeManagedUpstreamResourceScopeKey } from "~/types/managedUpstreamResource"
-import { showUpdateToast } from "~/utils/core/toastHelpers"
+import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
 import {
   openManagedSiteModelSyncForChannel,
   openSettingsTab,

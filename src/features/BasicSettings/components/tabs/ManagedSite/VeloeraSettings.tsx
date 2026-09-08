@@ -15,8 +15,8 @@ import { blurInputOnEnter } from "~/hooks/useDeferredPreferenceField"
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
 import { isManagedSiteAdminUserIdInputValid } from "~/services/managedSites/utils/adminUserId"
 import { createTab } from "~/utils/browser/browserApi"
-import { runPreferenceUpdateWithToast } from "~/utils/core/toastHelpers"
 import { joinUrl } from "~/utils/core/url"
+import { runPreferenceUpdateWithToast } from "~/utils/feedback/preferenceFeedback"
 
 /**
  * Settings panel for configuring Veloera connection credentials (base URL, admin token, user ID).

@@ -25,7 +25,7 @@ const {
   mockAutoDetectAccount,
   mockGenericAutoDetectAccount,
   mockCancelAccountAutoDetect,
-  mockShowWarningToast,
+  mockWarningToast,
   mockValidateAndSaveAccount,
   mockIsExtensionPopup,
   mockStartPopupCriticalFlow,
@@ -38,7 +38,7 @@ const {
   mockAutoDetectAccount: vi.fn(),
   mockGenericAutoDetectAccount: vi.fn(),
   mockCancelAccountAutoDetect: vi.fn(),
-  mockShowWarningToast: vi.fn(),
+  mockWarningToast: vi.fn(),
   mockValidateAndSaveAccount: vi.fn(),
   mockIsExtensionPopup: vi.fn(),
   mockStartPopupCriticalFlow: vi.fn(),
@@ -103,12 +103,6 @@ vi.mock("~/services/apiAdapters/openrouter/accountProvisioning", () => ({
   onboardOpenRouterAccount: mockAutoDetectAccount,
   cancelOpenRouterAccountProvisioning: mockCancelAccountAutoDetect,
 }))
-
-vi.mock("~/utils/core/toastHelpers", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("~/utils/core/toastHelpers")>()
-  return { ...actual, showWarningToast: mockShowWarningToast }
-})
 
 vi.mock("~/services/popupInterruptionHint", async (importOriginal) => {
   const actual =
@@ -187,7 +181,7 @@ describe("useAccountDialog OpenRouter behavior", () => {
     mockAutoDetectAccount.mockReset()
     mockGenericAutoDetectAccount.mockReset()
     mockCancelAccountAutoDetect.mockReset()
-    mockShowWarningToast.mockReset()
+    mockWarningToast.mockReset()
     mockValidateAndSaveAccount.mockReset()
     mockIsExtensionPopup.mockReset()
     mockStartPopupCriticalFlow.mockReset()
@@ -478,7 +472,7 @@ describe("useAccountDialog OpenRouter behavior", () => {
       await result.current.handlers.handleClose()
     })
 
-    expect(mockShowWarningToast).not.toHaveBeenCalled()
+    expect(mockWarningToast).not.toHaveBeenCalled()
   })
 
   it("starts a canonical bootstrap without treating an existing site as a duplicate", async () => {
@@ -501,7 +495,7 @@ describe("useAccountDialog OpenRouter behavior", () => {
     expect(result.current.state.duplicateAccountWarning.isOpen).toBe(false)
     expect(result.current.state.siteType).toBe(SITE_TYPES.OPENROUTER)
     expect(result.current.state.accessToken).toBe("management-key-placeholder")
-    expect(mockShowWarningToast).not.toHaveBeenCalled()
+    expect(mockWarningToast).not.toHaveBeenCalled()
   })
 
   it("does not dispatch a canonical bootstrap after popup setup changes context", async () => {
@@ -529,7 +523,7 @@ describe("useAccountDialog OpenRouter behavior", () => {
     expect(result.current.state.url).toBe("https://example.invalid")
     expect(result.current.state.siteType).toBe(SITE_TYPES.NEW_API)
     expect(result.current.state.accessToken).toBe("")
-    expect(mockShowWarningToast).not.toHaveBeenCalled()
+    expect(mockWarningToast).not.toHaveBeenCalled()
   })
 
   it("does not dispatch a prepared popup bootstrap after the dialog closes", async () => {
@@ -555,7 +549,7 @@ describe("useAccountDialog OpenRouter behavior", () => {
     expect(mockAutoDetectAccount).not.toHaveBeenCalled()
     expect(result.current.state.siteType).toBe(SITE_TYPES.UNKNOWN)
     expect(result.current.state.accessToken).toBe("")
-    expect(mockShowWarningToast).not.toHaveBeenCalled()
+    expect(mockWarningToast).not.toHaveBeenCalled()
   })
 
   it("admits only one real auto-detect attempt through popup preflight and provisioning", async () => {
@@ -1706,4 +1700,9 @@ describe("useAccountDialog OpenRouter behavior", () => {
       account_info: { access_token: "new-management-key" },
     })
   })
+})
+
+vi.mock("~/lib/notify", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/lib/notify")>()
+  return { default: { ...actual.default, warning: mockWarningToast } }
 })

@@ -14,7 +14,7 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { cn } from "~/lib/utils"
 import { resolveManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
 import { getManagedSiteLabel } from "~/services/managedSites/utils/managedSite"
-import { showUpdateToast } from "~/utils/core/toastHelpers"
+import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
 
 interface ManagedSiteTypeSwitcherProps {
   ariaLabel?: string

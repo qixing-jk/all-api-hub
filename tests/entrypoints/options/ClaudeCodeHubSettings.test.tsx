@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import ClaudeCodeHubSettings from "~/features/BasicSettings/components/tabs/ManagedSite/ClaudeCodeHubSettings"
 import { validateClaudeCodeHubConfig } from "~/services/apiService/claudeCodeHub"
-import { showUpdateToast } from "~/utils/core/toastHelpers"
+import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
 import { createResourceTestI18n, testI18n } from "~~/tests/test-utils/i18n"
 
 const { showUpdateToastMock, toSanitizedErrorSummaryMock } = vi.hoisted(() => ({
@@ -25,10 +25,7 @@ vi.mock("~/services/verification/aiApiVerification/utils", () => ({
   toSanitizedErrorSummary: toSanitizedErrorSummaryMock,
 }))
 
-vi.mock("~/utils/core/toastHelpers", () => ({
-  createVersionedPreferenceSaveOptions: (expectedLastUpdated: number) => ({
-    expectedLastUpdated,
-  }),
+vi.mock("~/utils/feedback/preferenceFeedback", () => ({
   runPreferenceUpdateWithToast: async ({
     expectedLastUpdated,
     setting,

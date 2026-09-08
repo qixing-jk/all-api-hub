@@ -81,7 +81,7 @@ const {
   }
 })
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     loading: toastLoadingMock,
     success: vi.fn(),

@@ -1,13 +1,13 @@
 import { RefreshCw } from "lucide-react"
 import { useState, type ReactNode } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { BodySmall, Button, Heading3 } from "~/components/ui"
 import { Modal } from "~/components/ui/Dialog/Modal"
+import toast from "~/lib/notify"
 import type { PreferenceWriteResult } from "~/services/preferences/userPreferences"
 import { createLogger } from "~/utils/core/logger"
-import { getPreferenceWriteFailureMessage } from "~/utils/core/toastHelpers"
+import { getPreferenceWriteFailureMessage } from "~/utils/feedback/preferenceFeedback"
 
 /**
  * Unified logger scoped to shared settings section UI primitives.

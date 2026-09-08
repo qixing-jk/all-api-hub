@@ -6,12 +6,12 @@ import {
   useRef,
   useState,
 } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import { useAccountData } from "~/hooks/useAccountData"
+import toast from "~/lib/notify"
 import {
   buildDisplayAccountTokenRuntimeKey,
   buildServiceCredentialRuntimeKey,

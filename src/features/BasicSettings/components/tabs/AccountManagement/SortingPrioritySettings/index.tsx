@@ -8,7 +8,7 @@ import { SettingSection } from "~/components/SettingSection"
 import { Card, CardContent } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { SortingCriteriaType, type SortingFieldConfig } from "~/types/sorting"
-import { showUpdateToast } from "~/utils/core/toastHelpers"
+import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
 
 import { SortingPriorityDragList } from "./SortingPriorityDragList"
 

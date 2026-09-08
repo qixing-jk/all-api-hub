@@ -1,12 +1,12 @@
 import { Globe2, Info } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { Button, FormField, Input, Modal, Textarea } from "~/components/ui"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { TagPicker } from "~/features/AccountManagement/components/TagPicker"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
+import toast from "~/lib/notify"
 import { bookmarkRepository } from "~/services/accounts/accountStorage/bookmarkRepository"
 import { getSiteName } from "~/services/accounts/siteName"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"

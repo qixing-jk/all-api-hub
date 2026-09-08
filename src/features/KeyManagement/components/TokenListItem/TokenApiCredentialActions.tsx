@@ -1,4 +1,3 @@
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import {
@@ -8,6 +7,7 @@ import {
 import { KEY_CREDENTIAL_ASSOCIATION_STATES } from "~/features/KeyManagement/credentialAssociations"
 import type { KeyResourceActionPolicy } from "~/features/KeyManagement/presentation/keyResourceCard"
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
+import toast from "~/lib/notify"
 import { ACCOUNT_RUNTIME_KEY_SOURCES } from "~/services/accounts/accountRuntimeKeys"
 import {
   ACCOUNT_RUNTIME_KEY_SECRET_SOURCES,

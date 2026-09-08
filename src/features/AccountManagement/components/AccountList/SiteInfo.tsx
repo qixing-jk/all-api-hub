@@ -14,7 +14,6 @@ import {
   type LucideIcon,
 } from "lucide-react"
 import { useState } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { LdohIcon } from "~/components/icons/LdohIcon"
@@ -52,6 +51,7 @@ import {
 } from "~/features/AccountManagement/utils/tempWindowFallbackReminder"
 import { useLdohSiteLookupContext } from "~/features/LdohSiteLookup/hooks/LdohSiteLookupContext"
 import { ProtectionBypassHistoryLink } from "~/features/ProtectionBypass/components/ProtectionBypassHistoryLink"
+import toast from "~/lib/notify"
 import { cn } from "~/lib/utils"
 import {
   getSelectedCheckInStatus,
