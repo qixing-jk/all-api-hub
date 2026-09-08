@@ -98,13 +98,14 @@ export default function VeloeraSettings() {
     !isManagedSiteAdminUserIdInputValid(localUserId)
       ? t("messages:errors.validation.userIdNumeric")
       : undefined
-  const shouldShowAdminCredentialsLink = Boolean(trimmedBaseUrl)
-  const adminCredentialsUrl = shouldShowAdminCredentialsLink
-    ? joinUrl(
-        trimmedBaseUrl,
-        getSiteRouteConfigForKey(SITE_TYPES.VELOERA).adminCredentialsPath,
-      )
-    : ""
+  const adminCredentialsPath = getSiteRouteConfigForKey(
+    SITE_TYPES.VELOERA,
+  ).adminCredentialsPath
+  const adminCredentialsUrl =
+    trimmedBaseUrl && adminCredentialsPath
+      ? joinUrl(trimmedBaseUrl, adminCredentialsPath)
+      : ""
+  const shouldShowAdminCredentialsLink = Boolean(adminCredentialsUrl)
 
   const handleOpenAdminCredentials = async () => {
     if (!adminCredentialsUrl) return

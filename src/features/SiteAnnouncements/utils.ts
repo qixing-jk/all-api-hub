@@ -59,10 +59,8 @@ export function isSub2ApiAnnouncement(record: SiteAnnouncementRecord) {
  * Returns the normal site UI surface where the cached announcement can be inspected.
  */
 export function getAnnouncementSourceUrl(record: SiteAnnouncementRecord) {
-  return joinUrl(
-    record.baseUrl,
-    getAccountSiteApiRouter(record.siteType).siteAnnouncementsPath,
-  )
+  const path = getAccountSiteApiRouter(record.siteType).siteAnnouncementsPath
+  return path === null ? null : joinUrl(record.baseUrl, path)
 }
 
 /**

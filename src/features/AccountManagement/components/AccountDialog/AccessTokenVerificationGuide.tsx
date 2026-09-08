@@ -43,14 +43,14 @@ export function AccessTokenVerificationGuide({
 }) {
   const { t } = useTranslation("accountDialog")
   const [navigationFailed, setNavigationFailed] = useState(false)
+  const { accessTokenPath } = getAccountSiteApiRouter(siteType)
   const isApiYi = siteType === SITE_TYPES.APIYI
 
   const openAccessTokenPage = async () => {
-    if (!siteUrl || !isHttpUrl(siteUrl)) return
+    if (!siteUrl || !isHttpUrl(siteUrl) || !accessTokenPath) return
     setNavigationFailed(false)
     onPrepareAccessTokenInput?.()
     try {
-      const { accessTokenPath } = getAccountSiteApiRouter(siteType)
       await createTab(joinUrl(siteUrl, accessTokenPath), true)
     } catch {
       setNavigationFailed(true)
@@ -101,7 +101,7 @@ export function AccessTokenVerificationGuide({
               <p>{t("accessTokenVerification.rotationWarning")}</p>
             )}
             <div className="flex flex-wrap gap-2">
-              {siteUrl && isHttpUrl(siteUrl) && (
+              {accessTokenPath && siteUrl && isHttpUrl(siteUrl) && (
                 <Button
                   type="button"
                   size="sm"

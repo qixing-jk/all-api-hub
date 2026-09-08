@@ -2,14 +2,17 @@ import type { AccountSiteProductProfileOverride } from "~/services/accounts/acco
 
 import type { SiteType } from "./identifiers"
 
+type AccountSitePagePath = `/${string}`
+
+/** Every page is explicit. Null means this integration provides no page navigation. */
 export interface AccountSiteRouteConfig {
-  loginPath?: string
-  usagePath?: string
-  checkInPath?: string
-  adminCredentialsPath?: string
-  accessTokenPath?: string
-  redeemPath?: string
-  siteAnnouncementsPath?: string
+  loginPath: AccountSitePagePath
+  usagePath: AccountSitePagePath | null
+  checkInPath: AccountSitePagePath | null
+  adminCredentialsPath: AccountSitePagePath | null
+  accessTokenPath: AccountSitePagePath | null
+  redeemPath: AccountSitePagePath | null
+  siteAnnouncementsPath: AccountSitePagePath | null
 }
 
 export interface AccountSiteDetectionMetadata {
@@ -68,7 +71,7 @@ export interface ManagedResourceProductPolicy {
 
 export interface AccountSiteDefinitionOnboardingMetadata {
   detection?: AccountSiteDetectionMetadata
-  routes?: AccountSiteRouteConfig
+  routes: AccountSiteRouteConfig
   manualAddGuideAnchor?: AccountSiteManualAddGuideAnchor
 }
 
@@ -79,4 +82,9 @@ export interface AccountSiteDefinition {
   managedResource?: ManagedResourceProductPolicy
   onboarding?: AccountSiteDefinitionOnboardingMetadata
   productProfile?: AccountSiteProductProfileOverride
+}
+
+/** Account registrations must own a complete route declaration. Null means no supported page navigation. */
+export type RegisteredAccountSiteDefinition = AccountSiteDefinition & {
+  onboarding: AccountSiteDefinitionOnboardingMetadata
 }

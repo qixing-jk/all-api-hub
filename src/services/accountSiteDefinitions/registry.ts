@@ -61,7 +61,7 @@ function cloneOnboarding(
           ),
         }
       : undefined,
-    routes: onboarding.routes ? { ...onboarding.routes } : undefined,
+    routes: { ...onboarding.routes },
   }
 }
 
@@ -229,11 +229,18 @@ export function getAccountSiteOnboardingDefinitions() {
       hasScope(definition, ACCOUNT_SITE_DEFINITION_SCOPES.Account),
     ),
     ACCOUNT_SITE_TYPE_ORDER,
-  ).map((definition) => ({
-    siteType: definition.siteType,
-    adapterFamily: definition.adapterFamily,
-    ...cloneOnboarding(definition.onboarding),
-  }))
+  ).map((definition) => {
+    const onboarding = cloneOnboarding(definition.onboarding)
+    if (!onboarding)
+      throw new Error(
+        `Account site ${definition.siteType} is missing onboarding metadata`,
+      )
+    return {
+      siteType: definition.siteType,
+      adapterFamily: definition.adapterFamily,
+      ...onboarding,
+    }
+  })
 }
 
 /**

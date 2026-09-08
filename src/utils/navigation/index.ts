@@ -710,7 +710,7 @@ const _openUsagePage = async (account: DisplaySiteData) => {
     account,
     SITE_ROUTE_KINDS.Usage,
   )
-  await createActiveTab(logUrl)
+  if (logUrl) await createActiveTab(logUrl)
 }
 
 /**
@@ -798,7 +798,7 @@ const openUrlsBestEffort = async (
  */
 const _openCheckInPage = async (account: DisplaySiteData) => {
   const checkInUrl = await getCheckInPageUrl(account)
-  await createActiveTab(checkInUrl)
+  if (checkInUrl) await createActiveTab(checkInUrl)
 }
 
 /**
@@ -810,7 +810,7 @@ const _openCustomCheckInPage = async (account: DisplaySiteData) => {
   const customCheckInUrl =
     account.checkIn?.customCheckIn?.url ||
     (await resolveAccountSiteRouteUrl(account, SITE_ROUTE_KINDS.CheckIn))
-  await createActiveTab(customCheckInUrl)
+  if (customCheckInUrl) await createActiveTab(customCheckInUrl)
 }
 
 /**
@@ -821,7 +821,7 @@ const _openRedeemPage = async (account: DisplaySiteData) => {
   const redeemUrl =
     account.checkIn?.customCheckIn?.redeemUrl ||
     (await resolveAccountSiteRouteUrl(account, SITE_ROUTE_KINDS.Redeem))
-  await createActiveTab(redeemUrl)
+  if (redeemUrl) await createActiveTab(redeemUrl)
 }
 
 // 导出带自动关闭的版本
@@ -1033,9 +1033,13 @@ export const openCheckInPages = async (
   options?: { openInNewWindow?: boolean },
 ) => {
   const urls = await Promise.all(accounts.map(getCheckInPageUrl))
-  const result = await openUrlsBestEffort(urls, options)
+  const availableUrls = urls.filter((url): url is string => url !== null)
+  const result = await openUrlsBestEffort(availableUrls, options)
   closeIfPopup()
-  return result
+  return {
+    ...result,
+    failedCount: result.failedCount + urls.length - availableUrls.length,
+  }
 }
 
 /**

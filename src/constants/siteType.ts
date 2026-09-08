@@ -1,5 +1,4 @@
 // 站点名称常量
-import merge from "lodash-es/merge.js"
 
 import {
   ACCOUNT_SITE_TYPE_VALUES,
@@ -8,9 +7,8 @@ import {
   type ManagedSiteType,
 } from "~/services/accountSiteDefinitions/siteTypes"
 import {
-  DEFAULT_SITE_ROUTE_CONFIG,
   getAccountSiteDomainRuleMetadata,
-  getAccountSiteRouteOverrideMetadata,
+  getAccountSiteRouteMetadata,
   getAccountSiteTitleRuleMetadata,
 } from "~/services/accountSiteOnboarding/metadata"
 
@@ -57,23 +55,19 @@ export const ACCOUNT_SITE_TITLE_RULES = getAccountSiteTitleRuleMetadata()
 export const ACCOUNT_SITE_DOMAIN_RULES = getAccountSiteDomainRuleMetadata()
 
 /**
- * 获取站点对应的路径配置对象
+ * 获取站点显式声明的页面路径（null 表示未提供页面导航）
  * @param key 站点名称
- * @returns 对应的路径配置对象，否则返回 Default 的路径配置对象
+ * @returns 仅未知或无效类型使用未知站点的兜底配置
  */
-export function getSiteRouteConfigForKey(key: AccountSiteType) {
-  return merge(
-    {},
-    DEFAULT_SITE_ROUTE_CONFIG,
-    getAccountSiteRouteOverrideMetadata(key),
-  )
+export function getSiteRouteConfigForKey(key: unknown) {
+  return getAccountSiteRouteMetadata(key)
 }
 
 /**
- * 获取账号站点对应的 API 路由对象
+ * 获取账号站点对应的页面路径配置
  * @param accountSiteType 账号站点类型
- * @returns 对应的 API 路由对象，否则返回 Default 的路由对象
+ * @returns 完整页面路径配置；仅未知或无效类型使用兜底配置
  */
-export function getAccountSiteApiRouter(accountSiteType: AccountSiteType) {
+export function getAccountSiteApiRouter(accountSiteType: unknown) {
   return getSiteRouteConfigForKey(accountSiteType)
 }

@@ -45,10 +45,55 @@ describe("siteRouteResolver", () => {
     })
   })
 
+  it.each([
+    [SITE_TYPES.ONE_API, SITE_ROUTE_KINDS.Redeem, "/topup"],
+    [SITE_TYPES.ONE_API, SITE_ROUTE_KINDS.Usage, "/log"],
+    [SITE_TYPES.ONE_API, SITE_ROUTE_KINDS.AdminCredentials, "/user/edit"],
+    [SITE_TYPES.APIYI, SITE_ROUTE_KINDS.Redeem, "/account/topup/recharge"],
+    [SITE_TYPES.OPENROUTER, SITE_ROUTE_KINDS.Login, "/sign-in"],
+    [SITE_TYPES.OPENROUTER, SITE_ROUTE_KINDS.Usage, "/activity"],
+    [SITE_TYPES.OPENROUTER, SITE_ROUTE_KINDS.Redeem, "/settings/credits"],
+  ])(
+    "resolves %s %s using its registered page",
+    async (siteType, route, path) => {
+      await expect(
+        resolveAccountSiteRouteUrl(
+          { baseUrl: "https://site.example/", siteType },
+          route,
+        ),
+      ).resolves.toBe(`https://site.example${path}`)
+      expect(mockFetchSiteStatus).not.toHaveBeenCalled()
+    },
+  )
+
   const mockDefaultNewApiThemeStatus = () =>
     mockFetchSiteStatus.mockResolvedValue({
       theme: "default",
     })
+
+  it("does not turn an unsupported SharedChat redemption page into a default URL", async () => {
+    await expect(
+      resolveAccountSiteRouteUrl(
+        {
+          baseUrl: "https://new.sharedchat.cc",
+          siteType: SITE_TYPES.SHAREDCHAT,
+        },
+        SITE_ROUTE_KINDS.Redeem,
+      ),
+    ).resolves.toBeNull()
+  })
+
+  it("does not restore an unsupported page through a frontend theme fallback", async () => {
+    mockResolveRoutePath.mockResolvedValueOnce(null)
+    mockDefaultNewApiThemeStatus()
+    await expect(
+      resolveAccountSiteRouteUrl(
+        { baseUrl: "https://new-api.example", siteType: SITE_TYPES.NEW_API },
+        SITE_ROUTE_KINDS.Redeem,
+      ),
+    ).resolves.toBeNull()
+    expect(mockFetchSiteStatus).not.toHaveBeenCalled()
+  })
 
   it("uses New API default frontend routes when /api/status reports the default theme", async () => {
     mockDefaultNewApiThemeStatus()

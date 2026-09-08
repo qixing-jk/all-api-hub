@@ -257,7 +257,7 @@ function shouldAttemptNativePageCheckinFallback(params: {
 /**
  * Resolve a user-openable URL for manual Turnstile verification.
  */
-function resolveCheckInUrl(account: SiteAccount): Promise<string> {
+function resolveCheckInUrl(account: SiteAccount): Promise<string | null> {
   return resolveAccountSiteRouteUrl(
     { baseUrl: account.site_url, siteType: account.site_type },
     SITE_ROUTE_KINDS.CheckIn,
@@ -590,6 +590,13 @@ async function resolveNativePageCheckinResult(params: {
   protectionBypassExecution: ProtectionBypassExecution
 }): Promise<CheckinResult> {
   const checkInUrl = await resolveCheckInUrl(params.account)
+  if (!checkInUrl) {
+    return {
+      status: CHECKIN_RESULT_STATUS.FAILED,
+      messageKey: AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinFailed,
+      rawMessage: params.responseMessage,
+    }
+  }
   const expectedUserId = normalizeAccountIdentity(
     params.account.account_info?.id,
   )
@@ -720,6 +727,13 @@ async function resolveTurnstileAssistedCheckinResult(params: {
   protectionBypassExecution: ProtectionBypassExecution
 }): Promise<CheckinResult> {
   const checkInUrl = await resolveCheckInUrl(params.account)
+  if (!checkInUrl) {
+    return {
+      status: CHECKIN_RESULT_STATUS.FAILED,
+      messageKey: AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinFailed,
+      rawMessage: params.responseMessage,
+    }
+  }
   const assistedParams = buildTurnstileAssistedParams(
     params.account,
     checkInUrl,

@@ -124,7 +124,7 @@ describe("account bootstrap adapters", () => {
       resolveRoutePath(
         target: AccountBootstrapRouteTarget,
         route: AccountBootstrapRouteKind,
-      ): Promise<string>
+      ): Promise<string | null>
     }>()
   })
 
@@ -163,6 +163,21 @@ describe("account bootstrap adapters", () => {
     expect(mockExtractDefaultExchangeRate).toHaveBeenCalledWith(siteStatus)
   })
 
+  it.each([
+    [ACCOUNT_BOOTSTRAP_ROUTE_KINDS.Redeem, "/topup"],
+    [ACCOUNT_BOOTSTRAP_ROUTE_KINDS.Usage, "/log"],
+    [ACCOUNT_BOOTSTRAP_ROUTE_KINDS.AdminCredentials, "/user/edit"],
+  ])("resolves One API %s to its own account page", async (route, path) => {
+    const bootstrap = createNewApiAccountBootstrap(SITE_TYPES.ONE_API)
+
+    await expect(
+      bootstrap.resolveRoutePath(
+        { baseUrl: "https://one-api.example", siteType: SITE_TYPES.ONE_API },
+        route,
+      ),
+    ).resolves.toBe(path)
+  })
+
   it("resolves static account route paths from shared route kinds", () => {
     const target = {
       baseUrl: "https://sub2.example.invalid",
@@ -186,7 +201,7 @@ describe("account bootstrap adapters", () => {
         target,
         ACCOUNT_BOOTSTRAP_ROUTE_KINDS.CheckIn,
       ),
-    ).toBe("/console/personal")
+    ).toBeNull()
     expect(
       resolveStaticAccountRoutePath(
         target,

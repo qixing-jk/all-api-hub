@@ -55,5 +55,5 @@ export type AccountBootstrapCapability = {
   resolveRoutePath(
     target: AccountBootstrapRouteTarget,
     route: AccountBootstrapRouteKind,
-  ): Promise<string>
+  ): Promise<string | null>
 }

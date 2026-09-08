@@ -56,12 +56,16 @@ export default function Sub2ApiSettings() {
   })
   const [isValidating, setIsValidating] = useState(false)
   const parsedBaseUrl = tryParseHttpUrl(localConfig.baseUrl)
-  const adminCredentialsUrl = parsedBaseUrl
-    ? joinUrl(
-        `${parsedBaseUrl.origin}${parsedBaseUrl.pathname}`,
-        getSiteRouteConfigForKey(SITE_TYPES.SUB2API).adminCredentialsPath,
-      )
-    : null
+  const adminCredentialsPath = getSiteRouteConfigForKey(
+    SITE_TYPES.SUB2API,
+  ).adminCredentialsPath
+  const adminCredentialsUrl =
+    parsedBaseUrl && adminCredentialsPath
+      ? joinUrl(
+          `${parsedBaseUrl.origin}${parsedBaseUrl.pathname}`,
+          adminCredentialsPath,
+        )
+      : null
 
   const handleOpenAdminCredentials = async () => {
     if (!adminCredentialsUrl) return

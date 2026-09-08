@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, expectTypeOf, it } from "vitest"
 
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import {
@@ -44,6 +44,10 @@ import {
   type AccountSiteType,
   type ManagedSiteType,
 } from "~/services/accountSiteDefinitions"
+import type {
+  AccountSiteRouteConfig,
+  RegisteredAccountSiteDefinition,
+} from "~/services/accountSiteDefinitions/contracts"
 import {
   ACCOUNT_SITE_TYPE_ORDER,
   MANAGED_SITE_TYPE_ORDER,
@@ -118,6 +122,49 @@ const productProfileSiteTypeIsForbidden: "siteType" extends keyof NonNullable<
   : true = true
 
 describe("account site definition registry", () => {
+  it("requires every account registration to explicitly declare every page or null", () => {
+    const routeKeys = [
+      "loginPath",
+      "usagePath",
+      "checkInPath",
+      "adminCredentialsPath",
+      "accessTokenPath",
+      "redeemPath",
+      "siteAnnouncementsPath",
+    ]
+    for (const definition of getAccountSiteOnboardingDefinitions()) {
+      expect(
+        Object.keys(definition.routes).sort(),
+        definition.siteType,
+      ).toEqual([...routeKeys].sort())
+      expect(definition.routes.loginPath).toMatch(/^\/(?!\/)/)
+      for (const path of Object.values(definition.routes)) {
+        if (path !== null) expect(path).toMatch(/^\/(?!\/)/)
+      }
+    }
+    expectTypeOf<
+      Partial<AccountSiteRouteConfig>
+    >().not.toExtend<AccountSiteRouteConfig>()
+    expectTypeOf<
+      Omit<RegisteredAccountSiteDefinition, "onboarding">
+    >().not.toExtend<RegisteredAccountSiteDefinition>()
+  })
+
+  it.each([undefined, null, "", "unregistered", "toString"])(
+    "uses unknown routes only for an unregistered input: %s",
+    (siteType) => {
+      expect(getAccountSiteApiRouter(siteType)).toEqual(
+        getAccountSiteApiRouter(SITE_TYPES.UNKNOWN),
+      )
+    },
+  )
+
+  it("preserves explicit unsupported pages and returns independent route objects", () => {
+    const routes = getAccountSiteApiRouter(SITE_TYPES.SHAREDCHAT)
+    expect(routes.redeemPath).toBeNull()
+    routes.redeemPath = "/changed"
+    expect(getAccountSiteApiRouter(SITE_TYPES.SHAREDCHAT).redeemPath).toBeNull()
+  })
   it("keeps public site type aliases exact", () => {
     expect([...typeAssertions, productProfileSiteTypeIsForbidden]).toEqual([
       true,
@@ -176,9 +223,9 @@ describe("account site definition registry", () => {
         (definition) => definition.siteType === siteType,
       )?.routes
 
-      expect(getAccountSiteApiRouter(siteType)).toMatchObject(routes ?? {})
-      expect(routes ?? {}).toEqual(
-        getAccountSiteDefinition(siteType)?.onboarding?.routes ?? {},
+      expect(getAccountSiteApiRouter(siteType)).toEqual(routes)
+      expect(routes).toEqual(
+        getAccountSiteDefinition(siteType)?.onboarding?.routes,
       )
     }
   })

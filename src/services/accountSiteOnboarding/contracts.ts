@@ -52,5 +52,5 @@ export type AccountSiteOnboardingMetadata = {
   siteType: AccountSiteType
   adapterFamily: AccountSiteBackendFamily
   detection?: AccountSiteDetectionMetadata
-  routes?: AccountSiteRouteConfig
+  routes: AccountSiteRouteConfig
 }

@@ -156,6 +156,7 @@ export default function NewApiSettings() {
       { baseUrl: trimmedBaseUrl, siteType: SITE_TYPES.NEW_API },
       SITE_ROUTE_KINDS.AdminCredentials,
     )
+    if (!adminCredentialsUrl) return
     try {
       await createTab(adminCredentialsUrl, true)
     } catch {

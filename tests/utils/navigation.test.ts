@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { resolveAccountSiteRouteUrl } from "~/services/accounts/utils/siteRouteResolver"
 import { isExtensionPopup } from "~/utils/browser"
 import {
   createTab as createTabApi,
@@ -141,6 +142,40 @@ const getMockedRouteResolver = async () => {
 }
 
 describe("navigation utilities", () => {
+  it("counts unsupported check-in pages without opening empty tabs or blocking other accounts", async () => {
+    vi.mocked(resolveAccountSiteRouteUrl)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce("https://example.com/check")
+    mockedCreateTab.mockResolvedValueOnce({ id: 10 } as any)
+    const result = await openCheckInPages([
+      { baseUrl: "https://unsupported.example", siteType: "sharedchat" } as any,
+      { baseUrl: "https://example.com", siteType: "new-api" } as any,
+    ])
+    expect(result).toEqual({ openedCount: 1, failedCount: 1 })
+    expect(mockedCreateTab).toHaveBeenCalledTimes(1)
+    expect(mockedCreateTab).toHaveBeenCalledWith(
+      "https://example.com/check",
+      true,
+    )
+  })
+  it("does not open an unsupported redemption page, but honors a custom URL", async () => {
+    const account = {
+      baseUrl: "https://example.com",
+      siteType: "sharedchat",
+    } as any
+    vi.mocked(resolveAccountSiteRouteUrl).mockResolvedValueOnce(null)
+    await openRedeemPage(account)
+    expect(mockedCreateTab).not.toHaveBeenCalled()
+
+    await openRedeemPage({
+      ...account,
+      checkIn: { customCheckIn: { redeemUrl: "https://example.com/custom" } },
+    })
+    expect(mockedCreateTab).toHaveBeenCalledWith(
+      "https://example.com/custom",
+      true,
+    )
+  })
   beforeEach(() => {
     vi.clearAllMocks()
     mockedHasWindowsAPI.mockReturnValue(false)

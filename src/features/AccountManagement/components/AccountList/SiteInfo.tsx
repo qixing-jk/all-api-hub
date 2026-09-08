@@ -33,6 +33,7 @@ import {
   CHECK_IN_METHOD_TODAY_STATUSES,
   CHECK_IN_SELECTION_STATUSES,
 } from "~/constants/checkIn"
+import { getAccountSiteApiRouter } from "~/constants/siteType"
 import { isSelectedCheckInStatusCurrent } from "~/features/AccountManagement/components/AccountList/checkInFilter"
 import { useAccountActionsContext } from "~/features/AccountManagement/hooks/AccountActionsContext"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
@@ -95,6 +96,7 @@ const logger = createLogger("AccountList.SiteInfo")
 
 interface CheckInStatusButtonProps {
   checkedIn: boolean
+  disabled?: boolean
   icon: LucideIcon
   label: string
   onClick: () => void
@@ -104,6 +106,7 @@ interface CheckInStatusButtonProps {
 /** Renders a check-in action with its source-specific icon and shared status color. */
 function CheckInStatusButton({
   checkedIn,
+  disabled,
   icon: Icon,
   label,
   onClick,
@@ -117,6 +120,7 @@ function CheckInStatusButton({
     >
       <IconButton
         onClick={onClick}
+        disabled={disabled}
         variant="ghost"
         size="xs"
         aria-label={label}
@@ -410,6 +414,7 @@ export default function SiteInfo({
             icon={CircleCheck}
             label={t("list.site.checkedInToday")}
             onClick={handleSiteCheckIn}
+            disabled={!getAccountSiteApiRouter(site.siteType).checkInPath}
             testId={ACCOUNT_MANAGEMENT_TEST_IDS.siteCheckInStatusButton}
           />,
         )
@@ -421,6 +426,7 @@ export default function SiteInfo({
             icon={CircleX}
             label={t("list.site.notCheckedInToday")}
             onClick={handleSiteCheckIn}
+            disabled={!getAccountSiteApiRouter(site.siteType).checkInPath}
             testId={ACCOUNT_MANAGEMENT_TEST_IDS.siteCheckInStatusButton}
           />,
         )

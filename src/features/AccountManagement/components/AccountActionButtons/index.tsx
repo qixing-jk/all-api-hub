@@ -30,7 +30,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
-import { SITE_TYPES } from "~/constants/siteType"
+import { getAccountSiteApiRouter, SITE_TYPES } from "~/constants/siteType"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useAccountActionsContext } from "~/features/AccountManagement/hooks/AccountActionsContext"
@@ -480,6 +480,11 @@ export default function AccountActionButtons({
   const handleNavigateToModelManagement = () => {
     navigateAfterClosingMoreActions(() => openModelsPage(site.id))
   }
+
+  const pageRoutes = getAccountSiteApiRouter(site.siteType)
+  const canOpenRedeemPage = Boolean(
+    site.checkIn?.customCheckIn?.redeemUrl || pageRoutes.redeemPath,
+  )
 
   const handleNavigateToUsageManagement = () => {
     openUsagePage(site)
@@ -1156,24 +1161,30 @@ export default function AccountActionButtons({
                 <ProductAnalyticsScope
                   featureId={PRODUCT_ANALYTICS_FEATURE_IDS.UsageAnalytics}
                 >
-                  <AccountActionMenuItem
-                    onClick={handleNavigateToUsageManagement}
-                    icon={ChartPie}
-                    label={t("actions.usageLog")}
-                    testId={ACCOUNT_MANAGEMENT_TEST_IDS.rowUsageLogMenuItem}
-                    analyticsAction={
-                      PRODUCT_ANALYTICS_ACTION_IDS.OpenAccountUsageLog
-                    }
-                  />
+                  {pageRoutes.usagePath && (
+                    <AccountActionMenuItem
+                      onClick={handleNavigateToUsageManagement}
+                      icon={ChartPie}
+                      label={t("actions.usageLog")}
+                      testId={ACCOUNT_MANAGEMENT_TEST_IDS.rowUsageLogMenuItem}
+                      analyticsAction={
+                        PRODUCT_ANALYTICS_ACTION_IDS.OpenAccountUsageLog
+                      }
+                    />
+                  )}
                 </ProductAnalyticsScope>
 
-                <AccountActionMenuItem
-                  onClick={handleNavigateToRedeemPage}
-                  icon={Banknote}
-                  label={t("actions.redeemPage")}
-                  testId={ACCOUNT_MANAGEMENT_TEST_IDS.rowRedeemMenuItem}
-                  analyticsAction={PRODUCT_ANALYTICS_ACTION_IDS.OpenRedeemPage}
-                />
+                {canOpenRedeemPage && (
+                  <AccountActionMenuItem
+                    onClick={handleNavigateToRedeemPage}
+                    icon={Banknote}
+                    label={t("actions.redeemPage")}
+                    testId={ACCOUNT_MANAGEMENT_TEST_IDS.rowRedeemMenuItem}
+                    analyticsAction={
+                      PRODUCT_ANALYTICS_ACTION_IDS.OpenRedeemPage
+                    }
+                  />
+                )}
 
                 <DropdownMenuSeparator className="dark:bg-dark-bg-tertiary my-1 bg-gray-200" />
 

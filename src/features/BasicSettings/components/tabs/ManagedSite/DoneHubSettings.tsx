@@ -93,13 +93,14 @@ export default function DoneHubSettings() {
     !isManagedSiteAdminUserIdInputValid(localUserId)
       ? t("messages:errors.validation.userIdNumeric")
       : undefined
-  const shouldShowAdminCredentialsLink = Boolean(trimmedBaseUrl)
-  const adminCredentialsUrl = shouldShowAdminCredentialsLink
-    ? joinUrl(
-        trimmedBaseUrl,
-        getSiteRouteConfigForKey(SITE_TYPES.DONE_HUB).adminCredentialsPath,
-      )
-    : ""
+  const adminCredentialsPath = getSiteRouteConfigForKey(
+    SITE_TYPES.DONE_HUB,
+  ).adminCredentialsPath
+  const adminCredentialsUrl =
+    trimmedBaseUrl && adminCredentialsPath
+      ? joinUrl(trimmedBaseUrl, adminCredentialsPath)
+      : ""
+  const shouldShowAdminCredentialsLink = Boolean(adminCredentialsUrl)
 
   const handleOpenAdminCredentials = async () => {
     if (!adminCredentialsUrl) return

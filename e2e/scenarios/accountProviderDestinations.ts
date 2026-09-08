@@ -136,54 +136,44 @@ export async function runAccountProviderDestinationsScenario(params: {
   validateDestinationPages?: ProviderDestinationValidationOptions
 }) {
   const routes = getAccountSiteApiRouter(params.account.siteType)
-  const usageUrl = joinUrl(params.account.baseUrl, routes.usagePath)
-  const redeemUrl = joinUrl(params.account.baseUrl, routes.redeemPath)
+  const destinations = [
+    {
+      kind: "usage",
+      path: routes.usagePath,
+      testId: ACCOUNT_MANAGEMENT_TEST_IDS.rowUsageLogMenuItem,
+    },
+    {
+      kind: "redeem",
+      path: routes.redeemPath,
+      testId: ACCOUNT_MANAGEMENT_TEST_IDS.rowRedeemMenuItem,
+    },
+  ] as const
 
-  await openAccountActionsMenu({
-    page: params.page,
-    accountId: params.account.accountId,
-  })
-  await params.page
-    .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowUsageLogMenuItem)
-    .click()
-  const validateUsageDestination = shouldValidateDestination(
-    params.validateDestinationPages,
-    "usage",
-  )
-  await expectBrowserTabOpened({
-    serviceWorker: params.serviceWorker,
-    url: usageUrl,
-    allowSameOriginRedirect: validateUsageDestination,
-  })
-  if (validateUsageDestination) {
-    await expectDestinationPageExists({
-      sourcePage: params.page,
-      url: usageUrl,
+  for (const destination of destinations) {
+    await openAccountActionsMenu({
+      page: params.page,
+      accountId: params.account.accountId,
     })
-  }
-
-  await openAccountActionsMenu({
-    page: params.page,
-    accountId: params.account.accountId,
-  })
-  await params.page
-    .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowRedeemMenuItem)
-    .click()
-  const validateRedeemDestination = shouldValidateDestination(
-    params.validateDestinationPages,
-    "redeem",
-  )
-  await expectBrowserTabOpened({
-    serviceWorker: params.serviceWorker,
-    url: redeemUrl,
-    allowSameOriginRedirect: validateRedeemDestination,
-  })
-  if (validateRedeemDestination) {
-    await expectDestinationPageExists({
-      sourcePage: params.page,
-      url: redeemUrl,
+    const menuItem = params.page.getByTestId(destination.testId)
+    if (destination.path === null) {
+      await expect(menuItem).toHaveCount(0)
+      await params.page.keyboard.press("Escape")
+      continue
+    }
+    const url = joinUrl(params.account.baseUrl, destination.path)
+    await menuItem.click()
+    const validateDestination = shouldValidateDestination(
+      params.validateDestinationPages,
+      destination.kind,
+    )
+    await expectBrowserTabOpened({
+      serviceWorker: params.serviceWorker,
+      url,
+      allowSameOriginRedirect: validateDestination,
     })
+    if (validateDestination) {
+      await expectDestinationPageExists({ sourcePage: params.page, url })
+    }
   }
-
   await params.page.bringToFront()
 }

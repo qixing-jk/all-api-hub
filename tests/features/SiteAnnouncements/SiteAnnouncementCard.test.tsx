@@ -75,6 +75,55 @@ const record: SiteAnnouncementRecord = {
 }
 
 describe("SiteAnnouncementCard", () => {
+  it.each([false, true])(
+    "keeps every source link independent of card expansion (expanded=%s)",
+    (expanded) => {
+      const onToggleExpanded = vi.fn()
+      render(
+        <SiteAnnouncementCard
+          record={record}
+          expanded={expanded}
+          onToggleExpanded={onToggleExpanded}
+          onMarkRead={vi.fn()}
+        />,
+        {
+          withReleaseUpdateStatusProvider: false,
+          withThemeProvider: false,
+          withUserPreferencesProvider: false,
+        },
+      )
+      for (const link of screen.getAllByRole("link", {
+        name: "siteAnnouncements:actions.viewSource",
+      })) {
+        expect(link).toHaveAttribute("href", "https://example.com/")
+        expect(link).toHaveAttribute("target", "_blank")
+        expect(link).toHaveAttribute("rel", "noopener noreferrer")
+        fireEvent.click(link)
+      }
+      expect(onToggleExpanded).not.toHaveBeenCalled()
+    },
+  )
+  it("shows cached content without a source link when no announcement page is declared", () => {
+    render(
+      <SiteAnnouncementCard
+        record={{ ...record, siteType: "openrouter" }}
+        expanded={true}
+        onToggleExpanded={vi.fn()}
+        onMarkRead={vi.fn()}
+      />,
+      {
+        withReleaseUpdateStatusProvider: false,
+        withThemeProvider: false,
+        withUserPreferencesProvider: false,
+      },
+    )
+    expect(
+      screen.queryByRole("link", {
+        name: "siteAnnouncements:actions.viewSource",
+      }),
+    ).not.toBeInTheDocument()
+    expect(screen.getByText("Full body")).toBeInTheDocument()
+  })
   it("declares controlled analytics metadata for card actions", () => {
     render(
       <SiteAnnouncementCard

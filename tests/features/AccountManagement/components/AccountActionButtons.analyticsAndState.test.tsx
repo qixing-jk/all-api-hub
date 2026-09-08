@@ -43,6 +43,37 @@ import {
 describe("AccountActionButtons", () => {
   setupAccountActionButtonsTest()
 
+  it.each([undefined, "https://example.com/custom-redeem"])(
+    "offers SharedChat redemption only when a custom page exists: %s",
+    async (redeemUrl) => {
+      const user = userEvent.setup()
+      render(
+        <AccountActionButtons
+          site={buildDisplaySiteData({
+            siteType: SITE_TYPES.SHAREDCHAT,
+            checkIn: {
+              ...buildDisplaySiteData().checkIn,
+              customCheckIn: { redeemUrl },
+            },
+          })}
+          onCopyKey={vi.fn()}
+          onDeleteAccount={vi.fn()}
+        />,
+      )
+      await user.click(
+        screen.getByRole("button", { name: "common:actions.more" }),
+      )
+      const redeemItem = screen.queryByRole("menuitem", {
+        name: "account:actions.redeemPage",
+      })
+      if (redeemUrl) expect(redeemItem).toBeInTheDocument()
+      else expect(redeemItem).not.toBeInTheDocument()
+      expect(
+        screen.getByRole("menuitem", { name: "account:actions.usageLog" }),
+      ).toBeInTheDocument()
+    },
+  )
+
   it("locks externally refreshed accounts without announcing local menu work", async () => {
     accountActionsContextValue.refreshingAccountId = "acc-external-refresh"
     const user = userEvent.setup()

@@ -10,6 +10,7 @@ import {
   ACCOUNT_BOOTSTRAP_ROUTE_KINDS,
   type AccountBootstrapCapability,
   type AccountBootstrapRouteKind,
+  type AccountBootstrapRouteTarget,
 } from "~/services/apiAdapters/contracts/accountBootstrap"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { AuthTypeEnum } from "~/types"
@@ -18,11 +19,6 @@ import { joinUrl } from "~/utils/core/url"
 export const SITE_ROUTE_KINDS = ACCOUNT_BOOTSTRAP_ROUTE_KINDS
 
 type SiteRouteKind = AccountBootstrapRouteKind
-
-type RouteTarget = {
-  baseUrl: string
-  siteType: AccountSiteType
-}
 
 const NEW_API_FRONTEND_THEMES = {
   Default: "default",
@@ -140,12 +136,12 @@ async function fetchNewApiFrontendTheme(
  * Resolve the web page path for an account site route.
  * @param target Account site route target.
  * @param route Named route kind.
- * @returns Route path for the target site and frontend theme.
+ * @returns The declared page path, or null when page navigation is unsupported.
  */
 async function resolveAccountSiteRoutePath(
-  target: Pick<RouteTarget, "baseUrl" | "siteType">,
+  target: AccountBootstrapRouteTarget,
   route: SiteRouteKind,
-): Promise<string> {
+): Promise<string | null> {
   const accountBootstrap = getSiteTypeCapabilities(target.siteType).account
     ?.bootstrap
   const staticPath = accountBootstrap?.resolveRoutePath
@@ -153,6 +149,7 @@ async function resolveAccountSiteRoutePath(
     : resolveStaticAccountRoutePath(target, route)
 
   if (
+    staticPath === null ||
     target.siteType !== SITE_TYPES.NEW_API ||
     route === SITE_ANNOUNCEMENTS_ROUTE_KIND
   ) {
@@ -171,15 +168,26 @@ async function resolveAccountSiteRoutePath(
  * Resolve the full web page URL for an account site route.
  * @param target Account site route target.
  * @param route Named route kind.
- * @returns Full URL for the target site and route.
+ * @returns The page URL, or null when page navigation is unsupported.
  */
-export async function resolveAccountSiteRouteUrl(
-  target: Pick<RouteTarget, "baseUrl" | "siteType">,
+export function resolveAccountSiteRouteUrl(
+  target: AccountBootstrapRouteTarget,
+  route: typeof SITE_ROUTE_KINDS.Login,
+): Promise<string>
+export function resolveAccountSiteRouteUrl(
+  target: AccountBootstrapRouteTarget,
   route: SiteRouteKind,
-): Promise<string> {
+): Promise<string | null>
+export async function resolveAccountSiteRouteUrl(
+  target: AccountBootstrapRouteTarget,
+  route: SiteRouteKind,
+): Promise<string | null> {
   const baseUrl = normalizeBaseUrl(target.baseUrl)
   const path = await resolveAccountSiteRoutePath(target, route)
-  return joinUrl(baseUrl, path)
+  if (route === SITE_ROUTE_KINDS.Login && path === null) {
+    throw new Error("Account site login route must be declared")
+  }
+  return path === null ? null : joinUrl(baseUrl, path)
 }
 
 /**
