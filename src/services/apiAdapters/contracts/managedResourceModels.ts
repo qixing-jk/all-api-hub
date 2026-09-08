@@ -10,6 +10,12 @@ import type {
   ManagedSiteChannelRequestOptions,
 } from "./managedSiteCapabilities"
 
+/** Provider semantics for determining whether a redirect target still exists. */
+export interface ManagedModelMappingPolicy {
+  supportsChaining?: boolean
+  normalizeTargetForAvailability?(target: string): string
+}
+
 /** Provider-owned model operations; writes affect only model fields and preserve native settings. */
 export interface ManagedResourceModelsCapability<
   TConfig = ManagedSiteRuntimeConfigValue,
@@ -19,6 +25,7 @@ export interface ManagedResourceModelsCapability<
     config: TConfig,
     protectionBypassExecution: ProtectionBypassExecution,
   ): ManagedResourceModelSyncWorkflow
+  modelMappingPolicy?: ManagedModelMappingPolicy
   list?(
     config: TConfig,
     options?: ManagedSiteChannelRequestOptions & {

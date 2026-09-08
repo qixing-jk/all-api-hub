@@ -287,6 +287,7 @@ beforeEach(() => {
   getSiteTypeCapabilitiesMock.mockImplementation((siteType) => ({
     siteType,
     managedSites: {
+      matching: getManagedSiteCapabilitiesForTypeMock()?.matching,
       models: {
         list: listAllChannelsMock,
         fetchModels: fetchChannelModelsMock,
@@ -1230,6 +1231,7 @@ describe("ModelSyncService - probe-backed filters", () => {
 
   it("marks a model as unmatched when probe execution throws", async () => {
     const context = {
+      matching: { fetchSecretKey: fetchChannelSecretKeyMock },
       channel: makeChannel({
         id: 92,
         ref: modelResourceRef(92, { siteType: SITE_TYPES.VELOERA }),
@@ -1253,6 +1255,7 @@ describe("ModelSyncService - probe-backed filters", () => {
 
   it("rejects probe filtering when the channel base URL is missing", async () => {
     const context = {
+      matching: { fetchSecretKey: fetchChannelSecretKeyMock },
       channel: makeChannel({
         id: 93,
         ref: modelResourceRef(93, { siteType: SITE_TYPES.VELOERA }),
@@ -1462,6 +1465,7 @@ describe("ModelSyncService - probe-backed filters", () => {
       new Error("failed with runtime-token sk-hidden-channel-key 123456"),
     )
     const context = {
+      matching: { fetchSecretKey: fetchChannelSecretKeyMock },
       channel: makeChannel({
         id: 83,
         type: ChannelType.OpenAI,
@@ -1503,6 +1507,7 @@ describe("ModelSyncService - probe-backed filters", () => {
         new Error(`failed with ${item.secret} sk-hidden-channel-key 123456`),
       )
       const context = {
+        matching: { fetchSecretKey: fetchChannelSecretKeyMock },
         channel: makeChannel({
           id: 84,
           ref: modelResourceRef(84, { siteType: item.runtimeConfig.siteType }),
@@ -1526,6 +1531,7 @@ describe("ModelSyncService - probe-backed filters", () => {
   it("rejects unusable keys returned by the managed-site provider", async () => {
     fetchChannelSecretKeyMock.mockResolvedValueOnce("sk-mask***")
     const context = {
+      matching: { fetchSecretKey: fetchChannelSecretKeyMock },
       channel: makeChannel({
         id: 85,
         type: ChannelType.OpenAI,
@@ -1545,6 +1551,7 @@ describe("ModelSyncService - probe-backed filters", () => {
 
   it("resolves a hidden key only once across repeated probe evaluations", async () => {
     const context = {
+      matching: { fetchSecretKey: fetchChannelSecretKeyMock },
       channel: makeChannel({
         id: 90,
         ref: modelResourceRef(90, { siteType: SITE_TYPES.VELOERA }),
@@ -1571,6 +1578,7 @@ describe("ModelSyncService - probe-backed filters", () => {
       PROTECTION_BYPASS_USER_COMMANDS.SyncManagedSiteModels,
     )
     const context = {
+      matching: { fetchSecretKey: fetchChannelSecretKeyMock },
       channel: makeChannel({
         id: 90,
         type: ChannelType.OpenAI,
@@ -1600,6 +1608,7 @@ describe("ModelSyncService - probe-backed filters", () => {
 
   it("treats empty probe rules as non-matches", async () => {
     const context = {
+      matching: { fetchSecretKey: fetchChannelSecretKeyMock },
       channel: makeChannel({
         id: 91,
         type: ChannelType.OpenAI,

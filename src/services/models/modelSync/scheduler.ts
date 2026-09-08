@@ -1,3 +1,4 @@
+import type { ManagedSiteMessagesKey } from "~/services/accountSiteDefinitions/contracts"
 import type {
   ManagedResourceModelSyncBatchOptions,
   ManagedResourceModelSyncWorkflow,
@@ -7,7 +8,6 @@ import {
   type ManagedResourceRef,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
-import type { ManagedSiteMessagesKey } from "~/services/accountSiteDefinitions/contracts"
 import { ensureLegacyChannelConfigMigrationReady } from "~/services/managedSites/legacyChannelConfigMigration"
 import {
   assertManagedResourceRefForSite,
@@ -637,7 +637,9 @@ class ModelSyncScheduler {
                         ? {
                             pruneMissingTargets: true,
                             availableModels: actualModels,
-                            siteType,
+                            modelMappingPolicy:
+                              getSiteTypeCapabilities(siteType).managedSites
+                                ?.models?.modelMappingPolicy,
                           }
                         : undefined,
                     )

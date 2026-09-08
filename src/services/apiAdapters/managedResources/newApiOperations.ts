@@ -246,6 +246,7 @@ export const newApiChannelOperations = {
 }
 
 export const newApiManagedResourceModels = {
+  modelMappingPolicy: { supportsChaining: true },
   list: async (config, options) =>
     toManagedModelChannelList(
       await listAllChannels(

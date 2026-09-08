@@ -2,6 +2,8 @@
 
 先清理职责与重复策略，暂不引入 lint、白名单或引用额度。此文件是审计记录，不参与运行时或检查。
 
+最新状态：已整合 origin/main 6953346f6 的 scoped resource identity 重构。第二、三轮的本地指纹/导航接口已被上游统一配置指纹与 ManagedResourceRef 契约替代；下文保留实施历史，当前实现以第五轮记录为准。
+
 ## 本轮实现
 
 - 撤销 93d25ac85 新增的 lint 规则、配额和配套测试，保留 tokenKey.optionalSkPrefix 元数据及测试。
@@ -20,7 +22,7 @@
 2. New API 的交互验证（ManagedSiteChannelAssessmentSignalHelpers、AccountActionButtons、KeyManagement、managedSiteTokenBatchExportPreview、useManagedResourceInteraction、tokenBatchExport/tokenChannelStatus、accountBrowserSession）。当前执行与 UI 挑战过程具有提供方专属契约，需要完成整个验证流程的能力迁移。
 3. **已完成第三轮清理**：匹配适配器的 resolveNavigationId 决定可用导航身份，AxonHub 自行拒绝历史数字投影。服务摘要显式携带 resourceId，TokenHeader 不再猜测站点规则；状态查询、批量导出与账户定位一起迁移。
 4. **已完成第二轮清理**：KeyManagement/useKeyManagement 的配置指纹读取已有 runtimeConfig 解析结果，删除提供方字段名单；所有配置字段参与失效判断，字段顺序规范化，凭证仍只保留内存哈希。七类站点均覆盖凭证变更、旧结果晚返回、无关目标变更和配置清空。
-5. 模型同步/重定向的提供方执行流程（ModelRedirectService、modelSync/scheduler）需要 provider-owned 执行接口；保留 Octopus 流程及各提供方字段解码。
+5. **已完成第五轮清理**：上游 createSync 能力已承接 Octopus 执行流程；本地将链式映射与 DoneHub 计费前缀语义注册为 modelMappingPolicy。共享调度器/重定向服务不再依赖站点分支。提供方类型字段解码保留。
 6. AIHubMix 一次性密钥恢复和保存后流程（accountKeyAutoProvisioning/repair、AddTokenDialog、useAccountDialog）仍涉及专门 UI 生命周期，应与创建密钥工作流一起迁移。
 
 ## 保留的合法身份用途
@@ -74,10 +76,10 @@
 | src/services/managedSites/utils/channelMatching.ts | 已清理 | Sub2API-specific matching identity. |
 | src/services/managedSites/utils/managedSite.ts | 已清理 | Legacy provider settings, default config and token routing; migrate by consumer. |
 | src/services/modelList/accountSources/sub2apiEstimates.ts | 保留 | Provider-specific Sub2API model dashboard estimates. |
-| src/services/models/modelRedirect/ModelRedirectService.ts | 后续 | Existing New API and DoneHub model redirect behavior. |
+| src/services/models/modelRedirect/ModelRedirectService.ts | 已清理 | 裁剪算法接收注册模型映射策略，不再判断 New API/DoneHub。 |
 | src/services/models/modelSync/channelModelFilterEvaluator.ts | 保留 | Provider-specific channel model-filter decoding. |
 | src/services/models/modelSync/octopusModelSync.ts | 保留 | Provider-specific Octopus synchronization implementation. |
-| src/services/models/modelSync/scheduler.ts | 后续 | Existing provider-specific scheduling behavior; migrate with provider execution contracts. |
+| src/services/models/modelSync/scheduler.ts | 已清理 | 通过上游 createSync 工作流和注册模型映射策略分发。 |
 | src/services/preferences/userPreferences.ts | 保留 | Persisted managed-site defaults and provider preference selection. |
 | src/services/productAnalytics/settings.ts | 保留 | Existing provider-specific analytics settings projection. |
 | src/services/siteAnnouncements/providers.ts | 保留 | Executable site-announcement provider dispatch and Sub2API implementation. |
@@ -127,3 +129,17 @@
 - 已验证：新增导入顺序测试原先复现三个提供方能力丢失，拆分后七种入口均保留全部托管注册。敏感信息收集实现原样迁移，没有调整脱敏语义或遍历预算。
 - 复扫：TypeScript 静态运行时 import 图中，七个托管适配器都已没有返回 apiAdapters/registry 的路径。这个依赖边界没有其他待执行清理；其余整体流程迁移仍保留在前文清单。
 - 验证：143 个测试文件、2583 项测试通过；类型检查、未使用代码检查通过。首轮并行模型同步测试加载超时，单文件重跑及 maxWorkers=4 的整批重跑均通过。提交钩子结果以提交完成为准。
+
+
+## 第五轮基线整合、模型策略与验证
+
+范围：整合 6953346f6 的资源身份契约，清理模型同步/重定向的执行策略，保持既有注册初始化保证。
+
+- 基线整合：旧头 46469d026，备份 backup/site-policy-cleanup-before-resource-refresh-46469d026，重放到 origin/main 6953346f6。前四个提交 range-diff 等价；基础清理按 ref 比较和新调度器契约合并；循环依赖清理跟随 Octopus 执行模块的新路径迁移。
+- 替代关系：跳过旧第二轮 712903d20 与第三轮 09b9ea234 的重复实现。上游 getManagedSiteRuntimeConfigFingerprint 已提供完整目标配置归属；上游 ManagedResourceRef 已包含稳定身份与作用域，直接用于导航与匹配。没有恢复旧 numeric projection 或 resolveNavigationId 兼容接口。
+- 已执行：New API 模型能力声明链式目标支持，DoneHub 模型能力负责计费前缀归一化；ModelRedirectService 只执行通用裁剪算法，保留环检测、未知值保留、空目标和无变化不写入等语义。
+- 已执行：模型调度器从实际模型能力透传 modelMappingPolicy。Octopus 执行分发采用上游 createSync，未新增站点名单。
+- 已执行：新增 Octopus 工作流会经过滤器反向依赖 registry，导入顺序测试确实复现失败。过滤器改为显式接收 matching 密钥读取能力，ModelSyncService 注入实际能力；Octopus 维持直接凭证、无隐藏密钥读取能力的原有边界。七种导入顺序已恢复通过。
+- 已验证：提供方策略注册、链式映射保留、不可用循环裁剪、DoneHub 前缀保留、调度器策略透传、密钥失败脱敏与显式执行意图；复扫调度器与重定向服务没有具体站点常量分支。
+- 后续仍独立保留：OpenRouter 凭证/身份持久化、New API 交互验证、AIHubMix 一次性密钥恢复流程。
+- 验证：259 个相关测试文件、4484 项测试通过，类型检查和未使用代码检查通过；冲突文件 ESLint/格式检查通过。七种导入顺序完整性回归通过；未运行浏览器 E2E。提交钩子结果以提交完成为准。

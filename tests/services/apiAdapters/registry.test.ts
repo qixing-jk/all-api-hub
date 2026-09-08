@@ -405,3 +405,27 @@ describe("apiAdapters registry", () => {
     })
   })
 })
+
+describe("model mapping policies", () => {
+  it("registers chained targets only for New API", () => {
+    for (const siteType of MANAGED_SITE_TYPES) {
+      expect(
+        Boolean(
+          getManagedSiteCapabilities(siteType).models?.modelMappingPolicy
+            ?.supportsChaining,
+        ),
+      ).toBe(siteType === SITE_TYPES.NEW_API)
+    }
+  })
+
+  it("keeps DoneHub billing prefixes out of availability comparisons", () => {
+    const policy = getManagedSiteCapabilities(SITE_TYPES.DONE_HUB).models
+      ?.modelMappingPolicy
+    expect(policy?.normalizeTargetForAvailability?.("+ gpt-4o")).toBe("gpt-4o")
+    expect(policy?.normalizeTargetForAvailability?.("gpt-4o")).toBe("gpt-4o")
+    expect(
+      getManagedSiteCapabilities(SITE_TYPES.NEW_API).models?.modelMappingPolicy
+        ?.normalizeTargetForAvailability,
+    ).toBeUndefined()
+  })
+})

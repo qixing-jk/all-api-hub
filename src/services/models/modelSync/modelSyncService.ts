@@ -412,6 +412,8 @@ export class ModelSyncService {
         const probeContext: ProbeFilterContext = {
           channel,
           managedConfig: this.managedSiteConfig,
+          matching: getSiteTypeCapabilities(this.managedSiteConfig.siteType)
+            .managedSites?.matching,
           cache: probeFilterCache,
           abortSignal: probeFilterAbort.signal,
           protectionBypassExecution: this.protectionBypassExecution,

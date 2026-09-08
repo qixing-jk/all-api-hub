@@ -1,5 +1,5 @@
-import { areManagedResourceRefsEqual } from "~/services/managedSites/managedResourceIdentity"
 import type { ManagedResourceMatchingCapability } from "~/services/apiAdapters/contracts/managedResourceMatching"
+import { areManagedResourceRefsEqual } from "~/services/managedSites/managedResourceIdentity"
 import type { ManagedResourceMatchCandidate } from "~/types/managedResourceMatching"
 
 export const MANAGED_SITE_CHANNEL_MATCH_LEVELS = {

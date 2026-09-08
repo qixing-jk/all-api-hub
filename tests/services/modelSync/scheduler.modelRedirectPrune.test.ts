@@ -191,7 +191,7 @@ describe("modelSyncScheduler.executeSync - model redirect pruning", () => {
     ).toHaveBeenCalledWith(channel, {}, expect.anything(), {
       pruneMissingTargets: true,
       availableModels: newModels,
-      siteType: SITE_TYPES.NEW_API,
+      modelMappingPolicy: { supportsChaining: true },
     })
   })
 
@@ -213,7 +213,7 @@ describe("modelSyncScheduler.executeSync - model redirect pruning", () => {
     ).toHaveBeenCalledWith(channel, {}, expect.anything(), {
       pruneMissingTargets: true,
       availableModels: newModels,
-      siteType: SITE_TYPES.NEW_API,
+      modelMappingPolicy: { supportsChaining: true },
     })
   })
 

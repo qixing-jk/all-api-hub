@@ -204,6 +204,11 @@ export const doneHubChannelOperations = {
 }
 
 export const doneHubManagedResourceModels = {
+  modelMappingPolicy: {
+    // DoneHub's billing prefix is not part of the upstream model identity.
+    normalizeTargetForAvailability: (target: string) =>
+      target.startsWith("+") ? target.slice(1).trim() : target,
+  },
   list: async (config, options) =>
     toManagedModelChannelList(
       await listAllChannels(

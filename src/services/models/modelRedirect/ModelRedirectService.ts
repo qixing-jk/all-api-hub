@@ -4,8 +4,10 @@
  * Based on gpt-api-sync logic with enhancements for weighted channel selection
  */
 
-import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
-import type { ManagedResourceModelsCapability } from "~/services/apiAdapters/contracts/managedResourceModels"
+import type {
+  ManagedModelMappingPolicy,
+  ManagedResourceModelsCapability,
+} from "~/services/apiAdapters/contracts/managedResourceModels"
 import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
 import {
   assertManagedResourceRefForSite,
@@ -215,22 +217,16 @@ export class ModelRedirectService {
     existingMapping: Record<string, unknown>,
     availableModels: ReadonlySet<string>,
     options?: {
-      siteType?: ManagedSiteType
+      modelMappingPolicy?: ManagedModelMappingPolicy
     },
   ): { prunedMapping: Record<string, unknown>; removedCount: number } {
     let removedCount = 0
     const prunedMapping: Record<string, unknown> = {}
 
-    const siteType = options?.siteType
-    const supportsChainedMapping = siteType === SITE_TYPES.NEW_API
-    const supportsBillingPrefix = siteType === SITE_TYPES.DONE_HUB
-
+    const policy = options?.modelMappingPolicy
     const normalizeTargetForAvailability = (targetModel: string): string => {
       const trimmed = targetModel.trim()
-      if (supportsBillingPrefix && trimmed.startsWith("+")) {
-        return trimmed.slice(1).trim()
-      }
-      return trimmed
+      return policy?.normalizeTargetForAvailability?.(trimmed) ?? trimmed
     }
 
     const resolvesToAvailableModel = (startModel: string): boolean => {
@@ -262,7 +258,7 @@ export class ModelRedirectService {
       const isAvailable =
         Boolean(normalizedTarget) &&
         (availableModels.has(normalizedTarget) ||
-          (supportsChainedMapping &&
+          (policy?.supportsChaining &&
             resolvesToAvailableModel(normalizedTarget)))
 
       if (!isAvailable) {
@@ -360,7 +356,7 @@ export class ModelRedirectService {
     options?: {
       availableModels?: string[]
       pruneMissingTargets?: boolean
-      siteType?: ManagedSiteType
+      modelMappingPolicy?: ManagedModelMappingPolicy
     },
   ): Promise<{ updated: boolean; prunedCount: number }> {
     const hasNewMapping = Object.keys(newMapping).length > 0
@@ -404,7 +400,7 @@ export class ModelRedirectService {
         ModelRedirectService.pruneModelMappingMissingTargets(
           existingMapping,
           availableModelsSet,
-          { siteType: options?.siteType },
+          { modelMappingPolicy: options?.modelMappingPolicy },
         )
       baseMapping = prunedMapping
       prunedCount = removedCount

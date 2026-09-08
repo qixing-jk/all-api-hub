@@ -30,13 +30,13 @@ import {
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { getManagedResourceRegistration } from "~/services/apiAdapters/managedResources/registry"
 import { resolveManagedSiteMigrationCapability } from "~/services/managedSites/channelMigrationCapabilityRegistry"
+import { getManagedSiteTargetOptions } from "~/services/managedSites/channelMigrationTargets"
 import {
   getManagedResourceRefKey,
   isManagedResourceRefForSite,
   parseManagedResourceRef,
   toManagedUpstreamResourceRef,
 } from "~/services/managedSites/managedResourceIdentity"
-import { getManagedSiteTargetOptions } from "~/services/managedSites/channelMigrationTargets"
 import { resolveManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
 import {
   getManagedSiteConfigMissingMessage,

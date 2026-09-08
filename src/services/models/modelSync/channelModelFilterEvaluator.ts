@@ -4,7 +4,7 @@ import { DoneHubChannelType } from "~/constants/doneHub"
 import { ChannelType as NewApiChannelType } from "~/constants/newApi"
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import { VeloeraChannelType } from "~/constants/veloera"
-import { getManagedSiteCapabilities } from "~/services/apiAdapters/registry"
+import type { ManagedResourceMatchingCapability } from "~/services/apiAdapters/contracts/managedResourceMatching"
 import { isSafeChannelModelFilterRegex } from "~/services/managedSites/channelModelFilterRules"
 import {
   assertManagedResourceRefForSite,
@@ -61,6 +61,7 @@ export class ProbeFilterUnavailableError extends Error {
  */
 export interface ProbeFilterContext {
   channel: Pick<ManagedModelChannel, "ref" | "type" | "baseUrl" | "credential">
+  matching?: Pick<ManagedResourceMatchingCapability, "fetchSecretKey">
   managedConfig: ManagedSiteRuntimeConfig
   cache: Map<string, boolean>
   resolvedKey?: string
@@ -246,8 +247,8 @@ async function resolveChannelKey(context: ProbeFilterContext): Promise<string> {
     return directKey
   }
 
-  const managedSite = getManagedSiteCapabilities(context.managedConfig.siteType)
-  if (!managedSite.matching?.fetchSecretKey) {
+  const matching = context.matching
+  if (!matching?.fetchSecretKey) {
     throw new ProbeFilterUnavailableError(
       "provider-unsupported",
       "Probe filtering is unsupported because this managed-site provider cannot resolve hidden channel keys.",
@@ -256,12 +257,12 @@ async function resolveChannelKey(context: ProbeFilterContext): Promise<string> {
 
   try {
     const key = context.protectionBypassExecution
-      ? await managedSite.matching.fetchSecretKey(
+      ? await matching.fetchSecretKey(
           context.managedConfig.config,
           context.channel.ref,
           { protectionBypassExecution: context.protectionBypassExecution },
         )
-      : await managedSite.matching.fetchSecretKey(
+      : await matching.fetchSecretKey(
           context.managedConfig.config,
           context.channel.ref,
         )
