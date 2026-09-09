@@ -157,8 +157,18 @@ vi.mock(
 )
 
 vi.mock("~/features/ModelList/components/ModelItem/ModelItemPricing", () => ({
-  ModelItemPricing: ({ showPricing }: { showPricing: boolean }) => (
-    <div data-testid="model-pricing" data-show-pricing={String(showPricing)} />
+  ModelItemPricing: ({
+    showPricing,
+    onShowDetails,
+  }: {
+    showPricing: boolean
+    onShowDetails?: () => void
+  }) => (
+    <div data-testid="model-pricing" data-show-pricing={String(showPricing)}>
+      {onShowDetails && (
+        <button onClick={onShowDetails}>Calculation details</button>
+      )}
+    </div>
   ),
 }))
 
@@ -248,6 +258,22 @@ function createDefaultProps() {
 }
 
 describe("ModelItem", () => {
+  it("expands and focuses calculation details from the price summary", async () => {
+    const user = userEvent.setup()
+    render(<ModelItem {...createDefaultProps()} />)
+    expect(screen.queryByTestId("model-details")).not.toBeInTheDocument()
+    await user.click(
+      screen.getByRole("button", { name: "Calculation details" }),
+    )
+    expect(screen.getByTestId("model-details")).toBeVisible()
+    expect(document.activeElement).toContainElement(
+      screen.getByTestId("model-details"),
+    )
+    await user.click(
+      screen.getByRole("button", { name: "Calculation details" }),
+    )
+    expect(screen.getByTestId("model-details")).toBeVisible()
+  })
   beforeEach(() => {
     vi.clearAllMocks()
     vi.unstubAllEnvs()
