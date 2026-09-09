@@ -3,13 +3,11 @@ import {
   isAccountTokenRuntimeKey,
   type AccountRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
-import {
-  ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS,
-  ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES,
-} from "~/services/accounts/accountSiteProfile"
+import { ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS } from "~/services/accounts/accountSiteProfile"
 import { resolveDisplayAccountRuntimeKeySecret } from "~/services/accounts/utils/apiServiceRequest"
 import type { ModelCatalogRequest } from "~/services/apiAdapters/contracts/modelCatalog"
 import type { ModelPricingRequest } from "~/services/apiAdapters/contracts/modelPricing"
+import { MODEL_PRICING_RUNTIME_KEY_FALLBACKS } from "~/services/apiAdapters/contracts/modelPricing"
 import {
   buildApiCredentialProfilePricingResponse,
   fetchApiCredentialModelIds,
@@ -141,8 +139,8 @@ export async function loadAccountRuntimeKeyFallbackPricingResponse(
   try {
     if (
       readiness.route === MODEL_LIST_ACCOUNT_SOURCE_ROUTES.DirectPricing &&
-      readiness.displayCapabilitiesSource ===
-        ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Profile
+      readiness.modelPricing.runtimeKeyFallback ===
+        MODEL_PRICING_RUNTIME_KEY_FALLBACKS.ACCOUNT_PRICING
     ) {
       return await readiness.modelPricing.fetchPricing(
         createAccountModelPricingRequest(params.account, params.abortSignal),

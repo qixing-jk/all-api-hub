@@ -1,0 +1,569 @@
+[
+  {
+    "model_name": "gpt-image-2",
+    "quota_type": 0,
+    "model_price": 0,
+    "billing_mode": "tiered_expr",
+    "billing_expr": "v2:tier(\"base\", unit(outputs, resolution == \"1k\" ? 0.0136986301 : resolution == \"2k\" ? 0.0164383562 : 0.0205479452))",
+    "billing_usage_schema": null,
+    "price_presentation": {
+      "kind": "image",
+      "settlement": "actual_result",
+      "items": [
+        {
+          "key": "image-1k",
+          "amount": 0.013698630100000001,
+          "unit": "image",
+          "resolution": "1k"
+        },
+        {
+          "key": "image-2k",
+          "amount": 0.0164383562,
+          "unit": "image",
+          "resolution": "2k"
+        },
+        {
+          "key": "image-4k",
+          "amount": 0.0205479452,
+          "unit": "image",
+          "resolution": "4k"
+        }
+      ]
+    }
+  },
+  {
+    "model_name": "gpt-image-1.5",
+    "quota_type": 1,
+    "model_price": 0.010959,
+    "billing_mode": null,
+    "billing_expr": null,
+    "billing_usage_schema": null,
+    "price_presentation": {
+      "kind": "image",
+      "settlement": "request"
+    }
+  },
+  {
+    "model_name": "wan2.7-t2v",
+    "quota_type": 0,
+    "model_price": 0,
+    "billing_mode": "tiered_expr",
+    "billing_expr": "v2:tier(\"base\", unit(seconds, resolution == \"720p\" ? 0.0821917808 : 0.1369863014))",
+    "billing_usage_schema": null,
+    "price_presentation": {
+      "kind": "video",
+      "settlement": "actual_result",
+      "items": [
+        {
+          "key": "second-1080p",
+          "amount": 0.1369863014,
+          "unit": "second",
+          "resolution": "1080p"
+        },
+        {
+          "key": "second-720p",
+          "amount": 0.0821917808,
+          "unit": "second",
+          "resolution": "720p"
+        }
+      ]
+    }
+  },
+  {
+    "model_name": "wan2.7-i2v",
+    "quota_type": 0,
+    "model_price": 0,
+    "billing_mode": "tiered_expr",
+    "billing_expr": "v2:tier(\"base\", unit(seconds, resolution == \"720p\" ? 0.0821917808 : 0.1369863014))",
+    "billing_usage_schema": null,
+    "price_presentation": {
+      "kind": "video",
+      "settlement": "actual_result",
+      "items": [
+        {
+          "key": "second-1080p",
+          "amount": 0.1369863014,
+          "unit": "second",
+          "resolution": "1080p"
+        },
+        {
+          "key": "second-720p",
+          "amount": 0.0821917808,
+          "unit": "second",
+          "resolution": "720p"
+        }
+      ]
+    }
+  },
+  {
+    "model_name": "wan2.7-image-pro",
+    "quota_type": 0,
+    "model_price": 0,
+    "billing_mode": "tiered_expr",
+    "billing_expr": "v2:tier(\"base\", unit(outputs, 0.0684931507))",
+    "billing_usage_schema": null,
+    "price_presentation": {
+      "kind": "image",
+      "settlement": "actual_result",
+      "items": [
+        {
+          "key": "image",
+          "amount": 0.0684931507,
+          "unit": "image"
+        }
+      ]
+    }
+  },
+  {
+    "model_name": "wan2.7-image",
+    "quota_type": 0,
+    "model_price": 0,
+    "billing_mode": "tiered_expr",
+    "billing_expr": "v2:tier(\"base\", unit(outputs, 0.0273972603))",
+    "billing_usage_schema": null,
+    "price_presentation": {
+      "kind": "image",
+      "settlement": "actual_result",
+      "items": [
+        {
+          "key": "image",
+          "amount": 0.0273972603,
+          "unit": "image"
+        }
+      ]
+    }
+  },
+  {
+    "model_name": "qwen-image-2.0-pro",
+    "quota_type": 0,
+    "model_price": 0,
+    "billing_mode": "tiered_expr",
+    "billing_expr": "v2:tier(\"base\", unit(outputs, 0.0684931507))",
+    "billing_usage_schema": null,
+    "price_presentation": {
+      "kind": "image",
+      "settlement": "actual_result",
+      "items": [
+        {
+          "key": "image",
+          "amount": 0.0684931507,
+          "unit": "image"
+        }
+      ]
+    }
+  },
+  {
+    "model_name": "qwen-image-2.0",
+    "quota_type": 0,
+    "model_price": 0,
+    "billing_mode": "tiered_expr",
+    "billing_expr": "v2:tier(\"base\", unit(outputs, 0.0273972603))",
+    "billing_usage_schema": null,
+    "price_presentation": {
+      "kind": "image",
+      "settlement": "actual_result",
+      "items": [
+        {
+          "key": "image",
+          "amount": 0.0273972603,
+          "unit": "image"
+        }
+      ]
+    }
+  },
+  {
+    "model_name": "qwen-image-edit-max",
+    "quota_type": 0,
+    "model_price": 0,
+    "billing_mode": "tiered_expr",
+    "billing_expr": "v2:tier(\"base\", unit(outputs, 0.0684931507))",
+    "billing_usage_schema": null,
+    "price_presentation": {
+      "kind": "image",
+      "settlement": "actual_result",
+      "items": [
+        {
+          "key": "image",
+          "amount": 0.0684931507,
+          "unit": "image"
+        }
+      ]
+    }
+  },
+  {
+    "model_name": "qwen-image-max",
+    "quota_type": 0,
+    "model_price": 0,
+    "billing_mode": "tiered_expr",
+    "billing_expr": "v2:tier(\"base\", unit(outputs, 0.0684931507))",
+    "billing_usage_schema": null,
+    "price_presentation": {
+      "kind": "image",
+      "settlement": "actual_result",
+      "items": [
+        {
+          "key": "image",
+          "amount": 0.0684931507,
+          "unit": "image"
+        }
+      ]
+    }
+  },
+  {
+    "model_name": "qwen-image-plus",
+    "quota_type": 0,
+    "model_price": 0,
+    "billing_mode": "tiered_expr",
+    "billing_expr": "v2:tier(\"base\", unit(outputs, 0.0273972603))",
+    "billing_usage_schema": null,
+    "price_presentation": {
+      "kind": "image",
+      "settlement": "actual_result",
+      "items": [
+        {
+          "key": "image",
+          "amount": 0.0273972603,
+          "unit": "image"
+        }
+      ]
+    }
+  },
+  {
+    "model_name": "qwen-image-edit-plus",
+    "quota_type": 0,
+    "model_price": 0,
+    "billing_mode": "tiered_expr",
+    "billing_expr": "v2:tier(\"base\", unit(outputs, 0.0273972603))",
+    "billing_usage_schema": null,
+    "price_presentation": {
+      "kind": "image",
+      "settlement": "actual_result",
+      "items": [
+        {
+          "key": "image",
+          "amount": 0.0273972603,
+          "unit": "image"
+        }
+      ]
+    }
+  },
+  {
+    "model_name": "qwen-image",
+    "quota_type": 0,
+    "model_price": 0,
+    "billing_mode": "tiered_expr",
+    "billing_expr": "v2:tier(\"base\", unit(outputs, 0.0342465753))",
+    "billing_usage_schema": null,
+    "price_presentation": {
+      "kind": "image",
+      "settlement": "actual_result",
+      "items": [
+        {
+          "key": "image",
+          "amount": 0.0342465753,
+          "unit": "image"
+        }
+      ]
+    }
+  },
+  {
+    "model_name": "doubao-seedance-2-5-260628",
+    "quota_type": 0,
+    "model_price": 0,
+    "billing_mode": "tiered_expr",
+    "billing_expr": "v2:tier(\"base\", c * (video_input ? 5.7534246575 : 9.5890410959))",
+    "billing_usage_schema": null,
+    "price_presentation": {
+      "kind": "video",
+      "settlement": "actual_result",
+      "items": [
+        {
+          "key": "million_output_tokens-video-input-false",
+          "amount": 9.5890410959,
+          "unit": "million_output_tokens",
+          "video_input": false
+        },
+        {
+          "key": "million_output_tokens-video-input-true",
+          "amount": 5.7534246575,
+          "unit": "million_output_tokens",
+          "video_input": true
+        }
+      ]
+    }
+  },
+  {
+    "model_name": "doubao-seedance-2-0-260128",
+    "quota_type": 0,
+    "model_price": 0,
+    "billing_mode": "tiered_expr",
+    "billing_expr": "v2:tier(\"base\", c * (resolution == \"4k\" ? (video_input ? 2.1917808219 : 3.5616438356) : (resolution == \"480p\" || resolution == \"720p\") ? (video_input ? 3.8356164384 : 6.3013698630) : (video_input ? 4.2465753425 : 6.9863013699)))",
+    "billing_usage_schema": null,
+    "price_presentation": {
+      "kind": "video",
+      "settlement": "actual_result",
+      "items": [
+        {
+          "key": "million_output_tokens-1080p-video-input-false",
+          "amount": 6.9863013699,
+          "unit": "million_output_tokens",
+          "resolution": "1080p",
+          "video_input": false
+        },
+        {
+          "key": "million_output_tokens-1080p-video-input-true",
+          "amount": 4.2465753425,
+          "unit": "million_output_tokens",
+          "resolution": "1080p",
+          "video_input": true
+        },
+        {
+          "key": "million_output_tokens-480p-video-input-false",
+          "amount": 6.301369863,
+          "unit": "million_output_tokens",
+          "resolution": "480p",
+          "video_input": false
+        },
+        {
+          "key": "million_output_tokens-480p-video-input-true",
+          "amount": 3.8356164384,
+          "unit": "million_output_tokens",
+          "resolution": "480p",
+          "video_input": true
+        },
+        {
+          "key": "million_output_tokens-4k-video-input-false",
+          "amount": 3.5616438356,
+          "unit": "million_output_tokens",
+          "resolution": "4k",
+          "video_input": false
+        },
+        {
+          "key": "million_output_tokens-4k-video-input-true",
+          "amount": 2.1917808219,
+          "unit": "million_output_tokens",
+          "resolution": "4k",
+          "video_input": true
+        },
+        {
+          "key": "million_output_tokens-720p-video-input-false",
+          "amount": 6.301369863,
+          "unit": "million_output_tokens",
+          "resolution": "720p",
+          "video_input": false
+        },
+        {
+          "key": "million_output_tokens-720p-video-input-true",
+          "amount": 3.8356164384,
+          "unit": "million_output_tokens",
+          "resolution": "720p",
+          "video_input": true
+        }
+      ]
+    }
+  },
+  {
+    "model_name": "doubao-seedance-2.0-mini",
+    "quota_type": 0,
+    "model_price": 0,
+    "billing_mode": "tiered_expr",
+    "billing_expr": "v2:tier(\"base\", c * (video_input ? 1.9178082192 : 3.1506849315))",
+    "billing_usage_schema": null,
+    "price_presentation": {
+      "kind": "video",
+      "settlement": "actual_result",
+      "items": [
+        {
+          "key": "million_output_tokens-video-input-false",
+          "amount": 3.1506849315,
+          "unit": "million_output_tokens",
+          "video_input": false
+        },
+        {
+          "key": "million_output_tokens-video-input-true",
+          "amount": 1.9178082192,
+          "unit": "million_output_tokens",
+          "video_input": true
+        }
+      ]
+    }
+  },
+  {
+    "model_name": "doubao-seedance-2-0-fast-260128",
+    "quota_type": 0,
+    "model_price": 0,
+    "billing_mode": "tiered_expr",
+    "billing_expr": "v2:tier(\"base\", c * (video_input ? 3.0136986301 : 5.0684931507))",
+    "billing_usage_schema": null,
+    "price_presentation": {
+      "kind": "video",
+      "settlement": "actual_result",
+      "items": [
+        {
+          "key": "million_output_tokens-video-input-false",
+          "amount": 5.0684931507,
+          "unit": "million_output_tokens",
+          "video_input": false
+        },
+        {
+          "key": "million_output_tokens-video-input-true",
+          "amount": 3.0136986300999995,
+          "unit": "million_output_tokens",
+          "video_input": true
+        }
+      ]
+    }
+  },
+  {
+    "model_name": "doubao-seedream-5-0-260128",
+    "quota_type": 0,
+    "model_price": 0,
+    "billing_mode": "tiered_expr",
+    "billing_expr": "v2:tier(\"base\", unit(outputs, 0.0301369863))",
+    "billing_usage_schema": null,
+    "price_presentation": {
+      "kind": "image",
+      "settlement": "actual_result",
+      "items": [
+        {
+          "key": "image",
+          "amount": 0.0301369863,
+          "unit": "image"
+        }
+      ]
+    }
+  },
+  {
+    "model_name": "doubao-seedream-5.0-lite",
+    "quota_type": 0,
+    "model_price": 0,
+    "billing_mode": "tiered_expr",
+    "billing_expr": "v2:tier(\"base\", unit(outputs, 0.0301369863))",
+    "billing_usage_schema": null,
+    "price_presentation": {
+      "kind": "image",
+      "settlement": "actual_result",
+      "items": [
+        {
+          "key": "image",
+          "amount": 0.0301369863,
+          "unit": "image"
+        }
+      ]
+    }
+  },
+  {
+    "model_name": "doubao-seedream-4-0-250828",
+    "quota_type": 0,
+    "model_price": 0,
+    "billing_mode": "tiered_expr",
+    "billing_expr": "v2:tier(\"base\", unit(outputs, 0.0273972603))",
+    "billing_usage_schema": null,
+    "price_presentation": {
+      "kind": "image",
+      "settlement": "actual_result",
+      "items": [
+        {
+          "key": "image",
+          "amount": 0.0273972603,
+          "unit": "image"
+        }
+      ]
+    }
+  },
+  {
+    "model_name": "step-2x-large",
+    "quota_type": 0,
+    "model_price": 0,
+    "billing_mode": "tiered_expr",
+    "billing_expr": "v2:tier(\"base\", unit(outputs, 0.0136986301))",
+    "billing_usage_schema": null,
+    "price_presentation": {
+      "kind": "image",
+      "settlement": "actual_result",
+      "items": [
+        {
+          "key": "image",
+          "amount": 0.013698630100000001,
+          "unit": "image"
+        }
+      ]
+    }
+  },
+  {
+    "model_name": "step-image-edit-2",
+    "quota_type": 0,
+    "model_price": 0,
+    "billing_mode": "tiered_expr",
+    "billing_expr": "v2:tier(\"base\", unit(outputs, 0.0027397260))",
+    "billing_usage_schema": null,
+    "price_presentation": {
+      "kind": "image",
+      "settlement": "actual_result",
+      "items": [
+        {
+          "key": "image",
+          "amount": 0.002739726,
+          "unit": "image"
+        }
+      ]
+    }
+  },
+  {
+    "model_name": "MiniMax-H3",
+    "quota_type": 0,
+    "model_price": 0,
+    "billing_mode": "tiered_expr",
+    "billing_expr": "v2:tier(\"base\", unit(seconds, 0.1095890411))",
+    "billing_usage_schema": null,
+    "price_presentation": {
+      "kind": "video",
+      "settlement": "actual_result",
+      "items": [
+        {
+          "key": "second",
+          "amount": 0.1095890411,
+          "unit": "second"
+        }
+      ]
+    }
+  },
+  {
+    "model_name": "grok-imagine-image",
+    "quota_type": 1,
+    "model_price": 0.02,
+    "billing_mode": "tiered_expr",
+    "billing_expr": "v2:tier(\"image\", unit(outputs, 0.02))",
+    "billing_usage_schema": null,
+    "price_presentation": {
+      "kind": "image",
+      "settlement": "actual_result",
+      "items": [
+        {
+          "key": "image",
+          "amount": 0.02,
+          "unit": "image"
+        }
+      ]
+    }
+  },
+  {
+    "model_name": "grok-imagine-image-quality",
+    "quota_type": 1,
+    "model_price": 0.05,
+    "billing_mode": "tiered_expr",
+    "billing_expr": "v2:tier(\"image\", unit(outputs, 0.05))",
+    "billing_usage_schema": null,
+    "price_presentation": {
+      "kind": "image",
+      "settlement": "actual_result",
+      "items": [
+        {
+          "key": "image",
+          "amount": 0.05,
+          "unit": "image"
+        }
+      ]
+    }
+  }
+]

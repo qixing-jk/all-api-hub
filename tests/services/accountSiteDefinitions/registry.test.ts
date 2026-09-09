@@ -739,7 +739,7 @@ describe("account site definition registry", () => {
           ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS.None,
         statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Account,
         displayCapabilitiesSource:
-          ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Profile,
+          ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Response,
       },
       tokenForm: {
         networkLimitPolicy:

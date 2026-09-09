@@ -12,6 +12,12 @@ import {
   MODEL_PRICE_SOURCE_KINDS,
   MODEL_UNAVAILABLE_PRICE_REASONS,
 } from "~/services/modelList/pricingModel"
+import {
+  PRICING_IMAGE_SIZES,
+  PRICING_PURPOSES,
+} from "~/services/modelPricing/pricingConstants"
+import { quoteCanonicalModelPrice } from "~/services/modelPricing/quoteCanonicalModelPrice"
+import { calculateModelPrice } from "~/services/models/utils/modelPricing"
 import type { ApiToken } from "~/types"
 
 const createToken = (overrides: Partial<ApiToken> = {}): ApiToken => ({
@@ -411,4 +417,300 @@ describe("applySub2ApiPriceEstimates", () => {
     })
     expect(result.model_list_source?.supportsPricing).toBe(false)
   })
+})
+
+it("prefers the selected runtime group's station schedule over LiteLLM and applies local time and user rates once", () => {
+  const response = applySub2ApiPriceEstimates({
+    models: [{ id: "example-priced-model" }],
+    group: { groupId: "9", groupName: "vip", rate_multiplier: 2 },
+    groupRates: { "9": 0.5 },
+    priceTable,
+    pricingCatalogs: {
+      plaza: {
+        groups: [
+          {
+            id: 9,
+            name: "vip",
+            rate_multiplier: 2,
+            long_context_pricing_enabled: true,
+            models: [
+              {
+                name: "example-priced-model",
+                long_context_basis: "whole_request",
+                pricing: {
+                  billing_mode: "token",
+                  input_price: 0.000003,
+                  output_price: 0.000015,
+                  intervals: [
+                    {
+                      min_tokens: 200000,
+                      max_tokens: null,
+                      input_price: 0.000006,
+                      output_price: 0.0000225,
+                    },
+                  ],
+                },
+                time_pricing: {
+                  timezone: "Asia/Shanghai",
+                  weekdays_only: true,
+                  periods: [
+                    { start_time: "09:00", end_time: "17:00", multiplier: 0.5 },
+                  ],
+                },
+              },
+            ],
+          },
+          {
+            id: 10,
+            name: "other",
+            models: [
+              {
+                name: "example-priced-model",
+                pricing: {
+                  billing_mode: "token",
+                  input_price: 0,
+                  output_price: 0,
+                },
+              },
+            ],
+          },
+        ],
+      },
+    },
+  })
+  const quote = (at: string) =>
+    quoteCanonicalModelPrice(
+      response.data[0],
+      {
+        purpose: PRICING_PURPOSES.REQUEST,
+        inputTokens: 300000,
+        outputTokens: 10000,
+        at,
+        usage: { input: 300000, output: 10000, request: 1 },
+      },
+      { groupMultiplier: 0.5 },
+    )
+  expect(quote("2026-09-08T01:00:00Z")).toMatchObject({
+    status: "complete",
+    amount: 0.50625,
+    source: { kind: "account" },
+  })
+  expect(quote("2026-09-08T09:00:00Z").amount).toBe(1.0125)
+  expect(response.data[0].enable_groups).toEqual(["vip"])
+})
+
+it("preserves station interval gaps, inclusive upper bounds and explicit-price precedence", () => {
+  const response = applySub2ApiPriceEstimates({
+    models: [{ id: "example-priced-model" }],
+    group: { groupId: "9", groupName: "vip" },
+    groupRates: { "9": 1 },
+    priceTable,
+    pricingCatalogs: {
+      plaza: {
+        groups: [
+          {
+            id: 9,
+            models: [
+              {
+                name: "example-priced-model",
+                long_context_basis: "whole_request",
+                pricing: {
+                  billing_mode: "token",
+                  input_price: 0.000002,
+                  output_price: 0.000006,
+                  intervals: [
+                    {
+                      min_tokens: 100,
+                      max_tokens: 200,
+                      input_price: 0.000005,
+                      input_multiplier: 99,
+                      output_multiplier: 2,
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        ],
+      },
+    },
+  })
+  const quote = (inputTokens: number) =>
+    quoteCanonicalModelPrice(
+      response.data[0],
+      {
+        purpose: PRICING_PURPOSES.TOKEN_INDEX,
+        inputTokens,
+        usage: { input: 1, output: 1 },
+      },
+      { groupMultiplier: 1 },
+    )
+  expect(quote(100).amount).toBe(4)
+  expect(quote(101).amount).toBe(8.5)
+  expect(quote(200).amount).toBe(8.5)
+  expect(quote(201).amount).toBe(4)
+})
+
+it("keeps unresolved channel policy and ambiguous station rows out of estimated fallback", () => {
+  const item = {
+    name: "example-priced-model",
+    pricing: {
+      billing_mode: "token",
+      input_price: 0.000001,
+      output_price: 0.000002,
+    },
+  }
+  const params = {
+    models: [{ id: "example-priced-model" }],
+    group: { groupId: "9", groupName: "vip" },
+    groupRates: { "9": 1 },
+    priceTable,
+  }
+  for (const pricingCatalogs of [
+    {
+      channels: [
+        {
+          name: "channel",
+          platforms: [{ groups: [{ id: 9 }], supported_models: [item] }],
+        },
+      ],
+    },
+    { plaza: { groups: [{ id: 9, models: [item, item] }] } },
+    {
+      plaza: {
+        groups: [
+          { id: 9, models: [item] },
+          { id: 9, models: [item] },
+        ],
+      },
+    },
+    {
+      plaza: {
+        groups: [
+          {
+            id: 9,
+            subscription_type: "subscription",
+            peak_rate_enabled: true,
+            models: [item],
+          },
+        ],
+      },
+    },
+  ]) {
+    const model = applySub2ApiPriceEstimates({ ...params, pricingCatalogs })
+      .data[0]
+    expect(
+      quoteCanonicalModelPrice(
+        model,
+        { purpose: PRICING_PURPOSES.TOKEN_INDEX, usage: { input: 1 } },
+        { groupMultiplier: 1 },
+      ),
+    ).toMatchObject({
+      status: "unavailable",
+      amount: null,
+      source: { kind: "account" },
+    })
+  }
+})
+
+it("quotes per-request station prices with the selected group and time discount once", () => {
+  const response = applySub2ApiPriceEstimates({
+    models: [{ id: "example-priced-model" }],
+    group: { groupId: "9", groupName: "vip" },
+    groupRates: { "9": 0.5 },
+    priceTable,
+    pricingCatalogs: {
+      plaza: {
+        groups: [
+          {
+            id: 9,
+            models: [
+              {
+                name: "example-priced-model",
+                pricing: {
+                  billing_mode: "per_request",
+                  per_request_price: 0.02,
+                },
+                time_pricing: {
+                  timezone: "UTC",
+                  periods: [
+                    { start_time: "10:00", end_time: "12:00", multiplier: 0.5 },
+                  ],
+                },
+              },
+            ],
+          },
+        ],
+      },
+    },
+  })
+  expect(calculateModelPrice(response.data[0], 0.5)).toEqual({
+    kind: "per-call",
+    usdPerCall: 0.01,
+  })
+  expect(
+    quoteCanonicalModelPrice(
+      response.data[0],
+      {
+        purpose: PRICING_PURPOSES.REQUEST,
+        at: "2026-09-08T10:00:00Z",
+        usage: { input: 32000, output: 2000, request: 1 },
+      },
+      { groupMultiplier: 0.5 },
+    ),
+  ).toMatchObject({ status: "complete", amount: 0.005 })
+})
+
+it("selects station image size prices and replaces the user rate with the independent image rate", () => {
+  const model = applySub2ApiPriceEstimates({
+    models: [{ id: "example-priced-model" }],
+    group: { groupId: "9", groupName: "vip" },
+    groupRates: { "9": 0.5 },
+    priceTable,
+    pricingCatalogs: {
+      plaza: {
+        groups: [
+          {
+            id: 9,
+            image_rate_independent: true,
+            image_rate_multiplier: 0.8,
+            models: [
+              {
+                name: "example-priced-model",
+                pricing: {
+                  billing_mode: "image",
+                  intervals: [
+                    { tier_label: "1K", min_tokens: 0, per_request_price: 0.1 },
+                    { tier_label: "2K", min_tokens: 0, per_request_price: 0.2 },
+                  ],
+                },
+              },
+            ],
+          },
+        ],
+      },
+    },
+  }).data[0]
+  expect(
+    quoteCanonicalModelPrice(
+      model,
+      {
+        purpose: PRICING_PURPOSES.REQUEST,
+        imageSize: PRICING_IMAGE_SIZES.K2,
+        usage: { input: 32000, output: 2000, request: 1, image: 2 },
+      },
+      { groupMultiplier: 0.5 },
+    ).amount,
+  ).toBeCloseTo(0.32)
+  expect(
+    quoteCanonicalModelPrice(
+      model,
+      {
+        purpose: PRICING_PURPOSES.REQUEST,
+        imageSize: PRICING_IMAGE_SIZES.K4,
+        usage: { image: 1 },
+      },
+      { groupMultiplier: 0.5 },
+    ).status,
+  ).toBe("unavailable")
 })

@@ -4,6 +4,10 @@ import {
   normalizeApiTokenKeyValue,
 } from "~/services/accountTokens/apiTokenKey"
 import { loadSub2ApiDashboardEstimateData } from "~/services/apiAdapters/sub2api/dashboardEstimates"
+import {
+  applySub2ApiStationPrice,
+  type Sub2ApiPricingCatalogs,
+} from "~/services/apiAdapters/sub2api/stationPricing"
 import { parseSub2ApiGroupRates } from "~/services/apiService/sub2api/parsing"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import {
@@ -19,6 +23,8 @@ import {
   loadModelPriceTable,
   type ModelPriceTable,
 } from "~/services/modelPricing/modelPriceTable"
+import { PRICING_GROUP_MULTIPLIERS } from "~/services/modelPricing/pricingConstants"
+import { scalePricingRates } from "~/services/modelPricing/pricingRates"
 import type { ModelDescriptor } from "~/services/models/modelDescriptor"
 import { isAbortError } from "~/services/verification/aiApiVerification/utils"
 import { AuthTypeEnum, type ApiToken, type DisplaySiteData } from "~/types"
@@ -47,6 +53,7 @@ interface ApplySub2ApiPriceEstimatesParams {
   group: ResolvedSub2ApiPriceGroup | null
   groupRates: Record<string, number>
   priceTable: ModelPriceTable
+  pricingCatalogs?: Sub2ApiPricingCatalogs
 }
 
 type Sub2ApiEstimateAccount = Pick<
@@ -210,6 +217,22 @@ const createEstimatedModel = (
 
   return {
     ...model,
+    ...(officialPrice?.pricingPlan
+      ? {
+          pricingPlan: {
+            ...officialPrice.pricingPlan,
+            rates: scalePricingRates(
+              officialPrice.pricingPlan.rates,
+              effectiveRate,
+            ),
+            rules: officialPrice.pricingPlan.rules.map((rule) => ({
+              ...rule,
+              rates: scalePricingRates(rule.rates, effectiveRate),
+            })),
+            groupMultiplier: PRICING_GROUP_MULTIPLIERS.INCLUDED,
+          },
+        }
+      : {}),
     token_price_usd_per_million: {
       ...(hasFinitePrice(input) ? { input: input * effectiveRate } : {}),
       ...(hasFinitePrice(output) ? { output: output * effectiveRate } : {}),
@@ -270,8 +293,16 @@ export function applySub2ApiPriceEstimates(
       supportsRuntimeModelList: true,
       supportsPricing: true,
     },
-    data: response.data.map((model) =>
-      createEstimatedModel(model, group, effectiveRate, params.priceTable),
+    data: response.data.map(
+      (model) =>
+        applySub2ApiStationPrice(
+          model,
+          group.groupId,
+          group.groupName,
+          effectiveRate,
+          params.pricingCatalogs,
+        ) ??
+        createEstimatedModel(model, group, effectiveRate, params.priceTable),
     ),
   }
 }
@@ -333,7 +364,10 @@ export const loadSub2ApiEstimatedPricingResponse = async (
     )
     const [dashboardEstimateData, priceTable] = await Promise.all([
       loadSub2ApiDashboardEstimateData(dashboardRequest),
-      loadModelPriceTable(params.abortSignal),
+      loadModelPriceTable(params.abortSignal).catch((error) => {
+        if (isAbortError(error, params.abortSignal)) throw error
+        return { source: "unavailable", models: {} }
+      }),
     ])
     const { groups, groupRates, accountTokens } = dashboardEstimateData
     const group = resolveSub2ApiKeyGroupForPriceEstimation({
@@ -348,6 +382,7 @@ export const loadSub2ApiEstimatedPricingResponse = async (
       group,
       groupRates,
       priceTable,
+      pricingCatalogs: dashboardEstimateData.pricingCatalogs,
     })
   } catch (error) {
     if (isAbortError(error, params.abortSignal)) {

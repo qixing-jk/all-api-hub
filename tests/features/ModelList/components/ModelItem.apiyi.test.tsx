@@ -11,6 +11,8 @@ import { createAccountSource } from "~/features/ModelList/modelManagementSources
 import { MODEL_LIST_SORT_MODES } from "~/features/ModelList/sortModes"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import type { PricingResponse } from "~/services/modelList/pricingModel"
+import { PRICING_PURPOSES } from "~/services/modelPricing/pricingConstants"
+import type { PricingScenario } from "~/services/modelPricing/pricingPlan"
 import { MODEL_VENDOR_FILTER_VALUES } from "~/services/models/modelVendor"
 import { AuthTypeEnum } from "~/types"
 import { apiyiPricingSample } from "~~/tests/fixtures/apiyi/pricing.sample"
@@ -31,10 +33,17 @@ const account = buildDisplaySiteData({
 })
 
 /** Exercises the real registry, filtering, group selection, and model row. */
-function ApiYiModelRow({ pricing }: { pricing: PricingResponse }) {
+function ApiYiModelRow({
+  pricing,
+  pricingScenario,
+}: {
+  pricing: PricingResponse
+  pricingScenario?: PricingScenario
+}) {
   const [selectedGroups, setSelectedGroups] = useState<string[]>([])
   const { filteredModels } = useFilteredModels({
     pricingData: pricing,
+    pricingScenario,
     pricingContexts: [],
     selectedSource: createAccountSource(account),
     selectedBillingMode: MODEL_LIST_BILLING_MODES.ALL,
@@ -75,7 +84,7 @@ describe("APIyi model groups and prices", () => {
     )
   })
 
-  it("keeps all four gpt-6-astra groups when displaying or changing its cheapest group", async () => {
+  it("keeps all four gpt-6-astra groups when pricing conditions are unverified or its group changes", async () => {
     const pricing = await getSiteTypeCapabilities(
       SITE_TYPES.APIYI,
     ).account!.modelPricing!.fetchPricing({
@@ -101,7 +110,10 @@ describe("APIyi model groups and prices", () => {
         expect(element).toBeVisible()
       }
     }
-    expect(screen.getByText("USD: $5.0000")).toBeVisible()
+    await user.click(screen.getByText("CodexReverse (0.5x)"))
+    // Incomplete comparisons show the published schedule in its original currency.
+    expect(screen.getByText("USD: $10.0000")).toBeVisible()
+    expect(screen.queryByText("USD: $5.0000")).not.toBeInTheDocument()
 
     await user.click(screen.getByText("default (1x)"))
 
@@ -119,13 +131,26 @@ describe("APIyi model groups and prices", () => {
       auth: { authType: AuthTypeEnum.Cookie, userId: account.userId },
     })
     const user = userEvent.setup()
-    render(<ApiYiModelRow pricing={pricing} />)
+    render(
+      <ApiYiModelRow
+        pricing={pricing}
+        pricingScenario={{
+          purpose: PRICING_PURPOSES.TOKEN_INDEX,
+          inputTokens: 32000,
+          outputTokens: 2000,
+          usage: { input: 1, output: 0, cacheRead: 0, cacheWrite: 0 },
+        }}
+      />,
+    )
 
-    expect(await screen.findByText("modelList:firstTierPrice")).toBeVisible()
+    expect(
+      await screen.findByText("modelList:scenario.blendedPrice"),
+    ).toBeVisible()
     await user.click(
       screen.getByRole("button", { name: "modelList:expandDetails" }),
     )
 
+    await user.click(screen.getByText("CodexReverse (0.5x)"))
     const tiers = screen.getAllByRole("group", {
       name: "modelList:contextTokenRange",
     })

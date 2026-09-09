@@ -1,16 +1,9 @@
 import type { AccountSiteType } from "~/constants/siteType"
+import type { PricingPlan } from "~/services/modelPricing/pricingPlan"
 import type { ModelVendorEvidence } from "~/services/models/modelDescriptor"
 import type { ModelPresentation } from "~/services/models/modelDisplayFacts"
 
 export type PerCallPrice = number | { input: number; output: number }
-
-/** Inclusive context ranges with New API-compatible input and output ratios. */
-export interface ModelTokenPriceTier {
-  min_context_tokens: number
-  max_context_tokens?: number
-  model_ratio: number
-  completion_ratio: number
-}
 
 // Product-owned Model List pricing shape. Upstream adapters map their native
 // payloads into this shape before Model List consumes it.
@@ -19,6 +12,8 @@ export interface ProductCanonicalModel {
   display_name?: string
   vendorEvidence?: ModelVendorEvidence
   model_description?: string
+  /** Provider-published descriptions; selected at render time, not cache time. */
+  model_descriptions?: Partial<Record<"zh" | "en", string>>
   presentation?: ModelPresentation
   quota_type: number // 0 = token billing, 1 = per-call billing
   model_ratio: number
@@ -38,7 +33,7 @@ export interface ProductCanonicalModel {
     cache_read?: number
     cache_write?: number
   }
-  token_price_tiers?: ModelTokenPriceTier[]
+  pricingPlan?: PricingPlan
   price_metadata?: ModelPriceMetadata
   owner_by?: string
   completion_ratio: number

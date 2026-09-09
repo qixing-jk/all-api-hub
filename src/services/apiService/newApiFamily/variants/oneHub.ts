@@ -41,6 +41,7 @@ export const fetchUserGroupMap = async (request: ApiServiceRequest) => {
  */
 export const fetchModelPricing = async (
   request: ApiServiceRequest,
+  isDoneHub = false,
 ): Promise<PricingResponse> => {
   try {
     const [availableModel, userGroupMap] = await Promise.all([
@@ -48,7 +49,9 @@ export const fetchModelPricing = async (
       fetchUserGroupMap(request),
     ])
 
-    const result = transformModelPricing(availableModel, userGroupMap)
+    const result = isDoneHub
+      ? transformModelPricing(availableModel, userGroupMap, true)
+      : transformModelPricing(availableModel, userGroupMap)
     logger.debug("Fetched model pricing")
 
     return result

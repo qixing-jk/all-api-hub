@@ -10,12 +10,13 @@ import {
   createAccountSource,
   createAllAccountsSource,
   createProfileSource,
+  deriveModelListSourceCapabilities,
   EMPTY_MODEL_MANAGEMENT_CAPABILITIES,
   MODEL_LIST_GROUP_SEMANTICS,
-  toAihubmixCatalogFallbackCapabilities,
 } from "~/features/ModelList/modelManagementSources"
 import { MODEL_LIST_SORT_MODES } from "~/features/ModelList/sortModes"
 import { DEFAULT_MODEL_LIST_VERIFICATION_RESULT_FILTERS } from "~/features/ModelList/verificationResultFilters"
+import { CALCULATED_PRICE_KINDS } from "~/services/modelPricing/pricingConstants"
 import { MODEL_VENDOR_FILTER_VALUES } from "~/services/models/modelVendor"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -26,6 +27,7 @@ import {
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { AuthTypeEnum } from "~/types"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
+import { buildAIHubMixModelListSource } from "~~/tests/test-utils/modelListSource"
 import { render, screen } from "~~/tests/test-utils/render"
 
 const mockUseModelListData = vi.fn()
@@ -371,6 +373,10 @@ function buildState(overrides: Record<string, any> = {}) {
       {
         model: { model_name: "gpt-4" },
         source: ACCOUNT_SOURCE,
+        calculatedPrice: {
+          kind: CALCULATED_PRICE_KINDS.TOKEN,
+          usdPerMillionTokens: { input: 1, output: 2 },
+        },
       },
     ],
     accountSummaryCountsByAccountId: new Map([[ACCOUNT.id, 1]]),
@@ -603,7 +609,7 @@ describe("ModelList page flows", () => {
     mockUseModelListData.mockReturnValue(
       buildState({
         isFallbackCatalogActive: false,
-        isAihubmixCatalogFallbackActive: true,
+        isProviderCatalogFallbackActive: true,
         pricingData: {
           success: true,
           data: [{ model_name: "gpt-aihubmix" }],
@@ -625,10 +631,10 @@ describe("ModelList page flows", () => {
     })
 
     expect(
-      await screen.findByText("modelList:aihubmixCatalogFallbackNotice.title"),
+      await screen.findByText("modelList:providerCatalogFallbackNotice.title"),
     ).toBeInTheDocument()
     expect(
-      screen.getByText("modelList:aihubmixCatalogFallbackNotice.description"),
+      screen.getByText("modelList:providerCatalogFallbackNotice.description"),
     ).toBeInTheDocument()
     expect(
       screen.queryByText("modelList:fallbackSourceNotice.title"),
@@ -1237,9 +1243,10 @@ describe("ModelList page flows", () => {
     })
     const disabledAihubmixSource = {
       ...aihubmixSource,
-      capabilities: toAihubmixCatalogFallbackCapabilities(
-        aihubmixSource.capabilities,
-      ),
+      capabilities: deriveModelListSourceCapabilities({
+        capabilities: aihubmixSource.capabilities,
+        modelListSource: buildAIHubMixModelListSource("catalog-fallback"),
+      }),
     }
 
     mockUseModelListData.mockReturnValue(
@@ -1292,9 +1299,10 @@ describe("ModelList page flows", () => {
     })
     const disabledAihubmixSource = {
       ...aihubmixSource,
-      capabilities: toAihubmixCatalogFallbackCapabilities(
-        aihubmixSource.capabilities,
-      ),
+      capabilities: deriveModelListSourceCapabilities({
+        capabilities: aihubmixSource.capabilities,
+        modelListSource: buildAIHubMixModelListSource("catalog-fallback"),
+      }),
     }
 
     mockUseModelListData.mockReturnValue(

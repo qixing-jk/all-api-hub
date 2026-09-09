@@ -211,7 +211,7 @@ describe("accountSiteProfile", () => {
     )
     expect(profile.auth.allowedAuthTypes).toEqual([AuthTypeEnum.AccessToken])
     expect(profile.modelList.displayCapabilitiesSource).toBe(
-      ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Profile,
+      ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Response,
     )
     expect(profile.modelList.groupSemantics).toBe(
       ACCOUNT_SITE_MODEL_LIST_GROUP_SEMANTICS.NOT_APPLICABLE,

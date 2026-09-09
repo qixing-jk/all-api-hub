@@ -11,7 +11,7 @@ import {
 import {
   createAccountSource,
   createProfileSource,
-  toAihubmixCatalogFallbackCapabilities,
+  deriveModelListSourceCapabilities,
   toCatalogOnlyCapabilities,
 } from "~/features/ModelList/modelManagementSources"
 import {
@@ -19,6 +19,7 @@ import {
   MODEL_PRICE_SOURCE_KINDS,
   MODEL_UNAVAILABLE_PRICE_REASONS,
 } from "~/services/modelList/pricingModel"
+import { CALCULATED_PRICE_KINDS } from "~/services/modelPricing/pricingConstants"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import {
   createProfileModelVerificationHistoryTarget,
@@ -27,6 +28,7 @@ import {
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
+import { buildAIHubMixModelListSource } from "~~/tests/test-utils/modelListSource"
 import { render, screen } from "~~/tests/test-utils/render"
 
 const mockCreateTab = vi.hoisted(() => vi.fn())
@@ -104,7 +106,7 @@ describe("ModelItem profile actions", () => {
           supported_endpoint_types: [],
         }}
         calculatedPrice={{
-          kind: "token",
+          kind: CALCULATED_PRICE_KINDS.TOKEN,
           usdPerMillionTokens: { input: 0, output: 0 },
         }}
         exchangeRate={1}
@@ -215,7 +217,7 @@ describe("ModelItem profile actions", () => {
           supported_endpoint_types: [],
         }}
         calculatedPrice={{
-          kind: "token",
+          kind: CALCULATED_PRICE_KINDS.TOKEN,
           usdPerMillionTokens: { input: 0, output: 0 },
         }}
         exchangeRate={1}
@@ -267,7 +269,7 @@ describe("ModelItem profile actions", () => {
           supported_endpoint_types: [],
         }}
         calculatedPrice={{
-          kind: "token",
+          kind: CALCULATED_PRICE_KINDS.TOKEN,
           usdPerMillionTokens: { input: 0, output: 0 },
         }}
         exchangeRate={1}
@@ -322,7 +324,7 @@ describe("ModelItem profile actions", () => {
           supported_endpoint_types: [],
         }}
         calculatedPrice={{
-          kind: "token",
+          kind: CALCULATED_PRICE_KINDS.TOKEN,
           usdPerMillionTokens: { input: 0, output: 0 },
         }}
         exchangeRate={1}
@@ -391,7 +393,7 @@ describe("ModelItem profile actions", () => {
           supported_endpoint_types: [],
         }}
         calculatedPrice={{
-          kind: "token",
+          kind: CALCULATED_PRICE_KINDS.TOKEN,
           usdPerMillionTokens: { input: 0, output: 0 },
         }}
         exchangeRate={1}
@@ -449,7 +451,7 @@ describe("ModelItem profile actions", () => {
           supported_endpoint_types: [],
         }}
         calculatedPrice={{
-          kind: "token",
+          kind: CALCULATED_PRICE_KINDS.TOKEN,
           usdPerMillionTokens: { input: 0, output: 0 },
         }}
         exchangeRate={1}
@@ -507,7 +509,7 @@ describe("ModelItem profile actions", () => {
           supported_endpoint_types: [],
         }}
         calculatedPrice={{
-          kind: "token",
+          kind: CALCULATED_PRICE_KINDS.TOKEN,
           usdPerMillionTokens: { input: 0, output: 0 },
         }}
         exchangeRate={1}
@@ -582,7 +584,7 @@ describe("ModelItem profile actions", () => {
           },
         }}
         calculatedPrice={{
-          kind: "unavailable",
+          kind: CALCULATED_PRICE_KINDS.UNAVAILABLE,
           billingMode: "token",
           reason: MODEL_UNAVAILABLE_PRICE_REASONS.MODEL_LIST_ONLY,
         }}
@@ -636,9 +638,10 @@ describe("ModelItem profile actions", () => {
     })
     const catalogFallbackSource = {
       ...accountSource,
-      capabilities: toAihubmixCatalogFallbackCapabilities(
-        accountSource.capabilities,
-      ),
+      capabilities: deriveModelListSourceCapabilities({
+        capabilities: accountSource.capabilities,
+        modelListSource: buildAIHubMixModelListSource("catalog-fallback"),
+      }),
     }
 
     render(
@@ -654,7 +657,7 @@ describe("ModelItem profile actions", () => {
           supported_endpoint_types: [],
         }}
         calculatedPrice={{
-          kind: "token",
+          kind: CALCULATED_PRICE_KINDS.TOKEN,
           usdPerMillionTokens: { input: 0, output: 0 },
         }}
         exchangeRate={1}
@@ -721,7 +724,7 @@ describe("ModelItem profile actions", () => {
           supported_endpoint_types: [],
         }}
         calculatedPrice={{
-          kind: "token",
+          kind: CALCULATED_PRICE_KINDS.TOKEN,
           usdPerMillionTokens: { input: 2, output: 2 },
         }}
         exchangeRate={7}

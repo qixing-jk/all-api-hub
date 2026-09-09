@@ -31,6 +31,11 @@ export interface OneHubModelPricingItem {
     output: number
     locked: boolean
     extra_ratios?: Record<string, number>
+    long_context?: {
+      threshold: number
+      input_ratio: number
+      output_ratio: number
+    }
   }
 }
 

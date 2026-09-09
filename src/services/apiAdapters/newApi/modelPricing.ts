@@ -17,7 +17,8 @@ export function createNewApiModelPricing(
 ): ModelPricingCapability {
   if (siteType === SITE_TYPES.ONE_HUB || siteType === SITE_TYPES.DONE_HUB) {
     return {
-      fetchPricing: (request) => oneHub.fetchModelPricing(request),
+      fetchPricing: (request) =>
+        oneHub.fetchModelPricing(request, siteType === SITE_TYPES.DONE_HUB),
     }
   }
 

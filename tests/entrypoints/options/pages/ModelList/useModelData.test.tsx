@@ -916,6 +916,54 @@ describe("useModelData all-accounts loading", () => {
     }
   })
 
+  it.each(["single", "all"])(
+    "invalidates shared direct-pricing data once before a %s refresh",
+    async (scope) => {
+      const events: string[] = []
+      const fetchPricing = vi.fn(async () => {
+        events.push("fetch")
+        return { data: [], group_ratio: {}, usable_group: {}, success: true }
+      })
+      const capabilities = createMockSiteTypeCapabilities(fetchPricing, {
+        siteType: SITE_TYPES.AIHUBMIX,
+      })
+      capabilities.account.modelPricing.invalidateCache = () => {
+        events.push("invalidate")
+      }
+      vi.mocked(getSiteTypeCapabilities).mockReturnValue(capabilities)
+      const accounts = ["a", "b"].map((id) =>
+        createDisplayAccount({
+          id: `shared-refresh-${scope}-${id}`,
+          siteType: SITE_TYPES.AIHUBMIX,
+        }),
+      )
+      const { result } = renderHook(
+        () =>
+          useModelData({
+            selectedSource:
+              scope === "single"
+                ? createAccountSource(accounts[0])
+                : createAllAccountsSource(),
+            accounts,
+          }),
+        { wrapper: createWrapper() },
+      )
+      const expectedFetches = scope === "single" ? 1 : 2
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false)
+        expect(fetchPricing).toHaveBeenCalledTimes(expectedFetches)
+      })
+      events.length = 0
+      await act(async () => {
+        await result.current.loadPricingData()
+      })
+      expect(events).toEqual([
+        "invalidate",
+        ...Array(expectedFetches).fill("fetch"),
+      ])
+    },
+  )
+
   it("combines ordinary pricing with one provider-wide catalog for repeated provider accounts", async () => {
     const fetchOrdinaryPricing = vi.fn().mockResolvedValue({
       data: [

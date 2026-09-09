@@ -1,6 +1,6 @@
 import { Cpu, Info } from "lucide-react"
-import { forwardRef, useCallback, useEffect, useMemo, useState } from "react"
 import type { HTMLAttributes } from "react"
+import { forwardRef, useCallback, useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { Virtuoso } from "react-virtuoso"
 
@@ -22,6 +22,7 @@ import type {
 import { MODEL_MANAGEMENT_SOURCE_KINDS } from "~/features/ModelList/modelManagementSources"
 import { MODEL_LIST_TEST_IDS } from "~/features/ModelList/testIds"
 import { cn } from "~/lib/utils"
+import { QUOTE_UNITS } from "~/services/modelPricing/pricingConstants"
 import {
   getBillingModeText,
   isTokenBillingType,
@@ -68,6 +69,7 @@ interface ModelDisplayProps {
 }
 
 interface PriceComparisonDisplayGroup {
+  unit?: string
   key: string
   modelName: string
   quotaType: number
@@ -89,9 +91,19 @@ function createPriceComparisonDisplayGroups(
     const billingMode = isTokenBillingType(item.model.quota_type)
       ? MODEL_LIST_BILLING_MODES.TOKEN_BASED
       : MODEL_LIST_BILLING_MODES.PER_CALL
-    const key = JSON.stringify([item.comparableModelIdentity.key, billingMode])
+    const unit =
+      item.calculatedPrice.quote?.unit ??
+      (billingMode === MODEL_LIST_BILLING_MODES.TOKEN_BASED
+        ? QUOTE_UNITS.MILLION_SELECTED_TOKENS
+        : QUOTE_UNITS.REQUEST)
+    const key = JSON.stringify([
+      item.comparableModelIdentity.key,
+      billingMode,
+      unit,
+    ])
     const group = groups.get(key) ?? {
       key,
+      unit,
       modelName: item.comparableModelIdentity.displayName,
       quotaType: item.model.quota_type,
       comparableItems: [],
@@ -306,7 +318,25 @@ export function ModelDisplay(props: ModelDisplayProps) {
                   </h2>
                   <Badge variant="secondary" size="sm" className="shrink-0">
                     <span id={billingModeId}>
-                      {getBillingModeText(group.quotaType)}
+                      {group.unit === QUOTE_UNITS.PAGE
+                        ? t("scenario.page")
+                        : group.unit === QUOTE_UNITS.MEGAPIXEL
+                          ? t("scenario.megapixel")
+                          : group.unit === QUOTE_UNITS.VIDEO_SECOND ||
+                              group.unit === QUOTE_UNITS.AUDIO_SECOND
+                            ? t("scenario.second")
+                            : group.unit === QUOTE_UNITS.THOUSAND_CHARACTERS
+                              ? t("scenario.thousandCharacters")
+                              : group.unit === QUOTE_UNITS.SEARCH_UNIT
+                                ? t("scenario.searchUnit")
+                                : group.unit === QUOTE_UNITS.IMAGE
+                                  ? t("scenario.imagePrice")
+                                  : group.unit ===
+                                      QUOTE_UNITS.MILLION_VIDEO_OUTPUT_TOKENS
+                                    ? t("scenario.perMillionVideoTokens")
+                                    : group.unit === QUOTE_UNITS.UNRESOLVED
+                                      ? t("scenario.sitePricingDescription")
+                                      : getBillingModeText(group.quotaType)}
                     </span>
                   </Badge>
                 </div>

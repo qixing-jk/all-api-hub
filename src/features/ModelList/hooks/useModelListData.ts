@@ -1,14 +1,16 @@
 import { useEffect, useMemo, useState } from "react"
 
 import { useApiCredentialProfiles } from "~/features/ApiCredentialProfiles/hooks/useApiCredentialProfiles"
+import { resolvePricingScenario } from "~/features/ModelList/pricingScenario"
 import { useAccountData } from "~/hooks/useAccountData"
+import {
+  MODEL_CATALOG_SCOPES,
+  MODEL_LIST_SOURCE_KINDS,
+  type PricingResponse,
+} from "~/services/modelList/pricingModel"
 import { modelMetadataService } from "~/services/models/modelMetadata"
 import type { ModelMetadata } from "~/services/models/modelMetadata/types"
 
-import {
-  isAihubmixCatalogFallbackPricing,
-  isAihubmixModelListPricing,
-} from "../aihubmixModelList"
 import {
   repairAllAccountGroupExclusions,
   repairSelectedGroups,
@@ -23,8 +25,6 @@ import {
   NO_MODEL_MANAGEMENT_SOURCE_VALUE,
   resolveModelManagementSource,
   toAccountSourceValue,
-  toAihubmixCatalogFallbackCapabilities,
-  toAihubmixModelListCapabilities,
   toCatalogOnlyCapabilities,
   toProfileSourceValue,
   type ModelManagementSource,
@@ -35,6 +35,15 @@ import { useModelData } from "./useModelData"
 import { useModelListState } from "./useModelListState"
 
 const ROUTE_SOURCE_PENDING = Symbol("route-source-pending")
+
+/** Identifies provider-wide fallback catalogs using the normalized response scope. */
+function isProviderCatalogFallback(pricing: PricingResponse | null) {
+  return (
+    pricing?.model_list_source?.kind ===
+      MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK &&
+    pricing.model_list_source.catalogScope === MODEL_CATALOG_SCOPES.PROVIDER
+  )
+}
 
 /** Resolves account routing after profile-route precedence has been settled. */
 function resolveRouteAccountSourceValue(
@@ -230,32 +239,16 @@ export function useModelListData(routeParams?: Record<string, string>) {
   }, [])
 
   const isFallbackCatalogActive = modelData.accountFallback?.isActive === true
-  const isSelectedAccountAihubmixCatalogFallback =
-    isAihubmixCatalogFallbackPricing(currentAccount, modelData.pricingData)
-  const isSelectedAccountAihubmixModelList = isAihubmixModelListPricing(
-    currentAccount,
-    modelData.pricingData,
-  )
-  const isAnyAllAccountsAihubmixCatalogFallback =
-    selectedSource?.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS &&
-    modelData.pricingContexts.some(({ account, pricing }) =>
-      isAihubmixCatalogFallbackPricing(account, pricing),
-    )
-  const isAihubmixCatalogFallbackActive =
-    isSelectedAccountAihubmixCatalogFallback ||
-    isAnyAllAccountsAihubmixCatalogFallback
+  const isProviderCatalogFallbackActive =
+    isProviderCatalogFallback(modelData.pricingData) ||
+    (selectedSource?.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS &&
+      modelData.pricingContexts.some(({ pricing }) =>
+        isProviderCatalogFallback(pricing),
+      ))
 
   const resolvedSourceCapabilities = (() => {
     const baseCapabilities =
       selectedSource?.capabilities ?? EMPTY_MODEL_MANAGEMENT_CAPABILITIES
-
-    if (isSelectedAccountAihubmixCatalogFallback) {
-      return toAihubmixCatalogFallbackCapabilities(baseCapabilities)
-    }
-
-    if (isSelectedAccountAihubmixModelList) {
-      return toAihubmixModelListCapabilities(baseCapabilities)
-    }
 
     const responseDerivedCapabilities =
       selectedSource?.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS
@@ -337,7 +330,17 @@ export function useModelListData(routeParams?: Record<string, string>) {
     sourceCapabilities.supportsPricing,
   ])
 
+  const pricingScenario = useMemo(
+    () =>
+      resolvePricingScenario(
+        state.pricingScenarioSettings,
+        priceComparisonWeights,
+      ),
+    [state.pricingScenarioSettings, priceComparisonWeights],
+  )
   const filteredData = useFilteredModels({
+    pricingScenario,
+    isPriceComparisonActive: isModelListPriceSortMode(sortMode),
     pricingData: modelData.pricingData,
     pricingContexts: modelData.pricingContexts,
     selectedSource,
@@ -419,7 +422,7 @@ export function useModelListData(routeParams?: Record<string, string>) {
     currentProfile,
     sourceCapabilities,
     isFallbackCatalogActive,
-    isAihubmixCatalogFallbackActive,
+    isProviderCatalogFallbackActive,
     fallbackRuntimeKeyName:
       modelData.accountFallback?.activeRuntimeKeyName ?? null,
 

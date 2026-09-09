@@ -637,6 +637,12 @@ describe("accountStorage core behaviors", () => {
   })
 
   it("convertToDisplayData should normalize currency values", () => {
+    const empty = createAccount({ exchange_rate: 6.5 })
+    empty.account_info.quota = 0
+    expect(accountStorage.convertToDisplayData(empty)).toMatchObject({
+      exchangeRate: 6.5,
+      balance: { USD: 0, CNY: 0 },
+    })
     const account = createAccount({
       created_at: 1_700_000_000_000,
       exchange_rate: 7,

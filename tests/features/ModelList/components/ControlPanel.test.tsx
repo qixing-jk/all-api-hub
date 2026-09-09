@@ -675,6 +675,7 @@ describe("ControlPanel", () => {
     fireEvent.change(within(priceRegion).getByRole("combobox"), {
       target: { value: "tracelab-coding-agent" },
     })
+    fireEvent.click(within(priceRegion).getByText("priceComparison.customize"))
     fireEvent.change(
       within(priceRegion).getByRole("spinbutton", {
         name: "priceComparison.weights.input",

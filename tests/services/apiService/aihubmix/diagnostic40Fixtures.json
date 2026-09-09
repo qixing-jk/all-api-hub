@@ -1,0 +1,670 @@
+{
+  "website": [
+    {
+      "model": "DESCRIBE",
+      "billing_config": "",
+      "img_price_config": "",
+      "display_input": "$0.01 / IMG",
+      "display_output": "$0.01 / IMG"
+    },
+    {
+      "model": "Stable-Diffusion-3-5-Large",
+      "billing_config": "",
+      "img_price_config": "",
+      "display_input": "$ 0.08 / IMG",
+      "display_output": "$ 0.08 / IMG"
+    },
+    {
+      "model": "UPSCALE",
+      "billing_config": "",
+      "img_price_config": "",
+      "display_input": "$0.06 / IMG",
+      "display_output": "$0.06 / IMG"
+    },
+    {
+      "model": "V3",
+      "billing_config": "",
+      "img_price_config": "",
+      "display_input": "$ 0.09 / IMG (Quality)",
+      "display_output": "$ 0.09 / IMG (Quality)"
+    },
+    {
+      "model": "V_1",
+      "billing_config": "",
+      "img_price_config": "",
+      "display_input": "$0.06 / IMG",
+      "display_output": "$0.06 / IMG"
+    },
+    {
+      "model": "V_1_TURBO",
+      "billing_config": "",
+      "img_price_config": "",
+      "display_input": "$0.02 / IMG",
+      "display_output": "$0.02 / IMG"
+    },
+    {
+      "model": "V_2",
+      "billing_config": "",
+      "img_price_config": "",
+      "display_input": "$0.08 / IMG",
+      "display_output": "$0.08 / IMG"
+    },
+    {
+      "model": "V_2A",
+      "billing_config": "",
+      "img_price_config": "",
+      "display_input": "$0.04 / IMG",
+      "display_output": "$0.04 / IMG"
+    },
+    {
+      "model": "V_2A_TURBO",
+      "billing_config": "",
+      "img_price_config": "",
+      "display_input": "$0.0025 / IMG",
+      "display_output": "$0.0025 / IMG"
+    },
+    {
+      "model": "V_2_TURBO",
+      "billing_config": "",
+      "img_price_config": "",
+      "display_input": "$0.05 / IMG",
+      "display_output": "$0.05 / IMG"
+    },
+    {
+      "model": "auto",
+      "billing_config": "",
+      "img_price_config": "",
+      "display_input": "Charges are based on the original price of the model actually hit, and the smart routing itself does not charge any additional fees.",
+      "display_output": "按实际命中的模型原价计费，智能路由本身不收取任何附加费。"
+    },
+    {
+      "model": "dall-e-2",
+      "billing_config": "",
+      "img_price_config": "",
+      "display_input": "$ 0.02 / IMG",
+      "display_output": "$ 0.02 / IMG"
+    },
+    {
+      "model": "dall-e-3",
+      "billing_config": "",
+      "img_price_config": "{\"generate\":{\"standard\":{\"standard\":0.04}}}",
+      "display_input": "$ 0.04 / IMG",
+      "display_output": "$ 0.04 / IMG"
+    },
+    {
+      "model": "doubao-seed-1-8",
+      "billing_config": "{\n\t\"model_name\": \"doubao-seed-1-8\",\n\t\"default_tier\": \"tier1\",\n\t\"enabled_billing_items\": [\"prompt_tokens\", \"completion_tokens\", \"cached_tokens\"],\n\t\"token_based_tier_configs\": {\n\t\t\"tier1\": {\n\t\t\t\"model_ratio\": 0.054795,\n\t\t\t\"tier_condition\": {\n\t\t\t\t\"max_tokens\": 32000,\n\t\t\t\t\"min_tokens\": 0\n\t\t\t},\n\t\t\t\"output_tier_condition\": {\n\t\t\t\t\"max_tokens\": 200,\n\t\t\t\t\"min_tokens\": 0\n\t\t\t},\n\t\t\t\"prompt_tokens_ratio\": 1.0,\n\t\t\t\"cached_tokens_ratio\": 0.2,\n\t\t\t\"completion_tokens_ratio\": 2.5\n\t\t},\n\t\t\"tier2\": {\n\t\t\t\"model_ratio\": 0.054795,\n\t\t\t\"tier_condition\": {\n\t\t\t\t\"max_tokens\": 32000,\n\t\t\t\t\"min_tokens\": 0\n\t\t\t},\n\t\t\t\"output_tier_condition\": {\n\t\t\t\t\"max_tokens\": 32000,\n\t\t\t\t\"min_tokens\": 200\n\t\t\t},\n\t\t\t\"prompt_tokens_ratio\": 1.0,\n\t\t\t\"cached_tokens_ratio\": 0.2,\n\t\t\t\"completion_tokens_ratio\": 10.0\n\t\t},\n\t\t\"tier3\": {\n\t\t\t\"model_ratio\": 0.0822,\n\t\t\t\"tier_condition\": {\n\t\t\t\t\"max_tokens\": 128000,\n\t\t\t\t\"min_tokens\": 32001\n\t\t\t},\n\t\t\t\"prompt_tokens_ratio\": 1.0,\n\t\t\t\"cached_tokens_ratio\": 0.1333,\n\t\t\t\"completion_tokens_ratio\": 13.3333\n\t\t},\n\t\t\"tier4\": {\n\t\t\t\"model_ratio\": 0.16438,\n\t\t\t\"tier_condition\": {\n\t\t\t\t\"max_tokens\": 256000,\n\t\t\t\t\"min_tokens\": 128001\n\t\t\t},\n\t\t\t\"prompt_tokens_ratio\": 1.0,\n\t\t\t\"cached_tokens_ratio\": 0.06667,\n\t\t\t\"completion_tokens_ratio\": 10.0\n\t\t}\n\t}\n}",
+      "img_price_config": "",
+      "display_input": "",
+      "display_output": ""
+    },
+    {
+      "model": "doubao-seedance-2-5-260628",
+      "billing_config": "{\n  \"model_name\": \"doubao-seedance-2-5-260628\",\n  \"reserve_price_config\": {\n    \"unit\": \"request\",\n    \"unit_price\": 5\n  },\n  \"metered_price_config\": {\n    \"video_generation\": {\n      \"unit\": \"token\",\n      \"price_rules\": [\n        {\n          \"match\": {\n            \"ability\": \"video_reference\"\n          },\n          \"unit_price\": 6.51\n        }\n      ],\n      \"fallback_unit_price\": 10\n    }\n  }\n}",
+      "img_price_config": "",
+      "display_input": "Input without video: $10.85 per million tokens\nInput including video: $6.51 per million tokens",
+      "display_output": "输入不含视频：10.85美元/百万token\n输入包含视频：6.51美元/百万token"
+    },
+    {
+      "model": "embed-v-4-0",
+      "billing_config": "{\n  \"model_name\": \"embed-v-4-0\",\n  \"default_tier\": \"tier1\",\n  \"token_based_tier_configs\": {\n    \"tier1\": {\n      \"tier_condition\": {\n        \"min_tokens\": 0,\n        \"max_tokens\": -1\n      },\n      \"model_ratio\": 0.06,\n      \"input_image_tokens_ratio\": 3.92,\n      \"prompt_tokens_ratio\": 1.0\n    }\n  },\n  \"enabled_billing_items\": [\n    \"prompt_tokens\",\n    \"completion_tokens\",\n    \"input_image_tokens\"\n  ]\n}",
+      "img_price_config": "",
+      "display_input": "",
+      "display_output": ""
+    },
+    {
+      "model": "flux-2-flex",
+      "billing_config": "",
+      "img_price_config": "{\"generate\":{\"standard\":{\"per_megapixel\": 0.05}}}",
+      "display_input": "$0.05 /MP",
+      "display_output": "$0.05 /百万像素"
+    },
+    {
+      "model": "flux-2-pro",
+      "billing_config": "",
+      "img_price_config": "{\"generate\":{\"standard\":{\"per_megapixel\": 0.03}}}",
+      "display_input": "$0.03 /MP",
+      "display_output": "$0.03 /百万像素"
+    },
+    {
+      "model": "gemini-embedding-2",
+      "billing_config": "{\n  \"model_name\": \"gemini-embedding-2-preview\",\n  \"default_tier\": \"tier1\",\n  \"token_based_tier_configs\": {\n    \"tier1\": {\n      \"tier_condition\": {\n        \"min_tokens\": 0,\n        \"max_tokens\": -1\n      },\n      \"model_ratio\": 0.1,\n      \"input_image_tokens_ratio\": 2.25,\n      \"input_video_tokens_ratio\": 60.0,\n      \"input_audio_tokens_ratio\": 32.5,\n      \"input_document_tokens_ratio\": 2.25,\n      \"prompt_tokens_ratio\": 1.0\n    }\n  },\n  \"enabled_billing_items\": [\n    \"prompt_tokens\",\n    \"completion_tokens\",\n    \"input_image_tokens\",\n    \"input_video_tokens\",\n    \"input_document_tokens\",\n    \"input_audio_tokens\"\n  ]\n}",
+      "img_price_config": "",
+      "display_input": "",
+      "display_output": ""
+    },
+    {
+      "model": "glm-4.6",
+      "billing_config": "{\n\t\"model_name\": \"zai-glm-4.6\",\n\t\"default_tier\": \"tier1\",\n\t\"enabled_billing_items\": [\"prompt_tokens\", \"completion_tokens\", \"cached_tokens\"],\n\t\"token_based_tier_configs\": {\n\t\t\"tier1\": {\n\t\t\t\"model_ratio\": 0.136987,\n\t\t\t\"tier_condition\": {\n\t\t\t\t\"max_tokens\": 32000,\n\t\t\t\t\"min_tokens\": 0\n\t\t\t},\n\t\t\t\"output_tier_condition\": {\n\t\t\t\t\"max_tokens\": 200,\n\t\t\t\t\"min_tokens\": 0\n\t\t\t},\n\t\t\t\"prompt_tokens_ratio\": 1.0,\n      \"cached_tokens_ratio\": 0.2,\n\t\t\t\"completion_tokens_ratio\": 4.0\n\t\t},\n\t\t\"tier2\": {\n\t\t\t\"model_ratio\": 0.205479,\n\t\t\t\"tier_condition\": {\n\t\t\t\t\"max_tokens\": 32000,\n\t\t\t\t\"min_tokens\": 0\n\t\t\t},\n\t\t\t\"output_tier_condition\": {\n\t\t\t\t\"max_tokens\": 32000,\n\t\t\t\t\"min_tokens\": 200\n\t\t\t},\n\t\t\t\"prompt_tokens_ratio\": 1.0,\n      \"cached_tokens_ratio\": 0.2,\n\t\t\t\"completion_tokens_ratio\": 4.666667\n\t\t},\n\t\t\"tier3\": {\n\t\t\t\"model_ratio\": 0.273973,\n\t\t\t\"tier_condition\": {\n\t\t\t\t\"max_tokens\": 128000,\n\t\t\t\t\"min_tokens\": 32001\n\t\t\t},\n\t\t\t\"prompt_tokens_ratio\": 1.0,\n      \"cached_tokens_ratio\": 0.2,\n\t\t\t\"completion_tokens_ratio\": 4.0\n\t\t}\n\t}\n}",
+      "img_price_config": "",
+      "display_input": "Input pricing starts at $0.27/M tokens  output pricing starts at $1.10/M tokens  For detailed pricing, please refer to each provider.",
+      "display_output": "输入价格$0.27/M tokens起  输出价格$1.10/M tokens起  详细价格内见各供应商。"
+    },
+    {
+      "model": "glm-4.7",
+      "billing_config": "{\n\t\"model_name\": \"zai-glm-4.7\",\n\t\"default_tier\": \"tier1\",\n\t\"enabled_billing_items\": [\"prompt_tokens\", \"completion_tokens\", \"cached_tokens\"],\n\t\"token_based_tier_configs\": {\n\t\t\"tier1\": {\n\t\t\t\"model_ratio\": 0.136987,\n\t\t\t\"tier_condition\": {\n\t\t\t\t\"max_tokens\": 32000,\n\t\t\t\t\"min_tokens\": 0\n\t\t\t},\n\t\t\t\"output_tier_condition\": {\n\t\t\t\t\"max_tokens\": 200,\n\t\t\t\t\"min_tokens\": 0\n\t\t\t},\n\t\t\t\"prompt_tokens_ratio\": 1.0,\n\t\t\t\"cached_tokens_ratio\": 0.2,\n\t\t\t\"completion_tokens_ratio\": 4.0\n\t\t},\n\t\t\"tier2\": {\n\t\t\t\"model_ratio\": 0.205479,\n\t\t\t\"tier_condition\": {\n\t\t\t\t\"max_tokens\": 32000,\n\t\t\t\t\"min_tokens\": 0\n\t\t\t},\n\t\t\t\"output_tier_condition\": {\n\t\t\t\t\"max_tokens\": 32000,\n\t\t\t\t\"min_tokens\": 200\n\t\t\t},\n\t\t\t\"prompt_tokens_ratio\": 1.0,\n\t\t\t\"cached_tokens_ratio\": 0.2,\n\t\t\t\"completion_tokens_ratio\": 4.666667\n\t\t},\n\t\t\"tier3\": {\n\t\t\t\"model_ratio\": 0.273973,\n\t\t\t\"tier_condition\": {\n\t\t\t\t\"max_tokens\": 128000,\n\t\t\t\t\"min_tokens\": 32001\n\t\t\t},\n\t\t\t\"prompt_tokens_ratio\": 1.0,\n\t\t\t\"cached_tokens_ratio\": 0.2,\n\t\t\t\"completion_tokens_ratio\": 4.0\n\t\t}\n\t}\n}",
+      "img_price_config": "",
+      "display_input": "",
+      "display_output": ""
+    },
+    {
+      "model": "glm-5",
+      "billing_config": "",
+      "img_price_config": "",
+      "display_input": "The model is available through multiple vendor channels; deepinfra supports input caching, with a cache-hit fee of $0.176/M. sophnet and baidu channels use tiered pricing. sophnet-glm-5 pricing: input <32k: $0.548→$2.466; input <64k: $0.822→$3.836; input >64k: $1.096→$4.384. baidu-glm-5 pricing: input <32k: $0.548→$2.466; input >32k: $0.822→$3.014;alicloud-glm-5 pricing: input <32k: $0.563 → $2.535, cache hit fee $0.113/M; input >32k: $0.845 → $3.098, cache hit fee $0.169/M.",
+      "display_output": "该模型有多个供应商渠道，deepinfra支持输入缓存，缓存命中费用为0.176$/M。sophnet和baidu渠道价格为阶梯计费。sophnet-glm-5价格：输入<32k：$0.548→$2.466；输入<64k：$0.822→$3.836；输入>64k：$1.096→$4.384。baidu-glm-5价格：输入<32k：$0.548→$2.466；输入>32k：$0.822→$3.014。\nalicloud-glm-5价格：输入<32k：$0.563→$2.535缓存命中费用为0.113$/M；输入>32k：$0.845→$3.098缓存命中费用为0.169$/M。\n"
+    },
+    {
+      "model": "hy-3d-3.1",
+      "billing_config": "",
+      "img_price_config": "{\n  \"normal\":              {\"standard\": {\"standard\": 0.3333}},\n  \"normal-pbr\":          {\"standard\": {\"standard\": 0.5000}},\n  \"normal-fc\":           {\"standard\": {\"standard\": 0.5000}},\n  \"normal-fmt\":          {\"standard\": {\"standard\": 0.4167}},\n  \"normal-pbr-fc\":       {\"standard\": {\"standard\": 0.6667}},\n  \"normal-pbr-fmt\":      {\"standard\": {\"standard\": 0.5833}},\n  \"normal-fc-fmt\":       {\"standard\": {\"standard\": 0.5833}},\n  \"normal-pbr-fc-fmt\":   {\"standard\": {\"standard\": 0.7500}},\n  \"geometry\":            {\"standard\": {\"standard\": 0.2500}},\n  \"geometry-pbr\":        {\"standard\": {\"standard\": 0.4167}},\n  \"geometry-fc\":         {\"standard\": {\"standard\": 0.4167}},\n  \"geometry-fmt\":        {\"standard\": {\"standard\": 0.3333}},\n  \"geometry-pbr-fc\":     {\"standard\": {\"standard\": 0.5833}},\n  \"geometry-pbr-fmt\":    {\"standard\": {\"standard\": 0.5000}},\n  \"geometry-fc-fmt\":     {\"standard\": {\"standard\": 0.5000}},\n  \"geometry-pbr-fc-fmt\": {\"standard\": {\"standard\": 0.6667}},\n  \"sketch\":              {\"standard\": {\"standard\": 0.4167}},\n  \"sketch-pbr\":          {\"standard\": {\"standard\": 0.5833}},\n  \"sketch-fc\":           {\"standard\": {\"standard\": 0.5833}},\n  \"sketch-fmt\":          {\"standard\": {\"standard\": 0.5000}},\n  \"sketch-pbr-fc\":       {\"standard\": {\"standard\": 0.7500}},\n  \"sketch-pbr-fmt\":      {\"standard\": {\"standard\": 0.6667}},\n  \"sketch-fc-fmt\":       {\"standard\": {\"standard\": 0.6667}},\n  \"sketch-pbr-fc-fmt\":   {\"standard\": {\"standard\": 0.8333}}\n}",
+      "display_input": "Base price: Normal (default): $0.3333 per run, Geometry: $0.25 per run.\nAdditional parameter fees: enable_pbr:true (PBR material): +$0.1667, face_count (custom face count): +$0.1667, format (specify stl/usdz/fbx; additional charge to generate that format): +$0.0833",
+      "display_output": "基础价格：Normal(默认)：$0.3333 / 次，Geometry：$0.25/次。\n参数额外收费：enable_pbr:true(PBR 材质)：+$0.1667，face_count(自定义面数)：+$0.1667，format(指定stl/usdz/fbx，追加生成该格式)：+$0.0833"
+    },
+    {
+      "model": "imagen-4.0",
+      "billing_config": "",
+      "img_price_config": "",
+      "display_input": "$0.04 / IMG",
+      "display_output": "$0.04 / IMG"
+    },
+    {
+      "model": "imagen-4.0-fast-generate-001",
+      "billing_config": "",
+      "img_price_config": "{\"generate\":{\"standard\":{\"standard\":0.02}}}",
+      "display_input": "$0.75 / S",
+      "display_output": "$0.02 / IMG"
+    },
+    {
+      "model": "imagen-4.0-generate-001",
+      "billing_config": "",
+      "img_price_config": "{\"generate\":{\"standard\":{\"standard\":0.04}}}",
+      "display_input": "$ 0.41 / Request",
+      "display_output": "$0.04 / IMG"
+    },
+    {
+      "model": "imagen-4.0-ultra",
+      "billing_config": "",
+      "img_price_config": "",
+      "display_input": "$0.06 / IMG",
+      "display_output": "$0.06 / IMG"
+    },
+    {
+      "model": "paddleocr-vl-0.9b",
+      "billing_config": "",
+      "img_price_config": "{\"generate\":{\"standard\":{\"standard\":0.025}}}",
+      "display_input": "$0.025/page",
+      "display_output": "0.025美元/页"
+    },
+    {
+      "model": "pp-structurev3",
+      "billing_config": "",
+      "img_price_config": "{\"generate\":{\"standard\":{\"standard\":0.025}}}",
+      "display_input": "$0.025/page",
+      "display_output": "0.025美元/页"
+    },
+    {
+      "model": "qwen3-vl-plus",
+      "billing_config": "{\n  \"model_name\": \"qwen3-vl-plus\",\n  \"default_tier\": \"tier1\",\n  \"token_based_tier_configs\": {\n    \"tier1\": {\n      \"tier_condition\": {\n        \"min_tokens\": 0,\n        \"max_tokens\": 32000\n      },\n      \"model_ratio\": 0.0685,\n      \"prompt_tokens_ratio\": 0.2,\n      \"completion_tokens_ratio\": 10.0\n    },\n    \"tier2\": {\n      \"tier_condition\": {\n        \"min_tokens\": 32001,\n        \"max_tokens\": 128000\n      },\n      \"model_ratio\": 0.1027,\n      \"prompt_tokens_ratio\": 0.2,\n      \"completion_tokens_ratio\": 10.0\n    },\n    \"tier3\": {\n      \"tier_condition\": {\n        \"min_tokens\": 128001,\n        \"max_tokens\": 2520000\n      },\n      \"model_ratio\": 0.2055,\n      \"prompt_tokens_ratio\": 0.2,\n      \"completion_tokens_ratio\": 10.0\n    }\n  },\n  \"enabled_billing_items\": [\n    \"prompt_tokens\",\n    \"completion_tokens\",\n    \"cached_tokens\"\n  ]\n}",
+      "img_price_config": "",
+      "display_input": "",
+      "display_output": ""
+    },
+    {
+      "model": "sora-2",
+      "billing_config": "",
+      "img_price_config": "{\n\t\"generate\": {\n\t\t\"standard\": {\n\t\t\t\"standard\": 0.1\n\t\t}\n\t}\n}",
+      "display_input": "The price of this model is $0.10 per second.",
+      "display_output": "该模型的价格为$0.10/秒。"
+    },
+    {
+      "model": "sora-2-pro",
+      "billing_config": "",
+      "img_price_config": "{\"generate\":{\"standard\":{\"standard\":0.3,\"720x1280\":0.3,\"1024x1792\":0.5,\"1792x1024\":0.5}}}",
+      "display_input": "The price for a 720×1280 video is $0.30 per second, and for a 1024×1792 video is $0.50 per second.",
+      "display_output": "720x1280大小的视频价格为$0.30/秒，1024x1792大小的视频价格为$0.50/秒。"
+    },
+    {
+      "model": "veo-3.0-generate-preview",
+      "billing_config": "",
+      "img_price_config": "{\"generate\":{\"standard\":{\"standard\":0.75}}}",
+      "display_input": "$0.75 / S",
+      "display_output": "$0.75 / S"
+    },
+    {
+      "model": "veo-3.1-fast-generate-preview",
+      "billing_config": "",
+      "img_price_config": "{\"generate\":{\"standard\":{\"standard\":0.12,\"720p\":0.1,\"1080p\":0.12,\"4k\":0.3}}}",
+      "display_input": "$0.12 / S",
+      "display_output": "$0.12 / S"
+    },
+    {
+      "model": "veo-3.1-generate-preview",
+      "billing_config": "",
+      "img_price_config": "{\"generate\":{\"standard\":{\"standard\":0.40,\"720p\":0.40,\"1080p\":0.40,\"4k\":0.60}}}",
+      "display_input": "$0.4 / S",
+      "display_output": "$0.4 / S"
+    },
+    {
+      "model": "veo-3.1-lite-generate-preview",
+      "billing_config": "",
+      "img_price_config": "{\"generate\":{\"standard\":{\"standard\":0.08,\"720p\":0.05,\"1080p\":0.08}}}",
+      "display_input": "720p：$0.05 / S；1080p：$0.08 / S",
+      "display_output": "720p：$0.05 / S；1080p：$0.08 / S"
+    },
+    {
+      "model": "wan2.2-i2v-plus",
+      "billing_config": "",
+      "img_price_config": "{\n  \"generate\": {\n    \"standard\": {\n      \"standard\": 0.0192,\n      \"832x480\": 0.0192,\n      \"480x832\": 0.0192,\n      \"624x624\": 0.0192,\n      \"1920x1080\":0.0959,\n      \"1080x1920\":0.0959,\n      \"1440x1440\":0.0959,\n      \"1632x1248\":0.0959,\n      \"1248x1632\":0.0959\n    }\n  }\n}",
+      "display_input": "480p: $0.0192per second;1080p: $0.0959 per second.",
+      "display_output": "480p：每秒价格0.0192美元；1080p：每秒价格0.0959美元。"
+    },
+    {
+      "model": "whisper-1",
+      "billing_config": "",
+      "img_price_config": "",
+      "display_input": "-",
+      "display_output": "Transcription: $ 0.006 /Minutes"
+    },
+    {
+      "model": "whisper-large-v3",
+      "billing_config": "",
+      "img_price_config": "",
+      "display_input": "$0.111/h",
+      "display_output": "$0.111/h"
+    },
+    {
+      "model": "whisper-large-v3-turbo",
+      "billing_config": "",
+      "img_price_config": "",
+      "display_input": "$0.044/h",
+      "display_output": "$0.044/h"
+    }
+  ],
+  "catalog": [
+    {
+      "model_id": "auto",
+      "pricing": {
+        "input": 2,
+        "output": 2
+      },
+      "promotion": null,
+      "types": "llm"
+    },
+    {
+      "model_id": "doubao-seedance-2-5-260628",
+      "pricing": {
+        "cache_read": 2,
+        "input": 2,
+        "output": 0
+      },
+      "promotion": null,
+      "types": "video"
+    },
+    {
+      "model_id": "hy-3d-3.1",
+      "pricing": {
+        "input": 2,
+        "output": 2
+      },
+      "promotion": null,
+      "types": "3d"
+    },
+    {
+      "model_id": "glm-5",
+      "pricing": {
+        "cache_read": 0.176,
+        "input": 0.88,
+        "output": 2.816
+      },
+      "promotion": null,
+      "types": "llm"
+    },
+    {
+      "model_id": "embed-v-4-0",
+      "pricing": {
+        "cache_read": 0.12,
+        "input": 0.12,
+        "output": 0
+      },
+      "promotion": null,
+      "types": "embedding"
+    },
+    {
+      "model_id": "glm-4.7",
+      "pricing": {
+        "cache_read": 0.054795,
+        "input": 0.273974,
+        "output": 1.095896
+      },
+      "promotion": null,
+      "types": "llm"
+    },
+    {
+      "model_id": "veo-3.1-lite-generate-preview",
+      "pricing": {
+        "input": 2,
+        "output": 0
+      },
+      "promotion": null,
+      "types": "video"
+    },
+    {
+      "model_id": "gemini-embedding-2",
+      "pricing": {
+        "cache_read": 0.2,
+        "input": 0.2,
+        "output": 0
+      },
+      "promotion": null,
+      "types": "embedding"
+    },
+    {
+      "model_id": "doubao-seed-1-8",
+      "pricing": {
+        "cache_read": 0.021918,
+        "input": 0.10959,
+        "output": 0.273975
+      },
+      "promotion": null,
+      "types": "llm"
+    },
+    {
+      "model_id": "qwen3-vl-plus",
+      "pricing": {
+        "cache_read": 0.0274,
+        "input": 0.137,
+        "output": 1.37
+      },
+      "promotion": null,
+      "types": "llm"
+    },
+    {
+      "model_id": "sora-2",
+      "pricing": {
+        "input": 2,
+        "output": 2
+      },
+      "promotion": null,
+      "types": "video"
+    },
+    {
+      "model_id": "sora-2-pro",
+      "pricing": {
+        "input": 2,
+        "output": 2
+      },
+      "promotion": null,
+      "types": "video"
+    },
+    {
+      "model_id": "wan2.2-i2v-plus",
+      "pricing": {
+        "input": 2,
+        "output": 0
+      },
+      "promotion": null,
+      "types": "video"
+    },
+    {
+      "model_id": "flux-2-flex",
+      "pricing": {
+        "cache_read": 0,
+        "input": 2,
+        "output": 0
+      },
+      "promotion": null,
+      "types": "image_generation"
+    },
+    {
+      "model_id": "flux-2-pro",
+      "pricing": {
+        "cache_read": 0,
+        "input": 2,
+        "output": 0
+      },
+      "promotion": null,
+      "types": "image_generation"
+    },
+    {
+      "model_id": "glm-4.6",
+      "pricing": {
+        "cache_read": 0.054795,
+        "input": 0.273974,
+        "output": 1.095896
+      },
+      "promotion": null,
+      "types": "llm"
+    },
+    {
+      "model_id": "imagen-4.0",
+      "pricing": {
+        "cache_read": 0,
+        "input": 2,
+        "output": 2
+      },
+      "promotion": null,
+      "types": "image_generation"
+    },
+    {
+      "model_id": "imagen-4.0-fast-generate-001",
+      "pricing": {
+        "input": 2,
+        "output": 2
+      },
+      "promotion": null,
+      "types": "image_generation"
+    },
+    {
+      "model_id": "imagen-4.0-generate-001",
+      "pricing": {
+        "input": 2,
+        "output": 2
+      },
+      "promotion": null,
+      "types": "image_generation"
+    },
+    {
+      "model_id": "imagen-4.0-ultra",
+      "pricing": {
+        "cache_read": 0,
+        "input": 2,
+        "output": 2
+      },
+      "promotion": null,
+      "types": "image_generation"
+    },
+    {
+      "model_id": "paddleocr-vl-0.9b",
+      "pricing": {
+        "input": 2,
+        "output": 0
+      },
+      "promotion": null,
+      "types": "ocr"
+    },
+    {
+      "model_id": "pp-structurev3",
+      "pricing": {
+        "input": 2,
+        "output": 0
+      },
+      "promotion": null,
+      "types": "ocr"
+    },
+    {
+      "model_id": "veo-3.0-generate-preview",
+      "pricing": {
+        "cache_read": 0,
+        "input": 2,
+        "output": 2
+      },
+      "promotion": null,
+      "types": "video"
+    },
+    {
+      "model_id": "veo-3.1-fast-generate-preview",
+      "pricing": {
+        "input": 2,
+        "output": 0
+      },
+      "promotion": null,
+      "types": "video"
+    },
+    {
+      "model_id": "veo-3.1-generate-preview",
+      "pricing": {
+        "cache_read": 0,
+        "input": 2,
+        "output": 2
+      },
+      "promotion": null,
+      "types": "video"
+    },
+    {
+      "model_id": "V3",
+      "pricing": {
+        "cache_read": 0,
+        "input": 2,
+        "output": 2
+      },
+      "promotion": null,
+      "types": "image_generation"
+    },
+    {
+      "model_id": "V_2",
+      "pricing": {
+        "cache_read": 0,
+        "input": 2,
+        "output": 2
+      },
+      "promotion": null,
+      "types": "image_generation"
+    },
+    {
+      "model_id": "V_2_TURBO",
+      "pricing": {
+        "cache_read": 0,
+        "input": 2,
+        "output": 2
+      },
+      "promotion": null,
+      "types": "image_generation"
+    },
+    {
+      "model_id": "V_2A",
+      "pricing": {
+        "cache_read": 0,
+        "input": 2,
+        "output": 2
+      },
+      "promotion": null,
+      "types": "image_generation"
+    },
+    {
+      "model_id": "V_2A_TURBO",
+      "pricing": {
+        "cache_read": 0,
+        "input": 2,
+        "output": 2
+      },
+      "promotion": null,
+      "types": "image_generation"
+    },
+    {
+      "model_id": "V_1",
+      "pricing": {
+        "cache_read": 0,
+        "input": 2,
+        "output": 2
+      },
+      "promotion": null,
+      "types": "image_generation"
+    },
+    {
+      "model_id": "V_1_TURBO",
+      "pricing": {
+        "cache_read": 0,
+        "input": 2,
+        "output": 2
+      },
+      "promotion": null,
+      "types": "image_generation"
+    },
+    {
+      "model_id": "dall-e-3",
+      "pricing": {
+        "input": 40,
+        "output": 40
+      },
+      "promotion": null,
+      "types": "image_generation"
+    },
+    {
+      "model_id": "DESCRIBE",
+      "pricing": {
+        "cache_read": 0,
+        "input": 2,
+        "output": 2
+      },
+      "promotion": null,
+      "types": "image_generation"
+    },
+    {
+      "model_id": "UPSCALE",
+      "pricing": {
+        "cache_read": 0,
+        "input": 2,
+        "output": 2
+      },
+      "promotion": null,
+      "types": "image_generation"
+    },
+    {
+      "model_id": "Stable-Diffusion-3-5-Large",
+      "pricing": {
+        "cache_read": 0,
+        "input": 4,
+        "output": 4
+      },
+      "promotion": null,
+      "types": "image_generation"
+    },
+    {
+      "model_id": "dall-e-2",
+      "pricing": {
+        "input": 16,
+        "output": 16
+      },
+      "promotion": null,
+      "types": "image_generation"
+    },
+    {
+      "model_id": "whisper-1",
+      "pricing": {
+        "input": 100,
+        "output": 100
+      },
+      "promotion": null,
+      "types": "stt"
+    },
+    {
+      "model_id": "whisper-large-v3",
+      "pricing": {
+        "input": 30.834,
+        "output": 30.834
+      },
+      "promotion": null,
+      "types": "stt"
+    },
+    {
+      "model_id": "whisper-large-v3-turbo",
+      "pricing": {
+        "input": 5.556,
+        "output": 5.556
+      },
+      "promotion": null,
+      "types": "stt"
+    }
+  ]
+}

@@ -11,6 +11,7 @@ import { AuthTypeEnum } from "~/types"
 
 vi.mock("~/services/apiService/sub2api", () => ({
   fetchAccountTokens: vi.fn(),
+  fetchSub2ApiPricingCatalogs: vi.fn().mockResolvedValue(undefined),
   fetchSub2ApiAvailableGroups: vi.fn(),
   fetchSub2ApiGroupRates: vi.fn(),
 }))

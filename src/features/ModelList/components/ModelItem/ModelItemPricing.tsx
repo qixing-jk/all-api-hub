@@ -20,6 +20,10 @@ import {
   type ModelUnavailablePriceReason,
 } from "~/services/modelList/pricingModel"
 import {
+  CALCULATED_PRICE_KINDS,
+  PRICING_CONDITION_KINDS,
+} from "~/services/modelPricing/pricingConstants"
+import {
   formatPriceCompact,
   isTokenBillingType,
   type CalculatedPrice,
@@ -27,8 +31,11 @@ import {
 
 import { ModelItemPerCallPricingView } from "./ModelItemPerCallPricingView"
 import { PriceView } from "./ModelItemPicingView"
+import { ModelPriceQuote } from "./ModelPriceQuote"
 
 interface ModelItemPricingProps {
+  sourceLabel?: string
+  onShowDetails?: () => void
   model: ModelPricing
   calculatedPrice: CalculatedPrice
   exchangeRate: number
@@ -95,15 +102,26 @@ export function resolveUnavailablePriceReason(
   calculatedPrice: CalculatedPrice,
   context?: PriceAvailabilityContext,
 ): ModelUnavailablePriceReason | undefined {
+  // Active structured quotes own both availability and recovery guidance.
+  if (
+    model.pricingPlan &&
+    calculatedPrice.quote &&
+    calculatedPrice.isComparisonActive !== false
+  )
+    return undefined
+
   const sourceUnavailableReason =
     model.price_metadata?.unavailable_reason ??
-    (calculatedPrice.kind === "unavailable"
+    (calculatedPrice.kind === CALCULATED_PRICE_KINDS.UNAVAILABLE
       ? calculatedPrice.reason
       : undefined)
 
   if (
     isModelPriceUnavailable(model) ||
-    calculatedPrice.kind === "unavailable"
+    (calculatedPrice.kind === CALCULATED_PRICE_KINDS.UNAVAILABLE &&
+      (calculatedPrice.reason !== undefined ||
+        !calculatedPrice.quote ||
+        calculatedPrice.isComparisonActive === false))
   ) {
     return (
       sourceUnavailableReason ??
@@ -129,7 +147,7 @@ export function resolveUnavailablePriceReason(
 export function isAvailableCalculatedPrice(
   calculatedPrice: CalculatedPrice,
 ): calculatedPrice is Exclude<CalculatedPrice, { kind: "unavailable" }> {
-  return calculatedPrice.kind !== "unavailable"
+  return calculatedPrice.kind !== CALCULATED_PRICE_KINDS.UNAVAILABLE
 }
 
 /**
@@ -171,6 +189,8 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
   groupRatios,
   showsOptimalGroup = false,
   groupSelectionScope = MODEL_LIST_GROUP_SELECTION_SCOPES.SINGLE_SOURCE,
+  onShowDetails,
+  sourceLabel,
 }) => {
   const { t } = useTranslation("modelList")
   if (!showPricing) {
@@ -184,7 +204,8 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
   )
   const tokenBillingType = isTokenBillingType(model.quota_type)
   const hasContextTiers =
-    calculatedPrice.kind === "token" && Boolean(calculatedPrice.tiers?.length)
+    calculatedPrice.kind === CALCULATED_PRICE_KINDS.TOKEN &&
+    Boolean(model.pricingPlan?.rules.length)
   const effectiveGroupLabel = effectiveGroup
     ? formatGroupLabelFromRatios(effectiveGroup, groupRatios)
     : undefined
@@ -246,6 +267,21 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
       </Badge>
     ) : null
 
+  if (
+    calculatedPrice.quote &&
+    !unavailableReason &&
+    calculatedPrice.isComparisonActive !== false
+  )
+    return (
+      <ModelPriceQuote
+        quote={calculatedPrice.quote}
+        isLowestPrice={isLowestPrice}
+        onShowDetails={onShowDetails}
+        sourceLabel={sourceLabel}
+        effectiveGroup={effectiveGroup}
+      />
+    )
+
   if (unavailableReason) {
     return (
       <div className="mt-2">
@@ -268,7 +304,7 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
 
   return (
     <div className="mt-2">
-      {calculatedPrice.kind === "token" ? (
+      {calculatedPrice.kind === CALCULATED_PRICE_KINDS.TOKEN ? (
         <div className="flex flex-wrap items-center gap-3 sm:gap-4 md:gap-6">
           <PriceView
             usdPrices={calculatedPrice.usdPerMillionTokens}
@@ -286,9 +322,16 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
                   variant="secondary"
                   size="sm"
                   className="shrink-0 text-[10px] sm:text-xs"
-                  title={t("firstTierPriceTitle")}
+                  title={t("scenario.configure")}
                 >
-                  {t("firstTierPrice")}
+                  {model.pricingPlan?.rules.some((rule) =>
+                    rule.conditions.some(
+                      (condition) =>
+                        condition.kind === PRICING_CONDITION_KINDS.RANGE,
+                    ),
+                  )
+                    ? t("scenario.tiered")
+                    : t("scenario.conditional")}
                 </Badge>
               )}
               {priceMeta}
@@ -297,7 +340,7 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
           )}
         </div>
       ) : (
-        calculatedPrice.kind === "per-call" && (
+        calculatedPrice.kind === CALCULATED_PRICE_KINDS.PER_CALL && (
           <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
             <span className="dark:text-dark-text-secondary text-xs whitespace-nowrap text-gray-600 sm:text-sm">
               {t("perCall")}

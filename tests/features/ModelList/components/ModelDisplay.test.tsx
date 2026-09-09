@@ -17,6 +17,16 @@ import {
   createProfileSource,
 } from "~/features/ModelList/modelManagementSources"
 import type { ModelPricing } from "~/services/modelList/pricingModel"
+import {
+  CALCULATED_PRICE_KINDS,
+  PRICE_RATE_UNITS,
+  PRICING_GROUP_MULTIPLIERS,
+  PRICING_PURPOSES,
+  PRICING_SOURCE_KINDS,
+  PRICING_USAGE_MODES,
+  TOKENS_PER_MILLION,
+} from "~/services/modelPricing/pricingConstants"
+import { quoteModelPrice } from "~/services/modelPricing/quoteModelPrice"
 import type { CalculatedPrice } from "~/services/models/utils/modelPricing"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import {
@@ -239,7 +249,7 @@ const createCalculatedModel = (
   }
 
   const calculatedPrice: CalculatedPrice = {
-    kind: "token",
+    kind: CALCULATED_PRICE_KINDS.TOKEN,
     usdPerMillionTokens: {
       input: overrides.calculatedPrice?.input ?? 1,
       output: overrides.calculatedPrice?.output ?? 2,
@@ -434,6 +444,56 @@ describe("ModelDisplay", () => {
     expect(lastItem).not.toHaveClass("my-3")
     expect(firstItem).toHaveClass("pb-3")
     expect(lastItem).toHaveClass("pb-3")
+  })
+
+  it("separates video output tokens from text tokens for the same model", () => {
+    const textModel = createCalculatedModel({
+      model: { model_name: "shared-model" },
+      isPriceComparable: true,
+    })
+    const videoModel = createCalculatedModel({
+      model: { model_name: "shared-model" },
+      isPriceComparable: true,
+    })
+    videoModel.calculatedPrice.quote = quoteModelPrice(
+      {
+        usageMode: PRICING_USAGE_MODES.VIDEO,
+        rates: {
+          videoOutput: {
+            amount: 1,
+            currency: "USD",
+            unit: PRICE_RATE_UNITS.TOKEN,
+            per: TOKENS_PER_MILLION,
+          },
+        },
+        rules: [],
+        source: { kind: PRICING_SOURCE_KINDS.ACCOUNT },
+        groupMultiplier: PRICING_GROUP_MULTIPLIERS.INCLUDED,
+        issues: [],
+      },
+      { purpose: PRICING_PURPOSES.TOKEN_INDEX, usage: { input: 1 } },
+    )
+    render(
+      <ModelDisplay
+        models={[textModel, videoModel]}
+        verificationSummariesByKey={{}}
+        showRealPrice={false}
+        showEndpointTypes={true}
+        showPriceComparisonGroups={true}
+        handleGroupClick={vi.fn()}
+      />,
+    )
+    expect(screen.getAllByRole("region")).toHaveLength(2)
+    expect(
+      screen.getByRole("region", {
+        name: "shared-model modelList:scenario.perMillionVideoTokens",
+      }),
+    ).toBeVisible()
+    expect(
+      screen.getByRole("region", {
+        name: "shared-model ui:billing.tokenBased",
+      }),
+    ).toBeVisible()
   })
 
   it("shows separate comparison regions for each exact model and billing mode", () => {

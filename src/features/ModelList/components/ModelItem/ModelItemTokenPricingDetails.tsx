@@ -4,17 +4,17 @@ import {
   formatPrice,
   resolvePriceAmount,
   type CalculatedTokenPrice,
-  type TokenPricesUSD,
 } from "~/services/models/utils/modelPricing"
 
-/** Shows the same token meters for flat pricing and each context tier. */
-function TokenPriceBreakdown({
-  prices,
+/** Shows the available flat token prices in USD and the account's display currency. */
+export function ModelItemTokenPricingDetails({
+  calculatedPrice,
   exchangeRate,
 }: {
-  prices: TokenPricesUSD
+  calculatedPrice: CalculatedTokenPrice
   exchangeRate: number
 }) {
+  const prices = calculatedPrice.usdPerMillionTokens
   const { t } = useTranslation("modelList")
   const details = [
     { key: "input", label: t("input1MTokens"), amount: prices.input },
@@ -52,44 +52,6 @@ function TokenPriceBreakdown({
           </div>
         ),
       )}
-    </div>
-  )
-}
-
-/** Keeps every tier's prices and inclusive context bounds visible together. */
-export function ModelItemTokenPricingDetails({
-  calculatedPrice,
-  exchangeRate,
-}: {
-  calculatedPrice: CalculatedTokenPrice
-  exchangeRate: number
-}) {
-  const { t, i18n } = useTranslation("modelList")
-  if (!calculatedPrice.tiers?.length) {
-    return (
-      <TokenPriceBreakdown
-        prices={calculatedPrice.usdPerMillionTokens}
-        exchangeRate={exchangeRate}
-      />
-    )
-  }
-
-  return (
-    <div className="space-y-4">
-      {calculatedPrice.tiers.map((tier) => (
-        <fieldset key={tier.minContextTokens} className="min-w-0">
-          <legend className="dark:text-dark-text-secondary mb-2 text-xs font-medium text-gray-700">
-            {t("contextTokenRange", {
-              min: tier.minContextTokens.toLocaleString(i18n.language),
-              max: tier.maxContextTokens?.toLocaleString(i18n.language) ?? "∞",
-            })}
-          </legend>
-          <TokenPriceBreakdown
-            prices={tier.usdPerMillionTokens}
-            exchangeRate={exchangeRate}
-          />
-        </fieldset>
-      ))}
     </div>
   )
 }

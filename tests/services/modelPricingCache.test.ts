@@ -67,7 +67,7 @@ describe("modelPricingCache", () => {
     mocks.storageMap.clear()
   })
 
-  it("round-trips v2 pricing rows with vendor evidence", async () => {
+  it("round-trips pricing rows with vendor evidence", async () => {
     vi.spyOn(Date, "now").mockReturnValue(1_000)
 
     const { modelPricingCache } = await import(
@@ -83,7 +83,7 @@ describe("modelPricingCache", () => {
     await modelPricingCache.set("account-alpha", pricing)
 
     expect(mocks.set).toHaveBeenCalledWith(
-      "modelPricing_cache_v2",
+      "modelPricing_cache_v27",
       expect.objectContaining({
         "account-alpha": {
           pricing,
@@ -97,9 +97,9 @@ describe("modelPricingCache", () => {
     )
   })
 
-  it("accepts evidence-free pricing rows stored under the v2 key", async () => {
+  it("accepts evidence-free pricing rows stored under the current key", async () => {
     const pricing = createPricingResponse("model-without-evidence")
-    mocks.storageMap.set("modelPricing_cache_v2", {
+    mocks.storageMap.set("modelPricing_cache_v27", {
       "account-without-evidence": {
         pricing,
         lastUpdated: 1_000,
@@ -117,8 +117,33 @@ describe("modelPricingCache", () => {
     expect(pricing.data[0]).not.toHaveProperty("vendorEvidence")
   })
 
-  it("ignores pricing entries stored under the v1 key", async () => {
-    mocks.storageMap.set("modelPricing_cache_v1", {
+  it.each([
+    "v2",
+    "v3",
+    "v4",
+    "v5",
+    "v6",
+    "v7",
+    "v8",
+    "v9",
+    "v10",
+    "v11",
+    "v12",
+    "v13",
+    "v14",
+    "v15",
+    "v16",
+    "v17",
+    "v18",
+    "v19",
+    "v20",
+    "v21",
+    "v22",
+    "v23",
+    "v24",
+    "v25",
+  ])("ignores pricing entries stored under the %s key", async (version) => {
+    mocks.storageMap.set(`modelPricing_cache_${version}`, {
       "account-legacy": {
         pricing: createPricingResponse("legacy-model"),
         lastUpdated: 1_000,
@@ -131,7 +156,7 @@ describe("modelPricingCache", () => {
     )
 
     await expect(modelPricingCache.get("account-legacy")).resolves.toBeNull()
-    expect(mocks.get).toHaveBeenCalledWith("modelPricing_cache_v2")
+    expect(mocks.get).toHaveBeenCalledWith("modelPricing_cache_v27")
   })
 
   it("keeps independent vendor evidence for each account cache entry", async () => {
@@ -152,7 +177,7 @@ describe("modelPricingCache", () => {
     await modelPricingCache.set("account-alpha", accountAlphaPricing)
     await modelPricingCache.set("account-beta", accountBetaPricing)
 
-    expect(mocks.storageMap.get("modelPricing_cache_v2")).toEqual({
+    expect(mocks.storageMap.get("modelPricing_cache_v27")).toEqual({
       "account-alpha": {
         pricing: accountAlphaPricing,
         lastUpdated: 1_000,
@@ -171,7 +196,7 @@ describe("modelPricingCache", () => {
   })
 
   it("returns null for missing or expired cache entries", async () => {
-    mocks.storageMap.set("modelPricing_cache_v2", {
+    mocks.storageMap.set("modelPricing_cache_v27", {
       missing: {
         pricing: { success: true, data: [] },
         lastUpdated: 1_000,
@@ -197,7 +222,7 @@ describe("modelPricingCache", () => {
   })
 
   it("invalidates only the requested account entry", async () => {
-    mocks.storageMap.set("modelPricing_cache_v2", {
+    mocks.storageMap.set("modelPricing_cache_v27", {
       "account-1": {
         pricing: { success: true, data: [{ model_name: "gpt-4.1" }] },
         lastUpdated: 100,
@@ -214,7 +239,7 @@ describe("modelPricingCache", () => {
 
     await modelPricingCache.invalidate("account-1")
 
-    expect(mocks.storageMap.get("modelPricing_cache_v2")).toEqual({
+    expect(mocks.storageMap.get("modelPricing_cache_v27")).toEqual({
       "account-2": {
         pricing: { success: true, data: [{ model_name: "claude-3-7-sonnet" }] },
         lastUpdated: 200,
@@ -237,7 +262,7 @@ describe("modelPricingCache", () => {
   })
 
   it("swallows storage write failures for set and invalidate operations", async () => {
-    mocks.storageMap.set("modelPricing_cache_v2", {
+    mocks.storageMap.set("modelPricing_cache_v27", {
       "account-1": {
         pricing: { success: true, data: [] },
         lastUpdated: 100,

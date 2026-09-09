@@ -378,6 +378,8 @@ export type TokenUsage = { upload: number; download: number }
 
 // 展示用的站点数据 (兼容当前 UI)
 export interface DisplaySiteData {
+  /** Configured recharge conversion, independent of the current balance. */
+  exchangeRate?: number
   id: string
   /**
    * Icon URL or identifier used by older UI components for site branding.

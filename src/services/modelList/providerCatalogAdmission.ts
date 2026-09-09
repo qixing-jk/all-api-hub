@@ -14,6 +14,7 @@ import {
   type PricingResponse,
   type ProductCanonicalModel,
 } from "~/services/modelList/pricingModel"
+import { pricingPlanSchema } from "~/services/modelPricing/pricingPlan"
 import { isIsoCalendarDate } from "~/services/models/isoCalendarDate"
 import { MODEL_VENDOR_EVIDENCE_KINDS } from "~/services/models/modelDescriptor"
 import {
@@ -270,6 +271,7 @@ const productCanonicalModelSchema = z
     model_description: trimmedNonBlankStringSchema.optional(),
     presentation: modelPresentationSchema.optional(),
     quota_type: z.union([z.literal(0), z.literal(1)]),
+    pricingPlan: pricingPlanSchema.optional(),
     model_ratio: finiteNonnegativeNumberSchema,
     model_price: z.union([finiteNonnegativeNumberSchema, perCallPriceSchema]),
     token_price_usd_per_million: tokenPriceSchema.optional(),

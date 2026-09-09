@@ -1,5 +1,5 @@
 import { Copy } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
@@ -29,6 +29,7 @@ import {
   isModelPriceUnavailable,
   type ModelPricing,
 } from "~/services/modelList/pricingModel"
+import { CALCULATED_PRICE_KINDS } from "~/services/modelPricing/pricingConstants"
 import type {
   ModelMetadata,
   ResolvedModelVendor,
@@ -142,6 +143,8 @@ export default function ModelItem(props: ModelItemProps) {
   } = props
   const { t } = useTranslation("modelList")
   const [uncontrolledIsExpanded, setUncontrolledIsExpanded] = useState(false)
+  const detailsRef = useRef<HTMLDivElement>(null)
+  const [calculationRequested, setCalculationRequested] = useState(false)
   const isExpansionControlled =
     controlledIsExpanded !== undefined && onToggleExpand !== undefined
   const hasExpansionPropMismatch =
@@ -149,6 +152,13 @@ export default function ModelItem(props: ModelItemProps) {
   const isExpanded = isExpansionControlled
     ? controlledIsExpanded
     : uncontrolledIsExpanded
+  useEffect(() => {
+    if (calculationRequested && isExpanded && detailsRef.current) {
+      detailsRef.current.scrollIntoView?.({ block: "nearest" })
+      detailsRef.current.focus({ preventScroll: true })
+      setCalculationRequested(false)
+    }
+  }, [calculationRequested, isExpanded])
 
   useEffect(() => {
     if (!hasExpansionPropMismatch || isProdBuild()) {
@@ -271,7 +281,8 @@ export default function ModelItem(props: ModelItemProps) {
     (hasLegacyDetails || hasPresentationDetails)
 
   const hasRuntimeDiscoveredPricingGap =
-    isModelPriceUnavailable(model) || calculatedPrice.kind === "unavailable"
+    isModelPriceUnavailable(model) ||
+    calculatedPrice.kind === CALCULATED_PRICE_KINDS.UNAVAILABLE
   const hasKnownNoUsableGroup =
     groupContext.accessState === MODEL_GROUP_ACCESS_STATES.KNOWN &&
     groupContext.usableGroups.length === 0
@@ -449,6 +460,15 @@ export default function ModelItem(props: ModelItemProps) {
         <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div className="min-w-0 flex-1">
             <ModelItemPricing
+              sourceLabel={sourceLabel.label}
+              onShowDetails={
+                canExpand && hasLegacyDetails
+                  ? () => {
+                      setCalculationRequested(true)
+                      if (!isExpanded) handleToggleExpand()
+                    }
+                  : undefined
+              }
               model={model}
               calculatedPrice={calculatedPrice}
               exchangeRate={exchangeRate}
@@ -471,11 +491,15 @@ export default function ModelItem(props: ModelItemProps) {
         {canExpand &&
           isExpanded &&
           source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT && (
-            <div className="border-t pt-4 dark:border-gray-700">
+            <div
+              ref={detailsRef}
+              tabIndex={-1}
+              className="border-t pt-4 dark:border-gray-700"
+            >
               <div className="space-y-4">
-                <ModelPresentationDetails presentation={model.presentation} />
                 {hasLegacyDetails && (
                   <ModelItemDetails
+                    sourceLabel={sourceLabel.label}
                     model={model}
                     calculatedPrice={calculatedPrice}
                     exchangeRate={exchangeRate}
@@ -490,6 +514,7 @@ export default function ModelItem(props: ModelItemProps) {
                     }
                   />
                 )}
+                <ModelPresentationDetails presentation={model.presentation} />
               </div>
             </div>
           )}

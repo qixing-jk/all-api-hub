@@ -1,7 +1,9 @@
+import type { Sub2ApiPricingCatalogs } from "~/services/apiAdapters/sub2api/stationPricing"
 import {
   fetchAccountTokens,
   fetchSub2ApiAvailableGroups,
   fetchSub2ApiGroupRates,
+  fetchSub2ApiPricingCatalogs,
 } from "~/services/apiService/sub2api"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import type { ApiToken } from "~/types"
@@ -10,20 +12,24 @@ interface Sub2ApiDashboardEstimateData {
   groups: unknown[]
   groupRates: Record<string, number>
   accountTokens: ApiToken[]
+  pricingCatalogs?: Sub2ApiPricingCatalogs
 }
 
 export const loadSub2ApiDashboardEstimateData = async (
   request: ApiServiceRequest,
 ): Promise<Sub2ApiDashboardEstimateData> => {
-  const [groups, groupRates, accountTokens] = await Promise.all([
-    fetchSub2ApiAvailableGroups(request),
-    fetchSub2ApiGroupRates(request),
-    fetchAccountTokens(request),
-  ])
+  const [groups, groupRates, accountTokens, pricingCatalogs] =
+    await Promise.all([
+      fetchSub2ApiAvailableGroups(request),
+      fetchSub2ApiGroupRates(request),
+      fetchAccountTokens(request),
+      fetchSub2ApiPricingCatalogs(request),
+    ])
 
   return {
     groups,
     groupRates,
     accountTokens,
+    pricingCatalogs,
   }
 }

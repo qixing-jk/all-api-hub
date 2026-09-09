@@ -1,5 +1,5 @@
-import { CircleHelp } from "lucide-react"
-import { useEffect, useState } from "react"
+import { ChevronDown, CircleHelp, SlidersHorizontal } from "lucide-react"
+import { useEffect, useState, type ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 
 import Tooltip from "~/components/Tooltip"
@@ -79,7 +79,20 @@ function trackPriceComparisonConfiguration(
   })
 }
 
+/** Preserves excluded meters as blank fields for both initial and updated weights. */
+function toDraftWeights(weights: ModelPriceComparisonWeights) {
+  return Object.fromEntries(
+    MODEL_PRICE_COMPARISON_WEIGHT_KEYS.map((key) => [
+      key,
+      weights[key] === null ? "" : String(weights[key]),
+    ]),
+  ) as Record<ModelPriceComparisonWeightKey, string>
+}
+
 interface PriceComparisonControlsProps {
+  conditionFields?: ReactNode
+  conditionSummary?: ReactNode
+  embedded?: boolean
   presetId: ModelPriceComparisonPresetId
   onPresetIdChange: (presetId: ModelPriceComparisonPresetId) => void
   weights: ModelPriceComparisonWeights
@@ -92,29 +105,17 @@ export function PriceComparisonControls({
   onPresetIdChange,
   weights,
   onWeightsChange,
+  embedded = false,
+  conditionFields,
+  conditionSummary,
 }: PriceComparisonControlsProps) {
-  const { t } = useTranslation("modelList")
-  const [draftWeights, setDraftWeights] = useState<
-    Record<ModelPriceComparisonWeightKey, string>
-  >(
-    () =>
-      Object.fromEntries(
-        MODEL_PRICE_COMPARISON_WEIGHT_KEYS.map((key) => [
-          key,
-          weights[key] === null ? "" : String(weights[key]),
-        ]),
-      ) as Record<ModelPriceComparisonWeightKey, string>,
+  const { t, i18n } = useTranslation("modelList")
+  const [draftWeights, setDraftWeights] = useState(() =>
+    toDraftWeights(weights),
   )
 
   useEffect(() => {
-    setDraftWeights(
-      Object.fromEntries(
-        MODEL_PRICE_COMPARISON_WEIGHT_KEYS.map((key) => [
-          key,
-          weights[key] === null ? "" : String(weights[key]),
-        ]),
-      ) as Record<ModelPriceComparisonWeightKey, string>,
-    )
+    setDraftWeights(toDraftWeights(weights))
   }, [weights])
 
   const presetOptions = [
@@ -237,29 +238,39 @@ export function PriceComparisonControls({
     }))
   }
 
+  const weightTotal = MODEL_PRICE_COMPARISON_WEIGHT_KEYS.reduce(
+    (total, key) => total + Math.max(0, weights[key] ?? 0),
+    0,
+  )
   return (
     <section
       aria-labelledby="model-price-comparison-title"
-      aria-describedby="model-price-comparison-description model-price-comparison-helper"
-      className="dark:border-dark-bg-tertiary dark:bg-dark-bg-primary/40 mt-4 rounded-md border border-gray-200 bg-gray-50/70 p-3"
+      aria-describedby="model-price-comparison-helper"
+      className={
+        embedded
+          ? undefined
+          : "dark:border-dark-bg-tertiary dark:bg-dark-bg-primary/40 relative mt-4 rounded-md border border-gray-200 bg-gray-50/70 p-3"
+      }
     >
-      <div className="space-y-1">
-        <h3
-          id="model-price-comparison-title"
-          className="text-foreground text-sm font-semibold"
-        >
-          {t("priceComparison.sectionTitle")}
-        </h3>
-        <p
-          id="model-price-comparison-description"
-          className="dark:text-dark-text-tertiary text-xs text-gray-500"
-        >
-          {t("priceComparison.sectionDescription")}
-        </p>
-      </div>
+      {!embedded && (
+        <div className="space-y-1 [@container(min-width:48rem)]:pr-44">
+          <h3
+            id="model-price-comparison-title"
+            className="text-foreground text-sm font-semibold"
+          >
+            {t("priceComparison.sectionTitle")}
+          </h3>
+          <p
+            id="model-price-comparison-description"
+            className="dark:text-dark-text-tertiary text-xs text-gray-500"
+          >
+            {t("priceComparison.sectionDescription")}
+          </p>
+        </div>
+      )}
 
-      <div className="mt-3 grid grid-cols-1 gap-3 [@container(min-width:32rem)]:grid-cols-2 [@container(min-width:48rem)]:grid-cols-[minmax(11rem,1.25fr)_repeat(4,minmax(6rem,1fr))]">
-        <div className="space-y-2 [@container(min-width:32rem)]:col-span-2 [@container(min-width:48rem)]:col-span-1">
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+        <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-1.5">
             <label
               htmlFor="model-price-comparison-preset"
@@ -279,45 +290,97 @@ export function PriceComparisonControls({
               </Tooltip>
             )}
           </div>
-          <SearchableSelect
-            id="model-price-comparison-preset"
-            aria-label={t("priceComparison.presetLabel")}
-            options={presetOptions}
-            value={presetId}
-            onChange={handlePresetChange}
-          />
-        </div>
-        {MODEL_PRICE_COMPARISON_WEIGHT_KEYS.map((key) => (
-          <FormField
-            key={key}
-            label={weightLabels[key]}
-            htmlFor={`model-price-comparison-weight-${key}`}
-          >
-            <Input
-              id={`model-price-comparison-weight-${key}`}
-              type="number"
-              min={0}
-              step="any"
-              inputMode="decimal"
-              placeholder={t("priceComparison.unmodeledPlaceholder")}
-              aria-describedby="model-price-comparison-helper"
-              value={draftWeights[key]}
-              onChange={(event) => handleWeightChange(key, event.target.value)}
-              onBlur={() => handleWeightBlur(key)}
-              onClear={() => handleWeightChange(key, "")}
-              clearButtonLabel={t("priceComparison.clearWeight", {
-                meter: weightLabels[key],
-              })}
+          <div className="w-52 max-w-full">
+            <SearchableSelect
+              id="model-price-comparison-preset"
+              aria-label={t("priceComparison.presetLabel")}
+              options={presetOptions}
+              value={presetId}
+              onChange={handlePresetChange}
             />
-          </FormField>
-        ))}
-        <p
-          id="model-price-comparison-helper"
-          className="dark:text-dark-text-tertiary text-xs leading-5 text-gray-500 [@container(min-width:32rem)]:col-span-2 [@container(min-width:48rem)]:col-span-5"
-        >
-          {t("priceComparison.helperNote")}
-        </p>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <dl className="flex flex-wrap gap-x-6 gap-y-2">
+            {MODEL_PRICE_COMPARISON_WEIGHT_KEYS.filter(
+              (key) => (weights[key] ?? 0) > 0,
+            ).map((key) => (
+              <div key={key} className="flex items-baseline gap-1">
+                <dt className="text-muted-foreground text-xs">
+                  {weightLabels[key]}
+                </dt>
+                <dd className="text-foreground text-sm font-medium tabular-nums">
+                  {new Intl.NumberFormat(i18n?.language ?? "en", {
+                    style: "percent",
+                    maximumFractionDigits: 0,
+                  }).format((weights[key] ?? 0) / weightTotal)}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </div>
       </div>
+      {conditionSummary && <div className="mt-2">{conditionSummary}</div>}
+      <details className="group mt-2">
+        <summary className="bg-background text-foreground hover:bg-muted/70 inline-flex h-9 cursor-pointer list-none items-center gap-1.5 rounded-md border px-3 text-sm font-medium shadow-sm transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 focus-visible:outline-none [&::-webkit-details-marker]:hidden [@container(min-width:48rem)]:absolute [@container(min-width:48rem)]:top-3 [@container(min-width:48rem)]:right-3">
+          <SlidersHorizontal
+            className="text-muted-foreground size-3.5"
+            aria-hidden="true"
+          />
+          <span>{t("priceComparison.customize")}</span>
+          <ChevronDown
+            className="text-muted-foreground size-3.5 transition-transform group-open:rotate-180"
+            aria-hidden="true"
+          />
+        </summary>
+        <div className="mt-3 grid items-start gap-5 border-t pt-3 [@container(min-width:48rem)]:grid-cols-2">
+          <div className="min-w-0 space-y-3">
+            <div className="space-y-0.5">
+              <h4 className="text-sm font-medium">
+                {t("priceComparison.weightSectionTitle")}
+              </h4>
+              <p className="text-muted-foreground text-xs">
+                {t("priceComparison.weightEffect")}
+              </p>
+            </div>
+            <div className="grid max-w-md grid-cols-2 gap-3">
+              {MODEL_PRICE_COMPARISON_WEIGHT_KEYS.map((key) => (
+                <FormField
+                  key={key}
+                  label={weightLabels[key]}
+                  htmlFor={`model-price-comparison-weight-${key}`}
+                >
+                  <Input
+                    id={`model-price-comparison-weight-${key}`}
+                    type="number"
+                    min={0}
+                    step="any"
+                    inputMode="decimal"
+                    placeholder={t("priceComparison.unmodeledPlaceholder")}
+                    aria-describedby="model-price-comparison-helper"
+                    value={draftWeights[key]}
+                    onChange={(event) =>
+                      handleWeightChange(key, event.target.value)
+                    }
+                    onBlur={() => handleWeightBlur(key)}
+                    onClear={() => handleWeightChange(key, "")}
+                    clearButtonLabel={t("priceComparison.clearWeight", {
+                      meter: weightLabels[key],
+                    })}
+                  />
+                </FormField>
+              ))}
+              <p
+                id="model-price-comparison-helper"
+                className="dark:text-dark-text-tertiary col-span-2 text-xs leading-5 text-gray-500"
+              >
+                {t("priceComparison.helperNote")}
+              </p>
+            </div>
+          </div>
+          {conditionFields}
+        </div>
+      </details>
     </section>
   )
 }

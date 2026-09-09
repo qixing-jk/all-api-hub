@@ -1,0 +1,50 @@
+[
+  {
+    "note": "",
+    "legacy": "",
+    "model": "cohere-rerank-v4.0-fast",
+    "billing": "{\n  \"model_name\": \"cohere-rerank-v4.0-fast\",\n  \"default_tier\": \"tier1\",\n  \"enabled_billing_items\": [\n    \"prompt_tokens\",\n    \"completion_tokens\",\n    \"search_units\"\n  ],\n  \"per_unit_price_config\": {\n    \"search_units_price\": 0.002\n  },\n  \"token_based_tier_configs\": {\n    \"tier1\": {\n      \"model_ratio\": 0,\n      \"tier_condition\": {\n        \"max_tokens\": -1,\n        \"min_tokens\": 0\n      },\n      \"prompt_tokens_ratio\": 1.0,\n      \"completion_tokens_ratio\": 0.0\n    }\n}\n}"
+  },
+  {
+    "note": "Image input: 00286 per image.\nImage output: $0.0471 per image when the output image is less than 2.36 million pixels; $0.0942 per image when the output image is greater than 2.36 million pixels.",
+    "legacy": "",
+    "model": "doubao-seedream-5.0-pro",
+    "billing": "{\n  \"model_name\": \"doubao-seedream-5-0-pro-260628\",\n  \"enabled_billing_items\": [\"image_generation\", \"image_input\"],\n  \"metered_price_config\": {\n    \"image_generation\": { \"unit\":\"image\", \"price_rules\":[\n      {\"match\":{\"megapixels\":{\"lte\":2.36}}, \"unit_price\":0.0471},\n      {\"match\":{\"megapixels\":{\"gt\":2.36}},  \"unit_price\":0.0942}\n    ], \"fallback_unit_price\":0.0471 },\n    \"image_input\": { \"unit\":\"image\", \"fallback_unit_price\":0.00286 }\n  }\n}"
+  },
+  {
+    "note": "720p: $0.1395 per second; 1080p: $0.2479 per second.",
+    "legacy": "{\n  \"generate\": {\n    \"standard\": {\n      \"standard\": 0.1395,\n      \"720x1280\":0.1395,\n      \"1280x720\":0.1395,\n      \"960x960\":0.1395,\n      \"832x1088\":0.1395,\n      \"1088x832\":0.1395,\n      \"1920x1080\":0.2479,\n      \"1080x1920\":0.2479,\n      \"1440x1440\":0.2479,\n      \"1632x1248\":0.2479,\n      \"1248x1632\":0.2479\n    }\n  }\n}",
+    "model": "happyhorse-1.0-video-edit",
+    "billing": ""
+  },
+  {
+    "note": "720p: $0.1395 per second; 1080p: $0.2479 per second.",
+    "legacy": "{\n  \"generate\": {\n    \"standard\": {\n      \"standard\": 0.1395,\n      \"720x1280\":0.1395,\n      \"1280x720\":0.1395,\n      \"960x960\":0.1395,\n      \"832x1088\":0.1395,\n      \"1088x832\":0.1395,\n      \"1920x1080\":0.1691,\n      \"1080x1920\":0.1691,\n      \"1440x1440\":0.1691,\n      \"1632x1248\":0.1691,\n      \"1248x1632\":0.1691\n    }\n  }\n}",
+    "model": "happyhorse-1.1-t2v",
+    "billing": ""
+  },
+  {
+    "note": "Video generation price: 2k video $0.12397/s. 768P video $0.07744/s.\nInput material price: 2k video $0.12397/s. 768P video $0.07744/s. For images, after more than five, each additional image $0.0282.",
+    "legacy": "",
+    "model": "minimax-h3",
+    "billing": "{\"model_name\":\"MiniMax-H3\",\"enabled_billing_items\":[\"video_generation\",\"image_input\"],\"metered_price_config\":{\"video_generation\":{\"unit\":\"second\",\"price_rules\":[{\"match\":{\"quality\":\"2K\"},\"unit_price\":0.12397},{\"match\":{\"quality\":\"768P\"},\"unit_price\":0.07746}],\"fallback_unit_price\":0.12397},\"image_input\":{\"unit\":\"image\",\"free_quantity\":5,\"fallback_unit_price\":0.0282}}}"
+  },
+  {
+    "note": "Video generation price: 480p video $0.05112/s. 768P video $0.07744/s.\n",
+    "legacy": "",
+    "model": "minimax-h3-max",
+    "billing": "{\"model_name\":\"MiniMax-H3\",\"enabled_billing_items\":[\"video_generation\",\"image_input\"],\"metered_price_config\":{\"video_generation\":{\"unit\":\"second\",\"price_rules\":[{\"match\":{\"quality\":\"480P\"},\"unit_price\":0.05112},{\"match\":{\"quality\":\"768P\"},\"unit_price\":0.07744}],\"fallback_unit_price\":0.07744}}}"
+  },
+  {
+    "note": "$0.141 / 10K characters",
+    "legacy": "",
+    "model": "qwen-audio-3.0-tts-flash",
+    "billing": ""
+  },
+  {
+    "note": "480p: 0.04225; 720p: price per second $0.0845; 1080p: price per second $0.169.",
+    "legacy": "{\n  \"generate\": {\n    \"standard\": {\n      \"standard\":0.0845,\n      \"480p\":0.04225,\n      \"720p\":0.0845,\n      \"1080p\":0.169\n    }\n  }\n}",
+    "model": "wan3.0-video",
+    "billing": ""
+  }
+]

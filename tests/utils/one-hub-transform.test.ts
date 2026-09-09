@@ -4,10 +4,187 @@ import {
   transformModelPricing,
   transformUserGroup,
 } from "~/services/apiService/oneHub/transform"
+import {
+  PRICING_PURPOSES,
+  PRICING_RESPONSE_FORMATS,
+} from "~/services/modelPricing/pricingConstants"
+import { quoteCanonicalModelPrice } from "~/services/modelPricing/quoteCanonicalModelPrice"
+import { quoteModelPrice } from "~/services/modelPricing/quoteModelPrice"
 import { MODEL_VENDOR_EVIDENCE_KINDS } from "~/services/models/modelDescriptor"
 
 describe("OneHub data transformers", () => {
   describe("transformModelPricing", () => {
+    it("quotes independent DoneHub output prices when input is free and normalizes nonpositive tier multipliers", () => {
+      const price = {
+        model: "example",
+        type: "tokens" as const,
+        input: 0,
+        output: 25,
+        channel_type: 0,
+        locked: false,
+        long_context: { threshold: 10, input_ratio: 0, output_ratio: -1 },
+      }
+      const [done] = transformModelPricing(
+        { example: { groups: [], owned_by: "", price } },
+        {},
+        true,
+      ).data
+      const [one] = transformModelPricing({
+        example: { groups: [], owned_by: "", price },
+      }).data
+      expect(one.pricingPlan).toBeUndefined()
+      expect(
+        quoteCanonicalModelPrice(
+          done,
+          {
+            purpose: PRICING_PURPOSES.TOKEN_INDEX,
+            inputTokens: 11,
+            usage: { input: 1, output: 1 },
+          },
+          { groupMultiplier: 1 },
+        ),
+      ).toMatchObject({ status: "complete", amount: 25 })
+    })
+
+    it("does not invent a common cache price when OpenAI and Anthropic cache meters disagree", () => {
+      const [model] = transformModelPricing(
+        {
+          example: {
+            groups: [],
+            owned_by: "",
+            price: {
+              model: "example",
+              type: "tokens",
+              input: 5,
+              output: 25,
+              channel_type: 0,
+              locked: false,
+              extra_ratios: { cached_tokens: 0.5, cached_read_tokens: 0.1 },
+            },
+          },
+        },
+        {},
+        true,
+      ).data
+      const quote = quoteCanonicalModelPrice(
+        model,
+        { purpose: PRICING_PURPOSES.TOKEN_INDEX, usage: { cacheRead: 1 } },
+        { groupMultiplier: 1 },
+      )
+      expect(quote.status).toBe("unavailable")
+      expect(quote.amount).toBeNull()
+      expect(
+        quoteCanonicalModelPrice(
+          model,
+          {
+            purpose: PRICING_PURPOSES.TOKEN_INDEX,
+            responseFormat: PRICING_RESPONSE_FORMATS.OPENAI,
+            usage: { cacheRead: 1 },
+          },
+          { groupMultiplier: 0.5 },
+        ).amount,
+      ).toBe(2.5)
+      expect(
+        quoteCanonicalModelPrice(
+          model,
+          {
+            purpose: PRICING_PURPOSES.TOKEN_INDEX,
+            responseFormat: PRICING_RESPONSE_FORMATS.ANTHROPIC,
+            usage: { cacheRead: 1 },
+          },
+          { groupMultiplier: 0.5 },
+        ).amount,
+      ).toBe(0.5)
+    })
+
+    it("keeps DoneHub per-request charges independent of text lengths", () => {
+      const [model] = transformModelPricing(
+        {
+          example: {
+            groups: [],
+            owned_by: "",
+            price: {
+              model: "example",
+              type: "times",
+              input: 20,
+              output: 20,
+              channel_type: 0,
+              locked: false,
+              long_context: { threshold: 1, input_ratio: 2, output_ratio: 2 },
+            },
+          },
+        },
+        {},
+        true,
+      ).data
+      expect(
+        quoteCanonicalModelPrice(
+          model,
+          {
+            purpose: PRICING_PURPOSES.REQUEST,
+            inputTokens: 300000,
+            outputTokens: 10000,
+            usage: { input: 300000, output: 10000, request: 1 },
+          },
+          { groupMultiplier: 0.5 },
+        ),
+      ).toMatchObject({ status: "complete", amount: 0.02 })
+    })
+
+    it("quotes DoneHub whole-request tiers using raw input including cache and one group multiplier", () => {
+      const [model] = transformModelPricing(
+        {
+          example: {
+            groups: ["vip"],
+            owned_by: "",
+            price: {
+              model: "example",
+              type: "tokens",
+              channel_type: 0,
+              locked: false,
+              input: 5,
+              output: 25,
+              extra_ratios: {
+                cached_tokens: 0.1,
+                cached_read_tokens: 0.1,
+                cached_write_tokens: 1.25,
+                cached_write_1h_tokens: 2,
+              },
+              long_context: {
+                threshold: 272000,
+                input_ratio: 2,
+                output_ratio: 1.5,
+              },
+            },
+          },
+        },
+        {},
+        true,
+      ).data
+      expect(model.pricingPlan).toBeDefined()
+      const quote = (inputTokens: number) =>
+        quoteModelPrice(
+          model.pricingPlan!,
+          {
+            purpose: PRICING_PURPOSES.REQUEST,
+            inputTokens,
+            outputTokens: 20000,
+            usage: {
+              input: inputTokens - 100000,
+              cacheRead: 100000,
+              cacheWrite: 0,
+              cacheWrite1h: 0,
+              output: 20000,
+              request: 1,
+            },
+          },
+          { groupMultiplier: 0.5 },
+        )
+      expect(quote(272000).amount).toBeCloseTo(1.41)
+      expect(quote(300000)).toMatchObject({ status: "complete", amount: 2.85 })
+      expect(quote(272001).matchedRules).toHaveLength(1)
+    })
+
     it("should convert OneHubModelPricing into PricingResponse with default group when no groups", () => {
       const input = {
         "gpt-4": {

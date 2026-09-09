@@ -3,10 +3,26 @@ import {
   MODEL_PRICE_PRECISION_KINDS,
   MODEL_PRICE_SOURCE_KINDS,
   MODEL_UNAVAILABLE_PRICE_REASONS,
-  type ModelTokenPriceTier,
   type PricingResponse,
 } from "~/services/modelList/pricingModel"
+import {
+  PRICE_RATE_UNITS,
+  PRICING_CONDITION_KINDS,
+  PRICING_GROUP_MULTIPLIERS,
+  PRICING_ISSUE_CODES,
+  PRICING_METERS,
+  PRICING_RANGE_AXES,
+  PRICING_SOURCE_KINDS,
+  TOKENS_PER_MILLION,
+} from "~/services/modelPricing/pricingConstants"
 import { isRecord } from "~/utils/core/object"
+
+interface ModelTokenPriceTier {
+  min_context_tokens: number
+  max_context_tokens?: number
+  model_ratio: number
+  completion_ratio: number
+}
 
 const isRatio = (value: unknown): value is number =>
   typeof value === "number" && Number.isFinite(value) && value >= 0
@@ -60,6 +76,7 @@ function normalizeContextTiers(
       !Number.isSafeInteger(condition.MinTokens) ||
       (condition.MinTokens as number) < 0 ||
       !Number.isSafeInteger(condition.MaxTokens) ||
+      condition.MaxTokens === Number.MAX_SAFE_INTEGER ||
       (condition.MaxTokens !== -1 &&
         (condition.MaxTokens as number) < (condition.MinTokens as number)) ||
       !isRatio(condition.InputRatio) ||
@@ -135,13 +152,18 @@ export function normalizeApiYiModelPricingResponse(
       ) {
         return model
       }
-      const tiers = normalizeContextTiers(
-        findContextPricing(conditions, model.model_name),
-        cnyPerUsd,
-      )
+      const nativePlan = findContextPricing(conditions, model.model_name)
+      const tiers = normalizeContextTiers(nativePlan, cnyPerUsd)
       if (!tiers) {
         return {
           ...model,
+          pricingPlan: {
+            rates: {},
+            rules: [],
+            source: { kind: PRICING_SOURCE_KINDS.ACCOUNT },
+            groupMultiplier: PRICING_GROUP_MULTIPLIERS.PENDING,
+            issues: [{ code: PRICING_ISSUE_CODES.UNSUPPORTED_RULE }],
+          },
           price_metadata: {
             source: MODEL_PRICE_SOURCE_KINDS.CHANNEL_PRICING,
             precision: MODEL_PRICE_PRECISION_KINDS.UNAVAILABLE,
@@ -155,7 +177,70 @@ export function normalizeApiYiModelPricingResponse(
         ...model,
         model_ratio: tiers[0].model_ratio,
         completion_ratio: tiers[0].completion_ratio,
-        token_price_tiers: tiers,
+        pricingPlan: {
+          rates: {
+            request: {
+              amount: 0,
+              currency: "USD",
+              unit: PRICE_RATE_UNITS.REQUEST,
+              per: 1,
+            },
+          },
+          groupMultiplier: PRICING_GROUP_MULTIPLIERS.PENDING,
+          source: {
+            kind: PRICING_SOURCE_KINDS.ACCOUNT,
+            capturedAt: new Date().toISOString(),
+            url: "https://api.apiyi.com/account/pricing",
+            ...(isRecord(nativePlan) && nativePlan.Currency === "CNY"
+              ? { conversion: { originalCurrency: "CNY" as const, cnyPerUsd } }
+              : {}),
+          },
+          requiresRuleMatch: true,
+          issues: [
+            {
+              code: PRICING_ISSUE_CODES.UNVERIFIED_AXIS,
+              meters: [
+                PRICING_METERS.CACHE_READ,
+                PRICING_METERS.CACHE_WRITE,
+                PRICING_METERS.CACHE_WRITE1H,
+              ],
+            },
+          ],
+          rules: tiers.map((tier, index) => {
+            const input = tier.model_ratio * 2
+            const rate = (amount: number) => ({
+              amount,
+              currency: "USD" as const,
+              unit: PRICE_RATE_UNITS.TOKEN,
+              per: TOKENS_PER_MILLION,
+            })
+            return {
+              id: `context-${index}`,
+              // APIyi /pricing v29.8.9 shows input ranges but not cache inclusion.
+              // Both candidate input bases coincide for explicitly uncached requests.
+              conditions: [
+                {
+                  kind: PRICING_CONDITION_KINDS.RANGE,
+                  axis: PRICING_RANGE_AXES.INPUT_TOKENS_CACHE_BASIS_UNKNOWN,
+                  min: tier.min_context_tokens,
+                  ...(tier.max_context_tokens === undefined
+                    ? {}
+                    : { maxExclusive: tier.max_context_tokens + 1 }),
+                },
+              ],
+              rates: {
+                input: rate(input),
+                output: rate(input * tier.completion_ratio),
+                ...(isRatio(native.cache_ratio)
+                  ? { cacheRead: rate(input * native.cache_ratio) }
+                  : {}),
+                ...(isRatio(native.create_cache_ratio)
+                  ? { cacheWrite: rate(input * native.create_cache_ratio) }
+                  : {}),
+              },
+            }
+          }),
+        },
         token_price_ratios_to_input: {
           ...(isRatio(native.cache_ratio)
             ? { cache_read: native.cache_ratio }

@@ -23,7 +23,10 @@ import {
   hasUsableAccountRuntimeKeySecret,
   type AccountRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
-import { getAccountSiteModelListProfile } from "~/services/accounts/accountSiteProfile"
+import {
+  ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES,
+  getAccountSiteModelListProfile,
+} from "~/services/accounts/accountSiteProfile"
 import {
   canManageDisplayAccountTokens,
   fetchDisplayAccountRuntimeKeys,
@@ -1573,6 +1576,9 @@ function useSingleAccountModelData(params: {
         sourceId: readiness.providerModelCatalog.source.id,
       })
     } else {
+      if (readiness.route === MODEL_LIST_ACCOUNT_SOURCE_ROUTES.DirectPricing) {
+        readiness.modelPricing.invalidateCache?.()
+      }
       await modelPricingCache.invalidate(
         createModelPricingCacheKey(currentAccount),
       )
@@ -1661,7 +1667,7 @@ function useSingleAccountModelData(params: {
       isActive: isFallbackCatalogActive,
       statusScope:
         getAccountSiteModelListProfile(currentAccount.siteType).statusScope ===
-        "token"
+        ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Token
           ? "runtime-key"
           : "account",
       runtimeKeys: scopedFallbackRuntimeKeys,
@@ -1996,6 +2002,21 @@ function useAllAccountsModelData(
   })
 
   const loadPricingData = useCallback(async () => {
+    // Invalidate shared provider snapshots once, before any account starts a
+    // replacement fetch, so one refresh preserves cross-account coalescing.
+    const invalidated = new Set<() => void>()
+    for (const target of loadTargets) {
+      if (
+        target.readiness.route ===
+        MODEL_LIST_ACCOUNT_SOURCE_ROUTES.DirectPricing
+      ) {
+        const invalidate = target.readiness.modelPricing.invalidateCache
+        if (invalidate && !invalidated.has(invalidate)) {
+          invalidated.add(invalidate)
+          invalidate.call(target.readiness.modelPricing)
+        }
+      }
+    }
     await Promise.all(
       loadTargets.map(async (target, index) => {
         if (
