@@ -1,6 +1,5 @@
 import userEvent from "@testing-library/user-event"
 import type { ReactNode } from "react"
-import toast from "react-hot-toast"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { DIALOG_MODES } from "~/constants/dialogModes"
@@ -15,6 +14,7 @@ import { SPONSOR_CATALOG_SCHEMA_VERSION } from "~/features/AccountManagement/spo
 import type { SponsorRecommendation } from "~/features/AccountManagement/sponsors/types"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
+import toast from "~/lib/notify"
 import enAccountDialog from "~/locales/en/accountDialog.json"
 import { DEFAULT_AUTO_PROVISION_TOKEN_NAME } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
 import { ACCOUNT_POST_SAVE_WORKFLOW_STEPS } from "~/services/accounts/accountPostSaveWorkflow"
@@ -304,8 +304,8 @@ vi.mock(
   },
 )
 
-vi.mock("react-hot-toast", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("react-hot-toast")>()
+vi.mock("~/lib/notify", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/lib/notify")>()
 
   return {
     ...actual,

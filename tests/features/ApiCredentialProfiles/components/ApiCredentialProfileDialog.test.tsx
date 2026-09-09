@@ -11,7 +11,7 @@ import {
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     error: vi.fn(),
     success: vi.fn(),

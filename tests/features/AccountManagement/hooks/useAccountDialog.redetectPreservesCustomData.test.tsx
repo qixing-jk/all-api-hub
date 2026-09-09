@@ -1,6 +1,5 @@
 import { http, HttpResponse } from "msw"
 import type { ReactNode } from "react"
-import toast from "react-hot-toast"
 import { beforeEach, describe, expect, it, onTestFinished, vi } from "vitest"
 
 import { COOKIE_IMPORT_FAILURE_REASONS } from "~/constants/cookieImport"
@@ -10,6 +9,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { getCheckInRedetectionFeedbackPresentation } from "~/features/AccountManagement/components/AccountDialog/checkInPresentation"
 import { useAccountDialog } from "~/features/AccountManagement/components/AccountDialog/hooks/useAccountDialog"
 import { BOOKMARK_IMPORT_ADD_ACCOUNT_PREFILL_SOURCE } from "~/features/AccountManagement/sponsors/types"
+import toast from "~/lib/notify"
 import { AutoDetectErrorType } from "~/services/accounts/utils/autoDetectUtils"
 import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import type { discoverCheckInMethods } from "~/services/checkin/autoCheckin/discovery"
@@ -42,7 +42,7 @@ const {
   mockOpenDefaultTokenQuickCreateDialogForAccount: vi.fn(),
 }))
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: Object.assign(vi.fn(), {
     success: vi.fn(),
     error: vi.fn(),

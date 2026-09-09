@@ -216,7 +216,7 @@ vi.mock("~/services/productAnalytics/actions", () => ({
     mockTrackProductAnalyticsActionCompleted,
 }))
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     success: mockToastSuccess,
   },

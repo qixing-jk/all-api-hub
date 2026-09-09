@@ -9,7 +9,6 @@ import {
   within,
 } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import toast from "react-hot-toast/headless"
 import { describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
@@ -23,6 +22,7 @@ import {
   getWebAiApiCheckProbeTestId,
   WEB_AI_API_CHECK_TEST_IDS,
 } from "~/entrypoints/content/webAiApiCheck/testIds"
+import toast from "~/lib/notify/content"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,

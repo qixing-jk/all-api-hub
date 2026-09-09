@@ -1,9 +1,9 @@
-import toast from "react-hot-toast"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { createEmptyAccountDialogDraft } from "~/features/AccountManagement/components/AccountDialog/models"
 import { useAccountDialogRecoveryReceiver } from "~/features/AccountManagement/hooks/useAccountDialogRecoveryReceiver"
+import toast from "~/lib/notify"
 import { getActiveTab } from "~/utils/browser/browserApi"
 import { createDeferred } from "~~/tests/test-utils/deferred"
 import { testI18n } from "~~/tests/test-utils/i18n"

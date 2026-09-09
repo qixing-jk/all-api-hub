@@ -44,7 +44,7 @@ vi.mock("~/utils/browser/tempWindowRequestSource", () => ({
   getCurrentTempWindowRequestSource: getCurrentTempWindowRequestSourceMock,
 }))
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     loading: vi.fn(),
     dismiss: vi.fn(),
@@ -110,7 +110,7 @@ describe("AutoCheckinUiOpenPretrigger", () => {
   })
 
   it("encodes the popup surface in the pretrigger intent before showing completion", async () => {
-    const toast = (await import("react-hot-toast")).default
+    const toast = (await import("~/lib/notify")).default
 
     /**
      * The UI-open pretrigger hook reads from UserPreferencesContext and will not

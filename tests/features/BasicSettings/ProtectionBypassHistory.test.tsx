@@ -1,11 +1,11 @@
 import { act, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import toast from "react-hot-toast"
 import { I18nextProvider } from "react-i18next"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import ProtectionBypassHistory from "~/features/BasicSettings/components/tabs/Refresh/ProtectionBypassHistory"
 import { SHIELD_SETTINGS_TARGET_IDS } from "~/features/BasicSettings/components/tabs/Refresh/searchTargets"
+import toast from "~/lib/notify"
 import enShieldBypass from "~/locales/en/shieldBypass.json"
 import zhCnShieldBypass from "~/locales/zh-CN/shieldBypass.json"
 import { createAutomaticProtectionBypassExecution } from "~/services/protectionBypass/contracts"

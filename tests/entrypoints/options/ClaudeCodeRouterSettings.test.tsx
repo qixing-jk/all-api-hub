@@ -37,7 +37,7 @@ vi.mock("~/utils/feedback/preferenceFeedback", () => ({
   showUpdateToast: showUpdateToastMock,
 }))
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     error: (...args: unknown[]) => toastErrorMock(...args),
   },

@@ -1,5 +1,4 @@
 import type { ReactNode } from "react"
-import toast from "react-hot-toast"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import ChannelFilterDialog from "~/features/ManagedSiteChannels/components/ChannelFilterDialog"
@@ -7,6 +6,7 @@ import {
   fetchChannelFilters,
   saveChannelFilters,
 } from "~/features/ManagedSiteChannels/utils/channelFilters"
+import toast from "~/lib/notify"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_EDITOR_MODES,
@@ -32,7 +32,7 @@ const {
   mockCompleteProductAnalyticsAction: vi.fn(),
 }))
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     error: vi.fn(),
     success: vi.fn(),

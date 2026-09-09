@@ -212,7 +212,7 @@ vi.mock("~/utils/core/logger", () => ({
   createLogger: () => ({ error: loggerErrorMock }),
 }))
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     dismiss: vi.fn(),
     error: vi.fn(),

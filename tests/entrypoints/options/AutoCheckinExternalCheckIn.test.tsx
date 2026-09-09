@@ -29,7 +29,7 @@ const { toast, tMock } = vi.hoisted(() => ({
   tMock: vi.fn(),
 }))
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: toast,
 }))
 

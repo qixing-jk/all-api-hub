@@ -1,7 +1,6 @@
 import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import type React from "react"
-import toast from "react-hot-toast"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import ModelItem from "~/features/ModelList/components/ModelItem"
@@ -11,6 +10,7 @@ import {
   createPersonalizedCatalogModelListSourceIdentity,
   createProviderCatalogModelListSourceIdentity,
 } from "~/features/ModelList/modelManagementSources"
+import toast from "~/lib/notify"
 import { SITE_TYPES } from "~/services/accountSiteDefinitions/identifiers"
 import type { ModelPricing } from "~/services/modelList/pricingModel"
 import {
@@ -35,7 +35,7 @@ const { trackProductAnalyticsActionStartedMock } = vi.hoisted(() => ({
   trackProductAnalyticsActionStartedMock: vi.fn(),
 }))
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     success: vi.fn(),
     error: vi.fn(),

@@ -1,5 +1,4 @@
 import userEvent from "@testing-library/user-event"
-import toast from "react-hot-toast"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
@@ -13,6 +12,7 @@ import {
   DialogStateProvider,
   useDialogStateContext,
 } from "~/features/AccountManagement/hooks/DialogStateContext"
+import toast from "~/lib/notify"
 import type { DisplaySiteData } from "~/types"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 import { testI18n } from "~~/tests/test-utils/i18n"

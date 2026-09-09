@@ -42,7 +42,7 @@ vi.mock("~/utils/feedback/preferenceFeedback", () => ({
   showUpdateToast: showUpdateToastMock,
 }))
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     error: vi.fn(),
     success: vi.fn(),
@@ -171,7 +171,7 @@ describe("ClaudeCodeHubSettings", () => {
   })
 
   it("shows a missing-fields error when validation inputs are blank after trimming", async () => {
-    const toast = await import("react-hot-toast")
+    const toast = await import("~/lib/notify")
 
     vi.mocked(useUserPreferencesContext).mockReturnValue({
       preferences: { lastUpdated: 3 },
@@ -225,7 +225,7 @@ describe("ClaudeCodeHubSettings", () => {
   })
 
   it("exposes only validation as busy, suppresses duplicate clicks, and restores on success", async () => {
-    const toast = await import("react-hot-toast")
+    const toast = await import("~/lib/notify")
     const deferredValidation = createDeferred<{ ok: boolean }>()
     const updateClaudeCodeHubConfig = vi
       .fn()
@@ -319,7 +319,7 @@ describe("ClaudeCodeHubSettings", () => {
   })
 
   it("shows a validation failure toast when Claude Code Hub rejects the config", async () => {
-    const toast = await import("react-hot-toast")
+    const toast = await import("~/lib/notify")
 
     mockedValidateClaudeCodeHubConfig.mockRejectedValueOnce(
       new Error("request failed"),
@@ -358,7 +358,7 @@ describe("ClaudeCodeHubSettings", () => {
   })
 
   it("redacts the draft admin token at the validation toast boundary", async () => {
-    const toast = await import("react-hot-toast")
+    const toast = await import("~/lib/notify")
     mockedValidateClaudeCodeHubConfig.mockRejectedValueOnce(
       new Error("token admin-token rejected"),
     )
@@ -391,7 +391,7 @@ describe("ClaudeCodeHubSettings", () => {
   })
 
   it("shows a fixed validation error when sanitization yields no message", async () => {
-    const toast = await import("react-hot-toast")
+    const toast = await import("~/lib/notify")
     const i18n = await createResourceTestI18n({
       en: {
         settings: {

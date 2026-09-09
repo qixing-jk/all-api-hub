@@ -1,10 +1,10 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
-import toast from "react-hot-toast"
 import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import RefreshSettings from "~/features/BasicSettings/components/tabs/Refresh/RefreshSettings"
+import toast from "~/lib/notify"
 import {
   ACCOUNT_AUTO_REFRESH_INTERVAL_MIN_SECONDS,
   ACCOUNT_AUTO_REFRESH_MIN_INTERVAL_MIN_SECONDS,
@@ -20,7 +20,7 @@ vi.mock("~/utils/feedback/preferenceFeedback", () => ({
   showUpdateToast: vi.fn(),
 }))
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: { error: vi.fn() },
 }))
 

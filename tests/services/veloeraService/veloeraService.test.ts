@@ -17,7 +17,7 @@ const mockToast = {
   error: vi.fn(),
 }
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: mockToast,
 }))
 

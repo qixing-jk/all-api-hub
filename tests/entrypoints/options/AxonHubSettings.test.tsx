@@ -1,8 +1,8 @@
 import { useState, type ReactNode } from "react"
-import toast from "react-hot-toast"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import AxonHubSettings from "~/features/BasicSettings/components/tabs/ManagedSite/AxonHubSettings"
+import toast from "~/lib/notify"
 import { signIn } from "~/services/apiService/axonHub"
 import type { PreferenceWriteResult } from "~/services/preferences/userPreferences"
 import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
@@ -66,7 +66,7 @@ vi.mock("~/utils/feedback/preferenceFeedback", () => ({
   showUpdateToast: showUpdateToastMock,
 }))
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     error: vi.fn(),
     success: vi.fn(),

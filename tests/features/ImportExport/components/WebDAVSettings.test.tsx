@@ -7,7 +7,6 @@ import {
 } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import type { ReactNode } from "react"
-import toast from "react-hot-toast"
 import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -16,6 +15,7 @@ import { UserPreferencesProvider } from "~/contexts/UserPreferencesContext"
 import WebDAVAutoSyncSettings from "~/features/ImportExport/components/WebDAVAutoSyncSettings"
 import WebDAVSettings from "~/features/ImportExport/components/WebDAVSettings"
 import { WEBDAV_TARGET_IDS } from "~/features/ImportExport/searchTargets"
+import toast from "~/lib/notify"
 import enImportExport from "~/locales/en/importExport.json"
 import es419ImportExport from "~/locales/es-419/importExport.json"
 import jaImportExport from "~/locales/ja/importExport.json"
@@ -128,7 +128,7 @@ const {
   },
 }))
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     success: vi.fn(),
     error: vi.fn(),

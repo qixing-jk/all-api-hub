@@ -20,7 +20,7 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/utils/browser/browserApi")>()),
   createTab: vi.fn(),
 }))
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: { error: vi.fn(), success: vi.fn() },
 }))
 
@@ -135,7 +135,7 @@ describe("Sub2ApiSettings", () => {
   })
 
   it("validates the trimmed URL and Admin API Key before saving them", async () => {
-    const toast = await import("react-hot-toast")
+    const toast = await import("~/lib/notify")
     const context = arrange()
     vi.mocked(validateSub2ApiManagedSiteConfig).mockResolvedValue()
 
@@ -211,7 +211,7 @@ describe("Sub2ApiSettings", () => {
   })
 
   it("reports save conflicts and validation errors", async () => {
-    const toast = await import("react-hot-toast")
+    const toast = await import("~/lib/notify")
     const failedWrite = {
       ok: false,
       reason: { type: "stale" as const, currentLastUpdated: 9 },
@@ -252,7 +252,7 @@ describe("Sub2ApiSettings", () => {
   })
 
   it("does not validate blank credentials", async () => {
-    const toast = await import("react-hot-toast")
+    const toast = await import("~/lib/notify")
     arrange({
       sub2ApiManagedSiteBaseUrl: "",
       sub2ApiManagedSiteAdminToken: "",

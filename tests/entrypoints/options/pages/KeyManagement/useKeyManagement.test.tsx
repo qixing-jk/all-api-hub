@@ -1,6 +1,5 @@
 import { act, renderHook, waitFor } from "@testing-library/react"
 import type { ReactNode } from "react"
-import toast from "react-hot-toast"
 import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -10,6 +9,7 @@ import { useKeyManagement } from "~/features/KeyManagement/hooks/useKeyManagemen
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import { buildTokenIdentityKey } from "~/features/KeyManagement/utils"
 import { useAccountData } from "~/hooks/useAccountData"
+import toast from "~/lib/notify"
 import enKeyManagement from "~/locales/en/keyManagement.json"
 import zhKeyManagement from "~/locales/zh-CN/keyManagement.json"
 import {
@@ -122,7 +122,7 @@ vi.mock("~/services/productAnalytics/actions", async (importOriginal) => {
   }
 })
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     success: vi.fn(),
     error: vi.fn(),

@@ -1,6 +1,5 @@
 import { act, renderHook, waitFor } from "@testing-library/react"
 import type { ReactNode } from "react"
-import toast from "react-hot-toast"
 import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -9,6 +8,7 @@ import {
   NEW_API_MANAGED_VERIFICATION_STEPS,
   useNewApiManagedVerification,
 } from "~/features/ManagedSiteVerification/useNewApiManagedVerification"
+import toast from "~/lib/notify"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { NEW_API_MANAGED_SESSION_STATUSES } from "~/services/managedSites/providers/newApiSession"
 import { createDeferred } from "~~/tests/test-utils/deferred"
@@ -30,7 +30,7 @@ const {
   loggerWarnMock: vi.fn(),
 }))
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     success: vi.fn(),
     error: vi.fn(),

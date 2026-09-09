@@ -37,7 +37,7 @@ vi.mock("~/services/integrations/kiloCodeExportPolicy", () => ({
     mockBuildKiloCodeExportOutput(...args),
 }))
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     success: (...args: any[]) => toastSuccessMock(...args),
     error: (...args: any[]) => toastErrorMock(...args),

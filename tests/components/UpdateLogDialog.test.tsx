@@ -27,7 +27,7 @@ const createDeferred = <T,>() => {
   return { promise, resolve }
 }
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     error: toastErrorMock,
     success: vi.fn(),

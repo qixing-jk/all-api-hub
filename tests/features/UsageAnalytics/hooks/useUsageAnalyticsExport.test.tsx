@@ -1,7 +1,7 @@
-import toast from "react-hot-toast"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useUsageAnalyticsExport } from "~/features/UsageAnalytics/hooks/useUsageAnalyticsExport"
+import toast from "~/lib/notify"
 import * as usageAnalytics from "~/services/history/usageHistory/analytics"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -21,7 +21,7 @@ const { startProductAnalyticsActionMock, completeProductAnalyticsActionMock } =
     completeProductAnalyticsActionMock: vi.fn(),
   }))
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     success: vi.fn(),
     error: vi.fn(),

@@ -50,7 +50,7 @@ const {
   validateManagementKeyMock: vi.fn(),
 }))
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     loading: vi.fn(),
     success: vi.fn(),

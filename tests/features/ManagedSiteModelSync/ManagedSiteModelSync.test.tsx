@@ -8,11 +8,11 @@ import {
 } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import type { ReactNode } from "react"
-import toast from "react-hot-toast"
 import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import ManagedSiteModelSync from "~/features/ManagedSiteModelSync/ManagedSiteModelSync"
+import toast from "~/lib/notify"
 import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { getManagedSiteRuntimeConfigFingerprint } from "~/services/managedSites/runtimeConfig"
 import {
@@ -84,10 +84,11 @@ const modelSyncExecution = userCommandExecution(
   PROTECTION_BYPASS_USER_COMMANDS.SyncManagedSiteModels,
 )
 
-vi.mock("react-hot-toast", () => ({
+vi.mock("~/lib/notify", () => ({
   default: {
     success: vi.fn(),
     error: vi.fn(),
+    warning: mockWarningToast,
   },
 }))
 
@@ -4425,9 +4426,4 @@ describe("ManagedSiteModelSync page", () => {
       vi.useRealTimers()
     }
   })
-})
-
-vi.mock("~/lib/notify", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("~/lib/notify")>()
-  return { default: { ...actual.default, warning: mockWarningToast } }
 })
