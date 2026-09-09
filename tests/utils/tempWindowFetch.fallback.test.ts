@@ -23,6 +23,10 @@ import {
   tempWindowTurnstileFetch,
 } from "~/utils/browser/tempWindowFetch"
 
+const { DEFAULT_TEMP_WINDOW_SIZE } = await vi.hoisted(
+  () => import("~/services/preferences/tempWindowFallbackPreferences"),
+)
+
 const mocks = vi.hoisted(() => ({
   sendRuntimeMessageMock: vi.fn(),
   onRuntimeMessageMock: vi.fn(() => vi.fn()),
@@ -45,6 +49,7 @@ const mocks = vi.hoisted(() => ({
     error: vi.fn(),
   },
   defaultTempWindowFallback: {
+    ...DEFAULT_TEMP_WINDOW_SIZE,
     enabled: true,
     automaticFeatureBypass: {
       account_refresh: true,

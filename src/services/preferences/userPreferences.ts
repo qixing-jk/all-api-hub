@@ -19,6 +19,7 @@ import {
 import {
   DEFAULT_AUTOMATIC_FEATURE_BYPASS,
   DEFAULT_TEMP_CONTEXT_PREFERENCE,
+  DEFAULT_TEMP_WINDOW_SIZE,
   normalizeTempWindowFallbackPreferences,
   type TempWindowFallbackPreferences,
 } from "~/services/preferences/tempWindowFallbackPreferences"
@@ -632,6 +633,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   logging: getDefaultLoggingPreferences(),
   preferencesVersion: CURRENT_PREFERENCES_VERSION,
   tempWindowFallback: {
+    ...DEFAULT_TEMP_WINDOW_SIZE,
     enabled: true,
     automaticFeatureBypass: DEFAULT_AUTOMATIC_FEATURE_BYPASS,
     tempContextMode: DEFAULT_TEMP_CONTEXT_PREFERENCE,

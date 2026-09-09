@@ -13,7 +13,10 @@ import {
   type ApiErrorCode,
 } from "~/services/apiTransport/errors"
 import { applyLocalRemoteFetchResultEvidence } from "~/services/apiTransport/remoteLifecycle"
-import { DEFAULT_TEMP_CONTEXT_PREFERENCE } from "~/services/preferences/tempWindowFallbackPreferences"
+import {
+  DEFAULT_TEMP_CONTEXT_PREFERENCE,
+  normalizeTempWindowFallbackPreferences,
+} from "~/services/preferences/tempWindowFallbackPreferences"
 import {
   userPreferences,
   type TempWindowFallbackPreferences,
@@ -246,6 +249,20 @@ async function resolveTempContextPreferenceMode(): Promise<
   } catch {
     return DEFAULT_TEMP_CONTEXT_PREFERENCE
   }
+}
+
+/** Reads window dimensions at creation time, including for legacy preferences. */
+async function resolveTempWindowSize() {
+  let storedPreferences: unknown
+  try {
+    storedPreferences = (await userPreferences.getPreferences())
+      .tempWindowFallback
+  } catch {
+    // Window creation remains available when preference storage is unavailable.
+  }
+  const { windowWidth, windowHeight } =
+    normalizeTempWindowFallbackPreferences(storedPreferences)
+  return { width: windowWidth, height: windowHeight }
 }
 
 /**
@@ -2550,8 +2567,7 @@ async function openPopupWindowTempContext(params: {
       popupWindow = await createWindow({
         url: TEMP_CONTEXT_INITIAL_URL,
         type: "popup",
-        width: 420,
-        height: 520,
+        ...(await resolveTempWindowSize()),
         focused: false,
         incognito: Boolean(params.incognito),
       })
@@ -2980,8 +2996,7 @@ async function openTabInCompositeWindowLocked(params: {
       compositeWindow = await createWindow({
         url: initialUrl,
         type: "normal",
-        width: 420,
-        height: 520,
+        ...(await resolveTempWindowSize()),
         focused: false,
       })
     } catch (error) {

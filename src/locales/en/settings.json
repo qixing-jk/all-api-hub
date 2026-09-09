@@ -507,6 +507,11 @@
     "shieldPermissionWarningTitle": "Cookies, Web Request, and Web Request Blocking permissions required",
     "shieldPopupFirefoxNote": "On Firefox, starting this feature from the extension popup would close the popup, so this entry point is unavailable. Use the side panel or settings page instead.",
     "shieldTitle": "Website verification assistance",
+    "shieldWindowHeight": "Height (px)",
+    "shieldWindowSizeDesc": "Set the width and height in pixels, then save. Applies to newly opened verification windows; existing windows and tabs keep their size.",
+    "shieldWindowSizeReset": "Restore defaults",
+    "shieldWindowSizeTitle": "Verification window size",
+    "shieldWindowWidth": "Width (px)",
     "title": "Refresh Settings"
   },
   "releaseUpdate": {

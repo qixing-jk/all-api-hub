@@ -506,6 +506,11 @@
     "shieldPermissionWarningTitle": "Cần các quyền Cookies, Web Request và Web Request Blocking",
     "shieldPopupFirefoxNote": "Trên Firefox, bắt đầu tính năng này từ popup của tiện ích sẽ làm popup đóng lại, nên không thể dùng điểm truy cập này. Hãy dùng thanh bên hoặc trang cài đặt.",
     "shieldTitle": "Hỗ trợ xác minh trang web",
+    "shieldWindowHeight": "Chiều cao (px)",
+    "shieldWindowSizeDesc": "Đặt chiều rộng và chiều cao theo pixel rồi lưu. Áp dụng cho cửa sổ xác minh mở mới; cửa sổ và thẻ hiện có giữ nguyên kích thước.",
+    "shieldWindowSizeReset": "Khôi phục mặc định",
+    "shieldWindowSizeTitle": "Kích thước cửa sổ xác minh",
+    "shieldWindowWidth": "Chiều rộng (px)",
     "title": "Cài đặt làm mới"
   },
   "releaseUpdate": {

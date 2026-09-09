@@ -167,6 +167,22 @@ export const refreshSearchControls: OptionsSearchItemDefinition[] = [
       keywords: ["automatic", "temporary page"],
     },
   ),
+  buildControlDefinition(
+    "control:shield-window-size",
+    "refresh",
+    SHIELD_SETTINGS_TARGET_IDS.windowSize,
+    "settings:refresh.shieldWindowSizeTitle",
+    546,
+    {
+      descriptionKey: "settings:refresh.shieldWindowSizeDesc",
+      breadcrumbsKeys: shieldBreadcrumbs,
+      keywordKeys: [
+        "settings:refresh.shieldWindowWidth",
+        "settings:refresh.shieldWindowHeight",
+      ],
+      keywords: ["window", "size", "width", "height", "captcha"],
+    },
+  ),
   ...SHIELD_AUTOMATIC_FEATURE_ITEMS.map(
     ({ feature, titleKey, keyword }, index) =>
       buildControlDefinition(

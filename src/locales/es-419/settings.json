@@ -508,6 +508,11 @@
     "shieldPermissionWarningTitle": "Se requieren los permisos Cookies, Web Request y Web Request Blocking",
     "shieldPopupFirefoxNote": "En Firefox, iniciar esta función desde la ventana emergente de la extensión cerraría la ventana. Usa el panel lateral o la página de ajustes.",
     "shieldTitle": "Asistencia para verificar el sitio",
+    "shieldWindowHeight": "Alto (px)",
+    "shieldWindowSizeDesc": "Configura el ancho y el alto en píxeles y guarda. Se aplica a las nuevas ventanas de verificación; las ventanas y pestañas existentes conservan su tamaño.",
+    "shieldWindowSizeReset": "Restaurar valores predeterminados",
+    "shieldWindowSizeTitle": "Tamaño de la ventana de verificación",
+    "shieldWindowWidth": "Ancho (px)",
     "title": "Ajustes de actualización"
   },
   "releaseUpdate": {

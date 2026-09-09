@@ -507,6 +507,11 @@
     "shieldPermissionWarningTitle": "Berechtigungen für Cookies, Webanfragen und Blockierung von Webanfragen erforderlich",
     "shieldPopupFirefoxNote": "In Firefox würde das Starten dieser Funktion über das Erweiterungs-Popup das Popup schließen. Dieser Einstiegspunkt ist daher nicht verfügbar. Verwenden Sie stattdessen die Seitenleiste oder die Einstellungsseite.",
     "shieldTitle": "Unterstützung bei der Website-Verifizierung",
+    "shieldWindowHeight": "Höhe (px)",
+    "shieldWindowSizeDesc": "Breite und Höhe in Pixeln einstellen und speichern. Gilt für neu geöffnete Verifizierungsfenster; bestehende Fenster und Tabs behalten ihre Größe.",
+    "shieldWindowSizeReset": "Standardwerte wiederherstellen",
+    "shieldWindowSizeTitle": "Größe des Verifizierungsfensters",
+    "shieldWindowWidth": "Breite (px)",
     "title": "Aktualisierungseinstellungen"
   },
   "releaseUpdate": {

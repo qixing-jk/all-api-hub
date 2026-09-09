@@ -506,6 +506,11 @@
     "shieldPermissionWarningTitle": "Cookies、Web Request、Web Request Blocking の権限が必要です",
     "shieldPopupFirefoxNote": "Firefox では、拡張機能のポップアップからこの機能を開始するとポップアップが閉じるため、この入口は利用できません。サイドパネルまたは設定ページを使用してください。",
     "shieldTitle": "サイト認証の補助",
+    "shieldWindowHeight": "高さ（px）",
+    "shieldWindowSizeDesc": "幅と高さをピクセル単位で設定して保存します。次に開く認証ウィンドウに適用されます。既存のウィンドウとタブのサイズは変わりません。",
+    "shieldWindowSizeReset": "既定値に戻す",
+    "shieldWindowSizeTitle": "認証ウィンドウのサイズ",
+    "shieldWindowWidth": "幅（px）",
     "title": "更新設定"
   },
   "releaseUpdate": {

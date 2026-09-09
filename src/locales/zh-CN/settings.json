@@ -506,6 +506,11 @@
     "shieldPermissionWarningTitle": "需要 Cookies、Web Request 和 Web Request Blocking 权限",
     "shieldPopupFirefoxNote": "在 Firefox 中，从扩展弹窗启动此功能会导致弹窗关闭，因此该入口不可用。请改用侧边栏或设置页。",
     "shieldTitle": "网站验证辅助",
+    "shieldWindowHeight": "高度（像素）",
+    "shieldWindowSizeDesc": "设置宽度和高度（像素）后保存，下次新建验证窗口时生效；已有窗口和标签页保持原尺寸。",
+    "shieldWindowSizeReset": "恢复默认值",
+    "shieldWindowSizeTitle": "验证窗口尺寸",
+    "shieldWindowWidth": "宽度（像素）",
     "title": "刷新设置"
   },
   "releaseUpdate": {

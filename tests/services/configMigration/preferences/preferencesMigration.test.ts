@@ -1449,6 +1449,8 @@ describe("preferencesMigration", () => {
 
       expect(migrated.preferencesVersion).toBe(27)
       expect(migrated.tempWindowFallback).toEqual({
+        windowWidth: 600,
+        windowHeight: 720,
         enabled: false,
         tempContextMode: "tab",
         automaticFeatureBypass: {

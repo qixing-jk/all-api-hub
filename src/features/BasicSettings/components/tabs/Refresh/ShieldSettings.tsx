@@ -41,6 +41,7 @@ import { openSettingsTab } from "~/utils/navigation"
 
 import { ProtectionBypassDevTrigger } from "./ProtectionBypassDevTrigger"
 import ProtectionBypassHistory from "./ProtectionBypassHistory"
+import { ShieldWindowSizeSettings } from "./ShieldWindowSizeSettings"
 
 /** Compares complete automatic-feature preference maps. */
 function hasSameAutomaticFeatureBypass(
@@ -304,6 +305,7 @@ export default function ShieldSettings() {
               </div>
             }
           />
+          <ShieldWindowSizeSettings />
           <CardItem
             id={SHIELD_SETTINGS_TARGET_IDS.automaticFeatures}
             title={t("refresh.shieldAutomaticFeaturesTitle")}

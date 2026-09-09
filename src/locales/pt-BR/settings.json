@@ -508,6 +508,11 @@
     "shieldPermissionWarningTitle": "São necessárias permissões para cookies, solicitações da Web e bloqueio de solicitações da Web",
     "shieldPopupFirefoxNote": "No Firefox, iniciar esse recurso a partir do pop-up de extensão fecharia o pop-up, portanto, esse ponto de entrada não estará disponível. Use o painel lateral ou a página de configurações.",
     "shieldTitle": "Assistência para verificação de site",
+    "shieldWindowHeight": "Altura (px)",
+    "shieldWindowSizeDesc": "Defina a largura e a altura em pixels e salve. Aplica-se às novas janelas de verificação; janelas e abas existentes mantêm seu tamanho.",
+    "shieldWindowSizeReset": "Restaurar padrões",
+    "shieldWindowSizeTitle": "Tamanho da janela de verificação",
+    "shieldWindowWidth": "Largura (px)",
     "title": "Atualizar configurações"
   },
   "releaseUpdate": {

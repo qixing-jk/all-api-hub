@@ -36,6 +36,16 @@ describe("refresh settings search definitions", () => {
   })
 
   it("keeps website verification labels aligned with stable rendered targets", () => {
+    expect(refreshSearchControls).toContainEqual(
+      expect.objectContaining({
+        targetId: SHIELD_SETTINGS_TARGET_IDS.windowSize,
+        titleKey: "settings:refresh.shieldWindowSizeTitle",
+        tabId: "refresh",
+      }),
+    )
+    expect(
+      BASIC_SETTINGS_ANCHOR_TO_TAB[SHIELD_SETTINGS_TARGET_IDS.windowSize],
+    ).toBe("refresh")
     expect(refreshSearchSections).toContainEqual(
       expect.objectContaining({
         id: "section:shield-settings",

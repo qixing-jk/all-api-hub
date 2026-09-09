@@ -832,6 +832,8 @@ describe("tempWindowPool window fallback", () => {
       expect.objectContaining({
         type: "normal",
         url: "about:blank",
+        width: 600,
+        height: 720,
       }),
     )
     expect(createTabMock).not.toHaveBeenCalled()
@@ -899,6 +901,47 @@ describe("tempWindowPool window fallback", () => {
     )
     expect(createTabMock).not.toHaveBeenCalled()
   })
+
+  it.each(["composite", "window"] as const)(
+    "opens %s verification windows with persisted custom dimensions",
+    async (mode) => {
+      tempContextMode = mode
+      getPreferencesMock.mockResolvedValue({
+        tempWindowFallback: {
+          tempContextMode: mode,
+          windowWidth: 800,
+          windowHeight: 1000,
+        },
+      })
+      createWindowMock.mockResolvedValueOnce({ id: 105, tabs: [{ id: 106 }] })
+      tabsQueryMock.mockResolvedValueOnce([{ id: 106 }])
+      const { handleTempWindowFetch } = await import(
+        "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
+      )
+      const sendResponse = vi.fn()
+      const request = handleTempWindowFetch(
+        {
+          originUrl: "https://example.invalid",
+          fetchUrl: "https://example.invalid/api/test",
+          fetchOptions: { method: "GET" },
+          requestId: "custom-size",
+        },
+        sendResponse,
+      )
+      await vi.advanceTimersByTimeAsync(500)
+      await request
+      expect(createWindowMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: mode === "composite" ? "normal" : "popup",
+          width: 800,
+          height: 1000,
+        }),
+      )
+      expect(sendResponse).toHaveBeenCalledWith(
+        expect.objectContaining({ success: true }),
+      )
+    },
+  )
 
   it("reuses a live composite window for automatic mode while unfocused", async () => {
     tempContextMode = "composite"

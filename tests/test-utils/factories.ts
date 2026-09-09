@@ -8,6 +8,7 @@
 
 import { ChannelType } from "~/constants/newApi"
 import { SITE_TYPES } from "~/constants/siteType"
+import { DEFAULT_TEMP_WINDOW_SIZE } from "~/services/preferences/tempWindowFallbackPreferences"
 import {
   createDefaultPreferences,
   DEFAULT_PREFERENCES,
@@ -371,6 +372,7 @@ export function buildTempWindowPrefs(
   overrides: Partial<TempWindowFallbackPreferences> = {},
 ): TempWindowFallbackPreferences {
   const base: TempWindowFallbackPreferences = {
+    ...DEFAULT_TEMP_WINDOW_SIZE,
     enabled: true,
     automaticFeatureBypass: {
       account_refresh: true,

@@ -6,6 +6,7 @@ export const SHIELD_SETTINGS_TARGET_IDS = {
   history: SETTINGS_ANCHORS.SHIELD_HISTORY,
   enabled: "shield-enabled",
   method: "shield-method",
+  windowSize: SETTINGS_ANCHORS.SHIELD_WINDOW_SIZE,
   automaticFeatures: "shield-automatic-features",
   feature: {
     account_refresh: "shield-automatic-feature-account-refresh",
@@ -22,6 +23,7 @@ export const SHIELD_SETTINGS_TARGET_IDS = {
   history: string
   enabled: string
   method: string
+  windowSize: string
   automaticFeatures: string
   feature: Record<ProtectionBypassAutomaticFeature, string>
 }
