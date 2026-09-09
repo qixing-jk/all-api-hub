@@ -170,6 +170,8 @@ describe("userPreferences shared preference timestamps", () => {
       )) as any
       expect(storedAfter.preferencesVersion).toBe(27)
       expect(storedAfter.tempWindowFallback).toEqual({
+        windowWidth: 600,
+        windowHeight: 720,
         enabled: false,
         automaticFeatureBypass: {
           account_refresh: true,
@@ -222,6 +224,8 @@ describe("userPreferences shared preference timestamps", () => {
       const exported = await userPreferences.exportPreferences()
       expect(storageSetSpy).toHaveBeenCalledTimes(1)
       expect(storedAfter.tempWindowFallback).toEqual({
+        windowWidth: 600,
+        windowHeight: 720,
         enabled: false,
         automaticFeatureBypass: {
           account_refresh: true,
