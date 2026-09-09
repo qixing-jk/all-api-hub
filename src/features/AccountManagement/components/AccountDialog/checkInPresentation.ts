@@ -2,6 +2,7 @@ import type { TFunction } from "i18next"
 
 import {
   CHECK_IN_DISCOVERY_DECISION_OUTCOMES,
+  CHECK_IN_METHOD_DETECTION_OUTCOMES,
   CHECK_IN_METHOD_UNKNOWN_REASON_CODES,
   CHECK_IN_SELECTION_MODES,
   CHECK_IN_SELECTION_STATUSES,
@@ -45,29 +46,40 @@ export function getCheckInSelectionPresentation(
   state: CheckInAccountState,
   selection: CheckInMethodSelection,
 ) {
-  const selectedMethodId = state.choices.find(
-    (choice) => choice.selected,
-  )?.methodId
+  const selectedChoice = state.choices.find((choice) => choice.selected)
+  const selectedMethodId = selectedChoice?.methodId
   const selectedMethod = selectedMethodId
     ? getCheckInMethodPresentation(t, selectedMethodId)
     : {
         label: t("form.checkInMethodNotSelected"),
         disclosure: null,
       }
-  const automaticDetail = selectedMethodId
-    ? selectedMethod.label
-    : state.decision.outcome === CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Ambiguous
-      ? t("form.checkInMethodNeedsChoice")
-      : state.decision.outcome ===
-          CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Unsupported
-        ? t("form.checkInMethodUnavailable")
-        : t("form.checkInMethodPendingConfirmation")
+  const needsConfirmation =
+    selectedChoice?.detectionOutcome ===
+    CHECK_IN_METHOD_DETECTION_OUTCOMES.Unknown
+  const selectionLabel = needsConfirmation
+    ? t("form.checkInMethodNeedsConfirmation", { method: selectedMethod.label })
+    : selectedMethod.label
+  const automaticDetail =
+    selectedChoice?.detectionOutcome ===
+    CHECK_IN_METHOD_DETECTION_OUTCOMES.Unsupported
+      ? t("form.checkInMethodUnavailable")
+      : selectedMethodId
+        ? selectionLabel
+        : state.decision.outcome ===
+            CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Ambiguous
+          ? t("form.checkInMethodNeedsChoice")
+          : state.decision.outcome ===
+              CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Unsupported
+            ? t("form.checkInMethodUnavailable")
+            : t("form.checkInMethodPendingConfirmation")
   const automaticLabel = t("form.automaticCheckInSelectionWithDetail", {
     detail: automaticDetail,
   })
 
-  const helperText =
-    state.selectionState.status === CHECK_IN_SELECTION_STATUSES.Stale
+  const helperText = needsConfirmation
+    ? t("form.checkInSelectionUnconfirmed", { method: selectedMethod.label })
+    : state.selectionState.status === CHECK_IN_SELECTION_STATUSES.Stale
       ? t("form.checkInSelectionStale")
       : selection.mode === CHECK_IN_SELECTION_MODES.Manual
         ? t("form.checkInSelectionManual", { method: selectedMethod.label })
@@ -89,7 +101,7 @@ export function getCheckInSelectionPresentation(
     triggerLabel:
       selection.mode === CHECK_IN_SELECTION_MODES.Automatic
         ? automaticLabel
-        : selectedMethod.label,
+        : selectionLabel,
     helperText,
   }
 }

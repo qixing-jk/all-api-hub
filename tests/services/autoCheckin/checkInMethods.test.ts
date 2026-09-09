@@ -8,7 +8,7 @@ import {
   CHECK_IN_METHOD_UNKNOWN_REASON_CODES,
 } from "~/constants/checkIn"
 import { SITE_TYPES } from "~/constants/siteType"
-import { ApiError } from "~/services/apiTransport/errors"
+import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
 import {
   discoverCheckInMethods,
@@ -73,6 +73,36 @@ describe("check-in methods compatibility activation", () => {
       PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
     ),
   })
+
+  it.each([
+    ["无权进行此操作，权限不足", "permission_denied"],
+    ["Permission denied. Insufficient privileges.", "permission_denied"],
+    ["Invalid response payload", "status_unavailable"],
+  ])(
+    "does not send a first New API mutation after a failed read: %s",
+    async (message, reason) => {
+      const registration = getNewApiExecutionRegistration()
+      const account = createNewApiExecutionAccount()
+      vi.spyOn(registration.provider, "getStatus").mockRejectedValue(
+        new ApiError(
+          message,
+          200,
+          "/api/user/checkin",
+          API_ERROR_CODES.BUSINESS_ERROR,
+        ),
+      )
+      const mutation = vi
+        .spyOn(registration.provider, "checkIn")
+        .mockResolvedValue({ status: "success" })
+      const result = await executeSelectedCheckIn({
+        account,
+        globalAutomaticExecutionEnabled: true,
+        context: createExecutionContext(),
+      })
+      expect(result).toMatchObject({ reason })
+      expect(mutation).not.toHaveBeenCalled()
+    },
+  )
 
   it("turns a pre-registry support result into canonical evidence and selection", () => {
     const config = createCompatibilityCheckInConfig({
@@ -864,7 +894,7 @@ describe("check-in methods compatibility activation", () => {
     expect(checkInRequest).not.toHaveBeenCalled()
   })
 
-  it("executes when the optional status readback cannot connect", async () => {
+  it("blocks the initial New API mutation when status readback cannot connect", async () => {
     const registration = getNewApiExecutionRegistration()
     const account = createNewApiExecutionAccount()
     vi.spyOn(registration.provider, "getStatus").mockRejectedValue(
@@ -880,11 +910,15 @@ describe("check-in methods compatibility activation", () => {
       context: createExecutionContext(),
     })
 
-    expect(result).toMatchObject({ kind: "executed" })
-    expect(checkInRequest).toHaveBeenCalledOnce()
+    expect(result).toMatchObject({
+      kind: "blocked",
+      reason: "network_error",
+      retryable: true,
+    })
+    expect(checkInRequest).not.toHaveBeenCalled()
   })
 
-  it("executes when the optional status readback returns an invalid response", async () => {
+  it("blocks the initial New API mutation when status readback is invalid", async () => {
     const registration = getNewApiExecutionRegistration()
     const account = createNewApiExecutionAccount()
     vi.spyOn(registration.provider, "getStatus").mockRejectedValue(
@@ -900,8 +934,12 @@ describe("check-in methods compatibility activation", () => {
       context: createExecutionContext(),
     })
 
-    expect(result).toMatchObject({ kind: "executed" })
-    expect(checkInRequest).toHaveBeenCalledOnce()
+    expect(result).toMatchObject({
+      kind: "blocked",
+      reason: "status_unavailable",
+      retryable: false,
+    })
+    expect(checkInRequest).not.toHaveBeenCalled()
   })
 
   it.each([
@@ -1482,13 +1520,13 @@ describe("check-in methods compatibility activation", () => {
   })
 
   it.each([
-    [401, "authentication_required", false],
-    [403, "permission_denied", false],
-    [408, "timeout", true],
-    [500, "source_unavailable", true],
+    [401, "authentication_required", "skipped"],
+    [403, "permission_denied", "skipped"],
+    [408, "timeout", "blocked"],
+    [500, "source_unavailable", "blocked"],
   ] as const)(
-    "classifies an HTTP %s optional status failure as %s",
-    async (statusCode, expectedReason, shouldExecute) => {
+    "classifies an HTTP %s status failure as %s without posting",
+    async (statusCode, expectedReason, kind) => {
       const registration = getNewApiExecutionRegistration()
       const account = createNewApiExecutionAccount()
       vi.spyOn(registration.provider, "getStatus").mockRejectedValue(
@@ -1506,16 +1544,8 @@ describe("check-in methods compatibility activation", () => {
         context: createExecutionContext(),
       })
 
-      if (shouldExecute) {
-        expect(result).toMatchObject({ kind: "executed" })
-        expect(checkInRequest).toHaveBeenCalledOnce()
-      } else {
-        expect(result).toMatchObject({
-          kind: "skipped",
-          reason: expectedReason,
-        })
-        expect(checkInRequest).not.toHaveBeenCalled()
-      }
+      expect(result).toMatchObject({ kind, reason: expectedReason })
+      expect(checkInRequest).not.toHaveBeenCalled()
     },
   )
 
@@ -1532,7 +1562,12 @@ describe("check-in methods compatibility activation", () => {
     async (_name, revalidateAccount) => {
       const registration = getNewApiExecutionRegistration()
       const account = createNewApiExecutionAccount()
-      vi.spyOn(registration.provider, "getStatus").mockResolvedValue(undefined)
+      vi.spyOn(registration.provider, "getStatus").mockResolvedValue({
+        outcome: "known",
+        availability: "enabled",
+        today: "not_checked",
+        evidence: { source: "probe", observedAt: Date.now() },
+      })
       const checkInRequest = vi
         .spyOn(registration.provider, "checkIn")
         .mockResolvedValue({ status: "success" })

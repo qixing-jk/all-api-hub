@@ -96,7 +96,6 @@ import { isCanonicalOpenRouterUrl } from "~/services/accountSiteDefinitions/iden
 import { getManagedSiteCapabilities } from "~/services/apiAdapters/registry"
 import {
   createCompatibilityCheckInConfig,
-  hasNewAccountCompatibilityRegistration,
   resolveNewAccountAutomaticExecutionEnabled,
 } from "~/services/checkin/autoCheckin/compatibilityConfig"
 import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/inspection"
@@ -729,7 +728,7 @@ export function useAccountDialog({
         const checkIn = shouldRebuildCompatibilityConfig
           ? createCompatibilityCheckInConfig({
               siteType: nextSiteType,
-              supported: hasNewAccountCompatibilityRegistration(nextSiteType),
+              supported: false,
               automaticExecutionEnabled:
                 resolveNewAccountAutomaticExecutionEnabled({
                   siteType: nextSiteType,

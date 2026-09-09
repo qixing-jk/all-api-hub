@@ -206,6 +206,66 @@ describe("newApiProvider", () => {
   })
 
   describe("read-only status", () => {
+    it.each([
+      {
+        error: new ApiError(
+          "localized denial",
+          200,
+          "/api/user/checkin",
+          API_ERROR_CODES.BUSINESS_ERROR,
+          "AUTH_INSUFFICIENT_PRIVILEGE",
+        ),
+        reason: "permission_denied",
+      },
+      {
+        error: new ApiError(
+          "Permission denied. Insufficient privileges.",
+          503,
+          "/api/user/checkin",
+          API_ERROR_CODES.BUSINESS_ERROR,
+        ),
+        reason: "source_unavailable",
+      },
+      {
+        error: new Error("Permission denied. Insufficient privileges."),
+        reason: "invalid_response",
+      },
+    ])(
+      "preserves structured error evidence as $reason",
+      async ({ error, reason }) => {
+        vi.mocked(newApiFamilyRequests.data).mockRejectedValueOnce(error)
+        await expect(
+          newApiProvider.detect!({ account: mockAccount, observedAt: 202 }),
+        ).resolves.toEqual({
+          outcome: "unknown",
+          reason,
+          attemptedAt: 202,
+        })
+      },
+    )
+
+    it.each([
+      "无权进行此操作，权限不足",
+      "Permission denied. Insufficient privileges.",
+    ])("classifies a message-only permission denial: %s", async (message) => {
+      vi.mocked(newApiFamilyRequests.data).mockRejectedValueOnce(
+        new ApiError(
+          message,
+          200,
+          "/api/user/checkin",
+          API_ERROR_CODES.BUSINESS_ERROR,
+        ),
+      )
+      await expect(
+        newApiProvider.detect!({ account: mockAccount, observedAt: 202 }),
+      ).resolves.toEqual({
+        outcome: "unknown",
+        reason: "permission_denied",
+        attemptedAt: 202,
+      })
+      expect(newApiFamilyRequests.envelope).not.toHaveBeenCalled()
+    })
+
     it("uses public site status to classify a disabled deployment independently of error copy", async () => {
       vi.mocked(newApiFamilyRequests.data).mockRejectedValueOnce(
         new ApiError(

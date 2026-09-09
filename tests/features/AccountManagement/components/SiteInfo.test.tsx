@@ -14,6 +14,7 @@ import {
   SiteHealthStatus,
   TEMP_WINDOW_HEALTH_STATUS_CODES,
 } from "~/types"
+import type { CheckInMethodStatus } from "~/types/checkIn"
 import { formatLocaleDateTime } from "~/utils/core/formatters"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
@@ -355,24 +356,103 @@ describe("SiteInfo", () => {
     }
   })
 
-  it("does not label a selected check-in method without readback status as unsupported", () => {
+  it.each<{
+    scenario: string
+    supported: boolean
+    status?: CheckInMethodStatus
+  }>([
+    { scenario: "unsupported site", supported: false },
+    { scenario: "selection without a status readback", supported: true },
+    {
+      scenario: "permission-denied status readback",
+      supported: true,
+      status: {
+        outcome: "unknown",
+        reason: "permission_denied",
+        attemptedAt: Date.now(),
+      },
+    },
+    {
+      scenario: "disabled check-in without today's status",
+      supported: true,
+      status: {
+        outcome: "known",
+        availability: "disabled",
+        evidence: { source: "probe", observedAt: Date.now() },
+      },
+    },
+    {
+      scenario: "disabled check-in with a not-checked status",
+      supported: true,
+      status: {
+        outcome: "known",
+        availability: "disabled",
+        today: "not_checked",
+        evidence: { source: "probe", observedAt: Date.now() },
+      },
+    },
+    {
+      scenario: "disabled check-in with an outdated status",
+      supported: true,
+      status: {
+        outcome: "known",
+        availability: "disabled",
+        today: "checked",
+        evidence: { source: "probe", observedAt: 1 },
+      },
+    },
+  ])(
+    "hides site check-in indicators for $scenario",
+    ({ supported, status }) => {
+      const checkIn = createCheckIn({ supported })
+      if (status) {
+        checkIn.methodKnowledge.methods[
+          AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn
+        ]!.status = status
+      }
+      render(
+        <SiteInfo
+          site={buildSite({
+            checkIn,
+          })}
+        />,
+      )
+
+      expect(
+        screen.queryAllByRole("img", {
+          name: /account:list\.site\.(checkIn|checkedInToday|notCheckedInToday)/,
+        }),
+      ).toHaveLength(0)
+      expect(
+        screen.queryAllByRole("button", {
+          name: /account:list\.site\.(checkIn|checkedInToday|notCheckedInToday)/,
+        }),
+      ).toHaveLength(0)
+    },
+  )
+
+  it("keeps custom check-in visible when the selected site method has no status", () => {
     render(
       <SiteInfo
         site={buildSite({
-          checkIn: createCheckIn({ supported: true }),
+          checkIn: createCheckIn({
+            supported: true,
+            customCheckIn: {
+              url: "https://example.com/checkin",
+              isCheckedInToday: false,
+            },
+          }),
         })}
       />,
     )
 
     expect(
-      screen.getByRole("img", {
-        name: "account:list.site.checkInStatusUnavailable",
+      screen.getByRole("button", {
+        name: "account:list.site.notCheckedInToday",
       }),
-    ).toBeInTheDocument()
+    ).toBeVisible()
     expect(
-      screen.queryByRole("img", {
-        name: "account:list.site.checkInUnsupported",
-      }),
+      screen.queryByRole("img", { name: /account:list.site.checkInStatus/ }),
     ).not.toBeInTheDocument()
   })
 

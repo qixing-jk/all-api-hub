@@ -111,12 +111,18 @@ const toProviderReadinessSkipReason = (
     ? CHECK_IN_EXECUTION_SKIP_REASONS.CredentialsMissing
     : CHECK_IN_EXECUTION_SKIP_REASONS.AccountDataMissing
 
-const toStatusReadSkipReason = (error: unknown): CheckInExecutionSkipReason => {
+const toStatusReadSkipReason = (
+  error: unknown,
+  classifyStatusError?: AutoCheckinProvider["classifyStatusError"],
+): CheckInExecutionSkipReason => {
   if (
     error instanceof ApiError &&
     (error.statusCode === 404 || error.statusCode === 405)
   ) {
     return CHECK_IN_EXECUTION_SKIP_REASONS.MethodUnsupported
+  }
+  if (classifyStatusError) {
+    return toUnknownStatusSkipReason(classifyStatusError(error))
   }
   switch (classifyAutoCheckinError(error)) {
     case AUTO_CHECKIN_ERROR_CATEGORIES.AuthenticationRequired:
@@ -397,8 +403,8 @@ export async function executeSelectedCheckIn(input: {
   revalidateAccount?: RevalidateCheckInAccount
   /**
    * Retry safety guard: a provider with readback must confirm current status
-   * before another mutation. Initial daily/manual runs keep best-effort
-   * readback so a transient GET failure does not suppress the day's check-in.
+   * before another mutation. Providers may also require this for initial
+   * daily/manual runs through requiresAuthoritativeStatusBeforeMutation.
    */
   requireStatusConfirmationBeforeMutation?: boolean
 }): Promise<ExecuteSelectedCheckInResult> {
@@ -494,7 +500,10 @@ export async function executeSelectedCheckIn(input: {
         )
       }
     } catch (error) {
-      const reason = toStatusReadSkipReason(error)
+      const reason = toStatusReadSkipReason(
+        error,
+        registration.provider.classifyStatusError,
+      )
       if (reason === CHECK_IN_EXECUTION_SKIP_REASONS.MethodUnsupported) {
         if (
           !(await persistUnsupportedMethod(

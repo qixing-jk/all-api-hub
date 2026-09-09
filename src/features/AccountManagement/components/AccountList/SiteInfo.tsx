@@ -27,6 +27,7 @@ import {
   WorkflowTransitionButton,
 } from "~/components/ui"
 import {
+  CHECK_IN_METHOD_AVAILABILITIES,
   CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES,
   CHECK_IN_METHOD_STATUS_OUTCOMES,
   CHECK_IN_METHOD_TODAY_STATUSES,
@@ -363,20 +364,12 @@ export default function SiteInfo({
 
     if (
       checkInInspection.selectionState.status ===
-      CHECK_IN_SELECTION_STATUSES.Selected
+        CHECK_IN_SELECTION_STATUSES.Selected &&
+      selectedStatus?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known &&
+      selectedStatus.availability !== CHECK_IN_METHOD_AVAILABILITIES.Disabled &&
+      siteCheckedIn !== undefined
     ) {
-      if (siteCheckedIn === undefined) {
-        indicators.push(
-          <Tooltip
-            key="site-checkin"
-            content={t("list.site.checkInStatusUnavailable")}
-            position="top"
-            wrapperClassName="flex items-center"
-          >
-            <TriangleAlert className="h-4 w-4 text-yellow-500" />
-          </Tooltip>,
-        )
-      } else if (!isSelectedCheckInStatusCurrent(site)) {
+      if (!isSelectedCheckInStatusCurrent(site)) {
         const staleStatusLabel = t("list.site.checkInStatusOutdated", {
           time: formatLocaleDateTime(
             selectedStatusObservedAt,

@@ -3,6 +3,7 @@ import {
   CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES,
   CHECK_IN_METHOD_STATUS_OUTCOMES,
   CHECK_IN_METHOD_TODAY_STATUSES,
+  CHECK_IN_METHOD_UNKNOWN_REASON_CODES,
   CHECK_IN_PROVIDER_READINESS_REASONS,
 } from "~/constants/checkIn"
 import { TURNSTILE_DEFAULT_WAIT_TIMEOUT_MS } from "~/constants/turnstile"
@@ -20,8 +21,9 @@ import { fetchSupportCheckIn } from "~/services/apiService/newApiFamily/default/
 import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import { buildCompatUserIdHeaders } from "~/services/apiTransport/compatHeaders"
 import { REQUEST_CONFIG } from "~/services/apiTransport/constant"
-import { ApiError } from "~/services/apiTransport/errors"
+import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
+import { getCheckInMethodUnknownReason } from "~/services/checkin/autoCheckin/errors"
 import type {
   AutoCheckinProvider,
   AutoCheckinProviderContext,
@@ -1142,9 +1144,30 @@ const getStatus: NonNullable<AutoCheckinProvider["getStatus"]> = async ({
     : undefined
 }
 
+/** Classifies legacy permission envelopes without treating them as support evidence. */
+function classifyStatusError(error: unknown) {
+  // New API's auth middleware uses AUTH_INSUFFICIENT_PRIVILEGE; older
+  // deployments (including AgentRouter) return only the localized message.
+  // https://github.com/QuantumNous/new-api/blob/2d8e50bf36e94200b809dfb39e73624ec48b1e23/middleware/auth.go
+  if (
+    error instanceof ApiError &&
+    error.code === API_ERROR_CODES.BUSINESS_ERROR &&
+    (error.statusCode === undefined || error.statusCode === 200) &&
+    (error.upstreamCode === "AUTH_INSUFFICIENT_PRIVILEGE" ||
+      error.message.trim() === "无权进行此操作，权限不足" ||
+      error.message.trim() === "Permission denied. Insufficient privileges.")
+  ) {
+    return CHECK_IN_METHOD_UNKNOWN_REASON_CODES.PermissionDenied
+  }
+  return getCheckInMethodUnknownReason(error)
+}
+
 export const newApiProvider: AutoCheckinProvider = {
+  requiresAuthoritativeStatusBeforeMutation: true,
+  classifyStatusError,
   getReadiness,
-  detect: (context) => detectWithStatusReadback(context, getStatus),
+  detect: (context) =>
+    detectWithStatusReadback(context, getStatus, classifyStatusError),
   getStatus,
   checkIn: checkinNewApi,
 }

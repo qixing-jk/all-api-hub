@@ -3,23 +3,16 @@ import { describe, expect, it } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   getNewAccountAutomaticExecutionDefault,
-  hasNewAccountCompatibilityRegistration,
   resolveNewAccountAutomaticExecutionEnabled,
 } from "~/services/checkin/autoCheckin/compatibilityConfig"
 
 describe("new-account check-in defaults", () => {
-  it("derives automatic intent and compatibility selection from method metadata", () => {
+  it("derives automatic intent from candidate method metadata", () => {
     expect(getNewAccountAutomaticExecutionDefault(SITE_TYPES.ANYROUTER)).toBe(
-      true,
-    )
-    expect(hasNewAccountCompatibilityRegistration(SITE_TYPES.ANYROUTER)).toBe(
       true,
     )
     expect(getNewAccountAutomaticExecutionDefault(SITE_TYPES.SUB2API)).toBe(
       true,
-    )
-    expect(hasNewAccountCompatibilityRegistration(SITE_TYPES.SUB2API)).toBe(
-      false,
     )
   })
 

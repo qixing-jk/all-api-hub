@@ -6,7 +6,6 @@ import {
 import {
   createCompatibilityCheckInConfig,
   getNewAccountAutomaticExecutionDefault,
-  hasNewAccountCompatibilityRegistration,
 } from "~/services/checkin/autoCheckin/compatibilityConfig"
 import { AuthTypeEnum, type CheckInConfig } from "~/types"
 import type {
@@ -99,7 +98,7 @@ export function createEmptyAccountDialogDraft(
     excludeFromTodayIncome: false,
     checkIn: createCompatibilityCheckInConfig({
       siteType,
-      supported: hasNewAccountCompatibilityRegistration(siteType),
+      supported: false,
       automaticExecutionEnabled:
         getNewAccountAutomaticExecutionDefault(siteType),
       customCheckIn: {

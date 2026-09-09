@@ -10,11 +10,15 @@ import {
   CHECK_IN_SELECTION_MODES,
   CHECK_IN_SELECTION_STATUSES,
 } from "~/constants/checkIn"
+import { SITE_TYPES } from "~/constants/siteType"
 import {
   getCheckInMethodPresentation,
   getCheckInRedetectionFeedbackPresentation,
   getCheckInSelectionPresentation,
 } from "~/features/AccountManagement/components/AccountDialog/checkInPresentation"
+import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
+import { mergeCheckInDiscoveryResults } from "~/services/checkin/autoCheckin/domain"
+import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/inspection"
 import type { CheckInAccountState } from "~/types/checkIn"
 
 const t = ((key: string, options?: Record<string, unknown>) =>
@@ -60,6 +64,48 @@ const createAmbiguousState = (): CheckInAccountState => ({
 })
 
 describe("check-in presentation", () => {
+  it.each(["automatic", "manual"] as const)(
+    "marks a retained %s selection as unconfirmed after failed redetection",
+    (mode) => {
+      const methodId = AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn
+      const config = createCompatibilityCheckInConfig({
+        siteType: SITE_TYPES.NEW_API,
+        supported: true,
+        automaticExecutionEnabled: true,
+      })
+      config.selection = { mode, methodId }
+      const updated = mergeCheckInDiscoveryResults({
+        config,
+        candidateMethodIds: [methodId],
+        detections: {
+          [methodId]: {
+            outcome: "unknown",
+            reason: "permission_denied",
+            attemptedAt: 200,
+          },
+        },
+        completedAt: 200,
+      })
+      const state = inspectAccountCheckIn({
+        config: updated,
+        siteType: SITE_TYPES.NEW_API,
+      })
+      const presentation = getCheckInSelectionPresentation(
+        t,
+        state,
+        updated.selection,
+      )
+
+      expect(updated.selection).toEqual(config.selection)
+      expect(presentation.triggerLabel).toContain(
+        "form.checkInMethodNeedsConfirmation:form.dailyCheckInMethod",
+      )
+      expect(presentation.helperText).toBe(
+        "form.checkInSelectionUnconfirmed:form.dailyCheckInMethod",
+      )
+    },
+  )
+
   it("discloses third-party method sources without changing official labels", () => {
     expect(
       getCheckInMethodPresentation(
