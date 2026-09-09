@@ -587,7 +587,11 @@ test("keeps mixed pricing settings compact and opens the missing condition group
       ),
     ).toBe(true)
     const bounds = await controls.boundingBox()
-    expect(bounds!.height).toBeLessThan(width >= 1000 ? 600 : 900)
+    // On narrow screens, keep the expanded controls within one viewport;
+    // font metrics and wrapped copy vary between local and CI platforms.
+    expect(bounds!.height).toBeLessThan(
+      width >= 1000 ? 600 : page.viewportSize()!.height,
+    )
     await controls.screenshot({
       path: testInfo.outputPath(`pricing-groups-${width}.png`),
     })

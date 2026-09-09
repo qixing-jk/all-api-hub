@@ -265,7 +265,11 @@ describe("apiAdapters registry", () => {
     expectKeyManagementCapability(capabilities)
     expectTokenProvisioningCapability(capabilities)
     expectAccountRefreshCapability(capabilities)
-    expectModelPricingCapability(capabilities)
+    expect(capabilities.account?.modelPricing).toEqual({
+      fetchPricing: expect.any(Function),
+      invalidateCache: expect.any(Function),
+      runtimeKeyFallback: "account-pricing",
+    })
     expectInviteLinkCapability(capabilities)
     expect(capabilities.account?.announcements).toBeUndefined()
     expect(capabilities.account?.modelCatalog).toBeUndefined()

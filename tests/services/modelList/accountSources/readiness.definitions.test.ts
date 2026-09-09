@@ -71,7 +71,7 @@ describe("Model List readiness capability routing", () => {
       route: MODEL_LIST_ACCOUNT_SOURCE_ROUTES.DirectPricing,
       statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Account,
       displayCapabilitiesSource:
-        ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Profile,
+        ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Response,
     })
   })
 })
