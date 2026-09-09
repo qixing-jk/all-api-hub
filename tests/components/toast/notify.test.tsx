@@ -7,6 +7,7 @@ import {
 } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import type { ReactElement } from "react"
+import { useToasterStore } from "react-hot-toast/headless"
 import { I18nextProvider } from "react-i18next"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -60,6 +61,96 @@ afterEach(async () => {
 })
 
 describe("notification facade", () => {
+  it.each(["success", "error", "loading"] as const)(
+    "applies shared %s lifetimes before a renderer mounts and preserves overrides",
+    async (kind) => {
+      const durations = { success: 3000, error: 5000, loading: Infinity }
+      const Probe = () => {
+        const { toasts } = useToasterStore()
+        return (
+          <output>
+            {toasts.map((toast) => `${toast.id}:${toast.duration}`).join(",")}
+          </output>
+        )
+      }
+      let standard = ""
+      let override = ""
+      act(() => {
+        standard = contentNotify[kind]("Default")
+        override = contentNotify[kind]("Override", { duration: 9000 })
+      })
+      render(<Probe />)
+      expect(screen.getByRole("status")).toHaveTextContent(
+        `${standard}:${durations[kind]}`,
+      )
+      expect(screen.getByRole("status")).toHaveTextContent(`${override}:9000`)
+    },
+  )
+
+  it.each(["success", "error"] as const)(
+    "applies promise %s lifetimes and prioritizes per-state overrides",
+    async (kind) => {
+      const Probe = () => {
+        const { toasts } = useToasterStore()
+        return (
+          <output>
+            {toasts
+              .map((toast) => `${toast.message}:${toast.duration}`)
+              .join(",")}
+          </output>
+        )
+      }
+      render(<Probe />)
+      for (const [label, options] of [
+        ["Default", undefined],
+        ["Global", { duration: 8000 }],
+        ["State", { duration: 8000, [kind]: { duration: 9000 } }],
+      ] as const) {
+        await act(async () => {
+          await contentNotify
+            .promise(
+              kind === "success"
+                ? Promise.resolve()
+                : Promise.reject(new Error("failed")),
+              { loading: "Working", success: label, error: label },
+              options,
+            )
+            .catch(() => undefined)
+        })
+      }
+      expect(screen.getByRole("status")).toHaveTextContent(
+        `Default:${kind === "success" ? 3000 : 5000}`,
+      )
+      expect(screen.getByRole("status")).toHaveTextContent("Global:8000")
+      expect(screen.getByRole("status")).toHaveTextContent("State:9000")
+    },
+  )
+
+  it.each([
+    ["success", "circle-check"],
+    ["error", "circle-x"],
+    ["loading", "loader-circle"],
+  ] as const)(
+    "renders a default content %s icon and preserves custom icons",
+    (kind, icon) => {
+      render(<RedemptionToaster />)
+      act(() => {
+        contentNotify[kind]("Default icon")
+      })
+      expect(
+        screen.getByRole("status").querySelector(`.lucide-${icon}`),
+      ).not.toBeNull()
+      act(() => {
+        contentNotify.remove()
+        contentNotify[kind]("Custom icon", { icon: <span>Custom marker</span> })
+      })
+      expect(screen.getByText("Custom marker")).toBeVisible()
+      expect(
+        screen.getByRole("status").querySelector(`.lucide-${icon}`),
+      ).toBeNull()
+    },
+  )
+
   it.each(["info", "warning"] as const)(
     "normalizes %s text and skips empty notices without replacing an existing toast",
     async (kind) => {

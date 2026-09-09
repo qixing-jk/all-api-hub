@@ -20,14 +20,11 @@ export function createNotify(runtime: typeof toast) {
     const [message, options] = args
     // Updates merge with the existing record. Reset presentation owned by this
     // facade so a warning's icon or lifetime cannot leak into the next state.
-    if (options?.id) {
-      return runtime[kind](message, {
-        icon: undefined,
-        duration: NOTIFICATION_DURATIONS[kind],
-        ...options,
-      })
-    }
-    return runtime[kind](...args)
+    return runtime[kind](message, {
+      ...(options?.id ? { icon: undefined } : {}),
+      duration: NOTIFICATION_DURATIONS[kind],
+      ...options,
+    })
   }
   const showNotice = (
     kind: "info" | "warning",
@@ -73,23 +70,22 @@ export function createNotify(runtime: typeof toast) {
 
   const promise: typeof runtime.promise = (...args) => {
     const [task, messages, options] = args
-    if (!options?.id) return runtime.promise(...args)
     return runtime.promise(task, messages, {
       ...options,
       loading: {
-        icon: options.icon,
-        duration: options.duration ?? NOTIFICATION_DURATIONS.loading,
-        ...options.loading,
+        ...(options?.id ? { icon: options.icon } : {}),
+        duration: options?.duration ?? NOTIFICATION_DURATIONS.loading,
+        ...options?.loading,
       },
       success: {
-        icon: options.icon,
-        duration: options.duration ?? NOTIFICATION_DURATIONS.success,
-        ...options.success,
+        ...(options?.id ? { icon: options.icon } : {}),
+        duration: options?.duration ?? NOTIFICATION_DURATIONS.success,
+        ...options?.success,
       },
       error: {
-        icon: options.icon,
-        duration: options.duration ?? NOTIFICATION_DURATIONS.error,
-        ...options.error,
+        ...(options?.id ? { icon: options.icon } : {}),
+        duration: options?.duration ?? NOTIFICATION_DURATIONS.error,
+        ...options?.error,
       },
     })
   }
