@@ -9,7 +9,7 @@ import { createLogger } from "~/utils/core/logger"
 const logger = createLogger("ModelPricingCache")
 
 const STORAGE_KEYS = {
-  PRICING_CACHE: "modelPricing_cache_v27",
+  PRICING_CACHE: "modelPricing_cache_v28",
 } as const
 
 export const MODEL_PRICING_CACHE_TTL_MS = 10 * 60 * 1000

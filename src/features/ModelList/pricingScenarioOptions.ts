@@ -2,13 +2,34 @@ import type { TFunction } from "i18next"
 
 import {
   PRICING_IMAGE_SIZES,
+  PRICING_RANGE_AXES,
   PRICING_RESPONSE_FORMATS,
   PRICING_SERVICE_TIERS,
   PRICING_VIDEO_INPUTS,
 } from "~/services/modelPricing/pricingConstants"
-import type { PriceMeter } from "~/services/modelPricing/pricingPlan"
+import type {
+  PriceMeter,
+  PricingPlan,
+} from "~/services/modelPricing/pricingPlan"
 
 import { UNSPECIFIED_PRICING_OPTION } from "./pricingScenarioFields"
+
+/** Names the token basis consistently in compact and expanded pricing rules. */
+export function pricingRangeLabel(
+  t: TFunction<"modelList">,
+  condition: Extract<
+    PricingPlan["rules"][number]["conditions"][number],
+    { kind: "range" }
+  >,
+): string {
+  if (condition.outputTokenDeductions) return t("scenario.netOutput")
+  if (condition.inputTokenDeductions) return t("scenario.netInput")
+  if (condition.axis === PRICING_RANGE_AXES.OUTPUT_TOKENS)
+    return t("scenario.output")
+  if (condition.axis === PRICING_RANGE_AXES.TOTAL_TOKENS)
+    return t("scenario.totalTokens")
+  return t("scenario.input")
+}
 
 /** Shared labels for scenario selectors and the matching price schedule. */
 export function pricingScenarioOptions(t: TFunction<"modelList">) {

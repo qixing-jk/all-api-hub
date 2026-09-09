@@ -330,7 +330,7 @@ export function ModelDisplay(props: ModelDisplayProps) {
                               : group.unit === QUOTE_UNITS.SEARCH_UNIT
                                 ? t("scenario.searchUnit")
                                 : group.unit === QUOTE_UNITS.IMAGE
-                                  ? t("scenario.imagePrice")
+                                  ? t("scenario.image")
                                   : group.unit ===
                                       QUOTE_UNITS.MILLION_VIDEO_OUTPUT_TOKENS
                                     ? t("scenario.perMillionVideoTokens")

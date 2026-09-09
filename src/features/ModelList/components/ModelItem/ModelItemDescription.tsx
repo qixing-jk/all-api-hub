@@ -35,7 +35,7 @@ export const ModelItemDescription: React.FC<ModelItemDescriptionProps> = ({
         }}
         title={description}
       >
-        <span className="text-muted-foreground">{t("siteDescription")}： </span>
+        <span className="text-muted-foreground">{t("siteDescription")} </span>
         {description}
       </p>
     </div>

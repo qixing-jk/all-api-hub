@@ -28,6 +28,9 @@ type LiteLlmPriceTableEntry = {
 export const LITELLM_MODEL_PRICE_TABLE_URL =
   "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json"
 
+const LITELLM_MODEL_PRICE_TABLE_PAGE_URL =
+  "https://github.com/BerriAI/litellm/blob/main/model_prices_and_context_window.json"
+
 export const MODEL_PRICE_TABLE_FETCH_TIMEOUT_MS = 10_000
 
 const toFiniteNonNegativeNumber = (value: unknown): number | undefined => {
@@ -74,7 +77,10 @@ const normalizeLiteLlmPriceTable = (payload: unknown): ModelPriceTable => {
         ),
       ) as ModelPriceTableEntry
 
-      const plan = buildLiteLlmPricingPlan(value, LITELLM_MODEL_PRICE_TABLE_URL)
+      const plan = buildLiteLlmPricingPlan(
+        value,
+        LITELLM_MODEL_PRICE_TABLE_PAGE_URL,
+      )
       if (plan) cleaned.pricingPlan = plan
 
       return Object.keys(cleaned).length > 0 ? [[modelId, cleaned]] : []
@@ -82,7 +88,7 @@ const normalizeLiteLlmPriceTable = (payload: unknown): ModelPriceTable => {
   )
 
   return {
-    source: LITELLM_MODEL_PRICE_TABLE_URL,
+    source: LITELLM_MODEL_PRICE_TABLE_PAGE_URL,
     models,
   }
 }

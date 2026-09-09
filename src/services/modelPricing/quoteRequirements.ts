@@ -5,6 +5,7 @@ import {
   PRICING_METERS,
   PRICING_PURPOSES,
   PRICING_RANGE_AXES,
+  PRICING_RESPONSE_FORMATS,
   PRICING_SELECTION_AXES,
   PRICING_SERVICE_TIERS,
   PRICING_USAGE_MODES,
@@ -23,6 +24,27 @@ export function getQuoteConditionDetails(
   >()
   for (const rule of plan.rules) {
     for (const condition of rule.conditions) {
+      if (
+        condition.kind === PRICING_CONDITION_KINDS.RANGE &&
+        (condition.inputTokenDeductions || condition.outputTokenDeductions) &&
+        !scenario.responseFormat &&
+        matchesPricingCondition(condition, scenario) === undefined
+      ) {
+        const formats = Object.values(PRICING_RESPONSE_FORMATS)
+        if (
+          formats.some(
+            (responseFormat) =>
+              typeof matchesPricingCondition(condition, {
+                ...scenario,
+                responseFormat,
+              }) === "boolean",
+          )
+        )
+          selections.set(
+            PRICING_SELECTION_AXES.RESPONSE_FORMAT,
+            new Set(formats),
+          )
+      }
       if (condition.kind !== PRICING_CONDITION_KINDS.SELECTION) continue
       const values = selections.get(condition.axis) ?? new Set<string>()
       values.add(

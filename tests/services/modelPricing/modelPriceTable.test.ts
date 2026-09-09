@@ -224,7 +224,8 @@ describe("loadModelPriceTable", () => {
     vi.stubGlobal("fetch", fetchMock)
 
     await expect(loadModelPriceTable()).resolves.toEqual({
-      source: LITELLM_MODEL_PRICE_TABLE_URL,
+      source:
+        "https://github.com/BerriAI/litellm/blob/main/model_prices_and_context_window.json",
       models: {
         "example-priced-model": {
           input: 2,

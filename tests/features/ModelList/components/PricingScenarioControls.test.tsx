@@ -71,6 +71,279 @@ const plan: PricingPlan = {
   issues: [],
   serviceTiers: [PRICING_SERVICE_TIERS.STANDARD, PRICING_SERVICE_TIERS.BATCH],
 }
+it("clears a rejected quantity draft even when the committed value is already empty", async () => {
+  const user = userEvent.setup()
+  function EmptyQuantity() {
+    const [settings, onChange] = useState({
+      ...createDefaultPricingScenario(),
+      inputTokens: undefined as number | undefined,
+    })
+    return (
+      <PricingScenarioControls
+        settings={settings}
+        onChange={onChange}
+        plans={[plan]}
+      />
+    )
+  }
+  render(<EmptyQuantity />)
+  await user.click(
+    await screen.findByText("modelList:priceComparison.customize"),
+  )
+  await user.click(screen.getByText("modelList:scenario.groups.tiers"))
+  const input = screen.getByRole("spinbutton", {
+    name: "modelList:scenario.input",
+  })
+  await user.type(input, "-10")
+  await user.tab()
+  expect(input).toHaveValue(null)
+  await user.type(input, "12")
+  await user.tab()
+  expect(input).toHaveValue(12)
+})
+it("recovers a protocol-dependent cache quote by focusing and selecting its response format", async () => {
+  const user = userEvent.setup()
+  const protocolPlan: PricingPlan = {
+    ...plan,
+    serviceTiers: undefined,
+    requiresRuleMatch: true,
+    rates: {},
+    rules: [
+      {
+        id: "protocol",
+        conditions: [
+          {
+            kind: PRICING_CONDITION_KINDS.RANGE,
+            axis: PRICING_RANGE_AXES.INPUT_TOKENS,
+            min: 0,
+            inputTokenDeductions: {
+              openai: [],
+              anthropic: [PRICING_METERS.CACHE_READ],
+            },
+          },
+        ],
+        rates: { input: plan.rates.input!, cacheRead: plan.rates.input! },
+      },
+    ],
+  }
+  function ProtocolComparison() {
+    const [settings, onChange] = useState(createDefaultPricingScenario)
+    return (
+      <PricingScenarioNavigation onConfigure={() => {}}>
+        <PricingScenarioControls
+          settings={settings}
+          onChange={onChange}
+          plans={[protocolPlan]}
+        />
+        <ModelPriceQuote
+          quote={quoteModelPrice(
+            protocolPlan,
+            resolvePricingScenario(settings, {
+              input: 1,
+              output: null,
+              cacheRead: 1,
+              cacheWrite: null,
+            }),
+          )}
+        />
+      </PricingScenarioNavigation>
+    )
+  }
+  render(<ProtocolComparison />)
+  await user.click(
+    await screen.findByRole("button", { name: /modelList:scenario.configure/ }),
+  )
+  const format = screen.getByRole("combobox", {
+    name: "modelList:scenario.responseFormat",
+  })
+  expect(format).toHaveFocus()
+  await user.click(format)
+  await user.click(await screen.findByRole("option", { name: "OpenAI" }))
+  expect(screen.getByText("$1.000000")).toBeVisible()
+  expect(
+    screen.queryByRole("button", { name: /modelList:scenario.configure/ }),
+  ).not.toBeInTheDocument()
+})
+it("can refill image quantity after filtering from metered images to a fixed image plan", async () => {
+  const user = userEvent.setup()
+  const imagePlan: PricingPlan = {
+    ...plan,
+    serviceTiers: undefined,
+    usageMode: PRICING_USAGE_MODES.IMAGE,
+    rules: [],
+    rates: {
+      image: {
+        amount: 0.2,
+        currency: "USD",
+        unit: PRICE_RATE_UNITS.IMAGE,
+        per: 1,
+      },
+    },
+  }
+  function ImageComparison() {
+    const [settings, onChange] = useState(createDefaultPricingScenario)
+    const [fixed, setFixed] = useState(false)
+    const current = fixed
+      ? imagePlan
+      : { ...imagePlan, comparison: { meter: PRICING_METERS.IMAGE } }
+    return (
+      <PricingScenarioNavigation onConfigure={() => {}}>
+        <button onClick={() => setFixed(true)}>Only fixed images</button>
+        <PricingScenarioControls
+          settings={settings}
+          onChange={onChange}
+          plans={[current]}
+        />
+        <ModelPriceQuote
+          quote={quoteModelPrice(
+            current,
+            resolvePricingScenario(settings, {
+              input: 1,
+              output: null,
+              cacheRead: null,
+              cacheWrite: null,
+            }),
+          )}
+        />
+      </PricingScenarioNavigation>
+    )
+  }
+  render(<ImageComparison />)
+  await user.click(await screen.findByText("modelList:scenario.groups.image"))
+  await user.clear(
+    screen.getByRole("spinbutton", { name: "modelList:scenario.outputImages" }),
+  )
+  await user.tab()
+  await user.click(screen.getByRole("button", { name: "Only fixed images" }))
+  await user.click(
+    screen.getByRole("button", { name: /modelList:scenario.configure/ }),
+  )
+  const quantity = screen.getByRole("spinbutton", {
+    name: "modelList:scenario.outputImages",
+  })
+  expect(quantity).toHaveFocus()
+  await user.type(quantity, "2")
+  await user.tab()
+  expect(screen.getByText("$0.200000")).toBeVisible()
+})
+it("keeps effective task quantities and pricing time visible when conditions are folded", async () => {
+  render(
+    <PricingScenarioControls
+      settings={{
+        ...createDefaultPricingScenario(),
+        taskUsage: { videoSeconds: 12 },
+        at: "2026-09-09T04:00:00Z",
+      }}
+      onChange={() => {}}
+      plans={[
+        {
+          ...plan,
+          usageMode: PRICING_USAGE_MODES.METERED,
+          comparison: { meter: PRICING_METERS.VIDEO_SECONDS },
+          rates: {
+            videoSeconds: {
+              amount: 0.1,
+              currency: "USD",
+              unit: PRICE_RATE_UNITS.SECOND,
+              per: 1,
+            },
+          },
+          rules: [
+            {
+              id: "time",
+              rates: {},
+              conditions: [
+                {
+                  kind: PRICING_CONDITION_KINDS.UTC_WINDOW,
+                  startMinute: 0,
+                  endMinute: 1440,
+                },
+              ],
+            },
+          ],
+        },
+      ]}
+    />,
+  )
+  expect(
+    await screen.findByText("modelList:scenario.videoSeconds: 12"),
+  ).toBeVisible()
+  expect(
+    screen.getByLabelText("modelList:scenario.videoSeconds"),
+  ).not.toBeVisible()
+  expect(screen.getByText(/modelList:scenario.pricingTime:/)).toBeVisible()
+  expect(
+    screen.getByLabelText("modelList:scenario.pricingTime"),
+  ).not.toBeVisible()
+})
+it("focuses cache weights without changing the workload when the tier cache basis is unknown", async () => {
+  const user = userEvent.setup()
+  const cachePlan: PricingPlan = {
+    ...plan,
+    rules: [
+      {
+        ...plan.rules[0],
+        conditions: [
+          {
+            kind: PRICING_CONDITION_KINDS.RANGE,
+            axis: PRICING_RANGE_AXES.INPUT_TOKENS_CACHE_BASIS_UNKNOWN,
+            min: 0,
+          },
+        ],
+      },
+    ],
+  }
+  function CacheComparison() {
+    const [settings, onChange] = useState(createDefaultPricingScenario)
+    const [weights, setWeights] = useState<ModelPriceComparisonWeights>({
+      input: 1,
+      output: 1,
+      cacheRead: 2,
+      cacheWrite: 3,
+    })
+    return (
+      <PricingScenarioNavigation onConfigure={() => {}}>
+        <PricingScenarioControls
+          settings={settings}
+          onChange={onChange}
+          plans={[cachePlan]}
+        >
+          {(conditions, summary) => (
+            <PriceComparisonControls
+              embedded
+              conditionFields={conditions}
+              conditionSummary={summary}
+              presetId="custom"
+              onPresetIdChange={() => {}}
+              weights={weights}
+              onWeightsChange={setWeights}
+            />
+          )}
+        </PricingScenarioControls>
+        <ModelPriceQuote
+          quote={quoteModelPrice(
+            cachePlan,
+            resolvePricingScenario(settings, weights),
+          )}
+        />
+      </PricingScenarioNavigation>
+    )
+  }
+  render(<CacheComparison />)
+  await user.click(
+    await screen.findByRole("button", { name: /modelList:scenario.configure/ }),
+  )
+  const cacheRead = screen.getByRole("spinbutton", {
+    name: "modelList:priceComparison.weights.cacheRead",
+  })
+  expect(cacheRead).toHaveFocus()
+  expect(cacheRead).toHaveValue(2)
+  expect(
+    screen.getByRole("spinbutton", {
+      name: "modelList:priceComparison.weights.cacheWrite",
+    }),
+  ).toHaveValue(3)
+})
 it("hides reference lengths for flat pricing even when a model has capacity limits", async () => {
   render(
     <PricingScenarioControls
@@ -168,6 +441,7 @@ it("shares one resolution option and quote across provider notation variants", a
   }
   render(<Comparison />)
   expect(await screen.findAllByText("complete")).toHaveLength(2)
+  await user.click(screen.getByText("modelList:scenario.groups.video"))
   const selector = screen.getByRole("combobox", {
     name: "modelList:scenario.videoQuality",
   })
@@ -332,6 +606,7 @@ it("derives video reference controls from the pricing rules and shows video outp
   }
   render(<VideoComparison />)
   const user = userEvent.setup()
+  await user.click(await screen.findByText("modelList:scenario.groups.video"))
   await user.click(
     await screen.findByRole("combobox", {
       name: "modelList:scenario.videoInput",
@@ -402,6 +677,7 @@ it("selects image size and displays a per-image quote without token weights", as
   }
   render(<ImageComparison />)
   const user = userEvent.setup()
+  await user.click(await screen.findByText("modelList:scenario.groups.image"))
   await user.click(
     await screen.findByRole("combobox", {
       name: "modelList:scenario.imageSize",
@@ -551,7 +827,7 @@ function Comparison() {
     </PricingScenarioNavigation>
   )
 }
-it("starts with a usable comparison and exposes all adjustments together", async () => {
+it("starts with a usable comparison and reveals only the selected condition group", async () => {
   const user = userEvent.setup()
   render(<Comparison />)
   expect(await screen.findByText("$1.500000")).toBeVisible()
@@ -563,7 +839,16 @@ it("starts with a usable comparison and exposes all adjustments together", async
   ).not.toBeInTheDocument()
   expect(screen.getByLabelText("modelList:scenario.input")).not.toBeVisible()
   await user.click(screen.getByText("modelList:priceComparison.customize"))
+  expect(screen.getByLabelText("modelList:scenario.input")).not.toBeVisible()
+  expect(
+    screen.getByLabelText("modelList:scenario.serviceTier"),
+  ).not.toBeVisible()
+  await user.click(screen.getByText("modelList:scenario.groups.tiers"))
   expect(screen.getByLabelText("modelList:scenario.input")).toBeVisible()
+  expect(
+    screen.getByLabelText("modelList:scenario.serviceTier"),
+  ).not.toBeVisible()
+  await user.click(screen.getByText("modelList:scenario.groups.other"))
   expect(screen.getByLabelText("modelList:scenario.serviceTier")).toBeVisible()
 })
 it("updates the same comparison and active tier when the representative length changes", async () => {
@@ -572,6 +857,7 @@ it("updates the same comparison and active tier when the representative length c
   await user.click(
     await screen.findByText("modelList:priceComparison.customize"),
   )
+  await user.click(screen.getByText("modelList:scenario.groups.tiers"))
   const input = screen.getByLabelText("modelList:scenario.input")
   await user.clear(input)
   await user.type(input, "100001")
@@ -586,18 +872,20 @@ it("keeps available output costs and source prices when a tier length is missing
   await user.click(
     await screen.findByText("modelList:priceComparison.customize"),
   )
+  await user.click(screen.getByText("modelList:scenario.groups.tiers"))
   await user.clear(screen.getByLabelText("modelList:scenario.input"))
   await user.tab()
   expect(screen.getByText("$1.000000")).toBeVisible()
   expect(screen.getByText("modelList:scenario.knownPrice")).toBeVisible()
   expect(screen.getByText("modelList:scenario.publishedPrices")).toBeVisible()
 })
-it("opens all comparison controls locally", async () => {
+it("reopens the missing tier condition locally without exposing unrelated settings", async () => {
   const user = userEvent.setup()
   render(<Comparison />)
   await user.click(
     await screen.findByText("modelList:priceComparison.customize"),
   )
+  await user.click(screen.getByText("modelList:scenario.groups.tiers"))
   await user.clear(screen.getByLabelText("modelList:scenario.input"))
   await user.tab()
   await user.click(screen.getByText("modelList:priceComparison.customize"))
@@ -614,7 +902,9 @@ it("opens all comparison controls locally", async () => {
   expect(window.location.href).toBe(oldUrl)
   expect(screen.getByLabelText("modelList:scenario.input")).toHaveFocus()
   expect(screen.getByLabelText("modelList:scenario.input")).toBeVisible()
-  expect(screen.getByLabelText("modelList:scenario.serviceTier")).toBeVisible()
+  expect(
+    screen.getByLabelText("modelList:scenario.serviceTier"),
+  ).not.toBeVisible()
 })
 it("omits conditions that no listed model uses", async () => {
   render(
@@ -650,6 +940,9 @@ it("lets people choose the time used by time-based price rules", async () => {
     </PricingScenarioControls>,
   )
 
+  await userEvent
+    .setup()
+    .click(await screen.findByText("modelList:scenario.groups.other"))
   expect(
     await screen.findByText("modelList:scenario.pricingTimeEffect"),
   ).toBeVisible()
@@ -778,12 +1071,19 @@ it.each(["pages", PRICING_METERS.OUTPUT_MEGAPIXELS] as const)(
     }
     const user = userEvent.setup()
     render(<Comparison />)
+    const groupLabel =
+      meter === PRICING_METERS.PAGES
+        ? "modelList:scenario.groups.other"
+        : "modelList:scenario.groups.image"
+    await user.click(await screen.findByText(groupLabel))
     const input = await screen.findByRole("spinbutton", {
       name: `modelList:scenario.${meter}`,
     })
     expect(input).toHaveValue(1)
     await user.clear(input)
     await user.tab()
+    await user.click(screen.getByText(groupLabel))
+    expect(input).not.toBeVisible()
     await user.click(
       await screen.findByRole("button", {
         name: `modelList:scenario.configure · modelList:scenario.${meter}`,

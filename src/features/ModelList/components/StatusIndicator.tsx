@@ -19,6 +19,7 @@ import {
   MODEL_MANAGEMENT_SOURCE_KINDS,
   type ModelManagementSource,
 } from "~/features/ModelList/modelManagementSources"
+import { resolveAccountSitePricingUrl } from "~/services/accounts/accountSiteProfile/urls"
 import type { DisplaySiteData } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 import { openSiteSupportRequestPage } from "~/utils/navigation"
@@ -329,6 +330,10 @@ export function StatusIndicator({
   }
 
   if (dataFormatError && currentAccount) {
+    const pricingUrl = resolveAccountSitePricingUrl({
+      siteType: currentAccount.siteType,
+      baseUrl: currentAccount.baseUrl,
+    })
     return (
       <Alert variant="warning" className="mb-6">
         <div>
@@ -337,14 +342,16 @@ export function StatusIndicator({
           </h3>
           <p className="mb-4 text-sm">{t("status.incompatibleDesc")}</p>
           <div className="flex flex-col gap-3 sm:flex-row">
-            <WorkflowTransitionButton
-              variant="warning"
-              onClick={() =>
-                window.open(`${currentAccount.baseUrl}/pricing`, "_blank")
-              }
-            >
-              {t("status.goToSitePricing")}
-            </WorkflowTransitionButton>
+            {pricingUrl && (
+              <WorkflowTransitionButton
+                variant="warning"
+                onClick={() =>
+                  window.open(pricingUrl, "_blank", "noopener,noreferrer")
+                }
+              >
+                {t("status.goToSitePricing")}
+              </WorkflowTransitionButton>
+            )}
             <Button
               variant="secondary"
               onClick={loadPricingData}

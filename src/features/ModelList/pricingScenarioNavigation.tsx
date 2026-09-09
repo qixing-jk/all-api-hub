@@ -11,6 +11,7 @@ import {
 import {
   PRICING_CONDITION_KINDS,
   PRICING_ISSUE_CODES,
+  PRICING_METERS,
   PRICING_RANGE_AXES,
 } from "~/services/modelPricing/pricingConstants"
 import type { QuoteResult } from "~/services/modelPricing/pricingPlan"
@@ -66,11 +67,20 @@ export function getPricingConditionTarget(
 
 /** Resolve every editable field without inventing a target for unsupported rules. */
 export function getPricingConditionTargets(
-  quote: Pick<QuoteResult, "conditionDetails" | "requirementDetails">,
+  quote: Pick<QuoteResult, "conditionDetails" | "requirementDetails"> &
+    Partial<Pick<QuoteResult, "issues">>,
 ): PricingConditionTarget[] {
   const targets = new Set<PricingConditionTarget>(
     quote.conditionDetails?.map((detail) => detail.axis),
   )
+  if (
+    quote.issues?.some(
+      (issue) => issue.code === PRICING_ISSUE_CODES.CACHE_BASIS_UNKNOWN,
+    )
+  ) {
+    targets.add(PRICING_METERS.CACHE_READ)
+    targets.add(PRICING_METERS.CACHE_WRITE)
+  }
   for (const detail of quote.requirementDetails ?? []) {
     if (detail.axis === PRICING_RANGE_AXES.TOTAL_TOKENS) {
       targets.add(PRICING_RANGE_AXES.INPUT_TOKENS)
@@ -105,15 +115,24 @@ export function PricingScenarioNavigation({
     if (!requested) return
     const controls = controlsRef.current
     if (controls) {
-      const customization = controls.querySelector("details")
-      if (customization) customization.open = true
       const targets = targetRef.current.flatMap((target) => {
         const field = controls.querySelector<HTMLElement>(
           `[data-pricing-condition="${target}"]`,
         )
         return field ? [field] : []
       })
-      for (const target of targets) target.dataset.pricingHighlight = "true"
+      for (const target of targets) {
+        let ancestor = target.parentElement
+        while (ancestor && ancestor !== controls) {
+          if (ancestor instanceof HTMLDetailsElement) ancestor.open = true
+          ancestor = ancestor.parentElement
+        }
+        target.dataset.pricingHighlight = "true"
+      }
+      if (!targets.length) {
+        const customization = controls.querySelector("details")
+        if (customization) customization.open = true
+      }
       const destination = targets[0] ?? controls
       destination.scrollIntoView?.({ block: "center" })
       destination.focus({ preventScroll: true })

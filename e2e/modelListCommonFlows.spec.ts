@@ -25,6 +25,7 @@ import {
   getServiceWorker,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
+import mediaPricingRows from "~~/tests/fixtures/newApi/mediaPricing.json" with { type: "json" }
 
 const MODEL_LIST_BASE_URL = "https://models.example.com"
 const PRICE_COMPARISON_BASE_URL_A = "https://comparison-a.example.com"
@@ -81,7 +82,10 @@ const PRICING_MODELS: ModelPricing[] = [
   },
 ]
 
-async function seedModelListAccount(context: BrowserContext) {
+async function seedModelListAccount(
+  context: BrowserContext,
+  pricingModels: ModelPricing[] = PRICING_MODELS,
+) {
   const serviceWorker = await getServiceWorker(context)
 
   await seedStoredAccounts(serviceWorker, [
@@ -99,8 +103,8 @@ async function seedModelListAccount(context: BrowserContext) {
 
   await stubNewApiSiteRoutes(context, {
     baseUrl: MODEL_LIST_BASE_URL,
-    models: PRICING_MODELS.map((model) => model.model_name),
-    pricingModels: PRICING_MODELS,
+    models: pricingModels.map((model) => model.model_name),
+    pricingModels,
     groups: {
       default: { desc: "Default", ratio: 1 },
       vip: { desc: "VIP", ratio: 1.5 },
@@ -425,6 +429,24 @@ test("loads account-backed models from the options route", async ({
       totalModels: 3,
     },
   })
+  await page
+    .getByTestId(MODEL_LIST_TEST_IDS.headerPriceComparisonButton)
+    .click()
+  await page
+    .getByRole("button", { name: "View calculation", exact: true })
+    .first()
+    .click()
+  const sourceLink = page
+    .getByRole("link", { name: "View pricing source", exact: true })
+    .first()
+  await expect(sourceLink).toBeVisible()
+  await expect(sourceLink).toHaveAttribute("target", "_blank")
+  const destination = new URL((await sourceLink.getAttribute("href"))!)
+  expect(destination.origin).toBe(new URL(MODEL_LIST_BASE_URL).origin)
+  expect(destination.pathname).toBe("/pricing")
+  expect(["gpt-4o-mini", "claude-3-5-sonnet", "gemini-1.5-flash"]).toContain(
+    destination.searchParams.get("search"),
+  )
 })
 
 test("groups same-model offers when comparing prices at narrow options width", async ({
@@ -480,7 +502,7 @@ test("groups same-model offers when comparing prices at narrow options width", a
     "Not compared under current conditions: 1",
   )
   await expect(comparisonGroup.getByRole("note")).toContainText(
-    "The current conditions use a price item the source does not provide",
+    "The offers below are excluded from comparison; see each offer for the reason.",
   )
   await expect(comparisonGroup).toContainText("Comparison Account A")
   await expect(comparisonGroup).toContainText("Comparison Account B")
@@ -491,6 +513,115 @@ test("groups same-model offers when comparing prices at narrow options width", a
       (element) => element.scrollWidth <= element.clientWidth + 1,
     ),
   ).toBe(true)
+})
+
+test("keeps mixed pricing settings compact and opens the missing condition group", async ({
+  context,
+  extensionId,
+  page,
+}, testInfo) => {
+  const pricingModels = [
+    {
+      ...PRICING_MODELS[0],
+      model_name: "tiered-chat",
+      enable_groups: ["default"],
+      billing_mode: "tiered_expr",
+      billing_expr:
+        'len <= 100000 ? tier("short", p * 1 + c * 2) : tier("long", p * 3 + c * 4)',
+    },
+    {
+      ...PRICING_MODELS[0],
+      model_name: "timed-chat",
+      enable_groups: ["default"],
+      billing_mode: "tiered_expr",
+      billing_expr:
+        'hour("Asia/Shanghai") < 12 ? tier("morning", p * 1 + c * 2) : tier("afternoon", p * 2 + c * 3)',
+    },
+    ...mediaPricingRows
+      .filter((row) => ["gpt-image-2", "wan2.7-t2v"].includes(row.model_name))
+      .map((row) => ({
+        ...PRICING_MODELS[0],
+        ...row,
+        enable_groups: ["default"],
+      })),
+  ]
+  await seedModelListAccount(context, pricingModels)
+  await verifyAccountModelCatalogUsage({
+    page,
+    extensionId,
+    account: { accountId: "model-list-account" },
+    expectations: {
+      sourceLabel: "Model Catalog Account",
+      totalModels: pricingModels.length,
+    },
+  })
+  await page
+    .getByTestId(MODEL_LIST_TEST_IDS.headerPriceComparisonButton)
+    .click()
+  const controls = page.getByRole("region", {
+    name: "Set conditions",
+    exact: true,
+  })
+  await expect(controls).toBeVisible()
+  await expect(page.getByText(/Complete quotes:/)).toHaveCount(0)
+  await expect(controls.getByText(/^Compare prices at:/)).toBeVisible()
+  await controls.getByText("Adjust comparison", { exact: true }).click()
+  await expect(page.getByText("Model data loaded successfully")).toBeHidden()
+  for (const width of [1440, 720, 390]) {
+    await page.setViewportSize({ width, height: 1000 })
+    await expect(
+      controls.getByText("Tiered pricing conditions", { exact: true }),
+    ).toBeVisible()
+    await expect(
+      controls.getByText("Image settings", { exact: true }),
+    ).toBeVisible()
+    await expect(
+      controls.getByText("Video settings", { exact: true }),
+    ).toBeVisible()
+    await expect(
+      controls.getByText("Other billing conditions", { exact: true }),
+    ).toBeVisible()
+    expect(
+      await controls.evaluate(
+        (element) => element.scrollWidth <= element.clientWidth + 1,
+      ),
+    ).toBe(true)
+    const bounds = await controls.boundingBox()
+    expect(bounds!.height).toBeLessThan(width >= 1000 ? 600 : 900)
+    await controls.screenshot({
+      path: testInfo.outputPath(`pricing-groups-${width}.png`),
+    })
+  }
+  await page.setViewportSize({ width: 1440, height: 1000 })
+  await expect(controls.getByLabel("Image size", { exact: true })).toBeHidden()
+  await expect(
+    controls.getByLabel("Video quality", { exact: true }),
+  ).toBeHidden()
+  const url = page.url()
+  await page
+    .getByRole("button", { name: "Set conditions · Image size", exact: true })
+    .first()
+    .click()
+  const size = controls.getByRole("combobox", {
+    name: "Image size",
+    exact: true,
+  })
+  await expect(size).toBeFocused()
+  await expect(size).toBeVisible()
+  await expect(
+    controls.getByLabel("Video quality", { exact: true }),
+  ).toBeHidden()
+  await expect(page).toHaveURL(url)
+  await size.click()
+  await page.getByRole("option", { name: "2K", exact: true }).click()
+  await expect(size).toContainText("2K")
+  await controls.getByText("Image settings", { exact: true }).click()
+  await expect(size).toBeHidden()
+  await controls.getByText("Image settings", { exact: true }).press("Enter")
+  await expect(size).toContainText("2K")
+  await controls.screenshot({
+    path: testInfo.outputPath("pricing-image-expanded.png"),
+  })
 })
 
 test("loads personalized OpenRouter catalogs with visible provider fallback and retry", async ({
@@ -542,12 +673,20 @@ test("loads personalized OpenRouter catalogs with visible provider fallback and 
   await expect(
     page.getByRole("heading", { name: "Pricing", exact: true }),
   ).toBeVisible()
+  const inputTier = page.getByRole("group", {
+    name: "Reference input length (tokens, including cache) · Context: 200001–∞ tokens",
+    exact: true,
+  })
+  await expect(inputTier).toBeVisible()
   await expect(
-    page.getByText("Conditional prices", { exact: true }),
+    inputTier.getByText("USD: $3.0000", { exact: true }),
   ).toBeVisible()
   await expect(
-    page.getByText("More than 200,000 prompt tokens", { exact: true }),
-  ).toBeVisible()
+    page.getByRole("link", { name: "View pricing source", exact: true }),
+  ).toHaveAttribute(
+    "href",
+    `${OPENROUTER_WEB_ORIGIN}/${OPENROUTER_PERSONALIZED_MODEL_A_ID}`,
+  )
   await expect(
     page.getByRole("heading", { name: "Routing provider" }),
   ).toBeVisible()

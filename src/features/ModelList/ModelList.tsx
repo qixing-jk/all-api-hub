@@ -36,7 +36,6 @@ import {
   canCreateAccountApiTokens,
   canListAccountRuntimeKeys,
 } from "~/services/accounts/keyProductCapabilities"
-import { QUOTE_STATUSES } from "~/services/modelPricing/pricingConstants"
 import { MODEL_VENDOR_FILTER_VALUES } from "~/services/models/modelVendor"
 import { trackProductAnalyticsActionStarted } from "~/services/productAnalytics/actions"
 import {
@@ -803,22 +802,6 @@ export default function ModelList(props: {
             />
           )}
 
-          {isModelListPriceSortMode(sortMode) && (
-            <p aria-live="polite" className="text-muted-foreground text-sm">
-              {t("modelList:scenario.comparisonSummary", {
-                complete: displayedModels.filter(
-                  (item) =>
-                    item.calculatedPrice.quote?.status ===
-                    QUOTE_STATUSES.COMPLETE,
-                ).length,
-                pending: displayedModels.filter(
-                  (item) =>
-                    item.calculatedPrice.quote?.status !==
-                    QUOTE_STATUSES.COMPLETE,
-                ).length,
-              })}
-            </p>
-          )}
           <ControlPanel
             selectedSource={selectedSource}
             sourceCapabilities={sourceCapabilities}

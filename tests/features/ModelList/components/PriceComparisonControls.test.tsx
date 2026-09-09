@@ -30,6 +30,11 @@ it("shows the actual comparison mix before optional numeric editing", async () =
   const user = userEvent.setup()
   render(<Comparison />)
   expect(await screen.findByText("85%")).toBeVisible()
+  expect(
+    screen.getByRole("region", {
+      name: "modelList:priceComparison.sectionTitle",
+    }),
+  ).toHaveAccessibleDescription("modelList:priceComparison.sectionDescription")
   expect(screen.getByText("15%")).toBeVisible()
   expect(
     screen.getByLabelText("modelList:priceComparison.weights.input"),
@@ -48,9 +53,9 @@ it("shows the actual comparison mix before optional numeric editing", async () =
   expect(screen.getAllByText("50%")).toHaveLength(2)
 })
 
-it("keeps active conditions visible and opens weights and tier conditions together", async () => {
+it("keeps the active summary visible while condition groups open independently", async () => {
   const user = userEvent.setup()
-  const { container } = render(
+  render(
     <PricingScenarioControls
       settings={{
         ...createDefaultPricingScenario(),
@@ -78,10 +83,14 @@ it("keeps active conditions visible and opens weights and tier conditions togeth
   expect(
     screen.getByText("modelList:scenario.responseFormat: OpenAI"),
   ).toBeVisible()
-  expect(container.querySelectorAll("details")).toHaveLength(1)
   expect(screen.getByLabelText("modelList:scenario.input")).not.toBeVisible()
   await user.click(screen.getByText("modelList:priceComparison.customize"))
+  expect(screen.getByLabelText("modelList:scenario.input")).not.toBeVisible()
+  await user.click(screen.getByText("modelList:scenario.groups.tiers"))
   expect(screen.getByLabelText("modelList:scenario.input")).toBeVisible()
+  expect(
+    screen.getByLabelText("modelList:scenario.responseFormat"),
+  ).not.toBeVisible()
   expect(
     screen.getByLabelText("modelList:priceComparison.weights.input"),
   ).toBeVisible()

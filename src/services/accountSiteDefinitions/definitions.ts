@@ -187,6 +187,9 @@ const ACCOUNT_SITE_DEFINITIONS = [
         compatUserIdHeaderNames: ["New-API-User"],
       },
       routes: {
+        // https://github.com/QuantumNous/new-api/blob/bdef117505247769268b209665fb3ad7554c3da7/web/src/routes/pricing/index.tsx
+        pricingPath: "/pricing",
+        pricingSearchParam: "search",
         usagePath: NEW_API_USAGE_PATH,
         checkInPath: NEW_API_CHECKIN_PATH,
         adminCredentialsPath: NEW_API_CHECKIN_PATH,
@@ -205,6 +208,8 @@ const ACCOUNT_SITE_DEFINITIONS = [
     onboarding: {
       detection: { hostnames: [APIYI_HOSTNAME] },
       routes: {
+        // https://api.apiyi.com/account/pricing (v29.8.9)
+        pricingPath: "/account/pricing",
         // https://api.apiyi.com/ (v29.8.9) dashboard routes.
         usagePath: "/log",
         redeemPath: "/account/topup/recharge",
@@ -291,6 +296,8 @@ const ACCOUNT_SITE_DEFINITIONS = [
       manualAddGuideAnchor: ACCOUNT_SITE_MANUAL_ADD_GUIDE_ANCHORS.Sub2Api,
       detection: { titlePatterns: [makeTitleRegex(SITE_TYPES.SUB2API)] },
       routes: {
+        // https://github.com/Wei-Shaw/sub2api/blob/main/frontend/src/router/index.ts
+        pricingPath: "/model-plaza",
         usagePath: "/usage",
         redeemPath: "/redeem",
         // Admin API Key lives in Settings > Security; the tab has no URL route.
@@ -632,6 +639,8 @@ const ACCOUNT_SITE_DEFINITION_OVERRIDES = [
     onboarding: {
       detection: { titlePatterns: [makeTitleRegex(SITE_TYPES.DONE_HUB)] },
       routes: {
+        // https://github.com/deanxv/done-hub/blob/main/web/src/routes/MainRoutes.jsx
+        pricingPath: "/panel/model_price",
         usagePath: "/panel/log",
         redeemPath: "/panel/topup",
         adminCredentialsPath: "/panel/profile",
@@ -653,6 +662,8 @@ const COMPATIBLE_ACCOUNT_SITE_DEFINITIONS = [
     onboarding: {
       detection: { titlePatterns: [makeTitleRegex(SITE_TYPES.ONE_HUB)] },
       routes: {
+        // https://github.com/MartialBE/one-hub/blob/main/web/src/routes/MainRoutes.jsx
+        pricingPath: "/panel/model_price",
         usagePath: "/panel/log",
         redeemPath: "/panel/topup",
         adminCredentialsPath: "/panel/profile",

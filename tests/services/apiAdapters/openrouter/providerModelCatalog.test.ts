@@ -60,6 +60,7 @@ it("quotes published image and audio token rates in token units", async () => {
     ),
   )
   const model = (await openRouterProviderModelCatalog.fetchPricing({})).data[0]
+  expect(model.pricingPlan?.source.url).toBe("https://openrouter.ai/test/media")
   expect(
     quoteCanonicalModelPrice(
       model,

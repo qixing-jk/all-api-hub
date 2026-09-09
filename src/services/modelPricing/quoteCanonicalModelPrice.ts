@@ -93,6 +93,9 @@ export function quoteCanonicalModelPrice(
     rules: [],
     groupMultiplier: PRICING_GROUP_MULTIPLIERS.INCLUDED,
     source: {
+      ...(model.price_metadata?.source_url
+        ? { url: model.price_metadata.source_url }
+        : {}),
       kind:
         model.price_metadata?.source ===
         MODEL_PRICE_SOURCE_KINDS.PROVIDER_CATALOG

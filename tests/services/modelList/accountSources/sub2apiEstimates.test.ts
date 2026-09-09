@@ -214,6 +214,27 @@ describe("buildSub2ApiRuntimePricingResponse", () => {
 })
 
 describe("applySub2ApiPriceEstimates", () => {
+  it("preserves a browsable price-table source through a flat estimate quote", () => {
+    const result = applySub2ApiPriceEstimates({
+      models: [{ id: "example-priced-model" }],
+      group: { groupId: "9", groupName: "vip", rate_multiplier: 1 },
+      groupRates: {},
+      priceTable: {
+        ...priceTable,
+        source:
+          "https://github.com/BerriAI/litellm/blob/main/model_prices_and_context_window.json",
+      },
+    })
+    const quote = quoteCanonicalModelPrice(
+      result.data[0],
+      { purpose: PRICING_PURPOSES.TOKEN_INDEX, usage: { input: 1 } },
+      {},
+    )
+    expect(quote.source).toMatchObject({
+      kind: "estimate",
+      url: "https://github.com/BerriAI/litellm/blob/main/model_prices_and_context_window.json",
+    })
+  })
   it("uses user-specific group rates before the default group rate", () => {
     const result = applySub2ApiPriceEstimates({
       models: [{ id: "example-priced-model" }],

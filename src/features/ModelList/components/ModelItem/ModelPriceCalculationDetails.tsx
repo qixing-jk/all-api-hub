@@ -1,6 +1,9 @@
 import { useTranslation } from "react-i18next"
 
-import { pricingScenarioOptions } from "~/features/ModelList/pricingScenarioOptions"
+import {
+  pricingRangeLabel,
+  pricingScenarioOptions,
+} from "~/features/ModelList/pricingScenarioOptions"
 import {
   PRICE_RATE_UNITS,
   PRICING_CONDITION_KINDS,
@@ -68,11 +71,7 @@ export function ModelPriceCalculationDetails({
     if (condition.kind === PRICING_CONDITION_KINDS.MEASUREMENT)
       return `${options.labels[condition.axis]}: ${condition.gt === undefined ? "≥ 0" : `> ${condition.gt}`}${condition.lte === undefined ? "" : `, ≤ ${condition.lte}`}`
     if (condition.kind === PRICING_CONDITION_KINDS.RANGE) {
-      const basis = condition.outputTokenDeductions
-        ? `${t("scenario.netOutput")} · `
-        : condition.inputTokenDeductions
-          ? `${t("scenario.netInput")} · `
-          : ""
+      const basis = `${pricingRangeLabel(t, condition)} · `
       return `${basis}${t("contextTokenRange", {
         min: condition.min ?? 0,
         max:

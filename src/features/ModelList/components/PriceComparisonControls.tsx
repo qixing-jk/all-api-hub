@@ -245,7 +245,9 @@ export function PriceComparisonControls({
   return (
     <section
       aria-labelledby="model-price-comparison-title"
-      aria-describedby="model-price-comparison-helper"
+      aria-describedby={
+        embedded ? undefined : "model-price-comparison-description"
+      }
       className={
         embedded
           ? undefined
@@ -321,7 +323,7 @@ export function PriceComparisonControls({
         </div>
       </div>
       {conditionSummary && <div className="mt-2">{conditionSummary}</div>}
-      <details className="group mt-2">
+      <details className="group/comparison mt-2">
         <summary className="bg-background text-foreground hover:bg-muted/70 inline-flex h-9 cursor-pointer list-none items-center gap-1.5 rounded-md border px-3 text-sm font-medium shadow-sm transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 focus-visible:outline-none [&::-webkit-details-marker]:hidden [@container(min-width:48rem)]:absolute [@container(min-width:48rem)]:top-3 [@container(min-width:48rem)]:right-3">
           <SlidersHorizontal
             className="text-muted-foreground size-3.5"
@@ -329,11 +331,11 @@ export function PriceComparisonControls({
           />
           <span>{t("priceComparison.customize")}</span>
           <ChevronDown
-            className="text-muted-foreground size-3.5 transition-transform group-open:rotate-180"
+            className="text-muted-foreground size-3.5 transition-transform group-open/comparison:rotate-180"
             aria-hidden="true"
           />
         </summary>
-        <div className="mt-3 grid items-start gap-5 border-t pt-3 [@container(min-width:48rem)]:grid-cols-2">
+        <div className="mt-3 space-y-4 border-t pt-3">
           <div className="min-w-0 space-y-3">
             <div className="space-y-0.5">
               <h4 className="text-sm font-medium">
@@ -343,7 +345,7 @@ export function PriceComparisonControls({
                 {t("priceComparison.weightEffect")}
               </p>
             </div>
-            <div className="grid max-w-md grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3 [@container(min-width:48rem)]:grid-cols-4">
               {MODEL_PRICE_COMPARISON_WEIGHT_KEYS.map((key) => (
                 <FormField
                   key={key}
@@ -352,6 +354,7 @@ export function PriceComparisonControls({
                 >
                   <Input
                     id={`model-price-comparison-weight-${key}`}
+                    data-pricing-condition={key}
                     type="number"
                     min={0}
                     step="any"
@@ -372,7 +375,7 @@ export function PriceComparisonControls({
               ))}
               <p
                 id="model-price-comparison-helper"
-                className="dark:text-dark-text-tertiary col-span-2 text-xs leading-5 text-gray-500"
+                className="dark:text-dark-text-tertiary col-span-full text-xs leading-5 text-gray-500"
               >
                 {t("priceComparison.helperNote")}
               </p>

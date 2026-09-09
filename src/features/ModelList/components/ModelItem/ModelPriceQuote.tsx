@@ -10,6 +10,7 @@ import {
 } from "~/features/ModelList/pricingScenarioNavigation"
 import {
   pricingMeterLabels,
+  pricingRangeLabel,
   pricingScenarioOptions,
 } from "~/features/ModelList/pricingScenarioOptions"
 import {
@@ -62,9 +63,13 @@ export function ModelPriceQuote({
         ? t("scenario.output")
         : conditionTarget === "at"
           ? t("scenario.pricingTime")
-          : conditionTarget
-            ? options.labels[conditionTarget]
-            : undefined
+          : conditionTarget === "cacheRead"
+            ? t("priceComparison.weights.cacheRead")
+            : conditionTarget === "cacheWrite"
+              ? t("priceComparison.weights.cacheWrite")
+              : conditionTarget
+                ? options.labels[conditionTarget]
+                : undefined
   const canConfigure = quote.issues.some((issue) =>
     [
       PRICING_ISSUE_CODES.USAGE_MISSING,
@@ -396,15 +401,7 @@ export function ModelPriceQuote({
           <Badge variant="secondary">{t("scenario.tiered")}</Badge>
           {activeRanges.map((condition, index) => (
             <p key={index}>
-              {t("scenario.currentTier")} ·{" "}
-              {condition.outputTokenDeductions
-                ? t("scenario.netOutput")
-                : condition.inputTokenDeductions
-                  ? t("scenario.netInput")
-                  : condition.axis === PRICING_RANGE_AXES.TOTAL_TOKENS
-                    ? t("scenario.totalTokens")
-                    : t("scenario.input")}{" "}
-              ·{" "}
+              {t("scenario.currentTier")} · {pricingRangeLabel(t, condition)} ·{" "}
               {t("contextTokenRange", {
                 min: condition.min ?? 0,
                 max:

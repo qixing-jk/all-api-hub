@@ -6,6 +6,10 @@ type AccountSitePagePath = `/${string}`
 
 /** Every page is explicit. Null means this integration provides no page navigation. */
 export interface AccountSiteRouteConfig {
+  /** Verified human-readable pricing page; absent means no known destination. */
+  pricingPath?: AccountSitePagePath
+  /** Optional upstream search parameter; old versions may safely ignore it. */
+  pricingSearchParam?: string
   loginPath: AccountSitePagePath
   usagePath: AccountSitePagePath | null
   checkInPath: AccountSitePagePath | null

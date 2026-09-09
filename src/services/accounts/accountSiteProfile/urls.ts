@@ -1,10 +1,39 @@
 import { isAccountSiteType, type AccountSiteType } from "~/constants/siteType"
 import { getAccountSiteDefinitions } from "~/services/accountSiteDefinitions/registry"
+import { getAccountSiteRouteMetadata } from "~/services/accountSiteOnboarding/metadata"
 import { sanitizeOriginUrl } from "~/utils/core/url"
 import { normalizeUrlForOriginKey } from "~/utils/core/urlParsing"
 
 import type { AccountSiteProductProfile } from "./contracts"
 import { getAccountSiteProductProfile } from "./registry"
+
+/** Resolves a verified pricing page on the account's deployment, preserving subpaths. */
+export function resolveAccountSitePricingUrl({
+  siteType,
+  baseUrl,
+  modelName,
+}: {
+  siteType: string
+  baseUrl: string
+  modelName?: string
+}): string | undefined {
+  const routes = getAccountSiteRouteMetadata(siteType)
+  if (!routes.pricingPath) return undefined
+  try {
+    const url = new URL(baseUrl)
+    if (!["https:", "http:"].includes(url.protocol)) return undefined
+    url.username = ""
+    url.password = ""
+    url.search = ""
+    url.hash = ""
+    url.pathname = `${url.pathname.replace(/\/+$/, "")}${routes.pricingPath}`
+    if (modelName && routes.pricingSearchParam)
+      url.searchParams.set(routes.pricingSearchParam, modelName)
+    return url.toString()
+  } catch {
+    return undefined
+  }
+}
 
 const parseHttpUrl = (value: string): URL | null => {
   const trimmed = value.trim()

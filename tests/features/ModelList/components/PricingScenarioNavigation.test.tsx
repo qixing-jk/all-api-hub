@@ -46,14 +46,24 @@ it("opens, focuses and highlights multiple fields locally, and renews temporary 
           <section ref={navigation.controlsRef}>
             <details>
               <summary>Conditions</summary>
-              <input
-                aria-label="Input"
-                data-pricing-condition={PRICING_RANGE_AXES.INPUT_TOKENS}
-              />
-              <input
-                aria-label="Output"
-                data-pricing-condition={PRICING_RANGE_AXES.OUTPUT_TOKENS}
-              />
+              <details>
+                <summary>Input conditions</summary>
+                <input
+                  aria-label="Input"
+                  data-pricing-condition={PRICING_RANGE_AXES.INPUT_TOKENS}
+                />
+              </details>
+              <details>
+                <summary>Output conditions</summary>
+                <input
+                  aria-label="Output"
+                  data-pricing-condition={PRICING_RANGE_AXES.OUTPUT_TOKENS}
+                />
+              </details>
+              <details>
+                <summary>Other conditions</summary>
+                <input aria-label="Other" />
+              </details>
             </details>
           </section>
         )}
@@ -75,6 +85,8 @@ it("opens, focuses and highlights multiple fields locally, and renews temporary 
   const output = screen.getByRole("textbox", { name: "Output" })
   expect(input).toHaveFocus()
   expect(input).toBeVisible()
+  expect(output).toBeVisible()
+  expect(screen.getByLabelText("Other")).not.toBeVisible()
   expect(input).toHaveAttribute("data-pricing-highlight", "true")
   expect(output).toHaveAttribute("data-pricing-highlight", "true")
   act(() => vi.advanceTimersByTime(3000))

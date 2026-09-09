@@ -7,7 +7,7 @@ export function resolveKnownAccountExchangeRate(
 ): number | undefined {
   const rate =
     account?.exchangeRate ??
-    (account && account.balance?.USD !== 0
+    (account?.balance && account.balance.USD !== 0
       ? account.balance.CNY / account.balance.USD
       : undefined)
   return rate !== undefined && Number.isFinite(rate) && rate > 0

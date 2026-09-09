@@ -35,6 +35,7 @@ import {
   MODEL_LIST_SORT_MODES,
   type ModelListSortMode,
 } from "~/features/ModelList/sortModes"
+import { resolveAccountSitePricingUrl } from "~/services/accounts/accountSiteProfile/urls"
 import {
   isModelPriceUnavailable,
   MODEL_UNAVAILABLE_PRICE_REASONS,
@@ -43,6 +44,7 @@ import {
 import {
   CALCULATED_PRICE_KINDS,
   PRICING_PURPOSES,
+  PRICING_SOURCE_KINDS,
   QUOTE_STATUSES,
   QUOTE_UNITS,
 } from "~/services/modelPricing/pricingConstants"
@@ -579,6 +581,20 @@ function resolveBestCalculatedItem(
         ? { cnyPerUsd: resolveKnownAccountExchangeRate(rawItem.source.account) }
         : {}),
     })
+    if (
+      !quote.source.url &&
+      quote.source.kind === PRICING_SOURCE_KINDS.ACCOUNT &&
+      rawItem.source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT
+    ) {
+      quote.source = {
+        ...quote.source,
+        url: resolveAccountSitePricingUrl({
+          siteType: rawItem.source.account.siteType,
+          baseUrl: rawItem.source.account.baseUrl,
+          modelName: model.model_name,
+        }),
+      }
+    }
     return {
       ...price,
       quote,

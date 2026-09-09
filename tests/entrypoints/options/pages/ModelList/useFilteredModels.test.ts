@@ -142,6 +142,50 @@ function renderUseFilteredModels(
 }
 
 describe("useFilteredModels", () => {
+  it("provides a model pricing destination on the originating account deployment", async () => {
+    const account = createDisplayAccount({
+      siteType: SITE_TYPES.NEW_API,
+      baseUrl: "https://site.example/gateway/",
+    })
+    const { result } = renderUseFilteredModels({
+      selectedSource: createAccountSource(account),
+      pricingData: createPricingResponse(["vendor/model"]),
+    })
+    await waitFor(() =>
+      expect(
+        result.current.filteredModels[0].calculatedPrice.quote?.source.url,
+      ).toBe("https://site.example/gateway/pricing?search=vendor%2Fmodel"),
+    )
+  })
+  it("keeps account link enrichment out of shared pricing evidence", async () => {
+    const pricingPlan: PricingPlan = {
+      rates: {
+        input: {
+          amount: 1,
+          currency: "USD",
+          unit: PRICE_RATE_UNITS.TOKEN,
+          per: TOKENS_PER_MILLION,
+        },
+      },
+      rules: [],
+      groupMultiplier: PRICING_GROUP_MULTIPLIERS.INCLUDED,
+      source: { kind: PRICING_SOURCE_KINDS.ACCOUNT },
+      issues: [],
+    }
+    const account = createDisplayAccount({
+      siteType: SITE_TYPES.NEW_API,
+      baseUrl: "https://first.example",
+    })
+    const { result } = renderUseFilteredModels({
+      selectedSource: createAccountSource(account),
+      pricingData: createPricingResponse([{ pricingPlan }]),
+    })
+    await waitFor(() => expect(result.current.filteredModels).toHaveLength(1))
+    expect(
+      result.current.filteredModels[0].calculatedPrice.quote?.source.url,
+    ).toContain("https://first.example/pricing")
+    expect(pricingPlan.source.url).toBeUndefined()
+  })
   it("quotes display rows once and previews filter counts without pricing again", async () => {
     const quote = vi.spyOn(pricingQuotes, "quoteCanonicalModelPrice")
     try {

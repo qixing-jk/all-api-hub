@@ -152,7 +152,7 @@ describe("APIyi model groups and prices", () => {
 
     await user.click(screen.getByText("CodexReverse (0.5x)"))
     const tiers = screen.getAllByRole("group", {
-      name: "modelList:contextTokenRange",
+      name: "modelList:scenario.input · modelList:contextTokenRange",
     })
     expect(tiers).toHaveLength(2)
     expect(within(tiers[0]).getByText("USD: $5.0000")).toBeVisible()
@@ -165,7 +165,7 @@ describe("APIyi model groups and prices", () => {
     await user.click(screen.getByText("svip (1x)"))
 
     const fullPriceTiers = screen.getAllByRole("group", {
-      name: "modelList:contextTokenRange",
+      name: "modelList:scenario.input · modelList:contextTokenRange",
     })
     expect(within(fullPriceTiers[0]).getByText("USD: $10.0000")).toBeVisible()
     expect(within(fullPriceTiers[0]).getByText("USD: $50.0000")).toBeVisible()

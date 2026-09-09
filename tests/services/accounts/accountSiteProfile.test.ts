@@ -26,6 +26,7 @@ import {
   shouldDecorateAccountApiRequestWithAuthSession,
 } from "~/services/accounts/accountSiteProfile"
 import * as accountSiteProfileApi from "~/services/accounts/accountSiteProfile"
+import { resolveAccountSitePricingUrl } from "~/services/accounts/accountSiteProfile/urls"
 import {
   AIHUBMIX_API_ORIGIN,
   AIHUBMIX_WEB_ORIGIN,
@@ -39,6 +40,52 @@ import {
 } from "~/types/accountTodayStats"
 
 describe("accountSiteProfile", () => {
+  it("opens provider-owned pricing pages without leaking base URL credentials or queries", () => {
+    expect(
+      resolveAccountSitePricingUrl({
+        siteType: SITE_TYPES.NEW_API,
+        baseUrl:
+          "https://user:secret@example.com/gateway/?token=secret#settings",
+        modelName: "vendor/model + pro",
+      }),
+    ).toBe("https://example.com/gateway/pricing?search=vendor%2Fmodel+%2B+pro")
+    expect(
+      resolveAccountSitePricingUrl({
+        siteType: SITE_TYPES.ONE_HUB,
+        baseUrl: "https://example.com/",
+      }),
+    ).toBe("https://example.com/panel/model_price")
+    expect(
+      resolveAccountSitePricingUrl({
+        siteType: SITE_TYPES.DONE_HUB,
+        baseUrl: "https://example.com",
+      }),
+    ).toBe("https://example.com/panel/model_price")
+    expect(
+      resolveAccountSitePricingUrl({
+        siteType: SITE_TYPES.SUB2API,
+        baseUrl: "https://example.com",
+      }),
+    ).toBe("https://example.com/model-plaza")
+    expect(
+      resolveAccountSitePricingUrl({
+        siteType: SITE_TYPES.APIYI,
+        baseUrl: "https://api.apiyi.com",
+      }),
+    ).toBe("https://api.apiyi.com/account/pricing")
+    expect(
+      resolveAccountSitePricingUrl({
+        siteType: SITE_TYPES.UNKNOWN,
+        baseUrl: "https://example.com",
+      }),
+    ).toBeUndefined()
+    expect(
+      resolveAccountSitePricingUrl({
+        siteType: SITE_TYPES.NEW_API,
+        baseUrl: "javascript:alert(1)",
+      }),
+    ).toBeUndefined()
+  })
   it("only infers URL policy for registrations that explicitly opt in", () => {
     expect(
       findAccountSiteProfileForHostname("WWW.AIHUBMIX.COM")?.siteType,

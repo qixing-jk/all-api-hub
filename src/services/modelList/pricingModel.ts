@@ -112,6 +112,8 @@ export interface ModelPriceMetadata {
   precision: ModelPricePrecisionKind
   unavailable_reason?: ModelUnavailablePriceReason
   source_date?: string
+  /** Public reference for the price evidence, separate from the account site. */
+  source_url?: string
   unmatched_model_count?: number
 }
 

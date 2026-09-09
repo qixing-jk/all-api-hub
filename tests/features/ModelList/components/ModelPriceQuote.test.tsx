@@ -20,7 +20,7 @@ import {
 } from "~/services/modelPricing/pricingConstants"
 import type { PricingPlan } from "~/services/modelPricing/pricingPlan"
 import { quoteModelPrice } from "~/services/modelPricing/quoteModelPrice"
-import { fireEvent, render, screen } from "~~/tests/test-utils/render"
+import { fireEvent, render, screen, within } from "~~/tests/test-utils/render"
 
 const plan: PricingPlan = {
   rates: {
@@ -61,6 +61,44 @@ const plan: PricingPlan = {
   source: { kind: PRICING_SOURCE_KINDS.ACCOUNT },
   issues: [],
 }
+it.each([
+  [PRICING_RANGE_AXES.INPUT_TOKENS, "scenario.input"],
+  [PRICING_RANGE_AXES.OUTPUT_TOKENS, "scenario.output"],
+  [PRICING_RANGE_AXES.TOTAL_TOKENS, "scenario.totalTokens"],
+] as const)(
+  "identifies the %s tier in both the summary and rule details",
+  async (axis, label) => {
+    const quote = quoteModelPrice(
+      {
+        ...plan,
+        rules: [
+          {
+            id: "tier",
+            conditions: [{ kind: PRICING_CONDITION_KINDS.RANGE, axis, min: 1 }],
+            rates: plan.rates,
+          },
+        ],
+      },
+      {
+        purpose: PRICING_PURPOSES.TOKEN_INDEX,
+        inputTokens: 10,
+        outputTokens: 10,
+        usage: { input: 1, output: 1 },
+      },
+    )
+    render(<ModelPriceQuote quote={quote} details />)
+    expect(
+      await screen.findByText(
+        new RegExp(`modelList:scenario.currentTier.*modelList:${label}`),
+      ),
+    ).toBeVisible()
+    expect(
+      within(
+        screen.getByRole("group", { name: new RegExp(`modelList:${label}`) }),
+      ).getByText("modelList:scenario.matched"),
+    ).toBeVisible()
+  },
+)
 it("keeps one recovery action and moves source evidence into expanded details", async () => {
   const quote = quoteModelPrice(
     {

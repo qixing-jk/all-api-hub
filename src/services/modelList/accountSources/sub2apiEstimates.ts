@@ -245,6 +245,9 @@ const createEstimatedModel = (
     },
     price_metadata: {
       source: MODEL_PRICE_SOURCE_KINDS.OFFICIAL_RATE_ESTIMATE,
+      ...(/^https?:\/\//i.test(priceTable.source)
+        ? { source_url: priceTable.source }
+        : {}),
       precision: MODEL_PRICE_PRECISION_KINDS.ESTIMATED,
       ...(priceTable.source_date
         ? { source_date: priceTable.source_date }

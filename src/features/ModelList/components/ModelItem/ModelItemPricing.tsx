@@ -322,7 +322,6 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
                   variant="secondary"
                   size="sm"
                   className="shrink-0 text-[10px] sm:text-xs"
-                  title={t("scenario.configure")}
                 >
                   {model.pricingPlan?.rules.some((rule) =>
                     rule.conditions.some(

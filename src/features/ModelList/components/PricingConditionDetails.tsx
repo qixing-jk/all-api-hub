@@ -33,6 +33,7 @@ export function PricingConditionDetails({
   const targets = getPricingConditionTargets({
     conditionDetails: details,
     requirementDetails: requirements,
+    issues,
   })
   const labels: Record<string, string> = {
     ...pricingMeterLabels(t),

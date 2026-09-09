@@ -54,6 +54,7 @@ function adaptOpenRouterModel(
 ): ProviderModelCatalogModel {
   const normalized = normalizeOpenRouterModel(model)
   const pricingPlan = normalizeOpenRouterPricingPlan(model.pricing)
+  pricingPlan.source.url = `https://openrouter.ai/${model.id.split("/").map(encodeURIComponent).join("/")}`
   const topProvider = isRecord(model.top_provider) ? model.top_provider : {}
   const requestLimits = isRecord(model.per_request_limits)
     ? model.per_request_limits
