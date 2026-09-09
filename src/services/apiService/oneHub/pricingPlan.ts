@@ -97,13 +97,15 @@ export function buildDoneHubPricingPlan(
         })
     }
     const tier = price.long_context
+    const validTier =
+      tier &&
+      tier.threshold > 0 &&
+      Number.isSafeInteger(tier.threshold) &&
+      tier.threshold < Number.MAX_SAFE_INTEGER &&
+      Number.isFinite(tier.input_ratio) &&
+      Number.isFinite(tier.output_ratio)
     if (tier && tier.threshold > 0) {
-      if (
-        !Number.isSafeInteger(tier.threshold) ||
-        tier.threshold >= Number.MAX_SAFE_INTEGER ||
-        !Number.isFinite(tier.input_ratio) ||
-        !Number.isFinite(tier.output_ratio)
-      ) {
+      if (!validTier) {
         plan.issues.push({ code: PRICING_ISSUE_CODES.UNSUPPORTED_RULE })
       } else {
         const inputMultiplier = tier.input_ratio > 0 ? tier.input_ratio : 1
@@ -159,7 +161,7 @@ export function buildDoneHubPricingPlan(
         },
       ]
       plan.rules.push({ id: `${format}-cache`, conditions, rates: baseRates })
-      if (tier && tier.threshold > 0 && Number.isSafeInteger(tier.threshold)) {
+      if (validTier) {
         plan.rules.push({
           id: `${format}-long-cache`,
           conditions: [

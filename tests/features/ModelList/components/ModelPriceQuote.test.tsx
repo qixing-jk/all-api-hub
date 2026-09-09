@@ -61,6 +61,177 @@ const plan: PricingPlan = {
   source: { kind: PRICING_SOURCE_KINDS.ACCOUNT },
   issues: [],
 }
+
+it.each([
+  ["source-conflict", "sourceConflict"],
+  ["service-tier-unavailable", "serviceTierUnavailable"],
+  ["model-limit-exceeded", "modelLimit"],
+  ["usage-missing", "needsUsage"],
+  ["usage-invalid", "needsUsage"],
+  ["condition-missing", "needsConditions"],
+  ["cache-basis-unknown", "unverifiedCacheBasis"],
+  ["unsupported-rule", "unsupportedRule"],
+  ["price-range-unavailable", "noRange"],
+  ["unknown-fees", "unknownFees"],
+  ["group-rate-missing", "missingGroupRate"],
+  ["exchange-rate-missing", "missingConversion"],
+  ["price-invalid", "missingPrice"],
+] as const)("explains the unavailable quote reason %s", async (code, label) => {
+  const quote = quoteModelPrice(plan, {
+    purpose: "token-index",
+    inputTokens: 1,
+    usage: { input: 1 },
+  })
+  render(
+    <ModelPriceQuote
+      quote={{
+        ...quote,
+        status: "unavailable",
+        amount: null,
+        issues: [{ code }],
+      }}
+    />,
+  )
+  expect(await screen.findByText(`modelList:scenario.${label}`)).toBeVisible()
+  expect(
+    screen.queryByText("modelList:scenario.lowest"),
+  ).not.toBeInTheDocument()
+})
+
+it.each([
+  ["pages", "page", "page"],
+  ["outputMegapixels", "megapixel", "megapixel"],
+  ["characters", "character", "thousandCharacters"],
+  ["searchUnits", "search-unit", "searchUnit"],
+] as const)(
+  "shows %s task units, free quantities, and source evidence in calculation details",
+  async (meter, unit, label) => {
+    const taskPlan: PricingPlan = {
+      usageMode: "metered",
+      comparison: { meter },
+      groupMultiplier: "included",
+      rates: {
+        [meter]: { amount: 2, currency: "USD", unit, per: 1, freeQuantity: 1 },
+      },
+      rules: [],
+      issues: [],
+      source: {
+        kind: "catalog",
+        capturedAt: "2026-09-09",
+        pricingDescription: { en: "Published task rules" },
+        hasUnpricedCharges: true,
+      },
+    }
+    const quote = quoteModelPrice(
+      taskPlan,
+      {
+        purpose: "token-index",
+        usage: {},
+        taskUsage: { [meter]: 2 },
+      },
+      { currency: "CNY", cnyPerUsd: 7 },
+    )
+    render(
+      <ModelPriceQuote
+        quote={quote}
+        details
+        sourceLabel="Provider"
+        effectiveGroup="vip"
+      />,
+    )
+    expect(
+      (await screen.findAllByText(new RegExp(`modelList:scenario.${label}`)))
+        .length,
+    ).toBeGreaterThan(0)
+    expect(
+      screen.getByText(/modelList:scenario.appliedConversion/),
+    ).toBeVisible()
+    expect(screen.getByText(/Published task rules/)).toBeVisible()
+    expect(screen.getByText("Provider · vip")).toBeVisible()
+    expect(
+      screen.getByText("modelList:scenario.additionalChargesExcluded"),
+    ).toBeVisible()
+    expect(screen.getByText(/modelList:scenario.freeQuantity/)).toBeVisible()
+    expect(
+      screen.getByText(/modelList:scenario.billableQuantity/),
+    ).toBeVisible()
+  },
+)
+
+it("shows complete published calendar, date, selection, and measurement boundaries", async () => {
+  const rulePlan: PricingPlan = {
+    ...plan,
+    rules: [
+      {
+        id: "calendar",
+        conditions: [
+          {
+            kind: "calendar",
+            timeZone: "UTC",
+            part: "hour",
+            operator: ">=",
+            value: 1,
+          },
+        ],
+        rates: plan.rates,
+      },
+      {
+        id: "selection",
+        conditions: [
+          { kind: "selection", axis: "videoQuality", value: "custom-quality" },
+        ],
+        rates: plan.rates,
+      },
+      {
+        id: "area",
+        conditions: [
+          { kind: "measurement", axis: "imageMegapixels", gt: 1, lte: 4 },
+        ],
+        rates: plan.rates,
+      },
+      {
+        id: "area-open",
+        conditions: [{ kind: "measurement", axis: "imageMegapixels" }],
+        rates: plan.rates,
+      },
+      {
+        id: "date",
+        conditions: [{ kind: "date-window", start: "2026-09-09T00:00:00Z" }],
+        rates: plan.rates,
+      },
+      {
+        id: "clock",
+        conditions: [
+          {
+            kind: "time-window",
+            timeZone: "UTC",
+            startMinute: 540,
+            endMinute: 1020,
+            days: [1, 5],
+          },
+        ],
+        rates: plan.rates,
+      },
+      {
+        id: "utc",
+        conditions: [{ kind: "utc-window", startMinute: 60, endMinute: 120 }],
+        rates: plan.rates,
+      },
+    ],
+  }
+  const quote = quoteModelPrice(rulePlan, {
+    purpose: "token-index",
+    usage: { input: 1 },
+  })
+  render(<ModelPriceQuote quote={quote} details />)
+  expect(await screen.findByText(/UTC.*>= 1/)).toBeVisible()
+  expect(screen.getByRole("group", { name: /custom-quality/ })).toBeVisible()
+  expect(screen.getByRole("group", { name: /> 1, ≤ 4/ })).toBeVisible()
+  expect(screen.getByRole("group", { name: /≥ 0/ })).toBeVisible()
+  expect(screen.getByText("2026-09-09T00:00:00Z–∞")).toBeVisible()
+  expect(screen.getByText(/UTC 9:00–17:00/)).toBeVisible()
+  expect(screen.getByText(/UTC 1:00–2:00/)).toBeVisible()
+})
 it.each([
   [PRICING_RANGE_AXES.INPUT_TOKENS, "scenario.input"],
   [PRICING_RANGE_AXES.OUTPUT_TOKENS, "scenario.output"],

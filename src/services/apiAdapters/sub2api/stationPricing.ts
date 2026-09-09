@@ -3,6 +3,7 @@ import { z } from "zod"
 import {
   MODEL_PRICE_PRECISION_KINDS,
   MODEL_PRICE_SOURCE_KINDS,
+  MODEL_UNAVAILABLE_PRICE_REASONS,
 } from "~/services/modelList/pricingModel"
 import type { ModelPricing } from "~/services/modelList/pricingModel"
 import {
@@ -326,11 +327,22 @@ export function applySub2ApiStationPrice(
           ? Number(match[1]) * 60 + Number(match[2])
           : NaN
       }
+      const startMinute = minute(period.start_time)
+      const endMinute = minute(period.end_time)
+      if (
+        !Number.isInteger(startMinute) ||
+        startMinute > 1439 ||
+        !Number.isInteger(endMinute) ||
+        endMinute > 1440
+      ) {
+        plan.issues.push({ code: PRICING_ISSUE_CODES.UNSUPPORTED_RULE })
+        continue
+      }
       const condition = {
         kind: PRICING_CONDITION_KINDS.TIME_WINDOW,
         timeZone: native.time_pricing!.timezone,
-        startMinute: minute(period.start_time),
-        endMinute: minute(period.end_time),
+        startMinute,
+        endMinute,
         ...(native.time_pricing!.weekdays_only
           ? { days: [1, 2, 3, 4, 5] }
           : {}),
@@ -391,7 +403,15 @@ export function applySub2ApiStationPrice(
     },
     price_metadata: {
       source: MODEL_PRICE_SOURCE_KINDS.CHANNEL_PRICING,
-      precision: MODEL_PRICE_PRECISION_KINDS.EXACT,
+      ...(admitted.issues.some(
+        (issue) => issue.code === PRICING_ISSUE_CODES.UNSUPPORTED_RULE,
+      )
+        ? {
+            precision: MODEL_PRICE_PRECISION_KINDS.UNAVAILABLE,
+            unavailable_reason:
+              MODEL_UNAVAILABLE_PRICE_REASONS.PRICING_SOURCE_UNAVAILABLE,
+          }
+        : { precision: MODEL_PRICE_PRECISION_KINDS.EXACT }),
     },
   }
 }

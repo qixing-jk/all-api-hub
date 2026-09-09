@@ -11,9 +11,150 @@ import {
 import { quoteCanonicalModelPrice } from "~/services/modelPricing/quoteCanonicalModelPrice"
 import { quoteModelPrice } from "~/services/modelPricing/quoteModelPrice"
 import { MODEL_VENDOR_EVIDENCE_KINDS } from "~/services/models/modelDescriptor"
+import { calculateModelPrice } from "~/services/models/utils/modelPricing"
 
 describe("OneHub data transformers", () => {
   describe("transformModelPricing", () => {
+    it.each(["unknown_input", "reasoning_tokens", "unknown_output"])(
+      "keeps unknown DoneHub multiplier %s out of affected-meter quotes",
+      (meter) => {
+        const [model] = transformModelPricing(
+          {
+            example: {
+              groups: [],
+              owned_by: "",
+              price: {
+                model: "example",
+                type: "tokens",
+                input: 5,
+                output: 25,
+                channel_type: 0,
+                locked: false,
+                extra_ratios: { [meter]: 2 },
+              },
+            },
+          },
+          {},
+          true,
+        ).data
+        expect(
+          quoteCanonicalModelPrice(
+            model,
+            {
+              purpose: "token-index",
+              usage: { input: 1, output: 1 },
+            },
+            { groupMultiplier: 1 },
+          ).status,
+        ).toBe("partial")
+      },
+    )
+
+    it("keeps format-specific cache-write prices through valid long-context tiers", () => {
+      const [model] = transformModelPricing(
+        {
+          example: {
+            groups: [],
+            owned_by: "",
+            price: {
+              model: "example",
+              type: "tokens",
+              input: 5,
+              output: 25,
+              channel_type: 0,
+              locked: false,
+              extra_ratios: {
+                openai_cache_write_tokens: 2,
+                cached_write_tokens: 1.25,
+                ignored_factor: 1,
+              },
+              long_context: { threshold: 100, input_ratio: 2, output_ratio: 2 },
+            },
+          },
+        },
+        {},
+        true,
+      ).data
+      const quote = (responseFormat: "openai" | "anthropic") =>
+        quoteCanonicalModelPrice(
+          model,
+          {
+            purpose: "token-index",
+            responseFormat,
+            inputTokens: 101,
+            usage: { cacheWrite: 1 },
+          },
+          { groupMultiplier: 1 },
+        )
+      expect(quote("openai").amount).toBe(40)
+      expect(quote("anthropic").amount).toBe(25)
+    })
+    it("does not browse legacy ratios when a DoneHub plan cannot preserve its rates", () => {
+      const [model] = transformModelPricing(
+        {
+          example: {
+            groups: [],
+            owned_by: "",
+            price: {
+              model: "example",
+              type: "tokens",
+              input: 5,
+              output: 25,
+              channel_type: 0,
+              locked: false,
+              extra_ratios: { cached_read_tokens: NaN },
+            },
+          },
+        },
+        {},
+        true,
+      ).data
+      expect(model.pricingPlan?.rates).toEqual({})
+      expect(calculateModelPrice(model, 1)).toMatchObject({
+        kind: "unavailable",
+      })
+    })
+
+    it.each([Number.MAX_SAFE_INTEGER, 10.5, Infinity])(
+      "preserves base cache rates while rejecting invalid long-context threshold %s",
+      (threshold) => {
+        const [model] = transformModelPricing(
+          {
+            example: {
+              groups: [],
+              owned_by: "",
+              price: {
+                model: "example",
+                type: "tokens",
+                input: 5,
+                output: 25,
+                channel_type: 0,
+                locked: false,
+                long_context: { threshold, input_ratio: 2, output_ratio: 2 },
+              },
+            },
+          },
+          {},
+          true,
+        ).data
+        expect(model.pricingPlan?.rules.map((rule) => rule.id)).toEqual([
+          "openai-cache",
+          "anthropic-cache",
+        ])
+        expect(model.pricingPlan?.rates.input?.amount).toBe(10)
+        expect(
+          quoteCanonicalModelPrice(
+            model,
+            {
+              purpose: PRICING_PURPOSES.TOKEN_INDEX,
+              responseFormat: PRICING_RESPONSE_FORMATS.OPENAI,
+              usage: { cacheRead: 1 },
+            },
+            { groupMultiplier: 1 },
+          ).amount,
+        ).toBeNull()
+      },
+    )
     it("quotes independent DoneHub output prices when input is free and normalizes nonpositive tier multipliers", () => {
       const price = {
         model: "example",

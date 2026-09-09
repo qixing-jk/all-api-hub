@@ -176,6 +176,16 @@ export const calculateModelPrice = (
   if (!isTokenBillingType(model.quota_type) && planRequest !== undefined)
     return { kind: CALCULATED_PRICE_KINDS.PER_CALL, usdPerCall: planRequest }
 
+  // Structured schedules are authoritative; missing base rates cannot be
+  // replaced by legacy ratios that omit their conditions or unknown fees.
+  if (plan)
+    return {
+      kind: CALCULATED_PRICE_KINDS.UNAVAILABLE,
+      billingMode: isTokenBillingType(model.quota_type)
+        ? CALCULATED_PRICE_KINDS.TOKEN
+        : CALCULATED_PRICE_KINDS.PER_CALL,
+    }
+
   if (isTokenBillingType(model.quota_type)) {
     // 按 New API/One API 兼容倍率计费；倍率基准来自 1M tokens / 500,000 quota-per-USD。
     // inputUSD（每 1M token） = model_ratio × baseUSDPer1M × groupRatio

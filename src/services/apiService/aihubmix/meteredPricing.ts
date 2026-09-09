@@ -132,7 +132,9 @@ export function buildAIHubMixLegacyVideoPlan(
       })
     }
     plan.requiresRuleMatch = plan.rules.length > 0
-    return table.standard === amount ? plan : markAIHubMixPriceConflict(plan)
+    return table.standard === undefined || table.standard === amount
+      ? plan
+      : markAIHubMixPriceConflict(plan)
   }
   const dimensions =
     /^The price for a (\d+)×(\d+) video is \$(\d+(?:\.\d+)?) per second, and for a (\d+)×(\d+) video is \$(\d+(?:\.\d+)?) per second\.$/i.exec(

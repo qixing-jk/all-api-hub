@@ -31,6 +31,26 @@ function fixture(model: string) {
 }
 
 describe("public task billing compiled into shared pricing", () => {
+  it("quotes quality-only legacy tables without inventing a standard-price conflict", () => {
+    const plan = buildAIHubMixLegacyVideoPlan(
+      { generate: { standard: { "720p": 0.1, "1080p": 0.2 } } },
+      "$0.1/S",
+      { kind: PRICING_SOURCE_KINDS.CATALOG },
+    )!
+    expect(
+      quoteModelPrice(plan, {
+        purpose: PRICING_PURPOSES.TOKEN_INDEX,
+        videoQuality: "1080P",
+        usage: {},
+      }),
+    ).toMatchObject({ status: "complete", amount: 0.2 })
+    expect(
+      quoteModelPrice(plan, {
+        purpose: PRICING_PURPOSES.TOKEN_INDEX,
+        usage: {},
+      }).amount,
+    ).toBeNull()
+  })
   it.each([0.1, 0.2])(
     "merges equivalent resolution keys only when prices agree: %s",
     (secondPrice) => {

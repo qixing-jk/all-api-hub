@@ -440,6 +440,78 @@ describe("applySub2ApiPriceEstimates", () => {
   })
 })
 
+it.each([
+  ["bad", "17:00"],
+  ["24:00", "17:00"],
+  ["09:60", "17:00"],
+  ["09:00", "24:01"],
+  ["09:00", "bad"],
+])(
+  "preserves valid station rules beside malformed period %s-%s without exposing an exact price",
+  (start_time, end_time) => {
+    const response = applySub2ApiPriceEstimates({
+      models: [{ id: "example-priced-model" }],
+      group: { groupId: "9", groupName: "vip" },
+      groupRates: { "9": 1 },
+      priceTable,
+      pricingCatalogs: {
+        plaza: {
+          groups: [
+            {
+              id: 9,
+              models: [
+                {
+                  name: "example-priced-model",
+                  pricing: {
+                    billing_mode: "token",
+                    input_price: 0.000003,
+                    output_price: 0.000015,
+                  },
+                  time_pricing: {
+                    timezone: "UTC",
+                    periods: [
+                      { start_time, end_time, multiplier: 0.5 },
+                      {
+                        start_time: "17:00",
+                        end_time: "24:00",
+                        multiplier: 0.8,
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      },
+    })
+    const model = response.data[0]
+    expect(model.pricingPlan?.rates.input?.amount).toBe(0.000003)
+    expect(model.pricingPlan?.rules).toHaveLength(1)
+    expect(model.pricingPlan?.rules[0].conditions).toContainEqual({
+      kind: "time-window",
+      timeZone: "UTC",
+      startMinute: 1020,
+      endMinute: 1440,
+    })
+    expect(model.price_metadata).toMatchObject({
+      precision: "unavailable",
+      unavailable_reason: "pricing-source-unavailable",
+    })
+    expect(
+      quoteCanonicalModelPrice(
+        model,
+        {
+          purpose: PRICING_PURPOSES.TOKEN_INDEX,
+          at: "2026-09-09T18:00:00Z",
+          usage: { input: 1 },
+        },
+        { groupMultiplier: 1 },
+      ).amount,
+    ).toBeNull()
+  },
+)
+
 it("prefers the selected runtime group's station schedule over LiteLLM and applies local time and user rates once", () => {
   const response = applySub2ApiPriceEstimates({
     models: [{ id: "example-priced-model" }],
@@ -620,6 +692,10 @@ it("keeps unresolved channel policy and ambiguous station rows out of estimated 
   ]) {
     const model = applySub2ApiPriceEstimates({ ...params, pricingCatalogs })
       .data[0]
+    expect(model.price_metadata).toMatchObject({
+      precision: "unavailable",
+      unavailable_reason: "pricing-source-unavailable",
+    })
     expect(
       quoteCanonicalModelPrice(
         model,
