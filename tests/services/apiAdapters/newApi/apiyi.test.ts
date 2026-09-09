@@ -9,6 +9,11 @@ import { getAccountKeyProductCapabilities } from "~/services/accounts/keyProduct
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
 import { AuthTypeEnum } from "~/types"
+import { apiyiAliasPricingSample } from "~~/tests/fixtures/apiyi/aliasPricing.sample"
+import {
+  apiyiCnyPricingSample,
+  apiyiPricingSample,
+} from "~~/tests/fixtures/apiyi/pricing.sample"
 import { server } from "~~/tests/msw/server"
 
 vi.mock("~/utils/browser/tempWindowFetch", async (importOriginal) => ({
@@ -460,6 +465,125 @@ describe("APIyi account capabilities", () => {
           auth: { authType: AuthTypeEnum.Cookie, userId: "42" },
         }),
       ).resolves.toEqual({ free: { desc: "free", ratio: 0 } })
+    },
+  )
+
+  it("uses CNY context tiers and the site's exchange rate instead of stale compatibility prices", async () => {
+    server.use(
+      http.get(`${baseUrl}/api/pricing`, () =>
+        HttpResponse.json(apiyiCnyPricingSample),
+      ),
+      http.get(`${baseUrl}/api/status`, () =>
+        HttpResponse.json({
+          success: true,
+          data: { price: 7, usd_exchange_rate: 7.3 },
+        }),
+      ),
+    )
+    const pricing = await getSiteTypeCapabilities(
+      SITE_TYPES.APIYI,
+    ).account!.modelPricing!.fetchPricing({
+      baseUrl,
+      auth: { authType: AuthTypeEnum.Cookie, userId: "42" },
+    })
+
+    expect(pricing.data[0].model_ratio).toBeCloseTo(0.054794520548, 10)
+    expect(pricing.data[0].completion_ratio).toBe(2.5)
+    expect(pricing.data[0].token_price_tiers).toEqual([
+      {
+        min_context_tokens: 0,
+        max_context_tokens: 128000,
+        model_ratio: expect.closeTo(0.054794520548, 10),
+        completion_ratio: 2.5,
+      },
+      {
+        min_context_tokens: 128001,
+        max_context_tokens: 256000,
+        model_ratio: expect.closeTo(0.164383561644, 10),
+        completion_ratio: 8.333333333333334,
+      },
+      {
+        min_context_tokens: 256001,
+        max_context_tokens: 1000000,
+        model_ratio: expect.closeTo(0.328767123288, 10),
+        completion_ratio: 10,
+      },
+    ])
+  })
+
+  it("applies wildcard context tiers to model variants and preserves an unbounded final tier", async () => {
+    server.use(
+      http.get(`${baseUrl}/api/pricing`, () =>
+        HttpResponse.json(apiyiAliasPricingSample),
+      ),
+    )
+    const pricing = await getSiteTypeCapabilities(
+      SITE_TYPES.APIYI,
+    ).account!.modelPricing!.fetchPricing({
+      baseUrl,
+      auth: { authType: AuthTypeEnum.Cookie, userId: "42" },
+    })
+
+    expect(pricing.data[0]).toMatchObject({
+      model_name: "gemini-3.1-pro-preview-customtools",
+      model_ratio: 1,
+      completion_ratio: 6,
+      token_price_tiers: [
+        {
+          min_context_tokens: 0,
+          max_context_tokens: 200000,
+          model_ratio: 1,
+          completion_ratio: 6,
+        },
+        { min_context_tokens: 200001, model_ratio: 2, completion_ratio: 4.5 },
+      ],
+    })
+    expect(
+      pricing.data[0].token_price_tiers?.[1].max_context_tokens,
+    ).toBeUndefined()
+  })
+
+  it.each(["missing", "overlapping"])(
+    "keeps groups but does not invent flat prices for %s context tiers",
+    async (scenario) => {
+      const sample = structuredClone(apiyiPricingSample)
+      sample.ModelConditionalPricing["gpt-6-astra"].Conditions =
+        scenario === "missing"
+          ? []
+          : [
+              {
+                MinTokens: 0,
+                MaxTokens: 272000,
+                InputRatio: 5,
+                CompletionRatio: 5,
+                FixedPrice: 0,
+              },
+              {
+                MinTokens: 272000,
+                MaxTokens: 1050000,
+                InputRatio: 10,
+                CompletionRatio: 3.75,
+                FixedPrice: 0,
+              },
+            ]
+      server.use(
+        http.get(`${baseUrl}/api/pricing`, () => HttpResponse.json(sample)),
+      )
+      const pricing = await getSiteTypeCapabilities(
+        SITE_TYPES.APIYI,
+      ).account!.modelPricing!.fetchPricing({
+        baseUrl,
+        auth: { authType: AuthTypeEnum.Cookie, userId: "42" },
+      })
+
+      expect(pricing.data[0]).toMatchObject({
+        enable_groups: ["CodexResponses", "CodexReverse", "default", "svip"],
+        price_metadata: {
+          precision: "unavailable",
+          unavailable_reason: "pricing-source-unavailable",
+        },
+      })
+      expect(pricing.data[0].token_price_tiers).toBeUndefined()
     },
   )
 

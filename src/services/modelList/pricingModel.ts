@@ -4,6 +4,14 @@ import type { ModelPresentation } from "~/services/models/modelDisplayFacts"
 
 export type PerCallPrice = number | { input: number; output: number }
 
+/** Inclusive context ranges with New API-compatible input and output ratios. */
+export interface ModelTokenPriceTier {
+  min_context_tokens: number
+  max_context_tokens?: number
+  model_ratio: number
+  completion_ratio: number
+}
+
 // Product-owned Model List pricing shape. Upstream adapters map their native
 // payloads into this shape before Model List consumes it.
 export interface ProductCanonicalModel {
@@ -30,6 +38,7 @@ export interface ProductCanonicalModel {
     cache_read?: number
     cache_write?: number
   }
+  token_price_tiers?: ModelTokenPriceTier[]
   price_metadata?: ModelPriceMetadata
   owner_by?: string
   completion_ratio: number

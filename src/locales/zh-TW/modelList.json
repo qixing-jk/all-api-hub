@@ -105,6 +105,7 @@
     "cta": "一鍵比價",
     "tooltip": "清空目前篩選，切換到所有帳號，並按同模型最低價優先排序。"
   },
+  "contextTokenRange": "上下文 {{min}}–{{max}} tokens",
   "controlPanelSections": {
     "actions": "操作",
     "filters": "篩選條件"
@@ -243,6 +244,8 @@
     "description": "目前模型目錄是透過帳號金鑰回退載入，僅支援模型發現與驗證。點擊重新整理資料會重新嘗試帳號介面。",
     "title": "帳號金鑰回退目錄"
   },
+  "firstTierPrice": "首段價格",
+  "firstTierPriceTitle": "此處顯示第一個上下文區間的價格，展開可查看各區間價格。",
   "groupRatioTooltip": "{{group}} 分組倍率: {{ratio}}x",
   "groupRatioUnavailable": "分組倍率不可用",
   "groupSelectionHint": "留空表示所有分組；價格排序會在已選分組範圍內自動取最優價",

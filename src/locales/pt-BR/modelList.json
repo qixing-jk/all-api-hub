@@ -117,6 +117,7 @@
     "cta": "Comparar preços",
     "tooltip": "Limpa os filtros atuais, muda para todas as contas e ordena cada modelo pelo menor preço."
   },
+  "contextTokenRange": "Contexto: {{min}}–{{max}} tokens",
   "controlPanelSections": {
     "actions": "Ações",
     "filters": "Filtros"
@@ -259,6 +260,8 @@
     "description": "Este catálogo foi carregado por uma alternativa baseada na chave da conta e, portanto, permite apenas descobrir e verificar modelos. A opção Atualizar dados tentará novamente o acesso direto pela conta.",
     "title": "Catálogo alternativo pela chave da conta"
   },
+  "firstTierPrice": "Preço da primeira faixa",
+  "firstTierPriceTitle": "Exibe o preço da primeira faixa de contexto. Expanda para ver todas as faixas de preço.",
   "groupRatioTooltip": "Multiplicador do grupo {{group}}: {{ratio}}x",
   "groupRatioUnavailable": "Multiplicador do grupo indisponível",
   "groupSelectionHint": "Deixe em branco para comparar todos os grupos; a ordenação por preço usa o melhor preço entre os grupos selecionados",

@@ -111,6 +111,7 @@
     "cta": "Compare Prices",
     "tooltip": "Clear current filters, switch to all accounts, and sort each model by the lowest price."
   },
+  "contextTokenRange": "Context: {{min}}–{{max}} tokens",
   "controlPanelSections": {
     "actions": "Actions",
     "filters": "Filters"
@@ -251,6 +252,8 @@
     "description": "This catalog is currently loaded through an account-key fallback, so it only supports model discovery and verification. Refresh Data will retry the direct account route.",
     "title": "Account-key fallback catalog"
   },
+  "firstTierPrice": "First-tier price",
+  "firstTierPriceTitle": "Shows the first context tier's price. Expand to view all pricing tiers.",
   "groupRatioTooltip": "Group {{group}} ratio: {{ratio}}x",
   "groupRatioUnavailable": "Group multiplier unavailable",
   "groupSelectionHint": "Leave this empty to compare across all groups; price sorting uses the best price within the selected group set",

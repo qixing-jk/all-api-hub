@@ -26,6 +26,11 @@ export interface TokenPricesUSD {
 export interface CalculatedTokenPrice {
   kind: "token"
   usdPerMillionTokens: TokenPricesUSD
+  tiers?: Array<{
+    minContextTokens: number
+    maxContextTokens?: number
+    usdPerMillionTokens: TokenPricesUSD
+  }>
 }
 
 export interface CalculatedPerCallPrice {
@@ -87,7 +92,7 @@ const resolveDirectTokenPriceUSD = (
  * Calculates token prices for New API/One API-compatible ratio responses.
  */
 const calculateRatioTokenPriceUSD = (
-  model: ModelPricing,
+  model: Pick<ModelPricing, "model_ratio" | "completion_ratio">,
   groupMultiplier: number,
 ): TokenPricesUSD => {
   const input =
@@ -153,6 +158,39 @@ export const calculateModelPrice = (
         ...(cacheRead !== undefined ? { cacheRead } : {}),
         ...(cacheWrite !== undefined ? { cacheWrite } : {}),
       },
+      ...(model.token_price_tiers?.length
+        ? {
+            tiers: model.token_price_tiers.map((tier) => {
+              const prices = calculateRatioTokenPriceUSD(
+                tier,
+                effectiveGroupMultiplier,
+              )
+              const tierCacheRead = resolveOptionalCachePrice(
+                undefined,
+                model.token_price_ratios_to_input?.cache_read,
+                prices.input,
+              )
+              const tierCacheWrite = resolveOptionalCachePrice(
+                undefined,
+                model.token_price_ratios_to_input?.cache_write,
+                prices.input,
+              )
+              return {
+                minContextTokens: tier.min_context_tokens,
+                maxContextTokens: tier.max_context_tokens,
+                usdPerMillionTokens: {
+                  ...prices,
+                  ...(tierCacheRead !== undefined
+                    ? { cacheRead: tierCacheRead }
+                    : {}),
+                  ...(tierCacheWrite !== undefined
+                    ? { cacheWrite: tierCacheWrite }
+                    : {}),
+                },
+              }
+            }),
+          }
+        : {}),
     }
   } else {
     // 按次计费

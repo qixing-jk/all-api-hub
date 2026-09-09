@@ -105,6 +105,7 @@
     "cta": "価格を比較",
     "tooltip": "現在の絞り込みをクリアし、すべてのアカウントに切り替えて、同一モデルの最安値を優先して並べます。"
   },
+  "contextTokenRange": "コンテキスト: {{min}}～{{max}} トークン",
   "controlPanelSections": {
     "actions": "操作",
     "filters": "絞り込み条件"
@@ -243,6 +244,8 @@
     "description": "このカタログは現在アカウントキーのフォールバック経由で読み込まれているため、モデル検出と検証のみ利用できます。[データを更新] を押すと直接のアカウント経路を再試行します。",
     "title": "アカウントキーフォールバックのカタログ"
   },
+  "firstTierPrice": "最初の区間の価格",
+  "firstTierPriceTitle": "最初のコンテキスト区間の価格を表示しています。展開するとすべての区間の料金を確認できます。",
   "groupRatioTooltip": "グループ {{group}} の倍率: {{ratio}}x",
   "groupRatioUnavailable": "グループ倍率を取得できません",
   "groupSelectionHint": "未選択なら全グループ対象です。価格ソートは選択済みグループ範囲内の最安値を使います",

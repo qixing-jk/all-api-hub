@@ -1,5 +1,8 @@
 import type { UserGroupInfo } from "~/services/accountTokens/tokenProvisioningModel"
-import { fetchUserInfo } from "~/services/apiService/newApiFamily/default/accountBootstrap"
+import {
+  fetchSiteStatus,
+  fetchUserInfo,
+} from "~/services/apiService/newApiFamily/default/accountBootstrap"
 import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { fetchAllItems } from "~/services/apiTransport/pagination"
@@ -87,5 +90,20 @@ export async function fetchModelPricing(request: ApiServiceRequest) {
       API_ERROR_CODES.BUSINESS_ERROR,
     )
   }
-  return response
+  const conditionalPricing = isRecord(response)
+    ? response.ModelConditionalPricing
+    : undefined
+  const needsCurrencyRate =
+    isRecord(conditionalPricing) &&
+    Object.values(conditionalPricing).some(
+      (config) =>
+        isRecord(config) &&
+        config.Currency === "CNY" &&
+        Array.isArray(config.Conditions) &&
+        config.Conditions.length > 0,
+    )
+  return {
+    pricing: response,
+    status: needsCurrencyRate ? await fetchSiteStatus(request) : undefined,
+  }
 }

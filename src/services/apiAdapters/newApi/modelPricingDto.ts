@@ -97,6 +97,7 @@ export function normalizeNewApiModelPricingResponse(
     delete canonicalRow.cache_ratio
     delete canonicalRow.create_cache_ratio
     delete canonicalRow.token_price_ratios_to_input
+    delete canonicalRow.token_price_tiers
 
     if (row.billing_mode !== "tiered_expr") {
       // New API exposes cache ratios relative to the effective input price.

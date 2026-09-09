@@ -105,6 +105,7 @@
     "cta": "So sánh giá",
     "tooltip": "Xóa bộ lọc hiện tại, chuyển sang tất cả tài khoản và ưu tiên giá thấp nhất cho cùng mô hình."
   },
+  "contextTokenRange": "Ngữ cảnh: {{min}}–{{max}} token",
   "controlPanelSections": {
     "actions": "Thao tác",
     "filters": "Bộ lọc"
@@ -243,6 +244,8 @@
     "description": "Thư mục mô hình hiện tại được tải dự phòng thông qua khóa tài khoản, chỉ hỗ trợ phát hiện và xác minh mô hình. Nhấp vào làm mới dữ liệu sẽ thử lại API của tài khoản.",
     "title": "Thư mục dự phòng khóa tài khoản"
   },
+  "firstTierPrice": "Giá bậc đầu",
+  "firstTierPriceTitle": "Hiển thị giá của khoảng ngữ cảnh đầu tiên. Mở rộng để xem tất cả các bậc giá.",
   "groupRatioTooltip": "Tỷ lệ nhóm {{group}}: {{ratio}}x",
   "groupRatioUnavailable": "Không có hệ số nhóm",
   "groupSelectionHint": "Để trống biểu thị tất cả các nhóm; việc sắp xếp giá sẽ tự động lấy mức giá tốt nhất trong phạm vi các nhóm đã chọn",

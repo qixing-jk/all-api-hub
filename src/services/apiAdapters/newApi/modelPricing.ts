@@ -1,5 +1,6 @@
 import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import type { ModelPricingCapability } from "~/services/apiAdapters/contracts/modelPricing"
+import { normalizeApiYiModelPricingResponse } from "~/services/apiAdapters/newApi/apiyiModelPricing"
 import {
   normalizeNewApiModelPricingResponse,
   normalizeVApiModelPricingResponse,
@@ -20,14 +21,21 @@ export function createNewApiModelPricing(
     }
   }
 
+  if (siteType === SITE_TYPES.APIYI) {
+    return {
+      fetchPricing: async (request) => {
+        const { pricing, status } = await apiyi.fetchModelPricing(request)
+        return normalizeApiYiModelPricingResponse(pricing, status)
+      },
+    }
+  }
+
   const normalizePricingResponse =
     siteType === SITE_TYPES.V_API
       ? normalizeVApiModelPricingResponse
       : normalizeNewApiModelPricingResponse
   const fetchModelPricing =
-    siteType === SITE_TYPES.APIYI
-      ? apiyi.fetchModelPricing
-      : modelPricing.defaultModelPricingImplementation.fetchModelPricing
+    modelPricing.defaultModelPricingImplementation.fetchModelPricing
 
   return {
     fetchPricing: async (request) =>

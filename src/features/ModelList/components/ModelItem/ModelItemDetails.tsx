@@ -14,10 +14,8 @@ import {
 } from "~/features/ModelList/groupLabels"
 import type { ModelPricing } from "~/services/modelList/pricingModel"
 import {
-  formatPrice,
   getEndpointTypesText,
   isTokenBillingType,
-  resolvePriceAmount,
   type CalculatedPrice,
 } from "~/services/models/utils/modelPricing"
 
@@ -25,6 +23,7 @@ import {
   getUnavailablePriceReasonText,
   resolveUnavailablePriceReason,
 } from "./ModelItemPricing"
+import { ModelItemTokenPricingDetails } from "./ModelItemTokenPricingDetails"
 
 interface ModelItemDetailsProps {
   model: ModelPricing
@@ -55,39 +54,6 @@ export const ModelItemDetails: React.FC<ModelItemDetailsProps> = ({
   const hasGroupSemantics =
     groupContext.accessState !== MODEL_GROUP_ACCESS_STATES.NOT_APPLICABLE
   const shouldShowGroupDetails = showGroupDetails && hasGroupSemantics
-  const tokenPriceDetails =
-    calculatedPrice.kind === "token"
-      ? [
-          {
-            key: "input",
-            label: t("input1MTokens"),
-            amount: calculatedPrice.usdPerMillionTokens.input,
-          },
-          {
-            key: "output",
-            label: t("output1MTokens"),
-            amount: calculatedPrice.usdPerMillionTokens.output,
-          },
-          ...(calculatedPrice.usdPerMillionTokens.cacheRead !== undefined
-            ? [
-                {
-                  key: "cache-read",
-                  label: t("cacheRead1MTokens"),
-                  amount: calculatedPrice.usdPerMillionTokens.cacheRead,
-                },
-              ]
-            : []),
-          ...(calculatedPrice.usdPerMillionTokens.cacheWrite !== undefined
-            ? [
-                {
-                  key: "cache-write",
-                  label: t("cacheWrite1MTokens"),
-                  amount: calculatedPrice.usdPerMillionTokens.cacheWrite,
-                },
-              ]
-            : []),
-        ]
-      : []
 
   if (!shouldShowGroupDetails && !showEndpointTypes && !showPricingDetails) {
     return null
@@ -223,25 +189,10 @@ export const ModelItemDetails: React.FC<ModelItemDetailsProps> = ({
                 {getUnavailablePriceReasonText(t, unavailableReason)}
               </div>
             ) : calculatedPrice.kind === "token" ? (
-              <div className="grid grid-cols-2 gap-4 text-xs">
-                {tokenPriceDetails.map((price) => (
-                  <div key={price.key} className="space-y-1">
-                    <div className="dark:text-dark-text-tertiary text-gray-500">
-                      {price.label}
-                    </div>
-                    <div className="dark:text-dark-text-primary font-medium text-gray-900">
-                      USD: {formatPrice(price.amount, "USD")}
-                    </div>
-                    <div className="dark:text-dark-text-primary font-medium text-gray-900">
-                      CNY:{" "}
-                      {formatPrice(
-                        resolvePriceAmount(price.amount, "CNY", exchangeRate),
-                        "CNY",
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <ModelItemTokenPricingDetails
+                calculatedPrice={calculatedPrice}
+                exchangeRate={exchangeRate}
+              />
             ) : null}
           </div>
         )}

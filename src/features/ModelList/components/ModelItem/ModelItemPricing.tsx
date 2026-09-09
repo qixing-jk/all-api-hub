@@ -183,6 +183,8 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
     { effectiveGroup, groupRatios },
   )
   const tokenBillingType = isTokenBillingType(model.quota_type)
+  const hasContextTiers =
+    calculatedPrice.kind === "token" && Boolean(calculatedPrice.tiers?.length)
   const effectiveGroupLabel = effectiveGroup
     ? formatGroupLabelFromRatios(effectiveGroup, groupRatios)
     : undefined
@@ -277,8 +279,18 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
             formatPriceCompact={formatPriceCompact}
           />
 
-          {(priceMeta || estimatedPriceMeta) && (
+          {(priceMeta || estimatedPriceMeta || hasContextTiers) && (
             <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+              {hasContextTiers && (
+                <Badge
+                  variant="secondary"
+                  size="sm"
+                  className="shrink-0 text-[10px] sm:text-xs"
+                  title={t("firstTierPriceTitle")}
+                >
+                  {t("firstTierPrice")}
+                </Badge>
+              )}
               {priceMeta}
               {estimatedPriceMeta}
             </div>
