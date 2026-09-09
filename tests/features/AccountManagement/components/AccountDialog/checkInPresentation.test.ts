@@ -64,6 +64,41 @@ const createAmbiguousState = (): CheckInAccountState => ({
 })
 
 describe("check-in presentation", () => {
+  it("keeps an unsupported manual selection stale rather than unconfirmed", () => {
+    const methodId = AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn
+    const config = createCompatibilityCheckInConfig({
+      siteType: SITE_TYPES.NEW_API,
+      supported: true,
+      automaticExecutionEnabled: true,
+    })
+    config.selection = { mode: CHECK_IN_SELECTION_MODES.Manual, methodId }
+    const updated = mergeCheckInDiscoveryResults({
+      config,
+      candidateMethodIds: [methodId],
+      detections: {
+        [methodId]: {
+          outcome: "unsupported",
+          evidence: { source: "probe", observedAt: 200 },
+        },
+      },
+      completedAt: 200,
+    })
+    const state = inspectAccountCheckIn({
+      config: updated,
+      siteType: SITE_TYPES.NEW_API,
+    })
+
+    expect(updated.selection).toEqual(config.selection)
+    expect(state.executionEligibility.eligible).toBe(false)
+    expect(
+      getCheckInSelectionPresentation(t, state, updated.selection),
+    ).toMatchObject({
+      selectedMethodId: methodId,
+      triggerLabel: "form.dailyCheckInMethod",
+      helperText: "form.checkInSelectionStale",
+    })
+  })
+
   it.each(["automatic", "manual"] as const)(
     "marks a retained %s selection as unconfirmed after failed redetection",
     (mode) => {
