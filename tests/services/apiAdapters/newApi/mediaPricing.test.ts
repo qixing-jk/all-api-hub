@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 
+import { parseMediaPriceExpression } from "~/services/apiAdapters/newApi/mediaPriceExpression"
 import { normalizeNewApiModelPricingResponse } from "~/services/apiAdapters/newApi/modelPricingDto"
 import {
   PRICE_RATE_UNITS,
@@ -29,6 +30,30 @@ function normalize(row: object) {
 }
 
 describe("public media pricing contracts captured 2026-09-09", () => {
+  it("evaluates conjunctions before alternatives in media price selections", () => {
+    const expression = parseMediaPriceExpression(
+      'resolution == "720p" && video_input || resolution == "1080p" ? 2 : 1',
+    )!
+    expect(expression.evaluate({ resolution: "720p", video_input: true })).toBe(
+      2,
+    )
+    expect(
+      expression.evaluate({ resolution: "720p", video_input: false }),
+    ).toBe(1)
+    expect(
+      expression.evaluate({ resolution: "1080p", video_input: false }),
+    ).toBe(2)
+    expect(expression.evaluate({ resolution: "480p", video_input: true })).toBe(
+      1,
+    )
+  })
+  it.each([
+    "resolution == 1 ? 2 : 3",
+    "video_input ? : 3",
+    'resolution == "" ? 2 : 3',
+  ])("rejects incomplete media selection literals: %s", (expression) =>
+    expect(parseMediaPriceExpression(expression)).toBeUndefined(),
+  )
   it("explains missing resolution independently from video input and usage quantities", () => {
     const model = normalize(
       rows.find((row) => row.model_name === "doubao-seedance-2-0-260128")!,

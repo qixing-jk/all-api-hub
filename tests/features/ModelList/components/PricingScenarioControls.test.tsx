@@ -960,6 +960,39 @@ it("lets people choose the time used by time-based price rules", async () => {
   ).not.toBeInTheDocument()
 })
 
+it("commits pricing time with Enter and restores a cleared draft", async () => {
+  const user = userEvent.setup()
+  const onChange = vi.fn()
+  render(
+    <PricingScenarioControls
+      settings={{
+        ...createDefaultPricingScenario(),
+        at: "2026-09-09T04:00:00.000Z",
+      }}
+      onChange={onChange}
+      plans={[timePlan]}
+    >
+      {(conditions) => conditions}
+    </PricingScenarioControls>,
+  )
+  await user.click(await screen.findByText("modelList:scenario.groups.other"))
+  const input = screen.getByLabelText("modelList:scenario.pricingTime")
+  const original = (input as HTMLInputElement).value
+  await user.click(input)
+  fireEvent.change(input, { target: { value: "2026-09-10T08:30" } })
+  await user.keyboard("{Enter}")
+  expect(onChange).toHaveBeenCalledWith(
+    expect.objectContaining({ at: new Date("2026-09-10T08:30").toISOString() }),
+  )
+  expect(input).not.toHaveFocus()
+  onChange.mockClear()
+  await user.click(input)
+  fireEvent.change(input, { target: { value: "" } })
+  await user.tab()
+  expect(input).toHaveValue(original)
+  expect(onChange).not.toHaveBeenCalled()
+})
+
 it("navigates to missing image quality, highlights it and quotes the selected tier", async () => {
   const qualityPlan: PricingPlan = {
     rates: {},

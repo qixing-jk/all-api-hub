@@ -7,6 +7,24 @@ import {
 } from "~/services/modelPricing/pricingConstants"
 import { quoteModelPrice } from "~/services/modelPricing/quoteModelPrice"
 
+it.each([{}, [null], [42]])(
+  "does not quote a malformed override schedule: %j",
+  (overrides) => {
+    const plan = normalizeOpenRouterPricingPlan({
+      prompt: "0.000001",
+      completion: "0.000002",
+      overrides,
+    })
+    const quote = quoteModelPrice(plan, {
+      purpose: PRICING_PURPOSES.TOKEN_INDEX,
+      usage: { input: 1, output: 1 },
+    })
+    expect(quote.status).toBe("unavailable")
+    expect(quote.amount).toBeNull()
+    expect(plan.rates.input?.amount).toBe(0.000001)
+  },
+)
+
 it.each([
   ["0.00000075", "0.00000375"],
   ["0.000000375", "0.000001875"],
