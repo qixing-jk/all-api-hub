@@ -23,6 +23,7 @@
     "partialLoadFailed": "部分加载",
     "partialLoadFailedReason": "部分密钥加载失败。首个原因：{{reason}}",
     "title": "账号概览",
+    "unavailableAccounts": "未能加载模型 · {{count}}",
     "unsupported": "暂未适配"
   },
   "actions": {

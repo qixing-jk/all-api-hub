@@ -27,6 +27,9 @@
     "partialLoadFailed": "parcial",
     "partialLoadFailedReason": "No se pudieron cargar algunas claves. Primer error: {{reason}}",
     "title": "Resumen de cuentas",
+    "unavailableAccounts_one": "Modelos no disponibles · {{count}}",
+    "unavailableAccounts_many": "Modelos no disponibles · {{count}}",
+    "unavailableAccounts_other": "Modelos no disponibles · {{count}}",
     "unsupported": "no compatible"
   },
   "actions": {

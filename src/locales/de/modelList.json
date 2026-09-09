@@ -25,6 +25,8 @@
     "partialLoadFailed": "teilweise",
     "partialLoadFailedReason": "Einige Schlüssel konnten nicht geladen werden. Erster Fehler: {{reason}}",
     "title": "Kontoübersicht",
+    "unavailableAccounts_one": "Modelle nicht verfügbar · {{count}}",
+    "unavailableAccounts_other": "Modelle nicht verfügbar · {{count}}",
     "unsupported": "nicht unterstützt"
   },
   "actions": {

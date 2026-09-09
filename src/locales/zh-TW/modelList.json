@@ -23,6 +23,7 @@
     "partialLoadFailed": "部分載入",
     "partialLoadFailedReason": "部分金鑰載入失敗。第一個原因：{{reason}}",
     "title": "帳號概覽",
+    "unavailableAccounts_other": "未能載入模型 · {{count}}",
     "unsupported": "尚未支援"
   },
   "actions": {

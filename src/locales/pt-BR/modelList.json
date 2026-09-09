@@ -27,6 +27,9 @@
     "partialLoadFailed": "parcial",
     "partialLoadFailedReason": "Falha ao carregar algumas chaves. Primeira falha: {{reason}}",
     "title": "Visão geral das contas",
+    "unavailableAccounts_one": "Modelos indisponíveis · {{count}}",
+    "unavailableAccounts_many": "Modelos indisponíveis · {{count}}",
+    "unavailableAccounts_other": "Modelos indisponíveis · {{count}}",
     "unsupported": "não compatível"
   },
   "actions": {

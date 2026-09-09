@@ -297,13 +297,18 @@ export default function ModelList(props: {
       (accountQueryStates ?? []).map((state) => [state.account.id, state]),
     )
 
-    return sortedAccounts.flatMap((account) => {
+    return accounts.flatMap((account) => {
       const state = stateByAccountId.get(account.id)
       if (!state) {
         return []
       }
       const count = accountSummaryCountsByAccountId.get(state.account.id)
-      if (count === undefined && !state.isLoading && !state.errorType) {
+      if (
+        count === undefined &&
+        !state.isLoading &&
+        !state.errorType &&
+        !allAccountsFilterAccountIds.includes(account.id)
+      ) {
         return []
       }
 
@@ -312,13 +317,19 @@ export default function ModelList(props: {
           accountId: state.account.id,
           name: state.account.name,
           count: count ?? 0,
+          hasData: state.hasData,
           isLoading: state.isLoading,
           errorType: state.errorType,
           errorMessage: state.errorMessage,
         },
       ]
     })
-  }, [accountQueryStates, accountSummaryCountsByAccountId, sortedAccounts])
+  }, [
+    accountQueryStates,
+    accountSummaryCountsByAccountId,
+    accounts,
+    allAccountsFilterAccountIds,
+  ])
 
   const modelVerificationTargets = useMemo(() => {
     return filteredModels.reduce<ApiVerificationHistoryTarget[]>(
@@ -676,6 +687,16 @@ export default function ModelList(props: {
         />
       ) : null}
 
+      {selectedSource?.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS &&
+        sourceCapabilities.supportsAccountSummary &&
+        accountSummaryItems.length > 0 && (
+          <AccountSummaryBar
+            items={accountSummaryItems}
+            activeAccountIds={allAccountsFilterAccountIds}
+            onAccountClick={handleAccountSummaryClick}
+          />
+        )}
+
       {selectedSource && !hasModelData && (
         <StatusIndicator
           selectedSource={selectedSource}
@@ -782,16 +803,6 @@ export default function ModelList(props: {
             />
           )}
 
-          {selectedSource?.kind ===
-            MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS &&
-            sourceCapabilities.supportsAccountSummary &&
-            accountSummaryItems.length > 0 && (
-              <AccountSummaryBar
-                items={accountSummaryItems}
-                activeAccountIds={allAccountsFilterAccountIds}
-                onAccountClick={handleAccountSummaryClick}
-              />
-            )}
           {isModelListPriceSortMode(sortMode) && (
             <p aria-live="polite" className="text-muted-foreground text-sm">
               {t("modelList:scenario.comparisonSummary", {

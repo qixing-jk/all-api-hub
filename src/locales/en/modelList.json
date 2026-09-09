@@ -25,6 +25,8 @@
     "partialLoadFailed": "partial",
     "partialLoadFailedReason": "Some keys failed to load. First failure: {{reason}}",
     "title": "Accounts overview",
+    "unavailableAccounts_one": "Models unavailable · {{count}}",
+    "unavailableAccounts_other": "Models unavailable · {{count}}",
     "unsupported": "unsupported"
   },
   "actions": {

@@ -23,6 +23,7 @@
     "partialLoadFailed": "一部読み込み",
     "partialLoadFailedReason": "一部のキーの読み込みに失敗しました。最初の理由: {{reason}}",
     "title": "アカウント概要",
+    "unavailableAccounts_other": "モデルを読み込めません · {{count}}",
     "unsupported": "未対応"
   },
   "actions": {

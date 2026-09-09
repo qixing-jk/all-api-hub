@@ -23,6 +23,7 @@
     "partialLoadFailed": "Tải một phần",
     "partialLoadFailedReason": "Một số khóa tải thất bại. Lỗi đầu tiên: {{reason}}",
     "title": "Tổng quan tài khoản",
+    "unavailableAccounts_other": "Không tải được mô hình · {{count}}",
     "unsupported": "chưa hỗ trợ"
   },
   "actions": {
