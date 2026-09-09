@@ -49,6 +49,33 @@ const scenario = (inputTokens: number) => ({
 })
 
 describe("AIHubMix website pricing", () => {
+  it.each([
+    { default_tier: "missing" },
+    { token_based_tier_configs: {} },
+    { per_unit_price_config: { unknown_charge: 1 } },
+    { per_unit_price_config: { image_price: -1 } },
+  ])(
+    "does not infer website prices from an incomplete configuration %j",
+    (extension) => {
+      const plan = buildAIHubMixWebsitePricingPlan("renamed", {
+        ...billing,
+        ...extension,
+      })
+      expect(quoteModelPrice(plan, scenario(100))).toMatchObject({
+        status: "unavailable",
+        amount: null,
+      })
+    },
+  )
+  it("rejects a malformed promotion instead of using undiscounted website tiers", () => {
+    const plan = buildAIHubMixWebsitePricingPlan("renamed", billing, {
+      invalid: true,
+    })
+    expect(quoteModelPrice(plan, scenario(100))).toMatchObject({
+      status: "unavailable",
+      amount: null,
+    })
+  })
   it("keeps text and audio input/output token prices independent", () => {
     // Aihubmix /call/mdl_info gpt-audio-1.5, verified 2026-09-09.
     const config = {

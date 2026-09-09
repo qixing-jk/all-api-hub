@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 
+import { buildAIHubMixMeteredImagePlan } from "~/services/apiService/aihubmix/meteredImagePricing"
 import {
   buildAIHubMixAudioDurationPlan,
   buildAIHubMixCharacterPlan,
@@ -31,6 +32,86 @@ function fixture(model: string) {
 }
 
 describe("public task billing compiled into shared pricing", () => {
+  it.each([
+    [
+      { match: { megapixels: { gt: 1, lte: 2 } }, unit_price: 0.1 },
+      { match: { size: "1k" }, unit_price: 0.2 },
+    ],
+    [{ match: { megapixels: { gt: 2, lte: 1 } }, unit_price: 0.1 }],
+    [
+      { match: { megapixels: { gt: 1, lte: 3 } }, unit_price: 0.1 },
+      { match: { megapixels: { gt: 2, lte: 4 } }, unit_price: 0.2 },
+    ],
+  ])("rejects ambiguous image area schedules %#", (...price_rules) => {
+    const plan = buildAIHubMixMeteredImagePlan(
+      {
+        model_name: "renamed",
+        enabled_billing_items: ["image_generation"],
+        metered_price_config: {
+          image_generation: {
+            unit: "image",
+            fallback_unit_price: 0.1,
+            price_rules,
+          },
+        },
+      },
+      { kind: PRICING_SOURCE_KINDS.CATALOG },
+    )!
+    expect(
+      quoteModelPrice(plan, {
+        purpose: PRICING_PURPOSES.TOKEN_INDEX,
+        usage: {},
+        imageMegapixels: 2,
+      }),
+    ).toMatchObject({ status: "unavailable", amount: null })
+  })
+  it("does not infer unlisted image sizes or omit declared reference-image charges", () => {
+    const config = {
+      model_name: "renamed",
+      enabled_billing_items: ["image_generation"],
+      metered_price_config: {
+        image_generation: {
+          unit: "image",
+          fallback_unit_price: 0.2,
+          price_rules: [{ match: { size: "1k" }, unit_price: 0.1 }],
+        },
+      },
+    }
+    const plan = buildAIHubMixMeteredImagePlan(config, {
+      kind: PRICING_SOURCE_KINDS.CATALOG,
+    })!
+    expect(
+      quoteModelPrice(plan, {
+        purpose: PRICING_PURPOSES.TOKEN_INDEX,
+        usage: {},
+        imageSize: "2k",
+      }).amount,
+    ).toBeNull()
+    const missingReference = buildAIHubMixMeteredImagePlan(
+      { ...config, enabled_billing_items: ["image_generation", "image_input"] },
+      { kind: PRICING_SOURCE_KINDS.CATALOG },
+    )!
+    expect(
+      quoteModelPrice(missingReference, {
+        purpose: PRICING_PURPOSES.REQUEST,
+        usage: { image: 1, referenceImage: 1 },
+        imageSize: "1k",
+      }),
+    ).toMatchObject({
+      status: "partial",
+      amount: 0.1,
+      issues: expect.arrayContaining([
+        { code: "unsupported-rule", meters: ["referenceImage"] },
+      ]),
+    })
+    expect(
+      quoteModelPrice(missingReference, {
+        purpose: PRICING_PURPOSES.REQUEST,
+        usage: { image: 1 },
+        imageSize: "1k",
+      }).issues,
+    ).toContainEqual({ code: "usage-missing", meter: "referenceImage" })
+  })
   it("quotes quality-only legacy tables without inventing a standard-price conflict", () => {
     const plan = buildAIHubMixLegacyVideoPlan(
       { generate: { standard: { "720p": 0.1, "1080p": 0.2 } } },

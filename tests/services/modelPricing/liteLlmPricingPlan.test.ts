@@ -77,6 +77,32 @@ it("keeps interval-table precedence over service-tier overrides", () => {
   ).toBe(6)
 })
 
+it.each(["xai", "other"])(
+  "sorts multiple %s context thresholds and applies their boundary convention",
+  (litellm_provider) => {
+    const plan = buildLiteLlmPricingPlan(
+      {
+        ...base,
+        litellm_provider,
+        input_cost_per_token_above_200_tokens: 0.000006,
+        input_cost_per_token_above_100_tokens: 0.000004,
+      },
+      source,
+    )!
+    const offset = litellm_provider === "xai" ? 0 : 1
+    const quote = (inputTokens: number) =>
+      quoteModelPrice(
+        plan,
+        { purpose: "token-index", inputTokens, usage: { input: 1 } },
+        { groupMultiplier: 1 },
+      ).amount
+    expect(quote(100 + offset - 1)).toBe(2)
+    expect(quote(100 + offset)).toBe(4)
+    expect(quote(200 + offset - 1)).toBe(4)
+    expect(quote(200 + offset)).toBe(6)
+  },
+)
+
 it("halves standard prompt and cache prices when only batch output is explicit", () => {
   const plan = buildLiteLlmPricingPlan(
     {

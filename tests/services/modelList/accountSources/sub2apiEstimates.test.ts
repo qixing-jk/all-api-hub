@@ -710,6 +710,74 @@ it("keeps unresolved channel policy and ambiguous station rows out of estimated 
   }
 })
 
+it.each([
+  {
+    billing_mode: "token",
+    input_price: 0.000001,
+    intervals: [{ min_tokens: 20, max_tokens: 10 }],
+  },
+  {
+    billing_mode: "token",
+    input_price: 0.000001,
+    intervals: [
+      { min_tokens: 0, max_tokens: 100 },
+      { min_tokens: 50, max_tokens: 200 },
+    ],
+  },
+  {
+    billing_mode: "image",
+    intervals: [
+      { min_tokens: 0, tier_label: "unsupported", per_request_price: 0.1 },
+    ],
+  },
+  {
+    billing_mode: "image",
+    intervals: [
+      { min_tokens: 0, tier_label: "1k", per_request_price: 0.1 },
+      { min_tokens: 0, tier_label: "1k", per_request_price: 0.2 },
+    ],
+  },
+  { billing_mode: "per_request" },
+])(
+  "keeps malformed station schedules unavailable without estimated fallback %j",
+  (pricing) => {
+    const model = applySub2ApiPriceEstimates({
+      models: [{ id: "example-priced-model" }],
+      group: { groupId: "9", groupName: "vip" },
+      groupRates: { "9": 1 },
+      priceTable,
+      pricingCatalogs: {
+        plaza: {
+          groups: [
+            {
+              id: 9,
+              models: [
+                {
+                  name: "example-priced-model",
+                  long_context_basis: "whole_request",
+                  pricing,
+                },
+              ],
+            },
+          ],
+        },
+      },
+    }).data[0]
+    expect(model.price_metadata).toMatchObject({ precision: "unavailable" })
+    expect(
+      quoteCanonicalModelPrice(
+        model,
+        {
+          purpose: PRICING_PURPOSES.TOKEN_INDEX,
+          usage: { input: 1 },
+          imageSize: "1k",
+        },
+        { groupMultiplier: 1 },
+      ),
+    ).toMatchObject({ status: "unavailable", amount: null })
+  },
+)
+
 it("quotes per-request station prices with the selected group and time discount once", () => {
   const response = applySub2ApiPriceEstimates({
     models: [{ id: "example-priced-model" }],

@@ -11,6 +11,44 @@ import { PRICING_RANGE_AXES } from "~/services/modelPricing/pricingConstants"
 
 afterEach(() => vi.useRealTimers())
 
+it.each([undefined, "at"] as const)(
+  "opens and focuses local conditions for target %s",
+  (target) => {
+    const configure = vi.fn()
+    function Fields() {
+      const navigation = usePricingScenarioNavigation()!
+      return (
+        <>
+          <button onClick={() => navigation.configure(target)}>Adjust</button>
+          <section
+            ref={navigation.controlsRef}
+            tabIndex={-1}
+            aria-label="Conditions"
+          >
+            <details>
+              <summary>Customize</summary>
+              <input aria-label="Time" data-pricing-condition="at" />
+            </details>
+          </section>
+        </>
+      )
+    }
+    render(
+      <PricingScenarioNavigation onConfigure={configure}>
+        <Fields />
+      </PricingScenarioNavigation>,
+    )
+    fireEvent.click(screen.getByRole("button", { name: "Adjust" }))
+    expect(screen.getByLabelText("Time")).toBeVisible()
+    expect(
+      target
+        ? screen.getByLabelText("Time")
+        : screen.getByRole("region", { name: "Conditions" }),
+    ).toHaveFocus()
+    expect(configure).toHaveBeenCalledOnce()
+  },
+)
+
 it("routes a combined-token limit to both editable lengths", () => {
   expect(
     getPricingConditionTargets({

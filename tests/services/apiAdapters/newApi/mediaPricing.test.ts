@@ -108,6 +108,41 @@ describe("public media pricing contracts captured 2026-09-09", () => {
   }
 
   it.each([
+    { ...flatImage, quota_type: 9 },
+    {
+      ...flatImage,
+      price_presentation: { ...flatImage.price_presentation, kind: "video" },
+    },
+    {
+      ...flatImage,
+      price_presentation: {
+        ...flatImage.price_presentation,
+        items: flatImage.price_presentation.items!.map((item) => ({
+          ...item,
+          resolution: "unsupported",
+        })),
+      },
+    },
+    {
+      ...flatImage,
+      price_presentation: {
+        ...flatImage.price_presentation,
+        items: flatImage.price_presentation.items!.map((item) => ({
+          ...item,
+          resolution: "1k",
+        })),
+      },
+    },
+    {
+      ...flatImage,
+      price_presentation: {
+        ...flatImage.price_presentation,
+        items: flatImage.price_presentation.items!.map((item) => ({
+          ...item,
+          video_input: false,
+        })),
+      },
+    },
     { ...flatImage, billing_expr: 'v2:tier("base", unit(outputs, 0.03))' },
     { ...flatImage, billing_expr: flatImage.billing_expr + " + 1" },
     {
