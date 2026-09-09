@@ -133,13 +133,19 @@ describe("account site definition registry", () => {
       "siteAnnouncementsPath",
     ]
     for (const definition of getAccountSiteOnboardingDefinitions()) {
-      expect(
-        Object.keys(definition.routes).sort(),
-        definition.siteType,
-      ).toEqual([...routeKeys].sort())
+      const { pricingPath, pricingSearchParam, ...requiredRoutes } =
+        definition.routes
+      expect(Object.keys(requiredRoutes).sort(), definition.siteType).toEqual(
+        [...routeKeys].sort(),
+      )
       expect(definition.routes.loginPath).toMatch(/^\/(?!\/)/)
-      for (const path of Object.values(definition.routes)) {
+      for (const path of Object.values(requiredRoutes)) {
         if (path !== null) expect(path).toMatch(/^\/(?!\/)/)
+      }
+      if (pricingPath != null) expect(pricingPath).toMatch(/^\/(?!\/)/)
+      if (pricingSearchParam !== undefined) {
+        expect(pricingPath).toEqual(expect.any(String))
+        expect(pricingSearchParam).toMatch(/^[A-Za-z][A-Za-z0-9_]*$/)
       }
     }
     expectTypeOf<
